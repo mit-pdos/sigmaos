@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"sigmaos/cachesrv"
-	"sigmaos/config"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
@@ -223,7 +222,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt %v\n", err)
 	}
@@ -281,7 +280,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	db.DPrintf(db.KVGRP, "Starting replica with cluster config %v", clusterCfg)
 
 	var cs any
-	cs = cachesrv.NewCacheSrv(config.GetProcEnv(), "")
+	cs = cachesrv.NewCacheSrv(proc.GetProcEnv(), "")
 	if raftCfg != nil {
 		cs = replsrv.NewReplSrv(raftCfg, cs)
 	}

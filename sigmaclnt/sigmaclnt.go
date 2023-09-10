@@ -1,7 +1,6 @@
 package sigmaclnt
 
 import (
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/leaseclnt"
@@ -24,7 +23,7 @@ func MkSigmaLeaseClnt(fsl *fslib.FsLib) (*SigmaClnt, error) {
 }
 
 // Create only an FsLib, as a proc.
-func MkSigmaClntFsLib(scfg *config.ProcEnv) (*SigmaClnt, error) {
+func MkSigmaClntFsLib(scfg *proc.ProcEnv) (*SigmaClnt, error) {
 	fsl, err := fslib.MakeFsLib(scfg)
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: %v", err)
@@ -32,7 +31,7 @@ func MkSigmaClntFsLib(scfg *config.ProcEnv) (*SigmaClnt, error) {
 	return MkSigmaLeaseClnt(fsl)
 }
 
-func NewSigmaClnt(scfg *config.ProcEnv) (*SigmaClnt, error) {
+func NewSigmaClnt(scfg *proc.ProcEnv) (*SigmaClnt, error) {
 	sc, err := MkSigmaClntFsLib(scfg)
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: %v", err)
@@ -43,7 +42,7 @@ func NewSigmaClnt(scfg *config.ProcEnv) (*SigmaClnt, error) {
 
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
-func MkSigmaClntRootInit(scfg *config.ProcEnv) (*SigmaClnt, error) {
+func MkSigmaClntRootInit(scfg *proc.ProcEnv) (*SigmaClnt, error) {
 	sc, err := MkSigmaClntFsLib(scfg)
 	if err != nil {
 		return nil, err

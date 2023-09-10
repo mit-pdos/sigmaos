@@ -5,7 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
-	"sigmaos/config"
+	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
@@ -36,7 +36,7 @@ type GraphSrv struct {
 func RunGraphSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Creating graph service\n")
 	gsrv := &GraphSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

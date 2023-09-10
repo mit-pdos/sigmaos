@@ -12,7 +12,6 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	"github.com/mit-pdos/go-geoindex"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
@@ -82,7 +81,7 @@ func RunGeoSrv(job string, public bool) error {
 	for i := 0; i < N_INDEX; i++ {
 		geo.indexes = append(geo.indexes, makeSafeIndex("data/geo.json"))
 	}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELGEO, geo, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELGEO, geo, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

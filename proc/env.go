@@ -14,8 +14,6 @@ import (
 
 const (
 	SIGMACONFIG = "SIGMACONFIG"
-	SIGMADEBUG  = "SIGMADEBUG"
-	SIGMAPERF   = "SIGMAPERF"
 	NOT_SET     = "NOT_SET" // Catch cases where we fail to set a variable.
 )
 

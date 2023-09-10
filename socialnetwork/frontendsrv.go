@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"sigmaos/config"
 	"sigmaos/container"
 	dbg "sigmaos/debug"
 	"sigmaos/perf"
@@ -54,7 +53,7 @@ var (
 func RunFrontendSrv(public bool, job string) error {
 	frontend := &FrontEnd{}
 	frontend.job = job
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,7 @@ import (
 	"sync"
 	//	"github.com/sasha-s/go-deadlock"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -13,13 +13,13 @@ import (
 
 type Mgr struct {
 	mu       sync.Mutex
-	scfg     *config.ProcEnv
+	scfg     *proc.ProcEnv
 	cli      sessp.Tclient
 	sessions map[string]*SessClnt
 	clntnet  string
 }
 
-func MakeMgr(scfg *config.ProcEnv, cli sessp.Tclient, clntnet string) *Mgr {
+func MakeMgr(scfg *proc.ProcEnv, cli sessp.Tclient, clntnet string) *Mgr {
 	sc := &Mgr{}
 	sc.scfg = scfg
 	sc.cli = cli

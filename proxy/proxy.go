@@ -4,7 +4,7 @@ import (
 	"os/user"
 	"sync"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
@@ -21,11 +21,11 @@ import (
 
 type Npd struct {
 	lip  string
-	scfg *config.ProcEnv
+	scfg *proc.ProcEnv
 	st   *sessstatesrv.SessionTable
 }
 
-func MakeNpd(scfg *config.ProcEnv, lip string) *Npd {
+func MakeNpd(scfg *proc.ProcEnv, lip string) *Npd {
 	npd := &Npd{lip, scfg, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil)
 	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm, nil, nil)
@@ -80,7 +80,7 @@ type NpConn struct {
 	cid   sp.TclntId
 }
 
-func makeNpConn(scfg *config.ProcEnv, lip string) *NpConn {
+func makeNpConn(scfg *proc.ProcEnv, lip string) *NpConn {
 	npc := &NpConn{}
 	npc.clnt = protclnt.MakeClnt(scfg, sp.ROOTREALM.String())
 	npc.fidc = fidclnt.MakeFidClnt(scfg, sp.ROOTREALM.String())

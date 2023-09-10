@@ -6,13 +6,12 @@ import (
 	"strconv"
 
 	//	"go.opentelemetry.io/otel/trace"
-	//	"sigmaos/proc"
 	//	"context"
 
-	"sigmaos/config"
 	"sigmaos/dbclnt"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
@@ -43,7 +42,7 @@ type Users struct {
 
 func RunUserSrv(n string, public bool) error {
 	u := &Users{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELUSER, u, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELUSER, u, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

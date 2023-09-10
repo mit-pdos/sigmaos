@@ -3,7 +3,7 @@ package pathclnt
 import (
 	"fmt"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
@@ -25,7 +25,7 @@ import (
 type Watch func(string, error)
 
 type PathClnt struct {
-	scfg *config.ProcEnv
+	scfg *proc.ProcEnv
 	*fidclnt.FidClnt
 	mnt     *MntTable
 	rootmt  *RootMountTable
@@ -33,7 +33,7 @@ type PathClnt struct {
 	cid     sp.TclntId
 }
 
-func MakePathClnt(scfg *config.ProcEnv, fidc *fidclnt.FidClnt, sz sessp.Tsize) *PathClnt {
+func MakePathClnt(scfg *proc.ProcEnv, fidc *fidclnt.FidClnt, sz sessp.Tsize) *PathClnt {
 	pathc := &PathClnt{scfg: scfg, mnt: makeMntTable(), chunkSz: sz}
 	if fidc == nil {
 		pathc.FidClnt = fidclnt.MakeFidClnt(scfg, scfg.Net)

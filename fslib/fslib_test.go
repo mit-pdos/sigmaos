@@ -14,7 +14,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
@@ -504,7 +504,7 @@ func TestPageDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func dirwriter(t *testing.T, scfg *config.ProcEnv, dn, name string, ch chan bool) {
+func dirwriter(t *testing.T, scfg *proc.ProcEnv, dn, name string, ch chan bool) {
 	fsl, err := fslib.MakeFsLib(scfg)
 	assert.Nil(t, err)
 	stop := false
@@ -540,7 +540,7 @@ func TestDirConcur(t *testing.T) {
 
 	ch := make(chan bool)
 	for i := 0; i < N; i++ {
-		scfg := config.NewAddedProcEnv(ts.ProcEnv(), i)
+		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
 		go dirwriter(t, scfg, dn, strconv.Itoa(i), ch)
 	}
 
@@ -747,7 +747,7 @@ func TestWatchRemoveConcur(t *testing.T) {
 	ch := make(chan error)
 	done := make(chan bool)
 	go func() {
-		scfg := config.NewAddedProcEnv(ts.ProcEnv(), 1)
+		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
 		fsl, err := fslib.MakeFsLib(scfg)
 		assert.Nil(t, err)
 		for i := 1; i < N; {
@@ -802,7 +802,7 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 
 	ch := make(chan error)
 	done := make(chan bool)
-	scfg := config.NewAddedProcEnv(ts.ProcEnv(), 1)
+	scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
 	fsl, err := fslib.MakeFsLib(scfg)
 	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
@@ -926,7 +926,7 @@ func TestConcurRename(t *testing.T) {
 
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
-		scfg := config.NewAddedProcEnv(ts.ProcEnv(), i)
+		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
 		fsl, err := fslib.MakeFsLib(scfg)
 		assert.Nil(t, err)
 		go func(fsl *fslib.FsLib, t string) {
@@ -1252,7 +1252,7 @@ func TestFslibDetach(t *testing.T) {
 
 	// Make a new fsl for this test, because we want to use ts.FsLib
 	// to shutdown the system.
-	scfg := config.NewAddedProcEnv(ts.ProcEnv(), 1)
+	scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
 	fsl, err := fslib.MakeFsLib(scfg)
 	assert.Nil(t, err)
 

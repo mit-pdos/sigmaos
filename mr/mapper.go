@@ -14,7 +14,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	"sigmaos/config"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -68,7 +67,7 @@ func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper: linesz %v isn't int", args[1])
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +262,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 func RunMapper(mapf MapT, args []string) {
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	p, err := perf.MakePerf(scfg, perf.MRMAPPER)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)

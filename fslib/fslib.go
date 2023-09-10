@@ -1,7 +1,7 @@
 package fslib
 
 import (
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
 	"sigmaos/sessp"
@@ -9,12 +9,12 @@ import (
 )
 
 type FsLib struct {
-	scfg *config.ProcEnv
+	scfg *proc.ProcEnv
 	*fdclnt.FdClient
 }
 
 // Only to be called by procs.
-func MakeFsLib(scfg *config.ProcEnv) (*FsLib, error) {
+func MakeFsLib(scfg *proc.ProcEnv) (*FsLib, error) {
 	db.DPrintf(db.PORT, "MakeFsLib: uname %s lip %s addrs %v\n", scfg.Uname, scfg.LocalIP, scfg.EtcdIP)
 	fl := &FsLib{
 		scfg:     scfg,
@@ -23,7 +23,7 @@ func MakeFsLib(scfg *config.ProcEnv) (*FsLib, error) {
 	return fl, nil
 }
 
-func (fl *FsLib) ProcEnv() *config.ProcEnv {
+func (fl *FsLib) ProcEnv() *proc.ProcEnv {
 	return fl.scfg
 }
 

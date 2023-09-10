@@ -3,7 +3,7 @@ package fdclnt
 import (
 	"fmt"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
@@ -32,12 +32,12 @@ import (
 //
 
 type FdClient struct {
-	scfg *config.ProcEnv
+	scfg *proc.ProcEnv
 	*pathclnt.PathClnt
 	fds *FdTable
 }
 
-func MakeFdClient(scfg *config.ProcEnv, fsc *fidclnt.FidClnt, sz sessp.Tsize) *FdClient {
+func MakeFdClient(scfg *proc.ProcEnv, fsc *fidclnt.FidClnt, sz sessp.Tsize) *FdClient {
 	fdc := &FdClient{scfg: scfg}
 	fdc.PathClnt = pathclnt.MakePathClnt(scfg, fsc, sz)
 	fdc.fds = mkFdTable()

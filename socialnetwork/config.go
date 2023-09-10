@@ -6,7 +6,6 @@ import (
 
 	"sigmaos/cachedsvc"
 	"sigmaos/cachedsvcclnt"
-	"sigmaos/config"
 	dbg "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -51,7 +50,7 @@ func MakeFsLibs(uname string) []*fslib.FsLib {
 	dbg.DFatalf("Differentiate for different fslibs")
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
-		fsl, err := fslib.MakeFsLib(config.GetProcEnv())
+		fsl, err := fslib.MakeFsLib(proc.GetProcEnv())
 		//fsl, err := fslib.MakeFsLib(sp.Tuname(uname + "-" + strconv.Itoa(i)))
 		if err != nil {
 			dbg.DFatalf("Error mkfsl: %v", err)

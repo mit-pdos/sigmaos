@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 
-	"sigmaos/config"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kproc"
@@ -51,7 +50,7 @@ func mkKernel(param *Param) *Kernel {
 	return k
 }
 
-func MakeKernel(p *Param, scfg *config.ProcEnv) (*Kernel, error) {
+func MakeKernel(p *Param, scfg *proc.ProcEnv) (*Kernel, error) {
 	k := mkKernel(p)
 	ip, err := container.LocalIP()
 	if err != nil {
@@ -184,7 +183,7 @@ func makeKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 }
 
 // Run knamed (but not as a proc)
-func runKNamed(scfg *config.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
+func runKNamed(scfg *proc.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
 	r1, w1, err := os.Pipe()
 	if err != nil {
 		return nil, err

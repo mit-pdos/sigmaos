@@ -13,7 +13,6 @@ import (
 	proto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachedsvcclnt"
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/perf"
@@ -48,7 +47,7 @@ func main() {
 		db.DFatalf("Bad offset %v", err)
 	}
 	sempath = os.Args[5]
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}

@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
-	"sigmaos/config"
+	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
@@ -43,7 +43,7 @@ func RunUserSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Creating user service\n")
 	usrv := &UserSrv{}
 	usrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fenceclnt"
 	"sigmaos/proc"
@@ -14,7 +13,7 @@ import (
 
 func RunProc(fencestr, dir string) {
 
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v\n", err)
 	}

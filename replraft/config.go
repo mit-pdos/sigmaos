@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/repl"
 )
@@ -15,10 +15,10 @@ type RaftConfig struct {
 	peerAddrs []string
 	l         net.Listener
 	init      bool // Is this node part of the initial cluster? Or is it being added to an existing cluster?
-	scfg      *config.ProcEnv
+	scfg      *proc.ProcEnv
 }
 
-func MakeRaftConfig(scfg *config.ProcEnv, id int, peerAddrs []string, init bool) *RaftConfig {
+func MakeRaftConfig(scfg *proc.ProcEnv, id int, peerAddrs []string, init bool) *RaftConfig {
 	rc := &RaftConfig{}
 	rc.id = id
 	rc.init = init

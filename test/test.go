@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"sigmaos/bootkernelclnt"
-	"sigmaos/config"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -110,7 +109,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	scfg := config.NewTestProcEnv(sp.ROOTREALM, etcdIP, localIP, tag)
+	scfg := proc.NewTestProcEnv(sp.ROOTREALM, etcdIP, localIP, tag)
 	proc.SetSigmaDebugPid(scfg.PID.String())
 	var kernelid string
 	var err error
@@ -166,7 +165,7 @@ func (ts *Tstate) KillOne(s string) error {
 	return ts.kclnts[idx].Kill(s)
 }
 
-func (ts *Tstate) MakeClnt(idx int, scfg *config.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
+func (ts *Tstate) MakeClnt(idx int, scfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 	return ts.kclnts[idx].NewSigmaClnt(scfg)
 }
 

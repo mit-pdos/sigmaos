@@ -3,7 +3,7 @@ package fsux
 import (
 	"sync"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
@@ -34,7 +34,7 @@ func RunFsUx(rootux string) {
 	if sr != nil {
 		db.DFatalf("makeDir %v\n", sr)
 	}
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	srv, err := sigmasrv.MakeSigmaSrvRoot(root, ip+":0", sp.UX, scfg)
 	if err != nil {
 		db.DFatalf("BootSrvAndPost %v\n", err)

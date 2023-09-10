@@ -3,7 +3,7 @@ package protclnt
 import (
 	"sync/atomic"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	"sigmaos/path"
 	"sigmaos/rand"
 	"sigmaos/serr"
@@ -25,10 +25,10 @@ type Clnt struct {
 	id    sessp.Tclient
 	seqno sessp.Tseqno
 	sm    *sessclnt.Mgr
-	scfg  *config.ProcEnv
+	scfg  *proc.ProcEnv
 }
 
-func MakeClnt(scfg *config.ProcEnv, clntnet string) *Clnt {
+func MakeClnt(scfg *proc.ProcEnv, clntnet string) *Clnt {
 	clnt := &Clnt{}
 	clnt.seqno = 0
 	clnt.id = clid

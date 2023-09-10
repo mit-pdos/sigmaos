@@ -11,7 +11,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"sigmaos/config"
 	sp "sigmaos/sigmap"
 )
 
@@ -166,14 +165,14 @@ func (p *Proc) String() string {
 
 // ========== Getters and Setters ==========
 
-func (p *Proc) SetProcEnv(scfg *config.ProcEnv) {
+func (p *Proc) SetProcEnv(scfg *ProcEnv) {
 	p.ProcEnv = scfg.Marshal()
 	// TODO: don't append every time.
-	p.AppendEnv(config.SIGMACONFIG, scfg.Marshal())
+	p.AppendEnv(SIGMACONFIG, scfg.Marshal())
 }
 
-func (p *Proc) GetProcEnv() *config.ProcEnv {
-	return config.Unmarshal(p.ProcEnv)
+func (p *Proc) GetProcEnv() *ProcEnv {
+	return Unmarshal(p.ProcEnv)
 }
 
 func (p *Proc) GetPid() sp.Tpid {

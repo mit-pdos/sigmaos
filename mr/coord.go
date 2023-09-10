@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/config"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
@@ -82,7 +81,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	}
 	c := &Coord{}
 	c.job = args[0]
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}

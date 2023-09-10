@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/pipe"
@@ -41,7 +40,7 @@ func MakeReader(args []string) (*Reader, error) {
 	if len(args) != 2 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	db.DPrintf(db.ALWAYS, "MakeReader %v: %v\n", scfg.PID, args)
 	r := &Reader{}
 	sc, err := sigmaclnt.NewSigmaClnt(scfg)

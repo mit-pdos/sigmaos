@@ -4,7 +4,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
@@ -122,7 +121,7 @@ func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 			}
 		} else {
 			var err error
-			scfg := config.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
+			scfg := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
 			if clnt, err = sigmaclnt.NewSigmaClnt(scfg); err != nil {
 				db.DFatalf("Err MkSigmaClntRealm: %v", err)
 			}

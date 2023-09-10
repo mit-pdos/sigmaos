@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -43,7 +42,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: error %v\n", err)
 	}

@@ -5,14 +5,13 @@ import (
 	"os/exec"
 	"syscall"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
 // To run kernel procs
-func RunKernelProc(parentCfg *config.ProcEnv, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
+func RunKernelProc(parentCfg *proc.ProcEnv, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
 	childCfg := proc.NewChildProcEnv(parentCfg, p)
 	p.SetProcEnv(childCfg)
 	p.Finalize("")

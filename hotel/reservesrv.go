@@ -7,16 +7,15 @@ import (
 	"time"
 
 	//	"go.opentelemetry.io/otel/trace"
-	//	"sigmaos/proc"
 
 	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
-	"sigmaos/config"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
@@ -89,7 +88,7 @@ func (s *Reserve) initDb() error {
 
 func RunReserveSrv(job string, public bool, cache string) error {
 	r := &Reserve{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELRESERVE, r, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELRESERVE, r, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

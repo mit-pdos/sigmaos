@@ -3,7 +3,7 @@ package fidclnt
 import (
 	"fmt"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/protclnt"
@@ -18,12 +18,12 @@ import (
 
 type FidClnt struct {
 	fids *FidMap
-	scfg *config.ProcEnv
+	scfg *proc.ProcEnv
 	pc   *protclnt.Clnt
 	ft   *FenceTable
 }
 
-func MakeFidClnt(scfg *config.ProcEnv, clntnet string) *FidClnt {
+func MakeFidClnt(scfg *proc.ProcEnv, clntnet string) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = mkFidMap()
 	fidc.pc = protclnt.MakeClnt(scfg, clntnet)

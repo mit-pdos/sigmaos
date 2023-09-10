@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
@@ -61,7 +61,7 @@ func TestServerCrash(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		scfg := config.NewAddedProcEnv(ts.ProcEnv(), 1)
+		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
 		fsl, err := fslib.MakeFsLib(scfg)
 		assert.Nil(t, err)
 		sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
@@ -139,7 +139,7 @@ func TestReconnectSimple(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		scfg := config.NewAddedProcEnv(ts.ProcEnv(), 1)
+		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
 		fsl, err := fslib.MakeFsLib(scfg)
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
@@ -168,7 +168,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			scfg := config.NewAddedProcEnv(ts.ProcEnv(), i)
+			scfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
 			fsl, err := fslib.MakeFsLib(scfg)
 			assert.Nil(t, err)
 			for true {
@@ -198,7 +198,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			scfg := config.NewAddedProcEnv(ts.ProcEnv(), i)
+			scfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
 			fsl, err := fslib.MakeFsLib(scfg)
 			assert.Nil(t, err)
 			sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
@@ -220,7 +220,7 @@ const (
 	WRITESZ = 4096
 )
 
-func writer(t *testing.T, ch chan error, scfg *config.ProcEnv) {
+func writer(t *testing.T, ch chan error, scfg *proc.ProcEnv) {
 	fsl, err := fslib.MakeFsLib(scfg)
 	assert.Nil(t, err)
 	fn := sp.UX + "~local/file-" + string(scfg.Uname)
@@ -265,7 +265,7 @@ func TestWriteCrash(t *testing.T) {
 	ch := make(chan error)
 
 	for i := 0; i < N; i++ {
-		scfg := config.NewAddedProcEnv(ts.ProcEnv(), i)
+		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
 		go writer(ts.T, ch, scfg)
 	}
 

@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	"sigmaos/fsetcd"
 	sp "sigmaos/sigmap"
 )
@@ -23,7 +23,7 @@ func init() {
 }
 
 func TestLease(t *testing.T) {
-	scfg := config.NewTestProcEnv(sp.ROOTREALM, etcdIP, "", "")
+	scfg := proc.NewTestProcEnv(sp.ROOTREALM, etcdIP, "", "")
 	ec, err := fsetcd.MkFsEtcd(scfg)
 	assert.Nil(t, err)
 	l := clientv3.NewLease(ec.Client)

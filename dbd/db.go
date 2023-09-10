@@ -2,7 +2,7 @@ package dbd
 
 import (
 	// db "sigmaos/debug"
-	"sigmaos/config"
+	"sigmaos/proc"
 	"sigmaos/sessdevsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -24,7 +24,7 @@ func RunDbd(dbdaddr string) error {
 	if err != nil {
 		return err
 	}
-	ssrv, err := sigmasrv.MakeSigmaSrv(sp.DB, s, config.GetProcEnv())
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.DB, s, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

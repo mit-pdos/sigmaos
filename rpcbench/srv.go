@@ -3,7 +3,6 @@ package rpcbench
 import (
 	"time"
 
-	"sigmaos/config"
 	"sigmaos/fs"
 	"sigmaos/proc"
 	"sigmaos/rpcbench/proto"
@@ -19,7 +18,7 @@ type Srv struct {
 // Run starts the server
 func RunRPCBenchSrv(path string, public bool) error {
 	s := &Srv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(path, s, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(path, s, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/go-redis/redis/v8"
 
 	"sigmaos/cache"
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/kv"
 	"sigmaos/kv/proto"
@@ -48,7 +47,7 @@ func main() {
 		}
 		sempath = os.Args[5]
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}

@@ -10,7 +10,6 @@ import (
 
 	"net/http/pprof"
 
-	"sigmaos/config"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/microbenchmarks"
@@ -82,7 +81,7 @@ type Wwwd struct {
 func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	var err error
 	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), scfg)
 	if err != nil {

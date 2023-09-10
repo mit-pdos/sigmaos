@@ -6,7 +6,6 @@ import (
 	"path"
 	"runtime"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/proc"
@@ -35,7 +34,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 		return nil, errors.New("MakeSpinner: too few arguments")
 	}
 	s := &Spinner{}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}

@@ -14,7 +14,6 @@ import (
 	"github.com/harlow/go-micro-services/data"
 
 	"sigmaos/cache"
-	"sigmaos/config"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -53,7 +52,7 @@ type Rate struct {
 // Run starts the server
 func RunRateSrv(job string, public bool, cache string) error {
 	r := &Rate{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELRATE, r, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELRATE, r, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
@@ -19,7 +18,7 @@ func main() {
 	if len(os.Args) != 2 {
 		db.DFatalf("Usage: %v mem\nArgs: %v", os.Args[0], os.Args)
 	}
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	m, err := humanize.ParseBytes(os.Args[1])
 	if err != nil {
 		db.DFatalf("Error ParseBytes: %v", err)

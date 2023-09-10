@@ -3,7 +3,7 @@ package socialnetwork
 import (
 	"fmt"
 	"regexp"
-	"sigmaos/config"
+	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/rpcclnt"
@@ -32,7 +32,7 @@ type TextSrv struct {
 func RunTextSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Creating text service\n")
 	tsrv := &TextSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TEXT, tsrv, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TEXT, tsrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

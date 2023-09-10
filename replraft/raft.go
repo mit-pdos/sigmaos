@@ -20,7 +20,7 @@ import (
 	stats "go.etcd.io/etcd/server/v3/etcdserver/api/v2stats"
 	"go.uber.org/zap"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 )
@@ -44,7 +44,7 @@ type RaftNode struct {
 	snapshotIndex uint64
 	appliedIndex  uint64
 	currentLeader uint64
-	scfg          *config.ProcEnv
+	scfg          *proc.ProcEnv
 }
 
 type committedEntries struct {
@@ -52,7 +52,7 @@ type committedEntries struct {
 	leader  uint64
 }
 
-func makeRaftNode(scfg *config.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
+func makeRaftNode(scfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
 	node := &RaftNode{}
 	node.scfg = scfg
 	node.id = id

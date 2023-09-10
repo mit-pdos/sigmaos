@@ -6,7 +6,7 @@ import (
 
 	"time"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/intervals"
 	"sigmaos/netclnt"
@@ -23,7 +23,7 @@ import (
 type SessClnt struct {
 	sync.Mutex
 	*sync.Cond
-	scfg    *config.ProcEnv
+	scfg    *proc.ProcEnv
 	cli     sessp.Tclient
 	sid     sessp.Tsession
 	seqno   sessp.Tseqno
@@ -35,7 +35,7 @@ type SessClnt struct {
 	clntnet string
 }
 
-func makeSessClnt(scfg *config.ProcEnv, cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
+func makeSessClnt(scfg *proc.ProcEnv, cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c := &SessClnt{}
 	c.scfg = scfg
 	c.cli = cli

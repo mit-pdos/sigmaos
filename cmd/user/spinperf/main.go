@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/microbenchmarks"
 	"sigmaos/proc"
@@ -32,7 +31,7 @@ func main() {
 	id := os.Args[4]
 	var sc *sigmaclnt.SigmaClnt
 	if isSigmaProc {
-		sc, err = sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+		sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 		if err != nil {
 			db.DFatalf("Error mkSigmaClnt: %v", err)
 		}

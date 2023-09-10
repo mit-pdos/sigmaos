@@ -7,7 +7,6 @@ import (
 	"syscall"
 	"time"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
@@ -78,7 +77,7 @@ func ExecUProc() error {
 	args := os.Args[1:]
 	program := args[0]
 	s := time.Now()
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	// Isolate the user proc.
 	pn, err := isolateUserProc(scfg.PID, program)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc jail creation %v", scfg.PID, time.Since(s))

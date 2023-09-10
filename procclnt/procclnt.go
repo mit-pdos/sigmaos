@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	//	"sigmaos/config"
+	//	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"

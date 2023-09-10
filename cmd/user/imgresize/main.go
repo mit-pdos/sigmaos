@@ -10,7 +10,6 @@ import (
 
 	"github.com/nfnt/resize"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"
@@ -64,7 +63,7 @@ func MakeTrans(args []string) (*Trans, error) {
 	if len(args) != 3 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", scfg.PID, args)
 	t := &Trans{}
 	sc, err := sigmaclnt.NewSigmaClnt(scfg)

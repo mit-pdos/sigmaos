@@ -6,7 +6,6 @@ import (
 	"path"
 	"sync"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
@@ -44,7 +43,7 @@ func RunRealmSrv() error {
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	ssrv, err := sigmasrv.MakeSigmaSrv(sp.REALMD, rs, scfg)
 	if err != nil {
 		return err
@@ -108,7 +107,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", rid)
 
-	scfg := config.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
+	scfg := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
 	sc, err := sigmaclnt.MkSigmaClntFsLib(scfg)
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error MkSigmaClntRealm: %v", err)

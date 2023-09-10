@@ -16,7 +16,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	"sigmaos/config"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/perf"
@@ -49,7 +48,7 @@ func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error)
 	r.output = args[1]
 	r.tmp = r.output + rand.String(16)
 	r.reducef = reducef
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	r.SigmaClnt = sc
 	r.perf = p
 
@@ -103,7 +102,7 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 
 func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
-	scfg := config.NewAddedProcEnv(r.ProcEnv(), int(rand.Uint64()))
+	scfg := proc.NewAddedProcEnv(r.ProcEnv(), int(rand.Uint64()))
 	sc, err := sigmaclnt.MkSigmaClntFsLib(scfg)
 	if err != nil {
 		db.DPrintf(db.MR, "MkSigmaClntFsLib err %v", err)
@@ -220,7 +219,7 @@ func (r *Reducer) doReduce() *proc.Status {
 }
 
 func RunReducer(reducef ReduceT, args []string) {
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	p, err := perf.MakePerf(scfg, perf.MRREDUCER)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)

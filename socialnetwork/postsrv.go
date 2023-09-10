@@ -5,7 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
-	"sigmaos/config"
+	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
@@ -33,7 +33,7 @@ type PostSrv struct {
 func RunPostSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Creating post service\n")
 	psrv := &PostSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

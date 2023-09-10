@@ -10,7 +10,6 @@ import (
 	//	"go.opentelemetry.io/otel/trace"
 	//	tproto "sigmaos/tracing/proto"
 
-	"sigmaos/config"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
@@ -42,7 +41,7 @@ type Www struct {
 func RunWww(job string, public bool) error {
 	www := &Www{}
 	www.job = job
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

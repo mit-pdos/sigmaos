@@ -3,7 +3,7 @@ package socialnetwork
 import (
 	"fmt"
 	"math/rand"
-	"sigmaos/config"
+	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"
@@ -37,7 +37,7 @@ func RunComposeSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Creating compose service\n")
 	csrv := &ComposeSrv{}
 	csrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_COMPOSE, csrv, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_COMPOSE, csrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

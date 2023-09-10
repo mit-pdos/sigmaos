@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	scfg "sigmaos/config"
+	scfg "sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/perf"

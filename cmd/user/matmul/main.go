@@ -7,7 +7,6 @@ import (
 
 	"gonum.org/v1/gonum/mat"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -33,7 +32,7 @@ type MatrixMult struct {
 }
 
 func MakeMatrixMult(args []string) (*MatrixMult, error) {
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	db.DPrintf(db.MATMUL, "MakeMatrixMul: %v %v", scfg.PID, args)
 	m := &MatrixMult{}
 	sc, err := sigmaclnt.NewSigmaClnt(scfg)

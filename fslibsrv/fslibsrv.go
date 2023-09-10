@@ -1,7 +1,7 @@
 package fslibsrv
 
 import (
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
@@ -24,7 +24,7 @@ import (
 // sesssrv and protsrv.
 //
 
-func BootSrv(scfg *config.ProcEnv, root fs.Dir, addr string, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *sesssrv.SessSrv {
+func BootSrv(scfg *proc.ProcEnv, root fs.Dir, addr string, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *sesssrv.SessSrv {
 	return sesssrv.MakeSessSrv(scfg, root, addr, protsrv.MakeProtServer, attachf, detachf, et, nil)
 }
 

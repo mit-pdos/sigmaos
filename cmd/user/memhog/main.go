@@ -9,7 +9,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/shirou/gopsutil/process"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/sigmaclnt"
@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error strconv: %v", err)
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error mkSigmaClnt: %v", err)
 	}

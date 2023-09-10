@@ -6,7 +6,7 @@ import (
 	"io"
 	"net"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/serr"
@@ -18,7 +18,7 @@ type WriteF func(*sessp.FcallMsg, []byte, *bufio.Writer) *serr.Err
 type ReadF func(rdr io.Reader) (sessp.Tseqno, *sessp.FcallMsg, *serr.Err)
 
 type NetServer struct {
-	scfg       *config.ProcEnv
+	scfg       *proc.ProcEnv
 	addr       string
 	sesssrv    sps.SessServer
 	writefcall WriteF
@@ -26,7 +26,7 @@ type NetServer struct {
 	l          net.Listener
 }
 
-func MakeNetServer(scfg *config.ProcEnv, ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
+func MakeNetServer(scfg *proc.ProcEnv, ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
 	srv := &NetServer{scfg: scfg, sesssrv: ss, writefcall: m, readframe: u}
 
 	// Create and start the main server listener

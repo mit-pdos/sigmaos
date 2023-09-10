@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	"sigmaos/seqgrep"
 )
 
@@ -13,5 +13,5 @@ func main() {
 	if err != nil {
 		log.Fatal("cannot open %s\n", os.Args[1])
 	}
-	seqgrep.Grep(config.GetProcEnv(), f)
+	seqgrep.Grep(proc.GetProcEnv(), f)
 }

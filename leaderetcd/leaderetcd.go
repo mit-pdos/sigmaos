@@ -8,7 +8,7 @@ import (
 
 	"sigmaos/fsetcd"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 )
 
@@ -16,10 +16,10 @@ type Election struct {
 	sess *fsetcd.Session
 	pn   string
 	*concurrency.Election
-	scfg *config.ProcEnv
+	scfg *proc.ProcEnv
 }
 
-func MkElection(scfg *config.ProcEnv, s *fsetcd.Session, pn string) (*Election, error) {
+func MkElection(scfg *proc.ProcEnv, s *fsetcd.Session, pn string) (*Election, error) {
 	el := &Election{sess: s, pn: pn, scfg: scfg}
 	return el, nil
 }

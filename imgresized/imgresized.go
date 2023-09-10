@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"sigmaos/config"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/electclnt"
@@ -92,7 +91,7 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 	}
 	imgd := &ImgSrv{}
 	imgd.job = args[0]
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -13,7 +12,7 @@ import (
 )
 
 func RunKNamed(args []string) error {
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "%v: knamed %v\n", scfg.PID, args)
 	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)

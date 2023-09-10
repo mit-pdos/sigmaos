@@ -4,14 +4,13 @@ import (
 	//	"context"
 
 	//	"go.opentelemetry.io/otel/trace"
-	//	"sigmaos/proc"
 	//	tproto "sigmaos/tracing/proto"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
@@ -27,7 +26,7 @@ type Search struct {
 // Run starts the server
 func RunSearchSrv(n string, public bool) error {
 	s := &Search{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELSEARCH, s, config.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELSEARCH, s, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

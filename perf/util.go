@@ -16,7 +16,6 @@ import (
 	"syscall"
 	"time"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
@@ -96,13 +95,13 @@ type Perf struct {
 	sigc           chan os.Signal
 }
 
-func MakePerf(scfg *config.ProcEnv, s Tselector) (*Perf, error) {
+func MakePerf(scfg *proc.ProcEnv, s Tselector) (*Perf, error) {
 	return MakePerfMulti(scfg, s, "")
 }
 
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
-func MakePerfMulti(scfg *config.ProcEnv, s Tselector, s2 string) (*Perf, error) {
+func MakePerfMulti(scfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 	p := &Perf{}
 	p.selector = s
 	p.utilChan = make(chan bool, 1)
@@ -114,7 +113,7 @@ func MakePerfMulti(scfg *config.ProcEnv, s Tselector, s2 string) (*Perf, error) 
 		os.Exit(143)
 	}()
 	// Make sure the PID is set (used to name the output files).
-	if scfg.PID == config.NOT_SET {
+	if scfg.PID == proc.NOT_SET {
 		db.DFatalf("Must set PID before starting Perf")
 	}
 	// Make the output dir

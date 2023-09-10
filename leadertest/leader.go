@@ -5,7 +5,6 @@ import (
 	"path"
 	"time"
 
-	"sigmaos/config"
 	db "sigmaos/debug"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
@@ -23,7 +22,7 @@ const (
 )
 
 func RunLeader(dir, last, child string) {
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("SigmaClnt %v failed %v\n", LEADERFN, err)
 	}

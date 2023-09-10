@@ -3,7 +3,7 @@ package boot
 import (
 	"os"
 
-	"sigmaos/config"
+	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv"
@@ -14,7 +14,7 @@ type Boot struct {
 }
 
 // The boot processes enters here
-func BootUp(param *kernel.Param, scfg *config.ProcEnv) error {
+func BootUp(param *kernel.Param, scfg *proc.ProcEnv) error {
 	db.DPrintf(db.KERNEL, "Boot param %v ProcEnv %v env %v", param, scfg, os.Environ())
 	k, err := kernel.MakeKernel(param, scfg)
 	if err != nil {

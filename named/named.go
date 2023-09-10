@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/config"
 	"sigmaos/container"
 	"sigmaos/crash"
 	db "sigmaos/debug"
@@ -34,7 +33,7 @@ type Named struct {
 }
 
 func Run(args []string) error {
-	scfg := config.GetProcEnv()
+	scfg := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, scfg)
 	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)

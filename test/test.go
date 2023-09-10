@@ -116,7 +116,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		ip, err := bootkernelclnt.Start(kernelid, scfg, srvs, Overlays)
+		_, err := bootkernelclnt.Start(kernelid, scfg, srvs, Overlays)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err

@@ -32,7 +32,7 @@ func main() {
 	id := os.Args[4]
 	var sc *sigmaclnt.SigmaClnt
 	if isSigmaProc {
-		sc, err = sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+		sc, err = sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 		if err != nil {
 			db.DFatalf("Error mkSigmaClnt: %v", err)
 		}

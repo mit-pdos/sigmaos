@@ -24,7 +24,7 @@ func RunDbd(dbdaddr string) error {
 	if err != nil {
 		return err
 	}
-	ssrv, err := sigmasrv.MakeSigmaSrv(sp.DB, s, config.GetSigmaConfig())
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.DB, s, config.GetProcEnv())
 	if err != nil {
 		return err
 	}

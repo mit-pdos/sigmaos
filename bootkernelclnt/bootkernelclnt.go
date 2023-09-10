@@ -20,7 +20,7 @@ const (
 	START = "../start-kernel.sh"
 )
 
-func Start(kernelId string, scfg *config.SigmaConfig, srvs string, overlays bool) (string, error) {
+func Start(kernelId string, scfg *config.ProcEnv, srvs string, overlays bool) (string, error) {
 	args := []string{
 		"--pull", scfg.BuildTag,
 		"--boot", srvs,
@@ -51,7 +51,7 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func MkKernelClntStart(scfg *config.SigmaConfig, conf string, overlays bool) (*Kernel, error) {
+func MkKernelClntStart(scfg *config.ProcEnv, conf string, overlays bool) (*Kernel, error) {
 	kernelId := GenKernelId()
 	ip, err := Start(kernelId, scfg, conf, overlays)
 	if err != nil {
@@ -61,7 +61,7 @@ func MkKernelClntStart(scfg *config.SigmaConfig, conf string, overlays bool) (*K
 	return MkKernelClnt(kernelId, scfg)
 }
 
-func MkKernelClnt(kernelId string, scfg *config.SigmaConfig) (*Kernel, error) {
+func MkKernelClnt(kernelId string, scfg *config.ProcEnv) (*Kernel, error) {
 	db.DPrintf(db.SYSTEM, "MakeKernelClnt %s\n", kernelId)
 	sc, err := sigmaclnt.MkSigmaClntRootInit(scfg)
 	if err != nil {
@@ -89,7 +89,7 @@ func MkKernelClnt(kernelId string, scfg *config.SigmaConfig) (*Kernel, error) {
 	return &Kernel{sc, kernelId, kclnt}, nil
 }
 
-func (k *Kernel) NewSigmaClnt(scfg *config.SigmaConfig) (*sigmaclnt.SigmaClnt, error) {
+func (k *Kernel) NewSigmaClnt(scfg *config.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 	return sigmaclnt.MkSigmaClntRootInit(scfg)
 }
 

@@ -43,7 +43,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: error %v\n", err)
 	}

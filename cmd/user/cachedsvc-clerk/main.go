@@ -48,7 +48,7 @@ func main() {
 		db.DFatalf("Bad offset %v", err)
 	}
 	sempath = os.Args[5]
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}
@@ -69,7 +69,7 @@ func main() {
 	}
 
 	// Record performance.
-	p, err := perf.MakePerf(sc.SigmaConfig(), perf.CACHECLERK)
+	p, err := perf.MakePerf(sc.ProcEnv(), perf.CACHECLERK)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -80,7 +80,7 @@ func main() {
 }
 
 func waitEvict(csc *cachedsvcclnt.CachedSvcClnt, pclnt *procclnt.ProcClnt) {
-	err := pclnt.WaitEvict(pclnt.SigmaConfig().PID)
+	err := pclnt.WaitEvict(pclnt.ProcEnv().PID)
 	if err != nil {
 		db.DPrintf(db.CACHECLERK, "Error WaitEvict: %v", err)
 	}
@@ -125,7 +125,7 @@ func test(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis
 		key := cacheclnt.MkKey(i + keyOffset)
 		// If running against redis.
 		if rcli != nil {
-			if err := rcli.Set(ctx, key, sc.SigmaConfig().PID.String(), 0).Err(); err != nil {
+			if err := rcli.Set(ctx, key, sc.ProcEnv().PID.String(), 0).Err(); err != nil {
 				db.DFatalf("Error redis cli set: %v", err)
 			}
 			// Record op for throughput calculation.
@@ -138,8 +138,8 @@ func test(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis
 			p.TptTick(1.0)
 			*nops++
 		} else {
-			if err := csc.Put(key, &proto.CacheString{Val: sc.SigmaConfig().PID.String()}); err != nil {
-				return fmt.Errorf("%v: Put %v err %v", sc.SigmaConfig().PID, key, err)
+			if err := csc.Put(key, &proto.CacheString{Val: sc.ProcEnv().PID.String()}); err != nil {
+				return fmt.Errorf("%v: Put %v err %v", sc.ProcEnv().PID, key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)

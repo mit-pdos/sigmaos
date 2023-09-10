@@ -19,7 +19,7 @@ func init() {
 }
 
 func TestDump(t *testing.T) {
-	scfg := config.NewTestSigmaConfig(sp.Trealm(realm), etcdIP, "", "")
+	scfg := config.NewTestProcEnv(sp.Trealm(realm), etcdIP, "", "")
 	fs, err := fsetcd.MkFsEtcd(scfg)
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)

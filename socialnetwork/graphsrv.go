@@ -36,7 +36,7 @@ type GraphSrv struct {
 func RunGraphSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Creating graph service\n")
 	gsrv := &GraphSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func RunGraphSrv(public bool, jobname string) error {
 	}
 	gsrv.userc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Starting graph service\n")
-	perf, err := perf.MakePerf(fsls[0].SigmaConfig(), perf.SOCIAL_NETWORK_GRAPH)
+	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}

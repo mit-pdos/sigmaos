@@ -51,7 +51,7 @@ func mkKernel(param *Param) *Kernel {
 	return k
 }
 
-func MakeKernel(p *Param, scfg *config.SigmaConfig) (*Kernel, error) {
+func MakeKernel(p *Param, scfg *config.ProcEnv) (*Kernel, error) {
 	k := mkKernel(p)
 	ip, err := container.LocalIP()
 	if err != nil {
@@ -122,14 +122,14 @@ func startSrvs(k *Kernel) error {
 func (k *Kernel) shutdown() {
 	// start knamed to shutdown kernel with named?
 	if len(k.svcs.svcs[sp.KNAMED]) == 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
-		db.DPrintf(db.KERNEL, "Booting knamed for shutdown %v", k.SigmaConfig().PID)
-		if err := k.bootKNamed(k.SigmaConfig(), false); err != nil {
+		db.DPrintf(db.KERNEL, "Booting knamed for shutdown %v", k.ProcEnv().PID)
+		if err := k.bootKNamed(k.ProcEnv(), false); err != nil {
 			db.DFatalf("shutdown: bootKnamed err %v\n", err)
 		}
-		db.DPrintf(db.KERNEL, "Done booting knamed for shutdown %v", k.SigmaConfig().PID)
+		db.DPrintf(db.KERNEL, "Done booting knamed for shutdown %v", k.ProcEnv().PID)
 	}
 	if len(k.Param.Services) > 0 {
-		db.DPrintf(db.KERNEL, "Get children %v", k.SigmaConfig().PID)
+		db.DPrintf(db.KERNEL, "Get children %v", k.ProcEnv().PID)
 		cpids, err := k.GetChildren()
 		if err != nil {
 			db.DPrintf(db.KERNEL, "Error get children: %v", err)
@@ -144,7 +144,7 @@ func (k *Kernel) shutdown() {
 					db.DPrintf(db.ALWAYS, "shutdown error pid %v: %v %v", pid, status, err)
 				}
 			}
-			db.DPrintf(db.KERNEL, "RemoveChild %v %v", pid, k.SigmaConfig().ProcDir)
+			db.DPrintf(db.KERNEL, "RemoveChild %v %v", pid, k.ProcEnv().ProcDir)
 			if err := k.RemoveChild(pid); err != nil {
 				db.DPrintf(db.KERNEL, "Done evicting; rm %v err %v", pid, err)
 			} else {
@@ -161,8 +161,8 @@ func (k *Kernel) shutdown() {
 			}
 		}
 	}
-	if err := k.RmDir(k.SigmaConfig().ProcDir); err != nil {
-		db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", k.SigmaConfig().ProcDir, err)
+	if err := k.RmDir(k.ProcEnv().ProcDir); err != nil {
+		db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", k.ProcEnv().ProcDir, err)
 	}
 	db.DPrintf(db.KERNEL, "Shutdown nameds %d\n", len(k.svcs.svcs[sp.KNAMED]))
 	for _, ss := range k.svcs.svcs[sp.KNAMED] {
@@ -184,7 +184,7 @@ func makeKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 }
 
 // Run knamed (but not as a proc)
-func runKNamed(scfg *config.SigmaConfig, p *proc.Proc, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
+func runKNamed(scfg *config.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
 	r1, w1, err := os.Pipe()
 	if err != nil {
 		return nil, err

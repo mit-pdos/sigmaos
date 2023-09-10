@@ -33,7 +33,7 @@ type MatrixMult struct {
 }
 
 func MakeMatrixMult(args []string) (*MatrixMult, error) {
-	scfg := config.GetSigmaConfig()
+	scfg := config.GetProcEnv()
 	db.DPrintf(db.MATMUL, "MakeMatrixMul: %v %v", scfg.PID, args)
 	m := &MatrixMult{}
 	sc, err := sigmaclnt.NewSigmaClnt(scfg)
@@ -72,9 +72,9 @@ func (m *MatrixMult) Work() {
 		db.DFatalf("Started: error %v\n", err)
 	}
 	start := time.Now()
-	db.DPrintf(db.MATMUL, "doMM %v", m.SigmaConfig().PID)
+	db.DPrintf(db.MATMUL, "doMM %v", m.ProcEnv().PID)
 	m.doMM()
-	db.DPrintf(db.MATMUL, "doMM done %v: %v", m.SigmaConfig().PID, time.Since(start))
+	db.DPrintf(db.MATMUL, "doMM done %v: %v", m.ProcEnv().PID, time.Since(start))
 	m.ClntExit(proc.MakeStatusInfo(proc.StatusOK, "Latency (us)", time.Since(start).Microseconds()))
-	db.DPrintf(db.MATMUL, "Exited %v", m.SigmaConfig().PID)
+	db.DPrintf(db.MATMUL, "Exited %v", m.ProcEnv().PID)
 }

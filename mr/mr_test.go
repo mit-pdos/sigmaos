@@ -72,7 +72,7 @@ func TestMakeWordCount(t *testing.T) {
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
 	data := make(seqwc.Tdata, 0)
-	p, err := perf.MakePerf(config.NewTestSigmaConfig("", "", "", ""), perf.SEQWC)
+	p, err := perf.MakePerf(config.NewTestProcEnv("", "", "", ""), perf.SEQWC)
 	assert.Nil(t, err)
 	sbc := mr.MakeScanByteCounter(p)
 	for scanner.Scan() {
@@ -120,7 +120,7 @@ func TestMapper(t *testing.T) {
 	)
 
 	ts := test.MakeTstateAll(t)
-	p, err := perf.MakePerf(config.NewTestSigmaConfig("", "", "", ""), perf.MRMAPPER)
+	p, err := perf.MakePerf(config.NewTestProcEnv("", "", "", ""), perf.MRMAPPER)
 	assert.Nil(t, err)
 
 	ts.Remove(REDUCEIN)

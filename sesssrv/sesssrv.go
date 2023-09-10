@@ -35,7 +35,7 @@ import (
 //
 
 type SessSrv struct {
-	scfg     *config.SigmaConfig
+	scfg     *config.ProcEnv
 	addr     string
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
@@ -54,7 +54,7 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func MakeSessSrv(scfg *config.SigmaConfig, root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func MakeSessSrv(scfg *config.ProcEnv, root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.scfg = scfg
 	ssrv.dirover = overlay.NewDirOverlay(root)

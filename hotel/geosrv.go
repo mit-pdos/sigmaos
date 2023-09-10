@@ -82,12 +82,12 @@ func RunGeoSrv(job string, public bool) error {
 	for i := 0; i < N_INDEX; i++ {
 		geo.indexes = append(geo.indexes, makeSafeIndex("data/geo.json"))
 	}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELGEO, geo, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELGEO, geo, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
 
-	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().SigmaConfig(), perf.HOTEL_GEO)
+	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_GEO)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

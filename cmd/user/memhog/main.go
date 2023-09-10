@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error strconv: %v", err)
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error mkSigmaClnt: %v", err)
 	}

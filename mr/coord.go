@@ -82,7 +82,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	}
 	c := &Coord{}
 	c.job = args[0]
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +360,7 @@ func (c *Coord) Round(ttype string) {
 }
 
 func (c *Coord) Work() {
-	db.DPrintf(db.MR, "Try acquire leadership coord %v job %v", c.SigmaConfig().PID, c.job)
+	db.DPrintf(db.MR, "Try acquire leadership coord %v job %v", c.ProcEnv().PID, c.job)
 	// Try to become the leading coordinator.  If we get
 	// partitioned, we cannot write the todo directories either,
 	// so need to set a fence.

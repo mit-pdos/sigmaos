@@ -25,11 +25,11 @@ type Fss3 struct {
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	ssrv, err := sigmasrv.MakeSigmaSrvNoRPC(sp.S3, scfg.GetSigmaConfig())
+	ssrv, err := sigmasrv.MakeSigmaSrvNoRPC(sp.S3, scfg.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error MakeSigmaSrv: %v", err)
 	}
-	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().SigmaConfig(), perf.S3)
+	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.S3)
 	if err != nil {
 		db.DFatalf("Error MakePerf: %v", err)
 	}

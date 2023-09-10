@@ -154,7 +154,7 @@ func (g *Group) registerInConfig(path string, init bool) (int, *GroupConfig, *re
 	// Get the raft replica id.
 	id := len(clusterCfg.RaftAddrs)
 	// Create the raft config
-	raftCfg := replraft.MakeRaftConfig(g.SigmaConfig(), id, clusterCfg.RaftAddrs, init)
+	raftCfg := replraft.MakeRaftConfig(g.ProcEnv(), id, clusterCfg.RaftAddrs, init)
 	// Get the listener address selected by the raft library.
 	clusterCfg.RaftAddrs[id-1] = raftCfg.ReplAddr()
 	if err := g.writeGroupConfig(path, clusterCfg); err != nil {
@@ -223,7 +223,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	g := &Group{}
 	g.grp = grp
 	g.isBusy = true
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt %v\n", err)
 	}
@@ -281,7 +281,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	db.DPrintf(db.KVGRP, "Starting replica with cluster config %v", clusterCfg)
 
 	var cs any
-	cs = cachesrv.NewCacheSrv(config.GetSigmaConfig(), "")
+	cs = cachesrv.NewCacheSrv(config.GetProcEnv(), "")
 	if raftCfg != nil {
 		cs = replsrv.NewReplSrv(raftCfg, cs)
 	}
@@ -311,7 +311,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 	crash.NetFailer(g.ssrv.SessSrv)
 
 	// Record performance.
-	p, err := perf.MakePerf(g.SigmaConfig(), perf.GROUP)
+	p, err := perf.MakePerf(g.ProcEnv(), perf.GROUP)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -321,7 +321,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 
 	<-ch
 
-	db.DPrintf(db.KVGRP, "%v: group done\n", g.SigmaConfig().PID)
+	db.DPrintf(db.KVGRP, "%v: group done\n", g.ProcEnv().PID)
 
 	g.ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
 }
@@ -329,13 +329,13 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 // XXX move to procclnt?
 func (g *Group) waitExit(ch chan struct{}) {
 	for {
-		err := g.WaitEvict(g.SigmaConfig().PID)
+		err := g.WaitEvict(g.ProcEnv().PID)
 		if err != nil {
 			db.DPrintf(db.KVGRP, "Error WaitEvict: %v", err)
 			time.Sleep(time.Second)
 			continue
 		}
-		db.DPrintf(db.KVGRP, "candidate %v %v evicted\n", g, g.SigmaConfig().PID.String())
+		db.DPrintf(db.KVGRP, "candidate %v %v evicted\n", g, g.ProcEnv().PID.String())
 		ch <- struct{}{}
 	}
 }

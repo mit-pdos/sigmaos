@@ -23,7 +23,7 @@ const (
 )
 
 func RunLeader(dir, last, child string) {
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		db.DFatalf("SigmaClnt %v failed %v\n", LEADERFN, err)
 	}
@@ -45,7 +45,7 @@ func RunLeader(dir, last, child string) {
 	//
 	// Write dir in new epoch
 	//
-	conf := &Config{l.Fence().Epoch, sc.SigmaConfig().PID, sc.SigmaConfig().PID}
+	conf := &Config{l.Fence().Epoch, sc.ProcEnv().PID, sc.ProcEnv().PID}
 	b, err := json.Marshal(*conf)
 	if err != nil {
 		db.DFatalf("marshal %v failed %v\n", fn, err)

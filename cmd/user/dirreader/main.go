@@ -15,7 +15,7 @@ func main() {
 	if len(os.Args) < 2 {
 		db.DFatalf("Usage: %v dir\n", os.Args[0])
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}

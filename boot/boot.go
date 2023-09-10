@@ -14,8 +14,8 @@ type Boot struct {
 }
 
 // The boot processes enters here
-func BootUp(param *kernel.Param, scfg *config.SigmaConfig) error {
-	db.DPrintf(db.KERNEL, "Boot param %v SigmaConfig %v env %v", param, scfg, os.Environ())
+func BootUp(param *kernel.Param, scfg *config.ProcEnv) error {
+	db.DPrintf(db.KERNEL, "Boot param %v ProcEnv %v env %v", param, scfg, os.Environ())
 	k, err := kernel.MakeKernel(param, scfg)
 	if err != nil {
 		return err

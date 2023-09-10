@@ -38,7 +38,7 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	scfg := config.NewBootSigmaConfig(sp.Tuname(param.KernelId), os.Args[2], localIP)
+	scfg := config.NewBootProcEnv(sp.Tuname(param.KernelId), os.Args[2], localIP)
 	proc.SetSigmaDebugPid(scfg.PID.String())
 	if err := boot.BootUp(&param, scfg); err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)

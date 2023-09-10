@@ -39,7 +39,7 @@ type MemFs struct {
 func NewMemFsSrv(pn string, srv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) *MemFs {
 	mfs := &MemFs{
 		SessSrv: srv,
-		ctx:     ctx.MkCtx(sc.SigmaConfig().Uname, 0, sp.NoClntId, nil, fencefs),
+		ctx:     ctx.MkCtx(sc.ProcEnv().Uname, 0, sp.NoClntId, nil, fencefs),
 		plt:     srv.GetPathLockTable(),
 		sc:      sc,
 		pn:      pn,

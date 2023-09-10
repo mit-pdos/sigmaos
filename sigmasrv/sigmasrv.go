@@ -39,7 +39,7 @@ type SigmaSrv struct {
 }
 
 // Make a sigmasrv with an memfs, and publish server at fn.
-func MakeSigmaSrv(fn string, svci any, scfg *config.SigmaConfig) (*SigmaSrv, error) {
+func MakeSigmaSrv(fn string, svci any, scfg *config.ProcEnv) (*SigmaSrv, error) {
 	mfs, error := memfssrv.MakeMemFs(fn, scfg)
 	if error != nil {
 		db.DFatalf("MakeSigmaSrv %v err %v\n", fn, error)
@@ -47,7 +47,7 @@ func MakeSigmaSrv(fn string, svci any, scfg *config.SigmaConfig) (*SigmaSrv, err
 	return MakeSigmaSrvMemFs(mfs, svci)
 }
 
-func MakeSigmaSrvPublic(fn string, svci any, scfg *config.SigmaConfig, public bool) (*SigmaSrv, error) {
+func MakeSigmaSrvPublic(fn string, svci any, scfg *config.ProcEnv, public bool) (*SigmaSrv, error) {
 	db.DPrintf(db.ALWAYS, "MakeSigmaSrvPublic %T\n", svci)
 	if public {
 		mfs, error := memfssrv.MakeMemFsPublic(fn, scfg)
@@ -62,7 +62,7 @@ func MakeSigmaSrvPublic(fn string, svci any, scfg *config.SigmaConfig, public bo
 
 // Make a sigmasrv and memfs and publish srv at fn. Note: no lease
 // server.
-func MakeSigmaSrvNoRPC(fn string, scfg *config.SigmaConfig) (*SigmaSrv, error) {
+func MakeSigmaSrvNoRPC(fn string, scfg *config.ProcEnv) (*SigmaSrv, error) {
 	mfs, err := memfssrv.MakeMemFs(fn, scfg)
 	if err != nil {
 		db.DFatalf("MakeSigmaSrv %v err %v\n", fn, err)
@@ -70,7 +70,7 @@ func MakeSigmaSrvNoRPC(fn string, scfg *config.SigmaConfig) (*SigmaSrv, error) {
 	return newSigmaSrv(mfs), nil
 }
 
-func MakeSigmaSrvPort(fn, port string, scfg *config.SigmaConfig, svci any) (*SigmaSrv, error) {
+func MakeSigmaSrvPort(fn, port string, scfg *config.ProcEnv, svci any) (*SigmaSrv, error) {
 	mfs, error := memfssrv.MakeMemFsPort(fn, ":"+port, scfg)
 	if error != nil {
 		db.DFatalf("MakeSigmaSrvPort %v err %v\n", fn, error)
@@ -146,13 +146,13 @@ func MakeSigmaSrvSess(sesssrv *sesssrv.SessSrv, uname sp.Tuname, sc *sigmaclnt.S
 	return newSigmaSrv(mfs)
 }
 
-func MakeSigmaSrvRoot(root fs.Dir, addr, path string, scfg *config.SigmaConfig) (*SigmaSrv, error) {
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+func MakeSigmaSrvRoot(root fs.Dir, addr, path string, scfg *config.ProcEnv) (*SigmaSrv, error) {
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}
 	et := ephemeralmap.NewEphemeralMap()
-	sesssrv := fslibsrv.BootSrv(sc.SigmaConfig(), root, addr, nil, nil, et)
+	sesssrv := fslibsrv.BootSrv(sc.ProcEnv(), root, addr, nil, nil, et)
 	ssrv := newSigmaSrv(memfssrv.NewMemFsSrv("", sesssrv, sc, nil))
 	fslibsrv.Post(sesssrv, sc, path)
 	return ssrv, nil
@@ -200,14 +200,14 @@ func (ssrv *SigmaSrv) MonitorCPU(ufn cpumon.UtilFn) {
 }
 
 func (ssrv *SigmaSrv) RunServer() error {
-	db.DPrintf(db.SIGMASRV, "Run %v", ssrv.MemFs.SigmaClnt().SigmaConfig().Program)
+	db.DPrintf(db.SIGMASRV, "Run %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	ssrv.Serve()
 	ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
 	return nil
 }
 
 func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
-	db.DPrintf(db.SIGMASRV, "SrvExit %v", ssrv.MemFs.SigmaClnt().SigmaConfig().Program)
+	db.DPrintf(db.SIGMASRV, "SrvExit %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.Stop()
 	}
@@ -221,14 +221,14 @@ func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 func (ssrv *SigmaSrv) Serve() {
 	// If this is a kernel proc, register the subsystem info for the realmmgr
 	if proc.GetIsPrivilegedProc() {
-		si := kernel.MakeSubsystemInfo(ssrv.SigmaClnt().SigmaConfig().PID, ssrv.MyAddr())
+		si := kernel.MakeSubsystemInfo(ssrv.SigmaClnt().ProcEnv().PID, ssrv.MyAddr())
 		kernel.RegisterSubsystemInfo(ssrv.MemFs.SigmaClnt().FsLib, si)
 	}
 	if err := ssrv.MemFs.SigmaClnt().Started(); err != nil {
 		debug.PrintStack()
 		db.DPrintf(db.ALWAYS, "Error Started: %v", err)
 	}
-	if err := ssrv.MemFs.SigmaClnt().WaitEvict(ssrv.SigmaClnt().SigmaConfig().PID); err != nil {
+	if err := ssrv.MemFs.SigmaClnt().WaitEvict(ssrv.SigmaClnt().ProcEnv().PID); err != nil {
 		db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
 	}
 }

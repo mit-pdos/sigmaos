@@ -21,11 +21,11 @@ import (
 
 type Npd struct {
 	lip  string
-	scfg *config.SigmaConfig
+	scfg *config.ProcEnv
 	st   *sessstatesrv.SessionTable
 }
 
-func MakeNpd(scfg *config.SigmaConfig, lip string) *Npd {
+func MakeNpd(scfg *config.ProcEnv, lip string) *Npd {
 	npd := &Npd{lip, scfg, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil)
 	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm, nil, nil)
@@ -80,7 +80,7 @@ type NpConn struct {
 	cid   sp.TclntId
 }
 
-func makeNpConn(scfg *config.SigmaConfig, lip string) *NpConn {
+func makeNpConn(scfg *config.ProcEnv, lip string) *NpConn {
 	npc := &NpConn{}
 	npc.clnt = protclnt.MakeClnt(scfg, sp.ROOTREALM.String())
 	npc.fidc = fidclnt.MakeFidClnt(scfg, sp.ROOTREALM.String())

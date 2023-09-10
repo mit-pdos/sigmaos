@@ -110,7 +110,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	scfg := config.NewTestSigmaConfig(sp.ROOTREALM, etcdIP, localIP, tag)
+	scfg := config.NewTestProcEnv(sp.ROOTREALM, etcdIP, localIP, tag)
 	proc.SetSigmaDebugPid(scfg.PID.String())
 	var kernelid string
 	var err error
@@ -143,7 +143,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.MkKernelClntStart(ts.SigmaConfig(), BOOT_NODE, Overlays)
+		kclnt, err := bootkernelclnt.MkKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays)
 		if err != nil {
 			return err
 		}
@@ -166,7 +166,7 @@ func (ts *Tstate) KillOne(s string) error {
 	return ts.kclnts[idx].Kill(s)
 }
 
-func (ts *Tstate) MakeClnt(idx int, scfg *config.SigmaConfig) (*sigmaclnt.SigmaClnt, error) {
+func (ts *Tstate) MakeClnt(idx int, scfg *config.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 	return ts.kclnts[idx].NewSigmaClnt(scfg)
 }
 
@@ -178,8 +178,8 @@ func (ts *Tstate) Shutdown() error {
 		db.DPrintf(db.TEST, "Skipping shutdown")
 	} else {
 		db.DPrintf(db.SYSTEM, "Shutdown")
-		if err := ts.RmDir(ts.SigmaConfig().ProcDir); err != nil {
-			db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", ts.SigmaConfig().ProcDir, err)
+		if err := ts.RmDir(ts.ProcEnv().ProcDir); err != nil {
+			db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", ts.ProcEnv().ProcDir, err)
 		}
 		// Shut down other kernel; the one running named last
 		for i := len(ts.kclnts) - 1; i >= 0; i-- {

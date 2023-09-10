@@ -89,7 +89,7 @@ func (s *Reserve) initDb() error {
 
 func RunReserveSrv(job string, public bool, cache string) error {
 	r := &Reserve{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELRESERVE, r, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELRESERVE, r, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func RunReserveSrv(job string, public bool, cache string) error {
 	if err != nil {
 		return err
 	}
-	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().SigmaConfig(), perf.HOTEL_RESERVE)
+	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_RESERVE)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

@@ -19,7 +19,7 @@ type Srv struct {
 // Run starts the server
 func RunRPCBenchSrv(path string, public bool) error {
 	s := &Srv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(path, s, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(path, s, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

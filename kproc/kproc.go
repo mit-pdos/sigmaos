@@ -12,9 +12,9 @@ import (
 )
 
 // To run kernel procs
-func RunKernelProc(parentCfg *config.SigmaConfig, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
-	childCfg := proc.NewChildSigmaConfig(parentCfg, p)
-	p.SetSigmaConfig(childCfg)
+func RunKernelProc(parentCfg *config.ProcEnv, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
+	childCfg := proc.NewChildProcEnv(parentCfg, p)
+	p.SetProcEnv(childCfg)
 	p.Finalize("")
 	env := p.GetEnv()
 	//	s, err := namedAddr.Taddrs2String()

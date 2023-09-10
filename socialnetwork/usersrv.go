@@ -43,7 +43,7 @@ func RunUserSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Creating user service\n")
 	usrv := &UserSrv{}
 	usrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	usrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Starting user service %v\n", usrv.sid)
-	perf, err := perf.MakePerf(fsls[0].SigmaConfig(), perf.SOCIAL_NETWORK_USER)
+	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_USER)
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}

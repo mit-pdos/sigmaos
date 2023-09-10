@@ -17,7 +17,7 @@ func main() {
 		log.Fatalf("%s: Usage <lip>\n", os.Args[0])
 	}
 	lip := os.Args[1]
-	scfg := config.NewTestSigmaConfig(sp.ROOTREALM, lip, lip, "")
+	scfg := config.NewTestProcEnv(sp.ROOTREALM, lip, lip, "")
 	scfg.Program = "proxy"
 	scfg.Uname = "proxy"
 	proc.SetSigmaDebugPid(scfg.String())

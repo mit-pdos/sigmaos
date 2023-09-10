@@ -82,7 +82,7 @@ type Wwwd struct {
 func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
-	scfg := config.GetSigmaConfig()
+	scfg := config.GetProcEnv()
 	var err error
 	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), scfg)
 	if err != nil {

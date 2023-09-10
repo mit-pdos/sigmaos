@@ -96,13 +96,13 @@ type Perf struct {
 	sigc           chan os.Signal
 }
 
-func MakePerf(scfg *config.SigmaConfig, s Tselector) (*Perf, error) {
+func MakePerf(scfg *config.ProcEnv, s Tselector) (*Perf, error) {
 	return MakePerfMulti(scfg, s, "")
 }
 
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
-func MakePerfMulti(scfg *config.SigmaConfig, s Tselector, s2 string) (*Perf, error) {
+func MakePerfMulti(scfg *config.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 	p := &Perf{}
 	p.selector = s
 	p.utilChan = make(chan bool, 1)

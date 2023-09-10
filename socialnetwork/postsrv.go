@@ -33,7 +33,7 @@ type PostSrv struct {
 func RunPostSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Creating post service\n")
 	psrv := &PostSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func RunPostSrv(public bool, jobname string) error {
 	}
 	psrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting post service\n")
-	perf, err := perf.MakePerf(fsls[0].SigmaConfig(), perf.SOCIAL_NETWORK_POST)
+	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_POST)
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}

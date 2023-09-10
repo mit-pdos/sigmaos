@@ -104,10 +104,10 @@ func (p *Proc) setProcDir(kernelId string) {
 	} else {
 		p.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
 	}
-	if p.SigmaConfig != "" {
-		cfg := p.GetSigmaConfig()
+	if p.ProcEnv != "" {
+		cfg := p.GetProcEnv()
 		cfg.ProcDir = p.ProcDir
-		p.SetSigmaConfig(cfg)
+		p.SetProcEnv(cfg)
 	}
 }
 
@@ -166,14 +166,14 @@ func (p *Proc) String() string {
 
 // ========== Getters and Setters ==========
 
-func (p *Proc) SetSigmaConfig(scfg *config.SigmaConfig) {
-	p.SigmaConfig = scfg.Marshal()
+func (p *Proc) SetProcEnv(scfg *config.ProcEnv) {
+	p.ProcEnv = scfg.Marshal()
 	// TODO: don't append every time.
 	p.AppendEnv(config.SIGMACONFIG, scfg.Marshal())
 }
 
-func (p *Proc) GetSigmaConfig() *config.SigmaConfig {
-	return config.Unmarshal(p.SigmaConfig)
+func (p *Proc) GetProcEnv() *config.ProcEnv {
+	return config.Unmarshal(p.ProcEnv)
 }
 
 func (p *Proc) GetPid() sp.Tpid {

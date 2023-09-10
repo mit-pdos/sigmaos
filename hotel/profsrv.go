@@ -30,7 +30,7 @@ type ProfSrv struct {
 
 func RunProfSrv(job string, public bool, cache string) error {
 	ps := &ProfSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELPROF, ps, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELPROF, ps, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

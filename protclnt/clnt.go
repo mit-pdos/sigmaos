@@ -25,10 +25,10 @@ type Clnt struct {
 	id    sessp.Tclient
 	seqno sessp.Tseqno
 	sm    *sessclnt.Mgr
-	scfg  *config.SigmaConfig
+	scfg  *config.ProcEnv
 }
 
-func MakeClnt(scfg *config.SigmaConfig, clntnet string) *Clnt {
+func MakeClnt(scfg *config.ProcEnv, clntnet string) *Clnt {
 	clnt := &Clnt{}
 	clnt.seqno = 0
 	clnt.id = clid

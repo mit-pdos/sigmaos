@@ -13,11 +13,11 @@ import (
 )
 
 func main() {
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: error %v\n", err)
 	}
-	p, err := perf.MakePerf(sc.SigmaConfig(), perf.SEQWC)
+	p, err := perf.MakePerf(sc.ProcEnv(), perf.SEQWC)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

@@ -54,7 +54,7 @@ func NewClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 	return newClerk(fsl, job, repl)
 }
 
-func MakeClerk(scfg *config.SigmaConfig, job string, repl bool) (*KvClerk, error) {
+func MakeClerk(scfg *config.ProcEnv, job string, repl bool) (*KvClerk, error) {
 	fsl, err := fslib.MakeFsLib(scfg)
 	if err != nil {
 		return nil, err

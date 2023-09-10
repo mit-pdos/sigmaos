@@ -38,7 +38,7 @@ type UrlSrv struct {
 func RunUrlSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Creating url service\n")
 	urlsrv := &UrlSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_URL, urlsrv, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_URL, urlsrv, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

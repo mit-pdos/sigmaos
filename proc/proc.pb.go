@@ -40,7 +40,7 @@ type ProcProto struct {
 	RealmStr     string                 `protobuf:"bytes,12,opt,name=realmStr,proto3" json:"realmStr,omitempty"`
 	SharedTarget string                 `protobuf:"bytes,13,opt,name=sharedTarget,proto3" json:"sharedTarget,omitempty"`
 	KernelId     string                 `protobuf:"bytes,14,opt,name=kernelId,proto3" json:"kernelId,omitempty"`
-	SigmaConfig  string                 `protobuf:"bytes,15,opt,name=sigmaConfig,proto3" json:"sigmaConfig,omitempty"`
+	ProcEnv  string                 `protobuf:"bytes,15,opt,name=sigmaConfig,proto3" json:"sigmaConfig,omitempty"`
 }
 
 func (x *ProcProto) Reset() {
@@ -173,9 +173,9 @@ func (x *ProcProto) GetKernelId() string {
 	return ""
 }
 
-func (x *ProcProto) GetSigmaConfig() string {
+func (x *ProcProto) GetProcEnv() string {
 	if x != nil {
-		return x.SigmaConfig
+		return x.ProcEnv
 	}
 	return ""
 }

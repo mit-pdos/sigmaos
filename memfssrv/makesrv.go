@@ -15,13 +15,13 @@ import (
 )
 
 // Make an MemFs and advertise it at pn
-func MakeMemFs(pn string, scfg *config.SigmaConfig) (*MemFs, error) {
+func MakeMemFs(pn string, scfg *config.ProcEnv) (*MemFs, error) {
 	return MakeMemFsPort(pn, ":0", scfg)
 }
 
 // Make an MemFs for a specific port and advertise it at pn
-func MakeMemFsPort(pn, port string, scfg *config.SigmaConfig) (*MemFs, error) {
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+func MakeMemFsPort(pn, port string, scfg *config.ProcEnv) (*MemFs, error) {
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}
@@ -48,8 +48,8 @@ func MakeMemFsPortClntFence(pn, port string, sc *sigmaclnt.SigmaClnt, fencefs fs
 }
 
 // Allocate server with public port and advertise it
-func MakeMemFsPublic(pn string, scfg *config.SigmaConfig) (*MemFs, error) {
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+func MakeMemFsPublic(pn string, scfg *config.ProcEnv) (*MemFs, error) {
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}

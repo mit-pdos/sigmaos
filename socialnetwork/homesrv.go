@@ -34,7 +34,7 @@ type HomeSrv struct {
 func RunHomeSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Creating home service\n")
 	hsrv := &HomeSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_HOME, hsrv, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_HOME, hsrv, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func RunHomeSrv(public bool, jobname string) error {
 	}
 	hsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Starting home service\n")
-	perf, err := perf.MakePerf(fsls[0].SigmaConfig(), perf.SOCIAL_NETWORK_HOME)
+	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_HOME)
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}

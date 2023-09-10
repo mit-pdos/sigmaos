@@ -52,9 +52,9 @@ func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 }
 
 func (lmgr *LeaseClnt) EndLeases() error {
-	db.DPrintf(db.LEASECLNT, "%v: EndLeases\n", lmgr.SigmaConfig())
+	db.DPrintf(db.LEASECLNT, "%v: EndLeases\n", lmgr.ProcEnv())
 	for _, li := range lmgr.lm.Values() {
-		db.DPrintf(db.LEASECLNT, "%v: EndLeases %v\n", lmgr.SigmaConfig(), li)
+		db.DPrintf(db.LEASECLNT, "%v: EndLeases %v\n", lmgr.ProcEnv(), li)
 		li.End()
 	}
 	return nil

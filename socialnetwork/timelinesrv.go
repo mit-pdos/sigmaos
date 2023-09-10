@@ -35,7 +35,7 @@ type TimelineSrv struct {
 func RunTimelineSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Creating timeline service\n")
 	tlsrv := &TimelineSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TIMELINE, tlsrv, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TIMELINE, tlsrv, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func RunTimelineSrv(public bool, jobname string) error {
 	}
 	tlsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Starting timeline service\n")
-	perf, err := perf.MakePerf(fsls[0].SigmaConfig(), perf.SOCIAL_NETWORK_TIMELINE)
+	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		dbg.DFatalf("MakePerf err %v\n", err)
 	}

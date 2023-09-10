@@ -23,7 +23,7 @@ func init() {
 }
 
 func TestLease(t *testing.T) {
-	scfg := config.NewTestSigmaConfig(sp.ROOTREALM, etcdIP, "", "")
+	scfg := config.NewTestProcEnv(sp.ROOTREALM, etcdIP, "", "")
 	ec, err := fsetcd.MkFsEtcd(scfg)
 	assert.Nil(t, err)
 	l := clientv3.NewLease(ec.Client)

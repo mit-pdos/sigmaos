@@ -45,7 +45,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	}
 	s := &Sleeper{}
 	s.Time = time.Now()
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClient: %v", err)
 	}
@@ -73,7 +73,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 
 func (s *Sleeper) waitEvict(ch chan *proc.Status) {
 	if !s.native {
-		err := s.WaitEvict(s.SigmaConfig().PID)
+		err := s.WaitEvict(s.ProcEnv().PID)
 		if err != nil {
 			db.DFatalf("Error WaitEvict: %v", err)
 		}
@@ -84,7 +84,7 @@ func (s *Sleeper) waitEvict(ch chan *proc.Status) {
 func (s *Sleeper) sleep(ch chan *proc.Status) {
 	time.Sleep(s.sleepLength)
 	if s.outdir != "" {
-		fpath := path.Join(s.outdir, s.SigmaConfig().PID.String()+"_out")
+		fpath := path.Join(s.outdir, s.ProcEnv().PID.String()+"_out")
 		_, err := s.PutFile(fpath, 0777, sp.OWRITE, []byte("hello"))
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error: Makefile %v in Sleeper.Work: %v\n", fpath, err)

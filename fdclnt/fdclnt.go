@@ -32,12 +32,12 @@ import (
 //
 
 type FdClient struct {
-	scfg *config.SigmaConfig
+	scfg *config.ProcEnv
 	*pathclnt.PathClnt
 	fds *FdTable
 }
 
-func MakeFdClient(scfg *config.SigmaConfig, fsc *fidclnt.FidClnt, sz sessp.Tsize) *FdClient {
+func MakeFdClient(scfg *config.ProcEnv, fsc *fidclnt.FidClnt, sz sessp.Tsize) *FdClient {
 	fdc := &FdClient{scfg: scfg}
 	fdc.PathClnt = pathclnt.MakePathClnt(scfg, fsc, sz)
 	fdc.fds = mkFdTable()

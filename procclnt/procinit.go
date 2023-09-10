@@ -12,17 +12,17 @@ import (
 // Called by a sigmaOS process after being spawned
 func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	// Mount procdir
-	fsl.MakeRootMount(fsl.Uname(), fsl.SigmaConfig().ProcDir, proc.PROCDIR)
+	fsl.MakeRootMount(fsl.Uname(), fsl.ProcEnv().ProcDir, proc.PROCDIR)
 
 	// Mount parentdir. May fail if parent already exited.
-	fsl.MakeRootMount(fsl.Uname(), fsl.SigmaConfig().ParentDir, proc.PARENTDIR)
+	fsl.MakeRootMount(fsl.Uname(), fsl.ProcEnv().ParentDir, proc.PARENTDIR)
 
 	if err := fsl.MakeRootMount(fsl.Uname(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
 
-	return makeProcClnt(fsl, fsl.SigmaConfig().PID, proc.PROCDIR)
+	return makeProcClnt(fsl, fsl.ProcEnv().PID, proc.PROCDIR)
 }
 
 // Fake an initial process for, for example, tests.
@@ -36,10 +36,10 @@ func MakeProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
 
-	clnt := makeProcClnt(fsl, pid, fsl.SigmaConfig().ProcDir)
-	clnt.MakeProcDir(pid, fsl.SigmaConfig().ProcDir, false)
+	clnt := makeProcClnt(fsl, pid, fsl.ProcEnv().ProcDir)
+	clnt.MakeProcDir(pid, fsl.ProcEnv().ProcDir, false)
 
-	fsl.MakeRootMount(fsl.Uname(), fsl.SigmaConfig().ProcDir, proc.PROCDIR)
+	fsl.MakeRootMount(fsl.Uname(), fsl.ProcEnv().ProcDir, proc.PROCDIR)
 	return clnt
 }
 

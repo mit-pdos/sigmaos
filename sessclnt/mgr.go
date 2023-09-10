@@ -13,13 +13,13 @@ import (
 
 type Mgr struct {
 	mu       sync.Mutex
-	scfg     *config.SigmaConfig
+	scfg     *config.ProcEnv
 	cli      sessp.Tclient
 	sessions map[string]*SessClnt
 	clntnet  string
 }
 
-func MakeMgr(scfg *config.SigmaConfig, cli sessp.Tclient, clntnet string) *Mgr {
+func MakeMgr(scfg *config.ProcEnv, cli sessp.Tclient, clntnet string) *Mgr {
 	sc := &Mgr{}
 	sc.scfg = scfg
 	sc.cli = cli

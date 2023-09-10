@@ -18,12 +18,12 @@ import (
 
 type FidClnt struct {
 	fids *FidMap
-	scfg *config.SigmaConfig
+	scfg *config.ProcEnv
 	pc   *protclnt.Clnt
 	ft   *FenceTable
 }
 
-func MakeFidClnt(scfg *config.SigmaConfig, clntnet string) *FidClnt {
+func MakeFidClnt(scfg *config.ProcEnv, clntnet string) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = mkFidMap()
 	fidc.pc = protclnt.MakeClnt(scfg, clntnet)

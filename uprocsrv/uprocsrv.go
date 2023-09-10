@@ -20,7 +20,7 @@ import (
 type UprocSrv struct {
 	mu       sync.Mutex
 	ch       chan struct{}
-	scfg     *config.SigmaConfig
+	scfg     *config.ProcEnv
 	ssrv     *sigmasrv.SigmaSrv
 	kc       *kernelclnt.KernelClnt
 	kernelId string
@@ -28,7 +28,7 @@ type UprocSrv struct {
 }
 
 func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
-	scfg := config.GetSigmaConfig()
+	scfg := config.GetProcEnv()
 	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), scfg: scfg}
 
 	ip, _ := container.LocalIP()

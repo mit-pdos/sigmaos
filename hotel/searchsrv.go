@@ -27,7 +27,7 @@ type Search struct {
 // Run starts the server
 func RunSearchSrv(n string, public bool) error {
 	s := &Search{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELSEARCH, s, config.GetSigmaConfig(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELSEARCH, s, config.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func RunSearchSrv(n string, public bool) error {
 	}
 	s.geoc = rpcc
 
-	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().SigmaConfig(), perf.HOTEL_SEARCH)
+	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_SEARCH)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

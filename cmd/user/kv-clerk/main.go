@@ -48,7 +48,7 @@ func main() {
 		}
 		sempath = os.Args[5]
 	}
-	sc, err := sigmaclnt.NewSigmaClnt(config.GetSigmaConfig())
+	sc, err := sigmaclnt.NewSigmaClnt(config.GetProcEnv())
 	if err != nil {
 		db.DFatalf("MkSigmaClnt err %v", err)
 	}
@@ -73,7 +73,7 @@ func main() {
 	}
 
 	// Record performance.
-	p, err := perf.MakePerf(sc.SigmaConfig(), perf.KVCLERK)
+	p, err := perf.MakePerf(sc.ProcEnv(), perf.KVCLERK)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -84,7 +84,7 @@ func main() {
 }
 
 func waitEvict(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk) {
-	err := sc.WaitEvict(sc.SigmaConfig().PID)
+	err := sc.WaitEvict(sc.ProcEnv().PID)
 	if err != nil {
 		db.DPrintf(db.KVCLERK, "Error WaitEvict: %v", err)
 	}
@@ -142,20 +142,20 @@ func check(kc *kv.KvClerk, key cache.Tkey, ntest uint64, p *perf.Perf) error {
 	for _, v := range vals {
 		val := v.(*proto.KVTestVal)
 		p.TptTick(1.0)
-		if val.Pid != kc.SigmaConfig().PID.String() {
+		if val.Pid != kc.ProcEnv().PID.String() {
 			return nil
 		}
 		if val.Key != string(key) {
-			return fmt.Errorf("%v: wrong key expected %v observed %v", kc.SigmaConfig().PID, key, val.Key)
+			return fmt.Errorf("%v: wrong key expected %v observed %v", kc.ProcEnv().PID, key, val.Key)
 		}
 		if val.N != n {
-			return fmt.Errorf("%v: wrong N expected %v observed %v", kc.SigmaConfig().PID, n, val.N)
+			return fmt.Errorf("%v: wrong N expected %v observed %v", kc.ProcEnv().PID, n, val.N)
 		}
 		n += 1
 		return nil
 	}
 	if n < ntest {
-		return fmt.Errorf("%v: wrong ntest expected %v observed %v", kc.SigmaConfig().PID, ntest, n)
+		return fmt.Errorf("%v: wrong ntest expected %v observed %v", kc.ProcEnv().PID, ntest, n)
 	}
 	return nil
 }
@@ -166,11 +166,11 @@ func check(kc *kv.KvClerk, key cache.Tkey, ntest uint64, p *perf.Perf) error {
 func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, nops *uint64, p *perf.Perf, setget bool) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
 		key := cache.MkKey(i + keyOffset)
-		v := proto.KVTestVal{Pid: kc.SigmaConfig().PID.String(), Key: string(key), N: ntest}
+		v := proto.KVTestVal{Pid: kc.ProcEnv().PID.String(), Key: string(key), N: ntest}
 		if setget {
 			// If running against redis.
 			if rcli != nil {
-				if err := rcli.Set(ctx, key, kc.SigmaConfig().PID.String(), 0).Err(); err != nil {
+				if err := rcli.Set(ctx, key, kc.ProcEnv().PID.String(), 0).Err(); err != nil {
 					db.DFatalf("Error redis cli set: %v", err)
 				}
 				// Record op for throughput calculation.
@@ -184,14 +184,14 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 				*nops++
 			} else {
 				// If doing sets & gets (bounded clerk)
-				if err := kc.Put(key, &cproto.CacheString{Val: kc.SigmaConfig().PID.String()}); err != nil {
-					return fmt.Errorf("%v: Put %v err %v", kc.SigmaConfig().PID, key, err)
+				if err := kc.Put(key, &cproto.CacheString{Val: kc.ProcEnv().PID.String()}); err != nil {
+					return fmt.Errorf("%v: Put %v err %v", kc.ProcEnv().PID, key, err)
 				}
 				// Record op for throughput calculation.
 				p.TptTick(1.0)
 				*nops++
 				if err := kc.Get(key, &cproto.CacheString{}); err != nil {
-					return fmt.Errorf("%v: Get %v err %v", kc.SigmaConfig().PID, key, err)
+					return fmt.Errorf("%v: Get %v err %v", kc.ProcEnv().PID, key, err)
 				}
 				// Record op for throughput calculation.
 				p.TptTick(1.0)
@@ -200,7 +200,7 @@ func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, no
 		} else {
 			// If doing appends (unbounded clerk)
 			if err := kc.Append(cache.Tkey(key), &v); err != nil {
-				return fmt.Errorf("%v: Append %v err %v", kc.SigmaConfig().PID, key, err)
+				return fmt.Errorf("%v: Append %v err %v", kc.ProcEnv().PID, key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)

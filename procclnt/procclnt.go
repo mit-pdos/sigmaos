@@ -68,7 +68,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how Thow, kernelId string) (
 	if how == HLINUX {
 		// If this proc wasn't intended to be spawned through procd, run it
 		// as a local Linux process
-		return kproc.RunKernelProc(clnt.SigmaConfig(), p, clnt.Realm(), nil)
+		return kproc.RunKernelProc(clnt.ProcEnv(), p, clnt.Realm(), nil)
 	}
 	return nil, nil
 }
@@ -108,8 +108,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		return fmt.Errorf("Spawn non-LC proc with Mcpu set %v", p)
 	}
 
-	childCfg := proc.NewChildSigmaConfig(clnt.SigmaConfig(), p)
-	p.SetSigmaConfig(childCfg)
+	childCfg := proc.NewChildProcEnv(clnt.ProcEnv(), p)
+	p.SetProcEnv(childCfg)
 
 	// Set the realm id.
 	if p.RealmStr == "" {
@@ -296,7 +296,7 @@ func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
 
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
-	procdir := clnt.SigmaConfig().ProcDir
+	procdir := clnt.ProcEnv().ProcDir
 	db.DPrintf(db.PROCCLNT, "WaitEvict %v procdir %v", pid, procdir)
 	defer db.DPrintf(db.PROCCLNT, "WaitEvict done %v", pid)
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
@@ -313,7 +313,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
 	db.DPrintf(db.PROCCLNT, "Started %v", clnt.pid)
-	db.DPrintf(db.SPAWN_LAT, "[%v] Proc started %v", clnt.SigmaConfig().PID, time.Now())
+	db.DPrintf(db.SPAWN_LAT, "[%v] Proc started %v", clnt.ProcEnv().PID, time.Now())
 
 	// Link self into parent dir
 	if err := clnt.linkSelfIntoParentDir(); err != nil {
@@ -322,7 +322,7 @@ func (clnt *ProcClnt) Started() error {
 	}
 
 	// Mark self as started
-	semPath := path.Join( /*proc.PARENTDIR*/ clnt.SigmaConfig().ParentDir, proc.START_SEM)
+	semPath := path.Join( /*proc.PARENTDIR*/ clnt.ProcEnv().ParentDir, proc.START_SEM)
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, semPath)
 	err := semStart.Up()
 	if err != nil {
@@ -384,9 +384,9 @@ func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid sp.Tpid, sta
 }
 
 func (clnt *ProcClnt) Exited(status *proc.Status) {
-	err := clnt.exited(clnt.FsLib, clnt.procdir /*proc.PARENTDIR*/, clnt.SigmaConfig().ParentDir, clnt.SigmaConfig().PID, status)
+	err := clnt.exited(clnt.FsLib, clnt.procdir /*proc.PARENTDIR*/, clnt.ProcEnv().ParentDir, clnt.ProcEnv().PID, status)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "exited %v err %v", clnt.SigmaConfig().PID, err)
+		db.DPrintf(db.ALWAYS, "exited %v err %v", clnt.ProcEnv().PID, err)
 	}
 }
 

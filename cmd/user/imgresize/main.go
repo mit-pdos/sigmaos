@@ -31,7 +31,7 @@ func main() {
 		db.DFatalf("Error %v", err)
 	}
 
-	p, err := perf.MakePerf(t.SigmaConfig(), perf.THUMBNAIL)
+	p, err := perf.MakePerf(t.ProcEnv(), perf.THUMBNAIL)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
@@ -64,7 +64,7 @@ func MakeTrans(args []string) (*Trans, error) {
 	if len(args) != 3 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
-	scfg := config.GetSigmaConfig()
+	scfg := config.GetProcEnv()
 	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", scfg.PID, args)
 	t := &Trans{}
 	sc, err := sigmaclnt.NewSigmaClnt(scfg)

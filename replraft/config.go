@@ -15,10 +15,10 @@ type RaftConfig struct {
 	peerAddrs []string
 	l         net.Listener
 	init      bool // Is this node part of the initial cluster? Or is it being added to an existing cluster?
-	scfg      *config.SigmaConfig
+	scfg      *config.ProcEnv
 }
 
-func MakeRaftConfig(scfg *config.SigmaConfig, id int, peerAddrs []string, init bool) *RaftConfig {
+func MakeRaftConfig(scfg *config.ProcEnv, id int, peerAddrs []string, init bool) *RaftConfig {
 	rc := &RaftConfig{}
 	rc.id = id
 	rc.init = init

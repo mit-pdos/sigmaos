@@ -171,7 +171,7 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 }
 
 func RunSchedd(kernelId string) error {
-	scfg := config.GetSigmaConfig()
+	scfg := config.GetProcEnv()
 	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), scfg)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)

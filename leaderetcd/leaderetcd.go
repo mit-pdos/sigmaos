@@ -16,10 +16,10 @@ type Election struct {
 	sess *fsetcd.Session
 	pn   string
 	*concurrency.Election
-	scfg *config.SigmaConfig
+	scfg *config.ProcEnv
 }
 
-func MkElection(scfg *config.SigmaConfig, s *fsetcd.Session, pn string) (*Election, error) {
+func MkElection(scfg *config.ProcEnv, s *fsetcd.Session, pn string) (*Election, error) {
 	el := &Election{sess: s, pn: pn, scfg: scfg}
 	return el, nil
 }

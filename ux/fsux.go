@@ -34,7 +34,7 @@ func RunFsUx(rootux string) {
 	if sr != nil {
 		db.DFatalf("makeDir %v\n", sr)
 	}
-	scfg := config.GetSigmaConfig()
+	scfg := config.GetProcEnv()
 	srv, err := sigmasrv.MakeSigmaSrvRoot(root, ip+":0", sp.UX, scfg)
 	if err != nil {
 		db.DFatalf("BootSrvAndPost %v\n", err)

@@ -9,12 +9,12 @@ import (
 )
 
 type FsLib struct {
-	scfg *config.SigmaConfig
+	scfg *config.ProcEnv
 	*fdclnt.FdClient
 }
 
 // Only to be called by procs.
-func MakeFsLib(scfg *config.SigmaConfig) (*FsLib, error) {
+func MakeFsLib(scfg *config.ProcEnv) (*FsLib, error) {
 	db.DPrintf(db.PORT, "MakeFsLib: uname %s lip %s addrs %v\n", scfg.Uname, scfg.LocalIP, scfg.EtcdIP)
 	fl := &FsLib{
 		scfg:     scfg,
@@ -23,7 +23,7 @@ func MakeFsLib(scfg *config.SigmaConfig) (*FsLib, error) {
 	return fl, nil
 }
 
-func (fl *FsLib) SigmaConfig() *config.SigmaConfig {
+func (fl *FsLib) ProcEnv() *config.ProcEnv {
 	return fl.scfg
 }
 

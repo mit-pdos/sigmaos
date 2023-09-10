@@ -63,7 +63,7 @@ func RunCacheSrv(args []string, nshard int) error {
 		return err
 	}
 
-	scfg := config.GetSigmaConfig()
+	scfg := config.GetProcEnv()
 	s := NewCacheSrv(scfg, pn)
 
 	for i := 0; i < nshard; i++ {
@@ -88,7 +88,7 @@ func RunCacheSrv(args []string, nshard int) error {
 	return nil
 }
 
-func NewCacheSrv(scfg *config.SigmaConfig, pn string) *CacheSrv {
+func NewCacheSrv(scfg *config.ProcEnv, pn string) *CacheSrv {
 	cs := &CacheSrv{shards: make(map[cache.Tshard]*shardInfo), lastFence: sp.NullFence()}
 	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
 	p, err := perf.MakePerf(scfg, perf.CACHESRV)

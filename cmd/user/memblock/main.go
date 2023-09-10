@@ -19,7 +19,7 @@ func main() {
 	if len(os.Args) != 2 {
 		db.DFatalf("Usage: %v mem\nArgs: %v", os.Args[0], os.Args)
 	}
-	scfg := config.GetSigmaConfig()
+	scfg := config.GetProcEnv()
 	m, err := humanize.ParseBytes(os.Args[1])
 	if err != nil {
 		db.DFatalf("Error ParseBytes: %v", err)

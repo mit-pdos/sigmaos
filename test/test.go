@@ -25,8 +25,6 @@ const (
 	BOOT_ALL   = "all"
 	BOOT_NAMED = "named"
 	BOOT_NODE  = "node"
-
-	NAMEDPORT = ":1111"
 )
 
 var Start bool

@@ -239,7 +239,7 @@ where IP:PORT is the IP address and port from `ls /mnt/9p/s3`.
 
 You can copy files into s3. For example,
 ```
-cp tutorial/01_local_dev.md /mnt/9p/s3/192.168.0.10\:46043/x
+cp tutorial/01_local_dev.md /mnt/9p/s3/192.168.0.10\:46043/<YOUR_BUCKET_NAME>/x
 ```
 copies this tutorial file into the s3 object `x`.
 

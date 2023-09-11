@@ -86,6 +86,16 @@ and it will produce output like this:
 --- PASS: TestExerciseNamed (0.61s)
 ```
 
+Note: when running tests, it is recommendable to first run `./stop.sh` first,
+to make sure any SigmaOS containers/instances which left haning around are
+cleaned up before the test starts. Otherwise, your tests may hang. One
+short-hand for doing this (which we commonly use during development) is the
+following:
+
+```
+$ ./stop.sh; go test -v sigmaos/example --start --run Named
+```
+
 Now extend `TestExerciseNamed` to implement the exercise.
 `fslib/fslib_test.go` and `fslib/file.go` may provide inspiration.
 (If you are unfamiliar with Golang, checkout [go

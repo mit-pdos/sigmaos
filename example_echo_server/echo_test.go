@@ -2,6 +2,7 @@ package example_echo_server_test
 
 import (
 	"github.com/stretchr/testify/assert"
+	"math"
 	"path"
 	dbg "sigmaos/debug"
 	echo "sigmaos/example_echo_server"
@@ -11,14 +12,13 @@ import (
 	"sigmaos/rpcclnt"
 	"sigmaos/test"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
-	"sync"
-	"math"
 )
 
 const (
-	N = 5
+	N              = 5
 	N_RPC_SESSIONS = 10
 )
 
@@ -88,7 +88,7 @@ func TestEchoTime(t *testing.T) {
 	assert.Nil(t, err, "Test server should start properly")
 
 	// create a RPC client and query server
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	pdc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}
@@ -96,9 +96,9 @@ func TestEchoTime(t *testing.T) {
 	t0 := time.Now()
 	for i := 0; i < N_REQ; i++ {
 		pdc.RPC("Echo.Echo", &arg, &res)
-	} 
+	}
 	totalTime := time.Since(t0).Microseconds()
-	dbg.DPrintf(dbg.ALWAYS, "Total time: %v ms; avg time %v ms", totalTime, totalTime/int64(N_REQ))	
+	dbg.DPrintf(dbg.ALWAYS, "Total time: %v ms; avg time %v ms", totalTime, totalTime/int64(N_REQ))
 
 	// Stop server
 	assert.Nil(t, tse.Stop())
@@ -119,7 +119,7 @@ func TestEchoLoad(t *testing.T) {
 		}
 		fsls = append(fsls, fsl)
 	}
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, echo.NAMED_ECHO_SERVER)
+	pdc, err := rpcclnt.MkRPCCln(fsls, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	var wg sync.WaitGroup
 	for n := 1; n <= N; n++ {

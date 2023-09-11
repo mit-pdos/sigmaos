@@ -121,7 +121,7 @@ func TestEchoLoad(t *testing.T) {
 		}
 		fsls = append(fsls, fsl)
 	}
-	pdc, err := rpcclnt.MkRPCCln(fsls, echo.NAMED_ECHO_SERVER)
+	pdc, err := rpcclnt.MkRPCClnt(fsls, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	var wg sync.WaitGroup
 	for n := 1; n <= N; n++ {

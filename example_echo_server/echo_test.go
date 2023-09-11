@@ -97,7 +97,7 @@ func TestEchoTime(t *testing.T) {
 	N_REQ := 10000
 	t0 := time.Now()
 	for i := 0; i < N_REQ; i++ {
-		pdc.RPC("Echo.Echo", &arg, &res)
+		pdc.RPC("EchoSrv.Echo", &arg, &res)
 	}
 	totalTime := time.Since(t0).Microseconds()
 	dbg.DPrintf(dbg.ALWAYS, "Total time: %v ms; avg time %v ms", totalTime, totalTime/int64(N_REQ))
@@ -135,7 +135,7 @@ func TestEchoLoad(t *testing.T) {
 				arg := echo.EchoRequest{Text: "Hello!"}
 				res := echo.EchoResult{}
 				t1 := time.Now()
-				err = pdc.RPC("Echo.Echo", &arg, &res)
+				err = pdc.RPC("EchoSrv.Echo", &arg, &res)
 				tArr[i] = time.Since(t1).Microseconds()
 				assert.Equal(t, "Hello!", res.Text)
 				assert.Nil(t, err, "RPC call should succeed")

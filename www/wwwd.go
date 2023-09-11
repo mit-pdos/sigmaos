@@ -81,9 +81,9 @@ type Wwwd struct {
 func MakeWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
-	scfg := proc.GetProcEnv()
+	pcfg := proc.GetProcEnv()
 	var err error
-	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), scfg)
+	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), pcfg)
 	if err != nil {
 		db.DFatalf("MakeSrvFsLib %v %v\n", JobDir(job), err)
 	}
@@ -94,13 +94,13 @@ func MakeWwwd(job, tree string) *Wwwd {
 		db.DFatalf("wwwd err mount pids %v", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "pid %v ", scfg.PID)
+	db.DPrintf(db.ALWAYS, "pid %v ", pcfg.GetPID())
 	if _, err := www.ssrv.SigmaClnt().PutFile(path.Join(TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		db.DFatalf("wwwd MakeFile %v", err)
 	}
 
 	www.localSrvpath = path.Join(proc.PROCDIR, WWWD)
-	www.globalSrvpath = path.Join(scfg.ProcDir, WWWD)
+	www.globalSrvpath = path.Join(pcfg.ProcDir, WWWD)
 
 	err = www.ssrv.SigmaClnt().Symlink([]byte(MemFsPath(job)), www.localSrvpath, 0777)
 	if err != nil {

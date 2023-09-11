@@ -33,8 +33,8 @@ type Named struct {
 }
 
 func Run(args []string) error {
-	scfg := proc.GetProcEnv()
-	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, scfg)
+	pcfg := proc.GetProcEnv()
+	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pcfg)
 	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
@@ -46,7 +46,7 @@ func Run(args []string) error {
 	}
 	nd.crash = crashing
 
-	sc, err := sigmaclnt.NewSigmaClnt(scfg)
+	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
 	if err != nil {
 		return err
 	}
@@ -71,10 +71,10 @@ func Run(args []string) error {
 	ch := make(chan struct{})
 	go nd.waitExit(ch)
 
-	db.DPrintf(db.NAMED, "started %v %v %v\n", scfg.PID, nd.realm, proc.GetRealm())
+	db.DPrintf(db.NAMED, "started %v %v %v\n", pcfg.GetPID(), nd.realm, proc.GetRealm())
 
 	if err := nd.startLeader(); err != nil {
-		db.DPrintf(db.NAMED, "%v: startLeader %v err %v\n", scfg.PID, nd.realm, err)
+		db.DPrintf(db.NAMED, "%v: startLeader %v err %v\n", pcfg.GetPID(), nd.realm, err)
 		return err
 	}
 	defer nd.fs.Close()
@@ -120,10 +120,10 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.NAMED, "%v: named done %v %v\n", scfg.PID, nd.realm, mnt)
+	db.DPrintf(db.NAMED, "%v: named done %v %v\n", pcfg.GetPID(), nd.realm, mnt)
 
 	if err := nd.resign(); err != nil {
-		db.DPrintf(db.NAMED, "resign %v err %v\n", scfg.PID, err)
+		db.DPrintf(db.NAMED, "resign %v err %v\n", pcfg.GetPID(), err)
 	}
 
 	nd.SigmaSrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
@@ -143,7 +143,7 @@ func (nd *Named) mkSrv() error {
 		return fmt.Errorf("BootSrv err %v\n", err)
 	}
 
-	ssrv := sigmasrv.MakeSigmaSrvSess(srv, sp.Tuname(nd.ProcEnv().PID.String()), nd.SigmaClnt)
+	ssrv := sigmasrv.MakeSigmaSrvSess(srv, sp.Tuname(nd.ProcEnv().GetPID().String()), nd.SigmaClnt)
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
 		return err
 	}
@@ -183,13 +183,13 @@ func (nd *Named) getRoot(pn string) error {
 
 func (nd *Named) waitExit(ch chan struct{}) {
 	for {
-		err := nd.WaitEvict(nd.ProcEnv().PID)
+		err := nd.WaitEvict(nd.ProcEnv().GetPID())
 		if err != nil {
 			db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
 			time.Sleep(time.Second)
 			continue
 		}
-		db.DPrintf(db.NAMED, "candidate %v %v evicted\n", nd.realm, nd.ProcEnv().PID.String())
+		db.DPrintf(db.NAMED, "candidate %v %v evicted\n", nd.realm, nd.ProcEnv().GetPID().String())
 		ch <- struct{}{}
 	}
 }

@@ -9,22 +9,22 @@ import (
 )
 
 type FsLib struct {
-	scfg *proc.ProcEnv
+	pcfg *proc.ProcEnv
 	*fdclnt.FdClient
 }
 
 // Only to be called by procs.
-func MakeFsLib(scfg *proc.ProcEnv) (*FsLib, error) {
-	db.DPrintf(db.PORT, "MakeFsLib: uname %s lip %s addrs %v\n", scfg.Uname, scfg.LocalIP, scfg.EtcdIP)
+func MakeFsLib(pcfg *proc.ProcEnv) (*FsLib, error) {
+	db.DPrintf(db.PORT, "MakeFsLib: uname %s lip %s addrs %v\n", pcfg.GetUname(), pcfg.LocalIP, pcfg.EtcdIP)
 	fl := &FsLib{
-		scfg:     scfg,
-		FdClient: fdclnt.MakeFdClient(scfg, nil, sessp.Tsize(10_000_000)),
+		pcfg:     pcfg,
+		FdClient: fdclnt.MakeFdClient(pcfg, nil, sessp.Tsize(10_000_000)),
 	}
 	return fl, nil
 }
 
 func (fl *FsLib) ProcEnv() *proc.ProcEnv {
-	return fl.scfg
+	return fl.pcfg
 }
 
 func (fl *FsLib) NamedAddr() sp.Taddrs {

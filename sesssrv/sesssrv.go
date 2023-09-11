@@ -35,7 +35,7 @@ import (
 //
 
 type SessSrv struct {
-	scfg     *proc.ProcEnv
+	pcfg     *proc.ProcEnv
 	addr     string
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
@@ -54,9 +54,9 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func MakeSessSrv(scfg *proc.ProcEnv, root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func MakeSessSrv(pcfg *proc.ProcEnv, root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
-	ssrv.scfg = scfg
+	ssrv.pcfg = pcfg
 	ssrv.dirover = overlay.NewDirOverlay(root)
 	ssrv.dirunder = root
 	ssrv.addr = addr
@@ -74,7 +74,7 @@ func MakeSessSrv(scfg *proc.ProcEnv, root fs.Dir, addr string, mkps sps.MkProtSe
 
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
-	ssrv.srv = netsrv.MakeNetServer(scfg, ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
+	ssrv.srv = netsrv.MakeNetServer(pcfg, ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv

@@ -3,17 +3,20 @@ syntax = "proto3";
 option go_package = "sigmaos/proc";
 import "google/protobuf/timestamp.proto";
 
-//message ProcEnvProto {
-//  string pidStr = 1;
-//  string program = 2;
-//  string realmStr = 3;
-//  string unameStr = 4;
-//  string procDir = 5;
-//  string parentDir = 6;
-//  string etcdIP = 7;
-//  string localIP = 8;
-//  string buildTag = 9;
-//}
+message ProcEnvProto {
+  string pidStr = 1;
+  string program = 2;
+  string realmStr = 3;
+  string unameStr = 4;
+  string procDir = 5;
+  string parentDir = 6;
+  string etcdIP = 7;
+  string localIP = 8;
+  string buildTag = 9;
+  string net = 10;
+  string perf = 11;
+  string debug = 12;
+}
 //	KernelID   string    `json:kernelid,omitempty`
 //	UprocdPID  sp.Tpid   `json:uprocdpid,omitempty`
 //	Net        string    `json:net,omitempty`

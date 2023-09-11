@@ -128,7 +128,7 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string, repl string) {
 		db.DFatalf("LeadAndFence %v\n", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.ProcEnv().PID, bl.lc.Fence())
+	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.ProcEnv().GetPID(), bl.lc.Fence())
 
 	if err := bl.MkMountSymlink(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
 		db.DFatalf("mount %v at %v err %v\n", mnt, KVBalancer(bl.job), err)
@@ -393,11 +393,11 @@ func (bl *Balancer) doMoves(moves Moves) {
 
 func (bl *Balancer) balance(opcode, kvd string) *serr.Err {
 	if bl.testAndSetIsBusy() {
-		return serr.MkErr(serr.TErrRetry, fmt.Sprintf("busy %v", bl.ProcEnv().PID))
+		return serr.MkErr(serr.TErrRetry, fmt.Sprintf("busy %v", bl.ProcEnv().GetPID()))
 	}
 	defer bl.clearIsBusy()
 
-	db.DPrintf(db.KVBAL, "%v: opcode %v kvd %v conf %v\n", bl.ProcEnv().PID, opcode, kvd, bl.conf)
+	db.DPrintf(db.KVBAL, "%v: opcode %v kvd %v conf %v\n", bl.ProcEnv().GetPID(), opcode, kvd, bl.conf)
 
 	var nextShards []string
 	switch opcode {

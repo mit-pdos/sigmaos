@@ -164,7 +164,7 @@ func RunFrontendSrv(public bool, job string) error {
 }
 
 func (s *FrontEnd) done() error {
-	if err := s.WaitEvict(s.ProcEnv().PID); err != nil {
+	if err := s.WaitEvict(s.ProcEnv().GetPID()); err != nil {
 		return err
 	}
 	dbg.DPrintf(dbg.HOTEL_WWW_STATS, "\nUserc %v", s.userc.StatsClnt())

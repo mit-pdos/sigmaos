@@ -36,8 +36,8 @@ func makeRealmTstateClnt(ts *Tstate, realm sp.Trealm, makerealm bool) *RealmTsta
 		}
 		db.DPrintf(db.TEST, "Done making realm %v", realm)
 	}
-	scfg := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
-	if sc, err := sigmaclnt.MkSigmaClntRootInit(scfg); err != nil {
+	pcfg := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
+	if sc, err := sigmaclnt.MkSigmaClntRootInit(pcfg); err != nil {
 		db.DFatalf("Error MakeRealmTstate MkSigmaClnt: %v", err)
 	} else {
 		return &RealmTstate{

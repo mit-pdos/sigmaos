@@ -45,8 +45,8 @@ func RunMongod(mongodUrl string) error {
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Starting mongo proxy server")
-	scfg := proc.GetProcEnv()
-	ssrv, err := sigmasrv.MakeSigmaSrv(sp.MONGO, s, scfg)
+	pcfg := proc.GetProcEnv()
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.MONGO, s, pcfg)
 	if err != nil {
 		return err
 	}

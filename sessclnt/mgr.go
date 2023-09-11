@@ -13,15 +13,15 @@ import (
 
 type Mgr struct {
 	mu       sync.Mutex
-	scfg     *proc.ProcEnv
+	pcfg     *proc.ProcEnv
 	cli      sessp.Tclient
 	sessions map[string]*SessClnt
 	clntnet  string
 }
 
-func MakeMgr(scfg *proc.ProcEnv, cli sessp.Tclient, clntnet string) *Mgr {
+func MakeMgr(pcfg *proc.ProcEnv, cli sessp.Tclient, clntnet string) *Mgr {
 	sc := &Mgr{}
-	sc.scfg = scfg
+	sc.pcfg = pcfg
 	sc.cli = cli
 	sc.sessions = make(map[string]*SessClnt)
 	sc.clntnet = clntnet
@@ -50,7 +50,7 @@ func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := makeSessClnt(sc.scfg, sc.cli, sc.clntnet, addrs)
+	sess, err := makeSessClnt(sc.pcfg, sc.cli, sc.clntnet, addrs)
 	if err != nil {
 		return nil, err
 	}

@@ -44,7 +44,7 @@ func RunLeader(dir, last, child string) {
 	//
 	// Write dir in new epoch
 	//
-	conf := &Config{l.Fence().Epoch, sc.ProcEnv().PID, sc.ProcEnv().PID}
+	conf := &Config{l.Fence().Epoch, sc.ProcEnv().GetPID(), sc.ProcEnv().GetPID()}
 	b, err := json.Marshal(*conf)
 	if err != nil {
 		db.DFatalf("marshal %v failed %v\n", fn, err)

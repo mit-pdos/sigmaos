@@ -22,7 +22,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
 
-	return makeProcClnt(fsl, fsl.ProcEnv().PID, proc.PROCDIR)
+	return makeProcClnt(fsl, fsl.ProcEnv().GetPID(), proc.PROCDIR)
 }
 
 // Fake an initial process for, for example, tests.

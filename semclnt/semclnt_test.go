@@ -22,8 +22,8 @@ func TestSemClntSimple(t *testing.T) {
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
-	scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	fsl0, err := fslib.MakeFsLib(scfg)
+	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+	fsl0, err := fslib.MakeFsLib(pcfg)
 	assert.Nil(ts.T, err, "fsl0")
 
 	sem := semclnt.MakeSemClnt(ts.FsLib, WAIT_PATH+"/x")
@@ -60,11 +60,11 @@ func TestSemClntConcur(t *testing.T) {
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
-	scfg1 := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	fsl0, err := fslib.MakeFsLib(scfg1)
+	pcfg1 := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+	fsl0, err := fslib.MakeFsLib(pcfg1)
 	assert.Nil(ts.T, err, "fsl0")
-	scfg2 := proc.NewAddedProcEnv(ts.ProcEnv(), 2)
-	fsl1, err := fslib.MakeFsLib(scfg2)
+	pcfg2 := proc.NewAddedProcEnv(ts.ProcEnv(), 2)
+	fsl1, err := fslib.MakeFsLib(pcfg2)
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {

@@ -131,8 +131,8 @@ func TestSymlink3(t *testing.T) {
 	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
-	scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	sc, err := ts.MakeClnt(0, scfg)
+	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+	sc, err := ts.MakeClnt(0, pcfg)
 	assert.Nil(t, err)
 	sc.ProcessDir(linkDir, func(st *sp.Stat) (bool, error) {
 		// Read symlink contents

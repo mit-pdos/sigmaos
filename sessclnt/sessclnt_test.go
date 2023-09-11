@@ -60,8 +60,8 @@ func TestServerCrash(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := fslib.MakeFsLib(scfg)
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+		fsl, err := fslib.MakeFsLib(pcfg)
 		assert.Nil(t, err)
 		sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
 		err = sem.Down()
@@ -138,8 +138,8 @@ func TestReconnectSimple(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := fslib.MakeFsLib(scfg)
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+		fsl, err := fslib.MakeFsLib(pcfg)
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
 			_, err := fsl.Stat(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
@@ -167,8 +167,8 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			scfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-			fsl, err := fslib.MakeFsLib(scfg)
+			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+			fsl, err := fslib.MakeFsLib(pcfg)
 			assert.Nil(t, err)
 			for true {
 				_, err := fsl.Stat(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
@@ -197,8 +197,8 @@ func TestServerPartitionBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			scfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-			fsl, err := fslib.MakeFsLib(scfg)
+			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+			fsl, err := fslib.MakeFsLib(pcfg)
 			assert.Nil(t, err)
 			sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
 			sem.Init(0)
@@ -219,10 +219,10 @@ const (
 	WRITESZ = 4096
 )
 
-func writer(t *testing.T, ch chan error, scfg *proc.ProcEnv) {
-	fsl, err := fslib.MakeFsLib(scfg)
+func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
+	fsl, err := fslib.MakeFsLib(pcfg)
 	assert.Nil(t, err)
-	fn := sp.UX + "~local/file-" + string(scfg.Uname)
+	fn := sp.UX + "~local/file-" + string(pcfg.GetUname())
 	stop := false
 	nfile := 0
 	for !stop {
@@ -264,8 +264,8 @@ func TestWriteCrash(t *testing.T) {
 	ch := make(chan error)
 
 	for i := 0; i < N; i++ {
-		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		go writer(ts.T, ch, scfg)
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+		go writer(ts.T, ch, pcfg)
 	}
 
 	crashchan := make(chan bool)

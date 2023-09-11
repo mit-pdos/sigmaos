@@ -19,7 +19,7 @@ import (
 type UprocSrv struct {
 	mu       sync.Mutex
 	ch       chan struct{}
-	scfg     *proc.ProcEnv
+	pcfg     *proc.ProcEnv
 	ssrv     *sigmasrv.SigmaSrv
 	kc       *kernelclnt.KernelClnt
 	kernelId string
@@ -27,8 +27,8 @@ type UprocSrv struct {
 }
 
 func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
-	scfg := proc.GetProcEnv()
-	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), scfg: scfg}
+	pcfg := proc.GetProcEnv()
+	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pcfg: pcfg}
 
 	ip, _ := container.LocalIP()
 	db.DPrintf(db.UPROCD, "Run %v %v %v %s IP %s", realm, kernelId, up, os.Environ(), ip)
@@ -37,10 +37,10 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	var err error
 	if up == port.NOPORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, realm, ptype.String())
-		ssrv, err = sigmasrv.MakeSigmaSrv(pn, ups, scfg)
+		ssrv, err = sigmasrv.MakeSigmaSrv(pn, ups, pcfg)
 	} else {
 		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.MakeSigmaSrvPort("", up, scfg, ups)
+		ssrv, err = sigmasrv.MakeSigmaSrvPort("", up, pcfg, ups)
 	}
 	if err != nil {
 		return err
@@ -58,5 +58,5 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.MakeProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Get uproc %v", uproc)
-	return container.RunUProc(uproc, ups.kernelId, ups.scfg.PID, ups.net)
+	return container.RunUProc(uproc, ups.kernelId, ups.pcfg.GetPID(), ups.net)
 }

@@ -21,19 +21,19 @@ import (
 
 type Npd struct {
 	lip  string
-	scfg *proc.ProcEnv
+	pcfg *proc.ProcEnv
 	st   *sessstatesrv.SessionTable
 }
 
-func MakeNpd(scfg *proc.ProcEnv, lip string) *Npd {
-	npd := &Npd{lip, scfg, nil}
+func MakeNpd(pcfg *proc.ProcEnv, lip string) *Npd {
+	npd := &Npd{lip, pcfg, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil)
 	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm, nil, nil)
 	return npd
 }
 
 func (npd *Npd) mkProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Protsrv {
-	return makeNpConn(npd.scfg, npd.lip)
+	return makeNpConn(npd.pcfg, npd.lip)
 }
 
 func (npd *Npd) serve(fm *sessp.FcallMsg) {
@@ -80,11 +80,11 @@ type NpConn struct {
 	cid   sp.TclntId
 }
 
-func makeNpConn(scfg *proc.ProcEnv, lip string) *NpConn {
+func makeNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
 	npc := &NpConn{}
-	npc.clnt = protclnt.MakeClnt(scfg, sp.ROOTREALM.String())
-	npc.fidc = fidclnt.MakeFidClnt(scfg, sp.ROOTREALM.String())
-	npc.pc = pathclnt.MakePathClnt(scfg, npc.fidc, sessp.Tsize(1_000_000))
+	npc.clnt = protclnt.MakeClnt(pcfg, sp.ROOTREALM.String())
+	npc.fidc = fidclnt.MakeFidClnt(pcfg, sp.ROOTREALM.String())
+	npc.pc = pathclnt.MakePathClnt(pcfg, npc.fidc, sessp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
 	npc.cid = sp.TclntId(rand.Uint64())
 	return npc

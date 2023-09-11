@@ -170,8 +170,8 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 }
 
 func RunSchedd(kernelId string) error {
-	scfg := proc.GetProcEnv()
-	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), scfg)
+	pcfg := proc.GetProcEnv()
+	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), pcfg)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
@@ -183,7 +183,7 @@ func RunSchedd(kernelId string) error {
 	setupMemFsSrv(ssrv.MemFs)
 	setupFs(ssrv.MemFs, sd)
 	// Perf monitoring
-	p, err := perf.MakePerf(scfg, perf.SCHEDD)
+	p, err := perf.MakePerf(pcfg, perf.SCHEDD)
 	if err != nil {
 		db.DFatalf("Error MakePerf: %v", err)
 	}

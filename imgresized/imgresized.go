@@ -122,7 +122,7 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 	crash.Crasher(imgd.FsLib)
 
 	go func() {
-		imgd.WaitEvict(sc.ProcEnv().PID)
+		imgd.WaitEvict(sc.ProcEnv().GetPID())
 		imgd.ClntExitOK()
 		os.Exit(0)
 	}()
@@ -241,7 +241,7 @@ func (imgd *ImgSrv) recover() {
 
 func (imgd *ImgSrv) Work() {
 
-	db.DPrintf(db.IMGD, "Try acquire leadership coord %v job %v", imgd.ProcEnv().PID, imgd.job)
+	db.DPrintf(db.IMGD, "Try acquire leadership coord %v job %v", imgd.ProcEnv().GetPID(), imgd.job)
 
 	// Try to become the leading coordinator.  If we get
 	// partitioned, we cannot write the todo directories either,

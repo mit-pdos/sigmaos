@@ -25,7 +25,7 @@ import (
 type Watch func(string, error)
 
 type PathClnt struct {
-	scfg *proc.ProcEnv
+	pcfg *proc.ProcEnv
 	*fidclnt.FidClnt
 	mnt     *MntTable
 	rootmt  *RootMountTable
@@ -33,10 +33,10 @@ type PathClnt struct {
 	cid     sp.TclntId
 }
 
-func MakePathClnt(scfg *proc.ProcEnv, fidc *fidclnt.FidClnt, sz sessp.Tsize) *PathClnt {
-	pathc := &PathClnt{scfg: scfg, mnt: makeMntTable(), chunkSz: sz}
+func MakePathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt, sz sessp.Tsize) *PathClnt {
+	pathc := &PathClnt{pcfg: pcfg, mnt: makeMntTable(), chunkSz: sz}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.MakeFidClnt(scfg, scfg.Net)
+		pathc.FidClnt = fidclnt.MakeFidClnt(pcfg, pcfg.Net)
 	} else {
 		pathc.FidClnt = fidc
 	}
@@ -52,7 +52,7 @@ func (pathc *PathClnt) String() string {
 }
 
 func (pathc *PathClnt) Realm() sp.Trealm {
-	return pathc.scfg.Realm
+	return pathc.pcfg.GetRealm()
 }
 
 func (pathc *PathClnt) ClntID() sp.TclntId {
@@ -60,7 +60,7 @@ func (pathc *PathClnt) ClntID() sp.TclntId {
 }
 
 func (pathc *PathClnt) GetLocalIP() string {
-	return pathc.scfg.LocalIP
+	return pathc.pcfg.LocalIP
 }
 
 func (pathc *PathClnt) SetChunkSz(sz sessp.Tsize) {
@@ -96,7 +96,7 @@ func (pathc *PathClnt) PathLastSymlink(pn string, uname sp.Tuname) (path.Path, p
 
 // Close all sessions
 func (pathc *PathClnt) DetachAll() error {
-	db.DPrintf(db.PATHCLNT, "%v: Fslib.DetachAll\n", pathc.scfg.PID)
+	db.DPrintf(db.PATHCLNT, "%v: Fslib.DetachAll\n", pathc.pcfg.GetPID())
 	return pathc.FidClnt.DetachAll(pathc.cid)
 }
 

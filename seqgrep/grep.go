@@ -40,8 +40,8 @@ func grepline(n int, line string, sbc *mr.ScanByteCounter) int {
 	return cnt
 }
 
-func Grep(scfg *proc.ProcEnv, rdr io.Reader) int {
-	p, err := perf.MakePerf(scfg, perf.SEQGREP)
+func Grep(pcfg *proc.ProcEnv, rdr io.Reader) int {
+	p, err := perf.MakePerf(pcfg, perf.SEQGREP)
 	if err != nil {
 		log.Fatalf("MakePerf err %v\n", err)
 	}

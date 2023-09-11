@@ -165,10 +165,10 @@ func (p *Proc) String() string {
 
 // ========== Getters and Setters ==========
 
-func (p *Proc) SetProcEnv(scfg *ProcEnv) {
-	p.ProcEnv = scfg.Marshal()
+func (p *Proc) SetProcEnv(pcfg *ProcEnv) {
+	p.ProcEnv = pcfg.Marshal()
 	// TODO: don't append every time.
-	p.AppendEnv(SIGMACONFIG, scfg.Marshal())
+	p.AppendEnv(SIGMACONFIG, pcfg.Marshal())
 }
 
 func (p *Proc) GetProcEnv() *ProcEnv {

@@ -25,15 +25,15 @@ type Clnt struct {
 	id    sessp.Tclient
 	seqno sessp.Tseqno
 	sm    *sessclnt.Mgr
-	scfg  *proc.ProcEnv
+	pcfg  *proc.ProcEnv
 }
 
-func MakeClnt(scfg *proc.ProcEnv, clntnet string) *Clnt {
+func MakeClnt(pcfg *proc.ProcEnv, clntnet string) *Clnt {
 	clnt := &Clnt{}
 	clnt.seqno = 0
 	clnt.id = clid
-	clnt.scfg = scfg
-	clnt.sm = sessclnt.MakeMgr(scfg, clnt.id, clntnet)
+	clnt.pcfg = pcfg
+	clnt.sm = sessclnt.MakeMgr(pcfg, clnt.id, clntnet)
 	return clnt
 }
 

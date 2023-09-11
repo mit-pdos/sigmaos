@@ -44,7 +44,7 @@ type RaftNode struct {
 	snapshotIndex uint64
 	appliedIndex  uint64
 	currentLeader uint64
-	scfg          *proc.ProcEnv
+	pcfg          *proc.ProcEnv
 }
 
 type committedEntries struct {
@@ -52,9 +52,9 @@ type committedEntries struct {
 	leader  uint64
 }
 
-func makeRaftNode(scfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
+func makeRaftNode(pcfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
 	node := &RaftNode{}
-	node.scfg = scfg
+	node.pcfg = pcfg
 	node.id = id
 	node.peerAddrs = peerAddrs
 	node.done = make(chan bool)
@@ -84,7 +84,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
 	}
 	// Make sure the logging dir exists
 	os.Mkdir("./raftlogs/", 0777)
-	logPath := "./raftlogs/" + n.scfg.PID.String()
+	logPath := "./raftlogs/" + n.pcfg.GetPID().String()
 	log.Printf("Raft logs being written to: %v", logPath)
 	logCfg := zap.NewDevelopmentConfig()
 	logCfg.OutputPaths = []string{string(logPath)}

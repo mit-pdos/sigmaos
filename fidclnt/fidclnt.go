@@ -18,15 +18,15 @@ import (
 
 type FidClnt struct {
 	fids *FidMap
-	scfg *proc.ProcEnv
+	pcfg *proc.ProcEnv
 	pc   *protclnt.Clnt
 	ft   *FenceTable
 }
 
-func MakeFidClnt(scfg *proc.ProcEnv, clntnet string) *FidClnt {
+func MakeFidClnt(pcfg *proc.ProcEnv, clntnet string) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = mkFidMap()
-	fidc.pc = protclnt.MakeClnt(scfg, clntnet)
+	fidc.pc = protclnt.MakeClnt(pcfg, clntnet)
 	fidc.ft = MakeFenceTable()
 	return fidc
 }

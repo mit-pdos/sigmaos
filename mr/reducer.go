@@ -102,8 +102,8 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 
 func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
-	scfg := proc.NewAddedProcEnv(r.ProcEnv(), int(rand.Uint64()))
-	sc, err := sigmaclnt.MkSigmaClntFsLib(scfg)
+	pcfg := proc.NewAddedProcEnv(r.ProcEnv(), int(rand.Uint64()))
+	sc, err := sigmaclnt.MkSigmaClntFsLib(pcfg)
 	if err != nil {
 		db.DPrintf(db.MR, "MkSigmaClntFsLib err %v", err)
 		return 0, 0, false
@@ -186,7 +186,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.output, r.nmaptask)
 	nin, duration, data, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", r.ProcEnv().PID, r.input, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", r.ProcEnv().GetPID(), r.input, err), nil)
 	}
 	if len(lostMaps) > 0 {
 		return proc.MakeStatusErr(RESTART, lostMaps)
@@ -203,24 +203,24 @@ func (r *Reducer) doReduce() *proc.Status {
 	}
 
 	if err := r.bwrt.Flush(); err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: flush %v err %v\n", r.ProcEnv().PID, r.tmp, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: flush %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
 	}
 	if err := r.wrt.Close(); err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().PID, r.tmp, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
 	}
 	// Include time spent writing output.
 	duration += time.Since(start)
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", r.ProcEnv().PID, r.tmp, r.output, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", r.ProcEnv().GetPID(), r.tmp, r.output, err), nil)
 	}
 	return proc.MakeStatusInfo(proc.StatusOK, r.input,
 		Result{false, r.input, nin, r.wrt.Nbytes(), duration.Milliseconds()})
 }
 
 func RunReducer(reducef ReduceT, args []string) {
-	scfg := proc.GetProcEnv()
-	p, err := perf.MakePerf(scfg, perf.MRREDUCER)
+	pcfg := proc.GetProcEnv()
+	p, err := perf.MakePerf(pcfg, perf.MRREDUCER)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

@@ -23,8 +23,8 @@ func init() {
 }
 
 func TestLease(t *testing.T) {
-	scfg := proc.NewTestProcEnv(sp.ROOTREALM, etcdIP, "", "")
-	ec, err := fsetcd.MkFsEtcd(scfg)
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, etcdIP, "", "")
+	ec, err := fsetcd.MkFsEtcd(pcfg)
 	assert.Nil(t, err)
 	l := clientv3.NewLease(ec.Client)
 	respg, err := l.Grant(context.TODO(), 30)

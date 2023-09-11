@@ -116,12 +116,12 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	if err != nil {
 		return err, nil
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup Uprocd clnt %v", updm.fsl.ProcEnv().PID, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup Uprocd clnt %v", updm.fsl.ProcEnv().GetPID(), time.Since(s))
 	// run and exit do resource accounting and share rebalancing for the
 	// uprocds.
 	s = time.Now()
 	updm.startBalanceShares(uproc)
-	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Uprocd shares %v", updm.fsl.ProcEnv().PID, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Uprocd shares %v", updm.fsl.ProcEnv().GetPID(), time.Since(s))
 	defer updm.exitBalanceShares(uproc)
 	req := &proto.RunRequest{
 		ProcProto: uproc.GetProto(),

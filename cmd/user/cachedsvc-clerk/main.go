@@ -79,7 +79,7 @@ func main() {
 }
 
 func waitEvict(csc *cachedsvcclnt.CachedSvcClnt, pclnt *procclnt.ProcClnt) {
-	err := pclnt.WaitEvict(pclnt.ProcEnv().PID)
+	err := pclnt.WaitEvict(pclnt.ProcEnv().GetPID())
 	if err != nil {
 		db.DPrintf(db.CACHECLERK, "Error WaitEvict: %v", err)
 	}
@@ -124,7 +124,7 @@ func test(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis
 		key := cacheclnt.MkKey(i + keyOffset)
 		// If running against redis.
 		if rcli != nil {
-			if err := rcli.Set(ctx, key, sc.ProcEnv().PID.String(), 0).Err(); err != nil {
+			if err := rcli.Set(ctx, key, sc.ProcEnv().GetPID().String(), 0).Err(); err != nil {
 				db.DFatalf("Error redis cli set: %v", err)
 			}
 			// Record op for throughput calculation.
@@ -137,8 +137,8 @@ func test(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis
 			p.TptTick(1.0)
 			*nops++
 		} else {
-			if err := csc.Put(key, &proto.CacheString{Val: sc.ProcEnv().PID.String()}); err != nil {
-				return fmt.Errorf("%v: Put %v err %v", sc.ProcEnv().PID, key, err)
+			if err := csc.Put(key, &proto.CacheString{Val: sc.ProcEnv().GetPID().String()}); err != nil {
+				return fmt.Errorf("%v: Put %v err %v", sc.ProcEnv().GetPID(), key, err)
 			}
 			// Record op for throughput calculation.
 			p.TptTick(1.0)

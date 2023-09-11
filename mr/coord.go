@@ -359,7 +359,7 @@ func (c *Coord) Round(ttype string) {
 }
 
 func (c *Coord) Work() {
-	db.DPrintf(db.MR, "Try acquire leadership coord %v job %v", c.ProcEnv().PID, c.job)
+	db.DPrintf(db.MR, "Try acquire leadership coord %v job %v", c.ProcEnv().GetPID(), c.job)
 	// Try to become the leading coordinator.  If we get
 	// partitioned, we cannot write the todo directories either,
 	// so need to set a fence.

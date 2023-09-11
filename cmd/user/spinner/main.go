@@ -49,7 +49,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	}
 	li.KeepExtending()
 
-	if _, err := s.PutFileEphemeral(path.Join(s.outdir, s.ProcEnv().PID.String()), 0777, sp.OWRITE, li.Lease(), []byte{}); err != nil {
+	if _, err := s.PutFileEphemeral(path.Join(s.outdir, s.ProcEnv().GetPID().String()), 0777, sp.OWRITE, li.Lease(), []byte{}); err != nil {
 		db.DFatalf("MakeFile error: %v", err)
 	}
 
@@ -61,7 +61,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 }
 
 func (s *Spinner) waitEvict() {
-	err := s.WaitEvict(s.ProcEnv().PID)
+	err := s.WaitEvict(s.ProcEnv().GetPID())
 	if err != nil {
 		db.DFatalf("Error WaitEvict: %v", err)
 	}

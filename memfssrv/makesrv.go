@@ -14,12 +14,12 @@ import (
 )
 
 // Make an MemFs and advertise it at pn
-func MakeMemFs(pn string, scfg *proc.ProcEnv) (*MemFs, error) {
-	return MakeMemFsPort(pn, ":0", scfg)
+func MakeMemFs(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
+	return MakeMemFsPort(pn, ":0", pcfg)
 }
 
 // Make an MemFs for a specific port and advertise it at pn
-func MakeMemFsPort(pn, port string, scfg *proc.ProcEnv) (*MemFs, error) {
+func MakeMemFsPort(pn, port string, pcfg *proc.ProcEnv) (*MemFs, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func MakeMemFsPortClntFence(pn, port string, sc *sigmaclnt.SigmaClnt, fencefs fs
 }
 
 // Allocate server with public port and advertise it
-func MakeMemFsPublic(pn string, scfg *proc.ProcEnv) (*MemFs, error) {
+func MakeMemFsPublic(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err

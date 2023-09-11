@@ -320,7 +320,7 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 
 	<-ch
 
-	db.DPrintf(db.KVGRP, "%v: group done\n", g.ProcEnv().PID)
+	db.DPrintf(db.KVGRP, "%v: group done\n", g.ProcEnv().GetPID())
 
 	g.ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
 }
@@ -328,13 +328,13 @@ func RunMember(jobdir, grp string, public bool, nrepl int) {
 // XXX move to procclnt?
 func (g *Group) waitExit(ch chan struct{}) {
 	for {
-		err := g.WaitEvict(g.ProcEnv().PID)
+		err := g.WaitEvict(g.ProcEnv().GetPID())
 		if err != nil {
 			db.DPrintf(db.KVGRP, "Error WaitEvict: %v", err)
 			time.Sleep(time.Second)
 			continue
 		}
-		db.DPrintf(db.KVGRP, "candidate %v %v evicted\n", g, g.ProcEnv().PID.String())
+		db.DPrintf(db.KVGRP, "candidate %v %v evicted\n", g, g.ProcEnv().GetPID().String())
 		ch <- struct{}{}
 	}
 }

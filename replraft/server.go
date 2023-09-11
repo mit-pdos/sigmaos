@@ -16,7 +16,7 @@ type RaftReplServer struct {
 	clerk   *Clerk
 }
 
-func MakeRaftReplServer(scfg *proc.ProcEnv, id int, peerAddrs []string, l net.Listener, init bool, apply repl.Tapplyf) *RaftReplServer {
+func MakeRaftReplServer(pcfg *proc.ProcEnv, id int, peerAddrs []string, l net.Listener, init bool, apply repl.Tapplyf) *RaftReplServer {
 	srv := &RaftReplServer{}
 	peers := []raft.Peer{}
 	for i := range peerAddrs {
@@ -25,7 +25,7 @@ func MakeRaftReplServer(scfg *proc.ProcEnv, id int, peerAddrs []string, l net.Li
 	commitC := make(chan *committedEntries)
 	proposeC := make(chan []byte)
 	srv.clerk = newClerk(id, commitC, proposeC, apply)
-	srv.node = makeRaftNode(scfg, id, peers, peerAddrs, l, init, srv.clerk, commitC, proposeC)
+	srv.node = makeRaftNode(pcfg, id, peers, peerAddrs, l, init, srv.clerk, commitC, proposeC)
 	return srv
 }
 

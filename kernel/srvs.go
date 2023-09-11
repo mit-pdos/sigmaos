@@ -100,12 +100,12 @@ func (k *Kernel) KillOne(srv string) error {
 	}
 }
 
-func (k *Kernel) bootKNamed(scfg *proc.ProcEnv, init bool) error {
+func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 	p, err := makeKNamedProc(sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}
-	cmd, err := runKNamed(scfg, p, sp.ROOTREALM, init)
+	cmd, err := runKNamed(pcfg, p, sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}

@@ -15,14 +15,14 @@ type RaftConfig struct {
 	peerAddrs []string
 	l         net.Listener
 	init      bool // Is this node part of the initial cluster? Or is it being added to an existing cluster?
-	scfg      *proc.ProcEnv
+	pcfg      *proc.ProcEnv
 }
 
-func MakeRaftConfig(scfg *proc.ProcEnv, id int, peerAddrs []string, init bool) *RaftConfig {
+func MakeRaftConfig(pcfg *proc.ProcEnv, id int, peerAddrs []string, init bool) *RaftConfig {
 	rc := &RaftConfig{}
 	rc.id = id
 	rc.init = init
-	rc.scfg = scfg
+	rc.pcfg = pcfg
 	rc.peerAddrs = []string{}
 	for _, addr := range peerAddrs {
 		rc.peerAddrs = append(rc.peerAddrs, addr)
@@ -48,7 +48,7 @@ func (rc *RaftConfig) UpdatePeerAddrs(new []string) {
 
 func (rc *RaftConfig) MakeServer(applyf repl.Tapplyf) repl.Server {
 	rc.started = true
-	return MakeRaftReplServer(rc.scfg, rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
+	return MakeRaftReplServer(rc.pcfg, rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
 }
 
 func (rc *RaftConfig) ReplAddr() string {

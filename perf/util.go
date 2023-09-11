@@ -95,13 +95,13 @@ type Perf struct {
 	sigc           chan os.Signal
 }
 
-func MakePerf(scfg *proc.ProcEnv, s Tselector) (*Perf, error) {
-	return MakePerfMulti(scfg, s, "")
+func MakePerf(pcfg *proc.ProcEnv, s Tselector) (*Perf, error) {
+	return MakePerfMulti(pcfg, s, "")
 }
 
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
-func MakePerfMulti(scfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
+func MakePerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 	p := &Perf{}
 	p.selector = s
 	p.utilChan = make(chan bool, 1)
@@ -113,7 +113,7 @@ func MakePerfMulti(scfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 		os.Exit(143)
 	}()
 	// Make sure the PID is set (used to name the output files).
-	if scfg.PID == proc.NOT_SET {
+	if pcfg.GetPID() == proc.NOT_SET {
 		db.DFatalf("Must set PID before starting Perf")
 	}
 	// Make the output dir
@@ -121,7 +121,7 @@ func MakePerfMulti(scfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 		db.DPrintf(db.ALWAYS, "MakePerfMulti: MkdirAll %s err %v", OUTPUT_PATH, err)
 		return nil, err
 	}
-	basePath := path.Join(OUTPUT_PATH, path.Base(scfg.PID.String()))
+	basePath := path.Join(OUTPUT_PATH, path.Base(pcfg.GetPID().String()))
 	if s2 != "" {
 		basePath += "-" + s2
 	}

@@ -136,13 +136,13 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 func (m *Mapper) informReducer() error {
 	pn, err := m.ResolveUnions(MLOCALSRV)
 	if err != nil {
-		return fmt.Errorf("%v: ResolveUnion %v err %v\n", m.ProcEnv().PID, MLOCALSRV, err)
+		return fmt.Errorf("%v: ResolveUnion %v err %v\n", m.ProcEnv().GetPID(), MLOCALSRV, err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
 		fn := mshardfile(m.job, m.bin, r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
-			return fmt.Errorf("%v: rename %v -> %v err %v\n", m.ProcEnv().PID, fn+m.rand, fn, err)
+			return fmt.Errorf("%v: rename %v -> %v err %v\n", m.ProcEnv().GetPID(), fn+m.rand, fn, err)
 		}
 
 		name := symname(m.job, strconv.Itoa(r), m.bin)
@@ -262,8 +262,8 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 func RunMapper(mapf MapT, args []string) {
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
-	scfg := proc.GetProcEnv()
-	p, err := perf.MakePerf(scfg, perf.MRMAPPER)
+	pcfg := proc.GetProcEnv()
+	p, err := perf.MakePerf(pcfg, perf.MRMAPPER)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
 	}

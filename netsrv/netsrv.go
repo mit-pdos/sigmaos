@@ -18,7 +18,7 @@ type WriteF func(*sessp.FcallMsg, []byte, *bufio.Writer) *serr.Err
 type ReadF func(rdr io.Reader) (sessp.Tseqno, *sessp.FcallMsg, *serr.Err)
 
 type NetServer struct {
-	scfg       *proc.ProcEnv
+	pcfg       *proc.ProcEnv
 	addr       string
 	sesssrv    sps.SessServer
 	writefcall WriteF
@@ -26,8 +26,8 @@ type NetServer struct {
 	l          net.Listener
 }
 
-func MakeNetServer(scfg *proc.ProcEnv, ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
-	srv := &NetServer{scfg: scfg, sesssrv: ss, writefcall: m, readframe: u}
+func MakeNetServer(pcfg *proc.ProcEnv, ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
+	srv := &NetServer{pcfg: pcfg, sesssrv: ss, writefcall: m, readframe: u}
 
 	// Create and start the main server listener
 	var l net.Listener
@@ -59,7 +59,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "%v: Accept err %v", srv.scfg.PID, err)
+			db.DPrintf(db.ALWAYS, "%v: Accept err %v", srv.pcfg.GetPID(), err)
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)

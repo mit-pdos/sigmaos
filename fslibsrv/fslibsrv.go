@@ -24,8 +24,8 @@ import (
 // sesssrv and protsrv.
 //
 
-func BootSrv(scfg *proc.ProcEnv, root fs.Dir, addr string, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *sesssrv.SessSrv {
-	return sesssrv.MakeSessSrv(scfg, root, addr, protsrv.MakeProtServer, attachf, detachf, et, nil)
+func BootSrv(pcfg *proc.ProcEnv, root fs.Dir, addr string, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *sesssrv.SessSrv {
+	return sesssrv.MakeSessSrv(pcfg, root, addr, protsrv.MakeProtServer, attachf, detachf, et, nil)
 }
 
 func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error {

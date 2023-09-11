@@ -157,7 +157,7 @@ func RunWww(job string, public bool) error {
 }
 
 func (s *Www) done() error {
-	if err := s.WaitEvict(s.ProcEnv().PID); err != nil {
+	if err := s.WaitEvict(s.ProcEnv().GetPID()); err != nil {
 		return err
 	}
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nUserc %v", s.userc.StatsClnt())
@@ -165,7 +165,7 @@ func (s *Www) done() error {
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nReservec %v", s.reservec.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nProfc %v", s.profc.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nRecc %v", s.recc.StatsClnt())
-	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", s.ProcEnv().PID)
+	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", s.ProcEnv().GetPID())
 	s.tracer.Flush()
 	s.p.Done()
 	s.ClntExit(proc.MakeStatus(proc.StatusEvicted))

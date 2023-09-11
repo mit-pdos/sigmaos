@@ -107,14 +107,14 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	scfg := proc.NewTestProcEnv(sp.ROOTREALM, etcdIP, localIP, tag)
-	proc.SetSigmaDebugPid(scfg.PID.String())
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, etcdIP, localIP, tag)
+	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 	var kernelid string
 	var err error
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, scfg, srvs, Overlays)
+		_, err := bootkernelclnt.Start(kernelid, pcfg, srvs, Overlays)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -124,7 +124,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ALWAYS, "Error set named ip")
 		return nil, err
 	}
-	k, err = bootkernelclnt.MkKernelClnt(kernelid, scfg)
+	k, err = bootkernelclnt.MkKernelClnt(kernelid, pcfg)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make kernel clnt")
 		return nil, err
@@ -162,8 +162,8 @@ func (ts *Tstate) KillOne(s string) error {
 	return ts.kclnts[idx].Kill(s)
 }
 
-func (ts *Tstate) MakeClnt(idx int, scfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
-	return ts.kclnts[idx].NewSigmaClnt(scfg)
+func (ts *Tstate) MakeClnt(idx int, pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
+	return ts.kclnts[idx].NewSigmaClnt(pcfg)
 }
 
 func (ts *Tstate) Shutdown() error {

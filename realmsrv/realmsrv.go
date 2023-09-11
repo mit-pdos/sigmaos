@@ -43,8 +43,8 @@ func RunRealmSrv() error {
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
-	scfg := proc.GetProcEnv()
-	ssrv, err := sigmasrv.MakeSigmaSrv(sp.REALMD, rs, scfg)
+	pcfg := proc.GetProcEnv()
+	ssrv, err := sigmasrv.MakeSigmaSrv(sp.REALMD, rs, pcfg)
 	if err != nil {
 		return err
 	}
@@ -107,8 +107,8 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", rid)
 
-	scfg := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
-	sc, err := sigmaclnt.MkSigmaClntFsLib(scfg)
+	pcfg := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
+	sc, err := sigmaclnt.MkSigmaClntFsLib(pcfg)
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error MkSigmaClntRealm: %v", err)
 		return err

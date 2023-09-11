@@ -63,10 +63,10 @@ func MakeTrans(args []string) (*Trans, error) {
 	if len(args) != 3 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
-	scfg := proc.GetProcEnv()
-	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", scfg.PID, args)
+	pcfg := proc.GetProcEnv()
+	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", pcfg.GetPID(), args)
 	t := &Trans{}
-	sc, err := sigmaclnt.NewSigmaClnt(scfg)
+	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
 	if err != nil {
 		return nil, err
 	}

@@ -40,10 +40,10 @@ func MakeReader(args []string) (*Reader, error) {
 	if len(args) != 2 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
-	scfg := proc.GetProcEnv()
-	db.DPrintf(db.ALWAYS, "MakeReader %v: %v\n", scfg.PID, args)
+	pcfg := proc.GetProcEnv()
+	db.DPrintf(db.ALWAYS, "MakeReader %v: %v\n", pcfg.GetPID(), args)
 	r := &Reader{}
-	sc, err := sigmaclnt.NewSigmaClnt(scfg)
+	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
 	if err != nil {
 		return nil, err
 	}

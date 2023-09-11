@@ -504,8 +504,8 @@ func TestPageDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func dirwriter(t *testing.T, scfg *proc.ProcEnv, dn, name string, ch chan bool) {
-	fsl, err := fslib.MakeFsLib(scfg)
+func dirwriter(t *testing.T, pcfg *proc.ProcEnv, dn, name string, ch chan bool) {
+	fsl, err := fslib.MakeFsLib(pcfg)
 	assert.Nil(t, err)
 	stop := false
 	for !stop {
@@ -540,8 +540,8 @@ func TestDirConcur(t *testing.T) {
 
 	ch := make(chan bool)
 	for i := 0; i < N; i++ {
-		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		go dirwriter(t, scfg, dn, strconv.Itoa(i), ch)
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+		go dirwriter(t, pcfg, dn, strconv.Itoa(i), ch)
 	}
 
 	for i := 0; i < NSCAN; i++ {
@@ -747,8 +747,8 @@ func TestWatchRemoveConcur(t *testing.T) {
 	ch := make(chan error)
 	done := make(chan bool)
 	go func() {
-		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := fslib.MakeFsLib(scfg)
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+		fsl, err := fslib.MakeFsLib(pcfg)
 		assert.Nil(t, err)
 		for i := 1; i < N; {
 			db.DPrintf(db.TEST, "PutFile %v", i)
@@ -802,8 +802,8 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 
 	ch := make(chan error)
 	done := make(chan bool)
-	scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	fsl, err := fslib.MakeFsLib(scfg)
+	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+	fsl, err := fslib.MakeFsLib(pcfg)
 	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
 		fn := gopath.Join(dn, strconv.Itoa(i))
@@ -926,8 +926,8 @@ func TestConcurRename(t *testing.T) {
 
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
-		scfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		fsl, err := fslib.MakeFsLib(scfg)
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+		fsl, err := fslib.MakeFsLib(pcfg)
 		assert.Nil(t, err)
 		go func(fsl *fslib.FsLib, t string) {
 			n := 0
@@ -1252,8 +1252,8 @@ func TestFslibDetach(t *testing.T) {
 
 	// Make a new fsl for this test, because we want to use ts.FsLib
 	// to shutdown the system.
-	scfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	fsl, err := fslib.MakeFsLib(scfg)
+	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+	fsl, err := fslib.MakeFsLib(pcfg)
 	assert.Nil(t, err)
 
 	// connect

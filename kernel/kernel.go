@@ -50,7 +50,7 @@ func mkKernel(param *Param) *Kernel {
 	return k
 }
 
-func MakeKernel(p *Param, scfg *proc.ProcEnv) (*Kernel, error) {
+func MakeKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 	k := mkKernel(p)
 	ip, err := container.LocalIP()
 	if err != nil {
@@ -60,13 +60,13 @@ func MakeKernel(p *Param, scfg *proc.ProcEnv) (*Kernel, error) {
 	k.ip = ip
 	proc.SetSigmaLocal(ip)
 	if p.Services[0] == sp.KNAMED {
-		if err := k.bootKNamed(scfg, true); err != nil {
+		if err := k.bootKNamed(pcfg, true); err != nil {
 			return nil, err
 		}
 		p.Services = p.Services[1:]
 	}
 	proc.SetSigmaJaegerIP(p.Jaegerip)
-	sc, err := sigmaclnt.MkSigmaClntRootInit(scfg)
+	sc, err := sigmaclnt.MkSigmaClntRootInit(pcfg)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error MkSigmaClntProc: %v", err)
 		return nil, err
@@ -121,14 +121,14 @@ func startSrvs(k *Kernel) error {
 func (k *Kernel) shutdown() {
 	// start knamed to shutdown kernel with named?
 	if len(k.svcs.svcs[sp.KNAMED]) == 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
-		db.DPrintf(db.KERNEL, "Booting knamed for shutdown %v", k.ProcEnv().PID)
+		db.DPrintf(db.KERNEL, "Booting knamed for shutdown %v", k.ProcEnv().GetPID())
 		if err := k.bootKNamed(k.ProcEnv(), false); err != nil {
 			db.DFatalf("shutdown: bootKnamed err %v\n", err)
 		}
-		db.DPrintf(db.KERNEL, "Done booting knamed for shutdown %v", k.ProcEnv().PID)
+		db.DPrintf(db.KERNEL, "Done booting knamed for shutdown %v", k.ProcEnv().GetPID())
 	}
 	if len(k.Param.Services) > 0 {
-		db.DPrintf(db.KERNEL, "Get children %v", k.ProcEnv().PID)
+		db.DPrintf(db.KERNEL, "Get children %v", k.ProcEnv().GetPID())
 		cpids, err := k.GetChildren()
 		if err != nil {
 			db.DPrintf(db.KERNEL, "Error get children: %v", err)
@@ -183,7 +183,7 @@ func makeKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 }
 
 // Run knamed (but not as a proc)
-func runKNamed(scfg *proc.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
+func runKNamed(pcfg *proc.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
 	r1, w1, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -192,7 +192,7 @@ func runKNamed(scfg *proc.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (
 	if err != nil {
 		return nil, err
 	}
-	cmd, err := kproc.RunKernelProc(scfg, p, realmId, []*os.File{w1, r2, w2})
+	cmd, err := kproc.RunKernelProc(pcfg, p, realmId, []*os.File{w1, r2, w2})
 	if err != nil {
 		r1.Close()
 		w1.Close()

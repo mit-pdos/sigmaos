@@ -115,7 +115,7 @@ func TestEchoLoad(t *testing.T) {
 	// create a RPC client and query server
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
-		fsl, err := fslib.MakeFsLib(sp.Tuname(tse.jobname + "-" + strconv.Itoa(i)))
+		fsl, err := fslib.MakeFsLibAddr(sp.Tuname(tse.jobname+"-"+strconv.Itoa(i)), sp.ROOTREALM, tse.GetLocalIP(), tse.NamedAddr())
 		if err != nil {
 			dbg.DFatalf("Error mkfsl: %v", err)
 		}

@@ -19,10 +19,7 @@ message ProcEnvProto {
 }
 //	KernelID   string    `json:kernelid,omitempty`
 //	UprocdPID  sp.Tpid   `json:uprocdpid,omitempty`
-//	Net        string    `json:net,omitempty`
 //	Privileged bool      `json:privileged,omitempty` // XXX phase out?
-//	Perf       string    `json:perf,omitempty`
-//	Debug      string    `json:debug,omitempty`
 //	// For testing purposes
 //	Crash     bool `json:crash,omitempty`
 //	Partition bool `json:partition,omitempty`

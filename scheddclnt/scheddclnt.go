@@ -63,7 +63,7 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 			}
 			p := proc.MakeEmptyProc()
 			p.Unmarshal(b)
-			db.DPrintf(db.SCHEDDCLNT, "%s: %v\n", procdir, p.Program)
+			db.DPrintf(db.SCHEDDCLNT, "%s: %v\n", procdir, p.GetProgram())
 		}
 	}
 	return len(sts), nil

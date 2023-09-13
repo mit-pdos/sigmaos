@@ -51,7 +51,7 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 	p.Args = append(p.Args, up.String())
 	p.AppendEnv(proc.SIGMANET, net)
 
-	cmd := append([]string{p.Program}, p.Args...)
+	cmd := append([]string{p.GetProgram()}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v r %v s %v\n", cmd, p.GetEnv(), r, realm, score)
 
 	pset := nat.PortSet{} // Ports to expose

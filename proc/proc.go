@@ -65,8 +65,7 @@ func MakeProc(program string, args []string) *Proc {
 func MakePrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
-	p.PidStr = pid.String()
-	p.Program = program
+	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), sp.Tuname(pid), NOT_SET, NOT_SET).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
 	p.McpuInt = uint32(0)
@@ -74,7 +73,6 @@ func MakePrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Pro
 	if p.Privileged {
 		p.TypeInt = uint32(T_LC)
 	}
-	p.ProcEnvProto = NewProcEnv().GetProto()
 	p.setProcDir("NOT_SET")
 	p.Env = make(map[string]string)
 	p.setBaseEnv()
@@ -93,18 +91,22 @@ func (p *Proc) GetProto() *ProcProto {
 	return p.ProcProto
 }
 
-// Called by procclnt to set the parent dir when spawning.
-func (p *Proc) SetParentDir(parentdir string) {
-	p.ParentDir = parentdir
+func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
+	p.ProcEnvProto.SetRealm(parentPE.GetRealm())
+	p.ProcEnvProto.ParentDir = path.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
+	p.ProcEnvProto.EtcdIP = parentPE.EtcdIP
+	p.ProcEnvProto.LocalIP = parentPE.LocalIP
+	p.ProcEnvProto.Perf = parentPE.Perf
+	p.ProcEnvProto.Debug = parentPE.Debug
+	// TODO: anything else?
 }
 
 func (p *Proc) setProcDir(kernelId string) {
 	if p.IsPrivilegedProc() {
-		p.ProcDir = path.Join(sp.KPIDS, p.GetPid().String())
+		p.ProcEnvProto.ProcDir = path.Join(sp.KPIDS, p.GetPid().String())
 	} else {
-		p.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
+		p.ProcEnvProto.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
 	}
-	p.ProcEnvProto.ProcDir = p.ProcDir
 }
 
 func (p *Proc) AppendEnv(name, val string) {
@@ -137,6 +139,7 @@ func (p *Proc) Finalize(kernelId string) {
 	//	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)
 	//	p.AppendEnv(SIGMAPARENTDIR, p.ParentDir)
 	p.AppendEnv(SIGMAJAEGERIP, GetSigmaJaegerIP())
+	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
 }
 
 func (p *Proc) IsPrivilegedProc() bool {
@@ -145,13 +148,13 @@ func (p *Proc) IsPrivilegedProc() bool {
 
 func (p *Proc) String() string {
 	return fmt.Sprintf("&{ Program:%v Pid:%v Priv:%t KernelId:%v Realm:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Mcpu:%v Mem:%v }",
-		p.Program,
-		p.GetPid(),
+		p.ProcEnvProto.Program,
+		p.ProcEnvProto.GetPID(),
 		p.Privileged,
 		p.KernelId,
-		p.GetRealm(),
-		p.ProcDir,
-		p.ParentDir,
+		p.ProcEnvProto.GetRealm(),
+		p.ProcEnvProto.ProcDir,
+		p.ProcEnvProto.ParentDir,
 		p.Args,
 		p.GetEnv(),
 		p.GetType(),
@@ -162,18 +165,24 @@ func (p *Proc) String() string {
 
 // ========== Getters and Setters ==========
 
-func (p *Proc) SetProcEnv(pcfg *ProcEnv) {
-	p.ProcEnvProto = pcfg.GetProto()
-	// TODO: don't append every time.
-	p.AppendEnv(SIGMACONFIG, pcfg.Marshal())
-}
-
 func (p *Proc) GetProcEnv() *ProcEnv {
 	return NewProcEnvFromProto(p.ProcEnvProto)
 }
 
+func (p *Proc) GetProgram() string {
+	return p.ProcEnvProto.Program
+}
+
+func (p *Proc) GetProcDir() string {
+	return p.ProcEnvProto.ProcDir
+}
+
+func (p *Proc) GetParentDir() string {
+	return p.ProcEnvProto.ParentDir
+}
+
 func (p *Proc) GetPid() sp.Tpid {
-	return sp.Tpid(p.ProcProto.PidStr)
+	return p.ProcEnvProto.GetPID()
 }
 
 func (p *Proc) GetType() Ttype {
@@ -193,15 +202,11 @@ func (p *Proc) GetMem() Tmem {
 }
 
 func (p *Proc) GetRealm() sp.Trealm {
-	return sp.Trealm(p.ProcProto.RealmStr)
+	return p.ProcEnvProto.GetRealm()
 }
 
 func (p *Proc) SetType(t Ttype) {
 	p.ProcProto.TypeInt = uint32(t)
-}
-
-func (p *Proc) SetRealm(r sp.Trealm) {
-	p.ProcProto.RealmStr = r.String()
 }
 
 func (p *Proc) SetSpawnTime(t time.Time) {

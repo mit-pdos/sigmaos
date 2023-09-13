@@ -108,19 +108,12 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		return fmt.Errorf("Spawn non-LC proc with Mcpu set %v", p)
 	}
 
-	childCfg := proc.NewChildProcEnv(clnt.ProcEnv(), p)
-	p.SetProcEnv(childCfg)
-
-	// Set the realm id.
-	if p.RealmStr == "" {
-		p.SetRealm(clnt.Realm())
-	}
+	p.InheritParentProcEnv(clnt.ProcEnv())
 
 	// Set the parent dir
-	p.SetParentDir(childCfg.ParentDir)
-	childProcdir := childCfg.ParentDir
+	childProcdir := p.GetParentDir()
 
-	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v\ncfg %v", kernelId, p, childCfg)
+	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v", kernelId, p)
 	if clnt.hasExited() != "" {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn error called after Exited")
 		db.DFatalf("Spawn error called after Exited")
@@ -145,7 +138,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		}
 	} else {
 		// Make the proc's procdir
-		err := clnt.MakeProcDir(p.GetPid(), p.ProcDir, p.IsPrivilegedProc())
+		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivilegedProc())
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc MakeProcDir: %v", err)
 		}

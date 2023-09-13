@@ -23,7 +23,7 @@ func (mgr *ProcMgr) runProc(p *proc.Proc) {
 }
 
 func (mgr *ProcMgr) runPrivilegedProc(p *proc.Proc) error {
-	cmd := exec.Command(p.Program, p.Args...)
+	cmd := exec.Command(p.GetProgram(), p.Args...)
 	cmd.Env = p.GetEnv()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

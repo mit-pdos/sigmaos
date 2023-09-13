@@ -12,8 +12,7 @@ import (
 
 // To run kernel procs
 func RunKernelProc(parentCfg *proc.ProcEnv, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
-	childCfg := proc.NewChildProcEnv(parentCfg, p)
-	p.SetProcEnv(childCfg)
+	p.InheritParentProcEnv(parentCfg)
 	p.Finalize("")
 	env := p.GetEnv()
 	//	s, err := namedAddr.Taddrs2String()
@@ -24,7 +23,7 @@ func RunKernelProc(parentCfg *proc.ProcEnv, p *proc.Proc, realm sp.Trealm, extra
 	env = append(env, "SIGMAROOTFS="+proc.GetSigmaRootFs())
 	env = append(env, "SIGMAREALM="+realm.String())
 	env = append(env, "SIGMATAG="+proc.GetBuildTag())
-	cmd := exec.Command(p.Program, p.Args...)
+	cmd := exec.Command(p.GetProgram(), p.Args...)
 	// Create a process group ID to kill all children if necessary.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout

@@ -113,7 +113,7 @@ func (s *Subsystem) Terminate() error {
 func (s *Subsystem) Kill() error {
 	s.crashed = true
 	db.DPrintf(db.KERNEL, "Kill %v\n", s)
-	if s.p.Program == "knamed" {
+	if s.p.GetProgram() == "knamed" {
 		return stopKNamed(s.cmd)
 	}
 	if s.how == procclnt.HSCHEDD || s.how == procclnt.HDOCKER {

@@ -64,6 +64,10 @@ func NewProcEnv() *ProcEnv {
 	}
 }
 
+func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
+	return &ProcEnv{p}
+}
+
 func NewChildProcEnv(pcfg *ProcEnv, p *Proc) *ProcEnv {
 	pe2 := NewProcEnv()
 	*(pe2.ProcEnvProto) = *(pcfg.ProcEnvProto)
@@ -134,6 +138,10 @@ func (pe *ProcEnv) SetRealm(realm sp.Trealm) {
 
 func (pe *ProcEnv) GetUname() sp.Tuname {
 	return sp.Tuname(pe.UnameStr)
+}
+
+func (pe *ProcEnv) GetProto() *ProcEnvProto {
+	return pe.ProcEnvProto
 }
 
 func (pe *ProcEnv) SetUname(uname sp.Tuname) {

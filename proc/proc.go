@@ -74,6 +74,7 @@ func MakePrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Pro
 	if p.Privileged {
 		p.TypeInt = uint32(T_LC)
 	}
+	p.ProcEnvProto = NewProcEnv().GetProto()
 	p.setProcDir("NOT_SET")
 	p.Env = make(map[string]string)
 	p.setBaseEnv()
@@ -103,11 +104,7 @@ func (p *Proc) setProcDir(kernelId string) {
 	} else {
 		p.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
 	}
-	if p.ProcEnv != "" {
-		cfg := p.GetProcEnv()
-		cfg.ProcDir = p.ProcDir
-		p.SetProcEnv(cfg)
-	}
+	p.ProcEnvProto.ProcDir = p.ProcDir
 }
 
 func (p *Proc) AppendEnv(name, val string) {
@@ -166,13 +163,13 @@ func (p *Proc) String() string {
 // ========== Getters and Setters ==========
 
 func (p *Proc) SetProcEnv(pcfg *ProcEnv) {
-	p.ProcEnv = pcfg.Marshal()
+	p.ProcEnvProto = pcfg.GetProto()
 	// TODO: don't append every time.
 	p.AppendEnv(SIGMACONFIG, pcfg.Marshal())
 }
 
 func (p *Proc) GetProcEnv() *ProcEnv {
-	return Unmarshal(p.ProcEnv)
+	return NewProcEnvFromProto(p.ProcEnvProto)
 }
 
 func (p *Proc) GetPid() sp.Tpid {

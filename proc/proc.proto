@@ -39,6 +39,6 @@ message ProcProto {
   string realmStr = 12;
   string sharedTarget = 13;
   string kernelId = 14;
-  string procEnv = 15;
-//  ProcEnvProto procEnvProto = 15;
+  ProcEnvProto procEnvProto = 15;
+//  string procEnv = 15;
 }

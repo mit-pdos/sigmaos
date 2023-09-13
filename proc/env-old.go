@@ -18,7 +18,6 @@ const (
 	SIGMADEBUG          = "SIGMADEBUG"
 	SIGMATAG            = "SIGMATAG"
 	SIGMAROOTFS         = "SIGMAROOTFS"
-	SIGMAREALM          = "SIGMAREALM"
 	SIGMANET            = "SIGMANET"
 	SIGMAJAEGERIP       = "SIGMAJAEGERIP"
 	SIGMAKERNEL         = "SIGMAKERNEL"
@@ -55,10 +54,6 @@ func SetSigmaJaegerIP(ip string) {
 
 func GetSigmaJaegerIP() string {
 	return os.Getenv(SIGMAJAEGERIP)
-}
-
-func GetRealm() sp.Trealm {
-	return sp.Trealm(os.Getenv(SIGMAREALM))
 }
 
 func GetKernelId() string {

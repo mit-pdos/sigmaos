@@ -71,7 +71,7 @@ func Run(args []string) error {
 	ch := make(chan struct{})
 	go nd.waitExit(ch)
 
-	db.DPrintf(db.NAMED, "started %v %v %v\n", pcfg.GetPID(), nd.realm, proc.GetRealm())
+	db.DPrintf(db.NAMED, "started %v %v", pcfg.GetPID(), nd.realm)
 
 	if err := nd.startLeader(); err != nil {
 		db.DPrintf(db.NAMED, "%v: startLeader %v err %v\n", pcfg.GetPID(), nd.realm, err)

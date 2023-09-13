@@ -37,7 +37,7 @@ func (mgr *ProcMgr) setupUserBinCache(p *proc.Proc) {
 		if err := mgr.rootsc.MkDir(cachePn, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 			db.DFatalf("Error MkDir cache dir [%v]: %v", cachePn, err)
 		}
-		mgr.cachedirs[proc.GetRealm()] = true
+		mgr.cachedirs[p.GetRealm()] = true
 	}
 }
 

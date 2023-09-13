@@ -28,7 +28,7 @@ func RunKNamed(args []string) error {
 
 	init := args[2]
 
-	db.DPrintf(db.NAMED, "started %v %v %v\n", pcfg.GetPID(), nd.realm, proc.GetRealm())
+	db.DPrintf(db.NAMED, "started %v %v", pcfg.GetPID(), nd.realm)
 
 	w := os.NewFile(uintptr(3), "pipew")
 	r := os.NewFile(uintptr(4), "piper")

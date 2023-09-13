@@ -58,7 +58,6 @@ func MakeKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 	}
 	db.DPrintf(db.KERNEL, "MakeKernel ip %v", ip)
 	k.ip = ip
-	proc.SetSigmaLocal(ip)
 	if p.Services[0] == sp.KNAMED {
 		if err := k.bootKNamed(pcfg, true); err != nil {
 			return nil, err

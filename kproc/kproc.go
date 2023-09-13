@@ -13,7 +13,7 @@ import (
 // To run kernel procs
 func RunKernelProc(parentCfg *proc.ProcEnv, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
 	p.InheritParentProcEnv(parentCfg)
-	p.Finalize("")
+	p.Finalize("", parentCfg.LocalIP)
 	env := p.GetEnv()
 	//	s, err := namedAddr.Taddrs2String()
 	//	if err != nil {

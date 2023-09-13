@@ -95,7 +95,6 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.SetRealm(parentPE.GetRealm())
 	p.ProcEnvProto.ParentDir = path.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
 	p.ProcEnvProto.EtcdIP = parentPE.EtcdIP
-	p.ProcEnvProto.LocalIP = parentPE.LocalIP
 	p.ProcEnvProto.Perf = parentPE.Perf
 	p.ProcEnvProto.Debug = parentPE.Debug
 	// TODO: anything else?
@@ -132,8 +131,9 @@ func (p *Proc) setBaseEnv() {
 
 // Finalize env details which can only be set once a physical machine has been
 // chosen.
-func (p *Proc) Finalize(kernelId string) {
+func (p *Proc) Finalize(kernelId string, localIP string) {
 	p.setProcDir(kernelId)
+	p.ProcEnvProto.LocalIP = localIP
 	p.AppendEnv(SIGMAKERNEL, kernelId)
 	p.AppendEnv(SIGMAJAEGERIP, GetSigmaJaegerIP())
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())

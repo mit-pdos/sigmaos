@@ -61,7 +61,7 @@ func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {
-	p.Finalize(mgr.kernelId)
+	p.Finalize(mgr.kernelId, mgr.rootsc.ProcEnv().LocalIP)
 	s := time.Now()
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))

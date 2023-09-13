@@ -44,10 +44,10 @@ func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow)
 	pid := sp.GenPid(program)
 	p := proc.MakePrivProcPid(pid, program, args, true)
 	ss := makeSubsystem(k.ProcClnt, k, p, how)
-	return ss, ss.Run(how, k.Param.KernelId)
+	return ss, ss.Run(how, k.Param.KernelId, k.ip)
 }
 
-func (s *Subsystem) Run(how procclnt.Thow, kernelId string) error {
+func (s *Subsystem) Run(how procclnt.Thow, kernelId string, localIP string) error {
 	if how == procclnt.HLINUX || how == procclnt.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {
@@ -63,7 +63,7 @@ func (s *Subsystem) Run(how procclnt.Thow, kernelId string) error {
 		// XXX don't hard code
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
-		s.p.Finalize("")
+		s.p.Finalize("", localIP)
 		var r *port.Range
 		up := port.NOPORT
 		if s.k.Param.Overlays {

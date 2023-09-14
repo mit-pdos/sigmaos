@@ -124,7 +124,7 @@ func (d *Dir) s3ReadDir(ctx fs.CtxI, fss3 *Fss3) *serr.Err {
 		}
 	}
 	d.sz = sp.Tlength(d.dents.Len()) // makeup size
-	db.DPrintf(db.S3, "s3ReadDirL: dir %v key %v\n", d, key)
+	db.DPrintf(db.S3, "s3ReadDir: dir %v key %v\n", d, key)
 	return nil
 }
 
@@ -175,7 +175,7 @@ func mkObjs(base *Obj) []fs.FsObj {
 }
 
 func (d *Dir) lookupPath(ctx fs.CtxI, p path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
-	db.DPrintf(db.S3, "%v: lookupPath d %v %v\n", ctx, d, p)
+	db.DPrintf(db.S3, "%v: lookupPath d %v p %v\n", ctx, d, p)
 	// maybe p is f a file
 	o := makeObj(d.bucket, d.key.Copy().AppendPath(p), sp.Tperm(0777))
 	if err := o.readHead(fss3); err == nil {
@@ -291,12 +291,16 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	}
 	if perm.IsDir() {
 		obj, err := d.CreateDir(ctx, name, perm)
-		if err == nil {
-			d.dents.Insert(name, perm)
+		if err != nil {
+			return nil, err
 		}
-		return obj, err
+		d.dents.Insert(name, perm)
+		return obj, nil
 	}
 	d.dents.Insert(name, perm)
+	if err := o.s3Create(); err != nil {
+		return nil, err
+	}
 	if perm.IsFile() && m == sp.OWRITE {
 		o.setupWriter()
 	}

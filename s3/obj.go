@@ -72,10 +72,10 @@ func (o *Obj) readHead(fss3 *Fss3) *serr.Err {
 	}
 	result, err := fss3.client.HeadObject(context.TODO(), input)
 	if err != nil {
+		db.DPrintf(db.S3, "readHead: %v err %v\n", key, err)
 		return serr.MkErrError(err)
 	}
-
-	db.DPrintf(db.S3, "readHead: %v %v\n", key, result.ContentLength)
+	db.DPrintf(db.S3, "readHead: %v %v %v\n", key, result.ContentLength, err)
 	o.sz = sp.Tlength(result.ContentLength)
 	if result.LastModified != nil {
 		o.mtime = (*result.LastModified).Unix()
@@ -126,6 +126,7 @@ func (o *Obj) Parent() fs.Dir {
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.S3, "Stat: %v\n", o)
 	if err := o.fill(); err != nil {
+		db.DPrintf(db.S3, "Stat: %v err %v\n", o, err)
 		return nil, err
 	}
 	st := o.stat()
@@ -198,6 +199,18 @@ func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]by
 		return nil, serr.MkErrError(error)
 	}
 	return b, nil
+}
+
+func (o *Obj) s3Create() *serr.Err {
+	key := o.key.String()
+	input := &s3.PutObjectInput{
+		Bucket: &o.bucket,
+		Key:    &key,
+	}
+	if _, err := fss3.client.PutObject(context.TODO(), input); err != nil {
+		return serr.MkErrError(err)
+	}
+	return nil
 }
 
 //

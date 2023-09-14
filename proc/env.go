@@ -59,6 +59,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, p
 			ParentDir: parentDir,
 			Program:   program,
 			LocalIP:   NOT_SET,
+			KernelID:  NOT_SET,
 			BuildTag:  NOT_SET,
 			Net:       NOT_SET,
 			Perf:      os.Getenv(SIGMAPERF),

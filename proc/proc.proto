@@ -12,10 +12,11 @@ message ProcEnvProto {
   string parentDir = 6;
   string etcdIP = 7;
   string localIP = 8;
-  string buildTag = 9;
-  string net = 10;
-  string perf = 11;
-  string debug = 12;
+  string kernelID = 9;
+  string buildTag = 10;
+  string net = 11;
+  string perf = 12;
+  string debug = 13;
 }
 //	KernelID   string    `json:kernelid,omitempty`
 //	UprocdPID  sp.Tpid   `json:uprocdpid,omitempty`
@@ -34,5 +35,4 @@ message ProcProto {
   uint32 memInt = 10;
   google.protobuf.Timestamp spawnTimePB = 11;
   string sharedTarget = 13;
-  string kernelId = 14;
 }

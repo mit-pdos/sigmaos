@@ -82,11 +82,11 @@ func (mgr *ProcMgr) downloadProcBin(p *proc.Proc) error {
 	paths := []string{
 		commonBins,
 		path.Join(sp.S3, "~local", p.GetRealm().String(), "/bin"),
-		path.Join(sp.S3, "~local", mgr.bintag, "/bin"),
+		path.Join(sp.S3, "~local", p.GetBuildTag(), "/bin"),
 	}
 	var err error
 	for _, pp := range paths {
-		db.DPrintf(db.ALWAYS, "Download bintag %v sigmatag %v pp %v prog %v", mgr.bintag, proc.GetBuildTag(), pp, p.GetProgram())
+		db.DPrintf(db.ALWAYS, "Download buildtag %v pp %v prog %v", p.GetBuildTag(), pp, p.GetProgram())
 		if e := mgr.downloadProcPath(p.GetRealm(), pp, p.GetProgram()); e == nil {
 			return nil
 		} else {

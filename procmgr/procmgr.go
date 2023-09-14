@@ -27,7 +27,6 @@ type ProcMgr struct {
 	cachedirs map[sp.Trealm]bool
 	running   map[sp.Tpid]*proc.Proc
 	pcache    *ProcCache
-	bintag    string
 }
 
 // Manages the state and lifecycle of a proc.
@@ -41,7 +40,6 @@ func MakeProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 		cachedirs: make(map[sp.Trealm]bool),
 		running:   make(map[sp.Tpid]*proc.Proc),
 		pcache:    MakeProcCache(PROC_CACHE_SZ),
-		bintag:    proc.GetBuildTag(),
 	}
 	mgr.makews()
 	return mgr

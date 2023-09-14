@@ -15,14 +15,6 @@ func RunKernelProc(parentCfg *proc.ProcEnv, p *proc.Proc, realm sp.Trealm, extra
 	p.InheritParentProcEnv(parentCfg)
 	p.Finalize("", parentCfg.LocalIP)
 	env := p.GetEnv()
-	//	s, err := namedAddr.Taddrs2String()
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	env = append(env, "SIGMAPROGRAM="+p.Program)
-	env = append(env, "SIGMAROOTFS="+proc.GetSigmaRootFs())
-	env = append(env, "SIGMAREALM="+realm.String())
-	env = append(env, "SIGMATAG="+proc.GetBuildTag())
 	cmd := exec.Command(p.GetProgram(), p.Args...)
 	// Create a process group ID to kill all children if necessary.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

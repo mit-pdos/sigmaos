@@ -16,11 +16,8 @@ const (
 	SIGMANETFAIL        = "SIGMANETFAIL"
 	SIGMAPERF           = "SIGMAPERF"
 	SIGMADEBUG          = "SIGMADEBUG"
-	SIGMATAG            = "SIGMATAG"
-	SIGMAROOTFS         = "SIGMAROOTFS"
 	SIGMANET            = "SIGMANET"
 	SIGMAJAEGERIP       = "SIGMAJAEGERIP"
-	SIGMAKERNEL         = "SIGMAKERNEL"
 	SIGMAUPROCD         = "SIGMAUPROCD"
 )
 
@@ -44,10 +41,6 @@ func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
 }
 
-func GetSigmaRootFs() string {
-	return os.Getenv(SIGMAROOTFS)
-}
-
 func SetSigmaJaegerIP(ip string) {
 	os.Setenv(SIGMAJAEGERIP, ip)
 }
@@ -56,20 +49,12 @@ func GetSigmaJaegerIP() string {
 	return os.Getenv(SIGMAJAEGERIP)
 }
 
-func GetKernelId() string {
-	return os.Getenv(SIGMAKERNEL)
-}
-
 func GetNet() string {
 	return os.Getenv(SIGMANET)
 }
 
 func GetUprocdPid() sp.Tpid {
 	return sp.Tpid(os.Getenv(SIGMAUPROCD))
-}
-
-func GetBuildTag() string {
-	return os.Getenv(SIGMATAG)
 }
 
 func GetLabels(envvar string) map[string]bool {

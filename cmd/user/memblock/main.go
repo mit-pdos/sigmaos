@@ -32,7 +32,7 @@ func main() {
 		db.DFatalf("Unexpected mkdir err: %v", err)
 	}
 	// Register this memblocker.
-	if _, err := sc.Create(path.Join(sp.MEMBLOCK, proc.GetKernelId()), 0777, 0); err != nil {
+	if _, err := sc.Create(path.Join(sp.MEMBLOCK, sc.ProcEnv().KernelID), 0777, 0); err != nil {
 		db.DFatalf("Unexpected putfile err: %v", err)
 	}
 	db.DPrintf(db.ALWAYS, "Allocating %v bytes of memory", m)

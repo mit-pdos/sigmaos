@@ -97,6 +97,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.EtcdIP = parentPE.EtcdIP
 	p.ProcEnvProto.Perf = parentPE.Perf
 	p.ProcEnvProto.Debug = parentPE.Debug
+	p.ProcEnvProto.BuildTag = parentPE.BuildTag
 	// TODO: anything else?
 }
 
@@ -134,7 +135,7 @@ func (p *Proc) setBaseEnv() {
 func (p *Proc) Finalize(kernelId string, localIP string) {
 	p.setProcDir(kernelId)
 	p.ProcEnvProto.LocalIP = localIP
-	p.AppendEnv(SIGMAKERNEL, kernelId)
+	p.ProcEnvProto.KernelID = kernelId
 	p.AppendEnv(SIGMAJAEGERIP, GetSigmaJaegerIP())
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
 }
@@ -148,7 +149,7 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.GetPID(),
 		p.Privileged,
-		p.KernelId,
+		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.ProcDir,
 		p.ProcEnvProto.ParentDir,
@@ -200,6 +201,10 @@ func (p *Proc) GetMem() Tmem {
 
 func (p *Proc) GetRealm() sp.Trealm {
 	return p.ProcEnvProto.GetRealm()
+}
+
+func (p *Proc) GetBuildTag() string {
+	return p.ProcEnvProto.BuildTag
 }
 
 func (p *Proc) SetType(t Ttype) {

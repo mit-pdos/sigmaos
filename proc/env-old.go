@@ -9,16 +9,15 @@ import (
 
 // Environment variables which every proc expects to have.
 const (
-	SIGMAPRIVILEGEDPROC = "SIGMAKERNELPROC"
-	SIGMADEBUGPID       = "SIGMADEBUGPID"
-	SIGMACRASH          = "SIGMACRASH"
-	SIGMAPARTITION      = "SIGMAPARTITION"
-	SIGMANETFAIL        = "SIGMANETFAIL"
-	SIGMAPERF           = "SIGMAPERF"
-	SIGMADEBUG          = "SIGMADEBUG"
-	SIGMANET            = "SIGMANET"
-	SIGMAJAEGERIP       = "SIGMAJAEGERIP"
-	SIGMAUPROCD         = "SIGMAUPROCD"
+	SIGMADEBUGPID  = "SIGMADEBUGPID"
+	SIGMACRASH     = "SIGMACRASH"
+	SIGMAPARTITION = "SIGMAPARTITION"
+	SIGMANETFAIL   = "SIGMANETFAIL"
+	SIGMAPERF      = "SIGMAPERF"
+	SIGMADEBUG     = "SIGMADEBUG"
+	SIGMANET       = "SIGMANET"
+	SIGMAJAEGERIP  = "SIGMAJAEGERIP"
+	SIGMAUPROCD    = "SIGMAUPROCD"
 )
 
 func SetSigmaDebugPid(pid string) {
@@ -27,10 +26,6 @@ func SetSigmaDebugPid(pid string) {
 
 func GetSigmaDebugPid() string {
 	return os.Getenv(SIGMADEBUGPID)
-}
-
-func GetIsPrivilegedProc() bool {
-	return os.Getenv(SIGMAPRIVILEGEDPROC) == "true"
 }
 
 func GetSigmaPerf() string {

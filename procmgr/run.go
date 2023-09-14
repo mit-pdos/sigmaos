@@ -12,7 +12,7 @@ import (
 func (mgr *ProcMgr) runProc(p *proc.Proc) {
 	db.DPrintf(db.PROCMGR, "Procd run: %v\nQueueing delay: %v", p, time.Since(p.GetSpawnTime()))
 	var err error
-	if p.IsPrivilegedProc() {
+	if p.IsPrivileged() {
 		err = mgr.runPrivilegedProc(p)
 	} else {
 		err = mgr.runUserProc(p)

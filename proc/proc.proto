@@ -17,8 +17,8 @@ message ProcEnvProto {
   string net = 11;
   string perf = 12;
   string debug = 13;
+  bool privileged = 14;
 }
-//	KernelID   string    `json:kernelid,omitempty`
 //	UprocdPID  sp.Tpid   `json:uprocdpid,omitempty`
 //	Privileged bool      `json:privileged,omitempty` // XXX phase out?
 //	// For testing purposes
@@ -27,7 +27,6 @@ message ProcEnvProto {
 
 message ProcProto {
   ProcEnvProto procEnvProto = 1;
-  bool privileged = 2;
   repeated string args = 6;
   map<string, string> env = 7;
   uint32 typeInt = 8;

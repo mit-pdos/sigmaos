@@ -24,7 +24,7 @@ func cachePath(realm sp.Trealm, prog string) string {
 func (mgr *ProcMgr) setupUserBinCache(p *proc.Proc) {
 	// Only set up cache dir when we start spawning user procs. By this time, UX
 	// will already be up.
-	if p.Privileged {
+	if p.IsPrivileged() {
 		return
 	}
 
@@ -55,7 +55,7 @@ func (mgr *ProcMgr) alreadyCached(realm sp.Trealm, prog string) bool {
 
 func (mgr *ProcMgr) downloadProc(p *proc.Proc) {
 	// Privileged procs' bins should be part of the base image.
-	if p.IsPrivilegedProc() {
+	if p.IsPrivileged() {
 		return
 	}
 	// Download the bin from s3, if it isn't already cached locally.

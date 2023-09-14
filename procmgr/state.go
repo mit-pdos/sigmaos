@@ -48,19 +48,19 @@ func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 	}
 	// Release the parent proc, which may be waiting for removal of the proc
 	// queue file in WaitStart.
-	if err := mgr.rootsc.Remove(path.Join(sp.SCHEDD, p.KernelId, sp.QUEUE, p.GetPid().String())); err != nil {
+	if err := mgr.rootsc.Remove(path.Join(sp.SCHEDD, p.GetKernelID(), sp.QUEUE, p.GetPid().String())); err != nil {
 		// Check if the proc was stoelln from another schedd.
-		stolen := p.KernelId != mgr.kernelId
+		stolen := p.GetKernelID() != mgr.kernelId
 		if stolen {
 			// May return an error if the schedd stolen from crashes.
-			db.DPrintf(db.PROCMGR_ERR, "Error remove schedd queue file [%v]: %v", p.KernelId, err)
+			db.DPrintf(db.PROCMGR_ERR, "Error remove schedd queue file [%v]: %v", p.GetKernelID(), err)
 		} else {
 			// Removing from self should always succeed.
 			db.DFatalf("Error remove schedd queue file: %v", err)
 		}
 	}
 	// Make the proc's procdir
-	if err := mgr.rootsc.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivilegedProc()); err != nil {
+	if err := mgr.rootsc.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged()); err != nil {
 		db.DPrintf(db.PROCMGR_ERR, "Err procmgr MakeProcDir: %v\n", err)
 	}
 }
@@ -147,7 +147,7 @@ func (mgr *ProcMgr) getWSQueue(qpath string) (map[sp.Trealm][]*proc.Proc, bool) 
 			}
 			// Is the proc a local proc? If so, don't add it to the queue of
 			// stealable procs.
-			if p.KernelId == mgr.kernelId {
+			if p.GetKernelID() == mgr.kernelId {
 				continue
 			}
 			if _, ok := stealable[p.GetRealm()]; !ok {

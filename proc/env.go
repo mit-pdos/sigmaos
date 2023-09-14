@@ -48,29 +48,30 @@ func GetProcEnv() *ProcEnv {
 	return Unmarshal(pestr)
 }
 
-func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, procDir string, parentDir string) *ProcEnv {
+func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, procDir string, parentDir string, priv bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
-			PidStr:    string(pid),
-			RealmStr:  string(realm),
-			UnameStr:  string(uname),
-			ProcDir:   procDir,
-			ParentDir: parentDir,
-			Program:   program,
-			LocalIP:   NOT_SET,
-			KernelID:  NOT_SET,
-			BuildTag:  NOT_SET,
-			Net:       NOT_SET,
-			Perf:      os.Getenv(SIGMAPERF),
-			Debug:     os.Getenv(SIGMADEBUG),
+			PidStr:     string(pid),
+			RealmStr:   string(realm),
+			UnameStr:   string(uname),
+			ProcDir:    procDir,
+			ParentDir:  parentDir,
+			Program:    program,
+			LocalIP:    NOT_SET,
+			KernelID:   NOT_SET,
+			BuildTag:   NOT_SET,
+			Net:        NOT_SET,
+			Perf:       os.Getenv(SIGMAPERF),
+			Debug:      os.Getenv(SIGMADEBUG),
+			Privileged: priv,
 		},
 	}
 }
 
-func NewProcEnvUnset() *ProcEnv {
+func NewProcEnvUnset(priv bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
-	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), sp.Tuname(NOT_SET), NOT_SET, NOT_SET)
+	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), sp.Tuname(NOT_SET), NOT_SET, NOT_SET, priv)
 }
 
 func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
@@ -78,7 +79,7 @@ func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 }
 
 func NewBootProcEnv(uname sp.Tuname, etcdIP, localIP string) *ProcEnv {
-	pe := NewProcEnvUnset()
+	pe := NewProcEnvUnset(true)
 	pe.SetUname(uname)
 	pe.Program = "kernel"
 	pe.SetPID(sp.GenPid(string(uname)))
@@ -90,7 +91,7 @@ func NewBootProcEnv(uname sp.Tuname, etcdIP, localIP string) *ProcEnv {
 }
 
 func NewTestProcEnv(realm sp.Trealm, etcdIP, localIP, buildTag string) *ProcEnv {
-	pe := NewProcEnvUnset()
+	pe := NewProcEnvUnset(true)
 	pe.SetUname("test")
 	pe.SetPID(sp.GenPid("test"))
 	pe.SetRealm(realm)
@@ -104,14 +105,14 @@ func NewTestProcEnv(realm sp.Trealm, etcdIP, localIP, buildTag string) *ProcEnv 
 
 // Create a new sigma config which is a derivative of an existing sigma config.
 func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
-	pe2 := NewProcEnvUnset()
+	pe2 := NewProcEnvUnset(pe.Privileged)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetUname(sp.Tuname(string(pe.GetUname()) + "-clnt-" + strconv.Itoa(idx)))
 	return pe2
 }
 
 func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
-	pe2 := NewProcEnvUnset()
+	pe2 := NewProcEnvUnset(pe.Privileged)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetRealm(realm)
 	pe2.SetUname(sp.Tuname(string(pe.GetUname()) + "-realm-" + realm.String()))
@@ -165,5 +166,5 @@ func Unmarshal(pestr string) *ProcEnv {
 
 // TODO: cleanup
 func (pe *ProcEnv) String() string {
-	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Uname:%v KernelID:%v UprocdPID:%v Net:%v Privileged:%v ProcDir:%v ParentDir:%v Perf:%v Debug:%v EtcdIP:%v LocalIP:%v BuildTag:%v Crash:%v Partition:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetUname(), nil /*pe.KernelID*/, nil /*pe.UprocdPID*/, pe.Net, nil /*pe.Privileged*/, pe.ProcDir, pe.ParentDir, pe.Perf, pe.Debug, pe.EtcdIP, pe.LocalIP, pe.BuildTag, nil, nil /*pe.Crash, pe.Partition*/)
+	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Uname:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v Perf:%v Debug:%v EtcdIP:%v LocalIP:%v BuildTag:%v Privileged:%v Crash:%v Partition:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetUname(), pe.KernelID, nil /*pe.UprocdPID*/, pe.Net, nil /*pe.Privileged*/, pe.ProcDir, pe.ParentDir, pe.Perf, pe.Debug, pe.EtcdIP, pe.LocalIP, pe.BuildTag, pe.Privileged, nil, nil /*pe.Crash, pe.Partition*/)
 }

@@ -219,7 +219,7 @@ func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 
 func (ssrv *SigmaSrv) Serve() {
 	// If this is a kernel proc, register the subsystem info for the realmmgr
-	if proc.GetIsPrivilegedProc() {
+	if ssrv.SigmaClnt().ProcEnv().Privileged {
 		si := kernel.MakeSubsystemInfo(ssrv.SigmaClnt().ProcEnv().GetPID(), ssrv.MyAddr())
 		kernel.RegisterSubsystemInfo(ssrv.MemFs.SigmaClnt().FsLib, si)
 	}

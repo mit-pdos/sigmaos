@@ -138,7 +138,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		}
 	} else {
 		// Make the proc's procdir
-		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivilegedProc())
+		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged())
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc MakeProcDir: %v", err)
 		}

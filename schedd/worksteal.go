@@ -19,7 +19,7 @@ func (sd *Schedd) tryStealProc(realm sp.Trealm, p *proc.Proc) bool {
 		PidStr:   p.GetPid().String(),
 	}
 	sres := &proto.StealProcResponse{}
-	rpcc, err := sd.scheddclnt.GetScheddClnt(p.KernelId)
+	rpcc, err := sd.scheddclnt.GetScheddClnt(p.GetKernelID())
 	if err != nil {
 		// XXX FK: just return false?
 		db.DFatalf("Error make getScheddClnt: %v", err)

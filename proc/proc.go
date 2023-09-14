@@ -65,12 +65,11 @@ func MakeProc(program string, args []string) *Proc {
 func MakePrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
-	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), sp.Tuname(pid), NOT_SET, NOT_SET).GetProto()
+	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), sp.Tuname(pid), NOT_SET, NOT_SET, priv).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
 	p.McpuInt = uint32(0)
-	p.Privileged = priv
-	if p.Privileged {
+	if p.ProcEnvProto.Privileged {
 		p.TypeInt = uint32(T_LC)
 	}
 	p.setProcDir("NOT_SET")
@@ -102,7 +101,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 }
 
 func (p *Proc) setProcDir(kernelId string) {
-	if p.IsPrivilegedProc() {
+	if p.IsPrivileged() {
 		p.ProcEnvProto.ProcDir = path.Join(sp.KPIDS, p.GetPid().String())
 	} else {
 		p.ProcEnvProto.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
@@ -120,12 +119,11 @@ func (p *Proc) LookupEnv(name string) (string, bool) {
 
 // Set the envvars which can be set at proc creation time.
 func (p *Proc) setBaseEnv() {
-	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%t", p.IsPrivilegedProc()))
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
 	p.AppendEnv(SIGMADEBUGPID, p.GetPid().String())
-	if p.Privileged {
+	if p.IsPrivileged() {
 		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot
 	}
 }
@@ -140,15 +138,15 @@ func (p *Proc) Finalize(kernelId string, localIP string) {
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
 }
 
-func (p *Proc) IsPrivilegedProc() bool {
-	return p.Privileged
+func (p *Proc) IsPrivileged() bool {
+	return p.ProcEnvProto.Privileged
 }
 
 func (p *Proc) String() string {
 	return fmt.Sprintf("&{ Program:%v Pid:%v Priv:%t KernelId:%v Realm:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Mcpu:%v Mem:%v }",
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.GetPID(),
-		p.Privileged,
+		p.ProcEnvProto.Privileged,
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.ProcDir,
@@ -205,6 +203,14 @@ func (p *Proc) GetRealm() sp.Trealm {
 
 func (p *Proc) GetBuildTag() string {
 	return p.ProcEnvProto.BuildTag
+}
+
+func (p *Proc) GetKernelID() string {
+	return p.ProcEnvProto.KernelID
+}
+
+func (p *Proc) SetKernelID(id string) {
+	p.ProcEnvProto.KernelID = id
 }
 
 func (p *Proc) SetType(t Ttype) {

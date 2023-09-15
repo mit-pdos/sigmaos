@@ -6,11 +6,10 @@ import (
 	"math/rand"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
-	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
-	sp "sigmaos/sigmap"
+	"sigmaos/proc"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -37,7 +36,7 @@ func RunMediaSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Creating media service\n")
 	msrv := &MediaSrv{}
 	msrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_MEDIA, msrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_MEDIA, msrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -47,7 +46,7 @@ func RunMediaSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, MEDIA_COL, []string{"mediaid"})
 	msrv.mongoc = mongoc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_MEDIA)
+	fsls := MakeFsLibs(SOCIAL_NETWORK_MEDIA)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
@@ -62,7 +61,7 @@ func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaRequest, res *
 	mId := msrv.getNextMediaId()
 	newMedia := Media{mId, req.Mediatype, req.Mediadata}
 	if err := msrv.mongoc.Insert(SN_DB, MEDIA_COL, newMedia); err != nil {
-		dbg.DFatalf("Mongo Error: %v", err)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Mongo Error: %v", err)
 		return err
 	}
 	res.Ok = POST_QUERY_OK

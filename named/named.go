@@ -13,6 +13,8 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/fslibsrv"
 	"sigmaos/leaderetcd"
+	"sigmaos/port"
+	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
@@ -79,11 +81,11 @@ func Run(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	if err := nd.mkSrv(); err != nil {
+	mnt, err := nd.mkSrv()
+	if err != nil {
 		db.DFatalf("Error mkSrv %v\n", err)
 	}
 
-	mnt := sp.MkMountServer(nd.MyAddr())
 	pn = sp.NAMED
 	if nd.realm == sp.ROOTREALM {
 		db.DPrintf(db.ALWAYS, "SetRootNamed %v mnt %v\n", nd.realm, mnt)
@@ -106,9 +108,9 @@ func Run(args []string) error {
 		}
 	}
 
-	nd.getRoot(pn)
+	nd.getRoot(pn + "/")
 
-	if err := nd.CreateLeaderFile(path.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease())); err != nil {
+	if err := nd.CreateLeaderFile(path.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
 		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v\n", nd.elect.Key(), err)
 	}
 
@@ -131,27 +133,42 @@ func Run(args []string) error {
 	return nil
 }
 
-func (nd *Named) mkSrv() error {
+func (nd *Named) mkSrv() (sp.Tmount, error) {
 	ip, err := container.LocalIP()
 	if err != nil {
-		return err
+		return sp.NullMount(), err
 	}
-
 	root := rootDir(nd.fs, nd.realm)
-	srv := fslibsrv.BootSrv(nd.ProcEnv(), root, ip+":0", nd.attach, nd.detach, nil)
+	var pi portclnt.PortInfo
+	if nd.realm == sp.ROOTREALM || proc.GetNet() == sp.ROOTREALM.String() {
+		ip = ip + ":0"
+	} else {
+		_, pi0, err := portclnt.MkPortClntPort(nd.SigmaClnt.FsLib)
+		if err != nil {
+			return sp.NullMount(), err
+		}
+		pi = pi0
+		ip = ":" + pi.Pb.RealmPort.String()
+	}
+	srv := fslibsrv.BootSrv(root, ip, nd.attach, nd.detach, nil)
 	if srv == nil {
-		return fmt.Errorf("BootSrv err %v\n", err)
+		return sp.NullMount(), fmt.Errorf("BootSrv err %v\n", err)
 	}
 
 	ssrv := sigmasrv.MakeSigmaSrvSess(srv, sp.Tuname(nd.ProcEnv().GetPID().String()), nd.SigmaClnt)
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
-		return err
+		return sp.NullMount(), err
+	}
+	nd.SigmaSrv = ssrv
+
+	mnt := sp.MkMountServer(nd.MyAddr())
+	if nd.realm != sp.ROOTREALM {
+		mnt = port.MkPublicMount(pi.Hip, pi.Pb, proc.GetNet(), nd.MyAddr())
 	}
 
-	db.DPrintf(db.NAMED, "mkSrv %v %v %v\n", nd.realm, srv.MyAddr(), nd.elect.Key())
+	db.DPrintf(db.NAMED, "mkSrv %v %v %v %v %v\n", nd.realm, ip, srv.MyAddr(), nd.elect.Key(), mnt)
 
-	nd.SigmaSrv = ssrv
-	return nil
+	return mnt, nil
 }
 
 func (nd *Named) attach(cid sp.TclntId) {

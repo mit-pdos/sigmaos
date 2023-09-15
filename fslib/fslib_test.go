@@ -21,7 +21,6 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 	"sigmaos/test"
@@ -415,7 +414,7 @@ func TestSetAppend(t *testing.T) {
 	assert.Equal(t, nil, err)
 	l, err := ts.SetFile(fn, d, sp.OAPPEND, sp.NoOffset)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, sessp.Tsize(len(d)), l)
+	assert.Equal(t, sp.Tsize(len(d)), l)
 	b, err := ts.GetFile(fn)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, len(d)*2, len(b))
@@ -474,8 +473,8 @@ func TestPageDir(t *testing.T) {
 	dn := gopath.Join(pathname, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
-	ts.SetChunkSz(sessp.Tsize(512))
-	n := 100
+	ts.SetChunkSz(sp.Tsize(512))
+	n := 1000
 	names := make([]string, 0)
 	for i := 0; i < n; i++ {
 		db.DPrintf(db.TEST, "Putfile %v", i)
@@ -577,76 +576,6 @@ func TestDirConcur(t *testing.T) {
 
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
-
-	ts.Shutdown()
-}
-
-func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
-	fd, err := fsl.Open(cnt, sp.ORDWR)
-	assert.Nil(t, err)
-
-	defer fsl.Close(fd)
-
-	b, err := fsl.ReadV(fd, 1000)
-	if serr.IsErrCode(err, serr.TErrVersion) {
-		return true
-	}
-	assert.Nil(t, err)
-	n, err := strconv.Atoi(string(b))
-	assert.Nil(t, err)
-
-	n += 1
-
-	err = fsl.Seek(fd, 0)
-	assert.Nil(t, err)
-
-	b = []byte(strconv.Itoa(n))
-	_, err = fsl.WriteV(fd, b)
-	if serr.IsErrCode(err, serr.TErrVersion) {
-		return true
-	}
-	assert.Nil(t, err)
-
-	return false
-}
-
-func TestCounter(t *testing.T) {
-	const N = 10
-
-	ts := test.MakeTstatePath(t, pathname)
-	cnt := gopath.Join(pathname, "cnt")
-	b := []byte(strconv.Itoa(0))
-	_, err := ts.PutFile(cnt, 0777, sp.OWRITE, b)
-	assert.Equal(t, nil, err)
-
-	ch := make(chan int)
-
-	for i := 0; i < N; i++ {
-		go func(i int) {
-			ntrial := 0
-			for {
-				ntrial += 1
-				if readWrite(t, ts.FsLib, cnt) {
-					continue
-				}
-				break
-			}
-			// log.Printf("%d: tries %v\n", i, ntrial)
-			ch <- i
-		}(i)
-	}
-	for i := 0; i < N; i++ {
-		<-ch
-	}
-	b, err = ts.GetFile(cnt)
-	assert.Equal(t, nil, err)
-	n, err := strconv.Atoi(string(b))
-	assert.Equal(t, nil, err)
-
-	assert.Equal(t, N, n)
-
-	err = ts.Remove(cnt)
-	assert.Nil(t, err, "Remove: %v", err)
 
 	ts.Shutdown()
 }
@@ -1167,7 +1096,7 @@ func TestSetFileSymlink(t *testing.T) {
 	d = []byte("byebye")
 	n, err := ts.SetFile(gopath.Join(pathname, "namedself0/f"), d, sp.OWRITE, 0)
 	assert.Nil(ts.T, err, "SetFile: %v", err)
-	assert.Equal(ts.T, sessp.Tsize(len(d)), n, "SetFile")
+	assert.Equal(ts.T, sp.Tsize(len(d)), n, "SetFile")
 
 	err = ts.GetFileJson(gopath.Join(pathname, sp.STATSD), &st)
 	assert.Nil(t, err, "statsd")

@@ -44,8 +44,6 @@ func (l *LeaderClnt) Fence() sp.Tfence {
 	return l.ec.Fence()
 }
 
-// Enter next epoch.  If the leader is partitioned and another leader
-// has taken over already, this fails.
 func (l *LeaderClnt) fenceDirs(dirs []string) error {
 	if err := l.fc.FenceAtEpoch(l.Fence(), dirs); err != nil {
 		return err
@@ -57,6 +55,7 @@ func (l *LeaderClnt) GetFences(pn string) ([]*sp.Stat, error) {
 	return l.fc.GetFences(pn)
 }
 
+// Works for file systems that support fencefs
 func (l *LeaderClnt) RemoveFence(dirs []string) error {
 	return l.fc.RemoveFence(dirs)
 }

@@ -174,7 +174,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 			ca = cachedsvcclnt.MakeAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
-			kvf, err = kv.MakeKvdFleet(sc, job, 0, nsrv, 0, cacheMcpu, "0", "manual")
+			kvf, err = kv.MakeKvdFleet(sc, job, 0, nsrv, 0, 0, cacheMcpu, "0", "manual")
 			if err != nil {
 				return nil, err
 			}

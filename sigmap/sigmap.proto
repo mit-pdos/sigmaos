@@ -114,22 +114,20 @@ message Rcreate {
         uint32 iounit = 2;
 }
 
-message TreadV {
+message TreadF {
         uint32 fid = 1;
         uint64 offset = 2;
         uint32 count = 3;
-        uint32 version = 4;
-        TfenceProto fence = 5;
+        TfenceProto fence = 4;
 }
 
 message Rread {
 }
 
-message TwriteV {
+message TwriteF {
         uint32 fid = 1;
         uint64 offset = 2;
-        uint32 version = 3;
-        TfenceProto fence = 4;
+        TfenceProto fence = 3;
 }
 
 message Rwrite {
@@ -205,9 +203,7 @@ message Tputfile {
 }
 
 message Tdetach {
-        uint32 propId = 1;
-        uint32 leadId = 2;
-        uint64 clntId = 3;
+        uint64 clntId = 1;
 }
 
 message Rdetach {

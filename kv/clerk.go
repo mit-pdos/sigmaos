@@ -94,8 +94,8 @@ func (kc *KvClerk) DetachKVs(kvs *KvSet) {
 	mnts := kc.Mounts()
 	for _, mnt := range mnts {
 		db.DPrintf(db.KVCLERK, "mnt kv %v", mnt)
-		if strings.HasPrefix(mnt, JobDir(kc.job)+"/grp") {
-			kvd := strings.TrimPrefix(mnt, JobDir(kc.job)+"/")
+		if strings.HasPrefix(mnt, kvgrp.JobDir(kc.job)+"/grp") {
+			kvd := strings.TrimPrefix(mnt, kvgrp.JobDir(kc.job)+"/")
 			if !kvs.present(kvd) {
 				db.DPrintf(db.KVCLERK, "Detach kv %v", kvd)
 				kc.Detach(kvGrpPath(kc.job, kvd))
@@ -108,7 +108,7 @@ func paths(job string, kvset *KvSet) []string {
 	kvs := kvset.mkKvs()
 	dirs := make([]string, 0, len(kvs)+1)
 	for _, kvd := range kvs {
-		dirs = append(dirs, kvgrp.GrpPath(JobDir(job), kvd))
+		dirs = append(dirs, kvgrp.GrpPath(kvgrp.JobDir(job), kvd))
 	}
 	return dirs
 }

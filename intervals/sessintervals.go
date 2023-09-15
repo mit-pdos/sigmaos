@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/interval"
 	"sigmaos/sessp"
 	"sigmaos/skipintervals"
 	"sigmaos/sliceintervals"
@@ -19,8 +20,8 @@ const useSkip = false
 type Intervals struct {
 	sync.Mutex
 	sid   sessp.Tsession
-	acked sessp.IIntervals // intervals with seqnos for which the server replied
-	next  sessp.IIntervals // intervals with seqnos to tell server we have received reply
+	acked interval.IIntervals // intervals with seqnos for which the server replied
+	next  interval.IIntervals // intervals with seqnos to tell server we have received reply
 }
 
 func (ivs *Intervals) String() string {
@@ -44,13 +45,13 @@ func MkIntervals(sid sessp.Tsession) *Intervals {
 // * Unless ivs.ResetNext is called, the same number should never be returned
 // twice from ivs.Next, assuming it was never inserted twice.
 // * All intervals inserted in ivs will eventually be returned by Next.
-func (ivs *Intervals) Next() sessp.Tinterval {
+func (ivs *Intervals) Next() interval.Tinterval {
 	ivs.Lock()
 	defer ivs.Unlock()
 
 	if ivs.next.Length() == 0 {
 		db.DPrintf(db.INTERVALS, "[%v] ivs.Next: nil", ivs.sid)
-		return sessp.Tinterval{}
+		return interval.Tinterval{}
 	}
 	// Pop the next interval from the queue.
 	iv := ivs.next.Pop()
@@ -72,7 +73,7 @@ func (ivs *Intervals) ResetNext() {
 	// db.DPrintf(db.INTERVALS, "ivs.ResetNext next %v acked %v", ivs.next, ivs.acked)
 }
 
-func (ivs *Intervals) Insert(n *sessp.Tinterval) {
+func (ivs *Intervals) Insert(n *interval.Tinterval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
@@ -81,7 +82,7 @@ func (ivs *Intervals) Insert(n *sessp.Tinterval) {
 	// Insert into next slice, so future calls to ivs.Next will return this
 	// interval. Must make a deep copy of n, because it may be modified during
 	// insert.
-	ivs.next.Insert(sessp.MkInterval(n.Start, n.End))
+	ivs.next.Insert(interval.MkInterval(n.Start, n.End))
 	// Insert into acked slice.
 	ivs.acked.Insert(n)
 }
@@ -93,14 +94,14 @@ func (ivs *Intervals) Contains(e uint64) bool {
 	return ivs.acked.Contains(e)
 }
 
-func (ivs *Intervals) Delete(ivd *sessp.Tinterval) {
+func (ivs *Intervals) Delete(ivd *interval.Tinterval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
 	db.DPrintf(db.INTERVALS, "[%v] ivs.Delete: %v", ivs.sid, ivd)
 
 	// Delete from Next slice to ensure the interval isn't returned by ivs.Next.
-	ivs.next.Delete(sessp.MkInterval(ivd.Start, ivd.End))
+	ivs.next.Delete(interval.MkInterval(ivd.Start, ivd.End))
 	// Delete from acked slice.
 	ivs.acked.Delete(ivd)
 }

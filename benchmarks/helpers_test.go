@@ -308,13 +308,30 @@ func makeHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps str
 }
 
 // ========== ImgResize Helpers ==========
-func makeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, mcpu proc.Tmcpu) ([]*ImgResizeJobInstance, []interface{}) {
+func makeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu) ([]*ImgResizeJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*ImgResizeJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeImgResizeJob(ts, p, sigmaos, input, ntasks, mcpu)
+		i := MakeImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, mcpu)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
+// ========== Social Network Helpers ==========
+
+func makeSocialNetworkJobs(
+		ts *test.RealmTstate, p *perf.Perf, sigmaos, readonly bool, 
+		dur, maxrps string, ncache int) ([]*SocialNetworkJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*SocialNetworkJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := MakeSocialNetworkJob(ts, p, sigmaos, readonly, dur, maxrps, ncache)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

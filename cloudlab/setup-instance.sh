@@ -42,7 +42,7 @@ Host *
 EOF
 chmod go-w .ssh/config
 
-cat << EOF > ~/.ssh/aws-ulambda
+cat << EOF > ~/.ssh/aws-sigmaos
 -----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
 NhAAAAAwEAAQAAAYEAuDRdL/1xBSHfWySdSr87yCH3BVD77zSQlh9+SSW6WggkboLhwJYp
@@ -82,8 +82,8 @@ jCPLaDog91uFPSlez3OC/eEKgCCA6WUP6w9X80VpLvi2kPumXsJXPIcQvAmpQqYPeK+ELt
 IuzhbPSUS+OksAAAAOa2Fhc2hvZWtAZms2eDEBAgMEBQ==
 -----END OPENSSH PRIVATE KEY-----
 EOF
-chmod 600 ~/.ssh/aws-ulambda
-cp ~/.ssh/aws-ulambda ~/.ssh/id_rsa
+chmod 600 ~/.ssh/aws-sigmaos
+cp ~/.ssh/aws-sigmaos ~/.ssh/id_rsa
 
 cat << EOF >> ~/.ssh/authorized_keys
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC4NF0v/XEFId9bJJ1KvzvIIfcFUPvvNJCWH35JJbpaCCRuguHAlim30WqeTG+Ru7Debl80AVuve+XrhL2uYY6R1SeBXQ6Vl6jGPzmmlTqJLi73e6oNWI13QJ1ALriS2Vy5xk1ckmS5epYS0OixerQJ/9gHTcdHWcNDbfUOi23jqdciNExSqjamrYvUwi14IhRNRqltrk2V4ephnRI+8S3ExansbZSwnu0XIz7j86e3PFMuuHwLJWv59UdO9roJl2B36dnzWp0lpqcXYrk3gbbXBCu6iV1Dv7XgvElTtmwqJJ50O2pzwJv2pBB/tw3LkWldF6FuYO3vjaTOgdm2gbCsw2DMJSa6oXJB4cRztXDe51ljbhdYptHxbJgM7+852soEma2uhuek80rRn3UEqrQ1MIsw0DJXx5k+tDbJAWyzy4k4opR583Go9UtRq/BY6qyaFHA/DY13c5QiJNapN5JameX3+wUvNmR22lX/SW61KFjXzYnn//77UCidNPr6SQs= kaashoek@fk6x1
@@ -96,20 +96,20 @@ then
   git clone https://github.com/mit-pdos/DeathStarBench.git
 fi
 
-if [ -d "ulambda" ] 
+if [ -d "sigmaos" ] 
 then
-  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull;)'
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd sigmaos; git pull;)'
 else
-  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; (cd ulambda; go mod download;)'
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; git clone git@g.csail.mit.edu:sigmaos; (cd sigmaos; go mod download;)'
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
 fi
 
 if [ -d "corral" ] 
 then
-  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd corral; git pull;)'
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd corral; git pull;)'
 else
-  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:corral; (cd corral; git checkout k8s; git pull; go mod download;)'
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; git clone git@g.csail.mit.edu:corral; (cd corral; git checkout k8s; git pull; go mod download;)'
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
 fi

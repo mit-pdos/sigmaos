@@ -324,14 +324,8 @@ type Tclunk struct {
 type Rclunk struct {
 }
 
-type Tremove struct {
+type Tremove9P struct {
 	Fid Tfid
-}
-
-type Tremovefile struct {
-	Fid     Tfid
-	Wnames  []string
-	Resolve bool
 }
 
 type Rremove struct {
@@ -383,4 +377,5 @@ func (Tread) Type() sessp.Tfcall     { return sessp.TTread }
 func (Rread9P) Type() sessp.Tfcall   { return sessp.TRread9P }
 func (Twrite) Type() sessp.Tfcall    { return sessp.TTwrite }
 func (Rstat9P) Type() sessp.Tfcall   { return sessp.TRstat9P }
+func (Tremove9P) Type() sessp.Tfcall { return sessp.TTremove }
 func (Twstat9P) Type() sessp.Tfcall  { return sessp.TTwstat }

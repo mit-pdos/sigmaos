@@ -13,6 +13,7 @@ import (
 	"sigmaos/groupmgr"
 	"sigmaos/kvgrp"
 	"sigmaos/proc"
+	"sigmaos/rand"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -24,7 +25,6 @@ const (
 	PARTITION = 200
 	NETFAIL   = 200
 	NTRIALS   = "3001"
-	JOBDIR    = "name/group"
 	GRP       = "grp-0"
 )
 
@@ -32,38 +32,42 @@ type Tstate struct {
 	*test.Tstate
 	grp string
 	gm  *groupmgr.GroupMgr
+	job string
 }
 
 func makeTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
-	ts := &Tstate{grp: GRP}
+	ts := &Tstate{job: rand.String(4), grp: GRP}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.RmDir(JOBDIR)
-	ts.MkDir(JOBDIR, 0777)
-	ts.gm = groupmgr.Start(ts.SigmaClnt, 0, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, JOBDIR, 0, ncrash, crash, partition, netfail)
-	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, JOBDIR, ts.grp)
+	ts.MkDir(kvgrp.KVDIR, 0777)
+	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
+	assert.Nil(t, err)
+	mcfg := groupmgr.NewGroupConfig(0, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, 0, ts.job)
+	mcfg.SetTest(crash, partition, netfail)
+	ts.gm = mcfg.StartGrpMgr(ts.SigmaClnt, ncrash)
+	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	return ts
 }
 
-// Server crashes store a semaphore, groupmgr starts a new server,
-// which will return a not-found for the semaphore, which is
-// interpreted as a successful down by the semclnt.
+// Server crashes storing a semaphore. The test's down() will return a
+// not-found for the semaphore, which is interpreted as a successful
+// down by the semclnt.
 func TestServerCrash(t *testing.T) {
 	ts := makeTstate(t, 1, CRASH, 0, 0)
 
-	sem := semclnt.MakeSemClnt(ts.FsLib, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
+	sem := semclnt.MakeSemClnt(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 	err := sem.Init(0)
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "Sem %v", kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
+	db.DPrintf(db.TEST, "Sem %v", kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 
 	ch := make(chan error)
 	go func() {
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
 		fsl, err := fslib.MakeFsLib(pcfg)
 		assert.Nil(t, err)
-		sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
+		sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 		err = sem.Down()
 		ch <- err
 	}()
@@ -142,7 +146,7 @@ func TestReconnectSimple(t *testing.T) {
 		fsl, err := fslib.MakeFsLib(pcfg)
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
-			_, err := fsl.Stat(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
+			_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
 			if err != nil {
 				ch <- err
 				return
@@ -171,7 +175,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 			fsl, err := fslib.MakeFsLib(pcfg)
 			assert.Nil(t, err)
 			for true {
-				_, err := fsl.Stat(kvgrp.GrpPath(JOBDIR, ts.grp) + "/")
+				_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
 				if err != nil {
 					ch <- err
 					break
@@ -200,7 +204,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
 			fsl, err := fslib.MakeFsLib(pcfg)
 			assert.Nil(t, err)
-			sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(JOBDIR, ts.grp)+"/sem")
+			sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 			sem.Init(0)
 			err = sem.Down()
 			ch <- err

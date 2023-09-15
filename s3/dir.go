@@ -13,7 +13,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/sorteddir"
 	"sigmaos/spcodec"
@@ -197,7 +196,7 @@ func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	return d, nil
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sessp.Tsize, v sp.TQversion) ([]*sp.Stat, *serr.Err) {
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.Err) {
 	db.DPrintf(db.S3, "ReadDir %v %d cursor %d cnt %v\n", d, len(d.sts), cursor, cnt)
 
 	if cursor > len(d.sts) {

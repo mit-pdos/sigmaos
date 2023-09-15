@@ -5,12 +5,11 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
-	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
-	sp "sigmaos/sigmap"
+	"sigmaos/proc"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -33,7 +32,7 @@ type PostSrv struct {
 func RunPostSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Creating post service\n")
 	psrv := &PostSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_POST, psrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_POST, psrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -43,7 +42,7 @@ func RunPostSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, POST_COL, []string{"postid"})
 	psrv.mongoc = mongoc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_POST)
+	fsls := MakeFsLibs(SOCIAL_NETWORK_POST)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
@@ -63,7 +62,7 @@ func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostRequest, res *pro
 	res.Ok = "No"
 	postBson := postToBson(req.Post)
 	if err := psrv.mongoc.Insert(SN_DB, POST_COL, postBson); err != nil {
-		dbg.DFatalf("Error storing post %v", err)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Error storing post %v", err)
 		return err
 	}
 	res.Ok = POST_QUERY_OK

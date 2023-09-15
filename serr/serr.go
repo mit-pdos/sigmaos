@@ -182,6 +182,11 @@ func (err *Err) IsErrNotfound() bool {
 	return err.Code() == TErrNotfound
 }
 
+// SigmaOS server couldn't find the fid for the requested fid/file
+func (err *Err) IsErrUnknownfid() bool {
+	return err.Code() == TErrUnknownfid
+}
+
 // Maybe the error is because of a symlink or ~
 func (err *Err) IsMaybeSpecialElem() bool {
 	return err.Code() == TErrNotDir ||

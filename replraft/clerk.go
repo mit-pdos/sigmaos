@@ -22,7 +22,6 @@ type Op struct {
 
 type Clerk struct {
 	mu       *sync.Mutex
-	id       int
 	opmap    map[sp.TclntId]map[sp.Tseqno]*Op
 	requests chan *Op
 	commit   <-chan *committedEntries
@@ -30,10 +29,9 @@ type Clerk struct {
 	applyf   repl.Tapplyf
 }
 
-func newClerk(id int, commit <-chan *committedEntries, propose chan<- []byte, applyf repl.Tapplyf) *Clerk {
+func newClerk(commit <-chan *committedEntries, propose chan<- []byte, applyf repl.Tapplyf) *Clerk {
 	return &Clerk{
 		mu:       &sync.Mutex{},
-		id:       id,
 		opmap:    make(map[sp.TclntId]map[sp.Tseqno]*Op),
 		applyf:   applyf,
 		requests: make(chan *Op),

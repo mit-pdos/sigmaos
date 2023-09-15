@@ -117,6 +117,9 @@ func (pm *PortMap) GetBinding(port Tport) (*PortBinding, error) {
 }
 
 func (pm *PortMap) AllocPortOne(port Tport) (*PortBinding, error) {
+	if pm == nil {
+		return nil, fmt.Errorf("No overlay network")
+	}
 	pm.Lock()
 	defer pm.Unlock()
 
@@ -129,6 +132,9 @@ func (pm *PortMap) AllocPortOne(port Tport) (*PortBinding, error) {
 }
 
 func (pm *PortMap) AllocPort() (*PortBinding, error) {
+	if pm == nil {
+		return nil, fmt.Errorf("No overlay network")
+	}
 	pm.Lock()
 	defer pm.Unlock()
 

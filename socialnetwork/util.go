@@ -3,15 +3,14 @@ package socialnetwork
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/montanaflynn/stats"
 	"gopkg.in/mgo.v2/bson"
-	"math"
 	"math/rand"
 	dbg "sigmaos/debug"
 	"sigmaos/mongoclnt"
 	"sigmaos/sigmaclnt"
 	"strconv"
 	"sync"
-	"time"
 )
 
 // YH:
@@ -27,6 +26,7 @@ const (
 	URL_COL         = "url"
 	TIMELINE_COL    = "timeline"
 	MEDIA_COL       = "media"
+	N_COUNT         = 5000
 )
 
 var letterRunes = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -106,43 +106,44 @@ func (dbu *DBUtil) InitGraph() error {
 
 type Counter struct {
 	mu    sync.Mutex
-	count int64
-	sum   int64
-	ssum  int64
-	max   int64
-	min   int64
 	label string
+	count int64
+	vals  []int64
 }
 
 func MakeCounter(str string) *Counter {
-	return &Counter{label: str, count: 0, sum: 0, ssum: 0, min: 10000000, max: 0}
+	return &Counter{label: str, count: 0, vals: make([]int64, N_COUNT)}
 }
 
 func (c *Counter) AddOne(val int64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.vals[c.count] = val
 	c.count += 1
-	c.sum += val
-	c.ssum += val * val
-	if val > c.max {
-		c.max = val
-	}
-	if val < c.min {
-		c.min = val
-	}
-	if c.count == 1000 {
-		avg := c.sum / c.count
-		std := math.Sqrt(float64(c.ssum/c.count - avg*avg))
-		dbg.DPrintf(dbg.ALWAYS,
-			"Stats for %v: max = %v; min=%v, avg=%v, std=%v\n", c.label, c.max, c.min, avg, std)
+	if c.count == N_COUNT {
+		c.printStats()
 		c.count = 0
-		c.sum = 0
-		c.ssum = 0
-		c.max = 0
-		c.min = 10000000
+		c.vals = make([]int64, N_COUNT)
 	}
 }
 
 func (c *Counter) AddTimeSince(t0 time.Time) {
 	c.AddOne(time.Since(t0).Microseconds())
+}
+
+func (c *Counter) printStats() {
+	fVals := make([]float64, N_COUNT)
+	for i := range c.vals {
+		fVals[i] = float64(c.vals[i])
+	}
+	mean, _ := stats.Mean(fVals)
+	std, _ := stats.StandardDeviation(fVals)
+	lat50P, _ := stats.Percentile(fVals, 50)
+	lat75P, _ := stats.Percentile(fVals, 75)
+	lat99P, _ := stats.Percentile(fVals, 99)
+	min, _ := stats.Min(fVals)
+	max, _ := stats.Max(fVals)
+	dbg.DPrintf(dbg.ALWAYS,
+		"Stats for %v: mean=%v; std=%v; min=%v; max=%v; 50P,75P,99P=%v,%v,%v;",
+		c.label, mean, std, min, max, lat50P, lat75P, lat99P)
 }

@@ -28,11 +28,12 @@ const (
 )
 
 type Param struct {
-	KernelId string
-	Services []string
-	Dbip     string
-	Mongoip  string
-	Overlays bool
+	KernelId    string
+	Services    []string
+	Dbip        string
+	Mongoip     string
+	Overlays    bool
+	ReserveMcpu string
 }
 
 type Kernel struct {
@@ -102,7 +103,7 @@ func (k *Kernel) Shutdown() error {
 	return nil
 }
 
-// Start kernel services listed in p
+// Start kernel services
 func startSrvs(k *Kernel) error {
 	n := len(k.Param.Services)
 	for _, s := range k.Param.Services {

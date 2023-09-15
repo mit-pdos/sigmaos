@@ -43,8 +43,8 @@ func (ec *ElectClnt) AcquireLeadership(b []byte) error {
 		return err
 	}
 	pn := ec.elect.Key()
-	db.DPrintf(db.ELECTCLNT, "CreateLeaderFile %v lid %v\n", pn, ec.sess.Lease())
-	if err := ec.CreateLeaderFile(pn, b, ec.sess.Lease()); err != nil {
+	db.DPrintf(db.ELECTCLNT, "CreateLeaderFile %v lid %v f %v\n", pn, ec.sess.Lease(), ec.Fence())
+	if err := ec.CreateLeaderFile(pn, b, ec.sess.Lease(), ec.Fence()); err != nil {
 		return err
 	}
 	return nil
@@ -56,7 +56,7 @@ func (ec *ElectClnt) ReleaseLeadership() error {
 }
 
 func (ec *ElectClnt) Fence() sp.Tfence {
-	return sp.NewFence(ec.elect.Key(), sp.Tepoch(ec.elect.Rev()))
+	return ec.elect.Fence()
 }
 
 func (ec *ElectClnt) Lease() sp.TleaseId {

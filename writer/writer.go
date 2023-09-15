@@ -13,7 +13,7 @@ type Writer struct {
 }
 
 func (wrt *Writer) Write(p []byte) (int, error) {
-	n, err := wrt.fc.WriteV(wrt.fid, wrt.off, p, sp.NoV)
+	n, err := wrt.fc.WriteF(wrt.fid, wrt.off, p, sp.NoFence())
 	if err != nil {
 		db.DPrintf(db.WRITER_ERR, "Write %v err %v\n", wrt.fc.Path(wrt.fid), err)
 		return 0, err

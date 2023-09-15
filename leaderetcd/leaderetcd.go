@@ -8,8 +8,8 @@ import (
 
 	"sigmaos/fsetcd"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
+	"sigmaos/proc"
 )
 
 type Election struct {
@@ -41,6 +41,10 @@ func (el *Election) Candidate() error {
 
 	db.DPrintf(db.LEADER, "leader %v %v\n", el.pcfg.GetPID().String(), resp)
 	return nil
+}
+
+func (el Election) Fence() sp.Tfence {
+	return sp.NewFence(el.Election.Key(), sp.Tepoch(el.Election.Rev()))
 }
 
 func (el *Election) Resign() error {

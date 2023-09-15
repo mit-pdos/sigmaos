@@ -60,7 +60,7 @@ for vm in $vms; do
     outfile="/tmp/join.out"
   fi
   # read log files.
-  cmd1="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c '~/ulambda/logs.sh'\" > $LOG_DIR/$vm.out 2>&1" 
+  cmd1="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c '~/sigmaos/logs.sh'\" > $LOG_DIR/$vm.out 2>&1"
   # scp performance files.
   cmd2="scp -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:/tmp/sigmaos-perf/* $PERF_DIR"
   # scp the bench.out file.

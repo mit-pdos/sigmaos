@@ -107,5 +107,6 @@ func (cs *CachedSvc) Stop() error {
 			return err
 		}
 	}
+	cs.RmDir(cs.pn + SVRDIR)
 	return nil
 }

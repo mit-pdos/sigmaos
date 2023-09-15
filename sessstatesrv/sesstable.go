@@ -15,7 +15,6 @@ import (
 type SessionTable struct {
 	mu sync.RWMutex
 	//	deadlock.Mutex
-	tm       *threadmgr.ThreadMgrTable
 	mkps     sps.MkProtServer
 	sesssrv  sps.SessServer
 	sessions map[sessp.Tsession]*Session
@@ -24,9 +23,8 @@ type SessionTable struct {
 	detachf  sps.DetachClntF
 }
 
-func MakeSessionTable(mkps sps.MkProtServer, sesssrv sps.SessServer, tm *threadmgr.ThreadMgrTable, attachf sps.AttachClntF, detachf sps.DetachClntF) *SessionTable {
-	st := &SessionTable{sesssrv: sesssrv, mkps: mkps, tm: tm, attachf: attachf,
-		detachf: detachf}
+func MakeSessionTable(mkps sps.MkProtServer, sesssrv sps.SessServer, attachf sps.AttachClntF, detachf sps.DetachClntF) *SessionTable {
+	st := &SessionTable{sesssrv: sesssrv, mkps: mkps, attachf: attachf, detachf: detachf}
 	st.sessions = make(map[sessp.Tsession]*Session)
 	return st
 }
@@ -86,7 +84,8 @@ func (st *SessionTable) allocRL(cid sessp.Tclient, sid sessp.Tsession) *Session 
 			}
 		}
 	}
-	sess := makeSession(st.mkps(st.sesssrv, sid), cid, sid, st.tm.AddThread(), st.attachf, st.detachf)
+	sess := makeSession(st.mkps(st.sesssrv, sid), cid, sid, st.attachf, st.detachf)
+	// sess := makeSession(st.mkps(st.sesssrv, sid), cid, sid, st.tm.AddThread(), st.attachf, st.detachf)
 	st.sessions[sid] = sess
 	st.last = sess
 	return sess
@@ -106,20 +105,22 @@ func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
 	}
 }
 
+// For when using a thread manager to execute requests of a session sequentially
 func (st *SessionTable) SessThread(sid sessp.Tsession) *threadmgr.ThreadMgr {
-	if sess, ok := st.Lookup(sid); ok {
-		return sess.threadmgr
+	if _, ok := st.Lookup(sid); ok {
+		return nil
 	} else {
 		db.DFatalf("SessThread: no thread for %v\n", sid)
 	}
 	return nil
 }
 
+// Note: Used when running sessions using threadmgr
 func (st *SessionTable) KillSessThread(sid sessp.Tsession) {
-	t := st.SessThread(sid)
-	st.mu.RLock()
-	defer st.mu.RUnlock()
-	st.tm.RemoveThread(t)
+	//t := st.SessThread(sid)
+	//st.mu.RLock()
+	//defer st.mu.RUnlock()
+	// st.tm.RemoveThread(t)
 }
 
 func (st *SessionTable) LastSession() *Session {

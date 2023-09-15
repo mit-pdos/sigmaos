@@ -45,11 +45,11 @@ func RunKNamed(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	if err := nd.mkSrv(); err != nil {
+	mnt, err := nd.mkSrv()
+	if err != nil {
 		db.DFatalf("Error mkSrv %v\n", err)
 	}
 
-	mnt := sp.MkMountServer(nd.MyAddr())
 	if err := nd.fs.SetRootNamed(mnt); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
@@ -74,7 +74,7 @@ func RunKNamed(args []string) error {
 	return nil
 }
 
-var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.SCHEDD, sp.UX, sp.S3, sp.DB}
+var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO}
 
 // If initial root dir doesn't exist, create it.
 func (nd *Named) initfs() error {

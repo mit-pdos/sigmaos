@@ -537,7 +537,7 @@ realm_balance_be() {
   mrapp=mr-grep-wiki20G.yml
   sl="40s"
   n_vm=8
-  n_realm=4
+  n_realm=1
   driver_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -556,7 +556,7 @@ k8s_balance_be() {
   sl="40s"
   n_vm=8
   # Config
-  n_realm=4
+  n_realm=1
   driver_vm=8
   s3dir="corralperf/k8s"
   k8sleaderip=$LEADER_IP_K8S
@@ -580,7 +580,8 @@ k8s_balance_be() {
     # Remove old results
     aws s3 rm --profile me-mit --recursive s3://9ps3/$s3dir-$i > /dev/null; \
     cd $SCRIPT_DIR
-    ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20G-$i" --nrunning $np
+#    ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20G-$i" --nrunning $np
+    ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20GqosG" --nrunning $np
     cd $ROOT_DIR
     sleep 5s
   done
@@ -833,9 +834,9 @@ mr_k8s() {
 
 img_resize() {
   imgpath="9ps3/img/6.jpg"
-  n_imgresize=200
+  n_imgresize_per=1
   n_vm=2
-  mcpu=1000
+  mcpu=500
   driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -862,27 +863,32 @@ k8s_img_resize() {
   ncore=4
   swap="swapoff"
   fname=${FUNCNAME[0]}
-  run="${fname##k8s_}"
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run/K8s
-  driver_vm=0
-  # Avoid doing duplicate work.
-  if ! should_skip $perf_dir false ; then
-    return
-  fi
-  # Start the K8s cluster.
-  start_k8s_cluster $KVPC $n_vm $swap
-  # Stop any previous run.
-  cd $SCRIPT_DIR
-  ./stop-k8s-app.sh --vpc $KVPC --path "ulambda/benchmarks/k8s/apps/thumbnail/yaml/"
-  cd $ROOT_DIR
-  cmd="
-    export SIGMADEBUG=\"TEST;BENCH;\"; \
-    go clean -testcache; \
-    kubectl apply -Rf benchmarks/k8s/apps/thumbnail/yaml; \
-    go test -v sigmaos/benchmarks -timeout 0 --run TestK8sImgResize > /tmp/bench.out 2>&1
-  "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  for i in 10 20 40 80 160 320 ; do
+    n_imgresize=$i
+    run="${fname##k8s_}"/$n_imgresize
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run/K8s
+    driver_vm=0
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      return
+    fi
+    # Start the K8s cluster.
+    start_k8s_cluster $KVPC $n_vm $swap
+    # Stop any previous run.
+    cd $SCRIPT_DIR
+    ./stop-k8s-app.sh --vpc $KVPC --path "ulambda/benchmarks/k8s/apps/thumbnail/yaml/"
+    cd $ROOT_DIR
+    cmd="
+      cp ulambda/benchmarks/k8s/apps/thumbnail/yaml/thumbnail.yaml /tmp/thumbnail.yaml; \
+      sed -i \"s/XXX/$n_imgresize/g\" /tmp/thumbnail.yaml; \
+      export SIGMADEBUG=\"TEST;BENCH;\"; \
+      go clean -testcache; \
+      kubectl apply -Rf /tmp/thumbnail.yaml; \
+      go test -v sigmaos/benchmarks -timeout 0 --run TestK8sImgResize > /tmp/bench.out 2>&1
+    "
+    run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  done
 }
 
 #mr_overlap() {
@@ -1054,7 +1060,7 @@ graph_realm_balance_multi() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --mr_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --legend_on_right
 }
 
 graph_realm_balance_multi_mempressure() {
@@ -1151,6 +1157,9 @@ realm_balance_multi
 #realm_balance_be
 #k8s_balance_multi
 #k8s_balance_be
+
+#hotel_tail_multi
+#k8s_balance_multi
 # XXX Try above next
 #k8s_balance
 # XXX

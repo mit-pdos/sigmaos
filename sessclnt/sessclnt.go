@@ -6,10 +6,9 @@ import (
 
 	"time"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
-	"sigmaos/intervals"
 	"sigmaos/netclnt"
+	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessconn"
@@ -31,7 +30,6 @@ type SessClnt struct {
 	addrs   sp.Taddrs
 	nc      *netclnt.NetClnt
 	queue   *sessstateclnt.RequestQueue
-	ivs     *intervals.Intervals
 	clntnet string
 }
 
@@ -52,7 +50,6 @@ func makeSessClnt(pcfg *proc.ProcEnv, cli sessp.Tclient, clntnet string, addrs s
 		return nil, err
 	}
 	c.nc = nc
-	c.ivs = intervals.MkIntervals(c.sid)
 	go c.writer()
 	return c, nil
 }
@@ -93,8 +90,6 @@ func (c *SessClnt) Reset() {
 	// Reset outstanding request queue.
 	db.DPrintf(db.SESS_STATE_CLNT, "%v Reset outstanding request queue to %v", c.sid, c.addrs)
 	c.queue.Reset()
-	// Reset intervals "next" slice so we can resend message acks.
-	c.ivs.ResetNext()
 	// Try to send a heartbeat to force a reconnect to the replica group.
 	go c.sendHeartbeat()
 }
@@ -109,14 +104,14 @@ func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr
 		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v from %v", c.sid, rpc.Req, c.addrs)
 		rpc.Complete(f, d, err)
 	} else {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Already completed rpc from %v; seqnos %v\n", c.sid, c.addrs, c.ivs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Already completed rpc from %v\n", c.sid, c.addrs)
 	}
 }
 
 // Send a detach.
 func (c *SessClnt) Detach(cid sp.TclntId) *serr.Err {
 	db.DPrintf(db.SESS_STATE_CLNT, "%v: Send detach %v\n", c.pcfg.GetPID(), c.sid)
-	rep, err := c.RPC(sp.MkTdetach(0, 0, cid), nil)
+	rep, err := c.RPC(sp.MkTdetach(cid), nil)
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "detach %v err %v", c.sid, err)
 		return err
@@ -161,7 +156,7 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte) (*netclnt.Rpc, *serr.Err) {
 	// allocates a sequence number), the marshaling step (which often takes a
 	// long time), and the request enqueue step (which ordinarily expects fcalls
 	// to be enqueued in order).
-	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno, c.ivs.Next())
+	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno)
 	rpc := netclnt.MakeRpc(c.addrs, sessconn.MakePartMarshaledMsg(fc), s)
 
 	// If the request is an RPC, then we don't have strict ordering requirements.
@@ -190,10 +185,7 @@ func (c *SessClnt) recv(rpc *netclnt.Rpc) (*sessp.FcallMsg, *serr.Err) {
 	// Reply may be nil if the server became unreachable, the session was closed,
 	// and outstanding RPCs were aborted.
 	if reply != nil {
-		o := uint64(reply.Seqno())
-		c.ivs.Insert(sessp.MkInterval(o, o+1))
-		c.ivs.Delete(reply.Fc.Received)
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
+		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v reply %v from %v\n", c.sid, rpc.Req, reply, c.addrs)
 		// If the server closed the session (this is a sessclosed error or an
 		// Rdetach), close the SessClnt.
 		if srvClosedSess(reply.Msg, err) {

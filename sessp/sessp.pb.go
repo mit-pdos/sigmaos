@@ -20,78 +20,22 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Tinterval struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Start uint64 `protobuf:"varint,1,opt,name=start,proto3" json:"start,omitempty"`
-	End   uint64 `protobuf:"varint,2,opt,name=end,proto3" json:"end,omitempty"`
-}
-
-func (x *Tinterval) Reset() {
-	*x = Tinterval{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_sessp_sessp_proto_msgTypes[0]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Tinterval) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Tinterval) ProtoMessage() {}
-
-func (x *Tinterval) ProtoReflect() protoreflect.Message {
-	mi := &file_sessp_sessp_proto_msgTypes[0]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Tinterval.ProtoReflect.Descriptor instead.
-func (*Tinterval) Descriptor() ([]byte, []int) {
-	return file_sessp_sessp_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *Tinterval) GetStart() uint64 {
-	if x != nil {
-		return x.Start
-	}
-	return 0
-}
-
-func (x *Tinterval) GetEnd() uint64 {
-	if x != nil {
-		return x.End
-	}
-	return 0
-}
-
 type Fcall struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type     uint32     `protobuf:"varint,1,opt,name=type,proto3" json:"type,omitempty"`
-	Tag      uint32     `protobuf:"varint,2,opt,name=tag,proto3" json:"tag,omitempty"`
-	Client   uint64     `protobuf:"varint,3,opt,name=client,proto3" json:"client,omitempty"`
-	Session  uint64     `protobuf:"varint,4,opt,name=session,proto3" json:"session,omitempty"`
-	Seqno    uint64     `protobuf:"varint,5,opt,name=seqno,proto3" json:"seqno,omitempty"`
-	Received *Tinterval `protobuf:"bytes,6,opt,name=received,proto3" json:"received,omitempty"`
+	Type    uint32 `protobuf:"varint,1,opt,name=type,proto3" json:"type,omitempty"`
+	Tag     uint32 `protobuf:"varint,2,opt,name=tag,proto3" json:"tag,omitempty"`
+	Client  uint64 `protobuf:"varint,3,opt,name=client,proto3" json:"client,omitempty"`
+	Session uint64 `protobuf:"varint,4,opt,name=session,proto3" json:"session,omitempty"`
+	Seqno   uint64 `protobuf:"varint,5,opt,name=seqno,proto3" json:"seqno,omitempty"`
 }
 
 func (x *Fcall) Reset() {
 	*x = Fcall{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sessp_sessp_proto_msgTypes[1]
+		mi := &file_sessp_sessp_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -104,7 +48,7 @@ func (x *Fcall) String() string {
 func (*Fcall) ProtoMessage() {}
 
 func (x *Fcall) ProtoReflect() protoreflect.Message {
-	mi := &file_sessp_sessp_proto_msgTypes[1]
+	mi := &file_sessp_sessp_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -117,7 +61,7 @@ func (x *Fcall) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Fcall.ProtoReflect.Descriptor instead.
 func (*Fcall) Descriptor() ([]byte, []int) {
-	return file_sessp_sessp_proto_rawDescGZIP(), []int{1}
+	return file_sessp_sessp_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Fcall) GetType() uint32 {
@@ -155,33 +99,20 @@ func (x *Fcall) GetSeqno() uint64 {
 	return 0
 }
 
-func (x *Fcall) GetReceived() *Tinterval {
-	if x != nil {
-		return x.Received
-	}
-	return nil
-}
-
 var File_sessp_sessp_proto protoreflect.FileDescriptor
 
 var file_sessp_sessp_proto_rawDesc = []byte{
 	0x0a, 0x11, 0x73, 0x65, 0x73, 0x73, 0x70, 0x2f, 0x73, 0x65, 0x73, 0x73, 0x70, 0x2e, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x22, 0x33, 0x0a, 0x09, 0x54, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x76, 0x61, 0x6c,
-	0x12, 0x14, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x72, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52,
-	0x05, 0x73, 0x74, 0x61, 0x72, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x65, 0x6e, 0x64, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x04, 0x52, 0x03, 0x65, 0x6e, 0x64, 0x22, 0x9d, 0x01, 0x0a, 0x05, 0x46, 0x63, 0x61,
-	0x6c, 0x6c, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d,
-	0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x74, 0x61, 0x67, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x0d, 0x52, 0x03, 0x74, 0x61, 0x67, 0x12, 0x16, 0x0a, 0x06, 0x63, 0x6c, 0x69, 0x65,
-	0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74,
-	0x12, 0x18, 0x0a, 0x07, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28,
-	0x04, 0x52, 0x07, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x65,
-	0x71, 0x6e, 0x6f, 0x18, 0x05, 0x20, 0x01, 0x28, 0x04, 0x52, 0x05, 0x73, 0x65, 0x71, 0x6e, 0x6f,
-	0x12, 0x26, 0x0a, 0x08, 0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x64, 0x18, 0x06, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x54, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x76, 0x61, 0x6c, 0x52, 0x08,
-	0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x64, 0x42, 0x0f, 0x5a, 0x0d, 0x73, 0x69, 0x67, 0x6d,
-	0x61, 0x6f, 0x73, 0x2f, 0x73, 0x65, 0x73, 0x73, 0x70, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x6f, 0x74, 0x6f, 0x22, 0x75, 0x0a, 0x05, 0x46, 0x63, 0x61, 0x6c, 0x6c, 0x12, 0x12, 0x0a, 0x04,
+	0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65,
+	0x12, 0x10, 0x0a, 0x03, 0x74, 0x61, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x03, 0x74,
+	0x61, 0x67, 0x12, 0x16, 0x0a, 0x06, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x04, 0x52, 0x06, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x65,
+	0x73, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x73, 0x65, 0x73,
+	0x73, 0x69, 0x6f, 0x6e, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x65, 0x71, 0x6e, 0x6f, 0x18, 0x05, 0x20,
+	0x01, 0x28, 0x04, 0x52, 0x05, 0x73, 0x65, 0x71, 0x6e, 0x6f, 0x42, 0x0f, 0x5a, 0x0d, 0x73, 0x69,
+	0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x73, 0x65, 0x73, 0x73, 0x70, 0x62, 0x06, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x33,
 }
 
 var (
@@ -196,18 +127,16 @@ func file_sessp_sessp_proto_rawDescGZIP() []byte {
 	return file_sessp_sessp_proto_rawDescData
 }
 
-var file_sessp_sessp_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_sessp_sessp_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_sessp_sessp_proto_goTypes = []interface{}{
-	(*Tinterval)(nil), // 0: Tinterval
-	(*Fcall)(nil),     // 1: Fcall
+	(*Fcall)(nil), // 0: Fcall
 }
 var file_sessp_sessp_proto_depIdxs = []int32{
-	0, // 0: Fcall.received:type_name -> Tinterval
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0, // [0:0] is the sub-list for method output_type
+	0, // [0:0] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for extension type_name
+	0, // [0:0] is the sub-list for extension extendee
+	0, // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_sessp_sessp_proto_init() }
@@ -217,18 +146,6 @@ func file_sessp_sessp_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_sessp_sessp_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Tinterval); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_sessp_sessp_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Fcall); i {
 			case 0:
 				return &v.state
@@ -247,7 +164,7 @@ func file_sessp_sessp_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_sessp_sessp_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

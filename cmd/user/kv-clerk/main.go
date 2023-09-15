@@ -114,18 +114,18 @@ func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Pe
 		}
 		ntest += 1
 	}
-	db.DPrintf(db.ALWAYS, "done ntest %v elapsed %v err %v\n", ntest, time.Since(start), err)
+	d := time.Since(start)
+	db.DPrintf(db.ALWAYS, "done ntest %v elapsed %v err %v\n", ntest, d, err)
 	var status *proc.Status
 	if err != nil {
 		status = proc.MakeStatusErr(err.Error(), nil)
 	} else {
 		if timed {
 			// If this was a bounded clerk, we should return status ok.
-			d := time.Since(start)
 			status = proc.MakeStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
 		} else {
 			// If this was an unbounded clerk, we should return status evicted.
-			status = proc.MakeStatus(proc.StatusEvicted)
+			status = proc.MakeStatusInfo(proc.StatusEvicted, fmt.Sprintf("ntest %d elapsed %v", ntest, d), nil)
 		}
 	}
 	sc.ClntExit(status)

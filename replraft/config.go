@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"net"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	"sigmaos/repl"
 )
 
 type RaftConfig struct {
-	started   bool // Indicates whether or not a server has already been started using this config.
 	id        int
 	peerAddrs []string
 	l         net.Listener
@@ -18,36 +17,34 @@ type RaftConfig struct {
 	pcfg      *proc.ProcEnv
 }
 
-func MakeRaftConfig(pcfg *proc.ProcEnv, id int, peerAddrs []string, init bool) *RaftConfig {
+func MakeRaftConfig(pcfg *proc.ProcEnv, id int, addr string, init bool) *RaftConfig {
 	rc := &RaftConfig{}
 	rc.id = id
 	rc.init = init
 	rc.pcfg = pcfg
-	rc.peerAddrs = []string{}
-	for _, addr := range peerAddrs {
-		rc.peerAddrs = append(rc.peerAddrs, addr)
-	}
-	l, err := net.Listen("tcp", rc.peerAddrs[rc.id-1])
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		db.DFatalf("Error listen: %v", err)
 	}
 	rc.l = l
-	rc.peerAddrs[rc.id-1] = l.Addr().String()
 	return rc
 }
 
-func (rc *RaftConfig) UpdatePeerAddrs(new []string) {
-	if rc.started {
-		db.DFatalf("Update peers for started server")
+func NValidAddr(peerAddrs []string) int {
+	n := 0
+	for _, a := range peerAddrs {
+		if a != "" {
+			n += 1
+		}
 	}
-	rc.peerAddrs = []string{}
-	for _, addr := range new {
-		rc.peerAddrs = append(rc.peerAddrs, addr)
-	}
+	return n
 }
 
-func (rc *RaftConfig) MakeServer(applyf repl.Tapplyf) repl.Server {
-	rc.started = true
+func (rc *RaftConfig) SetPeerAddrs(new []string) {
+	rc.peerAddrs = new
+}
+
+func (rc *RaftConfig) MakeServer(applyf repl.Tapplyf) (repl.Server, error) {
 	return MakeRaftReplServer(rc.pcfg, rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
 }
 

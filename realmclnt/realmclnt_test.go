@@ -29,7 +29,7 @@ const (
 	N_ITER      = 5_000_000_000
 
 	// Realms
-	REALM1 sp.Trealm = "testrealm"
+	REALM1 sp.Trealm = "testrealm1"
 	REALM2 sp.Trealm = "testrealm2"
 )
 
@@ -326,11 +326,7 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	pn = pn + "/"
 
 	status := spawnDirreader(ts1, pn)
-	if test.Overlays {
-		assert.True(t, status.IsStatusOK())
-	} else {
-		assert.True(t, status.IsStatusOK())
-	}
+	assert.True(t, status.IsStatusOK())
 
 	cm.Stop()
 

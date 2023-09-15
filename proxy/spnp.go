@@ -8,11 +8,10 @@ import (
 	np "sigmaos/ninep"
 	"sigmaos/npcodec"
 	"sigmaos/reader"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
-func Sp2NpDir(d []byte, cnt sessp.Tsize) ([]byte, error) {
+func Sp2NpDir(d []byte, cnt sp.Tsize) ([]byte, error) {
 	rdr := bytes.NewReader(d)
 	npsts := make([]*np.Stat9P, 0)
 	_, error := reader.ReadDir(reader.NewDirReader(rdr), func(st *sp.Stat) (bool, error) {

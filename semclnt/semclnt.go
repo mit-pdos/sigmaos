@@ -85,7 +85,7 @@ func (c *SemClnt) Down() error {
 		}
 		return nil
 	}
-	db.DPrintf(db.ALWAYS, "Down failed after %d retries\n", pathclnt.MAXRETRY)
+	db.DPrintf(db.SEMCLNT_ERR, "Down failed after %d retries\n", pathclnt.MAXRETRY)
 	return serr.MkErr(serr.TErrUnreachable, c.path)
 }
 

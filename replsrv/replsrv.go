@@ -25,16 +25,20 @@ type ReplSrv struct {
 	rt      *ReplyTable
 }
 
-func NewReplSrv(raftcfg *replraft.RaftConfig, svci any) *ReplSrv {
+func NewReplSrv(raftcfg *replraft.RaftConfig, svci any) (*ReplSrv, error) {
+	var err error
 	rs := &ReplSrv{
 		raftcfg: raftcfg,
 		rpcs:    rpcsrv.NewRPCSrv(svci, nil),
 		rt:      NewReplyTable(),
 	}
-	rs.replSrv = raftcfg.MakeServer(rs.applyOp)
+	rs.replSrv, err = raftcfg.MakeServer(rs.applyOp)
+	if err != nil {
+		return nil, err
+	}
 	rs.replSrv.Start()
 	db.DPrintf(db.ALWAYS, "Starting repl server: %v %v", svci, raftcfg)
-	return rs
+	return rs, nil
 }
 
 func (rs *ReplSrv) applyOp(req *replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {

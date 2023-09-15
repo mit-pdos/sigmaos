@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: thumbnail3-benchrealm1
+  labels:
+    foo: bar
+spec:
+  completions: XXX
+  parallelism: XXX
+  template:
+    spec:
+      nodeName: node3.yizhe-159693.ulambda-pg0.wisc.cloudlab.us
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            foo: bar
+      restartPolicy: OnFailure
+      containers:
+      - name: thumbnail-compute
+        image: arielszekely/thumbnail
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: aws-creds
+                key: aws-id
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: aws-creds
+                key: aws-secret
+          - name: AWS_DEFAULT_REGION
+            value: "us-east-1"
+        args:
+        - "s3://9ps3/img/1.jpg 1"
+      imagePullSecrets:
+      - name: regcred

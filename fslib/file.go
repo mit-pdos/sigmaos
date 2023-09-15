@@ -28,15 +28,15 @@ func (fl *FsLib) GetFile(fname string) ([]byte, error) {
 	return fl.FdClient.GetFile(fname)
 }
 
-func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sessp.Tsize, error) {
+func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sp.Tsize, error) {
 	return fl.FdClient.PutFile(fname, 0777, m, data, off, sp.NoLeaseId)
 }
 
-func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sessp.Tsize, error) {
+func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sp.Tsize, error) {
 	return fl.FdClient.PutFile(fname, perm, mode, data, 0, sp.NoLeaseId)
 }
 
-func (fl *FsLib) PutFileEphemeral(fname string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, data []byte) (sessp.Tsize, error) {
+func (fl *FsLib) PutFileEphemeral(fname string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, data []byte) (sp.Tsize, error) {
 	return fl.FdClient.PutFile(fname, perm|sp.DMTMP, mode, data, 0, lid)
 }
 
@@ -223,7 +223,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 		if err != nil {
 			return err
 		}
-		if n != sessp.Tsize(len(b)) {
+		if n != sp.Tsize(len(b)) {
 			return fmt.Errorf("short write")
 		}
 	}

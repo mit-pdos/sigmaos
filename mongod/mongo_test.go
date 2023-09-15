@@ -2,9 +2,11 @@ package mongod_test
 
 import (
 	"testing"
+	"context"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"fmt"
 	"time"
 	"sigmaos/dbclnt"
@@ -13,6 +15,8 @@ import (
 	"strconv"
 	sp "sigmaos/sigmap"
 	dbg "sigmaos/debug"
+	bson2 "gopkg.in/mgo.v2/bson"
+
 )
 
 type MyObj struct {
@@ -22,27 +26,34 @@ type MyObj struct {
 
 func TestConnet(t *testing.T) {
 	// Connect to mongo
-	mongoUrl := "172.17.0.4:27017"
-	session, err := mgo.Dial(mongoUrl)
+	mongoUrl := "mongodb://172.17.0.3:27017"
+	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoUrl).SetMaxPoolSize(1000))
 	assert.Nil(t, err)
-	assert.Nil(t, session.Ping())
+	assert.Nil(t, client.Ping(context.TODO(), nil))
 	
 	// insert an item
-	col := session.DB("myDB").C("myTbl")
-	col.DropCollection()
-	col.EnsureIndexKey("key")
+	col := client.Database("myDB").Collection("myTbl")
+	col.Drop(context.TODO())
+	indexModel := mongo.IndexModel{
+    	Keys: bson.D{{"key", 1}},
+	}
+	_, err = col.Indexes().CreateOne(context.TODO(), indexModel)
+	assert.Nil(t, err)
 	obj := MyObj{"objKey", "objVal"}
-	err = col.Insert(&obj)
+	_, err = col.InsertOne(context.TODO(), &obj)
 	assert.Nil(t, err)
 
 	// query the item
 	var objs []MyObj
-	err = col.Find(&bson.M{"key": "objKey1"}).All(&objs)
+	res, err := col.Find(context.TODO(), &bson.M{"key": "objKey1"})
 	assert.Nil(t, err)
+	assert.Nil(t, res.All(context.TODO(), &objs))
 	assert.Equal(t, 0, len(objs))
 
-	err = col.Find(&bson.M{"key": "objKey"}).All(&objs)
+	res, err = col.Find(context.TODO(), &bson.M{"key": "objKey"})
 	assert.Nil(t, err)
+	assert.Nil(t, res.All(context.TODO(), &objs))
 	assert.Equal(t, 1, len(objs))
 	assert.Equal(t, "objVal", objs[0].Val)
 }
@@ -50,13 +61,20 @@ func TestConnet(t *testing.T) {
 func TestEncodeDecode(t *testing.T) {
 	// Connect to mongo
 	fmt.Printf("%v: Start\n", time.Now().String())
-	mongoUrl := "172.17.0.4:27017"
-	session, err := mgo.Dial(mongoUrl)
+	mongoUrl := "mongodb://172.17.0.3:27017"
+	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoUrl))
 	assert.Nil(t, err)
+
+	// set up index
 	fmt.Printf("%v: Clear\n", time.Now().String())
-	col := session.DB("myDB").C("myTbl")
-	col.DropCollection()
-	col.EnsureIndexKey("key")
+	col := client.Database("myDB").Collection("myTbl")
+	col.Drop(context.TODO())
+	indexModel := mongo.IndexModel{
+    	Keys: bson.D{{"key", 1}},
+	}
+	_, err = col.Indexes().CreateOne(context.TODO(), indexModel)
+	assert.Nil(t, err)
 
 	// Insert client encode
 	fmt.Printf("%v: Insert\n", time.Now().String())
@@ -67,7 +85,8 @@ func TestEncodeDecode(t *testing.T) {
 	// Insert: Server logic
 	var insertServer bson.M
 	assert.Nil(t, bson.Unmarshal(insertEncode, &insertServer))
-	assert.Nil(t, col.Insert(&insertServer))
+	_, err = col.InsertOne(context.TODO(), &insertServer)
+	assert.Nil(t, err)
 
 	// Find: client encode
 	m := bson.M{"key": "objKey"}
@@ -80,7 +99,10 @@ func TestEncodeDecode(t *testing.T) {
 	var serverObjs []bson.M
 	assert.Nil(t, bson.Unmarshal(mEncoded, &serverM))
 	fmt.Printf("%v: server query: %v\n", time.Now().String(), serverM)
-	assert.Nil(t, col.Find(&serverM).All(&serverObjs))
+	res, err := col.Find(context.TODO(), &serverM)
+	assert.Nil(t, err)
+	assert.Nil(t, res.All(context.TODO(), &serverObjs))
+
 	fmt.Printf("%v: server results %v\n", time.Now().String(), serverObjs)
 	objsEncoded := make([][]byte, len(serverObjs))
 	for i, serverObj := range serverObjs {
@@ -132,7 +154,7 @@ func TestQuerySpeed(t *testing.T) {
 	t0Mongo = time.Now()
 	for i := 0; i < N_test; i++ {
 		var result MyObj
-		f, err := mongoc.FindOne(db, col, bson.M{"key": keys[i]}, &result)
+		f, err := mongoc.FindOne(db, col, bson2.M{"key": keys[i]}, &result)
 		assert.Nil(t, err)
 		assert.True(t, f)
 		assert.Equal(t, vals[i], result.Val)
@@ -161,4 +183,3 @@ func TestQuerySpeed(t *testing.T) {
 	assert.Nil(t, ts.Shutdown())
 
 }
-

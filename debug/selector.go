@@ -114,6 +114,7 @@ const (
 	UX                       = "UX"
 	DB                       = "DB"
 	MONGO                    = "MONGO"
+	MONGO_ERR                = "MONGO_ERR"
 	PROXY                    = "PROXY"
 )
 
@@ -186,6 +187,7 @@ const (
 	PATHCLNT                      = "PATHCLNT"
 	PATHCLNT_ERR                  = PATHCLNT + ERR
 	WALK                          = "WALK"
+	WALK_ERR                      = "WALK" + ERR
 	SVCMOUNT                      = "SVCMOUNT"
 )
 

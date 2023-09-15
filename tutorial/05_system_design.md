@@ -1,4 +1,4 @@
-# 04. SigmaOS System Design
+# 05. SigmaOS System Design
 
 This tutorial describes the SigmaOS kernel components, how they fit together,
 and how `procs` interact with them. By the end of this tutorial, you should be

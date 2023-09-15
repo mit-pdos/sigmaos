@@ -4,7 +4,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/fslib"
-	"sigmaos/rand"
 	replproto "sigmaos/repl/proto"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
@@ -18,7 +17,7 @@ type ReplClnt struct {
 
 func NewReplClnt(fsls []*fslib.FsLib) *ReplClnt {
 	rc := &ReplClnt{
-		cid:       sp.TclntId(rand.Uint64()),
+		cid:       fsls[0].ClntId(),
 		ClntCache: rpcclnt.NewRPCClntCache(fsls),
 	}
 	return rc

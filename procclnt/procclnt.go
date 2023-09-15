@@ -122,7 +122,11 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 	if spread > 0 {
 		// Update the list of active procds.
 		clnt.scheddclnt.UpdateSchedds()
-		kernelId = clnt.scheddclnt.NextSchedd(spread)
+		kid, err := clnt.scheddclnt.NextSchedd(spread)
+		if err != nil {
+			return err
+		}
+		kernelId = kid
 	}
 
 	if err := clnt.addChild(kernelId, p, childProcdir, how); err != nil {

@@ -98,11 +98,6 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 // Delete ephemeral files created on this session.
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
 	db.DPrintf(db.PROTSRV, "Detach cid %v sess %v\n", args.TclntId(), ps.sid)
-
-	// Several threads maybe waiting in a sesscond. DeleteSess
-	// will unblock them so that they can bail out.
-	ps.ssrv.GetSessCondTable().DeleteSess(ps.sid)
-
 	ps.ft.ClunkOpen()
 	if detach != nil {
 		detach(args.TclntId())
@@ -293,18 +288,15 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
+func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}
-	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
-	db.DPrintf(db.PROTSRV, "%v: ReadV f %v args {%v} v %d", f.Pobj().Ctx().Uname(), f, args, v)
-	if !sp.VEq(args.Tversion(), v) {
-		return nil, sp.MkRerror(serr.MkErr(serr.TErrVersion, v))
-	}
 
-	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tversion(), args.Tfence())
+	db.DPrintf(db.PROTSRV, "%v: ReadV f %v args {%v}\n", f.Pobj().Ctx().Uname(), f, args)
+
+	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}
@@ -325,17 +317,15 @@ func (ps *ProtSrv) WriteRead(args *sp.Twriteread, data []byte, rets *sp.Rread) (
 	return retdata, nil
 }
 
-func (ps *ProtSrv) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Rerror {
+func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return sp.MkRerror(err)
 	}
-	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
-	db.DPrintf(db.PROTSRV, "%v: WriteV %v args {%v} path %d v %d", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path(), v)
-	if !sp.VEq(args.Tversion(), v) {
-		return sp.MkRerror(serr.MkErr(serr.TErrVersion, v))
-	}
-	n, err := f.Write(args.Toffset(), data, args.Tversion(), args.Tfence())
+
+	db.DPrintf(db.PROTSRV, "%v: WriteV %v args {%v} path %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path())
+
+	n, err := f.Write(args.Toffset(), data, args.Tfence())
 	if err != nil {
 		return sp.MkRerror(err)
 	}
@@ -569,7 +559,7 @@ func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 	}
 	ps.stats.IncPathString(f.Pobj().Path().String())
 	db.DPrintf(db.PROTSRV, "GetFile f %v args {%v} %v", f.Pobj().Ctx().Uname(), args, fname)
-	data, err := i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), sp.NoV, args.Tfence())
+	data, err := i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
 		return nil, sp.MkRerror(err)
 	}
@@ -600,7 +590,7 @@ func (ps *ProtSrv) lookupPathOpen(f *fid.Fid, dir fs.Dir, name string, mode sp.T
 
 // Create file or open file, and write data to it
 func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.Rerror {
-	if sessp.Tsize(len(data)) > sp.MAXGETSET {
+	if sp.Tsize(len(data)) > sp.MAXGETSET {
 		return sp.MkRerror(serr.MkErr(serr.TErrInval, "too large"))
 	}
 	f, err := ps.ft.Lookup(args.Tfid())
@@ -680,7 +670,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		return sp.MkRerror(serr.MkErr(serr.TErrInval, "mode shouldbe OAPPEND"))
 	}
 
-	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, sp.NoV, args.Tfence())
+	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, args.Tfence())
 	if err != nil {
 		return sp.MkRerror(err)
 	}

@@ -5,13 +5,12 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
-	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
+	"sigmaos/proc"
 	"sigmaos/rpcclnt"
-	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -36,7 +35,7 @@ type GraphSrv struct {
 func RunGraphSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Creating graph service\n")
 	gsrv := &GraphSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_GRAPH, gsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_GRAPH, gsrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -48,13 +47,13 @@ func RunGraphSrv(public bool, jobname string) error {
 	mongoc.EnsureIndex(SN_DB, GRAPH_FLWEE_COL, []string{"userid"})
 	gsrv.mongoc = mongoc
 
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_GRAPH)
+	fsls := MakeFsLibs(SOCIAL_NETWORK_GRAPH)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	gsrv.cachec = cachec
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_USER)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
@@ -154,7 +153,7 @@ func (gsrv *GraphSrv) updateGraphWithUname(
 	// get follower
 	follower_arg := &proto.CheckUserRequest{Usernames: []string{follwer_uname}}
 	follower_res := &proto.CheckUserResponse{}
-	if err := gsrv.userc.RPC("User.CheckUser", follower_arg, follower_res); err != nil {
+	if err := gsrv.userc.RPC("UserSrv.CheckUser", follower_arg, follower_res); err != nil {
 		return err
 	} else if follower_res.Ok != USER_QUERY_OK {
 		res.Ok = "Follower does not exist"
@@ -164,7 +163,7 @@ func (gsrv *GraphSrv) updateGraphWithUname(
 	// get followee id
 	followee_arg := &proto.CheckUserRequest{Usernames: []string{followee_uname}}
 	followee_res := &proto.CheckUserResponse{}
-	if err := gsrv.userc.RPC("User.CheckUser", followee_arg, followee_res); err != nil {
+	if err := gsrv.userc.RPC("UserSrv.CheckUser", followee_arg, followee_res); err != nil {
 		return err
 	} else if followee_res.Ok != USER_QUERY_OK {
 		res.Ok = "Followee does not exist"

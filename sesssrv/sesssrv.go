@@ -19,15 +19,13 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/spcodec"
 	"sigmaos/stats"
-	"sigmaos/threadmgr"
 	"sigmaos/version"
 	"sigmaos/watch"
 )
 
 //
 // There is one SessSrv per server. The SessSrv has one protsrv per
-// session (i.e., TCP connection). Each session may multiplex several
-// users.
+// session (i.e., TCP connection).
 //
 // SessSrv has a table with all sess conds in use so that it can
 // unblock threads that are waiting in a sess cond when a session
@@ -44,7 +42,6 @@ type SessSrv struct {
 	st       *sessstatesrv.SessionTable
 	sm       *sessstatesrv.SessionMgr
 	sct      *sesscond.SessCondTable
-	tmt      *threadmgr.ThreadMgrTable
 	plt      *lockmap.PathLockTable
 	wt       *watch.WatchTable
 	vt       *version.VersionTable
@@ -63,8 +60,7 @@ func MakeSessSrv(pe *proc.ProcEnv, root fs.Dir, addr string, mkps sps.MkProtServ
 	ssrv.mkps = mkps
 	ssrv.et = et
 	ssrv.stats = stats.MkStatsDev(ssrv.dirover)
-	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall)
-	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt, attachf, detachf)
+	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, attachf, detachf)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.plt = lockmap.MkPathLockTable()
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
@@ -82,10 +78,6 @@ func MakeSessSrv(pe *proc.ProcEnv, root fs.Dir, addr string, mkps sps.MkProtServ
 
 func (ssrv *SessSrv) ProcEnv() *proc.ProcEnv {
 	return ssrv.pe
-}
-
-func (ssrv *SessSrv) GetSessCondTable() *sesscond.SessCondTable {
-	return ssrv.sct
 }
 
 func (ssrv *SessSrv) GetPathLockTable() *lockmap.PathLockTable {
@@ -184,21 +176,19 @@ func (ssrv *SessSrv) Unregister(cid sessp.Tclient, sid sessp.Tsession, conn sps.
 func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 	ssrv.qlen.Inc(1)
 	s := sessp.Tsession(fc.Fc.Session)
-	sess, ok := ssrv.st.Lookup(s)
+	_, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
 	if !ok && s != 0 {
 		db.DFatalf("SrvFcall: no session %v for req %v\n", s, fc)
 	}
-	// If the fcall is a server-generated heartbeat, don't worry about
-	// processing it sequentially on the session's thread.
+	// If the fcall is a server-generated heartbeat, it won't block;
+	// don't start a new thread.
 	if s == 0 {
 		ssrv.srvfcall(fc)
-	} else if sessp.Tfcall(fc.Fc.Type) == sessp.TTwriteread {
+	} else {
 		go func() {
 			ssrv.srvfcall(fc)
 		}()
-	} else {
-		sess.GetThread().Process(fc)
 	}
 }
 
@@ -222,11 +212,6 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 		ssrv.st.ProcessHeartbeats(fc.Msg.(*sp.Theartbeat))
 		return
 	}
-	// If this is a replicated op received through raft (not
-	// directly from a client), the first time Alloc is called
-	// will be in this function, so the conn will be set to
-	// nil. If it came from the client, the conn will already be
-	// set.
 	sess := ssrv.st.Alloc(sessp.Tclient(fc.Fc.Client), s)
 	qlen := ssrv.QueueLen()
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
@@ -248,7 +233,11 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	ssrv.sendReply(fc, reply, sess)
 
 	if close {
-		// Dispatch() signaled to close the sessstatesrv.
+		// Dispatch() signaled to close the sessstatesrv.  Several
+		// threads maybe waiting in a sesscond of this
+		// session. DeleteSess will unblock them so that they can bail
+		// out.
+		ssrv.sct.DeleteSess(sess.Sid)
 		sess.Close()
 	}
 }

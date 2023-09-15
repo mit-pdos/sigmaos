@@ -3,14 +3,13 @@ package pathclnt
 import (
 	"fmt"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/reader"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
@@ -29,11 +28,13 @@ type PathClnt struct {
 	*fidclnt.FidClnt
 	mnt     *MntTable
 	rootmt  *RootMountTable
-	chunkSz sessp.Tsize
+	chunkSz sp.Tsize
+	realm   sp.Trealm
+	lip     string
 	cid     sp.TclntId
 }
 
-func MakePathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt, sz sessp.Tsize) *PathClnt {
+func MakePathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt, sz sp.Tsize) *PathClnt {
 	pathc := &PathClnt{pcfg: pcfg, mnt: makeMntTable(), chunkSz: sz}
 	if fidc == nil {
 		pathc.FidClnt = fidclnt.MakeFidClnt(pcfg, pcfg.Net)
@@ -55,7 +56,7 @@ func (pathc *PathClnt) Realm() sp.Trealm {
 	return pathc.pcfg.GetRealm()
 }
 
-func (pathc *PathClnt) ClntID() sp.TclntId {
+func (pathc *PathClnt) ClntId() sp.TclntId {
 	return pathc.cid
 }
 
@@ -63,11 +64,11 @@ func (pathc *PathClnt) GetLocalIP() string {
 	return pathc.pcfg.LocalIP
 }
 
-func (pathc *PathClnt) SetChunkSz(sz sessp.Tsize) {
+func (pathc *PathClnt) SetChunkSz(sz sp.Tsize) {
 	pathc.chunkSz = sz
 }
 
-func (pathc *PathClnt) GetChunkSz() sessp.Tsize {
+func (pathc *PathClnt) GetChunkSz() sp.Tsize {
 	return pathc.chunkSz
 }
 
@@ -128,7 +129,7 @@ func (pathc *PathClnt) Disconnect(pn string) error {
 	return nil
 }
 
-func (pathc *PathClnt) MakeReader(fid sp.Tfid, path string, chunksz sessp.Tsize) *reader.Reader {
+func (pathc *PathClnt) MakeReader(fid sp.Tfid, path string, chunksz sp.Tsize) *reader.Reader {
 	return reader.MakeReader(pathc.FidClnt, path, fid, chunksz)
 }
 
@@ -175,7 +176,7 @@ func (pathc *PathClnt) Mount(fid sp.Tfid, path string) error {
 	return nil
 }
 
-func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId) (sp.Tfid, error) {
+func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "Create %v perm %v lid %v\n", p, perm, lid)
 	path := path.Split(p)
 	dir := path.Dir()
@@ -185,7 +186,7 @@ func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.
 		db.DPrintf(db.PATHCLNT_ERR, "Walk failed: %v", p)
 		return sp.NoFid, err
 	}
-	fid, err = pathc.FidClnt.Create(fid, base, perm, mode, lid)
+	fid, err = pathc.FidClnt.Create(fid, base, perm, mode, lid, f)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "create failed: %v", p)
 		return sp.NoFid, err
@@ -255,22 +256,15 @@ func (pathc *PathClnt) Remove(name string, uname sp.Tuname) error {
 	if err != nil {
 		return err
 	}
-
-	// Optimistcally remove obj without doing a pathname
-	// walk; this may fail if rest contains an automount
-	// symlink.
 	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name))
-	if err != nil {
-		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
-			fid, err = pathc.walk(pn, uname, path.EndSlash(name), nil)
-			if err != nil {
-				return err
-			}
-			defer pathc.FidClnt.Clunk(fid)
-			err = pathc.FidClnt.Remove(fid)
+	if Retry(err) {
+		fid, err = pathc.walk(pn, uname, path.EndSlash(name), nil)
+		if err != nil {
+			return err
 		}
-	}
-	if err != nil {
+		defer pathc.FidClnt.Clunk(fid)
+		err = pathc.FidClnt.Remove(fid)
+	} else if err != nil {
 		return err
 	}
 	return nil
@@ -279,8 +273,11 @@ func (pathc *PathClnt) Remove(name string, uname sp.Tuname) error {
 func (pathc *PathClnt) Stat(name string, uname sp.Tuname) (*sp.Stat, error) {
 	db.DPrintf(db.PATHCLNT, "Stat %v\n", name)
 	pn := path.Split(name)
-	// XXX ignore err?
-	target, rest, _ := pathc.resolve(pn, uname, true)
+	target, rest, err := pathc.resolve(pn, uname, true)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Stat resolve %v err %v\n", pn, err)
+	}
+	db.DPrintf(db.PATHCLNT, "Stat resolve %v target %v rest %v\n", pn, target, rest)
 	if len(rest) == 0 && !path.EndSlash(name) {
 		st := sp.MkStatNull()
 		st.Name = pathc.FidClnt.Lookup(target).Servers().String()
@@ -355,37 +352,42 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w Watch) error
 	return nil
 }
 
-func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp.Toffset, cnt sessp.Tsize) ([]byte, error) {
+// Several calls optimistically connect to a recently-mounted server
+// without doing a pathname walk; this may fail, and the call should
+// walk. retry() says when to retry.
+func Retry(err *serr.Err) bool {
+	if err == nil {
+		return false
+	}
+	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
+}
+
+func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.resolve(p, uname, path.EndSlash(pn))
 	if err != nil {
 		return nil, err
 	}
-	// Optimistcally GetFile without doing a pathname
-	// walk; this may fail if rest contains an automount
-	// symlink or if server is unreachable.
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn))
-	if err != nil {
-		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
-			fid, err = pathc.walk(p, uname, path.EndSlash(pn), nil)
-			if err != nil {
-				return nil, err
-			}
-			defer pathc.FidClnt.Clunk(fid)
-			data, err = pathc.FidClnt.GetFile(fid, []string{}, mode, off, cnt, false)
-			if err != nil {
-				return nil, err
-			}
-		} else {
+	if Retry(err) {
+		fid, err = pathc.walk(p, uname, path.EndSlash(pn), nil)
+		if err != nil {
 			return nil, err
 		}
+		defer pathc.FidClnt.Clunk(fid)
+		data, err = pathc.FidClnt.GetFile(fid, []string{}, mode, off, cnt, false)
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
 	}
 	return data, nil
 }
 
 // Create or open file and write it
-func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId) (sessp.Tsize, error) {
+func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId) (sp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "PutFile %v %v %v\n", pn, mode, lid)
 	p := path.Split(pn)
 	fid, rest, err := pathc.resolve(p, uname, path.EndSlash(pn))
@@ -393,40 +395,35 @@ func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm s
 		db.DPrintf(db.PATHCLNT_ERR, "Error PutFile resolve %v %v %v: %v", pn, mode, lid, err)
 		return 0, err
 	}
-	// Optimistcally PutFile without doing a pathname
-	// walk; this may fail if rest contains an automount
-	// symlink or if server is unreachable.
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid)
-	if err != nil {
-		if err.IsMaybeSpecialElem() || err.IsErrUnreachable() {
-			dir := p.Dir()
-			base := path.Path{p.Base()}
-			resolve := true
-			if p.Base() == err.Obj { // was the final pn component a symlink?
-				dir = p
-				base = path.Path{}
-				resolve = path.EndSlash(pn)
-			}
-			fid, err = pathc.walk(dir, uname, resolve, nil)
-			if err != nil {
-				db.DPrintf(db.PATHCLNT_ERR, "Error PutFile walk failed %v %v %v: %v", pn, mode, lid, err)
-				return 0, err
-			}
-			defer pathc.FidClnt.Clunk(fid)
-			cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false, lid)
-			if err != nil {
-				db.DPrintf(db.PATHCLNT_ERR, "Error PutFile retry failed %v %v %v: %v", pn, mode, lid, err)
-				return 0, err
-			}
-		} else {
+	if Retry(err) {
+		dir := p.Dir()
+		base := path.Path{p.Base()}
+		resolve := true
+		if p.Base() == err.Obj { // was the final pn component a symlink?
+			dir = p
+			base = path.Path{}
+			resolve = path.EndSlash(pn)
+		}
+		fid, err = pathc.walk(dir, uname, resolve, nil)
+		if err != nil {
 			return 0, err
 		}
+		defer pathc.FidClnt.Clunk(fid)
+		cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false, lid)
+		if err != nil {
+			return 0, err
+		}
+	} else if err != nil {
+		return 0, err
 	}
 	return cnt, nil
 }
 
 func (pathc *PathClnt) resolve(p path.Path, uname sp.Tuname, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
-	pathc.resolveRoot(p, uname)
+	if err, b := pathc.resolveRoot(p, uname); err != nil {
+		db.DPrintf(db.ALWAYS, "resolveRoot %v err %v b %v\n", p, err, b)
+	}
 	return pathc.mnt.resolve(p, resolve)
 }
 

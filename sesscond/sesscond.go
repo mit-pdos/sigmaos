@@ -8,8 +8,8 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
+	"sigmaos/serr"
 	"sigmaos/sessp"
-    "sigmaos/serr"
 	"sigmaos/threadmgr"
 )
 
@@ -49,9 +49,8 @@ func (sc *SessCond) alloc(sessid sessp.Tsession) *cond {
 	if _, ok := sc.conds[sessid]; !ok {
 		sc.conds[sessid] = []*cond{}
 	}
-	c := &cond{}
-	c.threadmgr = sc.sct.St.SessThread(sessid)
-	c.c = sync.NewCond(sc.lock)
+	c := &cond{c: sync.NewCond(sc.lock), threadmgr: sc.sct.St.SessThread(sessid)}
+	db.DPrintf(db.SESSCOND, "alloc sc %v %v c %v\n", sc, sessid, c)
 	sc.conds[sessid] = append(sc.conds[sessid], c)
 	return c
 }
@@ -62,11 +61,19 @@ func (sc *SessCond) alloc(sessid sessp.Tsession) *cond {
 func (sc *SessCond) Wait(sessid sessp.Tsession) *serr.Err {
 	c := sc.alloc(sessid)
 
-	c.threadmgr.Sleep(c.c)
+	db.DPrintf(db.SESSCOND, "Wait %v c %v\n", sessid, c)
+
+	if c.threadmgr != nil {
+		c.threadmgr.Sleep(c.c)
+	} else {
+		c.c.Wait()
+	}
 
 	sc.removeWakingCond(sessid, c)
 
 	closed := c.isClosed
+
+	db.DPrintf(db.SESSCOND, "Wait return %v\n", c)
 
 	if closed {
 		db.DPrintf(db.SESSCOND, "wait sess closed %v\n", sessid)
@@ -75,14 +82,18 @@ func (sc *SessCond) Wait(sessid sessp.Tsession) *serr.Err {
 	return nil
 }
 
-// Caller should hold sc lock.
+// Caller should hold sc lock and the sleeper should have gone to
+// sleep while holding sc.lock and release it in inside of sleep, so
+// it shouldn't be running anymore.
 func (sc *SessCond) Signal() {
 	for sid, condlist := range sc.conds {
-		// acquire c.lock() to ensure signal doesn't happen
-		// between releasing sc or sess lock and going to
-		// sleep.
 		for _, c := range condlist {
-			c.threadmgr.Wake(c.c)
+			db.DPrintf(db.SESSCOND, "Signal %v c %v\n", sid, c)
+			if c.threadmgr != nil {
+				c.threadmgr.Wake(c.c)
+			} else {
+				c.c.Signal()
+			}
 			sc.addWakingCond(sid, c)
 		}
 		delete(sc.conds, sid)
@@ -93,7 +104,11 @@ func (sc *SessCond) Signal() {
 func (sc *SessCond) Broadcast() {
 	for sid, condlist := range sc.conds {
 		for _, c := range condlist {
-			c.threadmgr.Wake(c.c)
+			if c.threadmgr != nil {
+				c.threadmgr.Wake(c.c)
+			} else {
+				c.c.Signal()
+			}
 			sc.addWakingCond(sid, c)
 		}
 		delete(sc.conds, sid)
@@ -127,7 +142,11 @@ func (sc *SessCond) closed(sessid sessp.Tsession) {
 	if condlist, ok := sc.conds[sessid]; ok {
 		db.DPrintf(db.SESSCOND, "%p: sess %v closed\n", sc, sessid)
 		for _, c := range condlist {
-			c.threadmgr.Wake(c.c)
+			if c.threadmgr != nil {
+				c.threadmgr.Wake(c.c)
+			} else {
+				c.c.Signal()
+			}
 			sc.addWakingCond(sessid, c)
 		}
 		delete(sc.conds, sessid)

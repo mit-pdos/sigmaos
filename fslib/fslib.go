@@ -1,10 +1,9 @@
 package fslib
 
 import (
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
-	"sigmaos/sessp"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -18,7 +17,7 @@ func MakeFsLib(pcfg *proc.ProcEnv) (*FsLib, error) {
 	db.DPrintf(db.PORT, "MakeFsLib: uname %s lip %s addrs %v\n", pcfg.GetUname(), pcfg.LocalIP, pcfg.EtcdIP)
 	fl := &FsLib{
 		pcfg:     pcfg,
-		FdClient: fdclnt.MakeFdClient(pcfg, nil, sessp.Tsize(10_000_000)),
+		FdClient: fdclnt.MakeFdClient(pcfg, nil, sp.Tsize(10_000_000)),
 	}
 	return fl, nil
 }

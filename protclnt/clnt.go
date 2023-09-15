@@ -204,8 +204,8 @@ func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) ReadVF(fid sp.Tfid, offset sp.Toffset, cnt sessp.Tsize, f *sp.Tfence, v sp.TQversion) ([]byte, *serr.Err) {
-	args := sp.MkReadV(fid, offset, cnt, v, f)
+func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, *serr.Err) {
+	args := sp.MkReadF(fid, offset, cnt, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
@@ -217,8 +217,8 @@ func (pclnt *ProtClnt) ReadVF(fid sp.Tfid, offset sp.Toffset, cnt sessp.Tsize, f
 	return reply.Data, nil
 }
 
-func (pclnt *ProtClnt) WriteVF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, v sp.TQversion, data []byte) (*sp.Rwrite, *serr.Err) {
-	args := sp.MkTwriteV(fid, offset, v, f)
+func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
+	args := sp.MkTwriteF(fid, offset, f)
 	reply, err := pclnt.CallData(args, data)
 	if err != nil {
 		return nil, err
@@ -295,7 +295,7 @@ func (pclnt *ProtClnt) Renameat(oldfid sp.Tfid, oldname string, newfid sp.Tfid, 
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offset sp.Toffset, cnt sessp.Tsize, resolve bool, f *sp.Tfence) ([]byte, *serr.Err) {
+func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offset sp.Toffset, cnt sp.Tsize, resolve bool, f *sp.Tfence) ([]byte, *serr.Err) {
 	args := sp.MkTgetfile(fid, mode, offset, cnt, path, resolve, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -322,7 +322,7 @@ func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm 
 }
 
 func (pclnt *ProtClnt) Detach(cid sp.TclntId) *serr.Err {
-	args := sp.MkTdetach(0, 0, cid)
+	args := sp.MkTdetach(cid)
 	_, err := pclnt.Call(args)
 	if err != nil {
 		return err

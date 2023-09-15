@@ -7,12 +7,11 @@ import (
 	"math/rand"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
-	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongoclnt"
 	"sigmaos/perf"
-	sp "sigmaos/sigmap"
+	"sigmaos/proc"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"sync"
@@ -36,6 +35,7 @@ type UserSrv struct {
 	ucount       int32 //This server may overflow with over 2^31 users
 	dbCounter    *Counter
 	cacheCounter *Counter
+	wCounter     *Counter
 	loginCounter *Counter
 }
 
@@ -43,7 +43,7 @@ func RunUserSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Creating user service\n")
 	usrv := &UserSrv{}
 	usrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_USER, usrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_USER, usrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"username"})
 	usrv.mongoc = mongoc
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_USER)
+	fsls := MakeFsLibs(SOCIAL_NETWORK_USER)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
@@ -66,6 +66,7 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	usrv.dbCounter = MakeCounter("DB")
 	usrv.cacheCounter = MakeCounter("Cache")
+	usrv.wCounter = MakeCounter("Write-Cache")
 	usrv.loginCounter = MakeCounter("Login")
 	defer perf.Done()
 	return ssrv.RunServer()
@@ -115,7 +116,7 @@ func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserRequest, re
 		Firstname: req.Firstname,
 		Password:  pswd_hashed}
 	if err := usrv.mongoc.Insert(SN_DB, USER_COL, newUser); err != nil {
-		dbg.DFatalf("Mongo Error: %v", err)
+		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Mongo Error: %v", err)
 		return err
 	}
 	res.Ok = USER_QUERY_OK
@@ -180,7 +181,9 @@ func (usrv *UserSrv) getUserbyUname(username string) (*User, error) {
 			return nil, nil
 		}
 		encoded, _ := bson.Marshal(user)
+		t2 := time.Now()
 		usrv.cachec.Put(key, &proto.CacheItem{Key: key, Val: encoded})
+		usrv.wCounter.AddTimeSince(t2)
 		dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Found user %v in DB: %v\n", username, user)
 	} else {
 		bson.Unmarshal(cacheItem.Val, user)

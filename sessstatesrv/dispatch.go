@@ -10,9 +10,6 @@ import (
 )
 
 func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, bool, *sp.Rerror) {
-	// If another replica detached a session, and the client sent their request
-	// to this replica (which proposed it through raft), raft may spit out some
-	// ops after the detach is processed. Catch these by returning an error.
 	if s.IsClosed() {
 		db.DPrintf(db.SESS_STATE_SRV_ERR, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
 		err := serr.MkErr(serr.TErrClosed, fmt.Sprintf("session %v", s.Sid))
@@ -47,13 +44,13 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, boo
 		reply := &sp.Rcreate{}
 		err := s.protsrv.Create(req, reply)
 		return reply, nil, false, err
-	case *sp.TreadV:
+	case *sp.TreadF:
 		reply := &sp.Rread{}
-		data, err := s.protsrv.ReadV(req, reply)
+		data, err := s.protsrv.ReadF(req, reply)
 		return reply, data, false, err
-	case *sp.TwriteV:
+	case *sp.TwriteF:
 		reply := &sp.Rwrite{}
-		err := s.protsrv.WriteV(req, data, reply)
+		err := s.protsrv.WriteF(req, data, reply)
 		return reply, nil, false, err
 	case *sp.Tclunk:
 		reply := &sp.Rclunk{}
@@ -89,13 +86,8 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, boo
 		return reply, nil, false, err
 	case *sp.Tdetach:
 		reply := &sp.Rdetach{}
-		db.DPrintf(db.SESS_STATE_SRV_ERR, "Try to detach l %v p %v", req.LeadId, req.PropId)
-		// If the leader proposed this detach message, accept it.
-		if req.LeadId == req.PropId {
-			err := s.protsrv.Detach(req, reply, s.detachClnt)
-			return reply, nil, true, err
-		}
-		return reply, nil, false, nil
+		err := s.protsrv.Detach(req, reply, s.detachClnt)
+		return reply, nil, true, err
 	case *sp.Theartbeat:
 		reply := &sp.Rheartbeat{}
 		reply.Sids = req.Sids

@@ -22,7 +22,7 @@ import (
 const (
 	MAXLOAD        float64 = 85.0
 	MINLOAD        float64 = 40.0
-	CRASHKVD               = 40000
+	CRASHKVD               = 5000
 	KVD_NO_REPL    int     = 0
 	KVD_REPL_LEVEL         = 3
 )
@@ -138,7 +138,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	var lowload perf.Tload
 	n := 0
 	for gn, _ := range kvs.Set {
-		kvgrp := path.Join(kvgrp.GrpPath(JobDir(mo.job), gn), sp.STATSD)
+		kvgrp := path.Join(kvgrp.GrpPath(kvgrp.JobDir(mo.job), gn), sp.STATSD)
 		st := stats.Stats{}
 		err := mo.GetFileJson(kvgrp, &st)
 		if err != nil {

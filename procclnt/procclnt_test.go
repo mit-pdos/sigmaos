@@ -541,13 +541,14 @@ func TestReserveCores(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	start := time.Now()
-	pid := sp.Tpid("sleeper-aaaaaaa")
-	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(1000*linuxsched.NCores), SLEEP_MSECS)
+	pid := proc.Tpid("sleeper-aaaaaaa")
+	majorityCpu := 1000 * (linuxsched.NCores/2 + 1)
+	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
 	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
 	// proc is only picked up *after* the other one.
-	pid1 := sp.Tpid("sleeper-bbbbbb")
-	spawnSleeperMcpu(t, ts, pid1, 1000, SLEEP_MSECS)
+	pid1 := proc.Tpid("sleeper-bbbbbb")
+	spawnSleeperMcpu(t, ts, pid1, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
@@ -576,9 +577,9 @@ func TestWorkStealing(t *testing.T) {
 
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "Boot node %v", err)
-
-	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.NCores))
-	pid1 := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.NCores))
+	majorityCpu := 1000 * (linuxsched.NCores/2 + 1)
+	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(majorityCpu))
+	pid1 := spawnSpinnerMcpu(ts, proc.Tmcpu(majorityCpu))
 
 	err = ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart")
@@ -715,7 +716,8 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	assert.Nil(t, err, "Mkdir")
 
 	// Start a bunch of replicated spinner procs.
-	sm := groupmgr.Start(ts.SigmaClnt, N_REPL, "spinner", []string{}, OUTDIR, 0, N_REPL, 0, 0, 0)
+	cfg := groupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
+	sm := cfg.StartGrpMgr(ts.SigmaClnt, 0)
 	nChildren += N_REPL
 
 	// Wait for them to spawn.

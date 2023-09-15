@@ -44,14 +44,14 @@ func (pathc *PathClnt) walk(path path.Path, uname sp.Tuname, resolve bool, w Wat
 		}
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
 		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
-		if err != nil && err.IsErrUnreachable() {
+		if Retry(err) {
 			done := len(path1) - len(left)
-			db.DPrintf(db.ALWAYS, "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
+			db.DPrintf(db.WALK_ERR, "Walk retry p %v %v l %v d %v err %v by umount %v\n", path, path1, left, done, err, path1[0:done])
 			if e := pathc.umountPrefix(path1[0:done]); e != nil {
 				return sp.NoFid, e
 			}
 			// try again
-			db.DPrintf(db.ALWAYS, "walkPathUmount: retry p %v r %v\n", path, resolve)
+			db.DPrintf(db.WALK_ERR, "walkPathUmount: retry p %v r %v\n", path, resolve)
 			time.Sleep(TIMEOUT * time.Millisecond)
 			continue
 		}

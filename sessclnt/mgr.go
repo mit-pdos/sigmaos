@@ -46,6 +46,9 @@ func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
+	if len(addrs) == 0 {
+		return nil, serr.MkErr(serr.TErrInval, addrs)
+	}
 	key := sessKey(addrs)
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil

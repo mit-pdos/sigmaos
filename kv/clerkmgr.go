@@ -9,6 +9,7 @@ import (
 
 	"sigmaos/cache"
 	db "sigmaos/debug"
+	"sigmaos/kvgrp"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
@@ -30,7 +31,7 @@ func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string, mcpu proc.Tmcpu, repl bool)
 	cm := &ClerkMgr{SigmaClnt: sc, job: job, ckmcpu: mcpu, repl: repl}
 	clrk := NewClerk(cm.SigmaClnt.FsLib, cm.job, repl)
 	cm.KvClerk = clrk
-	cm.sempath = path.Join(JobDir(job), "kvclerk-sem")
+	cm.sempath = path.Join(kvgrp.JobDir(job), "kvclerk-sem")
 	cm.sem = semclnt.MakeSemClnt(sc.FsLib, cm.sempath)
 	if err := cm.sem.Init(0); err != nil {
 		return nil, err
@@ -94,6 +95,9 @@ func (cm *ClerkMgr) StopClerks() error {
 			return err
 		}
 		db.DPrintf(db.ALWAYS, "Clerk exit status %v\n", status)
+		if !(status.IsStatusEvicted() || status.IsStatusOK()) {
+			return fmt.Errorf("wrong status %v", status)
+		}
 	}
 	return nil
 }

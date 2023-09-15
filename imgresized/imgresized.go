@@ -10,8 +10,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/electclnt"
 	"sigmaos/fslib"
+	"sigmaos/leaderclnt"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/serr"
@@ -34,7 +34,7 @@ type ImgSrv struct {
 	workerMcpu proc.Tmcpu
 	isDone     bool
 	crash      int64
-	electclnt  *electclnt.ElectClnt
+	leaderclnt *leaderclnt.LeaderClnt
 }
 
 func MkDirs(fsl *fslib.FsLib, job string) error {
@@ -58,8 +58,12 @@ func MkDirs(fsl *fslib.FsLib, job string) error {
 }
 
 func SubmitTask(fsl *fslib.FsLib, job string, fn string) error {
+	return SubmitTaskMulti(fsl, job, []string{fn})
+}
+
+func SubmitTaskMulti(fsl *fslib.FsLib, job string, fns []string) error {
 	t := path.Join(sp.IMG, job, "todo", rd.String(4))
-	_, err := fsl.PutFile(t, 0777, sp.OREAD, []byte(fn))
+	_, err := fsl.PutFile(t, 0777, sp.OREAD, []byte(strings.Join(fns, ",")))
 	return err
 }
 
@@ -114,9 +118,9 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 
 	imgd.Started()
 
-	imgd.electclnt, err = electclnt.MakeElectClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
+	imgd.leaderclnt, err = leaderclnt.MakeLeaderClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
 	if err != nil {
-		return nil, fmt.Errorf("MakeElectClnt err %v", err)
+		return nil, fmt.Errorf("MakeLeaderclnt err %v", err)
 	}
 
 	crash.Crasher(imgd.FsLib)
@@ -154,6 +158,8 @@ type Tresult struct {
 }
 
 func (imgd *ImgSrv) waitForTask(start time.Time, ch chan Tresult, p *proc.Proc, t task) {
+	imgd.WaitStart(p.GetPid())
+	db.DPrintf(db.ALWAYS, "Start Latency %v", time.Since(start))
 	status, err := imgd.WaitExit(p.GetPid())
 	ms := time.Since(start).Milliseconds()
 	if err == nil && status.IsStatusOK() {
@@ -243,10 +249,10 @@ func (imgd *ImgSrv) Work() {
 
 	db.DPrintf(db.IMGD, "Try acquire leadership coord %v job %v", imgd.ProcEnv().GetPID(), imgd.job)
 
-	// Try to become the leading coordinator.  If we get
-	// partitioned, we cannot write the todo directories either,
-	// so need to set a fence.
-	imgd.electclnt.AcquireLeadership(nil)
+	// Try to become the leading coordinator.
+	if err := imgd.leaderclnt.LeadAndFence(nil, []string{path.Join(IMG, imgd.job)}); err != nil {
+		db.DFatalf("LeadAndFence err %v", err)
+	}
 
 	db.DPrintf(db.ALWAYS, "leader %s\n", imgd.job)
 

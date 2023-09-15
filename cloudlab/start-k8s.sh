@@ -67,18 +67,18 @@ id=$(cat ~/.aws/credentials | grep "id" | tail -n 1 | cut -d ' ' -f3)
 key=$(cat ~/.aws/credentials | grep "key" | tail -n 1 | cut -d ' ' -f3)
 
 for vm in $vms; do
-  $DIR/setup-for-benchmarking.sh $LOGIN@$vm
+  $DIR/setup-for-benchmarking.sh $vm
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START k8s leader $vm"
     # Start the first k8s node.
     if [[ "${SWAP}" == "true" ]]; then
       echo "Swap is on, copying config"
-      cp ~/ulambda/aws/yaml/k8s-cluster-config-swap.yaml /tmp/kubelet.yaml
+      cp ~/sigmaos/aws/yaml/k8s-cluster-config-swap.yaml /tmp/kubelet.yaml
       sed -i "s/x.x.x.x/$MAIN_PRIVADDR/g" /tmp/kubelet.yaml
       sudo kubeadm init --config /tmp/kubelet.yaml 2>&1 | tee /tmp/start.out
     else
-#      cp ~/ulambda/cloudlab/yaml/k8s-cluster-config-epleg.yaml /tmp/kubelet.yaml
+#      cp ~/sigmaos/cloudlab/yaml/k8s-cluster-config-epleg.yaml /tmp/kubelet.yaml
 #      sed -i "s/x.x.x.x/$MAIN_PRIVADDR/g" /tmp/kubelet.yaml
 #      sudo kubeadm init --config /tmp/kubelet.yaml 2>&1 | tee /tmp/start.out
       sudo kubeadm init --apiserver-advertise-address=$MAIN_PRIVADDR --pod-network-cidr=$flannel_cidr/16 2>&1 | tee /tmp/start.out
@@ -92,7 +92,7 @@ for vm in $vms; do
     wget -O /tmp/kube-flannel.yml https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
     sed -i "s/10.244.0.0/$flannel_cidr/g" /tmp/kube-flannel.yml
     kubectl apply -f /tmp/kube-flannel.yml
-    kubectl apply -f ~/ulambda/benchmarks/k8s/metrics/metrics-server.yaml
+    kubectl apply -f ~/sigmaos/benchmarks/k8s/metrics/metrics-server.yaml
 
     # Un-taint all nodes, so the control-plane node can run pods too
     kubectl taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule-

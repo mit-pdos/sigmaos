@@ -84,7 +84,7 @@ if [ "${TARGET}" != "local" ]; then
     --mount type=bind,src=$USRBIN,dst=/tmp/bin \
     -e "TAG=$TAG" \
     sigmabuilder 
-  ./upload.sh --tag $TAG --profile me-mit
+  ./upload.sh --tag $TAG --profile sigmaos
   # Clean up base container
   docker stop $(docker ps -aq --filter="ancestor=sigmabuilder")
   docker rm $(docker ps -aq --filter="ancestor=sigmabuilder")

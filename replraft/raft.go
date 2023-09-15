@@ -20,8 +20,9 @@ import (
 	stats "go.etcd.io/etcd/server/v3/etcdserver/api/v2stats"
 	"go.uber.org/zap"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
+	"sigmaos/proc"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -52,16 +53,18 @@ type committedEntries struct {
 	leader  uint64
 }
 
-func makeRaftNode(pcfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
-	node := &RaftNode{}
-	node.pcfg = pcfg
-	node.id = id
-	node.peerAddrs = peerAddrs
-	node.done = make(chan bool)
-	node.clerk = clerk
-	node.commit = commit
-	node.propose = propose
-	node.storage = raft.NewMemoryStorage()
+// etcd numbers nodes start from 1.  0 is not a valid id.
+func makeRaftNode(pcfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
+	node := &RaftNode{
+		id:        id,
+		peerAddrs: peerAddrs,
+		done:      make(chan bool),
+		clerk:     clerk,
+		commit:    commit,
+		propose:   propose,
+		storage:   raft.NewMemoryStorage(),
+		pcfg:      pcfg,
+	}
 	node.config = &raft.Config{
 		ID:                        uint64(id),
 		ElectionTick:              sp.Conf.Raft.ELECT_NTICKS,
@@ -71,15 +74,17 @@ func makeRaftNode(pcfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []str
 		MaxInflightMsgs:           256,
 		MaxUncommittedEntriesSize: 1 << 30,
 	}
-	node.start(peers, l, init)
-	return node
+	db.DPrintf(db.REPLRAFT, "makeRaftNode %d peeraddrs %v\n", id, peerAddrs)
+	if err := node.start(peers, l, init); err != nil {
+		return nil, err
+	}
+	return node, nil
 }
 
-func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
+func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 	if init {
 		n.node = raft.StartNode(n.config, peers)
 	} else {
-		n.postNodeId()
 		n.node = raft.RestartNode(n.config)
 	}
 	// Make sure the logging dir exists
@@ -90,7 +95,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
 	logCfg.OutputPaths = []string{string(logPath)}
 	logger, err := logCfg.Build()
 	if err != nil {
-		db.DFatalf("Couldn't build logger: %v", err)
+		return err
 	}
 	n.transport = &rafthttp.Transport{
 		Logger:      logger,
@@ -102,14 +107,14 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
 		ErrorC:      make(chan error),
 	}
 	n.transport.Start()
-	for i := range peers {
-		if i+1 != n.id {
-			n.transport.AddPeer(types.ID(i+1), []string{"http://" + n.peerAddrs[i]})
+	for i, a := range n.peerAddrs {
+		if i != n.id-1 && a != "" {
+			n.transport.AddPeer(types.ID(i+1), []string{"http://" + a})
 		}
 	}
-
 	go n.serveRaft(l)
 	go n.serveChannels()
+	return nil
 }
 
 func (n *RaftNode) serveRaft(l net.Listener) {
@@ -223,10 +228,9 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry, leader uint64) {
 }
 
 // Send a post request, indicating that the node will join the cluster.
-func (n *RaftNode) postNodeId() {
-	if len(n.peerAddrs) == 1 {
-		return
-	}
+// Note: unused for now.
+func (n *RaftNode) postNodeId() error {
+	db.DPrintf(db.REPLRAFT, "%v: postNodeId %v\n", n.id, n.peerAddrs)
 	for i, addr := range n.peerAddrs {
 		if i == n.id-1 {
 			continue
@@ -236,14 +240,17 @@ func (n *RaftNode) postNodeId() {
 		if err != nil {
 			db.DFatalf("Error Marshal in RaftNode.postNodeID: %v", err)
 		}
-		_, err = http.Post("http://"+path.Join(addr, membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b))
-		// Only post the node ID to one node
-		if err == nil {
-			return
+		db.DPrintf(db.REPLRAFT, "Invoke Post node ID %d %v\n", i, addr)
+		if _, err := http.Post("http://"+path.Join(addr, membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b)); err == nil {
+			db.DPrintf(db.REPLRAFT, "Posted node ID %d %v\n", i, addr)
+			// Only post the node ID to one node
+			return nil
+		} else {
+			db.DPrintf(db.REPLRAFT, "Error posting node ID %d %v err %v\n", i, addr, err)
 		}
-		log.Printf("Error posting node ID: %v", err)
 	}
-	db.DFatalf("Failed to post node ID")
+	db.DPrintf(db.REPLRAFT, "postNodeId %v unreachable %v\n", n.id, n.peerAddrs)
+	return serr.MkErr(serr.TErrUnreachable, "no peers")
 }
 
 func (n *RaftNode) IsIDRemoved(id uint64) bool {

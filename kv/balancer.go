@@ -30,11 +30,11 @@ import (
 	"sigmaos/fs"
 	"sigmaos/fslib"
 	"sigmaos/inode"
+	"sigmaos/kvgrp"
 	"sigmaos/leaderclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -126,7 +126,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 		db.DFatalf("Marshal failed %v\n", error)
 	}
 
-	if err := bl.lc.LeadAndFence(b, []string{JobDir(bl.job)}); err != nil {
+	if err := bl.lc.LeadAndFence(b, []string{kvgrp.JobDir(bl.job)}); err != nil {
 		db.DFatalf("LeadAndFence %v\n", err)
 	}
 
@@ -187,10 +187,10 @@ func BalancerOpRetry(fsl *fslib.FsLib, job, opcode, kvd string) error {
 		}
 		var serr *serr.Err
 		if errors.As(err, &serr) && (serr.IsErrUnavailable() || serr.IsErrRetry()) {
-			db.DPrintf(db.ALWAYS, "balancer op wait err %v\n", err)
+			db.DPrintf(db.KVBAL_ERR, "balancer op wait err %v\n", err)
 			time.Sleep(WAITMS * time.Millisecond)
 		} else {
-			db.DPrintf(db.ALWAYS, "balancer op err %v\n", err)
+			db.DPrintf(db.KVBAL_ERR, "balancer op err %v\n", err)
 			return err
 		}
 	}
@@ -209,7 +209,7 @@ func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
 
 // XXX call balance() repeatedly for each server passed in to write
 // XXX assumes one client that retries
-func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, f sp.Tfence) (sessp.Tsize, *serr.Err) {
+func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
 		return 0, serr.MkErr(serr.TErrInval, words)
@@ -218,10 +218,10 @@ func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, v sp.TQversion, f sp.
 	if err != nil {
 		return 0, err
 	}
-	return sessp.Tsize(len(b)), nil
+	return sp.Tsize(len(b)), nil
 }
 
-func (c *Ctl) Read(ctx fs.CtxI, off sp.Toffset, cnt sessp.Tsize, v sp.TQversion, f sp.Tfence) ([]byte, *serr.Err) {
+func (c *Ctl) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
 	return nil, serr.MkErr(serr.TErrNotSupported, "Read")
 }
 
@@ -241,7 +241,8 @@ func (bl *Balancer) monitor() {
 }
 
 // Monitor if i am connected; if not, terminate myself.  Another
-// balancer will take over.
+// balancer will take over.  XXX replace by checking if leaderclnt's
+// session lease is still valid.
 func (bl *Balancer) monitorMyself() {
 	for true {
 		time.Sleep(time.Duration(500) * time.Millisecond)

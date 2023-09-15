@@ -20,6 +20,7 @@ type Tpath uint64
 type Tiounit uint32
 type Tperm uint32
 type Toffset uint64
+type Tsize uint32
 type Tlength uint64
 type Tgid uint32
 type Trealm string
@@ -81,7 +82,7 @@ func (cid TclntId) String() string {
 }
 
 // If need more than MaxGetSet, use Open/Read/Close interface
-const MAXGETSET sessp.Tsize = 1_000_000
+const MAXGETSET Tsize = 1_000_000
 
 type Qtype uint32
 type TQversion uint32
@@ -364,52 +365,44 @@ func (c *Tcreate) Tfence() Tfence {
 	return c.Fence.Tfence()
 }
 
-func MkReadV(fid Tfid, o Toffset, c sessp.Tsize, v TQversion, f *Tfence) *TreadV {
-	return &TreadV{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Version: uint32(v), Fence: f.FenceProto()}
+func MkReadF(fid Tfid, o Toffset, c Tsize, f *Tfence) *TreadF {
+	return &TreadF{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Fence: f.FenceProto()}
 }
 
-func (r *TreadV) Tfid() Tfid {
+func (r *TreadF) Tfid() Tfid {
 	return Tfid(r.Fid)
 }
 
-func (r *TreadV) Tversion() TQversion {
-	return TQversion(r.Version)
-}
-
-func (r *TreadV) Toffset() Toffset {
+func (r *TreadF) Toffset() Toffset {
 	return Toffset(r.Offset)
 }
 
-func (r *TreadV) Tcount() sessp.Tsize {
-	return sessp.Tsize(r.Count)
+func (r *TreadF) Tcount() Tsize {
+	return Tsize(r.Count)
 }
 
-func (r *TreadV) Tfence() Tfence {
+func (r *TreadF) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func MkTwriteV(fid Tfid, o Toffset, v TQversion, f *Tfence) *TwriteV {
-	return &TwriteV{Fid: uint32(fid), Offset: uint64(o), Version: uint32(v), Fence: f.FenceProto()}
+func MkTwriteF(fid Tfid, o Toffset, f *Tfence) *TwriteF {
+	return &TwriteF{Fid: uint32(fid), Offset: uint64(o), Fence: f.FenceProto()}
 }
 
-func (w *TwriteV) Tfid() Tfid {
+func (w *TwriteF) Tfid() Tfid {
 	return Tfid(w.Fid)
 }
 
-func (w *TwriteV) Toffset() Toffset {
+func (w *TwriteF) Toffset() Toffset {
 	return Toffset(w.Offset)
 }
 
-func (w *TwriteV) Tversion() TQversion {
-	return TQversion(w.Version)
-}
-
-func (w *TwriteV) Tfence() Tfence {
+func (w *TwriteF) Tfence() Tfence {
 	return w.Fence.Tfence()
 }
 
-func (wr *Rwrite) Tcount() sessp.Tsize {
-	return sessp.Tsize(wr.Count)
+func (wr *Rwrite) Tcount() Tsize {
+	return Tsize(wr.Count)
 }
 
 func MkTwatch(fid Tfid) *Twatch {
@@ -515,7 +508,7 @@ func (r *Trenameat) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt sessp.Tsize, path path.Path, resolve bool, f *Tfence) *Tgetfile {
+func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt Tsize, path path.Path, resolve bool, f *Tfence) *Tgetfile {
 	return &Tgetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Count: uint32(cnt), Wnames: path, Resolve: resolve, Fence: f.FenceProto()}
 }
 
@@ -531,8 +524,8 @@ func (g *Tgetfile) Toffset() Toffset {
 	return Toffset(g.Offset)
 }
 
-func (g *Tgetfile) Tcount() sessp.Tsize {
-	return sessp.Tsize(g.Count)
+func (g *Tgetfile) Tcount() Tsize {
+	return Tsize(g.Count)
 }
 
 func (g *Tgetfile) Tfence() Tfence {
@@ -583,8 +576,8 @@ func MkTheartbeat(sess map[uint64]bool) *Theartbeat {
 	return &Theartbeat{Sids: sess}
 }
 
-func MkTdetach(pid, lid uint32, cid TclntId) *Tdetach {
-	return &Tdetach{PropId: pid, LeadId: lid, ClntId: uint64(cid)}
+func MkTdetach(cid TclntId) *Tdetach {
+	return &Tdetach{ClntId: uint64(cid)}
 }
 
 func (d *Tdetach) TclntId() TclntId {
@@ -625,8 +618,8 @@ func (Rwstat) Type() sessp.Tfcall   { return sessp.TRwstat }
 
 // sigmaP
 func (Rstat) Type() sessp.Tfcall       { return sessp.TRstat }
-func (TreadV) Type() sessp.Tfcall      { return sessp.TTreadV }
-func (TwriteV) Type() sessp.Tfcall     { return sessp.TTwriteV }
+func (TreadF) Type() sessp.Tfcall      { return sessp.TTreadF }
+func (TwriteF) Type() sessp.Tfcall     { return sessp.TTwriteF }
 func (Trenameat) Type() sessp.Tfcall   { return sessp.TTrenameat }
 func (Rrenameat) Type() sessp.Tfcall   { return sessp.TRrenameat }
 func (Tremovefile) Type() sessp.Tfcall { return sessp.TTremovefile }

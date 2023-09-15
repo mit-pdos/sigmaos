@@ -4,11 +4,11 @@ import (
 	"os/user"
 	"sync"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
+	"sigmaos/proc"
 	"sigmaos/protclnt"
 	"sigmaos/rand"
 	"sigmaos/serr"
@@ -16,7 +16,6 @@ import (
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
-	"sigmaos/threadmgr"
 )
 
 type Npd struct {
@@ -27,8 +26,7 @@ type Npd struct {
 
 func MakeNpd(pcfg *proc.ProcEnv, lip string) *Npd {
 	npd := &Npd{lip, pcfg, nil}
-	tm := threadmgr.MakeThreadMgrTable(nil)
-	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, tm, nil, nil)
+	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, nil, nil)
 	return npd
 }
 
@@ -43,7 +41,7 @@ func (npd *Npd) serve(fm *sessp.FcallMsg) {
 	if rerror != nil {
 		msg = rerror
 	}
-	reply := sessp.MakeFcallMsg(msg, nil, sessp.Tclient(fm.Fc.Client), s, nil, sessp.Tinterval{})
+	reply := sessp.MakeFcallMsg(msg, nil, sessp.Tclient(fm.Fc.Client), s, nil)
 	reply.Data = data
 	reply.Fc.Tag = fm.Fc.Tag
 	sess.SendConn(reply)
@@ -84,7 +82,7 @@ func makeNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
 	npc := &NpConn{}
 	npc.clnt = protclnt.MakeClnt(pcfg, sp.ROOTREALM.String())
 	npc.fidc = fidclnt.MakeFidClnt(pcfg, sp.ROOTREALM.String())
-	npc.pc = pathclnt.MakePathClnt(pcfg, npc.fidc, sessp.Tsize(1_000_000))
+	npc.pc = pathclnt.MakePathClnt(pcfg, npc.fidc, sp.Tsize(1_000_000))
 	npc.fm = mkFidMap()
 	npc.cid = sp.TclntId(rand.Uint64())
 	return npc
@@ -169,7 +167,7 @@ func (npc *NpConn) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if !ok {
 		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
-	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode(), sp.NoLeaseId)
+	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode(), sp.NoLeaseId, sp.NoFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Create args %v err: %v\n", args, err)
 		return sp.MkRerror(err)
@@ -247,12 +245,12 @@ func (npc *NpConn) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	return sp.MkRerrorCode(serr.TErrNotSupported)
 }
 
-func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
+func (npc *NpConn) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return nil, sp.MkRerrorCode(serr.TErrNotfound)
 	}
-	d, err := npc.fidc.ReadVU(fid, args.Toffset(), args.Tcount(), sp.NoV)
+	d, err := npc.fidc.ReadF(fid, args.Toffset(), args.Tcount())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Read: args %v err %v\n", args, err)
 		return nil, sp.MkRerror(err)
@@ -271,12 +269,12 @@ func (npc *NpConn) ReadV(args *sp.TreadV, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	return d, nil
 }
 
-func (npc *NpConn) WriteV(args *sp.TwriteV, data []byte, rets *sp.Rwrite) *sp.Rerror {
+func (npc *NpConn) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.MkRerrorCode(serr.TErrNotfound)
 	}
-	n, err := npc.fidc.WriteV(fid, args.Toffset(), data, sp.NoV)
+	n, err := npc.fidc.WriteF(fid, args.Toffset(), data, sp.NoFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Write: args %v err %v\n", args, err)
 		return sp.MkRerror(err)

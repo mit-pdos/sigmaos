@@ -13,6 +13,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/schedd/proto"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
 )
@@ -265,12 +266,13 @@ func (sdc *ScheddClnt) UpdateSchedds() {
 		db.DPrintf(db.PROCCLNT, "Update schedds too soon")
 		return
 	}
-	sdc.lastUpdate = time.Now()
 	// Read the procd union dir.
 	schedds, _, err := sdc.ReadDir(sp.SCHEDD)
 	if err != nil {
-		db.DFatalf("Error ReadDir procd: %v", err)
+		db.DPrintf(db.ALWAYS, "Error ReadDir procd: %v", err)
+		return
 	}
+	sdc.lastUpdate = time.Now()
 	db.DPrintf(db.PROCCLNT, "Got schedds %v", sp.Names(schedds))
 	// Alloc enough space for the list of schedds.
 	sdc.scheddKernelIds = make([]string, 0, len(schedds))
@@ -280,16 +282,16 @@ func (sdc *ScheddClnt) UpdateSchedds() {
 }
 
 // Get the next procd to burst on.
-func (sdc *ScheddClnt) NextSchedd(spread int) string {
+func (sdc *ScheddClnt) NextSchedd(spread int) (string, error) {
 	sdc.Lock()
 	defer sdc.Unlock()
 
 	if len(sdc.scheddKernelIds) == 0 {
 		debug.PrintStack()
-		db.DFatalf("Error: no schedds to spawn on")
+		return "", serr.MkErr(serr.TErrNotfound, "no schedds to spawn on")
 	}
 
 	sdip := sdc.scheddKernelIds[(sdc.burstOffset/spread)%len(sdc.scheddKernelIds)]
 	sdc.burstOffset++
-	return sdip
+	return sdip, nil
 }

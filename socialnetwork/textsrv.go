@@ -3,11 +3,10 @@ package socialnetwork
 import (
 	"fmt"
 	"regexp"
-	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/proc"
 	"sigmaos/rpcclnt"
-	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"sync"
@@ -32,17 +31,17 @@ type TextSrv struct {
 func RunTextSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Creating text service\n")
 	tsrv := &TextSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(sp.SOCIAL_NETWORK_TEXT, tsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_TEXT, tsrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(sp.SOCIAL_NETWORK_TEXT)
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_USER)
+	fsls := MakeFsLibs(SOCIAL_NETWORK_TEXT)
+	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	tsrv.userc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, sp.SOCIAL_NETWORK_URL)
+	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_URL)
 	if err != nil {
 		return err
 	}
@@ -91,7 +90,7 @@ func (tsrv *TextSrv) ProcessText(
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			urlErr = tsrv.urlc.RPC("Url.ComposeUrls", &urlArg, &urlRes)
+			urlErr = tsrv.urlc.RPC("UrlSrv.ComposeUrls", &urlArg, &urlRes)
 		}()
 	}
 	wg.Wait()

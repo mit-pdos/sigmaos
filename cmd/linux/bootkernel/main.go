@@ -2,20 +2,19 @@ package main
 
 import (
 	"os"
-	"strconv"
-	"strings"
-
 	"sigmaos/boot"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"strconv"
+	"strings"
 )
 
 func main() {
-	if len(os.Args) < 7 {
-		db.DFatalf("%v: usage kernelid srvs nameds dbip mongoip overlays\n", os.Args[0])
+	if len(os.Args) < 8 {
+		db.DFatalf("%v: usage kernelid srvs nameds dbip mongoip overlays reserveMcpu\n", os.Args[0])
 	}
 	srvs := strings.Split(os.Args[3], ";")
 	overlays, err := strconv.ParseBool(os.Args[6])
@@ -28,6 +27,9 @@ func main() {
 		Dbip:     os.Args[4],
 		Mongoip:  os.Args[5],
 		Overlays: overlays,
+	}
+	if len(os.Args) >= 9 {
+		param.ReserveMcpu = os.Args[8]
 	}
 	db.DPrintf(db.KERNEL, "param %v\n", param)
 	h := sp.SIGMAHOME

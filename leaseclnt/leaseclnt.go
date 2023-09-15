@@ -34,7 +34,7 @@ func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 	}
 	var res leaseproto.AskResult
 	if err := lmc.cc.RPC(srv.String(), "LeaseSrv.AskLease", &leaseproto.AskRequest{
-		ClntId: uint64(lmc.ClntID()),
+		ClntId: uint64(lmc.ClntId()),
 		TTL:    fsetcd.LeaseTTL}, &res); err == nil {
 		li := &LeaseInfo{
 			ch:  make(chan struct{}),

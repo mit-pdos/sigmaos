@@ -3,21 +3,21 @@ kind: Job
 metadata:
   name: thumbnail-benchrealm1
 spec:
-  completions: 100
-  parallelism: 100
+  completions: XXX
+  parallelism: XXX
   template:
     spec:
       restartPolicy: OnFailure
       containers:
       - name: thumbnail-compute
-        image: arielszekely/thumbnail@sha256:e9f29c94d264fa5bb6301fbcc8594e855a391ef345abc481bd063f5d90b83b1f
+        image: arielszekely/thumbnail@sha256:2b966061412f6586e7b87002c33e42c0f7ae801e503bc318e7f13508da55a0a9
         imagePullPolicy: IfNotPresent
         resources:
           limits:
-            cpu: 800m
+            cpu: 400m
             memory: 256Mi
           requests:
-            cpu: 800m
+            cpu: 400m
             memory: 256Mi
         env:
           - name: HOST_IP
@@ -37,6 +37,6 @@ spec:
           - name: AWS_DEFAULT_REGION
             value: "us-east-1"
         args:
-        - "s3://9ps3/img/6.jpg"
+        - "s3://9ps3/img/6.jpg 1"
       imagePullSecrets:
       - name: regcred

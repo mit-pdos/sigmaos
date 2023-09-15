@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"testing"
 	"time"
-
 	"github.com/stretchr/testify/assert"
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
@@ -21,12 +20,14 @@ import (
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"os/exec"
 )
 
 const (
 	REALM_BASENAME sp.Trealm = "benchrealm"
-	REALM1                   = REALM_BASENAME + "1"
-	REALM2                   = REALM_BASENAME + "2"
+	//	REALM1                   = "arielck" // NOTE: Set this as realm name to take cold-start into account.
+	REALM1 = REALM_BASENAME + "1"
+	REALM2 = REALM_BASENAME + "2"
 
 	MR_K8S_INIT_PORT int = 32585
 
@@ -66,11 +67,15 @@ var DURATION time.Duration
 var MAX_RPS int
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
+var SOCIAL_NETWORK_DURS string
+var SOCIAL_NETWORK_MAX_RPS string
+var SOCIAL_NETWORK_READ_ONLY bool
 var RPCBENCH_MCPU int
 var RPCBENCH_DURS string
 var RPCBENCH_MAX_RPS string
 var IMG_RESIZE_INPUT_PATH string
 var N_IMG_RESIZE_JOBS int
+var N_IMG_RESIZE_INPUTS_PER_JOB int
 var IMG_RESIZE_MCPU int
 var SLEEP time.Duration
 var REDIS_ADDR string
@@ -103,7 +108,7 @@ func init() {
 	flag.IntVar(&WWWD_MCPU, "wwwd_mcpu", 2000, "WWWD mCPU")
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
-	flag.DurationVar(&SLEEP, "sleep", 1*time.Millisecond, "Sleep length.")
+	flag.DurationVar(&SLEEP, "sleep", 0*time.Millisecond, "Sleep length.")
 	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
 	flag.IntVar(&HOTEL_CACHE_MCPU, "hotel_cache_mcpu", 2000, "Hotel cache mcpu")
 	flag.IntVar(&HOTEL_IMG_SZ_MB, "hotel_img_sz_mb", 0, "Hotel image data size in megabytes.")
@@ -118,6 +123,9 @@ func init() {
 	flag.IntVar(&MAX_RPS, "max_rps", 1000, "Max requests per second.")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
+	flag.StringVar(&SOCIAL_NETWORK_DURS, "sn_dur", "10s", "Social network benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&SOCIAL_NETWORK_MAX_RPS, "sn_max_rps", "1000", "Max requests/second for social network bench (comma-separated for multiple phases).")
+	flag.BoolVar(&SOCIAL_NETWORK_READ_ONLY, "sn_read_only", false, "send read only cases in social network bench")
 	flag.StringVar(&RPCBENCH_DURS, "rpcbench_dur", "10s", "RPCBench benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&RPCBENCH_MAX_RPS, "rpcbench_max_rps", "1000", "Max requests/second for rpc bench (comma-separated for multiple phases).")
 	flag.IntVar(&RPCBENCH_MCPU, "rpcbench_mcpu", 3000, "RPCbench mCPU")
@@ -134,6 +142,7 @@ func init() {
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
 	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "9ps3/img/6.jpg", "Path of img resize input file.")
 	flag.IntVar(&N_IMG_RESIZE_JOBS, "n_imgresize", 10, "Number of img resize jobs.")
+	flag.IntVar(&N_IMG_RESIZE_INPUTS_PER_JOB, "n_imgresize_per", 1, "Number of img resize inputs per job.")
 	flag.IntVar(&IMG_RESIZE_MCPU, "imgresize_mcpu", 100, "MCPU for img resize worker.")
 }
 
@@ -199,7 +208,7 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 	}
 	rs := benchmarks.MakeResults(N_TRIALS, benchmarks.OPS)
 	makeOutDir(ts1)
-	ps, _ := makeNProcs(1, "spinner", []string{OUT_DIR}, nil, 1)
+	ps, _ := makeNProcs(N_TRIALS, "sleeper", []string{"10000us", OUT_DIR}, nil, proc.Tmcpu(MCPU))
 	runOps(ts1, []interface{}{ps}, spawnWaitStartProcs, rs)
 	printResultSummary(rs)
 	rmOutDir(ts1)
@@ -825,6 +834,15 @@ func TestK8sMRMulti(t *testing.T) {
 		defer ps[i].Done()
 	}
 	db.DPrintf(db.TEST, "Done creating realm srtructs")
+	err := ts[0].MkDir(sp.K8S_SCRAPER, 0777)
+	assert.Nil(rootts.T, err, "Error mkdir %v", err)
+	// Start up the stat scraper procs.
+	sdc := scheddclnt.MakeScheddClnt(ts[0].SigmaClnt.FsLib)
+	nSchedd, err := sdc.Nschedd()
+	ps2, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.NCores-1)))
+	spawnBurstProcs(ts[0], ps2)
+	waitStartProcs(ts[0], ps2)
+
 	cs := make([]*rpc.Client, 0, N_REALM)
 	for i := 0; i < N_REALM; i++ {
 		rName := sp.Trealm(REALM_BASENAME.String() + strconv.Itoa(i+1))
@@ -832,7 +850,8 @@ func TestK8sMRMulti(t *testing.T) {
 		// Start the next k8s job.
 		cs = append(cs, startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT+i+1)))
 		// Monitor cores assigned to this realm.
-		monitorK8sCPUUtil(ts[i], ps[i], "mr", rName)
+		//		monitorK8sCPUUtil(ts[i], ps[i], "mr", rName)
+		monitorK8sCPUUtilScraperTS(ts[0], ps[i], "Guaranteed")
 		// Sleep for a bit before starting the next job
 		time.Sleep(SLEEP)
 	}
@@ -899,7 +918,7 @@ func TestImgResize(t *testing.T) {
 	rs := benchmarks.MakeResults(1, benchmarks.E2E)
 	p := makeRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := makeImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, proc.Tmcpu(IMG_RESIZE_MCPU))
+	jobs, apps := makeImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -935,12 +954,200 @@ func TestK8sImgResize(t *testing.T) {
 	// NOte start time
 	start := time.Now()
 	// Monitor CPU utilization via the stat scraper procs.
-	monitorK8sCPUUtilScraper(rootts, p)
+	monitorK8sCPUUtilScraper(rootts, p, "BestEffort")
+	exec.Command("kubectl", "apply", "-Rf", "/tmp/thumbnail.yaml").Start()
 	for !k8sJobHasCompleted(K8S_JOB_NAME) {
 		time.Sleep(500 * time.Millisecond)
 	}
 	rs.Append(time.Since(start), 1)
 	printResultSummary(rs)
 	evictProcs(ts1, ps)
+	rootts.Shutdown()
+}
+
+func TestRealmBalanceSimpleImgResize(t *testing.T) {
+	done := make(chan bool)
+	rootts := test.MakeTstateWithRealms(t)
+	blockers := blockMem(rootts, BLOCK_MEM)
+	// Structures for BE image resize
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p1 := makeRealmPerf(ts1)
+	defer p1.Done()
+	// Structure for LC image resize
+	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p2 := makeRealmPerf(ts2)
+	defer p2.Done()
+	// Prep resize jobs
+	imgJobsBE, imgAppsBE := makeImgResizeJob(
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0)
+	imgJobsLC, imgAppsLC := makeImgResizeJob(
+		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU))
+
+	// Run image resize jobs
+	go func() {
+		runOps(ts1, imgAppsBE, runImgResize, rs1)
+		done <- true
+	}()
+	go func() {
+		runOps(ts2, imgAppsLC, runImgResize, rs2)
+		done <- true
+	}()
+	// Wait for image resize jobs to set up.
+	<-imgJobsBE[0].ready
+	<-imgJobsLC[0].ready
+
+	// Monitor cores for kernel procs
+	monitorCPUUtil(ts1, p1)
+	monitorCPUUtil(ts2, p2)
+	db.DPrintf(db.TEST, "Image Resize setup done.")
+	// Kick off image resize jobs.
+	imgJobsBE[0].ready <- true
+	// Sleep for a bit
+	time.Sleep(5 * time.Second)
+	// Kick off social network jobs
+	imgJobsLC[0].ready <- true
+	// Wait for both jobs to finish.
+	<-done
+	<-done
+	db.DPrintf(db.TEST, "Image Resize Done.")
+	printResultSummary(rs1)
+	evictMemBlockers(rootts, blockers)
+	rootts.Shutdown()
+}
+
+func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
+	done := make(chan bool)
+	rootts := test.MakeTstateWithRealms(t)
+	blockers := blockMem(rootts, BLOCK_MEM)
+	ts0 := test.MakeRealmTstateClnt(rootts, "rootrealm")
+	p0 := makeRealmPerf(ts0)
+	defer p0.Done()
+	// Structures for image resize
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p1 := makeRealmPerf(ts1)
+	defer p1.Done()
+	// Structure for social network
+	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p2 := makeRealmPerf(ts2)
+	defer p2.Done()
+	// Prep image resize job
+	imgJobs, imgApps := makeImgResizeJob(
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0)
+	// Prep social network job
+	snJobs, snApps := makeSocialNetworkJobs(ts2, p2, true, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
+	// Run social network job
+	go func() {
+		runOps(ts2, snApps, runSocialNetwork, rs2)
+		done <- true
+	}()
+	// Wait for social network jobs to set up.
+	<-snJobs[0].ready
+	db.DPrintf(db.TEST, "Social Network setup done.")
+	// Run image resize job
+	go func() {
+		runOps(ts1, imgApps, runImgResize, rs1)
+		done <- true
+	}()
+	// Wait for image resize jobs to set up.
+	<-imgJobs[0].ready
+	// Monitor cores for kernel procs
+	monitorCPUUtil(ts0, p0)
+	monitorCPUUtil(ts1, p1)
+	monitorCPUUtil(ts2, p2)
+	db.DPrintf(db.TEST, "Image Resize setup done.")
+	db.DPrintf(db.TEST, "Setup phase done.")
+	// Kick off image resize jobs.
+	imgJobs[0].ready <- true
+	// Sleep for a bit
+	time.Sleep(10 * time.Second)
+	// Kick off social network jobs
+	snJobs[0].ready <- true
+	// Wait for both jobs to finish.
+	<-done
+	<-done
+	db.DPrintf(db.TEST, "Image Resize and Social Network Done.")
+	printResultSummary(rs1)
+	time.Sleep(5 * time.Second)
+	evictMemBlockers(rootts, blockers)
+	rootts.Shutdown()
+}
+
+func TestK8sSocialNetworkImgResize(t *testing.T) {
+	done := make(chan bool)
+	rootts := test.MakeTstateWithRealms(t)
+	blockers := blockMem(rootts, BLOCK_MEM)
+	// make realm to run k8s scrapper
+	ts0:= test.MakeRealmTstateClnt(rootts, sp.ROOTREALM)
+	p0 := makeRealmPerf(ts0)
+	defer p0.Done()
+	if PREWARM_REALM {
+		warmupRealm(ts0)
+	}
+	sdc := scheddclnt.MakeScheddClnt(ts0.SigmaClnt.FsLib)
+	nSchedd, err := sdc.Nschedd()
+	assert.Nil(ts0.Ts.T, err, "Error nschedd %v", err)
+	rs0 := benchmarks.MakeResults(1, benchmarks.E2E)
+	err = ts0.MkDir(sp.K8S_SCRAPER, 0777)
+	assert.Nil(ts0.Ts.T, err, "Error mkdir %v", err)
+	// Start up the stat scraper procs.
+	//ps, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.NCores-1)))
+	ps, _ := makeNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, 0)
+	spawnBurstProcs(ts0, ps)
+	waitStartProcs(ts0, ps)
+	// Structures for image resize
+	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	//rs1 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p1 := makeRealmPerf(ts1)
+	defer p1.Done()
+	// Structure for social network
+	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	rs2 := benchmarks.MakeResults(1, benchmarks.E2E)
+	p2 := makeRealmPerf(ts2)
+	defer p2.Done()
+	// Prep image resize job
+
+	// Prep social network job
+	snJobs, snApps := makeSocialNetworkJobs(ts2, p2, false, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
+	// Monitor cores assigned to image resize.
+	// NOte start time
+	start := time.Now()
+	// Run social network job
+	go func() {
+		runOps(ts2, snApps, runSocialNetwork, rs2)
+		snJobs[0].requestK8sStats()
+		done <- true
+	}()
+	// Wait for social network jobs to set up.
+	<-snJobs[0].ready
+	db.DPrintf(db.TEST, "Social Network setup done.")
+	// Monitor CPU utilization via the stat scraper procs.
+	monitorK8sCPUUtilScraper(rootts, p2, "Burstable")
+	monitorK8sCPUUtilScraper(rootts, p1, "BestEffort")
+	// Run image resize job
+	exec.Command("kubectl", "apply", "-Rf", "/tmp/thumbnail-heavy/").Start()
+	// Wait for image resize jobs to set up.
+	db.DPrintf(db.TEST, "Setup phase done.")
+	// Kick off image resize jobs.
+	// Sleep for a bit
+	time.Sleep(5 * time.Second)
+	// Kick off social network jobs
+	snJobs[0].ready <- true
+	// Wait for both jobs to finish.
+	<-done
+	db.DPrintf(db.TEST, "Downloading results")
+	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "social-network-perf/k8s"), HOSTTMP+"sigmaos-perf")
+	for !(k8sJobHasCompleted("thumbnail1-benchrealm1") && k8sJobHasCompleted("thumbnail2-benchrealm1") && 
+			k8sJobHasCompleted("thumbnail3-benchrealm1")&&k8sJobHasCompleted("thumbnail4-benchrealm1")) {
+		time.Sleep(500 * time.Millisecond)
+	}
+	rs0.Append(time.Since(start), 1)
+	printResultSummary(rs0)
+	evictProcs(ts0, ps)
+	time.Sleep(10 * time.Second)
+	evictMemBlockers(rootts, blockers)
 	rootts.Shutdown()
 }

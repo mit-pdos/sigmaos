@@ -40,14 +40,19 @@ func makeSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proccl
 	return makeSubsystemCmd(pclnt, k, p, how, nil)
 }
 
-func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow) (*Subsystem, error) {
+func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how procclnt.Thow, mcpu proc.Tmcpu) (*Subsystem, error) {
 	pid := sp.GenPid(program)
 	p := proc.MakePrivProcPid(pid, program, args, true)
+	p.SetMcpu(mcpu)
 	ss := makeSubsystem(k.ProcClnt, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelId, k.ip)
 }
 
-func (s *Subsystem) Run(how procclnt.Thow, kernelId string, localIP string) error {
+func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow) (*Subsystem, error) {
+	return k.bootSubsystemWithMcpu(program, args, how, 0)
+}
+
+func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string) error {
 	if how == procclnt.HLINUX || how == procclnt.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {

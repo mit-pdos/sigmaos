@@ -20,7 +20,7 @@ import (
 const (
 	MKNET      = "./bin/kernel/create-net.sh"
 	MIN_PORT   = 30000
-	NAMED_MCPU = 1000
+	NAMED_MCPU = 0
 )
 
 type Realm struct {
@@ -114,7 +114,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		return err
 	}
 	// Make some rootrealm services available in new realm
-	for _, s := range []string{sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.BOOTREL} {
+	for _, s := range []string{sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
 		mnt := sp.Tmount{Addr: rm.sc.NamedAddr(), Root: s}
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)

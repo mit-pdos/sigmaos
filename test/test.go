@@ -102,7 +102,6 @@ func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
 }
 
 func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
-	// XXX What should we set localIP to?
 	localIP, err1 := container.LocalIP()
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)

@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	//	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
@@ -120,7 +119,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		db.DFatalf("Spawn error called after Exited")
 	}
 
-	// XXX need to pick kernelId now
 	if spread > 0 {
 		// Update the list of active procds.
 		clnt.scheddclnt.UpdateSchedds()

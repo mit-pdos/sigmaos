@@ -33,10 +33,6 @@ func main() {
 	h := sp.SIGMAHOME
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+h+"/bin/kernel:"+h+"/bin/linux:"+h+"/bin/user")
-	//	addrs, err := sp.String2Taddrs(os.Args[2])
-	//	if err != nil {
-	//		db.DFatalf("%v: String2Taddrs %v\n", os.Args[0], err)
-	//	}
 	localIP, err1 := container.LocalIP()
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)

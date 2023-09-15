@@ -24,9 +24,6 @@ message ProcEnvProto {
   int64 crash = 18;
   int64 partition = 19;
 }
-//	// For testing purposes
-//	Crash     bool `json:crash,omitempty`
-//	Partition bool `json:partition,omitempty`
 
 message ProcProto {
   ProcEnvProto procEnvProto = 1;

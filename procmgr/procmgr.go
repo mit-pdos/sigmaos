@@ -62,7 +62,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	s := time.Now()
 	// Set the proc's kernel ID, now that a kernel has been selected to run the
 	// proc.
-	p.SetKernelID(mgr.kernelId)
+	p.SetKernelID(mgr.kernelId, true)
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
 	s = time.Now()

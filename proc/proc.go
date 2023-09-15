@@ -133,9 +133,11 @@ func (p *Proc) setBaseEnv() {
 	}
 }
 
-func (p *Proc) SetKernelID(kernelID string) {
+func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 	p.ProcEnvProto.KernelID = kernelID
-	p.setProcDir(kernelID)
+	if setProcDir {
+		p.setProcDir(kernelID)
+	}
 }
 
 // Finalize env details which can only be set once a physical machine and

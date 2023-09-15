@@ -13,7 +13,7 @@ import (
 // To run kernel procs
 func RunKernelProc(parentCfg *proc.ProcEnv, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
 	p.InheritParentProcEnv(parentCfg)
-	p.Finalize("", parentCfg.LocalIP)
+	p.FinalizeEnv(parentCfg.LocalIP, "")
 	env := p.GetEnv()
 	cmd := exec.Command(p.GetProgram(), p.Args...)
 	// Create a process group ID to kill all children if necessary.

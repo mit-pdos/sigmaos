@@ -17,10 +17,9 @@ message ProcEnvProto {
   string net = 11;
   string perf = 12;
   string debug = 13;
-  bool privileged = 14;
+  string uprocdPIDStr = 14;
+  bool privileged = 15;
 }
-//	UprocdPID  sp.Tpid   `json:uprocdpid,omitempty`
-//	Privileged bool      `json:privileged,omitempty` // XXX phase out?
 //	// For testing purposes
 //	Crash     bool `json:crash,omitempty`
 //	Partition bool `json:partition,omitempty`

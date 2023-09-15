@@ -63,7 +63,7 @@ func (s *Subsystem) Run(how procclnt.Thow, kernelId string, localIP string) erro
 		// XXX don't hard code
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
-		s.p.Finalize("", localIP)
+		s.p.FinalizeEnv(localIP, sp.Tpid(proc.NOT_SET))
 		var r *port.Range
 		up := port.NOPORT
 		if s.k.Param.Overlays {

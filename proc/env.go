@@ -52,19 +52,20 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, p
 	// Load Perf & Debug from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
-			PidStr:     string(pid),
-			RealmStr:   string(realm),
-			UnameStr:   string(uname),
-			ProcDir:    procDir,
-			ParentDir:  parentDir,
-			Program:    program,
-			LocalIP:    NOT_SET,
-			KernelID:   NOT_SET,
-			BuildTag:   NOT_SET,
-			Net:        NOT_SET,
-			Perf:       os.Getenv(SIGMAPERF),
-			Debug:      os.Getenv(SIGMADEBUG),
-			Privileged: priv,
+			PidStr:       string(pid),
+			RealmStr:     string(realm),
+			UnameStr:     string(uname),
+			ProcDir:      procDir,
+			ParentDir:    parentDir,
+			Program:      program,
+			LocalIP:      NOT_SET,
+			KernelID:     NOT_SET,
+			BuildTag:     NOT_SET,
+			Net:          NOT_SET,
+			Perf:         os.Getenv(SIGMAPERF),
+			Debug:        os.Getenv(SIGMADEBUG),
+			UprocdPIDStr: NOT_SET,
+			Privileged:   priv,
 		},
 	}
 }
@@ -143,6 +144,14 @@ func (pe *ProcEnvProto) SetUname(uname sp.Tuname) {
 	pe.UnameStr = string(uname)
 }
 
+func (pe *ProcEnvProto) SetUprocdPID(pid sp.Tpid) {
+	pe.UprocdPIDStr = string(pid)
+}
+
+func (pe *ProcEnvProto) GetUprocdPID() sp.Tpid {
+	return sp.Tpid(pe.UprocdPIDStr)
+}
+
 func (pe *ProcEnv) GetProto() *ProcEnvProto {
 	return pe.ProcEnvProto
 }
@@ -150,7 +159,7 @@ func (pe *ProcEnv) GetProto() *ProcEnvProto {
 func (pe *ProcEnv) Marshal() string {
 	b, err := json.Marshal(pe)
 	if err != nil {
-		log.Fatalf("Error marshal sigmaconfig: %v")
+		log.Fatalf("FATAL Error marshal sigmaconfig: %v")
 	}
 	return string(b)
 }
@@ -159,7 +168,7 @@ func Unmarshal(pestr string) *ProcEnv {
 	pe := &ProcEnv{}
 	err := json.Unmarshal([]byte(pestr), pe)
 	if err != nil {
-		log.Fatalf("Error unmarshal ProcEnv %v", err)
+		log.Fatalf("FATAL Error unmarshal ProcEnv %v", err)
 	}
 	return pe
 }

@@ -5,7 +5,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kernelclnt"
 	"sigmaos/port"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -40,7 +39,7 @@ func MkPortClntPort(fsl *fslib.FsLib) (*PortClnt, PortInfo, error) {
 }
 
 func (pc *PortClnt) AllocPort(p port.Tport) (PortInfo, error) {
-	hip, pb, err := pc.kc.Port(proc.GetUprocdPid(), p)
+	hip, pb, err := pc.kc.Port(pc.ProcEnv().GetUprocdPID(), p)
 	if err != nil {
 		return PortInfo{}, err
 	}

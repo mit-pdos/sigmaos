@@ -50,7 +50,6 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	defer sd.mu.Unlock()
 
 	p := proc.MakeProcFromProto(req.ProcProto)
-	p.SetKernelID(sd.kernelId)
 	db.DPrintf(db.SCHEDD, "[%v] %v Spawned %v", req.Realm, sd.kernelId, p)
 	if _, ok := sd.qs[sp.Trealm(req.Realm)]; !ok {
 		sd.qs[sp.Trealm(req.Realm)] = makeQueue()

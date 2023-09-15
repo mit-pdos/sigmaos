@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime/debug"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -65,14 +66,18 @@ func MakeProc(program string, args []string) *Proc {
 func MakePrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
-	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), sp.Tuname(pid), NOT_SET, NOT_SET, priv).GetProto()
+	procdir := NOT_SET
+	if priv {
+		// If this is a privileged proc, we already know its procdir.
+		procdir = path.Join(sp.KPIDS, pid.String())
+	}
+	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), sp.Tuname(pid), procdir, NOT_SET, priv).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
 	p.McpuInt = uint32(0)
 	if p.ProcEnvProto.Privileged {
 		p.TypeInt = uint32(T_LC)
 	}
-	p.setProcDir("NOT_SET")
 	p.Env = make(map[string]string)
 	p.setBaseEnv()
 	return p
@@ -101,9 +106,9 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 }
 
 func (p *Proc) setProcDir(kernelId string) {
-	if p.IsPrivileged() {
-		p.ProcEnvProto.ProcDir = path.Join(sp.KPIDS, p.GetPid().String())
-	} else {
+	// Privileged procs have their ProcDir (sp.KPIDS) set at the time of creation
+	// of the proc struct.
+	if !p.IsPrivileged() {
 		p.ProcEnvProto.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
 	}
 }
@@ -128,12 +133,16 @@ func (p *Proc) setBaseEnv() {
 	}
 }
 
-// Finalize env details which can only be set once a physical machine has been
-// chosen.
-func (p *Proc) Finalize(kernelId string, localIP string) {
-	p.setProcDir(kernelId)
+func (p *Proc) SetKernelID(kernelID string) {
+	p.ProcEnvProto.KernelID = kernelID
+	p.setProcDir(kernelID)
+}
+
+// Finalize env details which can only be set once a physical machine and
+// uprocd container have been chosen.
+func (p *Proc) FinalizeEnv(localIP string, uprocdPid sp.Tpid) {
 	p.ProcEnvProto.LocalIP = localIP
-	p.ProcEnvProto.KernelID = kernelId
+	p.ProcEnvProto.SetUprocdPID(uprocdPid)
 	p.AppendEnv(SIGMAJAEGERIP, GetSigmaJaegerIP())
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
 }
@@ -170,6 +179,10 @@ func (p *Proc) GetProgram() string {
 }
 
 func (p *Proc) GetProcDir() string {
+	if p.ProcEnvProto.ProcDir == NOT_SET {
+		b := debug.Stack()
+		log.Fatalf("Error, getting unset proc dir: %v", string(b))
+	}
 	return p.ProcEnvProto.ProcDir
 }
 
@@ -207,10 +220,6 @@ func (p *Proc) GetBuildTag() string {
 
 func (p *Proc) GetKernelID() string {
 	return p.ProcEnvProto.KernelID
-}
-
-func (p *Proc) SetKernelID(id string) {
-	p.ProcEnvProto.KernelID = id
 }
 
 func (p *Proc) SetType(t Ttype) {

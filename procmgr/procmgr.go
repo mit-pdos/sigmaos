@@ -59,8 +59,10 @@ func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {
-	p.Finalize(mgr.kernelId, mgr.rootsc.ProcEnv().LocalIP)
 	s := time.Now()
+	// Set the proc's kernel ID, now that a kernel has been selected to run the
+	// proc.
+	p.SetKernelID(mgr.kernelId)
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
 	s = time.Now()

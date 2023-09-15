@@ -122,6 +122,7 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	s = time.Now()
 	updm.startBalanceShares(uproc)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Uprocd shares %v", updm.fsl.ProcEnv().GetPID(), time.Since(s))
+	uproc.FinalizeEnv(updm.fsl.ProcEnv().LocalIP, rpcc.pid)
 	defer updm.exitBalanceShares(uproc)
 	req := &proto.RunRequest{
 		ProcProto: uproc.GetProto(),

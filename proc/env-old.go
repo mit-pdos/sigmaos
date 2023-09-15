@@ -3,8 +3,6 @@ package proc
 import (
 	"os"
 	"strings"
-
-	sp "sigmaos/sigmap"
 )
 
 // Environment variables which every proc expects to have.
@@ -17,7 +15,6 @@ const (
 	SIGMADEBUG     = "SIGMADEBUG"
 	SIGMANET       = "SIGMANET"
 	SIGMAJAEGERIP  = "SIGMAJAEGERIP"
-	SIGMAUPROCD    = "SIGMAUPROCD"
 )
 
 func SetSigmaDebugPid(pid string) {
@@ -46,10 +43,6 @@ func GetSigmaJaegerIP() string {
 
 func GetNet() string {
 	return os.Getenv(SIGMANET)
-}
-
-func GetUprocdPid() sp.Tpid {
-	return sp.Tpid(os.Getenv(SIGMAUPROCD))
 }
 
 func GetLabels(envvar string) map[string]bool {

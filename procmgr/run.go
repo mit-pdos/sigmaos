@@ -22,7 +22,9 @@ func (mgr *ProcMgr) runProc(p *proc.Proc) {
 	}
 }
 
+// XXX Redundant?
 func (mgr *ProcMgr) runPrivilegedProc(p *proc.Proc) error {
+	p.FinalizeEnv(mgr.rootsc.ProcEnv().LocalIP, "")
 	cmd := exec.Command(p.GetProgram(), p.Args...)
 	cmd.Env = p.GetEnv()
 	cmd.Stdout = os.Stdout

@@ -216,5 +216,5 @@ func Unmarshal(pestr string) *ProcEnv {
 
 // TODO: cleanup
 func (pe *ProcEnv) String() string {
-	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Uname:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v Perf:%v Debug:%v EtcdIP:%v LocalIP:%v BuildTag:%v Privileged:%v Crash:%v Partition:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetUname(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, pe.Perf, pe.Debug, pe.EtcdIP, pe.LocalIP, pe.BuildTag, pe.Privileged, nil, nil /*pe.Crash, pe.Partition*/)
+	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Uname:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v Perf:%v Debug:%v EtcdIP:%v LocalIP:%v BuildTag:%v Privileged:%v Crash:%v Partition:%v NetFail:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetUname(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, pe.Perf, pe.Debug, pe.EtcdIP, pe.LocalIP, pe.BuildTag, pe.Privileged, pe.Crash, pe.Partition, pe.NetFail)
 }

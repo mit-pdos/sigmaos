@@ -81,11 +81,11 @@ func MemFsPath(job string) string {
 }
 
 func MakeFsLibs(uname string) []*fslib.FsLib {
+	pe := proc.GetProcEnv()
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
-		db.DFatalf("Errror: Set env for many fslibs")
-		//		fsl, err := fslib.MakeFsLib(sp.Tuname(uname + "-" + strconv.Itoa(i)))
-		fsl, err := fslib.MakeFsLib(nil)
+		pen := proc.NewAddedProcEnv(pe, i)
+		fsl, err := fslib.MakeFsLib(pen)
 		if err != nil {
 			db.DFatalf("Error mkfsl: %v", err)
 		}

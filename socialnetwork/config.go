@@ -51,7 +51,6 @@ func MakeFsLibs(uname string) []*fslib.FsLib {
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
 		fsl, err := fslib.MakeFsLib(proc.GetProcEnv())
-		//fsl, err := fslib.MakeFsLib(sp.Tuname(uname + "-" + strconv.Itoa(i)))
 		if err != nil {
 			dbg.DFatalf("Error mkfsl: %v", err)
 		}

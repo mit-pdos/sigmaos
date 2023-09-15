@@ -125,7 +125,7 @@ func RunFrontendSrv(public bool, job string) error {
 		if err != nil {
 			dbg.DFatalf("QualifyAddr %v err %v", a, err)
 		}
-		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, proc.GetNet(), a); err != nil {
+		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, frontend.ProcEnv().GetNet(), a); err != nil {
 			dbg.DFatalf("AdvertisePort %v", err)
 		}
 	} else {

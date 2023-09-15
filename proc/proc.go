@@ -71,7 +71,7 @@ func MakePrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Pro
 		// If this is a privileged proc, we already know its procdir.
 		procdir = path.Join(sp.KPIDS, pid.String())
 	}
-	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), sp.Tuname(pid), procdir, NOT_SET, priv).GetProto()
+	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), sp.Tuname(pid), procdir, NOT_SET, priv, false).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
 	p.McpuInt = uint32(0)
@@ -102,6 +102,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Perf = parentPE.Perf
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
+	p.ProcEnvProto.Net = parentPE.Net
 	// TODO: anything else?
 }
 
@@ -240,6 +241,10 @@ func (p *Proc) SetShared(target string) {
 
 func (p *Proc) GetShared() string {
 	return p.SharedTarget
+}
+
+func (p *Proc) GetNet() string {
+	return p.ProcEnvProto.GetNet()
 }
 
 // Return Env map as a []string

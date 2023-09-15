@@ -29,15 +29,6 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 		return nil, err
 	}
 
-	// set overlay network
-	net := sp.ROOTREALM.String()
-	if r != nil {
-		net = "sigmanet-" + realm.String()
-		if realm == sp.ROOTREALM {
-			net = "sigmanet-testuser"
-		}
-	}
-
 	membytes := int64(mem.GetTotalMem()) * sp.MBYTE
 
 	score := 0
@@ -49,7 +40,6 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 
 	// append uprocd's port
 	p.Args = append(p.Args, up.String())
-	p.AppendEnv(proc.SIGMANET, net)
 
 	cmd := append([]string{p.GetProgram()}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v r %v s %v\n", cmd, p.GetEnv(), r, realm, score)
@@ -69,7 +59,7 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 			pmap[p] = []nat.PortBinding{{}}
 		}
 		endpoints = make(map[string]*network.EndpointSettings, 1)
-		endpoints[net] = &network.EndpointSettings{}
+		endpoints[p.GetNet()] = &network.EndpointSettings{}
 	}
 
 	resp, err := cli.ContainerCreate(ctx,

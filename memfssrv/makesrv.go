@@ -63,7 +63,7 @@ func MakeMemFsPublic(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
 	}
 	mfs.pc = pc
 
-	if err = pc.AdvertisePort(pn, pi, proc.GetNet(), mfs.MyAddr()); err != nil {
+	if err = pc.AdvertisePort(pn, pi, pcfg.GetNet(), mfs.MyAddr()); err != nil {
 		return nil, err
 	}
 	return mfs, err

@@ -48,7 +48,7 @@ func GetProcEnv() *ProcEnv {
 	return Unmarshal(pestr)
 }
 
-func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, procDir string, parentDir string, priv bool) *ProcEnv {
+func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, procDir string, parentDir string, priv, overlays bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
@@ -66,21 +66,22 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, p
 			Debug:        os.Getenv(SIGMADEBUG),
 			UprocdPIDStr: NOT_SET,
 			Privileged:   priv,
+			Overlays:     overlays,
 		},
 	}
 }
 
-func NewProcEnvUnset(priv bool) *ProcEnv {
+func NewProcEnvUnset(priv, overlays bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
-	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), sp.Tuname(NOT_SET), NOT_SET, NOT_SET, priv)
+	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), sp.Tuname(NOT_SET), NOT_SET, NOT_SET, priv, overlays)
 }
 
 func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 	return &ProcEnv{p}
 }
 
-func NewBootProcEnv(uname sp.Tuname, etcdIP, localIP string) *ProcEnv {
-	pe := NewProcEnvUnset(true)
+func NewBootProcEnv(uname sp.Tuname, etcdIP, localIP string, overlays bool) *ProcEnv {
+	pe := NewProcEnvUnset(true, overlays)
 	pe.SetUname(uname)
 	pe.Program = "kernel"
 	pe.SetPID(sp.GenPid(string(uname)))
@@ -91,8 +92,8 @@ func NewBootProcEnv(uname sp.Tuname, etcdIP, localIP string) *ProcEnv {
 	return pe
 }
 
-func NewTestProcEnv(realm sp.Trealm, etcdIP, localIP, buildTag string) *ProcEnv {
-	pe := NewProcEnvUnset(true)
+func NewTestProcEnv(realm sp.Trealm, etcdIP, localIP, buildTag string, overlays bool) *ProcEnv {
+	pe := NewProcEnvUnset(true, overlays)
 	pe.SetUname("test")
 	pe.SetPID(sp.GenPid("test"))
 	pe.SetRealm(realm)
@@ -106,14 +107,14 @@ func NewTestProcEnv(realm sp.Trealm, etcdIP, localIP, buildTag string) *ProcEnv 
 
 // Create a new sigma config which is a derivative of an existing sigma config.
 func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
-	pe2 := NewProcEnvUnset(pe.Privileged)
+	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetUname(sp.Tuname(string(pe.GetUname()) + "-clnt-" + strconv.Itoa(idx)))
 	return pe2
 }
 
 func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
-	pe2 := NewProcEnvUnset(pe.Privileged)
+	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetRealm(realm)
 	pe2.SetUname(sp.Tuname(string(pe.GetUname()) + "-realm-" + realm.String()))
@@ -134,6 +135,14 @@ func (pe *ProcEnvProto) GetRealm() sp.Trealm {
 
 func (pe *ProcEnvProto) SetRealm(realm sp.Trealm) {
 	pe.RealmStr = string(realm)
+	// Set overlay network for realm.
+	pe.Net = sp.ROOTREALM.String()
+	if pe.Overlays {
+		pe.Net = "sigmanet-" + realm.String()
+		if realm == sp.ROOTREALM {
+			pe.Net = "sigmanet-testuser"
+		}
+	}
 }
 
 func (pe *ProcEnvProto) GetUname() sp.Tuname {
@@ -175,5 +184,5 @@ func Unmarshal(pestr string) *ProcEnv {
 
 // TODO: cleanup
 func (pe *ProcEnv) String() string {
-	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Uname:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v Perf:%v Debug:%v EtcdIP:%v LocalIP:%v BuildTag:%v Privileged:%v Crash:%v Partition:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetUname(), pe.KernelID, nil /*pe.UprocdPID*/, pe.Net, nil /*pe.Privileged*/, pe.ProcDir, pe.ParentDir, pe.Perf, pe.Debug, pe.EtcdIP, pe.LocalIP, pe.BuildTag, pe.Privileged, nil, nil /*pe.Crash, pe.Partition*/)
+	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Uname:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v Perf:%v Debug:%v EtcdIP:%v LocalIP:%v BuildTag:%v Privileged:%v Crash:%v Partition:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetUname(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, pe.Perf, pe.Debug, pe.EtcdIP, pe.LocalIP, pe.BuildTag, pe.Privileged, nil, nil /*pe.Crash, pe.Partition*/)
 }

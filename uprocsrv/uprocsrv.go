@@ -23,7 +23,6 @@ type UprocSrv struct {
 	ssrv     *sigmasrv.SigmaSrv
 	kc       *kernelclnt.KernelClnt
 	kernelId string
-	net      string
 }
 
 func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
@@ -49,7 +48,6 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 		db.DFatalf("Error setting up isolation env: %v", err)
 	}
 	ups.ssrv = ssrv
-	ups.net = proc.GetNet()
 	err = ssrv.RunServer()
 	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)
 	return nil
@@ -58,5 +56,5 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.MakeProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Get uproc %v", uproc)
-	return container.RunUProc(uproc, ups.net)
+	return container.RunUProc(uproc)
 }

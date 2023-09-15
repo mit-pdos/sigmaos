@@ -107,7 +107,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, etcdIP, localIP, tag)
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, etcdIP, localIP, tag, Overlays)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 	var kernelid string
 	var err error

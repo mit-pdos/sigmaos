@@ -19,6 +19,7 @@ message ProcEnvProto {
   string debug = 13;
   string uprocdPIDStr = 14;
   bool privileged = 15;
+  bool overlays = 16;
 }
 //	// For testing purposes
 //	Crash     bool `json:crash,omitempty`

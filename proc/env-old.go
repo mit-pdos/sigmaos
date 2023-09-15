@@ -13,7 +13,6 @@ const (
 	SIGMANETFAIL   = "SIGMANETFAIL"
 	SIGMAPERF      = "SIGMAPERF"
 	SIGMADEBUG     = "SIGMADEBUG"
-	SIGMANET       = "SIGMANET"
 	SIGMAJAEGERIP  = "SIGMAJAEGERIP"
 )
 
@@ -39,10 +38,6 @@ func SetSigmaJaegerIP(ip string) {
 
 func GetSigmaJaegerIP() string {
 	return os.Getenv(SIGMAJAEGERIP)
-}
-
-func GetNet() string {
-	return os.Getenv(SIGMANET)
 }
 
 func GetLabels(envvar string) map[string]bool {

@@ -16,7 +16,8 @@ func main() {
 		log.Fatalf("%s: Usage <lip>\n", os.Args[0])
 	}
 	lip := os.Args[1]
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, lip, lip, "")
+	// By default, proxy doesn't use overlays.
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, lip, lip, "", false)
 	pcfg.Program = "proxy"
 	pcfg.SetUname("proxy")
 	proc.SetSigmaDebugPid(pcfg.String())

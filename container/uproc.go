@@ -16,12 +16,11 @@ import (
 // Contain user procs using exec-uproc trampoline
 //
 
-func RunUProc(uproc *proc.Proc, net string) error {
+func RunUProc(uproc *proc.Proc) error {
 	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
 	//	cmd := exec.Command("strace", append([]string{"-f", "exec-uproc", uproc.Program}, uproc.Args...)...)
 	cmd := exec.Command("exec-uproc", append([]string{uproc.GetProgram()}, uproc.Args...)...)
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
-	uproc.AppendEnv(proc.SIGMANET, net)
 	cmd.Env = uproc.GetEnv()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

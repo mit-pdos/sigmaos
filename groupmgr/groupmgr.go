@@ -35,10 +35,10 @@ type member struct {
 	args      []string
 	job       string
 	mcpu      proc.Tmcpu
-	crash     int
+	crash     int64
 	nReplicas int
-	partition int
-	netfail   int
+	partition int64
+	netfail   int64
 	started   bool
 }
 
@@ -53,15 +53,15 @@ func (pr procret) String() string {
 }
 
 func makeMember(sc *sigmaclnt.SigmaClnt, bin string, args []string, job string, mcpu proc.Tmcpu, crash, nReplicas, partition, netfail int) *member {
-	return &member{SigmaClnt: sc, bin: bin, args: append([]string{job}, args...), job: job, mcpu: mcpu, crash: crash, nReplicas: nReplicas, partition: partition, netfail: netfail}
+	return &member{SigmaClnt: sc, bin: bin, args: append([]string{job}, args...), job: job, mcpu: mcpu, crash: int64(crash), nReplicas: nReplicas, partition: int64(partition), netfail: int64(netfail)}
 }
 
 func (m *member) spawn() error {
 	p := proc.MakeProc(m.bin, m.args)
 	p.SetMcpu(m.mcpu)
-	p.AppendEnv(proc.SIGMACRASH, strconv.Itoa(m.crash))
-	p.AppendEnv(proc.SIGMAPARTITION, strconv.Itoa(m.partition))
-	p.AppendEnv(proc.SIGMANETFAIL, strconv.Itoa(m.netfail))
+	p.SetCrash(m.crash)
+	p.SetPartition(m.partition)
+	p.SetNetFail(m.netfail)
 	p.AppendEnv("SIGMAREPL", strconv.Itoa(m.nReplicas))
 	// If we are specifically setting kvd's mcpu=1, then set GOMAXPROCS to 1
 	// (for use when comparing to redis).

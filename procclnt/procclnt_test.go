@@ -78,7 +78,7 @@ func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid sp.Tpid, mcpu proc.Tmcp
 
 func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, crash int) sp.Tpid {
 	p := proc.MakeProc("spawner", []string{strconv.FormatBool(wait), childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
-	p.AppendEnv(proc.SIGMACRASH, strconv.Itoa(crash))
+	p.SetCrash(int64(crash))
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	return p.GetPid()

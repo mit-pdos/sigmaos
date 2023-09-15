@@ -33,7 +33,7 @@ type ImgSrv struct {
 	todo       string
 	workerMcpu proc.Tmcpu
 	isDone     bool
-	crash      int
+	crash      int64
 	electclnt  *electclnt.ElectClnt
 }
 
@@ -102,7 +102,7 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeImgSrv: error parse crash %v", err)
 	}
-	imgd.crash = crashing
+	imgd.crash = int64(crashing)
 	imgd.done = path.Join(IMG, imgd.job, "done")
 	imgd.todo = path.Join(IMG, imgd.job, "todo")
 	imgd.wip = path.Join(IMG, imgd.job, "wip")
@@ -182,7 +182,7 @@ func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
 	for i, t := range tasks {
 		procs[i] = proc.MakeProc("imgresize", []string{t.fn, ThumbName(t.fn)})
 		if imgd.crash > 0 {
-			procs[i].AppendEnv("SIGMACRASH", strconv.Itoa(imgd.crash))
+			procs[i].SetCrash(imgd.crash)
 		}
 		procs[i].SetMcpu(imgd.workerMcpu)
 		db.DPrintf(db.IMGD, "prep to burst-spawn task %v %v\n", procs[i].GetPid(), procs[i].Args)

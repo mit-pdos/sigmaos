@@ -135,7 +135,8 @@ func (pe *ProcEnvProto) GetRealm() sp.Trealm {
 
 func (pe *ProcEnvProto) SetRealm(realm sp.Trealm) {
 	pe.RealmStr = string(realm)
-	// Set overlay network for realm.
+	// Changing the realm changes the overlay network name. Therefore, set the
+	// overlay network for the new realm.
 	pe.Net = sp.ROOTREALM.String()
 	if pe.Overlays {
 		pe.Net = "sigmanet-" + realm.String()
@@ -163,6 +164,18 @@ func (pe *ProcEnvProto) GetUprocdPID() sp.Tpid {
 
 func (pe *ProcEnv) GetProto() *ProcEnvProto {
 	return pe.ProcEnvProto
+}
+
+func (pe *ProcEnvProto) SetNetFail(nf int64) {
+	pe.NetFail = nf
+}
+
+func (pe *ProcEnvProto) SetCrash(nf int64) {
+	pe.Crash = nf
+}
+
+func (pe *ProcEnvProto) SetPartition(nf int64) {
+	pe.Partition = nf
 }
 
 func (pe *ProcEnv) Marshal() string {

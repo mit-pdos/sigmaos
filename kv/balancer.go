@@ -49,8 +49,7 @@ type Balancer struct {
 	job         string
 	kvdmcpu     proc.Tmcpu
 	ch          chan bool
-	crash       int64
-	crashhelper string
+	crashhelper int64
 	isBusy      bool // in config change?
 	kc          *KvClerk
 	repl        string
@@ -70,7 +69,7 @@ func (bl *Balancer) clearIsBusy() {
 	bl.isBusy = false
 }
 
-func RunBalancer(job, crashhelper, kvdmcpu string, auto string, repl string) {
+func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) {
 	bl := &Balancer{}
 
 	// reject requests for changes until after recovery
@@ -82,8 +81,11 @@ func RunBalancer(job, crashhelper, kvdmcpu string, auto string, repl string) {
 	}
 	bl.SigmaClnt = sc
 	bl.job = job
-	bl.crash = crash.GetEnv(proc.SIGMACRASH)
-	bl.crashhelper = crashhelper
+	crashhelper, err := strconv.Atoi(crashhelperstr)
+	if err != nil {
+		db.DFatalf("Error atoi crashhelperstr: %v", err)
+	}
+	bl.crashhelper = int64(crashhelper)
 	bl.kc = NewClerk(sc.FsLib, job, repl == "repl")
 	bl.repl = repl
 
@@ -300,7 +302,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 
 func (bl *Balancer) spawnProc(args []string) (sp.Tpid, error) {
 	p := proc.MakeProc(args[0], args[1:])
-	p.AppendEnv("SIGMACRASH", bl.crashhelper)
+	p.SetCrash(bl.crashhelper)
 	err := bl.Spawn(p)
 	if err != nil {
 		db.DPrintf(db.KVBAL_ERR, "spawn pid %v err %v\n", p.GetPid(), err)

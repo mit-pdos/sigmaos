@@ -2,7 +2,6 @@ package crash
 
 import (
 	"os"
-	"strconv"
 	"time"
 
 	db "sigmaos/debug"
@@ -18,15 +17,6 @@ import (
 // Crash/partition testing
 //
 
-func GetEnv(name string) int64 {
-	crash := os.Getenv(name)
-	n, err := strconv.Atoi(crash)
-	if err != nil {
-		n = 0
-	}
-	return int64(n)
-}
-
 func randSleep(c int64) uint64 {
 	ms := rand.Int64(c)
 	db.DPrintf(db.CRASH, "randSleep %dms\n", ms)
@@ -36,7 +26,7 @@ func randSleep(c int64) uint64 {
 }
 
 func Crasher(fsl *fslib.FsLib) {
-	crash := GetEnv(proc.SIGMACRASH)
+	crash := fsl.ProcEnv().GetCrash()
 	if crash == 0 {
 		return
 	}
@@ -44,7 +34,7 @@ func Crasher(fsl *fslib.FsLib) {
 		for true {
 			r := randSleep(crash)
 			if r < 330 {
-				Crash()
+				Crash(crash)
 			} else if r < 660 {
 				PartitionNamed(fsl)
 			}
@@ -53,7 +43,7 @@ func Crasher(fsl *fslib.FsLib) {
 }
 
 func Partitioner(ss *sesssrv.SessSrv) {
-	crash := GetEnv(proc.SIGMAPARTITION)
+	crash := ss.ProcEnv().GetPartition()
 	if crash == 0 {
 		return
 	}
@@ -68,7 +58,7 @@ func Partitioner(ss *sesssrv.SessSrv) {
 }
 
 func NetFailer(ss *sesssrv.SessSrv) {
-	crash := GetEnv(proc.SIGMANETFAIL)
+	crash := ss.ProcEnv().GetNetFail()
 	if crash == 0 {
 		return
 	}
@@ -83,7 +73,7 @@ func NetFailer(ss *sesssrv.SessSrv) {
 }
 
 func PartitionParentProb(sc *sigmaclnt.SigmaClnt, prob uint64) bool {
-	crash := GetEnv(proc.SIGMACRASH)
+	crash := sc.ProcEnv().GetCrash()
 	if crash == 0 {
 		return false
 	}
@@ -96,13 +86,13 @@ func PartitionParentProb(sc *sigmaclnt.SigmaClnt, prob uint64) bool {
 	return false
 }
 
-func Crash() {
-	db.DPrintf(db.ALWAYS, "crash.Crash %v\n", GetEnv(proc.SIGMACRASH))
+func Crash(crash int64) {
+	db.DPrintf(db.ALWAYS, "crash.Crash %v\n", crash)
 	os.Exit(1)
 }
 
 func PartitionNamed(fsl *fslib.FsLib) {
-	db.DPrintf(db.ALWAYS, "crash.Partition %v\n", GetEnv(proc.SIGMAPARTITION))
+	db.DPrintf(db.ALWAYS, "crash.Partition %v\n", fsl.ProcEnv().GetPartition())
 	if error := fsl.Disconnect(sp.NAMED); error != nil {
 		db.DPrintf(db.ALWAYS, "Disconnect %v name fails err %v\n", os.Args, error)
 	}

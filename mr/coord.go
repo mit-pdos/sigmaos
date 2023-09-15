@@ -67,7 +67,7 @@ type Coord struct {
 	job         string
 	nmaptask    int
 	nreducetask int
-	crash       int
+	crash       int64
 	linesz      string
 	mapperbin   string
 	reducerbin  string
@@ -104,7 +104,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeCoord: crash %v isn't int", args[5])
 	}
-	c.crash = ctime
+	c.crash = int64(ctime)
 
 	c.linesz = args[6]
 
@@ -128,7 +128,7 @@ func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 	//	}
 	p.SetMem(mb)
 	if c.crash > 0 {
-		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
+		p.SetCrash(c.crash)
 	}
 	return p
 }

@@ -99,7 +99,7 @@ if [[ $APPS == "" ]]; then
     go test $VERB sigmaos/realmclnt -start
 
     #
-    # Container tests (will OOM your machine if you don't have 1:1 memory:swap ratio
+    # Container tests (WARNING: will OOM your machine if you don't have 1:1 memory:swap ratio)
     #
     go test $VERB sigmaos/container -start
 

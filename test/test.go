@@ -30,11 +30,11 @@ const (
 var Start bool
 var noShutdown bool
 var tag string
-var etcdIP string
+var EtcdIP string
 var Overlays bool
 
 func init() {
-	flag.StringVar(&etcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
+	flag.StringVar(&EtcdIP, "EtcdIP", "127.0.0.1", "Etcd IP")
 	flag.StringVar(&tag, "tag", "no-build", "Docker image tag")
 	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
@@ -107,7 +107,7 @@ func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, etcdIP, localIP, tag, Overlays)
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, EtcdIP, localIP, tag, Overlays)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 	var kernelid string
 	var err error

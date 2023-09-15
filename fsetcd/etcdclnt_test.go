@@ -11,19 +11,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/proc"
 	"sigmaos/fsetcd"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
-var etcdIP string
-
-func init() {
-	flag.StringVar(&etcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
-}
-
 func TestLease(t *testing.T) {
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, etcdIP, "", "")
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, test.EtcdIP, "", "")
 	ec, err := fsetcd.MkFsEtcd(pcfg)
 	assert.Nil(t, err)
 	l := clientv3.NewLease(ec.Client)

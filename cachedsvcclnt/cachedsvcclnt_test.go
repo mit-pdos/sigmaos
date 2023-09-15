@@ -17,6 +17,7 @@ import (
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/semclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 

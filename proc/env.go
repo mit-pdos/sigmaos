@@ -8,13 +8,21 @@ import (
 	"path"
 	"runtime/debug"
 	"strconv"
+	"strings"
 
 	sp "sigmaos/sigmap"
 )
 
+// Environment variables for procs (SHOULD NOT BE ADDED TO)
 const (
-	SIGMACONFIG = "SIGMACONFIG"
-	NOT_SET     = "NOT_SET" // Catch cases where we fail to set a variable.
+	SIGMADEBUGPID = "SIGMADEBUGPID"
+	SIGMAPERF     = "SIGMAPERF"
+	SIGMADEBUG    = "SIGMADEBUG"
+	SIGMACONFIG   = "SIGMACONFIG"
+)
+
+const (
+	NOT_SET = "NOT_SET" // Catch cases where we fail to set a variable.
 )
 
 type ProcEnv struct {
@@ -28,6 +36,35 @@ func GetProcEnv() *ProcEnv {
 		log.Fatalf("%s\nError: No Sigma Config", stack)
 	}
 	return Unmarshal(pestr)
+}
+
+func SetSigmaDebugPid(pid string) {
+	os.Setenv(SIGMADEBUGPID, pid)
+}
+
+func GetSigmaDebugPid() string {
+	return os.Getenv(SIGMADEBUGPID)
+}
+
+func GetSigmaPerf() string {
+	return os.Getenv(SIGMAPERF)
+}
+
+func GetSigmaDebug() string {
+	return os.Getenv(SIGMADEBUG)
+}
+
+func GetLabels(envvar string) map[string]bool {
+	m := make(map[string]bool)
+	s := os.Getenv(envvar)
+	if s == "" {
+		return m
+	}
+	labels := strings.Split(s, ";")
+	for _, l := range labels {
+		m[l] = true
+	}
+	return m
 }
 
 func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, procDir string, parentDir string, priv, overlays bool) *ProcEnv {

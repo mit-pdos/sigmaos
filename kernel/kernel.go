@@ -190,7 +190,7 @@ func runKNamed(pe *proc.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (*e
 		return nil, err
 	}
 	p.InheritParentProcEnv(pe)
-	cmd, err := kproc.RunKernelProc(pe.GetLocalIP(), p, realmId, []*os.File{w1, r2, w2})
+	cmd, err := kproc.RunKernelProc(pe.GetLocalIP(), p, []*os.File{w1, r2, w2})
 	if err != nil {
 		r1.Close()
 		w1.Close()

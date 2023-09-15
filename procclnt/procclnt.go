@@ -69,7 +69,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how Thow, kernelId string) (
 		// If this proc wasn't intended to be spawned through procd, run it
 		// as a local Linux process
 		p.InheritParentProcEnv(clnt.ProcEnv())
-		return kproc.RunKernelProc(clnt.ProcEnv().GetLocalIP(), p, clnt.Realm(), nil)
+		return kproc.RunKernelProc(clnt.ProcEnv().GetLocalIP(), p, nil)
 	}
 	return nil, nil
 }

@@ -1,11 +1,10 @@
 package procmgr
 
 import (
-	"os"
-	"os/exec"
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/kproc"
 	"sigmaos/proc"
 )
 
@@ -22,14 +21,9 @@ func (mgr *ProcMgr) runProc(p *proc.Proc) {
 	}
 }
 
-// XXX Redundant?
 func (mgr *ProcMgr) runPrivilegedProc(p *proc.Proc) error {
-	p.FinalizeEnv(mgr.rootsc.ProcEnv().LocalIP, "")
-	cmd := exec.Command(p.GetProgram(), p.Args...)
-	cmd.Env = p.GetEnv()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
+	cmd, err := kproc.RunKernelProc(mgr.rootsc.ProcEnv().LocalIP, p, nil)
+	if err != nil {
 		db.DFatalf("Couldn't start privileged proc: %v", err)
 		return err
 	}

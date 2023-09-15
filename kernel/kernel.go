@@ -180,7 +180,7 @@ func makeKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 }
 
 // Run knamed (but not as a proc)
-func runKNamed(pcfg *proc.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
+func runKNamed(pe *proc.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (*exec.Cmd, error) {
 	r1, w1, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,8 @@ func runKNamed(pcfg *proc.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (
 	if err != nil {
 		return nil, err
 	}
-	cmd, err := kproc.RunKernelProc(pcfg, p, realmId, []*os.File{w1, r2, w2})
+	p.InheritParentProcEnv(pe)
+	cmd, err := kproc.RunKernelProc(pe.GetLocalIP(), p, realmId, []*os.File{w1, r2, w2})
 	if err != nil {
 		r1.Close()
 		w1.Close()

@@ -11,9 +11,8 @@ import (
 )
 
 // To run kernel procs
-func RunKernelProc(parentCfg *proc.ProcEnv, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
-	p.InheritParentProcEnv(parentCfg)
-	p.FinalizeEnv(parentCfg.LocalIP, "")
+func RunKernelProc(localIP string, p *proc.Proc, realm sp.Trealm, extra []*os.File) (*exec.Cmd, error) {
+	p.FinalizeEnv(localIP, "")
 	env := p.GetEnv()
 	cmd := exec.Command(p.GetProgram(), p.Args...)
 	// Create a process group ID to kill all children if necessary.
@@ -22,9 +21,7 @@ func RunKernelProc(parentCfg *proc.ProcEnv, p *proc.Proc, realm sp.Trealm, extra
 	cmd.Stderr = os.Stderr
 	cmd.ExtraFiles = extra
 	cmd.Env = env
-
 	db.DPrintf(db.KERNEL, "RunKernelProc %v env %v", p, env)
-
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}

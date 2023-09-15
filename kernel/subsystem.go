@@ -52,7 +52,7 @@ func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow)
 	return k.bootSubsystemWithMcpu(program, args, how, 0)
 }
 
-func (s *Subsystem) Run(namedAddr sp.Taddrs, how procclnt.Thow, kernelId string) error {
+func (s *Subsystem) Run(how procclnt.Thow, kernelId, localIP string) error {
 	if how == procclnt.HLINUX || how == procclnt.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {

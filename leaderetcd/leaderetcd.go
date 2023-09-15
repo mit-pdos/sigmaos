@@ -10,6 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 type Election struct {
@@ -50,5 +51,4 @@ func (el Election) Fence() sp.Tfence {
 func (el *Election) Resign() error {
 	db.DPrintf(db.LEADER, "leader %v resign %v\n", el.pcfg.GetPID().String(), el.pn)
 	return el.Election.Resign(context.TODO())
-
 }

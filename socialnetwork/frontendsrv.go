@@ -19,8 +19,6 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/tracing"
-	"strconv"
-	"strings"
 )
 
 type FrontEnd struct {
@@ -84,8 +82,6 @@ func RunFrontendSrv(public bool, job string) error {
 		return err
 	}
 	frontend.composec = rpcc
-	frontend.uCounter = MakeCounter("User")
-	frontend.iCounter = MakeCounter("User-Inner")
 	//	frontend.tracer = tracing.Init("frontend", proc.GetSigmaJaegerIP())
 
 	var mux *http.ServeMux

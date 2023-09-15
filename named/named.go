@@ -140,7 +140,7 @@ func (nd *Named) mkSrv() (sp.Tmount, error) {
 	}
 	root := rootDir(nd.fs, nd.realm)
 	var pi portclnt.PortInfo
-	if nd.realm == sp.ROOTREALM || proc.GetNet() == sp.ROOTREALM.String() {
+	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
 		ip = ip + ":0"
 	} else {
 		_, pi0, err := portclnt.MkPortClntPort(nd.SigmaClnt.FsLib)
@@ -150,7 +150,7 @@ func (nd *Named) mkSrv() (sp.Tmount, error) {
 		pi = pi0
 		ip = ":" + pi.Pb.RealmPort.String()
 	}
-	srv := fslibsrv.BootSrv(root, ip, nd.attach, nd.detach, nil)
+	srv := fslibsrv.BootSrv(nd.ProcEnv(), root, ip, nd.attach, nd.detach, nil)
 	if srv == nil {
 		return sp.NullMount(), fmt.Errorf("BootSrv err %v\n", err)
 	}
@@ -163,7 +163,7 @@ func (nd *Named) mkSrv() (sp.Tmount, error) {
 
 	mnt := sp.MkMountServer(nd.MyAddr())
 	if nd.realm != sp.ROOTREALM {
-		mnt = port.MkPublicMount(pi.Hip, pi.Pb, proc.GetNet(), nd.MyAddr())
+		mnt = port.MkPublicMount(pi.Hip, pi.Pb, nd.ProcEnv().GetNet(), nd.MyAddr())
 	}
 
 	db.DPrintf(db.NAMED, "mkSrv %v %v %v %v %v\n", nd.realm, ip, srv.MyAddr(), nd.elect.Key(), mnt)

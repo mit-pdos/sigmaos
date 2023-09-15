@@ -37,7 +37,7 @@ func MakeSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd 
 		pmgr:     procmgr.MakeProcMgr(mfs, kernelId),
 		qs:       make(map[sp.Trealm]*Queue),
 		realms:   make([]sp.Trealm, 0),
-		mcpufree: proc.Tmcpu(1000 * linuxsched.NCores - reserveMcpu),
+		mcpufree: proc.Tmcpu(1000*linuxsched.NCores - reserveMcpu),
 		memfree:  mem.GetTotalMem(),
 		kernelId: kernelId,
 	}
@@ -173,11 +173,6 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 	}
 }
 
-<<<<<<< HEAD
-func RunSchedd(kernelId string) error {
-	pcfg := proc.GetProcEnv()
-	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), pcfg)
-=======
 func (sd *Schedd) getQueue(realm sp.Trealm) (*Queue, bool) {
 	sd.qsmu.RLock()
 	defer sd.qsmu.RUnlock()
@@ -197,8 +192,8 @@ func (sd *Schedd) addRealmQueueL(realm sp.Trealm) *Queue {
 }
 
 func RunSchedd(kernelId string, reserveMcpu uint) error {
-	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), sp.SCHEDDREL)
->>>>>>> etcd-sigmasrv
+	pcfg := proc.GetProcEnv()
+	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), pcfg)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}

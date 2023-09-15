@@ -108,7 +108,7 @@ func (g *Group) makeRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *r
 		initial = true
 		ip = g.ip + ":0"
 	}
-	raftCfg = replraft.MakeRaftConfig(myid, ip, initial)
+	raftCfg = replraft.MakeRaftConfig(g.ProcEnv(), myid, ip, initial)
 
 	if initial {
 		// Get the listener address selected by raft and advertise it to group (if initial)
@@ -154,7 +154,7 @@ func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) (*Gr
 	var cs any
 	var err error
 
-	cs = cachesrv.NewCacheSrv("")
+	cs = cachesrv.NewCacheSrv(g.ProcEnv(), "")
 	if raftCfg != nil {
 		cs, err = replsrv.NewReplSrv(raftCfg, cs)
 		if err != nil {

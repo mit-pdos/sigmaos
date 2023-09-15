@@ -112,7 +112,7 @@ func (q *Queue) SetWSQueue(qtype proc.Ttype, newQ []*proc.Proc) {
 	}
 }
 
-func (q *Queue) GetStealableProcs(stealable map[proc.Tpid]*proc.Proc) {
+func (q *Queue) GetStealableProcs(stealable map[sp.Tpid]*proc.Proc) {
 	q.Lock()
 	defer q.Unlock()
 

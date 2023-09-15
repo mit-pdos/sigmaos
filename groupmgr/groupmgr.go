@@ -57,9 +57,9 @@ type GroupMgrConfig struct {
 	NReplicas int
 
 	// For testing purposes
-	crash     int
-	partition int
-	netfail   int
+	crash     int64
+	partition int64
+	netfail   int64
 }
 
 // If n == 0, run only one member (i.e., no hot standby's or replication)
@@ -74,9 +74,9 @@ func NewGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job strin
 }
 
 func (cfg *GroupMgrConfig) SetTest(crash, partition, netfail int) {
-	cfg.crash = crash
-	cfg.partition = partition
-	cfg.netfail = netfail
+	cfg.crash = int64(crash)
+	cfg.partition = int64(partition)
+	cfg.netfail = int64(netfail)
 }
 
 func (cfg *GroupMgrConfig) Persist(fsl *fslib.FsLib) error {
@@ -135,9 +135,9 @@ func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *Gro
 type member struct {
 	*sigmaclnt.SigmaClnt
 	*GroupMgrConfig
-	pid    proc.Tpid
+	pid    sp.Tpid
 	id     int
-	crash  int
+	crash  int64
 	nstart int
 }
 
@@ -155,14 +155,13 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func makeMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id, crash int) *member {
+func makeMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int, crash int64) *member {
 	return &member{SigmaClnt: sc, GroupMgrConfig: cfg, crash: crash, id: id}
 }
 
 func (m *member) spawn() error {
 	p := proc.MakeProc(m.Program, m.Args)
 	p.SetMcpu(m.Mcpu)
-	p.SetMcpu(m.mcpu)
 	p.SetCrash(m.crash)
 	p.SetPartition(m.partition)
 	p.SetNetFail(m.netfail)

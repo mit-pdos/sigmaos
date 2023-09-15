@@ -9,6 +9,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongod/proto"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"time"

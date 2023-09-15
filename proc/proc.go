@@ -103,7 +103,6 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
 	p.ProcEnvProto.Net = parentPE.Net
-	// TODO: anything else?
 }
 
 func (p *Proc) setProcDir(kernelId string) {
@@ -144,7 +143,6 @@ func (p *Proc) SetKernelID(kernelID string) {
 func (p *Proc) FinalizeEnv(localIP string, uprocdPid sp.Tpid) {
 	p.ProcEnvProto.LocalIP = localIP
 	p.ProcEnvProto.SetUprocdPID(uprocdPid)
-	p.AppendEnv(SIGMAJAEGERIP, GetSigmaJaegerIP())
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
 }
 

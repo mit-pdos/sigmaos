@@ -50,8 +50,8 @@ func RunRecSrv(n string, public bool) error {
 	if err != nil {
 		return err
 	}
-	r.tracer = tracing.Init("rec", proc.GetSigmaJaegerIP())
-	defer r.tracer.Flush()
+	//	r.tracer = tracing.Init("rec", proc.GetSigmaJaegerIP())
+	//	defer r.tracer.Flush()
 	return ssrv.RunServer()
 }
 

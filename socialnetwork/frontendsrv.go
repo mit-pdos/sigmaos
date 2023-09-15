@@ -84,7 +84,7 @@ func RunFrontendSrv(public bool, job string) error {
 		return err
 	}
 	frontend.composec = rpcc
-	frontend.tracer = tracing.Init("frontend", proc.GetSigmaJaegerIP())
+	//	frontend.tracer = tracing.Init("frontend", proc.GetSigmaJaegerIP())
 	frontend.uCounter = MakeCounter("User")
 	frontend.iCounter = MakeCounter("User-Inner")
 
@@ -143,7 +143,7 @@ func RunFrontendSrv(public bool, job string) error {
 		if err != nil {
 			dbg.DFatalf("QualifyAddr %v err %v", a, err)
 		}
-		dbg.DPrintf(dbg.ALWAYS, "SN advertise %v jaegerip %v", a, proc.GetSigmaJaegerIP())
+		dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", a)
 		mnt := sp.MkMountService(sp.MkTaddrs([]string{a}))
 		if err = frontend.MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 			dbg.DFatalf("MountService %v", err)
@@ -168,7 +168,7 @@ func (s *FrontEnd) done() error {
 		return err
 	}
 	dbg.DPrintf(dbg.HOTEL_WWW_STATS, "\nUserc %v", s.userc.StatsClnt())
-	s.tracer.Flush()
+	//	s.tracer.Flush()
 	s.p.Done()
 	s.ClntExit(proc.MakeStatus(proc.StatusEvicted))
 	return nil

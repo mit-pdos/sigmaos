@@ -32,7 +32,6 @@ type Param struct {
 	Services []string
 	Dbip     string
 	Mongoip  string
-	Jaegerip string
 	Overlays bool
 }
 
@@ -64,7 +63,6 @@ func MakeKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 		}
 		p.Services = p.Services[1:]
 	}
-	proc.SetSigmaJaegerIP(p.Jaegerip)
 	sc, err := sigmaclnt.MkSigmaClntRootInit(pcfg)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error MkSigmaClntProc: %v", err)

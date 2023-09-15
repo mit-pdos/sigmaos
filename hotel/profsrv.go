@@ -49,8 +49,8 @@ func RunProfSrv(job string, public bool, cache string) error {
 		return err
 	}
 	ps.initDB(profs)
-	ps.tracer = tracing.Init("prof", proc.GetSigmaJaegerIP())
-	defer ps.tracer.Flush()
+	//	ps.tracer = tracing.Init("prof", proc.GetSigmaJaegerIP())
+	//	defer ps.tracer.Flush()
 	return ssrv.RunServer()
 }
 

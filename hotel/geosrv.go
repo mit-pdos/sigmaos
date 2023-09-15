@@ -91,8 +91,8 @@ func RunGeoSrv(job string, public bool) error {
 		db.DFatalf("MakePerf err %v\n", err)
 	}
 	defer p.Done()
-	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
-	defer geo.tracer.Flush()
+	//	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
+	//	defer geo.tracer.Flush()
 
 	return ssrv.RunServer()
 }

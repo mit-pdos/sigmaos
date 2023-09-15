@@ -89,7 +89,8 @@ func RunCacheSrv(args []string, nshard int) error {
 
 func NewCacheSrv(pcfg *proc.ProcEnv, pn string) *CacheSrv {
 	cs := &CacheSrv{shards: make(map[cache.Tshard]*shardInfo), lastFence: sp.NullFence()}
-	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
+	// Turn off tracing for now
+	//	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
 	p, err := perf.MakePerf(pcfg, perf.CACHESRV)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)
@@ -100,7 +101,7 @@ func NewCacheSrv(pcfg *proc.ProcEnv, pn string) *CacheSrv {
 }
 
 func (cs *CacheSrv) exitCacheSrv() {
-	cs.tracer.Flush()
+	//	cs.tracer.Flush()
 	cs.perf.Done()
 }
 

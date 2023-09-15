@@ -79,8 +79,8 @@ func RunRateSrv(job string, public bool, cache string) error {
 	for i := range sampleImg {
 		sampleImg[i] = 'A'
 	}
-	r.tracer = tracing.Init("rate", proc.GetSigmaJaegerIP())
-	defer r.tracer.Flush()
+	//	r.tracer = tracing.Init("rate", proc.GetSigmaJaegerIP())
+	//	defer r.tracer.Flush()
 	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_RATE)
 	if err != nil {
 		db.DFatalf("MakePerf err %v\n", err)

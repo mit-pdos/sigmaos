@@ -10,7 +10,6 @@ const (
 	SIGMADEBUGPID = "SIGMADEBUGPID"
 	SIGMAPERF     = "SIGMAPERF"
 	SIGMADEBUG    = "SIGMADEBUG"
-	SIGMAJAEGERIP = "SIGMAJAEGERIP"
 )
 
 func SetSigmaDebugPid(pid string) {
@@ -27,14 +26,6 @@ func GetSigmaPerf() string {
 
 func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
-}
-
-func SetSigmaJaegerIP(ip string) {
-	os.Setenv(SIGMAJAEGERIP, ip)
-}
-
-func GetSigmaJaegerIP() string {
-	return os.Getenv(SIGMAJAEGERIP)
 }
 
 func GetLabels(envvar string) map[string]bool {

@@ -79,7 +79,7 @@ func RunWww(job string, public bool) error {
 	}
 	www.geoc = rpcc
 
-	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
+	//	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
 	var mux *http.ServeMux
 	//	var tmux *tracing.TracedHTTPMux
 	//	if TRACING {
@@ -136,7 +136,7 @@ func RunWww(job string, public bool) error {
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
 		}
-		db.DPrintf(db.ALWAYS, "Hotel advertise %v jaegerip %v", a, proc.GetSigmaJaegerIP())
+		db.DPrintf(db.ALWAYS, "Hotel advertise %v", a)
 		mnt := sp.MkMountService(sp.MkTaddrs([]string{a}))
 		if err = www.MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 			db.DFatalf("MountService %v", err)
@@ -166,7 +166,7 @@ func (s *Www) done() error {
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nProfc %v", s.profc.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW_STATS, "\nRecc %v", s.recc.StatsClnt())
 	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", s.ProcEnv().GetPID())
-	s.tracer.Flush()
+	//	s.tracer.Flush()
 	s.p.Done()
 	s.ClntExit(proc.MakeStatus(proc.StatusEvicted))
 	return nil

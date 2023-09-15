@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 	"strings"
 
 	"sigmaos/boot"
@@ -13,16 +14,20 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 8 {
+	if len(os.Args) < 7 {
 		db.DFatalf("%v: usage kernelid srvs nameds dbip mongoip overlays\n", os.Args[0])
 	}
 	srvs := strings.Split(os.Args[3], ";")
+	overlays, err := strconv.ParseBool(os.Args[6])
+	if err != nil {
+		db.DFatalf("Error parse overlays: %v", err)
+	}
 	param := kernel.Param{
 		KernelId: os.Args[1],
 		Services: srvs,
 		Dbip:     os.Args[4],
 		Mongoip:  os.Args[5],
-		Overlays: os.Args[6] == "true",
+		Overlays: overlays,
 	}
 	db.DPrintf(db.KERNEL, "param %v\n", param)
 	h := sp.SIGMAHOME

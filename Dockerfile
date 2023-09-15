@@ -43,14 +43,13 @@ ENV named ""
 ENV boot named
 ENV dbip x.x.x.x
 ENV mongoip x.x.x.x
-ENV jaegerip x.x.x.x
 ENV overlays "false"
 # Copy kernel bins
 COPY --from=sigmabuilder /home/sigmaos/bin/kernel /home/sigmaos/bin/kernel
 COPY --from=sigmabuilder /home/sigmaos/create-net.sh /home/sigmaos/bin/kernel/create-net.sh
 # Copy linus bins
 COPY --from=sigmabuilder /home/sigmaos/bin/linux /home/sigmaos/bin/linux
-CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${jaegerip} ${overlays}"]
+CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays}"]
 
 # ========== kernel image, including user binaries ==========
 FROM sigmakernelclean AS sigmakernel

@@ -19,24 +19,6 @@ const (
 
 type ProcEnv struct {
 	*ProcEnvProto
-	// PID        sp.Tpid   `json:pid,omitempty`
-	// Realm      sp.Trealm `json:realm,omitempty`
-	// Uname      sp.Tuname `json:uname,omitempty`
-	// KernelID   string    `json:kernelid,omitempty`
-	// UprocdPID  sp.Tpid   `json:uprocdpid,omitempty`
-	// Net        string    `json:net,omitempty`
-	// Privileged bool      `json:privileged,omitempty` // XXX phase out?
-	// Program    string    `json:program,omitempty`
-	// ProcDir    string    `json:procdir,omitempty`   // XXX phase out?
-	// ParentDir  string    `json:parentdir,omitempty` // XXX phase out?
-	// Perf       string    `json:perf,omitempty`
-	// Debug      string    `json:debug,omitempty`
-	// EtcdIP     string    `json:etcdip,omitempty`
-	// LocalIP    string    `json:localip,omitempty`
-	// BuildTag   string    `json:buildtag,omitempty`
-	// // For testing purposes
-	// Crash     bool `json:crash,omitempty`
-	// Partition bool `json:partition,omitempty`
 }
 
 func GetProcEnv() *ProcEnv {

@@ -48,6 +48,7 @@ cleanup() {
 }
 
 go clean -testcache
+cleanup
 
 if [[ $BASIC == "--basic" ]]; then
 
@@ -71,7 +72,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test with a kernel with just named
     #
 
-    for T in semclnt electclnt; do
+    for T in reader writer stats fslib semclnt electclnt; do
         go test $VERB -timeout 20m sigmaos/$T -start
         cleanup
     done

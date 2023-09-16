@@ -257,7 +257,7 @@ func (gm *GroupMgr) Stop() error {
 			}
 		}(c)
 	}
-	// log.Printf("wait for members\n")
+	db.DPrintf(db.GROUPMGR, "wait for members")
 	<-gm.ch
 	db.DPrintf(db.GROUPMGR, "done members %v\n", gm)
 	return err

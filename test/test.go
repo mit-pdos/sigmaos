@@ -34,7 +34,7 @@ var EtcdIP string
 var Overlays bool
 
 func init() {
-	flag.StringVar(&EtcdIP, "EtcdIP", "127.0.0.1", "Etcd IP")
+	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
 	flag.StringVar(&tag, "tag", "no-build", "Docker image tag")
 	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")

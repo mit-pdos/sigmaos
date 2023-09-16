@@ -541,13 +541,13 @@ func TestReserveCores(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	start := time.Now()
-	pid := proc.Tpid("sleeper-aaaaaaa")
+	pid := sp.Tpid("sleeper-aaaaaaa")
 	majorityCpu := 1000 * (linuxsched.NCores/2 + 1)
 	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
 	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
 	// proc is only picked up *after* the other one.
-	pid1 := proc.Tpid("sleeper-bbbbbb")
+	pid1 := sp.Tpid("sleeper-bbbbbb")
 	spawnSleeperMcpu(t, ts, pid1, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
 	status, err := ts.WaitExit(pid)

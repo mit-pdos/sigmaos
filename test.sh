@@ -113,13 +113,19 @@ if [[ $APPS == "--apps" ]]; then
     ./start-db.sh
     if [[ $FAST == "--fast" ]]; then
         go test $VERB sigmaos/mr -start -run "(MRJob|TaskAndCoord)"
+        cleanup
         go test $VERB sigmaos/imgresized -start -run ImgdOne
+        cleanup
         go test $VERB sigmaos/kv -start -run "(OKN|AllN)"
+        cleanup
         go test $VERB sigmaos/hotel -start -run TestBenchDeathStarSingle
-	go test $VERB sigmaos/socialnetwork -start -run TestCompose
+        cleanup
+       	go test $VERB sigmaos/socialnetwork -start -run TestCompose
+        cleanup
     else
         for T in imgresized mr kv hotel socialnetwork; do
             go test -timeout 20m $VERB sigmaos/$T -start
+            cleanup
         done
     fi
 fi
@@ -141,10 +147,17 @@ if [[ $OVERLAY == "--overlay" ]] ; then
     ./start-network.sh
     
     go test $VERB sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
+    cleanup
     go test $VERB sigmaos/cachedsvcclnt -start --overlays --run TestCacheClerk
+    cleanup
     go test $VERB sigmaos/hotel -start --overlays --run GeoSingle
+    cleanup
     go test $VERB sigmaos/hotel -start --overlays --run Www
+    cleanup
     go test $VERB sigmaos/realmclnt -start --overlays --run Basic
+    cleanup
     go test $VERB sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
+    cleanup
     go test $VERB sigmaos/realmclnt -start --overlays --run RealmNetIsolation
+    cleanup
 fi

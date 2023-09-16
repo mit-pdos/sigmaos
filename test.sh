@@ -112,7 +112,6 @@ fi
 #
 
 if [[ $APPS == "--apps" ]]; then
-    ./start-db.sh
     if [[ $FAST == "--fast" ]]; then
         go test $VERB sigmaos/mr -start -run "(MRJob|TaskAndCoord)"
         cleanup
@@ -120,8 +119,10 @@ if [[ $APPS == "--apps" ]]; then
         cleanup
         go test $VERB sigmaos/kv -start -run "(OKN|AllN)"
         cleanup
+        ./start-db.sh
         go test $VERB sigmaos/hotel -start -run TestBenchDeathStarSingle
         cleanup
+        ./start-db.sh
        	go test $VERB sigmaos/socialnetwork -start -run TestCompose
         cleanup
     else
@@ -145,15 +146,16 @@ fi
 #
 
 if [[ $OVERLAY == "--overlay" ]] ; then
-    ./start-db.sh
     ./start-network.sh
     
     go test $VERB sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
     cleanup
     go test $VERB sigmaos/cachedsvcclnt -start --overlays --run TestCacheClerk
     cleanup
+    ./start-db.sh
     go test $VERB sigmaos/hotel -start --overlays --run GeoSingle
     cleanup
+    ./start-db.sh
     go test $VERB sigmaos/hotel -start --overlays --run Www
     cleanup
     go test $VERB sigmaos/realmclnt -start --overlays --run Basic

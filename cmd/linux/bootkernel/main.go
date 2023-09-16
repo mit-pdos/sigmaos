@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 7 {
+	if len(os.Args) < 8 {
 		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu\n", os.Args[0])
 	}
 	srvs := strings.Split(os.Args[3], ";")

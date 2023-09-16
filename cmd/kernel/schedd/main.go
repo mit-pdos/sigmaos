@@ -2,9 +2,9 @@ package main
 
 import (
 	"os"
-	"strconv"
 	db "sigmaos/debug"
 	"sigmaos/schedd"
+	"strconv"
 )
 
 func main() {
@@ -13,7 +13,7 @@ func main() {
 	}
 	reserveMcpu, err := strconv.ParseUint(os.Args[2], 10, 32)
 	if err != nil {
-		db.DFatalf("Cannot parse reserve cpu unit %v", os.Args[2])
+		db.DFatalf("Cannot parse reserve cpu unit \"%v\": %v", os.Args[2], err)
 	}
 	schedd.RunSchedd(os.Args[1], uint(reserveMcpu))
 }

@@ -33,6 +33,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 func MakeProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 	MountPids(fsl, fsl.NamedAddr())
 
+	db.DPrintf(db.PROCCLNT, "Mount %v as %v", sp.SCHEDDREL, sp.SCHEDDREL)
 	if err := fsl.MakeRootMount(fsl.Uname(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
@@ -41,11 +42,12 @@ func MakeProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 	clnt := makeProcClnt(fsl, pid, fsl.ProcEnv().ProcDir)
 	clnt.MakeProcDir(pid, fsl.ProcEnv().ProcDir, false)
 
+	db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)
 	fsl.MakeRootMount(fsl.Uname(), fsl.ProcEnv().ProcDir, proc.PROCDIR)
 	return clnt
 }
 
 func MountPids(fsl *fslib.FsLib, namedAddr sp.Taddrs) error {
-	fsl.MakeRootMount(fsl.Uname(), sp.KPIDSREL, sp.KPIDSREL)
+	fsl.MakeRootMount(fsl.Uname(), sp.KPIDS, sp.KPIDS)
 	return nil
 }

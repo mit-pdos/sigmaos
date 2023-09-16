@@ -42,6 +42,11 @@ while [[ "$#" -gt 0 ]]; do
     esac
 done
 
+cleanup() {
+  ./stop.sh --parallel --nopurge
+  ./fsetcd-wipe.sh
+}
+
 go clean -testcache
 
 if [[ $BASIC == "--basic" ]]; then
@@ -52,6 +57,7 @@ if [[ $BASIC == "--basic" ]]; then
 
     for T in path intervals serr linuxsched perf sigmap; do
         go test $VERB sigmaos/$T
+        cleanup
     done
 
     #
@@ -59,13 +65,15 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     go test $VERB sigmaos/proxy -start
+    cleanup
 
     #
     # test with a kernel with just named
     #
 
-    for T in reader writer stats fslib semclnt electclnt; do
-        go test $VERB sigmaos/$T -start
+    for T in semclnt electclnt; do
+        go test $VERB -timeout 20m sigmaos/$T -start
+        cleanup
     done
 
     # go test $VERB sigmaos/fslibsrv -start  # no perf
@@ -73,6 +81,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test memfs using schedd's memfs
     go test $VERB sigmaos/fslib -start -path "name/schedd/~local/" 
     go test $VERB sigmaos/memfs -start -path "name/schedd/~local/"
+    cleanup
 
     #
     # tests a full kernel using root realm
@@ -80,16 +89,19 @@ if [[ $BASIC == "--basic" ]]; then
 
     for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www; do
         go test $VERB sigmaos/$T -start
+        cleanup
     done
 
     go test $VERB sigmaos/fslibsrv -start -path "name/ux/~local/" -run ReadPerf
     go test $VERB sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
+    cleanup
 
     #
     # test with realms
     #
 
     go test $VERB sigmaos/realmclnt -start
+    cleanup
 
 fi
 

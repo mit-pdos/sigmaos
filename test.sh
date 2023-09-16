@@ -80,6 +80,7 @@ if [[ $BASIC == "--basic" ]]; then
 
     # test memfs using schedd's memfs
     go test $VERB sigmaos/fslib -start -path "name/schedd/~local/" 
+    cleanup
     go test $VERB sigmaos/memfs -start -path "name/schedd/~local/"
     cleanup
 
@@ -93,6 +94,7 @@ if [[ $BASIC == "--basic" ]]; then
     done
 
     go test $VERB sigmaos/fslibsrv -start -path "name/ux/~local/" -run ReadPerf
+    cleanup
     go test $VERB sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
     cleanup
 

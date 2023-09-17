@@ -37,7 +37,7 @@ var BENCH_TEST bool
 
 func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
-	flag.StringVar(&MONGO_URL, "mongourl", "127.0.0.1:27017", "Addr of mongo server.")
+	flag.StringVar(&MONGO_URL, "mongourl", "127.0.0.1:4407", "Addr of mongo server.")
 	flag.BoolVar(&BENCH_TEST, "benchtest", false, "Is this a benchmark test?")
 }
 

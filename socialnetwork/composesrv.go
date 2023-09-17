@@ -130,7 +130,7 @@ func (csrv *ComposeSrv) ComposePost(
 	}()
 	wg.Wait()
 	if postErr != nil || tlErr != nil || homeErr != nil {
-		return fmt.Errorf("%w; %w; %w", postErr, tlErr, homeErr)
+		return fmt.Errorf("%v; %v; %v", postErr, tlErr, homeErr)
 	}
 	if postRes.Ok != POST_QUERY_OK {
 		res.Ok += " Post Error: " + postRes.Ok

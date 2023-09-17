@@ -96,7 +96,7 @@ func (tsrv *TextSrv) ProcessText(
 	wg.Wait()
 	res.Text = req.Text
 	if userErr != nil || urlErr != nil {
-		return fmt.Errorf("%w; %w", userErr, urlErr)
+		return fmt.Errorf("%v; %v", userErr, urlErr)
 	}
 
 	// process mentions

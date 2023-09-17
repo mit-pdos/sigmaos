@@ -133,7 +133,7 @@ func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
 }
 
 func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
-	pe2 := NewProcEnvUnset(pe.Privileged, false)
+	pe2 := NewProcEnvUnset(pe.Privileged, pe.Overlays)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetRealm(realm)
 	pe2.SetUname(sp.Tuname(string(pe.GetUname()) + "-realm-" + realm.String()))

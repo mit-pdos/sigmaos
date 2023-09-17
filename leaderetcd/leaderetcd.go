@@ -20,7 +20,7 @@ type Election struct {
 	pcfg *proc.ProcEnv
 }
 
-func MkElection(pcfg *proc.ProcEnv, s *fsetcd.Session, pn string) (*Election, error) {
+func NewElection(pcfg *proc.ProcEnv, s *fsetcd.Session, pn string) (*Election, error) {
 	el := &Election{sess: s, pn: pn, pcfg: pcfg}
 	return el, nil
 }

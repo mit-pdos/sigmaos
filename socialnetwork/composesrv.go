@@ -42,22 +42,22 @@ func RunComposeSrv(public bool, jobname string) error {
 		return err
 	}
 	fsls := NewFsLibs(SOCIAL_NETWORK_POST)
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_TEXT)
+	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err
 	}
 	csrv.textc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_POST)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
 	csrv.postc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
 	csrv.tlc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_HOME)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}

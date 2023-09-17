@@ -125,9 +125,9 @@ func TestEncodeDecode(t *testing.T) {
 func TestQuerySpeed(t *testing.T) {
 	// create mongo and sql dbs
 	ts := test.NewTstateAll(t)
-	mongoc, err := mongoclnt.MkMongoClnt(ts.FsLib)
+	mongoc, err := mongoclnt.NewMongoClnt(ts.FsLib)
 	assert.Nil(t, err)
-	dbc, err := dbclnt.MkDbClnt(ts.FsLib, sp.DBD)
+	dbc, err := dbclnt.NewDbClnt(ts.FsLib, sp.DBD)
 	assert.Nil(t, err)
 	assert.NotNil(t, dbc)
 

@@ -46,6 +46,6 @@ func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.Path
 		return Walk(plt, ctx, e, dlk, dn.Append(target[0]), target[1:], os)
 	default: // an error or perhaps a symlink
 		db.DPrintf(db.NAMEI, "%v: error not dir namei %T %v %v %v %v", ctx.Uname(), e, target, d, os, target[1:])
-		return os, e, dlk, target, serr.MkErr(serr.TErrNotDir, target[0])
+		return os, e, dlk, target, serr.NewErr(serr.TErrNotDir, target[0])
 	}
 }

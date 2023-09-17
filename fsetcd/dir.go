@@ -50,10 +50,10 @@ func (fs *FsEtcd) isEmpty(di DirEntInfo) (bool, *serr.Err) {
 	}
 }
 
-func (fs *FsEtcd) MkRootDir() *serr.Err {
-	nf, r := MkEtcdFileDir(sp.DMDIR, ROOT, sp.NoClntId, sp.NoLeaseId)
+func (fs *FsEtcd) NewRootDir() *serr.Err {
+	nf, r := NewEtcdFileDir(sp.DMDIR, ROOT, sp.NoClntId, sp.NoLeaseId)
 	if r != nil {
-		return serr.MkErrError(r)
+		return serr.NewErrError(r)
 	}
 	if err := fs.PutFile(ROOT, nf, sp.NoFence()); err != nil {
 		return err
@@ -75,7 +75,7 @@ func (fs *FsEtcd) Lookup(d sp.Tpath, name string) (DirEntInfo, *serr.Err) {
 	if ok {
 		return e.(DirEntInfo), nil
 	}
-	return DirEntInfo{}, serr.MkErr(serr.TErrNotfound, name)
+	return DirEntInfo{}, serr.NewErr(serr.TErrNotfound, name)
 }
 
 // XXX retry on version mismatch
@@ -87,7 +87,7 @@ func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f
 	}
 	_, ok := dir.Ents.Lookup(name)
 	if ok {
-		return DirEntInfo{}, serr.MkErr(serr.TErrExists, name)
+		return DirEntInfo{}, serr.NewErr(serr.TErrExists, name)
 	}
 	dir.Ents.Insert(name, DirEntInfo{Nf: nf, Path: path, Perm: nf.Tperm()})
 	db.DPrintf(db.FSETCD, "Create %q dir %v nf %v\n", name, dir, nf)
@@ -115,7 +115,7 @@ func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
 	}
 	e, ok := dir.Ents.Lookup(name)
 	if !ok {
-		return serr.MkErr(serr.TErrNotfound, name)
+		return serr.NewErr(serr.TErrNotfound, name)
 	}
 
 	di := e.(DirEntInfo)
@@ -126,7 +126,7 @@ func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
 		return err
 	}
 	if !empty {
-		return serr.MkErr(serr.TErrNotEmpty, name)
+		return serr.NewErr(serr.TErrNotEmpty, name)
 	}
 
 	dir.Ents.Delete(name)
@@ -145,7 +145,7 @@ func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.FSETCD, "Rename in %v from %v to %v\n", dir, from, to)
 	fromi, ok := dir.Ents.Lookup(from)
 	if !ok {
-		return serr.MkErr(serr.TErrNotfound, from)
+		return serr.NewErr(serr.TErrNotfound, from)
 	}
 	difrom := fromi.(DirEntInfo)
 	topath := sp.Tpath(0)
@@ -157,7 +157,7 @@ func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
 			return err
 		}
 		if !empty {
-			return serr.MkErr(serr.TErrNotEmpty, to)
+			return serr.NewErr(serr.TErrNotEmpty, to)
 		}
 		topath = di.Path
 	}
@@ -181,7 +181,7 @@ func (fs *FsEtcd) Renameat(df sp.Tpath, from string, dt sp.Tpath, to string, f s
 	db.DPrintf(db.FSETCD, "Renameat %v dir: %v %v %v %v\n", df, dirf, dirt, vt, vf)
 	fi, ok := dirf.Ents.Lookup(from)
 	if !ok {
-		return serr.MkErr(serr.TErrNotfound, from)
+		return serr.NewErr(serr.TErrNotfound, from)
 	}
 	difrom := fi.(DirEntInfo)
 	topath := sp.Tpath(0)
@@ -193,7 +193,7 @@ func (fs *FsEtcd) Renameat(df sp.Tpath, from string, dt sp.Tpath, to string, f s
 			return err
 		}
 		if !empty {
-			return serr.MkErr(serr.TErrNotEmpty, to)
+			return serr.NewErr(serr.TErrNotEmpty, to)
 		}
 		topath = di.Path
 	}

@@ -123,7 +123,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ALWAYS, "Error set named ip")
 		return nil, err
 	}
-	k, err = bootkernelclnt.MkKernelClnt(kernelid, pcfg)
+	k, err = bootkernelclnt.NewKernelClnt(kernelid, pcfg)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make kernel clnt")
 		return nil, err
@@ -138,7 +138,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.MkKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays)
 		if err != nil {
 			return err
 		}

@@ -47,7 +47,7 @@ type Protsrv interface {
 	Detach(*sp.Tdetach, *sp.Rdetach, DetachClntF) *sp.Rerror
 }
 
-type MkProtServer func(SessServer, sessp.Tsession) Protsrv
+type NewProtServer func(SessServer, sessp.Tsession) Protsrv
 
 type DetachSessF func(sessp.Tsession)
 

@@ -16,7 +16,7 @@ func spin(args []string) error {
 	db.DFatalf("Error: env")
 	// addr := args[0]
 	// sempath := args[1]
-	// fsl, err := fslib.NewFsLibAddr(sp.Tuname("spin-"+path.Base(sempath)), sp.ROOTREALM, "XXXXXXX", sp.MkTaddrs([]string{addr}))
+	// fsl, err := fslib.NewFsLibAddr(sp.Tuname("spin-"+path.Base(sempath)), sp.ROOTREALM, "XXXXXXX", sp.NewTaddrs([]string{addr}))
 	//
 	//	if err != nil {
 	//		return err

@@ -16,11 +16,11 @@ type SessDevClnt struct {
 	data string
 }
 
-func MkSessDevClnt(fsl *fslib.FsLib, pn string) (*SessDevClnt, error) {
+func NewSessDevClnt(fsl *fslib.FsLib, pn string) (*SessDevClnt, error) {
 	sdc := &SessDevClnt{FsLib: fsl, pn: pn}
 
 	clone := sdc.pn + "/" + sessdev.CLONE
-	db.DPrintf(db.SESSDEVCLNT, "MkSessDevClnt: %q\n", clone)
+	db.DPrintf(db.SESSDEVCLNT, "NewSessDevClnt: %q\n", clone)
 	b, err := sdc.GetFile(clone)
 	if err != nil {
 		return nil, err

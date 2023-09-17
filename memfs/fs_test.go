@@ -23,8 +23,8 @@ type TestState struct {
 func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
-	ts.ctx = ctx.MkCtxNull()
-	ts.rooti = dir.MkRootDir(ts.ctx, NewInode, nil)
+	ts.ctx = ctx.NewCtxNull()
+	ts.rooti = dir.NewRootDir(ts.ctx, NewInode, nil)
 	return ts
 }
 

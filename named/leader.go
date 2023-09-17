@@ -9,7 +9,7 @@ import (
 )
 
 func (nd *Named) startLeader() error {
-	fs, err := fsetcd.MkFsEtcd(nd.realm, nd.ProcEnv().EtcdIP)
+	fs, err := fsetcd.NewFsEtcd(nd.realm, nd.ProcEnv().EtcdIP)
 	if err != nil {
 		return err
 	}
@@ -22,7 +22,7 @@ func (nd *Named) startLeader() error {
 	}
 	nd.sess = sess
 
-	nd.elect, err = leaderetcd.MkElection(nd.ProcEnv(), nd.sess, fn)
+	nd.elect, err = leaderetcd.NewElection(nd.ProcEnv(), nd.sess, fn)
 	if err != nil {
 		return err
 	}

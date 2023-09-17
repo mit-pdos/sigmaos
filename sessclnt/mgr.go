@@ -47,7 +47,7 @@ func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
 	if len(addrs) == 0 {
-		return nil, serr.MkErr(serr.TErrInval, addrs)
+		return nil, serr.NewErr(serr.TErrInval, addrs)
 	}
 	key := sessKey(addrs)
 	if sess, ok := sc.sessions[key]; ok {
@@ -81,7 +81,7 @@ func (sc *Mgr) Disconnect(addrs sp.Taddrs) *serr.Err {
 	sess, ok := sc.sessions[key]
 	sc.mu.Unlock()
 	if !ok {
-		return serr.MkErr(serr.TErrUnreachable, "disconnect: "+sessKey(addrs))
+		return serr.NewErr(serr.TErrUnreachable, "disconnect: "+sessKey(addrs))
 	}
 	sess.close()
 	db.DPrintf(db.SESS_STATE_CLNT, "Disconnected cli %v sid %v addr %v", sc.cli, sess.sid, addrs)

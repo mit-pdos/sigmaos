@@ -103,8 +103,8 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 }
 
 func InitHotelFs(fsl *fslib.FsLib, jobname string) {
-	fsl.MkDir(HOTELDIR, 0777)
-	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
+	fsl.NewDir(HOTELDIR, 0777)
+	if err := fsl.NewDir(JobDir(jobname), 0777); err != nil {
 		db.DFatalf("Mkdir %v err %v\n", JobDir(jobname), err)
 	}
 }
@@ -116,7 +116,7 @@ type Srv struct {
 }
 
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
-func MkHotelSvc(public bool) []Srv {
+func NewHotelSvc(public bool) []Srv {
 	return []Srv{
 		Srv{"hotel-userd", public, 0}, Srv{"hotel-rated", public, 2000},
 		Srv{"hotel-geod", public, 2000}, Srv{"hotel-profd", public, 2000},
@@ -161,14 +161,14 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cachedsvc.MkCacheMgr(sc, job, nsrv, cacheMcpu, gc, test.Overlays)
+			cm, err = cachedsvc.NewCacheMgr(sc, job, nsrv, cacheMcpu, gc, test.Overlays)
 			if err != nil {
-				db.DFatalf("Error MkCacheMgr %v", err)
+				db.DFatalf("Error NewCacheMgr %v", err)
 				return nil, err
 			}
-			cc, err = cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, job)
+			cc, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, job)
 			if err != nil {
-				db.DFatalf("Error MkCachedSvcClnt %v", err)
+				db.DFatalf("Error NewCachedSvcClnt %v", err)
 				return nil, err
 			}
 			ca = cachedsvcclnt.NewAutoscaler(cm, cc)

@@ -60,10 +60,10 @@ func (fdt *FdTable) closefd(fd int) {
 // Caller must have locked fdt
 func (fdt *FdTable) lookupL(fd int) (*FdState, *serr.Err) {
 	if fd < 0 || fd >= len(fdt.fds) {
-		return nil, serr.MkErr(serr.TErrBadFd, fd)
+		return nil, serr.NewErr(serr.TErrBadFd, fd)
 	}
 	if fdt.fds[fd].fid == sp.NoFid {
-		return nil, serr.MkErr(serr.TErrBadFd, fd)
+		return nil, serr.NewErr(serr.TErrBadFd, fd)
 	}
 	return &fdt.fds[fd], nil
 }

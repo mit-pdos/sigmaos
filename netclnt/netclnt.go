@@ -94,7 +94,7 @@ func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
 		return nil
 	}
 	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", addrs)
-	return serr.MkErr(serr.TErrUnreachable, "no connection")
+	return serr.NewErr(serr.TErrUnreachable, "no connection")
 }
 
 // Try to send a request to the server. If an error occurs, close the

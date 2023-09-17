@@ -41,7 +41,7 @@ func TestMedia(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_MEDIA)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_MEDIA)
 	assert.Nil(t, err, "RPC client should be created properly")
 
 	// store two media
@@ -79,7 +79,7 @@ func TestPost(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
 	assert.Nil(t, err, "RPC client should be created properly")
 
 	// create two posts

@@ -9,7 +9,7 @@ import (
 var NAMES = []string{"a", "b.txt", "gutenberg", "ls.PDF", "wiki"}
 
 func TestBasic(t *testing.T) {
-	sd := MkSortedDir()
+	sd := NewSortedDir()
 	for _, n := range NAMES {
 		sd.Insert(n, nil)
 	}

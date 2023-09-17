@@ -162,7 +162,7 @@ func warmupRealm(ts *test.RealmTstate) {
 // ========== Dir Helpers ==========
 
 func newOutDir(ts *test.RealmTstate) {
-	err := ts.MkDir(OUT_DIR, 0777)
+	err := ts.NewDir(OUT_DIR, 0777)
 	assert.Nil(ts.Ts.T, err, "Couldn't make out dir: %v", err)
 }
 
@@ -356,7 +356,7 @@ func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
 // returns.
 func waitForClnts(rootts *test.Tstate, n int) {
 	// Make sure the clients directory has been created.
-	err := rootts.MkDir(clidir, 0777)
+	err := rootts.NewDir(clidir, 0777)
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 	// Wait for n - 1 clnts to register themselves.
 	_, err = rootts.ReadDirWatch(clidir, func(sts []*sp.Stat) bool {
@@ -374,7 +374,7 @@ func waitForClnts(rootts *test.Tstate, n int) {
 // returns.
 func clientReady(rootts *test.Tstate) {
 	// Make sure the clients directory has been created.
-	err := rootts.MkDir(clidir, 0777)
+	err := rootts.NewDir(clidir, 0777)
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 	// Register the client as ready.
 	cid := "clnt-" + rand.String(4)

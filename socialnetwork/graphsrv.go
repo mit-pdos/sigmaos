@@ -39,7 +39,7 @@ func RunGraphSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	mongoc, err := mongoclnt.MkMongoClnt(ssrv.MemFs.SigmaClnt().FsLib)
+	mongoc, err := mongoclnt.NewMongoClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
@@ -48,12 +48,12 @@ func RunGraphSrv(public bool, jobname string) error {
 	gsrv.mongoc = mongoc
 
 	fsls := NewFsLibs(SOCIAL_NETWORK_GRAPH)
-	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
+	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	gsrv.cachec = cachec
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}

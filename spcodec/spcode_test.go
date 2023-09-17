@@ -11,7 +11,7 @@ import (
 func TestPutfile(t *testing.T) {
 	b := []byte("hello")
 	fence := &sp.Tfence{Fenceid: &sp.Tfenceid{Path: 36, Serverid: 2}, Epoch: 7}
-	msg := sp.MkTputfile(1, sp.OWRITE, 0777, 101, []string{"f"}, b)
+	msg := sp.NewTputfile(1, sp.OWRITE, 0777, 101, []string{"f"}, b)
 	fcall := sp.NewFcallMsg(msg, 0, 13, nil, &sessp.Tinterval{Start: 1, End: 2}, fence)
 	frame, error := MarshalFcallMsgByte(fcall)
 	assert.Nil(t, error)

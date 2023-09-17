@@ -15,7 +15,7 @@ func RunProc(fencestr, dir string) {
 
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("MkSigmaClnt err %v\n", err)
+		db.DFatalf("NewSigmaClnt err %v\n", err)
 	}
 	sc.Started()
 

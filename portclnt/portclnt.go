@@ -18,7 +18,7 @@ type PortClnt struct {
 	kc *kernelclnt.KernelClnt
 }
 
-func MkPortClnt(fsl *fslib.FsLib, kernelId string) (*PortClnt, error) {
+func NewPortClnt(fsl *fslib.FsLib, kernelId string) (*PortClnt, error) {
 	kc, err := kernelclnt.NewKernelClnt(fsl, sp.BOOT+fsl.ProcEnv().KernelID)
 	if err != nil {
 		return nil, err
@@ -26,8 +26,8 @@ func MkPortClnt(fsl *fslib.FsLib, kernelId string) (*PortClnt, error) {
 	return &PortClnt{fsl, kc}, nil
 }
 
-func MkPortClntPort(fsl *fslib.FsLib) (*PortClnt, PortInfo, error) {
-	pc, err := MkPortClnt(fsl, fsl.ProcEnv().KernelID)
+func NewPortClntPort(fsl *fslib.FsLib) (*PortClnt, PortInfo, error) {
+	pc, err := NewPortClnt(fsl, fsl.ProcEnv().KernelID)
 	if err != nil {
 		return nil, PortInfo{}, err
 	}
@@ -48,9 +48,9 @@ func (pc *PortClnt) AllocPort(p port.Tport) (PortInfo, error) {
 }
 
 func (pc *PortClnt) AdvertisePort(pn string, pi PortInfo, net string, laddr string) error {
-	mnt := port.MkPublicMount(pi.Hip, pi.Pb, net, laddr)
+	mnt := port.NewPublicMount(pi.Hip, pi.Pb, net, laddr)
 	db.DPrintf(db.PORT, "AdvertisePort %v %v\n", pn, mnt)
-	if err := pc.MkMountSymlink(pn, mnt, sp.NoLeaseId); err != nil {
+	if err := pc.NewMountSymlink(pn, mnt, sp.NoLeaseId); err != nil {
 		return err
 	}
 	return nil

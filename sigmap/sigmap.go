@@ -222,20 +222,20 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
-func MkTaddr(addr string) *Taddr {
+func NewTaddr(addr string) *Taddr {
 	return &Taddr{Net: ROOTREALM.String(), Addr: addr}
 }
 
-func MkTaddrRealm(addr string, net string) *Taddr {
+func NewTaddrRealm(addr string, net string) *Taddr {
 	return &Taddr{Net: net, Addr: addr}
 }
 
 type Taddrs []*Taddr
 
-func MkTaddrs(addr []string) Taddrs {
+func NewTaddrs(addr []string) Taddrs {
 	addrs := make([]*Taddr, len(addr))
 	for i, a := range addr {
-		addrs[i] = MkTaddr(a)
+		addrs[i] = NewTaddr(a)
 	}
 	return addrs
 }
@@ -276,20 +276,20 @@ func String2Taddrs(as string) (Taddrs, error) {
 		if len(a) > 1 {
 			n = a[1]
 		}
-		addrs = append(addrs, MkTaddrRealm(a[0], n))
+		addrs = append(addrs, NewTaddrRealm(a[0], n))
 	}
 	return addrs, nil
 }
 
-func MkErr(msg *Rerror) *serr.Err {
+func NewErr(msg *Rerror) *serr.Err {
 	return &serr.Err{serr.Terror(msg.ErrCode), msg.Obj, fmt.Errorf("%s", msg.Err)}
 }
 
-func MkRerror(err *serr.Err) *Rerror {
+func NewRerrorSerr(err *serr.Err) *Rerror {
 	return &Rerror{ErrCode: uint32(err.ErrCode), Obj: err.Obj, Err: err.String()}
 }
 
-func MkRerrorErr(err error) *Rerror {
+func NewRerrorErr(err error) *Rerror {
 	return &Rerror{ErrCode: uint32(serr.TErrError), Obj: err.Error()}
 }
 
@@ -297,11 +297,11 @@ func NewRerror() *Rerror {
 	return &Rerror{ErrCode: 0}
 }
 
-func MkRerrorCode(ec serr.Terror) *Rerror {
+func NewRerrorCode(ec serr.Terror) *Rerror {
 	return &Rerror{ErrCode: uint32(ec)}
 }
 
-func MkTwalk(fid, nfid Tfid, p path.Path) *Twalk {
+func NewTwalk(fid, nfid Tfid, p path.Path) *Twalk {
 	return &Twalk{Fid: uint32(fid), NewFid: uint32(nfid), Wnames: p}
 }
 
@@ -313,7 +313,7 @@ func (w *Twalk) Tnewfid() Tfid {
 	return Tfid(w.NewFid)
 }
 
-func MkTattach(fid, afid Tfid, uname Tuname, cid TclntId, path path.Path) *Tattach {
+func NewTattach(fid, afid Tfid, uname Tuname, cid TclntId, path path.Path) *Tattach {
 	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Uname: string(uname), Aname: path.String(), ClntId: uint64(cid)}
 }
 
@@ -329,7 +329,7 @@ func (a *Tattach) TclntId() TclntId {
 	return TclntId(a.ClntId)
 }
 
-func MkTopen(fid Tfid, mode Tmode) *Topen {
+func NewTopen(fid Tfid, mode Tmode) *Topen {
 	return &Topen{Fid: uint32(fid), Mode: uint32(mode)}
 }
 
@@ -341,7 +341,7 @@ func (o *Topen) Tmode() Tmode {
 	return Tmode(o.Mode)
 }
 
-func MkTcreate(fid Tfid, n string, p Tperm, mode Tmode, lid TleaseId, f Tfence) *Tcreate {
+func NewTcreate(fid Tfid, n string, p Tperm, mode Tmode, lid TleaseId, f Tfence) *Tcreate {
 	return &Tcreate{Fid: uint32(fid), Name: n, Perm: uint32(p), Mode: uint32(mode), Lease: uint64(lid), Fence: f.FenceProto()}
 }
 
@@ -365,7 +365,7 @@ func (c *Tcreate) Tfence() Tfence {
 	return c.Fence.Tfence()
 }
 
-func MkReadF(fid Tfid, o Toffset, c Tsize, f *Tfence) *TreadF {
+func NewReadF(fid Tfid, o Toffset, c Tsize, f *Tfence) *TreadF {
 	return &TreadF{Fid: uint32(fid), Offset: uint64(o), Count: uint32(c), Fence: f.FenceProto()}
 }
 
@@ -385,7 +385,7 @@ func (r *TreadF) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func MkTwriteF(fid Tfid, o Toffset, f *Tfence) *TwriteF {
+func NewTwriteF(fid Tfid, o Toffset, f *Tfence) *TwriteF {
 	return &TwriteF{Fid: uint32(fid), Offset: uint64(o), Fence: f.FenceProto()}
 }
 
@@ -405,7 +405,7 @@ func (wr *Rwrite) Tcount() Tsize {
 	return Tsize(wr.Count)
 }
 
-func MkTwatch(fid Tfid) *Twatch {
+func NewTwatch(fid Tfid) *Twatch {
 	return &Twatch{Fid: uint32(fid)}
 }
 
@@ -413,7 +413,7 @@ func (w *Twatch) Tfid() Tfid {
 	return Tfid(w.Fid)
 }
 
-func MkTclunk(fid Tfid) *Tclunk {
+func NewTclunk(fid Tfid) *Tclunk {
 	return &Tclunk{Fid: uint32(fid)}
 }
 
@@ -421,7 +421,7 @@ func (c *Tclunk) Tfid() Tfid {
 	return Tfid(c.Fid)
 }
 
-func MkTremove(fid Tfid, f *Tfence) *Tremove {
+func NewTremove(fid Tfid, f *Tfence) *Tremove {
 	return &Tremove{Fid: uint32(fid), Fence: f.FenceProto()}
 }
 
@@ -433,7 +433,7 @@ func (r *Tremove) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func MkTstat(fid Tfid) *Tstat {
+func NewTstat(fid Tfid) *Tstat {
 	return &Tstat{Fid: uint32(fid)}
 }
 
@@ -441,13 +441,13 @@ func (s *Tstat) Tfid() Tfid {
 	return Tfid(s.Fid)
 }
 
-func MkStatNull() *Stat {
+func NewStatNull() *Stat {
 	st := &Stat{}
 	st.Qid = NewQid(0, 0, 0)
 	return st
 }
 
-func MkStat(qid *Tqid, perm Tperm, mtime uint32, name, owner string) *Stat {
+func NewStat(qid *Tqid, perm Tperm, mtime uint32, name, owner string) *Stat {
 	st := &Stat{
 		Type:   0, // XXX
 		Qid:    qid,
@@ -480,7 +480,7 @@ func Names(sts []*Stat) []string {
 	return r
 }
 
-func MkTwstat(fid Tfid, st *Stat, f *Tfence) *Twstat {
+func NewTwstat(fid Tfid, st *Stat, f *Tfence) *Twstat {
 	return &Twstat{Fid: uint32(fid), Stat: st, Fence: f.FenceProto()}
 }
 
@@ -492,7 +492,7 @@ func (w *Twstat) Tfence() Tfence {
 	return w.Fence.Tfence()
 }
 
-func MkTrenameat(oldfid Tfid, oldname string, newfid Tfid, newname string, f *Tfence) *Trenameat {
+func NewTrenameat(oldfid Tfid, oldname string, newfid Tfid, newname string, f *Tfence) *Trenameat {
 	return &Trenameat{OldFid: uint32(oldfid), OldName: oldname, NewFid: uint32(newfid), NewName: newname, Fence: f.FenceProto()}
 }
 
@@ -508,7 +508,7 @@ func (r *Trenameat) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func MkTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt Tsize, path path.Path, resolve bool, f *Tfence) *Tgetfile {
+func NewTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt Tsize, path path.Path, resolve bool, f *Tfence) *Tgetfile {
 	return &Tgetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Count: uint32(cnt), Wnames: path, Resolve: resolve, Fence: f.FenceProto()}
 }
 
@@ -532,7 +532,7 @@ func (g *Tgetfile) Tfence() Tfence {
 	return g.Fence.Tfence()
 }
 
-func MkTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool, lid TleaseId, f *Tfence) *Tputfile {
+func NewTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool, lid TleaseId, f *Tfence) *Tputfile {
 	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Resolve: resolve, Lease: uint64(lid), Fence: f.FenceProto()}
 }
 
@@ -560,7 +560,7 @@ func (p *Tputfile) Tfence() Tfence {
 	return p.Fence.Tfence()
 }
 
-func MkTremovefile(fid Tfid, path path.Path, r bool, f *Tfence) *Tremovefile {
+func NewTremovefile(fid Tfid, path path.Path, r bool, f *Tfence) *Tremovefile {
 	return &Tremovefile{Fid: uint32(fid), Wnames: path, Resolve: r, Fence: f.FenceProto()}
 }
 
@@ -572,11 +572,11 @@ func (r *Tremovefile) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func MkTheartbeat(sess map[uint64]bool) *Theartbeat {
+func NewTheartbeat(sess map[uint64]bool) *Theartbeat {
 	return &Theartbeat{Sids: sess}
 }
 
-func MkTdetach(cid TclntId) *Tdetach {
+func NewTdetach(cid TclntId) *Tdetach {
 	return &Tdetach{ClntId: uint64(cid)}
 }
 
@@ -584,7 +584,7 @@ func (d *Tdetach) TclntId() TclntId {
 	return TclntId(d.ClntId)
 }
 
-func MkTwriteread(fid Tfid) *Twriteread {
+func NewTwriteread(fid Tfid) *Twriteread {
 	return &Twriteread{Fid: uint32(fid)}
 }
 

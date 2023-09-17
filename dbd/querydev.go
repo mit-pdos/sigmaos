@@ -28,16 +28,16 @@ func (fs *fileSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence)
 	debug.DPrintf(debug.DB, "doQuery: %v\n", string(b))
 	db, error := sql.Open("mysql", "sigma:sigmaos@tcp("+fs.dbaddr+")/sigmaos")
 	if error != nil {
-		return 0, serr.MkErrError(error)
+		return 0, serr.NewErrError(error)
 	}
 	res, err := doQuery(db, string(b))
 	if err != nil {
-		return 0, serr.MkErrError(err)
+		return 0, serr.NewErrError(err)
 	}
 	fs.res = res
 
 	if err := db.Close(); err != nil {
-		return 0, serr.MkErrError(err)
+		return 0, serr.NewErrError(err)
 	}
 
 	return sp.Tsize(len(b)), nil

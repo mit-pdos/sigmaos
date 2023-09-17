@@ -95,8 +95,8 @@ func Run(args []string) error {
 	} else {
 		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = path.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.ALWAYS, "MkMountSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
-		if err := nd.MkMountSymlink(pn, mnt, nd.sess.Lease()); err != nil {
+		db.DPrintf(db.ALWAYS, "NewMountSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
+		if err := nd.NewMountSymlink(pn, mnt, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "mount %v at %v err %v\n", nd.realm, pn, err)
 			return err
 		}
@@ -143,7 +143,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
 		ip = ip + ":0"
 	} else {
-		_, pi0, err := portclnt.MkPortClntPort(nd.SigmaClnt.FsLib)
+		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
 		if err != nil {
 			return sp.NullMount(), err
 		}
@@ -161,9 +161,9 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 	}
 	nd.SigmaSrv = ssrv
 
-	mnt := sp.MkMountServer(nd.MyAddr())
+	mnt := sp.NewMountServer(nd.MyAddr())
 	if nd.realm != sp.ROOTREALM {
-		mnt = port.MkPublicMount(pi.Hip, pi.Pb, nd.ProcEnv().GetNet(), nd.MyAddr())
+		mnt = port.NewPublicMount(pi.Hip, pi.Pb, nd.ProcEnv().GetNet(), nd.MyAddr())
 	}
 
 	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, ip, srv.MyAddr(), nd.elect.Key(), mnt)

@@ -58,17 +58,17 @@ func RunRealmSrv() error {
 	return nil
 }
 
-func MkNet(net string) error {
+func NewNet(net string) error {
 	if net == "" {
 		return nil
 	}
 	args := []string{"sigmanet-" + net}
 	out, err := exec.Command(MKNET, args...).Output()
 	if err != nil {
-		db.DPrintf(db.REALMD, "MkNet: %v %s err %v\n", net, string(out), err)
+		db.DPrintf(db.REALMD, "NewNet: %v %s err %v\n", net, string(out), err)
 		return err
 	}
-	db.DPrintf(db.REALMD, "MkNet: %v\n", string(out))
+	db.DPrintf(db.REALMD, "NewNet: %v\n", string(out))
 	return nil
 }
 
@@ -81,9 +81,9 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	rid := sp.Trealm(req.Realm)
 	// If realm already exists
 	if _, ok := rm.realms[rid]; ok {
-		return serr.MkErr(serr.TErrExists, rid)
+		return serr.NewErr(serr.TErrExists, rid)
 	}
-	if err := MkNet(req.Network); err != nil {
+	if err := NewNet(req.Network); err != nil {
 		return err
 	}
 
@@ -108,9 +108,9 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	db.DPrintf(db.REALMD, "RealmSrv.Make named for %v started\n", rid)
 
 	pcfg := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
-	sc, err := sigmaclnt.MkSigmaClntFsLib(pcfg)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pcfg)
 	if err != nil {
-		db.DPrintf(db.REALMD_ERR, "Error MkSigmaClntRealm: %v", err)
+		db.DPrintf(db.REALMD_ERR, "Error NewSigmaClntRealm: %v", err)
 		return err
 	}
 	// Make some rootrealm services available in new realm
@@ -127,7 +127,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	for _, s := range []string{sp.KPIDSREL} {
 		pn := path.Join(sp.NAMED, s)
 		db.DPrintf(db.REALMD, "Mkdir %v", pn)
-		if err := sc.MkDir(pn, 0777); err != nil {
+		if err := sc.NewDir(pn, 0777); err != nil {
 			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
 			return err
 		}
@@ -144,7 +144,7 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveRequest, res *proto.Remo
 	rid := sp.Trealm(req.Realm)
 	r, ok := rm.realms[rid]
 	if !ok {
-		return serr.MkErr(serr.TErrNotfound, rid)
+		return serr.NewErr(serr.TErrNotfound, rid)
 	}
 
 	if err := r.sc.RmDirEntries(sp.NAMED); err != nil {

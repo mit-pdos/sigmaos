@@ -100,7 +100,7 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
-	st := sp.MkStat(sp.NewQidPerm(inode.perm, 0, inode.inum),
+	st := sp.NewStat(sp.NewQidPerm(inode.perm, 0, inode.inum),
 		inode.Mode(), uint32(inode.mtime), "", string(inode.owner))
 	return st, nil
 }

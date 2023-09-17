@@ -30,14 +30,14 @@ func BootSrv(pcfg *proc.ProcEnv, root fs.Dir, addr string, attachf sps.AttachCln
 
 func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error {
 	if len(path) > 0 {
-		mnt := sp.MkMountServer(sesssrv.MyAddr())
+		mnt := sp.NewMountServer(sesssrv.MyAddr())
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
 		li, err := sc.LeaseClnt.AskLease(path, fsetcd.LeaseTTL)
 		if err != nil {
 			return err
 		}
 		li.KeepExtending()
-		if err := sc.MkMountSymlink(path, mnt, li.Lease()); err != nil {
+		if err := sc.NewMountSymlink(path, mnt, li.Lease()); err != nil {
 			return err
 		}
 	}

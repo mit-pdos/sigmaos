@@ -18,6 +18,6 @@ func NewInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, new fs.NewDirF
 	} else if p.IsFile() || p.IsEphemeral() {
 		return NewFile(i), nil
 	} else {
-		return nil, serr.MkErr(serr.TErrInval, p)
+		return nil, serr.NewErr(serr.TErrInval, p)
 	}
 }

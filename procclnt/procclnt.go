@@ -52,7 +52,7 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procdir string) *ProcClnt {
 // ========== SPAWN ==========
 
 // Create the named state the proc (and its parent) expects.
-func (clnt *ProcClnt) MkProc(p *proc.Proc, how Thow, kernelId string) error {
+func (clnt *ProcClnt) NewProc(p *proc.Proc, how Thow, kernelId string) error {
 	if how == HSCHEDD {
 		return clnt.spawn(kernelId, how, p, 0)
 	} else {
@@ -61,7 +61,7 @@ func (clnt *ProcClnt) MkProc(p *proc.Proc, how Thow, kernelId string) error {
 }
 
 func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how Thow, kernelId string) (*exec.Cmd, error) {
-	if err := clnt.MkProc(p, how, kernelId); err != nil {
+	if err := clnt.NewProc(p, how, kernelId); err != nil {
 		return nil, err
 	}
 	if how == HLINUX {
@@ -179,7 +179,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) error {
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
 		return nil
 	}
-	return serr.MkErr(serr.TErrUnreachable, kernelId)
+	return serr.NewErr(serr.TErrUnreachable, kernelId)
 }
 
 func (clnt *ProcClnt) getScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {

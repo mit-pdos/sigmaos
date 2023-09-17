@@ -35,8 +35,8 @@ func newTstateEcho(t *testing.T) (*TstateEcho, error) {
 	tse := &TstateEcho{}
 	tse.jobname = jobname
 	tse.Tstate = test.NewTstateAll(t)
-	tse.MkDir(echo.DIR_ECHO_SERVER, 0777)
-	if err = tse.MkDir(jobdir, 0777); err != nil {
+	tse.NewDir(echo.DIR_ECHO_SERVER, 0777)
+	if err = tse.NewDir(jobdir, 0777); err != nil {
 		return nil, err
 	}
 	// Start proc
@@ -70,7 +70,7 @@ func TestEcho(t *testing.T) {
 	assert.Nil(t, err, "Test server should start properly %v", err)
 
 	// create a RPC client and query server
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}
@@ -88,7 +88,7 @@ func TestEchoTime(t *testing.T) {
 	assert.Nil(t, err, "Test server should start properly")
 
 	// create a RPC client and query server
-	pdc, err := protdevclnt.MkProtDevClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	pdc, err := protdevclnt.NewProtDevClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}
@@ -119,7 +119,7 @@ func TestEchoLoad(t *testing.T) {
 		}
 		fsls = append(fsls, fsl)
 	}
-	pdc, err := protdevclnt.MkProtDevClnt(fsls, echo.NAMED_ECHO_SERVER)
+	pdc, err := protdevclnt.NewProtDevClnt(fsls, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	var wg sync.WaitGroup
 	for n := 1; n <= N; n++ {

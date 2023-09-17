@@ -67,7 +67,7 @@ type WatchTable struct {
 	sct     *sesscond.SessCondTable
 }
 
-func MkWatchTable(sct *sesscond.SessCondTable) *WatchTable {
+func NewWatchTable(sct *sesscond.SessCondTable) *WatchTable {
 	wt := &WatchTable{}
 	wt.sct = sct
 	wt.watches = make(map[string]*Watch)

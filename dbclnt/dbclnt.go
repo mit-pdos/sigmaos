@@ -12,9 +12,9 @@ type DbClnt struct {
 	rpcc *rpcclnt.RPCClnt
 }
 
-func MkDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
+func NewDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
 	dc := &DbClnt{}
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, fn)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{fsl}, fn)
 	if err != nil {
 		return nil, err
 	}

@@ -25,14 +25,14 @@ type RPCClnt struct {
 	idx  int32
 }
 
-func MkRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
+func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 	rpcc := &RPCClnt{
 		fsls: make([]*fslib.FsLib, 0, len(fsls)),
 		fds:  make([]int, 0, len(fsls)),
 		si:   rpc.NewStatInfo(),
 		pn:   pn,
 	}
-	sdc, err := sessdevclnt.MkSessDevClnt(fsls[0], path.Join(pn, rpc.RPC))
+	sdc, err := sessdevclnt.NewSessDevClnt(fsls[0], path.Join(pn, rpc.RPC))
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	b, err := proto.Marshal(&req)
 	if err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 
 	start := time.Now()
@@ -66,7 +66,7 @@ func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	rep := &rpcproto.Reply{}
 	if err := proto.Unmarshal(b, rep); err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 
 	return rep, nil
@@ -82,7 +82,7 @@ func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) er
 		return err
 	}
 	if rep.Err.ErrCode != 0 {
-		return sp.MkErr(rep.Err)
+		return sp.NewErr(rep.Err)
 	}
 	if err := proto.Unmarshal(rep.Res, res); err != nil {
 		return err

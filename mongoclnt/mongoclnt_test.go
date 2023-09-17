@@ -16,7 +16,7 @@ type MyObj struct {
 func TestMongoClnt(t *testing.T) {
 	// create a client
 	ts := test.NewTstateAll(t)
-	mongoc, err := mongoclnt.MkMongoClnt(ts.FsLib)
+	mongoc, err := mongoclnt.NewMongoClnt(ts.FsLib)
 	assert.Nil(t, err)
 	assert.NotNil(t, mongoc)
 	

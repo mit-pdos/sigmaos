@@ -70,7 +70,7 @@ func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 	if ji.sigmaos {
 		clnt = www.NewWWWClnt(ji.FsLib, ji.job)
 	} else {
-		clnt = www.NewWWWClntAddr(sp.MkTaddrs([]string{ji.k8ssrvaddr}))
+		clnt = www.NewWWWClntAddr(sp.NewTaddrs([]string{ji.k8ssrvaddr}))
 	}
 	var latency time.Duration
 	for i := 0; i < ji.nreq; i++ {

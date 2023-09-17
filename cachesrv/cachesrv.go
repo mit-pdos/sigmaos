@@ -79,7 +79,7 @@ func RunCacheSrv(args []string, nshard int) error {
 	if _, err := ssrv.Create(DUMP, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
-	if err := sessdevsrv.MkSessDev(ssrv.MemFs, DUMP, s.newSession, nil); err != nil {
+	if err := sessdevsrv.NewSessDev(ssrv.MemFs, DUMP, s.newSession, nil); err != nil {
 		return err
 	}
 	ssrv.RunServer()
@@ -137,25 +137,25 @@ func (cs *CacheSrv) lookupShardFence(s cache.Tshard, f sp.Tfence) (*shardInfo, e
 	if cmp == sp.FENCE_LT {
 		// cs is behind let the client retry until cs catches up
 		db.DPrintf(db.ALWAYS, "f %v shard %v cs behind; retry\n", cs.lastFence, s)
-		return nil, serr.MkErr(serr.TErrRetry, fmt.Sprintf("shard %v", s))
+		return nil, serr.NewErr(serr.TErrRetry, fmt.Sprintf("shard %v", s))
 	}
 	sh, ok := cs.shards[s]
 	if !ok {
 		// if client is behind, return stale
 		if cmp == sp.FENCE_GT {
-			return nil, serr.MkErr(serr.TErrStale, fmt.Sprintf("shard %v", s))
+			return nil, serr.NewErr(serr.TErrStale, fmt.Sprintf("shard %v", s))
 		}
 		// cs and client are in same config but server hasn't received
 		// the shard yet.  let the client retry until the server
 		// catchup first.
 		db.DPrintf(db.ALWAYS, "f %v shard %v cs waiting for shard; retry\n", cs.lastFence, s)
-		return nil, serr.MkErr(serr.TErrRetry, fmt.Sprintf("shard %v", s))
+		return nil, serr.NewErr(serr.TErrRetry, fmt.Sprintf("shard %v", s))
 	}
 	switch sh.status {
 	case READY:
 		return sh, nil
 	case FROZEN:
-		return nil, serr.MkErr(serr.TErrStale, fmt.Sprintf("shard %v", s))
+		return nil, serr.NewErr(serr.TErrStale, fmt.Sprintf("shard %v", s))
 	default:
 		db.DFatalf("lookupShardFence err status %v\n", sh.status)
 		return nil, nil
@@ -168,10 +168,10 @@ func (cs *CacheSrv) createShard(s cache.Tshard, f sp.Tfence, vals Tcache) error 
 	defer cs.mu.Unlock()
 
 	if cmp := cs.cmpFenceUpgrade(f); cmp == sp.FENCE_GT {
-		return serr.MkErr(serr.TErrStale, fmt.Sprintf("shard %v", s))
+		return serr.NewErr(serr.TErrStale, fmt.Sprintf("shard %v", s))
 	}
 	if _, ok := cs.shards[s]; ok {
-		return serr.MkErr(serr.TErrExists, s)
+		return serr.NewErr(serr.TErrExists, s)
 	}
 	sh := newShard()
 	sh.fill(vals)
@@ -191,7 +191,7 @@ func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *c
 	db.DPrintf(db.CACHESRV, "DeleteShard %v\n", req)
 
 	if _, ok := cs.shards[req.Tshard()]; !ok {
-		return serr.MkErr(serr.TErrNotfound, req.Shard)
+		return serr.NewErr(serr.TErrNotfound, req.Shard)
 	}
 	delete(cs.shards, req.Tshard())
 	return nil
@@ -204,11 +204,11 @@ func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *c
 	db.DPrintf(db.CACHESRV, "FreezeShard %v\n", req)
 
 	if cmp := cs.cmpFenceUpgrade(req.Fence.Tfence()); cmp == sp.FENCE_GT {
-		return serr.MkErr(serr.TErrStale, fmt.Sprintf("shard %v", req.Tshard()))
+		return serr.NewErr(serr.TErrStale, fmt.Sprintf("shard %v", req.Tshard()))
 	}
 	si, ok := cs.shards[req.Tshard()]
 	if !ok {
-		return serr.MkErr(serr.TErrNotfound, req.Tshard())
+		return serr.NewErr(serr.TErrNotfound, req.Tshard())
 	}
 	switch si.status {
 	case READY:
@@ -226,10 +226,10 @@ func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cac
 	db.DPrintf(db.CACHESRV, "DumpShard %v\n", req)
 
 	if cmp := cs.cmpFence(req.Fence.Tfence()); cmp == sp.FENCE_GT {
-		return serr.MkErr(serr.TErrStale, fmt.Sprintf("shard %v", req.Tshard()))
+		return serr.NewErr(serr.TErrStale, fmt.Sprintf("shard %v", req.Tshard()))
 	}
 	if si, ok := cs.shards[req.Tshard()]; !ok {
-		return serr.MkErr(serr.TErrNotfound, req.Tshard())
+		return serr.NewErr(serr.TErrNotfound, req.Tshard())
 	} else {
 		rep.Vals = si.s.dump()
 	}
@@ -267,7 +267,7 @@ func (cs *CacheSrv) GetFence(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cach
 		rep.Value = v
 		return nil
 	}
-	return serr.MkErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
+	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
 }
 
 //
@@ -277,7 +277,7 @@ func (cs *CacheSrv) GetFence(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cach
 func (cs *CacheSrv) lookupShard(s cache.Tshard) (*shard, error) {
 	sh, ok := cs.shards[s]
 	if !ok {
-		return nil, serr.MkErr(serr.TErrNotfound, fmt.Sprintf("shard %v", s))
+		return nil, serr.NewErr(serr.TErrNotfound, fmt.Sprintf("shard %v", s))
 	}
 	if sh.status != READY {
 		db.DFatalf("lookupShard %v err status %v\n", s, sh.status)
@@ -347,7 +347,7 @@ func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheprot
 	if time.Since(e2e) > 1*time.Millisecond {
 		db.DPrintf(db.CACHE_LAT, "Long e2e get: %v", time.Since(e2e))
 	}
-	return serr.MkErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
+	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
 }
 
 func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
@@ -373,5 +373,5 @@ func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cachep
 	if ok {
 		return nil
 	}
-	return serr.MkErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
+	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
 }

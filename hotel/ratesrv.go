@@ -56,12 +56,12 @@ func RunRateSrv(job string, public bool, cache string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(ssrv.MemFs.SigmaClnt().FsLib, sp.DBD)
+	dbc, err := dbclnt.NewDbClnt(ssrv.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := MkCacheClnt(cache, NewFsLibs(HOTELRATE), job)
+	cachec, err := NewCacheClnt(cache, NewFsLibs(HOTELRATE), job)
 	if err != nil {
 		return err
 	}

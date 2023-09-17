@@ -77,7 +77,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("MkSigmaClnt err %v", err)
+		db.DFatalf("NewSigmaClnt err %v", err)
 	}
 	bl.SigmaClnt = sc
 	bl.job = job
@@ -106,9 +106,9 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}
-	ctx := ctx.MkCtx(KVBALANCER, 0, sp.NoClntId, nil, nil)
+	ctx := ctx.NewCtx(KVBALANCER, 0, sp.NoClntId, nil, nil)
 	root, _ := ssrv.Root(path.Path{})
-	err1 := dir.MkNod(ctx, root, "ctl", newCtl(ctx, root, bl))
+	err1 := dir.NewNod(ctx, root, "ctl", newCtl(ctx, root, bl))
 	if err1 != nil {
 		db.DFatalf("NewNod clone failed %v\n", err1)
 	}
@@ -120,7 +120,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 		ch <- true
 	}()
 
-	mnt := sp.MkMountServer(ssrv.MyAddr())
+	mnt := sp.NewMountServer(ssrv.MyAddr())
 	b, error := mnt.Marshal()
 	if error != nil {
 		db.DFatalf("Marshal failed %v\n", error)
@@ -132,7 +132,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 
 	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.ProcEnv().GetPID(), bl.lc.Fence())
 
-	if err := bl.MkMountSymlink(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
+	if err := bl.NewMountSymlink(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
 		db.DFatalf("mount %v at %v err %v\n", mnt, KVBalancer(bl.job), err)
 	}
 
@@ -212,7 +212,7 @@ func newCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
 func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
-		return 0, serr.MkErr(serr.TErrInval, words)
+		return 0, serr.NewErr(serr.TErrInval, words)
 	}
 	err := c.bl.balance(words[0], words[1])
 	if err != nil {
@@ -222,7 +222,7 @@ func (c *Ctl) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsiz
 }
 
 func (c *Ctl) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
-	return nil, serr.MkErr(serr.TErrNotSupported, "Read")
+	return nil, serr.NewErr(serr.TErrNotSupported, "Read")
 }
 
 func (bl *Balancer) monitor() {
@@ -396,7 +396,7 @@ func (bl *Balancer) doMoves(moves Moves) {
 
 func (bl *Balancer) balance(opcode, kvd string) *serr.Err {
 	if bl.testAndSetIsBusy() {
-		return serr.MkErr(serr.TErrRetry, fmt.Sprintf("busy %v", bl.ProcEnv().GetPID()))
+		return serr.NewErr(serr.TErrRetry, fmt.Sprintf("busy %v", bl.ProcEnv().GetPID()))
 	}
 	defer bl.clearIsBusy()
 

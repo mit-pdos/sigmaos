@@ -108,12 +108,12 @@ func TestProxySymlinkPath(t *testing.T) {
 	ts := initTest(t)
 
 	dn := "name/d"
-	err := ts.MkDir(dn, 0777)
+	err := ts.NewDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	mnt := sp.MkMountService(ts.NamedAddr())
-	err = ts.MkMountSymlink9P("name/namedself", mnt)
-	assert.Nil(ts.T, err, "MkMountSymlink")
+	mnt := sp.NewMountService(ts.NamedAddr())
+	err = ts.NewMountSymlink9P("name/namedself", mnt)
+	assert.Nil(ts.T, err, "NewMountSymlink")
 
 	out, err := run("ls /mnt/9p/namedself")
 	assert.Nil(t, err)

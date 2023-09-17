@@ -118,9 +118,9 @@ func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
 			srvAddrs = append(srvAddrs, addrs...)
 		}
 	}
-	mnt := sp.MkMountService(srvAddrs)
+	mnt := sp.NewMountService(srvAddrs)
 	db.DPrintf(db.KVGRP, "Advertise %v at %v", mnt, GrpPath(g.jobdir, g.grp))
-	if err := g.MkMountSymlink(GrpPath(g.jobdir, g.grp), mnt, g.lc.Lease()); err != nil {
+	if err := g.NewMountSymlink(GrpPath(g.jobdir, g.grp), mnt, g.lc.Lease()); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
 }
@@ -129,7 +129,7 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 	g := &Group{myid: myid, grp: grp, isBusy: true}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("MkSigmaClnt %v\n", err)
+		db.DFatalf("NewSigmaClnt %v\n", err)
 	}
 	g.SigmaClnt = sc
 	g.jobdir = JobDir(job)

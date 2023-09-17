@@ -103,9 +103,9 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
 	pcfg := proc.NewAddedProcEnv(r.ProcEnv(), int(rand.Uint64()))
-	sc, err := sigmaclnt.MkSigmaClntFsLib(pcfg)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pcfg)
 	if err != nil {
-		db.DPrintf(db.MR, "MkSigmaClntFsLib err %v", err)
+		db.DPrintf(db.MR, "NewSigmaClntFsLib err %v", err)
 		return 0, 0, false
 	}
 	defer sc.DetachAll()

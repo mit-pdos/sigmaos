@@ -17,7 +17,7 @@ type Pobj struct {
 	ctx  fs.CtxI
 }
 
-func MkPobj(p path.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
+func NewPobj(p path.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
 	return &Pobj{p, o, ctx}
 }
 

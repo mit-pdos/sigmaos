@@ -48,7 +48,7 @@ func newDir(bucket string, key path.Path, perm sp.Tperm) *Dir {
 	o := newObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
-	dir.dents = sorteddir.MkSortedDir()
+	dir.dents = sorteddir.NewSortedDir()
 	return dir
 }
 
@@ -76,7 +76,7 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *serr.Err {
 	for p.HasMorePages() {
 		page, err := p.NextPage(context.TODO())
 		if err != nil {
-			return serr.MkErr(serr.TErrInval, err)
+			return serr.NewErr(serr.TErrInval, err)
 		}
 		for _, obj := range page.Contents {
 			db.DPrintf(db.S3, "key %v\n", *obj.Key)
@@ -161,7 +161,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	if d1.dents.Len() == 0 {
 		// not a directory either
 		db.DPrintf(db.S3, "%v: Lookup %v not found\n", ctx, path)
-		return nil, nil, path, serr.MkErr(serr.TErrNotfound, path)
+		return nil, nil, path, serr.NewErr(serr.TErrNotfound, path)
 	}
 	db.DPrintf(db.S3, "%v: Lookup return %v %v\n", ctx, path, d1)
 	return append(newObjs(d1.Obj), d1), d1, nil, nil
@@ -216,7 +216,7 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *ser
 	}
 	_, err := fss3.client.PutObject(context.TODO(), input)
 	if err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	o := newFsObj(d.bucket, perm, d.key.Copy().Append(name))
 	return o, nil
@@ -227,7 +227,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	o := newObj(d.bucket, d.key.Copy().Append(name), perm)
 	_, err := o.Stat(ctx)
 	if err == nil {
-		return nil, serr.MkErr(serr.TErrExists, name)
+		return nil, serr.NewErr(serr.TErrExists, name)
 	}
 	if perm.IsDir() {
 		obj, err := d.CreateDir(ctx, name, perm)
@@ -244,7 +244,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfence) *serr.Err {
-	return serr.MkErr(serr.TErrNotSupported, "Renameat")
+	return serr.NewErr(serr.TErrNotSupported, "Renameat")
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
@@ -256,7 +256,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 	e, ok := d.dents.Lookup(name)
 	if !ok {
 		db.DPrintf(db.S3, "Delete %v err %v\n", key, name)
-		return serr.MkErr(serr.TErrNotfound, name)
+		return serr.NewErr(serr.TErrNotfound, name)
 	}
 	perm := e.(sp.Tperm)
 	if perm.IsDir() {
@@ -265,7 +265,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 			return err
 		}
 		if d1.dents.Len() > 1 {
-			return serr.MkErr(serr.TErrNotEmpty, name)
+			return serr.NewErr(serr.TErrNotEmpty, name)
 		}
 		key = key.Append(DOT)
 	}
@@ -276,14 +276,14 @@ func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 	}
 	if _, err := fss3.client.DeleteObject(context.TODO(), input); err != nil {
 		db.DPrintf(db.S3, "DeleteObject %v err %v\n", k, err)
-		return serr.MkErrError(err)
+		return serr.NewErrError(err)
 	}
 	d.dents.Delete(name)
 	return nil
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
-	return serr.MkErr(serr.TErrNotSupported, "Rename")
+	return serr.NewErr(serr.TErrNotSupported, "Rename")
 }
 
 // ===== The following functions are needed to make an s3 dir of type fs.Inode

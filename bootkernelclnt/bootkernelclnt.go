@@ -51,19 +51,19 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func MkKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays bool) (*Kernel, error) {
+func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays bool) (*Kernel, error) {
 	kernelId := GenKernelId()
 	ip, err := Start(kernelId, pcfg, conf, overlays)
 	if err != nil {
 		return nil, err
 	}
 	db.DPrintf(db.ALWAYS, "Got IP %v", ip)
-	return MkKernelClnt(kernelId, pcfg)
+	return NewKernelClnt(kernelId, pcfg)
 }
 
-func MkKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
+func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 	db.DPrintf(db.SYSTEM, "NewKernelClnt %s\n", kernelId)
-	sc, err := sigmaclnt.MkSigmaClntRootInit(pcfg)
+	sc, err := sigmaclnt.NewSigmaClntRootInit(pcfg)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make sigma clnt root init")
 		return nil, err
@@ -82,7 +82,7 @@ func MkKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 	db.DPrintf(db.SYSTEM, "NewKernelClnt %s %s\n", pn, kernelId)
 	kclnt, err := kernelclnt.NewKernelClnt(sc.FsLib, pn)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error MkKernelClnt")
+		db.DPrintf(db.ALWAYS, "Error NewKernelClnt")
 		return nil, err
 	}
 
@@ -90,7 +90,7 @@ func MkKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 }
 
 func (k *Kernel) NewSigmaClnt(pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
-	return sigmaclnt.MkSigmaClntRootInit(pcfg)
+	return sigmaclnt.NewSigmaClntRootInit(pcfg)
 }
 
 func (k *Kernel) Shutdown() error {

@@ -27,7 +27,7 @@ type ClerkMgr struct {
 	repl    bool
 }
 
-func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string, mcpu proc.Tmcpu, repl bool) (*ClerkMgr, error) {
+func NewClerkMgr(sc *sigmaclnt.SigmaClnt, job string, mcpu proc.Tmcpu, repl bool) (*ClerkMgr, error) {
 	cm := &ClerkMgr{SigmaClnt: sc, job: job, ckmcpu: mcpu, repl: repl}
 	clrk := NewClerkFsLib(cm.SigmaClnt.FsLib, cm.job, repl)
 	cm.KvClerk = clrk
@@ -49,7 +49,7 @@ func (cm *ClerkMgr) StartCmClerk() error {
 
 func (cm *ClerkMgr) InitKeys(nkeys int) error {
 	for i := uint64(0); i < uint64(nkeys); i++ {
-		if err := cm.Put(cache.MkKey(i), &proto.CacheString{Val: ""}); err != nil {
+		if err := cm.Put(cache.NewKey(i), &proto.CacheString{Val: ""}); err != nil {
 			return err
 		}
 	}
@@ -150,7 +150,7 @@ func (cm *ClerkMgr) stopClerk(pid sp.Tpid) (*proc.Status, error) {
 func (cm *ClerkMgr) GetKeyCountsPerGroup(nkeys int) map[string]int {
 	keys := make([]string, 0, nkeys)
 	for i := uint64(0); i < uint64(nkeys); i++ {
-		keys = append(keys, cache.MkKey(i))
+		keys = append(keys, cache.NewKey(i))
 	}
 	return cm.KvClerk.GetKeyCountsPerGroup(keys)
 }

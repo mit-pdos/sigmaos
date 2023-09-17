@@ -15,7 +15,7 @@ import (
 type SessionTable struct {
 	mu sync.RWMutex
 	//	deadlock.Mutex
-	newps     sps.MkProtServer
+	newps     sps.NewProtServer
 	sesssrv  sps.SessServer
 	sessions map[sessp.Tsession]*Session
 	last     *Session // for tests
@@ -23,7 +23,7 @@ type SessionTable struct {
 	detachf  sps.DetachClntF
 }
 
-func NewSessionTable(newps sps.MkProtServer, sesssrv sps.SessServer, attachf sps.AttachClntF, detachf sps.DetachClntF) *SessionTable {
+func NewSessionTable(newps sps.NewProtServer, sesssrv sps.SessServer, attachf sps.AttachClntF, detachf sps.DetachClntF) *SessionTable {
 	st := &SessionTable{sesssrv: sesssrv, newps: newps, attachf: attachf, detachf: detachf}
 	st.sessions = make(map[sessp.Tsession]*Session)
 	return st

@@ -49,7 +49,7 @@ func main() {
 	sempath = os.Args[5]
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("MkSigmaClnt err %v", err)
+		db.DFatalf("NewSigmaClnt err %v", err)
 	}
 	var rcli *redis.Client
 	var csc *cachedsvcclnt.CachedSvcClnt
@@ -61,9 +61,9 @@ func main() {
 		})
 	} else {
 		var err error
-		csc, err = cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1])
+		csc, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1])
 		if err != nil {
-			db.DFatalf("MkCachedSvcClnt err %v\n", err)
+			db.DFatalf("NewCachedSvcClnt err %v\n", err)
 		}
 	}
 
@@ -121,7 +121,7 @@ func run(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.
 
 func test(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.Client, ntest uint64, nkeys int, keyOffset uint64, nops *uint64, p *perf.Perf) error {
 	for i := uint64(0); i < uint64(nkeys) && atomic.LoadInt32(&done) == 0; i++ {
-		key := cacheclnt.MkKey(i + keyOffset)
+		key := cacheclnt.NewKey(i + keyOffset)
 		// If running against redis.
 		if rcli != nil {
 			if err := rcli.Set(ctx, key, sc.ProcEnv().GetPID().String(), 0).Err(); err != nil {

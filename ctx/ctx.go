@@ -15,12 +15,12 @@ type Ctx struct {
 	fencefs fs.Dir
 }
 
-func MkCtx(uname sp.Tuname, sessid sessp.Tsession, clntid sp.TclntId, sct *sesscond.SessCondTable, fencefs fs.Dir) *Ctx {
+func NewCtx(uname sp.Tuname, sessid sessp.Tsession, clntid sp.TclntId, sct *sesscond.SessCondTable, fencefs fs.Dir) *Ctx {
 	return &Ctx{uname: uname, sessid: sessid, clntid: clntid, sct: sct, fencefs: fencefs}
 }
 
-func MkCtxNull() *Ctx {
-	return MkCtx("", 0, sp.NoClntId, nil, nil)
+func NewCtxNull() *Ctx {
+	return NewCtx("", 0, sp.NoClntId, nil, nil)
 }
 
 func (ctx *Ctx) Uname() sp.Tuname {

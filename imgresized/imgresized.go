@@ -37,21 +37,21 @@ type ImgSrv struct {
 	leaderclnt *leaderclnt.LeaderClnt
 }
 
-func MkDirs(fsl *fslib.FsLib, job string) error {
+func NewDirs(fsl *fslib.FsLib, job string) error {
 	fsl.RmDir(IMG)
-	if err := fsl.MkDir(IMG, 0777); err != nil {
+	if err := fsl.NewDir(IMG, 0777); err != nil {
 		return err
 	}
-	if err := fsl.MkDir(path.Join(IMG, job), 0777); err != nil {
+	if err := fsl.NewDir(path.Join(IMG, job), 0777); err != nil {
 		return err
 	}
-	if err := fsl.MkDir(path.Join(IMG, job, "done"), 0777); err != nil {
+	if err := fsl.NewDir(path.Join(IMG, job, "done"), 0777); err != nil {
 		return err
 	}
-	if err := fsl.MkDir(path.Join(IMG, job, "todo"), 0777); err != nil {
+	if err := fsl.NewDir(path.Join(IMG, job, "todo"), 0777); err != nil {
 		return err
 	}
-	if err := fsl.MkDir(path.Join(IMG, job, "wip"), 0777); err != nil {
+	if err := fsl.NewDir(path.Join(IMG, job, "wip"), 0777); err != nil {
 		return err
 	}
 	return nil

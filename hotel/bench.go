@@ -48,7 +48,7 @@ func RandRecsReq(wc *WebClnt, r *rand.Rand) error {
 func RandLoginReq(wc *WebClnt, r *rand.Rand) (string, error) {
 	suffix := strconv.Itoa(r.Intn(500))
 	user := "Cornell_" + suffix
-	pw := MkPassword(suffix)
+	pw := NewPassword(suffix)
 	return wc.Login(user, pw)
 }
 
@@ -66,7 +66,7 @@ func RandReserveReq(wc *WebClnt, r *rand.Rand) (string, error) {
 	hotelid := strconv.Itoa(r.Intn(nhotel) + 1)
 	suffix := strconv.Itoa(r.Intn(500))
 	user := "Cornell_" + suffix
-	pw := MkPassword(suffix)
+	pw := NewPassword(suffix)
 	cust_name := user
 	num := 1
 	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0

@@ -62,7 +62,7 @@ func (s *Subsystem) Run(how procclnt.Thow, kernelId, localIP string) error {
 	} else {
 		realm := sp.Trealm(s.p.Args[0])
 		ptype := proc.ParseTtype(s.p.Args[1])
-		if err := s.MkProc(s.p, procclnt.HDOCKER, kernelId); err != nil {
+		if err := s.NewProc(s.p, procclnt.HDOCKER, kernelId); err != nil {
 			return err
 		}
 		// XXX don't hard code

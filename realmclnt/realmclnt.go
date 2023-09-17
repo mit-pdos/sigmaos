@@ -14,7 +14,7 @@ type RealmClnt struct {
 
 func NewRealmClnt(fsl *fslib.FsLib) (*RealmClnt, error) {
 	rc := &RealmClnt{FsLib: fsl}
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{rc.FsLib}, sp.REALMD)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{rc.FsLib}, sp.REALMD)
 	if err != nil {
 		return nil, err
 	}

@@ -49,8 +49,8 @@ func (cs *CachedSvc) addServer(i int) error {
 	return nil
 }
 
-func MkCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc, public bool) (*CachedSvc, error) {
-	sc.MkDir(pn, 0777)
+func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc, public bool) (*CachedSvc, error) {
+	sc.NewDir(pn, 0777)
 	if _, err := sc.Create(pn+SVRDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
 			return nil, err

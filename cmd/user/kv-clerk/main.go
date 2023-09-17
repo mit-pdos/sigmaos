@@ -49,7 +49,7 @@ func main() {
 	}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("MkSigmaClnt err %v", err)
+		db.DFatalf("NewSigmaClnt err %v", err)
 	}
 	var rcli *redis.Client
 	var clk *kv.KvClerk
@@ -164,7 +164,7 @@ func check(kc *kv.KvClerk, key cache.Tkey, ntest uint64, p *perf.Perf) error {
 // indicated by setget).
 func test(kc *kv.KvClerk, rcli *redis.Client, ntest uint64, keyOffset uint64, nops *uint64, p *perf.Perf, setget bool) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
-		key := cache.MkKey(i + keyOffset)
+		key := cache.NewKey(i + keyOffset)
 		v := proto.KVTestVal{Pid: kc.ProcEnv().GetPID().String(), Key: string(key), N: ntest}
 		if setget {
 			// If running against redis.

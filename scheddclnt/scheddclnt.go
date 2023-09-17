@@ -215,7 +215,7 @@ func (sdc *ScheddClnt) GetScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) 
 	var ok bool
 	if rpcc, ok = sdc.schedds[kernelId]; !ok {
 		var err error
-		rpcc, err = rpcclnt.MkRPCClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, kernelId))
+		rpcc, err = rpcclnt.NewRPCClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, kernelId))
 		if err != nil {
 			db.DPrintf(db.SCHEDDCLNT_ERR, "Error newRPCClnt[schedd:%v]: %v", kernelId, err)
 			return nil, err
@@ -288,7 +288,7 @@ func (sdc *ScheddClnt) NextSchedd(spread int) (string, error) {
 
 	if len(sdc.scheddKernelIds) == 0 {
 		debug.PrintStack()
-		return "", serr.MkErr(serr.TErrNotfound, "no schedds to spawn on")
+		return "", serr.NewErr(serr.TErrNotfound, "no schedds to spawn on")
 	}
 
 	sdip := sdc.scheddKernelIds[(sdc.burstOffset/spread)%len(sdc.scheddKernelIds)]

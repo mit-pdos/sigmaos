@@ -96,7 +96,7 @@ func (ts *Tstate) stop() {
 
 func TestGeoSingle(t *testing.T) {
 	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: test.Overlays}}, 0)
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
 	assert.Nil(t, err)
 	arg := proto.GeoRequest{
 		Lat: 37.7749,
@@ -113,7 +113,7 @@ func TestGeoSingle(t *testing.T) {
 
 func TestRateSingle(t *testing.T) {
 	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-rated", Public: test.Overlays}}, NCACHESRV)
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
 	assert.Nil(t, err)
 	arg := &proto.RateRequest{
 		HotelIds: []string{"5", "3", "1", "6", "2"}, // from TestGeo
@@ -133,7 +133,7 @@ func TestRateSingle(t *testing.T) {
 
 func TestRecSingle(t *testing.T) {
 	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-recd", Public: test.Overlays}}, 0)
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
 	assert.Nil(t, err)
 	arg := &proto.RecRequest{
 		Require: "dis",
@@ -151,11 +151,11 @@ func TestRecSingle(t *testing.T) {
 
 func TestUserSingle(t *testing.T) {
 	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-userd", Public: test.Overlays}}, 0)
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
 	assert.Nil(t, err)
 	arg := &proto.UserRequest{
 		Name:     "Cornell_0",
-		Password: hotel.MkPassword("0"),
+		Password: hotel.NewPassword("0"),
 	}
 	var res proto.UserResult
 	err = rpcc.RPC("Users.CheckUser", arg, &res)
@@ -167,7 +167,7 @@ func TestUserSingle(t *testing.T) {
 
 func TestProfile(t *testing.T) {
 	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-profd", Public: test.Overlays}}, NCACHESRV)
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
 	assert.Nil(t, err)
 	arg := &proto.ProfRequest{
 		HotelIds: []string{"1", "2"},
@@ -188,7 +188,7 @@ func TestProfile(t *testing.T) {
 
 func TestCheck(t *testing.T) {
 	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
@@ -210,7 +210,7 @@ func TestCheck(t *testing.T) {
 
 func TestReserve(t *testing.T) {
 	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
@@ -236,7 +236,7 @@ func TestReserve(t *testing.T) {
 func TestQueryDev(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
-	dbc, err := dbclnt.MkDbClnt(ts.FsLib, sp.DBD)
+	dbc, err := dbclnt.NewDbClnt(ts.FsLib, sp.DBD)
 	assert.Nil(t, err)
 	q := fmt.Sprintf("select * from reservation")
 	res := []hotel.Reservation{}
@@ -249,7 +249,7 @@ func TestQueryDev(t *testing.T) {
 
 func TestSingleSearch(t *testing.T) {
 	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: false}, hotel.Srv{Name: "hotel-rated", Public: false}, hotel.Srv{Name: "hotel-searchd", Public: test.Overlays}}, NCACHESRV)
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
 	assert.Nil(t, err)
 	arg := &proto.SearchRequest{
 		Lat:     37.7749,
@@ -269,11 +269,11 @@ func TestSingleSearch(t *testing.T) {
 }
 
 func TestWww(t *testing.T) {
-	ts := newTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
+	ts := newTstate(t, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
 
 	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
 
-	s, err := wc.Login("Cornell_0", hotel.MkPassword("0"))
+	s, err := wc.Login("Cornell_0", hotel.NewPassword("0"))
 	assert.Nil(t, err)
 	assert.Equal(t, "Login successfully!", s)
 
@@ -283,7 +283,7 @@ func TestWww(t *testing.T) {
 	err = wc.Recs("dis", 38.0235, -122.095)
 	assert.Nil(t, err)
 
-	s, err = wc.Reserve("2015-04-09", "2015-04-10", 38.0235, -122.095, "1", "Cornell_0", "Cornell_0", hotel.MkPassword("0"), 1)
+	s, err = wc.Reserve("2015-04-09", "2015-04-10", 38.0235, -122.095, "1", "Cornell_0", "Cornell_0", hotel.NewPassword("0"), 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "Reserve successfully!", s)
 
@@ -324,7 +324,7 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 }
 
 func TestBenchDeathStarSingle(t *testing.T) {
-	ts := newTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
+	ts := newTstate(t, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
 	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
@@ -350,7 +350,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 }
 
 func TestBenchSearchSigma(t *testing.T) {
-	ts := newTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
+	ts := newTstate(t, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
 	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
@@ -368,7 +368,7 @@ func TestBenchSearchSigma(t *testing.T) {
 func setupK8sState(ts *Tstate) {
 	// Advertise server address
 	p := hotel.JobHTTPAddrsPath(ts.job)
-	mnt := sp.MkMountService(sp.MkTaddrs([]string{K8S_ADDR}))
+	mnt := sp.NewMountService(sp.NewTaddrs([]string{K8S_ADDR}))
 	if err := ts.MountService(p, mnt, sp.NoLeaseId); err != nil {
 		db.DFatalf("MountService %v", err)
 	}
@@ -395,7 +395,7 @@ func TestBenchSearchK8s(t *testing.T) {
 }
 
 func TestBenchGeoSigma(t *testing.T) {
-	ts := newTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
+	ts := newTstate(t, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
 	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
@@ -434,7 +434,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	const (
 		N = 1000
 	)
-	ts := newTstate(t, hotel.MkHotelSvc(test.Overlays), NCACHESRV)
+	ts := newTstate(t, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
 	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
 	ch := make(chan bool)
 	start := time.Now()

@@ -16,11 +16,11 @@ type IvSlice struct {
 	entries []*interval.Tinterval
 }
 
-func MkIInterval() interval.IIntervals {
-	return MkIvSlice()
+func NewIInterval() interval.IIntervals {
+	return NewIvSlice()
 }
 
-func MkIvSlice() *IvSlice {
+func NewIvSlice() *IvSlice {
 	return &IvSlice{make([]*interval.Tinterval, 0)}
 }
 
@@ -33,7 +33,7 @@ func (ivs *IvSlice) Length() int {
 }
 
 func (ivs *IvSlice) Contains(e uint64) bool {
-	return ivs.Find(interval.MkInterval(e, e+1)) != nil
+	return ivs.Find(interval.NewInterval(e, e+1)) != nil
 }
 
 func (ivs *IvSlice) Present(t *interval.Tinterval) bool {
@@ -88,7 +88,7 @@ func (ivs *IvSlice) Delete(ivd *interval.Tinterval) {
 			iv.Start = ivd.End
 			i++
 		} else { // split iv
-			ivs.insertidx(i, interval.MkInterval(iv.Start, ivd.Start))
+			ivs.insertidx(i, interval.NewInterval(iv.Start, ivd.Start))
 			ivs.entries[i+1].Start = ivd.End
 			i += 2
 		}
@@ -161,6 +161,6 @@ func (dst *IvSlice) Deepcopy(s interval.IIntervals) {
 	src := s.(*IvSlice)
 	dst.entries = make([]*interval.Tinterval, len(src.entries))
 	for i, iv := range src.entries {
-		dst.entries[i] = interval.MkInterval(iv.Start, iv.End)
+		dst.entries[i] = interval.NewInterval(iv.Start, iv.End)
 	}
 }

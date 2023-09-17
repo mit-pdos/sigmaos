@@ -45,6 +45,6 @@ func RunFsUx(rootux string) {
 
 func newUx(rootux string) *FsUx {
 	fsux = &FsUx{}
-	fsux.ot = MkObjTable()
+	fsux.ot = NewObjTable()
 	return fsux
 }

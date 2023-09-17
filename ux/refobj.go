@@ -17,9 +17,9 @@ type ObjTable struct {
 	*refmap.RefTable[sp.Tpath, fs.FsObj]
 }
 
-func MkObjTable() *ObjTable {
+func NewObjTable() *ObjTable {
 	ot := &ObjTable{}
-	ot.RefTable = refmap.MkRefTable[sp.Tpath, fs.FsObj](debug.UX)
+	ot.RefTable = refmap.NewRefTable[sp.Tpath, fs.FsObj](debug.UX)
 	return ot
 }
 

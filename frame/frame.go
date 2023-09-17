@@ -11,17 +11,17 @@ import (
 func ReadFrame(rd io.Reader) ([]byte, *serr.Err) {
 	var len uint32
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
-		return nil, serr.MkErr(serr.TErrUnreachable, err)
+		return nil, serr.NewErr(serr.TErrUnreachable, err)
 	}
 	db.DPrintf(db.FRAME, "ReadFrame %d\n", len)
 	len = len - 4
 	if len <= 0 {
-		return nil, serr.MkErr(serr.TErrUnreachable, "readMsg too short")
+		return nil, serr.NewErr(serr.TErrUnreachable, "readMsg too short")
 	}
 	frame := make([]byte, len)
 	n, e := io.ReadFull(rd, frame)
 	if n != int(len) {
-		return nil, serr.MkErr(serr.TErrUnreachable, e)
+		return nil, serr.NewErr(serr.TErrUnreachable, e)
 	}
 	return frame, nil
 }
@@ -29,14 +29,14 @@ func ReadFrame(rd io.Reader) ([]byte, *serr.Err) {
 func ReadBuf(rd io.Reader) ([]byte, *serr.Err) {
 	var len uint32
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
-		return nil, serr.MkErr(serr.TErrUnreachable, err)
+		return nil, serr.NewErr(serr.TErrUnreachable, err)
 	}
 	var buf []byte
 	if len > 0 {
 		buf = make([]byte, len)
 		n, e := io.ReadFull(rd, buf)
 		if n != int(len) {
-			return nil, serr.MkErr(serr.TErrUnreachable, e)
+			return nil, serr.NewErr(serr.TErrUnreachable, e)
 		}
 	}
 	return buf, nil
@@ -45,16 +45,16 @@ func ReadBuf(rd io.Reader) ([]byte, *serr.Err) {
 func WriteFrame(wr io.Writer, frame []byte) *serr.Err {
 	l := uint32(len(frame) + 4) // +4 because that is how 9P wants it
 	if err := binary.Write(wr, binary.LittleEndian, l); err != nil {
-		return serr.MkErr(serr.TErrUnreachable, err.Error())
+		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	return WriteRawBuffer(wr, frame)
 }
 
 func WriteRawBuffer(wr io.Writer, buf []byte) *serr.Err {
 	if n, err := wr.Write(buf); err != nil {
-		return serr.MkErr(serr.TErrUnreachable, err.Error())
+		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	} else if n < len(buf) {
-		return serr.MkErr(serr.TErrUnreachable, "writeRawBuffer too short")
+		return serr.NewErr(serr.TErrUnreachable, "writeRawBuffer too short")
 	}
 	return nil
 }

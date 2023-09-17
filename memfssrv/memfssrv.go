@@ -39,7 +39,7 @@ type MemFs struct {
 func NewMemFsSrv(pn string, srv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) *MemFs {
 	mfs := &MemFs{
 		SessSrv: srv,
-		ctx:     ctx.MkCtx(sc.ProcEnv().GetUname(), 0, sp.NoClntId, nil, fencefs),
+		ctx:     ctx.NewCtx(sc.ProcEnv().GetUname(), 0, sp.NoClntId, nil, fencefs),
 		plt:     srv.GetPathLockTable(),
 		sc:      sc,
 		pn:      pn,
@@ -52,10 +52,10 @@ func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 }
 
 func (mfs *MemFs) MyAddrsPublic(net string) sp.Taddrs {
-	return port.MkPublicAddrs(mfs.pi.Hip, mfs.pi.Pb, net, mfs.MyAddr())
+	return port.NewPublicAddrs(mfs.pi.Hip, mfs.pi.Pb, net, mfs.MyAddr())
 }
 
-// Note: MkDev() sets parent
+// Note: NewDev() sets parent
 func (mfs *MemFs) NewDevInode() *inode.Inode {
 	return inode.NewInode(mfs.ctx, sp.DMDEVICE, nil)
 }
@@ -83,7 +83,7 @@ func (mfs *MemFs) lookupParent(path path.Path) (fs.Dir, *lockmap.PathLock, *serr
 	return d, lk, nil
 }
 
-func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *serr.Err {
+func (mfs *MemFs) NewDev(pn string, dev fs.Inode) *serr.Err {
 	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
@@ -91,17 +91,17 @@ func (mfs *MemFs) MkDev(pn string, dev fs.Inode) *serr.Err {
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
 	dev.SetParent(d)
-	return dir.MkNod(mfs.ctx, d, path.Base(), dev)
+	return dir.NewNod(mfs.ctx, d, path.Base(), dev)
 }
 
-func (mfs *MemFs) MkNod(pn string, i fs.Inode) *serr.Err {
+func (mfs *MemFs) NewNod(pn string, i fs.Inode) *serr.Err {
 	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir())
 	if err != nil {
 		return err
 	}
 	defer mfs.plt.Release(mfs.ctx, lk)
-	return dir.MkNod(mfs.ctx, d, path.Base(), i)
+	return dir.NewNod(mfs.ctx, d, path.Base(), i)
 }
 
 func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {

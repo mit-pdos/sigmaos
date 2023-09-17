@@ -47,9 +47,9 @@ func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 
 // Create ws queue if it doesn't exist
 func (mgr *ProcMgr) newws() {
-	mgr.rootsc.MkDir(sp.WS, 0777)
+	mgr.rootsc.NewDir(sp.WS, 0777)
 	for _, n := range []string{sp.WS_RUNQ_LC, sp.WS_RUNQ_BE} {
-		mgr.rootsc.MkDir(n, 0777)
+		mgr.rootsc.NewDir(n, 0777)
 	}
 }
 
@@ -116,14 +116,14 @@ func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 		// No need to make a new client for the root realm.
 		if realm == sp.ROOTREALM {
 			var err error
-			if clnt, err = sigmaclnt.MkSigmaLeaseClnt(mgr.rootsc.FsLib); err != nil {
-				db.DFatalf("Err MkSigmaLeaseClnt: %v", err)
+			if clnt, err = sigmaclnt.NewSigmaLeaseClnt(mgr.rootsc.FsLib); err != nil {
+				db.DFatalf("Err NewSigmaLeaseClnt: %v", err)
 			}
 		} else {
 			var err error
 			pcfg := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
 			if clnt, err = sigmaclnt.NewSigmaClnt(pcfg); err != nil {
-				db.DFatalf("Err MkSigmaClntRealm: %v", err)
+				db.DFatalf("Err NewSigmaClntRealm: %v", err)
 			}
 			// Mount KPIDS.
 			procclnt.MountPids(clnt.FsLib)

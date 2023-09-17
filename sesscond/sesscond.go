@@ -77,7 +77,7 @@ func (sc *SessCond) Wait(sessid sessp.Tsession) *serr.Err {
 
 	if closed {
 		db.DPrintf(db.SESSCOND, "wait sess closed %v\n", sessid)
-		return serr.MkErr(serr.TErrClosed, fmt.Sprintf("session %v", sessid))
+		return serr.NewErr(serr.TErrClosed, fmt.Sprintf("session %v", sessid))
 	}
 	return nil
 }

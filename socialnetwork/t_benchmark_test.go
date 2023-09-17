@@ -98,7 +98,7 @@ func setupK8sState(t *testing.T) *TstateSN {
 	// Advertise server address
 	tssn := newTstateSN(t, nil, 0)
 	p := sn.JobHTTPAddrsPath(tssn.jobname)
-	mnt := sp.MkMountService(sp.MkTaddrs([]string{K8S_ADDR}))
+	mnt := sp.NewMountService(sp.NewTaddrs([]string{K8S_ADDR}))
 	assert.Nil(t, tssn.MountService(p, mnt, sp.NoLeaseId))
 	// forward mongo port and init users and graphs.
 	cmd := exec.Command("kubectl", "port-forward", "svc/mongodb-sn", K8S_MONGO_FWD_PORT+":27017")

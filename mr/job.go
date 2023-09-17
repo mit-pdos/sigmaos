@@ -80,9 +80,9 @@ func ReadJobConfig(app string) *Job {
 }
 
 func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
-	fsl.MkDir(MRDIRTOP, 0777)
+	fsl.NewDir(MRDIRTOP, 0777)
 	for _, n := range []string{JobDir(jobname), MapTask(jobname), ReduceTask(jobname), ReduceIn(jobname), MapTask(jobname) + TIP, ReduceTask(jobname) + TIP, MapTask(jobname) + DONE, ReduceTask(jobname) + DONE, MapTask(jobname) + NEXT, ReduceTask(jobname) + NEXT} {
-		if err := fsl.MkDir(n, 0777); err != nil {
+		if err := fsl.NewDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
 	}
@@ -94,7 +94,7 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 			db.DFatalf("Putfile %v err %v\n", n, err)
 		}
 		n = ReduceIn(jobname) + "/" + strconv.Itoa(r)
-		if err := fsl.MkDir(n, 0777); err != nil {
+		if err := fsl.NewDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
 	}
@@ -110,7 +110,7 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 	splitsz := sp.Tlength(10 * sp.MBYTE)
 	// splitsz := maxbinsz >> 3 //sp.Tlength(10 * 1024 * 1024)
 
-	bins, err := MkBins(fsl, job.Input, sp.Tlength(job.Binsz), splitsz)
+	bins, err := NewBins(fsl, job.Input, sp.Tlength(job.Binsz), splitsz)
 	if err != nil || len(bins) == 0 {
 		return len(bins), err
 	}

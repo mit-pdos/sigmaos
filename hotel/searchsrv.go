@@ -31,12 +31,12 @@ func RunSearchSrv(n string, public bool) error {
 		return err
 	}
 	fsls := NewFsLibs(HOTELSEARCH)
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, HOTELRATE)
+	rpcc, err := rpcclnt.NewRPCClnt(fsls, HOTELRATE)
 	if err != nil {
 		return err
 	}
 	s.ratec = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELGEO)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELGEO)
 	if err != nil {
 		return err
 	}

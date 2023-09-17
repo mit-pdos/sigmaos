@@ -94,7 +94,7 @@ func newResult(data interface{}) *Result {
 
 // Each bin has a slice of splits.  Assign splits of files to a bin
 // until the bin is full
-func MkBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin, error) {
+func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := uint64(0)
 	bin := Bin{}

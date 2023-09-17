@@ -29,7 +29,7 @@ type FsEtcd struct {
 	realm    sp.Trealm
 }
 
-func MkFsEtcd(realm sp.Trealm, etcdIP string) (*FsEtcd, error) {
+func NewFsEtcd(realm sp.Trealm, etcdIP string) (*FsEtcd, error) {
 	endpoints := []string{}
 	for i := range endpointsBase {
 		endpoints = append(endpoints, etcdIP+endpointsBase[i])
@@ -62,11 +62,11 @@ func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
 	db.DPrintf(db.FSETCD, "SetRootNamed %v", mnt)
 	d, err := mnt.Marshal()
 	if err != nil {
-		return serr.MkErrError(err)
+		return serr.NewErrError(err)
 	}
-	nf := MkEtcdFile(sp.DMSYMLINK, sp.NoClntId, sp.NoLeaseId, d)
+	nf := NewEtcdFile(sp.DMSYMLINK, sp.NoClntId, sp.NoLeaseId, d)
 	if b, err := proto.Marshal(nf); err != nil {
-		return serr.MkErrError(err)
+		return serr.NewErrError(err)
 	} else {
 		cmp := []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
@@ -77,7 +77,7 @@ func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
 		resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 		if err != nil {
 			db.DPrintf(db.FSETCD, "SetNamed txn %v err %v\n", nf, err)
-			return serr.MkErrError(err)
+			return serr.NewErrError(err)
 		}
 		db.DPrintf(db.FSETCD, "SetNamed txn %v %v\n", nf, resp)
 		return nil
@@ -85,9 +85,9 @@ func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
 }
 
 func GetRootNamed(realm sp.Trealm, etcdIP string) (sp.Tmount, *serr.Err) {
-	fs, err := MkFsEtcd(realm, etcdIP)
+	fs, err := NewFsEtcd(realm, etcdIP)
 	if err != nil {
-		return sp.Tmount{}, serr.MkErrError(err)
+		return sp.Tmount{}, serr.NewErrError(err)
 	}
 	defer fs.Close()
 
@@ -96,9 +96,9 @@ func GetRootNamed(realm sp.Trealm, etcdIP string) (sp.Tmount, *serr.Err) {
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v realm %v etcdIP %v", BOOT, nf, sr, realm, etcdIP)
 		return sp.Tmount{}, sr
 	}
-	mnt, sr := sp.MkMount(nf.Data)
+	mnt, sr := sp.NewMount(nf.Data)
 	if sr != nil {
-		db.DPrintf(db.FSETCD, "MkMount %v err %v\n", BOOT, err)
+		db.DPrintf(db.FSETCD, "NewMount %v err %v\n", BOOT, err)
 		return sp.Tmount{}, sr
 	}
 	db.DPrintf(db.FSETCD, "GetNamed mnt %v\n", mnt)

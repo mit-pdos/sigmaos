@@ -36,12 +36,12 @@ func marshalDirInfo(dir *DirInfo) ([]byte, *serr.Err) {
 func marshalDir(dir *EtcdDir, dperm sp.Tperm) ([]byte, *serr.Err) {
 	d, err := proto.Marshal(dir)
 	if err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	nfd := &EtcdFile{Perm: uint32(dperm), Data: d, ClientId: uint64(sp.NoClntId)}
 	b, err := proto.Marshal(nfd)
 	if err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	return b, nil
 }
@@ -49,7 +49,7 @@ func marshalDir(dir *EtcdDir, dperm sp.Tperm) ([]byte, *serr.Err) {
 func UnmarshalDir(b []byte) (*EtcdDir, *serr.Err) {
 	dir := &EtcdDir{}
 	if err := proto.Unmarshal(b, dir); err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	return dir, nil
 }
@@ -63,7 +63,7 @@ func (dir *EtcdDir) lookup(name string) (*EtcdDirEnt, bool) {
 	return nil, false
 }
 
-func MkEtcdFile(perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId, data []byte) *EtcdFile {
+func NewEtcdFile(perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId, data []byte) *EtcdFile {
 	return &EtcdFile{
 		Perm:     uint32(perm),
 		Data:     data,
@@ -73,7 +73,7 @@ func MkEtcdFile(perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId, data []byte) *Et
 }
 
 // Make empty file or directory
-func MkEtcdFileDir(perm sp.Tperm, path sp.Tpath, cid sp.TclntId, lid sp.TleaseId) (*EtcdFile, error) {
+func NewEtcdFileDir(perm sp.Tperm, path sp.Tpath, cid sp.TclntId, lid sp.TleaseId) (*EtcdFile, error) {
 	var fdata []byte
 	perm = perm | 0777
 	if perm.IsDir() {
@@ -89,7 +89,7 @@ func MkEtcdFileDir(perm sp.Tperm, path sp.Tpath, cid sp.TclntId, lid sp.TleaseId
 		}
 		fdata = d
 	}
-	return MkEtcdFile(perm, cid, lid, fdata), nil
+	return NewEtcdFile(perm, cid, lid, fdata), nil
 }
 
 func (nf *EtcdFile) LeaseOpts() []clientv3.OpOption {

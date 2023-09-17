@@ -52,7 +52,7 @@ type DBUtil struct {
 }
 
 func NewDBUtil(sc *sigmaclnt.SigmaClnt) (*DBUtil, error) {
-	mongoc, err := mongoclnt.MkMongoClnt(sc.FsLib)
+	mongoc, err := mongoclnt.NewMongoClnt(sc.FsLib)
 	if err != nil {
 		return nil, err
 	}

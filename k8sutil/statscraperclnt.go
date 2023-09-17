@@ -31,7 +31,7 @@ func (clnt *StatScraperClnt) GetStatScrapers() []string {
 	scrapers := sp.Names(st)
 	for _, s := range scrapers {
 		if _, ok := clnt.rpccs[s]; !ok {
-			rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.K8S_SCRAPER, s))
+			rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.K8S_SCRAPER, s))
 			if err != nil {
 				db.DFatalf("Error NewRPCClnt: %v", err)
 			}

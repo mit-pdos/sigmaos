@@ -46,7 +46,7 @@ func RunUserSrv(n string, public bool) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(ssrv.MemFs.SigmaClnt().FsLib, sp.DBD)
+	dbc, err := dbclnt.NewDbClnt(ssrv.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func RunUserSrv(n string, public bool) error {
 	return ssrv.RunServer()
 }
 
-func MkPassword(u string) string {
+func NewPassword(u string) string {
 	p := ""
 	for j := 0; j < 10; j++ {
 		p += u
@@ -77,7 +77,7 @@ func (s *Users) initDB() error {
 	for i := 0; i <= NUSER; i++ {
 		suffix := strconv.Itoa(i)
 		u := "Cornell_" + suffix
-		p := MkPassword(suffix)
+		p := NewPassword(suffix)
 		sum := sha256.Sum256([]byte(p))
 		q = fmt.Sprintf("INSERT INTO user (username, password) VALUES ('%v', '%x');", u, sum)
 		err = s.dbc.Exec(q)

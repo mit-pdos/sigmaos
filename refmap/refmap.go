@@ -34,7 +34,7 @@ type RefTable[K comparable, T any] struct {
 	refs  map[K]*entry[T]
 }
 
-func MkRefTable[K comparable, T any](debug db.Tselector) *RefTable[K, T] {
+func NewRefTable[K comparable, T any](debug db.Tselector) *RefTable[K, T] {
 	rf := &RefTable[K, T]{}
 	rf.debug = debug
 	rf.refs = make(map[K]*entry[T])

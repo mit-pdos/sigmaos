@@ -48,7 +48,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *serr.Err) {
 
 	if mode == sp.OREAD {
 		if pipe.rclosed || pipe.nlink <= 0 {
-			return nil, serr.MkErr(serr.TErrClosed, "pipe reading")
+			return nil, serr.NewErr(serr.TErrClosed, "pipe reading")
 		}
 		pipe.nreader += 1
 		db.DPrintf(db.PIPE, "%v/%v: open pipe %v(%p) for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe, pipe.nreader)
@@ -64,13 +64,13 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *serr.Err) {
 				return nil, err
 			}
 			if pipe.nlink == 0 {
-				return nil, serr.MkErr(serr.TErrNotfound, "pipe")
+				return nil, serr.NewErr(serr.TErrNotfound, "pipe")
 			}
 			db.DPrintf(db.PIPE, "%v/%v Open pipe %v(%p) for reader\n", ctx.Uname(), ctx.SessionId(), pipe, pipe)
 		}
 	} else if mode == sp.OWRITE {
 		if pipe.wclosed || pipe.nlink <= 0 {
-			return nil, serr.MkErr(serr.TErrClosed, "pipe writing")
+			return nil, serr.NewErr(serr.TErrClosed, "pipe writing")
 		}
 		pipe.nwriter += 1
 		db.DPrintf(db.PIPE, "%v/%v: open pipe %v(%p) for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe, pipe.nwriter)
@@ -87,12 +87,12 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *serr.Err) {
 				return nil, err
 			}
 			if pipe.nlink == 0 {
-				return nil, serr.MkErr(serr.TErrNotfound, "pipe")
+				return nil, serr.NewErr(serr.TErrNotfound, "pipe")
 			}
 			db.DPrintf(db.PIPE, "%v/%v Open pipe %v(%p) for writer\n", ctx.Uname(), ctx.SessionId(), pipe, pipe)
 		}
 	} else {
-		return nil, serr.MkErr(serr.TErrInval, fmt.Sprintf("mode %v", mode))
+		return nil, serr.NewErr(serr.TErrInval, fmt.Sprintf("mode %v", mode))
 	}
 	return nil, nil
 }
@@ -108,7 +108,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 			pipe.rclosed = true
 		}
 		if pipe.nreader < 0 {
-			serr.MkErr(serr.TErrClosed, "pipe reading")
+			serr.NewErr(serr.TErrClosed, "pipe reading")
 		}
 		pipe.condw.Signal()
 	} else if mode == sp.OWRITE {
@@ -117,11 +117,11 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 			pipe.wclosed = true
 		}
 		if pipe.nwriter < 0 {
-			serr.MkErr(serr.TErrClosed, "pipe writing")
+			serr.NewErr(serr.TErrClosed, "pipe writing")
 		}
 		pipe.condr.Signal()
 	} else {
-		return serr.MkErr(serr.TErrInval, fmt.Sprintf("mode %v", mode))
+		return serr.NewErr(serr.TErrInval, fmt.Sprintf("mode %v", mode))
 	}
 	return nil
 }
@@ -136,7 +136,7 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, f sp.Tfence) (sp.Ts
 	for len(d) > 0 {
 		for len(pipe.buf) >= PIPESZ {
 			if pipe.nreader <= 0 {
-				return 0, serr.MkErr(serr.TErrClosed, "pipe")
+				return 0, serr.NewErr(serr.TErrClosed, "pipe")
 			}
 			db.DPrintf(db.PIPE, "%v/%v: Write wait for reader %v(%p)\n", ctx.Uname(), ctx.SessionId(), pipe, pipe)
 			err := pipe.condw.Wait(ctx.SessionId())
@@ -163,7 +163,7 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sp.Tsize, f sp.Tfence) ([]by
 
 	for len(pipe.buf) == 0 {
 		if pipe.nwriter <= 0 {
-			return nil, serr.MkErr(serr.TErrClosed, "pipe")
+			return nil, serr.NewErr(serr.TErrClosed, "pipe")
 		}
 		db.DPrintf(db.PIPE, "%v/%v: Read wait for writer %v(%p)\n", ctx.Uname(), ctx.SessionId(), pipe, pipe)
 		err := pipe.condr.Wait(ctx.SessionId())

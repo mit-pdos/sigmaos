@@ -10,12 +10,12 @@ import (
 )
 
 func TestEOF(t *testing.T) {
-	err := MkErrError(io.EOF)
+	err := NewErrError(io.EOF)
 	assert.True(t, errors.Is(err, io.EOF))
 }
 
 func f() error {
-	return MkErr(TErrNotfound, "f")
+	return NewErr(TErrNotfound, "f")
 }
 
 func TestErr(t *testing.T) {

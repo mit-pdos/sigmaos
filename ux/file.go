@@ -29,7 +29,7 @@ func (f *File) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.UX, "%v: FileOpen %v m 0x%x path %v flags 0x%x\n", ctx, f, m, f.Path(), uxFlags(m))
 	fd, err := syscall.Open(f.PathName(), uxFlags(m), 0)
 	if err != nil {
-		return nil, serr.MkErr(serr.TErrError, err)
+		return nil, serr.NewErr(serr.TErrError, err)
 	}
 	f.fd = fd
 	return nil, nil
@@ -39,7 +39,7 @@ func (f *File) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 	db.DPrintf(db.UX, "%v: FileClose %v\n", ctx, f)
 	err := syscall.Close(f.fd)
 	if err != nil {
-		return serr.MkErr(serr.TErrError, err)
+		return serr.NewErr(serr.TErrError, err)
 	}
 	return nil
 }
@@ -50,7 +50,7 @@ func (f *File) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, fence sp.Tfence) 
 	n, err := syscall.Pread(f.fd, b, int64(off))
 	if err != nil {
 		db.DPrintf(db.UX, "Pread %v err %v\n", f, err)
-		return nil, serr.MkErr(serr.TErrError, err)
+		return nil, serr.NewErr(serr.TErrError, err)
 	}
 	return b[:n], nil
 }
@@ -65,7 +65,7 @@ func (f *File) Write(ctx fs.CtxI, off sp.Toffset, b []byte, fence sp.Tfence) (sp
 	n, err := syscall.Pwrite(f.fd, b, int64(off))
 	if err != nil {
 		db.DPrintf(db.UX, "Pwrite %v err %v\n", f, err)
-		return 0, serr.MkErr(serr.TErrError, err)
+		return 0, serr.NewErr(serr.TErrError, err)
 	}
 	return sp.Tsize(n), nil
 }

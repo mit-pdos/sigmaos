@@ -14,7 +14,7 @@ type KernelClnt struct {
 }
 
 func NewKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, pn)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{fsl}, pn)
 	if err != nil {
 		return nil, err
 	}

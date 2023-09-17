@@ -26,7 +26,7 @@ import (
 	tproto "sigmaos/tracing/proto"
 )
 
-func MkKey(k uint64) string {
+func NewKey(k uint64) string {
 	return strconv.FormatUint(k, 16)
 }
 

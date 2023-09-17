@@ -116,7 +116,7 @@ func (sess *Session) SetConn(conn sps.Conn) *serr.Err {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
-		return serr.MkErr(serr.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
+		return serr.NewErr(serr.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
 	}
 	db.DPrintf(db.SESS_STATE_SRV, "%v SetConn new %v\n", sess.Sid, conn)
 	sess.conn = conn

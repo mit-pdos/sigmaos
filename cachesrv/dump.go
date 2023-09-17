@@ -42,13 +42,13 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfe
 
 	b, err := proto.Marshal(&cacheproto.ShardData{Vals: m})
 	if err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	return b, nil
 }
 
 func (cs *cacheSession) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
-	return 0, serr.MkErr(serr.TErrNotSupported, nil)
+	return 0, serr.NewErr(serr.TErrNotSupported, nil)
 }
 
 func (cs *cacheSession) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {

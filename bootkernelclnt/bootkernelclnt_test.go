@@ -73,7 +73,7 @@ func TestSymlink2(t *testing.T) {
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
-	err := ts.MkDir(targetDirPath, 0777)
+	err := ts.NewDir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
 	_, err = ts.PutFile(targetPath, 0777, sp.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
@@ -86,7 +86,7 @@ func TestSymlink2(t *testing.T) {
 	// Create a symlink
 	linkDir := "name/dir2"
 	linkPath := linkDir + "/symlink-test"
-	err = ts.MkDir(linkDir, 0777)
+	err = ts.NewDir(linkDir, 0777)
 	assert.Nil(t, err, "Creating link dir")
 	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
@@ -113,7 +113,7 @@ func TestSymlink3(t *testing.T) {
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
-	err = ts.MkDir(targetDirPath, 0777)
+	err = ts.NewDir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
 	_, err = ts.PutFile(targetPath, 0777, sp.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
@@ -126,7 +126,7 @@ func TestSymlink3(t *testing.T) {
 	// Create a symlink
 	linkDir := "name/ldir"
 	linkPath := linkDir + "/link"
-	err = ts.MkDir(linkDir, 0777)
+	err = ts.NewDir(linkDir, 0777)
 	assert.Nil(t, err, "Creating link dir")
 	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
@@ -163,8 +163,8 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name)
 
 	// check if b is indeed reasonable mounting symlink
-	_, error := sp.MkMount(b)
-	assert.Nil(t, error, "MkMount")
+	_, error := sp.NewMount(b)
+	assert.Nil(t, error, "NewMount")
 
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")

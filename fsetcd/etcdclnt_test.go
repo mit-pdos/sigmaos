@@ -18,7 +18,7 @@ import (
 
 func TestLease(t *testing.T) {
 	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, test.EtcdIP, "", "")
-	ec, err := fsetcd.MkFsEtcd(pcfg)
+	ec, err := fsetcd.NewFsEtcd(pcfg)
 	assert.Nil(t, err)
 	l := clientv3.NewLease(ec.Client)
 	respg, err := l.Grant(context.TODO(), 30)

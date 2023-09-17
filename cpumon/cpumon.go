@@ -25,7 +25,7 @@ type CpuMon struct {
 	customLoad perf.Tload
 }
 
-func MkCpuMon(st *stats.StatInfo, ufn UtilFn) *CpuMon {
+func NewCpuMon(st *stats.StatInfo, ufn UtilFn) *CpuMon {
 	cm := &CpuMon{}
 	cm.st = st
 	cm.hz = perf.Hz()

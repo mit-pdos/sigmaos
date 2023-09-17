@@ -28,7 +28,7 @@ func main() {
 		db.DFatalf("Error newSigmaClnt: %v", err)
 	}
 	// Make the memblock dir.
-	if err := sc.MkDir(sp.MEMBLOCK, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+	if err := sc.NewDir(sp.MEMBLOCK, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		db.DFatalf("Unexpected mkdir err: %v", err)
 	}
 	// Register this memblocker.

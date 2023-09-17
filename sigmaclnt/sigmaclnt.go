@@ -14,7 +14,7 @@ type SigmaClnt struct {
 	*leaseclnt.LeaseClnt
 }
 
-func MkSigmaLeaseClnt(fsl *fslib.FsLib) (*SigmaClnt, error) {
+func NewSigmaLeaseClnt(fsl *fslib.FsLib) (*SigmaClnt, error) {
 	lmc, err := leaseclnt.NewLeaseClnt(fsl)
 	if err != nil {
 		return nil, err
@@ -23,18 +23,18 @@ func MkSigmaLeaseClnt(fsl *fslib.FsLib) (*SigmaClnt, error) {
 }
 
 // Create only an FsLib, as a proc.
-func MkSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
+func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	fsl, err := fslib.NewFsLib(pcfg)
 	if err != nil {
-		db.DFatalf("MkSigmaClnt: %v", err)
+		db.DFatalf("NewSigmaClnt: %v", err)
 	}
-	return MkSigmaLeaseClnt(fsl)
+	return NewSigmaLeaseClnt(fsl)
 }
 
 func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := MkSigmaClntFsLib(pcfg)
+	sc, err := NewSigmaClntFsLib(pcfg)
 	if err != nil {
-		db.DFatalf("MkSigmaClnt: %v", err)
+		db.DFatalf("NewSigmaClnt: %v", err)
 	}
 	sc.ProcClnt = procclnt.NewProcClnt(sc.FsLib)
 	return sc, nil
@@ -42,8 +42,8 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
-func MkSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := MkSigmaClntFsLib(pcfg)
+func NewSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
+	sc, err := NewSigmaClntFsLib(pcfg)
 	if err != nil {
 		return nil, err
 	}

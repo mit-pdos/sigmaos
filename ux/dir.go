@@ -31,7 +31,7 @@ func newDir(path path.Path) (*Dir, *serr.Err) {
 		return nil, err
 	}
 	d.Obj = o
-	d.sd = sorteddir.MkSortedDir()
+	d.sd = sorteddir.NewSortedDir()
 	return d, nil
 }
 
@@ -74,7 +74,7 @@ func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 }
 
 func (d *Dir) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
-	d.sd = sorteddir.MkSortedDir()
+	d.sd = sorteddir.NewSortedDir()
 	return nil
 }
 

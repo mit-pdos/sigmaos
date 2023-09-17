@@ -57,27 +57,27 @@ func RunFrontendSrv(public bool, job string) error {
 	}
 	frontend.SigmaClnt = sc
 	fsls := NewFsLibs(SERVER_NAME)
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	frontend.userc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
 	frontend.graphc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
 	frontend.tlc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_HOME)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
 	frontend.homec = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_COMPOSE)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func RunFrontendSrv(public bool, job string) error {
 	//	}
 	/*
 		if public {
-			pc, pi, err := portclnt.MkPortClntPort(frontend.FsLib)
+			pc, pi, err := portclnt.NewPortClntPort(frontend.FsLib)
 			if err != nil {
 				dbg.DFatalf("AllocPort err %v", err)
 			}
@@ -141,7 +141,7 @@ func RunFrontendSrv(public bool, job string) error {
 		dbg.DFatalf("QualifyAddr %v err %v", a, err)
 	}
 	dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", a)
-	mnt := sp.MkMountService(sp.MkTaddrs([]string{a}))
+	mnt := sp.NewMountService(sp.NewTaddrs([]string{a}))
 	if err = frontend.MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 		dbg.DFatalf("MountService %v", err)
 		//	}

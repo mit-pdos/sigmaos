@@ -32,14 +32,14 @@ func newRealmTstateClnt(ts *Tstate, realm sp.Trealm, newrealm bool) *RealmTstate
 		}
 		db.DPrintf(db.TEST, "Make realm %v", realm)
 		if err := ts.rc.NewRealm(realm, net); err != nil {
-			db.DFatalf("Error NewRealmTstate MkRealm: %v", err)
+			db.DFatalf("Error NewRealmTstate NewRealm: %v", err)
 		}
 		db.DPrintf(db.TEST, "Done making realm %v", realm)
 	}
 	pcfg := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
 	db.DPrintf(db.TEST, "ProcEnv for new realm %v", pcfg)
-	if sc, err := sigmaclnt.MkSigmaClntRootInit(pcfg); err != nil {
-		db.DFatalf("Error NewRealmTstate MkSigmaClnt: %v", err)
+	if sc, err := sigmaclnt.NewSigmaClntRootInit(pcfg); err != nil {
+		db.DFatalf("Error NewRealmTstate NewSigmaClnt: %v", err)
 	} else {
 		return &RealmTstate{
 			realm:     realm,

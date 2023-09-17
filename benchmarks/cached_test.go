@@ -47,8 +47,8 @@ func NewCachedJob(ts *test.RealmTstate, nkeys, ncache, nclerks int, dur time.Dur
 }
 
 func (ji *CachedJobInstance) RunCachedJob() {
-	cm, err := cachedsvc.MkCacheMgr(ji.SigmaClnt, ji.job, ji.ncache, ji.cachemcpu, CACHE_GC, test.Overlays)
-	assert.Nil(ji.Ts.T, err, "Error MkCacheMgr: %v", err)
+	cm, err := cachedsvc.NewCacheMgr(ji.SigmaClnt, ji.job, ji.ncache, ji.cachemcpu, CACHE_GC, test.Overlays)
+	assert.Nil(ji.Ts.T, err, "Error NewCacheMgr: %v", err)
 	ji.cm = cm
 	ji.sempn = ji.cm.SvcDir() + "-cacheclerk-sem"
 	ji.sem = semclnt.NewSemClnt(ji.FsLib, ji.sempn)

@@ -20,9 +20,9 @@ func RunKNamed(args []string) error {
 	nd := &Named{}
 	nd.realm = sp.Trealm(args[1])
 
-	sc, err := sigmaclnt.MkSigmaClntFsLib(pcfg)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pcfg)
 	if err != nil {
-		db.DFatalf("MkSigmaClntFsLib: err %v", err)
+		db.DFatalf("NewSigmaClntFsLib: err %v", err)
 	}
 	nd.SigmaClnt = sc
 

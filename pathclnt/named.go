@@ -68,9 +68,9 @@ func (pathc *PathClnt) getRealmNamed(uname sp.Tuname) (sp.Tmount, *serr.Err) {
 	target, err := pathc.GetFile(pn, uname, sp.OREAD, 0, sp.MAXGETSET)
 	if err != nil {
 		db.DPrintf(db.NAMED, "getRealmNamed %v err %v\n", pathc.pcfg.GetRealm(), err)
-		return sp.Tmount{}, serr.MkErrError(err)
+		return sp.Tmount{}, serr.NewErrError(err)
 	}
-	mnt, sr := sp.MkMount(target)
+	mnt, sr := sp.NewMount(target)
 	if sr != nil {
 		return sp.Tmount{}, sr
 	}
@@ -89,5 +89,5 @@ func (pathc *PathClnt) mountRealmNamed(uname sp.Tuname) *serr.Err {
 		return nil
 	}
 	db.DPrintf(db.NAMED, "mountRealmNamed: automount err %v\n", err)
-	return serr.MkErr(serr.TErrRetry, fmt.Sprintf("%v realm failure", pathc.pcfg.GetRealm()))
+	return serr.NewErr(serr.TErrRetry, fmt.Sprintf("%v realm failure", pathc.pcfg.GetRealm()))
 }

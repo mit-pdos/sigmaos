@@ -299,16 +299,16 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	job := rd.String(16)
-	cm, err := cachedsvc.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
+	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
 	assert.Nil(t, err)
 
-	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
+	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
 	assert.Nil(t, err)
 
 	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
-	_, err = cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
+	_, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
 	assert.NotNil(t, err)
 
 	mnt, err := ts1.ReadMount(cc.Server(0))
@@ -343,16 +343,16 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	job := rd.String(16)
-	cm, err := cachedsvc.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
+	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
 	assert.Nil(t, err)
 
-	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
+	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
 	assert.Nil(t, err)
 
 	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
-	_, err = cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
+	_, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
 	assert.NotNil(t, err)
 
 	mnt, err := ts1.ReadMount(cc.Server(0))

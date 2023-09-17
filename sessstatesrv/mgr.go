@@ -79,7 +79,7 @@ func (sm *SessionMgr) runHeartbeats() {
 	for !sm.Done() {
 		<-sessHeartbeatT.C
 		sess := sm.getConnectedSessions()
-		hbs := sessp.NewFcallMsg(sp.MkTheartbeat(sess), nil, 0, 0, nil)
+		hbs := sessp.NewFcallMsg(sp.NewTheartbeat(sess), nil, 0, 0, nil)
 		sm.srvfcall(hbs)
 	}
 }

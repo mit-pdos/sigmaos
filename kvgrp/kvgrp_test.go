@@ -32,8 +32,8 @@ type Tstate struct {
 func newTstate(t *testing.T, nrepl int, persist bool) *Tstate {
 	ts := &Tstate{job: rand.String(4), grp: GRP}
 	ts.Tstate = test.NewTstateAll(t)
-	ts.MkDir(kvgrp.KVDIR, 0777)
-	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
+	ts.NewDir(kvgrp.KVDIR, 0777)
+	err := ts.NewDir(kvgrp.JobDir(ts.job), 0777)
 	assert.Nil(t, err)
 	mcfg := groupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, 0, ts.job)
 	if persist {

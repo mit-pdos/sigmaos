@@ -96,7 +96,7 @@ func TestSplits(t *testing.T) {
 	const SPLITSZ = 10 * sp.MBYTE
 	ts := test.NewTstateAll(t)
 	job = mr.ReadJobConfig(app)
-	bins, err := mr.MkBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
+	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
 	sum := sp.Tlength(0)
 	for _, b := range bins {
@@ -128,10 +128,10 @@ func TestMapper(t *testing.T) {
 	job = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
 	job.Nreduce = 1
 
-	bins, err := mr.MkBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
-	assert.Nil(t, err, "Err MkBins %v", err)
-	m, err := mr.MkMapper(ts.SigmaClnt, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
-	assert.Nil(t, err, "MkMapper %v", err)
+	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
+	assert.Nil(t, err, "Err NewBins %v", err)
+	m, err := mr.NewMapper(ts.SigmaClnt, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin")
+	assert.Nil(t, err, "NewMapper %v", err)
 	err = m.InitWrt(0, REDUCEIN)
 	assert.Nil(t, err)
 

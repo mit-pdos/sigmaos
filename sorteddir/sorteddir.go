@@ -11,7 +11,7 @@ type SortedDir struct {
 	sorted []string
 }
 
-func MkSortedDir() *SortedDir {
+func NewSortedDir() *SortedDir {
 	sd := &SortedDir{}
 	sd.dents = make(map[string]interface{})
 	sd.sorted = make([]string, 0)

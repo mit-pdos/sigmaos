@@ -15,7 +15,7 @@ type Clnt struct {
 }
 
 func NewClnt(sc *sigmaclnt.SigmaClnt, t *tracing.Tracer, path string) *Clnt {
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{sc.FsLib}, path)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sc.FsLib}, path)
 	if err != nil {
 		db.DFatalf("Error NewClnt: %v", err)
 	}

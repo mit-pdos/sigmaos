@@ -28,15 +28,15 @@ func StringToPort(s string) (Tport, error) {
 	return Tport(p), err
 }
 
-func MkPublicAddrs(hip string, pb PortBinding, net string, laddr string) sp.Taddrs {
+func NewPublicAddrs(hip string, pb PortBinding, net string, laddr string) sp.Taddrs {
 	addrs := make(sp.Taddrs, 2)
-	addrs[0] = sp.MkTaddrRealm(laddr, net)
-	addrs[1] = sp.MkTaddr(hip + ":" + pb.HostPort.String())
+	addrs[0] = sp.NewTaddrRealm(laddr, net)
+	addrs[1] = sp.NewTaddr(hip + ":" + pb.HostPort.String())
 	return addrs
 }
 
-func MkPublicMount(hip string, pb PortBinding, net string, laddr string) sp.Tmount {
-	return sp.MkMountService(MkPublicAddrs(hip, pb, net, laddr))
+func NewPublicMount(hip string, pb PortBinding, net string, laddr string) sp.Tmount {
+	return sp.NewMountService(NewPublicAddrs(hip, pb, net, laddr))
 }
 
 type PortBinding struct {

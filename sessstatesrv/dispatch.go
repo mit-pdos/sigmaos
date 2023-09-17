@@ -12,8 +12,8 @@ import (
 func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, bool, *sp.Rerror) {
 	if s.IsClosed() {
 		db.DPrintf(db.SESS_STATE_SRV_ERR, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
-		err := serr.MkErr(serr.TErrClosed, fmt.Sprintf("session %v", s.Sid))
-		return nil, nil, true, sp.MkRerror(err)
+		err := serr.NewErr(serr.TErrClosed, fmt.Sprintf("session %v", s.Sid))
+		return nil, nil, true, sp.NewRerrorSerr(err)
 	}
 	switch req := msg.(type) {
 	case *sp.Tversion:
@@ -98,6 +98,6 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, boo
 		return reply, data, false, err
 	default:
 		db.DPrintf(db.ALWAYS, "Unexpected type: %v", msg)
-		return nil, nil, false, sp.MkRerror(serr.MkErr(serr.TErrUnknownMsg, msg))
+		return nil, nil, false, sp.NewRerrorSerr(serr.NewErr(serr.TErrUnknownMsg, msg))
 	}
 }

@@ -20,7 +20,7 @@ const (
 func TestSemClntSimple(t *testing.T) {
 	ts := test.NewTstate(t)
 
-	err := ts.MkDir(WAIT_PATH, 0777)
+	err := ts.NewDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
 	fsl0, err := fslib.NewFsLib(pcfg)
@@ -58,7 +58,7 @@ func TestSemClntSimple(t *testing.T) {
 func TestSemClntConcur(t *testing.T) {
 	ts := test.NewTstate(t)
 
-	err := ts.MkDir(WAIT_PATH, 0777)
+	err := ts.NewDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pcfg1 := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
 	fsl0, err := fslib.NewFsLib(pcfg1)

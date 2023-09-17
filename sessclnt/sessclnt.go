@@ -72,7 +72,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err)
 }
 
 func (c *SessClnt) sendHeartbeat() {
-	_, err := c.RPC(sp.MkTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil)
+	_, err := c.RPC(sp.NewTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil)
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}
@@ -111,14 +111,14 @@ func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr
 // Send a detach.
 func (c *SessClnt) Detach(cid sp.TclntId) *serr.Err {
 	db.DPrintf(db.SESS_STATE_CLNT, "%v: Send detach %v\n", c.pcfg.GetPID(), c.sid)
-	rep, err := c.RPC(sp.MkTdetach(cid), nil)
+	rep, err := c.RPC(sp.NewTdetach(cid), nil)
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "detach %v err %v", c.sid, err)
 		return err
 	}
 	rmsg, ok := rep.Msg.(*sp.Rerror)
 	if ok {
-		return sp.MkErr(rmsg)
+		return sp.NewErr(rmsg)
 	}
 	return nil
 }
@@ -131,7 +131,7 @@ func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {
 		return true
 	}
 	if rerr, ok := msg.(*sp.Rerror); ok {
-		err := sp.MkErr(rerr)
+		err := sp.NewErr(rerr)
 		if err.IsErrSessClosed() {
 			return true
 		}
@@ -170,7 +170,7 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte) (*netclnt.Rpc, *serr.Err) {
 	}
 
 	if c.closed {
-		return nil, serr.MkErr(serr.TErrUnreachable, c.addrs)
+		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)
 	}
 
 	// Enqueue a request
@@ -203,7 +203,7 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 	defer c.Unlock()
 
 	if c.closed {
-		return nil, serr.MkErr(serr.TErrUnreachable, c.addrs)
+		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)
 	}
 
 	if c.nc == nil {

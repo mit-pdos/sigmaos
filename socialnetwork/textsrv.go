@@ -36,12 +36,12 @@ func RunTextSrv(public bool, jobname string) error {
 		return err
 	}
 	fsls := NewFsLibs(SOCIAL_NETWORK_TEXT)
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	tsrv.userc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_URL)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_URL)
 	if err != nil {
 		return err
 	}

@@ -24,7 +24,7 @@ func (s *session) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) (
 
 func (s *session) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	if s.wctl == nil {
-		return 0, serr.MkErr(serr.TErrNotSupported, nil)
+		return 0, serr.NewErr(serr.TErrNotSupported, nil)
 	}
 	return s.wctl(s.id, ctx, off, b, f)
 }

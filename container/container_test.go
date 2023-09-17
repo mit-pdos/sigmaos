@@ -35,9 +35,9 @@ func TestExpose(t *testing.T) {
 }
 
 func TestRearrange(t *testing.T) {
-	addr0 := sp.MkTaddrRealm("10.0.1.55:1113", "realm1")
-	addr1 := sp.MkTaddrRealm("10.0.7.53:1113", "realm2")
-	addr2 := sp.MkTaddrRealm("192.168.2.114:1113", string(sp.ROOTREALM))
+	addr0 := sp.NewTaddrRealm("10.0.1.55:1113", "realm1")
+	addr1 := sp.NewTaddrRealm("10.0.7.53:1113", "realm2")
+	addr2 := sp.NewTaddrRealm("192.168.2.114:1113", string(sp.ROOTREALM))
 
 	addrs := sp.Taddrs{addr0, addr2}
 	raddrs := container.Rearrange(sp.ROOTREALM.String(), addrs)

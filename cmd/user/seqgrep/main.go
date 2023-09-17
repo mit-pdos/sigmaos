@@ -15,7 +15,7 @@ import (
 func main() {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("MkSigmaClnt: error %v\n", err)
+		db.DFatalf("NewSigmaClnt: error %v\n", err)
 	}
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.SEQGREP)
 	if err != nil {

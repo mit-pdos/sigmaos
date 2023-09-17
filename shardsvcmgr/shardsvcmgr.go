@@ -47,8 +47,8 @@ func (sm *ShardMgr) addShard(i int) error {
 	return nil
 }
 
-func MkShardMgr(sc *sigmaclnt.SigmaClnt, n int, mcpu proc.Tmcpu, job, bin, pn string, gc, public bool) (*ShardMgr, error) {
-	sc.MkDir(pn, 0777)
+func NewShardMgr(sc *sigmaclnt.SigmaClnt, n int, mcpu proc.Tmcpu, job, bin, pn string, gc, public bool) (*ShardMgr, error) {
+	sc.NewDir(pn, 0777)
 	if _, err := sc.Create(pn+SHRDDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
 			return nil, err

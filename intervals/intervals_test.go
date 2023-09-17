@@ -16,20 +16,20 @@ import (
 )
 
 func testSimple(t *testing.T, ivs interval.IIntervals) {
-	ivs.Insert(interval.MkInterval(1, 2))
-	ivs.Insert(interval.MkInterval(2, 3))
-	ivs.Delete(interval.MkInterval(1, 2))
+	ivs.Insert(interval.NewInterval(1, 2))
+	ivs.Insert(interval.NewInterval(2, 3))
+	ivs.Delete(interval.NewInterval(1, 2))
 	assert.Equal(t, 1, ivs.Length())
 }
 
 func TestSimple(t *testing.T) {
-	testSimple(t, sliceintervals.MkIInterval())
-	testSimple(t, skipintervals.MkSkipIInterval())
+	testSimple(t, sliceintervals.NewIInterval())
+	testSimple(t, skipintervals.NewSkipIInterval())
 }
 
 func testContains(t *testing.T, ivs interval.IIntervals) {
-	ivs.Insert(interval.MkInterval(0, 10))
-	ivs.Insert(interval.MkInterval(90, 100))
+	ivs.Insert(interval.NewInterval(0, 10))
+	ivs.Insert(interval.NewInterval(90, 100))
 	assert.True(t, ivs.Contains(0))
 	assert.False(t, ivs.Contains(10))
 	assert.False(t, ivs.Contains(11))
@@ -39,78 +39,78 @@ func testContains(t *testing.T, ivs interval.IIntervals) {
 }
 
 func TestContains(t *testing.T) {
-	testContains(t, sliceintervals.MkIInterval())
-	testContains(t, skipintervals.MkSkipIInterval())
+	testContains(t, sliceintervals.NewIInterval())
+	testContains(t, skipintervals.NewSkipIInterval())
 }
 
 func testInsert(t *testing.T, ivs interval.IIntervals) {
-	ivs.Insert(interval.MkInterval(0, 10))
-	ivs.Insert(interval.MkInterval(10, 20))
+	ivs.Insert(interval.NewInterval(0, 10))
+	ivs.Insert(interval.NewInterval(10, 20))
 	assert.Equal(t, 1, ivs.Length())
-	ivs.Insert(interval.MkInterval(15, 20))
+	ivs.Insert(interval.NewInterval(15, 20))
 	assert.Equal(t, 1, ivs.Length())
-	ivs.Insert(interval.MkInterval(30, 40))
+	ivs.Insert(interval.NewInterval(30, 40))
 	assert.Equal(t, 2, ivs.Length())
-	ivs.Insert(interval.MkInterval(20, 25))
+	ivs.Insert(interval.NewInterval(20, 25))
 	assert.Equal(t, 2, ivs.Length())
-	ivs.Insert(interval.MkInterval(50, 60))
+	ivs.Insert(interval.NewInterval(50, 60))
 	assert.Equal(t, 3, ivs.Length())
-	ivs.Insert(interval.MkInterval(70, 80))
+	ivs.Insert(interval.NewInterval(70, 80))
 	assert.Equal(t, 4, ivs.Length())
-	ivs.Insert(interval.MkInterval(40, 50))
+	ivs.Insert(interval.NewInterval(40, 50))
 	assert.Equal(t, 3, ivs.Length())
-	ivs.Insert(interval.MkInterval(25, 30))
+	ivs.Insert(interval.NewInterval(25, 30))
 	assert.Equal(t, 2, ivs.Length())
-	ivs.Insert(interval.MkInterval(60, 70))
+	ivs.Insert(interval.NewInterval(60, 70))
 	assert.Equal(t, 1, ivs.Length())
 }
 
 func TestInsert(t *testing.T) {
-	testInsert(t, sliceintervals.MkIInterval())
-	testInsert(t, skipintervals.MkSkipIInterval())
+	testInsert(t, sliceintervals.NewIInterval())
+	testInsert(t, skipintervals.NewSkipIInterval())
 }
 
 func testDelete(t *testing.T, ivs interval.IIntervals) {
-	ivs.Insert(interval.MkInterval(0, 100))
+	ivs.Insert(interval.NewInterval(0, 100))
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
-	ivs.Delete(interval.MkInterval(5, 10))
+	ivs.Delete(interval.NewInterval(5, 10))
 	assert.Equal(t, 2, ivs.Length())
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
-	ivs.Delete(interval.MkInterval(30, 50))
+	ivs.Delete(interval.NewInterval(30, 50))
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
 	assert.Equal(t, 3, ivs.Length())
-	ivs.Delete(interval.MkInterval(50, 100))
+	ivs.Delete(interval.NewInterval(50, 100))
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
 	assert.Equal(t, 2, ivs.Length())
-	ivs.Delete(interval.MkInterval(20, 30))
+	ivs.Delete(interval.NewInterval(20, 30))
 	assert.Equal(t, 2, ivs.Length())
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
-	ivs.Delete(interval.MkInterval(0, 5))
+	ivs.Delete(interval.NewInterval(0, 5))
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
 	assert.Equal(t, 1, ivs.Length())
-	ivs.Delete(interval.MkInterval(10, 20))
+	ivs.Delete(interval.NewInterval(10, 20))
 	assert.Equal(t, 0, ivs.Length())
 
-	ivs.Insert(interval.MkInterval(0, 100))
+	ivs.Insert(interval.NewInterval(0, 100))
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
-	ivs.Delete(interval.MkInterval(5, 10))
+	ivs.Delete(interval.NewInterval(5, 10))
 	assert.Equal(t, 2, ivs.Length())
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
-	ivs.Delete(interval.MkInterval(0, 100))
+	ivs.Delete(interval.NewInterval(0, 100))
 	db.DPrintf(db.TEST, "ivs %v\n", ivs)
 	assert.Equal(t, 0, ivs.Length())
 }
 
 func TestDelete(t *testing.T) {
-	testDelete(t, sliceintervals.MkIInterval())
-	testDelete(t, skipintervals.MkSkipIInterval())
+	testDelete(t, sliceintervals.NewIInterval())
+	testDelete(t, skipintervals.NewSkipIInterval())
 }
 
 // No overlapping intervals
 func testBasic(t *testing.T, siv interval.IIntervals) {
-	ivs := []*interval.Tinterval{interval.MkInterval(2, 4), interval.MkInterval(10, 12),
-		interval.MkInterval(5, 7), interval.MkInterval(0, 1), interval.MkInterval(20, 22)}
-	e := siv.Find(interval.MkInterval(10, 12))
+	ivs := []*interval.Tinterval{interval.NewInterval(2, 4), interval.NewInterval(10, 12),
+		interval.NewInterval(5, 7), interval.NewInterval(0, 1), interval.NewInterval(20, 22)}
+	e := siv.Find(interval.NewInterval(10, 12))
 	assert.Nil(t, e)
 	for _, iv := range ivs {
 		siv.Insert(iv)
@@ -133,22 +133,22 @@ func testBasic(t *testing.T, siv interval.IIntervals) {
 }
 
 func TestBasic(t *testing.T) {
-	testBasic(t, sliceintervals.MkIInterval())
-	testBasic(t, skipintervals.MkSkipIntervals())
+	testBasic(t, sliceintervals.NewIInterval())
+	testBasic(t, skipintervals.NewSkipIntervals())
 }
 
 func testInsert1(t *testing.T, siv interval.IIntervals) {
 	ivs := []*interval.Tinterval{
-		interval.MkInterval(0, 10),
-		interval.MkInterval(10, 20),
-		interval.MkInterval(15, 20),
-		interval.MkInterval(30, 40),
-		interval.MkInterval(20, 25),
-		interval.MkInterval(50, 60),
-		interval.MkInterval(70, 80),
-		interval.MkInterval(40, 50),
-		interval.MkInterval(25, 30),
-		interval.MkInterval(60, 70),
+		interval.NewInterval(0, 10),
+		interval.NewInterval(10, 20),
+		interval.NewInterval(15, 20),
+		interval.NewInterval(30, 40),
+		interval.NewInterval(20, 25),
+		interval.NewInterval(50, 60),
+		interval.NewInterval(70, 80),
+		interval.NewInterval(40, 50),
+		interval.NewInterval(25, 30),
+		interval.NewInterval(60, 70),
 	}
 	lens := []int{1, 1, 1, 2, 2, 3, 4, 3, 2, 1}
 	for i, iv := range ivs {
@@ -159,19 +159,19 @@ func testInsert1(t *testing.T, siv interval.IIntervals) {
 }
 
 func TestInsert1(t *testing.T) {
-	// testInsert1(t, sliceintervals.MkIInterval())
-	testInsert1(t, skipintervals.MkSkipIntervals())
+	// testInsert1(t, sliceintervals.NewIInterval())
+	testInsert1(t, skipintervals.NewSkipIntervals())
 }
 
 func testDelete1(t *testing.T, siv interval.IIntervals) {
-	iv0 := interval.MkInterval(0, 100)
+	iv0 := interval.NewInterval(0, 100)
 	ivs := []*interval.Tinterval{
-		interval.MkInterval(5, 10),
-		interval.MkInterval(30, 50),
-		interval.MkInterval(50, 100),
-		interval.MkInterval(20, 30),
-		interval.MkInterval(0, 5),
-		interval.MkInterval(10, 20),
+		interval.NewInterval(5, 10),
+		interval.NewInterval(30, 50),
+		interval.NewInterval(50, 100),
+		interval.NewInterval(20, 30),
+		interval.NewInterval(0, 5),
+		interval.NewInterval(10, 20),
 	}
 	lens := []int{2, 3, 2, 2, 1, 0}
 	siv.Insert(iv0)
@@ -189,8 +189,8 @@ func testDelete1(t *testing.T, siv interval.IIntervals) {
 }
 
 func TestDelete1(t *testing.T) {
-	// testDelete1(t, sliceintervals.MkIInterval())
-	testDelete1(t, skipintervals.MkSkipIntervals())
+	// testDelete1(t, sliceintervals.NewIInterval())
+	testDelete1(t, skipintervals.NewSkipIntervals())
 }
 
 func testRandom(t *testing.T, siv interval.IIntervals) {
@@ -199,7 +199,7 @@ func testRandom(t *testing.T, siv interval.IIntervals) {
 	ivs := make([]*interval.Tinterval, 0)
 	for i := 0; i < N; i++ {
 		s := r.Int31() % N
-		ivs = append(ivs, interval.MkInterval(uint64(s), uint64(s+1)))
+		ivs = append(ivs, interval.NewInterval(uint64(s), uint64(s+1)))
 	}
 	for _, iv := range ivs {
 		siv.Insert(iv)
@@ -210,8 +210,8 @@ func testRandom(t *testing.T, siv interval.IIntervals) {
 }
 
 func TestRandom1(t *testing.T) {
-	// testRandom(t, sliceintervals.MkIInterval())
-	testRandom(t, skipintervals.MkSkipIntervals())
+	// testRandom(t, sliceintervals.NewIInterval())
+	testRandom(t, skipintervals.NewSkipIntervals())
 }
 
 const (
@@ -227,7 +227,7 @@ func testManyInorder(t *testing.T, newiv func() interval.IIntervals) {
 		v = reflect.TypeOf(ivs)
 		start := time.Now()
 		for i := uint64(0); i < N; i++ {
-			ivs.Insert(interval.MkInterval(i, i+1))
+			ivs.Insert(interval.NewInterval(i, i+1))
 		}
 		tot += time.Since(start)
 	}
@@ -235,8 +235,8 @@ func testManyInorder(t *testing.T, newiv func() interval.IIntervals) {
 }
 
 func TestManyInOrder(t *testing.T) {
-	testManyInorder(t, skipintervals.MkSkipIInterval)
-	testManyInorder(t, sliceintervals.MkIInterval)
+	testManyInorder(t, skipintervals.NewSkipIInterval)
+	testManyInorder(t, sliceintervals.NewIInterval)
 }
 
 func testManyGaps(t *testing.T, newiv func() interval.IIntervals) {
@@ -250,7 +250,7 @@ func testManyGaps(t *testing.T, newiv func() interval.IIntervals) {
 		v = reflect.TypeOf(ivs)
 		start := time.Now()
 		for i := uint64(N * B); i > 1; i -= B {
-			ivs.Insert(interval.MkInterval(i-1, i))
+			ivs.Insert(interval.NewInterval(i-1, i))
 		}
 		tot += time.Since(start)
 	}
@@ -258,8 +258,8 @@ func testManyGaps(t *testing.T, newiv func() interval.IIntervals) {
 }
 
 func TestManyGaps(t *testing.T) {
-	testManyGaps(t, skipintervals.MkSkipIInterval)
-	testManyGaps(t, sliceintervals.MkIInterval)
+	testManyGaps(t, skipintervals.NewSkipIInterval)
+	testManyGaps(t, sliceintervals.NewIInterval)
 }
 
 func bench(siv interval.IIntervals, ivs []*interval.Tinterval) {
@@ -281,7 +281,7 @@ func testManyRandom(t *testing.T, newiv func() interval.IIntervals) {
 		v = reflect.TypeOf(siv)
 		ivs := make([]*interval.Tinterval, N)
 		for i := 0; i < N; i++ {
-			ivs[i] = interval.MkInterval(uint64(i), uint64(i+1))
+			ivs[i] = interval.NewInterval(uint64(i), uint64(i+1))
 		}
 		// receive replies out of order
 		for i := 0; i < N; i++ {
@@ -298,8 +298,8 @@ func testManyRandom(t *testing.T, newiv func() interval.IIntervals) {
 }
 
 func TestManyRandom(t *testing.T) {
-	testManyRandom(t, skipintervals.MkSkipIInterval)
-	testManyRandom(t, sliceintervals.MkIInterval)
+	testManyRandom(t, skipintervals.NewSkipIInterval)
+	testManyRandom(t, sliceintervals.NewIInterval)
 }
 
 func processIV(t *testing.T, retrieved map[uint64]bool, iv *interval.Tinterval) {
@@ -348,92 +348,92 @@ func doNext(t *testing.T, ivs *intervals.Intervals, retrieved map[uint64]bool, s
 // * All intervals inserted in ivs will eventually be returned by Next.
 func TestNextInsert(t *testing.T) {
 	retrieved := make(map[uint64]bool)
-	ivs := intervals.MkIntervals(12345)
-	ivs.Insert(interval.MkInterval(0, 10))
+	ivs := intervals.NewIntervals(12345)
+	ivs.Insert(interval.NewInterval(0, 10))
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{9})
 	assert.Equal(t, 1, ivs.Length())
-	ivs.Insert(interval.MkInterval(10, 20))
+	ivs.Insert(interval.NewInterval(10, 20))
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{19})
 	assert.Equal(t, 1, ivs.Length())
-	ivs.Insert(interval.MkInterval(25, 26))
-	ivs.Insert(interval.MkInterval(22, 23))
-	ivs.Insert(interval.MkInterval(23, 24))
+	ivs.Insert(interval.NewInterval(25, 26))
+	ivs.Insert(interval.NewInterval(22, 23))
+	ivs.Insert(interval.NewInterval(23, 24))
 	assert.Equal(t, 3, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0, 22}, []uint64{19, 23})
-	ivs.Insert(interval.MkInterval(21, 22))
+	ivs.Insert(interval.NewInterval(21, 22))
 	assert.Equal(t, 3, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0, 21}, []uint64{19, 23})
-	ivs.Insert(interval.MkInterval(25, 101))
+	ivs.Insert(interval.NewInterval(25, 101))
 	assert.Equal(t, 3, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0, 21, 25}, []uint64{19, 23, 100})
-	ivs.Insert(interval.MkInterval(20, 21))
+	ivs.Insert(interval.NewInterval(20, 21))
 	assert.Equal(t, 2, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0, 20, 25}, []uint64{19, 23, 100})
-	ivs.Insert(interval.MkInterval(24, 25))
+	ivs.Insert(interval.NewInterval(24, 25))
 	assert.Equal(t, 1, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{100})
 }
 
 func TestNextDelete(t *testing.T) {
 	retrieved := make(map[uint64]bool)
-	ivs := intervals.MkIntervals(12345)
-	ivs.Insert(interval.MkInterval(0, 10))
+	ivs := intervals.NewIntervals(12345)
+	ivs.Insert(interval.NewInterval(0, 10))
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{9})
 	assert.Equal(t, 1, ivs.Length())
-	ivs.Insert(interval.MkInterval(10, 20))
+	ivs.Insert(interval.NewInterval(10, 20))
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{19})
 	assert.Equal(t, 1, ivs.Length())
-	ivs.Insert(interval.MkInterval(25, 26))
-	ivs.Insert(interval.MkInterval(22, 23))
-	ivs.Insert(interval.MkInterval(23, 24))
+	ivs.Insert(interval.NewInterval(25, 26))
+	ivs.Insert(interval.NewInterval(22, 23))
+	ivs.Insert(interval.NewInterval(23, 24))
 	assert.Equal(t, 3, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0, 22}, []uint64{19, 23})
-	ivs.Insert(interval.MkInterval(21, 22))
+	ivs.Insert(interval.NewInterval(21, 22))
 	assert.Equal(t, 3, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0, 21}, []uint64{19, 23})
-	ivs.Insert(interval.MkInterval(25, 101))
+	ivs.Insert(interval.NewInterval(25, 101))
 	assert.Equal(t, 3, ivs.Length())
-	ivs.Delete(interval.MkInterval(50, 51))
+	ivs.Delete(interval.NewInterval(50, 51))
 	assert.Equal(t, 4, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0, 21, 25}, []uint64{19, 23, 49})
 	doNext(t, ivs, retrieved, []uint64{0, 21, 25, 51}, []uint64{19, 23, 49, 100})
-	ivs.Insert(interval.MkInterval(20, 21))
+	ivs.Insert(interval.NewInterval(20, 21))
 	doNext(t, ivs, retrieved, []uint64{0, 20, 25, 51}, []uint64{19, 23, 49, 100})
-	ivs.Insert(interval.MkInterval(24, 25))
+	ivs.Insert(interval.NewInterval(24, 25))
 	doNext(t, ivs, retrieved, []uint64{0, 51}, []uint64{49, 100})
-	ivs.Insert(interval.MkInterval(50, 51))
+	ivs.Insert(interval.NewInterval(50, 51))
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{100})
 }
 
 func TestNextReset(t *testing.T) {
 	retrieved := make(map[uint64]bool)
-	ivs := intervals.MkIntervals(12345)
-	ivs.Insert(interval.MkInterval(0, 10))
+	ivs := intervals.NewIntervals(12345)
+	ivs.Insert(interval.NewInterval(0, 10))
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{9})
 	assert.Equal(t, 1, ivs.Length())
-	ivs.Insert(interval.MkInterval(10, 20))
+	ivs.Insert(interval.NewInterval(10, 20))
 	doNext(t, ivs, retrieved, []uint64{0}, []uint64{19})
 	assert.Equal(t, 1, ivs.Length())
-	ivs.Insert(interval.MkInterval(25, 26))
-	ivs.Insert(interval.MkInterval(22, 23))
-	ivs.Insert(interval.MkInterval(23, 24))
+	ivs.Insert(interval.NewInterval(25, 26))
+	ivs.Insert(interval.NewInterval(22, 23))
+	ivs.Insert(interval.NewInterval(23, 24))
 	assert.Equal(t, 3, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0, 22}, []uint64{19, 23})
-	ivs.Insert(interval.MkInterval(21, 22))
+	ivs.Insert(interval.NewInterval(21, 22))
 	assert.Equal(t, 3, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0, 21}, []uint64{19, 23})
-	ivs.Insert(interval.MkInterval(25, 101))
+	ivs.Insert(interval.NewInterval(25, 101))
 	assert.Equal(t, 3, ivs.Length())
-	ivs.Delete(interval.MkInterval(50, 51))
+	ivs.Delete(interval.NewInterval(50, 51))
 	assert.Equal(t, 4, ivs.Length())
 	doNext(t, ivs, retrieved, []uint64{0, 21, 25}, []uint64{19, 23, 49})
 	doNext(t, ivs, retrieved, []uint64{0, 21, 25, 51}, []uint64{19, 23, 49, 100})
-	ivs.Insert(interval.MkInterval(20, 21))
+	ivs.Insert(interval.NewInterval(20, 21))
 	doNext(t, ivs, retrieved, []uint64{0, 20, 25, 51}, []uint64{19, 23, 49, 100})
 	newRetrieved := make(map[uint64]bool)
 	ivs.ResetNext()
 	doNext(t, ivs, newRetrieved, []uint64{0}, []uint64{19})
-	ivs.Insert(interval.MkInterval(24, 25))
-	ivs.Insert(interval.MkInterval(50, 51))
+	ivs.Insert(interval.NewInterval(24, 25))
+	ivs.Insert(interval.NewInterval(50, 51))
 	doNext(t, ivs, newRetrieved, []uint64{0}, []uint64{100})
 }

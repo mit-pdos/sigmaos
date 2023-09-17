@@ -19,7 +19,7 @@ func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target path.Path) ([]fs.
 		return nil, o, lk, nil, nil
 	}
 	if !o.Perm().IsDir() {
-		return nil, o, lk, nil, serr.MkErr(serr.TErrNotDir, src.Base())
+		return nil, o, lk, nil, serr.NewErr(serr.TErrNotDir, src.Base())
 	}
 	return namei.Walk(ps.plt, ctx, o, lk, src, target, nil)
 }

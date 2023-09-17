@@ -49,7 +49,7 @@ func TestFile(t *testing.T) {
 func TestDir(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
-	err := ts.MkDir(fn+"d1", 0777)
+	err := ts.NewDir(fn+"d1", 0777)
 	assert.Equal(t, nil, err)
 	d := []byte("hello")
 
@@ -75,7 +75,7 @@ func TestDir(t *testing.T) {
 
 func newfile(t *testing.T, name string) {
 	CNT := 500
-	buf := test.MkBuf(sp.BUFSZ)
+	buf := test.NewBuf(sp.BUFSZ)
 	start := time.Now()
 	fd, err := syscall.Open(name, syscall.O_CREAT|syscall.O_EXCL|syscall.O_WRONLY, 0666)
 	assert.Nil(t, err)

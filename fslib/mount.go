@@ -34,7 +34,7 @@ func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string, lid s
 	return fsl.MountService(p, mnt, lid)
 }
 
-func (fsl *FsLib) MkMountSymlink(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
+func (fsl *FsLib) NewMountSymlink(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	if path.EndSlash(pn) {
 		return fsl.MountServiceUnion(pn, mnt, mnt.Address().Addr, lid)
 	} else {
@@ -78,7 +78,7 @@ func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
 	if err != nil {
 		return sp.Tmount{}, err
 	}
-	mnt, error := sp.MkMount(target)
+	mnt, error := sp.NewMount(target)
 	if error != nil {
 		return sp.Tmount{}, err
 	}
@@ -89,7 +89,7 @@ func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
 // content of symlink and the symlink's name.
 func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if pn == sp.NAMED {
-		return sp.MkMountService(fsl.GetMntNamed(fsl.pcfg.GetUname()).Addr), "", nil
+		return sp.NewMountService(fsl.GetMntNamed(fsl.pcfg.GetUname()).Addr), "", nil
 	}
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()
@@ -104,7 +104,7 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 			return mnt, p.String(), nil
 		}
 	}
-	return sp.NullMount(), "", serr.MkErr(serr.TErrInval, pn)
+	return sp.NullMount(), "", serr.NewErr(serr.TErrInval, pn)
 }
 
 func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
@@ -116,7 +116,7 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 		if err != nil {
 			return false, nil
 		}
-		mnt, error := sp.MkMount(b)
+		mnt, error := sp.NewMount(b)
 		if error != nil {
 			return false, nil
 		}
@@ -130,11 +130,11 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 	if err == nil && rname != "" {
 		return rname, rmnt, nil
 	}
-	return rname, rmnt, serr.MkErr(serr.TErrNotfound, d)
+	return rname, rmnt, serr.NewErr(serr.TErrNotfound, d)
 }
 
 // For code running using /mnt/9p, which doesn't support PutFile.
-func (fsl *FsLib) MkMountSymlink9P(pn string, mnt sp.Tmount) error {
+func (fsl *FsLib) NewMountSymlink9P(pn string, mnt sp.Tmount) error {
 	b, err := mnt.Marshal()
 	if err != nil {
 		return err

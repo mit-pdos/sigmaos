@@ -23,7 +23,7 @@ type ElectClnt struct {
 
 func NewElectClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*ElectClnt, error) {
 	e := &ElectClnt{FsLib: fsl, pn: pn, perm: perm}
-	fs, err := fsetcd.MkFsEtcd(fsl.ProcEnv().GetRealm(), fsl.ProcEnv().EtcdIP)
+	fs, err := fsetcd.NewFsEtcd(fsl.ProcEnv().GetRealm(), fsl.ProcEnv().EtcdIP)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func NewElectClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*ElectClnt, error
 	if err != nil {
 		return nil, err
 	}
-	e.elect, err = leaderetcd.MkElection(e.ProcEnv(), e.sess, pn)
+	e.elect, err = leaderetcd.NewElection(e.ProcEnv(), e.sess, pn)
 	if err != nil {
 		return nil, err
 	}

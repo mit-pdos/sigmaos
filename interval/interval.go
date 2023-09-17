@@ -15,7 +15,7 @@ type Tinterval struct {
 	End   uint64
 }
 
-func MkInterval(start, end uint64) *Tinterval {
+func NewInterval(start, end uint64) *Tinterval {
 	return &Tinterval{
 		Start: start,
 		End:   end,

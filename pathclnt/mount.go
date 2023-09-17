@@ -39,7 +39,7 @@ func (mnt *MntTable) add(path path.Path, fid sp.Tfid) *serr.Err {
 	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
 		if path.Equal(p.path) {
-			return serr.MkErr(serr.TErrExists, fmt.Sprintf("%v (mount)", p.path))
+			return serr.NewErr(serr.TErrExists, fmt.Sprintf("%v (mount)", p.path))
 		}
 		if len(path) > len(p.path) {
 			mnts := append([]*Point{point}, mnt.mounts[i:]...)
@@ -81,7 +81,7 @@ func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.P
 		}
 	}
 	db.DPrintf(db.MOUNT_ERR, "resolve failed: path %v allowResolve %v mnt %v\n", path, allowResolve, mnt.mounts)
-	return sp.NoFid, path, serr.MkErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return sp.NoFid, path, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 // Umount mnt point that is the longest prefix of path, if exact is
@@ -104,7 +104,7 @@ func (mnt *MntTable) umount(path path.Path, exact bool) (sp.Tfid, path.Path, *se
 		}
 	}
 	// db.DPrintf(db.ALWAYS, "umount: %v %v\n", path, mnt.mounts)
-	return sp.NoFid, nil, serr.MkErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return sp.NoFid, nil, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 func (mnt *MntTable) mountedPaths() []string {

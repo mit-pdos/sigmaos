@@ -85,7 +85,7 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *serr.Err) {
 	if i := dir.lookupMount(name); i != nil {
 		return i, nil
 	}
-	return nil, serr.MkErr(serr.TErrNotfound, name)
+	return nil, serr.NewErr(serr.TErrNotfound, name)
 }
 
 func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
@@ -102,7 +102,7 @@ func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.F
 
 func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
 	if i := dir.lookupMount(name); i != nil {
-		return i, serr.MkErr(serr.TErrExists, name)
+		return i, serr.NewErr(serr.TErrExists, name)
 	}
 	return dir.underlay.Create(ctx, name, perm, m, lid, f)
 }
@@ -124,14 +124,14 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize) ([]*sp.Stat,
 
 func (dir *DirOverlay) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 	if i := dir.lookupMount(from); i != nil {
-		return serr.MkErr(serr.TErrNotSupported, from)
+		return serr.NewErr(serr.TErrNotSupported, from)
 	}
 	return dir.underlay.Rename(ctx, from, to, f)
 }
 
 func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, f sp.Tfence) *serr.Err {
 	if i := dir.lookupMount(old); i != nil {
-		return serr.MkErr(serr.TErrNotSupported, old)
+		return serr.NewErr(serr.TErrNotSupported, old)
 	}
 	return dir.underlay.Renameat(ctx, old, nd, new, f)
 }

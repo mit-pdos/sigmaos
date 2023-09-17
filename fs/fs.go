@@ -55,7 +55,7 @@ type FsObj interface {
 func Obj2File(o FsObj, fname path.Path) (File, *serr.Err) {
 	switch i := o.(type) {
 	case Dir:
-		return nil, serr.MkErr(serr.TErrNotFile, fname)
+		return nil, serr.NewErr(serr.TErrNotFile, fname)
 	case File:
 		return i, nil
 	default:

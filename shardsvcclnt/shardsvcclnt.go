@@ -25,7 +25,7 @@ type ShardSvcClnt struct {
 	rdr   *reader.Reader
 }
 
-func MkShardSvcClnt(fsls []*fslib.FsLib, pn string, sw ShardWatch) (*ShardSvcClnt, error) {
+func NewShardSvcClnt(fsls []*fslib.FsLib, pn string, sw ShardWatch) (*ShardSvcClnt, error) {
 	ssc := &ShardSvcClnt{
 		fsls: fsls,
 		pn:   pn,
@@ -70,7 +70,7 @@ func (ssc *ShardSvcClnt) addClnt(i int) error {
 	defer ssc.Unlock()
 
 	sn := ssc.pn + shardsvcmgr.Shard(i)
-	rpcc, err := rpcclnt.MkRPCClnt(ssc.fsls, sn)
+	rpcc, err := rpcclnt.NewRPCClnt(ssc.fsls, sn)
 	if err != nil {
 		return err
 	}

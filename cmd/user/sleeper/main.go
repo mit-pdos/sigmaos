@@ -46,7 +46,7 @@ func NewSleeper(args []string) (*Sleeper, error) {
 	s.Time = time.Now()
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("MkSigmaClient: %v", err)
+		db.DFatalf("NewSigmaClient: %v", err)
 	}
 	s.SigmaClnt = sc
 	s.startSeqno = s.ReadSeqNo()

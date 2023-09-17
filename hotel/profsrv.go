@@ -33,12 +33,12 @@ func RunProfSrv(job string, public bool, cache string) error {
 	if err != nil {
 		return err
 	}
-	dbc, err := dbclnt.MkDbClnt(ssrv.MemFs.SigmaClnt().FsLib, sp.DBD)
+	dbc, err := dbclnt.NewDbClnt(ssrv.MemFs.SigmaClnt().FsLib, sp.DBD)
 	if err != nil {
 		return err
 	}
 	ps.dbc = dbc
-	cachec, err := MkCacheClnt(cache, NewFsLibs(HOTELPROF), job)
+	cachec, err := NewCacheClnt(cache, NewFsLibs(HOTELPROF), job)
 	if err != nil {
 		return err
 	}

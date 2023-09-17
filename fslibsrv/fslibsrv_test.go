@@ -106,7 +106,7 @@ func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz
 func TestWriteFilePerfSingle(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 	fn := gopath.Join(pathname, "f")
-	buf := test.MkBuf(WRITESZ)
+	buf := test.NewBuf(WRITESZ)
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
 	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.WRITER.String())
@@ -142,7 +142,7 @@ func TestWriteFilePerfSingle(t *testing.T) {
 func TestWriteFilePerfMultiClient(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 	N_CLI := 10
-	buf := test.MkBuf(WRITESZ)
+	buf := test.NewBuf(WRITESZ)
 	done := make(chan sp.Tlength)
 	fns := make([]string, 0, N_CLI)
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
@@ -226,7 +226,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 func TestReadFilePerfSingle(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 	fn := gopath.Join(pathname, "f")
-	buf := test.MkBuf(WRITESZ)
+	buf := test.NewBuf(WRITESZ)
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
 	sz := newFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
@@ -275,7 +275,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 func TestReadFilePerfMultiClient(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 	N_CLI := 10
-	buf := test.MkBuf(WRITESZ)
+	buf := test.NewBuf(WRITESZ)
 	done := make(chan sp.Tlength)
 	fns := make([]string, 0, N_CLI)
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
@@ -370,7 +370,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 }
 
 func newDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
-	err := fsl.MkDir(dir, 0777)
+	err := fsl.NewDir(dir, 0777)
 	assert.Equal(t, nil, err)
 	for i := 0; i < n; i++ {
 		b := []byte("hello")

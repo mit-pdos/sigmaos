@@ -27,7 +27,7 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []sp.Tpid) {
 	fn := path.Join(DIR, OUT)
 
 	ts.Remove(LEADERFN)
-	err := ts.MkDir(DIR, 0777)
+	err := ts.NewDir(DIR, 0777)
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, []byte{})
 	assert.Nil(t, err, "putfile")
 

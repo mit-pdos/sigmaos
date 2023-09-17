@@ -20,7 +20,7 @@ func TestUser(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
 	assert.Nil(t, err, "RPC client should be created properly")
 
 	// check user
@@ -89,7 +89,7 @@ func TestGraph(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitGraph()
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
 	assert.Nil(t, err)
 
 	// get follower and followee list
@@ -162,8 +162,8 @@ func TestUserAndGraph(t *testing.T) {
 	tssn.dbu.InitGraph()
 	tssn.dbu.InitUser()
 	snCfg := tssn.snCfg
-	urpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
-	grpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
+	urpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
+	grpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
 	assert.Nil(t, err)
 
 	// Create two users Alice and Bob
@@ -236,7 +236,7 @@ func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
-	urpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
+	urpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
 	assert.Nil(t, err, "RPC client should be created properly")
 
 	// check user

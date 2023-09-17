@@ -38,7 +38,7 @@ func NewKVJobInstance(ts *test.RealmTstate, nkvd int, kvdrepl int, nclerks []int
 	assert.Nil(ts.Ts.T, err)
 	ji.kvf = kvf
 
-	cm, err := kv.MkClerkMgr(ts.SigmaClnt, ji.job, ckmcpu, false)
+	cm, err := kv.NewClerkMgr(ts.SigmaClnt, ji.job, ckmcpu, false)
 	assert.Nil(ts.Ts.T, err)
 	ji.cm = cm
 

@@ -8,7 +8,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func MkBuf(n int) []byte {
+func NewBuf(n int) []byte {
 	buf := make([]byte, n)
 	for i := 0; i < n; i++ {
 		buf[i] = byte(i & 0xFF)

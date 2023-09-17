@@ -13,9 +13,9 @@ type MongoClnt struct {
 	rpcc *rpcclnt.RPCClnt
 }
 
-func MkMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
+func NewMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
 	mongoc := &MongoClnt{}
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, name)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{fsl}, name)
 	if err != nil {
 		return nil, err
 	}
@@ -23,8 +23,8 @@ func MkMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
 	return mongoc, nil
 }
 
-func MkMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
-	return MkMongoClntWithName(fsl, sp.MONGO + "~local/")
+func NewMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
+	return NewMongoClntWithName(fsl, sp.MONGO + "~local/")
 }
 
 func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {

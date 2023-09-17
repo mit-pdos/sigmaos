@@ -38,19 +38,19 @@ func RunTimelineSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	mongoc, err := mongoclnt.MkMongoClnt(ssrv.MemFs.SigmaClnt().FsLib)
+	mongoc, err := mongoclnt.NewMongoClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		return err
 	}
 	mongoc.EnsureIndex(SN_DB, TIMELINE_COL, []string{"userid"})
 	tlsrv.mongoc = mongoc
 	fsls := NewFsLibs(SOCIAL_NETWORK_TIMELINE)
-	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
+	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	tlsrv.cachec = cachec
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_POST)
+	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}

@@ -39,7 +39,7 @@ func newTstate(t *testing.T, nsrv int) *Tstate {
 	ts.Tstate = test.NewTstateAll(t)
 	ts.job = rd.String(16)
 	ts.Remove(cache.CACHE)
-	cm, err := cachedsvc.MkCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
+	cm, err := cachedsvc.NewCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
 	assert.Nil(t, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
@@ -72,7 +72,7 @@ func TestCacheSingle(t *testing.T) {
 	)
 
 	ts := newTstate(t, NSRV)
-	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	assert.Nil(t, err)
 
 	for k := 0; k < N; k++ {
@@ -115,7 +115,7 @@ func testCacheSharded(t *testing.T, nsrv int) {
 		N = 10
 	)
 	ts := newTstate(t, nsrv)
-	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	assert.Nil(t, err)
 
 	for k := 0; k < N; k++ {
@@ -168,7 +168,7 @@ func TestCacheConcur(t *testing.T) {
 	)
 	ts := newTstate(t, NSRV)
 	v := "hello"
-	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	assert.Nil(t, err)
 	err = cc.Put("x", &proto.CacheString{Val: v})
 	assert.Nil(t, err)
@@ -227,7 +227,7 @@ func TestElasticCache(t *testing.T) {
 
 	ts.sem.Up()
 
-	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	assert.Nil(t, err)
 
 	for i := 0; i < 5; i++ {

@@ -14,20 +14,20 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 )
 
-type MkSessionF func(*memfssrv.MemFs, sessp.Tsession) *serr.Err
+type NewSessionF func(*memfssrv.MemFs, sessp.Tsession) *serr.Err
 type WriteCtlF func(sessp.Tsession, fs.CtxI, sp.Toffset, []byte, sp.Tfence) (sp.Tsize, *serr.Err)
 
 type Clone struct {
 	*inode.Inode
 	mfs       *memfssrv.MemFs
-	newsession MkSessionF
+	newsession NewSessionF
 	detach    sps.DetachSessF
 	dir       string
 	wctl      WriteCtlF
 }
 
 // Make a Clone dev inode in directory <dir> in memfs
-func newClone(mfs *memfssrv.MemFs, dir string, news MkSessionF, d sps.DetachSessF, w WriteCtlF) *serr.Err {
+func newClone(mfs *memfssrv.MemFs, dir string, news NewSessionF, d sps.DetachSessF, w WriteCtlF) *serr.Err {
 	cl := &Clone{
 		Inode:     mfs.NewDevInode(),
 		mfs:       mfs,
@@ -38,7 +38,7 @@ func newClone(mfs *memfssrv.MemFs, dir string, news MkSessionF, d sps.DetachSess
 	}
 	pn := dir + "/" + sessdev.CLONE
 	db.DPrintf(db.CLONEDEV, "newClone %q\n", dir)
-	err := mfs.MkDev(pn, cl) // put clone file into dir <dir>
+	err := mfs.NewDev(pn, cl) // put clone file into dir <dir>
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.CLONEDEV, "Clone create %q\n", pn)
 	_, err := c.mfs.Create(pn, sp.DMDIR, sp.ORDWR, sp.NoLeaseId)
 	if err != nil && err.Code() != serr.TErrExists {
-		db.DPrintf(db.CLONEDEV, "MkDir %q err %v\n", pn, err)
+		db.DPrintf(db.CLONEDEV, "NewDir %q err %v\n", pn, err)
 		return nil, err
 	}
 	var s *session
@@ -60,8 +60,8 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	if err == nil {
 		s = &session{id: sid, wctl: c.wctl}
 		s.Inode = c.mfs.NewDevInode()
-		if err := c.mfs.MkDev(ctl, s); err != nil {
-			db.DPrintf(db.CLONEDEV, "MkDev %q err %v\n", ctl, err)
+		if err := c.mfs.NewDev(ctl, s); err != nil {
+			db.DPrintf(db.CLONEDEV, "NewDev %q err %v\n", ctl, err)
 			return nil, err
 		}
 		if err := c.mfs.RegisterDetachSess(c.Detach, sid); err != nil {
@@ -102,7 +102,7 @@ func (c *Clone) Detach(session sessp.Tsession) {
 	}
 }
 
-func MkCloneDev(mfs *memfssrv.MemFs, dir string, f MkSessionF, d sps.DetachSessF, w WriteCtlF) error {
+func NewCloneDev(mfs *memfssrv.MemFs, dir string, f NewSessionF, d sps.DetachSessF, w WriteCtlF) error {
 	if err := newClone(mfs, dir, f, d, w); err != nil {
 		return err
 	}

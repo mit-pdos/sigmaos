@@ -55,7 +55,7 @@ func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *lease
 	db.DPrintf(db.LEASESRV, "%v: Extend %v\n", ctx.ClntId(), sp.TleaseId(req.LeaseId))
 	li, ok := ls.lt.Lookup(sp.TleaseId(req.LeaseId))
 	if !ok {
-		return serr.MkErr(serr.TErrNotfound, req.LeaseId)
+		return serr.NewErr(serr.TErrNotfound, req.LeaseId)
 	}
 	li.resetTTL()
 	return nil
@@ -66,7 +66,7 @@ func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leasepro
 	db.DPrintf(db.LEASESRV, "%v: End %v\n", ctx.ClntId(), lid)
 	_, ok := ls.lt.Lookup(lid)
 	if !ok {
-		return serr.MkErr(serr.TErrNotfound, req.LeaseId)
+		return serr.NewErr(serr.TErrNotfound, req.LeaseId)
 	}
 	ls.lt.Delete(lid)
 	ls.expire(lid)

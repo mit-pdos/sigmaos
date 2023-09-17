@@ -38,8 +38,8 @@ type Tstate struct {
 func newTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
 	ts := &Tstate{job: rand.String(4), grp: GRP}
 	ts.Tstate = test.NewTstateAll(t)
-	ts.MkDir(kvgrp.KVDIR, 0777)
-	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
+	ts.NewDir(kvgrp.KVDIR, 0777)
+	err := ts.NewDir(kvgrp.JobDir(ts.job), 0777)
 	assert.Nil(t, err)
 	mcfg := groupmgr.NewGroupConfig(0, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, 0, ts.job)
 	mcfg.SetTest(crash, partition, netfail)
@@ -243,7 +243,7 @@ func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
 				break
 			}
 			nfile += 1
-			buf := test.MkBuf(WRITESZ)
+			buf := test.NewBuf(WRITESZ)
 			if err := test.Writer(t, w, buf, FILESZ); err != nil {
 				break
 			}

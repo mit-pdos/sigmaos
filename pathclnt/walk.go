@@ -19,7 +19,7 @@ const (
 func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, uname sp.Tuname) (sp.Tfid, *serr.Err) {
 	ch := pathc.FidClnt.Lookup(fid)
 	if ch == nil {
-		return sp.NoFid, serr.MkErr(serr.TErrNotfound, fid)
+		return sp.NoFid, serr.NewErr(serr.TErrNotfound, fid)
 	}
 	p := ch.Path().AppendPath(path)
 	db.DPrintf(db.WALK, "Walk %v (ch %v)", p, ch.Path())
@@ -60,7 +60,7 @@ func (pathc *PathClnt) walk(path path.Path, uname sp.Tuname, resolve bool, w Wat
 		}
 		return fid, nil
 	}
-	return sp.NoFid, serr.MkErr(serr.TErrUnreachable, path)
+	return sp.NoFid, serr.NewErr(serr.TErrUnreachable, path)
 }
 
 // Walks path. If success, returns the fid for the path.  If failure,
@@ -127,9 +127,9 @@ func (pathc *PathClnt) walkPath(path path.Path, resolve bool, w Watch) (sp.Tfid,
 			// Note: fid can be the one returned by walkMount
 			return fid, path, nil, nil
 		}
-		return sp.NoFid, path, left, serr.MkErr(serr.TErrNotfound, left)
+		return sp.NoFid, path, left, serr.NewErr(serr.TErrNotfound, left)
 	}
-	return sp.NoFid, path, path, serr.MkErr(serr.TErrUnreachable, "too many symlink cycles")
+	return sp.NoFid, path, path, serr.NewErr(serr.TErrUnreachable, "too many symlink cycles")
 }
 
 // Walk the mount table, and clone the found fid; the caller is

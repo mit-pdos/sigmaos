@@ -40,8 +40,8 @@ func RunFss3(buckets []string) {
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.
 		d := newDir(bucket, path.Path{}, sp.DMDIR)
-		if err := ssrv.MkNod(bucket, d); err != nil {
-			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
+		if err := ssrv.NewNod(bucket, d); err != nil {
+			db.DFatalf("Error NewNod bucket in RunFss3: %v", err)
 		}
 	}
 	fss3.SigmaSrv = ssrv

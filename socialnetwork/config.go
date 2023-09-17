@@ -76,8 +76,8 @@ func JobDir(job string) string {
 func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc, public bool) (*SocialNetworkConfig, error) {
 	var err error
 	fsl := sc.FsLib
-	fsl.MkDir(SOCIAL_NETWORK, 0777)
-	if err = fsl.MkDir(JobDir(jobname), 0777); err != nil {
+	fsl.NewDir(SOCIAL_NETWORK, 0777)
+	if err = fsl.NewDir(JobDir(jobname), 0777); err != nil {
 		fmt.Printf("Mkdir %v err %v\n", JobDir(jobname), err)
 		return nil, err
 	}
@@ -86,12 +86,12 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 	var cm *cachedsvc.CacheMgr
 	if nsrv > 0 {
 		dbg.DPrintf(dbg.SOCIAL_NETWORK, "social network running with cached: %v caches", nsrv)
-		cm, err = cachedsvc.MkCacheMgr(sc, jobname, nsrv, proc.Tmcpu(cacheMcpu), gc, public)
+		cm, err = cachedsvc.NewCacheMgr(sc, jobname, nsrv, proc.Tmcpu(cacheMcpu), gc, public)
 		if err != nil {
-			dbg.DFatalf("Error MkCacheMgr %v", err)
+			dbg.DFatalf("Error NewCacheMgr %v", err)
 			return nil, err
 		}
-		cc, err = cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, jobname)
+		cc, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, jobname)
 		if err != nil {
 			dbg.DFatalf("Error cacheclnt %v", err)
 			return nil, err

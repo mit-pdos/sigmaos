@@ -10,7 +10,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
+func (fl *FsLib) NewDir(path string, perm sp.Tperm) error {
 	perm = perm | sp.DMDIR
 	fd, err := fl.Create(path, perm, sp.OREAD)
 	if err != nil {

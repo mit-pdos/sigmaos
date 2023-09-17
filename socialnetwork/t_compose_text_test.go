@@ -18,7 +18,7 @@ func TestUrl(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_URL)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_URL)
 	assert.Nil(t, err)
 
 	// compose urls
@@ -55,7 +55,7 @@ func TestText(t *testing.T) {
 
 	// create RPC clients text
 	tssn.dbu.InitUser()
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TEXT)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TEXT)
 	assert.Nil(t, err)
 
 	// process text
@@ -105,11 +105,11 @@ func TestCompose(t *testing.T) {
 	// create RPC clients text
 	tssn.dbu.InitUser()
 	tssn.dbu.InitGraph()
-	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_COMPOSE)
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_COMPOSE)
 	assert.Nil(t, err)
-	trpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
+	trpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
 	assert.Nil(t, err)
-	hrpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
+	hrpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
 	assert.Nil(t, err)
 
 	// compose empty post not allowed

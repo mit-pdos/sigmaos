@@ -51,7 +51,7 @@ func (rs *ReplSrv) applyOp(req *replproto.ReplOpRequest, rep *replproto.ReplOpRe
 		}
 		return err
 	}
-	if b, err := rs.rpcs.ServeRPC(ctx.MkCtxNull(), req.Method, req.Msg); err != nil {
+	if b, err := rs.rpcs.ServeRPC(ctx.NewCtxNull(), req.Method, req.Msg); err != nil {
 		rs.rt.PutReply(req.TclntId(), req.Tseqno(), err, nil)
 		return err
 	} else {

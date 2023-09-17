@@ -83,5 +83,5 @@ func NewMsg(typ sessp.Tfcall) (sessp.Tmsg, *serr.Err) {
 	case sessp.TTwriteread:
 		return &sp.Twriteread{}, nil
 	}
-	return nil, serr.MkErr(serr.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
+	return nil, serr.NewErr(serr.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
 }

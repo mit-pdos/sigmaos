@@ -168,9 +168,9 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 
 		// Use 127.0.0.1, because only the local schedd should be talking
 		// to uprocd.
-		mnt := sp.MkMountServer("127.0.0.1:" + pm.HostPort.String())
+		mnt := sp.NewMountServer("127.0.0.1:" + pm.HostPort.String())
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
-		if err := k.MkMountSymlink(pn, mnt, sp.NoLeaseId); err != nil {
+		if err := k.NewMountSymlink(pn, mnt, sp.NoLeaseId); err != nil {
 			return nil, err
 		}
 		db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s, %v\n", realm, ptype, pn, pm)

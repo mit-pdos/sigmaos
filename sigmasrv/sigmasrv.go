@@ -86,7 +86,7 @@ func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, e
 }
 
 func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
-	ffs := fencefs.NewRoot(ctx.MkCtxNull(), nil)
+	ffs := fencefs.NewRoot(ctx.NewCtxNull(), nil)
 	mfs, error := memfssrv.NewMemFsPortClntFence(fn, ":0", sc, ffs)
 	if error != nil {
 		db.DFatalf("NewSigmaSrvClnt %v err %v\n", fn, error)
@@ -161,7 +161,7 @@ func NewSigmaSrvRoot(root fs.Dir, addr, path string, pcfg *proc.ProcEnv) (*Sigma
 // it. This function is useful for SigmaSrv that don't have an MemFs
 // (e.g., knamed/named).
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
-	d := dir.MkRootDir(ctx.MkCtxNull(), memfs.NewInode, nil)
+	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
 	ssrv.MemFs.SessSrv.Mount(rpc.RPC, d.(*dir.DirImpl))
 	if err := ssrv.newRPCDev(svci); err != nil {
 		return err
@@ -176,7 +176,7 @@ func (ssrv *SigmaSrv) newRPCDev(svci any) error {
 	} else {
 		ssrv.rpcs = rpcsrv.NewRPCSrv(svci, si)
 		rd := newRpcDev(ssrv.rpcs)
-		if err := sessdevsrv.MkSessDev(ssrv.MemFs, rpc.RPC, rd.newRpcSession, nil); err != nil {
+		if err := sessdevsrv.NewSessDev(ssrv.MemFs, rpc.RPC, rd.newRpcSession, nil); err != nil {
 			return err
 		}
 		return nil
@@ -195,7 +195,7 @@ func (ssrv *SigmaSrv) QueueLen() int64 {
 }
 
 func (ssrv *SigmaSrv) MonitorCPU(ufn cpumon.UtilFn) {
-	ssrv.cpumon = cpumon.MkCpuMon(ssrv.GetStats(), ufn)
+	ssrv.cpumon = cpumon.NewCpuMon(ssrv.GetStats(), ufn)
 }
 
 func (ssrv *SigmaSrv) RunServer() error {

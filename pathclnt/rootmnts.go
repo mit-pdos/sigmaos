@@ -37,7 +37,7 @@ func (rootmt *RootMountTable) lookup(name string) (*RootMount, *serr.Err) {
 	if ok {
 		return sm, nil
 	}
-	return nil, serr.MkErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
+	return nil, serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
 }
 
 func (rootmt *RootMountTable) add(uname sp.Tuname, svcpn, tree path.Path, mntname string) *serr.Err {
@@ -46,7 +46,7 @@ func (rootmt *RootMountTable) add(uname sp.Tuname, svcpn, tree path.Path, mntnam
 
 	_, ok := rootmt.mounts[mntname]
 	if ok {
-		return serr.MkErr(serr.TErrExists, mntname)
+		return serr.NewErr(serr.TErrExists, mntname)
 	}
 	rootmt.mounts[mntname] = &RootMount{svcpn: svcpn, tree: tree}
 	return nil
@@ -65,7 +65,7 @@ func (rootmt *RootMountTable) isRootMount(mntname string) bool {
 
 func (pathc *PathClnt) resolveRoot(pn path.Path, uname sp.Tuname) (*serr.Err, bool) {
 	if len(pn) == 0 {
-		return serr.MkErr(serr.TErrInval, fmt.Sprintf("empty path '%v' ", pn)), false
+		return serr.NewErr(serr.TErrInval, fmt.Sprintf("empty path '%v' ", pn)), false
 	}
 	_, rest, err := pathc.mnt.resolve(pn, true)
 	if err != nil && len(rest) >= 1 && pathc.rootmt.isRootMount(rest[0]) {
@@ -87,7 +87,7 @@ func (pathc *PathClnt) resolveRoot(pn path.Path, uname sp.Tuname) (*serr.Err, bo
 				if errors.As(err, &sr) {
 					return sr, false
 				} else {
-					return serr.MkErrError(err), false
+					return serr.NewErrError(err), false
 				}
 			}
 			return pathc.mountRoot(sm.uname, sm.svcpn, sm.tree, pn[0]), true

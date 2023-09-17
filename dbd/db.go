@@ -32,7 +32,7 @@ func RunDbd(dbdaddr string) error {
 	if _, err := ssrv.Create(QDEV, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
-	if err := sessdevsrv.MkSessDev(ssrv.MemFs, QDEV, qd.newSession, nil); err != nil {
+	if err := sessdevsrv.NewSessDev(ssrv.MemFs, QDEV, qd.newSession, nil); err != nil {
 		return err
 	}
 	return ssrv.RunServer()

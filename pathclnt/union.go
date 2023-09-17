@@ -22,7 +22,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 		return sp.NoFid, err
 	}
 	db.DPrintf(db.WALK, "unionScan: %v target: %v\n", name, string(target))
-	mnt, err := sp.MkMount(target)
+	mnt, err := sp.NewMount(target)
 	if err != nil {
 		return sp.NoFid, nil
 	}
@@ -62,5 +62,5 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *serr.Err) {
 	if error == nil && rfid != sp.NoFid {
 		return rfid, nil
 	}
-	return rfid, serr.MkErr(serr.TErrNotfound, q)
+	return rfid, serr.NewErr(serr.TErrNotfound, q)
 }

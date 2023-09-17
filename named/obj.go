@@ -91,6 +91,6 @@ func getObj(fs *fsetcd.FsEtcd, pn path.Path, path sp.Tpath, parent sp.Tpath) (*O
 }
 
 func (o *Obj) putObj(f sp.Tfence) *serr.Err {
-	nf := fsetcd.MkEtcdFile(o.di.Perm|0777, o.di.Nf.TclntId(), o.di.Nf.TleaseId(), o.di.Nf.Data)
+	nf := fsetcd.NewEtcdFile(o.di.Perm|0777, o.di.Nf.TclntId(), o.di.Nf.TleaseId(), o.di.Nf.Data)
 	return o.fs.PutFile(o.di.Path, nf, f)
 }

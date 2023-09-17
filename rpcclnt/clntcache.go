@@ -38,7 +38,7 @@ func (cc *ClntCache) Lookup(pn string) (*RPCClnt, error) {
 		return rpcc, nil
 	}
 	cc.Unlock()
-	rpcc, err := MkRPCClnt(cc.fsls, pn)
+	rpcc, err := NewRPCClnt(cc.fsls, pn)
 	cc.Lock()
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 			return err
 		}
 	}
-	return serr.MkErr(serr.TErrUnreachable, pn)
+	return serr.NewErr(serr.TErrUnreachable, pn)
 }
 
 func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.Message) error {

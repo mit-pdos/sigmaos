@@ -16,7 +16,7 @@ import (
 func main() {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("MkSigmaClnt err %v\n", err)
+		db.DFatalf("NewSigmaClnt err %v\n", err)
 	}
 	err = sc.Started()
 	if err != nil {

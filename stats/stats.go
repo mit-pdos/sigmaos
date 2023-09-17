@@ -83,7 +83,7 @@ type Stats struct {
 	CustomLoad perf.Tload
 }
 
-func MkStats() *Stats {
+func NewStats() *Stats {
 	sti := &Stats{}
 	return sti
 }
@@ -144,10 +144,10 @@ type StatInfo struct {
 	pathCnts bool
 }
 
-func MkStatsDev(parent fs.Dir) *StatInfo {
+func NewStatsDev(parent fs.Dir) *StatInfo {
 	sti := &StatInfo{}
 	sti.Inode = inode.NewInode(nil, sp.DMDEVICE, parent)
-	sti.st = MkStats()
+	sti.st = NewStats()
 	sti.pathCnts = false
 	return sti
 }

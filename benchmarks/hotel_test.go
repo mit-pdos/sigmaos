@@ -80,7 +80,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	var err error
 	var svcs []hotel.Srv
 	if sigmaos {
-		svcs = hotel.MkHotelSvc(test.Overlays)
+		svcs = hotel.NewHotelSvc(test.Overlays)
 	}
 
 	if ji.justCli {
@@ -125,7 +125,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		}
 		db.DPrintf(db.TEST, "Running procs:%v", progs)
 		if sigmaos {
-			rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, hotel.HOTELRESERVE)
+			rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, hotel.HOTELRESERVE)
 			if err != nil {
 				db.DFatalf("Error make reserve pdc: %v", err)
 			}
@@ -138,7 +138,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		// Write a file for clients to discover the server's address.
 		if !ji.justCli {
 			p := hotel.JobHTTPAddrsPath(ji.job)
-			mnt := sp.MkMountService(sp.MkTaddrs([]string{ji.k8ssrvaddr}))
+			mnt := sp.NewMountService(sp.NewTaddrs([]string{ji.k8ssrvaddr}))
 			if err = ts.MountService(p, mnt, sp.NoLeaseId); err != nil {
 				db.DFatalf("MountService %v", err)
 			}

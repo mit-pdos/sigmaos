@@ -50,9 +50,9 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	}
 	pn := d.pn.Copy().Append(name)
 	path := newTpath(pn)
-	nf, r := fsetcd.MkEtcdFileDir(perm, path, cid, lid)
+	nf, r := fsetcd.NewEtcdFileDir(perm, path, cid, lid)
 	if r != nil {
-		return nil, serr.MkErrError(r)
+		return nil, serr.NewErrError(r)
 	}
 	di, err := d.fs.Create(d.Obj.di.Path, name, path, nf, f)
 	if err != nil {
@@ -147,7 +147,7 @@ func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
 	_, err := fs.ReadRootDir()
 	if err != nil && err.IsErrNotfound() { // make root dir
 		db.DPrintf(db.NAMED, "fsetcd.ReadDir err %v; make root dir\n", err)
-		if err := fs.MkRootDir(); err != nil {
+		if err := fs.NewRootDir(); err != nil {
 			db.DFatalf("rootDir: newRootDir err %v\n", err)
 		}
 	} else if err != nil {

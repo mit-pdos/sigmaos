@@ -24,7 +24,7 @@ func (ft *fidTable) Lookup(fid sp.Tfid) (*fid.Fid, *serr.Err) {
 	defer ft.Unlock()
 	f, ok := ft.fids[fid]
 	if !ok {
-		return nil, serr.MkErr(serr.TErrUnknownfid, f)
+		return nil, serr.NewErr(serr.TErrUnknownfid, f)
 	}
 	return f, nil
 }

@@ -35,7 +35,7 @@ type CachedSvcClnt struct {
 	rdr  *reader.Reader
 }
 
-func MkCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
+func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
 	csc := &CachedSvcClnt{
 		fsl:  fsls[0],
 		pn:   cache.CACHE,

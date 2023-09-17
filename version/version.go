@@ -28,9 +28,9 @@ type VersionTable struct {
 	*refmap.RefTable[sp.Tpath, *version]
 }
 
-func MkVersionTable() *VersionTable {
+func NewVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.MkRefTable[sp.Tpath, *version](db.VERSION)
+	vt.RefTable = refmap.NewRefTable[sp.Tpath, *version](db.VERSION)
 	return vt
 }
 

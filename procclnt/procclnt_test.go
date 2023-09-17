@@ -712,7 +712,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	nChildren := getNChildren(ts)
 
 	ts.RmDir(OUTDIR)
-	err = ts.MkDir(OUTDIR, 0777)
+	err = ts.NewDir(OUTDIR, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Start a bunch of replicated spinner procs.

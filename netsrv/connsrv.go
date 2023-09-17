@@ -118,7 +118,7 @@ func (c *SrvConn) reader() {
 				db.DPrintf(db.NETSRV_ERR, "Cli %v Sess %v closed\n", c.clid, c.sessid)
 				// Push a message telling the client that it's session has been closed,
 				// and it shouldn't try to reconnect.
-				fm := sessp.NewFcallMsgReply(fc, sp.MkRerror(err))
+				fm := sessp.NewFcallMsgReply(fc, sp.NewRerrorSerr(err))
 				c.GetReplyChan() <- sessconn.NewPartMarshaledMsg(fm)
 				close(c.replies)
 				return

@@ -140,7 +140,7 @@ func (pathc *PathClnt) NewWriter(fid sp.Tfid) *writer.Writer {
 func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
 	qid := pathc.Qid(fid)
 	if qid.Ttype()&sp.QTSYMLINK == 0 {
-		return nil, serr.MkErr(serr.TErrNotSymlink, qid.Type)
+		return nil, serr.NewErr(serr.TErrNotSymlink, qid.Type)
 	}
 	_, err := pathc.FidClnt.Open(fid, sp.OREAD)
 	if err != nil {
@@ -220,7 +220,7 @@ func (pathc *PathClnt) Rename(old, new string, uname sp.Tuname) error {
 		return err
 	}
 	defer pathc.FidClnt.Clunk(fid)
-	st := sp.MkStatNull()
+	st := sp.NewStatNull()
 	st.Name = npath[len(npath)-1]
 	err = pathc.FidClnt.Wstat(fid, st)
 	if err != nil {
@@ -279,7 +279,7 @@ func (pathc *PathClnt) Stat(name string, uname sp.Tuname) (*sp.Stat, error) {
 	}
 	db.DPrintf(db.PATHCLNT, "Stat resolve %v target %v rest %v\n", pn, target, rest)
 	if len(rest) == 0 && !path.EndSlash(name) {
-		st := sp.MkStatNull()
+		st := sp.NewStatNull()
 		st.Name = pathc.FidClnt.Lookup(target).Servers().String()
 		return st, nil
 	} else {
@@ -337,7 +337,7 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w Watch) error
 		return err
 	}
 	if w == nil {
-		return serr.MkErr(serr.TErrInval, "watch")
+		return serr.NewErr(serr.TErrInval, "watch")
 	}
 	go func() {
 		err := pathc.FidClnt.Watch(fid)

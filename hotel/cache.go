@@ -11,10 +11,10 @@ import (
 	"sigmaos/memcached"
 )
 
-func MkCacheClnt(cache string, fsls []*fslib.FsLib, job string) (cache.CacheClnt, error) {
+func NewCacheClnt(cache string, fsls []*fslib.FsLib, job string) (cache.CacheClnt, error) {
 	switch cache {
 	case "cached":
-		cc, err := cachedsvcclnt.MkCachedSvcClnt(fsls, job)
+		cc, err := cachedsvcclnt.NewCachedSvcClnt(fsls, job)
 		if err != nil {
 			return nil, err
 		}

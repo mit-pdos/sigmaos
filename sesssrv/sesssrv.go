@@ -37,7 +37,7 @@ type SessSrv struct {
 	addr     string
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
-	newps     sps.MkProtServer
+	newps     sps.NewProtServer
 	stats    *stats.StatInfo
 	st       *sessstatesrv.SessionTable
 	sm       *sessstatesrv.SessionMgr
@@ -51,7 +51,7 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr string, newps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr string, newps sps.NewProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
 	ssrv.dirover = overlay.NewDirOverlay(root)
@@ -59,12 +59,12 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr string, newps sps.MkProtServ
 	ssrv.addr = addr
 	ssrv.newps = newps
 	ssrv.et = et
-	ssrv.stats = stats.MkStatsDev(ssrv.dirover)
+	ssrv.stats = stats.NewStatsDev(ssrv.dirover)
 	ssrv.st = sessstatesrv.NewSessionTable(newps, ssrv, attachf, detachf)
 	ssrv.sct = sesscond.NewSessCondTable(ssrv.st)
-	ssrv.plt = lockmap.MkPathLockTable()
-	ssrv.wt = watch.MkWatchTable(ssrv.sct)
-	ssrv.vt = version.MkVersionTable()
+	ssrv.plt = lockmap.NewPathLockTable()
+	ssrv.wt = watch.NewWatchTable(ssrv.sct)
+	ssrv.vt = version.NewVersionTable()
 	ssrv.vt.Insert(ssrv.dirover.Path())
 	ssrv.fencefs = fencefs
 
@@ -91,7 +91,7 @@ func (ssrv *SessSrv) GetEphemeralMap() *ephemeralmap.EphemeralMap {
 func (ssrv *SessSrv) Root(path path.Path) (fs.Dir, path.Path) {
 	d := ssrv.dirunder
 	if len(path) > 0 {
-		o, err := ssrv.dirover.Lookup(ctx.MkCtxNull(), path[0])
+		o, err := ssrv.dirover.Lookup(ctx.NewCtxNull(), path[0])
 		if err == nil {
 			return o.(fs.Dir), path[1:]
 		}
@@ -107,7 +107,7 @@ func (ssrv *SessSrv) Mount(name string, dir *dir.DirImpl) {
 func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) *serr.Err {
 	sess, ok := sssrv.st.Lookup(sid)
 	if !ok {
-		return serr.MkErr(serr.TErrNotfound, sid)
+		return serr.NewErr(serr.TErrNotfound, sid)
 	}
 	sess.RegisterDetachSess(f)
 	return nil
@@ -153,7 +153,7 @@ func (ssrv *SessSrv) GetVersionTable() *version.VersionTable {
 }
 
 func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
-	return ssrv.dirover, ctx.MkCtx(uname, sessid, clntid, ssrv.sct, ssrv.fencefs)
+	return ssrv.dirover, ctx.NewCtx(uname, sessid, clntid, ssrv.sct, ssrv.fencefs)
 }
 
 // New session or new connection for existing session

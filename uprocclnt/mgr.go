@@ -62,15 +62,15 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (sp.Tpid, 
 func (updm *UprocdMgr) mkdirs(realm sp.Trealm, ptype proc.Ttype) error {
 	d1 := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL)
 	// We may get ErrExists if the uprocd for a different type (within the same realm) has already started up.
-	if err := updm.fsl.MkDir(d1, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+	if err := updm.fsl.NewDir(d1, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		return err
 	}
 	d2 := path.Join(d1, realm.String())
-	if err := updm.fsl.MkDir(d2, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+	if err := updm.fsl.NewDir(d2, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		return err
 	}
 	d3 := path.Join(d2, ptype.String())
-	if err := updm.fsl.MkDir(d3, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+	if err := updm.fsl.NewDir(d3, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		return err
 	}
 	return nil
@@ -94,7 +94,7 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 			return nil, err
 		}
 		pn := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL, realm.String(), ptype.String())
-		rc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{updm.fsl}, pn)
+		rc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{updm.fsl}, pn)
 		if err != nil {
 			return nil, err
 		}

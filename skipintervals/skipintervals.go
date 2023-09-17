@@ -22,11 +22,11 @@ type SkipIntervals struct {
 	freelist  *element
 }
 
-func MkSkipIInterval() interval.IIntervals {
-	return MkSkipIntervals()
+func NewSkipIInterval() interval.IIntervals {
+	return NewSkipIntervals()
 }
 
-func MkSkipIntervals() *SkipIntervals {
+func NewSkipIntervals() *SkipIntervals {
 	source := rand.NewSource(time.Now().UnixNano())
 	skipl := &SkipIntervals{
 		levels:    newLevels(MaxLevel),
@@ -187,7 +187,7 @@ func (skipl *SkipIntervals) Delete(iv *interval.Tinterval) {
 		} else if elem.iv.Start == iv.Start {
 			elem.iv.Start = iv.End
 		} else { // split iv
-			skipl.insert(interval.MkInterval(elem.iv.Start, iv.Start), skipl.prevElems, elem)
+			skipl.insert(interval.NewInterval(elem.iv.Start, iv.Start), skipl.prevElems, elem)
 			elem.iv.Start = iv.End
 			break
 		}

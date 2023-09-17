@@ -31,11 +31,11 @@ func newFence(i fs.Inode) *Fence {
 }
 
 func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, fence sp.Tfence) (sp.Tsize, *serr.Err) {
-	return 0, serr.MkErr(serr.TErrNotSupported, "Write")
+	return 0, serr.NewErr(serr.TErrNotSupported, "Write")
 }
 
 func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, fence sp.Tfence) ([]byte, *serr.Err) {
-	return nil, serr.MkErr(serr.TErrNotSupported, "Read")
+	return nil, serr.NewErr(serr.TErrNotSupported, "Read")
 }
 
 func newInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, new fs.NewDirF) (fs.Inode, *serr.Err) {
@@ -46,18 +46,18 @@ func newInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, new fs.NewD
 	} else if p.IsFile() {
 		return newFence(i), nil
 	} else {
-		return nil, serr.MkErr(serr.TErrInval, p)
+		return nil, serr.NewErr(serr.TErrInval, p)
 	}
 }
 
 func NewRoot(ctx fs.CtxI, parent fs.Dir) fs.Dir {
-	dir := dir.MkRootDir(ctx, newInode, parent)
+	dir := dir.NewRootDir(ctx, newInode, parent)
 	return dir
 }
 
 // XXX check that clnt is allowed to update fence, perhaps using ctx
 func allocFence(root fs.Dir, name string) (*Fence, *serr.Err) {
-	i, err := root.Create(ctx.MkCtxNull(), name, 0777, sp.OWRITE, sp.NoLeaseId, sp.NoFence())
+	i, err := root.Create(ctx.NewCtxNull(), name, 0777, sp.OWRITE, sp.NoLeaseId, sp.NoFence())
 	if err == nil {
 		f := i.(*Fence)
 		f.RLock()
@@ -89,7 +89,7 @@ func CheckFence(root fs.Dir, new sp.Tfence) (*Fence, *serr.Err) {
 	if new.LessThan(&f.fence) {
 		db.DPrintf(db.FENCEFS_ERR, "Stale fence %v\n", new)
 		f.RUnlock()
-		return nil, serr.MkErr(serr.TErrStale, new)
+		return nil, serr.NewErr(serr.TErrStale, new)
 	}
 	if new.Eq(&f.fence) {
 		return f, nil
@@ -111,5 +111,5 @@ func CheckFence(root fs.Dir, new sp.Tfence) (*Fence, *serr.Err) {
 		return f, nil
 	}
 	db.DPrintf(db.FENCEFS_ERR, "Stale fence %v\n", new)
-	return nil, serr.MkErr(serr.TErrStale, new)
+	return nil, serr.NewErr(serr.TErrStale, new)
 }

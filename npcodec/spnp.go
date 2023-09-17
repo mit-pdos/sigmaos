@@ -84,32 +84,32 @@ func np2SpMsg(fcm *sessp.FcallMsg) {
 	switch fcm.Type() {
 	case sessp.TTattach9P:
 		m := fcm.Msg.(*np.Tattach9P)
-		r := sp.MkTattach(sp.Tfid(m.Fid), sp.Tfid(m.Afid), sp.Tuname(m.Uname), 0, path.Split(m.Aname))
+		r := sp.NewTattach(sp.Tfid(m.Fid), sp.Tfid(m.Afid), sp.Tuname(m.Uname), 0, path.Split(m.Aname))
 		fcm.Msg = r
 	case sessp.TTread:
 		m := fcm.Msg.(*np.Tread)
-		r := sp.MkReadF(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.Tsize(m.Count), sp.NullFence())
+		r := sp.NewReadF(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.Tsize(m.Count), sp.NullFence())
 		fcm.Msg = r
 	case sessp.TTwrite:
 		m := fcm.Msg.(*np.Twrite)
-		r := sp.MkTwriteF(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.NullFence())
+		r := sp.NewTwriteF(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.NullFence())
 		fcm.Msg = r
 		fcm.Data = m.Data
 	case sessp.TTopen9P:
 		m := fcm.Msg.(*np.Topen9P)
-		r := sp.MkTopen(sp.Tfid(m.Fid), sp.Tmode(m.Mode))
+		r := sp.NewTopen(sp.Tfid(m.Fid), sp.Tmode(m.Mode))
 		fcm.Msg = r
 	case sessp.TTcreate9P:
 		m := fcm.Msg.(*np.Tcreate9P)
-		r := sp.MkTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode), sp.NoLeaseId, sp.NoFence())
+		r := sp.NewTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode), sp.NoLeaseId, sp.NoFence())
 		fcm.Msg = r
 	case sessp.TTremove9P:
 		m := fcm.Msg.(*np.Tremove9P)
-		r := sp.MkTremove(sp.Tfid(m.Fid), sp.NullFence())
+		r := sp.NewTremove(sp.Tfid(m.Fid), sp.NullFence())
 		fcm.Msg = r
 	case sessp.TTwstat9P:
 		m := fcm.Msg.(*np.Twstat9P)
-		r := sp.MkTwstat(sp.Tfid(m.Fid), Np2SpStat(m.Stat), sp.NullFence())
+		r := sp.NewTwstat(sp.Tfid(m.Fid), Np2SpStat(m.Stat), sp.NullFence())
 		fcm.Msg = r
 	}
 }

@@ -18,7 +18,7 @@ func MarshalSizeDir(dir []*sp.Stat) (sp.Tlength, *serr.Err) {
 	for _, st := range dir {
 		b, err := proto.Marshal(st)
 		if err != nil {
-			return 0, serr.MkErrError(err)
+			return 0, serr.NewErrError(err)
 		}
 		sz += uint64(len(b))
 	}
@@ -29,26 +29,26 @@ func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *serr.Err) {
 	var buf bytes.Buffer
 	b, err := proto.Marshal(st)
 	if err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	sz := binary.Size(uint32(len(b)))
 	if cnt < uint64(len(b)+sz) {
 		return nil, nil
 	}
 	if err := frame.PushToFrame(&buf, b); err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	return buf.Bytes(), nil
 }
 
 func UnmarshalDirEnt(rdr io.Reader) (*sp.Stat, *serr.Err) {
-	st := sp.MkStatNull()
+	st := sp.NewStatNull()
 	b, err := frame.PopFromFrame(rdr)
 	if err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	if err := proto.Unmarshal(b, st); err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	return st, nil
 }

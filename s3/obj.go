@@ -72,7 +72,7 @@ func (o *Obj) readHead(fss3 *Fss3) *serr.Err {
 	}
 	result, err := fss3.client.HeadObject(context.TODO(), input)
 	if err != nil {
-		return serr.MkErrError(err)
+		return serr.NewErrError(err)
 	}
 
 	db.DPrintf(db.S3, "readHead: %v %v\n", key, result.ContentLength)
@@ -105,7 +105,7 @@ func (o *Obj) stat() *sp.Stat {
 	if len(o.key) > 0 {
 		name = o.key.Base()
 	}
-	return sp.MkStat(sp.NewQidPerm(o.perm, 0, o.Path()), o.perm|sp.Tperm(0777), uint32(o.mtime), name, "")
+	return sp.NewStat(sp.NewQidPerm(o.perm, 0, o.Path()), o.perm|sp.Tperm(0777), uint32(o.mtime), name, "")
 }
 
 func (o *Obj) Path() sp.Tpath {
@@ -151,7 +151,7 @@ func (o *Obj) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 		// wait for uploader to finish
 		err := <-o.ch
 		if err != nil {
-			return serr.MkErrError(err)
+			return serr.NewErrError(err)
 		}
 	}
 	return nil
@@ -171,7 +171,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, *serr.Err) {
 	}
 	result, err := fss3.client.GetObject(context.TODO(), input)
 	if err != nil {
-		return nil, 0, serr.MkErrError(err)
+		return nil, 0, serr.NewErrError(err)
 	}
 	region1 := ""
 	if result.ContentRange != nil {
@@ -194,7 +194,7 @@ func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]by
 	b, error := io.ReadAll(rdr)
 	if error != nil {
 		db.DPrintf(db.S3, "Read: Read %d err %v\n", n, error)
-		return nil, serr.MkErrError(error)
+		return nil, serr.NewErrError(error)
 	}
 	return b, nil
 }
@@ -229,11 +229,11 @@ func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsiz
 	db.DPrintf(db.S3, "Write %v %v sz %v f %v\n", off, len(b), o.sz, f)
 	if off != o.off {
 		db.DPrintf(db.S3, "Write %v err\n", o.off)
-		return 0, serr.MkErr(serr.TErrInval, off)
+		return 0, serr.NewErr(serr.TErrInval, off)
 	}
 	if n, err := o.w.Write(b); err != nil {
 		db.DPrintf(db.S3, "Write %v %v err %v\n", off, len(b), err)
-		return 0, serr.MkErrError(err)
+		return 0, serr.NewErrError(err)
 	} else {
 		o.off += sp.Toffset(n)
 		o.SetSize(sp.Tlength(o.off))

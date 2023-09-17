@@ -22,7 +22,7 @@ type statsDev struct {
 // Create a StatsDev in mfs at pn
 func newStatsDev(mfs *memfssrv.MemFs, pn string) (*rpc.StatInfo, *serr.Err) {
 	std := &statsDev{mfs: mfs, Inode: mfs.NewDevInode()}
-	if err := mfs.MkDev(path.Join(pn, rpc.STATS), std); err != nil {
+	if err := mfs.NewDev(path.Join(pn, rpc.STATS), std); err != nil {
 		return nil, err
 	}
 	std.si = rpc.NewStatInfo()
@@ -40,13 +40,13 @@ func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence
 	st.RpcStat = std.si.Stats()
 	b, err := json.Marshal(st)
 	if err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	return b, nil
 }
 
 func (std *statsDev) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
-	return 0, serr.MkErr(serr.TErrNotSupported, nil)
+	return 0, serr.NewErr(serr.TErrNotSupported, nil)
 }
 
 func (std *statsDev) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {

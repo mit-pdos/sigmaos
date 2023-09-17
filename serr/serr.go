@@ -155,11 +155,11 @@ type Err struct {
 	Err     error
 }
 
-func MkErr(err Terror, obj interface{}) *Err {
+func NewErr(err Terror, obj interface{}) *Err {
 	return &Err{err, fmt.Sprintf("%v", obj), nil}
 }
 
-func MkErrError(error error) *Err {
+func NewErrError(error error) *Err {
 	return &Err{TErrError, "", error}
 }
 
@@ -253,11 +253,11 @@ func IsErrCode(error error, code Terror) bool {
 func errnoToErr(errno syscall.Errno, err error, name string) *Err {
 	switch errno {
 	case syscall.ENOENT:
-		return MkErr(TErrNotfound, name)
+		return NewErr(TErrNotfound, name)
 	case syscall.EEXIST:
-		return MkErr(TErrExists, name)
+		return NewErr(TErrExists, name)
 	default:
-		return MkErrError(err)
+		return NewErrError(err)
 	}
 }
 
@@ -270,6 +270,6 @@ func UxErrnoToErr(err error, name string) *Err {
 	case syscall.Errno:
 		return errnoToErr(e, err, name)
 	default:
-		return MkErrError(err)
+		return NewErrError(err)
 	}
 }

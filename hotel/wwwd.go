@@ -48,32 +48,32 @@ func RunWww(job string, public bool) error {
 	www.SigmaClnt = sc
 
 	fsls := NewFsLibs("hotel-wwwd")
-	rpcc, err := rpcclnt.MkRPCClnt(fsls, HOTELUSER)
+	rpcc, err := rpcclnt.NewRPCClnt(fsls, HOTELUSER)
 	if err != nil {
 		return err
 	}
 	www.userc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELSEARCH)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELSEARCH)
 	if err != nil {
 		return err
 	}
 	www.searchc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELPROF)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELPROF)
 	if err != nil {
 		return err
 	}
 	www.profc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELRESERVE)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELRESERVE)
 	if err != nil {
 		return err
 	}
 	www.reservec = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELREC)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELREC)
 	if err != nil {
 		return err
 	}
 	www.recc = rpcc
-	rpcc, err = rpcclnt.MkRPCClnt(fsls, HOTELGEO)
+	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELGEO)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func RunWww(job string, public bool) error {
 	//	}
 
 	if public {
-		pc, pi, err := portclnt.MkPortClntPort(www.FsLib)
+		pc, pi, err := portclnt.NewPortClntPort(www.FsLib)
 		if err != nil {
 			db.DFatalf("AllocPort err %v", err)
 		}
@@ -137,7 +137,7 @@ func RunWww(job string, public bool) error {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
 		}
 		db.DPrintf(db.ALWAYS, "Hotel advertise %v", a)
-		mnt := sp.MkMountService(sp.MkTaddrs([]string{a}))
+		mnt := sp.NewMountService(sp.NewTaddrs([]string{a}))
 		if err = www.MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 			db.DFatalf("MountService %v", err)
 		}

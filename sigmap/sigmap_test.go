@@ -17,8 +17,8 @@ func TestString(t *testing.T) {
 
 func TestNamedAddrs(t *testing.T) {
 	addrs := make(Taddrs, 2)
-	addrs[0] = MkTaddrRealm("10.x.x.x:1111", "testrealm")
-	addrs[1] = MkTaddrRealm("192.y.y.y:1111", "rootrealm")
+	addrs[0] = NewTaddrRealm("10.x.x.x:1111", "testrealm")
+	addrs[1] = NewTaddrRealm("192.y.y.y:1111", "rootrealm")
 	s, err := addrs.Taddrs2String()
 	assert.Nil(t, err)
 	as, err := String2Taddrs(s)

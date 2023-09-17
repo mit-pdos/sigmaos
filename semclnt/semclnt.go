@@ -86,7 +86,7 @@ func (c *SemClnt) Down() error {
 		return nil
 	}
 	db.DPrintf(db.SEMCLNT_ERR, "Down failed after %d retries\n", pathclnt.MAXRETRY)
-	return serr.MkErr(serr.TErrUnreachable, c.path)
+	return serr.NewErr(serr.TErrUnreachable, c.path)
 }
 
 // Up a semaphore variable (i.e., remove semaphore to indicate up has

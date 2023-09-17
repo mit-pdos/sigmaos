@@ -13,19 +13,19 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type MkSessionF func(*memfssrv.MemFs, sessp.Tsession) (fs.Inode, *serr.Err)
+type NewSessionF func(*memfssrv.MemFs, sessp.Tsession) (fs.Inode, *serr.Err)
 
 type SessDev struct {
 	mfs *memfssrv.MemFs
 	dir string
-	news MkSessionF
+	news NewSessionF
 }
 
 // Make a SessDev in mfs in the directory pn
-func MkSessDev(mfs *memfssrv.MemFs, dir string, news MkSessionF, wctl clonedev.WriteCtlF) error {
-	db.DPrintf(db.SESSDEV, "MkSessDev: %v\n", dir)
+func NewSessDev(mfs *memfssrv.MemFs, dir string, news NewSessionF, wctl clonedev.WriteCtlF) error {
+	db.DPrintf(db.SESSDEV, "NewSessDev: %v\n", dir)
 	sd := &SessDev{mfs, dir, news}
-	if err := clonedev.MkCloneDev(mfs, dir, sd.newSession, sd.detachSession, wctl); err != nil {
+	if err := clonedev.NewCloneDev(mfs, dir, sd.newSession, sd.detachSession, wctl); err != nil {
 		return err
 	}
 	return nil
@@ -39,7 +39,7 @@ func (sd *SessDev) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) *serr.Err
 	}
 	fn := path.Join(sd.dir, sid.String(), sessdev.DATA)
 	db.DPrintf(db.SESSDEV, "newSession %v\n", fn)
-	if err := mfs.MkDev(fn, sess); err != nil {
+	if err := mfs.NewDev(fn, sess); err != nil {
 		db.DPrintf(db.SESSDEV, "newSession %v err %v\n", fn, err)
 		return err
 	}

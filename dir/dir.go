@@ -25,7 +25,7 @@ func NewDir(i fs.Inode, mi fs.NewInodeF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
 	d.mi = mi
-	d.dents = sorteddir.MkSortedDir()
+	d.dents = sorteddir.NewSortedDir()
 	d.dents.Insert(".", d)
 	return d
 }
@@ -76,12 +76,12 @@ func (dir *DirImpl) Dump() (string, error) {
 	return s, nil
 }
 
-func MkRootDir(ctx fs.CtxI, mi fs.NewInodeF, parent fs.Dir) fs.Dir {
+func NewRootDir(ctx fs.CtxI, mi fs.NewInodeF, parent fs.Dir) fs.Dir {
 	i, _ := mi(ctx, sp.DMDIR, 0, parent, NewDirF)
 	return i.(fs.Dir)
 }
 
-func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *serr.Err {
+func NewNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *serr.Err {
 	err := dir.(*DirImpl).CreateDev(ctx, name, i)
 	if err != nil {
 		return err
@@ -95,13 +95,13 @@ func (dir *DirImpl) unlinkL(name string) *serr.Err {
 		dir.dents.Delete(name)
 		return nil
 	}
-	return serr.MkErr(serr.TErrNotfound, name)
+	return serr.NewErr(serr.TErrNotfound, name)
 }
 
 func (dir *DirImpl) createL(ino fs.Inode, name string) *serr.Err {
 	ok := dir.dents.Insert(name, ino)
 	if !ok {
-		return serr.MkErr(serr.TErrExists, name)
+		return serr.NewErr(serr.TErrExists, name)
 	}
 	return nil
 }
@@ -111,7 +111,7 @@ func (dir *DirImpl) lookup(name string) (fs.Inode, *serr.Err) {
 	if ok {
 		return v.(fs.Inode), nil
 	} else {
-		return nil, serr.MkErr(serr.TErrNotfound, name)
+		return nil, serr.NewErr(serr.TErrNotfound, name)
 	}
 }
 
@@ -200,7 +200,7 @@ func (dir *DirImpl) remove(name string) *serr.Err {
 		return err
 	}
 	if nonemptydir(inode) {
-		return serr.MkErr(serr.TErrNotEmpty, name)
+		return serr.NewErr(serr.TErrNotEmpty, name)
 	}
 	dir.SetMtime(time.Now().Unix())
 	return dir.unlinkL(name)
@@ -222,7 +222,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 
 	if v, ok := dir.dents.Lookup(name); ok {
 		i := v.(fs.Inode)
-		return i, serr.MkErr(serr.TErrExists, name)
+		return i, serr.NewErr(serr.TErrExists, name)
 	}
 	newi, err := dir.mi(ctx, perm, m, dir, NewDirF)
 	if err != nil {
@@ -284,7 +284,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err 
 	// check if to is non-existing, or, if a dir, non-empty
 	inoto, terr := dir.lookup(to)
 	if terr == nil && nonemptydir(inoto) {
-		return serr.MkErr(serr.TErrNotEmpty, to)
+		return serr.NewErr(serr.TErrNotEmpty, to)
 	}
 
 	err = dir.unlinkL(from)
@@ -317,7 +317,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, f s
 	db.DPrintf(db.MEMFS, "Renameat %v %v to %v %v\n", dir, old, newdir, new)
 	ino, err := dir.lookup(old)
 	if err != nil {
-		return serr.MkErr(serr.TErrNotfound, old)
+		return serr.NewErr(serr.TErrNotfound, old)
 	}
 	err = dir.unlinkL(old)
 	if err != nil {

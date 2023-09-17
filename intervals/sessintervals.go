@@ -28,15 +28,15 @@ func (ivs *Intervals) String() string {
 	return fmt.Sprintf("{ acked:%v next:%v }", ivs.acked, ivs.next)
 }
 
-func MkIntervals(sid sessp.Tsession) *Intervals {
+func NewIntervals(sid sessp.Tsession) *Intervals {
 	ivs := &Intervals{}
 	ivs.sid = sid
 	if useSkip {
-		ivs.acked = skipintervals.MkSkipIInterval()
-		ivs.next = skipintervals.MkSkipIInterval()
+		ivs.acked = skipintervals.NewSkipIInterval()
+		ivs.next = skipintervals.NewSkipIInterval()
 	} else {
-		ivs.acked = sliceintervals.MkIvSlice()
-		ivs.next = sliceintervals.MkIvSlice()
+		ivs.acked = sliceintervals.NewIvSlice()
+		ivs.next = sliceintervals.NewIvSlice()
 	}
 	return ivs
 }
@@ -82,7 +82,7 @@ func (ivs *Intervals) Insert(n *interval.Tinterval) {
 	// Insert into next slice, so future calls to ivs.Next will return this
 	// interval. Must make a deep copy of n, because it may be modified during
 	// insert.
-	ivs.next.Insert(interval.MkInterval(n.Start, n.End))
+	ivs.next.Insert(interval.NewInterval(n.Start, n.End))
 	// Insert into acked slice.
 	ivs.acked.Insert(n)
 }
@@ -101,7 +101,7 @@ func (ivs *Intervals) Delete(ivd *interval.Tinterval) {
 	db.DPrintf(db.INTERVALS, "[%v] ivs.Delete: %v", ivs.sid, ivd)
 
 	// Delete from Next slice to ensure the interval isn't returned by ivs.Next.
-	ivs.next.Delete(interval.MkInterval(ivd.Start, ivd.End))
+	ivs.next.Delete(interval.NewInterval(ivd.Start, ivd.End))
 	// Delete from acked slice.
 	ivs.acked.Delete(ivd)
 }

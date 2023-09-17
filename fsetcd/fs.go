@@ -25,15 +25,15 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 	db.DPrintf(db.FSETCD, "getFile %v\n", key)
 	resp, err := fs.Get(context.TODO(), key)
 	if err != nil {
-		return nil, 0, serr.MkErrError(err)
+		return nil, 0, serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "GetFile %v %v\n", key, resp)
 	if len(resp.Kvs) != 1 {
-		return nil, 0, serr.MkErr(serr.TErrNotfound, key2path(key))
+		return nil, 0, serr.NewErr(serr.TErrNotfound, key2path(key))
 	}
 	nf := &EtcdFile{}
 	if err := proto.Unmarshal(resp.Kvs[0].Value, nf); err != nil {
-		return nil, 0, serr.MkErrError(err)
+		return nil, 0, serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "GetFile %v %v\n", key, nf)
 	return nf, sp.TQversion(resp.Kvs[0].Version), nil
@@ -46,7 +46,7 @@ func (fs *FsEtcd) GetFile(p sp.Tpath) (*EtcdFile, sp.TQversion, *serr.Err) {
 func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 	opts := nf.LeaseOpts()
 	if b, err := proto.Marshal(nf); err != nil {
-		return serr.MkErrError(err)
+		return serr.NewErrError(err)
 	} else {
 		var cmp []clientv3.Cmp
 		if f.PathName == "" {
@@ -66,7 +66,7 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 		}
 		resp, err := fs.Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
 		if err != nil {
-			return serr.MkErrError(err)
+			return serr.NewErrError(err)
 		}
 		if f.PathName != "" {
 			db.DPrintf(db.ALWAYS, "PutFile %v %v %v %v\n", p, nf, f, resp)
@@ -74,7 +74,7 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 		db.DPrintf(db.FSETCD, "PutFile %v %v %v %v\n", p, nf, f, resp)
 		if !resp.Succeeded {
 			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
-				return serr.MkErr(serr.TErrStale, f)
+				return serr.NewErr(serr.TErrStale, f)
 			}
 			db.DFatalf("PutFile failed %v %v %v\n", p, nf, resp.Responses[0])
 		}
@@ -93,7 +93,7 @@ func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, *serr.
 	if err != nil {
 		return nil, 0, err
 	}
-	dents := sorteddir.MkSortedDir()
+	dents := sorteddir.NewSortedDir()
 	for _, e := range dir.Ents {
 		if e.Name == "." {
 			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
@@ -121,7 +121,7 @@ func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, 
 	opts := nf.LeaseOpts()
 	b, err := proto.Marshal(nf)
 	if err != nil {
-		return serr.MkErrError(err)
+		return serr.NewErrError(err)
 	}
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
@@ -138,11 +138,11 @@ func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, 
 		clientv3.OpPut(fs.path2key(fs.realm, dp), string(d1))}
 	resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
-		return serr.MkErrError(err)
+		return serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "Create %v %v with lease %x\n", p, resp, nf.LeaseId)
 	if !resp.Succeeded {
-		return serr.MkErr(serr.TErrExists, p)
+		return serr.NewErr(serr.TErrExists, p)
 	}
 	return nil
 }
@@ -162,11 +162,11 @@ func (fs *FsEtcd) remove(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 	resp, err := fs.Txn(context.TODO()).
 		If(cmp...).Then(ops...).Commit()
 	if err != nil {
-		return serr.MkErrError(err)
+		return serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "Remove %v %v\n", del, resp)
 	if !resp.Succeeded {
-		return serr.MkErr(serr.TErrNotfound, del)
+		return serr.NewErr(serr.TErrNotfound, del)
 	}
 	return nil
 }
@@ -196,11 +196,11 @@ func (fs *FsEtcd) rename(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 	resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
 		db.DPrintf(db.FSETCD, "Rename error %v %v e %v\n", d, resp, err)
-		return serr.MkErrError(err)
+		return serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "Rename %v %v\n", d, resp)
 	if !resp.Succeeded {
-		return serr.MkErr(serr.TErrNotfound, d)
+		return serr.NewErr(serr.TErrNotfound, d)
 	}
 	return nil
 }
@@ -242,11 +242,11 @@ func (fs *FsEtcd) renameAt(df sp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sp.Tp
 	}
 	resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
-		return serr.MkErrError(err)
+		return serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "RenameAt %v %v\n", del, resp)
 	if !resp.Succeeded {
-		return serr.MkErr(serr.TErrNotfound, del)
+		return serr.NewErr(serr.TErrNotfound, del)
 	}
 	return nil
 }

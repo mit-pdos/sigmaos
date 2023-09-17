@@ -12,10 +12,10 @@ func NullMount() Tmount {
 	return Tmount{}
 }
 
-func MkMount(b []byte) (Tmount, *serr.Err) {
+func NewMount(b []byte) (Tmount, *serr.Err) {
 	mnt := NullMount()
 	if err := proto.Unmarshal(b, &mnt); err != nil {
-		return mnt, serr.MkErrError(err)
+		return mnt, serr.NewErrError(err)
 	}
 	return mnt, nil
 }
@@ -36,13 +36,13 @@ func (mnt Tmount) Address() *Taddr {
 	return mnt.Addr[0]
 }
 
-func MkMountService(srvaddrs Taddrs) Tmount {
+func NewMountService(srvaddrs Taddrs) Tmount {
 	return Tmount{Addr: srvaddrs}
 }
 
-func MkMountServer(addr string) Tmount {
-	addrs := MkTaddrs([]string{addr})
-	return MkMountService(addrs)
+func NewMountServer(addr string) Tmount {
+	addrs := NewTaddrs([]string{addr})
+	return NewMountService(addrs)
 }
 
 func (mnt Tmount) TargetHostPort() (string, string, error) {

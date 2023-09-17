@@ -353,7 +353,7 @@ func fields9p(v interface{}) ([]interface{}, *serr.Err) {
 	rv := reflect.Indirect(reflect.ValueOf(v))
 
 	if rv.Kind() != reflect.Struct {
-		return nil, serr.MkErr(serr.TErrBadFcall, "cannot extract fields from non-struct")
+		return nil, serr.NewErr(serr.TErrBadFcall, "cannot extract fields from non-struct")
 	}
 
 	elements := make([]interface{}, 0, rv.NumField())

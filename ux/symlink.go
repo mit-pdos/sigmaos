@@ -21,7 +21,7 @@ func newSymlink(path path.Path, iscreate bool) (*Symlink, *serr.Err) {
 	s := &Symlink{}
 	o, err := newObj(path)
 	if err == nil && iscreate {
-		return nil, serr.MkErr(serr.TErrExists, path)
+		return nil, serr.NewErr(serr.TErrExists, path)
 	}
 	s.Obj = o
 	s.File = file.NewFile()

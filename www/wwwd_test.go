@@ -33,7 +33,7 @@ func newTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.NewTstateAll(t)
 
-	ts.Tstate.MkDir(www.TMP, 0777)
+	ts.Tstate.NewDir(www.TMP, 0777)
 
 	ts.job = rd.String(4)
 

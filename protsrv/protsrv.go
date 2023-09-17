@@ -62,7 +62,7 @@ func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 }
 
 func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
-	return sp.MkRerror(serr.MkErr(serr.TErrNotSupported, "Auth"))
+	return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotSupported, "Auth"))
 }
 
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) *sp.Rerror {
@@ -76,7 +76,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 		_, lo, lk, rest, err := namei.Walk(ps.plt, ctx, root, dlk, path.Path{}, p, nil)
 		defer ps.plt.Release(ctx, lk)
 		if len(rest) > 0 || err != nil {
-			return sp.MkRerror(err)
+			return sp.NewRerrorSerr(err)
 		}
 		// insert before releasing
 		ps.vt.Insert(lo.Path())
@@ -87,7 +87,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 		// just the refcnt.
 		ps.vt.Insert(root.Path())
 	}
-	ps.ft.Add(args.Tfid(), fid.NewFidPath(fid.MkPobj(p, tree, ctx), 0, qid))
+	ps.ft.Add(args.Tfid(), fid.NewFidPath(fid.NewPobj(p, tree, ctx), 0, qid))
 	rets.Qid = qid
 	if attach != nil {
 		attach(args.TclntId())
@@ -120,7 +120,7 @@ func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names path.Path, resol
 		return nil, err
 	}
 	if lo.Perm().IsSymlink() && resolve {
-		return nil, serr.MkErr(serr.TErrNotDir, names[len(names)-1])
+		return nil, serr.NewErr(serr.TErrNotDir, names[len(names)-1])
 	}
 	return lo, nil
 }
@@ -132,7 +132,7 @@ func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names path.Path, resol
 func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 
 	db.DPrintf(db.PROTSRV, "%v: Walk o %v args {%v} (%v)", f.Pobj().Ctx().Uname(), f, args, len(args.Wnames))
@@ -145,7 +145,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	}
 
 	if err != nil && !err.IsMaybeSpecialElem() {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 
 	// let the client decide what to do with rest (when there is a rest)
@@ -154,7 +154,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	rets.Qids = ps.newQids(os)
 	qid := ps.newQid(lo.Perm(), lo.Path())
 	db.DPrintf(db.PROTSRV, "%v: Walk NewFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid, os)
-	ps.ft.Add(args.Tnewfid(), fid.NewFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
+	ps.ft.Add(args.Tnewfid(), fid.NewFidPath(fid.NewPobj(p, lo, f.Pobj().Ctx()), 0, qid))
 
 	ps.vt.Insert(qid.Tpath())
 
@@ -164,7 +164,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 func (ps *ProtSrv) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %v", f.Pobj().Ctx().Uname(), args.Fid, f, f.Pobj().Path())
 	if f.IsOpen() { // has the fid been opened?
@@ -179,7 +179,7 @@ func (ps *ProtSrv) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Open f %v %v", f.Pobj().Ctx().Uname(), f, args)
 
@@ -188,7 +188,7 @@ func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	o := f.Pobj().Obj()
 	no, r := o.Open(f.Pobj().Ctx(), args.Tmode())
 	if r != nil {
-		return sp.MkRerror(r)
+		return sp.NewRerrorSerr(r)
 	}
 	f.SetMode(args.Tmode())
 	if no != nil {
@@ -205,7 +205,7 @@ func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	p := f.Pobj().Path()
 	ino := f.Pobj().Obj().Path()
@@ -219,18 +219,18 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 
 	v := ps.vt.GetVersion(ino)
 	if !sp.VEq(f.Qid().Tversion(), v) {
-		return sp.MkRerror(serr.MkErr(serr.TErrVersion, v))
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
 	}
 	err = ps.wt.WaitWatch(pl, ps.sid)
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	return nil
 }
 
 func (ps *ProtSrv) newFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *fid.Fid {
 	pn := dir.Copy().Append(name)
-	po := fid.MkPobj(pn, o, ctx)
+	po := fid.NewPobj(pn, o, ctx)
 	nf := fid.NewFidPath(po, 0, qid)
 	if o.Perm().IsEphemeral() && ps.et != nil {
 		ps.et.Insert(pn.String(), lid)
@@ -242,7 +242,7 @@ func (ps *ProtSrv) newFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, l
 func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
 	name := fn.Base()
 	if name == "." {
-		return nil, nil, serr.MkErr(serr.TErrInval, name)
+		return nil, nil, serr.NewErr(serr.TErrInval, name)
 	}
 	flk := ps.plt.Acquire(ctx, fn)
 	o1, err := d.Create(ctx, name, perm, mode, lid, f)
@@ -259,13 +259,13 @@ func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn pa
 func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Create f %v", f.Pobj().Ctx().Uname(), f)
 	o := f.Pobj().Obj()
 	fn := f.Pobj().Path().Append(args.Name)
 	if !o.Perm().IsDir() {
-		return sp.MkRerror(serr.MkErr(serr.TErrNotDir, f.Pobj().Path()))
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, f.Pobj().Path()))
 	}
 	d := o.(fs.Dir)
 	dlk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path())
@@ -273,7 +273,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 
 	o1, flk, err := ps.createObj(f.Pobj().Ctx(), d, dlk, fn, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	defer ps.plt.Release(f.Pobj().Ctx(), flk)
 	ps.stats.IncPathString(f.Pobj().Path().String())
@@ -291,14 +291,14 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return nil, sp.MkRerror(err)
+		return nil, sp.NewRerrorSerr(err)
 	}
 
 	db.DPrintf(db.PROTSRV, "%v: ReadV f %v args {%v}\n", f.Pobj().Ctx().Uname(), f, args)
 
 	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
-		return nil, sp.MkRerror(err)
+		return nil, sp.NewRerrorSerr(err)
 	}
 	return data, nil
 }
@@ -306,12 +306,12 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 func (ps *ProtSrv) WriteRead(args *sp.Twriteread, data []byte, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	f, err := ps.ft.Lookup(sp.Tfid(args.Fid))
 	if err != nil {
-		return nil, sp.MkRerror(err)
+		return nil, sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: WriteRead %v args {%v} path %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path())
 	retdata, err := f.WriteRead(data)
 	if err != nil {
-		return nil, sp.MkRerror(err)
+		return nil, sp.NewRerrorSerr(err)
 	}
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	return retdata, nil
@@ -320,14 +320,14 @@ func (ps *ProtSrv) WriteRead(args *sp.Twriteread, data []byte, rets *sp.Rread) (
 func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 
 	db.DPrintf(db.PROTSRV, "%v: WriteV %v args {%v} path %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path())
 
 	n, err := f.Write(args.Toffset(), data, args.Tfence())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	rets.Count = uint32(n)
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
@@ -337,7 +337,7 @@ func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path path.Path, f sp.Tfence) *sp.Rerror {
 	name := path.Base()
 	if name == "." {
-		return sp.MkRerror(serr.MkErr(serr.TErrInval, name))
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, name))
 	}
 
 	// lock path to make WatchV and Remove interact correctly
@@ -354,7 +354,7 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path path.Path, f sp.Tfenc
 	ephemeral := o.Perm().IsEphemeral()
 	err := o.Parent().Remove(ctx, name, f)
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 
 	ps.vt.IncVersion(o.Path())
@@ -374,7 +374,7 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path path.Path, f sp.Tfenc
 func (ps *ProtSrv) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Remove %v", f.Pobj().Ctx().Uname(), f.Pobj().Path())
 	return ps.removeObj(f.Pobj().Ctx(), f.Pobj().Obj(), f.Pobj().Path(), args.Tfence())
@@ -383,14 +383,14 @@ func (ps *ProtSrv) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 func (ps *ProtSrv) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Stat %v", f.Pobj().Ctx().Uname(), f)
 	ps.stats.IncPathString(f.Pobj().Path().String())
 	o := f.Pobj().Obj()
 	st, r := o.Stat(f.Pobj().Ctx())
 	if r != nil {
-		return sp.MkRerror(r)
+		return sp.NewRerrorSerr(r)
 	}
 	rets.Stat = st
 	return nil
@@ -403,7 +403,7 @@ func (ps *ProtSrv) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Wstat %v %v", f.Pobj().Ctx().Uname(), f, args)
 	o := f.Pobj().Obj()
@@ -419,7 +419,7 @@ func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 		ps.stats.IncPathString(f.Pobj().Path().String())
 		err := o.Parent().Rename(f.Pobj().Ctx(), f.Pobj().Path().Base(), args.Stat.Name, args.Tfence())
 		if err != nil {
-			return sp.MkRerror(err)
+			return sp.NewRerrorSerr(err)
 		}
 		ps.vt.IncVersion(f.Pobj().Obj().Path())
 		ps.vt.IncVersion(f.Pobj().Obj().Parent().Path())
@@ -450,11 +450,11 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	oldf, err := ps.ft.Lookup(args.Toldfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	newf, err := ps.ft.Lookup(args.Tnewfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Renameat %v %v %v", oldf.Pobj().Ctx().Uname(), oldf, newf, args)
 	oo := oldf.Pobj().Obj()
@@ -463,10 +463,10 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	case fs.Dir:
 		d2, ok := no.(fs.Dir)
 		if !ok {
-			return sp.MkRerror(serr.MkErr(serr.TErrNotDir, newf.Pobj().Path()))
+			return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, newf.Pobj().Path()))
 		}
 		if oo.Path() == no.Path() {
-			return sp.MkRerror(serr.MkErr(serr.TErrInval, newf.Pobj().Path()))
+			return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, newf.Pobj().Path()))
 		}
 
 		var d1lk, d2lk, srclk, dstlk *lockmap.PathLock
@@ -482,7 +482,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 
 		err := d1.Renameat(oldf.Pobj().Ctx(), args.OldName, d2, args.NewName, args.Tfence())
 		if err != nil {
-			return sp.MkRerror(err)
+			return sp.NewRerrorSerr(err)
 		}
 		ps.vt.IncVersion(newf.Pobj().Obj().Path())
 		ps.vt.IncVersion(oldf.Pobj().Obj().Path())
@@ -499,7 +499,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 		ps.wt.WakeupWatch(d1lk)  // trigger one dir watch
 		ps.wt.WakeupWatch(d2lk)  // trigger the other dir watch
 	default:
-		return sp.MkRerror(serr.MkErr(serr.TErrNotDir, oldf.Pobj().Path()))
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, oldf.Pobj().Path()))
 	}
 	return nil
 }
@@ -543,7 +543,7 @@ func (ps *ProtSrv) lookupWalkOpen(fid sp.Tfid, wnames path.Path, resolve bool, m
 func (ps *ProtSrv) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror {
 	f, fname, lo, err := ps.lookupWalk(args.Tfid(), args.Wnames, args.Resolve)
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: RemoveFile %v %v %v", f.Pobj().Ctx().Uname(), f.Pobj().Path(), fname, args.Fid)
 	return ps.removeObj(f.Pobj().Ctx(), lo, fname, args.Tfence())
@@ -551,20 +551,20 @@ func (ps *ProtSrv) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror
 
 func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if args.Tcount() > sp.MAXGETSET {
-		return nil, sp.MkRerror(serr.MkErr(serr.TErrInval, "too large"))
+		return nil, sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, "too large"))
 	}
 	f, fname, lo, i, err := ps.lookupWalkOpen(args.Tfid(), args.Wnames, args.Resolve, args.Tmode())
 	if err != nil {
-		return nil, sp.MkRerror(err)
+		return nil, sp.NewRerrorSerr(err)
 	}
 	ps.stats.IncPathString(f.Pobj().Path().String())
 	db.DPrintf(db.PROTSRV, "GetFile f %v args {%v} %v", f.Pobj().Ctx().Uname(), args, fname)
 	data, err := i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
-		return nil, sp.MkRerror(err)
+		return nil, sp.NewRerrorSerr(err)
 	}
 	if err := lo.Close(f.Pobj().Ctx(), args.Tmode()); err != nil {
-		return nil, sp.MkRerror(err)
+		return nil, sp.NewRerrorSerr(err)
 	}
 	return data, nil
 }
@@ -576,7 +576,7 @@ func (ps *ProtSrv) lookupPathOpen(f *fid.Fid, dir fs.Dir, name string, mode sp.T
 		return nil, err
 	}
 	if lo.Perm().IsSymlink() && resolve {
-		return nil, serr.MkErr(serr.TErrNotDir, name)
+		return nil, serr.NewErr(serr.TErrNotDir, name)
 	}
 	no, err := lo.Open(f.Pobj().Ctx(), mode)
 	if err != nil {
@@ -591,11 +591,11 @@ func (ps *ProtSrv) lookupPathOpen(f *fid.Fid, dir fs.Dir, name string, mode sp.T
 // Create file or open file, and write data to it
 func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	if sp.Tsize(len(data)) > sp.MAXGETSET {
-		return sp.MkRerror(serr.MkErr(serr.TErrInval, "too large"))
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, "too large"))
 	}
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: PutFile o %v args {%v}", f.Pobj().Ctx().Uname(), f, args)
 	fn := append(f.Pobj().Path(), args.Wnames...)
@@ -606,11 +606,11 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		// walk to directory
 		f, dname, lo, err = ps.lookupWalk(args.Tfid(), args.Wnames[0:len(args.Wnames)-1], false)
 		if err != nil {
-			return sp.MkRerror(err)
+			return sp.NewRerrorSerr(err)
 		}
 
 		if !lo.Perm().IsDir() {
-			return sp.MkRerror(serr.MkErr(serr.TErrNotDir, dname))
+			return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, dname))
 		}
 		dlk = ps.plt.Acquire(f.Pobj().Ctx(), dname)
 		defer ps.plt.Release(f.Pobj().Ctx(), dlk)
@@ -621,10 +621,10 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		lo, flk, err = ps.createObj(f.Pobj().Ctx(), dir, dlk, fn, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence())
 		if err != nil {
 			if err.Code() != serr.TErrExists {
-				return sp.MkRerror(err)
+				return sp.NewRerrorSerr(err)
 			}
 			if err.Code() == serr.TErrExists && args.Tmode()&sp.OEXCL == sp.OEXCL {
-				return sp.MkRerror(err)
+				return sp.NewRerrorSerr(err)
 			}
 			db.DPrintf(db.PROTSRV, "%v: PutFile lookup %v", f.Pobj().Ctx().Uname(), fn.Base())
 			// look up the file and get a lock on it. note: it cannot have
@@ -632,7 +632,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 			// holds the directory lock.
 			lo, err = ps.lookupPathOpen(f, dir, fn.Base(), args.Tmode(), args.Resolve)
 			if err != nil {
-				return sp.MkRerror(err)
+				return sp.NewRerrorSerr(err)
 			}
 			// flk also ensures that two writes execute atomically
 			flk = ps.plt.Acquire(f.Pobj().Ctx(), fn)
@@ -645,7 +645,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		flk = ps.plt.Acquire(f.Pobj().Ctx(), fn)
 		no, err := lo.Open(f.Pobj().Ctx(), args.Tmode())
 		if err != nil {
-			return sp.MkRerror(err)
+			return sp.NewRerrorSerr(err)
 		}
 		if no != nil {
 			lo = no
@@ -658,25 +658,25 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	f = ps.newFid(f.Pobj().Ctx(), dname, fn.Base(), lo, args.TleaseId(), qid)
 	i, err := fs.Obj2File(lo, fn)
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 
 	ps.stats.IncPathString(f.Pobj().Path().String())
 
 	if args.Tmode()&sp.OAPPEND == sp.OAPPEND && args.Toffset() != sp.NoOffset {
-		return sp.MkRerror(serr.MkErr(serr.TErrInval, "offset should be sp.NoOffset"))
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, "offset should be sp.NoOffset"))
 	}
 	if args.Toffset() == sp.NoOffset && args.Tmode()&sp.OAPPEND != sp.OAPPEND {
-		return sp.MkRerror(serr.MkErr(serr.TErrInval, "mode shouldbe OAPPEND"))
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, "mode shouldbe OAPPEND"))
 	}
 
 	n, err := i.Write(f.Pobj().Ctx(), args.Toffset(), data, args.Tfence())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	err = lo.Close(f.Pobj().Ctx(), args.Tmode())
 	if err != nil {
-		return sp.MkRerror(err)
+		return sp.NewRerrorSerr(err)
 	}
 	rets.Count = uint32(n)
 	return nil

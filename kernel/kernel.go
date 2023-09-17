@@ -64,9 +64,9 @@ func NewKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 		}
 		p.Services = p.Services[1:]
 	}
-	sc, err := sigmaclnt.MkSigmaClntRootInit(pcfg)
+	sc, err := sigmaclnt.NewSigmaClntRootInit(pcfg)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error MkSigmaClntProc: %v", err)
+		db.DPrintf(db.ALWAYS, "Error NewSigmaClntProc: %v", err)
 		return nil, err
 	}
 	k.SigmaClnt = sc
@@ -231,7 +231,7 @@ func SetNamedIP(ip string, ports sp.Taddrs) (sp.Taddrs, error) {
 		if host != "" {
 			db.DFatalf("Tried to substitute named ip when port exists: %v -> %v %v", s, host, port)
 		}
-		nameds[i] = sp.MkTaddr(net.JoinHostPort(ip, port))
+		nameds[i] = sp.NewTaddr(net.JoinHostPort(ip, port))
 	}
 	return nameds, nil
 }

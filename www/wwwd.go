@@ -60,7 +60,7 @@ func RunWwwd(job, tree string) {
 	}
 
 	// Write a file for clients to discover the server's address.
-	mnt := sp.MkMountService(sp.MkTaddrs([]string{l.Addr().String()}))
+	mnt := sp.NewMountService(sp.NewTaddrs([]string{l.Addr().String()}))
 	if err = www.ssrv.SigmaClnt().MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 		db.DFatalf("MountService %v", err)
 	}

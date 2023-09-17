@@ -45,9 +45,9 @@ type PathLockTable struct {
 	*refmap.RefTable[string, *PathLock]
 }
 
-func MkPathLockTable() *PathLockTable {
+func NewPathLockTable() *PathLockTable {
 	plt := &PathLockTable{}
-	plt.RefTable = refmap.MkRefTable[string, *PathLock](db.LOCKMAP)
+	plt.RefTable = refmap.NewRefTable[string, *PathLock](db.LOCKMAP)
 	return plt
 }
 

@@ -35,19 +35,19 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, arg []byte) ([]byte, *serr.Err) {
 	start := time.Now()
 	req := rpcproto.Request{}
 	if err := proto.Unmarshal(arg, &req); err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	var rerr *sp.Rerror
 	b, sr := rpcs.ServeRPC(ctx, req.Method, req.Args)
 	if sr != nil {
-		rerr = sp.MkRerror(sr)
+		rerr = sp.NewRerrorSerr(sr)
 	} else {
 		rerr = sp.NewRerror()
 	}
 	rep := &rpcproto.Reply{Res: b, Err: rerr}
 	b, err := proto.Marshal(rep)
 	if err != nil {
-		return nil, serr.MkErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 	rpcs.sti.Stat(req.Method, time.Since(start).Microseconds())
 	return b, nil
@@ -64,7 +64,7 @@ func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, b []byte) ([]byte, *serr.Err
 	}
 	b, r := proto.Marshal(repmsg)
 	if r != nil {
-		return nil, serr.MkErrError(r)
+		return nil, serr.NewErrError(r)
 	}
 	return b, nil
 
@@ -79,7 +79,7 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req []byte) (proto.Me
 		args := reflect.New(method.argType)
 		reqmsg := args.Interface().(proto.Message)
 		if err := proto.Unmarshal(req, reqmsg); err != nil {
-			return nil, serr.MkErrError(err)
+			return nil, serr.NewErrError(err)
 		}
 
 		db.DPrintf(db.SIGMASRV, "dispatchproto %v %v %v\n", svc.svc, name, reqmsg)
@@ -101,7 +101,7 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req []byte) (proto.Me
 			if errors.As(err, &sr) {
 				return nil, sr
 			}
-			return nil, serr.MkErrError(err)
+			return nil, serr.NewErrError(err)
 		}
 		return repmsg, nil
 	} else {
@@ -111,6 +111,6 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req []byte) (proto.Me
 		}
 		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, name, choices)
-		return nil, serr.MkErr(serr.TErrNotfound, methname)
+		return nil, serr.NewErr(serr.TErrNotfound, methname)
 	}
 }

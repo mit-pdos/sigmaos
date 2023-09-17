@@ -15,7 +15,7 @@ func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path
 		return left, err
 	}
 	var p path.Path
-	mnt, error := sp.MkMount(target)
+	mnt, error := sp.NewMount(target)
 	if error == nil {
 		db.DPrintf(db.WALK, "walksymlink1 %v mnt %v err %v\n", fid, mnt, err)
 		err := pathc.autoMount(pathc.FidClnt.Lookup(fid).Uname(), mnt, resolved)
@@ -25,7 +25,7 @@ func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path
 		}
 		p = append(resolved, left...)
 	} else {
-		db.DPrintf(db.WALK, "walksymlink1 %v MkMount err %v\n", fid, err)
+		db.DPrintf(db.WALK, "walksymlink1 %v NewMount err %v\n", fid, err)
 		p = append(path.Split(string(target)), left...)
 	}
 	return p, nil

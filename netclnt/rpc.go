@@ -37,7 +37,7 @@ func NewRpc(addrs sp.Taddrs, req *sessconn.PartMarshaledMsg, start time.Time) *R
 func (rpc *Rpc) Await() (*sessp.FcallMsg, *serr.Err) {
 	reply, ok := <-rpc.ReplyC
 	if !ok {
-		return nil, serr.MkErr(serr.TErrUnreachable, rpc.addrs)
+		return nil, serr.NewErr(serr.TErrUnreachable, rpc.addrs)
 	}
 
 	// Unmarshal reply, now on the receiver thread.

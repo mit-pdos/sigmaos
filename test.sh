@@ -128,6 +128,7 @@ if [[ $APPS == "--apps" ]]; then
         cleanup
     else
         for T in imgresized mr kv hotel socialnetwork; do
+            ./start-db.sh
             go test -timeout 20m $VERB sigmaos/$T -start
             cleanup
         done

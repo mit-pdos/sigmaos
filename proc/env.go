@@ -106,7 +106,7 @@ func NewBootProcEnv(uname sp.Tuname, etcdIP, localIP string, overlays bool) *Pro
 	pe.SetPID(sp.GenPid(string(uname)))
 	pe.EtcdIP = etcdIP
 	pe.LocalIP = localIP
-	pe.SetRealm(sp.ROOTREALM)
+	pe.SetRealm(sp.ROOTREALM, overlays)
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
 	return pe
 }
@@ -115,7 +115,7 @@ func NewTestProcEnv(realm sp.Trealm, etcdIP, localIP, buildTag string, overlays 
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetUname("test")
 	pe.SetPID(sp.GenPid("test"))
-	pe.SetRealm(realm)
+	pe.SetRealm(realm, overlays)
 	pe.EtcdIP = etcdIP
 	pe.LocalIP = localIP
 	pe.BuildTag = buildTag
@@ -135,7 +135,7 @@ func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
 func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, pe.Overlays)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
-	pe2.SetRealm(realm)
+	pe2.SetRealm(realm, pe.Overlays)
 	pe2.SetUname(sp.Tuname(string(pe.GetUname()) + "-realm-" + realm.String()))
 	return pe2
 }
@@ -152,12 +152,12 @@ func (pe *ProcEnvProto) GetRealm() sp.Trealm {
 	return sp.Trealm(pe.RealmStr)
 }
 
-func (pe *ProcEnvProto) SetRealm(realm sp.Trealm) {
+func (pe *ProcEnvProto) SetRealm(realm sp.Trealm, overlays bool) {
 	pe.RealmStr = string(realm)
 	// Changing the realm changes the overlay network name. Therefore, set the
 	// overlay network for the new realm.
 	pe.Net = sp.ROOTREALM.String()
-	if pe.Overlays {
+	if overlays {
 		pe.Net = "sigmanet-" + realm.String()
 		if realm == sp.ROOTREALM {
 			pe.Net = "sigmanet-testuser"

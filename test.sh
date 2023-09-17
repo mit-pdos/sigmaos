@@ -8,7 +8,7 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--overlay]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--overlay HOST_IP]" 
 }
 
 BASIC="--basic"
@@ -17,6 +17,7 @@ APPS=""
 OVERLAY=""
 VERB="-v"
 CONTAINER=""
+HOST_IP="127.0.0.1"
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
         --apps-fast)
@@ -34,6 +35,8 @@ while [[ "$#" -gt 0 ]]; do
             shift
             BASIC="" 
             OVERLAY="--overlay"
+            HOST_IP="$1"
+            shift
             ;;
         *)
             echo "unexpected argument $1"
@@ -148,22 +151,23 @@ fi
 #
 
 if [[ $OVERLAY == "--overlay" ]] ; then
+    echo "Overlay tests running with host IP $HOST_IP"
     ./start-network.sh
     
-    go test $VERB sigmaos/procclnt -start --overlays --run TestWaitExitSimpleSingle
+    go test $VERB sigmaos/procclnt --etcdIP $HOST_IP -start --overlays --run TestWaitExitSimpleSingle
     cleanup
-    go test $VERB sigmaos/cachedsvcclnt -start --overlays --run TestCacheClerk
-    cleanup
-    ./start-db.sh
-    go test $VERB sigmaos/hotel -start --overlays --run GeoSingle
+    go test $VERB sigmaos/cachedsvcclnt --etcdIP $HOST_IP -start --overlays --run TestCacheClerk
     cleanup
     ./start-db.sh
-    go test $VERB sigmaos/hotel -start --overlays --run Www
+    go test $VERB sigmaos/hotel --etcdIP $HOST_IP -start --overlays --run GeoSingle
     cleanup
-    go test $VERB sigmaos/realmclnt -start --overlays --run Basic
+    ./start-db.sh
+    go test $VERB sigmaos/hotel --etcdIP $HOST_IP -start --overlays --run Www
     cleanup
-    go test $VERB sigmaos/realmclnt -start --overlays --run WaitExitSimpleSingle
+    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start --overlays --run Basic
     cleanup
-    go test $VERB sigmaos/realmclnt -start --overlays --run RealmNetIsolation
+    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start --overlays --run WaitExitSimpleSingle
+    cleanup
+    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start --overlays --run RealmNetIsolation
     cleanup
 fi

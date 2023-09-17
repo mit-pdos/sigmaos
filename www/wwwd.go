@@ -90,7 +90,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 
 	//	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 	// In order to automount children, we need to at least mount /pids.
-	if err := procclnt.MountPids(www.ssrv.SigmaClnt().FsLib, www.ssrv.SigmaClnt().NamedAddr()); err != nil {
+	if err := procclnt.MountPids(www.ssrv.SigmaClnt().FsLib); err != nil {
 		db.DFatalf("wwwd err mount pids %v", err)
 	}
 

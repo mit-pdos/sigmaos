@@ -140,7 +140,7 @@ func (ssrv *SigmaSrv) makeRPCSrv(svci any) error {
 	return nil
 }
 
-func MakeSigmaSrvSess(sesssrv *sesssrv.SessSrv, uname sp.Tuname, sc *sigmaclnt.SigmaClnt) *SigmaSrv {
+func MakeSigmaSrvSess(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt) *SigmaSrv {
 	mfs := memfssrv.NewMemFsSrv("", sesssrv, sc, nil)
 	return newSigmaSrv(mfs)
 }

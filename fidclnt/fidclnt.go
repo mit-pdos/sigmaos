@@ -3,9 +3,9 @@ package fidclnt
 import (
 	"fmt"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/protclnt"
 	"sigmaos/serr"
 	"sigmaos/sessp"

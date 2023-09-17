@@ -155,7 +155,7 @@ func (nd *Named) mkSrv() (sp.Tmount, error) {
 		return sp.NullMount(), fmt.Errorf("BootSrv err %v\n", err)
 	}
 
-	ssrv := sigmasrv.MakeSigmaSrvSess(srv, sp.Tuname(nd.ProcEnv().GetPID().String()), nd.SigmaClnt)
+	ssrv := sigmasrv.MakeSigmaSrvSess(srv, nd.SigmaClnt)
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
 		return sp.NullMount(), err
 	}

@@ -50,10 +50,6 @@ func (fdc *FdClient) String() string {
 	return str
 }
 
-func (fdc *FdClient) Uname() sp.Tuname {
-	return fdc.pcfg.GetUname()
-}
-
 func (fdc *FdClient) Close(fd int) error {
 	fid, error := fdc.fds.lookup(fd)
 	if error != nil {

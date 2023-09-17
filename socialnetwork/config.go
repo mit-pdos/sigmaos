@@ -25,9 +25,9 @@ const (
 	SOCIAL_NETWORK_TEXT     = SOCIAL_NETWORK + "text"
 	SOCIAL_NETWORK_COMPOSE  = SOCIAL_NETWORK + "compose"
 	SOCIAL_NETWORK_MEDIA    = SOCIAL_NETWORK + "media"
-	cacheMcpu      = 1000
-	HTTP_ADDRS     = "http-addr"
-	N_RPC_SESSIONS = 10
+	cacheMcpu               = 1000
+	HTTP_ADDRS              = "http-addr"
+	N_RPC_SESSIONS          = 10
 )
 
 type Srv struct {
@@ -49,10 +49,10 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 }
 
 func MakeFsLibs(uname string) []*fslib.FsLib {
-	dbg.DFatalf("Differentiate for different fslibs")
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
-		fsl, err := fslib.MakeFsLib(proc.GetProcEnv())
+		pe := proc.GetProcEnv()
+		fsl, err := fslib.MakeFsLib(proc.NewAddedProcEnv(pe, i))
 		if err != nil {
 			dbg.DFatalf("Error mkfsl: %v", err)
 		}

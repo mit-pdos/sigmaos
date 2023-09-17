@@ -95,24 +95,6 @@ func (p *Proc) GetProto() *ProcProto {
 	return p.ProcProto
 }
 
-func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
-	p.ProcEnvProto.SetRealm(parentPE.GetRealm())
-	p.ProcEnvProto.ParentDir = path.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
-	p.ProcEnvProto.EtcdIP = parentPE.EtcdIP
-	p.ProcEnvProto.Perf = parentPE.Perf
-	p.ProcEnvProto.Debug = parentPE.Debug
-	p.ProcEnvProto.BuildTag = parentPE.BuildTag
-	p.ProcEnvProto.Net = parentPE.Net
-}
-
-func (p *Proc) setProcDir(kernelId string) {
-	// Privileged procs have their ProcDir (sp.KPIDS) set at the time of creation
-	// of the proc struct.
-	if !p.IsPrivileged() {
-		p.ProcEnvProto.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
-	}
-}
-
 func (p *Proc) AppendEnv(name, val string) {
 	p.Env[name] = val
 }
@@ -122,15 +104,15 @@ func (p *Proc) LookupEnv(name string) (string, bool) {
 	return s, ok
 }
 
-// Set the envvars which can be set at proc creation time.
-func (p *Proc) setBaseEnv() {
-	// Pass through debug/performance vars.
-	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
-	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
-	p.AppendEnv(SIGMADEBUGPID, p.GetPid().String())
-	if p.IsPrivileged() {
-		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot
-	}
+func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
+	p.ProcEnvProto.SetRealm(parentPE.GetRealm())
+	p.ProcEnvProto.ParentDir = path.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
+	p.ProcEnvProto.EtcdIP = parentPE.EtcdIP
+	p.ProcEnvProto.Perf = parentPE.Perf
+	p.ProcEnvProto.Debug = parentPE.Debug
+	p.ProcEnvProto.BuildTag = parentPE.BuildTag
+	p.ProcEnvProto.Net = parentPE.Net
+	p.ProcEnvProto.Overlays = parentPE.Overlays
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
@@ -167,6 +149,26 @@ func (p *Proc) String() string {
 		p.GetMcpu(),
 		p.GetMem(),
 	)
+}
+
+// ========== Special getters and setters (for internal use) ==========
+func (p *Proc) setProcDir(kernelId string) {
+	// Privileged procs have their ProcDir (sp.KPIDS) set at the time of creation
+	// of the proc struct.
+	if !p.IsPrivileged() {
+		p.ProcEnvProto.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
+	}
+}
+
+// Set the envvars which can be set at proc creation time.
+func (p *Proc) setBaseEnv() {
+	// Pass through debug/performance vars.
+	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
+	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
+	p.AppendEnv(SIGMADEBUGPID, p.GetPid().String())
+	if p.IsPrivileged() {
+		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot
+	}
 }
 
 // ========== Getters and Setters ==========

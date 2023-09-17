@@ -1,8 +1,8 @@
 package test
 
 import (
-	"sigmaos/proc"
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -37,6 +37,7 @@ func makeRealmTstateClnt(ts *Tstate, realm sp.Trealm, makerealm bool) *RealmTsta
 		db.DPrintf(db.TEST, "Done making realm %v", realm)
 	}
 	pcfg := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
+	db.DPrintf(db.TEST, "ProcEnv for new realm %v", pcfg)
 	if sc, err := sigmaclnt.MkSigmaClntRootInit(pcfg); err != nil {
 		db.DFatalf("Error MakeRealmTstate MkSigmaClnt: %v", err)
 	} else {

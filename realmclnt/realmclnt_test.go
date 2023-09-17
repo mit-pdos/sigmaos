@@ -371,7 +371,7 @@ func TestRealmNetIsolationFail(t *testing.T) {
 
 	status := spawnDirreader(ts2, pn)
 	if test.Overlays {
-		assert.True(t, status.IsStatusErr())
+		assert.True(t, status.IsStatusErr(), "Status is: %v", status)
 	} else {
 		assert.True(t, status.IsStatusOK())
 		log.Printf("status %v %v\n", status.Msg(), status.Data())

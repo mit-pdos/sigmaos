@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	dbg "sigmaos/debug"
+	"sigmaos/loadgen"
 	sp "sigmaos/sigmap"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/test"
@@ -18,7 +19,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"sigmaos/loadgen"
 )
 
 const (
@@ -37,7 +37,7 @@ var BENCH_TEST bool
 
 func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
-	flag.StringVar(&MONGO_URL, "mongourl", "172.17.0.3:27017", "Addr of mongo server.")
+	flag.StringVar(&MONGO_URL, "mongourl", "127.0.0.1:27017", "Addr of mongo server.")
 	flag.BoolVar(&BENCH_TEST, "benchtest", false, "Is this a benchmark test?")
 }
 
@@ -63,7 +63,7 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 	b, err := os.ReadFile("data/socfb-Reed98/socfb-Reed98.edges")
 	assert.Nil(t, err, "Cannot open edge file: %v", err)
 	dbg.DPrintf(dbg.TEST, "Inserting graphs")
-	for _, line := range strings.FieldsFunc(string(b), func(c rune) bool {return c =='\n'}) {
+	for _, line := range strings.FieldsFunc(string(b), func(c rune) bool { return c == '\n' }) {
 		ids := strings.Split(line, " ")
 		followerId, _ := strconv.ParseInt(ids[0], 10, 64)
 		followeeId, _ := strconv.ParseInt(ids[1], 10, 64)
@@ -293,7 +293,7 @@ func randOps(t *testing.T, wc *sn.WebClnt, r *rand.Rand) {
 
 func testLoadgenInner(t *testing.T, wc *sn.WebClnt) {
 	lg := loadgen.MakeLoadGenerator(
-		LOAD_DUR * time.Second, LOAD_MAX_RPS, func(r *rand.Rand) { randOps(t, wc, r) })
+		LOAD_DUR*time.Second, LOAD_MAX_RPS, func(r *rand.Rand) { randOps(t, wc, r) })
 	lg.Calibrate()
 	rmsg, err := wc.StartRecording()
 	assert.Nil(t, err)

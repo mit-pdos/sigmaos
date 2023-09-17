@@ -17,7 +17,7 @@ func main() {
 	if len(os.Args) < 2 {
 		db.DFatalf("Usage: %v out\n", os.Args[0])
 	}
-	l, err := MakeSpinner(os.Args[1:])
+	l, err := NewSpinner(os.Args[1:])
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
@@ -29,9 +29,9 @@ type Spinner struct {
 	outdir string
 }
 
-func MakeSpinner(args []string) (*Spinner, error) {
+func NewSpinner(args []string) (*Spinner, error) {
 	if len(args) < 1 {
-		return nil, errors.New("MakeSpinner: too few arguments")
+		return nil, errors.New("NewSpinner: too few arguments")
 	}
 	s := &Spinner{}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
@@ -41,7 +41,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	s.SigmaClnt = sc
 	s.outdir = args[0]
 
-	db.DPrintf(db.SPINNER, "MakeSpinner: %v\n", args)
+	db.DPrintf(db.SPINNER, "NewSpinner: %v\n", args)
 
 	li, err := sc.LeaseClnt.AskLease(s.outdir, fsetcd.LeaseTTL)
 	if err != nil {
@@ -50,7 +50,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	li.KeepExtending()
 
 	if _, err := s.PutFileEphemeral(path.Join(s.outdir, s.ProcEnv().GetPID().String()), 0777, sp.OWRITE, li.Lease(), []byte{}); err != nil {
-		db.DFatalf("MakeFile error: %v", err)
+		db.DFatalf("NewFile error: %v", err)
 	}
 
 	err = s.Started()
@@ -65,7 +65,7 @@ func (s *Spinner) waitEvict() {
 	if err != nil {
 		db.DFatalf("Error WaitEvict: %v", err)
 	}
-	s.ClntExit(proc.MakeStatus(proc.StatusEvicted))
+	s.ClntExit(proc.NewStatus(proc.StatusEvicted))
 	os.Exit(0)
 }
 

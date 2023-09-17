@@ -134,9 +134,9 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 	g.SigmaClnt = sc
 	g.jobdir = JobDir(job)
 
-	g.lc, err = leaderclnt.MakeLeaderClnt(sc.FsLib, grpElectPath(g.jobdir, grp), 0777)
+	g.lc, err = leaderclnt.NewLeaderClnt(sc.FsLib, grpElectPath(g.jobdir, grp), 0777)
 	if err != nil {
-		db.DFatalf("MakeLeaderClnt %v\n", err)
+		db.DFatalf("NewLeaderClnt %v\n", err)
 	}
 
 	db.DPrintf(db.KVGRP, "Starting replica %d with replication level %v", g.myid, nrepl)
@@ -152,7 +152,7 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 
 	var raftCfg *replraft.RaftConfig
 	if nrepl > 0 {
-		cfg, raftCfg = g.makeRaftCfg(cfg, g.myid, nrepl)
+		cfg, raftCfg = g.newRaftCfg(cfg, g.myid, nrepl)
 	}
 
 	db.DPrintf(db.KVGRP, "Grp config: %v config: %v raftCfg %v", g.myid, cfg, raftCfg)
@@ -171,9 +171,9 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 	crash.NetFailer(g.ssrv.SessSrv)
 
 	// Record performance.
-	p, err := perf.MakePerf(g.ProcEnv(), perf.GROUP)
+	p, err := perf.NewPerf(g.ProcEnv(), perf.GROUP)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
 
@@ -185,7 +185,7 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 
 	db.DPrintf(db.KVGRP, "%v/%v: pid %v done\n", g.grp, g.myid, g.ProcEnv().GetPID())
 
-	g.ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
+	g.ssrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
 }
 
 // XXX move to procclnt?

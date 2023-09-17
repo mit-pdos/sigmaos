@@ -64,44 +64,44 @@ type Tstate struct {
 	proc    *proc.Proc
 }
 
-func MakeTstatePath(t *testing.T, path string) *Tstate {
-	ts, err := makeSysClntPath(t, path)
+func NewTstatePath(t *testing.T, path string) *Tstate {
+	ts, err := newSysClntPath(t, path)
 	if err != nil {
-		db.DFatalf("MakeTstatePath: %v\n", err)
+		db.DFatalf("NewTstatePath: %v\n", err)
 	}
 	return ts
 }
 
-func MakeTstate(t *testing.T) *Tstate {
-	return MakeTstatePath(t, sp.NAMED)
+func NewTstate(t *testing.T) *Tstate {
+	return NewTstatePath(t, sp.NAMED)
 }
 
-func MakeTstateAll(t *testing.T) *Tstate {
-	return MakeTstatePath(t, "all")
+func NewTstateAll(t *testing.T) *Tstate {
+	return NewTstatePath(t, "all")
 }
 
-func MakeTstateWithRealms(t *testing.T) *Tstate {
-	ts, err := makeSysClnt(t, BOOT_REALM)
+func NewTstateWithRealms(t *testing.T) *Tstate {
+	ts, err := newSysClnt(t, BOOT_REALM)
 	if err != nil {
-		db.DFatalf("MakeTstateRealm: %v\n", err)
+		db.DFatalf("NewTstateRealm: %v\n", err)
 	}
-	rc, err := realmclnt.MakeRealmClnt(ts.FsLib)
+	rc, err := realmclnt.NewRealmClnt(ts.FsLib)
 	if err != nil {
-		db.DFatalf("MakeRealmClnt make realmclnt: %v\n", err)
+		db.DFatalf("NewRealmClnt make realmclnt: %v\n", err)
 	}
 	ts.rc = rc
 	return ts
 }
 
-func makeSysClntPath(t *testing.T, path string) (*Tstate, error) {
+func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return makeSysClnt(t, BOOT_NAMED)
+		return newSysClnt(t, BOOT_NAMED)
 	} else {
-		return makeSysClnt(t, BOOT_ALL)
+		return newSysClnt(t, BOOT_ALL)
 	}
 }
 
-func makeSysClnt(t *testing.T, srvs string) (*Tstate, error) {
+func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	localIP, err1 := container.LocalIP()
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
@@ -161,7 +161,7 @@ func (ts *Tstate) KillOne(s string) error {
 	return ts.kclnts[idx].Kill(s)
 }
 
-func (ts *Tstate) MakeClnt(idx int, pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
+func (ts *Tstate) NewClnt(idx int, pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 	return ts.kclnts[idx].NewSigmaClnt(pcfg)
 }
 

@@ -35,24 +35,24 @@ type ProtSrv struct {
 	sid   sessp.Tsession
 }
 
-func MakeProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
+func NewProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	ps := &ProtSrv{}
 	srv := s.(*sesssrv.SessSrv)
 	ps.ssrv = srv
 
-	ps.ft = makeFidTable()
+	ps.ft = newFidTable()
 	ps.et = srv.GetEphemeralMap()
 	ps.plt = srv.GetPathLockTable()
 	ps.wt = srv.GetWatchTable()
 	ps.vt = srv.GetVersionTable()
 	ps.stats = srv.GetStats()
 	ps.sid = sid
-	db.DPrintf(db.PROTSRV, "MakeProtSrv -> %v", ps)
+	db.DPrintf(db.PROTSRV, "NewProtSrv -> %v", ps)
 	return ps
 }
 
-func (ps *ProtSrv) mkQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
-	return sp.MakeQidPerm(perm, ps.vt.GetVersion(path), path)
+func (ps *ProtSrv) newQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
+	return sp.NewQidPerm(perm, ps.vt.GetVersion(path), path)
 }
 
 func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
@@ -70,7 +70,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	p := path.Split(args.Aname)
 	root, ctx := ps.ssrv.GetRootCtx(args.Tuname(), args.Aname, ps.sid, args.TclntId())
 	tree := root.(fs.FsObj)
-	qid := ps.mkQid(tree.Perm(), tree.Path())
+	qid := ps.newQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
 		dlk := ps.plt.Acquire(ctx, path.Path{})
 		_, lo, lk, rest, err := namei.Walk(ps.plt, ctx, root, dlk, path.Path{}, p, nil)
@@ -81,13 +81,13 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 		// insert before releasing
 		ps.vt.Insert(lo.Path())
 		tree = lo
-		qid = ps.mkQid(lo.Perm(), lo.Path())
+		qid = ps.newQid(lo.Perm(), lo.Path())
 	} else {
 		// root is already in the version table; this updates
 		// just the refcnt.
 		ps.vt.Insert(root.Path())
 	}
-	ps.ft.Add(args.Tfid(), fid.MakeFidPath(fid.MkPobj(p, tree, ctx), 0, qid))
+	ps.ft.Add(args.Tfid(), fid.NewFidPath(fid.MkPobj(p, tree, ctx), 0, qid))
 	rets.Qid = qid
 	if attach != nil {
 		attach(args.TclntId())
@@ -105,10 +105,10 @@ func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachC
 	return nil
 }
 
-func (ps *ProtSrv) makeQids(os []fs.FsObj) []*sp.Tqid {
+func (ps *ProtSrv) newQids(os []fs.FsObj) []*sp.Tqid {
 	var qids []*sp.Tqid
 	for _, o := range os {
-		qids = append(qids, ps.mkQid(o.Perm(), o.Path()))
+		qids = append(qids, ps.newQid(o.Perm(), o.Path()))
 	}
 	return qids
 }
@@ -151,10 +151,10 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	// let the client decide what to do with rest (when there is a rest)
 	n := len(args.Wnames) - len(rest)
 	p := append(f.Pobj().Path().Copy(), args.Wnames[:n]...)
-	rets.Qids = ps.makeQids(os)
-	qid := ps.mkQid(lo.Perm(), lo.Path())
-	db.DPrintf(db.PROTSRV, "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid, os)
-	ps.ft.Add(args.Tnewfid(), fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
+	rets.Qids = ps.newQids(os)
+	qid := ps.newQid(lo.Perm(), lo.Path())
+	db.DPrintf(db.PROTSRV, "%v: Walk NewFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid, os)
+	ps.ft.Add(args.Tnewfid(), fid.NewFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
 
 	ps.vt.Insert(qid.Tpath())
 
@@ -195,9 +195,9 @@ func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 		f.Pobj().SetObj(no)
 		ps.vt.Insert(no.Path())
 		ps.vt.IncVersion(no.Path())
-		rets.Qid = ps.mkQid(no.Perm(), no.Path())
+		rets.Qid = ps.newQid(no.Perm(), no.Path())
 	} else {
-		rets.Qid = ps.mkQid(o.Perm(), o.Path())
+		rets.Qid = ps.newQid(o.Perm(), o.Path())
 	}
 	return nil
 }
@@ -228,10 +228,10 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *fid.Fid {
+func (ps *ProtSrv) newFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *fid.Fid {
 	pn := dir.Copy().Append(name)
 	po := fid.MkPobj(pn, o, ctx)
-	nf := fid.MakeFidPath(po, 0, qid)
+	nf := fid.NewFidPath(po, 0, qid)
 	if o.Perm().IsEphemeral() && ps.et != nil {
 		ps.et.Insert(pn.String(), lid)
 	}
@@ -279,8 +279,8 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	ps.stats.IncPathString(f.Pobj().Path().String())
 	ps.vt.Insert(o1.Path())
 	ps.vt.IncVersion(o1.Path())
-	qid := ps.mkQid(o1.Perm(), o1.Path())
-	nf := ps.makeFid(f.Pobj().Ctx(), f.Pobj().Path(), args.Name, o1, args.TleaseId(), qid)
+	qid := ps.newQid(o1.Perm(), o1.Path())
+	nf := ps.newFid(f.Pobj().Ctx(), f.Pobj().Path(), args.Name, o1, args.TleaseId(), qid)
 	ps.ft.Add(args.Tfid(), nf)
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	nf.SetMode(args.Tmode())
@@ -654,8 +654,8 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	defer ps.plt.Release(f.Pobj().Ctx(), flk)
 
 	// make an fid for the file (in case we created it)
-	qid := ps.mkQid(lo.Perm(), lo.Path())
-	f = ps.makeFid(f.Pobj().Ctx(), dname, fn.Base(), lo, args.TleaseId(), qid)
+	qid := ps.newQid(lo.Perm(), lo.Path())
+	f = ps.newFid(f.Pobj().Ctx(), dname, fn.Base(), lo, args.TleaseId(), qid)
 	i, err := fs.Obj2File(lo, fn)
 	if err != nil {
 		return sp.MkRerror(err)

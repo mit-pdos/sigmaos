@@ -22,7 +22,7 @@ type ProcCache struct {
 	ps      map[sp.Tpid]*ProcCacheEntry
 }
 
-func MakeProcCache(maxSize int) *ProcCache {
+func NewProcCache(maxSize int) *ProcCache {
 	return &ProcCache{
 		maxSize: maxSize,
 		ps:      make(map[sp.Tpid]*ProcCacheEntry),

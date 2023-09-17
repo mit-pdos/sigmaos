@@ -56,7 +56,7 @@ func RunFrontendSrv(public bool, job string) error {
 		return err
 	}
 	frontend.SigmaClnt = sc
-	fsls := MakeFsLibs(SERVER_NAME)
+	fsls := NewFsLibs(SERVER_NAME)
 	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func RunFrontendSrv(public bool, job string) error {
 	var mux *http.ServeMux
 	//	var tmux *tracing.TracedHTTPMux
 	//	if TRACING {
-	//		tmux = tracing.MakeHTTPMux()
+	//		tmux = tracing.NewHTTPMux()
 	//		tmux.HandleFunc("/user", frontend.userHandler)
 	//		tmux.HandleFunc("/hotels", frontend.searchHandler)
 	//		tmux.HandleFunc("/recommendations", frontend.recommendHandler)
@@ -147,9 +147,9 @@ func RunFrontendSrv(public bool, job string) error {
 		//	}
 	}
 
-	perf, err := perf.MakePerf(frontend.ProcEnv(), perf.SOCIAL_NETWORK_FRONTEND)
+	perf, err := perf.NewPerf(frontend.ProcEnv(), perf.SOCIAL_NETWORK_FRONTEND)
 	if err != nil {
-		dbg.DFatalf("MakePerf err %v\n", err)
+		dbg.DFatalf("NewPerf err %v\n", err)
 	}
 	frontend.p = perf
 
@@ -167,7 +167,7 @@ func (s *FrontEnd) done() error {
 	dbg.DPrintf(dbg.HOTEL_WWW_STATS, "\nUserc %v", s.userc.StatsClnt())
 	//	s.tracer.Flush()
 	s.p.Done()
-	s.ClntExit(proc.MakeStatus(proc.StatusEvicted))
+	s.ClntExit(proc.NewStatus(proc.StatusEvicted))
 	return nil
 }
 

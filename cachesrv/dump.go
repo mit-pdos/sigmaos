@@ -19,9 +19,9 @@ type cacheSession struct {
 	sid    sessp.Tsession
 }
 
-func (s *CacheSrv) mkSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
-	cs := &cacheSession{mfs.MakeDevInode(), s.shards, sid}
-	db.DPrintf(db.CACHESRV, "mkSession %v %p\n", cs.shards, cs)
+func (s *CacheSrv) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
+	cs := &cacheSession{mfs.NewDevInode(), s.shards, sid}
+	db.DPrintf(db.CACHESRV, "newSession %v %p\n", cs.shards, cs)
 	return cs, nil
 }
 

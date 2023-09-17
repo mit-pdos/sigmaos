@@ -33,7 +33,7 @@ func (clnt *StatScraperClnt) GetStatScrapers() []string {
 		if _, ok := clnt.rpccs[s]; !ok {
 			rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.K8S_SCRAPER, s))
 			if err != nil {
-				db.DFatalf("Error MakeRPCClnt: %v", err)
+				db.DFatalf("Error NewRPCClnt: %v", err)
 			}
 			clnt.rpccs[s] = rpcc
 		}

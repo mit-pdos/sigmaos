@@ -18,7 +18,7 @@ type Channel struct {
 	uname sp.Tuname
 }
 
-func makeChannel(pc *protclnt.ProtClnt, uname sp.Tuname, path path.Path, qs []*sp.Tqid) *Channel {
+func newChannel(pc *protclnt.ProtClnt, uname sp.Tuname, path path.Path, qs []*sp.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
 	c.path = path
@@ -50,7 +50,7 @@ func (c *Channel) Version() sp.TQversion {
 func (c *Channel) Copy() *Channel {
 	qids := make([]*sp.Tqid, len(c.qids))
 	copy(qids, c.qids)
-	return makeChannel(c.pc, c.uname, c.path.Copy(), qids)
+	return newChannel(c.pc, c.uname, c.path.Copy(), qids)
 }
 
 func (c *Channel) add(name string, q *sp.Tqid) {

@@ -16,7 +16,7 @@ type File struct {
 	data []byte
 }
 
-func MakeFile() *File {
+func NewFile() *File {
 	f := &File{}
 	f.data = make([]byte, 0)
 	return f

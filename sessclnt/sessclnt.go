@@ -33,7 +33,7 @@ type SessClnt struct {
 	clntnet string
 }
 
-func makeSessClnt(pcfg *proc.ProcEnv, cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
+func newSessClnt(pcfg *proc.ProcEnv, cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c := &SessClnt{}
 	c.pcfg = pcfg
 	c.cli = cli
@@ -43,9 +43,9 @@ func makeSessClnt(pcfg *proc.ProcEnv, cli sessp.Tclient, clntnet string, addrs s
 	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
 	c.clntnet = clntnet
-	c.queue = sessstateclnt.MakeRequestQueue(addrs)
+	c.queue = sessstateclnt.NewRequestQueue(addrs)
 	db.DPrintf(db.SESS_STATE_CLNT, "Cli %v make session %v to srvs %v", c.cli, c.sid, addrs)
-	nc, err := netclnt.MakeNetClnt(c, clntnet, addrs)
+	nc, err := netclnt.NewNetClnt(c, clntnet, addrs)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte) (*netclnt.Rpc, *serr.Err) {
 
 	// If the request is not an RPC, we need to ensure strict ordering by seqno.
 	// So, hold the lock between incrementing the seqno (which happens in
-	// sessp.MakeFcallMsg) and enqueueing the message. This holds the lock during
+	// sessp.NewFcallMsg) and enqueueing the message. This holds the lock during
 	// marshaling.
 	if req.Type() != sessp.TTwriteread {
 		c.Lock()
@@ -156,8 +156,8 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte) (*netclnt.Rpc, *serr.Err) {
 	// allocates a sequence number), the marshaling step (which often takes a
 	// long time), and the request enqueue step (which ordinarily expects fcalls
 	// to be enqueued in order).
-	fc := sessp.MakeFcallMsg(req, data, c.cli, c.sid, &c.seqno)
-	rpc := netclnt.MakeRpc(c.addrs, sessconn.MakePartMarshaledMsg(fc), s)
+	fc := sessp.NewFcallMsg(req, data, c.cli, c.sid, &c.seqno)
+	rpc := netclnt.NewRpc(c.addrs, sessconn.NewPartMarshaledMsg(fc), s)
 
 	// If the request is an RPC, then we don't have strict ordering requirements.
 	// We haven't taken the lock yet in order to avoid holding the lock while
@@ -208,7 +208,7 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 
 	if c.nc == nil {
 		db.DPrintf(db.SESS_STATE_CLNT, "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
-		nc, err := netclnt.MakeNetClnt(c, c.clntnet, c.addrs)
+		nc, err := netclnt.NewNetClnt(c, c.clntnet, c.addrs)
 		if err != nil {
 			db.DPrintf(db.SESS_STATE_CLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
 			return nil, err

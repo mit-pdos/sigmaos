@@ -51,7 +51,7 @@ type DBUtil struct {
 	mongoc *mongoclnt.MongoClnt
 }
 
-func MakeDBUtil(sc *sigmaclnt.SigmaClnt) (*DBUtil, error) {
+func NewDBUtil(sc *sigmaclnt.SigmaClnt) (*DBUtil, error) {
 	mongoc, err := mongoclnt.MkMongoClnt(sc.FsLib)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ type Counter struct {
 	vals  []int64
 }
 
-func MakeCounter(str string) *Counter {
+func NewCounter(str string) *Counter {
 	return &Counter{label: str, count: 0, vals: make([]int64, N_COUNT)}
 }
 

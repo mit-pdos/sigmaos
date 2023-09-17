@@ -22,7 +22,7 @@ type Inode struct {
 
 var NextInum = uint64(0)
 
-func MakeInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
+func NewInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 	i := &Inode{}
 	i.inum = sp.Tpath(atomic.AddUint64(&NextInum, 1))
 	i.perm = p
@@ -100,7 +100,7 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
-	st := sp.MkStat(sp.MakeQidPerm(inode.perm, 0, inode.inum),
+	st := sp.MkStat(sp.NewQidPerm(inode.perm, 0, inode.inum),
 		inode.Mode(), uint32(inode.mtime), "", string(inode.owner))
 	return st, nil
 }

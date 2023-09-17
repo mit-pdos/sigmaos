@@ -22,16 +22,16 @@ type Tstate struct {
 }
 
 func spawn(t *testing.T, ts *Tstate) sp.Tpid {
-	a := proc.MakeProc("wwwd", []string{ts.job, ""})
+	a := proc.NewProc("wwwd", []string{ts.job, ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	return a.GetPid()
 }
 
-func makeTstate(t *testing.T) *Tstate {
+func newTstate(t *testing.T) *Tstate {
 	var err error
 	ts := &Tstate{}
-	ts.Tstate = test.MakeTstateAll(t)
+	ts.Tstate = test.NewTstateAll(t)
 
 	ts.Tstate.MkDir(www.TMP, 0777)
 
@@ -44,7 +44,7 @@ func makeTstate(t *testing.T) *Tstate {
 	err = ts.WaitStart(ts.pid)
 	assert.Nil(t, err)
 
-	ts.WWWClnt = www.MakeWWWClnt(ts.Tstate.FsLib, ts.job)
+	ts.WWWClnt = www.NewWWWClnt(ts.Tstate.FsLib, ts.job)
 
 	return ts
 }
@@ -56,12 +56,12 @@ func (ts *Tstate) waitWww() {
 }
 
 func TestSandbox(t *testing.T) {
-	ts := makeTstate(t)
+	ts := newTstate(t)
 	ts.waitWww()
 }
 
 func TestStatic(t *testing.T) {
-	ts := makeTstate(t)
+	ts := newTstate(t)
 
 	out, err := ts.GetStatic("hello.html")
 	assert.Nil(t, err)
@@ -74,7 +74,7 @@ func TestStatic(t *testing.T) {
 }
 
 func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, done chan bool) {
-	clnt := www.MakeWWWClnt(ts.Tstate.FsLib, ts.job)
+	clnt := www.NewWWWClnt(ts.Tstate.FsLib, ts.job)
 	for i := 0; i < nreq; i++ {
 		slp := avgslp * time.Duration(rd.Uint64()%100) / 100
 		db.DPrintf(db.TEST, "[%v] iteration %v Random sleep %v", clntid, i, slp)
@@ -89,7 +89,7 @@ func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, don
 const N = 100
 
 func TestMatMul(t *testing.T) {
-	ts := makeTstate(t)
+	ts := newTstate(t)
 
 	done := make(chan bool)
 	go matmulClnt(ts, N, 0, 1, 0, done)
@@ -99,7 +99,7 @@ func TestMatMul(t *testing.T) {
 }
 
 func TestMatMulConcurrent(t *testing.T) {
-	ts := makeTstate(t)
+	ts := newTstate(t)
 
 	N_CLNT := 5
 	done := make(chan bool)

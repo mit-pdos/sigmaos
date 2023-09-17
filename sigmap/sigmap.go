@@ -135,12 +135,12 @@ func (qt Qtype) String() string {
 	return s
 }
 
-func MakeQid(t Qtype, v TQversion, p Tpath) *Tqid {
+func NewQid(t Qtype, v TQversion, p Tpath) *Tqid {
 	return &Tqid{Type: uint32(t), Version: uint32(v), Path: uint64(p)}
 }
 
-func MakeQidPerm(perm Tperm, v TQversion, p Tpath) *Tqid {
-	return MakeQid(Qtype(perm>>QTYPESHIFT), v, p)
+func NewQidPerm(perm Tperm, v TQversion, p Tpath) *Tqid {
+	return NewQid(Qtype(perm>>QTYPESHIFT), v, p)
 }
 
 func (qid *Tqid) Tversion() TQversion {
@@ -443,7 +443,7 @@ func (s *Tstat) Tfid() Tfid {
 
 func MkStatNull() *Stat {
 	st := &Stat{}
-	st.Qid = MakeQid(0, 0, 0)
+	st.Qid = NewQid(0, 0, 0)
 	return st
 }
 

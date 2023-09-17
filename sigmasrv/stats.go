@@ -20,12 +20,12 @@ type statsDev struct {
 }
 
 // Create a StatsDev in mfs at pn
-func makeStatsDev(mfs *memfssrv.MemFs, pn string) (*rpc.StatInfo, *serr.Err) {
-	std := &statsDev{mfs: mfs, Inode: mfs.MakeDevInode()}
+func newStatsDev(mfs *memfssrv.MemFs, pn string) (*rpc.StatInfo, *serr.Err) {
+	std := &statsDev{mfs: mfs, Inode: mfs.NewDevInode()}
 	if err := mfs.MkDev(path.Join(pn, rpc.STATS), std); err != nil {
 		return nil, err
 	}
-	std.si = rpc.MakeStatInfo()
+	std.si = rpc.NewStatInfo()
 	return std.si, nil
 }
 

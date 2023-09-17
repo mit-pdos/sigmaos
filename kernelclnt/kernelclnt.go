@@ -13,7 +13,7 @@ type KernelClnt struct {
 	rpcc *rpcclnt.RPCClnt
 }
 
-func MakeKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
+func NewKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
 	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{fsl}, pn)
 	if err != nil {
 		return nil, err

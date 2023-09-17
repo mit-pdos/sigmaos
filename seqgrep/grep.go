@@ -41,11 +41,11 @@ func grepline(n int, line string, sbc *mr.ScanByteCounter) int {
 }
 
 func Grep(pcfg *proc.ProcEnv, rdr io.Reader) int {
-	p, err := perf.MakePerf(pcfg, perf.SEQGREP)
+	p, err := perf.NewPerf(pcfg, perf.SEQGREP)
 	if err != nil {
-		log.Fatalf("MakePerf err %v\n", err)
+		log.Fatalf("NewPerf err %v\n", err)
 	}
-	sbc := mr.MakeScanByteCounter(p)
+	sbc := mr.NewScanByteCounter(p)
 	sz := 8 * (1 << 20)
 	ra, err := readahead.NewReaderSize(rdr, 4, sz)
 	if err != nil {

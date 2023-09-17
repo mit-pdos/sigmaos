@@ -12,7 +12,7 @@ import (
 )
 
 func TestStatsd(t *testing.T) {
-	ts := test.MakeTstate(t)
+	ts := test.NewTstate(t)
 
 	st := &stats.Stats{}
 	err := ts.GetFileJson("name/"+sp.STATSD, st)

@@ -47,11 +47,11 @@ func TestResizeImg(t *testing.T) {
 }
 
 func TestResizeProc(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	in := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
 	out := path.Join(sp.S3, "~local/9ps3/img-save/1-thumb.jpg")
 	ts.Remove(out)
-	p := proc.MakeProc("imgresize", []string{in, out})
+	p := proc.NewProc("imgresize", []string{in, out})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(p.GetPid())
@@ -67,9 +67,9 @@ type Tstate struct {
 	*test.Tstate
 }
 
-func makeTstate(t *testing.T) *Tstate {
+func newTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = test.MakeTstateAll(t)
+	ts.Tstate = test.NewTstateAll(t)
 	ts.job = rd.String(4)
 	return ts
 }
@@ -90,7 +90,7 @@ func (ts *Tstate) WaitDone(t int) error {
 }
 
 func TestImgdOne(t *testing.T) {
-	ts := makeTstate(t)
+	ts := newTstate(t)
 
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
@@ -114,7 +114,7 @@ func TestImgdOne(t *testing.T) {
 }
 
 func TestImgdMany(t *testing.T) {
-	ts := makeTstate(t)
+	ts := newTstate(t)
 
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
@@ -150,7 +150,7 @@ func TestImgdMany(t *testing.T) {
 }
 
 func TestImgdRestart(t *testing.T) {
-	ts := makeTstate(t)
+	ts := newTstate(t)
 
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
@@ -180,7 +180,7 @@ func TestImgdRestart(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Restart")
 
-	ts.Tstate = test.MakeTstateAll(t)
+	ts.Tstate = test.NewTstateAll(t)
 
 	gms, err := groupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")

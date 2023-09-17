@@ -19,7 +19,7 @@ func init() {
 }
 
 func TestReader1(t *testing.T) {
-	ts := test.MakeTstate(t)
+	ts := test.NewTstate(t)
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("abcdefg")
@@ -47,7 +47,7 @@ func TestReader1(t *testing.T) {
 }
 
 func TestReader2(t *testing.T) {
-	ts := test.MakeTstate(t)
+	ts := test.NewTstate(t)
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("a")
@@ -73,7 +73,7 @@ func TestReader2(t *testing.T) {
 }
 
 func TestReaderLarge(t *testing.T) {
-	ts := test.MakeTstate(t)
+	ts := test.NewTstate(t)
 
 	fn := gopath.Join(pathname, "f")
 	ts.SetChunkSz(4096)

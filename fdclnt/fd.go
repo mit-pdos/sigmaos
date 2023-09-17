@@ -23,7 +23,7 @@ type FdTable struct {
 	freefds map[int]bool
 }
 
-func mkFdTable() *FdTable {
+func newFdTable() *FdTable {
 	fdt := &FdTable{}
 	fdt.fds = make([]FdState, 0, MAXFD)
 	fdt.freefds = make(map[int]bool)

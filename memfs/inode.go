@@ -7,16 +7,16 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func MakeInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *serr.Err) {
-	i := inode.MakeInode(ctx, p, parent)
+func NewInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, new fs.NewDirF) (fs.Inode, *serr.Err) {
+	i := inode.NewInode(ctx, p, parent)
 	if p.IsDir() {
-		return mk(i, MakeInode), nil
+		return new(i, NewInode), nil
 	} else if p.IsSymlink() {
-		return MakeFile(i), nil
+		return NewFile(i), nil
 	} else if p.IsPipe() {
-		return MakePipe(ctx, i), nil
+		return NewPipe(ctx, i), nil
 	} else if p.IsFile() || p.IsEphemeral() {
-		return MakeFile(i), nil
+		return NewFile(i), nil
 	} else {
 		return nil, serr.MkErr(serr.TErrInval, p)
 	}

@@ -12,9 +12,9 @@ type Pipe struct {
 	*pipe.Pipe
 }
 
-func MakePipe(ctx fs.CtxI, i fs.Inode) *Pipe {
+func NewPipe(ctx fs.CtxI, i fs.Inode) *Pipe {
 	p := Pipe{}
-	p.Pipe = pipe.MakePipe(ctx)
+	p.Pipe = pipe.NewPipe(ctx)
 	p.Inode = i
 	return &p
 }

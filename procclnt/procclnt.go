@@ -40,12 +40,12 @@ type ProcClnt struct {
 	scheddclnt *scheddclnt.ScheddClnt
 }
 
-func makeProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procdir string) *ProcClnt {
+func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procdir string) *ProcClnt {
 	clnt := &ProcClnt{}
 	clnt.FsLib = fsl
 	clnt.pid = pid
 	clnt.procdir = procdir
-	clnt.scheddclnt = scheddclnt.MakeScheddClnt(fsl)
+	clnt.scheddclnt = scheddclnt.NewScheddClnt(fsl)
 	return clnt
 }
 
@@ -77,7 +77,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how Thow, kernelId string) (
 // which were unable to be successfully spawned, as well as corresponding
 // errors.
 //
-// Use of burstOffset makes sure we continue rotating across invocations as
+// Use of burstOffset news sure we continue rotating across invocations as
 // well as within an invocation.
 func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc, procsPerSchedd int) ([]*proc.Proc, []error) {
 	failed := []*proc.Proc{}
@@ -141,14 +141,14 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		}
 	} else {
 		// Make the proc's procdir
-		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged())
+		err := clnt.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged())
 		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc MakeProcDir: %v", err)
+			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc NewProcDir: %v", err)
 		}
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, schedd will create the semaphore.
 		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.GetPid()))
-		semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
+		semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 		semStart.Init(0)
 	}
 	return nil
@@ -239,7 +239,7 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid) error {
 	defer db.DPrintf(db.PROCCLNT, "WaitStart done waiting %v %v", pid, childDir)
 	s := time.Now()
 	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E Semaphore Down %v", pid, time.Since(s))
-	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
+	semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	return semStart.Down()
 }
 
@@ -266,7 +266,7 @@ func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
 	db.DPrintf(db.PROCCLNT, "WaitExit %v", pid)
 
 	// Make sure the child proc has exited.
-	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(clnt.procdir, pid), proc.EXIT_SEM))
+	semExit := semclnt.NewSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(clnt.procdir, pid), proc.EXIT_SEM))
 	if err := semExit.Down(); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error WaitExit semExit.Down: %v", err)
 		return nil, fmt.Errorf("Error semExit.Down: %v", err)
@@ -295,7 +295,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 	procdir := clnt.ProcEnv().ProcDir
 	db.DPrintf(db.PROCCLNT, "WaitEvict %v procdir %v", pid, procdir)
 	defer db.DPrintf(db.PROCCLNT, "WaitEvict done %v", pid)
-	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
+	semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	err := semEvict.Down()
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "WaitEvict error %v procdir %v", err, procdir)
@@ -319,7 +319,7 @@ func (clnt *ProcClnt) Started() error {
 
 	// Mark self as started
 	semPath := path.Join( /*proc.PARENTDIR*/ clnt.ProcEnv().ParentDir, proc.START_SEM)
-	semStart := semclnt.MakeSemClnt(clnt.FsLib, semPath)
+	semStart := semclnt.NewSemClnt(clnt.FsLib, semPath)
 	err := semStart.Up()
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Started error %v %v", semPath, err)
@@ -362,10 +362,10 @@ func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid sp.Tpid, sta
 	// May return an error if parent already exited.
 	fn := path.Join(parentdir, proc.EXIT_STATUS)
 	if _, err := fsl.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "exited error (parent already exited) MakeFile %v err %v", fn, err)
+		db.DPrintf(db.PROCCLNT_ERR, "exited error (parent already exited) NewFile %v err %v", fn, err)
 	}
 
-	semExit := semclnt.MakeSemClnt(fsl, path.Join(procdir, proc.EXIT_SEM))
+	semExit := semclnt.NewSemClnt(fsl, path.Join(procdir, proc.EXIT_SEM))
 	if err := semExit.Up(); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited semExit up error: %v, %v, %v", procdir, pid, err)
 	}
@@ -393,7 +393,7 @@ func ExitedProcd(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string
 		db.DPrintf(db.PROCCLNT_ERR, "exited %v err %v", pid, err)
 	}
 	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()
-	semStart := semclnt.MakeSemClnt(fsl, path.Join(parentdir, proc.START_SEM))
+	semStart := semclnt.NewSemClnt(fsl, path.Join(parentdir, proc.START_SEM))
 	semStart.Up()
 }
 
@@ -402,7 +402,7 @@ func ExitedProcd(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string
 // Notifies a proc that it will be evicted using Evict.
 func (clnt *ProcClnt) evict(procdir string) error {
 	db.DPrintf(db.PROCCLNT, "Evict %v", procdir)
-	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
+	semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	err := semEvict.Up()
 	if err != nil {
 		return fmt.Errorf("Evict error %v", err)

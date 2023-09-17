@@ -80,7 +80,7 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 }
 
 func setupSigmaState(t *testing.T) *TstateSN {
-	tssn := makeTstateSN(t, []sn.Srv{
+	tssn := newTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
@@ -96,7 +96,7 @@ func setupSigmaState(t *testing.T) *TstateSN {
 
 func setupK8sState(t *testing.T) *TstateSN {
 	// Advertise server address
-	tssn := makeTstateSN(t, nil, 0)
+	tssn := newTstateSN(t, nil, 0)
 	p := sn.JobHTTPAddrsPath(tssn.jobname)
 	mnt := sp.MkMountService(sp.MkTaddrs([]string{K8S_ADDR}))
 	assert.Nil(t, tssn.MountService(p, mnt, sp.NoLeaseId))
@@ -121,7 +121,7 @@ func testTemplate(t *testing.T, isBenchTest bool, testFunc func(*testing.T, *sn.
 		dbg.DPrintf(dbg.ALWAYS, "Running K8s at %v", K8S_ADDR)
 		tssn = setupK8sState(t)
 	}
-	wc := sn.MakeWebClnt(tssn.FsLib, tssn.jobname)
+	wc := sn.NewWebClnt(tssn.FsLib, tssn.jobname)
 
 	// run tests
 	testFunc(t, wc)
@@ -292,7 +292,7 @@ func randOps(t *testing.T, wc *sn.WebClnt, r *rand.Rand) {
 }
 
 func testLoadgenInner(t *testing.T, wc *sn.WebClnt) {
-	lg := loadgen.MakeLoadGenerator(
+	lg := loadgen.NewLoadGenerator(
 		LOAD_DUR*time.Second, LOAD_MAX_RPS, func(r *rand.Rand) { randOps(t, wc, r) })
 	lg.Calibrate()
 	rmsg, err := wc.StartRecording()

@@ -57,7 +57,7 @@ func main() {
 			start = time.Now()
 		}
 		err := BurstProc(M, func(ch chan error) {
-			a := proc.MakeProc(os.Args[2], os.Args[3:])
+			a := proc.NewProc(os.Args[2], os.Args[3:])
 			db.DPrintf(db.TEST1, "Spawning %v", a.GetPid().String())
 			if err := sc.Spawn(a); err != nil {
 				ch <- err
@@ -84,7 +84,7 @@ func main() {
 		})
 
 		if err != nil && !(os.Args[2] == "crash" && err.Error() == "status error Non-sigma error  Non-sigma error  exit status 2") {
-			sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+			sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 			os.Exit(1)
 		}
 	}

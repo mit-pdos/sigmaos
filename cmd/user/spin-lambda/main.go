@@ -16,13 +16,13 @@ func spin(args []string) error {
 	db.DFatalf("Error: env")
 	// addr := args[0]
 	// sempath := args[1]
-	// fsl, err := fslib.MakeFsLibAddr(sp.Tuname("spin-"+path.Base(sempath)), sp.ROOTREALM, "XXXXXXX", sp.MkTaddrs([]string{addr}))
+	// fsl, err := fslib.NewFsLibAddr(sp.Tuname("spin-"+path.Base(sempath)), sp.ROOTREALM, "XXXXXXX", sp.MkTaddrs([]string{addr}))
 	//
 	//	if err != nil {
 	//		return err
 	//	}
 	//
-	// sem := semclnt.MakeSemClnt(fsl, sempath)
+	// sem := semclnt.NewSemClnt(fsl, sempath)
 	// err = sem.Up()
 	//
 	//	if err != nil {

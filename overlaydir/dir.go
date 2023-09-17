@@ -27,7 +27,7 @@ type DirOverlay struct {
 
 func NewDirOverlay(dir fs.Dir) *DirOverlay {
 	d := &DirOverlay{}
-	d.Inode = inode.MakeInode(nil, sp.DMDIR, nil)
+	d.Inode = inode.NewInode(nil, sp.DMDIR, nil)
 	d.underlay = dir
 	d.entries = make(map[string]fs.Inode)
 	return d

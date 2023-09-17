@@ -30,7 +30,7 @@ type RequestQueue struct {
 	closed      bool
 }
 
-func MakeRequestQueue(addrs sp.Taddrs) *RequestQueue {
+func NewRequestQueue(addrs sp.Taddrs) *RequestQueue {
 	rq := &RequestQueue{}
 	rq.Cond = sync.NewCond(&rq.Mutex)
 	rq.addrs = addrs

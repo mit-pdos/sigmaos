@@ -34,14 +34,14 @@ type PathClnt struct {
 	cid     sp.TclntId
 }
 
-func MakePathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt, sz sp.Tsize) *PathClnt {
-	pathc := &PathClnt{pcfg: pcfg, mnt: makeMntTable(), chunkSz: sz}
+func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt, sz sp.Tsize) *PathClnt {
+	pathc := &PathClnt{pcfg: pcfg, mnt: newMntTable(), chunkSz: sz}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.MakeFidClnt(pcfg, pcfg.Net)
+		pathc.FidClnt = fidclnt.NewFidClnt(pcfg, pcfg.Net)
 	} else {
 		pathc.FidClnt = fidc
 	}
-	pathc.rootmt = mkRootMountTable()
+	pathc.rootmt = newRootMountTable()
 	pathc.cid = sp.TclntId(rand.Uint64())
 	return pathc
 }
@@ -129,12 +129,12 @@ func (pathc *PathClnt) Disconnect(pn string) error {
 	return nil
 }
 
-func (pathc *PathClnt) MakeReader(fid sp.Tfid, path string, chunksz sp.Tsize) *reader.Reader {
-	return reader.MakeReader(pathc.FidClnt, path, fid, chunksz)
+func (pathc *PathClnt) NewReader(fid sp.Tfid, path string, chunksz sp.Tsize) *reader.Reader {
+	return reader.NewReader(pathc.FidClnt, path, fid, chunksz)
 }
 
-func (pathc *PathClnt) MakeWriter(fid sp.Tfid) *writer.Writer {
-	return writer.MakeWriter(pathc.FidClnt, fid)
+func (pathc *PathClnt) NewWriter(fid sp.Tfid) *writer.Writer {
+	return writer.NewWriter(pathc.FidClnt, fid)
 }
 
 func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
@@ -146,7 +146,7 @@ func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	rdr := reader.MakeReader(pathc.FidClnt, "", fid, pathc.chunkSz)
+	rdr := reader.NewReader(pathc.FidClnt, "", fid, pathc.chunkSz)
 	b, err := rdr.GetDataErr()
 	if err != nil {
 		return nil, err

@@ -117,12 +117,12 @@ type Tqid9P struct {
 	Path    Tpath
 }
 
-func MakeQid(t Qtype9P, v TQversion, p Tpath) Tqid9P {
+func NewQid(t Qtype9P, v TQversion, p Tpath) Tqid9P {
 	return Tqid9P{t, v, p}
 }
 
-func MakeQidPerm(perm Tperm, v TQversion, p Tpath) Tqid9P {
-	return MakeQid(Qtype9P(perm>>QTYPESHIFT), v, p)
+func NewQidPerm(perm Tperm, v TQversion, p Tpath) Tqid9P {
+	return NewQid(Qtype9P(perm>>QTYPESHIFT), v, p)
 }
 
 func (q Tqid9P) String() string {

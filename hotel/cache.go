@@ -21,14 +21,14 @@ func MkCacheClnt(cache string, fsls []*fslib.FsLib, job string) (cache.CacheClnt
 		return cc, nil
 	case "kvd":
 		db.DPrintf(db.ALWAYS, "cache %v\n", cache)
-		cc, err := kv.MakeClerkFsl(fsls[0], job, false)
+		cc, err := kv.NewClerkStart(fsls[0], job, false)
 		if err != nil {
 			return nil, err
 		}
-		db.DPrintf(db.ALWAYS, "MakeClerkFsl done %v\n", cache)
+		db.DPrintf(db.ALWAYS, "NewClerkFsl done %v\n", cache)
 		return cc, nil
 	case "memcached":
-		cc, err := memcached.MakeMemcachedClnt(fsls[0], job)
+		cc, err := memcached.NewMemcachedClnt(fsls[0], job)
 		if err != nil {
 			return nil, err
 		}

@@ -40,12 +40,12 @@ const (
 var validPath = regexp.MustCompile(`^/(static|hotel|exit|matmul|user)/([=.a-zA-Z0-9/]*)$`)
 
 func RunWwwd(job, tree string) {
-	www := MakeWwwd(job, tree)
-	http.HandleFunc(STATIC, www.makeHandler(getStatic))
-	http.HandleFunc(HELLO, www.makeHandler(doHello))
-	http.HandleFunc(EXIT, www.makeHandler(doExit))
-	http.HandleFunc(MATMUL, www.makeHandler(doMatMul))
-	http.HandleFunc(CONS_CPU_LOCAL, www.makeHandler(doConsumeCPULocal))
+	www := NewWwwd(job, tree)
+	http.HandleFunc(STATIC, www.newHandler(getStatic))
+	http.HandleFunc(HELLO, www.newHandler(doHello))
+	http.HandleFunc(EXIT, www.newHandler(doExit))
+	http.HandleFunc(MATMUL, www.newHandler(doMatMul))
+	http.HandleFunc(CONS_CPU_LOCAL, www.newHandler(doConsumeCPULocal))
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
@@ -78,17 +78,17 @@ type Wwwd struct {
 	globalSrvpath string
 }
 
-func MakeWwwd(job, tree string) *Wwwd {
+func NewWwwd(job, tree string) *Wwwd {
 	www := &Wwwd{}
 
 	pcfg := proc.GetProcEnv()
 	var err error
-	www.ssrv, err = sigmasrv.MakeSigmaSrvNoRPC(MemFsPath(job), pcfg)
+	www.ssrv, err = sigmasrv.NewSigmaSrvNoRPC(MemFsPath(job), pcfg)
 	if err != nil {
-		db.DFatalf("MakeSrvFsLib %v %v\n", JobDir(job), err)
+		db.DFatalf("NewSrvFsLib %v %v\n", JobDir(job), err)
 	}
 
-	//	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
+	//	www.FsLib = fslib.NewFsLibBase("www") // don't mount Named()
 	// In order to automount children, we need to at least mount /pids.
 	if err := procclnt.MountPids(www.ssrv.SigmaClnt().FsLib); err != nil {
 		db.DFatalf("wwwd err mount pids %v", err)
@@ -96,7 +96,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 
 	db.DPrintf(db.ALWAYS, "pid %v ", pcfg.GetPID())
 	if _, err := www.ssrv.SigmaClnt().PutFile(path.Join(TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
-		db.DFatalf("wwwd MakeFile %v", err)
+		db.DFatalf("wwwd NewFile %v", err)
 	}
 
 	www.localSrvpath = path.Join(proc.PROCDIR, WWWD)
@@ -109,7 +109,7 @@ func MakeWwwd(job, tree string) *Wwwd {
 	return www
 }
 
-func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, string) (*proc.Status, error)) http.HandlerFunc {
+func (www *Wwwd) newHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, string) (*proc.Status, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		db.DPrintf(db.ALWAYS, "path %v\n", r.URL.Path)
 		m := validPath.FindStringSubmatch(r.URL.Path)
@@ -132,12 +132,12 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 	}
 }
 
-func (www *Wwwd) makePipe() string {
+func (www *Wwwd) newPipe() string {
 	// Make the pipe in the server.
 	pipeName := rand.String(16)
 	pipePath := path.Join(www.localSrvpath, pipeName)
-	if err := www.ssrv.SigmaClnt().MakePipe(pipePath, 0777); err != nil {
-		db.DFatalf("Error MakePipe %v", err)
+	if err := www.ssrv.SigmaClnt().NewPipe(pipePath, 0777); err != nil {
+		db.DFatalf("Error NewPipe %v", err)
 	}
 	return pipeName
 }
@@ -174,14 +174,14 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pipe bool, args []string, env map[string]string, mcpu proc.Tmcpu) (*proc.Status, error) {
 	var pipeName string
 	pid := sp.GenPid(app)
-	a := proc.MakeProcPid(pid, app, args)
+	a := proc.NewProcPid(pid, app, args)
 	a.SetMcpu(mcpu)
 	for k, v := range env {
 		a.AppendEnv(k, v)
 	}
 	// Create a pipe for the child to write to.
 	if pipe {
-		pipeName = www.makePipe()
+		pipeName = www.newPipe()
 		// Set the shared link to point to the pipe
 		a.SetShared(path.Join(www.globalSrvpath, pipeName))
 	}
@@ -226,11 +226,11 @@ func doHello(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*p
 	if err != nil {
 		return nil, err
 	}
-	return proc.MakeStatus(proc.StatusOK), nil
+	return proc.NewStatus(proc.StatusOK), nil
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
-	www.ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
+	www.ssrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
 	os.Exit(0)
 	return nil, nil
 }
@@ -248,5 +248,5 @@ func doConsumeCPULocal(www *Wwwd, w http.ResponseWriter, r *http.Request, args s
 		db.DFatalf("Can't convert niter %v", args)
 	}
 	microbenchmarks.ConsumeCPU(niter)
-	return proc.MakeStatus(proc.StatusOK), nil
+	return proc.NewStatus(proc.StatusOK), nil
 }

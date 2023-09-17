@@ -11,7 +11,7 @@ type File struct {
 	*Obj
 }
 
-func makeFile(o *Obj) *File {
+func newFile(o *Obj) *File {
 	f := &File{Obj: o}
 	return f
 }

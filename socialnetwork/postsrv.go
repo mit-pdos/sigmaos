@@ -32,7 +32,7 @@ type PostSrv struct {
 func RunPostSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Creating post service\n")
 	psrv := &PostSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_POST, psrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_POST, psrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -42,16 +42,16 @@ func RunPostSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, POST_COL, []string{"postid"})
 	psrv.mongoc = mongoc
-	fsls := MakeFsLibs(SOCIAL_NETWORK_POST)
+	fsls := NewFsLibs(SOCIAL_NETWORK_POST)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	psrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting post service\n")
-	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_POST)
+	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_POST)
 	if err != nil {
-		dbg.DFatalf("MakePerf err %v\n", err)
+		dbg.DFatalf("NewPerf err %v\n", err)
 	}
 	defer perf.Done()
 

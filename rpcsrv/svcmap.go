@@ -43,7 +43,7 @@ func (svcmap *svcMap) RegisterService(svci any) {
 	svc.methods = map[string]*method{}
 
 	tname := structName(svci)
-	db.DPrintf(db.SIGMASRV, "makeRPCSrv %T %q\n", svci, tname)
+	db.DPrintf(db.SIGMASRV, "newRPCSrv %T %q\n", svci, tname)
 
 	for m := 0; m < svc.typ.NumMethod(); m++ {
 		methodt := svc.typ.Method(m)

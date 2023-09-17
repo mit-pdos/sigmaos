@@ -32,7 +32,7 @@ type CachedSvc struct {
 
 func (cs *CachedSvc) addServer(i int) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.MakeProc(cs.bin, []string{cs.pn, strconv.FormatBool(cs.public), SVRDIR + strconv.Itoa(int(i))})
+	p := proc.NewProc(cs.bin, []string{cs.pn, strconv.FormatBool(cs.public), SVRDIR + strconv.Itoa(int(i))})
 	//	p.AppendEnv("GODEBUG", "gctrace=1")
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")

@@ -23,7 +23,7 @@ type MRJobInstance struct {
 	cm      *groupmgr.GroupMgr
 }
 
-func MakeMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string) *MRJobInstance {
+func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string) *MRJobInstance {
 	ji := &MRJobInstance{}
 	ji.RealmTstate = ts
 	ji.p = p

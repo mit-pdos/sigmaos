@@ -18,20 +18,20 @@ const (
 )
 
 func TestSemClntSimple(t *testing.T) {
-	ts := test.MakeTstate(t)
+	ts := test.NewTstate(t)
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	fsl0, err := fslib.MakeFsLib(pcfg)
+	fsl0, err := fslib.NewFsLib(pcfg)
 	assert.Nil(ts.T, err, "fsl0")
 
-	sem := semclnt.MakeSemClnt(ts.FsLib, WAIT_PATH+"/x")
+	sem := semclnt.NewSemClnt(ts.FsLib, WAIT_PATH+"/x")
 	sem.Init(0)
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		sem := semclnt.MakeSemClnt(fsl0, WAIT_PATH+"/x")
+		sem := semclnt.NewSemClnt(fsl0, WAIT_PATH+"/x")
 		sem.Down()
 		ch <- true
 	}(ch)
@@ -56,32 +56,32 @@ func TestSemClntSimple(t *testing.T) {
 }
 
 func TestSemClntConcur(t *testing.T) {
-	ts := test.MakeTstate(t)
+	ts := test.NewTstate(t)
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pcfg1 := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	fsl0, err := fslib.MakeFsLib(pcfg1)
+	fsl0, err := fslib.NewFsLib(pcfg1)
 	assert.Nil(ts.T, err, "fsl0")
 	pcfg2 := proc.NewAddedProcEnv(ts.ProcEnv(), 2)
-	fsl1, err := fslib.MakeFsLib(pcfg2)
+	fsl1, err := fslib.NewFsLib(pcfg2)
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {
-		sem := semclnt.MakeSemClnt(ts.FsLib, WAIT_PATH+"/x")
+		sem := semclnt.NewSemClnt(ts.FsLib, WAIT_PATH+"/x")
 		sem.Init(0)
 
 		ch := make(chan bool)
 
 		go func(ch chan bool) {
 			delay.Delay(200)
-			sem := semclnt.MakeSemClnt(fsl0, WAIT_PATH+"/x")
+			sem := semclnt.NewSemClnt(fsl0, WAIT_PATH+"/x")
 			sem.Down()
 			ch <- true
 		}(ch)
 		go func(ch chan bool) {
 			delay.Delay(200)
-			sem := semclnt.MakeSemClnt(fsl1, WAIT_PATH+"/x")
+			sem := semclnt.NewSemClnt(fsl1, WAIT_PATH+"/x")
 			sem.Up()
 			ch <- true
 		}(ch)

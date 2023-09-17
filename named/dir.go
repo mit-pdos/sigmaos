@@ -17,7 +17,7 @@ func (d *Dir) String() string {
 	return d.Obj.String()
 }
 
-func makeDir(o *Obj) *Dir {
+func newDir(o *Obj) *Dir {
 	dir := &Dir{Obj: o}
 	return dir
 }
@@ -28,14 +28,14 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.
 	di, err := d.fs.Lookup(d.Obj.di.Path, name)
 	if err == nil {
 		pn1 := d.pn.Copy().Append(name)
-		obj := makeObjDi(d.fs, pn1, di, d.Obj.di.Path)
+		obj := newObjDi(d.fs, pn1, di, d.Obj.di.Path)
 		var o fs.FsObj
 		if obj.di.Perm.IsDir() {
-			o = makeDir(obj)
+			o = newDir(obj)
 		} else if obj.di.Perm.IsDevice() {
-			o = makeDev(obj)
+			o = newDev(obj)
 		} else {
-			o = makeFile(obj)
+			o = newFile(obj)
 		}
 		return []fs.FsObj{o}, o, pn[1:], nil
 	}
@@ -49,7 +49,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 		cid = ctx.ClntId()
 	}
 	pn := d.pn.Copy().Append(name)
-	path := mkTpath(pn)
+	path := newTpath(pn)
 	nf, r := fsetcd.MkEtcdFileDir(perm, path, cid, lid)
 	if r != nil {
 		return nil, serr.MkErrError(r)
@@ -58,13 +58,13 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	if err != nil {
 		return nil, err
 	}
-	obj := makeObjDi(d.fs, pn, di, d.Obj.di.Path)
+	obj := newObjDi(d.fs, pn, di, d.Obj.di.Path)
 	if obj.di.Perm.IsDir() {
-		return makeDir(obj), nil
+		return newDir(obj), nil
 	} else if obj.di.Perm.IsDevice() {
-		return makeDev(obj), nil
+		return newDev(obj), nil
 	} else {
-		return makeFile(obj), nil
+		return newFile(obj), nil
 	}
 }
 
@@ -83,7 +83,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 		for i, n := range ns {
 			e, _ := dir.Ents.Lookup(n)
 			di := e.(fsetcd.DirEntInfo)
-			o := makeObjDi(d.fs, d.pn.Append(n), di, d.Obj.di.Path)
+			o := newObjDi(d.fs, d.pn.Append(n), di, d.Obj.di.Path)
 			sts[i] = o.stat()
 		}
 		return sts, nil
@@ -148,12 +148,12 @@ func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
 	if err != nil && err.IsErrNotfound() { // make root dir
 		db.DPrintf(db.NAMED, "fsetcd.ReadDir err %v; make root dir\n", err)
 		if err := fs.MkRootDir(); err != nil {
-			db.DFatalf("rootDir: mkRootDir err %v\n", err)
+			db.DFatalf("rootDir: newRootDir err %v\n", err)
 		}
 	} else if err != nil {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
-	return makeDir(makeObjDi(fs, path.Path{},
+	return newDir(newObjDi(fs, path.Path{},
 		fsetcd.DirEntInfo{Perm: sp.DMDIR | 0777, Path: fsetcd.ROOT},
 		fsetcd.ROOT))
 }

@@ -19,7 +19,7 @@ type FenceTable struct {
 	fencedDirs map[string]sp.Tfence
 }
 
-func MakeFenceTable() *FenceTable {
+func NewFenceTable() *FenceTable {
 	ft := &FenceTable{}
 	ft.fencedDirs = make(map[string]sp.Tfence)
 	return ft

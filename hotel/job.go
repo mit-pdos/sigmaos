@@ -80,14 +80,14 @@ func MemFsPath(job string) string {
 	return path.Join(JobDir(job), MEMFS)
 }
 
-func MakeFsLibs(uname string) []*fslib.FsLib {
+func NewFsLibs(uname string) []*fslib.FsLib {
 	pe := proc.GetProcEnv()
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
 		pen := proc.NewAddedProcEnv(pe, i)
-		fsl, err := fslib.MakeFsLib(pen)
+		fsl, err := fslib.NewFsLib(pen)
 		if err != nil {
-			db.DFatalf("Error mkfsl: %v", err)
+			db.DFatalf("Error newfsl: %v", err)
 		}
 		fsls = append(fsls, fsl)
 	}
@@ -143,7 +143,7 @@ type HotelJob struct {
 	kvf             *kv.KVFleet
 }
 
-func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, nsrv int, gc bool, imgSizeMB int) (*HotelJob, error) {
+func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, nsrv int, gc bool, imgSizeMB int) (*HotelJob, error) {
 	// Set number of hotels before doing anything.
 	setNHotel(nhotel)
 
@@ -171,10 +171,10 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 				db.DFatalf("Error MkCachedSvcClnt %v", err)
 				return nil, err
 			}
-			ca = cachedsvcclnt.MakeAutoscaler(cm, cc)
+			ca = cachedsvcclnt.NewAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
-			kvf, err = kv.MakeKvdFleet(sc, job, 0, nsrv, 0, 0, cacheMcpu, "0", "manual")
+			kvf, err = kv.NewKvdFleet(sc, job, 0, nsrv, 0, 0, cacheMcpu, "0", "manual")
 			if err != nil {
 				return nil, err
 			}
@@ -193,7 +193,7 @@ func MakeHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, c
 	pids := make([]sp.Tpid, 0, len(srvs))
 
 	for _, srv := range srvs {
-		p := proc.MakeProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
+		p := proc.NewProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
 		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)

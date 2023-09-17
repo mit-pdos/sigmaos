@@ -54,7 +54,7 @@ type committedEntries struct {
 }
 
 // etcd numbers nodes start from 1.  0 is not a valid id.
-func makeRaftNode(pcfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
+func newRaftNode(pcfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
 	node := &RaftNode{
 		id:        id,
 		peerAddrs: peerAddrs,
@@ -74,7 +74,7 @@ func makeRaftNode(pcfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []str
 		MaxInflightMsgs:           256,
 		MaxUncommittedEntriesSize: 1 << 30,
 	}
-	db.DPrintf(db.REPLRAFT, "makeRaftNode %d peeraddrs %v\n", id, peerAddrs)
+	db.DPrintf(db.REPLRAFT, "newRaftNode %d peeraddrs %v\n", id, peerAddrs)
 	if err := node.start(peers, l, init); err != nil {
 		return nil, err
 	}

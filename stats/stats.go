@@ -146,7 +146,7 @@ type StatInfo struct {
 
 func MkStatsDev(parent fs.Dir) *StatInfo {
 	sti := &StatInfo{}
-	sti.Inode = inode.MakeInode(nil, sp.DMDEVICE, parent)
+	sti.Inode = inode.NewInode(nil, sp.DMDEVICE, parent)
 	sti.st = MkStats()
 	sti.pathCnts = false
 	return sti

@@ -12,7 +12,7 @@ type RealmClnt struct {
 	rpcc *rpcclnt.RPCClnt
 }
 
-func MakeRealmClnt(fsl *fslib.FsLib) (*RealmClnt, error) {
+func NewRealmClnt(fsl *fslib.FsLib) (*RealmClnt, error) {
 	rc := &RealmClnt{FsLib: fsl}
 	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{rc.FsLib}, sp.REALMD)
 	if err != nil {
@@ -22,7 +22,7 @@ func MakeRealmClnt(fsl *fslib.FsLib) (*RealmClnt, error) {
 	return rc, nil
 }
 
-func (rc *RealmClnt) MakeRealm(realm sp.Trealm, net string) error {
+func (rc *RealmClnt) NewRealm(realm sp.Trealm, net string) error {
 	req := &proto.MakeRequest{
 		Realm:   realm.String(),
 		Network: net,

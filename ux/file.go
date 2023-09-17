@@ -15,9 +15,9 @@ type File struct {
 	fd int
 }
 
-func makeFile(path path.Path) (*File, *serr.Err) {
+func newFile(path path.Path) (*File, *serr.Err) {
 	f := &File{}
-	o, err := makeObj(path)
+	o, err := newObj(path)
 	if err != nil {
 		return nil, err
 	}

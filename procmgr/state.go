@@ -25,7 +25,7 @@ func (mgr *ProcMgr) postProcInQueue(p *proc.Proc) {
 // Create an ephemeral "Started" semaphore. Must be ephemeral so parent procs can detect schedd crashes.
 func (mgr *ProcMgr) createStartedSem(p *proc.Proc) (*semclnt.SemClnt, error) {
 	semPath := path.Join(p.GetParentDir(), proc.START_SEM)
-	semStart := semclnt.MakeSemClnt(mgr.getSigmaClnt(p.GetRealm()).FsLib, semPath)
+	semStart := semclnt.NewSemClnt(mgr.getSigmaClnt(p.GetRealm()).FsLib, semPath)
 	var err error
 	if err = semStart.Init(sp.DMTMP); err != nil {
 		db.DPrintf(db.PROCMGR_ERR, "Err sem init [%v]: %v", semPath, err)
@@ -60,8 +60,8 @@ func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 		}
 	}
 	// Make the proc's procdir
-	if err := mgr.rootsc.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged()); err != nil {
-		db.DPrintf(db.PROCMGR_ERR, "Err procmgr MakeProcDir: %v\n", err)
+	if err := mgr.rootsc.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged()); err != nil {
+		db.DPrintf(db.PROCMGR_ERR, "Err procmgr NewProcDir: %v\n", err)
 	}
 }
 
@@ -72,7 +72,7 @@ func (mgr *ProcMgr) teardownProcState(p *proc.Proc) {
 // Set up state to notify parent that a proc crashed.
 func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	db.DPrintf(db.PROCMGR_ERR, "Proc %v finished with error: %v", p, err)
-	procclnt.ExitedProcd(mgr.getSigmaClnt(p.GetRealm()).FsLib, p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.MakeStatusErr(err.Error(), nil))
+	procclnt.ExitedProcd(mgr.getSigmaClnt(p.GetRealm()).FsLib, p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil))
 }
 
 // Register a proc as running.
@@ -141,7 +141,7 @@ func (mgr *ProcMgr) getWSQueue(qpath string) (map[sp.Trealm][]*proc.Proc, bool) 
 					// Proc may have been stolen already.
 					continue
 				}
-				p = proc.MakeEmptyProc()
+				p = proc.NewEmptyProc()
 				p.Unmarshal(b)
 				mgr.pcache.Set(p.GetPid(), p)
 			}

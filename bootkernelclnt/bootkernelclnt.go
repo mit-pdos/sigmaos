@@ -62,7 +62,7 @@ func MkKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays bool) (*Kernel,
 }
 
 func MkKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
-	db.DPrintf(db.SYSTEM, "MakeKernelClnt %s\n", kernelId)
+	db.DPrintf(db.SYSTEM, "NewKernelClnt %s\n", kernelId)
 	sc, err := sigmaclnt.MkSigmaClntRootInit(pcfg)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make sigma clnt root init")
@@ -79,8 +79,8 @@ func MkKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 		kernelId = path.Base(pn)
 	}
 
-	db.DPrintf(db.SYSTEM, "MakeKernelClnt %s %s\n", pn, kernelId)
-	kclnt, err := kernelclnt.MakeKernelClnt(sc.FsLib, pn)
+	db.DPrintf(db.SYSTEM, "NewKernelClnt %s %s\n", pn, kernelId)
+	kclnt, err := kernelclnt.NewKernelClnt(sc.FsLib, pn)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error MkKernelClnt")
 		return nil, err

@@ -54,7 +54,7 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 7, mr.Khash("absently")%8)
 }
 
-func TestMakeWordCount(t *testing.T) {
+func TestNewWordCount(t *testing.T) {
 	const (
 		// INPUT = "/home/kaashoek/Downloads/enwiki-1G"
 		HOSTTMP = "/tmp/sigmaos"
@@ -71,9 +71,9 @@ func TestMakeWordCount(t *testing.T) {
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
 	data := make(seqwc.Tdata, 0)
-	p, err := perf.MakePerf(proc.NewTestProcEnv(sp.ROOTREALM, "", "", "", false), perf.SEQWC)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, "", "", "", false), perf.SEQWC)
 	assert.Nil(t, err)
-	sbc := mr.MakeScanByteCounter(p)
+	sbc := mr.NewScanByteCounter(p)
 	for scanner.Scan() {
 		l := scanner.Text()
 		if len(l) > 0 {
@@ -94,7 +94,7 @@ func TestMakeWordCount(t *testing.T) {
 
 func TestSplits(t *testing.T) {
 	const SPLITSZ = 10 * sp.MBYTE
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	job = mr.ReadJobConfig(app)
 	bins, err := mr.MkBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
@@ -118,8 +118,8 @@ func TestMapper(t *testing.T) {
 		REDUCEOUT = "name/ux/~local/test-reducer-out.txt"
 	)
 
-	ts := test.MakeTstateAll(t)
-	p, err := perf.MakePerf(proc.NewTestProcEnv(sp.ROOTREALM, "", "", "", false), perf.MRMAPPER)
+	ts := test.NewTstateAll(t)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, "", "", "", false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
 	ts.Remove(REDUCEIN)
@@ -171,7 +171,7 @@ func TestMapper(t *testing.T) {
 	}
 
 	data1 := make(seqwc.Tdata)
-	sbc := mr.MakeScanByteCounter(p)
+	sbc := mr.NewScanByteCounter(p)
 	_, _, err = seqwc.WcData(ts.FsLib, job.Input, data1, sbc)
 	assert.Nil(t, err)
 	assert.Equal(t, len(data1), len(data))
@@ -191,10 +191,10 @@ func TestMapper(t *testing.T) {
 }
 
 func TestSeqGrep(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	job = mr.ReadJobConfig(app)
 
-	p := proc.MakeProc("seqgrep", []string{job.Input})
+	p := proc.NewProc("seqgrep", []string{job.Input})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
 	status, err := ts.WaitExit(p.GetPid())
@@ -206,12 +206,12 @@ func TestSeqGrep(t *testing.T) {
 
 func TestSeqWc(t *testing.T) {
 	const OUT = "name/ux/~local/seqout.txt"
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	job = mr.ReadJobConfig(app)
 
 	ts.Remove(OUT)
 
-	p := proc.MakeProc("seqwc", []string{job.Input, OUT})
+	p := proc.NewProc("seqwc", []string{job.Input, OUT})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
 	status, err := ts.WaitExit(p.GetPid())
@@ -227,9 +227,9 @@ type Tstate struct {
 	nreducetask int
 }
 
-func makeTstate(t *testing.T) *Tstate {
+func newTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = test.MakeTstateAll(t)
+	ts.Tstate = test.NewTstateAll(t)
 	job = mr.ReadJobConfig(app)
 	ts.nreducetask = job.Nreduce
 	ts.job = rd.String(4)
@@ -277,9 +277,9 @@ func (ts *Tstate) checkJob() {
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor bool) {
-	ts := makeTstate(t)
+	ts := newTstate(t)
 
-	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	if monitor {
 		sdc.MonitorSchedds(ts.Realm())
 		defer sdc.Done()

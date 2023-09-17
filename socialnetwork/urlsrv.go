@@ -37,7 +37,7 @@ type UrlSrv struct {
 func RunUrlSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Creating url service\n")
 	urlsrv := &UrlSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_URL, urlsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_URL, urlsrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func RunUrlSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, URL_COL, []string{"shorturl"})
 	urlsrv.mongoc = mongoc
-	fsls := MakeFsLibs(SOCIAL_NETWORK_URL)
+	fsls := NewFsLibs(SOCIAL_NETWORK_URL)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err

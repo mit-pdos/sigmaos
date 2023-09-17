@@ -43,20 +43,20 @@ type Kernel struct {
 	ip    string
 }
 
-func mkKernel(param *Param) *Kernel {
+func newKernel(param *Param) *Kernel {
 	k := &Kernel{}
 	k.Param = param
-	k.svcs = mkServices()
+	k.svcs = newServices()
 	return k
 }
 
-func MakeKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
-	k := mkKernel(p)
+func NewKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
+	k := newKernel(p)
 	ip, err := container.LocalIP()
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.KERNEL, "MakeKernel ip %v", ip)
+	db.DPrintf(db.KERNEL, "NewKernel ip %v", ip)
 	k.ip = ip
 	if p.Services[0] == sp.KNAMED {
 		if err := k.bootKNamed(pcfg, true); err != nil {
@@ -79,10 +79,10 @@ func MakeKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 	if len(k.svcs.svcs[sp.KNAMED]) > 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
 		// a kernel with knamed and named; stop knamed
 		if err := k.KillOne(sp.KNAMED); err != nil {
-			db.DPrintf(db.KERNEL, "MakeKernel: stop knamed err %v\n", err)
+			db.DPrintf(db.KERNEL, "NewKernel: stop knamed err %v\n", err)
 			return nil, err
 		}
-		db.DPrintf(db.KERNEL, "MakeKernel: switch to named\n")
+		db.DPrintf(db.KERNEL, "NewKernel: switch to named\n")
 	}
 	return k, err
 }
@@ -170,13 +170,13 @@ func (k *Kernel) shutdown() {
 	}
 }
 
-func makeKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
+func newKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 	i := "start"
 	if init {
 		i = "init"
 	}
 	args := []string{realmId.String(), i}
-	p := proc.MakePrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
+	p := proc.NewPrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }
 

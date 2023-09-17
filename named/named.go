@@ -55,7 +55,7 @@ func Run(args []string) error {
 	nd.SigmaClnt = sc
 
 	pn := path.Join(sp.REALMS, nd.realm.String()) + ".sem"
-	sem := semclnt.MakeSemClnt(nd.FsLib, pn)
+	sem := semclnt.NewSemClnt(nd.FsLib, pn)
 	if nd.realm != sp.ROOTREALM {
 		// create semaphore to signal realmd when we are the leader
 		// and ready to serve requests.  realmd downs this semaphore.
@@ -81,9 +81,9 @@ func Run(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	mnt, err := nd.mkSrv()
+	mnt, err := nd.newSrv()
 	if err != nil {
-		db.DFatalf("Error mkSrv %v\n", err)
+		db.DFatalf("Error newSrv %v\n", err)
 	}
 
 	pn = sp.NAMED
@@ -128,12 +128,12 @@ func Run(args []string) error {
 		db.DPrintf(db.NAMED, "resign %v err %v\n", pcfg.GetPID(), err)
 	}
 
-	nd.SigmaSrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
+	nd.SigmaSrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
 
 	return nil
 }
 
-func (nd *Named) mkSrv() (sp.Tmount, error) {
+func (nd *Named) newSrv() (sp.Tmount, error) {
 	ip, err := container.LocalIP()
 	if err != nil {
 		return sp.NullMount(), err
@@ -155,7 +155,7 @@ func (nd *Named) mkSrv() (sp.Tmount, error) {
 		return sp.NullMount(), fmt.Errorf("BootSrv err %v\n", err)
 	}
 
-	ssrv := sigmasrv.MakeSigmaSrvSess(srv, nd.SigmaClnt)
+	ssrv := sigmasrv.NewSigmaSrvSess(srv, nd.SigmaClnt)
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
 		return sp.NullMount(), err
 	}
@@ -166,7 +166,7 @@ func (nd *Named) mkSrv() (sp.Tmount, error) {
 		mnt = port.MkPublicMount(pi.Hip, pi.Pb, nd.ProcEnv().GetNet(), nd.MyAddr())
 	}
 
-	db.DPrintf(db.NAMED, "mkSrv %v %v %v %v %v\n", nd.realm, ip, srv.MyAddr(), nd.elect.Key(), mnt)
+	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, ip, srv.MyAddr(), nd.elect.Key(), mnt)
 
 	return mnt, nil
 }

@@ -12,10 +12,10 @@ import (
 	cacheproto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kvgrp"
+	"sigmaos/proc"
 	"sigmaos/replclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -46,20 +46,20 @@ type KvClerk struct {
 	rc   *replclnt.ReplClnt
 }
 
-func MakeClerkFsl(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
-	return makeClerkStart(fsl, job, repl)
+func NewClerkStart(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
+	return newClerkStart(fsl, job, repl)
 }
 
-func NewClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
+func NewClerkFsLib(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 	return newClerk(fsl, job, repl)
 }
 
-func MakeClerk(pcfg *proc.ProcEnv, job string, repl bool) (*KvClerk, error) {
-	fsl, err := fslib.MakeFsLib(pcfg)
+func NewClerk(pcfg *proc.ProcEnv, job string, repl bool) (*KvClerk, error) {
+	fsl, err := fslib.NewFsLib(pcfg)
 	if err != nil {
 		return nil, err
 	}
-	return makeClerkStart(fsl, job, repl)
+	return newClerkStart(fsl, job, repl)
 }
 
 func newClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
@@ -77,7 +77,7 @@ func newClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 	return kc
 }
 
-func makeClerkStart(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
+func newClerkStart(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
 	kc := newClerk(fsl, job, repl)
 	return kc, kc.StartClerk()
 }
@@ -105,7 +105,7 @@ func (kc *KvClerk) DetachKVs(kvs *KvSet) {
 }
 
 func paths(job string, kvset *KvSet) []string {
-	kvs := kvset.mkKvs()
+	kvs := kvset.newKvs()
 	dirs := make([]string, 0, len(kvs)+1)
 	for _, kvd := range kvs {
 		dirs = append(dirs, kvgrp.GrpPath(kvgrp.JobDir(job), kvd))
@@ -122,7 +122,7 @@ func (kc *KvClerk) switchConfig() error {
 			return err
 		}
 		db.DPrintf(db.KVCLERK, "Conf %v", kc.conf)
-		kvset := MakeKvs(kc.conf.Shards)
+		kvset := NewKvs(kc.conf.Shards)
 		// detach groups not in use; diff between new and mount table?
 		kc.DetachKVs(kvset)
 		break

@@ -39,10 +39,10 @@ type Watch struct {
 	nref int
 }
 
-func mkWatch(sct *sesscond.SessCondTable, pl *lockmap.PathLock) *Watch {
+func newWatch(sct *sesscond.SessCondTable, pl *lockmap.PathLock) *Watch {
 	w := &Watch{}
 	w.pl = pl
-	w.sc = sct.MakeSessCond(pl)
+	w.sc = sct.NewSessCond(pl)
 	return w
 }
 
@@ -86,8 +86,8 @@ func (wt *WatchTable) allocWatch(pl *lockmap.PathLock) *Watch {
 
 	ws, ok := wt.watches[p]
 	if !ok {
-		db.DPrintf(db.WATCH, "mkWatch '%s'\n", p)
-		ws = mkWatch(wt.sct, pl)
+		db.DPrintf(db.WATCH, "newWatch '%s'\n", p)
+		ws = newWatch(wt.sct, pl)
 		wt.watches[p] = ws
 	}
 	ws.nref++ // ensure ws won't be deleted from table

@@ -39,7 +39,7 @@ func main() {
 	}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("Error mkSigmaClnt: %v", err)
+		db.DFatalf("Error newSigmaClnt: %v", err)
 	}
 	if err := sc.Started(); err != nil {
 		db.DFatalf("Error started: %v", err)

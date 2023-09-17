@@ -25,7 +25,7 @@ func main() {
 	}
 	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
 	if err != nil {
-		db.DFatalf("Error mkSigmaClnt: %v", err)
+		db.DFatalf("Error newSigmaClnt: %v", err)
 	}
 	// Make the memblock dir.
 	if err := sc.MkDir(sp.MEMBLOCK, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
@@ -54,7 +54,7 @@ func main() {
 	if err := sc.WaitEvict(pcfg.GetPID()); err != nil {
 		db.DFatalf("Err waitevict: %v", err)
 	}
-	sc.ClntExit(proc.MakeStatus(proc.StatusEvicted))
+	sc.ClntExit(proc.NewStatus(proc.StatusEvicted))
 }
 
 func worker(ch chan []byte, m uint64) {

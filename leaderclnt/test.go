@@ -32,10 +32,10 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		// Make a new fsl for this test, because we want to use ts.FsLib
 		// to shutdown the system.
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl2, err := fslib.MakeFsLib(pcfg)
-		assert.Nil(ts.T, err, "MakeFsLib")
+		fsl2, err := fslib.NewFsLib(pcfg)
+		assert.Nil(ts.T, err, "NewFsLib")
 
-		l, err := MakeLeaderClnt(fsl2, leadername, 0777)
+		l, err := NewLeaderClnt(fsl2, leadername, 0777)
 		assert.Nil(ts.T, err)
 		err = l.LeadAndFence(nil, []string{pn})
 		assert.Nil(ts.T, err, "BecomeLeaderEpoch")
@@ -73,7 +73,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 
 	db.DPrintf(db.TEST, "Become leader..\n")
 
-	l, err := MakeLeaderClnt(ts.FsLib, leadername, 0777)
+	l, err := NewLeaderClnt(ts.FsLib, leadername, 0777)
 	assert.Nil(ts.T, err)
 	// When other thread resigns, we become leader and start new epoch
 	err = l.LeadAndFence(nil, []string{pn})

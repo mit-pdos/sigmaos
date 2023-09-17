@@ -24,7 +24,7 @@ func MkSigmaLeaseClnt(fsl *fslib.FsLib) (*SigmaClnt, error) {
 
 // Create only an FsLib, as a proc.
 func MkSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	fsl, err := fslib.MakeFsLib(pcfg)
+	fsl, err := fslib.NewFsLib(pcfg)
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: %v", err)
 	}
@@ -36,7 +36,7 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: %v", err)
 	}
-	sc.ProcClnt = procclnt.MakeProcClnt(sc.FsLib)
+	sc.ProcClnt = procclnt.NewProcClnt(sc.FsLib)
 	return sc, nil
 }
 
@@ -47,7 +47,7 @@ func MkSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	sc.ProcClnt = procclnt.MakeProcClntInit(pcfg.GetPID(), sc.FsLib, string(pcfg.GetUname()))
+	sc.ProcClnt = procclnt.NewProcClntInit(pcfg.GetPID(), sc.FsLib, string(pcfg.GetUname()))
 	return sc, nil
 }
 
@@ -60,5 +60,5 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 }
 
 func (sc *SigmaClnt) ClntExitOK() {
-	sc.ClntExit(proc.MakeStatus(proc.StatusOK))
+	sc.ClntExit(proc.NewStatus(proc.StatusOK))
 }

@@ -18,9 +18,9 @@ type LeaderClnt struct {
 	pn string
 }
 
-func MakeLeaderClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*LeaderClnt, error) {
-	l := &LeaderClnt{pn: pn, fc: fenceclnt.MakeFenceClnt(fsl)}
-	ec, err := electclnt.MakeElectClnt(fsl, pn, perm)
+func NewLeaderClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*LeaderClnt, error) {
+	l := &LeaderClnt{pn: pn, fc: fenceclnt.NewFenceClnt(fsl)}
+	ec, err := electclnt.NewElectClnt(fsl, pn, perm)
 	if err != nil {
 		return nil, err
 	}

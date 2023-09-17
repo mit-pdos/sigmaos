@@ -32,7 +32,7 @@ type grpMap struct {
 	grps map[string]*groupmgr.GroupMgr
 }
 
-func mkGrpMap() *grpMap {
+func newGrpMap() *grpMap {
 	gm := &grpMap{}
 	gm.grps = make(map[string]*groupmgr.GroupMgr)
 	return gm
@@ -75,13 +75,13 @@ type Monitor struct {
 	gm      *grpMap
 }
 
-func MakeMonitor(sc *sigmaclnt.SigmaClnt, job string, kvdmcpu proc.Tmcpu) *Monitor {
+func NewMonitor(sc *sigmaclnt.SigmaClnt, job string, kvdmcpu proc.Tmcpu) *Monitor {
 	mo := &Monitor{}
 	mo.SigmaClnt = sc
 	mo.group = 1
 	mo.job = job
 	mo.kvdmcpu = kvdmcpu
-	mo.gm = mkGrpMap()
+	mo.gm = newGrpMap()
 	return mo
 }
 
@@ -129,7 +129,7 @@ func (mo *Monitor) done() {
 }
 
 func (mo *Monitor) doMonitor(conf *Config) {
-	kvs := MakeKvs(conf.Shards)
+	kvs := NewKvs(conf.Shards)
 	db.DPrintf(db.ALWAYS, "Monitor config %v\n", kvs)
 
 	util := float64(0)

@@ -25,14 +25,14 @@ func main() {
 	}
 	sc.Started()
 	pid1 := sp.Tpid(os.Args[2])
-	a := proc.MakeProcPid(pid1, "sleeper", []string{os.Args[1], "name/"})
+	a := proc.NewProcPid(pid1, "sleeper", []string{os.Args[1], "name/"})
 	err = sc.Spawn(a)
 	if err != nil {
-		sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+		sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}
 	err = sc.WaitStart(pid1)
 	if err != nil {
-		sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+		sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}
 	sc.ClntExitOK()
 }

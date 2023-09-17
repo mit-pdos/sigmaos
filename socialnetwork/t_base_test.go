@@ -21,11 +21,11 @@ type TstateSN struct {
 	dbu     *sn.DBUtil
 }
 
-func makeTstateSN(t *testing.T, srvs []sn.Srv, nsrv int) *TstateSN {
+func newTstateSN(t *testing.T, srvs []sn.Srv, nsrv int) *TstateSN {
 	var err error
 	tssn := &TstateSN{}
 	tssn.jobname = rand.String(8)
-	tssn.Tstate = test.MakeTstateAll(t)
+	tssn.Tstate = test.NewTstateAll(t)
 	if test.Start {
 		nMoreKernel := ((len(srvs)*2 + NCACHESRV) - 1) / int(linuxsched.NCores)
 		if nMoreKernel > 0 {
@@ -35,9 +35,9 @@ func makeTstateSN(t *testing.T, srvs []sn.Srv, nsrv int) *TstateSN {
 			assert.Nil(tssn.T, err)
 		}
 	}
-	tssn.snCfg, err = sn.MakeConfig(tssn.SigmaClnt, tssn.jobname, srvs, nsrv, false, test.Overlays)
+	tssn.snCfg, err = sn.NewConfig(tssn.SigmaClnt, tssn.jobname, srvs, nsrv, false, test.Overlays)
 	assert.Nil(tssn.T, err, "config should initialize properly.")
-	tssn.dbu, err = sn.MakeDBUtil(tssn.SigmaClnt)
+	tssn.dbu, err = sn.NewDBUtil(tssn.SigmaClnt)
 	assert.Nil(tssn.T, err, "DBUtil should initialize properly.")
 	err = tssn.dbu.Clear()
 	assert.Nil(tssn.T, err)

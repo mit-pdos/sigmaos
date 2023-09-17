@@ -23,7 +23,7 @@ type Rpc struct {
 	ReplyC chan *Reply
 }
 
-func MakeRpc(addrs sp.Taddrs, req *sessconn.PartMarshaledMsg, start time.Time) *Rpc {
+func NewRpc(addrs sp.Taddrs, req *sessconn.PartMarshaledMsg, start time.Time) *Rpc {
 	rpc := &Rpc{
 		start:  start,
 		addrs:  addrs,

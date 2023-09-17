@@ -15,7 +15,7 @@ type ReplyFuture struct {
 	reply *sessp.FcallMsg
 }
 
-func MakeReplyFuture() *ReplyFuture {
+func NewReplyFuture() *ReplyFuture {
 	r := &ReplyFuture{}
 	r.Cond = sync.NewCond(&r.Mutex)
 	return r
@@ -50,7 +50,7 @@ func (f *ReplyFuture) Abort(cli sessp.Tclient, sid sessp.Tsession) {
 	f.Lock()
 	defer f.Unlock()
 	if f.Cond != nil {
-		f.reply = sessp.MakeFcallMsg(sp.MkRerror(serr.MkErr(serr.TErrClosed, nil)), nil, cli, sid, nil, sessp.Tinterval{})
+		f.reply = sessp.NewFcallMsg(sp.MkRerror(serr.MkErr(serr.TErrClosed, nil)), nil, cli, sid, nil, sessp.Tinterval{})
 		f.Cond.Broadcast()
 		f.Cond = nil
 	}

@@ -65,16 +65,16 @@ func main() {
 		if os.Args[2] != "" {
 			repl = true
 		}
-		clk, err = kv.MakeClerkFsl(sc.FsLib, os.Args[1], repl)
+		clk, err = kv.NewClerkStart(sc.FsLib, os.Args[1], repl)
 		if err != nil {
 			db.DFatalf("%v err %v", os.Args[0], err)
 		}
 	}
 
 	// Record performance.
-	p, err := perf.MakePerf(sc.ProcEnv(), perf.KVCLERK)
+	p, err := perf.NewPerf(sc.ProcEnv(), perf.KVCLERK)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
 
@@ -96,7 +96,7 @@ func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Pe
 	nops := uint64(0)
 	var err error
 	if timed {
-		sclnt := semclnt.MakeSemClnt(sc.FsLib, sempath)
+		sclnt := semclnt.NewSemClnt(sc.FsLib, sempath)
 		sclnt.Down()
 		// Run for duration dur, then mark as done.
 		go func() {
@@ -118,14 +118,14 @@ func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Pe
 	db.DPrintf(db.ALWAYS, "done ntest %v elapsed %v err %v\n", ntest, d, err)
 	var status *proc.Status
 	if err != nil {
-		status = proc.MakeStatusErr(err.Error(), nil)
+		status = proc.NewStatusErr(err.Error(), nil)
 	} else {
 		if timed {
 			// If this was a bounded clerk, we should return status ok.
-			status = proc.MakeStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
+			status = proc.NewStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
 		} else {
 			// If this was an unbounded clerk, we should return status evicted.
-			status = proc.MakeStatusInfo(proc.StatusEvicted, fmt.Sprintf("ntest %d elapsed %v", ntest, d), nil)
+			status = proc.NewStatusInfo(proc.StatusEvicted, fmt.Sprintf("ntest %d elapsed %v", ntest, d), nil)
 		}
 	}
 	sc.ClntExit(status)

@@ -37,7 +37,7 @@ type SessSrv struct {
 	addr     string
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
-	mkps     sps.MkProtServer
+	newps     sps.MkProtServer
 	stats    *stats.StatInfo
 	st       *sessstatesrv.SessionTable
 	sm       *sessstatesrv.SessionMgr
@@ -51,17 +51,17 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func MakeSessSrv(pe *proc.ProcEnv, root fs.Dir, addr string, mkps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr string, newps sps.MkProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
 	ssrv.dirover = overlay.NewDirOverlay(root)
 	ssrv.dirunder = root
 	ssrv.addr = addr
-	ssrv.mkps = mkps
+	ssrv.newps = newps
 	ssrv.et = et
 	ssrv.stats = stats.MkStatsDev(ssrv.dirover)
-	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, attachf, detachf)
-	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
+	ssrv.st = sessstatesrv.NewSessionTable(newps, ssrv, attachf, detachf)
+	ssrv.sct = sesscond.NewSessCondTable(ssrv.st)
 	ssrv.plt = lockmap.MkPathLockTable()
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
 	ssrv.vt = version.MkVersionTable()
@@ -70,8 +70,8 @@ func MakeSessSrv(pe *proc.ProcEnv, root fs.Dir, addr string, mkps sps.MkProtServ
 
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
-	ssrv.srv = netsrv.MakeNetServer(pe, ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
-	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
+	ssrv.srv = netsrv.NewNetServer(pe, ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
+	ssrv.sm = sessstatesrv.NewSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv
 }
@@ -227,7 +227,7 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 		msg = rerror
 	}
 
-	reply := sessp.MakeFcallMsgReply(fc, msg)
+	reply := sessp.NewFcallMsgReply(fc, msg)
 	reply.Data = data
 
 	ssrv.sendReply(fc, reply, sess)

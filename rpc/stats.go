@@ -37,7 +37,7 @@ func (st *SigmaRPCStats) String() string {
 	return s
 }
 
-func mkStats() *RPCStats {
+func newStats() *RPCStats {
 	return &RPCStats{}
 }
 
@@ -56,9 +56,9 @@ type StatInfo struct {
 	st *RPCStats
 }
 
-func MakeStatInfo() *StatInfo {
+func NewStatInfo() *StatInfo {
 	si := &StatInfo{}
-	si.st = mkStats()
+	si.st = newStats()
 	return si
 }
 

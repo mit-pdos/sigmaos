@@ -15,7 +15,7 @@ import (
 
 func TestUser(t *testing.T) {
 	// start server
-	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1000}}, NCACHESRV)
+	tssn := newTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1000}}, NCACHESRV)
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
@@ -82,7 +82,7 @@ func TestUser(t *testing.T) {
 
 func TestGraph(t *testing.T) {
 	// start server
-	tssn := makeTstateSN(t, []sn.Srv{
+	tssn := newTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000}}, NCACHESRV)
 	snCfg := tssn.snCfg
@@ -156,7 +156,7 @@ func TestGraph(t *testing.T) {
 
 func TestUserAndGraph(t *testing.T) {
 	// start server
-	tssn := makeTstateSN(t, []sn.Srv{
+	tssn := newTstateSN(t, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000}}, NCACHESRV)
 	tssn.dbu.InitGraph()
@@ -231,7 +231,7 @@ func TestUserAndGraph(t *testing.T) {
 
 func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 	// start server
-	tssn := makeTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, mcpu}}, 1)
+	tssn := newTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, mcpu}}, 1)
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query

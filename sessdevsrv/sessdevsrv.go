@@ -18,29 +18,29 @@ type MkSessionF func(*memfssrv.MemFs, sessp.Tsession) (fs.Inode, *serr.Err)
 type SessDev struct {
 	mfs *memfssrv.MemFs
 	dir string
-	mks MkSessionF
+	news MkSessionF
 }
 
 // Make a SessDev in mfs in the directory pn
-func MkSessDev(mfs *memfssrv.MemFs, dir string, mks MkSessionF, wctl clonedev.WriteCtlF) error {
+func MkSessDev(mfs *memfssrv.MemFs, dir string, news MkSessionF, wctl clonedev.WriteCtlF) error {
 	db.DPrintf(db.SESSDEV, "MkSessDev: %v\n", dir)
-	sd := &SessDev{mfs, dir, mks}
-	if err := clonedev.MkCloneDev(mfs, dir, sd.mkSession, sd.detachSession, wctl); err != nil {
+	sd := &SessDev{mfs, dir, news}
+	if err := clonedev.MkCloneDev(mfs, dir, sd.newSession, sd.detachSession, wctl); err != nil {
 		return err
 	}
 	return nil
 }
 
 // XXX clean up in case of error
-func (sd *SessDev) mkSession(mfs *memfssrv.MemFs, sid sessp.Tsession) *serr.Err {
-	sess, err := sd.mks(mfs, sid)
+func (sd *SessDev) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) *serr.Err {
+	sess, err := sd.news(mfs, sid)
 	if err != nil {
 		return err
 	}
 	fn := path.Join(sd.dir, sid.String(), sessdev.DATA)
-	db.DPrintf(db.SESSDEV, "mkSession %v\n", fn)
+	db.DPrintf(db.SESSDEV, "newSession %v\n", fn)
 	if err := mfs.MkDev(fn, sess); err != nil {
-		db.DPrintf(db.SESSDEV, "mkSession %v err %v\n", fn, err)
+		db.DPrintf(db.SESSDEV, "newSession %v err %v\n", fn, err)
 		return err
 	}
 	return nil

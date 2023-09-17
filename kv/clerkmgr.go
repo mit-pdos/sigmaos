@@ -29,10 +29,10 @@ type ClerkMgr struct {
 
 func MkClerkMgr(sc *sigmaclnt.SigmaClnt, job string, mcpu proc.Tmcpu, repl bool) (*ClerkMgr, error) {
 	cm := &ClerkMgr{SigmaClnt: sc, job: job, ckmcpu: mcpu, repl: repl}
-	clrk := NewClerk(cm.SigmaClnt.FsLib, cm.job, repl)
+	clrk := NewClerkFsLib(cm.SigmaClnt.FsLib, cm.job, repl)
 	cm.KvClerk = clrk
 	cm.sempath = path.Join(kvgrp.JobDir(job), "kvclerk-sem")
-	cm.sem = semclnt.MakeSemClnt(sc.FsLib, cm.sempath)
+	cm.sem = semclnt.NewSemClnt(sc.FsLib, cm.sempath)
 	if err := cm.sem.Init(0); err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (cm *ClerkMgr) startClerk(dur string, mcpu proc.Tmcpu) (sp.Tpid, error) {
 		repl = "repl"
 	}
 	args = append([]string{cm.job, repl}, args...)
-	p := proc.MakeProc("kv-clerk", args)
+	p := proc.NewProc("kv-clerk", args)
 	p.SetMcpu(mcpu)
 	// SpawnBurst to spread clerks across procds.
 	_, errs := cm.SpawnBurst([]*proc.Proc{p}, 2)

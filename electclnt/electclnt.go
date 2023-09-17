@@ -21,7 +21,7 @@ type ElectClnt struct {
 	sess  *fsetcd.Session
 }
 
-func MakeElectClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*ElectClnt, error) {
+func NewElectClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*ElectClnt, error) {
 	e := &ElectClnt{FsLib: fsl, pn: pn, perm: perm}
 	fs, err := fsetcd.MkFsEtcd(fsl.ProcEnv().GetRealm(), fsl.ProcEnv().EtcdIP)
 	if err != nil {

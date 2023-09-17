@@ -29,7 +29,7 @@ type PathLock struct {
 	path string // the locked path
 }
 
-func mkLock(p string) *PathLock {
+func newLock(p string) *PathLock {
 	lk := &PathLock{}
 	lk.path = p
 	return lk
@@ -54,7 +54,7 @@ func MkPathLockTable() *PathLockTable {
 // Caller must hold plt lock
 func (plt *PathLockTable) allocLockStringL(pn string) *PathLock {
 	sanitizedPn := strings.Trim(pn, "/")
-	lk, _ := plt.Insert(sanitizedPn, func() *PathLock { return mkLock(sanitizedPn) })
+	lk, _ := plt.Insert(sanitizedPn, func() *PathLock { return newLock(sanitizedPn) })
 	return lk
 }
 

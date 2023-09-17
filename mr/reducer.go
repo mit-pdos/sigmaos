@@ -39,9 +39,9 @@ type Reducer struct {
 	perf     *perf.Perf
 }
 
-func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
+func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
 	if len(args) != 3 {
-		return nil, errors.New("MakeReducer: too few arguments")
+		return nil, errors.New("NewReducer: too few arguments")
 	}
 	r := &Reducer{}
 	r.input = args[0]
@@ -66,7 +66,7 @@ func makeReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error)
 	r.bwrt = bufio.NewWriterSize(w, sp.BUFSZ)
 
 	if err := r.Started(); err != nil {
-		return nil, fmt.Errorf("MakeReducer couldn't start %v", args)
+		return nil, fmt.Errorf("NewReducer couldn't start %v", args)
 	}
 
 	crash.Crasher(r.FsLib)
@@ -114,7 +114,7 @@ func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, 
 	db.DPrintf(db.MR, "readFile %v\n", sym)
 	rdr, err := sc.OpenAsyncReader(sym, 0)
 	if err != nil {
-		db.DPrintf(db.MR, "MakeReader %v err %v", sym, err)
+		db.DPrintf(db.MR, "NewReader %v err %v", sym, err)
 		return 0, 0, false
 	}
 	defer rdr.Close()
@@ -186,10 +186,10 @@ func (r *Reducer) doReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.output, r.nmaptask)
 	nin, duration, data, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", r.ProcEnv().GetPID(), r.input, err), nil)
+		return proc.NewStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", r.ProcEnv().GetPID(), r.input, err), nil)
 	}
 	if len(lostMaps) > 0 {
-		return proc.MakeStatusErr(RESTART, lostMaps)
+		return proc.NewStatusErr(RESTART, lostMaps)
 	}
 
 	ms := duration.Milliseconds()
@@ -198,34 +198,34 @@ func (r *Reducer) doReduce() *proc.Status {
 	start := time.Now()
 	for k, vs := range data {
 		if err := r.reducef(k, vs, r.emit); err != nil {
-			return proc.MakeStatusErr("reducef", err)
+			return proc.NewStatusErr("reducef", err)
 		}
 	}
 
 	if err := r.bwrt.Flush(); err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: flush %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
+		return proc.NewStatusErr(fmt.Sprintf("%v: flush %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
 	}
 	if err := r.wrt.Close(); err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
+		return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
 	}
 	// Include time spent writing output.
 	duration += time.Since(start)
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", r.ProcEnv().GetPID(), r.tmp, r.output, err), nil)
+		return proc.NewStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", r.ProcEnv().GetPID(), r.tmp, r.output, err), nil)
 	}
-	return proc.MakeStatusInfo(proc.StatusOK, r.input,
+	return proc.NewStatusInfo(proc.StatusOK, r.input,
 		Result{false, r.input, nin, r.wrt.Nbytes(), duration.Milliseconds()})
 }
 
 func RunReducer(reducef ReduceT, args []string) {
 	pcfg := proc.GetProcEnv()
-	p, err := perf.MakePerf(pcfg, perf.MRREDUCER)
+	p, err := perf.NewPerf(pcfg, perf.MRREDUCER)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
-	r, err := makeReducer(reducef, args, p)
+	r, err := newReducer(reducef, args, p)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)

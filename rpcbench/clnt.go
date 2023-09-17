@@ -14,10 +14,10 @@ type Clnt struct {
 	t *tracing.Tracer
 }
 
-func MakeClnt(sc *sigmaclnt.SigmaClnt, t *tracing.Tracer, path string) *Clnt {
+func NewClnt(sc *sigmaclnt.SigmaClnt, t *tracing.Tracer, path string) *Clnt {
 	rpcc, err := rpcclnt.MkRPCClnt([]*fslib.FsLib{sc.FsLib}, path)
 	if err != nil {
-		db.DFatalf("Error MakeClnt: %v", err)
+		db.DFatalf("Error NewClnt: %v", err)
 	}
 	return &Clnt{
 		c: rpcc,

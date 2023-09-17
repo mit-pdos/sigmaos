@@ -13,11 +13,11 @@ type FsLib struct {
 }
 
 // Only to be called by procs.
-func MakeFsLib(pcfg *proc.ProcEnv) (*FsLib, error) {
-	db.DPrintf(db.PORT, "MakeFsLib: uname %s lip %s addrs %v\n", pcfg.GetUname(), pcfg.LocalIP, pcfg.EtcdIP)
+func NewFsLib(pcfg *proc.ProcEnv) (*FsLib, error) {
+	db.DPrintf(db.PORT, "NewFsLib: uname %s lip %s addrs %v\n", pcfg.GetUname(), pcfg.LocalIP, pcfg.EtcdIP)
 	fl := &FsLib{
 		pcfg:     pcfg,
-		FdClient: fdclnt.MakeFdClient(pcfg, nil, sp.Tsize(10_000_000)),
+		FdClient: fdclnt.NewFdClient(pcfg, nil, sp.Tsize(10_000_000)),
 	}
 	return fl, nil
 }

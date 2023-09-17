@@ -16,7 +16,7 @@ import (
 
 func TestExerciseNamed(t *testing.T) {
 	dir := sp.NAMED
-	ts := test.MakeTstatePath(t, dir)
+	ts := test.NewTstatePath(t, dir)
 
 	sts, err := ts.GetDir(dir)
 	assert.Nil(t, err)
@@ -29,7 +29,7 @@ func TestExerciseNamed(t *testing.T) {
 }
 
 func TestExerciseS3(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	// Your code here
 
@@ -37,9 +37,9 @@ func TestExerciseS3(t *testing.T) {
 }
 
 func TestExerciseProc(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
-	p := proc.MakeProc("example", []string{})
+	p := proc.NewProc("example", []string{})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
 	err = ts.WaitStart(p.GetPid())
@@ -56,7 +56,7 @@ func TestExerciseProc(t *testing.T) {
 }
 
 func TestExerciseParallel(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	// Your code here
 

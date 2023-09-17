@@ -67,18 +67,18 @@ func WriteJsonRecord(wrt io.Writer, r interface{}) error {
 	return nil
 }
 
-func JsonReader(rdr io.Reader, mk func() interface{}, f func(i interface{}) error) error {
-	return JsonBufReader(bufio.NewReader(rdr), mk, f)
+func JsonReader(rdr io.Reader, new func() interface{}, f func(i interface{}) error) error {
+	return JsonBufReader(bufio.NewReader(rdr), new, f)
 }
 
-func JsonBufReader(rdr *bufio.Reader, mk func() interface{}, f func(i interface{}) error) error {
+func JsonBufReader(rdr *bufio.Reader, new func() interface{}, f func(i interface{}) error) error {
 	dec := json.NewDecoder(rdr)
-	return RecordReader(dec.Decode, mk, f)
+	return RecordReader(dec.Decode, new, f)
 }
 
-func RecordReader(decodefn func(interface{}) error, mk func() interface{}, f func(i interface{}) error) error {
+func RecordReader(decodefn func(interface{}) error, new func() interface{}, f func(i interface{}) error) error {
 	for {
-		v := mk()
+		v := new()
 		if err := decodefn(&v); err == io.EOF {
 			break
 		} else if err != nil {

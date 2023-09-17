@@ -26,11 +26,11 @@ type Search struct {
 // Run starts the server
 func RunSearchSrv(n string, public bool) error {
 	s := &Search{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELSEARCH, s, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELSEARCH, s, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(HOTELSEARCH)
+	fsls := NewFsLibs(HOTELSEARCH)
 	rpcc, err := rpcclnt.MkRPCClnt(fsls, HOTELRATE)
 	if err != nil {
 		return err
@@ -42,9 +42,9 @@ func RunSearchSrv(n string, public bool) error {
 	}
 	s.geoc = rpcc
 
-	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_SEARCH)
+	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_SEARCH)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	//	s.tracer = tracing.Init("search", proc.GetSigmaJaegerIP())
 	//	defer s.tracer.Flush()

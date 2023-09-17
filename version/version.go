@@ -13,7 +13,7 @@ type version struct {
 	V sp.TQversion
 }
 
-func mkVersion() *version {
+func newVersion() *version {
 	v := &version{}
 	v.V = 0
 	return v
@@ -47,7 +47,7 @@ func (vt *VersionTable) GetVersion(path sp.Tpath) sp.TQversion {
 func (vt *VersionTable) Insert(path sp.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
-	vt.RefTable.Insert(path, mkVersion)
+	vt.RefTable.Insert(path, newVersion)
 }
 
 func (vt *VersionTable) Delete(p sp.Tpath) {

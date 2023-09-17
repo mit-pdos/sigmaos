@@ -40,7 +40,7 @@ type RPCBenchJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeRPCBenchJob(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, durs string, maxrpss string, fn rpcbenchFn, justCli bool) *RPCBenchJobInstance {
+func NewRPCBenchJob(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, durs string, maxrpss string, fn rpcbenchFn, justCli bool) *RPCBenchJobInstance {
 	ji := &RPCBenchJobInstance{}
 	ji.jobpath = "name/rpcbench"
 	ji.ready = make(chan bool)
@@ -67,9 +67,9 @@ func MakeRPCBenchJob(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, durs s
 
 	if !ji.justCli {
 		var err error
-		ji.rj, err = rpcbench.MakeRPCBenchJob(ts.SigmaClnt, ji.jobpath, mcpu, test.Overlays)
-		assert.Nil(ts.Ts.T, err, "Error MakeRPCBenchJob: %v", err)
-		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+		ji.rj, err = rpcbench.NewRPCBenchJob(ts.SigmaClnt, ji.jobpath, mcpu, test.Overlays)
+		assert.Nil(ts.Ts.T, err, "Error NewRPCBenchJob: %v", err)
+		sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 		procs := sdc.GetRunningProcs()
 		progs := make(map[string][]string)
 		for sd, ps := range procs {
@@ -83,11 +83,11 @@ func MakeRPCBenchJob(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, durs s
 
 	t := tracing.Init("Bench", proc.GetSigmaJaegerIP())
 
-	clnt := rpcbench.MakeClnt(ts.SigmaClnt, t, ji.jobpath)
+	clnt := rpcbench.NewClnt(ts.SigmaClnt, t, ji.jobpath)
 	// Make a load generators.
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
-		ji.lgs = append(ji.lgs, loadgen.MakeLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) {
+		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) {
 			// Run a single request.
 			ji.fn(clnt)
 		}))

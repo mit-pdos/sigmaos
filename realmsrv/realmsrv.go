@@ -44,7 +44,7 @@ func RunRealmSrv() error {
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
 	pcfg := proc.GetProcEnv()
-	ssrv, err := sigmasrv.MakeSigmaSrv(sp.REALMD, rs, pcfg)
+	ssrv, err := sigmasrv.NewSigmaSrv(sp.REALMD, rs, pcfg)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func RunRealmSrv() error {
 	if serr != nil {
 		return serr
 	}
-	db.DPrintf(db.REALMD, "makesrv ok")
+	db.DPrintf(db.REALMD, "newsrv ok")
 	rs.sc = ssrv.MemFs.SigmaClnt()
 	err = ssrv.RunServer()
 	return nil
@@ -87,7 +87,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		return err
 	}
 
-	p := proc.MakeProc("named", []string{req.Realm, "0"})
+	p := proc.NewProc("named", []string{req.Realm, "0"})
 	p.SetMcpu(NAMED_MCPU)
 
 	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) != 0 {
@@ -100,7 +100,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 
 	// wait until realm's named is ready to serve
-	sem := semclnt.MakeSemClnt(rm.sc.FsLib, path.Join(sp.REALMS, req.Realm)+".sem")
+	sem := semclnt.NewSemClnt(rm.sc.FsLib, path.Join(sp.REALMS, req.Realm)+".sem")
 	if err := sem.Down(); err != nil {
 		return err
 	}

@@ -34,7 +34,7 @@ func (t Tload) String() string {
 	return fmt.Sprintf("{r %d q %d}", t[0], t[1])
 }
 
-func MakeScheddClnt(fsl *fslib.FsLib) *ScheddClnt {
+func NewScheddClnt(fsl *fslib.FsLib) *ScheddClnt {
 	return &ScheddClnt{
 		FsLib:           fsl,
 		schedds:         make(map[string]*rpcclnt.RPCClnt),
@@ -62,7 +62,7 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 			if err != nil { // the proc may not exist anymore
 				continue
 			}
-			p := proc.MakeEmptyProc()
+			p := proc.NewEmptyProc()
 			p.Unmarshal(b)
 			db.DPrintf(db.SCHEDDCLNT, "%s: %v\n", procdir, p.GetProgram())
 		}
@@ -195,7 +195,7 @@ func (sdc *ScheddClnt) GetRunningProcs() map[string][]*proc.Proc {
 			if err != nil {
 				db.DFatalf("Error getfile: %v", err)
 			}
-			p := proc.MakeEmptyProc()
+			p := proc.NewEmptyProc()
 			p.UnmarshalJson(b)
 			procs[sd] = append(procs[sd], p)
 		}
@@ -217,7 +217,7 @@ func (sdc *ScheddClnt) GetScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) 
 		var err error
 		rpcc, err = rpcclnt.MkRPCClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, kernelId))
 		if err != nil {
-			db.DPrintf(db.SCHEDDCLNT_ERR, "Error mkRPCClnt[schedd:%v]: %v", kernelId, err)
+			db.DPrintf(db.SCHEDDCLNT_ERR, "Error newRPCClnt[schedd:%v]: %v", kernelId, err)
 			return nil, err
 		}
 		sdc.schedds[kernelId] = rpcc

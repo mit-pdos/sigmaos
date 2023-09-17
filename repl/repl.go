@@ -13,7 +13,7 @@ type Tapplyf func(*proto.ReplOpRequest, *proto.ReplOpReply) error
 type Config interface {
 	ReplAddr() string
 	String() string
-	MakeServer(Tapplyf) Server
+	NewServer(Tapplyf) Server
 }
 
 type Server interface {

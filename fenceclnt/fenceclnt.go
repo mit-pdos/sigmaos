@@ -11,7 +11,7 @@ type FenceClnt struct {
 	fence sp.Tfence
 }
 
-func MakeFenceClnt(fsl *fslib.FsLib) *FenceClnt {
+func NewFenceClnt(fsl *fslib.FsLib) *FenceClnt {
 	fc := &FenceClnt{}
 	fc.FsLib = fsl
 	return fc

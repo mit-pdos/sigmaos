@@ -89,9 +89,9 @@ func Cleanup(fsl *fslib.FsLib, dir string) error {
 	return err
 }
 
-func MakeImgd(args []string) (*ImgSrv, error) {
+func NewImgd(args []string) (*ImgSrv, error) {
 	if len(args) != 3 {
-		return nil, fmt.Errorf("MakeImgSrv: wrong number of arguments: %v", args)
+		return nil, fmt.Errorf("NewImgSrv: wrong number of arguments: %v", args)
 	}
 	imgd := &ImgSrv{}
 	imgd.job = args[0]
@@ -104,7 +104,7 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 	imgd.job = args[0]
 	crashing, err := strconv.Atoi(args[1])
 	if err != nil {
-		return nil, fmt.Errorf("MakeImgSrv: error parse crash %v", err)
+		return nil, fmt.Errorf("NewImgSrv: error parse crash %v", err)
 	}
 	imgd.crash = int64(crashing)
 	imgd.done = path.Join(IMG, imgd.job, "done")
@@ -112,15 +112,15 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 	imgd.wip = path.Join(IMG, imgd.job, "wip")
 	mcpu, err := strconv.Atoi(args[2])
 	if err != nil {
-		return nil, fmt.Errorf("MakeImgSrv: Error parse MCPU %v", err)
+		return nil, fmt.Errorf("NewImgSrv: Error parse MCPU %v", err)
 	}
 	imgd.workerMcpu = proc.Tmcpu(mcpu)
 
 	imgd.Started()
 
-	imgd.leaderclnt, err = leaderclnt.MakeLeaderClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
+	imgd.leaderclnt, err = leaderclnt.NewLeaderClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
 	if err != nil {
-		return nil, fmt.Errorf("MakeLeaderclnt err %v", err)
+		return nil, fmt.Errorf("NewLeaderclnt err %v", err)
 	}
 
 	crash.Crasher(imgd.FsLib)
@@ -186,7 +186,7 @@ func ThumbName(fn string) string {
 func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
 	procs := make([]*proc.Proc, len(tasks))
 	for i, t := range tasks {
-		procs[i] = proc.MakeProc("imgresize", []string{t.fn, ThumbName(t.fn)})
+		procs[i] = proc.NewProc("imgresize", []string{t.fn, ThumbName(t.fn)})
 		if imgd.crash > 0 {
 			procs[i].SetCrash(imgd.crash)
 		}

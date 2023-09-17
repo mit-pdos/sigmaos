@@ -20,24 +20,24 @@ type WriteCtlF func(sessp.Tsession, fs.CtxI, sp.Toffset, []byte, sp.Tfence) (sp.
 type Clone struct {
 	*inode.Inode
 	mfs       *memfssrv.MemFs
-	mksession MkSessionF
+	newsession MkSessionF
 	detach    sps.DetachSessF
 	dir       string
 	wctl      WriteCtlF
 }
 
 // Make a Clone dev inode in directory <dir> in memfs
-func makeClone(mfs *memfssrv.MemFs, dir string, mks MkSessionF, d sps.DetachSessF, w WriteCtlF) *serr.Err {
+func newClone(mfs *memfssrv.MemFs, dir string, news MkSessionF, d sps.DetachSessF, w WriteCtlF) *serr.Err {
 	cl := &Clone{
-		Inode:     mfs.MakeDevInode(),
+		Inode:     mfs.NewDevInode(),
 		mfs:       mfs,
-		mksession: mks,
+		newsession: news,
 		detach:    d,
 		dir:       dir,
 		wctl:      w,
 	}
 	pn := dir + "/" + sessdev.CLONE
-	db.DPrintf(db.CLONEDEV, "makeClone %q\n", dir)
+	db.DPrintf(db.CLONEDEV, "newClone %q\n", dir)
 	err := mfs.MkDev(pn, cl) // put clone file into dir <dir>
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	ctl := pn + "/" + sessdev.CTL
 	if err == nil {
 		s = &session{id: sid, wctl: c.wctl}
-		s.Inode = c.mfs.MakeDevInode()
+		s.Inode = c.mfs.NewDevInode()
 		if err := c.mfs.MkDev(ctl, s); err != nil {
 			db.DPrintf(db.CLONEDEV, "MkDev %q err %v\n", ctl, err)
 			return nil, err
@@ -67,7 +67,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 		if err := c.mfs.RegisterDetachSess(c.Detach, sid); err != nil {
 			db.DPrintf(db.CLONEDEV, "RegisterDetach err %v\n", err)
 		}
-		if err := c.mksession(c.mfs, sid); err != nil {
+		if err := c.newsession(c.mfs, sid); err != nil {
 			return nil, err
 		}
 	} else {
@@ -103,7 +103,7 @@ func (c *Clone) Detach(session sessp.Tsession) {
 }
 
 func MkCloneDev(mfs *memfssrv.MemFs, dir string, f MkSessionF, d sps.DetachSessF, w WriteCtlF) error {
-	if err := makeClone(mfs, dir, f, d, w); err != nil {
+	if err := newClone(mfs, dir, f, d, w); err != nil {
 		return err
 	}
 	return nil

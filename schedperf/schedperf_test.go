@@ -25,7 +25,7 @@ const (
 )
 
 func spawnSpinPerf(ts *test.RealmTstate, mcpu proc.Tmcpu, nthread uint, niter int, id string) sp.Tpid {
-	p := proc.MakeProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
+	p := proc.NewProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
 	p.SetMcpu(mcpu)
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err, "Error spawn: %v", err)
@@ -33,7 +33,7 @@ func spawnSpinPerf(ts *test.RealmTstate, mcpu proc.Tmcpu, nthread uint, niter in
 }
 
 func spawnSleeper(ts *test.RealmTstate) sp.Tpid {
-	p := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	p := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err, "Error spawn: %v", err)
 	return p.GetPid()
@@ -63,10 +63,10 @@ func runSleeper(ts *test.RealmTstate, c chan time.Duration) {
 }
 
 func TestGetCPUUtilLatencyLowLoad(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
-	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(ts1.SigmaClnt.FsLib)
 
 	db.DPrintf(db.TEST, "Run SpinPerf")
 	c := make(chan time.Duration)
@@ -92,10 +92,10 @@ func TestGetCPUUtilLatencyLowLoad(t *testing.T) {
 }
 
 func TestGetCPUUtilLatencyHighLoad(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
-	sdc := scheddclnt.MakeScheddClnt(ts1.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(ts1.SigmaClnt.FsLib)
 
 	db.DPrintf(db.TEST, "Run SpinPerf")
 	c := make(chan time.Duration)

@@ -29,7 +29,7 @@ type ImgResizeJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu) *ImgResizeJobInstance {
+func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu) *ImgResizeJobInstance {
 	ji := &ImgResizeJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = "imgresize-" + rd.String(4)

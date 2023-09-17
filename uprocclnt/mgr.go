@@ -26,7 +26,7 @@ type UprocdMgr struct {
 	sharesAlloced Tshare
 }
 
-func MakeUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
+func NewUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 	updm := &UprocdMgr{
 		fsl:           fsl,
 		kernelId:      kernelId,
@@ -43,7 +43,7 @@ func (updm *UprocdMgr) startUprocd(realm sp.Trealm, ptype proc.Ttype) (sp.Tpid, 
 	}
 	if updm.kclnt == nil {
 		pn := path.Join(sp.BOOT, updm.kernelId) + "/"
-		kclnt, err := kernelclnt.MakeKernelClnt(updm.fsl, pn)
+		kclnt, err := kernelclnt.NewKernelClnt(updm.fsl, pn)
 		if err != nil {
 			return sp.Tpid(""), err
 		}
@@ -98,7 +98,7 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 		if err != nil {
 			return nil, err
 		}
-		c := MakeUprocdClnt(pid, rc, realm, ptype)
+		c := NewUprocdClnt(pid, rc, realm, ptype)
 		updm.upcs[realm][ptype] = c
 		rpcc = c
 		if ptype == proc.T_BE {

@@ -43,7 +43,7 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *serr.Err) {
 	if err != nil {
 		return sp.NoFid, err
 	}
-	rdr := reader.MakeReader(pathc.FidClnt, "", fid, pathc.chunkSz)
+	rdr := reader.NewReader(pathc.FidClnt, "", fid, pathc.chunkSz)
 	drdr := reader.NewDirReader(rdr)
 	rfid := sp.NoFid
 	_, error := reader.ReadDir(drdr, func(st *sp.Stat) (bool, error) {

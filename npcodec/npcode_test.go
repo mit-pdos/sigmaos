@@ -13,7 +13,7 @@ func TestPutfile(t *testing.T) {
 	b := []byte("hello")
 	fence := &np.Tfence{Fenceid: &np.Tfenceid{Path: 36, Serverid: 2}, Epoch: 7}
 	msg := &np.Tputfile{1, np.OWRITE, 0777, 101, []string{"f"}, b}
-	fcall := np.MakeFcallMsg(msg, 0, 13, nil, &np.Tinterval{Start: 1, End: 2}, fence)
+	fcall := np.NewFcallMsg(msg, 0, 13, nil, &np.Tinterval{Start: 1, End: 2}, fence)
 	frame, error := npcodec.MarshalFcallMsgByte(fcall)
 	assert.Nil(t, error)
 	fcall1, error := npcodec.UnmarshalFcallMsg(frame)

@@ -36,7 +36,7 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []sp.Tpid) {
 		if i == N-1 {
 			last = "last"
 		}
-		p := proc.MakeProc("leadertest-leader", []string{DIR, last, sec})
+		p := proc.NewProc("leadertest-leader", []string{DIR, last, sec})
 		err = ts.Spawn(p)
 		assert.Nil(t, err, "Spawn")
 
@@ -84,14 +84,14 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []sp.Tpid) {
 }
 
 func TestOldPrimary(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	fn, pids := runLeaders(t, ts, "")
 	check(t, ts, fn, pids)
 	ts.Shutdown()
 }
 
 func TestOldProc(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	fn, pids := runLeaders(t, ts, "child")
 	check(t, ts, fn, pids)
 	ts.Shutdown()

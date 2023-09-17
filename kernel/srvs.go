@@ -18,7 +18,7 @@ type Services struct {
 	svcMap map[sp.Tpid]*Subsystem
 }
 
-func mkServices() *Services {
+func newServices() *Services {
 	ss := &Services{}
 	ss.svcs = make(map[string][]*Subsystem)
 	ss.svcMap = make(map[sp.Tpid]*Subsystem)
@@ -101,7 +101,7 @@ func (k *Kernel) KillOne(srv string) error {
 }
 
 func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
-	p, err := makeKNamedProc(sp.ROOTREALM, init)
+	p, err := newKNamedProc(sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 	if err != nil {
 		return err
 	}
-	ss := makeSubsystemCmd(nil, k, p, procclnt.HLINUX, cmd)
+	ss := newSubsystemCmd(nil, k, p, procclnt.HLINUX, cmd)
 	k.svcs.Lock()
 	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.KNAMED] = append(k.svcs.svcs[sp.KNAMED], ss)

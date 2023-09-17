@@ -47,7 +47,7 @@ func RunWww(job string, public bool) error {
 	}
 	www.SigmaClnt = sc
 
-	fsls := MakeFsLibs("hotel-wwwd")
+	fsls := NewFsLibs("hotel-wwwd")
 	rpcc, err := rpcclnt.MkRPCClnt(fsls, HOTELUSER)
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func RunWww(job string, public bool) error {
 	var mux *http.ServeMux
 	//	var tmux *tracing.TracedHTTPMux
 	//	if TRACING {
-	//		tmux = tracing.MakeHTTPMux()
+	//		tmux = tracing.NewHTTPMux()
 	//		tmux.HandleFunc("/user", www.userHandler)
 	//		tmux.HandleFunc("/hotels", www.searchHandler)
 	//		tmux.HandleFunc("/recommendations", www.recommendHandler)
@@ -143,9 +143,9 @@ func RunWww(job string, public bool) error {
 		}
 	}
 
-	perf, err := perf.MakePerf(sc.ProcEnv(), perf.HOTEL_WWW)
+	perf, err := perf.NewPerf(sc.ProcEnv(), perf.HOTEL_WWW)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	www.p = perf
 
@@ -168,7 +168,7 @@ func (s *Www) done() error {
 	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", s.ProcEnv().GetPID())
 	//	s.tracer.Flush()
 	s.p.Done()
-	s.ClntExit(proc.MakeStatus(proc.StatusEvicted))
+	s.ClntExit(proc.NewStatus(proc.StatusEvicted))
 	return nil
 }
 
@@ -487,7 +487,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make reservation
 	var resResp proto.ReserveResult
-	err = s.reservec.RPC("Reserve.MakeReservation", &proto.ReserveRequest{
+	err = s.reservec.RPC("Reserve.NewReservation", &proto.ReserveRequest{
 		CustomerName:      customerName,
 		HotelId:           []string{hotelId},
 		InDate:            inDate,

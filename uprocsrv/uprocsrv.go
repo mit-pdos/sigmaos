@@ -36,10 +36,10 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	var err error
 	if up == port.NOPORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, realm, ptype.String())
-		ssrv, err = sigmasrv.MakeSigmaSrv(pn, ups, pcfg)
+		ssrv, err = sigmasrv.NewSigmaSrv(pn, ups, pcfg)
 	} else {
 		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.MakeSigmaSrvPort("", up, pcfg, ups)
+		ssrv, err = sigmasrv.NewSigmaSrvPort("", up, pcfg, ups)
 	}
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 }
 
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
-	uproc := proc.MakeProcFromProto(req.ProcProto)
+	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Get uproc %v", uproc)
 	return container.RunUProc(uproc)
 }

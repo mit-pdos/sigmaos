@@ -37,7 +37,7 @@ type World struct {
 	computeI        FTick
 }
 
-func mkWorld(n, t, npm int, ls []float64, nt Tick, p Tpolicy, c FTick) *World {
+func newWorld(n, t, npm int, ls []float64, nt Tick, p Tpolicy, c FTick) *World {
 	w := &World{}
 	w.nNode = n
 	w.nTenant = t
@@ -109,7 +109,7 @@ func (b *Bid) String() string {
 	return fmt.Sprintf("{t: %p %v %d}", b.tenant, b.bids, len(b.bids))
 }
 
-func mkBid(t *Tenant, bs []Price) *Bid {
+func newBid(t *Tenant, bs []Price) *Bid {
 	if len(bs) == 0 {
 		return nil
 	}
@@ -175,7 +175,7 @@ func (p *Proc) String() string {
 	return fmt.Sprintf("{n %v c %v t %v l %v}", p.nTick, p.ci, p.time, p.nLength)
 }
 
-func mkProc(rand *rand.Rand, c FTick) *Proc {
+func newProc(rand *rand.Rand, c FTick) *Proc {
 	p := &Proc{}
 	// p.nTick = zipf(rand)
 	t := Tick(uniform(rand))
@@ -560,7 +560,7 @@ func (t *Tenant) genProcs() (int, Tick) {
 	nproc := int(t.poisson.Rand())
 	len := Tick(0)
 	for i := 0; i < nproc; i++ {
-		p := mkProc(t.sim.rand, t.sim.world.computeI)
+		p := newProc(t.sim.rand, t.sim.world.computeI)
 		len += p.nLength
 		t.procs = append(t.procs, p)
 	}
@@ -590,7 +590,7 @@ func policyBidMore(t *Tenant, last Price) *Bid {
 		//bid := last
 		bids = append(bids, bid)
 	}
-	return mkBid(t, bids)
+	return newBid(t, bids)
 }
 
 // Bid one up from last, the lowest winning bid
@@ -599,7 +599,7 @@ func policyLast(t *Tenant, last Price) *Bid {
 	for i := 0; i < len(t.procs); i++ {
 		bids = append(bids, last+BID_INCREMENT)
 	}
-	return mkBid(t, bids)
+	return newBid(t, bids)
 }
 
 func policyFixed(t *Tenant, last Price) *Bid {
@@ -607,7 +607,7 @@ func policyFixed(t *Tenant, last Price) *Bid {
 	for i := 0; i < len(t.procs); i++ {
 		bids = append(bids, PRICE_SPOT)
 	}
-	return mkBid(t, bids)
+	return newBid(t, bids)
 }
 
 // Bid for new nodes if we have queued procs.  last is avg succesful
@@ -720,7 +720,7 @@ type Mgr struct {
 	high     Price // highest bid in last tick
 }
 
-func mkMgr(sim *Sim) *Mgr {
+func newMgr(sim *Sim) *Mgr {
 	m := &Mgr{}
 	m.sim = sim
 	ns := make(Nodes, sim.world.nNode, sim.world.nNode)
@@ -885,11 +885,11 @@ type Sim struct {
 	avgprice Price // avg price per tick
 }
 
-func mkSim(w *World) *Sim {
+func newSim(w *World) *Sim {
 	sim := &Sim{}
 	sim.world = w
 	sim.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
-	sim.mgr = mkMgr(sim)
+	sim.mgr = newMgr(sim)
 	sim.tenants = make([]Tenant, w.nTenant, w.nTenant)
 	for i := 0; i < w.nTenant; i++ {
 		t := &sim.tenants[i]
@@ -983,7 +983,7 @@ func (sim *Sim) stats() {
 }
 
 func runSim(world *World) *Sim {
-	sim := mkSim(world)
+	sim := newSim(world)
 	for sim.tick = 0; sim.tick < sim.world.nTick; sim.tick++ {
 		sim.oneTick()
 	}

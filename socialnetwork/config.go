@@ -48,13 +48,13 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 	return mnt.Addr, err
 }
 
-func MakeFsLibs(uname string) []*fslib.FsLib {
+func NewFsLibs(uname string) []*fslib.FsLib {
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
 		pe := proc.GetProcEnv()
-		fsl, err := fslib.MakeFsLib(proc.NewAddedProcEnv(pe, i))
+		fsl, err := fslib.NewFsLib(proc.NewAddedProcEnv(pe, i))
 		if err != nil {
-			dbg.DFatalf("Error mkfsl: %v", err)
+			dbg.DFatalf("Error newfsl: %v", err)
 		}
 		fsls = append(fsls, fsl)
 	}
@@ -73,7 +73,7 @@ func JobDir(job string) string {
 	return path.Join(SOCIAL_NETWORK, job)
 }
 
-func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc, public bool) (*SocialNetworkConfig, error) {
+func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc, public bool) (*SocialNetworkConfig, error) {
 	var err error
 	fsl := sc.FsLib
 	fsl.MkDir(SOCIAL_NETWORK, 0777)
@@ -101,7 +101,7 @@ func MakeConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, g
 	// Start procs
 	pids := make([]sp.Tpid, 0, len(srvs))
 	for _, srv := range srvs {
-		p := proc.MakeProc(srv.Name, []string{strconv.FormatBool(srv.Public), jobname})
+		p := proc.NewProc(srv.Name, []string{strconv.FormatBool(srv.Public), jobname})
 		p.SetMcpu(srv.Mcpu)
 		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 			dbg.DFatalf("Error burst-spawnn proc %v: %v", p, errs)

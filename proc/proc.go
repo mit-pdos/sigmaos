@@ -52,18 +52,18 @@ type Proc struct {
 	*ProcProto
 }
 
-func MakeEmptyProc() *Proc {
+func NewEmptyProc() *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
 	return p
 }
 
-func MakeProc(program string, args []string) *Proc {
+func NewProc(program string, args []string) *Proc {
 	pid := sp.GenPid(program)
-	return MakeProcPid(pid, program, args)
+	return NewProcPid(pid, program, args)
 }
 
-func MakePrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc {
+func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
 	procdir := NOT_SET
@@ -83,11 +83,11 @@ func MakePrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Pro
 	return p
 }
 
-func MakeProcPid(pid sp.Tpid, program string, args []string) *Proc {
-	return MakePrivProcPid(pid, program, args, false)
+func NewProcPid(pid sp.Tpid, program string, args []string) *Proc {
+	return NewPrivProcPid(pid, program, args, false)
 }
 
-func MakeProcFromProto(p *ProcProto) *Proc {
+func NewProcFromProto(p *ProcProto) *Proc {
 	return &Proc{p}
 }
 

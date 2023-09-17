@@ -20,7 +20,7 @@ const (
 )
 
 func TestRoot(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	dirents, err := ts.GetDir(fn)
 	assert.Nil(t, err, "GetDir")
@@ -31,7 +31,7 @@ func TestRoot(t *testing.T) {
 }
 
 func TestFile(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	d := []byte("hello")
 	_, err := ts.PutFile(fn+"f", 0777, sp.OWRITE, d)
@@ -47,7 +47,7 @@ func TestFile(t *testing.T) {
 }
 
 func TestDir(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	err := ts.MkDir(fn+"d1", 0777)
 	assert.Equal(t, nil, err)
@@ -73,7 +73,7 @@ func TestDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func mkfile(t *testing.T, name string) {
+func newfile(t *testing.T, name string) {
 	CNT := 500
 	buf := test.MkBuf(sp.BUFSZ)
 	start := time.Now()
@@ -93,7 +93,7 @@ func mkfile(t *testing.T, name string) {
 }
 
 func TestFsPerfSingle(t *testing.T) {
-	mkfile(t, "xxx")
+	newfile(t, "xxx")
 }
 
 func TestFsPerfMulti(t *testing.T) {
@@ -101,11 +101,11 @@ func TestFsPerfMulti(t *testing.T) {
 	var done sync.WaitGroup
 	done.Add(2)
 	go func() {
-		mkfile(t, "xxx")
+		newfile(t, "xxx")
 		done.Done()
 	}()
 	go func() {
-		mkfile(t, "yyy")
+		newfile(t, "yyy")
 		done.Done()
 	}()
 	done.Wait()

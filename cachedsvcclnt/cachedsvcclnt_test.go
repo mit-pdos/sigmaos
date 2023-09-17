@@ -34,16 +34,16 @@ type Tstate struct {
 	sem   *semclnt.SemClnt
 }
 
-func mkTstate(t *testing.T, nsrv int) *Tstate {
+func newTstate(t *testing.T, nsrv int) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = test.MakeTstateAll(t)
+	ts.Tstate = test.NewTstateAll(t)
 	ts.job = rd.String(16)
 	ts.Remove(cache.CACHE)
 	cm, err := cachedsvc.MkCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
 	assert.Nil(t, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
-	ts.sem = semclnt.MakeSemClnt(ts.FsLib, ts.sempn)
+	ts.sem = semclnt.NewSemClnt(ts.FsLib, ts.sempn)
 	err = ts.sem.Init(0)
 	assert.Nil(t, err)
 	return ts
@@ -71,7 +71,7 @@ func TestCacheSingle(t *testing.T) {
 		NSRV = 1
 	)
 
-	ts := mkTstate(t, NSRV)
+	ts := newTstate(t, NSRV)
 	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	assert.Nil(t, err)
 
@@ -114,7 +114,7 @@ func testCacheSharded(t *testing.T, nsrv int) {
 	const (
 		N = 10
 	)
-	ts := mkTstate(t, nsrv)
+	ts := newTstate(t, nsrv)
 	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	assert.Nil(t, err)
 
@@ -166,7 +166,7 @@ func TestCacheConcur(t *testing.T) {
 		N    = 3
 		NSRV = 1
 	)
-	ts := mkTstate(t, NSRV)
+	ts := newTstate(t, NSRV)
 	v := "hello"
 	cc, err := cachedsvcclnt.MkCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	assert.Nil(t, err)
@@ -199,7 +199,7 @@ func TestCacheClerk(t *testing.T) {
 		DUR   = 10 * time.Second
 	)
 
-	ts := mkTstate(t, NSRV)
+	ts := newTstate(t, NSRV)
 
 	for i := 0; i < N; i++ {
 		ts.StartClerk(DUR, NKEYS, i*NKEYS, 0)
@@ -219,7 +219,7 @@ func TestElasticCache(t *testing.T) {
 		DUR   = 30 * time.Second
 	)
 
-	ts := mkTstate(t, NSRV)
+	ts := newTstate(t, NSRV)
 
 	for i := 0; i < N; i++ {
 		ts.StartClerk(DUR, NKEYS, i*NKEYS, 2*1000)

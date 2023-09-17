@@ -120,14 +120,14 @@ func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *Gro
 		} else {
 			db.DPrintf(db.GROUPMGR, "group %v member %v crash %v\n", cfg.Args, i, crashMember)
 		}
-		gm.members[i] = makeMember(sc, cfg, i, crashMember)
+		gm.members[i] = newMember(sc, cfg, i, crashMember)
 	}
 	done := make(chan *procret)
 	go gm.manager(done, N)
 
 	// make the manager start the members
 	for i := 0; i < N; i++ {
-		done <- &procret{i, nil, proc.MakeStatusErr("start", nil)}
+		done <- &procret{i, nil, proc.NewStatusErr("start", nil)}
 	}
 	return gm
 }
@@ -155,12 +155,12 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func makeMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int, crash int64) *member {
+func newMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int, crash int64) *member {
 	return &member{SigmaClnt: sc, GroupMgrConfig: cfg, crash: crash, id: id}
 }
 
 func (m *member) spawn() error {
-	p := proc.MakeProc(m.Program, m.Args)
+	p := proc.NewProc(m.Program, m.Args)
 	p.SetMcpu(m.Mcpu)
 	p.SetCrash(m.crash)
 	p.SetPartition(m.partition)

@@ -72,14 +72,14 @@ func RunCacheSrv(args []string, nshard int) error {
 	}
 
 	db.DPrintf(db.CACHESRV, "Run %v\n", s.shrd)
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(args[1]+s.shrd, s, pcfg, public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(args[1]+s.shrd, s, pcfg, public)
 	if err != nil {
 		return err
 	}
 	if _, err := ssrv.Create(DUMP, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
-	if err := sessdevsrv.MkSessDev(ssrv.MemFs, DUMP, s.mkSession, nil); err != nil {
+	if err := sessdevsrv.MkSessDev(ssrv.MemFs, DUMP, s.newSession, nil); err != nil {
 		return err
 	}
 	ssrv.RunServer()
@@ -91,9 +91,9 @@ func NewCacheSrv(pcfg *proc.ProcEnv, pn string) *CacheSrv {
 	cs := &CacheSrv{shards: make(map[cache.Tshard]*shardInfo), lastFence: sp.NullFence()}
 	// Turn off tracing for now
 	//	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
-	p, err := perf.MakePerf(pcfg, perf.CACHESRV)
+	p, err := perf.NewPerf(pcfg, perf.CACHESRV)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	cs.perf = p
 	cs.shrd = pn

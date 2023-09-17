@@ -17,7 +17,7 @@ type RaftConfig struct {
 	pcfg      *proc.ProcEnv
 }
 
-func MakeRaftConfig(pcfg *proc.ProcEnv, id int, addr string, init bool) *RaftConfig {
+func NewRaftConfig(pcfg *proc.ProcEnv, id int, addr string, init bool) *RaftConfig {
 	rc := &RaftConfig{}
 	rc.id = id
 	rc.init = init
@@ -44,8 +44,8 @@ func (rc *RaftConfig) SetPeerAddrs(new []string) {
 	rc.peerAddrs = new
 }
 
-func (rc *RaftConfig) MakeServer(applyf repl.Tapplyf) (repl.Server, error) {
-	return MakeRaftReplServer(rc.pcfg, rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
+func (rc *RaftConfig) NewServer(applyf repl.Tapplyf) (repl.Server, error) {
+	return NewRaftReplServer(rc.pcfg, rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
 }
 
 func (rc *RaftConfig) ReplAddr() string {

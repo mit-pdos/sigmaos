@@ -32,7 +32,7 @@ func NewReplSrv(raftcfg *replraft.RaftConfig, svci any) (*ReplSrv, error) {
 		rpcs:    rpcsrv.NewRPCSrv(svci, nil),
 		rt:      NewReplyTable(),
 	}
-	rs.replSrv, err = raftcfg.MakeServer(rs.applyOp)
+	rs.replSrv, err = raftcfg.NewServer(rs.applyOp)
 	if err != nil {
 		return nil, err
 	}

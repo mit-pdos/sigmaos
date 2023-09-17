@@ -19,7 +19,7 @@ type PortClnt struct {
 }
 
 func MkPortClnt(fsl *fslib.FsLib, kernelId string) (*PortClnt, error) {
-	kc, err := kernelclnt.MakeKernelClnt(fsl, sp.BOOT+fsl.ProcEnv().KernelID)
+	kc, err := kernelclnt.NewKernelClnt(fsl, sp.BOOT+fsl.ProcEnv().KernelID)
 	if err != nil {
 		return nil, err
 	}

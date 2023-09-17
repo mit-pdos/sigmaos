@@ -24,7 +24,7 @@ func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
 	ts.ctx = ctx.MkCtxNull()
-	ts.rooti = dir.MkRootDir(ts.ctx, MakeInode, nil)
+	ts.rooti = dir.MkRootDir(ts.ctx, NewInode, nil)
 	return ts
 }
 

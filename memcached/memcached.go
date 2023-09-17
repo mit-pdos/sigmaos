@@ -17,14 +17,14 @@ type MemcachedClnt struct {
 	cc *memcache.Client
 }
 
-func MakeMemcachedClnt(fsl *fslib.FsLib, job string) (*MemcachedClnt, error) {
+func NewMemcachedClnt(fsl *fslib.FsLib, job string) (*MemcachedClnt, error) {
 	var addrs []string
 	err := fsl.GetFileJson(sp.MEMCACHED, &addrs)
 	if err != nil {
 		db.DFatalf("Error get memcache addr file: %v", err)
 	}
 	mc := &MemcachedClnt{
-		memcache.NewFromSelector(makeServerSelector(addrs)),
+		memcache.NewFromSelector(newServerSelector(addrs)),
 	}
 	mc.cc.MaxIdleConns = 8000
 	return mc, nil
@@ -86,7 +86,7 @@ type serverSelector struct {
 	addrs []net.Addr
 }
 
-func makeServerSelector(addrs []string) *serverSelector {
+func newServerSelector(addrs []string) *serverSelector {
 	// TCP or UDP?
 	as := make([]net.Addr, 0, len(addrs))
 	for _, addr := range addrs {

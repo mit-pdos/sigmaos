@@ -9,6 +9,6 @@ type Op struct {
 	N  uint64 // Order in which this op was received.
 }
 
-func makeOp(fm *sessp.FcallMsg, n uint64) *Op {
+func newOp(fm *sessp.FcallMsg, n uint64) *Op {
 	return &Op{fm, n}
 }

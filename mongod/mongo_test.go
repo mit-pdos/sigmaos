@@ -124,7 +124,7 @@ func TestEncodeDecode(t *testing.T) {
 
 func TestQuerySpeed(t *testing.T) {
 	// create mongo and sql dbs
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	mongoc, err := mongoclnt.MkMongoClnt(ts.FsLib)
 	assert.Nil(t, err)
 	dbc, err := dbclnt.MkDbClnt(ts.FsLib, sp.DBD)
@@ -164,18 +164,18 @@ func TestQuerySpeed(t *testing.T) {
 	//MySql write
 	dbc.Exec("DROP TABLE test_table")
 	dbc.Exec(
-		"CREATE TABLE test_table (mkey VARCHAR(128), mval VARCHAR(128), PRIMARY KEY (`mkey`));")
+		"CREATE TABLE test_table (newey VARCHAR(128), mval VARCHAR(128), PRIMARY KEY (`newey`));")
 	t0Sql := time.Now()
 	for i := 0; i < N_test; i++ {
 		assert.Nil(t, dbc.Exec(fmt.Sprintf(
-			"INSERT INTO test_table (mkey, mval) VALUES ('%v', '%v')", keys[i], vals[i])))
+			"INSERT INTO test_table (newey, mval) VALUES ('%v', '%v')", keys[i], vals[i])))
 	}
 	dbg.DPrintf(dbg.TEST, "Sql Time: %v", time.Since(t0Sql).Microseconds())
 	// MySql read
 	t0Sql = time.Now()
 	for i := 0; i < N_test; i++ {
 		assert.Nil(t, dbc.Exec(fmt.Sprintf(
-			"SELECT mval FROM test_table WHERE mkey='%v'", keys[i])))
+			"SELECT mval FROM test_table WHERE newey='%v'", keys[i])))
 	}
 	dbg.DPrintf(dbg.TEST, "Sql Read Time: %v", time.Since(t0Sql).Microseconds())
 

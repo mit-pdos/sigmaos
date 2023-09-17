@@ -58,7 +58,7 @@ func (fs *FsEtcd) MkRootDir() *serr.Err {
 	if err := fs.PutFile(ROOT, nf, sp.NoFence()); err != nil {
 		return err
 	}
-	db.DPrintf(db.FSETCD, "mkRoot: PutFile %v\n", nf)
+	db.DPrintf(db.FSETCD, "newRoot: PutFile %v\n", nf)
 	return nil
 }
 

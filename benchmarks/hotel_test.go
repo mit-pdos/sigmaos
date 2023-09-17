@@ -49,7 +49,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
@@ -112,9 +112,9 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		if sigmaos && CACHE_TYPE == "cached" && HOTEL_CACHE_AUTOSCALE {
 			nc = 1
 		}
-		ji.hj, err = hotel.MakeHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
-		assert.Nil(ts.Ts.T, err, "Error MakeHotelJob: %v", err)
-		sdc := scheddclnt.MakeScheddClnt(ts.FsLib)
+		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
+		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
+		sdc := scheddclnt.NewScheddClnt(ts.FsLib)
 		procs := sdc.GetRunningProcs()
 		progs := make(map[string][]string)
 		for sd, ps := range procs {
@@ -151,11 +151,11 @@ func MakeHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		}
 	}
 
-	ji.wc = hotel.MakeWebClnt(ts.FsLib, ji.job)
+	ji.wc = hotel.NewWebClnt(ts.FsLib, ji.job)
 	// Make a load generators.
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
-		ji.lgs = append(ji.lgs, loadgen.MakeLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) {
+		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) {
 			// Run a single request.
 			ji.fn(ji.wc, r)
 		}))

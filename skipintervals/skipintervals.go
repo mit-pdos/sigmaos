@@ -29,13 +29,13 @@ func MkSkipIInterval() interval.IIntervals {
 func MkSkipIntervals() *SkipIntervals {
 	source := rand.NewSource(time.Now().UnixNano())
 	skipl := &SkipIntervals{
-		levels:    mkLevels(MaxLevel),
+		levels:    newLevels(MaxLevel),
 		rand:      rand.New(source),
-		prevElems: mkLevels(MaxLevel),
+		prevElems: newLevels(MaxLevel),
 	}
 	if ALLOC {
 		for i := 0; i < 2000; i++ {
-			e := mkElement(0, nil)
+			e := newElement(0, nil)
 			skipl.freeElem(e)
 		}
 	}
@@ -107,7 +107,7 @@ func (skipl *SkipIntervals) insert(iv *interval.Tinterval, prevElems levels, nex
 	if ALLOC {
 		elem = skipl.allocElem(level, iv)
 	} else {
-		elem = mkElement(level, iv)
+		elem = newElement(level, iv)
 	}
 
 	//db.DPrintf(db.TEST, "insert %v %v(%d) %v\n", prevElems, elem, level, skipl)

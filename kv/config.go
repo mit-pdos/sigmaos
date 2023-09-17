@@ -39,7 +39,7 @@ func (cf *Config) String() string {
 	return fmt.Sprintf("{Fence %v, Shards %v, Moves %v}", cf.Fence, cf.Shards, cf.Moves)
 }
 
-func MakeConfig(f sp.Tfence) *Config {
+func NewConfig(f sp.Tfence) *Config {
 	cf := &Config{Fence: f, Shards: make([]string, NSHARD), Moves: Moves{}}
 	return cf
 }
@@ -66,7 +66,7 @@ type KvSet struct {
 	Set map[string]int
 }
 
-func MakeKvs(shards []string) *KvSet {
+func NewKvs(shards []string) *KvSet {
 	ks := &KvSet{}
 	ks.Set = make(map[string]int)
 	for _, kv := range shards {
@@ -85,7 +85,7 @@ func (ks *KvSet) present(kv string) bool {
 	return ok
 }
 
-func (ks *KvSet) mkKvs() []string {
+func (ks *KvSet) newKvs() []string {
 	kvs := make([]string, 0, len(ks.Set))
 	for kv, _ := range ks.Set {
 		kvs = append(kvs, kv)
@@ -149,8 +149,8 @@ func assign(conf *Config, nextShards []string, hkv string, t int, newkv string) 
 
 func AddKv(conf *Config, newkv string) []string {
 	nextShards := make([]string, NSHARD)
-	kvs := MakeKvs(conf.Shards)
-	l := len(kvs.mkKvs()) + 1
+	kvs := NewKvs(conf.Shards)
+	l := len(kvs.newKvs()) + 1
 
 	if l == 1 { // newkv is first shard
 		for i, _ := range conf.Shards {
@@ -181,11 +181,11 @@ func AddKv(conf *Config, newkv string) []string {
 
 func DelKv(conf *Config, delkv string) []string {
 	nextShards := make([]string, NSHARD)
-	kvs := MakeKvs(conf.Shards)
+	kvs := NewKvs(conf.Shards)
 	n := kvs.nshards(delkv)
 	kvs.del([]string{delkv})
 
-	l := len(kvs.mkKvs())
+	l := len(kvs.newKvs())
 	p := n / l
 	n1 := (NSHARD + l - 1) / l
 	// log.Printf("del: n = %v p = %v n1 = %v\n", n, p, n1)

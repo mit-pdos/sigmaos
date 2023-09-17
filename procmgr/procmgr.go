@@ -30,23 +30,23 @@ type ProcMgr struct {
 }
 
 // Manages the state and lifecycle of a proc.
-func MakeProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
+func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 	mgr := &ProcMgr{
 		mfs:       mfs,
 		kernelId:  kernelId,
 		rootsc:    mfs.SigmaClnt(),
-		updm:      uprocclnt.MakeUprocdMgr(mfs.SigmaClnt().FsLib, kernelId),
+		updm:      uprocclnt.NewUprocdMgr(mfs.SigmaClnt().FsLib, kernelId),
 		sclnts:    make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		cachedirs: make(map[sp.Trealm]bool),
 		running:   make(map[sp.Tpid]*proc.Proc),
-		pcache:    MakeProcCache(PROC_CACHE_SZ),
+		pcache:    NewProcCache(PROC_CACHE_SZ),
 	}
-	mgr.makews()
+	mgr.newws()
 	return mgr
 }
 
 // Create ws queue if it doesn't exist
-func (mgr *ProcMgr) makews() {
+func (mgr *ProcMgr) newws() {
 	mgr.rootsc.MkDir(sp.WS, 0777)
 	for _, n := range []string{sp.WS_RUNQ_LC, sp.WS_RUNQ_BE} {
 		mgr.rootsc.MkDir(n, 0777)

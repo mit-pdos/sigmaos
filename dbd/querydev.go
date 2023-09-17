@@ -52,9 +52,9 @@ func (fs *fileSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfen
 }
 
 // XXX clean up in case of error
-func (qd *queryDev) mkSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
+func (qd *queryDev) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
 	fs := &fileSession{}
-	fs.Inode = mfs.MakeDevInode()
+	fs.Inode = mfs.NewDevInode()
 	fs.id = sid
 	fs.dbaddr = qd.dbaddr
 	return fs, nil

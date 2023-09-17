@@ -13,7 +13,7 @@ type fidTable struct {
 	fids map[sp.Tfid]*fid.Fid
 }
 
-func makeFidTable() *fidTable {
+func newFidTable() *fidTable {
 	ft := &fidTable{}
 	ft.fids = make(map[sp.Tfid]*fid.Fid)
 	return ft

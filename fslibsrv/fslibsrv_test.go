@@ -70,7 +70,7 @@ const (
 	HASYNC
 )
 
-func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz sp.Tlength) sp.Tlength {
+func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz sp.Tlength) sp.Tlength {
 	switch how {
 	case HSYNC:
 		w, err := fsl.CreateWriter(fn, 0777, sp.OWRITE)
@@ -104,34 +104,34 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 }
 
 func TestWriteFilePerfSingle(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 	fn := gopath.Join(pathname, "f")
 	buf := test.MkBuf(WRITESZ)
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
-	p1, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.WRITER.String())
+	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.WRITER.String())
 	assert.Nil(t, err)
 	defer p1.Done()
 	measure(p1, "writer", func() sp.Tlength {
-		sz := mkFile(t, ts.FsLib, fn, HSYNC, buf, SYNCFILESZ)
+		sz := newFile(t, ts.FsLib, fn, HSYNC, buf, SYNCFILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
 	})
-	p2, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFWRITER)
+	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFWRITER)
 	assert.Nil(t, err)
 	defer p2.Done()
 	measure(p2, "bufwriter", func() sp.Tlength {
-		sz := mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+		sz := newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
 	})
-	p3, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFWRITER)
+	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFWRITER)
 	assert.Nil(t, err)
 	defer p3.Done()
 	measure(p3, "abufwriter", func() sp.Tlength {
-		sz := mkFile(t, ts.FsLib, fn, HASYNC, buf, FILESZ)
+		sz := newFile(t, ts.FsLib, fn, HASYNC, buf, FILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
@@ -140,7 +140,7 @@ func TestWriteFilePerfSingle(t *testing.T) {
 }
 
 func TestWriteFilePerfMultiClient(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 	N_CLI := 10
 	buf := test.MkBuf(WRITESZ)
 	done := make(chan sp.Tlength)
@@ -149,7 +149,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		fsl, err := fslib.MakeFsLib(pcfg)
+		fsl, err := fslib.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -157,14 +157,14 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	for _, fn := range fns {
 		ts.Remove(fn)
 	}
-	p1, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.WRITER.String())
+	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.WRITER.String())
 	assert.Nil(t, err)
 	defer p1.Done()
 	start := time.Now()
 	for i := range fns {
 		go func(i int) {
 			n := measure(p1, "writer", func() sp.Tlength {
-				sz := mkFile(t, fsls[i], fns[i], HSYNC, buf, SYNCFILESZ)
+				sz := newFile(t, fsls[i], fns[i], HSYNC, buf, SYNCFILESZ)
 				err := ts.Remove(fns[i])
 				assert.Nil(t, err, "Remove err %v", err)
 				return sz
@@ -178,14 +178,14 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	}
 	ms := time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt writer: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p2, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFWRITER)
+	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFWRITER)
 	assert.Nil(t, err)
 	defer p2.Done()
 	start = time.Now()
 	for i := range fns {
 		go func(i int) {
 			n := measure(p2, "bufwriter", func() sp.Tlength {
-				sz := mkFile(t, fsls[i], fns[i], HBUF, buf, FILESZ)
+				sz := newFile(t, fsls[i], fns[i], HBUF, buf, FILESZ)
 				err := ts.Remove(fns[i])
 				assert.Nil(t, err, "Remove err %v", err)
 				return sz
@@ -199,14 +199,14 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	}
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFWRITER)
+	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFWRITER)
 	assert.Nil(t, err)
 	defer p3.Done()
 	start = time.Now()
 	for i := range fns {
 		go func(i int) {
 			n := measure(p3, "abufwriter", func() sp.Tlength {
-				sz := mkFile(t, fsls[i], fns[i], HASYNC, buf, FILESZ)
+				sz := newFile(t, fsls[i], fns[i], HASYNC, buf, FILESZ)
 				err := ts.Remove(fns[i])
 				assert.Nil(t, err, "Remove err %v", err)
 				return sz
@@ -224,13 +224,13 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 }
 
 func TestReadFilePerfSingle(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 	fn := gopath.Join(pathname, "f")
 	buf := test.MkBuf(WRITESZ)
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
-	sz := mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
-	p1, r := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
+	sz := newFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
+	p1, r := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
 	assert.Nil(t, r)
 	defer p1.Done()
 	measure(p1, "reader", func() sp.Tlength {
@@ -243,10 +243,10 @@ func TestReadFilePerfSingle(t *testing.T) {
 	})
 	err := ts.Remove(fn)
 	assert.Nil(t, err)
-	p2, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
+	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
 	assert.Nil(t, err)
 	defer p2.Done()
-	sz = mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+	sz = newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 	measure(p2, "bufreader", func() sp.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
@@ -256,7 +256,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 		r.Close()
 		return n
 	})
-	p3, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
+	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
 	defer p3.Done()
 	measure(p3, "readahead", func() sp.Tlength {
@@ -273,7 +273,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 }
 
 func TestReadFilePerfMultiClient(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 	N_CLI := 10
 	buf := test.MkBuf(WRITESZ)
 	done := make(chan sp.Tlength)
@@ -282,16 +282,16 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		fsl, err := fslib.MakeFsLib(pcfg)
+		fsl, err := fslib.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
 	// Remove just in case it was left over from a previous run.
 	for _, fn := range fns {
 		ts.Remove(fn)
-		mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
+		newFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
 	}
-	p1, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
+	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
 	assert.Nil(t, err)
 	defer p1.Done()
 	start := time.Now()
@@ -317,9 +317,9 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for _, fn := range fns {
 		err := ts.Remove(fn)
 		assert.Nil(ts.T, err)
-		mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+		newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 	}
-	p2, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
+	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
 	assert.Nil(t, err)
 	defer p2.Done()
 	start = time.Now()
@@ -343,7 +343,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	}
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3, err := perf.MakePerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
+	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
 	defer p3.Done()
 	start = time.Now()
@@ -369,7 +369,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	ts.Shutdown()
 }
 
-func mkDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
+func newDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
 	err := fsl.MkDir(dir, 0777)
 	assert.Equal(t, nil, err)
 	for i := 0; i < n; i++ {
@@ -382,10 +382,10 @@ func mkDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
 
 func TestDirCreatePerf(t *testing.T) {
 	const N = 1000
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 	dir := gopath.Join(pathname, "d")
 	measuredir("create dir", 1, func() int {
-		n := mkDir(t, ts.FsLib, dir, N)
+		n := newDir(t, ts.FsLib, dir, N)
 		return n
 	})
 	err := ts.RmDir(dir)
@@ -399,7 +399,7 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip str
 	for c := 0; c < nclerk; c++ {
 		go func(c int) {
 			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), c)
-			fsl, err := fslib.MakeFsLib(pcfg)
+			fsl, err := fslib.NewFsLib(pcfg)
 			assert.Nil(ts.T, err)
 			measuredir("lookup dir entry", NITER, func() int {
 				for f := 0; f < nfile; f++ {
@@ -420,9 +420,9 @@ func TestDirReadPerf(t *testing.T) {
 	const N = 10000
 	const NFILE = 10
 	const NCLERK = 1
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 	dir := pathname + "d"
-	n := mkDir(t, ts.FsLib, dir, NFILE)
+	n := newDir(t, ts.FsLib, dir, NFILE)
 	assert.Equal(t, NFILE, n)
 	measuredir("read dir", 1, func() int {
 		n := 0
@@ -441,9 +441,9 @@ func TestDirReadPerf(t *testing.T) {
 
 func TestRmDirPerf(t *testing.T) {
 	const N = 5000
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 	dir := gopath.Join(pathname, "d")
-	n := mkDir(t, ts.FsLib, dir, N)
+	n := newDir(t, ts.FsLib, dir, N)
 	assert.Equal(t, N, n)
 	measuredir("rm dir", 1, func() int {
 		err := ts.RmDir(dir)

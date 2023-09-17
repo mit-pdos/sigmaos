@@ -68,9 +68,9 @@ func main() {
 	}
 
 	// Record performance.
-	p, err := perf.MakePerf(sc.ProcEnv(), perf.CACHECLERK)
+	p, err := perf.NewPerf(sc.ProcEnv(), perf.CACHECLERK)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
 
@@ -91,7 +91,7 @@ func run(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
-	sclnt := semclnt.MakeSemClnt(sc.FsLib, sempath)
+	sclnt := semclnt.NewSemClnt(sc.FsLib, sempath)
 	sclnt.Down()
 	// Run for duration dur, then mark as done.
 	go func() {
@@ -111,10 +111,10 @@ func run(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.
 	db.DPrintf(db.ALWAYS, "done ntest %v elapsed %v err %v\n", ntest, time.Since(start), err)
 	var status *proc.Status
 	if err != nil {
-		status = proc.MakeStatusErr(err.Error(), nil)
+		status = proc.NewStatusErr(err.Error(), nil)
 	} else {
 		d := time.Since(start)
-		status = proc.MakeStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
+		status = proc.NewStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
 	}
 	sc.ClntExit(status)
 }

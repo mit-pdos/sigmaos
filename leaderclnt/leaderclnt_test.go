@@ -15,7 +15,7 @@ const (
 )
 
 func TestOldLeaderOK(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	l := leaderclnt.OldleaderTest(ts, dirnamed, false)
 
@@ -25,7 +25,7 @@ func TestOldLeaderOK(t *testing.T) {
 }
 
 func TestOldLeaderCrash(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	err := ts.Boot(sp.NAMEDREL)
 	assert.Nil(t, err)

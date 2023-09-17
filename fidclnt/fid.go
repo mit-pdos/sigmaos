@@ -15,7 +15,7 @@ type FidMap struct {
 	fids map[sp.Tfid]*Channel
 }
 
-func mkFidMap() *FidMap {
+func newFidMap() *FidMap {
 	fm := &FidMap{}
 	fm.fids = make(map[sp.Tfid]*Channel)
 	return fm

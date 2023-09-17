@@ -49,7 +49,7 @@ func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return fl.MakeReader(fd, path, fl.GetChunkSz()), nil
+	return fl.NewReader(fd, path, fl.GetChunkSz()), nil
 }
 
 type Rdr struct {
@@ -114,7 +114,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			break
 		}
 	}
-	rdr := fl.MakeReader(fd, path, fl.GetChunkSz())
+	rdr := fl.NewReader(fd, path, fl.GetChunkSz())
 	return rdr, nil
 
 }
@@ -141,7 +141,7 @@ func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*writ
 	if err != nil {
 		return nil, err
 	}
-	wrt := fl.MakeWriter(fd)
+	wrt := fl.NewWriter(fd)
 	return wrt, nil
 }
 
@@ -150,7 +150,7 @@ func (fl *FsLib) OpenWriter(fname string, mode sp.Tmode) (*writer.Writer, error)
 	if err != nil {
 		return nil, err
 	}
-	wrt := fl.MakeWriter(fd)
+	wrt := fl.NewWriter(fd)
 	return wrt, nil
 }
 

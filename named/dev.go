@@ -11,7 +11,7 @@ type Dev struct {
 	*Obj
 }
 
-func makeDev(o *Obj) fs.FsObj {
+func newDev(o *Obj) fs.FsObj {
 	f := &Dev{Obj: o}
 	return f
 }

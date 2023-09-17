@@ -19,7 +19,7 @@ type Mgr struct {
 	clntnet  string
 }
 
-func MakeMgr(pcfg *proc.ProcEnv, cli sessp.Tclient, clntnet string) *Mgr {
+func NewMgr(pcfg *proc.ProcEnv, cli sessp.Tclient, clntnet string) *Mgr {
 	sc := &Mgr{}
 	sc.pcfg = pcfg
 	sc.cli = cli
@@ -53,7 +53,7 @@ func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := makeSessClnt(sc.pcfg, sc.cli, sc.clntnet, addrs)
+	sess, err := newSessClnt(sc.pcfg, sc.cli, sc.clntnet, addrs)
 	if err != nil {
 		return nil, err
 	}

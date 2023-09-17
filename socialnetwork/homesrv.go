@@ -33,11 +33,11 @@ type HomeSrv struct {
 func RunHomeSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Creating home service\n")
 	hsrv := &HomeSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_HOME, hsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_HOME, hsrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(SOCIAL_NETWORK_HOME)
+	fsls := NewFsLibs(SOCIAL_NETWORK_HOME)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
@@ -54,9 +54,9 @@ func RunHomeSrv(public bool, jobname string) error {
 	}
 	hsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Starting home service\n")
-	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_HOME)
+	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_HOME)
 	if err != nil {
-		dbg.DFatalf("MakePerf err %v\n", err)
+		dbg.DFatalf("NewPerf err %v\n", err)
 	}
 	defer perf.Done()
 

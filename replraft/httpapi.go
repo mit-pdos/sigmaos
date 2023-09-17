@@ -16,7 +16,7 @@ const (
 )
 
 func apiHandler(n *RaftNode) http.Handler {
-	mHandler := makeMembershipHandler(n)
+	mHandler := newMembershipHandler(n)
 	mux := http.NewServeMux()
 	mux.Handle("/", n.transport.Handler())
 	mux.Handle(membershipPrefix, mHandler)
@@ -32,7 +32,7 @@ type membershipHandler struct {
 	n *RaftNode
 }
 
-func makeMembershipHandler(n *RaftNode) http.Handler {
+func newMembershipHandler(n *RaftNode) http.Handler {
 	h := &membershipHandler{}
 	h.n = n
 	return h

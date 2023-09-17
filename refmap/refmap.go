@@ -18,7 +18,7 @@ type entry[T any] struct {
 	e T
 }
 
-func mkEntry[T any](i T) *entry[T] {
+func newEntry[T any](i T) *entry[T] {
 	e := &entry[T]{}
 	e.n = 1
 	e.e = i
@@ -51,13 +51,13 @@ func (rf *RefTable[K, T]) Lookup(k K) (T, bool) {
 	return r, false
 }
 
-func (rf *RefTable[K, T]) Insert(k K, mkT func() T) (T, bool) {
+func (rf *RefTable[K, T]) Insert(k K, newT func() T) (T, bool) {
 	if e, ok := rf.refs[k]; ok {
 		e.n += 1
 		db.DPrintf(rf.debug+db.REFMAP_SUFFIX, "insert %v %v", k, e)
 		return e.e, true
 	}
-	e := mkEntry(mkT())
+	e := newEntry(newT())
 	db.DPrintf(rf.debug+db.REFMAP_SUFFIX, "new insert %v %v", k, e)
 	rf.refs[k] = e
 	return e.e, false

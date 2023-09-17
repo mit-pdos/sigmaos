@@ -17,9 +17,9 @@ func main() {
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: error %v\n", err)
 	}
-	p, err := perf.MakePerf(sc.ProcEnv(), perf.SEQGREP)
+	p, err := perf.NewPerf(sc.ProcEnv(), perf.SEQGREP)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	err = sc.Started()
 	if err != nil {
@@ -33,5 +33,5 @@ func main() {
 	n := seqgrep.Grep(sc.ProcEnv(), rdr)
 	log.Printf("n = %d\n", n)
 	p.Done()
-	sc.ClntExit(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
+	sc.ClntExit(proc.NewStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
 }

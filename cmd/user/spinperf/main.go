@@ -33,7 +33,7 @@ func main() {
 	if isSigmaProc {
 		sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 		if err != nil {
-			db.DFatalf("Error mkSigmaClnt: %v", err)
+			db.DFatalf("Error newSigmaClnt: %v", err)
 		}
 		if err := sc.Started(); err != nil {
 			db.DFatalf("Error started: %v", err)
@@ -43,7 +43,7 @@ func main() {
 	spinPerf(nthread, niter)
 	db.DPrintf(db.ALWAYS, "%v:  %v", id, time.Since(start))
 	if isSigmaProc {
-		sc.ClntExit(proc.MakeStatusInfo(proc.StatusOK, "elapsed time", time.Since(start)))
+		sc.ClntExit(proc.NewStatusInfo(proc.StatusOK, "elapsed time", time.Since(start)))
 	}
 }
 

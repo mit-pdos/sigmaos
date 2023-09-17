@@ -31,15 +31,15 @@ type Status struct {
 	StatusData    interface{}
 }
 
-func MakeStatus(code Tstatus) *Status {
+func NewStatus(code Tstatus) *Status {
 	return &Status{code, "", nil}
 }
 
-func MakeStatusInfo(code Tstatus, msg string, data interface{}) *Status {
+func NewStatusInfo(code Tstatus, msg string, data interface{}) *Status {
 	return &Status{code, msg, data}
 }
 
-func MakeStatusErr(msg string, data interface{}) *Status {
+func NewStatusErr(msg string, data interface{}) *Status {
 	return &Status{StatusErr, msg, data}
 }
 

@@ -15,27 +15,27 @@ import (
 
 // For documentation on dir structure, see sigmaos/proc/dir.go
 
-func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool) error {
+func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			debug.PrintStack()
-			db.DFatalf("MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
+			db.DFatalf("NewProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		}
-		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
+		db.DPrintf(db.PROCCLNT_ERR, "NewProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
 	}
 	childrenDir := path.Join(procdir, proc.CHILDREN)
 	if err := clnt.MkDir(childrenDir, 0777); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir childrens %v err %v\n", childrenDir, err)
+		db.DPrintf(db.PROCCLNT_ERR, "NewProcDir mkdir childrens %v err %v\n", childrenDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 
 	// Create exit signal
-	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
+	semExit := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
 	semExit.Init(0)
 
 	// Create eviction signal
-	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
+	semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	semEvict.Init(0)
 
 	return nil

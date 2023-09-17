@@ -23,7 +23,7 @@ type WebClnt struct {
 	*fslib.FsLib
 }
 
-func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
+func NewWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	addrs, err := GetJobHTTPAddrs(fsl, job)
 	if err != nil {
 		db.DFatalf("Error wwwd job http addrs: %v", err)

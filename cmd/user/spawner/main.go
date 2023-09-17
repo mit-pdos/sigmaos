@@ -18,7 +18,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v shouldWaitExit child_pid child_program child_args... \n", os.Args[0])
 		os.Exit(1)
 	}
-	l, err := MakeSpawner(os.Args[1:])
+	l, err := NewSpawner(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
@@ -34,11 +34,11 @@ type Spawner struct {
 	childArgs      []string
 }
 
-func MakeSpawner(args []string) (*Spawner, error) {
+func NewSpawner(args []string) (*Spawner, error) {
 	if len(args) < 3 {
-		return nil, errors.New("MakeSpawner: too few arguments")
+		return nil, errors.New("NewSpawner: too few arguments")
 	}
-	// 	log.Printf("MakeSpawner %v", args)
+	// 	log.Printf("NewSpawner %v", args)
 	s := &Spawner{}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
@@ -58,7 +58,7 @@ func MakeSpawner(args []string) (*Spawner, error) {
 }
 
 func (s *Spawner) Work() {
-	p := proc.MakeProcPid(s.childPid, s.childProgram, s.childArgs)
+	p := proc.NewProcPid(s.childPid, s.childProgram, s.childArgs)
 	err := s.Spawn(p)
 	if err != nil {
 		db.DFatalf("Error spawn: %v", err)

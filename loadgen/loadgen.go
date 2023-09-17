@@ -29,7 +29,7 @@ type LoadGenerator struct {
 	initC     chan int64          // Channel on which initiator threads report how many total requests they initiated
 }
 
-func MakeLoadGenerator(dur time.Duration, maxrps int, req Req) *LoadGenerator {
+func NewLoadGenerator(dur time.Duration, maxrps int, req Req) *LoadGenerator {
 	lg := &LoadGenerator{}
 	lg.totaldur = dur
 	lg.maxrps = int64(maxrps)
@@ -88,7 +88,7 @@ func (lg *LoadGenerator) Calibrate() {
 	}
 	lg.avgReqLat = time.Since(start) / N
 	// Preallocate entries. Multiply by 2 to leave a slight buffer.
-	lg.res = benchmarks.MakeResults(2*int(lg.maxrps*int64(lg.totaldur.Seconds()))+N, benchmarks.REQ)
+	lg.res = benchmarks.NewResults(2*int(lg.maxrps*int64(lg.totaldur.Seconds()))+N, benchmarks.REQ)
 	db.DPrintf(db.TEST, "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
 	for i := 0; i < N; i++ {
 		lg.res.Append(lg.avgReqLat, 1)

@@ -43,7 +43,7 @@ func RunUserSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Creating user service\n")
 	usrv := &UserSrv{}
 	usrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_USER, usrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_USER, usrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -53,21 +53,21 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"username"})
 	usrv.mongoc = mongoc
-	fsls := MakeFsLibs(SOCIAL_NETWORK_USER)
+	fsls := NewFsLibs(SOCIAL_NETWORK_USER)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
 	}
 	usrv.cachec = cachec
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Starting user service %v\n", usrv.sid)
-	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_USER)
+	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_USER)
 	if err != nil {
-		dbg.DFatalf("MakePerf err %v\n", err)
+		dbg.DFatalf("NewPerf err %v\n", err)
 	}
-	usrv.dbCounter = MakeCounter("DB")
-	usrv.cacheCounter = MakeCounter("Cache")
-	usrv.wCounter = MakeCounter("Write-Cache")
-	usrv.loginCounter = MakeCounter("Login")
+	usrv.dbCounter = NewCounter("DB")
+	usrv.cacheCounter = NewCounter("Cache")
+	usrv.wCounter = NewCounter("Write-Cache")
+	usrv.loginCounter = NewCounter("Login")
 	defer perf.Done()
 	return ssrv.RunServer()
 }

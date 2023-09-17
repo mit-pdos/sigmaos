@@ -11,7 +11,7 @@ type fidMap struct {
 	fidmap map[np.Tfid]np.Tfid
 }
 
-func mkFidMap() *fidMap {
+func newFidMap() *fidMap {
 	fm := &fidMap{}
 	fm.fidmap = make(map[np.Tfid]np.Tfid)
 	return fm

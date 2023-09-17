@@ -24,7 +24,7 @@ type MntTable struct {
 	mounts []*Point
 }
 
-func makeMntTable() *MntTable {
+func newMntTable() *MntTable {
 	mnt := &MntTable{}
 	mnt.mounts = make([]*Point, 0)
 	return mnt

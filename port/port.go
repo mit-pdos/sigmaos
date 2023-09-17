@@ -68,7 +68,7 @@ type PortMap struct {
 	fport   Tport
 }
 
-func MakePortMap(ports nat.PortMap, r *Range) *PortMap {
+func NewPortMap(ports nat.PortMap, r *Range) *PortMap {
 	if r == nil {
 		return nil
 	}

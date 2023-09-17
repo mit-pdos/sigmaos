@@ -11,7 +11,7 @@ type ThreadMgrTable struct {
 	threadmgrs map[*ThreadMgr]bool
 }
 
-func MakeThreadMgrTable(pfn ProcessFn) *ThreadMgrTable {
+func NewThreadMgrTable(pfn ProcessFn) *ThreadMgrTable {
 	tm := &ThreadMgrTable{}
 	tm.pfn = pfn
 	tm.threadmgrs = make(map[*ThreadMgr]bool)
@@ -20,7 +20,7 @@ func MakeThreadMgrTable(pfn ProcessFn) *ThreadMgrTable {
 
 func (tm *ThreadMgrTable) AddThread() *ThreadMgr {
 	var new *ThreadMgr
-	new = makeThreadMgr(tm.pfn)
+	new = newThreadMgr(tm.pfn)
 	tm.threadmgrs[new] = true
 	new.start()
 	return new

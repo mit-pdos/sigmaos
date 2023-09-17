@@ -17,14 +17,14 @@ type Symlink struct {
 	*file.File
 }
 
-func makeSymlink(path path.Path, iscreate bool) (*Symlink, *serr.Err) {
+func newSymlink(path path.Path, iscreate bool) (*Symlink, *serr.Err) {
 	s := &Symlink{}
-	o, err := makeObj(path)
+	o, err := newObj(path)
 	if err == nil && iscreate {
 		return nil, serr.MkErr(serr.TErrExists, path)
 	}
 	s.Obj = o
-	s.File = file.MakeFile()
+	s.File = file.NewFile()
 	return s, nil
 }
 

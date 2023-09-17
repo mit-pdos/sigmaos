@@ -22,15 +22,15 @@ type WebClnt struct {
 	*fslib.FsLib
 }
 
-func MakeWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
+func NewWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	feAddrs, err := GetJobHTTPAddrs(fsl, job)
 	if err != nil {
 		dbg.DFatalf("Error wwwd job http addrs: %v", err)
 	}
-	return MakeWebClntWithAddr(fsl, job, feAddrs)
+	return NewWebClntWithAddr(fsl, job, feAddrs)
 }
 
-func MakeWebClntWithAddr(fsl *fslib.FsLib, job string, feAddrs sp.Taddrs) *WebClnt {
+func NewWebClntWithAddr(fsl *fslib.FsLib, job string, feAddrs sp.Taddrs) *WebClnt {
 	clnt := &http.Client{
 		Timeout:   1 * time.Minute,
 		Transport: http.DefaultTransport,

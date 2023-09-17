@@ -16,9 +16,9 @@ func main() {
 	if err != nil {
 		db.DFatalf("MkSigmaClnt: error %v\n", err)
 	}
-	p, err := perf.MakePerf(sc.ProcEnv(), perf.SEQWC)
+	p, err := perf.NewPerf(sc.ProcEnv(), perf.SEQWC)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
 	err = sc.Started()
@@ -29,5 +29,5 @@ func main() {
 	if err != nil {
 		db.DFatalf("Wc: error %v\n", err)
 	}
-	sc.ClntExit(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
+	sc.ClntExit(proc.NewStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
 }

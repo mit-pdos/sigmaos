@@ -24,14 +24,14 @@ type Npd struct {
 	st   *sessstatesrv.SessionTable
 }
 
-func MakeNpd(pcfg *proc.ProcEnv, lip string) *Npd {
+func NewNpd(pcfg *proc.ProcEnv, lip string) *Npd {
 	npd := &Npd{lip, pcfg, nil}
-	npd.st = sessstatesrv.MakeSessionTable(npd.mkProtServer, npd, nil, nil)
+	npd.st = sessstatesrv.NewSessionTable(npd.newProtServer, npd, nil, nil)
 	return npd
 }
 
-func (npd *Npd) mkProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Protsrv {
-	return makeNpConn(npd.pcfg, npd.lip)
+func (npd *Npd) newProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Protsrv {
+	return newNpConn(npd.pcfg, npd.lip)
 }
 
 func (npd *Npd) serve(fm *sessp.FcallMsg) {
@@ -41,7 +41,7 @@ func (npd *Npd) serve(fm *sessp.FcallMsg) {
 	if rerror != nil {
 		msg = rerror
 	}
-	reply := sessp.MakeFcallMsg(msg, nil, sessp.Tclient(fm.Fc.Client), s, nil)
+	reply := sessp.NewFcallMsg(msg, nil, sessp.Tclient(fm.Fc.Client), s, nil)
 	reply.Data = data
 	reply.Fc.Tag = fm.Fc.Tag
 	sess.SendConn(reply)
@@ -78,12 +78,12 @@ type NpConn struct {
 	cid   sp.TclntId
 }
 
-func makeNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
+func newNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
 	npc := &NpConn{}
-	npc.clnt = protclnt.MakeClnt(pcfg, sp.ROOTREALM.String())
-	npc.fidc = fidclnt.MakeFidClnt(pcfg, sp.ROOTREALM.String())
-	npc.pc = pathclnt.MakePathClnt(pcfg, npc.fidc, sp.Tsize(1_000_000))
-	npc.fm = mkFidMap()
+	npc.clnt = protclnt.NewClnt(pcfg, sp.ROOTREALM.String())
+	npc.fidc = fidclnt.NewFidClnt(pcfg, sp.ROOTREALM.String())
+	npc.pc = pathclnt.NewPathClnt(pcfg, npc.fidc, sp.Tsize(1_000_000))
+	npc.fm = newFidMap()
 	npc.cid = sp.TclntId(rand.Uint64())
 	return npc
 }

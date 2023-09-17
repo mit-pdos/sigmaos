@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 )
 
-func MakeHTTPMux() *TracedHTTPMux {
+func NewHTTPMux() *TracedHTTPMux {
 	return &TracedHTTPMux{
 		http.NewServeMux(),
 	}

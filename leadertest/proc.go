@@ -21,14 +21,14 @@ func RunProc(fencestr, dir string) {
 
 	fence, err := sp.NewFenceJson([]byte(fencestr))
 	if err != nil {
-		sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+		sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}
 
 	db.DPrintf(db.ALWAYS, "fence %v dir %v\n", fence, dir)
 
-	fc := fenceclnt.MakeFenceClnt(sc.FsLib)
+	fc := fenceclnt.NewFenceClnt(sc.FsLib)
 	if err := fc.FenceAtEpoch(*fence, []string{dir}); err != nil {
-		sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+		sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 		return
 	}
 
@@ -41,7 +41,7 @@ func RunProc(fencestr, dir string) {
 
 	b, err := json.Marshal(*conf)
 	if err != nil {
-		sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+		sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 		return
 	}
 

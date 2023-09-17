@@ -36,10 +36,10 @@ type FdClient struct {
 	fds *FdTable
 }
 
-func MakeFdClient(pcfg *proc.ProcEnv, fsc *fidclnt.FidClnt, sz sp.Tsize) *FdClient {
+func NewFdClient(pcfg *proc.ProcEnv, fsc *fidclnt.FidClnt, sz sp.Tsize) *FdClient {
 	fdc := &FdClient{pcfg: pcfg}
-	fdc.PathClnt = pathclnt.MakePathClnt(pcfg, fsc, sz)
-	fdc.fds = mkFdTable()
+	fdc.PathClnt = pathclnt.NewPathClnt(pcfg, fsc, sz)
+	fdc.fds = newFdTable()
 	return fdc
 }
 
@@ -141,20 +141,20 @@ func (fdc *FdClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []
 	return fdc.PathClnt.PutFile(fname, fdc.pcfg.GetUname(), mode|sp.OWRITE, perm, data, off, lid)
 }
 
-func (fdc *FdClient) MakeReader(fd int, path string, chunksz sp.Tsize) *reader.Reader {
+func (fdc *FdClient) NewReader(fd int, path string, chunksz sp.Tsize) *reader.Reader {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return nil
 	}
-	return fdc.PathClnt.MakeReader(fid, path, chunksz)
+	return fdc.PathClnt.NewReader(fid, path, chunksz)
 }
 
-func (fdc *FdClient) MakeWriter(fd int) *writer.Writer {
+func (fdc *FdClient) NewWriter(fd int) *writer.Writer {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return nil
 	}
-	return fdc.PathClnt.MakeWriter(fid)
+	return fdc.PathClnt.NewWriter(fid)
 }
 
 func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {

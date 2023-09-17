@@ -19,12 +19,12 @@ type RPCBenchJob struct {
 	pids []sp.Tpid
 }
 
-func MakeRPCBenchJob(sc *sigmaclnt.SigmaClnt, jobpath string, mcpu proc.Tmcpu, public bool) (*RPCBenchJob, error) {
+func NewRPCBenchJob(sc *sigmaclnt.SigmaClnt, jobpath string, mcpu proc.Tmcpu, public bool) (*RPCBenchJob, error) {
 	var err error
 
 	pids := make([]sp.Tpid, 0, 1)
 
-	p := proc.MakeProc(SRVNAME, []string{jobpath, strconv.FormatBool(public)})
+	p := proc.NewProc(SRVNAME, []string{jobpath, strconv.FormatBool(public)})
 	p.SetMcpu(mcpu)
 	if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 		db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)

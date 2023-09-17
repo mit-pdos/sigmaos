@@ -15,31 +15,31 @@ type RealmTstate struct {
 }
 
 // Creates a realm, and a tstate relative to that realm.
-func MakeRealmTstate(ts *Tstate, realm sp.Trealm) *RealmTstate {
-	return makeRealmTstateClnt(ts, realm, true)
+func NewRealmTstate(ts *Tstate, realm sp.Trealm) *RealmTstate {
+	return newRealmTstateClnt(ts, realm, true)
 }
 
-// Makes a tstate relative to an existing realm.
-func MakeRealmTstateClnt(ts *Tstate, realm sp.Trealm) *RealmTstate {
-	return makeRealmTstateClnt(ts, realm, false)
+// News a tstate relative to an existing realm.
+func NewRealmTstateClnt(ts *Tstate, realm sp.Trealm) *RealmTstate {
+	return newRealmTstateClnt(ts, realm, false)
 }
 
-func makeRealmTstateClnt(ts *Tstate, realm sp.Trealm, makerealm bool) *RealmTstate {
-	if makerealm {
+func newRealmTstateClnt(ts *Tstate, realm sp.Trealm, newrealm bool) *RealmTstate {
+	if newrealm {
 		net := ""
 		if Overlays {
 			net = realm.String()
 		}
 		db.DPrintf(db.TEST, "Make realm %v", realm)
-		if err := ts.rc.MakeRealm(realm, net); err != nil {
-			db.DFatalf("Error MakeRealmTstate MkRealm: %v", err)
+		if err := ts.rc.NewRealm(realm, net); err != nil {
+			db.DFatalf("Error NewRealmTstate MkRealm: %v", err)
 		}
 		db.DPrintf(db.TEST, "Done making realm %v", realm)
 	}
 	pcfg := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
 	db.DPrintf(db.TEST, "ProcEnv for new realm %v", pcfg)
 	if sc, err := sigmaclnt.MkSigmaClntRootInit(pcfg); err != nil {
-		db.DFatalf("Error MakeRealmTstate MkSigmaClnt: %v", err)
+		db.DFatalf("Error NewRealmTstate MkSigmaClnt: %v", err)
 	} else {
 		return &RealmTstate{
 			realm:     realm,

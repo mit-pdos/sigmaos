@@ -14,10 +14,10 @@ type File struct {
 	*file.File
 }
 
-func MakeFile(i fs.Inode) *File {
+func NewFile(i fs.Inode) *File {
 	f := &File{}
 	f.Inode = i
-	f.File = file.MakeFile()
+	f.File = file.NewFile()
 	return f
 }
 

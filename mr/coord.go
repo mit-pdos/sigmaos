@@ -65,9 +65,9 @@ type Coord struct {
 	done        int32
 }
 
-func MakeCoord(args []string) (*Coord, error) {
+func NewCoord(args []string) (*Coord, error) {
 	if len(args) != 7 {
-		return nil, errors.New("MakeCoord: wrong number of arguments")
+		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
 	c.job = args[0]
@@ -79,11 +79,11 @@ func MakeCoord(args []string) (*Coord, error) {
 	c.SigmaClnt = sc
 	m, err := strconv.Atoi(args[1])
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: nmaptask %v isn't int", args[1])
+		return nil, fmt.Errorf("NewCoord: nmaptask %v isn't int", args[1])
 	}
 	n, err := strconv.Atoi(args[2])
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: nreducetask %v isn't int", args[2])
+		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[2])
 	}
 	c.nmaptask = m
 	c.nreducetask = n
@@ -92,7 +92,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	ctime, err := strconv.Atoi(args[5])
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: crash %v isn't int", args[5])
+		return nil, fmt.Errorf("NewCoord: crash %v isn't int", args[5])
 	}
 	c.crash = int64(ctime)
 
@@ -100,9 +100,9 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	c.Started()
 
-	c.leaderclnt, err = leaderclnt.MakeLeaderClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
+	c.leaderclnt, err = leaderclnt.NewLeaderClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: MakeLeaderclnt err %v", err)
+		return nil, fmt.Errorf("NewCoord: NewLeaderclnt err %v", err)
 	}
 
 	crash.Crasher(c.FsLib)
@@ -110,9 +110,9 @@ func MakeCoord(args []string) (*Coord, error) {
 	return c, nil
 }
 
-func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
+func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 	pid := sp.GenPid(c.job)
-	p := proc.MakeProcPid(pid, bin, args)
+	p := proc.NewProcPid(pid, bin, args)
 	//	if mb > 0 {
 	//		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
 	//	}
@@ -125,14 +125,14 @@ func (c *Coord) makeTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.makeTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, MEM_REQ)
+	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, MEM_REQ)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	out := ReduceOut(c.job) + task
 	// TODO: set dynamically based on input file combined size.
-	return c.makeTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, MEM_REQ)
+	return c.newTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, MEM_REQ)
 }
 
 func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {
@@ -198,12 +198,12 @@ func (c *Coord) waitForTask(start time.Time, ch chan Tresult, dir string, p *pro
 		if err := c.Rename(inProgress, done); err != nil {
 			db.DFatalf("rename task done %v to %v err %v\n", inProgress, done, err)
 		}
-		r := mkResult(status.Data())
+		r := newResult(status.Data())
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
 		if status != nil && status.Msg() == RESTART {
 			// reducer indicates to run some mappers again
-			s := mkStringSlice(status.Data().([]interface{}))
+			s := newStringSlice(status.Data().([]interface{}))
 			c.restart(s, t)
 		} else { // if failure but not restart, rerun task immediately again
 			to := dir + "/" + t
@@ -234,7 +234,7 @@ func (c *Coord) runTasks(ch chan Tresult, dir string, taskNames []string, f func
 	}
 }
 
-func mkStringSlice(data []interface{}) []string {
+func newStringSlice(data []interface{}) []string {
 	s := make([]string, 0, len(data))
 	for _, o := range data {
 		s = append(s, o.(string))

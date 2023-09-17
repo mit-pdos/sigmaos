@@ -24,7 +24,7 @@ type Fence struct {
 	fence sp.Tfence
 }
 
-func makeFence(i fs.Inode) *Fence {
+func newFence(i fs.Inode) *Fence {
 	e := &Fence{}
 	e.Inode = i
 	return e
@@ -38,20 +38,20 @@ func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, fence sp.Tfence) 
 	return nil, serr.MkErr(serr.TErrNotSupported, "Read")
 }
 
-func makeInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *serr.Err) {
-	db.DPrintf(db.FENCEFS, "makeInode %v dir %v\n", p, parent)
-	i := inode.MakeInode(ctx, p, parent)
+func newInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, new fs.NewDirF) (fs.Inode, *serr.Err) {
+	db.DPrintf(db.FENCEFS, "newInode %v dir %v\n", p, parent)
+	i := inode.NewInode(ctx, p, parent)
 	if p.IsDir() {
-		return dir.MakeDir(i, makeInode), nil
+		return dir.NewDir(i, newInode), nil
 	} else if p.IsFile() {
-		return makeFence(i), nil
+		return newFence(i), nil
 	} else {
 		return nil, serr.MkErr(serr.TErrInval, p)
 	}
 }
 
-func MakeRoot(ctx fs.CtxI, parent fs.Dir) fs.Dir {
-	dir := dir.MkRootDir(ctx, makeInode, parent)
+func NewRoot(ctx fs.CtxI, parent fs.Dir) fs.Dir {
+	dir := dir.MkRootDir(ctx, newInode, parent)
 	return dir
 }
 

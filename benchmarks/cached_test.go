@@ -30,7 +30,7 @@ type CachedJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeCachedJob(ts *test.RealmTstate, nkeys, ncache, nclerks int, dur time.Duration, ckmcpu, cachemcpu proc.Tmcpu) *CachedJobInstance {
+func NewCachedJob(ts *test.RealmTstate, nkeys, ncache, nclerks int, dur time.Duration, ckmcpu, cachemcpu proc.Tmcpu) *CachedJobInstance {
 	ji := &CachedJobInstance{}
 	ji.dur = dur
 	ji.ncache = ncache
@@ -51,7 +51,7 @@ func (ji *CachedJobInstance) RunCachedJob() {
 	assert.Nil(ji.Ts.T, err, "Error MkCacheMgr: %v", err)
 	ji.cm = cm
 	ji.sempn = ji.cm.SvcDir() + "-cacheclerk-sem"
-	ji.sem = semclnt.MakeSemClnt(ji.FsLib, ji.sempn)
+	ji.sem = semclnt.NewSemClnt(ji.FsLib, ji.sempn)
 	err = ji.sem.Init(0)
 	assert.Nil(ji.Ts.T, err, "Err sem init %v", err)
 

@@ -49,7 +49,7 @@ func calibrateCTimeLinux(ts *test.RealmTstate, nthread uint, niter int) time.Dur
 }
 
 func spawnSpinPerf(ts *test.RealmTstate, mcpu proc.Tmcpu, nthread uint, niter int, id string) sp.Tpid {
-	p := proc.MakeProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
+	p := proc.NewProc("spinperf", []string{"true", strconv.Itoa(int(nthread)), strconv.Itoa(niter), id})
 	p.SetMcpu(mcpu)
 	err := ts.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "Error spawn: %v", err)
@@ -75,8 +75,8 @@ func runSpinPerf(ts *test.RealmTstate, c chan time.Duration, mcpu proc.Tmcpu, nt
 }
 
 func TestBasicSimple(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
 
@@ -106,9 +106,9 @@ func TestBasicSimple(t *testing.T) {
 }
 
 func TestBasicMultiRealmSingleNode(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
+	ts2 := test.NewRealmTstate(rootts, REALM2)
 
 	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts1.GetLocalIP())
 	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM2, ts2.GetLocalIP())
@@ -136,11 +136,11 @@ func TestBasicMultiRealmSingleNode(t *testing.T) {
 }
 
 func TestBasicMultiRealmMultiNode(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 	rootts.BootNode(1)
 	time.Sleep(2 * sp.Conf.Realm.RESIZE_INTERVAL)
-	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	ts2 := test.NewRealmTstate(rootts, REALM2)
 
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, ts1.NamedAddr())
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, ts2.NamedAddr())
@@ -172,8 +172,8 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 }
 
 func TestWaitExitSimpleSingle(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	sts1, err := rootts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -182,7 +182,7 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
 
-	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
 	err = ts1.Spawn(a)
 	assert.Nil(t, err, "Error spawn: %v", err)
@@ -201,8 +201,8 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 }
 
 func TestEvictSingle(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	sts1, err := rootts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -211,7 +211,7 @@ func TestEvictSingle(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
 
-	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
+	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
 	err = ts1.Spawn(a)
 	assert.Nil(t, err, "Error spawn: %v", err)
@@ -240,10 +240,10 @@ func TestEvictSingle(t *testing.T) {
 }
 
 func TestEvictMultiRealm(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
+	rootts := test.NewTstateWithRealms(t)
 	// Make a second realm
-	ts2 := test.MakeRealmTstate(rootts, REALM2)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	ts2 := test.NewRealmTstate(rootts, REALM2)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	sts1, err := rootts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -252,7 +252,7 @@ func TestEvictMultiRealm(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
 
-	a := proc.MakeProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
+	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
 	err = ts1.Spawn(a)
 	assert.Nil(t, err, "Error spawn: %v", err)
@@ -283,7 +283,7 @@ func TestEvictMultiRealm(t *testing.T) {
 }
 
 func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
-	a := proc.MakeProc("dirreader", []string{pn})
+	a := proc.NewProc("dirreader", []string{pn})
 	err := r.Spawn(a)
 	assert.Nil(r.Ts.T, err, "Error spawn: %v", err)
 	err = r.WaitStart(a.GetPid())
@@ -294,9 +294,9 @@ func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
 }
 
 func TestRealmNetIsolationOK(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
+	rootts := test.NewTstateWithRealms(t)
 	// Make a second realm
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	job := rd.String(16)
 	cm, err := cachedsvc.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
@@ -337,10 +337,10 @@ func TestRealmNetIsolationOK(t *testing.T) {
 }
 
 func TestRealmNetIsolationFail(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
+	rootts := test.NewTstateWithRealms(t)
 	// Make a second realm
-	ts2 := test.MakeRealmTstate(rootts, REALM2)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	ts2 := test.NewRealmTstate(rootts, REALM2)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	job := rd.String(16)
 	cm, err := cachedsvc.MkCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
@@ -388,8 +388,8 @@ func TestRealmNetIsolationFail(t *testing.T) {
 }
 
 func TestSpinPerfCalibrate(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
 	// -1 for named
@@ -417,8 +417,8 @@ func targetTime(baseline time.Duration, tslowdown float64) time.Duration {
 }
 
 func TestSpinPerfDoubleSlowdown(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
 	// - 2 to account for NAMED reserved cores
@@ -450,8 +450,8 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 }
 
 func TestSpinPerfDoubleBEandLC(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
 	// - 2 to account for NAMED reserved cores
@@ -488,9 +488,9 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 }
 
 func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
-	rootts := test.MakeTstateWithRealms(t)
-	ts1 := test.MakeRealmTstate(rootts, REALM1)
-	ts2 := test.MakeRealmTstate(rootts, REALM2)
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
+	ts2 := test.NewRealmTstate(rootts, REALM2)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
 	// - 2 to account for NAMED reserved cores

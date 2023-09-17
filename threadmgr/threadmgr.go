@@ -30,7 +30,7 @@ type ThreadMgr struct {
 	pfn       ProcessFn
 }
 
-func makeThreadMgr(pfn ProcessFn) *ThreadMgr {
+func newThreadMgr(pfn ProcessFn) *ThreadMgr {
 	t := &ThreadMgr{}
 	t.Locker = &sync.Mutex{}
 	t.newOpCond = sync.NewCond(t.Locker)
@@ -73,7 +73,7 @@ func (t *ThreadMgr) Process(fc *sessp.FcallMsg) {
 	db.DPrintf(db.THREADMGR, "Enqueue %v", fc)
 
 	t.numops++
-	op := makeOp(fc, t.numops)
+	op := newOp(fc, t.numops)
 	t.ops = append(t.ops, op)
 	t.executing[op] = true
 

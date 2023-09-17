@@ -29,7 +29,7 @@ func MkRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 	rpcc := &RPCClnt{
 		fsls: make([]*fslib.FsLib, 0, len(fsls)),
 		fds:  make([]int, 0, len(fsls)),
-		si:   rpc.MakeStatInfo(),
+		si:   rpc.NewStatInfo(),
 		pn:   pn,
 	}
 	sdc, err := sessdevclnt.MkSessDevClnt(fsls[0], path.Join(pn, rpc.RPC))

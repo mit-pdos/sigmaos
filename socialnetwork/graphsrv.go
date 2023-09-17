@@ -35,7 +35,7 @@ type GraphSrv struct {
 func RunGraphSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Creating graph service\n")
 	gsrv := &GraphSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_GRAPH, gsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_GRAPH, gsrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func RunGraphSrv(public bool, jobname string) error {
 	mongoc.EnsureIndex(SN_DB, GRAPH_FLWEE_COL, []string{"userid"})
 	gsrv.mongoc = mongoc
 
-	fsls := MakeFsLibs(SOCIAL_NETWORK_GRAPH)
+	fsls := NewFsLibs(SOCIAL_NETWORK_GRAPH)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
@@ -59,9 +59,9 @@ func RunGraphSrv(public bool, jobname string) error {
 	}
 	gsrv.userc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Starting graph service\n")
-	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_GRAPH)
+	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_GRAPH)
 	if err != nil {
-		dbg.DFatalf("MakePerf err %v\n", err)
+		dbg.DFatalf("NewPerf err %v\n", err)
 	}
 	defer perf.Done()
 	return ssrv.RunServer()

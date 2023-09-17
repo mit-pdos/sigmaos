@@ -71,7 +71,7 @@ func to9P(fm *sessp.FcallMsg) *Fcall9P {
 }
 
 func toSP(fcall9P *Fcall9P) *sessp.FcallMsg {
-	fm := sessp.MakeFcallMsgNull()
+	fm := sessp.NewFcallMsgNull()
 	fm.Fc.Type = uint32(fcall9P.Type)
 	fm.Fc.Tag = uint32(fcall9P.Tag)
 	fm.Fc.Session = uint64(sessp.NoSession)

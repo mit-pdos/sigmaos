@@ -24,9 +24,9 @@ func (d *Dir) String() string {
 	return fmt.Sprintf("o %v sd %v", d.Obj, d.sd)
 }
 
-func makeDir(path path.Path) (*Dir, *serr.Err) {
+func newDir(path path.Path) (*Dir, *serr.Err) {
 	d := &Dir{}
-	o, err := makeObj(path)
+	o, err := newObj(path)
 	if err != nil {
 		return nil, err
 	}
@@ -79,26 +79,26 @@ func (d *Dir) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 }
 
 // XXX O_CREATE/O_EXCL
-func (d *Dir) mkDir(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (*Dir, *serr.Err) {
+func (d *Dir) newDir(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (*Dir, *serr.Err) {
 	p := d.pathName.Append(name).String()
 	error := os.Mkdir(p, os.FileMode(perm&0777))
 	if error != nil {
 		return nil, serr.UxErrnoToErr(error, name)
 	}
-	d1, err := makeDir(append(d.pathName, name))
+	d1, err := newDir(append(d.pathName, name))
 	if err != nil {
 		return nil, err
 	}
 	return d1, nil
 }
 
-func (d *Dir) mkFile(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
+func (d *Dir) newFile(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	p := d.pathName.Append(name).String()
 	fd, error := syscall.Open(p, uxFlags(m)|syscall.O_CREAT|syscall.O_EXCL, uint32(perm&0777))
 	if error != nil {
 		return nil, serr.UxErrnoToErr(error, name)
 	}
-	f, err := makeFile(append(d.pathName, name))
+	f, err := newFile(append(d.pathName, name))
 	if err != nil {
 		return nil, err
 	}
@@ -106,23 +106,23 @@ func (d *Dir) mkFile(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 	return f, nil
 }
 
-func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
+func (d *Dir) newPipe(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	p := d.pathName.Append(name).String()
 	error := syscall.Mkfifo(p, uint32(perm&0777))
 	if error != nil {
 		return nil, serr.UxErrnoToErr(error, name)
 	}
-	f, err := makePipe(ctx, append(d.pathName, name))
+	f, err := newPipe(ctx, append(d.pathName, name))
 	if err != nil {
 		return nil, err
 	}
 	return f, nil
 }
 
-func (d *Dir) mkSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
+func (d *Dir) newSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	p := d.pathName.Append(name)
-	log.Printf("mkSym %s\n", p)
-	s, err := makeSymlink(p, true)
+	log.Printf("newSym %s\n", p)
+	s, err := newSymlink(p, true)
 	if err != nil {
 		return nil, err
 	}
@@ -133,13 +133,13 @@ func (d *Dir) mkSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsO
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.UX, "%v: Create %v n %v perm %v m %v\n", ctx, d, name, perm, m)
 	if perm.IsDir() {
-		return d.mkDir(ctx, name, perm, m)
+		return d.newDir(ctx, name, perm, m)
 	} else if perm.IsPipe() {
-		return d.mkPipe(ctx, name, perm, m)
+		return d.newPipe(ctx, name, perm, m)
 	} else if perm.IsSymlink() {
-		return d.mkSym(ctx, name, perm, m)
+		return d.newSym(ctx, name, perm, m)
 	} else {
-		return d.mkFile(ctx, name, perm, m)
+		return d.newFile(ctx, name, perm, m)
 	}
 }
 
@@ -154,22 +154,22 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 	db.DPrintf(db.UX, "%v: Lookup %v %v st %v\n", ctx, d, name, st)
 	var o fs.FsObj
 	if st.Tmode().IsDir() {
-		o, err = makeDir(append(d.pathName, name))
+		o, err = newDir(append(d.pathName, name))
 		if err != nil {
 			return nil, nil, path, err
 		}
 	} else if st.Tmode().IsSymlink() {
-		o, err = makeSymlink(append(d.pathName, name), false)
+		o, err = newSymlink(append(d.pathName, name), false)
 		if err != nil {
 			return nil, nil, path, err
 		}
 	} else if st.Tmode().IsPipe() {
-		o, err = makePipe(ctx, append(d.pathName, name))
+		o, err = newPipe(ctx, append(d.pathName, name))
 		if err != nil {
 			return nil, nil, path, err
 		}
 	} else {
-		o, err = makeFile(append(d.pathName, name))
+		o, err = newFile(append(d.pathName, name))
 		if err != nil {
 			return nil, nil, path, err
 		}
@@ -191,7 +191,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string, f sp.Tfen
 func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.UX, "%v: Remove %v %v\n", ctx, d, name)
 	p := d.pathName.Copy().Append(name)
-	o, err := makeObj(p)
+	o, err := newObj(p)
 	if err != nil {
 		return err
 	}

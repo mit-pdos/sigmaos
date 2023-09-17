@@ -15,7 +15,7 @@ type SessionMgr struct {
 	done     bool
 }
 
-func MakeSessionMgr(st *SessionTable, pfn sps.Fsrvfcall) *SessionMgr {
+func NewSessionMgr(st *SessionTable, pfn sps.Fsrvfcall) *SessionMgr {
 	sm := &SessionMgr{}
 	sm.st = st
 	sm.srvfcall = pfn
@@ -79,7 +79,7 @@ func (sm *SessionMgr) runHeartbeats() {
 	for !sm.Done() {
 		<-sessHeartbeatT.C
 		sess := sm.getConnectedSessions()
-		hbs := sessp.MakeFcallMsg(sp.MkTheartbeat(sess), nil, 0, 0, nil)
+		hbs := sessp.NewFcallMsg(sp.MkTheartbeat(sess), nil, 0, 0, nil)
 		sm.srvfcall(hbs)
 	}
 }
@@ -92,7 +92,7 @@ func (sm *SessionMgr) runDetaches() {
 		<-sessTimeoutT.C
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
-			detach := sessp.MakeFcallMsg(&sp.Tdetach{}, nil, s.ClientId, s.Sid, nil)
+			detach := sessp.NewFcallMsg(&sp.Tdetach{}, nil, s.ClientId, s.Sid, nil)
 			sm.srvfcall(detach)
 		}
 	}

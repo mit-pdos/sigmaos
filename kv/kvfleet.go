@@ -66,7 +66,7 @@ type KVFleet struct {
 	cpids       []sp.Tpid
 }
 
-func MakeKvdFleet(sc *sigmaclnt.SigmaClnt, job string, crashbal, nkvd, kvdrepl, crashkvd int, kvdmcpu proc.Tmcpu, crashhelper, auto string) (*KVFleet, error) {
+func NewKvdFleet(sc *sigmaclnt.SigmaClnt, job string, crashbal, nkvd, kvdrepl, crashkvd int, kvdmcpu proc.Tmcpu, crashhelper, auto string) (*KVFleet, error) {
 	kvf := &KVFleet{
 		SigmaClnt:   sc,
 		nkvd:        nkvd,

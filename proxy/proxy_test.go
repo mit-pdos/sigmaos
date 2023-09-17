@@ -24,7 +24,7 @@ func initTest(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	// start named
-	ts.Tstate = test.MakeTstatePath(t, sp.NAMED)
+	ts.Tstate = test.NewTstatePath(t, sp.NAMED)
 	sts, err := ts.GetDir(sp.NAMED)
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, named.InitRootDir))

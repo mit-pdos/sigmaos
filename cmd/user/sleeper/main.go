@@ -19,7 +19,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v sleep_length outdir <native>\n", os.Args[0])
 		os.Exit(1)
 	}
-	l, err := MakeSleeper(os.Args[1:])
+	l, err := NewSleeper(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
@@ -38,9 +38,9 @@ type Sleeper struct {
 	time.Time
 }
 
-func MakeSleeper(args []string) (*Sleeper, error) {
+func NewSleeper(args []string) (*Sleeper, error) {
 	if len(args) < 2 {
-		return nil, errors.New("MakeSleeper: too few arguments")
+		return nil, errors.New("NewSleeper: too few arguments")
 	}
 	s := &Sleeper{}
 	s.Time = time.Now()
@@ -59,7 +59,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 
 	s.native = len(args) == 3 && args[2] == "native"
 
-	db.DPrintf(db.SLEEPER, "MakeSleeper: %v\n", args)
+	db.DPrintf(db.SLEEPER, "NewSleeper: %v\n", args)
 
 	if !s.native {
 		err := s.Started()
@@ -76,7 +76,7 @@ func (s *Sleeper) waitEvict(ch chan *proc.Status) {
 		if err != nil {
 			db.DFatalf("Error WaitEvict: %v", err)
 		}
-		ch <- proc.MakeStatus(proc.StatusEvicted)
+		ch <- proc.NewStatus(proc.StatusEvicted)
 	}
 }
 
@@ -86,11 +86,11 @@ func (s *Sleeper) sleep(ch chan *proc.Status) {
 		fpath := path.Join(s.outdir, s.ProcEnv().GetPID().String()+"_out")
 		_, err := s.PutFile(fpath, 0777, sp.OWRITE, []byte("hello"))
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error: Makefile %v in Sleeper.Work: %v\n", fpath, err)
+			db.DPrintf(db.ALWAYS, "Error: Newfile %v in Sleeper.Work: %v\n", fpath, err)
 		}
 	}
 	// Measure latency of all ops except for Exited.
-	ch <- proc.MakeStatusInfo(proc.StatusOK, "elapsed time", time.Since(s.Time))
+	ch <- proc.NewStatusInfo(proc.StatusOK, "elapsed time", time.Since(s.Time))
 }
 
 func (s *Sleeper) Work() {

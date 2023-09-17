@@ -24,14 +24,14 @@ import (
 //
 
 func main() {
-	t, err := MakeTrans(os.Args)
+	t, err := NewTrans(os.Args)
 	if err != nil {
 		db.DFatalf("Error %v", err)
 	}
 
-	p, err := perf.MakePerf(t.ProcEnv(), perf.THUMBNAIL)
+	p, err := perf.NewPerf(t.ProcEnv(), perf.THUMBNAIL)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
 
@@ -56,12 +56,12 @@ type Trans struct {
 	ctx    fs.CtxI
 }
 
-func MakeTrans(args []string) (*Trans, error) {
+func NewTrans(args []string) (*Trans, error) {
 	if len(args) != 3 {
-		return nil, fmt.Errorf("MakeTrans: too few arguments: %v", args)
+		return nil, fmt.Errorf("NewTrans: too few arguments: %v", args)
 	}
 	pcfg := proc.GetProcEnv()
-	db.DPrintf(db.IMGD, "MakeTrans %v: %v\n", pcfg.GetPID(), args)
+	db.DPrintf(db.IMGD, "NewTrans %v: %v\n", pcfg.GetPID(), args)
 	t := &Trans{}
 	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
 	if err != nil {
@@ -82,7 +82,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	rdr, err := t.OpenReader(t.inputs[i])
 	if err != nil {
 		db.DFatalf("Error open file %v", err)
-		return proc.MakeStatusErr("File not found", err)
+		return proc.NewStatusErr("File not found", err)
 	}
 	db.DPrintf(db.ALWAYS, "Time %v open: %v", t.inputs[i], time.Since(do))
 	var dc time.Time
@@ -94,7 +94,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	ds := time.Now()
 	img, err := jpeg.Decode(rdr)
 	if err != nil {
-		return proc.MakeStatusErr("Decode", err)
+		return proc.NewStatusErr("Decode", err)
 	}
 	db.DPrintf(db.ALWAYS, "Time %v read/decode: %v", t.inputs[i], time.Since(ds))
 	dr := time.Now()
@@ -118,5 +118,5 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	}()
 
 	jpeg.Encode(wrt, img1, nil)
-	return proc.MakeStatus(proc.StatusOK)
+	return proc.NewStatus(proc.StatusOK)
 }

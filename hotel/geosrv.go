@@ -36,7 +36,7 @@ type safeIndex struct {
 	geoidx *geoindex.ClusteringIndex
 }
 
-func makeSafeIndex(path string) *safeIndex {
+func newSafeIndex(path string) *safeIndex {
 	return &safeIndex{
 		geoidx: newGeoIndex(path),
 	}
@@ -79,16 +79,16 @@ func RunGeoSrv(job string, public bool) error {
 	geo := &Geo{}
 	geo.indexes = make([]*safeIndex, 0, N_INDEX)
 	for i := 0; i < N_INDEX; i++ {
-		geo.indexes = append(geo.indexes, makeSafeIndex("data/geo.json"))
+		geo.indexes = append(geo.indexes, newSafeIndex("data/geo.json"))
 	}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELGEO, geo, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELGEO, geo, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
 
-	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_GEO)
+	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_GEO)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
 	//	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())

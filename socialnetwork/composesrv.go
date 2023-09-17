@@ -37,11 +37,11 @@ func RunComposeSrv(public bool, jobname string) error {
 	csrv := &ComposeSrv{}
 	csrv.sid = rand.Int31n(536870912) // 2^29
 
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_COMPOSE, csrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_COMPOSE, csrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(SOCIAL_NETWORK_POST)
+	fsls := NewFsLibs(SOCIAL_NETWORK_POST)
 	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err
@@ -63,9 +63,9 @@ func RunComposeSrv(public bool, jobname string) error {
 	}
 	csrv.homec = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Starting compose service %v\n", csrv.sid)
-	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_COMPOSE)
+	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
-		dbg.DFatalf("MakePerf err %v\n", err)
+		dbg.DFatalf("NewPerf err %v\n", err)
 	}
 	defer perf.Done()
 	return ssrv.RunServer()

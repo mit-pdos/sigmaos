@@ -13,7 +13,7 @@ import (
 )
 
 func TestBootNamed(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	sts, err := ts.GetDir(sp.NAMED + "/")
 	assert.Nil(t, err)
@@ -25,7 +25,7 @@ func TestBootNamed(t *testing.T) {
 }
 
 func TestKillNamed(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	sts, err := ts.GetDir(sp.NAMED + "/")
 	assert.Nil(t, err)

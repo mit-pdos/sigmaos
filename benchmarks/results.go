@@ -28,7 +28,7 @@ type Results struct {
 	tpt  []float64       // To avoid converting to float slices many times for the stats library.
 }
 
-func MakeResults(n int, u Tunit) *Results {
+func NewResults(n int, u Tunit) *Results {
 	r := &Results{}
 	r.dur = make([]time.Duration, 0, n)
 	r.amt = make([]float64, 0, n)

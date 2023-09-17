@@ -52,7 +52,7 @@ type Rate struct {
 // Run starts the server
 func RunRateSrv(job string, public bool, cache string) error {
 	r := &Rate{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELRATE, r, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELRATE, r, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func RunRateSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := MkCacheClnt(cache, MakeFsLibs(HOTELRATE), job)
+	cachec, err := MkCacheClnt(cache, NewFsLibs(HOTELRATE), job)
 	if err != nil {
 		return err
 	}
@@ -81,9 +81,9 @@ func RunRateSrv(job string, public bool, cache string) error {
 	}
 	//	r.tracer = tracing.Init("rate", proc.GetSigmaJaegerIP())
 	//	defer r.tracer.Flush()
-	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_RATE)
+	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_RATE)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
 	return ssrv.RunServer()

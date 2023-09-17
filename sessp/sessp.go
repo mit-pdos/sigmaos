@@ -66,12 +66,12 @@ func (fcm *FcallMsg) Tag() Ttag {
 	return Ttag(fcm.Fc.Tag)
 }
 
-func MakeFcallMsgNull() *FcallMsg {
+func NewFcallMsgNull() *FcallMsg {
 	fc := &Fcall{}
 	return &FcallMsg{fc, nil, nil}
 }
 
-func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno) *FcallMsg {
+func NewFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno) *FcallMsg {
 	fcall := &Fcall{
 		Type:    uint32(msg.Type()),
 		Tag:     0,
@@ -84,8 +84,8 @@ func MakeFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseq
 	return &FcallMsg{fcall, msg, data}
 }
 
-func MakeFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
-	fm := MakeFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil)
+func NewFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
+	fm := NewFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil)
 	fm.Fc.Seqno = req.Fc.Seqno
 	fm.Fc.Tag = req.Fc.Tag
 	return fm

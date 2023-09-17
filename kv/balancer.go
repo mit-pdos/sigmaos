@@ -86,7 +86,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 		db.DFatalf("Error atoi crashhelperstr: %v", err)
 	}
 	bl.crashhelper = int64(crashhelper)
-	bl.kc = NewClerk(sc.FsLib, job, repl == "repl")
+	bl.kc = NewClerkFsLib(sc.FsLib, job, repl == "repl")
 	bl.repl = repl
 
 	var kvdnc int
@@ -97,20 +97,20 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 	}
 	bl.kvdmcpu = proc.Tmcpu(kvdnc)
 
-	bl.lc, err = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBalancerElect(bl.job), sp.DMSYMLINK|077)
+	bl.lc, err = leaderclnt.NewLeaderClnt(bl.FsLib, KVBalancerElect(bl.job), sp.DMSYMLINK|077)
 	if err != nil {
-		db.DFatalf("MakeLeaderClnt %v\n", err)
+		db.DFatalf("NewLeaderClnt %v\n", err)
 	}
 
-	ssrv, err := sigmasrv.MakeSigmaSrvClntNoRPC("", bl.SigmaClnt)
+	ssrv, err := sigmasrv.NewSigmaSrvClntNoRPC("", bl.SigmaClnt)
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}
 	ctx := ctx.MkCtx(KVBALANCER, 0, sp.NoClntId, nil, nil)
 	root, _ := ssrv.Root(path.Path{})
-	err1 := dir.MkNod(ctx, root, "ctl", makeCtl(ctx, root, bl))
+	err1 := dir.MkNod(ctx, root, "ctl", newCtl(ctx, root, bl))
 	if err1 != nil {
-		db.DFatalf("MakeNod clone failed %v\n", err1)
+		db.DFatalf("NewNod clone failed %v\n", err1)
 	}
 
 	// start server and write ch when server is done
@@ -153,7 +153,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 		bl.clearIsBusy()
 
 		if auto == "auto" {
-			bl.mo = MakeMonitor(bl.SigmaClnt, bl.job, bl.kvdmcpu)
+			bl.mo = NewMonitor(bl.SigmaClnt, bl.job, bl.kvdmcpu)
 			bl.ch = make(chan bool)
 			go bl.monitor()
 		}
@@ -168,7 +168,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 		bl.ch <- true
 		<-bl.ch
 	}
-	ssrv.SrvExit(proc.MakeStatus(proc.StatusEvicted))
+	ssrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
 }
 
 func BalancerOp(fsl *fslib.FsLib, job string, opcode, kvd string) error {
@@ -202,8 +202,8 @@ type Ctl struct {
 	bl *Balancer
 }
 
-func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
-	i := inode.MakeInode(ctx, sp.DMDEVICE, parent)
+func newCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
+	i := inode.NewInode(ctx, sp.DMDEVICE, parent)
 	return &Ctl{i, bl}
 }
 
@@ -257,7 +257,7 @@ func (bl *Balancer) monitorMyself() {
 func (bl *Balancer) PostConfig() {
 	err := bl.PutFileJsonAtomic(KVConfig(bl.job), 0777, *bl.conf)
 	if err != nil {
-		db.DFatalf("MakeFile %v err %v\n", KVConfig(bl.job), err)
+		db.DFatalf("NewFile %v err %v\n", KVConfig(bl.job), err)
 	}
 }
 
@@ -278,7 +278,7 @@ func (bl *Balancer) recover(fence sp.Tfence) {
 		// this must be the first recovery of the balancer;
 		// otherwise, there would be a either a config or
 		// backup config.
-		bl.conf = MakeConfig(fence)
+		bl.conf = NewConfig(fence)
 		bl.PostConfig()
 	}
 }
@@ -302,7 +302,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 }
 
 func (bl *Balancer) spawnProc(args []string) (sp.Tpid, error) {
-	p := proc.MakeProc(args[0], args[1:])
+	p := proc.NewProc(args[0], args[1:])
 	p.SetCrash(bl.crashhelper)
 	err := bl.Spawn(p)
 	if err != nil {

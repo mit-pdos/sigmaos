@@ -23,11 +23,11 @@ type FidClnt struct {
 	ft   *FenceTable
 }
 
-func MakeFidClnt(pcfg *proc.ProcEnv, clntnet string) *FidClnt {
+func NewFidClnt(pcfg *proc.ProcEnv, clntnet string) *FidClnt {
 	fidc := &FidClnt{}
-	fidc.fids = mkFidMap()
-	fidc.pc = protclnt.MakeClnt(pcfg, clntnet)
-	fidc.ft = MakeFenceTable()
+	fidc.fids = newFidMap()
+	fidc.pc = protclnt.NewClnt(pcfg, clntnet)
+	fidc.ft = NewFenceTable()
 	return fidc
 }
 
@@ -101,8 +101,8 @@ func (fidc *FidClnt) Attach(uname sp.Tuname, cid sp.TclntId, addrs sp.Taddrs, pn
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}
-	pc := fidc.pc.MakeProtClnt(addrs)
-	fidc.fids.insert(fid, makeChannel(pc, uname, path.Split(pn), []*sp.Tqid{reply.Qid}))
+	pc := fidc.pc.NewProtClnt(addrs)
+	fidc.fids.insert(fid, newChannel(pc, uname, path.Split(pn), []*sp.Tqid{reply.Qid}))
 	return fid, nil
 }
 

@@ -31,11 +31,11 @@ type TextSrv struct {
 func RunTextSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Creating text service\n")
 	tsrv := &TextSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_TEXT, tsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_TEXT, tsrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
-	fsls := MakeFsLibs(SOCIAL_NETWORK_TEXT)
+	fsls := NewFsLibs(SOCIAL_NETWORK_TEXT)
 	rpcc, err := rpcclnt.MkRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err

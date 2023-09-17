@@ -10,7 +10,7 @@ import (
 )
 
 func TestStartStop(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	db.DPrintf(db.TEST, "Successfully started SigmaOS")
 	ts.Shutdown()
 }

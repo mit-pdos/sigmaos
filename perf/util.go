@@ -95,13 +95,13 @@ type Perf struct {
 	sigc           chan os.Signal
 }
 
-func MakePerf(pcfg *proc.ProcEnv, s Tselector) (*Perf, error) {
-	return MakePerfMulti(pcfg, s, "")
+func NewPerf(pcfg *proc.ProcEnv, s Tselector) (*Perf, error) {
+	return NewPerfMulti(pcfg, s, "")
 }
 
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
-func MakePerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
+func NewPerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 	p := &Perf{}
 	p.selector = s
 	p.utilChan = make(chan bool, 1)
@@ -118,7 +118,7 @@ func MakePerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 	}
 	// Make the output dir
 	if err := os.MkdirAll(OUTPUT_PATH, 0777); err != nil {
-		db.DPrintf(db.ALWAYS, "MakePerfMulti: MkdirAll %s err %v", OUTPUT_PATH, err)
+		db.DPrintf(db.ALWAYS, "NewPerfMulti: MkdirAll %s err %v", OUTPUT_PATH, err)
 		return nil, err
 	}
 	basePath := path.Join(OUTPUT_PATH, path.Base(pcfg.GetPID().String()))

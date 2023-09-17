@@ -17,7 +17,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func mkTpath(key path.Path) sp.Tpath {
+func newTpath(key path.Path) sp.Tpath {
 	h := fnv.New64a()
 	h.Write([]byte(key.String()))
 	return sp.Tpath(h.Sum64())
@@ -39,7 +39,7 @@ type Obj struct {
 	off sp.Toffset
 }
 
-func makeObj(bucket string, key path.Path, perm sp.Tperm) *Obj {
+func newObj(bucket string, key path.Path, perm sp.Tperm) *Obj {
 	o := &Obj{}
 	o.bucket = bucket
 	o.key = key
@@ -83,11 +83,11 @@ func (o *Obj) readHead(fss3 *Fss3) *serr.Err {
 	return nil
 }
 
-func makeFsObj(bucket string, perm sp.Tperm, key path.Path) fs.FsObj {
+func newFsObj(bucket string, perm sp.Tperm, key path.Path) fs.FsObj {
 	if perm.IsDir() {
-		return makeDir(bucket, key.Copy(), perm)
+		return newDir(bucket, key.Copy(), perm)
 	} else {
-		return makeObj(bucket, key.Copy(), perm)
+		return newObj(bucket, key.Copy(), perm)
 	}
 }
 
@@ -105,11 +105,11 @@ func (o *Obj) stat() *sp.Stat {
 	if len(o.key) > 0 {
 		name = o.key.Base()
 	}
-	return sp.MkStat(sp.MakeQidPerm(o.perm, 0, o.Path()), o.perm|sp.Tperm(0777), uint32(o.mtime), name, "")
+	return sp.MkStat(sp.NewQidPerm(o.perm, 0, o.Path()), o.perm|sp.Tperm(0777), uint32(o.mtime), name, "")
 }
 
 func (o *Obj) Path() sp.Tpath {
-	return mkTpath(o.key)
+	return newTpath(o.key)
 }
 
 // convert ux perms into np perm; maybe symlink?
@@ -119,7 +119,7 @@ func (o *Obj) Perm() sp.Tperm {
 
 func (o *Obj) Parent() fs.Dir {
 	dir := o.key.Dir()
-	return makeDir(o.bucket, dir, sp.DMDIR)
+	return newDir(o.bucket, dir, sp.DMDIR)
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {

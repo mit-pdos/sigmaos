@@ -12,8 +12,8 @@ import (
 	"sigmaos/spcodec"
 )
 
-type MakeInodeF func(CtxI, sp.Tperm, sp.Tmode, Dir, MakeDirF) (Inode, *serr.Err)
-type MakeDirF func(Inode, MakeInodeF) Inode
+type NewInodeF func(CtxI, sp.Tperm, sp.Tmode, Dir, NewDirF) (Inode, *serr.Err)
+type NewDirF func(Inode, NewInodeF) Inode
 
 type CtxI interface {
 	Uname() sp.Tuname

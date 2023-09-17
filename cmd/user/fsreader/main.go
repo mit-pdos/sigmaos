@@ -20,7 +20,7 @@ import (
 //
 
 func main() {
-	r, err := MakeReader(os.Args)
+	r, err := NewReader(os.Args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
@@ -36,12 +36,12 @@ type Reader struct {
 	ctx    fs.CtxI
 }
 
-func MakeReader(args []string) (*Reader, error) {
+func NewReader(args []string) (*Reader, error) {
 	if len(args) != 2 {
-		return nil, errors.New("MakeReader: too few arguments")
+		return nil, errors.New("NewReader: too few arguments")
 	}
 	pcfg := proc.GetProcEnv()
-	db.DPrintf(db.ALWAYS, "MakeReader %v: %v\n", pcfg.GetPID(), args)
+	db.DPrintf(db.ALWAYS, "NewReader %v: %v\n", pcfg.GetPID(), args)
 	r := &Reader{}
 	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
 	if err != nil {
@@ -64,7 +64,7 @@ func (r *Reader) Work() *proc.Status {
 	defer r.Close(pipefd)
 	fd, err := r.Open(r.input, sp.OREAD)
 	if err != nil {
-		return proc.MakeStatusErr("File not found", nil)
+		return proc.NewStatusErr("File not found", nil)
 	}
 	defer r.Close(fd)
 	for {
@@ -77,7 +77,7 @@ func (r *Reader) Work() *proc.Status {
 			db.DFatalf("Error pipe Write: %v", err)
 		}
 	}
-	return proc.MakeStatus(proc.StatusOK)
+	return proc.NewStatus(proc.StatusOK)
 }
 
 func (r *Reader) Exit(status *proc.Status) {

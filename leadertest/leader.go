@@ -30,9 +30,9 @@ func RunLeader(dir, last, child string) {
 	sc.Started()
 
 	fn := path.Join(dir, OUT)
-	l, err := leaderclnt.MakeLeaderClnt(sc.FsLib, LEADERFN, 0777)
+	l, err := leaderclnt.NewLeaderClnt(sc.FsLib, LEADERFN, 0777)
 	if err != nil {
-		db.DFatalf("MakeLeaderClnt %v failed %v\n", LEADERFN, err)
+		db.DFatalf("NewLeaderClnt %v failed %v\n", LEADERFN, err)
 	}
 
 	if err := l.LeadAndFence(nil, []string{dir}); err != nil {
@@ -57,13 +57,13 @@ func RunLeader(dir, last, child string) {
 	if child == "child" {
 		// Create a proc running in the same fence as leader
 		b := l.Fence().Json()
-		p := proc.MakeProc("leadertest-proc", []string{string(b), dir})
+		p := proc.NewProc("leadertest-proc", []string{string(b), dir})
 		if err := sc.Spawn(p); err != nil {
-			sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+			sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 			return
 		}
 		if err := sc.WaitStart(p.GetPid()); err != nil {
-			sc.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+			sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 			return
 		}
 	}

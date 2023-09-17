@@ -22,7 +22,7 @@ func RunKernelSrv(k *kernel.Kernel) error {
 	ks := &KernelSrv{k: k}
 	ks.ch = make(chan struct{})
 	db.DPrintf(db.KERNEL, "Run KernelSrv %v", k.Param.KernelId)
-	_, err := sigmasrv.MakeSigmaSrvClnt(sp.BOOT+k.Param.KernelId, k.SigmaClnt, ks)
+	_, err := sigmasrv.NewSigmaSrvClnt(sp.BOOT+k.Param.KernelId, k.SigmaClnt, ks)
 	if err != nil {
 		return err
 	}

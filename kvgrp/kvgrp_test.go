@@ -29,9 +29,9 @@ type Tstate struct {
 	job string
 }
 
-func makeTstate(t *testing.T, nrepl int, persist bool) *Tstate {
+func newTstate(t *testing.T, nrepl int, persist bool) *Tstate {
 	ts := &Tstate{job: rand.String(4), grp: GRP}
-	ts.Tstate = test.MakeTstateAll(t)
+	ts.Tstate = test.NewTstateAll(t)
 	ts.MkDir(kvgrp.KVDIR, 0777)
 	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
 	assert.Nil(t, err)
@@ -52,7 +52,7 @@ func (ts *Tstate) Shutdown() {
 }
 
 func TestStartStopRepl0(t *testing.T) {
-	ts := makeTstate(t, 0, false)
+	ts := newTstate(t, 0, false)
 
 	sts, _, err := ts.ReadDir(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
 	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
@@ -64,7 +64,7 @@ func TestStartStopRepl0(t *testing.T) {
 }
 
 func TestStartStopReplN(t *testing.T) {
-	ts := makeTstate(t, N_REPL, false)
+	ts := newTstate(t, N_REPL, false)
 	err := ts.gm.Stop()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown()
@@ -73,7 +73,7 @@ func TestStartStopReplN(t *testing.T) {
 func (ts *Tstate) testRecover() {
 	ts.Shutdown()
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
-	ts.Tstate = test.MakeTstateAll(ts.T)
+	ts.Tstate = test.NewTstateAll(ts.T)
 	gms, err := groupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")
 	assert.Equal(ts.T, 1, len(gms))
@@ -88,11 +88,11 @@ func (ts *Tstate) testRecover() {
 }
 
 func TestRestartRepl0(t *testing.T) {
-	ts := makeTstate(t, 0, true)
+	ts := newTstate(t, 0, true)
 	ts.testRecover()
 }
 
 func TestRestartReplN(t *testing.T) {
-	ts := makeTstate(t, N_REPL, true)
+	ts := newTstate(t, N_REPL, true)
 	ts.testRecover()
 }

@@ -35,9 +35,9 @@ type Tstate struct {
 	job string
 }
 
-func makeTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
+func newTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
 	ts := &Tstate{job: rand.String(4), grp: GRP}
-	ts.Tstate = test.MakeTstateAll(t)
+	ts.Tstate = test.NewTstateAll(t)
 	ts.MkDir(kvgrp.KVDIR, 0777)
 	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
 	assert.Nil(t, err)
@@ -54,9 +54,9 @@ func makeTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
 // not-found for the semaphore, which is interpreted as a successful
 // down by the semclnt.
 func TestServerCrash(t *testing.T) {
-	ts := makeTstate(t, 1, CRASH, 0, 0)
+	ts := newTstate(t, 1, CRASH, 0, 0)
 
-	sem := semclnt.MakeSemClnt(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
+	sem := semclnt.NewSemClnt(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 	err := sem.Init(0)
 	assert.Nil(t, err)
 
@@ -65,9 +65,9 @@ func TestServerCrash(t *testing.T) {
 	ch := make(chan error)
 	go func() {
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := fslib.MakeFsLib(pcfg)
+		fsl, err := fslib.NewFsLib(pcfg)
 		assert.Nil(t, err)
-		sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
+		sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 		err = sem.Down()
 		ch <- err
 	}()
@@ -96,8 +96,8 @@ func BurstProc(n int, f func(chan error)) error {
 }
 
 func TestProcManyOK(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("proctest", []string{NTRIALS, "sleeper", "1us", ""})
+	ts := test.NewTstateAll(t)
+	a := proc.NewProc("proctest", []string{NTRIALS, "sleeper", "1us", ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.GetPid())
@@ -109,8 +109,8 @@ func TestProcManyOK(t *testing.T) {
 }
 
 func TestProcCrashMany(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("proctest", []string{NTRIALS, "crash"})
+	ts := test.NewTstateAll(t)
+	a := proc.NewProc("proctest", []string{NTRIALS, "crash"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.GetPid())
@@ -122,8 +122,8 @@ func TestProcCrashMany(t *testing.T) {
 }
 
 func TestProcPartitionMany(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("proctest", []string{NTRIALS, "partition"})
+	ts := test.NewTstateAll(t)
+	a := proc.NewProc("proctest", []string{NTRIALS, "partition"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.GetPid())
@@ -138,12 +138,12 @@ func TestProcPartitionMany(t *testing.T) {
 
 func TestReconnectSimple(t *testing.T) {
 	const N = 1000
-	ts := makeTstate(t, 0, 0, 0, NETFAIL)
+	ts := newTstate(t, 0, 0, 0, NETFAIL)
 
 	ch := make(chan error)
 	go func() {
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := fslib.MakeFsLib(pcfg)
+		fsl, err := fslib.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
 			_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
@@ -166,13 +166,13 @@ func TestReconnectSimple(t *testing.T) {
 func TestServerPartitionNonBlocking(t *testing.T) {
 	const N = 50
 
-	ts := makeTstate(t, 0, 0, PARTITION, 0)
+	ts := newTstate(t, 0, 0, PARTITION, 0)
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
 			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-			fsl, err := fslib.MakeFsLib(pcfg)
+			fsl, err := fslib.NewFsLib(pcfg)
 			assert.Nil(t, err)
 			for true {
 				_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
@@ -196,15 +196,15 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 func TestServerPartitionBlocking(t *testing.T) {
 	const N = 50
 
-	ts := makeTstate(t, 0, 0, PARTITION, 0)
+	ts := newTstate(t, 0, 0, PARTITION, 0)
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
 			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-			fsl, err := fslib.MakeFsLib(pcfg)
+			fsl, err := fslib.NewFsLib(pcfg)
 			assert.Nil(t, err)
-			sem := semclnt.MakeSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
+			sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 			sem.Init(0)
 			err = sem.Down()
 			ch <- err
@@ -224,7 +224,7 @@ const (
 )
 
 func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
-	fsl, err := fslib.MakeFsLib(pcfg)
+	fsl, err := fslib.NewFsLib(pcfg)
 	assert.Nil(t, err)
 	fn := sp.UX + "~local/file-" + string(pcfg.GetUname())
 	stop := false
@@ -264,7 +264,7 @@ func TestWriteCrash(t *testing.T) {
 		CRASHSRV = 1000000
 	)
 
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	ch := make(chan error)
 
 	for i := 0; i < N; i++ {

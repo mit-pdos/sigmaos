@@ -23,7 +23,7 @@ const NAMED_ECHO_SERVER = DIR_ECHO_SERVER + "echo-server"
 func RunEchoSrv(public bool) error {
 	echosrv := &EchoSrv{rand.String(8)}
 	dbg.DPrintf(DEBUG_ECHO_SERVER, "==%v== Creating echo server \n", echosrv.sid)
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(NAMED_ECHO_SERVER, echosrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(NAMED_ECHO_SERVER, echosrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

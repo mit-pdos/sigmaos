@@ -74,7 +74,7 @@ func (g *Group) readCreateCfg(myid, nrepl int) *GroupConfig {
 			}
 			if nrepl > 0 {
 				sem := grpSemPath(g.jobdir, g.grp)
-				sclnt := semclnt.MakeSemClnt(g.SigmaClnt.FsLib, sem)
+				sclnt := semclnt.NewSemClnt(g.SigmaClnt.FsLib, sem)
 				sclnt.Init(0)
 			}
 		} else {
@@ -95,10 +95,10 @@ func (g *Group) AcquireReadCfg() *GroupConfig {
 	return cfg
 }
 
-func (g *Group) makeRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *replraft.RaftConfig) {
+func (g *Group) newRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *replraft.RaftConfig) {
 	var raftCfg *replraft.RaftConfig
 
-	db.DPrintf(db.KVGRP, "%v/%v makeRaftConfig %v\n", g.grp, myid, cfg)
+	db.DPrintf(db.KVGRP, "%v/%v newRaftConfig %v\n", g.grp, myid, cfg)
 
 	pn := grpConfPath(g.jobdir, g.grp)
 
@@ -108,7 +108,7 @@ func (g *Group) makeRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *r
 		initial = true
 		ip = g.ip + ":0"
 	}
-	raftCfg = replraft.MakeRaftConfig(g.ProcEnv(), myid, ip, initial)
+	raftCfg = replraft.NewRaftConfig(g.ProcEnv(), myid, ip, initial)
 
 	if initial {
 		// Get the listener address selected by raft and advertise it to group (if initial)
@@ -131,7 +131,7 @@ func (g *Group) waitRaftConfig(cfg *GroupConfig) *GroupConfig {
 	db.DPrintf(db.KVGRP, "waitRaftConfig %v\n", cfg)
 
 	sem := grpSemPath(g.jobdir, g.grp)
-	sclnt := semclnt.MakeSemClnt(g.SigmaClnt.FsLib, sem)
+	sclnt := semclnt.NewSemClnt(g.SigmaClnt.FsLib, sem)
 
 	if !cfg.RaftInitialized() {
 		// Release leadership so that another member can write config
@@ -162,7 +162,7 @@ func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) (*Gr
 		}
 	}
 
-	ssrv, err := sigmasrv.MakeSigmaSrvClntFence("", g.SigmaClnt, cs)
+	ssrv, err := sigmasrv.NewSigmaSrvClntFence("", g.SigmaClnt, cs)
 	if err != nil {
 		return nil, err
 	}

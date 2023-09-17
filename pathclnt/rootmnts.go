@@ -23,7 +23,7 @@ type RootMountTable struct {
 	mounts map[string]*RootMount
 }
 
-func mkRootMountTable() *RootMountTable {
+func newRootMountTable() *RootMountTable {
 	mt := &RootMountTable{}
 	mt.mounts = make(map[string]*RootMount)
 	return mt
@@ -96,11 +96,11 @@ func (pathc *PathClnt) resolveRoot(pn path.Path, uname sp.Tuname) (*serr.Err, bo
 	return nil, false
 }
 
-func (pathc *PathClnt) MakeRootMount(uname sp.Tuname, pn, mntname string) error {
+func (pathc *PathClnt) NewRootMount(uname sp.Tuname, pn, mntname string) error {
 	if !strings.HasPrefix(pn, sp.NAME) {
 		pn = sp.NAMED + pn
 	}
-	db.DPrintf(db.SVCMOUNT, "MakeRootMount: %v %v\n", pn, mntname)
+	db.DPrintf(db.SVCMOUNT, "NewRootMount: %v %v\n", pn, mntname)
 	svc, rest, err := pathc.PathLastSymlink(pn, uname)
 	if err != nil {
 		db.DPrintf(db.SVCMOUNT, "PathLastSymlink %v err %v\n", pn, err)
@@ -110,7 +110,7 @@ func (pathc *PathClnt) MakeRootMount(uname sp.Tuname, pn, mntname string) error 
 		return err
 	}
 	if err := pathc.rootmt.add(uname, svc, rest, mntname); err != nil {
-		db.DPrintf(db.SVCMOUNT, "MakeRootMount: add %v err %v\n", svc, err)
+		db.DPrintf(db.SVCMOUNT, "NewRootMount: add %v err %v\n", svc, err)
 		return err
 	}
 	return nil

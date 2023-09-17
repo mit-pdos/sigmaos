@@ -39,7 +39,7 @@ func checkFence(fsl *fslib.FsLib, job string, fence *sp.Tfence) {
 	}
 }
 
-func MakeMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
+func NewMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func MakeMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
 	mv := &Mover{fence: fence,
 		SigmaClnt: sc,
 		job:       job,
-		kc:        NewClerk(sc.FsLib, job, repl == "repl"),
+		kc:        NewClerkFsLib(sc.FsLib, job, repl == "repl"),
 		exit:      true,
 	}
 	if sh, err := strconv.ParseUint(shard, 10, 32); err != nil {
@@ -114,7 +114,7 @@ func (mv *Mover) Move(src, dst string) {
 	db.DPrintf(db.KVMV, "conf %v: move %v done from %v to %v err %v\n", mv.fence, mv.shard, src, dst, err)
 	if mv.exit {
 		if err != nil {
-			mv.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+			mv.ClntExit(proc.NewStatusErr(err.Error(), nil))
 		} else {
 			mv.ClntExitOK()
 		}

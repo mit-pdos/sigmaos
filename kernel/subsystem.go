@@ -32,19 +32,19 @@ func (ss *Subsystem) String() string {
 	return s
 }
 
-func makeSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
+func newSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
 	return &Subsystem{pclnt, k, p, how, cmd, nil, false}
 }
 
-func makeSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow) *Subsystem {
-	return makeSubsystemCmd(pclnt, k, p, how, nil)
+func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow) *Subsystem {
+	return newSubsystemCmd(pclnt, k, p, how, nil)
 }
 
 func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how procclnt.Thow, mcpu proc.Tmcpu) (*Subsystem, error) {
 	pid := sp.GenPid(program)
-	p := proc.MakePrivProcPid(pid, program, args, true)
+	p := proc.NewPrivProcPid(pid, program, args, true)
 	p.SetMcpu(mcpu)
-	ss := makeSubsystem(k.ProcClnt, k, p, how)
+	ss := newSubsystem(k.ProcClnt, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelId, k.ip)
 }
 
@@ -158,7 +158,7 @@ type SubsystemInfo struct {
 	Ip   string
 }
 
-func MakeSubsystemInfo(kpid sp.Tpid, ip string) *SubsystemInfo {
+func NewSubsystemInfo(kpid sp.Tpid, ip string) *SubsystemInfo {
 	return &SubsystemInfo{kpid, ip}
 }
 

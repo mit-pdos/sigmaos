@@ -219,11 +219,11 @@ const (
 	I = 1000
 )
 
-func testManyInorder(t *testing.T, mkiv func() interval.IIntervals) {
+func testManyInorder(t *testing.T, newiv func() interval.IIntervals) {
 	tot := time.Duration(0)
 	var v reflect.Type
 	for t := 0; t < I; t++ {
-		ivs := mkiv()
+		ivs := newiv()
 		v = reflect.TypeOf(ivs)
 		start := time.Now()
 		for i := uint64(0); i < N; i++ {
@@ -239,14 +239,14 @@ func TestManyInOrder(t *testing.T) {
 	testManyInorder(t, sliceintervals.MkIInterval)
 }
 
-func testManyGaps(t *testing.T, mkiv func() interval.IIntervals) {
+func testManyGaps(t *testing.T, newiv func() interval.IIntervals) {
 	const (
 		B = 10
 	)
 	tot := time.Duration(0)
 	var v reflect.Type
 	for t := 0; t < I; t++ {
-		ivs := mkiv()
+		ivs := newiv()
 		v = reflect.TypeOf(ivs)
 		start := time.Now()
 		for i := uint64(N * B); i > 1; i -= B {
@@ -272,12 +272,12 @@ func bench(siv interval.IIntervals, ivs []*interval.Tinterval) {
 	}
 }
 
-func testManyRandom(t *testing.T, mkiv func() interval.IIntervals) {
+func testManyRandom(t *testing.T, newiv func() interval.IIntervals) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tot := time.Duration(0)
 	var v reflect.Type
 	for t := 0; t < I; t++ {
-		siv := mkiv()
+		siv := newiv()
 		v = reflect.TypeOf(siv)
 		ivs := make([]*interval.Tinterval, N)
 		for i := 0; i < N; i++ {

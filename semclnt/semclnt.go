@@ -20,7 +20,7 @@ type SemClnt struct {
 	*fslib.FsLib
 }
 
-func MakeSemClnt(fsl *fslib.FsLib, semaphore string) *SemClnt {
+func NewSemClnt(fsl *fslib.FsLib, semaphore string) *SemClnt {
 	c := &SemClnt{}
 	c.path = semaphore
 	c.FsLib = fsl

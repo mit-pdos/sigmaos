@@ -26,7 +26,7 @@ type Tracer struct {
 	t trace.Tracer
 }
 
-func MakeTracer(t trace.Tracer) *Tracer {
+func NewTracer(t trace.Tracer) *Tracer {
 	return &Tracer{
 		t: t,
 	}
@@ -55,7 +55,7 @@ func (t *Tracer) Flush() {
 	}
 }
 
-func makeJaegerExporter(host string) *jaeger.Exporter {
+func newJaegerExporter(host string) *jaeger.Exporter {
 	exp, err := jaeger.New(
 		jaeger.WithAgentEndpoint(
 			jaeger.WithAgentHost(host),
@@ -68,8 +68,8 @@ func makeJaegerExporter(host string) *jaeger.Exporter {
 }
 
 func Init(svcname string, jaegerhost string) *Tracer {
-	unsafeExporter := makeJaegerExporter(jaegerhost)
-	exporter := makeThreadSafeExporterWrapper(unsafeExporter)
+	unsafeExporter := newJaegerExporter(jaegerhost)
+	exporter := newThreadSafeExporterWrapper(unsafeExporter)
 	// Create a sampler for the trace provider.
 	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(SAMPLE_RATIO))
 	//	sampler := sdktrace.AlwaysSample()
@@ -81,5 +81,5 @@ func Init(svcname string, jaegerhost string) *Tracer {
 		sdktrace.WithSyncer(exporter),
 		sdktrace.WithResource(res))
 	otel.SetTracerProvider(tp)
-	return MakeTracer(otel.Tracer(svcname))
+	return NewTracer(otel.Tracer(svcname))
 }

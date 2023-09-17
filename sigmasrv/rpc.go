@@ -17,7 +17,7 @@ type rpcDev struct {
 	rpcs *rpcsrv.RPCSrv
 }
 
-func mkRpcDev(rpcs *rpcsrv.RPCSrv) *rpcDev {
+func newRpcDev(rpcs *rpcsrv.RPCSrv) *rpcDev {
 	return &rpcDev{rpcs}
 }
 
@@ -26,8 +26,8 @@ type rpcSession struct {
 	rpcs *rpcsrv.RPCSrv
 }
 
-func (rd *rpcDev) mkRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
-	rpc := &rpcSession{rpcs: rd.rpcs, Inode: mfs.MakeDevInode()}
+func (rd *rpcDev) newRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
+	rpc := &rpcSession{rpcs: rd.rpcs, Inode: mfs.NewDevInode()}
 	return rpc, nil
 }
 

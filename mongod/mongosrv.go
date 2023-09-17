@@ -28,7 +28,7 @@ type MongoSrv struct {
 	mclnt *mongo.Client
 }
 
-func makeServer(mongodUrl string) (*MongoSrv, error) {
+func newServer(mongodUrl string) (*MongoSrv, error) {
 	s := &MongoSrv{}
 	uri := "mongodb://" + mongodUrl
 	ctx, _ := context.WithTimeout(context.Background(), DIAL_TIMEOUT_SEC*time.Second)
@@ -46,13 +46,13 @@ func makeServer(mongodUrl string) (*MongoSrv, error) {
 
 func RunMongod(mongodUrl string) error {
 	dbg.DPrintf(dbg.MONGO, "Making mongo proxy server at %v", mongodUrl)
-	s, err := makeServer(mongodUrl)
+	s, err := newServer(mongodUrl)
 	if err != nil {
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Starting mongo proxy server")
 	pcfg := proc.GetProcEnv()
-	ssrv, err := sigmasrv.MakeSigmaSrv(sp.MONGO, s, pcfg)
+	ssrv, err := sigmasrv.NewSigmaSrv(sp.MONGO, s, pcfg)
 	if err != nil {
 		return err
 	}

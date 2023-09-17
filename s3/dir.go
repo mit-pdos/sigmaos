@@ -44,8 +44,8 @@ func (d *Dir) String() string {
 	return s + fmt.Sprintf(" dents %v", d.dents)
 }
 
-func makeDir(bucket string, key path.Path, perm sp.Tperm) *Dir {
-	o := makeObj(bucket, key, perm)
+func newDir(bucket string, key path.Path, perm sp.Tperm) *Dir {
+	o := newObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
 	dir.dents = sorteddir.MkSortedDir()
@@ -93,7 +93,7 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *serr.Err {
 			d.dents.Insert(strings.TrimRight(n, "/"), sp.DMDIR)
 		}
 	}
-	d.sz = sp.Tlength(d.dents.Len()) // makeup size
+	d.sz = sp.Tlength(d.dents.Len()) // newup size
 	db.DPrintf(db.S3, "s3ReadDirL: dir %v key %v\n", d, key)
 	return nil
 }
@@ -114,7 +114,7 @@ func (d *Dir) dirents() []*Obj {
 	dents := make([]*Obj, 0, d.dents.Len())
 	d.dents.Iter(func(n string, e interface{}) bool {
 		if n != "." {
-			dents = append(dents, makeObj(d.bucket, d.key.Copy().Append(n), e.(sp.Tperm)))
+			dents = append(dents, newObj(d.bucket, d.key.Copy().Append(n), e.(sp.Tperm)))
 		}
 		return true
 	})
@@ -133,27 +133,27 @@ func (d *Dir) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	return st, nil
 }
 
-func mkObjs(base *Obj) []fs.FsObj {
+func newObjs(base *Obj) []fs.FsObj {
 	os := make([]fs.FsObj, 0, len(base.key))
 	for i, _ := range base.key {
 		if i+1 >= len(base.key) {
 			break
 		}
-		os = append(os, makeFsObj(base.bucket, sp.DMDIR, base.key[0:i+1]))
+		os = append(os, newFsObj(base.bucket, sp.DMDIR, base.key[0:i+1]))
 	}
 	return os
 }
 
 func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
-	o := makeObj(d.bucket, d.key.Copy().AppendPath(path), sp.Tperm(0777))
+	o := newObj(d.bucket, d.key.Copy().AppendPath(path), sp.Tperm(0777))
 	if err := o.readHead(fss3); err == nil {
 		// name is a file; done
 		db.DPrintf(db.S3, "%v: Lookup %v o %v\n", ctx, path, o)
-		os := append(mkObjs(o), o)
+		os := append(newObjs(o), o)
 		return os, o, nil, nil
 	}
 	// maybe path names a dir
-	d1 := makeDir(d.bucket, d.key.Copy().AppendPath(path), sp.DMDIR|sp.Tperm(0777))
+	d1 := newDir(d.bucket, d.key.Copy().AppendPath(path), sp.DMDIR|sp.Tperm(0777))
 	if err := d1.fill(); err != nil {
 		db.DPrintf(db.S3, "%v: Lookup %v err %v\n", ctx, path, err)
 		return nil, nil, path, err
@@ -164,7 +164,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, pat
 		return nil, nil, path, serr.MkErr(serr.TErrNotfound, path)
 	}
 	db.DPrintf(db.S3, "%v: Lookup return %v %v\n", ctx, path, d1)
-	return append(mkObjs(d1.Obj), d1), d1, nil, nil
+	return append(newObjs(d1.Obj), d1), d1, nil, nil
 }
 
 func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
@@ -218,13 +218,13 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *ser
 	if err != nil {
 		return nil, serr.MkErrError(err)
 	}
-	o := makeFsObj(d.bucket, perm, d.key.Copy().Append(name))
+	o := newFsObj(d.bucket, perm, d.key.Copy().Append(name))
 	return o, nil
 }
 
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.S3, "Create %v name: %v\n", d, name)
-	o := makeObj(d.bucket, d.key.Copy().Append(name), perm)
+	o := newObj(d.bucket, d.key.Copy().Append(name), perm)
 	_, err := o.Stat(ctx)
 	if err == nil {
 		return nil, serr.MkErr(serr.TErrExists, name)
@@ -260,7 +260,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 	}
 	perm := e.(sp.Tperm)
 	if perm.IsDir() {
-		d1 := makeDir(d.bucket, d.key.Copy().Append(name), perm)
+		d1 := newDir(d.bucket, d.key.Copy().Append(name), perm)
 		if err := d1.s3ReadDir(fss3); err != nil {
 			return err
 		}

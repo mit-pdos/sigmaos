@@ -26,7 +26,7 @@ type NetServer struct {
 	l          net.Listener
 }
 
-func MakeNetServer(pcfg *proc.ProcEnv, ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
+func NewNetServer(pcfg *proc.ProcEnv, ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
 	srv := &NetServer{pcfg: pcfg, sesssrv: ss, writefcall: m, readframe: u}
 
 	// Create and start the main server listener
@@ -63,7 +63,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)
-		MakeSrvConn(srv, conn)
+		NewSrvConn(srv, conn)
 	}
 }
 

@@ -28,10 +28,10 @@ type Pipe struct {
 	buf     []byte
 }
 
-func MakePipe(ctx fs.CtxI) *Pipe {
+func NewPipe(ctx fs.CtxI) *Pipe {
 	pipe := &Pipe{}
-	pipe.condr = ctx.SessCondTable().MakeSessCond(&pipe.mu)
-	pipe.condw = ctx.SessCondTable().MakeSessCond(&pipe.mu)
+	pipe.condr = ctx.SessCondTable().NewSessCond(&pipe.mu)
+	pipe.condw = ctx.SessCondTable().NewSessCond(&pipe.mu)
 	pipe.sct = ctx.SessCondTable()
 	pipe.buf = make([]byte, 0, PIPESZ)
 	pipe.nreader = 0

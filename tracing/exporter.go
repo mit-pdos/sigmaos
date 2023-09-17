@@ -14,7 +14,7 @@ type threadSafeExporterWrapper struct {
 	exporter sdktrace.SpanExporter
 }
 
-func makeThreadSafeExporterWrapper(exporter sdktrace.SpanExporter) sdktrace.SpanExporter {
+func newThreadSafeExporterWrapper(exporter sdktrace.SpanExporter) sdktrace.SpanExporter {
 	return &threadSafeExporterWrapper{
 		exporter: exporter,
 	}

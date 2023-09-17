@@ -34,7 +34,7 @@ type TimelineSrv struct {
 func RunTimelineSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Creating timeline service\n")
 	tlsrv := &TimelineSrv{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_TIMELINE, tlsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_TIMELINE, tlsrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func RunTimelineSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, TIMELINE_COL, []string{"userid"})
 	tlsrv.mongoc = mongoc
-	fsls := MakeFsLibs(SOCIAL_NETWORK_TIMELINE)
+	fsls := NewFsLibs(SOCIAL_NETWORK_TIMELINE)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err
@@ -56,9 +56,9 @@ func RunTimelineSrv(public bool, jobname string) error {
 	}
 	tlsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Starting timeline service\n")
-	perf, err := perf.MakePerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_TIMELINE)
+	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
-		dbg.DFatalf("MakePerf err %v\n", err)
+		dbg.DFatalf("NewPerf err %v\n", err)
 	}
 	defer perf.Done()
 

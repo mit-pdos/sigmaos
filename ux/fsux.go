@@ -30,12 +30,12 @@ func RunFsUx(rootux string) {
 	}
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := newUx(rootux)
-	root, sr := makeDir([]string{rootux})
+	root, sr := newDir([]string{rootux})
 	if sr != nil {
-		db.DFatalf("makeDir %v\n", sr)
+		db.DFatalf("newDir %v\n", sr)
 	}
 	pcfg := proc.GetProcEnv()
-	srv, err := sigmasrv.MakeSigmaSrvRoot(root, ip+":0", sp.UX, pcfg)
+	srv, err := sigmasrv.NewSigmaSrvRoot(root, ip+":0", sp.UX, pcfg)
 	if err != nil {
 		db.DFatalf("BootSrvAndPost %v\n", err)
 	}

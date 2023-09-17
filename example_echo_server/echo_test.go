@@ -28,19 +28,19 @@ type TstateEcho struct {
 	pid     sp.Tpid
 }
 
-func makeTstateEcho(t *testing.T) (*TstateEcho, error) {
+func newTstateEcho(t *testing.T) (*TstateEcho, error) {
 	jobname := rand.String(8)
 	jobdir := path.Join(echo.DIR_ECHO_SERVER, jobname)
 	var err error
 	tse := &TstateEcho{}
 	tse.jobname = jobname
-	tse.Tstate = test.MakeTstateAll(t)
+	tse.Tstate = test.NewTstateAll(t)
 	tse.MkDir(echo.DIR_ECHO_SERVER, 0777)
 	if err = tse.MkDir(jobdir, 0777); err != nil {
 		return nil, err
 	}
 	// Start proc
-	p := proc.MakeProc("example-echo", []string{strconv.FormatBool(test.Overlays)})
+	p := proc.NewProc("example-echo", []string{strconv.FormatBool(test.Overlays)})
 	p.SetMcpu(proc.Tmcpu(1000))
 	if _, errs := tse.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
 		dbg.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
@@ -66,7 +66,7 @@ func (tse *TstateEcho) Stop() error {
 
 func TestEcho(t *testing.T) {
 	// start server
-	tse, err := makeTstateEcho(t)
+	tse, err := newTstateEcho(t)
 	assert.Nil(t, err, "Test server should start properly %v", err)
 
 	// create a RPC client and query server
@@ -84,7 +84,7 @@ func TestEcho(t *testing.T) {
 
 func TestEchoTime(t *testing.T) {
 	// start server
-	tse, err := makeTstateEcho(t)
+	tse, err := newTstateEcho(t)
 	assert.Nil(t, err, "Test server should start properly")
 
 	// create a RPC client and query server
@@ -107,15 +107,15 @@ func TestEchoTime(t *testing.T) {
 
 func TestEchoLoad(t *testing.T) {
 	// start server
-	tse, err := makeTstateEcho(t)
+	tse, err := newTstateEcho(t)
 	assert.Nil(t, err, "Test server should start properly")
 
 	// create a RPC client and query server
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
-		fsl, err := fslib.MakeFsLib(tse.jobname + "-" + strconv.Itoa(i))
+		fsl, err := fslib.NewFsLib(tse.jobname + "-" + strconv.Itoa(i))
 		if err != nil {
-			dbg.DFatalf("Error mkfsl: %v", err)
+			dbg.DFatalf("Error newfsl: %v", err)
 		}
 		fsls = append(fsls, fsl)
 	}

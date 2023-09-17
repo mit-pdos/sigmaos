@@ -89,7 +89,7 @@ func ReadFcallAndDataFrames(rdr io.Reader) (sn sessp.Tseqno, fc []byte, data []b
 }
 
 func UnmarshalFcallAndData(f []byte, buf []byte) *sessp.FcallMsg {
-	fm := sessp.MakeFcallMsgNull()
+	fm := sessp.NewFcallMsgNull()
 	if err := decode(bytes.NewReader(f), fm); err != nil {
 		db.DFatalf("Decode error: %v", err)
 	}

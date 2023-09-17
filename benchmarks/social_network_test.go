@@ -70,7 +70,7 @@ type SocialNetworkJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeSocialNetworkJob(
+func NewSocialNetworkJob(
 		ts *test.RealmTstate, p *perf.Perf, sigmaos, readonly bool, 
 		durStr, maxrpsStr string, ncache int) *SocialNetworkJobInstance {
 	ji := &SocialNetworkJobInstance{}
@@ -100,10 +100,10 @@ func MakeSocialNetworkJob(
 	var err error
 	if sigmaos {
 		initUserAndGraph(ts.Ts.T, MONGO_URL)
-		ji.snCfg, err = sn.MakeConfig(
+		ji.snCfg, err = sn.NewConfig(
 			ts.SigmaClnt, ji.job, getDefaultSrvs(), ncache, true, test.Overlays)
 		assert.Nil(ts.Ts.T, err, "Error Make social network job: %v", err)
-		sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+		sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 		procs := sdc.GetRunningProcs()
 		progs := make(map[string][]string)
 		for sd, ps := range procs {
@@ -114,7 +114,7 @@ func MakeSocialNetworkJob(
 		}
 		dbg.DPrintf(dbg.TEST, "Running procs:%v", progs)
 	} else {
-		ji.snCfg, err = sn.MakeConfig(ts.SigmaClnt, ji.job, nil, 0, false, test.Overlays)
+		ji.snCfg, err = sn.NewConfig(ts.SigmaClnt, ji.job, nil, 0, false, test.Overlays)
 		p := sn.JobHTTPAddrsPath(ji.job)
 		mnt := sp.MkMountService(sp.MkTaddrs([]string{K8S_ADDR}))
 		assert.Nil(ts.Ts.T, ts.MountService(p, mnt, sp.NoLeaseId))
@@ -124,12 +124,12 @@ func MakeSocialNetworkJob(
 		defer cmd.Process.Kill()
 		initUserAndGraph(ts.Ts.T, "localhost:"+K8_FWD_PORT)
 	}
-	ji.wc = sn.MakeWebClnt(ts.FsLib, ji.job)
+	ji.wc = sn.NewWebClnt(ts.FsLib, ji.job)
 	// Make a load generators.
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(
-			ji.lgs, loadgen.MakeLoadGenerator(ji.dur[i], ji.maxrps[i], 
+			ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], 
 			func(r *rand.Rand) { randOps(ts.Ts.T, ji.wc, r, ji.readonly)}))
 	}
 	// warmup with writes for read-only runs

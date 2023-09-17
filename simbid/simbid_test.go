@@ -61,7 +61,7 @@ func TestRun(t *testing.T) {
 
 const HIGH = 10
 
-func mkArrival(t int) []float64 {
+func newArrival(t int) []float64 {
 	ls := make([]float64, t, t)
 	ls[0] = HIGH * AVG_ARRIVAL_RATE
 	for i := 1; i < t; i++ {
@@ -70,7 +70,7 @@ func mkArrival(t int) []float64 {
 	return ls
 }
 
-func mkArrivalExp(t int) ([]float64, float64) {
+func newArrivalExp(t int) ([]float64, float64) {
 	ls := make([]float64, t, t)
 	s := 0
 	n := t / 2
@@ -97,8 +97,8 @@ func TestOneTenant(t *testing.T) {
 	nTenant := 1
 	nTick := 100
 	nNode := 50
-	ls := mkArrival(nTenant)
-	w := mkWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 1.0)
+	ls := newArrival(nTenant)
+	w := newWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 1.0)
 	sim := runSim(w)
 	ten := &sim.tenants[0]
 	// sim.stats()
@@ -120,8 +120,8 @@ func TestWait(t *testing.T) {
 	nTenant := 1
 	nTick := 100
 	nNode := 5
-	ls := mkArrival(nTenant)
-	w := mkWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 1.0)
+	ls := newArrival(nTenant)
+	w := newWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 1.0)
 	sim := runSim(w)
 	//sim.stats()
 	r := float64(sim.nprocq) / float64(sim.world.nTick)
@@ -134,8 +134,8 @@ func TestComputeI(t *testing.T) {
 	nTenant := 1
 	nTick := 100
 	nNode := 50
-	ls := mkArrival(nTenant)
-	w := mkWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 0.5)
+	ls := newArrival(nTenant)
+	w := newWorld(nNode, nTenant, 1, ls, Tick(nTick), policyFixed, 0.5)
 	sim := runSim(w)
 	// sim.stats()
 	ten := &sim.tenants[0]
@@ -152,11 +152,11 @@ func TestFixedVsLast(t *testing.T) {
 	nNode := 35
 	nTenant := 100
 	nTick := Tick(1000)
-	ls := mkArrival(nTenant)
+	ls := newArrival(nTenant)
 	sims := make([]*Sim, 0)
 	policies := []Tpolicy{policyFixed, policyLast}
 	for _, p := range policies {
-		w := mkWorld(nNode, nTenant, 1, ls, nTick, p, 0.5)
+		w := newWorld(nNode, nTenant, 1, ls, nTick, p, 0.5)
 		s := runSim(w)
 		sims = append(sims, s)
 	}
@@ -168,13 +168,13 @@ func TestReserveNode(t *testing.T) {
 	nNode := 35
 	nTenant := 100
 	nTick := Tick(1000)
-	ls := mkArrival(nTenant)
+	ls := newArrival(nTenant)
 	sims := make([]*Sim, 0)
 	policies := []Tpolicy{policyLast, policyBidMore}
 	cis := []FTick{0.5, 1.0}
 	for _, ci := range cis {
 		for _, p := range policies {
-			w := mkWorld(nNode, nTenant, 1, ls, nTick, p, ci)
+			w := newWorld(nNode, nTenant, 1, ls, nTick, p, ci)
 			s := runSim(w)
 			//s.stats()
 			sims = append(sims, s)
@@ -190,13 +190,13 @@ func TestReserveNode(t *testing.T) {
 func TestMigration(t *testing.T) {
 	nTenant := 100
 	nTick := Tick(1000)
-	ls := mkArrival(nTenant)
+	ls := newArrival(nTenant)
 	npms := []int{1, 5}
 	nnodes := []int{35, 50}
 	sims := make([]*Sim, 0)
 	for _, n := range nnodes {
 		for _, npm := range npms {
-			w := mkWorld(n, nTenant, npm, ls, nTick, policyBidMore, 0.5)
+			w := newWorld(n, nTenant, npm, ls, nTick, policyBidMore, 0.5)
 			s := runSim(w)
 			//s.stats()
 			sims = append(sims, s)
@@ -216,7 +216,7 @@ func TestMigration(t *testing.T) {
 func TestArrivalExp(t *testing.T) {
 	nTenant := 128
 	nTick := Tick(1000)
-	ls, sum := mkArrivalExp(nTenant)
+	ls, sum := newArrivalExp(nTenant)
 	fmt.Printf("sum %f\n", sum)
 	npms := []int{1, 5}
 	nnodes := []int{200, 225}
@@ -224,7 +224,7 @@ func TestArrivalExp(t *testing.T) {
 	i := nTenant - 1
 	for _, n := range nnodes {
 		for _, npm := range npms {
-			w := mkWorld(n, nTenant, npm, ls, nTick, policyBidMore, 0.5)
+			w := newWorld(n, nTenant, npm, ls, nTick, policyBidMore, 0.5)
 			s := runSim(w)
 			s.stats()
 			// s.tenants[i].stats()

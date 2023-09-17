@@ -46,7 +46,7 @@ type Rec struct {
 func RunRecSrv(n string, public bool) error {
 	r := &Rec{}
 	r.hotels = loadRecTable("data/hotels.json")
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELREC, r, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELREC, r, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

@@ -39,7 +39,7 @@ type Session struct {
 	detachClnt    sps.DetachClntF
 }
 
-func makeSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
+func newSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
 	sess := &Session{protsrv: protsrv,
 		lastHeartbeat: time.Now(), Sid: sid, ClientId: cid, attachClnt: attachf,
 		detachClnt: detachf}
@@ -100,7 +100,7 @@ func (sess *Session) SendConn(fm *sessp.FcallMsg) {
 
 	// If there was a connection associated with this session...
 	if replies != nil {
-		replies <- sessconn.MakePartMarshaledMsg(fm)
+		replies <- sessconn.NewPartMarshaledMsg(fm)
 	}
 }
 

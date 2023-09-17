@@ -32,9 +32,9 @@ type Schedd struct {
 	realms     []sp.Trealm
 }
 
-func MakeSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
+func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
-		pmgr:     procmgr.MakeProcMgr(mfs, kernelId),
+		pmgr:     procmgr.NewProcMgr(mfs, kernelId),
 		qs:       make(map[sp.Trealm]*Queue),
 		realms:   make([]sp.Trealm, 0),
 		mcpufree: proc.Tmcpu(1000*linuxsched.NCores - reserveMcpu),
@@ -42,7 +42,7 @@ func MakeSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd 
 		kernelId: kernelId,
 	}
 	sd.cond = sync.NewCond(&sd.mu)
-	sd.scheddclnt = scheddclnt.MakeScheddClnt(mfs.SigmaClnt().FsLib)
+	sd.scheddclnt = scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib)
 	return sd
 }
 
@@ -50,7 +50,7 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
-	p := proc.MakeProcFromProto(req.ProcProto)
+	p := proc.NewProcFromProto(req.ProcProto)
 	p.SetKernelID(sd.kernelId, false)
 	db.DPrintf(db.SCHEDD, "[%v] %v Spawned %v", req.Realm, sd.kernelId, p)
 	realm := sp.Trealm(req.Realm)
@@ -186,28 +186,28 @@ func (sd *Schedd) addRealmQueueL(realm sp.Trealm) *Queue {
 	sd.qsmu.Lock()
 	defer sd.qsmu.Unlock()
 
-	q := makeQueue()
+	q := newQueue()
 	sd.qs[realm] = q
 	return q
 }
 
 func RunSchedd(kernelId string, reserveMcpu uint) error {
 	pcfg := proc.GetProcEnv()
-	mfs, err := memfssrv.MakeMemFs(path.Join(sp.SCHEDD, kernelId), pcfg)
+	mfs, err := memfssrv.NewMemFs(path.Join(sp.SCHEDD, kernelId), pcfg)
 	if err != nil {
-		db.DFatalf("Error MakeMemFs: %v", err)
+		db.DFatalf("Error NewMemFs: %v", err)
 	}
-	sd := MakeSchedd(mfs, kernelId, reserveMcpu)
-	ssrv, err := sigmasrv.MakeSigmaSrvMemFs(mfs, sd)
+	sd := NewSchedd(mfs, kernelId, reserveMcpu)
+	ssrv, err := sigmasrv.NewSigmaSrvMemFs(mfs, sd)
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)
 	}
 	setupMemFsSrv(ssrv.MemFs)
 	setupFs(ssrv.MemFs, sd)
 	// Perf monitoring
-	p, err := perf.MakePerf(pcfg, perf.SCHEDD)
+	p, err := perf.NewPerf(pcfg, perf.SCHEDD)
 	if err != nil {
-		db.DFatalf("Error MakePerf: %v", err)
+		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
 	go sd.schedule()

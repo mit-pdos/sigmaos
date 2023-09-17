@@ -10,12 +10,12 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func TestMakeFenceFs(t *testing.T) {
+func TestNewFenceFs(t *testing.T) {
 	fence := sp.Tfence1{}
 	fence.Epoch = 10
 
 	ctx := ctx.MkCtx("", 0, nil)
-	root := fencefs.MakeRoot()
+	root := fencefs.NewRoot()
 	assert.NotNil(t, root)
 	i, err := root.Create(ctx, fence.FenceId.Path.String(), 0777, sp.OWRITE)
 	assert.Nil(t, err)

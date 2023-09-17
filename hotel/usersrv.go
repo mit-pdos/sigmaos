@@ -42,7 +42,7 @@ type Users struct {
 
 func RunUserSrv(n string, public bool) error {
 	u := &Users{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELUSER, u, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELUSER, u, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}

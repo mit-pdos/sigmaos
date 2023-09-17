@@ -16,12 +16,12 @@ import (
 
 type DirImpl struct {
 	fs.Inode
-	mi    fs.MakeInodeF
+	mi    fs.NewInodeF
 	mu    sync.Mutex
 	dents *sorteddir.SortedDir
 }
 
-func MakeDir(i fs.Inode, mi fs.MakeInodeF) *DirImpl {
+func NewDir(i fs.Inode, mi fs.NewInodeF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
 	d.mi = mi
@@ -30,8 +30,8 @@ func MakeDir(i fs.Inode, mi fs.MakeInodeF) *DirImpl {
 	return d
 }
 
-func MakeDirF(i fs.Inode, mi fs.MakeInodeF) fs.Inode {
-	d := MakeDir(i, mi)
+func NewDirF(i fs.Inode, mi fs.NewInodeF) fs.Inode {
+	d := NewDir(i, mi)
 	return d
 }
 
@@ -76,8 +76,8 @@ func (dir *DirImpl) Dump() (string, error) {
 	return s, nil
 }
 
-func MkRootDir(ctx fs.CtxI, mi fs.MakeInodeF, parent fs.Dir) fs.Dir {
-	i, _ := mi(ctx, sp.DMDIR, 0, parent, MakeDirF)
+func MkRootDir(ctx fs.CtxI, mi fs.NewInodeF, parent fs.Dir) fs.Dir {
+	i, _ := mi(ctx, sp.DMDIR, 0, parent, NewDirF)
 	return i.(fs.Dir)
 }
 
@@ -224,7 +224,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 		i := v.(fs.Inode)
 		return i, serr.MkErr(serr.TErrExists, name)
 	}
-	newi, err := dir.mi(ctx, perm, m, dir, MakeDirF)
+	newi, err := dir.mi(ctx, perm, m, dir, NewDirF)
 	if err != nil {
 		return nil, err
 	}

@@ -11,7 +11,7 @@ type PartMarshaledMsg struct {
 	MarshaledFcm []byte
 }
 
-func MakePartMarshaledMsg(fcm *sessp.FcallMsg) *PartMarshaledMsg {
+func NewPartMarshaledMsg(fcm *sessp.FcallMsg) *PartMarshaledMsg {
 	return &PartMarshaledMsg{
 		fcm,
 		spcodec.MarshalFcallWithoutData(fcm),

@@ -55,7 +55,7 @@ func uniform(r *rand.Rand) uint64 {
 	return (rand.Uint64() % MAXTICK) + 1
 }
 
-func mkLambda(lc bool, ntick uint64) *Lambda {
+func newLambda(lc bool, ntick uint64) *Lambda {
 	l := &Lambda{}
 	if lc {
 		l.lc = lc
@@ -72,7 +72,7 @@ func (n *Node) String() string {
 	return fmt.Sprintf("ls %v", n.ls)
 }
 
-func mkSim() *Sim {
+func newSim() *Sim {
 	sim := &Sim{}
 	sim.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	sim.nodes = make([]*Node, NNODE)
@@ -80,7 +80,7 @@ func mkSim() *Sim {
 		sim.nodes[i] = &Node{}
 	}
 	sim.lc = make([]*Lambda, 0)
-	sim.lc = append(sim.lc, mkLambda(true, math.MaxUint64))
+	sim.lc = append(sim.lc, newLambda(true, math.MaxUint64))
 	sim.runLC(false)
 	sim.peak = NPEAK
 	return sim
@@ -97,7 +97,7 @@ func (sim *Sim) Print() {
 }
 
 func (sim *Sim) incLoad() {
-	sim.lc = append(sim.lc, mkLambda(true, NTICKLC))
+	sim.lc = append(sim.lc, newLambda(true, NTICKLC))
 	sim.nlc += 1
 }
 
@@ -108,8 +108,8 @@ func (sim *Sim) getLCLambda() *Lambda {
 }
 
 func (sim *Sim) getBELambda() *Lambda {
-	// return mkLambda(false, zipf(sim.rand))
-	return mkLambda(false, uniform(sim.rand))
+	// return newLambda(false, zipf(sim.rand))
+	return newLambda(false, uniform(sim.rand))
 }
 
 // Add LCs to nodes who aren't running anything or add to a node that
@@ -177,7 +177,7 @@ func runSim(util float64, preempt bool) {
 	t := uint64(0)
 	w := uint64(0)
 	for i := 0; i < NTRIAL; i++ {
-		sim := mkSim()
+		sim := newSim()
 		sim.maxutil = util
 		sim.preempt = preempt
 		stop := false

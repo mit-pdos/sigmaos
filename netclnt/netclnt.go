@@ -32,13 +32,13 @@ type NetClnt struct {
 	realm  sp.Trealm
 }
 
-func MakeNetClnt(sconn sessconnclnt.Conn, clntnet string, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
-	db.DPrintf(db.NETCLNT, "mkNetClnt to %v\n", addrs)
+func NewNetClnt(sconn sessconnclnt.Conn, clntnet string, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
+	db.DPrintf(db.NETCLNT, "newNetClnt to %v\n", addrs)
 	nc := &NetClnt{}
 	nc.sconn = sconn
 	err := nc.connect(clntnet, addrs)
 	if err != nil {
-		db.DPrintf(db.NETCLNT_ERR, "MakeNetClnt connect %v err %v\n", addrs, err)
+		db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", addrs, err)
 		return nil, err
 	}
 	go nc.reader()

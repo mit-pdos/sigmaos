@@ -36,7 +36,7 @@ type SessCond struct {
 	wakingConds map[sessp.Tsession]map[*cond]bool // Conds pending wakeup (which also may need to be alerted that the session has closed)
 }
 
-func makeSessCond(sct *SessCondTable, lock sync.Locker) *SessCond {
+func newSessCond(sct *SessCondTable, lock sync.Locker) *SessCond {
 	sc := &SessCond{}
 	sc.sct = sct
 	sc.lock = lock

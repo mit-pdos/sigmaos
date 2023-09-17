@@ -21,8 +21,8 @@ func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
 	return time.Unix(sts.Sec, int64(sts.Nsec))
 }
 
-func mkQid(mode sp.Tperm, v sp.TQversion, path sp.Tpath) *sp.Tqid {
-	return sp.MakeQid(sp.Qtype(mode>>sp.QTYPESHIFT), v, path)
+func newQid(mode sp.Tperm, v sp.TQversion, path sp.Tpath) *sp.Tqid {
+	return sp.NewQid(sp.Qtype(mode>>sp.QTYPESHIFT), v, path)
 }
 
 func umode2Perm(umode uint16) sp.Tperm {
@@ -49,7 +49,7 @@ func ustat(path path.Path) (*sp.Stat, *serr.Err) {
 		return nil, serr.UxErrnoToErr(error, path.Base())
 	}
 	t := statxTimestampToTime(statx.Mtime)
-	st := sp.MkStat(sp.MakeQidPerm(umode2Perm(statx.Mode), 0, sp.Tpath(statx.Ino)),
+	st := sp.MkStat(sp.NewQidPerm(umode2Perm(statx.Mode), 0, sp.Tpath(statx.Ino)),
 		umode2Perm(statx.Mode), uint32(t.Unix()), path.Base(), "")
 	st.Length = statx.Size
 	return st, nil
@@ -65,7 +65,7 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("pn %v p %v %v", o.pathName, o.path, o.perm)
 }
 
-func makeObj(path path.Path) (*Obj, *serr.Err) {
+func newObj(path path.Path) (*Obj, *serr.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, sp.DMSYMLINK}, err
 	} else {
@@ -140,7 +140,7 @@ func (o *Obj) SetMtime(m int64) {
 
 func (o *Obj) Parent() fs.Dir {
 	dir := o.pathName.Dir()
-	d, err := makeDir(dir)
+	d, err := newDir(dir)
 	if err != nil {
 		db.DFatalf("Parent %v err %v\n", dir, err)
 	}

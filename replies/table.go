@@ -19,7 +19,7 @@ type ReplyTable struct {
 	closed   bool
 }
 
-func MakeReplyTable(sid sessp.Tsession) *ReplyTable {
+func NewReplyTable(sid sessp.Tsession) *ReplyTable {
 	rt := &ReplyTable{}
 	rt.cond = sync.NewCond(&rt.Mutex)
 	rt.sid = sid
@@ -71,7 +71,7 @@ func (rt *ReplyTable) Register(request *sessp.FcallMsg) bool {
 	//	for s := iv.Start; s < iv.End; s++ {
 	//		delete(rt.entries, sessp.Tseqno(s))
 	//	}
-	rt.entries[request.Seqno()] = MakeReplyFuture()
+	rt.entries[request.Seqno()] = NewReplyFuture()
 	return true
 }
 
@@ -114,7 +114,7 @@ func (rt *ReplyTable) Close(cli sessp.Tclient, sid sessp.Tsession) {
 // Merge two reply caches.
 func (rt *ReplyTable) Merge(rt2 *ReplyTable) {
 	for seqno, entry := range rt2.entries {
-		rf := MakeReplyFuture()
+		rf := NewReplyFuture()
 		if entry.reply != nil {
 			rf.Complete(entry.reply)
 		}

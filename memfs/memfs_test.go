@@ -21,15 +21,15 @@ func init() {
 }
 
 func TestPipeBasic(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 
 	pipe := gopath.Join(pathname, "pipe")
-	err := ts.MakePipe(pipe, 0777)
-	assert.Nil(ts.T, err, "MakePipe")
+	err := ts.NewPipe(pipe, 0777)
+	assert.Nil(ts.T, err, "NewPipe")
 
 	ch := make(chan bool)
 	go func() {
-		fsl, err := fslib.MakeFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		fsl, err := fslib.NewFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
@@ -55,15 +55,15 @@ func TestPipeBasic(t *testing.T) {
 }
 
 func TestPipeClose(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 
 	pipe := gopath.Join(pathname, "pipe")
-	err := ts.MakePipe(pipe, 0777)
-	assert.Nil(ts.T, err, "MakePipe")
+	err := ts.NewPipe(pipe, 0777)
+	assert.Nil(ts.T, err, "NewPipe")
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		fsl, err := fslib.MakeFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		fsl, err := fslib.NewFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
@@ -94,15 +94,15 @@ func TestPipeClose(t *testing.T) {
 }
 
 func TestPipeRemove(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 	pipe := gopath.Join(pathname, "pipe")
 
-	err := ts.MakePipe(pipe, 0777)
-	assert.Nil(ts.T, err, "MakePipe")
+	err := ts.NewPipe(pipe, 0777)
+	assert.Nil(ts.T, err, "NewPipe")
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		fsl, err := fslib.MakeFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		fsl, err := fslib.NewFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OREAD)
 		assert.NotNil(ts.T, err, "Open")
@@ -118,13 +118,13 @@ func TestPipeRemove(t *testing.T) {
 }
 
 func TestPipeCrash0(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 	pipe := gopath.Join(pathname, "pipe")
-	err := ts.MakePipe(pipe, 0777)
-	assert.Nil(ts.T, err, "MakePipe")
+	err := ts.NewPipe(pipe, 0777)
+	assert.Nil(ts.T, err, "NewPipe")
 
 	go func() {
-		fsl, err := fslib.MakeFsLibAddr("writer", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		fsl, err := fslib.NewFsLibAddr("writer", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OWRITE)
 		assert.Nil(ts.T, err, "Open")
@@ -146,12 +146,12 @@ func TestPipeCrash0(t *testing.T) {
 }
 
 func TestPipeCrash1(t *testing.T) {
-	ts := test.MakeTstatePath(t, pathname)
+	ts := test.NewTstatePath(t, pathname)
 	pipe := gopath.Join(pathname, "pipe")
-	err := ts.MakePipe(pipe, 0777)
-	assert.Nil(ts.T, err, "MakePipe")
+	err := ts.NewPipe(pipe, 0777)
+	assert.Nil(ts.T, err, "NewPipe")
 
-	fsl1, err := fslib.MakeFsLibAddr("w1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	fsl1, err := fslib.NewFsLibAddr("w1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 	assert.Nil(t, err)
 	go func() {
 		// blocks
@@ -171,7 +171,7 @@ func TestPipeCrash1(t *testing.T) {
 
 	// start up second write to pipe
 	go func() {
-		fsl2, err := fslib.MakeFsLibAddr("w2", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		fsl2, err := fslib.NewFsLibAddr("w2", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
 		assert.Nil(t, err)
 		// the pipe has been closed for writing due to crash;
 		// this open should fail.

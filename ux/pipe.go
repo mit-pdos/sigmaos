@@ -14,13 +14,13 @@ type Pipe struct {
 	*Obj
 }
 
-func makePipe(ctx fs.CtxI, pathName path.Path) (*Pipe, *serr.Err) {
+func newPipe(ctx fs.CtxI, pathName path.Path) (*Pipe, *serr.Err) {
 	p := &Pipe{}
-	o, err := makeObj(pathName)
+	o, err := newObj(pathName)
 	if err != nil {
 		return nil, err
 	}
-	p.Pipe = pipe.MakePipe(ctx)
+	p.Pipe = pipe.NewPipe(ctx)
 	p.Obj = o
 	return p, nil
 }

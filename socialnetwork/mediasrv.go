@@ -36,7 +36,7 @@ func RunMediaSrv(public bool, jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Creating media service\n")
 	msrv := &MediaSrv{}
 	msrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(SOCIAL_NETWORK_MEDIA, msrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_MEDIA, msrv, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func RunMediaSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, MEDIA_COL, []string{"mediaid"})
 	msrv.mongoc = mongoc
-	fsls := MakeFsLibs(SOCIAL_NETWORK_MEDIA)
+	fsls := NewFsLibs(SOCIAL_NETWORK_MEDIA)
 	cachec, err := cachedsvcclnt.MkCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err

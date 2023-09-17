@@ -56,8 +56,8 @@ func (mfs *MemFs) MyAddrsPublic(net string) sp.Taddrs {
 }
 
 // Note: MkDev() sets parent
-func (mfs *MemFs) MakeDevInode() *inode.Inode {
-	return inode.MakeInode(mfs.ctx, sp.DMDEVICE, nil)
+func (mfs *MemFs) NewDevInode() *inode.Inode {
+	return inode.NewInode(mfs.ctx, sp.DMDEVICE, nil)
 }
 
 func (mfs *MemFs) lookup(path path.Path) (fs.FsObj, *lockmap.PathLock, *serr.Err) {

@@ -28,12 +28,12 @@ type Clnt struct {
 	pcfg  *proc.ProcEnv
 }
 
-func MakeClnt(pcfg *proc.ProcEnv, clntnet string) *Clnt {
+func NewClnt(pcfg *proc.ProcEnv, clntnet string) *Clnt {
 	clnt := &Clnt{}
 	clnt.seqno = 0
 	clnt.id = clid
 	clnt.pcfg = pcfg
-	clnt.sm = sessclnt.MakeMgr(pcfg, clnt.id, clntnet)
+	clnt.sm = sessclnt.NewMgr(pcfg, clnt.id, clntnet)
 	return clnt
 }
 
@@ -74,7 +74,7 @@ func (clnt *Clnt) DetachAll(cid sp.TclntId) *serr.Err {
 	return nil
 }
 
-func (clnt *Clnt) MakeProtClnt(addrs sp.Taddrs) *ProtClnt {
+func (clnt *Clnt) NewProtClnt(addrs sp.Taddrs) *ProtClnt {
 	protclnt := &ProtClnt{addrs, clnt}
 	return protclnt
 }

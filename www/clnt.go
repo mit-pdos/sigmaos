@@ -18,7 +18,7 @@ type WWWClnt struct {
 	*fslib.FsLib
 }
 
-func MakeWWWClnt(fsl *fslib.FsLib, job string) *WWWClnt {
+func NewWWWClnt(fsl *fslib.FsLib, job string) *WWWClnt {
 	addrs, err := GetJobHTTPAddrs(fsl, job)
 	if err != nil {
 		db.DFatalf("Error wwwd job http addrs: %v", err)
@@ -26,7 +26,7 @@ func MakeWWWClnt(fsl *fslib.FsLib, job string) *WWWClnt {
 	return &WWWClnt{job, addrs, fsl}
 }
 
-func MakeWWWClntAddr(addrs sp.Taddrs) *WWWClnt {
+func NewWWWClntAddr(addrs sp.Taddrs) *WWWClnt {
 	return &WWWClnt{"NOJOB", addrs, nil}
 }
 

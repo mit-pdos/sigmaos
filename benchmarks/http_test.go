@@ -17,8 +17,8 @@ type HTTPClnt struct {
 }
 
 func RunHTTPLoadGen(url string, dur time.Duration, maxrps int) {
-	wc := makeHTTPClnt(url)
-	lg := loadgen.MakeLoadGenerator(dur, maxrps, func(r *rand.Rand) {
+	wc := newHTTPClnt(url)
+	lg := loadgen.NewLoadGenerator(dur, maxrps, func(r *rand.Rand) {
 		_, err := wc.get()
 		if err != nil {
 			db.DFatalf("Error HTTPLoadGen.Get: %v", err)
@@ -32,7 +32,7 @@ func RunHTTPLoadGen(url string, dur time.Duration, maxrps int) {
 	lg.Stats()
 }
 
-func makeHTTPClnt(url string) *HTTPClnt {
+func newHTTPClnt(url string) *HTTPClnt {
 	//	transport := &http.Transport{
 	//		Dial: (&net.Dialer{
 	//			Timeout: 2 * time.Minute,

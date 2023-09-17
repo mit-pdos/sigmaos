@@ -23,7 +23,7 @@ type Queue struct {
 	pmap map[sp.Tpid]*proc.Proc
 }
 
-func makeQueue() *Queue {
+func newQueue() *Queue {
 	return &Queue{
 		lc:   make([]*proc.Proc, 0, DEF_Q_SZ),
 		lcws: make([]*proc.Proc, 0, DEF_Q_SZ),

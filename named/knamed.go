@@ -45,9 +45,9 @@ func RunKNamed(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	mnt, err := nd.mkSrv()
+	mnt, err := nd.newSrv()
 	if err != nil {
-		db.DFatalf("Error mkSrv %v\n", err)
+		db.DFatalf("Error newSrv %v\n", err)
 	}
 
 	if err := nd.fs.SetRootNamed(mnt); err != nil {

@@ -14,7 +14,7 @@ type Server struct {
 	rows *sql.Rows
 }
 
-func mkServer(dbdaddr string) (*Server, error) {
+func newServer(dbdaddr string) (*Server, error) {
 	s := &Server{}
 	db, error := sql.Open("mysql", "sigma1:sigmaos1@tcp("+dbdaddr+")/sigmaos")
 	if error != nil {

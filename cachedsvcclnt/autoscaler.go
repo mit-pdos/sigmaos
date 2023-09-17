@@ -20,7 +20,7 @@ type Autoscaler struct {
 	done bool
 }
 
-func MakeAutoscaler(cm *cachedsvc.CacheMgr, csc *CachedSvcClnt) *Autoscaler {
+func NewAutoscaler(cm *cachedsvc.CacheMgr, csc *CachedSvcClnt) *Autoscaler {
 	return &Autoscaler{
 		cm:  cm,
 		csc: csc,

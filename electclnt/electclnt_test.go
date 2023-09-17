@@ -16,13 +16,13 @@ const (
 )
 
 func TestAcquireRelease(t *testing.T) {
-	ts := test.MakeTstate(t)
+	ts := test.NewTstate(t)
 
 	N := 20
 
-	leader1, err := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
+	leader1, err := electclnt.NewElectClnt(ts.FsLib, LEADERNAME, 0)
 	assert.Nil(t, err)
-	leader2, err := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
+	leader2, err := electclnt.NewElectClnt(ts.FsLib, LEADERNAME, 0)
 	assert.Nil(t, err)
 
 	for i := 0; i < N; i++ {
@@ -41,7 +41,7 @@ func TestAcquireRelease(t *testing.T) {
 
 // n thread become try to become a leader and on success add 1 to shared file
 func TestLeaderConcur(t *testing.T) {
-	ts := test.MakeTstate(t)
+	ts := test.NewTstate(t)
 
 	N := 3000
 	n_threads := 20
@@ -54,7 +54,7 @@ func TestLeaderConcur(t *testing.T) {
 		go func(done *sync.WaitGroup, N *int, cnt *int) {
 			defer done.Done()
 			for {
-				leader, err := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
+				leader, err := electclnt.NewElectClnt(ts.FsLib, LEADERNAME, 0)
 				assert.Nil(t, err)
 				err = leader.AcquireLeadership([]byte{})
 				assert.Nil(ts.T, err, "AcquireLeader")
@@ -79,7 +79,7 @@ func TestLeaderConcur(t *testing.T) {
 
 // n thread become leader in turn and add 1
 func TestLeaderInTurn(t *testing.T) {
-	ts := test.MakeTstate(t)
+	ts := test.NewTstate(t)
 
 	N := uint64(20)
 	sum := uint64(0)
@@ -88,7 +88,7 @@ func TestLeaderInTurn(t *testing.T) {
 
 	for i := uint64(0); i < N; i++ {
 		go func(i uint64) {
-			leader, err := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
+			leader, err := electclnt.NewElectClnt(ts.FsLib, LEADERNAME, 0)
 			assert.Nil(t, err)
 			me := false
 			for !me {

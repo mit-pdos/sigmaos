@@ -7,7 +7,7 @@ import (
 
 type levels []*element
 
-func mkLevels(l int) levels {
+func newLevels(l int) levels {
 	return make([]*element, l)
 }
 
@@ -26,7 +26,7 @@ type element struct {
 	prev    *element
 }
 
-func mkElement(l int, iv *interval.Tinterval) *element {
+func newElement(l int, iv *interval.Tinterval) *element {
 	e := &element{levels: make([]*element, l, MaxLevel)}
 	if iv != nil {
 		e.iv = *iv

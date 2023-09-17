@@ -36,7 +36,7 @@ type WwwJobInstance struct {
 	*test.RealmTstate
 }
 
-func MakeWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) *WwwJobInstance {
+func NewWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) *WwwJobInstance {
 	ji := &WwwJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rand.String(16)
@@ -58,7 +58,7 @@ func MakeWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype 
 	}
 
 	ji.sempath = path.Join(www.JobDir(ji.job), "kvclerk-sem")
-	ji.sem = semclnt.MakeSemClnt(ts.FsLib, ji.sempath)
+	ji.sem = semclnt.NewSemClnt(ts.FsLib, ji.sempath)
 	err := ji.sem.Init(0)
 	assert.Nil(ji.Ts.T, err, "Sem init: %v", err)
 	assert.Equal(ji.Ts.T, reqtype, "compute")
@@ -68,9 +68,9 @@ func MakeWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype 
 func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 	var clnt *www.WWWClnt
 	if ji.sigmaos {
-		clnt = www.MakeWWWClnt(ji.FsLib, ji.job)
+		clnt = www.NewWWWClnt(ji.FsLib, ji.job)
 	} else {
-		clnt = www.MakeWWWClntAddr(sp.MkTaddrs([]string{ji.k8ssrvaddr}))
+		clnt = www.NewWWWClntAddr(sp.MkTaddrs([]string{ji.k8ssrvaddr}))
 	}
 	var latency time.Duration
 	for i := 0; i < ji.nreq; i++ {
@@ -86,7 +86,7 @@ func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 
 func (ji *WwwJobInstance) StartWwwJob() {
 	if ji.sigmaos {
-		a := proc.MakeProc("wwwd", []string{ji.job, ""})
+		a := proc.NewProc("wwwd", []string{ji.job, ""})
 		err := ji.Spawn(a)
 		assert.Nil(ji.Ts.T, err, "Spawn")
 		err = ji.WaitStart(a.GetPid())
@@ -122,7 +122,7 @@ func (ji *WwwJobInstance) StartWwwJob() {
 
 func (ji *WwwJobInstance) Wait() {
 	if ji.sigmaos {
-		clnt := www.MakeWWWClnt(ji.FsLib, ji.job)
+		clnt := www.NewWWWClnt(ji.FsLib, ji.job)
 		err := clnt.StopServer(ji.ProcClnt, ji.pid)
 		assert.Nil(ji.Ts.T, err)
 	}

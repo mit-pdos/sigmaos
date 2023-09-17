@@ -28,12 +28,12 @@ import (
 
 // ========== Proc Helpers ==========
 
-func makeNProcs(n int, prog string, args []string, env map[string]string, mcpu proc.Tmcpu) ([]*proc.Proc, []interface{}) {
+func newNProcs(n int, prog string, args []string, env map[string]string, mcpu proc.Tmcpu) ([]*proc.Proc, []interface{}) {
 	ps := make([]*proc.Proc, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
-		p := proc.MakeProc(prog, args)
+		p := proc.NewProc(prog, args)
 		for k, v := range env {
 			p.AppendEnv(k, v)
 		}
@@ -102,7 +102,7 @@ func blockMem(rootts *test.Tstate, mem string) []*proc.Proc {
 		db.DPrintf(db.TEST, "No mem blocking")
 		return nil
 	}
-	sdc := scheddclnt.MakeScheddClnt(rootts.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(rootts.SigmaClnt.FsLib)
 	// Get the number of schedds.
 	n, err := sdc.Nschedd()
 	if err != nil {
@@ -111,7 +111,7 @@ func blockMem(rootts *test.Tstate, mem string) []*proc.Proc {
 	ps := make([]*proc.Proc, 0, n)
 	for i := 0; i < n; i++ {
 		db.DPrintf(db.TEST, "Spawning memblock %v for %v of memory", i, mem)
-		p := proc.MakeProc("memblock", []string{mem})
+		p := proc.NewProc("memblock", []string{mem})
 		// Make it LC so it doesn't get swapped.
 		p.SetType(proc.T_LC)
 		_, errs := rootts.SpawnBurst([]*proc.Proc{p}, 1)
@@ -143,14 +143,14 @@ func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
 
 // Warm up a realm, by starting uprocds for it on all machines in the cluster.
 func warmupRealm(ts *test.RealmTstate) {
-	sdc := scheddclnt.MakeScheddClnt(ts.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	// Get the number of schedds.
 	n, err := sdc.Nschedd()
 	assert.Nil(ts.Ts.T, err, "Get NSchedd: %v", err)
 	// Spawn one BE and one LC proc on each schedd, to force uprocds to start.
 	for _, ncore := range []proc.Tmcpu{0, 1000} {
 		// Make N LC procs.
-		ps, _ := makeNProcs(n, "sleeper", []string{"1000us", ""}, nil, ncore)
+		ps, _ := newNProcs(n, "sleeper", []string{"1000us", ""}, nil, ncore)
 		// Burst the procs across the available schedds.
 		spawnBurstProcs(ts, ps)
 		// Wait for them to exit.
@@ -161,7 +161,7 @@ func warmupRealm(ts *test.RealmTstate) {
 
 // ========== Dir Helpers ==========
 
-func makeOutDir(ts *test.RealmTstate) {
+func newOutDir(ts *test.RealmTstate) {
 	err := ts.MkDir(OUT_DIR, 0777)
 	assert.Nil(ts.Ts.T, err, "Couldn't make out dir: %v", err)
 }
@@ -173,12 +173,12 @@ func rmOutDir(ts *test.RealmTstate) {
 
 // ========== Semaphore Helpers ==========
 
-func makeNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interface{}) {
+func newNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interface{}) {
 	ss := make([]*semclnt.SemClnt, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		spath := path.Join(OUT_DIR, rand.String(16))
-		s := semclnt.MakeSemClnt(ts.FsLib, spath)
+		s := semclnt.NewSemClnt(ts.FsLib, spath)
 		ss = append(ss, s)
 		is = append(is, s)
 	}
@@ -187,11 +187,11 @@ func makeNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interfa
 
 // ========== MR Helpers ========
 
-func makeNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string) ([]*MRJobInstance, []interface{}) {
+func newNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string) ([]*MRJobInstance, []interface{}) {
 	ms := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeMRJobInstance(ts, p, app, app+"-mr-"+rand.String(16)+"-"+ts.GetRealm().String())
+		i := NewMRJobInstance(ts, p, app, app+"-mr-"+rand.String(16)+"-"+ts.GetRealm().String())
 		ms = append(ms, i)
 		is = append(is, i)
 	}
@@ -210,7 +210,7 @@ func parseDurations(ts *test.RealmTstate, ss []string) []time.Duration {
 	return ds
 }
 
-func makeNKVJobs(ts *test.RealmTstate, n, nkvd, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdmcpu, ckmcpu proc.Tmcpu, auto string, redisaddr string) ([]*KVJobInstance, []interface{}) {
+func newNKVJobs(ts *test.RealmTstate, n, nkvd, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdmcpu, ckmcpu proc.Tmcpu, auto string, redisaddr string) ([]*KVJobInstance, []interface{}) {
 	// If we're running with unbounded clerks...
 	if len(phases) > 0 {
 		assert.Equal(ts.Ts.T, len(nclerks), len(phases), "Phase and clerk lengths don't match: %v != %v", len(phases), len(nclerks))
@@ -218,7 +218,7 @@ func makeNKVJobs(ts *test.RealmTstate, n, nkvd, kvdrepl int, nclerks []int, phas
 	js := make([]*KVJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		ji := MakeKVJobInstance(ts, nkvd, kvdrepl, nclerks, phases, ckdur, kvdmcpu, ckmcpu, auto, redisaddr)
+		ji := NewKVJobInstance(ts, nkvd, kvdrepl, nclerks, phases, ckdur, kvdmcpu, ckmcpu, auto, redisaddr)
 		js = append(js, ji)
 		is = append(is, ji)
 	}
@@ -226,12 +226,12 @@ func makeNKVJobs(ts *test.RealmTstate, n, nkvd, kvdrepl int, nclerks []int, phas
 }
 
 // ========== Cached Helpers ==========
-func makeNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr string, ckmcpu, cachemcpu proc.Tmcpu) ([]*CachedJobInstance, []interface{}) {
+func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr string, ckmcpu, cachemcpu proc.Tmcpu) ([]*CachedJobInstance, []interface{}) {
 	js := make([]*CachedJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	durs := parseDurations(ts, []string{durstr})
 	for i := 0; i < n; i++ {
-		ji := MakeCachedJob(ts, nkeys, ncache, nclerks, durs[0], ckmcpu, cachemcpu)
+		ji := NewCachedJob(ts, nkeys, ncache, nclerks, durs[0], ckmcpu, cachemcpu)
 		js = append(js, ji)
 		is = append(is, ji)
 	}
@@ -240,11 +240,11 @@ func makeNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr
 
 // ========== Www Helpers ========
 
-func makeWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwmcpu proc.Tmcpu, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) ([]*WwwJobInstance, []interface{}) {
+func newWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwmcpu proc.Tmcpu, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) ([]*WwwJobInstance, []interface{}) {
 	ws := make([]*WwwJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeWwwJob(ts, sigmaos, wwwmcpu, reqtype, ntrials, nclnt, nreq, delay)
+		i := NewWwwJob(ts, sigmaos, wwwmcpu, reqtype, ntrials, nclnt, nreq, delay)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -253,26 +253,26 @@ func makeWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwmcpu proc.Tmcpu, 
 
 // ========== RPCBench Helpers ========
 
-func makeRPCBenchJobs(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, dur string, maxrps string, fn rpcbenchFn) ([]*RPCBenchJobInstance, []interface{}) {
+func newRPCBenchJobs(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, dur string, maxrps string, fn rpcbenchFn) ([]*RPCBenchJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*RPCBenchJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeRPCBenchJob(ts, p, mcpu, dur, maxrps, fn, false)
+		i := NewRPCBenchJob(ts, p, mcpu, dur, maxrps, fn, false)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
 	return ws, is
 }
 
-func makeRPCBenchJobsCli(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, dur string, maxrps string, fn rpcbenchFn) ([]*RPCBenchJobInstance, []interface{}) {
+func newRPCBenchJobsCli(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, dur string, maxrps string, fn rpcbenchFn) ([]*RPCBenchJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*RPCBenchJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeRPCBenchJob(ts, p, mcpu, dur, maxrps, fn, true)
+		i := NewRPCBenchJob(ts, p, mcpu, dur, maxrps, fn, true)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -281,26 +281,26 @@ func makeRPCBenchJobsCli(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, du
 
 // ========== Hotel Helpers ==========
 
-func makeHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cachetype, cacheMcpu)
+		i := NewHotelJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cachetype, cacheMcpu)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
 	return ws, is
 }
 
-func makeHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache, cachetype, cacheMcpu)
+		i := NewHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache, cachetype, cacheMcpu)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -308,13 +308,13 @@ func makeHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps str
 }
 
 // ========== ImgResize Helpers ==========
-func makeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu) ([]*ImgResizeJobInstance, []interface{}) {
+func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu) ([]*ImgResizeJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*ImgResizeJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, mcpu)
+		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, mcpu)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -323,7 +323,7 @@ func makeImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input st
 
 // ========== Social Network Helpers ==========
 
-func makeSocialNetworkJobs(
+func newSocialNetworkJobs(
 		ts *test.RealmTstate, p *perf.Perf, sigmaos, readonly bool, 
 		dur, maxrps string, ncache int) ([]*SocialNetworkJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
@@ -331,7 +331,7 @@ func makeSocialNetworkJobs(
 	ws := make([]*SocialNetworkJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := MakeSocialNetworkJob(ts, p, sigmaos, readonly, dur, maxrps, ncache)
+		i := NewSocialNetworkJob(ts, p, sigmaos, readonly, dur, maxrps, ncache)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -343,7 +343,7 @@ func makeSocialNetworkJobs(
 var clidir string = path.Join("name/", "clnts")
 
 func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
-	sem := semclnt.MakeSemClnt(rootts.FsLib, path.Join(clidir, "clisem"))
+	sem := semclnt.NewSemClnt(rootts.FsLib, path.Join(clidir, "clisem"))
 	err := sem.Init(0)
 	if !assert.True(rootts.T, err == nil || !serr.IsErrCode(err, serr.TErrExists), "Error sem init %v", err) {
 		return nil

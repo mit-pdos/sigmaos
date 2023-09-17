@@ -53,7 +53,7 @@ func TestRearrange(t *testing.T) {
 }
 
 func runMemHog(ts *test.Tstate, c chan error, id, delay, mem, dur string, nthread int) {
-	p := proc.MakeProc("memhog", []string{id, delay, mem, dur, strconv.Itoa(nthread)})
+	p := proc.NewProc("memhog", []string{id, delay, mem, dur, strconv.Itoa(nthread)})
 	if id == "LC" {
 		p.SetMcpu(2000)
 	}
@@ -73,7 +73,7 @@ func runMemHog(ts *test.Tstate, c chan error, id, delay, mem, dur string, nthrea
 
 func runMemBlock(ts *test.Tstate, mem string) *proc.Proc {
 	db.DPrintf(db.TEST, "Spawning memblock for %v of memory", mem)
-	p := proc.MakeProc("memblock", []string{mem})
+	p := proc.NewProc("memblock", []string{mem})
 	p.SetType(proc.T_LC)
 	_, errs := ts.SpawnBurst([]*proc.Proc{p}, 1)
 	assert.True(ts.T, len(errs) == 0, "Error spawn: %v", errs)
@@ -91,7 +91,7 @@ func evictMemBlock(ts *test.Tstate, p *proc.Proc) {
 }
 
 func TestLCAlone(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	mem := mem.GetTotalMem()
 	lcC := make(chan error)
@@ -102,7 +102,7 @@ func TestLCAlone(t *testing.T) {
 }
 
 func TestReapBE(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	duration := "60s"
 	mem := mem.GetTotalMem()
@@ -119,7 +119,7 @@ func TestReapBE(t *testing.T) {
 
 // Test that the mem blocker does indeed block off physical memory.
 func TestMemBlock(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	memt := mem.GetTotalMem()
 	mema := mem.GetAvailableMem()
 	assert.True(ts.T, mema > memt/2, "Too little mem available")
@@ -132,7 +132,7 @@ func TestMemBlock(t *testing.T) {
 
 // Test that we can spawn a mem blocker on each node.
 func TestMemBlockMany(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	ts.BootNode(1)
 	memt := mem.GetTotalMem()
 	mema := mem.GetAvailableMem()
@@ -147,7 +147,7 @@ func TestMemBlockMany(t *testing.T) {
 }
 
 func TestMemBlockManyFail(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 	memt := mem.GetTotalMem()
 	mema := mem.GetAvailableMem()
 	assert.True(ts.T, mema > memt/2, "Too little mem available")

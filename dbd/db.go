@@ -20,11 +20,11 @@ const (
 
 func RunDbd(dbdaddr string) error {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
-	s, err := mkServer(dbdaddr)
+	s, err := newServer(dbdaddr)
 	if err != nil {
 		return err
 	}
-	ssrv, err := sigmasrv.MakeSigmaSrv(sp.DB, s, proc.GetProcEnv())
+	ssrv, err := sigmasrv.NewSigmaSrv(sp.DB, s, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func RunDbd(dbdaddr string) error {
 	if _, err := ssrv.Create(QDEV, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
-	if err := sessdevsrv.MkSessDev(ssrv.MemFs, QDEV, qd.mkSession, nil); err != nil {
+	if err := sessdevsrv.MkSessDev(ssrv.MemFs, QDEV, qd.newSession, nil); err != nil {
 		return err
 	}
 	return ssrv.RunServer()

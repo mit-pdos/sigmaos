@@ -18,7 +18,7 @@ func init() {
 }
 
 func TestWriter1(t *testing.T) {
-	ts := test.MakeTstate(t)
+	ts := test.NewTstate(t)
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("abcdefg")

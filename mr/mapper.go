@@ -51,21 +51,21 @@ func MkMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr, 
 	m.wrts = make([]*fslib.Wrt, m.nreducetask)
 	m.SigmaClnt = sc
 	m.perf = p
-	m.sbc = MakeScanByteCounter(p)
+	m.sbc = NewScanByteCounter(p)
 	return m, nil
 }
 
-func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
+func newMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if len(args) != 4 {
-		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
+		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
 	nr, err := strconv.Atoi(args[1])
 	if err != nil {
-		return nil, fmt.Errorf("MakeMapper: nreducetask %v isn't int", args[1])
+		return nil, fmt.Errorf("NewMapper: nreducetask %v isn't int", args[1])
 	}
 	lsz, err := strconv.Atoi(args[3])
 	if err != nil {
-		return nil, fmt.Errorf("MakeMapper: linesz %v isn't int", args[1])
+		return nil, fmt.Errorf("NewMapper: linesz %v isn't int", args[1])
 	}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
@@ -73,10 +73,10 @@ func makeMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	}
 	m, err := MkMapper(sc, mapf, args[0], p, nr, lsz, args[2])
 	if err != nil {
-		return nil, fmt.Errorf("MakeMapper failed %v", err)
+		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
 	if err := m.Started(); err != nil {
-		return nil, fmt.Errorf("MakeMapper couldn't start %v", args)
+		return nil, fmt.Errorf("NewMapper couldn't start %v", args)
 	}
 	crash.Crasher(m.FsLib)
 	return m, nil
@@ -263,28 +263,28 @@ func RunMapper(mapf MapT, args []string) {
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
 	pcfg := proc.GetProcEnv()
-	p, err := perf.MakePerf(pcfg, perf.MRMAPPER)
+	p, err := perf.NewPerf(pcfg, perf.MRMAPPER)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
 
-	m, err := makeMapper(mapf, args, p)
+	m, err := newMapper(mapf, args, p)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
 
 	if err = m.initMapper(); err != nil {
-		m.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
 		return
 	}
 	start := time.Now()
 	nin, nout, err := m.doMap()
 	db.DPrintf(db.MR_TPT, "%s: in %s out %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
-		m.ClntExit(proc.MakeStatusInfo(proc.StatusOK, m.input,
+		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, m.input,
 			Result{true, m.input, nin, nout, time.Since(start).Milliseconds()}))
 	} else {
-		m.ClntExit(proc.MakeStatusErr(err.Error(), nil))
+		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}
 }

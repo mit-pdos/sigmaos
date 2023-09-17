@@ -33,6 +33,6 @@ func (wrt *Writer) Close() error {
 func (wrt *Writer) Nbytes() sp.Tlength {
 	return sp.Tlength(wrt.off)
 }
-func MakeWriter(fc *fidclnt.FidClnt, fid sp.Tfid) *Writer {
+func NewWriter(fc *fidclnt.FidClnt, fid sp.Tfid) *Writer {
 	return &Writer{fc, fid, 0}
 }

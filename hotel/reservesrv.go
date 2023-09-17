@@ -88,7 +88,7 @@ func (s *Reserve) initDb() error {
 
 func RunReserveSrv(job string, public bool, cache string) error {
 	r := &Reserve{}
-	ssrv, err := sigmasrv.MakeSigmaSrvPublic(HOTELRESERVE, r, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELRESERVE, r, proc.GetProcEnv(), public)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func RunReserveSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := MkCacheClnt(cache, MakeFsLibs(HOTELRESERVE), job)
+	cachec, err := MkCacheClnt(cache, NewFsLibs(HOTELRESERVE), job)
 	if err != nil {
 		return err
 	}
@@ -106,9 +106,9 @@ func RunReserveSrv(job string, public bool, cache string) error {
 	if err != nil {
 		return err
 	}
-	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_RESERVE)
+	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_RESERVE)
 	if err != nil {
-		db.DFatalf("MakePerf err %v\n", err)
+		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
 	//	if TRACING {
@@ -243,13 +243,13 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 	return true, num_date, nil
 }
 
-// MakeReservation makes a reservation based on given information
+// NewReservation news a reservation based on given information
 // XXX make check and reservation atomic
-func (s *Reserve) MakeReservation(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
+func (s *Reserve) NewReservation(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
 	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {
-	//		sctx, span = s.tracer.StartRPCSpan(&req, "MakeReservation")
+	//		sctx, span = s.tracer.StartRPCSpan(&req, "NewReservation")
 	//		defer span.End()
 	//	} else {
 	sctx = context.TODO()

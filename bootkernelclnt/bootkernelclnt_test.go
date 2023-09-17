@@ -20,7 +20,7 @@ import (
 //
 
 func TestSymlink1(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	// Make a target file
 	targetPath := sp.UX + "/~local/symlink-test-file"
@@ -65,7 +65,7 @@ func TestSymlink1(t *testing.T) {
 }
 
 func TestSymlink2(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	// Make a target file
 	targetDirPath := sp.UX + "/~local/dir1"
@@ -100,7 +100,7 @@ func TestSymlink2(t *testing.T) {
 }
 
 func TestSymlink3(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	uxs, err := ts.GetDir(sp.UX)
 	assert.Nil(t, err, "Error reading ux dir")
@@ -132,7 +132,7 @@ func TestSymlink3(t *testing.T) {
 	assert.Nil(t, err, "Creating link")
 
 	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	sc, err := ts.MakeClnt(0, pcfg)
+	sc, err := ts.NewClnt(0, pcfg)
 	assert.Nil(t, err)
 	sc.ProcessDir(linkDir, func(st *sp.Stat) (bool, error) {
 		// Read symlink contents
@@ -153,7 +153,7 @@ func TestSymlink3(t *testing.T) {
 }
 
 func TestEphemeral(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	name := path.Join(sp.SCHEDD, "~any")
 
@@ -195,7 +195,7 @@ func TestEphemeral(t *testing.T) {
 }
 
 func TestBootMulti(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	db.DPrintf(db.TEST, "Boot second node")
 
@@ -206,7 +206,7 @@ func TestBootMulti(t *testing.T) {
 }
 
 func TestBootMulti2(t *testing.T) {
-	ts := test.MakeTstateAll(t)
+	ts := test.NewTstateAll(t)
 
 	db.DPrintf(db.TEST, "Boot second node")
 

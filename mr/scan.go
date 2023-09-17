@@ -12,7 +12,7 @@ type ScanByteCounter struct {
 	p         *perf.Perf
 }
 
-func MakeScanByteCounter(p *perf.Perf) *ScanByteCounter {
+func NewScanByteCounter(p *perf.Perf) *ScanByteCounter {
 	return &ScanByteCounter{0, p}
 }
 

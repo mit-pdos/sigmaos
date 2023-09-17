@@ -16,18 +16,18 @@ type SessCondTable struct {
 	closed bool
 }
 
-func MakeSessCondTable(st *sessstatesrv.SessionTable) *SessCondTable {
+func NewSessCondTable(st *sessstatesrv.SessionTable) *SessCondTable {
 	t := &SessCondTable{}
 	t.conds = make(map[*SessCond]bool)
 	t.St = st
 	return t
 }
 
-func (sct *SessCondTable) MakeSessCond(lock sync.Locker) *SessCond {
+func (sct *SessCondTable) NewSessCond(lock sync.Locker) *SessCond {
 	sct.Lock()
 	defer sct.Unlock()
 
-	sc := makeSessCond(sct, lock)
+	sc := newSessCond(sct, lock)
 	sct.conds[sc] = true
 	sc.nref++
 	return sc
@@ -60,7 +60,7 @@ func (sct *SessCondTable) toSlice() []*SessCond {
 // user.  So we need, a lock around sct.conds.  But, DeleteSess
 // violates lock order, which is lock sc.lock first (e.g., watch on
 // directory), then acquire sct.lock (if file watch must create sess
-// cond in sct).  To avoid order violation, DeleteSess makes copy
+// cond in sct).  To avoid order violation, DeleteSess news copy
 // first, then close() sess conds.  Threads many add new sess conds to
 // sct while bailing out (e.g., to remove an emphemeral file), but
 // threads shouldn't wait on these sess conds, so we don't have to

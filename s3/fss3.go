@@ -25,13 +25,13 @@ type Fss3 struct {
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	ssrv, err := sigmasrv.MakeSigmaSrvNoRPC(sp.S3, pcfg.GetProcEnv())
+	ssrv, err := sigmasrv.NewSigmaSrvNoRPC(sp.S3, pcfg.GetProcEnv())
 	if err != nil {
-		db.DFatalf("Error MakeSigmaSrv: %v", err)
+		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
-	p, err := perf.MakePerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.S3)
+	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.S3)
 	if err != nil {
-		db.DFatalf("Error MakePerf: %v", err)
+		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
 
@@ -39,7 +39,7 @@ func RunFss3(buckets []string) {
 	buckets = append(buckets, commonBuckets...)
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.
-		d := makeDir(bucket, path.Path{}, sp.DMDIR)
+		d := newDir(bucket, path.Path{}, sp.DMDIR)
 		if err := ssrv.MkNod(bucket, d); err != nil {
 			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
 		}

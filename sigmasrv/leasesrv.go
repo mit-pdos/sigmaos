@@ -73,7 +73,7 @@ func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leasepro
 	return nil
 }
 
-func (ls *LeaseSrv) Stop() {
+func (ls *LeaseSrv) stop() {
 	ls.ch <- struct{}{}
 }
 

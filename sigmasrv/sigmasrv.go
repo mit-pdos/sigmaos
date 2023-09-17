@@ -208,7 +208,7 @@ func (ssrv *SigmaSrv) RunServer() error {
 func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 	db.DPrintf(db.SIGMASRV, "SrvExit %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	if ssrv.lsrv != nil {
-		ssrv.lsrv.Stop()
+		ssrv.lsrv.stop()
 	}
 	if ssrv.cpumon != nil {
 		ssrv.cpumon.Done()

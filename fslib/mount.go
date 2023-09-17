@@ -89,7 +89,7 @@ func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
 // content of symlink and the symlink's name.
 func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if pn == sp.NAMED {
-		return sp.MkMountService(fsl.NamedAddr()), "", nil
+		return sp.MkMountService(fsl.GetMntNamed(fsl.pcfg.GetUname()).Addr), "", nil
 	}
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()

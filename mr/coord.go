@@ -75,7 +75,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.MR, "Made fslib job %v, addr %v", c.job, sc.NamedAddr())
+	db.DPrintf(db.MR, "Made fslib job %v", c.job)
 	c.SigmaClnt = sc
 	m, err := strconv.Atoi(args[1])
 	if err != nil {

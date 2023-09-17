@@ -99,7 +99,7 @@ func MakeImgd(args []string) (*ImgSrv, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.IMGD, "Made fslib job %v, addr %v", imgd.job, sc.NamedAddr())
+	db.DPrintf(db.IMGD, "Made fslib job %v", imgd.job)
 	imgd.SigmaClnt = sc
 	imgd.job = args[0]
 	crashing, err := strconv.Atoi(args[1])

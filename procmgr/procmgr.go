@@ -126,7 +126,7 @@ func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 				db.DFatalf("Err MkSigmaClntRealm: %v", err)
 			}
 			// Mount KPIDS.
-			procclnt.MountPids(clnt.FsLib, clnt.FsLib.NamedAddr())
+			procclnt.MountPids(clnt.FsLib)
 		}
 		mgr.sclnts[realm] = clnt
 	}

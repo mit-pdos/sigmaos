@@ -27,12 +27,12 @@ func (fl *FsLib) ProcEnv() *proc.ProcEnv {
 }
 
 func (fl *FsLib) NamedAddr() sp.Taddrs {
-	mnt := fl.GetMntNamed(fl.Uname())
+	mnt := fl.GetMntNamed(fl.pcfg.GetUname())
 	return mnt.Addr
 }
 
 func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
-	return fl.FdClient.MountTree(fl.Uname(), addrs, tree, mount)
+	return fl.FdClient.MountTree(fl.pcfg.GetUname(), addrs, tree, mount)
 }
 
 func (fl *FsLib) DetachAll() error {

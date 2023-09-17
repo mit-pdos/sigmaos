@@ -8,7 +8,7 @@ import (
 )
 
 func setupMemFsSrv(mfs *memfssrv.MemFs) {
-	procclnt.MountPids(mfs.SigmaClnt().FsLib, mfs.SigmaClnt().NamedAddr())
+	procclnt.MountPids(mfs.SigmaClnt().FsLib)
 }
 
 // Setup schedd's fs.

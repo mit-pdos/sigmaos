@@ -261,11 +261,11 @@ func (p *Proc) GetNet() string {
 	return p.ProcEnvProto.GetNet()
 }
 
-func (p *Proc) SetHow(n int32) {
+func (p *Proc) SetHow(n Thow) {
 	p.ProcEnvProto.SetHow(n)
 }
 
-func (p *Proc) GetHow() int32 {
+func (p *Proc) GetHow() Thow {
 	return p.ProcEnvProto.GetHow()
 }
 

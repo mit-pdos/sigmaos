@@ -23,7 +23,7 @@ message ProcEnvProto {
   int64 netFail = 17;
   int64 crash = 18;
   int64 partition = 19;
-  int32 how = 20;
+  int32 howInt = 20;
 }
 
 message ProcProto {

@@ -21,7 +21,7 @@ type Subsystem struct {
 	*procclnt.ProcClnt
 	k         *Kernel
 	p         *proc.Proc
-	how       procclnt.Thow
+	how       proc.Thow
 	cmd       *exec.Cmd
 	container *container.Container
 	crashed   bool
@@ -32,15 +32,15 @@ func (ss *Subsystem) String() string {
 	return s
 }
 
-func newSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow, cmd *exec.Cmd) *Subsystem {
+func newSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow, cmd *exec.Cmd) *Subsystem {
 	return &Subsystem{pclnt, k, p, how, cmd, nil, false}
 }
 
-func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how procclnt.Thow) *Subsystem {
+func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow) *Subsystem {
 	return newSubsystemCmd(pclnt, k, p, how, nil)
 }
 
-func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how procclnt.Thow, mcpu proc.Tmcpu) (*Subsystem, error) {
+func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.Thow, mcpu proc.Tmcpu) (*Subsystem, error) {
 	pid := sp.GenPid(program)
 	p := proc.NewPrivProcPid(pid, program, args, true)
 	p.SetMcpu(mcpu)
@@ -48,12 +48,12 @@ func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proccl
 	return ss, ss.Run(how, k.Param.KernelId, k.ip)
 }
 
-func (k *Kernel) bootSubsystem(program string, args []string, how procclnt.Thow) (*Subsystem, error) {
+func (k *Kernel) bootSubsystem(program string, args []string, how proc.Thow) (*Subsystem, error) {
 	return k.bootSubsystemWithMcpu(program, args, how, 0)
 }
 
-func (s *Subsystem) Run(how procclnt.Thow, kernelId, localIP string) error {
-	if how == procclnt.HLINUX || how == procclnt.HSCHEDD {
+func (s *Subsystem) Run(how proc.Thow, kernelId, localIP string) error {
+	if how == proc.HLINUX || how == proc.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {
 			return err
@@ -62,7 +62,7 @@ func (s *Subsystem) Run(how procclnt.Thow, kernelId, localIP string) error {
 	} else {
 		realm := sp.Trealm(s.p.Args[0])
 		ptype := proc.ParseTtype(s.p.Args[1])
-		if err := s.NewProc(s.p, procclnt.HDOCKER, kernelId); err != nil {
+		if err := s.NewProc(s.p, proc.HDOCKER, kernelId); err != nil {
 			return err
 		}
 		// XXX don't hard code
@@ -108,7 +108,7 @@ func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
 // Send SIGTERM to a system.
 func (s *Subsystem) Terminate() error {
 	db.DPrintf(db.KERNEL, "Terminate %v %v\n", s.cmd.Process.Pid, s.cmd)
-	if s.how != procclnt.HLINUX {
+	if s.how != proc.HLINUX {
 		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
 	}
 	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGTERM)
@@ -121,7 +121,7 @@ func (s *Subsystem) Kill() error {
 	if s.p.GetProgram() == "knamed" {
 		return stopKNamed(s.cmd)
 	}
-	if s.how == procclnt.HSCHEDD || s.how == procclnt.HDOCKER {
+	if s.how == proc.HSCHEDD || s.how == proc.HDOCKER {
 		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through %v: %v", s.p, s.how)
 		err := s.Evict(s.p.GetPid())
 		if err != nil {
@@ -135,7 +135,7 @@ func (s *Subsystem) Kill() error {
 
 func (s *Subsystem) Wait() error {
 	db.DPrintf(db.KERNEL, "Wait for %v to terminate\n", s)
-	if s.how == procclnt.HSCHEDD || s.how == procclnt.HDOCKER {
+	if s.how == proc.HSCHEDD || s.how == proc.HDOCKER {
 		status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)
 		if err != nil || !status.IsStatusOK() {
 			db.DPrintf(db.ALWAYS, "Subsystem exit with status %v err %v", status, err)

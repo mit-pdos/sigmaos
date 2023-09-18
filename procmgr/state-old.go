@@ -73,7 +73,7 @@ func (mgr *ProcMgr) teardownProcState(p *proc.Proc) {
 func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	db.DPrintf(db.PROCMGR_ERR, "Proc %v finished with error: %v", p, err)
 	mgr.pstate.started(p.GetPid())
-	procclnt.ExitedProcd(mgr.getSigmaClnt(p.GetRealm()).FsLib, p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), procclnt.Thow(p.GetHow()))
+	procclnt.ExitedProcd(mgr.getSigmaClnt(p.GetRealm()).FsLib, p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }
 
 // Register a proc as running.

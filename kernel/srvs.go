@@ -5,10 +5,9 @@ import (
 	"path"
 	"sync"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/port"
-	"sigmaos/procclnt"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -109,7 +108,7 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 	if err != nil {
 		return err
 	}
-	ss := newSubsystemCmd(nil, k, p, procclnt.HLINUX, cmd)
+	ss := newSubsystemCmd(nil, k, p, proc.HLINUX, cmd)
 	k.svcs.Lock()
 	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.KNAMED] = append(k.svcs.svcs[sp.KNAMED], ss)
@@ -117,40 +116,40 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 }
 
 func (k *Kernel) bootRealmd() (*Subsystem, error) {
-	return k.bootSubsystem("realmd", []string{}, procclnt.HSCHEDD)
+	return k.bootSubsystem("realmd", []string{}, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootUxd() (*Subsystem, error) {
 	// XXX ignore realm for now
-	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, procclnt.HSCHEDD)
+	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootS3d() (*Subsystem, error) {
 	// XXX Mount realm buckets dynamically.
-	return k.bootSubsystem("fss3d", []string{"arielck", "kaashoek", "fkaashoek", "yizhengh"}, procclnt.HSCHEDD)
+	return k.bootSubsystem("fss3d", []string{"arielck", "kaashoek", "fkaashoek", "yizhengh"}, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
-	return k.bootSubsystem("dbd", []string{hostip}, procclnt.HSCHEDD)
+	return k.bootSubsystem("dbd", []string{hostip}, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootMongod(hostip string) (*Subsystem, error) {
-	return k.bootSubsystemWithMcpu("mongod", []string{hostip}, procclnt.HSCHEDD, 1000)
+	return k.bootSubsystemWithMcpu("mongod", []string{hostip}, proc.HSCHEDD, 1000)
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{k.Param.KernelId, k.Param.ReserveMcpu}, procclnt.HLINUX)
+	return k.bootSubsystem("schedd", []string{k.Param.KernelId, k.Param.ReserveMcpu}, proc.HLINUX)
 }
 
 func (k *Kernel) bootNamed() (*Subsystem, error) {
-	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0"}, procclnt.HSCHEDD)
+	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0"}, proc.HSCHEDD)
 }
 
 // Start uprocd in a sigmauser container and post the mount for
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
-	s, err := k.bootSubsystem("uprocd", args, procclnt.HDOCKER)
+	s, err := k.bootSubsystem("uprocd", args, proc.HDOCKER)
 	if err != nil {
 		return nil, err
 	}

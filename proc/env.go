@@ -197,8 +197,12 @@ func (pe *ProcEnvProto) SetPartition(nf int64) {
 	pe.Partition = nf
 }
 
-func (pe *ProcEnvProto) SetHow(how int32) {
-	pe.How = how
+func (pe *ProcEnvProto) SetHow(how Thow) {
+	pe.HowInt = int32(how)
+}
+
+func (pe *ProcEnvProto) GetHow() Thow {
+	return Thow(pe.HowInt)
 }
 
 func (pe *ProcEnv) Marshal() string {

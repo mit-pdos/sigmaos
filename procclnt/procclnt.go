@@ -24,28 +24,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Thow uint32
-
-const (
-	HSCHEDD Thow = iota + 1 // spawned as a sigmos proc
-	HLINUX                  // spawned as a linux process
-	HDOCKER                 // spawned as a container
-)
-
-func (h Thow) String() string {
-	switch h {
-	case HSCHEDD:
-		return "schedd"
-	case HLINUX:
-		return "linux"
-	case HDOCKER:
-		return "docker"
-	default:
-		db.DFatalf("Unknown how %v", int(h))
-		return "unknown"
-	}
-}
-
 type ProcClnt struct {
 	sync.Mutex
 	*fslib.FsLib
@@ -70,19 +48,19 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procdir string) *ProcClnt {
 // ========== SPAWN ==========
 
 // Create the named state the proc (and its parent) expects.
-func (clnt *ProcClnt) NewProc(p *proc.Proc, how Thow, kernelId string) error {
-	if how == HSCHEDD {
+func (clnt *ProcClnt) NewProc(p *proc.Proc, how proc.Thow, kernelId string) error {
+	if how == proc.HSCHEDD {
 		return clnt.spawn(kernelId, how, p, 0)
 	} else {
 		return clnt.spawn(kernelId, how, p, -1)
 	}
 }
 
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how Thow, kernelId string) (*exec.Cmd, error) {
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how proc.Thow, kernelId string) (*exec.Cmd, error) {
 	if err := clnt.NewProc(p, how, kernelId); err != nil {
 		return nil, err
 	}
-	if how == HLINUX {
+	if how == proc.HLINUX {
 		// If this proc wasn't intended to be spawned through procd, run it
 		// as a local Linux process
 		p.InheritParentProcEnv(clnt.ProcEnv())
@@ -101,7 +79,7 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc, procsPerSchedd int) ([]*proc.P
 	failed := []*proc.Proc{}
 	errs := []error{}
 	for i := range ps {
-		if err := clnt.spawn("", HSCHEDD, ps[i], procsPerSchedd); err != nil {
+		if err := clnt.spawn("", proc.HSCHEDD, ps[i], procsPerSchedd); err != nil {
 			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
 			failed = append(failed, ps[i])
 			errs = append(errs, err)
@@ -116,18 +94,18 @@ type errTuple struct {
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~local", HSCHEDD, p, 0)
+	return clnt.spawn("~local", proc.HSCHEDD, p, 0)
 }
 
 // Spawn a proc on kernelId. If spread > 0, p is part of SpawnBurt().
-func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int) error {
+func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread int) error {
 	// Sanity check.
 	if p.GetMcpu() > 0 && p.GetType() != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Mcpu set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Mcpu set %v", p)
 	}
 
-	p.SetHow(int32(how))
+	p.SetHow(how)
 
 	clnt.cs.spawned(p.GetPid(), kernelId)
 
@@ -158,7 +136,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 
 	p.SetSpawnTime(time.Now())
 	// If this is not a privileged proc, spawn it through schedd.
-	if how == HSCHEDD {
+	if how == proc.HSCHEDD {
 		if err := clnt.spawnRetry(kernelId, p); err != nil {
 			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
@@ -261,7 +239,7 @@ func isKProc(pid sp.Tpid) bool {
 		strings.Contains(pidstr, "mongo")
 }
 
-func (clnt *ProcClnt) waitStart(pid sp.Tpid, how Thow) error {
+func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 	db.DPrintf(db.PROCCLNT, "WaitStart %v how %v", pid, how)
 	defer db.DPrintf(db.PROCCLNT, "WaitStart done waiting %v how %v", pid, how)
 
@@ -270,7 +248,7 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how Thow) error {
 
 	var err error
 	// If not a kernel proc...
-	if how == HSCHEDD {
+	if how == proc.HSCHEDD {
 		db.DPrintf(db.PROCCLNT, "WaitStart uproc %v", pid)
 		// RPC the schedd this proc was spawned on to wait for it to start.
 		db.DPrintf(db.ALWAYS, "WaitStart %v RPC pre", pid)
@@ -313,16 +291,16 @@ func (clnt *ProcClnt) WaitStart(pid sp.Tpid) error {
 		b := debug.Stack()
 		db.DFatalf("Tried to WaitStart kernel proc %v, stack:\n%v", pid, string(b))
 	}
-	return clnt.waitStart(pid, HSCHEDD)
+	return clnt.waitStart(pid, proc.HSCHEDD)
 }
 
 // Parent calls WaitStart() to wait until the child proc has
 // started. If the proc doesn't exist, return immediately.
-func (clnt *ProcClnt) WaitStartKernelProc(pid sp.Tpid, how Thow) error {
+func (clnt *ProcClnt) WaitStartKernelProc(pid sp.Tpid, how proc.Thow) error {
 	return clnt.waitStart(pid, how)
 }
 
-func (clnt *ProcClnt) waitExit(pid sp.Tpid, how Thow) (*proc.Status, error) {
+func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error) {
 	defer clnt.cs.exited(pid)
 
 	// Must wait for child to fill in return status pipe.
@@ -365,13 +343,13 @@ func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
 		b := debug.Stack()
 		db.DFatalf("Tried to WaitExit kernel proc %v, stack:\n%v", pid, string(b))
 	}
-	return clnt.waitExit(pid, HSCHEDD)
+	return clnt.waitExit(pid, proc.HSCHEDD)
 }
 
 // Parent calls WaitExit() to wait until child proc has exited. If
 // the proc doesn't exist, return immediately.  After collecting
 // return status, parent removes the child from its list of children.
-func (clnt *ProcClnt) WaitExitKernelProc(pid sp.Tpid, how Thow) (*proc.Status, error) {
+func (clnt *ProcClnt) WaitExitKernelProc(pid sp.Tpid, how proc.Thow) (*proc.Status, error) {
 	return clnt.waitExit(pid, how)
 }
 
@@ -403,7 +381,7 @@ func (clnt *ProcClnt) Started() error {
 		return err
 	}
 
-	if Thow(clnt.ProcEnv().GetHow()) == HSCHEDD {
+	if proc.Thow(clnt.ProcEnv().GetHow()) == proc.HSCHEDD {
 		db.DPrintf(db.PROCCLNT, "Started %v RPC pre", clnt.pid)
 		db.DPrintf(db.ALWAYS, "Started %v RPC pre", clnt.pid)
 		// Get the RPC client for the local schedd
@@ -496,7 +474,7 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 	}
 }
 
-func ExitedProcd(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string, status *proc.Status, how Thow) {
+func ExitedProcd(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string, status *proc.Status, how proc.Thow) {
 	db.DPrintf(db.PROCCLNT, "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 	err := exited(fsl, procdir, parentdir, pid, status)
 	if err != nil {
@@ -504,7 +482,7 @@ func ExitedProcd(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string
 	}
 	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()
 	semPath := path.Join(parentdir, proc.START_SEM)
-	if how != HSCHEDD {
+	if how != proc.HSCHEDD {
 		kprocDir := proc.KProcDir(pid)
 		semPath = path.Join(kprocDir, proc.START_SEM)
 	}

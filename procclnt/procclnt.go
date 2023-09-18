@@ -32,6 +32,20 @@ const (
 	HDOCKER                 // spawned as a container
 )
 
+func (h Thow) String() string {
+	switch h {
+	case HSCHEDD:
+		return "schedd"
+	case HLINUX:
+		return "linux"
+	case HDOCKER:
+		return "docker"
+	default:
+		db.DFatalf("Unknown how %v", int(h))
+		return "unknown"
+	}
+}
+
 type ProcClnt struct {
 	sync.Mutex
 	*fslib.FsLib
@@ -113,6 +127,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		return fmt.Errorf("Spawn non-LC proc with Mcpu set %v", p)
 	}
 
+	p.SetHow(int32(how))
+
 	clnt.cs.spawned(p.GetPid(), kernelId)
 
 	p.InheritParentProcEnv(clnt.ProcEnv())
@@ -147,6 +163,10 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
+		if !isKProc(p.GetPid()) {
+			b := debug.Stack()
+			db.DFatalf("Tried to Spawn kernel proc %v, stack:\n%v", p.GetPid(), string(b))
+		}
 		// Make the proc's procdir
 		err := clnt.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged())
 		if err != nil {
@@ -154,8 +174,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int)
 		}
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, schedd will create the semaphore.
-		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.GetPid()))
-		semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
+		kprocDir := proc.KProcDir(p.GetPid())
+		semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.START_SEM))
 		semStart.Init(0)
 	}
 	return nil
@@ -241,8 +261,17 @@ func isKProc(pid sp.Tpid) bool {
 		strings.Contains(pidstr, "mongo")
 }
 
-func (clnt *ProcClnt) waitStart(pid sp.Tpid) error {
-	if !isKProc(pid) {
+func (clnt *ProcClnt) waitStart(pid sp.Tpid, how Thow) error {
+	db.DPrintf(db.PROCCLNT, "WaitStart %v how %v", pid, how)
+	defer db.DPrintf(db.PROCCLNT, "WaitStart done waiting %v how %v", pid, how)
+
+	s := time.Now()
+	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E WaitStart %v", pid, time.Since(s))
+
+	var err error
+	// If not a kernel proc...
+	if how == HSCHEDD {
+		db.DPrintf(db.PROCCLNT, "WaitStart uproc %v", pid)
 		// RPC the schedd this proc was spawned on to wait for it to start.
 		db.DPrintf(db.ALWAYS, "WaitStart %v RPC pre", pid)
 		db.DPrintf(db.PROCCLNT, "WaitStart %v RPC pre", pid)
@@ -263,36 +292,13 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid) error {
 		}
 		db.DPrintf(db.PROCCLNT, "WaitStart %v RPC post", pid)
 		db.DPrintf(db.ALWAYS, "WaitStart %v RPC post", pid)
-		return nil
+		err = nil
 	} else {
-
-		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
-		b, err := clnt.GetFile(path.Join(childDir, proc.PROCFILE_LINK))
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Can't get procip file: %v", err)
-			return err
-		}
-		procfileLink := string(b)
-		// Kernel procs will have empty proc file links.
-		if procfileLink != "" {
-			// Wait for the proc queue file to be removed. Should not return an error.
-			if err := clnt.waitProcFileRemove(pid, procfileLink); err != nil {
-				return err
-			}
-		}
-		db.DPrintf(db.PROCCLNT, "WaitStart %v %v", pid, childDir)
-		defer db.DPrintf(db.PROCCLNT, "WaitStart done waiting %v %v", pid, childDir)
-		s := time.Now()
-		defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E Semaphore Down %v", pid, time.Since(s))
-		semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
-		return semStart.Down()
+		kprocDir := proc.KProcDir(pid)
+		db.DPrintf(db.PROCCLNT, "WaitStart kproc %v dir %v", pid, kprocDir)
+		semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.START_SEM))
+		err = semStart.Down()
 	}
-}
-
-// Parent calls WaitStart() to wait until the child proc has
-// started. If the proc doesn't exist, return immediately.
-func (clnt *ProcClnt) WaitStart(pid sp.Tpid) error {
-	err := clnt.waitStart(pid)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "WaitStart %v %v", pid, err)
 		return fmt.Errorf("WaitStart error %v", err)
@@ -300,14 +306,27 @@ func (clnt *ProcClnt) WaitStart(pid sp.Tpid) error {
 	return nil
 }
 
-// Parent calls WaitExit() to wait until child proc has exited. If
-// the proc doesn't exist, return immediately.  After collecting
-// return status, parent removes the child from its list of children.
-func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
+// Parent calls WaitStart() to wait until the child proc has
+// started. If the proc doesn't exist, return immediately.
+func (clnt *ProcClnt) WaitStart(pid sp.Tpid) error {
+	if isKProc(pid) {
+		b := debug.Stack()
+		db.DFatalf("Tried to WaitStart kernel proc %v, stack:\n%v", pid, string(b))
+	}
+	return clnt.waitStart(pid, HSCHEDD)
+}
+
+// Parent calls WaitStart() to wait until the child proc has
+// started. If the proc doesn't exist, return immediately.
+func (clnt *ProcClnt) WaitStartKernelProc(pid sp.Tpid, how Thow) error {
+	return clnt.waitStart(pid, how)
+}
+
+func (clnt *ProcClnt) waitExit(pid sp.Tpid, how Thow) (*proc.Status, error) {
 	defer clnt.cs.exited(pid)
 
 	// Must wait for child to fill in return status pipe.
-	if err := clnt.waitStart(pid); err != nil {
+	if err := clnt.waitStart(pid, how); err != nil {
 		db.DPrintf(db.PROCCLNT, "waitStart err %v", err)
 	}
 
@@ -338,6 +357,24 @@ func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
 	return status, nil
 }
 
+// Parent calls WaitExit() to wait until child proc has exited. If
+// the proc doesn't exist, return immediately.  After collecting
+// return status, parent removes the child from its list of children.
+func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
+	if isKProc(pid) {
+		b := debug.Stack()
+		db.DFatalf("Tried to WaitExit kernel proc %v, stack:\n%v", pid, string(b))
+	}
+	return clnt.waitExit(pid, HSCHEDD)
+}
+
+// Parent calls WaitExit() to wait until child proc has exited. If
+// the proc doesn't exist, return immediately.  After collecting
+// return status, parent removes the child from its list of children.
+func (clnt *ProcClnt) WaitExitKernelProc(pid sp.Tpid, how Thow) (*proc.Status, error) {
+	return clnt.waitExit(pid, how)
+}
+
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 	procdir := clnt.ProcEnv().ProcDir
@@ -366,7 +403,7 @@ func (clnt *ProcClnt) Started() error {
 		return err
 	}
 
-	if !isKProc(clnt.ProcEnv().GetPID()) {
+	if Thow(clnt.ProcEnv().GetHow()) == HSCHEDD {
 		db.DPrintf(db.PROCCLNT, "Started %v RPC pre", clnt.pid)
 		db.DPrintf(db.ALWAYS, "Started %v RPC pre", clnt.pid)
 		// Get the RPC client for the local schedd
@@ -383,20 +420,25 @@ func (clnt *ProcClnt) Started() error {
 		}
 		db.DPrintf(db.PROCCLNT, "Started %v RPC post", clnt.pid)
 		db.DPrintf(db.ALWAYS, "Started %v RPC post", clnt.pid)
-	}
+		return nil
+	} else {
+		semPath := path.Join( /*proc.PARENTDIR*/ clnt.ProcEnv().ParentDir, proc.START_SEM)
+		if isKProc(clnt.ProcEnv().GetPID()) {
+			semPath = path.Join(clnt.ProcEnv().ProcDir, proc.START_SEM)
+		}
 
-	// Mark self as started
-	semPath := path.Join( /*proc.PARENTDIR*/ clnt.ProcEnv().ParentDir, proc.START_SEM)
-	semStart := semclnt.NewSemClnt(clnt.FsLib, semPath)
-	err := semStart.Up()
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Started error %v %v", semPath, err)
+		// Mark self as started
+		semStart := semclnt.NewSemClnt(clnt.FsLib, semPath)
+		err := semStart.Up()
+		if err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "Started error %v %v", semPath, err)
+		}
+		// File may not be found if parent exited first or isn't reachable
+		if err != nil && !serr.IsErrorUnavailable(err) {
+			return fmt.Errorf("Started error %v", err)
+		}
+		return nil
 	}
-	// File may not be found if parent exited first or isn't reachable
-	if err != nil && !serr.IsErrorUnavailable(err) {
-		return fmt.Errorf("Started error %v", err)
-	}
-	return nil
 }
 
 // ========== EXITED ==========
@@ -414,8 +456,8 @@ func (clnt *ProcClnt) exited(fsl *fslib.FsLib, procdir string, parentdir string,
 	// will catch some unintended misuses: a proc calling exited
 	// twice or schedd calling exited twice.
 	if clnt.setExited(pid) == pid {
-		debug.PrintStack()
-		db.DFatalf("Exited called after exited %v", procdir)
+		b := debug.Stack()
+		db.DFatalf("Exited called after exited %v stack:\n%v", procdir, string(b))
 	}
 
 	return exited(fsl, procdir, parentdir, pid, status)
@@ -454,14 +496,19 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 	}
 }
 
-func ExitedProcd(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string, status *proc.Status) {
+func ExitedProcd(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string, status *proc.Status, how Thow) {
 	db.DPrintf(db.PROCCLNT, "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 	err := exited(fsl, procdir, parentdir, pid, status)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited %v err %v", pid, err)
 	}
 	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()
-	semStart := semclnt.NewSemClnt(fsl, path.Join(parentdir, proc.START_SEM))
+	semPath := path.Join(parentdir, proc.START_SEM)
+	if how != HSCHEDD {
+		kprocDir := proc.KProcDir(pid)
+		semPath = path.Join(kprocDir, proc.START_SEM)
+	}
+	semStart := semclnt.NewSemClnt(fsl, semPath)
 	semStart.Up()
 }
 

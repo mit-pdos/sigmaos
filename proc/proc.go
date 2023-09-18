@@ -69,7 +69,7 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 	procdir := NOT_SET
 	if priv {
 		// If this is a privileged proc, we already know its procdir.
-		procdir = path.Join(sp.KPIDS, pid.String())
+		procdir = KProcDir(pid)
 	}
 	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), sp.Tuname(pid), procdir, NOT_SET, priv, false).GetProto()
 	p.Args = args
@@ -259,6 +259,14 @@ func (p *Proc) GetShared() string {
 
 func (p *Proc) GetNet() string {
 	return p.ProcEnvProto.GetNet()
+}
+
+func (p *Proc) SetHow(n int32) {
+	p.ProcEnvProto.SetHow(n)
+}
+
+func (p *Proc) GetHow() int32 {
+	return p.ProcEnvProto.GetHow()
 }
 
 // Return Env map as a []string

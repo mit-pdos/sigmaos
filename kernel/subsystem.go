@@ -81,7 +81,7 @@ func (s *Subsystem) Run(how procclnt.Thow, kernelId, localIP string) error {
 		}
 		s.container = c
 	}
-	err := s.WaitStart(s.p.GetPid())
+	err := s.WaitStartKernelProc(s.p.GetPid(), how)
 	return err
 }
 
@@ -136,7 +136,7 @@ func (s *Subsystem) Kill() error {
 func (s *Subsystem) Wait() error {
 	db.DPrintf(db.KERNEL, "Wait for %v to terminate\n", s)
 	if s.how == procclnt.HSCHEDD || s.how == procclnt.HDOCKER {
-		status, err := s.WaitExit(s.p.GetPid())
+		status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)
 		if err != nil || !status.IsStatusOK() {
 			db.DPrintf(db.ALWAYS, "Subsystem exit with status %v err %v", status, err)
 			return err

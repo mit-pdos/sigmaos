@@ -65,3 +65,7 @@ const (
 func GetChildProcDir(procdir string, cpid sp.Tpid) string {
 	return path.Join(procdir, CHILDREN, cpid.String(), PROCDIR)
 }
+
+func KProcDir(pid sp.Tpid) string {
+	return path.Join(sp.KPIDS, pid.String())
+}

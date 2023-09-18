@@ -64,6 +64,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how proc.Thow, kernelId stri
 		// If this proc wasn't intended to be spawned through procd, run it
 		// as a local Linux process
 		p.InheritParentProcEnv(clnt.ProcEnv())
+		p.SetKernelID(kernelId, false)
 		return kproc.RunKernelProc(clnt.ProcEnv().GetLocalIP(), p, nil)
 	}
 	return nil, nil
@@ -507,9 +508,13 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 		b := debug.Stack()
 		db.DFatalf("Exited called after exited %v stack:\n%v", clnt.procdir, string(b))
 	}
-	rpcc, err := clnt.getScheddClnt(clnt.ProcEnv().GetKernelID())
-	if err != nil {
-		db.DFatalf("Err getScheddClnt: %v", err)
+	var rpcc *rpcclnt.RPCClnt
+	var err error
+	if clnt.ProcEnv().GetHow() == proc.HSCHEDD {
+		rpcc, err = clnt.getScheddClnt(clnt.ProcEnv().GetKernelID())
+		if err != nil {
+			db.DFatalf("Err getScheddClnt: %v", err)
+		}
 	}
 	err = exited(clnt.FsLib, clnt.procdir, clnt.ProcEnv().ParentDir, rpcc, clnt.ProcEnv().GetPID(), status, clnt.ProcEnv().GetHow(), false)
 	if err != nil {

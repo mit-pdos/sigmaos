@@ -38,7 +38,11 @@ func (ps *ProcState) started(pid sp.Tpid) {
 	ps.Lock()
 	defer ps.Unlock()
 
-	ps.startWaiter[pid].release()
+	// May be called multiple times by procmgr if, for example, the proc crashes
+	// shortly after calling Exited().
+	if w, ok := ps.startWaiter[pid]; ok {
+		w.release()
+	}
 }
 
 func (ps *ProcState) waitStart(pid sp.Tpid) {
@@ -70,7 +74,11 @@ func (ps *ProcState) exited(pid sp.Tpid) {
 	ps.Lock()
 	defer ps.Unlock()
 
-	ps.exitWaiter[pid].release()
+	// May be called multiple times by procmgr if, for example, the proc crashes
+	// shortly after calling Exited().
+	if w, ok := ps.exitWaiter[pid]; ok {
+		w.release()
+	}
 	// Clean up state
 	delete(ps.spawned, pid)
 	delete(ps.startWaiter, pid)

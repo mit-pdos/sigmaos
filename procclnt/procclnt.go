@@ -376,14 +376,38 @@ func (clnt *ProcClnt) WaitExitKernelProc(pid sp.Tpid, how proc.Thow) (*proc.Stat
 
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
-	procdir := clnt.ProcEnv().ProcDir
-	db.DPrintf(db.PROCCLNT, "WaitEvict %v procdir %v", pid, procdir)
+	db.DPrintf(db.PROCCLNT, "WaitEvict %v procdir %v", pid, clnt.ProcEnv().ProcDir)
 	defer db.DPrintf(db.PROCCLNT, "WaitEvict done %v", pid)
-	semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
-	err := semEvict.Down()
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "WaitEvict error %v procdir %v", err, procdir)
-		return fmt.Errorf("WaitEvict error %v", err)
+
+	// If spawned via schedd, wait via RPC.
+	if clnt.ProcEnv().GetHow() == proc.HSCHEDD {
+		// RPC the schedd this proc was spawned on to wait for it to evict.
+		db.DPrintf(db.PROCCLNT, "WaitEvict %v RPC", pid)
+		rpcc, err := clnt.getScheddClnt(clnt.ProcEnv().GetKernelID())
+		if err != nil {
+			db.DFatalf("Err get schedd clnt rpcc %v", err)
+		}
+		req := &schedd.EvictRequest{
+			PidStr: pid.String(),
+		}
+		res := &schedd.EvictResponse{}
+		if err := rpcc.RPC("Schedd.WaitEvict", req, res); err != nil {
+			db.DFatalf("Error Schedd WaitEvict: %v", err)
+		}
+	} else {
+		if !isKProc(clnt.ProcEnv().GetPID()) {
+			b := debug.Stack()
+			db.DFatalf("Tried to Evicted non-kernel proc %v, stack:\n%v", clnt.ProcEnv().GetPID(), string(b))
+		}
+		// If not spawned via schedd, wait via semaphore.
+		kprocDir := proc.KProcDir(pid)
+		db.DPrintf(db.PROCCLNT, "WaitEvict sem %v dir %v", pid, kprocDir)
+		semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.EVICT_SEM))
+		err := semEvict.Down()
+		if err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "WaitEvict error %v procdir %v", err, clnt.ProcEnv().ProcDir)
+			return fmt.Errorf("WaitEvict error %v", err)
+		}
 	}
 	return nil
 }
@@ -541,33 +565,46 @@ func ExitedCrashed(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir stri
 
 // ========== EVICT ==========
 
-// Notifies a proc that it will be evicted using Evict.
-func (clnt *ProcClnt) evict(procdir string) error {
-	db.DPrintf(db.PROCCLNT, "Evict %v", procdir)
-	semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
-	err := semEvict.Up()
-	if err != nil {
-		return fmt.Errorf("Evict error %v", err)
+// Notifies a proc that it will be evicted using Evict. Called by parent.
+func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
+	db.DPrintf(db.PROCCLNT, "Evict %v", pid)
+	defer db.DPrintf(db.PROCCLNT, "Evict done %v", pid)
+
+	if clnt.ProcEnv().GetHow() == proc.HSCHEDD {
+		// If the proc was spawned via schedd, evict via RPC.
+		db.DPrintf(db.PROCCLNT, "Evict %v RPC pre", pid)
+		kernelID, err := clnt.cs.getKernelID(pid)
+		if err != nil {
+			db.DFatalf("Error Evict can't get kernel ID for proc: %v", err)
+		}
+		// Get the RPC client for the local schedd
+		rpcc, err := clnt.getScheddClnt(kernelID)
+		if err != nil {
+			db.DFatalf("Err get schedd clnt rpcc %v", err)
+		}
+		req := &schedd.EvictRequest{
+			PidStr: pid.String(),
+		}
+		res := &schedd.EvictResponse{}
+		if err := rpcc.RPC("Schedd.Evict", req, res); err != nil {
+			db.DFatalf("Error Schedd Evict: %v", err)
+		}
+	} else {
+		// If the proc was not spawned via schedd, evict via sem.
+		if !isKProc(pid) {
+			b := debug.Stack()
+			db.DFatalf("Tried to Evict non-kernel proc %v, stack:\n%v", pid, string(b))
+		}
+		kprocDir := proc.KProcDir(clnt.ProcEnv().GetPID())
+		db.DPrintf(db.PROCCLNT, "Evict sem %v dir %v", pid, kprocDir)
+		semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.EVICT_SEM))
+		err := semEvict.Up()
+		if err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "Error Evict: %v", err)
+			return fmt.Errorf("Evict error %v", err)
+		}
 	}
 	return nil
-}
-
-// Called by parent.
-func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
-	procdir := proc.GetChildProcDir(clnt.procdir, pid)
-	return clnt.evict(procdir)
-}
-
-// Called by realm to evict another machine's named.
-func (clnt *ProcClnt) EvictKernelProc(pid string) error {
-	procdir := path.Join(sp.KPIDSREL, pid)
-	return clnt.evict(procdir)
-}
-
-// Called by procd.
-func (clnt *ProcClnt) EvictProcd(scheddIp string, pid sp.Tpid) error {
-	procdir := path.Join(sp.SCHEDD, scheddIp, sp.PIDS, pid.String())
-	return clnt.evict(procdir)
 }
 
 func (clnt *ProcClnt) hasExited() sp.Tpid {

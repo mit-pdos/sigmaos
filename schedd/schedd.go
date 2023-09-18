@@ -83,6 +83,21 @@ func (sd *Schedd) Started(ctx fs.CtxI, req proto.StartRequest, res *proto.StartR
 	return nil
 }
 
+// Wait for a proc to be evicted.
+func (sd *Schedd) WaitEvict(ctx fs.CtxI, req proto.EvictRequest, res *proto.EvictResponse) error {
+	db.DPrintf(db.SCHEDD, "WaitEvict %v", req.PidStr)
+	sd.pmgr.WaitEvict(sp.Tpid(req.PidStr))
+	db.DPrintf(db.SCHEDD, "WaitEvict done %v", req.PidStr)
+	return nil
+}
+
+// Wait for a proc to mark itself as exited.
+func (sd *Schedd) Evict(ctx fs.CtxI, req proto.EvictRequest, res *proto.EvictResponse) error {
+	db.DPrintf(db.SCHEDD, "Evict %v", req.PidStr)
+	sd.pmgr.Evict(sp.Tpid(req.PidStr))
+	return nil
+}
+
 // Wait for a proc to mark itself as exited.
 func (sd *Schedd) WaitExit(ctx fs.CtxI, req proto.ExitRequest, res *proto.ExitResponse) error {
 	db.DPrintf(db.SCHEDD, "WaitExit %v", req.PidStr)

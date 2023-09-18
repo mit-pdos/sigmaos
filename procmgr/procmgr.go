@@ -89,6 +89,14 @@ func (mgr *ProcMgr) WaitStart(pid sp.Tpid) {
 	mgr.pstate.waitStart(pid)
 }
 
+func (mgr *ProcMgr) Evict(pid sp.Tpid) {
+	mgr.pstate.evict(pid)
+}
+
+func (mgr *ProcMgr) WaitEvict(pid sp.Tpid) {
+	mgr.pstate.waitEvict(pid)
+}
+
 func (mgr *ProcMgr) Exited(pid sp.Tpid) {
 	mgr.pstate.exited(pid)
 }

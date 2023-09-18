@@ -54,7 +54,7 @@ func (ps *ProcState) waitStart(pid sp.Tpid) {
 	}
 }
 
-func (ps *ProcState) evicted(pid sp.Tpid) {
+func (ps *ProcState) evict(pid sp.Tpid) {
 	ps.Lock()
 	defer ps.Unlock()
 

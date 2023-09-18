@@ -10,6 +10,8 @@ service Schedd {
   rpc Started(StartRequest) returns (StartResponse);
   rpc WaitExit(ExitRequest) returns (ExitResponse);
   rpc Exited(ExitRequest) returns (ExitResponse);
+  rpc WaitEvict(EvictRequest) returns (EvictResponse);
+  rpc Evict(EvictRequest) returns (EvictResponse);
   rpc StealProc(StealProcRequest) returns (StealProcResponse);
   rpc GetCPUShares(GetCPUSharesRequest) returns (GetCPUSharesResponse);
 }
@@ -35,6 +37,13 @@ message ExitRequest {
 }
 
 message ExitResponse {
+}
+
+message EvictRequest {
+  string pidStr = 1;
+}
+
+message EvictResponse {
 }
 
 message StealProcRequest {

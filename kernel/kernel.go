@@ -134,7 +134,7 @@ func (k *Kernel) shutdown() {
 		}
 		db.DPrintf(db.KERNEL, "Shutdown children %v", cpids)
 		for _, pid := range cpids {
-			k.Evict(pid)
+			k.EvictKernelProc(pid, k.svcs.svcMap[pid].how)
 			db.DPrintf(db.KERNEL, "Evicted %v", pid)
 			if !k.svcs.svcMap[pid].crashed {
 				if status, err := k.WaitExitKernelProc(pid, k.svcs.svcMap[pid].how); err != nil || !status.IsStatusEvicted() {

@@ -58,7 +58,9 @@ func (ps *ProcState) evict(pid sp.Tpid) {
 	ps.Lock()
 	defer ps.Unlock()
 
-	ps.evictWaiter[pid].release()
+	if w, ok := ps.evictWaiter[pid]; ok {
+		w.release()
+	}
 }
 
 func (ps *ProcState) waitEvict(pid sp.Tpid) {

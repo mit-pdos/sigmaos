@@ -123,7 +123,7 @@ func (s *Subsystem) Kill() error {
 	}
 	if s.how == proc.HSCHEDD || s.how == proc.HDOCKER {
 		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through %v: %v", s.p, s.how)
-		err := s.Evict(s.p.GetPid())
+		err := s.EvictKernelProc(s.p.GetPid(), s.how)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error killing procd-spawned kernel proc: %v err %v", s.p.GetPid(), err)
 		}

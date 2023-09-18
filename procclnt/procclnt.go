@@ -565,12 +565,11 @@ func ExitedCrashed(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir stri
 
 // ========== EVICT ==========
 
-// Notifies a proc that it will be evicted using Evict. Called by parent.
-func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
+func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
 	db.DPrintf(db.PROCCLNT, "Evict %v", pid)
 	defer db.DPrintf(db.PROCCLNT, "Evict done %v", pid)
 
-	if clnt.ProcEnv().GetHow() == proc.HSCHEDD {
+	if how == proc.HSCHEDD {
 		// If the proc was spawned via schedd, evict via RPC.
 		db.DPrintf(db.PROCCLNT, "Evict %v RPC pre", pid)
 		kernelID, err := clnt.cs.getKernelID(pid)
@@ -595,7 +594,7 @@ func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
 			b := debug.Stack()
 			db.DFatalf("Tried to Evict non-kernel proc %v, stack:\n%v", pid, string(b))
 		}
-		kprocDir := proc.KProcDir(clnt.ProcEnv().GetPID())
+		kprocDir := proc.KProcDir(pid)
 		db.DPrintf(db.PROCCLNT, "Evict sem %v dir %v", pid, kprocDir)
 		semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.EVICT_SEM))
 		err := semEvict.Up()
@@ -605,6 +604,15 @@ func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
 		}
 	}
 	return nil
+}
+
+// Notifies a proc that it will be evicted using Evict. Called by parent.
+func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
+	return clnt.evict(pid, proc.HSCHEDD)
+}
+
+func (clnt *ProcClnt) EvictKernelProc(pid sp.Tpid, how proc.Thow) error {
+	return clnt.evict(pid, how)
 }
 
 func (clnt *ProcClnt) hasExited() sp.Tpid {

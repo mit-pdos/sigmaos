@@ -83,6 +83,21 @@ func (sd *Schedd) Started(ctx fs.CtxI, req proto.StartRequest, res *proto.StartR
 	return nil
 }
 
+// Wait for a proc to mark itself as exited.
+func (sd *Schedd) WaitExit(ctx fs.CtxI, req proto.ExitRequest, res *proto.ExitResponse) error {
+	db.DPrintf(db.SCHEDD, "WaitExit %v", req.PidStr)
+	sd.pmgr.WaitExit(sp.Tpid(req.PidStr))
+	db.DPrintf(db.SCHEDD, "WaitExit done %v", req.PidStr)
+	return nil
+}
+
+// Wait for a proc to mark itself as exited.
+func (sd *Schedd) Exited(ctx fs.CtxI, req proto.ExitRequest, res *proto.ExitResponse) error {
+	db.DPrintf(db.SCHEDD, "Exited %v", req.PidStr)
+	sd.pmgr.Exited(sp.Tpid(req.PidStr))
+	return nil
+}
+
 // Steal a proc from this schedd.
 func (sd *Schedd) StealProc(ctx fs.CtxI, req proto.StealProcRequest, res *proto.StealProcResponse) error {
 	q, _ := sd.getQueue(sp.Trealm(req.Realm))

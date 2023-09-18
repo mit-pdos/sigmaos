@@ -247,12 +247,10 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E WaitStart %v", pid, time.Since(s))
 
 	var err error
-	// If not a kernel proc...
+	// If spawned via schedd, wait via RPC.
 	if how == proc.HSCHEDD {
-		db.DPrintf(db.PROCCLNT, "WaitStart uproc %v", pid)
 		// RPC the schedd this proc was spawned on to wait for it to start.
-		db.DPrintf(db.ALWAYS, "WaitStart %v RPC pre", pid)
-		db.DPrintf(db.PROCCLNT, "WaitStart %v RPC pre", pid)
+		db.DPrintf(db.PROCCLNT, "WaitStart %v RPC", pid)
 		kernelID, err := clnt.cs.getKernelID(pid)
 		if err != nil {
 			db.DFatalf("Unkown kernel ID %v", err)
@@ -268,17 +266,16 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 		if err := rpcc.RPC("Schedd.WaitStart", req, res); err != nil {
 			db.DFatalf("Error Schedd WaitStart: %v", err)
 		}
-		db.DPrintf(db.PROCCLNT, "WaitStart %v RPC post", pid)
-		db.DPrintf(db.ALWAYS, "WaitStart %v RPC post", pid)
 		err = nil
 	} else {
+		// If not spawned via schedd, wait via semaphore.
 		kprocDir := proc.KProcDir(pid)
-		db.DPrintf(db.PROCCLNT, "WaitStart kproc %v dir %v", pid, kprocDir)
+		db.DPrintf(db.PROCCLNT, "WaitStart sem %v dir %v", pid, kprocDir)
 		semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.START_SEM))
 		err = semStart.Down()
 	}
 	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "WaitStart %v %v", pid, err)
+		db.DPrintf(db.PROCCLNT_ERR, "Err WaitStart %v %v", pid, err)
 		return fmt.Errorf("WaitStart error %v", err)
 	}
 	return nil
@@ -309,12 +306,35 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 	}
 
 	db.DPrintf(db.PROCCLNT, "WaitExit %v", pid)
+	defer db.DPrintf(db.PROCCLNT, "WaitExit done %v", pid)
 
-	// Make sure the child proc has exited.
-	semExit := semclnt.NewSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(clnt.procdir, pid), proc.EXIT_SEM))
-	if err := semExit.Down(); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Error WaitExit semExit.Down: %v", err)
-		return nil, fmt.Errorf("Error semExit.Down: %v", err)
+	if how == proc.HSCHEDD {
+		// If this proc was spawned via Schedd, wait via RPC.
+		db.DPrintf(db.PROCCLNT, "WaitExit %v RPC", pid)
+		kernelID, err := clnt.cs.getKernelID(pid)
+		if err != nil {
+			db.DFatalf("Unkown kernel ID %v", err)
+		}
+		rpcc, err := clnt.getScheddClnt(kernelID)
+		if err != nil {
+			db.DFatalf("Err get schedd clnt rpcc %v", err)
+		}
+		req := &schedd.ExitRequest{
+			PidStr: pid.String(),
+		}
+		res := &schedd.ExitResponse{}
+		if err := rpcc.RPC("Schedd.WaitExit", req, res); err != nil {
+			db.DFatalf("Error Schedd WaitExit: %v", err)
+		}
+	} else {
+		db.DPrintf(db.PROCCLNT, "WaitExit %v sem", pid)
+		// If this proc was not spawned via Schedd, wait via sem.
+		// Make sure the child proc has exited.
+		semExit := semclnt.NewSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(clnt.procdir, pid), proc.EXIT_SEM))
+		if err := semExit.Down(); err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "Error WaitExit semExit.Down: %v", err)
+			return nil, fmt.Errorf("Error semExit.Down: %v", err)
+		}
 	}
 
 	defer clnt.RemoveChild(pid)
@@ -383,7 +403,6 @@ func (clnt *ProcClnt) Started() error {
 
 	if clnt.ProcEnv().GetHow() == proc.HSCHEDD {
 		db.DPrintf(db.PROCCLNT, "Started %v RPC pre", clnt.pid)
-		db.DPrintf(db.ALWAYS, "Started %v RPC pre", clnt.pid)
 		// Get the RPC client for the local schedd
 		rpcc, err := clnt.getScheddClnt(clnt.ProcEnv().GetKernelID())
 		if err != nil {
@@ -397,7 +416,6 @@ func (clnt *ProcClnt) Started() error {
 			db.DFatalf("Error Schedd Started: %v", err)
 		}
 		db.DPrintf(db.PROCCLNT, "Started %v RPC post", clnt.pid)
-		db.DPrintf(db.ALWAYS, "Started %v RPC post", clnt.pid)
 		return nil
 	} else {
 		if !isKProc(clnt.ProcEnv().GetPID()) {
@@ -429,20 +447,8 @@ func (clnt *ProcClnt) Started() error {
 //
 // exited() should be called *once* per proc, but procd's procclnt may
 // call exited() for different procs.
-func (clnt *ProcClnt) exited(fsl *fslib.FsLib, procdir string, parentdir string, pid sp.Tpid, status *proc.Status) error {
-	db.DPrintf(db.PROCCLNT, "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 
-	// will catch some unintended misuses: a proc calling exited
-	// twice or schedd calling exited twice.
-	if clnt.setExited(pid) == pid {
-		b := debug.Stack()
-		db.DFatalf("Exited called after exited %v stack:\n%v", procdir, string(b))
-	}
-
-	return exited(fsl, procdir, parentdir, pid, status)
-}
-
-func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid sp.Tpid, status *proc.Status) error {
+func exited(fsl *fslib.FsLib, procdir string, parentdir string, rpcc *rpcclnt.RPCClnt, pid sp.Tpid, status *proc.Status, how proc.Thow, crashed bool) error {
 	b, err := json.Marshal(status)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited marshal err %v", err)
@@ -454,9 +460,33 @@ func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid sp.Tpid, sta
 		db.DPrintf(db.PROCCLNT_ERR, "exited error (parent already exited) NewFile %v err %v", fn, err)
 	}
 
-	semExit := semclnt.NewSemClnt(fsl, path.Join(procdir, proc.EXIT_SEM))
-	if err := semExit.Up(); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "exited semExit up error: %v, %v, %v", procdir, pid, err)
+	// If proc was spawned via SCHEDD, mark exited via RPC.
+	if how == proc.HSCHEDD {
+		if crashed {
+			// If the proc had crashed, then exited is being called from Schedd
+			// itself, which will take care of calling Exited locally. No need to
+			// RPC.
+			//
+			// Do nothing
+		} else {
+			req := &schedd.ExitRequest{
+				PidStr: pid.String(),
+			}
+			res := &schedd.ExitResponse{}
+			if err := rpcc.RPC("Schedd.Exited", req, res); err != nil {
+				db.DFatalf("Error Schedd Exited: %v", err)
+			}
+		}
+	} else {
+		if !isKProc(pid) {
+			b := debug.Stack()
+			db.DFatalf("Tried to Exited non-kernel proc %v, stack:\n%v", pid, string(b))
+		}
+		// If proc was not spawned via SCHEDD, mark exited via sem.
+		semExit := semclnt.NewSemClnt(fsl, path.Join(procdir, proc.EXIT_SEM))
+		if err := semExit.Up(); err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "exited semExit up error: %v, %v, %v", procdir, pid, err)
+		}
 	}
 
 	// clean myself up
@@ -468,16 +498,29 @@ func exited(fsl *fslib.FsLib, procdir string, parentdir string, pid sp.Tpid, sta
 	return nil
 }
 
+// Called voluntarily by the proc when it Exits normally.
 func (clnt *ProcClnt) Exited(status *proc.Status) {
-	err := clnt.exited(clnt.FsLib, clnt.procdir /*proc.PARENTDIR*/, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetPID(), status)
+	db.DPrintf(db.PROCCLNT, "Exited normally %v parent %v pid %v status %v", clnt.procdir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetPID(), status)
+	// will catch some unintended misuses: a proc calling exited
+	// twice or schedd calling exited twice.
+	if clnt.setExited(clnt.ProcEnv().GetPID()) == clnt.ProcEnv().GetPID() {
+		b := debug.Stack()
+		db.DFatalf("Exited called after exited %v stack:\n%v", clnt.procdir, string(b))
+	}
+	rpcc, err := clnt.getScheddClnt(clnt.ProcEnv().GetKernelID())
+	if err != nil {
+		db.DFatalf("Err getScheddClnt: %v", err)
+	}
+	err = exited(clnt.FsLib, clnt.procdir, clnt.ProcEnv().ParentDir, rpcc, clnt.ProcEnv().GetPID(), status, clnt.ProcEnv().GetHow(), false)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "exited %v err %v", clnt.ProcEnv().GetPID(), err)
 	}
 }
 
-func ExitedProcd(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string, status *proc.Status, how proc.Thow) {
-	db.DPrintf(db.PROCCLNT, "exited %v parent %v pid %v status %v", procdir, parentdir, pid, status)
-	err := exited(fsl, procdir, parentdir, pid, status)
+// Called on behalf of the proc by schedd when the proc crashes.
+func ExitedCrashed(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string, status *proc.Status, how proc.Thow) {
+	db.DPrintf(db.PROCCLNT, "Exited crashed %v parent %v pid %v status %v", procdir, parentdir, pid, status)
+	err := exited(fsl, procdir, parentdir, nil, pid, status, how, true)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited %v err %v", pid, err)
 	}

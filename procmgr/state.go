@@ -82,6 +82,7 @@ func (ps *ProcState) waitExit(pid sp.Tpid) {
 	ps.Lock()
 	defer ps.Unlock()
 
+	// If proc exited already, the waiter may no longer be present.
 	if w, ok := ps.exitWaiter[pid]; ok {
 		w.wait()
 	}

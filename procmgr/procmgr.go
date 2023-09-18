@@ -74,6 +74,10 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	mgr.downloadProc(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Binary download time %v", p.GetPid(), time.Since(s))
 	mgr.runProc(p)
+	// Ensure that the proc is marked as started & exited after it has run. The
+	// proc may not have done this if, for example, it crashed.
+	mgr.pstate.started(p.GetPid())
+	mgr.pstate.exited(p.GetPid())
 	mgr.teardownProcState(p)
 }
 
@@ -83,6 +87,14 @@ func (mgr *ProcMgr) Started(pid sp.Tpid) {
 
 func (mgr *ProcMgr) WaitStart(pid sp.Tpid) {
 	mgr.pstate.waitStart(pid)
+}
+
+func (mgr *ProcMgr) Exited(pid sp.Tpid) {
+	mgr.pstate.exited(pid)
+}
+
+func (mgr *ProcMgr) WaitExit(pid sp.Tpid) {
+	mgr.pstate.waitExit(pid)
 }
 
 // Try to steal a proc from another schedd. Must be callled after RPCing the

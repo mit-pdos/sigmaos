@@ -472,44 +472,11 @@ func ExitedCrashed(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir stri
 // ========== EVICT ==========
 
 func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
-	db.DPrintf(db.PROCCLNT, "Evict %v", pid)
-	defer db.DPrintf(db.PROCCLNT, "Evict done %v", pid)
-
-	if how == proc.HSCHEDD {
-		// If the proc was spawned via schedd, evict via RPC.
-		db.DPrintf(db.PROCCLNT, "Evict %v RPC pre", pid)
-		kernelID, err := clnt.cs.getKernelID(pid)
-		if err != nil {
-			db.DFatalf("Error Evict can't get kernel ID for proc: %v", err)
-		}
-		// Get the RPC client for the local schedd
-		rpcc, err := clnt.getScheddClnt(kernelID)
-		if err != nil {
-			db.DFatalf("Err get schedd clnt rpcc %v", err)
-		}
-		req := &schedd.NotifyRequest{
-			PidStr: pid.String(),
-		}
-		res := &schedd.NotifyResponse{}
-		if err := rpcc.RPC("Schedd.Evict", req, res); err != nil {
-			db.DFatalf("Error Schedd Evict: %v", err)
-		}
-	} else {
-		// If the proc was not spawned via schedd, evict via sem.
-		if !isKProc(pid) {
-			b := debug.Stack()
-			db.DFatalf("Tried to Evict non-kernel proc %v, stack:\n%v", pid, string(b))
-		}
-		kprocDir := proc.KProcDir(pid)
-		db.DPrintf(db.PROCCLNT, "Evict sem %v dir %v", pid, kprocDir)
-		semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.EVICT_SEM))
-		err := semEvict.Up()
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Error Evict: %v", err)
-			return fmt.Errorf("Evict error %v", err)
-		}
+	kernelID, err := clnt.cs.getKernelID(pid)
+	if err != nil {
+		db.DFatalf("Error Evict can't get kernel ID for proc: %v", err)
 	}
-	return nil
+	return clnt.notify(EVICT, pid, kernelID, proc.EVICT_SEM, how)
 }
 
 // Notifies a proc that it will be evicted using Evict. Called by parent.

@@ -24,6 +24,27 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type Tmethod string
+
+const (
+	START Tmethod = "Start"
+	EVICT         = "Evict"
+	EXIT          = "Exit"
+)
+
+func (m Tmethod) String() string {
+	return string(m)
+}
+
+func (m Tmethod) Verb() string {
+	switch m {
+	case EVICT:
+		return m.String()
+	default:
+		return m.String() + "ed"
+	}
+}
+
 type ProcClnt struct {
 	sync.Mutex
 	*fslib.FsLib
@@ -241,41 +262,15 @@ func isKProc(pid sp.Tpid) bool {
 }
 
 func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
-	db.DPrintf(db.PROCCLNT, "WaitStart %v how %v", pid, how)
-	defer db.DPrintf(db.PROCCLNT, "WaitStart done waiting %v how %v", pid, how)
-
 	s := time.Now()
 	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E WaitStart %v", pid, time.Since(s))
 
-	var err error
-	// If spawned via schedd, wait via RPC.
-	if how == proc.HSCHEDD {
-		// RPC the schedd this proc was spawned on to wait for it to start.
-		db.DPrintf(db.PROCCLNT, "WaitStart %v RPC", pid)
-		kernelID, err := clnt.cs.getKernelID(pid)
-		if err != nil {
-			b := debug.Stack()
-			db.DFatalf("Unknown kernel ID %v stack:\n%v", err, string(b))
-		}
-		rpcc, err := clnt.getScheddClnt(kernelID)
-		if err != nil {
-			db.DFatalf("Err get schedd clnt rpcc %v", err)
-		}
-		req := &schedd.StartRequest{
-			PidStr: pid.String(),
-		}
-		res := &schedd.StartResponse{}
-		if err := rpcc.RPC("Schedd.WaitStart", req, res); err != nil {
-			db.DFatalf("Error Schedd WaitStart: %v", err)
-		}
-		err = nil
-	} else {
-		// If not spawned via schedd, wait via semaphore.
-		kprocDir := proc.KProcDir(pid)
-		db.DPrintf(db.PROCCLNT, "WaitStart sem %v dir %v", pid, kprocDir)
-		semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.START_SEM))
-		err = semStart.Down()
+	kernelID, err := clnt.cs.getKernelID(pid)
+	if err != nil {
+		b := debug.Stack()
+		db.DFatalf("Unknown kernel ID %v stack:\n%v", err, string(b))
 	}
+	err = clnt.wait(START, pid, kernelID, proc.START_SEM, how)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Err WaitStart %v %v", pid, err)
 		return fmt.Errorf("WaitStart error %v", err)
@@ -306,39 +301,12 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 	if err := clnt.waitStart(pid, how); err != nil {
 		db.DPrintf(db.PROCCLNT, "waitStart err %v", err)
 	}
-
-	db.DPrintf(db.PROCCLNT, "WaitExit %v", pid)
-	defer db.DPrintf(db.PROCCLNT, "WaitExit done %v", pid)
-
-	if how == proc.HSCHEDD {
-		// If this proc was spawned via Schedd, wait via RPC.
-		db.DPrintf(db.PROCCLNT, "WaitExit %v RPC", pid)
-		kernelID, err := clnt.cs.getKernelID(pid)
-		if err != nil {
-			b := debug.Stack()
-			db.DFatalf("Unknown kernel ID %v stack:\n%v", err, string(b))
-		}
-		rpcc, err := clnt.getScheddClnt(kernelID)
-		if err != nil {
-			db.DFatalf("Err get schedd clnt rpcc %v", err)
-		}
-		req := &schedd.ExitRequest{
-			PidStr: pid.String(),
-		}
-		res := &schedd.ExitResponse{}
-		if err := rpcc.RPC("Schedd.WaitExit", req, res); err != nil {
-			db.DFatalf("Error Schedd WaitExit: %v", err)
-		}
-	} else {
-		db.DPrintf(db.PROCCLNT, "WaitExit %v sem", pid)
-		// If this proc was not spawned via Schedd, wait via sem.
-		// Make sure the child proc has exited.
-		semExit := semclnt.NewSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(clnt.procdir, pid), proc.EXIT_SEM))
-		if err := semExit.Down(); err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Error WaitExit semExit.Down: %v", err)
-			return nil, fmt.Errorf("Error semExit.Down: %v", err)
-		}
+	kernelID, err := clnt.cs.getKernelID(pid)
+	if err != nil {
+		b := debug.Stack()
+		db.DFatalf("Unknown kernel ID %v stack:\n%v", err, string(b))
 	}
+	err = clnt.wait(EXIT, pid, kernelID, proc.EXIT_SEM, how)
 
 	defer clnt.RemoveChild(pid)
 
@@ -381,37 +349,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 	db.DPrintf(db.PROCCLNT, "WaitEvict %v procdir %v", pid, clnt.ProcEnv().ProcDir)
 	defer db.DPrintf(db.PROCCLNT, "WaitEvict done %v", pid)
 
-	// If spawned via schedd, wait via RPC.
-	if clnt.ProcEnv().GetHow() == proc.HSCHEDD {
-		// RPC the schedd this proc was spawned on to wait for it to evict.
-		db.DPrintf(db.PROCCLNT, "WaitEvict %v RPC", pid)
-		rpcc, err := clnt.getScheddClnt(clnt.ProcEnv().GetKernelID())
-		if err != nil {
-			db.DFatalf("Err get schedd clnt rpcc %v", err)
-		}
-		req := &schedd.EvictRequest{
-			PidStr: pid.String(),
-		}
-		res := &schedd.EvictResponse{}
-		if err := rpcc.RPC("Schedd.WaitEvict", req, res); err != nil {
-			db.DFatalf("Error Schedd WaitEvict: %v", err)
-		}
-	} else {
-		if !isKProc(clnt.ProcEnv().GetPID()) {
-			b := debug.Stack()
-			db.DFatalf("Tried to Evicted non-kernel proc %v, stack:\n%v", clnt.ProcEnv().GetPID(), string(b))
-		}
-		// If not spawned via schedd, wait via semaphore.
-		kprocDir := proc.KProcDir(pid)
-		db.DPrintf(db.PROCCLNT, "WaitEvict sem %v dir %v", pid, kprocDir)
-		semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.EVICT_SEM))
-		err := semEvict.Down()
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "WaitEvict error %v procdir %v", err, clnt.ProcEnv().ProcDir)
-			return fmt.Errorf("WaitEvict error %v", err)
-		}
-	}
-	return nil
+	return clnt.wait(EVICT, pid, clnt.ProcEnv().GetKernelID(), proc.EVICT_SEM, clnt.ProcEnv().GetHow())
 }
 
 // ========== STARTED ==========

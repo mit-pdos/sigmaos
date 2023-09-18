@@ -26,6 +26,7 @@ type ProcMgr struct {
 	sclnts    map[sp.Trealm]*sigmaclnt.SigmaClnt
 	cachedirs map[sp.Trealm]bool
 	running   map[sp.Tpid]*proc.Proc
+	pstate    *ProcState
 	pcache    *ProcCache
 }
 
@@ -39,6 +40,7 @@ func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 		sclnts:    make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		cachedirs: make(map[sp.Trealm]bool),
 		running:   make(map[sp.Tpid]*proc.Proc),
+		pstate:    NewProcState(),
 		pcache:    NewProcCache(PROC_CACHE_SZ),
 	}
 	mgr.newws()
@@ -55,7 +57,10 @@ func (mgr *ProcMgr) newws() {
 
 // Proc has been spawned.
 func (mgr *ProcMgr) Spawn(p *proc.Proc) {
+	// XXX will probably kill this eventually
 	mgr.postProcInQueue(p)
+
+	mgr.pstate.spawn(p)
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {
@@ -70,6 +75,14 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Binary download time %v", p.GetPid(), time.Since(s))
 	mgr.runProc(p)
 	mgr.teardownProcState(p)
+}
+
+func (mgr *ProcMgr) Started(pid sp.Tpid) {
+	mgr.pstate.started(pid)
+}
+
+func (mgr *ProcMgr) WaitStart(pid sp.Tpid) {
+	mgr.pstate.waitStart(pid)
 }
 
 // Try to steal a proc from another schedd. Must be callled after RPCing the

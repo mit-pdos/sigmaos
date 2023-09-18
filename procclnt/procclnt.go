@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -38,14 +39,17 @@ type ProcClnt struct {
 	isExited   sp.Tpid
 	procdir    string
 	scheddclnt *scheddclnt.ScheddClnt
+	cs         *ChildState
 }
 
 func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procdir string) *ProcClnt {
-	clnt := &ProcClnt{}
-	clnt.FsLib = fsl
-	clnt.pid = pid
-	clnt.procdir = procdir
-	clnt.scheddclnt = scheddclnt.NewScheddClnt(fsl)
+	clnt := &ProcClnt{
+		FsLib:      fsl,
+		pid:        pid,
+		procdir:    procdir,
+		scheddclnt: scheddclnt.NewScheddClnt(fsl),
+		cs:         newChildState(),
+	}
 	return clnt
 }
 
@@ -103,10 +107,13 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 
 // Spawn a proc on kernelId. If spread > 0, p is part of SpawnBurt().
 func (clnt *ProcClnt) spawn(kernelId string, how Thow, p *proc.Proc, spread int) error {
+	// Sanity check.
 	if p.GetMcpu() > 0 && p.GetType() != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Mcpu set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Mcpu set %v", p)
 	}
+
+	clnt.cs.spawned(p.GetPid(), kernelId)
 
 	p.InheritParentProcEnv(clnt.ProcEnv())
 
@@ -220,27 +227,66 @@ func (clnt *ProcClnt) waitProcFileRemove(pid sp.Tpid, pn string) error {
 	return nil
 }
 
+// XXX TODO Silly check for priv proc for now. Should Do this in a more
+// principle way.
+func isKProc(pid sp.Tpid) bool {
+	pidstr := pid.String()
+	return strings.Contains(pidstr, "named") ||
+		strings.Contains(pidstr, "schedd") ||
+		strings.Contains(pidstr, "uprocd") ||
+		strings.Contains(pidstr, "ux") ||
+		strings.Contains(pidstr, "s3") ||
+		strings.Contains(pidstr, "realmd") ||
+		strings.Contains(pidstr, "db") ||
+		strings.Contains(pidstr, "mongo")
+}
+
 func (clnt *ProcClnt) waitStart(pid sp.Tpid) error {
-	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
-	b, err := clnt.GetFile(path.Join(childDir, proc.PROCFILE_LINK))
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Can't get procip file: %v", err)
-		return err
-	}
-	procfileLink := string(b)
-	// Kernel procs will have empty proc file links.
-	if procfileLink != "" {
-		// Wait for the proc queue file to be removed. Should not return an error.
-		if err := clnt.waitProcFileRemove(pid, procfileLink); err != nil {
+	if !isKProc(pid) {
+		// RPC the schedd this proc was spawned on to wait for it to start.
+		db.DPrintf(db.ALWAYS, "WaitStart %v RPC pre", pid)
+		db.DPrintf(db.PROCCLNT, "WaitStart %v RPC pre", pid)
+		kernelID, err := clnt.cs.getKernelID(pid)
+		if err != nil {
+			db.DFatalf("Unkown kernel ID %v", err)
+		}
+		rpcc, err := clnt.getScheddClnt(kernelID)
+		if err != nil {
+			db.DFatalf("Err get schedd clnt rpcc %v", err)
+		}
+		req := &schedd.StartRequest{
+			PidStr: pid.String(),
+		}
+		res := &schedd.StartResponse{}
+		if err := rpcc.RPC("Schedd.WaitStart", req, res); err != nil {
+			db.DFatalf("Error Schedd WaitStart: %v", err)
+		}
+		db.DPrintf(db.PROCCLNT, "WaitStart %v RPC post", pid)
+		db.DPrintf(db.ALWAYS, "WaitStart %v RPC post", pid)
+		return nil
+	} else {
+
+		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
+		b, err := clnt.GetFile(path.Join(childDir, proc.PROCFILE_LINK))
+		if err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "Can't get procip file: %v", err)
 			return err
 		}
+		procfileLink := string(b)
+		// Kernel procs will have empty proc file links.
+		if procfileLink != "" {
+			// Wait for the proc queue file to be removed. Should not return an error.
+			if err := clnt.waitProcFileRemove(pid, procfileLink); err != nil {
+				return err
+			}
+		}
+		db.DPrintf(db.PROCCLNT, "WaitStart %v %v", pid, childDir)
+		defer db.DPrintf(db.PROCCLNT, "WaitStart done waiting %v %v", pid, childDir)
+		s := time.Now()
+		defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E Semaphore Down %v", pid, time.Since(s))
+		semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
+		return semStart.Down()
 	}
-	db.DPrintf(db.PROCCLNT, "WaitStart %v %v", pid, childDir)
-	defer db.DPrintf(db.PROCCLNT, "WaitStart done waiting %v %v", pid, childDir)
-	s := time.Now()
-	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E Semaphore Down %v", pid, time.Since(s))
-	semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
-	return semStart.Down()
 }
 
 // Parent calls WaitStart() to wait until the child proc has
@@ -258,6 +304,8 @@ func (clnt *ProcClnt) WaitStart(pid sp.Tpid) error {
 // the proc doesn't exist, return immediately.  After collecting
 // return status, parent removes the child from its list of children.
 func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
+	defer clnt.cs.exited(pid)
+
 	// Must wait for child to fill in return status pipe.
 	if err := clnt.waitStart(pid); err != nil {
 		db.DPrintf(db.PROCCLNT, "waitStart err %v", err)
@@ -309,12 +357,32 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
 	db.DPrintf(db.PROCCLNT, "Started %v", clnt.pid)
+
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc started %v", clnt.ProcEnv().GetPID(), time.Now())
 
 	// Link self into parent dir
 	if err := clnt.linkSelfIntoParentDir(); err != nil {
 		db.DPrintf(db.PROCCLNT, "linkSelfIntoParentDir %v err %v", clnt.pid, err)
 		return err
+	}
+
+	if !isKProc(clnt.ProcEnv().GetPID()) {
+		db.DPrintf(db.PROCCLNT, "Started %v RPC pre", clnt.pid)
+		db.DPrintf(db.ALWAYS, "Started %v RPC pre", clnt.pid)
+		// Get the RPC client for the local schedd
+		rpcc, err := clnt.getScheddClnt(clnt.ProcEnv().GetKernelID())
+		if err != nil {
+			db.DFatalf("Err get schedd clnt rpcc %v", err)
+		}
+		req := &schedd.StartRequest{
+			PidStr: clnt.pid.String(),
+		}
+		res := &schedd.StartResponse{}
+		if err := rpcc.RPC("Schedd.Started", req, res); err != nil {
+			db.DFatalf("Error Schedd Started: %v", err)
+		}
+		db.DPrintf(db.PROCCLNT, "Started %v RPC post", clnt.pid)
+		db.DPrintf(db.ALWAYS, "Started %v RPC post", clnt.pid)
 	}
 
 	// Mark self as started

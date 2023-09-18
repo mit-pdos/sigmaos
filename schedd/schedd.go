@@ -68,6 +68,21 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	return nil
 }
 
+// Wait for a proc to mark itself as started.
+func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.StartRequest, res *proto.StartResponse) error {
+	db.DPrintf(db.SCHEDD, "WaitStart %v", req.PidStr)
+	sd.pmgr.WaitStart(sp.Tpid(req.PidStr))
+	db.DPrintf(db.SCHEDD, "WaitStart done %v", req.PidStr)
+	return nil
+}
+
+// Wait for a proc to mark itself as started.
+func (sd *Schedd) Started(ctx fs.CtxI, req proto.StartRequest, res *proto.StartResponse) error {
+	db.DPrintf(db.SCHEDD, "Started %v", req.PidStr)
+	sd.pmgr.Started(sp.Tpid(req.PidStr))
+	return nil
+}
+
 // Steal a proc from this schedd.
 func (sd *Schedd) StealProc(ctx fs.CtxI, req proto.StealProcRequest, res *proto.StealProcResponse) error {
 	q, _ := sd.getQueue(sp.Trealm(req.Realm))

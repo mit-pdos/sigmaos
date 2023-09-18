@@ -69,7 +69,7 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 }
 
 // Wait for a proc to mark itself as started.
-func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.StartRequest, res *proto.StartResponse) error {
+func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
 	db.DPrintf(db.SCHEDD, "WaitStart %v", req.PidStr)
 	sd.pmgr.WaitStart(sp.Tpid(req.PidStr))
 	db.DPrintf(db.SCHEDD, "WaitStart done %v", req.PidStr)
@@ -77,14 +77,14 @@ func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.StartRequest, res *proto.Star
 }
 
 // Wait for a proc to mark itself as started.
-func (sd *Schedd) Started(ctx fs.CtxI, req proto.StartRequest, res *proto.StartResponse) error {
+func (sd *Schedd) Started(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
 	db.DPrintf(db.SCHEDD, "Started %v", req.PidStr)
 	sd.pmgr.Started(sp.Tpid(req.PidStr))
 	return nil
 }
 
 // Wait for a proc to be evicted.
-func (sd *Schedd) WaitEvict(ctx fs.CtxI, req proto.EvictRequest, res *proto.EvictResponse) error {
+func (sd *Schedd) WaitEvict(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
 	db.DPrintf(db.SCHEDD, "WaitEvict %v", req.PidStr)
 	sd.pmgr.WaitEvict(sp.Tpid(req.PidStr))
 	db.DPrintf(db.SCHEDD, "WaitEvict done %v", req.PidStr)
@@ -92,14 +92,14 @@ func (sd *Schedd) WaitEvict(ctx fs.CtxI, req proto.EvictRequest, res *proto.Evic
 }
 
 // Wait for a proc to mark itself as exited.
-func (sd *Schedd) Evict(ctx fs.CtxI, req proto.EvictRequest, res *proto.EvictResponse) error {
+func (sd *Schedd) Evict(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
 	db.DPrintf(db.SCHEDD, "Evict %v", req.PidStr)
 	sd.pmgr.Evict(sp.Tpid(req.PidStr))
 	return nil
 }
 
 // Wait for a proc to mark itself as exited.
-func (sd *Schedd) WaitExit(ctx fs.CtxI, req proto.ExitRequest, res *proto.ExitResponse) error {
+func (sd *Schedd) WaitExit(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
 	db.DPrintf(db.SCHEDD, "WaitExit %v", req.PidStr)
 	sd.pmgr.WaitExit(sp.Tpid(req.PidStr))
 	db.DPrintf(db.SCHEDD, "WaitExit done %v", req.PidStr)
@@ -107,7 +107,7 @@ func (sd *Schedd) WaitExit(ctx fs.CtxI, req proto.ExitRequest, res *proto.ExitRe
 }
 
 // Wait for a proc to mark itself as exited.
-func (sd *Schedd) Exited(ctx fs.CtxI, req proto.ExitRequest, res *proto.ExitResponse) error {
+func (sd *Schedd) Exited(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
 	db.DPrintf(db.SCHEDD, "Exited %v", req.PidStr)
 	sd.pmgr.Exited(sp.Tpid(req.PidStr))
 	return nil

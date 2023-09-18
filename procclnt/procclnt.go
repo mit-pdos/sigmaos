@@ -366,41 +366,7 @@ func (clnt *ProcClnt) Started() error {
 		return err
 	}
 
-	if clnt.ProcEnv().GetHow() == proc.HSCHEDD {
-		db.DPrintf(db.PROCCLNT, "Started %v RPC pre", clnt.pid)
-		// Get the RPC client for the local schedd
-		rpcc, err := clnt.getScheddClnt(clnt.ProcEnv().GetKernelID())
-		if err != nil {
-			db.DFatalf("Err get schedd clnt rpcc %v", err)
-		}
-		req := &schedd.StartRequest{
-			PidStr: clnt.pid.String(),
-		}
-		res := &schedd.StartResponse{}
-		if err := rpcc.RPC("Schedd.Started", req, res); err != nil {
-			db.DFatalf("Error Schedd Started: %v", err)
-		}
-		db.DPrintf(db.PROCCLNT, "Started %v RPC post", clnt.pid)
-		return nil
-	} else {
-		if !isKProc(clnt.ProcEnv().GetPID()) {
-			b := debug.Stack()
-			db.DFatalf("Tried to Started non-kernel proc %v, stack:\n%v", clnt.ProcEnv().GetPID(), string(b))
-		}
-		kprocDir := proc.KProcDir(clnt.ProcEnv().GetPID())
-		semPath := path.Join(kprocDir, proc.START_SEM)
-		// Mark self as started
-		semStart := semclnt.NewSemClnt(clnt.FsLib, semPath)
-		err := semStart.Up()
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Started error %v %v", semPath, err)
-		}
-		// File may not be found if parent exited first or isn't reachable
-		if err != nil && !serr.IsErrorUnavailable(err) {
-			return fmt.Errorf("Started error %v", err)
-		}
-		return nil
-	}
+	return clnt.notify(START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow())
 }
 
 // ========== EXITED ==========
@@ -434,10 +400,10 @@ func exited(fsl *fslib.FsLib, procdir string, parentdir string, rpcc *rpcclnt.RP
 			//
 			// Do nothing
 		} else {
-			req := &schedd.ExitRequest{
+			req := &schedd.NotifyRequest{
 				PidStr: pid.String(),
 			}
-			res := &schedd.ExitResponse{}
+			res := &schedd.NotifyResponse{}
 			if err := rpcc.RPC("Schedd.Exited", req, res); err != nil {
 				db.DFatalf("Error Schedd Exited: %v", err)
 			}
@@ -521,10 +487,10 @@ func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
 		if err != nil {
 			db.DFatalf("Err get schedd clnt rpcc %v", err)
 		}
-		req := &schedd.EvictRequest{
+		req := &schedd.NotifyRequest{
 			PidStr: pid.String(),
 		}
-		res := &schedd.EvictResponse{}
+		res := &schedd.NotifyResponse{}
 		if err := rpcc.RPC("Schedd.Evict", req, res); err != nil {
 			db.DFatalf("Error Schedd Evict: %v", err)
 		}

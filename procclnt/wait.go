@@ -19,16 +19,16 @@ func (clnt *ProcClnt) wait(method Tmethod, pid sp.Tpid, kernelID, semName string
 
 	// If spawned via schedd, wait via RPC.
 	if how == proc.HSCHEDD {
-		// RPC the schedd this proc was spawned on to wait for it to evict.
+		// RPC the schedd this proc was spawned on to wait.
 		db.DPrintf(db.PROCCLNT, "Wait%v %v RPC", method, pid)
 		rpcc, err := clnt.getScheddClnt(kernelID)
 		if err != nil {
 			db.DFatalf("Err get schedd clnt rpcc %v", err)
 		}
-		req := &schedd.EvictRequest{
+		req := &schedd.WaitRequest{
 			PidStr: pid.String(),
 		}
-		res := &schedd.EvictResponse{}
+		res := &schedd.WaitResponse{}
 		if err := rpcc.RPC("Schedd.Wait"+method.String(), req, res); err != nil {
 			db.DFatalf("Error Schedd Wait%v: %v", method, err)
 		}
@@ -40,8 +40,8 @@ func (clnt *ProcClnt) wait(method Tmethod, pid sp.Tpid, kernelID, semName string
 		// If not spawned via schedd, wait via semaphore.
 		kprocDir := proc.KProcDir(pid)
 		db.DPrintf(db.PROCCLNT, "Wait%v sem %v dir %v", method, pid, kprocDir)
-		semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, semName))
-		err := semEvict.Down()
+		sem := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, semName))
+		err := sem.Down()
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Wait%v error %v", method, err)
 			return fmt.Errorf("Wait%v error %v", method, err)

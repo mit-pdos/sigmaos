@@ -24,6 +24,7 @@ type Subsystem struct {
 	how       proc.Thow
 	cmd       *exec.Cmd
 	container *container.Container
+	waited    bool
 	crashed   bool
 }
 
@@ -33,7 +34,7 @@ func (ss *Subsystem) String() string {
 }
 
 func newSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow, cmd *exec.Cmd) *Subsystem {
-	return &Subsystem{pclnt, k, p, how, cmd, nil, false}
+	return &Subsystem{pclnt, k, p, how, cmd, nil, false, false}
 }
 
 func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow) *Subsystem {
@@ -136,10 +137,14 @@ func (s *Subsystem) Kill() error {
 func (s *Subsystem) Wait() error {
 	db.DPrintf(db.KERNEL, "Wait for %v to terminate\n", s)
 	if s.how == proc.HSCHEDD || s.how == proc.HDOCKER {
-		status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)
-		if err != nil || !status.IsStatusOK() {
-			db.DPrintf(db.ALWAYS, "Subsystem exit with status %v err %v", status, err)
-			return err
+		if !s.waited {
+			// Only wait if this proc has not been waited for already, since calling
+			// WaitExit twice leads to an error.
+			status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)
+			if err != nil || !status.IsStatusOK() {
+				db.DPrintf(db.ALWAYS, "Subsystem exit with status %v err %v", status, err)
+				return err
+			}
 		}
 		return nil
 	} else {

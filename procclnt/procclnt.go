@@ -254,7 +254,8 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 		db.DPrintf(db.PROCCLNT, "WaitStart %v RPC", pid)
 		kernelID, err := clnt.cs.getKernelID(pid)
 		if err != nil {
-			db.DFatalf("Unkown kernel ID %v", err)
+			b := debug.Stack()
+			db.DFatalf("Unknown kernel ID %v stack:\n%v", err, string(b))
 		}
 		rpcc, err := clnt.getScheddClnt(kernelID)
 		if err != nil {
@@ -314,7 +315,8 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 		db.DPrintf(db.PROCCLNT, "WaitExit %v RPC", pid)
 		kernelID, err := clnt.cs.getKernelID(pid)
 		if err != nil {
-			db.DFatalf("Unkown kernel ID %v", err)
+			b := debug.Stack()
+			db.DFatalf("Unknown kernel ID %v stack:\n%v", err, string(b))
 		}
 		rpcc, err := clnt.getScheddClnt(kernelID)
 		if err != nil {

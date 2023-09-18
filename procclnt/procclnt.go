@@ -143,7 +143,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	} else {
 		if !isKProc(p.GetPid()) {
 			b := debug.Stack()
-			db.DFatalf("Tried to Spawn kernel proc %v, stack:\n%v", p.GetPid(), string(b))
+			db.DFatalf("Tried to Spawn non-kernel proc %v, stack:\n%v", p.GetPid(), string(b))
 		}
 		// Make the proc's procdir
 		err := clnt.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged())
@@ -381,7 +381,7 @@ func (clnt *ProcClnt) Started() error {
 		return err
 	}
 
-	if proc.Thow(clnt.ProcEnv().GetHow()) == proc.HSCHEDD {
+	if clnt.ProcEnv().GetHow() == proc.HSCHEDD {
 		db.DPrintf(db.PROCCLNT, "Started %v RPC pre", clnt.pid)
 		db.DPrintf(db.ALWAYS, "Started %v RPC pre", clnt.pid)
 		// Get the RPC client for the local schedd
@@ -400,11 +400,12 @@ func (clnt *ProcClnt) Started() error {
 		db.DPrintf(db.ALWAYS, "Started %v RPC post", clnt.pid)
 		return nil
 	} else {
-		semPath := path.Join( /*proc.PARENTDIR*/ clnt.ProcEnv().ParentDir, proc.START_SEM)
-		if isKProc(clnt.ProcEnv().GetPID()) {
-			semPath = path.Join(clnt.ProcEnv().ProcDir, proc.START_SEM)
+		if !isKProc(clnt.ProcEnv().GetPID()) {
+			b := debug.Stack()
+			db.DFatalf("Tried to Started non-kernel proc %v, stack:\n%v", clnt.ProcEnv().GetPID(), string(b))
 		}
-
+		kprocDir := proc.KProcDir(clnt.ProcEnv().GetPID())
+		semPath := path.Join(kprocDir, proc.START_SEM)
 		// Mark self as started
 		semStart := semclnt.NewSemClnt(clnt.FsLib, semPath)
 		err := semStart.Up()

@@ -11,22 +11,27 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	pqproto "sigmaos/procqsrv/proto"
+	"sigmaos/rpcclnt"
+	schedd "sigmaos/schedd/proto"
+	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
 
 type LCSchedSrv struct {
 	sync.Mutex
-	cond    *sync.Cond
-	mfs     *memfssrv.MemFs
-	qs      map[sp.Trealm]*Queue
-	schedds map[string]*Resources
+	cond       *sync.Cond
+	mfs        *memfssrv.MemFs
+	scheddclnt *scheddclnt.ScheddClnt
+	qs         map[sp.Trealm]*Queue
+	schedds    map[string]*Resources
 }
 
 func NewLCSchedSrv(mfs *memfssrv.MemFs) *LCSchedSrv {
 	lcs := &LCSchedSrv{
-		mfs: mfs,
-		qs:  make(map[sp.Trealm]*Queue),
+		mfs:        mfs,
+		scheddclnt: scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib),
+		qs:         make(map[sp.Trealm]*Queue),
 	}
 	lcs.cond = sync.NewCond(&lcs.Mutex)
 	return lcs
@@ -50,7 +55,74 @@ func (lcs *LCSchedSrv) RegisterSchedd(ctx fs.CtxI, req proto.RegisterScheddReque
 		db.DFatalf("Double-register schedd %v", req.KernelID)
 	}
 	lcs.schedds[req.KernelID] = newResources(req.McpuInt, req.MemInt)
+	lcs.cond.Broadcast()
 	return nil
+}
+
+func (lcs *LCSchedSrv) schedule() {
+	lcs.Lock()
+	defer lcs.Unlock()
+
+	// Keep scheduling forever.
+	for {
+		var success bool
+		for realm, q := range lcs.qs {
+			db.DPrintf(db.LCSCHED, "Try to schedule realm %v", realm)
+			for kid, r := range lcs.schedds {
+				p, ch, ok := q.Dequeue(r.mcpu, r.mem)
+				if ok {
+					lcs.runProc(kid, p, ch, r)
+					success = true
+				}
+			}
+		}
+		// If scheduling was unsuccessful, wait.
+		if !success {
+			lcs.cond.Wait()
+		}
+	}
+}
+
+// Caller holds lock
+func (lcs *LCSchedSrv) runProc(kernelID string, p *proc.Proc, ch chan string, r *Resources) {
+	// Alloc resources for the proc
+	r.alloc(p)
+	rpcc, err := lcs.scheddclnt.GetScheddClnt(kernelID)
+	if err != nil {
+		db.DFatalf("Error getScheddClnt: %v", err)
+	}
+	// Start the proc on the chosen schedd.
+	req := &schedd.ForceRunRequest{
+		ProcProto: p.GetProto(),
+	}
+	res := &schedd.ForceRunResponse{}
+	if err := rpcc.RPC("Schedd.ForceRun", req, res); err != nil {
+		db.DFatalf("Schedd.Run %v err %v", kernelID, err)
+	}
+	// Notify the spawner that a schedd has been chosen.
+	ch <- kernelID
+
+	go lcs.waitProcExit(rpcc, kernelID, p, r)
+}
+
+func (lcs *LCSchedSrv) waitProcExit(rpcc *rpcclnt.RPCClnt, kernelID string, p *proc.Proc, r *Resources) {
+	// RPC the schedd this proc was spawned on to wait for the proc to exit.
+	db.DPrintf(db.LCSCHED, "WaitExit %v RPC", p.GetPid())
+	req := &schedd.WaitRequest{
+		PidStr: p.GetPid().String(),
+	}
+	res := &schedd.WaitResponse{}
+	if err := rpcc.RPC("Schedd.WaitExit", req, res); err != nil {
+		db.DFatalf("Error Schedd WaitExit: %v", err)
+	}
+	// Lock to modify resource allocations
+	lcs.Lock()
+	defer lcs.Unlock()
+
+	r.free(p)
+	// Notify that more resources have become available (and thus procs may now
+	// be schedulable).
+	lcs.cond.Broadcast()
 }
 
 func (lcs *LCSchedSrv) addProc(p *proc.Proc) chan string {
@@ -101,6 +173,7 @@ func Run() {
 	}
 
 	defer p.Done()
+	go lcs.schedule()
 
 	ssrv.RunServer()
 }

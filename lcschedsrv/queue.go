@@ -48,22 +48,19 @@ func (q *Queue) Enqueue(p *proc.Proc) chan string {
 }
 
 // Dequeue a proc with certain resource requirements.
-func (q *Queue) Dequeue() (*proc.Proc, chan string, bool) {
+func (q *Queue) Dequeue(mcpu proc.Tmcpu, mem proc.Tmem) (*proc.Proc, chan string, bool) {
 	q.Lock()
 	defer q.Unlock()
 
-	var p *proc.Proc
-	var ok bool
-	var kidch chan string = nil
-	if len(q.procs) > 0 {
-		var qi *Qitem
-		qi, q.procs = q.procs[0], q.procs[1:]
-		p = qi.p
-		kidch = qi.kidch
-		ok = true
-		delete(q.pmap, qi.p.GetPid())
+	for i := range q.procs {
+		qi := q.procs[i]
+		if qi.p.GetMem() <= mem && qi.p.GetMcpu() <= mcpu {
+			q.procs = append(q.procs[:i], q.procs[i+1:]...)
+			delete(q.pmap, qi.p.GetPid())
+			return qi.p, qi.kidch, true
+		}
 	}
-	return p, kidch, ok
+	return nil, nil, false
 }
 
 func (q *Queue) String() string {

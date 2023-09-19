@@ -84,7 +84,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string) (*proc.Proc, error) {
 		pqID, err := pqc.NextProcQ()
 		if err != nil {
 			pqc.UpdateProcQs()
-			db.DPrintf(db.ALWAYS, "No procQs", err)
+			db.DPrintf(db.PROCQCLNT_ERR, "No procQs available", err)
 			continue
 		}
 		rpcc, err := pqc.GetProcQClnt(pqID)

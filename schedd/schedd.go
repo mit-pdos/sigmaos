@@ -3,7 +3,6 @@ package schedd
 import (
 	"path"
 	"sync"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -22,14 +21,12 @@ import (
 
 type Schedd struct {
 	mu         sync.Mutex
-	qsmu       sync.RWMutex
 	cond       *sync.Cond
 	pmgr       *procmgr.ProcMgr
 	scheddclnt *scheddclnt.ScheddClnt
 	procqclnt  *procqclnt.ProcQClnt
 	mcpufree   proc.Tmcpu
 	memfree    proc.Tmem
-	qs         map[sp.Trealm]*Queue
 	kernelId   string
 	realms     []sp.Trealm
 }
@@ -37,7 +34,6 @@ type Schedd struct {
 func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
 		pmgr:     procmgr.NewProcMgr(mfs, kernelId),
-		qs:       make(map[sp.Trealm]*Queue),
 		realms:   make([]sp.Trealm, 0),
 		mcpufree: proc.Tmcpu(1000*linuxsched.NCores - reserveMcpu),
 		memfree:  mem.GetTotalMem(),
@@ -158,86 +154,6 @@ func (sc *Schedd) shouldGetProc() bool {
 	return true
 }
 
-func (sd *Schedd) getQueuedProcs() {
-	for {
-		// TODO: Switch to only BE procs...
-		if sd.shouldGetProc() {
-		}
-		// Try to get a proc from the proc queue.
-		p, err := sd.procqclnt.GetProc(sd.kernelId)
-		if err != nil {
-			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)
-			continue
-		}
-		db.DPrintf(db.SCHEDD, "Got proc from procq: %v", p)
-		sd.spawnAndRunProc(p)
-	}
-}
-
-func (sd *Schedd) schedule() {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
-	// Priority order in which procs are claimed
-	priority := []proc.Ttype{proc.T_LC, proc.T_BE}
-	for {
-		var ok bool
-		// Iterate through the realms round-robin.
-		for _, ptype := range priority {
-			for r, q := range sd.qs {
-				// Try to schedule a proc from realm r.
-				ok = ok || sd.tryScheduleRealmL(r, q, ptype)
-			}
-			// If a proc was successfully scheduled, don't try to schedule a proc
-			// from a lower priority class. Instead, rerun the whole scheduling loop.
-			if ok {
-				break
-			}
-		}
-		// If unable to schedule a proc from any realm, wait.
-		if !ok {
-			db.DPrintf(db.SCHEDD, "No procs runnable mcpu:%v mem:%v qs:%v", sd.mcpufree, sd.memfree, sd.qs)
-			sd.cond.Wait()
-		}
-	}
-}
-
-// Try to schedule a proc from realm r's queue q. Returns true if a proc was
-// successfully scheduled.
-func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) bool {
-	for {
-		// Try to dequeue a proc, whether it be from a local queue or potentially
-		// stolen from a remote queue.
-		if p, ok := q.Dequeue(ptype, sd.mcpufree, sd.memfree); ok {
-			// Claimed a proc, so schedule it.
-			db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
-			db.DPrintf(db.SPAWN_LAT, "[%v] Queueing latency %v", p.GetPid(), time.Since(p.GetSpawnTime()))
-			sd.runProcL(p)
-			return true
-		} else {
-			return false
-		}
-	}
-}
-
-func (sd *Schedd) getQueue(realm sp.Trealm) (*Queue, bool) {
-	sd.qsmu.RLock()
-	defer sd.qsmu.RUnlock()
-
-	q, ok := sd.qs[realm]
-	return q, ok
-}
-
-// Caller must hold sd.mu to be held.
-func (sd *Schedd) addRealmQueueL(realm sp.Trealm) *Queue {
-	sd.qsmu.Lock()
-	defer sd.qsmu.Unlock()
-
-	q := newQueue()
-	sd.qs[realm] = q
-	return q
-}
-
 func RunSchedd(kernelId string, reserveMcpu uint) error {
 	pcfg := proc.GetProcEnv()
 	mfs, err := memfssrv.NewMemFs(path.Join(sp.SCHEDD, kernelId), pcfg)
@@ -257,8 +173,6 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
-	go sd.schedule()
-	go sd.getQueuedProcs()
 	ssrv.RunServer()
 	return nil
 }

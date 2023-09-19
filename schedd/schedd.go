@@ -13,6 +13,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procmgr"
+	"sigmaos/procqclnt"
 	"sigmaos/schedd/proto"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
@@ -25,6 +26,7 @@ type Schedd struct {
 	cond       *sync.Cond
 	pmgr       *procmgr.ProcMgr
 	scheddclnt *scheddclnt.ScheddClnt
+	procqclnt  *procqclnt.ProcQClnt
 	mcpufree   proc.Tmcpu
 	memfree    proc.Tmem
 	qs         map[sp.Trealm]*Queue
@@ -43,6 +45,7 @@ func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.scheddclnt = scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib)
+	sd.procqclnt = procqclnt.NewProcQClnt(mfs.SigmaClnt().FsLib)
 	return sd
 }
 
@@ -73,11 +76,9 @@ func (sd *Schedd) Run(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRu
 	defer sd.mu.Unlock()
 
 	p := proc.NewProcFromProto(req.ProcProto)
-	p.SetKernelID(sd.kernelId, false)
-	db.DPrintf(db.SCHEDD, "[%v] %v Going to run %v", req.Realm, sd.kernelId, p)
-	sd.pmgr.Spawn(p)
+	db.DPrintf(db.SCHEDD, "[%v] %v Force run %v", req.Realm, sd.kernelId, p)
 	// Run the proc
-	sd.runProc(p)
+	sd.spawnAndRunProc(p)
 	return nil
 }
 
@@ -157,13 +158,44 @@ func (sd *Schedd) procDone(p *proc.Proc) error {
 	return nil
 }
 
-// Run a proc via the local procd.
-func (sd *Schedd) runProc(p *proc.Proc) {
+func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
+	p.SetKernelID(sd.kernelId, false)
+	sd.pmgr.Spawn(p)
+	// Run the proc
+	sd.runProcL(p)
+}
+
+// Run a proc via the local procd. Caller holds lock.
+func (sd *Schedd) runProcL(p *proc.Proc) {
+	db.DPrintf(db.SCHEDD, "[%v] %v runProcL %v", p.GetRealm(), sd.kernelId, p)
 	sd.allocResourcesL(p)
 	go func() {
 		sd.pmgr.RunProc(p)
 		sd.procDone(p)
 	}()
+}
+
+func (sc *Schedd) shouldGetProc() bool {
+	// TODO: check local resource utilization
+	return true
+}
+
+func (sd *Schedd) getQueuedProcs() {
+	for {
+		// TODO: Switch to only BE procs...
+		if sd.shouldGetProc() {
+		}
+		// Try to get a proc from the proc queue.
+		p, err := sd.procqclnt.GetProc(sd.kernelId)
+		if err != nil {
+			db.DFatalf("Error GetProc: %v", err)
+		}
+		db.DPrintf(db.SCHEDD, "Got proc from procq: %v", p)
+		sd.spawnAndRunProc(p)
+	}
 }
 
 func (sd *Schedd) schedule() {
@@ -204,7 +236,7 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 			// Claimed a proc, so schedule it.
 			db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
 			db.DPrintf(db.SPAWN_LAT, "[%v] Queueing latency %v", p.GetPid(), time.Since(p.GetSpawnTime()))
-			sd.runProc(p)
+			sd.runProcL(p)
 			return true
 		} else {
 			return false
@@ -250,6 +282,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	}
 	defer p.Done()
 	go sd.schedule()
+	go sd.getQueuedProcs()
 	ssrv.RunServer()
 	return nil
 }

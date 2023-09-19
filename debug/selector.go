@@ -104,6 +104,8 @@ const (
 	UPROCD_ERR               = "UPROCD" + ERR
 	PROCQ                    = "PROCQ"
 	PROCQ_ERR                = "PROCQ" + ERR
+	PROCQCLNT                = "PROCQCLNT"
+	PROCQCLNT_ERR            = "PROCQCLNT" + ERR
 	SCHEDD                   = "SCHEDD"
 	SCHEDD_ERR               = "SCHEDD" + ERR
 	SCHEDDCLNT               = "SCHEDDCLNT"

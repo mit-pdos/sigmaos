@@ -31,6 +31,10 @@ const (
 	EXIT          = "Exit"
 )
 
+const (
+	NO_KERNEL_ID = "NO_KERNEL_ID"
+)
+
 func (m Tmethod) String() string {
 	return string(m)
 }
@@ -123,8 +127,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 
 	p.SetHow(how)
 
-	clnt.cs.spawned(p.GetPid(), kernelId)
-
 	p.InheritParentProcEnv(clnt.ProcEnv())
 
 	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v", kernelId, p)
@@ -148,12 +150,15 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	}
 
 	p.SetSpawnTime(time.Now())
-	// If this is not a privileged proc, spawn it through schedd.
+	// Optionally spawn the proc through schedd.
 	if how == proc.HSCHEDD {
-		if err := clnt.spawnRetry(kernelId, p); err != nil {
+		spawnedKernelID, err := clnt.spawnRetry(kernelId, p)
+		clnt.cs.spawned(p.GetPid(), spawnedKernelID)
+		if err != nil {
 			return clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
+		clnt.cs.spawned(p.GetPid(), kernelId)
 		if !isKProc(p.GetPid()) {
 			b := debug.Stack()
 			db.DFatalf("Tried to Spawn non-kernel proc %v, stack:\n%v", p.GetPid(), string(b))
@@ -172,32 +177,39 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	return nil
 }
 
-func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) error {
+func (clnt *ProcClnt) spawnViaSchedd(kernelId string, p *proc.Proc) error {
+	rpcc, err := clnt.getScheddClnt(kernelId)
+	if err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "spawnRetry: getScheddClnt %v err %v\n", kernelId, err)
+		return err
+	}
+	req := &schedd.SpawnRequest{
+		Realm:     clnt.Realm().String(),
+		ProcProto: p.GetProto(),
+	}
+	res := &schedd.SpawnResponse{}
+	if err := rpcc.RPC("Schedd.Spawn", req, res); err != nil {
+		db.DPrintf(db.ALWAYS, "Schedd.Spawn %v err %v\n", kernelId, err)
+		return err
+	}
+	return nil
+}
+
+func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) {
 	s := time.Now()
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
-		rpcc, err := clnt.getScheddClnt(kernelId)
-		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry: getScheddClnt %v err %v\n", kernelId, err)
-			return err
-		}
-		req := &schedd.SpawnRequest{
-			Realm:     clnt.Realm().String(),
-			ProcProto: p.GetProto(),
-		}
-		res := &schedd.SpawnResponse{}
-		if err := rpcc.RPC("Schedd.Spawn", req, res); err != nil {
-			db.DPrintf(db.ALWAYS, "Schedd.Spawn %v err %v\n", kernelId, err)
+		if err := clnt.spawnViaSchedd(kernelId, p); err != nil {
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
 				db.DPrintf(db.ALWAYS, "Force lookup %v\n", kernelId)
 				clnt.scheddclnt.UnregisterClnt(kernelId)
 				continue
 			}
-			return err
+			return NO_KERNEL_ID, err
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
-		return nil
+		return kernelId, nil
 	}
-	return serr.NewErr(serr.TErrUnreachable, kernelId)
+	return NO_KERNEL_ID, serr.NewErr(serr.TErrUnreachable, kernelId)
 }
 
 func (clnt *ProcClnt) getScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {

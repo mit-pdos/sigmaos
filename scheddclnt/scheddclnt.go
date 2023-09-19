@@ -236,7 +236,7 @@ func (sdc *ScheddClnt) RegisterLocalClnt(pdc *rpcclnt.RPCClnt) error {
 		return fmt.Errorf("Couldn't register schedd ~local: %v, %v, %v", p, ok, err)
 	}
 	kernelId := path.Base(p)
-	db.DPrintf(db.PROCCLNT, "Resolved ~local to %v", kernelId)
+	db.DPrintf(db.SCHEDDCLNT, "Resolved ~local to %v", kernelId)
 	sdc.schedds[kernelId] = pdc
 	return nil
 }
@@ -263,7 +263,7 @@ func (sdc *ScheddClnt) UpdateSchedds() {
 	// If we updated the list of active procds recently, return immediately. The
 	// list will change at most as quickly as the realm resizes.
 	if time.Since(sdc.lastUpdate) < sp.Conf.Realm.RESIZE_INTERVAL && len(sdc.scheddKernelIds) > 0 {
-		db.DPrintf(db.PROCCLNT, "Update schedds too soon")
+		db.DPrintf(db.SCHEDDCLNT, "Update schedds too soon")
 		return
 	}
 	// Read the procd union dir.
@@ -273,7 +273,7 @@ func (sdc *ScheddClnt) UpdateSchedds() {
 		return
 	}
 	sdc.lastUpdate = time.Now()
-	db.DPrintf(db.PROCCLNT, "Got schedds %v", sp.Names(schedds))
+	db.DPrintf(db.SCHEDDCLNT, "Got schedds %v", sp.Names(schedds))
 	// Alloc enough space for the list of schedds.
 	sdc.scheddKernelIds = make([]string, 0, len(schedds))
 	for _, schedd := range schedds {

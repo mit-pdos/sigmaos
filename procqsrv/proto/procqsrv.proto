@@ -5,7 +5,7 @@ import "proc/proc.proto";
 option go_package = "sigmaos/procqsrv/proto";
 
 service ProcQ {
-  rpc Spawn(EnqueueRequest) returns (EnqueueResponse);
+  rpc Enqueue(EnqueueRequest) returns (EnqueueResponse);
   rpc GetProc(GetProcRequest) returns (GetProcResponse);
 }
 

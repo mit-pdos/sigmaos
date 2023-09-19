@@ -15,7 +15,7 @@ import (
 
 // For documentation on dir structure, see sigmaos/proc/dir.go
 
-func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool) error {
+func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool, how proc.Thow) error {
 	if err := clnt.NewDir(procdir, 0777); err != nil {
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			debug.PrintStack()
@@ -30,13 +30,15 @@ func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 
-	// Create exit signal
-	semExit := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
-	semExit.Init(0)
+	if how != proc.HSCHEDD {
+		// Create exit signal
+		semExit := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
+		semExit.Init(0)
 
-	// Create eviction signal
-	semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
-	semEvict.Init(0)
+		// Create eviction signal
+		semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
+		semEvict.Init(0)
+	}
 
 	return nil
 }

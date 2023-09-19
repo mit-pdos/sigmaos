@@ -5,7 +5,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -21,30 +20,11 @@ func (mgr *ProcMgr) postProcInQueue(p *proc.Proc) {
 	}
 }
 
-// Create an ephemeral "Started" semaphore. Must be ephemeral so parent procs can detect schedd crashes.
-func (mgr *ProcMgr) createStartedSem(p *proc.Proc) (*semclnt.SemClnt, error) {
-	semPath := path.Join(p.GetParentDir(), proc.START_SEM)
-	semStart := semclnt.NewSemClnt(mgr.getSigmaClnt(p.GetRealm()).FsLib, semPath)
-	var err error
-	if err = semStart.Init(sp.DMTMP); err != nil {
-		db.DPrintf(db.PROCMGR_ERR, "Err sem init [%v]: %v", semPath, err)
-	} else {
-		db.DPrintf(db.PROCMGR, "Sem init done: %v", p)
-	}
-	return semStart, err
-}
-
 // Set up a proc's state in the realm.
 func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 	mgr.addRunningProc(p)
 	// Set up the directory to cache proc binaries for this realm.
 	mgr.setupUserBinCache(p)
-	// Create started semaphore, if the proc was not stolen. If the proc was
-	// stolen, the started semaphore would have been created as part of the
-	// stealing process.
-	if _, err := mgr.createStartedSem(p); err != nil {
-		db.DPrintf(db.PROCMGR_ERR, "Error creating start semaphore path:%v err:%v", path.Join(p.GetParentDir(), proc.START_SEM), err)
-	}
 	// Release the parent proc, which may be waiting for removal of the proc
 	// queue file in WaitStart.
 	if err := mgr.rootsc.Remove(path.Join(sp.SCHEDD, p.GetKernelID(), sp.QUEUE, p.GetPid().String())); err != nil {
@@ -59,7 +39,7 @@ func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 		}
 	}
 	// Make the proc's procdir
-	if err := mgr.rootsc.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged()); err != nil {
+	if err := mgr.rootsc.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), proc.HSCHEDD); err != nil {
 		db.DPrintf(db.PROCMGR_ERR, "Err procmgr NewProcDir: %v\n", err)
 	}
 }

@@ -40,7 +40,7 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 	}
 
 	clnt := newProcClnt(fsl, pid, fsl.ProcEnv().ProcDir)
-	clnt.NewProcDir(pid, fsl.ProcEnv().ProcDir, false)
+	clnt.NewProcDir(pid, fsl.ProcEnv().ProcDir, false, proc.HSCHEDD)
 
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)
 	fsl.NewRootMount(fsl.ProcEnv().GetUname(), fsl.ProcEnv().ProcDir, proc.PROCDIR)

@@ -162,7 +162,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 			db.DFatalf("Tried to Spawn non-kernel proc %v, stack:\n%v", p.GetPid(), string(b))
 		}
 		// Make the proc's procdir
-		err := clnt.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged())
+		err := clnt.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), how)
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc NewProcDir: %v", err)
 		}

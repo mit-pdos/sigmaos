@@ -3,7 +3,6 @@ package procqclnt
 import (
 	"errors"
 	"path"
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -177,7 +176,6 @@ func (pqc *ProcQClnt) NextProcQ() (string, error) {
 	defer pqc.Unlock()
 
 	if len(pqc.procqIDs) == 0 {
-		debug.PrintStack()
 		return "", serr.NewErr(serr.TErrNotfound, "no procqs to spawn on")
 	}
 

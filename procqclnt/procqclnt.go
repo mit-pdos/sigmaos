@@ -47,7 +47,7 @@ func (pqc *ProcQClnt) Nprocq() (int, error) {
 
 // Enqueue a proc on the procq. Returns the ID of the kernel that is running
 // the proc.
-func (pqc *ProcQClnt) EnqueueProc(p *proc.Proc) (string, error) {
+func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 	pqc.UpdateProcQs()
 	pqID, err := pqc.NextProcQ()
 	if err != nil {

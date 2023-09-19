@@ -12,6 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
+	"sigmaos/lcschedclnt"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
@@ -47,22 +48,24 @@ func (m Tmethod) Verb() string {
 type ProcClnt struct {
 	sync.Mutex
 	*fslib.FsLib
-	pid        sp.Tpid
-	isExited   sp.Tpid
-	procdir    string
-	scheddclnt *scheddclnt.ScheddClnt
-	procqclnt  *procqclnt.ProcQClnt
-	cs         *ChildState
+	pid         sp.Tpid
+	isExited    sp.Tpid
+	procdir     string
+	scheddclnt  *scheddclnt.ScheddClnt
+	procqclnt   *procqclnt.ProcQClnt
+	lcschedclnt *lcschedclnt.LCSchedClnt
+	cs          *ChildState
 }
 
 func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procdir string) *ProcClnt {
 	clnt := &ProcClnt{
-		FsLib:      fsl,
-		pid:        pid,
-		procdir:    procdir,
-		scheddclnt: scheddclnt.NewScheddClnt(fsl),
-		procqclnt:  procqclnt.NewProcQClnt(fsl),
-		cs:         newChildState(),
+		FsLib:       fsl,
+		pid:         pid,
+		procdir:     procdir,
+		scheddclnt:  scheddclnt.NewScheddClnt(fsl),
+		procqclnt:   procqclnt.NewProcQClnt(fsl),
+		lcschedclnt: lcschedclnt.NewLCSchedClnt(fsl),
+		cs:          newChildState(),
 	}
 	return clnt
 }
@@ -197,7 +200,19 @@ func (clnt *ProcClnt) forceRunViaSchedd(kernelId string, p *proc.Proc) error {
 }
 
 func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, error) {
-	return clnt.procqclnt.EnqueueProc(p)
+	//	// Sanity check.
+	//	if p.GetType() == proc.T_LC {
+	//		db.DFatalf("Err: try to enqueue LC proc via procq")
+	//	}
+	return clnt.procqclnt.Enqueue(p)
+}
+
+func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
+	// Sanity check.
+	if p.GetType() == proc.T_BE {
+		db.DFatalf("Err: try to enqueue LC proc via procq")
+	}
+	return clnt.lcschedclnt.Enqueue(p)
 }
 
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) {
@@ -211,8 +226,13 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 			err = clnt.forceRunViaSchedd(kernelId, p)
 			spawnedKernelID = kernelId
 		} else {
-			// Non-kernel procs are enqueued via the procq.
-			spawnedKernelID, err = clnt.enqueueViaProcQ(p)
+			if p.GetType() == proc.T_BE {
+				// BE Non-kernel procs are enqueued via the procq.
+				spawnedKernelID, err = clnt.enqueueViaProcQ(p)
+			} else {
+				// LC Non-kernel procs are enqueued via the procq.
+				spawnedKernelID, err = clnt.enqueueViaLCSched(p)
+			}
 		}
 		// If spawn attempt resulted in an error, check if it was due to the
 		// server becoming unreachable.

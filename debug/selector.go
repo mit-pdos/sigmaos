@@ -91,37 +91,39 @@ const (
 
 // Kernel
 const (
-	KERNEL         Tselector = "KERNEL"
-	BOOTCLNT                 = "BOOTCLNT"
-	BOOT                     = "BOOT"
-	CONTAINER                = "CONTAINER"
-	NAMED                    = "NAMED"
-	FSETCD                   = "FSETCD"
-	FSETCDLEASE              = "FSETCDLEASE"
-	PROCMGR                  = "PROCMGR"
-	UPROCDMGR                = "UPROCDMGR"
-	UPROCD                   = "UPROCD"
-	UPROCD_ERR               = "UPROCD" + ERR
-	LCSCHED                  = "LCSCHED"
-	LCSCHED_ERR              = "LCSCHED" + ERR
-	PROCQ                    = "PROCQ"
-	PROCQ_ERR                = "PROCQ" + ERR
-	PROCQCLNT                = "PROCQCLNT"
-	PROCQCLNT_ERR            = "PROCQCLNT" + ERR
-	SCHEDD                   = "SCHEDD"
-	SCHEDD_ERR               = "SCHEDD" + ERR
-	SCHEDDCLNT               = "SCHEDDCLNT"
-	SCHEDDCLNT_ERR           = "SCHEDDCLNT" + ERR
-	PROCMGR_ERR              = PROCMGR + ERR
-	PROCCACHE                = "PROCCACHE"
-	CGROUP                   = "CGROUP"
-	CGROUP_ERR               = "CGROUP_ERR"
-	S3                       = "S3"
-	UX                       = "UX"
-	DB                       = "DB"
-	MONGO                    = "MONGO"
-	MONGO_ERR                = "MONGO_ERR"
-	PROXY                    = "PROXY"
+	KERNEL          Tselector = "KERNEL"
+	BOOTCLNT                  = "BOOTCLNT"
+	BOOT                      = "BOOT"
+	CONTAINER                 = "CONTAINER"
+	NAMED                     = "NAMED"
+	FSETCD                    = "FSETCD"
+	FSETCDLEASE               = "FSETCDLEASE"
+	PROCMGR                   = "PROCMGR"
+	UPROCDMGR                 = "UPROCDMGR"
+	UPROCD                    = "UPROCD"
+	UPROCD_ERR                = "UPROCD" + ERR
+	LCSCHEDCLNT               = "LCSCHEDCLNT"
+	LCSCHEDCLNT_ERR           = "LCSCHEDCLNT" + ERR
+	LCSCHED                   = "LCSCHED"
+	LCSCHED_ERR               = "LCSCHED" + ERR
+	PROCQ                     = "PROCQ"
+	PROCQ_ERR                 = "PROCQ" + ERR
+	PROCQCLNT                 = "PROCQCLNT"
+	PROCQCLNT_ERR             = "PROCQCLNT" + ERR
+	SCHEDD                    = "SCHEDD"
+	SCHEDD_ERR                = "SCHEDD" + ERR
+	SCHEDDCLNT                = "SCHEDDCLNT"
+	SCHEDDCLNT_ERR            = "SCHEDDCLNT" + ERR
+	PROCMGR_ERR               = PROCMGR + ERR
+	PROCCACHE                 = "PROCCACHE"
+	CGROUP                    = "CGROUP"
+	CGROUP_ERR                = "CGROUP_ERR"
+	S3                        = "S3"
+	UX                        = "UX"
+	DB                        = "DB"
+	MONGO                     = "MONGO"
+	MONGO_ERR                 = "MONGO_ERR"
+	PROXY                     = "PROXY"
 )
 
 // Realm

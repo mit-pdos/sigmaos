@@ -121,7 +121,7 @@ func (sd *Schedd) StealProc(ctx fs.CtxI, req proto.StealProcRequest, res *proto.
 	return nil
 }
 
-// Steal a proc from this schedd.
+// Get CPU shares assigned to this realm.
 func (sd *Schedd) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesRequest, res *proto.GetCPUSharesResponse) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
@@ -135,7 +135,7 @@ func (sd *Schedd) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesRequest, res *
 	return nil
 }
 
-// Steal a proc from this schedd.
+// Get schedd's CPU util.
 func (sd *Schedd) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *proto.GetCPUUtilResponse) error {
 	res.Util = sd.pmgr.GetCPUUtil(sp.Trealm(req.RealmStr))
 	return nil

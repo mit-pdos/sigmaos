@@ -62,8 +62,8 @@ func (pqc *ProcQClnt) EnqueueProc(p *proc.Proc) (string, error) {
 		ProcProto: p.GetProto(),
 	}
 	res := &proto.EnqueueResponse{}
-	if err := rpcc.RPC("ProcQSrv.Enqueue", req, res); err != nil {
-		db.DPrintf(db.ALWAYS, "ProcQSrv.Enqueue err %v", err)
+	if err := rpcc.RPC("ProcQ.Enqueue", req, res); err != nil {
+		db.DPrintf(db.ALWAYS, "ProcQ.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
 			pqc.UnregisterClnt(pqID)
@@ -96,8 +96,8 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string) (*proc.Proc, error) {
 			KernelID: callerKernelID,
 		}
 		res := &proto.GetProcResponse{}
-		if err := rpcc.RPC("ProcQSrv.GetProc", req, res); err != nil {
-			db.DPrintf(db.ALWAYS, "ProcQSrv.GetProc %v err %v", callerKernelID, err)
+		if err := rpcc.RPC("ProcQ.GetProc", req, res); err != nil {
+			db.DPrintf(db.ALWAYS, "ProcQ.GetProc %v err %v", callerKernelID, err)
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
 				db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
 				pqc.UnregisterClnt(pqID)

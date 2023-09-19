@@ -14,15 +14,15 @@ import (
 	"sigmaos/sigmasrv"
 )
 
-type ProcQSrv struct {
+type ProcQ struct {
 	mu   sync.Mutex
 	cond *sync.Cond
 	mfs  *memfssrv.MemFs
 	qs   map[sp.Trealm]*Queue
 }
 
-func NewProcQSrv(mfs *memfssrv.MemFs) *ProcQSrv {
-	pq := &ProcQSrv{
+func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
+	pq := &ProcQ{
 		mfs: mfs,
 		qs:  make(map[sp.Trealm]*Queue),
 	}
@@ -30,7 +30,7 @@ func NewProcQSrv(mfs *memfssrv.MemFs) *ProcQSrv {
 	return pq
 }
 
-func (pq *ProcQSrv) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
+func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
 
@@ -39,7 +39,7 @@ func (pq *ProcQSrv) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.En
 	return nil
 }
 
-func (pq *ProcQSrv) addProc(p *proc.Proc) chan string {
+func (pq *ProcQ) addProc(p *proc.Proc) chan string {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 
@@ -54,7 +54,7 @@ func (pq *ProcQSrv) addProc(p *proc.Proc) chan string {
 	return ch
 }
 
-func (pq *ProcQSrv) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
+func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 
@@ -79,20 +79,20 @@ func (pq *ProcQSrv) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Ge
 }
 
 // Caller must hold lock.
-func (pq *ProcQSrv) addRealmQueueL(realm sp.Trealm) *Queue {
+func (pq *ProcQ) addRealmQueueL(realm sp.Trealm) *Queue {
 	q := newQueue()
 	pq.qs[realm] = q
 	return q
 }
 
-// Run a ProcQSrv
+// Run a ProcQ
 func Run() {
 	pcfg := proc.GetProcEnv()
 	mfs, err := memfssrv.NewMemFs(path.Join(sp.PROCQ, pcfg.GetPID().String()), pcfg)
 	if err != nil {
 		db.DFatalf("Error NewMemFs: %v", err)
 	}
-	pq := NewProcQSrv(mfs)
+	pq := NewProcQ(mfs)
 	ssrv, err := sigmasrv.NewSigmaSrvMemFs(mfs, pq)
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)

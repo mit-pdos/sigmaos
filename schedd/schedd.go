@@ -71,9 +71,9 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	return nil
 }
 
-func (sd *Schedd) Run(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
+func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
-	db.DPrintf(db.SCHEDD, "[%v] %v Force run %v", req.Realm, sd.kernelId, p)
+	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", req.Realm, sd.kernelId, p)
 	// Run the proc
 	sd.spawnAndRunProc(p)
 	return nil

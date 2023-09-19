@@ -53,14 +53,18 @@ func (q *Queue) Dequeue() (*proc.Proc, chan string, bool) {
 	q.Lock()
 	defer q.Unlock()
 
-	var qi *Qitem
+	var p *proc.Proc
 	var ok bool
+	var kidch chan string = nil
 	if len(q.procs) > 0 {
+		var qi *Qitem
 		qi, q.procs = q.procs[0], q.procs[1:]
+		p = qi.p
+		kidch = qi.kidch
 		ok = true
 		delete(q.pmap, qi.p.GetPid())
 	}
-	return qi.p, qi.kidch, ok
+	return p, kidch, ok
 }
 
 func (q *Queue) String() string {

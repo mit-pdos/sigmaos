@@ -62,10 +62,10 @@ func (pq *ProcQSrv) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Ge
 	for {
 		// XXX Should probably do this more efficiently (just select a realm).
 		// Iterate through the realms round-robin.
-		for _, q := range pq.qs {
+		for r, q := range pq.qs {
 			p, ch, ok := q.Dequeue()
 			if ok {
-				db.DPrintf(db.PROCQ, "Dequeued %v", p)
+				db.DPrintf(db.PROCQ, "[%v] Dequeued %v", r, p)
 				res.ProcProto = p.GetProto()
 				ch <- req.KernelID
 				return nil

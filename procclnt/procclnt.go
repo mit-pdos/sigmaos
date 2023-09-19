@@ -15,6 +15,7 @@ import (
 	"sigmaos/kproc"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
+	"sigmaos/procqclnt"
 	"sigmaos/rpcclnt"
 	schedd "sigmaos/schedd/proto"
 	"sigmaos/scheddclnt"
@@ -29,10 +30,6 @@ const (
 	START Tmethod = "Start"
 	EVICT         = "Evict"
 	EXIT          = "Exit"
-)
-
-const (
-	NO_KERNEL_ID = "NO_KERNEL_ID"
 )
 
 func (m Tmethod) String() string {
@@ -55,6 +52,7 @@ type ProcClnt struct {
 	isExited   sp.Tpid
 	procdir    string
 	scheddclnt *scheddclnt.ScheddClnt
+	procqclnt  *procqclnt.ProcQClnt
 	cs         *ChildState
 }
 
@@ -64,6 +62,7 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procdir string) *ProcClnt {
 		pid:        pid,
 		procdir:    procdir,
 		scheddclnt: scheddclnt.NewScheddClnt(fsl),
+		procqclnt:  procqclnt.NewProcQClnt(fsl),
 		cs:         newChildState(),
 	}
 	return clnt
@@ -177,7 +176,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	return nil
 }
 
-func (clnt *ProcClnt) runViaSchedd(kernelId string, p *proc.Proc) error {
+func (clnt *ProcClnt) forceRunViaSchedd(kernelId string, p *proc.Proc) error {
 	rpcc, err := clnt.getScheddClnt(kernelId)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "spawnRetry: getScheddClnt %v err %v\n", kernelId, err)
@@ -188,7 +187,7 @@ func (clnt *ProcClnt) runViaSchedd(kernelId string, p *proc.Proc) error {
 		ProcProto: p.GetProto(),
 	}
 	res := &schedd.ForceRunResponse{}
-	if err := rpcc.RPC("Schedd.Run", req, res); err != nil {
+	if err := rpcc.RPC("Schedd.ForceRun", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "Schedd.Run %v err %v\n", kernelId, err)
 		return err
 	}
@@ -197,17 +196,34 @@ func (clnt *ProcClnt) runViaSchedd(kernelId string, p *proc.Proc) error {
 
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) {
 	s := time.Now()
-	spawnedKernelID := NO_KERNEL_ID
+	spawnedKernelID := procqclnt.NOT_ENQ
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
-		if err := clnt.runViaSchedd(kernelId, p); err != nil {
-			if serr.IsErrCode(err, serr.TErrUnreachable) {
-				db.DPrintf(db.ALWAYS, "Force lookup %v\n", kernelId)
-				clnt.scheddclnt.UnregisterClnt(kernelId)
-				continue
+		if p.IsPrivileged() {
+			// Privileged procs are force-run on the schedd specified by kernelID in
+			// order to make sure they end up on the correct scheddd
+			if err := clnt.forceRunViaSchedd(kernelId, p); err != nil {
+				if serr.IsErrCode(err, serr.TErrUnreachable) {
+					db.DPrintf(db.ALWAYS, "Force lookup %v\n", kernelId)
+					clnt.scheddclnt.UnregisterClnt(kernelId)
+					continue
+				}
+				return spawnedKernelID, err
 			}
-			return NO_KERNEL_ID, err
+			spawnedKernelID = kernelId
+		} else {
+			// Non-kernel procs are enqueued via the procq.
+			var err error
+			spawnedKernelID, err = clnt.procqclnt.EnqueueProc(p)
+			if err != nil {
+				if serr.IsErrCode(err, serr.TErrUnreachable) {
+					db.DPrintf(db.ALWAYS, "Force lookup %v\n", kernelId)
+					clnt.scheddclnt.UnregisterClnt(kernelId)
+					continue
+				}
+				return spawnedKernelID, err
+			}
+			spawnedKernelID = kernelId
 		}
-		spawnedKernelID = kernelId
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
 		return spawnedKernelID, nil
 	}

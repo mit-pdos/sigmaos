@@ -2,7 +2,6 @@ package procclnt
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os/exec"
 	"path"
@@ -108,11 +107,6 @@ func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc, procsPerSchedd int) ([]*proc.P
 		}
 	}
 	return failed, errs
-}
-
-type errTuple struct {
-	proc *proc.Proc
-	err  error
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
@@ -227,28 +221,7 @@ func (clnt *ProcClnt) getScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {
 
 // ========== WAIT ==========
 
-// Wait until a proc file is removed. Return an error if SetRemoveWatch returns
-// an unreachable error.
-func (clnt *ProcClnt) waitProcFileRemove(pid sp.Tpid, pn string) error {
-	db.DPrintf(db.PROCCLNT, "%v set remove watch: %v", pid, pn)
-	done := make(chan bool)
-	err := clnt.SetRemoveWatch(pn, func(string, error) {
-		done <- true
-	})
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Error waitStart SetRemoveWatch %v", err)
-		var sr *serr.Err
-		if errors.As(err, &sr) && (sr.IsErrUnreachable() || sr.IsMaybeSpecialElem()) {
-			return err
-		}
-	} else {
-		<-done
-	}
-	return nil
-}
-
-// XXX TODO Silly check for priv proc for now. Should Do this in a more
-// principle way.
+// XXX TODO Silly check for priv proc for now. Remove just before merge.
 func isKProc(pid sp.Tpid) bool {
 	pidstr := pid.String()
 	return strings.Contains(pidstr, "named") ||
@@ -366,7 +339,7 @@ func (clnt *ProcClnt) Started() error {
 		return err
 	}
 
-	return clnt.notify(START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow())
+	return clnt.notify(START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow(), false)
 }
 
 // ========== EXITED ==========
@@ -379,7 +352,7 @@ func (clnt *ProcClnt) Started() error {
 // exited() should be called *once* per proc, but procd's procclnt may
 // call exited() for different procs.
 
-func exited(fsl *fslib.FsLib, procdir string, parentdir string, rpcc *rpcclnt.RPCClnt, pid sp.Tpid, status *proc.Status, how proc.Thow, crashed bool) error {
+func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, status *proc.Status, how proc.Thow, crashed bool) error {
 	b, err := json.Marshal(status)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited marshal err %v", err)
@@ -387,45 +360,19 @@ func exited(fsl *fslib.FsLib, procdir string, parentdir string, rpcc *rpcclnt.RP
 	}
 	// May return an error if parent already exited.
 	fn := path.Join(parentdir, proc.EXIT_STATUS)
-	if _, err := fsl.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
+	if _, err := clnt.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited error (parent already exited) NewFile %v err %v", fn, err)
 	}
-
-	// If proc was spawned via SCHEDD, mark exited via RPC.
-	if how == proc.HSCHEDD {
-		if crashed {
-			// If the proc had crashed, then exited is being called from Schedd
-			// itself, which will take care of calling Exited locally. No need to
-			// RPC.
-			//
-			// Do nothing
-		} else {
-			req := &schedd.NotifyRequest{
-				PidStr: pid.String(),
-			}
-			res := &schedd.NotifyResponse{}
-			if err := rpcc.RPC("Schedd.Exited", req, res); err != nil {
-				db.DFatalf("Error Schedd Exited: %v", err)
-			}
-		}
-	} else {
-		if !isKProc(pid) {
-			b := debug.Stack()
-			db.DFatalf("Tried to Exited non-kernel proc %v, stack:\n%v", pid, string(b))
-		}
-		// If proc was not spawned via SCHEDD, mark exited via sem.
-		semExit := semclnt.NewSemClnt(fsl, path.Join(procdir, proc.EXIT_SEM))
-		if err := semExit.Up(); err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "exited semExit up error: %v, %v, %v", procdir, pid, err)
-		}
+	// Notify parent.
+	err = clnt.notify(EXIT, pid, kernelID, proc.EXIT_SEM, how, crashed)
+	if err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "Error notify exited: %v", err)
 	}
-
 	// clean myself up
-	r := removeProc(fsl, procdir+"/")
+	r := removeProc(clnt.FsLib, procdir+"/")
 	if r != nil {
 		return fmt.Errorf("Exited error [%v] %v", procdir, r)
 	}
-
 	return nil
 }
 
@@ -438,24 +385,16 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 		b := debug.Stack()
 		db.DFatalf("Exited called after exited %v stack:\n%v", clnt.procdir, string(b))
 	}
-	var rpcc *rpcclnt.RPCClnt
-	var err error
-	if clnt.ProcEnv().GetHow() == proc.HSCHEDD {
-		rpcc, err = clnt.getScheddClnt(clnt.ProcEnv().GetKernelID())
-		if err != nil {
-			db.DFatalf("Err getScheddClnt: %v", err)
-		}
-	}
-	err = exited(clnt.FsLib, clnt.procdir, clnt.ProcEnv().ParentDir, rpcc, clnt.ProcEnv().GetPID(), status, clnt.ProcEnv().GetHow(), false)
+	err := clnt.exited(clnt.procdir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetKernelID(), clnt.ProcEnv().GetPID(), status, clnt.ProcEnv().GetHow(), false)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "exited %v err %v", clnt.ProcEnv().GetPID(), err)
 	}
 }
 
 // Called on behalf of the proc by schedd when the proc crashes.
-func ExitedCrashed(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir string, status *proc.Status, how proc.Thow) {
+func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir string, status *proc.Status, how proc.Thow) {
 	db.DPrintf(db.PROCCLNT, "Exited crashed %v parent %v pid %v status %v", procdir, parentdir, pid, status)
-	err := exited(fsl, procdir, parentdir, nil, pid, status, how, true)
+	err := clnt.exited(procdir, parentdir, "IGNORE_KERNEL_CRASHED", pid, status, how, true)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "exited %v err %v", pid, err)
 	}
@@ -465,7 +404,7 @@ func ExitedCrashed(fsl *fslib.FsLib, pid sp.Tpid, procdir string, parentdir stri
 		kprocDir := proc.KProcDir(pid)
 		semPath = path.Join(kprocDir, proc.START_SEM)
 	}
-	semStart := semclnt.NewSemClnt(fsl, semPath)
+	semStart := semclnt.NewSemClnt(clnt.FsLib, semPath)
 	semStart.Up()
 }
 
@@ -476,7 +415,7 @@ func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
 	if err != nil {
 		db.DFatalf("Error Evict can't get kernel ID for proc: %v", err)
 	}
-	return clnt.notify(EVICT, pid, kernelID, proc.EVICT_SEM, how)
+	return clnt.notify(EVICT, pid, kernelID, proc.EVICT_SEM, how, false)
 }
 
 // Notifies a proc that it will be evicted using Evict. Called by parent.

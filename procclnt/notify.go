@@ -12,24 +12,32 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (clnt *ProcClnt) notify(method Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow) error {
+func (clnt *ProcClnt) notify(method Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow, skipSchedd bool) error {
 	db.DPrintf(db.PROCCLNT, "%v %v", method, pid)
 	defer db.DPrintf(db.PROCCLNT, "%v done %v", method, pid)
 
 	if how == proc.HSCHEDD {
-		// If the proc was spawned via schedd, notify via RPC.
-		db.DPrintf(db.PROCCLNT, "%v %v RPC pre", method, pid)
-		// Get the RPC client for the local schedd
-		rpcc, err := clnt.getScheddClnt(kernelID)
-		if err != nil {
-			db.DFatalf("Err get schedd clnt rpcc %v", err)
-		}
-		req := &schedd.NotifyRequest{
-			PidStr: pid.String(),
-		}
-		res := &schedd.NotifyResponse{}
-		if err := rpcc.RPC("Schedd."+method.Verb(), req, res); err != nil {
-			db.DFatalf("Error Schedd %v: %v", method.Verb(), err)
+		if skipSchedd {
+			// Skip notifying via schedd. Currently, this only happens when the proc
+			// crashes and schedd calls ExitedCrashed on behalf of the proc.  Schedd
+			// will take care of calling Exited locally, so no need to RPC (itself).
+			//
+			// Do nothing
+		} else {
+			// If the proc was spawned via schedd, notify via RPC.
+			db.DPrintf(db.PROCCLNT, "%v %v RPC", method, pid)
+			// Get the RPC client for the local schedd
+			rpcc, err := clnt.getScheddClnt(kernelID)
+			if err != nil {
+				db.DFatalf("Err get schedd clnt rpcc %v", err)
+			}
+			req := &schedd.NotifyRequest{
+				PidStr: pid.String(),
+			}
+			res := &schedd.NotifyResponse{}
+			if err := rpcc.RPC("Schedd."+method.Verb(), req, res); err != nil {
+				db.DFatalf("Error Schedd %v: %v", method.Verb(), err)
+			}
 		}
 	} else {
 		// If the proc was not spawned via schedd, notify via sem.

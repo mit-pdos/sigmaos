@@ -148,10 +148,7 @@ func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 	if clnt, ok = mgr.sclnts[realm]; !ok {
 		// No need to make a new client for the root realm.
 		if realm == sp.ROOTREALM {
-			var err error
-			if clnt, err = sigmaclnt.NewSigmaLeaseClnt(mgr.rootsc.FsLib); err != nil {
-				db.DFatalf("Err NewSigmaLeaseClnt: %v", err)
-			}
+			clnt = mgr.rootsc
 		} else {
 			var err error
 			pcfg := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)

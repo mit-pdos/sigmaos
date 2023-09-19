@@ -6,6 +6,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/fslib"
+	lcproto "sigmaos/lcschedsrv/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/memfssrv"
@@ -13,6 +15,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procmgr"
 	"sigmaos/procqclnt"
+	"sigmaos/rpcclnt"
 	"sigmaos/schedd/proto"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
@@ -29,6 +32,7 @@ type Schedd struct {
 	memfree    proc.Tmem
 	kernelId   string
 	realms     []sp.Trealm
+	mfs        *memfssrv.MemFs
 }
 
 func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
@@ -38,6 +42,7 @@ func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 		mcpufree: proc.Tmcpu(1000*linuxsched.NCores - reserveMcpu),
 		memfree:  mem.GetTotalMem(),
 		kernelId: kernelId,
+		mfs:      mfs,
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.scheddclnt = scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib)
@@ -165,9 +170,25 @@ func (sd *Schedd) runProcL(p *proc.Proc) {
 	}()
 }
 
-func (sc *Schedd) shouldGetProc() bool {
+func (sd *Schedd) shouldGetProc() bool {
 	// TODO: check local resource utilization
 	return true
+}
+
+func (sd *Schedd) Register() {
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sd.mfs.SigmaClnt().FsLib}, path.Join(sp.LCSCHED, "~any"))
+	if err != nil {
+		db.DFatalf("Error lsched rpccc: %v", err)
+	}
+	req := &lcproto.RegisterScheddRequest{
+		KernelID: sd.kernelId,
+		McpuInt:  uint32(sd.mcpufree),
+		MemInt:   uint32(sd.memfree),
+	}
+	res := &lcproto.RegisterScheddResponse{}
+	if err := rpcc.RPC("LCSched.RegisterSchedd", req, res); err != nil {
+		db.DFatalf("Error LCSched RegisterSchedd: %v", err)
+	}
 }
 
 func RunSchedd(kernelId string, reserveMcpu uint) error {
@@ -190,6 +211,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	}
 	defer p.Done()
 	go sd.getQueuedProcs()
+	sd.Register()
 	ssrv.RunServer()
 	return nil
 }

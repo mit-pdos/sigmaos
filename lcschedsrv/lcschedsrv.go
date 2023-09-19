@@ -18,7 +18,7 @@ import (
 	"sigmaos/sigmasrv"
 )
 
-type LCSchedSrv struct {
+type LCSched struct {
 	sync.Mutex
 	cond       *sync.Cond
 	mfs        *memfssrv.MemFs
@@ -27,8 +27,8 @@ type LCSchedSrv struct {
 	schedds    map[string]*Resources
 }
 
-func NewLCSchedSrv(mfs *memfssrv.MemFs) *LCSchedSrv {
-	lcs := &LCSchedSrv{
+func NewLCSched(mfs *memfssrv.MemFs) *LCSched {
+	lcs := &LCSched{
 		mfs:        mfs,
 		scheddclnt: scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib),
 		qs:         make(map[sp.Trealm]*Queue),
@@ -37,7 +37,7 @@ func NewLCSchedSrv(mfs *memfssrv.MemFs) *LCSchedSrv {
 	return lcs
 }
 
-func (lcs *LCSchedSrv) Enqueue(ctx fs.CtxI, req pqproto.EnqueueRequest, res *pqproto.EnqueueResponse) error {
+func (lcs *LCSched) Enqueue(ctx fs.CtxI, req pqproto.EnqueueRequest, res *pqproto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.LCSCHED, "[%v] Enqueued %v", p.GetRealm(), p)
 
@@ -46,7 +46,7 @@ func (lcs *LCSchedSrv) Enqueue(ctx fs.CtxI, req pqproto.EnqueueRequest, res *pqp
 	return nil
 }
 
-func (lcs *LCSchedSrv) RegisterSchedd(ctx fs.CtxI, req proto.RegisterScheddRequest, res *proto.RegisterScheddResponse) error {
+func (lcs *LCSched) RegisterSchedd(ctx fs.CtxI, req proto.RegisterScheddRequest, res *proto.RegisterScheddResponse) error {
 	lcs.Lock()
 	defer lcs.Unlock()
 
@@ -59,7 +59,7 @@ func (lcs *LCSchedSrv) RegisterSchedd(ctx fs.CtxI, req proto.RegisterScheddReque
 	return nil
 }
 
-func (lcs *LCSchedSrv) schedule() {
+func (lcs *LCSched) schedule() {
 	lcs.Lock()
 	defer lcs.Unlock()
 
@@ -84,7 +84,7 @@ func (lcs *LCSchedSrv) schedule() {
 }
 
 // Caller holds lock
-func (lcs *LCSchedSrv) runProc(kernelID string, p *proc.Proc, ch chan string, r *Resources) {
+func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Resources) {
 	// Alloc resources for the proc
 	r.alloc(p)
 	rpcc, err := lcs.scheddclnt.GetScheddClnt(kernelID)
@@ -105,7 +105,7 @@ func (lcs *LCSchedSrv) runProc(kernelID string, p *proc.Proc, ch chan string, r 
 	go lcs.waitProcExit(rpcc, kernelID, p, r)
 }
 
-func (lcs *LCSchedSrv) waitProcExit(rpcc *rpcclnt.RPCClnt, kernelID string, p *proc.Proc, r *Resources) {
+func (lcs *LCSched) waitProcExit(rpcc *rpcclnt.RPCClnt, kernelID string, p *proc.Proc, r *Resources) {
 	// RPC the schedd this proc was spawned on to wait for the proc to exit.
 	db.DPrintf(db.LCSCHED, "WaitExit %v RPC", p.GetPid())
 	req := &schedd.WaitRequest{
@@ -125,7 +125,7 @@ func (lcs *LCSchedSrv) waitProcExit(rpcc *rpcclnt.RPCClnt, kernelID string, p *p
 	lcs.cond.Broadcast()
 }
 
-func (lcs *LCSchedSrv) addProc(p *proc.Proc) chan string {
+func (lcs *LCSched) addProc(p *proc.Proc) chan string {
 	lcs.Lock()
 	defer lcs.Unlock()
 
@@ -141,13 +141,13 @@ func (lcs *LCSchedSrv) addProc(p *proc.Proc) chan string {
 }
 
 // Caller must hold lock.
-func (lcs *LCSchedSrv) addRealmQueueL(realm sp.Trealm) *Queue {
+func (lcs *LCSched) addRealmQueueL(realm sp.Trealm) *Queue {
 	q := newQueue()
 	lcs.qs[realm] = q
 	return q
 }
 
-// Run an LCSchedSrv
+// Run an LCSched
 func Run() {
 	pcfg := proc.GetProcEnv()
 	mfs, err := memfssrv.NewMemFs(path.Join(sp.LCSCHED, pcfg.GetPID().String()), pcfg)
@@ -156,7 +156,7 @@ func Run() {
 		db.DFatalf("Error NewMemFs: %v", err)
 	}
 
-	lcs := NewLCSchedSrv(mfs)
+	lcs := NewLCSched(mfs)
 	ssrv, err := sigmasrv.NewSigmaSrvMemFs(mfs, lcs)
 
 	if err != nil {

@@ -12,7 +12,7 @@ func setupMemFsSrv(mfs *memfssrv.MemFs) {
 }
 
 // Setup schedd's fs.
-func setupFs(mfs *memfssrv.MemFs, sd *Schedd) {
+func setupFs(mfs *memfssrv.MemFs) {
 	dirs := []string{
 		sp.QUEUE,
 		sp.RUNNING,

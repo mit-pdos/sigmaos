@@ -227,7 +227,6 @@ func isKProc(pid sp.Tpid) bool {
 		strings.Contains(pidstr, "ux") ||
 		strings.Contains(pidstr, "s3") ||
 		strings.Contains(pidstr, "realmd") ||
-		strings.Contains(pidstr, "db") ||
 		strings.Contains(pidstr, "mongo")
 }
 

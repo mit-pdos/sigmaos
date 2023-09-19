@@ -19,6 +19,8 @@ const (
 	UX        = NAMED + UXREL + "/"
 	SCHEDDREL = "schedd"
 	SCHEDD    = NAMED + SCHEDDREL + "/"
+	PROCQREL  = "procq"
+	PROCQ     = NAMED + PROCQREL + "/"
 	DBREL     = "db"
 	DB        = NAMED + DBREL + "/"
 	DBD       = DB + "~any/"

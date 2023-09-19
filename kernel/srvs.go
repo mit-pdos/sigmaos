@@ -45,6 +45,8 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (sp.Tpid,
 		ss, err = k.bootDbd(p.Dbip)
 	case sp.MONGOREL:
 		ss, err = k.bootMongod(p.Mongoip)
+	case sp.PROCQREL:
+		ss, err = k.bootProcq()
 	case sp.SCHEDDREL:
 		ss, err = k.bootSchedd()
 	case sp.REALMDREL:
@@ -135,6 +137,10 @@ func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
 
 func (k *Kernel) bootMongod(hostip string) (*Subsystem, error) {
 	return k.bootSubsystemWithMcpu("mongod", []string{hostip}, proc.HSCHEDD, 1000)
+}
+
+func (k *Kernel) bootProcq() (*Subsystem, error) {
+	return k.bootSubsystem("procq", []string{}, proc.HLINUX)
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {

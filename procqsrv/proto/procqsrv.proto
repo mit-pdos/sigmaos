@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+import "proc/proc.proto";
+
+option go_package = "sigmaos/procqsrv/proto";
+
+service ProcQ {
+  rpc Spawn(SpawnRequest) returns (SpawnResponse);
+  rpc GetProc(GetProcRequest) returns (GetProcResponse);
+}
+
+message SpawnRequest {
+  ProcProto procProto = 1;
+}
+
+message SpawnResponse {
+  string kernelID = 1;
+}
+
+message GetProcRequest {
+  string kernelID = 1;
+}
+
+message GetProcResponse {
+  ProcProto procProto = 1;
+}

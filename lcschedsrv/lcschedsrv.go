@@ -72,6 +72,7 @@ func (lcs *LCSched) schedule() {
 			for kid, r := range lcs.schedds {
 				p, ch, ok := q.Dequeue(r.mcpu, r.mem)
 				if ok {
+					db.DPrintf(db.LCSCHED, "Successfully schedule realm %v", realm)
 					lcs.runProc(kid, p, ch, r)
 					success = true
 					// Move on to the next realm
@@ -88,7 +89,7 @@ func (lcs *LCSched) schedule() {
 
 // Caller holds lock
 func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Resources) {
-	db.DPrintf(db.LCSCHED, "Successfully schedule kernelID %v p %v", kernelID, p)
+	db.DPrintf(db.LCSCHED, "Schedule kernelID %v p %v", kernelID, p)
 	// Alloc resources for the proc
 	r.alloc(p)
 	rpcc, err := lcs.scheddclnt.GetScheddClnt(kernelID)

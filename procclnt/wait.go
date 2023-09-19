@@ -3,7 +3,6 @@ package procclnt
 import (
 	"fmt"
 	"path"
-	"runtime/debug"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -33,10 +32,6 @@ func (clnt *ProcClnt) wait(method Tmethod, pid sp.Tpid, kernelID, semName string
 			db.DFatalf("Error Schedd Wait%v: %v", method, err)
 		}
 	} else {
-		if !isKProc(pid) {
-			b := debug.Stack()
-			db.DFatalf("Tried to Wait%v non-kernel proc %v, stack:\n%v", method, pid, string(b))
-		}
 		// If not spawned via schedd, wait via semaphore.
 		kprocDir := proc.KProcDir(pid)
 		db.DPrintf(db.PROCCLNT, "Wait%v sem %v dir %v", method, pid, kprocDir)

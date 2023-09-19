@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path"
 	"runtime/debug"
-	"strings"
 	"sync"
 	"time"
 
@@ -158,10 +157,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 		}
 	} else {
 		clnt.cs.spawned(p.GetPid(), kernelId)
-		if !isKProc(p.GetPid()) {
-			b := debug.Stack()
-			db.DFatalf("Tried to Spawn non-kernel proc %v, stack:\n%v", p.GetPid(), string(b))
-		}
 		// Make the proc's procdir
 		err := clnt.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), how)
 		if err != nil {
@@ -253,19 +248,6 @@ func (clnt *ProcClnt) getScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {
 
 // ========== WAIT ==========
 
-// XXX TODO Silly check for priv proc for now. Remove just before merge.
-func isKProc(pid sp.Tpid) bool {
-	pidstr := pid.String()
-	return strings.Contains(pidstr, "named") ||
-		strings.Contains(pidstr, "schedd") ||
-		strings.Contains(pidstr, "uprocd") ||
-		strings.Contains(pidstr, "procq") ||
-		strings.Contains(pidstr, "ux") ||
-		strings.Contains(pidstr, "s3") ||
-		strings.Contains(pidstr, "realmd") ||
-		strings.Contains(pidstr, "mongo")
-}
-
 func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 	s := time.Now()
 	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E WaitStart %v", pid, time.Since(s))
@@ -286,10 +268,6 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 // Parent calls WaitStart() to wait until the child proc has
 // started. If the proc doesn't exist, return immediately.
 func (clnt *ProcClnt) WaitStart(pid sp.Tpid) error {
-	if isKProc(pid) {
-		b := debug.Stack()
-		db.DFatalf("Tried to WaitStart kernel proc %v, stack:\n%v", pid, string(b))
-	}
 	return clnt.waitStart(pid, proc.HSCHEDD)
 }
 
@@ -335,10 +313,6 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 // the proc doesn't exist, return immediately.  After collecting
 // return status, parent removes the child from its list of children.
 func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
-	if isKProc(pid) {
-		b := debug.Stack()
-		db.DFatalf("Tried to WaitExit kernel proc %v, stack:\n%v", pid, string(b))
-	}
 	return clnt.waitExit(pid, proc.HSCHEDD)
 }
 

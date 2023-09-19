@@ -3,7 +3,6 @@ package procclnt
 import (
 	"fmt"
 	"path"
-	"runtime/debug"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -41,10 +40,6 @@ func (clnt *ProcClnt) notify(method Tmethod, pid sp.Tpid, kernelID, semName stri
 		}
 	} else {
 		// If the proc was not spawned via schedd, notify via sem.
-		if !isKProc(pid) {
-			b := debug.Stack()
-			db.DFatalf("Tried to %v non-kernel proc %v, stack:\n%v", method, pid, string(b))
-		}
 		kprocDir := proc.KProcDir(pid)
 		db.DPrintf(db.PROCCLNT, "%v sem %v dir %v", method, pid, kprocDir)
 		sem := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, semName))

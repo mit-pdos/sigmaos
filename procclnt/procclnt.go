@@ -179,50 +179,55 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 func (clnt *ProcClnt) forceRunViaSchedd(kernelId string, p *proc.Proc) error {
 	rpcc, err := clnt.getScheddClnt(kernelId)
 	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "spawnRetry: getScheddClnt %v err %v\n", kernelId, err)
+		db.DPrintf(db.PROCCLNT_ERR, "forceRunViaSchedd: getScheddClnt %v err %v\n", kernelId, err)
+		if serr.IsErrCode(err, serr.TErrUnreachable) {
+			db.DPrintf(db.PROCCLNT_ERR, "Unregister %v", kernelId)
+			clnt.scheddclnt.UnregisterClnt(kernelId)
+		}
 		return err
 	}
 	req := &schedd.ForceRunRequest{
-		Realm:     clnt.Realm().String(),
 		ProcProto: p.GetProto(),
 	}
 	res := &schedd.ForceRunResponse{}
 	if err := rpcc.RPC("Schedd.ForceRun", req, res); err != nil {
-		db.DPrintf(db.ALWAYS, "Schedd.Run %v err %v\n", kernelId, err)
+		db.DPrintf(db.ALWAYS, "Schedd.Run %v err %v", kernelId, err)
+		if serr.IsErrCode(err, serr.TErrUnreachable) {
+			db.DPrintf(db.PROCCLNT_ERR, "Unregister %v", kernelId)
+			clnt.scheddclnt.UnregisterClnt(kernelId)
+		}
 		return err
 	}
 	return nil
+}
+
+func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, error) {
+	return clnt.procqclnt.EnqueueProc(p)
 }
 
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) {
 	s := time.Now()
 	spawnedKernelID := procqclnt.NOT_ENQ
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
+		var err error
 		if p.IsPrivileged() {
 			// Privileged procs are force-run on the schedd specified by kernelID in
 			// order to make sure they end up on the correct scheddd
-			if err := clnt.forceRunViaSchedd(kernelId, p); err != nil {
-				if serr.IsErrCode(err, serr.TErrUnreachable) {
-					db.DPrintf(db.ALWAYS, "Force lookup %v\n", kernelId)
-					clnt.scheddclnt.UnregisterClnt(kernelId)
-					continue
-				}
-				return spawnedKernelID, err
-			}
+			err = clnt.forceRunViaSchedd(kernelId, p)
 			spawnedKernelID = kernelId
 		} else {
 			// Non-kernel procs are enqueued via the procq.
-			var err error
-			spawnedKernelID, err = clnt.procqclnt.EnqueueProc(p)
-			if err != nil {
-				if serr.IsErrCode(err, serr.TErrUnreachable) {
-					db.DPrintf(db.ALWAYS, "Force lookup %v\n", kernelId)
-					clnt.scheddclnt.UnregisterClnt(kernelId)
-					continue
-				}
-				return spawnedKernelID, err
+			spawnedKernelID, err = clnt.enqueueViaProcQ(p)
+		}
+		// If spawn attempt resulted in an error, check if it was due to the
+		// server becoming unreachable.
+		if err != nil {
+			// If unreachable, retry.
+			if serr.IsErrCode(err, serr.TErrUnreachable) {
+				db.DPrintf(db.PROCCLNT_ERR, "Err spawnRetry unreachable %v", err)
+				continue
 			}
-			spawnedKernelID = kernelId
+			return spawnedKernelID, err
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
 		return spawnedKernelID, nil

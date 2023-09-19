@@ -49,31 +49,9 @@ func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 	return sd
 }
 
-func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnResponse) error {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
-	p := proc.NewProcFromProto(req.ProcProto)
-	p.SetKernelID(sd.kernelId, false)
-	db.DPrintf(db.SCHEDD, "[%v] %v Spawned %v", req.Realm, sd.kernelId, p)
-	realm := sp.Trealm(req.Realm)
-	q, ok := sd.getQueue(realm)
-	if !ok {
-		q = sd.addRealmQueueL(realm)
-	}
-	// Enqueue the proc according to its realm
-	q.Enqueue(p)
-	s := time.Now()
-	sd.pmgr.Spawn(p)
-	db.DPrintf(db.SPAWN_LAT, "[%v] E2E Procmgr Spawn %v", p.GetPid(), time.Since(s))
-	// Signal that a new proc may be runnable.
-	sd.cond.Signal()
-	return nil
-}
-
 func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
-	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", req.Realm, sd.kernelId, p)
+	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p)
 	// Run the proc
 	sd.spawnAndRunProc(p)
 	return nil

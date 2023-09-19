@@ -5,7 +5,6 @@ import "proc/proc.proto";
 option go_package = "sigmaos/schedd/proto";
 
 service Schedd {
-  rpc Spawn(SpawnRequest) returns (SpawnResponse);
   rpc ForceRun(ForceRunRequest) returns (ForceRunResponse);
   rpc WaitStart(WaitRequest) returns (WaitResponse);
   rpc Started(NotifyRequest) returns (NotifyResponse);
@@ -18,17 +17,8 @@ service Schedd {
 }
 
 
-message SpawnRequest {
-  string realm = 1;
-  ProcProto procProto = 2;
-}
-
-message SpawnResponse {
-}
-
 message ForceRunRequest {
-  string realm = 1;
-  ProcProto procProto = 2;
+  ProcProto procProto = 1;
 }
 
 message ForceRunResponse {

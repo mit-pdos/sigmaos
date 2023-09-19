@@ -44,30 +44,6 @@ func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool,
 	return nil
 }
 
-// ========== SYMLINKS ==========
-
-func (clnt *ProcClnt) linkSelfIntoParentDir() error {
-	// Add symlink to child
-	link := path.Join(clnt.ProcEnv().ParentDir /*proc.PARENTDIR*/, proc.PROCDIR)
-	// Find the procdir. For normally-spawned procs, this will be proc.PROCDIR,
-	// which is just a mount point. Rather, the Symlink will need the full path
-	// for the parent to mount the child directory.
-	var procdir string
-	if clnt.procdir == proc.PROCDIR {
-		procdir = clnt.ProcEnv().ProcDir
-	} else {
-		procdir = clnt.procdir
-	}
-	// May return file not found if parent exited.
-	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil {
-		if !serr.IsErrorUnavailable(err) {
-			db.DPrintf(db.PROCCLNT_ERR, "Spawn Symlink child %v err %v\n", link, err)
-			return clnt.cleanupError(clnt.pid, clnt.procdir, err)
-		}
-	}
-	return nil
-}
-
 // ========== HELPERS ==========
 
 // Clean up proc

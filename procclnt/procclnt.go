@@ -316,9 +316,6 @@ func (clnt *ProcClnt) WaitExitKernelProc(pid sp.Tpid, how proc.Thow) (*proc.Stat
 
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
-	db.DPrintf(db.PROCCLNT, "WaitEvict %v procdir %v", pid, clnt.ProcEnv().ProcDir)
-	defer db.DPrintf(db.PROCCLNT, "WaitEvict done %v", pid)
-
 	return clnt.wait(EVICT, pid, clnt.ProcEnv().GetKernelID(), proc.EVICT_SEM, clnt.ProcEnv().GetHow())
 }
 
@@ -326,16 +323,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
-	db.DPrintf(db.PROCCLNT, "Started %v", clnt.pid)
-
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc started %v", clnt.ProcEnv().GetPID(), time.Now())
-
-	// Link self into parent dir
-	if err := clnt.linkSelfIntoParentDir(); err != nil {
-		db.DPrintf(db.PROCCLNT, "linkSelfIntoParentDir %v err %v", clnt.pid, err)
-		return err
-	}
-
 	return clnt.notify(START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow(), false)
 }
 

@@ -30,7 +30,7 @@ func NewProcQSrv(mfs *memfssrv.MemFs) *ProcQSrv {
 	return pq
 }
 
-func (pq *ProcQSrv) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnResponse) error {
+func (pq *ProcQSrv) Spawn(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCQ, "[%v] Spawned %v", p.GetRealm(), p)
 

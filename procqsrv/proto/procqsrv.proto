@@ -5,15 +5,15 @@ import "proc/proc.proto";
 option go_package = "sigmaos/procqsrv/proto";
 
 service ProcQ {
-  rpc Spawn(SpawnRequest) returns (SpawnResponse);
+  rpc Spawn(EnqueueRequest) returns (EnqueueResponse);
   rpc GetProc(GetProcRequest) returns (GetProcResponse);
 }
 
-message SpawnRequest {
+message EnqueueRequest {
   ProcProto procProto = 1;
 }
 
-message SpawnResponse {
+message EnqueueResponse {
   string kernelID = 1;
 }
 

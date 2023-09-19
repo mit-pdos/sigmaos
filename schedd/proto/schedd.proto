@@ -6,7 +6,7 @@ option go_package = "sigmaos/schedd/proto";
 
 service Schedd {
   rpc Spawn(SpawnRequest) returns (SpawnResponse);
-  rpc Run(RunRequest) returns (RunResponse);
+  rpc Run(ForceRunRequest) returns (ForceRunResponse);
   rpc WaitStart(WaitRequest) returns (WaitResponse);
   rpc Started(NotifyRequest) returns (NotifyResponse);
   rpc WaitExit(WaitRequest) returns (WaitResponse);
@@ -26,12 +26,12 @@ message SpawnRequest {
 message SpawnResponse {
 }
 
-message RunRequest {
+message ForceRunRequest {
   string realm = 1;
   ProcProto procProto = 2;
 }
 
-message RunResponse {
+message ForceRunResponse {
 }
 
 message WaitRequest {

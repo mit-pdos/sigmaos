@@ -68,7 +68,7 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	return nil
 }
 
-func (sd *Schedd) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResponse) error {
+func (sd *Schedd) Run(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 

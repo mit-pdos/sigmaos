@@ -24,11 +24,12 @@ const (
 
 // kernel procs
 const (
-	NAMED  Tselector = "NAMED"
-	PROCD            = "PROCD"
-	S3               = "S3"
-	SCHEDD           = "SCHEDD"
-	PROCQ            = "PROCQ"
+	NAMED   Tselector = "NAMED"
+	PROCD             = "PROCD"
+	S3                = "S3"
+	SCHEDD            = "SCHEDD"
+	PROCQ             = "PROCQ"
+	LCSCHED           = "LCSCHED"
 )
 
 // libs

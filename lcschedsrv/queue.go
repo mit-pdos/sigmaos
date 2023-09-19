@@ -1,4 +1,4 @@
-package procqsrv
+package lcschedsrv
 
 import (
 	"fmt"
@@ -47,6 +47,7 @@ func (q *Queue) Enqueue(p *proc.Proc) chan string {
 	return qi.kidch
 }
 
+// Dequeue a proc with certain resource requirements.
 func (q *Queue) Dequeue() (*proc.Proc, chan string, bool) {
 	q.Lock()
 	defer q.Unlock()

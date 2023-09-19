@@ -32,7 +32,7 @@ func NewProcQSrv(mfs *memfssrv.MemFs) *ProcQSrv {
 
 func (pq *ProcQSrv) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
-	db.DPrintf(db.PROCQ, "[%v] Spawned %v", p.GetRealm(), p)
+	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
 
 	ch := pq.addProc(p)
 	res.KernelID = <-ch

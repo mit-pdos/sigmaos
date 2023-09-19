@@ -102,6 +102,8 @@ const (
 	UPROCDMGR                = "UPROCDMGR"
 	UPROCD                   = "UPROCD"
 	UPROCD_ERR               = "UPROCD" + ERR
+	LCSCHED                  = "LCSCHED"
+	LCSCHED_ERR              = "LCSCHED" + ERR
 	PROCQ                    = "PROCQ"
 	PROCQ_ERR                = "PROCQ" + ERR
 	PROCQCLNT                = "PROCQCLNT"

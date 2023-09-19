@@ -74,7 +74,7 @@ func RunKNamed(args []string) error {
 	return nil
 }
 
-var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.PROCQ, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO}
+var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.LCSCHED, sp.PROCQ, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO}
 
 // If initial root dir doesn't exist, create it.
 func (nd *Named) initfs() error {

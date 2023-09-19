@@ -122,6 +122,26 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestWaitExitSimpleSingleLC(t *testing.T) {
+	ts := test.NewTstateAll(t)
+	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	a.SetMcpu(1000)
+	db.DPrintf(db.TEST, "Pre spawn")
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	db.DPrintf(db.TEST, "Post spawn")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := ts.WaitExit(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
+
+	cleanSleeperResult(t, ts, a.GetPid())
+
+	ts.Shutdown()
+}
+
 func TestWaitExitSimpleMultiKernel(t *testing.T) {
 	ts := test.NewTstateAll(t)
 

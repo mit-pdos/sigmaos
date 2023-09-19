@@ -8,7 +8,7 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--overlay HOST_IP]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--overlay HOST_IP] [--cleanup]" 
 }
 
 BASIC="--basic"
@@ -17,6 +17,7 @@ APPS=""
 OVERLAY=""
 VERB="-v"
 CONTAINER=""
+CLEANUP=""
 HOST_IP="127.0.0.1"
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -38,6 +39,10 @@ while [[ "$#" -gt 0 ]]; do
             HOST_IP="$1"
             shift
             ;;
+        --cleanup)
+            shift
+            CLEANUP="true" 
+            ;;
         *)
             echo "unexpected argument $1"
             usage
@@ -46,8 +51,10 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 cleanup() {
-  ./stop.sh --parallel --nopurge
-  ./fsetcd-wipe.sh
+  if [[ "$CLEANUP" == "true" ]]; then
+    ./stop.sh --parallel --nopurge
+    ./fsetcd-wipe.sh
+  fi
 }
 
 go clean -testcache

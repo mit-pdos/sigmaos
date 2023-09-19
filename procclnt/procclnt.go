@@ -177,19 +177,19 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	return nil
 }
 
-func (clnt *ProcClnt) spawnViaSchedd(kernelId string, p *proc.Proc) error {
+func (clnt *ProcClnt) runViaSchedd(kernelId string, p *proc.Proc) error {
 	rpcc, err := clnt.getScheddClnt(kernelId)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "spawnRetry: getScheddClnt %v err %v\n", kernelId, err)
 		return err
 	}
-	req := &schedd.SpawnRequest{
+	req := &schedd.ForceRunRequest{
 		Realm:     clnt.Realm().String(),
 		ProcProto: p.GetProto(),
 	}
-	res := &schedd.SpawnResponse{}
-	if err := rpcc.RPC("Schedd.Spawn", req, res); err != nil {
-		db.DPrintf(db.ALWAYS, "Schedd.Spawn %v err %v\n", kernelId, err)
+	res := &schedd.ForceRunResponse{}
+	if err := rpcc.RPC("Schedd.Run", req, res); err != nil {
+		db.DPrintf(db.ALWAYS, "Schedd.Run %v err %v\n", kernelId, err)
 		return err
 	}
 	return nil
@@ -197,8 +197,9 @@ func (clnt *ProcClnt) spawnViaSchedd(kernelId string, p *proc.Proc) error {
 
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) {
 	s := time.Now()
+	spawnedKernelID := NO_KERNEL_ID
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
-		if err := clnt.spawnViaSchedd(kernelId, p); err != nil {
+		if err := clnt.runViaSchedd(kernelId, p); err != nil {
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
 				db.DPrintf(db.ALWAYS, "Force lookup %v\n", kernelId)
 				clnt.scheddclnt.UnregisterClnt(kernelId)
@@ -206,10 +207,11 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 			}
 			return NO_KERNEL_ID, err
 		}
+		spawnedKernelID = kernelId
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
-		return kernelId, nil
+		return spawnedKernelID, nil
 	}
-	return NO_KERNEL_ID, serr.NewErr(serr.TErrUnreachable, kernelId)
+	return spawnedKernelID, serr.NewErr(serr.TErrUnreachable, kernelId)
 }
 
 func (clnt *ProcClnt) getScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {

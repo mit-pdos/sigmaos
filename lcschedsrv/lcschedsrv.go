@@ -57,7 +57,7 @@ func (lcs *LCSchedSrv) addProc(p *proc.Proc) chan string {
 	lcs.Lock()
 	defer lcs.Unlock()
 
-	q, ok := lcs.getQueue(p.GetRealm())
+	q, ok := lcs.qs[p.GetRealm()]
 	if !ok {
 		q = lcs.addRealmQueueL(p.GetRealm())
 	}
@@ -66,12 +66,6 @@ func (lcs *LCSchedSrv) addProc(p *proc.Proc) chan string {
 	// Signal that a new proc may be runnable.
 	lcs.cond.Signal()
 	return ch
-}
-
-// Caller holds lock.
-func (lcs *LCSchedSrv) getQueue(realm sp.Trealm) (*Queue, bool) {
-	q, ok := lcs.qs[realm]
-	return q, ok
 }
 
 // Caller must hold lock.

@@ -43,7 +43,7 @@ func (pq *ProcQSrv) addProc(p *proc.Proc) chan string {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 
-	q, ok := pq.getQueue(p.GetRealm())
+	q, ok := pq.qs[p.GetRealm()]
 	if !ok {
 		q = pq.addRealmQueueL(p.GetRealm())
 	}
@@ -76,12 +76,6 @@ func (pq *ProcQSrv) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Ge
 		pq.cond.Wait()
 	}
 	return nil
-}
-
-// Caller holds lock.
-func (pq *ProcQSrv) getQueue(realm sp.Trealm) (*Queue, bool) {
-	q, ok := pq.qs[realm]
-	return q, ok
 }
 
 // Caller must hold lock.

@@ -68,6 +68,19 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 	return nil
 }
 
+func (sd *Schedd) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResponse) error {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
+	p := proc.NewProcFromProto(req.ProcProto)
+	p.SetKernelID(sd.kernelId, false)
+	db.DPrintf(db.SCHEDD, "[%v] %v Going to run %v", req.Realm, sd.kernelId, p)
+	sd.pmgr.Spawn(p)
+	// Run the proc
+	sd.runProc(p)
+	return nil
+}
+
 // Wait for a proc to mark itself as started.
 func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
 	db.DPrintf(db.SCHEDD, "WaitStart %v", req.PidStr)

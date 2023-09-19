@@ -29,7 +29,6 @@ func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool,
 		db.DPrintf(db.PROCCLNT_ERR, "NewProcDir mkdir childrens %v err %v\n", childrenDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
-
 	// Only create exit/evict semaphores if not spawned on SCHEDD.
 	if how != proc.HSCHEDD {
 		// Create exit signal
@@ -40,7 +39,6 @@ func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool,
 		semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 		semEvict.Init(0)
 	}
-
 	return nil
 }
 
@@ -118,16 +116,9 @@ func (clnt *ProcClnt) addChild(kernelId string, p *proc.Proc, childProcdir strin
 
 // Remove a child from the current proc
 func (clnt *ProcClnt) RemoveChild(pid sp.Tpid) error {
-	procdir := proc.GetChildProcDir(clnt.procdir, pid)
-	childdir := path.Dir(procdir)
-	// Remove link.
-	if err := clnt.Remove(procdir); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Error Remove 1 %v in RemoveChild: %v", procdir, err)
-		return fmt.Errorf("RemoveChild link error %v", err)
-	}
-
+	childdir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
 	if err := clnt.RmDir(childdir); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Error Remove 2 %v in RemoveChild: %v", procdir, err)
+		db.DPrintf(db.PROCCLNT_ERR, "Error Remove 2 %v in RemoveChild: %v", childdir, err)
 		return fmt.Errorf("RemoveChild dir error %v", err)
 	}
 	return nil

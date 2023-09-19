@@ -74,6 +74,8 @@ func (lcs *LCSched) schedule() {
 				if ok {
 					lcs.runProc(kid, p, ch, r)
 					success = true
+					// Move on to the next realm
+					break
 				}
 			}
 		}
@@ -86,6 +88,7 @@ func (lcs *LCSched) schedule() {
 
 // Caller holds lock
 func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Resources) {
+	db.DPrintf(db.LCSCHED, "Successfully schedule kernelID %v p %v", kernelID, p)
 	// Alloc resources for the proc
 	r.alloc(p)
 	rpcc, err := lcs.scheddclnt.GetScheddClnt(kernelID)

@@ -127,9 +127,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 
 	p.InheritParentProcEnv(clnt.ProcEnv())
 
-	// Set the parent dir
-	childProcdir := p.GetParentDir()
-
 	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v", kernelId, p)
 	if clnt.hasExited() != "" {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn error called after Exited")
@@ -146,7 +143,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 		kernelId = kid
 	}
 
-	if err := clnt.addChild(kernelId, p, childProcdir, how); err != nil {
+	if err := clnt.addChild(kernelId, p, p.GetParentDir(), how); err != nil {
 		return err
 	}
 
@@ -154,7 +151,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	// If this is not a privileged proc, spawn it through schedd.
 	if how == proc.HSCHEDD {
 		if err := clnt.spawnRetry(kernelId, p); err != nil {
-			return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
+			return clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
 		if !isKProc(p.GetPid()) {

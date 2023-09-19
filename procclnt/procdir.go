@@ -30,6 +30,7 @@ func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool,
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 
+	// Only create exit/evict semaphores if not spawned on SCHEDD.
 	if how != proc.HSCHEDD {
 		// Create exit signal
 		semExit := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
@@ -129,16 +130,6 @@ func (clnt *ProcClnt) addChild(kernelId string, p *proc.Proc, childProcdir strin
 	if err := clnt.NewDir(childDir, 0777); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn mkdir childs %v err %v\n", childDir, err)
 		return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
-	}
-	// Only create procfile link for procs spawned via procd.
-	var procfileLink string
-	if how == proc.HSCHEDD {
-		procfileLink = path.Join(sp.SCHEDD, kernelId, sp.QUEUE, p.GetPid().String())
-	}
-	// Add a file telling WaitStart where to look for this child proc file in
-	// this procd's runq.
-	if _, err := clnt.PutFile(path.Join(childDir, proc.PROCFILE_LINK), 0777, sp.OWRITE|sp.OREAD, []byte(procfileLink)); err != nil {
-		db.DFatalf("Error PutFile addChild %v", err)
 	}
 	// Link in shared state from parent, if desired.
 	if len(p.GetShared()) > 0 {

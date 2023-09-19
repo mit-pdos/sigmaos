@@ -349,8 +349,8 @@ func (clnt *ProcClnt) Started() error {
 // of the failed proc. The exited proc abandons any chidren it may
 // have. The exited proc cleans itself up.
 //
-// exited() should be called *once* per proc, but procd's procclnt may
-// call exited() for different procs.
+// exited() should be called *once* per proc, but schedd's procclnt may
+// call exited() for other (crashed) procs.
 
 func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, status *proc.Status, how proc.Thow, crashed bool) error {
 	b, err := json.Marshal(status)

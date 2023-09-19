@@ -5,7 +5,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -75,80 +74,4 @@ func (mgr *ProcMgr) removeRunningProc(p *proc.Proc) {
 	if err := mgr.mfs.Remove(path.Join(sp.RUNNING, p.GetPid().String())); err != nil {
 		db.DFatalf("Error Remove from running queue: %v", err)
 	}
-}
-
-// ========== Work-stealing ==========
-
-func getWSQueuePath(ptype proc.Ttype) string {
-	var q string
-	switch ptype {
-	case proc.T_LC:
-		q = sp.WS_RUNQ_LC
-	case proc.T_BE:
-		q = sp.WS_RUNQ_BE
-	default:
-		db.DFatalf("Unrecognized proc type: %v", ptype)
-	}
-	return q
-}
-
-func (mgr *ProcMgr) removeWSLink(p *proc.Proc) {
-	mgr.rootsc.Remove(path.Join(getWSQueuePath(p.GetType()), p.GetPid().String()))
-}
-
-func (mgr *ProcMgr) createWSLink(p *proc.Proc) {
-	if _, err := mgr.rootsc.PutFile(path.Join(getWSQueuePath(p.GetType()), p.GetPid().String()), 0777, sp.OWRITE, p.Marshal()); err != nil {
-		db.DFatalf("Error PutFile: %v", err)
-	}
-}
-
-func (mgr *ProcMgr) getWSQueue(qpath string) (map[sp.Trealm][]*proc.Proc, bool) {
-	stealable := make(map[sp.Trealm][]*proc.Proc, 0)
-	// Wait until there is a proc to steal.
-	sts, err := mgr.rootsc.ReadDirWatch(qpath, func(sts []*sp.Stat) bool {
-		var nStealable int
-		for _, st := range sts {
-			var p *proc.Proc
-			var ok bool
-			// Try to tread the proc from the cache.
-			if p, ok = mgr.pcache.Get(sp.Tpid(st.Name)); !ok {
-				// Read and unmarshal proc.
-				b, err := mgr.rootsc.GetFile(path.Join(qpath, st.Name))
-				if err != nil {
-					// Proc may have been stolen already.
-					continue
-				}
-				p = proc.NewEmptyProc()
-				p.Unmarshal(b)
-				mgr.pcache.Set(p.GetPid(), p)
-			}
-			// Is the proc a local proc? If so, don't add it to the queue of
-			// stealable procs.
-			if p.GetKernelID() == mgr.kernelId {
-				continue
-			}
-			if _, ok := stealable[p.GetRealm()]; !ok {
-				stealable[p.GetRealm()] = make([]*proc.Proc, 0)
-			}
-			// Add to the list of stealable procs
-			stealable[p.GetRealm()] = append(stealable[p.GetRealm()], p)
-			nStealable++
-		}
-		db.DPrintf(db.PROCMGR, "Found %v stealable procs %v", nStealable, stealable)
-		return nStealable == 0
-	})
-	// Since many schedds may be modifying the WS dir, we may get version
-	// errors.
-	if serr.IsErrCode(err, serr.TErrVersion) {
-		db.DPrintf(db.PROCMGR_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
-		return nil, false
-	}
-	if serr.IsErrCode(err, serr.TErrUnreachable) {
-		db.DPrintf(db.PROCMGR_ERR, "Error ReadDirWatch: %v %v", err, len(sts))
-		return nil, false
-	}
-	if err != nil {
-		db.DFatalf("Error ReadDirWatch: %v %v", err, len(sts))
-	}
-	return stealable, true
 }

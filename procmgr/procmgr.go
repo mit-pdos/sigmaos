@@ -27,7 +27,6 @@ type ProcMgr struct {
 	cachedirs map[sp.Trealm]bool
 	running   map[sp.Tpid]*proc.Proc
 	pstate    *ProcState
-	pcache    *ProcCache
 }
 
 // Manages the state and lifecycle of a proc.
@@ -41,7 +40,6 @@ func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 		cachedirs: make(map[sp.Trealm]bool),
 		running:   make(map[sp.Tpid]*proc.Proc),
 		pstate:    NewProcState(),
-		pcache:    NewProcCache(PROC_CACHE_SZ),
 	}
 	mgr.newws()
 	return mgr
@@ -103,32 +101,6 @@ func (mgr *ProcMgr) Exited(pid sp.Tpid) {
 
 func (mgr *ProcMgr) WaitExit(pid sp.Tpid) {
 	mgr.pstate.waitExit(pid)
-}
-
-// Try to steal a proc from another schedd. Must be callled after RPCing the
-// victim schedd.
-func (mgr *ProcMgr) TryStealProc(p *proc.Proc) {
-	// Remove the proc from the ws queue. This can only be done *after* RPCing
-	// schedd. Otherwise, if this proc crashes after removing the stealable proc
-	// but before claiming it from the victim schedd, the proc will not be added
-	// back to the WS queue, and other schedds will not have the opportunity to
-	// steal it.
-	//
-	// It is safe, however, to remove the proc regardless of whether or not the
-	// steal is actually successful. If the steal is unsuccessful, that means
-	// another schedd was granted the proc by the victim, and will remove it
-	// anyway. Eagerly removing it here stops additional schedds from trying to
-	// steal it in the intervening time.
-	mgr.removeWSLink(p)
-}
-
-func (mgr *ProcMgr) OfferStealableProc(p *proc.Proc) {
-	mgr.createWSLink(p)
-}
-
-// Get the contents of the WS Queue for procs of type ptype.
-func (mgr *ProcMgr) GetWSQueue(ptype proc.Ttype) (map[sp.Trealm][]*proc.Proc, bool) {
-	return mgr.getWSQueue(getWSQueuePath(ptype))
 }
 
 func (mgr *ProcMgr) GetCPUShares() map[sp.Trealm]uprocclnt.Tshare {

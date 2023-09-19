@@ -113,14 +113,6 @@ func (sd *Schedd) Exited(ctx fs.CtxI, req proto.NotifyRequest, res *proto.Notify
 	return nil
 }
 
-// Steal a proc from this schedd.
-func (sd *Schedd) StealProc(ctx fs.CtxI, req proto.StealProcRequest, res *proto.StealProcResponse) error {
-	q, _ := sd.getQueue(sp.Trealm(req.Realm))
-	_, res.OK = q.Steal(sp.Tpid(req.PidStr))
-
-	return nil
-}
-
 // Get CPU shares assigned to this realm.
 func (sd *Schedd) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesRequest, res *proto.GetCPUSharesResponse) error {
 	sd.mu.Lock()
@@ -195,18 +187,7 @@ func (sd *Schedd) tryScheduleRealmL(r sp.Trealm, q *Queue, ptype proc.Ttype) boo
 	for {
 		// Try to dequeue a proc, whether it be from a local queue or potentially
 		// stolen from a remote queue.
-		if p, stolen, ok := q.Dequeue(ptype, sd.mcpufree, sd.memfree); ok {
-			// If the proc was stolen...
-			if stolen {
-				// Try to claim the proc.
-				if ok := sd.tryStealProc(r, p); ok {
-					// Proc was claimed successfully.
-					db.DPrintf(db.SCHEDD, "[%v] stole proc %v", r, p)
-				} else {
-					// Couldn't claim the proc. Try and steal another.
-					continue
-				}
-			}
+		if p, ok := q.Dequeue(ptype, sd.mcpufree, sd.memfree); ok {
 			// Claimed a proc, so schedule it.
 			db.DPrintf(db.SCHEDD, "[%v] run proc %v", r, p)
 			db.DPrintf(db.SPAWN_LAT, "[%v] Queueing latency %v", p.GetPid(), time.Since(p.GetSpawnTime()))
@@ -256,9 +237,6 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	}
 	defer p.Done()
 	go sd.schedule()
-	go sd.monitorWSQueue(proc.T_LC)
-	go sd.monitorWSQueue(proc.T_BE)
-	go sd.offerStealableProcs()
 	ssrv.RunServer()
 	return nil
 }

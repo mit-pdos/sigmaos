@@ -59,7 +59,6 @@ func (mgr *ProcMgr) addRunningProc(p *proc.Proc) {
 	mgr.Lock()
 	defer mgr.Unlock()
 
-	// XXX Write package to expose running map as a dir.
 	mgr.running[p.GetPid()] = p
 	_, err := mgr.rootsc.PutFile(path.Join(sp.SCHEDD, mgr.kernelId, sp.RUNNING, p.GetPid().String()), 0777, sp.OREAD|sp.OWRITE, p.MarshalJson())
 	if err != nil {
@@ -72,7 +71,6 @@ func (mgr *ProcMgr) removeRunningProc(p *proc.Proc) {
 	mgr.Lock()
 	defer mgr.Unlock()
 
-	// XXX Write package to expose running map as a dir.
 	delete(mgr.running, p.GetPid())
 	if err := mgr.mfs.Remove(path.Join(sp.RUNNING, p.GetPid().String())); err != nil {
 		db.DFatalf("Error Remove from running queue: %v", err)

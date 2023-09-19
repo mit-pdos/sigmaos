@@ -118,6 +118,22 @@ func (sd *Schedd) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *prot
 	return nil
 }
 
+func (sd *Schedd) getQueuedProcs() {
+	for {
+		// TODO: Switch to only BE procs...
+		if sd.shouldGetProc() {
+		}
+		// Try to get a proc from the proc queue.
+		p, err := sd.procqclnt.GetProc(sd.kernelId)
+		if err != nil {
+			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)
+			continue
+		}
+		db.DPrintf(db.SCHEDD, "Got proc from procq: %v", p)
+		sd.spawnAndRunProc(p)
+	}
+}
+
 func (sd *Schedd) procDone(p *proc.Proc) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
@@ -173,6 +189,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
+	go sd.getQueuedProcs()
 	ssrv.RunServer()
 	return nil
 }

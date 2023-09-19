@@ -32,6 +32,7 @@ func NewLCSched(mfs *memfssrv.MemFs) *LCSched {
 		mfs:        mfs,
 		scheddclnt: scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib),
 		qs:         make(map[sp.Trealm]*Queue),
+		schedds:    make(map[string]*Resources),
 	}
 	lcs.cond = sync.NewCond(&lcs.Mutex)
 	return lcs

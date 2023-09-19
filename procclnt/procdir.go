@@ -122,12 +122,12 @@ func (clnt *ProcClnt) RemoveChild(pid sp.Tpid) error {
 	childdir := path.Dir(procdir)
 	// Remove link.
 	if err := clnt.Remove(procdir); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Error Remove %v in RemoveChild: %v", procdir, err)
+		db.DPrintf(db.PROCCLNT_ERR, "Error Remove 1 %v in RemoveChild: %v", procdir, err)
 		return fmt.Errorf("RemoveChild link error %v", err)
 	}
 
 	if err := clnt.RmDir(childdir); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Error Remove %v in RemoveChild: %v", procdir, err)
+		db.DPrintf(db.PROCCLNT_ERR, "Error Remove 2 %v in RemoveChild: %v", procdir, err)
 		return fmt.Errorf("RemoveChild dir error %v", err)
 	}
 	return nil

@@ -72,9 +72,6 @@ func (sd *Schedd) Spawn(ctx fs.CtxI, req proto.SpawnRequest, res *proto.SpawnRes
 }
 
 func (sd *Schedd) Run(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.SCHEDD, "[%v] %v Force run %v", req.Realm, sd.kernelId, p)
 	// Run the proc
@@ -191,7 +188,8 @@ func (sd *Schedd) getQueuedProcs() {
 		// Try to get a proc from the proc queue.
 		p, err := sd.procqclnt.GetProc(sd.kernelId)
 		if err != nil {
-			db.DFatalf("Error GetProc: %v", err)
+			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)
+			continue
 		}
 		db.DPrintf(db.SCHEDD, "Got proc from procq: %v", p)
 		sd.spawnAndRunProc(p)

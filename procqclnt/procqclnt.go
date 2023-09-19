@@ -90,7 +90,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string) (*proc.Proc, error) {
 		}
 		rpcc, err := pqc.GetProcQClnt(pqID)
 		if err != nil {
-			db.DFatalf("Error: Can't get procq clnt: %v", err)
+			db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get procq clnt: %v", err)
 			return nil, err
 		}
 		req := &proto.GetProcRequest{

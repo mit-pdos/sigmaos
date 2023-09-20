@@ -43,15 +43,9 @@ const (
 	KPIDS    = NAMED + KPIDSREL
 
 	// Schedd
-	QUEUE          = "queue"
-	RUNNING        = "running"
-	PIDS           = "pids"
-	WS             = "name/" + WS_REL + "/"
-	WS_REL         = "ws"
-	WS_RUNQ_LC_REL = "runq-lc"
-	WS_RUNQ_BE_REL = "runq-be"
-	WS_RUNQ_LC     = WS + WS_RUNQ_LC_REL + "/"
-	WS_RUNQ_BE     = WS + WS_RUNQ_BE_REL + "/"
+	QUEUE   = "queue"
+	RUNNING = "running"
+	PIDS    = "pids"
 
 	// special devs/dirs exported by SigmaSrv/SessSrv
 	STATSD   = ".statsd"

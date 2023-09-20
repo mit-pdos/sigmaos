@@ -41,16 +41,7 @@ func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 		running:   make(map[sp.Tpid]*proc.Proc),
 		pstate:    NewProcState(),
 	}
-	mgr.newws()
 	return mgr
-}
-
-// Create ws queue if it doesn't exist
-func (mgr *ProcMgr) newws() {
-	mgr.rootsc.NewDir(sp.WS, 0777)
-	for _, n := range []string{sp.WS_RUNQ_LC, sp.WS_RUNQ_BE} {
-		mgr.rootsc.NewDir(n, 0777)
-	}
 }
 
 // Proc has been spawned.

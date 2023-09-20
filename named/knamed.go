@@ -78,10 +78,6 @@ var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.LCSCHED, sp.PROCQ, sp.SCHEDD, s
 
 // If initial root dir doesn't exist, create it.
 func (nd *Named) initfs() error {
-	// XXX clean up WS here for now
-	if err := nd.RmDir(sp.WS); err != nil {
-		db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", sp.WS, err)
-	}
 	for _, n := range InitRootDir {
 		if _, err := nd.SigmaClnt.Create(n, 0777|sp.DMDIR, sp.OREAD); err != nil {
 			db.DPrintf(db.ALWAYS, "Error create [%v]: %v", n, err)

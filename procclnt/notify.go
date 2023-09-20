@@ -6,12 +6,12 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	schedd "sigmaos/schedd/proto"
+	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 )
 
-func (clnt *ProcClnt) notify(method Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow, skipSchedd bool) error {
+func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow, skipSchedd bool) error {
 	db.DPrintf(db.PROCCLNT, "%v %v", method, pid)
 	defer db.DPrintf(db.PROCCLNT, "%v done %v", method, pid)
 
@@ -25,16 +25,7 @@ func (clnt *ProcClnt) notify(method Tmethod, pid sp.Tpid, kernelID, semName stri
 		} else {
 			// If the proc was spawned via schedd, notify via RPC.
 			db.DPrintf(db.PROCCLNT, "%v %v RPC", method, pid)
-			// Get the RPC client for the local schedd
-			rpcc, err := clnt.scheddclnt.GetScheddClnt(kernelID)
-			if err != nil {
-				db.DFatalf("Err get schedd clnt rpcc %v", err)
-			}
-			req := &schedd.NotifyRequest{
-				PidStr: pid.String(),
-			}
-			res := &schedd.NotifyResponse{}
-			if err := rpcc.RPC("Schedd."+method.Verb(), req, res); err != nil {
+			if err := clnt.scheddclnt.Notify(method, kernelID, pid); err != nil {
 				db.DFatalf("Error Schedd %v: %v", method.Verb(), err)
 			}
 		}

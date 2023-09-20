@@ -6,13 +6,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	schedd "sigmaos/schedd/proto"
+	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 )
 
 // Wait for an event. Method must be one of "Exit", "Evict", or "Start"
-func (clnt *ProcClnt) wait(method Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow) error {
+func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow) error {
 	db.DPrintf(db.PROCCLNT, "Wait%v %v how %v", method, pid, how)
 	defer db.DPrintf(db.PROCCLNT, "Wait%v done %v", method, pid)
 
@@ -20,15 +20,8 @@ func (clnt *ProcClnt) wait(method Tmethod, pid sp.Tpid, kernelID, semName string
 	if how == proc.HSCHEDD {
 		// RPC the schedd this proc was spawned on to wait.
 		db.DPrintf(db.PROCCLNT, "Wait%v %v RPC", method, pid)
-		rpcc, err := clnt.scheddclnt.GetScheddClnt(kernelID)
+		err := clnt.scheddclnt.Wait(method, kernelID, pid)
 		if err != nil {
-			db.DFatalf("Err get schedd clnt rpcc %v", err)
-		}
-		req := &schedd.WaitRequest{
-			PidStr: pid.String(),
-		}
-		res := &schedd.WaitResponse{}
-		if err := rpcc.RPC("Schedd.Wait"+method.String(), req, res); err != nil {
 			db.DFatalf("Error Schedd Wait%v: %v", method, err)
 		}
 	} else {

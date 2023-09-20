@@ -11,8 +11,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	pqproto "sigmaos/procqsrv/proto"
-	"sigmaos/rpcclnt"
-	schedd "sigmaos/schedd/proto"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -92,32 +90,19 @@ func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Re
 	db.DPrintf(db.LCSCHED, "Schedule kernelID %v p %v", kernelID, p)
 	// Alloc resources for the proc
 	r.alloc(p)
-	rpcc, err := lcs.scheddclnt.GetScheddClnt(kernelID)
-	if err != nil {
-		db.DFatalf("Error getScheddClnt: %v", err)
-	}
-	// Start the proc on the chosen schedd.
-	req := &schedd.ForceRunRequest{
-		ProcProto: p.GetProto(),
-	}
-	res := &schedd.ForceRunResponse{}
-	if err := rpcc.RPC("Schedd.ForceRun", req, res); err != nil {
+	if err := lcs.scheddclnt.ForceRun(kernelID, p); err != nil {
 		db.DFatalf("Schedd.Run %v err %v", kernelID, err)
 	}
 	// Notify the spawner that a schedd has been chosen.
 	ch <- kernelID
 
-	go lcs.waitProcExit(rpcc, kernelID, p, r)
+	go lcs.waitProcExit(kernelID, p, r)
 }
 
-func (lcs *LCSched) waitProcExit(rpcc *rpcclnt.RPCClnt, kernelID string, p *proc.Proc, r *Resources) {
+func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
 	// RPC the schedd this proc was spawned on to wait for the proc to exit.
 	db.DPrintf(db.LCSCHED, "WaitExit %v RPC", p.GetPid())
-	req := &schedd.WaitRequest{
-		PidStr: p.GetPid().String(),
-	}
-	res := &schedd.WaitResponse{}
-	if err := rpcc.RPC("Schedd.WaitExit", req, res); err != nil {
+	if err := lcs.scheddclnt.Wait(scheddclnt.EXIT, kernelID, p.GetPid()); err != nil {
 		db.DFatalf("Error Schedd WaitExit: %v", err)
 	}
 	// Lock to modify resource allocations

@@ -85,6 +85,38 @@ func (sdc *ScheddClnt) ForceRun(kernelID string, p *proc.Proc) error {
 	return nil
 }
 
+func (sdc *ScheddClnt) Wait(method Tmethod, kernelID string, pid sp.Tpid) error {
+	// RPC a schedd to wait.
+	rpcc, err := sdc.GetScheddClnt(kernelID)
+	if err != nil {
+		return err
+	}
+	req := &proto.WaitRequest{
+		PidStr: pid.String(),
+	}
+	res := &proto.WaitResponse{}
+	if err := rpcc.RPC("Schedd.Wait"+method.String(), req, res); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid) error {
+	// Get the RPC client for the local schedd
+	rpcc, err := sdc.GetScheddClnt(kernelID)
+	if err != nil {
+		return err
+	}
+	req := &proto.NotifyRequest{
+		PidStr: pid.String(),
+	}
+	res := &proto.NotifyResponse{}
+	if err := rpcc.RPC("Schedd."+method.Verb(), req, res); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (sdc *ScheddClnt) ScheddLoad() (int, []Tload, error) {
 	sds, err := sdc.getSchedds()
 	if err != nil {

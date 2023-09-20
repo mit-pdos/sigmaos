@@ -26,7 +26,7 @@ func (clnt *ProcClnt) notify(method Tmethod, pid sp.Tpid, kernelID, semName stri
 			// If the proc was spawned via schedd, notify via RPC.
 			db.DPrintf(db.PROCCLNT, "%v %v RPC", method, pid)
 			// Get the RPC client for the local schedd
-			rpcc, err := clnt.getScheddClnt(kernelID)
+			rpcc, err := clnt.scheddclnt.GetScheddClnt(kernelID)
 			if err != nil {
 				db.DFatalf("Err get schedd clnt rpcc %v", err)
 			}

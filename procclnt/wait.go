@@ -20,7 +20,7 @@ func (clnt *ProcClnt) wait(method Tmethod, pid sp.Tpid, kernelID, semName string
 	if how == proc.HSCHEDD {
 		// RPC the schedd this proc was spawned on to wait.
 		db.DPrintf(db.PROCCLNT, "Wait%v %v RPC", method, pid)
-		rpcc, err := clnt.getScheddClnt(kernelID)
+		rpcc, err := clnt.scheddclnt.GetScheddClnt(kernelID)
 		if err != nil {
 			db.DFatalf("Err get schedd clnt rpcc %v", err)
 		}

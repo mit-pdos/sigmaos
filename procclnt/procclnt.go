@@ -16,8 +16,6 @@ import (
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
-	"sigmaos/rpcclnt"
-	schedd "sigmaos/schedd/proto"
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
@@ -179,25 +177,13 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	return nil
 }
 
-func (clnt *ProcClnt) forceRunViaSchedd(kernelId string, p *proc.Proc) error {
-	rpcc, err := clnt.getScheddClnt(kernelId)
+func (clnt *ProcClnt) forceRunViaSchedd(kernelID string, p *proc.Proc) error {
+	err := clnt.scheddclnt.ForceRun(kernelID, p)
 	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "forceRunViaSchedd: getScheddClnt %v err %v\n", kernelId, err)
+		db.DPrintf(db.PROCCLNT_ERR, "forceRunViaSchedd: getScheddClnt %v err %v\n", kernelID, err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			db.DPrintf(db.PROCCLNT_ERR, "Unregister %v", kernelId)
-			clnt.scheddclnt.UnregisterClnt(kernelId)
-		}
-		return err
-	}
-	req := &schedd.ForceRunRequest{
-		ProcProto: p.GetProto(),
-	}
-	res := &schedd.ForceRunResponse{}
-	if err := rpcc.RPC("Schedd.ForceRun", req, res); err != nil {
-		db.DPrintf(db.ALWAYS, "Schedd.Run %v err %v", kernelId, err)
-		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			db.DPrintf(db.PROCCLNT_ERR, "Unregister %v", kernelId)
-			clnt.scheddclnt.UnregisterClnt(kernelId)
+			db.DPrintf(db.PROCCLNT_ERR, "Unregister %v", kernelID)
+			clnt.scheddclnt.UnregisterClnt(kernelID)
 		}
 		return err
 	}
@@ -205,18 +191,10 @@ func (clnt *ProcClnt) forceRunViaSchedd(kernelId string, p *proc.Proc) error {
 }
 
 func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, error) {
-	//	// Sanity check.
-	//	if p.GetType() == proc.T_LC {
-	//		db.DFatalf("Err: try to enqueue LC proc via procq")
-	//	}
 	return clnt.procqclnt.Enqueue(p)
 }
 
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
-	// Sanity check.
-	if p.GetType() == proc.T_BE {
-		db.DFatalf("Err: try to enqueue LC proc via procq")
-	}
 	return clnt.lcschedclnt.Enqueue(p)
 }
 
@@ -253,22 +231,6 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 		return spawnedKernelID, nil
 	}
 	return spawnedKernelID, serr.NewErr(serr.TErrUnreachable, kernelId)
-}
-
-func (clnt *ProcClnt) getScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {
-	rpcc, err := clnt.scheddclnt.GetScheddClnt(kernelId)
-	if err != nil {
-		return nil, err
-	}
-	// Local schedd is special: it has two entries, one under its
-	// kernelId and the other one under ~local.
-	if kernelId == "~local" {
-		if err := clnt.scheddclnt.RegisterLocalClnt(rpcc); err != nil {
-			db.DFatalf("RegisterLocalClnt err %v\n", err)
-			return rpcc, err
-		}
-	}
-	return rpcc, nil
 }
 
 // ========== WAIT ==========

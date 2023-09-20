@@ -70,6 +70,21 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 	return len(sts), nil
 }
 
+func (sdc *ScheddClnt) ForceRun(kernelID string, p *proc.Proc) error {
+	rpcc, err := sdc.GetScheddClnt(kernelID)
+	if err != nil {
+		return err
+	}
+	req := &proto.ForceRunRequest{
+		ProcProto: p.GetProto(),
+	}
+	res := &proto.ForceRunResponse{}
+	if err := rpcc.RPC("Schedd.ForceRun", req, res); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (sdc *ScheddClnt) ScheddLoad() (int, []Tload, error) {
 	sds, err := sdc.getSchedds()
 	if err != nil {
@@ -223,22 +238,6 @@ func (sdc *ScheddClnt) GetScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) 
 		sdc.schedds[kernelId] = rpcc
 	}
 	return rpcc, nil
-}
-
-func (sdc *ScheddClnt) RegisterLocalClnt(pdc *rpcclnt.RPCClnt) error {
-	sdc.Lock()
-	defer sdc.Unlock()
-
-	p, ok, err := sdc.ResolveUnion(path.Join(sp.SCHEDD, "~local"))
-	if !ok || err != nil {
-		// If ~local hasn't registered itself yet, this method should've bailed
-		// out earlier.
-		return fmt.Errorf("Couldn't register schedd ~local: %v, %v, %v", p, ok, err)
-	}
-	kernelId := path.Base(p)
-	db.DPrintf(db.SCHEDDCLNT, "Resolved ~local to %v", kernelId)
-	sdc.schedds[kernelId] = pdc
-	return nil
 }
 
 func (sdc *ScheddClnt) UnregisterClnt(kernelId string) {

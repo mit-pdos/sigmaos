@@ -153,13 +153,18 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	p.SetSpawnTime(time.Now())
 	// Optionally spawn the proc through schedd.
 	if how == proc.HSCHEDD {
-		spawnedKernelID, err := clnt.spawnRetry(kernelId, p)
-		clnt.cs.spawned(p.GetPid(), spawnedKernelID)
-		if err != nil {
-			return clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
-		}
+		clnt.cs.spawned(p.GetPid())
+		// Transparently spawn in a background thread.
+		go func() {
+			spawnedKernelID, err := clnt.spawnRetry(kernelId, p)
+			clnt.cs.started(p.GetPid(), spawnedKernelID, err)
+			if err != nil {
+				clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
+			}
+		}()
 	} else {
-		clnt.cs.spawned(p.GetPid(), kernelId)
+		clnt.cs.spawned(p.GetPid())
+		clnt.cs.started(p.GetPid(), kernelId, nil)
 		// Make the proc's procdir
 		err := clnt.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), how)
 		if err != nil {

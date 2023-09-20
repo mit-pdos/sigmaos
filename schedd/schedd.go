@@ -129,13 +129,12 @@ func (sd *Schedd) getQueuedProcs() {
 		if sd.shouldGetProc() {
 		}
 		// Try to get a proc from the proc queue.
-		p, err := sd.procqclnt.GetProc(sd.kernelId)
+		err := sd.procqclnt.GetProc(sd.kernelId)
 		if err != nil {
 			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)
 			continue
 		}
-		db.DPrintf(db.SCHEDD, "Got proc from procq: %v", p)
-		sd.spawnAndRunProc(p)
+		db.DPrintf(db.SCHEDD, "Got proc from procq")
 	}
 }
 

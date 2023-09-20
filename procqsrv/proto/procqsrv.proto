@@ -22,5 +22,4 @@ message GetProcRequest {
 }
 
 message GetProcResponse {
-  ProcProto procProto = 1;
 }

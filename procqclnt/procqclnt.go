@@ -76,7 +76,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 
 // Get a proc (passing in the kernelID of the caller). Will only return once
 // successful, or once there is an error.
-func (pqc *ProcQClnt) GetProc(callerKernelID string) (*proc.Proc, error) {
+func (pqc *ProcQClnt) GetProc(callerKernelID string) error {
 	// TODO: seems a bit sketchy to loop infinitely.
 	// Retry until successful.
 	pqc.UpdateProcQs()
@@ -90,7 +90,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string) (*proc.Proc, error) {
 		rpcc, err := pqc.GetProcQClnt(pqID)
 		if err != nil {
 			db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get procq clnt: %v", err)
-			return nil, err
+			return err
 		}
 		req := &proto.GetProcRequest{
 			KernelID: callerKernelID,
@@ -103,11 +103,10 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string) (*proc.Proc, error) {
 				pqc.UnregisterClnt(pqID)
 				continue
 			}
-			return nil, err
+			return err
 		}
-		p := proc.NewProcFromProto(res.ProcProto)
-		db.DPrintf(db.PROCQCLNT, "[%v] Got Proc %v", p.GetRealm(), p)
-		return p, nil
+		db.DPrintf(db.PROCQCLNT, "Got Proc")
+		return nil
 	}
 }
 

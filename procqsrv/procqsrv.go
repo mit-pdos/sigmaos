@@ -10,21 +10,24 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	proto "sigmaos/procqsrv/proto"
+	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
 
 type ProcQ struct {
-	mu   sync.Mutex
-	cond *sync.Cond
-	mfs  *memfssrv.MemFs
-	qs   map[sp.Trealm]*Queue
+	mu         sync.Mutex
+	cond       *sync.Cond
+	mfs        *memfssrv.MemFs
+	scheddclnt *scheddclnt.ScheddClnt
+	qs         map[sp.Trealm]*Queue
 }
 
 func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
 	pq := &ProcQ{
-		mfs: mfs,
-		qs:  make(map[sp.Trealm]*Queue),
+		mfs:        mfs,
+		scheddclnt: scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib),
+		qs:         make(map[sp.Trealm]*Queue),
 	}
 	pq.cond = sync.NewCond(&pq.mu)
 	return pq
@@ -54,6 +57,18 @@ func (pq *ProcQ) addProc(p *proc.Proc) chan string {
 	return ch
 }
 
+func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string) {
+	// Must push the proc to the schedd before responding to the parent because
+	// we must guarantee that the schedd knows about it before talking to the
+	// parent. Otherwise, the response to the parent could arrive first and the
+	// parent could ask schedd about the proc before the schedd learns about the
+	// proc.
+	if err := pq.scheddclnt.ForceRun(kernelID, p); err != nil {
+		db.DFatalf("Error ForceRun proc: %v", err)
+	}
+	ch <- kernelID
+}
+
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
@@ -66,8 +81,9 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 			p, ch, ok := q.Dequeue()
 			if ok {
 				db.DPrintf(db.PROCQ, "[%v] Dequeued %v", r, p)
-				res.ProcProto = p.GetProto()
-				ch <- req.KernelID
+				// Push proc to schedd. Do this asynchronously so we don't hold locks
+				// across RPCs.
+				go pq.runProc(req.KernelID, p, ch)
 				return nil
 			}
 		}

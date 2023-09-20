@@ -6,10 +6,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/proc"
 	"sigmaos/fsetcd"
 	"sigmaos/path"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/test"
 )
 
 var realm string
@@ -19,8 +20,8 @@ func init() {
 }
 
 func TestDump(t *testing.T) {
-	pcfg := proc.NewTestProcEnv(sp.Trealm(realm), etcdIP, "", "")
-	fs, err := fsetcd.NewFsEtcd(pcfg)
+	pcfg := proc.NewTestProcEnv(sp.Trealm(realm), test.EtcdIP, "", "", false)
+	fs, err := fsetcd.NewFsEtcd(pcfg.GetRealm(), pcfg.GetEtcdIP())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)
 	assert.Nil(t, err)

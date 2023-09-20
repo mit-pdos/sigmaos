@@ -243,16 +243,17 @@ func (clnt *ProcClnt) WaitStartKernelProc(pid sp.Tpid, how proc.Thow) error {
 }
 
 func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error) {
-	defer clnt.cs.exited(pid)
-
 	// Must wait for child to fill in return status pipe.
 	if err := clnt.waitStart(pid, how); err != nil {
 		db.DPrintf(db.PROCCLNT, "waitStart err %v", err)
+		return nil, err
 	}
 	kernelID, err := clnt.cs.getKernelID(pid)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Unknown kernel ID %v", err)
+		return nil, err
 	}
+	defer clnt.cs.exited(pid)
 	err = clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
 
 	defer clnt.RemoveChild(pid)

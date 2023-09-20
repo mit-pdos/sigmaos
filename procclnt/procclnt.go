@@ -220,8 +220,7 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 
 	kernelID, err := clnt.cs.getKernelID(pid)
 	if err != nil {
-		b := debug.Stack()
-		db.DFatalf("Unknown kernel ID %v stack:\n%v", err, string(b))
+		return fmt.Errorf("Unknown kernel ID %v", err)
 	}
 	err = clnt.wait(scheddclnt.START, pid, kernelID, proc.START_SEM, how)
 	if err != nil {
@@ -252,8 +251,7 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 	}
 	kernelID, err := clnt.cs.getKernelID(pid)
 	if err != nil {
-		b := debug.Stack()
-		db.DFatalf("Unknown kernel ID %v stack:\n%v", err, string(b))
+		db.DPrintf(db.ALWAYS, "Unknown kernel ID %v", err)
 	}
 	err = clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
 

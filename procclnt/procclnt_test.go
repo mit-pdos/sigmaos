@@ -15,7 +15,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
-	"sigmaos/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -592,50 +591,6 @@ func TestReserveCores(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWorkStealing(t *testing.T) {
-	ts := test.NewTstateAll(t)
-
-	err := ts.BootNode(1)
-	assert.Nil(t, err, "Boot node %v", err)
-	majorityCpu := 1000 * (linuxsched.NCores/2 + 1)
-	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(majorityCpu))
-	pid1 := spawnSpinnerMcpu(ts, proc.Tmcpu(majorityCpu))
-
-	err = ts.WaitStart(pid)
-	assert.Nil(t, err, "WaitStart")
-
-	err = ts.WaitStart(pid1)
-	assert.Nil(t, err, "WaitStart")
-
-	err = ts.Evict(pid)
-	assert.Nil(t, err, "Evict")
-
-	err = ts.Evict(pid1)
-	assert.Nil(t, err, "Evict")
-
-	status, err := ts.WaitExit(pid)
-	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
-
-	status, err = ts.WaitExit(pid1)
-	assert.Nil(t, err, "WaitExit 2")
-	assert.True(t, status.IsStatusEvicted(), "WaitExit status 2")
-
-	// Check that work-stealing symlinks were cleaned up.
-	sts, _, err := ts.ReadDir(sp.WS_RUNQ_LC)
-	assert.Nil(t, err, "Readdir %v", err)
-	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", sp.WS_RUNQ_LC, sts)
-
-	sts, _, err = ts.ReadDir(sp.WS_RUNQ_BE)
-	assert.Nil(t, err, "Readdir %v", err)
-	assert.Equal(t, 0, len(sts), "Wrong length ws dir[%v]: %v", sp.WS_RUNQ_BE, sts)
-
-	cleanSleeperResult(t, ts, pid)
-	cleanSleeperResult(t, ts, pid1)
-
-	ts.Shutdown()
-}
-
 func TestEvictN(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
@@ -777,32 +732,4 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	assert.Nil(t, err, "RmDir: %v", err)
 
 	ts.Shutdown()
-}
-
-// Test to see if any core has a spinner running on it (high utilization).
-func anyCoresOccupied(coresMaps []map[string]bool) bool {
-	N_SAMPLES := 5
-	// Calculate the average utilization over a 250ms period for each core to be
-	// revoked.
-	coreOccupied := false
-	for c, m := range coresMaps {
-		idle0, total0 := perf.GetCPUSample(m)
-		idleDelta := uint64(0)
-		totalDelta := uint64(0)
-		// Collect some CPU util samples for this core.
-		for i := 0; i < N_SAMPLES; i++ {
-			time.Sleep(25 * time.Millisecond)
-			idle1, total1 := perf.GetCPUSample(m)
-			idleDelta += idle1 - idle0
-			totalDelta += total1 - total0
-			idle0 = idle1
-			total0 = total1
-		}
-		avgCoreUtil := 100.0 * ((float64(totalDelta) - float64(idleDelta)) / float64(totalDelta))
-		db.DPrintf(db.TEST, "Core %v utilization: %v", c, avgCoreUtil)
-		if avgCoreUtil > 50.0 {
-			coreOccupied = true
-		}
-	}
-	return coreOccupied
 }

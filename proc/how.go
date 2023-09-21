@@ -2,6 +2,7 @@ package proc
 
 import (
 	"log"
+	"runtime/debug"
 )
 
 type Thow uint32
@@ -10,6 +11,8 @@ const (
 	HSCHEDD Thow = iota + 1 // spawned as a sigmos proc
 	HLINUX                  // spawned as a linux process
 	HDOCKER                 // spawned as a container
+	TEST                    // test program (not spawned)
+	BOOT                    // boot program (not spawned)
 )
 
 func (h Thow) String() string {
@@ -20,8 +23,13 @@ func (h Thow) String() string {
 		return "linux"
 	case HDOCKER:
 		return "docker"
+	case BOOT:
+		return "boot"
+	case TEST:
+		return "test"
 	default:
-		log.Fatalf("FATAL: Unknown how %v", int(h))
+		b := debug.Stack()
+		log.Fatalf("FATAL: Unknown how %v stack:\n%v", int(h), string(b))
 		return "unknown how"
 	}
 }

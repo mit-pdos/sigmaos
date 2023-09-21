@@ -108,6 +108,7 @@ func NewBootProcEnv(uname sp.Tuname, etcdIP, localIP string, overlays bool) *Pro
 	pe.LocalIP = localIP
 	pe.SetRealm(sp.ROOTREALM, overlays)
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
+	pe.HowInt = int32(BOOT)
 	return pe
 }
 
@@ -121,6 +122,7 @@ func NewTestProcEnv(realm sp.Trealm, etcdIP, localIP, buildTag string, overlays 
 	pe.BuildTag = buildTag
 	pe.Program = "test"
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
+	pe.HowInt = int32(TEST)
 	return pe
 }
 

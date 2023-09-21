@@ -70,7 +70,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 		}
 		return NOT_ENQ, err
 	}
-	db.DPrintf(db.PROCQCLNT, "[%v] Got Proc %v", p.GetRealm(), p)
+	db.DPrintf(db.PROCQCLNT, "[%v] Enqueued Proc %v", p.GetRealm(), p)
 	return res.KernelID, nil
 }
 
@@ -105,7 +105,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string) (bool, error) {
 			}
 			return false, err
 		}
-		db.DPrintf(db.PROCQCLNT, "Got Proc")
+		db.DPrintf(db.PROCQCLNT, "GetProc success? %v", res.OK)
 		return res.OK, nil
 	}
 }

@@ -3,6 +3,7 @@ package procqsrv
 import (
 	"path"
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -13,6 +14,10 @@ import (
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+)
+
+const (
+	GET_PROC_TIMEOUT = 500 * time.Millisecond
 )
 
 type ProcQ struct {
@@ -35,9 +40,9 @@ func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
 
 func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
-	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
-
+	db.DPrintf(db.PROCQ, "[%v] Enqueue %v", p.GetRealm(), p)
 	ch := pq.addProc(p)
+	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
 	res.KernelID = <-ch
 	return nil
 }
@@ -52,8 +57,8 @@ func (pq *ProcQ) addProc(p *proc.Proc) chan string {
 	}
 	// Enqueue the proc according to its realm
 	ch := q.Enqueue(p)
-	// Signal that a new proc may be runnable.
-	pq.cond.Signal()
+	// Broadcast that a new proc may be runnable.
+	pq.cond.Broadcast()
 	return ch
 }
 
@@ -70,8 +75,12 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string) {
 }
 
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
+	db.DPrintf(db.PROCQ, "GetProc request by %v", req.KernelID)
+
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
+
+	db.DPrintf(db.PROCQ, "GetProc acquired lock for %v", req.KernelID)
 
 	// XXX seems fishy to loop forever...
 	for {
@@ -80,16 +89,22 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 		for r, q := range pq.qs {
 			p, ch, ok := q.Dequeue()
 			if ok {
-				db.DPrintf(db.PROCQ, "[%v] Dequeued %v", r, p)
+				db.DPrintf(db.PROCQ, "[%v] Dequeued for %v %v", r, req.KernelID, p)
 				// Push proc to schedd. Do this asynchronously so we don't hold locks
 				// across RPCs.
 				go pq.runProc(req.KernelID, p, ch)
+				res.OK = true
 				return nil
 			}
 		}
 		// If unable to schedule a proc from any realm, wait.
 		db.DPrintf(db.PROCQ, "No procs schedulable qs:%v", pq.qs)
-		pq.cond.Wait()
+		ok := pq.waitOrTimeoutL()
+		// If timed out, respond to schedd to have it try another procq.
+		if !ok {
+			res.OK = false
+			return nil
+		}
 	}
 	return nil
 }

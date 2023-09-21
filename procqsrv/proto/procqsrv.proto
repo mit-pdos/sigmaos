@@ -22,4 +22,5 @@ message GetProcRequest {
 }
 
 message GetProcResponse {
+  bool oK = 1;
 }

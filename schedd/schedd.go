@@ -128,13 +128,18 @@ func (sd *Schedd) getQueuedProcs() {
 		// TODO: Switch to only BE procs...
 		if sd.shouldGetProc() {
 		}
+		db.DPrintf(db.SCHEDD, "[%v] Try get proc from procq", sd.kernelId)
 		// Try to get a proc from the proc queue.
-		err := sd.procqclnt.GetProc(sd.kernelId)
+		ok, err := sd.procqclnt.GetProc(sd.kernelId)
 		if err != nil {
 			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)
 			continue
 		}
-		db.DPrintf(db.SCHEDD, "Got proc from procq")
+		if !ok {
+			db.DPrintf(db.SCHEDD, "[%v] No proc on procq, try another", sd.kernelId)
+			continue
+		}
+		db.DPrintf(db.SCHEDD, "[%v] Got proc from procq", sd.kernelId)
 	}
 }
 

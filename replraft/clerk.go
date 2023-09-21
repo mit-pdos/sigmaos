@@ -103,7 +103,7 @@ func (c *Clerk) registerOp(req *replproto.ReplOpRequest, op *Op) {
 	m[seq] = op
 }
 
-// Get the full op struct associated with an sp.
+// Get the full op struct associated with an cid/seqno.
 func (c *Clerk) getOp(req *replproto.ReplOpRequest) *Op {
 	c.mu.Lock()
 	defer c.mu.Unlock()

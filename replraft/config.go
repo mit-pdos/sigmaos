@@ -42,7 +42,7 @@ func (rc *RaftConfig) SetPeerAddrs(new []string) {
 }
 
 func (rc *RaftConfig) MakeServer(applyf repl.Tapplyf) (repl.Server, error) {
-	return MakeRaftReplServer(rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
+	return makeRaftReplServer(rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
 }
 
 func (rc *RaftConfig) ReplAddr() string {

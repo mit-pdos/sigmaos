@@ -10,12 +10,11 @@ import (
 )
 
 type RaftReplServer struct {
-	storage *raft.MemoryStorage
-	node    *RaftNode
-	clerk   *Clerk
+	node  *RaftNode
+	clerk *Clerk
 }
 
-func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool, apply repl.Tapplyf) (*RaftReplServer, error) {
+func makeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool, apply repl.Tapplyf) (*RaftReplServer, error) {
 	var err error
 	srv := &RaftReplServer{}
 	peers := []raft.Peer{}

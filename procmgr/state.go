@@ -3,6 +3,7 @@ package procmgr
 import (
 	"sync"
 
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -79,7 +80,14 @@ func (ps *ProcState) exited(pid sp.Tpid) {
 	// May be called multiple times by procmgr if, for example, the proc crashes
 	// shortly after calling Exited().
 	if w, ok := ps.exitWaiter[pid]; ok {
+		// Sanity check: start should have been called already.
+		if !ps.startWaiter[pid].done {
+			db.DFatalf("Error: exit but start not done")
+		}
 		w.release()
+		ps.startWaiter[pid].release()
+		// Make sure to release evict waiters so we don't leak goroutines
+		ps.evictWaiter[pid].release()
 	}
 	// Clean up state
 	delete(ps.spawned, pid)

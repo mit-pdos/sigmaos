@@ -58,7 +58,7 @@ func (sf *SpawnFuture) Complete(kernelID string, err error) {
 	sf.cond.Broadcast()
 }
 
-func (cs *ChildState) spawned(pid sp.Tpid) {
+func (cs *ChildState) Spawned(pid sp.Tpid) {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -66,7 +66,7 @@ func (cs *ChildState) spawned(pid sp.Tpid) {
 	cs.ranOn[pid] = newSpawnFuture(&cs.Mutex)
 }
 
-func (cs *ChildState) started(pid sp.Tpid, kernelID string, err error) {
+func (cs *ChildState) Started(pid sp.Tpid, kernelID string, err error) {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -74,7 +74,7 @@ func (cs *ChildState) started(pid sp.Tpid, kernelID string, err error) {
 	cs.ranOn[pid].Complete(kernelID, err)
 }
 
-func (cs *ChildState) exited(pid sp.Tpid) {
+func (cs *ChildState) Exited(pid sp.Tpid) {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -86,7 +86,7 @@ func (cs *ChildState) exited(pid sp.Tpid) {
 	delete(cs.ranOn, pid)
 }
 
-func (cs *ChildState) getKernelID(pid sp.Tpid) (string, error) {
+func (cs *ChildState) GetKernelID(pid sp.Tpid) (string, error) {
 	cs.Lock()
 	defer cs.Unlock()
 

@@ -130,18 +130,18 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	p.SetSpawnTime(time.Now())
 	// Optionally spawn the proc through schedd.
 	if how == proc.HSCHEDD {
-		clnt.cs.spawned(p.GetPid())
+		clnt.cs.Spawned(p.GetPid())
 		// Transparently spawn in a background thread.
 		go func() {
 			spawnedKernelID, err := clnt.spawnRetry(kernelId, p)
-			clnt.cs.started(p.GetPid(), spawnedKernelID, err)
+			clnt.cs.Started(p.GetPid(), spawnedKernelID, err)
 			if err != nil {
 				clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
 			}
 		}()
 	} else {
-		clnt.cs.spawned(p.GetPid())
-		clnt.cs.started(p.GetPid(), kernelId, nil)
+		clnt.cs.Spawned(p.GetPid())
+		clnt.cs.Started(p.GetPid(), kernelId, nil)
 		// Make the proc's procdir
 		err := clnt.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), how)
 		if err != nil {
@@ -218,7 +218,7 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 	s := time.Now()
 	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E WaitStart %v", pid, time.Since(s))
 
-	kernelID, err := clnt.cs.getKernelID(pid)
+	kernelID, err := clnt.cs.GetKernelID(pid)
 	if err != nil {
 		return fmt.Errorf("Unknown kernel ID %v", err)
 	}
@@ -248,12 +248,12 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 		db.DPrintf(db.PROCCLNT, "waitStart err %v", err)
 		return nil, err
 	}
-	kernelID, err := clnt.cs.getKernelID(pid)
+	kernelID, err := clnt.cs.GetKernelID(pid)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Unknown kernel ID %v", err)
 		return nil, err
 	}
-	defer clnt.cs.exited(pid)
+	defer clnt.cs.Exited(pid)
 	err = clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
 
 	defer clnt.RemoveChild(pid)
@@ -370,7 +370,7 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 // ========== EVICT ==========
 
 func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
-	kernelID, err := clnt.cs.getKernelID(pid)
+	kernelID, err := clnt.cs.GetKernelID(pid)
 	if err != nil {
 		db.DFatalf("Error Evict can't get kernel ID for proc: %v", err)
 	}

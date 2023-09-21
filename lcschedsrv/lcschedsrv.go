@@ -104,6 +104,7 @@ func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
 	if err := lcs.scheddclnt.Wait(scheddclnt.EXIT, kernelID, p.GetPid()); err != nil {
 		db.DFatalf("Error Schedd WaitExit: %v", err)
 	}
+	db.DPrintf(db.LCSCHED, "Proc exited %v", p.GetPid())
 	// Lock to modify resource allocations
 	lcs.Lock()
 	defer lcs.Unlock()

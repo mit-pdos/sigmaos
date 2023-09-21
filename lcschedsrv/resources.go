@@ -21,12 +21,16 @@ func newResources(mcpuInt uint32, memInt uint32) *Resources {
 
 // Caller holds lock
 func (r *Resources) alloc(p *proc.Proc) {
+	defer r.sanityCheck()
+
 	r.mcpu -= p.GetMcpu()
 	r.mem -= p.GetMem()
 }
 
 // Caller holds lock
 func (r *Resources) free(p *proc.Proc) {
+	defer r.sanityCheck()
+
 	r.mcpu += p.GetMcpu()
 	r.mem += p.GetMem()
 }

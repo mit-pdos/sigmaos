@@ -100,9 +100,11 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 		ok := pq.waitOrTimeoutAndUnlock()
 		// If timed out, respond to schedd to have it try another procq.
 		if !ok {
+			db.DPrintf(db.PROCQ, "Timed out GetProc request from: %v", req.KernelID)
 			res.OK = false
 			return nil
 		}
+		db.DPrintf(db.PROCQ, "Woke up GetProc request from: %v", req.KernelID)
 	}
 	return nil
 }

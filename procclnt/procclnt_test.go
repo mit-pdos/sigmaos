@@ -86,7 +86,7 @@ func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, ms
 func checkSleeperResult(t *testing.T, ts *test.Tstate, pid sp.Tpid) bool {
 	res := true
 	b, err := ts.GetFile("name/" + pid.String() + "_out")
-	res = assert.Nil(t, err, "GetFile") && res
+	res = assert.Nil(t, err, "GetFile err: %v", err) && res
 	res = assert.Equal(t, string(b), "hello", "Output") && res
 
 	return res
@@ -556,41 +556,6 @@ func TestEvict(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestReserveCores(t *testing.T) {
-	ts := test.NewTstateAll(t)
-
-	start := time.Now()
-	pid := sp.Tpid("sleeper-aaaaaaa")
-	majorityCpu := 1000 * (linuxsched.NCores/2 + 1)
-	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
-
-	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
-	// proc is only picked up *after* the other one.
-	pid1 := sp.Tpid("sleeper-bbbbbb")
-	spawnSleeperMcpu(t, ts, pid1, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
-
-	status, err := ts.WaitExit(pid)
-	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status.IsStatusOK(), "WaitExit status")
-
-	// Make sure the second proc didn't finish
-	checkSleeperResult(t, ts, pid)
-	checkSleeperResultFalse(t, ts, pid1)
-
-	cleanSleeperResult(t, ts, pid)
-
-	status, err = ts.WaitExit(pid1)
-	assert.Nil(t, err, "WaitExit 2")
-	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
-	end := time.Now()
-
-	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
-
-	cleanSleeperResult(t, ts, pid1)
-
-	ts.Shutdown()
-}
-
 func TestEvictN(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
@@ -610,12 +575,6 @@ func TestEvictN(t *testing.T) {
 	}
 
 	ts.Shutdown()
-}
-
-func getNChildren(ts *test.Tstate) int {
-	c, err := ts.GetChildren()
-	assert.Nil(ts.T, err, "getnchildren")
-	return len(c)
 }
 
 func TestBurstSpawn(t *testing.T) {
@@ -651,6 +610,47 @@ func TestBurstSpawn(t *testing.T) {
 	}
 
 	ts.Shutdown()
+}
+
+func TestReserveCores(t *testing.T) {
+	ts := test.NewTstateAll(t)
+
+	start := time.Now()
+	pid := sp.Tpid("sleeper-aaaaaaa")
+	majorityCpu := 1000 * (linuxsched.NCores/2 + 1)
+	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
+
+	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
+	// proc is only picked up *after* the other one.
+	pid1 := sp.Tpid("sleeper-bbbbbb")
+	spawnSleeperMcpu(t, ts, pid1, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
+
+	status, err := ts.WaitExit(pid)
+	assert.Nil(t, err, "WaitExit")
+	assert.True(t, status.IsStatusOK(), "WaitExit status")
+
+	// Make sure the second proc didn't finish
+	checkSleeperResult(t, ts, pid)
+	checkSleeperResultFalse(t, ts, pid1)
+
+	cleanSleeperResult(t, ts, pid)
+
+	status, err = ts.WaitExit(pid1)
+	assert.Nil(t, err, "WaitExit 2")
+	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
+	end := time.Now()
+
+	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
+
+	cleanSleeperResult(t, ts, pid1)
+
+	ts.Shutdown()
+}
+
+func getNChildren(ts *test.Tstate) int {
+	c, err := ts.GetChildren()
+	assert.Nil(ts.T, err, "getnchildren")
+	return len(c)
 }
 
 func TestSpawnCrashSchedd(t *testing.T) {

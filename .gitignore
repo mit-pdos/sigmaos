@@ -12,3 +12,4 @@ perf/perf.test
 benchmarks/results/
 *.err
 *.pdf
+scratch.sh

@@ -148,7 +148,6 @@ func (sd *Schedd) procDone(p *proc.Proc) error {
 	defer sd.mu.Unlock()
 
 	db.DPrintf(db.SCHEDD, "Proc done %v", p)
-	sd.freeResourcesL(p)
 	// Signal that a new proc may be runnable.
 	sd.cond.Signal()
 	return nil
@@ -167,7 +166,6 @@ func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
 // Run a proc via the local procd. Caller holds lock.
 func (sd *Schedd) runProcL(p *proc.Proc) {
 	db.DPrintf(db.SCHEDD, "[%v] %v runProcL %v", p.GetRealm(), sd.kernelId, p)
-	sd.allocResourcesL(p)
 	go func() {
 		sd.pmgr.RunProc(p)
 		sd.procDone(p)

@@ -372,7 +372,8 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
 	kernelID, err := clnt.cs.GetKernelID(pid)
 	if err != nil {
-		db.DFatalf("Error Evict can't get kernel ID for proc: %v", err)
+		db.DPrintf(db.ALWAYS, "Error Evict can't get kernel ID for proc: %v", err)
+		return err
 	}
 	return clnt.notify(scheddclnt.EVICT, pid, kernelID, proc.EVICT_SEM, how, false)
 }

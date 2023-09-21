@@ -71,7 +71,9 @@ func (lcs *LCSched) schedule() {
 				p, ch, ok := q.Dequeue(r.mcpu, r.mem)
 				if ok {
 					db.DPrintf(db.LCSCHED, "Successfully schedule realm %v", realm)
-					lcs.runProc(kid, p, ch, r)
+					// Alloc resources for the proc
+					r.alloc(p)
+					go lcs.runProc(kid, p, ch, r)
 					success = true
 					// Move on to the next realm
 					break
@@ -85,18 +87,15 @@ func (lcs *LCSched) schedule() {
 	}
 }
 
-// Caller holds lock
 func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Resources) {
-	db.DPrintf(db.LCSCHED, "Schedule kernelID %v p %v", kernelID, p)
-	// Alloc resources for the proc
-	r.alloc(p)
+	db.DPrintf(db.LCSCHED, "runProc kernelID %v p %v", kernelID, p)
 	if err := lcs.scheddclnt.ForceRun(kernelID, p); err != nil {
 		db.DFatalf("Schedd.Run %v err %v", kernelID, err)
 	}
 	// Notify the spawner that a schedd has been chosen.
 	ch <- kernelID
-
-	go lcs.waitProcExit(kernelID, p, r)
+	// Wait for the proc to exit.
+	lcs.waitProcExit(kernelID, p, r)
 }
 
 func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {

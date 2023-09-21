@@ -77,13 +77,9 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string) {
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	db.DPrintf(db.PROCQ, "GetProc request by %v", req.KernelID)
 
-	pq.mu.Lock()
-	defer pq.mu.Unlock()
-
-	db.DPrintf(db.PROCQ, "GetProc acquired lock for %v", req.KernelID)
-
 	// XXX seems fishy to loop forever...
 	for {
+		pq.mu.Lock()
 		// XXX Should probably do this more efficiently (just select a realm).
 		// Iterate through the realms round-robin.
 		for r, q := range pq.qs {
@@ -94,12 +90,14 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// across RPCs.
 				go pq.runProc(req.KernelID, p, ch)
 				res.OK = true
+				pq.mu.Unlock()
 				return nil
 			}
 		}
 		// If unable to schedule a proc from any realm, wait.
 		db.DPrintf(db.PROCQ, "No procs schedulable qs:%v", pq.qs)
-		ok := pq.waitOrTimeoutL()
+		// Releases the lock, so we must re-acquire on the next loop iteration.
+		ok := pq.waitOrTimeoutAndUnlock()
 		// If timed out, respond to schedd to have it try another procq.
 		if !ok {
 			res.OK = false

@@ -177,7 +177,7 @@ func (sd *Schedd) shouldGetProc() bool {
 	return true
 }
 
-func (sd *Schedd) Register() {
+func (sd *Schedd) register() {
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sd.mfs.SigmaClnt().FsLib}, path.Join(sp.LCSCHED, "~any"))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
@@ -213,7 +213,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	}
 	defer p.Done()
 	go sd.getQueuedProcs()
-	sd.Register()
+	sd.register()
 	ssrv.RunServer()
 	return nil
 }

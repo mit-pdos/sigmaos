@@ -22,7 +22,7 @@ func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, sem
 		db.DPrintf(db.PROCCLNT, "Wait%v %v RPC", method, pid)
 		err := clnt.scheddclnt.Wait(method, kernelID, pid)
 		if err != nil {
-			db.DFatalf("Error Schedd Wait%v: %v", method, err)
+			return fmt.Errorf("Error Schedd Wait%v: %v", method, err)
 		}
 	} else {
 		// If not spawned via schedd, wait via semaphore.

@@ -696,7 +696,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	nChildren += N_REPL
 
 	// Wait for them to spawn.
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	// Make sure they spawned correctly.
 	st, err := ts.GetDir(OUTDIR)

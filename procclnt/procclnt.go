@@ -27,18 +27,16 @@ type ProcClnt struct {
 	*fslib.FsLib
 	pid         sp.Tpid
 	isExited    sp.Tpid
-	procdir     string
 	scheddclnt  *scheddclnt.ScheddClnt
 	procqclnt   *procqclnt.ProcQClnt
 	lcschedclnt *lcschedclnt.LCSchedClnt
 	cs          *ChildState
 }
 
-func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procdir string) *ProcClnt {
+func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid) *ProcClnt {
 	clnt := &ProcClnt{
 		FsLib:       fsl,
 		pid:         pid,
-		procdir:     procdir,
 		scheddclnt:  scheddclnt.NewScheddClnt(fsl),
 		procqclnt:   procqclnt.NewProcQClnt(fsl),
 		lcschedclnt: lcschedclnt.NewLCSchedClnt(fsl),
@@ -258,7 +256,7 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 
 	defer clnt.RemoveChild(pid)
 
-	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
+	childDir := path.Dir(proc.GetChildProcDir(proc.PROCDIR, pid))
 	b, err := clnt.GetFile(path.Join(childDir, proc.EXIT_STATUS))
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Missing return status, schedd must have crashed: %v, %v", pid, err)
@@ -337,14 +335,14 @@ func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, s
 
 // Called voluntarily by the proc when it Exits normally.
 func (clnt *ProcClnt) Exited(status *proc.Status) {
-	db.DPrintf(db.PROCCLNT, "Exited normally %v parent %v pid %v status %v", clnt.procdir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetPID(), status)
+	db.DPrintf(db.PROCCLNT, "Exited normally %v parent %v pid %v status %v", clnt.ProcEnv().ProcDir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetPID(), status)
 	// will catch some unintended misuses: a proc calling exited
 	// twice or schedd calling exited twice.
 	if clnt.setExited(clnt.ProcEnv().GetPID()) == clnt.ProcEnv().GetPID() {
 		b := debug.Stack()
-		db.DFatalf("Exited called after exited %v stack:\n%v", clnt.procdir, string(b))
+		db.DFatalf("Exited called after exited %v stack:\n%v", clnt.ProcEnv().ProcDir, string(b))
 	}
-	err := clnt.exited(clnt.procdir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetKernelID(), clnt.ProcEnv().GetPID(), status, clnt.ProcEnv().GetHow(), false)
+	err := clnt.exited(clnt.ProcEnv().ProcDir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetKernelID(), clnt.ProcEnv().GetPID(), status, clnt.ProcEnv().GetHow(), false)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "exited %v err %v", clnt.ProcEnv().GetPID(), err)
 	}

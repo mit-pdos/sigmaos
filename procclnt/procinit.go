@@ -21,7 +21,7 @@ func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
-	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), proc.PROCDIR)
+	return newProcClnt(fsl, fsl.ProcEnv().GetPID())
 }
 
 // Fake an initial process for, for example, tests.
@@ -29,19 +29,22 @@ func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // XXX deduplicate with NewProcClnt()
 func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 	MountPids(fsl)
+	// XXX needed?
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", sp.SCHEDDREL, sp.SCHEDDREL)
 	if err := fsl.NewRootMount(fsl.ProcEnv().GetUname(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
 		debug.PrintStack()
-		db.DFatalf("error mounting procd err %v\n", err)
+		db.DFatalf("error mounting schedd err %v\n", err)
 	}
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)
-	fsl.NewRootMount(fsl.ProcEnv().GetUname(), fsl.ProcEnv().ProcDir, proc.PROCDIR)
-	clnt := newProcClnt(fsl, pid, fsl.ProcEnv().ProcDir)
+	if err := fsl.NewRootMount(fsl.ProcEnv().GetUname(), fsl.ProcEnv().ProcDir, proc.PROCDIR); err != nil {
+		db.DFatalf("Error mounting procdir: %v", err)
+	}
+	clnt := newProcClnt(fsl, pid)
 	clnt.NewProcDir(pid, fsl.ProcEnv().ProcDir, false, proc.HSCHEDD)
 	return clnt
 }
 
 func MountPids(fsl *fslib.FsLib) error {
-	fsl.NewRootMount(fsl.ProcEnv().GetUname(), sp.KPIDS, sp.KPIDS)
+	fsl.NewRootMount(fsl.ProcEnv().GetUname(), sp.KPIDS, sp.KPIDSREL)
 	return nil
 }

@@ -23,7 +23,7 @@ const (
 type LCSchedClnt struct {
 	done int32
 	*fslib.FsLib
-	sync.Mutex
+	mu          sync.Mutex
 	lcscheds    map[string]*rpcclnt.RPCClnt
 	lcschedIDs  []string
 	lastUpdate  time.Time
@@ -76,8 +76,8 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 }
 
 func (lcs *LCSchedClnt) GetLCSchedClnt(lcschedID string) (*rpcclnt.RPCClnt, error) {
-	lcs.Lock()
-	defer lcs.Unlock()
+	lcs.mu.Lock()
+	defer lcs.mu.Unlock()
 
 	var rpcc *rpcclnt.RPCClnt
 	var ok bool
@@ -95,8 +95,8 @@ func (lcs *LCSchedClnt) GetLCSchedClnt(lcschedID string) (*rpcclnt.RPCClnt, erro
 
 // Update the list of active procds.
 func (lcs *LCSchedClnt) UpdateLCScheds() {
-	lcs.Lock()
-	defer lcs.Unlock()
+	lcs.mu.Lock()
+	defer lcs.mu.Unlock()
 
 	// If we updated the list of active procds recently, return immediately. The
 	// list will change at most as quickly as the realm resizes.
@@ -120,8 +120,8 @@ func (lcs *LCSchedClnt) UpdateLCScheds() {
 }
 
 func (lcs *LCSchedClnt) UnregisterClnt(id string) {
-	lcs.Lock()
-	defer lcs.Unlock()
+	lcs.mu.Lock()
+	defer lcs.mu.Unlock()
 
 	delete(lcs.lcscheds, id)
 }
@@ -136,8 +136,8 @@ func (lcs *LCSchedClnt) getLCScheds() ([]string, error) {
 
 // Get the next procd to burst on.
 func (lcs *LCSchedClnt) NextLCSched() (string, error) {
-	lcs.Lock()
-	defer lcs.Unlock()
+	lcs.mu.Lock()
+	defer lcs.mu.Unlock()
 
 	if len(lcs.lcschedIDs) == 0 {
 		return "", serr.NewErr(serr.TErrNotfound, "no lcscheds to spawn on")

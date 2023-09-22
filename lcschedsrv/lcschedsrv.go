@@ -17,7 +17,7 @@ import (
 )
 
 type LCSched struct {
-	sync.Mutex
+	mu         sync.Mutex
 	cond       *sync.Cond
 	mfs        *memfssrv.MemFs
 	scheddclnt *scheddclnt.ScheddClnt
@@ -32,7 +32,7 @@ func NewLCSched(mfs *memfssrv.MemFs) *LCSched {
 		qs:         make(map[sp.Trealm]*Queue),
 		schedds:    make(map[string]*Resources),
 	}
-	lcs.cond = sync.NewCond(&lcs.Mutex)
+	lcs.cond = sync.NewCond(&lcs.mu)
 	return lcs
 }
 
@@ -46,8 +46,8 @@ func (lcs *LCSched) Enqueue(ctx fs.CtxI, req pqproto.EnqueueRequest, res *pqprot
 }
 
 func (lcs *LCSched) RegisterSchedd(ctx fs.CtxI, req proto.RegisterScheddRequest, res *proto.RegisterScheddResponse) error {
-	lcs.Lock()
-	defer lcs.Unlock()
+	lcs.mu.Lock()
+	defer lcs.mu.Unlock()
 
 	db.DPrintf(db.LCSCHED, "Register Schedd id:%v mcpu:%v mem:%v", req.KernelID, req.McpuInt, req.MemInt)
 	if _, ok := lcs.schedds[req.KernelID]; ok {
@@ -59,8 +59,8 @@ func (lcs *LCSched) RegisterSchedd(ctx fs.CtxI, req proto.RegisterScheddRequest,
 }
 
 func (lcs *LCSched) schedule() {
-	lcs.Lock()
-	defer lcs.Unlock()
+	lcs.mu.Lock()
+	defer lcs.mu.Unlock()
 
 	// Keep scheduling forever.
 	for {
@@ -106,8 +106,8 @@ func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
 	}
 	db.DPrintf(db.LCSCHED, "Proc exited %v", p.GetPid())
 	// Lock to modify resource allocations
-	lcs.Lock()
-	defer lcs.Unlock()
+	lcs.mu.Lock()
+	defer lcs.mu.Unlock()
 
 	r.free(p)
 	// Notify that more resources have become available (and thus procs may now
@@ -116,8 +116,8 @@ func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
 }
 
 func (lcs *LCSched) addProc(p *proc.Proc) chan string {
-	lcs.Lock()
-	defer lcs.Unlock()
+	lcs.mu.Lock()
+	defer lcs.mu.Unlock()
 
 	q, ok := lcs.qs[p.GetRealm()]
 	if !ok {

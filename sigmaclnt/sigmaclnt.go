@@ -19,7 +19,7 @@ func init() {
 			return
 		}
 		pe := proc.GetProcEnv()
-		db.DPrintf(db.SPAWN_LAT, "[%v] SigmaClnt pkg init. E2e spawn latency: %v", time.Since(pe.GetSpawnTime()))
+		db.DPrintf(db.SPAWN_LAT, "[%v] SigmaClnt pkg init. E2e spawn latency: %v", pe.GetPID(), time.Since(pe.GetSpawnTime()))
 	}
 }
 

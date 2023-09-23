@@ -2,7 +2,6 @@ package procqclnt
 
 import (
 	"errors"
-	"path"
 	"sync"
 	"time"
 
@@ -10,9 +9,9 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procqsrv/proto"
-	"sigmaos/rpcclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/unionrpcclnt"
 )
 
 const (
@@ -20,45 +19,32 @@ const (
 )
 
 type ProcQClnt struct {
-	done int32
 	*fslib.FsLib
+	urpcc *unionrpcclnt.UnionRPCClnt
 	sync.Mutex
-	procqs      map[string]*rpcclnt.RPCClnt
-	procqIDs    []string
-	lastUpdate  time.Time
-	burstOffset int
 }
 
 func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
 	return &ProcQClnt{
-		FsLib:    fsl,
-		procqs:   make(map[string]*rpcclnt.RPCClnt),
-		procqIDs: make([]string, 0),
+		FsLib: fsl,
+		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR),
 	}
-}
-
-func (pqc *ProcQClnt) Nprocq() (int, error) {
-	sds, err := pqc.getProcQs()
-	if err != nil {
-		return 0, err
-	}
-	return len(sds), nil
 }
 
 // Enqueue a proc on the procq. Returns the ID of the kernel that is running
 // the proc.
 func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 	s := time.Now()
-	pqc.UpdateProcQs()
+	pqc.urpcc.UpdateSrvs(false)
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt updateProcQs %v", p.GetPid(), time.Since(s))
 	s = time.Now()
-	pqID, err := pqc.NextProcQ()
+	pqID, err := pqc.urpcc.NextSrv()
 	if err != nil {
 		return NOT_ENQ, errors.New("No procqs available")
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt get ProcQ %v", p.GetPid(), time.Since(s))
 	s = time.Now()
-	rpcc, err := pqc.GetProcQClnt(pqID)
+	rpcc, err := pqc.urpcc.GetClnt(pqID)
 	if err != nil {
 		db.DFatalf("Error: Can't get procq clnt: %v", err)
 		return NOT_ENQ, err
@@ -73,7 +59,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 		db.DPrintf(db.ALWAYS, "ProcQ.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-			pqc.UnregisterClnt(pqID)
+			pqc.urpcc.UnregisterSrv(pqID)
 		}
 		return NOT_ENQ, err
 	}
@@ -85,17 +71,16 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 // Get a proc (passing in the kernelID of the caller). Will only return once
 // successful, or once there is an error.
 func (pqc *ProcQClnt) GetProc(callerKernelID string) (bool, error) {
-	// TODO: seems a bit sketchy to loop infinitely.
+	pqc.urpcc.UpdateSrvs(false)
 	// Retry until successful.
-	pqc.UpdateProcQs()
 	for {
-		pqID, err := pqc.NextProcQ()
+		pqID, err := pqc.urpcc.NextSrv()
 		if err != nil {
-			pqc.UpdateProcQs()
+			pqc.urpcc.UpdateSrvs(true)
 			db.DPrintf(db.PROCQCLNT_ERR, "No procQs available: %v", err)
 			continue
 		}
-		rpcc, err := pqc.GetProcQClnt(pqID)
+		rpcc, err := pqc.urpcc.GetClnt(pqID)
 		if err != nil {
 			db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get procq clnt: %v", err)
 			return false, err
@@ -108,7 +93,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string) (bool, error) {
 			db.DPrintf(db.ALWAYS, "ProcQ.GetProc %v err %v", callerKernelID, err)
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
 				db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-				pqc.UnregisterClnt(pqID)
+				pqc.urpcc.UnregisterSrv(pqID)
 				continue
 			}
 			return false, err
@@ -116,77 +101,4 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string) (bool, error) {
 		db.DPrintf(db.PROCQCLNT, "GetProc success? %v", res.OK)
 		return res.OK, nil
 	}
-}
-
-func (pqc *ProcQClnt) GetProcQClnt(procqID string) (*rpcclnt.RPCClnt, error) {
-	pqc.Lock()
-	defer pqc.Unlock()
-
-	var rpcc *rpcclnt.RPCClnt
-	var ok bool
-	if rpcc, ok = pqc.procqs[procqID]; !ok {
-		var err error
-		rpcc, err = rpcclnt.NewRPCClnt([]*fslib.FsLib{pqc.FsLib}, path.Join(sp.PROCQ, procqID))
-		if err != nil {
-			db.DPrintf(db.PROCQCLNT_ERR, "Error newRPCClnt[procq:%v]: %v", procqID, err)
-			return nil, err
-		}
-		pqc.procqs[procqID] = rpcc
-	}
-	return rpcc, nil
-}
-
-// Update the list of active procds.
-func (pqc *ProcQClnt) UpdateProcQs() {
-	pqc.Lock()
-	defer pqc.Unlock()
-
-	// If we updated the list of active procds recently, return immediately. The
-	// list will change at most as quickly as the realm resizes.
-	if time.Since(pqc.lastUpdate) < sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL && len(pqc.procqIDs) > 0 {
-		db.DPrintf(db.PROCQCLNT, "Update procqs too soon")
-		return
-	}
-	// Read the procd union dir.
-	procqs, err := pqc.getProcQs()
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error ReadDir procd: %v", err)
-		return
-	}
-	pqc.lastUpdate = time.Now()
-	db.DPrintf(db.PROCQCLNT, "Got procqs %v", procqs)
-	// Alloc enough space for the list of procqs.
-	pqc.procqIDs = make([]string, 0, len(procqs))
-	for _, procq := range procqs {
-		pqc.procqIDs = append(pqc.procqIDs, procq)
-	}
-}
-
-func (pqc *ProcQClnt) UnregisterClnt(id string) {
-	pqc.Lock()
-	defer pqc.Unlock()
-
-	delete(pqc.procqs, id)
-}
-
-func (pqc *ProcQClnt) getProcQs() ([]string, error) {
-	sts, err := pqc.GetDir(sp.PROCQ)
-	if err != nil {
-		return nil, err
-	}
-	return sp.Names(sts), nil
-}
-
-// Get the next procd to burst on.
-func (pqc *ProcQClnt) NextProcQ() (string, error) {
-	pqc.Lock()
-	defer pqc.Unlock()
-
-	if len(pqc.procqIDs) == 0 {
-		return "", serr.NewErr(serr.TErrNotfound, "no procqs to spawn on")
-	}
-
-	sdip := pqc.procqIDs[pqc.burstOffset%len(pqc.procqIDs)]
-	pqc.burstOffset++
-	return sdip, nil
 }

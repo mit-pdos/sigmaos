@@ -332,7 +332,7 @@ func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, s
 		db.DPrintf(db.PROCCLNT_ERR, "Error notify exited: %v", err)
 	}
 	// clean myself up
-	r := removeProc(clnt.FsLib, procdir+"/")
+	r := removeProc(clnt.FsLib, procdir+"/", clnt.procDirCreated)
 	if r != nil {
 		return fmt.Errorf("Exited error [%v] %v", procdir, r)
 	}

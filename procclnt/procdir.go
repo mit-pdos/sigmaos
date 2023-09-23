@@ -57,6 +57,9 @@ func (clnt *ProcClnt) initProcDir() error {
 			// Make a ProcDir for this proc.
 			err = clnt.MakeProcDir(clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetProcDir(), clnt.ProcEnv().GetPrivileged(), clnt.ProcEnv().GetHow())
 			clnt.procDirCreated = true
+			// Mount procdir
+			db.DPrintf(db.PROCCLNT, "Mount %v as %v", clnt.ProcEnv().ProcDir, proc.PROCDIR)
+			clnt.NewRootMount(clnt.ProcEnv().GetUname(), clnt.ProcEnv().ProcDir, proc.PROCDIR)
 		}
 		// Demote to reader lock.
 		clnt.Unlock()
@@ -68,7 +71,7 @@ func (clnt *ProcClnt) initProcDir() error {
 // ========== HELPERS ==========
 
 // Clean up proc
-func removeProc(fsl *fslib.FsLib, procdir string) error {
+func removeProc(fsl *fslib.FsLib, procdir string, createdProcDir bool) error {
 	// Children may try to write in symlinks & exit statuses while the rmdir is
 	// happening. In order to avoid causing errors (such as removing a non-empty
 	// dir) temporarily rename so children can't find the dir. The dir may be
@@ -79,18 +82,21 @@ func removeProc(fsl *fslib.FsLib, procdir string) error {
 	if err := fsl.Rename(src, dst); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error rename removeProc %v -> %v : %v\n", src, dst, err)
 	}
-	err := fsl.RmDir(procdir)
-	maxRetries := 2
-	// May have to retry a few times if writing child already opened dir. We
-	// should only have to retry once at most.
-	for i := 0; i < maxRetries && err != nil; i++ {
-		s, _ := fsl.SprintfDir(procdir)
-		// debug.PrintStack()
-		db.DPrintf(db.PROCCLNT_ERR, "RmDir %v err %v \n%v", procdir, err, s)
-		// Retry
-		err = fsl.RmDir(procdir)
+	if createdProcDir {
+		err := fsl.RmDir(procdir)
+		maxRetries := 2
+		// May have to retry a few times if writing child already opened dir. We
+		// should only have to retry once at most.
+		for i := 0; i < maxRetries && err != nil; i++ {
+			s, _ := fsl.SprintfDir(procdir)
+			// debug.PrintStack()
+			db.DPrintf(db.PROCCLNT_ERR, "RmDir %v err %v \n%v", procdir, err, s)
+			// Retry
+			err = fsl.RmDir(procdir)
+		}
+		return err
 	}
-	return err
+	return nil
 }
 
 // Attempt to cleanup procdir
@@ -99,7 +105,7 @@ func (clnt *ProcClnt) cleanupError(pid sp.Tpid, procdir string, err error) error
 	// May be called by spawning parent proc, without knowing what the procdir is
 	// yet.
 	if len(procdir) > 0 {
-		removeProc(clnt.FsLib, procdir)
+		removeProc(clnt.FsLib, procdir, true)
 	}
 	return err
 }

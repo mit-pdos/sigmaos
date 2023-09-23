@@ -11,9 +11,6 @@ import (
 
 // Called by a sigmaOS process after being spawned
 func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
-	db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)
-	// Mount procdir
-	fsl.NewRootMount(fsl.ProcEnv().GetUname(), fsl.ProcEnv().ProcDir, proc.PROCDIR)
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ParentDir, proc.PARENTDIR)
 	// Mount parentdir. May fail if parent already exited.
 	fsl.NewRootMount(fsl.ProcEnv().GetUname(), fsl.ProcEnv().ParentDir, proc.PARENTDIR)

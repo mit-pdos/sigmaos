@@ -251,34 +251,6 @@ func newWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwmcpu proc.Tmcpu, r
 	return ws, is
 }
 
-// ========== RPCBench Helpers ========
-
-func newRPCBenchJobs(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, dur string, maxrps string, fn rpcbenchFn) ([]*RPCBenchJobInstance, []interface{}) {
-	// n is ntrials, which is always 1.
-	n := 1
-	ws := make([]*RPCBenchJobInstance, 0, n)
-	is := make([]interface{}, 0, n)
-	for i := 0; i < n; i++ {
-		i := NewRPCBenchJob(ts, p, mcpu, dur, maxrps, fn, false)
-		ws = append(ws, i)
-		is = append(is, i)
-	}
-	return ws, is
-}
-
-func newRPCBenchJobsCli(ts *test.RealmTstate, p *perf.Perf, mcpu proc.Tmcpu, dur string, maxrps string, fn rpcbenchFn) ([]*RPCBenchJobInstance, []interface{}) {
-	// n is ntrials, which is always 1.
-	n := 1
-	ws := make([]*RPCBenchJobInstance, 0, n)
-	is := make([]interface{}, 0, n)
-	for i := 0; i < n; i++ {
-		i := NewRPCBenchJob(ts, p, mcpu, dur, maxrps, fn, true)
-		ws = append(ws, i)
-		is = append(is, i)
-	}
-	return ws, is
-}
-
 // ========== Hotel Helpers ==========
 
 func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
@@ -324,8 +296,8 @@ func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 // ========== Social Network Helpers ==========
 
 func newSocialNetworkJobs(
-		ts *test.RealmTstate, p *perf.Perf, sigmaos, readonly bool, 
-		dur, maxrps string, ncache int) ([]*SocialNetworkJobInstance, []interface{}) {
+	ts *test.RealmTstate, p *perf.Perf, sigmaos, readonly bool,
+	dur, maxrps string, ncache int) ([]*SocialNetworkJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*SocialNetworkJobInstance, 0, n)

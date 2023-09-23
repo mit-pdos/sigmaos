@@ -1,13 +1,15 @@
 package benchmarks_test
 
 import (
+	"crypto/sha256"
+	"flag"
 	"fmt"
-	"math/rand"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+	"math/rand"
+	"os"
+	"os/exec"
 	dbg "sigmaos/debug"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
@@ -16,21 +18,19 @@ import (
 	sp "sigmaos/sigmap"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/test"
+	"strconv"
+	"strings"
+	"sync"
 	"testing"
-	"flag"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
-	"crypto/sha256"
-	"os"
-	"os/exec"
+	"time"
 )
 
 const (
-	K8_FWD_PORT = "9090"
-	N_BENCH_USER       = 962 // from "data/socfb-Reed98/socfb-Reed98.nodes"
-	HOME_RATIO         = 0.6
-	TIMELINE_RATIO     = 0.3
-	SN_RAND_SEED       = 54321
+	K8_FWD_PORT    = "9090"
+	N_BENCH_USER   = 962 // from "data/socfb-Reed98/socfb-Reed98.nodes"
+	HOME_RATIO     = 0.6
+	TIMELINE_RATIO = 0.3
+	SN_RAND_SEED   = 54321
 )
 
 var MONGO_URL string
@@ -71,8 +71,8 @@ type SocialNetworkJobInstance struct {
 }
 
 func NewSocialNetworkJob(
-		ts *test.RealmTstate, p *perf.Perf, sigmaos, readonly bool, 
-		durStr, maxrpsStr string, ncache int) *SocialNetworkJobInstance {
+	ts *test.RealmTstate, p *perf.Perf, sigmaos, readonly bool,
+	durStr, maxrpsStr string, ncache int) *SocialNetworkJobInstance {
 	ji := &SocialNetworkJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
@@ -109,7 +109,7 @@ func NewSocialNetworkJob(
 		for sd, ps := range procs {
 			progs[sd] = make([]string, 0, len(ps))
 			for _, p := range ps {
-				progs[sd] = append(progs[sd], p.Program)
+				progs[sd] = append(progs[sd], p.GetProgram())
 			}
 		}
 		dbg.DPrintf(dbg.TEST, "Running procs:%v", progs)
@@ -119,7 +119,7 @@ func NewSocialNetworkJob(
 		mnt := sp.NewMountService(sp.NewTaddrs([]string{K8S_ADDR}))
 		assert.Nil(ts.Ts.T, ts.MountService(p, mnt, sp.NoLeaseId))
 		// forward mongo port and init users and graphs.
-		cmd := exec.Command("kubectl","port-forward","svc/mongodb-sn", K8_FWD_PORT+":27017")
+		cmd := exec.Command("kubectl", "port-forward", "svc/mongodb-sn", K8_FWD_PORT+":27017")
 		assert.Nil(ts.Ts.T, cmd.Start())
 		defer cmd.Process.Kill()
 		initUserAndGraph(ts.Ts.T, "localhost:"+K8_FWD_PORT)
@@ -129,8 +129,8 @@ func NewSocialNetworkJob(
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(
-			ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], 
-			func(r *rand.Rand) { randOps(ts.Ts.T, ji.wc, r, ji.readonly)}))
+			ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i],
+				func(r *rand.Rand) { randOps(ts.Ts.T, ji.wc, r, ji.readonly) }))
 	}
 	// warmup with writes for read-only runs
 	if ji.readonly {
@@ -140,7 +140,7 @@ func NewSocialNetworkJob(
 			wg.Add(1)
 			go func(wg *sync.WaitGroup, t *testing.T, wc *sn.WebClnt, i int) {
 				defer wg.Done()
-				r := rand.New(rand.NewSource(SN_RAND_SEED + int64(i + 1)))
+				r := rand.New(rand.NewSource(SN_RAND_SEED + int64(i+1)))
 				randCompose(t, wc, r)
 				randCompose(t, wc, r)
 			}(&wg, ts.Ts.T, ji.wc, i)
@@ -217,11 +217,11 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 	for i := 0; i < N_BENCH_USER; i++ {
 		suffix := strconv.Itoa(i)
 		newUser := sn.User{
-			Userid: int64(i),
-			Username: "user_" + suffix,
-			Lastname: "Lastname" + suffix,
+			Userid:    int64(i),
+			Username:  "user_" + suffix,
+			Lastname:  "Lastname" + suffix,
 			Firstname: "Firstname" + suffix,
-			Password: fmt.Sprintf("%x", sha256.Sum256([]byte("p_user_" + suffix)))}
+			Password:  fmt.Sprintf("%x", sha256.Sum256([]byte("p_user_"+suffix)))}
 		err := session.DB(sn.SN_DB).C(sn.USER_COL).Insert(newUser)
 		assert.Nil(t, err, "cannot insert user: %v", err)
 	}
@@ -229,7 +229,7 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 	b, err := os.ReadFile("../socialnetwork/data/socfb-Reed98/socfb-Reed98.edges")
 	assert.Nil(t, err, "Cannot open edge file: %v", err)
 	dbg.DPrintf(dbg.TEST, "Inserting graphs")
-	for _, line := range strings.FieldsFunc(string(b), func(c rune) bool {return c =='\n'}) {
+	for _, line := range strings.FieldsFunc(string(b), func(c rune) bool { return c == '\n' }) {
 		ids := strings.Split(line, " ")
 		followerId, _ := strconv.ParseInt(ids[0], 10, 64)
 		followeeId, _ := strconv.ParseInt(ids[1], 10, 64)
@@ -280,13 +280,12 @@ func randReadTimeline(t *testing.T, wc *sn.WebClnt, r *rand.Rand) {
 }
 
 func randOps(t *testing.T, wc *sn.WebClnt, r *rand.Rand, readonly bool) {
-	ratio := float64(r.Intn(10000))/10000
+	ratio := float64(r.Intn(10000)) / 10000
 	if ratio < TIMELINE_RATIO {
 		randReadTimeline(t, wc, r)
-	} else if ratio < TIMELINE_RATIO + HOME_RATIO || readonly {
+	} else if ratio < TIMELINE_RATIO+HOME_RATIO || readonly {
 		randReadHome(t, wc, r)
 	} else {
 		randCompose(t, wc, r)
 	}
 }
-

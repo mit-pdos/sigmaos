@@ -120,7 +120,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		for sd, ps := range procs {
 			progs[sd] = make([]string, 0, len(ps))
 			for _, p := range ps {
-				progs[sd] = append(progs[sd], p.Program)
+				progs[sd] = append(progs[sd], p.GetProgram())
 			}
 		}
 		db.DPrintf(db.TEST, "Running procs:%v", progs)

@@ -119,13 +119,15 @@ func (r *Results) Percentile(p float64) (time.Duration, float64) {
 
 	l, err := stats.Percentile(lat, p)
 	if err != nil {
-		db.DFatalf("Error calculating percentile %v: %v", p, err)
+		db.DPrintf(db.ALWAYS, "Error calculating percentile %v: %v", p, err)
+		l = 0
 	}
 	plat = time.Duration(int64(l))
 
 	t, err := stats.Percentile(tpt, p)
 	if err != nil {
-		db.DFatalf("Error calculating percentile %v: %v", p, err)
+		db.DPrintf(db.ALWAYS, "Error calculating percentile %v: %v", p, err)
+		t = 0
 	}
 	ptpt = t
 

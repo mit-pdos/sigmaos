@@ -2,25 +2,24 @@ package benchmarks_test
 
 import (
 	"flag"
+	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"net/rpc"
+	"os/exec"
 	"path"
-	"strconv"
-	"testing"
-	"time"
-	"github.com/stretchr/testify/assert"
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/rpcbench"
 	"sigmaos/rpcclnt"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
-	"os/exec"
+	"strconv"
+	"testing"
+	"time"
 )
 
 const (
@@ -70,9 +69,6 @@ var HOTEL_MAX_RPS string
 var SOCIAL_NETWORK_DURS string
 var SOCIAL_NETWORK_MAX_RPS string
 var SOCIAL_NETWORK_READ_ONLY bool
-var RPCBENCH_MCPU int
-var RPCBENCH_DURS string
-var RPCBENCH_MAX_RPS string
 var IMG_RESIZE_INPUT_PATH string
 var N_IMG_RESIZE_JOBS int
 var N_IMG_RESIZE_INPUTS_PER_JOB int
@@ -126,9 +122,6 @@ func init() {
 	flag.StringVar(&SOCIAL_NETWORK_DURS, "sn_dur", "10s", "Social network benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&SOCIAL_NETWORK_MAX_RPS, "sn_max_rps", "1000", "Max requests/second for social network bench (comma-separated for multiple phases).")
 	flag.BoolVar(&SOCIAL_NETWORK_READ_ONLY, "sn_read_only", false, "send read only cases in social network bench")
-	flag.StringVar(&RPCBENCH_DURS, "rpcbench_dur", "10s", "RPCBench benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&RPCBENCH_MAX_RPS, "rpcbench_max_rps", "1000", "Max requests/second for rpc bench (comma-separated for multiple phases).")
-	flag.IntVar(&RPCBENCH_MCPU, "rpcbench_mcpu", 3000, "RPCbench mCPU")
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Kubernetes frontend service address (only for hotel benchmarking for the time being).")
 	flag.StringVar(&K8S_LEADER_NODE_IP, "k8sleaderip", "", "Kubernetes leader node ip.")
 	flag.StringVar(&K8S_JOB_NAME, "k8sjobname", "thumbnail-benchrealm1", "Name of k8s job")
@@ -208,8 +201,10 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 	}
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	newOutDir(ts1)
-	ps, _ := newNProcs(N_TRIALS, "sleeper", []string{"10000us", OUT_DIR}, nil, proc.Tmcpu(MCPU))
-	runOps(ts1, []interface{}{ps}, spawnWaitStartProcs, rs)
+	ps, is := newNProcs(N_TRIALS, "sleeper", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(MCPU))
+	runOps(ts1, is, spawnWaitStartProc, rs)
+	waitExitProcs(ts1, ps)
+	db.DPrintf(db.BENCH, "Results:\n%v", rs)
 	printResultSummary(rs)
 	rmOutDir(ts1)
 	rootts.Shutdown()
@@ -595,71 +590,8 @@ func TestWwwK8s(t *testing.T) {
 	testWww(t, false)
 }
 
-func testRPCBench(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, fn rpcbenchFn) {
-	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newRPCBenchJobs(ts1, p, proc.Tmcpu(RPCBENCH_MCPU), RPCBENCH_DURS, RPCBENCH_MAX_RPS, fn)
-	go func() {
-		for _, j := range jobs {
-			// Wait until ready
-			<-j.ready
-			if N_CLNT > 1 {
-				// Wait for clients to start up on other machines.
-				waitForClnts(rootts, N_CLNT)
-			}
-			// Ack to allow the job to proceed.
-			j.ready <- true
-		}
-	}()
-	p2 := newRealmPerf(ts1)
-	defer p2.Done()
-	monitorCPUUtil(ts1, p2)
-	runOps(ts1, ji, runRPCBench, rs)
-	//	printResultSummary(rs)
-	rootts.Shutdown()
-}
-
-func TestRPCBenchSigmaosSleep(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
-	testRPCBench(rootts, ts1, nil, func(c *rpcbench.Clnt) {
-		err := c.Sleep(int64(SLEEP / time.Millisecond))
-		assert.Nil(t, err, "Error sleep req: %v", err)
-	})
-}
-
-func TestRPCBenchSigmaosJustCliSleep(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstateClnt(rootts, REALM1)
-	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	clientReady(rootts)
-	jobs, ji := newRPCBenchJobsCli(ts1, nil, proc.Tmcpu(RPCBENCH_MCPU), RPCBENCH_DURS, RPCBENCH_MAX_RPS, func(c *rpcbench.Clnt) {
-		err := c.Sleep(int64(SLEEP / time.Millisecond))
-		assert.Nil(t, err, "Error sleep req: %v", err)
-	})
-	go func() {
-		for _, j := range jobs {
-			// Wait until ready
-			<-j.ready
-			// Ack to allow the job to proceed.
-			j.ready <- true
-		}
-	}()
-	runOps(ts1, ji, runHotel, rs)
-	//	printResultSummary(rs)
-	//	jobs[0].requestK8sStats()
-}
-
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	go func() {
-		time.Sleep(20 * time.Second)
-		if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
-			rootts.Shutdown()
-			db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
-		} else {
-			db.DPrintf(db.ALWAYS, "Getdir contents %v : %v", sp.WS_RUNQ_LC, sp.Names(sts))
-		}
-	}()
 	jobs, ji := newHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), fn)
 	go func() {
 		for _, j := range jobs {
@@ -721,12 +653,6 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	clientReady(rootts)
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	if sts, err := rootts.GetDir(sp.WS_RUNQ_LC); err != nil || len(sts) > 0 {
-		rootts.Shutdown()
-		db.DFatalf("Error getdir ws err %v ws %v", err, sp.Names(sts))
-	} else {
-		db.DPrintf(db.ALWAYS, "Getdir contents %v : %v", sp.WS_RUNQ_LC, sp.Names(sts))
-	}
 	jobs, ji := newHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
@@ -1081,7 +1007,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	blockers := blockMem(rootts, BLOCK_MEM)
 	// make realm to run k8s scrapper
-	ts0:= test.NewRealmTstateClnt(rootts, sp.ROOTREALM)
+	ts0 := test.NewRealmTstateClnt(rootts, sp.ROOTREALM)
 	p0 := newRealmPerf(ts0)
 	defer p0.Done()
 	if PREWARM_REALM {
@@ -1140,8 +1066,8 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
 	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "social-network-perf/k8s"), HOSTTMP+"sigmaos-perf")
-	for !(k8sJobHasCompleted("thumbnail1-benchrealm1") && k8sJobHasCompleted("thumbnail2-benchrealm1") && 
-			k8sJobHasCompleted("thumbnail3-benchrealm1")&&k8sJobHasCompleted("thumbnail4-benchrealm1")) {
+	for !(k8sJobHasCompleted("thumbnail1-benchrealm1") && k8sJobHasCompleted("thumbnail2-benchrealm1") &&
+		k8sJobHasCompleted("thumbnail3-benchrealm1") && k8sJobHasCompleted("thumbnail4-benchrealm1")) {
 		time.Sleep(500 * time.Millisecond)
 	}
 	rs0.Append(time.Since(start), 1)

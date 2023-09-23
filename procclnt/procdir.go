@@ -98,7 +98,7 @@ func (clnt *ProcClnt) GetChildren() ([]sp.Tpid, error) {
 }
 
 // Add a child to the current proc
-func (clnt *ProcClnt) addChild(kernelId string, p *proc.Proc, childProcdir string, how proc.Thow) error {
+func (clnt *ProcClnt) addChild(p *proc.Proc, childProcdir string, how proc.Thow) error {
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(proc.PROCDIR, p.GetPid()))
 	if err := clnt.NewDir(childDir, 0777); err != nil {

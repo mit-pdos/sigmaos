@@ -114,14 +114,18 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	if spread > 0 {
 		// Update the list of active procds.
 		clnt.scheddclnt.UpdateSchedds()
-		kid, err := clnt.scheddclnt.NextSchedd(spread)
+		// XXX For now, spread is ignored
+		kid, err := clnt.scheddclnt.NextSchedd()
 		if err != nil {
 			return err
 		}
 		kernelId = kid
+		if how != proc.HSCHEDD {
+			db.DFatalf("Try to spread non-schedd proc")
+		}
 	}
 
-	if err := clnt.addChild(kernelId, p, p.GetParentDir(), how); err != nil {
+	if err := clnt.addChild(p, p.GetParentDir(), how); err != nil {
 		return err
 	}
 
@@ -160,7 +164,7 @@ func (clnt *ProcClnt) forceRunViaSchedd(kernelID string, p *proc.Proc) error {
 		db.DPrintf(db.PROCCLNT_ERR, "forceRunViaSchedd: getScheddClnt %v err %v\n", kernelID, err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.PROCCLNT_ERR, "Unregister %v", kernelID)
-			clnt.scheddclnt.UnregisterClnt(kernelID)
+			clnt.scheddclnt.UnregisterSrv(kernelID)
 		}
 		return err
 	}

@@ -17,7 +17,6 @@ const (
 )
 
 type LCSchedClnt struct {
-	done int32
 	*fslib.FsLib
 	urpcc *unionrpcclnt.UnionRPCClnt
 }

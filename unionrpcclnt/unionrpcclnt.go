@@ -80,8 +80,8 @@ func (urpcc *UnionRPCClnt) UpdateSrvs(force bool) {
 	db.DPrintf(urpcc.lSelector, "Got clnts %v", clnts)
 	// Alloc enough space for the list of clnts.
 	urpcc.srvs = make([]string, 0, len(clnts))
-	for _, procq := range clnts {
-		urpcc.srvs = append(urpcc.srvs, procq)
+	for _, srvid := range clnts {
+		urpcc.srvs = append(urpcc.srvs, srvid)
 	}
 }
 

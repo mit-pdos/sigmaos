@@ -21,7 +21,7 @@ func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
-	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), false)
+	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged())
 }
 
 // Fake an initial process for, for example, tests.

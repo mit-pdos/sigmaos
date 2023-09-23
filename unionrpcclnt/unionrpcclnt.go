@@ -34,7 +34,7 @@ func NewUnionRPCClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSel
 }
 
 func (urpcc *UnionRPCClnt) Nsrv() (int, error) {
-	sds, err := urpcc.getSrvs()
+	sds, err := urpcc.GetSrvs()
 	if err != nil {
 		return 0, err
 	}
@@ -71,7 +71,7 @@ func (urpcc *UnionRPCClnt) UpdateSrvs(force bool) {
 		return
 	}
 	// Read the procd union dir.
-	clnts, err := urpcc.getSrvs()
+	clnts, err := urpcc.GetSrvs()
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error ReadDir procd: %v", err)
 		return
@@ -98,14 +98,6 @@ func (urpcc *UnionRPCClnt) UnregisterSrv(srvID string) {
 	}
 }
 
-func (urpcc *UnionRPCClnt) getSrvs() ([]string, error) {
-	sts, err := urpcc.GetDir(urpcc.path)
-	if err != nil {
-		return nil, err
-	}
-	return sp.Names(sts), nil
-}
-
 // Get the next server, round-robin.
 func (urpcc *UnionRPCClnt) NextSrv() (string, error) {
 	urpcc.Lock()
@@ -118,4 +110,12 @@ func (urpcc *UnionRPCClnt) NextSrv() (string, error) {
 	srvID := urpcc.srvs[urpcc.rrOffset%len(urpcc.srvs)]
 	urpcc.rrOffset++
 	return srvID, nil
+}
+
+func (urpcc *UnionRPCClnt) GetSrvs() ([]string, error) {
+	sts, err := urpcc.GetDir(urpcc.path)
+	if err != nil {
+		return nil, err
+	}
+	return sp.Names(sts), nil
 }

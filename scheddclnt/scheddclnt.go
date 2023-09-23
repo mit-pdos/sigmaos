@@ -3,29 +3,21 @@ package scheddclnt
 import (
 	"fmt"
 	"path"
-	"runtime/debug"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
 	"sigmaos/schedd/proto"
-	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/uprocclnt"
+	"sigmaos/unionrpcclnt"
 )
 
 type ScheddClnt struct {
-	done int32
 	*fslib.FsLib
-	sync.Mutex
-	schedds         map[string]*rpcclnt.RPCClnt
-	scheddKernelIds []string
-	lastUpdate      time.Time
-	burstOffset     int
+	urpcc *unionrpcclnt.UnionRPCClnt
+	done  int32
 }
 
 type Tload [2]int
@@ -36,18 +28,29 @@ func (t Tload) String() string {
 
 func NewScheddClnt(fsl *fslib.FsLib) *ScheddClnt {
 	return &ScheddClnt{
-		FsLib:           fsl,
-		schedds:         make(map[string]*rpcclnt.RPCClnt),
-		scheddKernelIds: make([]string, 0),
+		FsLib: fsl,
+		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.SCHEDD, db.SCHEDDCLNT, db.SCHEDDCLNT_ERR),
 	}
 }
 
 func (sdc *ScheddClnt) Nschedd() (int, error) {
-	sds, err := sdc.getSchedds()
+	sds, err := sdc.urpcc.GetSrvs()
 	if err != nil {
 		return 0, err
 	}
 	return len(sds), nil
+}
+
+func (sdc *ScheddClnt) NextSchedd() (string, error) {
+	return sdc.urpcc.NextSrv()
+}
+
+func (sdc *ScheddClnt) UpdateSchedds() {
+	sdc.urpcc.UpdateSrvs(false)
+}
+
+func (sdc *ScheddClnt) UnregisterSrv(scheddID string) {
+	sdc.urpcc.UnregisterSrv(scheddID)
 }
 
 func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
@@ -71,7 +74,7 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 }
 
 func (sdc *ScheddClnt) ForceRun(kernelID string, p *proc.Proc) error {
-	rpcc, err := sdc.GetScheddClnt(kernelID)
+	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -87,7 +90,7 @@ func (sdc *ScheddClnt) ForceRun(kernelID string, p *proc.Proc) error {
 
 func (sdc *ScheddClnt) Wait(method Tmethod, kernelID string, pid sp.Tpid) error {
 	// RPC a schedd to wait.
-	rpcc, err := sdc.GetScheddClnt(kernelID)
+	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -103,7 +106,7 @@ func (sdc *ScheddClnt) Wait(method Tmethod, kernelID string, pid sp.Tpid) error 
 
 func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid) error {
 	// Get the RPC client for the local schedd
-	rpcc, err := sdc.GetScheddClnt(kernelID)
+	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -118,7 +121,7 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid) erro
 }
 
 func (sdc *ScheddClnt) ScheddLoad() (int, []Tload, error) {
-	sds, err := sdc.getSchedds()
+	sds, err := sdc.urpcc.GetSrvs()
 	if err != nil {
 		return 0, nil, err
 	}
@@ -137,6 +140,10 @@ func (sdc *ScheddClnt) ScheddLoad() (int, []Tload, error) {
 		sdloads = append(sdloads, Tload{nproc, qproc})
 	}
 	return r, sdloads, err
+}
+
+func (sdc *ScheddClnt) Done() {
+	atomic.StoreInt32(&sdc.done, 1)
 }
 
 func (sdc *ScheddClnt) MonitorSchedds(realm sp.Trealm) {
@@ -162,43 +169,11 @@ func (sdc *ScheddClnt) MonitorSchedds(realm sp.Trealm) {
 	}()
 }
 
-// Return the CPU shares assigned to this realm, and the total CPU shares in
-// the cluster
-func (sdc *ScheddClnt) GetCPUShares(realm sp.Trealm) (rshare uprocclnt.Tshare, total uprocclnt.Tshare) {
-	// Total CPU shares in the system
-	total = 0
-	// Target realm's share
-	rshare = 0
-	// Get list of schedds
-	sds, err := sdc.getSchedds()
-	if err != nil {
-		db.DFatalf("Error getSchedds: %v", err)
-	}
-	for _, sd := range sds {
-		// Get the CPU shares on this schedd.
-		req := &proto.GetCPUSharesRequest{}
-		res := &proto.GetCPUSharesResponse{}
-		sclnt, err := sdc.GetScheddClnt(sd)
-		if err != nil {
-			db.DFatalf("Error GetCPUShares RPC [schedd:%v]: %v", sd, err)
-		}
-		err = sclnt.RPC("Schedd.GetCPUShares", req, res)
-		if err != nil {
-			db.DFatalf("Error GetCPUShares RPC [schedd:%v]: %v", sd, err)
-		}
-		rshare += uprocclnt.Tshare(res.Shares[realm.String()])
-		for _, share := range res.Shares {
-			total += uprocclnt.Tshare(share)
-		}
-	}
-	return rshare, total
-}
-
 func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 	// Total CPU utilization by this sceddclnt's realm.
 	var total float64 = 0
 	// Get list of schedds
-	sds, err := sdc.getSchedds()
+	sds, err := sdc.urpcc.GetSrvs()
 	if err != nil {
 		db.DPrintf(db.SCHEDDCLNT_ERR, "Error getSchedds: %v", err)
 		return 0, err
@@ -207,7 +182,7 @@ func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 		// Get the CPU shares on this schedd.
 		req := &proto.GetCPUUtilRequest{RealmStr: realm.String()}
 		res := &proto.GetCPUUtilResponse{}
-		sclnt, err := sdc.GetScheddClnt(sd)
+		sclnt, err := sdc.urpcc.GetClnt(sd)
 		if err != nil {
 			db.DPrintf(db.SCHEDDCLNT_ERR, "Error GetCPUUtil GetScheddClnt: %v", err)
 			return 0, err
@@ -225,7 +200,7 @@ func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 
 func (sdc *ScheddClnt) GetRunningProcs() map[string][]*proc.Proc {
 	// Get list of schedds
-	sds, err := sdc.getSchedds()
+	sds, err := sdc.urpcc.GetSrvs()
 	if err != nil {
 		db.DFatalf("Error getSchedds: %v", err)
 	}
@@ -248,81 +223,4 @@ func (sdc *ScheddClnt) GetRunningProcs() map[string][]*proc.Proc {
 		}
 	}
 	return procs
-}
-
-func (sdc *ScheddClnt) Done() {
-	atomic.StoreInt32(&sdc.done, 1)
-}
-
-func (sdc *ScheddClnt) GetScheddClnt(kernelId string) (*rpcclnt.RPCClnt, error) {
-	sdc.Lock()
-	defer sdc.Unlock()
-
-	var rpcc *rpcclnt.RPCClnt
-	var ok bool
-	if rpcc, ok = sdc.schedds[kernelId]; !ok {
-		var err error
-		rpcc, err = rpcclnt.NewRPCClnt([]*fslib.FsLib{sdc.FsLib}, path.Join(sp.SCHEDD, kernelId))
-		if err != nil {
-			db.DPrintf(db.SCHEDDCLNT_ERR, "Error newRPCClnt[schedd:%v]: %v", kernelId, err)
-			return nil, err
-		}
-		sdc.schedds[kernelId] = rpcc
-	}
-	return rpcc, nil
-}
-
-func (sdc *ScheddClnt) UnregisterClnt(kernelId string) {
-	sdc.Lock()
-	defer sdc.Unlock()
-	delete(sdc.schedds, kernelId)
-}
-
-func (sdc *ScheddClnt) getSchedds() ([]string, error) {
-	sts, err := sdc.GetDir(sp.SCHEDD)
-	if err != nil {
-		return nil, err
-	}
-	return sp.Names(sts), nil
-}
-
-// Update the list of active procds.
-func (sdc *ScheddClnt) UpdateSchedds() {
-	sdc.Lock()
-	defer sdc.Unlock()
-
-	// If we updated the list of active procds recently, return immediately. The
-	// list will change at most as quickly as the realm resizes.
-	if time.Since(sdc.lastUpdate) < sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL && len(sdc.scheddKernelIds) > 0 {
-		db.DPrintf(db.SCHEDDCLNT, "Update schedds too soon")
-		return
-	}
-	// Read the procd union dir.
-	schedds, _, err := sdc.ReadDir(sp.SCHEDD)
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error ReadDir procd: %v", err)
-		return
-	}
-	sdc.lastUpdate = time.Now()
-	db.DPrintf(db.SCHEDDCLNT, "Got schedds %v", sp.Names(schedds))
-	// Alloc enough space for the list of schedds.
-	sdc.scheddKernelIds = make([]string, 0, len(schedds))
-	for _, schedd := range schedds {
-		sdc.scheddKernelIds = append(sdc.scheddKernelIds, schedd.Name)
-	}
-}
-
-// Get the next procd to burst on.
-func (sdc *ScheddClnt) NextSchedd(spread int) (string, error) {
-	sdc.Lock()
-	defer sdc.Unlock()
-
-	if len(sdc.scheddKernelIds) == 0 {
-		debug.PrintStack()
-		return "", serr.NewErr(serr.TErrNotfound, "no schedds to spawn on")
-	}
-
-	sdip := sdc.scheddKernelIds[(sdc.burstOffset/spread)%len(sdc.scheddKernelIds)]
-	sdc.burstOffset++
-	return sdip, nil
 }

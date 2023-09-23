@@ -26,10 +26,12 @@ type UnionRPCClnt struct {
 
 func NewUnionRPCClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector) *UnionRPCClnt {
 	return &UnionRPCClnt{
-		FsLib: fsl,
-		path:  path,
-		clnts: make(map[string]*rpcclnt.RPCClnt),
-		srvs:  make([]string, 0),
+		FsLib:     fsl,
+		path:      path,
+		clnts:     make(map[string]*rpcclnt.RPCClnt),
+		srvs:      make([]string, 0),
+		lSelector: lSelector,
+		eSelector: eSelector,
 	}
 }
 

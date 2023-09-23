@@ -2,7 +2,6 @@ package procqclnt
 
 import (
 	"errors"
-	"sync"
 	"time"
 
 	db "sigmaos/debug"
@@ -21,7 +20,6 @@ const (
 type ProcQClnt struct {
 	*fslib.FsLib
 	urpcc *unionrpcclnt.UnionRPCClnt
-	sync.Mutex
 }
 
 func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {

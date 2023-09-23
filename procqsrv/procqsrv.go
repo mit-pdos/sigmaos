@@ -22,10 +22,12 @@ const (
 
 type ProcQ struct {
 	mu         sync.Mutex
+	realmMu    sync.RWMutex
 	cond       *sync.Cond
 	mfs        *memfssrv.MemFs
 	scheddclnt *scheddclnt.ScheddClnt
 	qs         map[sp.Trealm]*Queue
+	qlen       int // Aggregate queue length, across all queues
 }
 
 func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
@@ -33,6 +35,7 @@ func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
 		mfs:        mfs,
 		scheddclnt: scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib),
 		qs:         make(map[sp.Trealm]*Queue),
+		qlen:       0,
 	}
 	pq.cond = sync.NewCond(&pq.mu)
 	return pq
@@ -41,6 +44,7 @@ func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
 func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCQ, "[%v] Enqueue %v", p.GetRealm(), p)
+	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv time %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	ch := pq.addProc(p)
 	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
 	res.KernelID = <-ch
@@ -51,18 +55,19 @@ func (pq *ProcQ) addProc(p *proc.Proc) chan string {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 
-	q, ok := pq.qs[p.GetRealm()]
-	if !ok {
-		q = pq.addRealmQueueL(p.GetRealm())
-	}
-	// Enqueue the proc according to its realm
+	// Increase aggregate queue length.
+	pq.qlen++
+	// Get the queue for the realm.
+	q := pq.getRealmQueue(p.GetRealm())
+	// Enqueue the proc according to its realm.
 	ch := q.Enqueue(p)
 	// Broadcast that a new proc may be runnable.
 	pq.cond.Broadcast()
 	return ch
 }
 
-func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string) {
+func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS time.Time) {
+	db.DPrintf(db.SPAWN_LAT, "[%v] Internal procqsrv Proc queueing time %v", p.GetPid(), time.Since(enqTS))
 	// Must push the proc to the schedd before responding to the parent because
 	// we must guarantee that the schedd knows about it before talking to the
 	// parent. Otherwise, the response to the parent could arrive first and the
@@ -77,18 +82,19 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string) {
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	db.DPrintf(db.PROCQ, "GetProc request by %v", req.KernelID)
 
-	// XXX seems fishy to loop forever...
 	for {
 		pq.mu.Lock()
 		// XXX Should probably do this more efficiently (just select a realm).
 		// Iterate through the realms round-robin.
 		for r, q := range pq.qs {
-			p, ch, ok := q.Dequeue()
+			p, ch, ts, ok := q.Dequeue()
 			if ok {
+				// Decrease aggregate queue length.
+				pq.qlen--
 				db.DPrintf(db.PROCQ, "[%v] Dequeued for %v %v", r, req.KernelID, p)
 				// Push proc to schedd. Do this asynchronously so we don't hold locks
 				// across RPCs.
-				go pq.runProc(req.KernelID, p, ch)
+				go pq.runProc(req.KernelID, p, ch, ts)
 				res.OK = true
 				pq.mu.Unlock()
 				return nil
@@ -109,11 +115,33 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 	return nil
 }
 
-// Caller must hold lock.
-func (pq *ProcQ) addRealmQueueL(realm sp.Trealm) *Queue {
-	q := newQueue()
-	pq.qs[realm] = q
+func (pq *ProcQ) getRealmQueue(realm sp.Trealm) *Queue {
+	pq.realmMu.RLock()
+	defer pq.realmMu.RUnlock()
+
+	q, ok := pq.tryGetRealmQueueL(realm)
+	if !ok {
+		// Promote to writer lock.
+		pq.realmMu.RUnlock()
+		pq.realmMu.Lock()
+		// Check if the queue was created during lock promotion.
+		q, ok = pq.tryGetRealmQueueL(realm)
+		if !ok {
+			// If the queue has still not been created, create it.
+			q = newQueue()
+			pq.qs[realm] = q
+		}
+		// Demote to reader lock
+		pq.realmMu.Unlock()
+		pq.realmMu.RLock()
+	}
 	return q
+}
+
+// Caller must hold lock.
+func (pq *ProcQ) tryGetRealmQueueL(realm sp.Trealm) (*Queue, bool) {
+	q, ok := pq.qs[realm]
+	return q, ok
 }
 
 // Run a ProcQ

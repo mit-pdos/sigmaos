@@ -25,6 +25,7 @@ func init() {
 	for k, v := range labelstr {
 		labels[Tselector(k)] = v
 	}
+	DPrintf(SPAWN_LAT, "Debug package init")
 }
 
 // Sometimes, converting pointers to call DPrintf is very expensive (and occurs

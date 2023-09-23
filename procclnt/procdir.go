@@ -42,7 +42,7 @@ func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool
 	return nil
 }
 
-// Initialize a proc dir for this proc.
+// Initialize a proc dir for this proc (but make sure to only do so once).
 func (clnt *ProcClnt) initProcDir() error {
 	clnt.RLock()
 	defer clnt.RUnlock()
@@ -56,6 +56,7 @@ func (clnt *ProcClnt) initProcDir() error {
 		if !clnt.procDirCreated {
 			// Make a ProcDir for this proc.
 			err = clnt.MakeProcDir(clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetProcDir(), clnt.ProcEnv().GetPrivileged(), clnt.ProcEnv().GetHow())
+			clnt.procDirCreated = true
 		}
 		// Demote to reader lock.
 		clnt.Unlock()

@@ -1,15 +1,15 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--nosort]" 1>&2
+  echo "Usage: $0 [--merge]" 1>&2
 }
 
-SORT="sort"
+MERGE="nomerge"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
-  --nosort)
+  --merge)
     shift
-    SORT=""
+    MERGE="merge"
     ;;
    *)
    echo "unexpected argument $1"
@@ -18,13 +18,21 @@ while [[ "$#" -gt 0 ]]; do
  esac
 done
 
+out=""
 for containerid in $(docker ps -a --format "{{.Names}}"); do
-    if [[ $containerid == sigma-* ]] ; then
-        echo "========== Logs for $containerid =========="
-        if [[ $SORT == "sort" ]]; then 
-            docker logs $containerid | sort -k 1
-        else 
-            docker logs $containerid
-        fi
+  if [[ $containerid == sigma-* ]] ; then
+    ctr_out="$(docker logs $containerid 2>&1)"
+    if [[ "$MERGE" == "merge" ]] ; then
+      out="$(printf "%s\n" "$out" "$ctr_out")"
+    else
+      out="$(printf "%s\n" "$out" "========== Logs for $containerid ==========" "$ctr_out")"
     fi
+  fi
 done
+
+# Trim first line (which is blank)
+out="$(echo "$out" | tail -n +2 )"
+if [[ "$MERGE" == "merge" ]] ; then
+  out="$(echo "$out" | sort -k 1)"
+fi
+echo "$out"

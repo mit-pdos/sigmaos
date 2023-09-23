@@ -20,10 +20,10 @@ type ScheddClnt struct {
 	done  int32
 }
 
-type Tload [2]int
+type Tload [1]int
 
 func (t Tload) String() string {
-	return fmt.Sprintf("{r %d q %d}", t[0], t[1])
+	return fmt.Sprintf("{r %d}", t[0])
 }
 
 func NewScheddClnt(fsl *fslib.FsLib) *ScheddClnt {
@@ -133,11 +133,7 @@ func (sdc *ScheddClnt) ScheddLoad() (int, []Tload, error) {
 		if err != nil {
 			return r, nil, err
 		}
-		qproc, err := sdc.Nprocs(path.Join(sdpath, sp.QUEUE))
-		if err != nil {
-			return r, nil, err
-		}
-		sdloads = append(sdloads, Tload{nproc, qproc})
+		sdloads = append(sdloads, Tload{nproc})
 	}
 	return r, sdloads, err
 }

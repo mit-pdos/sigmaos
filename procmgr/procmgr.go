@@ -47,9 +47,6 @@ func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 // Proc has been spawned.
 func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc spawn time %v", p.GetPid(), time.Since(p.GetSpawnTime()))
-	// XXX will probably kill this eventually
-	mgr.postProcInQueue(p)
-
 	mgr.pstate.spawn(p)
 }
 

@@ -76,8 +76,8 @@ func JobDir(job string) string {
 func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc, public bool) (*SocialNetworkConfig, error) {
 	var err error
 	fsl := sc.FsLib
-	fsl.NewDir(SOCIAL_NETWORK, 0777)
-	if err = fsl.NewDir(JobDir(jobname), 0777); err != nil {
+	fsl.MkDir(SOCIAL_NETWORK, 0777)
+	if err = fsl.MkDir(JobDir(jobname), 0777); err != nil {
 		fmt.Printf("Mkdir %v err %v\n", JobDir(jobname), err)
 		return nil, err
 	}

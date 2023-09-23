@@ -12,7 +12,7 @@ import (
 // Making rdr a bufio is important because the first read must be >=
 // sizeof(st), because memfs and fsux try to avoid materializing
 // directories as an array of bytes.
-func NewDirReader(rdr io.Reader) *bufio.Reader {
+func MkDirReader(rdr io.Reader) *bufio.Reader {
 	brdr := bufio.NewReader(rdr)
 	return brdr
 }

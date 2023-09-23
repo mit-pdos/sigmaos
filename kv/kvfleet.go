@@ -81,9 +81,9 @@ func NewKvdFleet(sc *sigmaclnt.SigmaClnt, job string, crashbal, nkvd, kvdrepl, c
 	}
 
 	// May already exit
-	kvf.NewDir(kvgrp.KVDIR, 0777)
+	kvf.MkDir(kvgrp.KVDIR, 0777)
 	// Should not exist.
-	if err := kvf.NewDir(kvgrp.JobDir(kvf.job), 0777); err != nil {
+	if err := kvf.MkDir(kvgrp.JobDir(kvf.job), 0777); err != nil {
 		return nil, err
 	}
 	kvf.kvdgms = []*groupmgr.GroupMgr{}

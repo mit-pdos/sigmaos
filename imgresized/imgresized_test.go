@@ -92,7 +92,7 @@ func (ts *Tstate) WaitDone(t int) error {
 func TestImgdOne(t *testing.T) {
 	ts := newTstate(t)
 
-	err := imgresized.NewDirs(ts.SigmaClnt.FsLib, ts.job)
+	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
 	fn := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
@@ -116,7 +116,7 @@ func TestImgdOne(t *testing.T) {
 func TestImgdMany(t *testing.T) {
 	ts := newTstate(t)
 
-	err := imgresized.NewDirs(ts.SigmaClnt.FsLib, ts.job)
+	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
 	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, false)
@@ -152,7 +152,7 @@ func TestImgdMany(t *testing.T) {
 func TestImgdRestart(t *testing.T) {
 	ts := newTstate(t)
 
-	err := imgresized.NewDirs(ts.SigmaClnt.FsLib, ts.job)
+	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
 	fn := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")

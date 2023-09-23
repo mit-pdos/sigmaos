@@ -370,7 +370,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 }
 
 func newDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
-	err := fsl.NewDir(dir, 0777)
+	err := fsl.MkDir(dir, 0777)
 	assert.Equal(t, nil, err)
 	for i := 0; i < n; i++ {
 		b := []byte("hello")

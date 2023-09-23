@@ -127,7 +127,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	for _, s := range []string{sp.KPIDSREL} {
 		pn := path.Join(sp.NAMED, s)
 		db.DPrintf(db.REALMD, "Mkdir %v", pn)
-		if err := sc.NewDir(pn, 0777); err != nil {
+		if err := sc.MkDir(pn, 0777); err != nil {
 			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
 			return err
 		}

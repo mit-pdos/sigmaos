@@ -21,7 +21,7 @@ type DirImpl struct {
 	dents *sorteddir.SortedDir
 }
 
-func NewDir(i fs.Inode, mi fs.NewInodeF) *DirImpl {
+func MkDir(i fs.Inode, mi fs.NewInodeF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
 	d.mi = mi
@@ -30,8 +30,8 @@ func NewDir(i fs.Inode, mi fs.NewInodeF) *DirImpl {
 	return d
 }
 
-func NewDirF(i fs.Inode, mi fs.NewInodeF) fs.Inode {
-	d := NewDir(i, mi)
+func MkDirF(i fs.Inode, mi fs.NewInodeF) fs.Inode {
+	d := MkDir(i, mi)
 	return d
 }
 
@@ -77,7 +77,7 @@ func (dir *DirImpl) Dump() (string, error) {
 }
 
 func NewRootDir(ctx fs.CtxI, mi fs.NewInodeF, parent fs.Dir) fs.Dir {
-	i, _ := mi(ctx, sp.DMDIR, 0, parent, NewDirF)
+	i, _ := mi(ctx, sp.DMDIR, 0, parent, MkDirF)
 	return i.(fs.Dir)
 }
 
@@ -224,7 +224,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 		i := v.(fs.Inode)
 		return i, serr.NewErr(serr.TErrExists, name)
 	}
-	newi, err := dir.mi(ctx, perm, m, dir, NewDirF)
+	newi, err := dir.mi(ctx, perm, m, dir, MkDirF)
 	if err != nil {
 		return nil, err
 	}

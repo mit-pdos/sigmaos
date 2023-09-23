@@ -25,12 +25,13 @@ import (
 type ProcClnt struct {
 	sync.Mutex
 	*fslib.FsLib
-	pid         sp.Tpid
-	isExited    sp.Tpid
-	scheddclnt  *scheddclnt.ScheddClnt
-	procqclnt   *procqclnt.ProcQClnt
-	lcschedclnt *lcschedclnt.LCSchedClnt
-	cs          *ChildState
+	pid            sp.Tpid
+	isExited       sp.Tpid
+	procDirCreated bool
+	scheddclnt     *scheddclnt.ScheddClnt
+	procqclnt      *procqclnt.ProcQClnt
+	lcschedclnt    *lcschedclnt.LCSchedClnt
+	cs             *ChildState
 }
 
 func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid) *ProcClnt {

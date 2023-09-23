@@ -102,9 +102,9 @@ func (m *Mapper) InitWrt(r int, name string) error {
 func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
-	m.NewDir(MLOCALDIR, 0777)
-	m.NewDir(LocalOut(m.job), 0777)
-	m.NewDir(Moutdir(m.job, m.bin), 0777)
+	m.MkDir(MLOCALDIR, 0777)
+	m.MkDir(LocalOut(m.job), 0777)
+	m.MkDir(Moutdir(m.job, m.bin), 0777)
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {

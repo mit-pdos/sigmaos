@@ -49,7 +49,7 @@ func TestFile(t *testing.T) {
 func TestDir(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
-	err := ts.NewDir(fn+"d1", 0777)
+	err := ts.MkDir(fn+"d1", 0777)
 	assert.Equal(t, nil, err)
 	d := []byte("hello")
 

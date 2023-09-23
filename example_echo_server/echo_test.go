@@ -35,8 +35,8 @@ func newTstateEcho(t *testing.T) (*TstateEcho, error) {
 	tse := &TstateEcho{}
 	tse.jobname = jobname
 	tse.Tstate = test.NewTstateAll(t)
-	tse.NewDir(echo.DIR_ECHO_SERVER, 0777)
-	if err = tse.NewDir(jobdir, 0777); err != nil {
+	tse.MkDir(echo.DIR_ECHO_SERVER, 0777)
+	if err = tse.MkDir(jobdir, 0777); err != nil {
 		return nil, err
 	}
 	// Start proc

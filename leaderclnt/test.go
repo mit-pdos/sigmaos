@@ -23,7 +23,7 @@ const (
 )
 
 func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
-	ts.NewDir(pn, 0777)
+	ts.MkDir(pn, 0777)
 	ts.Remove(pn + "/f")
 	ts.Remove(pn + "/g")
 

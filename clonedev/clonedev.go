@@ -52,7 +52,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.CLONEDEV, "Clone create %q\n", pn)
 	_, err := c.mfs.Create(pn, sp.DMDIR, sp.ORDWR, sp.NoLeaseId)
 	if err != nil && err.Code() != serr.TErrExists {
-		db.DPrintf(db.CLONEDEV, "NewDir %q err %v\n", pn, err)
+		db.DPrintf(db.CLONEDEV, "MkDir %q err %v\n", pn, err)
 		return nil, err
 	}
 	var s *session

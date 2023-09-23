@@ -54,7 +54,7 @@ type SessSrv struct {
 func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr string, newps sps.NewProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
-	ssrv.dirover = overlay.NewDirOverlay(root)
+	ssrv.dirover = overlay.MkDirOverlay(root)
 	ssrv.dirunder = root
 	ssrv.addr = addr
 	ssrv.newps = newps

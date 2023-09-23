@@ -41,8 +41,8 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ji.ninputs = ninputs
 	ji.mcpu = mcpu
 
-	err := imgresized.NewDirs(ji.FsLib, ji.job)
-	assert.Nil(ts.Ts.T, err, "Error NewDirs: %v", err)
+	err := imgresized.MkDirs(ji.FsLib, ji.job)
+	assert.Nil(ts.Ts.T, err, "Error MkDirs: %v", err)
 
 	return ji
 }

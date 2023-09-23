@@ -16,7 +16,7 @@ import (
 // For documentation on dir structure, see sigmaos/proc/dir.go
 
 func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool, how proc.Thow) error {
-	if err := clnt.NewDir(procdir, 0777); err != nil {
+	if err := clnt.MkDir(procdir, 0777); err != nil {
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			debug.PrintStack()
 			db.DFatalf("NewProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
@@ -25,7 +25,7 @@ func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool,
 		return err
 	}
 	childrenDir := path.Join(procdir, proc.CHILDREN)
-	if err := clnt.NewDir(childrenDir, 0777); err != nil {
+	if err := clnt.MkDir(childrenDir, 0777); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "NewProcDir mkdir childrens %v err %v\n", childrenDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
@@ -101,7 +101,7 @@ func (clnt *ProcClnt) GetChildren() ([]sp.Tpid, error) {
 func (clnt *ProcClnt) addChild(p *proc.Proc, childProcdir string, how proc.Thow) error {
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(proc.PROCDIR, p.GetPid()))
-	if err := clnt.NewDir(childDir, 0777); err != nil {
+	if err := clnt.MkDir(childDir, 0777); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn mkdir childs %v err %v fsl %v", childDir, err, clnt.FsLib)
 		return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 	}

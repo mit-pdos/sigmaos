@@ -21,7 +21,7 @@ func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
-	return newProcClnt(fsl, fsl.ProcEnv().GetPID())
+	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), false)
 }
 
 // Fake an initial process for, for example, tests.
@@ -39,8 +39,8 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 	if err := fsl.NewRootMount(fsl.ProcEnv().GetUname(), fsl.ProcEnv().ProcDir, proc.PROCDIR); err != nil {
 		db.DFatalf("Error mounting procdir: %v", err)
 	}
-	clnt := newProcClnt(fsl, pid)
-	clnt.NewProcDir(pid, fsl.ProcEnv().ProcDir, false, proc.HSCHEDD)
+	clnt := newProcClnt(fsl, pid, true)
+	clnt.MakeProcDir(pid, fsl.ProcEnv().ProcDir, false, proc.HSCHEDD)
 	return clnt
 }
 

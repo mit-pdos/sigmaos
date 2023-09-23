@@ -23,7 +23,7 @@ import (
 )
 
 type ProcClnt struct {
-	sync.Mutex
+	sync.RWMutex
 	*fslib.FsLib
 	pid            sp.Tpid
 	isExited       sp.Tpid
@@ -34,14 +34,15 @@ type ProcClnt struct {
 	cs             *ChildState
 }
 
-func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid) *ProcClnt {
+func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool) *ProcClnt {
 	clnt := &ProcClnt{
-		FsLib:       fsl,
-		pid:         pid,
-		scheddclnt:  scheddclnt.NewScheddClnt(fsl),
-		procqclnt:   procqclnt.NewProcQClnt(fsl),
-		lcschedclnt: lcschedclnt.NewLCSchedClnt(fsl),
-		cs:          newChildState(),
+		FsLib:          fsl,
+		pid:            pid,
+		procDirCreated: procDirCreated,
+		scheddclnt:     scheddclnt.NewScheddClnt(fsl),
+		procqclnt:      procqclnt.NewProcQClnt(fsl),
+		lcschedclnt:    lcschedclnt.NewLCSchedClnt(fsl),
+		cs:             newChildState(),
 	}
 	return clnt
 }
@@ -146,9 +147,9 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 		clnt.cs.Spawned(p.GetPid())
 		clnt.cs.Started(p.GetPid(), kernelId, nil)
 		// Make the proc's procdir
-		err := clnt.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), how)
+		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), how)
 		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc NewProcDir: %v", err)
+			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc MakeProcDir: %v", err)
 		}
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, schedd will create the semaphore.
@@ -391,8 +392,8 @@ func (clnt *ProcClnt) EvictKernelProc(pid sp.Tpid, how proc.Thow) error {
 }
 
 func (clnt *ProcClnt) hasExited() sp.Tpid {
-	clnt.Lock()
-	defer clnt.Unlock()
+	clnt.RLock()
+	defer clnt.RUnlock()
 	return clnt.isExited
 }
 

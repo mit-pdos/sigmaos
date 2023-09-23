@@ -17,10 +17,6 @@ func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 	mgr.addRunningProc(p)
 	// Set up the directory to cache proc binaries for this realm.
 	mgr.setupUserBinCache(p)
-	// Make the proc's procdir
-	if err := mgr.rootsc.NewProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), proc.HSCHEDD); err != nil {
-		db.DPrintf(db.PROCMGR_ERR, "Err procmgr NewProcDir: %v\n", err)
-	}
 }
 
 func (mgr *ProcMgr) teardownProcState(p *proc.Proc) {

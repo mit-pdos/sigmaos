@@ -15,18 +15,18 @@ import (
 
 // For documentation on dir structure, see sigmaos/proc/dir.go
 
-func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool, how proc.Thow) error {
+func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool, how proc.Thow) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			debug.PrintStack()
-			db.DFatalf("NewProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
+			db.DFatalf("MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		}
-		db.DPrintf(db.PROCCLNT_ERR, "NewProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
+		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
 	}
 	childrenDir := path.Join(procdir, proc.CHILDREN)
 	if err := clnt.MkDir(childrenDir, 0777); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "NewProcDir mkdir childrens %v err %v\n", childrenDir, err)
+		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir childrens %v err %v\n", childrenDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 	// Only create exit/evict semaphores if not spawned on SCHEDD.
@@ -40,6 +40,28 @@ func (clnt *ProcClnt) NewProcDir(pid sp.Tpid, procdir string, isKernelProc bool,
 		semEvict.Init(0)
 	}
 	return nil
+}
+
+// Initialize a proc dir for this proc.
+func (clnt *ProcClnt) initProcDir() error {
+	clnt.RLock()
+	defer clnt.RUnlock()
+
+	var err error
+	if !clnt.procDirCreated {
+		// Promote to writer lock.
+		clnt.RUnlock()
+		clnt.Lock()
+		// Check that the proc dir still has not been created after lock promotion.
+		if !clnt.procDirCreated {
+			// Make a ProcDir for this proc.
+			err = clnt.MakeProcDir(clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetProcDir(), clnt.ProcEnv().GetPrivileged(), clnt.ProcEnv().GetHow())
+		}
+		// Demote to reader lock.
+		clnt.Unlock()
+		clnt.RLock()
+	}
+	return err
 }
 
 // ========== HELPERS ==========
@@ -99,6 +121,12 @@ func (clnt *ProcClnt) GetChildren() ([]sp.Tpid, error) {
 
 // Add a child to the current proc
 func (clnt *ProcClnt) addChild(p *proc.Proc, childProcdir string, how proc.Thow) error {
+	// Make sure this proc's ProcDir has been initialized. We to do this here so
+	// that it can happen lazily (only for procs which spawn children).
+	if err := clnt.initProcDir(); err != nil {
+		db.DPrintf(db.ALWAYS, "Error init proc dir: %v", err)
+		return err
+	}
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(proc.PROCDIR, p.GetPid()))
 	if err := clnt.MkDir(childDir, 0777); err != nil {

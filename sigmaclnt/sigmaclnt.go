@@ -1,12 +1,27 @@
 package sigmaclnt
 
 import (
+	"strings"
+	"time"
+
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/leaseclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 )
+
+func init() {
+	if db.WillBePrinted(db.SPAWN_LAT) {
+		name := proc.GetSigmaDebugPid()
+		// Don't print for test programs, which won't have a debug PID set.
+		if name == "" || strings.Contains(name, "test-") {
+			return
+		}
+		pe := proc.GetProcEnv()
+		db.DPrintf(db.SPAWN_LAT, "[%v] SigmaClnt pkg init. E2e spawn latency: %v", time.Since(pe.GetSpawnTime()))
+	}
+}
 
 type SigmaClnt struct {
 	*fslib.FsLib

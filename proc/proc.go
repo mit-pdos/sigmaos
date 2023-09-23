@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	sp "sigmaos/sigmap"
 )
@@ -242,11 +241,11 @@ func (p *Proc) SetType(t Ttype) {
 }
 
 func (p *Proc) SetSpawnTime(t time.Time) {
-	p.SpawnTimePB = timestamppb.New(t)
+	p.ProcEnvProto.SetSpawnTime(t)
 }
 
 func (p *Proc) GetSpawnTime() time.Time {
-	return p.SpawnTimePB.AsTime()
+	return p.ProcEnvProto.GetSpawnTime()
 }
 
 func (p *Proc) SetShared(target string) {

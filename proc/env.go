@@ -9,6 +9,9 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	sp "sigmaos/sigmap"
 )
@@ -205,6 +208,14 @@ func (pe *ProcEnvProto) SetHow(how Thow) {
 
 func (pe *ProcEnvProto) GetHow() Thow {
 	return Thow(pe.HowInt)
+}
+
+func (pe *ProcEnvProto) SetSpawnTime(t time.Time) {
+	pe.SpawnTimePB = timestamppb.New(t)
+}
+
+func (pe *ProcEnvProto) GetSpawnTime() time.Time {
+	return pe.SpawnTimePB.AsTime()
 }
 
 func (pe *ProcEnv) Marshal() string {

@@ -26,7 +26,7 @@ session:
   timeout: 1000ms
 
 realm:
-  resize_interval: 100ms
+  refresh_kernel_srv_interval: 100ms
 
 schedd:
   stealable_proc_timeout: 100ms
@@ -54,7 +54,7 @@ session:
   timeout: 40000ms
 
 realm:
-  resize_interval: 100ms
+  refresh_kernel_srv_interval: 100ms
 
 schedd:
   stealable_proc_timeout: 50ms
@@ -86,8 +86,8 @@ type Config struct {
 		TIMEOUT time.Duration `yaml:"timeout"`
 	} `yaml:"session"`
 	Realm struct {
-		// Maximum frequency with which realmmgr resizes a realm.
-		RESIZE_INTERVAL time.Duration `yaml:"resize_interval"`
+		// Maximum frequency with which to refresh kernel servers.
+		KERNEL_SRV_REFRESH_INTERVAL time.Duration `yaml:"refresh_kernel_srv_interval"`
 	} `yaml:"realm"`
 	Schedd struct {
 		// Time a proc remains un-spawned before becoming stealable.

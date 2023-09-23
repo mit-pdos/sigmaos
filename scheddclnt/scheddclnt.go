@@ -293,7 +293,7 @@ func (sdc *ScheddClnt) UpdateSchedds() {
 
 	// If we updated the list of active procds recently, return immediately. The
 	// list will change at most as quickly as the realm resizes.
-	if time.Since(sdc.lastUpdate) < sp.Conf.Realm.RESIZE_INTERVAL && len(sdc.scheddKernelIds) > 0 {
+	if time.Since(sdc.lastUpdate) < sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL && len(sdc.scheddKernelIds) > 0 {
 		db.DPrintf(db.SCHEDDCLNT, "Update schedds too soon")
 		return
 	}

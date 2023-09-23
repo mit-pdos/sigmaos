@@ -100,7 +100,7 @@ func (lcs *LCSchedClnt) UpdateLCScheds() {
 
 	// If we updated the list of active procds recently, return immediately. The
 	// list will change at most as quickly as the realm resizes.
-	if time.Since(lcs.lastUpdate) < sp.Conf.Realm.RESIZE_INTERVAL && len(lcs.lcschedIDs) > 0 {
+	if time.Since(lcs.lastUpdate) < sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL && len(lcs.lcschedIDs) > 0 {
 		db.DPrintf(db.LCSCHEDCLNT, "Update lcscheds too soon")
 		return
 	}

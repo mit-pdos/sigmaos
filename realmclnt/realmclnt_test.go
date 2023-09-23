@@ -139,7 +139,7 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	rootts.BootNode(1)
-	time.Sleep(2 * sp.Conf.Realm.RESIZE_INTERVAL)
+	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
 	ts2 := test.NewRealmTstate(rootts, REALM2)
 
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, ts1.NamedAddr())

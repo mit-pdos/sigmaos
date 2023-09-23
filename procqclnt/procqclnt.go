@@ -48,20 +48,27 @@ func (pqc *ProcQClnt) Nprocq() (int, error) {
 // Enqueue a proc on the procq. Returns the ID of the kernel that is running
 // the proc.
 func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
+	s := time.Now()
 	pqc.UpdateProcQs()
+	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt updateProcQs %v", p.GetPid(), time.Since(s))
+	s = time.Now()
 	pqID, err := pqc.NextProcQ()
 	if err != nil {
 		return NOT_ENQ, errors.New("No procqs available")
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt get ProcQ %v", p.GetPid(), time.Since(s))
+	s = time.Now()
 	rpcc, err := pqc.GetProcQClnt(pqID)
 	if err != nil {
 		db.DFatalf("Error: Can't get procq clnt: %v", err)
 		return NOT_ENQ, err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt make clnt %v", p.GetPid(), time.Since(s))
 	req := &proto.EnqueueRequest{
 		ProcProto: p.GetProto(),
 	}
 	res := &proto.EnqueueResponse{}
+	s = time.Now()
 	if err := rpcc.RPC("ProcQ.Enqueue", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "ProcQ.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
@@ -71,6 +78,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 		return NOT_ENQ, err
 	}
 	db.DPrintf(db.PROCQCLNT, "[%v] Enqueued Proc %v", p.GetRealm(), p)
+	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt client-side RPC latency %v", p.GetPid(), time.Since(s))
 	return res.KernelID, nil
 }
 
@@ -135,7 +143,7 @@ func (pqc *ProcQClnt) UpdateProcQs() {
 
 	// If we updated the list of active procds recently, return immediately. The
 	// list will change at most as quickly as the realm resizes.
-	if time.Since(pqc.lastUpdate) < sp.Conf.Realm.RESIZE_INTERVAL && len(pqc.procqIDs) > 0 {
+	if time.Since(pqc.lastUpdate) < sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL && len(pqc.procqIDs) > 0 {
 		db.DPrintf(db.PROCQCLNT, "Update procqs too soon")
 		return
 	}

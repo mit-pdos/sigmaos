@@ -84,7 +84,6 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 
 	for {
 		pq.mu.Lock()
-		// XXX Should probably do this more efficiently (just select a realm).
 		// Iterate through the realms round-robin.
 		for r, q := range pq.qs {
 			p, ch, ts, ok := q.Dequeue()

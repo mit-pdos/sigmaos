@@ -19,42 +19,42 @@ const (
 
 type ProcMgr struct {
 	sync.Mutex
-	mfs       *memfssrv.MemFs
-	kernelId  string
-	rootsc    *sigmaclnt.SigmaClnt
-	updm      *uprocclnt.UprocdMgr
-	sclnts    map[sp.Trealm]*sigmaclnt.SigmaClnt
-	cachedirs map[sp.Trealm]bool
-	running   map[sp.Tpid]*proc.Proc
-	pstate    *ProcState
+	mfs            *memfssrv.MemFs
+	kernelId       string
+	rootsc         *sigmaclnt.SigmaClnt
+	updm           *uprocclnt.UprocdMgr
+	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClnt
+	cachedProcBins map[sp.Trealm]map[string]bool
+	running        map[sp.Tpid]*proc.Proc
+	pstate         *ProcState
 }
 
 // Manages the state and lifecycle of a proc.
 func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 	mgr := &ProcMgr{
-		mfs:       mfs,
-		kernelId:  kernelId,
-		rootsc:    mfs.SigmaClnt(),
-		updm:      uprocclnt.NewUprocdMgr(mfs.SigmaClnt().FsLib, kernelId),
-		sclnts:    make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
-		cachedirs: make(map[sp.Trealm]bool),
-		running:   make(map[sp.Tpid]*proc.Proc),
-		pstate:    NewProcState(),
+		mfs:            mfs,
+		kernelId:       kernelId,
+		rootsc:         mfs.SigmaClnt(),
+		updm:           uprocclnt.NewUprocdMgr(mfs.SigmaClnt().FsLib, kernelId),
+		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
+		cachedProcBins: make(map[sp.Trealm]map[string]bool),
+		running:        make(map[sp.Tpid]*proc.Proc),
+		pstate:         NewProcState(),
 	}
 	return mgr
 }
 
 // Proc has been spawned.
 func (mgr *ProcMgr) Spawn(p *proc.Proc) {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Proc spawn time %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Schedd proc spawn time %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	mgr.pstate.spawn(p)
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {
-	s := time.Now()
 	// Set the proc's kernel ID, now that a kernel has been selected to run the
 	// proc.
 	p.SetKernelID(mgr.kernelId, true)
+	s := time.Now()
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
 	s = time.Now()

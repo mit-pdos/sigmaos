@@ -31,26 +31,20 @@ func (mgr *ProcMgr) setupUserBinCache(p *proc.Proc) {
 	mgr.Lock()
 	defer mgr.Unlock()
 
-	if _, ok := mgr.cachedirs[p.GetRealm()]; !ok {
+	if _, ok := mgr.cachedProcBins[p.GetRealm()]; !ok {
+		mgr.cachedProcBins[p.GetRealm()] = make(map[string]bool)
 		cachePn := path.Dir(cachePath(p.GetRealm(), p.GetProgram()))
 		// Make a dir to cache the realm's binaries.
 		if err := mgr.rootsc.MkDir(cachePn, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 			db.DFatalf("Error MkDir cache dir [%v]: %v", cachePn, err)
 		}
-		mgr.cachedirs[p.GetRealm()] = true
 	}
 }
 
 // Returns true if the proc is already cached.
 // XXX check timestamps/versions?
 func (mgr *ProcMgr) alreadyCached(realm sp.Trealm, prog string) bool {
-	cachePn := cachePath(realm, prog)
-	_, err := mgr.rootsc.Stat(cachePn)
-	if err != nil {
-		db.DPrintf(db.PROCMGR, "uxp %v err %v\n", cachePn, err)
-		return false
-	}
-	return true
+	return mgr.cachedProcBins[realm][prog]
 }
 
 func (mgr *ProcMgr) downloadProc(p *proc.Proc) {
@@ -88,6 +82,7 @@ func (mgr *ProcMgr) downloadProcBin(p *proc.Proc) error {
 	for _, pp := range paths {
 		db.DPrintf(db.ALWAYS, "Download buildtag %v pp %v prog %v", p.GetBuildTag(), pp, p.GetProgram())
 		if e := mgr.downloadProcPath(p.GetRealm(), pp, p.GetProgram()); e == nil {
+			mgr.cachedProcBins[p.GetRealm()][p.GetProgram()] = true
 			return nil
 		} else {
 			err = e

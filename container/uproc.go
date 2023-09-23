@@ -77,7 +77,7 @@ func ExecUProc() error {
 	pcfg := proc.GetProcEnv()
 	// Isolate the user proc.
 	pn, err := isolateUserProc(pcfg.GetPID(), program)
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc jail creation %v", pcfg.GetPID(), time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc isolation %v", pcfg.GetPID(), time.Since(s))
 	if err != nil {
 		return err
 	}

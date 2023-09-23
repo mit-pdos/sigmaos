@@ -7,6 +7,7 @@ import (
 	"path"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	selinux "github.com/opencontainers/selinux/go-selinux"
@@ -40,14 +41,18 @@ func cleanupJail(pid sp.Tpid) {
 
 func isolateUserProc(pid sp.Tpid, program string) (string, error) {
 	// Setup and chroot to the process jail.
+	s := time.Now()
 	if err := jailProcess(pid); err != nil {
 		db.DPrintf(db.CONTAINER, "Error jail process %v", err)
 		return "", err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc create chroot jail %v", pid, time.Since(s))
+	s = time.Now()
 	pn, err := exec.LookPath(program)
 	if err != nil {
 		return "", fmt.Errorf("ContainUProc: LookPath: %v", err)
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc look for exec path %v", pid, time.Since(s))
 	// Lock the OS thread, since SE Linux labels are per-thread, and so this
 	// thread should disallow the Go runtime from scheduling it on another kernel
 	// thread before starting the user proc.
@@ -65,11 +70,14 @@ func isolateUserProc(pid sp.Tpid, program string) (string, error) {
 		db.DPrintf(db.CONTAINER, "Error set uproc capabilities: %v", err)
 		return "", err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc apparmor & set capabilities %v", pid, time.Since(s))
+	s = time.Now()
 	// Seccomp the process.
 	if err := seccompProcess(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error seccomp: %v", err)
 		return "", err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc seccomp %v", pid, time.Since(s))
 	return pn, nil
 }
 

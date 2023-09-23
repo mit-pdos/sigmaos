@@ -155,7 +155,7 @@ func (urpcc *UnionRPCClnt) monitorSrvs() {
 			return true
 		})
 		if err != nil {
-			db.DFatalf("Error ReadDirWatch monitorSrvs: %v", err)
+			db.DPrintf(db.ALWAYS, "Error ReadDirWatch monitorSrvs[%v]: %v", urpcc.path, err)
 		}
 		srvs := sp.Names(sts)
 		db.DPrintf(urpcc.lSelector, "monitorSrvs new srv list: %v", srvs)

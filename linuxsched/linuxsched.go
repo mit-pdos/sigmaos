@@ -12,13 +12,18 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
+
+	db "sigmaos/debug"
+	"time"
 )
 
 func init() {
+	s := time.Now()
 	if _, err := ScanTopology(); err != nil {
 		fmt.Fprintf(os.Stderr, "ScanTopology failed %v\n", err)
 		os.Exit(1)
 	}
+	db.DPrintf(db.SPAWN_LAT, "Linuxsched scanTopology latency: %v", time.Since(s))
 }
 
 var ErrInvalid = errors.New("invalid")

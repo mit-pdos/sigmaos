@@ -3,9 +3,11 @@ package seccomp
 import (
 	"fmt"
 	"syscall"
+	"time"
 
 	"github.com/seccomp/libseccomp-golang"
 
+	db "sigmaos/debug"
 	"sigmaos/yaml"
 )
 
@@ -75,7 +77,10 @@ func LoadFilter(wl *WhiteList) error {
 			return err
 		}
 	}
-	return filter.Load()
+	s := time.Now()
+	err = filter.Load()
+	db.DPrintf(db.SPAWN_LAT, "seccomp.LoadFilter filter.Load %v", time.Since(s))
+	return err
 }
 
 func parseOp(op string) (seccomp.ScmpCompareOp, error) {

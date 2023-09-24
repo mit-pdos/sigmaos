@@ -111,6 +111,7 @@ func NewBootProcEnv(uname sp.Tuname, etcdIP, localIP string, overlays bool) *Pro
 	pe.LocalIP = localIP
 	pe.SetRealm(sp.ROOTREALM, overlays)
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
+	pe.Privileged = true
 	pe.HowInt = int32(BOOT)
 	return pe
 }

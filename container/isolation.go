@@ -56,21 +56,26 @@ func isolateUserProc(pid sp.Tpid, program string) (string, error) {
 	// Lock the OS thread, since SE Linux labels are per-thread, and so this
 	// thread should disallow the Go runtime from scheduling it on another kernel
 	// thread before starting the user proc.
+	s = time.Now()
 	runtime.LockOSThread()
 	// Apply SELinux label.
 	if err := applySELinuxLabel(pn); err != nil {
 		return "", err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc runtime lock os thread %v", pid, time.Since(s))
 	// Apply apparmor profile.
+	s = time.Now()
 	if err := applyAppArmorProfile(APPARMOR_PROF); err != nil {
 		return "", err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc apply apparmor prof %v", pid, time.Since(s))
 	// Decrease process capabilities.
+	s = time.Now()
 	if err := setCapabilities(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error set uproc capabilities: %v", err)
 		return "", err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc apparmor & set capabilities %v", pid, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc set capabilities %v", pid, time.Since(s))
 	s = time.Now()
 	// Seccomp the process.
 	if err := seccompProcess(); err != nil {

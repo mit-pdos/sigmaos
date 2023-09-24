@@ -301,7 +301,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Proc calls procclnt.Started %v", clnt.ProcEnv().GetPID(), time.Now())
+	db.DPrintf(db.SPAWN_LAT, "[%v] Proc calls procclnt.Started %v", clnt.ProcEnv().GetPID(), time.Since(clnt.ProcEnv().GetSpawnTime()))
 	return clnt.notify(scheddclnt.START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow(), false)
 }
 

@@ -39,7 +39,7 @@ func (r *Resources) sanityCheck() {
 	if r.mcpu < 0 || r.mem < 0 {
 		db.DFatalf("Invalid mcpu (%v) or mem (%v): too little", r.mcpu, r.mem)
 	}
-	if r.mcpu > proc.Tmcpu(uint32(linuxsched.NCores)*1000) || r.mem > mem.GetTotalMem() {
+	if r.mcpu > proc.Tmcpu(uint32(linuxsched.GetNCores())*1000) || r.mem > mem.GetTotalMem() {
 		db.DFatalf("Invalid mcpu (%v) or mem (%v): too much", r.mcpu, r.mem)
 	}
 }

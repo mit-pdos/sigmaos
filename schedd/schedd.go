@@ -39,7 +39,7 @@ func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
 		pmgr:     procmgr.NewProcMgr(mfs, kernelId),
 		realms:   make([]sp.Trealm, 0),
-		mcpufree: proc.Tmcpu(1000*linuxsched.NCores - reserveMcpu),
+		mcpufree: proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:  mem.GetTotalMem(),
 		kernelId: kernelId,
 		mfs:      mfs,

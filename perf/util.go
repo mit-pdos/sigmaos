@@ -315,7 +315,7 @@ func GetActiveCores() map[string]bool {
 		db.DFatalf("Error getting affinity mask: %v", err)
 	}
 	cores := map[string]bool{}
-	for i := uint(0); i < linuxsched.NCores; i++ {
+	for i := uint(0); i < linuxsched.GetNCores(); i++ {
 		if m.Test(i) {
 			cores["cpu"+strconv.Itoa(int(i))] = true
 		}

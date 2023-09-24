@@ -54,7 +54,7 @@ func (cmon *CgroupMonitor) GetCPUStats(cgroupPath string) (*CPUStat, error) {
 		// CPU util calculation based on
 		// https://github.com/moby/moby/blob/eb131c5383db8cac633919f82abad86c99bffbe5/cli/command/container/stats_helpers.go#L175
 		if sysDelta > 0 && ctrDelta > 0 {
-			util = float64(ctrDelta) / float64(sysDelta) * float64(linuxsched.NCores) * 100.0
+			util = float64(ctrDelta) / float64(sysDelta) * float64(linuxsched.GetNCores()) * 100.0
 		} else {
 			db.DPrintf(db.ALWAYS, "GetCPUUtil [%v] no delta %v %v", cgroupPath, sysDelta, ctrDelta)
 		}

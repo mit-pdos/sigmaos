@@ -17,22 +17,25 @@ import (
 	"time"
 )
 
-func init() {
-	s := time.Now()
-	if _, err := ScanTopology(); err != nil {
-		fmt.Fprintf(os.Stderr, "ScanTopology failed %v\n", err)
-		os.Exit(1)
+// NCores is the actual number of cores in the machine.
+var nCores uint
+
+func GetNCores() uint {
+	if nCores == 0 {
+		s := time.Now()
+		if _, err := ScanTopology(); err != nil {
+			fmt.Fprintf(os.Stderr, "ScanTopology failed %v\n", err)
+			os.Exit(1)
+		}
+		db.DPrintf(db.SPAWN_LAT, "Linuxsched scanTopology latency: %v", time.Since(s))
 	}
-	db.DPrintf(db.SPAWN_LAT, "Linuxsched scanTopology latency: %v", time.Since(s))
+	return nCores
 }
 
 var ErrInvalid = errors.New("invalid")
 
 // MaxCores is the maximum number of cores supported.
 const MaxCores uint = 256
-
-// NCores is the actual number of cores in the machine.
-var NCores uint
 
 const bitsPerWord uint = uint(unsafe.Sizeof(uint(0)) * 8)
 const bitsPerUint32 uint = 32
@@ -44,7 +47,7 @@ type CPUMask struct {
 
 // Test returns true if the core is set in the mask.
 func (m *CPUMask) Test(core uint) bool {
-	if core >= NCores {
+	if core >= GetNCores() {
 		panic("core too high")
 	}
 	idx := core / bitsPerWord
@@ -54,7 +57,7 @@ func (m *CPUMask) Test(core uint) bool {
 
 // Set sets a core in the mask.
 func (m *CPUMask) Set(core uint) {
-	if core >= NCores {
+	if core >= GetNCores() {
 		panic("core too high")
 	}
 	idx := core / bitsPerWord
@@ -64,7 +67,7 @@ func (m *CPUMask) Set(core uint) {
 
 // Clear clears a core in the mask.
 func (m *CPUMask) Clear(core uint) {
-	if core >= NCores {
+	if core >= GetNCores() {
 		panic("core too high")
 	}
 	idx := core / bitsPerWord
@@ -85,7 +88,7 @@ func (m *CPUMask) OnesCount() int {
 func (m *CPUMask) FindNextSet(pos uint) uint {
 	mask := ^uint((1 << (pos % bitsPerWord)) - 1)
 
-	for idx := pos & ^uint(bitsPerWord-1); idx < NCores; idx += bitsPerWord {
+	for idx := pos & ^uint(bitsPerWord-1); idx < GetNCores(); idx += bitsPerWord {
 		val := m.mask[idx/bitsPerWord]
 		val &= mask
 		if val != 0 {
@@ -94,7 +97,7 @@ func (m *CPUMask) FindNextSet(pos uint) uint {
 		mask = 0
 	}
 
-	return NCores
+	return GetNCores()
 }
 
 // ClearAll clears all cores in the mask.
@@ -277,7 +280,7 @@ func fsWriteCPUMask(path string, mask *CPUMask) error {
 
 	// convert mask to string
 	var sb strings.Builder
-	for i := int(NCores / 32); i >= 0; i-- {
+	for i := int(GetNCores() / 32); i >= 0; i-- {
 		v := mask.getUInt32(i)
 		sb.WriteString(fmt.Sprintf("%08x,", v))
 	}
@@ -418,7 +421,7 @@ func ScanTopology() (*TopologyInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	NCores = uint(n)
+	nCores = uint(n)
 
 	// open the sysfs cpu directory
 	files, err := ioutil.ReadDir("/sys/devices/system/cpu/")
@@ -464,7 +467,7 @@ func PrintTopology(ti *TopologyInfo) {
 			s += "["
 			for {
 				pos = sibs.FindNextSet(pos)
-				if pos >= NCores {
+				if pos >= GetNCores() {
 					break
 				}
 				s += strconv.Itoa(int(pos)) + ","

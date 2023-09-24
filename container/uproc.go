@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -81,6 +82,7 @@ func ExecUProc() error {
 	if err != nil {
 		return err
 	}
+	os.Setenv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
 	db.DPrintf(db.CONTAINER, "exec %v %v", pn, args)
 	if err := syscall.Exec(pn, args, os.Environ()); err != nil {
 		db.DPrintf(db.CONTAINER, "Error exec %v", err)

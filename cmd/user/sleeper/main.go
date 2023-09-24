@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	db "sigmaos/debug"
@@ -15,6 +16,15 @@ import (
 )
 
 func main() {
+	execTimeStr := os.Getenv("SIGMA_EXEC_TIME")
+	execTimeMicro, err := strconv.ParseInt(execTimeStr, 10, 64)
+	if err != nil {
+		db.DFatalf("Error parsing exec time: %v", err)
+	}
+	execTime := time.UnixMicro(execTimeMicro)
+	db.DPrintf(db.ALWAYS, "[%v] Proc exec latency: %v", proc.GetSigmaDebugPid(), time.Since(execTime))
+	pe := proc.GetProcEnv()
+	db.DPrintf(db.SPAWN_LAT, "[%v] E2e latency until main: %v", pe.GetPID(), time.Since(pe.GetSpawnTime()))
 	if len(os.Args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: %v sleep_length outdir <native>\n", os.Args[0])
 		os.Exit(1)

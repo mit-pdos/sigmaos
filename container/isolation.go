@@ -58,11 +58,13 @@ func isolateUserProc(pid sp.Tpid, program string) (string, error) {
 	// thread before starting the user proc.
 	s = time.Now()
 	runtime.LockOSThread()
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc runtime lock OS thread %v", pid, time.Since(s))
+	s = time.Now()
 	// Apply SELinux label.
 	if err := applySELinuxLabel(pn); err != nil {
 		return "", err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc runtime lock os thread %v", pid, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc apply SELinux label %v", pid, time.Since(s))
 	// Apply apparmor profile.
 	s = time.Now()
 	if err := applyAppArmorProfile(APPARMOR_PROF); err != nil {
@@ -71,18 +73,18 @@ func isolateUserProc(pid sp.Tpid, program string) (string, error) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc apply apparmor prof %v", pid, time.Since(s))
 	// Decrease process capabilities.
 	s = time.Now()
-	if err := setCapabilities(); err != nil {
+	if err := setCapabilities(pid); err != nil {
 		db.DPrintf(db.CONTAINER, "Error set uproc capabilities: %v", err)
 		return "", err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc set capabilities %v", pid, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc setCapabilities %v", pid, time.Since(s))
 	s = time.Now()
 	// Seccomp the process.
-	if err := seccompProcess(); err != nil {
+	if err := seccompProcess(pid); err != nil {
 		db.DPrintf(db.CONTAINER, "Error seccomp: %v", err)
 		return "", err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc seccomp %v", pid, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc seccompProcess %v", pid, time.Since(s))
 	return pn, nil
 }
 
@@ -232,8 +234,8 @@ func applyAppArmorProfile(prof string) error {
 	return nil
 }
 
-// Capabilities
-func setCapabilities() error {
+// Capabilities. PID is only for debugging purposes.
+func setCapabilities(pid sp.Tpid) error {
 	// Taken from https://github.com/moby/moby/blob/master/oci/caps/defaults.go
 	dockerDefaults := []cap.Value{
 		cap.CHOWN,
@@ -266,26 +268,34 @@ func setCapabilities() error {
 	if err := capsIAB.Fill(cap.Bound, caps, cap.Permitted); err != nil {
 		return err
 	}
+	s := time.Now()
 	if err := caps.SetProc(); err != nil {
 		return err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc setCapabilities caps.SetProc %v", pid, time.Since(s))
+	s = time.Now()
 	if err := capsIAB.SetProc(); err != nil {
 		return err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc setCapabilities capsIAB.SetProc %v", pid, time.Since(s))
 	db.DPrintf(db.CONTAINER, "Successfully set capabilities to:\n%v.\nResulting caps:\n%v", dockerDefaults, cap.GetProc())
 	return nil
 }
 
-// Seccomp
-func seccompProcess() error {
+// Seccomp. PID is for debugging purposes.
+func seccompProcess(pid sp.Tpid) error {
 	// Load the sigmaOS seccomp white list.
+	s := time.Now()
 	sigmaSCWL, err := seccomp.ReadWhiteList("/seccomp/whitelist.yml")
 	if err != nil {
 		return err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc seccompProcess ReadWhiteList %v", pid, time.Since(s))
+	s = time.Now()
 	if err := seccomp.LoadFilter(sigmaSCWL); err != nil {
 		return err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc seccompProcess LoadFilter %v", pid, time.Since(s))
 	db.DPrintf(db.CONTAINER, "Successfully seccomped process %v %v", os.Args, sigmaSCWL)
 	return nil
 }

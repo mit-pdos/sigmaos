@@ -91,7 +91,7 @@ func countClusterCores(rootts *test.Tstate) int {
 	sts, err := rootts.GetDir(sp.BOOT)
 	assert.Nil(rootts.T, err)
 
-	ncores := len(sts) * int(linuxsched.NCores)
+	ncores := len(sts) * int(linuxsched.GetNCores())
 	db.DPrintf(db.TEST, "Aggregate number of cores in the cluster: %v", ncores)
 	return ncores
 }

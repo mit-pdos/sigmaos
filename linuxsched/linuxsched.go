@@ -14,6 +14,7 @@ import (
 	"unsafe"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	"time"
 )
 
@@ -27,7 +28,7 @@ func GetNCores() uint {
 			fmt.Fprintf(os.Stderr, "ScanTopology failed %v\n", err)
 			os.Exit(1)
 		}
-		db.DPrintf(db.SPAWN_LAT, "Linuxsched scanTopology latency: %v", time.Since(s))
+		db.DPrintf(db.SPAWN_LAT, "[%v] Linuxsched scanTopology latency: %v", proc.GetSigmaDebugPid(), time.Since(s))
 	}
 	return nCores
 }

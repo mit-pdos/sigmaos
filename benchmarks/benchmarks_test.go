@@ -131,7 +131,7 @@ func init() {
 	flag.IntVar(&MCPU, "mcpu", 1000, "Generic proc test MCPU")
 	flag.IntVar(&MAT_SIZE, "matrixsize", 4000, "Size of matrix.")
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
-	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.NCores), "Go maxprocs setting for procs to be spawned.")
+	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.GetNCores()), "Go maxprocs setting for procs to be spawned.")
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
 	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "9ps3/img/6.jpg", "Path of img resize input file.")
 	flag.IntVar(&N_IMG_RESIZE_JOBS, "n_imgresize", 10, "Number of img resize jobs.")
@@ -765,7 +765,7 @@ func TestK8sMRMulti(t *testing.T) {
 	// Start up the stat scraper procs.
 	sdc := scheddclnt.NewScheddClnt(ts[0].SigmaClnt.FsLib)
 	nSchedd, err := sdc.Nschedd()
-	ps2, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.NCores-1)))
+	ps2, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	spawnBurstProcs(ts[0], ps2)
 	waitStartProcs(ts[0], ps2)
 
@@ -874,7 +874,7 @@ func TestK8sImgResize(t *testing.T) {
 	err = ts1.MkDir(sp.K8S_SCRAPER, 0777)
 	assert.Nil(ts1.Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
-	ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.NCores-1)))
+	ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	spawnBurstProcs(ts1, ps)
 	waitStartProcs(ts1, ps)
 	// NOte start time
@@ -1020,7 +1020,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	err = ts0.MkDir(sp.K8S_SCRAPER, 0777)
 	assert.Nil(ts0.Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
-	//ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.NCores-1)))
+	//ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, 0)
 	spawnBurstProcs(ts0, ps)
 	waitStartProcs(ts0, ps)

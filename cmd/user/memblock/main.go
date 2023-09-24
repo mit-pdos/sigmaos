@@ -36,7 +36,7 @@ func main() {
 		db.DFatalf("Unexpected putfile err: %v", err)
 	}
 	db.DPrintf(db.ALWAYS, "Allocating %v bytes of memory", m)
-	nthread := int(linuxsched.NCores)
+	nthread := int(linuxsched.GetNCores())
 	ch := make(chan []byte)
 	// Allocate and write memory in parallel, to force OS allocation.
 	for i := 0; i < nthread; i++ {

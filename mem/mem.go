@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -12,7 +13,9 @@ import (
 var totalMem proc.Tmem
 
 func init() {
+	s := time.Now()
 	totalMem = getMem("MemTotal")
+	db.DPrintf(db.SPAWN_LAT, "[%v] mem getMem latency: %v", proc.GetSigmaDebugPid(), time.Since(s))
 }
 
 func getMem(pat string) proc.Tmem {

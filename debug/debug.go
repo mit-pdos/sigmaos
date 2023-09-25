@@ -6,6 +6,7 @@ import (
 	"runtime"
 	// "runtime/debug"
 	"strings"
+	"time"
 
 	"sigmaos/proc"
 )
@@ -18,6 +19,7 @@ import (
 var labels map[Tselector]bool
 
 func init() {
+	s := time.Now()
 	// XXX may want to set log.Ldate when not debugging
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
 	labelstr := proc.GetLabels(proc.SIGMADEBUG)
@@ -25,6 +27,7 @@ func init() {
 	for k, v := range labelstr {
 		labels[Tselector(k)] = v
 	}
+	DPrintf(SPAWN_LAT, "[%v] debug init pkg: %v", proc.GetSigmaDebugPid(), time.Since(s))
 }
 
 // Sometimes, converting pointers to call DPrintf is very expensive (and occurs

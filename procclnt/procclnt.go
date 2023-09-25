@@ -127,10 +127,11 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 		}
 	}
 
+	s := time.Now()
 	if err := clnt.addChild(p, p.GetParentDir(), how); err != nil {
 		return err
 	}
-
+	db.DPrintf(db.SPAWN_LAT, "[%v] procclnt addChild %v", p.GetPid(), time.Since(s))
 	p.SetSpawnTime(time.Now())
 	// Optionally spawn the proc through schedd.
 	if how == proc.HSCHEDD {

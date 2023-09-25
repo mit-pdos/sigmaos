@@ -22,7 +22,7 @@ func main() {
 		db.DFatalf("Error parsing exec time: %v", err)
 	}
 	execTime := time.UnixMicro(execTimeMicro)
-	db.DPrintf(db.ALWAYS, "[%v] Proc exec latency: %v", proc.GetSigmaDebugPid(), time.Since(execTime))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Proc exec latency: %v", proc.GetSigmaDebugPid(), time.Since(execTime))
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.SPAWN_LAT, "[%v] E2e latency until main: %v", pe.GetPID(), time.Since(pe.GetSpawnTime()))
 	if len(os.Args) < 3 {

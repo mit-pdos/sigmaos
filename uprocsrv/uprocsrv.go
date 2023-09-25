@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"sync"
+	"time"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
@@ -56,5 +57,6 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Get uproc %v", uproc)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	return container.RunUProc(uproc)
 }

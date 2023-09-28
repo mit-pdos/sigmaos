@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 json = "0.12.4" 
+libseccomp = "0.3.0"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = "0.9.25"

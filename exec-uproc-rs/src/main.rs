@@ -8,6 +8,8 @@ use json;
 use serde::{Serialize, Deserialize};
 use serde_yaml::{self};
 
+use libseccomp::*;
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
     allowed: Vec<String>,
@@ -34,11 +36,10 @@ fn main() {
 
     let pn = env::args().nth(1).expect("no program");
 
-    seccomp_proc();
+    seccomp_proc().expect("seccomp failed");
     
     let new_args: Vec<_> = std::env::args_os().skip(1).collect();
     let mut cmd = Command::new(pn);
-    
     
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -46,11 +47,10 @@ fn main() {
      
     env::set_var("SIGMA_EXEC_TIME", now.as_micros().to_string());
 
-
     cmd.args(new_args).exec();
 }
 
-fn seccomp_proc() {
+fn seccomp_proc()  -> Result<(), Box<dyn std::error::Error>> {
     let yaml_str = r#"
 allowed:
   - accept4
@@ -131,6 +131,13 @@ cond_allowed:
 "#;
 
     let cfg: Config = serde_yaml::from_str(&yaml_str).expect("Couldn't read yaml str");
-    
-    println!("{:?}", cfg);
+
+    let mut filter = ScmpFilterContext::new_filter(ScmpAction::Errno(1))?;
+    for name in cfg.allowed {
+        let syscall = ScmpSyscall::from_name(&name)?;
+        println!("{} {:?}", name, syscall);
+        filter.add_rule(ScmpAction::Allow, syscall)?;
+    }
+    filter.load()?;
+    Ok(())
 }

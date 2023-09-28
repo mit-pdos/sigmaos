@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::process::Command;
 use std::os::unix::process::CommandExt;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -22,6 +23,7 @@ fn main() {
 
     let pn = env::args().nth(1).expect("no program");
 
+    jail_proc().expect("jail failed");
     setcap_proc().expect("set caps failed");
     seccomp_proc().expect("seccomp failed");
     
@@ -35,6 +37,17 @@ fn main() {
     env::set_var("SIGMA_EXEC_TIME", now.as_micros().to_string());
 
     cmd.args(new_args).exec();
+}
+
+fn jail_proc() ->  Result<(), Box<dyn std::error::Error>> {
+    const DIRS: &'static [&'static str] = &["", "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", "cgroup"];
+    for d in DIRS.iter() {
+        let path : String = "/tmp/newroot/".to_owned();
+        //println!("dir {}", path+d);
+        fs::create_dir_all(path+d)?;
+    }
+    
+    Ok(())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -145,9 +158,9 @@ fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
     use caps::{CapSet, Capability};
 
     let cur = caps::read(None, CapSet::Permitted)?;
-    println!("-> Current permitted caps: {:?}.", cur);
+    println!("Current permitted caps: {:?}.", cur);
     let cur = caps::read(None, CapSet::Effective)?;
-    println!("-> Current effective caps: {:?}.", cur);
+    println!("Current effective caps: {:?}.", cur);
 
     Ok(())
 }

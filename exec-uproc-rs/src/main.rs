@@ -8,8 +8,6 @@ use json;
 use serde::{Serialize, Deserialize};
 use serde_yaml::{self};
 
-use libseccomp::*;
-
 fn main() {
     let exec_time = env::var("SIGMA_EXEC_TIME").unwrap_or("".to_string());
     let exec_time_micro: u64 = exec_time.parse().unwrap_or(0);
@@ -24,6 +22,7 @@ fn main() {
 
     let pn = env::args().nth(1).expect("no program");
 
+    setcap_proc().expect("set caps failed");
     seccomp_proc().expect("seccomp failed");
     
     let new_args: Vec<_> = std::env::args_os().skip(1).collect();
@@ -51,6 +50,8 @@ struct Cond {
 }
 
 fn seccomp_proc()  -> Result<(), Box<dyn std::error::Error>> {
+    use libseccomp::*;
+
     let yaml_str = r#"
 allowed:
   - accept4
@@ -137,5 +138,16 @@ cond_allowed:
         filter.add_rule(ScmpAction::Allow, syscall)?;
     }
     filter.load()?;
+    Ok(())
+}
+
+fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
+    use caps::{CapSet, Capability};
+
+    let cur = caps::read(None, CapSet::Permitted)?;
+    println!("-> Current permitted caps: {:?}.", cur);
+    let cur = caps::read(None, CapSet::Effective)?;
+    println!("-> Current effective caps: {:?}.", cur);
+
     Ok(())
 }

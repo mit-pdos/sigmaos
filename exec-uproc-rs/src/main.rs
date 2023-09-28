@@ -10,18 +10,6 @@ use serde_yaml::{self};
 
 use libseccomp::*;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Config {
-    allowed: Vec<String>,
-    cond_allowed: Vec<Cond>
-}
-#[derive(Debug, Serialize, Deserialize)]
-struct Cond {
-    index: u32,
-    op1: u64,
-    op: String,
-}
-
 fn main() {
     let exec_time = env::var("SIGMA_EXEC_TIME").unwrap_or("".to_string());
     let exec_time_micro: u64 = exec_time.parse().unwrap_or(0);
@@ -48,6 +36,18 @@ fn main() {
     env::set_var("SIGMA_EXEC_TIME", now.as_micros().to_string());
 
     cmd.args(new_args).exec();
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Config {
+    allowed: Vec<String>,
+    cond_allowed: Vec<Cond>
+}
+#[derive(Debug, Serialize, Deserialize)]
+struct Cond {
+    index: u32,
+    op1: u64,
+    op: String,
 }
 
 fn seccomp_proc()  -> Result<(), Box<dyn std::error::Error>> {
@@ -130,12 +130,10 @@ cond_allowed:
     op: "SCMP_CMP_MASKED_EQ"
 "#;
 
-    let cfg: Config = serde_yaml::from_str(&yaml_str).expect("Couldn't read yaml str");
-
+    let cfg: Config = serde_yaml::from_str(&yaml_str)?;
     let mut filter = ScmpFilterContext::new_filter(ScmpAction::Errno(1))?;
     for name in cfg.allowed {
         let syscall = ScmpSyscall::from_name(&name)?;
-        println!("{} {:?}", name, syscall);
         filter.add_rule(ScmpAction::Allow, syscall)?;
     }
     filter.load()?;

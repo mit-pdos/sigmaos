@@ -73,6 +73,8 @@ if [[ $WHAT == "kernel" ]]; then
     WHAT="kernel linux"
 elif [[ $WHAT == "user" ]]; then
     mkdir -p bin/user
+    # ( cd exec-uproc-rs && $HOME/.cargo/bin/cargo build --target=x86_64-unknown-linux-musl )
+    ( cd exec-uproc-rs && $HOME/.cargo/bin/cargo build )
 else
     mkdir -p bin/linux
     WHAT="linux"
@@ -109,4 +111,3 @@ for k in $WHAT; do
 done
 
 wait
-

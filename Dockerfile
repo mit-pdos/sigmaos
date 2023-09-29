@@ -34,6 +34,7 @@ COPY mr mr
 COPY --from=sigmabuilder /home/sigmaos/bin/kernel/uprocd /home/sigmaos/bin/kernel
 # Copy exec-uproc, the trampoline program, to the user image, 
 COPY --from=sigmabuilder /home/sigmaos/bin/user/common/exec-uproc /home/sigmaos/bin/kernel
+COPY --from=sigmabuilder /home/sigmaos/bin/user/common/exec-uproc-rs /home/sigmaos/bin/kernel
 
 # ========== kernel image, omitting user binaries ==========
 FROM base AS sigmakernelclean

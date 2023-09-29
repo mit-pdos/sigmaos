@@ -40,13 +40,94 @@ fn main() {
 }
 
 fn jail_proc() ->  Result<(), Box<dyn std::error::Error>> {
-    const DIRS: &'static [&'static str] = &["", "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", "cgroup"];
+    extern crate sys_mount;
+    use sys_mount::{Mount, MountFlags, unmount, UnmountFlags};
+
+    let old_root_mnt = "oldroot";
+    const DIRS: &'static [&'static str] = &["", "oldroot", "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", "cgroup"];
+    
+    let newroot = "/home/sigmaos/jail/";
+    let sigmahome = "/home/sigmaos/";
+    
     for d in DIRS.iter() {
-        let path : String = "/tmp/newroot/".to_owned();
-        //println!("dir {}", path+d);
+        let path : String = newroot.to_owned();
         fs::create_dir_all(path+d)?;
     }
+    Mount::builder()
+        .fstype("")
+        .flags(MountFlags::BIND | MountFlags::REC)
+        .mount(newroot, newroot)?;
     
+    env::set_current_dir(newroot)?;
+
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/lib", "lib")?;
+
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/lib64", "lib64")?;
+
+    let mut shome : String = sigmahome.to_owned();
+
+    Mount::builder()
+        .fstype("proc")
+        .mount("proc", "proc")?;
+
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount(shome+"bin/user", "bin")?;
+
+    shome = sigmahome.to_owned();
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount(shome+"bin/kernel", "bin2")?;
+
+    shome = sigmahome.to_owned();
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount(shome+"seccomp", "../seccomp")?;
+
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND)
+        .mount("/cgroup", "cgroup")?;
+
+    // XXX todo: mount perf output
+    
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/usr", "usr")?;
+
+    Mount::builder()
+        .fstype("sysfs")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/sys", "sys")?;
+
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/dev", "dev")?;
+
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/etc", "etc")?;
+    
+    // XXX pivot_root(newroot.as_os_str(), rootfs.join("oldroot").as_os_str())?;
+
+    env::set_current_dir("/")?;
+
+    unmount(old_root_mnt, UnmountFlags::DETACH)?;
+
+    // XXX Remove(old_root_mnt)
+
     Ok(())
 }
 

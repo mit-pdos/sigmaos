@@ -11,3 +11,4 @@ json = "0.12.4"
 libseccomp = "0.3.0"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = "0.9.25"
+sys-mount = { version = "2.1.0", default-features = false}

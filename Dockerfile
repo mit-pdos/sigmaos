@@ -42,7 +42,7 @@ COPY exec-uproc-rs exec-uproc-rs
 ENV LIBSECCOMP_LINK_TYPE=static
 ENV LIBSECCOMP_LIB_PATH="/usr/lib"
 RUN (cd exec-uproc-rs && $HOME/.cargo/bin/cargo build)
-RUN cp exec-uproc-rs/target/x86_64-unknown-linux-musl/debug/exec-uproc-rs bin/kernel
+RUN cp exec-uproc-rs/target/debug/exec-uproc-rs bin/kernel
 
 # Copy mr yaml files.
 COPY mr mr

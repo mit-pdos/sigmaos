@@ -26,15 +26,30 @@ COPY seccomp seccomp
 ENV SIGMATAG=$tag
 
 # ========== user image ==========
-FROM base AS sigmauser 
+FROM base AS sigmauser
+
+RUN apk add --no-cache curl bash gcc libc-dev libseccomp-static
+
+# Install rust
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+RUN echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
+RUN source $HOME/.bashrc
+
 RUN mkdir jail
+
+# Copy rust trampoline
+COPY exec-uproc-rs exec-uproc-rs
+ENV LIBSECCOMP_LINK_TYPE=static
+ENV LIBSECCOMP_LIB_PATH="/usr/lib"
+RUN (cd exec-uproc-rs && $HOME/.cargo/bin/cargo build)
+RUN cp exec-uproc-rs/target/x86_64-unknown-linux-musl/debug/exec-uproc-rs bin/kernel
+
 # Copy mr yaml files.
 COPY mr mr
 # Copy uprocd, the entrypoint for this container, to the user image.
 COPY --from=sigmabuilder /home/sigmaos/bin/kernel/uprocd /home/sigmaos/bin/kernel
 # Copy exec-uproc, the trampoline program, to the user image, 
 COPY --from=sigmabuilder /home/sigmaos/bin/user/common/exec-uproc /home/sigmaos/bin/kernel
-COPY --from=sigmabuilder /home/sigmaos/bin/user/common/exec-uproc-rs /home/sigmaos/bin/kernel
 
 # ========== kernel image, omitting user binaries ==========
 FROM base AS sigmakernelclean

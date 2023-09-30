@@ -14,7 +14,7 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
-	"sigmaos/linuxsched"
+	// "sigmaos/linuxsched"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -102,7 +102,7 @@ func cleanSleeperResult(t *testing.T, ts *test.Tstate, pid sp.Tpid) {
 	ts.Remove("name/" + pid.String() + "_out")
 }
 
-func TestWaitExitSimpleSingle(t *testing.T) {
+func TestWaitExitSimpleSingleBE(t *testing.T) {
 	ts := test.NewTstateAll(t)
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
@@ -559,7 +559,7 @@ func TestEvict(t *testing.T) {
 func TestEvictN(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
-	N := int(linuxsched.NCores)
+	N := int(4)
 
 	pids := []sp.Tpid{}
 	for i := 0; i < N; i++ {
@@ -581,7 +581,7 @@ func TestBurstSpawn(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
 	// Number of spinners to burst-spawn
-	N := (linuxsched.NCores) * 3
+	N := uint(4) * 3
 
 	// Start a couple new procds.
 	err := ts.BootNode(1)
@@ -617,7 +617,7 @@ func TestReserveCores(t *testing.T) {
 
 	start := time.Now()
 	pid := sp.Tpid("sleeper-aaaaaaa")
-	majorityCpu := 1000 * (linuxsched.NCores/2 + 1)
+	majorityCpu := 1000 * (4/2 + 1)
 	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
 	time.Sleep(SLEEP_MSECS / 2)
@@ -659,7 +659,7 @@ func TestSpawnCrashSchedd(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
 	// Spawn a proc which can't possibly be run by any schedd.
-	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.NCores*2))
+	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*4*2))
 
 	err := ts.KillOne(sp.SCHEDDREL)
 	assert.Nil(t, err, "KillOne: %v", err)

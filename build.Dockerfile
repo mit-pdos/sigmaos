@@ -32,11 +32,6 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install rust
-RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
-ENV PATH="${PATH}:$HOME/.cargo/bin"
-RUN $HOME/.cargo/bin/rustup target add x86_64-unknown-linux-musl
-
 WORKDIR /home/sigmaos
 
 RUN mkdir bin && \
@@ -66,7 +61,6 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel kernel && \
   ./make.sh --norace --gopath /go-custom/bin/go --userbin $userbin --target $target $parallel user && \
   mkdir bin/common && \
-  mv exec-uproc-rs/target/debug/exec-uproc-rs bin/common && \
   mv bin/user/* bin/common && \
   mv bin/common bin/user/common && \
   cp bin/kernel/named bin/user/common/named

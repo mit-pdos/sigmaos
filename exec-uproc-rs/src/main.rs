@@ -48,15 +48,22 @@ fn jail_proc() ->  Result<(), Box<dyn std::error::Error>> {
     
     let newroot = "/home/sigmaos/jail/";
     let sigmahome = "/home/sigmaos/";
+
+    println!("make dirs\n");
     
     for d in DIRS.iter() {
         let path : String = newroot.to_owned();
         fs::create_dir_all(path+d)?;
     }
+
+    println!("make dirs done\n");
+    
     Mount::builder()
         .fstype("")
         .flags(MountFlags::BIND | MountFlags::REC)
         .mount(newroot, newroot)?;
+
+    println!("mount newroot\n");
     
     env::set_current_dir(newroot)?;
 
@@ -65,39 +72,53 @@ fn jail_proc() ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib", "lib")?;
 
+    println!("mount lib\n");
+    
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib64", "lib64")?;
 
+    println!("mount lib64\n");
+    
     let mut shome : String = sigmahome.to_owned();
 
     Mount::builder()
         .fstype("proc")
         .mount("proc", "proc")?;
 
+    println!("mount proc\n");
+        
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome+"bin/user", "bin")?;
 
+    println!("mount bin\n");
+    
     shome = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome+"bin/kernel", "bin2")?;
 
+    println!("mount kernel\n");
+    
     shome = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome+"seccomp", "../seccomp")?;
 
+    println!("mount seccomp\n");
+    
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND)
         .mount("/cgroup", "cgroup")?;
 
+    println!("mount cgroup\n");
+    
     // XXX todo: mount perf output
     
     Mount::builder()
@@ -105,20 +126,28 @@ fn jail_proc() ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/usr", "usr")?;
 
+    println!("mount usr\n");
+    
     Mount::builder()
         .fstype("sysfs")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/sys", "sys")?;
 
+    println!("mount sys\n");
+    
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/dev", "dev")?;
 
+    println!("mount dev\n");
+    
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
+
+    println!("mount etc\n");
     
     // XXX pivot_root(newroot.as_os_str(), rootfs.join("oldroot").as_os_str())?;
 

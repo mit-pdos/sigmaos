@@ -20,7 +20,7 @@ import (
 func RunUProc(uproc *proc.Proc) error {
 	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
 	//	cmd := exec.Command("strace", append([]string{"-f", "exec-uproc", uproc.Program}, uproc.Args...)...)
-	cmd := exec.Command("exec-uproc", append([]string{uproc.GetProgram()}, uproc.Args...)...)
+	cmd := exec.Command("exec-uproc-rs", append([]string{uproc.GetProgram()}, uproc.Args...)...)
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
 	cmd.Env = uproc.GetEnv()

@@ -71,7 +71,7 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
 
     eprintln!("set {}", newroot_pn);
     
-    env::set_current_dir(newroot_pn)?;
+    env::set_current_dir(newroot_pn.clone())?;
 
     Mount::builder()
         .fstype("none")
@@ -95,16 +95,12 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome+"bin/user", "bin")?;
 
-    println!("mounted bin");
-    
     shome = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome+"bin/kernel", "bin2")?;
 
-    println!("mounted kernel");
-    
     shome = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
@@ -123,8 +119,6 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/usr", "usr")?;
 
-    println!("mounted usr");
-    
     Mount::builder()
         .fstype("sysfs")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
@@ -140,6 +134,8 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
 
+    eprintln!("pivot {}", newroot_pn);
+    
     pivot_root(".", old_root_mnt)?;
 
     println!("pivoted");
@@ -150,7 +146,7 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
 
     println!("unmounted");
 
-    // fs::remove_dir(old_root_mnt)?;
+    fs::remove_dir(old_root_mnt)?;
 
     let paths = fs::read_dir("/").unwrap();
     

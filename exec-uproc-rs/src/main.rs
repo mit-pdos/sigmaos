@@ -25,7 +25,7 @@ fn main() {
 
     jail_proc(pid).expect("jail failed");
     setcap_proc().expect("set caps failed");
-    //seccomp_proc().expect("seccomp failed");
+    seccomp_proc().expect("seccomp failed");
     
     let new_args: Vec<_> = std::env::args_os().skip(2).collect();
     let mut cmd = Command::new(program.clone());
@@ -243,6 +243,9 @@ allowed:
   - writev
 # Needed for MUSL/Alpine
   - readlink
+# XXX
+  - clone
+  - socket
 
 cond_allowed:
   - socket: # Allowed by docker if arg0 != 40 (disallows AF_VSOCK).

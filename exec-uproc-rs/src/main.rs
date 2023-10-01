@@ -16,19 +16,19 @@ fn main() {
     eprintln!("exec_uproc SIGMA_EXEC_TIME {}", exec_time_micro);
 
     let cfg = env::var("SIGMACONFIG").unwrap_or("".to_string());
-    if cfg != "" {
-        let parsed = json::parse(&cfg).unwrap();
-        println!("{}", parsed);
-    }
-
-    let pn = env::args().nth(1).expect("no program");
-
-    jail_proc().expect("jail failed");
-    setcap_proc().expect("set caps failed");
-    seccomp_proc().expect("seccomp failed");
+    let parsed = json::parse(&cfg).unwrap();
     
-    let new_args: Vec<_> = std::env::args_os().skip(1).collect();
-    let mut cmd = Command::new(pn);
+    eprintln!("Cfg: {}", parsed);
+
+    let program = env::args().nth(1).expect("no program");
+    let pid = parsed["pidStr"].as_str().unwrap_or("pid not");
+
+    jail_proc(pid).expect("jail failed");
+    setcap_proc().expect("set caps failed");
+    //seccomp_proc().expect("seccomp failed");
+    
+    let new_args: Vec<_> = std::env::args_os().skip(2).collect();
+    let mut cmd = Command::new(program.clone());
     
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -36,65 +36,66 @@ fn main() {
      
     env::set_var("SIGMA_EXEC_TIME", now.as_micros().to_string());
 
-    cmd.args(new_args).exec();
+    eprintln!("exec: {} {:?}", program, new_args);
+    
+    let err = cmd.args(new_args).exec();
+    
+    eprintln!("err: {}", err);
 }
 
-fn jail_proc() ->  Result<(), Box<dyn std::error::Error>> {
+fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
     extern crate sys_mount;
     use sys_mount::{Mount, MountFlags, unmount, UnmountFlags};
+    use nix::unistd::{pivot_root};
 
     let old_root_mnt = "oldroot";
     const DIRS: &'static [&'static str] = &["", "oldroot", "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", "cgroup"];
     
     let newroot = "/home/sigmaos/jail/";
     let sigmahome = "/home/sigmaos/";
-
-    println!("make dirs\n");
+    let newroot_pn: String = newroot.to_owned() + pid + "/";
+    
+    eprintln!("make dirs {}", newroot_pn);
     
     for d in DIRS.iter() {
-        let path : String = newroot.to_owned();
+        let path : String = newroot_pn.to_owned();
         fs::create_dir_all(path+d)?;
     }
 
-    println!("make dirs done\n");
+    eprintln!("mount newroot {}", newroot_pn);
     
     Mount::builder()
         .fstype("")
         .flags(MountFlags::BIND | MountFlags::REC)
-        .mount(newroot, newroot)?;
+        .mount(newroot_pn.clone(), newroot_pn.clone())?;
 
-    println!("mount newroot\n");
+    eprintln!("set {}", newroot_pn);
     
-    env::set_current_dir(newroot)?;
+    env::set_current_dir(newroot_pn)?;
 
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib", "lib")?;
 
-    println!("mount lib\n");
     
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib64", "lib64")?;
 
-    println!("mount lib64\n");
-    
     let mut shome : String = sigmahome.to_owned();
 
     Mount::builder()
         .fstype("proc")
         .mount("proc", "proc")?;
 
-    println!("mount proc\n");
-        
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome+"bin/user", "bin")?;
 
-    println!("mount bin\n");
+    println!("mounted bin");
     
     shome = sigmahome.to_owned();
     Mount::builder()
@@ -102,23 +103,19 @@ fn jail_proc() ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome+"bin/kernel", "bin2")?;
 
-    println!("mount kernel\n");
+    println!("mounted kernel");
     
     shome = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount(shome+"seccomp", "../seccomp")?;
+        .mount(shome+"seccomp", "seccomp")?;
 
-    println!("mount seccomp\n");
-    
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND)
         .mount("/cgroup", "cgroup")?;
 
-    println!("mount cgroup\n");
-    
     // XXX todo: mount perf output
     
     Mount::builder()
@@ -126,36 +123,40 @@ fn jail_proc() ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/usr", "usr")?;
 
-    println!("mount usr\n");
+    println!("mounted usr");
     
     Mount::builder()
         .fstype("sysfs")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/sys", "sys")?;
 
-    println!("mount sys\n");
-    
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/dev", "dev")?;
 
-    println!("mount dev\n");
-    
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
 
-    println!("mount etc\n");
-    
-    // XXX pivot_root(newroot.as_os_str(), rootfs.join("oldroot").as_os_str())?;
+    pivot_root(".", old_root_mnt)?;
 
+    println!("pivoted");
+    
     env::set_current_dir("/")?;
 
     unmount(old_root_mnt, UnmountFlags::DETACH)?;
 
-    // XXX Remove(old_root_mnt)
+    println!("unmounted");
+
+    // fs::remove_dir(old_root_mnt)?;
+
+    let paths = fs::read_dir("/").unwrap();
+    
+    for path in paths {
+        println!("Name: {}", path.unwrap().path().display())
+    }
 
     Ok(())
 }

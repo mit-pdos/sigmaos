@@ -9,6 +9,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
+name = "bitflags"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
+
+[[package]]
 name = "caps"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -36,7 +42,9 @@ version = "0.1.0"
 dependencies = [
  "caps",
  "json",
+ "libc",
  "libseccomp",
+ "nix",
  "serde",
  "serde_yaml",
  "sys-mount",
@@ -82,7 +90,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21c57fd8981a80019807b7b68118618d29a87177c63d704fc96e6ecd003ae5b3"
 dependencies = [
- "bitflags",
+ "bitflags 1.3.2",
  "libc",
  "libseccomp-sys",
  "pkg-config",
@@ -93,6 +101,17 @@ name = "libseccomp-sys"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a7cbbd4ad467251987c6e5b47d53b11a5a05add08f2447a9e2d70aef1e0d138"
+
+[[package]]
+name = "nix"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
+dependencies = [
+ "bitflags 2.4.0",
+ "cfg-if",
+ "libc",
+]
 
 [[package]]
 name = "once_cell"
@@ -208,7 +227,7 @@ version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab6b8b397ed1fa2364625189a004d532b5d58f772943c57aa144feb1966142bd"
 dependencies = [
- "bitflags",
+ "bitflags 1.3.2",
  "libc",
  "smart-default",
  "thiserror",

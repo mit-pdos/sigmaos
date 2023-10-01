@@ -297,7 +297,11 @@ fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
     
     caps::set(None, CapSet::Inheritable, &new_caps)?;
 
-    println!("set inherited done: {:?}", new_caps);
+    println!("set effective caps: {:?}.", new_caps);
+    
+    caps::set(None, CapSet::Ambient, &new_caps)?;
+
+    println!("set ambient caps: {:?}.", new_caps);
     
     let cur = caps::read(None, CapSet::Permitted)?;
     println!("Current permitted caps: {:?}.", cur);

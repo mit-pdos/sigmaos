@@ -274,10 +274,6 @@ fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
 	Capability::CAP_AUDIT_WRITE,
     ];
 
-    let defaultsextra = vec![
-        Capability::CAP_MKNOD, Capability::CAP_IPC_LOCK, Capability::CAP_NET_BIND_SERVICE, Capability::CAP_SYS_ADMIN, Capability::CAP_PERFMON, Capability::CAP_FSETID, Capability::CAP_SYSLOG, Capability::CAP_SETUID, Capability::CAP_MAC_ADMIN, Capability::CAP_AUDIT_WRITE, Capability::CAP_NET_BROADCAST, Capability::CAP_SYS_RESOURCE, Capability::CAP_SYS_BOOT, Capability::CAP_BPF, Capability::CAP_DAC_OVERRIDE, Capability::CAP_SYS_PTRACE, Capability::CAP_SETFCAP, Capability::CAP_SYS_TIME, Capability::CAP_LEASE, Capability::CAP_SETPCAP, Capability::CAP_LINUX_IMMUTABLE, Capability::CAP_NET_RAW, Capability::CAP_WAKE_ALARM, Capability::CAP_BLOCK_SUSPEND, Capability::CAP_CHECKPOINT_RESTORE, Capability::CAP_SYS_RAWIO, Capability::CAP_SYS_NICE, Capability::CAP_FOWNER, Capability::CAP_KILL, Capability::CAP_SYS_PACCT, Capability::CAP_CHOWN, Capability::CAP_IPC_OWNER, Capability::CAP_AUDIT_READ, Capability::CAP_MAC_OVERRIDE, Capability::CAP_AUDIT_CONTROL, Capability::CAP_SETGID, Capability::CAP_DAC_READ_SEARCH, Capability::CAP_SYS_MODULE, Capability::CAP_SYS_TTY_CONFIG, Capability::CAP_NET_ADMIN, Capability::CAP_SYS_CHROOT,
-        ];
-    
     let cur = caps::read(None, CapSet::Permitted)?;
     println!("Current permitted caps: {:?}.", cur);
     let cur = caps::read(None, CapSet::Effective)?;
@@ -289,11 +285,13 @@ fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
 
     
     let new_caps = CapsHashSet::from_iter(defaults);
-    let new_caps_extra = CapsHashSet::from_iter(defaultsextra);
 
     println!("new caps: {:?}.", new_caps);
 
-    caps::set(None, CapSet::Permitted, &new_caps_extra)?;
+    // Must drop caps from Effective before able to drop them from
+    // Permitted
+    caps::clear(None, CapSet::Effective)?;
+    caps::set(None, CapSet::Permitted, &new_caps)?;
 
     println!("set permitted caps: {:?}.", new_caps);
     

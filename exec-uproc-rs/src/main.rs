@@ -55,8 +55,6 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
     let sigmahome = "/home/sigmaos/";
     let newroot_pn: String = newroot.to_owned() + pid + "/";
     
-    eprintln!("make dirs {}", newroot_pn);
-    
     for d in DIRS.iter() {
         let path : String = newroot_pn.to_owned();
         fs::create_dir_all(path+d)?;
@@ -69,8 +67,6 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::REC)
         .mount(newroot_pn.clone(), newroot_pn.clone())?;
 
-    eprintln!("set {}", newroot_pn);
-    
     env::set_current_dir(newroot_pn.clone())?;
 
     Mount::builder()
@@ -134,17 +130,11 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
 
-    eprintln!("pivot {}", newroot_pn);
-    
     pivot_root(".", old_root_mnt)?;
 
-    println!("pivoted");
-    
     env::set_current_dir("/")?;
 
     unmount(old_root_mnt, UnmountFlags::DETACH)?;
-
-    println!("unmounted");
 
     fs::remove_dir(old_root_mnt)?;
 
@@ -265,12 +255,54 @@ cond_allowed:
 }
 
 fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
-    use caps::{CapSet, Capability};
+    use caps::{CapSet, Capability,CapsHashSet};
 
+    // Taken from https://github.com/moby/moby/blob/master/oci/caps/defaults.go
+    let defaults = vec![
+	Capability::CAP_CHOWN,
+        Capability::CAP_DAC_OVERRIDE,
+	Capability::CAP_FSETID,
+	Capability::CAP_FOWNER,
+	Capability::CAP_NET_RAW,
+	Capability::CAP_SETGID,
+	Capability::CAP_SETUID,
+	Capability::CAP_SETFCAP,
+	Capability::CAP_SETPCAP,
+	Capability::CAP_NET_BIND_SERVICE,
+	Capability::CAP_SYS_CHROOT,
+	Capability::CAP_KILL,
+	Capability::CAP_AUDIT_WRITE,
+    ];
+
+    let defaultsextra = vec![
+        Capability::CAP_MKNOD, Capability::CAP_IPC_LOCK, Capability::CAP_NET_BIND_SERVICE, Capability::CAP_SYS_ADMIN, Capability::CAP_PERFMON, Capability::CAP_FSETID, Capability::CAP_SYSLOG, Capability::CAP_SETUID, Capability::CAP_MAC_ADMIN, Capability::CAP_AUDIT_WRITE, Capability::CAP_NET_BROADCAST, Capability::CAP_SYS_RESOURCE, Capability::CAP_SYS_BOOT, Capability::CAP_BPF, Capability::CAP_DAC_OVERRIDE, Capability::CAP_SYS_PTRACE, Capability::CAP_SETFCAP, Capability::CAP_SYS_TIME, Capability::CAP_LEASE, Capability::CAP_SETPCAP, Capability::CAP_LINUX_IMMUTABLE, Capability::CAP_NET_RAW, Capability::CAP_WAKE_ALARM, Capability::CAP_BLOCK_SUSPEND, Capability::CAP_CHECKPOINT_RESTORE, Capability::CAP_SYS_RAWIO, Capability::CAP_SYS_NICE, Capability::CAP_FOWNER, Capability::CAP_KILL, Capability::CAP_SYS_PACCT, Capability::CAP_CHOWN, Capability::CAP_IPC_OWNER, Capability::CAP_AUDIT_READ, Capability::CAP_MAC_OVERRIDE, Capability::CAP_AUDIT_CONTROL, Capability::CAP_SETGID, Capability::CAP_DAC_READ_SEARCH, Capability::CAP_SYS_MODULE, Capability::CAP_SYS_TTY_CONFIG, Capability::CAP_NET_ADMIN, Capability::CAP_SYS_CHROOT,
+        ];
+    
     let cur = caps::read(None, CapSet::Permitted)?;
     println!("Current permitted caps: {:?}.", cur);
     let cur = caps::read(None, CapSet::Effective)?;
     println!("Current effective caps: {:?}.", cur);
+    let cur = caps::read(None, CapSet::Inheritable)?;
+    println!("Current inheritable caps: {:?}.", cur);
+    let cur = caps::read(None, CapSet::Ambient)?;
+    println!("Current ambient caps: {:?}.", cur);
+
+    
+    let new_caps = CapsHashSet::from_iter(defaults);
+    let new_caps_extra = CapsHashSet::from_iter(defaultsextra);
+
+    println!("new caps: {:?}.", new_caps);
+
+    caps::set(None, CapSet::Permitted, &new_caps_extra)?;
+
+    println!("set permitted caps: {:?}.", new_caps);
+    
+    caps::set(None, CapSet::Inheritable, &new_caps)?;
+
+    println!("set inherited done: {:?}", new_caps);
+    
+    let cur = caps::read(None, CapSet::Permitted)?;
+    println!("Current permitted caps: {:?}.", cur);
 
     Ok(())
 }

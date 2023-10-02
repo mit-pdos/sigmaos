@@ -13,8 +13,6 @@ fn main() {
     let exec_time = env::var("SIGMA_EXEC_TIME").unwrap_or("".to_string());
     let exec_time_micro: u64 = exec_time.parse().unwrap_or(0);
 
-    eprintln!("exec_uproc SIGMA_EXEC_TIME {}", exec_time_micro);
-
     let cfg = env::var("SIGMACONFIG").unwrap_or("".to_string());
     let parsed = json::parse(&cfg).unwrap();
     
@@ -138,12 +136,6 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
 
     fs::remove_dir(old_root_mnt)?;
 
-    let paths = fs::read_dir("/").unwrap();
-    
-    for path in paths {
-        println!("Name: {}", path.unwrap().path().display())
-    }
-
     Ok(())
 }
 
@@ -255,10 +247,10 @@ cond_allowed:
 }
 
 fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
-    use caps::{CapSet, Capability,CapsHashSet};
+    use caps::{CapSet, Capability};
 
     // Taken from https://github.com/moby/moby/blob/master/oci/caps/defaults.go
-    let defaults = vec![
+    let _defaults = vec![
 	Capability::CAP_CHOWN,
         Capability::CAP_DAC_OVERRIDE,
 	Capability::CAP_FSETID,
@@ -275,34 +267,18 @@ fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     let cur = caps::read(None, CapSet::Permitted)?;
-    println!("Current permitted caps: {:?}.", cur);
     let cur = caps::read(None, CapSet::Effective)?;
-    println!("Current effective caps: {:?}.", cur);
-    let cur = caps::read(None, CapSet::Inheritable)?;
-    println!("Current inheritable caps: {:?}.", cur);
-    let cur = caps::read(None, CapSet::Ambient)?;
-    println!("Current ambient caps: {:?}.", cur);
-
     
-    let new_caps = CapsHashSet::from_iter(defaults);
-
-    println!("new caps: {:?}.", new_caps);
+    // let new_caps = CapsHashSet::from_iter(defaults);
+    // println!("new caps: {:?}.", new_caps);
 
     // Must drop caps from Effective before able to drop them from
-    // Permitted
+    // Permitted, but user procs don't need any procs, so just clear.
     caps::clear(None, CapSet::Effective)?;
-    caps::set(None, CapSet::Permitted, &new_caps)?;
+    // caps::set(None, CapSet::Permitted, &new_caps)?;
+    caps::clear(None, CapSet::Permitted)?;
+    caps::clear(None, CapSet::Inheritable)?;
 
-    println!("set permitted caps: {:?}.", new_caps);
-    
-    caps::set(None, CapSet::Inheritable, &new_caps)?;
-
-    println!("set effective caps: {:?}.", new_caps);
-    
-    caps::set(None, CapSet::Ambient, &new_caps)?;
-
-    println!("set ambient caps: {:?}.", new_caps);
-    
     let cur = caps::read(None, CapSet::Permitted)?;
     println!("Current permitted caps: {:?}.", cur);
 

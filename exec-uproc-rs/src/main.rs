@@ -103,7 +103,6 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .mount(shome+"bin/kernel", "bin2")?;
 
     // A child must be able to stat "/cgroup/cgroup.controllers"
-    // XXX RDONLY?
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND| MountFlags::RDONLY)

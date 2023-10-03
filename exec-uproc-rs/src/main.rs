@@ -119,10 +119,10 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
     // E.g., openat for "/sys/kernel/mm/transparent_hugepage/hpage_pmd_size
     // but maybe not in children?
     // XXX exclude /sys/firmware; others?
-    Mount::builder()
-        .fstype("sysfs")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/sys", "sys")?;
+    // Mount::builder()
+    //     .fstype("sysfs")
+    //     .flags(MountFlags::BIND | MountFlags::RDONLY)
+    //     .mount("/sys", "sys")?;
 
     // Why mount /dev? 	/dev/urandom?
     // Mount::builder()

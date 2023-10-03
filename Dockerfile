@@ -22,13 +22,12 @@ RUN mkdir bin && \
     mkdir bin/kernel && \
     mkdir bin/linux
 # Copy some yaml files to the base image.
-COPY seccomp seccomp
 ENV SIGMATAG=$tag
 
 # ========== user image ==========
 FROM base AS sigmauser
 
-RUN apk add --no-cache curl bash gcc libc-dev libseccomp-static
+RUN apk add --no-cache curl bash gcc libc-dev libseccomp-static strace
 
 # Install rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y

@@ -19,7 +19,7 @@ fn main() {
     eprintln!("Cfg: {}", parsed);
 
     let program = env::args().nth(1).expect("no program");
-    let pid = parsed["pidStr"].as_str().unwrap_or("pid not");
+    let pid = parsed["pidStr"].as_str().unwrap_or("no pid");
 
     jail_proc(pid).expect("jail failed");
     setcap_proc().expect("set caps failed");
@@ -95,12 +95,7 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome+"bin/kernel", "bin2")?;
 
-    shome = sigmahome.to_owned();
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount(shome+"seccomp", "seccomp")?;
-
+    // A child must be able to stat "/cgroup/cgroup.controllers"
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND)
@@ -193,7 +188,7 @@ allowed:
   - nanosleep
   - newfstatat
   - openat
-  - open
+  - open  # to open binary and shared libraries
   - pipe2
   - pread64
   - prlimit64

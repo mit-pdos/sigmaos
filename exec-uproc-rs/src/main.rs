@@ -52,43 +52,50 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
     let newroot = "/home/sigmaos/jail/";
     let sigmahome = "/home/sigmaos/";
     let newroot_pn: String = newroot.to_owned() + pid + "/";
-    
+
+    // Create directories to use as mount points, as well as the new
+    // root directory itself
     for d in DIRS.iter() {
         let path : String = newroot_pn.to_owned();
         fs::create_dir_all(path+d)?;
     }
 
     eprintln!("mount newroot {}", newroot_pn);
-    
+    // Mount new file system as a mount point so we can pivot_root to
+    // it later
     Mount::builder()
         .fstype("")
         .flags(MountFlags::BIND | MountFlags::REC)
         .mount(newroot_pn.clone(), newroot_pn.clone())?;
 
+    // Chdir to new root
     env::set_current_dir(newroot_pn.clone())?;
 
+    // E.g., openat "/lib/ld-musl-x86_64.so.1"
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib", "lib")?;
 
-    
+    // Why mount lib64?
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib64", "lib64")?;
 
-    let mut shome : String = sigmahome.to_owned();
-
+    // E.g., openat "/proc/meminfo", "/proc/self/exe"
     Mount::builder()
         .fstype("proc")
         .mount("proc", "proc")?;
 
+    // To download user binaries into
+    let mut shome : String = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome+"bin/user", "bin")?;
 
+    // For the exec-uproc and uprocd
     shome = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
@@ -96,33 +103,41 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .mount(shome+"bin/kernel", "bin2")?;
 
     // A child must be able to stat "/cgroup/cgroup.controllers"
+    // XXX RDONLY?
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND)
         .mount("/cgroup", "cgroup")?;
 
     // XXX todo: mount perf output
-    
+
+    // E.g., /usr/lib for shared libraries
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/usr", "usr")?;
 
+    // E.g., openat for "/sys/kernel/mm/transparent_hugepage/hpage_pmd_size
+    // but maybe not in children?
+    // XXX exclude /sys/firmware; others?
     Mount::builder()
         .fstype("sysfs")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/sys", "sys")?;
 
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/dev", "dev")?;
+    // Why mount /dev? 	/dev/urandom?
+    // Mount::builder()
+    //     .fstype("none")
+    //     .flags(MountFlags::BIND | MountFlags::RDONLY)
+    //     .mount("/dev", "dev")?;
 
+    // E.g., Open "/etc/localtime"
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
 
+    // ========== No more mounts beyond this point ==========  
     pivot_root(".", old_root_mnt)?;
 
     env::set_current_dir("/")?;

@@ -95,7 +95,7 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome+"bin/user", "bin")?;
 
-    // For the exec-uproc and uprocd
+    // For exec-uproc and uprocd
     shome = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")

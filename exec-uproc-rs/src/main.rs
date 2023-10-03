@@ -106,7 +106,7 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
     // XXX RDONLY?
     Mount::builder()
         .fstype("none")
-        .flags(MountFlags::BIND)
+        .flags(MountFlags::BIND| MountFlags::RDONLY)
         .mount("/cgroup", "cgroup")?;
 
     // XXX todo: mount perf output

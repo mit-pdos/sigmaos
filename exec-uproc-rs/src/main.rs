@@ -141,6 +141,7 @@ struct Config {
 }
 #[derive(Debug, Serialize, Deserialize)]
 struct Cond {
+    name: String,
     index: u32,
     op1: u64,
     op: String,
@@ -216,16 +217,13 @@ allowed:
   - writev
 # Needed for MUSL/Alpine
   - readlink
-# XXX
-  - clone
-  - socket
 
 cond_allowed:
-  - socket: # Allowed by docker if arg0 != 40 (disallows AF_VSOCK).
+  - name: socket # Allowed by docker if arg0 != 40 (disallows AF_VSOCK).
     index: 0
     op1: 40
     op: "SCMP_CMP_NE"
-  - clone:
+  - name: clone
     index: 0
     op1: 0x7E020000
     op: "SCMP_CMP_MASKED_EQ"
@@ -236,6 +234,11 @@ cond_allowed:
     for name in cfg.allowed {
         let syscall = ScmpSyscall::from_name(&name)?;
         filter.add_rule(ScmpAction::Allow, syscall)?;
+    }
+    for c in cfg.cond_allowed.iter() {
+        let syscall = ScmpSyscall::from_name(&c.name)?;
+        let cond = ScmpArgCompare::new(c.index, c.op.parse().unwrap(), c.op1);
+        filter.add_rule_conditional(ScmpAction::Allow, syscall, &[cond])?;
     }
     filter.load()?;
     Ok(())

@@ -261,9 +261,6 @@ fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
 	Capability::CAP_AUDIT_WRITE,
     ];
 
-    let cur = caps::read(None, CapSet::Permitted)?;
-    let cur = caps::read(None, CapSet::Effective)?;
-    
     // let new_caps = CapsHashSet::from_iter(defaults);
     // println!("new caps: {:?}.", new_caps);
 

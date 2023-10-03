@@ -89,7 +89,7 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND| MountFlags::RDONLY)
         .mount("/cgroup", "cgroup")?;
 
-    // E.g., /usr/lib for shared libraries
+    // E.g., /usr/lib for shared libraries and /usr/local/lib
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)

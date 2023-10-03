@@ -83,32 +83,11 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib64", "lib64")?;
 
-    // E.g., openat "/proc/meminfo", "/proc/self/exe"
-    Mount::builder()
-        .fstype("proc")
-        .mount("proc", "proc")?;
-
-    // To download user binaries into
-    let mut shome : String = sigmahome.to_owned();
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount(shome+"bin/user", "bin")?;
-
-    // For exec-uproc and uprocd
-    shome = sigmahome.to_owned();
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount(shome+"bin/kernel", "bin2")?;
-
     // A child must be able to stat "/cgroup/cgroup.controllers"
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND| MountFlags::RDONLY)
         .mount("/cgroup", "cgroup")?;
-
-    // XXX todo: mount perf output
 
     // E.g., /usr/lib for shared libraries
     Mount::builder()
@@ -116,25 +95,32 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/usr", "usr")?;
 
-    // E.g., openat for "/sys/kernel/mm/transparent_hugepage/hpage_pmd_size
-    // but maybe not in children?
-    // XXX exclude /sys/firmware; others?
-    // Mount::builder()
-    //     .fstype("sysfs")
-    //     .flags(MountFlags::BIND | MountFlags::RDONLY)
-    //     .mount("/sys", "sys")?;
-
-    // Why mount /dev? 	/dev/urandom?
-    // Mount::builder()
-    //     .fstype("none")
-    //     .flags(MountFlags::BIND | MountFlags::RDONLY)
-    //     .mount("/dev", "dev")?;
-
     // E.g., Open "/etc/localtime"
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
+
+    // E.g., openat "/proc/meminfo", "/proc/self/exe"
+    Mount::builder()
+        .fstype("proc")
+        .mount("proc", "proc")?;
+
+    // To download sigmaos user binaries into
+    let mut shome : String = sigmahome.to_owned();
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount(shome+"bin/user", "bin")?;
+
+    // For sigmaos's exec-uproc and uprocd
+    shome = sigmahome.to_owned();
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount(shome+"bin/kernel", "bin2")?;
+
+    // XXX todo: mount perf output
 
     // ========== No more mounts beyond this point ==========  
     pivot_root(".", old_root_mnt)?;

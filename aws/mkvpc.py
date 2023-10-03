@@ -111,7 +111,7 @@ def find_sg(vpc):
     return None
 
 def main():
-    boto3.setup_default_session(profile_name='me-mit')
+    boto3.setup_default_session(profile_name='sigmaos')
     ec2 = boto3.resource('ec2')
     if args['vpc'] == None:
         vpc = ec2.create_vpc(CidrBlock='10.0.0.0/16')

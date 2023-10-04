@@ -226,7 +226,7 @@ cond_allowed:
   - name: clone
     index: 0
     op1: 0x7E020000
-    op: "SCMP_CMP_MASKED_EQ"
+    op: "SCMP_CMP_MASKED_EQ"  # clone flags
 "#;
 
     let cfg: Config = serde_yaml::from_str(&yaml_str)?;

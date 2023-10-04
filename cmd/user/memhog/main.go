@@ -10,7 +10,6 @@ import (
 	"github.com/shirou/gopsutil/process"
 
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -47,7 +46,7 @@ func main() {
 	if id == "LC" {
 		time.Sleep(d)
 	}
-	db.DPrintf(db.ALWAYS, "%v: start %v %v %v %d %d", id, d, humanize.Bytes(m), dur, nthread, linuxsched.GetNCores())
+	db.DPrintf(db.ALWAYS, "%v: start %v %v %v %d %d", id, d, humanize.Bytes(m), dur, nthread)
 	pid := os.Getpid()
 	proc, err := process.NewProcess(int32(pid))
 	if err != nil {

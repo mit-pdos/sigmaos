@@ -47,7 +47,7 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
     use nix::unistd::{pivot_root};
 
     let old_root_mnt = "oldroot";
-    const DIRS: &'static [&'static str] = &["", "oldroot", "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", "cgroup"];
+    const DIRS: &'static [&'static str] = &["", "oldroot", "lib", "usr", "lib64", "etc", "cgroup", "proc", "bin", "bin2", "tmp"];
     
     let newroot = "/home/sigmaos/jail/";
     let sigmahome = "/home/sigmaos/";
@@ -157,7 +157,7 @@ allowed:
   - arch_prctl # Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.
   - bind
   - brk
-  - clone3 # Needed by Go runtime on old versions of docker. See https://github.com/moby/moby/issues/42680
+  # - clone3 # Needed by Go runtime on old versions of docker. See https://github.com/moby/moby/issues/42680
   - close
   - connect
   - epoll_create1

@@ -20,10 +20,13 @@ fn main() {
 
     let program = env::args().nth(1).expect("no program");
     let pid = parsed["pidStr"].as_str().unwrap_or("no pid");
-
+    let aa = is_enabled_apparmor();
     jail_proc(pid).expect("jail failed");
     setcap_proc().expect("set caps failed");
     seccomp_proc().expect("seccomp failed");
+    if aa {
+        apply_apparmor("docker-default").expect("apparmor failed");
+    }
     
     let new_args: Vec<_> = std::env::args_os().skip(2).collect();
     let mut cmd = Command::new(program.clone());
@@ -190,7 +193,7 @@ allowed:
   - newfstatat
   - openat
   - open  # to open binary and shared libraries
-  - pipe2
+  - pipe2  # used by go runtime 
   - pread64
   - prlimit64
   - read
@@ -277,5 +280,19 @@ fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
     let cur = caps::read(None, CapSet::Permitted)?;
     println!("Current permitted caps: {:?}.", cur);
 
+    Ok(())
+}
+
+pub fn is_enabled_apparmor() -> bool {
+    let apparmor: &str = "/sys/module/apparmor/parameters/enabled";
+    let aa_enabled = fs::read_to_string(apparmor);
+    match aa_enabled {
+        Ok(val) => val.starts_with('Y'),
+        Err(_) => false
+    }
+}
+
+pub fn apply_apparmor(profile: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fs::write("/proc/self/attr/apparmor/exec", format!("exec {profile}"))?;
     Ok(())
 }

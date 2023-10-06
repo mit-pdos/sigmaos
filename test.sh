@@ -124,11 +124,11 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        go test $VERB sigmaos/mr -start -run "(MRJob|TaskAndCoord)"
+        go test $VERB sigmaos/mr -start -run MRJob
         cleanup
         go test $VERB sigmaos/imgresized -start -run ImgdOne
         cleanup
-        go test $VERB sigmaos/kv -start -run "(OKN|AllN)"
+        go test $VERB sigmaos/kv -start -run KVOKN
         cleanup
         ./start-db.sh
         go test $VERB sigmaos/hotel -start -run TestBenchDeathStarSingle

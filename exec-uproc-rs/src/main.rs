@@ -39,7 +39,7 @@ fn main() {
     let exec_time = env::var("SIGMA_EXEC_TIME").unwrap_or("".to_string());
     let exec_time_micros: u64 = exec_time.parse().unwrap_or(0);
     let exec_time = UNIX_EPOCH + Duration::from_micros(exec_time_micros);
-    print_elapsed_time("Exec into Rust trampoline", exec_time);
+    print_elapsed_time("Uproc.exec_trampoline", exec_time);
 
     let cfg = env::var("SIGMACONFIG").unwrap_or("".to_string());
     let parsed = json::parse(&cfg).unwrap();

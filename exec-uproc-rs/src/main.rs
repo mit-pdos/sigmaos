@@ -13,9 +13,15 @@ use json;
 use serde::{Deserialize, Serialize};
 use serde_yaml::{self};
 
+fn print_elapsed_time(msg: &str, start: SystemTime) {
+    let elapsed = SystemTime::now()
+        .duration_since(start)
+        .expect("Time went backwards");
+    log::info!("SPAWN_LAT {}: {}us", msg, elapsed.as_micros());
+}
+
 fn main() {
-    let debug_pid_log = env::var("SIGMADEBUGPID").unwrap();
-    let debug_pid = debug_pid_log.clone();
+    let debug_pid = env::var("SIGMADEBUGPID").unwrap();
     // Set log print formatting to match SigmaOS
     Builder::new()
         .format(move |buf, record| {
@@ -23,7 +29,7 @@ fn main() {
                 buf,
                 "{} {} {}",
                 Local::now().format("%H:%M:%S%.6f"),
-                debug_pid_log,
+                debug_pid,
                 record.args()
             )
         })
@@ -31,17 +37,9 @@ fn main() {
         .init();
 
     let exec_time = env::var("SIGMA_EXEC_TIME").unwrap_or("".to_string());
-    let exec_time_micro: u64 = exec_time.parse().unwrap_or(0);
-    let elapsed_pre_fork = Duration::from_micros(exec_time_micro);
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
-    let exec_latency_micros = now - elapsed_pre_fork;
-    log::info!(
-        "SPAWN_LAT ABC [{}] {}us",
-        debug_pid,
-        exec_latency_micros.as_micros()
-    );
+    let exec_time_micros: u64 = exec_time.parse().unwrap_or(0);
+    let exec_time = UNIX_EPOCH + Duration::from_micros(exec_time_micros);
+    print_elapsed_time("Exec into Rust trampoline", exec_time);
 
     let cfg = env::var("SIGMACONFIG").unwrap_or("".to_string());
     let parsed = json::parse(&cfg).unwrap();
@@ -50,23 +48,36 @@ fn main() {
 
     let program = env::args().nth(1).expect("no program");
     let pid = parsed["pidStr"].as_str().unwrap_or("no pid");
+    let mut now = SystemTime::now();
     let aa = is_enabled_apparmor();
+    print_elapsed_time("Check apparmor enabled", now);
+    now = SystemTime::now();
     jail_proc(pid).expect("jail failed");
+    print_elapsed_time("trampoline.fs_jail_proc", now);
+    now = SystemTime::now();
     setcap_proc().expect("set caps failed");
+    print_elapsed_time("trampoline.setcap_proc", now);
+    now = SystemTime::now();
     seccomp_proc().expect("seccomp failed");
+    print_elapsed_time("trampoline.seccomp_proc", now);
     if aa {
+        now = SystemTime::now();
         apply_apparmor("sigmaos-uproc").expect("apparmor failed");
+        print_elapsed_time("trampoline.apply_apparmor", now);
     }
 
     let new_args: Vec<_> = std::env::args_os().skip(2).collect();
     let mut cmd = Command::new(program.clone());
 
-    // Reset the current time
-    //    now = SystemTime::now()
-    //        .duration_since(UNIX_EPOCH)
-    //        .expect("Time went backwards");
-
-    //    env::set_var("SIGMA_EXEC_TIME", now.as_micros().to_string());
+    // Reset the exec time
+    now = SystemTime::now();
+    env::set_var(
+        "SIGMA_EXEC_TIME",
+        now.duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_micros()
+            .to_string(),
+    );
 
     log::info!("exec: {} {:?}", program, new_args);
 

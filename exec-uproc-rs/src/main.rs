@@ -61,13 +61,6 @@ fn main() {
     let new_args: Vec<_> = std::env::args_os().skip(2).collect();
     let mut cmd = Command::new(program.clone());
 
-    // Reset the current time
-    //    now = SystemTime::now()
-    //        .duration_since(UNIX_EPOCH)
-    //        .expect("Time went backwards");
-
-    //    env::set_var("SIGMA_EXEC_TIME", now.as_micros().to_string());
-
     log::info!("exec: {} {:?}", program, new_args);
 
     let err = cmd.args(new_args).exec();

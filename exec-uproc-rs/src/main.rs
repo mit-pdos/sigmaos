@@ -39,7 +39,7 @@ fn main() {
     let exec_time = env::var("SIGMA_EXEC_TIME").unwrap_or("".to_string());
     let exec_time_micros: u64 = exec_time.parse().unwrap_or(0);
     let exec_time = UNIX_EPOCH + Duration::from_micros(exec_time_micros);
-    print_elapsed_time("Uproc.exec_trampoline", exec_time);
+    print_elapsed_time("trampoline.exec_trampoline", exec_time);
 
     let cfg = env::var("SIGMACONFIG").unwrap_or("".to_string());
     let parsed = json::parse(&cfg).unwrap();
@@ -93,7 +93,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let old_root_mnt = "oldroot";
     const DIRS: &'static [&'static str] = &[
-        "", "oldroot", "lib", "usr", "lib64", "etc", "cgroup", "proc", "bin", "bin2", "tmp",
+        "", "oldroot", "lib", "usr", "lib64", "etc", "dev", "cgroup", "proc", "bin", "tmp",
     ];
 
     let newroot = "/home/sigmaos/jail/";
@@ -148,22 +148,21 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
 
+    // E.g., Open "/dev/null", "/dev/urandom"
+    // Mount::builder()
+    //     .fstype("none")
+    //     .flags(MountFlags::BIND | MountFlags::RDONLY)
+    //     .mount("/dev", "dev")?;
+
     // E.g., openat "/proc/meminfo", "/proc/self/exe"
     Mount::builder().fstype("proc").mount("proc", "proc")?;
 
     // To download sigmaos user binaries into
-    let mut shome: String = sigmahome.to_owned();
+    let shome: String = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome + "bin/user", "bin")?;
-
-    // For sigmaos's exec-uproc and uprocd
-    shome = sigmahome.to_owned();
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount(shome + "bin/kernel", "bin2")?;
 
     // XXX todo: mount perf output
 
@@ -211,6 +210,7 @@ allowed:
   - epoll_pwait
   - epoll_pwait2
   - execve
+  - exit #  if process must stop (e.g., syscall is blocked), it must be able to exit
   - exit_group
   - fcntl
   - fstat

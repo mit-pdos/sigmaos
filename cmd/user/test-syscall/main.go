@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"os/exec"
 	"os/user"
 	"syscall"
 
@@ -20,17 +19,16 @@ func main() {
 		db.DFatalf("Started err %v", err)
 	}
 	db.DPrintf(db.TEST, "running %v\n", os.Args)
+	if _, err := user.Current(); err == nil {
+		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "getuid succeeded", nil))
+	}
 	if err := syscall.Chroot("/"); err == nil {
 		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "chroot succeeded", nil))
 	}
-	cmd := exec.Command("/usr/sbin/chroot", append([]string{"/"})...)
-	if err := cmd.Start(); err == nil {
-		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "chroot succeeded", nil))
+	if _, err := os.StartProcess("/bin2/uprocd", append([]string{"/"}), &os.ProcAttr{}); err == nil {
+		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "exec succeeded", nil))
 	} else {
 		db.DPrintf(db.TEST, "exec err %v\n", err)
-	}
-	if _, err := user.Current(); err == nil {
-		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "getuid succeeded", nil))
 	}
 	sc.ClntExitOK()
 }

@@ -1,22 +1,52 @@
+use chrono::Local;
+use env_logger::Builder;
+use log::LevelFilter;
 use std::env;
 use std::fs;
-use std::process::Command;
+use std::io::Write;
 use std::os::unix::process::CommandExt;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::process::Command;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use json;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_yaml::{self};
 
 fn main() {
+    let debug_pid_log = env::var("SIGMADEBUGPID").unwrap();
+    let debug_pid = debug_pid_log.clone();
+    // Set log print formatting to match SigmaOS
+    Builder::new()
+        .format(move |buf, record| {
+            writeln!(
+                buf,
+                "{} {} {}",
+                Local::now().format("%H:%M:%S.6%f"),
+                debug_pid_log,
+                record.args()
+            )
+        })
+        .filter(None, LevelFilter::Info)
+        .init();
+
     let exec_time = env::var("SIGMA_EXEC_TIME").unwrap_or("".to_string());
     let exec_time_micro: u64 = exec_time.parse().unwrap_or(0);
+    let elapsed_pre_fork = Duration::from_micros(exec_time_micro);
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    let exec_latency_micros = now - elapsed_pre_fork;
+    log::info!(
+        "SPAWN_LAT ABC [{}] {}us",
+        debug_pid,
+        exec_latency_micros.as_micros()
+    );
 
     let cfg = env::var("SIGMACONFIG").unwrap_or("".to_string());
     let parsed = json::parse(&cfg).unwrap();
-    
-    eprintln!("Cfg: {}", parsed);
+
+    log::info!("Cfg: {}", parsed);
 
     let program = env::args().nth(1).expect("no program");
     let pid = parsed["pidStr"].as_str().unwrap_or("no pid");
@@ -27,31 +57,34 @@ fn main() {
     if aa {
         apply_apparmor("docker-default").expect("apparmor failed");
     }
-    
+
     let new_args: Vec<_> = std::env::args_os().skip(2).collect();
     let mut cmd = Command::new(program.clone());
-    
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
-     
-    env::set_var("SIGMA_EXEC_TIME", now.as_micros().to_string());
 
-    eprintln!("exec: {} {:?}", program, new_args);
-    
+    // Reset the current time
+    //    now = SystemTime::now()
+    //        .duration_since(UNIX_EPOCH)
+    //        .expect("Time went backwards");
+
+    //    env::set_var("SIGMA_EXEC_TIME", now.as_micros().to_string());
+
+    log::info!("exec: {} {:?}", program, new_args);
+
     let err = cmd.args(new_args).exec();
-    
-    eprintln!("err: {}", err);
+
+    log::info!("err: {}", err);
 }
 
-fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
+fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
     extern crate sys_mount;
-    use sys_mount::{Mount, MountFlags, unmount, UnmountFlags};
-    use nix::unistd::{pivot_root};
+    use nix::unistd::pivot_root;
+    use sys_mount::{unmount, Mount, MountFlags, UnmountFlags};
 
     let old_root_mnt = "oldroot";
-    const DIRS: &'static [&'static str] = &["", "oldroot", "lib", "usr", "lib64", "etc", "cgroup", "proc", "bin", "bin2", "tmp"];
-    
+    const DIRS: &'static [&'static str] = &[
+        "", "oldroot", "lib", "usr", "lib64", "etc", "cgroup", "proc", "bin", "bin2", "tmp",
+    ];
+
     let newroot = "/home/sigmaos/jail/";
     let sigmahome = "/home/sigmaos/";
     let newroot_pn: String = newroot.to_owned() + pid + "/";
@@ -59,11 +92,11 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
     // Create directories to use as mount points, as well as the new
     // root directory itself
     for d in DIRS.iter() {
-        let path : String = newroot_pn.to_owned();
-        fs::create_dir_all(path+d)?;
+        let path: String = newroot_pn.to_owned();
+        fs::create_dir_all(path + d)?;
     }
 
-    eprintln!("mount newroot {}", newroot_pn);
+    log::info!("mount newroot {}", newroot_pn);
     // Mount new file system as a mount point so we can pivot_root to
     // it later
     Mount::builder()
@@ -89,7 +122,7 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
     // A child must be able to stat "/cgroup/cgroup.controllers"
     Mount::builder()
         .fstype("none")
-        .flags(MountFlags::BIND| MountFlags::RDONLY)
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/cgroup", "cgroup")?;
 
     // E.g., /usr/lib for shared libraries and /usr/local/lib
@@ -105,27 +138,25 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
         .mount("/etc", "etc")?;
 
     // E.g., openat "/proc/meminfo", "/proc/self/exe"
-    Mount::builder()
-        .fstype("proc")
-        .mount("proc", "proc")?;
+    Mount::builder().fstype("proc").mount("proc", "proc")?;
 
     // To download sigmaos user binaries into
-    let mut shome : String = sigmahome.to_owned();
+    let mut shome: String = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount(shome+"bin/user", "bin")?;
+        .mount(shome + "bin/user", "bin")?;
 
     // For sigmaos's exec-uproc and uprocd
     shome = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount(shome+"bin/kernel", "bin2")?;
+        .mount(shome + "bin/kernel", "bin2")?;
 
     // XXX todo: mount perf output
 
-    // ========== No more mounts beyond this point ==========  
+    // ========== No more mounts beyond this point ==========
     pivot_root(".", old_root_mnt)?;
 
     env::set_current_dir("/")?;
@@ -140,7 +171,7 @@ fn jail_proc(pid : &str) ->  Result<(), Box<dyn std::error::Error>> {
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
     allowed: Vec<String>,
-    cond_allowed: Vec<Cond>
+    cond_allowed: Vec<Cond>,
 }
 #[derive(Debug, Serialize, Deserialize)]
 struct Cond {
@@ -150,7 +181,7 @@ struct Cond {
     op: String,
 }
 
-fn seccomp_proc()  -> Result<(), Box<dyn std::error::Error>> {
+fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
     use libseccomp::*;
 
     let yaml_str = r#"
@@ -252,23 +283,23 @@ fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
 
     // Taken from https://github.com/moby/moby/blob/master/oci/caps/defaults.go
     let _defaults = vec![
-	Capability::CAP_CHOWN,
+        Capability::CAP_CHOWN,
         Capability::CAP_DAC_OVERRIDE,
-	Capability::CAP_FSETID,
-	Capability::CAP_FOWNER,
-	Capability::CAP_NET_RAW,
-	Capability::CAP_SETGID,
-	Capability::CAP_SETUID,
-	Capability::CAP_SETFCAP,
-	Capability::CAP_SETPCAP,
-	Capability::CAP_NET_BIND_SERVICE,
-	Capability::CAP_SYS_CHROOT,
-	Capability::CAP_KILL,
-	Capability::CAP_AUDIT_WRITE,
+        Capability::CAP_FSETID,
+        Capability::CAP_FOWNER,
+        Capability::CAP_NET_RAW,
+        Capability::CAP_SETGID,
+        Capability::CAP_SETUID,
+        Capability::CAP_SETFCAP,
+        Capability::CAP_SETPCAP,
+        Capability::CAP_NET_BIND_SERVICE,
+        Capability::CAP_SYS_CHROOT,
+        Capability::CAP_KILL,
+        Capability::CAP_AUDIT_WRITE,
     ];
 
     // let new_caps = CapsHashSet::from_iter(defaults);
-    // println!("new caps: {:?}.", new_caps);
+    // log::info!("new caps: {:?}.", new_caps);
 
     // Must drop caps from Effective before able to drop them from
     // Permitted, but user procs don't need any procs, so just clear.
@@ -278,7 +309,7 @@ fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
     caps::clear(None, CapSet::Inheritable)?;
 
     let cur = caps::read(None, CapSet::Permitted)?;
-    println!("Current permitted caps: {:?}.", cur);
+    log::info!("Current permitted caps: {:?}.", cur);
 
     Ok(())
 }
@@ -288,7 +319,7 @@ pub fn is_enabled_apparmor() -> bool {
     let aa_enabled = fs::read_to_string(apparmor);
     match aa_enabled {
         Ok(val) => val.starts_with('Y'),
-        Err(_) => false
+        Err(_) => false,
     }
 }
 

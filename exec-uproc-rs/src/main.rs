@@ -75,7 +75,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let old_root_mnt = "oldroot";
     const DIRS: &'static [&'static str] = &[
-        "", "oldroot", "lib", "usr", "lib64", "etc", "cgroup", "proc", "bin", "bin2", "tmp",
+       "", "oldroot", "lib", "usr", "lib64", "etc", "dev", "cgroup", "proc", "bin", "tmp"
     ];
 
     let newroot = "/home/sigmaos/jail/";
@@ -130,22 +130,21 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
 
+    // E.g., Open "/dev/null", "/dev/urandom"
+    // Mount::builder()
+    //     .fstype("none")
+    //     .flags(MountFlags::BIND | MountFlags::RDONLY)
+    //     .mount("/dev", "dev")?;
+
     // E.g., openat "/proc/meminfo", "/proc/self/exe"
     Mount::builder().fstype("proc").mount("proc", "proc")?;
 
     // To download sigmaos user binaries into
-    let mut shome: String = sigmahome.to_owned();
+    let shome: String = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome + "bin/user", "bin")?;
-
-    // For sigmaos's exec-uproc and uprocd
-    shome = sigmahome.to_owned();
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount(shome + "bin/kernel", "bin2")?;
 
     // XXX todo: mount perf output
 

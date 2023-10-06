@@ -55,7 +55,7 @@ fn main() {
     setcap_proc().expect("set caps failed");
     seccomp_proc().expect("seccomp failed");
     if aa {
-        apply_apparmor("docker-default").expect("apparmor failed");
+        apply_apparmor("sigmaos-uproc").expect("apparmor failed");
     }
 
     let new_args: Vec<_> = std::env::args_os().skip(2).collect();

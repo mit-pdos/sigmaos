@@ -23,7 +23,7 @@ func main() {
 	if err := syscall.Chroot("/"); err == nil {
 		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "chroot succeeded", nil))
 	}
-	cmd := exec.Command("/usr/bin/chroot", append([]string{"/"})...)
+	cmd := exec.Command("/usr/sbin/chroot", append([]string{"/"})...)
 	if err := cmd.Start(); err == nil {
 		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "chroot succeeded", nil))
 	} else {

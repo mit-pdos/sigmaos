@@ -22,7 +22,7 @@ fn main() {
             writeln!(
                 buf,
                 "{} {} {}",
-                Local::now().format("%H:%M:%S.6%f"),
+                Local::now().format("%H:%M:%S%.6f"),
                 debug_pid_log,
                 record.args()
             )

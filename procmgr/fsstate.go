@@ -32,6 +32,8 @@ func (mgr *ProcMgr) teardownProcState(p *proc.Proc) {
 
 // Set up state to notify parent that a proc crashed.
 func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
+	// Mark the proc as exited due to a crash, and record the error exit status.
+	mgr.pstate.exited(p.GetPid(), proc.NewStatusErr(err.Error(), nil))
 	db.DPrintf(db.PROCMGR_ERR, "Proc %v finished with error: %v", p, err)
 	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }

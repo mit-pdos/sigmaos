@@ -226,7 +226,7 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 	if err != nil {
 		return fmt.Errorf("Unknown kernel ID %v", err)
 	}
-	err = clnt.wait(scheddclnt.START, pid, kernelID, proc.START_SEM, how)
+	_, err = clnt.wait(scheddclnt.START, pid, kernelID, proc.START_SEM, how)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Err WaitStart %v %v", pid, err)
 		return fmt.Errorf("WaitStart error %v", err)
@@ -257,10 +257,10 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 		db.DPrintf(db.ALWAYS, "Unknown kernel ID %v", err)
 		return nil, err
 	}
-	// Mark proc as exited in local state
-	defer clnt.cs.Exited(pid)
 	// Wait for proc to exit
-	err = clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
+	st, err := clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
+	// Mark proc as exited in local state
+	clnt.cs.Exited(pid, st)
 
 	defer clnt.RemoveChild(pid)
 
@@ -285,7 +285,8 @@ func (clnt *ProcClnt) WaitExitKernelProc(pid sp.Tpid, how proc.Thow) (*proc.Stat
 
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
-	return clnt.wait(scheddclnt.EVICT, pid, clnt.ProcEnv().GetKernelID(), proc.EVICT_SEM, clnt.ProcEnv().GetHow())
+	_, err := clnt.wait(scheddclnt.EVICT, pid, clnt.ProcEnv().GetKernelID(), proc.EVICT_SEM, clnt.ProcEnv().GetHow())
+	return err
 }
 
 // ========== STARTED ==========
@@ -293,7 +294,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc calls procclnt.Started. Time since spawn: %v", clnt.ProcEnv().GetPID(), time.Since(clnt.ProcEnv().GetSpawnTime()))
-	return clnt.notify(scheddclnt.START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow(), false)
+	return clnt.notify(scheddclnt.START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow(), nil, false)
 }
 
 // ========== EXITED ==========
@@ -308,11 +309,11 @@ func (clnt *ProcClnt) Started() error {
 
 func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, status *proc.Status, how proc.Thow, crashed bool) error {
 	// Write the exit status
-	if err := clnt.writeExitStatus(parentdir, status, how); err != nil {
+	if err := clnt.writeExitStatus(pid, parentdir, status, how); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "writeExitStatus err %v", err)
 	}
 	// Notify parent.
-	err := clnt.notify(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how, crashed)
+	err := clnt.notify(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how, status, crashed)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error notify exited: %v", err)
 	}
@@ -364,7 +365,7 @@ func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
 		db.DPrintf(db.ALWAYS, "Error Evict can't get kernel ID for proc: %v", err)
 		return err
 	}
-	return clnt.notify(scheddclnt.EVICT, pid, kernelID, proc.EVICT_SEM, how, false)
+	return clnt.notify(scheddclnt.EVICT, pid, kernelID, proc.EVICT_SEM, how, nil, false)
 }
 
 // Notifies a proc that it will be evicted using Evict. Called by parent.

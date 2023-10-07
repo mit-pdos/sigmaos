@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"encoding/json"
 	"fmt"
 	"path"
 
@@ -11,31 +10,36 @@ import (
 )
 
 func (clnt *ProcClnt) getExitStatus(pid sp.Tpid, how proc.Thow) (*proc.Status, error) {
-	childDir := path.Dir(proc.GetChildProcDir(proc.PROCDIR, pid))
-	b, err := clnt.GetFile(path.Join(childDir, proc.EXIT_STATUS))
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Missing return status, schedd must have crashed: %v, %v", pid, err)
-		return nil, fmt.Errorf("Missing return status, schedd must have crashed: %v", err)
-	}
-
-	status := &proc.Status{}
-	if err := json.Unmarshal(b, status); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "waitexit unmarshal err %v", err)
-		return nil, err
+	status := clnt.cs.GetExitStatus(pid)
+	if how == proc.HSCHEDD {
+		// Status will be cached in the child state struct
+		return status, nil
+	} else {
+		// Status must be read from kproc dir
+		kprocDir := proc.KProcDir(pid)
+		var b []byte
+		b, err := clnt.GetFile(path.Join(kprocDir, proc.EXIT_STATUS))
+		if err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "Missing return status, schedd must have crashed: %v, %v", pid, err)
+			return nil, fmt.Errorf("Missing return status, schedd must have crashed: %v", err)
+		}
+		status = proc.NewStatusFromBytes(b)
 	}
 	return status, nil
 }
 
-func (clnt *ProcClnt) writeExitStatus(parentdir string, status *proc.Status, how proc.Thow) error {
-	b, err := json.Marshal(status)
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "exited marshal err %v", err)
-		return err
-	}
-	// May return an error if parent already exited.
-	fn := path.Join(parentdir, proc.EXIT_STATUS)
-	if _, err := clnt.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "exited error (parent already exited) NewFile %v err %v", fn, err)
+func (clnt *ProcClnt) writeExitStatus(pid sp.Tpid, kernelID string, status *proc.Status, how proc.Thow) error {
+	if how == proc.HSCHEDD {
+		// Do nothing... exit status will be set by Notify RPC to schedd.
+	} else {
+		// Must write status to kproc dir
+		b := status.Marshal()
+		// May return an error if parent already exited.
+		kprocDir := proc.KProcDir(pid)
+		fn := path.Join(kprocDir, proc.EXIT_STATUS)
+		if _, err := clnt.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
+			db.DPrintf(db.PROCCLNT_ERR, "exited error (parent already exited) NewFile %v err %v", fn, err)
+		}
 	}
 	return nil
 }

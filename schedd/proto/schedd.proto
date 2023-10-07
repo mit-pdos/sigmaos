@@ -12,7 +12,6 @@ service Schedd {
   rpc Exited(NotifyRequest) returns (NotifyResponse);
   rpc WaitEvict(WaitRequest) returns (WaitResponse);
   rpc Evict(NotifyRequest) returns (NotifyResponse);
-  rpc StealProc(StealProcRequest) returns (StealProcResponse);
   rpc GetCPUShares(GetCPUSharesRequest) returns (GetCPUSharesResponse);
 }
 
@@ -29,24 +28,15 @@ message WaitRequest {
 }
 
 message WaitResponse {
+  bytes status = 1;
 }
 
 message NotifyRequest {
   string pidStr = 1;
+  bytes status = 2;
 }
 
 message NotifyResponse {
-}
-
-
-message StealProcRequest {
-  string kernelId = 1;
-  string realm = 2;
-  string pidStr = 3;
-}
-
-message StealProcResponse {
-  bool oK = 1;
 }
 
 message GetCPUSharesRequest {

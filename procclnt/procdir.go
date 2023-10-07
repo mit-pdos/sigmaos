@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"runtime/debug"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -130,22 +131,28 @@ func (clnt *ProcClnt) GetChildren() ([]sp.Tpid, error) {
 func (clnt *ProcClnt) addChild(p *proc.Proc, childProcdir string, how proc.Thow) error {
 	// Make sure this proc's ProcDir has been initialized. We to do this here so
 	// that it can happen lazily (only for procs which spawn children).
+	start := time.Now()
 	if err := clnt.initProcDir(); err != nil {
 		db.DPrintf(db.ALWAYS, "Error init proc dir: %v", err)
 		return err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] procclnt.addChild initProcDir %v", p.GetPid(), time.Since(start))
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(proc.PROCDIR, p.GetPid()))
+	start = time.Now()
 	if err := clnt.MkDir(childDir, 0777); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn mkdir childs %v err %v fsl %v", childDir, err, clnt.FsLib)
 		return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] procclnt.addChild MkDir %v", p.GetPid(), time.Since(start))
+	start = time.Now()
 	// Link in shared state from parent, if desired.
 	if len(p.GetShared()) > 0 {
 		if err := clnt.Symlink([]byte(p.GetShared()), path.Join(childDir, proc.SHARED), 0777); err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Error addChild Symlink: %v", err)
 		}
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] procclnt.addChild Symlink %v", p.GetPid(), time.Since(start))
 	return nil
 }
 

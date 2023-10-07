@@ -118,13 +118,13 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
     // Chdir to new root
     env::set_current_dir(newroot_pn.clone())?;
 
-    // E.g., openat "/lib/ld-musl-x86_64.so.1"
+    // E.g., execve /lib/ld-musl-x86_64.so.1
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib", "lib")?;
 
-    // Why mount lib64?
+    // E.g., openat "/lib64/ld-musl-x86_64.so.1" (links to /lib/)
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
@@ -136,7 +136,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/cgroup", "cgroup")?;
 
-    // E.g., /usr/lib for shared libraries and /usr/local/lib
+    // E.g., /usr/lib for shared libraries (e.g., /usr/lib/libseccomp.so.2)
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)

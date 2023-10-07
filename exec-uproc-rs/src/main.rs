@@ -210,7 +210,7 @@ allowed:
   - epoll_pwait
   - epoll_pwait2
   - execve
-  - exit #  if process must stop (e.g., syscall is blocked), it must be able to exit
+  - exit #  if process must stop (e.g., syscall is blocked by compsec), it must be able to exit
   - exit_group
   - fcntl
   - fstat

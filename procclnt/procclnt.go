@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"path"
@@ -248,7 +247,7 @@ func (clnt *ProcClnt) WaitStartKernelProc(pid sp.Tpid, how proc.Thow) error {
 }
 
 func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error) {
-	// Must wait for child to fill in return status pipe.
+	// Must wait for child to start.
 	if err := clnt.waitStart(pid, how); err != nil {
 		db.DPrintf(db.PROCCLNT, "waitStart err %v", err)
 		return nil, err
@@ -258,23 +257,14 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 		db.DPrintf(db.ALWAYS, "Unknown kernel ID %v", err)
 		return nil, err
 	}
+	// Mark proc as exited in local state
 	defer clnt.cs.Exited(pid)
+	// Wait for proc to exit
 	err = clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
 
 	defer clnt.RemoveChild(pid)
 
-	childDir := path.Dir(proc.GetChildProcDir(proc.PROCDIR, pid))
-	b, err := clnt.GetFile(path.Join(childDir, proc.EXIT_STATUS))
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Missing return status, schedd must have crashed: %v, %v", pid, err)
-		return nil, fmt.Errorf("Missing return status, schedd must have crashed: %v", err)
-	}
-
-	status := &proc.Status{}
-	if err := json.Unmarshal(b, status); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "waitexit unmarshal err %v", err)
-		return nil, err
-	}
+	status, err := clnt.getExitStatus(pid, how)
 
 	return status, nil
 }
@@ -317,18 +307,12 @@ func (clnt *ProcClnt) Started() error {
 // call exited() for other (crashed) procs.
 
 func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, status *proc.Status, how proc.Thow, crashed bool) error {
-	b, err := json.Marshal(status)
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "exited marshal err %v", err)
-		return err
-	}
-	// May return an error if parent already exited.
-	fn := path.Join(parentdir, proc.EXIT_STATUS)
-	if _, err := clnt.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "exited error (parent already exited) NewFile %v err %v", fn, err)
+	// Write the exit status
+	if err := clnt.writeExitStatus(parentdir, status, how); err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "writeExitStatus err %v", err)
 	}
 	// Notify parent.
-	err = clnt.notify(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how, crashed)
+	err := clnt.notify(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how, crashed)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error notify exited: %v", err)
 	}

@@ -80,8 +80,6 @@ type SleepResult struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
-
-	HotelIds []string `protobuf:"bytes,1,rep,name=hotelIds,proto3" json:"hotelIds,omitempty"`
 }
 
 func (x *SleepResult) Reset() {
@@ -116,11 +114,89 @@ func (*SleepResult) Descriptor() ([]byte, []int) {
 	return file_rpcbench_proto_rpcbench_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SleepResult) GetHotelIds() []string {
+type NoOpRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	SpanContextConfig *proto.SpanContextConfig `protobuf:"bytes,1,opt,name=spanContextConfig,proto3" json:"spanContextConfig,omitempty"`
+}
+
+func (x *NoOpRequest) Reset() {
+	*x = NoOpRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rpcbench_proto_rpcbench_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *NoOpRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NoOpRequest) ProtoMessage() {}
+
+func (x *NoOpRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rpcbench_proto_rpcbench_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NoOpRequest.ProtoReflect.Descriptor instead.
+func (*NoOpRequest) Descriptor() ([]byte, []int) {
+	return file_rpcbench_proto_rpcbench_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *NoOpRequest) GetSpanContextConfig() *proto.SpanContextConfig {
 	if x != nil {
-		return x.HotelIds
+		return x.SpanContextConfig
 	}
 	return nil
+}
+
+type NoOpResult struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *NoOpResult) Reset() {
+	*x = NoOpResult{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rpcbench_proto_rpcbench_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *NoOpResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NoOpResult) ProtoMessage() {}
+
+func (x *NoOpResult) ProtoReflect() protoreflect.Message {
+	mi := &file_rpcbench_proto_rpcbench_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NoOpResult.ProtoReflect.Descriptor instead.
+func (*NoOpResult) Descriptor() ([]byte, []int) {
+	return file_rpcbench_proto_rpcbench_proto_rawDescGZIP(), []int{3}
 }
 
 var File_rpcbench_proto_rpcbench_proto protoreflect.FileDescriptor
@@ -136,15 +212,21 @@ var file_rpcbench_proto_rpcbench_proto_rawDesc = []byte{
 	0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e,
 	0x53, 0x70, 0x61, 0x6e, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69,
 	0x67, 0x52, 0x11, 0x73, 0x70, 0x61, 0x6e, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x43, 0x6f,
-	0x6e, 0x66, 0x69, 0x67, 0x22, 0x29, 0x0a, 0x0b, 0x53, 0x6c, 0x65, 0x65, 0x70, 0x52, 0x65, 0x73,
-	0x75, 0x6c, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x68, 0x6f, 0x74, 0x65, 0x6c, 0x49, 0x64, 0x73, 0x18,
-	0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x08, 0x68, 0x6f, 0x74, 0x65, 0x6c, 0x49, 0x64, 0x73, 0x32,
-	0x33, 0x0a, 0x0b, 0x52, 0x50, 0x43, 0x42, 0x65, 0x6e, 0x63, 0x68, 0x53, 0x72, 0x76, 0x12, 0x24,
-	0x0a, 0x05, 0x53, 0x6c, 0x65, 0x65, 0x70, 0x12, 0x0d, 0x2e, 0x53, 0x6c, 0x65, 0x65, 0x70, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x0c, 0x2e, 0x53, 0x6c, 0x65, 0x65, 0x70, 0x52, 0x65,
-	0x73, 0x75, 0x6c, 0x74, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f,
-	0x72, 0x70, 0x63, 0x62, 0x65, 0x6e, 0x63, 0x68, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6e, 0x66, 0x69, 0x67, 0x22, 0x0d, 0x0a, 0x0b, 0x53, 0x6c, 0x65, 0x65, 0x70, 0x52, 0x65, 0x73,
+	0x75, 0x6c, 0x74, 0x22, 0x4f, 0x0a, 0x0b, 0x4e, 0x6f, 0x4f, 0x70, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x40, 0x0a, 0x11, 0x73, 0x70, 0x61, 0x6e, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78,
+	0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e,
+	0x53, 0x70, 0x61, 0x6e, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69,
+	0x67, 0x52, 0x11, 0x73, 0x70, 0x61, 0x6e, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x43, 0x6f,
+	0x6e, 0x66, 0x69, 0x67, 0x22, 0x0c, 0x0a, 0x0a, 0x4e, 0x6f, 0x4f, 0x70, 0x52, 0x65, 0x73, 0x75,
+	0x6c, 0x74, 0x32, 0x56, 0x0a, 0x0b, 0x52, 0x50, 0x43, 0x42, 0x65, 0x6e, 0x63, 0x68, 0x53, 0x72,
+	0x76, 0x12, 0x24, 0x0a, 0x05, 0x53, 0x6c, 0x65, 0x65, 0x70, 0x12, 0x0d, 0x2e, 0x53, 0x6c, 0x65,
+	0x65, 0x70, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x0c, 0x2e, 0x53, 0x6c, 0x65, 0x65,
+	0x70, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x21, 0x0a, 0x04, 0x4e, 0x6f, 0x4f, 0x70, 0x12,
+	0x0c, 0x2e, 0x4e, 0x6f, 0x4f, 0x70, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x0b, 0x2e,
+	0x4e, 0x6f, 0x4f, 0x70, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69,
+	0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x72, 0x70, 0x63, 0x62, 0x65, 0x6e, 0x63, 0x68, 0x2f, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -159,21 +241,26 @@ func file_rpcbench_proto_rpcbench_proto_rawDescGZIP() []byte {
 	return file_rpcbench_proto_rpcbench_proto_rawDescData
 }
 
-var file_rpcbench_proto_rpcbench_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_rpcbench_proto_rpcbench_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_rpcbench_proto_rpcbench_proto_goTypes = []interface{}{
 	(*SleepRequest)(nil),            // 0: SleepRequest
 	(*SleepResult)(nil),             // 1: SleepResult
-	(*proto.SpanContextConfig)(nil), // 2: SpanContextConfig
+	(*NoOpRequest)(nil),             // 2: NoOpRequest
+	(*NoOpResult)(nil),              // 3: NoOpResult
+	(*proto.SpanContextConfig)(nil), // 4: SpanContextConfig
 }
 var file_rpcbench_proto_rpcbench_proto_depIdxs = []int32{
-	2, // 0: SleepRequest.spanContextConfig:type_name -> SpanContextConfig
-	0, // 1: RPCBenchSrv.Sleep:input_type -> SleepRequest
-	1, // 2: RPCBenchSrv.Sleep:output_type -> SleepResult
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4, // 0: SleepRequest.spanContextConfig:type_name -> SpanContextConfig
+	4, // 1: NoOpRequest.spanContextConfig:type_name -> SpanContextConfig
+	0, // 2: RPCBenchSrv.Sleep:input_type -> SleepRequest
+	2, // 3: RPCBenchSrv.NoOp:input_type -> NoOpRequest
+	1, // 4: RPCBenchSrv.Sleep:output_type -> SleepResult
+	3, // 5: RPCBenchSrv.NoOp:output_type -> NoOpResult
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_rpcbench_proto_rpcbench_proto_init() }
@@ -206,6 +293,30 @@ func file_rpcbench_proto_rpcbench_proto_init() {
 				return nil
 			}
 		}
+		file_rpcbench_proto_rpcbench_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*NoOpRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rpcbench_proto_rpcbench_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*NoOpResult); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -213,7 +324,7 @@ func file_rpcbench_proto_rpcbench_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_rpcbench_proto_rpcbench_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -169,3 +169,39 @@ func TestMkDir2DeepPerf(t *testing.T) {
 
 	ts.Shutdown()
 }
+
+func TestMkDir3DeepPerf(t *testing.T) {
+	ts := test.NewTstateAll(t)
+	p := proc.NewProc("rpcbenchsrv", []string{PATH, strconv.FormatBool(test.Overlays)})
+	err := ts.Spawn(p)
+	assert.Nil(t, err, "Spawn")
+	err = ts.WaitStart(p.GetPid())
+	assert.Nil(t, err, "WaitStart")
+
+	err = ts.MkDir(path.Join(PATH, "dir"), 0777)
+	assert.Nil(t, err, "RPC: %v", err)
+
+	err = ts.MkDir(path.Join(PATH, "dir", "dir"), 0777)
+	assert.Nil(t, err, "RPC: %v", err)
+
+	err = ts.MkDir(path.Join(PATH, "dir", "dir", "dir"), 0777)
+	assert.Nil(t, err, "RPC: %v", err)
+
+	db.DPrintf(db.TEST, "Start RPCs")
+
+	start := time.Now()
+	for i := 0; i < N_TRIALS; i++ {
+		err = ts.MkDir(path.Join(PATH, "dir", "dir", "dir", strconv.Itoa(i)), 0777)
+		assert.Nil(t, err, "RPC: %v", err)
+	}
+	db.DPrintf(db.TEST, "Done RPCs")
+	db.DPrintf(db.BENCH, "Average request latency: %v", time.Since(start)/N_TRIALS)
+
+	err = ts.Evict(p.GetPid())
+	assert.Nil(t, err, "Evict")
+	status, err := ts.WaitExit(p.GetPid())
+	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status.IsStatusEvicted(), "Exit status wrong: %v", status)
+
+	ts.Shutdown()
+}

@@ -25,7 +25,8 @@ func main() {
 	if err := syscall.Chroot("/"); err == nil {
 		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "chroot succeeded", nil))
 	}
-	if _, err := os.StartProcess("/bin2/uprocd", append([]string{"/"}), &os.ProcAttr{}); err == nil {
+	// size doesn't use /bin/busybox
+	if _, err := os.StartProcess("/usr/bin/size", append([]string{"/usr/bin/size"}), &os.ProcAttr{}); err == nil {
 		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "exec succeeded", nil))
 	} else {
 		db.DPrintf(db.TEST, "exec err %v\n", err)

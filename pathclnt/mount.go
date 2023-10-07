@@ -77,6 +77,7 @@ func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.P
 			if len(left) == 0 && !allowResolve {
 				continue
 			}
+			db.DPrintf(db.MOUNT, "resolve succeeded: p %v path %v l %v", p.path, path, left)
 			return p.fid, left, nil
 		}
 	}

@@ -6,6 +6,8 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"sort"
+	"strings"
 	"time"
 
 	"sigmaos/container"
@@ -134,6 +136,17 @@ func (k *Kernel) shutdown() {
 		for pid, _ := range k.svcs.svcMap {
 			cpids = append(cpids, pid)
 		}
+		// Sort schedds to the end, to avoid havingas many eviction errors.
+		sort.Slice(cpids, func(i, j int) bool {
+			if strings.HasPrefix(cpids[i].String(), "schedd-") {
+				if strings.HasPrefix(cpids[j].String(), "schedd-") {
+					return strings.Compare(cpids[i].String(), cpids[j].String()) < 0
+				}
+				return false
+			}
+			return true
+		})
+		db.DPrintf(db.ALWAYS, "Shutdown children %v", cpids)
 		db.DPrintf(db.KERNEL, "Shutdown children %v", cpids)
 		for _, pid := range cpids {
 			for i := 0; i < MAX_EVICT_RETRIES; i++ {

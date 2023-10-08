@@ -47,8 +47,6 @@ RUN cp exec-uproc-rs/target/debug/exec-uproc-rs bin/kernel
 COPY mr mr
 # Copy uprocd, the entrypoint for this container, to the user image.
 COPY --from=sigmabuilder /home/sigmaos/bin/kernel/uprocd /home/sigmaos/bin/kernel
-# Copy exec-uproc, the trampoline program, to the user image, 
-COPY --from=sigmabuilder /home/sigmaos/bin/user/common/exec-uproc /home/sigmaos/bin/kernel
 
 # ========== kernel image, omitting user binaries ==========
 FROM base AS sigmakernelclean

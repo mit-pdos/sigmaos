@@ -46,9 +46,6 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	if err != nil {
 		return err
 	}
-	if err := container.SetupIsolationEnv(); err != nil {
-		db.DFatalf("Error setting up isolation env: %v", err)
-	}
 	ups.ssrv = ssrv
 	err = ssrv.RunServer()
 	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)

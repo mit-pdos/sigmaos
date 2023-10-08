@@ -1,9 +1,9 @@
 package container
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"syscall"
 	"time"
@@ -11,10 +11,11 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 //
-// Contain user procs using exec-uproc trampoline
+// Contain user procs using exec-uproc-rs trampoline
 //
 
 func RunUProc(uproc *proc.Proc) error {
@@ -55,6 +56,13 @@ func RunUProc(uproc *proc.Proc) error {
 	return nil
 }
 
+// Clean up a proc's chroot jail.
+func cleanupJail(pid sp.Tpid) {
+	if err := os.RemoveAll(jailPath(pid)); err != nil {
+		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
+	}
+}
+
 func setSchedPolicy(pid int, policy linuxsched.SchedPolicy) {
 	attr, err := linuxsched.SchedGetAttr(pid)
 	if err != nil {
@@ -68,42 +76,6 @@ func setSchedPolicy(pid int, policy linuxsched.SchedPolicy) {
 	}
 }
 
-//
-// The exec-uproc trampoline enters here
-//
-
-func ExecUProc() error {
-	db.DPrintf(db.CONTAINER, "ExecUProc: %v\n", os.Args)
-	args := os.Args[1:]
-	program := args[0]
-	s := time.Now()
-	pcfg := proc.GetProcEnv()
-	// Isolate the user proc.
-	pn, err := isolateUserProc(pcfg.GetPID(), program)
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc isolation %v", pcfg.GetPID(), time.Since(s))
-	if err != nil {
-		return err
-	}
-	os.Setenv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
-	db.DPrintf(db.CONTAINER, "exec %v %v", pn, args)
-	if err := syscall.Exec(pn, args, os.Environ()); err != nil {
-		db.DPrintf(db.CONTAINER, "Error exec %v", err)
-		return err
-	}
-	defer finishIsolation()
-	return nil
-}
-
-// For debugging
-func ls(dir string) error {
-	db.DPrintf(db.ALWAYS, "== ls %s\n", dir)
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "ls err %v", err)
-		return nil
-	}
-	for _, file := range files {
-		db.DPrintf(db.ALWAYS, "file %v isdir %v", file.Name(), file.IsDir())
-	}
-	return nil
+func jailPath(pid sp.Tpid) string {
+	return path.Join(sp.SIGMAHOME, "jail", pid.String())
 }

@@ -4,9 +4,9 @@ import (
 	"os/exec"
 	"path"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
+	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -53,11 +53,10 @@ type Kernel struct {
 
 func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays bool) (*Kernel, error) {
 	kernelId := GenKernelId()
-	ip, err := Start(kernelId, pcfg, conf, overlays)
+	_, err := Start(kernelId, pcfg, conf, overlays)
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.ALWAYS, "Got IP %v", ip)
 	return NewKernelClnt(kernelId, pcfg)
 }
 

@@ -620,7 +620,8 @@ func TestReserveCores(t *testing.T) {
 	majorityCpu := 1000 * (linuxsched.GetNCores()/2 + 1)
 	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
-	time.Sleep(SLEEP_MSECS / 2)
+	err := ts.WaitStart(pid)
+	assert.Nil(t, err, "WaitStart error")
 
 	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
 	// proc is only picked up *after* the other one.
@@ -643,6 +644,8 @@ func TestReserveCores(t *testing.T) {
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
+
+	checkSleeperResult(t, ts, pid1)
 
 	cleanSleeperResult(t, ts, pid1)
 

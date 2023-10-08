@@ -6,12 +6,14 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"time"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kproc"
 	"sigmaos/port"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -25,6 +27,8 @@ const (
 	LPORT port.Tport = 1132
 
 	KNAMED_PORT = ":1111"
+
+	MAX_EVICT_RETRIES = 100
 )
 
 type Param struct {
@@ -126,15 +130,24 @@ func (k *Kernel) shutdown() {
 		db.DPrintf(db.KERNEL, "Done booting knamed for shutdown %v", k.ProcEnv().GetPID())
 	}
 	if len(k.Param.Services) > 0 {
-		db.DPrintf(db.KERNEL, "Get children %v", k.ProcEnv().GetPID())
-		cpids, err := k.GetChildren()
-		if err != nil {
-			db.DPrintf(db.KERNEL, "Error get children: %v", err)
-			db.DFatalf("GetChildren in Kernel.Shutdown: %v", err)
+		cpids := []sp.Tpid{}
+		for pid, _ := range k.svcs.svcMap {
+			cpids = append(cpids, pid)
 		}
 		db.DPrintf(db.KERNEL, "Shutdown children %v", cpids)
 		for _, pid := range cpids {
-			k.EvictKernelProc(pid, k.svcs.svcMap[pid].how)
+			for i := 0; i < MAX_EVICT_RETRIES; i++ {
+				err := k.EvictKernelProc(pid, k.svcs.svcMap[pid].how)
+				if err == nil || !serr.IsErrCode(err, serr.TErrUnreachable) {
+					break
+				}
+				if i == MAX_EVICT_RETRIES-1 {
+					db.DPrintf(db.ALWAYS, "Giving up trying to evict kernel proc!")
+					db.DPrintf(db.KERNEL, "Giving up trying to evict kernel proc!")
+				}
+				db.DPrintf(db.KERNEL, "Error unreachable evict kernel proc. Retrying.")
+				time.Sleep(100 * time.Millisecond)
+			}
 			db.DPrintf(db.KERNEL, "Evicted %v", pid)
 			if !k.svcs.svcMap[pid].crashed {
 				k.svcs.svcMap[pid].waited = true
@@ -142,13 +155,6 @@ func (k *Kernel) shutdown() {
 					db.DPrintf(db.ALWAYS, "shutdown error pid %v: %v %v", pid, status, err)
 				}
 			}
-			db.DPrintf(db.KERNEL, "RemoveChild %v %v", pid, k.ProcEnv().ProcDir)
-			if err := k.RemoveChild(pid); err != nil {
-				db.DPrintf(db.KERNEL, "Done evicting; rm %v err %v", pid, err)
-			} else {
-				db.DPrintf(db.KERNEL, "Done evicting; rm %v", pid)
-			}
-
 			db.DPrintf(db.KERNEL, "Done evicting %v", pid)
 		}
 	}

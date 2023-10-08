@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"fmt"
 	"path"
 
 	db "sigmaos/debug"
@@ -37,7 +36,7 @@ func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, s
 		err := sem.Up()
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Error %v: %v", method, err)
-			return fmt.Errorf("%v error %v", method, err)
+			return err
 		}
 	}
 	return nil

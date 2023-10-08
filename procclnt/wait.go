@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"fmt"
 	"path"
 
 	db "sigmaos/debug"
@@ -24,7 +23,8 @@ func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, sem
 		var err error
 		status, err = clnt.scheddclnt.Wait(method, kernelID, pid)
 		if err != nil {
-			return nil, fmt.Errorf("Error Schedd Wait%v: %v", method, err)
+			db.DPrintf(db.PROCCLNT_ERR, "Error Schedd Wait%v: %v", method, err)
+			return nil, err
 		}
 	} else {
 		// If not spawned via schedd, wait via semaphore.
@@ -34,7 +34,7 @@ func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, sem
 		err := sem.Down()
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Wait%v error %v", method, err)
-			return nil, fmt.Errorf("Wait%v error %v", method, err)
+			return nil, err
 		}
 	}
 	return status, nil

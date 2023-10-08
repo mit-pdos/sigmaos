@@ -93,7 +93,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let old_root_mnt = "oldroot";
     const DIRS: &'static [&'static str] = &[
-        "", "oldroot", "lib", "usr", "lib64", "etc", "dev", "cgroup", "proc", "bin", "tmp",
+        "", "oldroot", "lib", "usr", "lib64", "dev", "cgroup", "proc", "bin", "tmp",
     ];
 
     let newroot = "/home/sigmaos/jail/";
@@ -141,12 +141,6 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/usr", "usr")?;
-
-    // E.g., Open "/etc/localtime"
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/etc", "etc")?;
 
     // E.g., Open "/dev/null", "/dev/urandom"
     // Mount::builder()

@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/user"
 	"syscall"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -19,6 +20,10 @@ func main() {
 		db.DFatalf("Started err %v", err)
 	}
 	db.DPrintf(db.TEST, "running %v\n", os.Args)
+
+	now := time.Now()
+	db.DPrintf(db.TEST, "Current date and time (RFC3339): %q\n", now.Format(time.RFC3339))
+
 	if _, err := user.Current(); err == nil {
 		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "getuid succeeded", nil))
 	}

@@ -8,7 +8,7 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/kernelsubsys"
+	"sigmaos/kernelsubinfo"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -103,7 +103,7 @@ func (ss *Subsystem) AllocPort(p port.Tport) (*port.PortBinding, error) {
 }
 
 func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
-	return kernelsubsys.GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Ip
+	return kernelsubinfo.GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Ip
 }
 
 // Send SIGTERM to a system.

@@ -11,7 +11,7 @@ import (
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/fslibsrv"
-	"sigmaos/kernelsubsys"
+	"sigmaos/kernelsubinfo"
 	"sigmaos/memfs"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
@@ -220,8 +220,8 @@ func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 func (ssrv *SigmaSrv) Serve() {
 	// If this is a kernel proc, register the subsystem info for the realmmgr
 	if ssrv.SigmaClnt().ProcEnv().Privileged {
-		si := kernelsubsys.NewSubsystemInfo(ssrv.SigmaClnt().ProcEnv().GetPID(), ssrv.MyAddr())
-		kernelsubsys.RegisterSubsystemInfo(ssrv.MemFs.SigmaClnt().FsLib, si)
+		si := kernelsubinfo.NewSubsystemInfo(ssrv.SigmaClnt().ProcEnv().GetPID(), ssrv.MyAddr())
+		kernelsubinfo.RegisterSubsystemInfo(ssrv.MemFs.SigmaClnt().FsLib, si)
 	}
 	if err := ssrv.MemFs.SigmaClnt().Started(); err != nil {
 		debug.PrintStack()

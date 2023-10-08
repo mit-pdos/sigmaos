@@ -1,4 +1,4 @@
-package kernelsubsys
+package kernelsubinfo
 
 import (
 	"path"

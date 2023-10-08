@@ -7,9 +7,9 @@ import (
 
 	"time"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/delay"
+	"sigmaos/netsigma"
 	"sigmaos/serr"
 	"sigmaos/sessconnclnt"
 	"sigmaos/sessp"
@@ -78,7 +78,7 @@ func (nc *NetClnt) isClosed() bool {
 }
 
 func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
-	addrs = container.Rearrange(clntnet, addrs)
+	addrs = netsigma.Rearrange(clntnet, addrs)
 	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", clntnet, addrs, addrs[0])
 	for _, addr := range addrs {
 		c, err := net.DialTimeout("tcp", addr.Addr, sp.Conf.Session.TIMEOUT/10)

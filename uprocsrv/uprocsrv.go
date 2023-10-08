@@ -10,6 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
+	"sigmaos/netsigma"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -30,7 +31,7 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	pcfg := proc.GetProcEnv()
 	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pcfg: pcfg}
 
-	ip, _ := container.LocalIP()
+	ip, _ := netsigma.LocalIP()
 	db.DPrintf(db.UPROCD, "Run %v %v %v %s IP %s", realm, kernelId, up, os.Environ(), ip)
 
 	var ssrv *sigmasrv.SigmaSrv

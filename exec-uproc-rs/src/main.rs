@@ -93,7 +93,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let old_root_mnt = "oldroot";
     const DIRS: &'static [&'static str] = &[
-        "", "oldroot", "lib", "usr", "lib64", "cgroup", "proc", "bin", "tmp",
+        "", "oldroot", "lib", "usr", "lib64", "proc", "bin", "tmp",
     ];
 
     let newroot = "/home/sigmaos/jail/";
@@ -130,22 +130,17 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib64", "lib64")?;
 
-    // A child must be able to stat "/cgroup/cgroup.controllers"
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/cgroup", "cgroup")?;
-
     // E.g., /usr/lib for shared libraries (e.g., /usr/lib/libseccomp.so.2)
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/usr", "usr")?;
 
-    // E.g., openat "/proc/meminfo", "/proc/self/exe"
+    // E.g., openat "/proc/meminfo", "/proc/self/exe", but further
+    // restricted by apparmor sigmoas-uproc profile.
     Mount::builder().fstype("proc").mount("proc", "proc")?;
 
-    // To download sigmaos user binaries into
+    // To download sigmaos user binaries into /home/sigmaos/bin/user
     let shome: String = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")

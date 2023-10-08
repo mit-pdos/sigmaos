@@ -6,9 +6,9 @@ import (
 	"io"
 	"net"
 
-	"sigmaos/proc"
-	"sigmaos/container"
 	db "sigmaos/debug"
+	"sigmaos/netsigma"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sps "sigmaos/sigmaprotsrv"
@@ -35,7 +35,7 @@ func NewNetServer(pcfg *proc.ProcEnv, ss sps.SessServer, address string, m Write
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}
-	a, err := container.QualifyAddr(l.Addr().String())
+	a, err := netsigma.QualifyAddr(l.Addr().String())
 	if err != nil {
 		db.DFatalf("QualifyAddr %v error: %v", a, err)
 	}

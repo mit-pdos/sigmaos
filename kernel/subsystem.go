@@ -3,12 +3,12 @@ package kernel
 import (
 	"fmt"
 	"os/exec"
-	"path"
 	"syscall"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/kernelsubsys"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -103,7 +103,7 @@ func (ss *Subsystem) AllocPort(p port.Tport) (*port.PortBinding, error) {
 }
 
 func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
-	return GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Ip
+	return kernelsubsys.GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Ip
 }
 
 // Send SIGTERM to a system.
@@ -156,28 +156,4 @@ func (s *Subsystem) Wait() error {
 		return s.container.Shutdown()
 	}
 	return nil
-}
-
-type SubsystemInfo struct {
-	Kpid sp.Tpid
-	Ip   string
-}
-
-func NewSubsystemInfo(kpid sp.Tpid, ip string) *SubsystemInfo {
-	return &SubsystemInfo{kpid, ip}
-}
-
-func RegisterSubsystemInfo(fsl *fslib.FsLib, si *SubsystemInfo) {
-	if err := fsl.PutFileJson(path.Join(proc.PROCDIR, SUBSYSTEM_INFO), 0777, si); err != nil {
-		db.DFatalf("PutFileJson (%v): %v", path.Join(proc.PROCDIR, SUBSYSTEM_INFO), err)
-	}
-}
-
-func GetSubsystemInfo(fsl *fslib.FsLib, kpids string, pid string) *SubsystemInfo {
-	si := &SubsystemInfo{}
-	if err := fsl.GetFileJson(path.Join(kpids, pid, SUBSYSTEM_INFO), si); err != nil {
-		db.DFatalf("Error GetFileJson in subsystem info: %v", err)
-		return nil
-	}
-	return si
 }

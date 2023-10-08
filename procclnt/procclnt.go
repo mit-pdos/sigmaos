@@ -126,11 +126,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 		}
 	}
 
-	s := time.Now()
-	if err := clnt.addChild(p, p.GetParentDir(), how); err != nil {
-		return err
-	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] procclnt addChild %v", p.GetPid(), time.Since(s))
 	p.SetSpawnTime(time.Now())
 	// Optionally spawn the proc through schedd.
 	if how == proc.HSCHEDD {
@@ -261,8 +256,6 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 	st, err := clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
 	// Mark proc as exited in local state
 	clnt.cs.Exited(pid, st)
-
-	defer clnt.RemoveChild(pid)
 
 	status, err := clnt.getExitStatus(pid, how)
 

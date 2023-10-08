@@ -1,10 +1,8 @@
 package procclnt
 
 import (
-	"fmt"
 	"path"
 	"runtime/debug"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -24,11 +22,6 @@ func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool
 		}
 		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
-	}
-	childrenDir := path.Join(procdir, proc.CHILDREN)
-	if err := clnt.MkDir(childrenDir, 0777); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir childrens %v err %v\n", childrenDir, err)
-		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 	// Only create exit/evict semaphores if not spawned on SCHEDD.
 	if how != proc.HSCHEDD {
@@ -73,16 +66,6 @@ func (clnt *ProcClnt) initProcDir() error {
 
 // Clean up proc
 func removeProc(fsl *fslib.FsLib, procdir string, createdProcDir bool) error {
-	// Children may try to write in symlinks & exit statuses while the rmdir is
-	// happening. In order to avoid causing errors (such as removing a non-empty
-	// dir) temporarily rename so children can't find the dir. The dir may be
-	// missing already if a proc died while exiting, and this is a procd trying
-	// to exit on its behalf.
-	src := path.Join(procdir, proc.CHILDREN)
-	dst := path.Join(procdir, ".tmp."+proc.CHILDREN)
-	if err := fsl.Rename(src, dst); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Error rename removeProc %v -> %v : %v\n", src, dst, err)
-	}
 	if createdProcDir {
 		err := fsl.RmDir(procdir)
 		maxRetries := 2
@@ -102,66 +85,10 @@ func removeProc(fsl *fslib.FsLib, procdir string, createdProcDir bool) error {
 
 // Attempt to cleanup procdir
 func (clnt *ProcClnt) cleanupError(pid sp.Tpid, procdir string, err error) error {
-	clnt.RemoveChild(pid)
 	// May be called by spawning parent proc, without knowing what the procdir is
 	// yet.
 	if len(procdir) > 0 {
 		removeProc(clnt.FsLib, procdir, true)
 	}
 	return err
-}
-
-// ========== CHILDREN ==========
-
-// Return the pids of all children.
-func (clnt *ProcClnt) GetChildren() ([]sp.Tpid, error) {
-	sts, err := clnt.GetDir(path.Join(proc.PROCDIR, proc.CHILDREN))
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "GetChildren %v error: %v", clnt.ProcEnv().ProcDir, err)
-		return nil, err
-	}
-	cpids := []sp.Tpid{}
-	for _, st := range sts {
-		cpids = append(cpids, sp.Tpid(st.Name))
-	}
-	return cpids, nil
-}
-
-// Add a child to the current proc
-func (clnt *ProcClnt) addChild(p *proc.Proc, childProcdir string, how proc.Thow) error {
-	// Make sure this proc's ProcDir has been initialized. We to do this here so
-	// that it can happen lazily (only for procs which spawn children).
-	start := time.Now()
-	if err := clnt.initProcDir(); err != nil {
-		db.DPrintf(db.ALWAYS, "Error init proc dir: %v", err)
-		return err
-	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] procclnt.addChild initProcDir %v", p.GetPid(), time.Since(start))
-	// Directory which holds link to child procdir
-	childDir := path.Dir(proc.GetChildProcDir(proc.PROCDIR, p.GetPid()))
-	start = time.Now()
-	if err := clnt.MkDir(childDir, 0777); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Spawn mkdir childs %v err %v fsl %v", childDir, err, clnt.FsLib)
-		return clnt.cleanupError(p.GetPid(), childProcdir, fmt.Errorf("Spawn error %v", err))
-	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] procclnt.addChild MkDir %v", p.GetPid(), time.Since(start))
-	start = time.Now()
-	// Link in shared state from parent, if desired.
-	if len(p.GetShared()) > 0 {
-		if err := clnt.Symlink([]byte(p.GetShared()), path.Join(childDir, proc.SHARED), 0777); err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Error addChild Symlink: %v", err)
-		}
-	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] procclnt.addChild Symlink %v", p.GetPid(), time.Since(start))
-	return nil
-}
-
-// Remove a child from the current proc
-func (clnt *ProcClnt) RemoveChild(pid sp.Tpid) error {
-	childdir := path.Dir(proc.GetChildProcDir(proc.PROCDIR, pid))
-	if err := clnt.RmDir(childdir); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Error Remove 2 %v in RemoveChild: %v", childdir, err)
-		return fmt.Errorf("RemoveChild dir error %v", err)
-	}
-	return nil
 }

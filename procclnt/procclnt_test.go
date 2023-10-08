@@ -649,12 +649,6 @@ func TestReserveCores(t *testing.T) {
 	ts.Shutdown()
 }
 
-func getNChildren(ts *test.Tstate) int {
-	c, err := ts.GetChildren()
-	assert.Nil(ts.T, err, "getnchildren")
-	return len(c)
-}
-
 func TestSpawnCrashSchedd(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
@@ -673,6 +667,7 @@ func TestSpawnCrashSchedd(t *testing.T) {
 	ts.Shutdown()
 }
 
+// Make sure this test is still meaningful
 func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
@@ -685,9 +680,6 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootNode %v", err)
 
-	// Count number of children.
-	nChildren := getNChildren(ts)
-
 	ts.RmDir(OUTDIR)
 	err = ts.MkDir(OUTDIR, 0777)
 	assert.Nil(t, err, "Mkdir")
@@ -695,7 +687,6 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	// Start a bunch of replicated spinner procs.
 	cfg := groupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
 	sm := cfg.StartGrpMgr(ts.SigmaClnt, 0)
-	nChildren += N_REPL
 
 	// Wait for them to spawn.
 	time.Sleep(5 * time.Second)
@@ -704,7 +695,6 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	st, err := ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
-	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
 
 	err = ts.KillOne(sp.SCHEDDREL)
 	assert.Nil(t, err, "kill schedd")

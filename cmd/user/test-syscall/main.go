@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
 	"os"
 	"os/user"
 	"syscall"
@@ -23,6 +25,14 @@ func main() {
 
 	now := time.Now()
 	db.DPrintf(db.TEST, "Current date and time (RFC3339): %q\n", now.Format(time.RFC3339))
+
+	c := 10
+	b := make([]byte, c)
+	if _, err := rand.Read(b); err != nil {
+		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "rand failed", err))
+	}
+	// The slice should now contain random bytes instead of only zeroes.
+	db.DPrintf(db.TEST, "bytes %v\n", bytes.Equal(b, make([]byte, c)))
 
 	if _, err := user.Current(); err == nil {
 		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "getuid succeeded", nil))

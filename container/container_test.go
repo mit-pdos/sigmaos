@@ -26,7 +26,7 @@ func TestSyscallBlock(t *testing.T) {
 	err := ts.Spawn(p)
 	st, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
-	assert.True(t, st.IsStatusOK())
+	assert.True(t, st.IsStatusOK(), st)
 	ts.Shutdown()
 }
 

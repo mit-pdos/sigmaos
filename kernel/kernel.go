@@ -28,7 +28,7 @@ const (
 
 	KNAMED_PORT = ":1111"
 
-	MAX_EVICT_RETRIES = 100
+	MAX_EVICT_RETRIES = 10
 )
 
 type Param struct {
@@ -142,7 +142,7 @@ func (k *Kernel) shutdown() {
 					break
 				}
 				if i == MAX_EVICT_RETRIES-1 {
-					db.DPrintf(db.ALWAYS, "Giving up trying to evict kernel proc!")
+					db.DPrintf(db.ALWAYS, "Giving up trying to evict kernel proc! %v", pid)
 					db.DPrintf(db.KERNEL, "Giving up trying to evict kernel proc!")
 				}
 				db.DPrintf(db.KERNEL, "Error unreachable evict kernel proc. Retrying.")

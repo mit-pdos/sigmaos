@@ -81,9 +81,8 @@ func (ps *ProcState) exited(pid sp.Tpid, status *proc.Status) {
 	ps.Lock()
 	defer ps.Unlock()
 
-	ps.exitStatus[pid].SetStatus(status)
-
 	if w, ok := ps.exitWaiter[pid]; ok {
+		ps.exitStatus[pid].SetStatus(status)
 		w.release()
 		// Make sure to release start waiter
 		ps.startWaiter[pid].release()

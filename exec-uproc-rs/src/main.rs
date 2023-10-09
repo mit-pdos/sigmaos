@@ -210,7 +210,7 @@ allowed:
   - listen
   - lseek
   - madvise
-  - mkdirat
+  - mkdirat  # for futex
   - mmap
   - mprotect
   - munmap
@@ -242,7 +242,7 @@ allowed:
   - timer_settime
   - tgkill
   - write
-  - writev
+  # - writev   # no application seems to use it currently
 # Needed for MUSL/Alpine
   - readlink
 

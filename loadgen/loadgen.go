@@ -13,7 +13,7 @@ const (
 	RAND_SEED = 12345
 )
 
-type Req func(*rand.Rand)
+type Req func(*rand.Rand) (time.Duration, bool)
 
 type LoadGenerator struct {
 	sync.Mutex
@@ -70,9 +70,15 @@ func (lg *LoadGenerator) setupInitThreads() {
 func (lg *LoadGenerator) runReq(i int, r *rand.Rand, store bool) {
 	defer lg.wg.Done()
 	start := time.Now()
-	lg.req(r)
+	var dur time.Duration
+	var useInternalDur bool
+	dur, useInternalDur = lg.req(r)
 	if store {
-		lg.res.Set(i, time.Since(start), 1.0)
+		// If not using internal (custom) duration, time external request duration
+		if !useInternalDur {
+			dur = time.Since(start)
+		}
+		lg.res.Set(i, dur, 1.0)
 	}
 }
 
@@ -103,7 +109,7 @@ func (lg *LoadGenerator) initiatorThread(tid int) {
 	t := time.NewTicker(lg.sleepdurs[tid])
 	var nreq int64
 	//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	r := rand.New(rand.NewSource(RAND_SEED + int64(tid + 1)))
+	r := rand.New(rand.NewSource(RAND_SEED + int64(tid+1)))
 	start := time.Now()
 	for time.Since(start) < lg.totaldur {
 		<-t.C

@@ -96,9 +96,6 @@ func (lg *LoadGenerator) Calibrate() {
 	// Preallocate entries. Multiply by 2 to leave a slight buffer.
 	lg.res = benchmarks.NewResults(2*int(lg.maxrps*int64(lg.totaldur.Seconds()))+N, benchmarks.REQ)
 	db.DPrintf(db.TEST, "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
-	for i := 0; i < N; i++ {
-		lg.res.Append(lg.avgReqLat, 1)
-	}
 }
 
 func (lg *LoadGenerator) warmup() {

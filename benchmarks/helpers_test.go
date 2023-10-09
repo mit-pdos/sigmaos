@@ -18,6 +18,7 @@ import (
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -81,6 +82,16 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 		status, err := ts.WaitExit(p.GetPid())
 		assert.True(ts.Ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
 	}
+}
+
+func runSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) time.Duration {
+	p := proc.NewProc("spawn-bench", nil)
+	err := sclnt.Spawn(p)
+	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
+	status, err := sclnt.WaitExit(p.GetPid())
+	assert.True(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
+	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
+	return time.Duration(status.Data().(float64))
 }
 
 // ========== Realm Helpers ==========
@@ -236,6 +247,21 @@ func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr 
 		is = append(is, ji)
 	}
 	return js, is
+}
+
+// ========== Schedd Helpers ==========
+
+func newScheddJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, fn scheddFn) ([]*ScheddJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*ScheddJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := NewScheddJob(ts, nclnt, dur, maxrps, fn)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
 }
 
 // ========== Www Helpers ========

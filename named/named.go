@@ -13,6 +13,7 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/fslibsrv"
 	"sigmaos/leaderetcd"
+	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
@@ -47,6 +48,12 @@ func Run(args []string) error {
 		return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 	}
 	nd.crash = crashing
+
+	p, err := perf.NewPerf(pcfg, perf.NAMED)
+	if err != nil {
+		db.DFatalf("Error NewPerf: %v", err)
+	}
+	defer p.Done()
 
 	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
 	if err != nil {

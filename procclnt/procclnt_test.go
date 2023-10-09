@@ -102,7 +102,7 @@ func cleanSleeperResult(t *testing.T, ts *test.Tstate, pid sp.Tpid) {
 	ts.Remove("name/" + pid.String() + "_out")
 }
 
-func TestWaitExitSimpleSingle(t *testing.T) {
+func TestWaitExitSimpleSingleBE(t *testing.T) {
 	ts := test.NewTstateAll(t)
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")

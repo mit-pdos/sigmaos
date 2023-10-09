@@ -54,7 +54,7 @@ func newTstate(t *testing.T, srvs []hotel.Srv, nserver int) *Tstate {
 	ts.job = rd.String(8)
 	ts.Tstate = test.NewTstateAll(t)
 	n := 0
-	for i := 1; int(linuxsched.NCores)*i < len(srvs)*2+nserver*2; i++ {
+	for i := 1; int(linuxsched.GetNCores())*i < len(srvs)*2+nserver*2; i++ {
 		n += 1
 	}
 	err = ts.BootNode(n)

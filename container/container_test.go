@@ -20,6 +20,16 @@ import (
 	"sigmaos/test"
 )
 
+func TestSyscallBlock(t *testing.T) {
+	ts := test.NewTstateAll(t)
+	p := proc.NewProc("test-syscall", []string{})
+	err := ts.Spawn(p)
+	st, err := ts.WaitExit(p.GetPid())
+	assert.Nil(t, err)
+	assert.True(t, st.IsStatusOK())
+	ts.Shutdown()
+}
+
 func TestExpose(t *testing.T) {
 	const (
 		FPORT port.Tport = 100

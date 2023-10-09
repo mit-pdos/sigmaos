@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"runtime"
 	"syscall"
@@ -93,6 +94,11 @@ func finishIsolation() {
 }
 
 func jailProcess(pid sp.Tpid) error {
+
+	u, _ := user.Current()
+	c := cap.GetProc()
+	db.DPrintf(db.CONTAINER, "Process caps: %v %v\n", c, u)
+
 	newRoot := jailPath(pid)
 	// Create directories to use as mount points, as well as the new root directory itself.
 	for _, d := range []string{"", OLD_ROOT_MNT, "lib", "usr", "lib64", "etc", "sys", "dev", "proc", "seccomp", "bin", "bin2", "tmp", perf.OUTPUT_PATH, "cgroup"} {
@@ -252,6 +258,7 @@ func setCapabilities(pid sp.Tpid) error {
 		cap.KILL,
 		cap.AUDIT_WRITE,
 	}
+
 	// Effective, Permitted, Inheritable.
 	caps := cap.NewSet()
 	// Bounding.

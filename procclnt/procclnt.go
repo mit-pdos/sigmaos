@@ -203,11 +203,13 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 				db.DPrintf(db.PROCCLNT_ERR, "Err spawnRetry unreachable %v", err)
 				continue
 			}
+			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
 			return spawnedKernelID, err
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
 		return spawnedKernelID, nil
 	}
+	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", pathclnt.MAXRETRY, p)
 	return spawnedKernelID, serr.NewErr(serr.TErrUnreachable, kernelId)
 }
 

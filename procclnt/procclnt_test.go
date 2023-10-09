@@ -652,20 +652,30 @@ func TestReserveCores(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestSpawnCrashSchedd(t *testing.T) {
+func TestSpawnCrashLCSched(t *testing.T) {
 	ts := test.NewTstateAll(t)
+
+	db.DPrintf(db.TEST, "Spawn proc which will queue forever")
 
 	// Spawn a proc which can't possibly be run by any schedd.
 	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.GetNCores()*2))
 
-	err := ts.KillOne(sp.SCHEDDREL)
+	db.DPrintf(db.TEST, "Kill a schedd")
+
+	err := ts.KillOne(sp.LCSCHEDREL)
 	assert.Nil(t, err, "KillOne: %v", err)
+
+	db.DPrintf(db.TEST, "Schedd killed")
 
 	err = ts.WaitStart(pid)
 	assert.NotNil(t, err, "WaitStart: %v", err)
 
+	db.DPrintf(db.TEST, "WaitStart done")
+
 	_, err = ts.WaitExit(pid)
 	assert.NotNil(t, err, "WaitExit: %v", err)
+
+	db.DPrintf(db.TEST, "WaitExit done")
 
 	ts.Shutdown()
 }

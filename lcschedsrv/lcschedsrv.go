@@ -79,11 +79,14 @@ func (lcs *LCSched) schedule() {
 					break
 				}
 			}
+			db.DPrintf(db.LCSCHED, "Done trying to schedule realm %v success %v", realm, success)
 		}
 		// If scheduling was unsuccessful, wait.
 		if !success {
+			db.DPrintf(db.LCSCHED, "Schedule wait")
 			lcs.cond.Wait()
 		}
+		db.DPrintf(db.LCSCHED, "Schedule retry")
 	}
 }
 

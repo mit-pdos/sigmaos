@@ -67,19 +67,20 @@ func (lg *LoadGenerator) setupInitThreads() {
 	}
 }
 
-func (lg *LoadGenerator) runReq(i int, r *rand.Rand, store bool) {
+func (lg *LoadGenerator) runReq(i int, r *rand.Rand, store bool) time.Duration {
 	defer lg.wg.Done()
 	start := time.Now()
 	var dur time.Duration
 	var useInternalDur bool
 	dur, useInternalDur = lg.req(r)
+	// If not using internal (custom) duration, time external request duration
+	if !useInternalDur {
+		dur = time.Since(start)
+	}
 	if store {
-		// If not using internal (custom) duration, time external request duration
-		if !useInternalDur {
-			dur = time.Since(start)
-		}
 		lg.res.Set(i, dur, 1.0)
 	}
+	return dur
 }
 
 // Find the base latency on which to base future measurements.
@@ -87,12 +88,12 @@ func (lg *LoadGenerator) Calibrate() {
 	const N = 1000
 	//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	r := rand.New(rand.NewSource(RAND_SEED))
-	start := time.Now()
+	totalDur := time.Duration(0)
 	for i := 0; i < N; i++ {
 		lg.wg.Add(1)
-		lg.runReq(i, r, false)
+		totalDur += lg.runReq(i, r, false)
 	}
-	lg.avgReqLat = time.Since(start) / N
+	lg.avgReqLat = totalDur / N
 	// Preallocate entries. Multiply by 2 to leave a slight buffer.
 	lg.res = benchmarks.NewResults(2*int(lg.maxrps*int64(lg.totaldur.Seconds()))+N, benchmarks.REQ)
 	db.DPrintf(db.TEST, "Done calibrating load generator, avg latency: %v", lg.avgReqLat)

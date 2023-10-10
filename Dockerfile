@@ -27,7 +27,7 @@ ENV SIGMATAG=$tag
 # ========== user image ==========
 FROM base AS sigmauser
 
-RUN apk add --no-cache curl bash gcc libc-dev libseccomp-static strace
+RUN apk add --no-cache curl bash gcc libc-dev libseccomp-static strace  python3
 
 # Install rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
@@ -38,6 +38,9 @@ RUN mkdir jail
 
 # Copy rust trampoline
 COPY exec-uproc-rs exec-uproc-rs
+COPY hello.py ./bin/kernel/hello.py
+RUN cp /usr/bin/python3 ./bin/kernel
+
 ENV LIBSECCOMP_LINK_TYPE=static
 ENV LIBSECCOMP_LIB_PATH="/usr/lib"
 RUN (cd exec-uproc-rs && $HOME/.cargo/bin/cargo build)

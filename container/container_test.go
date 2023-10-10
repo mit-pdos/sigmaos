@@ -28,6 +28,16 @@ func TestSyscallBlock(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestPython(t *testing.T) {
+	ts := test.NewTstateAll(t)
+	p := proc.NewProc("test-python", []string{})
+	err := ts.Spawn(p)
+	st, err := ts.WaitExit(p.GetPid())
+	assert.Nil(t, err)
+	assert.True(t, st.IsStatusOK(), st)
+	ts.Shutdown()
+}
+
 func TestExpose(t *testing.T) {
 	const (
 		FPORT port.Tport = 100

@@ -41,6 +41,8 @@ RUN mkdir bin && \
 # Copy some yaml files to the base image.
 COPY seccomp seccomp
 
+COPY hello.py ./
+
 # Download go modules
 COPY go.mod ./
 COPY go.sum ./

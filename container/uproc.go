@@ -1,6 +1,7 @@
 package container
 
 import (
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -16,12 +17,25 @@ import (
 
 //
 // Contain user procs using exec-uproc-rs trampoline
-//
+//py
+
+func printDir(dir string) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, file := range files {
+		db.DPrintf(db.TEST, "entry %v/%v\n", dir, file.Name())
+	}
+}
 
 func RunUProc(uproc *proc.Proc) error {
 	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
-	// cmd := exec.Command("strace", append([]string{"-f", "exec-uproc-rs", uproc.GetProgram()}, uproc.Args...)...)
-	cmd := exec.Command("exec-uproc-rs", append([]string{uproc.GetProgram()}, uproc.Args...)...)
+
+	printDir("/home/sigmaos/bin/user")
+
+	cmd := exec.Command("strace", append([]string{"-f", "exec-uproc-rs", uproc.GetProgram()}, uproc.Args...)...)
+	// cmd := exec.Command("exec-uproc-rs", append([]string{uproc.GetProgram()}, uproc.Args...)...)
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
 	uproc.AppendEnv("RUST_BACKTRACE", "1")

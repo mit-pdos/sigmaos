@@ -93,7 +93,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let old_root_mnt = "oldroot";
     const DIRS: &'static [&'static str] = &[
-        "", "oldroot", "lib", "usr", "lib64", "proc", "bin", "tmp",
+        "", "oldroot", "lib", "usr", "lib64", "proc", "bin", "bin2",
     ];
 
     let newroot = "/home/sigmaos/jail/";
@@ -147,7 +147,14 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome + "bin/user", "bin")?;
 
-    // XXX todo: mount perf output
+    let shome: String = sigmahome.to_owned();
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND)
+        .mount(shome + "bin/kernel", "bin2")?;
+
+
+   // XXX todo: mount perf output
 
     // ========== No more mounts beyond this point ==========
     pivot_root(".", old_root_mnt)?;
@@ -199,6 +206,7 @@ allowed:
   - fstat
   - fsync
   - futex
+  - getcwd
   - getdents64
   - getpeername
   - getpid
@@ -207,6 +215,7 @@ allowed:
   - getsockname
   - getsockopt
   - gettid
+  - ioctl  # python uses ioctl(0, FIOCLEX)
   - listen
   - lseek
   - madvise
@@ -222,6 +231,7 @@ allowed:
   - pread64
   - prlimit64
   - read
+  - readv
   - readlinkat
   - recvfrom
   - restart_syscall
@@ -236,13 +246,14 @@ allowed:
   - set_tid_address
   - setsockopt
   - sigaltstack
+  - stat
   - sync
   - timer_create
   - timer_delete
   - timer_settime
   - tgkill
   - write
-  # - writev   # no application seems to use it currently
+  - writev   # python uses it
 # Needed for MUSL/Alpine
   - readlink
 

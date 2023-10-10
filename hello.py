@@ -1,3 +1,1 @@
-import os
-
-os._exit(10)
+print("hello world!")

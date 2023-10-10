@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"os/exec"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -27,18 +28,16 @@ func main() {
 	if err := sc.Started(); err != nil {
 		db.DFatalf("Started err %v", err)
 	}
-	db.DPrintf(db.TEST, "running %v\n", os.Args)
+	db.DPrintf(db.TEST, "Running %v\n", os.Args)
 
-	p, err := os.StartProcess("/bin2/python3", append([]string{"/bin2/python3", "/bin2/hello.py"}), &os.ProcAttr{})
-	if err != nil {
-		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "exec failed", err))
+	cmd := exec.Command("/bin2/python3", append([]string{"/bin2/hello.py"})...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "run failed", err))
 	}
-	s, err := p.Wait()
-	if err != nil {
-		sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "wait failed", err))
-	}
-
-	db.DPrintf(db.TEST, "Wait returns %v\n", s)
-
+	// err.(*exec.ExitError).Sys().(syscall.WaitStatus).ExitStatus()
+	db.DPrintf(db.TEST, "Run returned ok \n")
 	sc.ClntExitOK()
 }

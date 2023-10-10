@@ -148,6 +148,12 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
 
+    // E.g., write pprof files to /tmp/sigmaos-perf
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND)
+        .mount("/tmp", "tmp")?;
+
     // E.g., Open "/dev/null", "/dev/urandom"
     // Mount::builder()
     //     .fstype("none")

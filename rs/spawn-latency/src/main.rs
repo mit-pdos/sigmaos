@@ -6,6 +6,8 @@ use std::io::Write;
 use std::process;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use json;
+
 fn print_elapsed_time(msg: &str, start: SystemTime) {
     let elapsed = SystemTime::now()
         .duration_since(start)
@@ -33,5 +35,14 @@ fn main() {
     let exec_time_micros: u64 = exec_time.parse().unwrap_or(0);
     let exec_time = UNIX_EPOCH + Duration::from_micros(exec_time_micros);
     print_elapsed_time("proc.exec_proc", exec_time);
+
+    let cfg = env::var("SIGMACONFIG").unwrap_or("".to_string());
+    let parsed = json::parse(&cfg).unwrap();
+
+    let spawn_time = UNIX_EPOCH
+        + Duration::from_secs(parsed["spawnTimePB"]["seconds"].as_u64().unwrap())
+        + Duration::from_nanos(parsed["spawnTimePB"]["nanos"].as_u64().unwrap());
+    print_elapsed_time("E2e spawn latency until main", spawn_time);
+
     process::exit(1);
 }

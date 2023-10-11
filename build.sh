@@ -51,9 +51,11 @@ if [[ "$TAG" != "" && "$TARGET" == "local" ]] || [[ "$TAG" == "" && "$TARGET" !=
 fi
 
 TMP=/tmp/sigmaos
+BUILD_LOG=/tmp/sigmaos-build
 
 # tests uses hosts /tmp, which mounted in kernel container.
 mkdir -p $TMP
+mkdir -p $BUILD_LOG
 
 # Make a dir to hold user proc build output
 USRBIN=$(pwd)/bin/user
@@ -67,44 +69,92 @@ fi
 # build binaries for host
 ./make.sh --norace $PARALLEL linux
 
-# Build base image
-DOCKER_BUILDKIT=1 docker build --progress=plain \
+BUILD_ARGS="--progress=plain \
   --build-arg target=$TARGET \
   --build-arg userbin=$USERBIN \
   --build-arg parallel=$PARALLEL \
-  --build-arg tag=$TAG \
-  -f build.Dockerfile \
-  -t sigmabuilder .
-# Default to building the sigmakernel image with user binaries
-SIGMAKERNEL_TARGET="sigmakernel"
-# If running on AWS, upload user bins and remove them from the base image.
-if [ "${TARGET}" != "local" ]; then
-  # Run the base image, which will copy the built user bins to USRBIN
-  docker run -it \
+  --build-arg tag='$TAG'"
+
+builders="build-kernel build-user-rust build-user"
+
+njobs=1
+if ! [ -z "$PARALLEL" ]; then
+  # Optionally build the docker images in parallel.
+  njobs=$(echo $builders | wc -w)
+fi
+
+build_builders="parallel -j$njobs \"DOCKER_BUILDKIT=1 docker build $BUILD_ARGS -f {}.Dockerfile -t sigma-{} . 2>&1 | tee $BUILD_LOG/sigmaos-{}.out\" ::: $builders"
+
+printf "\nBuilding Docker builders\n$build_builders\n\n"
+echo "========== Start Docker builders build =========="
+eval $build_builders
+echo "========== Done building Docker builders =========="
+
+
+# Now, prepare to build final containers which will actually run.
+targets="sigmauser sigmaos"
+if [ "${TARGET}" == "local" ]; then
+  targets="sigmauser sigmaos-with-userbin"
+fi
+build_targets="parallel -j$njobs \"DOCKER_BUILDKIT=1 docker build $BUILD_ARGS -f Dockerfile --target {} -t {} . 2>&1 | tee $BUILD_LOG/{}.out\" ::: $targets"
+
+printf "\nBuilding Docker targets\n$build_targets\n\n"
+echo "========== Start Docker targets build =========="
+eval $build_targets
+echo "========== Done building Docker targets =========="
+
+if [ "${TARGET}" == "local" ]; then
+  # If developing locally, rename the sigmaos image which includes binaries to
+  # be the default sigmaos image.
+  docker tag sigmaos-with-userbin sigmaos
+else
+  echo "========== Copying user bins to $USRBIN =========="
+  # If not developing locally, push user binaries to S3
+  # Copy user bins to USRBIN
+  docker run --rm -it \
     --mount type=bind,src=$USRBIN,dst=/tmp/bin \
     -e "TAG=$TAG" \
-    sigmabuilder 
+    sigma-build-user
+  echo "========== Copying user rust bins to $USRBIN =========="
+  docker run --rm -it \
+    --mount type=bind,src=$USRBIN,dst=/tmp/bin \
+    -e "TAG=$TAG" \
+    sigma-build-user-rust
+  # Upload the user bins to S3
+  echo "========== Pushing user bins to aws =========="
   ./upload.sh --tag $TAG --profile sigmaos
-  # Clean up base container
-  docker stop $(docker ps -aq --filter="ancestor=sigmabuilder")
-  docker rm $(docker ps -aq --filter="ancestor=sigmabuilder")
-  # Build the kernel image with no user binaries.
-  SIGMAKERNEL_TARGET="sigmakernelclean"
+  echo "========== Done pushing user bins to aws =========="
 fi
-# Build the user image
-DOCKER_BUILDKIT=1 docker build --progress=plain \
-  --build-arg target=$TARGET \
-  --build-arg userbin=$USERBIN \
-  --build-arg parallel=$PARALLEL \
-  --target sigmauser \
-  -t sigmauser .
-# Build the kernel image
-DOCKER_BUILDKIT=1 docker build --progress=plain \
-  --build-arg target=$TARGET \
-  --build-arg parallel=$PARALLEL \
-  --build-arg tag=$TAG \
-  --target $SIGMAKERNEL_TARGET \
-  -t sigmaos .
+
+exit 
+
+## Default to building the sigmakernel image with user binaries
+#SIGMAKERNEL_TARGET="sigma_kernel"
+## If running on AWS, upload user bins and remove them from the base image.
+#if [ "${TARGET}" != "local" ]; then
+#  # Run the base image, which will copy the built user bins to USRBIN
+#  docker run --rm -it \
+#    --mount type=bind,src=$USRBIN,dst=/tmp/bin \
+#    -e "TAG=$TAG" \
+#    sigma_user_builder 
+#  ./upload.sh --tag $TAG --profile sigmaos
+#  # TODO: unnecessary below?
+#  # Clean up base container
+#  docker stop $(docker ps -aq --filter="ancestor=sigma_user_builder")
+#  docker rm $(docker ps -aq --filter="ancestor=sigma_user_builder")
+#  # Build the kernel image with no user binaries.
+#  SIGMAKERNEL_TARGET="sigma_kernel_clean"
+#fi
+
+## Build the user image
+#DOCKER_BUILDKIT=1 docker build $BUILD_ARGS \
+#  --target sigmauser \
+#  -t sigmauser .
+#
+## Build the kernel image
+#DOCKER_BUILDKIT=1 docker build $BUILD_ARGS \
+#  --target $SIGMAKERNEL_TARGET \
+#  -t sigmaos .
 
 if ! [ -z "$TAG" ]; then
   docker tag sigmaos arielszekely/sigmaos:$TAG

@@ -2,7 +2,7 @@ bin/
 benchmarks/results/
 .git/
 Dockerfile
-build.Dockerfile
+*.Dockerfile
 *.sh
 !make.sh
 !create-net.sh

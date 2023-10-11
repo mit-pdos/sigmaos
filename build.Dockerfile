@@ -3,7 +3,7 @@
 FROM archlinux
 
 RUN yes | pacman -Syu
-RUN yes | pacman -Sy git libseccomp wget gcc pkg-config parallel
+RUN yes | pacman -Sy git libseccomp wget gcc pkg-config parallel make tk
 
 # Download an initial version of Go
 RUN wget "https://go.dev/dl/go1.20.4.linux-amd64.tar.gz" && \
@@ -20,6 +20,29 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   git pull && \
   cd src && \
   ./make.bash
+
+# Install musl libc
+RUN wget http://www.musl-libc.org/releases/musl-1.2.4.tar.gz && tar -xzf musl-1.2.4.tar.gz
+RUN cd musl-1.2.4 && \
+  ./configure --disable-shared && \
+  make -j && \
+  make install && ls /usr/local/musl
+
+RUN echo $CC
+ENV CC=/usr/local/musl/bin/musl-gcc
+RUN echo $CC
+
+# Install python
+# RUN git clone https://github.com/python/cpython.git
+#   git checkout tags/v3.12.0 && \
+
+RUN wget https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tar.xz && tar -xJf Python-3.5.0.tar.xz
+RUN cd Python-3.5.0 && \
+  ./configure --disable-shared LDFLAGS="-static" CFLAGS="-static" CPPFLAGS="-static" && \
+  make -j python
+
+RUN ls Python-3.5.0
+ENV CC=
 
 # Install some apt packages for debugging.
 #RUN \
@@ -42,6 +65,9 @@ RUN mkdir bin && \
 COPY seccomp seccomp
 
 COPY hello.py ./
+RUN mkdir bin/common
+RUN cp /Python-3.5.0/python ./bin/common
+RUN ls ./bin/common
 
 # Download go modules
 COPY go.mod ./
@@ -62,7 +88,6 @@ COPY . .
 # Build all binaries.
 RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel kernel && \
   ./make.sh --norace --gopath /go-custom/bin/go --userbin $userbin --target $target $parallel user && \
-  mkdir bin/common && \
   mv bin/user/* bin/common && \
   mv bin/common bin/user/common && \
   cp bin/kernel/named bin/user/common/named

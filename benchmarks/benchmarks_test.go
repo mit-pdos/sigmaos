@@ -15,6 +15,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/scheddclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"strconv"
@@ -43,7 +44,10 @@ var N_KVD int
 var N_CLERK int
 var CLERK_DURATION string
 var CLERK_MCPU int
+var N_NODE_PER_MACHINE int
 var N_CLNT int
+var SCHEDD_DURS string
+var SCHEDD_MAX_RPS string
 var N_CLNT_REQ int
 var KVD_MCPU int
 var WWWD_MCPU int
@@ -97,6 +101,9 @@ func init() {
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
 	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of clients.")
+	flag.IntVar(&N_NODE_PER_MACHINE, "n_node_per_machine", 1, "Number of nodes per machine. Likely should always be 1, unless developing locally.")
+	flag.StringVar(&SCHEDD_DURS, "schedd_dur", "10s", "Schedd benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&SCHEDD_MAX_RPS, "schedd_max_rps", "1000", "Max requests/second for schedd bench (comma-separated for multiple phases).")
 	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 1, "Number of request each client news.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
 	flag.IntVar(&CLERK_MCPU, "clerk_mcpu", 1000, "Clerk mCPU")
@@ -236,6 +243,40 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	runOps(ts1, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
 	waitExitProcs(ts1, ps)
+	rootts.Shutdown()
+}
+
+func TestMicroScheddSpawn(t *testing.T) {
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rs := benchmarks.NewResults(1, benchmarks.OPS)
+
+	if PREWARM_REALM {
+		warmupRealm(ts1)
+	}
+
+	done := make(chan bool)
+	// Prep Schedd job
+	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt) time.Duration {
+		return runSpawnBenchProc(ts1, sc)
+	})
+	// Run Schedd job
+	go func() {
+		runOps(ts1, ji, runSchedd, rs)
+		done <- true
+	}()
+	// Wait for schedd jobs to set up.
+	<-scheddJobs[0].ready
+	db.DPrintf(db.TEST, "Schedd setup done.")
+	db.DPrintf(db.TEST, "Setup phase done.")
+	// Sleep for a bit
+	time.Sleep(SLEEP)
+	// Kick off schedd jobs
+	scheddJobs[0].ready <- true
+	<-done
+	db.DPrintf(db.TEST, "Schedd load bench done.")
+
+	printResultSummary(rs)
 	rootts.Shutdown()
 }
 

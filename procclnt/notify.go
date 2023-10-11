@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"fmt"
 	"path"
 
 	db "sigmaos/debug"
@@ -11,7 +10,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow, skipSchedd bool) error {
+func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow, status *proc.Status, skipSchedd bool) error {
 	db.DPrintf(db.PROCCLNT, "%v %v", method, pid)
 	defer db.DPrintf(db.PROCCLNT, "%v done %v", method, pid)
 
@@ -25,8 +24,9 @@ func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, s
 		} else {
 			// If the proc was spawned via schedd, notify via RPC.
 			db.DPrintf(db.PROCCLNT, "%v %v RPC", method, pid)
-			if err := clnt.scheddclnt.Notify(method, kernelID, pid); err != nil {
-				db.DFatalf("Error Schedd %v: %v", method.Verb(), err)
+			if err := clnt.scheddclnt.Notify(method, kernelID, pid, status); err != nil {
+				db.DPrintf(db.PROCCLNT_ERR, "Error schedd %v: %v", method, err)
+				return err
 			}
 		}
 	} else {
@@ -37,7 +37,7 @@ func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, s
 		err := sem.Up()
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Error %v: %v", method, err)
-			return fmt.Errorf("%v error %v", method, err)
+			return err
 		}
 	}
 	return nil

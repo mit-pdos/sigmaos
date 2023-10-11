@@ -22,7 +22,7 @@ func init() {
 	s := time.Now()
 	// XXX may want to set log.Ldate when not debugging
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
-	labelstr := proc.GetLabels(proc.SIGMADEBUG)
+	labelstr := proc.GetLabelsEnv(proc.SIGMADEBUG)
 	labels = make(map[Tselector]bool, len(labelstr))
 	for k, v := range labelstr {
 		labels[Tselector(k)] = v

@@ -57,9 +57,13 @@ func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
 }
 
-func GetLabels(envvar string) map[string]bool {
-	m := make(map[string]bool)
+func GetLabelsEnv(envvar string) map[string]bool {
 	s := os.Getenv(envvar)
+	return GetLabels(s)
+}
+
+func GetLabels(s string) map[string]bool {
+	m := make(map[string]bool)
 	if s == "" {
 		return m
 	}

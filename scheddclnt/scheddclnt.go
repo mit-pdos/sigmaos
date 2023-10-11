@@ -88,30 +88,35 @@ func (sdc *ScheddClnt) ForceRun(kernelID string, p *proc.Proc) error {
 	return nil
 }
 
-func (sdc *ScheddClnt) Wait(method Tmethod, kernelID string, pid sp.Tpid) error {
+func (sdc *ScheddClnt) Wait(method Tmethod, kernelID string, pid sp.Tpid) (*proc.Status, error) {
 	// RPC a schedd to wait.
 	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req := &proto.WaitRequest{
 		PidStr: pid.String(),
 	}
 	res := &proto.WaitResponse{}
 	if err := rpcc.RPC("Schedd.Wait"+method.String(), req, res); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return proc.NewStatusFromBytes(res.Status), nil
 }
 
-func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid) error {
+func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, status *proc.Status) error {
 	// Get the RPC client for the local schedd
 	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
+	var b []byte
+	if status != nil {
+		b = status.Marshal()
+	}
 	req := &proto.NotifyRequest{
 		PidStr: pid.String(),
+		Status: b,
 	}
 	res := &proto.NotifyResponse{}
 	if err := rpcc.RPC("Schedd."+method.Verb(), req, res); err != nil {

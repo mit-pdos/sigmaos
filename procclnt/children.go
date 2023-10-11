@@ -5,18 +5,21 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
 // All the state a procclnt holds about its children.
 type ChildState struct {
 	sync.Mutex
-	ranOn map[sp.Tpid]*SpawnFuture
+	ranOn      map[sp.Tpid]*SpawnFuture
+	exitStatus map[sp.Tpid]*proc.Status
 }
 
 func newChildState() *ChildState {
 	return &ChildState{
-		ranOn: make(map[sp.Tpid]*SpawnFuture),
+		ranOn:      make(map[sp.Tpid]*SpawnFuture),
+		exitStatus: make(map[sp.Tpid]*proc.Status),
 	}
 }
 
@@ -74,7 +77,7 @@ func (cs *ChildState) Started(pid sp.Tpid, kernelID string, err error) {
 	cs.ranOn[pid].Complete(kernelID, err)
 }
 
-func (cs *ChildState) Exited(pid sp.Tpid) {
+func (cs *ChildState) Exited(pid sp.Tpid, status *proc.Status) {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -84,6 +87,19 @@ func (cs *ChildState) Exited(pid sp.Tpid) {
 	}
 	// Clean up child state
 	delete(cs.ranOn, pid)
+	cs.exitStatus[pid] = status
+}
+
+func (cs *ChildState) GetExitStatus(pid sp.Tpid) *proc.Status {
+	cs.Lock()
+	defer cs.Unlock()
+
+	status, ok := cs.exitStatus[pid]
+	if !ok {
+		db.DFatalf("Try to get exit status for proc which never exited")
+	}
+	delete(cs.exitStatus, pid)
+	return status
 }
 
 func (cs *ChildState) GetKernelID(pid sp.Tpid) (string, error) {

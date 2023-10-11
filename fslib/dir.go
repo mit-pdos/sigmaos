@@ -3,6 +3,7 @@ package fslib
 import (
 	"fmt"
 	"path"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/reader"
@@ -12,11 +13,15 @@ import (
 
 func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
 	perm = perm | sp.DMDIR
+	start := time.Now()
 	fd, err := fl.Create(path, perm, sp.OREAD)
 	if err != nil {
 		return err
 	}
+	db.DPrintf(db.FSLIB, "MkDir Create [%v]: %v", path, time.Since(start))
+	start = time.Now()
 	fl.Close(fd)
+	db.DPrintf(db.FSLIB, "MkDir Close [%v]: %v", path, time.Since(start))
 	return nil
 }
 

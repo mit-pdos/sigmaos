@@ -13,6 +13,7 @@ import (
 	"sigmaos/fslibsrv"
 	"sigmaos/leaderetcd"
 	"sigmaos/netsigma"
+	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
@@ -34,7 +35,20 @@ type Named struct {
 	sess  *fsetcd.Session
 }
 
+func toGiB(nbyte uint64) float64 {
+	return float64(nbyte) / float64(1<<30)
+}
+
 func Run(args []string) error {
+	//	go func() {
+	//		for {
+	//			time.Sleep(1000 * time.Millisecond)
+	//			var ms runtime.MemStats
+	//			runtime.ReadMemStats(&ms)
+	//			db.DPrintf(db.ALWAYS, "Num goroutines (%v) HeapLiveBytes:(%.3f) TotalHeapAllocCum:(%3f) MaxHeapSizeEver:(%.3f) HeapNotReleasedToSys:(%.3f) HeapReleasedToSys:(%.3f) StackInuse:(%.3f) StackReqeuestedFromSys:(%.3f) SysAllocated:(%.3f)", runtime.NumGoroutine(), toGiB(ms.HeapAlloc), toGiB(ms.TotalAlloc), toGiB(ms.HeapSys), toGiB(ms.HeapIdle), toGiB(ms.HeapReleased), toGiB(ms.StackInuse), toGiB(ms.StackSys), toGiB(ms.Sys))
+	//		}
+	//	}()
+
 	pcfg := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pcfg)
 	if len(args) != 3 {
@@ -47,6 +61,12 @@ func Run(args []string) error {
 		return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 	}
 	nd.crash = crashing
+
+	p, err := perf.NewPerf(pcfg, perf.NAMED)
+	if err != nil {
+		db.DFatalf("Error NewPerf: %v", err)
+	}
+	defer p.Done()
 
 	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
 	if err != nil {

@@ -18,11 +18,12 @@ type HTTPClnt struct {
 
 func RunHTTPLoadGen(url string, dur time.Duration, maxrps int) {
 	wc := newHTTPClnt(url)
-	lg := loadgen.NewLoadGenerator(dur, maxrps, func(r *rand.Rand) {
+	lg := loadgen.NewLoadGenerator(dur, maxrps, func(r *rand.Rand) (time.Duration, bool) {
 		_, err := wc.get()
 		if err != nil {
 			db.DFatalf("Error HTTPLoadGen.Get: %v", err)
 		}
+		return 0, false
 	})
 	db.DPrintf(db.TEST, "Calibrating loadgen")
 	lg.Calibrate()

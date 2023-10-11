@@ -38,7 +38,7 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 	}
 	rpcc, err := lcs.urpcc.GetClnt(pqID)
 	if err != nil {
-		db.DFatalf("Error: Can't get lcsched clnt: %v", err)
+		db.DPrintf(db.ALWAYS, "Error: Can't get lcsched clnt: %v", err)
 		return NOT_ENQ, err
 	}
 	req := &pqproto.EnqueueRequest{

@@ -61,9 +61,6 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	mgr.downloadProc(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Binary download time %v", p.GetPid(), time.Since(s))
 	mgr.runProc(p)
-	// Ensure that the proc is marked as exited after it has run. The
-	// proc may not have done this if, for example, it crashed.
-	mgr.pstate.exited(p.GetPid())
 	mgr.teardownProcState(p)
 }
 
@@ -83,12 +80,12 @@ func (mgr *ProcMgr) WaitEvict(pid sp.Tpid) {
 	mgr.pstate.waitEvict(pid)
 }
 
-func (mgr *ProcMgr) Exited(pid sp.Tpid) {
-	mgr.pstate.exited(pid)
+func (mgr *ProcMgr) Exited(pid sp.Tpid, status *proc.Status) {
+	mgr.pstate.exited(pid, status)
 }
 
-func (mgr *ProcMgr) WaitExit(pid sp.Tpid) {
-	mgr.pstate.waitExit(pid)
+func (mgr *ProcMgr) WaitExit(pid sp.Tpid) *proc.Status {
+	return mgr.pstate.waitExit(pid)
 }
 
 func (mgr *ProcMgr) GetCPUShares() map[sp.Trealm]uprocclnt.Tshare {

@@ -581,7 +581,7 @@ func TestBurstSpawn(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
 	// Number of spinners to burst-spawn
-	N := uint(linuxsched.GetNCores()) * 3
+	N := (linuxsched.GetNCores()) * 3
 
 	// Start a couple new procds.
 	err := ts.BootNode(1)
@@ -620,7 +620,8 @@ func TestReserveCores(t *testing.T) {
 	majorityCpu := 1000 * (linuxsched.GetNCores()/2 + 1)
 	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
-	time.Sleep(SLEEP_MSECS / 2)
+	err := ts.WaitStart(pid)
+	assert.Nil(t, err, "WaitStart error")
 
 	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
 	// proc is only picked up *after* the other one.
@@ -644,35 +645,42 @@ func TestReserveCores(t *testing.T) {
 
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
 
+	checkSleeperResult(t, ts, pid1)
+
 	cleanSleeperResult(t, ts, pid1)
 
 	ts.Shutdown()
 }
 
-func getNChildren(ts *test.Tstate) int {
-	c, err := ts.GetChildren()
-	assert.Nil(ts.T, err, "getnchildren")
-	return len(c)
-}
-
-func TestSpawnCrashSchedd(t *testing.T) {
+func TestSpawnCrashLCSched(t *testing.T) {
 	ts := test.NewTstateAll(t)
+
+	db.DPrintf(db.TEST, "Spawn proc which will queue forever")
 
 	// Spawn a proc which can't possibly be run by any schedd.
 	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.GetNCores()*2))
 
-	err := ts.KillOne(sp.SCHEDDREL)
+	db.DPrintf(db.TEST, "Kill a schedd")
+
+	err := ts.KillOne(sp.LCSCHEDREL)
 	assert.Nil(t, err, "KillOne: %v", err)
+
+	db.DPrintf(db.TEST, "Schedd killed")
 
 	err = ts.WaitStart(pid)
 	assert.NotNil(t, err, "WaitStart: %v", err)
 
+	db.DPrintf(db.TEST, "WaitStart done")
+
 	_, err = ts.WaitExit(pid)
 	assert.NotNil(t, err, "WaitExit: %v", err)
+
+	db.DPrintf(db.TEST, "WaitExit done")
 
 	ts.Shutdown()
 }
 
+// Make sure this test is still meaningful
 func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
@@ -685,9 +693,6 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootNode %v", err)
 
-	// Count number of children.
-	nChildren := getNChildren(ts)
-
 	ts.RmDir(OUTDIR)
 	err = ts.MkDir(OUTDIR, 0777)
 	assert.Nil(t, err, "Mkdir")
@@ -695,7 +700,6 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	// Start a bunch of replicated spinner procs.
 	cfg := groupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
 	sm := cfg.StartGrpMgr(ts.SigmaClnt, 0)
-	nChildren += N_REPL
 
 	// Wait for them to spawn.
 	time.Sleep(5 * time.Second)
@@ -704,7 +708,6 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	st, err := ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
-	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
 
 	err = ts.KillOne(sp.SCHEDDREL)
 	assert.Nil(t, err, "kill schedd")

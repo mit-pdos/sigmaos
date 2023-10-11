@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"path"
@@ -127,11 +126,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 		}
 	}
 
-	s := time.Now()
-	if err := clnt.addChild(p, p.GetParentDir(), how); err != nil {
-		return err
-	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] procclnt addChild %v", p.GetPid(), time.Since(s))
 	p.SetSpawnTime(time.Now())
 	// Optionally spawn the proc through schedd.
 	if how == proc.HSCHEDD {
@@ -209,11 +203,13 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 				db.DPrintf(db.PROCCLNT_ERR, "Err spawnRetry unreachable %v", err)
 				continue
 			}
+			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
 			return spawnedKernelID, err
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
 		return spawnedKernelID, nil
 	}
+	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", pathclnt.MAXRETRY, p)
 	return spawnedKernelID, serr.NewErr(serr.TErrUnreachable, kernelId)
 }
 
@@ -227,7 +223,7 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 	if err != nil {
 		return fmt.Errorf("Unknown kernel ID %v", err)
 	}
-	err = clnt.wait(scheddclnt.START, pid, kernelID, proc.START_SEM, how)
+	_, err = clnt.wait(scheddclnt.START, pid, kernelID, proc.START_SEM, how)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Err WaitStart %v %v", pid, err)
 		return fmt.Errorf("WaitStart error %v", err)
@@ -248,7 +244,7 @@ func (clnt *ProcClnt) WaitStartKernelProc(pid sp.Tpid, how proc.Thow) error {
 }
 
 func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error) {
-	// Must wait for child to fill in return status pipe.
+	// Must wait for child to start.
 	if err := clnt.waitStart(pid, how); err != nil {
 		db.DPrintf(db.PROCCLNT, "waitStart err %v", err)
 		return nil, err
@@ -258,23 +254,12 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 		db.DPrintf(db.ALWAYS, "Unknown kernel ID %v", err)
 		return nil, err
 	}
-	defer clnt.cs.Exited(pid)
-	err = clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
+	// Wait for proc to exit
+	st, err := clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
+	// Mark proc as exited in local state
+	clnt.cs.Exited(pid, st)
 
-	defer clnt.RemoveChild(pid)
-
-	childDir := path.Dir(proc.GetChildProcDir(proc.PROCDIR, pid))
-	b, err := clnt.GetFile(path.Join(childDir, proc.EXIT_STATUS))
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "Missing return status, schedd must have crashed: %v, %v", pid, err)
-		return nil, fmt.Errorf("Missing return status, schedd must have crashed: %v", err)
-	}
-
-	status := &proc.Status{}
-	if err := json.Unmarshal(b, status); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "waitexit unmarshal err %v", err)
-		return nil, err
-	}
+	status, err := clnt.getExitStatus(pid, how)
 
 	return status, nil
 }
@@ -295,7 +280,8 @@ func (clnt *ProcClnt) WaitExitKernelProc(pid sp.Tpid, how proc.Thow) (*proc.Stat
 
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
-	return clnt.wait(scheddclnt.EVICT, pid, clnt.ProcEnv().GetKernelID(), proc.EVICT_SEM, clnt.ProcEnv().GetHow())
+	_, err := clnt.wait(scheddclnt.EVICT, pid, clnt.ProcEnv().GetKernelID(), proc.EVICT_SEM, clnt.ProcEnv().GetHow())
+	return err
 }
 
 // ========== STARTED ==========
@@ -303,7 +289,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc calls procclnt.Started. Time since spawn: %v", clnt.ProcEnv().GetPID(), time.Since(clnt.ProcEnv().GetSpawnTime()))
-	return clnt.notify(scheddclnt.START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow(), false)
+	return clnt.notify(scheddclnt.START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow(), nil, false)
 }
 
 // ========== EXITED ==========
@@ -317,18 +303,12 @@ func (clnt *ProcClnt) Started() error {
 // call exited() for other (crashed) procs.
 
 func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, status *proc.Status, how proc.Thow, crashed bool) error {
-	b, err := json.Marshal(status)
-	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "exited marshal err %v", err)
-		return err
-	}
-	// May return an error if parent already exited.
-	fn := path.Join(parentdir, proc.EXIT_STATUS)
-	if _, err := clnt.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "exited error (parent already exited) NewFile %v err %v", fn, err)
+	// Write the exit status
+	if err := clnt.writeExitStatus(pid, parentdir, status, how); err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "writeExitStatus err %v", err)
 	}
 	// Notify parent.
-	err = clnt.notify(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how, crashed)
+	err := clnt.notify(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how, status, crashed)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Error notify exited: %v", err)
 	}
@@ -380,7 +360,7 @@ func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
 		db.DPrintf(db.ALWAYS, "Error Evict can't get kernel ID for proc: %v", err)
 		return err
 	}
-	return clnt.notify(scheddclnt.EVICT, pid, kernelID, proc.EVICT_SEM, how, false)
+	return clnt.notify(scheddclnt.EVICT, pid, kernelID, proc.EVICT_SEM, how, nil, false)
 }
 
 // Notifies a proc that it will be evicted using Evict. Called by parent.

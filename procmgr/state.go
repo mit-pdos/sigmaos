@@ -13,6 +13,7 @@ type ProcState struct {
 	startWaiter map[sp.Tpid]*Waiter
 	evictWaiter map[sp.Tpid]*Waiter
 	exitWaiter  map[sp.Tpid]*Waiter
+	exitStatus  map[sp.Tpid]*ExitStatus
 }
 
 func NewProcState() *ProcState {
@@ -21,6 +22,7 @@ func NewProcState() *ProcState {
 		startWaiter: make(map[sp.Tpid]*Waiter),
 		evictWaiter: make(map[sp.Tpid]*Waiter),
 		exitWaiter:  make(map[sp.Tpid]*Waiter),
+		exitStatus:  make(map[sp.Tpid]*ExitStatus),
 	}
 }
 
@@ -32,6 +34,7 @@ func (ps *ProcState) spawn(p *proc.Proc) {
 	ps.startWaiter[p.GetPid()] = newWaiter(&ps.Mutex)
 	ps.evictWaiter[p.GetPid()] = newWaiter(&ps.Mutex)
 	ps.exitWaiter[p.GetPid()] = newWaiter(&ps.Mutex)
+	ps.exitStatus[p.GetPid()] = newExitStatus(p)
 }
 
 func (ps *ProcState) started(pid sp.Tpid) {
@@ -72,13 +75,14 @@ func (ps *ProcState) waitEvict(pid sp.Tpid) {
 	}
 }
 
-func (ps *ProcState) exited(pid sp.Tpid) {
+// May be called multiple times by procmgr if, for example, the proc crashes
+// shortly after calling Exited().
+func (ps *ProcState) exited(pid sp.Tpid, status *proc.Status) {
 	ps.Lock()
 	defer ps.Unlock()
 
-	// May be called multiple times by procmgr if, for example, the proc crashes
-	// shortly after calling Exited().
 	if w, ok := ps.exitWaiter[pid]; ok {
+		ps.exitStatus[pid].SetStatus(status)
 		w.release()
 		// Make sure to release start waiter
 		ps.startWaiter[pid].release()
@@ -92,7 +96,7 @@ func (ps *ProcState) exited(pid sp.Tpid) {
 	delete(ps.exitWaiter, pid)
 }
 
-func (ps *ProcState) waitExit(pid sp.Tpid) {
+func (ps *ProcState) waitExit(pid sp.Tpid) *proc.Status {
 	ps.Lock()
 	defer ps.Unlock()
 
@@ -100,4 +104,9 @@ func (ps *ProcState) waitExit(pid sp.Tpid) {
 	if w, ok := ps.exitWaiter[pid]; ok {
 		w.wait()
 	}
+	status, del := ps.exitStatus[pid].GetStatus()
+	if del {
+		delete(ps.exitStatus, pid)
+	}
+	return status
 }

@@ -6,6 +6,7 @@ option go_package = "sigmaos/rpcbench/proto";
 
 service RPCBenchSrv {
   rpc Sleep(SleepRequest) returns (SleepResult);
+  rpc NoOp(NoOpRequest) returns (NoOpResult);
 }
 
 message SleepRequest {
@@ -14,5 +15,11 @@ message SleepRequest {
 }
 
 message SleepResult {
-  repeated string hotelIds = 1;
+}
+
+message NoOpRequest {
+  SpanContextConfig spanContextConfig = 1;
+}
+
+message NoOpResult {
 }

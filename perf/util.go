@@ -54,13 +54,15 @@ func (t Tload) String() string {
 	return fmt.Sprintf("[%.1f %.1f %.1f]", t[0], t[1], t[2])
 }
 
-var labels map[Tselector]bool
+var labels map[Tselector]bool = nil
 
-func init() {
-	labelstr := proc.GetLabels(proc.SIGMAPERF)
-	labels = make(map[Tselector]bool, len(labelstr))
-	for k, v := range labelstr {
-		labels[Tselector(k)] = v
+func initLabels(pcfg *proc.ProcEnv) {
+	if labels == nil {
+		labelstr := proc.GetLabels(pcfg.GetPerf())
+		labels = make(map[Tselector]bool, len(labelstr))
+		for k, v := range labelstr {
+			labels[Tselector(k)] = v
+		}
 	}
 }
 
@@ -102,6 +104,7 @@ func NewPerf(pcfg *proc.ProcEnv, s Tselector) (*Perf, error) {
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
 func NewPerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
+	initLabels(pcfg)
 	p := &Perf{}
 	p.selector = s
 	p.utilChan = make(chan bool, 1)

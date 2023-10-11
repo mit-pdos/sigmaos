@@ -136,7 +136,7 @@ CID=$(docker run -dit\
              -e dbip=${DBIP}\
              -e mongoip=${MONGOIP}\
              -e overlays=${OVERLAYS}\
-             -e SIGMADEBUG=${SIGMADEBUG}\
+             -e SIGMAPERF=${SIGMAPERF}\
              -e SIGMANAMED=${SIGMANAMED}\
              -e reserveMcpu=${RMCPU}\
              sigmaos)

@@ -194,6 +194,16 @@ func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
+func runSchedd(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*ScheddJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	start := time.Now()
+	ji.StartScheddJob()
+	ji.Wait()
+	return time.Since(start), 1.0
+}
+
 func runHotel(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*HotelJobInstance)
 	ji.ready <- true

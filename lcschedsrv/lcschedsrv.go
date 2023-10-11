@@ -79,11 +79,14 @@ func (lcs *LCSched) schedule() {
 					break
 				}
 			}
+			db.DPrintf(db.LCSCHED, "Done trying to schedule realm %v success %v", realm, success)
 		}
 		// If scheduling was unsuccessful, wait.
 		if !success {
+			db.DPrintf(db.LCSCHED, "Schedule wait")
 			lcs.cond.Wait()
 		}
+		db.DPrintf(db.LCSCHED, "Schedule retry")
 	}
 }
 
@@ -101,7 +104,7 @@ func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Re
 func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
 	// RPC the schedd this proc was spawned on to wait for the proc to exit.
 	db.DPrintf(db.LCSCHED, "WaitExit %v RPC", p.GetPid())
-	if err := lcs.scheddclnt.Wait(scheddclnt.EXIT, kernelID, p.GetPid()); err != nil {
+	if _, err := lcs.scheddclnt.Wait(scheddclnt.EXIT, kernelID, p.GetPid()); err != nil {
 		db.DFatalf("Error Schedd WaitExit: %v", err)
 	}
 	db.DPrintf(db.LCSCHED, "Proc exited %v", p.GetPid())

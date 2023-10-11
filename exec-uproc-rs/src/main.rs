@@ -136,6 +136,24 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/usr", "usr")?;
 
+    // E.g., Open "/etc/localtime"
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/etc", "etc")?;
+
+    // E.g., write pprof files to /tmp/sigmaos-perf
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND)
+        .mount("/tmp", "tmp")?;
+
+    // E.g., Open "/dev/null", "/dev/urandom"
+    // Mount::builder()
+    //     .fstype("none")
+    //     .flags(MountFlags::BIND | MountFlags::RDONLY)
+    //     .mount("/dev", "dev")?;
+
     // E.g., openat "/proc/meminfo", "/proc/self/exe", but further
     // restricted by apparmor sigmoas-uproc profile.
     Mount::builder().fstype("proc").mount("proc", "proc")?;

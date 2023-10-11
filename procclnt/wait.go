@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"fmt"
 	"path"
 
 	db "sigmaos/debug"
@@ -12,17 +11,20 @@ import (
 )
 
 // Wait for an event. Method must be one of "Exit", "Evict", or "Start"
-func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow) error {
+func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow) (*proc.Status, error) {
 	db.DPrintf(db.PROCCLNT, "Wait%v %v how %v", method, pid, how)
 	defer db.DPrintf(db.PROCCLNT, "Wait%v done %v", method, pid)
 
+	var status *proc.Status
 	// If spawned via schedd, wait via RPC.
 	if how == proc.HSCHEDD {
 		// RPC the schedd this proc was spawned on to wait.
 		db.DPrintf(db.PROCCLNT, "Wait%v %v RPC", method, pid)
-		err := clnt.scheddclnt.Wait(method, kernelID, pid)
+		var err error
+		status, err = clnt.scheddclnt.Wait(method, kernelID, pid)
 		if err != nil {
-			return fmt.Errorf("Error Schedd Wait%v: %v", method, err)
+			db.DPrintf(db.PROCCLNT_ERR, "Error Schedd Wait%v: %v", method, err)
+			return nil, err
 		}
 	} else {
 		// If not spawned via schedd, wait via semaphore.
@@ -32,8 +34,8 @@ func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, sem
 		err := sem.Down()
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Wait%v error %v", method, err)
-			return fmt.Errorf("Wait%v error %v", method, err)
+			return nil, err
 		}
 	}
-	return nil
+	return status, nil
 }

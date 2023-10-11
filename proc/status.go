@@ -1,7 +1,9 @@
 package proc
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 )
 
 type Tstatus uint8
@@ -43,6 +45,17 @@ func NewStatusErr(msg string, data interface{}) *Status {
 	return &Status{StatusErr, msg, data}
 }
 
+func NewStatusFromBytes(b []byte) *Status {
+	if len(b) == 0 {
+		return nil
+	}
+	status := &Status{}
+	if err := json.Unmarshal(b, status); err != nil {
+		log.Fatalf("Error unmarshal status: %v", err)
+	}
+	return status
+}
+
 func (s *Status) IsStatusOK() bool {
 	return s.StatusCode == StatusOK
 }
@@ -69,4 +82,12 @@ func (s *Status) Data() interface{} {
 
 func (s *Status) String() string {
 	return fmt.Sprintf("&{ statuscode:%v msg:%v data:%v }", s.StatusCode, s.StatusMessage, s.StatusData)
+}
+
+func (s *Status) Marshal() []byte {
+	b, err := json.Marshal(s)
+	if err != nil {
+		log.Fatalf("Error marshal status: %v", err)
+	}
+	return b
 }

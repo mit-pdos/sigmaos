@@ -130,7 +130,10 @@ func NewSocialNetworkJob(
 	for i := range ji.dur {
 		ji.lgs = append(
 			ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i],
-				func(r *rand.Rand) { randOps(ts.Ts.T, ji.wc, r, ji.readonly) }))
+				func(r *rand.Rand) (time.Duration, bool) {
+					randOps(ts.Ts.T, ji.wc, r, ji.readonly)
+					return 0, false
+				}))
 	}
 	// warmup with writes for read-only runs
 	if ji.readonly {

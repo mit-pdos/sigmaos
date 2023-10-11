@@ -25,8 +25,10 @@ RUN source $HOME/.bashrc
 COPY rs rs 
 ENV LIBSECCOMP_LINK_TYPE=static
 ENV LIBSECCOMP_LIB_PATH="/usr/lib"
-RUN (cd rs/exec-uproc-rs && $HOME/.cargo/bin/cargo build)
-RUN cp rs/exec-uproc-rs/target/debug/exec-uproc-rs bin/kernel
+RUN (cd rs/exec-uproc-rs && $HOME/.cargo/bin/cargo build) && \
+  (cd rs/spawn-latency && $HOME/.cargo/bin/cargo build)
+RUN cp rs/exec-uproc-rs/target/debug/exec-uproc-rs bin/kernel && \
+  cp rs/spawn-latency/target/debug/spawn-latency bin/user
 
 RUN touch /home/sigmaos/bin/user/test-rust-bin
 

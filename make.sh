@@ -107,6 +107,3 @@ for k in $WHAT; do
     eval $build
   fi
 done
-
-wait
-

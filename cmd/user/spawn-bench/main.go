@@ -2,10 +2,9 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
-
-	"os/exec"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"

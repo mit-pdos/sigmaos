@@ -18,6 +18,7 @@ import (
 
 // Environment variables for procs (SHOULD NOT BE ADDED TO)
 const (
+	SIGMASTRACE   = "SIGMASTRACE"
 	SIGMADEBUGPID = "SIGMADEBUGPID"
 	SIGMAPERF     = "SIGMAPERF"
 	SIGMADEBUG    = "SIGMADEBUG"
@@ -89,6 +90,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, p
 			BuildTag:     NOT_SET,
 			Net:          NOT_SET,
 			Perf:         os.Getenv(SIGMAPERF),
+			Strace:       os.Getenv(SIGMASTRACE),
 			Debug:        os.Getenv(SIGMADEBUG),
 			UprocdPIDStr: NOT_SET,
 			Privileged:   priv,

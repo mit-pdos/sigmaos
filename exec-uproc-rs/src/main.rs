@@ -93,7 +93,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let old_root_mnt = "oldroot";
     const DIRS: &'static [&'static str] = &[
-        "", "oldroot", "lib", "usr", "lib64", "proc", "bin", "bin2",
+        "", "oldroot", "lib", "lib64", "usr", "etc", "tmp", "proc", "bin", "bin2",
     ];
 
     let newroot = "/home/sigmaos/jail/";
@@ -170,9 +170,6 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .fstype("none")
         .flags(MountFlags::BIND)
         .mount(shome + "bin/kernel", "bin2")?;
-
-
-   // XXX todo: mount perf output
 
     // ========== No more mounts beyond this point ==========
     pivot_root(".", old_root_mnt)?;

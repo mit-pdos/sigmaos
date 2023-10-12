@@ -42,8 +42,6 @@ COPY seccomp seccomp
 
 COPY hello.py ./
 RUN mkdir bin/common
-RUN cp /Python-3.5.0/python ./bin/common
-RUN ls ./bin/common
 
 # Download go modules
 COPY go.mod ./

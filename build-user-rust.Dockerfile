@@ -20,26 +20,22 @@ RUN apk add --no-cache libseccomp \
 #   make -j && \
 #   make install && ls /usr/local/musl
 
-RUN ls /usr/local/musl
-RUN echo $CC
-ENV CC=/usr/local/musl/bin/musl-gcc
-RUN echo $CC
+#ENV CC=musl-gcc
 
 # Install python
 # RUN git clone https://github.com/python/cpython.git
 #   git checkout tags/v3.12.0 && \
 
-RUN wget https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tar.xz && tar -xJf Python-3.5.0.tar.xz
-RUN cd Python-3.5.0 && \
-  ./configure --disable-shared LDFLAGS="-static" CFLAGS="-static" CPPFLAGS="-static" && \
-  make -j python
-
-RUN ls Python-3.5.0
-ENV CC=
-
 WORKDIR /home/sigmaos
 RUN mkdir -p bin/kernel && \
   mkdir -p bin/user
+
+RUN wget https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tar.xz && tar -xJf Python-3.5.0.tar.xz
+RUN cd Python-3.5.0 && \
+  ./configure --disable-shared LDFLAGS="-static" CFLAGS="-static" CPPFLAGS="-static" && \
+  make -j
+
+RUN cp Python-3.5.0/python bin/user
 
 # Install rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y

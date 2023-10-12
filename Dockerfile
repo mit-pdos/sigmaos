@@ -72,6 +72,7 @@ CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip}
 # ========== kernel image, including user binaries ==========
 FROM sigmaos AS sigmaos-with-userbin
 COPY --from=sigma-build-user /home/sigmaos/bin/user /home/sigmaos/bin/user
+COPY --from=sigma-build-user-rust /home/sigmaos/bin/user /home/sigmaos/bin/user/common
 RUN cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
 
 CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu}"]

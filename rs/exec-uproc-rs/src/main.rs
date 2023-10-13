@@ -148,12 +148,6 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
 
-    // E.g., write pprof files to /tmp/sigmaos-perf
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND)
-        .mount("/tmp", "tmp")?;
-
     // E.g., Open "/dev/null", "/dev/urandom"
     // Mount::builder()
     //     .fstype("none")
@@ -170,7 +164,15 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome + "bin/user", "bin")?;
 
-    // XXX todo: mount perf output
+    // Only mount /tmp directory if SIGMAPERF is set (meaning we are
+    // benchmarking and want to extract the results)
+    if env::var("SIGMAPERF").is_ok() {
+        // E.g., write pprof files to /tmp/sigmaos-perf
+        Mount::builder()
+            .fstype("none")
+            .flags(MountFlags::BIND)
+            .mount("/tmp", "tmp")?;
+    }
 
     // ========== No more mounts beyond this point ==========
     pivot_root(".", old_root_mnt)?;

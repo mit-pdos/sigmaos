@@ -293,7 +293,10 @@ func randOps(t *testing.T, wc *sn.WebClnt, r *rand.Rand) {
 
 func testLoadgenInner(t *testing.T, wc *sn.WebClnt) {
 	lg := loadgen.NewLoadGenerator(
-		LOAD_DUR*time.Second, LOAD_MAX_RPS, func(r *rand.Rand) { randOps(t, wc, r) })
+		LOAD_DUR*time.Second, LOAD_MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
+			randOps(t, wc, r)
+			return 0, false
+		})
 	lg.Calibrate()
 	rmsg, err := wc.StartRecording()
 	assert.Nil(t, err)

@@ -355,8 +355,9 @@ func TestBenchSearchSigma(t *testing.T) {
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
-	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
+	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
 		runSearch(ts.T, wc, r)
+		return 0, false
 	})
 	lg.Calibrate()
 	lg.Run()
@@ -386,8 +387,9 @@ func TestBenchSearchK8s(t *testing.T) {
 	pf, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
-	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
+	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
 		runSearch(ts.T, wc, r)
+		return 0, false
 	})
 	lg.Calibrate()
 	lg.Run()
@@ -400,8 +402,9 @@ func TestBenchGeoSigma(t *testing.T) {
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
-	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
+	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
 		runGeo(ts.T, wc, r)
+		return 0, false
 	})
 	lg.Calibrate()
 	lg.Run()
@@ -422,8 +425,9 @@ func TestBenchGeoK8s(t *testing.T) {
 	pf, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
-	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) {
+	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
 		runGeo(ts.T, wc, r)
+		return 0, false
 	})
 	lg.Calibrate()
 	lg.Run()

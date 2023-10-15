@@ -13,6 +13,8 @@ const (
 	RAND_SEED = 12345
 )
 
+// Return true if external duration should be ignored (and favored by internal
+// duration).
 type Req func(*rand.Rand) (time.Duration, bool)
 
 type LoadGenerator struct {

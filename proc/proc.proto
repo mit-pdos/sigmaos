@@ -26,6 +26,7 @@ message ProcEnvProto {
   int32 howInt = 20;
   google.protobuf.Timestamp spawnTimePB = 21;
   string strace = 22;
+  string scheddIP = 23;
 }
 
 message ProcProto {

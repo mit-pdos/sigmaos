@@ -54,6 +54,9 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	// Set the proc's kernel ID, now that a kernel has been selected to run the
 	// proc.
 	p.SetKernelID(mgr.kernelId, true)
+	// Set the schedd IP for the proc, so it can mount this schedd in one RPC
+	// (without walking down to it).
+	p.SetScheddIP(mgr.mfs.MyAddr())
 	s := time.Now()
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))

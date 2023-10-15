@@ -16,12 +16,6 @@ func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
 		fsl.NewRootMount(fsl.ProcEnv().GetUname(), fsl.ProcEnv().ProcDir, proc.PROCDIR)
 	}
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ParentDir, proc.PARENTDIR)
-	// Mount parentdir. May fail if parent already exited.
-	fsl.NewRootMount(fsl.ProcEnv().GetUname(), fsl.ProcEnv().ParentDir, proc.PARENTDIR)
-	if err := fsl.NewRootMount(fsl.ProcEnv().GetUname(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
-		debug.PrintStack()
-		db.DFatalf("error mounting procd err %v\n", err)
-	}
 	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged())
 }
 

@@ -89,9 +89,12 @@ func runSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) time.Du
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
-	assert.True(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
+	ok := assert.True(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
-	return time.Duration(status.Data().(float64))
+	if ok {
+		return time.Duration(status.Data().(float64))
+	}
+	return 999.0
 }
 
 // ========== Realm Helpers ==========

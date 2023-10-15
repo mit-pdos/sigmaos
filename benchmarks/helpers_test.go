@@ -94,7 +94,7 @@ func runSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) time.Du
 	if ok {
 		return time.Duration(status.Data().(float64))
 	}
-	return 999999999.0
+	return 99 * time.Second
 }
 
 // ========== Realm Helpers ==========

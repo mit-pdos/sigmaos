@@ -71,14 +71,24 @@ func NewSpawnBench(pe *proc.ProcEnv, execLat time.Duration, spawnLat time.Durati
 		execLat:  execLat,
 		spawnLat: spawnLat,
 	}
+	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DFatalf("NewSigmaClient: %v", err)
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Make SigmaClnt latency: %v", pe.GetPID(), time.Since(start))
 	s.SigmaClnt = sc
 	return s, nil
 }
 
 func (s *SpawnBench) Work() {
+	start := time.Now()
+	err := s.Started()
+	if err != nil {
+		db.DFatalf("Started error: %v", err)
+	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Started latency: %v", s.ProcEnv().GetPID(), time.Since(start))
+	start = time.Now()
 	s.ClntExit(proc.NewStatusInfo(proc.StatusOK, "Spawn latency until main", s.spawnLat))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Exited latency: %v", s.ProcEnv().GetPID(), time.Since(start))
 }

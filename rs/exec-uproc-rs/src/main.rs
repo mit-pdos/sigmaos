@@ -87,6 +87,7 @@ fn main() {
 }
 
 fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut now = SystemTime::now();
     extern crate sys_mount;
     use nix::unistd::pivot_root;
     use sys_mount::{unmount, Mount, MountFlags, UnmountFlags};
@@ -106,6 +107,8 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         let path: String = newroot_pn.to_owned();
         fs::create_dir_all(path + d)?;
     }
+    print_elapsed_time("trampoline.fs_jail_proc create_dir_all", now);
+    now = SystemTime::now();
 
     log::info!("mount newroot {}", newroot_pn);
     // Mount new file system as a mount point so we can pivot_root to
@@ -173,15 +176,24 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
             .flags(MountFlags::BIND)
             .mount("/tmp", "tmp")?;
     }
+    print_elapsed_time("trampoline.fs_jail_proc mount dirs", now);
 
+    now = SystemTime::now();
     // ========== No more mounts beyond this point ==========
     pivot_root(".", old_root_mnt)?;
+    print_elapsed_time("trampoline.fs_jail_proc pivot_root", now);
 
+    now = SystemTime::now();
     env::set_current_dir("/")?;
+    print_elapsed_time("trampoline.fs_jail_proc chdir", now);
 
+    now = SystemTime::now();
     unmount(old_root_mnt, UnmountFlags::DETACH)?;
+    print_elapsed_time("trampoline.fs_jail_proc umount", now);
 
+    now = SystemTime::now();
     fs::remove_dir(old_root_mnt)?;
+    print_elapsed_time("trampoline.fs_jail_proc rmdir", now);
 
     Ok(())
 }
@@ -293,7 +305,9 @@ cond_allowed:
         let cond = ScmpArgCompare::new(c.index, c.op.parse().unwrap(), c.op1);
         filter.add_rule_conditional(ScmpAction::Allow, syscall, &[cond])?;
     }
+    let now = SystemTime::now();
     filter.load()?;
+    print_elapsed_time("trampoline.seccomp_proc load", now);
     Ok(())
 }
 

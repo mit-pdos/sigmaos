@@ -53,9 +53,10 @@ func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 
 func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
-	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p)
+	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p.GetPid())
 	// Run the proc
-	go sd.spawnAndRunProc(p)
+	sd.spawnAndRunProc(p)
+	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun done %v", p.GetRealm(), sd.kernelId, p.GetPid())
 	return nil
 }
 

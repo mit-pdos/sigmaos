@@ -5,7 +5,7 @@ import (
 )
 
 type ExitStatus struct {
-	status *proc.Status
+	status []byte
 	refcnt int
 }
 
@@ -21,7 +21,7 @@ func newExitStatus(p *proc.Proc) *ExitStatus {
 }
 
 // caller holds lock
-func (es *ExitStatus) SetStatus(status *proc.Status) {
+func (es *ExitStatus) SetStatus(status []byte) {
 	// Only set status once.
 	if es.status == nil {
 		es.status = status
@@ -29,7 +29,7 @@ func (es *ExitStatus) SetStatus(status *proc.Status) {
 }
 
 // caller holds lock
-func (es *ExitStatus) GetStatus() (status *proc.Status, del bool) {
+func (es *ExitStatus) GetStatus() (status []byte, del bool) {
 	es.refcnt--
 	return es.status, es.refcnt == 0
 }

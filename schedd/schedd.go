@@ -97,8 +97,7 @@ func (sd *Schedd) Evict(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyR
 // Wait for a proc to mark itself as exited.
 func (sd *Schedd) WaitExit(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
 	db.DPrintf(db.SCHEDD, "WaitExit %v", req.PidStr)
-	status := sd.pmgr.WaitExit(sp.Tpid(req.PidStr))
-	res.Status = status.Marshal()
+	res.Status = sd.pmgr.WaitExit(sp.Tpid(req.PidStr))
 	db.DPrintf(db.SCHEDD, "WaitExit done %v", req.PidStr)
 	return nil
 }
@@ -106,8 +105,7 @@ func (sd *Schedd) WaitExit(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitRe
 // Wait for a proc to mark itself as exited.
 func (sd *Schedd) Exited(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
 	db.DPrintf(db.SCHEDD, "Exited %v", req.PidStr)
-	status := proc.NewStatusFromBytes(req.Status)
-	sd.pmgr.Exited(sp.Tpid(req.PidStr), status)
+	sd.pmgr.Exited(sp.Tpid(req.PidStr), req.Status)
 	return nil
 }
 

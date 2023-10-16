@@ -77,7 +77,7 @@ func (ps *ProcState) waitEvict(pid sp.Tpid) {
 
 // May be called multiple times by procmgr if, for example, the proc crashes
 // shortly after calling Exited().
-func (ps *ProcState) exited(pid sp.Tpid, status *proc.Status) {
+func (ps *ProcState) exited(pid sp.Tpid, status []byte) {
 	ps.Lock()
 	defer ps.Unlock()
 
@@ -96,7 +96,7 @@ func (ps *ProcState) exited(pid sp.Tpid, status *proc.Status) {
 	delete(ps.exitWaiter, pid)
 }
 
-func (ps *ProcState) waitExit(pid sp.Tpid) *proc.Status {
+func (ps *ProcState) waitExit(pid sp.Tpid) []byte {
 	ps.Lock()
 	defer ps.Unlock()
 

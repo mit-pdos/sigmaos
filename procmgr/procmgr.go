@@ -83,11 +83,11 @@ func (mgr *ProcMgr) WaitEvict(pid sp.Tpid) {
 	mgr.pstate.waitEvict(pid)
 }
 
-func (mgr *ProcMgr) Exited(pid sp.Tpid, status *proc.Status) {
+func (mgr *ProcMgr) Exited(pid sp.Tpid, status []byte) {
 	mgr.pstate.exited(pid, status)
 }
 
-func (mgr *ProcMgr) WaitExit(pid sp.Tpid) *proc.Status {
+func (mgr *ProcMgr) WaitExit(pid sp.Tpid) []byte {
 	return mgr.pstate.waitExit(pid)
 }
 

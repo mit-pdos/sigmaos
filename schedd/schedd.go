@@ -3,6 +3,7 @@ package schedd
 import (
 	"path"
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -54,7 +55,7 @@ func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.Fo
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p)
 	// Run the proc
-	sd.spawnAndRunProc(p)
+	go sd.spawnAndRunProc(p)
 	return nil
 }
 
@@ -69,7 +70,9 @@ func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitR
 // Wait for a proc to mark itself as started.
 func (sd *Schedd) Started(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
 	db.DPrintf(db.SCHEDD, "Started %v", req.PidStr)
+	start := time.Now()
 	sd.pmgr.Started(sp.Tpid(req.PidStr))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Schedd.Started internal latency: %v", req.PidStr, time.Since(start))
 	return nil
 }
 
@@ -127,12 +130,13 @@ func (sd *Schedd) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *prot
 
 func (sd *Schedd) getQueuedProcs() {
 	for {
-		// TODO: Switch to only BE procs...
 		if sd.shouldGetProc() {
 		}
 		db.DPrintf(db.SCHEDD, "[%v] Try get proc from procq", sd.kernelId)
+		start := time.Now()
 		// Try to get a proc from the proc queue.
 		ok, err := sd.procqclnt.GetProc(sd.kernelId)
+		db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
 		if err != nil {
 			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)
 			continue
@@ -156,22 +160,17 @@ func (sd *Schedd) procDone(p *proc.Proc) error {
 }
 
 func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
 	p.SetKernelID(sd.kernelId, false)
 	sd.pmgr.Spawn(p)
 	// Run the proc
-	sd.runProcL(p)
+	go sd.runProc(p)
 }
 
 // Run a proc via the local procd. Caller holds lock.
-func (sd *Schedd) runProcL(p *proc.Proc) {
-	db.DPrintf(db.SCHEDD, "[%v] %v runProcL %v", p.GetRealm(), sd.kernelId, p)
-	go func() {
-		sd.pmgr.RunProc(p)
-		sd.procDone(p)
-	}()
+func (sd *Schedd) runProc(p *proc.Proc) {
+	db.DPrintf(db.SCHEDD, "[%v] %v runProc %v", p.GetRealm(), sd.kernelId, p)
+	sd.pmgr.RunProc(p)
+	sd.procDone(p)
 }
 
 func (sd *Schedd) shouldGetProc() bool {

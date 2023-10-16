@@ -105,10 +105,14 @@ func (sdc *ScheddClnt) Wait(method Tmethod, kernelID string, pid sp.Tpid) (*proc
 }
 
 func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, status *proc.Status) error {
+	start := time.Now()
 	// Get the RPC client for the local schedd
 	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {
 		return err
+	}
+	if method == START {
+		db.DPrintf(db.SPAWN_LAT, "[%v] scheddclnt.Notify Started urpcc.GetClnt latency: %v", pid, time.Since(start))
 	}
 	var b []byte
 	if status != nil {
@@ -119,8 +123,12 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 		Status: b,
 	}
 	res := &proto.NotifyResponse{}
+	start = time.Now()
 	if err := rpcc.RPC("Schedd."+method.Verb(), req, res); err != nil {
 		return err
+	}
+	if method == START {
+		db.DPrintf(db.SPAWN_LAT, "[%v] Notify RPC latency: %v", pid, time.Since(start))
 	}
 	return nil
 }

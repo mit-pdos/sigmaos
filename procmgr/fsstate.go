@@ -11,7 +11,6 @@ import (
 
 // Set up a proc's state in the realm.
 func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
-	mgr.addRunningProc(p)
 	// Set up the directory to cache proc binaries for this realm.
 	mgr.setupUserBinCache(p)
 	// Make the proc's procdir if this is a kernel proc. This will be done lazily
@@ -23,30 +22,10 @@ func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 	}
 }
 
-func (mgr *ProcMgr) teardownProcState(p *proc.Proc) {
-	mgr.removeRunningProc(p)
-}
-
 // Set up state to notify parent that a proc crashed.
 func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	// Mark the proc as exited due to a crash, and record the error exit status.
 	mgr.pstate.exited(p.GetPid(), proc.NewStatusErr(err.Error(), nil).Marshal())
 	db.DPrintf(db.PROCMGR_ERR, "Proc %v finished with error: %v", p, err)
 	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
-}
-
-// Register a proc as running.
-func (mgr *ProcMgr) addRunningProc(p *proc.Proc) {
-	mgr.Lock()
-	defer mgr.Unlock()
-
-	mgr.running[p.GetPid()] = p
-}
-
-// Unregister a proc which has finished running.
-func (mgr *ProcMgr) removeRunningProc(p *proc.Proc) {
-	mgr.Lock()
-	defer mgr.Unlock()
-
-	delete(mgr.running, p.GetPid())
 }

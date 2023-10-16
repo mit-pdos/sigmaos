@@ -25,7 +25,6 @@ type ProcMgr struct {
 	updm           *uprocclnt.UprocdMgr
 	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClnt
 	cachedProcBins map[sp.Trealm]map[string]bool
-	running        map[sp.Tpid]*proc.Proc
 	pstate         *ProcState
 }
 
@@ -38,7 +37,6 @@ func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 		updm:           uprocclnt.NewUprocdMgr(mfs.SigmaClnt().FsLib, kernelId),
 		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
-		running:        make(map[sp.Tpid]*proc.Proc),
 		pstate:         NewProcState(),
 	}
 	return mgr

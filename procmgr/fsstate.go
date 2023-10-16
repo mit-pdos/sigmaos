@@ -1,11 +1,8 @@
 package procmgr
 
 import (
-	"path"
-
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 )
 
 //
@@ -44,10 +41,6 @@ func (mgr *ProcMgr) addRunningProc(p *proc.Proc) {
 	defer mgr.Unlock()
 
 	mgr.running[p.GetPid()] = p
-	_, err := mgr.rootsc.PutFile(path.Join(sp.SCHEDD, mgr.kernelId, sp.RUNNING, p.GetPid().String()), 0777, sp.OREAD|sp.OWRITE, p.MarshalJson())
-	if err != nil {
-		db.DFatalf("Error PutFile in running queue: %v", err)
-	}
 }
 
 // Unregister a proc which has finished running.
@@ -56,7 +49,4 @@ func (mgr *ProcMgr) removeRunningProc(p *proc.Proc) {
 	defer mgr.Unlock()
 
 	delete(mgr.running, p.GetPid())
-	if err := mgr.mfs.Remove(path.Join(sp.RUNNING, p.GetPid().String())); err != nil {
-		db.DFatalf("Error Remove from running queue: %v", err)
-	}
 }

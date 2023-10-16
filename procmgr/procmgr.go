@@ -62,7 +62,6 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	mgr.downloadProc(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Binary download time %v", p.GetPid(), time.Since(s))
 	mgr.runProc(p)
-	mgr.teardownProcState(p)
 }
 
 func (mgr *ProcMgr) Started(pid sp.Tpid) {
@@ -95,6 +94,14 @@ func (mgr *ProcMgr) GetCPUShares() map[sp.Trealm]uprocclnt.Tshare {
 
 func (mgr *ProcMgr) GetCPUUtil(realm sp.Trealm) float64 {
 	return mgr.updm.GetCPUUtil(realm)
+}
+
+// Set up state to notify parent that a proc crashed.
+func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
+	// Mark the proc as exited due to a crash, and record the error exit status.
+	mgr.pstate.exited(p.GetPid(), proc.NewStatusErr(err.Error(), nil).Marshal())
+	db.DPrintf(db.PROCMGR_ERR, "Proc %v finished with error: %v", p, err)
+	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }
 
 func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {

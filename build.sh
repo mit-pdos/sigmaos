@@ -126,36 +126,6 @@ else
   echo "========== Done pushing user bins to aws =========="
 fi
 
-exit 
-
-## Default to building the sigmakernel image with user binaries
-#SIGMAKERNEL_TARGET="sigma_kernel"
-## If running on AWS, upload user bins and remove them from the base image.
-#if [ "${TARGET}" != "local" ]; then
-#  # Run the base image, which will copy the built user bins to USRBIN
-#  docker run --rm -it \
-#    --mount type=bind,src=$USRBIN,dst=/tmp/bin \
-#    -e "TAG=$TAG" \
-#    sigma_user_builder 
-#  ./upload.sh --tag $TAG --profile sigmaos
-#  # TODO: unnecessary below?
-#  # Clean up base container
-#  docker stop $(docker ps -aq --filter="ancestor=sigma_user_builder")
-#  docker rm $(docker ps -aq --filter="ancestor=sigma_user_builder")
-#  # Build the kernel image with no user binaries.
-#  SIGMAKERNEL_TARGET="sigma_kernel_clean"
-#fi
-
-## Build the user image
-#DOCKER_BUILDKIT=1 docker build $BUILD_ARGS \
-#  --target sigmauser \
-#  -t sigmauser .
-#
-## Build the kernel image
-#DOCKER_BUILDKIT=1 docker build $BUILD_ARGS \
-#  --target $SIGMAKERNEL_TARGET \
-#  -t sigmaos .
-
 if ! [ -z "$TAG" ]; then
   docker tag sigmaos arielszekely/sigmaos:$TAG
   docker push arielszekely/sigmaos:$TAG

@@ -11,7 +11,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use json;
 
 use serde::{Deserialize, Serialize};
-use serde_yaml::{self};
 
 fn print_elapsed_time(msg: &str, start: SystemTime) {
     let elapsed = SystemTime::now()
@@ -200,8 +199,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
-    allowed: Vec<String>,
-    cond_allowed: Vec<Cond>,
+    //cond_allowed: Vec<Cond>,
 }
 #[derive(Debug, Serialize, Deserialize)]
 struct Cond {
@@ -214,98 +212,96 @@ struct Cond {
 fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
     use libseccomp::*;
 
-    let yaml_str = r#"
-allowed:
-  - accept4
-  - access
-  - arch_prctl # Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.
-  - bind
-  - brk
-  # - clone3 # Needed by Go runtime on old versions of docker. See https://github.com/moby/moby/issues/42680
-  - close
-  - connect
-  - epoll_create1
-  - epoll_ctl
-  - epoll_ctl_old
-  - epoll_pwait
-  - epoll_pwait2
-  - execve
-  - exit #  if process must stop (e.g., syscall is blocked), it must be able to exit
-  - exit_group
-  - fcntl
-  - fstat
-  - fsync
-  - futex
-  - getdents64
-  - getpeername
-  - getpid
-  - getrandom
-  - getrlimit
-  - getsockname
-  - getsockopt
-  - gettid
-  - listen
-  - lseek
-  - madvise
-  - mkdirat
-  - mmap
-  - mprotect
-  - munmap
-  - nanosleep
-  - newfstatat
-  - openat
-  - open  # to open binary and shared libraries
-  - pipe2  # used by go runtime 
-  - pread64
-  - prlimit64
-  - read
-  - readlinkat
-  - recvfrom
-  - restart_syscall
-  - rt_sigaction
-  - rt_sigprocmask
-  - rt_sigreturn
-  - sched_getaffinity
-  - sched_yield
-  - sendto
-  - setitimer
-  - set_robust_list
-  - set_tid_address
-  - setsockopt
-  - sigaltstack
-  - sync
-  - timer_create
-  - timer_delete
-  - timer_settime
-  - tgkill
-  - write
-  - writev
-# Needed for MUSL/Alpine
-  - readlink
+    const ALLOWED_SYSCALLS: [ScmpSyscall; 64] = [
+        ScmpSyscall::new("accept4"),
+        ScmpSyscall::new("access"),
+        ScmpSyscall::new("arch_prctl"), // Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.
+        ScmpSyscall::new("bind"),
+        ScmpSyscall::new("brk"),
+        ScmpSyscall::new("close"),
+        ScmpSyscall::new("connect"),
+        ScmpSyscall::new("epoll_create1"),
+        ScmpSyscall::new("epoll_ctl"),
+        ScmpSyscall::new("epoll_ctl_old"),
+        ScmpSyscall::new("epoll_pwait"),
+        ScmpSyscall::new("epoll_pwait2"),
+        ScmpSyscall::new("execve"),
+        ScmpSyscall::new("exit"), // if process must stop (e.g., syscall is blocked), it must be able to exit
+        ScmpSyscall::new("exit_group"),
+        ScmpSyscall::new("fcntl"),
+        ScmpSyscall::new("fstat"),
+        ScmpSyscall::new("fsync"),
+        ScmpSyscall::new("futex"),
+        ScmpSyscall::new("getdents64"),
+        ScmpSyscall::new("getpeername"),
+        ScmpSyscall::new("getpid"),
+        ScmpSyscall::new("getrandom"),
+        ScmpSyscall::new("getrlimit"),
+        ScmpSyscall::new("getsockname"),
+        ScmpSyscall::new("getsockopt"),
+        ScmpSyscall::new("gettid"),
+        ScmpSyscall::new("listen"),
+        ScmpSyscall::new("lseek"),
+        ScmpSyscall::new("madvise"),
+        ScmpSyscall::new("mkdirat"),
+        ScmpSyscall::new("mmap"),
+        ScmpSyscall::new("mprotect"),
+        ScmpSyscall::new("munmap"),
+        ScmpSyscall::new("nanosleep"),
+        ScmpSyscall::new("newfstatat"),
+        ScmpSyscall::new("openat"),
+        ScmpSyscall::new("open"),  // to open binary and shared libraries
+        ScmpSyscall::new("pipe2"), // used by go runtime
+        ScmpSyscall::new("pread64"),
+        ScmpSyscall::new("prlimit64"),
+        ScmpSyscall::new("read"),
+        ScmpSyscall::new("readlinkat"),
+        ScmpSyscall::new("recvfrom"),
+        ScmpSyscall::new("restart_syscall"),
+        ScmpSyscall::new("rt_sigaction"),
+        ScmpSyscall::new("rt_sigprocmask"),
+        ScmpSyscall::new("rt_sigreturn"),
+        ScmpSyscall::new("sched_getaffinity"),
+        ScmpSyscall::new("sched_yield"),
+        ScmpSyscall::new("sendto"),
+        ScmpSyscall::new("setitimer"),
+        ScmpSyscall::new("set_robust_list"),
+        ScmpSyscall::new("set_tid_address"),
+        ScmpSyscall::new("setsockopt"),
+        ScmpSyscall::new("sigaltstack"),
+        ScmpSyscall::new("sync"),
+        ScmpSyscall::new("timer_create"),
+        ScmpSyscall::new("timer_delete"),
+        ScmpSyscall::new("timer_settime"),
+        ScmpSyscall::new("tgkill"),
+        ScmpSyscall::new("write"),
+        ScmpSyscall::new("writev"),
+        ScmpSyscall::new("readlink"), // Needed for MUSL/Alpine
+    ];
 
-cond_allowed:
-  - name: socket # Allowed by docker if arg0 != 40 (disallows AF_VSOCK).
-    index: 0
-    op1: 40
-    op: "SCMP_CMP_NE"
-  - name: clone
-    index: 0
-    op1: 0x7E020000
-    op: "SCMP_CMP_MASKED_EQ"  # clone flags
-"#;
+    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 2] = [
+        (
+            ScmpSyscall::new("clone"),
+            ScmpArgCompare::new(0, ScmpCompareOp::MaskedEqual(0), 0x7E020000),
+        ),
+        (
+            ScmpSyscall::new("socket"),
+            ScmpArgCompare::new(0, ScmpCompareOp::NotEqual, 40),
+        ),
+    ];
 
-    let cfg: Config = serde_yaml::from_str(&yaml_str)?;
+    let mut now = SystemTime::now();
+    print_elapsed_time("trampoline.seccomp_proc serde", now);
     let mut filter = ScmpFilterContext::new_filter(ScmpAction::Errno(1))?;
-    for name in cfg.allowed {
-        let syscall = ScmpSyscall::from_name(&name)?;
+    for syscall in ALLOWED_SYSCALLS {
         filter.add_rule(ScmpAction::Allow, syscall)?;
     }
-    for c in cfg.cond_allowed.iter() {
-        let syscall = ScmpSyscall::from_name(&c.name)?;
-        let cond = ScmpArgCompare::new(c.index, c.op.parse().unwrap(), c.op1);
+    for c in COND_ALLOWED_SYSCALLS {
+        let syscall = c.0;
+        let cond = c.1;
         filter.add_rule_conditional(ScmpAction::Allow, syscall, &[cond])?;
     }
-    let now = SystemTime::now();
+    now = SystemTime::now();
     filter.load()?;
     print_elapsed_time("trampoline.seccomp_proc load", now);
     Ok(())

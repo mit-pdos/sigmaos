@@ -6,3 +6,4 @@ Dockerfile
 *.sh
 !make.sh
 !create-net.sh
+rs/*/target/

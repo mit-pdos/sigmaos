@@ -290,8 +290,6 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ),
     ];
 
-    let mut now = SystemTime::now();
-    print_elapsed_time("trampoline.seccomp_proc serde", now);
     let mut filter = ScmpFilterContext::new_filter(ScmpAction::Errno(1))?;
     for syscall in ALLOWED_SYSCALLS {
         filter.add_rule(ScmpAction::Allow, syscall)?;

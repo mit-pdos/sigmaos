@@ -119,9 +119,7 @@ then
   sudo apt update
   sudo apt install -y gcc \
   make \
-  gcc-7 \
   gcc \
-  g++-7 \
   g++ \
   protobuf-compiler \
   libprotobuf-dev \

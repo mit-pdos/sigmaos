@@ -299,7 +299,7 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         let cond = c.1;
         filter.add_rule_conditional(ScmpAction::Allow, syscall, &[cond])?;
     }
-    now = SystemTime::now();
+    let now = SystemTime::now();
     filter.load()?;
     print_elapsed_time("trampoline.seccomp_proc load", now);
     Ok(())

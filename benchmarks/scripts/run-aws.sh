@@ -1,13 +1,14 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --version VERSION [--cloudlab" 1>&2
+  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --branch BRANCH --version VERSION [--cloudlab" 1>&2
 }
 
 VPC=""
 KVPC=""
 CLOUDLAB=""
-TAG=""
+BRANCH="master"
+BRANCH=""
 VERSION=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -19,6 +20,11 @@ while [[ "$#" -gt 0 ]]; do
   --kvpc)
     shift
     KVPC="$1"
+    shift
+    ;;
+  --branch)
+    shift
+    BRANCH=$1
     shift
     ;;
   --tag)
@@ -128,7 +134,7 @@ start_sigmaos_cluster() {
 #  stop_k8s_cluster $vpc
   stop_sigmaos_cluster $vpc
   cd $SCRIPT_DIR
-  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG >> $INIT_OUT 2>&1
+  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG --branch $BRANCH >> $INIT_OUT 2>&1
   cd $ROOT_DIR
 }
 
@@ -891,6 +897,34 @@ k8s_img_resize() {
   done
 }
 
+schedd_scalability() {
+  n_vm=4
+  driver_vm=0
+  dur="10s"
+#  for rps in 200 400 800 1000 1200 ; do
+#    rps=200
+    rps=400
+    run=${FUNCNAME[0]}/rps-$rps
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      return
+    fi
+    stop_k8s_cluster $KVPC
+    cmd="
+      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;SPAWN_LAT;\"; \
+      go clean -testcache; \
+      go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
+    "
+    # Start driver VM asynchronously.
+    run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true false
+    # Wait for test to terminate.
+    wait
+    end_benchmark $vpc $perf_dir
+#  done
+}
+
 #mr_overlap() {
 #  mrapp=mr-wc-wiki4G.yml
 #  n_vm=16
@@ -1149,8 +1183,9 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
+schedd_scalability
 #img_resize
-realm_balance_multi
+#realm_balance_multi
 
 #k8s_img_resize
 #hotel_tail_multi
@@ -1177,7 +1212,7 @@ realm_balance_multi
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
 #graph_img_resize
-graph_realm_balance_multi
+#graph_realm_balance_multi
 
 #graph_realm_balance_be
 #graph_k8s_balance_be

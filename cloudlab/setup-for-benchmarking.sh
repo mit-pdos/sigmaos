@@ -15,10 +15,13 @@ echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
 
 # Disable CPU frequency scaling.
 # sudo cpupower frequency-set -g performance
-sudo cpufreq-set -g performance -c 0
-sudo cpufreq-set -g performance -c 1
-sudo cpufreq-set -g performance -c 2
-sudo cpufreq-set -g performance -c 3
+np=$(nproc)
+np=$((np-1))
+for i in $(seq 0 $np) 
+do
+  echo "CPU frequency set core $i"
+  sudo cpufreq-set -g performance -c $i
+done
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="

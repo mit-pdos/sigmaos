@@ -148,6 +148,7 @@ then
   htop \
   jq \
   docker.io \
+  cpufrequtils \
   mysql-client
 
   # For hadoop
@@ -172,6 +173,10 @@ echo "root soft nofile 100000" | sudo tee -a /etc/security/limits.conf
 # Increase login user's open file ulimits.
 echo "$LOGIN hard nofile 100000" | sudo tee -a /etc/security/limits.conf
 echo "$LOGIN soft nofile 100000" | sudo tee -a /etc/security/limits.conf
+
+# Load apparmor profile
+cd sigmaos
+sudo apparmor_parser -r container/sigmaos-uproc
 
 echo -n > ~/.hushlogin
 ENDSSH

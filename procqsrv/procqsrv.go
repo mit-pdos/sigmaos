@@ -146,7 +146,7 @@ func (pq *ProcQ) tryGetRealmQueueL(realm sp.Trealm) (*Queue, bool) {
 // Run a ProcQ
 func Run() {
 	pcfg := proc.GetProcEnv()
-	mfs, err := memfssrv.NewMemFs(path.Join(sp.PROCQ, pcfg.GetPID().String()), pcfg)
+	mfs, err := memfssrv.NewMemFs(path.Join(sp.PROCQ, pcfg.GetKernelID()), pcfg)
 	if err != nil {
 		db.DFatalf("Error NewMemFs: %v", err)
 	}

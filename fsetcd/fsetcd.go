@@ -34,6 +34,7 @@ func NewFsEtcd(realm sp.Trealm, etcdIP string) (*FsEtcd, error) {
 	for i := range endpointsBase {
 		endpoints = append(endpoints, etcdIP+endpointsBase[i])
 	}
+	db.DPrintf(db.FSETCD, "FsEtcd etcd endpoints: %v", endpoints)
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: DialTimeout,

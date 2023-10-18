@@ -6,8 +6,8 @@ import argparse
 import numpy as np
 
 def str_dur_to_ms(dstr):
-  suffixes = [ "ms", "us", "ns", "s"  ]
-  mults = [ 1.0, .001, .000001, 1000.0 ]
+  suffixes = [ "ms", "us", "µs", "ns", "s"  ]
+  mults = [ 1.0, .001, .001, .000001, 1000.0 ]
   for i in range(len(suffixes)):
     if dstr.endswith(suffixes[i]):
       return float(dstr.removesuffix(suffixes[i])) * mults[i]

@@ -10,6 +10,8 @@ def str_dur_to_ms(dstr):
   mults = [ 1.0, .001, .001, .000001, 1000.0 ]
   for i in range(len(suffixes)):
     if dstr.endswith(suffixes[i]):
+      if "h" in dstr and "m" in dstr and "s" in dstr:
+        return None
       return float(dstr.removesuffix(suffixes[i])) * mults[i]
   raise ValueError("Unexpected suffix for duration string {}".format(dstr))
 
@@ -21,6 +23,7 @@ def scrape_stats(path, regex, pos, verbose):
   if len(lines) == 0:
     raise ValueError("No matches for regex [{}]".format(regex))
   lat = [ str_dur_to_ms(l.split(" ")[pos]) for l in lines ]
+  lat = [ l for l in lat if l is not None ]
   if verbose:
     for l in lat:
       print("{:.3f}ms".format(l))

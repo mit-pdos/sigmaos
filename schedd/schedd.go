@@ -3,6 +3,7 @@ package schedd
 import (
 	"path"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
@@ -34,6 +35,7 @@ type Schedd struct {
 	kernelId   string
 	realms     []sp.Trealm
 	mfs        *memfssrv.MemFs
+	nProcsRun  uint64
 }
 
 func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
@@ -52,6 +54,7 @@ func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 }
 
 func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
+	atomic.AddUint64(&sd.nProcsRun, 1)
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p.GetPid())
 	start := time.Now()
@@ -130,23 +133,45 @@ func (sd *Schedd) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *prot
 }
 
 func (sd *Schedd) getQueuedProcs() {
+	// If true, bias choice of procq to this schedd's kernel.
+	var bias bool = true
 	for {
 		if sd.shouldGetProc() {
 		}
-		db.DPrintf(db.SCHEDD, "[%v] Try get proc from procq", sd.kernelId)
+		db.DPrintf(db.SCHEDD, "[%v] Try get proc from procq, bias=%v", sd.kernelId, bias)
 		start := time.Now()
 		// Try to get a proc from the proc queue.
-		ok, err := sd.procqclnt.GetProc(sd.kernelId)
+		ok, err := sd.procqclnt.GetProc(sd.kernelId, bias)
 		db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
 		if err != nil {
 			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)
+			// If previously biased to this schedd's kernel, and GetProc returned an
+			// error, then un-bias.
+			//
+			// If not biased to this schedd's kernel, and GetProc returned an error,
+			// then bias on the next attempt.
+			if bias {
+				bias = false
+			} else {
+				bias = true
+			}
 			continue
 		}
 		if !ok {
-			db.DPrintf(db.SCHEDD, "[%v] No proc on procq, try another", sd.kernelId)
+			db.DPrintf(db.SCHEDD, "[%v] No proc on procq, try another, bias=%v", sd.kernelId, bias)
+			// If already biased to this schedd's kernel, and no proc was available,
+			// try another.
+			//
+			// If not biased to this schedd's kernel, and no proc was available, then
+			// bias on the next attempt.
+			if bias {
+				bias = false
+			} else {
+				bias = true
+			}
 			continue
 		}
-		db.DPrintf(db.SCHEDD, "[%v] Got proc from procq", sd.kernelId)
+		db.DPrintf(db.SCHEDD, "[%v] Got proc from procq, bias=%v", sd.kernelId, bias)
 	}
 }
 
@@ -195,6 +220,13 @@ func (sd *Schedd) register() {
 	}
 }
 
+func (sd *Schedd) logStats() {
+	for {
+		time.Sleep(time.Second)
+		db.DPrintf(db.ALWAYS, "Ran %v total procs", atomic.LoadUint64(&sd.nProcsRun))
+	}
+}
+
 func RunSchedd(kernelId string, reserveMcpu uint) error {
 	pcfg := proc.GetProcEnv()
 	mfs, err := memfssrv.NewMemFs(path.Join(sp.SCHEDD, kernelId), pcfg)
@@ -215,6 +247,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	}
 	defer p.Done()
 	go sd.getQueuedProcs()
+	go sd.logStats()
 	sd.register()
 	ssrv.RunServer()
 	return nil

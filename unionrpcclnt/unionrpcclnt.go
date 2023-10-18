@@ -6,6 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/rand"
 	"sigmaos/rpcclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -114,6 +115,18 @@ func (urpcc *UnionRPCClnt) NextSrv() (string, error) {
 
 	srvID := urpcc.srvs[urpcc.rrOffset%len(urpcc.srvs)]
 	urpcc.rrOffset++
+	return srvID, nil
+}
+
+// Get the next server, randomly.
+func (urpcc *UnionRPCClnt) RandomSrv() (string, error) {
+	urpcc.Lock()
+	defer urpcc.Unlock()
+
+	if len(urpcc.srvs) == 0 {
+		return "", serr.NewErr(serr.TErrNotfound, "no srvs to spawn on")
+	}
+	srvID := urpcc.srvs[rand.Int64(int64(len(urpcc.srvs)))]
 	return srvID, nil
 }
 

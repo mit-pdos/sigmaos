@@ -16,6 +16,7 @@ func main() {
 	if len(os.Args) < 8 {
 		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu\n", os.Args[0])
 	}
+	db.DPrintf(db.BOOT, "Boot %v", os.Args[1:])
 	srvs := strings.Split(os.Args[3], ";")
 	overlays, err := strconv.ParseBool(os.Args[6])
 	if err != nil {

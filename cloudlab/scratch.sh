@@ -23,7 +23,11 @@ vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
 for vm in $vms; do
   echo $vm
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
-  cd sigmaos
-  ./set-cores.sh --set 0 --start 4 --end 39
+    sudo apt install -y cpufrequtils
+    cd sigmaos
+    git checkout etcd-sigmasrv-newprocclnt
+    git pull
+    ./set-cores.sh --set 0 --start 20 --end 39
+    nproc
 ENDSSH
 done

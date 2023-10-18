@@ -77,8 +77,8 @@ if ! [ -z "$N_VM" ]; then
   vms=${vma[@]:0:$N_VM}
 fi
 
-if [ ! -z "$TAG" ]; then
-  ./update-repo.sh --vpc $VPC --parallel --branch etcd-sigmasrv
+if ! [ -z "$TAG" ]; then
+  ./update-repo.sh --vpc $VPC --parallel --branch etcd-sigmasrv-newprocclnt
 fi
 
 vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)

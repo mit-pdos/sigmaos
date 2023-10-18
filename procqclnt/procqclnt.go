@@ -40,7 +40,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 	if err != nil {
 		return NOT_ENQ, errors.New("No procqs available")
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt get ProcQ %v", p.GetPid(), time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt get ProcQ[%v] latency: %v", p.GetPid(), pqID, time.Since(s))
 	s = time.Now()
 	rpcc, err := pqc.urpcc.GetClnt(pqID)
 	if err != nil {

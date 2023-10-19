@@ -899,21 +899,19 @@ k8s_img_resize() {
 
 schedd_scalability() {
   n_vm=4
-  driver_vm=0
+  driver_vm=4
   dur="10s"
-#  for rps in 200 400 800 1000 1200 ; do
-#    rps=200
-    rps=400
+  for rps in 200 400 600 800 1000 1200 1600 ; do
     run=${FUNCNAME[0]}/rps-$rps
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
     # Avoid doing duplicate work.
     if ! should_skip $perf_dir false ; then
-      return
+      continue
     fi
     stop_k8s_cluster $KVPC
     cmd="
-      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;SPAWN_LAT;\"; \
+      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
       go clean -testcache; \
       go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
     "
@@ -922,7 +920,7 @@ schedd_scalability() {
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
-#  done
+  done
 }
 
 #mr_overlap() {

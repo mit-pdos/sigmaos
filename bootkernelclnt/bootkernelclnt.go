@@ -69,7 +69,14 @@ func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 	}
 	pn := sp.BOOT + kernelId
 	if kernelId == "" {
-		pn1, _, err := sc.ResolveUnion(sp.BOOT + "~local")
+		var pn1 string
+		var err error
+		if pcfg.EtcdIP != pcfg.LocalIP {
+			// If running in a distributed setting, bootkernel clnt can be ~any
+			pn1, _, err = sc.ResolveUnion(sp.BOOT + "~any")
+		} else {
+			pn1, _, err = sc.ResolveUnion(sp.BOOT + "~local")
+		}
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error resolve local")
 			return nil, err

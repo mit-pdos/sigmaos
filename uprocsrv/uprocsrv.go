@@ -5,6 +5,9 @@ import (
 	"path"
 	"sync"
 	"time"
+	"unsafe"
+
+	"golang.org/x/sys/unix"
 
 	"sigmaos/container"
 	db "sigmaos/debug"
@@ -45,12 +48,44 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 	if err != nil {
 		return err
 	}
-	if err := container.SetupIsolationEnv(); err != nil {
-		db.DFatalf("Error setting up isolation env: %v", err)
+	if err := shrinkMountTable(); err != nil {
+		db.DFatalf("Error shrinking mount table: %v", err)
 	}
 	ups.ssrv = ssrv
 	err = ssrv.RunServer()
 	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)
+	return nil
+}
+
+func shrinkMountTable() error {
+	mounts := []string{
+		"/etc/resolv.conf",
+		"/etc/hostname",
+		"/etc/hosts",
+		"/dev/shm",
+		"/dev/mqueue",
+		"/dev/pts",
+		//		"/dev",
+	}
+	for _, mnt := range mounts {
+		b := append([]byte(mnt), 0)
+		_, _, errno := unix.Syscall(unix.SYS_UMOUNT2, uintptr(unsafe.Pointer(&b[0])), uintptr(0), uintptr(0))
+		if errno != 0 {
+			db.DFatalf("Error umount2 %v: %v", mnt, errno)
+			return errno
+		}
+	}
+	lazyUmounts := []string{
+		"/sys",
+	}
+	for _, mnt := range lazyUmounts {
+		b := append([]byte(mnt), 0)
+		_, _, errno := unix.Syscall(unix.SYS_UMOUNT2, uintptr(unsafe.Pointer(&b[0])), uintptr(unix.MNT_DETACH), uintptr(0))
+		if errno != 0 {
+			db.DFatalf("Error umount2 %v: %v", mnt, errno)
+			return errno
+		}
+	}
 	return nil
 }
 

@@ -8,8 +8,13 @@ import (
 	"sigmaos/proc"
 )
 
+var cgroupsV2Checked bool
+
 // Check if cgroupsv2, which SigmaOS depends on, are enabled.
-func init() {
+func checkCgroupsV2() {
+	if cgroupsV2Checked {
+		return
+	}
 	s := time.Now()
 	// If cgroupsv2 are enabled, the cgroup.controllers file will exist. This
 	// could be present at /sys/fs/cgroup/cgroup.controllers (if the test program
@@ -24,4 +29,5 @@ func init() {
 		)
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] cgroup check cgroupsv2: %v", proc.GetSigmaDebugPid(), time.Since(s))
+	cgroupsV2Checked = true
 }

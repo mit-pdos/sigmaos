@@ -26,6 +26,8 @@ type cgroupFs struct {
 }
 
 func newCgroupFs() *cgroupFs {
+	// check cgroups V2 are enabled
+	checkCgroupsV2()
 	return &cgroupFs{
 		files: map[int]map[string]*file{
 			os.O_RDONLY: make(map[string]*file),

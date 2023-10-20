@@ -4,19 +4,12 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
 )
 
-var totalMem proc.Tmem
-
-func init() {
-	s := time.Now()
-	totalMem = getMem("MemTotal")
-	db.DPrintf(db.SPAWN_LAT, "[%v] mem getMem latency: %v", proc.GetSigmaDebugPid(), time.Since(s))
-}
+var totalMem proc.Tmem = 0
 
 func getMem(pat string) proc.Tmem {
 	b, err := ioutil.ReadFile("/proc/meminfo")
@@ -41,6 +34,9 @@ func getMem(pat string) proc.Tmem {
 
 // Total amount of memory, in MB.
 func GetTotalMem() proc.Tmem {
+	if totalMem == 0 {
+		totalMem = getMem("MemTotal")
+	}
 	return totalMem
 }
 

@@ -25,10 +25,6 @@ const (
 	APPARMOR_PROF = "docker-default"
 )
 
-func SetupIsolationEnv() error {
-	return nil
-}
-
 func jailPath(pid sp.Tpid) string {
 	return path.Join(sp.SIGMAHOME, "jail", pid.String())
 }

@@ -901,7 +901,7 @@ schedd_scalability() {
   n_vm=4
   driver_vm=4
   dur="10s"
-  for rps in 200 400 600 800 1000 1200 1600 ; do
+  for rps in 200 400 600 800 1000 1200 1400 1600 ; do
     run=${FUNCNAME[0]}/rps-$rps
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run

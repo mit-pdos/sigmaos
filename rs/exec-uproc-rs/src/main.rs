@@ -93,7 +93,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let old_root_mnt = "oldroot";
     const DIRS: &'static [&'static str] = &[
-        "", "oldroot", "lib", "usr", "lib64", "etc", "dev", "cgroup", "proc", "bin", "tmp",
+        "", "oldroot", "lib", "usr", "lib64", "etc", "dev", "proc", "bin", "tmp",
     ];
 
     let newroot = "/home/sigmaos/jail/";
@@ -131,12 +131,6 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib64", "lib64")?;
-
-    // A child must be able to stat "/cgroup/cgroup.controllers"
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/cgroup", "cgroup")?;
 
     // E.g., /usr/lib for shared libraries and /usr/local/lib
     Mount::builder()
@@ -351,6 +345,6 @@ pub fn is_enabled_apparmor() -> bool {
 }
 
 pub fn apply_apparmor(profile: &str) -> Result<(), Box<dyn std::error::Error>> {
-    fs::write("/proc/self/attr/apparmor/exec", format!("exec {profile}"))?;
+    //    fs::write("/proc/self/attr/apparmor/exec", format!("exec {profile}"))?;
     Ok(())
 }

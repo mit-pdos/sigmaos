@@ -193,7 +193,7 @@ struct Cond {
 fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
     use libseccomp::*;
 
-    const ALLOWED_SYSCALLS: [ScmpSyscall; 64] = [
+    const ALLOWED_SYSCALLS: [ScmpSyscall; 65] = [
         ScmpSyscall::new("accept4"),
         ScmpSyscall::new("access"),
         ScmpSyscall::new("arch_prctl"), // Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.
@@ -221,6 +221,7 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("getsockname"),
         ScmpSyscall::new("getsockopt"),
         ScmpSyscall::new("gettid"),
+        ScmpSyscall::new("ioctl"), // Only needed for rust proc
         ScmpSyscall::new("listen"),
         ScmpSyscall::new("lseek"),
         ScmpSyscall::new("madvise"),

@@ -46,6 +46,7 @@ var CLERK_DURATION string
 var CLERK_MCPU int
 var N_NODE_PER_MACHINE int
 var N_CLNT int
+var USE_RUST_PROC bool
 var SCHEDD_DURS string
 var SCHEDD_MAX_RPS string
 var N_CLNT_REQ int
@@ -102,6 +103,7 @@ func init() {
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
 	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of clients.")
 	flag.IntVar(&N_NODE_PER_MACHINE, "n_node_per_machine", 1, "Number of nodes per machine. Likely should always be 1, unless developing locally.")
+	flag.BoolVar(&USE_RUST_PROC, "use_rust_proc", false, "Use rust spawn bench proc")
 	flag.StringVar(&SCHEDD_DURS, "schedd_dur", "10s", "Schedd benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&SCHEDD_MAX_RPS, "schedd_max_rps", "1000", "Max requests/second for schedd bench (comma-separated for multiple phases).")
 	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 1, "Number of request each client news.")
@@ -258,7 +260,11 @@ func TestMicroScheddSpawn(t *testing.T) {
 	done := make(chan bool)
 	// Prep Schedd job
 	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt) time.Duration {
-		return runSpawnBenchProc(ts1, sc)
+		if USE_RUST_PROC {
+			return runRustSpawnBenchProc(ts1, sc)
+		} else {
+			return runSpawnBenchProc(ts1, sc)
+		}
 	})
 	// Run Schedd job
 	go func() {

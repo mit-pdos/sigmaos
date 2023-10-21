@@ -193,6 +193,9 @@ struct Cond {
 fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
     use libseccomp::*;
 
+    // XXX Should really be 64 syscalls. We can remove ioctl, but the mini rust
+    // proc for our spawn latency benchmarks requires it.
+
     const ALLOWED_SYSCALLS: [ScmpSyscall; 65] = [
         ScmpSyscall::new("accept4"),
         ScmpSyscall::new("access"),

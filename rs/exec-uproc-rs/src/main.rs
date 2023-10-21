@@ -8,11 +8,9 @@ use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use json;
-
 use serde::{Deserialize, Serialize};
 
-fn print_elapsed_time(msg: &str, start: SystemTime) {
+fn print_elapsed_time(/*label: &str,*/ msg: &str, start: SystemTime) {
     let elapsed = SystemTime::now()
         .duration_since(start)
         .expect("Time went backwards");
@@ -40,18 +38,13 @@ fn main() {
     let exec_time = UNIX_EPOCH + Duration::from_micros(exec_time_micros);
     print_elapsed_time("trampoline.exec_trampoline", exec_time);
 
-    let cfg = env::var("SIGMACONFIG").unwrap_or("".to_string());
-    let parsed = json::parse(&cfg).unwrap();
-
-    log::info!("Cfg: {}", parsed);
-
-    let program = env::args().nth(1).expect("no program");
-    let pid = parsed["pidStr"].as_str().unwrap_or("no pid");
+    let pid = env::args().nth(1).expect("no pid");
+    let program = env::args().nth(2).expect("no program");
     let mut now = SystemTime::now();
     let aa = is_enabled_apparmor();
     print_elapsed_time("Check apparmor enabled", now);
     now = SystemTime::now();
-    jail_proc(pid).expect("jail failed");
+    jail_proc(&pid).expect("jail failed");
     print_elapsed_time("trampoline.fs_jail_proc", now);
     now = SystemTime::now();
     setcap_proc().expect("set caps failed");
@@ -65,7 +58,7 @@ fn main() {
         print_elapsed_time("trampoline.apply_apparmor", now);
     }
 
-    let new_args: Vec<_> = std::env::args_os().skip(2).collect();
+    let new_args: Vec<_> = std::env::args_os().skip(3).collect();
     let mut cmd = Command::new(program.clone());
 
     // Reset the exec time

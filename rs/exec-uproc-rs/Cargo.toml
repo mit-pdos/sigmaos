@@ -9,7 +9,6 @@ edition = "2021"
 caps = "0.5.5"
 chrono = "0.4.31"
 env_logger = "0.10.0"
-json = "0.12.4" 
 libseccomp = { version = "0.3.0", features = ["const-syscall"] }
 log = "0.4.20"
 nix = { version = "0.27.1", features = ["fs"] }

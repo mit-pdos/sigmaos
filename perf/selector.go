@@ -28,6 +28,7 @@ const (
 	PROCD             = "PROCD"
 	S3                = "S3"
 	SCHEDD            = "SCHEDD"
+	UPROCD            = "UPROCD"
 	PROCQ             = "PROCQ"
 	LCSCHED           = "LCSCHED"
 )

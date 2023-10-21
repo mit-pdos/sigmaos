@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
+	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -52,6 +53,11 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 		db.DFatalf("Error shrinking mount table: %v", err)
 	}
 	ups.ssrv = ssrv
+	p, err := perf.NewPerf(pcfg, perf.UPROCD)
+	if err != nil {
+		db.DFatalf("Error NewPerf: %v", err)
+	}
+	defer p.Done()
 	err = ssrv.RunServer()
 	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)
 	return nil

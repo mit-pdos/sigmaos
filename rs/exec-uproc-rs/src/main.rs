@@ -193,10 +193,13 @@ struct Cond {
 fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
     use libseccomp::*;
 
-    // XXX Should really be 64 syscalls. We can remove ioctl, but the mini rust
-    // proc for our spawn latency benchmarks requires it.
-
-    const ALLOWED_SYSCALLS: [ScmpSyscall; 65] = [
+    // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,
+    // but the mini rust proc for our spawn latency microbenchmarks requires
+    // it.
+    const ALLOWED_SYSCALLS: [ScmpSyscall; 67] = [
+        ScmpSyscall::new("ioctl"), // XXX Only needed for rust proc spawn microbenchmark
+        ScmpSyscall::new("poll"),  // XXX Only needed for rust proc spawn microbenchmark
+        ScmpSyscall::new("lstat"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("accept4"),
         ScmpSyscall::new("access"),
         ScmpSyscall::new("arch_prctl"), // Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.
@@ -224,7 +227,6 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("getsockname"),
         ScmpSyscall::new("getsockopt"),
         ScmpSyscall::new("gettid"),
-        ScmpSyscall::new("ioctl"), // Only needed for rust proc
         ScmpSyscall::new("listen"),
         ScmpSyscall::new("lseek"),
         ScmpSyscall::new("madvise"),

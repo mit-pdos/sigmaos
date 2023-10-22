@@ -50,7 +50,7 @@ func (q *Queue) Enqueue(p *proc.Proc) chan string {
 	return qi.kidch
 }
 
-func (q *Queue) Dequeue() (*proc.Proc, chan string, time.Time, bool) {
+func (q *Queue) Dequeue(mem proc.Tmem) (*proc.Proc, chan string, time.Time, bool) {
 	q.Lock()
 	defer q.Unlock()
 
@@ -58,14 +58,22 @@ func (q *Queue) Dequeue() (*proc.Proc, chan string, time.Time, bool) {
 	var ok bool
 	var kidch chan string = nil
 	var enqTS time.Time
-	if len(q.procs) > 0 {
-		var qi *Qitem
-		qi, q.procs = q.procs[0], q.procs[1:]
-		p = qi.p
-		kidch = qi.kidch
-		enqTS = qi.enqTS
-		ok = true
-		delete(q.pmap, qi.p.GetPid())
+	for i := 0; i < len(q.procs); i++ {
+		if q.procs[i].p.GetMem() <= mem {
+			var qi *Qitem
+			// Save the proc we want to return
+			qi = q.procs[i]
+			// Delete the i-th proc from the queue
+			copy(q.procs[i:], q.procs[i+1:])
+			q.procs = q.procs[:len(q.procs)-1]
+			qi, q.procs = q.procs[0], q.procs[1:]
+			p = qi.p
+			kidch = qi.kidch
+			enqTS = qi.enqTS
+			ok = true
+			delete(q.pmap, qi.p.GetPid())
+			break
+		}
 	}
 	return p, kidch, enqTS, ok
 }

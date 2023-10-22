@@ -73,13 +73,14 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 	return len(sts), nil
 }
 
-func (sdc *ScheddClnt) ForceRun(kernelID string, p *proc.Proc) error {
+func (sdc *ScheddClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Proc) error {
 	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
 	req := &proto.ForceRunRequest{
-		ProcProto: p.GetProto(),
+		ProcProto:       p.GetProto(),
+		MemAccountedFor: memAccountedFor,
 	}
 	res := &proto.ForceRunResponse{}
 	if err := rpcc.RPC("Schedd.ForceRun", req, res); err != nil {

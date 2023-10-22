@@ -18,6 +18,7 @@ service Schedd {
 
 message ForceRunRequest {
   ProcProto procProto = 1;
+  bool memAccountedFor = 2;
 }
 
 message ForceRunResponse {

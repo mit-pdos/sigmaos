@@ -73,7 +73,7 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 	// parent. Otherwise, the response to the parent could arrive first and the
 	// parent could ask schedd about the proc before the schedd learns about the
 	// proc.
-	if err := pq.scheddclnt.ForceRun(kernelID, p); err != nil {
+	if err := pq.scheddclnt.ForceRun(kernelID, true, p); err != nil {
 		db.DFatalf("Error ForceRun proc: %v", err)
 	}
 	ch <- kernelID
@@ -86,7 +86,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 		pq.mu.Lock()
 		// Iterate through the realms round-robin.
 		for r, q := range pq.qs {
-			p, ch, ts, ok := q.Dequeue()
+			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem))
 			if ok {
 				// Decrease aggregate queue length.
 				pq.qlen--
@@ -95,6 +95,10 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// across RPCs.
 				go pq.runProc(req.KernelID, p, ch, ts)
 				res.OK = true
+				// Note the amount of memory required by the proc, so that schedd can
+				// do resource accounting and (potentially) temper future GetProc
+				// requests.
+				res.Mem = uint32(p.GetMem())
 				pq.mu.Unlock()
 				return nil
 			}

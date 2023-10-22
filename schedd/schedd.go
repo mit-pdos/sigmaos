@@ -56,6 +56,11 @@ func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
 	atomic.AddUint64(&sd.nProcsRun, 1)
 	p := proc.NewProcFromProto(req.ProcProto)
+	// If this proc's memory has not been accounted for (it was not spawned via
+	// the ProcQ), account for it.
+	if !req.MemAccountedFor {
+		sd.allocMem(p.GetMem())
+	}
 	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p.GetPid())
 	start := time.Now()
 	// Run the proc
@@ -132,16 +137,22 @@ func (sd *Schedd) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *prot
 	return nil
 }
 
+// For resource accounting purposes, it is assumed that only one getQueuedProcs
+// thread runs per schedd.
 func (sd *Schedd) getQueuedProcs() {
 	// If true, bias choice of procq to this schedd's kernel.
 	var bias bool = true
 	for {
-		if sd.shouldGetProc() {
+		memFree, ok := sd.shouldGetProc()
+		if !ok {
+			// If no memory is available, wait for some more.
+			sd.waitForMoreMem()
+			continue
 		}
 		db.DPrintf(db.SCHEDD, "[%v] Try get proc from procq, bias=%v", sd.kernelId, bias)
 		start := time.Now()
 		// Try to get a proc from the proc queue.
-		ok, err := sd.procqclnt.GetProc(sd.kernelId, bias)
+		procMem, ok, err := sd.procqclnt.GetProc(sd.kernelId, memFree, bias)
 		db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
 		if err != nil {
 			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)
@@ -171,18 +182,18 @@ func (sd *Schedd) getQueuedProcs() {
 			}
 			continue
 		}
+		// Allocate memory for the proc before this loop runs again so that
+		// subsequent getProc requests carry the updated memory accounting
+		// information.
+		sd.allocMem(procMem)
 		db.DPrintf(db.SCHEDD, "[%v] Got proc from procq, bias=%v", sd.kernelId, bias)
 	}
 }
 
-func (sd *Schedd) procDone(p *proc.Proc) error {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
+func (sd *Schedd) procDone(p *proc.Proc) {
 	db.DPrintf(db.SCHEDD, "Proc done %v", p)
-	// Signal that a new proc may be runnable.
-	sd.cond.Signal()
-	return nil
+	// Free any mem the proc was using.
+	sd.freeMem(p.GetMem())
 }
 
 func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
@@ -199,9 +210,10 @@ func (sd *Schedd) runProc(p *proc.Proc) {
 	sd.procDone(p)
 }
 
-func (sd *Schedd) shouldGetProc() bool {
-	// TODO: check local resource utilization
-	return true
+// We should always take a free proc if there is memory available.
+func (sd *Schedd) shouldGetProc() (proc.Tmem, bool) {
+	mem := sd.getFreeMem()
+	return mem, mem > 0
 }
 
 func (sd *Schedd) register() {

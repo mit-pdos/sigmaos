@@ -19,8 +19,10 @@ message EnqueueResponse {
 
 message GetProcRequest {
   string kernelID = 1;
+  uint32 mem = 2;
 }
 
 message GetProcResponse {
   bool oK = 1;
+  uint32 mem = 2;
 }

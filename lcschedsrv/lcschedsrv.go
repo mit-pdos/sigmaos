@@ -92,7 +92,7 @@ func (lcs *LCSched) schedule() {
 
 func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Resources) {
 	db.DPrintf(db.LCSCHED, "runProc kernelID %v p %v", kernelID, p)
-	if err := lcs.scheddclnt.ForceRun(kernelID, p); err != nil {
+	if err := lcs.scheddclnt.ForceRun(kernelID, false, p); err != nil {
 		db.DFatalf("Schedd.Run %v err %v", kernelID, err)
 	}
 	// Notify the spawner that a schedd has been chosen.

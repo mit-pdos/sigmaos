@@ -156,7 +156,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 }
 
 func (clnt *ProcClnt) forceRunViaSchedd(kernelID string, p *proc.Proc) error {
-	err := clnt.scheddclnt.ForceRun(kernelID, p)
+	err := clnt.scheddclnt.ForceRun(kernelID, false, p)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "forceRunViaSchedd: getScheddClnt %v err %v\n", kernelID, err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {

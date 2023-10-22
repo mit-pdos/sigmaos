@@ -73,6 +73,9 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 	return len(sts), nil
 }
 
+// memAccountedFor should be false, unless this is a BE proc which the procqsrv
+// is pushing to schedd (the schedd asked for it, and accounted for its
+// memory).
 func (sdc *ScheddClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Proc) error {
 	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {

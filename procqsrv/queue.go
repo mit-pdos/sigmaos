@@ -61,10 +61,8 @@ func (q *Queue) Dequeue(mem proc.Tmem) (*proc.Proc, chan string, time.Time, bool
 			// Delete the i-th proc from the queue
 			copy(q.procs[i:], q.procs[i+1:])
 			q.procs = q.procs[:len(q.procs)-1]
-			qi, q.procs = q.procs[0], q.procs[1:]
 			delete(q.pmap, qi.p.GetPid())
 			return qi.p, qi.kidch, qi.enqTS, true
-			break
 		}
 	}
 	return nil, nil, time.UnixMicro(0), false

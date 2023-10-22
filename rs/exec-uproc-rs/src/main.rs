@@ -338,6 +338,6 @@ pub fn is_enabled_apparmor() -> bool {
 }
 
 pub fn apply_apparmor(profile: &str) -> Result<(), Box<dyn std::error::Error>> {
-    //    fs::write("/proc/self/attr/apparmor/exec", format!("exec {profile}"))?;
+    fs::write("/proc/self/attr/apparmor/exec", format!("exec {profile}"))?;
     Ok(())
 }

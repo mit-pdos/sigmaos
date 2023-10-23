@@ -269,7 +269,7 @@ run_hotel() {
      as_cache="--hotel_cache_autoscale"
   fi
   cmd="
-    aws s3 rm --profile me-mit --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
+    aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
     export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
@@ -584,7 +584,7 @@ k8s_balance_be() {
     # Start MR
     echo "Starting mr $i"
     # Remove old results
-    aws s3 rm --profile me-mit --recursive s3://9ps3/$s3dir-$i > /dev/null; \
+    aws s3 rm --profile sigmaos --recursive s3://9ps3/$s3dir-$i > /dev/null; \
     cd $SCRIPT_DIR
 #    ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20G-$i" --nrunning $np
     ./start-k8s-app.sh --vpc $KVPC --path "corral/k8s20GqosG" --nrunning $np
@@ -718,9 +718,9 @@ k8s_balance() {
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
-    aws s3 rm --profile me-mit --recursive s3://9ps3/$s3dir > /dev/null; \
-    aws s3 rm --profile me-mit --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
-    aws s3 rm --profile me-mit --recursive s3://9ps3/ouptut > /dev/null; \
+    aws s3 rm --profile sigmaos --recursive s3://9ps3/$s3dir > /dev/null; \
+    aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
+    aws s3 rm --profile sigmaos --recursive s3://9ps3/ouptut > /dev/null; \
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
@@ -785,9 +785,9 @@ k8s_balance_multi() {
   k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
   cmd="
     export SIGMADEBUG=\"TEST;\"; \
-    aws s3 rm --profile me-mit --recursive s3://9ps3/$s3dir > /dev/null; \
-    aws s3 rm --profile me-mit --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
-    aws s3 rm --profile me-mit --recursive s3://9ps3/ouptut > /dev/null; \
+    aws s3 rm --profile sigmaos --recursive s3://9ps3/$s3dir > /dev/null; \
+    aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
+    aws s3 rm --profile sigmaos --recursive s3://9ps3/ouptut > /dev/null; \
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
@@ -853,8 +853,8 @@ img_resize() {
   fi
   stop_k8s_cluster $KVPC
   # Clear out s3 dir
-  aws s3 --profile me-mit rm --recursive s3://9ps3/img/ > /dev/null
-  aws s3 --profile me-mit cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
+  aws s3 --profile sigmaos rm --recursive s3://9ps3/img/ > /dev/null
+  aws s3 --profile sigmaos cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
   cmd="
     export SIGMANAMED=10.0.20.156; \
     export SIGMADEBUG=\"TEST;BENCH;\"; \

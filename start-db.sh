@@ -51,6 +51,8 @@ CREATE USER 'sigma1'@'192.168.%.%' IDENTIFIED BY 'sigmaos1';
 GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'192.168.%.%';
 CREATE USER 'sigma1'@'10.10.%.%' IDENTIFIED BY 'sigmaos1';
 GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'10.10.%.%';
+CREATE USER 'sigma1'@'10.0.%.%' IDENTIFIED BY 'sigmaos1';
+GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'10.0.%.%';
 FLUSH PRIVILEGES;
 SET GLOBAL max_connections = 100000;
 ENDOFSQL

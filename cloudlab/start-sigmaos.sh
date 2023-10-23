@@ -4,6 +4,7 @@ usage() {
   echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
 }
 
+VPC=""
 N_VM=""
 NCORES=4
 UPDATE=""
@@ -46,7 +47,7 @@ while [[ $# -gt 0 ]]; do
   --reserveMcpu)
     shift
     RMCPU="$1"
-	shift
+  	shift
     ;;
   -help)
     usage
@@ -86,7 +87,7 @@ if ! [ -z "$N_VM" ]; then
   vms=${vma[@]:0:$N_VM}
 fi
 
-if [ ! -z "$TAG" ]; then
+if ! [ -z "$TAG" ]; then
   ./update-repo.sh --parallel --branch $BRANCH
 fi
 
@@ -127,33 +128,29 @@ for vm in $vms; do
   cd sigmaos
 
   echo "$PWD $SIGMADEBUG"
-  if [ "${vm}" = "${MAIN}" ] || [ "${vm}" = "${SIGMASTART}" ]; then
-    if [ "${vm}" = "${MAIN}" ]; then 
-      echo "START DB: ${MAIN_PRIVADDR}"
-      ./make.sh --norace linux
-      ./start-network.sh --addr $MAIN_PRIVADDR
-      ./start-db.sh
+  if [ "${vm}" = "${MAIN}" ]; then
+    echo "START DB: ${MAIN_PRIVADDR}"
+    ./start-db.sh
+    ./make.sh --norace linux
+    echo "START NETWORK $MAIN_PRIVADDR"
+    ./start-network.sh --addr $MAIN_PRIVADDR
+    echo "START ${SIGMASTART} ${SIGMASTART_PRIVADDR} ${KERNELID}"
+    if ! docker ps | grep -q etcd ; then
+      echo "START etcd"
+      ./start-etcd.sh
     fi
-    if [ "${vm}" = "${SIGMASTART}" ]; then
-      echo "START ${SIGMASTART} ${SIGMASTART_PRIVADDR} ${KERNELID}"
-      if ! docker ps | grep -q etcd ; then
-        echo "START etcd"
-        ./start-etcd.sh
-      fi
-      ./make.sh --norace linux
-      ./start-kernel.sh --boot realm --named $SIGMASTART_PRIVADDR --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
-      docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
-      docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
-    fi
+    ./start-kernel.sh --boot realm --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
+    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
+    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
-     ${TOKEN} 2>&1 > /dev/null
+    ${TOKEN} 2>&1 > /dev/null
     ./start-kernel.sh --boot node --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
     docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
     docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
   fi
 ENDSSH
- if [ "${vm}" = "${MAIN}" ]; then
-     TOKEN=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm docker swarm join-token worker | grep docker)
- fi   
+  if [ "${vm}" = "${MAIN}" ]; then
+    TOKEN=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm docker swarm join-token worker | grep docker)
+  fi   
 done

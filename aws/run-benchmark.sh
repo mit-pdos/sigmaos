@@ -54,7 +54,7 @@ ssh -i key-$VPC.pem ubuntu@$SSHVM /bin/bash <<ENDSSH
   # Make sure swap is off on the benchmark machines.
   ulimit -n 100000
   sudo swapoff -a 
-  cd ulambda
+  cd sigmaos
   source ./env/env.sh
   export SIGMANAMED=$MAIN_PRIVADDR
   export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;"

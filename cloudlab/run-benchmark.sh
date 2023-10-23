@@ -4,6 +4,7 @@ usage() {
   echo "Usage: $0 --command COMMAND [--vm VM]" 1>&2
 }
 
+VPC=""
 VM=0
 COMMAND=""
 while [[ $# -gt 0 ]]; do

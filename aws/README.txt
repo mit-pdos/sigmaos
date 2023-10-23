@@ -38,7 +38,7 @@ $ ssh -i key-vpc-02f7e3816c4cc8e7f.pem ubuntu@ec2-52-54-107-185.compute-1.amazon
 
 $ hostname
 
-$ cd ulambda
+$ cd sigmaos
 
 $ go test -timeout 0 -v sigmaos/mr -app mr-grep-wiki2G.yml -run MRJOB
 > /tmp/mr.out 2>&1  &

@@ -53,7 +53,7 @@ do
   echo "stop: $vm"
   stop="
       ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-        (cd ulambda; ./stop.sh)
+        (cd sigmaos; ./stop.sh)
         rm -rf /tmp/sigmaos-perf > /dev/null 2>&1
         rm /tmp/bench.out > /dev/null 2>&1
         rm /tmp/start.out > /dev/null 2>&1

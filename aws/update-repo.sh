@@ -59,8 +59,8 @@ for vm in $vms; do
   echo "UPDATE: $vm"
   install="
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-      ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 ; git checkout $BRANCH; git pull >> /tmp/git.out 2>&1 )'
-      ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd corral; git pull > /tmp/corral-git.out 2>&1 ; )'
+      ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd sigmaos; git pull > /tmp/git.out 2>&1 ; git checkout $BRANCH; git pull >> /tmp/git.out 2>&1 )'
+      ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd corral; git pull > /tmp/corral-git.out 2>&1 ; )'
 ENDSSH"
   if [ -z "$PARALLEL" ]; then
     eval "$install"

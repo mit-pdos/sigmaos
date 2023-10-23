@@ -8,7 +8,6 @@ VPC=""
 KVPC=""
 CLOUDLAB=""
 BRANCH="master"
-BRANCH=""
 VERSION=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -810,7 +809,7 @@ mr_k8s() {
 }
 
 img_resize() {
-  imgpath="9ps3/img/6.jpg"
+  imgpath="9ps3/img/1.jpg"
   n_imgresize=10
   n_vm=2
   mcpu=500
@@ -827,8 +826,7 @@ img_resize() {
   aws s3 --profile sigmaos rm --recursive s3://9ps3/img/ > /dev/null
   aws s3 --profile sigmaos cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
   cmd="
-    export SIGMANAMED=10.0.20.156; \
-    export SIGMADEBUG=\"TEST;BENCH;\"; \
+    export SIGMADEBUG=\"TEST;BENCH;PROCCLNT;PROCCLNT_ERR;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestImgResize --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $mcpu > /tmp/bench.out 2>&1
   "

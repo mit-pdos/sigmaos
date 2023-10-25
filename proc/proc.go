@@ -141,6 +141,7 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.Privileged,
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.GetRealm(),
+		p.ProcEnvProto.GetPerf(),
 		p.Args,
 		p.GetEnv(),
 		p.GetType(),

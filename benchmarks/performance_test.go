@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	CPU_MONITOR_INTERVAL = 100 * time.Millisecond
+	CPU_MONITOR_INTERVAL = 1000 * time.Millisecond
 )
 
 //

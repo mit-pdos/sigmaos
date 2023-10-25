@@ -98,6 +98,7 @@ const (
 	CONTAINER                 = "CONTAINER"
 	NAMED                     = "NAMED"
 	FSETCD                    = "FSETCD"
+	FSETCD_ERR                = "FSETCD_ERR"
 	FSETCDLEASE               = "FSETCDLEASE"
 	PROCMGR                   = "PROCMGR"
 	UPROCDMGR                 = "UPROCDMGR"

@@ -53,9 +53,11 @@ func (fs *FsEtcd) isEmpty(di DirEntInfo) (bool, *serr.Err) {
 func (fs *FsEtcd) NewRootDir() *serr.Err {
 	nf, r := NewEtcdFileDir(sp.DMDIR, ROOT, sp.NoClntId, sp.NoLeaseId)
 	if r != nil {
+		db.DPrintf(db.FSETCD_ERR, "NewEtcdFileDir err %v", r)
 		return serr.NewErrError(r)
 	}
 	if err := fs.PutFile(ROOT, nf, sp.NoFence()); err != nil {
+		db.DPrintf(db.FSETCD_ERR, "NewRootDir PutFile err %v", err)
 		return err
 	}
 	db.DPrintf(db.FSETCD, "newRoot: PutFile %v\n", nf)
@@ -95,6 +97,7 @@ func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f
 		di := DirEntInfo{Nf: nf, Perm: nf.Tperm(), Path: path}
 		return di, nil
 	} else {
+		db.DPrintf(db.FSETCD_ERR, "Create %q dir %v nf %v err %v", name, dir, nf, err)
 		return DirEntInfo{}, err
 	}
 }

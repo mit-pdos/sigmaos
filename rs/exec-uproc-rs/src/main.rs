@@ -86,7 +86,16 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let old_root_mnt = "oldroot";
     const DIRS: &'static [&'static str] = &[
-        "", "oldroot", "lib", "usr", "lib64", "etc", "proc", "bin", "tmp",
+        "",
+        "oldroot",
+        "lib",
+        "usr",
+        "lib64",
+        "etc",
+        "proc",
+        "bin",
+        "tmp",
+        "tmp/sigmaos-perf",
     ];
 
     let newroot = "/home/sigmaos/jail/";
@@ -147,14 +156,16 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome + "bin/user", "bin")?;
 
-    // Only mount /tmp directory if SIGMAPERF is set (meaning we are
+    // Only mount /tmp/sigmaos-perf directory if SIGMAPERF is set (meaning we are
     // benchmarking and want to extract the results)
     if env::var("SIGMAPERF").is_ok() {
         // E.g., write pprof files to /tmp/sigmaos-perf
         Mount::builder()
             .fstype("none")
             .flags(MountFlags::BIND)
-            .mount("/tmp", "tmp")?;
+            .mount("/tmp/sigmaos-perf", "tmp/sigmaos-perf")?;
+        //            .mount("/tmp/sigmaos-perf", "tmp/sigmaos-perf")?;
+        log::info!("PERF {}", "mounting perf dir");
     }
     print_elapsed_time("trampoline.fs_jail_proc mount dirs", now);
 

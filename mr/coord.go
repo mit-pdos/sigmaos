@@ -143,8 +143,9 @@ func (c *Coord) mapperProc(task string) *proc.Proc {
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
-	out := ReduceOut(c.outdir, c.job) + task
-	return c.newTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, c.memPerTask)
+	outlink := ReduceOut(c.job) + task
+	outTarget := ReduceOutTarget(c.outdir, c.job) + task
+	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask)
 }
 
 func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {

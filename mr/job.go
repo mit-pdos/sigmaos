@@ -45,7 +45,11 @@ func ReduceIn(job string) string {
 	return JobDir(job) + "-rin/"
 }
 
-func ReduceOut(outDir string, job string) string {
+func ReduceOut(job string) string {
+	return path.Join(JobDir(job), "mr-out-")
+}
+
+func ReduceOutTarget(outDir string, job string) string {
 	return path.Join(JobOut(outDir, job), "mr-out-")
 }
 
@@ -175,12 +179,6 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap,
 
 // XXX run as a proc?
 func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) error {
-	b, err := fsl.GetFile(JobOutLink(jobName))
-	if err != nil {
-		db.DFatalf("Error GetFile JobOutLink: %v", err)
-	}
-	outdir := string(b)
-
 	file, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
@@ -189,7 +187,7 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) erro
 	wrt := bufio.NewWriter(file)
 	for i := 0; i < nreduce; i++ {
 		r := strconv.Itoa(i)
-		rdr, err := fsl.OpenReader(ReduceOut(outdir, jobName) + r)
+		rdr, err := fsl.OpenReader(ReduceOut(jobName) + r + "/")
 		if err != nil {
 			return err
 		}

@@ -29,31 +29,33 @@ import (
 
 type Reducer struct {
 	*sigmaclnt.SigmaClnt
-	reducef  ReduceT
-	input    string
-	output   string
-	nmaptask int
-	tmp      string
-	bwrt     *bufio.Writer
-	wrt      *writer.Writer
-	perf     *perf.Perf
+	reducef      ReduceT
+	input        string
+	outputTarget string
+	outlink      string
+	nmaptask     int
+	tmp          string
+	bwrt         *bufio.Writer
+	wrt          *writer.Writer
+	perf         *perf.Perf
 }
 
 func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return nil, errors.New("NewReducer: too few arguments")
 	}
 	r := &Reducer{}
 	r.input = args[0]
-	r.output = args[1]
-	r.tmp = r.output + rand.String(16)
+	r.outlink = args[1]
+	r.outputTarget = args[2]
+	r.tmp = r.outputTarget + rand.String(16)
 	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 	r.reducef = reducef
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	r.SigmaClnt = sc
 	r.perf = p
 
-	m, err := strconv.Atoi(args[2])
+	m, err := strconv.Atoi(args[3])
 	if err != nil {
 		return nil, fmt.Errorf("Reducer: nmaptask %v isn't int", args[2])
 	}
@@ -187,7 +189,7 @@ func (r *Reducer) emit(kv *KeyValue) error {
 }
 
 func (r *Reducer) doReduce() *proc.Status {
-	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.output, r.nmaptask)
+	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.outlink, r.nmaptask)
 	nin, duration, data, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Err readFiles: %v", err)
@@ -214,12 +216,22 @@ func (r *Reducer) doReduce() *proc.Status {
 	if err := r.wrt.Close(); err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
 	}
+
 	// Include time spent writing output.
 	duration += time.Since(start)
-	err = r.Rename(r.tmp, r.output)
+
+	pn, err := r.ResolveUnions(r.tmp)
 	if err != nil {
-		return proc.NewStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", r.ProcEnv().GetPID(), r.tmp, r.output, err), nil)
+		db.DFatalf("%v: ResolveUnion %v err %v", r.ProcEnv().GetPID(), r.tmp, err)
 	}
+
+	if err := r.Symlink([]byte(pn), r.outlink, 0777); err != nil {
+		return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
+	}
+	//	err = r.Rename(r.tmp, r.output)
+	//	if err != nil {
+	//		return proc.NewStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", r.ProcEnv().GetPID(), r.tmp, r.output, err), nil)
+	//	}
 	return proc.NewStatusInfo(proc.StatusOK, r.input,
 		Result{false, r.input, nin, r.wrt.Nbytes(), duration.Milliseconds()})
 }

@@ -29,6 +29,7 @@ func RunUProc(uproc *proc.Proc) error {
 	}
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
+	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
 	uproc.AppendEnv("RUST_BACKTRACE", "1")
 	cmd.Env = uproc.GetEnv()
 	cmd.Stdout = os.Stdout
@@ -40,7 +41,7 @@ func RunUProc(uproc *proc.Proc) error {
 			syscall.CLONE_NEWPID |
 			syscall.CLONE_NEWNS,
 	}
-	db.DPrintf(db.CONTAINER, "exec %v\n", cmd)
+	db.DPrintf(db.CONTAINER, "exec cmd %v", cmd)
 	defer cleanupJail(uproc.GetPid())
 	s := time.Now()
 	if err := cmd.Start(); err != nil {

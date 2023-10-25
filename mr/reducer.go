@@ -47,6 +47,7 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	r.input = args[0]
 	r.output = args[1]
 	r.tmp = r.output + rand.String(16)
+	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 	r.reducef = reducef
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	r.SigmaClnt = sc
@@ -179,6 +180,9 @@ func (r *Reducer) readFiles(input string) (sp.Tlength, time.Duration, Tdata, []s
 func (r *Reducer) emit(kv *KeyValue) error {
 	b := fmt.Sprintf("%s\t%s\n", kv.Key, kv.Value)
 	_, err := r.bwrt.Write([]byte(b))
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Err emt write bwriter: %v", err)
+	}
 	return err
 }
 
@@ -186,6 +190,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.output, r.nmaptask)
 	nin, duration, data, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "Err readFiles: %v", err)
 		return proc.NewStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", r.ProcEnv().GetPID(), r.input, err), nil)
 	}
 	if len(lostMaps) > 0 {
@@ -198,6 +203,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	start := time.Now()
 	for k, vs := range data {
 		if err := r.reducef(k, vs, r.emit); err != nil {
+			db.DPrintf(db.ALWAYS, "Err reducef: %v", err)
 			return proc.NewStatusErr("reducef", err)
 		}
 	}

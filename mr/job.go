@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strconv"
 
 	db "sigmaos/debug"
@@ -16,28 +17,36 @@ import (
 	"sigmaos/yaml"
 )
 
+func JobOut(outDir, job string) string {
+	return path.Join(outDir, job)
+}
+
+func JobOutLink(job string) string {
+	return path.Join(JobDir(job), OUTLINK)
+}
+
 func JobDir(job string) string {
-	return MRDIRTOP + "/" + job
+	return path.Join(MRDIRTOP, job)
 }
 
 func MRstats(job string) string {
-	return JobDir(job) + "/stats.txt"
+	return path.Join(JobDir(job), "stats.txt")
 }
 
 func MapTask(job string) string {
-	return JobDir(job) + "/m"
+	return path.Join(JobDir(job), "/m")
 }
 
 func ReduceTask(job string) string {
-	return JobDir(job) + "/r"
+	return path.Join(JobDir(job), "/r")
 }
 
 func ReduceIn(job string) string {
 	return JobDir(job) + "-rin/"
 }
 
-func ReduceOut(job string) string {
-	return JobDir(job) + "/mr-out-"
+func ReduceOut(outDir string, job string) string {
+	return path.Join(JobOut(outDir, job), "mr-out-")
 }
 
 func BinName(i int) string {
@@ -45,23 +54,23 @@ func BinName(i int) string {
 }
 
 func LocalOut(job string) string {
-	return MLOCALDIR + "/" + job + "/"
+	return path.Join(MLOCALDIR, job)
 }
 
 func Moutdir(job, name string) string {
-	return LocalOut(job) + "m-" + name
+	return path.Join(LocalOut(job), "m-"+name)
 }
 
 func mshardfile(job, name string, r int) string {
-	return Moutdir(job, name) + "/r-" + strconv.Itoa(r)
+	return path.Join(Moutdir(job, name), "r-"+strconv.Itoa(r))
 }
 
 func shardtarget(job, pn, name string, r int) string {
-	return pn + MR + job + "/m-" + name + "/r-" + strconv.Itoa(r) + "/"
+	return path.Join(pn, MR, job, "m-"+name, "r-"+strconv.Itoa(r)) + "/"
 }
 
 func symname(job, r, name string) string {
-	return ReduceIn(job) + "/" + r + "/m-" + name
+	return path.Join(ReduceIn(job), r, "m-"+name)
 }
 
 type Job struct {
@@ -69,6 +78,7 @@ type Job struct {
 	Nreduce int    `yalm:"nreduce"`
 	Binsz   int    `yalm:"binsz"`
 	Input   string `yalm:"input"`
+	Output  string `yalm:"output"`
 	Linesz  int    `yalm:"linesz"`
 }
 
@@ -82,7 +92,19 @@ func ReadJobConfig(app string) *Job {
 
 func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 	fsl.MkDir(MRDIRTOP, 0777)
-	for _, n := range []string{JobDir(jobname), MapTask(jobname), ReduceTask(jobname), ReduceIn(jobname), MapTask(jobname) + TIP, ReduceTask(jobname) + TIP, MapTask(jobname) + DONE, ReduceTask(jobname) + DONE, MapTask(jobname) + NEXT, ReduceTask(jobname) + NEXT} {
+	dirs := []string{
+		JobDir(jobname),
+		MapTask(jobname),
+		ReduceTask(jobname),
+		ReduceIn(jobname),
+		MapTask(jobname) + TIP,
+		ReduceTask(jobname) + TIP,
+		MapTask(jobname) + DONE,
+		ReduceTask(jobname) + DONE,
+		MapTask(jobname) + NEXT,
+		ReduceTask(jobname) + NEXT,
+	}
+	for _, n := range dirs {
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
@@ -106,8 +128,24 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 	}
 }
 
+// Clean up all old MR outputs
+func CleanupMROutputs(fsl *fslib.FsLib, outputDir string) {
+	db.DPrintf(db.ALWAYS, "Clean up MR outputs: %v", outputDir)
+}
+
 // Put names of input files in name/mr/m
 func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
+	fsl.MkDir(job.Output, 0777)
+	outDir := JobOut(job.Output, jobName)
+	if err := fsl.MkDir(outDir, 0777); err != nil {
+		db.DPrintf(db.ALWAYS, "Error mkdir job dir %v: %v", outDir, err)
+		return 0, err
+	}
+	if _, err := fsl.PutFile(JobOutLink(jobName), 0777, sp.OWRITE, []byte(job.Output)); err != nil {
+		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobName), err)
+		return 0, err
+	}
+
 	splitsz := sp.Tlength(10 * sp.MBYTE)
 	// splitsz := maxbinsz >> 3 //sp.Tlength(10 * 1024 * 1024)
 
@@ -137,6 +175,12 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap,
 
 // XXX run as a proc?
 func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) error {
+	b, err := fsl.GetFile(JobOutLink(jobName))
+	if err != nil {
+		db.DFatalf("Error GetFile JobOutLink: %v", err)
+	}
+	outdir := string(b)
+
 	file, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
@@ -145,7 +189,7 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) erro
 	wrt := bufio.NewWriter(file)
 	for i := 0; i < nreduce; i++ {
 		r := strconv.Itoa(i)
-		rdr, err := fsl.OpenReader(ReduceOut(jobName) + r)
+		rdr, err := fsl.OpenReader(ReduceOut(outdir, jobName) + r)
 		if err != nil {
 			return err
 		}

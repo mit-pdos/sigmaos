@@ -20,6 +20,7 @@ import (
 const (
 	MR       = "/mr/"
 	MRDIRTOP = "name/" + MR
+	OUTLINK  = "output"
 
 	TIP  = "-tip/"
 	DONE = "-done/"
@@ -60,6 +61,7 @@ type Coord struct {
 	mapperbin   string
 	reducerbin  string
 	leaderclnt  *leaderclnt.LeaderClnt
+	outdir      string
 	done        int32
 	memPerTask  proc.Tmem
 }
@@ -103,6 +105,12 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.memPerTask = proc.Tmem(mem)
 
+	b, err := c.GetFile(JobOutLink(c.job))
+	if err != nil {
+		db.DFatalf("Error GetFile JobOutLink: %v", err)
+	}
+	c.outdir = string(b)
+
 	c.Started()
 
 	c.leaderclnt, err = leaderclnt.NewLeaderClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
@@ -135,8 +143,7 @@ func (c *Coord) mapperProc(task string) *proc.Proc {
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
-	out := ReduceOut(c.job) + task
-	// TODO: set dynamically based on input file combined size.
+	out := ReduceOut(c.outdir, c.job) + task
 	return c.newTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, c.memPerTask)
 }
 

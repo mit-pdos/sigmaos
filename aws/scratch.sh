@@ -42,7 +42,6 @@ for vm in $vms; do
   echo "VM: $vm"
   # No additional benchmarking setup needed for AWS.
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-    sudo systemctl start docker
-    docker ps
+    docker ps -a
 ENDSSH
 done

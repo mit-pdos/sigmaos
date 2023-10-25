@@ -111,7 +111,7 @@ func NewCoord(args []string) (*Coord, error) {
 }
 
 func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
-	pid := sp.GenPid(c.job)
+	pid := sp.GenPid(bin + "-" + c.job)
 	p := proc.NewProcPid(pid, bin, args)
 	//	if mb > 0 {
 	//		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))

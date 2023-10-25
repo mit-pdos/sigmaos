@@ -53,11 +53,11 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	r.SigmaClnt = sc
 	r.perf = p
-	pn, err := r.ResolveUnions(r.outputTarget + rand.String(16))
-	if err != nil {
-		db.DFatalf("%v: ResolveUnion %v err %v", r.ProcEnv().GetPID(), r.tmp, err)
-	}
-	r.tmp = pn
+	//	pn, err := r.ResolveUnions(r.outputTarget + rand.String(16))
+	//	if err != nil {
+	//		db.DFatalf("%v: ResolveUnion %v err %v", r.ProcEnv().GetPID(), r.tmp, err)
+	//	}
+	r.tmp = r.outputTarget + rand.String(16) //pn
 
 	m, err := strconv.Atoi(args[3])
 	if err != nil {

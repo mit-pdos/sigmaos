@@ -2,5 +2,5 @@ app: "wc"
 nreduce: 2
 binsz: 262144
 input: "name/s3/~local/9ps3/gutenberg/"
-output: "name/ux/~local/mr-out/"
+output: "name/s3/~local/9ps3/mr-out/"
 linesz: 65536

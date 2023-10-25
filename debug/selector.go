@@ -34,6 +34,7 @@ const (
 	TEST1           = "TEST1"
 	DELAY           = "DELAY"
 	CRASH           = "CRASH"
+	PERF            = "PERF"
 )
 
 // Apps

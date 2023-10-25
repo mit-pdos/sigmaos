@@ -97,6 +97,7 @@ KERNELID=$1
 mkdir -p /tmp/sigmaos
 mkdir -p /tmp/sigmaos-bin
 mkdir -p /tmp/sigmaos-perf
+chmod a+w /tmp/sigmaos-perf
 
 # Pull latest docker images
 if ! [ -z "$TAG" ]; then

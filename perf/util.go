@@ -105,6 +105,7 @@ func NewPerf(pcfg *proc.ProcEnv, s Tselector) (*Perf, error) {
 // each realm).
 func NewPerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 	initLabels(pcfg)
+	db.DPrintf(db.PERF, "Perf tracking labels %v", labels)
 	p := &Perf{}
 	p.selector = s
 	p.utilChan = make(chan bool, 1)
@@ -130,26 +131,32 @@ func NewPerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 	}
 	// Set up pprof caputre
 	if ok := labels[s+PPROF]; ok {
+		db.DPrintf(db.PERF, "Set up pprof capture")
 		p.setupPprof(basePath + "-pprof.out")
 	}
 	// Set up pprof caputre
 	if ok := labels[s+PPROF_MEM]; ok {
+		db.DPrintf(db.PERF, "Set up pprof mem capture")
 		p.setupPprofMem(basePath + "-pprof-mem.out")
 	}
 	// Set up pprof caputre
 	if ok := labels[s+PPROF_MUTEX]; ok {
+		db.DPrintf(db.PERF, "Set up pprof mutex capture")
 		p.setupPprofMutex(basePath + "-pprof-mutex.out")
 	}
 	// Set up pprof caputre
 	if ok := labels[s+PPROF_BLOCK]; ok {
+		db.DPrintf(db.PERF, "Set up pprof block capture")
 		p.setupPprofBlock(basePath + "-pprof-block.out")
 	}
 	// Set up cpu util capture
 	if ok := labels[s+CPU]; ok {
+		db.DPrintf(db.PERF, "Set up pprof CPU util capture")
 		p.setupCPUUtil(sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-cpu.out")
 	}
 	// Set up throughput caputre
 	if ok := labels[s+TPT]; ok {
+		db.DPrintf(db.PERF, "Set up pprof tpt capture")
 		p.setupTpt(sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-tpt.out")
 	}
 	return p, nil
@@ -520,6 +527,7 @@ func (p *Perf) teardownUtil() {
 				db.DFatalf("Error writing to util file: %v", err)
 			}
 		}
+		p.utilFile.Close()
 	}
 }
 
@@ -527,11 +535,14 @@ func (p *Perf) teardownUtil() {
 func (p *Perf) teardownTpt() {
 	if p.tpt {
 		p.tpt = false
+		db.DPrintf(db.PERF, "Tear down tpt perf tracker num entries %v", len(p.times))
+		defer db.DPrintf(db.PERF, "Done Tear down tpt perf tracker")
 		// Ignore first entry.
 		for i := 0; i < len(p.times); i++ {
 			if _, err := p.tptFile.WriteString(fmt.Sprintf("%vus,%f\n", p.times[i].UnixMicro(), p.tpts[i])); err != nil {
 				db.DFatalf("Error writing to tpt file: %v", err)
 			}
 		}
+		p.tptFile.Close()
 	}
 }

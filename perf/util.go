@@ -371,7 +371,6 @@ func (p *Perf) setupCPUUtil(sampleHz int, fpath string) {
 		db.DFatalf("Create util file %v failed %v", fpath, err)
 	}
 	p.utilFile = f
-	// TODO: pre-allocate a large number of entries
 	p.cpuCyclesBusy = make([]float64, 0, 40*sampleHz)
 	p.cpuCyclesTotal = make([]float64, 0, 40*sampleHz)
 	p.cpuUtilPct = make([]float64, 0, 40*sampleHz)

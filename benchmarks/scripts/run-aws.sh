@@ -238,6 +238,7 @@ run_mr() {
   mrapp=$4
   perf_dir=$5
   cmd="
+    export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp > /tmp/bench.out 2>&1
   "
@@ -327,7 +328,7 @@ run_cached() {
 
 mr_scalability() {
   mrapp=mr-grep-wiki120G.yml
-  for n_vm in 1 16 ; do # 2 4 8 
+  for n_vm in 8 ; do # 1 16 ; do # 2 4 8 
     run=${FUNCNAME[0]}/sigmaOS/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
@@ -513,7 +514,7 @@ realm_balance_be() {
   mrapp=mr-grep-wiki20G.yml
   sl="40s"
   n_vm=8
-  n_realm=1
+  n_realm=4
   driver_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -1183,12 +1184,13 @@ echo "Running benchmarks with version: $VERSION"
 #schedd_scalability_rs
 #schedd_scalability
 
-img_resize
-#realm_balance_multi
+realm_balance_multi
+realm_balance_be
+#mr_scalability
+#img_resize
 
 #k8s_img_resize
 #hotel_tail_multi
-#realm_balance_be
 #k8s_balance_multi
 #k8s_balance_be
 
@@ -1210,10 +1212,10 @@ img_resize
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
+graph_realm_balance_multi
+graph_realm_balance_be
 #graph_img_resize
-#graph_realm_balance_multi
 
-#graph_realm_balance_be
 #graph_k8s_balance_be
 #graph_k8s_balance_multi
 #graph_k8s_hotel_tail_tpt_over_time

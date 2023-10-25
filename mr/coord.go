@@ -31,8 +31,6 @@ const (
 	MLOCALDIR = MLOCALSRV + MR
 
 	RESTART = "restart" // restart message from reducer
-
-	MEM_REQ = 1000
 )
 
 //
@@ -63,10 +61,11 @@ type Coord struct {
 	reducerbin  string
 	leaderclnt  *leaderclnt.LeaderClnt
 	done        int32
+	memPerTask  proc.Tmem
 }
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 7 {
+	if len(args) != 8 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
@@ -98,6 +97,12 @@ func NewCoord(args []string) (*Coord, error) {
 
 	c.linesz = args[6]
 
+	mem, err := strconv.Atoi(args[7])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[2])
+	}
+	c.memPerTask = proc.Tmem(mem)
+
 	c.Started()
 
 	c.leaderclnt, err = leaderclnt.NewLeaderClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
@@ -125,14 +130,14 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, MEM_REQ)
+	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, c.memPerTask)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	out := ReduceOut(c.job) + task
 	// TODO: set dynamically based on input file combined size.
-	return c.newTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, MEM_REQ)
+	return c.newTask(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)}, c.memPerTask)
 }
 
 func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {

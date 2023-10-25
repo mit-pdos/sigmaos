@@ -38,6 +38,7 @@ const (
 	CRASHTASK  = 3000
 	CRASHCOORD = 6000
 	CRASHSRV   = 1000000
+	MEM_REQ    = 1000
 )
 
 var app string // yaml app file
@@ -289,7 +290,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	assert.Nil(ts.T, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	cm := mr.StartMRJob(ts.SigmaClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord)
+	cm := mr.StartMRJob(ts.SigmaClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

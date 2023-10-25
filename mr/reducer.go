@@ -48,12 +48,16 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	r.input = args[0]
 	r.outlink = args[1]
 	r.outputTarget = args[2]
-	r.tmp = r.outputTarget + rand.String(16)
 	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 	r.reducef = reducef
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	r.SigmaClnt = sc
 	r.perf = p
+	pn, err := r.ResolveUnions(r.outputTarget + rand.String(16))
+	if err != nil {
+		db.DFatalf("%v: ResolveUnion %v err %v", r.ProcEnv().GetPID(), r.tmp, err)
+	}
+	r.tmp = pn
 
 	m, err := strconv.Atoi(args[3])
 	if err != nil {
@@ -220,12 +224,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	// Include time spent writing output.
 	duration += time.Since(start)
 
-	pn, err := r.ResolveUnions(r.tmp)
-	if err != nil {
-		db.DFatalf("%v: ResolveUnion %v err %v", r.ProcEnv().GetPID(), r.tmp, err)
-	}
-
-	if err := r.Symlink([]byte(pn), r.outlink, 0777); err != nil {
+	if err := r.Symlink([]byte(r.tmp), r.outlink, 0777); err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
 	}
 	//	err = r.Rename(r.tmp, r.output)

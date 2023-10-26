@@ -527,6 +527,25 @@ realm_balance_be() {
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
+realm_balance_be_img() {
+  imgpath="9ps3/img/1.jpg"
+  n_imgresize=10
+  imgresize_mcpu=0
+  sl="40s"
+  n_vm=8
+  n_realm=4
+  driver_vm=8
+  run=${FUNCNAME[0]}
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  cmd="
+    export SIGMADEBUG=\"TEST;BENCH;\"; \
+    go clean -testcache; \
+    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --nrealm $n_realm > /tmp/bench.out 2>&1
+  "
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+}
+
 k8s_balance_be() {
 #  mrapp=mr-wc-wiki4G.yml
 #  hotel_dur="20s,20s,20s"
@@ -635,6 +654,72 @@ realm_balance_multi() {
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
+  "
+  # Start driver VM asynchronously.
+  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true $swap
+  sleep $sl2
+  for cli_vm in $clnt_vms ; do
+    driver="false"
+    if [[ $cli_vm == $driver_vm ]]; then
+      # Already started above.
+      continue
+    else
+      testname=$testname_clnt
+    fi
+    run_hotel $testname $hotel_max_rps $cli_vm $n_clnt_vms $cache_type $k8saddr $hotel_dur $sl false $perf_dir $driver true
+  done
+  # Wait for all clients to terminate.
+  wait
+  end_benchmark $vpc $perf_dir
+}
+
+realm_balance_multi_img() {
+  imgpath="9ps3/img/1.jpg"
+  n_imgresize=10
+  imgresize_mcpu=0
+  hotel_dur="5s,5s,10s,15s,20s,15s"
+  hotel_max_rps="250,500,1000,1500,2000,1000"
+  mem_pressure="false"
+  hotel_ncache=3
+  sl="10s"
+  n_vm=8
+  driver_vm=8
+  sl2="10s"
+### Hotel client params
+  n_clnt_vms=4
+  sys="Sigmaos"
+  cache_type="cached"
+  clnt_vma=($(echo "$driver_vm 9 10 11 12 13 14"))
+  clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
+  testname_clnt="HotelSigmaosJustCliSearch"
+  LEADER_IP=$LEADER_IP_SIGMA
+  vpc=$VPC
+  k8saddr="x.x.x.x"
+###
+  swap="swapoff"
+  bmem=""
+  memp=""
+  if [[ $mem_pressure == "true" ]]; then
+    memp="_mempressure"
+    swap="swapon"
+    bmem="--block_mem 12GiB"
+    sl2="90s"
+  fi
+  run=${FUNCNAME[0]}$memp
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/$run
+  # Avoid doing duplicate work.
+  if ! should_skip $perf_dir false ; then
+    return
+  fi
+  stop_k8s_cluster $KVPC
+  # Clear out s3 dir
+  aws s3 --profile sigmaos rm --recursive s3://9ps3/img/ > /dev/null
+  aws s3 --profile sigmaos cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
+  cmd="
+    export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
+    go clean -testcache; \
+    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true $swap
@@ -1184,8 +1269,10 @@ echo "Running benchmarks with version: $VERSION"
 #schedd_scalability_rs
 #schedd_scalability
 
-realm_balance_multi
-realm_balance_be
+realm_balance_multi_img
+realm_balance_be_img
+#realm_balance_be
+#realm_balance_multi
 #mr_scalability
 #img_resize
 
@@ -1212,8 +1299,8 @@ realm_balance_be
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_realm_balance_multi
-graph_realm_balance_be
+#graph_realm_balance_multi
+#graph_realm_balance_be
 #graph_img_resize
 
 #graph_k8s_balance_be

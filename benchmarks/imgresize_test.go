@@ -20,6 +20,7 @@ type ImgResizeJobInstance struct {
 	sigmaos bool
 	job     string
 	mcpu    proc.Tmcpu
+	mem     proc.Tmem
 	ntasks  int
 	ninputs int
 	input   string
@@ -29,7 +30,7 @@ type ImgResizeJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu) *ImgResizeJobInstance {
+func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu, mem proc.Tmem) *ImgResizeJobInstance {
 	ji := &ImgResizeJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = "imgresize-" + rd.String(4)
@@ -40,6 +41,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ji.p = p
 	ji.ninputs = ninputs
 	ji.mcpu = mcpu
+	ji.mem = mem
 
 	err := imgresized.MkDirs(ji.FsLib, ji.job)
 	assert.Nil(ts.Ts.T, err, "Error MkDirs: %v", err)
@@ -49,7 +51,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v", ji.input, ji.ntasks, ji.mcpu)
-	ji.imgd = imgresized.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, false)
+	ji.imgd = imgresized.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false)
 	fn := ji.input
 	fns := make([]string, 0, ji.ninputs)
 	for i := 0; i < ji.ninputs; i++ {

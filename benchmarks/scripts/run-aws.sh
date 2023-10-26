@@ -528,7 +528,7 @@ realm_balance_be() {
 }
 
 realm_balance_be_img() {
-  imgpath="9ps3/img/1.jpg"
+  imgpath="name/s3/~local/9ps3/img/1.jpg"
   n_imgresize=10
   imgresize_mcpu=0
   sl="40s"
@@ -541,7 +541,7 @@ realm_balance_be_img() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --nrealm $n_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --nrealm $n_realm > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -674,7 +674,7 @@ realm_balance_multi() {
 }
 
 realm_balance_multi_img() {
-  imgpath="9ps3/img/1.jpg"
+  imgpath="name/s3/~local/9ps3/img/1.jpg"
   n_imgresize=10
   imgresize_mcpu=0
   hotel_dur="5s,5s,10s,15s,20s,15s"
@@ -719,7 +719,7 @@ realm_balance_multi_img() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceHotelImgResize --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true $swap
@@ -895,7 +895,7 @@ mr_k8s() {
 }
 
 img_resize() {
-  imgpath="9ps3/img/1.jpg"
+  imgpath="name/s3/~local/9ps3/img/1.jpg"
   n_imgresize=10
   n_vm=2
   mcpu=500

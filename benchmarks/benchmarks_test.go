@@ -79,6 +79,7 @@ var IMG_RESIZE_INPUT_PATH string
 var N_IMG_RESIZE_JOBS int
 var N_IMG_RESIZE_INPUTS_PER_JOB int
 var IMG_RESIZE_MCPU int
+var IMG_RESIZE_MEM_MB int
 var SLEEP time.Duration
 var REDIS_ADDR string
 var N_PROC int
@@ -148,6 +149,7 @@ func init() {
 	flag.IntVar(&N_IMG_RESIZE_JOBS, "n_imgresize", 10, "Number of img resize jobs.")
 	flag.IntVar(&N_IMG_RESIZE_INPUTS_PER_JOB, "n_imgresize_per", 1, "Number of img resize inputs per job.")
 	flag.IntVar(&IMG_RESIZE_MCPU, "imgresize_mcpu", 100, "MCPU for img resize worker.")
+	flag.IntVar(&IMG_RESIZE_MEM_MB, "imgresize_mem", 0, "Mem for img resize worker.")
 }
 
 // ========== Common parameters ==========
@@ -519,7 +521,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Prep ImgResize job
-	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU))
+	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB))
 	// Prep Hotel job
 	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
@@ -639,7 +641,7 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(tses[i])
 		defer ps[i].Done()
-		imgjob, imgapp := newImgResizeJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU))
+		imgjob, imgapp := newImgResizeJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB))
 		imgjobs[i] = imgjob
 		imgapps[i] = imgapp
 	}
@@ -1014,7 +1016,7 @@ func TestImgResize(t *testing.T) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := newImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU))
+	jobs, apps := newImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -1079,7 +1081,7 @@ func TestRealmBalanceSimpleImgResize(t *testing.T) {
 	imgJobsBE, imgAppsBE := newImgResizeJob(
 		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0)
 	imgJobsLC, imgAppsLC := newImgResizeJob(
-		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU))
+		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB))
 
 	// Run image resize jobs
 	go func() {

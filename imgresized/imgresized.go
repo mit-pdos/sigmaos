@@ -32,6 +32,7 @@ type ImgSrv struct {
 	wip        string
 	todo       string
 	workerMcpu proc.Tmcpu
+	workerMem  proc.Tmem
 	isDone     bool
 	crash      int64
 	leaderclnt *leaderclnt.LeaderClnt
@@ -90,7 +91,7 @@ func Cleanup(fsl *fslib.FsLib, dir string) error {
 }
 
 func NewImgd(args []string) (*ImgSrv, error) {
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return nil, fmt.Errorf("NewImgSrv: wrong number of arguments: %v", args)
 	}
 	imgd := &ImgSrv{}
@@ -115,6 +116,11 @@ func NewImgd(args []string) (*ImgSrv, error) {
 		return nil, fmt.Errorf("NewImgSrv: Error parse MCPU %v", err)
 	}
 	imgd.workerMcpu = proc.Tmcpu(mcpu)
+	mem, err := strconv.Atoi(args[3])
+	if err != nil {
+		return nil, fmt.Errorf("NewImgSrv: Error parse Mem %v", err)
+	}
+	imgd.workerMem = proc.Tmem(mem)
 
 	imgd.Started()
 
@@ -191,6 +197,7 @@ func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
 			procs[i].SetCrash(imgd.crash)
 		}
 		procs[i].SetMcpu(imgd.workerMcpu)
+		procs[i].SetMem(imgd.workerMem)
 		db.DPrintf(db.IMGD, "prep to burst-spawn task %v %v\n", procs[i].GetPid(), procs[i].Args)
 	}
 	start := time.Now()

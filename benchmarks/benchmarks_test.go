@@ -647,28 +647,28 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 	for i := range tses {
 		monitorCPUUtil(tses[i], ps[i])
 	}
-	// Initialize MR jobs.
+	// Initialize ImgResize jobs.
 	for i := range tses {
-		// Start MR job initialization.
-		go func(ts *test.RealmTstate, mrapp []interface{}, rs *benchmarks.Results) {
-			runOps(ts, mrapp, runMR, rs)
+		// Start ImgResize job initialization.
+		go func(ts *test.RealmTstate, imgapp []interface{}, rs *benchmarks.Results) {
+			runOps(ts, imgapp, runImgResize, rs)
 			done <- true
 		}(tses[i], imgapps[i], rses[i])
-		// Wait for MR job to set up.
+		// Wait for ImgResize job to set up.
 		<-imgjobs[i][0].ready
 	}
 	// Start jobs running, with a small delay between each job start.
 	for i := range tses {
-		// Kick off MR jobs.
+		// Kick off ImgResize jobs.
 		imgjobs[i][0].ready <- true
-		db.DPrintf(db.TEST, "Start MR job %v", i+1)
+		db.DPrintf(db.TEST, "Start ImgResize job %v", i+1)
 		// Sleep for a bit before starting the next job
 		time.Sleep(SLEEP)
 	}
 	// Wait for both jobs to finish.
 	for i := range tses {
 		<-done
-		db.DPrintf(db.TEST, "Done MR job %v", i+1)
+		db.DPrintf(db.TEST, "Done ImgResize job %v", i+1)
 	}
 	printResultSummary(rses[0])
 	rootts.Shutdown()

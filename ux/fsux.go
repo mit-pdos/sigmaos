@@ -3,9 +3,9 @@ package fsux
 import (
 	"sync"
 
-	"sigmaos/proc"
-	"sigmaos/container"
 	db "sigmaos/debug"
+	"sigmaos/netsigma"
+	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -24,7 +24,7 @@ type FsUx struct {
 }
 
 func RunFsUx(rootux string) {
-	ip, err := container.LocalIP()
+	ip, err := netsigma.LocalIP()
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}

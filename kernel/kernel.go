@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/kproc"
+	"sigmaos/netsigma"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -23,7 +23,6 @@ import (
 const (
 	SLEEP_S          = 2
 	REPL_PORT_OFFSET = 100
-	SUBSYSTEM_INFO   = "subsystem-info"
 
 	FPORT port.Tport = 1112
 	LPORT port.Tport = 1132
@@ -58,7 +57,7 @@ func newKernel(param *Param) *Kernel {
 
 func NewKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 	k := newKernel(p)
-	ip, err := container.LocalIP()
+	ip, err := netsigma.LocalIP()
 	if err != nil {
 		return nil, err
 	}

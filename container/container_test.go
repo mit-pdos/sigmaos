@@ -11,12 +11,10 @@ import (
 
 	"github.com/docker/go-connections/nat"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/mem"
 	"sigmaos/port"
 	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -26,7 +24,7 @@ func TestSyscallBlock(t *testing.T) {
 	err := ts.Spawn(p)
 	st, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
-	assert.True(t, st.IsStatusOK())
+	assert.True(t, st.IsStatusOK(), st)
 	ts.Shutdown()
 }
 
@@ -42,24 +40,6 @@ func TestExpose(t *testing.T) {
 	pmap := nat.PortMap{}
 	pmap[ports] = []nat.PortBinding{}
 	log.Printf("ports %v pms  %v\n", ports, pms)
-}
-
-func TestRearrange(t *testing.T) {
-	addr0 := sp.NewTaddrRealm("10.0.1.55:1113", "realm1")
-	addr1 := sp.NewTaddrRealm("10.0.7.53:1113", "realm2")
-	addr2 := sp.NewTaddrRealm("192.168.2.114:1113", string(sp.ROOTREALM))
-
-	addrs := sp.Taddrs{addr0, addr2}
-	raddrs := container.Rearrange(sp.ROOTREALM.String(), addrs)
-	log.Printf("addrs %v -> %v\n", addrs, raddrs)
-
-	addrs = sp.Taddrs{addr2, addr0}
-	raddrs = container.Rearrange("realm1", addrs)
-	log.Printf("addrs %v -> %v\n", addrs, raddrs)
-
-	addrs = sp.Taddrs{addr1, addr2}
-	raddrs = container.Rearrange("realm1", addrs)
-	log.Printf("addrs %v -> %v\n", addrs, raddrs)
 }
 
 func runMemHog(ts *test.Tstate, c chan error, id, delay, mem, dur string, nthread int) {

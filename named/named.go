@@ -9,12 +9,12 @@ import (
 
 	//	"runtime"
 
-	"sigmaos/container"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/fslibsrv"
 	"sigmaos/leaderetcd"
+	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/portclnt"
@@ -156,7 +156,7 @@ func Run(args []string) error {
 }
 
 func (nd *Named) newSrv() (sp.Tmount, error) {
-	ip, err := container.LocalIP()
+	ip, err := netsigma.LocalIP()
 	if err != nil {
 		return sp.NullMount(), err
 	}

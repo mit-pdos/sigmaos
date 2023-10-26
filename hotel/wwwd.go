@@ -10,9 +10,9 @@ import (
 	//	"go.opentelemetry.io/otel/trace"
 	//	tproto "sigmaos/tracing/proto"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
+	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
@@ -114,7 +114,7 @@ func RunWww(job string, public bool) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		a, err := container.QualifyAddr(l.Addr().String())
+		a, err := netsigma.QualifyAddr(l.Addr().String())
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
 		}
@@ -132,7 +132,7 @@ func RunWww(job string, public bool) error {
 		go http.Serve(l, mux)
 		//		}
 
-		a, err := container.QualifyAddr(l.Addr().String())
+		a, err := netsigma.QualifyAddr(l.Addr().String())
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
 		}

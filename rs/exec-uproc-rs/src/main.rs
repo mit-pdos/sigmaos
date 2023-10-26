@@ -122,19 +122,19 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
     // Chdir to new root
     env::set_current_dir(newroot_pn.clone())?;
 
-    // E.g., openat "/lib/ld-musl-x86_64.so.1"
+    // E.g., execve /lib/ld-musl-x86_64.so.1
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib", "lib")?;
 
-    // Why mount lib64?
+    // E.g., openat "/lib64/ld-musl-x86_64.so.1" (links to /lib/)
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/lib64", "lib64")?;
 
-    // E.g., /usr/lib for shared libraries and /usr/local/lib
+    // E.g., /usr/lib for shared libraries (e.g., /usr/lib/libseccomp.so.2)
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
@@ -146,10 +146,11 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
 
-    // E.g., openat "/proc/meminfo", "/proc/self/exe"
+    // E.g., openat "/proc/meminfo", "/proc/self/exe", but further
+    // restricted by apparmor sigmoas-uproc profile.
     Mount::builder().fstype("proc").mount("proc", "proc")?;
 
-    // To download sigmaos user binaries into
+    // To download sigmaos user binaries into /home/sigmaos/bin/user
     let shome: String = sigmahome.to_owned();
     Mount::builder()
         .fstype("none")

@@ -3,11 +3,11 @@ package kernelsrv
 import (
 	"os"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv/proto"
+	"sigmaos/netsigma"
 	"sigmaos/port"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -82,7 +82,7 @@ func (ks *KernelSrv) AllocPort(ctx fs.CtxI, req proto.PortRequest, rep *proto.Po
 	if err != nil {
 		return err
 	}
-	ip, err := container.LocalIP()
+	ip, err := netsigma.LocalIP()
 	if err != nil {
 		return err
 	}

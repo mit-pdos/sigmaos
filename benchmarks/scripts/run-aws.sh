@@ -1195,7 +1195,15 @@ graph_realm_balance_be() {
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
   nrealm=4
-  $GRAPH_SCRIPTS_DIR/mrmr-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32
+  $GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32 --prefix "mr-"
+}
+
+graph_realm_balance_be_img() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  nrealm=4
+  $GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32
 }
 
 graph_k8s_balance_be() {
@@ -1203,14 +1211,14 @@ graph_k8s_balance_be() {
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
   nrealm=4
-  $GRAPH_SCRIPTS_DIR/mrmr-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32
+  $GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32 --prefix "imgresize-"
 }
 
 graph_k8s_mr_aggregate_tpt() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_k8s/mr-k8s-grep/ --out $GRAPH_OUT_DIR/$graph.pdf --units "MB/sec" --title "MapReduce Aggregate Throughput" --total_ncore 64
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/mr_k8s/mr-k8s-grep/ --out $GRAPH_OUT_DIR/$graph.pdf --units "MB/sec" --title "MapReduce Aggregate Throughput" --total_ncore 64 --prefix "mr-"
 }
 
 graph_k8s_balance() {
@@ -1272,7 +1280,7 @@ echo "Running benchmarks with version: $VERSION"
 #schedd_scalability_rs
 #schedd_scalability
 
-realm_balance_multi_img
+#realm_balance_multi_img
 realm_balance_be_img
 #realm_balance_be
 #realm_balance_multi
@@ -1302,8 +1310,9 @@ realm_balance_be_img
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-#graph_realm_balance_multi
+graph_realm_balance_be_img
 #graph_realm_balance_be
+#graph_realm_balance_multi
 #graph_img_resize
 
 #graph_k8s_balance_be

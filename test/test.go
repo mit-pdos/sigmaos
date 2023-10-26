@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"sigmaos/bootkernelclnt"
-	"sigmaos/container"
 	db "sigmaos/debug"
+	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/realmclnt"
 	"sigmaos/sigmaclnt"
@@ -102,7 +102,7 @@ func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 }
 
 func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
-	localIP, err1 := container.LocalIP()
+	localIP, err1 := netsigma.LocalIP()
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}

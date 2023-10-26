@@ -25,17 +25,6 @@ const (
 	APPARMOR_PROF = "docker-default"
 )
 
-func jailPath(pid sp.Tpid) string {
-	return path.Join(sp.SIGMAHOME, "jail", pid.String())
-}
-
-// Clean up a proc's chroot jail.
-func cleanupJail(pid sp.Tpid) {
-	if err := os.RemoveAll(jailPath(pid)); err != nil {
-		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
-	}
-}
-
 func isolateUserProc(pid sp.Tpid, program string) (string, error) {
 	// Setup and chroot to the process jail.
 	s := time.Now()

@@ -10,9 +10,9 @@ import (
 
 	"net/http/pprof"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/microbenchmarks"
+	"sigmaos/netsigma"
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -49,7 +49,7 @@ func RunWwwd(job, tree string) {
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
-	ip, err := container.LocalIP()
+	ip, err := netsigma.LocalIP()
 	if err != nil {
 		db.DFatalf("Error LocalIP: %v", err)
 	}

@@ -56,7 +56,7 @@ def ls_instances(vpc):
 def main():
    vpc_id = args['vpc-id']
 
-   boto3.setup_default_session(profile_name='me-mit')
+   boto3.setup_default_session(profile_name='sigmaos')
    ec2 = boto3.resource('ec2')
 
    try:

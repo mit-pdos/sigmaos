@@ -3,6 +3,7 @@ package benchmarks_test
 import (
 	"fmt"
 	"math/rand"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -191,8 +192,9 @@ func (ji *HotelJobInstance) printStats() {
 	if ji.sigmaos && !ji.justCli {
 		for _, s := range hotel.HOTELSVC {
 			stats := &rpc.SigmaRPCStats{}
-			err := ji.GetFileJson(s+"/"+rpc.STATS, stats)
-			assert.Nil(ji.Ts.T, err, "error get stats %v", err)
+			spath := path.Join(s, sp.STATSD)
+			err := ji.GetFileJson(spath, stats)
+			assert.Nil(ji.Ts.T, err, "error get stats [%v] %v", spath, err)
 			fmt.Printf("= %s: %v\n", s, stats)
 		}
 		cs, err := ji.hj.StatsSrv()

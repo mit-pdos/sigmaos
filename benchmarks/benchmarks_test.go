@@ -1079,7 +1079,7 @@ func TestRealmBalanceSimpleImgResize(t *testing.T) {
 	defer p2.Done()
 	// Prep resize jobs
 	imgJobsBE, imgAppsBE := newImgResizeJob(
-		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0)
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB))
 	imgJobsLC, imgAppsLC := newImgResizeJob(
 		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB))
 
@@ -1134,7 +1134,7 @@ func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	defer p2.Done()
 	// Prep image resize job
 	imgJobs, imgApps := newImgResizeJob(
-		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0)
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB))
 	// Prep social network job
 	snJobs, snApps := newSocialNetworkJobs(ts2, p2, true, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
 	// Run social network job

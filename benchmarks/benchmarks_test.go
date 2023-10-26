@@ -144,7 +144,7 @@ func init() {
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
 	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.GetNCores()), "Go maxprocs setting for procs to be spawned.")
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
-	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "9ps3/img/6.jpg", "Path of img resize input file.")
+	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "9ps3/img/1.jpg", "Path of img resize input file.")
 	flag.IntVar(&N_IMG_RESIZE_JOBS, "n_imgresize", 10, "Number of img resize jobs.")
 	flag.IntVar(&N_IMG_RESIZE_INPUTS_PER_JOB, "n_imgresize_per", 1, "Number of img resize inputs per job.")
 	flag.IntVar(&IMG_RESIZE_MCPU, "imgresize_mcpu", 100, "MCPU for img resize worker.")
@@ -504,6 +504,75 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 // Start a realm with a long-running BE mr job. Then, start a realm with an LC
 // hotel job. In phases, ramp the hotel job's CPU utilization up and down, and
 // watch the realm-level software balance resource requests across realms.
+func TestRealmBalanceHotelImgResize(t *testing.T) {
+	done := make(chan bool)
+	rootts := test.NewTstateWithRealms(t)
+	blockers := blockMem(rootts, BLOCK_MEM)
+	// Structures for imgresize
+	ts1 := test.NewRealmTstate(rootts, REALM2)
+	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
+	p1 := newRealmPerf(ts1)
+	defer p1.Done()
+	// Structure for hotel
+	ts2 := test.NewRealmTstate(rootts, REALM1)
+	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
+	p2 := newRealmPerf(ts2)
+	defer p2.Done()
+	// Prep ImgResize job
+	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU))
+	// Prep Hotel job
+	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
+		//		hotel.RunDSB(ts2.T, 1, wc, r)
+		err := hotel.RandSearchReq(wc, r)
+		assert.Nil(t, err, "SearchReq %v", err)
+	})
+	// Monitor cores assigned to ImgResize.
+	monitorCPUUtil(ts1, p1)
+	// Monitor cores assigned to Hotel.
+	monitorCPUUtil(ts2, p2)
+	// Run Hotel job
+	go func() {
+		runOps(ts2, ji, runHotel, rs2)
+		done <- true
+	}()
+	// Wait for hotel jobs to set up.
+	<-hotelJobs[0].ready
+	db.DPrintf(db.TEST, "Hotel setup done.")
+	// Run ImgResize job
+	go func() {
+		runOps(ts1, imgApps, runImgResize, rs1)
+		done <- true
+	}()
+	// Wait for imgResize jobs to set up.
+	<-imgJobs[0].ready
+	db.DPrintf(db.TEST, "MR setup done.")
+	db.DPrintf(db.TEST, "Setup phase done.")
+	if N_CLNT > 1 {
+		// Wait for hotel clients to start up on other machines.
+		db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
+		waitForClnts(rootts, N_CLNT)
+		db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
+	}
+	db.DPrintf(db.TEST, "Done waiting for hotel clnts.")
+	// Kick off ImgResize jobs.
+	imgJobs[0].ready <- true
+	// Sleep for a bit
+	time.Sleep(SLEEP)
+	// Kick off hotel jobs
+	hotelJobs[0].ready <- true
+	// Wait for both jobs to finish.
+	<-done
+	<-done
+	db.DPrintf(db.TEST, "Hotel and ImgResize done.")
+	printResultSummary(rs1)
+	time.Sleep(20 * time.Second)
+	evictMemBlockers(rootts, blockers)
+	rootts.Shutdown()
+}
+
+// Start a realm with a long-running BE mr job. Then, start a realm with an LC
+// hotel job. In phases, ramp the hotel job's CPU utilization up and down, and
+// watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceMRMR(t *testing.T) {
 	done := make(chan bool)
 	rootts := test.NewTstateWithRealms(t)
@@ -540,6 +609,58 @@ func TestRealmBalanceMRMR(t *testing.T) {
 	for i := range tses {
 		// Kick off MR jobs.
 		mrjobs[i][0].ready <- true
+		db.DPrintf(db.TEST, "Start MR job %v", i+1)
+		// Sleep for a bit before starting the next job
+		time.Sleep(SLEEP)
+	}
+	// Wait for both jobs to finish.
+	for i := range tses {
+		<-done
+		db.DPrintf(db.TEST, "Done MR job %v", i+1)
+	}
+	printResultSummary(rses[0])
+	rootts.Shutdown()
+}
+
+// Start a realm with a long-running BE mr job. Then, start a realm with an LC
+// hotel job. In phases, ramp the hotel job's CPU utilization up and down, and
+// watch the realm-level software balance resource requests across realms.
+func TestRealmBalanceImgResizeImgResize(t *testing.T) {
+	done := make(chan bool)
+	rootts := test.NewTstateWithRealms(t)
+	tses := make([]*test.RealmTstate, N_REALM)
+	rses := make([]*benchmarks.Results, N_REALM)
+	ps := make([]*perf.Perf, N_REALM)
+	imgjobs := make([][]*ImgResizeJobInstance, N_REALM)
+	imgapps := make([][]interface{}, N_REALM)
+	// Create structures for imgresize jobs.
+	for i := range tses {
+		tses[i] = test.NewRealmTstate(rootts, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
+		ps[i] = newRealmPerf(tses[i])
+		defer ps[i].Done()
+		imgjob, imgapp := newImgResizeJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU))
+		imgjobs[i] = imgjob
+		imgapps[i] = imgapp
+	}
+	// Start CPU utilization monitoring.
+	for i := range tses {
+		monitorCPUUtil(tses[i], ps[i])
+	}
+	// Initialize MR jobs.
+	for i := range tses {
+		// Start MR job initialization.
+		go func(ts *test.RealmTstate, mrapp []interface{}, rs *benchmarks.Results) {
+			runOps(ts, mrapp, runMR, rs)
+			done <- true
+		}(tses[i], imgapps[i], rses[i])
+		// Wait for MR job to set up.
+		<-imgjobs[i][0].ready
+	}
+	// Start jobs running, with a small delay between each job start.
+	for i := range tses {
+		// Kick off MR jobs.
+		imgjobs[i][0].ready <- true
 		db.DPrintf(db.TEST, "Start MR job %v", i+1)
 		// Sleep for a bit before starting the next job
 		time.Sleep(SLEEP)

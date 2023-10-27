@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	N       int = 1
+	N       int = 10
 	IMG_DIM     = 160
 )
 

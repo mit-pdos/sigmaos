@@ -984,11 +984,14 @@ schedd_scalability() {
 }
 
 schedd_scalability_rs() {
-  n_vm=4
+#  n_vm=4
   driver_vm=4
+  qps_per_machine=450
   dur="10s"
-  for rps in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400 2600 2800 3000 3200 3400 3600 ; do
-    run=${FUNCNAME[0]}/rps-$rps
+  for n_vm in 1 2 3 4 ; do
+#    for rps in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400 2600 2800 3000 3200 3400 3600 ; do
+    rps=$((n_vm * $qps_per_machine))
+    run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
     # Avoid doing duplicate work.
@@ -999,7 +1002,7 @@ schedd_scalability_rs() {
     cmd="
       export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
       go clean -testcache; \
-      go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown --use_rust_proc > /tmp/bench.out 2>&1
+      go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
     run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true false
@@ -1008,6 +1011,7 @@ schedd_scalability_rs() {
     end_benchmark $vpc $perf_dir
     # Copy log files to perf dir.
     cp /tmp/*.out $perf_dir
+#    done
   done
 }
 

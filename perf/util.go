@@ -536,7 +536,6 @@ func (p *Perf) teardownTpt() {
 		p.tpt = false
 		db.DPrintf(db.PERF, "Tear down tpt perf tracker num entries %v", len(p.times))
 		defer db.DPrintf(db.PERF, "Done Tear down tpt perf tracker")
-		// Ignore first entry.
 		for i := 0; i < len(p.times); i++ {
 			if _, err := p.tptFile.WriteString(fmt.Sprintf("%vus,%f\n", p.times[i].UnixMicro(), p.tpts[i])); err != nil {
 				db.DFatalf("Error writing to tpt file: %v", err)

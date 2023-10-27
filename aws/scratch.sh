@@ -42,6 +42,6 @@ for vm in $vms; do
   echo "VM: $vm"
   # No additional benchmarking setup needed for AWS.
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-    docker ps -a
+    date
 ENDSSH
 done

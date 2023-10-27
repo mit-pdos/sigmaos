@@ -49,8 +49,9 @@ func TestResizeImg(t *testing.T) {
 
 func TestResizeProc(t *testing.T) {
 	ts := test.NewTstateAll(t)
-	in := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
-	out := path.Join(sp.S3, "~local/9ps3/img-save/1-thumb.jpg")
+	in := path.Join(sp.S3, "~local/9ps3/img-save/6.jpg")
+	//	in := path.Join(sp.S3, "~local/9ps3/img-save/6.jpg")
+	out := path.Join(sp.S3, "~local/9ps3/img/6-thumb-xxx.jpg")
 	ts.Remove(out)
 	p := proc.NewProc("imgresize", []string{in, out})
 	err := ts.Spawn(p)

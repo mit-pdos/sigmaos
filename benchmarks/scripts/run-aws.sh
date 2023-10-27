@@ -528,7 +528,8 @@ realm_balance_be() {
 }
 
 realm_balance_be_img() {
-  imgpath="name/ux/~local/9ps3/img/1.jpg"
+#  imgpath="name/ux/~local/9ps3/img/1.jpg"
+  imgpath="name/ux/~local/1.jpg"
   n_imgresize=10
   imgresize_mcpu=0
   imgresize_mem=1000
@@ -675,7 +676,8 @@ realm_balance_multi() {
 }
 
 realm_balance_multi_img() {
-  imgpath="name/s3/~local/9ps3/img/1.jpg"
+#  imgpath="name/s3/~local/9ps3/img/1.jpg"
+  imgpath="name/ux/~local/1.jpg"
   n_imgresize=10
   imgresize_mcpu=0
   imgresize_mem=1000
@@ -897,9 +899,10 @@ mr_k8s() {
 }
 
 img_resize() {
-  imgpath="name/s3/~local/9ps3/img/1.jpg"
+#  imgpath="name/ux/~local/9ps3/img/1.jpg"
+  imgpath="name/ux/~local/1.jpg"
   n_imgresize=10
-  n_vm=2
+  n_vm=1
   mcpu=500
   imgresize_mem=0
   driver_vm=0
@@ -1291,8 +1294,11 @@ echo "Running benchmarks with version: $VERSION"
 #schedd_scalability_rs
 #schedd_scalability
 
+#img_resize
+
 realm_balance_multi_img
 realm_balance_be_img
+
 #realm_balance_be
 #realm_balance_multi
 #mr_scalability
@@ -1323,6 +1329,7 @@ realm_balance_be_img
 source ~/env/3.10/bin/activate
 graph_realm_balance_be_img
 graph_realm_balance_multi_img
+
 #graph_realm_balance_be
 #graph_realm_balance_multi
 #graph_img_resize

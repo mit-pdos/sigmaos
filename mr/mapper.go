@@ -35,6 +35,7 @@ type Mapper struct {
 	input       string
 	bin         string
 	wrts        []*fslib.Wrt
+	pwrts       []*perf.PerfWriter
 	rand        string
 	perf        *perf.Perf
 }
@@ -49,6 +50,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr,
 	m.input = input
 	m.bin = path.Base(m.input)
 	m.wrts = make([]*fslib.Wrt, m.nreducetask)
+	m.pwrts = make([]*perf.PerfWriter, m.nreducetask)
 	m.SigmaClnt = sc
 	m.perf = p
 	m.sbc = NewScanByteCounter(p)
@@ -95,6 +97,7 @@ func (m *Mapper) InitWrt(r int, name string) error {
 		return err
 	} else {
 		m.wrts[r] = wrt
+		m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
 	}
 	return nil
 }
@@ -171,8 +174,7 @@ func (m *Mapper) informReducer() error {
 
 func (m *Mapper) emit(kv *KeyValue) error {
 	r := Khash(kv.Key) % m.nreducetask
-	n, err := encodeKV(m.wrts[r], kv.Key, kv.Value, r)
-	m.perf.TptTick(float64(n))
+	_, err := encodeKV(m.wrts[r], kv.Key, kv.Value, r)
 	return err
 }
 

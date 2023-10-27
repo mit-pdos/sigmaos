@@ -24,16 +24,18 @@ import (
 //
 
 func main() {
-	t, err := NewTrans(os.Args)
-	if err != nil {
-		db.DFatalf("Error %v", err)
-	}
-
-	p, err := perf.NewPerf(t.ProcEnv(), perf.THUMBNAIL)
+	pe := proc.GetProcEnv()
+	db.DPrintf(db.IMGD, "NewTrans %v: %v\n", pe.GetPID(), os.Args)
+	p, err := perf.NewPerf(pe, perf.THUMBNAIL)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
+
+	t, err := NewTrans(pe, os.Args, p)
+	if err != nil {
+		db.DFatalf("Error %v", err)
+	}
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -54,16 +56,17 @@ type Trans struct {
 	inputs []string
 	output string
 	ctx    fs.CtxI
+	p      *perf.Perf
 }
 
-func NewTrans(args []string) (*Trans, error) {
+func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
 	if len(args) != 3 {
 		return nil, fmt.Errorf("NewTrans: too few arguments: %v", args)
 	}
-	pcfg := proc.GetProcEnv()
-	db.DPrintf(db.IMGD, "NewTrans %v: %v\n", pcfg.GetPID(), args)
-	t := &Trans{}
-	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
+	t := &Trans{
+		p: p,
+	}
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +87,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 		db.DFatalf("Error open file %v", err)
 		return proc.NewStatusErr("File not found", err)
 	}
+	prdr := perf.NewPerfReader(rdr, t.p)
 	db.DPrintf(db.ALWAYS, "Time %v open: %v", t.inputs[i], time.Since(do))
 	var dc time.Time
 	defer func() {
@@ -92,7 +96,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	}()
 
 	ds := time.Now()
-	img, err := jpeg.Decode(rdr)
+	img, err := jpeg.Decode(prdr)
 	if err != nil {
 		return proc.NewStatusErr("Decode", err)
 	}
@@ -109,6 +113,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	if err != nil {
 		db.DFatalf("Open output %v error: %v", output, err)
 	}
+	pwrt := perf.NewPerfWriter(wrt, t.p)
 	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.inputs[i], time.Since(dcw))
 	dw := time.Now()
 	defer func() {
@@ -117,6 +122,6 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 		dc = time.Now()
 	}()
 
-	jpeg.Encode(wrt, img1, nil)
+	jpeg.Encode(pwrt, img1, nil)
 	return proc.NewStatus(proc.StatusOK)
 }

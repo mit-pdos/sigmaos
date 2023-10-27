@@ -36,6 +36,7 @@ type Reducer struct {
 	nmaptask     int
 	tmp          string
 	bwrt         *bufio.Writer
+	pwrt         *perf.PerfWriter
 	wrt          *writer.Writer
 	perf         *perf.Perf
 }
@@ -71,6 +72,7 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	}
 	r.wrt = w
 	r.bwrt = bufio.NewWriterSize(w, sp.BUFSZ)
+	r.pwrt = perf.NewPerfWriter(r.bwrt, r.perf)
 
 	if err := r.Started(); err != nil {
 		return nil, fmt.Errorf("NewReducer couldn't start %v", args)
@@ -185,7 +187,7 @@ func (r *Reducer) readFiles(input string) (sp.Tlength, time.Duration, Tdata, []s
 
 func (r *Reducer) emit(kv *KeyValue) error {
 	b := fmt.Sprintf("%s\t%s\n", kv.Key, kv.Value)
-	_, err := r.bwrt.Write([]byte(b))
+	_, err := r.pwrt.Write([]byte(b))
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Err emt write bwriter: %v", err)
 	}

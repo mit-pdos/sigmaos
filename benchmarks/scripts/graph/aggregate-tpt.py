@@ -207,7 +207,7 @@ def setup_graph(nplots, units, total_ncore):
   for idx in range(len(tptax)):
     tptax[idx].set_ylabel(ylabels[idx])
   if nplots == 1:
-    # Only put cores on the same graph for mr aggr tpt graph.
+    # Only put cores on the same graph for BE aggr tpt graph.
     for ax in tptax:
       ax2 = ax.twinx()
       coresax.append(ax2)
@@ -216,35 +216,35 @@ def setup_graph(nplots, units, total_ncore):
     ax.set_ylabel("Cores Utilized")
   return fig, tptax, coresax
 
-def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right):
-  if hotel_realm is None and mr_realm is None:
+def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right):
+  if hotel_realm is None and be_realm is None:
     procd_tpts = read_tpts(input_dir, "test")
     assert(len(procd_tpts) <= 1)
   else:
-    procd_tpts = read_tpts(input_dir, hotel_realm, ignore="mr-")
-    if mr_realm != "":
-      procd_tpts.append(read_tpts(input_dir, mr_realm, ignore="mr-")[0])
+    procd_tpts = read_tpts(input_dir, hotel_realm, ignore=prefix)
+    if be_realm != "":
+      procd_tpts.append(read_tpts(input_dir, be_realm, ignore=prefix)[0])
       assert(len(procd_tpts) == 2)
-  mr_tpts = read_tpts(input_dir, "mr")
-  mr_range = get_time_range(mr_tpts)
+  be_tpts = read_tpts(input_dir, prefix)#"mr")
+  be_range = get_time_range(be_tpts)
   procd_range = get_time_range(procd_tpts)
   hotel_tpts = read_tpts(input_dir, "hotel")
   hotel_range = get_time_range(hotel_tpts)
   hotel_lats = read_latencies(input_dir, "bench.out")
   hotel_lat_range = get_time_range(hotel_lats)
   # Time range for graph
-  time_range = get_overall_time_range([mr_range, hotel_range, hotel_lat_range])
-#  time_range = get_overall_time_range([procd_range, mr_range, hotel_range, hotel_lat_range])
+  time_range = get_overall_time_range([be_range, hotel_range, hotel_lat_range])
+#  time_range = get_overall_time_range([procd_range, be_range, hotel_range, hotel_lat_range])
   extend_tpts_to_range(procd_tpts, time_range)
   procd_tpts = truncate_tpts_to_range(procd_tpts, time_range)
-  mr_tpts = fit_times_to_range(mr_tpts, time_range)
+  be_tpts = fit_times_to_range(be_tpts, time_range)
   hotel_tpts = fit_times_to_range(hotel_tpts, time_range)
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
   hotel_lats = fit_times_to_range(hotel_lats, time_range)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
   hotel_buckets = bucketize(hotel_tpts, time_range, xmin, xmax, step_size=1000)
-  if len(hotel_tpts) > 0 and len(mr_tpts) > 0:
+  if len(hotel_tpts) > 0 and len(be_tpts) > 0:
     fig, tptax, coresax = setup_graph(3, units, total_ncore)
   else:
     if len(hotel_lats) > 0 and len(hotel_tpts) > 0:
@@ -269,12 +269,19 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
     p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel (LC) tpt", "blue", "-", "")
     plots.append(p)
     tptax_idx = tptax_idx + 1
-  mr_buckets = bucketize(mr_tpts, time_range, xmin, xmax, step_size=1000)
-  if len(mr_tpts) > 0:
-    x, y = buckets_to_lists(mr_buckets)
+  be_buckets = bucketize(be_tpts, time_range, xmin, xmax, step_size=1000)
+  tmod=""
+  if prefix == "mr-":
+    tmod = "MR"
+  elif prefix == "imgresize-":
+    tmod = "ImgResize"
+  else:
+    assert(False)
+  if len(be_tpts) > 0:
+    x, y = buckets_to_lists(be_buckets)
     if "MB" in units:
       y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "MR (BE) tpt", "orange", "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "{} (BE) tpt".format(tmod), "orange", "-", "")
     plots.append(p)
   if len(procd_tpts) > 0:
     # If we are dealing with multiple realms...
@@ -285,7 +292,7 @@ def graph_data(input_dir, title, out, hotel_realm, mr_realm, units, total_ncore,
       p = add_data_to_graph(coresax[0], x, y, "Hotel (LC) CPU", "blue", line_style, marker)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(coresax[0], x, y, "MR (BE) CPU", "orange", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "{} (BE) CPU".format(tmod), "orange", line_style, marker)
       plots.append(p)
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])
@@ -303,8 +310,9 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--measurement_dir", type=str, required=True)
   parser.add_argument("--title", type=str, required=True)
+  parser.add_argument("--prefix", type=str, required=True)
   parser.add_argument("--hotel_realm", type=str, default=None)
-  parser.add_argument("--mr_realm", type=str, default=None)
+  parser.add_argument("--be_realm", type=str, default=None)
   parser.add_argument("--units", type=str, required=True)
   parser.add_argument("--total_ncore", type=int, required=True)
   parser.add_argument("--percentile", type=float, default=99.0)
@@ -315,4 +323,4 @@ if __name__ == "__main__":
   parser.add_argument("--legend_on_right", action="store_true", default=False)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.mr_realm, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax, args.legend_on_right)
+  graph_data(args.measurement_dir, args.title, args.out, args.hotel_realm, args.be_realm, args.prefix, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax, args.legend_on_right)

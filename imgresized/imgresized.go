@@ -192,7 +192,8 @@ func ThumbName(fn string) string {
 func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
 	procs := make([]*proc.Proc, len(tasks))
 	for i, t := range tasks {
-		procs[i] = proc.NewProc("imgresize", []string{t.fn, ThumbName(t.fn)})
+		pid := sp.GenPid(imgd.job)
+		procs[i] = proc.NewProcPid(pid, "imgresize", []string{t.fn, ThumbName(t.fn)})
 		if imgd.crash > 0 {
 			procs[i].SetCrash(imgd.crash)
 		}

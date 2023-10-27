@@ -19,6 +19,11 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const (
+	N       int = 1
+	IMG_DIM     = 160
+)
+
 //
 // Crop picture <in> to <out>
 //
@@ -100,12 +105,17 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	if err != nil {
 		return proc.NewStatusErr("Decode", err)
 	}
+	// img size in bytes:
+	bounds := img.Bounds()
+	var imgSizeB uint64 = 16 * uint64(bounds.Max.X-bounds.Min.X) * uint64(bounds.Max.Y-bounds.Min.Y)
 	db.DPrintf(db.ALWAYS, "Time %v read/decode: %v", t.inputs[i], time.Since(ds))
 	dr := time.Now()
-	for i := 0; i < 20; i++ {
-		resize.Resize(160, 0, img, resize.Lanczos3)
+	for i := 0; i < N-1; i++ {
+		resize.Resize(IMG_DIM, IMG_DIM, img, resize.Lanczos3)
+		t.p.TptTick(float64(imgSizeB))
 	}
-	img1 := resize.Resize(160, 0, img, resize.Lanczos3)
+	img1 := resize.Resize(IMG_DIM, IMG_DIM, img, resize.Lanczos3)
+	t.p.TptTick(float64(imgSizeB))
 	db.DPrintf(db.ALWAYS, "Time %v resize: %v", t.inputs[i], time.Since(dr))
 
 	dcw := time.Now()

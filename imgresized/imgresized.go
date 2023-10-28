@@ -177,13 +177,13 @@ func (imgd *ImgSrv) waitForTask(start time.Time, p *proc.Proc, t *task) Tresult 
 	if err == nil && status.IsStatusOK() {
 		// mark task as done
 		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.done+"/"+t.name); err != nil {
-			db.DFatalf("rename task %v done err %v\n", t, err)
+			db.DFatalf("rename task %v done err %v", t, err)
 		}
 		return Tresult{t.name, true, ms, status.Msg()}
 	} else { // task failed; make it runnable again
-		db.DPrintf(db.IMGD, "task %v failed %v err %v\n", t, status, err)
+		db.DPrintf(db.IMGD, "task %v failed %v err %v", t, status, err)
 		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.todo+"/"+t.name); err != nil {
-			db.DFatalf("rename task %v todo err %v\n", t, err)
+			db.DFatalf("rename task %v todo err %v", t, err)
 		}
 		return Tresult{t.name, false, ms, ""}
 	}
@@ -207,17 +207,18 @@ func (imgd *ImgSrv) runTask(t *task) {
 	}
 	p.SetMcpu(imgd.workerMcpu)
 	p.SetMem(imgd.workerMem)
-	db.DPrintf(db.IMGD, "prep to spawn task %v %v\n", p.GetPid(), p.Args)
+	db.DPrintf(db.IMGD, "prep to spawn task %v %v", p.GetPid(), p.Args)
 	start := time.Now()
 	// Spawn proc.
 	err := imgd.Spawn(p)
 	if err != nil {
 		db.DFatalf("Couldn't spawn a task %v, err: %v", t, err)
 	}
+	db.DPrintf(db.IMGD, "spawned task %v %v", p.GetPid(), p.Args)
 	// Wait for results.
 	res := imgd.waitForTask(start, p, t)
 	if res.ok {
-		db.DPrintf(db.IMGD, "%v ok %v ms %d msg %v\n", res.t, res.ok, res.ms, res.msg)
+		db.DPrintf(db.IMGD, "%v ok %v ms %d msg %v", res.t, res.ok, res.ms, res.msg)
 	}
 }
 
@@ -254,7 +255,7 @@ func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
 // correct), and make them runnable
 func (imgd *ImgSrv) recover() {
 	if _, err := imgd.MoveFiles(imgd.wip, imgd.todo); err != nil {
-		db.DFatalf("MoveFiles %v err %v\n", imgd.wip, err)
+		db.DFatalf("MoveFiles %v err %v", imgd.wip, err)
 	}
 }
 
@@ -267,7 +268,7 @@ func (imgd *ImgSrv) Work() {
 		db.DFatalf("LeadAndFence err %v", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "leader %s\n", imgd.job)
+	db.DPrintf(db.ALWAYS, "leader %s", imgd.job)
 
 	imgd.recover()
 
@@ -278,14 +279,14 @@ func (imgd *ImgSrv) Work() {
 			return len(sts) == 0
 		})
 		if err != nil {
-			db.DFatalf("ReadDirWatch %v err %v\n", imgd.todo, err)
+			db.DFatalf("ReadDirWatch %v err %v", imgd.todo, err)
 		}
 		db.DPrintf(db.IMGD, "ReadDirWatch done %v, %v entries", imgd.todo, len(sts))
 		work = imgd.work(sts)
 	}
 	imgd.wg.Wait()
 
-	db.DPrintf(db.ALWAYS, "imgresized exit\n")
+	db.DPrintf(db.ALWAYS, "imgresized exit")
 
 	imgd.exited = true
 	imgd.ClntExitOK()

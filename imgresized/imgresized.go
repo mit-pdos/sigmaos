@@ -150,8 +150,10 @@ func (imgd *ImgSrv) claimEntry(name string) (string, error) {
 			return "", err
 		}
 		// another thread claimed the task before us
+		db.DPrintf(db.IMGD, "Error claim entry %v: %v", name, err)
 		return "", nil
 	}
+	db.DPrintf(db.IMGD, "Claim %v success", name)
 	return name, nil
 }
 
@@ -167,7 +169,7 @@ type Tresult struct {
 	msg string
 }
 
-func (imgd *ImgSrv) waitForTask(start time.Time, ch chan Tresult, p *proc.Proc, t task) {
+func (imgd *ImgSrv) waitForTask(start time.Time, p *proc.Proc, t *task) Tresult {
 	imgd.WaitStart(p.GetPid())
 	db.DPrintf(db.ALWAYS, "Start Latency %v", time.Since(start))
 	status, err := imgd.WaitExit(p.GetPid())
@@ -177,13 +179,13 @@ func (imgd *ImgSrv) waitForTask(start time.Time, ch chan Tresult, p *proc.Proc, 
 		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.done+"/"+t.name); err != nil {
 			db.DFatalf("rename task %v done err %v\n", t, err)
 		}
-		ch <- Tresult{t.name, true, ms, status.Msg()}
+		return Tresult{t.name, true, ms, status.Msg()}
 	} else { // task failed; make it runnable again
 		db.DPrintf(db.IMGD, "task %v failed %v err %v\n", t, status, err)
 		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.todo+"/"+t.name); err != nil {
 			db.DFatalf("rename task %v todo err %v\n", t, err)
 		}
-		ch <- Tresult{t.name, false, ms, ""}
+		return Tresult{t.name, false, ms, ""}
 	}
 }
 
@@ -193,46 +195,43 @@ func ThumbName(fn string) string {
 	return fn1
 }
 
-func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
-	procs := make([]*proc.Proc, len(tasks))
-	for i, t := range tasks {
-		pid := sp.GenPid(imgd.job)
-		procs[i] = proc.NewProcPid(pid, "imgresize", []string{t.fn, ThumbName(t.fn)})
-		if imgd.crash > 0 {
-			procs[i].SetCrash(imgd.crash)
-		}
-		procs[i].SetMcpu(imgd.workerMcpu)
-		procs[i].SetMem(imgd.workerMem)
-		db.DPrintf(db.IMGD, "prep to burst-spawn task %v %v\n", procs[i].GetPid(), procs[i].Args)
+func (imgd *ImgSrv) runTask(t *task) {
+	// Mark the task as done, regardless of whether it succeeded or not. If it
+	// didn't succeed, it will be added to the work queue again, which will
+	// result in another wg.Add
+	defer imgd.wg.Done()
+
+	p := proc.NewProcPid(sp.GenPid(imgd.job), "imgresize", []string{t.fn, ThumbName(t.fn)})
+	if imgd.crash > 0 {
+		p.SetCrash(imgd.crash)
 	}
+	p.SetMcpu(imgd.workerMcpu)
+	p.SetMem(imgd.workerMem)
+	db.DPrintf(db.IMGD, "prep to spawn task %v %v\n", p.GetPid(), p.Args)
 	start := time.Now()
-	// Burst-spawn procs.
-	failed, errs := imgd.SpawnBurst(procs, 1)
-	if len(failed) > 0 {
-		db.DFatalf("Couldn't burst-spawn some tasks %v, errs: %v", failed, errs)
-	}
-	// Kick off task waiters.
-	for i := range procs {
-		go imgd.waitForTask(start, ch, procs[i], tasks[i])
+	// Spawn proc.
+	err := imgd.Spawn(p)
+	if err != nil {
+		db.DFatalf("Couldn't spawn a task %v, err: %v", t, err)
 	}
 	// Wait for results.
-	for _ = range procs {
-		res := <-ch
-		// Mark the task as done, regardless of whether it succeeded or not. If it
-		// didn't succeed, it will be added to the work queue again, whicih will
-		// result in another wg.Add
-		imgd.wg.Done()
-		if res.ok {
-			db.DPrintf(db.IMGD, "%v ok %v ms %d msg %v\n", res.t, res.ok, res.ms, res.msg)
-		}
+	res := imgd.waitForTask(start, p, t)
+	if res.ok {
+		db.DPrintf(db.IMGD, "%v ok %v ms %d msg %v\n", res.t, res.ok, res.ms, res.msg)
 	}
 }
 
 func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
-	tasks := []task{}
-	ch := make(chan Tresult)
+	// Due to inconsistent views of the WIP directory (concurrent adds by clients
+	// and paging reads in the parent of this function), some entries may be
+	// duplicated. Dedup them using this map.
+	entries := make(map[string]bool)
 	for _, st := range sts {
-		t, err := imgd.claimEntry(st.Name)
+		entries[st.Name] = true
+	}
+	db.DPrintf(db.IMGD, "Removed %v duplicate entries", len(sts)-len(entries))
+	for entry, _ := range entries {
+		t, err := imgd.claimEntry(entry)
 		if err != nil || t == "" {
 			continue
 		}
@@ -244,9 +243,10 @@ func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
 			return false
 		}
 		imgd.wg.Add(1)
-		tasks = append(tasks, task{t, string(s3fn)})
+		// Run the task in another thread.
+		go imgd.runTask(&task{t, string(s3fn)})
 	}
-	go imgd.runTasks(ch, tasks)
+	db.DPrintf(db.IMGD, "Started %v tasks", len(entries))
 	return true
 }
 
@@ -273,12 +273,14 @@ func (imgd *ImgSrv) Work() {
 
 	work := true
 	for work {
+		db.DPrintf(db.IMGD, "ReadDirWatch %v", imgd.todo)
 		sts, err := imgd.ReadDirWatch(imgd.todo, func(sts []*sp.Stat) bool {
 			return len(sts) == 0
 		})
 		if err != nil {
 			db.DFatalf("ReadDirWatch %v err %v\n", imgd.todo, err)
 		}
+		db.DPrintf(db.IMGD, "ReadDirWatch done %v, %v entries", imgd.todo, len(sts))
 		work = imgd.work(sts)
 	}
 	imgd.wg.Wait()

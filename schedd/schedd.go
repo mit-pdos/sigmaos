@@ -152,7 +152,7 @@ func (sd *Schedd) getQueuedProcs() {
 		db.DPrintf(db.SCHEDD, "[%v] Try get proc from procq, bias=%v", sd.kernelId, bias)
 		start := time.Now()
 		// Try to get a proc from the proc queue.
-		procMem, ok, err := sd.procqclnt.GetProc(sd.kernelId, memFree, bias)
+		procMem, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, memFree, bias)
 		db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
 		if err != nil {
 			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)
@@ -169,7 +169,7 @@ func (sd *Schedd) getQueuedProcs() {
 			continue
 		}
 		if !ok {
-			db.DPrintf(db.SCHEDD, "[%v] No proc on procq, try another, bias=%v", sd.kernelId, bias)
+			db.DPrintf(db.SCHEDD, "[%v] No proc on procq, try another, bias=%v qlen=%v", sd.kernelId, bias, qlen)
 			// If already biased to this schedd's kernel, and no proc was available,
 			// try another.
 			//

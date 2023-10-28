@@ -99,6 +99,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// do resource accounting and (potentially) temper future GetProc
 				// requests.
 				res.Mem = uint32(p.GetMem())
+				res.QLen = uint32(pq.qlen)
 				pq.mu.Unlock()
 				return nil
 			}
@@ -110,6 +111,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 		// If timed out, respond to schedd to have it try another procq.
 		if !ok {
 			db.DPrintf(db.PROCQ, "Timed out GetProc request from: %v", req.KernelID)
+			res.QLen = uint32(pq.qlen)
 			res.OK = false
 			return nil
 		}

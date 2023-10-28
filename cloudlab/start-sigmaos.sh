@@ -142,12 +142,14 @@ for vm in $vms; do
     ./start-kernel.sh --boot realm --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
     docker cp ~/sigmaos/imgresized/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
     docker cp ~/sigmaos/imgresized/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
+    docker cp ~/sigmaos/imgresized/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
     ./start-kernel.sh --boot node --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
     docker cp ~/sigmaos/imgresized/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
     docker cp ~/sigmaos/imgresized/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
+    docker cp ~/sigmaos/imgresized/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
   fi
 ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then

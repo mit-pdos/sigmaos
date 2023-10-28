@@ -6,6 +6,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"sigmaos/crash"
@@ -27,14 +28,15 @@ const (
 
 type ImgSrv struct {
 	*sigmaclnt.SigmaClnt
+	wg         sync.WaitGroup
 	job        string
 	done       string
 	wip        string
 	todo       string
 	workerMcpu proc.Tmcpu
 	workerMem  proc.Tmem
-	isDone     bool
 	crash      int64
+	exited     bool
 	leaderclnt *leaderclnt.LeaderClnt
 }
 
@@ -133,7 +135,9 @@ func NewImgd(args []string) (*ImgSrv, error) {
 
 	go func() {
 		imgd.WaitEvict(sc.ProcEnv().GetPID())
-		imgd.ClntExitOK()
+		if !imgd.exited {
+			imgd.ClntExitOK()
+		}
 		os.Exit(0)
 	}()
 
@@ -207,15 +211,24 @@ func (imgd *ImgSrv) runTasks(ch chan Tresult, tasks []task) {
 	if len(failed) > 0 {
 		db.DFatalf("Couldn't burst-spawn some tasks %v, errs: %v", failed, errs)
 	}
+	// Kick off task waiters.
 	for i := range procs {
 		go imgd.waitForTask(start, ch, procs[i], tasks[i])
+	}
+	// Wait for results.
+	for _ = range procs {
+		res := <-ch
+		// Mark the task as done, regardless of whether it succeeded or not. If it
+		// didn't succeed, it will be added to the work queue again, whicih will
+		// result in another wg.Add
+		imgd.wg.Done()
+		if res.ok {
+			db.DPrintf(db.IMGD, "%v ok %v ms %d msg %v\n", res.t, res.ok, res.ms, res.msg)
+		}
 	}
 }
 
 func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
-	if imgd.isDone {
-		return false
-	}
 	tasks := []task{}
 	ch := make(chan Tresult)
 	for _, st := range sts {
@@ -230,18 +243,10 @@ func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
 		if string(s3fn) == STOP {
 			return false
 		}
+		imgd.wg.Add(1)
 		tasks = append(tasks, task{t, string(s3fn)})
 	}
 	go imgd.runTasks(ch, tasks)
-	for i := len(tasks); i > 0; i-- {
-		res := <-ch
-		if res.ok {
-			db.DPrintf(db.IMGD, "%v ok %v ms %d msg %v\n", res.t, res.ok, res.ms, res.msg)
-			//if err := c.AppendFileJson(MRstats(c.job), res.res); err != nil {
-			//	db.DFatalf("Appendfile %v err %v\n", MRstats(c.job), err)
-			//}
-		}
-	}
 	return true
 }
 
@@ -276,8 +281,10 @@ func (imgd *ImgSrv) Work() {
 		}
 		work = imgd.work(sts)
 	}
+	imgd.wg.Wait()
 
 	db.DPrintf(db.ALWAYS, "imgresized exit\n")
 
+	imgd.exited = true
 	imgd.ClntExitOK()
 }

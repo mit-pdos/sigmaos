@@ -68,6 +68,7 @@ func (pq *ProcQ) addProc(p *proc.Proc) chan string {
 
 func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS time.Time) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Internal procqsrv Proc queueing time %v", p.GetPid(), time.Since(enqTS))
+	db.DPrintf(db.PROCQ, "runProc on kid %v", kernelID)
 	// Must push the proc to the schedd before responding to the parent because
 	// we must guarantee that the schedd knows about it before talking to the
 	// parent. Otherwise, the response to the parent could arrive first and the
@@ -76,21 +77,27 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 	if err := pq.scheddclnt.ForceRun(kernelID, true, p); err != nil {
 		db.DFatalf("Error ForceRun proc: %v", err)
 	}
+	db.DPrintf(db.PROCQ, "Done runProc on kid %v", kernelID)
 	ch <- kernelID
 }
 
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
-	db.DPrintf(db.PROCQ, "GetProc request by %v", req.KernelID)
+	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
-	for {
+	start := time.Now()
+	// Try until we hit the timeout (which we may hit if the request is for too
+	// few resources).
+	for time.Since(start) < GET_PROC_TIMEOUT {
 		pq.mu.Lock()
 		// Iterate through the realms round-robin.
 		for r, q := range pq.qs {
+			db.DPrintf(db.PROCQ, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
 			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem))
+			db.DPrintf(db.PROCQ, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)
 			if ok {
 				// Decrease aggregate queue length.
 				pq.qlen--
-				db.DPrintf(db.PROCQ, "[%v] Dequeued for %v %v", r, req.KernelID, p)
+				db.DPrintf(db.PROCQ, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
 				// Push proc to schedd. Do this asynchronously so we don't hold locks
 				// across RPCs.
 				go pq.runProc(req.KernelID, p, ch, ts)
@@ -104,19 +111,20 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				return nil
 			}
 		}
+		res.QLen = uint32(pq.qlen)
 		// If unable to schedule a proc from any realm, wait.
-		db.DPrintf(db.PROCQ, "No procs schedulable qs:%v", pq.qs)
+		db.DPrintf(db.PROCQ, "GetProc No procs schedulable qs:%v", pq.qs)
 		// Releases the lock, so we must re-acquire on the next loop iteration.
 		ok := pq.waitOrTimeoutAndUnlock()
 		// If timed out, respond to schedd to have it try another procq.
 		if !ok {
 			db.DPrintf(db.PROCQ, "Timed out GetProc request from: %v", req.KernelID)
-			res.QLen = uint32(pq.qlen)
 			res.OK = false
 			return nil
 		}
 		db.DPrintf(db.PROCQ, "Woke up GetProc request from: %v", req.KernelID)
 	}
+	res.OK = false
 	return nil
 }
 

@@ -96,9 +96,14 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 		pq.mu.Lock()
 		nrealm := len(pq.realms)
 		// Iterate through the realms round-robin.
+		first := ""
 		for i := 0; i < nrealm; i++ {
 			r := pq.realms[(rOff+i)%len(pq.realms)]
 			q := pq.qs[r]
+			if first == "" {
+				first = r.String()
+				db.DPrintf(db.PROCQ, "First try to dequeue from %v", r)
+			}
 			db.DPrintf(db.PROCQ, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
 			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem))
 			db.DPrintf(db.PROCQ, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)

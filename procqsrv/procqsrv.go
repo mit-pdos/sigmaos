@@ -146,7 +146,7 @@ func (pq *ProcQ) getRealmIdx(realm sp.Trealm) int {
 		}
 	}
 	db.DPrintf(db.ALWAYS, "Unknown realm %v", realm)
-	return int(rand.Int64(int64(len(pq.realms))))
+	return int(rand.Int64(9999))
 }
 
 func (pq *ProcQ) getRealmQueue(realm sp.Trealm) *Queue {

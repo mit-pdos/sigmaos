@@ -53,8 +53,9 @@ func (sd *Schedd) getRealmCnt(realm sp.Trealm) *int64 {
 		// Check if the count was created during lock promotion.
 		cnt, ok = sd.realmCnts[realm]
 		if !ok {
-			var cnt int64 = 0
-			sd.realmCnts[realm] = &cnt
+			var cnt2 int64 = 0
+			cnt = &cnt2
+			sd.realmCnts[realm] = cnt
 		}
 		// Demote to reader lock
 		sd.realmMu.Unlock()

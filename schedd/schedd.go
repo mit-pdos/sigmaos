@@ -145,14 +145,17 @@ func (sd *Schedd) getQueuedProcs() {
 	for {
 		memFree, ok := sd.shouldGetProc()
 		if !ok {
+			db.DPrintf(db.SCHEDD, "[%v] Waiting for more mem", sd.kernelId, bias)
 			// If no memory is available, wait for some more.
 			sd.waitForMoreMem()
+			db.DPrintf(db.SCHEDD, "[%v] Waiting for mem done", sd.kernelId, bias)
 			continue
 		}
-		db.DPrintf(db.SCHEDD, "[%v] Try get proc from procq, bias=%v", sd.kernelId, bias)
+		db.DPrintf(db.SCHEDD, "[%v] Try GetProc mem=%v bias=%v", sd.kernelId, memFree, bias)
 		start := time.Now()
 		// Try to get a proc from the proc queue.
 		procMem, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, memFree, bias)
+		db.DPrintf(db.SCHEDD, "[%v] GetProc result procMem %v qlen %v ok %v", sd.kernelId, procMem, qlen, ok)
 		db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
 		if err != nil {
 			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)

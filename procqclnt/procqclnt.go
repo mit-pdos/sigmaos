@@ -68,7 +68,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 
 // Get a proc (passing in the kernelID of the caller). Will only return once
 // receives a response, or once there is an error.
-func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias bool) (proc.Tmem, uint32, bool, error) {
+func (pqc *ProcQClnt) GetProc(callerKernelID string, prefRealm sp.Trealm, freeMem proc.Tmem, bias bool) (proc.Tmem, uint32, bool, error) {
 	pqc.urpcc.UpdateSrvs(false)
 	// Retry until successful.
 	for {
@@ -91,8 +91,9 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			return 0, 0, false, err
 		}
 		req := &proto.GetProcRequest{
-			KernelID: callerKernelID,
-			Mem:      uint32(freeMem),
+			KernelID:  callerKernelID,
+			Mem:       uint32(freeMem),
+			PrefRealm: string(prefRealm),
 		}
 		res := &proto.GetProcResponse{}
 		if err := rpcc.RPC("ProcQ.GetProc", req, res); err != nil {

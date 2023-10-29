@@ -87,7 +87,8 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
-	rOff := int(rand.Int64(999))
+	// Try to start with the requester's preferred realm.
+	rOff := pq.getRealmIdx(sp.Trealm(req.PrefRealm))
 	start := time.Now()
 	// Try until we hit the timeout (which we may hit if the request is for too
 	// few resources).
@@ -96,8 +97,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 		nrealm := len(pq.realms)
 		// Iterate through the realms round-robin.
 		for i := 0; i < nrealm; i++ {
-			rOff++
-			r := pq.realms[rOff%len(pq.realms)]
+			r := pq.realms[(rOff+i)%len(pq.realms)]
 			q := pq.qs[r]
 			db.DPrintf(db.PROCQ, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
 			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem))
@@ -134,6 +134,19 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 	}
 	res.OK = false
 	return nil
+}
+
+func (pq *ProcQ) getRealmIdx(realm sp.Trealm) int {
+	pq.realmMu.RLock()
+	defer pq.realmMu.RUnlock()
+
+	for i := range pq.realms {
+		if pq.realms[i] == realm {
+			return i
+		}
+	}
+	db.DPrintf(db.ALWAYS, "Unknown realm %v", realm)
+	return int(rand.Int64(int64(len(pq.realms))))
 }
 
 func (pq *ProcQ) getRealmQueue(realm sp.Trealm) *Queue {

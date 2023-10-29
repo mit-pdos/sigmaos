@@ -242,7 +242,13 @@ func (sd *Schedd) register() {
 func (sd *Schedd) logStats() {
 	for {
 		time.Sleep(time.Second)
-		db.DPrintf(db.ALWAYS, "Ran %v total procs", atomic.LoadUint64(&sd.nProcsRun))
+		realmCnts := make(map[sp.Trealm]int64)
+		sd.realmMu.RLock()
+		for r, c := range sd.realmCnts {
+			realmCnts[r] = atomic.LoadInt64(c)
+		}
+		sd.realmMu.RUnlock()
+		db.DPrintf(db.ALWAYS, "Ran %v total procs cnts %v", atomic.LoadUint64(&sd.nProcsRun), realmCnts)
 	}
 }
 

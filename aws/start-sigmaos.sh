@@ -112,6 +112,11 @@ for vm in $vms; do
     echo "ncores:"
     nproc
   fi
+  
+  aws s3 --profile sigmaos cp s3://9ps3/img-save/1.jpg ~/
+  aws s3 --profile sigmaos cp s3://9ps3/img-save/6.jpg ~/
+  aws s3 --profile sigmaos cp s3://9ps3/img-save/7.jpg ~/
+  aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
 
   cd sigmaos
 
@@ -128,16 +133,18 @@ for vm in $vms; do
       ./start-etcd.sh
     fi
     ./start-kernel.sh --boot realm --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
-    docker cp ~/sigmaos/imgresized/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
-    docker cp ~/sigmaos/imgresized/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
-    docker cp ~/sigmaos/imgresized/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
+    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
+    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
+    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
+    docker cp ~/8.jpg ${KERNELID}:/home/sigmaos/7.jpg
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
     ./start-kernel.sh --boot node --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
-    docker cp ~/sigmaos/imgresized/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
-    docker cp ~/sigmaos/imgresized/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
-    docker cp ~/sigmaos/imgresized/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
+    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
+    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
+    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
+    docker cp ~/8.jpg ${KERNELID}:/home/sigmaos/7.jpg
   fi
 ENDSSH
  if [ "${vm}" = "${MAIN}" ]; then

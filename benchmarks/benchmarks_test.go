@@ -80,6 +80,7 @@ var N_IMG_RESIZE_JOBS int
 var N_IMG_RESIZE_INPUTS_PER_JOB int
 var IMG_RESIZE_MCPU int
 var IMG_RESIZE_MEM_MB int
+var IMG_RESIZE_N_ROUNDS int
 var SLEEP time.Duration
 var REDIS_ADDR string
 var N_PROC int
@@ -150,6 +151,7 @@ func init() {
 	flag.IntVar(&N_IMG_RESIZE_INPUTS_PER_JOB, "n_imgresize_per", 1, "Number of img resize inputs per job.")
 	flag.IntVar(&IMG_RESIZE_MCPU, "imgresize_mcpu", 100, "MCPU for img resize worker.")
 	flag.IntVar(&IMG_RESIZE_MEM_MB, "imgresize_mem", 0, "Mem for img resize worker.")
+	flag.IntVar(&IMG_RESIZE_N_ROUNDS, "imgresize_nround", 1, "Number of rounds of computation for each image")
 }
 
 // ========== Common parameters ==========
@@ -521,7 +523,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Prep ImgResize job
-	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB))
+	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
 	// Prep Hotel job
 	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
@@ -641,7 +643,7 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(tses[i])
 		defer ps[i].Done()
-		imgjob, imgapp := newImgResizeJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB))
+		imgjob, imgapp := newImgResizeJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
 		imgjobs[i] = imgjob
 		imgapps[i] = imgapp
 	}
@@ -1016,7 +1018,7 @@ func TestImgResize(t *testing.T) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := newImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB))
+	jobs, apps := newImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -1079,9 +1081,9 @@ func TestRealmBalanceSimpleImgResize(t *testing.T) {
 	defer p2.Done()
 	// Prep resize jobs
 	imgJobsBE, imgAppsBE := newImgResizeJob(
-		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB))
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
 	imgJobsLC, imgAppsLC := newImgResizeJob(
-		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB))
+		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
 
 	// Run image resize jobs
 	go func() {
@@ -1134,7 +1136,7 @@ func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	defer p2.Done()
 	// Prep image resize job
 	imgJobs, imgApps := newImgResizeJob(
-		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB))
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
 	// Prep social network job
 	snJobs, snApps := newSocialNetworkJobs(ts2, p2, true, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
 	// Run social network job

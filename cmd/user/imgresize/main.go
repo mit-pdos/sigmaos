@@ -20,8 +20,7 @@ import (
 )
 
 const (
-	N       int = 10
-	IMG_DIM     = 160
+	IMG_DIM = 160
 )
 
 //
@@ -58,14 +57,15 @@ func main() {
 
 type Trans struct {
 	*sigmaclnt.SigmaClnt
-	inputs []string
-	output string
-	ctx    fs.CtxI
-	p      *perf.Perf
+	inputs  []string
+	output  string
+	ctx     fs.CtxI
+	nrounds int
+	p       *perf.Perf
 }
 
 func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return nil, fmt.Errorf("NewTrans: too few arguments: %v", args)
 	}
 	t := &Trans{
@@ -80,6 +80,10 @@ func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
 	db.DPrintf(db.ALWAYS, "Args {%v} inputs {%v}", args[1], t.inputs)
 	// XXX Should be fixed properly
 	t.output = t.inputs[0] + "-thumbnail"
+	t.nrounds, err = strconv.Atoi(args[3])
+	if err != nil {
+		db.DFatalf("Err convert nrounds: %v", err)
+	}
 	t.Started()
 	return t, nil
 }
@@ -110,7 +114,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	var imgSizeB uint64 = 16 * uint64(bounds.Max.X-bounds.Min.X) * uint64(bounds.Max.Y-bounds.Min.Y)
 	db.DPrintf(db.ALWAYS, "Time %v read/decode: %v", t.inputs[i], time.Since(ds))
 	dr := time.Now()
-	for i := 0; i < N-1; i++ {
+	for i := 0; i < t.nrounds-1; i++ {
 		resize.Resize(IMG_DIM, IMG_DIM, img, resize.Lanczos3)
 		t.p.TptTick(float64(imgSizeB))
 	}

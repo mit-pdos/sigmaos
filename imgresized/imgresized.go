@@ -33,6 +33,7 @@ type ImgSrv struct {
 	done       string
 	wip        string
 	todo       string
+	nrounds    int
 	workerMcpu proc.Tmcpu
 	workerMem  proc.Tmem
 	crash      int64
@@ -93,7 +94,7 @@ func Cleanup(fsl *fslib.FsLib, dir string) error {
 }
 
 func NewImgd(args []string) (*ImgSrv, error) {
-	if len(args) != 4 {
+	if len(args) != 5 {
 		return nil, fmt.Errorf("NewImgSrv: wrong number of arguments: %v", args)
 	}
 	imgd := &ImgSrv{}
@@ -123,6 +124,10 @@ func NewImgd(args []string) (*ImgSrv, error) {
 		return nil, fmt.Errorf("NewImgSrv: Error parse Mem %v", err)
 	}
 	imgd.workerMem = proc.Tmem(mem)
+	imgd.nrounds, err = strconv.Atoi(args[4])
+	if err != nil {
+		db.DFatalf("Error parse nrounds: %v", err)
+	}
 
 	imgd.Started()
 
@@ -201,7 +206,7 @@ func (imgd *ImgSrv) runTask(t *task) {
 	// result in another wg.Add
 	defer imgd.wg.Done()
 
-	p := proc.NewProcPid(sp.GenPid(imgd.job), "imgresize", []string{t.fn, ThumbName(t.fn)})
+	p := proc.NewProcPid(sp.GenPid(imgd.job), "imgresize", []string{t.fn, ThumbName(t.fn), strconv.Itoa(imgd.nrounds)})
 	if imgd.crash > 0 {
 		p.SetCrash(imgd.crash)
 	}

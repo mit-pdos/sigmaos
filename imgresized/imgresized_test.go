@@ -103,7 +103,7 @@ func TestImgdOne(t *testing.T) {
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
 	assert.Nil(t, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1)
 
 	ts.WaitDone(1)
 
@@ -121,7 +121,7 @@ func TestImgdMany(t *testing.T) {
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1)
 
 	sts, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/img-save"))
 	assert.Nil(t, err)
@@ -163,7 +163,7 @@ func TestImgdRestart(t *testing.T) {
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
 	assert.Nil(t, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1)
 
 	go func() {
 		err := ts.WaitDone(1)

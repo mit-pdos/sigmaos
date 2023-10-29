@@ -11,6 +11,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	proto "sigmaos/procqsrv/proto"
+	"sigmaos/rand"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -27,6 +28,7 @@ type ProcQ struct {
 	mfs        *memfssrv.MemFs
 	scheddclnt *scheddclnt.ScheddClnt
 	qs         map[sp.Trealm]*Queue
+	realms     []sp.Trealm
 	qlen       int // Aggregate queue length, across all queues
 }
 
@@ -35,6 +37,7 @@ func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
 		mfs:        mfs,
 		scheddclnt: scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib),
 		qs:         make(map[sp.Trealm]*Queue),
+		realms:     make([]sp.Trealm, 0),
 		qlen:       0,
 	}
 	pq.cond = sync.NewCond(&pq.mu)
@@ -84,13 +87,18 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
+	rOff := int(rand.Int64(999))
 	start := time.Now()
 	// Try until we hit the timeout (which we may hit if the request is for too
 	// few resources).
 	for time.Since(start) < GET_PROC_TIMEOUT {
 		pq.mu.Lock()
+		nrealm := len(pq.realms)
 		// Iterate through the realms round-robin.
-		for r, q := range pq.qs {
+		for i := 0; i < nrealm; i++ {
+			rOff++
+			r := pq.realms[rOff%len(pq.realms)]
+			q := pq.qs[r]
 			db.DPrintf(db.PROCQ, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
 			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem))
 			db.DPrintf(db.PROCQ, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)
@@ -143,6 +151,7 @@ func (pq *ProcQ) getRealmQueue(realm sp.Trealm) *Queue {
 			// If the queue has still not been created, create it.
 			q = newQueue()
 			pq.qs[realm] = q
+			pq.realms = append(pq.realms, realm)
 		}
 		// Demote to reader lock
 		pq.realmMu.Unlock()

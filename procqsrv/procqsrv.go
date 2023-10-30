@@ -120,6 +120,9 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// requests.
 				res.Mem = uint32(p.GetMem())
 				res.QLen = uint32(pq.qlen)
+				if !p.IsPrivileged() {
+					res.Realm = p.GetRealm().String()
+				}
 				pq.mu.Unlock()
 				return nil
 			}

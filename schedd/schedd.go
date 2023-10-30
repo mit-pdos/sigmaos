@@ -61,6 +61,9 @@ func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.Fo
 	// the ProcQ), account for it.
 	if !req.MemAccountedFor {
 		sd.allocMem(p.GetMem())
+		if !p.IsPrivileged() {
+			sd.incRealmCnt(p.GetRealm())
+		}
 	}
 	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p.GetPid())
 	start := time.Now()
@@ -156,7 +159,7 @@ func (sd *Schedd) getQueuedProcs() {
 		db.DPrintf(db.SCHEDD, "[%v] Try GetProc mem=%v bias=%v prefRealm %v", sd.kernelId, memFree, bias, prefRealm)
 		start := time.Now()
 		// Try to get a proc from the proc queue.
-		procMem, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, prefRealm, memFree, bias)
+		procMem, procRealm, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, prefRealm, memFree, bias)
 		db.DPrintf(db.SCHEDD, "[%v] GetProc result procMem %v qlen %v ok %v", sd.kernelId, procMem, qlen, ok)
 		db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
 		if err != nil {
@@ -191,6 +194,7 @@ func (sd *Schedd) getQueuedProcs() {
 		// subsequent getProc requests carry the updated memory accounting
 		// information.
 		sd.allocMem(procMem)
+		sd.incRealmCnt(procRealm)
 		db.DPrintf(db.SCHEDD, "[%v] Got proc from procq, bias=%v", sd.kernelId, bias)
 	}
 }
@@ -203,7 +207,6 @@ func (sd *Schedd) procDone(p *proc.Proc) {
 
 func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
 	p.SetKernelID(sd.kernelId, false)
-	sd.incRealmCnt(p)
 	sd.pmgr.Spawn(p)
 	// Run the proc
 	go sd.runProc(p)

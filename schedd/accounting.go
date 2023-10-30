@@ -27,18 +27,17 @@ func (sd *Schedd) getPrefRealm() sp.Trealm {
 	return minRealm
 }
 
-func (sd *Schedd) incRealmCnt(p *proc.Proc) {
-	// Don't count privileged procs
-	if p.IsPrivileged() {
+func (sd *Schedd) incRealmCnt(realm sp.Trealm) {
+	if realm == "" {
 		return
 	}
-	cnt := sd.getRealmCnt(p.GetRealm())
+	cnt := sd.getRealmCnt(realm)
 	atomic.AddInt64(cnt, 1)
 }
 
 func (sd *Schedd) decRealmCnt(p *proc.Proc) {
 	// Don't count privileged procs
-	if p.IsPrivileged() {
+	if p.IsPrivileged() || p.GetRealm() == "" {
 		return
 	}
 	cnt := sd.getRealmCnt(p.GetRealm())

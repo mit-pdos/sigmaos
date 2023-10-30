@@ -20,12 +20,10 @@ message EnqueueResponse {
 message GetProcRequest {
   string kernelID = 1;
   uint32 mem = 2;
-  string prefRealm = 3;
 }
 
 message GetProcResponse {
   bool oK = 1;
   uint32 mem = 2;
   uint32 qLen = 3;
-  string realm = 4;
 }

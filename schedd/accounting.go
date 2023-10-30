@@ -7,26 +7,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (sd *Schedd) getPrefRealm() sp.Trealm {
-	sd.realmMu.RLock()
-	defer sd.realmMu.RUnlock()
-
-	var minRealm sp.Trealm = sp.ROOTREALM
-	var minCnt int64 = -1
-	for r, c := range sd.realmCnts {
-		// Ignore root realm.
-		if r == sp.ROOTREALM {
-			continue
-		}
-		cnt := atomic.LoadInt64(c)
-		if cnt < minCnt || minCnt == -1 {
-			minCnt = cnt
-			minRealm = r
-		}
-	}
-	return minRealm
-}
-
 func (sd *Schedd) incRealmCnt(realm sp.Trealm) {
 	if realm == "" {
 		return

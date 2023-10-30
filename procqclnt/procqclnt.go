@@ -68,7 +68,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 
 // Get a proc (passing in the kernelID of the caller). Will only return once
 // receives a response, or once there is an error.
-func (pqc *ProcQClnt) GetProc(callerKernelID string, prefRealm sp.Trealm, freeMem proc.Tmem, bias bool) (proc.Tmem, sp.Trealm, uint32, bool, error) {
+func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias bool) (proc.Tmem, uint32, bool, error) {
 	pqc.urpcc.UpdateSrvs(false)
 	// Retry until successful.
 	for {
@@ -88,12 +88,11 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, prefRealm sp.Trealm, freeMe
 		rpcc, err := pqc.urpcc.GetClnt(pqID)
 		if err != nil {
 			db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get procq clnt: %v", err)
-			return 0, "", 0, false, err
+			return 0, 0, false, err
 		}
 		req := &proto.GetProcRequest{
-			KernelID:  callerKernelID,
-			Mem:       uint32(freeMem),
-			PrefRealm: string(prefRealm),
+			KernelID: callerKernelID,
+			Mem:      uint32(freeMem),
 		}
 		res := &proto.GetProcResponse{}
 		if err := rpcc.RPC("ProcQ.GetProc", req, res); err != nil {
@@ -103,9 +102,9 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, prefRealm sp.Trealm, freeMe
 				pqc.urpcc.UnregisterSrv(pqID)
 				continue
 			}
-			return 0, "", 0, false, err
+			return 0, 0, false, err
 		}
 		db.DPrintf(db.PROCQCLNT, "GetProc success? %v", res.OK)
-		return proc.Tmem(res.Mem), sp.Trealm(res.Realm), res.QLen, res.OK, nil
+		return proc.Tmem(res.Mem), res.QLen, res.OK, nil
 	}
 }

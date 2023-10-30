@@ -85,21 +85,38 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 }
 
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
-	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v prefRealm %v", req.KernelID, req.Mem, req.PrefRealm)
+	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
-	// Try to start with the requester's preferred realm.
-	rOff := pq.getRealmIdx(sp.Trealm(req.PrefRealm))
+	// Pick a random realm to start with.
+	rOff := int(rand.Int64(9999))
 	start := time.Now()
 	// Try until we hit the timeout (which we may hit if the request is for too
 	// few resources).
 	for time.Since(start) < GET_PROC_TIMEOUT {
 		pq.mu.Lock()
 		nrealm := len(pq.realms)
-		// Iterate through the realms round-robin.
+		// Iterate through the realms round-robin, starting with the random index.
 		first := ""
-		for i := 0; i < nrealm; i++ {
-			r := pq.realms[(rOff+i)%len(pq.realms)]
-			q := pq.qs[r]
+		// +1 to include the root realm, which isn't part of the realms slice.
+		for i := 0; i < nrealm+1; i++ {
+			var r sp.Trealm
+			// If we tried to schedule every other realm, then try to schedule the
+			// root realm. We do it this way to avoid biasing scheduling in favor of
+			// realms that start up earlier. In normal operation there will be
+			// nothing to spawn for the root realm, and this would mean that a random
+			// choice of index into the pq.realms slice would give the first non-root
+			// realm an extra shot at being scheduled (since we move round-robin
+			// after the random choice).
+			if i == nrealm {
+				// Only try the root realm once we've exhausted all other options.
+				r = sp.ROOTREALM
+			} else {
+				r = pq.realms[(rOff+i)%len(pq.realms)]
+			}
+			q, ok := pq.qs[r]
+			if !ok && r == sp.ROOTREALM {
+				continue
+			}
 			if first == "" {
 				first = r.String()
 				db.DPrintf(db.PROCQ, "First try to dequeue from %v", r)
@@ -120,9 +137,6 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// requests.
 				res.Mem = uint32(p.GetMem())
 				res.QLen = uint32(pq.qlen)
-				if !p.IsPrivileged() {
-					res.Realm = p.GetRealm().String()
-				}
 				pq.mu.Unlock()
 				return nil
 			}
@@ -144,19 +158,6 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 	return nil
 }
 
-func (pq *ProcQ) getRealmIdx(realm sp.Trealm) int {
-	pq.realmMu.RLock()
-	defer pq.realmMu.RUnlock()
-
-	for i := range pq.realms {
-		if pq.realms[i] == realm {
-			return i
-		}
-	}
-	db.DPrintf(db.ALWAYS, "Unknown realm %v", realm)
-	return int(rand.Int64(9999))
-}
-
 func (pq *ProcQ) getRealmQueue(realm sp.Trealm) *Queue {
 	pq.realmMu.RLock()
 	defer pq.realmMu.RUnlock()
@@ -172,7 +173,10 @@ func (pq *ProcQ) getRealmQueue(realm sp.Trealm) *Queue {
 			// If the queue has still not been created, create it.
 			q = newQueue()
 			pq.qs[realm] = q
-			pq.realms = append(pq.realms, realm)
+			// Don't add the root realm as a realm to choose to schedule from.
+			if realm != sp.ROOTREALM {
+				pq.realms = append(pq.realms, realm)
+			}
 		}
 		// Demote to reader lock
 		pq.realmMu.Unlock()

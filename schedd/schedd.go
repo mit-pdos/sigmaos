@@ -153,7 +153,7 @@ func (sd *Schedd) getQueuedProcs() {
 			continue
 		}
 		prefRealm := sd.getPrefRealm()
-		db.DPrintf(db.SCHEDD, "[%v] Try GetProc mem=%v bias=%v", sd.kernelId, memFree, bias)
+		db.DPrintf(db.SCHEDD, "[%v] Try GetProc mem=%v bias=%v prefRealm %v", sd.kernelId, memFree, bias, prefRealm)
 		start := time.Now()
 		// Try to get a proc from the proc queue.
 		procMem, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, prefRealm, memFree, bias)

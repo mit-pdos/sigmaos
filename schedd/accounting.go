@@ -14,6 +14,10 @@ func (sd *Schedd) getPrefRealm() sp.Trealm {
 	var minRealm sp.Trealm = sp.ROOTREALM
 	var minCnt int64 = -1
 	for r, c := range sd.realmCnts {
+		// Ignore root realm.
+		if r == sp.ROOTREALM {
+			continue
+		}
 		cnt := atomic.LoadInt64(c)
 		if cnt < minCnt || minCnt == -1 {
 			minCnt = cnt

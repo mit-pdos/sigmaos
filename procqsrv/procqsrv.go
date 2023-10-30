@@ -85,7 +85,7 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 }
 
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
-	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
+	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v prefRealm %v", req.KernelID, req.Mem, req.PrefRealm)
 
 	// Try to start with the requester's preferred realm.
 	rOff := pq.getRealmIdx(sp.Trealm(req.PrefRealm))

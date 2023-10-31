@@ -103,5 +103,6 @@ func GetRootNamed(realm sp.Trealm, etcdIP string) (sp.Tmount, *serr.Err) {
 		return sp.Tmount{}, sr
 	}
 	db.DPrintf(db.FSETCD, "GetNamed mnt %v\n", mnt)
+	fs.Close()
 	return mnt, nil
 }

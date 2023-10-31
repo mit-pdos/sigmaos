@@ -499,6 +499,7 @@ func TestLookupConcurPerf(t *testing.T) {
 	const N = 2
 	const NFILE = 10
 	const NGO = 10
+	const NTRIAL = 10
 	ts := test.NewTstatePath(t, pathname)
 
 	ts.RmDir(gopath.Join(pathname, "d0"))
@@ -513,12 +514,16 @@ func TestLookupConcurPerf(t *testing.T) {
 	}
 	//dump(t)
 	done := make(chan int)
-	fsls := make([]*fslib.FsLib, 0, NGO)
+	fsls := make([][]*fslib.FsLib, 0, NGO)
 	for i := 0; i < NGO; i++ {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		fsl, err := fslib.NewFsLib(pcfg)
-		assert.Nil(t, err)
-		fsls = append(fsls, fsl)
+		fsl2 := make([]*fslib.FsLib, 0, NTRIAL)
+		for j := 0; j < NTRIAL; j++ {
+			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+			fsl, err := fslib.NewFsLib(pcfg)
+			assert.Nil(t, err)
+			fsl2 = append(fsl2, fsl)
+		}
+		fsls = append(fsls, fsl2)
 	}
 
 	for i := 0; i < NGO; i++ {
@@ -526,9 +531,11 @@ func TestLookupConcurPerf(t *testing.T) {
 			db.DPrintf(db.TEST, "go %d\n", i)
 			label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
 			measuredir(label, 1, func() int {
-				_, err := fsls[i].Stat(dir)
-				assert.Nil(t, err)
-				return 1
+				for j := 0; j < NTRIAL; j++ {
+					_, err := fsls[i][j].Stat(dir)
+					assert.Nil(t, err)
+				}
+				return NTRIAL
 			})
 			done <- i
 		}(i)

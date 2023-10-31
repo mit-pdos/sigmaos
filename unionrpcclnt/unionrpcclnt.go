@@ -15,12 +15,13 @@ import (
 type UnionRPCClnt struct {
 	*fslib.FsLib
 	sync.Mutex
-	path      string
-	clnts     map[string]*rpcclnt.RPCClnt
-	srvs      []string
-	rrOffset  int
-	lSelector db.Tselector
-	eSelector db.Tselector
+	monitoring bool
+	path       string
+	clnts      map[string]*rpcclnt.RPCClnt
+	srvs       []string
+	rrOffset   int
+	lSelector  db.Tselector
+	eSelector  db.Tselector
 }
 
 func NewUnionRPCClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector) *UnionRPCClnt {
@@ -63,10 +64,13 @@ func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
 
 // Update the list of active procds.
 func (urpcc *UnionRPCClnt) UpdateSrvs(force bool) {
-	go urpcc.monitorSrvs()
-
 	urpcc.Lock()
 	defer urpcc.Unlock()
+
+	if !urpcc.monitoring {
+		go urpcc.monitorSrvs()
+		urpcc.monitoring = true
+	}
 
 	// If the caller is not forcing an update, and the list of servers has
 	// already been populated, do nothing and return.

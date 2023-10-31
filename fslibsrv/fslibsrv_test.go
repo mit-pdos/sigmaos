@@ -3,6 +3,7 @@ package fslibsrv_test
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	gopath "path"
 	"strconv"
 	"testing"
@@ -12,25 +13,29 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/fslib"
+	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/~local/fslibtest"
+var pathname string // e.g., --path "name/ux/~local/"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
 }
 
 const (
-	KBYTE      = 1 << 10
-	NRUNS      = 3
-	SYNCFILESZ = 100 * KBYTE
-	FILESZ     = 100 * sp.MBYTE
-	WRITESZ    = 4096
+	KBYTE = 1 << 10
+	NRUNS = 3
+	// SYNCFILESZ = 100 * KBYTE
+	SYNCFILESZ = WRITESZ
+	// FILESZ     = 100 * sp.MBYTE
+	FILESZ  = SYNCFILESZ
+	WRITESZ = 4096
 )
 
 func measure(p *perf.Perf, msg string, f func() sp.Tlength) sp.Tlength {
@@ -450,5 +455,42 @@ func TestRmDirPerf(t *testing.T) {
 		assert.Nil(t, err)
 		return N
 	})
+	ts.Shutdown()
+}
+
+func dump(t *testing.T) {
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, test.EtcdIP, "", "", false)
+	fs, err := fsetcd.NewFsEtcd(pcfg.GetRealm(), pcfg.GetEtcdIP())
+	assert.Nil(t, err)
+	nd, err := fs.ReadDir(fsetcd.ROOT)
+	assert.Nil(t, err)
+	err = fs.Dump(0, nd, path.Path{}, fsetcd.ROOT)
+	assert.Nil(t, err)
+}
+
+func TestLookupPerf(t *testing.T) {
+	const N = 10
+	const NFILE = 10
+	ts := test.NewTstatePath(t, pathname)
+
+	ts.RmDir(gopath.Join(pathname, "d0"))
+
+	for d := 1; d < N; d++ {
+		dir := pathname
+		for i := 0; i < d; i++ {
+			dir = gopath.Join(dir, "d"+strconv.Itoa(i))
+			n := newDir(t, ts.FsLib, dir, NFILE)
+			assert.Equal(t, NFILE, n)
+		}
+		//dump(t)
+		label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
+		measuredir(label, 100, func() int {
+			_, err := ts.Stat(dir)
+			assert.Nil(t, err)
+			return 1
+		})
+		err := ts.RmDir(gopath.Join(pathname, "d0"))
+		assert.Nil(t, err)
+	}
 	ts.Shutdown()
 }

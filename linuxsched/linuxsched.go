@@ -25,8 +25,7 @@ func GetNCores() uint {
 	if nCores == 0 {
 		s := time.Now()
 		if _, err := ScanTopology(); err != nil {
-			fmt.Fprintf(os.Stderr, "ScanTopology failed %v\n", err)
-			os.Exit(1)
+			db.DFatalf("ScanTopology failed %v", err)
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] Linuxsched scanTopology latency: %v", proc.GetSigmaDebugPid(), time.Since(s))
 	}

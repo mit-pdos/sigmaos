@@ -45,7 +45,15 @@ func (pathc *PathClnt) mountNamed(p path.Path, uname sp.Tuname) *serr.Err {
 
 func (pathc *PathClnt) mountRootNamed(name string, uname sp.Tuname) *serr.Err {
 	db.DPrintf(db.NAMED, "mountRootNamed %v\n", name)
-	mnt, err := fsetcd.GetRootNamed(pathc.pcfg.GetRealm(), pathc.pcfg.EtcdIP)
+	var mnt sp.Tmount
+	var err *serr.Err
+	// If named has been set, don't bother getting it from fsetcd.
+	if pathc.pcfg.GetNamedIP() != "" {
+		mnt = sp.Tmount{Addr: []*sp.Taddr{sp.NewTaddr(pathc.pcfg.GetNamedIP())}}
+		err = nil
+	} else {
+		mnt, err = fsetcd.GetRootNamed(pathc.pcfg.GetRealm(), pathc.pcfg.EtcdIP)
+	}
 	if err == nil {
 		pn := path.Path{name}
 		if err := pathc.autoMount(uname, mnt, pn); err == nil {

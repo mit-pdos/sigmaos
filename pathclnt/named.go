@@ -13,6 +13,10 @@ import (
 
 func (pathc *PathClnt) GetMntNamed(uname sp.Tuname) sp.Tmount {
 	if pathc.pcfg.GetRealm() == sp.ROOTREALM {
+		// If named has been set, don't bother getting it from fsetcd.
+		if pathc.pcfg.GetNamedIP() != "" {
+			return sp.Tmount{Addr: []*sp.Taddr{sp.NewTaddr(pathc.pcfg.GetNamedIP())}}
+		}
 		mnt, err := fsetcd.GetRootNamed(pathc.pcfg.GetRealm(), pathc.pcfg.EtcdIP)
 		if err != nil {
 			db.DFatalf("GetMntNamed() GetRootNamed %v err %v\n", pathc.pcfg.GetRealm(), err)

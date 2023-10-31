@@ -27,7 +27,7 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 	if err != nil {
 		return nil, 0, serr.NewErrError(err)
 	}
-	db.DPrintf(db.FSETCD, "GetFile %v %v\n", key, resp)
+	db.DPrintf(db.FSETCD, "getFile %v %v\n", key, resp)
 	if len(resp.Kvs) != 1 {
 		return nil, 0, serr.NewErr(serr.TErrNotfound, key2path(key))
 	}
@@ -35,7 +35,7 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 	if err := proto.Unmarshal(resp.Kvs[0].Value, nf); err != nil {
 		return nil, 0, serr.NewErrError(err)
 	}
-	db.DPrintf(db.FSETCD, "GetFile %v %v\n", key, nf)
+	db.DPrintf(db.FSETCD, "getFile %v %v\n", key, nf)
 	return nf, sp.TQversion(resp.Kvs[0].Version), nil
 }
 

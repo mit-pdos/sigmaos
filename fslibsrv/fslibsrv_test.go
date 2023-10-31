@@ -519,6 +519,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		fsl2 := make([]*fslib.FsLib, 0, NTRIAL)
 		for j := 0; j < NTRIAL; j++ {
 			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+			pcfg.NamedIP = ts.NamedAddr()[0].Addr
 			fsl, err := fslib.NewFsLib(pcfg)
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)

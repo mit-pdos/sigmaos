@@ -3,6 +3,7 @@ package fslibsrv_test
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	gopath "path"
 	"strconv"
 	"testing"
@@ -12,7 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/fslib"
+	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -455,25 +458,38 @@ func TestRmDirPerf(t *testing.T) {
 	ts.Shutdown()
 }
 
+func dump(t *testing.T) {
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, test.EtcdIP, "", "", false)
+	fs, err := fsetcd.NewFsEtcd(pcfg.GetRealm(), pcfg.GetEtcdIP())
+	assert.Nil(t, err)
+	nd, err := fs.ReadDir(fsetcd.ROOT)
+	assert.Nil(t, err)
+	err = fs.Dump(0, nd, path.Path{}, fsetcd.ROOT)
+	assert.Nil(t, err)
+}
+
 func TestLookupPerf(t *testing.T) {
 	const N = 10
+	const NFILE = 10
 	ts := test.NewTstatePath(t, pathname)
 
-	err := ts.RmDir(gopath.Join(pathname, "d0"))
+	ts.RmDir(gopath.Join(pathname, "d0"))
+
 	for d := 1; d < N; d++ {
 		dir := pathname
 		for i := 0; i < d; i++ {
 			dir = gopath.Join(dir, "d"+strconv.Itoa(i))
-			err := ts.MkDir(dir, 0777)
-			assert.Equal(t, nil, err)
+			n := newDir(t, ts.FsLib, dir, NFILE)
+			assert.Equal(t, NFILE, n)
 		}
-		measuredir("readdir", 100, func() int {
-			_, err := ts.GetDir(dir)
-			// db.DPrintf(db.TEST, "dir %v sts %v\n", dir, sts)
+		//dump(t)
+		label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
+		measuredir(label, 100, func() int {
+			_, err := ts.Stat(dir)
 			assert.Nil(t, err)
 			return 1
 		})
-		err = ts.RmDir(gopath.Join(pathname, "d0"))
+		err := ts.RmDir(gopath.Join(pathname, "d0"))
 		assert.Nil(t, err)
 	}
 	ts.Shutdown()

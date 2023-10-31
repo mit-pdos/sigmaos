@@ -32,7 +32,6 @@ func NewUnionRPCClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSel
 		lSelector: lSelector,
 		eSelector: eSelector,
 	}
-	go u.monitorSrvs()
 	return u
 }
 
@@ -64,6 +63,8 @@ func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
 
 // Update the list of active procds.
 func (urpcc *UnionRPCClnt) UpdateSrvs(force bool) {
+	go urpcc.monitorSrvs()
+
 	urpcc.Lock()
 	defer urpcc.Unlock()
 

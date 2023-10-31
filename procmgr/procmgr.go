@@ -24,6 +24,7 @@ type ProcMgr struct {
 	rootsc         *sigmaclnt.SigmaClnt
 	updm           *uprocclnt.UprocdMgr
 	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClnt
+	namedIPs       map[sp.Trealm]string
 	cachedProcBins map[sp.Trealm]map[string]bool
 	pstate         *ProcState
 }
@@ -36,6 +37,7 @@ func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 		rootsc:         mfs.SigmaClnt(),
 		updm:           uprocclnt.NewUprocdMgr(mfs.SigmaClnt().FsLib, kernelId),
 		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
+		namedIPs:       make(map[sp.Trealm]string),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
 		pstate:         NewProcState(),
 	}
@@ -55,6 +57,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	// Set the schedd IP for the proc, so it can mount this schedd in one RPC
 	// (without walking down to it).
 	p.SetScheddIP(mgr.mfs.MyAddr())
+	p.SetNamedIP(mgr.getNamedIP(p.GetRealm()))
 	s := time.Now()
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
@@ -104,10 +107,27 @@ func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }
 
+func (mgr *ProcMgr) getNamedIP(realm sp.Trealm) string {
+	mgr.Lock()
+	defer mgr.Unlock()
+
+	ip, ok := mgr.namedIPs[realm]
+	if !ok {
+		sc := mgr.getSigmaClntL(realm)
+		ip = sc.NamedAddr()[0].Addr
+		mgr.namedIPs[realm] = ip
+	}
+	return ip
+}
+
 func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 	mgr.Lock()
 	defer mgr.Unlock()
 
+	return mgr.getSigmaClntL(realm)
+}
+
+func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClnt {
 	var clnt *sigmaclnt.SigmaClnt
 	var ok bool
 	if clnt, ok = mgr.sclnts[realm]; !ok {

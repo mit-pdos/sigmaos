@@ -272,6 +272,10 @@ func (p *Proc) SetScheddIP(ip string) {
 	p.ProcEnvProto.ScheddIP = ip
 }
 
+func (p *Proc) SetNamedIP(ip string) {
+	p.ProcEnvProto.NamedIP = ip
+}
+
 // Return Env map as a []string
 func (p *Proc) GetEnv() []string {
 	env := []string{}

@@ -58,6 +58,10 @@ func (pathc *PathClnt) mountRootNamed(name string, uname sp.Tuname) *serr.Err {
 }
 
 func (pathc *PathClnt) getRealmNamed(uname sp.Tuname) (sp.Tmount, *serr.Err) {
+	// If named has been set, don't bother getting it from fsetcd.
+	if pathc.pcfg.GetNamedIP() != "" {
+		return sp.Tmount{Addr: []*sp.Taddr{sp.NewTaddr(pathc.pcfg.GetNamedIP())}}, nil
+	}
 	if _, rest, err := pathc.mnt.resolve(path.Path{"root"}, true); err != nil && len(rest) >= 1 {
 		if err := pathc.mountRootNamed("root", uname); err != nil {
 			db.DPrintf(db.NAMED, "getRealmNamed %v err mounting root named %v\n", pathc.pcfg.GetRealm(), err)

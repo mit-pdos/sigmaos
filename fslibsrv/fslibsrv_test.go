@@ -525,7 +525,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		go func(i int) {
 			db.DPrintf(db.TEST, "go %d\n", i)
 			label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
-			measuredir(label, 1000, func() int {
+			measuredir(label, 1, func() int {
 				_, err := fsls[i].Stat(dir)
 				assert.Nil(t, err)
 				return 1

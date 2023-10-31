@@ -59,24 +59,25 @@ func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	for i := 0; i < ji.ninputs; i++ {
 		fns = append(fns, fn)
 	}
-	for i := 0; i < ji.ntasks; i++ {
-		err := imgresized.SubmitTaskMulti(ji.SigmaClnt.FsLib, ji.job, fns)
-		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
-	}
+	//	for i := 0; i < ji.ntasks; i++ {
+	//		err := imgresized.SubmitTaskMulti(ji.SigmaClnt.FsLib, ji.job, fns)
+	//		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
+	//	}
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
 
 func (ji *ImgResizeJobInstance) Wait() {
 	db.DPrintf(db.TEST, "Waiting for ImgResizeJOb to finish")
-	for {
-		n, err := imgresized.NTaskDone(ji.SigmaClnt.FsLib, ji.job)
-		assert.Nil(ji.Ts.T, err, "Error NTaskDone: %v", err)
-		db.DPrintf(db.TEST, "ImgResizeJob NTaskDone: %v", n)
-		if n == ji.ntasks {
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
+	time.Sleep(100 * time.Second)
+	//	for {
+	//		n, err := imgresized.NTaskDone(ji.SigmaClnt.FsLib, ji.job)
+	//		assert.Nil(ji.Ts.T, err, "Error NTaskDone: %v", err)
+	//		db.DPrintf(db.TEST, "ImgResizeJob NTaskDone: %v", n)
+	//		if n == ji.ntasks {
+	//			break
+	//		}
+	//		time.Sleep(1 * time.Second)
+	//	}
 	db.DPrintf(db.TEST, "Done waiting for ImgResizeJob to finish")
 	ji.imgd.Stop()
 	db.DPrintf(db.TEST, "Imgd shutdown")

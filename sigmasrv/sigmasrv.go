@@ -1,6 +1,7 @@
 package sigmasrv
 
 import (
+	"os"
 	"runtime/debug"
 
 	"sigmaos/cpumon"
@@ -202,18 +203,23 @@ func (ssrv *SigmaSrv) RunServer() error {
 	db.DPrintf(db.SIGMASRV, "Run %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	ssrv.Serve()
 	ssrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
+	os.Exit(0)
 	return nil
 }
 
 func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 	db.DPrintf(db.SIGMASRV, "SrvExit %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
+	defer db.DPrintf(db.SIGMASRV, "SrvExit done %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	if ssrv.lsrv != nil {
 		ssrv.lsrv.stop()
 	}
+	db.DPrintf(db.SIGMASRV, "lsrv stop %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	if ssrv.cpumon != nil {
 		ssrv.cpumon.Done()
 	}
+	db.DPrintf(db.SIGMASRV, "cpumon done %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	ssrv.MemFs.StopServing()
+	db.DPrintf(db.SIGMASRV, "StopServing %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	return ssrv.MemFs.MemFsExit(proc.NewStatus(proc.StatusEvicted))
 }
 

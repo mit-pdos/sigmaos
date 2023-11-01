@@ -72,9 +72,12 @@ func NewSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 
 func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	sc.ProcClnt.Exited(status)
+	db.DPrintf(db.SIGMACLNT, "Exited done")
 	if sc.LeaseClnt != nil {
 		sc.LeaseClnt.EndLeases()
 	}
+	db.DPrintf(db.SIGMACLNT, "EndLeases done")
+	defer db.DPrintf(db.SIGMACLNT, "ClntExit done")
 	return sc.FsLib.DetachAll()
 }
 

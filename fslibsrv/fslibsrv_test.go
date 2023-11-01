@@ -528,7 +528,7 @@ func TestLookupConcurPerf(t *testing.T) {
 
 	for i := 0; i < NGO; i++ {
 		go func(i int) {
-			label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
+			label := fmt.Sprintf("stat dir %v nfile %v ntrial %v", dir, NFILE, NTRIAL)
 			measuredir(label, 1, func() int {
 				for j := 0; j < NTRIAL; j++ {
 					_, err := fsls[i][j].Stat(dir)

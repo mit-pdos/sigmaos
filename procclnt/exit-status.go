@@ -37,6 +37,8 @@ func (clnt *ProcClnt) writeExitStatus(pid sp.Tpid, kernelID string, status *proc
 		// May return an error if parent already exited.
 		kprocDir := proc.KProcDir(pid)
 		fn := path.Join(kprocDir, proc.EXIT_STATUS)
+		db.DPrintf(db.PROCCLNT, "writeExitStatus via named")
+		defer db.DPrintf(db.PROCCLNT, "writeExitStatus done via named")
 		if _, err := clnt.PutFile(fn, 0777, sp.OWRITE, b); err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "exited error (parent already exited) NewFile %v err %v", fn, err)
 		}

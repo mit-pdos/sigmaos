@@ -381,6 +381,7 @@ func (clnt *ProcClnt) hasExited() sp.Tpid {
 func (clnt *ProcClnt) setExited(pid sp.Tpid) sp.Tpid {
 	clnt.Lock()
 	defer clnt.Unlock()
+
 	r := clnt.isExited
 	clnt.isExited = pid
 	return r

@@ -499,7 +499,7 @@ func TestLookupConcurPerf(t *testing.T) {
 	const N = 2
 	const NFILE = 10
 	const NGO = 10
-	const NTRIAL = 1
+	const NTRIAL = 10
 	ts := test.NewTstatePath(t, pathname)
 
 	ts.RmDir(gopath.Join(pathname, "d0"))
@@ -528,7 +528,6 @@ func TestLookupConcurPerf(t *testing.T) {
 
 	for i := 0; i < NGO; i++ {
 		go func(i int) {
-			db.DPrintf(db.TEST, "go %d\n", i)
 			label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
 			measuredir(label, 1, func() int {
 				for j := 0; j < NTRIAL; j++ {
@@ -542,8 +541,7 @@ func TestLookupConcurPerf(t *testing.T) {
 	}
 
 	for _ = range fsls {
-		i := <-done
-		db.DPrintf(db.TEST, "go done %d\n", i)
+		<-done
 	}
 
 	err := ts.RmDir(gopath.Join(pathname, "d0"))

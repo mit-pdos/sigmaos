@@ -225,6 +225,14 @@ func (pe *ProcEnvProto) GetSpawnTime() time.Time {
 	return pe.SpawnTimePB.AsTime()
 }
 
+func (pe *ProcEnv) GetNamedMount() (sp.Tmount, bool) {
+	mnt := pe.ProcEnvProto.GetNamedMountProto()
+	if mnt == nil {
+		return sp.Tmount{}, false
+	}
+	return *mnt, true
+}
+
 func (pe *ProcEnv) Marshal() string {
 	b, err := json.Marshal(pe)
 	if err != nil {

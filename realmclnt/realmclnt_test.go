@@ -142,21 +142,21 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
 	ts2 := test.NewRealmTstate(rootts, REALM2)
 
-	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, ts1.NamedAddr())
-	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, ts2.NamedAddr())
+	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, ts1.GetNamedMount())
+	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, ts2.GetNamedMount())
 
 	// Should have a public and private address
 	if test.Overlays {
-		assert.Equal(rootts.T, 2, len(ts1.NamedAddr()))
-		assert.Equal(rootts.T, 2, len(ts1.NamedAddr()))
+		assert.Equal(rootts.T, 2, len(ts1.GetNamedMount().Addr))
+		assert.Equal(rootts.T, 2, len(ts1.GetNamedMount().Addr))
 	}
 
 	schedds1, err := ts1.GetDir(sp.SCHEDD)
-	assert.Nil(t, err)
+	assert.Nil(t, err, "ErrGetDir SCHEDD: %v", err)
 	assert.True(rootts.T, len(schedds1) == 2, "Wrong number schedds %v", schedds1)
 
 	schedds2, err := ts2.GetDir(sp.SCHEDD)
-	assert.Nil(t, err)
+	assert.Nil(t, err, "ErrGetDir SCHEDD: %v", err)
 	assert.True(rootts.T, len(schedds2) == 2, "Wrong number schedds %v", schedds2)
 
 	for i := range schedds1 {

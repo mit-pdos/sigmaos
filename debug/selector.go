@@ -97,6 +97,7 @@ const (
 	BOOT                      = "BOOT"
 	CONTAINER                 = "CONTAINER"
 	NAMED                     = "NAMED"
+	NAMED_ERR                 = NAMED + ERR
 	FSETCD                    = "FSETCD"
 	FSETCD_ERR                = "FSETCD_ERR"
 	FSETCDLEASE               = "FSETCDLEASE"

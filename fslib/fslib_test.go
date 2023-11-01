@@ -134,7 +134,7 @@ func TestConnect(t *testing.T) {
 	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 
 	fd, err = ts.Open(fn, sp.OREAD)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err not unreachable: %v", err)
 
 	ts.Shutdown()
 }
@@ -218,7 +218,7 @@ func TestRemoveSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := sp.NewMountService(ts.NamedAddr())
+	mnt := ts.GetNamedMount()
 	err = ts.NewMountSymlink(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "NewMount: %v", err)
 
@@ -243,7 +243,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := sp.NewMountService(ts.NamedAddr())
+	mnt := ts.GetNamedMount()
 	err = ts.NewMountSymlink(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "NewMount: %v", err)
 
@@ -265,7 +265,7 @@ func TestReadSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := sp.NewMountService(ts.NamedAddr())
+	mnt := ts.GetNamedMount()
 	err = ts.NewMountSymlink(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "NewMount: %v", err)
 

@@ -16,95 +16,61 @@ import (
 //			return sp.Tmount{Addr: []*sp.Taddr{sp.NewTaddr(pathc.pcfg.GetNamedIP())}}
 //		}
 
-func (pathc *PathClnt) GetMntNamed() sp.Tmount {
-	if pathc.pcfg.GetRealm() == sp.ROOTREALM {
-		mnt, err := fsetcd.GetRootNamed(pathc.pcfg.GetRealm(), pathc.pcfg.EtcdIP)
-		if err != nil {
-			db.DFatalf("GetMntNamed() GetRootNamed %v err %v\n", pathc.pcfg.GetRealm(), err)
-		}
-		db.DPrintf(db.NAMED, "GetMntNamed %v %v\n", pathc.pcfg.GetRealm(), mnt)
-		return mnt
-	} else {
-		mnt, err := pathc.getRealmNamed()
-		if err != nil {
-			db.DFatalf("GetMntNamed() getRealmNamed %v err %v\n", pathc.pcfg.GetRealm(), err)
-		}
-		db.DPrintf(db.NAMED, "GetMntNamed %v %v\n", pathc.pcfg.GetRealm(), mnt)
+func (pathc *PathClnt) GetNamedMount() sp.Tmount {
+	// If this mount was passed via the proc config, return it immediately.
+	if mnt, ok := pathc.pcfg.GetNamedMount(); ok {
+		db.DPrintf(db.NAMED, "GetNamedMount cached %v %v", pathc.pcfg.GetRealm(), mnt)
 		return mnt
 	}
-}
-
-func (pathc *PathClnt) mountNamed(p path.Path) *serr.Err {
-	db.DPrintf(db.NAMED, "mountNamed %v: %v\n", pathc.pcfg.GetRealm(), p)
-	if pathc.pcfg.GetRealm() == sp.ROOTREALM {
-		return pathc.mountRootNamed(sp.NAME)
-	} else {
-		return pathc.mountRealmNamed()
+	mnt, err := pathc.getNamedMount(pathc.pcfg.GetRealm())
+	if err != nil {
+		db.DFatalf("Err getNamedMount [%v]: %v", pathc.pcfg.GetRealm(), err)
 	}
-	return nil
+	// TODO: cache in pcfg?
+	db.DPrintf(db.NAMED, "GetNamedMount %v %v", pathc.pcfg.GetRealm(), mnt)
+	return mnt
 }
 
-func (pathc *PathClnt) mountRootNamed(name string) *serr.Err {
-	db.DPrintf(db.NAMED, "mountRootNamed %v\n", name)
-	var mnt sp.Tmount
-	var err *serr.Err
-	// If named has been set, don't bother getting it from fsetcd.
-	//	if pathc.pcfg.GetNamedIP() != "" {
-	//		mnt = sp.Tmount{Addr: []*sp.Taddr{sp.NewTaddr(pathc.pcfg.GetNamedIP())}}
-	//		err = nil
-	//	} else {
-	mnt, err = fsetcd.GetRootNamed(pathc.pcfg.GetRealm(), pathc.pcfg.EtcdIP)
-	//	}
-	if err == nil {
-		pn := path.Path{name}
-		if err := pathc.autoMount(pathc.pcfg.GetUname(), mnt, pn); err == nil {
-			db.DPrintf(db.NAMED, "mountRootNamed: automount %v at %v\n", mnt, pn)
-			return nil
-		} else {
-			db.DPrintf(db.NAMED, "mountRootNamed: automount err %v\n", err)
-			return err
+func (pathc *PathClnt) getNamedMount(realm sp.Trealm) (sp.Tmount, *serr.Err) {
+	// If this is the root realm, then get the root named.
+	if realm == sp.ROOTREALM {
+		mnt, err := fsetcd.GetRootNamed(realm, pathc.pcfg.EtcdIP)
+		if err != nil {
+			db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] err GetRootNamed %v", realm, mnt)
 		}
-		return nil
+		return mnt, err
 	}
-	db.DPrintf(db.NAMED, "mountRootNamed: GetNamed err %v\n", err)
-	return err
-}
-
-func (pathc *PathClnt) getRealmNamed() (sp.Tmount, *serr.Err) {
-	// If named has been set, don't bother getting it from fsetcd.
-	//	if pathc.pcfg.GetNamedIP() != "" {
-	//		return sp.Tmount{Addr: []*sp.Taddr{sp.NewTaddr(pathc.pcfg.GetNamedIP())}}, nil
-	//	}
+	// Otherwise, walk through the root named to find this named's mount.
 	if _, rest, err := pathc.mnt.resolve(path.Path{"root"}, true); err != nil && len(rest) >= 1 {
-		if err := pathc.mountRootNamed("root"); err != nil {
-			db.DPrintf(db.NAMED, "getRealmNamed %v err mounting root named %v\n", pathc.pcfg.GetRealm(), err)
+		if err := pathc.mountNamed(sp.ROOTREALM, "root"); err != nil {
+			db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] err mounting root named %v", realm, err)
 			return sp.Tmount{}, err
 		}
 	}
-	pn := gpath.Join("root", sp.REALMDREL, sp.REALMSREL, pathc.pcfg.GetRealm().String())
+	pn := gpath.Join("root", sp.REALMDREL, sp.REALMSREL, realm.String())
 	target, err := pathc.GetFile(pn, pathc.pcfg.GetUname(), sp.OREAD, 0, sp.MAXGETSET)
 	if err != nil {
-		db.DPrintf(db.NAMED, "getRealmNamed %v err %v\n", pathc.pcfg.GetRealm(), err)
+		db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] GetFile err %v", realm, err)
 		return sp.Tmount{}, serr.NewErrError(err)
 	}
 	mnt, sr := sp.NewMount(target)
 	if sr != nil {
 		return sp.Tmount{}, sr
 	}
-	db.DPrintf(db.NAMED, "getRealmNamed %v %v\n", pathc.pcfg.GetRealm(), mnt)
+	db.DPrintf(db.NAMED, "getNamedMount [%v] %v", realm, mnt)
 	return mnt, nil
 }
 
-func (pathc *PathClnt) mountRealmNamed() *serr.Err {
-	mnt, err := pathc.getRealmNamed()
+func (pathc *PathClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
+	mnt, err := pathc.getNamedMount(realm)
 	if err != nil {
-		db.DPrintf(db.NAMED, "mountRealmNamed: getRrealmNamed err %v\n", err)
+		db.DPrintf(db.NAMED_ERR, "mountNamed [%v]: getNamedMount err %v", realm, err)
 		return err
 	}
-	if err := pathc.autoMount(pathc.pcfg.GetUname(), mnt, path.Path{sp.NAME}); err == nil {
-		db.DPrintf(db.NAMED, "mountRealmNamed: automount mnt %v at %v\n", mnt, sp.NAME)
-		return nil
+	if err := pathc.autoMount(pathc.pcfg.GetUname(), mnt, path.Path{name}); err != nil {
+		db.DPrintf(db.NAMED_ERR, "mountRealmNamed: automount err %v\n", err)
+		return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v realm failure", realm))
 	}
-	db.DPrintf(db.NAMED, "mountRealmNamed: automount err %v\n", err)
-	return serr.NewErr(serr.TErrRetry, fmt.Sprintf("%v realm failure", pathc.pcfg.GetRealm()))
+	db.DPrintf(db.NAMED, "mountNamed [%v]: automount mnt %v at %v\n", realm, mnt, name)
+	return nil
 }

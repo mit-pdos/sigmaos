@@ -26,11 +26,6 @@ func (fl *FsLib) ProcEnv() *proc.ProcEnv {
 	return fl.pcfg
 }
 
-func (fl *FsLib) NamedAddr() sp.Taddrs {
-	mnt := fl.GetMntNamed()
-	return mnt.Addr
-}
-
 func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
 	return fl.FdClient.MountTree(fl.pcfg.GetUname(), addrs, tree, mount)
 }

@@ -272,8 +272,10 @@ func (p *Proc) SetScheddIP(ip string) {
 	p.ProcEnvProto.ScheddIP = ip
 }
 
-func (p *Proc) SetNamedIP(ip string) {
-	p.ProcEnvProto.NamedIP = ip
+func (p *Proc) SetNamedMount(mnt sp.Tmount) {
+	m2 := &sp.Tmount{}
+	*m2 = mnt
+	p.ProcEnvProto.NamedMountProto = m2
 }
 
 // Return Env map as a []string

@@ -70,7 +70,7 @@ func (pathc *PathClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
 	_, rest, err := pathc.mnt.resolve(pn, true)
 	if err != nil && len(rest) >= 1 && pathc.rootmt.isRootMount(rest[0]) {
 		if pn[0] == sp.NAME {
-			return pathc.mountNamed(pn), true
+			return pathc.mountNamed(pathc.pcfg.GetRealm(), sp.NAME), true
 		} else {
 			sm, err := pathc.rootmt.lookup(pn[0])
 			if err != nil {

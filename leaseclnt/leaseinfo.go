@@ -39,7 +39,6 @@ func (li *LeaseInfo) extender() {
 		select {
 		case <-li.ch:
 			db.DPrintf(db.LEASECLNT, "extender: end lid %v\n", li)
-			close(li.ch)
 			return
 		case <-time.After(fsetcd.LeaseTTL / 3 * time.Second):
 			db.DPrintf(db.LEASECLNT, "extender: extend lid %v\n", li)

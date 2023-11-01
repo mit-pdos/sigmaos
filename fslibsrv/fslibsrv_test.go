@@ -398,7 +398,7 @@ func TestDirCreatePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip string, nds sp.Taddrs) {
+func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip string) {
 	const NITER = 100 // 10000
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {
@@ -437,7 +437,7 @@ func TestDirReadPerf(t *testing.T) {
 		})
 		return n
 	})
-	lookuper(ts, 1, N, dir, NFILE, ts.GetLocalIP(), ts.GetNamedMount().Addr)
+	lookuper(ts, 1, N, dir, NFILE, ts.GetLocalIP())
 	//lookuper(t, NCLERK, N, dir, NFILE)
 	err := ts.RmDir(dir)
 	assert.Nil(t, err)
@@ -530,8 +530,7 @@ func TestLookupConcurPerf(t *testing.T) {
 
 	for i := 0; i < NGO; i++ {
 		go func(i int) {
-			db.DPrintf(db.TEST, "go %d\n", i)
-			label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
+			label := fmt.Sprintf("stat dir %v nfile %v ntrial %v", dir, NFILE, NTRIAL)
 			measuredir(label, 1, func() int {
 				for j := 0; j < NTRIAL; j++ {
 					_, err := fsls[i][j].Stat(dir)
@@ -544,8 +543,7 @@ func TestLookupConcurPerf(t *testing.T) {
 	}
 
 	for _ = range fsls {
-		i := <-done
-		db.DPrintf(db.TEST, "go done %d\n", i)
+		<-done
 	}
 
 	err := ts.RmDir(gopath.Join(pathname, "d0"))

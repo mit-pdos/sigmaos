@@ -23,7 +23,7 @@ func (fs *FsEtcd) path2key(realm sp.Trealm, path sp.Tpath) string {
 
 func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 	db.DPrintf(db.FSETCD, "getFile %v\n", key)
-	resp, err := fs.Get(context.TODO(), key)
+	resp, err := fs.Clnt().Get(context.TODO(), key)
 	if err != nil {
 		return nil, 0, serr.NewErrError(err)
 	}
@@ -64,7 +64,7 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 		opsf := []clientv3.Op{
 			clientv3.OpGet(f.Prefix(), opts...),
 		}
-		resp, err := fs.Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
+		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
 		if err != nil {
 			return serr.NewErrError(err)
 		}
@@ -136,7 +136,7 @@ func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, 
 	ops := []clientv3.Op{
 		clientv3.OpPut(fs.path2key(fs.realm, p), string(b), opts...),
 		clientv3.OpPut(fs.path2key(fs.realm, dp), string(d1))}
-	resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
 		return serr.NewErrError(err)
 	}
@@ -159,7 +159,7 @@ func (fs *FsEtcd) remove(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 	ops := []clientv3.Op{
 		clientv3.OpDelete(fs.path2key(fs.realm, del)),
 		clientv3.OpPut(fs.path2key(fs.realm, d), string(d1))}
-	resp, err := fs.Txn(context.TODO()).
+	resp, err := fs.Clnt().Txn(context.TODO()).
 		If(cmp...).Then(ops...).Commit()
 	if err != nil {
 		return serr.NewErrError(err)
@@ -193,7 +193,7 @@ func (fs *FsEtcd) rename(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 		ops = []clientv3.Op{
 			clientv3.OpPut(fs.path2key(fs.realm, d), string(d1))}
 	}
-	resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
 		db.DPrintf(db.FSETCD, "Rename error %v %v e %v\n", d, resp, err)
 		return serr.NewErrError(err)
@@ -240,7 +240,7 @@ func (fs *FsEtcd) renameAt(df sp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sp.Tp
 			clientv3.OpPut(fs.path2key(fs.realm, dt), string(bt)),
 		}
 	}
-	resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 	if err != nil {
 		return serr.NewErrError(err)
 	}

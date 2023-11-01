@@ -23,7 +23,7 @@ func newLeaseSrv(fs *fsetcd.FsEtcd) *LeaseSrv {
 	return &LeaseSrv{
 		lt: syncmap.NewSyncMap[sp.TclntId, clientv3.LeaseID](),
 		fs: fs,
-		lc: clientv3.NewLease(fs.Client),
+		lc: clientv3.NewLease(fs.Clnt()),
 	}
 }
 

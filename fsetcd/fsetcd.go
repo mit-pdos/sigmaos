@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	endpointsBase = []string{":2379", ":22379", ":32379"}
+	endpointsBase = []string{":2379", ":2380", ":2381", ":2382", ":2383"}
 )
 
 type FsEtcd struct {
@@ -50,6 +50,10 @@ func (fs *FsEtcd) Close() error {
 	return fs.Client.Close()
 }
 
+func (fs *FsEtcd) Clnt() *clientv3.Client {
+	return fs.Client
+}
+
 func (fs *FsEtcd) Fence(key string, rev int64) {
 	db.DPrintf(db.FSETCD, "Fence key %v rev %d\n", key, rev)
 	fs.fencekey = key
@@ -75,7 +79,7 @@ func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
 		ops := []clientv3.Op{
 			clientv3.OpPut(fs.path2key(sp.ROOTREALM, BOOT), string(b)),
 		}
-		resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 		if err != nil {
 			db.DPrintf(db.FSETCD, "SetNamed txn %v err %v\n", nf, err)
 			return serr.NewErrError(err)

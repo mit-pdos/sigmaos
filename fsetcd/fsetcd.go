@@ -2,6 +2,7 @@ package fsetcd
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.etcd.io/etcd/client/v3"
@@ -16,14 +17,17 @@ const (
 	DialTimeout = 5 * time.Second
 	SessionTTL  = 5
 	LeaseTTL    = SessionTTL // 30
+	NCLNT       = 1
 )
 
 var (
-	endpointsBase = []string{":2379", ":22379", ":32379"}
+	endpointsBase = []string{":2379", ":2380", ":2381"}
 )
 
 type FsEtcd struct {
-	*clientv3.Client
+	sync.Mutex
+	clnts    []*clientv3.Client
+	next     int
 	fencekey string
 	fencerev int64
 	realm    sp.Trealm
@@ -35,19 +39,42 @@ func NewFsEtcd(realm sp.Trealm, etcdIP string) (*FsEtcd, error) {
 		endpoints = append(endpoints, etcdIP+endpointsBase[i])
 	}
 	db.DPrintf(db.FSETCD, "FsEtcd etcd endpoints: %v", endpoints)
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: DialTimeout,
-	})
-	if err != nil {
-		return nil, err
+	clnts := make([]*clientv3.Client, 0, NCLNT)
+	for i := 0; i < NCLNT; i++ {
+		cli, err := clientv3.New(clientv3.Config{
+			Endpoints:   endpoints,
+			DialTimeout: DialTimeout,
+		})
+		if err != nil {
+			return nil, err
+		}
+		clnts = append(clnts, cli)
 	}
-	fs := &FsEtcd{Client: cli, realm: realm}
+	fs := &FsEtcd{clnts: clnts, realm: realm}
 	return fs, nil
 }
 
 func (fs *FsEtcd) Close() error {
-	return fs.Client.Close()
+	var err error
+	for _, clnt := range fs.clnts {
+		if e := clnt.Close(); e != nil {
+			err = e
+		}
+	}
+	return err
+}
+
+func (fs *FsEtcd) incNext() int {
+	fs.Lock()
+	defer fs.Unlock()
+	n := fs.next
+	fs.next = (fs.next + 1) % NCLNT
+	return n
+}
+
+func (fs *FsEtcd) Clnt() *clientv3.Client {
+	n := fs.incNext()
+	return fs.clnts[n]
 }
 
 func (fs *FsEtcd) Fence(key string, rev int64) {
@@ -75,7 +102,7 @@ func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
 		ops := []clientv3.Op{
 			clientv3.OpPut(fs.path2key(sp.ROOTREALM, BOOT), string(b)),
 		}
-		resp, err := fs.Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 		if err != nil {
 			db.DPrintf(db.FSETCD, "SetNamed txn %v err %v\n", nf, err)
 			return serr.NewErrError(err)

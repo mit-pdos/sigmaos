@@ -19,6 +19,8 @@ docker run -d \
     --name etcd-server \
     --publish 2379:2379 \
     --publish 2380:2380 \
+    --publish 2381:2381 \
+    -listen-client-urls http://localhost:2379,http://localhost:2380,http://localhost:2381 \
     --env ALLOW_NONE_AUTHENTICATION=yes \
     bitnami/etcd:latest
 

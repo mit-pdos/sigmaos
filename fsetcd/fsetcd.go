@@ -2,7 +2,6 @@ package fsetcd
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.etcd.io/etcd/client/v3"
@@ -17,7 +16,6 @@ const (
 	DialTimeout = 5 * time.Second
 	SessionTTL  = 5
 	LeaseTTL    = SessionTTL // 30
-	NCLNT       = 1
 )
 
 var (
@@ -25,9 +23,7 @@ var (
 )
 
 type FsEtcd struct {
-	sync.Mutex
-	clnts    []*clientv3.Client
-	next     int
+	*clientv3.Client
 	fencekey string
 	fencerev int64
 	realm    sp.Trealm
@@ -39,42 +35,23 @@ func NewFsEtcd(realm sp.Trealm, etcdIP string) (*FsEtcd, error) {
 		endpoints = append(endpoints, etcdIP+endpointsBase[i])
 	}
 	db.DPrintf(db.FSETCD, "FsEtcd etcd endpoints: %v", endpoints)
-	clnts := make([]*clientv3.Client, 0, NCLNT)
-	for i := 0; i < NCLNT; i++ {
-		cli, err := clientv3.New(clientv3.Config{
-			Endpoints:   endpoints,
-			DialTimeout: DialTimeout,
-		})
-		if err != nil {
-			return nil, err
-		}
-		clnts = append(clnts, cli)
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   endpoints,
+		DialTimeout: DialTimeout,
+	})
+	if err != nil {
+		return nil, err
 	}
-	fs := &FsEtcd{clnts: clnts, realm: realm}
+	fs := &FsEtcd{Client: cli, realm: realm}
 	return fs, nil
 }
 
 func (fs *FsEtcd) Close() error {
-	var err error
-	for _, clnt := range fs.clnts {
-		if e := clnt.Close(); e != nil {
-			err = e
-		}
-	}
-	return err
-}
-
-func (fs *FsEtcd) incNext() int {
-	fs.Lock()
-	defer fs.Unlock()
-	n := fs.next
-	fs.next = (fs.next + 1) % NCLNT
-	return n
+	return fs.Client.Close()
 }
 
 func (fs *FsEtcd) Clnt() *clientv3.Client {
-	n := fs.incNext()
-	return fs.clnts[n]
+	return fs.Client
 }
 
 func (fs *FsEtcd) Fence(key string, rev int64) {

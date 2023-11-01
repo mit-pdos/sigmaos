@@ -423,7 +423,7 @@ func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm s
 }
 
 func (pathc *PathClnt) resolve(p path.Path, uname sp.Tuname, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
-	if err, b := pathc.resolveRoot(p, uname); err != nil {
+	if err, b := pathc.resolveRoot(p); err != nil {
 		db.DPrintf(db.ALWAYS, "resolveRoot %v err %v b %v\n", p, err, b)
 	}
 	return pathc.mnt.resolve(p, resolve)

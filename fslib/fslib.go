@@ -27,7 +27,7 @@ func (fl *FsLib) ProcEnv() *proc.ProcEnv {
 }
 
 func (fl *FsLib) NamedAddr() sp.Taddrs {
-	mnt := fl.GetMntNamed(fl.pcfg.GetUname())
+	mnt := fl.GetMntNamed()
 	return mnt.Addr
 }
 

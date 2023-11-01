@@ -33,7 +33,7 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, uname sp.Tuname) (sp.Tf
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
 func (pathc *PathClnt) walk(path path.Path, uname sp.Tuname, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
 	for i := 0; i < MAXRETRY; i++ {
-		if err, cont := pathc.resolveRoot(path, uname); err != nil {
+		if err, cont := pathc.resolveRoot(path); err != nil {
 			if cont && err.IsErrUnreachable() {
 				db.DPrintf(db.SVCMOUNT, "WalkPath: resolveRoot unreachable %v err %v\n", path, err)
 				time.Sleep(TIMEOUT * time.Millisecond)
@@ -42,8 +42,10 @@ func (pathc *PathClnt) walk(path path.Path, uname sp.Tuname, resolve bool, w Wat
 			db.DPrintf(db.SVCMOUNT, "WalkPath: resolveRoot %v err %v\n", path, err)
 			return sp.NoFid, err
 		}
+		start := time.Now()
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
-		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
+		//		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
+		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v) lat: %v", path, fid, path1, left, err, time.Since(start))
 		if Retry(err) {
 			done := len(path1) - len(left)
 			db.DPrintf(db.WALK_ERR, "Walk retry p %v %v l %v d %v err %v by umount %v\n", path, path1, left, done, err, path1[0:done])

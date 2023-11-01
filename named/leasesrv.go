@@ -28,7 +28,7 @@ func newLeaseSrv(fs *fsetcd.FsEtcd) *LeaseSrv {
 }
 
 func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leaseproto.AskResult) error {
-	db.DPrintf(db.LEASESRV, "%v: AskLease %v\n", ctx.ClntId(), req.TTL)
+	db.DPrintf(db.LEASESRV, "%v: AskLease %v", ctx.ClntId(), req.TTL)
 	if lid, ok := ls.lt.Lookup(ctx.ClntId()); ok {
 		rep.LeaseId = uint64(lid)
 		return nil
@@ -42,21 +42,22 @@ func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leasep
 }
 
 func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leaseproto.ExtendResult) error {
-	db.DPrintf(db.LEASESRV, "%v: Extend %v\n", ctx.ClntId(), req.LeaseId)
+	db.DPrintf(db.LEASESRV, "%v: Extend %v", ctx.ClntId(), sp.TleaseId(req.LeaseId))
 	resp, err := ls.lc.KeepAliveOnce(context.TODO(), clientv3.LeaseID(req.LeaseId))
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.LEASESRV, "%v: Extend KeepAliveOnce [%v,%v]\n", ctx.ClntId(), resp.ID, resp.TTL)
+	db.DPrintf(db.LEASESRV, "%v: Extend KeepAliveOnce [%v,%v]", ctx.ClntId(), resp.ID, resp.TTL)
 	return nil
 }
 
 func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leaseproto.ExtendResult) error {
-	db.DPrintf(db.LEASESRV, "%v: End %v\n", ctx.ClntId(), req.LeaseId)
+	db.DPrintf(db.LEASESRV, "%v: End %v", ctx.ClntId(), sp.TleaseId(req.LeaseId))
 	resp, err := ls.lc.Revoke(context.TODO(), clientv3.LeaseID(req.LeaseId))
 	if err != nil {
+		db.DPrintf(db.LEASESRV, "%v: End Revoke err: %v", ctx.ClntId())
 		return err
 	}
-	db.DPrintf(db.LEASESRV, "%v: End Revoke %v\n", ctx.ClntId(), resp)
+	db.DPrintf(db.LEASESRV, "%v: End Revoke %v", ctx.ClntId(), resp)
 	return nil
 }

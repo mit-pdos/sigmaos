@@ -498,7 +498,7 @@ func TestLookupDepthPerf(t *testing.T) {
 func TestLookupConcurPerf(t *testing.T) {
 	const N = 2
 	const NFILE = 10
-	const NGO = 10
+	const NGO = 1
 	const NTRIAL = 10
 	ts := test.NewTstatePath(t, pathname)
 

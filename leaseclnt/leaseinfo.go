@@ -39,12 +39,23 @@ func (li *LeaseInfo) extender() {
 		select {
 		case <-li.ch:
 			db.DPrintf(db.LEASECLNT, "extender: end lid %v\n", li)
+			close(li.ch)
 			return
 		case <-time.After(fsetcd.LeaseTTL / 3 * time.Second):
 			db.DPrintf(db.LEASECLNT, "extender: extend lid %v\n", li)
 			if err := li.extendLease(); err != nil {
 				db.DPrintf(db.LEASECLNT, "extender: expire lid %v err %v\n", li, err)
-				li.expired = true
+
+				li.Lock()
+				defer li.Unlock()
+
+				// If the lease wasn't ended and already marked as expired, do so.
+				if !li.expired {
+					// Lease is expired, so no goroutine will be left to wait on the
+					// channel. Close it.
+					li.expired = true
+					close(li.ch)
+				}
 				return
 			}
 		}
@@ -58,9 +69,25 @@ func (li *LeaseInfo) KeepExtending() error {
 }
 
 func (li *LeaseInfo) End() error {
+	db.DPrintf(db.LEASECLNT, "End lid %v", li)
+	defer db.DPrintf(db.LEASECLNT, "End lid done %v", li)
+
+	li.Lock()
+	defer li.Unlock()
+
+	// If the elase already expired, there is nothing to do. Return immediately.
+	if li.expired {
+		return nil
+	}
+
+	// Lease has expired, so no need to close the channel again.
+	li.expired = true
+
+	// Send on, and then close the cahnnel to stop the extender thread
 	li.ch <- struct{}{}
-	db.DPrintf(db.LEASECLNT, "%v: End lid %v\n", li.lmc.ProcEnv().GetPID(), li)
+	close(li.ch)
+
+	// Tell the server to end the lease.
 	var res leaseproto.EndResult
 	return li.lmc.cc.RPC(li.srv, "LeaseSrv.End", &leaseproto.EndRequest{LeaseId: uint64(li.lid)}, &res)
-
 }

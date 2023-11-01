@@ -398,7 +398,7 @@ func TestDirCreatePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip string, nds sp.Taddrs) {
+func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip string) {
 	const NITER = 100 // 10000
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {
@@ -437,7 +437,7 @@ func TestDirReadPerf(t *testing.T) {
 		})
 		return n
 	})
-	lookuper(ts, 1, N, dir, NFILE, ts.GetLocalIP(), ts.NamedAddr())
+	lookuper(ts, 1, N, dir, NFILE, ts.GetLocalIP())
 	//lookuper(t, NCLERK, N, dir, NFILE)
 	err := ts.RmDir(dir)
 	assert.Nil(t, err)
@@ -498,8 +498,8 @@ func TestLookupDepthPerf(t *testing.T) {
 func TestLookupConcurPerf(t *testing.T) {
 	const N = 2
 	const NFILE = 10
-	const NGO = 1 // 10
-	const NTRIAL = 10
+	const NGO = 10
+	const NTRIAL = 1
 	ts := test.NewTstatePath(t, pathname)
 
 	ts.RmDir(gopath.Join(pathname, "d0"))
@@ -512,7 +512,6 @@ func TestLookupConcurPerf(t *testing.T) {
 			assert.Equal(t, NFILE, n)
 		}
 	}
-	ndIP := ts.NamedAddr()[0].Addr
 	//dump(t)
 	done := make(chan int)
 	fsls := make([][]*fslib.FsLib, 0, NGO)
@@ -520,7 +519,6 @@ func TestLookupConcurPerf(t *testing.T) {
 		fsl2 := make([]*fslib.FsLib, 0, NTRIAL)
 		for j := 0; j < NTRIAL; j++ {
 			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-			pcfg.NamedIP = ndIP
 			fsl, err := fslib.NewFsLib(pcfg)
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)

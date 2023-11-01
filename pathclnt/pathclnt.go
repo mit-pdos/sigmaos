@@ -26,12 +26,13 @@ type Watch func(string, error)
 type PathClnt struct {
 	pcfg *proc.ProcEnv
 	*fidclnt.FidClnt
-	mnt     *MntTable
-	rootmt  *RootMountTable
-	chunkSz sp.Tsize
-	realm   sp.Trealm
-	lip     string
-	cid     sp.TclntId
+	ndMntCache *NamedMountCache
+	mnt        *MntTable
+	rootmt     *RootMountTable
+	chunkSz    sp.Tsize
+	realm      sp.Trealm
+	lip        string
+	cid        sp.TclntId
 }
 
 func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt, sz sp.Tsize) *PathClnt {
@@ -41,6 +42,7 @@ func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt, sz sp.Tsize) *PathCl
 	} else {
 		pathc.FidClnt = fidc
 	}
+	pathc.ndMntCache = NewNamedMountCache(pcfg)
 	pathc.rootmt = newRootMountTable()
 	pathc.cid = sp.TclntId(rand.Uint64())
 	return pathc

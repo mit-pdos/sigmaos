@@ -90,13 +90,14 @@ func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
 
 func (t *Trans) Work(i int, output string) *proc.Status {
 	do := time.Now()
-	db.DPrintf(db.ALWAYS, "Resize %v", t.inputs[i])
+
+	db.DPrintf(db.ALWAYS, "Resize (%v/%v) %v", i, len(t.inputs), t.inputs[i])
 	rdr, err := t.OpenReader(t.inputs[i])
 	if err != nil {
 		db.DFatalf("Error open file %v", err)
 		return proc.NewStatusErr("File not found", err)
 	}
-	prdr := perf.NewPerfReader(rdr, t.p)
+	//	prdr := perf.NewPerfReader(rdr, t.p)
 	db.DPrintf(db.ALWAYS, "Time %v open: %v", t.inputs[i], time.Since(do))
 	var dc time.Time
 	defer func() {
@@ -105,7 +106,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	}()
 
 	ds := time.Now()
-	img, err := jpeg.Decode(prdr)
+	img, err := jpeg.Decode(rdr)
 	if err != nil {
 		return proc.NewStatusErr("Decode", err)
 	}
@@ -127,7 +128,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	if err != nil {
 		db.DFatalf("Open output %v error: %v", output, err)
 	}
-	pwrt := perf.NewPerfWriter(wrt, t.p)
+	//	pwrt := perf.NewPerfWriter(wrt, t.p)
 	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.inputs[i], time.Since(dcw))
 	dw := time.Now()
 	defer func() {
@@ -136,6 +137,6 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 		dc = time.Now()
 	}()
 
-	jpeg.Encode(pwrt, img1, nil)
+	jpeg.Encode(wrt, img1, nil)
 	return proc.NewStatus(proc.StatusOK)
 }

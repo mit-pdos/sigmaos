@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -169,9 +169,9 @@ func TestEphemeral(t *testing.T) {
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")
 
-	// 5: .statsd, pids, queue, rpc, and running
+	// 5: .statsd, pids, rpc, and running
 	db.DPrintf(db.TEST, "entries %v\n", sp.Names(sts))
-	assert.Equal(t, 5, len(sts))
+	assert.Equal(t, 4, len(sts), "Unexpected len(sts) != %v:", 4, sp.Names(sts))
 
 	ts.KillOne(sp.SCHEDDREL)
 

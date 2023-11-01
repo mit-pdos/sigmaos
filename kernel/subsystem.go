@@ -135,9 +135,11 @@ func (s *Subsystem) Kill() error {
 }
 
 func (s *Subsystem) Wait() error {
-	db.DPrintf(db.KERNEL, "Wait for %v to terminate\n", s)
+	db.DPrintf(db.KERNEL, "Wait subsystem for %v", s)
+	defer db.DPrintf(db.KERNEL, "Wait subsystem done for %v", s)
 	if s.how == proc.HSCHEDD || s.how == proc.HDOCKER {
 		if !s.waited {
+			db.DPrintf(db.KERNEL, "Wait subsystem via procclnt %v", s)
 			// Only wait if this proc has not been waited for already, since calling
 			// WaitExit twice leads to an error.
 			status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)
@@ -148,11 +150,13 @@ func (s *Subsystem) Wait() error {
 		}
 		return nil
 	} else {
+		db.DPrintf(db.KERNEL, "Wait subsystem via cmd %v", s)
 		if err := s.cmd.Wait(); err != nil {
 			return err
 		}
 	}
 	if s.container != nil {
+		db.DPrintf(db.KERNEL, "Container shutdown %v", s)
 		return s.container.Shutdown()
 	}
 	return nil

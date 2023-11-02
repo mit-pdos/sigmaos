@@ -25,6 +25,7 @@ const (
 // kernel procs
 const (
 	NAMED   Tselector = "NAMED"
+	KNAMED            = "KNAMED"
 	PROCD             = "PROCD"
 	S3                = "S3"
 	SCHEDD            = "SCHEDD"

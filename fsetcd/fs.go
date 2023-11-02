@@ -83,8 +83,21 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 	}
 }
 
-func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, *serr.Err) {
-	db.DPrintf(db.FSETCD, "readDir %v\n", p)
+func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, *serr.Err) {
+	if dir, v, st, ok := fs.dc.Lookup(p); ok && (!stat || st) {
+		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", dir)
+		return dir, v, true, nil
+	}
+	dir, v, err := fs.readDirEtcd(p, stat)
+	if err != nil {
+		return nil, v, false, err
+	}
+	fs.dc.Insert(p, dir, v, stat)
+	return dir, v, false, nil
+}
+
+func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, *serr.Err) {
+	db.DPrintf(db.FSETCD, "readDirEtcd %v\n", p)
 	nf, v, err := fs.GetFile(p)
 	if err != nil {
 		return nil, 0, err

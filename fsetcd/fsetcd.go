@@ -27,6 +27,7 @@ type FsEtcd struct {
 	fencekey string
 	fencerev int64
 	realm    sp.Trealm
+	dc       *Dcache
 }
 
 func NewFsEtcd(realm sp.Trealm, etcdIP string) (*FsEtcd, error) {
@@ -42,7 +43,7 @@ func NewFsEtcd(realm sp.Trealm, etcdIP string) (*FsEtcd, error) {
 	if err != nil {
 		return nil, err
 	}
-	fs := &FsEtcd{Client: cli, realm: realm}
+	fs := &FsEtcd{Client: cli, realm: realm, dc: newDcache()}
 	return fs, nil
 }
 

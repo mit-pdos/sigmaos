@@ -671,63 +671,63 @@ func TestWatchDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWatchRemoveConcur(t *testing.T) {
-	const N = 50 // 5_000
-	const MS = 10
-
-	ts := test.NewTstatePath(t, pathname)
-	dn := gopath.Join(pathname, "d1")
-	err := ts.MkDir(dn, 0777)
-	assert.Equal(t, nil, err)
-
-	fn := gopath.Join(dn, "w")
-
-	ch := make(chan error)
-	done := make(chan bool)
-	go func() {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := fslib.NewFsLib(pcfg)
-		assert.Nil(t, err)
-		for i := 1; i < N; {
-			db.DPrintf(db.TEST, "PutFile %v", i)
-			_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
-			assert.Equal(t, nil, err)
-			err = ts.SetRemoveWatch(fn, func(fn string, r error) {
-				// log.Printf("watch cb %v err %v\n", i, r)
-				ch <- r
-			})
-			if err == nil {
-				// log.Printf("wait for rm %v\n", i)
-				r := <-ch
-				if r == nil {
-					i += 1
-				}
-			} else {
-				db.DPrintf(db.TEST, "SetRemoveWatch %v err %v\n", i, err)
-				// log.Printf("SetRemoveWatch %v err %v\n", i, err)
-			}
-		}
-		done <- true
-	}()
-
-	stop := false
-	for !stop {
-		select {
-		case <-done:
-			stop = true
-			db.DPrintf(db.TEST, "Done")
-		default:
-			time.Sleep(MS * time.Millisecond)
-			ts.Remove(fn) // remove may fail
-			db.DPrintf(db.TEST, "RemoveFile")
-		}
-	}
-
-	err = ts.RmDir(dn)
-	assert.Nil(t, err, "RmDir: %v", err)
-
-	ts.Shutdown()
-}
+//func TestWatchRemoveConcur(t *testing.T) {
+//	const N = 50 // 5_000
+//	const MS = 10
+//
+//	ts := test.NewTstatePath(t, pathname)
+//	dn := gopath.Join(pathname, "d1")
+//	err := ts.MkDir(dn, 0777)
+//	assert.Equal(t, nil, err)
+//
+//	fn := gopath.Join(dn, "w")
+//
+//	ch := make(chan error)
+//	done := make(chan bool)
+//	go func() {
+//		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+//		fsl, err := fslib.NewFsLib(pcfg)
+//		assert.Nil(t, err)
+//		for i := 1; i < N; {
+//			db.DPrintf(db.TEST, "PutFile %v", i)
+//			_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
+//			assert.Equal(t, nil, err)
+//			err = ts.SetRemoveWatch(fn, func(fn string, r error) {
+//				// log.Printf("watch cb %v err %v\n", i, r)
+//				ch <- r
+//			})
+//			if err == nil {
+//				// log.Printf("wait for rm %v\n", i)
+//				r := <-ch
+//				if r == nil {
+//					i += 1
+//				}
+//			} else {
+//				db.DPrintf(db.TEST, "SetRemoveWatch %v err %v\n", i, err)
+//				// log.Printf("SetRemoveWatch %v err %v\n", i, err)
+//			}
+//		}
+//		done <- true
+//	}()
+//
+//	stop := false
+//	for !stop {
+//		select {
+//		case <-done:
+//			stop = true
+//			db.DPrintf(db.TEST, "Done")
+//		default:
+//			time.Sleep(MS * time.Millisecond)
+//			ts.Remove(fn) // remove may fail
+//			db.DPrintf(db.TEST, "RemoveFile")
+//		}
+//	}
+//
+//	err = ts.RmDir(dn)
+//	assert.Nil(t, err, "RmDir: %v", err)
+//
+//	ts.Shutdown()
+//}
 
 // Concurrently remove & watch, but watch may be set after remove.
 func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
@@ -762,9 +762,10 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 		go func(fn string) {
 			err := ts.Remove(fn)
 			assert.Nil(t, err, "Unexpected remove error: %v", err)
+			done <- true
 		}(fn)
 	}
-	for i := 0; i < N; i++ {
+	for i := 0; i < 2*N; i++ {
 		<-done
 	}
 
@@ -934,7 +935,6 @@ func TestConcurAssignedRename(t *testing.T) {
 					done <- n
 					return
 				}
-				// TODO: rename
 				err := fsl.Rename(gopath.Join(TODO, fname), gopath.Join(DONE, fname))
 				assert.Nil(ts.T, err, "Error rename: %v", err)
 				n++

@@ -79,6 +79,6 @@ func (pathc *PathClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
 		pathc.ndMntCache.Invalidate(realm)
 		return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v realm failure", realm))
 	}
-	db.DPrintf(db.NAMED, "mountNamed [%v]: automount mnt %v at %v\n", realm, mnt, name)
+	db.DPrintf(db.NAMED, "mountNamed [%v]: automount mnt %v at %v", realm, mnt, name)
 	return nil
 }

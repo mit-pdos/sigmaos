@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -53,7 +52,7 @@ func main() {
 	start := time.Now()
 	for i := 0; i < n; i += M {
 		if i%1000 == 0 {
-			log.Printf("i = %d %dms\n", i, time.Since(start).Milliseconds())
+			db.DPrintf(db.ALWAYS, "i = %d %dms\n", i, time.Since(start).Milliseconds())
 			start = time.Now()
 		}
 		err := BurstProc(M, func(ch chan error) {

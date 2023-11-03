@@ -681,19 +681,25 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	N_REPL := 3
 	OUTDIR := "name/spinner-ephs"
 
+	db.DPrintf(db.TEST, "Boot node 2")
 	// Start a couple new nodes.
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "BootNode %v", err)
+	db.DPrintf(db.TEST, "Boot node 3")
 	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootNode %v", err)
+	db.DPrintf(db.TEST, "Done booting nodes")
 
 	ts.RmDir(OUTDIR)
 	err = ts.MkDir(OUTDIR, 0777)
 	assert.Nil(t, err, "Mkdir")
 
+	db.DPrintf(db.TEST, "Rm out dir done")
+
 	// Start a bunch of replicated spinner procs.
 	cfg := groupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
 	sm := cfg.StartGrpMgr(ts.SigmaClnt, 0)
+	db.DPrintf(db.TEST, "GrpMgr started")
 
 	// Wait for them to spawn.
 	time.Sleep(5 * time.Second)
@@ -702,9 +708,11 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	st, err := ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
+	db.DPrintf(db.TEST, "Get OutDir")
 
 	err = ts.KillOne(sp.SCHEDDREL)
 	assert.Nil(t, err, "kill schedd")
+	db.DPrintf(db.TEST, "Killed a schedd")
 
 	// Wait for them to respawn.
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
@@ -713,9 +721,11 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	st, err = ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
+	db.DPrintf(db.TEST, "Got out dir again")
 
 	err = ts.KillOne(sp.SCHEDDREL)
 	assert.Nil(t, err, "kill schedd")
+	db.DPrintf(db.TEST, "Killed another schedd")
 
 	// Wait for them to respawn.
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
@@ -724,11 +734,14 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	st, err = ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
+	db.DPrintf(db.TEST, "Got out dir 3")
 
 	sm.Stop()
+	db.DPrintf(db.TEST, "Stopped GroupMgr")
 
 	err = ts.RmDir(OUTDIR)
 	assert.Nil(t, err, "RmDir: %v", err)
+	db.DPrintf(db.TEST, "Get out dir 4")
 
 	ts.Shutdown()
 }

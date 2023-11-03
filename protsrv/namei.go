@@ -11,9 +11,9 @@ import (
 
 // LookupObj/namei will return an lo and a locked watch for it, even
 // in error cases because the caller create a new fid anyway.
-func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target path.Path) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Path, *serr.Err) {
+func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target path.Path, write bool) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Path, *serr.Err) {
 	src := po.Path()
-	lk := ps.plt.Acquire(ctx, src)
+	lk := ps.plt.Acquire(ctx, src, write)
 	o := po.Obj()
 	if len(target) == 0 {
 		return nil, o, lk, nil, nil
@@ -21,5 +21,5 @@ func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target path.Path) ([]fs.
 	if !o.Perm().IsDir() {
 		return nil, o, lk, nil, serr.NewErr(serr.TErrNotDir, src.Base())
 	}
-	return namei.Walk(ps.plt, ctx, o, lk, src, target, nil)
+	return namei.Walk(ps.plt, ctx, o, lk, src, target, nil, write)
 }

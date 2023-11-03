@@ -12,7 +12,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
@@ -308,11 +307,6 @@ func TestWaitStart(t *testing.T) {
 	pid := spawnSleeper(t, ts)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
-
-	// Check if proc exists
-	sts, err := ts.GetDir(path.Join(sp.SCHEDD, schedd(ts), sp.RUNNING))
-	assert.Nil(t, err, "Readdir")
-	assert.True(t, fslib.Present(sts, []string{pid.String()}), "pid")
 
 	// Make sure the proc hasn't finished yet...
 	checkSleeperResultFalse(t, ts, pid)

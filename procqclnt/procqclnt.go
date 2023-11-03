@@ -44,7 +44,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 	s = time.Now()
 	rpcc, err := pqc.urpcc.GetClnt(pqID)
 	if err != nil {
-		db.DFatalf("Error: Can't get procq clnt: %v", err)
+		db.DPrintf(db.ALWAYS, "Error: Can't get procq clnt: %v", err)
 		return NOT_ENQ, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt make clnt %v", p.GetPid(), time.Since(s))

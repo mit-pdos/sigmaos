@@ -220,7 +220,7 @@ func (gm *GroupMgr) manager(done chan *procret, n int) {
 		if atomic.LoadInt32(&gm.done) == 1 {
 			db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", gm.members[pr.member].Program, pr.member, n)
 			n--
-		} else if pr.err == nil && pr.status.IsStatusOK() { // done?
+		} else if pr.err == nil && (pr.status.IsStatusOK() || pr.status.IsStatusEvicted()) { // done?
 			db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[pr.member].Program, pr.member)
 			atomic.StoreInt32(&gm.done, 1)
 			n--
@@ -246,6 +246,7 @@ func (gm *GroupMgr) Wait() {
 // later in the list. So, start separate go routine to evict each
 // member.
 func (gm *GroupMgr) Stop() error {
+	db.DPrintf(db.GROUPMGR, "GroupMgr Stop")
 	atomic.StoreInt32(&gm.done, 1)
 	var err error
 	for _, c := range gm.members {

@@ -73,23 +73,21 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.NAMED, "fsetcd.ReadDir %v\n", dir)
-	if cursor > dir.Ents.Len() {
+	db.DPrintf(db.NAMED, "fsetcd.ReadDir %d %v\n", cursor, dir)
+	len := dir.Ents.Len() - 1 // ignore "."
+	if cursor > len {
 		return nil, nil
 	} else {
-		// XXX move into sorteddir
-		ns := dir.Ents.Slice(cursor)
-		sts := make([]*sp.Stat, len(ns))
-		for i, n := range ns {
-			if n == "." {
-				continue
+		sts := make([]*sp.Stat, 0, len)
+		dir.Ents.Iter(func(n string, e interface{}) bool {
+			if n != "." {
+				di := e.(fsetcd.DirEntInfo)
+				o := newObjDi(d.fs, d.pn.Append(n), di, d.Obj.di.Path)
+				sts = append(sts, o.stat())
 			}
-			e, _ := dir.Ents.Lookup(n)
-			di := e.(fsetcd.DirEntInfo)
-			o := newObjDi(d.fs, d.pn.Append(n), di, d.Obj.di.Path)
-			sts[i] = o.stat()
-		}
-		return sts, nil
+			return true
+		})
+		return sts[cursor:], nil
 	}
 }
 

@@ -57,20 +57,26 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
 		rpcc, err := cc.Lookup(pn)
 		if err != nil {
+			var sr *serr.Err
+			if errors.As(err, &sr) && pathclnt.Retry(sr) {
+				db.DPrintf(db.RPCCLNT, "RPC retry lookup failure pn %v", pn)
+				continue
+			}
+			db.DPrintf(db.RPCCLNT, "RPC lookup failure: give up pn %v", pn)
 			return err
 		}
-		if err := rpcc.RPC(method, arg, res); err == nil {
-			return nil
-		} else {
+		if err := rpcc.RPC(method, arg, res); err != nil {
 			var sr *serr.Err
 			if errors.As(err, &sr) && pathclnt.Retry(sr) {
 				time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
-				db.DPrintf(db.ALWAYS, "RPC: retry %v %v err %v\n", pn, method, sr)
+				db.DPrintf(db.RPCCLNT, "RPC: retry %v %v err %v", pn, method, sr)
 				cc.Delete(pn)
 				continue
 			}
+			db.DPrintf(db.RPCCLNT, "RPCRetry no retry %v err: %v sr: %v", pn, err, sr)
 			return err
 		}
+		return nil
 	}
 	return serr.NewErr(serr.TErrUnreachable, pn)
 }

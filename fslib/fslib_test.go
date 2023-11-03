@@ -512,7 +512,7 @@ func dirwriter(t *testing.T, pcfg *proc.ProcEnv, dn, name string, ch chan bool) 
 		case stop = <-ch:
 		default:
 			err := fsl.Remove(gopath.Join(dn, name))
-			assert.Nil(t, err)
+			assert.Nil(t, err, "Remove: %v", err)
 			_, err = fsl.PutFile(gopath.Join(dn, name), 0777, sp.OWRITE, []byte(name))
 			assert.Nil(t, err)
 		}

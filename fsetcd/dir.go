@@ -73,7 +73,7 @@ func (fs *FsEtcd) Lookup(d sp.Tpath, name string) (DirEntInfo, *serr.Err) {
 	if err != nil {
 		return DirEntInfo{}, err
 	}
-	db.DPrintf(db.TEST, "hit %v %v %v\n", d, name, hit)
+	db.DPrintf(db.TEST, "hit %v %q %v %v\n", d, name, hit, dir)
 	e, ok := dir.Ents.Lookup(name)
 	if ok {
 		return e.(DirEntInfo), nil
@@ -109,7 +109,6 @@ func (fs *FsEtcd) ReadDir(d sp.Tpath) (*DirInfo, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	dir.Ents.Delete(".")
 	return dir, nil
 }
 

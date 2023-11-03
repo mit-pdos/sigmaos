@@ -81,6 +81,9 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 		ns := dir.Ents.Slice(cursor)
 		sts := make([]*sp.Stat, len(ns))
 		for i, n := range ns {
+			if n == "." {
+				continue
+			}
 			e, _ := dir.Ents.Lookup(n)
 			di := e.(fsetcd.DirEntInfo)
 			o := newObjDi(d.fs, d.pn.Append(n), di, d.Obj.di.Path)

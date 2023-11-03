@@ -55,7 +55,7 @@ func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leasepro
 	db.DPrintf(db.LEASESRV, "%v: End %v", ctx.ClntId(), sp.TleaseId(req.LeaseId))
 	resp, err := ls.lc.Revoke(context.TODO(), clientv3.LeaseID(req.LeaseId))
 	if err != nil {
-		db.DPrintf(db.LEASESRV, "%v: End Revoke err: %v", ctx.ClntId())
+		db.DPrintf(db.LEASESRV, "%v: End Revoke err: %v", ctx.ClntId(), err)
 		return err
 	}
 	db.DPrintf(db.LEASESRV, "%v: End Revoke %v", ctx.ClntId(), resp)

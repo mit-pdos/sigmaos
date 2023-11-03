@@ -57,6 +57,8 @@ func RunKNamed(args []string) error {
 		db.DFatalf("Error newSrv %v\n", err)
 	}
 
+	db.DPrintf(db.NAMED, "newSrv %v mnt %v", nd.realm, mnt)
+
 	if err := nd.fs.SetRootNamed(mnt); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}

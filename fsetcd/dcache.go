@@ -28,7 +28,7 @@ func (dc *Dcache) Lookup(d sp.Tpath) (*DirInfo, sp.TQversion, bool, bool) {
 
 	de, ok := dc.dcache[d]
 	if ok {
-		db.DPrintf(db.FSETCD, "Lookup hit %v %v", d, de)
+		db.DPrintf(db.FSETCD, "Lookup dcache hit %v %v", d, de)
 		return de.dir, de.v, de.stat, ok
 	}
 	return nil, 0, false, false
@@ -38,14 +38,27 @@ func (dc *Dcache) Insert(d sp.Tpath, dir *DirInfo, v sp.TQversion, stat bool) {
 	dc.Lock()
 	defer dc.Unlock()
 
-	db.DPrintf(db.FSETCD, "Insert %v %v", d, dir)
+	db.DPrintf(db.FSETCD, "Insert dcache %v %v", d, dir)
 	dc.dcache[d] = &dcEntry{dir, v, stat}
+}
+
+func (dc *Dcache) Update(d sp.Tpath, dir *DirInfo) {
+	dc.Lock()
+	defer dc.Unlock()
+
+	if de, ok := dc.dcache[d]; ok {
+		db.DPrintf(db.FSETCD, "Update dcache %v %v %v", d, dir, de.v+1)
+		de.dir = dir
+		de.v += 1
+		return
+	}
+	db.DFatalf("Update dcache: key %v isn't present", d)
 }
 
 func (dc *Dcache) Invalidate(d sp.Tpath) {
 	dc.Lock()
 	defer dc.Unlock()
 
-	db.DPrintf(db.FSETCD, "Invalidate %v", d)
+	db.DPrintf(db.FSETCD, "Invalidate dcache %v", d)
 	delete(dc.dcache, d)
 }

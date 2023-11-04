@@ -100,7 +100,7 @@ func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f
 	db.DPrintf(db.FSETCD, "Create %q dir %v (%v) nf %v\n", name, dir, d, nf)
 	if err := fs.create(d, dir, v, path, nf); err == nil {
 		di := DirEntInfo{Nf: nf, Perm: nf.Tperm(), Path: path}
-		fs.dc.Invalidate(d)
+		fs.dc.Update(d, dir)
 		return di, nil
 	} else {
 		db.DPrintf(db.FSETCD_ERR, "Create %q dir %v nf %v err %v", name, dir, nf, err)
@@ -145,7 +145,7 @@ func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
 		dir.Ents.Insert(name, di)
 		return err
 	}
-	fs.dc.Invalidate(d)
+	fs.dc.Update(d, dir)
 	return nil
 }
 
@@ -179,7 +179,7 @@ func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
 	dir.Ents.Delete(from)
 	dir.Ents.Insert(to, difrom)
 	if err := fs.rename(d, dir, v, topath); err == nil {
-		fs.dc.Invalidate(d)
+		fs.dc.Update(d, dir)
 		return nil
 	} else {
 		dir.Ents.Insert(from, difrom)
@@ -222,8 +222,8 @@ func (fs *FsEtcd) Renameat(df sp.Tpath, from string, dt sp.Tpath, to string, f s
 	dirf.Ents.Delete(from)
 	dirt.Ents.Insert(to, difrom)
 	if err := fs.renameAt(df, dirf, vf, dt, dirt, vt, topath); err == nil {
-		fs.dc.Invalidate(df)
-		fs.dc.Invalidate(dt)
+		fs.dc.Update(df, dirf)
+		fs.dc.Update(dt, dirt)
 		return nil
 	} else {
 		dirf.Ents.Insert(from, difrom)

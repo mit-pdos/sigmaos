@@ -194,7 +194,7 @@ func TestEphemeral(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestBootMulti(t *testing.T) {
+func TestBootMulti1(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
 	db.DPrintf(db.TEST, "Boot second node")

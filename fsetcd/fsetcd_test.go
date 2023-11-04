@@ -22,9 +22,9 @@ func init() {
 func TestDump(t *testing.T) {
 	pcfg := proc.NewTestProcEnv(sp.Trealm(realm), test.EtcdIP, "", "", false)
 	fs, err := fsetcd.NewFsEtcd(pcfg.GetRealm(), pcfg.GetEtcdIP())
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err %v", err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err %v", err)
 	err = fs.Dump(0, nd, path.Path{}, fsetcd.ROOT)
 	assert.Nil(t, err)
 }

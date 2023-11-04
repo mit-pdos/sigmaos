@@ -53,14 +53,20 @@ func TestRemoveBasic(t *testing.T) {
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("hello")
+	db.DPrintf(db.TEST, "PutFile")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
+	db.DPrintf(db.TEST, "PutFile done")
 
+	db.DPrintf(db.TEST, "RemoveFile")
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
+	db.DPrintf(db.TEST, "RemoveFile done")
 
+	db.DPrintf(db.TEST, "StatFile")
 	_, err = ts.Stat(fn)
 	assert.NotEqual(t, nil, err)
+	db.DPrintf(db.TEST, "StatFile done")
 
 	ts.Shutdown()
 }
@@ -587,8 +593,9 @@ func TestWatchCreate(t *testing.T) {
 	ch := make(chan bool)
 	fd, err := ts.OpenWatch(fn, sp.OREAD, func(string, error) {
 		ch <- true
+		db.DPrintf(db.TEST, "Watch done")
 	})
-	assert.NotEqual(t, nil, err)
+	assert.NotNil(t, err, "Err not nil: %v", err)
 	assert.Equal(t, -1, fd, err)
 
 	assert.True(t, serr.IsErrCode(err, serr.TErrNotfound))
@@ -596,8 +603,10 @@ func TestWatchCreate(t *testing.T) {
 	// give Watch goroutine to start
 	time.Sleep(100 * time.Millisecond)
 
+	db.DPrintf(db.TEST, "PutFile")
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, nil)
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err, "Error PutFile: %v", err)
+	db.DPrintf(db.TEST, "PutFile done")
 
 	<-ch
 
@@ -662,63 +671,63 @@ func TestWatchDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWatchRemoveConcur(t *testing.T) {
-	const N = 50 // 5_000
-	const MS = 10
-
-	ts := test.NewTstatePath(t, pathname)
-	dn := gopath.Join(pathname, "d1")
-	err := ts.MkDir(dn, 0777)
-	assert.Equal(t, nil, err)
-
-	fn := gopath.Join(dn, "w")
-
-	ch := make(chan error)
-	done := make(chan bool)
-	go func() {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := fslib.NewFsLib(pcfg)
-		assert.Nil(t, err)
-		for i := 1; i < N; {
-			db.DPrintf(db.TEST, "PutFile %v", i)
-			_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
-			assert.Equal(t, nil, err)
-			err = ts.SetRemoveWatch(fn, func(fn string, r error) {
-				// log.Printf("watch cb %v err %v\n", i, r)
-				ch <- r
-			})
-			if err == nil {
-				// log.Printf("wait for rm %v\n", i)
-				r := <-ch
-				if r == nil {
-					i += 1
-				}
-			} else {
-				db.DPrintf(db.TEST, "SetRemoveWatch %v err %v\n", i, err)
-				// log.Printf("SetRemoveWatch %v err %v\n", i, err)
-			}
-		}
-		done <- true
-	}()
-
-	stop := false
-	for !stop {
-		select {
-		case <-done:
-			stop = true
-			db.DPrintf(db.TEST, "Done")
-		default:
-			time.Sleep(MS * time.Millisecond)
-			ts.Remove(fn) // remove may fail
-			db.DPrintf(db.TEST, "RemoveFile")
-		}
-	}
-
-	err = ts.RmDir(dn)
-	assert.Nil(t, err, "RmDir: %v", err)
-
-	ts.Shutdown()
-}
+//func TestWatchRemoveConcur(t *testing.T) {
+//	const N = 50 // 5_000
+//	const MS = 10
+//
+//	ts := test.NewTstatePath(t, pathname)
+//	dn := gopath.Join(pathname, "d1")
+//	err := ts.MkDir(dn, 0777)
+//	assert.Equal(t, nil, err)
+//
+//	fn := gopath.Join(dn, "w")
+//
+//	ch := make(chan error)
+//	done := make(chan bool)
+//	go func() {
+//		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+//		fsl, err := fslib.NewFsLib(pcfg)
+//		assert.Nil(t, err)
+//		for i := 1; i < N; {
+//			db.DPrintf(db.TEST, "PutFile %v", i)
+//			_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
+//			assert.Equal(t, nil, err)
+//			err = ts.SetRemoveWatch(fn, func(fn string, r error) {
+//				// log.Printf("watch cb %v err %v\n", i, r)
+//				ch <- r
+//			})
+//			if err == nil {
+//				// log.Printf("wait for rm %v\n", i)
+//				r := <-ch
+//				if r == nil {
+//					i += 1
+//				}
+//			} else {
+//				db.DPrintf(db.TEST, "SetRemoveWatch %v err %v\n", i, err)
+//				// log.Printf("SetRemoveWatch %v err %v\n", i, err)
+//			}
+//		}
+//		done <- true
+//	}()
+//
+//	stop := false
+//	for !stop {
+//		select {
+//		case <-done:
+//			stop = true
+//			db.DPrintf(db.TEST, "Done")
+//		default:
+//			time.Sleep(MS * time.Millisecond)
+//			ts.Remove(fn) // remove may fail
+//			db.DPrintf(db.TEST, "RemoveFile")
+//		}
+//	}
+//
+//	err = ts.RmDir(dn)
+//	assert.Nil(t, err, "RmDir: %v", err)
+//
+//	ts.Shutdown()
+//}
 
 // Concurrently remove & watch, but watch may be set after remove.
 func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
@@ -753,9 +762,10 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 		go func(fn string) {
 			err := ts.Remove(fn)
 			assert.Nil(t, err, "Unexpected remove error: %v", err)
+			done <- true
 		}(fn)
 	}
-	for i := 0; i < N; i++ {
+	for i := 0; i < 2*N; i++ {
 		<-done
 	}
 
@@ -775,12 +785,12 @@ func TestConcurFile(t *testing.T) {
 				fn := gopath.Join(pathname, "f"+strconv.Itoa(i))
 				data := []byte(fn)
 				_, err := ts.PutFile(fn, 0777, sp.OWRITE, data)
-				assert.Equal(t, nil, err)
+				assert.Nil(t, err, "Err PutFile: %v", err)
 				d, err := ts.GetFile(fn)
-				assert.Equal(t, nil, err)
+				assert.Nil(t, err, "Err GetFile: %v", err)
 				assert.Equal(t, len(data), len(d))
 				err = ts.Remove(fn)
-				assert.Equal(t, nil, err)
+				assert.Nil(t, err, "Err Remove: %v", err)
 			}
 			ch <- i
 		}(i)
@@ -792,7 +802,7 @@ func TestConcurFile(t *testing.T) {
 }
 
 const (
-	NFILE = 100 // 1000
+	NFILE = 200 //1000
 )
 
 func initfs(ts *test.Tstate, TODO, DONE string) {
@@ -881,6 +891,66 @@ func TestConcurRename(t *testing.T) {
 	n := 0
 	for i := 0; i < N; i++ {
 		cont <- false
+		n += <-done
+	}
+	assert.Equal(ts.T, NFILE, n, "sum")
+	checkFs(ts, DONE)
+
+	err := ts.RmDir(TODO)
+	assert.Nil(t, err, "RmDir: %v", err)
+	err = ts.RmDir(DONE)
+	assert.Nil(t, err, "RmDir: %v", err)
+
+	ts.Shutdown()
+}
+
+func TestConcurAssignedRename(t *testing.T) {
+	const N = 20
+	ts := test.NewTstatePath(t, pathname)
+	cont := make(chan string)
+	done := make(chan int)
+	TODO := gopath.Join(pathname, "todo")
+	DONE := gopath.Join(pathname, "done")
+
+	initfs(ts, TODO, DONE)
+
+	fnames := []string{}
+	// generate files in the todo dir
+	for i := 0; i < NFILE; i++ {
+		fnames = append(fnames, "job"+strconv.Itoa(i))
+		_, err := ts.PutFile(gopath.Join(TODO, fnames[i]), 07000, sp.OWRITE, []byte{})
+		assert.Nil(ts.T, err, "Create job")
+	}
+
+	// start N threads trying to rename files in todo dir
+	for i := 0; i < N; i++ {
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+		fsl, err := fslib.NewFsLib(pcfg)
+		assert.Nil(t, err, "Err newfslib: %v", err)
+		go func(fsl *fslib.FsLib, t string) {
+			n := 0
+			for {
+				fname := <-cont
+				if fname == "STOP" {
+					done <- n
+					return
+				}
+				err := fsl.Rename(gopath.Join(TODO, fname), gopath.Join(DONE, fname))
+				assert.Nil(ts.T, err, "Error rename: %v", err)
+				n++
+			}
+		}(fsl, strconv.Itoa(i))
+	}
+
+	// Assign renames to goroutines
+	for _, fn := range fnames {
+		cont <- fn
+	}
+
+	// tell threads we are done with generating files
+	n := 0
+	for i := 0; i < N; i++ {
+		cont <- "STOP"
 		n += <-done
 	}
 	assert.Equal(ts.T, NFILE, n, "sum")

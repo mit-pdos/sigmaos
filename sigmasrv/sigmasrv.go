@@ -1,7 +1,6 @@
 package sigmasrv
 
 import (
-	"os"
 	"runtime/debug"
 
 	"sigmaos/cpumon"
@@ -203,7 +202,6 @@ func (ssrv *SigmaSrv) RunServer() error {
 	db.DPrintf(db.SIGMASRV, "Run %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	ssrv.Serve()
 	ssrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
-	os.Exit(0)
 	return nil
 }
 

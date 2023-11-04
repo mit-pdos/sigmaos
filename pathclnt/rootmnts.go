@@ -64,6 +64,7 @@ func (rootmt *RootMountTable) isRootMount(mntname string) bool {
 }
 
 func (pathc *PathClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
+	db.DPrintf(db.PATHCLNT, "resolveRoot %v", pn)
 	if len(pn) == 0 {
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("empty path '%v' ", pn)), false
 	}

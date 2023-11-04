@@ -108,6 +108,8 @@ func Run(args []string) error {
 		db.DFatalf("Error newSrv %v\n", err)
 	}
 
+	db.DPrintf(db.NAMED, "newSrv %v mnt %v", nd.realm, mnt)
+
 	pn = sp.NAMED
 	if nd.realm == sp.ROOTREALM {
 		db.DPrintf(db.ALWAYS, "SetRootNamed %v mnt %v\n", nd.realm, mnt)

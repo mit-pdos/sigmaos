@@ -56,6 +56,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	}
 	di, err := d.fs.Create(d.Obj.di.Path, name, path, nf, f)
 	if err != nil {
+		db.DPrintf(db.NAMED, "Create %v %q err %v\n", d, name, err)
 		return nil, err
 	}
 	obj := newObjDi(d.fs, pn, di, d.Obj.di.Path)
@@ -73,20 +74,21 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.NAMED, "fsetcd.ReadDir %v\n", dir)
-	if cursor > dir.Ents.Len() {
+	db.DPrintf(db.NAMED, "fsetcd.ReadDir %d %v\n", cursor, dir)
+	len := dir.Ents.Len() - 1 // ignore "."
+	if cursor > len {
 		return nil, nil
 	} else {
-		// XXX move into sorteddir
-		ns := dir.Ents.Slice(cursor)
-		sts := make([]*sp.Stat, len(ns))
-		for i, n := range ns {
-			e, _ := dir.Ents.Lookup(n)
-			di := e.(fsetcd.DirEntInfo)
-			o := newObjDi(d.fs, d.pn.Append(n), di, d.Obj.di.Path)
-			sts[i] = o.stat()
-		}
-		return sts, nil
+		sts := make([]*sp.Stat, 0, len)
+		dir.Ents.Iter(func(n string, e interface{}) bool {
+			if n != "." {
+				di := e.(fsetcd.DirEntInfo)
+				o := newObjDi(d.fs, d.pn.Append(n), di, d.Obj.di.Path)
+				sts = append(sts, o.stat())
+			}
+			return true
+		})
+		return sts[cursor:], nil
 	}
 }
 

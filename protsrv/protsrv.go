@@ -293,8 +293,10 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
-
 	db.DPrintf(db.PROTSRV, "%v: ReadV f %v args {%v}\n", f.Pobj().Ctx().Uname(), f, args)
+
+	flk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path())
+	defer ps.plt.Release(f.Pobj().Ctx(), flk)
 
 	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
@@ -543,6 +545,7 @@ func (ps *ProtSrv) lookupWalkOpen(fid sp.Tfid, wnames path.Path, resolve bool, m
 func (ps *ProtSrv) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror {
 	f, fname, lo, err := ps.lookupWalk(args.Tfid(), args.Wnames, args.Resolve, true)
 	if err != nil {
+		db.DPrintf(db.PROTSRV, "RemoveFile %v err %v", args, err)
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: RemoveFile %v %v %v", f.Pobj().Ctx().Uname(), f.Pobj().Path(), fname, args.Fid)

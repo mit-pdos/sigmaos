@@ -295,8 +295,8 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	}
 	db.DPrintf(db.PROTSRV, "%v: ReadV f %v args {%v}\n", f.Pobj().Ctx().Uname(), f, args)
 
-	flk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path())
-	defer ps.plt.Release(f.Pobj().Ctx(), flk)
+	flk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path(), false)
+	defer ps.plt.Release(f.Pobj().Ctx(), flk, false)
 
 	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {

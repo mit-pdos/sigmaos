@@ -11,6 +11,11 @@ import (
 	"sigmaos/sorteddir"
 )
 
+//
+// Directory operations for fsetcd.  It assumes the caller (protsrv)
+// has exclusive locks for the directories involved in the operation.
+//
+
 const (
 	ROOT sp.Tpath = 1
 )
@@ -73,7 +78,7 @@ func (fs *FsEtcd) Lookup(d sp.Tpath, name string) (DirEntInfo, *serr.Err) {
 	if err != nil {
 		return DirEntInfo{}, err
 	}
-	db.DPrintf(db.TEST, "hit %v %q %v %v\n", d, name, hit, dir)
+	db.DPrintf(db.TEST, "readDir hit %q %t %v %v\n", name, hit, d, dir)
 	e, ok := dir.Ents.Lookup(name)
 	if ok {
 		return e.(DirEntInfo), nil
@@ -81,7 +86,6 @@ func (fs *FsEtcd) Lookup(d sp.Tpath, name string) (DirEntInfo, *serr.Err) {
 	return DirEntInfo{}, serr.NewErr(serr.TErrNotfound, name)
 }
 
-// XXX retry on version mismatch
 // OEXCL: should only succeed if file doesn't exist
 func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f sp.Tfence) (DirEntInfo, *serr.Err) {
 	dir, v, _, err := fs.readDir(d, false)
@@ -93,7 +97,7 @@ func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f
 		return DirEntInfo{}, serr.NewErr(serr.TErrExists, name)
 	}
 	dir.Ents.Insert(name, DirEntInfo{Nf: nf, Path: path, Perm: nf.Tperm()})
-	db.DPrintf(db.FSETCD, "Create %q dir %v nf %v\n", name, dir, nf)
+	db.DPrintf(db.FSETCD, "Create %q dir %v (%v) nf %v\n", name, dir, d, nf)
 	if err := fs.create(d, dir, v, path, nf); err == nil {
 		di := DirEntInfo{Nf: nf, Perm: nf.Tperm(), Path: path}
 		fs.dc.Invalidate(d)
@@ -136,6 +140,7 @@ func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
 	dir.Ents.Delete(name)
 
 	if err := fs.remove(d, dir, v, di.Path); err != nil {
+		db.DPrintf(db.FSETCD, "Remove entry %v err %v\n", name, err)
 		return err
 	}
 	fs.dc.Invalidate(d)

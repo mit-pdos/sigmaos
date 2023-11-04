@@ -104,6 +104,7 @@ func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f
 		return di, nil
 	} else {
 		db.DPrintf(db.FSETCD_ERR, "Create %q dir %v nf %v err %v", name, dir, nf, err)
+		dir.Ents.Delete(name)
 		return DirEntInfo{}, err
 	}
 }
@@ -141,6 +142,7 @@ func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
 
 	if err := fs.remove(d, dir, v, di.Path); err != nil {
 		db.DPrintf(db.FSETCD, "Remove entry %v err %v\n", name, err)
+		dir.Ents.Insert(name, di)
 		return err
 	}
 	fs.dc.Invalidate(d)
@@ -180,6 +182,8 @@ func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
 		fs.dc.Invalidate(d)
 		return nil
 	} else {
+		dir.Ents.Insert(from, difrom)
+		dir.Ents.Delete(to)
 		return err
 	}
 }
@@ -222,6 +226,8 @@ func (fs *FsEtcd) Renameat(df sp.Tpath, from string, dt sp.Tpath, to string, f s
 		fs.dc.Invalidate(dt)
 		return nil
 	} else {
+		dirf.Ents.Insert(from, difrom)
+		dirt.Ents.Delete(to)
 		return err
 	}
 }

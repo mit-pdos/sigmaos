@@ -258,10 +258,13 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 	st, err := clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
 	// Mark proc as exited in local state
 	clnt.cs.Exited(pid, st)
+	if err != nil {
+		return nil, err
+	}
 
 	status, err := clnt.getExitStatus(pid, how)
 
-	return status, nil
+	return status, err
 }
 
 // Parent calls WaitExit() to wait until child proc has exited. If

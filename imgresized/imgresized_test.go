@@ -53,7 +53,7 @@ func TestResizeProc(t *testing.T) {
 	//	in := path.Join(sp.S3, "~local/9ps3/img-save/6.jpg")
 	out := path.Join(sp.S3, "~local/9ps3/img/6-thumb-xxx.jpg")
 	ts.Remove(out)
-	p := proc.NewProc("imgresize", []string{in, out})
+	p := proc.NewProc("imgresize", []string{in, out, "1"})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(p.GetPid())

@@ -56,6 +56,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	}
 	di, err := d.fs.Create(d.Obj.di.Path, name, path, nf, f)
 	if err != nil {
+		db.DPrintf(db.NAMED, "Create %v %q err %v\n", d, name, err)
 		return nil, err
 	}
 	obj := newObjDi(d.fs, pn, di, d.Obj.di.Path)

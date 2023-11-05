@@ -141,9 +141,9 @@ func CleanupMROutputs(fsl *fslib.FsLib, outputDir string) {
 
 // Put names of input files in name/mr/m
 func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
-	fsl.MkDir(job.Output, 0777)
 	// Only make out dir if it lives in s3
 	if strings.Contains(job.Output, "/s3/") {
+		fsl.MkDir(job.Output, 0777)
 		outDir := JobOut(job.Output, jobName)
 		if err := fsl.MkDir(outDir, 0777); err != nil {
 			db.DPrintf(db.ALWAYS, "Error mkdir job dir %v: %v", outDir, err)

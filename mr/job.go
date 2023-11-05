@@ -98,6 +98,11 @@ func WaitJobDone(fsl *fslib.FsLib, job string) error {
 	return sc.Down()
 }
 
+func InitJobSem(fsl *fslib.FsLib, job string) error {
+	sc := semclnt.NewSemClnt(fsl, JobSem(job))
+	return sc.Init(0)
+}
+
 func JobDone(fsl *fslib.FsLib, job string) {
 	sc := semclnt.NewSemClnt(fsl, JobSem(job))
 	sc.Up()
@@ -129,6 +134,10 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
+	}
+
+	if err := InitJobSem(fsl, jobname); err != nil {
+		db.DFatalf("Err init job sem")
 	}
 
 	// Make task and input directories for reduce tasks

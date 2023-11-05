@@ -508,7 +508,6 @@ func TestLookupConcurPerf(t *testing.T) {
 	for d := 0; d < N; d++ {
 		dir = gopath.Join(dir, "d"+strconv.Itoa(d))
 		n := newDir(t, ts.FsLib, dir, NFILE)
-		db.DPrintf(db.TEST, "dir %v\n", dir)
 		assert.Equal(t, NFILE, n)
 	}
 	ndMnt := ts.GetNamedMount()

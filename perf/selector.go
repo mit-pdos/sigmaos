@@ -28,6 +28,7 @@ const (
 	KNAMED            = "KNAMED"
 	PROCD             = "PROCD"
 	S3                = "S3"
+	UX                = "UX"
 	SCHEDD            = "SCHEDD"
 	UPROCD            = "UPROCD"
 	PROCQ             = "PROCQ"

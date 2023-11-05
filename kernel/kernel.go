@@ -155,7 +155,7 @@ func (k *Kernel) shutdown() {
 				}
 				if i == MAX_EVICT_RETRIES-1 {
 					db.DPrintf(db.ALWAYS, "Giving up trying to evict kernel proc! %v", pid)
-					db.DPrintf(db.KERNEL, "Giving up trying to evict kernel proc!")
+					db.DPrintf(db.KERNEL, "Giving up trying to evict kernel proc! %v", pid)
 				}
 				db.DPrintf(db.KERNEL, "Error unreachable evict kernel proc. Retrying.")
 				time.Sleep(100 * time.Millisecond)

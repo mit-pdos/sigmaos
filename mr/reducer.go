@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	// "sort"
 	"strconv"
 	"strings"
@@ -66,8 +67,10 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	}
 	r.nmaptask = m
 
+	sc.MkDir(path.Dir(r.tmp), 0777)
 	w, err := r.CreateWriter(r.tmp, 0777, sp.OWRITE)
 	if err != nil {
+		db.DFatalf("Error CreateWriter [%v] %v", r.tmp, err)
 		return nil, err
 	}
 	r.wrt = w
@@ -206,7 +209,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	}
 
 	ms := duration.Milliseconds()
-	fmt.Printf("reduce readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
+	db.DPrintf(db.ALWAYS, "reduce readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
 
 	start := time.Now()
 	for k, vs := range data {

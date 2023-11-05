@@ -246,8 +246,7 @@ func RunReducer(reducef ReduceT, args []string) {
 	defer p.Done()
 	r, err := newReducer(reducef, args, p)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
-		os.Exit(1)
+		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
 
 	status := r.doReduce()

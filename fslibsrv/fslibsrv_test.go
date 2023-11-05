@@ -499,7 +499,7 @@ func TestLookupConcurPerf(t *testing.T) {
 	const N = 2
 	const NFILE = 10
 	const NGO = 10
-	const NTRIAL = 10
+	const NTRIAL = 100
 	ts := test.NewTstatePath(t, pathname)
 
 	ts.RmDir(gopath.Join(pathname, "d0"))

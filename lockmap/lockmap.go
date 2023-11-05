@@ -24,7 +24,7 @@ import (
 //
 
 type PathLock struct {
-	sync.Mutex
+	sync.RWMutex
 	//deadlock.Mutex
 	path string // the locked path
 }
@@ -72,9 +72,13 @@ func (plt *PathLockTable) allocLockString(pn string) *PathLock {
 	return plt.allocLockStringL(pn)
 }
 
-func (plt *PathLockTable) Acquire(ctx fs.CtxI, path path.Path) *PathLock {
+func (plt *PathLockTable) Acquire(ctx fs.CtxI, path path.Path, write bool) *PathLock {
 	lk := plt.allocLock(path)
-	lk.Lock()
+	if write {
+		lk.Lock()
+	} else {
+		lk.RLock()
+	}
 	db.DPrintf(db.LOCKMAP, "%v: Lock '%s'", ctx.Uname(), lk.path)
 	return lk
 }
@@ -87,30 +91,38 @@ func (plt *PathLockTable) release(lk *PathLock) bool {
 
 // Release lock for path. Caller should have watch locked through
 // Acquire().
-func (plt *PathLockTable) Release(ctx fs.CtxI, lk *PathLock) {
+func (plt *PathLockTable) Release(ctx fs.CtxI, lk *PathLock, write bool) {
 	db.DPrintf(db.LOCKMAP, "%v: Release '%s'", ctx.Uname(), lk.path)
-	lk.Unlock()
+	if write {
+		lk.Unlock()
+	} else {
+		lk.RUnlock()
+	}
 	plt.release(lk)
 }
 
 // Caller must have dlk locked
-func (plt *PathLockTable) HandOverLock(ctx fs.CtxI, dlk *PathLock, name string) *PathLock {
+func (plt *PathLockTable) HandOverLock(ctx fs.CtxI, dlk *PathLock, name string, write bool) *PathLock {
 	flk := plt.allocLockString(dlk.path + "/" + name)
 
 	db.DPrintf(db.LOCKMAP, "%v: HandoverLock '%s' %s", ctx.Uname(), dlk.path, name)
 
-	flk.Lock()
-	plt.Release(ctx, dlk)
+	if write {
+		flk.Lock()
+	} else {
+		flk.RLock()
+	}
+	plt.Release(ctx, dlk, write)
 	return flk
 }
 
-func (plt *PathLockTable) AcquireLocks(ctx fs.CtxI, dir path.Path, file string) (*PathLock, *PathLock) {
-	dlk := plt.Acquire(ctx, dir)
-	flk := plt.Acquire(ctx, append(dir, file))
+func (plt *PathLockTable) AcquireLocks(ctx fs.CtxI, dir path.Path, file string, write bool) (*PathLock, *PathLock) {
+	dlk := plt.Acquire(ctx, dir, write)
+	flk := plt.Acquire(ctx, append(dir, file), write)
 	return dlk, flk
 }
 
-func (plt *PathLockTable) ReleaseLocks(ctx fs.CtxI, dlk, flk *PathLock) {
-	plt.Release(ctx, dlk)
-	plt.Release(ctx, flk)
+func (plt *PathLockTable) ReleaseLocks(ctx fs.CtxI, dlk, flk *PathLock, write bool) {
+	plt.Release(ctx, dlk, write)
+	plt.Release(ctx, flk, write)
 }

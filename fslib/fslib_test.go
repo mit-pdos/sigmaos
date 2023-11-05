@@ -518,9 +518,10 @@ func dirwriter(t *testing.T, pcfg *proc.ProcEnv, dn, name string, ch chan bool) 
 		case stop = <-ch:
 		default:
 			err := fsl.Remove(gopath.Join(dn, name))
-			assert.Nil(t, err)
-			_, err = fsl.PutFile(gopath.Join(dn, name), 0777, sp.OWRITE, []byte(name))
-			assert.Nil(t, err)
+			assert.Nil(t, err, "Remove: %v", err)
+			//			_, err = fsl.PutFile(gopath.Join(dn, name), 0777, sp.OWRITE, []byte(name))
+			_, err = fsl.PutFile(gopath.Join(dn, name), 0777, sp.OWRITE|sp.OEXCL, []byte(name))
+			assert.Nil(t, err, "Put: %v", err)
 		}
 	}
 }
@@ -581,7 +582,7 @@ func TestDirConcur(t *testing.T) {
 	}
 
 	err = ts.RmDir(dn)
-	assert.Nil(t, err, "RmDir: %v", err)
+	assert.Nil(t, err, "RmDir: %v %v", dn, err)
 
 	ts.Shutdown()
 }
@@ -883,7 +884,7 @@ func TestConcurRename(t *testing.T) {
 
 	// generate files in the todo dir
 	for i := 0; i < NFILE; i++ {
-		_, err := ts.PutFile(gopath.Join(TODO, "job"+strconv.Itoa(i)), 07000, sp.OWRITE, []byte{})
+		_, err := ts.PutFile(gopath.Join(TODO, "job"+strconv.Itoa(i)), 07000, sp.OWRITE|sp.OEXCL, []byte{})
 		assert.Nil(ts.T, err, "Create job")
 	}
 

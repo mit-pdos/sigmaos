@@ -19,22 +19,22 @@ type WriteCtlF func(sessp.Tsession, fs.CtxI, sp.Toffset, []byte, sp.Tfence) (sp.
 
 type Clone struct {
 	*inode.Inode
-	mfs       *memfssrv.MemFs
+	mfs        *memfssrv.MemFs
 	newsession NewSessionF
-	detach    sps.DetachSessF
-	dir       string
-	wctl      WriteCtlF
+	detach     sps.DetachSessF
+	dir        string
+	wctl       WriteCtlF
 }
 
 // Make a Clone dev inode in directory <dir> in memfs
 func newClone(mfs *memfssrv.MemFs, dir string, news NewSessionF, d sps.DetachSessF, w WriteCtlF) *serr.Err {
 	cl := &Clone{
-		Inode:     mfs.NewDevInode(),
-		mfs:       mfs,
+		Inode:      mfs.NewDevInode(),
+		mfs:        mfs,
 		newsession: news,
-		detach:    d,
-		dir:       dir,
-		wctl:      w,
+		detach:     d,
+		dir:        dir,
+		wctl:       w,
 	}
 	pn := dir + "/" + sessdev.CLONE
 	db.DPrintf(db.CLONEDEV, "newClone %q\n", dir)
@@ -71,7 +71,8 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 			return nil, err
 		}
 	} else {
-		lo, err := c.mfs.Open(ctl, sp.OREAD)
+		// XXX should this be read-only?
+		lo, err := c.mfs.Open(ctl, sp.OREAD, true)
 		s = lo.(*session)
 		if err != nil {
 			db.DPrintf(db.CLONEDEV, "open %q err %v\n", ctl, err)

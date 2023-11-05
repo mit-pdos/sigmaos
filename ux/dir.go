@@ -2,8 +2,6 @@ package fsux
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"syscall"
 
@@ -36,7 +34,7 @@ func newDir(path path.Path) (*Dir, *serr.Err) {
 }
 
 func (d *Dir) uxReadDir() *serr.Err {
-	dirents, err := ioutil.ReadDir(d.PathName())
+	dirents, err := os.ReadDir(d.PathName())
 	if err != nil {
 		return serr.UxErrnoToErr(err, d.pathName.Base())
 	}
@@ -121,7 +119,6 @@ func (d *Dir) newPipe(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.F
 
 func (d *Dir) newSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	p := d.pathName.Append(name)
-	log.Printf("newSym %s\n", p)
 	s, err := newSymlink(p, true)
 	if err != nil {
 		return nil, err

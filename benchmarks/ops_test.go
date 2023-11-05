@@ -129,6 +129,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	sdc.MonitorSchedds(ts.GetRealm())
 	defer sdc.Done()
 	start := time.Now()
+	db.DPrintf(db.BENCH, "Start MR job")
 	ji.StartMRJob()
 	ji.Wait()
 	dur := time.Since(start)

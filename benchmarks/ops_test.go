@@ -132,6 +132,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji.StartMRJob()
 	ji.Wait()
 	dur := time.Since(start)
+	ji.WaitJobExit()
 	err := mr.PrintMRStats(ts.FsLib, ji.jobname)
 	assert.Nil(ts.Ts.T, err, "Error print MR stats: %v", err)
 	// Sleep a bit to allow util to update.

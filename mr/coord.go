@@ -21,6 +21,7 @@ const (
 	MR       = "/mr/"
 	MRDIRTOP = "name/" + MR
 	OUTLINK  = "output"
+	JOBSEM   = "jobsem"
 
 	TIP  = "-tip/"
 	DONE = "-done/"
@@ -401,6 +402,8 @@ func (c *Coord) Work() {
 	db.DPrintf(db.ALWAYS, "job done\n")
 
 	atomic.StoreInt32(&c.done, 1)
+
+	JobDone(c.FsLib, c.job)
 
 	c.ClntExitOK()
 }

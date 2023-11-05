@@ -13,6 +13,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
+	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/yaml"
@@ -28,6 +29,10 @@ func JobOutLink(job string) string {
 
 func JobDir(job string) string {
 	return path.Join(MRDIRTOP, job)
+}
+
+func JobSem(job string) string {
+	return path.Join(MRDIRTOP, job, JOBSEM)
 }
 
 func MRstats(job string) string {
@@ -85,6 +90,17 @@ type Job struct {
 	Input   string `yalm:"input"`
 	Output  string `yalm:"output"`
 	Linesz  int    `yalm:"linesz"`
+}
+
+// Wait until the job is done
+func WaitJobDone(fsl *fslib.FsLib, job string) error {
+	sc := semclnt.NewSemClnt(fsl, JobSem(job))
+	return sc.Down()
+}
+
+func JobDone(fsl *fslib.FsLib, job string) {
+	sc := semclnt.NewSemClnt(fsl, JobSem(job))
+	sc.Up()
 }
 
 func ReadJobConfig(app string) *Job {

@@ -496,24 +496,23 @@ func TestLookupDepthPerf(t *testing.T) {
 }
 
 func TestLookupConcurPerf(t *testing.T) {
-	const N = 2
+	const N = 1
 	const NFILE = 10
 	const NGO = 10
-	const NTRIAL = 10
+	const NTRIAL = 100
 	ts := test.NewTstatePath(t, pathname)
 
 	ts.RmDir(gopath.Join(pathname, "d0"))
 
 	dir := pathname
-	for d := 1; d < N; d++ {
-		for i := 0; i < d; i++ {
-			dir = gopath.Join(dir, "d"+strconv.Itoa(i))
-			n := newDir(t, ts.FsLib, dir, NFILE)
-			assert.Equal(t, NFILE, n)
-		}
+	for d := 0; d < N; d++ {
+		dir = gopath.Join(dir, "d"+strconv.Itoa(d))
+		n := newDir(t, ts.FsLib, dir, NFILE)
+		db.DPrintf(db.TEST, "dir %v\n", dir)
+		assert.Equal(t, NFILE, n)
 	}
 	ndMnt := ts.GetNamedMount()
-	//dump(t)
+	// dump(t)
 	done := make(chan int)
 	fsls := make([][]*fslib.FsLib, 0, NGO)
 	for i := 0; i < NGO; i++ {
@@ -534,7 +533,7 @@ func TestLookupConcurPerf(t *testing.T) {
 			measuredir(label, 1, func() int {
 				for j := 0; j < NTRIAL; j++ {
 					_, err := fsls[i][j].Stat(dir)
-					assert.Nil(t, err)
+					assert.Nil(t, err, "stat err %v", err)
 				}
 				return NTRIAL
 			})

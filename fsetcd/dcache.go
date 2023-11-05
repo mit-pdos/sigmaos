@@ -7,6 +7,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const N = 8192
+
 type dcEntry struct {
 	dir  *DirInfo
 	v    sp.TQversion
@@ -18,7 +20,7 @@ type Dcache struct {
 }
 
 func newDcache() *Dcache {
-	c, err := lru.New[sp.Tpath, *dcEntry](8192)
+	c, err := lru.New[sp.Tpath, *dcEntry](N)
 	if err != nil {
 		db.DFatalf("newDcache err %v\n", err)
 	}

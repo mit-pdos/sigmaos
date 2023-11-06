@@ -986,7 +986,7 @@ schedd_scalability() {
       go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -1017,7 +1017,7 @@ schedd_scalability_rs() {
       go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -1266,6 +1266,13 @@ graph_img_resize() {
   $GRAPH_SCRIPTS_DIR/imgresize-util.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "CPU Utilization" --title "Image Resizing CPU Utilization" --total_ncore 8 # --xmin 200000 --xmax 400000
 }
 
+graph_schedd_scalability() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/schedd-scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --title "Proc Scheduling Throughput"
+}
+
 #graph_mr_overlap() {
 #  fname=${FUNCNAME[0]}
 #  graph="${fname##graph_}"
@@ -1301,14 +1308,14 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-#schedd_scalability_rs
+schedd_scalability_rs
+#realm_balance_be_img
 #schedd_scalability
 
 #img_resize
 
 #realm_balance_multi_img
-realm_balance_be_img
-mr_vs_corral
+#mr_vs_corral
 
 #realm_balance_be
 #realm_balance_multi
@@ -1337,7 +1344,10 @@ mr_vs_corral
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
+graph_schedd_scalability
 graph_realm_balance_be_img
+
+#graph_mr_vs_corral
 #graph_realm_balance_multi_img
 
 #graph_realm_balance_be
@@ -1354,7 +1364,6 @@ graph_realm_balance_be_img
 #graph_k8s_balance
 #graph_realm_balance
 #graph_mr_replicated_named
-#graph_mr_vs_corral
 # XXX graph_mr_aggregate_tpt
 # XXX graph_mr_scalability
 #graph_k8s_mr_aggregate_tpt

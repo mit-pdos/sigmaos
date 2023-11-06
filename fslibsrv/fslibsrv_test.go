@@ -249,9 +249,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 	measure(p1, "reader", func() sp.Tlength {
 		n := sp.Tlength(0)
 		for i := 0; i < NTRIAL; i++ {
-			start := time.Now()
 			r, err := ts.OpenReader(fn)
-			db.DPrintf(db.TEST, "Time to open reader: %v", time.Since(start))
 			assert.Nil(t, err)
 			n2, err := test.Reader(t, r, buf, sz)
 			assert.Nil(t, err)
@@ -271,11 +269,9 @@ func TestReadFilePerfSingle(t *testing.T) {
 	measure(p2, "bufreader", func() sp.Tlength {
 		n := sp.Tlength(0)
 		for i := 0; i < NTRIAL; i++ {
-			start := time.Now()
 			r, err := ts.OpenReader(fn)
 			assert.Nil(t, err)
 			br := bufio.NewReaderSize(r, sp.BUFSZ)
-			db.DPrintf(db.TEST, "Time to open bufio reader: %v", time.Since(start))
 			n2, err := test.Reader(t, br, buf, sz)
 			assert.Nil(t, err)
 			n += n2
@@ -294,10 +290,8 @@ func TestReadFilePerfSingle(t *testing.T) {
 	measure(p3, "readahead", func() sp.Tlength {
 		n := sp.Tlength(0)
 		for i := 0; i < NTRIAL; i++ {
-			start := time.Now()
 			r, err := ts.OpenAsyncReader(fn, 0)
 			assert.Nil(t, err)
-			db.DPrintf(db.TEST, "Time to open async reader: %v", time.Since(start))
 			n2, err := test.Reader(t, r, buf, sz)
 			assert.Nil(t, err)
 			n += n2

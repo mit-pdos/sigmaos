@@ -96,6 +96,7 @@ func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, 
 	return dir, v, false, nil
 }
 
+// If stat is true, stat every entry in the directory.
 func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, *serr.Err) {
 	db.DPrintf(db.FSETCD, "readDirEtcd %v\n", p)
 	nf, v, err := fs.GetFile(p)

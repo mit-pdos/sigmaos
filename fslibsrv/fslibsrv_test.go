@@ -31,11 +31,11 @@ func init() {
 const (
 	KBYTE      = 1 << 10
 	NRUNS      = 3
-	SYNCFILESZ = 500 * KBYTE
+	SYNCFILESZ = 100 * KBYTE
 	// SYNCFILESZ = WRITESZ
 	// FILESZ     = 100 * sp.MBYTE
 	FILESZ  = SYNCFILESZ
-	WRITESZ = sp.BUFSZ
+	WRITESZ = 4096
 )
 
 func measure(p *perf.Perf, msg string, f func() sp.Tlength) sp.Tlength {
@@ -308,6 +308,10 @@ func TestReadFilePerfSingle(t *testing.T) {
 }
 
 func TestReadFilePerfMultiClient(t *testing.T) {
+	const (
+		NTRIAL = 1000
+	)
+
 	ts := test.NewTstatePath(t, pathname)
 	N_CLI := 10
 	buf := test.NewBuf(WRITESZ)
@@ -328,16 +332,19 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	}
 	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
 	assert.Nil(t, err)
-	defer p1.Done()
 	start := time.Now()
 	for i := range fns {
 		go func(i int) {
 			n := measure(p1, "reader", func() sp.Tlength {
-				r, err := fsls[i].OpenReader(fns[i])
-				assert.Nil(t, err)
-				n, err := test.Reader(t, r, buf, SYNCFILESZ)
-				assert.Nil(t, err)
-				r.Close()
+				n := sp.Tlength(0)
+				for j := 0; j < NTRIAL; j++ {
+					r, err := fsls[i].OpenReader(fns[i])
+					assert.Nil(t, err)
+					n2, err := test.Reader(t, r, buf, SYNCFILESZ)
+					assert.Nil(t, err)
+					n += n2
+					r.Close()
+				}
 				return n
 			})
 			done <- n
@@ -349,24 +356,29 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	}
 	ms := time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt reader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+	p1.Done()
 	for _, fn := range fns {
 		err := ts.Remove(fn)
 		assert.Nil(ts.T, err)
 		newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 	}
+
 	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
 	assert.Nil(t, err)
-	defer p2.Done()
 	start = time.Now()
 	for i := range fns {
 		go func(i int) {
 			n := measure(p2, "bufreader", func() sp.Tlength {
-				r, err := fsls[i].OpenReader(fns[i])
-				assert.Nil(t, err)
-				br := bufio.NewReaderSize(r, sp.BUFSZ)
-				n, err := test.Reader(t, br, buf, FILESZ)
-				assert.Nil(t, err)
-				r.Close()
+				n := sp.Tlength(0)
+				for j := 0; j < NTRIAL; j++ {
+					r, err := fsls[i].OpenReader(fns[i])
+					assert.Nil(t, err)
+					br := bufio.NewReaderSize(r, sp.BUFSZ)
+					n2, err := test.Reader(t, br, buf, FILESZ)
+					assert.Nil(t, err)
+					n += n2
+					r.Close()
+				}
 				return n
 			})
 			done <- n
@@ -376,20 +388,25 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for _ = range fns {
 		n += <-done
 	}
+	p2.Done()
+
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
 	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
-	defer p3.Done()
 	start = time.Now()
 	for i := range fns {
 		go func(i int) {
 			n := measure(p3, "readabuf", func() sp.Tlength {
-				r, err := fsls[i].OpenAsyncReader(fns[i], 0)
-				assert.Nil(t, err)
-				n, err := test.Reader(t, r, buf, FILESZ)
-				assert.Nil(t, err)
-				r.Close()
+				n := sp.Tlength(0)
+				for j := 0; j < NTRIAL; j++ {
+					r, err := fsls[i].OpenAsyncReader(fns[i], 0)
+					assert.Nil(t, err)
+					n2, err := test.Reader(t, r, buf, FILESZ)
+					assert.Nil(t, err)
+					n += n2
+					r.Close()
+				}
 				return n
 			})
 			done <- n
@@ -399,6 +416,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for _ = range fns {
 		n += <-done
 	}
+	p3.Done()
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt abufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
 	ts.Shutdown()

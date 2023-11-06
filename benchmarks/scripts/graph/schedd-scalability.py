@@ -1,9 +1,11 @@
 #!python3
 
 import os
+import sys
 import re
 import argparse
 import numpy as np
+import matplotlib.pyplot as plt
 
 def str_dur_to_ms(dstr):
   suffixes = [ "ms", "us", "µs", "ns", "s"  ]
@@ -60,15 +62,14 @@ def stats_summary(raw_stat):
       "p99": 0,
   })
 
-def graph_stats(stats_summary):
+def graph_stats(stats_summary, out):
   x = [ n_vm[0] for (n_vm, st) in stats_summary ] 
   p50 = [ st["p50"] for (n_vm, st) in stats_summary ]
   p99 = [ st["p99"] for (n_vm, st) in stats_summary ]
   plt.plot(x, p50, label="P50 Start latency")
   plt.plot(x, p99, label="P99 Start latency")
-  plt.xlabel(xlabel)
-  plt.ylabel(ylabel)
-  plt.title(title)
+  plt.xlabel("Number of machines")
+  plt.ylabel("Proc Start Latency (ms)")
   plt.legend()
   plt.savefig(out)
 
@@ -81,10 +82,14 @@ def print_stats_summary(stats_summary):
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--measurement_dir", type=str, required=True)
+  parser.add_argument("--out", type=str, required=True)
   parser.add_argument("--v", action="store_true", default=False)
   args = parser.parse_args()
 
-  n_vms = sorted([ (int(f[:f.index("-vm")]), f) for f in os.listdir(args.measurement_dir) ], key=lambda x: (x[0], x[1]) )
+  n_vms = sorted([ (int(f[:f.index("-vm")]), f) for f in os.listdir(args.measurement_dir) ], key=lambda x: (x[0], -1 * int(x[1][x[1].rindex("-"):])) )
+
+  # Truncate beyond 4 machines
+  n_vms = n_vms[:4]
 
   regex = ".*E2e spawn latency until main"
   file_suffix = ".out"
@@ -94,4 +99,4 @@ if __name__ == "__main__":
   stats_summary = [ stats_summary(st) for st in raw_stats ]
 
   print_stats_summary(stats_summary)
-  #graph_stats(stats_summary)
+  graph_stats(stats_summary=stats_summary, out=args.out)

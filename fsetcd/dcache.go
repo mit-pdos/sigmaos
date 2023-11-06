@@ -1,11 +1,13 @@
 package fsetcd
 
 import (
-	"sync"
+	"github.com/hashicorp/golang-lru/v2"
 
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 )
+
+const N = 8192
 
 type dcEntry struct {
 	dir  *DirInfo
@@ -14,19 +16,19 @@ type dcEntry struct {
 }
 
 type Dcache struct {
-	sync.Mutex
-	dcache map[sp.Tpath]*dcEntry
+	c *lru.Cache[sp.Tpath, *dcEntry]
 }
 
 func newDcache() *Dcache {
-	return &Dcache{dcache: make(map[sp.Tpath]*dcEntry)}
+	c, err := lru.New[sp.Tpath, *dcEntry](N)
+	if err != nil {
+		db.DFatalf("newDcache err %v\n", err)
+	}
+	return &Dcache{c: c}
 }
 
 func (dc *Dcache) Lookup(d sp.Tpath) (*DirInfo, sp.TQversion, bool, bool) {
-	dc.Lock()
-	defer dc.Unlock()
-
-	de, ok := dc.dcache[d]
+	de, ok := dc.c.Get(d)
 	if ok {
 		db.DPrintf(db.FSETCD, "Lookup dcache hit %v %v", d, de)
 		return de.dir, de.v, de.stat, ok
@@ -35,30 +37,19 @@ func (dc *Dcache) Lookup(d sp.Tpath) (*DirInfo, sp.TQversion, bool, bool) {
 }
 
 func (dc *Dcache) Insert(d sp.Tpath, dir *DirInfo, v sp.TQversion, stat bool) {
-	dc.Lock()
-	defer dc.Unlock()
-
 	db.DPrintf(db.FSETCD, "Insert dcache %v %v", d, dir)
-	dc.dcache[d] = &dcEntry{dir, v, stat}
+	if evict := dc.c.Add(d, &dcEntry{dir, v, stat}); evict {
+		db.DPrintf(db.FSETCD, "Eviction")
+	}
 }
 
 func (dc *Dcache) Update(d sp.Tpath, dir *DirInfo) {
-	dc.Lock()
-	defer dc.Unlock()
-
-	if de, ok := dc.dcache[d]; ok {
+	de, ok := dc.c.Get(d)
+	if ok {
 		db.DPrintf(db.FSETCD, "Update dcache %v %v %v", d, dir, de.v+1)
 		de.dir = dir
 		de.v += 1
 		return
 	}
 	db.DFatalf("Update dcache: key %v isn't present", d)
-}
-
-func (dc *Dcache) Invalidate(d sp.Tpath) {
-	dc.Lock()
-	defer dc.Unlock()
-
-	db.DPrintf(db.FSETCD, "Invalidate dcache %v", d)
-	delete(dc.dcache, d)
 }

@@ -1267,11 +1267,11 @@ graph_img_resize() {
   $GRAPH_SCRIPTS_DIR/imgresize-util.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "CPU Utilization" --title "Image Resizing CPU Utilization" --total_ncore 8 # --xmin 200000 --xmax 400000
 }
 
-graph_schedd_scalability() {
+graph_schedd_scalability_rs() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/schedd-scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --title "Proc Scheduling Throughput"
+  $GRAPH_SCRIPTS_DIR/schedd-scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf
 }
 
 #graph_mr_overlap() {
@@ -1309,7 +1309,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-schedd_scalability_rs
+#schedd_scalability_rs
 #realm_balance_be_img
 #schedd_scalability
 
@@ -1345,7 +1345,7 @@ schedd_scalability_rs
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_schedd_scalability
+graph_schedd_scalability_rs
 graph_realm_balance_be_img
 
 #graph_mr_vs_corral

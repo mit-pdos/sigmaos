@@ -1000,30 +1000,31 @@ schedd_scalability_rs() {
   driver_vm=4
   qps_per_machine=450
   dur="10s"
-  for n_vm in 1 2 3 4 ; do
-#    for rps in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400 2600 2800 3000 3200 3400 3600 ; do
-    rps=$((n_vm * $qps_per_machine))
-    run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
-    echo "========== Running $run =========="
-    perf_dir=$OUT_DIR/$run
-    # Avoid doing duplicate work.
-    if ! should_skip $perf_dir false ; then
-      continue
-    fi
-    stop_k8s_cluster $KVPC
-    cmd="
-      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
-      go clean -testcache; \
-      go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
-    "
-    # Start driver VM asynchronously.
-    run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
-    # Wait for test to terminate.
-    wait
-    end_benchmark $vpc $perf_dir
-    # Copy log files to perf dir.
-    cp /tmp/*.out $perf_dir
-#    done
+#  for n_vm in 1 2 3 4 ; do
+  for n_vm in 4 ; do
+    for rps in 2000 2400 2800 3200 3600 4000 4400 4800 5200 5600 6000 6400 6800 7200 7600 8000 8400 8800 9200 9600 10000 10400 10800 11200 11600 12000 ; do
+    #rps=$((n_vm * $qps_per_machine))
+      run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
+      echo "========== Running $run =========="
+      perf_dir=$OUT_DIR/$run
+      # Avoid doing duplicate work.
+      if ! should_skip $perf_dir false ; then
+        continue
+      fi
+      stop_k8s_cluster $KVPC
+      cmd="
+        export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+        go clean -testcache; \
+        go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
+      "
+      # Start driver VM asynchronously.
+      run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
+      # Wait for test to terminate.
+      wait
+      end_benchmark $vpc $perf_dir
+      # Copy log files to perf dir.
+      cp /tmp/*.out $perf_dir
+    done
   done
 }
 

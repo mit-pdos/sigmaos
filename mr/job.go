@@ -7,11 +7,13 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
+	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/yaml"
@@ -27,6 +29,10 @@ func JobOutLink(job string) string {
 
 func JobDir(job string) string {
 	return path.Join(MRDIRTOP, job)
+}
+
+func JobSem(job string) string {
+	return path.Join(MRDIRTOP, job, JOBSEM)
 }
 
 func MRstats(job string) string {
@@ -86,6 +92,22 @@ type Job struct {
 	Linesz  int    `yalm:"linesz"`
 }
 
+// Wait until the job is done
+func WaitJobDone(fsl *fslib.FsLib, job string) error {
+	sc := semclnt.NewSemClnt(fsl, JobSem(job))
+	return sc.Down()
+}
+
+func InitJobSem(fsl *fslib.FsLib, job string) error {
+	sc := semclnt.NewSemClnt(fsl, JobSem(job))
+	return sc.Init(0)
+}
+
+func JobDone(fsl *fslib.FsLib, job string) {
+	sc := semclnt.NewSemClnt(fsl, JobSem(job))
+	sc.Up()
+}
+
 func ReadJobConfig(app string) *Job {
 	job := &Job{}
 	if err := yaml.ReadYaml(app, job); err != nil {
@@ -114,6 +136,10 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 		}
 	}
 
+	if err := InitJobSem(fsl, jobname); err != nil {
+		db.DFatalf("Err init job sem")
+	}
+
 	// Make task and input directories for reduce tasks
 	for r := 0; r < nreducetask; r++ {
 		n := ReduceTask(jobname) + "/" + strconv.Itoa(r)
@@ -140,11 +166,14 @@ func CleanupMROutputs(fsl *fslib.FsLib, outputDir string) {
 
 // Put names of input files in name/mr/m
 func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
-	fsl.MkDir(job.Output, 0777)
-	outDir := JobOut(job.Output, jobName)
-	if err := fsl.MkDir(outDir, 0777); err != nil {
-		db.DPrintf(db.ALWAYS, "Error mkdir job dir %v: %v", outDir, err)
-		return 0, err
+	// Only make out dir if it lives in s3
+	if strings.Contains(job.Output, "/s3/") {
+		fsl.MkDir(job.Output, 0777)
+		outDir := JobOut(job.Output, jobName)
+		if err := fsl.MkDir(outDir, 0777); err != nil {
+			db.DPrintf(db.ALWAYS, "Error mkdir job dir %v: %v", outDir, err)
+			return 0, err
+		}
 	}
 	if _, err := fsl.PutFile(JobOutLink(jobName), 0777, sp.OWRITE, []byte(job.Output)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobName), err)

@@ -43,5 +43,6 @@ for vm in $vms; do
   # No additional benchmarking setup needed for AWS.
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
     date
+    nproc
 ENDSSH
 done

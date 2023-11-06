@@ -50,5 +50,9 @@ func (ji *MRJobInstance) StartMRJob() {
 }
 
 func (ji *MRJobInstance) Wait() {
+	mr.WaitJobDone(ji.FsLib, ji.jobname)
+}
+
+func (ji *MRJobInstance) WaitJobExit() {
 	ji.cm.Wait()
 }

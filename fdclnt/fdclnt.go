@@ -141,12 +141,12 @@ func (fdc *FdClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []
 	return fdc.PathClnt.PutFile(fname, fdc.pcfg.GetUname(), mode|sp.OWRITE, perm, data, off, lid)
 }
 
-func (fdc *FdClient) NewReader(fd int, path string, chunksz sp.Tsize) *reader.Reader {
+func (fdc *FdClient) NewReader(fd int, path string) *reader.Reader {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return nil
 	}
-	return fdc.PathClnt.NewReader(fid, path, chunksz)
+	return fdc.PathClnt.NewReader(fid, path)
 }
 
 func (fdc *FdClient) NewWriter(fd int) *writer.Writer {

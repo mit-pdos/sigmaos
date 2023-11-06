@@ -91,6 +91,6 @@ func (rdr *Reader) Unfence() {
 	rdr.fenced = false
 }
 
-func NewReader(fc *fidclnt.FidClnt, path string, fid sp.Tfid, chunksz sp.Tsize) *Reader {
+func NewReader(fc *fidclnt.FidClnt, path string, fid sp.Tfid) *Reader {
 	return &Reader{fc, path, fid, 0, false, true}
 }

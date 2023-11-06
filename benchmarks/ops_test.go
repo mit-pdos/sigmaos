@@ -129,9 +129,12 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	sdc.MonitorSchedds(ts.GetRealm())
 	defer sdc.Done()
 	start := time.Now()
+	db.DPrintf(db.BENCH, "Start MR job")
 	ji.StartMRJob()
 	ji.Wait()
+	db.DPrintf(db.BENCH, "Done MR job")
 	dur := time.Since(start)
+	ji.WaitJobExit()
 	err := mr.PrintMRStats(ts.FsLib, ji.jobname)
 	assert.Nil(ts.Ts.T, err, "Error print MR stats: %v", err)
 	// Sleep a bit to allow util to update.

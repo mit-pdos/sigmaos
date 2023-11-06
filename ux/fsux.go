@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/netsigma"
+	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -40,6 +41,14 @@ func RunFsUx(rootux string) {
 		db.DFatalf("BootSrvAndPost %v\n", err)
 	}
 	fsux.SigmaSrv = srv
+
+	// Perf monitoring
+	p, err := perf.NewPerf(pcfg, perf.UX)
+	if err != nil {
+		db.DFatalf("Error NewPerf: %v", err)
+	}
+	defer p.Done()
+
 	fsux.RunServer()
 }
 

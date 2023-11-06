@@ -163,6 +163,8 @@ def finalize_graph(fig, ax, plots, title, out, maxval):
     if maxval > 0:
       ax[idx].set_xlim(right=maxval)
   # plt.legend(lns, labels)
+  plt.grid(which="minor")
+  plt.grid(which="major")
   fig.align_ylabels(ax)
   fig.savefig(out, bbox_inches="tight")
 
@@ -171,10 +173,10 @@ def setup_graph(nplots, units, total_ncore):
   if nplots == 1:
     figsize=(6.4, 2.4)
   if total_ncore > 0:
-    np = nplots + 1
+    npl = nplots + 1
   else:
-    np = nplots
-  fig, tptax = plt.subplots(np, figsize=figsize, sharex=True)
+    npl = nplots
+  fig, tptax = plt.subplots(npl, figsize=figsize, sharex=True)
   if total_ncore > 0:
     coresax = [ tptax[-1] ]
     tptax = tptax[:-1]
@@ -189,6 +191,7 @@ def setup_graph(nplots, units, total_ncore):
     tptax[idx].set_ylabel(ylabels[idx])
   for ax in coresax:
     ax.set_ylim((0, total_ncore + 5))
+    ax.set_yticks(np.arange(0, total_ncore + 5), minor=True)
     ax.set_ylabel("Cores Utilized")
   return fig, tptax, coresax
 

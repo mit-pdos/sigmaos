@@ -228,19 +228,20 @@ run_benchmark() {
 }
 
 run_mr() {
-  if [ $# -ne 5 ]; then
-    echo "run_mr args: n_cores n_vm prewarm app perf_dir" 1>&2
+  if [ $# -ne 6 ]; then
+    echo "run_mr args: n_cores n_vm prewarm app mem_req perf_dir" 1>&2
     exit 1
   fi
   n_cores=$1
   n_vm=$2
   prewarm=$3
   mrapp=$4
-  perf_dir=$5
+  mem_req=$5
+  perf_dir=$6
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp --mr_mem_req $mem_req > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
@@ -327,30 +328,32 @@ run_cached() {
 # ========== Top-level benchmarks ==========
 
 mr_scalability() {
-  mrapp=mr-grep-wiki120G.yml
+  mrapp=mr-grep-wiki120G-bench.yml
   for n_vm in 8 ; do # 1 16 ; do # 2 4 8 
     run=${FUNCNAME[0]}/sigmaOS/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 4 $n_vm "" $mrapp $perf_dir
+    run_mr 4 $n_vm "" $mrapp 5500 $perf_dir
   done
 }
 
 mr_replicated_named() {
-  mrapp=mr-grep-wiki120G.yml
+  mrapp=mr-grep-wiki120G-bench.yml
   n_vm=16
   run=${FUNCNAME[0]}/sigmaOS
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  run_mr 4 $n_vm "" $mrapp $perf_dir
+  run_mr 4 $n_vm "" $mrapp 5500 $perf_dir
 }
 
 mr_vs_corral() {
   n_vm=8
   app="mr-wc-wiki"
   dataset_size="2G"
+#  mem_req=5500
+  mem_req=7000
   for prewarm in "" "--prewarm_realm" ; do
-    mrapp="$app$dataset_size.yml"
+    mrapp="$app$dataset_size-bench.yml"
     if [ -z "$prewarm" ]; then
       runname="$mrapp-cold"
     else
@@ -359,7 +362,7 @@ mr_vs_corral() {
     run=${FUNCNAME[0]}/$runname
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 2 $n_vm "$prewarm" $mrapp $perf_dir
+    run_mr 2 $n_vm "$prewarm" $mrapp $mem_req $perf_dir
   done
 }
 
@@ -509,9 +512,9 @@ hotel_tail_multi() {
 }
 
 realm_balance_be() {
-#  mrapp=mr-wc-wiki4G.yml
+#  mrapp=mr-wc-wiki4G-bench.yml
 #  hotel_dur="20s,20s,20s"
-  mrapp=mr-grep-wiki20G.yml
+  mrapp=mr-grep-wiki20G-bench.yml
   sl="40s"
   n_vm=8
   n_realm=4
@@ -528,12 +531,16 @@ realm_balance_be() {
 }
 
 realm_balance_be_img() {
-#  imgpath="name/ux/~local/9ps3/img/1.jpg"
-  imgpath="name/ux/~local/1.jpg"
-  n_imgresize=10
+#  imgpath="name/s3/~local/9ps3/img/7.jpg"
+  imgpath="name/ux/~local/8.jpg"
+  ncores=2
+  n_imgresize=3000
+#  imgresize_nrounds=200
+  imgresize_nrounds=32
+#  imgresize_nrounds=8
   imgresize_mcpu=0
-  imgresize_mem=1000
-  sl="40s"
+  imgresize_mem=1500
+  sl="20s"
   n_vm=8
   n_realm=4
   driver_vm=8
@@ -543,13 +550,13 @@ realm_balance_be_img() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --nrealm $n_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --nrealm $n_realm > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  run_benchmark $VPC $ncores $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 k8s_balance_be() {
-#  mrapp=mr-wc-wiki4G.yml
+#  mrapp=mr-wc-wiki4G-bench.yml
 #  hotel_dur="20s,20s,20s"
   sl="40s"
   n_vm=8
@@ -594,9 +601,9 @@ k8s_balance_be() {
 }
 
 realm_balance() {
-#  mrapp=mr-wc-wiki4G.yml
+#  mrapp=mr-wc-wiki4G-bench.yml
 #  hotel_dur="20s,20s,20s"
-  mrapp=mr-grep-wiki20G.yml
+  mrapp=mr-grep-wiki20G-bench.yml
   hotel_dur="20s,20s,40s"
   hotel_max_rps="1000,3000,1000"
   hotel_ncache=3
@@ -615,7 +622,7 @@ realm_balance() {
 }
 
 realm_balance_multi() {
-  mrapp=mr-grep-wiki20G.yml
+  mrapp=mr-grep-wiki20G-bench.yml
   hotel_dur="5s,5s,10s,15s,20s,15s"
   hotel_max_rps="250,500,1000,1500,2000,1000"
   mem_pressure="false"
@@ -676,11 +683,12 @@ realm_balance_multi() {
 }
 
 realm_balance_multi_img() {
-#  imgpath="name/s3/~local/9ps3/img/1.jpg"
-  imgpath="name/ux/~local/1.jpg"
+#  imgpath="name/s3/~local/9ps3/img/6.jpg"
+  imgpath="name/ux/~local/6.jpg"
   n_imgresize=10
+  imgresize_nrounds=25
   imgresize_mcpu=0
-  imgresize_mem=1000
+  imgresize_mem=250
   hotel_dur="5s,5s,10s,15s,20s,15s"
   hotel_max_rps="250,500,1000,1500,2000,1000"
   mem_pressure="false"
@@ -723,7 +731,7 @@ realm_balance_multi_img() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceHotelImgResize --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceHotelImgResize --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --imgresize_nround $imgresize_nrounds $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true $swap
@@ -899,9 +907,10 @@ mr_k8s() {
 }
 
 img_resize() {
-#  imgpath="name/ux/~local/9ps3/img/1.jpg"
-  imgpath="name/ux/~local/1.jpg"
+#  imgpath="name/ux/~local/9ps3/img/6.jpg"
+  imgpath="name/ux/~local/6.jpg"
   n_imgresize=10
+  imgresize_nrounds=25
   n_vm=1
   mcpu=500
   imgresize_mem=0
@@ -920,7 +929,7 @@ img_resize() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;PROCCLNT;PROCCLNT_ERR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestImgResize --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $mcpu --imgresize_mem $imgresize_mem > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestImgResize --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $mcpu --imgresize_mem $imgresize_mem > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -977,7 +986,7 @@ schedd_scalability() {
       go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -991,35 +1000,36 @@ schedd_scalability_rs() {
   driver_vm=4
   qps_per_machine=450
   dur="10s"
-  for n_vm in 1 2 3 4 ; do
-#    for rps in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400 2600 2800 3000 3200 3400 3600 ; do
-    rps=$((n_vm * $qps_per_machine))
-    run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
-    echo "========== Running $run =========="
-    perf_dir=$OUT_DIR/$run
-    # Avoid doing duplicate work.
-    if ! should_skip $perf_dir false ; then
-      continue
-    fi
-    stop_k8s_cluster $KVPC
-    cmd="
-      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
-      go clean -testcache; \
-      go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
-    "
-    # Start driver VM asynchronously.
-    run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true false
-    # Wait for test to terminate.
-    wait
-    end_benchmark $vpc $perf_dir
-    # Copy log files to perf dir.
-    cp /tmp/*.out $perf_dir
-#    done
+#  for n_vm in 1 2 3 4 ; do
+  for n_vm in 4 ; do
+    for rps in 2000 2400 2800 3200 3600 4000 4400 4800 5200 5600 6000 6400 6800 7200 7600 8000 8400 8800 9200 9600 10000 10400 10800 11200 11600 12000 ; do
+    #rps=$((n_vm * $qps_per_machine))
+      run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
+      echo "========== Running $run =========="
+      perf_dir=$OUT_DIR/$run
+      # Avoid doing duplicate work.
+      if ! should_skip $perf_dir false ; then
+        continue
+      fi
+      stop_k8s_cluster $KVPC
+      cmd="
+        export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+        go clean -testcache; \
+        go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
+      "
+      # Start driver VM asynchronously.
+      run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
+      # Wait for test to terminate.
+      wait
+      end_benchmark $vpc $perf_dir
+      # Copy log files to perf dir.
+      cp /tmp/*.out $perf_dir
+    done
   done
 }
 
 #mr_overlap() {
-#  mrapp=mr-wc-wiki4G.yml
+#  mrapp=mr-wc-wiki4G-bench.yml
 #  n_vm=16
 #  run=${FUNCNAME[0]}
 #  echo "========== Running $run =========="
@@ -1217,7 +1227,8 @@ graph_realm_balance_be_img() {
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
   nrealm=4
-  $GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32 --prefix "imgresize-"
+  ncores=8
+  $GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore $ncores --prefix "imgresize-"
 }
 
 graph_k8s_balance_be() {
@@ -1256,6 +1267,13 @@ graph_img_resize() {
   $GRAPH_SCRIPTS_DIR/imgresize-util.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --units "CPU Utilization" --title "Image Resizing CPU Utilization" --total_ncore 8 # --xmin 200000 --xmax 400000
 }
 
+graph_schedd_scalability_rs() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/schedd-scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf
+}
+
 #graph_mr_overlap() {
 #  fname=${FUNCNAME[0]}
 #  graph="${fname##graph_}"
@@ -1292,12 +1310,13 @@ echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
 #schedd_scalability_rs
+#realm_balance_be_img
 #schedd_scalability
 
 #img_resize
 
-realm_balance_multi_img
-realm_balance_be_img
+#realm_balance_multi_img
+#mr_vs_corral
 
 #realm_balance_be
 #realm_balance_multi
@@ -1320,15 +1339,17 @@ realm_balance_be_img
 #mr_replicated_named
 #realm_burst
 #kv_vs_cached
-#mr_vs_corral
 #rpcbench_tail_multi
 # XXX mr_scalability
 #mr_k8s
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
+graph_schedd_scalability_rs
 graph_realm_balance_be_img
-graph_realm_balance_multi_img
+
+#graph_mr_vs_corral
+#graph_realm_balance_multi_img
 
 #graph_realm_balance_be
 #graph_realm_balance_multi
@@ -1344,7 +1365,6 @@ graph_realm_balance_multi_img
 #graph_k8s_balance
 #graph_realm_balance
 #graph_mr_replicated_named
-#graph_mr_vs_corral
 # XXX graph_mr_aggregate_tpt
 # XXX graph_mr_scalability
 #graph_k8s_mr_aggregate_tpt

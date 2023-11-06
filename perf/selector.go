@@ -86,12 +86,12 @@ const (
 
 // microbenchmarks
 const (
-	WRITER         Tselector = "writer"
-	BUFWRITER                = "bufwriter"
-	ABUFWRITER               = "abufwriter"
-	READER                   = "reader"
-	BUFREADER                = "bufreader"
-	ABUFREADER               = "abufreader"
+	WRITER         Tselector = "WRITER"
+	BUFWRITER                = "BUFWRITER"
+	ABUFWRITER               = "ABUFWRITER"
+	READER                   = "READER"
+	BUFREADER                = "BUFREADER"
+	ABUFREADER               = "ABUFREADER"
 	RPC_BENCH_SRV            = "RPC_BENCH_SRV"
 	RPC_BENCH_CLNT           = "RPC_BENCH_CLNT"
 )

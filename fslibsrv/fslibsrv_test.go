@@ -29,13 +29,13 @@ func init() {
 }
 
 const (
-	KBYTE = 1 << 10
-	NRUNS = 3
-	// SYNCFILESZ = 100 * KBYTE
-	SYNCFILESZ = WRITESZ
+	KBYTE      = 1 << 10
+	NRUNS      = 3
+	SYNCFILESZ = 500 * KBYTE
+	// SYNCFILESZ = WRITESZ
 	// FILESZ     = 100 * sp.MBYTE
 	FILESZ  = SYNCFILESZ
-	WRITESZ = 4096
+	WRITESZ = sp.BUFSZ
 )
 
 func measure(p *perf.Perf, msg string, f func() sp.Tlength) sp.Tlength {
@@ -229,51 +229,87 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 }
 
 func TestReadFilePerfSingle(t *testing.T) {
+	const (
+		NTRIAL = 1000
+	)
+
+	var sz sp.Tlength
+	var err error
+
 	ts := test.NewTstatePath(t, pathname)
 	fn := gopath.Join(pathname, "f")
 	buf := test.NewBuf(WRITESZ)
+
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
-	sz := newFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
+	sz = newFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
+
 	p1, r := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
 	assert.Nil(t, r)
-	defer p1.Done()
 	measure(p1, "reader", func() sp.Tlength {
-		r, err := ts.OpenReader(fn)
-		assert.Nil(t, err)
-		n, err := test.Reader(t, r, buf, sz)
-		assert.Nil(t, err)
-		r.Close()
+		n := sp.Tlength(0)
+		for i := 0; i < NTRIAL; i++ {
+			start := time.Now()
+			r, err := ts.OpenReader(fn)
+			db.DPrintf(db.TEST, "Time to open reader: %v", time.Since(start))
+			assert.Nil(t, err)
+			n2, err := test.Reader(t, r, buf, sz)
+			assert.Nil(t, err)
+			n += n2
+			r.Close()
+		}
 		return n
 	})
-	err := ts.Remove(fn)
-	assert.Nil(t, err)
-	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
-	assert.Nil(t, err)
-	defer p2.Done()
-	sz = newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
-	measure(p2, "bufreader", func() sp.Tlength {
-		r, err := ts.OpenReader(fn)
-		assert.Nil(t, err)
-		br := bufio.NewReaderSize(r, sp.BUFSZ)
-		n, err := test.Reader(t, br, buf, sz)
-		assert.Nil(t, err)
-		r.Close()
-		return n
-	})
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
-	assert.Nil(t, err)
-	defer p3.Done()
-	measure(p3, "readahead", func() sp.Tlength {
-		r, err := ts.OpenAsyncReader(fn, 0)
-		assert.Nil(t, err)
-		n, err := test.Reader(t, r, buf, sz)
-		assert.Nil(t, err)
-		r.Close()
-		return n
-	})
+	p1.Done()
+
 	err = ts.Remove(fn)
 	assert.Nil(t, err)
+	sz = newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+
+	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
+	assert.Nil(t, err)
+	measure(p2, "bufreader", func() sp.Tlength {
+		n := sp.Tlength(0)
+		for i := 0; i < NTRIAL; i++ {
+			start := time.Now()
+			r, err := ts.OpenReader(fn)
+			assert.Nil(t, err)
+			br := bufio.NewReaderSize(r, sp.BUFSZ)
+			db.DPrintf(db.TEST, "Time to open bufio reader: %v", time.Since(start))
+			n2, err := test.Reader(t, br, buf, sz)
+			assert.Nil(t, err)
+			n += n2
+			r.Close()
+		}
+		return n
+	})
+	p2.Done()
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err)
+	sz = newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+
+	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
+	assert.Nil(t, err)
+	measure(p3, "readahead", func() sp.Tlength {
+		n := sp.Tlength(0)
+		for i := 0; i < NTRIAL; i++ {
+			start := time.Now()
+			r, err := ts.OpenAsyncReader(fn, 0)
+			assert.Nil(t, err)
+			db.DPrintf(db.TEST, "Time to open async reader: %v", time.Since(start))
+			n2, err := test.Reader(t, r, buf, sz)
+			assert.Nil(t, err)
+			n += n2
+			r.Close()
+		}
+		return n
+	})
+	p3.Done()
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err)
+
 	ts.Shutdown()
 }
 

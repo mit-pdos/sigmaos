@@ -105,7 +105,7 @@ func NewPerf(pcfg *proc.ProcEnv, s Tselector) (*Perf, error) {
 // each realm).
 func NewPerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 	initLabels(pcfg)
-	db.DPrintf(db.PERF, "Perf tracking labels %v", labels)
+	db.DPrintf(db.PERF, "Perf tracking selector %v labels %v", s, labels)
 	p := &Perf{}
 	p.selector = s
 	p.utilChan = make(chan bool, 1)
@@ -204,6 +204,7 @@ func (p *Perf) SumTicks() float64 {
 func (p *Perf) Done() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
 	if p.done == 0 {
 		atomic.StoreUint32(&p.done, 1)
 		p.teardownPprof()
@@ -459,6 +460,8 @@ func (p *Perf) setupPprofBlock(fpath string) {
 // Caller holds lock.
 func (p *Perf) teardownPprof() {
 	if p.pprof {
+		db.DPrintf(db.PERF, "Tear down pprof perf tracker")
+		defer db.DPrintf(db.PERF, "Done Tear down pprof perf tracker")
 		// Avoid double-closing
 		p.pprof = false
 		pprof.StopCPUProfile()

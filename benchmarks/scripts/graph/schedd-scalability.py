@@ -66,11 +66,14 @@ def graph_stats(stats_summary, out):
   x = [ n_vm[0] for (n_vm, st) in stats_summary ] 
   p50 = [ st["p50"] for (n_vm, st) in stats_summary ]
   p99 = [ st["p99"] for (n_vm, st) in stats_summary ]
-  plt.plot(x, p50, label="P50 Start latency")
-  plt.plot(x, p99, label="P99 Start latency")
-  plt.xlabel("Number of machines")
-  plt.ylabel("Proc Start Latency (ms)")
-  plt.legend()
+  fig, ax = plt.subplots(figsize=(6.4, 2.4))
+  plt.plot(x, p50, label="P50 latency")
+  plt.plot(x, p99, label="P99 latency")
+  plt.xticks(x)
+  ax.set_xlabel("Number of machines")
+  ax.set_ylabel("Proc Start Latency (ms)")
+  ax.set_ylim(bottom=0)
+  ax.legend()
   plt.savefig(out)
 
 def print_stats_summary(stats_summary):

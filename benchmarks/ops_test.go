@@ -132,6 +132,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	db.DPrintf(db.BENCH, "Start MR job")
 	ji.StartMRJob()
 	ji.Wait()
+	db.DPrintf(db.BENCH, "Done MR job")
 	dur := time.Since(start)
 	ji.WaitJobExit()
 	err := mr.PrintMRStats(ts.FsLib, ji.jobname)

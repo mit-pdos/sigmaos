@@ -1297,7 +1297,11 @@ func TestEphemeralFileOK(t *testing.T) {
 func TestEphemeralFileExpire(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 
-	fn := gopath.Join(pathname, "foobar")
+	dn := gopath.Join(pathname, "dir")
+	err := ts.MkDir(dn, 0777)
+	assert.Nil(ts.T, err, "dir")
+
+	fn := gopath.Join(dn, "foobar")
 
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err)
@@ -1305,10 +1309,25 @@ func TestEphemeralFileExpire(t *testing.T) {
 	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err)
 
+	sts, _, err := ts.ReadDir(dn)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 1, len(sts))
+
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 
 	_, err = ts.Stat(fn)
 	assert.NotNil(t, err)
+
+	sts, _, err = ts.ReadDir(dn)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 0, len(sts))
+
+	db.DPrintf(db.TEST, "names %v", sp.Names(sts))
+
+	err = ts.RmDir(dn)
+	assert.Nil(t, err, "RmDir: %v", err)
 
 	ts.Shutdown()
 }

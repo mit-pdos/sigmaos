@@ -133,8 +133,8 @@ func (pathc *PathClnt) Disconnect(pn string) error {
 	return nil
 }
 
-func (pathc *PathClnt) NewReader(fid sp.Tfid, path string, chunksz sp.Tsize) *reader.Reader {
-	return reader.NewReader(pathc.FidClnt, path, fid, chunksz)
+func (pathc *PathClnt) NewReader(fid sp.Tfid, path string) *reader.Reader {
+	return reader.NewReader(pathc.FidClnt, path, fid)
 }
 
 func (pathc *PathClnt) NewWriter(fid sp.Tfid) *writer.Writer {
@@ -150,7 +150,7 @@ func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	rdr := reader.NewReader(pathc.FidClnt, "", fid, pathc.chunkSz)
+	rdr := reader.NewReader(pathc.FidClnt, "", fid)
 	b, err := rdr.GetDataErr()
 	if err != nil {
 		return nil, err

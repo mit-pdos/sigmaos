@@ -49,7 +49,7 @@ func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return fl.NewReader(fd, path, fl.GetChunkSz()), nil
+	return fl.NewReader(fd, path), nil
 }
 
 type Rdr struct {
@@ -114,7 +114,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			break
 		}
 	}
-	rdr := fl.NewReader(fd, path, fl.GetChunkSz())
+	rdr := fl.NewReader(fd, path)
 	return rdr, nil
 
 }

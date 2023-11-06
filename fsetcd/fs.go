@@ -88,30 +88,38 @@ func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, 
 		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", dir)
 		return dir, v, true, nil
 	}
-	dir, v, err := fs.readDirEtcd(p, stat)
+	dir, v, c, err := fs.readDirEtcd(p, stat)
 	if err != nil {
 		return nil, v, false, err
 	}
-	fs.dc.Insert(p, dir, v, stat)
+	if c {
+		db.DPrintf(db.FSETCD0, "fsetcd.readDir not cacheable %v %v\n", p, dir)
+		fs.dc.Insert(p, dir, v, stat)
+	}
 	return dir, v, false, nil
 }
 
 // If stat is true, stat every entry in the directory.
-func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, *serr.Err) {
+func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, *serr.Err) {
 	db.DPrintf(db.FSETCD, "readDirEtcd %v\n", p)
 	nf, v, err := fs.GetFile(p)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, false, err
 	}
 	dir, err := UnmarshalDir(nf.Data)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, false, err
 	}
 	dents := sorteddir.NewSortedDir()
+	cacheable := true
+	update := false
 	for _, e := range dir.Ents {
 		if e.Name == "." {
 			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
 		} else {
+			if e.Tperm().IsEphemeral() {
+				cacheable = false
+			}
 			if e.Tperm().IsEphemeral() || stat {
 				// if file is emphemeral, etcd may have expired it, so
 				// check if it still exists; if not, don't return the
@@ -120,6 +128,7 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, *s
 				nf, _, err := fs.GetFile(e.Tpath())
 				if err != nil {
 					db.DPrintf(db.FSETCD, "readDir: GetFile %v %v\n", e.Name, err)
+					update = true
 					continue
 				}
 				dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
@@ -128,7 +137,36 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, *s
 			}
 		}
 	}
-	return &DirInfo{dents, nf.Tperm()}, v, nil
+	di := &DirInfo{dents, nf.Tperm()}
+	if update {
+		if err := fs.updateDir(p, di, v); err != nil {
+			return nil, 0, false, serr.NewErrError(err)
+		}
+	}
+	return di, v, cacheable, nil
+}
+
+func (fs *FsEtcd) updateDir(dp sp.Tpath, dir *DirInfo, v sp.TQversion) *serr.Err {
+	d1, r := marshalDirInfo(dir)
+	if r != nil {
+		return r
+	}
+	// Update directory if new file/dir doesn't exist and directory
+	// hasn't changed.
+	cmp := []clientv3.Cmp{
+		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dp)), "=", int64(v))}
+	ops := []clientv3.Op{
+		clientv3.OpPut(fs.path2key(fs.realm, dp), string(d1))}
+	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+	if err != nil {
+		return serr.NewErrError(err)
+	}
+	db.DPrintf(db.FSETCD0, "updateDir %v %v\n", dp, resp)
+	if !resp.Succeeded {
+		return serr.NewErr(serr.TErrStale, dp)
+	}
+	return nil
 }
 
 func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, nf *EtcdFile) *serr.Err {

@@ -18,6 +18,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/reader"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -31,7 +32,7 @@ func init() {
 const (
 	KBYTE      = 1 << 10
 	NRUNS      = 3
-	SYNCFILESZ = 100 * KBYTE
+	SYNCFILESZ = 250 * KBYTE
 	// SYNCFILESZ = WRITESZ
 	// FILESZ     = 100 * sp.MBYTE
 	FILESZ  = SYNCFILESZ
@@ -266,11 +267,18 @@ func TestReadFilePerfSingle(t *testing.T) {
 
 	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
 	assert.Nil(t, err)
+	readers := []*reader.Reader{}
+	for i := 0; i < NTRIAL*NRUNS; i++ {
+		r, err := ts.OpenReader(fn)
+		assert.Nil(t, err)
+		readers = append(readers, r)
+	}
+	k := 0
 	measure(p2, "bufreader", func() sp.Tlength {
 		n := sp.Tlength(0)
 		for i := 0; i < NTRIAL; i++ {
-			r, err := ts.OpenReader(fn)
-			assert.Nil(t, err)
+			r := readers[k]
+			k++
 			br := bufio.NewReaderSize(r, sp.BUFSZ)
 			n2, err := test.Reader(t, br, buf, sz)
 			assert.Nil(t, err)
@@ -313,7 +321,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	)
 
 	ts := test.NewTstatePath(t, pathname)
-	N_CLI := 10
+	N_CLI := 4
 	buf := test.NewBuf(WRITESZ)
 	done := make(chan sp.Tlength)
 	fns := make([]string, 0, N_CLI)

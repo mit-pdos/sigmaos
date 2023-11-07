@@ -506,16 +506,6 @@ func TestRmDirPerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func dump(t *testing.T) {
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, test.EtcdIP, "", "", false)
-	fs, err := fsetcd.NewFsEtcd(pcfg.GetRealm(), pcfg.GetEtcdIP())
-	assert.Nil(t, err)
-	nd, err := fs.ReadDir(fsetcd.ROOT)
-	assert.Nil(t, err)
-	err = fs.Dump(0, nd, path.Path{}, fsetcd.ROOT)
-	assert.Nil(t, err)
-}
-
 func TestLookupDepthPerf(t *testing.T) {
 	const N = 10
 	const NFILE = 10

@@ -101,5 +101,5 @@ if __name__ == "__main__":
   raw_stats = [ (n_vm, scrape_dir_stats(measurement_dir=args.measurement_dir, file_suffix=file_suffix, n_vm=n_vm, regex=regex, pos=pos)) for n_vm in n_vms ]
   stats_summary = [ stats_summary(st) for st in raw_stats ]
 
-#  print_stats_summary(stats_summary)
+  print_stats_summary(stats_summary)
   graph_stats(stats_summary=stats_summary, out=args.out)

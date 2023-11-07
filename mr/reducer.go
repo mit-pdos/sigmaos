@@ -1,7 +1,6 @@
 package mr
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -19,13 +18,13 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
-	"sigmaos/writer"
 )
 
 type Reducer struct {
@@ -36,9 +35,8 @@ type Reducer struct {
 	outlink      string
 	nmaptask     int
 	tmp          string
-	bwrt         *bufio.Writer
 	pwrt         *perf.PerfWriter
-	wrt          *writer.Writer
+	wrt          *fslib.Wrt
 	perf         *perf.Perf
 }
 
@@ -68,14 +66,13 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	r.nmaptask = m
 
 	sc.MkDir(path.Dir(r.tmp), 0777)
-	w, err := r.CreateWriter(r.tmp, 0777, sp.OWRITE)
+	w, err := r.CreateAsyncWriter(r.tmp, 0777, sp.OWRITE)
 	if err != nil {
 		db.DFatalf("Error CreateWriter [%v] %v", r.tmp, err)
 		return nil, err
 	}
 	r.wrt = w
-	r.bwrt = bufio.NewWriterSize(w, sp.BUFSZ)
-	r.pwrt = perf.NewPerfWriter(r.bwrt, r.perf)
+	r.pwrt = perf.NewPerfWriter(r.wrt, r.perf)
 
 	if err := r.Started(); err != nil {
 		return nil, fmt.Errorf("NewReducer couldn't start %v", args)
@@ -219,9 +216,6 @@ func (r *Reducer) doReduce() *proc.Status {
 		}
 	}
 
-	if err := r.bwrt.Flush(); err != nil {
-		return proc.NewStatusErr(fmt.Sprintf("%v: flush %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
-	}
 	if err := r.wrt.Close(); err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
 	}

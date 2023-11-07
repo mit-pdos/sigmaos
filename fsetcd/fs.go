@@ -118,6 +118,7 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bo
 			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
 		} else {
 			if e.Tperm().IsEphemeral() {
+				db.DPrintf(db.FSETCD0, "readDir: %v ephemeral; not cacheable %v\n", e.Name, e.Tperm())
 				cacheable = false
 			}
 			if e.Tperm().IsEphemeral() || stat {

@@ -92,7 +92,7 @@ if ! [ -z "$TAG" ]; then
   ./update-repo.sh --vpc $VPC --parallel --branch $BRANCH
 fi
 
-vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
+vm_ncores=4 #$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
 
 for vm in $vms; do
   echo "starting SigmaOS on $vm!"
@@ -102,6 +102,7 @@ for vm in $vms; do
   KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
+  export SIGMAPERF="$SIGMAPERF"
   export SIGMADEBUG="$SIGMADEBUG"
   if [ $NCORES -eq 2 ]; then
     ./sigmaos/set-cores.sh --set 0 --start 2 --end $vm_ncores > /dev/null

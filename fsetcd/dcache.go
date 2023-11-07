@@ -52,5 +52,6 @@ func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 		de.v += 1
 		return true
 	}
+	db.DPrintf(db.FSETCD, "Update dcache no entry %v %v", d, dir)
 	return false
 }

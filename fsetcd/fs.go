@@ -84,7 +84,7 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 }
 
 func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, *serr.Err) {
-	if dir, v, st, ok := fs.dc.Lookup(p); ok && (!stat || st) {
+	if dir, v, st, ok := fs.dc.lookup(p); ok && (!stat || st) {
 		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", dir)
 		return dir, v, true, nil
 	}
@@ -94,7 +94,7 @@ func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, 
 	}
 	if c {
 		db.DPrintf(db.FSETCD0, "fsetcd.readDir not cacheable %v %v\n", p, dir)
-		fs.dc.Insert(p, dir, v, stat)
+		fs.dc.insert(p, dir, v, stat)
 	}
 	return dir, v, false, nil
 }

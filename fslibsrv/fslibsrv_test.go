@@ -31,10 +31,10 @@ func init() {
 const (
 	KBYTE      = 1 << 10
 	NRUNS      = 3
-	SYNCFILESZ = 250 * KBYTE
+	SYNCFILESZ = 100 * KBYTE
+	//	SYNCFILESZ = 250 * KBYTE
 	// SYNCFILESZ = WRITESZ
-	// FILESZ     = 100 * sp.MBYTE
-	FILESZ  = SYNCFILESZ
+	FILESZ  = 300 * sp.MBYTE
 	WRITESZ = 4096
 )
 

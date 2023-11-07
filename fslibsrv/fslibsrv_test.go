@@ -13,9 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
 	"sigmaos/fslib"
-	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -520,7 +518,7 @@ func TestLookupDepthPerf(t *testing.T) {
 			n := newDir(t, ts.FsLib, dir, NFILE)
 			assert.Equal(t, NFILE, n)
 		}
-		//dump(t)
+		//test.Dump(t)
 		label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
 		measuredir(label, 1000, func() int {
 			_, err := ts.Stat(dir)

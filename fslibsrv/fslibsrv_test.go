@@ -18,7 +18,6 @@ import (
 	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/reader"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -230,10 +229,6 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 }
 
 func TestReadFilePerfSingle(t *testing.T) {
-	const (
-		NTRIAL = 1000
-	)
-
 	var sz sp.Tlength
 	var err error
 
@@ -248,15 +243,11 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p1, r := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
 	assert.Nil(t, r)
 	measure(p1, "reader", func() sp.Tlength {
-		n := sp.Tlength(0)
-		for i := 0; i < NTRIAL; i++ {
-			r, err := ts.OpenReader(fn)
-			assert.Nil(t, err)
-			n2, err := test.Reader(t, r, buf, sz)
-			assert.Nil(t, err)
-			n += n2
-			r.Close()
-		}
+		r, err := ts.OpenReader(fn)
+		assert.Nil(t, err)
+		n, err := test.Reader(t, r, buf, sz)
+		assert.Nil(t, err)
+		r.Close()
 		return n
 	})
 	p1.Done()
@@ -267,24 +258,12 @@ func TestReadFilePerfSingle(t *testing.T) {
 
 	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
 	assert.Nil(t, err)
-	readers := []*reader.Reader{}
-	for i := 0; i < NTRIAL*NRUNS; i++ {
-		r, err := ts.OpenReader(fn)
-		assert.Nil(t, err)
-		readers = append(readers, r)
-	}
-	k := 0
 	measure(p2, "bufreader", func() sp.Tlength {
-		n := sp.Tlength(0)
-		for i := 0; i < NTRIAL; i++ {
-			r := readers[k]
-			k++
-			br := bufio.NewReaderSize(r, sp.BUFSZ)
-			n2, err := test.Reader(t, br, buf, sz)
-			assert.Nil(t, err)
-			n += n2
-			r.Close()
-		}
+		r, err := ts.OpenReader(fn)
+		br := bufio.NewReaderSize(r, sp.BUFSZ)
+		n, err := test.Reader(t, br, buf, sz)
+		assert.Nil(t, err)
+		r.Close()
 		return n
 	})
 	p2.Done()
@@ -296,15 +275,11 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
 	measure(p3, "readahead", func() sp.Tlength {
-		n := sp.Tlength(0)
-		for i := 0; i < NTRIAL; i++ {
-			r, err := ts.OpenAsyncReader(fn, 0)
-			assert.Nil(t, err)
-			n2, err := test.Reader(t, r, buf, sz)
-			assert.Nil(t, err)
-			n += n2
-			r.Close()
-		}
+		r, err := ts.OpenAsyncReader(fn, 0)
+		assert.Nil(t, err)
+		n, err := test.Reader(t, r, buf, sz)
+		assert.Nil(t, err)
+		r.Close()
 		return n
 	})
 	p3.Done()

@@ -58,11 +58,11 @@ func (fs *FsEtcd) isEmpty(di DirEntInfo) (bool, *serr.Err) {
 func (fs *FsEtcd) NewRootDir() *serr.Err {
 	nf, r := NewEtcdFileDir(sp.DMDIR, ROOT, sp.NoClntId, sp.NoLeaseId)
 	if r != nil {
-		db.DPrintf(db.FSETCD_ERR, "NewEtcdFileDir err %v", r)
+		db.DPrintf(db.FSETCD, "NewEtcdFileDir err %v", r)
 		return serr.NewErrError(r)
 	}
 	if err := fs.PutFile(ROOT, nf, sp.NoFence()); err != nil {
-		db.DPrintf(db.FSETCD_ERR, "NewRootDir PutFile err %v", err)
+		db.DPrintf(db.FSETCD, "NewRootDir PutFile err %v", err)
 		return err
 	}
 	db.DPrintf(db.FSETCD, "newRoot: PutFile %v\n", nf)
@@ -100,10 +100,15 @@ func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f
 	db.DPrintf(db.FSETCD, "Create %q dir %v (%v) nf %v\n", name, dir, d, nf)
 	if err := fs.create(d, dir, v, path, nf); err == nil {
 		di := DirEntInfo{Nf: nf, Perm: nf.Tperm(), Path: path}
-		fs.dc.update(d, dir)
+		if nf.Tperm().IsEphemeral() {
+			// don't cache directory anymore
+			fs.dc.remove(d)
+		} else {
+			fs.dc.update(d, dir)
+		}
 		return di, nil
 	} else {
-		db.DPrintf(db.FSETCD_ERR, "Create %q dir %v nf %v err %v", name, dir, nf, err)
+		db.DPrintf(db.FSETCD, "Create %q dir %v nf %v err %v", name, dir, nf, err)
 		dir.Ents.Delete(name)
 		return DirEntInfo{}, err
 	}
@@ -223,7 +228,12 @@ func (fs *FsEtcd) Renameat(df sp.Tpath, from string, dt sp.Tpath, to string, f s
 	dirt.Ents.Insert(to, difrom)
 	if err := fs.renameAt(df, dirf, vf, dt, dirt, vt, topath); err == nil {
 		fs.dc.update(df, dirf)
-		fs.dc.update(dt, dirt)
+		if difrom.Perm.IsEphemeral() {
+			// don't cache directory anymore
+			fs.dc.remove(dt)
+		} else {
+			fs.dc.update(dt, dirt)
+		}
 		return nil
 	} else {
 		dirf.Ents.Insert(from, difrom)

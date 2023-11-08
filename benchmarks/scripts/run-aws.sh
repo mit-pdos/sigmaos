@@ -411,17 +411,17 @@ hotel_tail_multi() {
   k8saddr="x.x.x.x"
 #  rps="250,500,1000,2000,1000"
 #  dur="10s,20s,20s,20s,10s"
-  rps="250,500,1000,1500,1000"
-  dur="30s,30s,30s,30s,30s"
+  rps="250,500,1000,1500,2000,2500,3000,3500,4000,4500,5000"
+  dur="10s,10s,10s,10s,10s,10s,10s,10s,10s,10s,10s"
 #  rps="251"
 #  dur="10s"
-#  sys="Sigmaos"
-  sys="K8s"
+  sys="Sigmaos"
+#  sys="K8s"
   cache_type="cached"
   scale_cache="false"
   cache_type2="cached"
 #  cache_type="kvd"
-  n_clnt_vms=3
+  n_clnt_vms=4
   driver_vm=8
   clnt_vma=($(echo "$driver_vm 9 10 11 12 13 14"))
   clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
@@ -516,8 +516,9 @@ realm_balance_be() {
 #  hotel_dur="20s,20s,20s"
   mrapp=mr-grep-wiki20G-bench.yml
   sl="40s"
+  mem_req=3000
   n_vm=8
-  n_realm=4
+  n_realm=3
   driver_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -525,7 +526,7 @@ realm_balance_be() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --nrealm $n_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --nrealm $n_realm --mr_mem_req $mem_req > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -997,34 +998,34 @@ schedd_scalability() {
 
 schedd_scalability_rs() {
 #  n_vm=4
-  driver_vm=4
-  qps_per_machine=450
+  driver_vm=12
+  qps_per_machine=1100
   dur="10s"
-#  for n_vm in 1 2 3 4 ; do
-  for n_vm in 4 ; do
-    for rps in 2000 2400 2800 3200 3600 4000 4400 4800 5200 5600 6000 6400 6800 7200 7600 8000 8400 8800 9200 9600 10000 10400 10800 11200 11600 12000 ; do
-    #rps=$((n_vm * $qps_per_machine))
-      run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
-      echo "========== Running $run =========="
-      perf_dir=$OUT_DIR/$run
-      # Avoid doing duplicate work.
-      if ! should_skip $perf_dir false ; then
-        continue
-      fi
-      stop_k8s_cluster $KVPC
-      cmd="
-        export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
-        go clean -testcache; \
-        go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
-      "
-      # Start driver VM asynchronously.
-      run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
-      # Wait for test to terminate.
-      wait
-      end_benchmark $vpc $perf_dir
-      # Copy log files to perf dir.
-      cp /tmp/*.out $perf_dir
-    done
+  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
+#  for n_vm in 4 ; do
+#    for rps in 2000 2400 2800 3200 3600 4000 4400 4800 5200 5600 6000 6400 6800 7200 7600 8000 8400 8800 9200 9600 10000 10400 10800 11200 11600 12000 ; do
+    rps=$((n_vm * $qps_per_machine))
+    run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      continue
+    fi
+    stop_k8s_cluster $KVPC
+    cmd="
+      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+      go clean -testcache; \
+      go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
+    "
+    # Start driver VM asynchronously.
+    run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
+    # Wait for test to terminate.
+    wait
+    end_benchmark $vpc $perf_dir
+    # Copy log files to perf dir.
+    cp /tmp/*.out $perf_dir
+#   done
   done
 }
 
@@ -1218,7 +1219,7 @@ graph_realm_balance_be() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  nrealm=4
+  nrealm=3
   $GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore 32 --prefix "mr-"
 }
 
@@ -1309,6 +1310,9 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
+hotel_tail_multi
+#realm_balance_be
+#mr_vs_corral
 #schedd_scalability_rs
 #realm_balance_be_img
 #schedd_scalability
@@ -1316,19 +1320,15 @@ echo "Running benchmarks with version: $VERSION"
 #img_resize
 
 #realm_balance_multi_img
-#mr_vs_corral
 
-#realm_balance_be
 #realm_balance_multi
 #mr_scalability
 #img_resize
 
 #k8s_img_resize
-#hotel_tail_multi
 #k8s_balance_multi
 #k8s_balance_be
 
-#hotel_tail_multi
 #k8s_balance_multi
 # XXX Try above next
 #k8s_balance
@@ -1345,13 +1345,13 @@ echo "Running benchmarks with version: $VERSION"
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_schedd_scalability_rs
-graph_realm_balance_be_img
+#graph_realm_balance_be
+#graph_realm_balance_be_img
+#graph_schedd_scalability_rs
 
 #graph_mr_vs_corral
 #graph_realm_balance_multi_img
 
-#graph_realm_balance_be
 #graph_realm_balance_multi
 #graph_img_resize
 

@@ -92,7 +92,7 @@ if __name__ == "__main__":
   n_vms = sorted([ (int(f[:f.index("-vm")]), f) for f in os.listdir(args.measurement_dir) ], key=lambda x: (x[0], -1 * int(x[1][x[1].rindex("-"):])) )
 
   # Truncate beyond 4 machines
-  n_vms = n_vms[:4]
+  n_vms = n_vms[:10]
 
   regex = ".*E2e spawn latency until main"
   file_suffix = ".out"

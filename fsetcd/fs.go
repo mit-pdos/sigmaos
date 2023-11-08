@@ -24,10 +24,10 @@ func (fs *FsEtcd) path2key(realm sp.Trealm, path sp.Tpath) string {
 func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 	db.DPrintf(db.FSETCD, "getFile %v\n", key)
 	resp, err := fs.Clnt().Get(context.TODO(), key)
+	db.DPrintf(db.FSETCD, "getFile %v %v err %v\n", key, resp, err)
 	if err != nil {
 		return nil, 0, serr.NewErrError(err)
 	}
-	db.DPrintf(db.FSETCD, "getFile %v %v\n", key, resp)
 	if len(resp.Kvs) != 1 {
 		return nil, 0, serr.NewErr(serr.TErrNotfound, key2path(key))
 	}
@@ -65,13 +65,10 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 			clientv3.OpGet(f.Prefix(), opts...),
 		}
 		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
+		db.DPrintf(db.FSETCD, "PutFile %v %v %v %v err %v\n", p, nf, f, resp, err)
 		if err != nil {
 			return serr.NewErrError(err)
 		}
-		if f.PathName != "" {
-			db.DPrintf(db.ALWAYS, "PutFile %v %v %v %v\n", p, nf, f, resp)
-		}
-		db.DPrintf(db.FSETCD, "PutFile %v %v %v %v\n", p, nf, f, resp)
 		if !resp.Succeeded {
 			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
 				return serr.NewErr(serr.TErrStale, f)
@@ -84,7 +81,7 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 }
 
 func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, *serr.Err) {
-	if dir, v, st, ok := fs.dc.Lookup(p); ok && (!stat || st) {
+	if dir, v, st, ok := fs.dc.lookup(p); ok && (!stat || st) {
 		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", dir)
 		return dir, v, true, nil
 	}
@@ -93,13 +90,14 @@ func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, 
 		return nil, v, false, err
 	}
 	if c {
-		db.DPrintf(db.FSETCD0, "fsetcd.readDir not cacheable %v %v\n", p, dir)
-		fs.dc.Insert(p, dir, v, stat)
+		db.DPrintf(db.FSETCD, "fsetcd.readDir cacheable %v %v\n", p, dir)
+		fs.dc.insert(p, dir, v, stat)
 	}
 	return dir, v, false, nil
 }
 
-// If stat is true, stat every entry in the directory.
+// If stat is true, stat every entry in the directory.  Filters out
+// experid ephemeral files.
 func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, *serr.Err) {
 	db.DPrintf(db.FSETCD, "readDirEtcd %v\n", p)
 	nf, v, err := fs.GetFile(p)
@@ -117,19 +115,19 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bo
 		if e.Name == "." {
 			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
 		} else {
-			if e.Tperm().IsEphemeral() {
-				cacheable = false
-			}
 			if e.Tperm().IsEphemeral() || stat {
 				// if file is emphemeral, etcd may have expired it, so
 				// check if it still exists; if not, don't return the
 				// entry.
-				db.DPrintf(db.FSETCD, "readDir: check ephemeral %v %v\n", e.Name, err)
 				nf, _, err := fs.GetFile(e.Tpath())
 				if err != nil {
-					db.DPrintf(db.FSETCD, "readDir: GetFile %v %v\n", e.Name, err)
+					db.DPrintf(db.FSETCD, "readDir: expired %v err %v\n", e.Name, err)
 					update = true
 					continue
+				}
+				if e.Tperm().IsEphemeral() {
+					db.DPrintf(db.FSETCD, "readDir: %v ephemeral; not cacheable %v\n", e.Name, e.Tperm())
+					cacheable = false
 				}
 				dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
 			} else {
@@ -139,9 +137,11 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bo
 	}
 	di := &DirInfo{dents, nf.Tperm()}
 	if update {
+		// update directory because some ephemeral entries expired
 		if err := fs.updateDir(p, di, v); err != nil {
-			return nil, 0, false, serr.NewErrError(err)
+			return nil, 0, false, err
 		}
+		v = v + 1
 	}
 	return di, v, cacheable, nil
 }
@@ -151,18 +151,17 @@ func (fs *FsEtcd) updateDir(dp sp.Tpath, dir *DirInfo, v sp.TQversion) *serr.Err
 	if r != nil {
 		return r
 	}
-	// Update directory if new file/dir doesn't exist and directory
-	// hasn't changed.
+	// Update directory if directory hasn't changed.
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dp)), "=", int64(v))}
 	ops := []clientv3.Op{
 		clientv3.OpPut(fs.path2key(fs.realm, dp), string(d1))}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+	db.DPrintf(db.FSETCD, "updateDir %v %v %v %v err %v\n", dp, dir, v, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
-	db.DPrintf(db.FSETCD0, "updateDir %v %v\n", dp, resp)
 	if !resp.Succeeded {
 		return serr.NewErr(serr.TErrStale, dp)
 	}
@@ -189,10 +188,10 @@ func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, 
 		clientv3.OpPut(fs.path2key(fs.realm, p), string(b), opts...),
 		clientv3.OpPut(fs.path2key(fs.realm, dp), string(d1))}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+	db.DPrintf(db.FSETCD, "Create %v %v %v with lease %x err %v\n", p, dir, resp, nf.LeaseId, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
-	db.DPrintf(db.FSETCD, "Create %v %v with lease %x\n", p, resp, nf.LeaseId)
 	if !resp.Succeeded {
 		return serr.NewErr(serr.TErrExists, p)
 	}
@@ -213,10 +212,10 @@ func (fs *FsEtcd) remove(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 		clientv3.OpPut(fs.path2key(fs.realm, d), string(d1))}
 	resp, err := fs.Clnt().Txn(context.TODO()).
 		If(cmp...).Then(ops...).Commit()
+	db.DPrintf(db.FSETCD, "Remove %v %v %v %v err %v\n", d, dir, del, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
-	db.DPrintf(db.FSETCD, "Remove %v %v\n", del, resp)
 	if !resp.Succeeded {
 		return serr.NewErr(serr.TErrNotfound, del)
 	}
@@ -246,11 +245,10 @@ func (fs *FsEtcd) rename(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 			clientv3.OpPut(fs.path2key(fs.realm, d), string(d1))}
 	}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+	db.DPrintf(db.FSETCD, "Rename %v %v %v err %v\n", d, dir, resp, err)
 	if err != nil {
-		db.DPrintf(db.FSETCD, "Rename error %v %v e %v\n", d, resp, err)
 		return serr.NewErrError(err)
 	}
-	db.DPrintf(db.FSETCD, "Rename %v %v\n", d, resp)
 	if !resp.Succeeded {
 		return serr.NewErr(serr.TErrNotfound, d)
 	}
@@ -293,10 +291,10 @@ func (fs *FsEtcd) renameAt(df sp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sp.Tp
 		}
 	}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+	db.DPrintf(db.FSETCD, "RenameAt %v %v err %v\n", del, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
-	db.DPrintf(db.FSETCD, "RenameAt %v %v\n", del, resp)
 	if !resp.Succeeded {
 		return serr.NewErr(serr.TErrNotfound, del)
 	}

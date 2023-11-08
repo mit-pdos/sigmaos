@@ -21,6 +21,8 @@ func TestBootNamed(t *testing.T) {
 
 	assert.True(t, fslib.Present(sts, named.InitRootDir), "initfs")
 
+	// test.Dump(t)
+
 	ts.Shutdown()
 }
 

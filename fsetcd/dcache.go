@@ -27,7 +27,7 @@ func newDcache() *Dcache {
 	return &Dcache{c: c}
 }
 
-func (dc *Dcache) Lookup(d sp.Tpath) (*DirInfo, sp.TQversion, bool, bool) {
+func (dc *Dcache) lookup(d sp.Tpath) (*DirInfo, sp.TQversion, bool, bool) {
 	de, ok := dc.c.Get(d)
 	if ok {
 		db.DPrintf(db.FSETCD, "Lookup dcache hit %v %v", d, de)
@@ -36,20 +36,29 @@ func (dc *Dcache) Lookup(d sp.Tpath) (*DirInfo, sp.TQversion, bool, bool) {
 	return nil, 0, false, false
 }
 
-func (dc *Dcache) Insert(d sp.Tpath, dir *DirInfo, v sp.TQversion, stat bool) {
+func (dc *Dcache) insert(d sp.Tpath, dir *DirInfo, v sp.TQversion, stat bool) {
 	db.DPrintf(db.FSETCD, "Insert dcache %v %v", d, dir)
 	if evict := dc.c.Add(d, &dcEntry{dir, v, stat}); evict {
 		db.DPrintf(db.FSETCD, "Eviction")
 	}
 }
 
-func (dc *Dcache) Update(d sp.Tpath, dir *DirInfo) {
+func (dc *Dcache) remove(d sp.Tpath) {
+	db.DPrintf(db.FSETCD, "remove dcache %v", d)
+	if present := dc.c.Remove(d); present {
+		db.DPrintf(db.FSETCD, "Removed")
+	}
+}
+
+// d might not be in the cache since it maybe uncacheable
+func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 	de, ok := dc.c.Get(d)
 	if ok {
 		db.DPrintf(db.FSETCD, "Update dcache %v %v %v", d, dir, de.v+1)
 		de.dir = dir
 		de.v += 1
-		return
+		return true
 	}
-	db.DFatalf("Update dcache: key %v isn't present", d)
+	db.DPrintf(db.FSETCD, "Update dcache no entry %v %v", d, dir)
+	return false
 }

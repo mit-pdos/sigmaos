@@ -118,6 +118,7 @@ func TestWaitExitSimpleSingleBE(t *testing.T) {
 	cleanSleeperResult(t, ts, a.GetPid())
 
 	ts.Shutdown()
+	// test.Dump(t)
 }
 
 func TestWaitExitSimpleSingleLC(t *testing.T) {

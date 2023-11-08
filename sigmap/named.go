@@ -6,10 +6,12 @@ const (
 	NAME       = "name"
 	NAMED      = NAME + "/"
 	NAMEDREL   = "named"
+	REALMREL   = "realm"
+	REALM      = NAMED + REALMREL + "/"
 	REALMDREL  = "realmd"
-	REALMD     = NAMED + REALMDREL
+	REALMD     = NAMED + REALMREL + "/" + REALMDREL
 	REALMSREL  = "realms"
-	REALMS     = NAMED + REALMDREL + "/" + REALMSREL
+	REALMS     = REALMD + "/" + REALMSREL
 	BOOTREL    = "boot"
 	BOOT       = NAMED + BOOTREL + "/"
 	UPROCDREL  = "uprocd"

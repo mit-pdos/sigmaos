@@ -271,6 +271,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
+	db.DPrintf(db.ALWAYS, "Schedd starting with total mem: %v", mem.GetTotalMem())
 	defer p.Done()
 	go sd.getQueuedProcs()
 	go sd.logStats()

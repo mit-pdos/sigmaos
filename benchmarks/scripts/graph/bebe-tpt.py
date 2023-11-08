@@ -163,8 +163,8 @@ def finalize_graph(fig, ax, plots, title, out, maxval):
     if maxval > 0:
       ax[idx].set_xlim(right=maxval)
   # plt.legend(lns, labels)
-  plt.grid(which="minor")
-  plt.grid(which="major")
+#  plt.grid(which="minor")
+#  plt.grid(which="major")
   fig.align_ylabels(ax)
   fig.savefig(out, bbox_inches="tight")
 

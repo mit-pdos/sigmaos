@@ -92,7 +92,7 @@ if __name__ == "__main__":
   n_vms = sorted([ (int(f[:f.index("-vm")]), f) for f in os.listdir(args.measurement_dir) ], key=lambda x: (x[0], -1 * int(x[1][x[1].rindex("-"):])) )
 
   # Truncate beyond 4 machines
-  n_vms = n_vms[:4]
+  n_vms = n_vms[:10]
 
   regex = ".*E2e spawn latency until main"
   file_suffix = ".out"
@@ -101,5 +101,5 @@ if __name__ == "__main__":
   raw_stats = [ (n_vm, scrape_dir_stats(measurement_dir=args.measurement_dir, file_suffix=file_suffix, n_vm=n_vm, regex=regex, pos=pos)) for n_vm in n_vms ]
   stats_summary = [ stats_summary(st) for st in raw_stats ]
 
-#  print_stats_summary(stats_summary)
+  print_stats_summary(stats_summary)
   graph_stats(stats_summary=stats_summary, out=args.out)

@@ -99,9 +99,6 @@ const (
 	NAMED                     = "NAMED"
 	NAMED_ERR                 = NAMED + ERR
 	FSETCD                    = "FSETCD"
-	FSETCD0                   = "FSETCD0"
-	FSETCD_ERR                = "FSETCD_ERR"
-	FSETCDLEASE               = "FSETCDLEASE"
 	PROCMGR                   = "PROCMGR"
 	UPROCDMGR                 = "UPROCDMGR"
 	UPROCD                    = "UPROCD"

@@ -43,6 +43,13 @@ func (dc *Dcache) insert(d sp.Tpath, dir *DirInfo, v sp.TQversion, stat bool) {
 	}
 }
 
+func (dc *Dcache) remove(d sp.Tpath) {
+	db.DPrintf(db.FSETCD, "remove dcache %v", d)
+	if present := dc.c.Remove(d); present {
+		db.DPrintf(db.FSETCD, "Removed")
+	}
+}
+
 // d might not be in the cache since it maybe uncacheable
 func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 	de, ok := dc.c.Get(d)

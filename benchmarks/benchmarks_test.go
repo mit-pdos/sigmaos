@@ -212,7 +212,7 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	if PREWARM_REALM {
-		warmupRealm(ts1)
+		warmupRealm(ts1, []string{"sleeper"})
 	}
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	newOutDir(ts1)
@@ -230,7 +230,7 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	if PREWARM_REALM {
-		warmupRealm(ts1)
+		warmupRealm(ts1, []string{"sleeper"})
 	}
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	newOutDir(ts1)
@@ -259,8 +259,15 @@ func TestMicroScheddSpawn(t *testing.T) {
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
+	prog := "XXXX"
+	if USE_RUST_PROC {
+		prog = "spawn-latency"
+	} else {
+		prog = "spawn-bench"
+	}
+
 	if PREWARM_REALM {
-		warmupRealm(ts1)
+		warmupRealm(ts1, []string{prog})
 	}
 
 	done := make(chan bool)
@@ -301,7 +308,7 @@ func TestAppMR(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	if PREWARM_REALM {
-		warmupRealm(ts1)
+		warmupRealm(ts1, []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
@@ -1013,7 +1020,7 @@ func TestImgResize(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	if PREWARM_REALM {
-		warmupRealm(ts1)
+		warmupRealm(ts1, []string{"imgresize", "imgresized"})
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
@@ -1037,7 +1044,7 @@ func TestK8sImgResize(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstateClnt(rootts, sp.ROOTREALM)
 	if PREWARM_REALM {
-		warmupRealm(ts1)
+		warmupRealm(ts1, nil)
 	}
 	sdc := scheddclnt.NewScheddClnt(ts1.FsLib)
 	nSchedd, err := sdc.Nschedd()
@@ -1185,7 +1192,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	p0 := newRealmPerf(ts0)
 	defer p0.Done()
 	if PREWARM_REALM {
-		warmupRealm(ts0)
+		warmupRealm(ts0, nil)
 	}
 	sdc := scheddclnt.NewScheddClnt(ts0.SigmaClnt.FsLib)
 	nSchedd, err := sdc.Nschedd()

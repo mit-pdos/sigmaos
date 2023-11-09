@@ -54,6 +54,17 @@ func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 	return sd
 }
 
+// Warm the cache of proc binaries.
+func (sd *Schedd) WarmCacheBin(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
+	if err := sd.pmgr.DownloadProcBin(sp.Trealm(req.RealmStr), req.Program, req.BuildTag, proc.Ttype(req.ProcType)); err != nil {
+		db.DFatalf("Error Download Proc Bin: %v", err)
+		res.OK = false
+		return err
+	}
+	res.OK = true
+	return nil
+}
+
 func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
 	atomic.AddUint64(&sd.nProcsRun, 1)
 	p := proc.NewProcFromProto(req.ProcProto)

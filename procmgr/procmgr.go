@@ -104,6 +104,19 @@ func (mgr *ProcMgr) GetCPUUtil(realm sp.Trealm) float64 {
 	return mgr.updm.GetCPUUtil(realm)
 }
 
+func (mgr *ProcMgr) DownloadProcBin(realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
+	db.DPrintf(db.PROCMGR, "Download proc bin for realm %v proc %v", realm, prog)
+	// Make sure the OS-level directory which holds proc bins exists. This must
+	// be done before starting the Uprocd, because the Uprocd mounts it.
+	mgr.setupUserBinCacheL(realm)
+
+	if err := mgr.updm.WarmStartUprocd(realm, ptype); err != nil {
+		db.DFatalf("Error start uprocd: %v", err)
+		return err
+	}
+	return mgr.downloadProcBin(realm, prog, buildTag)
+}
+
 // Set up state to notify parent that a proc crashed.
 func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	// Mark the proc as exited due to a crash, and record the error exit status.

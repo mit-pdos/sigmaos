@@ -166,19 +166,20 @@ func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
 }
 
 // Warm up a realm, by starting uprocds for it on all machines in the cluster.
-func warmupRealm(ts *test.RealmTstate) {
+func warmupRealm(ts *test.RealmTstate, progs []string) {
+	db.DPrintf(db.TEST, "Warm up realm %v for progs %v", ts.GetRealm(), progs)
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
-	// Get the number of schedds.
-	n, err := sdc.Nschedd()
-	assert.Nil(ts.Ts.T, err, "Get NSchedd: %v", err)
-	// Spawn one BE and one LC proc on each schedd, to force uprocds to start.
-	for _, ncore := range []proc.Tmcpu{0, 1000} {
-		// Make N LC procs.
-		ps, _ := newNProcs(n, "sleeper", []string{"1000us", ""}, nil, ncore)
-		// Burst the procs across the available schedds.
-		spawnBurstProcs(ts, ps)
-		// Wait for them to exit.
-		waitExitProcs(ts, ps)
+	// Get the list of schedds.
+	sds, err := sdc.GetSchedds()
+	assert.Nil(ts.Ts.T, err, "Get Schedds: %v", err)
+	for _, kid := range sds {
+		// Spawn one BE and one LC proc on each schedd, to force uprocds to start.
+		for _, ptype := range []proc.Ttype{proc.T_LC, proc.T_BE} {
+			for _, prog := range progs {
+				err := sdc.WarmCacheBin(kid, ts.GetRealm(), prog, ts.Ts.ProcEnv().GetBuildTag(), ptype)
+				assert.Nil(ts.Ts.T, err, "WarmCacheBin: %v", err)
+			}
+		}
 	}
 	db.DPrintf(db.TEST, "Warmed up realm %v", ts.GetRealm())
 }

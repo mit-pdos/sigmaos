@@ -54,3 +54,14 @@ message GetCPUUtilRequest {
 message GetCPUUtilResponse {
   double util = 1;
 }
+
+message WarmCacheBinRequest {
+  string realmStr = 1;
+  string program = 2;
+  string buildTag = 3;
+  int32 procType = 4;
+}
+
+message WarmCacheBinResponse {
+  bool oK = 1;
+}

@@ -34,11 +34,15 @@ func NewScheddClnt(fsl *fslib.FsLib) *ScheddClnt {
 }
 
 func (sdc *ScheddClnt) Nschedd() (int, error) {
-	sds, err := sdc.urpcc.GetSrvs()
+	sds, err := sdc.GetSchedds()
 	if err != nil {
 		return 0, err
 	}
 	return len(sds), nil
+}
+
+func (sdc *ScheddClnt) GetSchedds() ([]string, error) {
+	return sdc.urpcc.GetSrvs()
 }
 
 func (sdc *ScheddClnt) NextSchedd() (string, error) {
@@ -71,6 +75,27 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 		}
 	}
 	return len(sts), nil
+}
+
+func (sdc *ScheddClnt) WarmCacheBin(kernelID string, realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
+	rpcc, err := sdc.urpcc.GetClnt(kernelID)
+	if err != nil {
+		return err
+	}
+	req := &proto.WarmCacheBinRequest{
+		RealmStr: realm.String(),
+		Program:  prog,
+		BuildTag: buildTag,
+		ProcType: int32(ptype),
+	}
+	res := &proto.WarmCacheBinResponse{}
+	if err := rpcc.RPC("Schedd.WarmCacheBin", req, res); err != nil {
+		return err
+	}
+	if !res.OK {
+		db.DFatalf("Err couldn't warm cache bin: realm %v prog %v tag %v", prog, prog, buildTag)
+	}
+	return nil
 }
 
 // memAccountedFor should be false, unless this is a BE proc which the procqsrv

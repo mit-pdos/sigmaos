@@ -21,7 +21,6 @@ import (
 // replica group)
 type SessClnt struct {
 	sync.Mutex
-	*sync.Cond
 	pcfg    *proc.ProcEnv
 	cli     sessp.Tclient
 	sid     sessp.Tsession
@@ -40,7 +39,6 @@ func newSessClnt(pcfg *proc.ProcEnv, cli sessp.Tclient, clntnet string, addrs sp
 	c.sid = sessp.Tsession(rand.Uint64())
 	c.seqno = 0
 	c.addrs = addrs
-	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
 	c.clntnet = clntnet
 	c.queue = sessstateclnt.NewRequestQueue(addrs)
@@ -222,6 +220,7 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 func (c *SessClnt) isClosed() bool {
 	c.Lock()
 	defer c.Unlock()
+
 	return c.closed
 }
 

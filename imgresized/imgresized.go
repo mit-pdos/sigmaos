@@ -21,9 +21,8 @@ import (
 )
 
 const (
-	IMG    = "name/img"
-	STOP   = "_STOP"
-	NCOORD = 1
+	IMG  = "name/img"
+	STOP = "_STOP"
 )
 
 type ImgSrv struct {

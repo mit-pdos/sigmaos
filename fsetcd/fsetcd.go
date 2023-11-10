@@ -2,7 +2,6 @@ package fsetcd
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.etcd.io/etcd/client/v3"
@@ -24,7 +23,6 @@ var (
 )
 
 type FsEtcd struct {
-	sync.Mutex
 	*clientv3.Client
 	fencekey string
 	fencerev int64

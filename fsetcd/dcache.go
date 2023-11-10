@@ -1,6 +1,8 @@
 package fsetcd
 
 import (
+	"sync"
+
 	"github.com/hashicorp/golang-lru/v2"
 
 	db "sigmaos/debug"
@@ -16,6 +18,7 @@ type dcEntry struct {
 }
 
 type Dcache struct {
+	sync.Mutex
 	c *lru.Cache[sp.Tpath, *dcEntry]
 }
 
@@ -27,6 +30,7 @@ func newDcache() *Dcache {
 	return &Dcache{c: c}
 }
 
+// XXX race with insert
 func (dc *Dcache) lookup(d sp.Tpath) (*DirInfo, sp.TQversion, Tstat, bool) {
 	de, ok := dc.c.Get(d)
 	if ok {
@@ -36,10 +40,26 @@ func (dc *Dcache) lookup(d sp.Tpath) (*DirInfo, sp.TQversion, Tstat, bool) {
 	return nil, 0, TSTAT_NONE, false
 }
 
+// the caller (protsrv) has only a read lock on d, and several threads
+// may call insert concurrently; update entry only when v is newer.
 func (dc *Dcache) insert(d sp.Tpath, dir *DirInfo, v sp.TQversion, stat Tstat) {
-	db.DPrintf(db.FSETCD, "Insert dcache %v %v", d, dir)
-	if evict := dc.c.Add(d, &dcEntry{dir, v, stat}); evict {
-		db.DPrintf(db.FSETCD, "Eviction")
+	dc.Lock()
+	defer dc.Unlock()
+
+	de, ok := dc.c.Get(d)
+	if ok {
+		if de.v < v {
+			db.DPrintf(db.FSETCD, "insert: update dcache %v %v", d, dir)
+			de.dir = dir
+			de.v = v
+		} else {
+			db.DPrintf(db.FSETCD, "insert: stale insert %v %d %d", d, de.v, v)
+		}
+	} else {
+		db.DPrintf(db.FSETCD, "insert: insert dcache %v %v", d, dir)
+		if evict := dc.c.Add(d, &dcEntry{dir, v, stat}); evict {
+			db.DPrintf(db.FSETCD, "Eviction")
+		}
 	}
 }
 
@@ -50,7 +70,8 @@ func (dc *Dcache) remove(d sp.Tpath) {
 	}
 }
 
-// d might not be in the cache since it maybe uncacheable
+// d might not be in the cache since it maybe uncacheable. update
+// assumes caller (protsrv) has write lock on dirctory d.
 func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 	de, ok := dc.c.Get(d)
 	if ok {

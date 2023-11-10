@@ -100,7 +100,6 @@ func (fs *FsEtcd) readDir(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, *serr
 		return nil, v, err
 	}
 	if c == TCACHEABLE_YES {
-		db.DPrintf(db.FSETCD, "fsetcd.readDir cacheable %v %v\n", p, dir)
 		fs.dc.insert(p, dir, v, stat)
 	}
 	return dir, v, nil
@@ -148,8 +147,13 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, T
 	}
 	di := &DirInfo{dents, nf.Tperm()}
 	if update {
+		// updateDir will succeed if the on-disk version is equal to v
 		if err := fs.updateDir(p, di, v); err != nil {
-			return nil, 0, TCACHEABLE_NO, err
+			if err.IsErrStale() {
+				return di, v, TCACHEABLE_NO, nil
+			} else {
+				return nil, 0, TCACHEABLE_NO, err
+			}
 		}
 		v = v + 1
 	}

@@ -87,7 +87,7 @@ func (o *Obj) stat() *sp.Stat {
 	return st
 }
 
-func (o *Obj) putObj(f sp.Tfence) *serr.Err {
-	nf := fsetcd.NewEtcdFile(o.di.Perm|0777, o.di.Nf.TclntId(), o.di.Nf.TleaseId(), o.di.Nf.Data)
+func (o *Obj) putObj(f sp.Tfence, data []byte) *serr.Err {
+	nf := fsetcd.NewEtcdFile(o.di.Perm|0777, o.di.Nf.TclntId(), o.di.Nf.TleaseId(), data)
 	return o.fs.PutFile(o.di.Path, nf, f)
 }

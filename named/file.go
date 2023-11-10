@@ -64,14 +64,14 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, fence sp.Tfence) 
 
 	if offset >= f.LenOff() { // passed end of file?
 		n := f.LenOff() - offset
+		new := append(f.Obj.di.Nf.Data, make([]byte, n)...)
+		new = append(new, b...)
 
-		f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, make([]byte, n)...)
-		f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, b...)
-
-		if err := f.Obj.putObj(fence); err != nil {
+		if err := f.Obj.putObj(fence, new); err != nil {
+			db.DPrintf(db.NAMED, "%v: Write: off %v fence %v err %v", f, offset, fence, err)
 			return 0, err
 		}
-
+		f.Obj.di.Nf.Data = new
 		return cnt, nil
 	}
 
@@ -79,12 +79,14 @@ func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, fence sp.Tfence) 
 	if offset+sz < f.LenOff() { // in the middle of the file?
 		d = f.Obj.di.Nf.Data[offset+sz:]
 	}
-	f.Obj.di.Nf.Data = f.Obj.di.Nf.Data[0:offset]
-	f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, b...)
-	f.Obj.di.Nf.Data = append(f.Obj.di.Nf.Data, d...)
+	new := f.Obj.di.Nf.Data[0:offset]
+	new = append(new, b...)
+	new = append(new, d...)
 
-	if err := f.Obj.putObj(fence); err != nil {
+	if err := f.Obj.putObj(fence, new); err != nil {
+		db.DPrintf(db.NAMED, "%v: Write: off %v fence %v err %v", f, offset, len(b), err)
 		return 0, err
 	}
+	f.Obj.di.Nf.Data = new
 	return sp.Tsize(len(b)), nil
 }

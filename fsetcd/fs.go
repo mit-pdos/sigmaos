@@ -71,6 +71,7 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 		}
 		if !resp.Succeeded {
 			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
+				db.DPrintf(db.FSETCD, "PutFile %v %v %v %v stale\n", p, nf, f, resp)
 				return serr.NewErr(serr.TErrStale, f)
 			}
 			db.DFatalf("PutFile failed %v %v %v\n", p, nf, resp.Responses[0])

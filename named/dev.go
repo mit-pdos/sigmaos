@@ -43,10 +43,9 @@ func (d *Dev) Read(ctx fs.CtxI, offset sp.Toffset, n sp.Tsize, f sp.Tfence) ([]b
 
 func (d *Dev) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	db.DPrintf(db.NAMED, "%v: DevWrite: %v off %v cnt %v\n", ctx, d, offset, len(b))
-	d.Obj.di.Nf.Data = b
-	if err := d.Obj.putObj(f); err != nil {
+	if err := d.Obj.putObj(f, b); err != nil {
 		return 0, err
 	}
-
+	d.Obj.di.Nf.Data = b
 	return sp.Tsize(len(b)), nil
 }

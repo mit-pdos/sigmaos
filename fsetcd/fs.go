@@ -13,8 +13,17 @@ import (
 	"sigmaos/sorteddir"
 )
 
+type Tstat int
+type Tcacheable int
+
 const (
 	BOOT sp.Tpath = 0
+
+	TSTAT_NONE Tstat = iota
+	TSTAT_STAT
+
+	TCACHEABLE_NO Tcacheable = iota
+	TCACHEABLE_YES
 )
 
 func (fs *FsEtcd) path2key(realm sp.Trealm, path sp.Tpath) string {
@@ -81,42 +90,43 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 	}
 }
 
-func (fs *FsEtcd) readDir(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, *serr.Err) {
-	if dir, v, st, ok := fs.dc.lookup(p); ok && (!stat || st) {
+func (fs *FsEtcd) readDir(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, *serr.Err) {
+	if dir, v, st, ok := fs.dc.lookup(p); ok && (stat == TSTAT_NONE || st == TSTAT_STAT) {
 		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", dir)
-		return dir, v, true, nil
+		return dir, v, nil
 	}
 	dir, v, c, err := fs.readDirEtcd(p, stat)
 	if err != nil {
-		return nil, v, false, err
+		return nil, v, err
 	}
-	if c {
+	if c == TCACHEABLE_YES {
 		db.DPrintf(db.FSETCD, "fsetcd.readDir cacheable %v %v\n", p, dir)
 		fs.dc.insert(p, dir, v, stat)
 	}
-	return dir, v, false, nil
+	return dir, v, nil
 }
 
-// If stat is true, stat every entry in the directory.  Filters out
-// experid ephemeral files.
-func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bool, *serr.Err) {
+// If stat is TSTAT_STAT, stat every entry in the directory.  If entry
+// is ephemeral, stat entry and filter it out if expired.  If
+// directory contains ephemeral entries, return TCACHEABLE_NO.
+func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, Tcacheable, *serr.Err) {
 	db.DPrintf(db.FSETCD, "readDirEtcd %v\n", p)
 	nf, v, err := fs.GetFile(p)
 	if err != nil {
-		return nil, 0, false, err
+		return nil, 0, TCACHEABLE_NO, err
 	}
 	dir, err := UnmarshalDir(nf.Data)
 	if err != nil {
-		return nil, 0, false, err
+		return nil, 0, TCACHEABLE_NO, err
 	}
 	dents := sorteddir.NewSortedDir()
-	cacheable := true
+	cacheable := TCACHEABLE_YES
 	update := false
 	for _, e := range dir.Ents {
 		if e.Name == "." {
 			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
 		} else {
-			if e.Tperm().IsEphemeral() || stat {
+			if e.Tperm().IsEphemeral() || stat == TSTAT_STAT {
 				// if file is emphemeral, etcd may have expired it, so
 				// check if it still exists; if not, don't return the
 				// entry.
@@ -128,7 +138,7 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bo
 				}
 				if e.Tperm().IsEphemeral() {
 					db.DPrintf(db.FSETCD, "readDir: %v ephemeral; not cacheable %v\n", e.Name, e.Tperm())
-					cacheable = false
+					cacheable = TCACHEABLE_NO
 				}
 				dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
 			} else {
@@ -138,9 +148,8 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat bool) (*DirInfo, sp.TQversion, bo
 	}
 	di := &DirInfo{dents, nf.Tperm()}
 	if update {
-		// update directory because some ephemeral entries expired
 		if err := fs.updateDir(p, di, v); err != nil {
-			return nil, 0, false, err
+			return nil, 0, TCACHEABLE_NO, err
 		}
 		v = v + 1
 	}
@@ -164,6 +173,7 @@ func (fs *FsEtcd) updateDir(dp sp.Tpath, dir *DirInfo, v sp.TQversion) *serr.Err
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
+		db.DPrintf(db.FSETCD, "updateDir %v %v %v %v stale\n", dp, dir, v, resp)
 		return serr.NewErr(serr.TErrStale, dp)
 	}
 	return nil

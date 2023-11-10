@@ -12,7 +12,7 @@ const N = 8192
 type dcEntry struct {
 	dir  *DirInfo
 	v    sp.TQversion
-	stat bool
+	stat Tstat
 }
 
 type Dcache struct {
@@ -27,16 +27,16 @@ func newDcache() *Dcache {
 	return &Dcache{c: c}
 }
 
-func (dc *Dcache) lookup(d sp.Tpath) (*DirInfo, sp.TQversion, bool, bool) {
+func (dc *Dcache) lookup(d sp.Tpath) (*DirInfo, sp.TQversion, Tstat, bool) {
 	de, ok := dc.c.Get(d)
 	if ok {
 		db.DPrintf(db.FSETCD, "Lookup dcache hit %v %v", d, de)
 		return de.dir, de.v, de.stat, ok
 	}
-	return nil, 0, false, false
+	return nil, 0, TSTAT_NONE, false
 }
 
-func (dc *Dcache) insert(d sp.Tpath, dir *DirInfo, v sp.TQversion, stat bool) {
+func (dc *Dcache) insert(d sp.Tpath, dir *DirInfo, v sp.TQversion, stat Tstat) {
 	db.DPrintf(db.FSETCD, "Insert dcache %v %v", d, dir)
 	if evict := dc.c.Add(d, &dcEntry{dir, v, stat}); evict {
 		db.DPrintf(db.FSETCD, "Eviction")

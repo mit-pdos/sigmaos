@@ -11,10 +11,14 @@ import (
 	"sigmaos/sorteddir"
 )
 
-//
-// Directory operations for fsetcd.  It assumes the caller (protsrv)
-// has exclusive locks for the directories involved in the operation.
-//
+// This file implements directory operations on top of etcd.  It
+// assumes the caller (protsrv) has read/write locks for the
+// directories involved in the operation.  Directory entries are a
+// (name, etcd key) tuple.  To implement directory operations
+// atomically with respect to crashes (e.g., updating the directory
+// and creating a file) fsetcd uses etcd's transaction API.  The
+// caller (named/protsrv) must hold read/write locks on the
+// directories.
 
 const (
 	ROOT sp.Tpath = 1
@@ -41,7 +45,7 @@ type DirInfo struct {
 
 func (fs *FsEtcd) isEmpty(di DirEntInfo) (bool, *serr.Err) {
 	if di.Perm.IsDir() {
-		dir, _, _, err := fs.readDir(di.Path, false)
+		dir, _, err := fs.readDir(di.Path, TSTAT_NONE)
 		if err != nil {
 			return false, err
 		}
@@ -74,11 +78,11 @@ func (fs *FsEtcd) ReadRootDir() (*DirInfo, *serr.Err) {
 }
 
 func (fs *FsEtcd) Lookup(d sp.Tpath, name string) (DirEntInfo, *serr.Err) {
-	dir, _, hit, err := fs.readDir(d, false)
+	dir, _, err := fs.readDir(d, TSTAT_NONE)
 	if err != nil {
 		return DirEntInfo{}, err
 	}
-	db.DPrintf(db.FSETCD, "readDir hit %q %t %v %v\n", name, hit, d, dir)
+	db.DPrintf(db.FSETCD, "Lookup %q %v %v\n", name, d, dir)
 	e, ok := dir.Ents.Lookup(name)
 	if ok {
 		return e.(DirEntInfo), nil
@@ -88,7 +92,7 @@ func (fs *FsEtcd) Lookup(d sp.Tpath, name string) (DirEntInfo, *serr.Err) {
 
 // OEXCL: should only succeed if file doesn't exist
 func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f sp.Tfence) (DirEntInfo, *serr.Err) {
-	dir, v, _, err := fs.readDir(d, false)
+	dir, v, err := fs.readDir(d, TSTAT_NONE)
 	if err != nil {
 		return DirEntInfo{}, err
 	}
@@ -115,7 +119,7 @@ func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f
 }
 
 func (fs *FsEtcd) ReadDir(d sp.Tpath) (*DirInfo, *serr.Err) {
-	dir, _, _, err := fs.readDir(d, true)
+	dir, _, err := fs.readDir(d, TSTAT_STAT)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +127,7 @@ func (fs *FsEtcd) ReadDir(d sp.Tpath) (*DirInfo, *serr.Err) {
 }
 
 func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
-	dir, v, _, err := fs.readDir(d, false)
+	dir, v, err := fs.readDir(d, TSTAT_NONE)
 	if err != nil {
 		return err
 	}
@@ -155,7 +159,7 @@ func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
 }
 
 func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
-	dir, v, _, err := fs.readDir(d, false)
+	dir, v, err := fs.readDir(d, TSTAT_NONE)
 	if err != nil {
 		return err
 	}
@@ -194,11 +198,11 @@ func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
 }
 
 func (fs *FsEtcd) Renameat(df sp.Tpath, from string, dt sp.Tpath, to string, f sp.Tfence) *serr.Err {
-	dirf, vf, _, err := fs.readDir(df, false)
+	dirf, vf, err := fs.readDir(df, TSTAT_NONE)
 	if err != nil {
 		return err
 	}
-	dirt, vt, _, err := fs.readDir(dt, false)
+	dirt, vt, err := fs.readDir(dt, TSTAT_NONE)
 	if err != nil {
 		return err
 	}
@@ -252,7 +256,7 @@ func (fs *FsEtcd) Dump(l int, dir *DirInfo, pn path.Path, p sp.Tpath) error {
 			di := v.(DirEntInfo)
 			fmt.Printf("%v%v %v\n", s, pn.Append(name), di)
 			if di.Perm.IsDir() {
-				nd, _, _, err := fs.readDir(di.Path, false)
+				nd, _, err := fs.readDir(di.Path, TSTAT_NONE)
 				if err == nil {
 					fs.Dump(l+1, nd, pn.Append(name), di.Path)
 				} else {

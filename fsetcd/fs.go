@@ -91,16 +91,16 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 }
 
 func (fs *FsEtcd) readDir(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, *serr.Err) {
-	if dir, v, st, ok := fs.dc.lookup(p); ok && (stat == TSTAT_NONE || st == TSTAT_STAT) {
-		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", dir)
-		return dir, v, nil
+	if de, ok := fs.dc.lookup(p); ok && (stat == TSTAT_NONE || de.stat == TSTAT_STAT) {
+		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", de.dir)
+		return de.dir, de.v, nil
 	}
 	dir, v, c, err := fs.readDirEtcd(p, stat)
 	if err != nil {
 		return nil, v, err
 	}
 	if c == TCACHEABLE_YES {
-		fs.dc.insert(p, dir, v, stat)
+		fs.dc.insert(p, &dcEntry{dir, v, stat})
 	}
 	return dir, v, nil
 }

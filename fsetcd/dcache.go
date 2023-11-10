@@ -30,36 +30,29 @@ func newDcache() *Dcache {
 	return &Dcache{c: c}
 }
 
-// XXX race with insert
-func (dc *Dcache) lookup(d sp.Tpath) (*DirInfo, sp.TQversion, Tstat, bool) {
+func (dc *Dcache) lookup(d sp.Tpath) (*dcEntry, bool) {
 	de, ok := dc.c.Get(d)
 	if ok {
 		db.DPrintf(db.FSETCD, "Lookup dcache hit %v %v", d, de)
-		return de.dir, de.v, de.stat, ok
+		return de, ok
 	}
-	return nil, 0, TSTAT_NONE, false
+	return nil, false
 }
 
 // the caller (protsrv) has only a read lock on d, and several threads
 // may call insert concurrently; update entry only when v is newer.
-func (dc *Dcache) insert(d sp.Tpath, dir *DirInfo, v sp.TQversion, stat Tstat) {
+func (dc *Dcache) insert(d sp.Tpath, new *dcEntry) {
 	dc.Lock()
 	defer dc.Unlock()
 
 	de, ok := dc.c.Get(d)
-	if ok {
-		if de.v < v {
-			db.DPrintf(db.FSETCD, "insert: update dcache %v %v", d, dir)
-			de.dir = dir
-			de.v = v
-		} else {
-			db.DPrintf(db.FSETCD, "insert: stale insert %v %d %d", d, de.v, v)
-		}
-	} else {
-		db.DPrintf(db.FSETCD, "insert: insert dcache %v %v", d, dir)
-		if evict := dc.c.Add(d, &dcEntry{dir, v, stat}); evict {
-			db.DPrintf(db.FSETCD, "Eviction")
-		}
+	if ok && de.v >= new.v {
+		db.DPrintf(db.FSETCD, "insert: stale insert %v %v", d, new)
+		return
+	}
+	db.DPrintf(db.FSETCD, "insert: insert dcache %v %v", d, new)
+	if evict := dc.c.Add(d, new); evict {
+		db.DPrintf(db.FSETCD, "Eviction")
 	}
 }
 

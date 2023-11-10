@@ -25,6 +25,9 @@ import (
 	"sigmaos/sigmasrv"
 )
 
+// Named implements fs/fs.go using fsetcd.  It assumes that its caller
+// (protsrv) holds read/write locks.
+
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sigmasrv.SigmaSrv

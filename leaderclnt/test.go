@@ -58,11 +58,9 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		// now so this write to pn should fail, because it is fenced
 		// with the fsl's fence, which is the old leader's one.
 
-		_, err = fsl2.PutFile(pn+"/f", 0777, sp.OWRITE, []byte(strconv.Itoa(0)))
+		_, err = fsl2.PutFile(pn+"/f", 0777, sp.OWRITE, []byte("should fail"))
 		assert.NotNil(ts.T, err, "Put")
-		db.DPrintf(db.TEST, "Put err %v\n", err)
 		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale))
-
 		fsl2.Close(fd)
 
 		ch <- true
@@ -96,7 +94,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	fd, err := ts.Open(pn+"/f", sp.OREAD)
 	assert.Nil(ts.T, err, "Open")
 	b, err := ts.Read(fd, 100)
-	assert.Equal(ts.T, 0, len(b))
+	assert.Equal(ts.T, 0, len(b), "buf %v", string(b))
 
 	return l
 }

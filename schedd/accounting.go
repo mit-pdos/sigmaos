@@ -3,7 +3,6 @@ package schedd
 import (
 	"sync/atomic"
 
-	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"

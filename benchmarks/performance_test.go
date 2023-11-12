@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	CPU_MONITOR_INTERVAL = 1000 * time.Millisecond
+	CPU_MONITOR_INTERVAL       = 1000 * time.Millisecond
+	SCHEDD_STAT_MONITOR_PERIOD = 1000 * time.Millisecond
 )
 
 //
@@ -62,8 +63,8 @@ func newRealmPerf(ts *test.RealmTstate) *perf.Perf {
 
 // Monitor how many cores have been assigned to a realm.
 func monitorCPUUtil(ts *test.RealmTstate, p *perf.Perf) {
+	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	go func() {
-		sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 		for {
 			perc, err := sdc.GetCPUUtil(ts.GetRealm())
 			if err != nil {

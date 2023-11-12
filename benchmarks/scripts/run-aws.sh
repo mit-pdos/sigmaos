@@ -352,6 +352,8 @@ mr_vs_corral() {
   dataset_size="2G"
 #  mem_req=5500
   mem_req=7000
+#  mem_req=5000
+#  mem_req=10000
   for prewarm in "" "--prewarm_realm" ; do
     mrapp="$app$dataset_size-bench.yml"
     if [ -z "$prewarm" ]; then
@@ -517,6 +519,7 @@ realm_balance_be() {
   mrapp=mr-grep-wiki20G-bench.yml
   sl="40s"
   mem_req=3000
+#  mem_req=1500
   n_vm=8
   n_realm=3
   driver_vm=8

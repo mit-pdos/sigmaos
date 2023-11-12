@@ -21,7 +21,6 @@ import (
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/rpc"
-	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -115,16 +114,6 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		}
 		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
-		sdc := scheddclnt.NewScheddClnt(ts.FsLib)
-		procs := sdc.GetRunningProcs()
-		progs := make(map[string][]string)
-		for sd, ps := range procs {
-			progs[sd] = make([]string, 0, len(ps))
-			for _, p := range ps {
-				progs[sd] = append(progs[sd], p.GetProgram())
-			}
-		}
-		db.DPrintf(db.TEST, "Running procs:%v", progs)
 		if sigmaos {
 			rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, hotel.HOTELRESERVE)
 			if err != nil {

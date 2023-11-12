@@ -1,7 +1,6 @@
 package scheddclnt
 
 import (
-	"fmt"
 	"path"
 	"sync/atomic"
 	"time"
@@ -18,12 +17,6 @@ type ScheddClnt struct {
 	*fslib.FsLib
 	urpcc *unionrpcclnt.UnionRPCClnt
 	done  int32
-}
-
-type Tload [1]int
-
-func (t Tload) String() string {
-	return fmt.Sprintf("{r %d}", t[0])
 }
 
 func NewScheddClnt(fsl *fslib.FsLib) *ScheddClnt {
@@ -71,7 +64,7 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 			}
 			p := proc.NewEmptyProc()
 			p.Unmarshal(b)
-			db.DPrintf(db.SCHEDDCLNT, "%s: %v\n", procdir, p.GetProgram())
+			db.DPrintf(db.SCHEDDCLNT, "%s: %v", procdir, p.GetProgram())
 		}
 	}
 	return len(sts), nil
@@ -162,47 +155,41 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 	return nil
 }
 
-func (sdc *ScheddClnt) ScheddLoad() (int, []Tload, error) {
+func (sdc *ScheddClnt) ScheddStats() (int, []map[string]*proto.RealmStats, error) {
 	sds, err := sdc.urpcc.GetSrvs()
 	if err != nil {
 		return 0, nil, err
 	}
-	r := len(sds)
-	sdloads := make([]Tload, 0, r)
+	sdstats := make([]map[string]*proto.RealmStats, 0, len(sds))
 	for _, sd := range sds {
-		sdpath := path.Join(sp.SCHEDD, sd, sp.RUNNING)
-		nproc, err := sdc.Nprocs(path.Join(sdpath, sp.RUNNING))
+		req := &proto.GetScheddStatsRequest{}
+		res := &proto.GetScheddStatsResponse{}
+		rpcc, err := sdc.urpcc.GetClnt(sd)
 		if err != nil {
-			return r, nil, err
+			return 0, nil, err
 		}
-		sdloads = append(sdloads, Tload{nproc})
+		if err := rpcc.RPC("Schedd.GetScheddStats", req, res); err != nil {
+			return 0, nil, err
+		}
+		sdstats = append(sdstats, res.ScheddStats)
 	}
-	return r, sdloads, err
+	return len(sds), sdstats, err
 }
 
 func (sdc *ScheddClnt) Done() {
 	atomic.StoreInt32(&sdc.done, 1)
 }
 
-func (sdc *ScheddClnt) MonitorSchedds(realm sp.Trealm) {
-	if true {
-		return
-	}
-	var realmstr string
-	if realm != "" {
-		realmstr = "[" + realm.String() + "] "
-	}
+func (sdc *ScheddClnt) MonitorScheddStats(period time.Duration) {
 	go func() {
 		for atomic.LoadInt32(&sdc.done) == 0 {
-			n, load, err := sdc.ScheddLoad()
+			n, stats, err := sdc.ScheddStats()
 			if err != nil && atomic.LoadInt32(&sdc.done) == 0 {
-				db.DFatalf("ScheddLoad err %v\n", err)
+				db.DPrintf(db.ALWAYS, "ScheddStats err %v", err)
+				return
 			}
-			db.DPrintf(db.ALWAYS, "%vnschedd = %d %v\n", realmstr, n, load)
-			// Sleep for 10 seconds, but do so in an interruptible way.
-			for i := 0; i < 10 && atomic.LoadInt32(&sdc.done) == 0; i++ {
-				time.Sleep(1 * time.Second)
-			}
+			db.DPrintf(db.ALWAYS, "schedd stats = %d %v", n, stats)
+			time.Sleep(period)
 		}
 	}()
 }
@@ -234,31 +221,4 @@ func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 		total += res.Util
 	}
 	return total, nil
-}
-
-func (sdc *ScheddClnt) GetRunningProcs() map[string][]*proc.Proc {
-	// Get list of schedds
-	sds, err := sdc.urpcc.GetSrvs()
-	if err != nil {
-		db.DFatalf("Error getSchedds: %v", err)
-	}
-	procs := make(map[string][]*proc.Proc)
-	for _, sd := range sds {
-		sdrun := path.Join(sp.SCHEDD, sd, sp.RUNNING)
-		sts, err := sdc.GetDir(sdrun)
-		if err != nil {
-			db.DFatalf("Error getdir: %v", err)
-		}
-		procs[sd] = []*proc.Proc{}
-		for _, st := range sts {
-			b, err := sdc.GetFile(path.Join(sdrun, st.Name))
-			if err != nil {
-				db.DFatalf("Error getfile: %v", err)
-			}
-			p := proc.NewEmptyProc()
-			p.UnmarshalJson(b)
-			procs[sd] = append(procs[sd], p)
-		}
-	}
-	return procs
 }

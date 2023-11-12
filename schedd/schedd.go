@@ -73,10 +73,7 @@ func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.Fo
 	if !req.MemAccountedFor {
 		sd.allocMem(p.GetMem())
 	}
-	// Don't count NAMED & other privileged procs.
-	if !p.IsPrivileged() && p.GetProgram() != "named" {
-		sd.incRealmCnt(p.GetRealm())
-	}
+	sd.incRealmStats(p)
 	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p.GetPid())
 	start := time.Now()
 	// Run the proc
@@ -239,7 +236,7 @@ func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
 
 // Run a proc via the local procd. Caller holds lock.
 func (sd *Schedd) runProc(p *proc.Proc) {
-	defer sd.decRealmCnt(p)
+	defer sd.decRealmStats(p)
 	db.DPrintf(db.SCHEDD, "[%v] %v runProc %v", p.GetRealm(), sd.kernelId, p)
 	sd.pmgr.RunProc(p)
 	sd.procDone(p)

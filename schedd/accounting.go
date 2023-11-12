@@ -3,21 +3,29 @@ package schedd
 import (
 	"sync/atomic"
 
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"
 )
 
-func (sd *Schedd) incRealmCnt(realm sp.Trealm) {
-	if realm == "" {
+func (sd *Schedd) incRealmStats(p *proc.Proc) {
+	// Don't count named or other privileged procs.
+	if p.IsPrivileged() || p.GetRealm() == "" || p.GetProgram() == "named" {
 		return
 	}
-	st := sd.getRealmStats(realm)
+	// For now, ignore MR coord
+	if p.GetProgram() != "mr-coord" {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Inc realm stats r %v p %v", p.GetRealm(), p.GetProgram())
+
+	st := sd.getRealmStats(p.GetRealm())
 	atomic.AddInt64(&st.Running, 1)
 	atomic.AddInt64(&st.TotalRan, 1)
 }
 
-func (sd *Schedd) decRealmCnt(p *proc.Proc) {
+func (sd *Schedd) decRealmStats(p *proc.Proc) {
 	// Don't count privileged procs
 	if p.IsPrivileged() || p.GetRealm() == "" {
 		return

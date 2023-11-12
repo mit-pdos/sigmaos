@@ -73,7 +73,8 @@ func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.Fo
 	if !req.MemAccountedFor {
 		sd.allocMem(p.GetMem())
 	}
-	if !p.IsPrivileged() {
+	// Don't count NAMED & other privileged procs.
+	if !p.IsPrivileged() && p.GetProgram() != "named" {
 		sd.incRealmCnt(p.GetRealm())
 	}
 	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p.GetPid())

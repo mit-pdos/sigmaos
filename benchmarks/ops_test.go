@@ -126,7 +126,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
-	sdc.MonitorScheddStats(SCHEDD_STAT_MONITOR_PERIOD)
+	sdc.MonitorScheddStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
 	defer sdc.Done()
 	start := time.Now()
 	db.DPrintf(db.BENCH, "Start MR job")
@@ -146,7 +146,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*KVJobInstance)
 	rpcc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
-	rpcc.MonitorScheddStats(SCHEDD_STAT_MONITOR_PERIOD)
+	rpcc.MonitorScheddStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
 	defer rpcc.Done()
 	// Start some balancers
 	start := time.Now()
@@ -189,7 +189,7 @@ func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
 	rpcc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
-	rpcc.MonitorScheddStats(SCHEDD_STAT_MONITOR_PERIOD)
+	rpcc.MonitorScheddStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
 	defer rpcc.Done()
 	start := time.Now()
 	ji.StartWwwJob()
@@ -214,7 +214,7 @@ func runHotel(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
 		rpcc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
-		rpcc.MonitorScheddStats(SCHEDD_STAT_MONITOR_PERIOD)
+		rpcc.MonitorScheddStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
 		defer rpcc.Done()
 	}
 	start := time.Now()
@@ -230,7 +230,7 @@ func runSocialNetwork(ts *test.RealmTstate, i interface{}) (time.Duration, float
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
 		rpcc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
-		rpcc.MonitorScheddStats(SCHEDD_STAT_MONITOR_PERIOD)
+		rpcc.MonitorScheddStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
 		defer rpcc.Done()
 	}
 	start := time.Now()
@@ -246,7 +246,7 @@ func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) 
 	// Start a procd clnt, and monitor procds
 	if ji.sigmaos {
 		rpcc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
-		rpcc.MonitorScheddStats(SCHEDD_STAT_MONITOR_PERIOD)
+		rpcc.MonitorScheddStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
 		defer rpcc.Done()
 	}
 	//	ji.Cleanup()

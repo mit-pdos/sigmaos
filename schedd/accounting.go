@@ -4,6 +4,7 @@ import (
 	"sync/atomic"
 
 	"sigmaos/proc"
+	"sigmaos/schedd/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -11,8 +12,9 @@ func (sd *Schedd) incRealmCnt(realm sp.Trealm) {
 	if realm == "" {
 		return
 	}
-	cnt := sd.getRealmCnt(realm)
-	atomic.AddInt64(cnt, 1)
+	st := sd.getRealmStats(realm)
+	atomic.AddInt64(&st.Running, 1)
+	atomic.AddInt64(&st.TotalRan, 1)
 }
 
 func (sd *Schedd) decRealmCnt(p *proc.Proc) {
@@ -20,25 +22,27 @@ func (sd *Schedd) decRealmCnt(p *proc.Proc) {
 	if p.IsPrivileged() || p.GetRealm() == "" {
 		return
 	}
-	cnt := sd.getRealmCnt(p.GetRealm())
-	atomic.AddInt64(cnt, -1)
+	st := sd.getRealmStats(p.GetRealm())
+	atomic.AddInt64(&st.Running, -1)
 }
 
-func (sd *Schedd) getRealmCnt(realm sp.Trealm) *int64 {
+func (sd *Schedd) getRealmStats(realm sp.Trealm) *proto.RealmStats {
 	sd.realmMu.RLock()
 	defer sd.realmMu.RUnlock()
 
-	cnt, ok := sd.realmCnts[realm]
+	cnt, ok := sd.scheddStats[realm]
 	if !ok {
 		// Promote to writer lock.
 		sd.realmMu.RUnlock()
 		sd.realmMu.Lock()
 		// Check if the count was created during lock promotion.
-		cnt, ok = sd.realmCnts[realm]
+		cnt, ok = sd.scheddStats[realm]
 		if !ok {
-			var cnt2 int64 = 0
-			cnt = &cnt2
-			sd.realmCnts[realm] = cnt
+			st := &proto.RealmStats{
+				Running:  0,
+				TotalRan: 0,
+			}
+			sd.scheddStats[realm] = st
 		}
 		// Demote to reader lock
 		sd.realmMu.Unlock()

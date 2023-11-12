@@ -13,6 +13,8 @@ service Schedd {
   rpc WaitEvict(WaitRequest) returns (WaitResponse);
   rpc Evict(NotifyRequest) returns (NotifyResponse);
   rpc GetCPUShares(GetCPUSharesRequest) returns (GetCPUSharesResponse);
+  rpc GetScheddStats(GetScheddStatsRequest) returns (GetScheddStatsResponse);
+  rpc WarmCacheBin(WarmCacheBinRequest) returns (WarmCacheBinResponse);
 }
 
 
@@ -64,4 +66,16 @@ message WarmCacheBinRequest {
 
 message WarmCacheBinResponse {
   bool oK = 1;
+}
+
+message RealmStats {
+  int64 running = 1;
+  int64 totalRan = 2; 
+}
+
+message GetScheddStatsRequest {
+}
+
+message GetScheddStatsResponse {
+  map<string, RealmStats> scheddStats = 1;
 }

@@ -25,28 +25,28 @@ import (
 )
 
 type Schedd struct {
-	realmMu    sync.RWMutex
-	mu         sync.Mutex
-	cond       *sync.Cond
-	pmgr       *procmgr.ProcMgr
-	scheddclnt *scheddclnt.ScheddClnt
-	procqclnt  *procqclnt.ProcQClnt
-	mcpufree   proc.Tmcpu
-	memfree    proc.Tmem
-	kernelId   string
-	realmCnts  map[sp.Trealm]*int64
-	mfs        *memfssrv.MemFs
-	nProcsRun  uint64
+	realmMu     sync.RWMutex
+	mu          sync.Mutex
+	cond        *sync.Cond
+	pmgr        *procmgr.ProcMgr
+	scheddclnt  *scheddclnt.ScheddClnt
+	procqclnt   *procqclnt.ProcQClnt
+	mcpufree    proc.Tmcpu
+	memfree     proc.Tmem
+	kernelId    string
+	scheddStats map[sp.Trealm]*proto.RealmStats
+	mfs         *memfssrv.MemFs
+	nProcsRun   uint64
 }
 
 func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
-		pmgr:      procmgr.NewProcMgr(mfs, kernelId),
-		realmCnts: make(map[sp.Trealm]*int64),
-		mcpufree:  proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
-		memfree:   mem.GetTotalMem(),
-		kernelId:  kernelId,
-		mfs:       mfs,
+		pmgr:        procmgr.NewProcMgr(mfs, kernelId),
+		scheddStats: make(map[sp.Trealm]*proto.RealmStats),
+		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
+		memfree:     mem.GetTotalMem(),
+		kernelId:    kernelId,
+		mfs:         mfs,
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.scheddclnt = scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib)
@@ -152,6 +152,21 @@ func (sd *Schedd) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *prot
 	return nil
 }
 
+func (sd *Schedd) GetScheddStats(ctx fs.CtxI, req proto.GetScheddStatsRequest, res *proto.GetScheddStatsResponse) error {
+	scheddStats := make(map[string]*proto.RealmStats)
+	sd.realmMu.RLock()
+	for r, s := range sd.scheddStats {
+		st := &proto.RealmStats{
+			Running:  atomic.LoadInt64(&s.Running),
+			TotalRan: atomic.LoadInt64(&s.TotalRan),
+		}
+		scheddStats[r.String()] = st
+	}
+	sd.realmMu.RUnlock()
+	res.ScheddStats = scheddStats
+	return nil
+}
+
 // For resource accounting purposes, it is assumed that only one getQueuedProcs
 // thread runs per schedd.
 func (sd *Schedd) getQueuedProcs() {
@@ -251,19 +266,6 @@ func (sd *Schedd) register() {
 	}
 }
 
-func (sd *Schedd) logStats() {
-	for {
-		time.Sleep(time.Second)
-		realmCnts := make(map[sp.Trealm]int64)
-		sd.realmMu.RLock()
-		for r, c := range sd.realmCnts {
-			realmCnts[r] = atomic.LoadInt64(c)
-		}
-		sd.realmMu.RUnlock()
-		db.DPrintf(db.ALWAYS, "Ran %v total procs cnts %v", atomic.LoadUint64(&sd.nProcsRun), realmCnts)
-	}
-}
-
 func RunSchedd(kernelId string, reserveMcpu uint) error {
 	pcfg := proc.GetProcEnv()
 	mfs, err := memfssrv.NewMemFs(path.Join(sp.SCHEDD, kernelId), pcfg)
@@ -285,7 +287,6 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	db.DPrintf(db.ALWAYS, "Schedd starting with total mem: %v", mem.GetTotalMem())
 	defer p.Done()
 	go sd.getQueuedProcs()
-	go sd.logStats()
 	sd.register()
 	ssrv.RunServer()
 	return nil

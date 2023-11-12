@@ -1,6 +1,7 @@
 package scheddclnt
 
 import (
+	"fmt"
 	"path"
 	"sync/atomic"
 	"time"
@@ -180,7 +181,7 @@ func (sdc *ScheddClnt) Done() {
 	atomic.StoreInt32(&sdc.done, 1)
 }
 
-func (sdc *ScheddClnt) MonitorScheddStats(period time.Duration) {
+func (sdc *ScheddClnt) MonitorScheddStats(realm sp.Trealm, period time.Duration) {
 	go func() {
 		for atomic.LoadInt32(&sdc.done) == 0 {
 			n, stats, err := sdc.ScheddStats()
@@ -188,7 +189,14 @@ func (sdc *ScheddClnt) MonitorScheddStats(period time.Duration) {
 				db.DPrintf(db.ALWAYS, "ScheddStats err %v", err)
 				return
 			}
-			db.DPrintf(db.ALWAYS, "schedd stats = %d %v", n, stats)
+			r := realm.String()
+			statsStr := ""
+			for _, st := range stats {
+				if rs, ok := st[r]; ok {
+					statsStr += fmt.Sprintf(" [ r:%v t:%v ]", rs.Running, rs.TotalRan)
+				}
+			}
+			db.DPrintf(db.ALWAYS, "[%v] schedd stats = %d%v", r, n, statsStr)
 			time.Sleep(period)
 		}
 	}()

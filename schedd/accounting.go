@@ -30,15 +30,15 @@ func (sd *Schedd) getRealmStats(realm sp.Trealm) *proto.RealmStats {
 	sd.realmMu.RLock()
 	defer sd.realmMu.RUnlock()
 
-	cnt, ok := sd.scheddStats[realm]
+	st, ok := sd.scheddStats[realm]
 	if !ok {
 		// Promote to writer lock.
 		sd.realmMu.RUnlock()
 		sd.realmMu.Lock()
 		// Check if the count was created during lock promotion.
-		cnt, ok = sd.scheddStats[realm]
+		st, ok = sd.scheddStats[realm]
 		if !ok {
-			st := &proto.RealmStats{
+			st = &proto.RealmStats{
 				Running:  0,
 				TotalRan: 0,
 			}
@@ -48,5 +48,5 @@ func (sd *Schedd) getRealmStats(realm sp.Trealm) *proto.RealmStats {
 		sd.realmMu.Unlock()
 		sd.realmMu.RLock()
 	}
-	return cnt
+	return st
 }

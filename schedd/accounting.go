@@ -18,7 +18,6 @@ func (sd *Schedd) incRealmStats(p *proc.Proc) {
 	if p.GetProgram() != "mr-coord" {
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Inc realm stats r %v p %v", p.GetRealm(), p.GetProgram())
 
 	st := sd.getRealmStats(p.GetRealm())
 	atomic.AddInt64(&st.Running, 1)

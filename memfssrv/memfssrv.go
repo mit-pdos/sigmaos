@@ -60,22 +60,22 @@ func (mfs *MemFs) NewDevInode() *inode.Inode {
 	return inode.NewInode(mfs.ctx, sp.DMDEVICE, nil)
 }
 
-func (mfs *MemFs) lookup(path path.Path, write bool) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
+func (mfs *MemFs) lookup(path path.Path, ltype lockmap.Tlock) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
 	d, path := mfs.Root(path)
-	lk := mfs.plt.Acquire(mfs.ctx, rootP, write)
+	lk := mfs.plt.Acquire(mfs.ctx, rootP, ltype)
 	if len(path) == 0 {
 		return d, lk, nil
 	}
-	_, lo, lk, _, err := namei.Walk(mfs.plt, mfs.ctx, d, lk, rootP, path, nil, write)
+	_, lo, lk, _, err := namei.Walk(mfs.plt, mfs.ctx, d, lk, rootP, path, nil, ltype)
 	if err != nil {
-		mfs.plt.Release(mfs.ctx, lk, write)
+		mfs.plt.Release(mfs.ctx, lk, ltype)
 		return nil, nil, err
 	}
 	return lo, lk, nil
 }
 
-func (mfs *MemFs) lookupParent(path path.Path, write bool) (fs.Dir, *lockmap.PathLock, *serr.Err) {
-	lo, lk, err := mfs.lookup(path, write)
+func (mfs *MemFs) lookupParent(path path.Path, ltype lockmap.Tlock) (fs.Dir, *lockmap.PathLock, *serr.Err) {
+	lo, lk, err := mfs.lookup(path, ltype)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -85,52 +85,52 @@ func (mfs *MemFs) lookupParent(path path.Path, write bool) (fs.Dir, *lockmap.Pat
 
 func (mfs *MemFs) NewDev(pn string, dev fs.Inode) *serr.Err {
 	path := path.Split(pn)
-	d, lk, err := mfs.lookupParent(path.Dir(), true)
+	d, lk, err := mfs.lookupParent(path.Dir(), lockmap.WLOCK)
 	if err != nil {
 		return err
 	}
-	defer mfs.plt.Release(mfs.ctx, lk, true)
+	defer mfs.plt.Release(mfs.ctx, lk, lockmap.WLOCK)
 	dev.SetParent(d)
 	return dir.NewNod(mfs.ctx, d, path.Base(), dev)
 }
 
 func (mfs *MemFs) NewNod(pn string, i fs.Inode) *serr.Err {
 	path := path.Split(pn)
-	d, lk, err := mfs.lookupParent(path.Dir(), true)
+	d, lk, err := mfs.lookupParent(path.Dir(), lockmap.WLOCK)
 	if err != nil {
 		return err
 	}
-	defer mfs.plt.Release(mfs.ctx, lk, true)
+	defer mfs.plt.Release(mfs.ctx, lk, lockmap.WLOCK)
 	return dir.NewNod(mfs.ctx, d, path.Base(), i)
 }
 
 func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
 	path := path.Split(pn)
-	d, lk, err := mfs.lookupParent(path.Dir(), true)
+	d, lk, err := mfs.lookupParent(path.Dir(), lockmap.WLOCK)
 	if err != nil {
 		return nil, err
 	}
-	defer mfs.plt.Release(mfs.ctx, lk, true)
+	defer mfs.plt.Release(mfs.ctx, lk, lockmap.WLOCK)
 	return d.Create(mfs.ctx, path.Base(), p, m, lid, sp.NoFence())
 }
 
 func (mfs *MemFs) Remove(pn string) *serr.Err {
 	path := path.Split(pn)
-	d, lk, err := mfs.lookupParent(path.Dir(), true)
+	d, lk, err := mfs.lookupParent(path.Dir(), lockmap.WLOCK)
 	if err != nil {
 		return err
 	}
-	defer mfs.plt.Release(mfs.ctx, lk, true)
+	defer mfs.plt.Release(mfs.ctx, lk, lockmap.WLOCK)
 	return d.Remove(mfs.ctx, path.Base(), sp.NoFence())
 }
 
-func (mfs *MemFs) Open(pn string, m sp.Tmode, write bool) (fs.FsObj, *serr.Err) {
+func (mfs *MemFs) Open(pn string, m sp.Tmode, ltype lockmap.Tlock) (fs.FsObj, *serr.Err) {
 	path := path.Split(pn)
-	lo, lk, err := mfs.lookup(path, write)
+	lo, lk, err := mfs.lookup(path, ltype)
 	if err != nil {
 		return nil, err
 	}
-	mfs.plt.Release(mfs.ctx, lk, write)
+	mfs.plt.Release(mfs.ctx, lk, ltype)
 	return lo, nil
 }
 

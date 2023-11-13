@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	GET_PROC_TIMEOUT = 500 * time.Millisecond
+	GET_PROC_TIMEOUT = 50 * time.Millisecond
 )
 
 type ProcQ struct {

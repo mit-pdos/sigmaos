@@ -230,20 +230,15 @@ func (c *Coord) waitForTask(start time.Time, ch chan Tresult, dir string, p *pro
 }
 
 func (c *Coord) runTasks(ch chan Tresult, dir string, taskNames []string, f func(string) *proc.Proc) {
-	tasks := make([]*proc.Proc, len(taskNames))
-	// Make task proc structures.
-	for i, tn := range taskNames {
-		tasks[i] = f(tn)
-		db.DPrintf(db.MR, "prep to burst-spawn task %v %v\n", tasks[i].GetPid(), tasks[i].Args)
-	}
-	start := time.Now()
-	// Burst-spawn procs.
-	failed, errs := c.SpawnBurst(tasks, 1)
-	if len(failed) > 0 {
-		db.DFatalf("Couldn't burst-spawn some tasks %v, errs: %v", failed, errs)
-	}
-	for i := range tasks {
-		go c.waitForTask(start, ch, dir, tasks[i], taskNames[i])
+	for _, tn := range taskNames {
+		t := f(tn)
+		db.DPrintf(db.MR, "prep to spawn task %v %v", t.GetPid(), t.Args)
+		start := time.Now()
+		err := c.Spawn(t)
+		if err != nil {
+			db.DFatalf("Err spawn task: %v", err)
+		}
+		go c.waitForTask(start, ch, dir, t, tn)
 	}
 }
 
@@ -339,6 +334,7 @@ func (c *Coord) Round(ttype string) {
 			m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
 		} else if ttype == "all" {
 			m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
+			time.Sleep(10 * time.Second)
 			m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
 		} else {
 			db.DFatalf("Unknown ttype: %v", ttype)
@@ -377,7 +373,7 @@ func (c *Coord) Work() {
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)
-		// c.Round("all")
+		//		c.Round("all")
 		start := time.Now()
 		c.Round("map")
 		n := c.doneTasks(MapTask(c.job) + DONE)

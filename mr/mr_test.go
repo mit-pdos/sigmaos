@@ -11,6 +11,7 @@ import (
 	"path"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
@@ -282,7 +283,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	if monitor {
-		sdc.MonitorSchedds(ts.Realm())
+		sdc.MonitorScheddStats(ts.Realm(), time.Second)
 		defer sdc.Done()
 	}
 

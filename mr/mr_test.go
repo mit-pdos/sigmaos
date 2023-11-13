@@ -288,7 +288,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	}
 
 	nmap, err := mr.PrepareJob(ts.FsLib, ts.job, job)
-	assert.Nil(ts.T, err)
+	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
 	cm := mr.StartMRJob(ts.SigmaClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ)

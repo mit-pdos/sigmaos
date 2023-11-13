@@ -230,6 +230,7 @@ func (c *Coord) waitForTask(start time.Time, ch chan Tresult, dir string, p *pro
 }
 
 func (c *Coord) runTasks(ch chan Tresult, dir string, taskNames []string, f func(string) *proc.Proc) {
+	db.DPrintf(db.MR, "runTasks %v", taskNames)
 	for _, tn := range taskNames {
 		t := f(tn)
 		db.DPrintf(db.MR, "prep to spawn task %v %v", t.GetPid(), t.Args)
@@ -262,7 +263,7 @@ func (c *Coord) startTasks(ch chan Tresult, dir string, f func(string) *proc.Pro
 		}
 		taskNames = append(taskNames, t)
 	}
-	go c.runTasks(ch, dir, taskNames, f)
+	c.runTasks(ch, dir, taskNames, f)
 	return len(taskNames)
 }
 
@@ -334,8 +335,9 @@ func (c *Coord) Round(ttype string) {
 			m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
 		} else if ttype == "all" {
 			m += c.startTasks(ch, MapTask(c.job), c.mapperProc)
-			time.Sleep(10 * time.Second)
+			db.DPrintf(db.MR, "startTasks mappers %v", m)
 			m += c.startTasks(ch, ReduceTask(c.job), c.reducerProc)
+			db.DPrintf(db.MR, "startTasks mappers %v", m)
 		} else {
 			db.DFatalf("Unknown ttype: %v", ttype)
 		}

@@ -228,8 +228,8 @@ run_benchmark() {
 }
 
 run_mr() {
-  if [ $# -ne 6 ]; then
-    echo "run_mr args: n_cores n_vm prewarm app mem_req perf_dir" 1>&2
+  if [ $# -ne 7 ]; then
+    echo "run_mr args: n_cores n_vm prewarm app mem_req mr_tpt perf_dir" 1>&2
     exit 1
   fi
   n_cores=$1
@@ -237,9 +237,15 @@ run_mr() {
   prewarm=$3
   mrapp=$4
   mem_req=$5
-  perf_dir=$6
+  mr_tpt=$6
+  perf_dir=$7
+  set_perf="echo \"mr perf is off\""
+  if [[ "$mr_tpt" == "false" ]]; then
+    set_perf="export SIGMAPERF=\"KVCLERK_TPT;HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;THUMBNAIL_TPT;\""
+  fi
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
+    $set_perf; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp --mr_mem_req $mem_req > /tmp/bench.out 2>&1
   "
@@ -333,7 +339,7 @@ mr_scalability() {
     run=${FUNCNAME[0]}/sigmaOS/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 4 $n_vm "" $mrapp 5500 $perf_dir
+    run_mr 4 $n_vm "" $mrapp 5500 false $perf_dir
   done
 }
 
@@ -343,7 +349,7 @@ mr_replicated_named() {
   run=${FUNCNAME[0]}/sigmaOS
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  run_mr 4 $n_vm "" $mrapp 5500 $perf_dir
+  run_mr 4 $n_vm "" $mrapp 5500 false $perf_dir
 }
 
 mr_vs_corral() {
@@ -364,7 +370,7 @@ mr_vs_corral() {
     run=${FUNCNAME[0]}/$runname
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 2 $n_vm "$prewarm" $mrapp $mem_req $perf_dir
+    run_mr 2 $n_vm "$prewarm" $mrapp $mem_req true $perf_dir
   done
 }
 

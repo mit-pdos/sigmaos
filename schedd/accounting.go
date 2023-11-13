@@ -14,10 +14,9 @@ func (sd *Schedd) incRealmStats(p *proc.Proc) {
 		return
 	}
 	// For now, ignore MR coord
-	if p.GetProgram() != "mr-coord" {
+	if p.GetProgram() == "mr-coord" {
 		return
 	}
-
 	st := sd.getRealmStats(p.GetRealm())
 	atomic.AddInt64(&st.Running, 1)
 	atomic.AddInt64(&st.TotalRan, 1)
@@ -26,6 +25,10 @@ func (sd *Schedd) incRealmStats(p *proc.Proc) {
 func (sd *Schedd) decRealmStats(p *proc.Proc) {
 	// Don't count privileged procs
 	if p.IsPrivileged() || p.GetRealm() == "" {
+		return
+	}
+	// For now, ignore MR coord
+	if p.GetProgram() == "mr-coord" {
 		return
 	}
 	st := sd.getRealmStats(p.GetRealm())

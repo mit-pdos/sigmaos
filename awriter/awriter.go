@@ -5,8 +5,6 @@ import (
 	"io"
 	"sync"
 
-	"time"
-
 	db "sigmaos/debug"
 	// sp "sigmaos/sigmap"
 	"sigmaos/writer"

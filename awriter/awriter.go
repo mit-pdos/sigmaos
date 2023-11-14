@@ -83,10 +83,6 @@ func (w *Writer) Write(p []byte) (int, error) {
 	w.Lock()
 	defer w.Unlock()
 
-	defer func(t time.Time) {
-		db.DPrintf(db.ALWAYS, "awrite %p waited for: %v", w.wrt, time.Since(t))
-	}(time.Now())
-
 	db.DPrintf(db.AWRITER, "awrite %p lens %v empty %v full %v wlen %v", w.wrt, w.lens, w.emptyIdxs, w.fullIdxs, len(p))
 
 	if w.exit {

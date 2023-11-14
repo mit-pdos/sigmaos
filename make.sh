@@ -78,7 +78,7 @@ else
     WHAT="linux"
 fi
 
-LDF="-X sigmaos/sigmap.Target=$TARGET"
+LDF="-X sigmaos/sigmap.Target=$TARGET -s -w"
 
 for k in $WHAT; do
   echo "Building $k components"

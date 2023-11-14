@@ -18,8 +18,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/writer"
-	//	"sigmaos/fslib"
+	//	"sigmaos/writer"
+	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -37,8 +37,8 @@ type Reducer struct {
 	nmaptask     int
 	tmp          string
 	pwrt         *perf.PerfWriter
-	//	wrt          *fslib.Wrt
-	wrt  *writer.Writer
+	wrt          *fslib.Wrt
+	//	wrt  *writer.Writer
 	perf *perf.Perf
 }
 
@@ -68,7 +68,7 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	r.nmaptask = m
 
 	sc.MkDir(path.Dir(r.tmp), 0777)
-	w, err := r.CreateWriter(r.tmp, 0777, sp.OWRITE)
+	w, err := r.CreateAsyncWriter(r.tmp, 0777, sp.OWRITE)
 	if err != nil {
 		db.DFatalf("Error CreateWriter [%v] %v", r.tmp, err)
 		return nil, err

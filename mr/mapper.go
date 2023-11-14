@@ -16,13 +16,14 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	//	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/writer"
 )
 
 type Mapper struct {
@@ -34,10 +35,11 @@ type Mapper struct {
 	linesz      int
 	input       string
 	bin         string
-	wrts        []*fslib.Wrt
-	pwrts       []*perf.PerfWriter
-	rand        string
-	perf        *perf.Perf
+	//	wrts        []*fslib.Wrt
+	wrts  []*writer.Writer
+	pwrts []*perf.PerfWriter
+	rand  string
+	perf  *perf.Perf
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) (*Mapper, error) {
@@ -49,7 +51,8 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr,
 	m.rand = rand.String(16)
 	m.input = input
 	m.bin = path.Base(m.input)
-	m.wrts = make([]*fslib.Wrt, m.nreducetask)
+	//	m.wrts = make([]*fslib.Wrt, m.nreducetask)
+	m.wrts = make([]*writer.Writer, m.nreducetask)
 	m.pwrts = make([]*perf.PerfWriter, m.nreducetask)
 	m.SigmaClnt = sc
 	m.perf = p
@@ -93,7 +96,7 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 }
 
 func (m *Mapper) InitWrt(r int, name string) error {
-	if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
+	if wrt, err := m.CreateWriter(name, 0777, sp.OWRITE); err != nil {
 		return err
 	} else {
 		m.wrts[r] = wrt

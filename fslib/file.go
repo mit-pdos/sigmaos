@@ -165,7 +165,7 @@ func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (
 	if err != nil {
 		return nil, err
 	}
-	aw := awriter.NewWriterSize(w, sp.BUFSZ)
+	aw := awriter.NewWriterSize(w, 4, sp.BUFSZ)
 	bw := bufio.NewWriterSize(aw, sp.BUFSZ)
 	return &Wrt{w, aw, bw}, nil
 }

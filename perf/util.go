@@ -164,6 +164,11 @@ func NewPerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 
 // Register that an event has happened with a given instantaneous throughput.
 func (p *Perf) TptTick(tpt float64) {
+	// If we aren't recording throughput, return.
+	if !p.tpt {
+		return
+	}
+
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -171,11 +176,6 @@ func (p *Perf) TptTick(tpt float64) {
 }
 
 func (p *Perf) tptTickL(tpt float64) {
-	// If we aren't recording throughput, return.
-	if !p.tpt {
-		return
-	}
-
 	// If it has been long enough since we started incrementing this slot, seal
 	// it and move to the next slot. In this way, we always expect
 	// len(p.times) == len(p.tpts) - 1

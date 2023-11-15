@@ -214,7 +214,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	b := make([]byte, sp.BUFSZ)
 	for {
 		n, err := rdr.Read(b)
-		if err != nil {
+		if err != nil && err != io.EOF {
 			return err
 		}
 		// Nothing left to read

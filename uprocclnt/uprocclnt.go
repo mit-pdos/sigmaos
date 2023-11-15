@@ -27,12 +27,13 @@ func NewUprocdClnt(pid sp.Tpid, rpcc *rpcclnt.RPCClnt) *UprocdClnt {
 		pid:     pid,
 		RPCClnt: rpcc,
 		realm:   NOT_SET,
-		ptype:   proc.Ttype(999),
+		ptype:   proc.T_LC,
 		share:   0,
 	}
 }
 
-func (clnt *UprocdClnt) AssignToRealm(realm sp.Trealm) error {
+func (clnt *UprocdClnt) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
+	clnt.ptype = ptype
 	req := &proto.AssignRequest{
 		RealmStr: realm.String(),
 	}

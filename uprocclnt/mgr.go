@@ -160,7 +160,7 @@ func (updm *UprocdMgr) getClntOrStartUprocd(realm sp.Trealm, ptype proc.Ttype) (
 		if ptype == proc.T_BE {
 			updm.beUprocds = append(updm.beUprocds, rpcc)
 		}
-		clnt.AssignToRealm(realm)
+		clnt.AssignToRealm(realm, ptype)
 	}
 	return rpcc, nil
 }

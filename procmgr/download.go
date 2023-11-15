@@ -123,5 +123,6 @@ func (mgr *ProcMgr) tryDownloadProcPath(realm sp.Trealm, from, prog string) erro
 		mgr.rootsc.Remove(tmppath)
 	}
 	db.DPrintf(db.PROCMGR, "Took %v to download proc %v", time.Since(start), src)
+	db.DPrintf(db.SPAWN_LAT, "Took %v to download proc %v", time.Since(start), src)
 	return nil
 }

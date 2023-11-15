@@ -122,10 +122,10 @@ func (w *Writer) Close() error {
 	for len(w.emptyIdxs) < len(w.buffs) && w.err == nil {
 		w.producer.Wait()
 	}
+	if w.err != nil {
+		db.DPrintf(db.ALWAYS, "Err when closing: %v len %v", w.err, len(w.emptyIdxs))
+	}
 	w.exit = true
 	w.consumer.Signal()
-	if w.err != nil {
-		return w.err
-	}
-	return w.wrt.Close()
+	return w.err
 }

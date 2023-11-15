@@ -38,12 +38,14 @@ func RunKernelSrv(k *kernel.Kernel) error {
 }
 
 func (ks *KernelSrv) Boot(ctx fs.CtxI, req proto.BootRequest, rep *proto.BootResult) error {
+	db.DPrintf(db.KERNEL, "kernelsrv boot %v args %v", req.Name, req.Args)
 	var pid sp.Tpid
 	var err error
 	if pid, err = ks.k.BootSub(req.Name, req.Args, ks.k.Param, false); err != nil {
 		return err
 	}
 	rep.PidStr = pid.String()
+	db.DPrintf(db.KERNEL, "kernelsrv boot done %v pid %v", req.Name, pid)
 	return nil
 }
 

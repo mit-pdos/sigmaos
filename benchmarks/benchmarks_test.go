@@ -270,6 +270,9 @@ func TestMicroScheddSpawn(t *testing.T) {
 		warmupRealm(ts1, []string{prog})
 	}
 
+	// Allow the uprocd pool to refill
+	time.Sleep(5 * time.Second)
+
 	done := make(chan bool)
 	// Prep Schedd job
 	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt) time.Duration {

@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --branch BRANCH --version VERSION [--cloudlab" 1>&2
+  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --branch BRANCH --version VERSION [--overlays] [--cloudlab]" 1>&2
 }
 
 VPC=""
 KVPC=""
+OVERLAYS=""
 CLOUDLAB=""
 BRANCH="master"
 VERSION=""
@@ -35,6 +36,10 @@ while [[ "$#" -gt 0 ]]; do
     shift
     VERSION=$1
     shift
+    ;;
+  --overlays)
+    shift
+    OVERLAYS="--overlays"
     ;;
   --cloudlab)
     shift
@@ -133,7 +138,7 @@ start_sigmaos_cluster() {
 #  stop_k8s_cluster $vpc
   stop_sigmaos_cluster $vpc
   cd $SCRIPT_DIR
-  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG --branch $BRANCH >> $INIT_OUT 2>&1
+  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG --branch $BRANCH $OVERLAYS >> $INIT_OUT 2>&1
   cd $ROOT_DIR
 }
 
@@ -239,15 +244,16 @@ run_mr() {
   mem_req=$5
   mr_tpt=$6
   perf_dir=$7
-  set_perf="echo \"mr perf is off\""
+  set_perf="echo \"mr perf is on\""
   if [[ "$mr_tpt" == "false" ]]; then
-    set_perf="export SIGMAPERF=\"KVCLERK_TPT;HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;THUMBNAIL_TPT;\""
+    set_perf="export SIGMAPERF=\"KVCLERK_TPT;HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;THUMBNAIL_TPT;\"; \
+    echo \"mr perf is off\""
   fi
   cmd="
-    export SIGMADEBUG=\"TEST;BENCH;\"; \
+    export SIGMADEBUG=\"TEST;BENCH;MR;\"; \
     $set_perf; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp --mr_mem_req $mem_req > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp --mr_mem_req $mem_req > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
@@ -280,9 +286,9 @@ run_hotel() {
     export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_mcpu $hotel_cache_mcpu $as_cache --hotel_dur $dur --hotel_max_rps $rps --sleep $slp --prewarm_realm --memcached '10.0.169.210:11211,10.0.57.124:11211,10.0.91.157:11211'  > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_mcpu $hotel_cache_mcpu $as_cache --hotel_dur $dur --hotel_max_rps $rps --sleep $slp --prewarm_realm --memcached '10.0.169.210:11211,10.0.57.124:11211,10.0.91.157:11211'  > /tmp/bench.out 2>&1
   "
-#    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_mcpu $hotel_cache_mcpu --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
+#    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_mcpu $hotel_cache_mcpu --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm > /tmp/bench.out 2>&1
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
   else
@@ -308,7 +314,7 @@ run_kv() {
   perf_dir=$8
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 -run AppKVUnrepl --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS -run AppKVUnrepl --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
@@ -326,7 +332,7 @@ run_cached() {
   perf_dir=$6
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 -run AppCached --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS -run AppCached --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
@@ -339,7 +345,7 @@ mr_scalability() {
     run=${FUNCNAME[0]}/sigmaOS/$n_vm
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 4 $n_vm "" $mrapp 5500 false $perf_dir
+    run_mr 4 $n_vm "" $mrapp 5500 true $perf_dir
   done
 }
 
@@ -349,7 +355,7 @@ mr_replicated_named() {
   run=${FUNCNAME[0]}/sigmaOS
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
-  run_mr 4 $n_vm "" $mrapp 5500 false $perf_dir
+  run_mr 4 $n_vm "" $mrapp 5500 true $perf_dir
 }
 
 mr_vs_corral() {
@@ -370,7 +376,7 @@ mr_vs_corral() {
     run=${FUNCNAME[0]}/$runname
     echo "========== Running $run =========="
     perf_dir=$OUT_DIR/$run
-    run_mr 2 $n_vm "$prewarm" $mrapp $mem_req true $perf_dir
+    run_mr 2 $n_vm "$prewarm" $mrapp $mem_req false $perf_dir
   done
 }
 
@@ -535,7 +541,7 @@ realm_balance_be() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --nrealm $n_realm --mr_mem_req $mem_req > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --nrealm $n_realm --mr_mem_req $mem_req > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -560,7 +566,7 @@ realm_balance_be_img() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --nrealm $n_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --nrealm $n_realm > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $ncores $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -605,7 +611,7 @@ k8s_balance_be() {
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sMRMulti --k8sleaderip $k8sleaderip --s3resdir $s3dir --sleep $sl --nrealm $n_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sMRMulti --k8sleaderip $k8sleaderip --s3resdir $s3dir --sleep $sl --nrealm $n_realm > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -626,7 +632,7 @@ realm_balance() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -672,7 +678,7 @@ realm_balance_multi() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true $swap
@@ -741,7 +747,7 @@ realm_balance_multi_img() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceHotelImgResize --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --imgresize_nround $imgresize_nrounds $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceHotelImgResize --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --imgresize_nround $imgresize_nrounds $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true $swap
@@ -802,7 +808,7 @@ k8s_balance() {
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
   cd $SCRIPT_DIR
@@ -869,7 +875,7 @@ k8s_balance_multi() {
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true "swapoff"
   sleep $sl2
@@ -911,7 +917,7 @@ mr_k8s() {
     aws s3 rm --recursive s3://9ps3/$s3dir > /dev/null; \
     aws s3 rm --recursive s3://9ps3/ouptut > /dev/null; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -939,7 +945,7 @@ img_resize() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;PROCCLNT;PROCCLNT_ERR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestImgResize --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $mcpu --imgresize_mem $imgresize_mem > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestImgResize --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $mcpu --imgresize_mem $imgresize_mem > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -971,7 +977,7 @@ k8s_img_resize() {
       export SIGMADEBUG=\"TEST;BENCH;\"; \
       go clean -testcache; \
       kubectl apply -Rf /tmp/thumbnail.yaml; \
-      go test -v sigmaos/benchmarks -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestK8sImgResize > /tmp/bench.out 2>&1
+      go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestK8sImgResize > /tmp/bench.out 2>&1
     "
     run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
   done
@@ -993,7 +999,7 @@ schedd_scalability() {
     cmd="
       export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
       go clean -testcache; \
-      go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
+      go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
     run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
@@ -1025,7 +1031,7 @@ schedd_scalability_rs() {
     cmd="
       export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
       go clean -testcache; \
-      go test -v sigmaos/benchmarks -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
+      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
     run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
@@ -1119,7 +1125,7 @@ realm_burst() {
   perf_dir=$OUT_DIR/$run
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 --run RealmBurst > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run RealmBurst > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
@@ -1321,7 +1327,7 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #hotel_tail_multi
 #realm_balance_be
-mr_vs_corral
+#mr_vs_corral
 #schedd_scalability_rs
 #realm_balance_be_img
 #schedd_scalability
@@ -1358,7 +1364,7 @@ source ~/env/3.10/bin/activate
 #graph_realm_balance_be_img
 #graph_schedd_scalability_rs
 
-#graph_mr_vs_corral
+graph_mr_vs_corral
 #graph_realm_balance_multi_img
 
 #graph_realm_balance_multi

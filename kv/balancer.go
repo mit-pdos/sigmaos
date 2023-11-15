@@ -108,9 +108,9 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 	}
 	ctx := ctx.NewCtx(KVBALANCER, 0, sp.NoClntId, nil, nil)
 	root, _ := ssrv.Root(path.Path{})
-	err1 := dir.NewNod(ctx, root, "ctl", newCtl(ctx, root, bl))
+	err1 := dir.MkNod(ctx, root, "ctl", newCtl(ctx, root, bl))
 	if err1 != nil {
-		db.DFatalf("NewNod clone failed %v\n", err1)
+		db.DFatalf("MkNod clone failed %v\n", err1)
 	}
 
 	// start server and write ch when server is done

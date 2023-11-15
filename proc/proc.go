@@ -30,7 +30,7 @@ func (t Ttype) String() string {
 	case T_LC:
 		return "T_LC"
 	default:
-		log.Fatalf("Unknown proc type: %v", t)
+		log.Fatalf("FATAL Unknown proc type: %v", int(t))
 	}
 	return ""
 }

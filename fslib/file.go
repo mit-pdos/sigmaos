@@ -201,29 +201,31 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	fdsrc, err := fl.Open(src, sp.OREAD)
+	rdr, err := fl.OpenAsyncReader(src, 0)
 	if err != nil {
 		return err
 	}
-	defer fl.Close(fdsrc)
-	fddst, err := fl.Create(dst, st.Tmode(), sp.OWRITE)
+	defer rdr.Close()
+	wrt, err := fl.CreateAsyncWriter(dst, st.Tmode(), 0777)
 	if err != nil {
 		return err
 	}
-	defer fl.Close(fddst)
+	defer wrt.Close()
+	b := make([]byte, sp.BUFSZ)
 	for {
-		b, err := fl.Read(fdsrc, sp.BUFSZ)
+		n, err := rdr.Read(b)
 		if err != nil {
 			return err
 		}
-		if len(b) == 0 {
+		// Nothing left to read
+		if n == 0 {
 			break
 		}
-		n, err := fl.Write(fddst, b)
+		nn, err := wrt.Write(b)
 		if err != nil {
 			return err
 		}
-		if n != sp.Tsize(len(b)) {
+		if nn != n {
 			return fmt.Errorf("short write")
 		}
 	}

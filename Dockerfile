@@ -17,6 +17,7 @@ RUN apk add --no-cache libseccomp gcompat libpthread-stubs musl-dev strace
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
+    mkdir all-realm-bin && \
     mkdir bin/user && \
     mkdir bin/kernel && \
     mkdir bin/linux

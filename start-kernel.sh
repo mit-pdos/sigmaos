@@ -11,7 +11,7 @@ usage() {
 UPDATE=""
 TAG=""
 BOOT="named"
-NAMED=":1111"
+NAMED="127.0.0.1"
 DBIP="x.x.x.x"
 MONGOIP="x.x.x.x"
 NET="host"

@@ -124,6 +124,8 @@ func (w *Writer) Close() error {
 	}
 	w.exit = true
 	w.consumer.Signal()
-	return w.err
-	// return w.wrt.Close()
+	if w.err != nil {
+		return w.err
+	}
+	return w.wrt.Close()
 }

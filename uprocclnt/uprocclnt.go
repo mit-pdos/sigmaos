@@ -5,7 +5,13 @@ import (
 
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/uprocsrv/proto"
+)
+
+const (
+	NOT_SET = "NOT_SET"
 )
 
 type UprocdClnt struct {
@@ -16,13 +22,33 @@ type UprocdClnt struct {
 	share Tshare
 }
 
-func NewUprocdClnt(pid sp.Tpid, rpcc *rpcclnt.RPCClnt, realm sp.Trealm, ptype proc.Ttype) *UprocdClnt {
+func NewUprocdClnt(pid sp.Tpid, rpcc *rpcclnt.RPCClnt) *UprocdClnt {
 	return &UprocdClnt{
 		pid:     pid,
 		RPCClnt: rpcc,
-		realm:   realm,
-		ptype:   ptype,
+		realm:   NOT_SET,
+		ptype:   proc.Ttype(999),
 		share:   0,
+	}
+}
+
+func (clnt *UprocdClnt) AssignToRealm(realm sp.Trealm) error {
+	req := &proto.AssignRequest{
+		RealmStr: realm.String(),
+	}
+	res := &proto.AssignResult{}
+	return clnt.RPC("UprocSrv.Assign", req, res)
+}
+
+func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr error) {
+	req := &proto.RunRequest{
+		ProcProto: uproc.GetProto(),
+	}
+	res := &proto.RunResult{}
+	if err := clnt.RPC("UprocSrv.Run", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+		return err, nil
+	} else {
+		return nil, err
 	}
 }
 

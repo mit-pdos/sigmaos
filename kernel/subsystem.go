@@ -61,8 +61,6 @@ func (s *Subsystem) Run(how proc.Thow, kernelId, localIP string) error {
 		}
 		s.cmd = cmd
 	} else {
-		realm := sp.Trealm(s.p.Args[0])
-		ptype := proc.ParseTtype(s.p.Args[1])
 		if err := s.NewProc(s.p, proc.HDOCKER, kernelId); err != nil {
 			return err
 		}
@@ -76,7 +74,7 @@ func (s *Subsystem) Run(how proc.Thow, kernelId, localIP string) error {
 			r = &port.Range{FPORT, LPORT}
 			up = r.Fport
 		}
-		c, err := container.StartPContainer(s.p, kernelId, realm, r, up, ptype)
+		c, err := container.StartPContainer(s.p, kernelId, r, up)
 		if err != nil {
 			return err
 		}

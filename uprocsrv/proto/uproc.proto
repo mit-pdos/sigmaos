@@ -11,3 +11,10 @@ message RunRequest {
 message RunResult {
 }
 
+message AssignRequest {
+  string realmStr = 1;
+}
+
+message AssignResult {
+  bool oK = 1;
+}

@@ -169,7 +169,7 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 		realm := args[0]
 		ptype := args[1]
 
-		pn := path.Join(sp.SCHEDD, args[2], sp.UPROCDREL, realm, ptype)
+		pn := path.Join(sp.SCHEDD, args[2], sp.UPROCDREL, s.p.GetPid().String())
 
 		// container's first port is for uprocd
 		pm, err := s.container.AllocFirst()

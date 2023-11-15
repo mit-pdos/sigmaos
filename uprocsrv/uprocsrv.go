@@ -31,17 +31,17 @@ type UprocSrv struct {
 	kernelId string
 }
 
-func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
+func RunUprocSrv(kernelId string, up string) error {
 	pcfg := proc.GetProcEnv()
 	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pcfg: pcfg}
 
 	ip, _ := netsigma.LocalIP()
-	db.DPrintf(db.UPROCD, "Run %v %v %v %s IP %s", realm, kernelId, up, os.Environ(), ip)
+	db.DPrintf(db.UPROCD, "Run %v %v %s IP %s", kernelId, up, os.Environ(), ip)
 
 	var ssrv *sigmasrv.SigmaSrv
 	var err error
 	if up == port.NOPORT.String() {
-		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, realm, ptype.String())
+		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pcfg.GetPID().String())
 		ssrv, err = sigmasrv.NewSigmaSrv(pn, ups, pcfg)
 	} else {
 		// The kernel will advertise the server, so pass "" as pn.
@@ -65,6 +65,7 @@ func RunUprocSrv(realm, kernelId string, ptype proc.Ttype, up string) error {
 }
 
 func shrinkMountTable() error {
+	return nil
 	mounts := []string{
 		"/etc/resolv.conf",
 		"/etc/hostname",
@@ -93,6 +94,18 @@ func shrinkMountTable() error {
 			return errno
 		}
 	}
+	return nil
+}
+
+func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.AssignResult) error {
+	realm := sp.Trealm(req.RealmStr)
+	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v", realm)
+	err := container.MountRealmBinDir(realm)
+	if err != nil {
+		db.DFatalf("Error mount realm bin dir: %v", err)
+	}
+	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v done", realm)
+	res.OK = true
 	return nil
 }
 

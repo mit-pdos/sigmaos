@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"path"
+	"syscall"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -21,7 +22,8 @@ import (
 )
 
 // Start container for uprocd. If r is nil, don't use overlays.
-func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range, up port.Tport, ptype proc.Ttype) (*Container, error) {
+// func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range, up port.Tport, ptype proc.Ttype) (*Container, error) {
+func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up port.Tport) (*Container, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -33,16 +35,17 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 
 	score := 0
 	memswap := int64(0)
-	if ptype == proc.T_BE {
-		score = 1000
-		memswap = membytes
-	}
+	// TODO: set swap score
+	//	if ptype == proc.T_BE {
+	//		score = 1000
+	//		memswap = membytes
+	//	}
 
 	// append uprocd's port
 	p.Args = append(p.Args, up.String())
 
 	cmd := append([]string{p.GetProgram()}, p.Args...)
-	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v %v r %v s %v\n", cmd, p.GetEnv(), r, realm, score)
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v r %v s %v\n", cmd, p.GetEnv(), r, score)
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
@@ -74,9 +77,11 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 			Mounts: []mount.Mount{
 				// user bin dir.
 				mount.Mount{
-					Type:     mount.TypeBind,
-					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
-					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
+					Type:   mount.TypeBind,
+					Source: path.Join("/tmp/sigmaos-bin"),
+					Target: path.Join(sp.SIGMAHOME, "all-realm-bin"),
+					//					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
+					//					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
 					ReadOnly: true,
 				},
 				// perf output dir
@@ -92,7 +97,7 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 			OomScoreAdj:  score,
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
-		}, nil, kernelId+"-uprocd-"+realm.String()+"-"+p.GetPid().String())
+		}, nil, kernelId+"-uprocd-"+p.GetPid().String())
 	if err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
 		return nil, err
@@ -124,4 +129,13 @@ func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Ran
 	}
 	c.cmgr.SetMemoryLimit(c.cgroupPath, membytes, memswap)
 	return c, nil
+}
+
+func MountRealmBinDir(realm sp.Trealm) error {
+	// Mount realm bin directory
+	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "all-realm-bin", realm.String()), path.Join(sp.SIGMAHOME, "bin", "user"), "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /realm bin dir: %v", err)
+		return err
+	}
+	return nil
 }

@@ -91,17 +91,17 @@ func (mfs *MemFs) NewDev(pn string, dev fs.Inode) *serr.Err {
 	}
 	defer mfs.plt.Release(mfs.ctx, lk, lockmap.WLOCK)
 	dev.SetParent(d)
-	return dir.NewNod(mfs.ctx, d, path.Base(), dev)
+	return dir.MkNod(mfs.ctx, d, path.Base(), dev)
 }
 
-func (mfs *MemFs) NewNod(pn string, i fs.Inode) *serr.Err {
+func (mfs *MemFs) MkNod(pn string, i fs.Inode) *serr.Err {
 	path := path.Split(pn)
 	d, lk, err := mfs.lookupParent(path.Dir(), lockmap.WLOCK)
 	if err != nil {
 		return err
 	}
 	defer mfs.plt.Release(mfs.ctx, lk, lockmap.WLOCK)
-	return dir.NewNod(mfs.ctx, d, path.Base(), i)
+	return dir.MkNod(mfs.ctx, d, path.Base(), i)
 }
 
 func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {

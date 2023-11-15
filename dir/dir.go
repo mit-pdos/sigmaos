@@ -81,7 +81,7 @@ func NewRootDir(ctx fs.CtxI, mi fs.NewInodeF, parent fs.Dir) fs.Dir {
 	return i.(fs.Dir)
 }
 
-func NewNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *serr.Err {
+func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *serr.Err {
 	err := dir.(*DirImpl).CreateDev(ctx, name, i)
 	if err != nil {
 		return err

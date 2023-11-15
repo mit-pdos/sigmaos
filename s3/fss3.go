@@ -7,10 +7,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	pcfg "sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/perf"
+	pcfg "sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -38,10 +38,9 @@ func RunFss3(buckets []string) {
 	commonBuckets := []string{"9ps3", "sigma-common"}
 	buckets = append(buckets, commonBuckets...)
 	for _, bucket := range buckets {
-		// Add the 9ps3 bucket.
 		d := newDir(bucket, path.Path{}, sp.DMDIR)
-		if err := ssrv.NewNod(bucket, d); err != nil {
-			db.DFatalf("Error NewNod bucket in RunFss3: %v", err)
+		if err := ssrv.MkNod(bucket, d); err != nil {
+			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
 		}
 	}
 	fss3.SigmaSrv = ssrv

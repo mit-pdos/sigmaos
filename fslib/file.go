@@ -221,12 +221,13 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 		if n == 0 {
 			break
 		}
-		nn, err := wrt.Write(b)
+		b2 := b[:n]
+		nn, err := wrt.Write(b2)
 		if err != nil {
 			return err
 		}
 		if nn != n {
-			return fmt.Errorf("short write")
+			return fmt.Errorf("short write %v != %v", nn, n)
 		}
 	}
 	return nil

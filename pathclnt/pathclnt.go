@@ -29,14 +29,13 @@ type PathClnt struct {
 	ndMntCache *NamedMountCache
 	mnt        *MntTable
 	rootmt     *RootMountTable
-	chunkSz    sp.Tsize
 	realm      sp.Trealm
 	lip        string
 	cid        sp.TclntId
 }
 
-func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt, sz sp.Tsize) *PathClnt {
-	pathc := &PathClnt{pcfg: pcfg, mnt: newMntTable(), chunkSz: sz}
+func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
+	pathc := &PathClnt{pcfg: pcfg, mnt: newMntTable()}
 	if fidc == nil {
 		pathc.FidClnt = fidclnt.NewFidClnt(pcfg, pcfg.Net)
 	} else {
@@ -64,14 +63,6 @@ func (pathc *PathClnt) ClntId() sp.TclntId {
 
 func (pathc *PathClnt) GetLocalIP() string {
 	return pathc.pcfg.LocalIP
-}
-
-func (pathc *PathClnt) SetChunkSz(sz sp.Tsize) {
-	pathc.chunkSz = sz
-}
-
-func (pathc *PathClnt) GetChunkSz() sp.Tsize {
-	return pathc.chunkSz
 }
 
 func (pathc *PathClnt) Mounts() []string {

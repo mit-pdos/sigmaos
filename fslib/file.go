@@ -212,7 +212,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	}
 	defer fl.Close(fddst)
 	for {
-		b, err := fl.Read(fdsrc, fl.GetChunkSz())
+		b, err := fl.Read(fdsrc, sp.BUFSZ)
 		if err != nil {
 			return err
 		}

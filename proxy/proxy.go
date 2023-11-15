@@ -82,7 +82,7 @@ func newNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
 	npc := &NpConn{}
 	npc.clnt = protclnt.NewClnt(pcfg, sp.ROOTREALM.String())
 	npc.fidc = fidclnt.NewFidClnt(pcfg, sp.ROOTREALM.String())
-	npc.pc = pathclnt.NewPathClnt(pcfg, npc.fidc, sp.Tsize(1_000_000))
+	npc.pc = pathclnt.NewPathClnt(pcfg, npc.fidc)
 	npc.fm = newFidMap()
 	npc.cid = sp.TclntId(rand.Uint64())
 	return npc

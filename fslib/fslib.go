@@ -17,7 +17,7 @@ func NewFsLib(pcfg *proc.ProcEnv) (*FsLib, error) {
 	db.DPrintf(db.PORT, "NewFsLib: uname %s lip %s addrs %v\n", pcfg.GetUname(), pcfg.LocalIP, pcfg.EtcdIP)
 	fl := &FsLib{
 		pcfg:     pcfg,
-		FdClient: fdclnt.NewFdClient(pcfg, nil, sp.Tsize(10_000_000)),
+		FdClient: fdclnt.NewFdClient(pcfg, nil),
 	}
 	return fl, nil
 }

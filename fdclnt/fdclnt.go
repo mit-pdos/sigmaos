@@ -36,9 +36,9 @@ type FdClient struct {
 	fds *FdTable
 }
 
-func NewFdClient(pcfg *proc.ProcEnv, fsc *fidclnt.FidClnt, sz sp.Tsize) *FdClient {
+func NewFdClient(pcfg *proc.ProcEnv, fsc *fidclnt.FidClnt) *FdClient {
 	fdc := &FdClient{pcfg: pcfg}
-	fdc.PathClnt = pathclnt.NewPathClnt(pcfg, fsc, sz)
+	fdc.PathClnt = pathclnt.NewPathClnt(pcfg, fsc)
 	fdc.fds = newFdTable()
 	return fdc
 }

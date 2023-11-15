@@ -113,7 +113,7 @@ func TestWaitExitSimpleSingleBE(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
+	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong: %v", status)
 
 	cleanSleeperResult(t, ts, a.GetPid())
 
@@ -134,7 +134,7 @@ func TestWaitExitSimpleSingleLC(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
+	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong: %v", status)
 
 	cleanSleeperResult(t, ts, a.GetPid())
 
@@ -157,7 +157,7 @@ func TestWaitExitSimpleMultiKernel(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status.IsStatusOK(), "Exit status wrong")
+	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong")
 
 	cleanSleeperResult(t, ts, a.GetPid())
 
@@ -172,7 +172,7 @@ func TestWaitExitOne(t *testing.T) {
 	pid := spawnSleeper(t, ts)
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status.IsStatusOK(), "Exit status wrong")
+	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong")
 
 	// cleaned up (may take a bit)
 	time.Sleep(500 * time.Millisecond)
@@ -201,7 +201,7 @@ func TestWaitExitN(t *testing.T) {
 			pid := spawnSleeper(t, ts)
 			status, err := ts.WaitExit(pid)
 			assert.Nil(t, err, "WaitExit error")
-			assert.True(t, status.IsStatusOK(), "Exit status wrong %v", status)
+			assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong %v", status)
 			db.DPrintf(db.TEST, "Exited %v", pid)
 
 			// cleaned up (may take a bit)
@@ -228,7 +228,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status.IsStatusOK(), "Exit status wrong")
+	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong")
 
 	// cleaned up
 	for {
@@ -260,7 +260,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(pid)
-	assert.True(t, status.IsStatusOK(), "WaitExit status error")
+	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit status error")
 	assert.Nil(t, err, "WaitExit error")
 	// Wait for the child to run & finish
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
@@ -375,7 +375,7 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 				status, err := ts.WaitExit(a.GetPid())
 				db.DPrintf(db.TEST, "Done WaitExit %v", pid)
 				assert.Nil(t, err, "WaitExit")
-				assert.True(t, status.IsStatusOK(), "Status not OK")
+				assert.True(t, status != nil && status.IsStatusOK(), "Status not OK")
 				cleanSleeperResult(t, ts, pid)
 			}
 			done <- i
@@ -401,7 +401,7 @@ func TestCrashProcOne(t *testing.T) {
 
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status.IsStatusErr(), "Status not err")
+	assert.True(t, status != nil && status.IsStatusErr(), "Status not err")
 	assert.Equal(t, "Non-sigma error  Non-sigma error  exit status 2", status.Msg(), "WaitExit")
 
 	ts.Shutdown()
@@ -418,7 +418,7 @@ func TestEarlyExit1(t *testing.T) {
 	// Wait for parent to finish
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status.IsStatusOK(), "WaitExit")
+	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit")
 
 	// Child should not have terminated yet.
 	checkSleeperResultFalse(t, ts, pid1)
@@ -455,7 +455,7 @@ func TestEarlyExitN(t *testing.T) {
 			// Wait for parent to finish
 			status, err := ts.WaitExit(a.GetPid())
 			assert.Nil(t, err, "WaitExit err: %v", err)
-			assert.True(t, status.IsStatusOK(), "WaitExit: %v", status)
+			assert.True(t, status != nil && status.IsStatusOK(), "WaitExit: %v", status)
 
 			time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
@@ -546,7 +546,7 @@ func TestEvict(t *testing.T) {
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
+	assert.True(t, status != nil && status.IsStatusEvicted(), "WaitExit status")
 
 	ts.Shutdown()
 }
@@ -566,7 +566,7 @@ func TestEvictN(t *testing.T) {
 	for i := 0; i < N; i++ {
 		status, err := ts.WaitExit(pids[i])
 		assert.Nil(t, err, "WaitExit")
-		assert.True(t, status.IsStatusEvicted(), "WaitExit status")
+		assert.True(t, status != nil && status.IsStatusEvicted(), "WaitExit status")
 	}
 
 	ts.Shutdown()
@@ -601,7 +601,7 @@ func TestBurstSpawn(t *testing.T) {
 	for _, p := range ps {
 		status, err := ts.WaitExit(p.GetPid())
 		assert.Nil(t, err, "WaitExit: %v", err)
-		assert.True(t, status.IsStatusEvicted(), "Wrong status: %v", status)
+		assert.True(t, status != nil && status.IsStatusEvicted(), "Wrong status: %v", status)
 	}
 
 	ts.Shutdown()
@@ -625,7 +625,7 @@ func TestReserveCores(t *testing.T) {
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status.IsStatusOK(), "WaitExit status")
+	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit status")
 
 	// Make sure the second proc didn't finish
 	checkSleeperResult(t, ts, pid)
@@ -635,7 +635,7 @@ func TestReserveCores(t *testing.T) {
 
 	status, err = ts.WaitExit(pid1)
 	assert.Nil(t, err, "WaitExit 2")
-	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
+	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit status 2: %v", status)
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")

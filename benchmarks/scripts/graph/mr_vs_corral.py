@@ -25,10 +25,12 @@ def scrape_times(dname, sigma):
 
 def get_e2e_times(input_dir, datasize):
   sfnbase = os.path.join(input_dir, "mr-wc-wiki" + datasize + "-bench.yml")
+  sfns3base = os.path.join(input_dir, "mr-wc-wiki" + datasize + "-bench-s3.yml")
   cfnbase = os.path.join(input_dir, "corral-" + datasize)
   sigma = [ scrape_times(sfnbase + "-cold", True), scrape_times(sfnbase + "-warm", True) ]
+  sigmas3 = [ scrape_times(sfns3base + "-cold", True), scrape_times(sfns3base + "-warm", True) ]
   corral = [ scrape_times(cfnbase + "-cold", False), scrape_times(cfnbase + "-warm", False) ]
-  return (sigma, corral)
+  return (sigma, sigmas3, corral)
 
 def finalize_graph(fig, ax, plots, title, out):
   plt.title(title)
@@ -41,17 +43,19 @@ def setup_graph():
   return fig, ax
 
 def graph_data(input_dir, datasize, out):
-  sigma_times, corral_times = get_e2e_times(input_dir, datasize)
+  sigma_times, sigmas3_times, corral_times = get_e2e_times(input_dir, datasize)
 
   fig, ax = setup_graph()
 
   width = 0.35
-  sigmax = np.arange(2)
-  corralx = [ x + width for x in sigmax ]
-  sigmaplot = plt.bar(sigmax, sigma_times, width=width, label="σOS")
+  sigmax = np.arange(2) * 1.5
+  sigmas3x = [ x + width for x in sigmax ]
+  corralx = [ x + 2 * width for x in sigmax ]
+  sigmaplot = plt.bar(sigmax, sigma_times, width=width, label="σOS (UX)")
+  sigmas3plot = plt.bar(sigmas3x, sigmas3_times, width=width, label="σOS (S3)")
   corralplot = plt.bar(corralx, corral_times, width=width, label="Lambda")
   plots = [sigmaplot, corralplot]
-  plt.xticks(sigmax + width / 2, ("Cold-start", "Warm-start"))
+  plt.xticks(sigmax + width, ("Cold-start", "Warm-start"))
 
   finalize_graph(fig, ax, plots, "MapReduce WordCount Execution Time", out)
 

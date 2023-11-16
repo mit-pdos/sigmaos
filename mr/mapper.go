@@ -23,7 +23,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
-	// "sigmaos/writer"
+	"sigmaos/writer"
 )
 
 type Mapper struct {
@@ -36,11 +36,11 @@ type Mapper struct {
 	input       string
 	intOutput   string
 	bin         string
-	wrts        []*fslib.Wrt
-	//	wrts  []*writer.Writer
-	pwrts []*perf.PerfWriter
-	rand  string
-	perf  *perf.Perf
+	asyncwrts   []*fslib.Wrt
+	syncwrts    []*writer.Writer
+	pwrts       []*perf.PerfWriter
+	rand        string
+	perf        *perf.Perf
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr, lsz int, input, intOutput string) (*Mapper, error) {
@@ -53,8 +53,8 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr,
 	m.input = input
 	m.intOutput = intOutput
 	m.bin = path.Base(m.input)
-	m.wrts = make([]*fslib.Wrt, m.nreducetask)
-	//	m.wrts = make([]*writer.Writer, m.nreducetask)
+	m.asyncwrts = make([]*fslib.Wrt, m.nreducetask)
+	m.syncwrts = make([]*writer.Writer, m.nreducetask)
 	m.pwrts = make([]*perf.PerfWriter, m.nreducetask)
 	m.SigmaClnt = sc
 	m.perf = p
@@ -98,12 +98,22 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 }
 
 func (m *Mapper) InitWrt(r int, name string) error {
-	if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
-		return err
+	if MAP_ASYNC_WRITER {
+		if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
+			return err
+		} else {
+			m.asyncwrts[r] = wrt
+			m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
+		}
 	} else {
-		m.wrts[r] = wrt
-		m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
+		if wrt, err := m.CreateWriter(name, 0777, sp.OWRITE); err != nil {
+			return err
+		} else {
+			m.syncwrts[r] = wrt
+			m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
+		}
 	}
+
 	return nil
 }
 
@@ -130,11 +140,21 @@ func (m *Mapper) initMapper() error {
 func (m *Mapper) closewrts() (sp.Tlength, error) {
 	n := sp.Tlength(0)
 	for r := 0; r < m.nreducetask; r++ {
-		if m.wrts[r] != nil {
-			if err := m.wrts[r].Close(); err != nil {
-				return 0, err
-			} else {
-				n += m.wrts[r].Nbytes()
+		if MAP_ASYNC_WRITER {
+			if m.asyncwrts[r] != nil {
+				if err := m.asyncwrts[r].Close(); err != nil {
+					return 0, err
+				} else {
+					n += m.asyncwrts[r].Nbytes()
+				}
+			}
+		} else {
+			if m.syncwrts[r] != nil {
+				if err := m.syncwrts[r].Close(); err != nil {
+					return 0, err
+				} else {
+					n += m.syncwrts[r].Nbytes()
+				}
 			}
 		}
 	}
@@ -182,7 +202,12 @@ func (m *Mapper) informReducer() error {
 
 func (m *Mapper) emit(kv *KeyValue) error {
 	r := Khash(kv.Key) % m.nreducetask
-	_, err := encodeKV(m.wrts[r], kv.Key, kv.Value, r)
+	var err error
+	if MAP_ASYNC_WRITER {
+		_, err = encodeKV(m.asyncwrts[r], kv.Key, kv.Value, r)
+	} else {
+		_, err = encodeKV(m.syncwrts[r], kv.Key, kv.Value, r)
+	}
 	return err
 }
 

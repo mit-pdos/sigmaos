@@ -20,6 +20,11 @@ import (
 )
 
 const (
+	MAP_ASYNC_WRITER    = false
+	REDUCE_ASYNC_WRITER = false
+)
+
+const (
 	MR          = "/mr/"
 	MRDIRTOP    = "name/" + MR
 	OUTLINK     = "output"

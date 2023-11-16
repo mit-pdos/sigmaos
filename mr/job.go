@@ -172,9 +172,10 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 }
 
 // Clean up all old MR outputs
-func CleanupMROutputs(fsl *fslib.FsLib, outputDir string) {
+func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string) {
 	db.DPrintf(db.MR, "Clean up MR outputs: %v", outputDir)
 	fsl.RmDir(outputDir)
+	fsl.RmDir(intOutputDir)
 	db.DPrintf(db.MR, "Clean up MR outputs done: %v", outputDir)
 }
 

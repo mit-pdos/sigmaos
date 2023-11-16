@@ -315,7 +315,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	err = mr.PrintMRStats(ts.FsLib, ts.job)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
-	mr.CleanupMROutputs(ts.FsLib, job.Output)
+	mr.CleanupMROutputs(ts.FsLib, job.Output, job.Intermediate)
 	ts.Shutdown()
 }
 

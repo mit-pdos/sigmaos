@@ -42,7 +42,11 @@ for vm in $vms; do
   echo "VM: $vm"
   # No additional benchmarking setup needed for AWS.
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-    date
-    nproc
+    cd sigmaos
+    git fetch --all
+    git checkout osdi23-submit
+    git pull
+#    ./make.sh --norace --version RETRY
+    ./install.sh --realm test-realm --version RETRY
 ENDSSH
 done

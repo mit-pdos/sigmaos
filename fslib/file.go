@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"time"
+	//	"time"
 
 	"github.com/klauspost/readahead"
 
@@ -199,32 +199,28 @@ func (wrt *Wrt) Nbytes() sp.Tlength {
 
 // XXX use reader/writer interfaces
 func (fl *FsLib) CopyFile(src, dst string) error {
-	//	st, err := fl.Stat(src)
-	//	if err != nil {
-	//		return err
-	//	}
-	start := time.Now()
-	defer func(t *time.Time) {
-		db.DPrintf(db.ALWAYS, "Time reading + writing in copyFile: %v", time.Since(*t))
-	}(&start)
+	//	start := time.Now()
+	//	defer func(t *time.Time) {
+	//		db.DPrintf(db.ALWAYS, "Time reading + writing in copyFile: %v", time.Since(*t))
+	//	}(&start)
 	rdr, err := fl.OpenAsyncReader(src, 0)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.ALWAYS, "Time openReader: %v", time.Since(start))
-	start = time.Now()
+	//	db.DPrintf(db.ALWAYS, "Time openReader: %v", time.Since(start))
+	//	start = time.Now()
 	defer rdr.Close()
 	wrt, err := fl.CreateAsyncWriter(dst, 0777, sp.OWRITE)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.ALWAYS, "Time openWriter: %v", time.Since(start))
+	//	db.DPrintf(db.ALWAYS, "Time openWriter: %v", time.Since(start))
 	defer wrt.Close()
 	b := make([]byte, sp.BUFSZ)
 	// Set start to ignore opening & closing reader/writer
-	start = time.Now()
+	//	start = time.Now()
 	for {
-		start := time.Now()
+		//		start := time.Now()
 		n, err := rdr.Read(b)
 		if err != nil && err != io.EOF {
 			return err
@@ -233,7 +229,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 		if n == 0 {
 			break
 		}
-		db.DPrintf(db.ALWAYS, "Time reading in copyFile: %v", time.Since(start))
+		//		db.DPrintf(db.ALWAYS, "Time reading in copyFile: %v", time.Since(start))
 		b2 := b[:n]
 		nn, err := wrt.Write(b2)
 		if err != nil {

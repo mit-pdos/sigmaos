@@ -114,6 +114,7 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize) ([]*sp.Stat,
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.OVERLAYDIR, "ReadDir underlay %v cursor %d %v\n", dir, cursor, sp.Names(sts))
 	if cursor > 0 { // did we already sent the extra ones
 		return sts, err
 	}

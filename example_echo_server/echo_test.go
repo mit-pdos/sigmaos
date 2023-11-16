@@ -12,14 +12,6 @@ import (
 	"sigmaos/test"
 	"strconv"
 	"testing"
-	"time"
-	"sync"
-	"math"
-)
-
-const (
-	N = 5
-	N_RPC_SESSIONS = 10
 )
 
 type TstateEcho struct {
@@ -96,9 +88,9 @@ func TestEchoTime(t *testing.T) {
 	t0 := time.Now()
 	for i := 0; i < N_REQ; i++ {
 		pdc.RPC("Echo.Echo", &arg, &res)
-	} 
+	}
 	totalTime := time.Since(t0).Microseconds()
-	dbg.DPrintf(dbg.ALWAYS, "Total time: %v ms; avg time %v ms", totalTime, totalTime/int64(N_REQ))	
+	dbg.DPrintf(dbg.ALWAYS, "Total time: %v ms; avg time %v ms", totalTime, totalTime/int64(N_REQ))
 
 	// Stop server
 	assert.Nil(t, tse.Stop())

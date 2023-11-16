@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/perf"
-	pcfg "sigmaos/proc"
+	proc "sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -25,7 +25,9 @@ type Fss3 struct {
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
-	ssrv, err := sigmasrv.NewSigmaSrvNoRPC(sp.S3, pcfg.GetProcEnv())
+	root := newDir("", path.Path{}, sp.DMDIR)
+	pe := proc.GetProcEnv()
+	ssrv, err := sigmasrv.NewSigmaSrvRoot(root, pe.GetLocalIP()+":0", sp.S3, pe)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
@@ -35,14 +37,6 @@ func RunFss3(buckets []string) {
 	}
 	defer p.Done()
 
-	commonBuckets := []string{"9ps3", "sigma-common"}
-	buckets = append(buckets, commonBuckets...)
-	for _, bucket := range buckets {
-		d := newDir(bucket, path.Path{}, sp.DMDIR)
-		if err := ssrv.MkNod(bucket, d); err != nil {
-			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
-		}
-	}
 	fss3.SigmaSrv = ssrv
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("sigmaos"))

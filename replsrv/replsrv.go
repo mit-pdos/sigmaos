@@ -14,7 +14,8 @@ import (
 )
 
 //
-// Replicated CacheSrv with same RPC interface (CacheSrv) has unreplicated CacheSrv
+// Replicates svci using Raft.  Each replica maintains a reply table
+// to filter out duplicate requests.
 //
 
 type ReplSrv struct {

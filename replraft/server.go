@@ -11,9 +11,8 @@ import (
 )
 
 type RaftReplServer struct {
-	storage *raft.MemoryStorage
-	node    *RaftNode
-	clerk   *Clerk
+	node  *RaftNode
+	clerk *Clerk
 }
 
 func NewRaftReplServer(pcfg *proc.ProcEnv, id int, peerAddrs []string, l net.Listener, init bool, apply repl.Tapplyf) (*RaftReplServer, error) {

@@ -40,7 +40,7 @@ func TestReadOff(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
 	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt"))
-	assert.Equal(t, nil, err, "Error ReadOff %v", err)
+	assert.Nil(t, err, "Error ReadOff %v", err)
 	rdr.Lseek(1 << 10)
 	brdr := bufio.NewReaderSize(rdr, 1<<16)
 	scanner := bufio.NewScanner(brdr)

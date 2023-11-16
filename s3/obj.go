@@ -52,7 +52,7 @@ func newObj(bucket string, key path.Path, perm sp.Tperm) *Obj {
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("key '%v' perm %v", o.key, o.perm)
+	return fmt.Sprintf("bucket %q key %q perm %v", o.bucket, o.key, o.perm)
 }
 
 func (o *Obj) Size() (sp.Tlength, *serr.Err) {
@@ -72,10 +72,10 @@ func (o *Obj) readHead(fss3 *Fss3) *serr.Err {
 	}
 	result, err := fss3.client.HeadObject(context.TODO(), input)
 	if err != nil {
+		db.DPrintf(db.S3, "readHead: %v err %v\n", key, err)
 		return serr.NewErrError(err)
 	}
-
-	db.DPrintf(db.S3, "readHead: %v %v\n", key, result.ContentLength)
+	db.DPrintf(db.S3, "readHead: %v %v %v\n", key, result.ContentLength, err)
 	o.sz = sp.Tlength(result.ContentLength)
 	if result.LastModified != nil {
 		o.mtime = (*result.LastModified).Unix()
@@ -109,7 +109,8 @@ func (o *Obj) stat() *sp.Stat {
 }
 
 func (o *Obj) Path() sp.Tpath {
-	return newTpath(o.key)
+	p := path.Path{o.bucket}
+	return newTpath(p.AppendPath(o.key))
 }
 
 // convert ux perms into np perm; maybe symlink?
@@ -125,6 +126,7 @@ func (o *Obj) Parent() fs.Dir {
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.S3, "Stat: %v\n", o)
 	if err := o.fill(); err != nil {
+		db.DPrintf(db.S3, "Stat: %v err %v\n", o, err)
 		return nil, err
 	}
 	st := o.stat()
@@ -197,6 +199,18 @@ func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]by
 		return nil, serr.NewErrError(error)
 	}
 	return b, nil
+}
+
+func (o *Obj) s3Create() *serr.Err {
+	key := o.key.String()
+	input := &s3.PutObjectInput{
+		Bucket: &o.bucket,
+		Key:    &key,
+	}
+	if _, err := fss3.client.PutObject(context.TODO(), input); err != nil {
+		return serr.NewErrError(err)
+	}
+	return nil
 }
 
 //

@@ -2,7 +2,6 @@ package fslib_test
 
 import (
 	"flag"
-	"log"
 	"net"
 	gopath "path"
 	"path/filepath"
@@ -37,12 +36,12 @@ func TestInitFs(t *testing.T) {
 	sts, err := ts.GetDir(pathname)
 	assert.Nil(t, err)
 	if pathname == sp.NAMED {
-		log.Printf("named %v\n", sp.Names(sts))
+		db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
 		assert.True(t, fslib.Present(sts, named.InitRootDir), "initfs")
 		sts, err = ts.GetDir(pathname + "/boot")
 		assert.Nil(t, err)
 	} else {
-		log.Printf("%v %v\n", pathname, sp.Names(sts))
+		db.DPrintf(db.TEST, "%v %v\n", pathname, sp.Names(sts))
 		assert.True(t, len(sts) >= 2, "initfs")
 	}
 	ts.Shutdown()

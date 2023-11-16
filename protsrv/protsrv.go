@@ -166,7 +166,7 @@ func (ps *ProtSrv) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %v", f.Pobj().Ctx().Uname(), args.Fid, f, f.Pobj().Path())
+	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %q", f.Pobj().Ctx().Uname(), args.Fid, f, f.Pobj().Path())
 	if f.IsOpen() { // has the fid been opened?
 		f.Pobj().Obj().Close(f.Pobj().Ctx(), f.Mode())
 		f.Close()
@@ -293,7 +293,8 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: ReadV f %v args {%v}\n", f.Pobj().Ctx().Uname(), f, args)
+
+	db.DPrintf(db.PROTSRV, "%v: ReadF f %v args {%v}\n", f.Pobj().Ctx().Uname(), f, args)
 
 	flk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path(), lockmap.RLOCK)
 	defer ps.plt.Release(f.Pobj().Ctx(), flk, lockmap.RLOCK)

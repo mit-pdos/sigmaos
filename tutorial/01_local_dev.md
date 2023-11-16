@@ -7,15 +7,32 @@ commands are intended to be run from the root of the repo.
 ## Dependencies
 
 You will need to have `golang`, `docker`, `mysql`, and `libseccomp-dev` installed in
-order to build and run SigmaOS and its benchmarks. On a Ubuntu system, these
-can be installed by running:
+order to build and run SigmaOS and its benchmarks. 
+
+In order to download Docker Desktop (which includes buildx, a plugin required
+by the SigmaOS build sequence), follow the following guide:
 
 ```
-$ sudo apt install golang-go docker.io libseccomp-dev mysql-client
+https://docs.docker.com/desktop/install/ubuntu/
 ```
 
-Note: `/var/run/docker.sock` must be accessible to SigmaOS, so you may
-have to run:
+On a Ubuntu system, you can install the remaining packages by running:
+
+```
+$ sudo apt install golang-go libseccomp-dev mysql-client parallel
+```
+
+Note: `/var/run/docker.sock` must be accessible to SigmaOS. You can add your
+user account to the docker group by running:
+
+```
+sudo usermod -aG docker $USER
+```
+
+In order for this to take effect, you will have to log out and back into your
+machine. If you want to skip this, you can temporarily change the permissions
+on the docker socket using:
+
 ```
 sudo chmod 666 /var/run/docker.sock
 ```
@@ -57,6 +74,25 @@ $ ./build.sh --parallel
 Warning: the parallel build uses much memory and all the cores on the
 machine you are building on.
 
+SigmaOS uses `etcd` for fault-tolerant storage and you may have to (re)start etcd:
+```
+./start-etcd.sh
+```
+
+You can check if `etcd` is running as follows:
+```
+docker exec etcd-server etcdctl version
+```
+
+Also, sigmaos expects the directories `~/.aws` and `/mnt/9p` to exist when it
+runs. To create them, run:
+
+```
+mkdir ~/.aws
+mkdir /mnt/9p
+sudo chown $USER /mnt/9p
+```
+
 In order to make sure the build succeeded, run a simple test which
 starts SigmaOS up and exits immediately:
 
@@ -70,16 +106,6 @@ The output should look something like:
 === RUN   TestInitFs
 13:44:32.833121 boot [sigma-7cfbce5e]
 --- PASS: TestInitFs (3.42s)
-```
-
-SigmaOS uses `etcd` for fault-tolerant storage and you may have to (re)start etcd:
-```
-./start-etcd.sh
-```
-
-You can check if `etcd` is running as follows:
-```
-docker exec etcd-server etcdctl version
 ```
 
 ## Testing SigmaOS
@@ -103,7 +129,7 @@ This will run the full array of tests, and save the output in
 To run a few key tests for the main apps, run:
 
 ```
-$ ./test.sh --apps --fast 2>&1 | tee /tmp/out
+$ ./test.sh --apps-fast 2>&1 | tee /tmp/out
 ```
 
 Generally, we run only tests related to packages we are actively
@@ -213,7 +239,7 @@ where IP:PORT is the IP address and port from `ls /mnt/9p/s3`.
 
 You can copy files into s3. For example,
 ```
-cp tutorial/01_local_dev.md /mnt/9p/s3/192.168.0.10\:46043/x
+cp tutorial/01_local_dev.md /mnt/9p/s3/192.168.0.10\:46043/<YOUR_BUCKET_NAME>/x
 ```
 copies this tutorial file into the s3 object `x`.
 

@@ -54,6 +54,7 @@ type Coord struct {
 	reducerbin  string
 	leaderclnt  *leaderclnt.LeaderClnt
 	outdir      string
+	intOutdir   string
 	done        int32
 	memPerTask  proc.Tmem
 }
@@ -103,6 +104,12 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.outdir = string(b)
 
+	b, err = c.GetFile(JobIntOutLink(c.job))
+	if err != nil {
+		db.DFatalf("Error GetFile JobIntOutLink: %v", err)
+	}
+	c.intOutdir = string(b)
+
 	c.Started()
 
 	c.leaderclnt, err = leaderclnt.NewLeaderClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
@@ -130,7 +137,7 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.linesz}, c.memPerTask)
+	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz}, c.memPerTask)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {

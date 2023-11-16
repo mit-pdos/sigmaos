@@ -34,6 +34,7 @@ type Mapper struct {
 	nreducetask int
 	linesz      int
 	input       string
+	intOutput   string
 	bin         string
 	wrts        []*fslib.Wrt
 	//	wrts  []*writer.Writer
@@ -42,7 +43,7 @@ type Mapper struct {
 	perf  *perf.Perf
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr, lsz int, input string) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr, lsz int, input, intOutput string) (*Mapper, error) {
 	m := &Mapper{}
 	m.mapf = mapf
 	m.job = job
@@ -50,6 +51,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr,
 	m.linesz = lsz
 	m.rand = rand.String(16)
 	m.input = input
+	m.intOutput = intOutput
 	m.bin = path.Base(m.input)
 	m.wrts = make([]*fslib.Wrt, m.nreducetask)
 	//	m.wrts = make([]*writer.Writer, m.nreducetask)
@@ -61,14 +63,14 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr,
 }
 
 func newMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
-	if len(args) != 4 {
+	if len(args) != 5 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
 	nr, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper: nreducetask %v isn't int", args[1])
 	}
-	lsz, err := strconv.Atoi(args[3])
+	lsz, err := strconv.Atoi(args[4])
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper: linesz %v isn't int", args[1])
 	}
@@ -76,7 +78,7 @@ func newMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err := NewMapper(sc, mapf, args[0], p, nr, lsz, args[2])
+	m, err := NewMapper(sc, mapf, args[0], p, nr, lsz, args[2], args[3])
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
@@ -109,11 +111,10 @@ func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
 	// XXX
-	intermediateDir := sp.UX + "/~local/"
-	outDirPath := MapIntermediateOutDir(m.job, intermediateDir, m.bin)
-	m.MkDir(path.Dir(path.Dir(outDirPath)), 0777)
-	m.MkDir(path.Dir(outDirPath), 0777)
-	m.MkDir(outDirPath, 0777)
+	m.MkDir(m.intOutput, 0777)
+	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
+	m.MkDir(path.Dir(outDirPath), 0777) // job dir
+	m.MkDir(outDirPath, 0777)           // mapper dir
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {
@@ -143,8 +144,8 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 
 // Inform reducer where to find map output
 func (m *Mapper) informReducer() error {
-	intermediateDir := sp.UX + "/~local/"
-	outDirPath := MapIntermediateOutDir(m.job, intermediateDir, m.bin)
+	/// XXX	intermediateDir := sp.UX + "/~local/mr-intermediate"
+	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
 	pn, err := m.ResolveUnions(outDirPath)
 	if err != nil {
 		return fmt.Errorf("%v: ResolveUnion %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)

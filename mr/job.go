@@ -20,10 +20,11 @@ import (
 )
 
 const (
-	MR       = "/mr/"
-	MRDIRTOP = "name/" + MR
-	OUTLINK  = "output"
-	JOBSEM   = "jobsem"
+	MR          = "/mr/"
+	MRDIRTOP    = "name/" + MR
+	OUTLINK     = "output"
+	INT_OUTLINK = "intermediate-output"
+	JOBSEM      = "jobsem"
 )
 
 func JobOut(outDir, job string) string {
@@ -32,6 +33,10 @@ func JobOut(outDir, job string) string {
 
 func JobOutLink(job string) string {
 	return path.Join(JobDir(job), OUTLINK)
+}
+
+func JobIntOutLink(job string) string {
+	return path.Join(JobDir(job), INT_OUTLINK)
 }
 
 func JobDir(job string) string {
@@ -51,7 +56,7 @@ func MapTask(job string) string {
 }
 
 func MapIntermediateOutDir(job, intOutdir, mapname string) string {
-	return path.Join(intOutdir, MR, job, "m-"+mapname)
+	return path.Join(intOutdir, job, "m-"+mapname)
 }
 
 // XXX
@@ -192,6 +197,15 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 	}
 	if _, err := fsl.PutFile(JobOutLink(jobName), 0777, sp.OWRITE, []byte(job.Output)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobName), err)
+		return 0, err
+	}
+	// Only make intermediate out dir if it lives in s3 (otherwise, it will be
+	// made by the mappers on their local machines).
+	if strings.Contains(job.Intermediate, "/s3/") {
+		fsl.MkDir(job.Intermediate, 0777)
+	}
+	if _, err := fsl.PutFile(JobIntOutLink(jobName), 0777, sp.OWRITE, []byte(job.Intermediate)); err != nil {
+		db.DPrintf(db.ALWAYS, "Error link intermediate dir [%v] [%v]: %v", job.Output, JobOutLink(jobName), err)
 		return 0, err
 	}
 

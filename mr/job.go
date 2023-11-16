@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	MAP_ASYNC_WRITER    = false
-	REDUCE_ASYNC_WRITER = false
+	MAP_ASYNC_WRITER    = true
+	REDUCE_ASYNC_WRITER = true
 )
 
 const (

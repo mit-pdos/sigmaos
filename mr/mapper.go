@@ -110,7 +110,6 @@ func (m *Mapper) InitWrt(r int, name string) error {
 func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
-	// XXX
 	m.MkDir(m.intOutput, 0777)
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
 	m.MkDir(path.Dir(outDirPath), 0777) // job dir
@@ -151,11 +150,11 @@ func (m *Mapper) informReducer() error {
 		return fmt.Errorf("%v: ResolveUnion %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
-		fn := mshardfile(pn, r)
-		err = m.Rename(fn+m.rand, fn)
-		if err != nil {
-			return fmt.Errorf("%v: rename %v -> %v err %v\n", m.ProcEnv().GetPID(), fn+m.rand, fn, err)
-		}
+		fn := mshardfile(pn, r) + m.rand
+		//		err = m.Rename(fn+m.rand, fn)
+		//		if err != nil {
+		//			return fmt.Errorf("%v: rename %v -> %v err %v\n", m.ProcEnv().GetPID(), fn+m.rand, fn, err)
+		//		}
 
 		name := symname(m.job, strconv.Itoa(r), m.bin)
 

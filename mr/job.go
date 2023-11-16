@@ -59,11 +59,6 @@ func MapIntermediateOutDir(job, intOutdir, mapname string) string {
 	return path.Join(intOutdir, job, "m-"+mapname)
 }
 
-// XXX
-//	MAPPER_INTERMEDIATE = sp.UX + "/~local" // must end without /
-//	MLOCALDIR = MLOCALSRV + MR
-//}
-
 func ReduceTask(job string) string {
 	return path.Join(JobDir(job), "/r")
 }
@@ -83,14 +78,6 @@ func ReduceOutTarget(outDir string, job string) string {
 func BinName(i int) string {
 	return fmt.Sprintf("bin%04d", i)
 }
-
-//func LocalOut(job string) string {
-//	return path.Join(MLOCALDIR, job)
-//}
-//
-//func Moutdir(job, name string) string {
-//	return path.Join(LocalOut(job), "m-"+name)
-//}
 
 func mshardfile(dir string, r int) string {
 	return path.Join(dir, "r-"+strconv.Itoa(r))

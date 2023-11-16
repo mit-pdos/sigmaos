@@ -367,16 +367,17 @@ mr_vs_corral() {
 #  mem_req=5000
 #  mem_req=10000
   for prewarm in "" "--prewarm_realm" ; do
-    mrapp="$app$dataset_size-bench.yml"
-    if [ -z "$prewarm" ]; then
-      runname="$mrapp-cold"
-    else
-      runname="$mrapp-warm"
-    fi
-    run=${FUNCNAME[0]}/$runname
-    echo "========== Running $run =========="
-    perf_dir=$OUT_DIR/$run
-    run_mr 2 $n_vm "$prewarm" $mrapp $mem_req false $perf_dir
+    for mrapp in "$app$dataset_size-bench.yml" "$app$dataset_size-bench-s3.yml" ; do
+      if [ -z "$prewarm" ]; then
+        runname="$mrapp-cold"
+      else
+        runname="$mrapp-warm"
+      fi
+      run=${FUNCNAME[0]}/$runname
+      echo "========== Running $run =========="
+      perf_dir=$OUT_DIR/$run
+      run_mr 2 $n_vm "$prewarm" $mrapp $mem_req false $perf_dir
+    done
   done
 }
 
@@ -1327,7 +1328,7 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #hotel_tail_multi
 #realm_balance_be
-#mr_vs_corral
+mr_vs_corral
 #schedd_scalability_rs
 #realm_balance_be_img
 #schedd_scalability

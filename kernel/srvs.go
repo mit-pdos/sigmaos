@@ -3,7 +3,6 @@ package kernel
 import (
 	"fmt"
 	"path"
-	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/port"
@@ -12,7 +11,6 @@ import (
 )
 
 type Services struct {
-	sync.Mutex
 	svcs   map[string][]*Subsystem
 	svcMap map[sp.Tpid]*Subsystem
 }
@@ -25,13 +23,18 @@ func newServices() *Services {
 }
 
 func (ss *Services) addSvc(s string, sub *Subsystem) {
-	ss.Lock()
-	defer ss.Unlock()
 	ss.svcs[s] = append(ss.svcs[s], sub)
 	ss.svcMap[sub.p.GetPid()] = sub
 }
 
 func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (sp.Tpid, error) {
+	k.Lock()
+	defer k.Unlock()
+
+	if k.shuttingDown {
+		return sp.Tpid(""), fmt.Errorf("Shutting down")
+	}
+
 	var err error
 	var ss *Subsystem
 	switch s {
@@ -113,8 +116,6 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 		return err
 	}
 	ss := newSubsystemCmd(nil, k, p, proc.HLINUX, cmd)
-	k.svcs.Lock()
-	defer k.svcs.Unlock()
 	k.svcs.svcs[sp.KNAMED] = append(k.svcs.svcs[sp.KNAMED], ss)
 	return err
 }

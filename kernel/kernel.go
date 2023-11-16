@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	db "sigmaos/debug"
@@ -42,10 +43,12 @@ type Param struct {
 }
 
 type Kernel struct {
+	sync.Mutex
 	*sigmaclnt.SigmaClnt
-	Param *Param
-	svcs  *Services
-	ip    string
+	Param        *Param
+	svcs         *Services
+	ip           string
+	shuttingDown bool
 }
 
 func newKernel(param *Param) *Kernel {
@@ -97,6 +100,11 @@ func (k *Kernel) Ip() string {
 }
 
 func (k *Kernel) Shutdown() error {
+	k.Lock()
+	defer k.Unlock()
+
+	k.shuttingDown = true
+
 	db.DPrintf(db.KERNEL, "Shutdown %v\n", k.Param.KernelId)
 	k.shutdown()
 	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
@@ -151,6 +159,7 @@ func (k *Kernel) shutdown() {
 			for i := 0; i < MAX_EVICT_RETRIES; i++ {
 				err := k.EvictKernelProc(pid, k.svcs.svcMap[pid].how)
 				if err == nil || !serr.IsErrCode(err, serr.TErrUnreachable) {
+					db.DPrintf(db.KERNEL, "Evicted proc %v err %v", pid, err)
 					break
 				}
 				if i == MAX_EVICT_RETRIES-1 {

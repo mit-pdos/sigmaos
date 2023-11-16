@@ -1328,7 +1328,7 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #hotel_tail_multi
 #realm_balance_be
-mr_vs_corral
+#mr_vs_corral
 #schedd_scalability_rs
 #realm_balance_be_img
 #schedd_scalability
@@ -1363,9 +1363,9 @@ mr_vs_corral
 source ~/env/3.10/bin/activate
 #graph_realm_balance_be
 #graph_realm_balance_be_img
-#graph_schedd_scalability_rs
+graph_schedd_scalability_rs
 
-graph_mr_vs_corral
+#graph_mr_vs_corral
 #graph_realm_balance_multi_img
 
 #graph_realm_balance_multi

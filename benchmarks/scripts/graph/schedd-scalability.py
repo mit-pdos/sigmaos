@@ -28,6 +28,14 @@ def scrape_file_stats(path, pat):
   lat = [ l for l in lat if l is not None ]
   return lat
 
+def tpt_stats(dpath):
+  fname = [ f for f in os.listdir(dpath) if "bench.out" in f ][0]
+  with open(os.path.join(dpath, fname), "r") as f:
+    x = f.read()
+  line = [ l.strip() for l in x.split("\n") if "Avg req/sec server-side" in l ][0]
+  tpt = float(line.split(" ")[-1])
+  return tpt
+  
 def scrape_dir_stats(measurement_dir, file_suffix, n_vm, regex, pos):
   dpath = os.path.join(measurement_dir, n_vm[1])
   pat = re.compile(regex)
@@ -38,12 +46,14 @@ def scrape_dir_stats(measurement_dir, file_suffix, n_vm, regex, pos):
   fstats_joined = []
   for fs in fstats:
     fstats_joined = fstats_joined + fs
-  return fstats_joined
+  tpt = tpt_stats(dpath)
+  return (tpt, fstats_joined)
 
 def stats_summary(raw_stat):
-  n_vm, rst = raw_stat
+  n_vm, (tpt, rst) = raw_stat
   if len(rst) > 0:
     return (n_vm, {
+        "tpt": tpt,
         "min": min(rst),
         "max": max(rst),
         "avg": np.mean(rst),
@@ -53,6 +63,7 @@ def stats_summary(raw_stat):
         "p99": np.percentile(rst, 99),
     })
   return (n_vm, {
+      "tpt": 0,
       "min": 0,
       "max": 0,
       "avg": 0,
@@ -64,21 +75,30 @@ def stats_summary(raw_stat):
 
 def graph_stats(stats_summary, out):
   x = [ n_vm[0] for (n_vm, st) in stats_summary ] 
+  tpt = [ st["tpt"] for (n_vm, st) in stats_summary ]
   p50 = [ st["p50"] for (n_vm, st) in stats_summary ]
   p99 = [ st["p99"] for (n_vm, st) in stats_summary ]
-  fig, ax = plt.subplots(figsize=(6.4, 2.4))
-  plt.plot(x, p50, label="P50 latency")
-  plt.plot(x, p99, label="P99 latency")
+  fig, ax = plt.subplots(2, figsize=(6.4, 2.4), sharex=True)
+  ax[0].plot(x, tpt, label="Spawns/sec")
+  ax[1].plot(x, p50, label="P50 latency")
+  ax[1].plot(x, p99, label="P99 latency")
+  ax[0].set_ylabel("Procs/sec")
+  ax[1].set_ylabel("Start Latency (ms)")
+  ax[0].set_xlim(left=0)
+  ax[1].set_xlim(left=0)
+  ax[0].set_ylim(bottom=0)
+  ax[1].set_ylim(bottom=0)
+  ax[0].legend()
+  ax[1].legend()
   plt.xticks(x)
-  ax.set_xlabel("Number of machines")
-  ax.set_ylabel("Proc Start Latency (ms)")
-  ax.set_ylim(bottom=0)
-  ax.legend()
+  plt.xlabel("Number of machines")
+  fig.align_ylabels(ax)
   plt.savefig(out)
 
 def print_stats_summary(stats_summary):
   for n_vm, ss in stats_summary:
     print("=== {}", n_vm[1])
+    print("\t\ttpt:{}", ss["tpt"])
     print("\t\tp50:{}", ss["p50"])
     print("\t\tp99:{}", ss["p99"])
 
@@ -92,7 +112,7 @@ if __name__ == "__main__":
   n_vms = sorted([ (int(f[:f.index("-vm")]), f) for f in os.listdir(args.measurement_dir) ], key=lambda x: (x[0], -1 * int(x[1][x[1].rindex("-"):])) )
 
   # Truncate beyond 4 machines
-  n_vms = n_vms[:10]
+  n_vms = n_vms[:8]
 
   regex = ".*E2e spawn latency until main"
   file_suffix = ".out"

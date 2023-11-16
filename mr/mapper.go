@@ -108,14 +108,17 @@ func (m *Mapper) InitWrt(r int, name string) error {
 func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
-	m.MkDir(MLOCALDIR, 0777)
-	m.MkDir(LocalOut(m.job), 0777)
-	m.MkDir(Moutdir(m.job, m.bin), 0777)
+	// XXX
+	intermediateDir := sp.UX + "/~local/"
+	outDirPath := MapIntermediateOutDir(m.job, intermediateDir, m.bin)
+	m.MkDir(path.Dir(path.Dir(outDirPath)), 0777)
+	m.MkDir(path.Dir(outDirPath), 0777)
+	m.MkDir(outDirPath, 0777)
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output shard for reducer r
-		oname := mshardfile(m.job, m.bin, r) + m.rand
+		oname := mshardfile(outDirPath, r) + m.rand
 		if err := m.InitWrt(r, oname); err != nil {
 			m.closewrts()
 			return err
@@ -140,12 +143,14 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 
 // Inform reducer where to find map output
 func (m *Mapper) informReducer() error {
-	pn, err := m.ResolveUnions(MLOCALSRV)
+	intermediateDir := sp.UX + "/~local/"
+	outDirPath := MapIntermediateOutDir(m.job, intermediateDir, m.bin)
+	pn, err := m.ResolveUnions(outDirPath)
 	if err != nil {
-		return fmt.Errorf("%v: ResolveUnion %v err %v\n", m.ProcEnv().GetPID(), MLOCALSRV, err)
+		return fmt.Errorf("%v: ResolveUnion %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
-		fn := mshardfile(m.job, m.bin, r)
+		fn := mshardfile(pn, r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
 			return fmt.Errorf("%v: rename %v -> %v err %v\n", m.ProcEnv().GetPID(), fn+m.rand, fn, err)
@@ -163,7 +168,7 @@ func (m *Mapper) informReducer() error {
 		// the symlink if we want to avoid the failing case.
 		m.Remove(name)
 
-		target := shardtarget(m.job, pn, m.bin, r)
+		target := fn + "/"
 
 		db.DPrintf(db.MR, "name %s target %s\n", name, target)
 

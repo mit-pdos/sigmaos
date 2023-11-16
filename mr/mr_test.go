@@ -31,7 +31,6 @@ import (
 
 const (
 	OUTPUT = "/tmp/par-mr.out"
-	NCOORD = 5
 
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine

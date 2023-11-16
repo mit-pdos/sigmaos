@@ -17,19 +17,11 @@ import (
 )
 
 const (
-	MR       = "/mr/"
-	MRDIRTOP = "name/" + MR
-	OUTLINK  = "output"
-	JOBSEM   = "jobsem"
-
 	TIP  = "-tip/"
 	DONE = "-done/"
 	NEXT = "-next/"
 
 	NCOORD = 3
-
-	MLOCALSRV = sp.UX + "/~local" // must end without /
-	MLOCALDIR = MLOCALSRV + MR
 
 	RESTART = "restart" // restart message from reducer
 )

@@ -19,6 +19,13 @@ import (
 	"sigmaos/yaml"
 )
 
+const (
+	MR       = "/mr/"
+	MRDIRTOP = "name/" + MR
+	OUTLINK  = "output"
+	JOBSEM   = "jobsem"
+)
+
 func JobOut(outDir, job string) string {
 	return path.Join(outDir, job)
 }
@@ -43,6 +50,15 @@ func MapTask(job string) string {
 	return path.Join(JobDir(job), "/m")
 }
 
+func MapIntermediateOutDir(job, intOutdir, mapname string) string {
+	return path.Join(intOutdir, MR, job, "m-"+mapname)
+}
+
+// XXX
+//	MAPPER_INTERMEDIATE = sp.UX + "/~local" // must end without /
+//	MLOCALDIR = MLOCALSRV + MR
+//}
+
 func ReduceTask(job string) string {
 	return path.Join(JobDir(job), "/r")
 }
@@ -63,20 +79,16 @@ func BinName(i int) string {
 	return fmt.Sprintf("bin%04d", i)
 }
 
-func LocalOut(job string) string {
-	return path.Join(MLOCALDIR, job)
-}
+//func LocalOut(job string) string {
+//	return path.Join(MLOCALDIR, job)
+//}
+//
+//func Moutdir(job, name string) string {
+//	return path.Join(LocalOut(job), "m-"+name)
+//}
 
-func Moutdir(job, name string) string {
-	return path.Join(LocalOut(job), "m-"+name)
-}
-
-func mshardfile(job, name string, r int) string {
-	return path.Join(Moutdir(job, name), "r-"+strconv.Itoa(r))
-}
-
-func shardtarget(job, pn, name string, r int) string {
-	return path.Join(pn, MR, job, "m-"+name, "r-"+strconv.Itoa(r)) + "/"
+func mshardfile(dir string, r int) string {
+	return path.Join(dir, "r-"+strconv.Itoa(r))
 }
 
 func symname(job, r, name string) string {
@@ -84,12 +96,13 @@ func symname(job, r, name string) string {
 }
 
 type Job struct {
-	App     string `yalm:"app"`
-	Nreduce int    `yalm:"nreduce"`
-	Binsz   int    `yalm:"binsz"`
-	Input   string `yalm:"input"`
-	Output  string `yalm:"output"`
-	Linesz  int    `yalm:"linesz"`
+	App          string `yalm:"app"`
+	Nreduce      int    `yalm:"nreduce"`
+	Binsz        int    `yalm:"binsz"`
+	Input        string `yalm:"input"`
+	Intermediate string `yalm:"intermediate"`
+	Output       string `yalm:"output"`
+	Linesz       int    `yalm:"linesz"`
 }
 
 // Wait until the job is done
@@ -162,6 +175,7 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 func CleanupMROutputs(fsl *fslib.FsLib, outputDir string) {
 	db.DPrintf(db.MR, "Clean up MR outputs: %v", outputDir)
 	fsl.RmDir(outputDir)
+	db.DPrintf(db.MR, "Clean up MR outputs done: %v", outputDir)
 }
 
 // Put names of input files in name/mr/m

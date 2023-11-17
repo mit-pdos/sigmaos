@@ -6,7 +6,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"sigmaos/crash"
@@ -27,7 +27,6 @@ const (
 
 type ImgSrv struct {
 	*sigmaclnt.SigmaClnt
-	wg         sync.WaitGroup
 	job        string
 	done       string
 	wip        string
@@ -38,6 +37,8 @@ type ImgSrv struct {
 	crash      int64
 	exited     bool
 	leaderclnt *leaderclnt.LeaderClnt
+	stop       int32
+	ntask      int32
 }
 
 func MkDirs(fsl *fslib.FsLib, job string) error {
@@ -78,9 +79,10 @@ func NTaskDone(fsl *fslib.FsLib, job string) (int, error) {
 	return len(sts), nil
 }
 
+// remove old thumbnails
 func Cleanup(fsl *fslib.FsLib, dir string) error {
 	_, err := fsl.ProcessDir(dir, func(st *sp.Stat) (bool, error) {
-		if strings.Contains(st.Name, "thumb") {
+		if IsThumbNail(st.Name) {
 			err := fsl.Remove(path.Join(dir, st.Name))
 			if err != nil {
 				return true, err
@@ -167,10 +169,10 @@ type task struct {
 }
 
 type Tresult struct {
-	t   string
-	ok  bool
-	ms  int64
-	msg string
+	t      string
+	ok     bool
+	ms     int64
+	status *proc.Status
 }
 
 func (imgd *ImgSrv) waitForTask(start time.Time, p *proc.Proc, t *task) Tresult {
@@ -183,20 +185,20 @@ func (imgd *ImgSrv) waitForTask(start time.Time, p *proc.Proc, t *task) Tresult 
 		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.done+"/"+t.name); err != nil {
 			db.DFatalf("rename task %v done err %v", t, err)
 		}
-		return Tresult{t.name, true, ms, status.Msg()}
+		return Tresult{t.name, true, ms, status}
 	} else if err == nil && status.IsStatusErr() {
 		db.DPrintf(db.ALWAYS, "task %v errored err %v", t, status)
 		// mark task as done, but return error
 		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.done+"/"+t.name); err != nil {
 			db.DFatalf("rename task %v done err %v", t, err)
 		}
-		return Tresult{t.name, false, ms, status.Msg()}
+		return Tresult{t.name, false, ms, status}
 	} else { // task failed; make it runnable again
 		db.DPrintf(db.IMGD, "task %v failed %v err %v", t, status, err)
 		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.todo+"/"+t.name); err != nil {
 			db.DFatalf("rename task %v todo err %v", t, err)
 		}
-		return Tresult{t.name, false, ms, ""}
+		return Tresult{t.name, false, ms, nil}
 	}
 }
 
@@ -206,12 +208,11 @@ func ThumbName(fn string) string {
 	return fn1
 }
 
-func (imgd *ImgSrv) runTask(t *task) {
-	// Mark the task as done, regardless of whether it succeeded or not. If it
-	// didn't succeed, it will be added to the work queue again, which will
-	// result in another wg.Add
-	defer imgd.wg.Done()
+func IsThumbNail(fn string) bool {
+	return strings.Contains(fn, "-thumb")
+}
 
+func (imgd *ImgSrv) runTask(t *task, ch chan Tresult) {
 	p := proc.NewProcPid(sp.GenPid(imgd.job), "imgresize", []string{t.fn, ThumbName(t.fn), strconv.Itoa(imgd.nrounds)})
 	if imgd.crash > 0 {
 		p.SetCrash(imgd.crash)
@@ -223,20 +224,16 @@ func (imgd *ImgSrv) runTask(t *task) {
 	// Spawn proc.
 	err := imgd.Spawn(p)
 	if err != nil {
-		db.DFatalf("Couldn't spawn a task %v, err: %v", t, err)
-	}
-	db.DPrintf(db.IMGD, "spawned task %v %v", p.GetPid(), p.Args)
-	// Wait for results.
-	res := imgd.waitForTask(start, p, t)
-	if res.ok {
-		db.DPrintf(db.IMGD, "%v ok %v ms %d msg %v", res.t, res.ok, res.ms, res.msg)
-	}
-	if !res.ok && res.msg != "" {
-		db.DFatalf("task %v has unrecoverable err %v\n", res.t, res.msg)
+		db.DPrintf(db.ALWAYS, "Couldn't spawn a task %v, err: %v", t, err)
+		ch <- Tresult{t.name, false, 0, nil}
+	} else {
+		db.DPrintf(db.IMGD, "spawned task %v %v", p.GetPid(), p.Args)
+		res := imgd.waitForTask(start, p, t)
+		ch <- res
 	}
 }
 
-func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
+func (imgd *ImgSrv) work(sts []*sp.Stat, ch chan Tresult) bool {
 	// Due to inconsistent views of the WIP directory (concurrent adds by clients
 	// and paging reads in the parent of this function), some entries may be
 	// duplicated. Dedup them using this map.
@@ -245,6 +242,8 @@ func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
 		entries[st.Name] = true
 	}
 	db.DPrintf(db.IMGD, "Removed %v duplicate entries", len(sts)-len(entries))
+	stop := false
+	ntask := 0
 	for entry, _ := range entries {
 		t, err := imgd.claimEntry(entry)
 		if err != nil || t == "" {
@@ -255,14 +254,17 @@ func (imgd *ImgSrv) work(sts []*sp.Stat) bool {
 			continue
 		}
 		if string(s3fn) == STOP {
-			return false
+			// stop after processing remaining entries
+			stop = true
+			continue
 		}
-		imgd.wg.Add(1)
+		atomic.AddInt32(&imgd.ntask, 1)
+		ntask += 1
 		// Run the task in another thread.
-		go imgd.runTask(&task{t, string(s3fn)})
+		go imgd.runTask(&task{t, string(s3fn)}, ch)
 	}
-	db.DPrintf(db.IMGD, "Started %v tasks", len(entries))
-	return true
+	db.DPrintf(db.IMGD, "Started %v tasks stop %v ntask in progress %v", ntask, stop, atomic.LoadInt32(&imgd.ntask))
+	return stop
 }
 
 // Consider all tasks in progress as failed (too aggressive, but
@@ -273,8 +275,28 @@ func (imgd *ImgSrv) recover() {
 	}
 }
 
-func (imgd *ImgSrv) Work() {
+func (imgd *ImgSrv) collector(ch chan Tresult, finish chan bool, res chan *Tresult) {
+	var r *Tresult
+	stop := false
+	for !stop || atomic.LoadInt32(&imgd.ntask) > 0 {
+		select {
+		case <-finish:
+			stop = true
+		case res := <-ch:
+			atomic.AddInt32(&imgd.ntask, -1)
+			if res.ok {
+				db.DPrintf(db.IMGD, "%v ok %v ms %d msg %v", res.t, res.ok, res.ms, res.status)
+			}
+			if !res.ok && res.status != nil {
+				db.DPrintf(db.ALWAYS, "task %v has unrecoverable err %v\n", res.t, res.status)
+				r = &res
+			}
+		}
+	}
+	res <- r
+}
 
+func (imgd *ImgSrv) Work() {
 	db.DPrintf(db.IMGD, "Try acquire leadership coord %v job %v", imgd.ProcEnv().GetPID(), imgd.job)
 
 	// Try to become the leading coordinator.
@@ -286,8 +308,15 @@ func (imgd *ImgSrv) Work() {
 
 	imgd.recover()
 
-	work := true
-	for work {
+	ch := make(chan Tresult)
+	finish := make(chan bool)
+	res := make(chan *Tresult)
+	go imgd.collector(ch, finish, res)
+
+	// keep doing work until collector tells us to stop (e.g., because
+	// unrecoverable error) or until a client stops imgd.
+	stop := false
+	for !stop {
 		db.DPrintf(db.IMGD, "ReadDirWatch %v", imgd.todo)
 		sts, err := imgd.ReadDirWatch(imgd.todo, func(sts []*sp.Stat) bool {
 			return len(sts) == 0
@@ -296,12 +325,17 @@ func (imgd *ImgSrv) Work() {
 			db.DFatalf("ReadDirWatch %v err %v", imgd.todo, err)
 		}
 		db.DPrintf(db.IMGD, "ReadDirWatch done %v, %v entries", imgd.todo, len(sts))
-		work = imgd.work(sts)
+		stop = imgd.work(sts, ch)
 	}
-	imgd.wg.Wait()
-
+	// tell collector to finish up
+	finish <- true
+	// wait for collector to finish
+	r := <-res
 	db.DPrintf(db.ALWAYS, "imgresized exit")
-
 	imgd.exited = true
-	imgd.ClntExitOK()
+	if r == nil {
+		imgd.ClntExitOK()
+	} else {
+		imgd.ClntExit(r.status)
+	}
 }

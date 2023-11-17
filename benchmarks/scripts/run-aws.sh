@@ -1291,6 +1291,13 @@ graph_schedd_scalability_rs() {
   $GRAPH_SCRIPTS_DIR/schedd-scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf
 }
 
+graph_start_latency() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/start-latency.py --out $GRAPH_OUT_DIR/$graph.pdf
+}
+
 #graph_mr_overlap() {
 #  fname=${FUNCNAME[0]}
 #  graph="${fname##graph_}"
@@ -1363,7 +1370,8 @@ echo "Running benchmarks with version: $VERSION"
 source ~/env/3.10/bin/activate
 #graph_realm_balance_be
 #graph_realm_balance_be_img
-graph_schedd_scalability_rs
+graph_start_latency
+#graph_schedd_scalability_rs
 
 #graph_mr_vs_corral
 #graph_realm_balance_multi_img

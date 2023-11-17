@@ -184,6 +184,13 @@ func (imgd *ImgSrv) waitForTask(start time.Time, p *proc.Proc, t *task) Tresult 
 			db.DFatalf("rename task %v done err %v", t, err)
 		}
 		return Tresult{t.name, true, ms, status.Msg()}
+	} else if err == nil && status.IsStatusErr() {
+		db.DPrintf(db.ALWAYS, "task %v errored err %v", t, status)
+		// mark task as done, but return error
+		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.done+"/"+t.name); err != nil {
+			db.DFatalf("rename task %v done err %v", t, err)
+		}
+		return Tresult{t.name, false, ms, status.Msg()}
 	} else { // task failed; make it runnable again
 		db.DPrintf(db.IMGD, "task %v failed %v err %v", t, status, err)
 		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.todo+"/"+t.name); err != nil {
@@ -223,6 +230,9 @@ func (imgd *ImgSrv) runTask(t *task) {
 	res := imgd.waitForTask(start, p, t)
 	if res.ok {
 		db.DPrintf(db.IMGD, "%v ok %v ms %d msg %v", res.t, res.ok, res.ms, res.msg)
+	}
+	if !res.ok && res.msg != "" {
+		db.DFatalf("task %v has unrecoverable err %v\n", res.t, res.msg)
 	}
 }
 

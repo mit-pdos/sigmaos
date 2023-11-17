@@ -138,7 +138,7 @@ func (kvf *KVFleet) RemoveKVDGroup() error {
 		return err
 	}
 	// Stop kvd group
-	if err := kvf.kvdgms[n].Stop(); err != nil {
+	if _, err := kvf.kvdgms[n].StopGroup(); err != nil {
 		return err
 	}
 	// Remove kvd group
@@ -152,9 +152,9 @@ func (kvf *KVFleet) Stop() error {
 		kvf.RemoveKVDGroup()
 	}
 	// Stop the balancers.
-	kvf.balgm.Stop()
+	kvf.balgm.StopGroup()
 	// Remove the last kvd group after removing the balancer.
-	kvf.kvdgms[0].Stop()
+	kvf.kvdgms[0].StopGroup()
 	kvf.kvdgms = nil
 	if err := RemoveJob(kvf.FsLib, kvf.job); err != nil {
 		return err

@@ -737,7 +737,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
 	db.DPrintf(db.TEST, "Got out dir 3")
 
-	sm.Stop()
+	sm.StopGroup()
 	db.DPrintf(db.TEST, "Stopped GroupMgr")
 
 	err = ts.RmDir(OUTDIR)

@@ -54,5 +54,5 @@ func (ji *MRJobInstance) Wait() {
 }
 
 func (ji *MRJobInstance) WaitJobExit() {
-	ji.cm.Wait()
+	ji.cm.WaitGroup()
 }

@@ -75,7 +75,7 @@ func TestServerCrash(t *testing.T) {
 	err = <-ch
 	assert.Nil(ts.T, err, "down")
 
-	ts.gm.Stop()
+	ts.gm.StopGroup()
 
 	ts.Shutdown()
 }
@@ -159,7 +159,7 @@ func TestReconnectSimple(t *testing.T) {
 	err := <-ch
 	assert.Nil(ts.T, err, "fsl1")
 
-	ts.gm.Stop()
+	ts.gm.StopGroup()
 	ts.Shutdown()
 }
 
@@ -189,7 +189,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 		assert.NotNil(ts.T, err, "stat")
 	}
 	db.DPrintf(db.TEST, "Stopping group")
-	ts.gm.Stop()
+	ts.gm.StopGroup()
 	ts.Shutdown()
 }
 
@@ -214,7 +214,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 		err := <-ch
 		assert.NotNil(ts.T, err, "down")
 	}
-	ts.gm.Stop()
+	ts.gm.StopGroup()
 	ts.Shutdown()
 }
 

@@ -97,7 +97,7 @@ func TestImgdOne(t *testing.T) {
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
-	fn := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
+	fn := path.Join(sp.S3, "~local/9ps3/img-save/2.jpg")
 	ts.Remove(imgresized.ThumbName(fn))
 
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
@@ -110,7 +110,7 @@ func TestImgdOne(t *testing.T) {
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
 	assert.Nil(t, err)
 
-	imgd.Wait()
+	imgd.WaitGroup()
 
 	ts.Shutdown()
 }
@@ -146,7 +146,7 @@ func TestImgdMany(t *testing.T) {
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
 	assert.Nil(t, err)
 
-	imgd.Wait()
+	imgd.WaitGroup()
 
 	ts.Shutdown()
 }
@@ -174,7 +174,7 @@ func TestImgdRestart(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	imgd.Stop()
+	imgd.StopGroup()
 
 	ts.Shutdown()
 
@@ -194,7 +194,7 @@ func TestImgdRestart(t *testing.T) {
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
 	assert.Nil(t, err)
 
-	gms[0].Wait()
+	gms[0].WaitGroup()
 
 	ts.Shutdown()
 }

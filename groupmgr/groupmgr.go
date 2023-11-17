@@ -25,8 +25,8 @@ import (
 // balancer, imageresized).
 //
 // There are two ways of stopping the group manager: the caller calls
-// stop or the callers calls wait (which returns when the primary
-// member returns with an OK status).
+// stop or the caller calls wait (which returns when the members returns
+// with an OK status).
 //
 
 const (
@@ -36,8 +36,8 @@ const (
 type GroupMgr struct {
 	*sigmaclnt.SigmaClnt
 	members []*member
-	done    int32
-	ch      chan bool
+	stop    int32
+	ch      chan *proc.Status
 }
 
 func (gm *GroupMgr) String() string {
@@ -111,7 +111,7 @@ func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *Gro
 		N = 1
 	}
 	gm := &GroupMgr{SigmaClnt: sc}
-	gm.ch = make(chan bool)
+	gm.ch = make(chan *proc.Status)
 	gm.members = make([]*member, N)
 	for i := 0; i < N; i++ {
 		crashMember := cfg.crash
@@ -213,16 +213,13 @@ func (gm *GroupMgr) start(i int, done chan *procret) {
 func (gm *GroupMgr) manager(done chan *procret, n int) {
 	for n > 0 {
 		pr := <-done
-		// XXX hack
-		if pr == nil {
-			break
-		}
-		if atomic.LoadInt32(&gm.done) == 1 {
+		if atomic.LoadInt32(&gm.stop) == 1 {
+			// we are finishing up; don't respawn the member
 			db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", gm.members[pr.member].Program, pr.member, n)
 			n--
-		} else if pr.err == nil && (pr.status.IsStatusOK() || pr.status.IsStatusEvicted()) { // done?
+		} else if pr.err == nil && (pr.status.IsStatusOK() || pr.status.IsStatusEvicted()) { // stop the group?
 			db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[pr.member].Program, pr.member)
-			atomic.StoreInt32(&gm.done, 1)
+			atomic.StoreInt32(&gm.stop, 1)
 			n--
 		} else { // restart member i
 			db.DPrintf(db.GROUPMGR, "%v start %v\n", gm.members[pr.member].Program, pr)
@@ -233,21 +230,21 @@ func (gm *GroupMgr) manager(done chan *procret, n int) {
 	for i := 0; i < len(gm.members); i++ {
 		db.DPrintf(db.GROUPMGR, "%v nstart %d exit\n", gm.members[i].Program, gm.members[i].nstart)
 	}
-	gm.ch <- true
+	gm.ch <- proc.NewStatus(proc.StatusOK)
 
 }
 
-func (gm *GroupMgr) Wait() {
-	<-gm.ch
+func (gm *GroupMgr) WaitGroup() *proc.Status {
+	return <-gm.ch
 }
 
-// members may not run in order of members, and blocked waiting for
-// becoming leader, while the primary keeps running, because it is
-// later in the list. So, start separate go routine to evict each
-// member.
-func (gm *GroupMgr) Stop() error {
+// Start separate go routine to evict each member, because members may
+// not run in order of members, and be blocked waiting for becoming
+// leader, while the primary keeps running, because it is later in the
+// list.
+func (gm *GroupMgr) StopGroup() (*proc.Status, error) {
 	db.DPrintf(db.GROUPMGR, "GroupMgr Stop")
-	atomic.StoreInt32(&gm.done, 1)
+	atomic.StoreInt32(&gm.stop, 1)
 	var err error
 	for _, c := range gm.members {
 		go func(m *member) {
@@ -259,9 +256,9 @@ func (gm *GroupMgr) Stop() error {
 		}(c)
 	}
 	db.DPrintf(db.GROUPMGR, "wait for members")
-	<-gm.ch
+	status := <-gm.ch
 	db.DPrintf(db.GROUPMGR, "done members %v\n", gm)
-	return err
+	return status, err
 }
 
 func newREPL(id, n int) string {

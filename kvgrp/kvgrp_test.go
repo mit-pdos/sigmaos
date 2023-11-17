@@ -58,14 +58,14 @@ func TestStartStopRepl0(t *testing.T) {
 	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
 	assert.Nil(t, err, "stat")
 
-	err = ts.gm.Stop()
+	_, err = ts.gm.StopGroup()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown()
 }
 
 func TestStartStopReplN(t *testing.T) {
 	ts := newTstate(t, N_REPL, false)
-	err := ts.gm.Stop()
+	_, err := ts.gm.StopGroup()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown()
 }
@@ -82,7 +82,7 @@ func (ts *Tstate) testRecover() {
 	time.Sleep(1 * fsetcd.LeaseTTL * time.Second)
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	time.Sleep(1 * fsetcd.LeaseTTL * time.Second)
-	gms[0].Stop()
+	gms[0].StopGroup()
 	ts.RmDir(groupmgr.GRPMGRDIR)
 	ts.Shutdown()
 }

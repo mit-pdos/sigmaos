@@ -101,7 +101,7 @@ func (mo *Monitor) grow() error {
 		return err
 	}
 	if err := BalancerOp(mo.FsLib, mo.job, "add", gn); err != nil {
-		grp.Stop()
+		grp.StopGroup()
 		return err
 	}
 	mo.gm.insert(gn, grp)
@@ -118,13 +118,13 @@ func (mo *Monitor) shrink(gn string) {
 	if err != nil {
 		db.DPrintf(db.KVMON, "Del group %v failed\n", gn)
 	}
-	grp.Stop()
+	grp.StopGroup()
 }
 
 func (mo *Monitor) done() {
 	db.DPrintf(db.KVMON, "shutdown groups\n")
 	for _, grp := range mo.gm.groups() {
-		grp.Stop()
+		grp.StopGroup()
 	}
 }
 

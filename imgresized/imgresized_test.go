@@ -110,7 +110,7 @@ func TestImgdOne(t *testing.T) {
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
 
-	fn := path.Join(sp.S3, "~local/9ps3/img-save/2.jpg")
+	fn := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
 
 	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1)
 

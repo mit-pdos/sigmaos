@@ -12,6 +12,7 @@ const (
 	StatusOK Tstatus = iota + 1
 	StatusEvicted
 	StatusErr
+	StatusFatal
 )
 
 func (status Tstatus) String() string {
@@ -22,6 +23,8 @@ func (status Tstatus) String() string {
 		return "EVICTED"
 	case StatusErr:
 		return "ERROR"
+	case StatusFatal:
+		return "FATAL"
 	default:
 		return "unkown status"
 	}
@@ -66,6 +69,10 @@ func (s *Status) IsStatusEvicted() bool {
 
 func (s *Status) IsStatusErr() bool {
 	return s.StatusCode == StatusErr
+}
+
+func (s *Status) IsStatusFatal() bool {
+	return s.StatusCode == StatusFatal
 }
 
 func (s *Status) Msg() string {

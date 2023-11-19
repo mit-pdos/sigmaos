@@ -25,8 +25,8 @@ import (
 // balancer, imageresized).
 //
 // There are two ways of stopping the group manager: the caller calls
-// stop or the caller calls wait (which returns when the members returns
-// with an OK status).
+// stop or the caller calls wait (which returns when the members
+// returns with an OK status).
 //
 
 const (
@@ -37,7 +37,7 @@ type GroupMgr struct {
 	*sigmaclnt.SigmaClnt
 	members []*member
 	stop    int32
-	ch      chan *proc.Status
+	ch      chan []*proc.Status
 }
 
 func (gm *GroupMgr) String() string {
@@ -111,7 +111,7 @@ func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *Gro
 		N = 1
 	}
 	gm := &GroupMgr{SigmaClnt: sc}
-	gm.ch = make(chan *proc.Status)
+	gm.ch = make(chan []*proc.Status)
 	gm.members = make([]*member, N)
 	for i := 0; i < N; i++ {
 		crashMember := cfg.crash
@@ -210,16 +210,23 @@ func (gm *GroupMgr) start(i int, done chan *procret) {
 	}
 }
 
+// stop restarting a member?
+func (gm *GroupMgr) stopMember(pr *procret) bool {
+	return pr.err == nil && (pr.status.IsStatusOK() || pr.status.IsStatusEvicted() || pr.status.IsStatusFatal())
+}
+
 func (gm *GroupMgr) manager(done chan *procret, n int) {
+	gstatus := make([]*proc.Status, 0, n)
 	for n > 0 {
 		pr := <-done
 		if atomic.LoadInt32(&gm.stop) == 1 {
 			// we are finishing up; don't respawn the member
 			db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", gm.members[pr.member].Program, pr.member, n)
 			n--
-		} else if pr.err == nil && (pr.status.IsStatusOK() || pr.status.IsStatusEvicted()) { // stop the group?
-			db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[pr.member].Program, pr.member)
+		} else if gm.stopMember(pr) {
+			db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[pr.member].Program, pr)
 			atomic.StoreInt32(&gm.stop, 1)
+			gstatus = append(gstatus, pr.status)
 			n--
 		} else { // restart member i
 			db.DPrintf(db.GROUPMGR, "%v start %v\n", gm.members[pr.member].Program, pr)
@@ -230,11 +237,11 @@ func (gm *GroupMgr) manager(done chan *procret, n int) {
 	for i := 0; i < len(gm.members); i++ {
 		db.DPrintf(db.GROUPMGR, "%v nstart %d exit\n", gm.members[i].Program, gm.members[i].nstart)
 	}
-	gm.ch <- proc.NewStatus(proc.StatusOK)
+	gm.ch <- gstatus
 
 }
 
-func (gm *GroupMgr) WaitGroup() *proc.Status {
+func (gm *GroupMgr) WaitGroup() []*proc.Status {
 	return <-gm.ch
 }
 
@@ -242,7 +249,7 @@ func (gm *GroupMgr) WaitGroup() *proc.Status {
 // not run in order of members, and be blocked waiting for becoming
 // leader, while the primary keeps running, because it is later in the
 // list.
-func (gm *GroupMgr) StopGroup() (*proc.Status, error) {
+func (gm *GroupMgr) StopGroup() ([]*proc.Status, error) {
 	db.DPrintf(db.GROUPMGR, "GroupMgr Stop")
 	atomic.StoreInt32(&gm.stop, 1)
 	var err error
@@ -256,9 +263,9 @@ func (gm *GroupMgr) StopGroup() (*proc.Status, error) {
 		}(c)
 	}
 	db.DPrintf(db.GROUPMGR, "wait for members")
-	status := <-gm.ch
-	db.DPrintf(db.GROUPMGR, "done members %v\n", gm)
-	return status, err
+	gstatus := <-gm.ch
+	db.DPrintf(db.GROUPMGR, "done members %v %v\n", gm, gstatus)
+	return gstatus, err
 }
 
 func newREPL(id, n int) string {

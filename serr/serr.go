@@ -55,7 +55,7 @@ const (
 	// sigma OS errors
 	//
 
-	TErrRetry
+	TErrRetry // tell client to retry
 	TErrBadFd
 
 	//

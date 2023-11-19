@@ -31,6 +31,7 @@ type ImgSrv struct {
 	done       string
 	wip        string
 	todo       string
+	error      string
 	nrounds    int
 	workerMcpu proc.Tmcpu
 	workerMem  proc.Tmem
@@ -56,6 +57,9 @@ func MkDirs(fsl *fslib.FsLib, job string) error {
 		return err
 	}
 	if err := fsl.MkDir(path.Join(IMG, job, "wip"), 0777); err != nil {
+		return err
+	}
+	if err := fsl.MkDir(path.Join(IMG, job, "error"), 0777); err != nil {
 		return err
 	}
 	return nil
@@ -115,6 +119,7 @@ func NewImgd(args []string) (*ImgSrv, error) {
 	imgd.done = path.Join(IMG, imgd.job, "done")
 	imgd.todo = path.Join(IMG, imgd.job, "todo")
 	imgd.wip = path.Join(IMG, imgd.job, "wip")
+	imgd.error = path.Join(IMG, imgd.job, "error")
 	mcpu, err := strconv.Atoi(args[2])
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: Error parse MCPU %v", err)
@@ -189,7 +194,7 @@ func (imgd *ImgSrv) waitForTask(start time.Time, p *proc.Proc, t *task) Tresult 
 	} else if err == nil && status.IsStatusErr() {
 		db.DPrintf(db.ALWAYS, "task %v errored err %v", t, status)
 		// mark task as done, but return error
-		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.done+"/"+t.name); err != nil {
+		if err := imgd.Rename(imgd.wip+"/"+t.name, imgd.error+"/"+t.name); err != nil {
 			db.DFatalf("rename task %v done err %v", t, err)
 		}
 		return Tresult{t.name, false, ms, status}
@@ -336,6 +341,6 @@ func (imgd *ImgSrv) Work() {
 	if r == nil {
 		imgd.ClntExitOK()
 	} else {
-		imgd.ClntExit(r.status)
+		imgd.ClntExit(proc.NewStatusInfo(proc.StatusFatal, "task error", r.status))
 	}
 }

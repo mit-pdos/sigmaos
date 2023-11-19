@@ -122,7 +122,10 @@ func TestImgdOne(t *testing.T) {
 
 	go ts.progress()
 
-	imgd.WaitGroup()
+	gs := imgd.WaitGroup()
+	for _, s := range gs {
+		assert.True(t, s.IsStatusOK(), s)
+	}
 
 	ts.shutdown()
 }
@@ -152,7 +155,10 @@ func TestImgdMany(t *testing.T) {
 
 	go ts.progress()
 
-	imgd.WaitGroup()
+	gs := imgd.WaitGroup()
+	for _, s := range gs {
+		assert.True(t, s.IsStatusOK())
+	}
 
 	ts.shutdown()
 }

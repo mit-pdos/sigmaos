@@ -478,7 +478,7 @@ func TestPageDir(t *testing.T) {
 	dn := gopath.Join(pathname, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
-	ts.SetChunkSz(sp.Tsize(512))
+	// ts.SetChunkSz(sp.Tsize(512))
 	n := 1000
 	names := make([]string, 0)
 	for i := 0; i < n; i++ {

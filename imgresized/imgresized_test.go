@@ -103,6 +103,29 @@ func (ts *Tstate) progress() {
 	}
 }
 
+func TestImgdFatal(t *testing.T) {
+	ts := newTstate(t)
+
+	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
+	assert.Nil(ts.T, err)
+
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1)
+	fn := path.Join(sp.S3, "~local/9ps3/img-save/", "yyy.jpg")
+
+	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
+	assert.Nil(ts.T, err)
+
+	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
+	assert.Nil(ts.T, err)
+
+	gs := imgd.WaitGroup()
+	for _, s := range gs {
+		assert.True(ts.T, s.IsStatusFatal(), s)
+	}
+	db.DPrintf(db.TEST, "shutdown\n")
+	ts.Shutdown()
+}
+
 func (ts *Tstate) imgdJob(paths []string) {
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(ts.T, err)

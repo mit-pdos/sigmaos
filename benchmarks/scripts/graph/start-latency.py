@@ -15,9 +15,9 @@ def graph_data(out):
   ax.set_yscale("log")
   ax.set_ylabel("Start Latency (ms)")
 
-  sys = [ "SigmaOS", "Ray", "Mitosis", "FAASM", "Docker", "Kubernetes" ]
-  cold = [ 223, 24.5, 3.1, 2.1, 2671.4, 1143 ]
-  warm = [ 1.8, 1.8, 2.8, 2.1, 469.1, 217 ]
+  sys = [ "SigmaOS", "Ray", "FAASM", "Mitosis", "Docker", "Kubernetes" ]
+  cold = [ 223,       25.5,     2.1,       3.1,   2671.4,         1143 ]
+  warm = [ 1.8,        0.6,     2.1,       2.8,    469.1,          217 ]
 
   assert(len(sys) == len(cold))
   assert(len(sys) == len(warm))

@@ -67,7 +67,8 @@ func (mgr *ProcMgr) downloadProcBin(realm sp.Trealm, prog, buildTag string) erro
 		commonBins,
 		path.Join(sp.S3, "~local", buildTag, "/bin"),
 	}
-	if sp.Target != "local" {
+	// For user bins, go straight to S3 instead of checking locally first.
+	if sp.Target != "local" && prog != "named" {
 		paths = paths[1:]
 	}
 	var err error

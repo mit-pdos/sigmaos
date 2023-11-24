@@ -261,6 +261,8 @@ func TestMicroScheddSpawn(t *testing.T) {
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
+	db.DPrintf(db.BENCH, "rust %v ux %v nclnt %v durs %v rps %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS)
+
 	prog := "XXXX"
 	if USE_RUST_PROC {
 		if DOWNLOAD_FROM_UX {

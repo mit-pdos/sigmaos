@@ -66,6 +66,7 @@ COPY --from=sigma-build-kernel /home/sigmaos/create-net.sh /home/sigmaos/bin/ker
 # Copy named bin
 RUN mkdir -p /home/sigmaos/bin/user/common && \
   cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
+COPY --from=sigma-build-user-rust /home/sigmaos/bin/user/spawn-latency /home/sigmaos/bin/user/common/spawn-latency-ux
 # Copy linux bins
 COPY --from=sigma-build-kernel /home/sigmaos/bin/linux /home/sigmaos/bin/linux
 CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu}"]

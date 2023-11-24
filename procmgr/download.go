@@ -68,7 +68,7 @@ func (mgr *ProcMgr) downloadProcBin(realm sp.Trealm, prog, buildTag string) erro
 		path.Join(sp.S3, "~local", buildTag, "/bin"),
 	}
 	// For user bins, go straight to S3 instead of checking locally first.
-	if sp.Target != "local" && prog != "named" {
+	if sp.Target != "local" && prog != "named" && prog != "spawn-latency-ux" {
 		paths = paths[1:]
 	}
 	var err error

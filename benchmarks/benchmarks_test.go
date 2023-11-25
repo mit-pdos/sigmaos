@@ -286,7 +286,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 	// Prep Schedd job
 	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt) time.Duration {
 		if USE_RUST_PROC {
-			return runRustSpawnBenchProc(ts1, sc)
+			return runRustSpawnBenchProc(ts1, sc, prog)
 		} else {
 			return runSpawnBenchProc(ts1, sc)
 		}

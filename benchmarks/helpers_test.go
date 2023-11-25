@@ -84,8 +84,8 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	}
 }
 
-func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) time.Duration {
-	p := proc.NewProc("spawn-latency", nil)
+func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, prog string) time.Duration {
+	p := proc.NewProc(prog, nil)
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())

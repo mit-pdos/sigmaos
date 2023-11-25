@@ -17,7 +17,7 @@ def graph_data(out):
 
   sys = [ "σOS", "σOS-ux", "Ray", "FAASM", "Mitosis", "Docker", "Kubernetes" ]
   cold = [  223,     41.5,  25.5,     8.8,       3.1,   2671.4,         1143 ]
-  warm = [  1.9,      1.9,   0.6,     0.3,       2.8,    469.1,          217 ]
+  warm = [  1.9,      1.9,   0.6,     0.3,       3.1,    469.1,          217 ]
 
   assert(len(sys) == len(cold))
   assert(len(sys) == len(warm))

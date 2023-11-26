@@ -48,7 +48,7 @@ func getDefaultSrvs() []sn.Srv {
 }
 
 func init() {
-	flag.StringVar(&MONGO_URL, "mongourl", "172.17.0.3:4407", "Addr of mongo server.")
+	flag.StringVar(&MONGO_URL, "mongourl", "10.10.1.1:4407", "Addr of mongo server.")
 }
 
 type snFn func(wc *sn.WebClnt, r *rand.Rand)

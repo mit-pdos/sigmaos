@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	endpointsBase = []string{":2379", ":2380", ":2381", ":2382", ":2383"}
+	endpointsBase = []string{":3379", ":3380", ":3381", ":3382", ":3383"}
 )
 
 type FsEtcd struct {

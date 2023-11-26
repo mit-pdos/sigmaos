@@ -109,6 +109,7 @@ for vm in $vms; do
   else
     if [ $NCORES -eq 4 ]; then
       ./sigmaos/set-cores.sh --set 1 --start 2 --end 3 > /dev/null
+      ./sigmaos/set-cores.sh --set 0 --start 4 --end 39 > /dev/null
       echo "ncores:"
       nproc
     else

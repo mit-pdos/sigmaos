@@ -818,6 +818,37 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	}
 }
 
+func testSocialNet(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool) {
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	jobs, apps := newSocialNetworkJobs(ts1, p, sigmaos, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
+	done := make(chan bool)
+	// Run social network job
+	go func() {
+		runOps(ts1, apps, runSocialNetwork, rs)
+		done <- true
+	}()
+	// Wait for social network jobs to set up.
+	<-jobs[0].ready
+	db.DPrintf(db.TEST, "Social Network setup done.")
+	monitorCPUUtil(ts1, p)
+	db.DPrintf(db.TEST, "Image Resize setup done.")
+	db.DPrintf(db.TEST, "Setup phase done.")
+	// Kick off social network jobs
+	jobs[0].ready <- true
+	// Wait for jobs to finish.
+	<-done
+	db.DPrintf(db.TEST, "Social Network Done.")
+	printResultSummary(rs)
+	time.Sleep(5 * time.Second)
+	rootts.Shutdown()
+}
+
+func TestSocialNetSigmaos(t *testing.T) {
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
+	testSocialNet(rootts, ts1, nil, true)
+}
+
 // XXX Messy, get rid of this.
 var reservec *rpcclnt.RPCClnt
 

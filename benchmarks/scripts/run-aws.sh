@@ -1214,7 +1214,7 @@ graph_realm_balance_multi() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --be_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --legend_on_right --prefix "mr-"
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --be_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --prefix "mr-" #--legend_on_right 
 }
 
 graph_realm_balance_multi_img() {
@@ -1333,7 +1333,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-#hotel_tail_multi
+hotel_tail_multi
 #realm_balance_be
 #mr_vs_corral
 #schedd_scalability_rs
@@ -1370,8 +1370,8 @@ echo "Running benchmarks with version: $VERSION"
 source ~/env/3.10/bin/activate
 #graph_realm_balance_be
 #graph_realm_balance_be_img
-graph_start_latency
-#graph_schedd_scalability_rs
+#graph_start_latency
+graph_schedd_scalability_rs
 
 #graph_mr_vs_corral
 #graph_realm_balance_multi_img

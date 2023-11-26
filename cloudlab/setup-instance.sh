@@ -149,6 +149,7 @@ then
   jq \
   docker.io \
   cpufrequtils \
+  apparmor-utils \
   mysql-client
 
   # For hadoop

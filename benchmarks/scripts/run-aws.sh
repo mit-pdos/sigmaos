@@ -299,6 +299,36 @@ run_hotel() {
   run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async "swapoff"
 }
 
+run_socialnet() {
+  if [ $# -ne 8 ]; then
+    echo "run_socialnet args: testname rps cli_vm k8saddr dur perf_dir driver async" 1>&2
+    exit 1
+  fi
+  testname=$1
+  rps=$2
+  cli_vm=$3
+  k8saddr=$4
+  dur=$5
+  perf_dir=$6
+  driver=$7
+  async=$8
+  cmd="
+    aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
+    export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+    go clean -testcache; \
+    ulimit -n 100000; \
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --prewarm_realm --sn_dur $dur --sn_max_rps $rps --sn_read_only > /tmp/bench.out 2>&1
+  "
+  if [ "$sys" = "Sigmaos" ]; then
+    vpc=$VPC
+  else
+    # If running against k8s, pass through k8s VPC
+    vpc=$KVPC
+  fi
+  n_cores=4
+  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async "swapoff"
+}
+
 run_kv() {
   if [ $# -ne 8 ]; then
     echo "run_kv args: n_cores n_vm nkvd kvd_mcpu nclerk auto redisaddr perf_dir" 1>&2
@@ -377,6 +407,29 @@ mr_vs_corral() {
       echo "========== Running $run =========="
       perf_dir=$OUT_DIR/$run
       run_mr 2 $n_vm "$prewarm" $mrapp $mem_req false $perf_dir
+    done
+  done
+}
+
+socialnet_tail() {
+  k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  for sys in Sigmaos ; do #K8s ; do
+    testname="TestSocialNet${sys}"
+    if [ "$sys" = "Sigmaos" ]; then
+      cli_vm=8
+      vpc=$VPC
+      LEADER_IP=$LEADER_IP_SIGMA
+    else
+      cli_vm=8
+      vpc=$KVPC
+      LEADER_IP=$LEADER_IP_K8S
+    fi
+    # for rps in 100 250 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 ; do
+    for rps in 1000 ; do #3000 ; do
+      run=${FUNCNAME[0]}/$sys/$rps
+      echo "========== Running $run =========="
+      perf_dir=$OUT_DIR/$run
+      run_socialnet $testname $rps $cli_vm $k8saddr "60s" $perf_dir true false
     done
   done
 }
@@ -1333,7 +1386,8 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-hotel_tail_multi
+socialnet_tail
+#hotel_tail_multi
 #realm_balance_be
 #mr_vs_corral
 #schedd_scalability_rs
@@ -1371,7 +1425,7 @@ source ~/env/3.10/bin/activate
 #graph_realm_balance_be
 #graph_realm_balance_be_img
 #graph_start_latency
-graph_schedd_scalability_rs
+#graph_schedd_scalability_rs
 
 #graph_mr_vs_corral
 #graph_realm_balance_multi_img

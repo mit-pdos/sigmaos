@@ -846,7 +846,9 @@ func testSocialNet(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sig
 func TestSocialNetSigmaos(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
-	testSocialNet(rootts, ts1, nil, true)
+	p1 := newRealmPerf(ts1)
+	defer p1.Done()
+	testSocialNet(rootts, ts1, p, true)
 }
 
 // XXX Messy, get rid of this.

@@ -18,7 +18,8 @@ import (
 var pathname string // e.g., --path "name/ux/~local/fslibtest"
 
 func init() {
-	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
+	// use a memfs file system
+	flag.StringVar(&pathname, "path", "name/schedd/~local/", "path for file system")
 }
 
 func TestPipeBasic(t *testing.T) {

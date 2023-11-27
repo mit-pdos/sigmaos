@@ -75,7 +75,9 @@ fn main() {
             .to_string(),
     );
 
-    log::info!("exec: {} {:?}", program, new_args);
+    if VERBOSE {
+        log::info!("exec: {} {:?}", program, new_args);
+    }
 
     let err = cmd.args(new_args).exec();
 
@@ -115,7 +117,9 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
     print_elapsed_time("trampoline.fs_jail_proc create_dir_all", now, false);
     now = SystemTime::now();
 
-    log::info!("mount newroot {}", newroot_pn);
+    if VERBOSE {
+        log::info!("mount newroot {}", newroot_pn);
+    }
     // Mount new file system as a mount point so we can pivot_root to
     // it later
     Mount::builder()
@@ -170,7 +174,9 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
             .flags(MountFlags::BIND)
             .mount("/tmp/sigmaos-perf", "tmp/sigmaos-perf")?;
         //            .mount("/tmp/sigmaos-perf", "tmp/sigmaos-perf")?;
-        log::info!("PERF {}", "mounting perf dir");
+        if VERBOSE {
+            log::info!("PERF {}", "mounting perf dir");
+        }
     }
     print_elapsed_time("trampoline.fs_jail_proc mount dirs", now, false);
 
@@ -339,7 +345,9 @@ fn setcap_proc() -> Result<(), Box<dyn std::error::Error>> {
     caps::clear(None, CapSet::Inheritable)?;
 
     let cur = caps::read(None, CapSet::Permitted)?;
-    log::info!("Current permitted caps: {:?}.", cur);
+    if VERBOSE {
+        log::info!("Current permitted caps: {:?}.", cur);
+    }
 
     Ok(())
 }

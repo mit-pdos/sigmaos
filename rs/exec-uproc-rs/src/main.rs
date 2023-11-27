@@ -10,11 +10,15 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-fn print_elapsed_time(/*label: &str,*/ msg: &str, start: SystemTime) {
-    let elapsed = SystemTime::now()
-        .duration_since(start)
-        .expect("Time went backwards");
-    log::info!("SPAWN_LAT {}: {}us", msg, elapsed.as_micros());
+const VERBOSE: bool = false;
+
+fn print_elapsed_time(/*label: &str,*/ msg: &str, start: SystemTime, ignore_verbose: bool) {
+    if ignore_verbose || VERBOSE {
+        let elapsed = SystemTime::now()
+            .duration_since(start)
+            .expect("Time went backwards");
+        log::info!("SPAWN_LAT {}: {}us", msg, elapsed.as_micros());
+    }
 }
 
 fn main() {
@@ -36,26 +40,26 @@ fn main() {
     let exec_time = env::var("SIGMA_EXEC_TIME").unwrap_or("".to_string());
     let exec_time_micros: u64 = exec_time.parse().unwrap_or(0);
     let exec_time = UNIX_EPOCH + Duration::from_micros(exec_time_micros);
-    print_elapsed_time("trampoline.exec_trampoline", exec_time);
+    print_elapsed_time("trampoline.exec_trampoline", exec_time, false);
 
     let pid = env::args().nth(1).expect("no pid");
     let program = env::args().nth(2).expect("no program");
     let mut now = SystemTime::now();
     let aa = is_enabled_apparmor();
-    print_elapsed_time("Check apparmor enabled", now);
+    print_elapsed_time("Check apparmor enabled", now, false);
     now = SystemTime::now();
     jail_proc(&pid).expect("jail failed");
-    print_elapsed_time("trampoline.fs_jail_proc", now);
+    print_elapsed_time("trampoline.fs_jail_proc", now, false);
     now = SystemTime::now();
     setcap_proc().expect("set caps failed");
-    print_elapsed_time("trampoline.setcap_proc", now);
+    print_elapsed_time("trampoline.setcap_proc", now, false);
     now = SystemTime::now();
     seccomp_proc().expect("seccomp failed");
-    print_elapsed_time("trampoline.seccomp_proc", now);
+    print_elapsed_time("trampoline.seccomp_proc", now, false);
     if aa {
         now = SystemTime::now();
         apply_apparmor("sigmaos-uproc").expect("apparmor failed");
-        print_elapsed_time("trampoline.apply_apparmor", now);
+        print_elapsed_time("trampoline.apply_apparmor", now, false);
     }
 
     let new_args: Vec<_> = std::env::args_os().skip(3).collect();
@@ -108,7 +112,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         let path: String = newroot_pn.to_owned();
         fs::create_dir_all(path + d)?;
     }
-    print_elapsed_time("trampoline.fs_jail_proc create_dir_all", now);
+    print_elapsed_time("trampoline.fs_jail_proc create_dir_all", now, false);
     now = SystemTime::now();
 
     log::info!("mount newroot {}", newroot_pn);
@@ -168,24 +172,24 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         //            .mount("/tmp/sigmaos-perf", "tmp/sigmaos-perf")?;
         log::info!("PERF {}", "mounting perf dir");
     }
-    print_elapsed_time("trampoline.fs_jail_proc mount dirs", now);
+    print_elapsed_time("trampoline.fs_jail_proc mount dirs", now, false);
 
     now = SystemTime::now();
     // ========== No more mounts beyond this point ==========
     pivot_root(".", old_root_mnt)?;
-    print_elapsed_time("trampoline.fs_jail_proc pivot_root", now);
+    print_elapsed_time("trampoline.fs_jail_proc pivot_root", now, false);
 
     now = SystemTime::now();
     env::set_current_dir("/")?;
-    print_elapsed_time("trampoline.fs_jail_proc chdir", now);
+    print_elapsed_time("trampoline.fs_jail_proc chdir", now, false);
 
     now = SystemTime::now();
     unmount(old_root_mnt, UnmountFlags::DETACH)?;
-    print_elapsed_time("trampoline.fs_jail_proc umount", now);
+    print_elapsed_time("trampoline.fs_jail_proc umount", now, false);
 
     now = SystemTime::now();
     fs::remove_dir(old_root_mnt)?;
-    print_elapsed_time("trampoline.fs_jail_proc rmdir", now);
+    print_elapsed_time("trampoline.fs_jail_proc rmdir", now, false);
 
     Ok(())
 }
@@ -300,7 +304,7 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
     }
     let now = SystemTime::now();
     filter.load()?;
-    print_elapsed_time("trampoline.seccomp_proc load", now);
+    print_elapsed_time("trampoline.seccomp_proc load", now, false);
     Ok(())
 }
 

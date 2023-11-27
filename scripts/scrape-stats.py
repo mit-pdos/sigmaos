@@ -33,6 +33,9 @@ def print_stats(path, regex, lat, verbose):
       print("{:.3f}ms".format(l))
       
   lat = np.array(lat)
+  if len(lat) == 0:
+    print("!!! NO DATA !!!")
+    return
   print("Stats for path[{}] regex[{}]:\n\tdata points: {}\n\tsum: {:.2f}ms\n\tmin: {:.3f}ms\n\tmax: {:.3f}ms\n\tmean: {:.3f}ms\n\tstd: {:.3f}ms\n\tp50: {:.3f}ms\n\tp90: {:.3f}ms\n\tp99: {:.3f}ms".format(
     path,
     regex,

@@ -20,7 +20,7 @@ type ProcDir struct {
 }
 
 func NewProcDir(procs ProcFs) fs.Inode {
-	return &ProcDir{ProcInode: newProcInode(sp.DMDIR|0444, "pids"), procs: procs}
+	return &ProcDir{ProcInode: newProcInode(sp.DMDIR|0555, "pids"), procs: procs}
 }
 
 func (pd *ProcDir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {

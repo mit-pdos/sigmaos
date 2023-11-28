@@ -7,16 +7,16 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/path"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sorteddir"
 )
 
 type ProcDir struct {
 	sync.Mutex
 	*ProcInode
 	procs ProcFs
-	ps    []*proc.Proc
+	sd    *sorteddir.SortedDir
 }
 
 func NewProcDir(procs ProcFs) fs.Inode {
@@ -24,12 +24,19 @@ func NewProcDir(procs ProcFs) fs.Inode {
 }
 
 func (pd *ProcDir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
-	pd.ps = pd.procs.GetProcs()
+	ps := pd.procs.GetProcs()
+	pd.sd = sorteddir.NewSortedDir()
+	for _, p := range ps {
+		n := string(p.GetPid())
+		pi := newProcInode(0444, n)
+		st, _ := pi.Stat(nil)
+		pd.sd.Insert(n, st)
+	}
 	return nil, nil
 }
 
 func (pd *ProcDir) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
-	pd.ps = nil
+	pd.sd = nil
 	return nil
 }
 
@@ -69,5 +76,15 @@ func (pd *ProcDir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj
 }
 
 func (pd *ProcDir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.Err) {
-	return nil, nil
+	db.DPrintf(db.PROCFS, "%v: ReadDir %v %v %v\n", ctx, pd, cursor, cnt)
+	dents := make([]*sp.Stat, 0, pd.sd.Len())
+	pd.sd.Iter(func(n string, e interface{}) bool {
+		dents = append(dents, e.(*sp.Stat))
+		return true
+	})
+	if cursor > len(dents) {
+		return nil, nil
+	} else {
+		return dents[cursor:], nil
+	}
 }

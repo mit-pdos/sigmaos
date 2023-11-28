@@ -8,7 +8,9 @@ import (
 
 	"sigmaos/ctx"
 	"sigmaos/dir"
+	"sigmaos/fs"
 	"sigmaos/memfs"
+	"sigmaos/path"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -38,16 +40,19 @@ func (ps *Procs) Len() int {
 
 func TestReadDir(t *testing.T) {
 	procs := &Procs{procs: make(map[sp.Tpid]*proc.Proc)}
+	p := proc.NewProc("test", nil)
+	procs.procs[p.GetPid()] = p
+
 	d := NewProcDir(procs)
-	log.Printf("dir %T\n", d)
 
 	ctx := ctx.NewCtx("", 0, sp.NoClntId, nil, nil)
 	root := dir.NewRootDir(ctx, memfs.NewInode, nil)
 	err := dir.MkNod(ctx, root, "pids", d)
 	assert.Nil(t, err)
-	log.Printf("dir %T\n", root)
-
-	sts, err := root.ReadDir(ctx, 0, 100000)
+	_, o, _, err := root.LookupPath(nil, path.Path{"pids"})
+	_, err = o.Open(nil, 0)
 	assert.Nil(t, err)
-	log.Printf("dir %v\n", sts)
+	sts, err := o.(fs.Dir).ReadDir(ctx, 0, 100000)
+	assert.Nil(t, err)
+	log.Printf("sts %v\n", sts)
 }

@@ -66,7 +66,7 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ] && [ $NCORES -ne 20 ]; then
+if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ] && [ $NCORES -ne 20 ] && [ $NCORES -ne 40 ]; then
   echo "Bad ncores $NCORES"
   exit 1
 fi
@@ -118,6 +118,13 @@ for vm in $vms; do
         ./sigmaos/set-cores.sh --set 1 --start 2 --end 19 > /dev/null
         echo "ncores:"
         nproc
+      else
+        if [ $NCORES -eq 40 ]; then
+          ./sigmaos/set-cores.sh --set 1 --start 2 --end 39 > /dev/null
+          echo "ncores:"
+          nproc
+        fi
+
       fi
     fi
   fi

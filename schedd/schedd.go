@@ -25,18 +25,20 @@ import (
 )
 
 type Schedd struct {
-	realmMu     sync.RWMutex
-	mu          sync.Mutex
-	cond        *sync.Cond
-	pmgr        *procmgr.ProcMgr
-	scheddclnt  *scheddclnt.ScheddClnt
-	procqclnt   *procqclnt.ProcQClnt
-	mcpufree    proc.Tmcpu
-	memfree     proc.Tmem
-	kernelId    string
-	scheddStats map[sp.Trealm]*proto.RealmStats
-	mfs         *memfssrv.MemFs
-	nProcsRun   uint64
+	realmMu             sync.RWMutex
+	mu                  sync.Mutex
+	cond                *sync.Cond
+	pmgr                *procmgr.ProcMgr
+	scheddclnt          *scheddclnt.ScheddClnt
+	procqclnt           *procqclnt.ProcQClnt
+	mcpufree            proc.Tmcpu
+	memfree             proc.Tmem
+	kernelId            string
+	scheddStats         map[sp.Trealm]*proto.RealmStats
+	mfs                 *memfssrv.MemFs
+	nProcsRun           uint64
+	nProcGets           uint64
+	nProcGetsSuccessful uint64
 }
 
 func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
@@ -199,6 +201,7 @@ func (sd *Schedd) getQueuedProcs() {
 			}
 			continue
 		}
+		atomic.AddUint64(&sd.nProcGets, 1)
 		if !ok {
 			db.DPrintf(db.SCHEDD, "[%v] No proc on procq, try another, bias=%v qlen=%v", sd.kernelId, bias, qlen)
 			// If already biased to this schedd's kernel, and no proc was available,
@@ -213,6 +216,10 @@ func (sd *Schedd) getQueuedProcs() {
 			}
 			continue
 		}
+		// Restore bias if successful (since getProc may have been unbiased and led
+		// to a successful claim before)
+		bias = true
+		atomic.AddUint64(&sd.nProcGetsSuccessful, 1)
 		// Allocate memory for the proc before this loop runs again so that
 		// subsequent getProc requests carry the updated memory accounting
 		// information.
@@ -264,6 +271,16 @@ func (sd *Schedd) register() {
 	}
 }
 
+func (sd *Schedd) stats() {
+	if !db.WillBePrinted(db.SCHEDD) {
+		return
+	}
+	for {
+		time.Sleep(time.Second)
+		db.DPrintf(db.ALWAYS, "nget %v successful %v", atomic.LoadUint64(&sd.nProcGets), atomic.LoadUint64(&sd.nProcGetsSuccessful))
+	}
+}
+
 func RunSchedd(kernelId string, reserveMcpu uint) error {
 	pcfg := proc.GetProcEnv()
 	mfs, err := memfssrv.NewMemFs(path.Join(sp.SCHEDD, kernelId), pcfg)
@@ -285,6 +302,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	db.DPrintf(db.ALWAYS, "Schedd starting with total mem: %v", mem.GetTotalMem())
 	defer p.Done()
 	go sd.getQueuedProcs()
+	go sd.stats()
 	sd.register()
 	ssrv.RunServer()
 	return nil

@@ -3,6 +3,7 @@ package procqsrv
 import (
 	"path"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
@@ -30,6 +31,7 @@ type ProcQ struct {
 	qs         map[sp.Trealm]*Queue
 	realms     []sp.Trealm
 	qlen       int // Aggregate queue length, across all queues
+	tot        int64
 }
 
 func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
@@ -60,6 +62,8 @@ func (pq *ProcQ) addProc(p *proc.Proc) chan string {
 
 	// Increase aggregate queue length.
 	pq.qlen++
+	// Increase the total number of procs spawned
+	atomic.AddInt64(&pq.tot, 1)
 	// Get the queue for the realm.
 	q := pq.getRealmQueue(p.GetRealm())
 	// Enqueue the proc according to its realm.
@@ -191,6 +195,17 @@ func (pq *ProcQ) tryGetRealmQueueL(realm sp.Trealm) (*Queue, bool) {
 	return q, ok
 }
 
+func (pq *ProcQ) stats() {
+	if !db.WillBePrinted(db.PROCQ) {
+		return
+	}
+	for {
+		time.Sleep(time.Second)
+		// Increase the total number of procs spawned
+		db.DPrintf(db.PROCQ, "Procq total size %v", atomic.LoadInt64(&pq.tot))
+	}
+}
+
 // Run a ProcQ
 func Run() {
 	pcfg := proc.GetProcEnv()
@@ -211,6 +226,6 @@ func Run() {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
-
+	//	go pq.stats()
 	ssrv.RunServer()
 }

@@ -50,6 +50,18 @@ func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 	mgr.pstate.spawn(p)
 }
 
+func (mgr *ProcMgr) SetupFs(mfs *memfssrv.MemFs) {
+	dirs := []string{
+		sp.RUNNING,
+	}
+	dir := NewProcDir(mgr.pstate.spawned)
+	for _, d := range dirs {
+		if err := mfs.MkNod(d, dir); err != nil {
+			db.DFatalf("Error mknod %v: %v", d, err)
+		}
+	}
+}
+
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	// Set the proc's kernel ID, now that a kernel has been selected to run the
 	// proc.

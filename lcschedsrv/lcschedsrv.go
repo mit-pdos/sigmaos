@@ -156,7 +156,6 @@ func Run() {
 		db.DFatalf("Error PDS: %v", err)
 	}
 
-	setupMemFsSrv(ssrv.MemFs)
 	setupFs(ssrv.MemFs)
 	// Perf monitoring
 	p, err := perf.NewPerf(pcfg, perf.LCSCHED)

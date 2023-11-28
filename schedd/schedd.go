@@ -292,7 +292,6 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)
 	}
-	setupMemFsSrv(ssrv.MemFs)
 	sd.pmgr.SetupFs(ssrv.MemFs)
 	// Perf monitoring
 	p, err := perf.NewPerf(pcfg, perf.SCHEDD)

@@ -483,15 +483,15 @@ hotel_tail_multi() {
   dur="10s,10s,10s,10s,10s,10s,10s,10s,10s,10s,10s"
 #  rps="251"
 #  dur="10s"
-  sys="Sigmaos"
-#  sys="K8s"
+#  sys="Sigmaos"
+  sys="K8s"
   cache_type="cached"
   scale_cache="false"
   cache_type2="cached"
 #  cache_type="kvd"
   n_clnt_vms=4
   driver_vm=8
-  clnt_vma=($(echo "$driver_vm 9 10 11 12 13 14"))
+  clnt_vma=($(echo "$driver_vm 9 10 11 12"))
   clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
   testname_driver="Hotel${sys}Search"
   testname_clnt="Hotel${sys}JustCliSearch"
@@ -1041,6 +1041,8 @@ schedd_scalability() {
   n_vm=4
   driver_vm=4
   dur="10s"
+#  prewarm=""
+  prewarm="--prewarm_realm"
   for rps in 200 400 600 800 1000 1200 1400 1600 ; do
     run=${FUNCNAME[0]}/rps-$rps
     echo "========== Running $run =========="
@@ -1053,7 +1055,7 @@ schedd_scalability() {
     cmd="
       export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
       go clean -testcache; \
-      go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
+      go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown $prewarm > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
     run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
@@ -1065,14 +1067,49 @@ schedd_scalability() {
   done
 }
 
+schedd_scalability_rs_single_machine() {
+  # !!! Make sure to enable turbo-boost and stop the databases !!!
+  driver_vm=9
+  dur="5s"
+  n_vm=1
+#  prewarm=""
+  prewarm="--prewarm_realm"
+#  for rps in 200 400 800 1000 1200 1400 1600 1800 2000 ; do
+  for rps in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400 2600 2800 ; do
+    run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      continue
+    fi
+    stop_k8s_cluster $KVPC
+    cmd="
+      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+      go clean -testcache; \
+      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown > /tmp/bench.out 2>&1
+    "
+    # Start driver VM asynchronously.
+    run_benchmark $VPC 40 $n_vm $perf_dir "$cmd" $driver_vm true true false
+    # Wait for test to terminate.
+    wait
+    end_benchmark $vpc $perf_dir
+    # Copy log files to perf dir.
+    cp /tmp/*.out $perf_dir
+  done
+}
+
 schedd_scalability_rs() {
-#  n_vm=4
-  driver_vm=12
-  qps_per_machine=1100
-  dur="10s"
-  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
-#  for n_vm in 4 ; do
-#    for rps in 2000 2400 2800 3200 3600 4000 4400 4800 5200 5600 6000 6400 6800 7200 7600 8000 8400 8800 9200 9600 10000 10400 10800 11200 11600 12000 ; do
+  driver_vm=9
+#  qps_per_machine=1100
+#  qps_per_machine=1800
+  dur="5s"
+  ncore=40
+#  prewarm=""
+  prewarm="--prewarm_realm"
+#  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
+  for qps_per_machine in 1000 1200 1400 1600 1800 2000; do
+    n_vm=8
     rps=$((n_vm * $qps_per_machine))
     run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
     echo "========== Running $run =========="
@@ -1085,16 +1122,15 @@ schedd_scalability_rs() {
     cmd="
       export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
       go clean -testcache; \
-      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA --no-shutdown > /tmp/bench.out 2>&1
+      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC 40 $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
     # Copy log files to perf dir.
     cp /tmp/*.out $perf_dir
-#   done
   done
 }
 
@@ -1344,6 +1380,13 @@ graph_schedd_scalability_rs() {
   $GRAPH_SCRIPTS_DIR/schedd-scalability.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf
 }
 
+graph_schedd_scalability_rs_single_machine() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf
+}
+
 graph_start_latency() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
@@ -1386,11 +1429,12 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-socialnet_tail
+schedd_scalability_rs_single_machine
 #hotel_tail_multi
+#socialnet_tail
 #realm_balance_be
 #mr_vs_corral
-#schedd_scalability_rs
+schedd_scalability_rs
 #realm_balance_be_img
 #schedd_scalability
 
@@ -1422,6 +1466,7 @@ socialnet_tail
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
+graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
 #graph_realm_balance_be_img
 #graph_start_latency

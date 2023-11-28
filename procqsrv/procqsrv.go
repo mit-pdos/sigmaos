@@ -11,6 +11,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/procfs"
 	proto "sigmaos/procqsrv/proto"
 	"sigmaos/rand"
 	"sigmaos/scheddclnt"
@@ -44,6 +45,48 @@ func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
 	}
 	pq.cond = sync.NewCond(&pq.mu)
 	return pq
+}
+
+// XXX Deduplicate with lcsched
+func (pq *ProcQ) GetProcs() []*proc.Proc {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+
+	procs := make([]*proc.Proc, 0, pq.lenL())
+	for _, q := range pq.qs {
+		for _, p := range q.pmap {
+			procs = append(procs, p)
+		}
+	}
+	return procs
+}
+
+// XXX Deduplicate with lcsched
+func (pq *ProcQ) Lookup(pid string) (*proc.Proc, bool) {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+
+	for _, q := range pq.qs {
+		if p, ok := q.pmap[sp.Tpid(pid)]; ok {
+			return p, ok
+		}
+	}
+	return nil, false
+}
+
+// XXX Deduplicate with lcsched
+func (pq *ProcQ) lenL() int {
+	l := 0
+	for _, q := range pq.qs {
+		l += len(q.pmap)
+	}
+	return l
+}
+
+func (pq *ProcQ) Len() int {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+	return pq.lenL()
 }
 
 func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
@@ -218,8 +261,13 @@ func Run() {
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)
 	}
-	setupMemFsSrv(ssrv.MemFs)
-	setupFs(ssrv.MemFs)
+
+	// export queued procs through procfs. maybe a subdir per realm?
+	dir := procfs.NewProcDir(pq)
+	if err := mfs.MkNod(sp.QUEUE, dir); err != nil {
+		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
+	}
+
 	// Perf monitoring
 	p, err := perf.NewPerf(pcfg, perf.PROCQ)
 	if err != nil {

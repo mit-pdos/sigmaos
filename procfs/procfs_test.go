@@ -1,4 +1,4 @@
-package procmgr
+package procfs
 
 import (
 	"log"
@@ -13,9 +13,28 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type Procs struct {
+	procs map[sp.Tpid]*proc.Proc
+}
+
+func (ps *Procs) GetProcs() []*proc.Proc {
+	procs := make([]*proc.Proc, 0, len(ps.procs))
+	for _, p := range ps.procs {
+		procs = append(procs, p)
+	}
+	return procs
+}
+
+func (ps *Procs) Lookup(n string) (*proc.Proc, bool) {
+	if p, ok := ps.procs[sp.Tpid(n)]; ok {
+		return p, ok
+	}
+	return nil, false
+}
+
 func TestReadDir(t *testing.T) {
-	m := make(map[sp.Tpid]*proc.Proc)
-	d := NewProcDir(m)
+	procs := &Procs{procs: make(map[sp.Tpid]*proc.Proc)}
+	d := NewProcDir(procs)
 	log.Printf("dir %T\n", d)
 
 	ctx := ctx.NewCtx("", 0, sp.NoClntId, nil, nil)

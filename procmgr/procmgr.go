@@ -8,6 +8,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/procfs"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
@@ -54,7 +55,7 @@ func (mgr *ProcMgr) SetupFs(mfs *memfssrv.MemFs) {
 	dirs := []string{
 		sp.RUNNING,
 	}
-	dir := NewProcDir(mgr.pstate.spawned)
+	dir := procfs.NewProcDir(mgr.pstate)
 	for _, d := range dirs {
 		if err := mfs.MkNod(d, dir); err != nil {
 			db.DFatalf("Error mknod %v: %v", d, err)

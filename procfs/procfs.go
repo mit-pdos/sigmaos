@@ -22,6 +22,7 @@ type ProcInode struct {
 	perm   sp.Tperm // XXX kill, but requires changing Perm() API
 	name   string
 	parent fs.Dir
+	proc   *proc.Proc
 }
 
 func newProcInode(perm sp.Tperm, name string) *ProcInode {
@@ -63,6 +64,18 @@ func (pi *ProcInode) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 
 func (pi *ProcInode) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
 	return nil
+}
+
+func (pi *ProcInode) Write(fs.CtxI, sp.Toffset, []byte, sp.Tfence) (sp.Tsize, *serr.Err) {
+	return 0, serr.NewErr(serr.TErrNotSupported, "Write")
+}
+
+func (pi *ProcInode) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, fence sp.Tfence) ([]byte, *serr.Err) {
+	s := pi.proc.String()
+	if off > sp.Toffset(len(s)) {
+		return nil, nil
+	}
+	return []byte(s)[off:], nil
 }
 
 func (pi *ProcInode) Size() (sp.Tlength, *serr.Err) {

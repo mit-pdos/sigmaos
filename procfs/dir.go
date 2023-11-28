@@ -66,9 +66,11 @@ func (pd *ProcDir) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 func (pd *ProcDir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
 	name := path[0]
 	db.DPrintf(db.PROCFS, "%v: Lookup %v %v\n", ctx, pd, name)
-	if _, ok := pd.procs.Lookup(name); ok {
+	if p, ok := pd.procs.Lookup(name); ok {
 		var o fs.FsObj
-		o = newProcInode(0444, name)
+		pi := newProcInode(0444, name)
+		pi.proc = p
+		o = pi
 		return []fs.FsObj{o}, o, path[1:], nil
 	} else {
 		return nil, nil, path, serr.NewErr(serr.TErrNotfound, name)

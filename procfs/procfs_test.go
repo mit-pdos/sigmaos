@@ -52,7 +52,15 @@ func TestReadDir(t *testing.T) {
 	_, o, _, err := root.LookupPath(nil, path.Path{"pids"})
 	_, err = o.Open(nil, 0)
 	assert.Nil(t, err)
-	sts, err := o.(fs.Dir).ReadDir(ctx, 0, 100000)
+	pids := o.(fs.Dir)
+	sts, err := pids.ReadDir(ctx, 0, 100000)
 	assert.Nil(t, err)
-	log.Printf("sts %v\n", sts)
+	for _, st := range sts {
+		_, o, _, err := pids.LookupPath(nil, path.Path{st.Name})
+		assert.Nil(t, err)
+		pid := o.(fs.File)
+		b, err := pid.Read(ctx, 0, 10000, sp.NoFence())
+		assert.Nil(t, err)
+		log.Printf("b %v\n", string(b))
+	}
 }

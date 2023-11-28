@@ -14,6 +14,7 @@ import (
 type ProcFs interface {
 	GetProcs() []*proc.Proc
 	Lookup(string) (*proc.Proc, bool)
+	Len() int
 }
 
 type ProcInode struct {

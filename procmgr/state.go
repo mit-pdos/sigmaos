@@ -44,6 +44,10 @@ func (ps *ProcState) Lookup(n string) (*proc.Proc, bool) {
 	return nil, false
 }
 
+func (ps *ProcState) Len() int {
+	return len(ps.spawned)
+}
+
 func (ps *ProcState) spawn(p *proc.Proc) {
 	ps.Lock()
 	defer ps.Unlock()

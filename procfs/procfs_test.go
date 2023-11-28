@@ -32,6 +32,10 @@ func (ps *Procs) Lookup(n string) (*proc.Proc, bool) {
 	return nil, false
 }
 
+func (ps *Procs) Len() int {
+	return len(ps.procs)
+}
+
 func TestReadDir(t *testing.T) {
 	procs := &Procs{procs: make(map[sp.Tpid]*proc.Proc)}
 	d := NewProcDir(procs)

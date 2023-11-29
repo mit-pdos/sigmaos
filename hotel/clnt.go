@@ -62,7 +62,7 @@ func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%v %s", resp.StatusCode, body)
+		return nil, fmt.Errorf("status code %v body %s", resp.StatusCode, body)
 	}
 	return body, nil
 }

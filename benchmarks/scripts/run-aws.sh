@@ -117,14 +117,15 @@ stop_k8s_cluster() {
 # Make sure to always start SigmaOS before K8s, as internally this function
 # stops k8s (because k8s generates a lot of interference).
 start_sigmaos_cluster() {
-  if [ $# -ne 4 ]; then
-    echo "start_sigmaos_cluster args: vpc n_cores n_vm swap" 1>&2
+  if [ $# -ne 5 ]; then
+    echo "start_sigmaos_cluster args: vpc n_cores turbo n_vm swap" 1>&2
     exit 1
   fi
   vpc=$1
   n_cores=$2
-  n_vm=$3
-  swap=$4
+  turbo=$3
+  n_vm=$4
+  swap=$5
   cd $SCRIPT_DIR
   echo "" > $INIT_OUT
   if [[ $swap == "swapon" ]]; then
@@ -138,7 +139,7 @@ start_sigmaos_cluster() {
 #  stop_k8s_cluster $vpc
   stop_sigmaos_cluster $vpc
   cd $SCRIPT_DIR
-  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG --branch $BRANCH $OVERLAYS >> $INIT_OUT 2>&1
+  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG --branch $BRANCH $OVERLAYS $turbo >> $INIT_OUT 2>&1
   cd $ROOT_DIR
 }
 
@@ -200,26 +201,27 @@ end_benchmark() {
 }
 
 run_benchmark() {
-  if [ $# -ne 9 ]; then
-    echo "run_benchmark args: vpc n_cores n_vm perf_dir cmd vm is_driver async swap" 1>&2
+  if [ $# -ne 10 ]; then
+    echo "run_benchmark args: vpc n_cores turbo n_vm perf_dir cmd vm is_driver async swap" 1>&2
     exit 1
   fi
   vpc=$1
   n_cores=$2
-  n_vm=$3
-  perf_dir=$4
-  cmd=$5
-  vm=$6 # benchmark driver vm index (usually 0)
-  is_driver=$7
-  async=$8
-  swap=$9
+  turbo=$3
+  n_vm=$4
+  perf_dir=$5
+  cmd=$6
+  vm=$7 # benchmark driver vm index (usually 0)
+  is_driver=$8
+  async=$9
+  swap=${10}
   # Start the cluster if this is the benchmark driver.
   if [[ $is_driver == "true" ]]; then
     # Avoid doing duplicate work.
     if ! should_skip $perf_dir true ; then
       return 0
     fi
-    start_sigmaos_cluster $vpc $n_cores $n_vm $swap
+    start_sigmaos_cluster $vpc $n_cores "$turbo" $n_vm $swap
   fi
   cd $SCRIPT_DIR
   # Start the benchmark as a background task.
@@ -255,7 +257,7 @@ run_mr() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp --mr_mem_req $mem_req > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
+  run_benchmark $VPC $n_cores "" $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
 
 run_hotel() {
@@ -296,7 +298,7 @@ run_hotel() {
     vpc=$KVPC
   fi
   n_cores=4
-  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async "swapoff"
+  run_benchmark $vpc $n_cores "" 8 $perf_dir "$cmd" $cli_vm $driver $async "swapoff"
 }
 
 run_socialnet() {
@@ -326,7 +328,7 @@ run_socialnet() {
     vpc=$KVPC
   fi
   n_cores=4
-  run_benchmark $vpc $n_cores 8 $perf_dir "$cmd" $cli_vm $driver $async "swapoff"
+  run_benchmark $vpc $n_cores "" 8 $perf_dir "$cmd" $cli_vm $driver $async "swapoff"
 }
 
 run_kv() {
@@ -346,7 +348,7 @@ run_kv() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS -run AppKVUnrepl --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
+  run_benchmark $VPC $n_cores "" $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
 
 run_cached() {
@@ -364,7 +366,7 @@ run_cached() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS -run AppCached --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_cores $n_vm $perf_dir "$cmd" 0 true false "swapoff"
+  run_benchmark $VPC $n_cores "" $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
 
 # ========== Top-level benchmarks ==========
@@ -597,7 +599,7 @@ realm_balance_be() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --nrealm $n_realm --mr_mem_req $mem_req > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 realm_balance_be_img() {
@@ -622,7 +624,7 @@ realm_balance_be_img() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --nrealm $n_realm > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $ncores $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  run_benchmark $VPC $ncores "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 k8s_balance_be() {
@@ -667,7 +669,7 @@ k8s_balance_be() {
     echo get ready to run ; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sMRMulti --k8sleaderip $k8sleaderip --s3resdir $s3dir --sleep $sl --nrealm $n_realm > /tmp/bench.out 2>&1
   "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  run_benchmark $KVPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 realm_balance() {
@@ -688,7 +690,7 @@ realm_balance() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 realm_balance_multi() {
@@ -735,7 +737,7 @@ realm_balance_multi() {
     go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true $swap
+  run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true true $swap
   sleep $sl2
   for cli_vm in $clnt_vms ; do
     driver="false"
@@ -804,7 +806,7 @@ realm_balance_multi_img() {
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceHotelImgResize --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --imgresize_nround $imgresize_nrounds $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true $swap
+  run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true true $swap
   sleep $sl2
   for cli_vm in $clnt_vms ; do
     driver="false"
@@ -864,7 +866,7 @@ k8s_balance() {
     echo get ready to run ; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  run_benchmark $KVPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
   cd $SCRIPT_DIR
   echo "Stopping hotel"
   ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-cached
@@ -931,7 +933,7 @@ k8s_balance_multi() {
     echo get ready to run ; \
     go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true true "swapoff"
+  run_benchmark $KVPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true true "swapoff"
   sleep $sl2
   for cli_vm in $clnt_vms ; do
     driver="false"
@@ -973,7 +975,7 @@ mr_k8s() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir > /tmp/bench.out 2>&1
   "
-  run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  run_benchmark $KVPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 img_resize() {
@@ -1001,7 +1003,7 @@ img_resize() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestImgResize --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $mcpu --imgresize_mem $imgresize_mem > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+  run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 k8s_img_resize() {
@@ -1033,7 +1035,7 @@ k8s_img_resize() {
       kubectl apply -Rf /tmp/thumbnail.yaml; \
       go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestK8sImgResize > /tmp/bench.out 2>&1
     "
-    run_benchmark $KVPC 4 $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
+    run_benchmark $KVPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
   done
 }
 
@@ -1058,7 +1060,7 @@ schedd_scalability() {
       go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown $prewarm > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 20 $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC 20 "" $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -1072,6 +1074,7 @@ schedd_scalability_rs_single_machine() {
   driver_vm=9
   dur="5s"
   n_vm=1
+  turbo="--turbo"
 #  prewarm=""
   prewarm="--prewarm_realm"
 #  for rps in 200 400 800 1000 1200 1400 1600 1800 2000 ; do
@@ -1090,7 +1093,7 @@ schedd_scalability_rs_single_machine() {
       go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 40 $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC 40 $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -1105,10 +1108,11 @@ schedd_scalability_rs() {
 #  qps_per_machine=1800
   dur="5s"
   ncore=40
+  turbo="--turbo"
 #  prewarm=""
   prewarm="--prewarm_realm"
 #  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
-  for qps_per_machine in 1000 1200 1400 1600 1800 2000; do
+  for qps_per_machine in 100 200 400 600 800 1000 1200 1400 1600 1800 2000; do
     n_vm=8
     rps=$((n_vm * $qps_per_machine))
     run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
@@ -1125,7 +1129,7 @@ schedd_scalability_rs() {
       go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 40 $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC 40 $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -1217,7 +1221,7 @@ realm_burst() {
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run RealmBurst > /tmp/bench.out 2>&1
   "
-  run_benchmark $VPC $n_vm $perf_dir "$cmd" 0 true false "swapoff"
+  run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
 
 # ========== Make Graphs ==========
@@ -1429,12 +1433,12 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-schedd_scalability_rs_single_machine
-#hotel_tail_multi
+schedd_scalability_rs
+hotel_tail_multi
+#schedd_scalability_rs_single_machine
 #socialnet_tail
 #realm_balance_be
 #mr_vs_corral
-schedd_scalability_rs
 #realm_balance_be_img
 #schedd_scalability
 
@@ -1466,7 +1470,7 @@ schedd_scalability_rs
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_schedd_scalability_rs_single_machine
+#graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
 #graph_realm_balance_be_img
 #graph_start_latency

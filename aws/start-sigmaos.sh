@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
+  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--turbo]" 1>&2
 }
 
 VPC=""
@@ -11,6 +11,7 @@ UPDATE=""
 TAG=""
 OVERLAYS=""
 TOKEN=""
+TURBO=""
 RMCPU="0"
 BRANCH="master"
 while [[ $# -gt 0 ]]; do
@@ -35,6 +36,10 @@ while [[ $# -gt 0 ]]; do
     shift
     NCORES=$1
     shift
+    ;;
+  --turbo)
+    shift
+    TURBO="--turbo"
     ;;
   --pull)
     shift

@@ -117,6 +117,7 @@ const (
 	SCHEDDCLNT_ERR            = "SCHEDDCLNT" + ERR
 	PROCMGR_ERR               = PROCMGR + ERR
 	PROCCACHE                 = "PROCCACHE"
+	PROCFS                    = "PROCFS"
 	CGROUP                    = "CGROUP"
 	CGROUP_ERR                = "CGROUP_ERR"
 	S3                        = "S3"

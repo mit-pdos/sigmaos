@@ -8,6 +8,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/procfs"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
@@ -48,6 +49,13 @@ func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
 func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Schedd proc spawn time %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	mgr.pstate.spawn(p)
+}
+
+func (mgr *ProcMgr) SetupFs(mfs *memfssrv.MemFs) {
+	dir := procfs.NewProcDir(mgr.pstate)
+	if err := mfs.MkNod(sp.RUNNING, dir); err != nil {
+		db.DFatalf("Error mknod %v: %v", sp.RUNNING, err)
+	}
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {

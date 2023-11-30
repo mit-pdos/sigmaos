@@ -851,6 +851,14 @@ func TestSocialNetSigmaos(t *testing.T) {
 	testSocialNet(rootts, ts1, p1, true)
 }
 
+func TestSocialNetK8s(t *testing.T) {
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
+	p1 := newRealmPerf(ts1)
+	defer p1.Done()
+	testSocialNet(rootts, ts1, p1, false)
+}
+
 // XXX Messy, get rid of this.
 var reservec *rpcclnt.RPCClnt
 

@@ -599,8 +599,8 @@ socialnet_tail_multi() {
   driver_vm=8
   clnt_vma=($(echo "$driver_vm 9 10 11 12"))
   clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
-  testname_driver="Hotel${sys}Search"
-  testname_clnt="Hotel${sys}JustCliSearch"
+  testname_driver="SocialNet${sys}"
+  testname_clnt="SocialNetJustCli${sys}"
   run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms"
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/"$run"

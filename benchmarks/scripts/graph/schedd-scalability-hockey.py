@@ -106,6 +106,7 @@ def print_stats_summary(stats_summary):
     print("=== {}".format(rps[1]))
     print("\t\ttpt:{:.2f}".format(ss["tpt"]))
     print("\t\tp50:{:.2f}".format(ss["p50"]))
+    print("\t\tp90:{:.2f}".format(ss["p90"]))
     print("\t\tp99:{:.2f}".format(ss["p99"]))
 
 if __name__ == "__main__":

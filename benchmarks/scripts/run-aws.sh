@@ -481,14 +481,19 @@ hotel_tail_multi() {
   k8saddr="x.x.x.x"
 #  rps="250,500,1000,2000,1000"
 #  dur="10s,20s,20s,20s,10s"
+
   rps="250,500,1000,1500,2000,2500,3000,3500,4000,4500,5000"
   dur="10s,10s,10s,10s,10s,10s,10s,10s,10s,10s,10s"
+#  rps="10"
+#  dur="5s"
+
 #  rps="251"
 #  dur="10s"
-#  sys="Sigmaos"
-  sys="K8s"
+  sys="Sigmaos"
+#  sys="K8s"
   cache_type="cached"
   scale_cache="false"
+#  cache_type2="memcached"
   cache_type2="cached"
 #  cache_type="kvd"
   n_clnt_vms=4
@@ -578,6 +583,109 @@ hotel_tail_multi() {
   # Stop MR
   echo "Stopping mr"
   ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
+  cd $ROOT_DIR
+}
+
+socialnet_tail_multi() {
+  k8saddr="x.x.x.x"
+  rps="250,500,1000,1500,2000,2500,3000,3500,4000,4500,5000"
+  dur="10s,10s,10s,10s,10s,10s,10s,10s,10s,10s,10s"
+#  rps="10"
+#  dur="5s"
+
+  sys="Sigmaos"
+#  sys="K8s"
+  n_clnt_vms=1
+  driver_vm=8
+  clnt_vma=($(echo "$driver_vm 9 10 11 12"))
+  clnt_vms=${clnt_vma[@]:0:$n_clnt_vms}
+  testname_driver="Hotel${sys}Search"
+  testname_clnt="Hotel${sys}JustCliSearch"
+  run=${FUNCNAME[0]}/$sys/"rps-$rps-nclnt-$n_clnt_vms"
+  echo "========== Running $run =========="
+  perf_dir=$OUT_DIR/"$run"
+  # Avoid doing duplicate work.
+  if ! should_skip $perf_dir false ; then
+    return
+  fi
+  if [[ "$sys" == "Sigmaos" ]]; then
+    vpc=$VPC
+    LEADER_IP=$LEADER_IP_SIGMA
+  else
+    vpc=$KVPC
+    LEADER_IP=$LEADER_IP_K8S
+    cd $SCRIPT_DIR
+    echo "Stopping socialnet"
+  	./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/socialNetworkK8s/kubernetes
+    echo "Stopping hotel"
+    ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
+    ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-cached
+    ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-memcached
+    echo "Stopping mr"
+    ./stop-k8s-app.sh --vpc $KVPC --path "corral/"
+    sleep 10
+    # Start SocialNet
+    echo "Starting SocialNet"
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/db-caches --nrunning 4
+  	sleep 1
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/consul --nrunning 5
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/jaeger --nrunning 6
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/user --nrunning 7
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/graph --nrunning 8
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/url --nrunning 9
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/text --nrunning 10
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/media --nrunning 11
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/post --nrunning 12
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/timeline --nrunning 13
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/home --nrunning 14
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/compose --nrunning 15
+  	./start-k8s-app.sh --path DeathStarBench/socialNetworkK8s/kubernetes/servers/frontend --nrunning 16
+    echo "Done starting SocialNet"
+    cd $ROOT_DIR
+    k8saddr="$(cd $SCRIPT_DIR; ./get-k8s-svc-addr.sh --vpc $KVPC --svc frontend):5000"
+  fi
+  for cli_vm in $clnt_vms ; do
+    driver="false"
+    if [[ $cli_vm == $driver_vm ]]; then
+      testname=$testname_driver
+      driver="true"
+    else
+      testname=$testname_clnt
+    fi
+    run_socialnet $testname $rps $cli_vm $k8saddr $dur $perf_dir $driver false
+    if [[ $cli_vm == $driver_vm ]]; then
+      # Give the driver time to start up the realm.
+      sleep 30s
+    fi
+  done
+  # Wait for all clients to terminate.
+  wait
+  # Copy results.
+  end_benchmark $vpc $perf_dir
+  echo "!!!!!!!!!!!!!!!!!! Benchmark done! !!!!!!!!!!!!!!!!!"
+  if grep -r "file not found http" $perf_dir ; then
+    echo "+++++++++++++++++++ Benchmark failed unexpectedly! +++++++++++++++++++" 
+    continue
+  fi
+  if grep -r "concurrent map reads" /tmp/*.out ; then
+    echo "----------------- Error concurrent map reads -----------------"
+    return
+    continue
+  fi
+  if grep -r "concurrent map writes" /tmp/*.out ; then
+    echo "----------------- Error concurrent map writes -----------------"
+    return
+    continue
+  fi
+  if grep -r "server-side" $perf_dir ; then
+    echo "+++++++++++++++++++ Benchmark successful! +++++++++++++++++++" 
+    return
+  fi
+  cd $SCRIPT_DIR
+#  echo "Stopping hotel"
+#  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes
+#  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-cached
+#  ./stop-k8s-app.sh --vpc $KVPC --path DeathStarBench/hotelReservation/kubernetes-memcached
   cd $ROOT_DIR
 }
 
@@ -1112,7 +1220,7 @@ schedd_scalability_rs() {
 #  prewarm=""
   prewarm="--prewarm_realm"
 #  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
-  for qps_per_machine in 100 200 400 600 800 1000 1200 1400 1600 1800 2000; do
+  for qps_per_machine in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400; do
     n_vm=8
     rps=$((n_vm * $qps_per_machine))
     run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
@@ -1388,7 +1496,14 @@ graph_schedd_scalability_rs_single_machine() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf
+  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --cutoff 2400
+}
+
+graph_schedd_scalability_rs_hockey() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/$graph.pdf --prefix "8-vm-" --cutoff 16000
 }
 
 graph_start_latency() {
@@ -1433,8 +1548,9 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-schedd_scalability_rs
-hotel_tail_multi
+socialnet_tail_multi
+#hotel_tail_multi
+#schedd_scalability_rs
 #schedd_scalability_rs_single_machine
 #socialnet_tail
 #realm_balance_be
@@ -1470,6 +1586,7 @@ hotel_tail_multi
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
+#graph_schedd_scalability_rs_hockey
 #graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
 #graph_realm_balance_be_img

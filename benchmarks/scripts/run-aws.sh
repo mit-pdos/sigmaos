@@ -588,8 +588,9 @@ hotel_tail_multi() {
 
 socialnet_tail_multi() {
   k8saddr="x.x.x.x"
-  rps="250,500,1000,1500,2000,2500,3000,3500,4000,4500,5000"
-  dur="10s,10s,10s,10s,10s,10s,10s,10s,10s,10s,10s"
+#  rps="250,500,1000,1500,2000,2500,3000,3500,4000,4500,5000"
+  rps="1000,2000,4000,6000,8000,10000,12000,14000,16000"
+  dur="10s,10s,10s,10s,10s,10s,10s,10s,10s"
 #  rps="10"
 #  dur="5s"
 
@@ -1503,6 +1504,8 @@ graph_schedd_scalability_rs_hockey() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
+#  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/$graph.pdf --prefix "8-vm-" --tpt_v_tpt
+#  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/$graph.pdf --prefix "8-vm-" --server_tpt --log_scale
   $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/$graph.pdf --prefix "8-vm-" --cutoff 16000
 }
 
@@ -1548,7 +1551,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-socialnet_tail_multi
+#socialnet_tail_multi
 #hotel_tail_multi
 #schedd_scalability_rs
 #schedd_scalability_rs_single_machine
@@ -1586,7 +1589,7 @@ socialnet_tail_multi
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-#graph_schedd_scalability_rs_hockey
+graph_schedd_scalability_rs_hockey
 #graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
 #graph_realm_balance_be_img

@@ -1,10 +1,48 @@
 package schedd
 
 import (
+	"sync/atomic"
+	"time"
+
 	db "sigmaos/debug"
 	"sigmaos/mem"
+	"sigmaos/perf"
 	"sigmaos/proc"
 )
+
+const (
+	TARGET_CPU_PCT    = 95
+	UTIL_REFRESH_RATE = 20 * time.Millisecond
+)
+
+type cpuStats struct {
+	idle  uint64
+	total uint64
+}
+
+func (sd *Schedd) getCPUUtil() int64 {
+	return atomic.LoadInt64(&sd.cpuUtil)
+}
+
+func (sd *Schedd) monitorCPU() {
+	cm := perf.GetActiveCores()
+	t := time.NewTicker(UTIL_REFRESH_RATE)
+	var oldStats cpuStats
+	for {
+		<-t.C
+		oldStats = *sd.cpuStats
+		idle, total := perf.GetCPUSample(cm)
+		sd.cpuStats.idle = idle
+		sd.cpuStats.total = total
+		if oldStats.idle == 0 && oldStats.total == 0 {
+			continue
+		}
+		idleDelta := float64(sd.cpuStats.idle - oldStats.idle)
+		totalDelta := float64(sd.cpuStats.total - oldStats.total)
+		utilPct := 100.0 * (totalDelta - idleDelta) / totalDelta
+		atomic.StoreInt64(&sd.cpuUtil, int64(utilPct))
+	}
+}
 
 func (sd *Schedd) allocMem(m proc.Tmem) {
 	sd.mu.Lock()

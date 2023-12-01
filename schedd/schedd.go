@@ -36,6 +36,8 @@ type Schedd struct {
 	kernelId            string
 	scheddStats         map[sp.Trealm]*proto.RealmStats
 	mfs                 *memfssrv.MemFs
+	cpuStats            *cpuStats
+	cpuUtil             int64
 	nProcsRun           uint64
 	nProcGets           uint64
 	nProcGetsSuccessful uint64
@@ -49,6 +51,7 @@ func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
 		memfree:     mem.GetTotalMem(),
 		kernelId:    kernelId,
 		mfs:         mfs,
+		cpuStats:    &cpuStats{},
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.scheddclnt = scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib)
@@ -183,7 +186,7 @@ func (sd *Schedd) getQueuedProcs() {
 	// If true, bias choice of procq to this schedd's kernel.
 	var bias bool = true
 	for {
-		memFree, ok := sd.shouldGetProc()
+		memFree, ok := sd.shouldGetBEProc()
 		if !ok {
 			db.DPrintf(db.SCHEDD, "[%v] Waiting for more mem", sd.kernelId, bias)
 			// If no memory is available, wait for some more.
@@ -260,9 +263,10 @@ func (sd *Schedd) runProc(p *proc.Proc) {
 }
 
 // We should always take a free proc if there is memory available.
-func (sd *Schedd) shouldGetProc() (proc.Tmem, bool) {
+func (sd *Schedd) shouldGetBEProc() (proc.Tmem, bool) {
 	mem := sd.getFreeMem()
-	return mem, mem > 0
+	cpu := sd.getCPUUtil()
+	return mem, mem > 0 && cpu < TARGET_CPU_PCT
 }
 
 func (sd *Schedd) register() {
@@ -312,6 +316,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	defer p.Done()
 	go sd.getQueuedProcs()
 	go sd.stats()
+	go sd.monitorCPU()
 	sd.register()
 	ssrv.RunServer()
 	return nil

@@ -86,6 +86,7 @@ func (pq *ProcQ) lenL() int {
 func (pq *ProcQ) Len() int {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
+
 	return pq.lenL()
 }
 
@@ -133,6 +134,19 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 
 func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.GetStatsResponse) error {
 	db.DFatalf("Unimplemented")
+
+	pq.realmMu.RLock()
+	realms := make(map[string]int64, len(pq.realms))
+	for _, r := range pq.realms {
+		realms[string(r)] = 0
+	}
+	pq.realmMu.RUnlock()
+
+	for r, _ := range realms {
+		realms[r] = int64(pq.getRealmQueue(sp.Trealm(r)).Len())
+	}
+	res.Nqueued = realms
+
 	return nil
 }
 

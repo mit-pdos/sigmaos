@@ -29,12 +29,9 @@ message GetProcResponse {
   uint32 qLen = 3;
 }
 
-message QueueStats {
-  map<string, int64> nqueued = 1;
-}
-
 message GetStatsRequest {
 }
 
 message GetStatsResponse {
+  map<string, int64> nqueued = 1;
 }

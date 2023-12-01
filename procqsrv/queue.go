@@ -68,6 +68,13 @@ func (q *Queue) Dequeue(mem proc.Tmem) (*proc.Proc, chan string, time.Time, bool
 	return nil, nil, time.UnixMicro(0), false
 }
 
+func (q *Queue) Len() int {
+	q.Lock()
+	defer q.Unlock()
+
+	return len(q.procs)
+}
+
 func (q *Queue) String() string {
 	q.Lock()
 	defer q.Unlock()

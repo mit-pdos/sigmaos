@@ -112,6 +112,10 @@ func (mgr *ProcMgr) GetCPUUtil(realm sp.Trealm) float64 {
 	return mgr.updm.GetCPUUtil(realm)
 }
 
+func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
+	return mgr.pstate.GetProcs()
+}
+
 func (mgr *ProcMgr) DownloadProcBin(realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
 	db.DPrintf(db.PROCMGR, "Download proc bin for realm %v proc %v", realm, prog)
 	// Make sure the OS-level directory which holds proc bins exists. This must

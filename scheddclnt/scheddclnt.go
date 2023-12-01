@@ -156,6 +156,23 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 	return nil
 }
 
+func (sdc *ScheddClnt) GetRunningProcs(kernelID string) ([]*proc.Proc, error) {
+	req := &proto.GetRunningProcsRequest{}
+	res := &proto.GetRunningProcsResponse{}
+	rpcc, err := sdc.urpcc.GetClnt(kernelID)
+	if err != nil {
+		return nil, err
+	}
+	if err := rpcc.RPC("Schedd.GetRunningProcs", req, res); err != nil {
+		return nil, err
+	}
+	ps := make([]*proc.Proc, 0, len(res.ProcProtos))
+	for _, p := range res.ProcProtos {
+		ps = append(ps, proc.NewProcFromProto(p))
+	}
+	return ps, nil
+}
+
 func (sdc *ScheddClnt) ScheddStats() (int, []map[string]*proto.RealmStats, error) {
 	sds, err := sdc.urpcc.GetSrvs()
 	if err != nil {

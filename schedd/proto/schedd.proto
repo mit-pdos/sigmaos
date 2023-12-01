@@ -57,6 +57,13 @@ message GetCPUUtilResponse {
   double util = 1;
 }
 
+message GetRunningProcsRequest {
+}
+
+message GetRunningProcsResponse {
+  repeated ProcProto procProtos = 1;
+}
+
 message WarmCacheBinRequest {
   string realmStr = 1;
   string program = 2;

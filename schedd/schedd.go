@@ -152,6 +152,16 @@ func (sd *Schedd) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *prot
 	return nil
 }
 
+// Get realm utilization information.
+func (sd *Schedd) GetRunningProcs(ctx fs.CtxI, req proto.GetRunningProcsRequest, res *proto.GetRunningProcsResponse) error {
+	ps := sd.pmgr.GetRunningProcs()
+	res.ProcProtos = make([]*proc.ProcProto, 0, len(ps))
+	for _, p := range ps {
+		res.ProcProtos = append(res.ProcProtos, p.GetProto())
+	}
+	return nil
+}
+
 func (sd *Schedd) GetScheddStats(ctx fs.CtxI, req proto.GetScheddStatsRequest, res *proto.GetScheddStatsResponse) error {
 	scheddStats := make(map[string]*proto.RealmStats)
 	sd.realmMu.RLock()

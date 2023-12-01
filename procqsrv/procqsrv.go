@@ -131,6 +131,11 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 	ch <- kernelID
 }
 
+func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.GetStatsResponse) error {
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 

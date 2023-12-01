@@ -108,3 +108,25 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 		return proc.Tmem(res.Mem), res.QLen, res.OK, nil
 	}
 }
+
+func (pqc *ProcQClnt) GetQueueStats(nsample int) error {
+	for i := 0; i < nsample; i++ {
+		pqID, err := pqc.urpcc.RandomSrv()
+		if err != nil {
+			db.DFatalf("Can't get random srv: %v", err)
+			return err
+		}
+		rpcc, err := pqc.urpcc.GetClnt(pqID)
+		if err != nil {
+			db.DFatalf("Can't get random srv clnt: %v", err)
+			return err
+		}
+		req := &proto.GetStatsRequest{}
+		res := &proto.GetStatsResponse{}
+		if err := rpcc.RPC("ProcQ.GetStats", req, res); err != nil {
+			db.DFatalf("Can't get stats: %v", err)
+			return err
+		}
+	}
+	return nil
+}

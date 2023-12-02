@@ -1589,11 +1589,11 @@ echo "Running benchmarks with version: $VERSION"
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-graph_schedd_scalability_rs_hockey
+#graph_schedd_scalability_rs_hockey
 #graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
 #graph_realm_balance_be_img
-#graph_start_latency
+graph_start_latency
 #graph_schedd_scalability_rs
 
 #graph_mr_vs_corral

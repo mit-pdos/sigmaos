@@ -18,6 +18,7 @@ type TrealmId int
 type Tftick float64
 
 type Ttickmap map[TrealmId]Tftick
+type Tprocmap map[TrealmId]int
 
 func (f Tftick) String() string {
 	return fmt.Sprintf("%.3fT", f)
@@ -124,7 +125,7 @@ type ProcQ struct {
 func (pq *ProcQ) String() string {
 	str := "[\n"
 	for r, q := range pq.qs {
-		str += fmt.Sprintf("  realm %d (%d): %v,\n", r, q.qlen(), q)
+		str += fmt.Sprintf("  realm %d (%d)\n", r, q.qlen())
 	}
 	str += "  ]"
 	return str
@@ -220,8 +221,7 @@ type World struct {
 	procqs  []*ProcQ
 	realms  map[TrealmId]*Realm
 	rand    *rand.Rand
-	nproc   int
-	nwork   Tftick
+	nproc   Tprocmap
 	maxq    int
 	avgq    float64
 }
@@ -238,11 +238,12 @@ func newWorld(nProcQ, nSchedd int) *World {
 	}
 	w.realms = make(map[TrealmId]*Realm)
 	w.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	w.nproc = make(Tprocmap)
 	return w
 }
 
 func (w *World) String() string {
-	str := fmt.Sprintf("%d nrealm %d nproc %d nwork %v ntick/r %v maxq %d avgq %.1f util %.1f%%\n schedds:", w.ntick, len(w.realms), w.nproc, w.nwork, w.fairness(), w.maxq, w.avgq/float64(w.ntick), w.util())
+	str := fmt.Sprintf("%d nrealm %d nproc %v ntick/r %v maxq %d avgq %.1f util %.1f%%\n schedds:", w.ntick, len(w.realms), w.nproc, w.fairness(), w.maxq, w.avgq/float64(w.ntick), w.util())
 	str += "[\n"
 	for _, sd := range w.schedds {
 		str += "  " + sd.String() + ",\n"
@@ -257,6 +258,7 @@ func (w *World) String() string {
 func (w *World) addRealm(realm Irealm) {
 	id := realm.Id()
 	w.realms[id] = newRealm(realm)
+	w.nproc[id] = 0
 	for _, sd := range w.schedds {
 		sd.addRealm(id)
 	}
@@ -292,8 +294,7 @@ func (w *World) genLoad() {
 		procs := r.realm.genLoad(w.rand)
 		for _, p := range procs {
 			q := int(rand.Uint64() % uint64(len(w.procqs)))
-			w.nproc += 1
-			w.nwork += p.nTick
+			w.nproc[p.realm] += 1
 			w.procqs[q].enq(p)
 		}
 	}
@@ -303,7 +304,7 @@ func (w *World) genLoad() {
 func (w *World) getProc(n Tmem) *Proc {
 	q := int(rand.Uint64() % uint64(len(w.procqs)))
 	for i := 0; i < 1; i++ {
-		// XXX iterate through keys instead of assuming keys are consecutive
+		// XXX iterate through keys instead of assuming keys/realms are consecutive
 		if p := w.procqs[q].deq(n); p != nil {
 			return p
 		}
@@ -329,7 +330,12 @@ func (w *World) getProcs() {
 		capacityAvailable = c
 		i += 1
 	}
-	fmt.Printf("rounds %d\n", i)
+	for _, sd := range w.schedds {
+		m := sd.mem()
+		if m < sd.totMem {
+			fmt.Printf("WARNING CAPACITY %v\n", sd)
+		}
+	}
 }
 
 func (w *World) compute() {

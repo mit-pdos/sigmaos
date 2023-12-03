@@ -15,7 +15,7 @@ const (
 	AVG_ARRIVAL_RATE_BIG   float64 = 0.1 // per tick (with 10 ticks per proc)
 )
 
-type Trealm struct {
+type TrealmSmall struct {
 	id      TrealmId
 	poisson *distuv.Poisson
 }
@@ -26,16 +26,16 @@ func uniform(r *rand.Rand) uint64 {
 
 // nschedd ticks available per world tick; divide on average equally
 // across realms.
-func newTrealm(id TrealmId, nschedd, nrealm int) *Trealm {
+func newTrealmSmall(id TrealmId, nschedd, nrealm int) *TrealmSmall {
 	lambda := AVG_ARRIVAL_RATE_SMALL * (float64(nschedd) / float64(nrealm))
-	return &Trealm{id: id, poisson: &distuv.Poisson{Lambda: lambda}}
+	return &TrealmSmall{id: id, poisson: &distuv.Poisson{Lambda: lambda}}
 }
 
-func (r *Trealm) Id() TrealmId {
+func (r *TrealmSmall) Id() TrealmId {
 	return r.id
 }
 
-func (r *Trealm) genLoad(rand *rand.Rand) []*Proc {
+func (r *TrealmSmall) genLoad(rand *rand.Rand) []*Proc {
 	nproc := int(r.poisson.Rand())
 	procs := make([]*Proc, nproc)
 	for i := 0; i < nproc; i++ {
@@ -54,7 +54,7 @@ type TrealmBig struct {
 }
 
 func newTrealmBig(id TrealmId, nschedd, nrealm int) *TrealmBig {
-	lambda := AVG_ARRIVAL_RATE_BIG / (float64(nschedd) / float64(nrealm))
+	lambda := AVG_ARRIVAL_RATE_BIG * (float64(nschedd) / float64(nrealm))
 	return &TrealmBig{id: id, poisson: &distuv.Poisson{Lambda: lambda}}
 }
 
@@ -77,7 +77,7 @@ func (r *TrealmBig) genLoad(rand *rand.Rand) []*Proc {
 func newConfig(nProcQ, nSchedd, nrealm int) *World {
 	w := newWorld(nProcQ, nSchedd)
 	for i := 0; i < nrealm; i++ {
-		r := newTrealm(TrealmId(i), nSchedd, nrealm)
+		r := newTrealmSmall(TrealmId(i), nSchedd, nrealm)
 		w.addRealm(r)
 	}
 	return w
@@ -87,7 +87,7 @@ func newConfig(nProcQ, nSchedd, nrealm int) *World {
 func newConfigBig(nProcQ, nSchedd, nrealm int) *World {
 	w := newWorld(nProcQ, nSchedd)
 	for i := 0; i < nrealm-1; i++ {
-		w.addRealm(newTrealm(TrealmId(i), nSchedd, nrealm-1))
+		w.addRealm(newTrealmSmall(TrealmId(i), nSchedd, nrealm))
 	}
 	w.addRealm(newTrealmBig(TrealmId(nrealm-1), nSchedd, nrealm))
 	return w

@@ -33,8 +33,8 @@ func (p *Proc) String() string {
 	return fmt.Sprintf("{nT %v nMem %d r %d}", p.nTick, p.nMem, p.realm)
 }
 
-func newProc(nTick Ttick, nMem Tmem, r TrealmId) *Proc {
-	return &Proc{Tftick(nTick), nMem, r}
+func newProc(nTick Tftick, nMem Tmem, r TrealmId) *Proc {
+	return &Proc{nTick, nMem, r}
 }
 
 type Queue struct {
@@ -234,7 +234,7 @@ func newWorld(nProcQ, nSchedd int) *World {
 }
 
 func (w *World) String() string {
-	str := fmt.Sprintf("%d nrealm %d nproc %d (ntick %v) nwork %v maxq %d avgq %.1f util %.1f%%\n schedds:", w.ntick, len(w.realms), w.nproc, w.fairness(), w.nwork, w.maxq, w.avgq/float64(w.ntick), w.util())
+	str := fmt.Sprintf("%d nrealm %d nproc %d nwork %v ntick/r %v maxq %d avgq %.1f util %.1f%%\n schedds:", w.ntick, len(w.realms), w.nproc, w.nwork, w.fairness(), w.maxq, w.avgq/float64(w.ntick), w.util())
 	str += "[\n"
 	for _, sd := range w.schedds {
 		str += "  " + sd.String() + ",\n"

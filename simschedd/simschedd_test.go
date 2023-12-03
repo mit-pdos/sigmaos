@@ -39,8 +39,8 @@ func (r *Trealm) genLoad(rand *rand.Rand) []*Proc {
 	nproc := int(r.poisson.Rand())
 	procs := make([]*Proc, nproc)
 	for i := 0; i < nproc; i++ {
-		t := Ttick(1) // Ttick(uniform(rand))
-		m := Tmem(1)  // Tmem(uniform(rand))
+		t := Tftick(0.95) // Ttick(uniform(rand))
+		m := Tmem(1)      // Tmem(uniform(rand))
 		procs[i] = newProc(t, m, r.id)
 	}
 	return procs
@@ -66,7 +66,7 @@ func (r *TrealmBig) genLoad(rand *rand.Rand) []*Proc {
 	nproc := int(r.poisson.Rand())
 	procs := make([]*Proc, nproc)
 	for i := 0; i < nproc; i++ {
-		t := Ttick(MAX_SERVICE_TIME)
+		t := Tftick(MAX_SERVICE_TIME)
 		m := Tmem(MAX_MEM)
 		procs[i] = newProc(t, m, r.id)
 	}

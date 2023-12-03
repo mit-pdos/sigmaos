@@ -53,7 +53,7 @@ func RunUProc(uproc *proc.Proc) error {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc cmd.Start %v", uproc.GetPid(), time.Since(s))
 	if uproc.GetType() == proc.T_BE {
 		s := time.Now()
-		setSchedPolicy(cmd.Process.Pid, linuxsched.SCHED_IDLE)
+		//		setSchedPolicy(cmd.Process.Pid, linuxsched.SCHED_IDLE)
 		db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Get/Set sched attr %v", uproc.GetPid(), time.Since(s))
 	}
 

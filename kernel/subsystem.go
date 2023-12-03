@@ -44,6 +44,7 @@ func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Th
 func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.Thow, mcpu proc.Tmcpu) (*Subsystem, error) {
 	pid := sp.GenPid(program)
 	p := proc.NewPrivProcPid(pid, program, args, true)
+	p.GetProcEnv().SetLocalIP(k.ip)
 	p.SetMcpu(mcpu)
 	ss := newSubsystem(k.ProcClnt, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelId, k.ip)

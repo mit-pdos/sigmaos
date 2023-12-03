@@ -54,7 +54,7 @@ type TrealmBig struct {
 }
 
 func newTrealmBig(id TrealmId, nschedd, nrealm int) *TrealmBig {
-	lambda := AVG_ARRIVAL_RATE_BIG / float64(nrealm)
+	lambda := AVG_ARRIVAL_RATE_BIG / (float64(nschedd) / float64(nrealm))
 	return &TrealmBig{id: id, poisson: &distuv.Poisson{Lambda: lambda}}
 }
 
@@ -73,6 +73,7 @@ func (r *TrealmBig) genLoad(rand *rand.Rand) []*Proc {
 	return procs
 }
 
+// <nreals> small realms
 func newConfig(nProcQ, nSchedd, nrealm int) *World {
 	w := newWorld(nProcQ, nSchedd)
 	for i := 0; i < nrealm; i++ {
@@ -82,6 +83,7 @@ func newConfig(nProcQ, nSchedd, nrealm int) *World {
 	return w
 }
 
+// zero or more small realms with one big realm
 func newConfigBig(nProcQ, nSchedd, nrealm int) *World {
 	w := newWorld(nProcQ, nSchedd)
 	for i := 0; i < nrealm-1; i++ {
@@ -105,8 +107,15 @@ func TestOneRealmBig(t *testing.T) {
 	}
 }
 
-func TestRunSmallBig(t *testing.T) {
+func TestRunSmallBig1(t *testing.T) {
 	w := newConfigBig(1, 1, 2)
+	for i := 0; i < NTICK; i++ {
+		w.Tick()
+	}
+}
+
+func TestRunSmallBigN(t *testing.T) {
+	w := newConfigBig(1, 2, 2)
 	for i := 0; i < NTICK; i++ {
 		w.Tick()
 	}

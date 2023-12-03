@@ -6,7 +6,7 @@ import (
 
 func TestRun(t *testing.T) {
 	w := newWorld(1, 1)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1000; i++ {
 		w.Tick()
 	}
 }

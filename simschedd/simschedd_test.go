@@ -1,6 +1,7 @@
 package simschedd
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -51,11 +52,12 @@ type TrealmBig struct {
 	nschedd int
 	nrealm  int
 	poisson *distuv.Poisson
+	extra   bool
 }
 
-func newTrealmBig(id TrealmId, nschedd, nrealm int) *TrealmBig {
+func newTrealmBig(id TrealmId, nschedd, nrealm int, extra bool) *TrealmBig {
 	lambda := AVG_ARRIVAL_RATE_BIG * (float64(nschedd) / float64(nrealm))
-	return &TrealmBig{id: id, poisson: &distuv.Poisson{Lambda: lambda}}
+	return &TrealmBig{id: id, poisson: &distuv.Poisson{Lambda: lambda}, extra: extra}
 }
 
 func (r *TrealmBig) Id() TrealmId {
@@ -67,6 +69,9 @@ func (r *TrealmBig) genLoad(rand *rand.Rand) []*Proc {
 	procs := make([]*Proc, nproc)
 	for i := 0; i < nproc; i++ {
 		t := Tftick(MAX_SERVICE_TIME)
+		if r.extra {
+			t = t * 100
+		}
 		m := Tmem(MAX_MEM)
 		procs[i] = newProc(t, m, r.id)
 	}
@@ -84,12 +89,14 @@ func newConfig(nProcQ, nSchedd, nrealm int) *World {
 }
 
 // zero or more small realms with one big realm
-func newConfigBig(nProcQ, nSchedd, nrealm int) *World {
+func newConfigBig(nProcQ, nSchedd, nrealm int, together, extra bool) *World {
 	w := newWorld(nProcQ, nSchedd)
-	for i := 0; i < nrealm-1; i++ {
-		w.addRealm(newTrealmSmall(TrealmId(i), nSchedd, nrealm))
+	if together {
+		for i := 0; i < nrealm-1; i++ {
+			w.addRealm(newTrealmSmall(TrealmId(i), nSchedd, nrealm))
+		}
 	}
-	w.addRealm(newTrealmBig(TrealmId(nrealm-1), nSchedd, nrealm))
+	w.addRealm(newTrealmBig(TrealmId(nrealm-1), nSchedd, nrealm, extra))
 	return w
 }
 
@@ -101,48 +108,51 @@ func TestRunOneRealmSmall(t *testing.T) {
 }
 
 func TestOneRealmBig(t *testing.T) {
-	w := newConfigBig(1, 1, 1)
+	w := newConfigBig(1, 1, 1, true, false)
 	for i := 0; i < NTICK; i++ {
 		w.Tick()
 	}
 }
 
 func TestRunSmallBig1(t *testing.T) {
-	w := newConfigBig(1, 1, 2)
+	w := newConfigBig(1, 1, 2, true, false)
 	for i := 0; i < NTICK; i++ {
 		w.Tick()
 	}
 }
 
 func TestRunSmallBigN(t *testing.T) {
-	w := newConfigBig(1, 2, 2)
+	w := newConfigBig(1, 2, 2, true, false)
 	for i := 0; i < NTICK; i++ {
 		w.Tick()
 	}
 }
 
-func TestRunOneRealmTwoSchedd(t *testing.T) {
+func TestRunSmallBigDelay(t *testing.T) {
+	w := newConfigBig(1, 2, 1, false, true)
+	for i := 0; i < NTICK; i++ {
+		w.Tick()
+		if i == 100 {
+			w.addRealm(newTrealmSmall(TrealmId(1), 2, 2))
+		}
+	}
+}
+
+func TestRunSmallOneRealmTwoSchedd(t *testing.T) {
 	w := newConfig(1, 2, 1)
 	for i := 0; i < NTICK; i++ {
 		w.Tick()
 	}
 }
 
-func TestRunTwoRealmOneSchedd(t *testing.T) {
-	w := newConfig(1, 1, 2)
-	for i := 0; i < NTICK; i++ {
-		w.Tick()
-	}
-}
-
-func TestRunTwoRealmTwoProcq(t *testing.T) {
+func TestRunSmallTwoRealmTwoProcq(t *testing.T) {
 	w := newConfig(2, 1, 2)
 	for i := 0; i < NTICK; i++ {
 		w.Tick()
 	}
 }
 
-func TestRunTwoAll(t *testing.T) {
+func TestRunSmallTwoAll(t *testing.T) {
 	w := newConfig(2, 2, 2)
 	for i := 0; i < NTICK; i++ {
 		w.Tick()

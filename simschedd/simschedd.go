@@ -138,13 +138,21 @@ func (pq *ProcQ) enq(p *Proc) {
 	pq.qs[p.realm].enq(p)
 }
 
+// Starting from a random offset, sweep through realms finding a proc
+// to run
 func (pq *ProcQ) deq(n Tmem) *Proc {
 	if len(pq.qs) == 0 {
 		return nil
 	}
 	r := TrealmId(int(rand.Uint64() % uint64(len(pq.qs))))
-	if q, ok := pq.qs[r]; ok {
-		return q.find(n)
+	for i := 0; i < len(pq.qs); i++ {
+		// XXX iterate through keys instead of assuming keys are consecutive
+		if q, ok := pq.qs[r]; ok {
+			if p := q.find(n); p != nil {
+				return p
+			}
+		}
+		r = TrealmId((int(r) + 1) % len(pq.qs))
 	}
 	return nil
 }
@@ -291,12 +299,15 @@ func (w *World) genLoad() {
 	}
 }
 
+// Try go get a proc from one random ProcQ server
 func (w *World) getProc(n Tmem) *Proc {
+	q := int(rand.Uint64() % uint64(len(w.procqs)))
 	for i := 0; i < 1; i++ {
-		q := int(rand.Uint64() % uint64(len(w.procqs)))
+		// XXX iterate through keys instead of assuming keys are consecutive
 		if p := w.procqs[q].deq(n); p != nil {
 			return p
 		}
+		q = (q + 1) % len(w.procqs)
 	}
 	return nil
 }

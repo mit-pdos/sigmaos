@@ -4,20 +4,17 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
-
-	"gonum.org/v1/gonum/stat/distuv"
 )
 
 type Tmem int
 type Ttick int
 
 const (
-	MAX_SERVICE_TIME         = 10 // in ticks
-	MAX_MEM                  = 10
-	AVG_ARRIVAL_RATE float64 = 0.2 // per tick
+	MAX_SERVICE_TIME = 10 // in ticks
+	MAX_MEM          = 10
 )
 
-type Trealm int
+type TrealmId int
 type Tftick float64
 
 func (f Tftick) String() string {
@@ -27,14 +24,14 @@ func (f Tftick) String() string {
 type Proc struct {
 	nTick Tftick
 	nMem  Tmem
-	realm Trealm
+	realm TrealmId
 }
 
 func (p *Proc) String() string {
 	return fmt.Sprintf("{nT %v nMem %d r %d}", p.nTick, p.nMem, p.realm)
 }
 
-func newProc(nTick Ttick, nMem Tmem, r Trealm) *Proc {
+func newProc(nTick Ttick, nMem Tmem, r TrealmId) *Proc {
 	return &Proc{Tftick(nTick), nMem, r}
 }
 
@@ -97,7 +94,7 @@ func (q *Queue) qlen() int {
 }
 
 type ProcQ struct {
-	qs map[Trealm]*Queue
+	qs map[TrealmId]*Queue
 }
 
 func (pq *ProcQ) String() string {
@@ -109,21 +106,19 @@ func (pq *ProcQ) String() string {
 	return str
 }
 
+func (pq *ProcQ) addRealm(realm TrealmId) {
+	pq.qs[realm] = newQueue()
+}
+
 func (pq *ProcQ) enq(p *Proc) {
-	q, ok := pq.qs[p.realm]
-	if !ok {
-		q = newQueue()
-		pq.qs[p.realm] = q
-	}
-	q.enq(p)
-	return
+	pq.qs[p.realm].enq(p)
 }
 
 func (pq *ProcQ) deq(n Tmem) *Proc {
 	if len(pq.qs) == 0 {
 		return nil
 	}
-	r := Trealm(int(rand.Uint64() % uint64(len(pq.qs))))
+	r := TrealmId(int(rand.Uint64() % uint64(len(pq.qs))))
 	if q, ok := pq.qs[r]; ok {
 		return q.find(n)
 	}
@@ -142,19 +137,21 @@ type Schedd struct {
 	totMem Tmem
 	q      *Queue
 	util   float64
-	nproc  map[Trealm]int
+	nproc  map[TrealmId]int
 }
 
-func newSchedd(nrealm int) *Schedd {
-	sd := &Schedd{totMem: MAX_MEM, q: newQueue(), nproc: make(map[Trealm]int)}
-	for i := 0; i < nrealm; i++ {
-		sd.nproc[Trealm(i)] = 0
-	}
+func newSchedd() *Schedd {
+	sd := &Schedd{totMem: MAX_MEM, q: newQueue(), nproc: make(map[TrealmId]int)}
+	sd.nproc = make(map[TrealmId]int)
 	return sd
 }
 
 func (sd *Schedd) String() string {
 	return fmt.Sprintf("{totMem %d nMem %d q %v}", sd.totMem, sd.mem(), sd.q)
+}
+
+func (sd *Schedd) addRealm(realm TrealmId) {
+	sd.nproc[realm] = 0
 }
 
 func (sd *Schedd) mem() Tmem {
@@ -173,61 +170,49 @@ func (sd *Schedd) run() {
 	}
 }
 
+type Irealm interface {
+	Id() TrealmId
+	genLoad(rand *rand.Rand) []*Proc
+}
+
 type Realm struct {
-	realm   Trealm
-	poisson *distuv.Poisson
+	realm Irealm
 }
 
-func newRealm(lambda float64, realm Trealm) *Realm {
-	r := &Realm{realm: realm, poisson: &distuv.Poisson{Lambda: lambda}}
+func newRealm(realm Irealm) *Realm {
+	r := &Realm{realm: realm}
 	return r
-}
-
-func (r *Realm) genLoad(rand *rand.Rand) []*Proc {
-	nproc := int(r.poisson.Rand())
-	procs := make([]*Proc, nproc)
-	for i := 0; i < nproc; i++ {
-		t := Ttick(uniform(rand))
-		m := Tmem(uniform(rand))
-		procs[i] = newProc(t, m, r.realm)
-	}
-	return procs
 }
 
 type World struct {
 	ntick   Ttick
 	schedds []*Schedd
 	procqs  []*ProcQ
-	realms  []*Realm
+	realms  map[TrealmId]*Realm
 	rand    *rand.Rand
 	nproc   int
 	nwork   Tftick
 	maxq    int
 	avgq    float64
-	lambda  float64
 }
 
-func newWorld(nProcQ, nSchedd, nRealm int) *World {
+func newWorld(nProcQ, nSchedd int) *World {
 	w := &World{}
 	w.schedds = make([]*Schedd, nSchedd)
 	w.procqs = make([]*ProcQ, nProcQ)
 	for i := 0; i < len(w.schedds); i++ {
-		w.schedds[i] = newSchedd(nRealm)
+		w.schedds[i] = newSchedd()
 	}
 	for i := 0; i < len(w.procqs); i++ {
-		w.procqs[i] = &ProcQ{qs: make(map[Trealm]*Queue)}
+		w.procqs[i] = &ProcQ{qs: make(map[TrealmId]*Queue)}
 	}
-	w.realms = make([]*Realm, nRealm)
-	w.lambda = AVG_ARRIVAL_RATE * (float64(nSchedd) / float64(nRealm))
-	for i := 0; i < len(w.realms); i++ {
-		w.realms[i] = newRealm(w.lambda, Trealm(i))
-	}
+	w.realms = make(map[TrealmId]*Realm)
 	w.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	return w
 }
 
 func (w *World) String() string {
-	str := fmt.Sprintf("%d nrealm %d (%v) nproc %d (ndone %v) nwork %v maxq %d avgq %v util %v\n schedds:", w.ntick, len(w.realms), w.lambda, w.nproc, w.fairness(), w.nwork, w.maxq, w.avgq/float64(w.ntick), w.util())
+	str := fmt.Sprintf("%d nrealm %d nproc %d (ndone %v) nwork %v maxq %d avgq %v util %v\n schedds:", w.ntick, len(w.realms), w.nproc, w.fairness(), w.nwork, w.maxq, w.avgq/float64(w.ntick), w.util())
 	str += "[\n"
 	for _, sd := range w.schedds {
 		str += "  " + sd.String() + ",\n"
@@ -237,6 +222,17 @@ func (w *World) String() string {
 		str += pq.String()
 	}
 	return str
+}
+
+func (w *World) addRealm(realm Irealm) {
+	id := realm.Id()
+	w.realms[id] = newRealm(realm)
+	for _, sd := range w.schedds {
+		sd.addRealm(id)
+	}
+	for _, pq := range w.procqs {
+		pq.addRealm(id)
+	}
 }
 
 func (w *World) fairness() []int {
@@ -259,10 +255,9 @@ func (w *World) util() float64 {
 
 func (w *World) genLoad() {
 	for _, r := range w.realms {
-		procs := r.genLoad(w.rand)
+		procs := r.realm.genLoad(w.rand)
 		for _, p := range procs {
 			q := int(rand.Uint64() % uint64(len(w.procqs)))
-			// fmt.Printf("q %d r %d\n", q, p.realm)
 			w.nproc += 1
 			w.nwork += p.nTick
 			w.procqs[q].enq(p)

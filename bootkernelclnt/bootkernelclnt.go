@@ -40,7 +40,7 @@ func Start(kernelId string, pcfg *proc.ProcEnv, srvs string, overlays, gvisor bo
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v\n", kernelId, srvs, ip)
+	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v", kernelId, srvs, ip, overlays, gvisor)
 	return ip, nil
 }
 

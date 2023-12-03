@@ -92,7 +92,7 @@ def graph_stats(stats_summary, out, cutoff, server_tpt, log_scale, tpt_v_tpt):
     p90.append(4 * max_p99)
   fig, ax = plt.subplots(1, figsize=(6.4, 2.4), sharex=True)
   if tpt_v_tpt:
-    ax.plot(x, tpt, label="Completion rate")
+    ax.plot(x, tpt, label="proc start rate")
   else:
     ax.plot(x, p50, label="P50 latency")
     ax.plot(x, p90, label="P90 latency")
@@ -107,7 +107,7 @@ def graph_stats(stats_summary, out, cutoff, server_tpt, log_scale, tpt_v_tpt):
   ax.set_xlabel("Spawns/sec")
   ax.set_ylim(bottom=0)
   ax.legend()
-  plt.xticks(x)
+  plt.xticks(x, rotation=45)
 #  plt.xlabel("Number of machines")
   fig.align_ylabels(ax)
   plt.savefig(out, bbox_inches='tight')

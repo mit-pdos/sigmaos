@@ -41,7 +41,7 @@ func parseInts(r io.Reader) ([]int, error) {
 		db.DPrintf(db.CGROUP_ERR, "Error ReadAll: %v", err)
 		return nil, err
 	}
-	strs := strings.Split(string(b), "\n")
+	strs := strings.Split(strings.TrimSpace(string(b)), "\n")
 	ints := make([]int, 0, len(strs))
 	for _, str := range strs {
 		n, err := strconv.Atoi(str)

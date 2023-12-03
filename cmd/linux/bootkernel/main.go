@@ -22,7 +22,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error parse overlays: %v", err)
 	}
-	gvisor, err := strconv.ParseBool(os.Args[7])
+	gvisor, err := strconv.ParseBool(os.Args[8])
 	if err != nil {
 		db.DFatalf("Error parse gvisor: %v", err)
 	}

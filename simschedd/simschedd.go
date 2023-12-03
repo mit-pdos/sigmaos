@@ -27,11 +27,11 @@ func (f Tftick) String() string {
 type Proc struct {
 	nTick Tftick
 	nMem  Tmem
-	r     Trealm
+	realm Trealm
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("{nT %v nMem %d r %d}", p.nTick, p.nMem, p.r)
+	return fmt.Sprintf("{nT %v nMem %d r %d}", p.nTick, p.nMem, p.realm)
 }
 
 func newProc(nTick Ttick, nMem Tmem, r Trealm) *Proc {
@@ -69,15 +69,19 @@ func (q *Queue) find(n Tmem) *Proc {
 	return nil
 }
 
-func (q *Queue) run(n Tftick) {
+func (q *Queue) run(n Tftick) []*Proc {
 	ps := make([]*Proc, 0)
+	done := make([]*Proc, 0)
 	for _, p := range q.q {
 		p.nTick -= n
 		if p.nTick > 0 {
 			ps = append(ps, p)
+		} else {
+			done = append(done, p)
 		}
 	}
 	q.q = ps
+	return done
 }
 
 func (q *Queue) mem() Tmem {
@@ -97,19 +101,19 @@ type ProcQ struct {
 }
 
 func (pq *ProcQ) String() string {
-	str := "["
+	str := "[\n"
 	for r, q := range pq.qs {
-		str += fmt.Sprintf("%d (%d): %v", r, q.qlen(), q)
+		str += fmt.Sprintf("  realm %d (%d): %v,\n", r, q.qlen(), q)
 	}
-	str += "]"
+	str += "  ]"
 	return str
 }
 
 func (pq *ProcQ) enq(p *Proc) {
-	q, ok := pq.qs[p.r]
+	q, ok := pq.qs[p.realm]
 	if !ok {
 		q = newQueue()
-		pq.qs[p.r] = q
+		pq.qs[p.realm] = q
 	}
 	q.enq(p)
 	return
@@ -138,6 +142,15 @@ type Schedd struct {
 	totMem Tmem
 	q      *Queue
 	util   float64
+	nproc  map[Trealm]int
+}
+
+func newSchedd(nrealm int) *Schedd {
+	sd := &Schedd{totMem: MAX_MEM, q: newQueue(), nproc: make(map[Trealm]int)}
+	for i := 0; i < nrealm; i++ {
+		sd.nproc[Trealm(i)] = 0
+	}
+	return sd
 }
 
 func (sd *Schedd) String() string {
@@ -154,7 +167,10 @@ func (sd *Schedd) run() {
 	}
 	n := float64(1.0 / float64(len(sd.q.q)))
 	sd.util += float64(1)
-	sd.q.run(Tftick(n))
+	ps := sd.q.run(Tftick(n))
+	for _, p := range ps {
+		sd.nproc[p.realm] += 1
+	}
 }
 
 type Realm struct {
@@ -162,9 +178,8 @@ type Realm struct {
 	poisson *distuv.Poisson
 }
 
-func newRealm(lambda float64) *Realm {
-	r := &Realm{}
-	r.poisson = &distuv.Poisson{Lambda: lambda}
+func newRealm(lambda float64, realm Trealm) *Realm {
+	r := &Realm{realm: realm, poisson: &distuv.Poisson{Lambda: lambda}}
 	return r
 }
 
@@ -189,34 +204,49 @@ type World struct {
 	nwork   Tftick
 	maxq    int
 	avgq    float64
+	lambda  float64
 }
 
-func newWorld(nProcQ, nSchedd int) *World {
+func newWorld(nProcQ, nSchedd, nRealm int) *World {
 	w := &World{}
 	w.schedds = make([]*Schedd, nSchedd)
 	w.procqs = make([]*ProcQ, nProcQ)
 	for i := 0; i < len(w.schedds); i++ {
-		w.schedds[i] = &Schedd{totMem: MAX_MEM, q: newQueue()}
+		w.schedds[i] = newSchedd(nRealm)
 	}
 	for i := 0; i < len(w.procqs); i++ {
 		w.procqs[i] = &ProcQ{qs: make(map[Trealm]*Queue)}
 	}
-	w.realms = make([]*Realm, 1)
-	w.realms[0] = newRealm(AVG_ARRIVAL_RATE)
+	w.realms = make([]*Realm, nRealm)
+	w.lambda = AVG_ARRIVAL_RATE * (float64(nSchedd) / float64(nRealm))
+	for i := 0; i < len(w.realms); i++ {
+		w.realms[i] = newRealm(w.lambda, Trealm(i))
+	}
 	w.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	return w
 }
 
 func (w *World) String() string {
-	str := fmt.Sprintf("%d nproc %d nwork %v maxq %d avgq %v util %v\n schedds:", w.ntick, w.nproc, w.nwork, w.maxq, w.avgq/float64(w.ntick), w.util())
+	str := fmt.Sprintf("%d nrealm %d (%v) nproc %d (ndone %v) nwork %v maxq %d avgq %v util %v\n schedds:", w.ntick, len(w.realms), w.lambda, w.nproc, w.fairness(), w.nwork, w.maxq, w.avgq/float64(w.ntick), w.util())
+	str += "[\n"
 	for _, sd := range w.schedds {
-		str += sd.String()
+		str += "  " + sd.String() + ",\n"
 	}
-	str += "\n procQs:"
+	str += "  ]\n procQs:"
 	for _, pq := range w.procqs {
 		str += pq.String()
 	}
 	return str
+}
+
+func (w *World) fairness() []int {
+	ndone := make([]int, len(w.realms))
+	for _, sd := range w.schedds {
+		for i, n := range sd.nproc {
+			ndone[i] += n
+		}
+	}
+	return ndone
 }
 
 func (w *World) util() float64 {
@@ -232,6 +262,7 @@ func (w *World) genLoad() {
 		procs := r.genLoad(w.rand)
 		for _, p := range procs {
 			q := int(rand.Uint64() % uint64(len(w.procqs)))
+			// fmt.Printf("q %d r %d\n", q, p.realm)
 			w.nproc += 1
 			w.nwork += p.nTick
 			w.procqs[q].enq(p)

@@ -209,6 +209,9 @@ func (sd *Schedd) run() {
 	if len(sd.q.q) == 0 {
 		return
 	}
+	for r, _ := range sd.rutil {
+		sd.rutil[r] = Tftick(0)
+	}
 	sd.util += float64(1)
 	ticks := sd.q.run()
 	for r, t := range ticks {
@@ -385,7 +388,7 @@ func (w *World) zap(r TrealmId) {
 	}
 }
 
-func (w *World) zapper() {
+func (w *World) utilPerRealm() Ttickmap {
 	rutil := make(Ttickmap)
 	for _, sd := range w.schedds {
 		for r, t := range sd.rutil {
@@ -396,7 +399,19 @@ func (w *World) zapper() {
 			}
 		}
 	}
-	avg := Tftick(len(w.schedds) / len(rutil))
+	return rutil
+}
+
+func (w *World) hasWork(lr TrealmId) bool {
+	for _, pq := range w.procqs {
+		if pq.rqlen(lr) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (w *World) utilRange(rutil Ttickmap) (Tftick, TrealmId, Tftick, TrealmId) {
 	h := Tftick(0)
 	hr := TrealmId(0)
 	l := Tftick(len(w.schedds))
@@ -411,12 +426,17 @@ func (w *World) zapper() {
 			lr = r
 		}
 	}
-	fmt.Printf("rutil %v avg %v h %v hr %v l %v lr %v\n", rutil, avg, h, hr, l, lr)
+	return h, hr, l, lr
+}
+
+func (w *World) zapper() {
+	rutil := w.utilPerRealm()
+	avg := Tftick(len(w.schedds) / len(rutil))
+	h, hr, l, lr := w.utilRange(rutil)
+	// fmt.Printf("rutil %v avg %v h %v hr %v l %v lr %v\n", rutil, avg, h, hr, l, lr)
 	if h-l > avg*1.25 {
-		for _, pq := range w.procqs {
-			if pq.rqlen(lr) > 0 {
-				w.zap(hr)
-			}
+		if w.hasWork(lr) {
+			w.zap(hr)
 		}
 	}
 }

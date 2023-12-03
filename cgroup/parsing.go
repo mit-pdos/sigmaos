@@ -20,6 +20,7 @@ const (
 )
 
 type parseFn func(io.Reader) (uint64, error)
+type parseFnMulti func(io.Reader) ([]int, error)
 
 func parseUint64(r io.Reader) (uint64, error) {
 	b, err := io.ReadAll(r)
@@ -32,6 +33,24 @@ func parseUint64(r io.Reader) (uint64, error) {
 		db.DFatalf("Error strconv: %v", err)
 	}
 	return n, nil
+}
+
+func parseInts(r io.Reader) ([]int, error) {
+	b, err := io.ReadAll(r)
+	if err != nil {
+		db.DPrintf(db.CGROUP_ERR, "Error ReadAll: %v", err)
+		return nil, err
+	}
+	strs := strings.Split(string(b), "\n")
+	ints := make([]int, 0, len(strs))
+	for _, str := range strs {
+		n, err := strconv.Atoi(str)
+		if err != nil {
+			db.DFatalf("Error strconv: %v", err)
+		}
+		ints = append(ints, n)
+	}
+	return ints, nil
 }
 
 func parseCgroupCpuStat(r io.Reader) (uint64, error) {

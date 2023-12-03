@@ -30,7 +30,6 @@ type Container struct {
 	cgroupPath   string
 	ip           string
 	cmgr         *cgroup.CgroupMgr
-	pid          int
 	prevCPUStats cpustats
 }
 
@@ -58,11 +57,15 @@ func (c *Container) SetCPUShares(cpu int64) error {
 func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
 	// If this container will run BE procs, mark it as SCHED_IDLE
 	if ptype == proc.T_BE {
-		db.DPrintf(db.CONTAINER, "Assign uprocd to realm %v and set SCHED_IDLE: %v pid %v", realm, c.cgroupPath, c.pid)
+		pids := c.cmgr.GetPIDs(c.cgroupPath)
+		db.DPrintf(db.CONTAINER, "Assign uprocd to realm %v and set SCHED_IDLE: %v pids %v", realm, c.cgroupPath, pids)
 		s := time.Now()
-		if err := setSchedPolicy(c.pid, linuxsched.SCHED_IDLE); err != nil {
-			db.DFatalf("Err setSchedPolicy: %v", err)
-			return err
+		for _, pid := range pids {
+			db.DPrintf(db.CONTAINER, "Set %v SCHED_IDLE", pid)
+			if err := setSchedPolicy(pid, linuxsched.SCHED_IDLE); err != nil {
+				db.DFatalf("Err setSchedPolicy: %v", err)
+				return err
+			}
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] Get/Set sched attr %v", time.Since(s))
 	}

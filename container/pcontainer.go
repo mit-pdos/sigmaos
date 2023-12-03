@@ -139,7 +139,6 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up port.Tport
 		cmgr:       cgroup.NewCgroupMgr(),
 	}
 	c.cmgr.SetMemoryLimit(c.cgroupPath, membytes, memswap)
-	c.pid = c.cmgr.GetPID(c.cgroupPath)
 	return c, nil
 }
 

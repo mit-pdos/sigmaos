@@ -68,9 +68,7 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up port.Tport
 	runtime := "runc"
 	if gvisor {
 		db.DPrintf(db.CONTAINER, "Running uprocd with gVisor")
-		runtime = "runsc-debug"
-		// XXX switch to non-debug version of the gVisor runtime
-		//		runtime = "runsc"
+		runtime = "runsc-kvm"
 	} else {
 		db.DPrintf(db.CONTAINER, "Running uprocd with Docker")
 	}

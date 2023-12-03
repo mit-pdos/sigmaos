@@ -17,6 +17,8 @@ const (
 type TrealmId int
 type Tftick float64
 
+type Ttickmap map[TrealmId]Tftick
+
 func (f Tftick) String() string {
 	return fmt.Sprintf("%.1fT", f)
 }
@@ -66,19 +68,22 @@ func (q *Queue) find(n Tmem) *Proc {
 	return nil
 }
 
-func (q *Queue) run(n Tftick) []*Proc {
+func (q *Queue) run(n Tftick) Ttickmap {
+	ticks := make(Ttickmap)
 	ps := make([]*Proc, 0)
-	done := make([]*Proc, 0)
 	for _, p := range q.q {
 		p.nTick -= n
+		if _, ok := ticks[p.realm]; ok {
+			ticks[p.realm] += n
+		} else {
+			ticks[p.realm] = n
+		}
 		if p.nTick > 0 {
 			ps = append(ps, p)
-		} else {
-			done = append(done, p)
 		}
 	}
 	q.q = ps
-	return done
+	return ticks
 }
 
 func (q *Queue) mem() Tmem {
@@ -163,9 +168,9 @@ func (sd *Schedd) run() {
 	}
 	n := Tftick(float64(1.0 / float64(len(sd.q.q))))
 	sd.util += float64(1)
-	ps := sd.q.run(n)
-	for _, p := range ps {
-		sd.ticks[p.realm] += n
+	ticks := sd.q.run(n)
+	for r, t := range ticks {
+		sd.ticks[r] += t
 	}
 }
 
@@ -211,7 +216,7 @@ func newWorld(nProcQ, nSchedd int) *World {
 }
 
 func (w *World) String() string {
-	str := fmt.Sprintf("%d nrealm %d nproc %d (ntick %v) nwork %v maxq %d avgq %v util %v\n schedds:", w.ntick, len(w.realms), w.nproc, w.fairness(), w.nwork, w.maxq, w.avgq/float64(w.ntick), w.util())
+	str := fmt.Sprintf("%d nrealm %d nproc %d (ntick %v) nwork %v maxq %d avgq %.1f util %.1f%%\n schedds:", w.ntick, len(w.realms), w.nproc, w.fairness(), w.nwork, w.maxq, w.avgq/float64(w.ntick), w.util())
 	str += "[\n"
 	for _, sd := range w.schedds {
 		str += "  " + sd.String() + ",\n"
@@ -249,7 +254,7 @@ func (w *World) util() float64 {
 	for _, sd := range w.schedds {
 		u += sd.util
 	}
-	return u / float64(w.ntick)
+	return (u / float64(w.ntick)) * float64(100)
 }
 
 func (w *World) genLoad() {
@@ -315,8 +320,4 @@ func (w *World) Tick() {
 func zipf(r *rand.Rand) uint64 {
 	z := rand.NewZipf(r, 2.0, 1.0, MAX_SERVICE_TIME-1)
 	return z.Uint64() + 1
-}
-
-func uniform(r *rand.Rand) uint64 {
-	return (rand.Uint64() % MAX_SERVICE_TIME) + 1
 }

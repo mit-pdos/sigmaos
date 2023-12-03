@@ -14,7 +14,7 @@ type Ttick int
 const (
 	MAX_SERVICE_TIME         = 10 // in ticks
 	MAX_MEM                  = 10
-	AVG_ARRIVAL_RATE float64 = 0.1 // per tick
+	AVG_ARRIVAL_RATE float64 = 0.2 // per tick
 )
 
 type Trealm int
@@ -88,6 +88,10 @@ func (q *Queue) mem() Tmem {
 	return m
 }
 
+func (q *Queue) qlen() int {
+	return len(q.q)
+}
+
 type ProcQ struct {
 	qs map[Trealm]*Queue
 }
@@ -95,7 +99,7 @@ type ProcQ struct {
 func (pq *ProcQ) String() string {
 	str := "["
 	for r, q := range pq.qs {
-		str += fmt.Sprintf("%d: %v", r, q)
+		str += fmt.Sprintf("%d (%d): %v", r, q.qlen(), q)
 	}
 	str += "]"
 	return str
@@ -122,14 +126,22 @@ func (pq *ProcQ) deq(n Tmem) *Proc {
 	return nil
 }
 
+func (pq *ProcQ) qlen() int {
+	l := 0
+	for _, q := range pq.qs {
+		l += q.qlen()
+	}
+	return l
+}
+
 type Schedd struct {
 	totMem Tmem
-	nMem   Tmem
 	q      *Queue
+	util   float64
 }
 
 func (sd *Schedd) String() string {
-	return fmt.Sprintf("{nMem %d q %v}", sd.nMem, sd.q)
+	return fmt.Sprintf("{totMem %d nMem %d q %v}", sd.totMem, sd.mem(), sd.q)
 }
 
 func (sd *Schedd) mem() Tmem {
@@ -141,6 +153,7 @@ func (sd *Schedd) run() {
 		return
 	}
 	n := float64(1.0 / float64(len(sd.q.q)))
+	sd.util += float64(1)
 	sd.q.run(Tftick(n))
 }
 
@@ -172,6 +185,10 @@ type World struct {
 	procqs  []*ProcQ
 	realms  []*Realm
 	rand    *rand.Rand
+	nproc   int
+	nwork   Tftick
+	maxq    int
+	avgq    float64
 }
 
 func newWorld(nProcQ, nSchedd int) *World {
@@ -191,7 +208,7 @@ func newWorld(nProcQ, nSchedd int) *World {
 }
 
 func (w *World) String() string {
-	str := fmt.Sprintf("%d\n schedds:", w.ntick)
+	str := fmt.Sprintf("%d nproc %d nwork %v maxq %d avgq %v util %v\n schedds:", w.ntick, w.nproc, w.nwork, w.maxq, w.avgq/float64(w.ntick), w.util())
 	for _, sd := range w.schedds {
 		str += sd.String()
 	}
@@ -202,11 +219,21 @@ func (w *World) String() string {
 	return str
 }
 
+func (w *World) util() float64 {
+	u := float64(0)
+	for _, sd := range w.schedds {
+		u += sd.util
+	}
+	return u / float64(w.ntick)
+}
+
 func (w *World) genLoad() {
 	for _, r := range w.realms {
 		procs := r.genLoad(w.rand)
 		for _, p := range procs {
 			q := int(rand.Uint64() % uint64(len(w.procqs)))
+			w.nproc += 1
+			w.nwork += p.nTick
 			w.procqs[q].enq(p)
 		}
 	}
@@ -239,13 +266,25 @@ func (w *World) compute() {
 	}
 }
 
+func (w *World) qstat() {
+	qlen := 0
+	for _, pq := range w.procqs {
+		qlen += pq.qlen()
+	}
+	w.avgq += float64(qlen)
+	if qlen > w.maxq {
+		w.maxq = qlen
+	}
+}
+
 func (w *World) Tick() {
 	w.ntick += 1
 	w.genLoad()
-	fmt.Printf("w0 %v\n", w)
+	fmt.Printf("after gen %v\n", w)
 	w.getProcs()
 	w.compute()
-	fmt.Printf("w1 %v\n", w)
+	w.qstat()
+	fmt.Printf("after compute %v\n", w)
 }
 
 func zipf(r *rand.Rand) uint64 {

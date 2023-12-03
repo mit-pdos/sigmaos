@@ -58,7 +58,7 @@ func (c *Container) SetCPUShares(cpu int64) error {
 func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
 	// If this container will run BE procs, mark it as SCHED_IDLE
 	if ptype == proc.T_BE {
-		db.DPrintf(db.CONTAINER, "Assign uprocd to realm and set SCHED_IDLE: %v pid %v", c.cgroupPath, c.pid)
+		db.DPrintf(db.CONTAINER, "Assign uprocd to realm %v and set SCHED_IDLE: %v pid %v", realm, c.cgroupPath, c.pid)
 		s := time.Now()
 		if err := setSchedPolicy(c.pid, linuxsched.SCHED_IDLE); err != nil {
 			db.DFatalf("Err setSchedPolicy: %v", err)

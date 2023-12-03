@@ -134,6 +134,8 @@ CID=$(docker run -dit\
              --mount type=bind,src=/tmp/sigmaos-bin,dst=/home/sigmaos/bin/user/realms\
              --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\
              --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\
+             --pid host\
+             --privileged\
              --network ${NET}\
              --name ${KERNELID}\
              -e kernelid=${KERNELID}\

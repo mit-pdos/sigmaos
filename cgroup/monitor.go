@@ -68,6 +68,17 @@ func (cmon *CgroupMonitor) GetCPUStats(cgroupPath string) (*CPUStat, error) {
 	return cur, nil
 }
 
+func (cmon *CgroupMonitor) GetPID(cgroupPath string) int {
+	cmon.Lock()
+	defer cmon.Unlock()
+
+	n, err := cmon.cfs.readFile(path.Join(cgroupPath, "cgroup.procs"), parseUint64)
+	if err != nil {
+		db.DFatalf("Error readFile: %v", err)
+	}
+	return int(n)
+}
+
 func (cmon *CgroupMonitor) getCPUShares(cgroupPath string) (int64, error) {
 
 	n, err := cmon.cfs.readFile(path.Join(cgroupPath, "cpu.weight"), parseUint64)

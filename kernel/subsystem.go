@@ -85,6 +85,10 @@ func (s *Subsystem) Run(how proc.Thow, kernelId, localIP string) error {
 	return err
 }
 
+func (ss *Subsystem) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
+	return ss.container.AssignToRealm(realm, ptype)
+}
+
 func (ss *Subsystem) SetCPUShares(shares int64) error {
 	return ss.container.SetCPUShares(shares)
 }

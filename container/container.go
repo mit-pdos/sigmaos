@@ -12,7 +12,10 @@ import (
 
 	"sigmaos/cgroup"
 	db "sigmaos/debug"
+	"sigmaos/linuxsched"
 	"sigmaos/port"
+	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -27,6 +30,7 @@ type Container struct {
 	cgroupPath   string
 	ip           string
 	cmgr         *cgroup.CgroupMgr
+	pid          int
 	prevCPUStats cpustats
 }
 
@@ -48,6 +52,20 @@ func (c *Container) SetCPUShares(cpu int64) error {
 	s := time.Now()
 	c.cmgr.SetCPUShares(c.cgroupPath, cpu)
 	db.DPrintf(db.SPAWN_LAT, "Container.SetCPUShares %v", time.Since(s))
+	return nil
+}
+
+func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
+	// If this container will run BE procs, mark it as SCHED_IDLE
+	if ptype == proc.T_BE {
+		db.DPrintf(db.CONTAINER, "Assign uprocd to realm and set SCHED_IDLE: %v pid %v", c.cgroupPath, c.pid)
+		s := time.Now()
+		if err := setSchedPolicy(c.pid, linuxsched.SCHED_IDLE); err != nil {
+			db.DFatalf("Err setSchedPolicy: %v", err)
+			return err
+		}
+		db.DPrintf(db.SPAWN_LAT, "[%v] Get/Set sched attr %v", time.Since(s))
+	}
 	return nil
 }
 

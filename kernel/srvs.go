@@ -72,6 +72,10 @@ func (k *Kernel) SetCPUShares(pid sp.Tpid, shares int64) error {
 	return k.svcs.svcMap[pid].SetCPUShares(shares)
 }
 
+func (k *Kernel) AssignUprocdToRealm(pid sp.Tpid, realm sp.Trealm, ptype proc.Ttype) error {
+	return k.svcs.svcMap[pid].AssignToRealm(realm, ptype)
+}
+
 func (k *Kernel) GetCPUUtil(pid sp.Tpid) (float64, error) {
 	return k.svcs.svcMap[pid].GetCPUUtil()
 }

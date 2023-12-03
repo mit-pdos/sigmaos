@@ -19,13 +19,13 @@ message SetCPUSharesRequest {
 message SetCPUSharesResponse {
 }
 
-message AssignProcdToRealmRequest {
+message AssignUprocdToRealmRequest {
   string pidStr = 1;
   string realmStr = 2;
   int64 procTypeInt = 3;
 }
 
-message AssignProcdToRealmResponse {
+message AssignUprocdToRealmResponse {
 }
 
 message GetKernelSrvCPUUtilRequest {

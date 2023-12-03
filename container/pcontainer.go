@@ -67,9 +67,12 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up port.Tport
 
 	runtime := "runc"
 	if gvisor {
+		db.DPrintf(db.CONTAINER, "Running uprocd with gVisor")
 		runtime = "runsc-debug"
 		// XXX switch to non-debug version of the gVisor runtime
 		//		runtime = "runsc"
+	} else {
+		db.DPrintf(db.CONTAINER, "Running uprocd with Docker")
 	}
 
 	resp, err := cli.ContainerCreate(ctx,
@@ -136,6 +139,7 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up port.Tport
 		cmgr:       cgroup.NewCgroupMgr(),
 	}
 	c.cmgr.SetMemoryLimit(c.cgroupPath, membytes, memswap)
+	c.pid = c.cmgr.GetPID(c.cgroupPath)
 	return c, nil
 }
 

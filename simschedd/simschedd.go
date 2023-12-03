@@ -69,6 +69,10 @@ func (q *Queue) find(n Tmem) *Proc {
 	return nil
 }
 
+func (q *Queue) zap(proc int) {
+	q.q = append(q.q[0:proc], q.q[proc+1:]...)
+}
+
 func (q *Queue) run() Ttickmap {
 	n := Tftick(float64(1.0 / float64(len(q.q))))
 	ticks := make(Ttickmap)
@@ -158,6 +162,10 @@ func (pq *ProcQ) deq(n Tmem) *Proc {
 	return nil
 }
 
+func (pq *ProcQ) rqlen(r TrealmId) int {
+	return pq.qs[r].qlen()
+}
+
 func (pq *ProcQ) qlen() int {
 	l := 0
 	for _, q := range pq.qs {
@@ -170,11 +178,17 @@ type Schedd struct {
 	totMem Tmem
 	q      *Queue
 	util   float64
-	ticks  map[TrealmId]Tftick
+	ticks  Ttickmap
+	rutil  Ttickmap
 }
 
 func newSchedd() *Schedd {
-	sd := &Schedd{totMem: MAX_MEM, q: newQueue(), ticks: make(map[TrealmId]Tftick)}
+	sd := &Schedd{
+		totMem: MAX_MEM,
+		q:      newQueue(),
+		ticks:  make(Ttickmap),
+		rutil:  make(Ttickmap),
+	}
 	return sd
 }
 
@@ -184,6 +198,7 @@ func (sd *Schedd) String() string {
 
 func (sd *Schedd) addRealm(realm TrealmId) {
 	sd.ticks[realm] = Tftick(0)
+	sd.rutil[realm] = Tftick(0)
 }
 
 func (sd *Schedd) mem() Tmem {
@@ -198,7 +213,24 @@ func (sd *Schedd) run() {
 	ticks := sd.q.run()
 	for r, t := range ticks {
 		sd.ticks[r] += t
+		sd.rutil[r] = t
 	}
+}
+
+func (sd *Schedd) zap(r TrealmId) bool {
+	proc := -1
+	m := Tmem(0)
+	for i, p := range sd.q.q {
+		if p.realm == r && p.nMem > m {
+			proc = i
+			m = p.nMem
+		}
+	}
+	if proc != -1 {
+		sd.q.zap(proc)
+		return true
+	}
+	return false
 }
 
 type Irealm interface {
@@ -344,6 +376,51 @@ func (w *World) compute() {
 	}
 }
 
+func (w *World) zap(r TrealmId) {
+	fmt.Printf("zap a proc from realm %v at %v\n", r, w.ntick)
+	for _, sd := range w.schedds {
+		if sd.zap(r) {
+			return
+		}
+	}
+}
+
+func (w *World) zapper() {
+	rutil := make(Ttickmap)
+	for _, sd := range w.schedds {
+		for r, t := range sd.rutil {
+			if _, ok := rutil[r]; ok {
+				rutil[r] += t
+			} else {
+				rutil[r] = t
+			}
+		}
+	}
+	avg := Tftick(len(w.schedds) / len(rutil))
+	h := Tftick(0)
+	hr := TrealmId(0)
+	l := Tftick(len(w.schedds))
+	lr := TrealmId(0)
+	for r, u := range rutil {
+		if u > h {
+			h = u
+			hr = r
+		}
+		if u < l {
+			l = u
+			lr = r
+		}
+	}
+	fmt.Printf("rutil %v avg %v h %v hr %v l %v lr %v\n", rutil, avg, h, hr, l, lr)
+	if h-l > avg*1.25 {
+		for _, pq := range w.procqs {
+			if pq.rqlen(lr) > 0 {
+				w.zap(hr)
+			}
+		}
+	}
+}
+
 func (w *World) qstat() {
 	qlen := 0
 	for _, pq := range w.procqs {
@@ -362,6 +439,7 @@ func (w *World) Tick() {
 	w.getProcs()
 	fmt.Printf("after getprocs %v\n", w)
 	w.compute()
+	w.zapper()
 	w.qstat()
 	fmt.Printf("after compute %v\n", w)
 }

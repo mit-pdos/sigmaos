@@ -11,9 +11,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 
 const VERBOSE: bool = false;
+const SPAWN_LAT: bool = false;
 
 fn print_elapsed_time(/*label: &str,*/ msg: &str, start: SystemTime, ignore_verbose: bool) {
-    if ignore_verbose || VERBOSE {
+    if SPAWN_LAT && (ignore_verbose || VERBOSE) {
         let elapsed = SystemTime::now()
             .duration_since(start)
             .expect("Time went backwards");
@@ -56,8 +57,8 @@ fn main() {
     now = SystemTime::now();
     seccomp_proc().expect("seccomp failed");
     print_elapsed_time("trampoline.seccomp_proc", now, false);
+    now = SystemTime::now();
     if aa {
-        now = SystemTime::now();
         apply_apparmor("sigmaos-uproc").expect("apparmor failed");
         print_elapsed_time("trampoline.apply_apparmor", now, false);
     }
@@ -179,21 +180,20 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     print_elapsed_time("trampoline.fs_jail_proc mount dirs", now, false);
-
     now = SystemTime::now();
     // ========== No more mounts beyond this point ==========
     pivot_root(".", old_root_mnt)?;
     print_elapsed_time("trampoline.fs_jail_proc pivot_root", now, false);
-
     now = SystemTime::now();
+
     env::set_current_dir("/")?;
     print_elapsed_time("trampoline.fs_jail_proc chdir", now, false);
-
     now = SystemTime::now();
+
     unmount(old_root_mnt, UnmountFlags::DETACH)?;
     print_elapsed_time("trampoline.fs_jail_proc umount", now, false);
-
     now = SystemTime::now();
+
     fs::remove_dir(old_root_mnt)?;
     print_elapsed_time("trampoline.fs_jail_proc rmdir", now, false);
 
@@ -218,10 +218,13 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,
     // but the mini rust proc for our spawn latency microbenchmarks requires
     // it.
-    const ALLOWED_SYSCALLS: [ScmpSyscall; 67] = [
+    const ALLOWED_SYSCALLS: [ScmpSyscall; 69] = [
+        //const ALLOWED_SYSCALLS: [ScmpSyscall; 67] = [
         ScmpSyscall::new("ioctl"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("poll"),  // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("lstat"), // XXX Only needed for rust proc spawn microbenchmark
+        ScmpSyscall::new("clock_gettime"), // XXX Only needed to run on gVisor
+        ScmpSyscall::new("membarrier"), // XXX Only needed to run on gVisor
         ScmpSyscall::new("accept4"),
         ScmpSyscall::new("access"),
         ScmpSyscall::new("arch_prctl"), // Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.

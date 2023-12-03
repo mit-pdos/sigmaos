@@ -137,12 +137,11 @@ type Schedd struct {
 	totMem Tmem
 	q      *Queue
 	util   float64
-	nproc  map[TrealmId]int
+	ticks  map[TrealmId]Tftick
 }
 
 func newSchedd() *Schedd {
-	sd := &Schedd{totMem: MAX_MEM, q: newQueue(), nproc: make(map[TrealmId]int)}
-	sd.nproc = make(map[TrealmId]int)
+	sd := &Schedd{totMem: MAX_MEM, q: newQueue(), ticks: make(map[TrealmId]Tftick)}
 	return sd
 }
 
@@ -151,7 +150,7 @@ func (sd *Schedd) String() string {
 }
 
 func (sd *Schedd) addRealm(realm TrealmId) {
-	sd.nproc[realm] = 0
+	sd.ticks[realm] = Tftick(0)
 }
 
 func (sd *Schedd) mem() Tmem {
@@ -162,11 +161,11 @@ func (sd *Schedd) run() {
 	if len(sd.q.q) == 0 {
 		return
 	}
-	n := float64(1.0 / float64(len(sd.q.q)))
+	n := Tftick(float64(1.0 / float64(len(sd.q.q))))
 	sd.util += float64(1)
-	ps := sd.q.run(Tftick(n))
+	ps := sd.q.run(n)
 	for _, p := range ps {
-		sd.nproc[p.realm] += 1
+		sd.ticks[p.realm] += n
 	}
 }
 
@@ -212,7 +211,7 @@ func newWorld(nProcQ, nSchedd int) *World {
 }
 
 func (w *World) String() string {
-	str := fmt.Sprintf("%d nrealm %d nproc %d (ndone %v) nwork %v maxq %d avgq %v util %v\n schedds:", w.ntick, len(w.realms), w.nproc, w.fairness(), w.nwork, w.maxq, w.avgq/float64(w.ntick), w.util())
+	str := fmt.Sprintf("%d nrealm %d nproc %d (ntick %v) nwork %v maxq %d avgq %v util %v\n schedds:", w.ntick, len(w.realms), w.nproc, w.fairness(), w.nwork, w.maxq, w.avgq/float64(w.ntick), w.util())
 	str += "[\n"
 	for _, sd := range w.schedds {
 		str += "  " + sd.String() + ",\n"
@@ -235,14 +234,14 @@ func (w *World) addRealm(realm Irealm) {
 	}
 }
 
-func (w *World) fairness() []int {
-	ndone := make([]int, len(w.realms))
+func (w *World) fairness() []Tftick {
+	ntick := make([]Tftick, len(w.realms))
 	for _, sd := range w.schedds {
-		for i, n := range sd.nproc {
-			ndone[i] += n
+		for i, n := range sd.ticks {
+			ntick[i] += n
 		}
 	}
-	return ndone
+	return ntick
 }
 
 func (w *World) util() float64 {

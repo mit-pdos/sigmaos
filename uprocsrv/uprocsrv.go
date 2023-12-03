@@ -143,7 +143,10 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
 	// Assign this uprocsrv to the realm, if not already assigned.
-	ups.assignToRealm(uproc.GetRealm())
+	if err := ups.assignToRealm(uproc.GetRealm()); err != nil {
+		db.DFatalf("Err assign to realm: %v", err)
+	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	return container.RunUProc(uproc)
+
 }

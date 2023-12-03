@@ -75,7 +75,7 @@ func (s *Subsystem) Run(how proc.Thow, kernelId, localIP string) error {
 			r = &port.Range{FPORT, LPORT}
 			up = r.Fport
 		}
-		c, err := container.StartPContainer(s.p, kernelId, r, up)
+		c, err := container.StartPContainer(s.p, kernelId, r, up, s.k.Param.GVisor)
 		if err != nil {
 			return err
 		}

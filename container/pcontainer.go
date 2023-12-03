@@ -23,7 +23,7 @@ import (
 
 // Start container for uprocd. If r is nil, don't use overlays.
 // func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range, up port.Tport, ptype proc.Ttype) (*Container, error) {
-func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up port.Tport) (*Container, error) {
+func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up port.Tport, gvisor bool) (*Container, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -65,6 +65,13 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up port.Tport
 		endpoints[p.GetNet()] = &network.EndpointSettings{}
 	}
 
+	runtime := "runc"
+	if gvisor {
+		runtime = "runsc-debug"
+		// XXX switch to non-debug version of the gVisor runtime
+		//		runtime = "runsc"
+	}
+
 	resp, err := cli.ContainerCreate(ctx,
 		&container.Config{
 			Image:        image,
@@ -73,6 +80,7 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up port.Tport
 			Env:          p.GetEnv(),
 			ExposedPorts: pset,
 		}, &container.HostConfig{
+			Runtime:     runtime,
 			NetworkMode: container.NetworkMode(netmode),
 			Mounts: []mount.Mount{
 				// user bin dir.

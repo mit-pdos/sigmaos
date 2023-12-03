@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 8 {
-		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu\n", os.Args[0])
+	if len(os.Args) < 9 {
+		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu gvisor\nprovided:%v", os.Args[0], os.Args)
 	}
 	db.DPrintf(db.BOOT, "Boot %v", os.Args[1:])
 	srvs := strings.Split(os.Args[3], ";")
@@ -22,12 +22,17 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error parse overlays: %v", err)
 	}
+	gvisor, err := strconv.ParseBool(os.Args[7])
+	if err != nil {
+		db.DFatalf("Error parse gvisor: %v", err)
+	}
 	param := kernel.Param{
 		KernelId: os.Args[1],
 		Services: srvs,
 		Dbip:     os.Args[4],
 		Mongoip:  os.Args[5],
 		Overlays: overlays,
+		GVisor:   gvisor,
 	}
 	if len(os.Args) >= 8 {
 		param.ReserveMcpu = os.Args[7]

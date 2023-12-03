@@ -239,11 +239,15 @@ func (w *World) addRealm(realm Irealm) {
 	}
 }
 
-func (w *World) fairness() []Tftick {
-	ntick := make([]Tftick, len(w.realms))
+func (w *World) fairness() Ttickmap {
+	ntick := make(Ttickmap)
 	for _, sd := range w.schedds {
-		for i, n := range sd.ticks {
-			ntick[i] += n
+		for r, n := range sd.ticks {
+			if _, ok := ntick[r]; ok {
+				ntick[r] += n
+			} else {
+				ntick[r] = n
+			}
 		}
 	}
 	return ntick

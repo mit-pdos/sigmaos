@@ -20,7 +20,7 @@ type Tftick float64
 type Ttickmap map[TrealmId]Tftick
 
 func (f Tftick) String() string {
-	return fmt.Sprintf("%.1fT", f)
+	return fmt.Sprintf("%.3fT", f)
 }
 
 type Proc struct {
@@ -68,21 +68,40 @@ func (q *Queue) find(n Tmem) *Proc {
 	return nil
 }
 
-func (q *Queue) run(n Tftick) Ttickmap {
+func (q *Queue) run() Ttickmap {
+	n := Tftick(float64(1.0 / float64(len(q.q))))
 	ticks := make(Ttickmap)
-	ps := make([]*Proc, 0)
-	for _, p := range q.q {
-		p.nTick -= n
-		if _, ok := ticks[p.realm]; ok {
-			ticks[p.realm] += n
-		} else {
-			ticks[p.realm] = n
+	for n > 0 && len(q.q) > 0 {
+		ps := make([]*Proc, 0)
+		over := Tftick(0)
+		for _, p := range q.q {
+			u := n
+			if p.nTick < n {
+				u = p.nTick
+				over += n - u
+				p.nTick = 0
+			} else {
+				p.nTick -= n
+			}
+			if _, ok := ticks[p.realm]; ok {
+				ticks[p.realm] += u
+			} else {
+				ticks[p.realm] = u
+			}
+			if p.nTick > 0 {
+				ps = append(ps, p)
+			}
 		}
-		if p.nTick > 0 {
-			ps = append(ps, p)
+		q.q = ps
+		if len(q.q) > 0 {
+			n = Tftick(float64(over) / float64(len(q.q)))
+			if n > 0.001 {
+				fmt.Printf("another round of scheduling %v\n", n)
+			} else {
+				n = Tftick(0)
+			}
 		}
 	}
-	q.q = ps
 	return ticks
 }
 
@@ -166,9 +185,8 @@ func (sd *Schedd) run() {
 	if len(sd.q.q) == 0 {
 		return
 	}
-	n := Tftick(float64(1.0 / float64(len(sd.q.q))))
 	sd.util += float64(1)
-	ticks := sd.q.run(n)
+	ticks := sd.q.run()
 	for r, t := range ticks {
 		sd.ticks[r] += t
 	}
@@ -284,14 +302,23 @@ func (w *World) getProc(n Tmem) *Proc {
 }
 
 func (w *World) getProcs() {
-	for _, sd := range w.schedds {
-		m := sd.mem()
-		if m < sd.totMem {
-			if p := w.getProc(sd.totMem - m); p != nil {
-				sd.q.enq(p)
+	capacityAvailable := true
+	i := 0
+	for capacityAvailable {
+		c := false
+		for _, sd := range w.schedds {
+			m := sd.mem()
+			if m < sd.totMem {
+				if p := w.getProc(sd.totMem - m); p != nil {
+					c = true
+					sd.q.enq(p)
+				}
 			}
 		}
+		capacityAvailable = c
+		i += 1
 	}
+	fmt.Printf("rounds %d\n", i)
 }
 
 func (w *World) compute() {
@@ -316,6 +343,7 @@ func (w *World) Tick() {
 	w.genLoad()
 	fmt.Printf("after gen %v\n", w)
 	w.getProcs()
+	fmt.Printf("after getprocs %v\n", w)
 	w.compute()
 	w.qstat()
 	fmt.Printf("after compute %v\n", w)

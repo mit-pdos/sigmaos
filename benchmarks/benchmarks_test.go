@@ -422,8 +422,6 @@ func TestLambdaBurst(t *testing.T) {
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	newOutDir(ts1)
-	// Find the total number of cores available for spinners across all machines.
-	// We need to get this in order to find out how many spinners to start.
 	N_LAMBDAS := 720
 	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
 	ss, is := newNSemaphores(ts1, N_LAMBDAS)

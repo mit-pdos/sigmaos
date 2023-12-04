@@ -1504,9 +1504,9 @@ graph_schedd_scalability_rs_hockey() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-#  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/$graph.pdf --prefix "8-vm-" --tpt_v_tpt
+  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/input_rate_vs_completion_rate.pdf --prefix "8-vm-" --tpt_v_tpt
 #  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/$graph.pdf --prefix "8-vm-" --server_tpt --log_scale
-  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/$graph.pdf --prefix "8-vm-" --cutoff 16000
+#  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/$graph.pdf --prefix "8-vm-" --cutoff 16000
 }
 
 graph_start_latency() {
@@ -1593,7 +1593,7 @@ source ~/env/3.10/bin/activate
 #graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
 #graph_realm_balance_be_img
-graph_start_latency
+#graph_start_latency
 #graph_schedd_scalability_rs
 
 #graph_mr_vs_corral

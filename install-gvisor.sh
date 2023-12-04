@@ -15,3 +15,4 @@
 sudo /usr/local/bin/runsc install
 sudo systemctl reload docker
 sudo cp gvisor/daemon.json /etc/docker/daemon.json
+sudo systemctl reload docker

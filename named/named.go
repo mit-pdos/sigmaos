@@ -14,7 +14,6 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/fslibsrv"
 	"sigmaos/leaderetcd"
-	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/portclnt"
@@ -161,10 +160,7 @@ func Run(args []string) error {
 }
 
 func (nd *Named) newSrv() (sp.Tmount, error) {
-	ip, err := netsigma.LocalIP()
-	if err != nil {
-		return sp.NullMount(), err
-	}
+	ip := nd.ProcEnv().GetLocalIP()
 	root := rootDir(nd.fs, nd.realm)
 	var pi portclnt.PortInfo
 	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
@@ -179,7 +175,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 	}
 	srv := fslibsrv.BootSrv(nd.ProcEnv(), root, ip, nd.attach, nd.detach, nil)
 	if srv == nil {
-		return sp.NullMount(), fmt.Errorf("BootSrv err %v\n", err)
+		return sp.NullMount(), fmt.Errorf("BootSrv err")
 	}
 
 	ssrv := sigmasrv.NewSigmaSrvSess(srv, nd.SigmaClnt)

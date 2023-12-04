@@ -3,6 +3,7 @@ package netsigma
 import (
 	"fmt"
 	"net"
+	"runtime/debug"
 	"strings"
 
 	db "sigmaos/debug"
@@ -103,7 +104,7 @@ func localIPs() ([]net.IP, error) {
 	var ips []net.IP
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		db.DFatalf("Err Get net interfaces %v: %v", ifaces, err)
+		db.DFatalf("Err Get net interfaces %v: %v\n%s", ifaces, err, debug.Stack())
 		return nil, err
 	}
 	for _, i := range ifaces {

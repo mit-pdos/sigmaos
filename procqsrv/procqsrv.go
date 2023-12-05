@@ -133,8 +133,6 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 }
 
 func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.GetStatsResponse) error {
-	db.DFatalf("Unimplemented")
-
 	pq.realmMu.RLock()
 	realms := make(map[string]int64, len(pq.realms))
 	for _, r := range pq.realms {

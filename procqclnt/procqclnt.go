@@ -109,24 +109,39 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 	}
 }
 
-func (pqc *ProcQClnt) GetQueueStats(nsample int) error {
+func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
+	pqc.urpcc.UpdateSrvs(false)
+	sampled := make(map[string]bool)
+	qstats := make(map[sp.Trealm]int)
 	for i := 0; i < nsample; i++ {
 		pqID, err := pqc.urpcc.RandomSrv()
 		if err != nil {
 			db.DFatalf("Can't get random srv: %v", err)
-			return err
+			return nil, err
 		}
+		// Don't double-sample
+		if sampled[pqID] {
+			continue
+		}
+		sampled[pqID] = true
 		rpcc, err := pqc.urpcc.GetClnt(pqID)
 		if err != nil {
 			db.DFatalf("Can't get random srv clnt: %v", err)
-			return err
+			return nil, err
 		}
 		req := &proto.GetStatsRequest{}
 		res := &proto.GetStatsResponse{}
 		if err := rpcc.RPC("ProcQ.GetStats", req, res); err != nil {
 			db.DFatalf("Can't get stats: %v", err)
-			return err
+			return nil, err
+		}
+		for rstr, l := range res.Nqueued {
+			r := sp.Trealm(rstr)
+			if _, ok := qstats[r]; !ok {
+				qstats[r] = 0
+			}
+			qstats[r] += int(l)
 		}
 	}
-	return nil
+	return qstats, nil
 }

@@ -11,10 +11,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 
 const VERBOSE: bool = false;
-const SPAWN_LAT: bool = false;
 
 fn print_elapsed_time(/*label: &str,*/ msg: &str, start: SystemTime, ignore_verbose: bool) {
-    if SPAWN_LAT && (ignore_verbose || VERBOSE) {
+    if ignore_verbose || VERBOSE {
         let elapsed = SystemTime::now()
             .duration_since(start)
             .expect("Time went backwards");

@@ -266,7 +266,8 @@ func (sd *Schedd) runProc(p *proc.Proc) {
 func (sd *Schedd) shouldGetBEProc() (proc.Tmem, bool) {
 	mem := sd.getFreeMem()
 	cpu := sd.getCPUUtil()
-	return mem, mem > 0 && cpu < TARGET_CPU_PCT
+	db.DPrintf(db.SCHEDD, "CPU util check: %v", cpu)
+	return mem, mem > 0 && cpu < (TARGET_CPU_PCT*int64(linuxsched.GetNCores()))
 }
 
 func (sd *Schedd) register() {

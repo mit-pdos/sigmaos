@@ -19,3 +19,4 @@ packages:
   - docker.io
   - mysql-client
   - libseccomp-dev
+  - apparmor-utils

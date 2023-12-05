@@ -1516,6 +1516,13 @@ graph_start_latency() {
   $GRAPH_SCRIPTS_DIR/start-latency.py --out $GRAPH_OUT_DIR/$graph.pdf
 }
 
+graph_start_latency_breakdown() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/start-latency-breakdown.py --out $GRAPH_OUT_DIR/$graph.pdf
+}
+
 #graph_mr_overlap() {
 #  fname=${FUNCNAME[0]}
 #  graph="${fname##graph_}"
@@ -1557,7 +1564,7 @@ echo "Running benchmarks with version: $VERSION"
 #schedd_scalability_rs_single_machine
 #socialnet_tail
 #realm_balance_be
-#mr_vs_corral
+mr_vs_corral
 #realm_balance_be_img
 #schedd_scalability
 
@@ -1593,10 +1600,10 @@ source ~/env/3.10/bin/activate
 #graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
 #graph_realm_balance_be_img
-#graph_start_latency
+graph_start_latency_breakdown
 #graph_schedd_scalability_rs
 
-#graph_mr_vs_corral
+graph_mr_vs_corral
 #graph_realm_balance_multi_img
 
 #graph_realm_balance_multi

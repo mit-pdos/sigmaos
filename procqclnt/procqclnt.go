@@ -110,7 +110,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 }
 
 func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
-	pqc.urpcc.UpdateSrvs(false)
+	pqc.urpcc.UpdateSrvs(true)
 	sampled := make(map[string]bool)
 	qstats := make(map[sp.Trealm]int)
 	for i := 0; i < nsample; i++ {

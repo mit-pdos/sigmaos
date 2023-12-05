@@ -534,6 +534,9 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
+	if PREWARM_REALM {
+		warmupRealm(ts1, []string{"imgresize", "imgresized"})
+	}
 	// Structure for hotel
 	ts2 := test.NewRealmTstate(rootts, REALM1)
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)

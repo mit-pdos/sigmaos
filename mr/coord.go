@@ -100,7 +100,7 @@ func NewCoord(args []string) (*Coord, error) {
 
 	b, err := c.GetFile(JobOutLink(c.job))
 	if err != nil {
-		db.DFatalf("Error GetFile JobOutLink: %v", err)
+		db.DFatalf("Error GetFile JobOutLink [%v]: %v", JobOutLink(c.job), err)
 	}
 	c.outdir = string(b)
 

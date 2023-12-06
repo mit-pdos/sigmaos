@@ -569,7 +569,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	}()
 	// Wait for imgResize jobs to set up.
 	<-imgJobs[0].ready
-	db.DPrintf(db.TEST, "MR setup done.")
+	db.DPrintf(db.TEST, "Imgresize setup done.")
 	db.DPrintf(db.TEST, "Setup phase done.")
 	if N_CLNT > 1 {
 		// Wait for hotel clients to start up on other machines.

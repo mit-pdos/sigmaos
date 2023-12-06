@@ -95,12 +95,15 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         "proc",
         "bin",
         "tmp",
+        "dev",
         "tmp/sigmaos-perf",
     ];
 
     let newroot = "/home/sigmaos/jail/";
     let sigmahome = "/home/sigmaos/";
     let newroot_pn: String = newroot.to_owned() + pid + "/";
+
+    log::info!("using perf: {}", env::var("SIGMAPERF").is_ok());
 
     // Create directories to use as mount points, as well as the new
     // root directory itself
@@ -145,6 +148,11 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/etc", "etc")?;
+    
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/dev", "dev")?;
 
     // E.g., openat "/proc/meminfo", "/proc/self/exe", but further
     // restricted by apparmor sigmoas-uproc profile.

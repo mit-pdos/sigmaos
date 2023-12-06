@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -60,6 +61,39 @@ func NewEmptyProc() *Proc {
 func NewProc(program string, args []string) *Proc {
 	pid := sp.GenPid(program)
 	return NewProcPid(pid, program, args)
+}
+
+func MakeRestoreProc(chkptLoc string, osPid int, sigmaPid string) *Proc {
+	p := &Proc{}
+	p.ProcProto = &ProcProto{}
+	procDir := NOT_SET
+	program := strings.Split(sigmaPid, "-")[0]
+	p.ProcEnvProto = &ProcEnvProto{
+		PidStr:             string(sigmaPid),
+		RealmStr:           string(sp.Trealm(NOT_SET)),
+		UnameStr:           string(sp.Tuname(sigmaPid)),
+		ProcDir:            procDir,
+		ParentDir:          NOT_SET,
+		Program:            program,
+		LocalIP:            NOT_SET,
+		KernelID:           NOT_SET,
+		BuildTag:           NOT_SET,
+		Net:                NOT_SET,
+		Perf:               os.Getenv(SIGMAPERF),
+		Strace:             os.Getenv(SIGMASTRACE),
+		Debug:              os.Getenv(SIGMADEBUG),
+		UprocdPIDStr:       NOT_SET,
+		Privileged:         false,
+		Overlays:           false,
+		CheckpointLocation: chkptLoc,
+		OsPid:              int32(osPid),
+	}
+	p.TypeInt = uint32(T_BE)
+	p.McpuInt = uint32(0)
+	p.Env = make(map[string]string)
+	p.setBaseEnv()
+	return p
+
 }
 
 func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc {

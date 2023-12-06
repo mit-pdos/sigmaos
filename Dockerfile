@@ -43,6 +43,18 @@ COPY --from=sigma-build-kernel /home/sigmaos/bin/kernel/uprocd /home/sigmaos/bin
 # Copy rust trampoline to the user image.
 COPY --from=sigma-build-user-rust /home/sigmaos/bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/exec-uproc-rs
 
+# copy criu binary
+ADD criu-3.18.tar.gz /home/sigmaos/bin/kernel
+WORKDIR /home/sigmaos/bin/kernel/criu-3.18
+RUN apk add iptables ip6tables
+RUN apk --update add build-base protobuf-dev protobuf-c-dev openssl wget tar
+RUN apk --update add linux-headers libnet-dev libnl3-dev libcap-dev python3 py3-pip
+RUN apk --update add libaio-dev pkgconfig asciidoc xmlto git
+RUN make \
+  && make install
+
+WORKDIR /home/sigmaos
+
 # ========== kernel image, omitting user binaries ==========
 FROM base AS sigmaos
 WORKDIR /home/sigmaos

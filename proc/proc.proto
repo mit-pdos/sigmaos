@@ -29,6 +29,8 @@ message ProcEnvProto {
   string strace = 22;
   string scheddIP = 23;
   Tmount namedMountProto = 24;
+  string checkpointLocation = 25;
+  int32 osPid = 26;
 }
 
 message ProcProto {

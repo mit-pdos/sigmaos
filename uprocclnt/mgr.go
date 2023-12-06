@@ -77,6 +77,24 @@ func NewUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 	return updm
 }
 
+// Fill out procd directory structure in which to register the uprocd.
+func (updm *UprocdMgr) mkdirs(realm sp.Trealm, ptype proc.Ttype) error {
+	d1 := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL)
+	// We may get ErrExists if the uprocd for a different type (within the same realm) has already started up.
+	if err := updm.fsl.MkDir(d1, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+		return err
+	}
+	d2 := path.Join(d1, realm.String())
+	if err := updm.fsl.MkDir(d2, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+		return err
+	}
+	d3 := path.Join(d2, ptype.String())
+	if err := updm.fsl.MkDir(d3, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+		return err
+	}
+	return nil
+}
+
 func (updm *UprocdMgr) WarmStartUprocd(realm sp.Trealm, ptype proc.Ttype) error {
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
@@ -143,6 +161,15 @@ func (updm *UprocdMgr) startUprocd() (sp.Tpid, *UprocdClnt) {
 	}
 	c := NewUprocdClnt(pid, rc)
 	return pid, c
+}
+
+func (updm *UprocdMgr) CheckpointProc(uproc *proc.Proc) (chkptloc string, odPid int, err error) {
+	db.DPrintf(db.UPROCDMGR, "[CheckpointProc %v] run uproc %v", uproc.GetRealm(), uproc)
+	rpcc, err := updm.lookupClnt(uproc.GetRealm(), uproc.GetType())
+	if err != nil {
+		return "", -1, err
+	}
+	return rpcc.CheckpointProc(uproc)
 }
 
 func (updm *UprocdMgr) getClntOrStartUprocd(realm sp.Trealm, ptype proc.Ttype) (*UprocdClnt, error) {

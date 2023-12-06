@@ -18,3 +18,12 @@ message AssignRequest {
 message AssignResult {
   bool oK = 1;
 }
+
+message CheckpointPidRequest {
+  string pidStr = 1;
+}
+
+message CheckpointPidResult {
+  string checkpointLocation = 1;
+  int32 osPid = 2;
+}

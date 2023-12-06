@@ -1,24 +1,54 @@
 package main
 
 import (
-	"log"
-
-	db "sigmaos/debug"
-	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
+	"time"
 )
 
 func main() {
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-	if err != nil {
-		db.DFatalf("NewSigmaClnt: error %v\n", err)
-	}
-	err = sc.Started()
-	if err != nil {
-		db.DFatalf("Started: error %v\n", err)
-	}
 
-	log.Printf("Hello world\n")
+	// sigmaclnt.NewSigmaClntTestVersion(proc.GetProcEnv())
+	// if err != nil {
+	// sc.ClntExit(proc.NewStatus(proc.StatusErr))
+	// }
+	// err = sc.Started()
+	// if err != nil {
+	// sc.ClntExit(proc.NewStatus(proc.StatusErr))
+	// }
 
-	sc.ClntExitOK()
+	timer := time.NewTicker(5 * time.Second)
+
+	<-timer.C
+
+	// sc.ClntExit(proc.NewStatus(proc.StatusOK))
+
+	// ---------------
+
+	// sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	// if err != nil {
+	// 	db.DFatalf("NewSigmaClnt: error %v\n", err)
+	// }
+	// err = sc.Started()
+	// if err != nil {
+	// 	db.DFatalf("Started: error %v\n", err)
+	// }
+
+	// timer := time.NewTicker(5 * time.Second)
+
+	// testDir := sp.S3 + "~any/hmngtestbucket/"
+	// filePath := testDir + "example-out.txt"
+	// dstFd, err := sc.Create(filePath, 0777, sp.OWRITE)
+
+	// for {
+	// 	select {
+	// 	case <-timer.C:
+	// 		sc.Write(dstFd, []byte("exiting"))
+	// 		err = sc.Close(dstFd)
+	// 		sc.ClntExitOK()
+	// 		return
+	// 	default:
+	// 		fmt.Println("here sleep")
+	// 		sc.Write(dstFd, []byte("here sleep"))
+	// 		time.Sleep(2 * time.Second)
+	// 	}
+	// }
 }

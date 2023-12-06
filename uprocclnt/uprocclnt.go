@@ -53,6 +53,20 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 }
 
+func (clnt *UprocdClnt) CheckpointProc(uproc *proc.Proc) (chkptLoc string, osPid int, childErr error) {
+	// run and exit do resource accounting and share rebalancing for the
+	// uprocds.
+	req := &proto.CheckpointPidRequest{
+		PidStr: uproc.ProcEnvProto.PidStr,
+	}
+	res := &proto.CheckpointPidResult{}
+	if err := clnt.RPC("UprocSrv.Checkpoint", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+		return "", -1, err
+	} else {
+		return res.CheckpointLocation, int(res.OsPid), nil
+	}
+}
+
 func (clnt *UprocdClnt) String() string {
 	return fmt.Sprintf("&{ realm:%v ptype:%v share:%v }", clnt.realm, clnt.ptype, clnt.share)
 }

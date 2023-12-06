@@ -59,6 +59,35 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	return sc, nil
 }
 
+func NewSigmaClntTestVersion(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
+	// start := time.Now()
+	// sc, err := NewSigmaClntFsLibTestVersion(pcfg)
+	// if err != nil {
+	// db.DFatalf("NewSigmaClnt: %v", err)
+	// }
+	// db.DPrintf(db.SPAWN_LAT, "[%v] Make FsLib: %v", pcfg.GetPID(), time.Since(start))
+	// start = time.Now()
+	// sc.ProcClnt = procclnt.NewProcClnt(sc.FsLib)
+	// db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", pcfg.GetPID(), time.Since(start))
+	return &SigmaClnt{nil, nil, nil}, nil
+}
+
+func NewSigmaClntFsLibTestVersion(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
+	// fsl, err := fslib.NewFsLib(pcfg)
+	// if err != nil {
+	// db.DFatalf("NewSigmaClnt: %v", err)
+	// }
+	return NewSigmaLeaseClntTestVersion(nil)
+}
+
+func NewSigmaLeaseClntTestVersion(fsl *fslib.FsLib) (*SigmaClnt, error) {
+	// lmc, err := leaseclnt.NewLeaseClnt(fsl)
+	// if err != nil {
+	// return nil, err
+	// }
+	return &SigmaClnt{fsl, nil, nil}, nil
+}
+
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
 func NewSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {

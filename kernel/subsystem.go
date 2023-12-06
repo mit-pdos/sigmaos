@@ -66,7 +66,8 @@ func (s *Subsystem) Run(how proc.Thow, kernelId, localIP string) error {
 		}
 		// XXX don't hard code
 		h := sp.SIGMAHOME
-		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
+		// edited to include /usr/local/sbin for criu and /sbin for iptables
+		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin:/usr/local/sbin:/sbin")
 		s.p.FinalizeEnv(localIP, sp.Tpid(proc.NOT_SET))
 		var r *port.Range
 		up := port.NOPORT

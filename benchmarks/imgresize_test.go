@@ -48,6 +48,12 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	err := imgresized.MkDirs(ji.FsLib, ji.job)
 	assert.Nil(ts.Ts.T, err, "Error MkDirs: %v", err)
 
+	fn := ji.input
+	fns := make([]string, 0, ji.ninputs)
+	for i := 0; i < ji.ninputs; i++ {
+		fns = append(fns, fn)
+	}
+
 	db.DPrintf(db.ALWAYS, "Submit ImgResizeJob tasks")
 	for i := 0; i < ji.ntasks; i++ {
 		err := imgresized.SubmitTaskMulti(ji.SigmaClnt.FsLib, ji.job, fns)
@@ -61,11 +67,6 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v job %v", ji.input, ji.ntasks, ji.mcpu, ji.job)
 	ji.imgd = imgresized.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false, ji.nrounds)
-	fn := ji.input
-	fns := make([]string, 0, ji.ninputs)
-	for i := 0; i < ji.ninputs; i++ {
-		fns = append(fns, fn)
-	}
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
 

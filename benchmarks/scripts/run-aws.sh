@@ -695,16 +695,16 @@ realm_balance_be() {
 #  hotel_dur="20s,20s,20s"
   mrapp=mr-grep-wiki20G-bench.yml
   sl="40s"
-  mem_req=3000
+  mem_req=1500
 #  mem_req=1500
-  n_vm=8
+  n_vm=1
   n_realm=3
   driver_vm=8
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   cmd="
-    export SIGMADEBUG=\"TEST;BENCH;\"; \
+    export SIGMADEBUG=\"TEST;BENCH;MR;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --nrealm $n_realm --mr_mem_req $mem_req > /tmp/bench.out 2>&1
   "
@@ -864,14 +864,18 @@ realm_balance_multi() {
 }
 
 realm_balance_multi_img() {
-#  imgpath="name/s3/~local/9ps3/img/6.jpg"
-  imgpath="name/ux/~local/6.jpg"
-  n_imgresize=10
-  imgresize_nrounds=25
+  imgpath="name/ux/~local/8.jpg"
+  n_imgresize=600
+  n_imgresize_per=1
+  imgresize_nrounds=500
   imgresize_mcpu=0
-  imgresize_mem=250
+  imgresize_mem=1500
+
   hotel_dur="5s,5s,10s,15s,20s,15s"
   hotel_max_rps="250,500,1000,1500,2000,1000"
+#  hotel_dur="20s"
+#  hotel_max_rps="200"
+
   mem_pressure="false"
   hotel_ncache=3
   sl="10s"
@@ -910,9 +914,9 @@ realm_balance_multi_img() {
   aws s3 --profile sigmaos rm --recursive s3://9ps3/img/ > /dev/null
   aws s3 --profile sigmaos cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
   cmd="
-    export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
+    export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceHotelImgResize --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --imgresize_nround $imgresize_nrounds $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceHotelImgResize --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --n_imgresize_per $n_imgresize_per --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --imgresize_nround $imgresize_nrounds $bmem --nclnt $n_clnt_vms > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
   run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true true $swap
@@ -1089,12 +1093,12 @@ mr_k8s() {
 
 img_resize() {
 #  imgpath="name/ux/~local/9ps3/img/6.jpg"
-  imgpath="name/ux/~local/6.jpg"
-  n_imgresize=10
-  imgresize_nrounds=25
-  n_vm=1
-  mcpu=500
-  imgresize_mem=0
+  imgpath="name/ux/~local/8.jpg"
+  n_imgresize=500
+  imgresize_nrounds=32
+  n_vm=8
+  mcpu=0
+  imgresize_mem=1500
   driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
@@ -1108,7 +1112,7 @@ img_resize() {
   aws s3 --profile sigmaos rm --recursive s3://9ps3/img/ > /dev/null
   aws s3 --profile sigmaos cp --recursive s3://9ps3/img-save/ s3://9ps3/img/ > /dev/null
   cmd="
-    export SIGMADEBUG=\"TEST;BENCH;PROCCLNT;PROCCLNT_ERR;\"; \
+    export SIGMADEBUG=\"TEST;BENCH;IMGD;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestImgResize --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $mcpu --imgresize_mem $imgresize_mem > /tmp/bench.out 2>&1
   "
@@ -1423,7 +1427,7 @@ graph_realm_balance_multi_img() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --be_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --legend_on_right --prefix "imgresize-"
+  $GRAPH_SCRIPTS_DIR/aggregate-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --be_realm $REALM2 --hotel_realm $REALM1 --units "Latency (ms),Req/sec,MB/sec" --title "Aggregate Throughput Balancing 2 Realms' Applications" --total_ncore 32 --prefix "imgresize-" #--legend_on_right 
 }
 
 graph_realm_balance_multi_mempressure() {
@@ -1563,14 +1567,14 @@ echo "Running benchmarks with version: $VERSION"
 #schedd_scalability_rs
 #schedd_scalability_rs_single_machine
 #socialnet_tail
-#realm_balance_be
-mr_vs_corral
+realm_balance_be
+#mr_vs_corral
 #realm_balance_be_img
 #schedd_scalability
 
-#img_resize
-
 #realm_balance_multi_img
+
+#img_resize
 
 #realm_balance_multi
 #mr_scalability
@@ -1598,12 +1602,13 @@ mr_vs_corral
 source ~/env/3.10/bin/activate
 #graph_schedd_scalability_rs_hockey
 #graph_schedd_scalability_rs_single_machine
-#graph_realm_balance_be
+graph_realm_balance_be
 #graph_realm_balance_be_img
-graph_start_latency_breakdown
+#graph_start_latency_breakdown
+#graph_start_latency
 #graph_schedd_scalability_rs
 
-graph_mr_vs_corral
+#graph_mr_vs_corral
 #graph_realm_balance_multi_img
 
 #graph_realm_balance_multi

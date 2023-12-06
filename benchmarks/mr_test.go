@@ -39,7 +39,7 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string, m
 
 func (ji *MRJobInstance) PrepareMRJob() {
 	ji.job = mr.ReadJobConfig(path.Join("..", "mr", ji.app))
-	db.DPrintf(db.TEST, "Prepare MR FS %v" ji.jobname)
+	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)
 	mr.InitCoordFS(ji.FsLib, ji.jobname, ji.job.Nreduce)
 	db.DPrintf(db.TEST, "Done prepare MR FS")
 	db.DPrintf(db.TEST, "Prepare MR job %v %v", ji.jobname, ji.job)

@@ -134,7 +134,7 @@ func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResul
 			if err != nil {
 				return err
 			}
-			//			db.DPrintf(db.ALWAYS, "Rate: Put %v bytes in cache for hotelID %v", len(b)+len(key), hotelId)
+			db.DPrintf(db.ALWAYS, "Rate: Put %v bytes in cache for hotelID %v", len(b)+len(key), hotelId)
 
 			//			var span4 trace.Span
 			//			if TRACING {

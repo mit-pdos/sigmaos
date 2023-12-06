@@ -291,6 +291,6 @@ func Run() {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
-	//	go pq.stats()
+	go pq.stats()
 	ssrv.RunServer()
 }

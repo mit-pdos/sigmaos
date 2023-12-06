@@ -306,7 +306,8 @@ func (imgd *ImgSrv) Work() {
 
 	// Try to become the leading coordinator.
 	if err := imgd.leaderclnt.LeadAndFence(nil, []string{path.Join(IMG, imgd.job)}); err != nil {
-		db.DFatalf("LeadAndFence err %v", err)
+		sts, err2 := imgd.GetDir(IMG)
+		db.DFatalf("LeadAndFence err %v sts %v err2 %v", err, sp.Names(sts), err2)
 	}
 
 	db.DPrintf(db.ALWAYS, "leader %s", imgd.job)

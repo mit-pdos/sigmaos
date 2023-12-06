@@ -206,6 +206,7 @@ def setup_graph(nplots, units, total_ncore):
   plt.xlabel("Time (sec)")
   for idx in range(len(tptax)):
     tptax[idx].set_ylabel(ylabels[idx])
+    tptax[idx].locator_params(axis='y', nbins=4)
   if nplots == 1:
     # Only put cores on the same graph for BE aggr tpt graph.
     for ax in tptax:

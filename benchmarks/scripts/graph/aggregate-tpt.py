@@ -214,6 +214,7 @@ def setup_graph(nplots, units, total_ncore):
   for ax in coresax:
     ax.set_ylim((0, total_ncore + 5))
     ax.set_ylabel("Cores Utilized")
+    ax.set_yticks([0, 16, 32])
   return fig, tptax, coresax
 
 def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right):
@@ -287,9 +288,9 @@ def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, tota
     # If we are dealing with multiple realms...
     if len(procd_tpts) > 1:
       line_style = "solid"
-      marker = "D"
+      marker = ""
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Hotel (LC) CPU", "blue", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "Hotel (LC)", "blue", line_style, marker)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
       p = add_data_to_graph(coresax[0], x, y, "{} (BE) CPU".format(tmod), "orange", line_style, marker)

@@ -191,7 +191,7 @@ def setup_graph(nplots, units, total_ncore):
     tptax[idx].set_ylabel(ylabels[idx])
   for ax in coresax:
     ax.set_ylim((0, total_ncore + 5))
-    ax.set_yticks(np.arange(0, total_ncore + 5), minor=True)
+    ax.set_yticks([0, 16, 32])
     ax.set_ylabel("Cores Utilized")
   return fig, tptax, coresax
 
@@ -241,7 +241,7 @@ def graph_data(input_dir, title, prefix, out, nrealm, units, total_ncore, percen
     plots.append(p)
   # If we are dealing with multiple realms...
   line_style = "solid"
-  marker = "D"
+  marker = ""
   for i in range(nrealm):
     x, y = buckets_to_lists(dict(procd_tpts[i][0]))
     p = add_data_to_graph(coresax[0], x, y, "Realm {} Cores".format(i + 1), colors[i], line_style, marker)

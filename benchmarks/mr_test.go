@@ -41,7 +41,7 @@ func (ji *MRJobInstance) PrepareMRJob() {
 	ji.job = mr.ReadJobConfig(path.Join("..", "mr", ji.app))
 	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)
 	mr.InitCoordFS(ji.FsLib, ji.jobname, ji.job.Nreduce)
-	db.DPrintf(db.TEST, "Done prepare MR FS")
+	db.DPrintf(db.TEST, "Done prepare MR FS %v", ji.jobname)
 	db.DPrintf(db.TEST, "Prepare MR job %v %v", ji.jobname, ji.job)
 	nmap, err := mr.PrepareJob(ji.FsLib, ji.jobname, ji.job)
 	db.DPrintf(db.TEST, "Done prepare MR job %v %v", ji.jobname, ji.job)

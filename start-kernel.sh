@@ -102,6 +102,7 @@ KERNELID=$1
 mkdir -p /tmp/sigmaos
 mkdir -p /tmp/sigmaos-bin
 mkdir -p /tmp/sigmaos-perf
+mkdir -p /tmp/sigmaos-data
 chmod a+w /tmp/sigmaos-perf
 
 # Pull latest docker images
@@ -131,6 +132,7 @@ CID=$(docker run -dit\
              --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock\
              --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup\
              --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos\
+             --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data\
              --mount type=bind,src=/tmp/sigmaos-bin,dst=/home/sigmaos/bin/user/realms\
              --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\
              --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\

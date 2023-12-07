@@ -112,7 +112,7 @@ func NewCoord(args []string) (*Coord, error) {
 
 	c.Started()
 
-	c.leaderclnt, err = leaderclnt.NewLeaderClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
+	c.leaderclnt, err = leaderclnt.NewLeaderClnt(c.FsLib, LeaderElectDir(c.job)+"/coord-leader", 0)
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: NewLeaderclnt err %v", err)
 	}

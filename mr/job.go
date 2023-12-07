@@ -27,6 +27,7 @@ const (
 const (
 	MR          = "/mr/"
 	MRDIRTOP    = "name/" + MR
+	MRDIRELECT  = "name/mr-elect"
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"
 	JOBSEM      = "jobsem"
@@ -42,6 +43,10 @@ func JobOutLink(job string) string {
 
 func JobIntOutLink(job string) string {
 	return path.Join(JobDir(job), INT_OUTLINK)
+}
+
+func LeaderElectDir(job string) string {
+	return path.Join(MRDIRELECT, job)
 }
 
 func JobDir(job string) string {
@@ -129,6 +134,7 @@ func ReadJobConfig(app string) *Job {
 func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 	fsl.MkDir(MRDIRTOP, 0777)
 	dirs := []string{
+		LeaderElectDir(jobname),
 		JobDir(jobname),
 		MapTask(jobname),
 		ReduceTask(jobname),

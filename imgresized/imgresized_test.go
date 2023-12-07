@@ -109,7 +109,7 @@ func TestImgdFatal(t *testing.T) {
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(ts.T, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0)
 	fn := path.Join(sp.S3, "~local/9ps3/img-save/", "yyy.jpg")
 
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
@@ -130,7 +130,7 @@ func (ts *Tstate) imgdJob(paths []string) {
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(ts.T, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0)
 
 	for _, pn := range paths {
 		db.DPrintf(db.TEST, "submit %v\n", pn)
@@ -183,7 +183,7 @@ func TestImgdRestart(t *testing.T) {
 	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
 	assert.Nil(t, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1)
+	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0)
 
 	time.Sleep(2 * time.Second)
 

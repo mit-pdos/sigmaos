@@ -156,7 +156,7 @@ def finalize_graph(fig, ax, plots, title, out, maxval):
   for p in plots[1:]:
     lns += p
   labels = [ l.get_label() for l in lns ]
-  ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 3))
+  ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=len(labels))
   for idx in range(len(ax)):
     ax[idx].set_xlim(left=0)
     ax[idx].set_ylim(bottom=0)

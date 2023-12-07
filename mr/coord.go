@@ -228,18 +228,16 @@ func (c *Coord) waitForTask(start time.Time, ch chan Tresult, dir string, p *pro
 	}
 }
 
-func (c *Coord) runTasks(ch chan Tresult, dir string, taskNames []string, f func(string) *proc.Proc) {
-	db.DPrintf(db.MR, "runTasks %v", taskNames)
-	for _, tn := range taskNames {
-		t := f(tn)
-		db.DPrintf(db.MR, "prep to spawn task %v %v", t.GetPid(), t.Args)
-		start := time.Now()
-		err := c.Spawn(t)
-		if err != nil {
-			db.DFatalf("Err spawn task: %v", err)
-		}
-		go c.waitForTask(start, ch, dir, t, tn)
+func (c *Coord) runTask(ch chan Tresult, dir string, taskName string, f func(string) *proc.Proc) {
+	db.DPrintf(db.MR, "runTask %v", taskName)
+	t := f(taskName)
+	db.DPrintf(db.MR, "prep to spawn task %v %v", t.GetPid(), t.Args)
+	start := time.Now()
+	err := c.Spawn(t)
+	if err != nil {
+		db.DFatalf("Err spawn task: %v", err)
 	}
+	go c.waitForTask(start, ch, dir, t, taskName)
 }
 
 func newStringSlice(data []interface{}) []string {
@@ -252,6 +250,8 @@ func newStringSlice(data []interface{}) []string {
 
 func (c *Coord) startTasks(ch chan Tresult, dir string, f func(string) *proc.Proc) int {
 	taskNames := []string{}
+	start := time.Now()
+	prev := time.Now()
 	for {
 		t, err := c.getTask(dir)
 		if err != nil {
@@ -260,9 +260,12 @@ func (c *Coord) startTasks(ch chan Tresult, dir string, f func(string) *proc.Pro
 		if t == "" {
 			break
 		}
+		db.DPrintf(db.MR, "startTasks time between spawns: %v", time.Since(prev))
+		c.runTask(ch, dir, t, f)
+		prev = time.Now()
 		taskNames = append(taskNames, t)
 	}
-	c.runTasks(ch, dir, taskNames, f)
+	db.DPrintf(db.MR, "startTasks getTasks time: %v", time.Since(start))
 	return len(taskNames)
 }
 
@@ -368,9 +371,15 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
+	start := time.Now()
 	c.recover(MapTask(c.job))
+	db.DPrintf(db.MR, "Recover map tasks took %v", time.Since(start))
+	start = time.Now()
 	c.recover(ReduceTask(c.job))
+	db.DPrintf(db.MR, "Recover reduce tasks took %v", time.Since(start))
+	start = time.Now()
 	c.doRestart()
+	db.DPrintf(db.MR, "doRestart took %v", time.Since(start))
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)

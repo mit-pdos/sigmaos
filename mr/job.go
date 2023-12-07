@@ -133,6 +133,7 @@ func ReadJobConfig(app string) *Job {
 
 func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 	fsl.MkDir(MRDIRTOP, 0777)
+	fsl.MkDir(MRDIRELECT, 0777)
 	dirs := []string{
 		LeaderElectDir(jobname),
 		JobDir(jobname),

@@ -159,8 +159,8 @@ func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {
 	return st.Name, nil
 }
 
-func (c *Coord) getTask(dir string) (string, error) {
-	t := ""
+func (c *Coord) getTasks(dir string) ([]string, error) {
+	tns := make([]string, 0)
 	stopped, err := c.ProcessDir(dir, func(st *sp.Stat) (bool, error) {
 		t1, err := c.claimEntry(dir, st)
 		if err != nil {
@@ -169,17 +169,17 @@ func (c *Coord) getTask(dir string) (string, error) {
 		if t1 == "" {
 			return false, nil
 		}
-		t = t1
+		tns = append(tns, t1)
 		return true, nil
 
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if stopped {
-		return t, nil
+		return tns, nil
 	}
-	return "", nil
+	return nil, nil
 }
 
 type Tresult struct {
@@ -228,16 +228,18 @@ func (c *Coord) waitForTask(start time.Time, ch chan Tresult, dir string, p *pro
 	}
 }
 
-func (c *Coord) runTask(ch chan Tresult, dir string, taskName string, f func(string) *proc.Proc) {
-	db.DPrintf(db.MR, "runTask %v", taskName)
-	t := f(taskName)
-	db.DPrintf(db.MR, "prep to spawn task %v %v", t.GetPid(), t.Args)
-	start := time.Now()
-	err := c.Spawn(t)
-	if err != nil {
-		db.DFatalf("Err spawn task: %v", err)
+func (c *Coord) runTasks(ch chan Tresult, dir string, taskNames []string, f func(string) *proc.Proc) {
+	db.DPrintf(db.MR, "runTasks %v", taskNames)
+	for _, tn := range taskNames {
+		t := f(tn)
+		db.DPrintf(db.MR, "prep to spawn task %v %v", t.GetPid(), t.Args)
+		start := time.Now()
+		err := c.Spawn(t)
+		if err != nil {
+			db.DFatalf("Err spawn task: %v", err)
+		}
+		go c.waitForTask(start, ch, dir, t, tn)
 	}
-	go c.waitForTask(start, ch, dir, t, taskName)
 }
 
 func newStringSlice(data []interface{}) []string {
@@ -251,21 +253,18 @@ func newStringSlice(data []interface{}) []string {
 func (c *Coord) startTasks(ch chan Tresult, dir string, f func(string) *proc.Proc) int {
 	taskNames := []string{}
 	start := time.Now()
-	prev := time.Now()
 	for {
-		t, err := c.getTask(dir)
+		tns, err := c.getTasks(dir)
 		if err != nil {
-			db.DFatalf("getTask %v err %v\n", dir, err)
+			db.DFatalf("getTasks %v err %v\n", dir, err)
 		}
-		if t == "" {
+		if len(tns) == 0 {
 			break
 		}
-		db.DPrintf(db.MR, "startTasks time between spawns: %v", time.Since(prev))
-		c.runTask(ch, dir, t, f)
-		prev = time.Now()
-		taskNames = append(taskNames, t)
+		taskNames = append(taskNames, tns...)
 	}
 	db.DPrintf(db.MR, "startTasks getTasks time: %v", time.Since(start))
+	c.runTasks(ch, dir, taskNames, f)
 	return len(taskNames)
 }
 

@@ -226,7 +226,7 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 }
 
 func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int, memPerTask proc.Tmem) *groupmgr.GroupMgr {
-	cfg := groupmgr.NewGroupConfig(ncoord, "mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz), strconv.Itoa(int(memPerTask))}, 0, jobname)
+	cfg := groupmgr.NewGroupConfig(ncoord, "mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz), strconv.Itoa(int(memPerTask))}, 1000, jobname)
 	cfg.SetTest(crashcoord, 0, 0)
 	return cfg.StartGrpMgr(sc, ncoord)
 }

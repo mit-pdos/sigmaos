@@ -1,6 +1,6 @@
 app: "grep"
 nreduce: 1
-binsz: 134217728
+binsz: 67108864
 input: "name/ux/~local/data/wiki-20G"
 intermediate: "name/ux/~local/mr-intermediate"
 #output: "name/ux/~local/"

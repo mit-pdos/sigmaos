@@ -60,4 +60,6 @@ message PortResult {
   int32 hostPort = 2;
 }
 
-
+message XResult {
+  int32 realmPort = 1;
+}

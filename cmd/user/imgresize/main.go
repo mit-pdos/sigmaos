@@ -94,8 +94,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	db.DPrintf(db.ALWAYS, "Resize (%v/%v) %v", i, len(t.inputs), t.inputs[i])
 	rdr, err := t.OpenReader(t.inputs[i])
 	if err != nil {
-		db.DFatalf("Error open file %v", err)
-		return proc.NewStatusErr("File not found", err)
+		return proc.NewStatusErr(fmt.Sprintf("File %v not found", t.inputs[i]), err)
 	}
 	//	prdr := perf.NewPerfReader(rdr, t.p)
 	db.DPrintf(db.ALWAYS, "Time %v open: %v", t.inputs[i], time.Since(do))
@@ -126,7 +125,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	dcw := time.Now()
 	wrt, err := t.CreateWriter(output, 0777, sp.OWRITE)
 	if err != nil {
-		db.DFatalf("Open output %v error: %v", output, err)
+		return proc.NewStatusErr(fmt.Sprintf("Open output failed %v", output), err)
 	}
 	//	pwrt := perf.NewPerfWriter(wrt, t.p)
 	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.inputs[i], time.Since(dcw))

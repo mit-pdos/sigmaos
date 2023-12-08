@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -17,6 +17,7 @@ MONGOIP="x.x.x.x"
 NET="host"
 KERNELID=""
 OVERLAYS="false"
+GVISOR="false"
 RMCPU="0"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
@@ -55,6 +56,10 @@ while [[ "$#" -gt 1 ]]; do
   --overlays)
     shift
     OVERLAYS="true"
+    ;;
+  --gvisor)
+    shift
+    GVISOR="true"
     ;;
   --named)
     shift
@@ -97,6 +102,7 @@ KERNELID=$1
 mkdir -p /tmp/sigmaos
 mkdir -p /tmp/sigmaos-bin
 mkdir -p /tmp/sigmaos-perf
+mkdir -p /tmp/sigmaos-data
 chmod a+w /tmp/sigmaos-perf
 
 # Pull latest docker images
@@ -126,9 +132,12 @@ CID=$(docker run -dit\
              --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock\
              --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup\
              --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos\
+             --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data\
              --mount type=bind,src=/tmp/sigmaos-bin,dst=/home/sigmaos/bin/user/realms\
              --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\
              --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\
+             --pid host\
+             --privileged\
              --network ${NET}\
              --name ${KERNELID}\
              -e kernelid=${KERNELID}\
@@ -137,6 +146,7 @@ CID=$(docker run -dit\
              -e dbip=${DBIP}\
              -e mongoip=${MONGOIP}\
              -e overlays=${OVERLAYS}\
+             -e gvisor=${GVISOR}\
              -e SIGMAPERF=${SIGMAPERF}\
              -e SIGMADEBUG=${SIGMADEBUG}\
              -e reserveMcpu=${RMCPU}\

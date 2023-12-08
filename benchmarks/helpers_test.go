@@ -84,8 +84,8 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	}
 }
 
-func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) time.Duration {
-	p := proc.NewProc("spawn-latency", nil)
+func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, prog string) time.Duration {
+	p := proc.NewProc(prog, nil)
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
@@ -320,13 +320,13 @@ func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps stri
 }
 
 // ========== ImgResize Helpers ==========
-func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int) ([]*ImgResizeJobInstance, []interface{}) {
+func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) ([]*ImgResizeJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*ImgResizeJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, mcpu, mem, nrounds)
+		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, mcpu, mem, nrounds, imgdmcpu)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

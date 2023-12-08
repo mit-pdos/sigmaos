@@ -136,7 +136,7 @@ func RunFrontendSrv(public bool, job string) error {
 	go http.Serve(l, mux)
 	//		}
 
-	a, err := netsigma.QualifyAddr(l.Addr().String())
+	a, err := netsigma.QualifyAddrLocalIP(frontend.ProcEnv().GetLocalIP(), l.Addr().String())
 	if err != nil {
 		dbg.DFatalf("QualifyAddr %v err %v", a, err)
 	}

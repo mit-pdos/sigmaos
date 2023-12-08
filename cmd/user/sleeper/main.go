@@ -118,14 +118,19 @@ func (s *Sleeper) waitEvict(ch chan *proc.Status) {
 }
 
 func (s *Sleeper) sleep(ch chan *proc.Status) {
+	db.DPrintf(db.SLEEPER, "Pre sleep")
 	time.Sleep(s.sleepLength)
+	db.DPrintf(db.SLEEPER, "Post sleep")
 	if s.outdir != "" {
 		fpath := path.Join(s.outdir, s.ProcEnv().GetPID().String()+"_out")
+		db.DPrintf(db.SLEEPER, "PutFile")
 		_, err := s.PutFile(fpath, 0777, sp.OWRITE, []byte("hello"))
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error: Newfile %v in Sleeper.Work: %v\n", fpath, err)
+			db.DPrintf(db.SLEEPER, "Error: Newfile %v in Sleeper.Work: %v\n", fpath, err)
 		}
+		db.DPrintf(db.SLEEPER, "PutFile done")
 	}
+	db.DPrintf(db.SLEEPER, "Send on channel")
 	// Measure latency of all ops except for Exited.
 	ch <- proc.NewStatusInfo(proc.StatusOK, "elapsed time", time.Since(s.Time))
 }
@@ -135,9 +140,12 @@ func (s *Sleeper) Work() {
 	go s.waitEvict(ch)
 	go s.sleep(ch)
 	status := <-ch
+	db.DPrintf(db.SLEEPER, "Recv status %v", status)
 	if !s.native {
 		start := time.Now()
+		db.DPrintf(db.SLEEPER, "Exiting")
 		s.ClntExit(status)
+		db.DPrintf(db.SLEEPER, "Exiting done")
 		db.DPrintf(db.SLEEPER_TIMING, "Elapsed %v us", time.Since(start).Microseconds())
 	}
 }

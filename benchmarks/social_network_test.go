@@ -36,19 +36,19 @@ var MONGO_URL string
 
 func getDefaultSrvs() []sn.Srv {
 	return []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-home", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-compose", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-frontend", test.Overlays, 1000}}
+		sn.Srv{"socialnetwork-user", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-graph", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-post", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-timeline", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-home", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-url", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-text", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-compose", test.Overlays, 2000},
+		sn.Srv{"socialnetwork-frontend", test.Overlays, 2000}}
 }
 
 func init() {
-	flag.StringVar(&MONGO_URL, "mongourl", "172.17.0.3:27017", "Addr of mongo server.")
+	flag.StringVar(&MONGO_URL, "mongourl", "10.10.1.1:4407", "Addr of mongo server.")
 }
 
 type snFn func(wc *sn.WebClnt, r *rand.Rand)

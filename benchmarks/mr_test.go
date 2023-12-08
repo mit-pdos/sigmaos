@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "sigmaos/debug"
 	"sigmaos/groupmgr"
 	"sigmaos/mr"
 	"sigmaos/perf"
@@ -38,14 +39,19 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string, m
 
 func (ji *MRJobInstance) PrepareMRJob() {
 	ji.job = mr.ReadJobConfig(path.Join("..", "mr", ji.app))
+	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)
 	mr.InitCoordFS(ji.FsLib, ji.jobname, ji.job.Nreduce)
+	db.DPrintf(db.TEST, "Done prepare MR FS %v", ji.jobname)
+	db.DPrintf(db.TEST, "Prepare MR job %v %v", ji.jobname, ji.job)
 	nmap, err := mr.PrepareJob(ji.FsLib, ji.jobname, ji.job)
+	db.DPrintf(db.TEST, "Done prepare MR job %v %v", ji.jobname, ji.job)
 	ji.nmap = nmap
 	assert.Nil(ji.Ts.T, err, "Error PrepareJob: %v", err)
 	assert.NotEqual(ji.Ts.T, 0, nmap, "Error PrepareJob nmap 0")
 }
 
 func (ji *MRJobInstance) StartMRJob() {
+	db.DPrintf(db.TEST, "Start MR job %v %v", ji.jobname, ji.job)
 	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0, ji.memreq)
 }
 
@@ -54,5 +60,5 @@ func (ji *MRJobInstance) Wait() {
 }
 
 func (ji *MRJobInstance) WaitJobExit() {
-	ji.cm.Wait()
+	ji.cm.WaitGroup()
 }

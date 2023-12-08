@@ -84,6 +84,7 @@ def graph_stats(stats_summary, out):
   ax[1].plot(x, p99, label="P99 latency")
   ax[0].set_ylabel("Procs/sec")
   ax[1].set_ylabel("Start Latency (ms)")
+  ax[1].set_xlabel("# of VMs in σOS deployment")
 #  ax[0].set_xlim(left=1)
 #  ax[1].set_xlim(left=1)
   ax[0].set_ylim(bottom=0)
@@ -91,9 +92,9 @@ def graph_stats(stats_summary, out):
   ax[0].legend()
   ax[1].legend()
   plt.xticks(x)
-  plt.xlabel("Number of machines")
+#  plt.xlabel("Number of machines")
   fig.align_ylabels(ax)
-  plt.savefig(out)
+  plt.savefig(out, bbox_inches='tight')
 
 def print_stats_summary(stats_summary):
   for n_vm, ss in stats_summary:

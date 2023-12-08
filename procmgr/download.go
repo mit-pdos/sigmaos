@@ -62,12 +62,14 @@ func (mgr *ProcMgr) downloadProcBin(realm sp.Trealm, prog, buildTag string) erro
 	commonBins := path.Join(sp.UXBIN, "user", "common")
 	// Search order:
 	// 1. Try to copy from the local bin cache (user bins will be here when built locally).
-	// 2. Try the shared to download from the realm's s3 bucket.
-	// 3. Try the global version repo.
+	// 2. Try the global version repo.
 	paths := []string{
 		commonBins,
-		path.Join(sp.S3, "~local", realm.String(), "/bin"),
 		path.Join(sp.S3, "~local", buildTag, "/bin"),
+	}
+	// For user bins, go straight to S3 instead of checking locally first.
+	if sp.Target != "local" && prog != "named" && prog != "spawn-latency-ux" {
+		paths = paths[1:]
 	}
 	var err error
 	for _, pp := range paths {

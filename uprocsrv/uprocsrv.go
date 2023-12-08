@@ -14,7 +14,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
-	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -26,7 +25,7 @@ import (
 )
 
 type UprocSrv struct {
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	ch       chan struct{}
 	pcfg     *proc.ProcEnv
 	ssrv     *sigmasrv.SigmaSrv
@@ -34,14 +33,15 @@ type UprocSrv struct {
 	procs    map[string]chan container.CheckpointSignal
 	criuInst *criu.Criu
 	kernelId string
+	realm    sp.Trealm
+	assigned bool
 }
 
 func RunUprocSrv(kernelId string, up string) error {
 	pcfg := proc.GetProcEnv()
 	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), procs: make(map[string]chan container.CheckpointSignal), criuInst: criu.MakeCriu()}
 
-	ip, _ := netsigma.LocalIP()
-	db.DPrintf(db.UPROCD, "Run %v %v %s IP %s", kernelId, up, os.Environ(), ip)
+	db.DPrintf(db.UPROCD, "Run %v %v %s IP %s", kernelId, up, os.Environ(), pcfg.GetLocalIP())
 
 	var ssrv *sigmasrv.SigmaSrv
 	var err error
@@ -102,22 +102,57 @@ func shrinkMountTable() error {
 	return nil
 }
 
-func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.AssignResult) error {
-	realm := sp.Trealm(req.RealmStr)
+func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
+	ups.mu.RLock()
+	defer ups.mu.RUnlock()
+
+	// If already assigned, bail out
+	if ups.assigned {
+		return nil
+	}
+
+	// Promote lock
+	ups.mu.RUnlock()
+	ups.mu.Lock()
+	// If already assigned, demote lock & bail out
+	if ups.assigned {
+		ups.mu.Unlock()
+		ups.mu.RLock()
+		return nil
+	}
+
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v", realm)
 	err := container.MountRealmBinDir(realm)
 	if err != nil {
 		db.DFatalf("Error mount realm bin dir: %v", err)
 	}
+
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v done", realm)
+	// Note that the uprocsrv has been assigned.
+	ups.assigned = true
+
+	// Demote to reader lock
+	ups.mu.Unlock()
+	ups.mu.RLock()
+
+	return err
+}
+
+func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.AssignResult) error {
+	// no-op
 	res.OK = true
 	return nil
 }
 
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
-	db.DPrintf(db.UPROCD, "Get uproc %v", uproc)
+	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
+	// Assign this uprocsrv to the realm, if not already assigned.
+	if err := ups.assignToRealm(uproc.GetRealm()); err != nil {
+		db.DFatalf("Err assign to realm: %v", err)
+	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+
 	procChan := make(chan container.CheckpointSignal)
 	ups.procs[uproc.ProcEnvProto.PidStr] = procChan
 

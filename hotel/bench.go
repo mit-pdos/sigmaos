@@ -23,10 +23,10 @@ func RandSearchReq(wc *WebClnt, r *rand.Rand) error {
 	if out_date <= 9 {
 		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
 	}
-	//	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
-	//	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
-	lat := 38.0235 + (float64(r.Intn(481*nhotel/80))-240.5)/1000.0
-	lon := -122.095 + (float64(r.Intn(325*nhotel/80))-157.0)/1000.0
+	lat := 38.0235 + (float64(r.Intn(481))-240.5)/1000.0
+	lon := -122.095 + (float64(r.Intn(325))-157.0)/1000.0
+	//	lat := 38.0235 + (float64(r.Intn(481*nhotel/80))-240.5)/1000.0
+	//	lon := -122.095 + (float64(r.Intn(325*nhotel/80))-157.0)/1000.0
 	return wc.Search(in_date_str, out_date_str, lat, lon)
 }
 

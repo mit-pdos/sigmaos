@@ -304,7 +304,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l2, crashchan)
 	}
 
-	cm.Wait()
+	cm.WaitGroup()
 
 	for i := 0; i < crashprocd+crashux; i++ {
 		<-crashchan

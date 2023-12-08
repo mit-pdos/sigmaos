@@ -39,6 +39,7 @@ type Param struct {
 	Dbip        string
 	Mongoip     string
 	Overlays    bool
+	GVisor      bool
 	ReserveMcpu string
 }
 
@@ -66,6 +67,7 @@ func NewKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 	}
 	db.DPrintf(db.KERNEL, "NewKernel ip %v", ip)
 	k.ip = ip
+	pcfg.SetLocalIP(ip)
 	if p.Services[0] == sp.KNAMED {
 		if err := k.bootKNamed(pcfg, true); err != nil {
 			return nil, err

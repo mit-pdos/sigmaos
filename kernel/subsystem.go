@@ -44,6 +44,7 @@ func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Th
 func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.Thow, mcpu proc.Tmcpu) (*Subsystem, error) {
 	pid := sp.GenPid(program)
 	p := proc.NewPrivProcPid(pid, program, args, true)
+	p.GetProcEnv().SetLocalIP(k.ip)
 	p.SetMcpu(mcpu)
 	ss := newSubsystem(k.ProcClnt, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelId, k.ip)
@@ -75,7 +76,7 @@ func (s *Subsystem) Run(how proc.Thow, kernelId, localIP string) error {
 			r = &port.Range{FPORT, LPORT}
 			up = r.Fport
 		}
-		c, err := container.StartPContainer(s.p, kernelId, r, up)
+		c, err := container.StartPContainer(s.p, kernelId, r, up, s.k.Param.GVisor)
 		if err != nil {
 			return err
 		}
@@ -83,6 +84,10 @@ func (s *Subsystem) Run(how proc.Thow, kernelId, localIP string) error {
 	}
 	err := s.WaitStartKernelProc(s.p.GetPid(), how)
 	return err
+}
+
+func (ss *Subsystem) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
+	return ss.container.AssignToRealm(realm, ptype)
 }
 
 func (ss *Subsystem) SetCPUShares(shares int64) error {

@@ -3,8 +3,10 @@ package netsigma
 import (
 	"fmt"
 	"net"
+	"runtime/debug"
 	"strings"
 
+	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 )
 
@@ -44,16 +46,25 @@ func swap(addrs sp.Taddrs, i int) sp.Taddrs {
 }
 
 func QualifyAddr(addr string) (string, error) {
+	return QualifyAddrLocalIP("", addr)
+}
+
+func QualifyAddrLocalIP(lip string, addr string) (string, error) {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
+		db.DFatalf("Err split host port %v: %v", addr, err)
 		return "", err
 	}
 	if host == "::" {
-		ip, err := LocalIP()
-		if err != nil {
-			return "", err
+		if lip == "" {
+			ip, err := LocalIP()
+			if err != nil {
+				db.DFatalf("LocalIP \"%v\" %v", addr, err)
+				return "", err
+			}
+			lip = ip
 		}
-		addr = net.JoinHostPort(ip, port)
+		addr = net.JoinHostPort(lip, port)
 	}
 	return addr, nil
 }
@@ -93,6 +104,7 @@ func localIPs() ([]net.IP, error) {
 	var ips []net.IP
 	ifaces, err := net.Interfaces()
 	if err != nil {
+		db.DFatalf("Err Get net interfaces %v: %v\n%s", ifaces, err, debug.Stack())
 		return nil, err
 	}
 	for _, i := range ifaces {

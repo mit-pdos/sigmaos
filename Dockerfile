@@ -63,6 +63,7 @@ ENV boot named
 ENV dbip x.x.x.x
 ENV mongoip x.x.x.x
 ENV overlays "false"
+ENV gvisor "false"
 # Install docker-cli
 RUN apk add --update docker openrc
 ENV reserveMcpu "0"
@@ -78,9 +79,10 @@ COPY --from=sigma-build-kernel /home/sigmaos/create-net.sh /home/sigmaos/bin/ker
 # Copy named bin
 RUN mkdir -p /home/sigmaos/bin/user/common && \
   cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
+COPY --from=sigma-build-user-rust /home/sigmaos/bin/user/spawn-latency /home/sigmaos/bin/user/common/spawn-latency-ux
 # Copy linux bins
 COPY --from=sigma-build-kernel /home/sigmaos/bin/linux /home/sigmaos/bin/linux
-CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu}"]
+CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${gvisor}"]
 
 # ========== kernel image, including user binaries ==========
 FROM sigmaos AS sigmaos-with-userbin
@@ -88,4 +90,4 @@ COPY --from=sigma-build-user /home/sigmaos/bin/user /home/sigmaos/bin/user
 COPY --from=sigma-build-user-rust /home/sigmaos/bin/user/* /home/sigmaos/bin/user/common/
 RUN cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
 
-CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu}"]
+CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${gvisor}"]

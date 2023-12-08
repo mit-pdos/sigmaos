@@ -46,6 +46,15 @@ func (cfs *cgroupFs) readFile(p string, fn parseFn) (uint64, error) {
 	return fn(f)
 }
 
+func (cfs *cgroupFs) readFileMulti(p string, fn parseFnMulti) ([]int, error) {
+	f, err := cfs.getFile(p, os.O_RDONLY)
+	if err != nil {
+		db.DPrintf(db.CGROUP_ERR, "Error get FD: %v", err)
+		return nil, err
+	}
+	return fn(f)
+}
+
 // Write the value of a file.
 func (cfs *cgroupFs) writeFile(p string, val uint64) error {
 	f, err := cfs.getFile(p, os.O_RDWR)

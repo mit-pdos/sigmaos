@@ -26,6 +26,28 @@ func NewProcState() *ProcState {
 	}
 }
 
+func (ps *ProcState) GetProcs() []*proc.Proc {
+	ps.Lock()
+	defer ps.Unlock()
+
+	procs := make([]*proc.Proc, 0, len(ps.spawned))
+	for _, p := range ps.spawned {
+		procs = append(procs, p)
+	}
+	return procs
+}
+
+func (ps *ProcState) Lookup(n string) (*proc.Proc, bool) {
+	if p, ok := ps.spawned[sp.Tpid(n)]; ok {
+		return p, ok
+	}
+	return nil, false
+}
+
+func (ps *ProcState) Len() int {
+	return len(ps.spawned)
+}
+
 func (ps *ProcState) spawn(p *proc.Proc) {
 	ps.Lock()
 	defer ps.Unlock()

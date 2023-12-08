@@ -171,6 +171,9 @@ else
   ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; git clone git@g.csail.mit.edu:sigmaos; (cd sigmaos; go mod download;)'
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
+  # Load apparmor profile
+  cd sigmaos
+  sudo apparmor_parser -r container/sigmaos-uproc
 fi
 
 if [ -d "corral" ] 

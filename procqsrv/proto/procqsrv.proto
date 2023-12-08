@@ -7,6 +7,7 @@ option go_package = "sigmaos/procqsrv/proto";
 service ProcQ {
   rpc Enqueue(EnqueueRequest) returns (EnqueueResponse);
   rpc GetProc(GetProcRequest) returns (GetProcResponse);
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
 }
 
 message EnqueueRequest {
@@ -26,4 +27,11 @@ message GetProcResponse {
   bool oK = 1;
   uint32 mem = 2;
   uint32 qLen = 3;
+}
+
+message GetStatsRequest {
+}
+
+message GetStatsResponse {
+  map<string, int64> nqueued = 1;
 }

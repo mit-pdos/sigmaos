@@ -362,18 +362,27 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 
 // ========== EVICT ==========
 
+func (clnt *ProcClnt) evictAt(pid sp.Tpid, kernelID string, how proc.Thow) error {
+	return clnt.notify(scheddclnt.EVICT, pid, kernelID, proc.EVICT_SEM, how, nil, false)
+}
+
 func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
 	kernelID, err := clnt.cs.GetKernelID(pid)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error Evict can't get kernel ID for proc: %v", err)
 		return err
 	}
-	return clnt.notify(scheddclnt.EVICT, pid, kernelID, proc.EVICT_SEM, how, nil, false)
+	return clnt.evictAt(pid, kernelID, how)
 }
 
 // Notifies a proc that it will be evicted using Evict. Called by parent.
 func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
 	return clnt.evict(pid, proc.HSCHEDD)
+}
+
+// For use by realmd when evicting procs for fairness
+func (clnt *ProcClnt) EvictRealmProc(pid sp.Tpid, kernelID string) error {
+	return clnt.evictAt(pid, kernelID, proc.HSCHEDD)
 }
 
 func (clnt *ProcClnt) EvictKernelProc(pid sp.Tpid, how proc.Thow) error {

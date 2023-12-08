@@ -10,6 +10,7 @@ import (
 
 	// db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -17,7 +18,8 @@ import (
 var pathname string // e.g., --path "name/ux/~local/fslibtest"
 
 func init() {
-	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
+	// use a memfs file system
+	flag.StringVar(&pathname, "path", "name/schedd/~local/", "path for file system")
 }
 
 func TestPipeBasic(t *testing.T) {
@@ -29,7 +31,8 @@ func TestPipeBasic(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		fsl, err := fslib.NewFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+		fsl, err := fslib.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
@@ -63,7 +66,8 @@ func TestPipeClose(t *testing.T) {
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		fsl, err := fslib.NewFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+		fsl, err := fslib.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
@@ -102,7 +106,8 @@ func TestPipeRemove(t *testing.T) {
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		fsl, err := fslib.NewFsLibAddr("reader", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+		fsl, err := fslib.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OREAD)
 		assert.NotNil(ts.T, err, "Open")
@@ -124,7 +129,8 @@ func TestPipeCrash0(t *testing.T) {
 	assert.Nil(ts.T, err, "NewPipe")
 
 	go func() {
-		fsl, err := fslib.NewFsLibAddr("writer", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+		fsl, err := fslib.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OWRITE)
 		assert.Nil(ts.T, err, "Open")
@@ -151,7 +157,9 @@ func TestPipeCrash1(t *testing.T) {
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
 
-	fsl1, err := fslib.NewFsLibAddr("w1", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+	fsl1, err := fslib.NewFsLib(pcfg)
+
 	assert.Nil(t, err)
 	go func() {
 		// blocks
@@ -171,7 +179,8 @@ func TestPipeCrash1(t *testing.T) {
 
 	// start up second write to pipe
 	go func() {
-		fsl2, err := fslib.NewFsLibAddr("w2", sp.ROOTREALM, ts.GetLocalIP(), ts.NamedAddr())
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+		fsl2, err := fslib.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		// the pipe has been closed for writing due to crash;
 		// this open should fail.

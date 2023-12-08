@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
+  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--turbo]" 1>&2
 }
 
 VPC=""
@@ -11,6 +11,7 @@ UPDATE=""
 TAG=""
 OVERLAYS=""
 TOKEN=""
+TURBO=""
 RMCPU="0"
 BRANCH="master"
 while [[ $# -gt 0 ]]; do
@@ -35,6 +36,10 @@ while [[ $# -gt 0 ]]; do
     shift
     NCORES=$1
     shift
+    ;;
+  --turbo)
+    shift
+    TURBO="--turbo"
     ;;
   --pull)
     shift
@@ -119,7 +124,15 @@ for vm in $vms; do
   aws s3 --profile sigmaos cp s3://9ps3/img-save/7.jpg ~/
   aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
 
+  # Download wiki dataset
+  mkdir -p /tmp/sigmaos-data
+  if ! [ -d /tmp/sigmaos-data/wiki-20G ]; then 
+    mkdir /tmp/sigmaos-data/wiki-20G
+    aws s3 --profile sigmaos cp s3://9ps3/wiki-20G/enwiki-latest-pages-articles-multistream-augmented.xml /tmp/sigmaos-data/wiki-20G/enwiki-latest-pages-articles-multistream-augmented.xml
+  fi
+
   cd sigmaos
+  sudo ./load-apparmor.sh
 
   echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ]; then 

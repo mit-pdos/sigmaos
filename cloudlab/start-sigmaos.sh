@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays]" 1>&2
+  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--turbo]" 1>&2
 }
 
 VPC=""
@@ -11,6 +11,7 @@ UPDATE=""
 TAG=""
 OVERLAYS=""
 TOKEN=""
+TURBO=""
 RMCPU="0"
 BRANCH="master"
 while [[ $# -gt 0 ]]; do
@@ -34,6 +35,10 @@ while [[ $# -gt 0 ]]; do
     shift
     NCORES=$1
     shift
+    ;;
+  --turbo)
+    shift
+    TURBO="--turbo"
     ;;
   --pull)
     shift
@@ -66,7 +71,7 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ] && [ $NCORES -ne 20 ]; then
+if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ] && [ $NCORES -ne 20 ] && [ $NCORES -ne 40 ]; then
   echo "Bad ncores $NCORES"
   exit 1
 fi
@@ -95,7 +100,7 @@ vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
 
 for vm in $vms; do
   echo "starting SigmaOS on $vm!"
-  $DIR/setup-for-benchmarking.sh $vm
+  $DIR/setup-for-benchmarking.sh $vm $TURBO
   # Get hostname.
   VM_NAME=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm hostname -s)
   KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
@@ -109,6 +114,7 @@ for vm in $vms; do
   else
     if [ $NCORES -eq 4 ]; then
       ./sigmaos/set-cores.sh --set 1 --start 2 --end 3 > /dev/null
+      ./sigmaos/set-cores.sh --set 0 --start 4 --end 39 > /dev/null
       echo "ncores:"
       nproc
     else
@@ -117,6 +123,12 @@ for vm in $vms; do
         ./sigmaos/set-cores.sh --set 1 --start 2 --end 19 > /dev/null
         echo "ncores:"
         nproc
+      else
+        if [ $NCORES -eq 40 ]; then
+          ./sigmaos/set-cores.sh --set 1 --start 2 --end 39 > /dev/null
+          echo "ncores:"
+          nproc
+        fi
       fi
     fi
   fi
@@ -127,6 +139,7 @@ for vm in $vms; do
   aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
 
   cd sigmaos
+  sudo ./load-apparmor.sh
 
   echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ]; then

@@ -3,6 +3,7 @@ package procqsrv
 import (
 	"path"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
@@ -10,6 +11,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/procfs"
 	proto "sigmaos/procqsrv/proto"
 	"sigmaos/rand"
 	"sigmaos/scheddclnt"
@@ -30,6 +32,7 @@ type ProcQ struct {
 	qs         map[sp.Trealm]*Queue
 	realms     []sp.Trealm
 	qlen       int // Aggregate queue length, across all queues
+	tot        int64
 }
 
 func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
@@ -42,6 +45,49 @@ func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
 	}
 	pq.cond = sync.NewCond(&pq.mu)
 	return pq
+}
+
+// XXX Deduplicate with lcsched
+func (pq *ProcQ) GetProcs() []*proc.Proc {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+
+	procs := make([]*proc.Proc, 0, pq.lenL())
+	for _, q := range pq.qs {
+		for _, p := range q.pmap {
+			procs = append(procs, p)
+		}
+	}
+	return procs
+}
+
+// XXX Deduplicate with lcsched
+func (pq *ProcQ) Lookup(pid string) (*proc.Proc, bool) {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+
+	for _, q := range pq.qs {
+		if p, ok := q.pmap[sp.Tpid(pid)]; ok {
+			return p, ok
+		}
+	}
+	return nil, false
+}
+
+// XXX Deduplicate with lcsched
+func (pq *ProcQ) lenL() int {
+	l := 0
+	for _, q := range pq.qs {
+		l += len(q.pmap)
+	}
+	return l
+}
+
+func (pq *ProcQ) Len() int {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+
+	return pq.lenL()
 }
 
 func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
@@ -60,6 +106,8 @@ func (pq *ProcQ) addProc(p *proc.Proc) chan string {
 
 	// Increase aggregate queue length.
 	pq.qlen++
+	// Increase the total number of procs spawned
+	atomic.AddInt64(&pq.tot, 1)
 	// Get the queue for the realm.
 	q := pq.getRealmQueue(p.GetRealm())
 	// Enqueue the proc according to its realm.
@@ -82,6 +130,22 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 	}
 	db.DPrintf(db.PROCQ, "Done runProc on kid %v", kernelID)
 	ch <- kernelID
+}
+
+func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.GetStatsResponse) error {
+	pq.realmMu.RLock()
+	realms := make(map[string]int64, len(pq.realms))
+	for _, r := range pq.realms {
+		realms[string(r)] = 0
+	}
+	pq.realmMu.RUnlock()
+
+	for r, _ := range realms {
+		realms[r] = int64(pq.getRealmQueue(sp.Trealm(r)).Len())
+	}
+	res.Nqueued = realms
+
+	return nil
 }
 
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
@@ -191,6 +255,17 @@ func (pq *ProcQ) tryGetRealmQueueL(realm sp.Trealm) (*Queue, bool) {
 	return q, ok
 }
 
+func (pq *ProcQ) stats() {
+	if !db.WillBePrinted(db.PROCQ) {
+		return
+	}
+	for {
+		time.Sleep(time.Second)
+		// Increase the total number of procs spawned
+		db.DPrintf(db.PROCQ, "Procq total size %v", atomic.LoadInt64(&pq.tot))
+	}
+}
+
 // Run a ProcQ
 func Run() {
 	pcfg := proc.GetProcEnv()
@@ -203,14 +278,19 @@ func Run() {
 	if err != nil {
 		db.DFatalf("Error PDS: %v", err)
 	}
-	setupMemFsSrv(ssrv.MemFs)
-	setupFs(ssrv.MemFs)
+
+	// export queued procs through procfs. maybe a subdir per realm?
+	dir := procfs.NewProcDir(pq)
+	if err := mfs.MkNod(sp.QUEUE, dir); err != nil {
+		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
+	}
+
 	// Perf monitoring
 	p, err := perf.NewPerf(pcfg, perf.PROCQ)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
-
+	go pq.stats()
 	ssrv.RunServer()
 }

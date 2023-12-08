@@ -48,6 +48,7 @@ var CLERK_MCPU int
 var N_NODE_PER_MACHINE int
 var N_CLNT int
 var USE_RUST_PROC bool
+var DOWNLOAD_FROM_UX bool
 var SCHEDD_DURS string
 var SCHEDD_MAX_RPS string
 var N_CLNT_REQ int
@@ -108,6 +109,7 @@ func init() {
 	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of clients.")
 	flag.IntVar(&N_NODE_PER_MACHINE, "n_node_per_machine", 1, "Number of nodes per machine. Likely should always be 1, unless developing locally.")
 	flag.BoolVar(&USE_RUST_PROC, "use_rust_proc", false, "Use rust spawn bench proc")
+	flag.BoolVar(&DOWNLOAD_FROM_UX, "download_from_ux", false, "Download the proc from ux, instead of S3. !!! WARNING: this only works for the spawn-latency proc !!!")
 	flag.StringVar(&SCHEDD_DURS, "schedd_dur", "10s", "Schedd benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&SCHEDD_MAX_RPS, "schedd_max_rps", "1000", "Max requests/second for schedd bench (comma-separated for multiple phases).")
 	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 1, "Number of request each client news.")
@@ -259,10 +261,17 @@ func TestMicroScheddSpawn(t *testing.T) {
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
+	db.DPrintf(db.BENCH, "rust %v ux %v nclnt %v durs %v rps %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS)
+
 	prog := "XXXX"
 	if USE_RUST_PROC {
-		prog = "spawn-latency"
+		if DOWNLOAD_FROM_UX {
+			prog = "spawn-latency-ux"
+		} else {
+			prog = "spawn-latency"
+		}
 	} else {
+		assert.False(t, DOWNLOAD_FROM_UX, "Can only download rust proc from ux for now")
 		prog = "spawn-bench"
 	}
 
@@ -277,7 +286,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 	// Prep Schedd job
 	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt) time.Duration {
 		if USE_RUST_PROC {
-			return runRustSpawnBenchProc(ts1, sc)
+			return runRustSpawnBenchProc(ts1, sc, prog)
 		} else {
 			return runSpawnBenchProc(ts1, sc)
 		}
@@ -413,8 +422,6 @@ func TestLambdaBurst(t *testing.T) {
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	newOutDir(ts1)
-	// Find the total number of cores available for spinners across all machines.
-	// We need to get this in order to find out how many spinners to start.
 	N_LAMBDAS := 720
 	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
 	ss, is := newNSemaphores(ts1, N_LAMBDAS)
@@ -527,13 +534,16 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
+	if PREWARM_REALM {
+		warmupRealm(ts1, []string{"imgresize", "imgresized"})
+	}
 	// Structure for hotel
 	ts2 := test.NewRealmTstate(rootts, REALM1)
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Prep ImgResize job
-	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
 	// Prep Hotel job
 	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
@@ -559,7 +569,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	}()
 	// Wait for imgResize jobs to set up.
 	<-imgJobs[0].ready
-	db.DPrintf(db.TEST, "MR setup done.")
+	db.DPrintf(db.TEST, "Imgresize setup done.")
 	db.DPrintf(db.TEST, "Setup phase done.")
 	if N_CLNT > 1 {
 		// Wait for hotel clients to start up on other machines.
@@ -653,7 +663,7 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(tses[i])
 		defer ps[i].Done()
-		imgjob, imgapp := newImgResizeJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+		imgjob, imgapp := newImgResizeJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 		imgjobs[i] = imgjob
 		imgapps[i] = imgapp
 	}
@@ -807,6 +817,47 @@ func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos
 	} else {
 		jobs[0].requestK8sStats()
 	}
+}
+
+func testSocialNet(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool) {
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	jobs, apps := newSocialNetworkJobs(ts1, p, sigmaos, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
+	done := make(chan bool)
+	// Run social network job
+	go func() {
+		runOps(ts1, apps, runSocialNetwork, rs)
+		done <- true
+	}()
+	// Wait for social network jobs to set up.
+	<-jobs[0].ready
+	db.DPrintf(db.TEST, "Social Network setup done.")
+	monitorCPUUtil(ts1, p)
+	db.DPrintf(db.TEST, "Image Resize setup done.")
+	db.DPrintf(db.TEST, "Setup phase done.")
+	// Kick off social network jobs
+	jobs[0].ready <- true
+	// Wait for jobs to finish.
+	<-done
+	db.DPrintf(db.TEST, "Social Network Done.")
+	printResultSummary(rs)
+	time.Sleep(5 * time.Second)
+	rootts.Shutdown()
+}
+
+func TestSocialNetSigmaos(t *testing.T) {
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
+	p1 := newRealmPerf(ts1)
+	defer p1.Done()
+	testSocialNet(rootts, ts1, p1, true)
+}
+
+func TestSocialNetK8s(t *testing.T) {
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
+	p1 := newRealmPerf(ts1)
+	defer p1.Done()
+	testSocialNet(rootts, ts1, p1, false)
 }
 
 // XXX Messy, get rid of this.
@@ -1028,7 +1079,7 @@ func TestImgResize(t *testing.T) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := newImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+	jobs, apps := newImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -1091,9 +1142,9 @@ func TestRealmBalanceSimpleImgResize(t *testing.T) {
 	defer p2.Done()
 	// Prep resize jobs
 	imgJobsBE, imgAppsBE := newImgResizeJob(
-		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 	imgJobsLC, imgAppsLC := newImgResizeJob(
-		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 
 	// Run image resize jobs
 	go func() {
@@ -1146,7 +1197,7 @@ func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	defer p2.Done()
 	// Prep image resize job
 	imgJobs, imgApps := newImgResizeJob(
-		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
 	// Prep social network job
 	snJobs, snApps := newSocialNetworkJobs(ts2, p2, true, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
 	// Run social network job

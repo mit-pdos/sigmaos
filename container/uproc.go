@@ -67,11 +67,6 @@ func RunUProc(uproc *proc.Proc, procChan chan CheckpointSignal) error {
 	}
 	db.DPrintf(db.ALWAYS, "---> RUNNING WITH PID %d\n", cmd.Process.Pid)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc cmd.Start %v", uproc.GetPid(), time.Since(s))
-	if uproc.GetType() == proc.T_BE {
-		s := time.Now()
-		setSchedPolicy(cmd.Process.Pid, linuxsched.SCHED_IDLE)
-		db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Get/Set sched attr %v", uproc.GetPid(), time.Since(s))
-	}
 
 	procDone := make(chan error)
 
@@ -110,17 +105,19 @@ func cleanupJail(pid sp.Tpid) {
 	}
 }
 
-func setSchedPolicy(pid int, policy linuxsched.SchedPolicy) {
+func setSchedPolicy(pid int, policy linuxsched.SchedPolicy) error {
 	attr, err := linuxsched.SchedGetAttr(pid)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error Getattr %v: %v", pid, err)
-		return
+		return err
 	}
 	attr.Policy = policy
 	err = linuxsched.SchedSetAttr(pid, attr)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error Setattr %v: %v", pid, err)
+		return err
 	}
+	return nil
 }
 
 func jailPath(pid sp.Tpid) string {

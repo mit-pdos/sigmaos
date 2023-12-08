@@ -34,7 +34,7 @@ def get_e2e_times(input_dir, datasize):
 
 def finalize_graph(fig, ax, plots, title, out):
   plt.title(title)
-  ax.legend(loc="upper left")
+  ax.legend(loc="lower right")
   fig.savefig(out)
 
 def setup_graph():
@@ -52,8 +52,14 @@ def graph_data(input_dir, datasize, out):
   sigmas3x = [ x + width for x in sigmax ]
   corralx = [ x + 2 * width for x in sigmax ]
   sigmaplot = plt.bar(sigmax, sigma_times, width=width, label="σOS (UX)")
+  for i, v in enumerate(sigma_times):
+    plt.text(sigmax[i], v + .25, str(round(v, 2)), ha="center")
   sigmas3plot = plt.bar(sigmas3x, sigmas3_times, width=width, label="σOS (S3)")
+  for i, v in enumerate(sigmas3_times):
+    plt.text(sigmas3x[i], v + .25, str(round(v, 2)), ha="center")
   corralplot = plt.bar(corralx, corral_times, width=width, label="Lambda")
+  for i, v in enumerate(corral_times):
+    plt.text(corralx[i], v + .25, str(round(v, 2)), ha="center")
   plots = [sigmaplot, corralplot]
   plt.xticks(sigmax + width, ("Cold-start", "Warm-start"))
 

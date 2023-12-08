@@ -156,7 +156,7 @@ def finalize_graph(fig, ax, plots, title, out, maxval):
   for p in plots[1:]:
     lns += p
   labels = [ l.get_label() for l in lns ]
-  ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 2))
+  ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=len(labels))
   for idx in range(len(ax)):
     ax[idx].set_xlim(left=0)
     ax[idx].set_ylim(bottom=0)
@@ -191,7 +191,7 @@ def setup_graph(nplots, units, total_ncore):
     tptax[idx].set_ylabel(ylabels[idx])
   for ax in coresax:
     ax.set_ylim((0, total_ncore + 5))
-    ax.set_yticks(np.arange(0, total_ncore + 5), minor=True)
+    ax.set_yticks([0, 16, 32])
     ax.set_ylabel("Cores Utilized")
   return fig, tptax, coresax
 
@@ -237,14 +237,14 @@ def graph_data(input_dir, title, prefix, out, nrealm, units, total_ncore, percen
     x, y = buckets_to_lists(buckets[i])
     if "MB" in units:
       y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Realm {} Throughput".format(i + 1), colors[i], "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Realm {}".format(i + 1), colors[i], "-", "")
     plots.append(p)
   # If we are dealing with multiple realms...
   line_style = "solid"
-  marker = "D"
+  marker = ""
   for i in range(nrealm):
     x, y = buckets_to_lists(dict(procd_tpts[i][0]))
-    p = add_data_to_graph(coresax[0], x, y, "Realm {} Cores".format(i + 1), colors[i], line_style, marker)
+    p = add_data_to_graph(coresax[0], x, y, "", colors[i], line_style, marker)
     plots.append(p)
   ta = [ ax for ax in tptax ]
   ta.append(coresax[0])

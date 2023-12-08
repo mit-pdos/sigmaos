@@ -739,6 +739,7 @@ task_args->thread_args: 0x55580
 (00.046902) pie: 1: 	mmap(0x7ffd154fc000 -> 0x7ffd15500000, 0x3 0x32 -1)
 (00.046906) pie: 1: 	mmap(0x7ffd15500000 -> 0x7ffd15502000, 0x7 0x32 -1)
 (00.046909) pie: 1: Preadv 0x402000:4096... (124 iovs)
+(00.051301) pie: 1: reading from fd 13, with offset 0
 (00.047352) pie: 1: `- returned 1000000
 (00.047357) pie: 1:    `- skip pagemap
 (00.047359) pie: 1:    `- skip pagemap
@@ -800,6 +801,7 @@ task_args->thread_args: 0x55580
 (00.047483) pie: 1:    `- skip pagemap
 (00.047485) pie: 1:    `- skip pagemap
 (00.047487) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.051485) pie: 1: reading from fd 13, with offset 1000000
 (00.047492) pie: 1: `- returned 0
 (00.047494) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
 (00.047498) pie: 1: `- returned 0

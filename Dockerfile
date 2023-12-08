@@ -13,7 +13,8 @@ FROM alpine:3.18 AS base
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apk add --no-cache libseccomp gcompat libpthread-stubs musl-dev strace
+# RUN apk add --no-cache libseccomp gcompat libpthread-stubs musl-dev strace
+RUN apk add --no-cache libseccomp gcompat musl-dev strace
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
@@ -44,7 +45,8 @@ COPY --from=sigma-build-kernel /home/sigmaos/bin/kernel/uprocd /home/sigmaos/bin
 COPY --from=sigma-build-user-rust /home/sigmaos/bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/exec-uproc-rs
 
 # copy criu binary
-ADD criu-3.18.tar.gz /home/sigmaos/bin/kernel
+# ADD criu-3.18.tar.gz /home/sigmaos/bin/kernel
+ADD custom-criu.tar.gz /home/sigmaos/bin/kernel
 WORKDIR /home/sigmaos/bin/kernel/criu-3.18
 RUN apk add iptables ip6tables
 RUN apk --update add build-base protobuf-dev protobuf-c-dev openssl wget tar

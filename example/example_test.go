@@ -198,9 +198,10 @@ func TestExerciseOut(t *testing.T) {
 	// fileName := "name/s3/~any/sigmaoscheckpoint/example-3dbdf5ba54df88ab/fdinfo-2.img"
 
 	// w/ nilled out sc
-	// fileName := "name/s3/~any/sigmaoscheckpoint/example-cd3bca6a83315115/mm-18.img"
+	fileName := "name/s3/~any/sigmaoscheckpoint/example-cd3bca6a83315115/dump.log"
 
-	fileName := "name/s3/~any/sigmaoscheckpoint/example-cc3e923ed91b0af5/mm-18.img"
+	// w/ everything commented out
+	// fileName := "name/s3/~any/sigmaoscheckpoint/example-cc3e923ed91b0af5/mm-18.img"
 
 	// fileName := "name/s3/~any/sigmaoscheckpoint/example-800a8b07b7aad4df/restore.log"
 
@@ -223,7 +224,7 @@ func TestExerciseOut(t *testing.T) {
 		log.Printf("file contents: %s", fileContents)
 	}
 
-	err = os.WriteFile("fdinfo.img", fileContents, 0777)
+	err = os.WriteFile("dump.log", fileContents, 0777)
 	if err != nil {
 		log.Fatalf("error writing: %s", err.Error())
 	}

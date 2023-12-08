@@ -1,0 +1,851 @@
+========== Logs for sigma-b80fa260-uprocd-uprocd-80c57f2903b176a6 ==========
+========== Logs for sigma-b80fa260-uprocd-uprocd-0577b3089b0e24ab ==========
+02:50:18.116894 uprocd-0577b3089b0e24ab ALWAYS running proc as normal
+02:50:18.116986 uprocd-0577b3089b0e24ab ALWAYS env: [PATH=/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel:/bin/user SIGMA_EXEC_TIME=1701917418116971 SIGMA_SPAWN_TIME=1701917416118527 SIGMADEBUG= SIGMADEBUGPID=example-6c096f828980ca53 SIGMAPERF= SIGMACONFIG={"pidStr":"example-6c096f828980ca53","program":"example","realmStr":"rootrealm","unameStr":"example-6c096f828980ca53","procDir":"name/schedd/sigma-b80fa260/pids/example-6c096f828980ca53","parentDir":"name/kpids/test-1bf6cf2542900945/children/example-6c096f828980ca53","etcdIP":"127.0.0.1","localIP":"18.26.5.3","kernelID":"sigma-b80fa260","buildTag":"local-build","net":"rootrealm","uprocdPIDStr":"uprocd-0577b3089b0e24ab","howInt":1,"spawnTimePB":{"seconds":1701917416,"nanos":118527655},"scheddIP":"18.26.5.3:46133","namedMountProto":{"addr":[{"addr":"18.26.5.3:42229","net":"rootrealm"}]}}]
+02:50:18.117294 uprocd-0577b3089b0e24ab ALWAYS ---> RUNNING WITH PID 17
+02:50:18.117491 example-6c096f828980ca53 SPAWN_LAT trampoline.exec_trampoline: 518us
+02:50:18.117610 example-6c096f828980ca53 SPAWN_LAT Check apparmor enabled: 43us
+02:50:18.117631 example-6c096f828980ca53 using perf: true
+02:50:18.118399 example-6c096f828980ca53 SPAWN_LAT trampoline.fs_jail_proc create_dir_all: 781us
+02:50:18.118408 example-6c096f828980ca53 mount newroot /home/sigmaos/jail/example-6c096f828980ca53/
+02:50:18.118560 example-6c096f828980ca53 PERF mounting perf dir
+02:50:18.118567 example-6c096f828980ca53 SPAWN_LAT trampoline.fs_jail_proc mount dirs: 159us
+02:50:18.118685 example-6c096f828980ca53 SPAWN_LAT trampoline.fs_jail_proc pivot_root: 114us
+02:50:18.118693 example-6c096f828980ca53 SPAWN_LAT trampoline.fs_jail_proc chdir: 2us
+02:50:18.118760 example-6c096f828980ca53 SPAWN_LAT trampoline.fs_jail_proc umount: 61us
+02:50:18.118810 example-6c096f828980ca53 SPAWN_LAT trampoline.fs_jail_proc rmdir: 43us
+02:50:18.118817 example-6c096f828980ca53 SPAWN_LAT trampoline.fs_jail_proc: 1199us
+02:50:18.118850 example-6c096f828980ca53 Current permitted caps: {}.
+02:50:18.118859 example-6c096f828980ca53 SPAWN_LAT trampoline.setcap_proc: 38us
+02:50:18.119465 example-6c096f828980ca53 SPAWN_LAT trampoline.seccomp_proc load: 402us
+02:50:18.119543 example-6c096f828980ca53 SPAWN_LAT trampoline.seccomp_proc: 679us
+02:50:18.119589 example-6c096f828980ca53 SPAWN_LAT trampoline.apply_apparmor: 37us
+02:50:18.119607 example-6c096f828980ca53 exec: example []
+02:50:19.134635 uprocd-0577b3089b0e24ab ALWAYS got checkpoint signal, sending pid and exiting
+02:50:19.134730 uprocd-0577b3089b0e24ab ALWAYS got pid from channel: 17
+02:50:19.134917 uprocd-0577b3089b0e24ab ALWAYS opts include perf
+02:50:19.134926 uprocd-0577b3089b0e24ab ALWAYS starting checkpoint
+02:50:19.232672 uprocd-0577b3089b0e24ab ALWAYS finished checkpoint
+02:50:19.232683 uprocd-0577b3089b0e24ab ALWAYS Checkpointing: Dumping succeeded!
+02:50:28.574819 uprocd-0577b3089b0e24ab ALWAYS restoring proc
+02:50:30.938795 uprocd-0577b3089b0e24ab ALWAYS just before restoring
+02:50:31.039303 uprocd-0577b3089b0e24ab ALWAYS Restoring: timer went off
+02:50:31.042044 uprocd-0577b3089b0e24ab ALWAYS Restoring: Restoring failed (00.000040) Version: 3.18 (gitid 0)
+(00.000064) Running on pd3 Linux 5.15.0-89-generic #99-Ubuntu SMP Mon Oct 30 20:42:41 UTC 2023 x86_64
+(00.000073) Warn  (criu/kerndat.c:1103): $XDG_RUNTIME_DIR not set. Cannot find location for kerndat file
+(00.000095) sockets: Probing sock diag modules
+(00.000138) sockets: Done probing
+(00.000174) Pagemap is fully functional
+(00.000204) Found anon-shmem device at 1
+(00.000224) Hugetlb size 2 Mb is supported but cannot get dev's number
+(00.000235) Hugetlb size 1024 Mb is supported but cannot get dev's number
+(00.000242) Reset 36's dirty tracking
+(00.000272)  ... done
+(00.000299) Dirty track supported on kernel
+(00.000365) Found task size of 7ffffffff000
+(00.039753) vdso: Parsing at 7ffc3e7c5000 7ffc3e7c7000
+(00.039768) vdso: PT_LOAD p_vaddr: 0
+(00.039773) vdso: DT_HASH: 120
+(00.039776) vdso: DT_STRTAB: 300
+(00.039779) vdso: DT_SYMTAB: 1c8
+(00.039783) vdso: DT_STRSZ: 8b
+(00.039786) vdso: DT_SYMENT: 18
+(00.039789) vdso: nbucket 3 nchain d bucket 7ffc3e7c5128 chain 7ffc3e7c5134
+(00.039795) vdso: rt [vdso] 7ffc3e7c5000-7ffc3e7c7000 [vvar] 7ffc3e7c1000-7ffc3e7c5000
+(00.040188) vdso: Parsing at 7f3ebbd73000 7f3ebbd75000
+(00.040201) vdso: PT_LOAD p_vaddr: 0
+(00.040205) vdso: DT_HASH: b4
+(00.040208) vdso: DT_STRTAB: 1f0
+(00.040212) vdso: DT_SYMTAB: 140
+(00.040215) vdso: DT_STRSZ: c0
+(00.040218) vdso: DT_SYMENT: 10
+(00.040221) vdso: nbucket 3 nchain b bucket 7f3ebbd730bc chain 7f3ebbd730c8
+(00.040226) vdso: compat [vdso] 7ffc3e7c9000-7ffc3e7cb000 [vvar] 7ffc3e7c5000-7ffc3e7c9000
+(00.040513) cpu: x86_family 6 x86_vendor_id GenuineIntel x86_model_id Intel(R) Xeon(R) CPU E5-1410 0 @ 2.80GHz
+(00.040524) cpu: fpu: xfeatures_mask 0x5 xsave_size 832 xsave_size_max 832 xsaves_size 0
+(00.040529) cpu: fpu: x87 floating point registers     xstate_offsets      0 / 0      xstate_sizes    160 / 160   
+(00.040534) cpu: fpu: AVX registers                    xstate_offsets    576 / 576    xstate_sizes    256 / 256   
+(00.040963) Found mmap_min_addr 0x10000
+(00.040980) files stat: fs/nr_open 1048576
+(00.040985) Warn  (criu/kerndat.c:1103): $XDG_RUNTIME_DIR not set. Cannot find location for kerndat file
+(00.041014) Will dump/restore TCP connections
+(00.041020) mnt-v2: Mounts-v2 requires MOVE_MOUNT_SET_GROUP support
+(00.041024) Mount engine fallback to --mntns-compat-mode mode
+(00.041031) rlimit: RLIMIT_NOFILE unlimited for self
+(00.041067) cpu: fpu:1 fxsr:1 xsave:1 xsaveopt:1 xsavec:0 xgetbv1:0 xsaves:0
+(00.041098) kernel pid_max=4194304
+(00.041104) Reading image tree
+(00.041135) Add mnt ns 12 pid 1
+(00.041140) Add net ns 2 pid 1
+(00.041144) Add pid ns 9 pid 1
+(00.041151) pstree pid_max=1
+(00.041156) Will restore in 2c020000 namespaces
+(00.041160) NS mask to use 2c020000
+(00.041177) Collecting 51/56 (flags 3)
+(00.041193) No memfd.img image
+(00.041198)  `- ... done
+(00.041202) Collecting 40/54 (flags 2)
+(00.041220) Collected [bin/example] ID 0x1
+(00.041226) Collected [usr/lib/libobstack.so.1.0.0] ID 0x2
+(00.041233) Collected [lib/libucontext.so.1] ID 0x3
+(00.041238) Collected [lib/libgcompat.so.0] ID 0x4
+(00.041243) Collected [lib/ld-musl-x86_64.so.1] ID 0x5
+(00.041249) Collected [dev/null] ID 0x6
+(00.041254) Collected pipe entry ID 0x7 PIPE ID 0x3c9c35
+(00.041262) Collected pipe entry ID 0x8 PIPE ID 0x3c9c36
+(00.041283) unix:  `- Got id 0x9 ino 3966824 type SOCK_DGRAM state TCP_CLOSE peer 0 (name @003a7 dir -)
+(00.041297) epoll: Collected eventpoll: id 0x00000a flags 0x02
+(00.041304) Collected pipe entry ID 0xb PIPE ID 0x3c8767
+(00.041309) Collected pipe entry ID 0xc PIPE ID 0x3c8767
+(00.041315) Collected [.] ID 0xd
+(00.041320) Collected [.] ID 0xe
+(00.041327)  `- ... done
+(00.041330) Collecting 46/68 (flags 0)
+(00.041341) No remap-fpath.img image
+(00.041346)  `- ... done
+(00.041350) tty: Standard stream is not a terminal, may fail later
+(00.041375) No apparmor.img image
+(00.041386) No cgroup.img image
+(00.041392) Running pre-restore scripts
+(00.041483) mnt: Reading mountpoint images (id 12 pid 1)
+(00.041501) mnt: 		Will mount 661 from /tmp/sigmaos-perf (E)
+(00.041507) mnt: 		Will mount 661 @ /tmp/.criu.mntns.EmbCBa/12-0000000000/tmp/sigmaos-perf /tmp/sigmaos-perf
+(00.041518) mnt: 	Read 661 mp @ /tmp/sigmaos-perf
+(00.041525) mnt: 		Will mount 660 from /home/sigmaos/bin/user (E)
+(00.041530) mnt: 		Will mount 660 @ /tmp/.criu.mntns.EmbCBa/12-0000000000/bin /bin
+(00.041534) mnt: 	Read 660 mp @ /bin
+(00.041539) mnt: 		Will mount 659 from /
+(00.041543) mnt: 		Will mount 659 @ /tmp/.criu.mntns.EmbCBa/12-0000000000/proc /proc
+(00.041547) mnt: 	Read 659 mp @ /proc
+(00.041553) mnt: 		Will mount 658 from /dev (E)
+(00.041558) mnt: 		Will mount 658 @ /tmp/.criu.mntns.EmbCBa/12-0000000000/dev /dev
+(00.041561) mnt: 	Read 658 mp @ /dev
+(00.041575) mnt: 		Will mount 657 from /etc (E)
+(00.041580) mnt: 		Will mount 657 @ /tmp/.criu.mntns.EmbCBa/12-0000000000/etc /etc
+(00.041583) mnt: 	Read 657 mp @ /etc
+(00.041597) mnt: 		Will mount 656 from /usr (E)
+(00.041602) mnt: 		Will mount 656 @ /tmp/.criu.mntns.EmbCBa/12-0000000000/usr /usr
+(00.041606) mnt: 	Read 656 mp @ /usr
+(00.041614) mnt: 		Will mount 655 from /lib64 (E)
+(00.041618) mnt: 		Will mount 655 @ /tmp/.criu.mntns.EmbCBa/12-0000000000/lib64 /lib64
+(00.041622) mnt: 	Read 655 mp @ /lib64
+(00.041635) mnt: 		Will mount 654 from /lib (E)
+(00.041643) mnt: 		Will mount 654 @ /tmp/.criu.mntns.EmbCBa/12-0000000000/lib /lib
+(00.041647) mnt: 	Read 654 mp @ /lib
+(00.041657) mnt: 		Will mount 653 from /home/sigmaos/jail/example-6c096f828980ca53
+(00.041662) mnt: 		Will mount 653 @ /tmp/.criu.mntns.EmbCBa/12-0000000000/ /
+(00.041665) mnt: 	Read 653 mp @ /
+(00.041672) mnt: Building mountpoints tree
+(00.041676) mnt: 	Building plain mount tree
+(00.041679) mnt: 		Working on 653->637
+(00.041682) mnt: 		Working on 654->653
+(00.041685) mnt: 		Working on 655->653
+(00.041689) mnt: 		Working on 656->653
+(00.041692) mnt: 		Working on 657->653
+(00.041695) mnt: 		Working on 658->653
+(00.041698) mnt: 		Working on 659->653
+(00.041701) mnt: 		Working on 660->653
+(00.041704) mnt: 		Working on 661->653
+(00.041707) mnt: 	Resorting children of 653 in mount order
+(00.041711) mnt: 	Resorting children of 661 in mount order
+(00.041714) mnt: 	Resorting children of 654 in mount order
+(00.041717) mnt: 	Resorting children of 655 in mount order
+(00.041720) mnt: 	Resorting children of 656 in mount order
+(00.041723) mnt: 	Resorting children of 657 in mount order
+(00.041726) mnt: 	Resorting children of 658 in mount order
+(00.041729) mnt: 	Resorting children of 659 in mount order
+(00.041732) mnt: 	Resorting children of 660 in mount order
+(00.041735) mnt: Done:
+(00.041738) mnt: [/](653->637)
+(00.041742) mnt:  [/tmp/sigmaos-perf](661->653)
+(00.041746) mnt:  <--
+(00.041749) mnt:  [/lib](654->653)
+(00.041752) mnt:  <--
+(00.041755) mnt:  [/lib64](655->653)
+(00.041759) mnt:  <--
+(00.041761) mnt:  [/usr](656->653)
+(00.041765) mnt:  <--
+(00.041768) mnt:  [/etc](657->653)
+(00.041771) mnt:  <--
+(00.041774) mnt:  [/dev](658->653)
+(00.041777) mnt:  <--
+(00.041780) mnt:  [/proc](659->653)
+(00.041784) mnt:  <--
+(00.041787) mnt:  [/bin](660->653)
+(00.041790) mnt:  <--
+(00.041793) mnt: <--
+(00.041797) mnt: 	The mount 654 is bind for 653 (@/lib -> @/)
+(00.041802) mnt: 	The mount 655 is bind for 653 (@/lib64 -> @/)
+(00.041807) mnt: 	The mount 656 is bind for 653 (@/usr -> @/)
+(00.041811) mnt: 	The mount 657 is bind for 653 (@/etc -> @/)
+(00.041815) mnt: 	The mount 661 is bind for 660 (@/tmp/sigmaos-perf -> @/bin)
+(00.041819) mnt: Start with 653:/
+(00.041824) mnt: Mountpoint 653 (@/) moved to the root yard
+(00.041836) No pidns-9.img image
+(00.041937) Forking task with 1 pid (flags 0x2c020000)
+(00.041944) Creating process using clone3()
+(00.042098) PID: real 44 virt 1
+(00.042152) Wait until namespaces are created
+(00.042187) Running setup-namespaces scripts
+(00.042207)      1: Calling restore_sid() for init
+(00.042229)      1: Restoring 1 to 1 sid
+(00.042331)      1: Collecting 44/37 (flags 2)
+(00.042359)      1: No tty-info.img image
+(00.042365)      1:  `- ... done
+(00.042368)      1: Collecting 45/51 (flags 0)
+(00.042378)      1: No tty-data.img image
+(00.042385)      1:  `- ... done
+(00.042389)      1: Restoring namespaces 1 flags 0x2c020000
+(00.042616)      1: kernel/hostname nr 3
+(00.042658)      1: kernel/domainname nr 6
+(00.042787)      1: Restoring IPC namespace
+(00.042798)      1: Restoring IPC variables
+(00.042937)      1: Restoring IPC shared memory
+(00.042950)      1: No ipcns-shm-10.img image
+(00.042955)      1: Restoring IPC message queues
+(00.042964)      1: No ipcns-msg-10.img image
+(00.042968)      1: Restoring IPC semaphores sets
+(00.042976)      1: No ipcns-sem-10.img image
+(00.042985)      1: mnt: Restoring mount namespace
+(00.042989)      1: mnt: Inspecting sharing on 653 shared_id 0 master_id 265 (@/)
+(00.042996)      1: mnt: Detected external slavery for 653 via 653
+(00.042999)      1: mnt: Inspecting sharing on 654 shared_id 0 master_id 265 (@/lib)
+(00.043004)      1: mnt: Detected external slavery for 654 via 654
+(00.043007)      1: mnt: Inspecting sharing on 655 shared_id 0 master_id 265 (@/lib64)
+(00.043011)      1: mnt: Detected external slavery for 655 via 655
+(00.043014)      1: mnt: Inspecting sharing on 656 shared_id 0 master_id 265 (@/usr)
+(00.043018)      1: mnt: Detected external slavery for 656 via 656
+(00.043021)      1: mnt: Inspecting sharing on 657 shared_id 0 master_id 265 (@/etc)
+(00.043025)      1: mnt: Detected external slavery for 657 via 657
+(00.043028)      1: mnt: Inspecting sharing on 658 shared_id 0 master_id 0 (@/dev)
+(00.043032)      1: mnt: Inspecting sharing on 659 shared_id 0 master_id 0 (@/proc)
+(00.043036)      1: mnt: Inspecting sharing on 660 shared_id 0 master_id 0 (@/bin)
+(00.043039)      1: mnt: Inspecting sharing on 661 shared_id 0 master_id 0 (@/tmp/sigmaos-perf)
+(00.043045)      1: mnt: Start with 0:(null)
+(00.043163)      1: mnt: Start with 0:(null)
+(00.043170)      1: mnt: can_mount_now: true as 653 is mntns root
+(00.043174)      1: mnt: 	Mounting overlay 653@/tmp/.criu.mntns.EmbCBa/12-0000000000/ (0)
+(00.043201)      1: mnt: 653:/tmp/.criu.mntns.EmbCBa/12-0000000000/ private 0 shared 0 slave 1
+(00.043212)      1: mnt: 	Mounting unsupported 661@/tmp/.criu.mntns.EmbCBa/12-0000000000/tmp/sigmaos-perf (0)
+(00.043217)      1: mnt: 	Bind /tmp/sigmaos-perf to /tmp/.criu.mntns.EmbCBa/12-0000000000/tmp/sigmaos-perf
+(00.043229)      1: mnt: 661:/tmp/.criu.mntns.EmbCBa/12-0000000000/tmp/sigmaos-perf private 1 shared 0 slave 0
+(00.043241)      1: mnt: 	Mounting overlay 654@/tmp/.criu.mntns.EmbCBa/12-0000000000/lib (0)
+(00.043245)      1: mnt: 	Bind /lib to /tmp/.criu.mntns.EmbCBa/12-0000000000/lib
+(00.043257)      1: mnt: 654:/tmp/.criu.mntns.EmbCBa/12-0000000000/lib private 0 shared 0 slave 1
+(00.043265)      1: mnt: 	Mounting overlay 655@/tmp/.criu.mntns.EmbCBa/12-0000000000/lib64 (0)
+(00.043269)      1: mnt: 	Bind /lib64 to /tmp/.criu.mntns.EmbCBa/12-0000000000/lib64
+(00.043280)      1: mnt: 655:/tmp/.criu.mntns.EmbCBa/12-0000000000/lib64 private 0 shared 0 slave 1
+(00.043289)      1: mnt: 	Mounting overlay 656@/tmp/.criu.mntns.EmbCBa/12-0000000000/usr (0)
+(00.043293)      1: mnt: 	Bind /usr to /tmp/.criu.mntns.EmbCBa/12-0000000000/usr
+(00.043303)      1: mnt: 656:/tmp/.criu.mntns.EmbCBa/12-0000000000/usr private 0 shared 0 slave 1
+(00.043311)      1: mnt: 	Mounting overlay 657@/tmp/.criu.mntns.EmbCBa/12-0000000000/etc (0)
+(00.043316)      1: mnt: 	Bind /etc to /tmp/.criu.mntns.EmbCBa/12-0000000000/etc
+(00.043326)      1: mnt: 657:/tmp/.criu.mntns.EmbCBa/12-0000000000/etc private 0 shared 0 slave 1
+(00.043334)      1: mnt: 	Mounting tmpfs 658@/tmp/.criu.mntns.EmbCBa/12-0000000000/dev (0)
+(00.043338)      1: mnt: 	Bind /dev to /tmp/.criu.mntns.EmbCBa/12-0000000000/dev
+(00.043349)      1: mnt: 658:/tmp/.criu.mntns.EmbCBa/12-0000000000/dev private 1 shared 0 slave 0
+(00.043357)      1: mnt: 	Mounting proc 659@/tmp/.criu.mntns.EmbCBa/12-0000000000/proc (0)
+(00.043401)      1: mnt: 659:/tmp/.criu.mntns.EmbCBa/12-0000000000/proc private 1 shared 0 slave 0
+(00.043412)      1: mnt: 	Mounting unsupported 660@/tmp/.criu.mntns.EmbCBa/12-0000000000/bin (0)
+(00.043417)      1: mnt: 	Bind /home/sigmaos/bin/user to /tmp/.criu.mntns.EmbCBa/12-0000000000/bin
+(00.043429)      1: mnt: 660:/tmp/.criu.mntns.EmbCBa/12-0000000000/bin private 1 shared 0 slave 0
+(00.043446)      1: mnt: Start with 0:(null)
+(00.043635)      1: mnt: Move the root to /tmp/.criu.mntns.EmbCBa/12-0000000000
+(00.043872) Running post-setup-namespaces scripts
+(00.043887)      1: Preparing info about shared resources
+(00.043923)      1: Collecting 48/38 (flags 0)
+(00.043936)      1: No filelocks.img image
+(00.043941)      1:  `- ... done
+(00.043945)      1: Collecting 42/27 (flags 0)
+(00.043963)      1: Collected pipe data for 0x3c8767 (chain 7)
+(00.043970)      1:  `- ... done
+(00.043973)      1: Collecting 43/27 (flags 0)
+(00.043983)      1: No fifo-data.img image
+(00.043987)      1:  `- ... done
+(00.043991)      1: Collecting 41/69 (flags 0)
+(00.043999)      1: No sk-queues.img image
+(00.044004)      1:  `- ... done
+(00.044092)      1: Found 57 VMAs in image
+(00.044100)      1: vma 0x400000 0x402000
+(00.044104)      1: vma 0x402000 0x934000
+(00.044108)      1: vma 0x934000 0xec1000
+(00.044111)      1: vma 0xec1000 0xec2000
+(00.044114)      1: vma 0xec2000 0xf1e000
+(00.044118)      1: vma 0xf1e000 0xf5a000
+(00.044121)      1: vma 0xc000000000 0xc000400000
+(00.044125)      1: vma 0xc000400000 0xc004000000
+(00.044128)      1: vma 0x5555574f6000 0x5555574f7000
+(00.044131)      1: vma 0x5555574f7000 0x5555574f8000
+(00.044135)      1: vma 0x7f6eb5494000 0x7f6eb54d4000
+(00.044138)      1: vma 0x7f6eb54d4000 0x7f6eb54d6000
+(00.044141)      1: vma 0x7f6eb54d6000 0x7f6eb54f7000
+(00.044145)      1: vma 0x7f6eb54f7000 0x7f6eb54f9000
+(00.044148)      1: vma 0x7f6eb54f9000 0x7f6eb555a000
+(00.044155)      1: vma 0x7f6eb555a000 0x7f6eb555c000
+(00.044159)      1: vma 0x7f6eb555c000 0x7f6eb557d000
+(00.044162)      1: vma 0x7f6eb557d000 0x7f6eb557f000
+(00.044166)      1: vma 0x7f6eb557f000 0x7f6eb55a0000
+(00.044169)      1: vma 0x7f6eb55a0000 0x7f6eb55a2000
+(00.044173)      1: vma 0x7f6eb55a2000 0x7f6eb7cfb000
+(00.044176)      1: vma 0x7f6eb7cfb000 0x7f6ec8274000
+(00.044179)      1: vma 0x7f6ec8274000 0x7f6ec8275000
+(00.044182)      1: vma 0x7f6ec8275000 0x7f6eda124000
+(00.044186)      1: vma 0x7f6eda124000 0x7f6eda125000
+(00.044189)      1: vma 0x7f6eda125000 0x7f6edc4fa000
+(00.044192)      1: vma 0x7f6edc4fa000 0x7f6edc4fb000
+(00.044195)      1: vma 0x7f6edc4fb000 0x7f6edc974000
+(00.044199)      1: vma 0x7f6edc974000 0x7f6edc975000
+(00.044202)      1: vma 0x7f6edc975000 0x7f6edc9f4000
+(00.044205)      1: vma 0x7f6edc9f4000 0x7f6edca54000
+(00.044208)      1: vma 0x7f6edca54000 0x7f6edca55000
+(00.044212)      1: vma 0x7f6edca55000 0x7f6edca56000
+(00.044215)      1: vma 0x7f6edca56000 0x7f6edca57000
+(00.044218)      1: vma 0x7f6edca57000 0x7f6edca58000
+(00.044221)      1: vma 0x7f6edca58000 0x7f6edca59000
+(00.044225)      1: vma 0x7f6edca59000 0x7f6edca5a000
+(00.044228)      1: vma 0x7f6edca5a000 0x7f6edca5b000
+(00.044231)      1: vma 0x7f6edca5b000 0x7f6edca5c000
+(00.044234)      1: vma 0x7f6edca5c000 0x7f6edca5d000
+(00.044238)      1: vma 0x7f6edca5d000 0x7f6edca5e000
+(00.044241)      1: vma 0x7f6edca5e000 0x7f6edca65000
+(00.044244)      1: vma 0x7f6edca65000 0x7f6edca6b000
+(00.044247)      1: vma 0x7f6edca6b000 0x7f6edca6e000
+(00.044251)      1: vma 0x7f6edca6e000 0x7f6edca6f000
+(00.044254)      1: vma 0x7f6edca6f000 0x7f6edca70000
+(00.044258)      1: vma 0x7f6edca70000 0x7f6edca71000
+(00.044261)      1: vma 0x7f6edca71000 0x7f6edca85000
+(00.044264)      1: vma 0x7f6edca85000 0x7f6edcad1000
+(00.044268)      1: vma 0x7f6edcad1000 0x7f6edcb07000
+(00.044271)      1: vma 0x7f6edcb07000 0x7f6edcb08000
+(00.044274)      1: vma 0x7f6edcb08000 0x7f6edcb09000
+(00.044277)      1: vma 0x7f6edcb09000 0x7f6edcb0c000
+(00.044281)      1: vma 0x7ffd153e8000 0x7ffd15409000
+(00.044284)      1: vma 0x7ffd154fc000 0x7ffd15500000
+(00.044290)      1: vma 0x7ffd15500000 0x7ffd15502000
+(00.044294)      1: vma 0xffffffffff600000 0xffffffffff601000
+(00.044310)      1: Collect fdinfo pid=1 fd=0 id=0x6
+(00.044320)      1: Collect fdinfo pid=1 fd=1 id=0x7
+(00.044325)      1: Collect fdinfo pid=1 fd=2 id=0x8
+(00.044329)      1: Collect fdinfo pid=1 fd=3 id=0x9
+(00.044333)      1: Collect fdinfo pid=1 fd=4 id=0xa
+(00.044337)      1: Collect fdinfo pid=1 fd=5 id=0xb
+(00.044348)      1: Collect fdinfo pid=1 fd=6 id=0xc
+(00.044395)      1: unix: `- will add fake 7 fd
+(00.044402)      1: skqueue: Preparing SCMs
+(00.044406)      1: Pipes:
+(00.044409)      1:  `- PIPE ID 0x3c9c35
+(00.044412)      1:   `- ID 0x55daeccf1f40 0x7
+(00.044416)      1:    `- FD 1 pid 1
+(00.044419)      1:     by 0x7
+(00.044422)      1:  `- PIPE ID 0x3c9c36
+(00.044425)      1:   `- ID 0x7f3ebbdbef60 0x8
+(00.044429)      1:    `- FD 2 pid 1
+(00.044432)      1:     by 0x8
+(00.044435)      1:  `- PIPE ID 0x3c8767
+(00.044438)      1:   `- ID 0x7f3ebbe614c0 0xb
+(00.044441)      1:    `- FD 5 pid 1
+(00.044444)      1:   `- ID 0x7f3ebbe61540 0xc
+(00.044448)      1:    `- FD 6 pid 1
+(00.044451)      1:     by 0xb
+(00.044454)      1: unix: ghost: Resolving addresses
+(00.044457)      1: File descs:
+(00.044460)      1:  `- type 1 ID 0x1
+(00.044463)      1:  `- type 1 ID 0x2
+(00.044466)      1:  `- type 1 ID 0x3
+(00.044470)      1:  `- type 1 ID 0x4
+(00.044473)      1:  `- type 1 ID 0x5
+(00.044476)      1:  `- type 1 ID 0x6
+(00.044479)      1:    `- FD 0 pid 1
+(00.044482)      1:  `- type 2 ID 0x7
+(00.044485)      1:    `- FD 1 pid 1
+(00.044488)      1:  `- type 2 ID 0x8
+(00.044491)      1:    `- FD 2 pid 1
+(00.044494)      1:  `- type 5 ID 0x9
+(00.044497)      1:    `- FD 3 pid 1
+(00.044501)      1:  `- type 7 ID 0xa
+(00.044504)      1:    `- FD 4 pid 1
+(00.044507)      1:  `- type 2 ID 0xb
+(00.044510)      1:    `- FD 5 pid 1
+(00.044513)      1:  `- type 2 ID 0xc
+(00.044516)      1:    `- FD 6 pid 1
+(00.044519)      1:  `- type 1 ID 0xd
+(00.044522)      1:  `- type 1 ID 0xe
+(00.044525)      1:  `- type 5 ID 0xf
+(00.044528)      1:    `- FD 7 pid 1
+(00.044654)      1: No parent images directory provided
+(00.044719)      1: Opened local page read 1 (parent 0)
+(00.044729)      1: Enqueue page-read
+(00.044733)      1: Enqueue page-read
+(00.044736)      1: Enqueue page-read
+(00.044739)      1: Enqueue page-read
+(00.044743)      1: Enqueue page-read
+(00.044746)      1: Enqueue page-read
+(00.044749)      1: Enqueue page-read
+(00.044752)      1: Enqueue page-read
+(00.044755)      1: Enqueue page-read
+(00.044758)      1: Enqueue page-read
+(00.044762)      1: Enqueue page-read
+(00.044765)      1: Enqueue page-read
+(00.044768)      1: Enqueue page-read
+(00.044771)      1: Enqueue page-read
+(00.044774)      1: Enqueue page-read
+(00.044777)      1: Enqueue page-read
+(00.044780)      1: Enqueue page-read
+(00.044784)      1: Enqueue page-read
+(00.044787)      1: Enqueue page-read
+(00.044790)      1: Enqueue page-read
+(00.044793)      1: Enqueue page-read
+(00.044796)      1: Enqueue page-read
+(00.044799)      1: Enqueue page-read
+(00.044802)      1: Enqueue page-read
+(00.044805)      1: Enqueue page-read
+(00.044808)      1: Enqueue page-read
+(00.044811)      1: Enqueue page-read
+(00.044814)      1: Enqueue page-read
+(00.044817)      1: Enqueue page-read
+(00.044820)      1: Enqueue page-read
+(00.044823)      1: Enqueue page-read
+(00.044826)      1: Enqueue page-read
+(00.044829)      1: Enqueue page-read
+(00.044832)      1: Enqueue page-read
+(00.044835)      1: Enqueue page-read
+(00.044838)      1: Enqueue page-read
+(00.044841)      1: Enqueue page-read
+(00.044843)      1: Enqueue page-read
+(00.044846)      1: Enqueue page-read
+(00.044849)      1: Enqueue page-read
+(00.044852)      1: Enqueue page-read
+(00.044855)      1: Enqueue page-read
+(00.044858)      1: Enqueue page-read
+(00.044866)      1: Enqueue page-read
+(00.044870)      1: Enqueue page-read
+(00.044873)      1: Enqueue page-read
+(00.044876)      1: Enqueue page-read
+(00.044879)      1: Enqueue page-read
+(00.044882)      1: Enqueue page-read
+(00.044885)      1: Enqueue page-read
+(00.044888)      1: Enqueue page-read
+(00.044897)      1: Enqueue page-read
+(00.044901)      1: Enqueue page-read
+(00.044904)      1: Enqueue page-read
+(00.044907)      1: Enqueue page-read
+(00.044910)      1: Enqueue page-read
+(00.044913)      1: Enqueue page-read
+(00.044916)      1: Enqueue page-read
+(00.044919)      1: Enqueue page-read
+(00.044922)      1: Enqueue page-read
+(00.044931)      1: Enqueue page-read
+(00.044934)      1: Enqueue page-read
+(00.044937)      1: Enqueue page-read
+(00.044941)      1: Enqueue page-read
+(00.044944)      1: Enqueue page-read
+(00.044947)      1: Enqueue page-read
+(00.044950)      1: Enqueue page-read
+(00.044953)      1: Enqueue page-read
+(00.044956)      1: Enqueue page-read
+(00.044959)      1: Enqueue page-read
+(00.044962)      1: Enqueue page-read
+(00.044969)      1: Enqueue page-read
+(00.044973)      1: Enqueue page-read
+(00.044980)      1: Enqueue page-read
+(00.044984)      1: Enqueue page-read
+(00.044987)      1: Enqueue page-read
+(00.044990)      1: Enqueue page-read
+(00.044993)      1: Enqueue page-read
+(00.044996)      1: Enqueue page-read
+(00.044999)      1: Enqueue page-read
+(00.045002)      1: Enqueue page-read
+(00.045005)      1: Enqueue page-read
+(00.045008)      1: Enqueue page-read
+(00.045012)      1: Enqueue page-read
+(00.045015)      1: Enqueue page-read
+(00.045018)      1: Enqueue page-read
+(00.045021)      1: Enqueue page-read
+(00.045024)      1: Enqueue page-read
+(00.045027)      1: Enqueue page-read
+(00.045030)      1: Enqueue page-read
+(00.045033)      1: Enqueue page-read
+(00.045036)      1: Enqueue page-read
+(00.045039)      1: Enqueue page-read
+(00.045042)      1: Enqueue page-read
+(00.045045)      1: Enqueue page-read
+(00.045048)      1: Enqueue page-read
+(00.045050)      1: Enqueue page-read
+(00.045053)      1: Enqueue page-read
+(00.045056)      1: Enqueue page-read
+(00.045059)      1: Enqueue page-read
+(00.045062)      1: Enqueue page-read
+(00.045065)      1: Enqueue page-read
+(00.045068)      1: Enqueue page-read
+(00.045072)      1: Enqueue page-read
+(00.045075)      1: Enqueue page-read
+(00.045078)      1: Enqueue page-read
+(00.045081)      1: Enqueue page-read
+(00.045084)      1: Enqueue page-read
+(00.045087)      1: Enqueue page-read
+(00.045089)      1: Enqueue page-read
+(00.045092)      1: Enqueue page-read
+(00.045095)      1: Enqueue page-read
+(00.045098)      1: Enqueue page-read
+(00.045101)      1: Enqueue page-read
+(00.045104)      1: Enqueue page-read
+(00.045107)      1: Enqueue page-read
+(00.045110)      1: Enqueue page-read
+(00.045113)      1: Enqueue page-read
+(00.045116)      1: Enqueue page-read
+(00.045119)      1: Enqueue page-read
+(00.045122)      1: Enqueue page-read
+(00.045125)      1: Enqueue page-read
+(00.045128)      1: Enqueue page-read
+(00.045131)      1: Enqueue page-read
+(00.045134)      1: Enqueue page-read
+(00.045136)      1: Enqueue page-read
+(00.045139)      1: Enqueue page-read
+(00.045142)      1: Enqueue page-read
+(00.045145)      1: Enqueue page-read
+(00.045148)      1: Enqueue page-read
+(00.045151)      1: Enqueue page-read
+(00.045154)      1: Enqueue page-read
+(00.045176)      1: nr_restored_pages: 515
+(00.045181)      1: nr_shared_pages:   0
+(00.045184)      1: nr_dropped_pages:   0
+(00.045187)      1: nr_lazy:           0
+(00.045199)      1: Shrunk premap area to 0x7f3e8fb5a000(0)
+(00.045203)      1: Restore on-core sigactions for 1
+(00.045231)      1: Restoring children in alien sessions:
+(00.045236)      1: Restoring children in our session:
+(00.045248)      1: Restoring 1 to 1 pgid
+(00.045254)      1: Restoring resources
+(00.045264)      1: Opening fdinfo-s
+(00.045276)      1: 		Create fd for 0
+(00.045280)      1: 		Creating pipe pipe_id=0x3c9c35 id=0x7
+(00.045288)      1: No data for pipe 0x3c9c35
+(00.045294)      1: 		Create fd for 1
+(00.045298)      1: 		Creating pipe pipe_id=0x3c9c36 id=0x8
+(00.045304)      1: No data for pipe 0x3c9c36
+(00.045309)      1: 		Create fd for 2
+(00.045313)      1: unix: Opening standalone (stage 0 id 0x9 ino 3966824 peer 0)
+(00.045325)      1: 		Create fd for 7
+(00.045329)      1: unix: bind id 0x9 ino 3966824 addr 
+(00.045336)      1: 		Create fd for 3
+(00.045340)      1: epoll: Restore eventpoll: id 0x00000a flags 0x02
+(00.045347)      1: 		Create fd for 4
+(00.045350)      1: 		Creating pipe pipe_id=0x3c8767 id=0xb
+(00.045357)      1: Restoring size 0x10000 for 0x3c8767
+(00.045363)      1: 		Send fd 6 to /crtools-fd-1-0
+(00.045374)      1: 		Create fd for 5
+(00.045383)      1: 		Creating pipe pipe_id=0x3c8767 id=0xc
+(00.045391)      1: Further fle=0x7f3ebbd75d40, pid=1
+(00.045396)      1: 		Create fd for 6
+(00.045400)      1: unix: Opening standalone (stage 1 id 0xf ino 0 peer 0)
+(00.045404)      1: skqueue: Trying to restore recv queue for 9
+(00.045411)      1: sockets: 7 restore sndbuf 212992 rcv buf 212992
+(00.045416)      1: sockets: 	restore buf_lock 0 for socket
+(00.045420)      1: sockets: 	restore priority 0 for socket
+(00.045424)      1: sockets: 	restore rcvlowat 1 for socket
+(00.045429)      1: unix: Opening standalone (stage 1 id 0x9 ino 3966824 peer 0)
+(00.045434)      1: sockets: 3 restore sndbuf 212992 rcv buf 212992
+(00.045438)      1: sockets: 	restore buf_lock 0 for socket
+(00.045442)      1: sockets: 	restore priority 0 for socket
+(00.045445)      1: sockets: 	restore rcvlowat 1 for socket
+(00.045450)      1: epoll: Restore eventpoll-tfd: id 0x00000a tfd        3 events 0x8000201d data 0x007f6eb549a718
+(00.045457)      1: epoll: Restore eventpoll-tfd: id 0x00000a tfd        5 events 0x000019 data 0x00000000f526a8
+(00.045467)      1: Opening 0x00000000400000-0x00000000402000 0000000000000000 (41) vma
+(00.045500)      1: Opening 0x00000000402000-0x00000000934000 0x00000000002000 (41) vma
+(00.045506)      1: Opening 0x00000000934000-0x00000000ec1000 0x00000000534000 (41) vma
+(00.045510)      1: Opening 0x00000000ec1000-0x00000000ec2000 0x00000000ac0000 (41) vma
+(00.045514)      1: Opening 0x00000000ec2000-0x00000000f1e000 0x00000000ac1000 (41) vma
+(00.045518)      1: Opening 0x007f6edca54000-0x007f6edca55000 0000000000000000 (20000041) vma
+(00.045529)      1: File usr/lib/libobstack.so.1.0.0 could only be validated with file size
+(00.045533)      1: Opening 0x007f6edca55000-0x007f6edca56000 0x00000000001000 (20000041) vma
+(00.045537)      1: Opening 0x007f6edca56000-0x007f6edca57000 0x00000000002000 (41) vma
+(00.045541)      1: Opening 0x007f6edca57000-0x007f6edca58000 0x00000000002000 (41) vma
+(00.045545)      1: Opening 0x007f6edca58000-0x007f6edca59000 0x00000000003000 (41) vma
+(00.045549)      1: Opening 0x007f6edca59000-0x007f6edca5a000 0000000000000000 (20000041) vma
+(00.045557)      1: File lib/libucontext.so.1 could only be validated with file size
+(00.045561)      1: Opening 0x007f6edca5a000-0x007f6edca5b000 0x00000000001000 (20000041) vma
+(00.045564)      1: Opening 0x007f6edca5b000-0x007f6edca5c000 0x00000000002000 (41) vma
+(00.045568)      1: Opening 0x007f6edca5c000-0x007f6edca5d000 0x00000000002000 (41) vma
+(00.045572)      1: Opening 0x007f6edca5d000-0x007f6edca5e000 0x00000000003000 (41) vma
+(00.045575)      1: Opening 0x007f6edca5e000-0x007f6edca65000 0000000000000000 (20000041) vma
+(00.045583)      1: File lib/libgcompat.so.0 could only be validated with file size
+(00.045587)      1: Opening 0x007f6edca65000-0x007f6edca6b000 0x00000000007000 (20000041) vma
+(00.045591)      1: Opening 0x007f6edca6b000-0x007f6edca6e000 0x0000000000d000 (41) vma
+(00.045595)      1: Opening 0x007f6edca6e000-0x007f6edca6f000 0x00000000010000 (41) vma
+(00.045598)      1: Opening 0x007f6edca6f000-0x007f6edca70000 0x00000000011000 (41) vma
+(00.045602)      1: Opening 0x007f6edca71000-0x007f6edca85000 0000000000000000 (20000041) vma
+(00.045610)      1: File lib/ld-musl-x86_64.so.1 could only be validated with file size
+(00.045614)      1: Opening 0x007f6edca85000-0x007f6edcad1000 0x00000000014000 (20000041) vma
+(00.045618)      1: Opening 0x007f6edcad1000-0x007f6edcb07000 0x00000000060000 (41) vma
+(00.045621)      1: Opening 0x007f6edcb07000-0x007f6edcb08000 0x00000000095000 (41) vma
+(00.045625)      1: Opening 0x007f6edcb08000-0x007f6edcb09000 0x00000000096000 (41) vma
+(00.045864)      1: `- render 124 iovs (0x402000:4096...)
+(00.045881)      1: Restore via sigreturn
+(00.046049)      1: Parsed 55daecb5c000-55daecb9c000 vma
+(00.046057)      1: Parsed 55daecb5c000-55daecc48000 vma
+(00.046060)      1: Parsed 55daecb5c000-55daeccb8000 vma
+(00.046064)      1: Parsed 55daecb5c000-55daeccd8000 vma
+(00.046067)      1: Parsed 55daecb5c000-55daecce0000 vma
+(00.046071)      1: Parsed 55daecb5c000-55daeccf2000 vma
+(00.046081)      1: Parsed 55daee2de000-55daee2df000 vma
+(00.046085)      1: Parsed 55daee2de000-55daee2e0000 vma
+(00.046088)      1: Parsed 55daee2de000-55daee2e1000 vma
+(00.046092)      1: Parsed 7f3ebbd4b000-7f3ebbd4f000 vma
+(00.046095)      1: Parsed 7f3ebbd51000-7f3ebbd55000 vma
+(00.046099)      1: Parsed 7f3ebbd51000-7f3ebbd60000 vma
+(00.046102)      1: Parsed 7f3ebbd51000-7f3ebbd66000 vma
+(00.046105)      1: Parsed 7f3ebbd51000-7f3ebbd67000 vma
+(00.046109)      1: Parsed 7f3ebbd51000-7f3ebbd69000 vma
+(00.046112)      1: Parsed 7f3ebbd51000-7f3ebbd6c000 vma
+(00.046115)      1: Parsed 7f3ebbd51000-7f3ebbd73000 vma
+(00.046119)      1: Parsed 7f3ebbd51000-7f3ebbd75000 vma
+(00.046122)      1: Parsed 7f3ebbd51000-7f3ebbd77000 vma
+(00.046125)      1: Parsed 7f3ebbd51000-7f3ebbd88000 vma
+(00.046128)      1: Parsed 7f3ebbd51000-7f3ebbd8c000 vma
+(00.046132)      1: Parsed 7f3ebbd51000-7f3ebbd98000 vma
+(00.046135)      1: Parsed 7f3ebbd51000-7f3ebbd9d000 vma
+(00.046139)      1: Parsed 7f3ebbd51000-7f3ebbd9e000 vma
+(00.046142)      1: Parsed 7f3ebbd51000-7f3ebbd9f000 vma
+(00.046145)      1: Parsed 7f3ebbd51000-7f3ebbda1000 vma
+(00.046149)      1: Parsed 7f3ebbd51000-7f3ebbda8000 vma
+(00.046152)      1: Parsed 7f3ebbd51000-7f3ebbdb4000 vma
+(00.046155)      1: Parsed 7f3ebbd51000-7f3ebbdbc000 vma
+(00.046158)      1: Parsed 7f3ebbd51000-7f3ebbdbe000 vma
+(00.046162)      1: Parsed 7f3ebbd51000-7f3ebbdbf000 vma
+(00.046165)      1: Parsed 7f3ebbd51000-7f3ebbdc0000 vma
+(00.046169)      1: Parsed 7f3ebbd51000-7f3ebbdc4000 vma
+(00.046172)      1: Parsed 7f3ebbd51000-7f3ebbdc5000 vma
+(00.046175)      1: Parsed 7f3ebbd51000-7f3ebbdc6000 vma
+(00.046179)      1: Parsed 7f3ebbd51000-7f3ebbdc7000 vma
+(00.046182)      1: Parsed 7f3ebbd51000-7f3ebbddb000 vma
+(00.046185)      1: Parsed 7f3ebbd51000-7f3ebbe27000 vma
+(00.046189)      1: Parsed 7f3ebbd51000-7f3ebbe5d000 vma
+(00.046192)      1: Parsed 7f3ebbd51000-7f3ebbe5e000 vma
+(00.046195)      1: Parsed 7f3ebbd51000-7f3ebbe5f000 vma
+(00.046198)      1: Parsed 7f3ebbd51000-7f3ebbe62000 vma
+(00.046202)      1: Parsed 7ffc3e71c000-7ffc3e73d000 vma
+(00.046205)      1: Parsed 7ffc3e7c1000-7ffc3e7c5000 vma
+(00.046209)      1: Parsed 7ffc3e7c1000-7ffc3e7c7000 vma
+(00.046212)      1: Parsed ffffffffff600000-ffffffffff601000 vma
+(00.046219)      1: 6 threads require 308K of memory
+(00.046223)      1: Found bootstrap VMA hint at: 0x10000 (needs ~332K)
+(00.046339)      1: 	call mremap(0x7f3ebbd4b000, 16384, 16384, MAYMOVE | FIXED, 0x57000)
+(00.046348)      1: 	call mremap(0x7f3ebbd73000, 8192, 8192, MAYMOVE | FIXED, 0x5b000)
+(00.046361)      1: x86: xsave runtime structure
+(00.046365)      1: x86: -----------------------
+(00.046368)      1: x86: cwd:0x37f swd:0 twd:0 fop:0 mxcsr:0x1f80 mxcsr_mask:0xffff
+(00.046372)      1: x86: magic1:0x46505853 extended_size:580 xstate_bv:0x3 xstate_size:576
+(00.046377)      1: x86: xstate_bv: 0x3
+(00.046380)      1: x86: -----------------------
+(00.046383)      1: Thread    0 stack  0x1b080 rt_sigframe  0x23080
+(00.046388)      1: x86: xsave runtime structure
+(00.046391)      1: x86: -----------------------
+(00.046393)      1: x86: cwd:0x37f swd:0 twd:0 fop:0 mxcsr:0x1f80 mxcsr_mask:0xffff
+(00.046397)      1: x86: magic1:0x46505853 extended_size:580 xstate_bv:0x3 xstate_size:576
+(00.046401)      1: x86: xstate_bv: 0x3
+(00.046404)      1: x86: -----------------------
+(00.046410)      1: Thread    1 stack  0x248c0 rt_sigframe  0x2c8c0
+(00.046415)      1: x86: xsave runtime structure
+(00.046418)      1: x86: -----------------------
+(00.046421)      1: x86: cwd:0x37f swd:0 twd:0 fop:0 mxcsr:0x1f80 mxcsr_mask:0xffff
+(00.046424)      1: x86: magic1:0x46505853 extended_size:580 xstate_bv:0x3 xstate_size:576
+(00.046428)      1: x86: xstate_bv: 0x3
+(00.046431)      1: x86: -----------------------
+(00.046437)      1: Thread    2 stack  0x2e100 rt_sigframe  0x36100
+(00.046441)      1: x86: xsave runtime structure
+(00.046444)      1: x86: -----------------------
+(00.046446)      1: x86: cwd:0x37f swd:0 twd:0 fop:0 mxcsr:0x1f80 mxcsr_mask:0xffff
+(00.046456)      1: x86: magic1:0x46505853 extended_size:580 xstate_bv:0x3 xstate_size:576
+(00.046460)      1: x86: xstate_bv: 0x3
+(00.046463)      1: x86: -----------------------
+(00.046468)      1: Thread    3 stack  0x37940 rt_sigframe  0x3f940
+(00.046472)      1: x86: xsave runtime structure
+(00.046475)      1: x86: -----------------------
+(00.046478)      1: x86: cwd:0x37f swd:0 twd:0 fop:0 mxcsr:0x1f80 mxcsr_mask:0xffff
+(00.046482)      1: x86: magic1:0x46505853 extended_size:580 xstate_bv:0x3 xstate_size:576
+(00.046485)      1: x86: xstate_bv: 0x3
+(00.046488)      1: x86: -----------------------
+(00.046493)      1: Thread    4 stack  0x41180 rt_sigframe  0x49180
+(00.046497)      1: x86: xsave runtime structure
+(00.046499)      1: x86: -----------------------
+(00.046502)      1: x86: cwd:0x37f swd:0 twd:0 fop:0 mxcsr:0x1f80 mxcsr_mask:0xffff
+(00.046506)      1: x86: magic1:0x46505853 extended_size:580 xstate_bv:0x3 xstate_size:576
+(00.046509)      1: x86: xstate_bv: 0x3
+(00.046512)      1: x86: -----------------------
+(00.046526)      1: Thread    5 stack  0x4a9c0 rt_sigframe  0x529c0
+(00.046556)      1: Restoring umask to 22
+(00.046570)      1: task_args: 0x55000
+task_args->pid: 1
+task_args->nr_threads: 6
+task_args->clone_restore_fn: 0x11d40
+task_args->thread_args: 0x55580
+(00.046577) pie: 1: Switched to the restorer 1
+(00.046668) pie: 1: Mapping native vDSO at 0x5d000
+(00.046675) pie: 1: vdso: Using gettimeofday() on vdso at 0x61bd0
+(00.046686) pie: 1: 	mmap(0x400000 -> 0x402000, 0x3 0x12 7)
+(00.046692) pie: 1: 	mmap(0x402000 -> 0x934000, 0x7 0x12 7)
+(00.046697) pie: 1: 	mmap(0x934000 -> 0xec1000, 0x3 0x12 7)
+(00.046701) pie: 1: 	mmap(0xec1000 -> 0xec2000, 0x3 0x12 7)
+(00.046705) pie: 1: 	mmap(0xec2000 -> 0xf1e000, 0x3 0x12 7)
+(00.046709) pie: 1: 	mmap(0xf1e000 -> 0xf5a000, 0x3 0x32 -1)
+(00.046713) pie: 1: 	mmap(0xc000000000 -> 0xc000400000, 0x3 0x32 -1)
+(00.046717) pie: 1: 	mmap(0xc000400000 -> 0xc004000000, 0x0 0x32 -1)
+(00.046720) pie: 1: 	mmap(0x5555574f6000 -> 0x5555574f7000, 0x2 0x32 -1)
+(00.046724) pie: 1: 	mmap(0x5555574f7000 -> 0x5555574f8000, 0x3 0x32 -1)
+(00.046727) pie: 1: 	mmap(0x7f6eb5494000 -> 0x7f6eb54d4000, 0x3 0x32 -1)
+(00.046730) pie: 1: 	mmap(0x7f6eb54d4000 -> 0x7f6eb54d6000, 0x0 0x32 -1)
+(00.046734) pie: 1: 	mmap(0x7f6eb54d6000 -> 0x7f6eb54f7000, 0x3 0x32 -1)
+(00.046737) pie: 1: 	mmap(0x7f6eb54f7000 -> 0x7f6eb54f9000, 0x0 0x32 -1)
+(00.046740) pie: 1: 	mmap(0x7f6eb54f9000 -> 0x7f6eb555a000, 0x3 0x32 -1)
+(00.046744) pie: 1: 	mmap(0x7f6eb555a000 -> 0x7f6eb555c000, 0x0 0x32 -1)
+(00.046747) pie: 1: 	mmap(0x7f6eb555c000 -> 0x7f6eb557d000, 0x3 0x32 -1)
+(00.046751) pie: 1: 	mmap(0x7f6eb557d000 -> 0x7f6eb557f000, 0x0 0x32 -1)
+(00.046754) pie: 1: 	mmap(0x7f6eb557f000 -> 0x7f6eb55a0000, 0x3 0x32 -1)
+(00.046758) pie: 1: 	mmap(0x7f6eb55a0000 -> 0x7f6eb55a2000, 0x0 0x32 -1)
+(00.046761) pie: 1: 	mmap(0x7f6eb55a2000 -> 0x7f6eb7cfb000, 0x3 0x32 -1)
+(00.046764) pie: 1: 	mmap(0x7f6eb7cfb000 -> 0x7f6ec8274000, 0x2 0x32 -1)
+(00.046768) pie: 1: 	mmap(0x7f6ec8274000 -> 0x7f6ec8275000, 0x3 0x32 -1)
+(00.046771) pie: 1: 	mmap(0x7f6ec8275000 -> 0x7f6eda124000, 0x2 0x32 -1)
+(00.046775) pie: 1: 	mmap(0x7f6eda124000 -> 0x7f6eda125000, 0x3 0x32 -1)
+(00.046778) pie: 1: 	mmap(0x7f6eda125000 -> 0x7f6edc4fa000, 0x2 0x32 -1)
+(00.046782) pie: 1: 	mmap(0x7f6edc4fa000 -> 0x7f6edc4fb000, 0x3 0x32 -1)
+(00.046785) pie: 1: 	mmap(0x7f6edc4fb000 -> 0x7f6edc974000, 0x2 0x32 -1)
+(00.046789) pie: 1: 	mmap(0x7f6edc974000 -> 0x7f6edc975000, 0x3 0x32 -1)
+(00.046792) pie: 1: 	mmap(0x7f6edc975000 -> 0x7f6edc9f4000, 0x0 0x32 -1)
+(00.046795) pie: 1: 	mmap(0x7f6edc9f4000 -> 0x7f6edca54000, 0x3 0x32 -1)
+(00.046799) pie: 1: 	mmap(0x7f6edca54000 -> 0x7f6edca55000, 0x1 0x12 8)
+(00.046804) pie: 1: 	mmap(0x7f6edca55000 -> 0x7f6edca56000, 0x5 0x12 8)
+(00.046808) pie: 1: 	mmap(0x7f6edca56000 -> 0x7f6edca57000, 0x3 0x12 8)
+(00.046813) pie: 1: 	mmap(0x7f6edca57000 -> 0x7f6edca58000, 0x3 0x12 8)
+(00.046817) pie: 1: 	mmap(0x7f6edca58000 -> 0x7f6edca59000, 0x3 0x12 8)
+(00.046822) pie: 1: 	mmap(0x7f6edca59000 -> 0x7f6edca5a000, 0x1 0x12 9)
+(00.046826) pie: 1: 	mmap(0x7f6edca5a000 -> 0x7f6edca5b000, 0x5 0x12 9)
+(00.046836) pie: 1: 	mmap(0x7f6edca5b000 -> 0x7f6edca5c000, 0x3 0x12 9)
+(00.046841) pie: 1: 	mmap(0x7f6edca5c000 -> 0x7f6edca5d000, 0x3 0x12 9)
+(00.046845) pie: 1: 	mmap(0x7f6edca5d000 -> 0x7f6edca5e000, 0x3 0x12 9)
+(00.046850) pie: 1: 	mmap(0x7f6edca5e000 -> 0x7f6edca65000, 0x1 0x12 10)
+(00.046854) pie: 1: 	mmap(0x7f6edca65000 -> 0x7f6edca6b000, 0x5 0x12 10)
+(00.046858) pie: 1: 	mmap(0x7f6edca6b000 -> 0x7f6edca6e000, 0x3 0x12 10)
+(00.046863) pie: 1: 	mmap(0x7f6edca6e000 -> 0x7f6edca6f000, 0x3 0x12 10)
+(00.046867) pie: 1: 	mmap(0x7f6edca6f000 -> 0x7f6edca70000, 0x3 0x12 10)
+(00.046872) pie: 1: 	mmap(0x7f6edca70000 -> 0x7f6edca71000, 0x3 0x32 -1)
+(00.046876) pie: 1: 	mmap(0x7f6edca71000 -> 0x7f6edca85000, 0x1 0x12 11)
+(00.046880) pie: 1: 	mmap(0x7f6edca85000 -> 0x7f6edcad1000, 0x5 0x12 11)
+(00.046883) pie: 1: 	mmap(0x7f6edcad1000 -> 0x7f6edcb07000, 0x3 0x12 11)
+(00.046887) pie: 1: 	mmap(0x7f6edcb07000 -> 0x7f6edcb08000, 0x3 0x12 11)
+(00.046891) pie: 1: 	mmap(0x7f6edcb08000 -> 0x7f6edcb09000, 0x3 0x12 11)
+(00.046895) pie: 1: 	mmap(0x7f6edcb09000 -> 0x7f6edcb0c000, 0x3 0x32 -1)
+(00.046899) pie: 1: 	mmap(0x7ffd153e8000 -> 0x7ffd15409000, 0x3 0x132 -1)
+(00.046902) pie: 1: 	mmap(0x7ffd154fc000 -> 0x7ffd15500000, 0x3 0x32 -1)
+(00.046906) pie: 1: 	mmap(0x7ffd15500000 -> 0x7ffd15502000, 0x7 0x32 -1)
+(00.046909) pie: 1: Preadv 0x402000:4096... (124 iovs)
+(00.047352) pie: 1: `- returned 1000000
+(00.047357) pie: 1:    `- skip pagemap
+(00.047359) pie: 1:    `- skip pagemap
+(00.047362) pie: 1:    `- skip pagemap
+(00.047364) pie: 1:    `- skip pagemap
+(00.047366) pie: 1:    `- skip pagemap
+(00.047369) pie: 1:    `- skip pagemap
+(00.047371) pie: 1:    `- skip pagemap
+(00.047373) pie: 1:    `- skip pagemap
+(00.047375) pie: 1:    `- skip pagemap
+(00.047377) pie: 1:    `- skip pagemap
+(00.047380) pie: 1:    `- skip pagemap
+(00.047382) pie: 1:    `- skip pagemap
+(00.047384) pie: 1:    `- skip pagemap
+(00.047386) pie: 1:    `- skip pagemap
+(00.047389) pie: 1:    `- skip pagemap
+(00.047391) pie: 1:    `- skip pagemap
+(00.047393) pie: 1:    `- skip pagemap
+(00.047395) pie: 1:    `- skip pagemap
+(00.047397) pie: 1:    `- skip pagemap
+(00.047400) pie: 1:    `- skip pagemap
+(00.047402) pie: 1:    `- skip pagemap
+(00.047404) pie: 1:    `- skip pagemap
+(00.047406) pie: 1:    `- skip pagemap
+(00.047409) pie: 1:    `- skip pagemap
+(00.047411) pie: 1:    `- skip pagemap
+(00.047413) pie: 1:    `- skip pagemap
+(00.047415) pie: 1:    `- skip pagemap
+(00.047417) pie: 1:    `- skip pagemap
+(00.047419) pie: 1:    `- skip pagemap
+(00.047422) pie: 1:    `- skip pagemap
+(00.047424) pie: 1:    `- skip pagemap
+(00.047426) pie: 1:    `- skip pagemap
+(00.047428) pie: 1:    `- skip pagemap
+(00.047430) pie: 1:    `- skip pagemap
+(00.047432) pie: 1:    `- skip pagemap
+(00.047435) pie: 1:    `- skip pagemap
+(00.047437) pie: 1:    `- skip pagemap
+(00.047439) pie: 1:    `- skip pagemap
+(00.047441) pie: 1:    `- skip pagemap
+(00.047443) pie: 1:    `- skip pagemap
+(00.047446) pie: 1:    `- skip pagemap
+(00.047448) pie: 1:    `- skip pagemap
+(00.047450) pie: 1:    `- skip pagemap
+(00.047452) pie: 1:    `- skip pagemap
+(00.047454) pie: 1:    `- skip pagemap
+(00.047457) pie: 1:    `- skip pagemap
+(00.047459) pie: 1:    `- skip pagemap
+(00.047461) pie: 1:    `- skip pagemap
+(00.047463) pie: 1:    `- skip pagemap
+(00.047465) pie: 1:    `- skip pagemap
+(00.047467) pie: 1:    `- skip pagemap
+(00.047470) pie: 1:    `- skip pagemap
+(00.047472) pie: 1:    `- skip pagemap
+(00.047474) pie: 1:    `- skip pagemap
+(00.047476) pie: 1:    `- skip pagemap
+(00.047478) pie: 1:    `- skip pagemap
+(00.047481) pie: 1:    `- skip pagemap
+(00.047483) pie: 1:    `- skip pagemap
+(00.047485) pie: 1:    `- skip pagemap
+(00.047487) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047492) pie: 1: `- returned 0
+(00.047494) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047498) pie: 1: `- returned 0
+(00.047500) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047504) pie: 1: `- returned 0
+(00.047506) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047515) pie: 1: `- returned 0
+(00.047518) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047521) pie: 1: `- returned 0
+(00.047524) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047527) pie: 1: `- returned 0
+(00.047530) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047533) pie: 1: `- returned 0
+(00.047536) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047539) pie: 1: `- returned 0
+(00.047542) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047545) pie: 1: `- returned 0
+(00.047548) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047551) pie: 1: `- returned 0
+(00.047554) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047557) pie: 1: `- returned 0
+(00.047560) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047563) pie: 1: `- returned 0
+(00.047566) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047569) pie: 1: `- returned 0
+(00.047571) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047575) pie: 1: `- returned 0
+(00.047577) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047581) pie: 1: `- returned 0
+(00.047583) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047587) pie: 1: `- returned 0
+(00.047589) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047593) pie: 1: `- returned 0
+(00.047595) pie: 1: Preadv 0xc0001c0240:19904... (65 iovs)
+(00.047599) pie: 1: `- returned 0
+.......... (redacted post facto by hannah)
+========== Logs for sigma-b80fa260 ==========
+02:50:13.069038 sigma-b80fa260-9ab387ecc45990ba ALWAYS knamed reports init
+02:50:13.880220 schedd-2c5420c5e0c63fba ALWAYS Schedd starting with total mem: 64243
+02:50:13.959283 root ux /home/sigmaos
+02:50:14.327609 FATAL dbd-1a41d96c950cc5c9 dbd.newServer Err: db.Ping err dial tcp: lookup x.x.x.x: no such host
+02:50:15.343742 FATAL mongod-9edbb450920c264b mongod.newServer Err: mongo ping err server selection error: context deadline exceeded, current topology: { Type: Unknown, Servers: [{ Addr: x.x.x.x:27017, Type: Unknown, Last error: dial tcp: lookup x.x.x.x: no such host }, ] }
+02:50:15.401680 knamed-4804f3e69146db84 ALWAYS Close 18.26.5.3:43725
+02:50:15.401725 knamed-4804f3e69146db84 ALWAYS knamed-4804f3e69146db84: Accept err accept tcp 18.26.5.3:43725: use of closed network connection
+02:50:15.492601 named-ae9bde61ca998d9c ALWAYS SetRootNamed rootrealm mnt {{{} [] [] <nil>} 0 [] [addr:"18.26.5.3:42229"  net:"rootrealm"]  []}
+02:50:15.721173 lcsched-b870e41233e268d9 ALWAYS resolveRoot name/rpc/clone err Unreachable rootrealm realm failure <nil> b true
+02:50:15.870801 schedd-2c5420c5e0c63fba ALWAYS ReadDirWatch: Version mismatch name/boot/
+02:50:16.136949 schedd-2c5420c5e0c63fba ALWAYS Download buildtag local-build pp name/ux/~local/bin/user/common prog example
+02:50:19.128540 schedd-2c5420c5e0c63fba ALWAYS running checkpoint from procmgr

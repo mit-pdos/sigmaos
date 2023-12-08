@@ -317,58 +317,64 @@ func RestoreRunProc(criuInst *criu.Criu, localChkptLoc string, sigmaPid string, 
 
 	db.DPrintf(db.ALWAYS, "just before restoring")
 
-	err = criuInst.Restore(opts, nil)
+	// err = criuInst.Restore(opts, nil)
 
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %v %s", err, err.Error())
-		b, err := os.ReadFile(localChkptLoc + "/restore.log")
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
-		}
-		str := string(b)
-		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
-	} else {
-		db.DPrintf(db.ALWAYS, "Restoring: Restoring suceeded!")
-	}
-
-	return nil
-
-	// restDone := make(chan error)
-
-	// go func() {
-	// 	err = criuInst.Restore(opts, nil)
-	// 	restDone <- err
-	// }()
-
-	// timer := time.NewTicker(200 * time.Millisecond)
-
-	// // waits for proc to finish or signal to checkpoint
-	// for {
-	// 	select {
-	// 	case <-restDone:
-	// 		db.DPrintf(db.ALWAYS, "done restoring")
-	// 		if err != nil {
-	// 			db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %v %s", err, err.Error())
-	// 			b, err := os.ReadFile(localChkptLoc + "/restore.log")
-	// 			if err != nil {
-	// 				db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
-	// 			}
-	// 			str := string(b)
-	// 			db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
-	// 		} else {
-	// 			db.DPrintf(db.ALWAYS, "Restoring: Restoring suceeded!")
-	// 		}
-	// 	case <-timer.C:
-	// 		db.DPrintf(db.ALWAYS, "Restoring: timer went off")
-	// 		b, err := os.ReadFile(localChkptLoc + "/restore.log")
-	// 		if err != nil {
-	// 			db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
-	// 		}
-	// 		str := string(b)
-	// 		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
-	// 		return nil
+	// if err != nil {
+	// 	db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %v %s", err, err.Error())
+	// 	b, err := os.ReadFile(localChkptLoc + "/restore.log")
+	// 	if err != nil {
+	// 		db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
 	// 	}
+	// 	str := string(b)
+	// 	db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
+	// } else {
+	// 	db.DPrintf(db.ALWAYS, "Restoring: Restoring suceeded!")
 	// }
+
+	// return nil
+
+	restDone := make(chan error)
+
+	go func() {
+		err = criuInst.Restore(opts, nil)
+		restDone <- err
+	}()
+
+	timer := time.NewTicker(100 * time.Millisecond)
+
+	// waits for proc to finish or signal to checkpoint
+	for {
+		select {
+		case <-restDone:
+			db.DPrintf(db.ALWAYS, "done restoring")
+			if err != nil {
+				db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %v %s", err, err.Error())
+				b, err := os.ReadFile(localChkptLoc + "/restore.log")
+				if err != nil {
+					db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
+				}
+				str := string(b)
+				db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
+			} else {
+				db.DPrintf(db.ALWAYS, "Restoring: Restoring suceeded!")
+				b, err := os.ReadFile(localChkptLoc + "/restore.log")
+				if err != nil {
+					db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
+				}
+				str := string(b)
+				db.DPrintf(db.ALWAYS, "Restore.log: %s", str)
+			}
+		case <-timer.C:
+			db.DPrintf(db.ALWAYS, "Restoring: timer went off")
+			b, err := os.ReadFile(localChkptLoc + "/restore.log")
+			if err != nil {
+				db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
+			}
+			str := string(b)
+			db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
+			return nil
+		}
+	}
 
 	// signalling finish is done via sigmaos
 	// TODO potentially need to wait for another checkpoint signal

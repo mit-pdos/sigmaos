@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM alpine AS base
+FROM alpine:3.18 AS base
 
 # Install some apt packages for debugging.
 #RUN \

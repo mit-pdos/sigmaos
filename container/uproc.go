@@ -39,7 +39,6 @@ func RunUProc(uproc *proc.Proc, procChan chan CheckpointSignal) error {
 	// } else {
 	cmd = exec.Command("exec-uproc-rs", append([]string{uproc.GetPid().String(), uproc.GetProgram()}, uproc.Args...)...)
 	// }
-	// cmd = exec.Command(uproc.GetProgram(), uproc.Args...)
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel:/bin/user")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
 	uproc.AppendEnv("SIGMA_SPAWN_TIME", strconv.FormatInt(uproc.GetSpawnTime().UnixMicro(), 10))
@@ -190,15 +189,6 @@ func CheckpointProc(c *criu.Criu, procChan chan CheckpointSignal) (string, int, 
 				LogFile:        proto.String("dump.log"),
 			}
 		}
-		// opts = &rpc.CriuOpts{
-		// 	Pid:          proto.Int32(int32(pid)),
-		// 	ImagesDirFd:  proto.Int32(int32(img.Fd())),
-		// 	LogLevel:     proto.Int32(4),
-		// 	Unprivileged: proto.Bool(true),
-		// 	// TcpEstablished: proto.Bool(true),
-		// 	ShellJob: proto.Bool(true),
-		// 	LogFile:  proto.String("dump.log"),
-		// }
 
 		db.DPrintf(db.ALWAYS, "starting checkpoint")
 		err = c.Dump(opts, NoNotify{})
@@ -306,14 +296,6 @@ func RestoreRunProc(criuInst *criu.Criu, localChkptLoc string, sigmaPid string, 
 		Unprivileged:   proto.Bool(true),
 		LogFile:        proto.String("restore.log"),
 	}
-	// opts := &rpc.CriuOpts{
-	// 	ImagesDirFd: proto.Int32(int32(img.Fd())),
-	// 	LogLevel:    proto.Int32(4),
-	// 	ShellJob:    proto.Bool(true),
-	// 	// TcpEstablished: proto.Bool(true),
-	// 	Unprivileged: proto.Bool(true),
-	// 	LogFile:      proto.String("restore.log"),
-	// }
 
 	db.DPrintf(db.ALWAYS, "just before restoring")
 
@@ -329,58 +311,9 @@ func RestoreRunProc(criuInst *criu.Criu, localChkptLoc string, sigmaPid string, 
 		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
 	} else {
 		db.DPrintf(db.ALWAYS, "Restoring: Restoring suceeded!")
-		b, err := os.ReadFile(localChkptLoc + "/restore.log")
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
-		}
-		str := string(b)
-		db.DPrintf(db.ALWAYS, "Restore.log: %s", str)
 	}
 
 	return nil
-
-	// restDone := make(chan error)
-
-	// go func() {
-	// 	err = criuInst.Restore(opts, nil)
-	// 	restDone <- err
-	// }()
-
-	// timer := time.NewTicker(75 * time.Millisecond)
-
-	// // waits for proc to finish or signal to checkpoint
-	// for {
-	// 	select {
-	// 	case <-restDone:
-	// 		db.DPrintf(db.ALWAYS, "done restoring")
-	// 		if err != nil {
-	// 			db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %v %s", err, err.Error())
-	// 			b, err := os.ReadFile(localChkptLoc + "/restore.log")
-	// 			if err != nil {
-	// 				db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
-	// 			}
-	// 			str := string(b)
-	// 			db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
-	// 		} else {
-	// 			db.DPrintf(db.ALWAYS, "Restoring: Restoring suceeded!")
-	// 			b, err := os.ReadFile(localChkptLoc + "/restore.log")
-	// 			if err != nil {
-	// 				db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
-	// 			}
-	// 			str := string(b)
-	// 			db.DPrintf(db.ALWAYS, "Restore.log: %s", str)
-	// 		}
-	// 	case <-timer.C:
-	// 		db.DPrintf(db.ALWAYS, "Restoring: timer went off")
-	// 		b, err := os.ReadFile(localChkptLoc + "/restore.log")
-	// 		if err != nil {
-	// 			db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
-	// 		}
-	// 		str := string(b)
-	// 		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
-	// 		return nil
-	// 	}
-	// }
 
 	// signalling finish is done via sigmaos
 	// TODO potentially need to wait for another checkpoint signal

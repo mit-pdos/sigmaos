@@ -82,7 +82,7 @@ func (cid TclntId) String() string {
 }
 
 // If need more than MaxGetSet, use Open/Read/Close interface
-const MAXGETSET Tsize = 1_000_000
+const MAXGETSET Tsize = 5_000_000
 
 type Qtype uint32
 type TQversion uint32

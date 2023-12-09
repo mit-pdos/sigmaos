@@ -114,12 +114,9 @@ func TestExerciseProc(t *testing.T) {
 
 	err := ts.Spawn(chkptProc)
 	assert.Nil(t, err)
-	// err = ts.WaitStart(chkptProc.GetPid())
-	// log.Printf("started")
-	// assert.Nil(t, err)
-
-	// let her run for a sec
-	time.Sleep(3 * time.Second)
+	err = ts.WaitStart(chkptProc.GetPid())
+	log.Printf("started")
+	assert.Nil(t, err)
 
 	log.Printf("checkpointing")
 	chkptLoc, osPid, err := ts.Checkpoint(chkptProc)
@@ -141,9 +138,9 @@ func TestExerciseProc(t *testing.T) {
 	// spawn and run it
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
-	// err = ts.WaitStart(restProc.GetPid())
-	// log.Printf("started")
-	// assert.Nil(t, err)
+	err = ts.WaitStart(restProc.GetPid())
+	log.Printf("started")
+	assert.Nil(t, err)
 
 	status, err := ts.WaitExit(restProc.GetPid())
 	assert.Nil(t, err)
@@ -157,8 +154,8 @@ func TestExerciseRestore(t *testing.T) {
 
 	log.Printf("starting")
 	// gotten from returned values from checkpointing
-	osPid := 18
-	chkptLoc := "name/s3/~any/sigmaoscheckpoint/example-3592d035307de6d7/"
+	osPid := 16
+	chkptLoc := "name/s3/~any/sigmaoscheckpoint/example-2fdda82cb4aef13a/"
 
 	// make restore proc
 	// TODO make this be perf?
@@ -171,9 +168,9 @@ func TestExerciseRestore(t *testing.T) {
 	// spawn and run it
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
-	err = ts.WaitStart(p.GetPid())
-	log.Printf("started")
-	assert.Nil(t, err)
+	// err = ts.WaitStart(p.GetPid())
+	// log.Printf("started")
+	// assert.Nil(t, err)
 
 	status, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
@@ -186,8 +183,8 @@ func TestExerciseOut(t *testing.T) {
 	ts := test.NewTstateAll(t)
 	// Your code here
 
-	// testDir := sp.S3 + "~any/hmngtestbucket/"
-	// fileName := testDir + "example-out.txt"
+	testDir := sp.S3 + "~any/hmngtestbucket/"
+	fileName := testDir + "example-out.txt"
 
 	// fileName := "name/s3/~any/sigmaoscheckpoint/example-558436b294fad070/mountpoints-12.img"
 	// w/ everything + tramp:
@@ -198,7 +195,7 @@ func TestExerciseOut(t *testing.T) {
 	// fileName := "name/s3/~any/sigmaoscheckpoint/example-3dbdf5ba54df88ab/fdinfo-2.img"
 
 	// w/ nilled out sc
-	fileName := "name/s3/~any/sigmaoscheckpoint/example-cd3bca6a83315115/dump.log"
+	// fileName := "name/s3/~any/sigmaoscheckpoint/example-cd3bca6a83315115/dump.log"
 
 	// w/ everything commented out
 	// fileName := "name/s3/~any/sigmaoscheckpoint/example-cc3e923ed91b0af5/mm-18.img"
@@ -224,10 +221,10 @@ func TestExerciseOut(t *testing.T) {
 		log.Printf("file contents: %s", fileContents)
 	}
 
-	err = os.WriteFile("dump.log", fileContents, 0777)
-	if err != nil {
-		log.Fatalf("error writing: %s", err.Error())
-	}
+	// err = os.WriteFile("dump.log", fileContents, 0777)
+	// if err != nil {
+	// 	log.Fatalf("error writing: %s", err.Error())
+	// }
 
 	ts.Shutdown()
 }

@@ -129,7 +129,7 @@ func TestCriuDump(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	cmd := exec.Command("../bin/user/example-nonsigma", []string{"10", "1s"}...)
+	cmd := exec.Command("../bin/user/example-nonsigma", []string{"20", "1s"}...)
 	cmd.Stdout = outfile
 	cmd.Stderr = outfile
 	//cmd.Stdout = os.Stdout
@@ -149,13 +149,13 @@ func TestCriuDump(t *testing.T) {
 	criu := criu.MakeCriu()
 	opts := &rpc.CriuOpts{}
 	opts = &rpc.CriuOpts{
-		Pid:            proto.Int32(int32(pid)),
-		ImagesDirFd:    proto.Int32(int32(img.Fd())),
-		LogLevel:       proto.Int32(4),
-		TcpEstablished: proto.Bool(true),
-		Unprivileged:   proto.Bool(true),
-		ShellJob:       proto.Bool(true),
-		LogFile:        proto.String("dump.log"),
+		Pid:         proto.Int32(int32(pid)),
+		ImagesDirFd: proto.Int32(int32(img.Fd())),
+		LogLevel:    proto.Int32(4),
+		//TcpEstablished: proto.Bool(true),
+		//Unprivileged:   proto.Bool(true),
+		ShellJob: proto.Bool(true),
+		LogFile:  proto.String("dump.log"),
 	}
 	err = criu.Dump(opts, NoNotify{})
 	assert.Nil(t, err, "err %v", err)
@@ -169,12 +169,12 @@ func TestCriuRestore(t *testing.T) {
 	criu := criu.MakeCriu()
 	opts := &rpc.CriuOpts{}
 	opts = &rpc.CriuOpts{
-		ImagesDirFd:    proto.Int32(int32(img.Fd())),
-		LogLevel:       proto.Int32(4),
-		TcpEstablished: proto.Bool(true),
-		Unprivileged:   proto.Bool(true),
-		ShellJob:       proto.Bool(true),
-		LogFile:        proto.String("restore.log"),
+		ImagesDirFd: proto.Int32(int32(img.Fd())),
+		LogLevel:    proto.Int32(4),
+		//TcpEstablished: proto.Bool(true),
+		//Unprivileged:   proto.Bool(true),
+		ShellJob: proto.Bool(true),
+		LogFile:  proto.String("restore.log"),
 	}
 	err = criu.Restore(opts, nil)
 	assert.Nil(t, err, "err %v", err)

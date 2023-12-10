@@ -218,8 +218,7 @@ func CheckpointProc(c *criu.Criu, procChan chan CheckpointSignal) (string, int, 
 	}
 }
 
-func RestoreRunProc(criuInst *criu.Criu, localChkptLoc string, sigmaPid string, osPid int) error {
-
+func restoreMounts(sigmaPid string) error {
 	// create dir for proc to be put in
 	jailPath := "/home/sigmaos/jail/" + sigmaPid + "/"
 	os.Mkdir(jailPath, 0777)
@@ -288,9 +287,9 @@ func RestoreRunProc(criuInst *criu.Criu, localChkptLoc string, sigmaPid string, 
 }
 
 func RestoreRunProc(criuInst *criu.Criu, localChkptLoc string, sigmaPid string, osPid int) error {
-	// if err := restoreMounts(sigmaPid); err != nil {
-	//	return err
-	//}
+	if err := restoreMounts(sigmaPid); err != nil {
+		return err
+	}
 	jailPath := "/home/sigmaos/jail/" + sigmaPid + "/"
 	return restoreProc(criuInst, localChkptLoc, jailPath)
 

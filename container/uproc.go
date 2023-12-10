@@ -283,8 +283,22 @@ func RestoreRunProc(criuInst *criu.Criu, localChkptLoc string, sigmaPid string, 
 		return err
 	}
 
-	// db.DPrintf(db.ALWAYS, "done making mounts!")
+	db.DPrintf(db.ALWAYS, "done making mounts!")
+	return nil
+}
 
+func RestoreRunProc(criuInst *criu.Criu, localChkptLoc string, sigmaPid string, osPid int) error {
+	// if err := restoreMounts(sigmaPid); err != nil {
+	//	return err
+	//}
+	jailPath := "/home/sigmaos/jail/" + sigmaPid + "/"
+	return restoreProc(criuInst, localChkptLoc, jailPath)
+
+	// signalling finish is done via sigmaos
+	// TODO potentially need to wait for another checkpoint signal
+}
+
+func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 	// open img dir
 	img, err := os.Open(localChkptLoc)
 	if err != nil {

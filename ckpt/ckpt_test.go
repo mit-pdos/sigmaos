@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -132,8 +133,14 @@ func TestCriuDump(t *testing.T) {
 	cmd := exec.Command("../bin/user/example-nonsigma", []string{"20", "1s"}...)
 	cmd.Stdout = outfile
 	cmd.Stderr = outfile
-	//cmd.Stdout = os.Stdout
-	//cmd.Stderr = os.Stderr
+	cmd.Stdin = nil
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid: true,
+		// Noctty: true,
+	}
 	err = cmd.Start()
 	assert.Nil(t, err)
 	pid := cmd.Process.Pid
@@ -154,8 +161,8 @@ func TestCriuDump(t *testing.T) {
 		LogLevel:    proto.Int32(4),
 		//TcpEstablished: proto.Bool(true),
 		//Unprivileged:   proto.Bool(true),
-		ShellJob: proto.Bool(true),
-		LogFile:  proto.String("dump.log"),
+		// ShellJob: proto.Bool(true),
+		LogFile: proto.String("dump.log"),
 	}
 	err = criu.Dump(opts, NoNotify{})
 	assert.Nil(t, err, "err %v", err)
@@ -173,8 +180,8 @@ func TestCriuRestore(t *testing.T) {
 		LogLevel:    proto.Int32(4),
 		//TcpEstablished: proto.Bool(true),
 		//Unprivileged:   proto.Bool(true),
-		ShellJob: proto.Bool(true),
-		LogFile:  proto.String("restore.log"),
+		//ShellJob: proto.Bool(true),
+		LogFile: proto.String("restore.log"),
 	}
 	err = criu.Restore(opts, nil)
 	assert.Nil(t, err, "err %v", err)

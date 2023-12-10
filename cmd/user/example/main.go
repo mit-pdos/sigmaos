@@ -43,7 +43,18 @@ func main() {
 	for i := 1; i < n; i++ {
 		db.DPrintf(db.ALWAYS, "Running ..")
 		time.Sleep(d)
+		f, err := os.OpenFile("log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			os.Exit(1)
+		}
+		fmt.Printf(".")
+		if _, err := f.WriteString("Running..\n"); err != nil {
+			os.Exit(1)
+		}
+		f.Close()
 	}
+
+	db.DPrintf(db.ALWAYS, "Exit")
 
 	sc.ClntExitOK()
 }

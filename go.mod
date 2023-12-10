@@ -51,7 +51,10 @@ require (
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.67
 )
 
-require github.com/moby/sys/mountinfo v0.6.2 // indirect
+require (
+	github.com/mitchellh/go-ps v1.0.0 // indirect
+	github.com/moby/sys/mountinfo v0.6.2 // indirect
+)
 
 require (
 	github.com/Microsoft/go-winio v0.6.0 // indirect

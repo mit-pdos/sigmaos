@@ -4,7 +4,7 @@ FROM alpine:3.18
 
 RUN apk add --no-cache libseccomp \
   gcompat \
-  libpthread-stubs \
+  # libpthread-stubs \
   musl-dev \
   curl \
   bash \

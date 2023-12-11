@@ -35,6 +35,10 @@ type ProcQ struct {
 	tot        int64
 }
 
+type QDir struct {
+	pq *ProcQ
+}
+
 func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
 	pq := &ProcQ{
 		mfs:        mfs,
@@ -48,12 +52,12 @@ func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
 }
 
 // XXX Deduplicate with lcsched
-func (pq *ProcQ) GetProcs() []*proc.Proc {
-	pq.mu.Lock()
-	defer pq.mu.Unlock()
+func (qd *QDir) GetProcs() []*proc.Proc {
+	qd.pq.mu.Lock()
+	defer qd.pq.mu.Unlock()
 
-	procs := make([]*proc.Proc, 0, pq.lenL())
-	for _, q := range pq.qs {
+	procs := make([]*proc.Proc, 0, qd.pq.lenL())
+	for _, q := range qd.pq.qs {
 		for _, p := range q.pmap {
 			procs = append(procs, p)
 		}
@@ -62,11 +66,11 @@ func (pq *ProcQ) GetProcs() []*proc.Proc {
 }
 
 // XXX Deduplicate with lcsched
-func (pq *ProcQ) Lookup(pid string) (*proc.Proc, bool) {
-	pq.mu.Lock()
-	defer pq.mu.Unlock()
+func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
+	qd.pq.mu.Lock()
+	defer qd.pq.mu.Unlock()
 
-	for _, q := range pq.qs {
+	for _, q := range qd.pq.qs {
 		if p, ok := q.pmap[sp.Tpid(pid)]; ok {
 			return p, ok
 		}
@@ -83,11 +87,11 @@ func (pq *ProcQ) lenL() int {
 	return l
 }
 
-func (pq *ProcQ) Len() int {
-	pq.mu.Lock()
-	defer pq.mu.Unlock()
+func (qd *QDir) Len() int {
+	qd.pq.mu.Lock()
+	defer qd.pq.mu.Unlock()
 
-	return pq.lenL()
+	return qd.pq.lenL()
 }
 
 func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
@@ -280,7 +284,7 @@ func Run() {
 	}
 
 	// export queued procs through procfs. maybe a subdir per realm?
-	dir := procfs.NewProcDir(pq)
+	dir := procfs.NewProcDir(&QDir{pq})
 	if err := mfs.MkNod(sp.QUEUE, dir); err != nil {
 		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}

@@ -2,20 +2,14 @@ package main
 
 import (
 	"fmt"
-<<<<<<< HEAD
 	"os"
-	"strconv"
-=======
-	db "sigmaos/debug"
-	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
->>>>>>> chkpt-rest
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
+
+	"time"
 )
 
 func main() {
@@ -24,19 +18,6 @@ func main() {
 		os.Exit(1)
 	}
 
-<<<<<<< HEAD
-	n, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		db.DFatalf("strconv err %v", err)
-	}
-
-	d, err := time.ParseDuration(os.Args[2])
-	if err != nil {
-		db.DFatalf("Error parsing duration: %v", err)
-	}
-
-	db.DPrintf(db.ALWAYS, "Running %v", os.Args)
-=======
 	// sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	// if err != nil {
 	// 	sc.ClntExit(proc.NewStatus(proc.StatusErr))
@@ -49,38 +30,9 @@ func main() {
 	// timer := time.NewTicker(5 * time.Second)
 
 	// <-timer.C
->>>>>>> chkpt-rest
-
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-	if err != nil {
-		db.DFatalf("example %v", err)
-	}
 
 	db.DPrintf(db.ALWAYS, "Set started")
 
-<<<<<<< HEAD
-	if err := sc.Started(); err != nil {
-		db.DFatalf("Started err %v", err)
-	}
-
-	for i := 1; i < n; i++ {
-		db.DPrintf(db.ALWAYS, "Running ..")
-		time.Sleep(d)
-		f, err := os.OpenFile("log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			os.Exit(1)
-		}
-		fmt.Printf(".")
-		if _, err := f.WriteString("Running..\n"); err != nil {
-			os.Exit(1)
-		}
-		f.Close()
-	}
-
-	db.DPrintf(db.ALWAYS, "Exit")
-
-	sc.ClntExitOK()
-=======
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("NewSigmaClnt: error %v\n", err)
@@ -112,5 +64,4 @@ func main() {
 			time.Sleep(2 * time.Second)
 		}
 	}
->>>>>>> chkpt-rest
 }

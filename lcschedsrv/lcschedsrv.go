@@ -26,6 +26,10 @@ type LCSched struct {
 	schedds    map[string]*Resources
 }
 
+type QDir struct {
+	lcs *LCSched
+}
+
 func NewLCSched(mfs *memfssrv.MemFs) *LCSched {
 	lcs := &LCSched{
 		mfs:        mfs,
@@ -37,12 +41,12 @@ func NewLCSched(mfs *memfssrv.MemFs) *LCSched {
 	return lcs
 }
 
-func (lcs *LCSched) GetProcs() []*proc.Proc {
-	lcs.mu.Lock()
-	defer lcs.mu.Unlock()
+func (qd *QDir) GetProcs() []*proc.Proc {
+	qd.lcs.mu.Lock()
+	defer qd.lcs.mu.Unlock()
 
-	procs := make([]*proc.Proc, 0, lcs.lenL())
-	for _, q := range lcs.qs {
+	procs := make([]*proc.Proc, 0, qd.lcs.lenL())
+	for _, q := range qd.lcs.qs {
 		for _, p := range q.pmap {
 			procs = append(procs, p)
 		}
@@ -50,11 +54,11 @@ func (lcs *LCSched) GetProcs() []*proc.Proc {
 	return procs
 }
 
-func (lcs *LCSched) Lookup(pid string) (*proc.Proc, bool) {
-	lcs.mu.Lock()
-	defer lcs.mu.Unlock()
+func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
+	qd.lcs.mu.Lock()
+	defer qd.lcs.mu.Unlock()
 
-	for _, q := range lcs.qs {
+	for _, q := range qd.lcs.qs {
 		if p, ok := q.pmap[sp.Tpid(pid)]; ok {
 			return p, ok
 		}
@@ -70,10 +74,11 @@ func (lcs *LCSched) lenL() int {
 	return l
 }
 
-func (lcs *LCSched) Len() int {
-	lcs.mu.Lock()
-	defer lcs.mu.Unlock()
-	return lcs.lenL()
+func (qd *QDir) Len() int {
+	qd.lcs.mu.Lock()
+	defer qd.lcs.mu.Unlock()
+
+	return qd.lcs.lenL()
 }
 
 func (lcs *LCSched) Enqueue(ctx fs.CtxI, req pqproto.EnqueueRequest, res *pqproto.EnqueueResponse) error {
@@ -197,7 +202,7 @@ func Run() {
 
 	// export queued procs through procfs. XXX maybe
 	// subdirectory per realm?
-	dir := procfs.NewProcDir(lcs)
+	dir := procfs.NewProcDir(&QDir{lcs})
 	if err := mfs.MkNod(sp.QUEUE, dir); err != nil {
 		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}

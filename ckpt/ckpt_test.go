@@ -26,7 +26,7 @@ import (
 	"sigmaos/test"
 )
 
-func TestExerciseProc(t *testing.T) {
+func TestExerciseProcSimple(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
 	log.Printf("starting")
@@ -70,21 +70,21 @@ func TestExerciseProcCkpt(t *testing.T) {
 	// pause between chkpt and rest
 	// ----------------------------
 	log.Printf("taking a beat... ")
-	time.Sleep(1000 * time.Second)
+	time.Sleep(10 * time.Second)
 
-	// log.Printf("restoring")
+	log.Printf("restoring")
 
-	// chkptLocList := strings.Split(chkptLoc, "/")
-	// sigmaPid := chkptLocList[len(chkptLocList)-2]
-	// restProc := proc.MakeRestoreProc(chkptLoc, osPid, sigmaPid)
+	chkptLocList := strings.Split(chkptLoc, "/")
+	sigmaPid := chkptLocList[len(chkptLocList)-2]
+	restProc := proc.MakeRestoreProc(chkptLoc, osPid, sigmaPid)
 
-	// // spawn and run it
-	// err = ts.Spawn(restProc)
-	// assert.Nil(t, err)
+	// spawn and run it
+	err = ts.Spawn(restProc)
+	assert.Nil(t, err)
 
-	// status, err := ts.WaitExit(restProc.GetPid())
-	// assert.Nil(t, err)
-	// assert.True(t, status.IsStatusOK())
+	status, err := ts.WaitExit(restProc.GetPid())
+	assert.Nil(t, err)
+	assert.True(t, status.IsStatusOK())
 
 	ts.Shutdown()
 }
@@ -125,24 +125,21 @@ func TestCriuDump(t *testing.T) {
 	type NoNotify struct {
 		criu.NoNotify
 	}
-
-	outfile, err := os.Create("./out.txt")
-	if err != nil {
-		panic(err)
-	}
 	cmd := exec.Command("../bin/user/example-nonsigma", []string{"20", "1s"}...)
-	cmd.Stdout = outfile
-	cmd.Stderr = outfile
-	cmd.Stdin = nil
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	//cmd.Stdout = outfile
+	//cmd.Stderr = outfile
+	//cmd.Stdin = os.Stdin
+	// cmd.Stdout = os.Stdout
+	// cmd.Stderr = os.Stderr
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setsid: true,
-		// Noctty: true,
+		// Setctty: true,
+		//Setpgid: true,
+		//Noctty: true,
 	}
-	err = cmd.Start()
-	assert.Nil(t, err)
+	err := cmd.Start()
+	assert.Nil(t, err, "err %v", err)
 	pid := cmd.Process.Pid
 
 	time.Sleep(10 * time.Second)
@@ -161,7 +158,6 @@ func TestCriuDump(t *testing.T) {
 		LogLevel:    proto.Int32(4),
 		//TcpEstablished: proto.Bool(true),
 		//Unprivileged:   proto.Bool(true),
-		// ShellJob: proto.Bool(true),
 		LogFile: proto.String("dump.log"),
 	}
 	err = criu.Dump(opts, NoNotify{})
@@ -180,7 +176,6 @@ func TestCriuRestore(t *testing.T) {
 		LogLevel:    proto.Int32(4),
 		//TcpEstablished: proto.Bool(true),
 		//Unprivileged:   proto.Bool(true),
-		//ShellJob: proto.Bool(true),
 		LogFile: proto.String("restore.log"),
 	}
 	err = criu.Restore(opts, nil)

@@ -169,7 +169,6 @@ func CheckpointProc(c *criu.Criu, procChan chan CheckpointSignal) (string, int, 
 				Root:           proto.String(root),
 				External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp/sigmaos-perf]:perfMount"},
 				Unprivileged:   proto.Bool(true),
-				ShellJob:       proto.Bool(true),
 				LogFile:        proto.String("dump.log"),
 			}
 		} else {
@@ -182,7 +181,6 @@ func CheckpointProc(c *criu.Criu, procChan chan CheckpointSignal) (string, int, 
 				Root:           proto.String(root),
 				External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount"},
 				Unprivileged:   proto.Bool(true),
-				ShellJob:       proto.Bool(true),
 				LogFile:        proto.String("dump.log"),
 			}
 		}
@@ -299,7 +297,6 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 	opts := &rpc.CriuOpts{
 		ImagesDirFd:    proto.Int32(int32(img.Fd())),
 		LogLevel:       proto.Int32(4),
-		ShellJob:       proto.Bool(true),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(jailPath),
 		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[devMount]:/dev", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[binMount]:/home/sigmaos/bin/user"},

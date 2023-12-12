@@ -90,10 +90,10 @@ message GetScheddStatsResponse {
 
 message CheckpointProcRequest {
   ProcProto procProto = 1;
+  string checkpointdir = 2;
 }
 
 message CheckpointProcResponse {
-  string checkpointLocation = 1;
   int32 osPid = 2;
 }
 

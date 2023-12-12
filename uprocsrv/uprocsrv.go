@@ -243,26 +243,15 @@ func (ups *UprocSrv) readCheckpointFromS3(remoteImgDir string, localImgDir strin
 }
 
 func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointPidRequest, res *proto.CheckpointPidResult) error {
-	db.DPrintf(db.UPROCD, "Checkpointing uproc %v", req.PidStr)
+	db.DPrintf(db.UPROCD, "Checkpointing uproc %v %q", req.PidStr, req.CheckpointDir)
 	procChan := ups.procs[req.PidStr]
 
-	// sts, _ := ups.ssrv.MemFs.SigmaClnt().GetDir(sp.S3)
-	// currS3Info := sp.Names(sts)[0]
-
-	ups.ssrv.MemFs.SigmaClnt().MkDir(sp.S3+"~any/fkaashoek/", 0777)
-	db.DPrintf(db.UPROCD, "created dir: %v\n", sp.S3+"~any/fkaashoek/")
-
-	chkptSimgaDir := sp.S3 + "~any/fkaashoek/" + req.PidStr + "/"
-	chkptLocalDir, osPid, err := container.CheckpointProc(ups.criuInst, procChan)
-
-	res.OsPid = int32(osPid)
-	res.CheckpointLocation = chkptSimgaDir
-
+	ckptdir, osPid, err := container.CheckpointProc(ups.criuInst, procChan)
 	if err != nil {
 		return err
 	}
-	err = ups.writeCheckpointToS3(chkptLocalDir, chkptSimgaDir)
-	if err != nil {
+	res.OsPid = int32(osPid)
+	if err = ups.writeCheckpointToS3(chkptDir, req.CheckpointDir); err != nil {
 		// TODO clean up what was written partially?
 		return err
 	}

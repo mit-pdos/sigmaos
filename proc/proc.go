@@ -62,17 +62,17 @@ func NewProc(program string, args []string) *Proc {
 	return NewProcPid(pid, program, args)
 }
 
-func MakeRestoreProc(program, chkptLoc string, osPid int, sigmaPid string) *Proc {
+func MakeRestoreProc(pid sp.Tpid, chkptLoc string, osPid int) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
 	procDir := NOT_SET
 	p.ProcEnvProto = &ProcEnvProto{
-		PidStr:             string(sigmaPid),
+		PidStr:             string(pid),
 		RealmStr:           string(sp.Trealm(NOT_SET)),
-		UnameStr:           string(sp.Tuname(sigmaPid)),
+		UnameStr:           string(sp.Tuname(pid)),
 		ProcDir:            procDir,
 		ParentDir:          NOT_SET,
-		Program:            program,
+		Program:            "",
 		LocalIP:            NOT_SET,
 		KernelID:           NOT_SET,
 		BuildTag:           NOT_SET,

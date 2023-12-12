@@ -1,17 +1,12 @@
 package ckpt_test
 
 import (
-	// Go imports:
-
 	"log"
 	"os"
 	"os/exec"
-	"strings"
 	"syscall"
 	"testing"
 	"time"
-
-	// External imports:
 
 	"github.com/stretchr/testify/assert"
 
@@ -19,10 +14,9 @@ import (
 	"github.com/checkpoint-restore/go-criu/v7/rpc"
 	"google.golang.org/protobuf/proto"
 
-	// SigmaOS imports:
-
+	db "sigmaos/debug"
 	"sigmaos/proc"
-	// sp "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -36,8 +30,6 @@ func TestExerciseProcSimple(t *testing.T) {
 	err = ts.WaitStart(chkptProc.GetPid())
 	assert.Nil(t, err)
 
-	log.Printf("started")
-
 	status, err := ts.WaitExit(chkptProc.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusOK())
@@ -48,23 +40,22 @@ func TestExerciseProcSimple(t *testing.T) {
 func TestExerciseProcCkpt(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
-	log.Printf("starting")
-	chkptProc := proc.NewProc("ckpt-example", []string{"100", "1s"})
+	chkptProc := proc.NewProc("ckpt-example", []string{"30", "1s"})
 	err := ts.Spawn(chkptProc)
 	assert.Nil(t, err)
-	//err = ts.WaitStart(chkptProc.GetPid())
-	//assert.Nil(t, err)
-
-	//log.Printf("started")
+	err = ts.WaitStart(chkptProc.GetPid())
+	assert.Nil(t, err)
 
 	// let her run for a sec
 	time.Sleep(5 * time.Second)
 
-	log.Printf("checkpointing")
-	chkptLoc, osPid, err := ts.Checkpoint(chkptProc)
+	pn := sp.S3 + "~any/fkaashoek/" + chkptProc.GetPid().String() + "/"
+
+	db.DPrintf(db.TEST, "checkpointing %q", pn)
+	osPid, err := ts.Checkpoint(chkptProc, pn)
 	assert.Nil(t, err)
-	log.Printf("checkpoint location: %s", chkptLoc)
-	log.Printf("checkpoint pid: %d", osPid)
+
+	db.DPrintf(db.TEST, "checkpoint pid: %d", osPid)
 
 	// ----------------------------
 	// pause between chkpt and rest
@@ -72,13 +63,7 @@ func TestExerciseProcCkpt(t *testing.T) {
 	log.Printf("taking a beat... ")
 	time.Sleep(10 * time.Second)
 
-	chkptLocList := strings.Split(chkptLoc, "/")
-	sigmaPid := chkptLocList[len(chkptLocList)-2]
-	program := strings.Join(strings.Split(sigmaPid, "-")[0:2], "-")
-
-	log.Printf("restoring %v", program)
-
-	restProc := proc.MakeRestoreProc(program, chkptLoc, osPid, sigmaPid)
+	restProc := proc.MakeRestoreProc(chkptProc.GetPid(), pn, osPid)
 
 	// spawn and run it
 	err = ts.Spawn(restProc)
@@ -88,36 +73,6 @@ func TestExerciseProcCkpt(t *testing.T) {
 	time.Sleep(10 * time.Second)
 	log.Printf("wait exit")
 	status, err := ts.WaitExit(restProc.GetPid())
-	assert.Nil(t, err)
-	assert.True(t, status.IsStatusOK())
-
-	ts.Shutdown()
-}
-
-func TestExerciseRestore(t *testing.T) {
-	ts := test.NewTstateAll(t)
-
-	log.Printf("starting")
-	// gotten from returned values from checkpointing
-	osPid := 18
-	chkptLoc := "name/s3/~any/fkaashoek/ckpt-example-3592d035307de6d7/"
-
-	// make restore proc
-	// TODO make this be perf?
-	chkptLocList := strings.Split(chkptLoc, "/")
-	sigmaPid := chkptLocList[len(chkptLocList)-2]
-	p := proc.MakeRestoreProc("", chkptLoc, osPid, sigmaPid)
-
-	// log.Printf("procEnvProto: %+v", p.ProcEnvProto)
-
-	// spawn and run it
-	err := ts.Spawn(p)
-	assert.Nil(t, err)
-	err = ts.WaitStart(p.GetPid())
-	log.Printf("started")
-	assert.Nil(t, err)
-
-	status, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusOK())
 

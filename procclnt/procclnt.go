@@ -94,9 +94,9 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	return clnt.spawn("~local", proc.HSCHEDD, p, 0)
 }
 
-func (clnt *ProcClnt) Checkpoint(p *proc.Proc) (string, int, error) {
+func (clnt *ProcClnt) Checkpoint(p *proc.Proc, pn string) (int, error) {
 	// is this true as the kernelID?
-	return clnt.scheddclnt.Checkpoint("~local", p)
+	return clnt.scheddclnt.Checkpoint("~local", p, pn)
 }
 
 // Spawn a proc on kernelId. If spread > 0, p is part of SpawnBurt().

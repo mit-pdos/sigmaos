@@ -572,7 +572,12 @@ func TestEvictN(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestBurstSpawn(t *testing.T) {
+func TestSpawnBurst(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
+
 	ts := test.NewTstateAll(t)
 
 	// Number of spinners to burst-spawn

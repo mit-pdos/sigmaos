@@ -30,7 +30,7 @@ func TestExerciseProcSimple(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
 	log.Printf("starting")
-	chkptProc := proc.NewProc("example", []string{"10", "1s"})
+	chkptProc := proc.NewProc("ckpt-example", []string{"10", "1s"})
 	err := ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 	err = ts.WaitStart(chkptProc.GetPid())
@@ -49,7 +49,7 @@ func TestExerciseProcCkpt(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
 	log.Printf("starting")
-	chkptProc := proc.NewProc("example", []string{"100", "1s"})
+	chkptProc := proc.NewProc("ckpt-example", []string{"100", "1s"})
 	err := ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 	//err = ts.WaitStart(chkptProc.GetPid())
@@ -72,16 +72,21 @@ func TestExerciseProcCkpt(t *testing.T) {
 	log.Printf("taking a beat... ")
 	time.Sleep(10 * time.Second)
 
-	log.Printf("restoring")
-
 	chkptLocList := strings.Split(chkptLoc, "/")
 	sigmaPid := chkptLocList[len(chkptLocList)-2]
-	restProc := proc.MakeRestoreProc(chkptLoc, osPid, sigmaPid)
+	program := strings.Join(strings.Split(sigmaPid, "-")[0:2], "-")
+
+	log.Printf("restoring %v", program)
+
+	restProc := proc.MakeRestoreProc(program, chkptLoc, osPid, sigmaPid)
 
 	// spawn and run it
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
+	log.Printf("spawned")
+	time.Sleep(10 * time.Second)
+	log.Printf("wait exit")
 	status, err := ts.WaitExit(restProc.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusOK())
@@ -95,13 +100,13 @@ func TestExerciseRestore(t *testing.T) {
 	log.Printf("starting")
 	// gotten from returned values from checkpointing
 	osPid := 18
-	chkptLoc := "name/s3/~any/fkaashoek/example-3592d035307de6d7/"
+	chkptLoc := "name/s3/~any/fkaashoek/ckpt-example-3592d035307de6d7/"
 
 	// make restore proc
 	// TODO make this be perf?
 	chkptLocList := strings.Split(chkptLoc, "/")
 	sigmaPid := chkptLocList[len(chkptLocList)-2]
-	p := proc.MakeRestoreProc(chkptLoc, osPid, sigmaPid)
+	p := proc.MakeRestoreProc("", chkptLoc, osPid, sigmaPid)
 
 	// log.Printf("procEnvProto: %+v", p.ProcEnvProto)
 

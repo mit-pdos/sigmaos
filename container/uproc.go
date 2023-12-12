@@ -46,8 +46,8 @@ func RunUProc(uproc *proc.Proc, procChan chan CheckpointSignal) error {
 	//	uproc.AppendEnv("RUST_BACKTRACE", "1")
 	cmd.Env = uproc.GetEnv()
 	db.DPrintf(db.ALWAYS, "env: %v", uproc.GetEnv())
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	//cmd.Stdout = os.Stdout
+	//cmd.Stderr = os.Stderr
 	// Set up new namespaces
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setsid: true,

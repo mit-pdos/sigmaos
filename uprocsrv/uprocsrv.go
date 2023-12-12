@@ -229,8 +229,7 @@ func (ups *UprocSrv) readCheckpointFromS3(remoteImgDir string, localImgDir strin
 	}
 
 	for _, file := range files {
-		db.DPrintf("Trying to copy file %s\n", file)
-
+		db.DPrintf(db.UPROCD, "Copy file %s from s3\n", file)
 		// write content
 		fileContents, _ := ups.ssrv.MemFs.SigmaClnt().GetFile(filepath.Join(remoteImgDir, file))
 		if err != nil {
@@ -241,7 +240,6 @@ func (ups *UprocSrv) readCheckpointFromS3(remoteImgDir string, localImgDir strin
 			db.DFatalf("Error writing to local file: %v\n", err)
 		}
 	}
-
 }
 
 func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointPidRequest, res *proto.CheckpointPidResult) error {
@@ -251,10 +249,10 @@ func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointPidRequest, res
 	// sts, _ := ups.ssrv.MemFs.SigmaClnt().GetDir(sp.S3)
 	// currS3Info := sp.Names(sts)[0]
 
-	ups.ssrv.MemFs.SigmaClnt().MkDir(sp.S3+"~any/sigmaoscheckpoint/", 0777)
-	db.DPrintf(db.UPROCD, "created dir: %v\n", sp.S3+"~any/sigmaoscheckpoint/")
+	ups.ssrv.MemFs.SigmaClnt().MkDir(sp.S3+"~any/fkaashoek/", 0777)
+	db.DPrintf(db.UPROCD, "created dir: %v\n", sp.S3+"~any/fkaashoek/")
 
-	chkptSimgaDir := sp.S3 + "~any/sigmaoscheckpoint/" + req.PidStr + "/"
+	chkptSimgaDir := sp.S3 + "~any/fkaashoek/" + req.PidStr + "/"
 	chkptLocalDir, osPid, err := container.CheckpointProc(ups.criuInst, procChan)
 
 	res.OsPid = int32(osPid)

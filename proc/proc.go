@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -63,11 +62,10 @@ func NewProc(program string, args []string) *Proc {
 	return NewProcPid(pid, program, args)
 }
 
-func MakeRestoreProc(chkptLoc string, osPid int, sigmaPid string) *Proc {
+func MakeRestoreProc(program, chkptLoc string, osPid int, sigmaPid string) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
 	procDir := NOT_SET
-	program := strings.Split(sigmaPid, "-")[0]
 	p.ProcEnvProto = &ProcEnvProto{
 		PidStr:             string(sigmaPid),
 		RealmStr:           string(sp.Trealm(NOT_SET)),

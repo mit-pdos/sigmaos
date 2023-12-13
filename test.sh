@@ -8,7 +8,7 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--overlay HOST_IP] [--gvisor] [--cleanup]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--cleanup]" 
 }
 
 BASIC="--basic"
@@ -19,6 +19,7 @@ GVISOR=""
 VERB="-v"
 CONTAINER=""
 CLEANUP=""
+COMPILE
 HOST_IP="127.0.0.1"
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -32,6 +33,11 @@ while [[ "$#" -gt 0 ]]; do
             shift
             BASIC="" 
             APPS="--apps"
+            ;;
+        --compile)
+            shift
+            BASIC=""
+            COMPILE="--compile"
             ;;
         --overlay)
             shift
@@ -64,6 +70,13 @@ cleanup() {
 
 go clean -testcache
 cleanup
+
+if [[ $COMPILE == "--compile" ]]; then
+
+    for T in path intervals serr linuxsched perf sigmap proxy reader writer stats fslib semclnt electclnt fslib memfs named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www fslibsrv realmclnt mr imgresized kv hotel socialnetwork; do
+        go test $VERB sigmaos/$T --run TestCompile
+    done
+fi
 
 if [[ $BASIC == "--basic" ]]; then
 

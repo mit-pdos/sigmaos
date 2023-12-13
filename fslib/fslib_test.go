@@ -31,6 +31,9 @@ func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestInitFs(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 	sts, err := ts.GetDir(pathname)

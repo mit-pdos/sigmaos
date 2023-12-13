@@ -11,6 +11,9 @@ import (
 	"sigmaos/test"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestStatsd(t *testing.T) {
 	ts := test.NewTstate(t)
 

@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/proc"
 	"sigmaos/delay"
 	"sigmaos/fslib"
+	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/test"
 )
@@ -16,6 +16,9 @@ import (
 const (
 	WAIT_PATH = "name/wait"
 )
+
+func TestCompile(t *testing.T) {
+}
 
 func TestSemClntSimple(t *testing.T) {
 	ts := test.NewTstate(t)

@@ -15,6 +15,9 @@ const (
 	LEADERNAME = "name/leader"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestAcquireRelease(t *testing.T) {
 	ts := test.NewTstate(t)
 

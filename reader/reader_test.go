@@ -18,6 +18,9 @@ func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestReader1(t *testing.T) {
 	ts := test.NewTstate(t)
 

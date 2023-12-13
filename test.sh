@@ -19,7 +19,7 @@ GVISOR=""
 VERB="-v"
 CONTAINER=""
 CLEANUP=""
-COMPILE
+COMPILE=""
 HOST_IP="127.0.0.1"
 while [[ "$#" -gt 0 ]]; do
     case "$1" in

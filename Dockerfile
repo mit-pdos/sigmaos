@@ -13,7 +13,7 @@ FROM alpine AS base
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apk add --no-cache libseccomp gcompat libpthread-stubs musl-dev strace
+RUN apk add --no-cache libseccomp gcompat musl-dev strace
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \

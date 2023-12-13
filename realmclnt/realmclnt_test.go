@@ -214,6 +214,9 @@ func TestBasicFairness(t *testing.T) {
 	err = ts1.Remove()
 	assert.Nil(t, err)
 
+	err = ts2.Remove()
+	assert.Nil(t, err)
+
 	rootts.Shutdown()
 }
 

@@ -73,6 +73,10 @@ cleanup
 
 if [[ $COMPILE == "--compile" ]]; then
 
+    #
+    # test if test packages compile
+    #
+
     for T in path intervals serr linuxsched perf sigmap proxy reader writer stats fslib semclnt electclnt fslib memfs named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www fslibsrv realmclnt mr imgresized kv hotel socialnetwork; do
         go test $VERB sigmaos/$T --run TestCompile
     done

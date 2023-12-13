@@ -150,7 +150,7 @@ func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
 	// RPC the schedd this proc was spawned on to wait for the proc to exit.
 	db.DPrintf(db.LCSCHED, "WaitExit %v RPC", p.GetPid())
 	if _, err := lcs.scheddclnt.Wait(scheddclnt.EXIT, kernelID, p.GetPid()); err != nil {
-		db.DFatalf("Error Schedd WaitExit: %v", err)
+		db.DPrintf(db.ALWAYS, "Error Schedd WaitExit: %v", err)
 	}
 	db.DPrintf(db.LCSCHED, "Proc exited %v", p.GetPid())
 	// Lock to modify resource allocations

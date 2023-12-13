@@ -51,6 +51,7 @@ func (fdc *FdClient) String() string {
 }
 
 func (fdc *FdClient) Close(fd int) error {
+	db.DPrintf(db.ALWAYS, "fdclient got close req")
 	fid, error := fdc.fds.lookup(fd)
 	if error != nil {
 		return error

@@ -1,11 +1,11 @@
 package container
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -145,7 +145,7 @@ func CheckpointProc(c *criu.Criu, procChan chan CheckpointSignal) (string, int, 
 		pid := chkptSignal.RealPid
 		db.DPrintf(db.ALWAYS, "got pid from channel: %v", pid)
 
-		procImgDir := imgDir + "/" + fmt.Sprint(pid)
+		procImgDir := imgDir + "/" + chkptSignal.SimgaosPid.String()
 		err := os.MkdirAll(procImgDir, os.ModePerm)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Checkpointing: error creating img dir %v", err)
@@ -313,10 +313,31 @@ func RestoreRunProc(criuInst *criu.Criu, localChkptLoc string, sigmaPid string, 
 		db.DPrintf(db.ALWAYS, "Restoring: Restoring suceeded!")
 	}
 
-	return nil
-
 	// signalling finish is done via sigmaos
 	// TODO potentially need to wait for another checkpoint signal
+	count := 0
+
+	// EWWWWWWW
+	for {
+		count += 1
+		process, err := os.FindProcess(int(osPid))
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Failed to find process: %s\n", err)
+			return nil
+		} else {
+			err := process.Signal(syscall.Signal(0))
+			if strings.Contains(err.Error(), "no such process") {
+				db.DPrintf(db.ALWAYS, "got no such process error")
+				return nil
+			} else if err != nil {
+				db.DPrintf(db.ALWAYS, "process.Signal returned: %v\n", err)
+			}
+		}
+		if count > 200 {
+			return nil
+		}
+	}
+
 }
 
 //

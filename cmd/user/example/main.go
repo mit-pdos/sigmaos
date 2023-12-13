@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -28,33 +26,25 @@ func main() {
 
 	// ---------------
 
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-	if err != nil {
-		db.DFatalf("NewSigmaClnt: error %v\n", err)
-	}
-	err = sc.Started()
-	if err != nil {
-		db.DFatalf("Started: error %v\n", err)
-	}
+	sc, _ := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	sc.Started()
 
-	timer := time.NewTicker(5 * time.Second)
+	timer := time.NewTicker(120 * time.Second)
 
 	testDir := sp.S3 + "~any/hmngtestbucket/"
 	filePath := testDir + "example-out.txt"
-	dstFd, err := sc.Create(filePath, 0777, sp.OWRITE)
-	if err != nil {
-		db.DFatalf("Error creating out file in s3 %v\n", err)
-	}
+	dstFd, _ := sc.Create(filePath, 0777, sp.OWRITE)
 
 	for {
 		select {
 		case <-timer.C:
+			// fmt.Println("exiting")
 			sc.Write(dstFd, []byte("exiting"))
-			err = sc.Close(dstFd)
+			sc.Close(dstFd)
 			sc.ClntExitOK()
 			return
 		default:
-			fmt.Println("here sleep")
+			// fmt.Println("here sleep")
 			sc.Write(dstFd, []byte("here sleep"))
 			time.Sleep(2 * time.Second)
 		}

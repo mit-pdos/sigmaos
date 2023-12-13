@@ -186,6 +186,7 @@ func (wrt *Wrt) Close() error {
 }
 
 func (wrt *Wrt) Write(b []byte) (int, error) {
+	db.DPrintf(db.FSLIB, "Got write \n")
 	return wrt.bwrt.Write(b)
 }
 

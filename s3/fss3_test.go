@@ -23,7 +23,7 @@ import (
 	"sigmaos/test"
 )
 
-var ROOT = []string{"a", "b.txt", "gutenberg", "wiki", "ls.PDF"}
+var ROOT = []string{"a", "gutenberg", "wiki", "img"}
 
 func TestCompile(t *testing.T) {
 }
@@ -42,7 +42,7 @@ func TestOne(t *testing.T) {
 func TestReadOff(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
-	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt"))
+	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/gutenberg/gutenberg.txt"))
 	assert.Nil(t, err, "Error ReadOff %v", err)
 	rdr.Lseek(1 << 10)
 	brdr := bufio.NewReaderSize(rdr, 1<<16)
@@ -100,7 +100,7 @@ func TestUnionDir(t *testing.T) {
 	dirents, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/gutenberg"))
 	assert.Nil(t, err, "GetDir")
 
-	assert.Equal(t, 8, len(dirents))
+	assert.Equal(t, 1, len(dirents))
 
 	ts.Shutdown()
 }
@@ -114,7 +114,7 @@ func TestUnionFile(t *testing.T) {
 	file, err := os.ReadFile("../input/pg-being_ernest.txt")
 	assert.Nil(t, err, "ReadFile")
 
-	name := path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt")
+	name := path.Join(sp.S3, "~local/9ps3/gutenberg/gutenberg.txt")
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
 

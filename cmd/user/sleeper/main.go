@@ -71,7 +71,6 @@ type Sleeper struct {
 	native      bool
 	sleepLength time.Duration
 	outdir      string
-	startSeqno  sessp.Tseqno
 	time.Time
 }
 
@@ -86,7 +85,6 @@ func NewSleeper(args []string) (*Sleeper, error) {
 		db.DFatalf("NewSigmaClient: %v", err)
 	}
 	s.SigmaClnt = sc
-	s.startSeqno = s.ReadSeqNo()
 	s.outdir = args[1]
 	d, err := time.ParseDuration(args[0])
 	if err != nil {

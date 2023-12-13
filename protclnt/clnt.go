@@ -1,10 +1,8 @@
 package protclnt
 
 import (
-	"sync/atomic"
-
-	"sigmaos/proc"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
@@ -22,23 +20,17 @@ func init() {
 }
 
 type Clnt struct {
-	id    sessp.Tclient
-	seqno sessp.Tseqno
-	sm    *sessclnt.Mgr
-	pcfg  *proc.ProcEnv
+	id   sessp.Tclient
+	sm   *sessclnt.Mgr
+	pcfg *proc.ProcEnv
 }
 
 func NewClnt(pcfg *proc.ProcEnv, clntnet string) *Clnt {
 	clnt := &Clnt{}
-	clnt.seqno = 0
 	clnt.id = clid
 	clnt.pcfg = pcfg
 	clnt.sm = sessclnt.NewMgr(pcfg, clnt.id, clntnet)
 	return clnt
-}
-
-func (clnt *Clnt) ReadSeqNo() sessp.Tseqno {
-	return sessp.Tseqno(atomic.LoadUint64((*uint64)(&clnt.seqno)))
 }
 
 func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {

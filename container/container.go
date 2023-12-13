@@ -67,7 +67,7 @@ func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
 				return err
 			}
 		}
-		db.DPrintf(db.SPAWN_LAT, "[%v] Get/Set sched attr %v", time.Since(s))
+		db.DPrintf(db.SPAWN_LAT, "Get/Set sched attr %v", time.Since(s))
 	}
 	return nil
 }

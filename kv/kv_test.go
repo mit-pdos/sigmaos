@@ -38,6 +38,9 @@ func checkKvs(t *testing.T, kvs *kv.KvSet, n int) {
 	}
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestBalance(t *testing.T) {
 	conf := &kv.Config{}
 	for i := 0; i < kv.NSHARD; i++ {

@@ -26,6 +26,9 @@ const (
 	IMG_RESIZE_MEM  proc.Tmem  = 0
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestResizeImg(t *testing.T) {
 	fn := "/tmp/thumb.jpeg"
 

@@ -48,6 +48,9 @@ func init() {
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestHash(t *testing.T) {
 	assert.Equal(t, 0, mr.Khash("LEAGUE")%8)
 	assert.Equal(t, 0, mr.Khash("Abbots")%8)

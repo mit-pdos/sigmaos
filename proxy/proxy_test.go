@@ -15,6 +15,9 @@ import (
 	"sigmaos/test"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 type Tstate struct {
 	*test.Tstate
 	cmd *exec.Cmd

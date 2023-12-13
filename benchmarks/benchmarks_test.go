@@ -161,6 +161,9 @@ const (
 	OUT_DIR = "name/out_dir"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 // Test how long it takes to init a semaphore.
 func TestMicroInitSemaphore(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)

@@ -7,6 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestString(t *testing.T) {
 	qt := Qtype(QTSYMLINK | QTTMP)
 	assert.Equal(t, qt.String(), "ts")

@@ -6,6 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestSplit(t *testing.T) {
 	s := Split("name/s3/192.168.2.114:43471//b.txt")
 	assert.Equal(t, 4, len(s))

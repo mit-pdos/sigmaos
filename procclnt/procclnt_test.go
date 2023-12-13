@@ -375,7 +375,7 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 				status, err := ts.WaitExit(a.GetPid())
 				db.DPrintf(db.TEST, "Done WaitExit %v", pid)
 				assert.Nil(t, err, "WaitExit")
-				assert.True(t, status != nil && status.IsStatusOK(), "Status not OK")
+				assert.True(t, status != nil && status.IsStatusOK(), "Status not OK: %v", status)
 				cleanSleeperResult(t, ts, pid)
 			}
 			done <- i

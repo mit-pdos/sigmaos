@@ -57,10 +57,11 @@ type Coord struct {
 	intOutdir   string
 	done        int32
 	memPerTask  proc.Tmem
+	asyncrw     bool
 }
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 8 {
+	if len(args) != 9 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
@@ -97,6 +98,11 @@ func NewCoord(args []string) (*Coord, error) {
 		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[2])
 	}
 	c.memPerTask = proc.Tmem(mem)
+	asyncrw, err := strconv.ParseBool(args[8])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: can't parse asyncrw %v", args[8])
+	}
+	c.asyncrw = asyncrw
 
 	b, err := c.GetFile(JobOutLink(c.job))
 	if err != nil {
@@ -137,14 +143,14 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz}, c.memPerTask)
+	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	outlink := ReduceOut(c.job) + task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + task
-	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask)
+	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask)
 }
 
 func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {

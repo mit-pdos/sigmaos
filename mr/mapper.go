@@ -41,9 +41,10 @@ type Mapper struct {
 	pwrts       []*perf.PerfWriter
 	rand        string
 	perf        *perf.Perf
+	asyncrw     bool
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr, lsz int, input, intOutput string) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
 	m := &Mapper{}
 	m.mapf = mapf
 	m.job = job
@@ -59,11 +60,12 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr,
 	m.SigmaClnt = sc
 	m.perf = p
 	m.sbc = NewScanByteCounter(p)
+	m.asyncrw = asyncrw
 	return m, nil
 }
 
 func newMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
-	if len(args) != 5 {
+	if len(args) != 6 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
 	nr, err := strconv.Atoi(args[1])
@@ -78,7 +80,11 @@ func newMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err := NewMapper(sc, mapf, args[0], p, nr, lsz, args[2], args[3])
+	asyncrw, err := strconv.ParseBool(args[5])
+	if err != nil {
+		return nil, fmt.Errorf("NewMapper: can't parse asyncrw %v", args[5])
+	}
+	m, err := NewMapper(sc, mapf, args[0], p, nr, lsz, args[2], args[3], asyncrw)
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
@@ -98,7 +104,7 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 }
 
 func (m *Mapper) InitWrt(r int, name string) error {
-	if MAP_ASYNC_WRITER {
+	if m.asyncrw {
 		if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
 			return err
 		} else {
@@ -140,7 +146,7 @@ func (m *Mapper) initMapper() error {
 func (m *Mapper) closewrts() (sp.Tlength, error) {
 	n := sp.Tlength(0)
 	for r := 0; r < m.nreducetask; r++ {
-		if MAP_ASYNC_WRITER {
+		if m.asyncrw {
 			if m.asyncwrts[r] != nil {
 				if err := m.asyncwrts[r].Close(); err != nil {
 					return 0, err
@@ -203,7 +209,7 @@ func (m *Mapper) informReducer() error {
 func (m *Mapper) emit(kv *KeyValue) error {
 	r := Khash(kv.Key) % m.nreducetask
 	var err error
-	if MAP_ASYNC_WRITER {
+	if m.asyncrw {
 		_, err = encodeKV(m.asyncwrts[r], kv.Key, kv.Value, r)
 	} else {
 		_, err = encodeKV(m.syncwrts[r], kv.Key, kv.Value, r)

@@ -40,6 +40,7 @@ type Reducer struct {
 	asyncwrt     *fslib.Wrt
 	syncwrt      *writer.Writer
 	perf         *perf.Perf
+	asyncrw      bool
 }
 
 func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
@@ -55,6 +56,11 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	r.SigmaClnt = sc
 	r.perf = p
+	asyncrw, err := strconv.ParseBool(args[3])
+	if err != nil {
+		return nil, fmt.Errorf("NewReducer: can't parse asyncrw %v", args[3])
+	}
+	r.asyncrw = asyncrw
 	//	pn, err := r.ResolveUnions(r.outputTarget + rand.String(16))
 	//	if err != nil {
 	//		db.DFatalf("%v: ResolveUnion %v err %v", r.ProcEnv().GetPID(), r.tmp, err)
@@ -68,7 +74,7 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	r.nmaptask = m
 
 	sc.MkDir(path.Dir(r.tmp), 0777)
-	if REDUCE_ASYNC_WRITER {
+	if r.asyncrw {
 		w, err := r.CreateAsyncWriter(r.tmp, 0777, sp.OWRITE)
 		if err != nil {
 			db.DFatalf("Error CreateWriter [%v] %v", r.tmp, err)
@@ -229,7 +235,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	}
 
 	var nbyte sp.Tlength
-	if REDUCE_ASYNC_WRITER {
+	if r.asyncrw {
 		if err := r.asyncwrt.Close(); err != nil {
 			return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
 		}

@@ -20,11 +20,6 @@ import (
 )
 
 const (
-	MAP_ASYNC_WRITER    = true
-	REDUCE_ASYNC_WRITER = true
-)
-
-const (
 	MR          = "/mr/"
 	MRDIRTOP    = "name/" + MR
 	MRDIRELECT  = "name/mr-elect"
@@ -232,8 +227,8 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 	return len(bins), nil
 }
 
-func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int, memPerTask proc.Tmem) *groupmgr.GroupMgr {
-	cfg := groupmgr.NewGroupConfig(ncoord, "mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz), strconv.Itoa(int(memPerTask))}, 1000, jobname)
+func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int, memPerTask proc.Tmem, asyncrw bool) *groupmgr.GroupMgr {
+	cfg := groupmgr.NewGroupConfig(ncoord, "mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz), strconv.Itoa(int(memPerTask)), strconv.FormatBool(asyncrw)}, 1000, jobname)
 	cfg.SetTest(crashcoord, 0, 0)
 	return cfg.StartGrpMgr(sc, ncoord)
 }

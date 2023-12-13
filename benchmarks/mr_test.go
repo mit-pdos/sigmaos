@@ -24,9 +24,10 @@ type MRJobInstance struct {
 	done    int32
 	job     *mr.Job
 	cm      *groupmgr.GroupMgr
+	asyncrw bool
 }
 
-func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string, memreq proc.Tmem) *MRJobInstance {
+func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string, memreq proc.Tmem, asyncrw bool) *MRJobInstance {
 	ji := &MRJobInstance{}
 	ji.RealmTstate = ts
 	ji.p = p
@@ -34,6 +35,7 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string, m
 	ji.app = app
 	ji.jobname = jobname
 	ji.memreq = memreq
+	ji.asyncrw = asyncrw
 	return ji
 }
 
@@ -52,7 +54,7 @@ func (ji *MRJobInstance) PrepareMRJob() {
 
 func (ji *MRJobInstance) StartMRJob() {
 	db.DPrintf(db.TEST, "Start MR job %v %v", ji.jobname, ji.job)
-	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0, ji.memreq)
+	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0, ji.memreq, ji.asyncrw)
 }
 
 func (ji *MRJobInstance) Wait() {

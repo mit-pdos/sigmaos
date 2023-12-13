@@ -87,9 +87,9 @@ func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz
 		assert.Nil(t, err, "Error Create writer: %v", err)
 		bw := bufio.NewWriterSize(w, sp.BUFSZ)
 		err = test.Writer(t, bw, buf, sz)
-		assert.Nil(t, err)
+		assert.Nil(t, err, "Err writer %v", err)
 		err = bw.Flush()
-		assert.Nil(t, err)
+		assert.Nil(t, err, "Err: %v", err)
 		err = w.Close()
 		assert.Nil(t, err)
 	case HASYNC:
@@ -110,6 +110,9 @@ func TestCompile(t *testing.T) {
 }
 
 func TestWriteFilePerfSingle(t *testing.T) {
+	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {
+		return
+	}
 	ts := test.NewTstatePath(t, pathname)
 	fn := gopath.Join(pathname, "f")
 	buf := test.NewBuf(WRITESZ)
@@ -146,6 +149,9 @@ func TestWriteFilePerfSingle(t *testing.T) {
 }
 
 func TestWriteFilePerfMultiClient(t *testing.T) {
+	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {
+		return
+	}
 	ts := test.NewTstatePath(t, pathname)
 	N_CLI := 10
 	buf := test.NewBuf(WRITESZ)
@@ -230,6 +236,10 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 }
 
 func TestReadFilePerfSingle(t *testing.T) {
+	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {
+		return
+	}
+
 	var sz sp.Tlength
 	var err error
 
@@ -292,6 +302,9 @@ func TestReadFilePerfSingle(t *testing.T) {
 }
 
 func TestReadFilePerfMultiClient(t *testing.T) {
+	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {
+		return
+	}
 	const (
 		NTRIAL = 1000
 	)

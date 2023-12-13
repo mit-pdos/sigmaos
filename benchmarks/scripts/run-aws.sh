@@ -693,45 +693,54 @@ socialnet_tail_multi() {
 realm_balance_be() {
 #  mrapp=mr-wc-wiki4G-bench.yml
 #  hotel_dur="20s,20s,20s"
-  mrapp=mr-grep-wiki20G-bench.yml
-  sl="40s"
-  mem_req=1500
+  mrapp=mr-grep-wiki20G-uxinput-medium-bench.yml
+  sl="20s"
+  mem_req=1000
 #  mem_req=1500
-  n_vm=1
+  n_vm=8
   n_realm=3
-  driver_vm=8
+#  n_realm=3
+  driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
+#  cmd="
+#    export SIGMADEBUG=\"TEST;BENCH;MR;FSETCD;\"; \
+#    go clean -testcache; \
+#    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP 10.0.113.190 --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --nrealm $n_realm --mr_mem_req $mem_req > /tmp/bench.out 2>&1
+#  "
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;MR;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --nrealm $n_realm --mr_mem_req $mem_req > /tmp/bench.out 2>&1
-  "
+#  "
   run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
 
 realm_balance_be_img() {
 #  imgpath="name/s3/~local/9ps3/img/7.jpg"
   imgpath="name/ux/~local/8.jpg"
-  ncores=2
-  n_imgresize=3000
-#  imgresize_nrounds=200
-  imgresize_nrounds=32
+  ncores=4
+  n_imgresize=10
+  n_imgresize_per=100
+#  n_imgresize_per=100
+  imgresize_nrounds=50
+#  imgresize_nrounds=120
 #  imgresize_nrounds=8
   imgresize_mcpu=0
   imgresize_mem=1500
+
   sl="20s"
   n_vm=8
   n_realm=4
-  driver_vm=8
+  driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --nrealm $n_realm > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --n_imgresize_per $n_imgresize_per --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --nrealm $n_realm > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $ncores "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -1450,7 +1459,7 @@ graph_realm_balance_be_img() {
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
   nrealm=4
-  ncores=8
+  ncores=32
   $GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore $ncores --prefix "imgresize-"
 }
 
@@ -1567,12 +1576,12 @@ echo "Running benchmarks with version: $VERSION"
 #schedd_scalability_rs
 #schedd_scalability_rs_single_machine
 #socialnet_tail
-realm_balance_be
+#realm_balance_be
 #mr_vs_corral
 #realm_balance_be_img
 #schedd_scalability
 
-#realm_balance_multi_img
+realm_balance_multi_img
 
 #img_resize
 
@@ -1602,7 +1611,7 @@ realm_balance_be
 source ~/env/3.10/bin/activate
 #graph_schedd_scalability_rs_hockey
 #graph_schedd_scalability_rs_single_machine
-graph_realm_balance_be
+#graph_realm_balance_be
 #graph_realm_balance_be_img
 #graph_start_latency_breakdown
 #graph_start_latency

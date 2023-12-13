@@ -186,10 +186,10 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 		a.SetShared(path.Join(www.globalSrvpath, pipeName))
 	}
 	db.DPrintf(db.WWW, "About to spawn %v", a)
-	_, errs := www.ssrv.SigmaClnt().SpawnBurst([]*proc.Proc{a}, 1)
-	if len(errs) != 0 {
-		db.DFatalf("Error SpawnBurst %v", errs)
-		return nil, errs[0]
+
+	if err := www.ssrv.SigmaClnt().Spawn(a); err != nil {
+		db.DFatalf("Error spawn %v", err)
+		return nil, err
 	}
 	db.DPrintf(db.WWW, "About to WaitStart %v", a)
 	err := www.ssrv.SigmaClnt().WaitStart(pid)

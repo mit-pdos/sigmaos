@@ -12,7 +12,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )

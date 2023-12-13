@@ -198,8 +198,8 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)
-		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
-			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
+		if err := sc.Spawn(p); err != nil {
+			db.DFatalf("Error burst-spawnn proc %v: %v", p, err)
 			return nil, err
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {

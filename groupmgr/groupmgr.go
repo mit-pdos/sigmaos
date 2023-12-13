@@ -171,10 +171,10 @@ func (m *member) spawn() error {
 	if m.Mcpu == 1000 && strings.Contains(m.Program, "kvd") {
 		p.AppendEnv("GOMAXPROCS", strconv.Itoa(1))
 	}
-	db.DPrintf(db.GROUPMGR, "SpawnBurst p %v", p)
-	if _, errs := m.SpawnBurst([]*proc.Proc{p}, 1); len(errs) > 0 {
-		db.DPrintf(db.GROUPMGR, "Error SpawnBurst pid %v err %v", p.GetPid(), errs[0])
-		return errs[0]
+	db.DPrintf(db.GROUPMGR, "Spawn p %v", p)
+	if err := m.Spawn(p); err != nil {
+		db.DPrintf(db.GROUPMGR, "Error Spawn pid %v err %v", p.GetPid(), err)
+		return err
 	}
 	if err := m.WaitStart(p.GetPid()); err != nil {
 		return err

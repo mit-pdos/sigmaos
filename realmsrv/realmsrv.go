@@ -106,9 +106,9 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	p.SetMcpu(NAMED_MCPU)
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named", req.Realm)
-	if _, errs := rm.sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) != 0 {
-		db.DPrintf(db.REALMD_ERR, "Error SpawnBurst: %v", errs[0])
-		return errs[0]
+	if err := rm.sc.Spawn(p); err != nil {
+		db.DPrintf(db.REALMD_ERR, "Error SpawnBurst: %v", err)
+		return err
 	}
 	if err := rm.sc.WaitStart(p.GetPid()); err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error WaitStart: %v", err)

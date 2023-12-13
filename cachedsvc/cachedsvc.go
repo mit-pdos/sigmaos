@@ -38,9 +38,9 @@ func (cs *CachedSvc) addServer(i int) error {
 		p.AppendEnv("GOGC", "off")
 	}
 	p.SetMcpu(cs.mcpu)
-	_, errs := cs.SpawnBurst([]*proc.Proc{p}, 2)
-	if len(errs) > 0 {
-		return errs[0]
+	err := cs.Spawn(p)
+	if err != nil {
+		return err
 	}
 	if err := cs.WaitStart(p.GetPid()); err != nil {
 		return err

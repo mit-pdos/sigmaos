@@ -8,7 +8,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protclnt"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -42,10 +41,6 @@ func (fidc *FidClnt) Len() int {
 
 func (fidc *FidClnt) FenceDir(path string, f sp.Tfence) *serr.Err {
 	return fidc.ft.Insert(path, f)
-}
-
-func (fidc *FidClnt) ReadSeqNo() sessp.Tseqno {
-	return fidc.pc.ReadSeqNo()
 }
 
 func (fidc *FidClnt) DetachAll(cid sp.TclntId) *serr.Err {

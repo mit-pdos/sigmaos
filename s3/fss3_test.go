@@ -111,7 +111,7 @@ func TestUnionFile(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	file, err := os.ReadFile("../input/pg-being_ernest.txt")
+	file, err := os.ReadFile("../input/gutenberg.txt")
 	assert.Nil(t, err, "ReadFile")
 
 	name := path.Join(sp.S3, "~local/9ps3/gutenberg/gutenberg.txt")

@@ -22,6 +22,9 @@ func init() {
 	flag.StringVar(&pathname, "path", "name/schedd/~local/", "path for file system")
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestPipeBasic(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 

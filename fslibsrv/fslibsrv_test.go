@@ -106,6 +106,9 @@ func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz
 	return sz
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestWriteFilePerfSingle(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 	fn := gopath.Join(pathname, "f")

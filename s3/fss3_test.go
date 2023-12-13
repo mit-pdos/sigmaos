@@ -25,6 +25,9 @@ import (
 
 var ROOT = []string{"a", "b.txt", "gutenberg", "wiki", "ls.PDF"}
 
+func TestCompile(t *testing.T) {
+}
+
 func TestOne(t *testing.T) {
 	ts := test.NewTstateAll(t)
 

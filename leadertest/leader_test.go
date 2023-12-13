@@ -83,6 +83,9 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []sp.Tpid) {
 	}
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestOldPrimary(t *testing.T) {
 	ts := test.NewTstateAll(t)
 	fn, pids := runLeaders(t, ts, "")

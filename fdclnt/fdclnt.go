@@ -3,13 +3,11 @@ package fdclnt
 import (
 	"fmt"
 
-	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/reader"
-	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
@@ -103,22 +101,6 @@ func (fdc *FdClient) OpenWatch(path string, mode sp.Tmode, w pathclnt.Watch) (in
 
 func (fdc *FdClient) Open(path string, mode sp.Tmode) (int, error) {
 	return fdc.OpenWatch(path, mode, nil)
-}
-
-func (fdc *FdClient) CreateOpen(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
-	fd, err := fdc.Create(path, perm, mode)
-	if err != nil && !serr.IsErrCode(err, serr.TErrExists) {
-		db.DPrintf(db.FDCLNT_ERR, "Create %v err %v", path, err)
-		return -1, err
-	}
-	if err != nil {
-		fd, err = fdc.Open(path, mode)
-		if err != nil {
-			db.DPrintf(db.FDCLNT_ERR, "Open %v err %v", path, err)
-			return -1, err
-		}
-	}
-	return fd, nil
 }
 
 func (fdc *FdClient) SetRemoveWatch(pn string, w pathclnt.Watch) error {

@@ -153,12 +153,12 @@ func TestSymlinkFile(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
 	dn := s3Name(ts)
-	fn := path.Join(dn, "9ps3", "b.txt")
+	fn := path.Join(dn, "9ps3", "gutenberg/gutenberg.txt")
 
 	_, err := ts.GetFile(fn)
 	assert.Nil(t, err, "GetFile")
 
-	fn = dn + "/9ps3" + "//b.txt"
+	fn = dn + "/9ps3" + "//gutenberg/gutenberg.txt"
 	_, err = ts.GetFile(fn)
 	assert.Nil(t, err, "GetFile")
 

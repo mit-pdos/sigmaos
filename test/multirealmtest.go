@@ -19,7 +19,7 @@ func NewRealmTstate(ts *Tstate, realm sp.Trealm) *RealmTstate {
 	return newRealmTstateClnt(ts, realm, true)
 }
 
-// News a tstate relative to an existing realm.
+// Creates a tstate relative to an existing realm.
 func NewRealmTstateClnt(ts *Tstate, realm sp.Trealm) *RealmTstate {
 	return newRealmTstateClnt(ts, realm, false)
 }

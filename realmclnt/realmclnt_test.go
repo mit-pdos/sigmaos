@@ -211,6 +211,9 @@ func TestBasicFairness(t *testing.T) {
 	assert.Nil(rootts.T, err, "Err WaitExit: %v", err)
 	assert.True(rootts.T, status.IsStatusOK(), "Wrong status: %v", status)
 
+	err = ts1.Remove()
+	assert.Nil(t, err)
+
 	rootts.Shutdown()
 }
 

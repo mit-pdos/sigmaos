@@ -44,7 +44,7 @@ type Reducer struct {
 }
 
 func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
-	if len(args) != 4 {
+	if len(args) != 5 {
 		return nil, errors.New("NewReducer: too few arguments")
 	}
 	r := &Reducer{}
@@ -67,7 +67,7 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	//	}
 	r.tmp = r.outputTarget + rand.String(16) //pn
 
-	m, err := strconv.Atoi(args[3])
+	m, err := strconv.Atoi(args[4])
 	if err != nil {
 		return nil, fmt.Errorf("Reducer: nmaptask %v isn't int", args[2])
 	}

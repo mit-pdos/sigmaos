@@ -173,9 +173,11 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 }
 
 func (ups *UprocSrv) writeCheckpointToS3(chkptLocalDir string, chkptSimgaDir string) error {
+	if err := ups.ssrv.MemFs.SigmaClnt().MkDir(chkptSimgaDir, 0777); err != nil {
+		return err
+	}
 
-	ups.ssrv.MemFs.SigmaClnt().MkDir(chkptSimgaDir, 0777)
-	db.DPrintf(db.UPROCD, "created dir: %v\n", chkptSimgaDir)
+	db.DPrintf(db.UPROCD, "Created dir: %v\n", chkptSimgaDir)
 
 	// loop through files in curr dir, put into files in sigmaOS dir
 	files, err := os.ReadDir(chkptLocalDir)

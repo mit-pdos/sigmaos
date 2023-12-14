@@ -482,7 +482,7 @@ func TestDirReadPerf(t *testing.T) {
 		})
 		return n
 	})
-	lookuper(ts, 1, N, dir, NFILE, ts.GetLocalIP())
+	lookuper(ts, 1, N, dir, NFILE, ts.ProcEnv().GetLocalIP())
 	//lookuper(t, NCLERK, N, dir, NFILE)
 	err := ts.RmDir(dir)
 	assert.Nil(t, err)

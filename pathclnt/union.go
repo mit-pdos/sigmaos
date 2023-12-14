@@ -16,7 +16,7 @@ func (pathc *PathClnt) IsLocalMount(mnt sp.Tmount) bool {
 	if tip == "" {
 		tip = lip
 	}
-	db.DPrintf(db.MOUNT, "IsLocalMount: %v tip %v lip %v\n", tip, lip)
+	db.DPrintf(db.MOUNT, "IsLocalMount: tip %v lip %v\n", tip, lip)
 	if tip == lip {
 		return true
 	}

@@ -120,7 +120,7 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 		if error != nil {
 			return false, nil
 		}
-		if ok := union.UnionMatch(fsl.GetLocalIP(), q, mnt); ok {
+		if ok := union.UnionMatch(fsl.pcfg.GetLocalIP(), q, mnt); ok {
 			rname = st.Name
 			rmnt = mnt
 			return true, nil

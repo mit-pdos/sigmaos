@@ -53,16 +53,8 @@ func (pathc *PathClnt) String() string {
 	return str
 }
 
-func (pathc *PathClnt) Realm() sp.Trealm {
-	return pathc.pcfg.GetRealm()
-}
-
 func (pathc *PathClnt) ClntId() sp.TclntId {
 	return pathc.cid
-}
-
-func (pathc *PathClnt) GetLocalIP() string {
-	return pathc.pcfg.LocalIP
 }
 
 func (pathc *PathClnt) Mounts() []string {

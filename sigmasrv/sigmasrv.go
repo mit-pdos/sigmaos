@@ -7,7 +7,6 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/ephemeralmap"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/fslibsrv"
@@ -138,8 +137,10 @@ func NewSigmaSrvRoot(root fs.Dir, addr, path string, pcfg *proc.ProcEnv) (*Sigma
 	if err != nil {
 		return nil, err
 	}
-	et := ephemeralmap.NewEphemeralMap()
-	sesssrv := fslibsrv.BootSrv(sc.ProcEnv(), root, addr, nil, nil, et)
+	sesssrv, err := fslibsrv.NewSrv(root, path, addr, sc, nil)
+	if err != nil {
+		return nil, err
+	}
 	ssrv := newSigmaSrv(memfssrv.NewMemFsSrv("", sesssrv, sc, nil))
 	fslibsrv.Post(sesssrv, sc, path)
 	return ssrv, nil

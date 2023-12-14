@@ -142,7 +142,6 @@ func NewSigmaSrvRoot(root fs.Dir, addr, path string, pcfg *proc.ProcEnv) (*Sigma
 		return nil, err
 	}
 	ssrv := newSigmaSrv(memfssrv.NewMemFsSrv("", sesssrv, sc, nil))
-	fslibsrv.Post(sesssrv, sc, path)
 	return ssrv, nil
 }
 

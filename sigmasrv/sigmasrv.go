@@ -108,9 +108,7 @@ func newSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := ssrv.NewLeaseSrv(); err != nil {
-		return nil, err
-	}
+	ssrv.newLeaseSrv()
 	return ssrv, nil
 }
 
@@ -182,10 +180,9 @@ func (ssrv *SigmaSrv) newRPCDev(svci any) error {
 }
 
 // Assumes RPCSrv has been created and register the LeaseSrv service.
-func (ssrv *SigmaSrv) NewLeaseSrv() error {
+func (ssrv *SigmaSrv) newLeaseSrv() {
 	ssrv.lsrv = newLeaseSrv(ssrv.MemFs)
 	ssrv.rpcs.RegisterService(ssrv.lsrv)
-	return nil
 }
 
 func (ssrv *SigmaSrv) QueueLen() int64 {

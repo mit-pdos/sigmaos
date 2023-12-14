@@ -7,7 +7,6 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/union"
 )
 
 func (fsl *FsLib) MountService(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
@@ -89,7 +88,7 @@ func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
 // content of symlink and the symlink's name.
 func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if pn == sp.NAMED {
-		return fsl.GetNamedMount(), "", nil
+		return fsl.SigmaOS.GetNamedMount(), "", nil
 	}
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()
@@ -99,7 +98,7 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 			return sp.NullMount(), "", err
 		}
 		return mnt, left[1:].String(), nil
-	} else if s, p, err := fsl.PathLastSymlink(pn); err == nil {
+	} else if s, p, err := fsl.SigmaOS.PathLastSymlink(pn); err == nil {
 		if mnt, err := fsl.ReadMount(s.String()); err == nil {
 			return mnt, p.String(), nil
 		}
@@ -120,7 +119,7 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 		if error != nil {
 			return false, nil
 		}
-		if ok := union.UnionMatch(fsl.GetLocalIP(), q, mnt); ok {
+		if q == "~any" || fsl.SigmaOS.IsLocalMount(mnt) {
 			rname = st.Name
 			rmnt = mnt
 			return true, nil

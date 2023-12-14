@@ -31,7 +31,7 @@ while [ $# -ne 1 ]; do
 done
 
 if [[ "$BOOT" == "--boot" ]] ; then
-    ./start-kernel.sh --boot all sigma-named
+    ./start-kernel.sh --boot named sigma-named
 fi
 
 ./bin/linux/proxyd $1 &

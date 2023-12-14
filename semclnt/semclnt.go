@@ -46,7 +46,7 @@ func (c *SemClnt) Down() error {
 	signal := make(chan error)
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
 		db.DPrintf(db.SEMCLNT, "Down %d %v\n", i, c.path)
-		err := c.SetRemoveWatch(c.path, func(p string, err1 error) {
+		err := c.SigmaOS.SetRemoveWatch(c.path, func(p string, err1 error) {
 			if err1 != nil {
 				db.DPrintf(db.SEMCLNT_ERR, "watch %v err %v\n", c.path, err1)
 			}

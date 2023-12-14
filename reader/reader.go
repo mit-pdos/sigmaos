@@ -4,15 +4,17 @@ import (
 	"io"
 
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
-	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
+type ReaderI interface {
+	Read(sp.Toffset, sp.Tsize) ([]byte, error)
+	Close() error
+}
+
 type Reader struct {
-	fc     *fidclnt.FidClnt
+	rdr    ReaderI
 	path   string
-	fid    sp.Tfid
 	off    sp.Toffset
 	eof    bool
 	fenced bool
@@ -20,10 +22,6 @@ type Reader struct {
 
 func (rdr *Reader) Path() string {
 	return rdr.path
-}
-
-func (rdr *Reader) Fid() sp.Tfid {
-	return rdr.fid
 }
 
 func (rdr *Reader) Nbytes() sp.Tlength {
@@ -38,12 +36,12 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 	var b []byte
-	var err *serr.Err
+	var err error
 	sz := sp.Tsize(len(p))
 	if rdr.fenced {
-		b, err = rdr.fc.ReadF(rdr.fid, rdr.off, sz)
+		b, err = rdr.rdr.Read(rdr.off, sz)
 	} else {
-		b, err = rdr.fc.ReadF(rdr.fid, rdr.off, sz)
+		b, err = rdr.rdr.Read(rdr.off, sz)
 	}
 	if err != nil {
 		db.DPrintf(db.READER_ERR, "Read %v err %v\n", rdr.path, err)
@@ -70,17 +68,13 @@ func (rdr *Reader) GetData() ([]byte, error) {
 	return b, nil
 }
 
-func (rdr *Reader) GetDataErr() ([]byte, *serr.Err) {
-	return rdr.fc.ReadF(rdr.fid, 0, sp.MAXGETSET)
-}
-
-func (rdr *Reader) Lseek(o sp.Toffset) error {
-	rdr.off = o
-	return nil
+func (rdr *Reader) GetDataErr() ([]byte, error) {
+	b, err := rdr.rdr.Read(0, sp.MAXGETSET)
+	return b, err
 }
 
 func (rdr *Reader) Close() error {
-	err := rdr.fc.Clunk(rdr.fid)
+	err := rdr.rdr.Close()
 	if err != nil {
 		return err
 	}
@@ -91,6 +85,10 @@ func (rdr *Reader) Unfence() {
 	rdr.fenced = false
 }
 
-func NewReader(fc *fidclnt.FidClnt, path string, fid sp.Tfid) *Reader {
-	return &Reader{fc, path, fid, 0, false, true}
+func (rdr *Reader) Reader() ReaderI {
+	return rdr.rdr
+}
+
+func NewReader(rdr ReaderI, path string) *Reader {
+	return &Reader{rdr, path, 0, false, true}
 }

@@ -107,11 +107,6 @@ func (k *Kernel) Shutdown() error {
 
 	db.DPrintf(db.KERNEL, "Shutdown %v\n", k.Param.KernelId)
 	k.shutdown()
-	N := 200 // Crashing procds in mr test leave several fids open; maybe too many?
-	n := k.PathClnt.FidClnt.Len()
-	if n > N {
-		db.DPrintf(db.ALWAYS, "Too many FIDs open (%v): %v", n, k.PathClnt.FidClnt)
-	}
 	db.DPrintf(db.KERNEL, "Shutdown %s done\n", k.Param.KernelId)
 	return nil
 }

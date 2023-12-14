@@ -245,7 +245,7 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) erro
 		if err != nil {
 			return err
 		}
-		if _, err := io.Copy(wrt, rdr); err != nil {
+		if _, err := io.Copy(wrt, rdr.Reader); err != nil {
 			return err
 		}
 	}

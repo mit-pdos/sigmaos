@@ -16,7 +16,7 @@ import (
 func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	if fsl.ProcEnv().GetPrivileged() {
 		db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)
-		fsl.NewRootMount(fsl.ProcEnv().GetUname(), fsl.ProcEnv().ProcDir, proc.PROCDIR)
+		fsl.NewRootMount(fsl.ProcEnv().ProcDir, proc.PROCDIR)
 	}
 	// If a schedd IP was specified for this proc, mount the RPC file directly.
 	if fsl.ProcEnv().GetScheddIP() != "" {
@@ -40,12 +40,12 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 	MountPids(fsl)
 	// XXX needed?
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", sp.SCHEDDREL, sp.SCHEDDREL)
-	if err := fsl.NewRootMount(fsl.ProcEnv().GetUname(), sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
+	if err := fsl.NewRootMount(sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting schedd err %v\n", err)
 	}
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)
-	if err := fsl.NewRootMount(fsl.ProcEnv().GetUname(), fsl.ProcEnv().ProcDir, proc.PROCDIR); err != nil {
+	if err := fsl.NewRootMount(fsl.ProcEnv().ProcDir, proc.PROCDIR); err != nil {
 		db.DFatalf("Error mounting procdir: %v", err)
 	}
 	clnt := newProcClnt(fsl, pid, true)
@@ -54,6 +54,6 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) *ProcClnt {
 }
 
 func MountPids(fsl *fslib.FsLib) error {
-	fsl.NewRootMount(fsl.ProcEnv().GetUname(), sp.KPIDS, sp.KPIDSREL)
+	fsl.NewRootMount(sp.KPIDS, sp.KPIDSREL)
 	return nil
 }

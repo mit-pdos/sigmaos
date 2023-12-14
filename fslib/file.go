@@ -13,40 +13,72 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/reader"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
-
-func (fl *FsLib) ReadSeqNo() sessp.Tseqno {
-	return fl.FidClnt.ReadSeqNo()
-}
 
 //
 // Single shot operations
 //
 
 func (fl *FsLib) GetFile(fname string) ([]byte, error) {
-	return fl.FdClient.GetFile(fname)
+	return fl.SigmaOS.GetFile(fname)
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sp.Tsize, error) {
-	return fl.FdClient.PutFile(fname, 0777, m, data, off, sp.NoLeaseId)
+	return fl.SigmaOS.PutFile(fname, 0777, m, data, off, sp.NoLeaseId)
 }
 
 func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sp.Tsize, error) {
-	return fl.FdClient.PutFile(fname, perm, mode, data, 0, sp.NoLeaseId)
+	return fl.SigmaOS.PutFile(fname, perm, mode, data, 0, sp.NoLeaseId)
 }
 
 func (fl *FsLib) PutFileEphemeral(fname string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, data []byte) (sp.Tsize, error) {
-	return fl.FdClient.PutFile(fname, perm|sp.DMTMP, mode, data, 0, lid)
+	return fl.SigmaOS.PutFile(fname, perm|sp.DMTMP, mode, data, 0, lid)
 }
 
 //
 // Open readers
 //
 
-func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
+type FdReader struct {
+	*reader.Reader
+	sos sos.SigmaOS
+	fd  int
+}
+
+func (rd *FdReader) Close() error {
+	return rd.sos.Close(rd.fd)
+}
+
+func (rd *FdReader) Read(o sp.Toffset, sz sp.Tsize) ([]byte, error) {
+	return rd.sos.Read(rd.fd, sz)
+}
+
+func (rd *FdReader) Fd() int {
+	return rd.fd
+}
+
+func (rd *FdReader) Lseek(off sp.Toffset) error {
+	return rd.sos.Seek(rd.fd, off)
+}
+
+func newFdReader(sos sos.SigmaOS, fd int) *FdReader {
+	return &FdReader{nil, sos, fd}
+}
+
+func (fl *FsLib) NewReader(fd int, path string) *FdReader {
+	fdrdr := newFdReader(fl.SigmaOS, fd)
+	fdrdr.Reader = reader.NewReader(fdrdr, path)
+	return fdrdr
+}
+
+func (fl *FsLib) NewWriter(fd int) *writer.Writer {
+	return writer.NewWriter(fl.SigmaOS, fd)
+}
+
+func (fl *FsLib) OpenReader(path string) (*FdReader, error) {
 	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
@@ -55,16 +87,16 @@ func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
 }
 
 type Rdr struct {
-	rdr  *reader.Reader
-	brdr *bufio.Reader
-	ardr io.ReadCloser
+	fdrdr *FdReader
+	brdr  *bufio.Reader
+	ardr  io.ReadCloser
 }
 
 func (rdr *Rdr) Close() error {
 	if err := rdr.ardr.Close(); err != nil {
 		return err
 	}
-	if err := rdr.rdr.Close(); err != nil {
+	if err := rdr.fdrdr.Close(); err != nil {
 		return err
 	}
 	return nil
@@ -75,7 +107,7 @@ func (rdr *Rdr) Read(p []byte) (n int, err error) {
 }
 
 func (rdr *Rdr) Nbytes() sp.Tlength {
-	return rdr.rdr.Nbytes()
+	return rdr.fdrdr.Nbytes()
 }
 
 func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
@@ -84,11 +116,11 @@ func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
 		return nil, err
 	}
 	r := &Rdr{}
-	r.rdr = rdr
+	r.fdrdr = rdr
 	if err := rdr.Lseek(offset); err != nil {
 		return nil, err
 	}
-	r.brdr = bufio.NewReaderSize(rdr, sp.BUFSZ)
+	r.brdr = bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
 	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err
@@ -96,7 +128,7 @@ func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
 	return r, nil
 }
 
-func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
+func (fl *FsLib) OpenReaderWatch(path string) (*FdReader, error) {
 	ch := make(chan error)
 	fd := -1
 	for {

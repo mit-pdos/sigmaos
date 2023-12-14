@@ -4,20 +4,21 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
 	"sigmaos/proc"
+	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
 
 type FsLib struct {
 	pcfg *proc.ProcEnv
-	*fdclnt.FdClient
+	sos.SigmaOS
 }
 
 // Only to be called by procs.
 func NewFsLib(pcfg *proc.ProcEnv) (*FsLib, error) {
 	db.DPrintf(db.PORT, "NewFsLib: uname %s lip %s addrs %v\n", pcfg.GetUname(), pcfg.LocalIP, pcfg.EtcdIP)
 	fl := &FsLib{
-		pcfg:     pcfg,
-		FdClient: fdclnt.NewFdClient(pcfg, nil),
+		pcfg:    pcfg,
+		SigmaOS: fdclnt.NewFdClient(pcfg, nil),
 	}
 	return fl, nil
 }
@@ -27,9 +28,9 @@ func (fl *FsLib) ProcEnv() *proc.ProcEnv {
 }
 
 func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
-	return fl.FdClient.MountTree(fl.pcfg.GetUname(), addrs, tree, mount)
+	return fl.SigmaOS.MountTree(addrs, tree, mount)
 }
 
 func (fl *FsLib) DetachAll() error {
-	return fl.PathClnt.DetachAll()
+	return fl.SigmaOS.DetachAll()
 }

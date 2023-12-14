@@ -26,7 +26,7 @@ func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
 }
 
 func (fl *FsLib) IsDir(name string) (bool, error) {
-	st, err := fl.FdClient.Stat(name)
+	st, err := fl.SigmaOS.Stat(name)
 	if err != nil {
 		return false, err
 	}
@@ -40,7 +40,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*sp.Stat) (bool, error)) (bool, e
 		return false, err
 	}
 	defer rdr.Close()
-	return reader.ReadDir(reader.MkDirReader(rdr), f)
+	return reader.ReadDir(reader.MkDirReader(rdr.Reader), f)
 }
 
 func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
@@ -52,13 +52,13 @@ func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
 }
 
 // Also returns reader.Reader for ReadDirWatch
-func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *reader.Reader, error) {
+func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		return nil, nil, err
 	}
 	dirents := []*sp.Stat{}
-	_, error := reader.ReadDir(reader.MkDirReader(rdr), func(st *sp.Stat) (bool, error) {
+	_, error := reader.ReadDir(reader.MkDirReader(rdr.Reader), func(st *sp.Stat) (bool, error) {
 		dirents = append(dirents, st)
 		return false, nil
 	})
@@ -176,7 +176,7 @@ func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) ([]*sp.Stat, error) {
 		}
 		if wait(sts) { // wait for new inputs?
 			ch := make(chan error)
-			if err := fsl.SetDirWatch(rdr.Fid(), dir, func(p string, r error) {
+			if err := fsl.SetDirWatch(rdr.fd, dir, func(p string, r error) {
 				ch <- r
 			}); err != nil {
 				rdr.Close()

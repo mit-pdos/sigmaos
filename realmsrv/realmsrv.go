@@ -117,7 +117,8 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	namedMount := rm.sc.GetNamedMount()
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
-		mnt := sp.Tmount{Addr: namedMount.Addr, Root: s}
+		mnt := sp.NewMountService(namedMount.Addr)
+		mnt.SetTree(s)
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
 		if err := sc.MountService(pn, mnt, sp.NoLeaseId); err != nil {
 			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)

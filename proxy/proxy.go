@@ -80,8 +80,8 @@ type NpConn struct {
 
 func newNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
 	npc := &NpConn{}
-	npc.clnt = protclnt.NewClnt(pcfg, sp.ROOTREALM.String())
-	npc.fidc = fidclnt.NewFidClnt(pcfg, sp.ROOTREALM.String())
+	npc.clnt = protclnt.NewClnt(sp.ROOTREALM.String())
+	npc.fidc = fidclnt.NewFidClnt(sp.ROOTREALM.String())
 	npc.pc = pathclnt.NewPathClnt(pcfg, npc.fidc)
 	npc.fm = newFidMap()
 	npc.cid = sp.TclntId(rand.Uint64())

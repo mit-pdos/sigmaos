@@ -59,16 +59,6 @@ func NewSigmaSrvPublic(fn string, svci any, pcfg *proc.ProcEnv, public bool) (*S
 	}
 }
 
-// Make a sigmasrv and memfs and publish srv at fn. Note: no lease
-// server.
-func NewSigmaSrvNoRPC(fn string, pcfg *proc.ProcEnv) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFs(fn, pcfg)
-	if err != nil {
-		db.DFatalf("NewSigmaSrv %v err %v\n", fn, err)
-	}
-	return newSigmaSrv(mfs), nil
-}
-
 func NewSigmaSrvPort(fn, port string, pcfg *proc.ProcEnv, svci any) (*SigmaSrv, error) {
 	mfs, error := memfssrv.NewMemFsPort(fn, ":"+port, pcfg)
 	if error != nil {

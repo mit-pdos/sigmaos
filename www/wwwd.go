@@ -83,7 +83,7 @@ func NewWwwd(job, tree string) *Wwwd {
 
 	pcfg := proc.GetProcEnv()
 	var err error
-	www.ssrv, err = sigmasrv.NewSigmaSrvNoRPC(MemFsPath(job), pcfg)
+	www.ssrv, err = sigmasrv.NewSigmaSrv(MemFsPath(job), www, pcfg)
 	if err != nil {
 		db.DFatalf("NewSrvFsLib %v %v\n", JobDir(job), err)
 	}

@@ -79,7 +79,7 @@ func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaS
 	ffs := fencefs.NewRoot(ctx.NewCtxNull(), nil)
 	mfs, error := memfssrv.NewMemFsPortClntFence(fn, ":0", sc, ffs)
 	if error != nil {
-		db.DFatalf("NewSigmaSrvClnt %v err %v\n", fn, error)
+		db.DFatalf("NewSigmaSrvClntFence %v err %v\n", fn, error)
 	}
 	mfs.Mount(sp.FENCEDIR, ffs.(*dir.DirImpl))
 	return newSigmaSrvRPC(mfs, svci)

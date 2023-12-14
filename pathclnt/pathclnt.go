@@ -24,8 +24,8 @@ import (
 type Watch func(string, error)
 
 type PathClnt struct {
-	pcfg *proc.ProcEnv
 	*fidclnt.FidClnt
+	pcfg       *proc.ProcEnv
 	ndMntCache *NamedMountCache
 	mnt        *MntTable
 	rootmt     *RootMountTable
@@ -35,7 +35,10 @@ type PathClnt struct {
 }
 
 func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
-	pathc := &PathClnt{pcfg: pcfg, mnt: newMntTable()}
+	pathc := &PathClnt{
+		pcfg: pcfg,
+		mnt:  newMntTable(),
+	}
 	if fidc == nil {
 		pathc.FidClnt = fidclnt.NewFidClnt(pcfg.Net)
 	} else {
@@ -84,7 +87,7 @@ func (pathc *PathClnt) PathLastSymlink(pn string, uname sp.Tuname) (path.Path, p
 
 // Close all sessions
 func (pathc *PathClnt) DetachAll() error {
-	db.DPrintf(db.PATHCLNT, "%v: Fslib.DetachAll\n", pathc.pcfg.GetPID())
+	db.DPrintf(db.PATHCLNT, "Fslib.DetachAll\n")
 	return pathc.FidClnt.DetachAll(pathc.cid)
 }
 

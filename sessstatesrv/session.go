@@ -41,8 +41,12 @@ type Session struct {
 
 func newSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
 	sess := &Session{protsrv: protsrv,
-		lastHeartbeat: time.Now(), Sid: sid, ClientId: cid, attachClnt: attachf,
-		detachClnt: detachf}
+		lastHeartbeat: time.Now(),
+		Sid:           sid,
+		ClientId:      cid,
+		attachClnt:    attachf,
+		detachClnt:    detachf,
+	}
 	return sess
 }
 

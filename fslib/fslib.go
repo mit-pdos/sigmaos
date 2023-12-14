@@ -23,6 +23,10 @@ func NewFsLib(pcfg *proc.ProcEnv) (*FsLib, error) {
 	return fl, nil
 }
 
+func (fl *FsLib) GetLocalIP() string {
+	return fl.pcfg.GetLocalIP()
+}
+
 func (fl *FsLib) ProcEnv() *proc.ProcEnv {
 	return fl.pcfg
 }

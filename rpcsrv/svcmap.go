@@ -3,6 +3,7 @@ package rpcsrv
 import (
 	"log"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -73,7 +74,7 @@ func (svcmap *svcMap) lookup(tname string) *service {
 
 	svc, ok := svcmap.svc[tname]
 	if !ok {
-		db.DFatalf("Unknown tname %q %v\n", tname, svcmap)
+		db.DFatalf("Unknown tname %q %v\n%s", tname, svcmap, debug.Stack())
 	}
 	return svc
 }

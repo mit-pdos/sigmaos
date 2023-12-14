@@ -195,7 +195,7 @@ func Run() {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	lcs := NewLCSched(sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClntLease(path.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {
 		db.DFatalf("Error NewSIgmaSrv: %v", err)
 	}

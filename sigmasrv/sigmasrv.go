@@ -72,14 +72,6 @@ func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, e
 	if error != nil {
 		db.DFatalf("NewSigmaSrvClnt %v err %v\n", fn, error)
 	}
-	return newSigmaSrvRPC(mfs, svci)
-}
-
-func NewSigmaSrvClntLease(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsPortClnt(fn, ":0", sc)
-	if error != nil {
-		db.DFatalf("NewSigmaSrvClnt %v err %v\n", fn, error)
-	}
 	return newSigmaSrvMemFs(mfs, svci)
 }
 

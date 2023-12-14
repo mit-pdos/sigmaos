@@ -302,7 +302,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	sd := NewSchedd(sc, kernelId, reserveMcpu)
-	ssrv, err := sigmasrv.NewSigmaSrvClntLease(path.Join(sp.SCHEDD, kernelId), sc, sd)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSIgmaSrv: %v", err)
 	}

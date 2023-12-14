@@ -277,7 +277,7 @@ func Run() {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	pq := NewProcQ(sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClntLease(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {
 		db.DFatalf("Error NewSIgmaSrv: %v", err)
 	}

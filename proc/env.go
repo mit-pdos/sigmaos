@@ -160,6 +160,10 @@ func (pe *ProcEnvProto) SetPID(pid sp.Tpid) {
 	pe.PidStr = string(pid)
 }
 
+func (pe *ProcEnvProto) SetLocalIP(ip string) {
+	pe.LocalIP = ip
+}
+
 func (pe *ProcEnvProto) GetRealm() sp.Trealm {
 	return sp.Trealm(pe.RealmStr)
 }

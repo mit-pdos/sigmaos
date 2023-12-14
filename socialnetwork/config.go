@@ -103,8 +103,8 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 	for _, srv := range srvs {
 		p := proc.NewProc(srv.Name, []string{strconv.FormatBool(srv.Public), jobname})
 		p.SetMcpu(srv.Mcpu)
-		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
-			dbg.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
+		if err := sc.Spawn(p); err != nil {
+			dbg.DFatalf("Error burst-spawnn proc %v: %v", p, err)
 			return nil, err
 		}
 		if !gc {

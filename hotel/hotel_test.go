@@ -94,6 +94,9 @@ func (ts *Tstate) stop() {
 	assert.True(ts.T, len(sts) < 10)
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestGeoSingle(t *testing.T) {
 	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: test.Overlays}}, 0)
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)

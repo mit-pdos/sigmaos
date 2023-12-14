@@ -40,6 +40,7 @@ var N_THREADS int
 var PREWARM_REALM bool
 var MR_APP string
 var MR_MEM_REQ int
+var MR_ASYNCRW bool
 var KV_AUTO string
 var N_KVD int
 var N_CLERK int
@@ -103,6 +104,7 @@ func init() {
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.IntVar(&MR_MEM_REQ, "mr_mem_req", 4000, "Amount of memory (in MB) required for each MR task.")
+	flag.BoolVar(&MR_ASYNCRW, "mr_asyncrw", true, "Mapers and reducers use asynchronous readers/writers.")
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
@@ -160,6 +162,9 @@ func init() {
 const (
 	OUT_DIR = "name/out_dir"
 )
+
+func TestCompile(t *testing.T) {
+}
 
 // Test how long it takes to init a semaphore.
 func TestMicroInitSemaphore(t *testing.T) {
@@ -325,7 +330,7 @@ func TestAppMR(t *testing.T) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := newNMRJobs(ts1, p, 1, MR_APP, proc.Tmem(MR_MEM_REQ))
+	jobs, apps := newNMRJobs(ts1, p, 1, MR_APP, proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -422,8 +427,6 @@ func TestLambdaBurst(t *testing.T) {
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	newOutDir(ts1)
-	// Find the total number of cores available for spinners across all machines.
-	// We need to get this in order to find out how many spinners to start.
 	N_LAMBDAS := 720
 	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
 	ss, is := newNSemaphores(ts1, N_LAMBDAS)
@@ -473,7 +476,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, proc.Tmem(MR_MEM_REQ))
+	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
 	// Prep Hotel job
 	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
@@ -536,13 +539,16 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
+	if PREWARM_REALM {
+		warmupRealm(ts1, []string{"imgresize", "imgresized"})
+	}
 	// Structure for hotel
 	ts2 := test.NewRealmTstate(rootts, REALM1)
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Prep ImgResize job
-	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
 	// Prep Hotel job
 	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
@@ -568,7 +574,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	}()
 	// Wait for imgResize jobs to set up.
 	<-imgJobs[0].ready
-	db.DPrintf(db.TEST, "MR setup done.")
+	db.DPrintf(db.TEST, "Imgresize setup done.")
 	db.DPrintf(db.TEST, "Setup phase done.")
 	if N_CLNT > 1 {
 		// Wait for hotel clients to start up on other machines.
@@ -610,7 +616,7 @@ func TestRealmBalanceMRMR(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(tses[i])
 		defer ps[i].Done()
-		mrjob, mrapp := newNMRJobs(tses[i], ps[i], 1, MR_APP, proc.Tmem(MR_MEM_REQ))
+		mrjob, mrapp := newNMRJobs(tses[i], ps[i], 1, MR_APP, proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
 		mrjobs[i] = mrjob
 		mrapps[i] = mrapp
 	}
@@ -662,7 +668,7 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(tses[i])
 		defer ps[i].Done()
-		imgjob, imgapp := newImgResizeJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+		imgjob, imgapp := newImgResizeJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 		imgjobs[i] = imgjob
 		imgapps[i] = imgapp
 	}
@@ -715,7 +721,7 @@ func TestKVMRRRB(t *testing.T) {
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, proc.Tmem(MR_MEM_REQ))
+	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
 	// Prep KV job
 	nclerks := []int{N_CLERK}
 	kvjobs, ji := newNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)
@@ -1078,7 +1084,7 @@ func TestImgResize(t *testing.T) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := newImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+	jobs, apps := newImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -1141,9 +1147,9 @@ func TestRealmBalanceSimpleImgResize(t *testing.T) {
 	defer p2.Done()
 	// Prep resize jobs
 	imgJobsBE, imgAppsBE := newImgResizeJob(
-		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 	imgJobsLC, imgAppsLC := newImgResizeJob(
-		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 
 	// Run image resize jobs
 	go func() {
@@ -1196,7 +1202,7 @@ func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	defer p2.Done()
 	// Prep image resize job
 	imgJobs, imgApps := newImgResizeJob(
-		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS)
+		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_JOBS, N_IMG_RESIZE_INPUTS_PER_JOB, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
 	// Prep social network job
 	snJobs, snApps := newSocialNetworkJobs(ts2, p2, true, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
 	// Run social network job

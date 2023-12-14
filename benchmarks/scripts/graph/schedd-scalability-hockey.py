@@ -73,30 +73,41 @@ def stats_summary(raw_stat):
       "p99": 0,
   })
 
-def graph_stats(stats_summary, out, cutoff):
+def graph_stats(stats_summary, out, cutoff, server_tpt, log_scale, tpt_v_tpt):
+  assert(not (tpt_v_tpt and server_tpt))
   x = [ rps[0] for (rps, st) in stats_summary ] 
   x1 = [ y for y in x ]
   tpt = [ st["tpt"] for (rps, st) in stats_summary ]
+  if server_tpt:
+    x = tpt
   p50 = [ st["p50"] for (rps, st) in stats_summary ]
   p90 = [ st["p90"] for (rps, st) in stats_summary ]
   p99 = [ st["p99"] for (rps, st) in stats_summary ]
   max_p99 = max(p99)
-  x.append(cutoff)
-  x1.append(cutoff + 1000)
-  p50.append(4 * max_p99)
-  p99.append(4 * max_p99)
-  p90.append(4 * max_p99)
+  if cutoff > 0:
+    x.append(cutoff)
+    x1.append(cutoff + 1000)
+    p50.append(4 * max_p99)
+    p99.append(4 * max_p99)
+    p90.append(4 * max_p99)
   fig, ax = plt.subplots(1, figsize=(6.4, 2.4), sharex=True)
-  ax.plot(x, p50, label="P50 latency")
-  ax.plot(x, p90, label="P90 latency")
-  ax.plot(x, p99, label="P99 latency")
-#  ax.set_yscale("log")
-  ax.set_ylabel("Start Latency (ms)")
+  if tpt_v_tpt:
+    ax.plot(x, tpt, label="proc start rate")
+  else:
+    ax.plot(x, p50, label="P50 latency")
+    ax.plot(x, p90, label="P90 latency")
+    ax.plot(x, p99, label="P99 latency")
+  if log_scale:
+    ax.set_yscale("log")
+  if tpt_v_tpt:
+    ax.set_ylabel("Starts/sec")
+  else:
+    ax.set_ylabel("Start Latency (ms)")
+    ax.set_ylim(top=1.1 * max_p99)
   ax.set_xlabel("Spawns/sec")
   ax.set_ylim(bottom=0)
-  ax.set_ylim(top=1.1 * max_p99)
   ax.legend()
-  plt.xticks(x)
+  plt.xticks(x, rotation=45)
 #  plt.xlabel("Number of machines")
   fig.align_ylabels(ax)
   plt.savefig(out, bbox_inches='tight')
@@ -115,6 +126,9 @@ if __name__ == "__main__":
   parser.add_argument("--out", type=str, required=True)
   parser.add_argument("--prefix", type=str, default="")
   parser.add_argument("--cutoff", type=int, default=-1)
+  parser.add_argument("--server_tpt", action="store_true", default=False)
+  parser.add_argument("--tpt_v_tpt", action="store_true", default=False)
+  parser.add_argument("--log_scale", action="store_true", default=False)
   parser.add_argument("--v", action="store_true", default=False)
   args = parser.parse_args()
 
@@ -130,4 +144,4 @@ if __name__ == "__main__":
   stats_summary = [ stats_summary(st) for st in raw_stats ]
 
   print_stats_summary(stats_summary)
-  graph_stats(stats_summary=stats_summary, out=args.out, cutoff=args.cutoff)
+  graph_stats(stats_summary=stats_summary, out=args.out, cutoff=args.cutoff, server_tpt=args.server_tpt, log_scale=args.log_scale, tpt_v_tpt=args.tpt_v_tpt)

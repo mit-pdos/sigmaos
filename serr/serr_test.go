@@ -9,6 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestEOF(t *testing.T) {
 	err := NewErrError(io.EOF)
 	assert.True(t, errors.Is(err, io.EOF))

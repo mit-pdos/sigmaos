@@ -14,6 +14,9 @@ const (
 	dirnamed = sp.NAMED + "outdir"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestOldLeaderOK(t *testing.T) {
 	ts := test.NewTstateAll(t)
 

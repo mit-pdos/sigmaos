@@ -8,7 +8,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/netclnt"
-	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessconn"
@@ -21,7 +20,6 @@ import (
 // replica group)
 type SessClnt struct {
 	sync.Mutex
-	pcfg    *proc.ProcEnv
 	cli     sessp.Tclient
 	sid     sessp.Tsession
 	seqno   sessp.Tseqno
@@ -32,9 +30,8 @@ type SessClnt struct {
 	clntnet string
 }
 
-func newSessClnt(pcfg *proc.ProcEnv, cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
+func newSessClnt(cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c := &SessClnt{}
-	c.pcfg = pcfg
 	c.cli = cli
 	c.sid = sessp.Tsession(rand.Uint64())
 	c.seqno = 0
@@ -108,7 +105,7 @@ func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr
 
 // Send a detach.
 func (c *SessClnt) Detach(cid sp.TclntId) *serr.Err {
-	db.DPrintf(db.SESS_STATE_CLNT, "%v: Send detach %v\n", c.pcfg.GetPID(), c.sid)
+	db.DPrintf(db.SESS_STATE_CLNT, "Send detach %v\n", c.sid)
 	rep, err := c.RPC(sp.NewTdetach(cid), nil)
 	if err != nil {
 		db.DPrintf(db.SESS_STATE_CLNT_ERR, "detach %v err %v", c.sid, err)

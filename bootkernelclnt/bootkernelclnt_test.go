@@ -19,6 +19,9 @@ import (
 // Tests automounting and ephemeral files with a kernel with all services
 //
 
+func TestCompile(t *testing.T) {
+}
+
 func TestSymlink1(t *testing.T) {
 	ts := test.NewTstateAll(t)
 

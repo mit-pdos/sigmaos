@@ -42,11 +42,16 @@ for vm in $vms; do
   echo "VM: $vm"
   # No additional benchmarking setup needed for AWS.
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-    cd sigmaos
-    git fetch --all
-    git checkout osdi23-submit
-    git pull
+#    cd sigmaos
+#    git fetch --all
+#    git checkout osdi23-submit
+#    git pull
 #    ./make.sh --norace --version RETRY
-    ./install.sh --realm test-realm --version RETRY
+#    ./install.sh --realm test-realm --version RETRY
+#  sudo apt update
+#  sudo apt install -y apparmor-utils
+#  sudo aa-status
+#ls -lha /tmp/sigmaos-data/wiki-20G
+df -h
 ENDSSH
 done

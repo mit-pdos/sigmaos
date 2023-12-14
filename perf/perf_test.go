@@ -12,6 +12,9 @@ import (
 	"sigmaos/perf"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestGetSamples(t *testing.T) {
 	hz := perf.Hz()
 	assert.NotEqual(t, 0, hz, "Hz")

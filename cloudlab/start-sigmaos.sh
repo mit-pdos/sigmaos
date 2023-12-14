@@ -139,6 +139,7 @@ for vm in $vms; do
   aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
 
   cd sigmaos
+  sudo ./load-apparmor.sh
 
   echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ]; then

@@ -43,7 +43,7 @@ func NewSigmaSrv(fn string, svci any, pcfg *proc.ProcEnv) (*SigmaSrv, error) {
 	if error != nil {
 		db.DFatalf("NewSigmaSrv %v err %v\n", fn, error)
 	}
-	return NewSigmaSrvMemFs(mfs, svci)
+	return newSigmaSrvMemFs(mfs, svci)
 }
 
 func NewSigmaSrvPublic(fn string, svci any, pcfg *proc.ProcEnv, public bool) (*SigmaSrv, error) {
@@ -53,20 +53,10 @@ func NewSigmaSrvPublic(fn string, svci any, pcfg *proc.ProcEnv, public bool) (*S
 		if error != nil {
 			return nil, error
 		}
-		return NewSigmaSrvMemFs(mfs, svci)
+		return newSigmaSrvMemFs(mfs, svci)
 	} else {
 		return NewSigmaSrv(fn, svci, pcfg)
 	}
-}
-
-// Make a sigmasrv and memfs and publish srv at fn. Note: no lease
-// server.
-func NewSigmaSrvNoRPC(fn string, pcfg *proc.ProcEnv) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFs(fn, pcfg)
-	if err != nil {
-		db.DFatalf("NewSigmaSrv %v err %v\n", fn, err)
-	}
-	return newSigmaSrv(mfs), nil
 }
 
 func NewSigmaSrvPort(fn, port string, pcfg *proc.ProcEnv, svci any) (*SigmaSrv, error) {
@@ -74,7 +64,7 @@ func NewSigmaSrvPort(fn, port string, pcfg *proc.ProcEnv, svci any) (*SigmaSrv, 
 	if error != nil {
 		db.DFatalf("NewSigmaSrvPort %v err %v\n", fn, error)
 	}
-	return NewSigmaSrvMemFs(mfs, svci)
+	return newSigmaSrvMemFs(mfs, svci)
 }
 
 func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
@@ -82,14 +72,14 @@ func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, e
 	if error != nil {
 		db.DFatalf("NewSigmaSrvClnt %v err %v\n", fn, error)
 	}
-	return newSigmaSrvRPC(mfs, svci)
+	return newSigmaSrvMemFs(mfs, svci)
 }
 
 func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
 	ffs := fencefs.NewRoot(ctx.NewCtxNull(), nil)
 	mfs, error := memfssrv.NewMemFsPortClntFence(fn, ":0", sc, ffs)
 	if error != nil {
-		db.DFatalf("NewSigmaSrvClnt %v err %v\n", fn, error)
+		db.DFatalf("NewSigmaSrvClntFence %v err %v\n", fn, error)
 	}
 	mfs.Mount(sp.FENCEDIR, ffs.(*dir.DirImpl))
 	return newSigmaSrvRPC(mfs, svci)
@@ -104,15 +94,13 @@ func NewSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error)
 	return ssrv, nil
 }
 
-// News a sigmasrv with an memfs, rpc server, and LeaseSrv service.
-func NewSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
+// Creates a sigmasrv with an memfs, rpc server, and LeaseSrv service.
+func newSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	ssrv, err := newSigmaSrvRPC(mfs, svci)
 	if err != nil {
 		return nil, err
 	}
-	if err := ssrv.NewLeaseSrv(); err != nil {
-		return nil, err
-	}
+	ssrv.newLeaseSrv()
 	return ssrv, nil
 }
 
@@ -184,10 +172,9 @@ func (ssrv *SigmaSrv) newRPCDev(svci any) error {
 }
 
 // Assumes RPCSrv has been created and register the LeaseSrv service.
-func (ssrv *SigmaSrv) NewLeaseSrv() error {
+func (ssrv *SigmaSrv) newLeaseSrv() {
 	ssrv.lsrv = newLeaseSrv(ssrv.MemFs)
 	ssrv.rpcs.RegisterService(ssrv.lsrv)
-	return nil
 }
 
 func (ssrv *SigmaSrv) QueueLen() int64 {

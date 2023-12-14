@@ -8,16 +8,18 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--overlay HOST_IP] [--cleanup]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--cleanup]" 
 }
 
 BASIC="--basic"
 FAST=""
 APPS=""
 OVERLAY=""
+GVISOR=""
 VERB="-v"
 CONTAINER=""
 CLEANUP=""
+COMPILE=""
 HOST_IP="127.0.0.1"
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -32,12 +34,21 @@ while [[ "$#" -gt 0 ]]; do
             BASIC="" 
             APPS="--apps"
             ;;
+        --compile)
+            shift
+            BASIC=""
+            COMPILE="--compile"
+            ;;
         --overlay)
             shift
             BASIC="" 
             OVERLAY="--overlay"
             HOST_IP="$1"
             shift
+            ;;
+        --gvisor)
+            shift
+            GVISOR="--gvisor" 
             ;;
         --cleanup)
             shift
@@ -59,6 +70,17 @@ cleanup() {
 
 go clean -testcache
 cleanup
+
+if [[ $COMPILE == "--compile" ]]; then
+
+    #
+    # test if test packages compile
+    #
+
+    for T in path intervals serr linuxsched perf sigmap proxy reader writer stats fslib semclnt electclnt fslib memfs named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www fslibsrv realmclnt mr imgresized kv hotel socialnetwork benchmarks; do
+        go test $VERB sigmaos/$T --run TestCompile
+    done
+fi
 
 if [[ $BASIC == "--basic" ]]; then
 
@@ -100,7 +122,7 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www; do
-        go test $VERB sigmaos/$T -start
+        go test $VERB sigmaos/$T -start $GVISOR
         cleanup
     done
 
@@ -113,7 +135,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test with realms
     #
 
-    go test $VERB sigmaos/realmclnt -start
+    go test $VERB sigmaos/realmclnt -start $GVISOR
     cleanup
 
 fi
@@ -124,22 +146,22 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        go test $VERB sigmaos/mr -start -run MRJob
+        go test $VERB sigmaos/mr -start $GVISOR -run MRJob
         cleanup
-        go test $VERB sigmaos/imgresized -start -run ImgdOne
+        go test $VERB sigmaos/imgresized -start $GVISOR -run ImgdOne
         cleanup
-        go test $VERB sigmaos/kv -start -run KVOKN
-        cleanup
-        ./start-db.sh
-        go test $VERB sigmaos/hotel -start -run TestBenchDeathStarSingle
+        go test $VERB sigmaos/kv -start $GVISOR -run KVOKN
         cleanup
         ./start-db.sh
-       	go test $VERB sigmaos/socialnetwork -start -run TestCompose
+        go test $VERB sigmaos/hotel -start $GVISOR -run TestBenchDeathStarSingle
+        cleanup
+        ./start-db.sh
+       	go test $VERB sigmaos/socialnetwork -start $GVISOR -run TestCompose
         cleanup
     else
         for T in imgresized mr kv hotel socialnetwork; do
             ./start-db.sh
-            go test -timeout 20m $VERB sigmaos/$T -start
+            go test -timeout 20m $VERB sigmaos/$T -start $GVISOR
             cleanup
         done
     fi
@@ -161,20 +183,20 @@ if [[ $OVERLAY == "--overlay" ]] ; then
     echo "Overlay tests running with host IP $HOST_IP"
     ./start-network.sh
     
-    go test $VERB sigmaos/procclnt --etcdIP $HOST_IP -start --overlays --run TestWaitExitSimpleSingle
+    go test $VERB sigmaos/procclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestWaitExitSimpleSingle
     cleanup
-    go test $VERB sigmaos/cachedsvcclnt --etcdIP $HOST_IP -start --overlays --run TestCacheClerk
-    cleanup
-    ./start-db.sh
-    go test $VERB sigmaos/hotel --etcdIP $HOST_IP -start --overlays --run GeoSingle
+    go test $VERB sigmaos/cachedsvcclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestCacheClerk
     cleanup
     ./start-db.sh
-    go test $VERB sigmaos/hotel --etcdIP $HOST_IP -start --overlays --run Www
+    go test $VERB sigmaos/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run GeoSingle
     cleanup
-    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start --overlays --run Basic
+    ./start-db.sh
+    go test $VERB sigmaos/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run Www
     cleanup
-    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start --overlays --run WaitExitSimpleSingle
+    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run Basic
     cleanup
-    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start --overlays --run RealmNetIsolation
+    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run WaitExitSimpleSingle
+    cleanup
+    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run RealmNetIsolation
     cleanup
 fi

@@ -19,6 +19,9 @@ const (
 	fn = sp.UX + "/~local/"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestRoot(t *testing.T) {
 	ts := test.NewTstateAll(t)
 

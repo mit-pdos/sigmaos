@@ -18,6 +18,9 @@ import (
 	"sigmaos/test"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestSyscallBlock(t *testing.T) {
 	ts := test.NewTstateAll(t)
 	p := proc.NewProc("test-syscall", []string{})

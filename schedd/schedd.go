@@ -12,7 +12,6 @@ import (
 	lcproto "sigmaos/lcschedsrv/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
-	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procmgr"
@@ -20,6 +19,7 @@ import (
 	"sigmaos/rpcclnt"
 	"sigmaos/schedd/proto"
 	"sigmaos/scheddclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -35,24 +35,27 @@ type Schedd struct {
 	memfree             proc.Tmem
 	kernelId            string
 	scheddStats         map[sp.Trealm]*proto.RealmStats
-	mfs                 *memfssrv.MemFs
+	sc                  *sigmaclnt.SigmaClnt
+	cpuStats            *cpuStats
+	cpuUtil             int64
 	nProcsRun           uint64
 	nProcGets           uint64
 	nProcGetsSuccessful uint64
 }
 
-func NewSchedd(mfs *memfssrv.MemFs, kernelId string, reserveMcpu uint) *Schedd {
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
-		pmgr:        procmgr.NewProcMgr(mfs, kernelId),
+		pmgr:        procmgr.NewProcMgr(sc, kernelId),
 		scheddStats: make(map[sp.Trealm]*proto.RealmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
 		kernelId:    kernelId,
-		mfs:         mfs,
+		sc:          sc,
+		cpuStats:    &cpuStats{},
 	}
 	sd.cond = sync.NewCond(&sd.mu)
-	sd.scheddclnt = scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib)
-	sd.procqclnt = procqclnt.NewProcQClnt(mfs.SigmaClnt().FsLib)
+	sd.scheddclnt = scheddclnt.NewScheddClnt(sc.FsLib)
+	sd.procqclnt = procqclnt.NewProcQClnt(sc.FsLib)
 	return sd
 }
 
@@ -152,6 +155,16 @@ func (sd *Schedd) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *prot
 	return nil
 }
 
+// Get realm utilization information.
+func (sd *Schedd) GetRunningProcs(ctx fs.CtxI, req proto.GetRunningProcsRequest, res *proto.GetRunningProcsResponse) error {
+	ps := sd.pmgr.GetRunningProcs()
+	res.ProcProtos = make([]*proc.ProcProto, 0, len(ps))
+	for _, p := range ps {
+		res.ProcProtos = append(res.ProcProtos, p.GetProto())
+	}
+	return nil
+}
+
 func (sd *Schedd) GetScheddStats(ctx fs.CtxI, req proto.GetScheddStatsRequest, res *proto.GetScheddStatsResponse) error {
 	scheddStats := make(map[string]*proto.RealmStats)
 	sd.realmMu.RLock()
@@ -173,7 +186,7 @@ func (sd *Schedd) getQueuedProcs() {
 	// If true, bias choice of procq to this schedd's kernel.
 	var bias bool = true
 	for {
-		memFree, ok := sd.shouldGetProc()
+		memFree, ok := sd.shouldGetBEProc()
 		if !ok {
 			db.DPrintf(db.SCHEDD, "[%v] Waiting for more mem", sd.kernelId, bias)
 			// If no memory is available, wait for some more.
@@ -250,13 +263,15 @@ func (sd *Schedd) runProc(p *proc.Proc) {
 }
 
 // We should always take a free proc if there is memory available.
-func (sd *Schedd) shouldGetProc() (proc.Tmem, bool) {
+func (sd *Schedd) shouldGetBEProc() (proc.Tmem, bool) {
 	mem := sd.getFreeMem()
-	return mem, mem > 0
+	cpu := sd.getCPUUtil()
+	db.DPrintf(db.SCHEDD, "CPU util check: %v", cpu)
+	return mem, mem > 0 && cpu < (TARGET_CPU_PCT*int64(linuxsched.GetNCores()))
 }
 
 func (sd *Schedd) register() {
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sd.mfs.SigmaClnt().FsLib}, path.Join(sp.LCSCHED, "~any"))
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sd.sc.FsLib}, path.Join(sp.LCSCHED, "~any"))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
@@ -282,19 +297,18 @@ func (sd *Schedd) stats() {
 }
 
 func RunSchedd(kernelId string, reserveMcpu uint) error {
-	pcfg := proc.GetProcEnv()
-	mfs, err := memfssrv.NewMemFs(path.Join(sp.SCHEDD, kernelId), pcfg)
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("Error NewMemFs: %v", err)
+		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	sd := NewSchedd(mfs, kernelId, reserveMcpu)
-	ssrv, err := sigmasrv.NewSigmaSrvMemFs(mfs, sd)
+	sd := NewSchedd(sc, kernelId, reserveMcpu)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
-		db.DFatalf("Error PDS: %v", err)
+		db.DFatalf("Error NewSIgmaSrv: %v", err)
 	}
 	sd.pmgr.SetupFs(ssrv.MemFs)
 	// Perf monitoring
-	p, err := perf.NewPerf(pcfg, perf.SCHEDD)
+	p, err := perf.NewPerf(sc.ProcEnv(), perf.SCHEDD)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
@@ -302,6 +316,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	defer p.Done()
 	go sd.getQueuedProcs()
 	go sd.stats()
+	go sd.monitorCPU()
 	sd.register()
 	ssrv.RunServer()
 	return nil

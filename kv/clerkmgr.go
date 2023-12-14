@@ -129,10 +129,9 @@ func (cm *ClerkMgr) startClerk(dur string, mcpu proc.Tmcpu) (sp.Tpid, error) {
 	args = append([]string{cm.job, repl}, args...)
 	p := proc.NewProc("kv-clerk", args)
 	p.SetMcpu(mcpu)
-	// SpawnBurst to spread clerks across procds.
-	_, errs := cm.SpawnBurst([]*proc.Proc{p}, 2)
-	if len(errs) > 0 {
-		return p.GetPid(), errs[0]
+
+	if err := cm.Spawn(p); err != nil {
+		return p.GetPid(), err
 	}
 	err := cm.WaitStart(p.GetPid())
 	return p.GetPid(), err

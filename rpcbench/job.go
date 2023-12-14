@@ -26,8 +26,8 @@ func NewRPCBenchJob(sc *sigmaclnt.SigmaClnt, jobpath string, mcpu proc.Tmcpu, pu
 
 	p := proc.NewProc(SRVNAME, []string{jobpath, strconv.FormatBool(public)})
 	p.SetMcpu(mcpu)
-	if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
-		db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
+	if err := sc.Spawn(p); err != nil {
+		db.DFatalf("Error burst-spawnn proc %v: %v", p, err)
 		return nil, err
 	}
 	if err = sc.WaitStart(p.GetPid()); err != nil {

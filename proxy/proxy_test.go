@@ -15,6 +15,9 @@ import (
 	"sigmaos/test"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 type Tstate struct {
 	*test.Tstate
 	cmd *exec.Cmd
@@ -31,7 +34,7 @@ func initTest(t *testing.T) *Tstate {
 
 	// start proxy
 
-	ts.cmd = exec.Command("../bin/linux/proxyd", append([]string{ts.GetLocalIP()})...)
+	ts.cmd = exec.Command("../bin/linux/proxyd", append([]string{ts.ProcEnv().GetLocalIP()})...)
 	ts.cmd.Stdout = os.Stdout
 	ts.cmd.Stderr = os.Stderr
 	err = ts.cmd.Start()

@@ -50,10 +50,10 @@ func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 	for i := uint(0); i < N; i++ {
 		p := proc.NewProc("spinner", []string{"name/"})
 		p.SetMcpu(1000)
+		err := ts.Spawn(p)
+		assert.Nil(t, err, "Failed spawning some procs: %v", err)
 		ps = append(ps, p)
 	}
-	failed, errs := ts.SpawnBurst(ps, 1)
-	assert.Equal(t, 0, len(failed), "Failed spawning some procs: %v", errs)
 	return ps
 }
 
@@ -99,6 +99,9 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid sp.Tpid) {
 
 func cleanSleeperResult(t *testing.T, ts *test.Tstate, pid sp.Tpid) {
 	ts.Remove("name/" + pid.String() + "_out")
+}
+
+func TestCompile(t *testing.T) {
 }
 
 func TestWaitExitSimpleSingleBE(t *testing.T) {
@@ -362,12 +365,12 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 				pid := sp.GenPid("sleeper")
 				db.DPrintf(db.TEST, "Prep spawn %v", pid)
 				a := proc.NewProcPid(pid, "sleeper", []string{"0ms", "name/"})
-				_, errs := ts.SpawnBurst([]*proc.Proc{a}, 1)
-				assert.True(t, len(errs) == 0, "Spawn err %v", errs)
+				err := ts.Spawn(a)
+				assert.Nil(t, err, "Spawn err %v", err)
 				db.DPrintf(db.TEST, "Done spawn %v", pid)
 
 				db.DPrintf(db.TEST, "Prep WaitStart %v", pid)
-				err := ts.WaitStart(a.GetPid())
+				err = ts.WaitStart(a.GetPid())
 				db.DPrintf(db.TEST, "Done WaitStart %v", pid)
 				assert.Nil(t, err, "WaitStart error")
 
@@ -375,7 +378,7 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 				status, err := ts.WaitExit(a.GetPid())
 				db.DPrintf(db.TEST, "Done WaitExit %v", pid)
 				assert.Nil(t, err, "WaitExit")
-				assert.True(t, status != nil && status.IsStatusOK(), "Status not OK")
+				assert.True(t, status != nil && status.IsStatusOK(), "Status not OK: %v", status)
 				cleanSleeperResult(t, ts, pid)
 			}
 			done <- i
@@ -572,7 +575,12 @@ func TestEvictN(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestBurstSpawn(t *testing.T) {
+func TestSpawnBurst(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
+
 	ts := test.NewTstateAll(t)
 
 	// Number of spinners to burst-spawn
@@ -608,6 +616,11 @@ func TestBurstSpawn(t *testing.T) {
 }
 
 func TestReserveCores(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
+
 	ts := test.NewTstateAll(t)
 
 	start := time.Now()

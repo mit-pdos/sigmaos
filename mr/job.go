@@ -20,13 +20,9 @@ import (
 )
 
 const (
-	MAP_ASYNC_WRITER    = true
-	REDUCE_ASYNC_WRITER = true
-)
-
-const (
 	MR          = "/mr/"
 	MRDIRTOP    = "name/" + MR
+	MRDIRELECT  = "name/mr-elect"
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"
 	JOBSEM      = "jobsem"
@@ -42,6 +38,10 @@ func JobOutLink(job string) string {
 
 func JobIntOutLink(job string) string {
 	return path.Join(JobDir(job), INT_OUTLINK)
+}
+
+func LeaderElectDir(job string) string {
+	return path.Join(MRDIRELECT, job)
 }
 
 func JobDir(job string) string {
@@ -128,7 +128,9 @@ func ReadJobConfig(app string) *Job {
 
 func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 	fsl.MkDir(MRDIRTOP, 0777)
+	fsl.MkDir(MRDIRELECT, 0777)
 	dirs := []string{
+		LeaderElectDir(jobname),
 		JobDir(jobname),
 		MapTask(jobname),
 		ReduceTask(jobname),
@@ -225,8 +227,8 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 	return len(bins), nil
 }
 
-func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int, memPerTask proc.Tmem) *groupmgr.GroupMgr {
-	cfg := groupmgr.NewGroupConfig(ncoord, "mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz), strconv.Itoa(int(memPerTask))}, 0, jobname)
+func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap, crashtask, crashcoord int, memPerTask proc.Tmem, asyncrw bool) *groupmgr.GroupMgr {
+	cfg := groupmgr.NewGroupConfig(ncoord, "mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz), strconv.Itoa(int(memPerTask)), strconv.FormatBool(asyncrw)}, 1000, jobname)
 	cfg.SetTest(crashcoord, 0, 0)
 	return cfg.StartGrpMgr(sc, ncoord)
 }

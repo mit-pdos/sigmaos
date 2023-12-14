@@ -57,10 +57,11 @@ type Coord struct {
 	intOutdir   string
 	done        int32
 	memPerTask  proc.Tmem
+	asyncrw     bool
 }
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 8 {
+	if len(args) != 9 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
@@ -97,10 +98,15 @@ func NewCoord(args []string) (*Coord, error) {
 		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[2])
 	}
 	c.memPerTask = proc.Tmem(mem)
+	asyncrw, err := strconv.ParseBool(args[8])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: can't parse asyncrw %v", args[8])
+	}
+	c.asyncrw = asyncrw
 
 	b, err := c.GetFile(JobOutLink(c.job))
 	if err != nil {
-		db.DFatalf("Error GetFile JobOutLink: %v", err)
+		db.DFatalf("Error GetFile JobOutLink [%v]: %v", JobOutLink(c.job), err)
 	}
 	c.outdir = string(b)
 
@@ -112,7 +118,7 @@ func NewCoord(args []string) (*Coord, error) {
 
 	c.Started()
 
-	c.leaderclnt, err = leaderclnt.NewLeaderClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
+	c.leaderclnt, err = leaderclnt.NewLeaderClnt(c.FsLib, LeaderElectDir(c.job)+"/coord-leader", 0)
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: NewLeaderclnt err %v", err)
 	}
@@ -137,14 +143,14 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz}, c.memPerTask)
+	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	outlink := ReduceOut(c.job) + task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + task
-	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask)
+	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask)
 }
 
 func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {
@@ -159,8 +165,8 @@ func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {
 	return st.Name, nil
 }
 
-func (c *Coord) getTask(dir string) (string, error) {
-	t := ""
+func (c *Coord) getTasks(dir string) ([]string, error) {
+	tns := make([]string, 0)
 	stopped, err := c.ProcessDir(dir, func(st *sp.Stat) (bool, error) {
 		t1, err := c.claimEntry(dir, st)
 		if err != nil {
@@ -169,17 +175,17 @@ func (c *Coord) getTask(dir string) (string, error) {
 		if t1 == "" {
 			return false, nil
 		}
-		t = t1
+		tns = append(tns, t1)
 		return true, nil
 
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if stopped {
-		return t, nil
+		return tns, nil
 	}
-	return "", nil
+	return nil, nil
 }
 
 type Tresult struct {
@@ -252,16 +258,18 @@ func newStringSlice(data []interface{}) []string {
 
 func (c *Coord) startTasks(ch chan Tresult, dir string, f func(string) *proc.Proc) int {
 	taskNames := []string{}
+	start := time.Now()
 	for {
-		t, err := c.getTask(dir)
+		tns, err := c.getTasks(dir)
 		if err != nil {
-			db.DFatalf("getTask %v err %v\n", dir, err)
+			db.DFatalf("getTasks %v err %v\n", dir, err)
 		}
-		if t == "" {
+		if len(tns) == 0 {
 			break
 		}
-		taskNames = append(taskNames, t)
+		taskNames = append(taskNames, tns...)
 	}
+	db.DPrintf(db.MR, "startTasks getTasks time: %v", time.Since(start))
 	c.runTasks(ch, dir, taskNames, f)
 	return len(taskNames)
 }
@@ -368,9 +376,15 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
+	start := time.Now()
 	c.recover(MapTask(c.job))
+	db.DPrintf(db.MR, "Recover map tasks took %v", time.Since(start))
+	start = time.Now()
 	c.recover(ReduceTask(c.job))
+	db.DPrintf(db.MR, "Recover reduce tasks took %v", time.Since(start))
+	start = time.Now()
 	c.doRestart()
+	db.DPrintf(db.MR, "doRestart took %v", time.Since(start))
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)

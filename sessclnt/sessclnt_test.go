@@ -50,6 +50,9 @@ func newTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
 	return ts
 }
 
+func TestCompile(t *testing.T) {
+}
+
 // Server crashes storing a semaphore. The test's down() will return a
 // not-found for the semaphore, which is interpreted as a successful
 // down by the semclnt.

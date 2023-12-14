@@ -156,6 +156,45 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 	return nil
 }
 
+func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, error) {
+	// Make sure list of schedds has been initialized
+	sdc.urpcc.UpdateSrvs(true)
+	// map of realm -> proc
+	procs := make(map[sp.Trealm][]*proc.Proc, 0)
+	sampled := make(map[string]bool)
+	for i := 0; i < nsample; i++ {
+		kernelID, err := sdc.urpcc.RandomSrv()
+		if err != nil {
+			db.DFatalf("Can't get random srv: %v", err)
+			return nil, err
+		}
+		// Don't double-sample
+		if sampled[kernelID] {
+			continue
+		}
+		sampled[kernelID] = true
+		req := &proto.GetRunningProcsRequest{}
+		res := &proto.GetRunningProcsResponse{}
+		rpcc, err := sdc.urpcc.GetClnt(kernelID)
+		if err != nil {
+			return nil, err
+		}
+		if err := rpcc.RPC("Schedd.GetRunningProcs", req, res); err != nil {
+			return nil, err
+		}
+		for _, pp := range res.ProcProtos {
+			p := proc.NewProcFromProto(pp)
+			r := p.GetRealm()
+			if _, ok := procs[r]; !ok {
+				procs[r] = make([]*proc.Proc, 0, 1)
+			}
+			procs[r] = append(procs[r], p)
+		}
+
+	}
+	return procs, nil
+}
+
 func (sdc *ScheddClnt) ScheddStats() (int, []map[string]*proto.RealmStats, error) {
 	sds, err := sdc.urpcc.GetSrvs()
 	if err != nil {

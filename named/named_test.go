@@ -12,6 +12,9 @@ import (
 	"sigmaos/test"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestBootNamed(t *testing.T) {
 	ts := test.NewTstateAll(t)
 

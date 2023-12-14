@@ -36,7 +36,7 @@ type PathClnt struct {
 func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 	pathc := &PathClnt{pcfg: pcfg, mnt: newMntTable()}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.NewFidClnt(pcfg, pcfg.Net)
+		pathc.FidClnt = fidclnt.NewFidClnt(pcfg.Net)
 	} else {
 		pathc.FidClnt = fidc
 	}
@@ -52,16 +52,8 @@ func (pathc *PathClnt) String() string {
 	return str
 }
 
-func (pathc *PathClnt) Realm() sp.Trealm {
-	return pathc.pcfg.GetRealm()
-}
-
 func (pathc *PathClnt) ClntId() sp.TclntId {
 	return pathc.cid
-}
-
-func (pathc *PathClnt) GetLocalIP() string {
-	return pathc.pcfg.LocalIP
 }
 
 func (pathc *PathClnt) Mounts() []string {

@@ -5,7 +5,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/path"
-	"sigmaos/proc"
 	"sigmaos/protclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -17,15 +16,14 @@ import (
 
 type FidClnt struct {
 	fids *FidMap
-	pcfg *proc.ProcEnv
 	pc   *protclnt.Clnt
 	ft   *FenceTable
 }
 
-func NewFidClnt(pcfg *proc.ProcEnv, clntnet string) *FidClnt {
+func NewFidClnt(clntnet string) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = newFidMap()
-	fidc.pc = protclnt.NewClnt(pcfg, clntnet)
+	fidc.pc = protclnt.NewClnt(clntnet)
 	fidc.ft = NewFenceTable()
 	return fidc
 }

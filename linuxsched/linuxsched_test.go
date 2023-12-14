@@ -9,13 +9,16 @@ import (
 	"sigmaos/linuxsched"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestBasic(t *testing.T) {
 	pid := os.Getpid()
 	// Get the cores we can run on
 	m, err := linuxsched.SchedGetAffinity(pid)
 	assert.Nil(t, err, "SchedGetAffinity")
 	core := false
-	for i := uint(0); i < linuxsched.NCores; i++ {
+	for i := uint(0); i < linuxsched.GetNCores(); i++ {
 		if m.Test(i) {
 			core = true
 		}

@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"net"
 
-	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
-	"sigmaos/serr"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
@@ -103,22 +101,6 @@ func (fdc *FdClient) OpenWatch(path string, mode sp.Tmode, w sos.Watch) (int, er
 
 func (fdc *FdClient) Open(path string, mode sp.Tmode) (int, error) {
 	return fdc.OpenWatch(path, mode, nil)
-}
-
-func (fdc *FdClient) CreateOpen(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
-	fd, err := fdc.Create(path, perm, mode)
-	if err != nil && !serr.IsErrCode(err, serr.TErrExists) {
-		db.DPrintf(db.FDCLNT_ERR, "Create %v err %v", path, err)
-		return -1, err
-	}
-	if err != nil {
-		fd, err = fdc.Open(path, mode)
-		if err != nil {
-			db.DPrintf(db.FDCLNT_ERR, "Open %v err %v", path, err)
-			return -1, err
-		}
-	}
-	return fd, nil
 }
 
 func (fdc *FdClient) SetRemoveWatch(pn string, w sos.Watch) error {
@@ -216,7 +198,7 @@ func (fdc *FdClient) IsLocalMount(mnt sp.Tmount) bool {
 }
 
 func (fdc *FdClient) SetLocalMount(mnt *sp.Tmount, port string) {
-	a := net.JoinHostPort(fdc.pc.GetLocalIP(), port)
+	a := net.JoinHostPort(fdc.pcfg.GetLocalIP(), port)
 	mnt.SetAddr(sp.NewTaddrs([]string{a}))
 }
 

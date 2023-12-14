@@ -124,7 +124,15 @@ for vm in $vms; do
   aws s3 --profile sigmaos cp s3://9ps3/img-save/7.jpg ~/
   aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
 
+  # Download wiki dataset
+  mkdir -p /tmp/sigmaos-data
+  if ! [ -d /tmp/sigmaos-data/wiki-20G ]; then 
+    mkdir /tmp/sigmaos-data/wiki-20G
+    aws s3 --profile sigmaos cp s3://9ps3/wiki-20G/enwiki-latest-pages-articles-multistream-augmented.xml /tmp/sigmaos-data/wiki-20G/enwiki-latest-pages-articles-multistream-augmented.xml
+  fi
+
   cd sigmaos
+  sudo ./load-apparmor.sh
 
   echo "$PWD $SIGMADEBUG"
   if [ "${vm}" = "${MAIN}" ]; then 

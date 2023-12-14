@@ -48,6 +48,9 @@ func init() {
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestHash(t *testing.T) {
 	assert.Equal(t, 0, mr.Khash("LEAGUE")%8)
 	assert.Equal(t, 0, mr.Khash("Abbots")%8)
@@ -131,7 +134,7 @@ func TestMapper(t *testing.T) {
 
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err NewBins %v", err)
-	m, err := mr.NewMapper(ts.SigmaClnt, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout")
+	m, err := mr.NewMapper(ts.SigmaClnt, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
 	assert.Nil(t, err, "NewMapper %v", err)
 	err = m.InitWrt(0, REDUCEIN)
 	assert.Nil(t, err)
@@ -290,7 +293,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	cm := mr.StartMRJob(ts.SigmaClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ)
+	cm := mr.StartMRJob(ts.SigmaClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, true)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

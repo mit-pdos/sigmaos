@@ -2,7 +2,6 @@ package protclnt
 
 import (
 	"sigmaos/path"
-	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
@@ -20,16 +19,14 @@ func init() {
 }
 
 type Clnt struct {
-	id   sessp.Tclient
-	sm   *sessclnt.Mgr
-	pcfg *proc.ProcEnv
+	id sessp.Tclient
+	sm *sessclnt.Mgr
 }
 
-func NewClnt(pcfg *proc.ProcEnv, clntnet string) *Clnt {
+func NewClnt(clntnet string) *Clnt {
 	clnt := &Clnt{}
 	clnt.id = clid
-	clnt.pcfg = pcfg
-	clnt.sm = sessclnt.NewMgr(pcfg, clnt.id, clntnet)
+	clnt.sm = sessclnt.NewMgr(clnt.id, clntnet)
 	return clnt
 }
 

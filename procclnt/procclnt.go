@@ -51,9 +51,9 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool) *ProcClnt {
 // Create the named state the proc (and its parent) expects.
 func (clnt *ProcClnt) NewProc(p *proc.Proc, how proc.Thow, kernelId string) error {
 	if how == proc.HSCHEDD {
-		return clnt.spawn(kernelId, how, p, 0)
+		return clnt.spawn(kernelId, how, p)
 	} else {
-		return clnt.spawn(kernelId, how, p, -1)
+		return clnt.spawn(kernelId, how, p)
 	}
 }
 
@@ -71,31 +71,12 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how proc.Thow, kernelId stri
 	return nil, nil
 }
 
-// Burst-spawn a set of procs across available procds. Return a slice of procs
-// which were unable to be successfully spawned, as well as corresponding
-// errors.
-//
-// Use of burstOffset news sure we continue rotating across invocations as
-// well as within an invocation.
-func (clnt *ProcClnt) SpawnBurst(ps []*proc.Proc, procsPerSchedd int) ([]*proc.Proc, []error) {
-	failed := []*proc.Proc{}
-	errs := []error{}
-	for i := range ps {
-		if err := clnt.spawn("", proc.HSCHEDD, ps[i], procsPerSchedd); err != nil {
-			db.DPrintf(db.ALWAYS, "Error burst-spawn %v: %v", ps[i], err)
-			failed = append(failed, ps[i])
-			errs = append(errs, err)
-		}
-	}
-	return failed, errs
-}
-
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	return clnt.spawn("~local", proc.HSCHEDD, p, 0)
+	return clnt.spawn("~local", proc.HSCHEDD, p)
 }
 
-// Spawn a proc on kernelId. If spread > 0, p is part of SpawnBurt().
-func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread int) error {
+// Spawn a proc on kernelId.
+func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error {
 	// Sanity check.
 	if p.GetMcpu() > 0 && p.GetType() != proc.T_LC {
 		db.DFatalf("Spawn non-LC proc with Mcpu set %v", p)
@@ -110,20 +91,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc, spread
 	if clnt.hasExited() != "" {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn error called after Exited")
 		db.DFatalf("Spawn error called after Exited")
-	}
-
-	if spread > 0 {
-		// Update the list of active procds.
-		clnt.scheddclnt.UpdateSchedds()
-		// XXX For now, spread is ignored
-		kid, err := clnt.scheddclnt.NextSchedd()
-		if err != nil {
-			return err
-		}
-		kernelId = kid
-		if how != proc.HSCHEDD {
-			db.DFatalf("Try to spread non-schedd proc")
-		}
 	}
 
 	p.SetSpawnTime(time.Now())
@@ -357,18 +324,27 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 
 // ========== EVICT ==========
 
+func (clnt *ProcClnt) evictAt(pid sp.Tpid, kernelID string, how proc.Thow) error {
+	return clnt.notify(scheddclnt.EVICT, pid, kernelID, proc.EVICT_SEM, how, nil, false)
+}
+
 func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
 	kernelID, err := clnt.cs.GetKernelID(pid)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error Evict can't get kernel ID for proc: %v", err)
 		return err
 	}
-	return clnt.notify(scheddclnt.EVICT, pid, kernelID, proc.EVICT_SEM, how, nil, false)
+	return clnt.evictAt(pid, kernelID, how)
 }
 
 // Notifies a proc that it will be evicted using Evict. Called by parent.
 func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
 	return clnt.evict(pid, proc.HSCHEDD)
+}
+
+// For use by realmd when evicting procs for fairness
+func (clnt *ProcClnt) EvictRealmProc(pid sp.Tpid, kernelID string) error {
+	return clnt.evictAt(pid, kernelID, proc.HSCHEDD)
 }
 
 func (clnt *ProcClnt) EvictKernelProc(pid sp.Tpid, how proc.Thow) error {

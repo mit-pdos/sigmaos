@@ -22,6 +22,9 @@ func testSimple(t *testing.T, ivs interval.IIntervals) {
 	assert.Equal(t, 1, ivs.Length())
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestSimple(t *testing.T) {
 	testSimple(t, sliceintervals.NewIInterval())
 	testSimple(t, skipintervals.NewSkipIInterval())

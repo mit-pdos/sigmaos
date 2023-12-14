@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "sigmaos/debug"
 	"sigmaos/groupmgr"
 	"sigmaos/mr"
 	"sigmaos/perf"
@@ -23,9 +24,10 @@ type MRJobInstance struct {
 	done    int32
 	job     *mr.Job
 	cm      *groupmgr.GroupMgr
+	asyncrw bool
 }
 
-func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string, memreq proc.Tmem) *MRJobInstance {
+func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string, memreq proc.Tmem, asyncrw bool) *MRJobInstance {
 	ji := &MRJobInstance{}
 	ji.RealmTstate = ts
 	ji.p = p
@@ -33,20 +35,26 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string, m
 	ji.app = app
 	ji.jobname = jobname
 	ji.memreq = memreq
+	ji.asyncrw = asyncrw
 	return ji
 }
 
 func (ji *MRJobInstance) PrepareMRJob() {
 	ji.job = mr.ReadJobConfig(path.Join("..", "mr", ji.app))
+	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)
 	mr.InitCoordFS(ji.FsLib, ji.jobname, ji.job.Nreduce)
+	db.DPrintf(db.TEST, "Done prepare MR FS %v", ji.jobname)
+	db.DPrintf(db.TEST, "Prepare MR job %v %v", ji.jobname, ji.job)
 	nmap, err := mr.PrepareJob(ji.FsLib, ji.jobname, ji.job)
+	db.DPrintf(db.TEST, "Done prepare MR job %v %v", ji.jobname, ji.job)
 	ji.nmap = nmap
 	assert.Nil(ji.Ts.T, err, "Error PrepareJob: %v", err)
 	assert.NotEqual(ji.Ts.T, 0, nmap, "Error PrepareJob nmap 0")
 }
 
 func (ji *MRJobInstance) StartMRJob() {
-	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0, ji.memreq)
+	db.DPrintf(db.TEST, "Start MR job %v %v", ji.jobname, ji.job)
+	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0, ji.memreq, ji.asyncrw)
 }
 
 func (ji *MRJobInstance) Wait() {

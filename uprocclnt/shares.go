@@ -16,9 +16,9 @@ type Tshare int64
 // realm's BE procs will get .5 cores' worth of shares.
 
 const (
-	SHARE_PER_CORE Tshare = 500
+	SHARE_PER_CORE Tshare = 1000
 	BE_SHARES             = 50 // shares split by BE procs.
-	MIN_SHARE             = SHARE_PER_CORE / 100
+	MIN_SHARE             = 5
 )
 
 // Rebalance CPU shares when a proc runs.

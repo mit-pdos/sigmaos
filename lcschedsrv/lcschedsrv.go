@@ -7,12 +7,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	proto "sigmaos/lcschedsrv/proto"
-	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	pqproto "sigmaos/procqsrv/proto"
 	"sigmaos/scheddclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -20,16 +20,20 @@ import (
 type LCSched struct {
 	mu         sync.Mutex
 	cond       *sync.Cond
-	mfs        *memfssrv.MemFs
+	sc         *sigmaclnt.SigmaClnt
 	scheddclnt *scheddclnt.ScheddClnt
 	qs         map[sp.Trealm]*Queue
 	schedds    map[string]*Resources
 }
 
-func NewLCSched(mfs *memfssrv.MemFs) *LCSched {
+type QDir struct {
+	lcs *LCSched
+}
+
+func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	lcs := &LCSched{
-		mfs:        mfs,
-		scheddclnt: scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib),
+		sc:         sc,
+		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib),
 		qs:         make(map[sp.Trealm]*Queue),
 		schedds:    make(map[string]*Resources),
 	}
@@ -37,12 +41,12 @@ func NewLCSched(mfs *memfssrv.MemFs) *LCSched {
 	return lcs
 }
 
-func (lcs *LCSched) GetProcs() []*proc.Proc {
-	lcs.mu.Lock()
-	defer lcs.mu.Unlock()
+func (qd *QDir) GetProcs() []*proc.Proc {
+	qd.lcs.mu.Lock()
+	defer qd.lcs.mu.Unlock()
 
-	procs := make([]*proc.Proc, 0, lcs.lenL())
-	for _, q := range lcs.qs {
+	procs := make([]*proc.Proc, 0, qd.lcs.lenL())
+	for _, q := range qd.lcs.qs {
 		for _, p := range q.pmap {
 			procs = append(procs, p)
 		}
@@ -50,11 +54,11 @@ func (lcs *LCSched) GetProcs() []*proc.Proc {
 	return procs
 }
 
-func (lcs *LCSched) Lookup(pid string) (*proc.Proc, bool) {
-	lcs.mu.Lock()
-	defer lcs.mu.Unlock()
+func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
+	qd.lcs.mu.Lock()
+	defer qd.lcs.mu.Unlock()
 
-	for _, q := range lcs.qs {
+	for _, q := range qd.lcs.qs {
 		if p, ok := q.pmap[sp.Tpid(pid)]; ok {
 			return p, ok
 		}
@@ -70,10 +74,11 @@ func (lcs *LCSched) lenL() int {
 	return l
 }
 
-func (lcs *LCSched) Len() int {
-	lcs.mu.Lock()
-	defer lcs.mu.Unlock()
-	return lcs.lenL()
+func (qd *QDir) Len() int {
+	qd.lcs.mu.Lock()
+	defer qd.lcs.mu.Unlock()
+
+	return qd.lcs.lenL()
 }
 
 func (lcs *LCSched) Enqueue(ctx fs.CtxI, req pqproto.EnqueueRequest, res *pqproto.EnqueueResponse) error {
@@ -133,7 +138,10 @@ func (lcs *LCSched) schedule() {
 func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Resources) {
 	db.DPrintf(db.LCSCHED, "runProc kernelID %v p %v", kernelID, p)
 	if err := lcs.scheddclnt.ForceRun(kernelID, false, p); err != nil {
-		db.DFatalf("Schedd.Run %v err %v", kernelID, err)
+		db.DPrintf(db.ALWAYS, "Schedd.Run %v err %v", kernelID, err)
+		// Re-enqueue the proc
+		lcs.addProc(p)
+		return
 	}
 	// Notify the spawner that a schedd has been chosen.
 	ch <- kernelID
@@ -145,7 +153,7 @@ func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
 	// RPC the schedd this proc was spawned on to wait for the proc to exit.
 	db.DPrintf(db.LCSCHED, "WaitExit %v RPC", p.GetPid())
 	if _, err := lcs.scheddclnt.Wait(scheddclnt.EXIT, kernelID, p.GetPid()); err != nil {
-		db.DFatalf("Error Schedd WaitExit: %v", err)
+		db.DPrintf(db.ALWAYS, "Error Schedd WaitExit: %v", err)
 	}
 	db.DPrintf(db.LCSCHED, "Proc exited %v", p.GetPid())
 	// Lock to modify resource allocations
@@ -182,28 +190,25 @@ func (lcs *LCSched) addRealmQueueL(realm sp.Trealm) *Queue {
 
 // Run an LCSched
 func Run() {
-	pcfg := proc.GetProcEnv()
-	mfs, err := memfssrv.NewMemFs(path.Join(sp.LCSCHED, pcfg.GetPID().String()), pcfg)
-
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("Error NewMemFs: %v", err)
+		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-
-	lcs := NewLCSched(mfs)
-	ssrv, err := sigmasrv.NewSigmaSrvMemFs(mfs, lcs)
+	lcs := NewLCSched(sc)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {
-		db.DFatalf("Error PDS: %v", err)
+		db.DFatalf("Error NewSIgmaSrv: %v", err)
 	}
 
 	// export queued procs through procfs. XXX maybe
 	// subdirectory per realm?
-	dir := procfs.NewProcDir(lcs)
-	if err := mfs.MkNod(sp.QUEUE, dir); err != nil {
+	dir := procfs.NewProcDir(&QDir{lcs})
+	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
 		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}
 
 	// Perf monitoring
-	p, err := perf.NewPerf(pcfg, perf.LCSCHED)
+	p, err := perf.NewPerf(sc.ProcEnv(), perf.LCSCHED)
 
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)

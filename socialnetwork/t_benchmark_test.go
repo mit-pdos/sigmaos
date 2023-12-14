@@ -130,6 +130,9 @@ func testTemplate(t *testing.T, isBenchTest bool, testFunc func(*testing.T, *sn.
 	assert.Nil(t, tssn.Shutdown())
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestBenchmarkSeqCompose(t *testing.T) {
 	testTemplate(t, true, testSeqComposeInner)
 }

@@ -18,6 +18,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
+	"sigmaos/mem"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
@@ -74,11 +75,14 @@ func runSpinPerf(ts *test.RealmTstate, c chan time.Duration, mcpu proc.Tmcpu, nt
 	c <- waitSpinPerf(ts, pid)
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestBasicSimple(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetLocalIP())
 
 	sts1, err := rootts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -110,8 +114,8 @@ func TestBasicMultiRealmSingleNode(t *testing.T) {
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	ts2 := test.NewRealmTstate(rootts, REALM2)
 
-	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts1.GetLocalIP())
-	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM2, ts2.GetLocalIP())
+	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts1.ProcEnv().GetLocalIP())
+	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM2, ts2.ProcEnv().GetLocalIP())
 
 	schedds1, err := ts1.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -171,6 +175,51 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	rootts.Shutdown()
 }
 
+func TestBasicFairness(t *testing.T) {
+	rootts := test.NewTstateWithRealms(t)
+	ts1 := test.NewRealmTstate(rootts, REALM1)
+	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
+
+	p1 := proc.NewProc("sleeper", []string{"100000s", "name/"})
+	p1.SetMem(mem.GetTotalMem()/2 + 1)
+
+	db.DPrintf(db.TEST, "Spawn big realm's proc")
+	err := ts1.Spawn(p1)
+	assert.Nil(rootts.T, err, "Err spawn: %v", err)
+	err = ts1.WaitStart(p1.GetPid())
+	assert.Nil(rootts.T, err, "Err WaitStart: %v", err)
+	db.DPrintf(db.TEST, "Big realm's proc started")
+
+	ts2 := test.NewRealmTstate(rootts, REALM2)
+	db.DPrintf(db.TEST, "Created realm 2")
+
+	p2 := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	p2.SetMem(mem.GetTotalMem())
+
+	db.DPrintf(db.TEST, "Spawn small realm's proc")
+	err = ts2.Spawn(p2)
+	assert.Nil(rootts.T, err, "Err spawn: %v", err)
+	err = ts2.WaitStart(p2.GetPid())
+	assert.Nil(rootts.T, err, "Err WaitStart: %v", err)
+	db.DPrintf(db.TEST, "Small realm's proc started")
+
+	status, err := ts1.WaitExit(p1.GetPid())
+	assert.Nil(rootts.T, err, "Err WaitExit: %v", err)
+	assert.True(rootts.T, status.IsStatusEvicted(), "Wrong status: %v", status)
+
+	status, err = ts2.WaitExit(p2.GetPid())
+	assert.Nil(rootts.T, err, "Err WaitExit: %v", err)
+	assert.True(rootts.T, status.IsStatusOK(), "Wrong status: %v", status)
+
+	err = ts1.Remove()
+	assert.Nil(t, err)
+
+	err = ts2.Remove()
+	assert.Nil(t, err)
+
+	rootts.Shutdown()
+}
+
 func TestWaitExitSimpleSingle(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
@@ -180,7 +229,7 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetLocalIP())
 
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
@@ -209,7 +258,7 @@ func TestEvictSingle(t *testing.T) {
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetLocalIP())
 
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
@@ -250,7 +299,7 @@ func TestEvictMultiRealm(t *testing.T) {
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts1.GetLocalIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetLocalIP())
 
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")

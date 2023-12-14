@@ -51,6 +51,9 @@ func (ts *Tstate) Shutdown() {
 	ts.DetachAll()
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestStartStopRepl0(t *testing.T) {
 	ts := newTstate(t, 0, false)
 

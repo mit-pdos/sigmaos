@@ -263,10 +263,13 @@ func (imgd *ImgSrv) work(sts []*sp.Stat, ch chan Tresult) bool {
 			stop = true
 			continue
 		}
-		atomic.AddInt32(&imgd.ntask, 1)
-		ntask += 1
-		// Run the task in another thread.
-		go imgd.runTask(&task{t, string(s3fn)}, ch)
+		inputs := strings.Split(string(s3fn), ",")
+		for _, input := range inputs {
+			atomic.AddInt32(&imgd.ntask, 1)
+			ntask += 1
+			// Run the task in another thread.
+			go imgd.runTask(&task{t, input}, ch)
+		}
 	}
 	db.DPrintf(db.IMGD, "Started %v tasks stop %v ntask in progress %v", ntask, stop, atomic.LoadInt32(&imgd.ntask))
 	return stop
@@ -306,7 +309,8 @@ func (imgd *ImgSrv) Work() {
 
 	// Try to become the leading coordinator.
 	if err := imgd.leaderclnt.LeadAndFence(nil, []string{path.Join(IMG, imgd.job)}); err != nil {
-		db.DFatalf("LeadAndFence err %v", err)
+		sts, err2 := imgd.GetDir(IMG)
+		db.DFatalf("LeadAndFence err %v sts %v err2 %v", err, sp.Names(sts), err2)
 	}
 
 	db.DPrintf(db.ALWAYS, "leader %s", imgd.job)

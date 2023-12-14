@@ -23,7 +23,10 @@ import (
 	"sigmaos/test"
 )
 
-var ROOT = []string{"a", "b.txt", "gutenberg", "wiki", "ls.PDF"}
+var ROOT = []string{"a", "gutenberg", "wiki", "img"}
+
+func TestCompile(t *testing.T) {
+}
 
 func TestOne(t *testing.T) {
 	ts := test.NewTstateAll(t)
@@ -39,7 +42,7 @@ func TestOne(t *testing.T) {
 func TestReadOff(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
-	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt"))
+	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/gutenberg/gutenberg.txt"))
 	assert.Nil(t, err, "Error ReadOff %v", err)
 	rdr.Lseek(1 << 10)
 	brdr := bufio.NewReaderSize(rdr, 1<<16)
@@ -97,7 +100,7 @@ func TestUnionDir(t *testing.T) {
 	dirents, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/gutenberg"))
 	assert.Nil(t, err, "GetDir")
 
-	assert.Equal(t, 8, len(dirents))
+	assert.Equal(t, 1, len(dirents))
 
 	ts.Shutdown()
 }
@@ -108,10 +111,10 @@ func TestUnionFile(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	file, err := os.ReadFile("../input/pg-being_ernest.txt")
+	file, err := os.ReadFile("../input/gutenberg.txt")
 	assert.Nil(t, err, "ReadFile")
 
-	name := path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt")
+	name := path.Join(sp.S3, "~local/9ps3/gutenberg/gutenberg.txt")
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
 
@@ -150,12 +153,12 @@ func TestSymlinkFile(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
 	dn := s3Name(ts)
-	fn := path.Join(dn, "9ps3", "b.txt")
+	fn := path.Join(dn, "9ps3", "gutenberg/gutenberg.txt")
 
 	_, err := ts.GetFile(fn)
 	assert.Nil(t, err, "GetFile")
 
-	fn = dn + "/9ps3" + "//b.txt"
+	fn = dn + "/9ps3" + "//gutenberg/gutenberg.txt"
 	_, err = ts.GetFile(fn)
 	assert.Nil(t, err, "GetFile")
 

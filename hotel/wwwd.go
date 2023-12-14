@@ -40,6 +40,7 @@ type Www struct {
 // Run starts the server
 func RunWww(job string, public bool) error {
 	www := &Www{}
+	www.record = true
 	www.job = job
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
@@ -114,7 +115,7 @@ func RunWww(job string, public bool) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		a, err := netsigma.QualifyAddr(l.Addr().String())
+		a, err := netsigma.QualifyAddrLocalIP(www.ProcEnv().GetLocalIP(), l.Addr().String())
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
 		}
@@ -132,7 +133,7 @@ func RunWww(job string, public bool) error {
 		go http.Serve(l, mux)
 		//		}
 
-		a, err := netsigma.QualifyAddr(l.Addr().String())
+		a, err := netsigma.QualifyAddrLocalIP(www.ProcEnv().GetLocalIP(), l.Addr().String())
 		if err != nil {
 			db.DFatalf("QualifyAddr %v err %v", a, err)
 		}

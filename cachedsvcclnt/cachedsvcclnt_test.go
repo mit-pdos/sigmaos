@@ -65,6 +65,9 @@ func (ts *Tstate) StartClerk(dur time.Duration, nkeys, keyOffset int, mcpu proc.
 	ts.clrks = append(ts.clrks, pid)
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestCacheSingle(t *testing.T) {
 	const (
 		N    = 1

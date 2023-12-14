@@ -29,21 +29,17 @@ type SigmaClnt struct {
 	*leaseclnt.LeaseClnt
 }
 
-func NewSigmaLeaseClnt(fsl *fslib.FsLib) (*SigmaClnt, error) {
-	lmc, err := leaseclnt.NewLeaseClnt(fsl)
-	if err != nil {
-		return nil, err
-	}
-	return &SigmaClnt{fsl, nil, lmc}, nil
-}
-
 // Create only an FsLib, as a proc.
 func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	fsl, err := fslib.NewFsLib(pcfg)
 	if err != nil {
 		db.DFatalf("NewSigmaClnt: %v", err)
 	}
-	return NewSigmaLeaseClnt(fsl)
+	lmc, err := leaseclnt.NewLeaseClnt(fsl)
+	if err != nil {
+		return nil, err
+	}
+	return &SigmaClnt{fsl, nil, lmc}, nil
 }
 
 func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {

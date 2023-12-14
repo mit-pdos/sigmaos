@@ -47,8 +47,10 @@ func newNProcs(n int, prog string, args []string, env map[string]string, mcpu pr
 
 func spawnBurstProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	db.DPrintf(db.TEST, "Burst-spawning %v procs in chunks of size %v", len(ps), len(ps)/MAX_PARALLEL)
-	_, errs := ts.SpawnBurst(ps, 1)
-	assert.Equal(ts.Ts.T, len(errs), 0, "Errors SpawnBurst: %v", errs)
+	for _, p := range ps {
+		err := ts.Spawn(p)
+		assert.Nil(ts.Ts.T, err, "Error Spawn: %v", err)
+	}
 }
 
 func spawnProcs(ts *test.RealmTstate, ps []*proc.Proc) {
@@ -132,18 +134,18 @@ func blockMem(rootts *test.Tstate, mem string) []*proc.Proc {
 	if err != nil {
 		db.DFatalf("Can't count nschedd: %v", err)
 	}
+	db.DFatalf("Memory blocking deprecated")
 	ps := make([]*proc.Proc, 0, n)
 	for i := 0; i < n; i++ {
 		db.DPrintf(db.TEST, "Spawning memblock %v for %v of memory", i, mem)
 		p := proc.NewProc("memblock", []string{mem})
 		// Make it LC so it doesn't get swapped.
 		p.SetType(proc.T_LC)
-		_, errs := rootts.SpawnBurst([]*proc.Proc{p}, 1)
-		assert.True(rootts.T, len(errs) == 0, "Error spawn: %v", errs)
-		if len(errs) > 0 {
+		err := rootts.Spawn(p)
+		if !assert.Nil(rootts.T, err, "Error spawn: %v", err) {
 			db.DFatalf("Can't spawn blockers: %v", err)
 		}
-		err := rootts.WaitStart(p.GetPid())
+		err = rootts.WaitStart(p.GetPid())
 		assert.Nil(rootts.T, err, "Error waitstart: %v", err)
 		if err != nil {
 			db.DFatalf("Error waitstart blocker: %v", err)
@@ -212,11 +214,11 @@ func newNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interfac
 
 // ========== MR Helpers ========
 
-func newNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string, memreq proc.Tmem) ([]*MRJobInstance, []interface{}) {
+func newNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string, memreq proc.Tmem, asyncrw bool) ([]*MRJobInstance, []interface{}) {
 	ms := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewMRJobInstance(ts, p, app, app+"-mr-"+rand.String(16)+"-"+ts.GetRealm().String(), memreq)
+		i := NewMRJobInstance(ts, p, app, app+"-mr-"+rand.String(16)+"-"+ts.GetRealm().String(), memreq, asyncrw)
 		ms = append(ms, i)
 		is = append(is, i)
 	}
@@ -320,13 +322,13 @@ func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps stri
 }
 
 // ========== ImgResize Helpers ==========
-func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int) ([]*ImgResizeJobInstance, []interface{}) {
+func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) ([]*ImgResizeJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*ImgResizeJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, mcpu, mem, nrounds)
+		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, mcpu, mem, nrounds, imgdmcpu)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

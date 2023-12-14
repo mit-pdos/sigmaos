@@ -193,12 +193,13 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 	pids := make([]sp.Tpid, 0, len(srvs))
 
 	for _, srv := range srvs {
+		db.DPrintf(db.TEST, "Hotel spawn %v", srv.Name)
 		p := proc.NewProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
 		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)
-		if _, errs := sc.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
-			db.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
+		if err := sc.Spawn(p); err != nil {
+			db.DFatalf("Error burst-spawnn proc %v: %v", p, err)
 			return nil, err
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {
@@ -206,6 +207,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 			return nil, err
 		}
 		pids = append(pids, p.GetPid())
+		db.DPrintf(db.TEST, "Hotel started %v", srv.Name)
 	}
 
 	return &HotelJob{sc, cc, cm, ca, pids, cache, kvf}, nil

@@ -55,6 +55,9 @@ func (ts *Tstate) waitWww() {
 	ts.Shutdown()
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestSandbox(t *testing.T) {
 	ts := newTstate(t)
 	ts.waitWww()

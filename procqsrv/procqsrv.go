@@ -8,13 +8,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	proto "sigmaos/procqsrv/proto"
 	"sigmaos/rand"
 	"sigmaos/scheddclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -27,7 +27,7 @@ type ProcQ struct {
 	mu         sync.Mutex
 	realmMu    sync.RWMutex
 	cond       *sync.Cond
-	mfs        *memfssrv.MemFs
+	sc         *sigmaclnt.SigmaClnt
 	scheddclnt *scheddclnt.ScheddClnt
 	qs         map[sp.Trealm]*Queue
 	realms     []sp.Trealm
@@ -35,10 +35,14 @@ type ProcQ struct {
 	tot        int64
 }
 
-func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
+type QDir struct {
+	pq *ProcQ
+}
+
+func NewProcQ(sc *sigmaclnt.SigmaClnt) *ProcQ {
 	pq := &ProcQ{
-		mfs:        mfs,
-		scheddclnt: scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib),
+		sc:         sc,
+		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib),
 		qs:         make(map[sp.Trealm]*Queue),
 		realms:     make([]sp.Trealm, 0),
 		qlen:       0,
@@ -48,12 +52,12 @@ func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
 }
 
 // XXX Deduplicate with lcsched
-func (pq *ProcQ) GetProcs() []*proc.Proc {
-	pq.mu.Lock()
-	defer pq.mu.Unlock()
+func (qd *QDir) GetProcs() []*proc.Proc {
+	qd.pq.mu.Lock()
+	defer qd.pq.mu.Unlock()
 
-	procs := make([]*proc.Proc, 0, pq.lenL())
-	for _, q := range pq.qs {
+	procs := make([]*proc.Proc, 0, qd.pq.lenL())
+	for _, q := range qd.pq.qs {
 		for _, p := range q.pmap {
 			procs = append(procs, p)
 		}
@@ -62,11 +66,11 @@ func (pq *ProcQ) GetProcs() []*proc.Proc {
 }
 
 // XXX Deduplicate with lcsched
-func (pq *ProcQ) Lookup(pid string) (*proc.Proc, bool) {
-	pq.mu.Lock()
-	defer pq.mu.Unlock()
+func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
+	qd.pq.mu.Lock()
+	defer qd.pq.mu.Unlock()
 
-	for _, q := range pq.qs {
+	for _, q := range qd.pq.qs {
 		if p, ok := q.pmap[sp.Tpid(pid)]; ok {
 			return p, ok
 		}
@@ -83,10 +87,11 @@ func (pq *ProcQ) lenL() int {
 	return l
 }
 
-func (pq *ProcQ) Len() int {
-	pq.mu.Lock()
-	defer pq.mu.Unlock()
-	return pq.lenL()
+func (qd *QDir) Len() int {
+	qd.pq.mu.Lock()
+	defer qd.pq.mu.Unlock()
+
+	return qd.pq.lenL()
 }
 
 func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
@@ -129,6 +134,22 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 	}
 	db.DPrintf(db.PROCQ, "Done runProc on kid %v", kernelID)
 	ch <- kernelID
+}
+
+func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.GetStatsResponse) error {
+	pq.realmMu.RLock()
+	realms := make(map[string]int64, len(pq.realms))
+	for _, r := range pq.realms {
+		realms[string(r)] = 0
+	}
+	pq.realmMu.RUnlock()
+
+	for r, _ := range realms {
+		realms[r] = int64(pq.getRealmQueue(sp.Trealm(r)).Len())
+	}
+	res.Nqueued = realms
+
+	return nil
 }
 
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
@@ -251,29 +272,27 @@ func (pq *ProcQ) stats() {
 
 // Run a ProcQ
 func Run() {
-	pcfg := proc.GetProcEnv()
-	mfs, err := memfssrv.NewMemFs(path.Join(sp.PROCQ, pcfg.GetKernelID()), pcfg)
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("Error NewMemFs: %v", err)
+		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	pq := NewProcQ(mfs)
-	ssrv, err := sigmasrv.NewSigmaSrvMemFs(mfs, pq)
+	pq := NewProcQ(sc)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {
-		db.DFatalf("Error PDS: %v", err)
+		db.DFatalf("Error NewSIgmaSrv: %v", err)
 	}
-
 	// export queued procs through procfs. maybe a subdir per realm?
-	dir := procfs.NewProcDir(pq)
-	if err := mfs.MkNod(sp.QUEUE, dir); err != nil {
+	dir := procfs.NewProcDir(&QDir{pq})
+	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
 		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}
 
 	// Perf monitoring
-	p, err := perf.NewPerf(pcfg, perf.PROCQ)
+	p, err := perf.NewPerf(sc.ProcEnv(), perf.PROCQ)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
-	//	go pq.stats()
+	go pq.stats()
 	ssrv.RunServer()
 }

@@ -154,13 +154,15 @@ func (updm *UprocdMgr) getClntOrStartUprocd(realm sp.Trealm, ptype proc.Ttype) (
 	rpcc, ok2 := pdcm[ptype]
 	if !ok1 || !ok2 {
 		pid, clnt := updm.pool.get()
-		db.DPrintf(db.UPROCDMGR, "[realm:%v] get uprocd %v", realm, pid)
+		db.DPrintf(db.UPROCDMGR, "[realm:%v] get uprocd %v ptype %v", realm, pid, ptype)
 		updm.upcs[realm][ptype] = clnt
 		rpcc = clnt
 		if ptype == proc.T_BE {
 			updm.beUprocds = append(updm.beUprocds, rpcc)
 		}
-		clnt.AssignToRealm(realm, ptype)
+		if err := updm.kclnt.AssignToRealm(pid, realm, ptype); err != nil {
+			db.DFatalf("Err assign uprocd to realm: %v", err)
+		}
 	}
 	return rpcc, nil
 }

@@ -4,7 +4,6 @@ import (
 	"sync"
 	//	"github.com/sasha-s/go-deadlock"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -13,15 +12,13 @@ import (
 
 type Mgr struct {
 	mu       sync.Mutex
-	pcfg     *proc.ProcEnv
 	cli      sessp.Tclient
 	sessions map[string]*SessClnt
 	clntnet  string
 }
 
-func NewMgr(pcfg *proc.ProcEnv, cli sessp.Tclient, clntnet string) *Mgr {
+func NewMgr(cli sessp.Tclient, clntnet string) *Mgr {
 	sc := &Mgr{}
-	sc.pcfg = pcfg
 	sc.cli = cli
 	sc.sessions = make(map[string]*SessClnt)
 	sc.clntnet = clntnet
@@ -53,7 +50,7 @@ func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := newSessClnt(sc.pcfg, sc.cli, sc.clntnet, addrs)
+	sess, err := newSessClnt(sc.cli, sc.clntnet, addrs)
 	if err != nil {
 		return nil, err
 	}

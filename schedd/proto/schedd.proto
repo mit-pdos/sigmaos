@@ -13,6 +13,7 @@ service Schedd {
   rpc WaitEvict(WaitRequest) returns (WaitResponse);
   rpc Evict(NotifyRequest) returns (NotifyResponse);
   rpc GetCPUShares(GetCPUSharesRequest) returns (GetCPUSharesResponse);
+  rpc GetRunningProcs(GetRunningProcsRequest) returns (GetRunningProcsResponse);
   rpc GetScheddStats(GetScheddStatsRequest) returns (GetScheddStatsResponse);
   rpc WarmCacheBin(WarmCacheBinRequest) returns (WarmCacheBinResponse);
 }
@@ -55,6 +56,13 @@ message GetCPUUtilRequest {
 
 message GetCPUUtilResponse {
   double util = 1;
+}
+
+message GetRunningProcsRequest {
+}
+
+message GetRunningProcsResponse {
+  repeated ProcProto procProtos = 1;
 }
 
 message WarmCacheBinRequest {

@@ -206,6 +206,7 @@ def setup_graph(nplots, units, total_ncore):
   plt.xlabel("Time (sec)")
   for idx in range(len(tptax)):
     tptax[idx].set_ylabel(ylabels[idx])
+    tptax[idx].locator_params(axis='y', nbins=4)
   if nplots == 1:
     # Only put cores on the same graph for BE aggr tpt graph.
     for ax in tptax:
@@ -214,6 +215,7 @@ def setup_graph(nplots, units, total_ncore):
   for ax in coresax:
     ax.set_ylim((0, total_ncore + 5))
     ax.set_ylabel("Cores Utilized")
+    ax.set_yticks([0, 16, 32])
   return fig, tptax, coresax
 
 def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right):
@@ -266,7 +268,7 @@ def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, tota
     tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel (LC) tpt", "blue", "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "Hotel (LC)", "blue", "-", "")
     plots.append(p)
     tptax_idx = tptax_idx + 1
   be_buckets = bucketize(be_tpts, time_range, xmin, xmax, step_size=1000)
@@ -281,18 +283,18 @@ def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, tota
     x, y = buckets_to_lists(be_buckets)
     if "MB" in units:
       y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "{} (BE) tpt".format(tmod), "orange", "-", "")
+    p = add_data_to_graph(tptax[tptax_idx], x, y, "{} (BE)".format(tmod), "orange", "-", "")
     plots.append(p)
   if len(procd_tpts) > 0:
     # If we are dealing with multiple realms...
     if len(procd_tpts) > 1:
       line_style = "solid"
-      marker = "D"
+      marker = ""
       x, y = buckets_to_lists(dict(procd_tpts[0]))
-      p = add_data_to_graph(coresax[0], x, y, "Hotel (LC) CPU", "blue", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "", "blue", line_style, marker)
       plots.append(p)
       x, y = buckets_to_lists(dict(procd_tpts[1]))
-      p = add_data_to_graph(coresax[0], x, y, "{} (BE) CPU".format(tmod), "orange", line_style, marker)
+      p = add_data_to_graph(coresax[0], x, y, "", "orange", line_style, marker)
       plots.append(p)
       ta = [ ax for ax in tptax ]
       ta.append(coresax[0])

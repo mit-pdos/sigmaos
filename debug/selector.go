@@ -132,6 +132,7 @@ const (
 const (
 	SIGMAMGR     Tselector = "SIGMAMGR"
 	SIGMAMGR_ERR           = SIGMAMGR + ERR
+	FAIRNESS               = "FAIRNESS"
 	REALMD                 = "REALMD"
 	REALMD_ERR             = "REALMD" + ERR
 	REALMMGR               = "REALMMGR"

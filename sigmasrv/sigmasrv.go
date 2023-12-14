@@ -43,7 +43,7 @@ func NewSigmaSrv(fn string, svci any, pcfg *proc.ProcEnv) (*SigmaSrv, error) {
 	if error != nil {
 		db.DFatalf("NewSigmaSrv %v err %v\n", fn, error)
 	}
-	return NewSigmaSrvMemFs(mfs, svci)
+	return newSigmaSrvMemFs(mfs, svci)
 }
 
 func NewSigmaSrvPublic(fn string, svci any, pcfg *proc.ProcEnv, public bool) (*SigmaSrv, error) {
@@ -53,7 +53,7 @@ func NewSigmaSrvPublic(fn string, svci any, pcfg *proc.ProcEnv, public bool) (*S
 		if error != nil {
 			return nil, error
 		}
-		return NewSigmaSrvMemFs(mfs, svci)
+		return newSigmaSrvMemFs(mfs, svci)
 	} else {
 		return NewSigmaSrv(fn, svci, pcfg)
 	}
@@ -74,7 +74,7 @@ func NewSigmaSrvPort(fn, port string, pcfg *proc.ProcEnv, svci any) (*SigmaSrv, 
 	if error != nil {
 		db.DFatalf("NewSigmaSrvPort %v err %v\n", fn, error)
 	}
-	return NewSigmaSrvMemFs(mfs, svci)
+	return newSigmaSrvMemFs(mfs, svci)
 }
 
 func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
@@ -83,6 +83,14 @@ func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, e
 		db.DFatalf("NewSigmaSrvClnt %v err %v\n", fn, error)
 	}
 	return newSigmaSrvRPC(mfs, svci)
+}
+
+func NewSigmaSrvClntLease(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
+	mfs, error := memfssrv.NewMemFsPortClnt(fn, ":0", sc)
+	if error != nil {
+		db.DFatalf("NewSigmaSrvClnt %v err %v\n", fn, error)
+	}
+	return newSigmaSrvMemFs(mfs, svci)
 }
 
 func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
@@ -104,8 +112,8 @@ func NewSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error)
 	return ssrv, nil
 }
 
-// News a sigmasrv with an memfs, rpc server, and LeaseSrv service.
-func NewSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
+// Creates a sigmasrv with an memfs, rpc server, and LeaseSrv service.
+func newSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	ssrv, err := newSigmaSrvRPC(mfs, svci)
 	if err != nil {
 		return nil, err

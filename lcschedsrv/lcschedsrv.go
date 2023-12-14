@@ -7,12 +7,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	proto "sigmaos/lcschedsrv/proto"
-	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	pqproto "sigmaos/procqsrv/proto"
 	"sigmaos/scheddclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -20,7 +20,7 @@ import (
 type LCSched struct {
 	mu         sync.Mutex
 	cond       *sync.Cond
-	mfs        *memfssrv.MemFs
+	sc         *sigmaclnt.SigmaClnt
 	scheddclnt *scheddclnt.ScheddClnt
 	qs         map[sp.Trealm]*Queue
 	schedds    map[string]*Resources
@@ -30,10 +30,10 @@ type QDir struct {
 	lcs *LCSched
 }
 
-func NewLCSched(mfs *memfssrv.MemFs) *LCSched {
+func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	lcs := &LCSched{
-		mfs:        mfs,
-		scheddclnt: scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib),
+		sc:         sc,
+		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib),
 		qs:         make(map[sp.Trealm]*Queue),
 		schedds:    make(map[string]*Resources),
 	}
@@ -190,28 +190,25 @@ func (lcs *LCSched) addRealmQueueL(realm sp.Trealm) *Queue {
 
 // Run an LCSched
 func Run() {
-	pcfg := proc.GetProcEnv()
-	mfs, err := memfssrv.NewMemFs(path.Join(sp.LCSCHED, pcfg.GetPID().String()), pcfg)
-
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("Error NewMemFs: %v", err)
+		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-
-	lcs := NewLCSched(mfs)
-	ssrv, err := sigmasrv.NewSigmaSrvMemFs(mfs, lcs)
+	lcs := NewLCSched(sc)
+	ssrv, err := sigmasrv.NewSigmaSrvClntLease(path.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {
-		db.DFatalf("Error PDS: %v", err)
+		db.DFatalf("Error NewSIgmaSrv: %v", err)
 	}
 
 	// export queued procs through procfs. XXX maybe
 	// subdirectory per realm?
 	dir := procfs.NewProcDir(&QDir{lcs})
-	if err := mfs.MkNod(sp.QUEUE, dir); err != nil {
+	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
 		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}
 
 	// Perf monitoring
-	p, err := perf.NewPerf(pcfg, perf.LCSCHED)
+	p, err := perf.NewPerf(sc.ProcEnv(), perf.LCSCHED)
 
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)

@@ -31,12 +31,11 @@ type ProcMgr struct {
 }
 
 // Manages the state and lifecycle of a proc.
-func NewProcMgr(mfs *memfssrv.MemFs, kernelId string) *ProcMgr {
+func NewProcMgr(sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
 	mgr := &ProcMgr{
-		mfs:            mfs,
 		kernelId:       kernelId,
-		rootsc:         mfs.SigmaClnt(),
-		updm:           uprocclnt.NewUprocdMgr(mfs.SigmaClnt().FsLib, kernelId),
+		rootsc:         sc,
+		updm:           uprocclnt.NewUprocdMgr(sc.FsLib, kernelId),
 		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		namedMnts:      make(map[sp.Trealm]sp.Tmount),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
@@ -52,6 +51,7 @@ func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 }
 
 func (mgr *ProcMgr) SetupFs(mfs *memfssrv.MemFs) {
+	mgr.mfs = mfs
 	dir := procfs.NewProcDir(mgr.pstate)
 	if err := mfs.MkNod(sp.RUNNING, dir); err != nil {
 		db.DFatalf("Error mknod %v: %v", sp.RUNNING, err)

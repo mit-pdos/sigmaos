@@ -8,13 +8,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	proto "sigmaos/procqsrv/proto"
 	"sigmaos/rand"
 	"sigmaos/scheddclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -27,7 +27,7 @@ type ProcQ struct {
 	mu         sync.Mutex
 	realmMu    sync.RWMutex
 	cond       *sync.Cond
-	mfs        *memfssrv.MemFs
+	sc         *sigmaclnt.SigmaClnt
 	scheddclnt *scheddclnt.ScheddClnt
 	qs         map[sp.Trealm]*Queue
 	realms     []sp.Trealm
@@ -39,10 +39,10 @@ type QDir struct {
 	pq *ProcQ
 }
 
-func NewProcQ(mfs *memfssrv.MemFs) *ProcQ {
+func NewProcQ(sc *sigmaclnt.SigmaClnt) *ProcQ {
 	pq := &ProcQ{
-		mfs:        mfs,
-		scheddclnt: scheddclnt.NewScheddClnt(mfs.SigmaClnt().FsLib),
+		sc:         sc,
+		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib),
 		qs:         make(map[sp.Trealm]*Queue),
 		realms:     make([]sp.Trealm, 0),
 		qlen:       0,
@@ -272,25 +272,23 @@ func (pq *ProcQ) stats() {
 
 // Run a ProcQ
 func Run() {
-	pcfg := proc.GetProcEnv()
-	mfs, err := memfssrv.NewMemFs(path.Join(sp.PROCQ, pcfg.GetKernelID()), pcfg)
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DFatalf("Error NewMemFs: %v", err)
+		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	pq := NewProcQ(mfs)
-	ssrv, err := sigmasrv.NewSigmaSrvMemFs(mfs, pq)
+	pq := NewProcQ(sc)
+	ssrv, err := sigmasrv.NewSigmaSrvClntLease(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {
-		db.DFatalf("Error PDS: %v", err)
+		db.DFatalf("Error NewSIgmaSrv: %v", err)
 	}
-
 	// export queued procs through procfs. maybe a subdir per realm?
 	dir := procfs.NewProcDir(&QDir{pq})
-	if err := mfs.MkNod(sp.QUEUE, dir); err != nil {
+	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
 		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}
 
 	// Perf monitoring
-	p, err := perf.NewPerf(pcfg, perf.PROCQ)
+	p, err := perf.NewPerf(sc.ProcEnv(), perf.PROCQ)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}

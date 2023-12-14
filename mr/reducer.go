@@ -56,7 +56,7 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	r.SigmaClnt = sc
 	r.perf = p
-	asyncrw, err := strconv.ParseBool(args[3])
+	asyncrw, err := strconv.ParseBool(args[4])
 	if err != nil {
 		return nil, fmt.Errorf("NewReducer: can't parse asyncrw %v", args[3])
 	}
@@ -67,7 +67,7 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	//	}
 	r.tmp = r.outputTarget + rand.String(16) //pn
 
-	m, err := strconv.Atoi(args[4])
+	m, err := strconv.Atoi(args[3])
 	if err != nil {
 		return nil, fmt.Errorf("Reducer: nmaptask %v isn't int", args[2])
 	}

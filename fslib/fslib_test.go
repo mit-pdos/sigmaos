@@ -993,7 +993,7 @@ func newMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 	h, p, err := mnt.TargetHostPort()
 	assert.Nil(t, err)
 	if h == "" {
-		a := net.JoinHostPort(ts.GetLocalIP(), p)
+		a := net.JoinHostPort(ts.ProcEnv().GetLocalIP(), p)
 		mnt.SetAddr(sp.NewTaddrs([]string{a}))
 	}
 	return mnt

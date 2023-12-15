@@ -2,7 +2,6 @@ package sigmap
 
 import (
 	"fmt"
-	"net"
 
 	"google.golang.org/protobuf/proto"
 
@@ -49,11 +48,11 @@ func NewMountService(srvaddrs Taddrs) Tmount {
 	return Tmount{&TmountProto{Addr: srvaddrs}}
 }
 
-func NewMountServer(addr string) Tmount {
-	addrs := NewTaddrs([]string{addr})
+func NewMountServer(addr *Taddr) Tmount {
+	addrs := []*Taddr{addr}
 	return NewMountService(addrs)
 }
 
-func (mnt Tmount) TargetHostPort() (string, string, error) {
-	return net.SplitHostPort(mnt.Addr[0].Addr)
+func (mnt Tmount) TargetHostPort() (Thost, Tport) {
+	return Thost(mnt.Addr[0].Host), Tport(mnt.Addr[0].Port)
 }

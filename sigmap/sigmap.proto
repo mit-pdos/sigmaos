@@ -26,14 +26,15 @@ message Stat {
 }
 
 message Taddr {
-        string addr = 1;
-        string net = 2;
+        string host = 1;
+        uint32 port = 2;
+        string netNS = 3;
 }
 
 message TmountProto {
         repeated Taddr addr = 1;
-        string root = 3;
-        bytes pubKey = 4;
+        string root = 2;
+        bytes pubKey = 3;
 }
 
 message TfenceProto {

@@ -38,6 +38,10 @@ func NewMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error) 
 func NewMemFsPortClntFence(pn, port string, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
 	ctx := ctx.NewCtx("", 0, sp.NoClntId, nil, fencefs)
 	root := dir.NewRootDir(ctx, memfs.NewInode, nil)
+	return NewMemFsRootPortClntFence(root, pn, port, sc, fencefs)
+}
+
+func NewMemFsRootPortClntFence(root fs.Dir, pn, port string, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
 	srv, err := fslibsrv.NewSrv(root, pn, port, sc, fencefs)
 	if err != nil {
 		return nil, err

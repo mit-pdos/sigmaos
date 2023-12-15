@@ -5,12 +5,10 @@ import (
 	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
-	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
 )
 
 //
@@ -23,10 +21,6 @@ import (
 // have to implement sigmaP, because fslibsrv provides that through
 // sesssrv and protsrv.
 //
-
-func BootSrv(pcfg *proc.ProcEnv, root fs.Dir, addr string, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap) *sesssrv.SessSrv {
-	return sesssrv.NewSessSrv(pcfg, root, addr, protsrv.NewProtServer, attachf, detachf, et, nil)
-}
 
 func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error {
 	if len(path) > 0 {

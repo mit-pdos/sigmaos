@@ -7,10 +7,8 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
-	"sigmaos/ephemeralmap"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
-	"sigmaos/fslibsrv"
 	"sigmaos/kernelsubinfo"
 	"sigmaos/memfs"
 	"sigmaos/memfssrv"
@@ -18,7 +16,6 @@ import (
 	"sigmaos/rpc"
 	"sigmaos/rpcsrv"
 	"sigmaos/sessdevsrv"
-	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -128,21 +125,20 @@ func (ssrv *SigmaSrv) newRPCSrv(svci any) error {
 	return nil
 }
 
-func NewSigmaSrvSess(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt) *SigmaSrv {
-	mfs := memfssrv.NewMemFsSrv("", sesssrv, sc, nil)
-	return newSigmaSrv(mfs)
-}
-
-func NewSigmaSrvRoot(root fs.Dir, addr, path string, pcfg *proc.ProcEnv) (*SigmaSrv, error) {
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+func NewSigmaSrvRootClnt(root fs.Dir, addr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
+	mfs, err := memfssrv.NewMemFsRootPortClntFence(root, path, addr, sc, nil)
 	if err != nil {
 		return nil, err
 	}
-	et := ephemeralmap.NewEphemeralMap()
-	sesssrv := fslibsrv.BootSrv(sc.ProcEnv(), root, addr, nil, nil, et)
-	ssrv := newSigmaSrv(memfssrv.NewMemFsSrv("", sesssrv, sc, nil))
-	fslibsrv.Post(sesssrv, sc, path)
-	return ssrv, nil
+	return newSigmaSrv(mfs), nil
+}
+
+func NewSigmaSrvRoot(root fs.Dir, addr, path string, pe *proc.ProcEnv) (*SigmaSrv, error) {
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		return nil, err
+	}
+	return NewSigmaSrvRootClnt(root, addr, path, sc)
 }
 
 // Mount the rpc directory in sessrv and create the RPC service in

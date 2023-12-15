@@ -9,7 +9,6 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
-	"sigmaos/fslibsrv"
 	"sigmaos/kernelsubinfo"
 	"sigmaos/memfs"
 	"sigmaos/memfssrv"
@@ -127,16 +126,15 @@ func (ssrv *SigmaSrv) newRPCSrv(svci any) error {
 }
 
 func NewSigmaSrvRootClnt(root fs.Dir, addr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	sesssrv, err := fslibsrv.NewSrv(root, path, addr, sc, nil)
+	mfs, err := memfssrv.NewMemFsRootPortClntFence(root, path, addr, sc, nil)
 	if err != nil {
 		return nil, err
 	}
-	ssrv := newSigmaSrv(memfssrv.NewMemFsSrv("", sesssrv, sc, nil))
-	return ssrv, nil
+	return newSigmaSrv(mfs), nil
 }
 
-func NewSigmaSrvRoot(root fs.Dir, addr, path string, pcfg *proc.ProcEnv) (*SigmaSrv, error) {
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+func NewSigmaSrvRoot(root fs.Dir, addr, path string, pe *proc.ProcEnv) (*SigmaSrv, error) {
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		return nil, err
 	}

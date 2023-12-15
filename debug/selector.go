@@ -189,8 +189,6 @@ const (
 	SESS_CLNT_Q                   = "SESS_CLNT_Q"
 	SESS_STATE_CLNT               = "SESS_STATE_CLNT"
 	SESS_STATE_CLNT_ERR           = SESS_STATE_CLNT + ERR
-	FDCLNT                        = "FDCLNT"
-	FDCLNT_ERR                    = FDCLNT + ERR
 	FIDCLNT                       = "FIDCLNT"
 	FIDCLNT_ERR                   = FIDCLNT + ERR
 	RPCCLNT                       = "RPCCLNT"

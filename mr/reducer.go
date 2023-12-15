@@ -61,9 +61,9 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 		return nil, fmt.Errorf("NewReducer: can't parse asyncrw %v", args[3])
 	}
 	r.asyncrw = asyncrw
-	//	pn, err := r.ResolveUnions(r.outputTarget + rand.String(16))
+	//	pn, err := r.ResolveMounts(r.outputTarget + rand.String(16))
 	//	if err != nil {
-	//		db.DFatalf("%v: ResolveUnion %v err %v", r.ProcEnv().GetPID(), r.tmp, err)
+	//		db.DFatalf("%v: ResolveMounts %v err %v", r.ProcEnv().GetPID(), r.tmp, err)
 	//	}
 	r.tmp = r.outputTarget + rand.String(16) //pn
 

@@ -41,13 +41,13 @@ func (fsl *FsLib) NewMount(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	}
 }
 
-// Return pn, replacing first ~local/~any with a symlink for a specific
+// Return pn, replacing first ~local/~any with a mount point for a specific
 // server.
-func (fsl *FsLib) ResolveUnion(pn string) (string, bool, error) {
+func (fsl *FsLib) ResolveMount(pn string) (string, bool, error) {
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()
 	if ok {
-		n, _, err := fsl.resolveUnion(d, left[0])
+		n, _, err := fsl.resolveMount(d, left[0])
 		if err != nil {
 			return "", false, err
 		}
@@ -57,11 +57,11 @@ func (fsl *FsLib) ResolveUnion(pn string) (string, bool, error) {
 	return "", ok, nil
 }
 
-// Return pn but with all ~local and ~any's replaced with symlinks for a
+// Return pn but with all ~local and ~any's replaced with mount points for a
 // specific server.
-func (fsl *FsLib) ResolveUnions(pn string) (string, error) {
+func (fsl *FsLib) ResolveMounts(pn string) (string, error) {
 	for {
-		npn, ok, err := fsl.ResolveUnion(pn)
+		npn, ok, err := fsl.ResolveMount(pn)
 		if err != nil {
 			return "", err
 		}
@@ -84,8 +84,8 @@ func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
 	return mnt, err
 }
 
-// Make copy of root mount or first union mount in pn. Return the
-// content of symlink and the symlink's name.
+// Make copy of root mount or first mount in pn. Return the
+// content of mount and the mount file's name.
 func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if pn == sp.NAMED {
 		return fsl.SigmaOS.GetNamedMount(), "", nil
@@ -93,7 +93,7 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()
 	if ok {
-		_, mnt, err := fsl.resolveUnion(d, left[0])
+		_, mnt, err := fsl.resolveMount(d, left[0])
 		if err != nil {
 			return sp.NullMount(), "", err
 		}
@@ -106,7 +106,7 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	return sp.NullMount(), "", serr.NewErr(serr.TErrInval, pn)
 }
 
-func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
+func (fsl *FsLib) resolveMount(d string, q string) (string, sp.Tmount, error) {
 	rmnt := sp.NullMount()
 	rname := ""
 	// Make sure to resolve d in case it is a symlink or mount point.

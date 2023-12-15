@@ -171,9 +171,9 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 func (m *Mapper) informReducer() error {
 	/// XXX	intermediateDir := sp.UX + "/~local/mr-intermediate"
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
-	pn, err := m.ResolveUnions(outDirPath)
+	pn, err := m.ResolveMounts(outDirPath)
 	if err != nil {
-		return fmt.Errorf("%v: ResolveUnion %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
+		return fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
 		fn := mshardfile(pn, r) + m.rand

@@ -227,7 +227,10 @@ func (fdc *FdClient) ClntId() sp.TclntId {
 }
 
 func (fdc *FdClient) FenceDir(pn string, fence sp.Tfence) error {
-	return fdc.pc.FenceDir(pn, fence)
+	if err := fdc.pc.FenceDir(pn, fence); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (fdc *FdClient) Disconnect(pn string) error {

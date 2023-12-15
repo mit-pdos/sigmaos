@@ -165,7 +165,7 @@ func TestEphemeral(t *testing.T) {
 	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
 
-	// check if b is indeed reasonable mounting symlink
+	// check if b is indeed reasonable mounting file
 	_, error := sp.NewMount(b)
 	assert.Nil(t, error, "NewMount")
 

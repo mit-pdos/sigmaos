@@ -369,7 +369,7 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	}
 
 	pn := path.Join(sp.NAMED, "srv")
-	err = ts1.MountService(pn, mnt, sp.NoLeaseId)
+	err = ts1.MkMountFile(pn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err)
 
 	pn = pn + "/"
@@ -413,7 +413,7 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	}
 
 	pn := path.Join(sp.NAMED, "srv")
-	err = ts2.MountService(pn, mnt, sp.NoLeaseId)
+	err = ts2.MkMountFile(pn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err)
 
 	pn = pn + "/"

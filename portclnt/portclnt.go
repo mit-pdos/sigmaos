@@ -50,7 +50,7 @@ func (pc *PortClnt) AllocPort(p port.Tport) (PortInfo, error) {
 func (pc *PortClnt) AdvertisePort(pn string, pi PortInfo, net string, laddr string) error {
 	mnt := port.NewPublicMount(pi.Hip, pi.Pb, net, laddr)
 	db.DPrintf(db.PORT, "AdvertisePort %v %v\n", pn, mnt)
-	if err := pc.NewMountSymlink(pn, mnt, sp.NoLeaseId); err != nil {
+	if err := pc.NewMount(pn, mnt, sp.NoLeaseId); err != nil {
 		return err
 	}
 	return nil

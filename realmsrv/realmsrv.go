@@ -137,7 +137,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		mnt := sp.NewMountService(namedMount.Addr)
 		mnt.SetTree(s)
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
-		if err := sc.MountService(pn, mnt, sp.NoLeaseId); err != nil {
+		if err := sc.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
 			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
 			return err
 		}

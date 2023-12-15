@@ -123,7 +123,7 @@ func (ji *WwwJobInstance) StartWwwJob() {
 func (ji *WwwJobInstance) Wait() {
 	if ji.sigmaos {
 		clnt := www.NewWWWClnt(ji.FsLib, ji.job)
-		err := clnt.StopServer(ji.ProcClnt, ji.pid)
+		err := clnt.StopServer(ji.ProcAPI, ji.pid)
 		assert.Nil(ji.Ts.T, err)
 	}
 }

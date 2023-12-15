@@ -142,8 +142,8 @@ func RunFrontendSrv(public bool, job string) error {
 	}
 	dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", a)
 	mnt := sp.NewMountService(sp.NewTaddrs([]string{a}))
-	if err = frontend.MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
-		dbg.DFatalf("MountService %v", err)
+	if err = frontend.MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
+		dbg.DFatalf("MkMountFile %v", err)
 		//	}
 	}
 

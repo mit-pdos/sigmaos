@@ -106,7 +106,7 @@ func NewSocialNetworkJob(
 		ji.snCfg, err = sn.NewConfig(ts.SigmaClnt, ji.job, nil, 0, false, test.Overlays)
 		p := sn.JobHTTPAddrsPath(ji.job)
 		mnt := sp.NewMountService(sp.NewTaddrs([]string{K8S_ADDR}))
-		assert.Nil(ts.Ts.T, ts.MountService(p, mnt, sp.NoLeaseId))
+		assert.Nil(ts.Ts.T, ts.MkMountFile(p, mnt, sp.NoLeaseId))
 		// forward mongo port and init users and graphs.
 		cmd := exec.Command("kubectl", "port-forward", "svc/mongodb-sn", K8_FWD_PORT+":27017")
 		assert.Nil(ts.Ts.T, cmd.Start())

@@ -132,7 +132,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 
 	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.ProcEnv().GetPID(), bl.lc.Fence())
 
-	if err := bl.NewMountSymlink(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
+	if err := bl.NewMount(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
 		db.DFatalf("mount %v at %v err %v\n", mnt, KVBalancer(bl.job), err)
 	}
 

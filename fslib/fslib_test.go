@@ -226,7 +226,7 @@ func TestRemoveSymlink(t *testing.T) {
 	fn := gopath.Join(d1, "f")
 
 	mnt := ts.GetNamedMount()
-	err = ts.NewMountSymlink(fn, mnt, sp.NoLeaseId)
+	err = ts.NewMount(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "NewMount: %v", err)
 
 	sts, err := ts.GetDir(fn + "/")
@@ -251,7 +251,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 	fn := gopath.Join(d1, "f")
 
 	mnt := ts.GetNamedMount()
-	err = ts.NewMountSymlink(fn, mnt, sp.NoLeaseId)
+	err = ts.NewMount(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "NewMount: %v", err)
 
 	sts, err := ts.GetDir(fn + "/")
@@ -273,7 +273,7 @@ func TestReadSymlink(t *testing.T) {
 	fn := gopath.Join(d1, "f")
 
 	mnt := ts.GetNamedMount()
-	err = ts.NewMountSymlink(fn, mnt, sp.NoLeaseId)
+	err = ts.NewMount(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "NewMount: %v", err)
 
 	_, err = ts.GetDir(fn + "/")
@@ -1005,8 +1005,8 @@ func TestMountSimple(t *testing.T) {
 	assert.Nil(ts.T, err, "dir")
 
 	pn := gopath.Join(pathname, "namedself")
-	err = ts.MountService(pn, newMount(t, ts, pathname), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err = ts.MkMountFile(pn, newMount(t, ts, pathname), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
 	sts, err := ts.GetDir(pn + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself"}), "dir")
@@ -1026,11 +1026,11 @@ func TestUnionDir(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), newMount(t, ts, pathname), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself0"), newMount(t, ts, pathname), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
 
-	err = ts.MountService(gopath.Join(pathname, "d/namedself1"), sp.NewMountServer(":2222"), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself1"), sp.NewMountServer(":2222"), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "d/~any") + "/")
 	assert.Equal(t, nil, err)
@@ -1061,10 +1061,10 @@ func TestUnionRoot(t *testing.T) {
 
 	pn0 := gopath.Join(pathname, "namedself0")
 	pn1 := gopath.Join(pathname, "namedself1")
-	err := ts.MountService(pn0, newMount(t, ts, pathname), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
-	err = ts.MountService(pn1, sp.NewMountServer("xxx"), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err := ts.MkMountFile(pn0, newMount(t, ts, pathname), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
+	err = ts.MkMountFile(pn1, sp.NewMountServer("xxx"), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "~any") + "/")
 	assert.Equal(t, nil, err)
@@ -1083,15 +1083,15 @@ func TestUnionSymlinkRead(t *testing.T) {
 
 	pn0 := gopath.Join(pathname, "namedself0")
 	mnt := newMount(t, ts, pathname)
-	err := ts.MountService(pn0, mnt, sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err := ts.MkMountFile(pn0, mnt, sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
 
 	dn := gopath.Join(pathname, "d")
 	err = ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MountService(gopath.Join(pathname, "d/namedself1"), mnt, sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself1"), mnt, sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "~any/d/namedself1") + "/")
 	assert.Equal(t, nil, err)
@@ -1114,8 +1114,8 @@ func TestUnionSymlinkPut(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 
 	pn0 := gopath.Join(pathname, "namedself0")
-	err := ts.MountService(pn0, newMount(t, ts, pathname), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err := ts.MkMountFile(pn0, newMount(t, ts, pathname), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
 
 	b := []byte("hello")
 	fn := gopath.Join(pathname, "~any/namedself0/f")
@@ -1155,8 +1155,8 @@ func TestSetFileSymlink(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	err = ts.MountService(gopath.Join(pathname, "namedself0"), newMount(t, ts, pathname), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err = ts.MkMountFile(gopath.Join(pathname, "namedself0"), newMount(t, ts, pathname), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
 
 	st := stats.Stats{}
 	err = ts.GetFileJson(gopath.Join("name", sp.STATSD), &st)
@@ -1199,12 +1199,12 @@ func TestMountUnion(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), sp.NewMountServer(":1111"), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself0"), sp.NewMountServer(":1111"), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
 
 	pn := gopath.Join(pathname, "mount")
-	err = ts.MountService(pn, newMount(t, ts, dn), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err = ts.MkMountFile(pn, newMount(t, ts, dn), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkMountFile")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "mount/~any") + "/")
 	assert.Equal(t, nil, err)

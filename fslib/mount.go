@@ -9,7 +9,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fsl *FsLib) MountService(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
+func (fsl *FsLib) MkMountFile(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	b, err := mnt.Marshal()
 	if err != nil {
 		return err
@@ -30,14 +30,14 @@ func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string, lid s
 	if !dir {
 		return fmt.Errorf("Not a directory")
 	}
-	return fsl.MountService(p, mnt, lid)
+	return fsl.MkMountFile(p, mnt, lid)
 }
 
-func (fsl *FsLib) NewMountSymlink(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
+func (fsl *FsLib) NewMount(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	if path.EndSlash(pn) {
 		return fsl.MountServiceUnion(pn, mnt, mnt.Address().Addr, lid)
 	} else {
-		return fsl.MountService(pn, mnt, lid)
+		return fsl.MkMountFile(pn, mnt, lid)
 	}
 }
 

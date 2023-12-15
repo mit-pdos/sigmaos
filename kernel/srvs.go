@@ -185,7 +185,7 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 		// to uprocd.
 		mnt := sp.NewMountServer("127.0.0.1:" + pm.HostPort.String())
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
-		if err := k.NewMountSymlink(pn, mnt, sp.NoLeaseId); err != nil {
+		if err := k.NewMount(pn, mnt, sp.NoLeaseId); err != nil {
 			return nil, err
 		}
 		db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s, %v\n", realm, ptype, pn, pm)

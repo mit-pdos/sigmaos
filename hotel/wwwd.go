@@ -139,7 +139,7 @@ func RunWww(job string, public bool) error {
 		}
 		db.DPrintf(db.ALWAYS, "Hotel advertise %v", a)
 		mnt := sp.NewMountService(sp.NewTaddrs([]string{a}))
-		if err = www.MountService(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
+		if err = www.NewMount(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 			db.DFatalf("MountService %v", err)
 		}
 	}

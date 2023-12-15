@@ -50,7 +50,7 @@ func newTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) waitWww() {
-	err := ts.StopServer(ts.ProcClnt, ts.pid)
+	err := ts.StopServer(ts.ProcAPI, ts.pid)
 	assert.Nil(ts.T, err)
 	ts.Shutdown()
 }

@@ -129,7 +129,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		if !ji.justCli {
 			p := hotel.JobHTTPAddrsPath(ji.job)
 			mnt := sp.NewMountService(sp.NewTaddrs([]string{ji.k8ssrvaddr}))
-			if err = ts.MountService(p, mnt, sp.NoLeaseId); err != nil {
+			if err = ts.MkMountFile(p, mnt, sp.NoLeaseId); err != nil {
 				db.DFatalf("MountService %v", err)
 			}
 		}

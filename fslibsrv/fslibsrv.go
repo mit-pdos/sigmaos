@@ -31,7 +31,7 @@ func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error 
 			return err
 		}
 		li.KeepExtending()
-		if err := sc.NewMountSymlink(path, mnt, li.Lease()); err != nil {
+		if err := sc.NewMount(path, mnt, li.Lease()); err != nil {
 			return err
 		}
 	}

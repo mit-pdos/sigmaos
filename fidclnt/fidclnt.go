@@ -7,7 +7,6 @@ import (
 	"sigmaos/path"
 	"sigmaos/protclnt"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -40,10 +39,6 @@ func (fidc *FidClnt) Len() int {
 
 func (fidc *FidClnt) FenceDir(path string, f sp.Tfence) *serr.Err {
 	return fidc.ft.Insert(path, f)
-}
-
-func (fidc *FidClnt) ReadSeqNo() sessp.Tseqno {
-	return fidc.pc.ReadSeqNo()
 }
 
 func (fidc *FidClnt) DetachAll(cid sp.TclntId) *serr.Err {
@@ -152,7 +147,7 @@ func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 func (fidc *FidClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, *serr.Err) {
 	db.DPrintf(db.FIDCLNT, "Create %v name %v", fid, name)
 	reply, err := fidc.fids.lookup(fid).pc.Create(fid, name, perm, mode, lid, f)
-	db.DPrintf(db.FIDCLNT, "Create done %v name %v", fid, name)
+	db.DPrintf(db.FIDCLNT, "Create done %v name %v err %v", fid, name, err)
 	if err != nil {
 		return sp.NoFid, err
 	}

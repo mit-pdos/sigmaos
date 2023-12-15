@@ -91,7 +91,7 @@ func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 	db.DPrintf(db.SYSTEM, "NewKernelClnt %s %s\n", pn, kernelId)
 	kclnt, err := kernelclnt.NewKernelClnt(sc.FsLib, pn)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error NewKernelClnt")
+		db.DPrintf(db.ALWAYS, "Error NewKernelClnt %v", err)
 		return nil, err
 	}
 

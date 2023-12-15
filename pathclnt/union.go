@@ -5,8 +5,23 @@ import (
 	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/union"
 )
+
+func (pathc *PathClnt) IsLocalMount(mnt sp.Tmount) bool {
+	lip := pathc.pcfg.LocalIP
+	tip, _, err := mnt.TargetHostPort()
+	if err != nil {
+		return false
+	}
+	if tip == "" {
+		tip = lip
+	}
+	db.DPrintf(db.MOUNT, "IsLocalMount: tip %v lip %v\n", tip, lip)
+	if tip == lip {
+		return true
+	}
+	return false
+}
 
 func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Err) {
 	fid1, _, err := pathc.FidClnt.Walk(fid, []string{name})
@@ -28,7 +43,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 		return sp.NoFid, nil
 	}
 	db.DPrintf(db.WALK, "unionScan: %v mnt: %v\n", name, mnt)
-	if union.UnionMatch(pathc.pcfg.LocalIP, q, mnt) {
+	if q == "~any" || pathc.IsLocalMount(mnt) {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {
 			db.DPrintf(db.WALK, "unionScan UnionMatch Walk %v err %v", fid, err)
@@ -47,7 +62,7 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *serr.Err) {
 		db.DPrintf(db.WALK, "unionLookup open %v fid %v err %v", q, fid, err)
 		return sp.NoFid, err
 	}
-	rdr := reader.NewReader(pathc.FidClnt, "", fid)
+	rdr := reader.NewReader(newRdr(pathc.FidClnt, fid), "")
 	drdr := reader.MkDirReader(rdr)
 	rfid := sp.NoFid
 	db.DPrintf(db.WALK, "unionLookup ReadDir %v search %v fid %v", fid, q, fid)

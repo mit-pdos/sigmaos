@@ -18,7 +18,7 @@ func PrintMRStats(fsl *fslib.FsLib, job string) error {
 	if err != nil {
 		return err
 	}
-	dec := json.NewDecoder(rdr)
+	dec := json.NewDecoder(rdr.Reader)
 	fmt.Println("=== STATS:")
 	totIn := sp.Tlength(0)
 	totOut := sp.Tlength(0)

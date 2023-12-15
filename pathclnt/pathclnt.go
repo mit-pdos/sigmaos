@@ -1,6 +1,7 @@
 package pathclnt
 
 import (
+	"errors"
 	"fmt"
 
 	db "sigmaos/debug"
@@ -10,8 +11,8 @@ import (
 	"sigmaos/rand"
 	"sigmaos/reader"
 	"sigmaos/serr"
+	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
-	"sigmaos/writer"
 )
 
 //
@@ -20,8 +21,6 @@ import (
 // mounts, sfs-like pathnames, etc. All fid-based operations are
 // inherited from FidClnt.
 //
-
-type Watch func(string, error)
 
 type PathClnt struct {
 	*fidclnt.FidClnt
@@ -119,15 +118,33 @@ func (pathc *PathClnt) Disconnect(pn string) error {
 	return nil
 }
 
-func (pathc *PathClnt) NewReader(fid sp.Tfid, path string) *reader.Reader {
-	return reader.NewReader(pathc.FidClnt, path, fid)
+type rdr struct {
+	*fidclnt.FidClnt
+	fid sp.Tfid
 }
 
-func (pathc *PathClnt) NewWriter(fid sp.Tfid) *writer.Writer {
-	return writer.NewWriter(pathc.FidClnt, fid)
+func newRdr(fdc *fidclnt.FidClnt, fid sp.Tfid) *rdr {
+	return &rdr{fdc, fid}
+}
+
+func (rd *rdr) Close() error {
+	return rd.FidClnt.Clunk(rd.fid)
+}
+
+func (rd *rdr) Read(o sp.Toffset, sz sp.Tsize) ([]byte, error) {
+	b, err := rd.ReadF(rd.fid, o, sz)
+	if err != nil {
+		return b, err
+	}
+	return b, nil
+}
+
+func (pathc *PathClnt) NewReader(fid sp.Tfid, path string) *reader.Reader {
+	return reader.NewReader(newRdr(pathc.FidClnt, fid), path)
 }
 
 func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
+	db.DPrintf(db.PATHCLNT, "readlink %v", fid)
 	qid := pathc.Qid(fid)
 	if qid.Ttype()&sp.QTSYMLINK == 0 {
 		return nil, serr.NewErr(serr.TErrNotSymlink, qid.Type)
@@ -136,9 +153,9 @@ func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	rdr := reader.NewReader(pathc.FidClnt, "", fid)
-	b, err := rdr.GetDataErr()
-	if err != nil {
+	rdr := reader.NewReader(newRdr(pathc.FidClnt, fid), "")
+	b, r := rdr.GetDataErr()
+	if errors.As(r, &err) {
 		return nil, err
 	}
 	return b, nil
@@ -173,12 +190,12 @@ func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.
 	base := path.Base()
 	fid, err := pathc.walk(dir, uname, true, nil)
 	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "Walk failed: %v", p)
+		db.DPrintf(db.PATHCLNT_ERR, "Walk failed: %v err %v", p, err)
 		return sp.NoFid, err
 	}
 	fid, err = pathc.FidClnt.Create(fid, base, perm, mode, lid, f)
 	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "create failed: %v", p)
+		db.DPrintf(db.PATHCLNT_ERR, "create failed: %v err %v", p, err)
 		return sp.NoFid, err
 	}
 	return fid, nil
@@ -286,7 +303,7 @@ func (pathc *PathClnt) Stat(name string, uname sp.Tuname) (*sp.Stat, error) {
 	}
 }
 
-func (pathc *PathClnt) OpenWatch(pn string, uname sp.Tuname, mode sp.Tmode, w Watch) (sp.Tfid, error) {
+func (pathc *PathClnt) OpenWatch(pn string, uname sp.Tuname, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "Open %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, err := pathc.walk(p, uname, path.EndSlash(pn), w)
@@ -304,7 +321,7 @@ func (pathc *PathClnt) Open(path string, uname sp.Tuname, mode sp.Tmode) (sp.Tfi
 	return pathc.OpenWatch(path, uname, mode, nil)
 }
 
-func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w Watch) error {
+func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w sos.Watch) error {
 	db.DPrintf(db.PATHCLNT, "SetDirWatch %v\n", fid)
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
@@ -318,7 +335,7 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w Watch) error {
 	return nil
 }
 
-func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w Watch) error {
+func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w sos.Watch) error {
 	db.DPrintf(db.PATHCLNT, "SetRemoveWatch %v", pn)
 	p := path.Split(pn)
 	fid, err := pathc.walk(p, uname, path.EndSlash(pn), nil)

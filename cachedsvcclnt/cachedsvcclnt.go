@@ -13,7 +13,6 @@ import (
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/reader"
 	"sigmaos/rpc"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
@@ -32,7 +31,7 @@ type CachedSvcClnt struct {
 	cc   *cacheclnt.CacheClnt
 	pn   string
 	srvs map[string]struct{}
-	rdr  *reader.Reader
+	rdr  *fslib.FdReader
 }
 
 func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
@@ -64,7 +63,7 @@ func (csc *CachedSvcClnt) setWatch() error {
 		return err
 	}
 	csc.rdr = rdr
-	if err := csc.fsl.SetDirWatch(csc.rdr.Fid(), dir, csc.Watch); err != nil {
+	if err := csc.fsl.SetDirWatch(csc.rdr.Fd(), dir, csc.Watch); err != nil {
 		return err
 	}
 	return nil

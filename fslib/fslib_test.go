@@ -2,7 +2,6 @@ package fslib_test
 
 import (
 	"flag"
-	"net"
 	gopath "path"
 	"path/filepath"
 	"sort"
@@ -304,7 +303,7 @@ func TestReadOff(t *testing.T) {
 
 	rdr.Lseek(3)
 	b := make([]byte, 10)
-	n, err := rdr.Read(b)
+	n, err := rdr.Reader.Read(b)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, n)
 
@@ -653,7 +652,7 @@ func TestWatchDir(t *testing.T) {
 	_, rdr, err := ts.ReadDir(fn)
 	assert.Equal(t, nil, err)
 	ch := make(chan bool)
-	err = ts.SetDirWatch(rdr.Fid(), fn, func(path string, err error) {
+	err = ts.SetDirWatch(rdr.Fd(), fn, func(path string, err error) {
 		assert.Equal(t, nil, err, path)
 		ch <- true
 	})
@@ -993,8 +992,7 @@ func newMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 	h, p, err := mnt.TargetHostPort()
 	assert.Nil(t, err)
 	if h == "" {
-		a := net.JoinHostPort(ts.ProcEnv().GetLocalIP(), p)
-		mnt.SetAddr(sp.NewTaddrs([]string{a}))
+		ts.SetLocalMount(&mnt, p)
 	}
 	return mnt
 }

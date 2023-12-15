@@ -36,32 +36,6 @@ func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool
 	return nil
 }
 
-// Initialize a proc dir for this proc (but make sure to only do so once).
-func (clnt *ProcClnt) initProcDir() error {
-	clnt.RLock()
-	defer clnt.RUnlock()
-
-	var err error
-	if !clnt.procDirCreated {
-		// Promote to writer lock.
-		clnt.RUnlock()
-		clnt.Lock()
-		// Check that the proc dir still has not been created after lock promotion.
-		if !clnt.procDirCreated {
-			// Make a ProcDir for this proc.
-			err = clnt.MakeProcDir(clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetProcDir(), clnt.ProcEnv().GetPrivileged(), clnt.ProcEnv().GetHow())
-			clnt.procDirCreated = true
-			// Mount procdir
-			db.DPrintf(db.PROCCLNT, "Mount %v as %v", clnt.ProcEnv().ProcDir, proc.PROCDIR)
-			clnt.NewRootMount(clnt.ProcEnv().GetUname(), clnt.ProcEnv().ProcDir, proc.PROCDIR)
-		}
-		// Demote to reader lock.
-		clnt.Unlock()
-		clnt.RLock()
-	}
-	return err
-}
-
 // ========== HELPERS ==========
 
 // Clean up proc

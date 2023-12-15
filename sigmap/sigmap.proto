@@ -30,7 +30,7 @@ message Taddr {
         string net = 2;
 }
 
-message Tmount {
+message TmountProto {
         repeated Taddr addr = 1;
         string root = 3;
         bytes pubKey = 4;

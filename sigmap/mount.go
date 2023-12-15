@@ -1,6 +1,7 @@
 package sigmap
 
 import (
+	"fmt"
 	"net"
 
 	"google.golang.org/protobuf/proto"
@@ -8,8 +9,16 @@ import (
 	"sigmaos/serr"
 )
 
+type Tmount struct {
+	*TmountProto
+}
+
+func (mnt Tmount) String() string {
+	return fmt.Sprintf("{addr %v root %q}", mnt.Addr, mnt.Root)
+}
+
 func NullMount() Tmount {
-	return Tmount{}
+	return Tmount{&TmountProto{}}
 }
 
 func NewMount(b []byte) (Tmount, *serr.Err) {
@@ -37,7 +46,7 @@ func (mnt Tmount) Address() *Taddr {
 }
 
 func NewMountService(srvaddrs Taddrs) Tmount {
-	return Tmount{Addr: srvaddrs}
+	return Tmount{&TmountProto{Addr: srvaddrs}}
 }
 
 func NewMountServer(addr string) Tmount {

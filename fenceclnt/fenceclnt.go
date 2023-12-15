@@ -23,8 +23,7 @@ func (fc *FenceClnt) FenceAtEpoch(fence sp.Tfence, paths []string) error {
 	db.DPrintf(db.FENCECLNT, "FencePaths fence %v %v", fence, paths)
 	fc.fence = fence
 	for _, p := range paths {
-		err := fc.registerFence(p, fence)
-		if err != nil {
+		if err := fc.registerFence(p, fence); err != nil {
 			db.DPrintf(db.FENCECLNT_ERR, "fencePath %v err %v", p, err)
 			return err
 		}

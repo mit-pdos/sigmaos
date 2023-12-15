@@ -268,7 +268,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	dec := json.NewDecoder(rdr)
+	dec := json.NewDecoder(rdr.Reader)
 	ni := sp.Tlength(0)
 	for {
 		var s Split

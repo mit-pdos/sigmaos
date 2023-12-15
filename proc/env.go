@@ -234,7 +234,7 @@ func (pe *ProcEnv) GetNamedMount() (sp.Tmount, bool) {
 	if mnt == nil {
 		return sp.Tmount{}, false
 	}
-	return *mnt, true
+	return sp.Tmount{mnt}, true
 }
 
 func (pe *ProcEnv) Marshal() string {

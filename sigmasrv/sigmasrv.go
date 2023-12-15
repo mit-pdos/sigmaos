@@ -17,7 +17,6 @@ import (
 	"sigmaos/rpc"
 	"sigmaos/rpcsrv"
 	"sigmaos/sessdevsrv"
-	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -127,9 +126,13 @@ func (ssrv *SigmaSrv) newRPCSrv(svci any) error {
 	return nil
 }
 
-func NewSigmaSrvSess(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt) *SigmaSrv {
-	mfs := memfssrv.NewMemFsSrv("", sesssrv, sc, nil)
-	return newSigmaSrv(mfs)
+func NewSigmaSrvRootClnt(root fs.Dir, addr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
+	sesssrv, err := fslibsrv.NewSrv(root, path, addr, sc, nil)
+	if err != nil {
+		return nil, err
+	}
+	ssrv := newSigmaSrv(memfssrv.NewMemFsSrv("", sesssrv, sc, nil))
+	return ssrv, nil
 }
 
 func NewSigmaSrvRoot(root fs.Dir, addr, path string, pcfg *proc.ProcEnv) (*SigmaSrv, error) {
@@ -137,12 +140,7 @@ func NewSigmaSrvRoot(root fs.Dir, addr, path string, pcfg *proc.ProcEnv) (*Sigma
 	if err != nil {
 		return nil, err
 	}
-	sesssrv, err := fslibsrv.NewSrv(root, path, addr, sc, nil)
-	if err != nil {
-		return nil, err
-	}
-	ssrv := newSigmaSrv(memfssrv.NewMemFsSrv("", sesssrv, sc, nil))
-	return ssrv, nil
+	return NewSigmaSrvRootClnt(root, addr, path, sc)
 }
 
 // Mount the rpc directory in sessrv and create the RPC service in

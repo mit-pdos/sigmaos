@@ -12,7 +12,6 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	"sigmaos/fslibsrv"
 	"sigmaos/leaderetcd"
 	"sigmaos/perf"
 	"sigmaos/port"
@@ -173,12 +172,12 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 		pi = pi0
 		ip = ":" + pi.Pb.RealmPort.String()
 	}
-	srv := fslibsrv.BootSrv(nd.ProcEnv(), root, ip, nd.attach, nd.detach, nil)
-	if srv == nil {
-		return sp.NullMount(), fmt.Errorf("BootSrv err")
+
+	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, ip, "", nd.SigmaClnt)
+	if err != nil {
+		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}
 
-	ssrv := sigmasrv.NewSigmaSrvSess(srv, nd.SigmaClnt)
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
 		return sp.NullMount(), err
 	}
@@ -189,7 +188,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 		mnt = port.NewPublicMount(pi.Hip, pi.Pb, nd.ProcEnv().GetNet(), nd.MyAddr())
 	}
 
-	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, ip, srv.MyAddr(), nd.elect.Key(), mnt)
+	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, ip, ssrv.MyAddr(), nd.elect.Key(), mnt)
 
 	return mnt, nil
 }

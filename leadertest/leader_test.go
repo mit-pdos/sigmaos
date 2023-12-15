@@ -61,7 +61,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []sp.Tpid) {
 	m := make(map[sp.Tpid]bool)
 	last := sp.Tpid("")
 	e := sp.Tepoch(0)
-	err = fslib.JsonReader(rdr, func() interface{} { return new(Config) }, func(a interface{}) error {
+	err = fslib.JsonReader(rdr.Reader, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
 		log.Printf("conf: %v\n", conf)
 		if conf.Leader == sp.Tpid("") && e != 0 {

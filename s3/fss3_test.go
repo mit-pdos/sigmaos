@@ -45,7 +45,7 @@ func TestReadOff(t *testing.T) {
 	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/gutenberg/gutenberg.txt"))
 	assert.Nil(t, err, "Error ReadOff %v", err)
 	rdr.Lseek(1 << 10)
-	brdr := bufio.NewReaderSize(rdr, 1<<16)
+	brdr := bufio.NewReaderSize(rdr.Reader, 1<<16)
 	scanner := bufio.NewScanner(brdr)
 	l := sp.Tlength(1 << 10)
 	n := 0
@@ -190,7 +190,7 @@ func TestReadSplit(t *testing.T) {
 	assert.Nil(t, err)
 	err = rdr.Lseek(SPLITSZ)
 	assert.Nil(t, err)
-	brdr := bufio.NewReaderSize(rdr, sp.BUFSZ)
+	brdr := bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
 	b := make([]byte, SPLITSZ)
 	n, err := brdr.Read(b)
 	assert.Nil(t, err)

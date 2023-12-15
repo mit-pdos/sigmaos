@@ -1,5 +1,9 @@
 package fdclnt
 
+//
+// Fdclnt package implements the SigmaOS API
+//
+
 import (
 	"fmt"
 	"net"

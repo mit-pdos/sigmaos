@@ -41,7 +41,7 @@ type Realm struct {
 type RealmSrv struct {
 	mu         sync.Mutex
 	realms     map[sp.Trealm]*Realm
-	sc         *sigmaclnt.SigmaClnt
+	sc         *sigmaclnt.SigmaClntKernel
 	pq         *procqclnt.ProcQClnt
 	sd         *scheddclnt.ScheddClnt
 	lastNDPort int
@@ -65,7 +65,7 @@ func RunRealmSrv() error {
 		return serr
 	}
 	db.DPrintf(db.REALMD, "newsrv ok")
-	rs.sc = ssrv.MemFs.SigmaClnt()
+	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
 	rs.pq = procqclnt.NewProcQClnt(rs.sc.FsLib)
 	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib)
 	go rs.enforceResourcePolicy()

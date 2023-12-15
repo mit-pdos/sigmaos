@@ -133,7 +133,7 @@ func (fsl *FsLib) resolveUnion(d string, q string) (string, sp.Tmount, error) {
 }
 
 // For code running using /mnt/9p, which doesn't support PutFile.
-func (fsl *FsLib) NewMountSymlink9P(pn string, mnt sp.Tmount) error {
+func (fsl *FsLib) NewMount9P(pn string, mnt sp.Tmount) error {
 	b, err := mnt.Marshal()
 	if err != nil {
 		return err

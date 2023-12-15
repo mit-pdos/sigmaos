@@ -285,7 +285,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	if monitor {
-		sdc.MonitorScheddStats(ts.Realm(), time.Second)
+		sdc.MonitorScheddStats(ts.ProcEnv().GetRealm(), time.Second)
 		defer sdc.Done()
 	}
 

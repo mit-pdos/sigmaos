@@ -45,7 +45,7 @@ type Param struct {
 
 type Kernel struct {
 	sync.Mutex
-	*sigmaclnt.SigmaClnt
+	*sigmaclnt.SigmaClntKernel
 	Param        *Param
 	svcs         *Services
 	ip           string
@@ -79,7 +79,7 @@ func NewKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 		db.DPrintf(db.ALWAYS, "Error NewSigmaClntProc: %v", err)
 		return nil, err
 	}
-	k.SigmaClnt = sc
+	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
 	db.DPrintf(db.KERNEL, "Kernel start srvs %v", k.Param.Services)
 	err = startSrvs(k)
 	if err != nil {

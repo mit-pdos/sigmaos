@@ -22,9 +22,9 @@ type ProcMgr struct {
 	sync.Mutex
 	mfs            *memfssrv.MemFs
 	kernelId       string
-	rootsc         *sigmaclnt.SigmaClnt
+	rootsc         *sigmaclnt.SigmaClntKernel
 	updm           *uprocclnt.UprocdMgr
-	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClnt
+	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClntKernel
 	namedMnts      map[sp.Trealm]sp.Tmount
 	cachedProcBins map[sp.Trealm]map[string]bool
 	pstate         *ProcState
@@ -34,9 +34,9 @@ type ProcMgr struct {
 func NewProcMgr(sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
 	mgr := &ProcMgr{
 		kernelId:       kernelId,
-		rootsc:         sc,
+		rootsc:         sigmaclnt.NewSigmaClntKernel(sc),
 		updm:           uprocclnt.NewUprocdMgr(sc.FsLib, kernelId),
-		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
+		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
 		namedMnts:      make(map[sp.Trealm]sp.Tmount),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
 		pstate:         NewProcState(),
@@ -150,28 +150,29 @@ func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) sp.Tmount {
 	return mnt
 }
 
-func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClnt {
+func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 	mgr.Lock()
 	defer mgr.Unlock()
 
 	return mgr.getSigmaClntL(realm)
 }
 
-func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClnt {
-	var clnt *sigmaclnt.SigmaClnt
+func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
+	var clnt *sigmaclnt.SigmaClntKernel
 	var ok bool
 	if clnt, ok = mgr.sclnts[realm]; !ok {
 		// No need to make a new client for the root realm.
 		if realm == sp.ROOTREALM {
 			clnt = mgr.rootsc
 		} else {
-			var err error
 			pcfg := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
-			if clnt, err = sigmaclnt.NewSigmaClnt(pcfg); err != nil {
+			if sc, err := sigmaclnt.NewSigmaClnt(pcfg); err != nil {
 				db.DFatalf("Err NewSigmaClntRealm: %v", err)
+			} else {
+				// Mount KPIDS.
+				procclnt.MountPids(clnt.FsLib)
+				clnt = sigmaclnt.NewSigmaClntKernel(sc)
 			}
-			// Mount KPIDS.
-			procclnt.MountPids(clnt.FsLib)
 		}
 		mgr.sclnts[realm] = clnt
 	}

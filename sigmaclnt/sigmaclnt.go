@@ -25,8 +25,26 @@ func init() {
 
 type SigmaClnt struct {
 	*fslib.FsLib
+	proc.ProcAPI
+	*leaseclnt.LeaseClnt
+}
+
+type SigmaClntKernel struct {
+	*fslib.FsLib
 	*procclnt.ProcClnt
 	*leaseclnt.LeaseClnt
+}
+
+// Convert to SigmaClntKernel from SigmaClnt
+func NewSigmaClntKernel(sc *SigmaClnt) *SigmaClntKernel {
+	sck := &SigmaClntKernel{sc.FsLib, sc.ProcAPI.(*procclnt.ProcClnt), sc.LeaseClnt}
+	return sck
+}
+
+// Convert to SigmaClnt from SigmaClntKernel
+func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
+	sc := &SigmaClnt{sck.FsLib, sck.ProcClnt, sck.LeaseClnt}
+	return sc
 }
 
 // Create only an FsLib, as a proc.
@@ -50,7 +68,7 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Make FsLib: %v", pcfg.GetPID(), time.Since(start))
 	start = time.Now()
-	sc.ProcClnt = procclnt.NewProcClnt(sc.FsLib)
+	sc.ProcAPI = procclnt.NewProcClnt(sc.FsLib)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", pcfg.GetPID(), time.Since(start))
 	return sc, nil
 }
@@ -62,12 +80,12 @@ func NewSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	sc.ProcClnt = procclnt.NewProcClntInit(pcfg.GetPID(), sc.FsLib, string(pcfg.GetUname()))
+	sc.ProcAPI = procclnt.NewProcClntInit(pcfg.GetPID(), sc.FsLib, string(pcfg.GetUname()))
 	return sc, nil
 }
 
 func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
-	sc.ProcClnt.Exited(status)
+	sc.ProcAPI.Exited(status)
 	db.DPrintf(db.SIGMACLNT, "Exited done")
 	if sc.LeaseClnt != nil {
 		sc.LeaseClnt.EndLeases()

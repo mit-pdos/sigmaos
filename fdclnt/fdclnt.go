@@ -206,8 +206,8 @@ func (fdc *FdClient) SetLocalMount(mnt *sp.Tmount, port string) {
 	mnt.SetAddr(sp.NewTaddrs([]string{a}))
 }
 
-func (fdc *FdClient) PathLastSymlink(pn string) (path.Path, path.Path, error) {
-	return fdc.pc.PathLastSymlink(pn, fdc.pcfg.GetUname())
+func (fdc *FdClient) PathLastMount(pn string) (path.Path, path.Path, error) {
+	return fdc.pc.PathLastMount(pn, fdc.pcfg.GetUname())
 }
 
 func (fdc *FdClient) MountTree(addrs sp.Taddrs, tree, mount string) error {

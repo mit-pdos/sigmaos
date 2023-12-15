@@ -98,7 +98,7 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 			return sp.NullMount(), "", err
 		}
 		return mnt, left[1:].String(), nil
-	} else if s, p, err := fsl.SigmaOS.PathLastSymlink(pn); err == nil {
+	} else if s, p, err := fsl.SigmaOS.PathLastMount(pn); err == nil {
 		if mnt, err := fsl.ReadMount(s.String()); err == nil {
 			return mnt, p.String(), nil
 		}

@@ -139,7 +139,7 @@ func TestPipeCrash0(t *testing.T) {
 		assert.Nil(ts.T, err, "Open")
 		time.Sleep(200 * time.Millisecond)
 		// simulate thread crashing
-		srv, _, err := ts.PathLastSymlink(pathname)
+		srv, _, err := ts.PathLastMount(pathname)
 		assert.Nil(t, err)
 		err = fsl.Disconnect(srv.String())
 		assert.Nil(ts.T, err, "Disconnect")
@@ -173,7 +173,7 @@ func TestPipeCrash1(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// simulate crash of w1
-	srv, _, err := ts.PathLastSymlink(pathname)
+	srv, _, err := ts.PathLastMount(pathname)
 	assert.Nil(t, err)
 	err = fsl1.Disconnect(srv.String())
 	assert.Nil(ts.T, err, "Disconnect")

@@ -102,9 +102,9 @@ func (pathc *PathClnt) NewRootMount(uname sp.Tuname, pn, mntname string) error {
 		pn = sp.NAMED + pn
 	}
 	db.DPrintf(db.SVCMOUNT, "NewRootMount: %v %v\n", pn, mntname)
-	svc, rest, err := pathc.PathLastSymlink(pn, uname)
+	svc, rest, err := pathc.PathLastMount(pn, uname)
 	if err != nil {
-		db.DPrintf(db.SVCMOUNT, "PathLastSymlink %v err %v\n", pn, err)
+		db.DPrintf(db.SVCMOUNT, "NewRootMount %v err %v\n", pn, err)
 		return err
 	}
 	if err := pathc.mountRoot(svc, rest, mntname); err != nil {

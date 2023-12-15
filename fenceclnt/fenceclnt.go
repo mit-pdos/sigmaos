@@ -50,9 +50,9 @@ func (fc *FenceClnt) registerFence(path string, fence sp.Tfence) error {
 }
 
 func (fc *FenceClnt) GetFences(p string) ([]*sp.Stat, error) {
-	srv, _, err := fc.PathLastSymlink(p)
+	srv, _, err := fc.PathLastMount(p)
 	if err != nil {
-		db.DPrintf(db.FENCECLNT_ERR, "PathLastSymlink %v err %v", p, err)
+		db.DPrintf(db.FENCECLNT_ERR, "PathLastMount %v err %v", p, err)
 		return nil, err
 	}
 	dn := srv.String() + "/" + sp.FENCEDIR
@@ -65,9 +65,9 @@ func (fc *FenceClnt) GetFences(p string) ([]*sp.Stat, error) {
 
 func (fc *FenceClnt) RemoveFence(dirs []string) error {
 	for _, d := range dirs {
-		srv, _, err := fc.PathLastSymlink(d)
+		srv, _, err := fc.PathLastMount(d)
 		if err != nil {
-			db.DPrintf(db.FENCECLNT_ERR, "PathLastSymlink %v err %v", d, err)
+			db.DPrintf(db.FENCECLNT_ERR, "PathLastMount %v err %v", d, err)
 			return err
 		}
 		fn := srv.String() + "/" + sp.FENCEDIR + "/" + fc.fence.Name()

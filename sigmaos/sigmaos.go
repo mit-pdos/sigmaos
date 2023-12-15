@@ -42,7 +42,7 @@ type SigmaOS interface {
 	MountTree(sp.Taddrs, string, string) error
 	IsLocalMount(sp.Tmount) bool
 	SetLocalMount(*sp.Tmount, string)
-	PathLastSymlink(string) (path.Path, path.Path, error)
+	PathLastMount(string) (path.Path, path.Path, error)
 	GetNamedMount() sp.Tmount
 	NewRootMount(string, string) error
 	Mounts() []string

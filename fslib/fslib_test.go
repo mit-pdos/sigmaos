@@ -126,7 +126,7 @@ func TestConnect(t *testing.T) {
 	_, err = ts.Write(fd, d)
 	assert.Equal(t, nil, err)
 
-	srv, _, err := ts.PathLastSymlink(pathname)
+	srv, _, err := ts.PathLastMount(pathname)
 	assert.Nil(t, err)
 
 	err = ts.Disconnect(srv.String())

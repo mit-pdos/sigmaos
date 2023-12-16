@@ -34,7 +34,7 @@ func initTest(t *testing.T) *Tstate {
 
 	// start proxy
 
-	ts.cmd = exec.Command("../bin/linux/proxyd", append([]string{ts.ProcEnv().GetLocalIP()})...)
+	ts.cmd = exec.Command("../bin/linux/proxyd", append([]string{ts.ProcEnv().GetLocalIP().String()})...)
 	ts.cmd.Stdout = os.Stdout
 	ts.cmd.Stderr = os.Stderr
 	err = ts.cmd.Start()

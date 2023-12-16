@@ -7,69 +7,39 @@ import (
 	"os/exec"
 	"testing"
 
-	"google.golang.org/protobuf/proto"
-
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
 	"sigmaos/frame"
-	rpcproto "sigmaos/rpc/proto"
-	"sigmaos/serr"
+	"sigmaos/rpc"
+	"sigmaos/rpcclnt"
+	// "sigmaos/serr"
 	scproto "sigmaos/sigmaclntsrv/proto"
-	sp "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
 )
 
-type RPCClnt struct {
+type RPCCh struct {
 	req io.Writer
 	rep io.Reader
 }
 
-func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
-	req := rpcproto.Request{Method: method, Args: a}
-
-	b, err := proto.Marshal(&req)
-	if err != nil {
-		return nil, serr.NewErrError(err)
-	}
-	db.DPrintf(db.ALWAYS, "Req %v\n", req)
-	if err := frame.WriteFrame(rpcc.req, b); err != nil {
+func (rpcch *RPCCh) WriteRead(a []byte) ([]byte, error) {
+	if err := frame.WriteFrame(rpcch.req, a); err != nil {
 		db.DPrintf(db.ALWAYS, "WriteFrame err %v\n", err)
 		return nil, err
 	}
-
-	b, r := frame.ReadFrame(rpcc.rep)
+	b, r := frame.ReadFrame(rpcch.rep)
 	if r != nil {
-		return nil, err
+		return nil, r
 	}
-
-	rep := &rpcproto.Reply{}
-	if err := proto.Unmarshal(b, rep); err != nil {
-		db.DPrintf(db.ALWAYS, "Unmarshall err %v\n", err)
-		return nil, serr.NewErrError(err)
-	}
-	db.DPrintf(db.ALWAYS, "Rep %v\n", rep)
-	return rep, nil
+	return b, nil
 }
 
-func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
-	b, err := proto.Marshal(arg)
-	if err != nil {
-		return err
-	}
-	rep, sr := rpcc.rpc(method, b)
-	if sr != nil {
-		return err
-	}
-	if rep.Err.ErrCode != 0 {
-		return sp.NewErr(rep.Err)
-	}
-	if err := proto.Unmarshal(rep.Res, res); err != nil {
-		return err
-	}
-	return nil
+func (rpcch *RPCCh) StatsSrv() (*rpc.SigmaRPCStats, error) {
+	return nil, nil
 }
 
-func TestConnect(t *testing.T) {
+func TestStat(t *testing.T) {
 	cmd := exec.Command("../bin/linux/sigmaclntd", []string{}...)
 	stdin, err := cmd.StdinPipe()
 	assert.Nil(t, err)
@@ -83,7 +53,9 @@ func TestConnect(t *testing.T) {
 	req := scproto.StatRequest{Path: "name/"}
 	rep := scproto.StatReply{}
 
-	rpcc := &RPCClnt{stdin, stdout}
+	rpcch := &RPCCh{stdin, stdout}
+	rpcc, err := rpcclnt.NewRPCClntCh(rpcch)
+	assert.Nil(t, err)
 	rpcc.RPC("SigmaClntSrv.Stat", &req, &rep)
 
 	fmt.Printf("rep: %v\n", rep)

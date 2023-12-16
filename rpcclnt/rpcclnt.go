@@ -16,19 +16,35 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type RPCCh interface {
+	WriteRead([]byte) ([]byte, error)
+	StatsSrv() (*rpc.SigmaRPCStats, error)
+}
+
 type RPCClnt struct {
+	si *rpc.StatInfo
+	ch RPCCh
+}
+
+func NewRPCClntCh(ch RPCCh) (*RPCClnt, error) {
+	rpcc := &RPCClnt{
+		si: rpc.NewStatInfo(),
+		ch: ch,
+	}
+	return rpcc, nil
+}
+
+type sigmaCh struct {
 	fsls []*fslib.FsLib
 	fds  []int
-	si   *rpc.StatInfo
 	pn   string
 	idx  int32
 }
 
-func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
-	rpcc := &RPCClnt{
+func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
+	rpcch := &sigmaCh{
 		fsls: make([]*fslib.FsLib, 0, len(fsls)),
 		fds:  make([]int, 0, len(fsls)),
-		si:   rpc.NewStatInfo(),
 		pn:   pn,
 	}
 	sdc, err := sessdevclnt.NewSessDevClnt(fsls[0], path.Join(pn, rpc.RPC))
@@ -36,35 +52,61 @@ func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 		return nil, err
 	}
 	for _, fsl := range fsls {
-		rpcc.fsls = append(rpcc.fsls, fsl)
-		n, err := fsl.Open(sdc.DataPn(), sp.ORDWR)
+		rpcch.fsls = append(rpcch.fsls, fsl)
+		fd, err := fsl.Open(sdc.DataPn(), sp.ORDWR)
 		if err != nil {
 			return nil, err
 		}
-		rpcc.fds = append(rpcc.fds, n)
+		rpcch.fds = append(rpcch.fds, fd)
 	}
-	return rpcc, nil
+	return rpcch, nil
+}
+
+func (ch *sigmaCh) WriteRead(b []byte) ([]byte, error) {
+	idx := int(atomic.AddInt32(&ch.idx, 1))
+	b, err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (ch *sigmaCh) StatsSrv() (*rpc.SigmaRPCStats, error) {
+	stats := &rpc.SigmaRPCStats{}
+	if err := ch.fsls[0].GetFileJson(path.Join(ch.pn, rpc.RPC, rpc.STATS), stats); err != nil {
+		db.DFatalf("Error getting stats")
+		return nil, err
+	}
+	return stats, nil
+}
+
+func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
+	ch, err := newSigmaCh(fsls, pn)
+	if err != nil {
+		return nil, err
+	}
+	return NewRPCClntCh(ch)
 }
 
 func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	req := rpcproto.Request{Method: method, Args: a}
-
 	b, err := proto.Marshal(&req)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
 
 	start := time.Now()
-	idx := int(atomic.AddInt32(&rpcc.idx, 1))
-	b, err = rpcc.fsls[idx%len(rpcc.fsls)].WriteRead(rpcc.fds[idx%len(rpcc.fds)], b)
+
+	b1, err := rpcc.ch.WriteRead(b)
 	if err != nil {
-		return nil, err
+		return nil, serr.NewErrError(err)
 	}
+
 	// Record stats
 	rpcc.si.Stat(method, time.Since(start).Microseconds())
 
 	rep := &rpcproto.Reply{}
-	if err := proto.Unmarshal(b, rep); err != nil {
+	if err := proto.Unmarshal(b1, rep); err != nil {
 		return nil, serr.NewErrError(err)
 	}
 
@@ -94,10 +136,5 @@ func (rpcc *RPCClnt) StatsClnt() map[string]*rpc.MethodStat {
 }
 
 func (rpcc *RPCClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
-	stats := &rpc.SigmaRPCStats{}
-	if err := rpcc.fsls[0].GetFileJson(path.Join(rpcc.pn, rpc.RPC, rpc.STATS), stats); err != nil {
-		db.DFatalf("Error getting stats")
-		return nil, err
-	}
-	return stats, nil
+	return rpcc.ch.StatsSrv()
 }

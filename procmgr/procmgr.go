@@ -64,7 +64,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	p.SetKernelID(mgr.kernelId, true)
 	// Set the schedd IP for the proc, so it can mount this schedd in one RPC
 	// (without walking down to it).
-	p.SetScheddIP(mgr.mfs.MyAddr())
+	p.SetScheddAddr(mgr.mfs.MyAddr())
 	// Set the named mount point if this isn't a privileged proc. If we were to
 	// do this for a privileged proc, it could cause issues as it may save the
 	// knamed address.

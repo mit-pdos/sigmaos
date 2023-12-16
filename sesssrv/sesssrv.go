@@ -34,10 +34,9 @@ import (
 
 type SessSrv struct {
 	pe       *proc.ProcEnv
-	addr     string
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
-	newps     sps.NewProtServer
+	newps    sps.NewProtServer
 	stats    *stats.StatInfo
 	st       *sessstatesrv.SessionTable
 	sm       *sessstatesrv.SessionMgr
@@ -51,12 +50,11 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr string, newps sps.NewProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
 	ssrv.dirover = overlay.MkDirOverlay(root)
 	ssrv.dirunder = root
-	ssrv.addr = addr
 	ssrv.newps = newps
 	ssrv.et = et
 	ssrv.stats = stats.NewStatsDev(ssrv.dirover)
@@ -122,7 +120,7 @@ func (ssrv *SessSrv) Sess(sid sessp.Tsession) *sessstatesrv.Session {
 	return sess
 }
 
-func (ssrv *SessSrv) MyAddr() string {
+func (ssrv *SessSrv) MyAddr() *sp.Taddr {
 	return ssrv.srv.MyAddr()
 }
 

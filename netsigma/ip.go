@@ -22,11 +22,11 @@ func Rearrange(clntnet string, addrs sp.Taddrs) sp.Taddrs {
 	p := -1
 	l := -1
 	for i, a := range raddrs {
-		if a.Net == clntnet {
+		if a.NetNS == clntnet {
 			l = i
 			break
 		}
-		if a.Net == sp.ROOTREALM.String() && p < 0 {
+		if a.NetNS == sp.ROOTREALM.String() && p < 0 {
 			p = i
 		}
 	}
@@ -45,28 +45,34 @@ func swap(addrs sp.Taddrs, i int) sp.Taddrs {
 	return addrs
 }
 
-func QualifyAddr(addr string) (string, error) {
-	return QualifyAddrLocalIP("", addr)
+func QualifyAddr(addrstr string) (sp.Thost, sp.Tport, error) {
+	return QualifyAddrLocalIP("", addrstr)
 }
 
-func QualifyAddrLocalIP(lip string, addr string) (string, error) {
-	host, port, err := net.SplitHostPort(addr)
+func QualifyAddrLocalIP(lip sp.Thost, addrstr string) (sp.Thost, sp.Tport, error) {
+	h, pstr, err := net.SplitHostPort(addrstr)
 	if err != nil {
-		db.DFatalf("Err split host port %v: %v", addr, err)
-		return "", err
+		db.DFatalf("Err split host port %v: %v", addrstr, err)
+		return sp.NO_HOST, sp.NO_PORT, err
 	}
-	if host == "::" {
+	p, err := sp.ParsePort(pstr)
+	if err != nil {
+		db.DFatalf("Err split host port %v: %v", addrstr, err)
+		return sp.NO_HOST, sp.NO_PORT, err
+	}
+	var host sp.Thost = lip
+	var port sp.Tport = p
+	if h == "::" {
 		if lip == "" {
 			ip, err := LocalIP()
 			if err != nil {
-				db.DFatalf("LocalIP \"%v\" %v", addr, err)
-				return "", err
+				db.DFatalf("LocalIP \"%v\" %v", addrstr, err)
+				return sp.NO_HOST, sp.NO_PORT, err
 			}
-			lip = ip
+			host = ip
 		}
-		addr = net.JoinHostPort(lip, port)
 	}
-	return addr, nil
+	return host, port, nil
 }
 
 // XXX deduplicate with localIP
@@ -133,7 +139,7 @@ func localIPs() ([]net.IP, error) {
 }
 
 // XXX should find what outgoing ip is
-func LocalIP() (string, error) {
+func LocalIP() (sp.Thost, error) {
 	ips, err := localIPs()
 	if err != nil {
 		return "", err
@@ -142,10 +148,10 @@ func LocalIP() (string, error) {
 	// if we have a local ip in 10.10.x.x (for Cloudlab), prioritize that first
 	for _, i := range ips {
 		if strings.HasPrefix(i.String(), "10.10.") {
-			return i.String(), nil
+			return sp.Thost(i.String()), nil
 		}
 		if !strings.HasPrefix(i.String(), "127.") {
-			return i.String(), nil
+			return sp.Thost(i.String()), nil
 		}
 	}
 
@@ -153,5 +159,5 @@ func LocalIP() (string, error) {
 		return "", fmt.Errorf("LocalIP: no IP")
 	}
 
-	return ips[len(ips)-1].String(), nil
+	return sp.Thost(ips[len(ips)-1].String()), nil
 }

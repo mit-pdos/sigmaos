@@ -56,8 +56,8 @@ func NewSigmaSrvPublic(fn string, svci any, pcfg *proc.ProcEnv, public bool) (*S
 	}
 }
 
-func NewSigmaSrvPort(fn, port string, pcfg *proc.ProcEnv, svci any) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsPort(fn, ":"+port, pcfg)
+func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pcfg *proc.ProcEnv, svci any) (*SigmaSrv, error) {
+	mfs, error := memfssrv.NewMemFsAddr(fn, addr, pcfg)
 	if error != nil {
 		db.DFatalf("NewSigmaSrvPort %v err %v\n", fn, error)
 	}
@@ -65,7 +65,7 @@ func NewSigmaSrvPort(fn, port string, pcfg *proc.ProcEnv, svci any) (*SigmaSrv, 
 }
 
 func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsPortClnt(fn, ":0", sc)
+	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sc.ProcEnv().GetNet()), sc)
 	if error != nil {
 		db.DFatalf("NewSigmaSrvClnt %v err %v\n", fn, error)
 	}
@@ -74,7 +74,7 @@ func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, e
 
 func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
 	ffs := fencefs.NewRoot(ctx.NewCtxNull(), nil)
-	mfs, error := memfssrv.NewMemFsPortClntFence(fn, ":0", sc, ffs)
+	mfs, error := memfssrv.NewMemFsPortClntFence(fn, sp.NewTaddrAnyPort(sc.ProcEnv().GetNet()), sc, ffs)
 	if error != nil {
 		db.DFatalf("NewSigmaSrvClntFence %v err %v\n", fn, error)
 	}
@@ -83,7 +83,7 @@ func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaS
 }
 
 func NewSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsPortClnt(fn, ":0", sc)
+	mfs, err := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sc.ProcEnv().GetNet()), sc)
 	if err != nil {
 		db.DFatalf("NewMemFsPortClnt %v err %v\n", fn, err)
 	}
@@ -125,7 +125,7 @@ func (ssrv *SigmaSrv) newRPCSrv(svci any) error {
 	return nil
 }
 
-func NewSigmaSrvRootClnt(root fs.Dir, addr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
+func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
 	mfs, err := memfssrv.NewMemFsRootPortClntFence(root, path, addr, sc, nil)
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func NewSigmaSrvRootClnt(root fs.Dir, addr, path string, sc *sigmaclnt.SigmaClnt
 	return newSigmaSrv(mfs), nil
 }
 
-func NewSigmaSrvRoot(root fs.Dir, addr, path string, pe *proc.ProcEnv) (*SigmaSrv, error) {
+func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv) (*SigmaSrv, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		return nil, err

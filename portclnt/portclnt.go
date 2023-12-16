@@ -9,7 +9,7 @@ import (
 )
 
 type PortInfo struct {
-	Hip string
+	Hip sp.Thost
 	Pb  port.PortBinding
 }
 
@@ -31,14 +31,14 @@ func NewPortClntPort(fsl *fslib.FsLib) (*PortClnt, PortInfo, error) {
 	if err != nil {
 		return nil, PortInfo{}, err
 	}
-	pi, err := pc.AllocPort(port.NOPORT)
+	pi, err := pc.AllocPort(sp.NO_PORT)
 	if err != nil {
 		return nil, PortInfo{}, err
 	}
 	return pc, pi, nil
 }
 
-func (pc *PortClnt) AllocPort(p port.Tport) (PortInfo, error) {
+func (pc *PortClnt) AllocPort(p sp.Tport) (PortInfo, error) {
 	hip, pb, err := pc.kc.Port(pc.ProcEnv().GetUprocdPID(), p)
 	if err != nil {
 		return PortInfo{}, err
@@ -47,7 +47,7 @@ func (pc *PortClnt) AllocPort(p port.Tport) (PortInfo, error) {
 	return PortInfo{hip, pb}, nil
 }
 
-func (pc *PortClnt) AdvertisePort(pn string, pi PortInfo, net string, laddr string) error {
+func (pc *PortClnt) AdvertisePort(pn string, pi PortInfo, net string, laddr *sp.Taddr) error {
 	mnt := port.NewPublicMount(pi.Hip, pi.Pb, net, laddr)
 	db.DPrintf(db.PORT, "AdvertisePort %v %v\n", pn, mnt)
 	if err := pc.NewMountSymlink(pn, mnt, sp.NoLeaseId); err != nil {

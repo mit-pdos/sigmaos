@@ -161,19 +161,20 @@ func Run(args []string) error {
 func (nd *Named) newSrv() (sp.Tmount, error) {
 	ip := nd.ProcEnv().GetLocalIP()
 	root := rootDir(nd.fs, nd.realm)
+	var addr *sp.Taddr
 	var pi portclnt.PortInfo
 	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
-		ip = ip + ":0"
+		addr = sp.NewTaddr(ip, sp.NO_PORT)
 	} else {
 		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
 		if err != nil {
 			return sp.NullMount(), err
 		}
 		pi = pi0
-		ip = ":" + pi.Pb.RealmPort.String()
+		addr = sp.NewTaddr(ip, sp.NO_PORT)
 	}
 
-	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, ip, "", nd.SigmaClnt)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)
 	if err != nil {
 		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}
@@ -188,7 +189,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 		mnt = port.NewPublicMount(pi.Hip, pi.Pb, nd.ProcEnv().GetNet(), nd.MyAddr())
 	}
 
-	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, ip, ssrv.MyAddr(), nd.elect.Key(), mnt)
+	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.MyAddr(), nd.elect.Key(), mnt)
 
 	return mnt, nil
 }

@@ -54,5 +54,5 @@ func NewMountServer(addr *Taddr) Tmount {
 }
 
 func (mnt Tmount) TargetHostPort() (Thost, Tport) {
-	return Thost(mnt.Addr[0].Host), Tport(mnt.Addr[0].Port)
+	return mnt.Addr[0].GetHost(), mnt.Addr[0].GetPort()
 }

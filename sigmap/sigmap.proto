@@ -26,8 +26,8 @@ message Stat {
 }
 
 message Taddr {
-        string host = 1;
-        uint32 port = 2;
+        string hostStr = 1;
+        uint32 portInt = 2;
         string netNS = 3;
 }
 

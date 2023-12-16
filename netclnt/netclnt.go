@@ -25,7 +25,7 @@ type NetClnt struct {
 	mu     sync.Mutex
 	sconn  sessconnclnt.Conn
 	conn   net.Conn
-	addr   string
+	addr   *sp.Taddr
 	closed bool
 	br     *bufio.Reader
 	bw     *bufio.Writer
@@ -81,13 +81,13 @@ func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
 	addrs = netsigma.Rearrange(clntnet, addrs)
 	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", clntnet, addrs, addrs[0])
 	for _, addr := range addrs {
-		c, err := net.DialTimeout("tcp", addr.Addr, sp.Conf.Session.TIMEOUT/10)
-		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.Addr, err)
+		c, err := net.DialTimeout("tcp", addr.HostPort(), sp.Conf.Session.TIMEOUT/10)
+		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.HostPort(), err)
 		if err != nil {
 			continue
 		}
 		nc.conn = c
-		nc.addr = addr.Addr
+		nc.addr = addr
 		nc.br = bufio.NewReaderSize(c, sp.Conf.Conn.MSG_LEN)
 		nc.bw = bufio.NewWriterSize(c, sp.Conf.Conn.MSG_LEN)
 		db.DPrintf(db.PORT, "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)

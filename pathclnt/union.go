@@ -8,11 +8,8 @@ import (
 )
 
 func (pathc *PathClnt) IsLocalMount(mnt sp.Tmount) bool {
-	lip := pathc.pcfg.LocalIP
-	tip, _, err := mnt.TargetHostPort()
-	if err != nil {
-		return false
-	}
+	lip := pathc.pcfg.GetLocalIP()
+	tip, _ := mnt.TargetHostPort()
 	if tip == "" {
 		tip = lip
 	}

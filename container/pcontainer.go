@@ -23,7 +23,7 @@ import (
 
 // Start container for uprocd. If r is nil, don't use overlays.
 // func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range, up port.Tport, ptype proc.Ttype) (*Container, error) {
-func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up port.Tport, gvisor bool) (*Container, error) {
+func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, gvisor bool) (*Container, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())

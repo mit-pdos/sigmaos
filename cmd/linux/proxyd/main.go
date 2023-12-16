@@ -17,11 +17,12 @@ func main() {
 	}
 	lip := os.Args[1]
 	// By default, proxy doesn't use overlays.
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, lip, lip, "", false)
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, lip, sp.Thost(lip), "", false)
 	pcfg.Program = "proxy"
 	pcfg.SetUname("proxy")
+	addr := sp.NewTaddr(sp.NO_HOST, 1110)
 	proc.SetSigmaDebugPid(pcfg.String())
-	netsrv.NewNetServer(pcfg, proxy.NewNpd(pcfg, lip), ":1110", npcodec.MarshalFrame, npcodec.UnmarshalFrame)
+	netsrv.NewNetServer(pcfg, proxy.NewNpd(pcfg, lip), addr, npcodec.MarshalFrame, npcodec.UnmarshalFrame)
 	ch := make(chan struct{})
 	<-ch
 }

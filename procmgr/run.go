@@ -22,7 +22,7 @@ func (mgr *ProcMgr) runProc(p *proc.Proc) {
 }
 
 func (mgr *ProcMgr) runPrivilegedProc(p *proc.Proc) error {
-	cmd, err := kproc.RunKernelProc(mgr.rootsc.ProcEnv().LocalIP, p, nil)
+	cmd, err := kproc.RunKernelProc(mgr.rootsc.ProcEnv().GetLocalIP(), p, nil)
 	if err != nil {
 		db.DFatalf("Couldn't start privileged proc: %v", err)
 		return err

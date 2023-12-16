@@ -54,7 +54,7 @@ func (k *Kernel) bootSubsystem(program string, args []string, how proc.Thow) (*S
 	return k.bootSubsystemWithMcpu(program, args, how, 0)
 }
 
-func (s *Subsystem) Run(how proc.Thow, kernelId, localIP string) error {
+func (s *Subsystem) Run(how proc.Thow, kernelId string, localIP sp.Thost) error {
 	if how == proc.HLINUX || how == proc.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {
@@ -70,7 +70,7 @@ func (s *Subsystem) Run(how proc.Thow, kernelId, localIP string) error {
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.FinalizeEnv(localIP, sp.Tpid(proc.NOT_SET))
 		var r *port.Range
-		up := port.NOPORT
+		up := sp.NO_PORT
 		if s.k.Param.Overlays {
 			r = &port.Range{FPORT, LPORT}
 			up = r.Fport
@@ -97,16 +97,16 @@ func (ss *Subsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
 }
 
-func (ss *Subsystem) AllocPort(p port.Tport) (*port.PortBinding, error) {
-	if p == port.NOPORT {
+func (ss *Subsystem) AllocPort(p sp.Tport) (*port.PortBinding, error) {
+	if p == sp.NO_PORT {
 		return ss.container.AllocPort()
 	} else {
 		return ss.container.AllocPortOne(p)
 	}
 }
 
-func (ss *Subsystem) GetIp(fsl *fslib.FsLib) string {
-	return kernelsubinfo.GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Ip
+func (ss *Subsystem) GetIp(fsl *fslib.FsLib) *sp.Taddr {
+	return kernelsubinfo.GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Addr
 }
 
 // Send SIGTERM to a system.

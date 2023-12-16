@@ -7,6 +7,7 @@ package sigmap
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 
 	"sigmaos/path"
@@ -224,24 +225,74 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
+func (p Tport) String() string {
+	return strconv.FormatUint(uint64(p), 10)
+}
+
+func (p Thost) String() string {
+	return string(p)
+}
+
+func ParsePort(ps string) (Tport, error) {
+	pi, err := strconv.ParseUint(ps, 10, 32)
+	return Tport(pi), err
+}
+
+const (
+	NO_HOST   Thost = "NO_HOST"
+	LOCALHOST Thost = "127.0.0.1"
+	NO_PORT   Tport = 0
+)
+
+const ()
+
 func (a *Taddr) HostPort() string {
-	return a.Host + ":" + strconv.FormatUint(uint64(a.Port), 10)
+	return a.HostStr + ":" + a.GetPort().String()
+}
+
+func (a *Taddr) GetHost() Thost {
+	return Thost(a.HostStr)
+}
+
+func (a *Taddr) GetPort() Tport {
+	return Tport(a.PortInt)
+}
+
+func NewTaddrAnyPort(netns string) *Taddr {
+	return NewTaddrRealm(NO_HOST, NO_PORT, netns)
 }
 
 func NewTaddr(host Thost, port Tport) *Taddr {
 	return &Taddr{
-		Host:  string(host),
-		Port:  uint32(port),
-		NetNS: ROOTREALM.String(),
+		HostStr: string(host),
+		PortInt: uint32(port),
+		NetNS:   ROOTREALM.String(),
 	}
 }
 
 func NewTaddrRealm(host Thost, port Tport, netns string) *Taddr {
 	return &Taddr{
-		Host:  string(host),
-		Port:  uint32(port),
-		NetNS: netns,
+		HostStr: string(host),
+		PortInt: uint32(port),
+		NetNS:   netns,
 	}
+}
+
+func (a *Taddr) Marshal() string {
+	b, err := json.Marshal(a)
+	if err != nil {
+		log.Fatalf("Can't marshal Taddr: %v", err)
+	}
+	return string(b)
+}
+
+func UnmarshalTaddr(a string) *Taddr {
+	var addr Taddr
+	err := json.Unmarshal([]byte(a), &addr)
+	if err != nil {
+		log.Fatalf("Can't unmarshal Taddr")
+	}
+	return &addr
 }
 
 type Taddrs []*Taddr

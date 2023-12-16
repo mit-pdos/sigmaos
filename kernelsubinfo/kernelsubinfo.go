@@ -15,11 +15,11 @@ const (
 
 type SubsystemInfo struct {
 	Kpid sp.Tpid
-	Ip   string
+	Addr *sp.Taddr
 }
 
-func NewSubsystemInfo(kpid sp.Tpid, ip string) *SubsystemInfo {
-	return &SubsystemInfo{kpid, ip}
+func NewSubsystemInfo(kpid sp.Tpid, addr *sp.Taddr) *SubsystemInfo {
+	return &SubsystemInfo{kpid, addr}
 }
 
 func RegisterSubsystemInfo(fsl *fslib.FsLib, si *SubsystemInfo) {

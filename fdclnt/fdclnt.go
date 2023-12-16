@@ -6,7 +6,6 @@ package fdclnt
 
 import (
 	"fmt"
-	"net"
 
 	"sigmaos/fidclnt"
 	"sigmaos/path"
@@ -201,9 +200,8 @@ func (fdc *FdClient) IsLocalMount(mnt sp.Tmount) bool {
 	return fdc.pc.IsLocalMount(mnt)
 }
 
-func (fdc *FdClient) SetLocalMount(mnt *sp.Tmount, port string) {
-	a := net.JoinHostPort(fdc.pcfg.GetLocalIP(), port)
-	mnt.SetAddr(sp.NewTaddrs([]string{a}))
+func (fdc *FdClient) SetLocalMount(mnt *sp.Tmount, port sp.Tport) {
+	mnt.SetAddr([]*sp.Taddr{sp.NewTaddr(fdc.pcfg.GetLocalIP(), port)})
 }
 
 func (fdc *FdClient) PathLastSymlink(pn string) (path.Path, path.Path, error) {

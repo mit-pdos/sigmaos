@@ -12,7 +12,7 @@ message ProcEnvProto {
   string procDir = 5;
   string parentDir = 6;
   string etcdIP = 7;
-  string localIP = 8;
+  string localIPStr = 8;
   string kernelID = 9;
   string buildTag = 10;
   string net = 11;
@@ -27,7 +27,7 @@ message ProcEnvProto {
   int32 howInt = 20;
   google.protobuf.Timestamp spawnTimePB = 21;
   string strace = 22;
-  string scheddIP = 23;
+  Taddr scheddAddr = 23;
   TmountProto namedMountProto = 24;
 }
 

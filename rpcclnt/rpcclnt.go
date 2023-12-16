@@ -1,3 +1,9 @@
+// Package rpcclnt is the client stub that (un)marshals argument
+// protobufs and result protobufs.  By default it uses sigmaos to
+// send/receive the request and receive reply.  But caller can pass
+// into its own RPCCh interface to replace the default (e.g., to
+// send/receive over a pipe).
+
 package rpcclnt
 
 import (

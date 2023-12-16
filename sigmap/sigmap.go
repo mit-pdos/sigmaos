@@ -239,7 +239,7 @@ func ParsePort(ps string) (Tport, error) {
 }
 
 const (
-	NO_HOST   Thost = "NO_HOST"
+	NO_HOST   Thost = ""
 	LOCALHOST Thost = "127.0.0.1"
 	NO_PORT   Tport = 0
 )

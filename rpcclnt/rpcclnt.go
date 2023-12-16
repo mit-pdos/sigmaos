@@ -26,12 +26,12 @@ type RPCClnt struct {
 	ch RPCCh
 }
 
-func NewRPCClntCh(ch RPCCh) (*RPCClnt, error) {
+func NewRPCClntCh(ch RPCCh) *RPCClnt {
 	rpcc := &RPCClnt{
 		si: rpc.NewStatInfo(),
 		ch: ch,
 	}
-	return rpcc, nil
+	return rpcc
 }
 
 type sigmaCh struct {
@@ -85,7 +85,7 @@ func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewRPCClntCh(ch)
+	return NewRPCClntCh(ch), nil
 }
 
 func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {

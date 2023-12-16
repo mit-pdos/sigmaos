@@ -8,6 +8,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
+	"net"
 	"os"
 	"os/exec"
 	dbg "sigmaos/debug"
@@ -99,10 +100,10 @@ func setupK8sState(t *testing.T) *TstateSN {
 	tssn := newTstateSN(t, nil, 0)
 	p := sn.JobHTTPAddrsPath(tssn.jobname)
 	h, p, err := net.SplitHostPort(K8S_ADDR)
-	assert.Nil(ts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
+	assert.Nil(tssn.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 	port, err := strconv.Atoi(p)
-	assert.Nil(ts.T, err, "Err parse port %v: %v", p, err)
-	addr := sp.NewTaddrRealm(sp.Thost(h), sp.Tport(port), ts.ProcEnv().GetNet())
+	assert.Nil(tssn.T, err, "Err parse port %v: %v", p, err)
+	addr := sp.NewTaddrRealm(sp.Thost(h), sp.Tport(port), tssn.ProcEnv().GetNet())
 	mnt := sp.NewMountService([]*sp.Taddr{addr})
 	assert.Nil(t, tssn.MountService(p, mnt, sp.NoLeaseId))
 	// forward mongo port and init users and graphs.

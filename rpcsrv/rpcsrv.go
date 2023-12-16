@@ -32,7 +32,10 @@ func (rpcs *RPCSrv) RegisterService(svci any) {
 }
 
 func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, arg []byte) ([]byte, *serr.Err) {
-	start := time.Now()
+	var start time.Time
+	if rpcs.sti != nil {
+		start = time.Now()
+	}
 	req := rpcproto.Request{}
 	if err := proto.Unmarshal(arg, &req); err != nil {
 		return nil, serr.NewErrError(err)
@@ -49,7 +52,9 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, arg []byte) ([]byte, *serr.Err) {
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
-	rpcs.sti.Stat(req.Method, time.Since(start).Microseconds())
+	if rpcs.sti != nil {
+		rpcs.sti.Stat(req.Method, time.Since(start).Microseconds())
+	}
 	return b, nil
 }
 

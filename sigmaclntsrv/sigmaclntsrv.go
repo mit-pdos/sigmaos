@@ -4,17 +4,14 @@ import (
 	"io"
 	"os"
 
-	"google.golang.org/protobuf/proto"
-
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/frame"
 	"sigmaos/fs"
-	rpcproto "sigmaos/rpc/proto"
 	// "sigmaos/serr"
 	"sigmaos/rpcsrv"
 	scproto "sigmaos/sigmaclntsrv/proto"
-	sp "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
 )
 
 type RPCCh struct {
@@ -37,23 +34,9 @@ func (rpcch *RPCCh) serveRPC() error {
 		db.DPrintf(db.ALWAYS, "ReadFrame err %v", err)
 		return err
 	}
-	req := rpcproto.Request{}
-	if err := proto.Unmarshal(f, &req); err != nil {
+	b, err := rpcch.rpcs.WriteRead(rpcch.ctx, f)
+	if err != nil {
 		return err
-	}
-
-	var rerr *sp.Rerror
-	b, sr := rpcch.rpcs.ServeRPC(rpcch.ctx, req.Method, req.Args)
-	if sr != nil {
-		rerr = sp.NewRerrorSerr(sr)
-	} else {
-		rerr = sp.NewRerror()
-	}
-
-	rep := &rpcproto.Reply{Res: b, Err: rerr}
-	b, r := proto.Marshal(rep)
-	if r != nil {
-		return r
 	}
 	if err := frame.WriteFrame(rpcch.rep, b); err != nil {
 		return err

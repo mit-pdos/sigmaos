@@ -1,13 +1,16 @@
 package benchmarks_test
 
 import (
+	"net"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/procclnt"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
@@ -70,7 +73,12 @@ func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 	if ji.sigmaos {
 		clnt = www.NewWWWClnt(ji.FsLib, ji.job)
 	} else {
-		clnt = www.NewWWWClntAddr(sp.NewTaddrs([]string{ji.k8ssrvaddr}))
+		h, po, err := net.SplitHostPort(ji.k8ssrvaddr)
+		assert.Nil(ji.Ts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
+		port, err := strconv.Atoi(po)
+		assert.Nil(ji.Ts.T, err, "Err parse port %v: %v", po, err)
+		addr := sp.NewTaddrRealm(sp.Thost(h), sp.Tport(port), ji.ProcEnv().GetNet())
+		clnt = www.NewWWWClntAddr([]*sp.Taddr{addr})
 	}
 	var latency time.Duration
 	for i := 0; i < ji.nreq; i++ {
@@ -123,7 +131,7 @@ func (ji *WwwJobInstance) StartWwwJob() {
 func (ji *WwwJobInstance) Wait() {
 	if ji.sigmaos {
 		clnt := www.NewWWWClnt(ji.FsLib, ji.job)
-		err := clnt.StopServer(ji.ProcClnt, ji.pid)
+		err := clnt.StopServer(ji.ProcAPI.(*procclnt.ProcClnt), ji.pid)
 		assert.Nil(ji.Ts.T, err)
 	}
 }

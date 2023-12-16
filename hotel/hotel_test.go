@@ -374,10 +374,10 @@ func TestBenchSearchSigma(t *testing.T) {
 func setupK8sState(ts *Tstate) {
 	// Advertise server address
 	p := hotel.JobHTTPAddrsPath(ts.job)
-	h, p, err := net.SplitHostPort(K8S_ADDR)
+	h, po, err := net.SplitHostPort(K8S_ADDR)
 	assert.Nil(ts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
-	port, err := strconv.Atoi(p)
-	assert.Nil(ts.T, err, "Err parse port %v: %v", p, err)
+	port, err := strconv.Atoi(po)
+	assert.Nil(ts.T, err, "Err parse port %v: %v", po, err)
 	addr := sp.NewTaddrRealm(sp.Thost(h), sp.Tport(port), ts.ProcEnv().GetNet())
 	mnt := sp.NewMountService([]*sp.Taddr{addr})
 	if err := ts.MountService(p, mnt, sp.NoLeaseId); err != nil {

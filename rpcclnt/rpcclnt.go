@@ -20,7 +20,6 @@ type RPCClnt struct {
 	fsls []*fslib.FsLib
 	fds  []int
 	si   *rpc.StatInfo
-	sdc  *sessdevclnt.SessDevClnt
 	pn   string
 	idx  int32
 }

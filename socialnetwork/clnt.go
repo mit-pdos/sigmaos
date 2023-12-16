@@ -38,8 +38,8 @@ func NewWebClntWithAddr(fsl *fslib.FsLib, job string, feAddrs sp.Taddrs) *WebCln
 	// XXX This is sort of arbitrary, perhaps change or remove?.
 	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 10000
 	addrs := netsigma.Rearrange(sp.ROOTREALM.String(), feAddrs)
-	dbg.DPrintf(dbg.SOCIAL_NETWORK_CLNT, "Advertised addr %v", addrs[0].Addr)
-	return &WebClnt{job, addrs, "http://" + addrs[0].Addr, clnt, fsl}
+	dbg.DPrintf(dbg.SOCIAL_NETWORK_CLNT, "Advertised addr %v", addrs[0])
+	return &WebClnt{job, addrs, "http://" + addrs[0].HostPort(), clnt, fsl}
 }
 
 func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {

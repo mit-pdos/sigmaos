@@ -282,7 +282,7 @@ func TestReadSymlink(t *testing.T) {
 	mnt1, err := ts.ReadMount(fn)
 	assert.Nil(t, err, "ReadMount: %v", err)
 
-	assert.Equal(t, mnt.Addr[0].Addr, mnt1.Addr[0].Addr)
+	assert.Equal(t, mnt.Addr[0], mnt1.Addr[0])
 
 	err = ts.RmDir(d1)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -989,8 +989,7 @@ func newMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 	mnt, left, err := ts.CopyMount(pathname)
 	assert.Nil(t, err)
 	mnt.SetTree(left)
-	h, p, err := mnt.TargetHostPort()
-	assert.Nil(t, err)
+	h, p := mnt.TargetHostPort()
 	if h == "" {
 		ts.SetLocalMount(&mnt, p)
 	}
@@ -1029,7 +1028,7 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), newMount(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MountService")
 
-	err = ts.MountService(gopath.Join(pathname, "d/namedself1"), sp.NewMountServer(":2222"), sp.NoLeaseId)
+	err = ts.MountService(gopath.Join(pathname, "d/namedself1"), sp.NewMountServer(sp.NewTaddrRealm(sp.NO_HOST, 2222, ts.ProcEnv().GetNet())), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "d/~any") + "/")
@@ -1063,7 +1062,7 @@ func TestUnionRoot(t *testing.T) {
 	pn1 := gopath.Join(pathname, "namedself1")
 	err := ts.MountService(pn0, newMount(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MountService")
-	err = ts.MountService(pn1, sp.NewMountServer("xxx"), sp.NoLeaseId)
+	err = ts.MountService(pn1, sp.NewMountServer(sp.NewTaddr("xxx", sp.NO_PORT)), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "~any") + "/")
@@ -1199,7 +1198,7 @@ func TestMountUnion(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), sp.NewMountServer(":1111"), sp.NoLeaseId)
+	err = ts.MountService(gopath.Join(pathname, "d/namedself0"), sp.NewMountServer(sp.NewTaddrRealm(sp.NO_HOST, 1111, ts.ProcEnv().GetNet())), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MountService")
 
 	pn := gopath.Join(pathname, "mount")

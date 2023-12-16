@@ -97,16 +97,16 @@ func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	start := time.Now()
 
-	b1, err := rpcc.ch.WriteRead(b)
+	b, err = rpcc.ch.WriteRead(b)
 	if err != nil {
-		return nil, serr.NewErrError(err)
+		return nil, err
 	}
 
 	// Record stats
 	rpcc.si.Stat(method, time.Since(start).Microseconds())
 
 	rep := &rpcproto.Reply{}
-	if err := proto.Unmarshal(b1, rep); err != nil {
+	if err := proto.Unmarshal(b, rep); err != nil {
 		return nil, serr.NewErrError(err)
 	}
 

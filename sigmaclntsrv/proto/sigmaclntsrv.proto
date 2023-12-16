@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "sigmap/sigmap.proto";
+
+option go_package = "sigmaos/sigmaclntsrv/proto";
+
+message StatRequest {
+        string path = 1;
+}
+
+message StatReply {
+        Stat stat = 1;
+        Rerror err = 2;
+}

@@ -35,7 +35,7 @@ func addrToUrl(addr string) string {
 }
 
 func (clnt *WWWClnt) get(path string) ([]byte, error) {
-	resp, err := http.Get(addrToUrl(clnt.srvaddrs[0].Addr) + path)
+	resp, err := http.Get(addrToUrl(clnt.srvaddrs[0].HostPort()) + path)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -49,7 +49,7 @@ func (clnt *WWWClnt) get(path string) ([]byte, error) {
 }
 
 func (clnt *WWWClnt) post(path string, vals map[string][]string) ([]byte, error) {
-	resp, err := http.PostForm(addrToUrl(clnt.srvaddrs[0].Addr)+path, vals)
+	resp, err := http.PostForm(addrToUrl(clnt.srvaddrs[0].HostPort())+path, vals)
 	if err != nil {
 		return []byte{}, err
 	}

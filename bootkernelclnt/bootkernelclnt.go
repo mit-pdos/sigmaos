@@ -9,6 +9,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclntclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -54,20 +55,39 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays, gvisor bool) (*Kernel, error) {
+func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays, gvisor, sigmaclntd bool) (*Kernel, error) {
 	kernelId := GenKernelId()
 	_, err := Start(kernelId, pcfg, conf, overlays, gvisor)
 	if err != nil {
 		return nil, err
 	}
-	return NewKernelClnt(kernelId, pcfg)
+	return NewKernelClnt(kernelId, pcfg, sigmaclntd)
 }
 
-func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
-	db.DPrintf(db.SYSTEM, "NewKernelClnt %s\n", kernelId)
-	sc, err := sigmaclnt.NewSigmaClntRootInit(pcfg)
+func newSigmaClnt(pcfg *proc.ProcEnv, sigmaclntd bool) (*sigmaclnt.SigmaClnt, error) {
+	var sc *sigmaclnt.SigmaClnt
+	var err error
+	if sigmaclntd {
+		scc, err := sigmaclntclnt.NewSigmaClntClnt()
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "NewKernelClntStart sigmaclntclnt err %v", err)
+			return nil, err
+		}
+		sc, err = sigmaclnt.NewSigmaClntFsLibAPI(pcfg, scc)
+	} else {
+		sc, err = sigmaclnt.NewSigmaClntRootInit(pcfg)
+	}
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error make sigma clnt root init")
+		db.DPrintf(db.ALWAYS, "NewKernelClntStart sigmaclnt err %v", err)
+		return nil, err
+	}
+	return sc, nil
+}
+
+func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv, sigmaclntd bool) (*Kernel, error) {
+	db.DPrintf(db.SYSTEM, "NewKernelClnt %s\n", kernelId)
+	sc, err := newSigmaClnt(pcfg, sigmaclntd)
+	if err != nil {
 		return nil, err
 	}
 	pn := sp.BOOT + kernelId
@@ -106,7 +126,14 @@ func (k *Kernel) Shutdown() error {
 	db.DPrintf(db.SYSTEM, "Shutdown kernel %s", k.kernelId)
 	err := k.kclnt.Shutdown()
 	db.DPrintf(db.SYSTEM, "Shutdown kernel %s err %v", k.kernelId, err)
-	return err
+	if err != nil {
+		return err
+	}
+	scc, ok := k.SigmaClnt.GetSigmaOS().(*sigmaclntclnt.SigmaClntClnt)
+	if ok {
+		return scc.Shutdown()
+	}
+	return nil
 }
 
 func (k *Kernel) Boot(s string) error {

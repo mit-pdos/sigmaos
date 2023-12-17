@@ -5,6 +5,8 @@ package sigmaclntclnt
 
 import (
 	"io"
+	"os"
+	"os/exec"
 
 	// db "sigmaos/debug"
 	"sigmaos/frame"
@@ -17,6 +19,7 @@ type SigmaClntClnt struct {
 	req  io.Writer
 	rep  io.Reader
 	rpcc *rpcclnt.RPCClnt
+	cmd  *exec.Cmd
 }
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
@@ -34,8 +37,28 @@ func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
 	return nil, nil
 }
 
-func NewSigmaClntClnt(req io.Writer, rep io.Reader) *SigmaClntClnt {
-	scc := &SigmaClntClnt{req, rep, nil}
+func NewSigmaClntClnt() (*SigmaClntClnt, error) {
+	cmd := exec.Command("../bin/linux/sigmaclntd", []string{}...)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Start()
+	if err != nil {
+		return nil, err
+	}
+
+	scc := &SigmaClntClnt{stdin, stdout, nil, cmd}
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
-	return scc
+	return scc, nil
+}
+
+func (scc *SigmaClntClnt) Shutdown() error {
+	return scc.cmd.Process.Kill()
 }

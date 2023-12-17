@@ -43,3 +43,7 @@ func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
 func (fl *FsLib) DetachAll() error {
 	return fl.SigmaOS.DetachAll()
 }
+
+func (fl *FsLib) GetSigmaOS() sos.SigmaOS {
+	return fl.SigmaOS
+}

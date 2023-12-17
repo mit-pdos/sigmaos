@@ -171,7 +171,7 @@ func (scc *SigmaClntClnt) MountTree(addrs sp.Taddrs, tree, mount string) error {
 }
 
 func (scc *SigmaClntClnt) IsLocalMount(mnt sp.Tmount) bool {
-	return false
+	return true
 }
 
 func (scc *SigmaClntClnt) SetLocalMount(mnt *sp.Tmount, port string) {}

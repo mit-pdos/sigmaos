@@ -37,6 +37,7 @@ var tag string
 var EtcdIP string
 var Overlays bool
 var GVisor bool
+var sigmaclntd bool
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
@@ -45,6 +46,7 @@ func init() {
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
+	flag.BoolVar(&sigmaclntd, "sigmaclntd", false, "sigmaclntd")
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -129,7 +131,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ALWAYS, "Error set named ip")
 		return nil, err
 	}
-	k, err = bootkernelclnt.NewKernelClnt(kernelid, pcfg)
+	k, err = bootkernelclnt.NewKernelClnt(kernelid, pcfg, sigmaclntd)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make kernel clnt")
 		return nil, err
@@ -144,7 +146,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays, GVisor)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays, GVisor, sigmaclntd)
 		if err != nil {
 			return err
 		}

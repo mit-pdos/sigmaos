@@ -9,34 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/frame"
-	"sigmaos/rpc"
-	"sigmaos/rpcclnt"
-	// "sigmaos/serr"
-	scproto "sigmaos/sigmaclntsrv/proto"
-	sp "sigmaos/sigmap"
+	"sigmaos/sigmaclntclnt"
 	"sigmaos/test"
 )
 
 type RPCCh struct {
 	req io.Writer
 	rep io.Reader
-}
-
-func (rpcch *RPCCh) WriteRead(a []byte) ([]byte, error) {
-	if err := frame.WriteFrame(rpcch.req, a); err != nil {
-		db.DPrintf(db.ALWAYS, "WriteFrame err %v\n", err)
-		return nil, err
-	}
-	b, r := frame.ReadFrame(rpcch.rep)
-	if r != nil {
-		return nil, r
-	}
-	return b, nil
-}
-
-func (rpcch *RPCCh) StatsSrv() (*rpc.SigmaRPCStats, error) {
-	return nil, nil
 }
 
 func TestCompile(t *testing.T) {
@@ -55,14 +34,12 @@ func TestStat(t *testing.T) {
 	err = cmd.Start()
 	assert.Nil(t, err)
 
-	req := scproto.StatRequest{Path: "name/"}
-	rep := scproto.StatReply{}
+	scc := sigmaclntclnt.NewSigmaClntClnt(stdin, stdout)
 
-	rpcch := &RPCCh{stdin, stdout}
-	rpcc := rpcclnt.NewRPCClntCh(rpcch)
-	rpcc.RPC("SigmaClntSrv.Stat", &req, &rep)
+	st, err := scc.Stat("name/")
+	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "rep: stat %v err %v\n", rep.Stat, sp.NewErr(rep.Err))
+	db.DPrintf(db.TEST, "Stat %v err %v\n", st, err)
 
 	cmd.Wait()
 

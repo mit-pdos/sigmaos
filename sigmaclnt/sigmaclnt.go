@@ -9,6 +9,7 @@ import (
 	"sigmaos/leaseclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	sos "sigmaos/sigmaos"
 )
 
 func init() {
@@ -60,6 +61,19 @@ func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	return &SigmaClnt{fsl, nil, lmc}, nil
 }
 
+// Create only an FsLib, as a proc.
+func NewSigmaClntFsLibAPI(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*SigmaClnt, error) {
+	fsl, err := fslib.NewFsLibAPI(pcfg, sos)
+	if err != nil {
+		db.DFatalf("NewSigmaClnt: %v", err)
+	}
+	lmc, err := leaseclnt.NewLeaseClnt(fsl)
+	if err != nil {
+		return nil, err
+	}
+	return &SigmaClnt{fsl, nil, lmc}, nil
+}
+
 func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
 	sc, err := NewSigmaClntFsLib(pcfg)
@@ -70,6 +84,15 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	start = time.Now()
 	sc.ProcAPI = procclnt.NewProcClnt(sc.FsLib)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", pcfg.GetPID(), time.Since(start))
+	return sc, nil
+}
+
+func NewSigmaClntAPI(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*SigmaClnt, error) {
+	sc, err := NewSigmaClntFsLibAPI(pcfg, sos)
+	if err != nil {
+		db.DFatalf("NewSigmaClntAPI: %v", err)
+	}
+	sc.ProcAPI = procclnt.NewProcClnt(sc.FsLib)
 	return sc, nil
 }
 

@@ -1,3 +1,4 @@
+// Package sigmaos defines the core API of SigmaOS
 package sigmaos
 
 import (

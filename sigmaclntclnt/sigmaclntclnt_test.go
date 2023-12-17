@@ -1,7 +1,6 @@
-package sigmaclntsrv_test
+package sigmaclntclnt_test
 
 import (
-	"io"
 	"os"
 	"os/exec"
 	"testing"
@@ -12,11 +11,6 @@ import (
 	"sigmaos/sigmaclntclnt"
 	"sigmaos/test"
 )
-
-type RPCCh struct {
-	req io.Writer
-	rep io.Reader
-}
 
 func TestCompile(t *testing.T) {
 }

@@ -4,11 +4,82 @@ import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/sigmaclntsrv/proto";
 
-message StatRequest {
+message SigmaCloseRequest {
+        uint32 fd = 1;
+}
+
+message SigmaErrReply {
+        Rerror err = 1;
+}
+
+message SigmaStatRequest {
         string path = 1;
 }
 
-message StatReply {
+message SigmaStatReply {
         Stat stat = 1;
         Rerror err = 2;
+}
+
+message SigmaCreateRequest {
+        string path = 1;
+        uint32 perm = 2;
+        uint32 mode = 3;
+}
+
+message SigmaFdReply {
+        uint32 fd = 1;
+        Rerror err = 2;
+}
+
+message SigmaRenameRequest {
+        string src = 1;
+        string dst = 2;
+}
+
+message SigmaRemoveRequest {
+        string path = 1;
+}
+
+message SigmaGetFileRequest {
+        string path = 1;
+}
+
+message SigmaDataReply {
+        bytes data = 1;
+        Rerror err = 2;
+}
+
+message SigmaPutFileRequest {
+        string path = 1;
+        uint32 perm = 2;
+        uint32 mode = 3;
+        uint64 offset = 4;
+        uint64 leaseId = 5;
+        bytes data = 6;
+}
+
+message SigmaSizeReply {
+        uint64 size = 1;
+        Rerror err = 2;
+}
+
+message SigmaReadRequest {
+        uint32 fd = 1;
+        uint64 size = 2;
+}
+
+message SigmaWriteRequest {
+        uint32 fd = 1;
+        bytes data = 2;
+}
+
+message SigmaSeekRequest {
+        uint32 fd = 1;
+        uint64 offset = 2;
+}
+
+message SigmaWriteReadRequest {
+        uint32 fd = 1;
+        bytes data = 2;
 }

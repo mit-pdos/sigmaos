@@ -10,9 +10,7 @@ import (
 	"sigmaos/frame"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
-	"sigmaos/serr"
-	scproto "sigmaos/sigmaclntsrv/proto"
-	sp "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
 )
 
 type SigmaClntClnt struct {
@@ -41,18 +39,4 @@ func NewSigmaClntClnt(req io.Writer, rep io.Reader) *SigmaClntClnt {
 	scc := &SigmaClntClnt{req, rep, nil}
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	return scc
-}
-
-func (scc *SigmaClntClnt) Stat(path string) (*sp.Stat, error) {
-	req := scproto.StatRequest{Path: path}
-	rep := scproto.StatReply{}
-	err := scc.rpcc.RPC("SigmaClntSrv.Stat", &req, &rep)
-	if err != nil {
-		return nil, err
-	}
-	if rep.Err.TErrCode() == serr.TErrNoError {
-		return rep.Stat, nil
-	} else {
-		return nil, sp.NewErr(rep.Err)
-	}
 }

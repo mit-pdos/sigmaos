@@ -47,7 +47,18 @@ func NewSigmaClntSrv() (*SigmaClntSrv, error) {
 	return scs, nil
 }
 
-func (scs *SigmaClntSrv) Stat(ctx fs.CtxI, req scproto.StatRequest, rep *scproto.StatReply) error {
+func (scs *SigmaClntSrv) Close(ctx fs.CtxI, req scproto.SigmaCloseRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.Close(int(req.Fd))
+	db.DPrintf(db.ALWAYS, "Close %v %v\n", req, err)
+	if err == nil {
+		rep.Err = sp.NewRerror()
+	} else {
+		rep.Err = sp.NewRerrorErr(err)
+	}
+	return nil
+}
+
+func (scs *SigmaClntSrv) Stat(ctx fs.CtxI, req scproto.SigmaStatRequest, rep *scproto.SigmaStatReply) error {
 	st, err := scs.sc.Stat(req.Path)
 	db.DPrintf(db.ALWAYS, "Stat %v %v %v\n", req, st, err)
 	rep.Stat = st

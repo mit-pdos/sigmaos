@@ -23,7 +23,7 @@ import (
 )
 
 type RPCCh interface {
-	WriteRead([]byte) ([]byte, error)
+	SendReceive([]byte) ([]byte, error)
 	StatsSrv() (*rpc.SigmaRPCStats, error)
 }
 
@@ -68,7 +68,7 @@ func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
 	return rpcch, nil
 }
 
-func (ch *sigmaCh) WriteRead(b []byte) ([]byte, error) {
+func (ch *sigmaCh) SendReceive(b []byte) ([]byte, error) {
 	idx := int(atomic.AddInt32(&ch.idx, 1))
 	b, err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], b)
 	if err != nil {
@@ -103,7 +103,7 @@ func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 
 	start := time.Now()
 
-	b, err = rpcc.ch.WriteRead(b)
+	b, err = rpcc.ch.SendReceive(b)
 	if err != nil {
 		return nil, err
 	}

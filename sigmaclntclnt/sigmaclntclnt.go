@@ -19,7 +19,7 @@ type SigmaClntClnt struct {
 	rpcc *rpcclnt.RPCClnt
 }
 
-func (scc *SigmaClntClnt) WriteRead(a []byte) ([]byte, error) {
+func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
 	if err := frame.WriteFrame(scc.req, a); err != nil {
 		return nil, err
 	}

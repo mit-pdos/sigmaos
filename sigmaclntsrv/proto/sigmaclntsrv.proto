@@ -79,7 +79,3 @@ message SigmaSeekRequest {
         uint64 offset = 2;
 }
 
-message SigmaWriteReadRequest {
-        uint32 fd = 1;
-        bytes data = 2;
-}

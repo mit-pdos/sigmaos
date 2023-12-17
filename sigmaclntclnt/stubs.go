@@ -3,8 +3,10 @@ package sigmaclntclnt
 import (
 	"google.golang.org/protobuf/proto"
 
+	"sigmaos/path"
 	"sigmaos/serr"
 	scproto "sigmaos/sigmaclntsrv/proto"
+	"sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
 
@@ -128,4 +130,70 @@ func (scc *SigmaClntClnt) WriteRead(fd int, data []byte) ([]byte, error) {
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Data: data}
 	rep := scproto.SigmaDataReply{}
 	return scc.rpcData("SigmaClntSrv.WriteRead", &req, &rep)
+}
+
+func (scc *SigmaClntClnt) CreateEphemeral(string, sp.Tperm, sp.Tmode, sp.TleaseId, sp.Tfence) (int, error) {
+	return 0, nil
+}
+
+func (scc *SigmaClntClnt) ClntId() sp.TclntId {
+	return 0
+}
+
+func (scc *SigmaClntClnt) FenceDir(string, sp.Tfence) error {
+	return nil
+}
+
+func (scc *SigmaClntClnt) WriteFence(int, []byte, sp.Tfence) (sp.Tsize, error) {
+	return 0, nil
+}
+
+func (scc *SigmaClntClnt) OpenWatch(path string, m sp.Tmode, w sigmaos.Watch) (int, error) {
+	return 0, nil
+}
+
+func (scc *SigmaClntClnt) SetDirWatch(fd int, dir string, w sigmaos.Watch) error {
+	return nil
+}
+
+func (scc *SigmaClntClnt) SetRemoveWatch(path string, w sigmaos.Watch) error {
+	return nil
+}
+
+func (scc *SigmaClntClnt) MountTree(addrs sp.Taddrs, tree, mount string) error {
+	return nil
+}
+
+func (scc *SigmaClntClnt) IsLocalMount(mnt sp.Tmount) bool {
+	return false
+}
+
+func (scc *SigmaClntClnt) SetLocalMount(mnt *sp.Tmount, port string) {}
+
+func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Path, path.Path, error) {
+	return path.Path{}, path.Path{}, nil
+}
+
+func (scc *SigmaClntClnt) GetNamedMount() sp.Tmount {
+	return sp.NullMount()
+}
+
+func (scc *SigmaClntClnt) NewRootMount(uname string, mntname string) error {
+	return nil
+}
+
+func (scc *SigmaClntClnt) Mounts() []string {
+	return nil
+}
+
+func (scc *SigmaClntClnt) DetachAll() error {
+	return nil
+}
+
+func (scc *SigmaClntClnt) Detach(path string) error {
+	return nil
+}
+
+func (scc *SigmaClntClnt) Disconnect(path string) error {
+	return nil
 }

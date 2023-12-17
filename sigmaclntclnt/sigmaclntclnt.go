@@ -10,7 +10,7 @@ import (
 	"sigmaos/frame"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
-	// "sigmaos/serr"
+	"sigmaos/serr"
 	scproto "sigmaos/sigmaclntsrv/proto"
 	sp "sigmaos/sigmap"
 )
@@ -50,5 +50,9 @@ func (scc *SigmaClntClnt) Stat(path string) (*sp.Stat, error) {
 	if err != nil {
 		return nil, err
 	}
-	return rep.Stat, nil
+	if rep.Err.TErrCode() == serr.TErrNoError {
+		return rep.Stat, nil
+	} else {
+		return nil, sp.NewErr(rep.Err)
+	}
 }

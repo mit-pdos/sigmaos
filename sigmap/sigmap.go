@@ -281,6 +281,10 @@ func String2Taddrs(as string) (Taddrs, error) {
 	return addrs, nil
 }
 
+func (r *Rerror) TErrCode() serr.Terror {
+	return serr.Terror(r.ErrCode)
+}
+
 func NewErr(msg *Rerror) *serr.Err {
 	return &serr.Err{serr.Terror(msg.ErrCode), msg.Obj, fmt.Errorf("%s", msg.Err)}
 }

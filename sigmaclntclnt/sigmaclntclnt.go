@@ -6,7 +6,7 @@ package sigmaclntclnt
 import (
 	"io"
 
-	db "sigmaos/debug"
+	// db "sigmaos/debug"
 	"sigmaos/frame"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
@@ -21,7 +21,6 @@ type SigmaClntClnt struct {
 
 func (scc *SigmaClntClnt) WriteRead(a []byte) ([]byte, error) {
 	if err := frame.WriteFrame(scc.req, a); err != nil {
-		db.DPrintf(db.ALWAYS, "WriteFrame err %v\n", err)
 		return nil, err
 	}
 	b, r := frame.ReadFrame(scc.rep)

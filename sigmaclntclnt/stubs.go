@@ -84,6 +84,12 @@ func (scc *SigmaClntClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, erro
 	return scc.rpcFd("SigmaClntSrv.Create", &req, &rep)
 }
 
+func (scc *SigmaClntClnt) Open(path string, m sp.Tmode) (int, error) {
+	req := scproto.SigmaCreateRequest{Path: path, Mode: uint32(m)}
+	rep := scproto.SigmaFdReply{}
+	return scc.rpcFd("SigmaClntSrv.Open", &req, &rep)
+}
+
 func (scc *SigmaClntClnt) Rename(src, dst string) error {
 	req := scproto.SigmaRenameRequest{Src: src, Dst: dst}
 	rep := scproto.SigmaErrReply{}
@@ -102,7 +108,7 @@ func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
 	return scc.rpcData("SigmaClntSrv.GetFile", &req, &rep)
 }
 
-func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, o sp.Toffset, l sp.TleaseId, data []byte) (sp.Tsize, error) {
+func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error) {
 	req := scproto.SigmaPutFileRequest{Path: path, Perm: uint32(p), Mode: uint32(m), Offset: uint64(o), LeaseId: uint64(l), Data: data}
 	rep := scproto.SigmaSizeReply{}
 	return scc.rpcSize("SigmaClntSrv.PutFile", &req, &rep)

@@ -13,7 +13,8 @@ import (
 type Terror uint32
 
 const (
-	TErrBadattach Terror = iota + 1
+	TErrNoError Terror = iota
+	TErrBadattach
 	TErrBadoffset
 	TErrBadcount
 	TErrBotch
@@ -67,6 +68,8 @@ const (
 
 func (err Terror) String() string {
 	switch err {
+	case TErrNoError:
+		return "No error"
 	case TErrBadattach:
 		return "unknown specifier in attach"
 	case TErrBadoffset:

@@ -1,7 +1,6 @@
 package sigmaclntsrv_test
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -15,7 +14,8 @@ import (
 	"sigmaos/rpcclnt"
 	// "sigmaos/serr"
 	scproto "sigmaos/sigmaclntsrv/proto"
-	// sp "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
+	"sigmaos/test"
 )
 
 type RPCCh struct {
@@ -39,7 +39,12 @@ func (rpcch *RPCCh) StatsSrv() (*rpc.SigmaRPCStats, error) {
 	return nil, nil
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestStat(t *testing.T) {
+	ts := test.NewTstateAll(t)
+
 	cmd := exec.Command("../bin/linux/sigmaclntd", []string{}...)
 	stdin, err := cmd.StdinPipe()
 	assert.Nil(t, err)
@@ -54,11 +59,12 @@ func TestStat(t *testing.T) {
 	rep := scproto.StatReply{}
 
 	rpcch := &RPCCh{stdin, stdout}
-	rpcc, err := rpcclnt.NewRPCClntCh(rpcch)
-	assert.Nil(t, err)
+	rpcc := rpcclnt.NewRPCClntCh(rpcch)
 	rpcc.RPC("SigmaClntSrv.Stat", &req, &rep)
 
-	fmt.Printf("rep: %v\n", rep)
+	db.DPrintf(db.TEST, "rep: stat %v err %v\n", rep.Stat, sp.NewErr(rep.Err))
 
 	cmd.Wait()
+
+	ts.Shutdown()
 }

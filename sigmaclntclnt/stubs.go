@@ -3,6 +3,7 @@ package sigmaclntclnt
 import (
 	"google.golang.org/protobuf/proto"
 
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	scproto "sigmaos/sigmaclntsrv/proto"
@@ -15,11 +16,10 @@ func (scc *SigmaClntClnt) rpcErr(method string, req proto.Message, rep *scproto.
 	if err != nil {
 		return err
 	}
-	if rep.Err.TErrCode() == serr.TErrNoError {
-		return nil
-	} else {
+	if rep.Err.TErrCode() != serr.TErrNoError {
 		return sp.NewErr(rep.Err)
 	}
+	return nil
 }
 
 func (scc *SigmaClntClnt) rpcFd(method string, req proto.Message, rep *scproto.SigmaFdReply) (int, error) {
@@ -27,23 +27,23 @@ func (scc *SigmaClntClnt) rpcFd(method string, req proto.Message, rep *scproto.S
 	if err != nil {
 		return -1, err
 	}
-	if rep.Err.TErrCode() == serr.TErrNoError {
-		return int(rep.Fd), nil
-	} else {
+	db.DPrintf(db.SIGMACLNTCLNT, "rpcFd rep %v\n", rep)
+	if rep.Err.TErrCode() != serr.TErrNoError {
 		return -1, sp.NewErr(rep.Err)
 	}
+	return int(rep.Fd), nil
 }
 
 func (scc *SigmaClntClnt) rpcData(method string, req proto.Message, rep *scproto.SigmaDataReply) ([]byte, error) {
 	err := scc.rpcc.RPC(method, req, rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "rpcData: %v %d %v\n", err, len(rep.Data), rep.Err)
 	if err != nil {
 		return nil, err
 	}
-	if rep.Err.TErrCode() == serr.TErrNoError {
-		return rep.Data, nil
-	} else {
+	if rep.Err.TErrCode() != serr.TErrNoError {
 		return nil, sp.NewErr(rep.Err)
 	}
+	return rep.Data, nil
 }
 
 func (scc *SigmaClntClnt) rpcSize(method string, req proto.Message, rep *scproto.SigmaSizeReply) (sp.Tsize, error) {
@@ -71,11 +71,7 @@ func (scc *SigmaClntClnt) Stat(path string) (*sp.Stat, error) {
 	if err != nil {
 		return nil, err
 	}
-	if rep.Err.TErrCode() == serr.TErrNoError {
-		return rep.Stat, nil
-	} else {
-		return nil, sp.NewErr(rep.Err)
-	}
+	return rep.Stat, nil
 }
 
 func (scc *SigmaClntClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, error) {
@@ -87,6 +83,7 @@ func (scc *SigmaClntClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, erro
 func (scc *SigmaClntClnt) Open(path string, m sp.Tmode) (int, error) {
 	req := scproto.SigmaCreateRequest{Path: path, Mode: uint32(m)}
 	rep := scproto.SigmaFdReply{}
+	db.DPrintf(db.SIGMACLNTCLNT, "Open %v", req)
 	return scc.rpcFd("SigmaClntSrv.Open", &req, &rep)
 }
 
@@ -105,6 +102,7 @@ func (scc *SigmaClntClnt) Remove(path string) error {
 func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
 	req := scproto.SigmaGetFileRequest{Path: path}
 	rep := scproto.SigmaDataReply{}
+	db.DPrintf(db.SIGMACLNTCLNT, "GetFile %v", req)
 	return scc.rpcData("SigmaClntSrv.GetFile", &req, &rep)
 }
 
@@ -135,6 +133,7 @@ func (scc *SigmaClntClnt) Seek(fd int, off sp.Toffset) error {
 func (scc *SigmaClntClnt) WriteRead(fd int, data []byte) ([]byte, error) {
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Data: data}
 	rep := scproto.SigmaDataReply{}
+	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v", req)
 	return scc.rpcData("SigmaClntSrv.WriteRead", &req, &rep)
 }
 

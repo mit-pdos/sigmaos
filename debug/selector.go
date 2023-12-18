@@ -171,6 +171,7 @@ const (
 	KVGRP_ERR               = KVGRP + ERR
 	SESSDEVCLNT             = "SESSDEVCLNT"
 	K8S_UTIL                = "K8S_UTIL"
+	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
 )
 
 // Server Libraries

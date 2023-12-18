@@ -846,6 +846,69 @@ func (x *SigmaSeekRequest) GetOffset() uint64 {
 	return 0
 }
 
+type SigmaMountTreeRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Addr  []*sigmap.Taddr `protobuf:"bytes,1,rep,name=addr,proto3" json:"addr,omitempty"`
+	Tree  string          `protobuf:"bytes,2,opt,name=tree,proto3" json:"tree,omitempty"`
+	Mount string          `protobuf:"bytes,3,opt,name=mount,proto3" json:"mount,omitempty"`
+}
+
+func (x *SigmaMountTreeRequest) Reset() {
+	*x = SigmaMountTreeRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SigmaMountTreeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SigmaMountTreeRequest) ProtoMessage() {}
+
+func (x *SigmaMountTreeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SigmaMountTreeRequest.ProtoReflect.Descriptor instead.
+func (*SigmaMountTreeRequest) Descriptor() ([]byte, []int) {
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *SigmaMountTreeRequest) GetAddr() []*sigmap.Taddr {
+	if x != nil {
+		return x.Addr
+	}
+	return nil
+}
+
+func (x *SigmaMountTreeRequest) GetTree() string {
+	if x != nil {
+		return x.Tree
+	}
+	return ""
+}
+
+func (x *SigmaMountTreeRequest) GetMount() string {
+	if x != nil {
+		return x.Mount
+	}
+	return ""
+}
+
 var File_sigmaclntsrv_proto_sigmaclntsrv_proto protoreflect.FileDescriptor
 
 var file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDesc = []byte{
@@ -911,9 +974,15 @@ var file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDesc = []byte{
 	0x65, 0x65, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x66, 0x64,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x02, 0x66, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x66,
 	0x66, 0x73, 0x65, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06, 0x6f, 0x66, 0x66, 0x73,
-	0x65, 0x74, 0x42, 0x1c, 0x5a, 0x1a, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x73, 0x69,
-	0x67, 0x6d, 0x61, 0x63, 0x6c, 0x6e, 0x74, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x65, 0x74, 0x22, 0x5d, 0x0a, 0x15, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x4d, 0x6f, 0x75, 0x6e, 0x74,
+	0x54, 0x72, 0x65, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x04, 0x61,
+	0x64, 0x64, 0x72, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x06, 0x2e, 0x54, 0x61, 0x64, 0x64,
+	0x72, 0x52, 0x04, 0x61, 0x64, 0x64, 0x72, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x72, 0x65, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x72, 0x65, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x6d,
+	0x6f, 0x75, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x6d, 0x6f, 0x75, 0x6e,
+	0x74, 0x42, 0x1c, 0x5a, 0x1a, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x73, 0x69, 0x67,
+	0x6d, 0x61, 0x63, 0x6c, 0x6e, 0x74, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -928,38 +997,41 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP() []byte {
 	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescData
 }
 
-var file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_sigmaclntsrv_proto_sigmaclntsrv_proto_goTypes = []interface{}{
-	(*SigmaCloseRequest)(nil),   // 0: SigmaCloseRequest
-	(*SigmaErrReply)(nil),       // 1: SigmaErrReply
-	(*SigmaStatRequest)(nil),    // 2: SigmaStatRequest
-	(*SigmaStatReply)(nil),      // 3: SigmaStatReply
-	(*SigmaCreateRequest)(nil),  // 4: SigmaCreateRequest
-	(*SigmaFdReply)(nil),        // 5: SigmaFdReply
-	(*SigmaRenameRequest)(nil),  // 6: SigmaRenameRequest
-	(*SigmaRemoveRequest)(nil),  // 7: SigmaRemoveRequest
-	(*SigmaGetFileRequest)(nil), // 8: SigmaGetFileRequest
-	(*SigmaDataReply)(nil),      // 9: SigmaDataReply
-	(*SigmaPutFileRequest)(nil), // 10: SigmaPutFileRequest
-	(*SigmaSizeReply)(nil),      // 11: SigmaSizeReply
-	(*SigmaReadRequest)(nil),    // 12: SigmaReadRequest
-	(*SigmaWriteRequest)(nil),   // 13: SigmaWriteRequest
-	(*SigmaSeekRequest)(nil),    // 14: SigmaSeekRequest
-	(*sigmap.Rerror)(nil),       // 15: Rerror
-	(*sigmap.Stat)(nil),         // 16: Stat
+	(*SigmaCloseRequest)(nil),     // 0: SigmaCloseRequest
+	(*SigmaErrReply)(nil),         // 1: SigmaErrReply
+	(*SigmaStatRequest)(nil),      // 2: SigmaStatRequest
+	(*SigmaStatReply)(nil),        // 3: SigmaStatReply
+	(*SigmaCreateRequest)(nil),    // 4: SigmaCreateRequest
+	(*SigmaFdReply)(nil),          // 5: SigmaFdReply
+	(*SigmaRenameRequest)(nil),    // 6: SigmaRenameRequest
+	(*SigmaRemoveRequest)(nil),    // 7: SigmaRemoveRequest
+	(*SigmaGetFileRequest)(nil),   // 8: SigmaGetFileRequest
+	(*SigmaDataReply)(nil),        // 9: SigmaDataReply
+	(*SigmaPutFileRequest)(nil),   // 10: SigmaPutFileRequest
+	(*SigmaSizeReply)(nil),        // 11: SigmaSizeReply
+	(*SigmaReadRequest)(nil),      // 12: SigmaReadRequest
+	(*SigmaWriteRequest)(nil),     // 13: SigmaWriteRequest
+	(*SigmaSeekRequest)(nil),      // 14: SigmaSeekRequest
+	(*SigmaMountTreeRequest)(nil), // 15: SigmaMountTreeRequest
+	(*sigmap.Rerror)(nil),         // 16: Rerror
+	(*sigmap.Stat)(nil),           // 17: Stat
+	(*sigmap.Taddr)(nil),          // 18: Taddr
 }
 var file_sigmaclntsrv_proto_sigmaclntsrv_proto_depIdxs = []int32{
-	15, // 0: SigmaErrReply.err:type_name -> Rerror
-	16, // 1: SigmaStatReply.stat:type_name -> Stat
-	15, // 2: SigmaStatReply.err:type_name -> Rerror
-	15, // 3: SigmaFdReply.err:type_name -> Rerror
-	15, // 4: SigmaDataReply.err:type_name -> Rerror
-	15, // 5: SigmaSizeReply.err:type_name -> Rerror
-	6,  // [6:6] is the sub-list for method output_type
-	6,  // [6:6] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	16, // 0: SigmaErrReply.err:type_name -> Rerror
+	17, // 1: SigmaStatReply.stat:type_name -> Stat
+	16, // 2: SigmaStatReply.err:type_name -> Rerror
+	16, // 3: SigmaFdReply.err:type_name -> Rerror
+	16, // 4: SigmaDataReply.err:type_name -> Rerror
+	16, // 5: SigmaSizeReply.err:type_name -> Rerror
+	18, // 6: SigmaMountTreeRequest.addr:type_name -> Taddr
+	7,  // [7:7] is the sub-list for method output_type
+	7,  // [7:7] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() }
@@ -1148,6 +1220,18 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 				return nil
 			}
 		}
+		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SigmaMountTreeRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1155,7 +1239,7 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

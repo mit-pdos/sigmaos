@@ -47,25 +47,18 @@ func NewSigmaClntSrv() (*SigmaClntSrv, error) {
 	return scs, nil
 }
 
+func (scs *SigmaClntSrv) setErr(err error) *sp.Rerror {
+	if err == nil {
+		return sp.NewRerror()
+	} else {
+		return sp.NewRerrorErr(err)
+	}
+}
+
 func (scs *SigmaClntSrv) Close(ctx fs.CtxI, req scproto.SigmaCloseRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.Close(int(req.Fd))
 	db.DPrintf(db.SIGMACLNTSRV, "Close %v err %v\n", req, err)
-	if err == nil {
-		rep.Err = sp.NewRerror()
-	} else {
-		rep.Err = sp.NewRerrorErr(err)
-	}
-	return nil
-}
-
-func (scs *SigmaClntSrv) Create(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
-	fd, err := scs.sc.Create(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode))
-	db.DPrintf(db.SIGMACLNTSRV, "Create %v %v err %v\n", req, fd, err)
-	if err == nil {
-		rep.Err = sp.NewRerror()
-	} else {
-		rep.Err = sp.NewRerrorErr(err)
-	}
+	rep.Err = scs.setErr(err)
 	return nil
 }
 
@@ -73,11 +66,15 @@ func (scs *SigmaClntSrv) Stat(ctx fs.CtxI, req scproto.SigmaStatRequest, rep *sc
 	st, err := scs.sc.Stat(req.Path)
 	db.DPrintf(db.SIGMACLNTSRV, "Stat %v %v %v\n", req, st, err)
 	rep.Stat = st
-	if err == nil {
-		rep.Err = sp.NewRerror()
-	} else {
-		rep.Err = sp.NewRerrorErr(err)
-	}
+	rep.Err = scs.setErr(err)
+	return nil
+}
+
+func (scs *SigmaClntSrv) Create(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
+	fd, err := scs.sc.Create(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode))
+	db.DPrintf(db.SIGMACLNTSRV, "Create %v %v %v\n", req, fd, err)
+	rep.Fd = uint32(fd)
+	rep.Err = scs.setErr(err)
 	return nil
 }
 
@@ -85,11 +82,14 @@ func (scs *SigmaClntSrv) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *
 	fd, err := scs.sc.Open(req.Path, sp.Tmode(req.Mode))
 	db.DPrintf(db.SIGMACLNTSRV, "Open %v %v %v\n", req, fd, err)
 	rep.Fd = uint32(fd)
-	if err == nil {
-		rep.Err = sp.NewRerror()
-	} else {
-		rep.Err = sp.NewRerrorErr(err)
-	}
+	rep.Err = scs.setErr(err)
+	return nil
+}
+
+func (scs *SigmaClntSrv) Remove(ctx fs.CtxI, req scproto.SigmaRemoveRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.Remove(req.Path)
+	db.DPrintf(db.SIGMACLNTSRV, "Remove %v %v\n", req, err)
+	rep.Err = scs.setErr(err)
 	return nil
 }
 
@@ -97,11 +97,15 @@ func (scs *SigmaClntSrv) GetFile(ctx fs.CtxI, req scproto.SigmaGetFileRequest, r
 	d, err := scs.sc.GetFile(req.Path)
 	db.DPrintf(db.SIGMACLNTSRV, "GetFile %v %v %v\n", req, len(d), err)
 	rep.Data = d
-	if err == nil {
-		rep.Err = sp.NewRerror()
-	} else {
-		rep.Err = sp.NewRerrorErr(err)
-	}
+	rep.Err = scs.setErr(err)
+	return nil
+}
+
+func (scs *SigmaClntSrv) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest, rep *scproto.SigmaSizeReply) error {
+	sz, err := scs.sc.PutFile(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), req.Data, sp.Toffset(req.Offset), sp.TleaseId(req.LeaseId))
+	db.DPrintf(db.SIGMACLNTSRV, "PutFile %v %v %v\n", req, len(d), err)
+	rep.Size = uint64(sz)
+	rep.Err = scs.setErr(err)
 	return nil
 }
 
@@ -109,11 +113,7 @@ func (scs *SigmaClntSrv) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *sc
 	d, err := scs.sc.Read(int(req.Fd), sp.Tsize(req.Size))
 	db.DPrintf(db.SIGMACLNTSRV, "Read %v %v %v\n", req, len(d), err)
 	rep.Data = d
-	if err == nil {
-		rep.Err = sp.NewRerror()
-	} else {
-		rep.Err = sp.NewRerrorErr(err)
-	}
+	rep.Err = scs.setErr(err)
 	return nil
 }
 
@@ -121,18 +121,20 @@ func (scs *SigmaClntSrv) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest, r
 	d, err := scs.sc.WriteRead(int(req.Fd), req.Data)
 	db.DPrintf(db.SIGMACLNTSRV, "WriteRead %v %v %v\n", req, len(d), err)
 	rep.Data = d
-	if err == nil {
-		rep.Err = sp.NewRerror()
-	} else {
-		rep.Err = sp.NewRerrorErr(err)
-	}
+	rep.Err = scs.setErr(err)
+	return nil
+}
+
+func (scs *SigmaClntSrv) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.MountTree(req.Addr, req.Tree, req.Mount)
+	db.DPrintf(db.SIGMACLNTSRV, "MountTree %v %v\n", req, err)
+	rep.Err = scs.setErr(err)
 	return nil
 }
 
 func (rpcch *RPCCh) serveRPC() error {
 	f, err := frame.ReadFrame(rpcch.req)
 	if err != nil {
-		db.DPrintf(db.SIGMACLNTSRV, "ReadFrame err %v", err)
 		return err
 	}
 	b, err := rpcch.rpcs.WriteRead(rpcch.ctx, f)

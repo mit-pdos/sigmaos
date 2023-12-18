@@ -79,3 +79,9 @@ message SigmaSeekRequest {
         uint64 offset = 2;
 }
 
+message SigmaMountTreeRequest {
+        repeated Taddr addr = 1;
+        string tree = 2;
+        string mount = 3;
+}
+

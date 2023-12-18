@@ -13,7 +13,7 @@ func TestCompile(t *testing.T) {
 }
 
 func TestStat(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts := test.NewTstate(t)
 
 	st, err := ts.Stat("name/")
 	assert.Nil(t, err)

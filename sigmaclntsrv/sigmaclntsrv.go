@@ -4,6 +4,7 @@
 package sigmaclntsrv
 
 import (
+	"errors"
 	"io"
 	"os"
 
@@ -14,7 +15,7 @@ import (
 	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/rpcsrv"
-	// "sigmaos/serr"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	scproto "sigmaos/sigmaclntsrv/proto"
 	sp "sigmaos/sigmap"
@@ -51,7 +52,12 @@ func (scs *SigmaClntSrv) setErr(err error) *sp.Rerror {
 	if err == nil {
 		return sp.NewRerror()
 	} else {
-		return sp.NewRerrorErr(err)
+		var sr *serr.Err
+		if errors.As(err, &sr) {
+			return sp.NewRerrorSerr(sr)
+		} else {
+			return sp.NewRerrorErr(err)
+		}
 	}
 }
 

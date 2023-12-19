@@ -68,7 +68,7 @@ func (scs *SigmaClntSrv) Close(ctx fs.CtxI, req scproto.SigmaCloseRequest, rep *
 	return nil
 }
 
-func (scs *SigmaClntSrv) Stat(ctx fs.CtxI, req scproto.SigmaStatRequest, rep *scproto.SigmaStatReply) error {
+func (scs *SigmaClntSrv) Stat(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaStatReply) error {
 	st, err := scs.sc.Stat(req.Path)
 	db.DPrintf(db.SIGMACLNTSRV, "Stat %v %v %v\n", req, st, err)
 	rep.Stat = st
@@ -92,14 +92,14 @@ func (scs *SigmaClntSrv) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *
 	return nil
 }
 
-func (scs *SigmaClntSrv) Remove(ctx fs.CtxI, req scproto.SigmaRemoveRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SigmaClntSrv) Remove(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.Remove(req.Path)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "Remove %v %v\n", req, rep)
 	return nil
 }
 
-func (scs *SigmaClntSrv) GetFile(ctx fs.CtxI, req scproto.SigmaGetFileRequest, rep *scproto.SigmaDataReply) error {
+func (scs *SigmaClntSrv) GetFile(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaDataReply) error {
 	d, err := scs.sc.GetFile(req.Path)
 	rep.Data = d
 	rep.Err = scs.setErr(err)
@@ -119,7 +119,15 @@ func (scs *SigmaClntSrv) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *sc
 	d, err := scs.sc.Read(int(req.Fd), sp.Tsize(req.Size))
 	rep.Data = d
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "Read %v %v %v\n", req, len(d), err)
+	db.DPrintf(db.SIGMACLNTSRV, "Read %v %v\n", req, rep)
+	return nil
+}
+
+func (scs *SigmaClntSrv) Write(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaSizeReply) error {
+	sz, err := scs.sc.Write(int(req.Fd), req.Data)
+	rep.Size = uint64(sz)
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "Write %v %v\n", req, rep)
 	return nil
 }
 
@@ -135,6 +143,22 @@ func (scs *SigmaClntSrv) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeReques
 	err := scs.sc.MountTree(req.Addr, req.Tree, req.Mount)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "MountTree %v %v\n", req, rep)
+	return nil
+}
+
+func (scs *SigmaClntSrv) PathLastMount(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaLastMountReply) error {
+	p1, p2, err := scs.sc.PathLastMount(req.Path)
+	rep.Path1 = p1
+	rep.Path2 = p2
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "PastLastMount %v %v\n", req, rep)
+	return nil
+}
+
+func (scs *SigmaClntSrv) Disconnect(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.Disconnect(req.Path)
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "Disconnect %v %v\n", req, rep)
 	return nil
 }
 

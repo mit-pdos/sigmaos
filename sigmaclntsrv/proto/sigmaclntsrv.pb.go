@@ -115,7 +115,7 @@ func (x *SigmaErrReply) GetErr() *sigmap.Rerror {
 	return nil
 }
 
-type SigmaStatRequest struct {
+type SigmaPathRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -123,8 +123,8 @@ type SigmaStatRequest struct {
 	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
 }
 
-func (x *SigmaStatRequest) Reset() {
-	*x = SigmaStatRequest{}
+func (x *SigmaPathRequest) Reset() {
+	*x = SigmaPathRequest{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -132,13 +132,13 @@ func (x *SigmaStatRequest) Reset() {
 	}
 }
 
-func (x *SigmaStatRequest) String() string {
+func (x *SigmaPathRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SigmaStatRequest) ProtoMessage() {}
+func (*SigmaPathRequest) ProtoMessage() {}
 
-func (x *SigmaStatRequest) ProtoReflect() protoreflect.Message {
+func (x *SigmaPathRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -150,12 +150,12 @@ func (x *SigmaStatRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SigmaStatRequest.ProtoReflect.Descriptor instead.
-func (*SigmaStatRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SigmaPathRequest.ProtoReflect.Descriptor instead.
+func (*SigmaPathRequest) Descriptor() ([]byte, []int) {
 	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *SigmaStatRequest) GetPath() string {
+func (x *SigmaPathRequest) GetPath() string {
 	if x != nil {
 		return x.Path
 	}
@@ -390,100 +390,6 @@ func (x *SigmaRenameRequest) GetDst() string {
 	return ""
 }
 
-type SigmaRemoveRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-}
-
-func (x *SigmaRemoveRequest) Reset() {
-	*x = SigmaRemoveRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[7]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *SigmaRemoveRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SigmaRemoveRequest) ProtoMessage() {}
-
-func (x *SigmaRemoveRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[7]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SigmaRemoveRequest.ProtoReflect.Descriptor instead.
-func (*SigmaRemoveRequest) Descriptor() ([]byte, []int) {
-	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *SigmaRemoveRequest) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
-type SigmaGetFileRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-}
-
-func (x *SigmaGetFileRequest) Reset() {
-	*x = SigmaGetFileRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[8]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *SigmaGetFileRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SigmaGetFileRequest) ProtoMessage() {}
-
-func (x *SigmaGetFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[8]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SigmaGetFileRequest.ProtoReflect.Descriptor instead.
-func (*SigmaGetFileRequest) Descriptor() ([]byte, []int) {
-	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *SigmaGetFileRequest) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
 type SigmaDataReply struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -496,7 +402,7 @@ type SigmaDataReply struct {
 func (x *SigmaDataReply) Reset() {
 	*x = SigmaDataReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[9]
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -509,7 +415,7 @@ func (x *SigmaDataReply) String() string {
 func (*SigmaDataReply) ProtoMessage() {}
 
 func (x *SigmaDataReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[9]
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -522,7 +428,7 @@ func (x *SigmaDataReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SigmaDataReply.ProtoReflect.Descriptor instead.
 func (*SigmaDataReply) Descriptor() ([]byte, []int) {
-	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{9}
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SigmaDataReply) GetData() []byte {
@@ -555,7 +461,7 @@ type SigmaPutFileRequest struct {
 func (x *SigmaPutFileRequest) Reset() {
 	*x = SigmaPutFileRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[10]
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -568,7 +474,7 @@ func (x *SigmaPutFileRequest) String() string {
 func (*SigmaPutFileRequest) ProtoMessage() {}
 
 func (x *SigmaPutFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[10]
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -581,7 +487,7 @@ func (x *SigmaPutFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SigmaPutFileRequest.ProtoReflect.Descriptor instead.
 func (*SigmaPutFileRequest) Descriptor() ([]byte, []int) {
-	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{10}
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SigmaPutFileRequest) GetPath() string {
@@ -638,7 +544,7 @@ type SigmaSizeReply struct {
 func (x *SigmaSizeReply) Reset() {
 	*x = SigmaSizeReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[11]
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -651,7 +557,7 @@ func (x *SigmaSizeReply) String() string {
 func (*SigmaSizeReply) ProtoMessage() {}
 
 func (x *SigmaSizeReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[11]
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -664,7 +570,7 @@ func (x *SigmaSizeReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SigmaSizeReply.ProtoReflect.Descriptor instead.
 func (*SigmaSizeReply) Descriptor() ([]byte, []int) {
-	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{11}
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SigmaSizeReply) GetSize() uint64 {
@@ -693,7 +599,7 @@ type SigmaReadRequest struct {
 func (x *SigmaReadRequest) Reset() {
 	*x = SigmaReadRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[12]
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -706,7 +612,7 @@ func (x *SigmaReadRequest) String() string {
 func (*SigmaReadRequest) ProtoMessage() {}
 
 func (x *SigmaReadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[12]
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -719,7 +625,7 @@ func (x *SigmaReadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SigmaReadRequest.ProtoReflect.Descriptor instead.
 func (*SigmaReadRequest) Descriptor() ([]byte, []int) {
-	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{12}
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SigmaReadRequest) GetFd() uint32 {
@@ -748,7 +654,7 @@ type SigmaWriteRequest struct {
 func (x *SigmaWriteRequest) Reset() {
 	*x = SigmaWriteRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[13]
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -761,7 +667,7 @@ func (x *SigmaWriteRequest) String() string {
 func (*SigmaWriteRequest) ProtoMessage() {}
 
 func (x *SigmaWriteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[13]
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -774,7 +680,7 @@ func (x *SigmaWriteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SigmaWriteRequest.ProtoReflect.Descriptor instead.
 func (*SigmaWriteRequest) Descriptor() ([]byte, []int) {
-	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{13}
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SigmaWriteRequest) GetFd() uint32 {
@@ -803,7 +709,7 @@ type SigmaSeekRequest struct {
 func (x *SigmaSeekRequest) Reset() {
 	*x = SigmaSeekRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[14]
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -816,7 +722,7 @@ func (x *SigmaSeekRequest) String() string {
 func (*SigmaSeekRequest) ProtoMessage() {}
 
 func (x *SigmaSeekRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[14]
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -829,7 +735,7 @@ func (x *SigmaSeekRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SigmaSeekRequest.ProtoReflect.Descriptor instead.
 func (*SigmaSeekRequest) Descriptor() ([]byte, []int) {
-	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{14}
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SigmaSeekRequest) GetFd() uint32 {
@@ -859,7 +765,7 @@ type SigmaMountTreeRequest struct {
 func (x *SigmaMountTreeRequest) Reset() {
 	*x = SigmaMountTreeRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[15]
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -872,7 +778,7 @@ func (x *SigmaMountTreeRequest) String() string {
 func (*SigmaMountTreeRequest) ProtoMessage() {}
 
 func (x *SigmaMountTreeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[15]
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -885,7 +791,7 @@ func (x *SigmaMountTreeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SigmaMountTreeRequest.ProtoReflect.Descriptor instead.
 func (*SigmaMountTreeRequest) Descriptor() ([]byte, []int) {
-	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{15}
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SigmaMountTreeRequest) GetAddr() []*sigmap.Taddr {
@@ -909,6 +815,69 @@ func (x *SigmaMountTreeRequest) GetMount() string {
 	return ""
 }
 
+type SigmaLastMountReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Path1 []string       `protobuf:"bytes,1,rep,name=path1,proto3" json:"path1,omitempty"`
+	Path2 []string       `protobuf:"bytes,2,rep,name=path2,proto3" json:"path2,omitempty"`
+	Err   *sigmap.Rerror `protobuf:"bytes,3,opt,name=err,proto3" json:"err,omitempty"`
+}
+
+func (x *SigmaLastMountReply) Reset() {
+	*x = SigmaLastMountReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[14]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SigmaLastMountReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SigmaLastMountReply) ProtoMessage() {}
+
+func (x *SigmaLastMountReply) ProtoReflect() protoreflect.Message {
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[14]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SigmaLastMountReply.ProtoReflect.Descriptor instead.
+func (*SigmaLastMountReply) Descriptor() ([]byte, []int) {
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SigmaLastMountReply) GetPath1() []string {
+	if x != nil {
+		return x.Path1
+	}
+	return nil
+}
+
+func (x *SigmaLastMountReply) GetPath2() []string {
+	if x != nil {
+		return x.Path2
+	}
+	return nil
+}
+
+func (x *SigmaLastMountReply) GetErr() *sigmap.Rerror {
+	if x != nil {
+		return x.Err
+	}
+	return nil
+}
+
 var File_sigmaclntsrv_proto_sigmaclntsrv_proto protoreflect.FileDescriptor
 
 var file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDesc = []byte{
@@ -921,7 +890,7 @@ var file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDesc = []byte{
 	0x64, 0x22, 0x2a, 0x0a, 0x0d, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x45, 0x72, 0x72, 0x52, 0x65, 0x70,
 	0x6c, 0x79, 0x12, 0x19, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
 	0x07, 0x2e, 0x52, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x22, 0x26, 0x0a,
-	0x10, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x53, 0x74, 0x61, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x10, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x50, 0x61, 0x74, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
 	0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
 	0x04, 0x70, 0x61, 0x74, 0x68, 0x22, 0x46, 0x0a, 0x0e, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x53, 0x74,
 	0x61, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x19, 0x0a, 0x04, 0x73, 0x74, 0x61, 0x74, 0x18,
@@ -940,49 +909,49 @@ var file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDesc = []byte{
 	0x67, 0x6d, 0x61, 0x52, 0x65, 0x6e, 0x61, 0x6d, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x12, 0x10, 0x0a, 0x03, 0x73, 0x72, 0x63, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x73,
 	0x72, 0x63, 0x12, 0x10, 0x0a, 0x03, 0x64, 0x73, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x03, 0x64, 0x73, 0x74, 0x22, 0x28, 0x0a, 0x12, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x52, 0x65, 0x6d,
-	0x6f, 0x76, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61,
-	0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x22, 0x29,
-	0x0a, 0x13, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x47, 0x65, 0x74, 0x46, 0x69, 0x6c, 0x65, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x22, 0x3f, 0x0a, 0x0e, 0x53, 0x69, 0x67,
-	0x6d, 0x61, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x12, 0x0a, 0x04, 0x64,
-	0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12,
-	0x19, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x52,
-	0x65, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x22, 0x97, 0x01, 0x0a, 0x13, 0x53,
-	0x69, 0x67, 0x6d, 0x61, 0x50, 0x75, 0x74, 0x46, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x12, 0x12, 0x0a, 0x04, 0x6d, 0x6f,
-	0x64, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x6d, 0x6f, 0x64, 0x65, 0x12, 0x16,
-	0x0a, 0x06, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06,
-	0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x6c, 0x65, 0x61, 0x73, 0x65, 0x49,
-	0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x6c, 0x65, 0x61, 0x73, 0x65, 0x49, 0x64,
-	0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04,
-	0x64, 0x61, 0x74, 0x61, 0x22, 0x3f, 0x0a, 0x0e, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x53, 0x69, 0x7a,
-	0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x04, 0x52, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x12, 0x19, 0x0a, 0x03, 0x65, 0x72,
+	0x03, 0x64, 0x73, 0x74, 0x22, 0x3f, 0x0a, 0x0e, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x44, 0x61, 0x74,
+	0x61, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x19, 0x0a, 0x03, 0x65, 0x72,
 	0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x52, 0x65, 0x72, 0x72, 0x6f, 0x72,
-	0x52, 0x03, 0x65, 0x72, 0x72, 0x22, 0x36, 0x0a, 0x10, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x52, 0x65,
-	0x61, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x66, 0x64, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x02, 0x66, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a,
-	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x22, 0x37, 0x0a,
-	0x11, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x57, 0x72, 0x69, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x66, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x02,
-	0x66, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c,
-	0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x3a, 0x0a, 0x10, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x53,
-	0x65, 0x65, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x66, 0x64,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x02, 0x66, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x66,
-	0x66, 0x73, 0x65, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06, 0x6f, 0x66, 0x66, 0x73,
-	0x65, 0x74, 0x22, 0x5d, 0x0a, 0x15, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x4d, 0x6f, 0x75, 0x6e, 0x74,
-	0x54, 0x72, 0x65, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x04, 0x61,
-	0x64, 0x64, 0x72, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x06, 0x2e, 0x54, 0x61, 0x64, 0x64,
-	0x72, 0x52, 0x04, 0x61, 0x64, 0x64, 0x72, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x72, 0x65, 0x65, 0x18,
-	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x72, 0x65, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x6d,
-	0x6f, 0x75, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x6d, 0x6f, 0x75, 0x6e,
-	0x74, 0x42, 0x1c, 0x5a, 0x1a, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x73, 0x69, 0x67,
-	0x6d, 0x61, 0x63, 0x6c, 0x6e, 0x74, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x52, 0x03, 0x65, 0x72, 0x72, 0x22, 0x97, 0x01, 0x0a, 0x13, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x50,
+	0x75, 0x74, 0x46, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a,
+	0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74,
+	0x68, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x65, 0x72, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52,
+	0x04, 0x70, 0x65, 0x72, 0x6d, 0x12, 0x12, 0x0a, 0x04, 0x6d, 0x6f, 0x64, 0x65, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x0d, 0x52, 0x04, 0x6d, 0x6f, 0x64, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x66, 0x66,
+	0x73, 0x65, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06, 0x6f, 0x66, 0x66, 0x73, 0x65,
+	0x74, 0x12, 0x18, 0x0a, 0x07, 0x6c, 0x65, 0x61, 0x73, 0x65, 0x49, 0x64, 0x18, 0x05, 0x20, 0x01,
+	0x28, 0x04, 0x52, 0x07, 0x6c, 0x65, 0x61, 0x73, 0x65, 0x49, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x64,
+	0x61, 0x74, 0x61, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22,
+	0x3f, 0x0a, 0x0e, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x53, 0x69, 0x7a, 0x65, 0x52, 0x65, 0x70, 0x6c,
+	0x79, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52,
+	0x04, 0x73, 0x69, 0x7a, 0x65, 0x12, 0x19, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x07, 0x2e, 0x52, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72,
+	0x22, 0x36, 0x0a, 0x10, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x52, 0x65, 0x61, 0x64, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x66, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d,
+	0x52, 0x02, 0x66, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x04, 0x52, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x22, 0x37, 0x0a, 0x11, 0x53, 0x69, 0x67, 0x6d,
+	0x61, 0x57, 0x72, 0x69, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a,
+	0x02, 0x66, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x02, 0x66, 0x64, 0x12, 0x12, 0x0a,
+	0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74,
+	0x61, 0x22, 0x3a, 0x0a, 0x10, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x53, 0x65, 0x65, 0x6b, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x66, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x0d, 0x52, 0x02, 0x66, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x22, 0x5d, 0x0a,
+	0x15, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x4d, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x72, 0x65, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x04, 0x61, 0x64, 0x64, 0x72, 0x18, 0x01,
+	0x20, 0x03, 0x28, 0x0b, 0x32, 0x06, 0x2e, 0x54, 0x61, 0x64, 0x64, 0x72, 0x52, 0x04, 0x61, 0x64,
+	0x64, 0x72, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x72, 0x65, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x04, 0x74, 0x72, 0x65, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x22, 0x5c, 0x0a, 0x13,
+	0x53, 0x69, 0x67, 0x6d, 0x61, 0x4c, 0x61, 0x73, 0x74, 0x4d, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65,
+	0x70, 0x6c, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x70, 0x61, 0x74, 0x68, 0x31, 0x18, 0x01, 0x20, 0x03,
+	0x28, 0x09, 0x52, 0x05, 0x70, 0x61, 0x74, 0x68, 0x31, 0x12, 0x14, 0x0a, 0x05, 0x70, 0x61, 0x74,
+	0x68, 0x32, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x70, 0x61, 0x74, 0x68, 0x32, 0x12,
+	0x19, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x52,
+	0x65, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x42, 0x1c, 0x5a, 0x1a, 0x73, 0x69,
+	0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x63, 0x6c, 0x6e, 0x74, 0x73,
+	0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -997,41 +966,41 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP() []byte {
 	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescData
 }
 
-var file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_sigmaclntsrv_proto_sigmaclntsrv_proto_goTypes = []interface{}{
 	(*SigmaCloseRequest)(nil),     // 0: SigmaCloseRequest
 	(*SigmaErrReply)(nil),         // 1: SigmaErrReply
-	(*SigmaStatRequest)(nil),      // 2: SigmaStatRequest
+	(*SigmaPathRequest)(nil),      // 2: SigmaPathRequest
 	(*SigmaStatReply)(nil),        // 3: SigmaStatReply
 	(*SigmaCreateRequest)(nil),    // 4: SigmaCreateRequest
 	(*SigmaFdReply)(nil),          // 5: SigmaFdReply
 	(*SigmaRenameRequest)(nil),    // 6: SigmaRenameRequest
-	(*SigmaRemoveRequest)(nil),    // 7: SigmaRemoveRequest
-	(*SigmaGetFileRequest)(nil),   // 8: SigmaGetFileRequest
-	(*SigmaDataReply)(nil),        // 9: SigmaDataReply
-	(*SigmaPutFileRequest)(nil),   // 10: SigmaPutFileRequest
-	(*SigmaSizeReply)(nil),        // 11: SigmaSizeReply
-	(*SigmaReadRequest)(nil),      // 12: SigmaReadRequest
-	(*SigmaWriteRequest)(nil),     // 13: SigmaWriteRequest
-	(*SigmaSeekRequest)(nil),      // 14: SigmaSeekRequest
-	(*SigmaMountTreeRequest)(nil), // 15: SigmaMountTreeRequest
-	(*sigmap.Rerror)(nil),         // 16: Rerror
-	(*sigmap.Stat)(nil),           // 17: Stat
-	(*sigmap.Taddr)(nil),          // 18: Taddr
+	(*SigmaDataReply)(nil),        // 7: SigmaDataReply
+	(*SigmaPutFileRequest)(nil),   // 8: SigmaPutFileRequest
+	(*SigmaSizeReply)(nil),        // 9: SigmaSizeReply
+	(*SigmaReadRequest)(nil),      // 10: SigmaReadRequest
+	(*SigmaWriteRequest)(nil),     // 11: SigmaWriteRequest
+	(*SigmaSeekRequest)(nil),      // 12: SigmaSeekRequest
+	(*SigmaMountTreeRequest)(nil), // 13: SigmaMountTreeRequest
+	(*SigmaLastMountReply)(nil),   // 14: SigmaLastMountReply
+	(*sigmap.Rerror)(nil),         // 15: Rerror
+	(*sigmap.Stat)(nil),           // 16: Stat
+	(*sigmap.Taddr)(nil),          // 17: Taddr
 }
 var file_sigmaclntsrv_proto_sigmaclntsrv_proto_depIdxs = []int32{
-	16, // 0: SigmaErrReply.err:type_name -> Rerror
-	17, // 1: SigmaStatReply.stat:type_name -> Stat
-	16, // 2: SigmaStatReply.err:type_name -> Rerror
-	16, // 3: SigmaFdReply.err:type_name -> Rerror
-	16, // 4: SigmaDataReply.err:type_name -> Rerror
-	16, // 5: SigmaSizeReply.err:type_name -> Rerror
-	18, // 6: SigmaMountTreeRequest.addr:type_name -> Taddr
-	7,  // [7:7] is the sub-list for method output_type
-	7,  // [7:7] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	15, // 0: SigmaErrReply.err:type_name -> Rerror
+	16, // 1: SigmaStatReply.stat:type_name -> Stat
+	15, // 2: SigmaStatReply.err:type_name -> Rerror
+	15, // 3: SigmaFdReply.err:type_name -> Rerror
+	15, // 4: SigmaDataReply.err:type_name -> Rerror
+	15, // 5: SigmaSizeReply.err:type_name -> Rerror
+	17, // 6: SigmaMountTreeRequest.addr:type_name -> Taddr
+	15, // 7: SigmaLastMountReply.err:type_name -> Rerror
+	8,  // [8:8] is the sub-list for method output_type
+	8,  // [8:8] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() }
@@ -1065,7 +1034,7 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 			}
 		}
 		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SigmaStatRequest); i {
+			switch v := v.(*SigmaPathRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1125,30 +1094,6 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 			}
 		}
 		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SigmaRemoveRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SigmaGetFileRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SigmaDataReply); i {
 			case 0:
 				return &v.state
@@ -1160,7 +1105,7 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 				return nil
 			}
 		}
-		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SigmaPutFileRequest); i {
 			case 0:
 				return &v.state
@@ -1172,7 +1117,7 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 				return nil
 			}
 		}
-		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SigmaSizeReply); i {
 			case 0:
 				return &v.state
@@ -1184,7 +1129,7 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 				return nil
 			}
 		}
-		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SigmaReadRequest); i {
 			case 0:
 				return &v.state
@@ -1196,7 +1141,7 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 				return nil
 			}
 		}
-		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SigmaWriteRequest); i {
 			case 0:
 				return &v.state
@@ -1208,7 +1153,7 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 				return nil
 			}
 		}
-		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SigmaSeekRequest); i {
 			case 0:
 				return &v.state
@@ -1220,8 +1165,20 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 				return nil
 			}
 		}
-		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SigmaMountTreeRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SigmaLastMountReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1239,7 +1196,7 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -66,7 +66,7 @@ func (scc *SigmaClntClnt) Close(fd int) error {
 }
 
 func (scc *SigmaClntClnt) Stat(path string) (*sp.Stat, error) {
-	req := scproto.SigmaStatRequest{Path: path}
+	req := scproto.SigmaPathRequest{Path: path}
 	rep := scproto.SigmaStatReply{}
 	db.DPrintf(db.SIGMACLNTCLNT, "Stat %v", req)
 	err := scc.rpcc.RPC("SigmaClntSrv.Stat", &req, &rep)
@@ -104,14 +104,14 @@ func (scc *SigmaClntClnt) Rename(src, dst string) error {
 }
 
 func (scc *SigmaClntClnt) Remove(path string) error {
-	req := scproto.SigmaRemoveRequest{Path: path}
+	req := scproto.SigmaPathRequest{Path: path}
 	rep := scproto.SigmaErrReply{}
 	db.DPrintf(db.SIGMACLNTCLNT, "Remove %v", req)
 	return scc.rpcErr("SigmaClntSrv.Remove", &req, &rep)
 }
 
 func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
-	req := scproto.SigmaGetFileRequest{Path: path}
+	req := scproto.SigmaPathRequest{Path: path}
 	rep := scproto.SigmaDataReply{}
 	b, err := scc.rpcData("SigmaClntSrv.GetFile", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "GetFile %v", req, rep)
@@ -211,8 +211,17 @@ func (scc *SigmaClntClnt) SetLocalMount(mnt *sp.Tmount, port string) {
 }
 
 func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Path, path.Path, error) {
-	db.DPrintf(db.SIGMACLNTCLNT, "PathLastMount %v", pn)
-	return path.Path{}, path.Path{}, nil
+	req := scproto.SigmaPathRequest{Path: pn}
+	rep := scproto.SigmaLastMountReply{}
+	err := scc.rpcc.RPC("SigmaClntSrv.PathLastMount", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "PathLastMount %v", req, rep)
+	if err != nil {
+		return nil, nil, err
+	}
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return nil, nil, sp.NewErr(rep.Err)
+	}
+	return rep.Path1, rep.Path2, nil
 }
 
 func (scc *SigmaClntClnt) GetNamedMount() sp.Tmount {
@@ -241,6 +250,9 @@ func (scc *SigmaClntClnt) Detach(path string) error {
 }
 
 func (scc *SigmaClntClnt) Disconnect(path string) error {
-	db.DPrintf(db.SIGMACLNTCLNT, "Disconnect %v", path)
-	return nil
+	req := scproto.SigmaPathRequest{Path: path}
+	rep := scproto.SigmaErrReply{}
+	err := scc.rpcErr("SigmaClntSrv.Disconnect", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Disconnect %v %v", req, rep)
+	return err
 }

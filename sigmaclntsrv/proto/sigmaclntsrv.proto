@@ -12,7 +12,7 @@ message SigmaErrReply {
         Rerror err = 1;
 }
 
-message SigmaStatRequest {
+message SigmaPathRequest {
         string path = 1;
 }
 
@@ -35,14 +35,6 @@ message SigmaFdReply {
 message SigmaRenameRequest {
         string src = 1;
         string dst = 2;
-}
-
-message SigmaRemoveRequest {
-        string path = 1;
-}
-
-message SigmaGetFileRequest {
-        string path = 1;
 }
 
 message SigmaDataReply {
@@ -85,3 +77,8 @@ message SigmaMountTreeRequest {
         string mount = 3;
 }
 
+message SigmaLastMountReply {
+        repeated string path1 = 1;
+        repeated string path2 = 2;
+        Rerror err = 3;
+}

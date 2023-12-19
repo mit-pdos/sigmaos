@@ -27,7 +27,6 @@ func (scc *SigmaClntClnt) rpcFd(method string, req proto.Message, rep *scproto.S
 	if err != nil {
 		return -1, err
 	}
-	db.DPrintf(db.SIGMACLNTCLNT, "rpcFd rep %v\n", rep)
 	if rep.Err.TErrCode() != serr.TErrNoError {
 		return -1, sp.NewErr(rep.Err)
 	}
@@ -83,22 +82,25 @@ func (scc *SigmaClntClnt) Stat(path string) (*sp.Stat, error) {
 func (scc *SigmaClntClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, error) {
 	req := scproto.SigmaCreateRequest{Path: path, Perm: uint32(p), Mode: uint32(m)}
 	rep := scproto.SigmaFdReply{}
-	db.DPrintf(db.SIGMACLNTCLNT, "Create %v", req)
-	return scc.rpcFd("SigmaClntSrv.Create", &req, &rep)
+	fd, err := scc.rpcFd("SigmaClntSrv.Create", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Create %v %v", req, rep)
+	return fd, err
 }
 
 func (scc *SigmaClntClnt) Open(path string, m sp.Tmode) (int, error) {
 	req := scproto.SigmaCreateRequest{Path: path, Mode: uint32(m)}
 	rep := scproto.SigmaFdReply{}
-	db.DPrintf(db.SIGMACLNTCLNT, "Open %v", req)
-	return scc.rpcFd("SigmaClntSrv.Open", &req, &rep)
+	fd, err := scc.rpcFd("SigmaClntSrv.Open", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Open %v %v", req, rep)
+	return fd, err
 }
 
 func (scc *SigmaClntClnt) Rename(src, dst string) error {
 	req := scproto.SigmaRenameRequest{Src: src, Dst: dst}
 	rep := scproto.SigmaErrReply{}
-	db.DPrintf(db.SIGMACLNTCLNT, "Rename %v", req)
-	return scc.rpcErr("SigmaClntSrv.Rename", &req, &rep)
+	err := scc.rpcErr("SigmaClntSrv.Rename", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Rename %v %v", req, rep)
+	return err
 }
 
 func (scc *SigmaClntClnt) Remove(path string) error {
@@ -111,43 +113,49 @@ func (scc *SigmaClntClnt) Remove(path string) error {
 func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
 	req := scproto.SigmaGetFileRequest{Path: path}
 	rep := scproto.SigmaDataReply{}
-	db.DPrintf(db.SIGMACLNTCLNT, "GetFile %v", req)
-	return scc.rpcData("SigmaClntSrv.GetFile", &req, &rep)
+	b, err := scc.rpcData("SigmaClntSrv.GetFile", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "GetFile %v", req, rep)
+	return b, err
 }
 
 func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error) {
 	req := scproto.SigmaPutFileRequest{Path: path, Perm: uint32(p), Mode: uint32(m), Offset: uint64(o), LeaseId: uint64(l), Data: data}
 	rep := scproto.SigmaSizeReply{}
-	db.DPrintf(db.SIGMACLNTCLNT, "PutFile %v", req)
-	return scc.rpcSize("SigmaClntSrv.PutFile", &req, &rep)
+	sz, err := scc.rpcSize("SigmaClntSrv.PutFile", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "PutFile %v", req, rep)
+	return sz, err
 }
 
 func (scc *SigmaClntClnt) Read(fd int, sz sp.Tsize) ([]byte, error) {
 	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(sz)}
 	rep := scproto.SigmaDataReply{}
-	db.DPrintf(db.SIGMACLNTCLNT, "Read %v", req)
-	return scc.rpcData("SigmaClntSrv.Read", &req, &rep)
+	b, err := scc.rpcData("SigmaClntSrv.Read", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Read %v %v", req, rep)
+	return b, err
 }
 
 func (scc *SigmaClntClnt) Write(fd int, data []byte) (sp.Tsize, error) {
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Data: data}
 	rep := scproto.SigmaSizeReply{}
-	db.DPrintf(db.SIGMACLNTCLNT, "Write %v", req)
-	return scc.rpcSize("SigmaClntSrv.Write", &req, &rep)
+	sz, err := scc.rpcSize("SigmaClntSrv.Write", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Write %v %v", req, rep)
+	return sz, err
 }
 
 func (scc *SigmaClntClnt) Seek(fd int, off sp.Toffset) error {
 	req := scproto.SigmaSeekRequest{Fd: uint32(fd), Offset: uint64(off)}
 	rep := scproto.SigmaErrReply{}
-	db.DPrintf(db.SIGMACLNTCLNT, "Seek %v", req)
-	return scc.rpcErr("SigmaClntSrv.Seek", &req, &rep)
+	err := scc.rpcErr("SigmaClntSrv.Seek", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Seek %v", req, rep)
+	return err
 }
 
 func (scc *SigmaClntClnt) WriteRead(fd int, data []byte) ([]byte, error) {
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Data: data}
 	rep := scproto.SigmaDataReply{}
-	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v", req)
-	return scc.rpcData("SigmaClntSrv.WriteRead", &req, &rep)
+	b, err := scc.rpcData("SigmaClntSrv.WriteRead", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v", req, rep)
+	return b, err
 }
 
 func (scc *SigmaClntClnt) CreateEphemeral(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error) {
@@ -188,8 +196,9 @@ func (scc *SigmaClntClnt) SetRemoveWatch(path string, w sigmaos.Watch) error {
 func (scc *SigmaClntClnt) MountTree(addrs sp.Taddrs, tree, mount string) error {
 	req := scproto.SigmaMountTreeRequest{Addr: addrs, Tree: tree, Mount: mount}
 	rep := scproto.SigmaErrReply{}
-	db.DPrintf(db.SIGMACLNTCLNT, "MountTree %v", req)
-	return scc.rpcErr("SigmaClntSrv.MountTree", &req, &rep)
+	err := scc.rpcErr("SigmaClntSrv.MountTree", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "MountTree %v %v", req, rep)
+	return err
 }
 
 func (scc *SigmaClntClnt) IsLocalMount(mnt sp.Tmount) bool {

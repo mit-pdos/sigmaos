@@ -74,6 +74,9 @@ func (scc *SigmaClntClnt) Stat(path string) (*sp.Stat, error) {
 	if err != nil {
 		return nil, err
 	}
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return nil, sp.NewErr(rep.Err)
+	}
 	return rep.Stat, nil
 }
 

@@ -88,32 +88,32 @@ func (scs *SigmaClntSrv) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *
 
 func (scs *SigmaClntSrv) Remove(ctx fs.CtxI, req scproto.SigmaRemoveRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.Remove(req.Path)
-	db.DPrintf(db.SIGMACLNTSRV, "Remove %v %v\n", req, err)
 	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "Remove %v %v\n", req, rep)
 	return nil
 }
 
 func (scs *SigmaClntSrv) GetFile(ctx fs.CtxI, req scproto.SigmaGetFileRequest, rep *scproto.SigmaDataReply) error {
 	d, err := scs.sc.GetFile(req.Path)
-	db.DPrintf(db.SIGMACLNTSRV, "GetFile %v %v %v\n", req, len(d), err)
 	rep.Data = d
 	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "GetFile %v %v\n", req, rep)
 	return nil
 }
 
 func (scs *SigmaClntSrv) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest, rep *scproto.SigmaSizeReply) error {
 	sz, err := scs.sc.PutFile(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), req.Data)
-	db.DPrintf(db.SIGMACLNTSRV, "PutFile %v %v %v\n", req, sz, err)
 	rep.Size = uint64(sz)
 	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "PutFile %v %v\n", req, rep)
 	return nil
 }
 
 func (scs *SigmaClntSrv) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaDataReply) error {
 	d, err := scs.sc.Read(int(req.Fd), sp.Tsize(req.Size))
-	db.DPrintf(db.SIGMACLNTSRV, "Read %v %v %v\n", req, len(d), err)
 	rep.Data = d
 	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "Read %v %v %v\n", req, len(d), err)
 	return nil
 }
 
@@ -127,8 +127,8 @@ func (scs *SigmaClntSrv) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest, r
 
 func (scs *SigmaClntSrv) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.MountTree(req.Addr, req.Tree, req.Mount)
-	db.DPrintf(db.SIGMACLNTSRV, "MountTree %v %v\n", req, err)
 	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "MountTree %v %v\n", req, rep)
 	return nil
 }
 

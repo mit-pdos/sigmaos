@@ -226,7 +226,17 @@ func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Path, path.Path, error)
 
 func (scc *SigmaClntClnt) GetNamedMount() sp.Tmount {
 	db.DPrintf(db.SIGMACLNTCLNT, "GetNamedMount")
-	return sp.NullMount()
+	req := scproto.SigmaNullRequest{}
+	rep := scproto.SigmaMountReply{}
+	err := scc.rpcc.RPC("SigmaClntSrv.GetNamedMount", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "PathLastMount %v", req, rep)
+	if err != nil {
+		return sp.NullMount()
+	}
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return sp.NullMount()
+	}
+	return sp.Tmount{rep.Mount}
 }
 
 func (scc *SigmaClntClnt) NewRootMount(uname string, mntname string) error {

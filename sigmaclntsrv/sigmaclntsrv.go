@@ -92,6 +92,13 @@ func (scs *SigmaClntSrv) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *
 	return nil
 }
 
+func (scs *SigmaClntSrv) Rename(ctx fs.CtxI, req scproto.SigmaRenameRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.Rename(req.Src, req.Dst)
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "Rename %v %v\n", req, rep)
+	return nil
+}
+
 func (scs *SigmaClntSrv) Remove(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.Remove(req.Path)
 	rep.Err = scs.setErr(err)
@@ -131,6 +138,13 @@ func (scs *SigmaClntSrv) Write(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *
 	return nil
 }
 
+func (scs *SigmaClntSrv) Seek(ctx fs.CtxI, req scproto.SigmaSeekRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.Seek(int(req.Fd), sp.Toffset(req.Offset))
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "Seek %v %v\n", req, rep)
+	return nil
+}
+
 func (scs *SigmaClntSrv) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaDataReply) error {
 	d, err := scs.sc.WriteRead(int(req.Fd), req.Data)
 	db.DPrintf(db.SIGMACLNTSRV, "WriteRead %v %v %v\n", req, len(d), err)
@@ -151,6 +165,14 @@ func (scs *SigmaClntSrv) PathLastMount(ctx fs.CtxI, req scproto.SigmaPathRequest
 	rep.Path1 = p1
 	rep.Path2 = p2
 	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "PastLastMount %v %v\n", req, rep)
+	return nil
+}
+
+func (scs *SigmaClntSrv) GetNamedMount(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaMountReply) error {
+	mnt := scs.sc.GetNamedMount()
+	rep.Mount = mnt.TmountProto
+	rep.Err = scs.setErr(nil)
 	db.DPrintf(db.SIGMACLNTSRV, "PastLastMount %v %v\n", req, rep)
 	return nil
 }

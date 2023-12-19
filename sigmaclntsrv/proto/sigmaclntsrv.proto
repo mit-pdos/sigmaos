@@ -4,6 +4,9 @@ import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/sigmaclntsrv/proto";
 
+message SigmaNullRequest {
+}
+
 message SigmaCloseRequest {
         uint32 fd = 1;
 }
@@ -81,4 +84,9 @@ message SigmaLastMountReply {
         repeated string path1 = 1;
         repeated string path2 = 2;
         Rerror err = 3;
+}
+
+message SigmaMountReply {
+        TmountProto mount = 1;
+        Rerror err = 2;
 }

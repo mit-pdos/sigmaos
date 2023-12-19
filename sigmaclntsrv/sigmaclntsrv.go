@@ -153,6 +153,48 @@ func (scs *SigmaClntSrv) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest, r
 	return nil
 }
 
+func (scs *SigmaClntSrv) CreateEphemeral(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
+	fd, err := scs.sc.CreateEphemeral(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), sp.TleaseId(req.LeaseId), req.Fence.Tfence())
+	db.DPrintf(db.SIGMACLNTSRV, "CreateEphemeral %v %v %v\n", req, fd, err)
+	rep.Fd = uint32(fd)
+	rep.Err = scs.setErr(err)
+	return nil
+}
+
+func (scs *SigmaClntSrv) ClntId(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaClntIdReply) error {
+	id := scs.sc.ClntId()
+	rep.ClntId = uint64(id)
+	db.DPrintf(db.SIGMACLNTSRV, "ClntId %v %v\n", req, rep)
+	return nil
+}
+
+func (scs *SigmaClntSrv) FenceDir(ctx fs.CtxI, req scproto.SigmaFenceRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.FenceDir(req.Path, req.Fence.Tfence())
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "FenceDir %v %v\n", req, rep)
+	return nil
+}
+
+func (scs *SigmaClntSrv) WriteFence(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaSizeReply) error {
+	sz, err := scs.sc.WriteFence(int(req.Fd), req.Data, req.Fence.Tfence())
+	rep.Size = uint64(sz)
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "WriteFence %v %v\n", req, rep)
+	return nil
+}
+
+func (scs *SigmeClntSrv) watch(ch) {
+}
+
+func (scs *SigmaClntSrv) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
+	fd, err := scs.sc.OpenWatch(req.Path, sp.Tmode(req.Mode), w)
+	db.DPrintf(db.SIGMACLNTSRV, "Open %v %v %v\n", req, fd, err)
+
+	rep.Fd = uint32(fd)
+	rep.Err = scs.setErr(err)
+	return nil
+}
+
 func (scs *SigmaClntSrv) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.MountTree(req.Addr, req.Tree, req.Mount)
 	rep.Err = scs.setErr(err)

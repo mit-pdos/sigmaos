@@ -28,6 +28,8 @@ message SigmaCreateRequest {
         string path = 1;
         uint32 perm = 2;
         uint32 mode = 3;
+        uint64 leaseId = 4;
+        TfenceProto fence = 5;
 }
 
 message SigmaFdReply {
@@ -67,11 +69,22 @@ message SigmaReadRequest {
 message SigmaWriteRequest {
         uint32 fd = 1;
         bytes data = 2;
+        TfenceProto fence = 3;
 }
 
 message SigmaSeekRequest {
         uint32 fd = 1;
         uint64 offset = 2;
+}
+
+message SigmaClntIdReply {
+        uint64 clntId = 1;
+        Rerror err = 2;
+}
+
+message SigmaFenceRequest {
+        string Path = 1;
+        TfenceProto Fence = 2;
 }
 
 message SigmaMountTreeRequest {

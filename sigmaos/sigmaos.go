@@ -35,8 +35,13 @@ type SigmaOS interface {
 	WriteRead(fd int, d []byte) ([]byte, error)
 
 	// Watches
+
+	// If OpenWatch returns Notfound for path, sigmaos will fire w
+	// when path comes into existence.
 	OpenWatch(path string, m sp.Tmode, w Watch) (int, error)
+	// Blocks unil directory changes
 	SetDirWatch(fd int, dir string, w Watch) error
+	// If file exists, block until it doesn't exist
 	SetRemoveWatch(path string, w Watch) error
 
 	// Mounting

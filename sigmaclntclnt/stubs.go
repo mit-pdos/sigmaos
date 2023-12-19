@@ -159,28 +159,49 @@ func (scc *SigmaClntClnt) WriteRead(fd int, data []byte) ([]byte, error) {
 }
 
 func (scc *SigmaClntClnt) CreateEphemeral(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error) {
-	db.DPrintf(db.SIGMACLNTCLNT, "CreateEphemeral %v", path)
-	return 0, nil
+	req := scproto.SigmaCreateRequest{Path: path, Perm: uint32(p), Mode: uint32(m), LeaseId: uint64(l), Fence: f.FenceProto()}
+	rep := scproto.SigmaFdReply{}
+	fd, err := scc.rpcFd("SigmaClntSrv.CreateEphemeral", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "CreateEphemeral %v %v", req, rep)
+	return fd, err
 }
 
 func (scc *SigmaClntClnt) ClntId() sp.TclntId {
-	db.DPrintf(db.SIGMACLNTCLNT, "ClntID")
-	return 0
+	req := scproto.SigmaNullRequest{}
+	rep := scproto.SigmaClntIdReply{}
+	err := scc.rpcc.RPC("SigmaClntSrv.ClntId", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "ClntId %v", req, rep)
+	if err != nil {
+		return 0
+	}
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return 0
+	}
+	return sp.TclntId(rep.ClntId)
 }
 
 func (scc *SigmaClntClnt) FenceDir(path string, f sp.Tfence) error {
-	db.DPrintf(db.SIGMACLNTCLNT, "FenceDir %v", path)
-	return nil
+	req := scproto.SigmaFenceRequest{Path: path, Fence: f.FenceProto()}
+	rep := scproto.SigmaErrReply{}
+	err := scc.rpcc.RPC("SigmaClntSrv.FenceDir", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "FenceDir %v", req, rep)
+	return err
 }
 
 func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
-	db.DPrintf(db.SIGMACLNTCLNT, "WriteFence %v", fd)
-	return 0, nil
+	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Data: d, Fence: f.FenceProto()}
+	rep := scproto.SigmaSizeReply{}
+	sz, err := scc.rpcSize("SigmaClntSrv.Write", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "WriteFence %v %v", req, rep)
+	return sz, err
 }
 
 func (scc *SigmaClntClnt) OpenWatch(path string, m sp.Tmode, w sigmaos.Watch) (int, error) {
-	db.DPrintf(db.SIGMACLNTCLNT, "OpenWatch %v", path)
-	return 0, nil
+	req := scproto.SigmaCreateRequest{Path: path, Mode: uint32(m)}
+	rep := scproto.SigmaFdReply{}
+	fd, err := scc.rpcFd("SigmaClntSrv.OpenWatch", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "OpenWatch %v %v", req, rep)
+	return fd, err
 }
 
 func (scc *SigmaClntClnt) SetDirWatch(fd int, dir string, w sigmaos.Watch) error {
@@ -225,11 +246,10 @@ func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Path, path.Path, error)
 }
 
 func (scc *SigmaClntClnt) GetNamedMount() sp.Tmount {
-	db.DPrintf(db.SIGMACLNTCLNT, "GetNamedMount")
 	req := scproto.SigmaNullRequest{}
 	rep := scproto.SigmaMountReply{}
 	err := scc.rpcc.RPC("SigmaClntSrv.GetNamedMount", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "PathLastMount %v", req, rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "GetNamedMount %v", req, rep)
 	if err != nil {
 		return sp.NullMount()
 	}

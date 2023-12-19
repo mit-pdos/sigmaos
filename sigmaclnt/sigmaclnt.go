@@ -87,12 +87,12 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	return sc, nil
 }
 
-func NewSigmaClntAPI(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*SigmaClnt, error) {
+func NewSigmaClntAPIRootInit(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*SigmaClnt, error) {
 	sc, err := NewSigmaClntFsLibAPI(pcfg, sos)
 	if err != nil {
 		db.DFatalf("NewSigmaClntAPI: %v", err)
 	}
-	sc.ProcAPI = procclnt.NewProcClnt(sc.FsLib)
+	sc.ProcAPI = procclnt.NewProcClntInit(pcfg.GetPID(), sc.FsLib, string(pcfg.GetUname()))
 	return sc, nil
 }
 

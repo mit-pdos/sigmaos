@@ -102,8 +102,8 @@ func (scs *SigmaClntSrv) GetFile(ctx fs.CtxI, req scproto.SigmaGetFileRequest, r
 }
 
 func (scs *SigmaClntSrv) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest, rep *scproto.SigmaSizeReply) error {
-	sz, err := scs.sc.PutFile(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), req.Data, sp.Toffset(req.Offset), sp.TleaseId(req.LeaseId))
-	db.DPrintf(db.SIGMACLNTSRV, "PutFile %v %v %v\n", req, len(d), err)
+	sz, err := scs.sc.PutFile(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), req.Data)
+	db.DPrintf(db.SIGMACLNTSRV, "PutFile %v %v %v\n", req, sz, err)
 	rep.Size = uint64(sz)
 	rep.Err = scs.setErr(err)
 	return nil

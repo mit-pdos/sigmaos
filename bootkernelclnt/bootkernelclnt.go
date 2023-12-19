@@ -1,3 +1,4 @@
+// Package bootkernelclnt starts a SigmaOS kernel
 package bootkernelclnt
 
 import (
@@ -13,10 +14,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-//
-// Library to start kernel
-//
-
+// Shell script that starts the sigmaos container, which invokes Start
+// of [bootkernel]
 const (
 	START = "../start-kernel.sh"
 )
@@ -73,7 +72,7 @@ func newSigmaClnt(pcfg *proc.ProcEnv, sigmaclntd bool) (*sigmaclnt.SigmaClnt, er
 			db.DPrintf(db.ALWAYS, "NewKernelClntStart sigmaclntclnt err %v", err)
 			return nil, err
 		}
-		sc, err = sigmaclnt.NewSigmaClntFsLibAPI(pcfg, scc)
+		sc, err = sigmaclnt.NewSigmaClntAPIRootInit(pcfg, scc)
 	} else {
 		sc, err = sigmaclnt.NewSigmaClntRootInit(pcfg)
 	}

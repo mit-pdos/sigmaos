@@ -196,8 +196,8 @@ func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, e
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) SetDirWatch(fd int, dir string, w sos.Watch) error {
-	db.DPrintf(db.SIGMACLNTCLNT, "SetDirWatch %v", dir)
+func (scc *SigmaClntClnt) DirWait(fd int, dir string) error {
+	db.DPrintf(db.SIGMACLNTCLNT, "DirWatch %v", dir)
 	return nil
 }
 

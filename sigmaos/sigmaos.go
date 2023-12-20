@@ -44,9 +44,9 @@ type SigmaOS interface {
 	// RPC
 	WriteRead(fd int, d []byte) ([]byte, error)
 
-	// Watches
-	// Blocks unil directory changes
-	SetDirWatch(fd int, dir string, w Watch) error
+	// Wait unil directory changes
+	DirWait(fd int, dir string) error
+
 	// If file exists, block until it doesn't exist
 	SetRemoveWatch(path string, w Watch) error
 

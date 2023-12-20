@@ -649,28 +649,42 @@ func TestWatchRemoveOne(t *testing.T) {
 func TestWatchDir(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 
-	fn := gopath.Join(pathname, "d1")
-	err := ts.MkDir(fn, 0777)
-	assert.Equal(t, nil, err)
-
-	_, rdr, err := ts.ReadDir(fn)
+	f := "x"
+	pn := gopath.Join(pathname, "d1")
+	err := ts.MkDir(pn, 0777)
 	assert.Equal(t, nil, err)
 	ch := make(chan bool)
-	err = ts.SetDirWatch(rdr.Fd(), fn, func(path string, err error) {
-		assert.Equal(t, nil, err, path)
-		ch <- true
-	})
-	assert.Equal(t, nil, err)
+	go func() {
+		err := ts.ReadDirWatch(pn, func(sts []*sp.Stat) bool {
+			assert.Equal(t, nil, err)
+			db.DPrintf(db.TEST, "ReadDirWatch %v\n", sp.Names(sts))
+			for _, st := range sts {
+				if st.Name == f {
+					ch <- true
+					return false
+				}
+			}
+			return true
+		})
+		assert.Nil(t, err)
+	}()
 
 	// give Watch goroutine to start
 	time.Sleep(100 * time.Millisecond)
 
-	_, err = ts.PutFile(gopath.Join(fn, "x"), 0777, sp.OWRITE, nil)
+	db.DPrintf(db.TEST, "Putfile")
+
+	pn1 := gopath.Join(pn, f)
+	_, err = ts.PutFile(pn1, 0777, sp.OWRITE, nil)
 	assert.Equal(t, nil, err)
+
+	db.DPrintf(db.TEST, "Putfile done %v", pn1)
 
 	<-ch
 
-	err = ts.RmDir(fn)
+	db.DPrintf(db.TEST, "ReadDirWatch returned")
+
+	err = ts.RmDir(pn)
 	assert.Nil(t, err, "RmDir: %v", err)
 
 	ts.Shutdown()

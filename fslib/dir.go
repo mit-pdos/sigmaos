@@ -91,7 +91,7 @@ func (fl *FsLib) MoveFiles(src, dst string) (int, error) {
 	}
 	n := 0
 	for _, st := range sts {
-		db.DPrintf(db.ALWAYS, "move %v to %v\n", st.Name, dst)
+		db.DPrintf(db.FSLIB, "move %v to %v\n", st.Name, dst)
 		to := dst + "/" + st.Name
 		if fl.Rename(src+"/"+st.Name, to) != nil {
 			return n, err
@@ -168,37 +168,28 @@ type Fwait func([]*sp.Stat) bool
 
 // Keep reading dir until wait returns false (e.g., a new file has
 // been created in dir)
-func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) ([]*sp.Stat, error) {
+func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) error {
 	for {
 		sts, rdr, err := fsl.ReadDir(dir)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if wait(sts) { // wait for new inputs?
-			ch := make(chan error)
-			if err := fsl.SetDirWatch(rdr.fd, dir, func(p string, r error) {
-				ch <- r
-			}); err != nil {
+			db.DPrintf(db.FSLIB, "ReadDirWatch wait %v\n", dir)
+			if err := fsl.DirWait(rdr.fd, dir); err != nil {
 				rdr.Close()
 				if serr.IsErrCode(err, serr.TErrVersion) {
-					db.DPrintf(db.ALWAYS, "ReadDirWatch: Version mismatch %v\n", dir)
-					continue
+					db.DPrintf(db.ALWAYS, "SetDirWatch: Version mismatch %v\n", dir)
+					continue // try again
 				}
-				return nil, err
+				return err
 			}
-			if err := <-ch; err != nil {
-				rdr.Close()
-				if serr.IsErrCode(err, serr.TErrVersion) {
-					db.DPrintf(db.ALWAYS, "ReadDirWatch: Version mismatch %v\n", dir)
-					continue
-				}
-				return nil, err
-			}
+			db.DPrintf(db.FSLIB, "DirWatch %v returned\n", dir)
+			// dir has changed; read again
+		} else {
 			rdr.Close()
-			continue // read again
+			return nil
 		}
-		rdr.Close()
-		return sts, nil
 	}
-	return nil, nil
+	return nil
 }

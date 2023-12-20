@@ -146,7 +146,8 @@ func (urpcc *UnionRPCClnt) GetSrvs() ([]string, error) {
 // Monitor for changes to the set of servers listed in the union directory.
 func (urpcc *UnionRPCClnt) monitorSrvs() {
 	for {
-		sts, err := urpcc.ReadDirWatch(urpcc.path, func(sts []*sp.Stat) bool {
+		var srvs []string
+		err := urpcc.ReadDirWatch(urpcc.path, func(sts []*sp.Stat) bool {
 			// Construct a map of the service IDs in the union dir.
 			srvsMap := map[string]bool{}
 			for _, srvID := range sp.Names(sts) {
@@ -155,6 +156,8 @@ func (urpcc *UnionRPCClnt) monitorSrvs() {
 
 			urpcc.Lock()
 			defer urpcc.Unlock()
+
+			srvs = sp.Names(sts)
 
 			// If the lengths don't match, the union dir has changed. Return false to
 			// stop reading the dir and return into monitorSrvs.
@@ -175,7 +178,6 @@ func (urpcc *UnionRPCClnt) monitorSrvs() {
 		if err != nil {
 			db.DPrintf(urpcc.eSelector, "Error ReadDirWatch monitorSrvs[%v]: %v", urpcc.path, err)
 		}
-		srvs := sp.Names(sts)
 		db.DPrintf(urpcc.lSelector, "monitorSrvs new srv list: %v", srvs)
 		// Update the list of servers.
 		urpcc.Lock()

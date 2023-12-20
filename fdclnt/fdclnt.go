@@ -214,12 +214,24 @@ func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {
 	return nil
 }
 
-func (fdc *FdClient) SetDirWatch(fd int, pn string, w sos.Watch) error {
-	fid, error := fdc.fds.lookup(fd)
-	if error != nil {
-		return error
+func (fdc *FdClient) DirWait(fd int, pn string) error {
+	fid, err := fdc.fds.lookup(fd)
+	if err != nil {
+		return err
 	}
-	return fdc.pc.SetDirWatch(fid, pn, w)
+	db.DPrintf(db.FDCLNT, "DirWait: watch %v\n", pn)
+	ch := make(chan error)
+	if err := fdc.pc.SetDirWatch(fid, pn, func(p string, r error) {
+		db.DPrintf(db.FDCLNT, "SetDirWatch: watch returns %v\n", r)
+		ch <- r
+	}); err != nil {
+		db.DPrintf(db.FDCLNT, "SetDirWatch err %v\n", err)
+		return err
+	}
+	if err := <-ch; err != nil {
+		return err
+	}
+	return nil
 }
 
 func (fdc *FdClient) IsLocalMount(mnt sp.Tmount) bool {

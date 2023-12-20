@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"net"
 
+	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
@@ -94,17 +96,40 @@ func (fdc *FdClient) CreateEphemeral(path string, perm sp.Tperm, mode sp.Tmode, 
 	return fd, nil
 }
 
-func (fdc *FdClient) OpenWatch(path string, mode sp.Tmode, w sos.Watch) (int, error) {
-	fid, err := fdc.pc.OpenWatch(path, fdc.pcfg.GetUname(), mode, w)
-	if err != nil {
-		return -1, err
+func (fdc *FdClient) openWait(path string, mode sp.Tmode) (int, error) {
+	ch := make(chan error)
+	fd := -1
+	for {
+		fid, err := fdc.pc.Open(path, fdc.pcfg.GetUname(), mode, func(path string, err error) {
+			ch <- err
+		})
+		db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", path, err)
+		if serr.IsErrCode(err, serr.TErrNotfound) {
+			r := <-ch
+			if r != nil {
+				db.DPrintf(db.FDCLNT, "Open watch %v err %v\n", path, err)
+			}
+		} else if err != nil {
+			return -1, err
+		} else { // success; file is opened
+			fd = fdc.fds.allocFd(fid, mode)
+			break
+		}
 	}
-	fd := fdc.fds.allocFd(fid, mode)
 	return fd, nil
 }
 
-func (fdc *FdClient) Open(path string, mode sp.Tmode) (int, error) {
-	return fdc.OpenWatch(path, mode, nil)
+func (fdc *FdClient) Open(path string, mode sp.Tmode, w sos.Twait) (int, error) {
+	if w {
+		return fdc.openWait(path, mode)
+	} else {
+		fid, err := fdc.pc.Open(path, fdc.pcfg.GetUname(), mode, nil)
+		if err != nil {
+			return -1, err
+		}
+		fd := fdc.fds.allocFd(fid, mode)
+		return fd, nil
+	}
 }
 
 func (fdc *FdClient) SetRemoveWatch(pn string, w sos.Watch) error {

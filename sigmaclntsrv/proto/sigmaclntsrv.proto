@@ -30,6 +30,7 @@ message SigmaCreateRequest {
         uint32 mode = 3;
         uint64 leaseId = 4;
         TfenceProto fence = 5;
+        bool wait = 6;
 }
 
 message SigmaFdReply {

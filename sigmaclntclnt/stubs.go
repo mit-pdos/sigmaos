@@ -7,7 +7,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	scproto "sigmaos/sigmaclntsrv/proto"
-	"sigmaos/sigmaos"
+	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
 
@@ -35,7 +35,6 @@ func (scc *SigmaClntClnt) rpcFd(method string, req proto.Message, rep *scproto.S
 
 func (scc *SigmaClntClnt) rpcData(method string, req proto.Message, rep *scproto.SigmaDataReply) ([]byte, error) {
 	err := scc.rpcc.RPC(method, req, rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "rpcData: %v %d %v\n", err, len(rep.Data), rep.Err)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +46,6 @@ func (scc *SigmaClntClnt) rpcData(method string, req proto.Message, rep *scproto
 
 func (scc *SigmaClntClnt) rpcSize(method string, req proto.Message, rep *scproto.SigmaSizeReply) (sp.Tsize, error) {
 	err := scc.rpcc.RPC(method, req, rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "rpcSize: %v %v %v\n", err, rep.Size, rep.Err)
 	if err != nil {
 		return 0, err
 	}
@@ -87,9 +85,10 @@ func (scc *SigmaClntClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, erro
 	return fd, err
 }
 
-func (scc *SigmaClntClnt) Open(path string, m sp.Tmode) (int, error) {
-	req := scproto.SigmaCreateRequest{Path: path, Mode: uint32(m)}
+func (scc *SigmaClntClnt) Open(path string, m sp.Tmode, w sos.Twait) (int, error) {
+	req := scproto.SigmaCreateRequest{Path: path, Mode: uint32(m), Wait: bool(w)}
 	rep := scproto.SigmaFdReply{}
+	db.DPrintf(db.SIGMACLNTCLNT, "Invoke open %v", req)
 	fd, err := scc.rpcFd("SigmaClntSrv.Open", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "Open %v %v", req, rep)
 	return fd, err
@@ -121,6 +120,7 @@ func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
 func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error) {
 	req := scproto.SigmaPutFileRequest{Path: path, Perm: uint32(p), Mode: uint32(m), Offset: uint64(o), LeaseId: uint64(l), Data: data}
 	rep := scproto.SigmaSizeReply{}
+	db.DPrintf(db.SIGMACLNTCLNT, "Invoke PutFile %v", req)
 	sz, err := scc.rpcSize("SigmaClntSrv.PutFile", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "PutFile %v", req, rep)
 	return sz, err
@@ -196,20 +196,12 @@ func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, e
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) OpenWatch(path string, m sp.Tmode, w sigmaos.Watch) (int, error) {
-	req := scproto.SigmaCreateRequest{Path: path, Mode: uint32(m)}
-	rep := scproto.SigmaFdReply{}
-	fd, err := scc.rpcFd("SigmaClntSrv.OpenWatch", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "OpenWatch %v %v", req, rep)
-	return fd, err
-}
-
-func (scc *SigmaClntClnt) SetDirWatch(fd int, dir string, w sigmaos.Watch) error {
+func (scc *SigmaClntClnt) SetDirWatch(fd int, dir string, w sos.Watch) error {
 	db.DPrintf(db.SIGMACLNTCLNT, "SetDirWatch %v", dir)
 	return nil
 }
 
-func (scc *SigmaClntClnt) SetRemoveWatch(path string, w sigmaos.Watch) error {
+func (scc *SigmaClntClnt) SetRemoveWatch(path string, w sos.Watch) error {
 	db.DPrintf(db.SIGMACLNTCLNT, "SetRemoveWatch %v", path)
 	return nil
 }

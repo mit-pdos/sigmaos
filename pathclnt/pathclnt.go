@@ -303,8 +303,8 @@ func (pathc *PathClnt) Stat(name string, uname sp.Tuname) (*sp.Stat, error) {
 	}
 }
 
-func (pathc *PathClnt) OpenWatch(pn string, uname sp.Tuname, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {
-	db.DPrintf(db.PATHCLNT, "Open %v %v\n", pn, mode)
+func (pathc *PathClnt) Open(pn string, uname sp.Tuname, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {
+	db.DPrintf(db.PATHCLNT, "Open %v %v %v\n", pn, mode, w)
 	p := path.Split(pn)
 	fid, err := pathc.walk(p, uname, path.EndSlash(pn), w)
 	if err != nil {
@@ -315,10 +315,6 @@ func (pathc *PathClnt) OpenWatch(pn string, uname sp.Tuname, mode sp.Tmode, w so
 		return sp.NoFid, err
 	}
 	return fid, nil
-}
-
-func (pathc *PathClnt) Open(path string, uname sp.Tuname, mode sp.Tmode) (sp.Tfid, error) {
-	return pathc.OpenWatch(path, uname, mode, nil)
 }
 
 func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w sos.Watch) error {

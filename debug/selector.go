@@ -196,6 +196,7 @@ const (
 	RPCCLNT                       = "RPCCLNT"
 	MOUNT                         = "MOUNT"
 	MOUNT_ERR                     = MOUNT + ERR
+	FDCLNT                        = "FDCLNT"
 	PATHCLNT                      = "PATHCLNT"
 	PATHCLNT_ERR                  = PATHCLNT + ERR
 	WALK                          = "WALK"

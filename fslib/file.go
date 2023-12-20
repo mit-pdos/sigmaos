@@ -12,18 +12,21 @@ import (
 	"sigmaos/awriter"
 	db "sigmaos/debug"
 	"sigmaos/reader"
-	"sigmaos/serr"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 	"sigmaos/writer"
 )
 
 //
-// Single shot operations
+// Wrappers
 //
 
-func (fl *FsLib) GetFile(fname string) ([]byte, error) {
-	return fl.SigmaOS.GetFile(fname)
+func (fsl *FsLib) Open(path string, m sp.Tmode) (int, error) {
+	return fsl.SigmaOS.Open(path, m, sos.O_NOW)
+}
+
+func (fsl *FsLib) OpenWait(path string, m sp.Tmode) (int, error) {
+	return fsl.SigmaOS.Open(path, m, sos.O_WAIT)
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sp.Tsize, error) {
@@ -128,25 +131,11 @@ func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
 	return r, nil
 }
 
-func (fl *FsLib) OpenReaderWatch(path string) (*FdReader, error) {
-	ch := make(chan error)
-	fd := -1
-	for {
-		fd1, err := fl.OpenWatch(path, sp.OREAD, func(path string, err error) {
-			ch <- err
-		})
-		db.DPrintf(db.FSLIB, "OpenWatch %v err %v\n", path, err)
-		if serr.IsErrCode(err, serr.TErrNotfound) {
-			r := <-ch
-			if r != nil {
-				db.DPrintf(db.FSLIB, "OpenWatch watch %v err %v\n", path, err)
-			}
-		} else if err != nil {
-			return nil, err
-		} else { // success; file is opened
-			fd = fd1
-			break
-		}
+func (fl *FsLib) OpenWaitReader(path string) (*FdReader, error) {
+	fd, err := fl.SigmaOS.Open(path, sp.OREAD, sos.O_WAIT)
+	db.DPrintf(db.FSLIB, "OpenWaitReader %v err %v\n", path, err)
+	if err != nil {
+		return nil, err
 	}
 	rdr := fl.NewReader(fd, path)
 	return rdr, nil
@@ -154,7 +143,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*FdReader, error) {
 }
 
 func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
-	rdr, err := fl.OpenReaderWatch(path)
+	rdr, err := fl.OpenWaitReader(path)
 	if err != nil {
 		return nil, err
 	}

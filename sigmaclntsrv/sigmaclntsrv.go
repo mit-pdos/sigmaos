@@ -18,6 +18,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	scproto "sigmaos/sigmaclntsrv/proto"
+	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
 
@@ -85,7 +86,7 @@ func (scs *SigmaClntSrv) Create(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep
 }
 
 func (scs *SigmaClntSrv) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
-	fd, err := scs.sc.Open(req.Path, sp.Tmode(req.Mode))
+	fd, err := scs.sc.SigmaOS.Open(req.Path, sp.Tmode(req.Mode), sos.Twait(req.Wait))
 	db.DPrintf(db.SIGMACLNTSRV, "Open %v %v %v\n", req, fd, err)
 	rep.Fd = uint32(fd)
 	rep.Err = scs.setErr(err)
@@ -115,6 +116,7 @@ func (scs *SigmaClntSrv) GetFile(ctx fs.CtxI, req scproto.SigmaPathRequest, rep 
 }
 
 func (scs *SigmaClntSrv) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest, rep *scproto.SigmaSizeReply) error {
+	db.DPrintf(db.SIGMACLNTSRV, "Invoke PutFile %v %v\n", req)
 	sz, err := scs.sc.PutFile(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), req.Data)
 	rep.Size = uint64(sz)
 	rep.Err = scs.setErr(err)
@@ -180,18 +182,6 @@ func (scs *SigmaClntSrv) WriteFence(ctx fs.CtxI, req scproto.SigmaWriteRequest, 
 	rep.Size = uint64(sz)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "WriteFence %v %v\n", req, rep)
-	return nil
-}
-
-func (scs *SigmeClntSrv) watch(ch) {
-}
-
-func (scs *SigmaClntSrv) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
-	fd, err := scs.sc.OpenWatch(req.Path, sp.Tmode(req.Mode), w)
-	db.DPrintf(db.SIGMACLNTSRV, "Open %v %v %v\n", req, fd, err)
-
-	rep.Fd = uint32(fd)
-	rep.Err = scs.setErr(err)
 	return nil
 }
 

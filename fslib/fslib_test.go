@@ -592,22 +592,26 @@ func TestWatchCreate(t *testing.T) {
 
 	fn := gopath.Join(pathname, "w")
 	ch := make(chan bool)
-	fd, err := ts.OpenWatch(fn, sp.OREAD, func(string, error) {
-		ch <- true
-		db.DPrintf(db.TEST, "Watch done")
-	})
-	assert.NotNil(t, err, "Err not nil: %v", err)
-	assert.Equal(t, -1, fd, err)
 
-	assert.True(t, serr.IsErrCode(err, serr.TErrNotfound))
+	go func() {
+		db.DPrintf(db.TEST, "Invoke OpenWait")
+		fd, err := ts.OpenWait(fn, sp.OREAD)
+		assert.Nil(t, err)
+		assert.NotEqual(t, -1, fd)
+		db.DPrintf(db.TEST, "OpenWait done")
+		ch <- true
+	}()
 
 	// give Watch goroutine to start
 	time.Sleep(100 * time.Millisecond)
 
 	db.DPrintf(db.TEST, "PutFile")
-	_, err = ts.PutFile(fn, 0777, sp.OWRITE, nil)
+
+	_, err := ts.PutFile(fn, 0777, sp.OWRITE, nil)
 	assert.Nil(t, err, "Error PutFile: %v", err)
 	db.DPrintf(db.TEST, "PutFile done")
+
+	db.DPrintf(db.TEST, "Wait for OpenWait to return")
 
 	<-ch
 

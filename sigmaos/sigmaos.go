@@ -8,13 +8,23 @@ import (
 
 type Watch func(string, error)
 
+type Twait bool
+
+const (
+	O_NOW  Twait = false
+	O_WAIT Twait = true
+)
+
 type SigmaOS interface {
 	// Core interface
 
 	Close(fd int) error
 	Stat(path string) (*sp.Stat, error)
 	Create(path string, p sp.Tperm, m sp.Tmode) (int, error)
-	Open(path string, m sp.Tmode) (int, error)
+
+	// If w, then wait until path exists before opening it
+	Open(path string, m sp.Tmode, w Twait) (int, error)
+
 	Rename(srcpath string, dstpath string) error
 	Remove(path string) error
 	GetFile(path string) ([]byte, error)
@@ -35,10 +45,6 @@ type SigmaOS interface {
 	WriteRead(fd int, d []byte) ([]byte, error)
 
 	// Watches
-
-	// If OpenWatch returns Notfound for path, sigmaos will fire w
-	// when path comes into existence.
-	OpenWatch(path string, m sp.Tmode, w Watch) (int, error)
 	// Blocks unil directory changes
 	SetDirWatch(fd int, dir string, w Watch) error
 	// If file exists, block until it doesn't exist

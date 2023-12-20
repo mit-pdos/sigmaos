@@ -629,19 +629,25 @@ func TestWatchRemoveOne(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
-	err = ts.SetRemoveWatch(fn, func(path string, err error) {
-		assert.Equal(t, nil, err, path)
+	go func() {
+		err := ts.WaitRemove(fn)
+		assert.Nil(t, err)
 		ch <- true
-	})
-	assert.Equal(t, nil, err)
+	}()
 
 	// give Watch goroutine to start
 	time.Sleep(100 * time.Millisecond)
 
+	db.DPrintf(db.TEST, "Remove %v", fn)
+
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
 
+	db.DPrintf(db.TEST, "Wait for RemoveWait to return")
+
 	<-ch
+
+	db.DPrintf(db.TEST, "RemoveWait returns")
 
 	ts.Shutdown()
 }
@@ -655,9 +661,8 @@ func TestWatchDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 	ch := make(chan bool)
 	go func() {
-		err := ts.ReadDirWatch(pn, func(sts []*sp.Stat) bool {
-			assert.Equal(t, nil, err)
-			db.DPrintf(db.TEST, "ReadDirWatch %v\n", sp.Names(sts))
+		err := ts.ReadDirWait(pn, func(sts []*sp.Stat) bool {
+			db.DPrintf(db.TEST, "ReadDirWait %v\n", sp.Names(sts))
 			for _, st := range sts {
 				if st.Name == f {
 					ch <- true
@@ -682,7 +687,7 @@ func TestWatchDir(t *testing.T) {
 
 	<-ch
 
-	db.DPrintf(db.TEST, "ReadDirWatch returned")
+	db.DPrintf(db.TEST, "ReadDirWait returned")
 
 	err = ts.RmDir(pn)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -748,8 +753,8 @@ func TestWatchDir(t *testing.T) {
 //	ts.Shutdown()
 //}
 
-// Concurrently remove & watch, but watch may be set after remove.
-func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
+// Concurrently remove & wait
+func TestWatchRemoveWaitConcur(t *testing.T) {
 	const N = 100 // 10_000
 
 	ts := test.NewTstatePath(t, pathname)
@@ -757,7 +762,6 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 
-	ch := make(chan error)
 	done := make(chan bool)
 	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
 	fsl, err := fslib.NewFsLib(pcfg)
@@ -770,12 +774,8 @@ func TestWatchRemoveConcurAsynchWatchSet(t *testing.T) {
 	for i := 0; i < N; i++ {
 		fn := gopath.Join(dn, strconv.Itoa(i))
 		go func(fn string) {
-			err := ts.SetRemoveWatch(fn, func(fn string, r error) {
-				// log.Printf("watch cb %v err %v\n", i, r)
-				ch <- r
-			})
-			// Either no error, or remove already happened.
-			assert.True(ts.T, err == nil || serr.IsErrCode(err, serr.TErrNotfound), "Unexpected RemoveWatch error: %v", err)
+			err := ts.WaitRemove(fn)
+			assert.True(ts.T, err == nil, "Unexpected RemoveWatch error: %v", err)
 			done <- true
 		}(fn)
 		go func(fn string) {

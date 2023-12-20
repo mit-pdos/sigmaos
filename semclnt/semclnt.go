@@ -43,15 +43,9 @@ func (c *SemClnt) InitLease(perm sp.Tperm, lid sp.TleaseId) error {
 
 // Down semaphore. If not upped yet (i.e., if file exists), block
 func (c *SemClnt) Down() error {
-	signal := make(chan error)
 	for i := 0; i < pathclnt.MAXRETRY; i++ {
 		db.DPrintf(db.SEMCLNT, "Down %d %v\n", i, c.path)
-		err := c.SigmaOS.SetRemoveWatch(c.path, func(p string, err1 error) {
-			if err1 != nil {
-				db.DPrintf(db.SEMCLNT_ERR, "watch %v err %v\n", c.path, err1)
-			}
-			signal <- err1
-		})
+		err := c.WaitRemove(c.path)
 		// If err is because file has been removed, then no error: the
 		// semaphore has been "upped".
 		if serr.IsErrCode(err, serr.TErrNotfound) {
@@ -64,26 +58,12 @@ func (c *SemClnt) Down() error {
 			continue
 		}
 		if err == nil {
-			db.DPrintf(db.SEMCLNT, "semaphore wait %v\n", c.path)
-			err = <-signal
+			db.DPrintf(db.SEMCLNT, "semaphore done wait %v\n", c.path)
+			return nil
 		} else {
 			db.DPrintf(db.SEMCLNT_ERR, "down %v err %v\n", c.path, err)
 			return err
 		}
-		if serr.IsErrCode(err, serr.TErrVersion) {
-			db.DPrintf(db.SEMCLNT_ERR, "down %v retry err %v\n", c.path, err)
-			continue
-		}
-		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", c.path, err)
-			time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
-			continue
-		}
-		if err != nil {
-			db.DPrintf(db.SEMCLNT_ERR, "down %v watch err %v\n", c.path, err)
-			return err
-		}
-		return nil
 	}
 	db.DPrintf(db.SEMCLNT_ERR, "Down failed after %d retries\n", pathclnt.MAXRETRY)
 	return serr.NewErr(serr.TErrUnreachable, c.path)

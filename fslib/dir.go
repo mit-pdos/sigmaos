@@ -168,7 +168,7 @@ type Fwait func([]*sp.Stat) bool
 
 // Keep reading dir until wait returns false (e.g., a new file has
 // been created in dir)
-func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) error {
+func (fsl *FsLib) ReadDirWait(dir string, wait Fwait) error {
 	for {
 		sts, rdr, err := fsl.ReadDir(dir)
 		if err != nil {
@@ -192,4 +192,20 @@ func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) error {
 		}
 	}
 	return nil
+}
+
+func (fsl *FsLib) WaitRemove(pn string) error {
+	dir := path.Dir(pn) + "/"
+	f := path.Base(pn)
+	db.DPrintf(db.TEST, "WaitRemove: ReadDirWait dir %v\n", dir)
+	err := fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
+		db.DPrintf(db.TEST, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
+		for _, st := range sts {
+			if st.Name == f {
+				return true
+			}
+		}
+		return false
+	})
+	return err
 }

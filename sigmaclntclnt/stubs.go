@@ -201,11 +201,6 @@ func (scc *SigmaClntClnt) DirWait(fd int, dir string) error {
 	return nil
 }
 
-func (scc *SigmaClntClnt) SetRemoveWatch(path string, w sos.Watch) error {
-	db.DPrintf(db.SIGMACLNTCLNT, "SetRemoveWatch %v", path)
-	return nil
-}
-
 func (scc *SigmaClntClnt) MountTree(addrs sp.Taddrs, tree, mount string) error {
 	req := scproto.SigmaMountTreeRequest{Addr: addrs, Tree: tree, Mount: mount}
 	rep := scproto.SigmaErrReply{}

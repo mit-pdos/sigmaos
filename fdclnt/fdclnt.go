@@ -132,10 +132,6 @@ func (fdc *FdClient) Open(path string, mode sp.Tmode, w sos.Twait) (int, error) 
 	}
 }
 
-func (fdc *FdClient) SetRemoveWatch(pn string, w sos.Watch) error {
-	return fdc.pc.SetRemoveWatch(pn, fdc.pcfg.GetUname(), w)
-}
-
 func (fdc *FdClient) Rename(old, new string) error {
 	return fdc.pc.Rename(old, new, fdc.pcfg.GetUname())
 }

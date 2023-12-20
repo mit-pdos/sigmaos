@@ -11,9 +11,10 @@ import (
 	"sigmaos/rand"
 	"sigmaos/reader"
 	"sigmaos/serr"
-	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
+
+type Watch func(string, error)
 
 //
 // The Sigma file system API at the level of pathnames.  The
@@ -303,7 +304,7 @@ func (pathc *PathClnt) Stat(name string, uname sp.Tuname) (*sp.Stat, error) {
 	}
 }
 
-func (pathc *PathClnt) Open(pn string, uname sp.Tuname, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {
+func (pathc *PathClnt) Open(pn string, uname sp.Tuname, mode sp.Tmode, w Watch) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "Open %v %v %v\n", pn, mode, w)
 	p := path.Split(pn)
 	fid, err := pathc.walk(p, uname, path.EndSlash(pn), w)
@@ -317,7 +318,7 @@ func (pathc *PathClnt) Open(pn string, uname sp.Tuname, mode sp.Tmode, w sos.Wat
 	return fid, nil
 }
 
-func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w sos.Watch) error {
+func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w Watch) error {
 	db.DPrintf(db.PATHCLNT, "SetDirWatch %v\n", fid)
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
@@ -331,7 +332,7 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w sos.Watch) error 
 	return nil
 }
 
-func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w sos.Watch) error {
+func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w Watch) error {
 	db.DPrintf(db.PATHCLNT, "SetRemoveWatch %v", pn)
 	p := path.Split(pn)
 	fid, err := pathc.walk(p, uname, path.EndSlash(pn), nil)

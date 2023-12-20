@@ -6,8 +6,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Watch func(string, error)
-
 type Twait bool
 
 const (
@@ -46,9 +44,6 @@ type SigmaOS interface {
 
 	// Wait unil directory changes
 	DirWait(fd int, dir string) error
-
-	// If file exists, block until it doesn't exist
-	SetRemoveWatch(path string, w Watch) error
 
 	// Mounting
 	MountTree(addrs sp.Taddrs, tree, mount string) error

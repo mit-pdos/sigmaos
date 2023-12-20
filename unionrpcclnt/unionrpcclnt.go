@@ -147,7 +147,7 @@ func (urpcc *UnionRPCClnt) GetSrvs() ([]string, error) {
 func (urpcc *UnionRPCClnt) monitorSrvs() {
 	for {
 		var srvs []string
-		err := urpcc.ReadDirWatch(urpcc.path, func(sts []*sp.Stat) bool {
+		err := urpcc.ReadDirWait(urpcc.path, func(sts []*sp.Stat) bool {
 			// Construct a map of the service IDs in the union dir.
 			srvsMap := map[string]bool{}
 			for _, srvID := range sp.Names(sts) {

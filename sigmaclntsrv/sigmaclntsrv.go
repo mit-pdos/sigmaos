@@ -5,12 +5,11 @@ package sigmaclntsrv
 
 import (
 	"errors"
-	"io"
 	"os"
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/frame"
+	"sigmaos/demux"
 	"sigmaos/fs"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
@@ -23,8 +22,7 @@ import (
 )
 
 type RPCCh struct {
-	req  io.Reader
-	rep  io.Writer
+	dmx  *demux.DemuxSrv
 	rpcs *rpcsrv.RPCSrv
 	ctx  fs.CtxI
 }
@@ -216,19 +214,12 @@ func (scs *SigmaClntSrv) Disconnect(ctx fs.CtxI, req scproto.SigmaPathRequest, r
 	return nil
 }
 
-func (rpcch *RPCCh) serveRPC() error {
-	f, err := frame.ReadFrame(rpcch.req)
-	if err != nil {
-		return err
-	}
+func (rpcch *RPCCh) ServeRequest(f []byte) ([]byte, *serr.Err) {
 	b, err := rpcch.rpcs.WriteRead(rpcch.ctx, f)
 	if err != nil {
-		return err
+		db.DPrintf(db.SIGMACLNTSRV, "serveRPC: writeRead err %v\n", err)
 	}
-	if err := frame.WriteFrame(rpcch.rep, b); err != nil {
-		return err
-	}
-	return nil
+	return b, err
 }
 
 func RunSigmaClntSrv(args []string) error {
@@ -237,11 +228,9 @@ func RunSigmaClntSrv(args []string) error {
 		return err
 	}
 	rpcs := rpcsrv.NewRPCSrv(scs, nil)
-	rpcch := &RPCCh{os.Stdin, os.Stdout, rpcs, ctx.NewCtxNull()}
-	for {
-		if err := rpcch.serveRPC(); err != nil {
-			db.DPrintf(db.SIGMACLNTSRV, "Handle err %v\n", err)
-		}
-	}
+	rpcch := &RPCCh{nil, rpcs, ctx.NewCtxNull()}
+	rpcch.dmx = demux.NewDemuxSrv(os.Stdin, os.Stdout, rpcch)
+	ch := make(chan struct{})
+	<-ch
 	return nil
 }

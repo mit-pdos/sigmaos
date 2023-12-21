@@ -208,6 +208,7 @@ const (
 const (
 	NETSRV             Tselector = "NETSRV"
 	NETSRV_ERR                   = NETSRV + ERR
+	DEMUXSRV                     = "DEMUXSRV"
 	REPLRAFT                     = "REPLRAFT"
 	RAFT_TIMING                  = "RAFT_TIMING"
 	REPLY_TABLE                  = "REPLY_TABLE"

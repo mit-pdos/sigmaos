@@ -43,7 +43,7 @@ type SigmaOS interface {
 	WriteRead(fd int, d []byte) ([]byte, error)
 
 	// Wait unil directory changes
-	DirWait(fd int, dir string) error
+	DirWait(fd int) error
 
 	// Mounting
 	MountTree(addrs sp.Taddrs, tree, mount string) error

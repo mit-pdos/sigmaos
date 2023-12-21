@@ -14,7 +14,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Watch func(string, error)
+type Watch func(error)
 
 //
 // The Sigma file system API at the level of pathnames.  The
@@ -318,15 +318,15 @@ func (pathc *PathClnt) Open(pn string, uname sp.Tuname, mode sp.Tmode, w Watch) 
 	return fid, nil
 }
 
-func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, path string, w Watch) error {
+func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w Watch) error {
 	db.DPrintf(db.PATHCLNT, "SetDirWatch %v\n", fid)
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
 		db.DPrintf(db.PATHCLNT, "SetDirWatch: Watch returns %v %v\n", fid, err)
 		if err == nil {
-			w(path, nil)
+			w(nil)
 		} else {
-			w(path, err)
+			w(err)
 		}
 	}()
 	return nil
@@ -347,9 +347,9 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w Watch) error
 		err := pathc.FidClnt.Watch(fid)
 		db.DPrintf(db.PATHCLNT, "SetRemoveWatch: Watch %v %v err %v\n", fid, pn, err)
 		if err == nil {
-			w(pn, nil)
+			w(nil)
 		} else {
-			w(pn, err)
+			w(err)
 		}
 		pathc.Clunk(fid)
 	}()

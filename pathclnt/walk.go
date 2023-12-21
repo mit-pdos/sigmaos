@@ -242,7 +242,7 @@ func (pathc *PathClnt) setWatch(fid sp.Tfid, p path.Path, r path.Path, w Watch) 
 		err := pathc.FidClnt.Watch(fid1)
 		pathc.FidClnt.Clunk(fid1)
 		db.DPrintf(db.PATHCLNT, "setWatch: Watch returns %v %v\n", p, err)
-		w(p.String(), err)
+		w(err)
 	}()
 	return sp.NoFid, nil
 }

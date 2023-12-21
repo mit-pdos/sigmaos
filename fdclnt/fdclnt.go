@@ -100,7 +100,7 @@ func (fdc *FdClient) openWait(path string, mode sp.Tmode) (int, error) {
 	ch := make(chan error)
 	fd := -1
 	for {
-		fid, err := fdc.pc.Open(path, fdc.pcfg.GetUname(), mode, func(path string, err error) {
+		fid, err := fdc.pc.Open(path, fdc.pcfg.GetUname(), mode, func(err error) {
 			ch <- err
 		})
 		db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", path, err)
@@ -210,14 +210,14 @@ func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {
 	return nil
 }
 
-func (fdc *FdClient) DirWait(fd int, pn string) error {
+func (fdc *FdClient) DirWait(fd int) error {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.FDCLNT, "DirWait: watch %v\n", pn)
+	db.DPrintf(db.FDCLNT, "DirWait: watch fd %v\n", fd)
 	ch := make(chan error)
-	if err := fdc.pc.SetDirWatch(fid, pn, func(p string, r error) {
+	if err := fdc.pc.SetDirWatch(fid, func(r error) {
 		db.DPrintf(db.FDCLNT, "SetDirWatch: watch returns %v\n", r)
 		ch <- r
 	}); err != nil {

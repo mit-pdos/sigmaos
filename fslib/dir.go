@@ -176,7 +176,7 @@ func (fsl *FsLib) ReadDirWait(dir string, wait Fwait) error {
 		}
 		if wait(sts) { // wait for new inputs?
 			db.DPrintf(db.FSLIB, "ReadDirWatch wait %v\n", dir)
-			if err := fsl.DirWait(rdr.fd, dir); err != nil {
+			if err := fsl.DirWait(rdr.fd); err != nil {
 				rdr.Close()
 				if serr.IsErrCode(err, serr.TErrVersion) {
 					db.DPrintf(db.ALWAYS, "SetDirWatch: Version mismatch %v\n", dir)

@@ -184,6 +184,13 @@ func (scs *SigmaClntSrv) WriteFence(ctx fs.CtxI, req scproto.SigmaWriteRequest, 
 	return nil
 }
 
+func (scs *SigmaClntSrv) DirWait(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.DirWait(int(req.Fd))
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "DirWait %v %v\n", req, rep)
+	return nil
+}
+
 func (scs *SigmaClntSrv) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.MountTree(req.Addr, req.Tree, req.Mount)
 	rep.Err = scs.setErr(err)

@@ -170,7 +170,7 @@ func (scc *SigmaClntClnt) ClntId() sp.TclntId {
 	req := scproto.SigmaNullRequest{}
 	rep := scproto.SigmaClntIdReply{}
 	err := scc.rpcc.RPC("SigmaClntSrv.ClntId", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "ClntId %v", req, rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "ClntId %v", rep)
 	if err != nil {
 		return 0
 	}

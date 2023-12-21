@@ -164,6 +164,7 @@ func (scs *SigmaClntSrv) CreateEphemeral(ctx fs.CtxI, req scproto.SigmaCreateReq
 func (scs *SigmaClntSrv) ClntId(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaClntIdReply) error {
 	id := scs.sc.ClntId()
 	rep.ClntId = uint64(id)
+	rep.Err = scs.setErr(nil)
 	db.DPrintf(db.SIGMACLNTSRV, "ClntId %v %v\n", req, rep)
 	return nil
 }

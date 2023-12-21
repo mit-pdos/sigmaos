@@ -327,8 +327,10 @@ func (imgd *ImgSrv) Work() {
 	stop := false
 	for !stop {
 		db.DPrintf(db.IMGD, "ReadDirWatch %v", imgd.todo)
-		sts, err := imgd.ReadDirWatch(imgd.todo, func(sts []*sp.Stat) bool {
-			return len(sts) == 0
+		var sts []*sp.Stat
+		err := imgd.ReadDirWait(imgd.todo, func(sts0 []*sp.Stat) bool {
+			sts = sts0
+			return len(sts0) == 0
 		})
 		if err != nil {
 			db.DFatalf("ReadDirWatch %v err %v", imgd.todo, err)

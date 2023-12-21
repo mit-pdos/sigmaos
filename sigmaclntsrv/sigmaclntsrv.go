@@ -39,7 +39,7 @@ func NewSigmaClntSrv() (*SigmaClntSrv, error) {
 		db.DFatalf("Error local IP: %v", err)
 	}
 	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, "127.0.0.1", localIP, "local-build", false)
-	sc, err := sigmaclnt.NewSigmaClntRootInit(pcfg)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pcfg)
 	if err != nil {
 		return nil, err
 	}
@@ -220,6 +220,28 @@ func (scs *SigmaClntSrv) GetNamedMount(ctx fs.CtxI, req scproto.SigmaPathRequest
 	rep.Mount = mnt.TmountProto
 	rep.Err = scs.setErr(nil)
 	db.DPrintf(db.SIGMACLNTSRV, "PastLastMount %v %v\n", req, rep)
+	return nil
+}
+
+// XXX need a few fslib instead of reusing bootkernel one?
+func (scs *SigmaClntSrv) NewRootMount(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.NewRootMount(req.Tree, req.Mount)
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "NewRootMount %v %v\n", req, rep)
+	return nil
+}
+
+func (scs *SigmaClntSrv) Detach(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.DetachAll()
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "DetachAll %v %v\n", req, rep)
+	return nil
+}
+
+func (scs *SigmaClntSrv) DetachAll(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.Detach(req.Path)
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "Detach %v %v\n", req, rep)
 	return nil
 }
 

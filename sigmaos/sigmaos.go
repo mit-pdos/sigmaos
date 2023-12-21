@@ -48,13 +48,13 @@ type SigmaOS interface {
 	// Mounting
 	MountTree(addrs sp.Taddrs, tree, mount string) error
 	IsLocalMount(mnt sp.Tmount) (bool, error)
-	SetLocalMount(mnt *sp.Tmount, port string)
 	PathLastMount(path string) (path.Path, path.Path, error)
 	GetNamedMount() sp.Tmount
 	NewRootMount(path string, mntname string) error
-	Mounts() []string
 
 	// Debugging
+	SetLocalMount(mnt *sp.Tmount, port string)
+	Mounts() []string
 	DetachAll() error
 	Detach(path string) error
 	Disconnect(path string) error

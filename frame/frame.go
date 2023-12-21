@@ -6,6 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
 func ReadFrame(rd io.Reader) ([]byte, *serr.Err) {
@@ -79,4 +80,20 @@ func PopFromFrame(rd io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	return b, nil
+}
+
+func WriteSeqno(seqno sessp.Tseqno, wr io.Writer) *serr.Err {
+	sn := uint64(seqno)
+	if err := binary.Write(wr, binary.LittleEndian, sn); err != nil {
+		return serr.NewErr(serr.TErrUnreachable, err.Error())
+	}
+	return nil
+}
+
+func ReadSeqno(rdr io.Reader) (sessp.Tseqno, *serr.Err) {
+	var sn uint64
+	if err := binary.Read(rdr, binary.LittleEndian, &sn); err != nil {
+		return 0, serr.NewErr(serr.TErrUnreachable, err.Error())
+	}
+	return sessp.Tseqno(sn), nil
 }

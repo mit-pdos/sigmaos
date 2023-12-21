@@ -69,7 +69,7 @@ func (scs *SigmaClntSrv) Close(ctx fs.CtxI, req scproto.SigmaCloseRequest, rep *
 
 func (scs *SigmaClntSrv) Stat(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaStatReply) error {
 	st, err := scs.sc.Stat(req.Path)
-	db.DPrintf(db.SIGMACLNTSRV, "Stat %v %v %v\n", req, st, err)
+	db.DPrintf(db.SIGMACLNTSRV, "Stat %v st %v err %v\n", req, st, err)
 	rep.Stat = st
 	rep.Err = scs.setErr(err)
 	return nil
@@ -77,7 +77,7 @@ func (scs *SigmaClntSrv) Stat(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *sc
 
 func (scs *SigmaClntSrv) Create(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
 	fd, err := scs.sc.Create(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode))
-	db.DPrintf(db.SIGMACLNTSRV, "Create %v %v %v\n", req, fd, err)
+	db.DPrintf(db.SIGMACLNTSRV, "Create %v fd %v err %v\n", req, fd, err)
 	rep.Fd = uint32(fd)
 	rep.Err = scs.setErr(err)
 	return nil
@@ -85,7 +85,7 @@ func (scs *SigmaClntSrv) Create(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep
 
 func (scs *SigmaClntSrv) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
 	fd, err := scs.sc.SigmaOS.Open(req.Path, sp.Tmode(req.Mode), sos.Twait(req.Wait))
-	db.DPrintf(db.SIGMACLNTSRV, "Open %v %v %v\n", req, fd, err)
+	db.DPrintf(db.SIGMACLNTSRV, "Open %v fd %v err %v\n", req, fd, err)
 	rep.Fd = uint32(fd)
 	rep.Err = scs.setErr(err)
 	return nil

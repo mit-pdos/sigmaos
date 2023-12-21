@@ -188,6 +188,7 @@ const (
 const (
 	NETCLNT             Tselector = "NETCLNT"
 	NETCLNT_ERR                   = NETCLNT + ERR
+	DEMUXCLNT                     = "DEMUXCLNT"
 	SESS_CLNT_Q                   = "SESS_CLNT_Q"
 	SESS_STATE_CLNT               = "SESS_STATE_CLNT"
 	SESS_STATE_CLNT_ERR           = SESS_STATE_CLNT + ERR

@@ -10,13 +10,15 @@ import (
 	"sigmaos/demux"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
+	"sigmaos/sessp"
 	// sp "sigmaos/sigmap"
 )
 
 type SigmaClntClnt struct {
-	dmx  *demux.DemuxClnt
-	rpcc *rpcclnt.RPCClnt
-	cmd  *exec.Cmd
+	dmx   *demux.DemuxClnt
+	rpcc  *rpcclnt.RPCClnt
+	seqno sessp.Tseqno
+	cmd   *exec.Cmd
 }
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
@@ -44,7 +46,7 @@ func NewSigmaClntClnt() (*SigmaClntClnt, error) {
 		return nil, err
 	}
 	dmx := demux.NewDemuxClnt(stdin, stdout)
-	scc := &SigmaClntClnt{dmx, nil, cmd}
+	scc := &SigmaClntClnt{dmx, nil, 0, cmd}
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	return scc, nil
 }

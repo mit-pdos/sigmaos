@@ -20,24 +20,8 @@ func MarshalFcallWithoutData(fcm *sessp.FcallMsg) []byte {
 	return f.Bytes()
 }
 
-func WriteSeqno(seqno sessp.Tseqno, bwr *bufio.Writer) *serr.Err {
-	sn := uint64(seqno)
-	if err := binary.Write(bwr, binary.LittleEndian, sn); err != nil {
-		return serr.NewErr(serr.TErrUnreachable, err.Error())
-	}
-	return nil
-}
-
-func ReadSeqno(rdr io.Reader) (sessp.Tseqno, *serr.Err) {
-	var sn uint64
-	if err := binary.Read(rdr, binary.LittleEndian, &sn); err != nil {
-		return 0, serr.NewErr(serr.TErrUnreachable, err.Error())
-	}
-	return sessp.Tseqno(sn), nil
-}
-
 func WriteFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Writer) *serr.Err {
-	if err := WriteSeqno(fcm.Seqno(), bwr); err != nil {
+	if err := frame.WriteSeqno(fcm.Seqno(), bwr); err != nil {
 		return err
 	}
 	if err := frame.WriteFrame(bwr, marshaledFcall); err != nil {
@@ -70,7 +54,7 @@ func MarshalFcallAndData(fcm *sessp.FcallMsg) ([]byte, *serr.Err) {
 }
 
 func ReadFcallAndDataFrames(rdr io.Reader) (sn sessp.Tseqno, fc []byte, data []byte, se *serr.Err) {
-	seqno, err := ReadSeqno(rdr)
+	seqno, err := frame.ReadSeqno(rdr)
 	if err != nil {
 		db.DPrintf(db.SPCODEC, "ReadSeqno err %v\n", err)
 		return 0, nil, nil, err

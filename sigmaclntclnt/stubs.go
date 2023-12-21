@@ -81,7 +81,7 @@ func (scc *SigmaClntClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, erro
 	req := scproto.SigmaCreateRequest{Path: path, Perm: uint32(p), Mode: uint32(m)}
 	rep := scproto.SigmaFdReply{}
 	fd, err := scc.rpcFd("SigmaClntSrv.Create", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Create %v %v", req, rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Create %v %v fd %v", req, rep, fd)
 	return fd, err
 }
 

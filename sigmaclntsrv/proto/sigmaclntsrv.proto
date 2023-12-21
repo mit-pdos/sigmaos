@@ -100,7 +100,13 @@ message SigmaLastMountReply {
         Rerror err = 3;
 }
 
+message SigmaMountRequest {
+        TmountProto mount = 1;
+        string port = 2;
+}
+
 message SigmaMountReply {
         TmountProto mount = 1;
-        Rerror err = 2;
+        bool local = 2;
+        Rerror err = 3;
 }

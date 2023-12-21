@@ -119,7 +119,11 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, sp.Tmount, error) {
 		if error != nil {
 			return false, nil
 		}
-		if q == "~any" || fsl.SigmaOS.IsLocalMount(mnt) {
+		ok, err := fsl.SigmaOS.IsLocalMount(mnt)
+		if err != nil {
+			return false, err
+		}
+		if q == "~any" || ok {
 			rname = st.Name
 			rmnt = mnt
 			return true, nil

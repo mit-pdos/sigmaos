@@ -191,6 +191,14 @@ func (scs *SigmaClntSrv) DirWait(ctx fs.CtxI, req scproto.SigmaReadRequest, rep 
 	return nil
 }
 
+func (scs *SigmaClntSrv) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountRequest, rep *scproto.SigmaMountReply) error {
+	ok, err := scs.sc.IsLocalMount(sp.Tmount{req.Mount})
+	rep.Local = ok
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "IsLocalMount %v %v\n", req, rep)
+	return nil
+}
+
 func (scs *SigmaClntSrv) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.MountTree(req.Addr, req.Tree, req.Mount)
 	rep.Err = scs.setErr(err)

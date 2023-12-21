@@ -230,7 +230,7 @@ func (fdc *FdClient) DirWait(fd int) error {
 	return nil
 }
 
-func (fdc *FdClient) IsLocalMount(mnt sp.Tmount) bool {
+func (fdc *FdClient) IsLocalMount(mnt sp.Tmount) (bool, error) {
 	return fdc.pc.IsLocalMount(mnt)
 }
 

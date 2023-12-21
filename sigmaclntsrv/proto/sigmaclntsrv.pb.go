@@ -1058,19 +1058,75 @@ func (x *SigmaLastMountReply) GetErr() *sigmap.Rerror {
 	return nil
 }
 
+type SigmaMountRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Mount *sigmap.TmountProto `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
+	Port  string              `protobuf:"bytes,2,opt,name=port,proto3" json:"port,omitempty"`
+}
+
+func (x *SigmaMountRequest) Reset() {
+	*x = SigmaMountRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[18]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SigmaMountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SigmaMountRequest) ProtoMessage() {}
+
+func (x *SigmaMountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[18]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SigmaMountRequest.ProtoReflect.Descriptor instead.
+func (*SigmaMountRequest) Descriptor() ([]byte, []int) {
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *SigmaMountRequest) GetMount() *sigmap.TmountProto {
+	if x != nil {
+		return x.Mount
+	}
+	return nil
+}
+
+func (x *SigmaMountRequest) GetPort() string {
+	if x != nil {
+		return x.Port
+	}
+	return ""
+}
+
 type SigmaMountReply struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	Mount *sigmap.TmountProto `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	Err   *sigmap.Rerror      `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
+	Local bool                `protobuf:"varint,2,opt,name=local,proto3" json:"local,omitempty"`
+	Err   *sigmap.Rerror      `protobuf:"bytes,3,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *SigmaMountReply) Reset() {
 	*x = SigmaMountReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[18]
+		mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1083,7 +1139,7 @@ func (x *SigmaMountReply) String() string {
 func (*SigmaMountReply) ProtoMessage() {}
 
 func (x *SigmaMountReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[18]
+	mi := &file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1096,7 +1152,7 @@ func (x *SigmaMountReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SigmaMountReply.ProtoReflect.Descriptor instead.
 func (*SigmaMountReply) Descriptor() ([]byte, []int) {
-	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{18}
+	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *SigmaMountReply) GetMount() *sigmap.TmountProto {
@@ -1104,6 +1160,13 @@ func (x *SigmaMountReply) GetMount() *sigmap.TmountProto {
 		return x.Mount
 	}
 	return nil
+}
+
+func (x *SigmaMountReply) GetLocal() bool {
+	if x != nil {
+		return x.Local
+	}
+	return false
 }
 
 func (x *SigmaMountReply) GetErr() *sigmap.Rerror {
@@ -1202,15 +1265,21 @@ var file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDesc = []byte{
 	0x09, 0x52, 0x05, 0x70, 0x61, 0x74, 0x68, 0x31, 0x12, 0x14, 0x0a, 0x05, 0x70, 0x61, 0x74, 0x68,
 	0x32, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x70, 0x61, 0x74, 0x68, 0x32, 0x12, 0x19,
 	0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x52, 0x65,
-	0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x22, 0x50, 0x0a, 0x0f, 0x53, 0x69, 0x67,
-	0x6d, 0x61, 0x4d, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x22, 0x0a, 0x05,
-	0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x6d,
-	0x6f, 0x75, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
-	0x12, 0x19, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x07, 0x2e,
-	0x52, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x42, 0x1c, 0x5a, 0x1a, 0x73,
-	0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x63, 0x6c, 0x6e, 0x74,
-	0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x22, 0x4b, 0x0a, 0x11, 0x53, 0x69, 0x67,
+	0x6d, 0x61, 0x4d, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x22,
+	0x0a, 0x05, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e,
+	0x54, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x6d, 0x6f, 0x75,
+	0x6e, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x6f, 0x72, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x04, 0x70, 0x6f, 0x72, 0x74, 0x22, 0x66, 0x0a, 0x0f, 0x53, 0x69, 0x67, 0x6d, 0x61, 0x4d,
+	0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x22, 0x0a, 0x05, 0x6d, 0x6f, 0x75,
+	0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x6d, 0x6f, 0x75, 0x6e,
+	0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x14, 0x0a,
+	0x05, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x6c, 0x6f,
+	0x63, 0x61, 0x6c, 0x12, 0x19, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x07, 0x2e, 0x52, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x42, 0x1c,
+	0x5a, 0x1a, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x63,
+	0x6c, 0x6e, 0x74, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1225,7 +1294,7 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescGZIP() []byte {
 	return file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDescData
 }
 
-var file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_sigmaclntsrv_proto_sigmaclntsrv_proto_goTypes = []interface{}{
 	(*SigmaNullRequest)(nil),      // 0: SigmaNullRequest
 	(*SigmaCloseRequest)(nil),     // 1: SigmaCloseRequest
@@ -1245,33 +1314,35 @@ var file_sigmaclntsrv_proto_sigmaclntsrv_proto_goTypes = []interface{}{
 	(*SigmaFenceRequest)(nil),     // 15: SigmaFenceRequest
 	(*SigmaMountTreeRequest)(nil), // 16: SigmaMountTreeRequest
 	(*SigmaLastMountReply)(nil),   // 17: SigmaLastMountReply
-	(*SigmaMountReply)(nil),       // 18: SigmaMountReply
-	(*sigmap.Rerror)(nil),         // 19: Rerror
-	(*sigmap.Stat)(nil),           // 20: Stat
-	(*sigmap.TfenceProto)(nil),    // 21: TfenceProto
-	(*sigmap.Taddr)(nil),          // 22: Taddr
-	(*sigmap.TmountProto)(nil),    // 23: TmountProto
+	(*SigmaMountRequest)(nil),     // 18: SigmaMountRequest
+	(*SigmaMountReply)(nil),       // 19: SigmaMountReply
+	(*sigmap.Rerror)(nil),         // 20: Rerror
+	(*sigmap.Stat)(nil),           // 21: Stat
+	(*sigmap.TfenceProto)(nil),    // 22: TfenceProto
+	(*sigmap.Taddr)(nil),          // 23: Taddr
+	(*sigmap.TmountProto)(nil),    // 24: TmountProto
 }
 var file_sigmaclntsrv_proto_sigmaclntsrv_proto_depIdxs = []int32{
-	19, // 0: SigmaErrReply.err:type_name -> Rerror
-	20, // 1: SigmaStatReply.stat:type_name -> Stat
-	19, // 2: SigmaStatReply.err:type_name -> Rerror
-	21, // 3: SigmaCreateRequest.fence:type_name -> TfenceProto
-	19, // 4: SigmaFdReply.err:type_name -> Rerror
-	19, // 5: SigmaDataReply.err:type_name -> Rerror
-	19, // 6: SigmaSizeReply.err:type_name -> Rerror
-	21, // 7: SigmaWriteRequest.fence:type_name -> TfenceProto
-	19, // 8: SigmaClntIdReply.err:type_name -> Rerror
-	21, // 9: SigmaFenceRequest.Fence:type_name -> TfenceProto
-	22, // 10: SigmaMountTreeRequest.addr:type_name -> Taddr
-	19, // 11: SigmaLastMountReply.err:type_name -> Rerror
-	23, // 12: SigmaMountReply.mount:type_name -> TmountProto
-	19, // 13: SigmaMountReply.err:type_name -> Rerror
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	20, // 0: SigmaErrReply.err:type_name -> Rerror
+	21, // 1: SigmaStatReply.stat:type_name -> Stat
+	20, // 2: SigmaStatReply.err:type_name -> Rerror
+	22, // 3: SigmaCreateRequest.fence:type_name -> TfenceProto
+	20, // 4: SigmaFdReply.err:type_name -> Rerror
+	20, // 5: SigmaDataReply.err:type_name -> Rerror
+	20, // 6: SigmaSizeReply.err:type_name -> Rerror
+	22, // 7: SigmaWriteRequest.fence:type_name -> TfenceProto
+	20, // 8: SigmaClntIdReply.err:type_name -> Rerror
+	22, // 9: SigmaFenceRequest.Fence:type_name -> TfenceProto
+	23, // 10: SigmaMountTreeRequest.addr:type_name -> Taddr
+	20, // 11: SigmaLastMountReply.err:type_name -> Rerror
+	24, // 12: SigmaMountRequest.mount:type_name -> TmountProto
+	24, // 13: SigmaMountReply.mount:type_name -> TmountProto
+	20, // 14: SigmaMountReply.err:type_name -> Rerror
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() }
@@ -1497,6 +1568,18 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 			}
 		}
 		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SigmaMountRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_sigmaclntsrv_proto_sigmaclntsrv_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SigmaMountReply); i {
 			case 0:
 				return &v.state
@@ -1515,7 +1598,7 @@ func file_sigmaclntsrv_proto_sigmaclntsrv_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_sigmaclntsrv_proto_sigmaclntsrv_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

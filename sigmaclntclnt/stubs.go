@@ -150,14 +150,6 @@ func (scc *SigmaClntClnt) Seek(fd int, off sp.Toffset) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) WriteRead(fd int, data []byte) ([]byte, error) {
-	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Data: data}
-	rep := scproto.SigmaDataReply{}
-	b, err := scc.rpcData("SigmaClntSrv.WriteRead", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v", req, rep)
-	return b, err
-}
-
 func (scc *SigmaClntClnt) CreateEphemeral(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error) {
 	req := scproto.SigmaCreateRequest{Path: path, Perm: uint32(p), Mode: uint32(m), LeaseId: uint64(l), Fence: f.FenceProto()}
 	rep := scproto.SigmaFdReply{}
@@ -204,6 +196,14 @@ func (scc *SigmaClntClnt) DirWait(fd int) error {
 	return err
 }
 
+func (scc *SigmaClntClnt) WriteRead(fd int, data []byte) ([]byte, error) {
+	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Data: data}
+	rep := scproto.SigmaDataReply{}
+	b, err := scc.rpcData("SigmaClntSrv.WriteRead", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v", req, rep)
+	return b, err
+}
+
 func (scc *SigmaClntClnt) MountTree(addrs sp.Taddrs, tree, mount string) error {
 	req := scproto.SigmaMountTreeRequest{Addr: addrs, Tree: tree, Mount: mount}
 	rep := scproto.SigmaErrReply{}
@@ -212,9 +212,18 @@ func (scc *SigmaClntClnt) MountTree(addrs sp.Taddrs, tree, mount string) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) IsLocalMount(mnt sp.Tmount) bool {
-	db.DPrintf(db.SIGMACLNTCLNT, "IsLocalMount %v", mnt)
-	return true
+func (scc *SigmaClntClnt) IsLocalMount(mnt sp.Tmount) (bool, error) {
+	req := scproto.SigmaMountRequest{Mount: mnt.TmountProto}
+	rep := scproto.SigmaMountReply{}
+	err := scc.rpcc.RPC("SigmaClntSrv.IsLocalMount", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "IsLocalMount %v %v", req, rep)
+	if err != nil {
+		return false, err
+	}
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return false, sp.NewErr(rep.Err)
+	}
+	return rep.Local, nil
 }
 
 func (scc *SigmaClntClnt) SetLocalMount(mnt *sp.Tmount, port string) {

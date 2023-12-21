@@ -7,20 +7,20 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) IsLocalMount(mnt sp.Tmount) bool {
+func (pathc *PathClnt) IsLocalMount(mnt sp.Tmount) (bool, error) {
 	lip := pathc.pcfg.LocalIP
 	tip, _, err := mnt.TargetHostPort()
 	if err != nil {
-		return false
+		return false, err
 	}
 	if tip == "" {
 		tip = lip
 	}
 	db.DPrintf(db.MOUNT, "IsLocalMount: tip %v lip %v\n", tip, lip)
 	if tip == lip {
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Err) {
@@ -43,7 +43,8 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 		return sp.NoFid, nil
 	}
 	db.DPrintf(db.WALK, "unionScan: %v mnt: %v\n", name, mnt)
-	if q == "~any" || pathc.IsLocalMount(mnt) {
+	ok, _ := pathc.IsLocalMount(mnt)
+	if q == "~any" || ok {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {
 			db.DPrintf(db.WALK, "unionScan UnionMatch Walk %v err %v", fid, err)

@@ -587,7 +587,7 @@ func TestDirConcur(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWatchCreate(t *testing.T) {
+func TestWaitCreate(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 
 	fn := gopath.Join(pathname, "w")
@@ -602,7 +602,7 @@ func TestWatchCreate(t *testing.T) {
 		ch <- true
 	}()
 
-	// give Watch goroutine to start
+	// give goroutine time to start
 	time.Sleep(100 * time.Millisecond)
 
 	db.DPrintf(db.TEST, "PutFile")
@@ -621,7 +621,7 @@ func TestWatchCreate(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWatchRemoveOne(t *testing.T) {
+func TestWaitRemoveOne(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 
 	fn := gopath.Join(pathname, "w")
@@ -635,7 +635,7 @@ func TestWatchRemoveOne(t *testing.T) {
 		ch <- true
 	}()
 
-	// give Watch goroutine to start
+	// give goroutine time to start
 	time.Sleep(100 * time.Millisecond)
 
 	db.DPrintf(db.TEST, "Remove %v", fn)
@@ -652,7 +652,7 @@ func TestWatchRemoveOne(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWatchDir(t *testing.T) {
+func TestWaitDir(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 
 	f := "x"
@@ -674,7 +674,7 @@ func TestWatchDir(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 
-	// give Watch goroutine to start
+	// give goroutine time to start
 	time.Sleep(100 * time.Millisecond)
 
 	db.DPrintf(db.TEST, "Putfile")
@@ -754,7 +754,7 @@ func TestWatchDir(t *testing.T) {
 //}
 
 // Concurrently remove & wait
-func TestWatchRemoveWaitConcur(t *testing.T) {
+func TestWaitRemoveWaitConcur(t *testing.T) {
 	const N = 100 // 10_000
 
 	ts := test.NewTstatePath(t, pathname)
@@ -775,7 +775,7 @@ func TestWatchRemoveWaitConcur(t *testing.T) {
 		fn := gopath.Join(dn, strconv.Itoa(i))
 		go func(fn string) {
 			err := ts.WaitRemove(fn)
-			assert.True(ts.T, err == nil, "Unexpected RemoveWatch error: %v", err)
+			assert.True(ts.T, err == nil, "Unexpected WaitRemove error: %v", err)
 			done <- true
 		}(fn)
 		go func(fn string) {

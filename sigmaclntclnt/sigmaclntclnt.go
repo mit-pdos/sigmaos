@@ -4,33 +4,23 @@
 package sigmaclntclnt
 
 import (
-	"io"
 	"os"
 	"os/exec"
 
-	// db "sigmaos/debug"
-	"sigmaos/frame"
+	"sigmaos/demux"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
 	// sp "sigmaos/sigmap"
 )
 
 type SigmaClntClnt struct {
-	req  io.Writer
-	rep  io.Reader
+	dmx  *demux.DemuxClnt
 	rpcc *rpcclnt.RPCClnt
 	cmd  *exec.Cmd
 }
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
-	if err := frame.WriteFrame(scc.req, a); err != nil {
-		return nil, err
-	}
-	b, r := frame.ReadFrame(scc.rep)
-	if r != nil {
-		return nil, r
-	}
-	return b, nil
+	return scc.dmx.SendReceive(a)
 }
 
 func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
@@ -53,8 +43,8 @@ func NewSigmaClntClnt() (*SigmaClntClnt, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	scc := &SigmaClntClnt{stdin, stdout, nil, cmd}
+	dmx := demux.NewDemuxClnt(stdin, stdout)
+	scc := &SigmaClntClnt{dmx, nil, cmd}
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	return scc, nil
 }

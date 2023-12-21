@@ -188,20 +188,20 @@ func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, e
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) DirWait(fd int) error {
-	req := scproto.SigmaReadRequest{Fd: uint32(fd)}
-	rep := scproto.SigmaErrReply{}
-	err := scc.rpcErr("SigmaClntSrv.DirWait", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "DirWait %v %v", req, rep)
-	return err
-}
-
 func (scc *SigmaClntClnt) WriteRead(fd int, data []byte) ([]byte, error) {
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Data: data}
 	rep := scproto.SigmaDataReply{}
 	b, err := scc.rpcData("SigmaClntSrv.WriteRead", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v", req, rep)
 	return b, err
+}
+
+func (scc *SigmaClntClnt) DirWait(fd int) error {
+	req := scproto.SigmaReadRequest{Fd: uint32(fd)}
+	rep := scproto.SigmaErrReply{}
+	err := scc.rpcErr("SigmaClntSrv.DirWait", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "DirWait %v %v", req, rep)
+	return err
 }
 
 func (scc *SigmaClntClnt) MountTree(addrs sp.Taddrs, tree, mount string) error {

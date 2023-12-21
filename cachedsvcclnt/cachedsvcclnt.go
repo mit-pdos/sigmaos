@@ -4,6 +4,7 @@ import (
 	"hash/fnv"
 	"strconv"
 	"sync"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -41,13 +42,14 @@ func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
 		cc:   cacheclnt.NewCacheClnt(fsls, job, cachesrv.NSHARD),
 		srvs: make(map[string]struct{}),
 	}
-	sts, err := csc.fsl.GetDir(csc.srvDir())
-	if err != nil {
-		return nil, err
-	}
-	csc.addServer(sts)
-	if err := csc.setWatch(); err != nil {
-		return nil, err
+	started := false
+	go func() {
+		if err := csc.watchServers(&started); err != nil {
+			db.DPrintf(db.ALWAYS, "watchDir %v\n", err)
+		}
+	}()
+	for !started {
+		time.Sleep(1 * time.Millisecond)
 	}
 	return csc, nil
 }
@@ -56,15 +58,19 @@ func (csc *CachedSvcClnt) srvDir() string {
 	return csc.pn + cachedsvc.SVRDIR
 }
 
-func (csc *CachedSvcClnt) setWatch() error {
-	dir := csc.srvDir()
-	_, rdr, err := csc.fsl.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-	csc.rdr = rdr
-	if err := csc.fsl.SetDirWatch(csc.rdr.Fd(), dir, csc.Watch); err != nil {
-		return err
+func (csc *CachedSvcClnt) watchServers(started *bool) error {
+	for {
+		dir := csc.srvDir()
+		if err := csc.fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
+			db.DPrintf(db.CACHEDSVCCLNT, "cachedsvcclnt watch %v", sp.Names(sts))
+			if len(sts) > len(csc.srvs) {
+				csc.addServer(sts)
+			}
+			return false
+		}); err != nil {
+			return err
+		}
+		*started = true
 	}
 	return nil
 }
@@ -77,22 +83,6 @@ func (csc *CachedSvcClnt) addServer(sts []*sp.Stat) {
 		if _, ok := csc.srvs[st.Name]; !ok {
 			csc.srvs[st.Name] = struct{}{}
 		}
-	}
-}
-
-func (csc *CachedSvcClnt) Watch(path string, err error) {
-	db.DPrintf(db.CACHEDSVCCLNT, "cachedsvcclnt watch %v err %v", path, err)
-	if err != nil {
-		db.DPrintf(db.CACHEDSVCCLNT, "Watch err %v\n", err)
-		return
-	}
-	sts, err := csc.fsl.GetDir(path)
-	if len(sts) > len(csc.srvs) {
-		csc.addServer(sts)
-	}
-	csc.rdr.Close()
-	if err := csc.setWatch(); err != nil {
-		db.DPrintf(db.CACHEDSVCCLNT, "setWatch err %v\n", err)
 	}
 }
 

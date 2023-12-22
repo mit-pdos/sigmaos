@@ -9,6 +9,7 @@ import (
 	"sigmaos/leaseclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/sigmaclntclnt"
 	sos "sigmaos/sigmaos"
 )
 
@@ -87,19 +88,21 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	return sc, nil
 }
 
-func NewSigmaClntAPIRootInit(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*SigmaClnt, error) {
-	sc, err := NewSigmaClntFsLibAPI(pcfg, sos)
-	if err != nil {
-		db.DFatalf("NewSigmaClntAPI: %v", err)
-	}
-	sc.ProcAPI = procclnt.NewProcClntInit(pcfg.GetPID(), sc.FsLib, string(pcfg.GetUname()))
-	return sc, nil
-}
-
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
 func NewSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := NewSigmaClntFsLib(pcfg)
+	var sc *SigmaClnt
+	var err error
+	if pcfg.UseSigmaclntd {
+		scc, err := sigmaclntclnt.NewSigmaClntClnt()
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "NewKernelClntStart sigmaclntclnt err %v", err)
+			return nil, err
+		}
+		sc, err = NewSigmaClntFsLibAPI(pcfg, scc)
+	} else {
+		sc, err = NewSigmaClntFsLib(pcfg)
+	}
 	if err != nil {
 		return nil, err
 	}

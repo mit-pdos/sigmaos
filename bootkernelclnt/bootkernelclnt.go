@@ -10,7 +10,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclntclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -63,30 +62,11 @@ func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays, gvisor bool) 
 	return NewKernelClnt(kernelId, pcfg)
 }
 
-func newSigmaClnt(pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
-	var sc *sigmaclnt.SigmaClnt
-	var err error
-	if pcfg.UseSigmaclntd {
-		scc, err := sigmaclntclnt.NewSigmaClntClnt()
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "NewKernelClntStart sigmaclntclnt err %v", err)
-			return nil, err
-		}
-		sc, err = sigmaclnt.NewSigmaClntAPIRootInit(pcfg, scc)
-	} else {
-		sc, err = sigmaclnt.NewSigmaClntRootInit(pcfg)
-	}
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "NewKernelClntStart sigmaclnt err %v", err)
-		return nil, err
-	}
-	return sc, nil
-}
-
 func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 	db.DPrintf(db.SYSTEM, "NewKernelClnt %s\n", kernelId)
-	sc, err := newSigmaClnt(pcfg)
+	sc, err := sigmaclnt.NewSigmaClntRootInit(pcfg)
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "NewKernelClnt sigmaclnt err %v", err)
 		return nil, err
 	}
 	pn := sp.BOOT + kernelId

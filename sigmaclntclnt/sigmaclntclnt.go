@@ -11,7 +11,6 @@ import (
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sessp"
-	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
 )
 
@@ -30,7 +29,7 @@ func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
 }
 
 func NewSigmaClntClnt() (*SigmaClntClnt, error) {
-	conn, err := net.Dial("unix", sigmaclntsrv.SOCKET)
+	conn, err := net.Dial("unix", sp.SIGMASOCKET)
 	if err != nil {
 		return nil, err
 	}

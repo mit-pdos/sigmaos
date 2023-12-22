@@ -19,8 +19,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const SOCKET = "/tmp/sigmaclntd.sock"
-
 type rpcCh struct {
 	dmx  *demux.DemuxSrv
 	rpcs *rpcsrv.RPCSrv
@@ -49,11 +47,11 @@ func newSigmaClntConn(conn net.Conn) error {
 }
 
 func runServer() error {
-	socket, err := net.Listen("unix", SOCKET)
+	socket, err := net.Listen("unix", sp.SIGMASOCKET)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.SIGMACLNTSRV, "runServer: listening on %v\n", SOCKET)
+	db.DPrintf(db.SIGMACLNTSRV, "runServer: listening on %v\n", sp.SIGMASOCKET)
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
 		return err
 	}
@@ -63,7 +61,7 @@ func runServer() error {
 		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
 			db.DFatalf(db.SIGMACLNTSRV, "read pipe err %v\n", err)
 		}
-		os.Remove(SOCKET)
+		os.Remove(sp.SIGMASOCKET)
 		os.Exit(0)
 	}()
 

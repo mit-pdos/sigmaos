@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"net"
 	"os/exec"
-	"time"
 
 	"sigmaos/demux"
 	"sigmaos/rpc"
@@ -37,7 +36,6 @@ func NewSigmaClntClnt() (*SigmaClntClnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	time.Sleep(100 * time.Millisecond)
 	conn, err := net.Dial("unix", sigmaclntsrv.SOCKET)
 	if err != nil {
 		return nil, err

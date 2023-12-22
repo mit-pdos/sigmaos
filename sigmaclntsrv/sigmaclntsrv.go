@@ -5,6 +5,7 @@ package sigmaclntsrv
 
 import (
 	"bufio"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -53,6 +54,9 @@ func runServer() error {
 		return err
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "runServer: listening on %v\n", SOCKET)
+	if _, err := io.WriteString(os.Stdout, "d"); err != nil {
+		return err
+	}
 	for {
 		conn, err := socket.Accept()
 		if err != nil {
@@ -74,10 +78,19 @@ func RunSigmaClntSrv(args []string) error {
 // Start the sigmaclntd process
 func ExecSigmaClntSrv() (*exec.Cmd, error) {
 	cmd := exec.Command("../bin/linux/sigmaclntd", []string{}...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
 	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	buf := make([]byte, 1)
+	if _, err := io.ReadFull(stdout, buf); err != nil {
+		db.DPrintf(db.SIGMACLNTSRV, "read pipe err %v\n", err)
 		return nil, err
 	}
 	return cmd, nil

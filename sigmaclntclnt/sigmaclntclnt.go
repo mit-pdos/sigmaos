@@ -6,7 +6,6 @@ package sigmaclntclnt
 import (
 	"bufio"
 	"net"
-	"os/exec"
 
 	"sigmaos/demux"
 	"sigmaos/rpc"
@@ -20,7 +19,7 @@ type SigmaClntClnt struct {
 	dmx   *demux.DemuxClnt
 	rpcc  *rpcclnt.RPCClnt
 	seqno sessp.Tseqno
-	cmd   *exec.Cmd
+	scsc  *sigmaclntsrv.SigmaClntSrvCmd
 }
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
@@ -32,7 +31,7 @@ func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
 }
 
 func NewSigmaClntClnt() (*SigmaClntClnt, error) {
-	cmd, err := sigmaclntsrv.ExecSigmaClntSrv()
+	scsc, err := sigmaclntsrv.ExecSigmaClntSrv()
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +41,11 @@ func NewSigmaClntClnt() (*SigmaClntClnt, error) {
 	}
 	dmx := demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN))
-	scc := &SigmaClntClnt{dmx, nil, 0, cmd}
+	scc := &SigmaClntClnt{dmx, nil, 0, scsc}
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	return scc, nil
 }
 
 func (scc *SigmaClntClnt) Shutdown() error {
-	return scc.cmd.Process.Kill()
+	return scc.scsc.Shutdown()
 }

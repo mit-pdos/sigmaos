@@ -54,9 +54,19 @@ func runServer() error {
 		return err
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "runServer: listening on %v\n", SOCKET)
-	if _, err := io.WriteString(os.Stdout, "d"); err != nil {
+	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
 		return err
 	}
+
+	go func() {
+		buf := make([]byte, 1)
+		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
+			db.DFatalf(db.SIGMACLNTSRV, "read pipe err %v\n", err)
+		}
+		os.Remove(SOCKET)
+		os.Exit(0)
+	}()
+
 	for {
 		conn, err := socket.Accept()
 		if err != nil {
@@ -75,14 +85,29 @@ func RunSigmaClntSrv(args []string) error {
 	return nil
 }
 
+type SigmaClntSrvCmd struct {
+	cmd *exec.Cmd
+	out io.WriteCloser
+}
+
+func (scsc *SigmaClntSrvCmd) Shutdown() error {
+	if _, err := io.WriteString(scsc.out, "e"); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Start the sigmaclntd process
-func ExecSigmaClntSrv() (*exec.Cmd, error) {
+func ExecSigmaClntSrv() (*SigmaClntSrvCmd, error) {
 	cmd := exec.Command("../bin/linux/sigmaclntd", []string{}...)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
 	}
-	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
@@ -93,5 +118,5 @@ func ExecSigmaClntSrv() (*exec.Cmd, error) {
 		db.DPrintf(db.SIGMACLNTSRV, "read pipe err %v\n", err)
 		return nil, err
 	}
-	return cmd, nil
+	return &SigmaClntSrvCmd{cmd, stdin}, nil
 }

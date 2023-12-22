@@ -35,6 +35,9 @@ if mount | grep -q 9p; then
 fi
 
 pgrep -x proxyd > /dev/null && killall -9 proxyd
+pgrep -x sigmaclntd > /dev/null && killall -9 sigmaclntd
+
+rm /tmp/sigmaclntd.sock
 
 if docker ps -a | grep -qE 'sigma|uprocd|bootkerne'; then
   for container in $(docker ps -a | grep -E 'sigma|uprocd|bootkerne' | cut -d ' ' -f1) ; do

@@ -4,14 +4,17 @@
 package sigmaclntclnt
 
 import (
-	"os"
+	"bufio"
+	"net"
 	"os/exec"
+	"time"
 
 	"sigmaos/demux"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sessp"
-	// sp "sigmaos/sigmap"
+	"sigmaos/sigmaclntsrv"
+	sp "sigmaos/sigmap"
 )
 
 type SigmaClntClnt struct {
@@ -30,22 +33,17 @@ func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
 }
 
 func NewSigmaClntClnt() (*SigmaClntClnt, error) {
-	cmd := exec.Command("../bin/linux/sigmaclntd", []string{}...)
-	stdin, err := cmd.StdinPipe()
+	cmd, err := sigmaclntsrv.ExecSigmaClntSrv()
 	if err != nil {
 		return nil, err
 	}
-	stdout, err := cmd.StdoutPipe()
+	time.Sleep(100 * time.Millisecond)
+	conn, err := net.Dial("unix", sigmaclntsrv.SOCKET)
 	if err != nil {
 		return nil, err
 	}
-	cmd.Stderr = os.Stderr
-
-	err = cmd.Start()
-	if err != nil {
-		return nil, err
-	}
-	dmx := demux.NewDemuxClnt(stdin, stdout)
+	dmx := demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN))
 	scc := &SigmaClntClnt{dmx, nil, 0, cmd}
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	return scc, nil

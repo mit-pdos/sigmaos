@@ -1,8 +1,8 @@
 package demux
 
 import (
+	"bufio"
 	"fmt"
-	"io"
 
 	db "sigmaos/debug"
 	"sigmaos/frame"
@@ -49,14 +49,14 @@ func (rm *rpcMap) Remove(seqno sessp.Tseqno) (*rpc, bool) {
 }
 
 type DemuxClnt struct {
-	out    io.Writer
-	in     io.Reader
+	out    *bufio.Writer
+	in     *bufio.Reader
 	seqno  sessp.Tseqno
 	rpcmap *rpcMap
 	rpcs   chan *rpc
 }
 
-func NewDemuxClnt(out io.Writer, in io.Reader) *DemuxClnt {
+func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader) *DemuxClnt {
 	dmx := &DemuxClnt{out, in, 0, newRpcMap(), make(chan *rpc)}
 	go dmx.reader()
 	go dmx.writer()
@@ -75,6 +75,10 @@ func (dmx *DemuxClnt) writer() {
 		}
 		if err := frame.WriteFrame(dmx.out, rpc.request); err != nil {
 			db.DFatalf("writer: WriteFrame err %v\n", err)
+		}
+		error := dmx.out.Flush()
+		if error != nil {
+			db.DFatalf("Flush error %v\n", error)
 		}
 	}
 }

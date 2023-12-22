@@ -1,7 +1,7 @@
 package demux
 
 import (
-	"io"
+	"bufio"
 
 	db "sigmaos/debug"
 	"sigmaos/frame"
@@ -19,13 +19,13 @@ type reply struct {
 }
 
 type DemuxSrv struct {
-	in      io.Reader
-	out     io.Writer
+	in      *bufio.Reader
+	out     *bufio.Writer
 	serve   DemuxI
 	replies chan reply
 }
 
-func NewDemuxSrv(in io.Reader, out io.Writer, serve DemuxI) *DemuxSrv {
+func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, serve DemuxI) *DemuxSrv {
 	dmx := &DemuxSrv{in, out, serve, make(chan reply)}
 	go dmx.reader()
 	go dmx.writer()
@@ -70,5 +70,10 @@ func (dmx *DemuxSrv) writer() {
 		if err := frame.WriteFrame(dmx.out, reply.data); err != nil {
 			db.DFatalf("writer: WriteFrame err %v\n", err)
 		}
+		error := dmx.out.Flush()
+		if error != nil {
+			db.DFatalf("Flush error %v\n", error)
+		}
+
 	}
 }

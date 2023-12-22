@@ -19,7 +19,6 @@ type SigmaClntClnt struct {
 	dmx   *demux.DemuxClnt
 	rpcc  *rpcclnt.RPCClnt
 	seqno sessp.Tseqno
-	scsc  *sigmaclntsrv.SigmaClntSrvCmd
 }
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
@@ -31,21 +30,13 @@ func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
 }
 
 func NewSigmaClntClnt() (*SigmaClntClnt, error) {
-	scsc, err := sigmaclntsrv.ExecSigmaClntSrv()
-	if err != nil {
-		return nil, err
-	}
 	conn, err := net.Dial("unix", sigmaclntsrv.SOCKET)
 	if err != nil {
 		return nil, err
 	}
 	dmx := demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN))
-	scc := &SigmaClntClnt{dmx, nil, 0, scsc}
+	scc := &SigmaClntClnt{dmx, nil, 0}
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	return scc, nil
-}
-
-func (scc *SigmaClntClnt) Shutdown() error {
-	return scc.scsc.Shutdown()
 }

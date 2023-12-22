@@ -128,10 +128,6 @@ func (k *Kernel) Shutdown() error {
 	if err != nil {
 		return err
 	}
-	scc, ok := k.SigmaClnt.GetSigmaOS().(*sigmaclntclnt.SigmaClntClnt)
-	if ok {
-		return scc.Shutdown()
-	}
 	return nil
 }
 

@@ -29,6 +29,7 @@ message ProcEnvProto {
   string strace = 22;
   string scheddIP = 23;
   TmountProto namedMountProto = 24;
+  bool useSigmaclntd = 25;
 }
 
 message ProcProto {

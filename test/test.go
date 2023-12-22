@@ -37,7 +37,7 @@ var tag string
 var EtcdIP string
 var Overlays bool
 var GVisor bool
-var sigmaclntd bool
+var useSigmaclntd bool
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
@@ -46,7 +46,7 @@ func init() {
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
-	flag.BoolVar(&sigmaclntd, "sigmaclntd", false, "sigmaclntd")
+	flag.BoolVar(&useSigmaclntd, "useSigmaclntd", false, "Use sigmaclntd?")
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -114,7 +114,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, EtcdIP, localIP, tag, Overlays)
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, EtcdIP, localIP, tag, Overlays, useSigmaclntd)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 	var kernelid string
 	var err error
@@ -131,7 +131,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ALWAYS, "Error set named ip")
 		return nil, err
 	}
-	k, err = bootkernelclnt.NewKernelClnt(kernelid, pcfg, sigmaclntd)
+	k, err = bootkernelclnt.NewKernelClnt(kernelid, pcfg)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make kernel clnt")
 		return nil, err
@@ -146,7 +146,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 
 func (ts *Tstate) BootNode(n int) error {
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays, GVisor, sigmaclntd)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays, GVisor)
 		if err != nil {
 			return err
 		}
@@ -195,7 +195,7 @@ func (ts *Tstate) Shutdown() error {
 }
 
 func Dump(t *testing.T) {
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, EtcdIP, "", "", false)
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, EtcdIP, "", "", false, false)
 	fs, err := fsetcd.NewFsEtcd(pcfg.GetRealm(), pcfg.GetEtcdIP())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)

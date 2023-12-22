@@ -75,33 +75,34 @@ func GetLabels(s string) map[string]bool {
 	return m
 }
 
-func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, procDir string, parentDir string, priv, overlays bool) *ProcEnv {
+func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, procDir string, parentDir string, priv, overlays, useSigmaclntd bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
-			PidStr:       string(pid),
-			RealmStr:     string(realm),
-			UnameStr:     string(uname),
-			ProcDir:      procDir,
-			ParentDir:    parentDir,
-			Program:      program,
-			LocalIP:      NOT_SET,
-			KernelID:     NOT_SET,
-			BuildTag:     NOT_SET,
-			Net:          NOT_SET,
-			Perf:         os.Getenv(SIGMAPERF),
-			Strace:       os.Getenv(SIGMASTRACE),
-			Debug:        os.Getenv(SIGMADEBUG),
-			UprocdPIDStr: NOT_SET,
-			Privileged:   priv,
-			Overlays:     overlays,
+			PidStr:        string(pid),
+			RealmStr:      string(realm),
+			UnameStr:      string(uname),
+			ProcDir:       procDir,
+			ParentDir:     parentDir,
+			Program:       program,
+			LocalIP:       NOT_SET,
+			KernelID:      NOT_SET,
+			BuildTag:      NOT_SET,
+			Net:           NOT_SET,
+			Perf:          os.Getenv(SIGMAPERF),
+			Strace:        os.Getenv(SIGMASTRACE),
+			Debug:         os.Getenv(SIGMADEBUG),
+			UprocdPIDStr:  NOT_SET,
+			Privileged:    priv,
+			Overlays:      overlays,
+			UseSigmaclntd: useSigmaclntd,
 		},
 	}
 }
 
 func NewProcEnvUnset(priv, overlays bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
-	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), sp.Tuname(NOT_SET), NOT_SET, NOT_SET, priv, overlays)
+	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), sp.Tuname(NOT_SET), NOT_SET, NOT_SET, priv, overlays, false)
 }
 
 func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
@@ -122,7 +123,7 @@ func NewBootProcEnv(uname sp.Tuname, etcdIP, localIP string, overlays bool) *Pro
 	return pe
 }
 
-func NewTestProcEnv(realm sp.Trealm, etcdIP, localIP, buildTag string, overlays bool) *ProcEnv {
+func NewTestProcEnv(realm sp.Trealm, etcdIP, localIP, buildTag string, overlays, useSigmaclntd bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetUname("test")
 	pe.SetPID(sp.GenPid("test"))
@@ -133,6 +134,7 @@ func NewTestProcEnv(realm sp.Trealm, etcdIP, localIP, buildTag string, overlays 
 	pe.Program = "test"
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
 	pe.HowInt = int32(TEST)
+	pe.UseSigmaclntd = useSigmaclntd
 	return pe
 }
 

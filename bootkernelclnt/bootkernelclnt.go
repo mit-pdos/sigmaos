@@ -54,19 +54,19 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays, gvisor, sigmaclntd bool) (*Kernel, error) {
+func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays, gvisor bool) (*Kernel, error) {
 	kernelId := GenKernelId()
 	_, err := Start(kernelId, pcfg, conf, overlays, gvisor)
 	if err != nil {
 		return nil, err
 	}
-	return NewKernelClnt(kernelId, pcfg, sigmaclntd)
+	return NewKernelClnt(kernelId, pcfg)
 }
 
-func newSigmaClnt(pcfg *proc.ProcEnv, sigmaclntd bool) (*sigmaclnt.SigmaClnt, error) {
+func newSigmaClnt(pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 	var sc *sigmaclnt.SigmaClnt
 	var err error
-	if sigmaclntd {
+	if pcfg.UseSigmaclntd {
 		scc, err := sigmaclntclnt.NewSigmaClntClnt()
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "NewKernelClntStart sigmaclntclnt err %v", err)
@@ -83,9 +83,9 @@ func newSigmaClnt(pcfg *proc.ProcEnv, sigmaclntd bool) (*sigmaclnt.SigmaClnt, er
 	return sc, nil
 }
 
-func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv, sigmaclntd bool) (*Kernel, error) {
+func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 	db.DPrintf(db.SYSTEM, "NewKernelClnt %s\n", kernelId)
-	sc, err := newSigmaClnt(pcfg, sigmaclntd)
+	sc, err := newSigmaClnt(pcfg)
 	if err != nil {
 		return nil, err
 	}

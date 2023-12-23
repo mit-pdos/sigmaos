@@ -16,6 +16,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
+	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/uprocsrv/proto"
@@ -27,6 +28,7 @@ type UprocSrv struct {
 	pcfg     *proc.ProcEnv
 	ssrv     *sigmasrv.SigmaSrv
 	kc       *kernelclnt.KernelClnt
+	scsc     *sigmaclntsrv.SigmaClntSrvCmd
 	kernelId string
 	realm    sp.Trealm
 	assigned bool
@@ -59,6 +61,13 @@ func RunUprocSrv(kernelId string, up string) error {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
+
+	scsc, err := sigmaclntsrv.ExecSigmaClntSrv()
+	if err != nil {
+		return err
+	}
+	ups.scsc = scsc
+
 	err = ssrv.RunServer()
 	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)
 	return nil

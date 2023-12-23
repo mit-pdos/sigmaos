@@ -49,7 +49,7 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 	return sc
 }
 
-// Create only an FsLib, as a proc.
+// Create only an FsLib (using fdclient), as a proc.
 func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	fsl, err := fslib.NewFsLib(pcfg)
 	if err != nil {
@@ -62,7 +62,7 @@ func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	return &SigmaClnt{fsl, nil, lmc}, nil
 }
 
-// Create only an FsLib, as a proc.
+// Create only an FsLib (using sigmaclntd), as a proc.
 func NewSigmaClntFsLibAPI(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*SigmaClnt, error) {
 	fsl, err := fslib.NewFsLibAPI(pcfg, sos)
 	if err != nil {
@@ -75,9 +75,27 @@ func NewSigmaClntFsLibAPI(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*SigmaClnt, erro
 	return &SigmaClnt{fsl, nil, lmc}, nil
 }
 
+// Create a SigmaClnt using usigmaclntd or fdclnt
+func newSigmaClntClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
+	var sc *SigmaClnt
+	var err error
+	if pcfg.UseSigmaclntd {
+		scc, err := sigmaclntclnt.NewSigmaClntClnt()
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
+			return nil, err
+		}
+		sc, err = NewSigmaClntFsLibAPI(pcfg, scc)
+
+	} else {
+		sc, err = NewSigmaClntFsLib(pcfg)
+	}
+	return sc, err
+}
+
 func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
-	sc, err := NewSigmaClntFsLib(pcfg)
+	sc, err := newSigmaClntClnt(pcfg)
 	if err != nil {
 		db.DFatalf("NewSigmaClnt: %v", err)
 	}
@@ -91,18 +109,7 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
 func NewSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	var sc *SigmaClnt
-	var err error
-	if pcfg.UseSigmaclntd {
-		scc, err := sigmaclntclnt.NewSigmaClntClnt()
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "NewKernelClntStart sigmaclntclnt err %v", err)
-			return nil, err
-		}
-		sc, err = NewSigmaClntFsLibAPI(pcfg, scc)
-	} else {
-		sc, err = NewSigmaClntFsLib(pcfg)
-	}
+	sc, err := newSigmaClntClnt(pcfg)
 	if err != nil {
 		return nil, err
 	}

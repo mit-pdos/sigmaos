@@ -7,4 +7,4 @@
 # export SIGMAPERF="PROCD_PPROF;NAMED_CPU;"
 
 # to find proxyd
-export PATH=$PATH:$PWD/bin/linux/
+export PATH=$PATH:$PWD/bin/linux/:$PWD/bin/kernel

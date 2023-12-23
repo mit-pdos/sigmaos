@@ -165,6 +165,12 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount(shome + "bin/user", "bin")?;
 
+    // XXX
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/tmp/", "tmp")?;
+
     // Only mount /tmp/sigmaos-perf directory if SIGMAPERF is set (meaning we are
     // benchmarking and want to extract the results)
     if env::var("SIGMAPERF").is_ok() {

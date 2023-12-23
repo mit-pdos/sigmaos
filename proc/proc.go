@@ -62,6 +62,14 @@ func NewProc(program string, args []string) *Proc {
 	return NewProcPid(pid, program, args)
 }
 
+// XXX clean up
+func NewProcSigmaClntd(program string, args []string) *Proc {
+	pid := sp.GenPid(program)
+	p := NewProcPid(pid, program, args)
+	p.ProcEnvProto.UseSigmaclntd = true
+	return p
+}
+
 func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}

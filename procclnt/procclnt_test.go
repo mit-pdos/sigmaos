@@ -106,7 +106,7 @@ func TestCompile(t *testing.T) {
 
 func TestWaitExitSimpleSingleBE(t *testing.T) {
 	ts := test.NewTstateAll(t)
-	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	a := proc.NewProcSigmaClntd("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")

@@ -49,7 +49,7 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 	return sc
 }
 
-// Create only an FsLib (using fdclient), as a proc.
+// Create a SigmaClnt (using fdclient), as a proc.
 func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	fsl, err := fslib.NewFsLib(pcfg)
 	if err != nil {

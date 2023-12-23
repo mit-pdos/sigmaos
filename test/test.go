@@ -39,7 +39,6 @@ var EtcdIP string
 var Overlays bool
 var GVisor bool
 var useSigmaclntd bool
-var execSigmaclntd bool
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
@@ -49,7 +48,6 @@ func init() {
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
 	flag.BoolVar(&useSigmaclntd, "usesigmaclntd", false, "Use sigmaclntd?")
-	flag.BoolVar(&execSigmaclntd, "execsigmaclntd", false, "Exec sigmaclntd?")
 }
 
 func Mbyte(sz sp.Tlength) float64 {
@@ -136,7 +134,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err
 	}
 	var scsc *sigmaclntsrv.SigmaClntSrvCmd
-	if execSigmaclntd {
+	if useSigmaclntd {
 		scsc, err = sigmaclntsrv.ExecSigmaClntSrv()
 		if err != nil {
 			return nil, err

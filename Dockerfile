@@ -40,6 +40,8 @@ COPY mr mr
 
 # Copy uprocd, the entrypoint for this container, to the user image.
 COPY --from=sigma-build-kernel /home/sigmaos/bin/kernel/uprocd /home/sigmaos/bin/kernel
+# Copy sigmaclntd to the user image.
+COPY --from=sigma-build-kernel /home/sigmaos/bin/kernel/sigmaclntd /home/sigmaos/bin/kernel/
 # Copy rust trampoline to the user image.
 COPY --from=sigma-build-user-rust /home/sigmaos/bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/exec-uproc-rs
 

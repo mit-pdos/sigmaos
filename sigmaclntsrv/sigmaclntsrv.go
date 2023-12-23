@@ -97,7 +97,7 @@ func (scsc *SigmaClntSrvCmd) Shutdown() error {
 
 // Start the sigmaclntd process
 func ExecSigmaClntSrv() (*SigmaClntSrvCmd, error) {
-	cmd := exec.Command("../bin/linux/sigmaclntd", []string{}...)
+	cmd := exec.Command("../bin/kernel/sigmaclntd", []string{}...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err

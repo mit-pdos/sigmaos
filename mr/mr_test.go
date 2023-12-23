@@ -75,7 +75,7 @@ func TestNewWordCount(t *testing.T) {
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
 	data := make(seqwc.Tdata, 0)
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, "", "", "", false), perf.SEQWC)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, "", "", "", false, false), perf.SEQWC)
 	assert.Nil(t, err)
 	sbc := mr.NewScanByteCounter(p)
 	for scanner.Scan() {
@@ -123,7 +123,7 @@ func TestMapper(t *testing.T) {
 	)
 
 	ts := test.NewTstateAll(t)
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, "", "", "", false), perf.MRMAPPER)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, "", "", "", false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
 	ts.Remove(REDUCEIN)

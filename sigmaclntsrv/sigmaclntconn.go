@@ -220,14 +220,14 @@ func (scs *SigmaClntSrv) NewRootMount(ctx fs.CtxI, req scproto.SigmaMountTreeReq
 	return nil
 }
 
-func (scs *SigmaClntSrv) Detach(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SigmaClntSrv) DetachAll(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.DetachAll()
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "DetachAll %v %v\n", req, rep)
 	return nil
 }
 
-func (scs *SigmaClntSrv) DetachAll(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SigmaClntSrv) Detach(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.Detach(req.Path)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "Detach %v %v\n", req, rep)

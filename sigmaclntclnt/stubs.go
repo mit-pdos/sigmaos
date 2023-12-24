@@ -275,7 +275,7 @@ func (scc *SigmaClntClnt) DetachAll() error {
 	db.DPrintf(db.SIGMACLNTCLNT, "Detachall")
 	req := scproto.SigmaNullRequest{}
 	rep := scproto.SigmaErrReply{}
-	err := scc.rpcErr("SigmaClntSrv.DetatchAll", &req, &rep)
+	err := scc.rpcErr("SigmaClntSrv.DetachAll", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "DetachAll %v %v", req, rep)
 	return err
 }

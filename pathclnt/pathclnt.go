@@ -88,7 +88,10 @@ func (pathc *PathClnt) PathLastMount(pn string, uname sp.Tuname) (path.Path, pat
 // Close all sessions
 func (pathc *PathClnt) DetachAll() error {
 	db.DPrintf(db.PATHCLNT, "Fslib.DetachAll\n")
-	return pathc.FidClnt.DetachAll(pathc.cid)
+	if err := pathc.FidClnt.DetachAll(pathc.cid); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Detach from server. XXX Mixes up umount a file system at server and

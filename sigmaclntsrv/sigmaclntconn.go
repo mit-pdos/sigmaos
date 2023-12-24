@@ -220,6 +220,14 @@ func (scs *SigmaClntSrv) NewRootMount(ctx fs.CtxI, req scproto.SigmaMountTreeReq
 	return nil
 }
 
+func (scs *SigmaClntSrv) Mounts(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaMountsReply) error {
+	mnts := scs.sc.Mounts()
+	rep.Mounts = mnts
+	rep.Err = scs.setErr(nil)
+	db.DPrintf(db.SIGMACLNTSRV, "Mounts %v %v\n", req, rep)
+	return nil
+}
+
 func (scs *SigmaClntSrv) DetachAll(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.DetachAll()
 	rep.Err = scs.setErr(err)

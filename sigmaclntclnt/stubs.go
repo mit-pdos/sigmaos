@@ -263,8 +263,17 @@ func (scc *SigmaClntClnt) NewRootMount(pn, mntname string) error {
 }
 
 func (scc *SigmaClntClnt) Mounts() []string {
-	db.DFatalf("Mounts")
-	return nil
+	req := scproto.SigmaNullRequest{}
+	rep := scproto.SigmaMountsReply{}
+	err := scc.rpcc.RPC("SigmaClntSrv.Mounts", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Mounts %v %v", req, rep)
+	if err != nil {
+		return nil
+	}
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return nil
+	}
+	return rep.Mounts
 }
 
 func (scc *SigmaClntClnt) SetLocalMount(mnt *sp.Tmount, port string) {
@@ -272,7 +281,6 @@ func (scc *SigmaClntClnt) SetLocalMount(mnt *sp.Tmount, port string) {
 }
 
 func (scc *SigmaClntClnt) DetachAll() error {
-	db.DPrintf(db.SIGMACLNTCLNT, "Detachall")
 	req := scproto.SigmaNullRequest{}
 	rep := scproto.SigmaErrReply{}
 	err := scc.rpcErr("SigmaClntSrv.DetachAll", &req, &rep)
@@ -281,10 +289,9 @@ func (scc *SigmaClntClnt) DetachAll() error {
 }
 
 func (scc *SigmaClntClnt) Detach(path string) error {
-	db.DPrintf(db.SIGMACLNTCLNT, "Detach %v", path)
 	req := scproto.SigmaPathRequest{Path: path}
 	rep := scproto.SigmaErrReply{}
-	err := scc.rpcErr("SigmaClntSrv.Detatch", &req, &rep)
+	err := scc.rpcErr("SigmaClntSrv.Detach", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "Detach %v %v", req, rep)
 	return err
 }

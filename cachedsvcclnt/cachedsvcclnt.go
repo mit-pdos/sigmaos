@@ -59,14 +59,17 @@ func (csc *CachedSvcClnt) srvDir() string {
 }
 
 func (csc *CachedSvcClnt) watchServers(started *bool) error {
+	db.DPrintf(db.CACHEDSVCCLNT, "watchServers %v", started)
 	for {
 		dir := csc.srvDir()
 		if err := csc.fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
-			db.DPrintf(db.CACHEDSVCCLNT, "cachedsvcclnt watch %v", sp.Names(sts))
+			db.DPrintf(db.CACHEDSVCCLNT, "cachedsvcclnt watch %v %d", sp.Names(sts), len(csc.srvs))
 			if len(sts) > len(csc.srvs) {
 				csc.addServer(sts)
+				return false
+			} else {
+				return true
 			}
-			return false
 		}); err != nil {
 			return err
 		}

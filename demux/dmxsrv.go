@@ -65,14 +65,15 @@ func (dmx *DemuxSrv) writer() {
 			return
 		}
 		if err := frame.WriteSeqno(reply.seqno, dmx.out); err != nil {
-			db.DFatalf("writer: WriteSeqno err %v\n", err)
+			db.DPrintf(db.DEMUXSRV, "writer: WriteSeqno err %v\n", err)
+			break
 		}
 		if err := frame.WriteFrame(dmx.out, reply.data); err != nil {
-			db.DFatalf("writer: WriteFrame err %v\n", err)
+			db.DPrintf(db.DEMUXSRV, "writer: WriteFrame err %v\n", err)
+			break
 		}
-		error := dmx.out.Flush()
-		if error != nil {
-			db.DFatalf("Flush error %v\n", error)
+		if error := dmx.out.Flush(); error != nil {
+			db.DPrintf(db.DEMUXSRV, "Flush error %v\n", error)
 		}
 
 	}

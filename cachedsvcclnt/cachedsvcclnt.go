@@ -58,6 +58,7 @@ func (csc *CachedSvcClnt) srvDir() string {
 	return csc.pn + cachedsvc.SVRDIR
 }
 
+// XXX delete servers
 func (csc *CachedSvcClnt) watchServers(started *bool) error {
 	db.DPrintf(db.CACHEDSVCCLNT, "watchServers %v", started)
 	for {

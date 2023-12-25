@@ -8,6 +8,7 @@ import (
 	"sigmaos/frame"
 	"sigmaos/sessp"
 	// sp "sigmaos/sigmap"
+	"sigmaos/serr"
 	"sync"
 )
 
@@ -71,16 +72,30 @@ func (dmx *DemuxClnt) writer() {
 			return
 		}
 		if err := frame.WriteSeqno(rpc.seqno, dmx.out); err != nil {
-			db.DFatalf("writer: WriteSeqno err %v\n", err)
+			db.DPrintf(db.DEMUXCLNT, "WriteSeqno err %v\n", err)
+			dmx.reply(rpc.seqno, nil, serr.NewErr(serr.TErrUnreachable, err.Error()))
+			break
 		}
 		if err := frame.WriteFrame(dmx.out, rpc.request); err != nil {
-			db.DFatalf("writer: WriteFrame err %v\n", err)
+			db.DPrintf(db.DEMUXCLNT, "WriteFrame err %v\n", err)
+			dmx.reply(rpc.seqno, nil, serr.NewErr(serr.TErrUnreachable, err.Error()))
+			break
 		}
-		error := dmx.out.Flush()
-		if error != nil {
-			db.DFatalf("Flush error %v\n", error)
+		if error := dmx.out.Flush(); error != nil {
+			db.DPrintf(db.DEMUXCLNT, "Flush error %v\n", error)
+			dmx.reply(rpc.seqno, nil, serr.NewErr(serr.TErrUnreachable, error.Error()))
 		}
 	}
+}
+
+func (dmx *DemuxClnt) reply(seqno sessp.Tseqno, reply []byte, err error) {
+	rpc, ok := dmx.rpcmap.Remove(seqno)
+	if !ok {
+		db.DFatalf("Remove err %v\n", seqno)
+	}
+	rpc.reply = reply
+	rpc.ch <- err
+
 }
 
 func (dmx *DemuxClnt) reader() {
@@ -96,12 +111,7 @@ func (dmx *DemuxClnt) reader() {
 			break
 		}
 		db.DPrintf(db.DEMUXCLNT, "reader: reply %v\n", seqno)
-		rpc, ok := dmx.rpcmap.Remove(seqno)
-		if !ok {
-			db.DFatalf("Remove err %v\n", seqno)
-		}
-		rpc.reply = reply
-		rpc.ch <- nil
+		dmx.reply(seqno, reply, nil)
 	}
 }
 
@@ -113,6 +123,6 @@ func (dmx *DemuxClnt) SendReceive(a []byte) ([]byte, error) {
 	dmx.rpcmap.Put(s, rpc)
 	dmx.rpcs <- rpc
 	err := <-rpc.ch
-	db.DPrintf(db.DEMUXCLNT, "SendReceive: return %v\n", rpc)
+	db.DPrintf(db.DEMUXCLNT, "SendReceive: return %v %v\n", rpc, err)
 	return rpc.reply, err
 }

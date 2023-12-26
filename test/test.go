@@ -135,6 +135,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	var scsc *sigmaclntsrv.SigmaClntSrvCmd
 	if useSigmaclntd {
+		db.DPrintf(db.BOOT, "Use sigmaclntd")
 		scsc, err = sigmaclntsrv.ExecSigmaClntSrv()
 		if err != nil {
 			return nil, err

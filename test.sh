@@ -8,7 +8,7 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--cleanup]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usesigmaclntd] [--cleanup]" 
 }
 
 BASIC="--basic"
@@ -16,6 +16,7 @@ FAST=""
 APPS=""
 OVERLAY=""
 GVISOR=""
+SIGMACLNTD=""
 VERB="-v"
 CONTAINER=""
 CLEANUP=""
@@ -49,6 +50,10 @@ while [[ "$#" -gt 0 ]]; do
         --gvisor)
             shift
             GVISOR="--gvisor" 
+            ;;
+        --usesigmaclntd)
+            shift
+            SIGMACLNTD="--usesigmaclntd" 
             ;;
         --cleanup)
             shift
@@ -105,7 +110,7 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in reader writer stats fslib semclnt electclnt; do
-        go test $VERB -timeout 20m sigmaos/$T -start
+        go test $VERB$ SIGMACLNTD -timeout 20m sigmaos/$T -start
         cleanup
     done
 
@@ -122,7 +127,7 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www; do
-        go test $VERB sigmaos/$T -start $GVISOR
+        go test $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD
         cleanup
     done
 
@@ -135,7 +140,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test with realms
     #
 
-    go test $VERB sigmaos/realmclnt -start $GVISOR
+    go test $VERB sigmaos/realmclnt -start $GVISOR $SIGMACLNTD
     cleanup
 
 fi
@@ -146,22 +151,22 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        go test $VERB sigmaos/mr -start $GVISOR -run MRJob
+        go test $VERB sigmaos/mr -start $GVISOR $SIGMACLNTD -run MRJob
         cleanup
-        go test $VERB sigmaos/imgresized -start $GVISOR -run ImgdOne
+        go test $VERB sigmaos/imgresized -start $GVISOR $SIGMACLNTD -run ImgdOne
         cleanup
-        go test $VERB sigmaos/kv -start $GVISOR -run KVOKN
-        cleanup
-        ./start-db.sh
-        go test $VERB sigmaos/hotel -start $GVISOR -run TestBenchDeathStarSingle
+        go test $VERB sigmaos/kv -start $GVISOR $SIGMACLNTD -run KVOKN
         cleanup
         ./start-db.sh
-       	go test $VERB sigmaos/socialnetwork -start $GVISOR -run TestCompose
+        go test $VERB sigmaos/hotel -start $GVISOR $SIGMACLNTD -run TestBenchDeathStarSingle
+        cleanup
+        ./start-db.sh
+       	go test $VERB sigmaos/socialnetwork -start $GVISOR $SIGMACLNTD -run TestCompose
         cleanup
     else
         for T in imgresized mr kv hotel socialnetwork; do
             ./start-db.sh
-            go test -timeout 20m $VERB sigmaos/$T -start $GVISOR
+            go test -timeout 20m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD
             cleanup
         done
     fi

@@ -110,16 +110,16 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in reader writer stats fslib semclnt electclnt; do
-        go test $VERB$ SIGMACLNTD -timeout 20m sigmaos/$T -start
+        go test $VERB$ SIGMACLNTD -timeout 20m sigmaos/$T -start $SIGMACLNTD
         cleanup
     done
 
     # go test $VERB sigmaos/fslibsrv -start  # no perf
 
     # test memfs using schedd's memfs
-    go test $VERB sigmaos/fslib -start -path "name/schedd/~local/" 
+    go test $VERB sigmaos/fslib -start -path "name/schedd/~local/"  $SIGMACLNTD
     cleanup
-    go test $VERB sigmaos/memfs -start
+    go test $VERB sigmaos/memfs -start $SIGMACLNTD
     cleanup
 
     #

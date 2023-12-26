@@ -277,7 +277,7 @@ func (scc *SigmaClntClnt) Mounts() []string {
 	return rep.Mounts
 }
 
-func (scc *SigmaClntClnt) SetLocalMount(mnt *sp.Tmount, port string) {
+func (scc *SigmaClntClnt) SetLocalMount(mnt *sp.Tmount, port sp.Tport) {
 	db.DFatalf("SetLocalMount %v", mnt)
 }
 

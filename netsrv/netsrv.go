@@ -13,6 +13,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
 )
 
@@ -21,34 +22,34 @@ type ReadF func(rdr io.Reader) (sessp.Tseqno, *sessp.FcallMsg, *serr.Err)
 
 type NetServer struct {
 	pcfg       *proc.ProcEnv
-	addr       string
+	addr       *sp.Taddr
 	sesssrv    sps.SessServer
 	writefcall WriteF
 	readframe  ReadF
 	l          net.Listener
 }
 
-func NewNetServer(pcfg *proc.ProcEnv, ss sps.SessServer, address string, m WriteF, u ReadF) *NetServer {
+func NewNetServer(pcfg *proc.ProcEnv, ss sps.SessServer, addr *sp.Taddr, m WriteF, u ReadF) *NetServer {
 	srv := &NetServer{pcfg: pcfg, sesssrv: ss, writefcall: m, readframe: u}
 
 	// Create and start the main server listener
 	var l net.Listener
-	l, err := net.Listen("tcp", address)
+	l, err := net.Listen("tcp", addr.HostPort())
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}
-	a, err := netsigma.QualifyAddrLocalIP(pcfg.GetLocalIP(), l.Addr().String())
+	h, p, err := netsigma.QualifyAddrLocalIP(pcfg.GetLocalIP(), l.Addr().String())
 	if err != nil {
-		db.DFatalf("QualifyAddr \"%v\" -> \"%v\" error: %v\n%s", l.Addr().String(), a, err, debug.Stack())
+		db.DFatalf("QualifyAddr \"%v\" -> \"%v:%v\" error: %v\n%s", l.Addr().String(), h, p, err, debug.Stack())
 	}
-	srv.addr = a
+	srv.addr = sp.NewTaddrRealm(h, p, pcfg.GetNet())
 	srv.l = l
-	db.DPrintf(db.PORT, "listen %v myaddr %v\n", address, a)
+	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.addr)
 	go srv.runsrv(l)
 	return srv
 }
 
-func (srv *NetServer) MyAddr() string {
+func (srv *NetServer) MyAddr() *sp.Taddr {
 	return srv.addr
 }
 

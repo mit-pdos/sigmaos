@@ -38,9 +38,9 @@ func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error 
 	return nil
 }
 
-func NewSrv(root fs.Dir, path, port string, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*sesssrv.SessSrv, error) {
+func NewSrv(root fs.Dir, path string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*sesssrv.SessSrv, error) {
 	et := ephemeralmap.NewEphemeralMap()
-	srv := sesssrv.NewSessSrv(sc.ProcEnv(), root, port, protsrv.NewProtServer, nil, nil, et, fencefs)
+	srv := sesssrv.NewSessSrv(sc.ProcEnv(), root, addr, protsrv.NewProtServer, nil, nil, et, fencefs)
 	if err := Post(srv, sc, path); err != nil {
 		return nil, err
 	}

@@ -7,10 +7,11 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 // To run kernel procs
-func RunKernelProc(localIP string, p *proc.Proc, extra []*os.File) (*exec.Cmd, error) {
+func RunKernelProc(localIP sp.Thost, p *proc.Proc, extra []*os.File) (*exec.Cmd, error) {
 	p.FinalizeEnv(localIP, "")
 	env := p.GetEnv()
 	cmd := exec.Command(p.GetProgram(), p.Args...)

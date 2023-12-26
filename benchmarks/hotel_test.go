@@ -3,6 +3,7 @@ package benchmarks_test
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"path"
 	"strconv"
 	"strings"
@@ -128,9 +129,14 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		// Write a file for clients to discover the server's address.
 		if !ji.justCli {
 			p := hotel.JobHTTPAddrsPath(ji.job)
-			mnt := sp.NewMountService(sp.NewTaddrs([]string{ji.k8ssrvaddr}))
+			h, p, err := net.SplitHostPort(K8S_ADDR)
+			assert.Nil(ts.Ts.T, err, "Err split host port %v: %v", ji.k8ssrvaddr, err)
+			port, err := strconv.Atoi(p)
+			assert.Nil(ts.Ts.T, err, "Err parse port %v: %v", p, err)
+			addr := sp.NewTaddrRealm(sp.Thost(h), sp.Tport(port), ts.ProcEnv().GetNet())
+			mnt := sp.NewMountService([]*sp.Taddr{addr})
 			if err = ts.MkMountFile(p, mnt, sp.NoLeaseId); err != nil {
-				db.DFatalf("MountService %v", err)
+				db.DFatalf("MkMountFile %v", err)
 			}
 		}
 	}

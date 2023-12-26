@@ -14,7 +14,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
 	"sigmaos/perf"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
@@ -25,7 +24,7 @@ import (
 type UprocSrv struct {
 	mu       sync.RWMutex
 	ch       chan struct{}
-	pcfg     *proc.ProcEnv
+	pe       *proc.ProcEnv
 	ssrv     *sigmasrv.SigmaSrv
 	kc       *kernelclnt.KernelClnt
 	scsc     *sigmaclntsrv.SigmaClntSrvCmd
@@ -35,19 +34,26 @@ type UprocSrv struct {
 }
 
 func RunUprocSrv(kernelId string, up string) error {
-	pcfg := proc.GetProcEnv()
-	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pcfg: pcfg}
+	pe := proc.GetProcEnv()
+	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pe: pe}
 
-	db.DPrintf(db.UPROCD, "Run %v %v %s IP %s", kernelId, up, os.Environ(), pcfg.GetLocalIP())
+	db.DPrintf(db.UPROCD, "Run %v %v %s IP %s", kernelId, up, os.Environ(), pe.GetLocalIP())
 
 	var ssrv *sigmasrv.SigmaSrv
 	var err error
-	if up == port.NOPORT.String() {
-		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pcfg.GetPID().String())
-		ssrv, err = sigmasrv.NewSigmaSrv(pn, ups, pcfg)
+	if up == sp.NO_PORT.String() {
+		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
+		ssrv, err = sigmasrv.NewSigmaSrv(pn, ups, pe)
 	} else {
+		var port sp.Tport
+		port, err = sp.ParsePort(up)
+		if err != nil {
+			db.DFatalf("Error parse port: %v", err)
+		}
+		addr := sp.NewTaddrRealm(pe.GetLocalIP(), port, pe.GetNet())
+
 		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.NewSigmaSrvPort("", up, pcfg, ups)
+		ssrv, err = sigmasrv.NewSigmaSrvAddr("", addr, pe, ups)
 	}
 	if err != nil {
 		return err
@@ -56,7 +62,7 @@ func RunUprocSrv(kernelId string, up string) error {
 		db.DFatalf("Error shrinking mount table: %v", err)
 	}
 	ups.ssrv = ssrv
-	p, err := perf.NewPerf(pcfg, perf.UPROCD)
+	p, err := perf.NewPerf(pe, perf.UPROCD)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}

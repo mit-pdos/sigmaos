@@ -35,7 +35,7 @@ func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string, lid s
 
 func (fsl *FsLib) NewMount(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	if path.EndSlash(pn) {
-		return fsl.MountServiceUnion(pn, mnt, mnt.Address().Addr, lid)
+		return fsl.MountServiceUnion(pn, mnt, mnt.Address().HostPort(), lid)
 	} else {
 		return fsl.MkMountFile(pn, mnt, lid)
 	}

@@ -15,34 +15,34 @@ import (
 
 // Make an MemFs and advertise it at pn
 func NewMemFs(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
-	return NewMemFsPort(pn, ":0", pcfg)
+	return NewMemFsAddr(pn, sp.NewTaddrRealm(sp.NO_HOST, sp.NO_PORT, pcfg.GetNet()), pcfg)
 }
 
 // Make an MemFs for a specific port and advertise it at pn
-func NewMemFsPort(pn, port string, pcfg *proc.ProcEnv) (*MemFs, error) {
+func NewMemFsAddr(pn string, addr *sp.Taddr, pcfg *proc.ProcEnv) (*MemFs, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.PORT, "NewMemFsPort %v %v\n", pn, port)
-	fs, err := NewMemFsPortClnt(pn, port, sc)
+	db.DPrintf(db.PORT, "NewMemFsPort %v %v\n", pn, addr)
+	fs, err := NewMemFsPortClnt(pn, addr, sc)
 	return fs, err
 }
 
 // Make an MemFs for a specific port and client, and advertise it at
 // pn
-func NewMemFsPortClnt(pn, port string, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
-	return NewMemFsPortClntFence(pn, port, sc, nil)
+func NewMemFsPortClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
+	return NewMemFsPortClntFence(pn, addr, sc, nil)
 }
 
-func NewMemFsPortClntFence(pn, port string, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
+func NewMemFsPortClntFence(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
 	ctx := ctx.NewCtx("", 0, sp.NoClntId, nil, fencefs)
 	root := dir.NewRootDir(ctx, memfs.NewInode, nil)
-	return NewMemFsRootPortClntFence(root, pn, port, sc, fencefs)
+	return NewMemFsRootPortClntFence(root, pn, addr, sc, fencefs)
 }
 
-func NewMemFsRootPortClntFence(root fs.Dir, pn, port string, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
-	srv, err := fslibsrv.NewSrv(root, pn, port, sc, fencefs)
+func NewMemFsRootPortClntFence(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
+	srv, err := fslibsrv.NewSrv(root, pn, addr, sc, fencefs)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func NewMemFsPublic(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
 		return nil, err
 	}
 	// Make server without advertising mnt
-	mfs, err := NewMemFsPortClnt("", ":"+pi.Pb.RealmPort.String(), sc)
+	mfs, err := NewMemFsPortClnt("", sp.NewTaddrRealm(sp.NO_HOST, pi.Pb.RealmPort, pcfg.GetNet()), sc)
 	if err != nil {
 		return nil, err
 	}

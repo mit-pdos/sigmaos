@@ -3,7 +3,6 @@ package kernel
 import (
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"os/exec"
 	"sort"
@@ -14,7 +13,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kproc"
 	"sigmaos/netsigma"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -25,8 +23,8 @@ const (
 	SLEEP_S          = 2
 	REPL_PORT_OFFSET = 100
 
-	FPORT port.Tport = 1112
-	LPORT port.Tport = 1132
+	FPORT sp.Tport = 1112
+	LPORT sp.Tport = 1132
 
 	KNAMED_PORT = ":1111"
 
@@ -48,7 +46,7 @@ type Kernel struct {
 	*sigmaclnt.SigmaClntKernel
 	Param        *Param
 	svcs         *Services
-	ip           string
+	ip           sp.Thost
 	shuttingDown bool
 }
 
@@ -97,7 +95,7 @@ func NewKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 	return k, err
 }
 
-func (k *Kernel) Ip() string {
+func (k *Kernel) Ip() sp.Thost {
 	return k.ip
 }
 
@@ -246,17 +244,13 @@ func stopKNamed(cmd *exec.Cmd) error {
 	return err
 }
 
-func SetNamedIP(ip string, ports sp.Taddrs) (sp.Taddrs, error) {
+func SetNamedIP(host sp.Thost, ports sp.Taddrs) (sp.Taddrs, error) {
 	nameds := make(sp.Taddrs, len(ports))
 	for i, s := range ports {
-		host, port, err := net.SplitHostPort(s.Addr)
-		if err != nil {
-			return nil, err
+		if s.GetHost() != sp.NO_HOST {
+			db.DFatalf("Tried to substitute named ip when port exists: %v -> %v %v", s, s.GetHost(), s.GetPort())
 		}
-		if host != "" {
-			db.DFatalf("Tried to substitute named ip when port exists: %v -> %v %v", s, host, port)
-		}
-		nameds[i] = sp.NewTaddr(net.JoinHostPort(ip, port))
+		nameds[i] = sp.NewTaddr(host, s.GetPort())
 	}
 	return nameds, nil
 }

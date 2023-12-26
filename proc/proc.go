@@ -78,7 +78,6 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		p.TypeInt = uint32(T_LC)
 	} else {
 		p.ProcEnvProto.UseSigmaclntd = true
-
 	}
 	p.Env = make(map[string]string)
 	p.setBaseEnv()
@@ -126,8 +125,8 @@ func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 
 // Finalize env details which can only be set once a physical machine and
 // uprocd container have been chosen.
-func (p *Proc) FinalizeEnv(localIP string, uprocdPid sp.Tpid) {
-	p.ProcEnvProto.LocalIP = localIP
+func (p *Proc) FinalizeEnv(localIP sp.Thost, uprocdPid sp.Tpid) {
+	p.ProcEnvProto.LocalIPStr = localIP.String()
 	p.ProcEnvProto.SetUprocdPID(uprocdPid)
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
 }
@@ -271,8 +270,8 @@ func (p *Proc) GetHow() Thow {
 	return p.ProcEnvProto.GetHow()
 }
 
-func (p *Proc) SetScheddIP(ip string) {
-	p.ProcEnvProto.ScheddIP = ip
+func (p *Proc) SetScheddAddr(addr *sp.Taddr) {
+	p.ProcEnvProto.ScheddAddr = addr
 }
 
 func (p *Proc) SetNamedMount(mnt sp.Tmount) {

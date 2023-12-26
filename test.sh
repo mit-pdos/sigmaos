@@ -126,8 +126,8 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www; do
-        go test $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD
+    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt; do
+        go test $VERB sigmaos/$T -start $GVISOR  $SIGMACLNTD
         cleanup
     done
 
@@ -164,7 +164,7 @@ if [[ $APPS == "--apps" ]]; then
        	go test $VERB sigmaos/socialnetwork -start $GVISOR $SIGMACLNTD -run TestCompose
         cleanup
     else
-        for T in imgresized mr kv hotel socialnetwork; do
+        for T in imgresized mr kv hotel socialnetwork www; do
             ./start-db.sh
             go test -timeout 20m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD
             cleanup

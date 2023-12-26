@@ -443,7 +443,7 @@ func TestDirCreatePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip string) {
+func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.Thost) {
 	const NITER = 100 // 10000
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {

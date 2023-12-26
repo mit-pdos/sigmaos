@@ -20,7 +20,7 @@ func NewFsLib(pcfg *proc.ProcEnv) (*FsLib, error) {
 }
 
 func NewFsLibAPI(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*FsLib, error) {
-	db.DPrintf(db.PORT, "NewFsLibAPI: uname %s lip %s addrs %v\n", pcfg.GetUname(), pcfg.LocalIP, pcfg.EtcdIP)
+	db.DPrintf(db.PORT, "NewFsLib: uname %s lip %s addrs %v\n", pcfg.GetUname(), pcfg.GetLocalIP(), pcfg.EtcdIP)
 	fl := &FsLib{
 		pcfg:    pcfg,
 		SigmaOS: sos,
@@ -28,7 +28,7 @@ func NewFsLibAPI(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*FsLib, error) {
 	return fl, nil
 }
 
-func (fl *FsLib) GetLocalIP() string {
+func (fl *FsLib) GetLocalIP() sp.Thost {
 	return fl.pcfg.GetLocalIP()
 }
 

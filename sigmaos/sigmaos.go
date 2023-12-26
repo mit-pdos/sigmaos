@@ -53,7 +53,7 @@ type SigmaOS interface {
 	NewRootMount(path string, mntname string) error
 
 	// Debugging
-	SetLocalMount(mnt *sp.Tmount, port string)
+	SetLocalMount(mnt *sp.Tmount, port sp.Tport)
 	Mounts() []string
 	DetachAll() error
 	Detach(path string) error

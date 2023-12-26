@@ -80,7 +80,7 @@ func (k *Kernel) GetCPUUtil(pid sp.Tpid) (float64, error) {
 	return k.svcs.svcMap[pid].GetCPUUtil()
 }
 
-func (k *Kernel) AllocPort(pid sp.Tpid, port port.Tport) (*port.PortBinding, error) {
+func (k *Kernel) AllocPort(pid sp.Tpid, port sp.Tport) (*port.PortBinding, error) {
 	return k.svcs.svcMap[pid].AllocPort(port)
 }
 
@@ -183,7 +183,8 @@ func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
 
 		// Use 127.0.0.1, because only the local schedd should be talking
 		// to uprocd.
-		mnt := sp.NewMountServer("127.0.0.1:" + pm.HostPort.String())
+		addr := sp.NewTaddr(sp.LOCALHOST, pm.HostPort)
+		mnt := sp.NewMountServer(addr)
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 		if err := k.NewMount(pn, mnt, sp.NoLeaseId); err != nil {
 			return nil, err

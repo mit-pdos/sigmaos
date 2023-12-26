@@ -5,9 +5,10 @@ package sigmap
 //
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
-	"strings"
 
 	"sigmaos/path"
 	"sigmaos/rand"
@@ -29,6 +30,8 @@ type Tuname string
 type TclntId uint64
 type TleaseId uint64
 type Tttl uint64
+type Thost string
+type Tport uint32
 
 const ROOTREALM Trealm = "rootrealm"
 
@@ -222,32 +225,93 @@ func (p Tperm) String() string {
 	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
-func NewTaddr(addr string) *Taddr {
-	return &Taddr{Net: ROOTREALM.String(), Addr: addr}
+func (p Tport) String() string {
+	return strconv.FormatUint(uint64(p), 10)
 }
 
-func NewTaddrRealm(addr string, net string) *Taddr {
-	return &Taddr{Net: net, Addr: addr}
+func (p Thost) String() string {
+	return string(p)
+}
+
+func ParsePort(ps string) (Tport, error) {
+	pi, err := strconv.ParseUint(ps, 10, 32)
+	return Tport(pi), err
+}
+
+const (
+	NO_HOST   Thost = ""
+	LOCALHOST Thost = "127.0.0.1"
+	NO_PORT   Tport = 0
+)
+
+const ()
+
+func (a *Taddr) HostPort() string {
+	return a.HostStr + ":" + a.GetPort().String()
+}
+
+func (a *Taddr) GetHost() Thost {
+	return Thost(a.HostStr)
+}
+
+func (a *Taddr) GetPort() Tport {
+	return Tport(a.PortInt)
+}
+
+func NewTaddrAnyPort(netns string) *Taddr {
+	return NewTaddrRealm(NO_HOST, NO_PORT, netns)
+}
+
+func NewTaddr(host Thost, port Tport) *Taddr {
+	return &Taddr{
+		HostStr: string(host),
+		PortInt: uint32(port),
+		NetNS:   ROOTREALM.String(),
+	}
+}
+
+func NewTaddrRealm(host Thost, port Tport, netns string) *Taddr {
+	return &Taddr{
+		HostStr: string(host),
+		PortInt: uint32(port),
+		NetNS:   netns,
+	}
+}
+
+func (a *Taddr) Marshal() string {
+	b, err := json.Marshal(a)
+	if err != nil {
+		log.Fatalf("Can't marshal Taddr: %v", err)
+	}
+	return string(b)
+}
+
+func UnmarshalTaddr(a string) *Taddr {
+	var addr Taddr
+	err := json.Unmarshal([]byte(a), &addr)
+	if err != nil {
+		log.Fatalf("Can't unmarshal Taddr")
+	}
+	return &addr
 }
 
 type Taddrs []*Taddr
 
-func NewTaddrs(addr []string) Taddrs {
-	addrs := make([]*Taddr, len(addr))
-	for i, a := range addr {
-		addrs[i] = NewTaddr(a)
-	}
-	return addrs
-}
+//func NewTaddrs(addr []string) Taddrs {
+//	addrs := make([]*Taddr, len(addr))
+//	for i, a := range addr {
+//		addrs[i] = NewTaddr(a)
+//	}
+//	return addrs
+//}
 
 // Ignores net
 func (as Taddrs) String() string {
 	s := ""
 	for i, a := range as {
+		s += a.HostPort()
 		if i < len(as)-1 {
-			s += a.Addr + ","
-		} else {
-			s += a.Addr
+			s += ","
 		}
 	}
 	return s
@@ -257,28 +321,14 @@ func (as Taddrs) String() string {
 // package it up in a way suitable to pass as argument or environment
 // variable to a program.
 func (as Taddrs) Taddrs2String() (string, error) {
-	s := ""
-	for i, a := range as {
-		if i < len(as)-1 {
-			s += a.Addr + "/" + a.Net + ","
-		} else {
-			s += a.Addr + "/" + a.Net
-		}
-	}
-	return s, nil
+	b, err := json.Marshal(as)
+	return string(b), err
 }
 
 func String2Taddrs(as string) (Taddrs, error) {
-	addrs := make([]*Taddr, 0)
-	for _, s := range strings.Split(as, ",") {
-		a := strings.Split(s, "/")
-		n := ""
-		if len(a) > 1 {
-			n = a[1]
-		}
-		addrs = append(addrs, NewTaddrRealm(a[0], n))
-	}
-	return addrs, nil
+	var addrs Taddrs
+	err := json.Unmarshal([]byte(as), &addrs)
+	return addrs, err
 }
 
 func (r *Rerror) TErrCode() serr.Terror {

@@ -8,7 +8,6 @@ import (
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv/proto"
 	"sigmaos/netsigma"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -87,7 +86,7 @@ func (ks *KernelSrv) Kill(ctx fs.CtxI, req proto.KillRequest, rep *proto.KillRes
 
 func (ks *KernelSrv) AllocPort(ctx fs.CtxI, req proto.PortRequest, rep *proto.PortResult) error {
 	db.DPrintf(db.KERNEL, "%v: AllocPort %v\n", ks.k.Param.KernelId, req)
-	pb, err := ks.k.AllocPort(sp.Tpid(req.PidStr), port.Tport(req.Port))
+	pb, err := ks.k.AllocPort(sp.Tpid(req.PidStr), sp.Tport(req.Port))
 	if err != nil {
 		return err
 	}
@@ -98,6 +97,6 @@ func (ks *KernelSrv) AllocPort(ctx fs.CtxI, req proto.PortRequest, rep *proto.Po
 
 	rep.RealmPort = int32(pb.RealmPort)
 	rep.HostPort = int32(pb.HostPort)
-	rep.HostIp = ip
+	rep.HostIp = ip.String()
 	return nil
 }

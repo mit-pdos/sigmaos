@@ -48,7 +48,6 @@ func newTstate(t *testing.T, nrepl int, persist bool) *Tstate {
 
 func (ts *Tstate) Shutdown() {
 	ts.Tstate.Shutdown()
-	ts.DetachAll()
 }
 
 func TestCompile(t *testing.T) {

@@ -72,6 +72,8 @@ func NetFailer(ss *sesssrv.SessSrv) {
 	}()
 }
 
+// Randomly tell parent we exited but then keep running, simulating a
+// network partition from the parent's point of view.
 func PartitionParentProb(sc *sigmaclnt.SigmaClnt, prob uint64) bool {
 	crash := sc.ProcEnv().GetCrash()
 	if crash == 0 {

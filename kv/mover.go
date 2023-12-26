@@ -66,7 +66,7 @@ func NewMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
 	// crash.Crasher(mv.FsLib)
 
 	if p := crash.PartitionParentProb(mv.SigmaClnt, 50); p {
-		mv.exit = false
+		mv.exit = false // parent has received an exit status, so don't exit again
 		time.Sleep(2 * time.Second)
 	}
 

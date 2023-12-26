@@ -59,7 +59,7 @@ func runServer() error {
 	go func() {
 		buf := make([]byte, 1)
 		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
-			db.DFatalf(db.SIGMACLNTSRV, "read pipe err %v\n", err)
+			db.DFatalf("read pipe err %v\n", err)
 		}
 		os.Remove(sp.SIGMASOCKET)
 		os.Exit(0)

@@ -508,6 +508,7 @@ func TestRmDirPerf(t *testing.T) {
 func TestLookupDepthPerf(t *testing.T) {
 	const N = 10
 	const NFILE = 10
+	const NOP = 10000
 	ts := test.NewTstatePath(t, pathname)
 
 	ts.RmDir(gopath.Join(pathname, "d0"))
@@ -521,7 +522,7 @@ func TestLookupDepthPerf(t *testing.T) {
 		}
 		//test.Dump(t)
 		label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
-		measuredir(label, 1000, func() int {
+		measuredir(label, NOP, func() int {
 			_, err := ts.Stat(dir)
 			assert.Nil(t, err)
 			return 1

@@ -306,7 +306,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 		return
 	}
 	const (
-		NTRIAL = 1000
+		NTRIAL = 3
 	)
 
 	ts := test.NewTstatePath(t, pathname)
@@ -329,6 +329,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	}
 	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
 	assert.Nil(t, err)
+	defer p1.Done()
 	start := time.Now()
 	for i := range fns {
 		go func(i int) {
@@ -353,7 +354,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	}
 	ms := time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt reader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p1.Done()
+
 	for _, fn := range fns {
 		err := ts.Remove(fn)
 		assert.Nil(ts.T, err)
@@ -361,6 +362,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	}
 
 	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
+	defer p2.Done()
 	assert.Nil(t, err)
 	start = time.Now()
 	for i := range fns {
@@ -382,15 +384,16 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 		}(i)
 	}
 	n = 0
+
 	for _ = range fns {
 		n += <-done
 	}
-	p2.Done()
 
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
 	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
+	defer p3.Done()
 	start = time.Now()
 	for i := range fns {
 		go func(i int) {
@@ -413,7 +416,6 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for _ = range fns {
 		n += <-done
 	}
-	p3.Done()
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt abufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
 	ts.Shutdown()

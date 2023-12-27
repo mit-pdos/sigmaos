@@ -16,6 +16,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -161,7 +162,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		fsl, err := fslib.NewFsLib(pcfg)
+		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -318,7 +319,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		fsl, err := fslib.NewFsLib(pcfg)
+		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -451,7 +452,7 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 	for c := 0; c < nclerk; c++ {
 		go func(c int) {
 			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), c)
-			fsl, err := fslib.NewFsLib(pcfg)
+			fsl, err := sigmaclnt.NewFsLib(pcfg)
 			assert.Nil(ts.T, err)
 			measuredir("lookup dir entry", NITER, func() int {
 				for f := 0; f < nfile; f++ {
@@ -557,7 +558,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		for j := 0; j < NTRIAL; j++ {
 			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
 			pcfg.NamedMountProto = ndMnt.TmountProto
-			fsl, err := fslib.NewFsLib(pcfg)
+			fsl, err := sigmaclnt.NewFsLib(pcfg)
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)
 		}

@@ -85,7 +85,7 @@ func NewFsLibs(uname string) []*fslib.FsLib {
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
 		pen := proc.NewAddedProcEnv(pe, i)
-		fsl, err := fslib.NewFsLib(pen)
+		fsl, err := sigmaclnt.NewFsLib(pen)
 		if err != nil {
 			db.DFatalf("Error newfsl: %v", err)
 		}

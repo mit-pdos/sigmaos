@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -32,7 +32,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		// Make a new fsl for this test, because we want to use ts.FsLib
 		// to shutdown the system.
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl2, err := fslib.NewFsLib(pcfg)
+		fsl2, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(ts.T, err, "NewFsLib")
 
 		l, err := NewLeaderClnt(fsl2, leadername, 0777)

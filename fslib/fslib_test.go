@@ -19,6 +19,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
 	"sigmaos/test"
@@ -513,7 +514,7 @@ func TestPageDir(t *testing.T) {
 }
 
 func dirwriter(t *testing.T, pcfg *proc.ProcEnv, dn, name string, ch chan bool) {
-	fsl, err := fslib.NewFsLib(pcfg)
+	fsl, err := sigmaclnt.NewFsLib(pcfg)
 	assert.Nil(t, err)
 	stop := false
 	for !stop {
@@ -712,7 +713,7 @@ func TestWaitDir(t *testing.T) {
 //	done := make(chan bool)
 //	go func() {
 //		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-//		fsl, err := fslib.NewFsLib(pcfg)
+//		fsl, err := sigmaclnt.NewFsLib(pcfg)
 //		assert.Nil(t, err)
 //		for i := 1; i < N; {
 //			db.DPrintf(db.TEST, "PutFile %v", i)
@@ -766,7 +767,7 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 
 	done := make(chan bool)
 	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	fsl, err := fslib.NewFsLib(pcfg)
+	fsl, err := sigmaclnt.NewFsLib(pcfg)
 	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
 		fn := gopath.Join(dn, strconv.Itoa(i))
@@ -887,7 +888,7 @@ func TestConcurRename(t *testing.T) {
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		fsl, err := fslib.NewFsLib(pcfg)
+		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		go func(fsl *fslib.FsLib, t string) {
 			n := 0
@@ -946,7 +947,7 @@ func TestConcurAssignedRename(t *testing.T) {
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		fsl, err := fslib.NewFsLib(pcfg)
+		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err, "Err newfslib: %v", err)
 		go func(fsl *fslib.FsLib, t string) {
 			n := 0
@@ -1271,7 +1272,7 @@ func TestFslibDetach(t *testing.T) {
 	// Make a new fsl for this test, because we want to use ts.FsLib
 	// to shutdown the system.
 	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	fsl, err := fslib.NewFsLib(pcfg)
+	fsl, err := sigmaclnt.NewFsLib(pcfg)
 	assert.Nil(t, err)
 
 	// connect

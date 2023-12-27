@@ -18,6 +18,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/replclnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
 )
@@ -55,7 +56,7 @@ func NewClerkFsLib(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 }
 
 func NewClerk(pcfg *proc.ProcEnv, job string, repl bool) (*KvClerk, error) {
-	fsl, err := fslib.NewFsLib(pcfg)
+	fsl, err := sigmaclnt.NewFsLib(pcfg)
 	if err != nil {
 		return nil, err
 	}

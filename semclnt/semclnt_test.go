@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/delay"
-	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
+	"sigmaos/sigmaclnt"
 	"sigmaos/test"
 )
 
@@ -26,7 +26,7 @@ func TestSemClntSimple(t *testing.T) {
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	fsl0, err := fslib.NewFsLib(pcfg)
+	fsl0, err := sigmaclnt.NewFsLib(pcfg)
 	assert.Nil(ts.T, err, "fsl0")
 
 	sem := semclnt.NewSemClnt(ts.FsLib, WAIT_PATH+"/x")
@@ -64,10 +64,10 @@ func TestSemClntConcur(t *testing.T) {
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pcfg1 := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-	fsl0, err := fslib.NewFsLib(pcfg1)
+	fsl0, err := sigmaclnt.NewFsLib(pcfg1)
 	assert.Nil(ts.T, err, "fsl0")
 	pcfg2 := proc.NewAddedProcEnv(ts.ProcEnv(), 2)
-	fsl1, err := fslib.NewFsLib(pcfg2)
+	fsl1, err := sigmaclnt.NewFsLib(pcfg2)
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {

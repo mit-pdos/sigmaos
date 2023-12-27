@@ -2,7 +2,6 @@ package fslib
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fdclnt"
 	"sigmaos/proc"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
@@ -11,12 +10,6 @@ import (
 type FsLib struct {
 	pcfg *proc.ProcEnv
 	sos.SigmaOS
-}
-
-// Only to be called by procs.
-func NewFsLib(pcfg *proc.ProcEnv) (*FsLib, error) {
-	sos := fdclnt.NewFdClient(pcfg, nil)
-	return NewFsLibAPI(pcfg, sos)
 }
 
 func NewFsLibAPI(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*FsLib, error) {

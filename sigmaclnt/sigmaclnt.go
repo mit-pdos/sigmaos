@@ -5,12 +5,13 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fdclnt"
 	"sigmaos/fslib"
 	"sigmaos/leaseclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclntclnt"
-	// sos "sigmaos/sigmaos"
+	sos "sigmaos/sigmaos"
 )
 
 func init() {
@@ -37,6 +38,22 @@ type SigmaClntKernel struct {
 	*leaseclnt.LeaseClnt
 }
 
+// Create FsLib using either sigmalcntd or fdclnt
+func NewFsLib(pcfg *proc.ProcEnv) (*fslib.FsLib, error) {
+	var err error
+	var s sos.SigmaOS
+	if pcfg.UseSigmaclntd {
+		s, err = sigmaclntclnt.NewSigmaClntClnt()
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
+			return nil, err
+		}
+	} else {
+		s = fdclnt.NewFdClient(pcfg, nil)
+	}
+	return fslib.NewFsLibAPI(pcfg, s)
+}
+
 // Convert to SigmaClntKernel from SigmaClnt
 func NewSigmaClntKernel(sc *SigmaClnt) *SigmaClntKernel {
 	sck := &SigmaClntKernel{sc.FsLib, sc.ProcAPI.(*procclnt.ProcClnt), sc.LeaseClnt}
@@ -49,9 +66,9 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 	return sc
 }
 
-// Create a SigmaClnt (using fdclient), as a proc.
+// Create a SigmaClnt (using sigmaclntd or fdclient), as a proc, without ProcAPI.
 func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	fsl, err := fslib.NewFsLib(pcfg)
+	fsl, err := NewFsLib(pcfg)
 	if err != nil {
 		db.DFatalf("NewSigmaClnt: %v", err)
 	}
@@ -62,33 +79,9 @@ func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	return &SigmaClnt{fsl, nil, lmc}, nil
 }
 
-// Create a SigmaClnt using usigmaclntd or fdclnt
-func newSigmaClntClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	var fsl *fslib.FsLib
-	var err error
-	if pcfg.UseSigmaclntd {
-		scc, err := sigmaclntclnt.NewSigmaClntClnt()
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
-			return nil, err
-		}
-		fsl, err = fslib.NewFsLibAPI(pcfg, scc)
-	} else {
-		fsl, err = fslib.NewFsLib(pcfg)
-	}
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "NewFsLibAPI err %v", err)
-	}
-	lmc, err := leaseclnt.NewLeaseClnt(fsl)
-	if err != nil {
-		return nil, err
-	}
-	return &SigmaClnt{fsl, nil, lmc}, nil
-}
-
 func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
-	sc, err := newSigmaClntClnt(pcfg)
+	sc, err := NewSigmaClntFsLib(pcfg)
 	if err != nil {
 		db.DFatalf("NewSigmaClnt: %v", err)
 	}
@@ -102,7 +95,7 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
 func NewSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := newSigmaClntClnt(pcfg)
+	sc, err := NewSigmaClntFsLib(pcfg)
 	if err != nil {
 		return nil, err
 	}

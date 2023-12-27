@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/kvgrp"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -68,7 +68,7 @@ func TestServerCrash(t *testing.T) {
 	ch := make(chan error)
 	go func() {
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := fslib.NewFsLib(pcfg)
+		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 		err = sem.Down()
@@ -146,7 +146,7 @@ func TestReconnectSimple(t *testing.T) {
 	ch := make(chan error)
 	go func() {
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := fslib.NewFsLib(pcfg)
+		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
 			_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
@@ -175,7 +175,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 		ch := make(chan error)
 		go func(i int) {
 			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-			fsl, err := fslib.NewFsLib(pcfg)
+			fsl, err := sigmaclnt.NewFsLib(pcfg)
 			assert.Nil(t, err)
 			for true {
 				_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
@@ -205,7 +205,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 		ch := make(chan error)
 		go func(i int) {
 			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-			fsl, err := fslib.NewFsLib(pcfg)
+			fsl, err := sigmaclnt.NewFsLib(pcfg)
 			assert.Nil(t, err)
 			sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 			sem.Init(0)
@@ -227,7 +227,7 @@ const (
 )
 
 func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
-	fsl, err := fslib.NewFsLib(pcfg)
+	fsl, err := sigmaclnt.NewFsLib(pcfg)
 	assert.Nil(t, err)
 	fn := sp.UX + "~local/file-" + string(pcfg.GetUname())
 	stop := false

@@ -138,7 +138,7 @@ func TestConnect(t *testing.T) {
 	_, err = ts.Write(fd, d)
 	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 
-	err = ts.Close(fd)
+	err = ts.CloseFd(fd)
 	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 
 	fd, err = ts.Open(fn, sp.OREAD)

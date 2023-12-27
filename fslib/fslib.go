@@ -37,6 +37,10 @@ func (fl *FsLib) DetachAll() error {
 	return fl.SigmaOS.DetachAll()
 }
 
+func (fl *FsLib) Close() error {
+	return fl.SigmaOS.Close()
+}
+
 func (fl *FsLib) GetSigmaOS() sos.SigmaOS {
 	return fl.SigmaOS
 }

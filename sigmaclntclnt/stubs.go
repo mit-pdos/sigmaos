@@ -56,7 +56,7 @@ func (scc *SigmaClntClnt) rpcSize(method string, req proto.Message, rep *scproto
 	}
 }
 
-func (scc *SigmaClntClnt) Close(fd int) error {
+func (scc *SigmaClntClnt) CloseFd(fd int) error {
 	req := scproto.SigmaCloseRequest{Fd: uint32(fd)}
 	rep := scproto.SigmaErrReply{}
 	err := scc.rpcErr("SigmaClntSrv.Close", &req, &rep)
@@ -147,7 +147,7 @@ func (scc *SigmaClntClnt) Seek(fd int, off sp.Toffset) error {
 	req := scproto.SigmaSeekRequest{Fd: uint32(fd), Offset: uint64(off)}
 	rep := scproto.SigmaErrReply{}
 	err := scc.rpcErr("SigmaClntSrv.Seek", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Seek %v %v", req, rep, err)
+	db.DPrintf(db.SIGMACLNTCLNT, "Seek %v %v %v", req, rep, err)
 	return err
 }
 

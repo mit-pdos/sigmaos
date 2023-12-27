@@ -61,7 +61,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		_, err = fsl2.PutFile(pn+"/f", 0777, sp.OWRITE, []byte("should fail"))
 		assert.NotNil(ts.T, err, "Put")
 		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale))
-		fsl2.Close(fd)
+		fsl2.CloseFd(fd)
 
 		ch <- true
 	}()

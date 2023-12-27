@@ -18,5 +18,5 @@ func (fsl *FsLib) CreateLeaderFile(pn string, b []byte, lid sp.TleaseId, f sp.Tf
 	if _, err := fsl.SigmaOS.WriteFence(fd, b, f); err != nil {
 		return err
 	}
-	return fsl.Close(fd)
+	return fsl.CloseFd(fd)
 }

@@ -61,12 +61,12 @@ func (r *Reader) Work() *proc.Status {
 	if err != nil {
 		db.DFatalf("Open error: %v", err)
 	}
-	defer r.Close(pipefd)
+	defer r.CloseFd(pipefd)
 	fd, err := r.Open(r.input, sp.OREAD)
 	if err != nil {
 		return proc.NewStatusErr("File not found", nil)
 	}
-	defer r.Close(fd)
+	defer r.CloseFd(fd)
 	for {
 		data, err := r.Read(fd, pipe.PIPESZ)
 		if len(data) == 0 || err != nil {

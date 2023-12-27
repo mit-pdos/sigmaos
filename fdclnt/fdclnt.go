@@ -53,7 +53,7 @@ func (fdc *FdClient) String() string {
 	return str
 }
 
-func (fdc *FdClient) Close(fd int) error {
+func (fdc *FdClient) CloseFd(fd int) error {
 	fid, error := fdc.fds.lookup(fd)
 	if error != nil {
 		return error
@@ -278,4 +278,8 @@ func (fdc *FdClient) Detach(pn string) error {
 
 func (fdc *FdClient) DetachAll() error {
 	return fdc.pc.DetachAll()
+}
+
+func (fdc *FdClient) Close() error {
+	return nil
 }

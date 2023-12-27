@@ -146,7 +146,7 @@ func TestSymlink3(t *testing.T) {
 		assert.Nil(t, err, "Reading linked file")
 		assert.Equal(t, contents, string(b), "File contents don't match")
 
-		err = sc.Close(fd)
+		err = sc.CloseFd(fd)
 		assert.Nil(t, err, "closing linked file")
 
 		return false, nil

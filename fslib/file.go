@@ -52,7 +52,7 @@ type FdReader struct {
 }
 
 func (rd *FdReader) Close() error {
-	return rd.sos.Close(rd.fd)
+	return rd.sos.CloseFd(rd.fd)
 }
 
 func (rd *FdReader) Read(o sp.Toffset, sz sp.Tsize) ([]byte, error) {

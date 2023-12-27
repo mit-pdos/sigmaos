@@ -160,7 +160,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 		db.DPrintf(db.WWW_ERR, "pipe open %v failed %v", pipePath, err)
 		return
 	}
-	defer www.ssrv.SigmaClnt().Close(fd)
+	defer www.ssrv.SigmaClnt().CloseFd(fd)
 	for {
 		b, err := www.ssrv.SigmaClnt().Read(fd, pipe.PIPESZ)
 		if err != nil || len(b) == 0 {

@@ -23,7 +23,7 @@ func (wrt *Writer) Write(p []byte) (int, error) {
 }
 
 func (wrt *Writer) Close() error {
-	err := wrt.sos.Close(wrt.fd)
+	err := wrt.sos.CloseFd(wrt.fd)
 	if err != nil {
 		return err
 	}

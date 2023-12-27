@@ -11,5 +11,5 @@ func (fl *FsLib) NewPipe(name string, lperm sp.Tperm) error {
 	if err != nil {
 		return err
 	}
-	return fl.Close(fd)
+	return fl.CloseFd(fd)
 }

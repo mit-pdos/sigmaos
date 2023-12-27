@@ -42,7 +42,7 @@ func TestPipeBasic(t *testing.T) {
 		b, err := fsl.Read(fd, 100)
 		assert.Nil(ts.T, err, "Read")
 		assert.Equal(ts.T, "hello", string(b))
-		err = fsl.Close(fd)
+		err = fsl.CloseFd(fd)
 		assert.Nil(ts.T, err, "Close")
 		ch <- true
 	}()
@@ -50,7 +50,7 @@ func TestPipeBasic(t *testing.T) {
 	assert.Nil(ts.T, err, "Open")
 	_, err = ts.Write(fd, []byte("hello"))
 	assert.Nil(ts.T, err, "Write")
-	err = ts.Close(fd)
+	err = ts.CloseFd(fd)
 	assert.Nil(ts.T, err, "Close")
 
 	<-ch
@@ -82,7 +82,7 @@ func TestPipeClose(t *testing.T) {
 			assert.Nil(ts.T, err, "Read")
 			assert.Equal(ts.T, "hello", string(b))
 		}
-		err = fsl.Close(fd)
+		err = fsl.CloseFd(fd)
 		assert.Nil(ts.T, err, "Close: %v", err)
 		ch <- true
 	}(ch)
@@ -90,7 +90,7 @@ func TestPipeClose(t *testing.T) {
 	assert.Nil(ts.T, err, "Open")
 	_, err = ts.Write(fd, []byte("hello"))
 	assert.Nil(ts.T, err, "Write")
-	err = ts.Close(fd)
+	err = ts.CloseFd(fd)
 	assert.Nil(ts.T, err, "Close")
 
 	<-ch

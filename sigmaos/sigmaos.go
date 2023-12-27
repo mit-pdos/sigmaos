@@ -16,7 +16,7 @@ const (
 type SigmaOS interface {
 	// Core interface
 
-	Close(fd int) error
+	CloseFd(fd int) error
 	Stat(path string) (*sp.Stat, error)
 	Create(path string, p sp.Tperm, m sp.Tmode) (int, error)
 
@@ -58,4 +58,5 @@ type SigmaOS interface {
 	DetachAll() error
 	Detach(path string) error
 	Disconnect(path string) error
+	Close() error
 }

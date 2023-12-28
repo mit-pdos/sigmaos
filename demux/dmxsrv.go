@@ -18,6 +18,8 @@ type reply struct {
 	seqno sessp.Tseqno
 }
 
+// DemuxSrv demultiplexes RPCs from a single transport and multiplexes
+// the reponses on the transport.
 type DemuxSrv struct {
 	in      *bufio.Reader
 	out     *bufio.Writer

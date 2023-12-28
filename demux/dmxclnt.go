@@ -2,53 +2,16 @@ package demux
 
 import (
 	"bufio"
-	"fmt"
 
 	db "sigmaos/debug"
 	"sigmaos/frame"
 	"sigmaos/sessp"
 	// sp "sigmaos/sigmap"
 	"sigmaos/serr"
-	"sync"
 )
 
-type rpc struct {
-	ch      chan error
-	seqno   sessp.Tseqno
-	request []byte
-	reply   []byte
-}
-
-func (r *rpc) String() string {
-	return fmt.Sprintf("{rpc %d %d %d}", r.seqno, len(r.request), len(r.reply))
-}
-
-type rpcMap struct {
-	sync.Mutex
-	rpcs map[sessp.Tseqno]*rpc
-}
-
-func newRpcMap() *rpcMap {
-	return &rpcMap{rpcs: make(map[sessp.Tseqno]*rpc)}
-}
-
-func (rm *rpcMap) Put(seqno sessp.Tseqno, rpc *rpc) {
-	rm.Lock()
-	defer rm.Unlock()
-	rm.rpcs[seqno] = rpc
-}
-
-func (rm *rpcMap) Remove(seqno sessp.Tseqno) (*rpc, bool) {
-	rm.Lock()
-	defer rm.Unlock()
-
-	if rpc, ok := rm.rpcs[seqno]; ok {
-		delete(rm.rpcs, seqno)
-		return rpc, true
-	}
-	return nil, false
-}
-
+// DemuxClnt multiplexes RPCs on a single transport and
+// demultiplexes responses.
 type DemuxClnt struct {
 	out    *bufio.Writer
 	in     *bufio.Reader
@@ -68,7 +31,7 @@ func (dmx *DemuxClnt) writer() {
 	for {
 		rpc, ok := <-dmx.rpcs
 		if !ok {
-			db.DPrintf(db.DEMUXCLNT, "%v writer: replies closed\n")
+			db.DPrintf(db.DEMUXCLNT, "writer: replies closed\n")
 			return
 		}
 		if err := frame.WriteSeqno(rpc.seqno, dmx.out); err != nil {
@@ -89,13 +52,15 @@ func (dmx *DemuxClnt) writer() {
 }
 
 func (dmx *DemuxClnt) reply(seqno sessp.Tseqno, reply []byte, err error) {
-	rpc, ok := dmx.rpcmap.Remove(seqno)
-	if !ok {
+	rpc, last := dmx.rpcmap.remove(seqno)
+	if rpc == nil {
 		db.DFatalf("Remove err %v\n", seqno)
+	}
+	if last {
+		close(dmx.rpcs)
 	}
 	rpc.reply = reply
 	rpc.ch <- err
-
 }
 
 func (dmx *DemuxClnt) reader() {
@@ -113,16 +78,27 @@ func (dmx *DemuxClnt) reader() {
 		db.DPrintf(db.DEMUXCLNT, "reader: reply %v\n", seqno)
 		dmx.reply(seqno, reply, nil)
 	}
+	for _, s := range dmx.rpcmap.outstanding() {
+		dmx.reply(s, nil, serr.NewErr(serr.TErrUnreachable, "dmxclnt"))
+	}
 }
 
 func (dmx *DemuxClnt) SendReceive(a []byte) ([]byte, error) {
 	seqp := &dmx.seqno
 	s := seqp.Next()
 	rpc := &rpc{request: a, seqno: s, ch: make(chan error)}
+	if err := dmx.rpcmap.put(s, rpc); err != nil {
+		db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue err %v\n", err)
+		return nil, err
+	}
 	db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue %v\n", rpc)
-	dmx.rpcmap.Put(s, rpc)
 	dmx.rpcs <- rpc
 	err := <-rpc.ch
 	db.DPrintf(db.DEMUXCLNT, "SendReceive: return %v %v\n", rpc, err)
 	return rpc.reply, err
+}
+
+func (dmx *DemuxClnt) Close() error {
+	dmx.rpcmap.close()
+	return nil
 }

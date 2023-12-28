@@ -50,7 +50,7 @@ func (scs *SigmaClntSrv) setErr(err error) *sp.Rerror {
 }
 
 func (scs *SigmaClntSrv) Close(ctx fs.CtxI, req scproto.SigmaCloseRequest, rep *scproto.SigmaErrReply) error {
-	err := scs.sc.Close(int(req.Fd))
+	err := scs.sc.CloseFd(int(req.Fd))
 	db.DPrintf(db.SIGMACLNTSRV, "Close %v err %v\n", req, err)
 	rep.Err = scs.setErr(err)
 	return nil

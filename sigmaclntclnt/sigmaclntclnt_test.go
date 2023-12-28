@@ -6,17 +6,29 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 func TestCompile(t *testing.T) {
 }
 
-func TestStat(t *testing.T) {
+func TestClose(t *testing.T) {
 	ts := test.NewTstate(t)
 
+	go func() {
+		err := ts.ReadDirWait("name/", func([]*sp.Stat) bool { return true })
+		assert.NotNil(t, err)
+	}()
+
+	go func() {
+		err := ts.ReadDirWait("name/", func([]*sp.Stat) bool { return true })
+		assert.NotNil(t, err)
+	}()
+
 	st, err := ts.Stat("name/")
-	assert.Nil(t, err)
+
+	ts.Close()
 
 	db.DPrintf(db.TEST, "Stat %v err %v\n", st, err)
 

@@ -19,31 +19,40 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type rpcCh struct {
+// One rpcConn per client connection
+type SigmaClntConn struct {
 	dmx  *demux.DemuxSrv
 	rpcs *rpcsrv.RPCSrv
 	ctx  fs.CtxI
+	conn net.Conn
 }
 
-func (rpcch *rpcCh) ServeRequest(f []byte) ([]byte, *serr.Err) {
-	b, err := rpcch.rpcs.WriteRead(rpcch.ctx, f)
+func newSigmaClntConn(conn net.Conn) (*SigmaClntConn, error) {
+	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntConn for %v\n", conn)
+	scs, err := NewSigmaClntSrv()
 	if err != nil {
-		db.DPrintf(db.SIGMACLNTSRV, "serveRPC: writeRead err %v\n", err)
+		return nil, err
+	}
+	rpcs := rpcsrv.NewRPCSrv(scs, nil)
+	scc := &SigmaClntConn{nil, rpcs, ctx.NewCtxNull(), conn}
+	scc.dmx = demux.NewDemuxSrv(bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
+		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), scc)
+	return scc, nil
+}
+
+func (scc *SigmaClntConn) ServeRequest(f []byte) ([]byte, *serr.Err) {
+	b, err := scc.rpcs.WriteRead(scc.ctx, f)
+	if err != nil {
+		db.DPrintf(db.SIGMACLNTSRV, "ServeRequest: writeRead err %v\n", err)
 	}
 	return b, err
 }
 
-func newSigmaClntConn(conn net.Conn) error {
-	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntConn for %v\n", conn)
-	scs, err := NewSigmaClntSrv()
-	if err != nil {
+func (scc *SigmaClntConn) Close() error {
+	if err := scc.conn.Close(); err != nil {
 		return err
 	}
-	rpcs := rpcsrv.NewRPCSrv(scs, nil)
-	rpcch := &rpcCh{nil, rpcs, ctx.NewCtxNull()}
-	rpcch.dmx = demux.NewDemuxSrv(bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), rpcch)
-	return nil
+	return scc.dmx.Close()
 }
 
 func runServer() error {

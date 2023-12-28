@@ -52,11 +52,13 @@ type SigmaOS interface {
 	GetNamedMount() sp.Tmount
 	NewRootMount(path string, mntname string) error
 
+	// Caller is done using SigmaOS
+	Close() error
+
 	// Debugging
 	SetLocalMount(mnt *sp.Tmount, port sp.Tport)
 	Mounts() []string
 	DetachAll() error
 	Detach(path string) error
 	Disconnect(path string) error
-	Close() error
 }

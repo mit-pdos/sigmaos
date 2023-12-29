@@ -48,6 +48,13 @@ func (scc *SigmaClntConn) ServeRequest(f []byte) ([]byte, *serr.Err) {
 	return b, err
 }
 
+func (scc *SigmaClntConn) ReportError(err error) {
+	db.DPrintf(db.DEMUXSRV, "ReportError err %v", err)
+	go func() {
+		scc.Close()
+	}()
+}
+
 func (scc *SigmaClntConn) Close() error {
 	if err := scc.conn.Close(); err != nil {
 		return err

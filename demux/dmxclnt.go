@@ -10,6 +10,10 @@ import (
 	"sigmaos/serr"
 )
 
+type DemuxClntI interface {
+	ReportError(err error)
+}
+
 // DemuxClnt multiplexes RPCs on a single transport and
 // demultiplexes responses.
 type DemuxClnt struct {
@@ -18,10 +22,11 @@ type DemuxClnt struct {
 	seqno  sessp.Tseqno
 	rpcmap *rpcMap
 	rpcs   chan *rpc
+	clnti  DemuxClntI
 }
 
-func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader) *DemuxClnt {
-	dmx := &DemuxClnt{out, in, 0, newRpcMap(), make(chan *rpc)}
+func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, clnti DemuxClntI) *DemuxClnt {
+	dmx := &DemuxClnt{out, in, 0, newRpcMap(), make(chan *rpc), clnti}
 	go dmx.reader()
 	go dmx.writer()
 	return dmx
@@ -67,12 +72,12 @@ func (dmx *DemuxClnt) reader() {
 	for {
 		seqno, err := frame.ReadSeqno(dmx.in)
 		if err != nil {
-			db.DPrintf(db.DEMUXCLNT, "reader: ReadSeqno err %v\n", err)
+			dmx.clnti.ReportError(err)
 			break
 		}
 		reply, err := frame.ReadFrame(dmx.in)
 		if err != nil {
-			db.DPrintf(db.DEMUXCLNT, "reader: ReadFrame err %v\n", err)
+			dmx.clnti.ReportError(err)
 			break
 		}
 		db.DPrintf(db.DEMUXCLNT, "reader: reply %v\n", seqno)

@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"net"
 
+	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
@@ -29,14 +30,21 @@ func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
 	return nil, nil
 }
 
+func (scc *SigmaClntClnt) ReportError(err error) {
+	db.DPrintf(db.DEMUXCLNT, "ReportError %v", err)
+	go func() {
+		scc.Close()
+	}()
+}
+
 func NewSigmaClntClnt() (*SigmaClntClnt, error) {
 	conn, err := net.Dial("unix", sp.SIGMASOCKET)
 	if err != nil {
 		return nil, err
 	}
-	dmx := demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN))
-	scc := &SigmaClntClnt{dmx, nil, 0, conn}
+	scc := &SigmaClntClnt{nil, nil, 0, conn}
+	scc.dmx = demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), scc)
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	return scc, nil
 }

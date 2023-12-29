@@ -10,7 +10,7 @@ import (
 	"sigmaos/sessp"
 )
 
-type DemuxI interface {
+type DemuxSrvI interface {
 	ServeRequest([]byte) ([]byte, *serr.Err)
 	ReportError(err error)
 }
@@ -27,13 +27,13 @@ type DemuxSrv struct {
 	mu      sync.Mutex
 	in      *bufio.Reader
 	out     *bufio.Writer
-	serve   DemuxI
+	serve   DemuxSrvI
 	replies chan reply
 	closed  bool
 	nreq    int
 }
 
-func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, serve DemuxI) *DemuxSrv {
+func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, serve DemuxSrvI) *DemuxSrv {
 	dmx := &DemuxSrv{in: in, out: out, serve: serve, replies: make(chan reply)}
 	go dmx.reader()
 	go dmx.writer()

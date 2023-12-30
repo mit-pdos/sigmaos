@@ -1,7 +1,10 @@
+// The package pathclnt implements all path operations of the SigmaOS
+// API. In particular it walks pathnames, mounting servers as needed,
+// and allocates an fid for the file at the server.  All fid-based
+// operations are inherited from [FidClnt].
 package pathclnt
 
 import (
-	"errors"
 	"fmt"
 
 	db "sigmaos/debug"
@@ -9,19 +12,11 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rand"
-	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
 type Watch func(error)
-
-//
-// The Sigma file system API at the level of pathnames.  The
-// pathname-based operations are implemented here and support dynamic
-// mounts, sfs-like pathnames, etc. All fid-based operations are
-// inherited from FidClnt.
-//
 
 type PathClnt struct {
 	*fidclnt.FidClnt
@@ -120,49 +115,6 @@ func (pathc *PathClnt) Disconnect(pn string) error {
 		return err
 	}
 	return nil
-}
-
-type rdr struct {
-	*fidclnt.FidClnt
-	fid sp.Tfid
-}
-
-func newRdr(fdc *fidclnt.FidClnt, fid sp.Tfid) *rdr {
-	return &rdr{fdc, fid}
-}
-
-func (rd *rdr) Close() error {
-	return rd.FidClnt.Clunk(rd.fid)
-}
-
-func (rd *rdr) Read(o sp.Toffset, sz sp.Tsize) ([]byte, error) {
-	b, err := rd.ReadF(rd.fid, o, sz)
-	if err != nil {
-		return b, err
-	}
-	return b, nil
-}
-
-func (pathc *PathClnt) NewReader(fid sp.Tfid, path string) *reader.Reader {
-	return reader.NewReader(newRdr(pathc.FidClnt, fid), path)
-}
-
-func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
-	db.DPrintf(db.PATHCLNT, "readlink %v", fid)
-	qid := pathc.Qid(fid)
-	if qid.Ttype()&sp.QTSYMLINK == 0 {
-		return nil, serr.NewErr(serr.TErrNotSymlink, qid.Type)
-	}
-	_, err := pathc.FidClnt.Open(fid, sp.OREAD)
-	if err != nil {
-		return nil, err
-	}
-	rdr := reader.NewReader(newRdr(pathc.FidClnt, fid), "")
-	b, r := rdr.GetDataErr()
-	if errors.As(r, &err) {
-		return nil, err
-	}
-	return b, nil
 }
 
 func (pathc *PathClnt) mount(fid sp.Tfid, pn string) *serr.Err {

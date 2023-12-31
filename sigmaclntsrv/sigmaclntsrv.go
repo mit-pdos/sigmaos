@@ -29,6 +29,11 @@ func newSigmaClntSrv() (*SigmaClntSrv, error) {
 		db.DFatalf("Error local IP: %v", err)
 	}
 	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, "127.0.0.1", localIP, "local-build", false, false)
+	pcfg.Program = "sigmaclntd"
+	pcfg.SetUname("sigmaclntd")
+	pcfg.SetPID(sp.GenPid("sigmaclntd"))
+	proc.SetSigmaDebugPid(pcfg.GetPID().String())
+
 	scs := &SigmaClntSrv{
 		pcfg,
 		fidclnt.NewFidClnt(pcfg.Net),

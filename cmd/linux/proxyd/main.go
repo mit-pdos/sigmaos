@@ -21,7 +21,7 @@ func main() {
 	pcfg.Program = "proxy"
 	pcfg.SetUname("proxy")
 	addr := sp.NewTaddr(sp.NO_HOST, 1110)
-	proc.SetSigmaDebugPid(pcfg.String())
+	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 	netsrv.NewNetServer(pcfg, proxy.NewNpd(pcfg, lip), addr, npcodec.MarshalFrame, npcodec.UnmarshalFrame)
 	ch := make(chan struct{})
 	<-ch

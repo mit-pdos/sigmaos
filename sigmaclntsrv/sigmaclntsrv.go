@@ -4,65 +4,39 @@
 package sigmaclntsrv
 
 import (
-	"bufio"
 	"io"
 	"net"
 	"os"
 	"os/exec"
 
-	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/demux"
-	"sigmaos/fs"
-	"sigmaos/rpcsrv"
-	"sigmaos/serr"
+	"sigmaos/fidclnt"
+	"sigmaos/netsigma"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
-// One rpcConn per client connection
-type SigmaClntConn struct {
-	dmx  *demux.DemuxSrv
-	rpcs *rpcsrv.RPCSrv
-	ctx  fs.CtxI
-	conn net.Conn
+// SigmaClntSrv maintains the state of the sigmaclntsrv. All
+// SigmaSrvClnt's share one fid table
+type SigmaClntSrv struct {
+	pcfg *proc.ProcEnv
+	fidc *fidclnt.FidClnt
 }
 
-func newSigmaClntConn(conn net.Conn) (*SigmaClntConn, error) {
-	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntConn for %v\n", conn)
-	scs, err := NewSigmaClntSrv()
+func newSigmaClntSrv() (*SigmaClntSrv, error) {
+	localIP, err := netsigma.LocalIP()
 	if err != nil {
-		return nil, err
+		db.DFatalf("Error local IP: %v", err)
 	}
-	rpcs := rpcsrv.NewRPCSrv(scs, nil)
-	scc := &SigmaClntConn{nil, rpcs, ctx.NewCtxNull(), conn}
-	scc.dmx = demux.NewDemuxSrv(bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), scc)
-	return scc, nil
-}
-
-func (scc *SigmaClntConn) ServeRequest(f []byte) ([]byte, *serr.Err) {
-	b, err := scc.rpcs.WriteRead(scc.ctx, f)
-	if err != nil {
-		db.DPrintf(db.SIGMACLNTSRV, "ServeRequest: writeRead err %v\n", err)
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, "127.0.0.1", localIP, "local-build", false, false)
+	scs := &SigmaClntSrv{
+		pcfg,
+		fidclnt.NewFidClnt(pcfg.Net),
 	}
-	return b, err
+	return scs, nil
 }
 
-func (scc *SigmaClntConn) ReportError(err error) {
-	db.DPrintf(db.DEMUXSRV, "ReportError err %v", err)
-	go func() {
-		scc.Close()
-	}()
-}
-
-func (scc *SigmaClntConn) Close() error {
-	if err := scc.conn.Close(); err != nil {
-		return err
-	}
-	return scc.dmx.Close()
-}
-
-func runServer() error {
+func (scs *SigmaClntSrv) runServer() error {
 	socket, err := net.Listen("unix", sp.SIGMASOCKET)
 	if err != nil {
 		return err
@@ -86,13 +60,18 @@ func runServer() error {
 		if err != nil {
 			return err
 		}
-		newSigmaClntConn(conn)
+		newSigmaClntConn(conn, scs.pcfg, scs.fidc)
 	}
 }
 
 // The sigmaclntd process enter here
 func RunSigmaClntSrv(args []string) error {
-	if err := runServer(); err != nil {
+	scs, err := newSigmaClntSrv()
+	if err != nil {
+		db.DPrintf(db.SIGMACLNTSRV, "runServer err %v\n", err)
+		return err
+	}
+	if err := scs.runServer(); err != nil {
 		db.DPrintf(db.SIGMACLNTSRV, "runServer err %v\n", err)
 		return err
 	}

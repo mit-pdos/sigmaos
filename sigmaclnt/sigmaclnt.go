@@ -6,6 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
+	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/leaseclnt"
 	"sigmaos/proc"
@@ -39,7 +40,7 @@ type SigmaClntKernel struct {
 }
 
 // Create FsLib using either sigmalcntd or fdclnt
-func NewFsLib(pcfg *proc.ProcEnv) (*fslib.FsLib, error) {
+func newFsLibFidClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
 	var s sos.SigmaOS
 	if pcfg.UseSigmaclntd {
@@ -49,9 +50,13 @@ func NewFsLib(pcfg *proc.ProcEnv) (*fslib.FsLib, error) {
 			return nil, err
 		}
 	} else {
-		s = fdclnt.NewFdClient(pcfg, nil)
+		s = fdclnt.NewFdClient(pcfg, fidc)
 	}
 	return fslib.NewFsLibAPI(pcfg, s)
+}
+
+func NewFsLib(pcfg *proc.ProcEnv) (*fslib.FsLib, error) {
+	return newFsLibFidClnt(pcfg, nil)
 }
 
 // Convert to SigmaClntKernel from SigmaClnt
@@ -67,8 +72,8 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 }
 
 // Create a SigmaClnt (using sigmaclntd or fdclient), as a proc, without ProcAPI.
-func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	fsl, err := NewFsLib(pcfg)
+func NewSigmaClntFsLibFidClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
+	fsl, err := newFsLibFidClnt(pcfg, fidc)
 	if err != nil {
 		db.DFatalf("NewSigmaClnt: %v", err)
 	}
@@ -77,6 +82,10 @@ func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 		return nil, err
 	}
 	return &SigmaClnt{fsl, nil, lmc}, nil
+}
+
+func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
+	return NewSigmaClntFsLibFidClnt(pcfg, nil)
 }
 
 func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {

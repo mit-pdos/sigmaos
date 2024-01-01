@@ -5,11 +5,10 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
-	db "sigmaos/debug"
+	// db "sigmaos/debug"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
-	"sigmaos/threadmgr"
 )
 
 type SessionTable struct {
@@ -99,24 +98,6 @@ func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
 		}
 		sess.Unlock()
 	}
-}
-
-// For when using a thread manager to execute requests of a session sequentially
-func (st *SessionTable) SessThread(sid sessp.Tsession) *threadmgr.ThreadMgr {
-	if _, ok := st.Lookup(sid); ok {
-		return nil
-	} else {
-		db.DFatalf("SessThread: no thread for %v\n", sid)
-	}
-	return nil
-}
-
-// Note: Used when running sessions using threadmgr
-func (st *SessionTable) KillSessThread(sid sessp.Tsession) {
-	//t := st.SessThread(sid)
-	//st.mu.RLock()
-	//defer st.mu.RUnlock()
-	// st.tm.RemoveThread(t)
 }
 
 func (st *SessionTable) LastSession() *Session {

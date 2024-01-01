@@ -1,3 +1,7 @@
+// package sesscond wraps cond vars so that if a session terminates,
+// it can wakeup threads that are associated with that session.  Each
+// cond var is represented as several cond vars, one per goroutine
+// using it.
 package sesscond
 
 import (
@@ -10,19 +14,11 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sessp"
-	"sigmaos/threadmgr"
 )
 
-//
-// sesscond wraps cond vars so that if a session terminates, it can
-// wakeup threads that are associated with that session.  Each cond
-// var is represented as several cond vars, one per goroutine using it.
-//
-
 type cond struct {
-	isClosed  bool
-	threadmgr *threadmgr.ThreadMgr
-	c         *sync.Cond
+	isClosed bool
+	c        *sync.Cond
 }
 
 // Sess cond has one cond per session.  The lock is, for example, a
@@ -49,7 +45,7 @@ func (sc *SessCond) alloc(sessid sessp.Tsession) *cond {
 	if _, ok := sc.conds[sessid]; !ok {
 		sc.conds[sessid] = []*cond{}
 	}
-	c := &cond{c: sync.NewCond(sc.lock), threadmgr: sc.sct.St.SessThread(sessid)}
+	c := &cond{c: sync.NewCond(sc.lock)}
 	db.DPrintf(db.SESSCOND, "alloc sc %v %v c %v\n", sc, sessid, c)
 	sc.conds[sessid] = append(sc.conds[sessid], c)
 	return c
@@ -63,11 +59,7 @@ func (sc *SessCond) Wait(sessid sessp.Tsession) *serr.Err {
 
 	db.DPrintf(db.SESSCOND, "Wait %v c %v\n", sessid, c)
 
-	if c.threadmgr != nil {
-		c.threadmgr.Sleep(c.c)
-	} else {
-		c.c.Wait()
-	}
+	c.c.Wait()
 
 	sc.removeWakingCond(sessid, c)
 
@@ -89,11 +81,7 @@ func (sc *SessCond) Signal() {
 	for sid, condlist := range sc.conds {
 		for _, c := range condlist {
 			db.DPrintf(db.SESSCOND, "Signal %v c %v\n", sid, c)
-			if c.threadmgr != nil {
-				c.threadmgr.Wake(c.c)
-			} else {
-				c.c.Signal()
-			}
+			c.c.Signal()
 			sc.addWakingCond(sid, c)
 		}
 		delete(sc.conds, sid)
@@ -104,11 +92,7 @@ func (sc *SessCond) Signal() {
 func (sc *SessCond) Broadcast() {
 	for sid, condlist := range sc.conds {
 		for _, c := range condlist {
-			if c.threadmgr != nil {
-				c.threadmgr.Wake(c.c)
-			} else {
-				c.c.Signal()
-			}
+			c.c.Signal()
 			sc.addWakingCond(sid, c)
 		}
 		delete(sc.conds, sid)
@@ -142,11 +126,7 @@ func (sc *SessCond) closed(sessid sessp.Tsession) {
 	if condlist, ok := sc.conds[sessid]; ok {
 		db.DPrintf(db.SESSCOND, "%p: sess %v closed\n", sc, sessid)
 		for _, c := range condlist {
-			if c.threadmgr != nil {
-				c.threadmgr.Wake(c.c)
-			} else {
-				c.c.Signal()
-			}
+			c.c.Signal()
 			sc.addWakingCond(sessid, c)
 		}
 		delete(sc.conds, sessid)

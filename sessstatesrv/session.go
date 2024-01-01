@@ -51,7 +51,6 @@ func newSession(protsrv sps.Protsrv, sid sessp.Tsession, attachf sps.AttachClntF
 // XXX reimplement
 func (sess *Session) QueueLen() int64 {
 	return 0
-	// return sess.threadmgr.QueueLen()
 }
 
 func (sess *Session) GetConn() sps.Conn {

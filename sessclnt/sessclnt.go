@@ -20,7 +20,6 @@ import (
 // replica group)
 type SessClnt struct {
 	sync.Mutex
-	cli     sessp.Tclient
 	sid     sessp.Tsession
 	seqno   sessp.Tseqno
 	closed  bool
@@ -30,16 +29,15 @@ type SessClnt struct {
 	clntnet string
 }
 
-func newSessClnt(cli sessp.Tclient, clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
+func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c := &SessClnt{}
-	c.cli = cli
 	c.sid = sessp.Tsession(rand.Uint64())
 	c.seqno = 0
 	c.addrs = addrs
 	c.nc = nil
 	c.clntnet = clntnet
 	c.queue = sessstateclnt.NewRequestQueue(addrs)
-	db.DPrintf(db.SESS_STATE_CLNT, "Cli %v make session %v to srvs %v", c.cli, c.sid, addrs)
+	db.DPrintf(db.SESS_STATE_CLNT, "Make session %v to srvs %v", c.sid, addrs)
 	nc, err := netclnt.NewNetClnt(c, clntnet, addrs)
 	if err != nil {
 		return nil, err
@@ -147,7 +145,7 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte) (*netclnt.Rpc, *serr.Err) {
 	// allocates a sequence number), the marshaling step (which often takes a
 	// long time), and the request enqueue step (which ordinarily expects fcalls
 	// to be enqueued in order).
-	fc := sessp.NewFcallMsg(req, data, c.cli, c.sid, &c.seqno)
+	fc := sessp.NewFcallMsg(req, data, c.sid, &c.seqno)
 	rpc := netclnt.NewRpc(c.addrs, sessconn.NewPartMarshaledMsg(fc), s)
 
 	// If the request is an RPC, then we don't have strict ordering requirements.

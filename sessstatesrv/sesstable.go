@@ -46,22 +46,19 @@ func (st *SessionTable) Lookup(sid sessp.Tsession) (*Session, bool) {
 	return sess, ok
 }
 
-func (st *SessionTable) Alloc(cid sessp.Tclient, sid sessp.Tsession) *Session {
+func (st *SessionTable) Alloc(sid sessp.Tsession) *Session {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 
-	return st.allocRL(cid, sid)
+	return st.allocRL(sid)
 }
 
-func (st *SessionTable) allocRL(cid sessp.Tclient, sid sessp.Tsession) *Session {
+func (st *SessionTable) allocRL(sid sessp.Tsession) *Session {
 	// Loop to first try with reader lock, then retry with writer lock.
 	for i := 0; i < 2; i++ {
 		if sess, ok := st.sessions[sid]; ok {
 			sess.Lock()
 			defer sess.Unlock()
-			if sess.ClientId == 0 {
-				sess.ClientId = cid
-			}
 			return sess
 		} else {
 			if i == 0 {
@@ -84,7 +81,7 @@ func (st *SessionTable) allocRL(cid sessp.Tclient, sid sessp.Tsession) *Session 
 			}
 		}
 	}
-	sess := newSession(st.newps(st.sesssrv, sid), cid, sid, st.attachf, st.detachf)
+	sess := newSession(st.newps(st.sesssrv, sid), sid, st.attachf, st.detachf)
 	st.sessions[sid] = sess
 	st.last = sess
 	return sess
@@ -95,7 +92,7 @@ func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
 	defer st.mu.RUnlock()
 
 	for sid, _ := range hbs.Sids {
-		sess := st.allocRL(0, sessp.Tsession(sid))
+		sess := st.allocRL(sessp.Tsession(sid))
 		sess.Lock()
 		if !sess.closed {
 			sess.heartbeatL(hbs)

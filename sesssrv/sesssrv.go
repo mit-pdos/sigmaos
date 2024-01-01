@@ -155,19 +155,19 @@ func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tses
 }
 
 // New session or new connection for existing session
-func (ssrv *SessSrv) Register(cid sessp.Tclient, sid sessp.Tsession, conn sps.Conn) *serr.Err {
+func (ssrv *SessSrv) Register(sid sessp.Tsession, conn sps.Conn) *serr.Err {
 	db.DPrintf(db.SESSSRV, "Register sid %v %v\n", sid, conn)
-	sess := ssrv.st.Alloc(cid, sid)
+	sess := ssrv.st.Alloc(sid)
 	return sess.SetConn(conn)
 }
 
 // Disassociate a connection with a session, and let it close gracefully.
-func (ssrv *SessSrv) Unregister(cid sessp.Tclient, sid sessp.Tsession, conn sps.Conn) {
+func (ssrv *SessSrv) Unregister(sid sessp.Tsession, conn sps.Conn) {
 	// If this connection hasn't been associated with a session yet, return.
 	if sid == sessp.NoSession {
 		return
 	}
-	sess := ssrv.st.Alloc(cid, sid)
+	sess := ssrv.st.Alloc(sid)
 	sess.UnsetConn(conn)
 }
 
@@ -210,7 +210,7 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 		ssrv.st.ProcessHeartbeats(fc.Msg.(*sp.Theartbeat))
 		return
 	}
-	sess := ssrv.st.Alloc(sessp.Tclient(fc.Fc.Client), s)
+	sess := ssrv.st.Alloc(s)
 	qlen := ssrv.QueueLen()
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
 	ssrv.serve(sess, fc)

@@ -5,7 +5,6 @@ option go_package = "sigmaos/sessp";
 message Fcall {
         uint32 type = 1;
         uint32 tag = 2;
-        uint64 client = 3;
-        uint64 session = 4;
-        uint64 seqno = 5;
+        uint64 session = 3;
+        uint64 seqno = 4;
 }

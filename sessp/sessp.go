@@ -11,7 +11,6 @@ type Ttag uint16
 
 type Tsession uint64
 type Tseqno uint64
-type Tclient uint64
 
 // NoTag is the tag for Tversion and Rversion requests.
 const NoTag Ttag = ^Ttag(0)
@@ -46,10 +45,6 @@ func (fcm *FcallMsg) Session() Tsession {
 	return Tsession(fcm.Fc.Session)
 }
 
-func (fcm *FcallMsg) Client() Tclient {
-	return Tclient(fcm.Fc.Client)
-}
-
 func (fcm *FcallMsg) Type() Tfcall {
 	return Tfcall(fcm.Fc.Type)
 }
@@ -71,11 +66,10 @@ func NewFcallMsgNull() *FcallMsg {
 	return &FcallMsg{fc, nil, nil}
 }
 
-func NewFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqno) *FcallMsg {
+func NewFcallMsg(msg Tmsg, data []byte, sess Tsession, seqno *Tseqno) *FcallMsg {
 	fcall := &Fcall{
 		Type:    uint32(msg.Type()),
 		Tag:     0,
-		Client:  uint64(cli),
 		Session: uint64(sess),
 	}
 	if seqno != nil {
@@ -85,14 +79,14 @@ func NewFcallMsg(msg Tmsg, data []byte, cli Tclient, sess Tsession, seqno *Tseqn
 }
 
 func NewFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
-	fm := NewFcallMsg(reply, nil, Tclient(req.Fc.Client), Tsession(req.Fc.Session), nil)
+	fm := NewFcallMsg(reply, nil, Tsession(req.Fc.Session), nil)
 	fm.Fc.Seqno = req.Fc.Seqno
 	fm.Fc.Tag = req.Fc.Tag
 	return fm
 }
 
 func (fm *FcallMsg) String() string {
-	return fmt.Sprintf("%v t %v s %v seq %v msg %v", fm.Msg.Type(), fm.Fc.Tag, fm.Fc.Session, fm.Fc.Seqno, fm.Msg)
+	return fmt.Sprintf("%v t %v sid %v seq %v msg %v", fm.Msg.Type(), fm.Fc.Tag, fm.Fc.Session, fm.Fc.Seqno, fm.Msg)
 }
 
 func (fm *FcallMsg) GetType() Tfcall {

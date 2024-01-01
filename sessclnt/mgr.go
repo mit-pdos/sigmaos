@@ -12,17 +12,15 @@ import (
 
 type Mgr struct {
 	mu       sync.Mutex
-	cli      sessp.Tclient
 	sessions map[string]*SessClnt
 	clntnet  string
 }
 
-func NewMgr(cli sessp.Tclient, clntnet string) *Mgr {
+func NewMgr(clntnet string) *Mgr {
 	sc := &Mgr{}
-	sc.cli = cli
 	sc.sessions = make(map[string]*SessClnt)
 	sc.clntnet = clntnet
-	db.DPrintf(db.SESS_STATE_CLNT, "Session Mgr for client %v", sc.cli)
+	db.DPrintf(db.SESS_STATE_CLNT, "Session Mgr for session")
 	return sc
 }
 
@@ -50,7 +48,7 @@ func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := newSessClnt(sc.cli, sc.clntnet, addrs)
+	sess, err := newSessClnt(sc.clntnet, addrs)
 	if err != nil {
 		return nil, err
 	}
@@ -65,14 +63,14 @@ func (sc *Mgr) RPC(addr sp.Taddrs, req sessp.Tmsg, data []byte) (*sessp.FcallMsg
 		db.DPrintf(db.SESS_STATE_CLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, addr)
 		return nil, err
 	}
-	db.DPrintf(db.SESS_STATE_CLNT, "cli %v sess %v RPC %v %v to %v", sc.cli, sess.sid, req.Type(), req, addr)
+	db.DPrintf(db.SESS_STATE_CLNT, "sess %v RPC %v %v to %v", sess.sid, req.Type(), req, addr)
 	msg, err := sess.RPC(req, data)
 	return msg, err
 }
 
 // For testing
 func (sc *Mgr) Disconnect(addrs sp.Taddrs) *serr.Err {
-	db.DPrintf(db.SESS_STATE_CLNT, "Disconnect cli %v addr %v", sc.cli, addrs)
+	db.DPrintf(db.SESS_STATE_CLNT, "Disconnect addr %v", addrs)
 	key := sessKey(addrs)
 	sc.mu.Lock()
 	sess, ok := sc.sessions[key]
@@ -81,7 +79,7 @@ func (sc *Mgr) Disconnect(addrs sp.Taddrs) *serr.Err {
 		return serr.NewErr(serr.TErrUnreachable, "disconnect: "+sessKey(addrs))
 	}
 	sess.close()
-	db.DPrintf(db.SESS_STATE_CLNT, "Disconnected cli %v sid %v addr %v", sc.cli, sess.sid, addrs)
+	db.DPrintf(db.SESS_STATE_CLNT, "Disconnected sid %v addr %v", sess.sid, addrs)
 	return nil
 }
 

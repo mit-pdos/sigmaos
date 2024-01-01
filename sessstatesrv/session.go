@@ -30,7 +30,6 @@ type Session struct {
 	protsrv       sps.Protsrv
 	lastHeartbeat time.Time
 	Sid           sessp.Tsession
-	ClientId      sessp.Tclient
 	began         bool // true if the fssrv has already begun processing ops
 	closed        bool // true if the session has been closed.
 	timedout      bool // for debugging
@@ -39,11 +38,10 @@ type Session struct {
 	detachClnt    sps.DetachClntF
 }
 
-func newSession(protsrv sps.Protsrv, cid sessp.Tclient, sid sessp.Tsession, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
+func newSession(protsrv sps.Protsrv, sid sessp.Tsession, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
 	sess := &Session{protsrv: protsrv,
 		lastHeartbeat: time.Now(),
 		Sid:           sid,
-		ClientId:      cid,
 		attachClnt:    attachf,
 		detachClnt:    detachf,
 	}

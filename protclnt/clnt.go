@@ -2,31 +2,19 @@ package protclnt
 
 import (
 	"sigmaos/path"
-	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
-// Each proc has a unique client ID.
-var clid sessp.Tclient = 0
-
-func init() {
-	if clid == 0 {
-		clid = sessp.Tclient(rand.Uint64())
-	}
-}
-
 type Clnt struct {
-	id sessp.Tclient
 	sm *sessclnt.Mgr
 }
 
 func NewClnt(clntnet string) *Clnt {
 	clnt := &Clnt{}
-	clnt.id = clid
-	clnt.sm = sessclnt.NewMgr(clnt.id, clntnet)
+	clnt.sm = sessclnt.NewMgr(clntnet)
 	return clnt
 }
 

@@ -20,8 +20,8 @@ type Conn interface {
 type Fsrvfcall func(*sessp.FcallMsg)
 
 type SessServer interface {
-	Register(sessp.Tclient, sessp.Tsession, Conn) *serr.Err
-	Unregister(sessp.Tclient, sessp.Tsession, Conn)
+	Register(sessp.Tsession, Conn) *serr.Err
+	Unregister(sessp.Tsession, Conn)
 	SrvFcall(*sessp.FcallMsg)
 }
 

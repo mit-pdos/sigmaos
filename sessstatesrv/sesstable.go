@@ -15,7 +15,7 @@ import (
 type SessionTable struct {
 	mu sync.RWMutex
 	//	deadlock.Mutex
-	newps     sps.NewProtServer
+	newps    sps.NewProtServer
 	sesssrv  sps.SessServer
 	sessions map[sessp.Tsession]*Session
 	last     *Session // for tests
@@ -85,7 +85,6 @@ func (st *SessionTable) allocRL(cid sessp.Tclient, sid sessp.Tsession) *Session 
 		}
 	}
 	sess := newSession(st.newps(st.sesssrv, sid), cid, sid, st.attachf, st.detachf)
-	// sess := newSession(st.newps(st.sesssrv, sid), cid, sid, st.tm.AddThread(), st.attachf, st.detachf)
 	st.sessions[sid] = sess
 	st.last = sess
 	return sess

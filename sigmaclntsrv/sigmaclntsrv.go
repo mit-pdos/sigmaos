@@ -57,6 +57,7 @@ func (scs *SigmaClntSrv) runServer() error {
 			db.DFatalf("read pipe err %v\n", err)
 		}
 		os.Remove(sp.SIGMASOCKET)
+		scs.fidc.Close()
 		os.Exit(0)
 	}()
 

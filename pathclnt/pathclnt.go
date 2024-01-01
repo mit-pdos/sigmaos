@@ -38,6 +38,7 @@ func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 		pathc.FidClnt = fidclnt.NewFidClnt(pcfg.Net)
 	} else {
 		pathc.FidClnt = fidc
+		fidc.NewClnt()
 	}
 	pathc.ndMntCache = NewNamedMountCache(pcfg)
 	pathc.rootmt = newRootMountTable()
@@ -49,6 +50,10 @@ func (pathc *PathClnt) String() string {
 	str := fmt.Sprintf("Pathclnt mount table:\n")
 	str += fmt.Sprintf("%v\n", pathc.mnt)
 	return str
+}
+
+func (pathc *PathClnt) Close() error {
+	return pathc.FidClnt.Close()
 }
 
 func (pathc *PathClnt) ClntId() sp.TclntId {

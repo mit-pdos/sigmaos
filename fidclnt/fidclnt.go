@@ -1,7 +1,9 @@
+// Package fidclnt implements SigmaOS API using fid's
 package fidclnt
 
 import (
 	"fmt"
+	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/path"
@@ -10,14 +12,12 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-//
-// Sigma file system API at the level of fids.
-//
-
 type FidClnt struct {
-	fids *FidMap
-	pc   *protclnt.Clnt
-	ft   *FenceTable
+	mu     sync.Mutex
+	fids   *FidMap
+	pc     *protclnt.Clnt
+	ft     *FenceTable
+	refcnt int
 }
 
 func NewFidClnt(clntnet string) *FidClnt {
@@ -25,12 +25,33 @@ func NewFidClnt(clntnet string) *FidClnt {
 	fidc.fids = newFidMap()
 	fidc.pc = protclnt.NewClnt(clntnet)
 	fidc.ft = NewFenceTable()
+	fidc.refcnt = 1
 	return fidc
 }
 
 func (fidc *FidClnt) String() string {
 	str := fmt.Sprintf("Fsclnt fid table %p:\n%v", fidc, fidc.fids)
 	return str
+}
+
+func (fidc *FidClnt) NewClnt() {
+	fidc.mu.Lock()
+	defer fidc.mu.Unlock()
+	fidc.refcnt++
+}
+
+func (fidc *FidClnt) Close() error {
+	fidc.mu.Lock()
+	defer fidc.mu.Unlock()
+
+	fidc.refcnt--
+	db.DPrintf(db.ALWAYS, "Close refcnt %d\n", fidc.refcnt)
+	if fidc.refcnt == 0 {
+		db.DPrintf(db.ALWAYS, "Close session\n")
+		fidc.pc.Close()
+
+	}
+	return nil
 }
 
 func (fidc *FidClnt) Len() int {

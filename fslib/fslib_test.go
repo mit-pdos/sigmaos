@@ -527,6 +527,8 @@ func dirwriter(t *testing.T, pcfg *proc.ProcEnv, dn, name string, ch chan bool) 
 			assert.Nil(t, err, "Put: %v", err)
 		}
 	}
+	err = fsl.Close()
+	assert.Nil(t, err)
 }
 
 // Concurrently scan dir and create/remove entries
@@ -790,7 +792,8 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 	for i := 0; i < 2*N; i++ {
 		<-done
 	}
-
+	err = fsl.Close()
+	assert.Nil(t, err)
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
 	ts.Shutdown()
@@ -933,7 +936,7 @@ func TestConcurAssignedRename(t *testing.T) {
 	done := make(chan int)
 	TODO := gopath.Join(pathname, "todo")
 	DONE := gopath.Join(pathname, "done")
-
+	fsls := make([]*fslib.FsLib, 0, N)
 	initfs(ts, TODO, DONE)
 
 	fnames := []string{}
@@ -949,6 +952,7 @@ func TestConcurAssignedRename(t *testing.T) {
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
 		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err, "Err newfslib: %v", err)
+		fsls = append(fsls, fsl)
 		go func(fsl *fslib.FsLib, t string) {
 			n := 0
 			for {
@@ -983,6 +987,10 @@ func TestConcurAssignedRename(t *testing.T) {
 	err = ts.RmDir(DONE)
 	assert.Nil(t, err, "RmDir: %v", err)
 
+	for _, fsl := range fsls {
+		err := fsl.Close()
+		assert.Nil(t, err)
+	}
 	ts.Shutdown()
 }
 
@@ -1279,13 +1287,16 @@ func TestFslibDetach(t *testing.T) {
 	_, err = fsl.Stat(dot)
 	assert.Nil(t, err)
 
-	// close
+	// detach from servers
 	err = fsl.DetachAll()
 	assert.Nil(t, err)
 
 	_, err = fsl.Stat(dot)
 	assert.NotNil(t, err)
 	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+
+	err = fsl.Close()
+	assert.Nil(t, err)
 
 	ts.Shutdown()
 }

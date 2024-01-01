@@ -12,6 +12,7 @@ import (
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sessp"
+	scproto "sigmaos/sigmaclntsrv/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -33,7 +34,7 @@ func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
 func (scc *SigmaClntClnt) ReportError(err error) {
 	db.DPrintf(db.DEMUXCLNT, "ReportError %v", err)
 	go func() {
-		scc.Close()
+		scc.close()
 	}()
 }
 
@@ -49,7 +50,17 @@ func NewSigmaClntClnt() (*SigmaClntClnt, error) {
 	return scc, nil
 }
 
-func (scc *SigmaClntClnt) Close() error {
+// Tell sigmaclntd to shut down
+func (scc *SigmaClntClnt) Shutdown() error {
+	req := scproto.SigmaNullRequest{}
+	rep := scproto.SigmaErrReply{}
+	err := scc.rpcErr("SigmaClntSrvAPI.Shutdown", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Shutdown %v %v %v", req, rep, err)
+	return err
+}
+
+// Close the socket connection
+func (scc *SigmaClntClnt) close() error {
 	if err := scc.conn.Close(); err != nil {
 		return err
 	}

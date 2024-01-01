@@ -281,5 +281,5 @@ func (fdc *FdClient) DetachAll() error {
 }
 
 func (fdc *FdClient) Close() error {
-	return nil
+	return fdc.pc.Close()
 }

@@ -195,11 +195,12 @@ func (ts *Tstate) Shutdown() error {
 		if err := ts.RmDir(ts.ProcEnv().ProcDir); err != nil {
 			db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", ts.ProcEnv().ProcDir, err)
 		}
-		// Shut down other kernel; the one running named last
+		// Shut down kernels; the one running named last
 		for i := len(ts.kclnts) - 1; i >= 0; i-- {
 			if err := ts.kclnts[i].Shutdown(); err != nil {
 				db.DPrintf(db.ALWAYS, "Shutdown %v err %v", ts.kclnts[i].KernelId, err)
 			}
+			ts.kclnts[i].Close()
 		}
 		if ts.scsc != nil {
 			if err := ts.scsc.Shutdown(); err != nil {

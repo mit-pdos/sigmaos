@@ -51,11 +51,11 @@ func (scc *SigmaClntConn) ServeRequest(f []byte) ([]byte, *serr.Err) {
 func (scc *SigmaClntConn) ReportError(err error) {
 	db.DPrintf(db.DEMUXSRV, "ReportError err %v", err)
 	go func() {
-		scc.Close()
+		scc.close()
 	}()
 }
 
-func (scc *SigmaClntConn) Close() error {
+func (scc *SigmaClntConn) close() error {
 	if err := scc.conn.Close(); err != nil {
 		return err
 	}
@@ -91,9 +91,9 @@ func (scs *SigmaClntSrvAPI) setErr(err error) *sp.Rerror {
 	}
 }
 
-func (scs *SigmaClntSrvAPI) Close(ctx fs.CtxI, req scproto.SigmaCloseRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SigmaClntSrvAPI) CloseFd(ctx fs.CtxI, req scproto.SigmaCloseRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.CloseFd(int(req.Fd))
-	db.DPrintf(db.SIGMACLNTSRV, "Close %v err %v\n", req, err)
+	db.DPrintf(db.SIGMACLNTSRV, "CloseFd %v err %v\n", req, err)
 	rep.Err = scs.setErr(err)
 	return nil
 }
@@ -288,5 +288,12 @@ func (scs *SigmaClntSrvAPI) Disconnect(ctx fs.CtxI, req scproto.SigmaPathRequest
 	err := scs.sc.Disconnect(req.Path)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "Disconnect %v %v\n", req, rep)
+	return nil
+}
+
+func (scs *SigmaClntSrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.Close()
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SIGMACLNTSRV, "Close %v %v\n", req, rep)
 	return nil
 }

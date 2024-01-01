@@ -30,6 +30,14 @@ func NewClnt(clntnet string) *Clnt {
 	return clnt
 }
 
+func (clnt *Clnt) Close() error {
+	scs := clnt.sm.SessClnts()
+	for _, sc := range scs {
+		sc.Close()
+	}
+	return nil
+}
+
 func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
 	reply, err := clnt.sm.RPC(addrs, args, data)
 	if err != nil {

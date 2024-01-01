@@ -59,8 +59,8 @@ func (scc *SigmaClntClnt) rpcSize(method string, req proto.Message, rep *scproto
 func (scc *SigmaClntClnt) CloseFd(fd int) error {
 	req := scproto.SigmaCloseRequest{Fd: uint32(fd)}
 	rep := scproto.SigmaErrReply{}
-	err := scc.rpcErr("SigmaClntSrvAPI.Close", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Close %v %v %v", req, rep, err)
+	err := scc.rpcErr("SigmaClntSrvAPI.CloseFd", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "CloseFd %v %v %v", req, rep, err)
 	return err
 }
 
@@ -305,10 +305,11 @@ func (scc *SigmaClntClnt) Disconnect(path string) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) Shutdown() error {
+func (scc *SigmaClntClnt) Close() error {
 	req := scproto.SigmaNullRequest{}
 	rep := scproto.SigmaErrReply{}
-	err := scc.rpcErr("SigmaClntSrvAPI.Shutdown", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Shutdown %v %v %v", req, rep, err)
+	err := scc.rpcErr("SigmaClntSrvAPI.Close", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Close %v %v %v", req, rep, err)
+	scc.close()
 	return err
 }

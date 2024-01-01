@@ -120,7 +120,10 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	}
 	db.DPrintf(db.SIGMACLNT, "EndLeases done")
 	defer db.DPrintf(db.SIGMACLNT, "ClntExit done")
-	return sc.FsLib.DetachAll()
+	if err := sc.FsLib.DetachAll(); err != nil {
+		return err
+	}
+	return sc.FsLib.Close()
 }
 
 func (sc *SigmaClnt) ClntExitOK() {

@@ -118,13 +118,9 @@ func (c *SessClnt) Detach(cid sp.TclntId) *serr.Err {
 	return nil
 }
 
-// Check if the session needs to be closed, either because the server killed
-// it, or because the client called detach. Close will be called in CompleteRPC
-// once the Rdetach is received.
+// Check if the session needs to be closed because the server killed
+// it.
 func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {
-	if msg.Type() == sessp.TRdetach {
-		return true
-	}
 	if rerr, ok := msg.(*sp.Rerror); ok {
 		err := sp.NewErr(rerr)
 		if err.IsErrSessClosed() {
@@ -219,6 +215,12 @@ func (c *SessClnt) isClosed() bool {
 	defer c.Unlock()
 
 	return c.closed
+}
+
+// Creator of sessclnt closes session
+func (c *SessClnt) Close() error {
+	c.close()
+	return nil
 }
 
 // Close the sessclnt connection to this replica group.

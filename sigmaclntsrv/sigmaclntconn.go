@@ -29,7 +29,8 @@ type SigmaClntConn struct {
 
 func newSigmaClntConn(conn net.Conn, pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntConn, error) {
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntConn for %v\n", conn)
-	scs, err := NewSigmaClntSrvAPI(pcfg, fidc)
+	// scs, err := NewSigmaClntSrvAPI(pcfg, fidc)
+	scs, err := NewSigmaClntSrvAPI(pcfg, nil)
 	if err != nil {
 		return nil, err
 	}

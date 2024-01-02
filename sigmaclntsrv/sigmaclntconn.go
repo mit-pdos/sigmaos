@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"net"
+	"sync"
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -52,11 +53,15 @@ func (scc *SigmaClntConn) ServeRequest(f []byte) ([]byte, *serr.Err) {
 func (scc *SigmaClntConn) ReportError(err error) {
 	db.DPrintf(db.DEMUXSRV, "ReportError err %v", err)
 	go func() {
+		db.DPrintf(db.ALWAYS, "close sigmaclntconn %v err %v", scc, err)
 		scc.close()
 	}()
 }
 
 func (scc *SigmaClntConn) close() error {
+	if !scc.api.testAndSetClosed() {
+		scc.api.sc.Close()
+	}
 	if err := scc.conn.Close(); err != nil {
 		return err
 	}
@@ -66,7 +71,17 @@ func (scc *SigmaClntConn) close() error {
 // SigmaClntSrvAPI exports the RPC methods that the server proxies.  The
 // RPC methods correspond to the functions in the sigmaos interface.
 type SigmaClntSrvAPI struct {
-	sc *sigmaclnt.SigmaClnt
+	mu     sync.Mutex
+	closed bool
+	sc     *sigmaclnt.SigmaClnt
+}
+
+func (scc *SigmaClntSrvAPI) testAndSetClosed() bool {
+	scc.mu.Lock()
+	defer scc.mu.Unlock()
+	b := scc.closed
+	scc.closed = true
+	return b
 }
 
 func NewSigmaClntSrvAPI(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntSrvAPI, error) {
@@ -75,7 +90,7 @@ func NewSigmaClntSrvAPI(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntSr
 		return nil, err
 	}
 
-	scsa := &SigmaClntSrvAPI{sc}
+	scsa := &SigmaClntSrvAPI{sc: sc}
 	return scsa, nil
 }
 
@@ -293,7 +308,13 @@ func (scs *SigmaClntSrvAPI) Disconnect(ctx fs.CtxI, req scproto.SigmaPathRequest
 }
 
 func (scs *SigmaClntSrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaErrReply) error {
-	err := scs.sc.Close()
+	db.DPrintf(db.ALWAYS, "Close conn %v\n", scs)
+	var err error
+	if !scs.testAndSetClosed() {
+		err = scs.sc.Close()
+	} else {
+		err = nil
+	}
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "Close %v %v\n", req, rep)
 	return nil

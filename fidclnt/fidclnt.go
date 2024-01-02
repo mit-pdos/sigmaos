@@ -44,12 +44,15 @@ func (fidc *FidClnt) Close() error {
 	fidc.mu.Lock()
 	defer fidc.mu.Unlock()
 
+	if fidc.refcnt <= 0 {
+		db.DPrintf(db.ALWAYS, "FidClnt already closed\n")
+		return nil // XXX maybe return error
+	}
 	fidc.refcnt--
-	db.DPrintf(db.ALWAYS, "Close refcnt %d\n", fidc.refcnt)
+	db.DPrintf(db.ALWAYS, "FidClnt refcnt %d\n", fidc.refcnt)
 	if fidc.refcnt == 0 {
-		db.DPrintf(db.ALWAYS, "Close session\n")
+		db.DPrintf(db.ALWAYS, "FidClnt close session\n")
 		fidc.pc.Close()
-
 	}
 	return nil
 }

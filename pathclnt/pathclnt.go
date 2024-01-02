@@ -94,9 +94,7 @@ func (pathc *PathClnt) DetachAll() error {
 	return nil
 }
 
-// Detach from server. XXX Mixes up umount a file system at server and
-// closing session; if two mounts point to the same server; the first
-// detach will close the session regardless of the second mount point.
+// Detach client from server.
 func (pathc *PathClnt) Detach(pn string) error {
 	fid, _, err := pathc.mnt.umount(path.Split(pn), true)
 	if err != nil {

@@ -24,23 +24,23 @@ import (
 
 	// "github.com/sasha-s/go-deadlock"
 
+	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/lockmap"
 	"sigmaos/serr"
-	"sigmaos/sesscond"
 	sp "sigmaos/sigmap"
 )
 
 type Watch struct {
 	pl   *lockmap.PathLock
-	sc   *sesscond.SessCond
+	sc   *clntcond.ClntCond
 	nref int
 }
 
-func newWatch(sct *sesscond.SessCondTable, pl *lockmap.PathLock) *Watch {
+func newWatch(sct *clntcond.ClntCondTable, pl *lockmap.PathLock) *Watch {
 	w := &Watch{}
 	w.pl = pl
-	w.sc = sct.NewSessCond(pl)
+	w.sc = sct.NewClntCond(pl)
 	return w
 }
 
@@ -62,10 +62,10 @@ type WatchTable struct {
 	//      deadlock.Mutex
 	sync.Mutex
 	watches map[string]*Watch
-	sct     *sesscond.SessCondTable
+	sct     *clntcond.ClntCondTable
 }
 
-func NewWatchTable(sct *sesscond.SessCondTable) *WatchTable {
+func NewWatchTable(sct *clntcond.ClntCondTable) *WatchTable {
 	wt := &WatchTable{}
 	wt.sct = sct
 	wt.watches = make(map[string]*Watch)
@@ -124,7 +124,7 @@ func (wt *WatchTable) FreeWatch(ws *Watch) {
 	db.DPrintf(db.WATCH, "FreeWatch '%s'\n", ws.pl.Path())
 	del := wt.free(ws)
 	if del {
-		wt.sct.FreeSessCond(ws.sc)
+		wt.sct.FreeClntCond(ws.sc)
 	}
 }
 

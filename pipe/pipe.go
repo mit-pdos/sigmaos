@@ -6,10 +6,10 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
+	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/serr"
-	"sigmaos/sesscond"
 	sp "sigmaos/sigmap"
 )
 
@@ -17,9 +17,9 @@ const PIPESZ = 8192
 
 type Pipe struct {
 	mu      sync.Mutex
-	condr   *sesscond.SessCond
-	condw   *sesscond.SessCond
-	sct     *sesscond.SessCondTable
+	condr   *clntcond.ClntCond
+	condw   *clntcond.ClntCond
+	sct     *clntcond.ClntCondTable
 	nreader int
 	nwriter int
 	wclosed bool
@@ -30,9 +30,9 @@ type Pipe struct {
 
 func NewPipe(ctx fs.CtxI) *Pipe {
 	pipe := &Pipe{}
-	pipe.condr = ctx.SessCondTable().NewSessCond(&pipe.mu)
-	pipe.condw = ctx.SessCondTable().NewSessCond(&pipe.mu)
-	pipe.sct = ctx.SessCondTable()
+	pipe.condr = ctx.ClntCondTable().NewClntCond(&pipe.mu)
+	pipe.condw = ctx.ClntCondTable().NewClntCond(&pipe.mu)
+	pipe.sct = ctx.ClntCondTable()
 	pipe.buf = make([]byte, 0, PIPESZ)
 	pipe.nreader = 0
 	pipe.nwriter = 0
@@ -194,8 +194,8 @@ func (pipe *Pipe) Unlink() {
 	// Free sess conds.
 	if pipe.nlink == 0 {
 		db.DPrintf(db.PIPE, "PIPE NLINK 0")
-		pipe.sct.FreeSessCond(pipe.condw)
-		pipe.sct.FreeSessCond(pipe.condr)
+		pipe.sct.FreeClntCond(pipe.condw)
+		pipe.sct.FreeClntCond(pipe.condr)
 	}
 }
 

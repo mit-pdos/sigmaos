@@ -1,6 +1,7 @@
 package sesssrv
 
 import (
+	"sigmaos/clntcond"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -12,7 +13,6 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sesscond"
 	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
@@ -40,7 +40,7 @@ type SessSrv struct {
 	stats    *stats.StatInfo
 	st       *sessstatesrv.SessionTable
 	sm       *sessstatesrv.SessionMgr
-	sct      *sesscond.SessCondTable
+	sct      *clntcond.ClntCondTable
 	plt      *lockmap.PathLockTable
 	wt       *watch.WatchTable
 	vt       *version.VersionTable
@@ -59,7 +59,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProt
 	ssrv.et = et
 	ssrv.stats = stats.NewStatsDev(ssrv.dirover)
 	ssrv.st = sessstatesrv.NewSessionTable(newps, ssrv, attachf, detachf)
-	ssrv.sct = sesscond.NewSessCondTable(ssrv.st)
+	ssrv.sct = clntcond.NewClntCondTable()
 	ssrv.plt = lockmap.NewPathLockTable()
 	ssrv.wt = watch.NewWatchTable(ssrv.sct)
 	ssrv.vt = version.NewVersionTable()
@@ -150,7 +150,7 @@ func (ssrv *SessSrv) GetVersionTable() *version.VersionTable {
 	return ssrv.vt
 }
 
-func (ssrv *SessSrv) GetSessionCondTable() *sesscond.SessCondTable {
+func (ssrv *SessSrv) GetSessionCondTable() *clntcond.ClntCondTable {
 	return ssrv.sct
 }
 

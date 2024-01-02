@@ -1,8 +1,8 @@
 package ctx
 
 import (
+	"sigmaos/clntcond"
 	"sigmaos/fs"
-	"sigmaos/sesscond"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -11,11 +11,11 @@ type Ctx struct {
 	uname   sp.Tuname
 	sessid  sessp.Tsession
 	clntid  sp.TclntId
-	sct     *sesscond.SessCondTable
+	sct     *clntcond.ClntCondTable
 	fencefs fs.Dir
 }
 
-func NewCtx(uname sp.Tuname, sessid sessp.Tsession, clntid sp.TclntId, sct *sesscond.SessCondTable, fencefs fs.Dir) *Ctx {
+func NewCtx(uname sp.Tuname, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
 	return &Ctx{uname: uname, sessid: sessid, clntid: clntid, sct: sct, fencefs: fencefs}
 }
 
@@ -35,7 +35,7 @@ func (ctx *Ctx) ClntId() sp.TclntId {
 	return ctx.clntid
 }
 
-func (ctx *Ctx) SessCondTable() *sesscond.SessCondTable {
+func (ctx *Ctx) ClntCondTable() *clntcond.ClntCondTable {
 	return ctx.sct
 }
 

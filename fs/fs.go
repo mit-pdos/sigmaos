@@ -1,12 +1,12 @@
 package fs
 
 import (
+	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/npcodec"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sesscond"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
@@ -18,7 +18,7 @@ type MkDirF func(Inode, NewInodeF) Inode
 type CtxI interface {
 	Uname() sp.Tuname
 	SessionId() sessp.Tsession
-	SessCondTable() *sesscond.SessCondTable
+	ClntCondTable() *clntcond.ClntCondTable
 	ClntId() sp.TclntId
 	FenceFs() Dir
 }

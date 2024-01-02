@@ -229,7 +229,7 @@ const (
 	PROTSRV                      = "PROTSRV"
 	REFMAP_SUFFIX                = "_REFMAP"
 	VERSION                      = "VERSION"
-	SESSCOND                     = "SESSCOND"
+	CLNTCOND                     = "CLNTCOND"
 	SESS_STATE_SRV               = "SESS_STATE_SRV"
 	SESS_STATE_SRV_ERR           = SESS_STATE_SRV + ERR
 )

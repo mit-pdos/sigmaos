@@ -1,6 +1,7 @@
 package protsrv
 
 import (
+	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/ephemeralmap"
 	"sigmaos/fid"
@@ -9,7 +10,6 @@ import (
 	"sigmaos/namei"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sesscond"
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"
 	"sigmaos/sessstatesrv"
@@ -34,7 +34,7 @@ type ProtSrv struct {
 	stats *stats.StatInfo            // shared across sessions
 	et    *ephemeralmap.EphemeralMap // shared across sessions
 	st    *sessstatesrv.SessionTable // shared across sessions
-	sct   *sesscond.SessCondTable    // shared across sessions
+	sct   *clntcond.ClntCondTable    // shared across sessions
 	ft    *fidTable
 	sid   sessp.Tsession
 }

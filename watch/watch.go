@@ -1,20 +1,6 @@
-package watch
-
-import (
-	"sync"
-
-	// "github.com/sasha-s/go-deadlock"
-
-	db "sigmaos/debug"
-	"sigmaos/lockmap"
-	"sigmaos/serr"
-	"sigmaos/sesscond"
-	"sigmaos/sessp"
-)
-
-//
-// A table of watches so that client can wait until a file is created
-// or removed, or a directory changes (see protsrv.Watch()).
+// package watch implements watches so that client can wait until a
+// file is created or removed, or a directory changes; see Watch()
+// [protsrv].
 //
 // Servers also use them to locks a pathname before
 // manipulating/creating a file or directory.  When a server starts an
@@ -31,7 +17,19 @@ import (
 // which causes the waiting thread to resume after acquiring the lock
 // on the watch.  This locking plan is modeled after condition
 // variables to ensure watches don't suffer from lost wakeups.
-//
+package watch
+
+import (
+	"sync"
+
+	// "github.com/sasha-s/go-deadlock"
+
+	db "sigmaos/debug"
+	"sigmaos/lockmap"
+	"sigmaos/serr"
+	"sigmaos/sesscond"
+	sp "sigmaos/sigmap"
+)
 
 type Watch struct {
 	pl   *lockmap.PathLock
@@ -47,9 +45,9 @@ func newWatch(sct *sesscond.SessCondTable, pl *lockmap.PathLock) *Watch {
 }
 
 // Caller should hold path lock. On return caller has path lock again
-func (ws *Watch) Watch(sessid sessp.Tsession) *serr.Err {
+func (ws *Watch) Watch(cid sp.TclntId) *serr.Err {
 	db.DPrintf(db.WATCH, "Watch '%s'\n", ws.pl.Path())
-	err := ws.sc.Wait(sessid)
+	err := ws.sc.Wait(cid)
 	if err != nil {
 		db.DPrintf(db.WATCH_ERR, "Watch done waiting '%v' err %v\n", ws.pl.Path(), err)
 	}
@@ -131,9 +129,9 @@ func (wt *WatchTable) FreeWatch(ws *Watch) {
 }
 
 // Caller should have pl locked
-func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, sid sessp.Tsession) *serr.Err {
+func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, cid sp.TclntId) *serr.Err {
 	ws := wt.allocWatch(pl)
-	err := ws.Watch(sid)
+	err := ws.Watch(cid)
 	wt.FreeWatch(ws)
 	return err
 }

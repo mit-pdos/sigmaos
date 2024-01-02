@@ -92,8 +92,12 @@ func (sm *SessionMgr) runDetaches() {
 		<-sessTimeoutT.C
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
-			detach := sessp.NewFcallMsg(&sp.Tdetach{}, nil, s.Sid, nil)
-			sm.srvfcall(detach)
+			clnts := s.getClnts()
+			for _, c := range clnts {
+				db.DPrintf(db.ALWAYS, "Session %v timed out", s.Sid)
+				detach := sessp.NewFcallMsg(&sp.Tdetach{ClntId: uint64(c)}, nil, s.Sid, nil)
+				sm.srvfcall(detach)
+			}
 		}
 	}
 }

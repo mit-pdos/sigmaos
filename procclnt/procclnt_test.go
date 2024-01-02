@@ -601,6 +601,8 @@ func TestSpawnBurst(t *testing.T) {
 		assert.Nil(t, err, "WaitStart: %v", err)
 	}
 
+	db.DPrintf(db.TEST, "Evict burst spawn")
+
 	for _, p := range ps {
 		err := ts.Evict(p.GetPid())
 		assert.Nil(t, err, "Evict: %v", err)

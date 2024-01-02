@@ -37,7 +37,7 @@ func (npd *Npd) newProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Pr
 func (npd *Npd) serve(fm *sessp.FcallMsg) {
 	s := sessp.Tsession(fm.Fc.Session)
 	sess, _ := npd.st.Lookup(s)
-	msg, data, _, rerror := sess.Dispatch(fm.Msg, fm.Data)
+	msg, data, rerror := sess.Dispatch(fm.Msg, fm.Data)
 	if rerror != nil {
 		msg = rerror
 	}

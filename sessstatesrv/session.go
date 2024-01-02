@@ -36,14 +36,17 @@ type Session struct {
 	attachClnt    sps.AttachClntF
 	detachSess    sps.DetachSessF
 	detachClnt    sps.DetachClntF
+	clnts         map[sp.TclntId]bool
 }
 
 func newSession(protsrv sps.Protsrv, sid sessp.Tsession, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
-	sess := &Session{protsrv: protsrv,
+	sess := &Session{
+		protsrv:       protsrv,
 		lastHeartbeat: time.Now(),
 		Sid:           sid,
 		attachClnt:    attachf,
 		detachClnt:    detachf,
+		clnts:         make(map[sp.TclntId]bool),
 	}
 	return sess
 }
@@ -71,13 +74,26 @@ func (sess *Session) CloseConn() {
 	conn.CloseConnTest()
 }
 
+func (sess *Session) AddClnt(cid sp.TclntId) {
+	sess.Lock()
+	defer sess.Unlock()
+	sess.clnts[cid] = true
+}
+
+func (sess *Session) CloseClnt(cid sp.TclntId) bool {
+	sess.Lock()
+	defer sess.Unlock()
+	delete(sess.clnts, cid)
+	return len(sess.clnts) == 0
+}
+
 // Server may call Close() several times because client may reconnect
 // on a session that server has terminated and the Close() will close
 // the new reply channel.
 func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DPrintf(db.SESS_STATE_SRV, "Close session %v\n", sess.Sid)
+	db.DPrintf(db.ALWAYS, "Close session %v\n", sess.Sid)
 	sess.closed = true
 	// Close the connection so that writer in srvconn exits
 	if sess.conn != nil {
@@ -103,6 +119,14 @@ func (sess *Session) SendConn(fm *sessp.FcallMsg) {
 	if replies != nil {
 		replies <- sessconn.NewPartMarshaledMsg(fm)
 	}
+}
+
+func (sess *Session) getClnts() []sp.TclntId {
+	cs := make([]sp.TclntId, 0, len(sess.clnts))
+	for c, _ := range sess.clnts {
+		cs = append(cs, c)
+	}
+	return cs
 }
 
 func (sess *Session) IsClosed() bool {

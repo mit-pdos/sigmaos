@@ -9,8 +9,10 @@ import (
 	"sigmaos/namei"
 	"sigmaos/path"
 	"sigmaos/serr"
+	"sigmaos/sesscond"
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"
+	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/stats"
@@ -31,6 +33,8 @@ type ProtSrv struct {
 	vt    *version.VersionTable      // shared across sessions
 	stats *stats.StatInfo            // shared across sessions
 	et    *ephemeralmap.EphemeralMap // shared across sessions
+	st    *sessstatesrv.SessionTable // shared across sessions
+	sct   *sesscond.SessCondTable    // shared across sessions
 	ft    *fidTable
 	sid   sessp.Tsession
 }
@@ -45,6 +49,8 @@ func NewProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	ps.plt = srv.GetPathLockTable()
 	ps.wt = srv.GetWatchTable()
 	ps.vt = srv.GetVersionTable()
+	ps.sct = srv.GetSessionCondTable()
+	ps.st = srv.GetSessionTable()
 	ps.stats = srv.GetStats()
 	ps.sid = sid
 	db.DPrintf(db.PROTSRV, "NewProtSrv -> %v", ps)
@@ -89,18 +95,25 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	}
 	ps.ft.Add(args.Tfid(), fid.NewFidPath(fid.NewPobj(p, tree, ctx), 0, qid))
 	rets.Qid = qid
+	if ok := ps.st.AddClnt(ps.sid, args.TclntId()); !ok {
+		db.DFatalf("AddClnt %v %v failed\n", ps.sid, args.TclntId())
+	}
 	if attach != nil {
 		attach(args.TclntId())
 	}
 	return nil
 }
 
-// Delete ephemeral files created on this session.
+// Delete ephemeral files created by this client and delete this client
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
-	db.DPrintf(db.PROTSRV, "Detach cid %v sess %v\n", args.TclntId(), ps.sid)
+	db.DPrintf(db.ALWAYS, "Detach cid %v sess %v\n", args.TclntId(), ps.sid)
 	ps.ft.ClunkOpen()
 	if detach != nil {
 		detach(args.TclntId())
+	}
+	ps.sct.DeleteClnt(args.TclntId())
+	if ok := ps.st.CloseClnt(ps.sid, args.TclntId()); !ok {
+		db.DFatalf("Unknown session %v\n", ps.sid)
 	}
 	return nil
 }
@@ -221,7 +234,7 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	if !sp.VEq(f.Qid().Tversion(), v) {
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
 	}
-	err = ps.wt.WaitWatch(pl, ps.sid)
+	err = ps.wt.WaitWatch(pl, f.Pobj().Ctx().ClntId())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}

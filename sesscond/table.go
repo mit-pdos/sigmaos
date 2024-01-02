@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
 	"sigmaos/sessstatesrv"
+	sp "sigmaos/sigmap"
 )
 
 type SessCondTable struct {
@@ -65,10 +65,10 @@ func (sct *SessCondTable) toSlice() []*SessCond {
 // sct while bailing out (e.g., to remove an emphemeral file), but
 // threads shouldn't wait on these sess conds, so we don't have to
 // close those.
-func (sct *SessCondTable) DeleteSess(sessid sessp.Tsession) {
+func (sct *SessCondTable) DeleteClnt(cid sp.TclntId) {
 	t := sct.toSlice()
-	db.DPrintf(db.SESSCOND, "%v: delete sess %v\n", sessid, t)
+	db.DPrintf(db.ALWAYS, "DeleteClnt cid %v %v\n", cid, t)
 	for _, sc := range t {
-		sc.closed(sessid)
+		sc.closed(cid)
 	}
 }

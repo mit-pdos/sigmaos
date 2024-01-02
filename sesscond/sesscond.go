@@ -1,7 +1,7 @@
-// package sesscond wraps cond vars so that if a session terminates,
-// it can wakeup threads that are associated with that session.  Each
-// cond var is represented as several cond vars, one per goroutine
-// using it.
+// package sesscond wraps cond vars so that if a client terminates, it
+// can wakeup threads that are associated with that client.  Each cond
+// var is represented as several cond vars, one per goroutine using
+// it.
 package sesscond
 
 import (
@@ -13,7 +13,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 )
 
 type cond struct {
@@ -21,27 +21,27 @@ type cond struct {
 	c        *sync.Cond
 }
 
-// Sess cond has one cond per session.  The lock is, for example, a
+// Sess cond has one cond per client.  The lock is, for example, a
 // pipe lock or watch lock, which SessCond releases in Wait() and
 // re-acquires before returning out of Wait().
 type SessCond struct {
 	lock        sync.Locker
 	sct         *SessCondTable
 	nref        int // under sct lock
-	conds       map[sessp.Tsession][]*cond
-	wakingConds map[sessp.Tsession]map[*cond]bool // Conds pending wakeup (which also may need to be alerted that the session has closed)
+	conds       map[sp.TclntId][]*cond
+	wakingConds map[sp.TclntId]map[*cond]bool // Conds pending wakeup (which also may need to be alerted that the session has closed)
 }
 
 func newSessCond(sct *SessCondTable, lock sync.Locker) *SessCond {
 	sc := &SessCond{}
 	sc.sct = sct
 	sc.lock = lock
-	sc.conds = make(map[sessp.Tsession][]*cond)
-	sc.wakingConds = make(map[sessp.Tsession]map[*cond]bool)
+	sc.conds = make(map[sp.TclntId][]*cond)
+	sc.wakingConds = make(map[sp.TclntId]map[*cond]bool)
 	return sc
 }
 
-func (sc *SessCond) alloc(sessid sessp.Tsession) *cond {
+func (sc *SessCond) alloc(sessid sp.TclntId) *cond {
 	if _, ok := sc.conds[sessid]; !ok {
 		sc.conds[sessid] = []*cond{}
 	}
@@ -51,25 +51,26 @@ func (sc *SessCond) alloc(sessid sessp.Tsession) *cond {
 	return c
 }
 
-// Caller should hold sc lock and will receive it back on return. Wait releases
-// sess lock, so that other threads on the session can run. sc.lock ensures
-// atomicity of releasing sc lock and going to sleep.
-func (sc *SessCond) Wait(sessid sessp.Tsession) *serr.Err {
-	c := sc.alloc(sessid)
+// Caller should hold sc lock and will receive it back on return. Wait
+// releases sess lock, so that other threads associated with client
+// can run. sc.lock ensures atomicity of releasing sc lock and going
+// to sleep.
+func (sc *SessCond) Wait(cid sp.TclntId) *serr.Err {
+	c := sc.alloc(cid)
 
-	db.DPrintf(db.SESSCOND, "Wait %v c %v\n", sessid, c)
+	db.DPrintf(db.SESSCOND, "Wait %v c %v\n", cid, c)
 
 	c.c.Wait()
 
-	sc.removeWakingCond(sessid, c)
+	sc.removeWakingCond(cid, c)
 
 	closed := c.isClosed
 
 	db.DPrintf(db.SESSCOND, "Wait return %v\n", c)
 
 	if closed {
-		db.DPrintf(db.SESSCOND, "wait sess closed %v\n", sessid)
-		return serr.NewErr(serr.TErrClosed, fmt.Sprintf("session %v", sessid))
+		db.DPrintf(db.SESSCOND, "wait sess closed %v\n", cid)
+		return serr.NewErr(serr.TErrClosed, fmt.Sprintf("session %v", cid))
 	}
 	return nil
 }
@@ -101,38 +102,38 @@ func (sc *SessCond) Broadcast() {
 
 // Keep track of conds which are waiting to be woken up, since their session
 // may close in the interim.
-func (sc *SessCond) addWakingCond(sid sessp.Tsession, c *cond) {
+func (sc *SessCond) addWakingCond(sid sp.TclntId, c *cond) {
 	if _, ok := sc.wakingConds[sid]; !ok {
 		sc.wakingConds[sid] = make(map[*cond]bool)
 	}
 	sc.wakingConds[sid][c] = true
 }
 
-func (sc *SessCond) removeWakingCond(sid sessp.Tsession, c *cond) {
+func (sc *SessCond) removeWakingCond(sid sp.TclntId, c *cond) {
 	delete(sc.wakingConds[sid], c)
 	if len(sc.wakingConds[sid]) == 0 {
 		delete(sc.wakingConds, sid)
 	}
 }
 
-// A session has been closed: wake up threads associated with this
-// session. Grab c lock to ensure that wakeup isn't missed while a
+// A client has detached: wake up threads associated with this
+// client. Grab c lock to ensure that wakeup isn't missed while a
 // thread is about enter wait (and releasing sess and sc lock).
-func (sc *SessCond) closed(sessid sessp.Tsession) {
+func (sc *SessCond) closed(cid sp.TclntId) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 
-	db.DPrintf(db.SESSCOND, "cond %p: close %v %v\n", sc, sessid, sc.conds)
-	if condlist, ok := sc.conds[sessid]; ok {
-		db.DPrintf(db.SESSCOND, "%p: sess %v closed\n", sc, sessid)
+	db.DPrintf(db.SESSCOND, "cond %p: close %v %v\n", sc, cid, sc.conds)
+	if condlist, ok := sc.conds[cid]; ok {
+		db.DPrintf(db.SESSCOND, "%p: sess %v closed\n", sc, cid)
 		for _, c := range condlist {
 			c.c.Signal()
-			sc.addWakingCond(sessid, c)
+			sc.addWakingCond(cid, c)
 		}
-		delete(sc.conds, sessid)
+		delete(sc.conds, cid)
 	}
-	// Mark all this session's waking conds as closed.
-	for c, _ := range sc.wakingConds[sessid] {
+	// Mark all this client's waking conds as closed.
+	for c, _ := range sc.wakingConds[cid] {
 		c.isClosed = true
 	}
 }

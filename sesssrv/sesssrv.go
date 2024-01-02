@@ -150,6 +150,14 @@ func (ssrv *SessSrv) GetVersionTable() *version.VersionTable {
 	return ssrv.vt
 }
 
+func (ssrv *SessSrv) GetSessionCondTable() *sesscond.SessCondTable {
+	return ssrv.sct
+}
+
+func (ssrv *SessSrv) GetSessionTable() *sessstatesrv.SessionTable {
+	return ssrv.st
+}
+
 func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
 	return ssrv.dirover, ctx.NewCtx(uname, sessid, clntid, ssrv.sct, ssrv.fencefs)
 }
@@ -218,8 +226,8 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 
 func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
-	msg, data, close, rerror := sess.Dispatch(fc.Msg, fc.Data)
-	db.DPrintf(db.SESSSRV, "Done dispatch request %v close? %v", fc, close)
+	msg, data, rerror := sess.Dispatch(fc.Msg, fc.Data)
+	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
 
 	if rerror != nil {
 		msg = rerror
@@ -227,17 +235,7 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 
 	reply := sessp.NewFcallMsgReply(fc, msg)
 	reply.Data = data
-
 	ssrv.sendReply(fc, reply, sess)
-
-	if close {
-		// Dispatch() signaled to close the sessstatesrv.  Several
-		// threads maybe waiting in a sesscond of this
-		// session. DeleteSess will unblock them so that they can bail
-		// out.
-		ssrv.sct.DeleteSess(sess.Sid)
-		sess.Close()
-	}
 }
 
 func (ssrv *SessSrv) PartitionClient(permanent bool) {

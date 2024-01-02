@@ -55,7 +55,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *serr.Err) {
 		pipe.condw.Signal()
 		for pipe.nwriter == 0 && !pipe.wclosed {
 			db.DPrintf(db.PIPE, "Wait for writer %v\n", ctx.SessionId())
-			err := pipe.condr.Wait(ctx.SessionId())
+			err := pipe.condr.Wait(ctx.ClntId())
 			if err != nil {
 				pipe.nreader -= 1
 				if pipe.nreader == 0 {
@@ -77,7 +77,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *serr.Err) {
 		pipe.condr.Signal()
 		for pipe.nreader == 0 && !pipe.rclosed {
 			db.DPrintf(db.PIPE, "Wait for reader %v\n", ctx.SessionId())
-			err := pipe.condw.Wait(ctx.SessionId())
+			err := pipe.condw.Wait(ctx.ClntId())
 			if err != nil {
 				db.DPrintf(db.PIPE, "Wait reader err %v %v\n", err, ctx.SessionId())
 				pipe.nwriter -= 1
@@ -139,7 +139,7 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o sp.Toffset, d []byte, f sp.Tfence) (sp.Ts
 				return 0, serr.NewErr(serr.TErrClosed, "pipe")
 			}
 			db.DPrintf(db.PIPE, "%v/%v: Write wait for reader %v(%p)\n", ctx.Uname(), ctx.SessionId(), pipe, pipe)
-			err := pipe.condw.Wait(ctx.SessionId())
+			err := pipe.condw.Wait(ctx.ClntId())
 			if err != nil {
 				return 0, err
 			}
@@ -166,7 +166,7 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o sp.Toffset, n sp.Tsize, f sp.Tfence) ([]by
 			return nil, serr.NewErr(serr.TErrClosed, "pipe")
 		}
 		db.DPrintf(db.PIPE, "%v/%v: Read wait for writer %v(%p)\n", ctx.Uname(), ctx.SessionId(), pipe, pipe)
-		err := pipe.condr.Wait(ctx.SessionId())
+		err := pipe.condr.Wait(ctx.ClntId())
 		if err != nil {
 			return nil, err
 		}

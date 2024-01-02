@@ -52,13 +52,15 @@ type SigmaOS interface {
 	GetNamedMount() sp.Tmount
 	NewRootMount(path string, mntname string) error
 
-	// Caller is done using SigmaOS
+	// Detaches mounted servers (which removes ephemeral files)
+	DetachAll() error
+
+	// Done using SigmaOS (which may close a session with a server)
 	Close() error
 
 	// Debugging
 	SetLocalMount(mnt *sp.Tmount, port sp.Tport)
 	Mounts() []string
-	DetachAll() error
 	Detach(path string) error
 	Disconnect(path string) error
 }

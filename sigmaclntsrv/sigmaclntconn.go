@@ -54,13 +54,13 @@ func (scc *SigmaClntConn) ServeRequest(f []byte) ([]byte, *serr.Err) {
 func (scc *SigmaClntConn) ReportError(err error) {
 	db.DPrintf(db.DEMUXSRV, "ReportError err %v", err)
 	go func() {
-		db.DPrintf(db.ALWAYS, "close sigmaclntconn %v err %v", scc, err)
 		scc.close()
 	}()
 }
 
 func (scc *SigmaClntConn) close() error {
 	if !scc.api.testAndSetClosed() {
+		db.DPrintf(db.ALWAYS, "close: sigmaclntconn close %v", scc.api)
 		scc.api.sc.Close()
 	}
 	if err := scc.conn.Close(); err != nil {

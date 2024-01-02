@@ -95,6 +95,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	}
 	ps.ft.Add(args.Tfid(), fid.NewFidPath(fid.NewPobj(p, tree, ctx), 0, qid))
 	rets.Qid = qid
+	db.DPrintf(db.ALWAYS, "Attach ctx %v sid %v cid %v\n", ctx, ps.sid, args.TclntId())
 	if ok := ps.st.AddClnt(ps.sid, args.TclntId()); !ok {
 		db.DFatalf("AddClnt %v %v failed\n", ps.sid, args.TclntId())
 	}

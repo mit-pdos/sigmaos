@@ -431,7 +431,7 @@ func TestEarlyExit1(t *testing.T) {
 	// Child should have exited
 	b, err := ts.GetFile("name/" + pid1.String() + "_out")
 	assert.Nil(t, err, "GetFile")
-	assert.Equal(t, string(b), "hello", "Output")
+	assert.Equal(t, "hello", string(b), "Output")
 
 	// .. and cleaned up
 	_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))

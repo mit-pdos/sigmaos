@@ -200,7 +200,7 @@ func (ts *Tstate) Shutdown() error {
 			if err := ts.kclnts[i].Shutdown(); err != nil {
 				db.DPrintf(db.ALWAYS, "Shutdown %v err %v", ts.kclnts[i].KernelId, err)
 			}
-			ts.kclnts[i].Close()
+			// ts.kclnts[i].Close()
 		}
 		if ts.scsc != nil {
 			if err := ts.scsc.Shutdown(); err != nil {

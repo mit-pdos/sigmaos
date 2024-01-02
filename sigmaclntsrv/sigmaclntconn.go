@@ -26,17 +26,18 @@ type SigmaClntConn struct {
 	rpcs *rpcsrv.RPCSrv
 	ctx  fs.CtxI
 	conn net.Conn
+	api  *SigmaClntSrvAPI
 }
 
 func newSigmaClntConn(conn net.Conn, pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntConn, error) {
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntConn for %v\n", conn)
-	// scs, err := NewSigmaClntSrvAPI(pcfg, fidc)
+	//scs, err := NewSigmaClntSrvAPI(pcfg, fidc)
 	scs, err := NewSigmaClntSrvAPI(pcfg, nil)
 	if err != nil {
 		return nil, err
 	}
 	rpcs := rpcsrv.NewRPCSrv(scs, nil)
-	scc := &SigmaClntConn{nil, rpcs, ctx.NewCtxNull(), conn}
+	scc := &SigmaClntConn{rpcs: rpcs, ctx: ctx.NewCtxNull(), conn: conn, api: scs}
 	scc.dmx = demux.NewDemuxSrv(bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), scc)
 	return scc, nil

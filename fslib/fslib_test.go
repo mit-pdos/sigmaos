@@ -1272,7 +1272,7 @@ func TestOpenRemoveRead(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestFslibDetach(t *testing.T) {
+func TestFslibDisconnect(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 
 	dot := pathname + "/."
@@ -1288,7 +1288,7 @@ func TestFslibDetach(t *testing.T) {
 	assert.Nil(t, err)
 
 	// detach from servers
-	err = fsl.DetachAll()
+	err = fsl.Disconnect(pathname)
 	assert.Nil(t, err)
 
 	_, err = fsl.Stat(dot)

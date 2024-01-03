@@ -885,6 +885,7 @@ func TestConcurRename(t *testing.T) {
 	done := make(chan int)
 	TODO := gopath.Join(pathname, "todo")
 	DONE := gopath.Join(pathname, "done")
+	fsls := make([]*fslib.FsLib, 0, N)
 
 	initfs(ts, TODO, DONE)
 
@@ -893,6 +894,7 @@ func TestConcurRename(t *testing.T) {
 		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
 		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err)
+		fsls = append(fsls, fsl)
 		go func(fsl *fslib.FsLib, t string) {
 			n := 0
 			for c := true; c; {
@@ -926,6 +928,10 @@ func TestConcurRename(t *testing.T) {
 	err = ts.RmDir(DONE)
 	assert.Nil(t, err, "RmDir: %v", err)
 
+	for _, fsl := range fsls {
+		err := fsl.Close()
+		assert.Nil(t, err)
+	}
 	ts.Shutdown()
 }
 

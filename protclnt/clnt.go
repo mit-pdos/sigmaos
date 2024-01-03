@@ -19,11 +19,14 @@ func NewClnt(clntnet string) *Clnt {
 }
 
 func (clnt *Clnt) Close() error {
+	var err error
 	scs := clnt.sm.SessClnts()
 	for _, sc := range scs {
-		sc.Close()
+		if r := sc.Close(); r != nil {
+			err = r
+		}
 	}
-	return nil
+	return err
 }
 
 func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
@@ -49,14 +52,6 @@ func (clnt *Clnt) Attach(addrs sp.Taddrs, uname sp.Tuname, cid sp.TclntId, fid s
 		return nil, serr.NewErr(serr.TErrBadFcall, "clnt")
 	}
 	return msg, nil
-}
-
-func (clnt *Clnt) DetachAll(cid sp.TclntId) *serr.Err {
-	scs := clnt.sm.SessClnts()
-	for _, sc := range scs {
-		sc.Detach(cid)
-	}
-	return nil
 }
 
 func (clnt *Clnt) NewProtClnt(addrs sp.Taddrs) *ProtClnt {

@@ -185,7 +185,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 				}
 			}
 			db.DPrintf(db.TEST, "Client %v done", i)
-			fsl.DetachAll()
+			fsl.Close()
 		}(i)
 
 		err := <-ch
@@ -211,7 +211,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 			sem.Init(0)
 			err = sem.Down()
 			ch <- err
-			fsl.DetachAll()
+			fsl.Close()
 		}(i)
 
 		err := <-ch

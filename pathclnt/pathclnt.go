@@ -53,7 +53,15 @@ func (pathc *PathClnt) String() string {
 }
 
 func (pathc *PathClnt) Close() error {
-	return pathc.FidClnt.Close()
+	var err error
+	if r := pathc.detachAll(); r != nil {
+		db.DPrintf(db.TEST, "detachall err %v\n", r)
+		err = r
+	}
+	if r := pathc.FidClnt.Close(); r != nil {
+		db.DPrintf(db.TEST, "close err %v\n", r)
+	}
+	return err
 }
 
 func (pathc *PathClnt) ClntId() sp.TclntId {
@@ -85,16 +93,21 @@ func (pathc *PathClnt) PathLastMount(pn string, uname sp.Tuname) (path.Path, pat
 	return pathc.LastMount(pn, uname)
 }
 
-// Close all sessions
-func (pathc *PathClnt) DetachAll() error {
-	db.DPrintf(db.PATHCLNT, "Fslib.DetachAll\n")
-	if err := pathc.FidClnt.DetachAll(pathc.cid); err != nil {
-		return err
+// Detach from all servers
+func (pathc *PathClnt) detachAll() error {
+	var err error
+	mnts := pathc.Mounts()
+	db.DPrintf(db.ALWAYS, "Fslib.detachAll %v\n", mnts)
+	for _, mnt := range mnts {
+		if r := pathc.Detach(mnt); r != nil {
+			db.DPrintf(db.TEST, "detachAll %v err %v\n", mnt, r)
+			err = r
+		}
 	}
-	return nil
+	return err
 }
 
-// Detach client from server.
+// Detach from server
 func (pathc *PathClnt) Detach(pn string) error {
 	fid, _, err := pathc.mnt.umount(path.Split(pn), true)
 	if err != nil {
@@ -107,7 +120,8 @@ func (pathc *PathClnt) Detach(pn string) error {
 	return nil
 }
 
-// Simulate network partition to server that exports path
+// Disconnect session with server to simulate network partition to
+// server that exports pn
 func (pathc *PathClnt) Disconnect(pn string) error {
 	fid, _, err := pathc.mnt.umount(path.Split(pn), true)
 	if err != nil {

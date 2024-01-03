@@ -31,8 +31,8 @@ type SigmaClntConn struct {
 
 func newSigmaClntConn(conn net.Conn, pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntConn, error) {
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntConn for %v\n", conn)
-	//scs, err := NewSigmaClntSrvAPI(pcfg, fidc)
-	scs, err := NewSigmaClntSrvAPI(pcfg, nil)
+	scs, err := NewSigmaClntSrvAPI(pcfg, fidc)
+	//scs, err := NewSigmaClntSrvAPI(pcfg, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -287,13 +287,6 @@ func (scs *SigmaClntSrvAPI) Mounts(ctx fs.CtxI, req scproto.SigmaNullRequest, re
 	return nil
 }
 
-func (scs *SigmaClntSrvAPI) DetachAll(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaErrReply) error {
-	err := scs.sc.DetachAll()
-	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "DetachAll %v %v\n", req, rep)
-	return nil
-}
-
 func (scs *SigmaClntSrvAPI) Detach(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.Detach(req.Path)
 	rep.Err = scs.setErr(err)
@@ -309,7 +302,7 @@ func (scs *SigmaClntSrvAPI) Disconnect(ctx fs.CtxI, req scproto.SigmaPathRequest
 }
 
 func (scs *SigmaClntSrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaErrReply) error {
-	db.DPrintf(db.ALWAYS, "Close conn %v\n", scs)
+	db.DPrintf(db.ALWAYS, "Close fslib %v\n", scs)
 	var err error
 	if !scs.testAndSetClosed() {
 		err = scs.sc.Close()

@@ -276,10 +276,6 @@ func (fdc *FdClient) Detach(pn string) error {
 	return fdc.pc.Detach(pn)
 }
 
-func (fdc *FdClient) DetachAll() error {
-	return fdc.pc.DetachAll()
-}
-
 func (fdc *FdClient) Close() error {
 	return fdc.pc.Close()
 }

@@ -51,8 +51,7 @@ func (fidc *FidClnt) Close() error {
 	fidc.refcnt--
 	db.DPrintf(db.ALWAYS, "FidClnt refcnt %d\n", fidc.refcnt)
 	if fidc.refcnt == 0 {
-		db.DPrintf(db.ALWAYS, "FidClnt close session\n")
-		fidc.pc.Close()
+		return fidc.pc.Close()
 	}
 	return nil
 }
@@ -63,10 +62,6 @@ func (fidc *FidClnt) Len() int {
 
 func (fidc *FidClnt) FenceDir(path string, f sp.Tfence) *serr.Err {
 	return fidc.ft.Insert(path, f)
-}
-
-func (fidc *FidClnt) DetachAll(cid sp.TclntId) *serr.Err {
-	return fidc.pc.DetachAll(cid)
 }
 
 func (fidc *FidClnt) allocFid() sp.Tfid {

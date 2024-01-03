@@ -281,14 +281,6 @@ func (scc *SigmaClntClnt) SetLocalMount(mnt *sp.Tmount, port sp.Tport) {
 	db.DFatalf("SetLocalMount %v", mnt)
 }
 
-func (scc *SigmaClntClnt) DetachAll() error {
-	req := scproto.SigmaNullRequest{}
-	rep := scproto.SigmaErrReply{}
-	err := scc.rpcErr("SigmaClntSrvAPI.DetachAll", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "DetachAll %v %v %v", req, rep, err)
-	return err
-}
-
 func (scc *SigmaClntClnt) Detach(path string) error {
 	req := scproto.SigmaPathRequest{Path: path}
 	rep := scproto.SigmaErrReply{}

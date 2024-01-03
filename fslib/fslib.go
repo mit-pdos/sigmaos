@@ -33,10 +33,6 @@ func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
 	return fl.SigmaOS.MountTree(addrs, tree, mount)
 }
 
-func (fl *FsLib) DetachAll() error {
-	return fl.SigmaOS.DetachAll()
-}
-
 func (fl *FsLib) Close() error {
 	return fl.SigmaOS.Close()
 }

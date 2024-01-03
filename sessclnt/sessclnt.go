@@ -101,21 +101,6 @@ func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr
 	}
 }
 
-// Send a detach.
-func (c *SessClnt) Detach(cid sp.TclntId) *serr.Err {
-	db.DPrintf(db.SESS_STATE_CLNT, "Send detach %v\n", c.sid)
-	rep, err := c.RPC(sp.NewTdetach(cid), nil)
-	if err != nil {
-		db.DPrintf(db.SESS_STATE_CLNT_ERR, "detach %v err %v", c.sid, err)
-		return err
-	}
-	rmsg, ok := rep.Msg.(*sp.Rerror)
-	if ok {
-		return sp.NewErr(rmsg)
-	}
-	return nil
-}
-
 // Check if the session needs to be closed because the server killed
 // it.
 func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {

@@ -236,6 +236,8 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	reply := sessp.NewFcallMsgReply(fc, msg)
 	reply.Data = data
 	ssrv.sendReply(fc, reply, sess)
+
+	sess.CheckForClose()
 }
 
 func (ssrv *SessSrv) PartitionClient(permanent bool) {

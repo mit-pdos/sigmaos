@@ -114,9 +114,7 @@ func (st *SessionTable) CloseClnt(sid sessp.Tsession, cid sp.TclntId) bool {
 	if !ok {
 		return false
 	}
-	if close := sess.CloseClnt(cid); close {
-		sess.Close()
-	}
+	sess.CloseClnt(cid)
 	return true
 }
 

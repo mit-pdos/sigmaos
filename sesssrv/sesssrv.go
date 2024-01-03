@@ -154,10 +154,6 @@ func (ssrv *SessSrv) GetSessionCondTable() *clntcond.ClntCondTable {
 	return ssrv.sct
 }
 
-func (ssrv *SessSrv) GetSessionTable() *sessstatesrv.SessionTable {
-	return ssrv.st
-}
-
 func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
 	return ssrv.dirover, ctx.NewCtx(uname, sessid, clntid, ssrv.sct, ssrv.fencefs)
 }
@@ -226,7 +222,7 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 
 func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
-	msg, data, rerror := sess.Dispatch(fc.Msg, fc.Data)
+	msg, data, clntid, rerror := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
 
 	if rerror != nil {
@@ -237,7 +233,9 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	reply.Data = data
 	ssrv.sendReply(fc, reply, sess)
 
-	sess.CheckForClose()
+	if clntid != sp.NoClntId {
+		sess.DelClnt(clntid)
+	}
 }
 
 func (ssrv *SessSrv) PartitionClient(permanent bool) {

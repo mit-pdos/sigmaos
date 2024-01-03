@@ -12,7 +12,6 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"
-	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/stats"
@@ -33,7 +32,6 @@ type ProtSrv struct {
 	vt    *version.VersionTable      // shared across sessions
 	stats *stats.StatInfo            // shared across sessions
 	et    *ephemeralmap.EphemeralMap // shared across sessions
-	st    *sessstatesrv.SessionTable // shared across sessions
 	sct   *clntcond.ClntCondTable    // shared across sessions
 	ft    *fidTable
 	sid   sessp.Tsession
@@ -50,7 +48,6 @@ func NewProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	ps.wt = srv.GetWatchTable()
 	ps.vt = srv.GetVersionTable()
 	ps.sct = srv.GetSessionCondTable()
-	ps.st = srv.GetSessionTable()
 	ps.stats = srv.GetStats()
 	ps.sid = sid
 	db.DPrintf(db.PROTSRV, "NewProtSrv -> %v", ps)
@@ -71,7 +68,7 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotSupported, "Auth"))
 }
 
-func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) *sp.Rerror {
+func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) (sp.TclntId, *sp.Rerror) {
 	db.DPrintf(db.PROTSRV, "Attach %v sid %v", args, ps.sid)
 	p := path.Split(args.Aname)
 	root, ctx := ps.ssrv.GetRootCtx(args.Tuname(), args.Aname, ps.sid, args.TclntId())
@@ -82,7 +79,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 		_, lo, lk, rest, err := namei.Walk(ps.plt, ctx, root, dlk, path.Path{}, p, nil, lockmap.RLOCK)
 		defer ps.plt.Release(ctx, lk, lockmap.RLOCK)
 		if len(rest) > 0 || err != nil {
-			return sp.NewRerrorSerr(err)
+			return sp.NoClntId, sp.NewRerrorSerr(err)
 		}
 		// insert before releasing
 		ps.vt.Insert(lo.Path())
@@ -95,27 +92,19 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	}
 	ps.ft.Add(args.Tfid(), fid.NewFidPath(fid.NewPobj(p, tree, ctx), 0, qid))
 	rets.Qid = qid
-	db.DPrintf(db.ALWAYS, "Attach sid %v cid %v\n", ps.sid, args.TclntId())
-	if ok := ps.st.AddClnt(ps.sid, args.TclntId()); !ok {
-		db.DFatalf("AddClnt %v %v failed\n", ps.sid, args.TclntId())
-	}
 	if attach != nil {
 		attach(args.TclntId())
 	}
-	return nil
+	return args.TclntId(), nil
 }
 
 // Delete ephemeral files created by this client and delete this client
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
-	db.DPrintf(db.ALWAYS, "Detach cid %v sess %v\n", args.TclntId(), ps.sid)
 	ps.ft.ClunkOpen()
 	if detach != nil {
 		detach(args.TclntId())
 	}
 	ps.sct.DeleteClnt(args.TclntId())
-	if ok := ps.st.CloseClnt(ps.sid, args.TclntId()); !ok {
-		db.DFatalf("Unknown session %v\n", ps.sid)
-	}
 	return nil
 }
 

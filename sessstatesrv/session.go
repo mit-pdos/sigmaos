@@ -77,29 +77,23 @@ func (sess *Session) CloseConn() {
 func (sess *Session) AddClnt(cid sp.TclntId) {
 	sess.Lock()
 	defer sess.Unlock()
+	db.DPrintf(db.ALWAYS, "Add cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 	sess.clnts[cid] = true
 }
 
-func (sess *Session) CloseClnt(cid sp.TclntId) {
+// Delete client from session
+func (sess *Session) DelClnt(cid sp.TclntId) {
 	sess.Lock()
 	defer sess.Unlock()
+	db.DPrintf(db.ALWAYS, "Del cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 	delete(sess.clnts, cid)
-}
-
-// Eagerly close the session if not in use
-func (sess *Session) CheckForClose() {
-	sess.Lock()
-	defer sess.Unlock()
-	if len(sess.clnts) == 0 && sess.closed == false {
-		sess.close()
-	}
 }
 
 // Server may call Close() several times because client may reconnect
 // on a session that server has terminated and the Close() will close
 // the new reply channel.
 func (sess *Session) close() {
-	db.DPrintf(db.ALWAYS, "Close session %v\n", sess.Sid)
+	db.DPrintf(db.ALWAYS, "Srv Close sess %v\n", sess.Sid)
 	sess.closed = true
 	// Close the connection so that writer in srvconn exits
 	if sess.conn != nil {
@@ -153,7 +147,7 @@ func (sess *Session) SetConn(conn sps.Conn) *serr.Err {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
-		return serr.NewErr(serr.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
+		return serr.NewErr(serr.TErrClosed, fmt.Sprintf("sess %v", sess.Sid))
 	}
 	db.DPrintf(db.SESS_STATE_SRV, "%v SetConn new %v\n", sess.Sid, conn)
 	sess.conn = conn
@@ -181,7 +175,7 @@ func (sess *Session) unsetConnL(conn sps.Conn) {
 func (sess *Session) heartbeatL(msg sessp.Tmsg) {
 	db.DPrintf(db.SESS_STATE_SRV, "Heartbeat sess %v msg %v %v", sess.Sid, msg.Type(), msg)
 	if sess.closed {
-		db.DFatalf("heartbeat %v on closed session %v", msg, sess.Sid)
+		db.DFatalf("heartbeat %v on closed sess %v", msg, sess.Sid)
 	}
 	sess.lastHeartbeat = time.Now()
 }

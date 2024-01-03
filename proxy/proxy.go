@@ -37,7 +37,7 @@ func (npd *Npd) newProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Pr
 func (npd *Npd) serve(fm *sessp.FcallMsg) {
 	s := sessp.Tsession(fm.Fc.Session)
 	sess, _ := npd.st.Lookup(s)
-	msg, data, rerror := sess.Dispatch(fm.Msg, fm.Data)
+	msg, data, _, rerror := sess.Dispatch(fm.Msg, fm.Data)
 	if rerror != nil {
 		msg = rerror
 	}
@@ -98,10 +98,10 @@ func (npc *NpConn) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.NewRerrorCode(serr.TErrNotSupported)
 }
 
-func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) *sp.Rerror {
+func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) (sp.TclntId, *sp.Rerror) {
 	u, error := user.Current()
 	if error != nil {
-		return sp.NewRerrorSerr(serr.NewErrError(error))
+		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
 	npc.uname = sp.Tuname(u.Uid)
 
@@ -109,17 +109,17 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	fid, err := npc.fidc.Attach(npc.uname, npc.cid, mnt.Addr, "", "")
 	if err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v err %v\n", args, err)
-		return sp.NewRerrorSerr(err)
+		return sp.NoClntId, sp.NewRerrorSerr(err)
 	}
 	if err := npc.pc.Mount(fid, sp.NAMED); err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v mount err %v\n", args, err)
-		return sp.NewRerrorSerr(serr.NewErrError(err))
+		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(err))
 	}
 	rets.Qid = npc.fidc.Qid(fid)
 	npc.fm.mapTo(args.Tfid(), fid)
 	npc.fidc.Lookup(fid).SetPath(path.Split(sp.NAMED))
 	db.DPrintf(db.PROXY, "Attach args %v rets %v fid %v\n", args, rets, fid)
-	return nil
+	return args.TclntId(), nil
 }
 
 func (npc *NpConn) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {

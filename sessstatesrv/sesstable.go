@@ -100,24 +100,6 @@ func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
 	}
 }
 
-func (st *SessionTable) AddClnt(sid sessp.Tsession, cid sp.TclntId) bool {
-	sess, ok := st.Lookup(sid)
-	if !ok {
-		return false
-	}
-	sess.AddClnt(cid)
-	return true
-}
-
-func (st *SessionTable) CloseClnt(sid sessp.Tsession, cid sp.TclntId) bool {
-	sess, ok := st.Lookup(sid)
-	if !ok {
-		return false
-	}
-	sess.CloseClnt(cid)
-	return true
-}
-
 func (st *SessionTable) LastSession() *Session {
 	st.mu.RLock()
 	defer st.mu.RUnlock()

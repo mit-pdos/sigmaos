@@ -37,12 +37,14 @@ type FdClient struct {
 	pcfg *proc.ProcEnv
 	pc   *pathclnt.PathClnt
 	fds  *FdTable
+	ft   *FenceTable
 }
 
 func NewFdClient(pcfg *proc.ProcEnv, fsc *fidclnt.FidClnt) sos.SigmaOS {
 	fdc := &FdClient{pcfg: pcfg}
 	fdc.pc = pathclnt.NewPathClnt(pcfg, fsc)
 	fdc.fds = newFdTable()
+	fdc.ft = newFenceTable()
 	return fdc
 }
 
@@ -132,23 +134,27 @@ func (fdc *FdClient) Open(path string, mode sp.Tmode, w sos.Twait) (int, error) 
 }
 
 func (fdc *FdClient) Rename(old, new string) error {
-	return fdc.pc.Rename(old, new, fdc.pcfg.GetUname())
+	f := fdc.ft.lookup(old)
+	return fdc.pc.Rename(old, new, fdc.pcfg.GetUname(), f)
 }
 
 func (fdc *FdClient) Remove(pn string) error {
-	return fdc.pc.Remove(pn, fdc.pcfg.GetUname())
+	f := fdc.ft.lookup(pn)
+	return fdc.pc.Remove(pn, fdc.pcfg.GetUname(), f)
 }
 
-func (fdc *FdClient) GetFile(fname string) ([]byte, error) {
-	return fdc.pc.GetFile(fname, fdc.pcfg.GetUname(), sp.OREAD, 0, sp.MAXGETSET)
+func (fdc *FdClient) GetFile(pn string) ([]byte, error) {
+	f := fdc.ft.lookup(pn)
+	return fdc.pc.GetFile(pn, fdc.pcfg.GetUname(), sp.OREAD, 0, sp.MAXGETSET, f)
 }
 
 func (fdc *FdClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte, off sp.Toffset, lid sp.TleaseId) (sp.Tsize, error) {
-	return fdc.pc.PutFile(fname, fdc.pcfg.GetUname(), mode|sp.OWRITE, perm, data, off, lid)
+	f := fdc.ft.lookup(fname)
+	return fdc.pc.PutFile(fname, fdc.pcfg.GetUname(), mode|sp.OWRITE, perm, data, off, lid, f)
 }
 
 func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
-	data, err := fdc.pc.ReadF(fid, off, cnt)
+	data, err := fdc.pc.ReadF(fid, off, cnt, sp.NullFence())
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +170,11 @@ func (fdc *FdClient) Read(fd int, cnt sp.Tsize) ([]byte, error) {
 	return fdc.readFid(fd, fid, off, cnt)
 }
 
-func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, f sp.Tfence) (sp.Tsize, error) {
+func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, error) {
+	f := &f0
+	if !f0.HasFence() {
+		f = fdc.ft.lookupPath(fdc.pc.FidClnt.Lookup(fid).Path())
+	}
 	sz, err := fdc.pc.WriteF(fid, off, data, f)
 	if err != nil {
 		return 0, err
@@ -262,10 +272,7 @@ func (fdc *FdClient) ClntId() sp.TclntId {
 }
 
 func (fdc *FdClient) FenceDir(pn string, fence sp.Tfence) error {
-	if err := fdc.pc.FenceDir(pn, fence); err != nil {
-		return err
-	}
-	return nil
+	return fdc.ft.insert(pn, fence)
 }
 
 func (fdc *FdClient) Disconnect(pn string) error {

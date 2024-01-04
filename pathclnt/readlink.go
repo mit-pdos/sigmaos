@@ -13,10 +13,11 @@ import (
 type rdr struct {
 	*fidclnt.FidClnt
 	fid sp.Tfid
+	f   *sp.Tfence
 }
 
-func newRdr(fdc *fidclnt.FidClnt, fid sp.Tfid) *rdr {
-	return &rdr{fdc, fid}
+func newRdr(fdc *fidclnt.FidClnt, fid sp.Tfid, f *sp.Tfence) *rdr {
+	return &rdr{fdc, fid, f}
 }
 
 func (rd *rdr) Close() error {
@@ -24,7 +25,7 @@ func (rd *rdr) Close() error {
 }
 
 func (rd *rdr) Read(o sp.Toffset, sz sp.Tsize) ([]byte, error) {
-	b, err := rd.ReadF(rd.fid, o, sz)
+	b, err := rd.ReadF(rd.fid, o, sz, rd.f)
 	if err != nil {
 		return b, err
 	}
@@ -41,7 +42,7 @@ func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	rdr := reader.NewReader(newRdr(pathc.FidClnt, fid), "")
+	rdr := reader.NewReader(newRdr(pathc.FidClnt, fid, sp.NullFence()), "")
 	b, r := rdr.GetDataErr()
 	if errors.As(r, &err) {
 		return nil, err

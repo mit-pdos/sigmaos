@@ -49,7 +49,7 @@ func (pathc *PathClnt) getNamedMount(realm sp.Trealm) (sp.Tmount, *serr.Err) {
 			}
 		}
 		pn := gpath.Join("root", sp.REALMREL, sp.REALMDREL, sp.REALMSREL, realm.String())
-		target, err := pathc.GetFile(pn, pathc.pcfg.GetUname(), sp.OREAD, 0, sp.MAXGETSET)
+		target, err := pathc.GetFile(pn, pathc.pcfg.GetUname(), sp.OREAD, 0, sp.MAXGETSET, sp.NullFence())
 		if err != nil {
 			db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] GetFile err %v", realm, err)
 			return sp.Tmount{}, serr.NewErrError(err)

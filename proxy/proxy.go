@@ -199,7 +199,7 @@ func (npc *NpConn) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	err := npc.fidc.Remove(fid)
+	err := npc.fidc.Remove(fid, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Remove: args %v err %v\n", args, err)
 		return sp.NewRerrorSerr(err)
@@ -232,7 +232,7 @@ func (npc *NpConn) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	err := npc.fidc.Wstat(fid, args.Stat)
+	err := npc.fidc.Wstat(fid, args.Stat, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Wstats: args %v err %v\n", args, err)
 		return sp.NewRerrorSerr(err)
@@ -250,7 +250,7 @@ func (npc *NpConn) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if !ok {
 		return nil, sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	d, err := npc.fidc.ReadF(fid, args.Toffset(), args.Tcount())
+	d, err := npc.fidc.ReadF(fid, args.Toffset(), args.Tcount(), sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Read: args %v err %v\n", args, err)
 		return nil, sp.NewRerrorSerr(err)
@@ -274,7 +274,7 @@ func (npc *NpConn) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	n, err := npc.fidc.WriteF(fid, args.Toffset(), data, sp.NoFence())
+	n, err := npc.fidc.WriteF(fid, args.Toffset(), data, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Write: args %v err %v\n", args, err)
 		return sp.NewRerrorSerr(err)

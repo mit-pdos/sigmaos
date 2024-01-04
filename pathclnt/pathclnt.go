@@ -176,20 +176,20 @@ func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.
 
 // Rename using renameat() for across directories or using wstat()
 // for within a directory.
-func (pathc *PathClnt) Rename(old, new string, uname sp.Tuname) error {
+func (pathc *PathClnt) Rename(old, new string, uname sp.Tuname, f *sp.Tfence) error {
 	db.DPrintf(db.PATHCLNT, "Rename %v %v\n", old, new)
 	opath := path.Split(old)
 	npath := path.Split(new)
 
 	if len(opath) != len(npath) {
-		if err := pathc.renameat(old, new, uname); err != nil {
+		if err := pathc.renameat(old, new, uname, f); err != nil {
 			return err
 		}
 		return nil
 	}
 	for i, n := range opath[:len(opath)-1] {
 		if npath[i] != n {
-			if err := pathc.renameat(old, new, uname); err != nil {
+			if err := pathc.renameat(old, new, uname, f); err != nil {
 				return err
 			}
 			return nil
@@ -202,7 +202,7 @@ func (pathc *PathClnt) Rename(old, new string, uname sp.Tuname) error {
 	defer pathc.FidClnt.Clunk(fid)
 	st := sp.NewStatNull()
 	st.Name = npath[len(npath)-1]
-	err = pathc.FidClnt.Wstat(fid, st)
+	err = pathc.FidClnt.Wstat(fid, st, f)
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func (pathc *PathClnt) Rename(old, new string, uname sp.Tuname) error {
 }
 
 // Rename across directories of a single server using Renameat
-func (pathc *PathClnt) renameat(old, new string, uname sp.Tuname) *serr.Err {
+func (pathc *PathClnt) renameat(old, new string, uname sp.Tuname, f *sp.Tfence) *serr.Err {
 	db.DPrintf(db.PATHCLNT, "Renameat %v %v\n", old, new)
 	opath := path.Split(old)
 	npath := path.Split(new)
@@ -226,24 +226,24 @@ func (pathc *PathClnt) renameat(old, new string, uname sp.Tuname) *serr.Err {
 		return err
 	}
 	defer pathc.FidClnt.Clunk(fid1)
-	return pathc.FidClnt.Renameat(fid, o, fid1, n)
+	return pathc.FidClnt.Renameat(fid, o, fid1, n, f)
 }
 
-func (pathc *PathClnt) Remove(name string, uname sp.Tuname) error {
+func (pathc *PathClnt) Remove(name string, uname sp.Tuname, f *sp.Tfence) error {
 	db.DPrintf(db.PATHCLNT, "Remove %v\n", name)
 	pn := path.Split(name)
 	fid, rest, err := pathc.resolve(pn, uname, path.EndSlash(name))
 	if err != nil {
 		return err
 	}
-	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name))
+	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name), f)
 	if Retry(err) {
 		fid, err = pathc.walk(pn, uname, path.EndSlash(name), nil)
 		if err != nil {
 			return err
 		}
 		defer pathc.FidClnt.Clunk(fid)
-		err = pathc.FidClnt.Remove(fid)
+		err = pathc.FidClnt.Remove(fid, f)
 	} else if err != nil {
 		return err
 	}
@@ -338,21 +338,21 @@ func Retry(err *serr.Err) bool {
 	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
 }
 
-func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
+func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "GetFile %v %v\n", pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.resolve(p, uname, path.EndSlash(pn))
 	if err != nil {
 		return nil, err
 	}
-	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn))
+	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn), f)
 	if Retry(err) {
 		fid, err = pathc.walk(p, uname, path.EndSlash(pn), nil)
 		if err != nil {
 			return nil, err
 		}
 		defer pathc.FidClnt.Clunk(fid)
-		data, err = pathc.FidClnt.GetFile(fid, []string{}, mode, off, cnt, false)
+		data, err = pathc.FidClnt.GetFile(fid, []string{}, mode, off, cnt, false, f)
 		if err != nil {
 			return nil, err
 		}
@@ -363,7 +363,7 @@ func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp
 }
 
 // Create or open file and write it
-func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId) (sp.Tsize, error) {
+func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId, f *sp.Tfence) (sp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "PutFile %v %v %v\n", pn, mode, lid)
 	p := path.Split(pn)
 	fid, rest, err := pathc.resolve(p, uname, path.EndSlash(pn))
@@ -371,7 +371,7 @@ func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm s
 		db.DPrintf(db.PATHCLNT_ERR, "Error PutFile resolve %v %v %v: %v", pn, mode, lid, err)
 		return 0, err
 	}
-	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid)
+	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid, f)
 	if Retry(err) {
 		dir := p.Dir()
 		base := path.Path{p.Base()}
@@ -386,7 +386,7 @@ func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm s
 			return 0, err
 		}
 		defer pathc.FidClnt.Clunk(fid)
-		cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false, lid)
+		cnt, err = pathc.FidClnt.PutFile(fid, base, mode, perm, off, data, false, lid, f)
 		if err != nil {
 			return 0, err
 		}

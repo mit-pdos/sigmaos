@@ -64,6 +64,8 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		fsl2.CloseFd(fd)
 
 		ch <- true
+
+		fsl2.Close()
 	}()
 
 	// Wait until other thread is leader

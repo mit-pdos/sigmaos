@@ -16,7 +16,6 @@ type FidClnt struct {
 	mu     sync.Mutex
 	fids   *FidMap
 	pc     *protclnt.Clnt
-	ft     *FenceTable
 	refcnt int
 }
 
@@ -24,7 +23,6 @@ func NewFidClnt(clntnet string) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = newFidMap()
 	fidc.pc = protclnt.NewClnt(clntnet)
-	fidc.ft = NewFenceTable()
 	fidc.refcnt = 1
 	return fidc
 }
@@ -60,16 +58,12 @@ func (fidc *FidClnt) Len() int {
 	return len(fidc.fids.fids)
 }
 
-func (fidc *FidClnt) FenceDir(path string, f sp.Tfence) *serr.Err {
-	return fidc.ft.Insert(path, f)
-}
-
 func (fidc *FidClnt) allocFid() sp.Tfid {
 	return fidc.fids.allocFid()
 }
 
 func (fidc *FidClnt) freeFid(np sp.Tfid) {
-	// not implemented
+	// XXX not implemented
 }
 
 func (fidc *FidClnt) Free(fid sp.Tfid) {
@@ -186,14 +180,12 @@ func (fidc *FidClnt) Watch(fid sp.Tfid) *serr.Err {
 	return fidc.fids.lookup(fid).pc.Watch(fid)
 }
 
-func (fidc *FidClnt) Wstat(fid sp.Tfid, st *sp.Stat) *serr.Err {
-	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+func (fidc *FidClnt) Wstat(fid sp.Tfid, st *sp.Stat, f *sp.Tfence) *serr.Err {
 	_, err := fidc.fids.lookup(fid).pc.WstatF(fid, st, f)
 	return err
 }
 
-func (fidc *FidClnt) Renameat(fid sp.Tfid, o string, fid1 sp.Tfid, n string) *serr.Err {
-	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+func (fidc *FidClnt) Renameat(fid sp.Tfid, o string, fid1 sp.Tfid, n string, f *sp.Tfence) *serr.Err {
 	if fidc.fids.lookup(fid).pc != fidc.fids.lookup(fid1).pc {
 		return serr.NewErr(serr.TErrInval, "paths at different servers")
 	}
@@ -201,17 +193,15 @@ func (fidc *FidClnt) Renameat(fid sp.Tfid, o string, fid1 sp.Tfid, n string) *se
 	return err
 }
 
-func (fidc *FidClnt) Remove(fid sp.Tfid) *serr.Err {
-	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+func (fidc *FidClnt) Remove(fid sp.Tfid, f *sp.Tfence) *serr.Err {
 	return fidc.fids.lookup(fid).pc.RemoveF(fid, f)
 }
 
-func (fidc *FidClnt) RemoveFile(fid sp.Tfid, wnames []string, resolve bool) *serr.Err {
+func (fidc *FidClnt) RemoveFile(fid sp.Tfid, wnames []string, resolve bool, f *sp.Tfence) *serr.Err {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return serr.NewErr(serr.TErrUnreachable, "getfile")
 	}
-	f := fidc.ft.Lookup(ch.Path().AppendPath(wnames))
 	return ch.pc.RemoveFile(fid, wnames, resolve, f)
 }
 
@@ -223,8 +213,7 @@ func (fidc *FidClnt) Stat(fid sp.Tfid) (*sp.Stat, *serr.Err) {
 	return reply.Stat, nil
 }
 
-func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize) ([]byte, *serr.Err) {
-	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, *serr.Err) {
 	data, err := fidc.fids.lookup(fid).pc.ReadF(fid, off, cnt, f)
 	if err != nil {
 		return nil, err
@@ -232,11 +221,7 @@ func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, cnt sp.Tsize) ([]byte, *
 	return data, nil
 }
 
-func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, *serr.Err) {
-	f := &f0
-	if !f0.HasFence() {
-		f = fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
-	}
+func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
 	reply, err := fidc.fids.lookup(fid).pc.WriteF(fid, off, f, data)
 	if err != nil {
 		return 0, err
@@ -256,12 +241,11 @@ func (fidc *FidClnt) WriteRead(fid sp.Tfid, data []byte) ([]byte, *serr.Err) {
 	return data, nil
 }
 
-func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, resolve bool) ([]byte, *serr.Err) {
+func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, resolve bool, f *sp.Tfence) ([]byte, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, "GetFile")
 	}
-	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
 	data, err := ch.pc.GetFile(fid, path, mode, off, cnt, resolve, f)
 	if err != nil {
 		return nil, err
@@ -269,12 +253,11 @@ func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.T
 	return data, err
 }
 
-func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte, resolve bool, lid sp.TleaseId) (sp.Tsize, *serr.Err) {
+func (fidc *FidClnt) PutFile(fid sp.Tfid, path []string, mode sp.Tmode, perm sp.Tperm, off sp.Toffset, data []byte, resolve bool, lid sp.TleaseId, f *sp.Tfence) (sp.Tsize, *serr.Err) {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
 		return 0, serr.NewErr(serr.TErrUnreachable, "PutFile")
 	}
-	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
 	reply, err := ch.pc.PutFile(fid, path, mode, perm, off, resolve, f, data, lid)
 	if err != nil {
 		return 0, err

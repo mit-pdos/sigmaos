@@ -1,11 +1,10 @@
-package fidclnt
+package fdclnt
 
 import (
 	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/path"
-	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -19,34 +18,39 @@ type FenceTable struct {
 	fencedDirs map[string]sp.Tfence
 }
 
-func NewFenceTable() *FenceTable {
+func newFenceTable() *FenceTable {
 	ft := &FenceTable{}
 	ft.fencedDirs = make(map[string]sp.Tfence)
 	return ft
 }
 
 // If already exist, just update
-func (ft *FenceTable) Insert(p string, f sp.Tfence) *serr.Err {
+func (ft *FenceTable) insert(pn string, f sp.Tfence) error {
 	ft.Lock()
 	defer ft.Unlock()
 
-	path := path.Split(p) // cleans up p
+	path := path.Split(pn) // cleans up pn
 
-	db.DPrintf(db.FIDCLNT, "Insert fence %v %v\n", path, f)
+	db.DPrintf(db.FDCLNT, "Insert fence %v %v\n", path, f)
 	ft.fencedDirs[path.String()] = f
 	return nil
 }
 
-func (ft *FenceTable) Lookup(p path.Path) *sp.Tfence {
+func (ft *FenceTable) lookup(pn string) *sp.Tfence {
+	p := path.Split(pn) // cleans up pn
+	return ft.lookupPath(p)
+}
+
+func (ft *FenceTable) lookupPath(p path.Path) *sp.Tfence {
 	ft.Lock()
 	defer ft.Unlock()
 
 	for pn, f := range ft.fencedDirs {
-		db.DPrintf(db.FIDCLNT, "Lookup fence %v %v\n", p, f)
+		db.DPrintf(db.FDCLNT, "Lookup fence %v %v\n", p, f)
 		if p.IsParent(path.Split(pn)) {
 			return &f
 		}
 	}
-	db.DPrintf(db.FIDCLNT, "Lookup fence %v: no fence\n", p)
+	db.DPrintf(db.FDCLNT, "Lookup fence %v: no fence\n", p)
 	return sp.NullFence()
 }

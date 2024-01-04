@@ -60,7 +60,7 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *serr.Err) {
 		db.DPrintf(db.WALK, "unionLookup open %v fid %v err %v", q, fid, err)
 		return sp.NoFid, err
 	}
-	rdr := reader.NewReader(newRdr(pathc.FidClnt, fid), "")
+	rdr := reader.NewReader(newRdr(pathc.FidClnt, fid, sp.NullFence()), "")
 	drdr := reader.MkDirReader(rdr)
 	rfid := sp.NoFid
 	db.DPrintf(db.WALK, "unionLookup ReadDir %v search %v fid %v", fid, q, fid)

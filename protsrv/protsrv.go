@@ -104,6 +104,8 @@ func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachC
 	if detach != nil {
 		detach(args.TclntId())
 	}
+	// Several threads maybe waiting in a clntcond of this
+	// clnt. DeleteClnt will unblock them so that they can bail out.
 	ps.sct.DeleteClnt(args.TclntId())
 	return nil
 }

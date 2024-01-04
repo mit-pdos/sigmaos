@@ -1,4 +1,10 @@
-// Package fidclnt implements SigmaOS API using fid's
+// Package fidclnt implements SigmaOS API using fid's.  Fidclnt's
+// session manager ([sessclnt]) makes sessions to the server
+// associated with a fid: that is, fids that have the same remote
+// server associated with them share a single session to that server.
+//
+// Several instances of [pathclnt] may share a single fidclnt, which
+// causes a session to a server to be shared among those pathclnt's.
 package fidclnt
 
 import (

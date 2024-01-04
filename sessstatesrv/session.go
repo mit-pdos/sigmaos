@@ -93,7 +93,7 @@ func (sess *Session) DelClnt(cid sp.TclntId) {
 // on a session that server has terminated and the Close() will close
 // the new reply channel.
 func (sess *Session) close() {
-	db.DPrintf(db.ALWAYS, "Srv Close sess %v\n", sess.Sid)
+	db.DPrintf(db.ALWAYS, "Srv Close sess %v %d\n", sess.Sid, len(sess.clnts))
 	sess.closed = true
 	// Close the connection so that writer in srvconn exits
 	if sess.conn != nil {

@@ -73,13 +73,12 @@ func main() {
 				ch <- err
 				return
 			}
-			db.DPrintf(db.TEST1, "Done %v", a.GetPid().String())
+			db.DPrintf(db.TEST1, "Done %v %v", a.GetPid().String(), status)
 			if !status.IsStatusOK() {
 				ch <- status.Error()
 				return
 			}
 			ch <- nil
-
 		})
 
 		if err != nil && !(os.Args[2] == "crash" && err.Error() == "status error Non-sigma error  Non-sigma error  exit status 2") {

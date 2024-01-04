@@ -9,21 +9,22 @@ import (
 	"sigmaos/path"
 	"sigmaos/protclnt"
 	"sigmaos/serr"
+	"sigmaos/sessclnt"
 	sp "sigmaos/sigmap"
 )
 
 type FidClnt struct {
 	mu     sync.Mutex
 	fids   *FidMap
-	pc     *protclnt.Clnt
 	refcnt int
+	sm     *sessclnt.Mgr
 }
 
 func NewFidClnt(clntnet string) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = newFidMap()
-	fidc.pc = protclnt.NewClnt(clntnet)
 	fidc.refcnt = 1
+	fidc.sm = sessclnt.NewMgr(clntnet)
 	return fidc
 }
 
@@ -38,6 +39,18 @@ func (fidc *FidClnt) NewClnt() {
 	fidc.refcnt++
 }
 
+// Close all sessions
+func (fidc *FidClnt) closeSess() error {
+	var err error
+	scs := fidc.sm.SessClnts()
+	for _, sc := range scs {
+		if r := sc.Close(); r != nil {
+			err = r
+		}
+	}
+	return err
+}
+
 func (fidc *FidClnt) Close() error {
 	fidc.mu.Lock()
 	defer fidc.mu.Unlock()
@@ -49,7 +62,7 @@ func (fidc *FidClnt) Close() error {
 	fidc.refcnt--
 	db.DPrintf(db.ALWAYS, "FidClnt refcnt %d\n", fidc.refcnt)
 	if fidc.refcnt == 0 {
-		return fidc.pc.Close()
+		fidc.closeSess()
 	}
 	return nil
 }
@@ -101,13 +114,13 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 
 func (fidc *FidClnt) Attach(uname sp.Tuname, cid sp.TclntId, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
 	fid := fidc.allocFid()
-	reply, err := fidc.pc.Attach(addrs, uname, cid, fid, path.Split(tree))
+	pc := protclnt.NewProtClnt(addrs, fidc.sm)
+	reply, err := pc.Attach(uname, cid, fid, path.Split(tree))
 	if err != nil {
 		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", addrs, err)
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}
-	pc := fidc.pc.NewProtClnt(addrs)
 	fidc.fids.insert(fid, newChannel(pc, uname, path.Split(pn), []*sp.Tqid{reply.Qid}))
 	return fid, nil
 }

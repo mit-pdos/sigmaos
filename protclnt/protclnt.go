@@ -8,29 +8,25 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Clnt struct {
-	sm *sessclnt.Mgr
+type ProtClnt struct {
+	addrs sp.Taddrs
+	sm    *sessclnt.Mgr
 }
 
-func NewClnt(clntnet string) *Clnt {
-	clnt := &Clnt{}
-	clnt.sm = sessclnt.NewMgr(clntnet)
-	return clnt
+func NewProtClnt(addrs sp.Taddrs, sm *sessclnt.Mgr) *ProtClnt {
+	return &ProtClnt{addrs: addrs, sm: sm}
 }
 
-func (clnt *Clnt) Close() error {
-	var err error
-	scs := clnt.sm.SessClnts()
-	for _, sc := range scs {
-		if r := sc.Close(); r != nil {
-			err = r
-		}
-	}
-	return err
+func (pclnt *ProtClnt) Servers() sp.Taddrs {
+	return pclnt.addrs
 }
 
-func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
-	reply, err := clnt.sm.RPC(addrs, args, data)
+func (pclnt *ProtClnt) Disconnect() *serr.Err {
+	return pclnt.sm.Disconnect(pclnt.addrs)
+}
+
+func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
+	reply, err := pclnt.sm.RPC(addrs, args, data)
 	if err != nil {
 		return nil, err
 	}
@@ -41,9 +37,17 @@ func (clnt *Clnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte) (*se
 	return reply, nil
 }
 
-func (clnt *Clnt) Attach(addrs sp.Taddrs, uname sp.Tuname, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
+func (pclnt *ProtClnt) Call(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
+	return pclnt.CallServer(pclnt.addrs, args, nil)
+}
+
+func (pclnt *ProtClnt) CallData(args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
+	return pclnt.CallServer(pclnt.addrs, args, data)
+}
+
+func (pclnt *ProtClnt) Attach(uname sp.Tuname, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
 	args := sp.NewTattach(fid, sp.NoFid, uname, cid, path)
-	reply, err := clnt.CallServer(addrs, args, nil)
+	reply, err := pclnt.CallServer(pclnt.addrs, args, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -52,32 +56,6 @@ func (clnt *Clnt) Attach(addrs sp.Taddrs, uname sp.Tuname, cid sp.TclntId, fid s
 		return nil, serr.NewErr(serr.TErrBadFcall, "clnt")
 	}
 	return msg, nil
-}
-
-func (clnt *Clnt) NewProtClnt(addrs sp.Taddrs) *ProtClnt {
-	protclnt := &ProtClnt{addrs, clnt}
-	return protclnt
-}
-
-type ProtClnt struct {
-	addrs sp.Taddrs
-	clnt  *Clnt
-}
-
-func (pclnt *ProtClnt) Servers() sp.Taddrs {
-	return pclnt.addrs
-}
-
-func (pclnt *ProtClnt) Disconnect() *serr.Err {
-	return pclnt.clnt.sm.Disconnect(pclnt.addrs)
-}
-
-func (pclnt *ProtClnt) Call(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.clnt.CallServer(pclnt.addrs, args, nil)
-}
-
-func (pclnt *ProtClnt) CallData(args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.clnt.CallServer(pclnt.addrs, args, data)
 }
 
 func (pclnt *ProtClnt) Walk(fid sp.Tfid, nfid sp.Tfid, path path.Path) (*sp.Rwalk, *serr.Err) {

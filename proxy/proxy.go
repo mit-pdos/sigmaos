@@ -9,7 +9,6 @@ import (
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
-	"sigmaos/protclnt"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -70,7 +69,6 @@ func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) {
 // The connection from the kernel/client
 type NpConn struct {
 	mu    sync.Mutex
-	clnt  *protclnt.Clnt
 	uname sp.Tuname
 	fidc  *fidclnt.FidClnt
 	pc    *pathclnt.PathClnt
@@ -80,7 +78,6 @@ type NpConn struct {
 
 func newNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
 	npc := &NpConn{}
-	npc.clnt = protclnt.NewClnt(sp.ROOTREALM.String())
 	npc.fidc = fidclnt.NewFidClnt(sp.ROOTREALM.String())
 	npc.pc = pathclnt.NewPathClnt(pcfg, npc.fidc)
 	npc.fm = newFidMap()

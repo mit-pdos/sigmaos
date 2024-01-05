@@ -76,8 +76,6 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 	p.McpuInt = uint32(0)
 	if p.ProcEnvProto.Privileged {
 		p.TypeInt = uint32(T_LC)
-	} else {
-		p.ProcEnvProto.UseSigmaclntd = true
 	}
 	p.Env = make(map[string]string)
 	p.setBaseEnv()
@@ -114,6 +112,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
 	p.ProcEnvProto.Net = parentPE.Net
 	p.ProcEnvProto.Overlays = parentPE.Overlays
+	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {

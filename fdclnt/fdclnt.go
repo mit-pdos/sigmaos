@@ -60,19 +60,10 @@ func (fdc *FdClient) CloseFd(fd int) error {
 	if error != nil {
 		return error
 	}
-	err := fdc.pc.Clunk(fid)
-	if err != nil {
+	if err := fdc.pc.Clunk(fid); err != nil {
 		return err
 	}
 	return nil
-}
-
-func (fdc *FdClient) Qid(fd int) (*sp.Tqid, error) {
-	fid, error := fdc.fds.lookup(fd)
-	if error != nil {
-		return nil, error
-	}
-	return fdc.pc.Qid(fid), nil
 }
 
 func (fdc *FdClient) Stat(name string) (*sp.Stat, error) {

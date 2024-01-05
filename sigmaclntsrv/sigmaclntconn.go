@@ -173,7 +173,7 @@ func (scs *SigmaClntSrvAPI) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep 
 	d, err := scs.sc.Read(int(req.Fd), sp.Tsize(req.Size))
 	rep.Data = d
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: Read %v %v\n", req, len(rep.Data))
+	db.DPrintf(db.SIGMACLNTSRV, "%v: Read %v %v\n", scs.sc.ClntId(), req, len(rep.Data))
 	return nil
 }
 
@@ -202,7 +202,7 @@ func (scs *SigmaClntSrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest
 
 func (scs *SigmaClntSrvAPI) CreateEphemeral(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
 	fd, err := scs.sc.CreateEphemeral(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), sp.TleaseId(req.LeaseId), req.Fence.Tfence())
-	db.DPrintf(db.SIGMACLNTSRV, "%v: CreateEphemeral %v %v %v\n", req, fd, err)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: CreateEphemeral %v %v %v\n", scs.sc.ClntId(), req, fd, err)
 	rep.Fd = uint32(fd)
 	rep.Err = scs.setErr(err)
 	return nil
@@ -234,7 +234,7 @@ func (scs *SigmaClntSrvAPI) WriteFence(ctx fs.CtxI, req scproto.SigmaWriteReques
 func (scs *SigmaClntSrvAPI) DirWait(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.DirWait(int(req.Fd))
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: DirWait %v %v\n", req, rep)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: DirWait %v %v\n", scs.sc.ClntId(), req, rep)
 	return nil
 }
 
@@ -249,7 +249,7 @@ func (scs *SigmaClntSrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountRequ
 func (scs *SigmaClntSrvAPI) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.MountTree(req.Addr, req.Tree, req.Mount)
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: MountTree %v %v\n", req, rep)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: MountTree %v %v\n", scs.sc.ClntId(), req, rep)
 	return nil
 }
 

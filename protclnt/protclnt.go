@@ -1,3 +1,6 @@
+// Package protclnt implements stubs for the sigmap messages for a
+// particular server at addrs. It relies on [sessclnt] for maintaining
+// a session with that server.
 package protclnt
 
 import (

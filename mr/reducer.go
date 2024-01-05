@@ -51,7 +51,6 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	r.input = args[0]
 	r.outlink = args[1]
 	r.outputTarget = args[2]
-	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 	r.reducef = reducef
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	r.SigmaClnt = sc
@@ -66,6 +65,8 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	//		db.DFatalf("%v: ResolveMounts %v err %v", r.ProcEnv().GetPID(), r.tmp, err)
 	//	}
 	r.tmp = r.outputTarget + rand.String(16) //pn
+
+	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 
 	m, err := strconv.Atoi(args[3])
 	if err != nil {

@@ -100,7 +100,11 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 
 // Delete ephemeral files created by this client and delete this client
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
-	ps.ft.ClunkOpen()
+	fids := ps.ft.ClunkOpen(args.TclntId())
+	for _, f := range fids {
+		o := f.Pobj().Obj()
+		o.Close(f.Pobj().Ctx(), f.Mode())
+	}
 	if detach != nil {
 		detach(args.TclntId())
 	}

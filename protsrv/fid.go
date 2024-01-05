@@ -24,7 +24,7 @@ func (ft *fidTable) Lookup(fid sp.Tfid) (*fid.Fid, *serr.Err) {
 	defer ft.Unlock()
 	f, ok := ft.fids[fid]
 	if !ok {
-		return nil, serr.NewErr(serr.TErrUnknownfid, f)
+		return nil, serr.NewErr(serr.TErrUnknownfid, fid)
 	}
 	return f, nil
 }
@@ -39,17 +39,20 @@ func (ft *fidTable) Add(fid sp.Tfid, f *fid.Fid) {
 func (ft *fidTable) Del(fid sp.Tfid) {
 	ft.Lock()
 	defer ft.Unlock()
+
 	delete(ft.fids, fid)
 }
 
-func (ft *fidTable) ClunkOpen() {
+// Return cid's open fids
+func (ft *fidTable) ClunkOpen(cid sp.TclntId) []*fid.Fid {
 	ft.Lock()
 	defer ft.Unlock()
 
+	fids := make([]*fid.Fid, 0)
 	for _, f := range ft.fids {
-		o := f.Pobj().Obj()
-		if f.IsOpen() { // has the fid been opened?
-			o.Close(f.Pobj().Ctx(), f.Mode())
+		if f.Pobj().Ctx().ClntId() == cid && f.IsOpen() {
+			fids = append(fids, f)
 		}
 	}
+	return fids
 }

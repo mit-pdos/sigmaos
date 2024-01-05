@@ -115,7 +115,7 @@ func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
 	req := scproto.SigmaPathRequest{Path: path}
 	rep := scproto.SigmaDataReply{}
 	b, err := scc.rpcData("SigmaClntSrvAPI.GetFile", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "GetFile %v %v %v", req, rep, err)
+	db.DPrintf(db.SIGMACLNTCLNT, "GetFile %v %v %v", req, len(rep.Data), err)
 	return b, err
 }
 
@@ -123,7 +123,7 @@ func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []by
 	req := scproto.SigmaPutFileRequest{Path: path, Perm: uint32(p), Mode: uint32(m), Offset: uint64(o), LeaseId: uint64(l), Data: data}
 	rep := scproto.SigmaSizeReply{}
 	sz, err := scc.rpcSize("SigmaClntSrvAPI.PutFile", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "PutFile %v %v sz %v %v", req, rep, sz, err)
+	db.DPrintf(db.SIGMACLNTCLNT, "PutFile %q %v %v sz %v %v", req.Path, len(req.Data), rep, sz, err)
 	return sz, err
 }
 
@@ -131,7 +131,7 @@ func (scc *SigmaClntClnt) Read(fd int, sz sp.Tsize) ([]byte, error) {
 	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(sz)}
 	rep := scproto.SigmaDataReply{}
 	b, err := scc.rpcData("SigmaClntSrvAPI.Read", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Read %v %v %v", req, rep, err)
+	db.DPrintf(db.SIGMACLNTCLNT, "Read %v %v %v", req, len(rep.Data), err)
 	return b, err
 }
 
@@ -139,7 +139,7 @@ func (scc *SigmaClntClnt) Write(fd int, data []byte) (sp.Tsize, error) {
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Data: data}
 	rep := scproto.SigmaSizeReply{}
 	sz, err := scc.rpcSize("SigmaClntSrvAPI.Write", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Write %v %v %v", req, rep, err)
+	db.DPrintf(db.SIGMACLNTCLNT, "Write %v %v %v %v", req.Fd, len(req.Data), rep, err)
 	return sz, err
 }
 
@@ -193,7 +193,7 @@ func (scc *SigmaClntClnt) WriteRead(fd int, data []byte) ([]byte, error) {
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Data: data}
 	rep := scproto.SigmaDataReply{}
 	b, err := scc.rpcData("SigmaClntSrvAPI.WriteRead", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v", req, rep, err)
+	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v %v", req.Fd, len(req.Data), len(rep.Data), err)
 	return b, err
 }
 

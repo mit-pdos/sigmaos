@@ -1,8 +1,6 @@
+// Fdclnt package implements the SigmaOS API but most of the heavy
+// lifting is done by [pathclnt].
 package fdclnt
-
-//
-// Fdclnt package implements the SigmaOS API
-//
 
 import (
 	"fmt"
@@ -16,22 +14,6 @@ import (
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
-
-//
-// Procs interact with servers using Unix-like file descriptor
-// interface and pathnames.
-//
-// A hypothetical kernel could multiplex multiple procs over one
-// FidClnt, which allows a shared TCP connection to a server. A kernel
-// could also use fds to share file descriptors state (e.g., offset)
-// between parent and child.  Since we have no kernel implementing
-// procs, these use cases are speculative.
-//
-// The FdClient is per user, while a single pathclnt can be shared
-// between many FdClients since pathclnt requires a uname being passed
-// in. The standard use case is, however, to have one pathclnt per
-// FdClient.
-//
 
 type FdClient struct {
 	pcfg *proc.ProcEnv

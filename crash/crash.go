@@ -99,12 +99,3 @@ func PartitionNamed(fsl *fslib.FsLib) {
 		db.DPrintf(db.ALWAYS, "Disconnect %v name fails err %v\n", os.Args, error)
 	}
 }
-
-func MaybePartition(fsl *fslib.FsLib) bool {
-	r := rand.Int64(1000)
-	if r < 330 {
-		PartitionNamed(fsl)
-		return true
-	}
-	return false
-}

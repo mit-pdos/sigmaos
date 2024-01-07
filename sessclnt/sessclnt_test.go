@@ -180,6 +180,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 			for true {
 				_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
 				if err != nil {
+					db.DPrintf(db.TEST, "Stat %d err %v", i, err)
 					ch <- err
 					break
 				}

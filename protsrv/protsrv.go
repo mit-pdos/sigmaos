@@ -100,10 +100,10 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 
 // Delete ephemeral files created by this client and delete this client
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
-	fids := ps.ft.ClunkOpen(args.TclntId())
-	for _, f := range fids {
-		o := f.Pobj().Obj()
-		o.Close(f.Pobj().Ctx(), f.Mode())
+	fes := ps.ft.ClientFids(args.TclntId())
+	db.DPrintf(db.TEST, "Detach clnt %v fes %v\n", args.TclntId(), fes)
+	for _, fe := range fes {
+		ps.clunk(fe.fid, fe.f)
 	}
 	if detach != nil {
 		detach(args.TclntId())
@@ -170,18 +170,22 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	return nil
 }
 
+func (ps *ProtSrv) clunk(fid sp.Tfid, f *fid.Fid) {
+	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %q", f.Pobj().Ctx().ClntId(), fid, f, f.Pobj().Path())
+	if f.IsOpen() { // has the fid been opened?
+		f.Pobj().Obj().Close(f.Pobj().Ctx(), f.Mode())
+		f.Close()
+	}
+	ps.ft.Del(fid)
+	ps.vt.Delete(f.Pobj().Obj().Path())
+}
+
 func (ps *ProtSrv) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %q", f.Pobj().Ctx().ClntId(), args.Fid, f, f.Pobj().Path())
-	if f.IsOpen() { // has the fid been opened?
-		f.Pobj().Obj().Close(f.Pobj().Ctx(), f.Mode())
-		f.Close()
-	}
-	ps.ft.Del(args.Tfid())
-	ps.vt.Delete(f.Pobj().Obj().Path())
+	ps.clunk(args.Tfid(), f)
 	return nil
 }
 

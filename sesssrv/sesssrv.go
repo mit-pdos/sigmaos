@@ -226,6 +226,7 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
 
 	if rerror != nil {
+		db.DPrintf(db.TEST, "Dispatch %v rerror %v", fc, rerror)
 		msg = rerror
 	}
 
@@ -235,13 +236,13 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 
 	if clntid != sp.NoClntId {
 		sess.DelClnt(clntid)
-		sess.Close()
+		// sess.Close()
 	}
 }
 
 func (ssrv *SessSrv) PartitionClient(permanent bool) {
 	if permanent {
-		ssrv.sm.TimeoutSession()
+		ssrv.sm.DisconnectClient()
 	} else {
 		ssrv.sm.CloseConn()
 	}

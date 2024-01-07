@@ -37,6 +37,7 @@ type Session struct {
 	detachSess    sps.DetachSessF
 	detachClnt    sps.DetachClntF
 	clnts         map[sp.TclntId]bool
+	lastClnt      sp.TclntId
 }
 
 func newSession(protsrv sps.Protsrv, sid sessp.Tsession, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
@@ -47,6 +48,7 @@ func newSession(protsrv sps.Protsrv, sid sessp.Tsession, attachf sps.AttachClntF
 		attachClnt:    attachf,
 		detachClnt:    detachf,
 		clnts:         make(map[sp.TclntId]bool),
+		lastClnt:      sp.NoClntId,
 	}
 	return sess
 }
@@ -63,7 +65,8 @@ func (sess *Session) GetConn() sps.Conn {
 }
 
 // For testing. Invoking CloseConn() will eventually cause
-// sess.Close() to be called by Detach().
+// sess.Close() to be called by Detach().  XXX really
+// won't the connection be re-established by client?
 func (sess *Session) CloseConn() {
 	sess.Lock()
 	var conn sps.Conn
@@ -79,6 +82,7 @@ func (sess *Session) AddClnt(cid sp.TclntId) {
 	defer sess.Unlock()
 	db.DPrintf(db.ALWAYS, "Add cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 	sess.clnts[cid] = true
+	sess.lastClnt = cid
 }
 
 // Delete client from session
@@ -180,12 +184,13 @@ func (sess *Session) heartbeatL(msg sessp.Tmsg) {
 	sess.lastHeartbeat = time.Now()
 }
 
-// Indirectly timeout a session
-func (sess *Session) timeout() {
+// Disconnect last client
+func (sess *Session) disconnectClient() sp.TclntId {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DPrintf(db.SESS_STATE_SRV, "timeout %v", sess.Sid)
-	sess.timedout = true
+	c := sess.lastClnt
+	sess.lastClnt = sp.NoClntId
+	return c
 }
 
 func (sess *Session) isConnected() bool {

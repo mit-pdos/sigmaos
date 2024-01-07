@@ -354,14 +354,28 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
 	assert.Nil(t, err)
 
+	db.DPrintf(db.TEST, "hello\n")
+
 	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "newcacheclnt")
+
+	sts, _ := ts1.GetDir("name/cache")
+	db.DPrintf(db.TEST, "readdir %v\n", sp.Names(sts))
+
+	sts, _ = rootts.GetDir("name/cache")
+	db.DPrintf(db.TEST, "readdir %v\n", sp.Names(sts))
 
 	_, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
 	assert.NotNil(t, err)
 
+	db.DPrintf(db.TEST, "readmount\n")
+
 	mnt, err := ts1.ReadMount(cc.Server(0))
 	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "mnt %v\n", mnt)
 
 	// Remove public port
 	if len(mnt.Addr) > 1 {

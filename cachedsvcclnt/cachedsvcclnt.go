@@ -4,7 +4,6 @@ import (
 	"hash/fnv"
 	"strconv"
 	"sync"
-	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -35,6 +34,7 @@ type CachedSvcClnt struct {
 	rdr  *fslib.FdReader
 }
 
+// XXX clean up watchServers goroutine?
 func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
 	csc := &CachedSvcClnt{
 		fsl:  fsls[0],
@@ -42,14 +42,13 @@ func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
 		cc:   cacheclnt.NewCacheClnt(fsls, job, cachesrv.NSHARD),
 		srvs: make(map[string]struct{}),
 	}
-	started := false
+	ch := make(chan error)
 	go func() {
-		if err := csc.watchServers(&started); err != nil {
-			db.DPrintf(db.ALWAYS, "watchDir %v\n", err)
-		}
+		csc.watchServers(ch)
 	}()
-	for !started {
-		time.Sleep(1 * time.Millisecond)
+	if err := <-ch; err != nil {
+		db.DPrintf(db.ALWAYS, "watchServers err %v\n", err)
+		return nil, err
 	}
 	return csc, nil
 }
@@ -59,8 +58,9 @@ func (csc *CachedSvcClnt) srvDir() string {
 }
 
 // XXX delete servers
-func (csc *CachedSvcClnt) watchServers(started *bool) error {
-	db.DPrintf(db.CACHEDSVCCLNT, "watchServers %v", started)
+func (csc *CachedSvcClnt) watchServers(ch chan error) {
+	db.DPrintf(db.CACHEDSVCCLNT, "watchServers")
+	started := false
 	for {
 		dir := csc.srvDir()
 		if err := csc.fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
@@ -72,11 +72,14 @@ func (csc *CachedSvcClnt) watchServers(started *bool) error {
 				return true
 			}
 		}); err != nil {
-			return err
+			ch <- err
+			return
 		}
-		*started = true
+		if !started {
+			started = true
+			ch <- nil
+		}
 	}
-	return nil
 }
 
 func (csc *CachedSvcClnt) addServer(sts []*sp.Stat) {

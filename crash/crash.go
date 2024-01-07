@@ -43,13 +43,13 @@ func Crasher(fsl *fslib.FsLib) {
 }
 
 func Partitioner(ss *sesssrv.SessSrv) {
-	crash := ss.ProcEnv().GetPartition()
-	if crash == 0 {
+	part := ss.ProcEnv().GetPartition()
+	if part == 0 {
 		return
 	}
 	go func() {
 		for true {
-			r := randSleep(crash)
+			r := randSleep(part)
 			if r < 330 {
 				ss.PartitionClient(true)
 			}

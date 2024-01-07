@@ -20,7 +20,6 @@ func main() {
 		db.DFatalf("NewSigmaClnt: error %v", err)
 	}
 	sc.Started()
-	//
 	_, err = sc.GetDir(sp.NAMED)
 	if err != nil {
 		db.DFatalf("Named GetDir error: %v", err)

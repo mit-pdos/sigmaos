@@ -235,7 +235,7 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 
 	if clntid != sp.NoClntId {
 		sess.DelClnt(clntid)
-		// sess.Close()
+		sess.Close()
 	}
 }
 

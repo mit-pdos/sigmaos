@@ -165,7 +165,6 @@ func (k *Kernel) bootNamed() (Subsystem, error) {
 }
 
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
-	db.DFatalf("Unimplemented")
 	return sigmaclntsrv.ExecSigmaClntSrv()
 }
 

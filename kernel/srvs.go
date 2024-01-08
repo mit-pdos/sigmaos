@@ -11,20 +11,20 @@ import (
 )
 
 type Services struct {
-	svcs   map[string][]*Subsystem
-	svcMap map[sp.Tpid]*Subsystem
+	svcs   map[string][]Subsystem
+	svcMap map[sp.Tpid]Subsystem
 }
 
 func newServices() *Services {
 	ss := &Services{}
-	ss.svcs = make(map[string][]*Subsystem)
-	ss.svcMap = make(map[sp.Tpid]*Subsystem)
+	ss.svcs = make(map[string][]Subsystem)
+	ss.svcMap = make(map[sp.Tpid]Subsystem)
 	return ss
 }
 
-func (ss *Services) addSvc(s string, sub *Subsystem) {
+func (ss *Services) addSvc(s string, sub Subsystem) {
 	ss.svcs[s] = append(ss.svcs[s], sub)
-	ss.svcMap[sub.p.GetPid()] = sub
+	ss.svcMap[sub.GetProc().GetPid()] = sub
 }
 
 func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (sp.Tpid, error) {
@@ -36,10 +36,12 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (sp.Tpid,
 	}
 
 	var err error
-	var ss *Subsystem
+	var ss Subsystem
 	switch s {
 	case sp.NAMEDREL:
 		ss, err = k.bootNamed()
+	case sp.SIGMACLNTDREL:
+		ss, err = k.bootSigmaclntd()
 	case sp.S3REL:
 		ss, err = k.bootS3d()
 	case sp.UXREL:
@@ -65,7 +67,7 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (sp.Tpid,
 		return sp.Tpid(""), err
 	}
 	k.svcs.addSvc(s, ss)
-	return ss.p.GetPid(), err
+	return ss.GetProc().GetPid(), err
 }
 
 func (k *Kernel) SetCPUShares(pid sp.Tpid, shares int64) error {
@@ -90,7 +92,7 @@ func (k *Kernel) KillOne(srv string) error {
 
 	db.DPrintf(db.KERNEL, "KillOne %v\n", srv)
 
-	var ss *Subsystem
+	var ss Subsystem
 	if _, ok := k.svcs.svcs[srv]; !ok {
 		return fmt.Errorf("Unknown kernel service %v", srv)
 	}
@@ -124,59 +126,64 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 	return err
 }
 
-func (k *Kernel) bootRealmd() (*Subsystem, error) {
+func (k *Kernel) bootRealmd() (Subsystem, error) {
 	return k.bootSubsystem("realmd", []string{}, proc.HSCHEDD)
 }
 
-func (k *Kernel) bootUxd() (*Subsystem, error) {
+func (k *Kernel) bootUxd() (Subsystem, error) {
 	// XXX ignore realm for now
 	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, proc.HSCHEDD)
 }
 
-func (k *Kernel) bootS3d() (*Subsystem, error) {
+func (k *Kernel) bootS3d() (Subsystem, error) {
 	return k.bootSubsystem("fss3d", []string{}, proc.HSCHEDD)
 }
 
-func (k *Kernel) bootDbd(hostip string) (*Subsystem, error) {
+func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {
 	return k.bootSubsystem("dbd", []string{hostip}, proc.HSCHEDD)
 }
 
-func (k *Kernel) bootMongod(hostip string) (*Subsystem, error) {
+func (k *Kernel) bootMongod(hostip string) (Subsystem, error) {
 	return k.bootSubsystemWithMcpu("mongod", []string{hostip}, proc.HSCHEDD, 1000)
 }
 
-func (k *Kernel) bootLCSched() (*Subsystem, error) {
+func (k *Kernel) bootLCSched() (Subsystem, error) {
 	return k.bootSubsystem("lcsched", []string{}, proc.HLINUX)
 }
 
-func (k *Kernel) bootProcq() (*Subsystem, error) {
+func (k *Kernel) bootProcq() (Subsystem, error) {
 	return k.bootSubsystem("procq", []string{}, proc.HLINUX)
 }
 
-func (k *Kernel) bootSchedd() (*Subsystem, error) {
+func (k *Kernel) bootSchedd() (Subsystem, error) {
 	return k.bootSubsystem("schedd", []string{k.Param.KernelId, k.Param.ReserveMcpu}, proc.HLINUX)
 }
 
-func (k *Kernel) bootNamed() (*Subsystem, error) {
+func (k *Kernel) bootNamed() (Subsystem, error) {
 	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0"}, proc.HSCHEDD)
+}
+
+func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
+	db.DFatalf("Unimplemented")
+	return k.bootSubsystem("realmd", []string{}, proc.HSCHEDD)
 }
 
 // Start uprocd in a sigmauser container and post the mount for
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
-func (k *Kernel) bootUprocd(args []string) (*Subsystem, error) {
+func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 	s, err := k.bootSubsystem("uprocd", args, proc.HDOCKER)
 	if err != nil {
 		return nil, err
 	}
-	if s.k.Param.Overlays {
+	if k.Param.Overlays {
 		realm := args[0]
 		ptype := args[1]
 
-		pn := path.Join(sp.SCHEDD, args[2], sp.UPROCDREL, s.p.GetPid().String())
+		pn := path.Join(sp.SCHEDD, args[2], sp.UPROCDREL, s.GetProc().GetPid().String())
 
 		// container's first port is for uprocd
-		pm, err := s.container.AllocFirst()
+		pm, err := s.GetContainer().AllocFirst()
 		if err != nil {
 			return nil, err
 		}

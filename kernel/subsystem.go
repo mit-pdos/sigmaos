@@ -17,7 +17,25 @@ import (
 
 const NPORT_PER_CONTAINER = 20
 
-type Subsystem struct {
+// XXX Make interface smaller
+type Subsystem interface {
+	GetProc() *proc.Proc
+	GetHow() proc.Thow
+	GetCrashed() bool
+	GetContainer() *container.Container
+	SetWaited(bool)
+	GetWaited() bool
+	Wait() error
+	Kill() error
+	SetCPUShares(shares int64) error
+	GetCPUUtil() (float64, error)
+	GetIp(fsl *fslib.FsLib) *sp.Taddr
+	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
+	AllocPort(p sp.Tport) (*port.PortBinding, error)
+	Run(how proc.Thow, kernelId string, localIP sp.Thost) error
+}
+
+type KernelSubsystem struct {
 	*procclnt.ProcClnt
 	k         *Kernel
 	p         *proc.Proc
@@ -28,20 +46,44 @@ type Subsystem struct {
 	crashed   bool
 }
 
-func (ss *Subsystem) String() string {
+func (ss *KernelSubsystem) GetProc() *proc.Proc {
+	return ss.p
+}
+
+func (ss *KernelSubsystem) GetContainer() *container.Container {
+	return ss.container
+}
+
+func (ss *KernelSubsystem) GetHow() proc.Thow {
+	return ss.how
+}
+
+func (ss *KernelSubsystem) GetCrashed() bool {
+	return ss.crashed
+}
+
+func (ss *KernelSubsystem) GetWaited() bool {
+	return ss.waited
+}
+
+func (ss *KernelSubsystem) SetWaited(w bool) {
+	ss.waited = w
+}
+
+func (ss *KernelSubsystem) String() string {
 	s := fmt.Sprintf("subsystem %p: [proc %v how %v]", ss, ss.p, ss.how)
 	return s
 }
 
-func newSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow, cmd *exec.Cmd) *Subsystem {
-	return &Subsystem{pclnt, k, p, how, cmd, nil, false, false}
+func newSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow, cmd *exec.Cmd) Subsystem {
+	return &KernelSubsystem{pclnt, k, p, how, cmd, nil, false, false}
 }
 
-func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow) *Subsystem {
+func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow) Subsystem {
 	return newSubsystemCmd(pclnt, k, p, how, nil)
 }
 
-func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.Thow, mcpu proc.Tmcpu) (*Subsystem, error) {
+func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	pid := sp.GenPid(program)
 	p := proc.NewPrivProcPid(pid, program, args, true)
 	p.GetProcEnv().SetLocalIP(k.ip)
@@ -50,11 +92,11 @@ func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.T
 	return ss, ss.Run(how, k.Param.KernelId, k.ip)
 }
 
-func (k *Kernel) bootSubsystem(program string, args []string, how proc.Thow) (*Subsystem, error) {
+func (k *Kernel) bootSubsystem(program string, args []string, how proc.Thow) (Subsystem, error) {
 	return k.bootSubsystemWithMcpu(program, args, how, 0)
 }
 
-func (s *Subsystem) Run(how proc.Thow, kernelId string, localIP sp.Thost) error {
+func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Thost) error {
 	if how == proc.HLINUX || how == proc.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {
@@ -85,19 +127,19 @@ func (s *Subsystem) Run(how proc.Thow, kernelId string, localIP sp.Thost) error 
 	return err
 }
 
-func (ss *Subsystem) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
+func (ss *KernelSubsystem) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
 	return ss.container.AssignToRealm(realm, ptype)
 }
 
-func (ss *Subsystem) SetCPUShares(shares int64) error {
+func (ss *KernelSubsystem) SetCPUShares(shares int64) error {
 	return ss.container.SetCPUShares(shares)
 }
 
-func (ss *Subsystem) GetCPUUtil() (float64, error) {
+func (ss *KernelSubsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
 }
 
-func (ss *Subsystem) AllocPort(p sp.Tport) (*port.PortBinding, error) {
+func (ss *KernelSubsystem) AllocPort(p sp.Tport) (*port.PortBinding, error) {
 	if p == sp.NO_PORT {
 		return ss.container.AllocPort()
 	} else {
@@ -105,21 +147,21 @@ func (ss *Subsystem) AllocPort(p sp.Tport) (*port.PortBinding, error) {
 	}
 }
 
-func (ss *Subsystem) GetIp(fsl *fslib.FsLib) *sp.Taddr {
+func (ss *KernelSubsystem) GetIp(fsl *fslib.FsLib) *sp.Taddr {
 	return kernelsubinfo.GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Addr
 }
 
 // Send SIGTERM to a system.
-func (s *Subsystem) Terminate() error {
-	db.DPrintf(db.KERNEL, "Terminate %v %v\n", s.cmd.Process.Pid, s.cmd)
-	if s.how != proc.HLINUX {
-		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
-	}
-	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGTERM)
-}
+//func (s *KernelSubsystem) Terminate() error {
+//	db.DPrintf(db.KERNEL, "Terminate %v %v\n", s.cmd.Process.Pid, s.cmd)
+//	if s.how != proc.HLINUX {
+//		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
+//	}
+//	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGTERM)
+//}
 
 // Kill a subsystem, either by sending SIGKILL or Evicting it.
-func (s *Subsystem) Kill() error {
+func (s *KernelSubsystem) Kill() error {
 	s.crashed = true
 	db.DPrintf(db.KERNEL, "Kill %v\n", s)
 	if s.p.GetProgram() == "knamed" {
@@ -137,11 +179,11 @@ func (s *Subsystem) Kill() error {
 	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGKILL)
 }
 
-func (s *Subsystem) Wait() error {
+func (s *KernelSubsystem) Wait() error {
 	db.DPrintf(db.KERNEL, "Wait subsystem for %v", s)
 	defer db.DPrintf(db.KERNEL, "Wait subsystem done for %v", s)
 	if s.how == proc.HSCHEDD || s.how == proc.HDOCKER {
-		if !s.waited {
+		if !s.GetWaited() {
 			db.DPrintf(db.KERNEL, "Wait subsystem via procclnt %v", s)
 			// Only wait if this proc has not been waited for already, since calling
 			// WaitExit twice leads to an error.

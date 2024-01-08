@@ -2,34 +2,35 @@ package sigmap
 
 // if name ends in "/", it is the union directory for that service
 const (
-	KNAMED     = "knamed"
-	NAME       = "name"
-	NAMED      = NAME + "/"
-	NAMEDREL   = "named"
-	REALMREL   = "realm"
-	REALM      = NAMED + REALMREL + "/"
-	REALMDREL  = "realmd"
-	REALMD     = NAMED + REALMREL + "/" + REALMDREL
-	REALMSREL  = "realms"
-	REALMS     = REALMD + "/" + REALMSREL
-	BOOTREL    = "boot"
-	BOOT       = NAMED + BOOTREL + "/"
-	UPROCDREL  = "uprocd"
-	S3REL      = "s3"
-	S3         = NAMED + S3REL + "/"
-	UXREL      = "ux"
-	UX         = NAMED + UXREL + "/"
-	SCHEDDREL  = "schedd"
-	SCHEDD     = NAMED + SCHEDDREL + "/"
-	LCSCHEDREL = "lcsched"
-	LCSCHED    = NAMED + LCSCHEDREL + "/"
-	PROCQREL   = "procq"
-	PROCQ      = NAMED + PROCQREL + "/"
-	DBREL      = "db"
-	DB         = NAMED + DBREL + "/"
-	DBD        = DB + "~any/"
-	MONGOREL   = "mongo"
-	MONGO      = NAMED + MONGOREL + "/"
+	KNAMED        = "knamed"
+	NAME          = "name"
+	NAMED         = NAME + "/"
+	NAMEDREL      = "named"
+	REALMREL      = "realm"
+	REALM         = NAMED + REALMREL + "/"
+	REALMDREL     = "realmd"
+	REALMD        = NAMED + REALMREL + "/" + REALMDREL
+	REALMSREL     = "realms"
+	REALMS        = REALMD + "/" + REALMSREL
+	BOOTREL       = "boot"
+	BOOT          = NAMED + BOOTREL + "/"
+	UPROCDREL     = "uprocd"
+	S3REL         = "s3"
+	S3            = NAMED + S3REL + "/"
+	UXREL         = "ux"
+	UX            = NAMED + UXREL + "/"
+	SCHEDDREL     = "schedd"
+	SCHEDD        = NAMED + SCHEDDREL + "/"
+	LCSCHEDREL    = "lcsched"
+	LCSCHED       = NAMED + LCSCHEDREL + "/"
+	SIGMACLNTDREL = "sigmaclntd"
+	PROCQREL      = "procq"
+	PROCQ         = NAMED + PROCQREL + "/"
+	DBREL         = "db"
+	DB            = NAMED + DBREL + "/"
+	DBD           = DB + "~any/"
+	MONGOREL      = "mongo"
+	MONGO         = NAMED + MONGOREL + "/"
 
 	UXBIN = UX + "~local/bin/"
 
@@ -58,5 +59,5 @@ const (
 // Linux path
 const (
 	SIGMAHOME   = "/home/sigmaos"
-	SIGMASOCKET = "/tmp/sigmaclntd.sock"
+	SIGMASOCKET = "/tmp/sigmaclntd/sigmaclntd.sock"
 )

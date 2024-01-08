@@ -7,6 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/port"
 	"sigmaos/proc"
+	//	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
 )
 
@@ -164,8 +165,9 @@ func (k *Kernel) bootNamed() (Subsystem, error) {
 }
 
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
-	db.DFatalf("Unimplemented")
-	return k.bootSubsystem("realmd", []string{}, proc.HSCHEDD)
+	// db.DFatalf("Unimplemented")
+	// return sigmaclntsrv.ExecSigmaClntSrv()
+	return nil, nil
 }
 
 // Start uprocd in a sigmauser container and post the mount for

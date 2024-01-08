@@ -25,6 +25,7 @@ type Subsystem interface {
 	GetContainer() *container.Container
 	SetWaited(bool)
 	GetWaited() bool
+	Evict() error
 	Wait() error
 	Kill() error
 	SetCPUShares(shares int64) error
@@ -96,6 +97,10 @@ func (k *Kernel) bootSubsystem(program string, args []string, how proc.Thow) (Su
 	return k.bootSubsystemWithMcpu(program, args, how, 0)
 }
 
+func (s *KernelSubsystem) Evict() error {
+	return s.k.EvictKernelProc(s.p.GetPid(), s.how)
+}
+
 func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Thost) error {
 	if how == proc.HLINUX || how == proc.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
@@ -152,13 +157,13 @@ func (ss *KernelSubsystem) GetIp(fsl *fslib.FsLib) *sp.Taddr {
 }
 
 // Send SIGTERM to a system.
-//func (s *KernelSubsystem) Terminate() error {
-//	db.DPrintf(db.KERNEL, "Terminate %v %v\n", s.cmd.Process.Pid, s.cmd)
-//	if s.how != proc.HLINUX {
-//		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
-//	}
-//	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGTERM)
-//}
+func (s *KernelSubsystem) Terminate() error {
+	db.DPrintf(db.KERNEL, "Terminate %v %v\n", s.cmd.Process.Pid, s.cmd)
+	if s.how != proc.HLINUX {
+		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
+	}
+	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGTERM)
+}
 
 // Kill a subsystem, either by sending SIGKILL or Evicting it.
 func (s *KernelSubsystem) Kill() error {
@@ -182,17 +187,20 @@ func (s *KernelSubsystem) Kill() error {
 func (s *KernelSubsystem) Wait() error {
 	db.DPrintf(db.KERNEL, "Wait subsystem for %v", s)
 	defer db.DPrintf(db.KERNEL, "Wait subsystem done for %v", s)
-	if s.how == proc.HSCHEDD || s.how == proc.HDOCKER {
-		if !s.GetWaited() {
-			db.DPrintf(db.KERNEL, "Wait subsystem via procclnt %v", s)
-			// Only wait if this proc has not been waited for already, since calling
-			// WaitExit twice leads to an error.
-			status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)
-			if err != nil || !status.IsStatusOK() {
-				db.DPrintf(db.ALWAYS, "Subsystem exit with status %v err %v", status, err)
-				return err
-			}
+
+	if !s.GetCrashed() {
+		s.SetWaited(true)
+		// Only wait if this proc has not been waited for already, since calling
+		// WaitExit twice leads to an error.
+		status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)
+		if err != nil || !status.IsStatusEvicted() {
+			db.DPrintf(db.ALWAYS, "shutdown susbystem [%v] exit with status %v err %v", s.p.GetPid(), status, err)
+			return err
 		}
+	}
+
+	if s.how == proc.HSCHEDD || s.how == proc.HDOCKER {
+		// Do nothing (already waited)
 		return nil
 	} else {
 		db.DPrintf(db.KERNEL, "Wait subsystem via cmd %v", s)

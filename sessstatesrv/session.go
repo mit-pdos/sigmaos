@@ -15,6 +15,8 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 )
 
+const NLAST = 10
+
 //
 // A session identifies a client across TCP connections.  For each
 // session, sigmaos has a protsrv.
@@ -37,7 +39,6 @@ type Session struct {
 	detachSess    sps.DetachSessF
 	detachClnt    sps.DetachClntF
 	clnts         map[sp.TclntId]bool
-	lastClnt      sp.TclntId
 }
 
 func newSession(protsrv sps.Protsrv, sid sessp.Tsession, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
@@ -48,7 +49,6 @@ func newSession(protsrv sps.Protsrv, sid sessp.Tsession, attachf sps.AttachClntF
 		attachClnt:    attachf,
 		detachClnt:    detachf,
 		clnts:         make(map[sp.TclntId]bool),
-		lastClnt:      sp.NoClntId,
 	}
 	return sess
 }
@@ -82,15 +82,14 @@ func (sess *Session) AddClnt(cid sp.TclntId) {
 	defer sess.Unlock()
 	db.DPrintf(db.ALWAYS, "Add cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 	sess.clnts[cid] = true
-	sess.lastClnt = cid
 }
 
 // Delete client from session
 func (sess *Session) DelClnt(cid sp.TclntId) {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DPrintf(db.ALWAYS, "Del cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 	delete(sess.clnts, cid)
+	db.DPrintf(db.ALWAYS, "Del cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 }
 
 // Server may call Close() several times because client may reconnect
@@ -182,15 +181,6 @@ func (sess *Session) heartbeatL(msg sessp.Tmsg) {
 		db.DFatalf("heartbeat %v on closed sess %v", msg, sess.Sid)
 	}
 	sess.lastHeartbeat = time.Now()
-}
-
-// Disconnect last client
-func (sess *Session) disconnectClient() sp.TclntId {
-	sess.Lock()
-	defer sess.Unlock()
-	c := sess.lastClnt
-	sess.lastClnt = sp.NoClntId
-	return c
 }
 
 func (sess *Session) isConnected() bool {

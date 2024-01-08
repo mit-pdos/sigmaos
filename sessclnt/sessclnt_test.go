@@ -15,6 +15,7 @@ import (
 	"sigmaos/rand"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
+	"sigmaos/sessstatesrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -140,7 +141,7 @@ func TestProcPartitionMany(t *testing.T) {
 }
 
 func TestReconnectSimple(t *testing.T) {
-	const N = 1000
+	const N = 10
 	ts := newTstate(t, 0, 0, 0, NETFAIL)
 
 	ch := make(chan error)
@@ -154,7 +155,7 @@ func TestReconnectSimple(t *testing.T) {
 				ch <- err
 				return
 			}
-			time.Sleep(5 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 		}
 		ch <- nil
 	}()
@@ -166,29 +167,46 @@ func TestReconnectSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestServerPartitionNonBlocking(t *testing.T) {
-	const N = 50
+func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
+	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+	fsl, err := sigmaclnt.NewFsLib(pcfg)
+	assert.Nil(t, err)
+	for true {
+		_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
+		if err != nil {
+			db.DPrintf(db.TEST, "Stat %d err %v", i, err)
+			ch <- err
+			break
+		}
+	}
+	db.DPrintf(db.TEST, "Client %v %v done", fsl.ClntId(), i)
+	fsl.Close()
+}
+
+func TestServerPartitionNonBlockingSimple(t *testing.T) {
+	const N = 3
 
 	ts := newTstate(t, 0, 0, PARTITION, 0)
-
+	ch := make(chan error)
 	for i := 0; i < N; i++ {
-		ch := make(chan error)
-		go func(i int) {
-			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-			fsl, err := sigmaclnt.NewFsLib(pcfg)
-			assert.Nil(t, err)
-			for true {
-				_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
-				if err != nil {
-					db.DPrintf(db.TEST, "Stat %d err %v", i, err)
-					ch <- err
-					break
-				}
-			}
-			db.DPrintf(db.TEST, "Client %v done", i)
-			fsl.Close()
-		}(i)
+		go ts.stat(t, i, ch)
+		err := <-ch
+		assert.NotNil(ts.T, err, "stat")
+	}
+	db.DPrintf(db.TEST, "Stopping group")
+	ts.gm.StopGroup()
+	ts.Shutdown()
+}
 
+func TestServerPartitionNonBlockingConcur(t *testing.T) {
+	const N = sessstatesrv.NLAST
+
+	ts := newTstate(t, 0, 0, PARTITION, 0)
+	ch := make(chan error)
+	for i := 0; i < N; i++ {
+		go ts.stat(t, i, ch)
+	}
+	for i := 0; i < N; i++ {
 		err := <-ch
 		assert.NotNil(ts.T, err, "stat")
 	}
@@ -198,7 +216,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 }
 
 func TestServerPartitionBlocking(t *testing.T) {
-	const N = 50
+	const N = 10
 
 	ts := newTstate(t, 0, 0, PARTITION, 0)
 

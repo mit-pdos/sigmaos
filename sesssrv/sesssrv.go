@@ -222,7 +222,7 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
 
 func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
-	msg, data, clntid, rerror := sess.Dispatch(fc.Msg, fc.Data)
+	msg, data, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
 
 	if rerror != nil {
@@ -234,9 +234,14 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	reply.Data = data
 	ssrv.sendReply(fc, reply, sess)
 
-	if clntid != sp.NoClntId {
+	switch op {
+	case sessstatesrv.TSESS_DEL:
 		sess.DelClnt(clntid)
-		// sess.Close()
+		ssrv.st.DelLastClnt(clntid)
+	case sessstatesrv.TSESS_ADD:
+		sess.AddClnt(clntid)
+		ssrv.st.AddLastClnt(clntid, sess.Sid)
+	case sessstatesrv.TSESS_NONE:
 	}
 }
 

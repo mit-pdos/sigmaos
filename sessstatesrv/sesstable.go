@@ -14,17 +14,20 @@ import (
 type SessionTable struct {
 	mu sync.RWMutex
 	//	deadlock.Mutex
-	newps    sps.NewProtServer
-	sesssrv  sps.SessServer
-	sessions map[sessp.Tsession]*Session
-	last     *Session // for tests
-	attachf  sps.AttachClntF
-	detachf  sps.DetachClntF
+	newps     sps.NewProtServer
+	sesssrv   sps.SessServer
+	sessions  map[sessp.Tsession]*Session
+	attachf   sps.AttachClntF
+	detachf   sps.DetachClntF
+	lasts     map[sessp.Tsession]*Session   // for testing
+	lastClnts map[sp.TclntId]sessp.Tsession // for testing
 }
 
 func NewSessionTable(newps sps.NewProtServer, sesssrv sps.SessServer, attachf sps.AttachClntF, detachf sps.DetachClntF) *SessionTable {
 	st := &SessionTable{sesssrv: sesssrv, newps: newps, attachf: attachf, detachf: detachf}
 	st.sessions = make(map[sessp.Tsession]*Session)
+	st.lasts = make(map[sessp.Tsession]*Session)
+	st.lastClnts = make(map[sp.TclntId]sessp.Tsession)
 	return st
 }
 
@@ -82,7 +85,9 @@ func (st *SessionTable) allocRL(sid sessp.Tsession) *Session {
 	}
 	sess := newSession(st.newps(st.sesssrv, sid), sid, st.attachf, st.detachf)
 	st.sessions[sid] = sess
-	st.last = sess
+	if len(st.lasts) < NLAST {
+		st.lasts[sid] = sess
+	}
 	return sess
 }
 
@@ -100,11 +105,47 @@ func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
 	}
 }
 
-func (st *SessionTable) LastSession() *Session {
+// Return a last session
+func (st *SessionTable) lastSession() *Session {
+	var sess *Session
+	for _, s := range st.lasts {
+		sess = s
+		break
+	}
+	return sess
+}
+
+func (st *SessionTable) AddLastClnt(cid sp.TclntId, sid sessp.Tsession) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-	if st.last != nil {
-		return st.last
+
+	if len(st.lastClnts) < NLAST {
+		st.lastClnts[cid] = sid
 	}
-	return nil
+}
+
+func (st *SessionTable) DelLastClnt(cid sp.TclntId) {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+
+	if _, ok := st.lastClnts[cid]; ok {
+		delete(st.lastClnts, cid)
+	}
+}
+
+// Return a last clnt
+func (st *SessionTable) lastClnt() (sp.TclntId, sessp.Tsession) {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+	c := sp.NoClntId
+	s := sessp.Tsession(0)
+	for cid, sid := range st.lastClnts {
+		c = cid
+		s = sid
+		break
+	}
+	if c != sp.NoClntId {
+		delete(st.lastClnts, c)
+	}
+	return c, s
 }

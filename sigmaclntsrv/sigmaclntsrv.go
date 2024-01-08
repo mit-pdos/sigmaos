@@ -143,8 +143,7 @@ func (scsc *SigmaClntSrvCmd) Evict() error {
 }
 
 func (scsc *SigmaClntSrvCmd) Wait() error {
-	db.DFatalf("Unimplemented")
-	return nil
+	return scsc.Shutdown()
 }
 
 func (scsc *SigmaClntSrvCmd) Kill() error {

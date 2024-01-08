@@ -29,7 +29,8 @@ ENV SIGMATAG=$tag
 # ========== user image ==========
 FROM base AS sigmauser
 
-RUN mkdir jail
+RUN mkdir jail && \
+    mkdir /tmp/sigmaclntd
 # Copy mr yaml files.
 COPY mr mr
 

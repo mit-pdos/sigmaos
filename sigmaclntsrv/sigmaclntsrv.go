@@ -49,7 +49,7 @@ func (scs *SigmaClntSrv) runServer() error {
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.SIGMACLNTSRV, "runServer: listening on %v\n", sp.SIGMASOCKET)
+	db.DPrintf(db.SIGMACLNTSRV, "runServer: listening on %v", sp.SIGMASOCKET)
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
 		return err
 	}
@@ -59,6 +59,7 @@ func (scs *SigmaClntSrv) runServer() error {
 		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
 			db.DFatalf("read pipe err %v\n", err)
 		}
+		db.DPrintf(db.SIGMACLNTSRV, "exiting")
 		os.Remove(sp.SIGMASOCKET)
 		scs.fidc.Close()
 		os.Exit(0)

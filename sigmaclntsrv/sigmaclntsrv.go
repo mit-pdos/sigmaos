@@ -9,9 +9,12 @@ import (
 	"os"
 	"os/exec"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/fslib"
 	"sigmaos/netsigma"
+	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -85,14 +88,96 @@ func RunSigmaClntSrv(args []string) error {
 }
 
 type SigmaClntSrvCmd struct {
-	cmd *exec.Cmd
-	out io.WriteCloser
+	p      *proc.Proc
+	cmd    *exec.Cmd
+	out    io.WriteCloser
+	waited bool
 }
 
-func (scsc *SigmaClntSrvCmd) Shutdown() error {
-	if _, err := io.WriteString(scsc.out, "e"); err != nil {
-		return err
-	}
+type Subsystem interface {
+	GetProc() *proc.Proc
+	GetHow() proc.Thow
+	GetCrashed() bool
+	GetContainer() *container.Container
+	SetWaited(bool)
+	GetWaited() bool
+	Wait() error
+	Kill() error
+	SetCPUShares(shares int64) error
+	GetCPUUtil() (float64, error)
+	GetIp(fsl *fslib.FsLib) *sp.Taddr
+	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
+	AllocPort(p sp.Tport) (*port.PortBinding, error)
+	Run(how proc.Thow, kernelId string, localIP sp.Thost) error
+}
+
+func (scsc *SigmaClntSrvCmd) GetProc() *proc.Proc {
+	return scsc.p
+}
+
+func (scsc *SigmaClntSrvCmd) GetHow() proc.Thow {
+	return proc.HLINUX
+}
+
+func (scsc *SigmaClntSrvCmd) GetCrashed() bool {
+	return false
+}
+
+func (scsc *SigmaClntSrvCmd) GetContainer() *container.Container {
+	db.DFatalf("No container")
+	return nil
+}
+
+func (scsc *SigmaClntSrvCmd) SetWaited(w bool) {
+	scsc.waited = w
+}
+
+func (scsc *SigmaClntSrvCmd) GetWaited() bool {
+	return scsc.waited
+}
+
+func (scsc *SigmaClntSrvCmd) Evict() error {
+	// Do nothing
+	return nil
+}
+
+func (scsc *SigmaClntSrvCmd) Wait() error {
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
+func (scsc *SigmaClntSrvCmd) Kill() error {
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
+func (scsc *SigmaClntSrvCmd) SetCPUShares(shares int64) error {
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
+func (scsc *SigmaClntSrvCmd) GetCPUUtil() (float64, error) {
+	db.DFatalf("Unimplemented")
+	return 0, nil
+}
+
+func (scsc *SigmaClntSrvCmd) GetIp(fsl *fslib.FsLib) *sp.Taddr {
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
+func (scsc *SigmaClntSrvCmd) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
+func (scsc *SigmaClntSrvCmd) AllocPort(p sp.Tport) (*port.PortBinding, error) {
+	db.DFatalf("Unimplemented")
+	return nil, nil
+}
+
+func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Thost) error {
+	db.DFatalf("Unimplemented")
 	return nil
 }
 
@@ -117,5 +202,16 @@ func ExecSigmaClntSrv() (*SigmaClntSrvCmd, error) {
 		db.DPrintf(db.SIGMACLNTSRV, "read pipe err %v\n", err)
 		return nil, err
 	}
-	return &SigmaClntSrvCmd{cmd, stdin}, nil
+	return &SigmaClntSrvCmd{
+		p:   proc.NewPrivProcPid(sp.Tpid("sigmaclntd"), "sigmaclntd", nil, true),
+		cmd: cmd,
+		out: stdin,
+	}, nil
+}
+
+func (scsc *SigmaClntSrvCmd) Shutdown() error {
+	if _, err := io.WriteString(scsc.out, "e"); err != nil {
+		return err
+	}
+	return nil
 }

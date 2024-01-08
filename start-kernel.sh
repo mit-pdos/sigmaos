@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -32,6 +32,9 @@ while [[ "$#" -gt 1 ]]; do
             ;;
         "named")
             BOOT="knamed"
+            ;;
+        "sigmaclntd")
+            BOOT="sigmaclntd"
             ;;
         "realm")
             BOOT="knamed;procq;lcsched;schedd;realmd;ux;s3;db;mongo;named"
@@ -100,6 +103,9 @@ fi
 KERNELID=$1
 
 mkdir -p /tmp/sigmaos
+# Perhaps /tmp/sigmaclntd should not always be mounted/should not be mounted by
+# every kernel instance on a machine?
+mkdir -p /tmp/sigmaclntd
 mkdir -p /tmp/sigmaos-bin
 mkdir -p /tmp/sigmaos-perf
 mkdir -p /tmp/sigmaos-data
@@ -132,6 +138,7 @@ CID=$(docker run -dit\
              --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock\
              --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup\
              --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos\
+             --mount type=bind,src=/tmp/sigmaclntd,dst=/tmp/sigmaclntd\
              --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data\
              --mount type=bind,src=/tmp/sigmaos-bin,dst=/home/sigmaos/bin/user/realms\
              --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\

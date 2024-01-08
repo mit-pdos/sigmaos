@@ -15,7 +15,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/realmclnt"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
 )
 
@@ -71,7 +70,7 @@ type Tstate struct {
 	killidx int
 	T       *testing.T
 	proc    *proc.Proc
-	scsc    *sigmaclntsrv.SigmaClntSrvCmd
+	scsck   *bootkernelclnt.Kernel
 }
 
 func NewTstatePath(t *testing.T, path string) *Tstate {
@@ -129,12 +128,19 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 			return nil, err
 		}
 	}
-	var scsc *sigmaclntsrv.SigmaClntSrvCmd
+	var scsck *bootkernelclnt.Kernel
+	var sckid string
 	if useSigmaclntd {
 		db.DPrintf(db.BOOT, "Use sigmaclntd")
-		scsc, err = sigmaclntsrv.ExecSigmaClntSrv()
+		sckid = bootkernelclnt.GenKernelId()
+		_, err := bootkernelclnt.Start(sckid, pcfg, sp.SIGMACLNTDREL, Overlays, GVisor)
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error Exec sigmaclntd srv: %v", err)
+			db.DPrintf(db.ALWAYS, "Error start kernel for sigmaclntd")
+			return nil, err
+		}
+		scsck, err = bootkernelclnt.NewKernelClnt(sckid, pcfg)
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error make kernel clnt for sigmaclntd")
 			return nil, err
 		}
 	}
@@ -148,7 +154,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		kclnts:    []*bootkernelclnt.Kernel{k},
 		killidx:   0,
 		T:         t,
-		scsc:      scsc,
+		scsck:     scsck,
 	}, nil
 }
 
@@ -199,8 +205,8 @@ func (ts *Tstate) Shutdown() error {
 			}
 			// ts.kclnts[i].Close()
 		}
-		if ts.scsc != nil {
-			if err := ts.scsc.Shutdown(); err != nil {
+		if ts.scsck != nil {
+			if err := ts.scsck.Shutdown(); err != nil {
 				db.DPrintf(db.ALWAYS, "Shutdown sigmaclntd err %v", err)
 			}
 		}

@@ -129,15 +129,12 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 			return nil, err
 		}
 	}
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error set named ip")
-		return nil, err
-	}
 	var scsc *sigmaclntsrv.SigmaClntSrvCmd
 	if useSigmaclntd {
 		db.DPrintf(db.BOOT, "Use sigmaclntd")
 		scsc, err = sigmaclntsrv.ExecSigmaClntSrv()
 		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error Exec sigmaclntd srv: %v", err)
 			return nil, err
 		}
 	}

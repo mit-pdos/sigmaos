@@ -5,7 +5,6 @@ import (
 
 	"sigmaos/path"
 	"sigmaos/protclnt"
-	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -70,11 +69,6 @@ func (c *Channel) AddN(qs []*sp.Tqid, path path.Path) {
 
 func (c *Channel) Lastqid() *sp.Tqid {
 	return c.qids[len(c.qids)-1]
-}
-
-// Simulate network partition to server that exports path
-func (c *Channel) Disconnect() *serr.Err {
-	return c.pc.Disconnect()
 }
 
 func (c *Channel) Servers() sp.Taddrs {

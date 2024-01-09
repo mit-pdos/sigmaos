@@ -24,10 +24,6 @@ func (pclnt *ProtClnt) Servers() sp.Taddrs {
 	return pclnt.addrs
 }
 
-func (pclnt *ProtClnt) Disconnect() *serr.Err {
-	return pclnt.sm.Disconnect(pclnt.addrs)
-}
-
 func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
 	reply, err := pclnt.sm.RPC(addrs, args, data)
 	if err != nil {

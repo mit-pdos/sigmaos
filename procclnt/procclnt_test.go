@@ -86,7 +86,7 @@ func checkSleeperResult(t *testing.T, ts *test.Tstate, pid sp.Tpid) bool {
 	res := true
 	b, err := ts.GetFile("name/" + pid.String() + "_out")
 	res = assert.Nil(t, err, "GetFile err: %v", err) && res
-	res = assert.Equal(t, string(b), "hello", "Output") && res
+	res = assert.Equal(t, "hello", string(b), "Output") && res
 
 	return res
 }

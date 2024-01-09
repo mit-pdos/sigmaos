@@ -38,7 +38,6 @@ func NewSpawner(args []string) (*Spawner, error) {
 	if len(args) < 3 {
 		return nil, errors.New("NewSpawner: too few arguments")
 	}
-	// 	log.Printf("NewSpawner %v", args)
 	s := &Spawner{}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {

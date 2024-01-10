@@ -19,9 +19,9 @@ import (
 
 func randSleep(c int64) uint64 {
 	ms := rand.Int64(c)
-	db.DPrintf(db.CRASH, "randSleep %dms\n", ms)
-	time.Sleep(time.Duration(ms) * time.Millisecond)
 	r := rand.Int64(1000)
+	db.DPrintf(db.CRASH, "randSleep %dms r %d\n", ms, r)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
 	return r
 }
 
@@ -81,7 +81,7 @@ func PartitionParentProb(sc *sigmaclnt.SigmaClnt, prob uint64) bool {
 	}
 	p := rand.Int64(100)
 	if p < prob {
-		db.DPrintf(db.ALWAYS, "PartitionParentProb %v\n", prob)
+		db.DPrintf(db.CRASH, "PartitionParentProb %v\n", prob)
 		sc.ProcAPI.Exited(proc.NewStatusErr("partitioned", nil))
 		return true
 	}
@@ -89,13 +89,13 @@ func PartitionParentProb(sc *sigmaclnt.SigmaClnt, prob uint64) bool {
 }
 
 func Crash(crash int64) {
-	db.DPrintf(db.ALWAYS, "crash.Crash %v\n", crash)
+	db.DPrintf(db.CRASH, "crash.Crash %v\n", crash)
 	os.Exit(1)
 }
 
 func PartitionNamed(fsl *fslib.FsLib) {
-	db.DPrintf(db.ALWAYS, "crash.Partition %v\n", fsl.ProcEnv().GetPartition())
+	db.DPrintf(db.CRASH, "crash.Partition from %v\n", sp.NAMED)
 	if error := fsl.Disconnect(sp.NAMED); error != nil {
-		db.DPrintf(db.ALWAYS, "Disconnect %v name fails err %v\n", os.Args, error)
+		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v\n", os.Args, error)
 	}
 }

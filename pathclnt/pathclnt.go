@@ -409,14 +409,14 @@ func (pathc *PathClnt) LastMount(pn string, uname sp.Tuname) (path.Path, path.Pa
 // Disconnect client from server permanently to simulate network
 // partition to server that exports pn
 func (pathc *PathClnt) Disconnect(pn string, fids []sp.Tfid) error {
-	db.DPrintf(db.CRASH, "disconnect %v %v\n", pathc.mnt.mountedPaths(), pn)
+	db.DPrintf(db.CRASH, "Disconnect %v mnts %v\n", pn, pathc.mnt.mountedPaths())
 	mntp := pathc.mnt.mountedAt(path.Split(pn))
 	for _, fid := range fids {
 		ch := pathc.FidClnt.Lookup(fid)
 		if ch != nil {
 			p := path.Split(pn)
-			db.DPrintf(db.CRASH, "fid disconnect fid %v %v %v\n", fid, ch, mntp)
 			if p.IsParent(ch.Path()) {
+				db.DPrintf(db.CRASH, "fid disconnect fid %v %v %v\n", fid, ch, mntp)
 				pathc.FidClnt.Disconnect(fid)
 			}
 		}

@@ -47,7 +47,7 @@ func (rootmt *RootMountTable) disconnect(name string) error {
 	defer rootmt.Unlock()
 	sm, ok := rootmt.mounts[name]
 	if ok {
-		db.DPrintf(db.CRASH, "rootmt disconnect: %v", name)
+		db.DPrintf(db.CRASH, "disconnect rootmnt %v", name)
 		sm.closed = true
 		return nil
 	}

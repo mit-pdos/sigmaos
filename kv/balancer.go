@@ -127,7 +127,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 	}
 
 	if err := bl.lc.LeadAndFence(b, []string{kvgrp.JobDir(bl.job)}); err != nil {
-		db.DFatalf("LeadAndFence %v\n", err)
+		db.DFatalf("LeadAndFence %v err %v\n", kvgrp.JobDir(bl.job), err)
 	}
 
 	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.ProcEnv().GetPID(), bl.lc.Fence())
@@ -248,15 +248,17 @@ func (bl *Balancer) monitorMyself() {
 		time.Sleep(time.Duration(500) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVConfig(bl.job))
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			db.DFatalf("disconnected\n")
+			crash.Crash(0)
 		}
 	}
 }
 
 // Post config atomically
 func (bl *Balancer) PostConfig() {
-	err := bl.PutFileJsonAtomic(KVConfig(bl.job), 0777, *bl.conf)
-	if err != nil {
+	if err := bl.PutFileJsonAtomic(KVConfig(bl.job), 0777, *bl.conf); err != nil {
+		if serr.IsErrCode(err, serr.TErrUnreachable) {
+			crash.Crash(0)
+		}
 		db.DFatalf("NewFile %v err %v\n", KVConfig(bl.job), err)
 	}
 }

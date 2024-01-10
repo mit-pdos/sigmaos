@@ -39,5 +39,4 @@ message ProcProto {
   uint32 mcpuInt = 9;
   uint32 memInt = 10;
   string sharedTarget = 13;
-  uint32 providerInt = 14;
 }

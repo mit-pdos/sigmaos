@@ -54,7 +54,7 @@ fn main() {
     setcap_proc().expect("set caps failed");
     print_elapsed_time("trampoline.setcap_proc", now, false);
     now = SystemTime::now();
-    seccomp_proc().expect("seccomp failed");
+    // seccomp_proc().expect("seccomp failed");
     print_elapsed_time("trampoline.seccomp_proc", now, false);
     now = SystemTime::now();
     if aa {
@@ -370,6 +370,6 @@ pub fn is_enabled_apparmor() -> bool {
 }
 
 pub fn apply_apparmor(profile: &str) -> Result<(), Box<dyn std::error::Error>> {
-    fs::write("/proc/self/attr/apparmor/exec", format!("exec {profile}"))?;
+    // fs::write("/proc/self/attr/apparmor/exec", format!("exec {profile}"))?;
     Ok(())
 }

@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--provider PROVIDER] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -17,6 +17,7 @@ MONGOIP="x.x.x.x"
 NET="host"
 KERNELID=""
 OVERLAYS="false"
+PROVIDER="aws"
 GVISOR="false"
 RMCPU="0"
 while [[ "$#" -gt 1 ]]; do
@@ -74,6 +75,11 @@ while [[ "$#" -gt 1 ]]; do
   --mongoip)
     shift
     MONGOIP=$1
+    shift
+    ;;
+  --provider)
+    shift
+    PROVIDER=$1
     shift
     ;;
   --reserveMcpu)
@@ -149,6 +155,7 @@ CID=$(docker run -dit\
              -e gvisor=${GVISOR}\
              -e SIGMAPERF=${SIGMAPERF}\
              -e SIGMADEBUG=${SIGMADEBUG}\
+             -e provider=${PROVIDER}\
              -e reserveMcpu=${RMCPU}\
              sigmaos)
 

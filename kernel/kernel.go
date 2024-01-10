@@ -38,6 +38,7 @@ type Param struct {
 	Mongoip     string
 	Overlays    bool
 	GVisor      bool
+	Provider    string
 	ReserveMcpu string
 }
 

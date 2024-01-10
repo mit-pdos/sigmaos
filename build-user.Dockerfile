@@ -2,7 +2,7 @@
 
 FROM archlinux
 
-RUN yes | pacman -Syu
+RUN (echo "1"; yes) | pacman -Syu
 RUN yes | pacman -Sy git libseccomp wget gcc pkg-config parallel
 
 # Download an initial version of Go

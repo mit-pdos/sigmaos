@@ -18,7 +18,7 @@ func main() {
 		db.DFatalf("Started: error %v\n", err)
 	}
 
-	log.Printf("Hello world\n")
+	log.Printf("example program ran successfully\n")
 
-	sc.ClntExitOK()
+	sc.ClntExit(proc.NewStatusInfo(proc.StatusOK, "Hello world", []string{}))
 }

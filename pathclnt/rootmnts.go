@@ -13,9 +13,10 @@ import (
 )
 
 type RootMount struct {
-	svcpn path.Path
-	tree  path.Path
-	uname sp.Tuname
+	svcpn  path.Path
+	tree   path.Path
+	uname  sp.Tuname
+	closed bool
 }
 
 type RootMountTable struct {
@@ -26,6 +27,7 @@ type RootMountTable struct {
 func newRootMountTable() *RootMountTable {
 	mt := &RootMountTable{}
 	mt.mounts = make(map[string]*RootMount)
+	mt.add("", nil, nil, sp.NAME)
 	return mt
 }
 
@@ -38,6 +40,18 @@ func (rootmt *RootMountTable) lookup(name string) (*RootMount, *serr.Err) {
 		return sm, nil
 	}
 	return nil, serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
+}
+
+func (rootmt *RootMountTable) disconnect(name string) error {
+	rootmt.Lock()
+	defer rootmt.Unlock()
+	sm, ok := rootmt.mounts[name]
+	if ok {
+		db.DPrintf(db.CRASH, "rootmt disconnect: %v", name)
+		sm.closed = true
+		return nil
+	}
+	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
 }
 
 func (rootmt *RootMountTable) add(uname sp.Tuname, svcpn, tree path.Path, mntname string) *serr.Err {
@@ -56,9 +70,6 @@ func (rootmt *RootMountTable) isRootMount(mntname string) bool {
 	rootmt.Lock()
 	defer rootmt.Unlock()
 
-	if mntname == sp.NAME {
-		return true
-	}
 	_, ok := rootmt.mounts[mntname]
 	return ok
 }
@@ -70,15 +81,18 @@ func (pathc *PathClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
 	}
 	_, rest, err := pathc.mnt.resolve(pn, true)
 	if err != nil && len(rest) >= 1 && pathc.rootmt.isRootMount(rest[0]) {
+		sm, err := pathc.rootmt.lookup(pn[0])
+		if err != nil {
+			db.DPrintf(db.SVCMOUNT, "resolveRoot: lookup %v err %v\n", pn[0], err)
+			return err, false
+		}
+		if sm.closed {
+			db.DPrintf(db.CRASH, "resolveRoot: closed %v\n", pn[0])
+			return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed root)", pn[0])), false
+		}
 		if pn[0] == sp.NAME {
 			return pathc.mountNamed(pathc.pcfg.GetRealm(), sp.NAME), true
 		} else {
-			sm, err := pathc.rootmt.lookup(pn[0])
-			if err != nil {
-				db.DPrintf(db.SVCMOUNT, "resolveRoot: lookup %v err %v\n", pn[0], err)
-				return err, false
-			}
-
 			db.DPrintf(db.SVCMOUNT, "resolveRoot: remount %v at %v\n", sm, pn[0])
 
 			// this may remount the service that this root is relying on

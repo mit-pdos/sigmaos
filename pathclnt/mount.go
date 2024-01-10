@@ -11,8 +11,9 @@ import (
 )
 
 type Point struct {
-	path path.Path
-	fid  sp.Tfid
+	path   path.Path
+	fid    sp.Tfid
+	closed bool
 }
 
 func (p *Point) String() string {
@@ -36,7 +37,7 @@ func (mnt *MntTable) add(path path.Path, fid sp.Tfid) *serr.Err {
 	mnt.Lock()
 	defer mnt.Unlock()
 
-	point := &Point{path, fid}
+	point := &Point{path: path, fid: fid}
 	for i, p := range mnt.mounts {
 		if path.Equal(p.path) {
 			return serr.NewErr(serr.TErrExists, fmt.Sprintf("%v (mount)", p.path))
@@ -74,6 +75,10 @@ func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.P
 		ok, left := match(p.path, path)
 		db.DPrintf(db.MOUNT, "resolve: p %v path %v ok %v l %v\n", p.path, path, ok, left)
 		if ok {
+			if p.closed {
+				db.DPrintf(db.CRASH, "resolve %v mount closed %v", path, p.path)
+				return sp.NoFid, path, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed mount)", path))
+			}
 			if len(left) == 0 && !allowResolve {
 				continue
 			}
@@ -93,19 +98,50 @@ func (mnt *MntTable) umount(path path.Path, exact bool) (sp.Tfid, path.Path, *se
 
 	for i, p := range mnt.mounts {
 		ok, left := match(p.path, path)
-		if ok && len(left) == 0 {
-			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
-			db.DPrintf(db.MOUNT, "umount exact %v %v\n", path, p.fid)
-			return p.fid, nil, nil
-		}
-		if ok && !exact {
-			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
-			db.DPrintf(db.MOUNT, "umount prefetch %v left %v %v\n", path, left, p.fid)
-			return p.fid, left, nil
+		if ok {
+			if p.closed {
+				db.DPrintf(db.CRASH, "umount %v mount closed ", p.path)
+				return sp.NoFid, path, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed mount)", p.path))
+			}
+			if len(left) == 0 {
+				mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
+				db.DPrintf(db.MOUNT, "umount exact %v %v\n", path, p.fid)
+				return p.fid, nil, nil
+			}
+			if !exact {
+				mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
+				db.DPrintf(db.MOUNT, "umount prefetch %v left %v %v\n", path, left, p.fid)
+				return p.fid, left, nil
+			}
 		}
 	}
 	// db.DPrintf(db.ALWAYS, "umount: %v %v\n", path, mnt.mounts)
 	return sp.NoFid, nil, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+}
+
+// For testing, mark mount point as closed so that client cannot
+// communicate and remount server.
+func (mnt *MntTable) disconnect(path path.Path) (sp.Tfid, *serr.Err) {
+	for _, p := range mnt.mounts {
+		ok, left := match(p.path, path)
+		if ok && len(left) == 0 {
+			db.DPrintf(db.CRASH, "disconnect %v\n", path)
+			p.closed = true
+			return p.fid, nil
+		}
+	}
+	return sp.NoFid, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+}
+
+// Which where is path mounted at?
+func (mnt *MntTable) mountedAt(path path.Path) path.Path {
+	for _, p := range mnt.mounts {
+		ok, _ := match(p.path, path)
+		if ok {
+			return p.path
+		}
+	}
+	return nil
 }
 
 func (mnt *MntTable) mountedPaths() []string {

@@ -146,7 +146,11 @@ func (fdc *FdClient) Read(fd int, cnt sp.Tsize) ([]byte, error) {
 func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, error) {
 	f := &f0
 	if !f0.HasFence() {
-		f = fdc.ft.lookupPath(fdc.pc.FidClnt.Lookup(fid).Path())
+		ch := fdc.pc.FidClnt.Lookup(fid)
+		if ch == nil {
+			return 0, serr.NewErr(serr.TErrUnreachable, "writeFid")
+		}
+		f = fdc.ft.lookupPath(ch.Path())
 	}
 	sz, err := fdc.pc.WriteF(fid, off, data, f)
 	if err != nil {
@@ -249,7 +253,8 @@ func (fdc *FdClient) FenceDir(pn string, fence sp.Tfence) error {
 }
 
 func (fdc *FdClient) Disconnect(pn string) error {
-	return fdc.pc.Disconnect(pn)
+	fids := fdc.fds.openfids()
+	return fdc.pc.Disconnect(pn, fids)
 }
 
 func (fdc *FdClient) Detach(pn string) error {

@@ -1,3 +1,5 @@
+// The crash package is used by procs to randomly crash and
+// introduce permanant/temporary network partitions.
 package crash
 
 import (
@@ -12,10 +14,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
-
-//
-// Crash/partition testing
-//
 
 func randSleep(c int64) uint64 {
 	ms := rand.Int64(c)

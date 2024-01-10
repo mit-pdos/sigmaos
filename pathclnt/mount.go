@@ -125,7 +125,7 @@ func (mnt *MntTable) disconnect(path path.Path) (sp.Tfid, *serr.Err) {
 	for _, p := range mnt.mounts {
 		ok, left := match(p.path, path)
 		if ok && len(left) == 0 {
-			db.DPrintf(db.CRASH, "disconnect mount %v\n", path)
+			db.DPrintf(db.CRASH, "disconnect mount %v %v\n", path, p.fid)
 			p.closed = true
 			return p.fid, nil
 		}

@@ -74,6 +74,7 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
 	p.McpuInt = uint32(0)
+	p.ProviderInt = uint32(sp.DEFAULT_PRVDR)
 	if p.ProcEnvProto.Privileged {
 		p.TypeInt = uint32(T_LC)
 	}
@@ -146,6 +147,7 @@ func (p *Proc) String() string {
 		p.GetType(),
 		p.GetMcpu(),
 		p.GetMem(),
+		p.GetProvider(),
 	)
 }
 
@@ -299,6 +301,14 @@ func (p *Proc) SetMcpu(mcpu Tmcpu) {
 // Set the amount of memory (in MB) required to run this proc.
 func (p *Proc) SetMem(mb Tmem) {
 	p.MemInt = uint32(mb)
+}
+
+func (p *Proc) GetProvider() sp.Tprovider {
+	return sp.Tprovider(p.ProcProto.ProviderInt)
+}
+
+func (p *Proc) SetProvider(provider sp.Tprovider) {
+	p.ProviderInt = uint32(provider)
 }
 
 func (p *Proc) Marshal() []byte {

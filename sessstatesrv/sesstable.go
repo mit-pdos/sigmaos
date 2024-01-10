@@ -107,6 +107,9 @@ func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
 
 // Return a last session
 func (st *SessionTable) lastSession() *Session {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+
 	var sess *Session
 	for _, s := range st.lasts {
 		sess = s
@@ -116,8 +119,8 @@ func (st *SessionTable) lastSession() *Session {
 }
 
 func (st *SessionTable) AddLastClnt(cid sp.TclntId, sid sessp.Tsession) {
-	st.mu.RLock()
-	defer st.mu.RUnlock()
+	st.mu.Lock()
+	defer st.mu.Unlock()
 
 	if len(st.lastClnts) < NLAST {
 		st.lastClnts[cid] = sid
@@ -125,8 +128,8 @@ func (st *SessionTable) AddLastClnt(cid sp.TclntId, sid sessp.Tsession) {
 }
 
 func (st *SessionTable) DelLastClnt(cid sp.TclntId) {
-	st.mu.RLock()
-	defer st.mu.RUnlock()
+	st.mu.Lock()
+	defer st.mu.Unlock()
 
 	if _, ok := st.lastClnts[cid]; ok {
 		delete(st.lastClnts, cid)

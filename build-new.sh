@@ -150,7 +150,7 @@ docker exec -it $buildercid \
   2>&1 | tee $BUILD_LOG/make-user.out
 echo "========== Done building user bins =========="
 
-RS_BUILD_ARGS="--rustpath=\$HOME/.cargo/bin/cargo \
+RS_BUILD_ARGS="--rustpath \$HOME/.cargo/bin/cargo \
   $PARALLEL"
 
 echo "========== Building Rust bins =========="

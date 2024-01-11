@@ -1,12 +1,18 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--parallel]" 1>&2
+  echo "Usage: $0 [--rustpath RUST] [--parallel]" 1>&2
 }
 
+CARGO="cargo"
 PARALLEL=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
+  --rustpath)
+    shift
+    CARGO="$1"
+    shift
+    ;;
   --parallel)
     shift
     PARALLEL="--parallel"
@@ -44,6 +50,6 @@ TARGETS="exec-uproc-rs spawn-latency"
 # If building in parallel, build with (n - 1) threads.
 njobs=$(nproc)
 njobs="$(($njobs-1))"
-build="parallel -j$njobs bash \"-c cd rs/{} && \$HOME/.cargo/bin/cargo build --release\" ::: $TARGETS"
+build="parallel -j$njobs bash \"-c cd rs/{} && $CARGO build --release\" ::: $TARGETS"
 echo $build
 eval $build

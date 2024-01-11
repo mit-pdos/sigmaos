@@ -23,8 +23,8 @@ type ProcQClnt struct {
 	urpcc *unionrpcclnt.UnionRPCClnt
 }
 
-func NewProcQClnt(fsl *fslib.FsLib, prvdr sp.Tprovider) *ProcQClnt {
-	pn := path.Join(sp.PROCQ, prvdr.TproviderToDir())
+func NewProcQClnt(fsl *fslib.FsLib, provider sp.Tprovider) *ProcQClnt {
+	pn := path.Join(sp.PROCQ, provider.TproviderToDir())
 	return &ProcQClnt{
 		FsLib: fsl,
 		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, pn, db.PROCQCLNT, db.PROCQCLNT_ERR),

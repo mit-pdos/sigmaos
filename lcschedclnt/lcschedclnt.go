@@ -2,6 +2,7 @@ package lcschedclnt
 
 import (
 	"errors"
+	"path"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -21,10 +22,11 @@ type LCSchedClnt struct {
 	urpcc *unionrpcclnt.UnionRPCClnt
 }
 
-func NewLCSchedClnt(fsl *fslib.FsLib) *LCSchedClnt {
+func NewLCSchedClnt(fsl *fslib.FsLib, provider sp.Tprovider) *LCSchedClnt {
+	pn := path.Join(sp.LCSCHED, provider.TproviderToDir())
 	return &LCSchedClnt{
 		FsLib: fsl,
-		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.LCSCHED, db.LCSCHEDCLNT, db.LCSCHEDCLNT_ERR),
+		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, pn, db.LCSCHEDCLNT, db.LCSCHEDCLNT_ERR),
 	}
 }
 

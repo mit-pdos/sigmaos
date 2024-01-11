@@ -189,13 +189,13 @@ func (lcs *LCSched) addRealmQueueL(realm sp.Trealm) *Queue {
 }
 
 // Run an LCSched
-func Run() {
+func Run(provider sp.Tprovider) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	lcs := NewLCSched(sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.LCSCHED, provider.String(), sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {
 		db.DFatalf("Error NewSIgmaSrv: %v", err)
 	}

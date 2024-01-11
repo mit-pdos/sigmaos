@@ -29,7 +29,7 @@ type ProcClnt struct {
 	procDirCreated bool
 	scheddclnt     *scheddclnt.ScheddClnt
 	procqclnts     map[sp.Tprovider]*procqclnt.ProcQClnt
-	lcschedclnt    *lcschedclnt.LCSchedClnt
+	lcschedclnts   map[sp.Tprovider]*lcschedclnt.LCSchedClnt
 	cs             *ChildState
 }
 
@@ -40,7 +40,7 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool) *ProcClnt {
 		procDirCreated: procDirCreated,
 		scheddclnt:     scheddclnt.NewScheddClnt(fsl),
 		procqclnts:     make(map[sp.Tprovider]*procqclnt.ProcQClnt, 0),
-		lcschedclnt:    lcschedclnt.NewLCSchedClnt(fsl),
+		lcschedclnts:   make(map[sp.Tprovider]*lcschedclnt.LCSchedClnt, 0),
 		cs:             newChildState(),
 	}
 	return clnt
@@ -144,7 +144,11 @@ func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, error) {
 }
 
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
-	return clnt.lcschedclnt.Enqueue(p)
+	prvdr := p.GetProvider()
+	if _, ok := clnt.lcschedclnts[prvdr]; !ok {
+		clnt.lcschedclnts[prvdr] = lcschedclnt.NewLCSchedClnt(clnt.FsLib, prvdr)
+	}
+	return clnt.lcschedclnts[prvdr].Enqueue(p)
 }
 
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) {

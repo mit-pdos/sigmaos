@@ -273,7 +273,7 @@ func (sd *Schedd) shouldGetBEProc() (proc.Tmem, bool) {
 }
 
 func (sd *Schedd) register() {
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sd.sc.FsLib}, path.Join(sp.LCSCHED, "~any"))
+	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sd.sc.FsLib}, path.Join(sp.LCSCHED, sd.provider.String(), "~any"))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
@@ -298,12 +298,12 @@ func (sd *Schedd) stats() {
 	}
 }
 
-func RunSchedd(kernelId string, prvdr sp.Tprovider, reserveMcpu uint) error {
+func RunSchedd(kernelId string, provider sp.Tprovider, reserveMcpu uint) error {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	sd := NewSchedd(sc, kernelId, prvdr, reserveMcpu)
+	sd := NewSchedd(sc, kernelId, provider, reserveMcpu)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSIgmaSrv: %v", err)

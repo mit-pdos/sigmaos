@@ -146,7 +146,7 @@ func (k *Kernel) bootMongod(hostip string) (*Subsystem, error) {
 }
 
 func (k *Kernel) bootLCSched() (*Subsystem, error) {
-	return k.bootSubsystem("lcsched", []string{}, proc.HLINUX)
+	return k.bootSubsystem("lcsched", []string{k.Param.Provider}, proc.HLINUX)
 }
 
 func (k *Kernel) bootProcq() (*Subsystem, error) {

@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--provider PROVIDER] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|lcschednode|named|realm] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--provider PROVIDER] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -30,6 +30,9 @@ while [[ "$#" -gt 1 ]]; do
             ;;
         "node")
             BOOT="procq;schedd;ux;s3;db;mongo"
+            ;;
+        "lcschednode")
+            BOOT="procq;lcsched;schedd;ux;s3;db;mongo"
             ;;
         "named")
             BOOT="knamed"

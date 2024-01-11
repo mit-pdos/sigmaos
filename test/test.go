@@ -26,10 +26,11 @@ import (
 //
 
 const (
-	BOOT_REALM = "realm"
-	BOOT_ALL   = "all"
-	BOOT_NAMED = "named"
-	BOOT_NODE  = "node"
+	BOOT_REALM       = "realm"
+	BOOT_ALL         = "all"
+	BOOT_NAMED       = "named"
+	BOOT_NODE        = "node"
+	BOOT_LCSCHEDNODE = "lcschednode"
 )
 
 var Start bool
@@ -179,6 +180,16 @@ func (ts *Tstate) BootNodeWithProvider(n int, provider sp.Tprovider) error {
 		}
 		ts.kclnts = append(ts.kclnts, kclnt)
 	}
+	return nil
+}
+
+func (ts *Tstate) BootLcschedNodeWithProvider(n int, provider sp.Tprovider) error {
+	kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_LCSCHEDNODE, Overlays, provider, GVisor)
+	if err != nil {
+		return err
+	}
+	ts.kclnts = append(ts.kclnts, kclnt)
+
 	return nil
 }
 

@@ -2,6 +2,7 @@ package procqclnt
 
 import (
 	"errors"
+	"path"
 	"time"
 
 	db "sigmaos/debug"
@@ -22,10 +23,11 @@ type ProcQClnt struct {
 	urpcc *unionrpcclnt.UnionRPCClnt
 }
 
-func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
+func NewProcQClnt(fsl *fslib.FsLib, prvdr sp.Tprovider) *ProcQClnt {
+	pn := path.Join(sp.PROCQ, prvdr.TproviderToDir())
 	return &ProcQClnt{
 		FsLib: fsl,
-		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR),
+		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, pn, db.PROCQCLNT, db.PROCQCLNT_ERR),
 	}
 }
 

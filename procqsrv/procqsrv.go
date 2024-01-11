@@ -271,15 +271,15 @@ func (pq *ProcQ) stats() {
 }
 
 // Run a ProcQ
-func Run() {
+func Run(provider sp.Tprovider) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	pq := NewProcQ(sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.PROCQ, provider.TproviderToDir(), sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {
-		db.DFatalf("Error NewSIgmaSrv: %v", err)
+		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
 	// export queued procs through procfs. maybe a subdir per realm?
 	dir := procfs.NewProcDir(&QDir{pq})

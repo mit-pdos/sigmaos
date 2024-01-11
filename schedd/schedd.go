@@ -57,7 +57,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, provider sp.Tprovider, 
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.scheddclnt = scheddclnt.NewScheddClnt(sc.FsLib)
-	sd.procqclnt = procqclnt.NewProcQClnt(sc.FsLib)
+	sd.procqclnt = procqclnt.NewProcQClnt(sc.FsLib, sd.provider)
 	return sd
 }
 

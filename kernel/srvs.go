@@ -150,7 +150,7 @@ func (k *Kernel) bootLCSched() (*Subsystem, error) {
 }
 
 func (k *Kernel) bootProcq() (*Subsystem, error) {
-	return k.bootSubsystem("procq", []string{}, proc.HLINUX)
+	return k.bootSubsystem("procq", []string{k.Param.Provider}, proc.HLINUX)
 }
 
 func (k *Kernel) bootSchedd() (*Subsystem, error) {

@@ -83,7 +83,8 @@ func RunKNamed(args []string) error {
 	return nil
 }
 
-var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.LCSCHED, sp.PROCQ, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM}
+var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.LCSCHED, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO}
+var InitRootDirWithProviders = []string{sp.PROCQ}
 
 // If initial root dir doesn't exist, create it.
 func (nd *Named) initfs() error {
@@ -93,5 +94,21 @@ func (nd *Named) initfs() error {
 			return err
 		}
 	}
+
+	for _, n := range InitRootDirWithProviders {
+		if _, err := nd.SigmaClnt.Create(n, 0777|sp.DMDIR, sp.OREAD); err != nil {
+			db.DPrintf(db.ALWAYS, "Error create [%v]: %v", n, err)
+			return err
+		}
+		allProviders := sp.AllProviders()
+		for _, prvdr := range allProviders {
+			pn := n + prvdr.String()
+			if _, err := nd.SigmaClnt.Create(pn, 0777|sp.DMDIR, sp.OREAD); err != nil {
+				db.DPrintf(db.ALWAYS, "Error create [%v]: %v", pn, err)
+				return err
+			}
+		}
+	}
+
 	return nil
 }

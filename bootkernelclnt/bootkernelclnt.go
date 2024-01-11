@@ -19,7 +19,7 @@ const (
 	START = "../start-kernel.sh"
 )
 
-func Start(kernelId string, pcfg *proc.ProcEnv, srvs string, overlays, gvisor bool) (string, error) {
+func Start(kernelId string, pcfg *proc.ProcEnv, srvs string, overlays bool, provider sp.Tprovider, gvisor bool) (string, error) {
 	args := []string{
 		"--pull", pcfg.BuildTag,
 		"--boot", srvs,
@@ -32,6 +32,7 @@ func Start(kernelId string, pcfg *proc.ProcEnv, srvs string, overlays, gvisor bo
 	if gvisor {
 		args = append(args, "--gvisor")
 	}
+	args = append(args, []string{"--provider", provider.String()}...)
 	args = append(args, kernelId)
 	out, err := exec.Command(START, args...).Output()
 	if err != nil {
@@ -53,9 +54,9 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays, gvisor bool) (*Kernel, error) {
+func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays bool, provider sp.Tprovider, gvisor bool) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, pcfg, conf, overlays, gvisor)
+	_, err := Start(kernelId, pcfg, conf, overlays, provider, gvisor)
 	if err != nil {
 		return nil, err
 	}

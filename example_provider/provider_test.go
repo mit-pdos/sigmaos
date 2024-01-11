@@ -68,6 +68,26 @@ func TestExerciseProc(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestExerciseProcWithProvider(t *testing.T) {
+	ts := test.NewTstateAllWithProvider(t, sp.DEFAULT_PRVDR)
+
+	p := proc.NewProc("example", []string{})
+	p.SetProvider(sp.DEFAULT_PRVDR)
+	err := ts.Spawn(p)
+	assert.Nil(t, err)
+	err = ts.WaitStart(p.GetPid())
+	assert.Nil(t, err)
+	status, err := ts.WaitExit(p.GetPid())
+	assert.Nil(t, err)
+	assert.True(t, status.IsStatusOK())
+
+	// Once you modified cmd/user/example, you should
+	// pass this test:
+	assert.Equal(t, "Hello world", status.Msg())
+
+	ts.Shutdown()
+}
+
 // func checkNumSchedds(t *testing.T, ts *test.Tstate, targetNum int) {
 // 	scheddSts, err := ts.GetDir(sp.SCHEDD)
 // 	assert.Nil(t, err, "Err getting schedd dir: %v", err)

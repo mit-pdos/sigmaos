@@ -90,6 +90,14 @@ func NewTstateAll(t *testing.T) *Tstate {
 	return NewTstatePath(t, "all")
 }
 
+func NewTstateAllWithProvider(t *testing.T, provider sp.Tprovider) *Tstate {
+	ts, err := newSysClntWithProvider(t, BOOT_ALL, provider)
+	if err != nil {
+		db.DFatalf("NewTstatePath: %v\n", err)
+	}
+	return ts
+}
+
 func NewTstateWithRealms(t *testing.T) *Tstate {
 	ts, err := newSysClnt(t, BOOT_REALM)
 	if err != nil {
@@ -112,6 +120,10 @@ func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 }
 
 func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
+	return newSysClntWithProvider(t, srvs, sp.DEFAULT_PRVDR)
+}
+
+func newSysClntWithProvider(t *testing.T, srvs string, provider sp.Tprovider) (*Tstate, error) {
 	localIP, err1 := netsigma.LocalIP()
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
@@ -123,7 +135,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, pcfg, srvs, Overlays, GVisor)
+		_, err := bootkernelclnt.Start(kernelid, pcfg, srvs, Overlays, provider, GVisor)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -156,8 +168,12 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 }
 
 func (ts *Tstate) BootNode(n int) error {
+	return ts.BootNodeWithProvider(n, sp.DEFAULT_PRVDR)
+}
+
+func (ts *Tstate) BootNodeWithProvider(n int, provider sp.Tprovider) error {
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays, GVisor)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays, provider, GVisor)
 		if err != nil {
 			return err
 		}

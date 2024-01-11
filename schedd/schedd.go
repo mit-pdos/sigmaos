@@ -33,6 +33,7 @@ type Schedd struct {
 	procqclnt           *procqclnt.ProcQClnt
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
+	provider            sp.Tprovider
 	kernelId            string
 	scheddStats         map[sp.Trealm]*proto.RealmStats
 	sc                  *sigmaclnt.SigmaClnt
@@ -43,12 +44,13 @@ type Schedd struct {
 	nProcGetsSuccessful uint64
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Schedd {
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, provider sp.Tprovider, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
 		pmgr:        procmgr.NewProcMgr(sc, kernelId),
 		scheddStats: make(map[sp.Trealm]*proto.RealmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
+		provider:    provider,
 		kernelId:    kernelId,
 		sc:          sc,
 		cpuStats:    &cpuStats{},
@@ -296,12 +298,12 @@ func (sd *Schedd) stats() {
 	}
 }
 
-func RunSchedd(kernelId string, reserveMcpu uint) error {
+func RunSchedd(kernelId string, prvdr sp.Tprovider, reserveMcpu uint) error {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	sd := NewSchedd(sc, kernelId, reserveMcpu)
+	sd := NewSchedd(sc, kernelId, prvdr, reserveMcpu)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSIgmaSrv: %v", err)

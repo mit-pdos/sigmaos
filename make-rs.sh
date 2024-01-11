@@ -41,7 +41,7 @@ ROOT=$(pwd)
 OUTPATH=bin
 
 mkdir -p $OUTPATH/kernel
-mkdir -p $OUTPATH/linux
+mkdir -p $OUTPATH/user
 
 LDF="-X sigmaos/sigmap.Target=$TARGET -s -w"
 
@@ -58,8 +58,5 @@ eval $build
 #cp 
 
 #echo "========== Building Rust bins =========="
-#RUST_CMD="cd rs/exec-uproc-rs && \$HOME/.cargo/bin/cargo build --release && \
-#  cd /home/sigmaos && cp rs/exec-uproc-rs/target/release/exec-uproc-rs bin/kernel && \
-#  cd rs/spawn-latency && rm -rf target && \$HOME/.cargo/bin/cargo build --release && \
-#  cd /home/sigmaos && cp rs/spawn-latency/target/release/spawn-latency bin/user"
-
+cp rs/exec-uproc-rs/target/release/exec-uproc-rs bin/kernel
+cp rs/spawn-latency/target/release/spawn-latency bin/user

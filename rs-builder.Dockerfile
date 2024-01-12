@@ -9,6 +9,7 @@ RUN apk add --no-cache libseccomp \
   bash \
   gcc \
   libc-dev \
+  parallel \
   libseccomp-static
 
 WORKDIR /home/sigmaos

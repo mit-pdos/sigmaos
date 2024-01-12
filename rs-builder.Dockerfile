@@ -12,7 +12,7 @@ RUN apk add --no-cache libseccomp \
   parallel \
   libseccomp-static
 
-RUN RUN echo 'will cite' | parallel --citation || true
+RUN echo 'will cite' | parallel --citation || true
 
 WORKDIR /home/sigmaos
 RUN mkdir -p bin/kernel && \

@@ -183,7 +183,7 @@ func (ts *Tstate) BootNodeWithProvider(n int, provider sp.Tprovider) error {
 	return nil
 }
 
-func (ts *Tstate) BootLcschedNodeWithProvider(n int, provider sp.Tprovider) error {
+func (ts *Tstate) BootLcschedNodeWithProvider(provider sp.Tprovider) error {
 	kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_LCSCHEDNODE, Overlays, provider, GVisor)
 	if err != nil {
 		return err

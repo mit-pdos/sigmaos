@@ -426,6 +426,6 @@ func (pathc *PathClnt) Disconnect(pn string, fids []sp.Tfid) error {
 	if err != nil {
 		return err
 	}
-	pathc.FidClnt.Free(fid)
+	pathc.FidClnt.Disconnect(fid)
 	return nil
 }

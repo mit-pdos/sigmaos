@@ -40,6 +40,10 @@ func (mnt *MntTable) add(path path.Path, fid sp.Tfid) *serr.Err {
 	point := &Point{path: path, fid: fid}
 	for i, p := range mnt.mounts {
 		if path.Equal(p.path) {
+			if p.closed {
+				db.DPrintf(db.CRASH, "add %v mount closed %v", path, p.path)
+				return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed mount)", p.path))
+			}
 			return serr.NewErr(serr.TErrExists, fmt.Sprintf("%v (mount)", p.path))
 		}
 		if len(path) > len(p.path) {
@@ -133,7 +137,7 @@ func (mnt *MntTable) disconnect(path path.Path) (sp.Tfid, *serr.Err) {
 	return sp.NoFid, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
-// Which where is path mounted at?
+// Where is path mounted at?  For Disconnect; it ignores closed.
 func (mnt *MntTable) mountedAt(path path.Path) path.Path {
 	for _, p := range mnt.mounts {
 		ok, _ := match(p.path, path)

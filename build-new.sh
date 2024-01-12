@@ -160,14 +160,6 @@ docker exec -it $rsbuildercid \
   2>&1 | tee $BUILD_LOG/make-user.out
 echo "========== Done building Rust bins =========="
 
-#printf "\nBuilding build-user-rust\n\n"
-#echo "========== Building rust bins =========="
-#DOCKER_BUILDKIT=1 docker build --progress=plain \
-#  -f build-user-rust.Dockerfile \
-#  -t sigma-build-user-rust . \
-#  2>&1 | tee $BUILD_LOG/sigmaos-build-user-rust.out
-#echo "========== Done building rust bins =========="
-
 # Now, prepare to build final containers which will actually run.
 targets="sigmauser sigmaos"
 if [ "${TARGET}" == "local" ]; then

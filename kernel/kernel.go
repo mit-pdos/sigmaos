@@ -152,7 +152,7 @@ func (k *Kernel) shutdown() {
 		db.DPrintf(db.KERNEL, "Shutdown children %v", cpids)
 		for _, pid := range cpids {
 			for i := 0; i < MAX_EVICT_RETRIES; i++ {
-				err := k.EvictKernelProc(pid, k.svcs.svcMap[pid].how)
+				err := k.svcs.svcMap[pid].Evict()
 				if err == nil || !serr.IsErrCode(err, serr.TErrUnreachable) {
 					db.DPrintf(db.KERNEL, "Evicted proc %v err %v", pid, err)
 					break
@@ -165,13 +165,6 @@ func (k *Kernel) shutdown() {
 				time.Sleep(100 * time.Millisecond)
 			}
 			db.DPrintf(db.KERNEL, "Evicted %v", pid)
-			if !k.svcs.svcMap[pid].crashed {
-				k.svcs.svcMap[pid].waited = true
-				if status, err := k.WaitExitKernelProc(pid, k.svcs.svcMap[pid].how); err != nil || !status.IsStatusEvicted() {
-					db.DPrintf(db.ALWAYS, "shutdown error pid %v: %v %v", pid, status, err)
-				}
-			}
-			db.DPrintf(db.KERNEL, "Done evicting %v", pid)
 		}
 	}
 	for key, val := range k.svcs.svcs {

@@ -22,29 +22,22 @@ RUN mkdir bin && \
     mkdir bin/kernel && \
     mkdir bin/linux
 
-ARG tag
-
-ENV SIGMATAG=$tag
-
 # ========== user image ==========
 FROM base AS sigmauser
 
 RUN mkdir jail && \
     mkdir /tmp/sigmaclntd
-# Copy mr yaml files.
-COPY mr mr
 
-# Hack to invalidate build cache
-#ARG kill_build_cache
-#
-#RUN echo "Invalidating build cache user $kill_build_cache"
+# XXX needed still?
+# Copy mr yaml files.
+#COPY mr mr
 
 # Copy uprocd, the entrypoint for this container, to the user image.
-COPY --from=sigma-build-kernel /home/sigmaos/bin/kernel/uprocd /home/sigmaos/bin/kernel
+COPY bin/kernel/uprocd bin/kernel/
 # Copy sigmaclntd to the user image.
-COPY --from=sigma-build-kernel /home/sigmaos/bin/kernel/sigmaclntd /home/sigmaos/bin/kernel/
-# Copy rust trampoline to the user image.
-COPY --from=sigma-build-user-rust /home/sigmaos/bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/exec-uproc-rs
+COPY bin/kernel/sigmaclntd bin/kernel/
+## Copy rust trampoline to the user image.
+COPY bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/
 
 # ========== kernel image, omitting user binaries ==========
 FROM base AS sigmaos
@@ -65,20 +58,18 @@ ENV reserveMcpu "0"
 #RUN echo "Invalidating build cache kernel $kill_build_cache"
 
 # Copy kernel bins
-COPY --from=sigma-build-kernel /home/sigmaos/bin/kernel /home/sigmaos/bin/kernel
-COPY --from=sigma-build-kernel /home/sigmaos/create-net.sh /home/sigmaos/bin/kernel/create-net.sh
+COPY bin/kernel /home/sigmaos/bin/kernel/
+COPY create-net.sh /home/sigmaos/bin/kernel/create-net.sh
 # Copy named bin
 RUN mkdir -p /home/sigmaos/bin/user/common && \
   cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
-COPY --from=sigma-build-user-rust /home/sigmaos/bin/user/spawn-latency /home/sigmaos/bin/user/common/spawn-latency-ux
+# Needed?
 # Copy linux bins
-COPY --from=sigma-build-kernel /home/sigmaos/bin/linux /home/sigmaos/bin/linux
+COPY bin/linux /home/sigmaos/bin/linux/
 CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${gvisor}"]
 
 # ========== kernel image, including user binaries ==========
 FROM sigmaos AS sigmaos-with-userbin
-COPY --from=sigma-build-user /home/sigmaos/bin/user /home/sigmaos/bin/user
-COPY --from=sigma-build-user-rust /home/sigmaos/bin/user/* /home/sigmaos/bin/user/common/
-RUN cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
+COPY bin/user/* /home/sigmaos/bin/user/common
 
 CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${gvisor}"]

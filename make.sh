@@ -67,14 +67,16 @@ if [ $# -gt 0 ]; then
 fi
 echo $WHAT
 
+OUTPATH=bin
+
 if [[ $WHAT == "kernel" ]]; then
-    mkdir -p bin/kernel
-    mkdir -p bin/linux
+    mkdir -p $OUTPATH/kernel
+    mkdir -p $OUTPATH/linux
     WHAT="kernel linux"
 elif [[ $WHAT == "user" ]]; then
-    mkdir -p bin/user
+    mkdir -p $OUTPATH/user
 else
-    mkdir -p bin/linux
+    mkdir -p $OUTPATH/linux
     WHAT="linux"
 fi
 
@@ -93,7 +95,7 @@ for k in $WHAT; do
         echo "$GO vet cmd/$k/$f/main.go"
         $GO vet cmd/$k/$f/main.go
       else
-        build="$GO build -ldflags=\"$LDF\" $RACE -o bin/$k/$f cmd/$k/$f/main.go"
+        build="$GO build -ldflags=\"$LDF\" $RACE -o $OUTPATH/$k/$f cmd/$k/$f/main.go"
         echo $build
         eval "$build"
       fi
@@ -102,7 +104,7 @@ for k in $WHAT; do
     # If building in parallel, build with (n - 1) threads.
     njobs=$(nproc)
     njobs="$(($njobs-1))"
-    build="parallel -j$njobs $GO \"build -ldflags='$LDF' $RACE -o bin/$k/{} cmd/$k/{}/main.go\" ::: $FILES"
+    build="parallel -j$njobs $GO \"build -ldflags='$LDF' $RACE -o $OUTPATH/$k/{} cmd/$k/{}/main.go\" ::: $FILES"
     echo $build
     eval $build
   fi

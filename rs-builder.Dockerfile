@@ -12,6 +12,8 @@ RUN apk add --no-cache libseccomp \
   parallel \
   libseccomp-static
 
+RUN echo "will cite" | parallel --citation echo {} ::: "disable parallel citation"
+
 WORKDIR /home/sigmaos
 RUN mkdir -p bin/kernel && \
   mkdir -p bin/user

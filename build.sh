@@ -172,7 +172,7 @@ if ! [ -z "$PARALLEL" ]; then
   njobs=$(echo $targets | wc -w)
 fi
 
-build_targets="parallel -j$njobs \"DOCKER_BUILDKIT=1 docker build --progress=plain -f Dockerfile.new --target {} -t {} . 2>&1 | tee $BUILD_LOG/{}.out\" ::: $targets"
+build_targets="parallel -j$njobs \"DOCKER_BUILDKIT=1 docker build --progress=plain -f target.Dockerfile --target {} -t {} . 2>&1 | tee $BUILD_LOG/{}.out\" ::: $targets"
 
 printf "\nBuilding Docker image targets\n$build_targets\n\n"
 echo "========== Start Docker targets build =========="

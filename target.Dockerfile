@@ -23,7 +23,7 @@ RUN mkdir bin && \
     mkdir bin/linux
 
 # ========== user image ==========
-FROM base AS sigmauser
+FROM base AS sigmauser-local
 
 RUN mkdir jail && \
     mkdir /tmp/sigmaclntd
@@ -39,8 +39,10 @@ COPY bin/kernel/sigmaclntd bin/kernel/
 ## Copy rust trampoline to the user image.
 COPY bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/
 
+FROM sigmauser-local AS sigmauser-remote
+
 # ========== kernel image, omitting user binaries ==========
-FROM base AS sigmaos
+FROM base AS sigmaos-local
 WORKDIR /home/sigmaos
 ENV kernelid kernel
 ENV boot named
@@ -52,24 +54,17 @@ ENV gvisor "false"
 RUN apk add --update docker openrc
 ENV reserveMcpu "0"
 
-# Hack to invalidate build cache
-#ARG kill_build_cache
-#
-#RUN echo "Invalidating build cache kernel $kill_build_cache"
-
-# Copy kernel bins
-COPY bin/kernel /home/sigmaos/bin/kernel/
+# Copy script needed to set up network
 COPY create-net.sh /home/sigmaos/bin/kernel/create-net.sh
-# Copy named bin
-RUN mkdir -p /home/sigmaos/bin/user/common && \
-  cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
-# Needed?
-# Copy linux bins
-COPY bin/linux /home/sigmaos/bin/linux/
+# Make a directory for binaries shared between realms.
+RUN mkdir -p /home/sigmaos/bin/user/common
 CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${gvisor}"]
 
-# ========== kernel image, including user binaries ==========
-FROM sigmaos AS sigmaos-with-userbin
+FROM sigmaos-local as sigmaos-remote
+# Copy kernel bins
+COPY bin/kernel /home/sigmaos/bin/kernel/
+# Copy user bins
 COPY bin/user/* /home/sigmaos/bin/user/common
-
+# Copy named
+RUN cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
 CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${gvisor}"]

@@ -161,9 +161,9 @@ docker exec -it $rsbuildercid \
 echo "========== Done building Rust bins =========="
 
 # Now, prepare to build final containers which will actually run.
-targets="sigmauser sigmaos"
+targets="sigmauser-remote sigmaos-remote"
 if [ "${TARGET}" == "local" ]; then
-  targets="sigmauser sigmaos-with-userbin"
+  targets="sigmauser-local sigmaos-local"
 fi
 
 njobs=1
@@ -197,9 +197,9 @@ else
 fi
 
 # Build Linux binaries for host
-echo "========== Building linux bins =========="
-/usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL linux
-echo "========== Done building linux bins =========="
+#echo "========== Building linux bins =========="
+#/usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL linux
+#echo "========== Done building linux bins =========="
 
 if ! [ -z "$TAG" ]; then
   echo "========== Pushing container images to DockerHub =========="

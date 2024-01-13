@@ -45,8 +45,7 @@ mkdir -p $OUTPATH/user
 
 LDF="-X sigmaos/sigmap.Target=$TARGET -s -w"
 
-#TARGETS="exec-uproc-rs spawn-latency"
-TARGETS="exec-uproc-rs"
+TARGETS="exec-uproc-rs spawn-latency"
 
 # If building in parallel, build with (n - 1) threads.
 njobs=$(nproc)

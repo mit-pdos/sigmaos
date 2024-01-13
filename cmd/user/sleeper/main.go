@@ -17,6 +17,7 @@ import (
 )
 
 func main() {
+	db.DPrintf(db.ALWAYS, "Test 1 2 3")
 	if os.Getenv("IS_FORKTEST") == "true" {
 		if len(os.Args) == 1 {
 			db.DPrintf(db.ALWAYS, "In parent")

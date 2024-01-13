@@ -108,7 +108,11 @@ func NewSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	sc.ProcAPI = procclnt.NewProcClntInit(pcfg.GetPID(), sc.FsLib, string(pcfg.GetUname()))
+	papi, err := procclnt.NewProcClntInit(pcfg.GetPID(), sc.FsLib, string(pcfg.GetUname()))
+	if err != nil {
+		return nil, err
+	}
+	sc.ProcAPI = papi
 	return sc, nil
 }
 

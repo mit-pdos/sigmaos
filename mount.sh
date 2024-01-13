@@ -34,7 +34,7 @@ if [[ "$BOOT" == "--boot" ]] ; then
     ./start-kernel.sh --boot all sigma-named
 fi
 
-./bin/linux/proxyd $1 &
+./bin/proxy/proxyd $1 &
 
 sleep 1
 

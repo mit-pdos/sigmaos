@@ -57,6 +57,6 @@ eval $build
 
 #cp 
 
-#echo "========== Building Rust bins =========="
+# Copy rust bins
 cp rs/exec-uproc-rs/target/release/exec-uproc-rs bin/kernel
 cp rs/spawn-latency/target/release/spawn-latency bin/user

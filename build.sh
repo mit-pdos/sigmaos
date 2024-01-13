@@ -196,10 +196,10 @@ else
   echo "========== Done pushing user bins to aws =========="
 fi
 
-# Build Linux binaries for host
-#echo "========== Building linux bins =========="
-#/usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL linux
-#echo "========== Done building linux bins =========="
+# Build proxy for host
+echo "========== Building linux bins =========="
+/usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL proxy 
+echo "========== Done building linux bins =========="
 
 if ! [ -z "$TAG" ]; then
   echo "========== Pushing container images to DockerHub =========="

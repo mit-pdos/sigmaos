@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] [--userbin USERBIN] kernel|user" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] [--userbin USERBIN] kernel|user|proxy" 1>&2
 }
 
 RACE="-race"
@@ -50,7 +50,7 @@ while [[ "$#" -gt 0 ]]; do
     usage
     exit 0
     ;;
-  kernel|user|linux)
+  kernel|user|linux|proxy)
     WHAT=$1
     shift
     ;;
@@ -75,6 +75,8 @@ if [[ $WHAT == "kernel" ]]; then
     WHAT="kernel linux"
 elif [[ $WHAT == "user" ]]; then
     mkdir -p $OUTPATH/user
+elif [[ $WHAT == "proxy" ]]; then
+    mkdir -p $OUTPATH/proxy
 else
     mkdir -p $OUTPATH/linux
     WHAT="linux"
@@ -86,7 +88,7 @@ for k in $WHAT; do
   echo "Building $k components"
   FILES=`ls cmd/$k`
    if [[ "$k" == "user" ]] && ! [[ "$USERBIN" == "all" ]] ; then
-     FILES="exec-uproc $(echo "$USERBIN" | tr "," " ")"
+     FILES="$(echo "$USERBIN" | tr "," " ")"
      echo "Only building userbin $USERBIN files $FILES"
    fi
   if [ -z "$PARALLEL" ]; then

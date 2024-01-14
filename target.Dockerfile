@@ -27,10 +27,6 @@ FROM base AS sigmauser-local
 RUN mkdir jail && \
     mkdir /tmp/sigmaclntd
 
-# XXX needed still?
-# Copy mr yaml files.
-#COPY mr mr
-
 # Copy uprocd, the entrypoint for this container, to the user image.
 COPY bin/kernel/uprocd bin/kernel/
 # Copy sigmaclntd to the user image.

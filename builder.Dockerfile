@@ -23,13 +23,4 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
 
 WORKDIR /home/sigmaos
 
-## Set env after downlaoding and installing the custom Go version, so we don't
-## rebuild Go evey time we change tags.
-#ENV SIGMATAG=$tag
-#
-## Copy source
-#COPY . .
-## Build kernel binaries.
-#RUN --mount=type=cache,target=/root/.cache/go-build ./make.sh --norace --gopath /go-custom/bin/go --target $target $parallel kernel && \
-#  mkdir bin/user/common 
 CMD [ "/bin/bash", "-l" ]

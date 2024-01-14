@@ -58,7 +58,7 @@ func (path1 Path) Equal(path2 Path) bool {
 	return true
 }
 
-// is c a child of p?
+// is c a child of parent?
 func (c Path) IsParent(parent Path) bool {
 	if len(parent) == 0 { // p is root directory
 		return true

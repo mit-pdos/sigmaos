@@ -62,7 +62,19 @@ func (fm *FidMap) free(fid sp.Tfid) {
 	_, ok := fm.fids[fid]
 	if !ok {
 		debug.PrintStack()
-		db.DFatalf("freeFid: fid %v unknown %v\n", fid, fm.fids)
+		db.DFatalf("freeFid: fid %v unknown\n", fid)
 	}
 	delete(fm.fids, fid)
+}
+
+func (fm *FidMap) disconnect(fid sp.Tfid) {
+	fm.Lock()
+	defer fm.Unlock()
+
+	_, ok := fm.fids[fid]
+	if !ok {
+		debug.PrintStack()
+		db.DFatalf("disconnects: fid %v unknown\n", fid)
+	}
+	fm.fids[fid] = nil
 }

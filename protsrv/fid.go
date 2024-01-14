@@ -43,15 +43,19 @@ func (ft *fidTable) Del(fid sp.Tfid) {
 	delete(ft.fids, fid)
 }
 
-// Return cid's open fids
-func (ft *fidTable) ClunkOpen(cid sp.TclntId) []*fid.Fid {
+type fidEntry struct {
+	fid sp.Tfid
+	f   *fid.Fid
+}
+
+func (ft *fidTable) ClientFids(cid sp.TclntId) []*fidEntry {
 	ft.Lock()
 	defer ft.Unlock()
 
-	fids := make([]*fid.Fid, 0)
-	for _, f := range ft.fids {
-		if f.Pobj().Ctx().ClntId() == cid && f.IsOpen() {
-			fids = append(fids, f)
+	fids := make([]*fidEntry, 0)
+	for fid, f := range ft.fids {
+		if f.Pobj().Ctx().ClntId() == cid {
+			fids = append(fids, &fidEntry{fid, f})
 		}
 	}
 	return fids

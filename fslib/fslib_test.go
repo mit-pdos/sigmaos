@@ -117,36 +117,6 @@ func TestCreateTwice(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestConnect(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
-
-	fn := gopath.Join(pathname, "f")
-	d := []byte("hello")
-	fd, err := ts.Create(fn, 0777, sp.OWRITE)
-	assert.Equal(t, nil, err)
-	_, err = ts.Write(fd, d)
-	assert.Equal(t, nil, err)
-
-	srv, _, err := ts.PathLastMount(pathname)
-	assert.Nil(t, err)
-
-	err = ts.Disconnect(srv.String())
-	assert.Nil(t, err, "Disconnect")
-	time.Sleep(100 * time.Millisecond)
-	db.DPrintf(db.TEST, "disconnected")
-
-	_, err = ts.Write(fd, d)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
-
-	err = ts.CloseFd(fd)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
-
-	fd, err = ts.Open(fn, sp.OREAD)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err not unreachable: %v", err)
-
-	ts.Shutdown()
-}
-
 func TestRemoveNonExistent(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 
@@ -1278,7 +1248,7 @@ func TestOpenRemoveRead(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestFslibDisconnect(t *testing.T) {
+func TestFslibClose(t *testing.T) {
 	ts := test.NewTstatePath(t, pathname)
 
 	dot := pathname + "/."
@@ -1293,16 +1263,39 @@ func TestFslibDisconnect(t *testing.T) {
 	_, err = fsl.Stat(dot)
 	assert.Nil(t, err)
 
-	// detach from servers
-	err = fsl.Disconnect(pathname)
+	// Detach from servers
+	err = fsl.Close()
 	assert.Nil(t, err)
 
 	_, err = fsl.Stat(dot)
 	assert.NotNil(t, err)
 	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 
-	err = fsl.Close()
-	assert.Nil(t, err)
+	ts.Shutdown()
+}
+
+func TestDisconnect(t *testing.T) {
+	ts := test.NewTstatePath(t, pathname)
+
+	fn := gopath.Join(pathname, "f")
+	d := []byte("hello")
+	fd, err := ts.Create(fn, 0777, sp.OWRITE)
+	assert.Equal(t, nil, err)
+	_, err = ts.Write(fd, d)
+	assert.Equal(t, nil, err)
+
+	err = ts.Disconnect(fn)
+	assert.Nil(t, err, "Disconnect")
+	time.Sleep(100 * time.Millisecond)
+
+	_, err = ts.Write(fd, d)
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+
+	err = ts.CloseFd(fd)
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+
+	fd, err = ts.Open(fn, sp.OREAD)
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err not unreachable: %v", err)
 
 	ts.Shutdown()
 }

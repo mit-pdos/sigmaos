@@ -304,7 +304,7 @@ func TestReplOKN(t *testing.T) {
 }
 
 //
-// Fix: crashing tests
+// Fix: repl crashing tests
 //
 
 func XTestReplCrash0(t *testing.T) {

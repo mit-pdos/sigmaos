@@ -24,19 +24,21 @@ func NewSessionMgr(st *SessionTable, pfn sps.Fsrvfcall) *SessionMgr {
 	return sm
 }
 
-// Force the last session to timeout
-func (sm *SessionMgr) TimeoutSession() {
-	sess := sm.st.LastSession()
-	if sess != nil {
-		db.DPrintf(db.SESS_STATE_SRV, "Test TimeoutSession %v", sess.Sid)
-		sess.timeout()
+// Force a client on the last session to detach for testing purposes
+func (sm *SessionMgr) DisconnectClient() {
+	c, sid := sm.st.lastClnt()
+	if c != sp.NoClntId {
+		db.DPrintf(db.CRASH, "DisconnectClient %v %v", c, sid)
+		detach := sessp.NewFcallMsg(&sp.Tdetach{ClntId: uint64(c)}, nil, sid, nil)
+		sm.srvfcall(detach)
 	}
 }
 
-// Close last the conn associated with last sess
+// Close last the conn associated with last sess for testing purposes
 func (sm *SessionMgr) CloseConn() {
-	sess := sm.st.LastSession()
+	sess := sm.st.lastSession()
 	if sess != nil {
+		db.DPrintf(db.CRASH, "%v: CloseConn", sess.Sid)
 		sess.CloseConn()
 	}
 }

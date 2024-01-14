@@ -68,21 +68,6 @@ func (sc *Mgr) RPC(addr sp.Taddrs, req sessp.Tmsg, data []byte) (*sessp.FcallMsg
 	return msg, err
 }
 
-// For testing
-func (sc *Mgr) Disconnect(addrs sp.Taddrs) *serr.Err {
-	db.DPrintf(db.SESS_STATE_CLNT, "Disconnect addr %v", addrs)
-	key := sessKey(addrs)
-	sc.mu.Lock()
-	sess, ok := sc.sessions[key]
-	sc.mu.Unlock()
-	if !ok {
-		return serr.NewErr(serr.TErrUnreachable, "disconnect: "+sessKey(addrs))
-	}
-	sess.close()
-	db.DPrintf(db.SESS_STATE_CLNT, "Disconnected sid %v addr %v", sess.sid, addrs)
-	return nil
-}
-
 func sessKey(addrs sp.Taddrs) string {
 	return addrs.String()
 }

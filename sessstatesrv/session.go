@@ -15,6 +15,8 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 )
 
+const NLAST = 10
+
 //
 // A session identifies a client across TCP connections.  For each
 // session, sigmaos has a protsrv.
@@ -63,7 +65,8 @@ func (sess *Session) GetConn() sps.Conn {
 }
 
 // For testing. Invoking CloseConn() will eventually cause
-// sess.Close() to be called by Detach().
+// sess.Close() to be called by Detach().  XXX really
+// won't the connection be re-established by client?
 func (sess *Session) CloseConn() {
 	sess.Lock()
 	var conn sps.Conn
@@ -85,8 +88,8 @@ func (sess *Session) AddClnt(cid sp.TclntId) {
 func (sess *Session) DelClnt(cid sp.TclntId) {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DPrintf(db.ALWAYS, "Del cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 	delete(sess.clnts, cid)
+	db.DPrintf(db.ALWAYS, "Del cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 }
 
 // Server may call Close() several times because client may reconnect
@@ -178,14 +181,6 @@ func (sess *Session) heartbeatL(msg sessp.Tmsg) {
 		db.DFatalf("heartbeat %v on closed sess %v", msg, sess.Sid)
 	}
 	sess.lastHeartbeat = time.Now()
-}
-
-// Indirectly timeout a session
-func (sess *Session) timeout() {
-	sess.Lock()
-	defer sess.Unlock()
-	db.DPrintf(db.SESS_STATE_SRV, "timeout %v", sess.Sid)
-	sess.timedout = true
 }
 
 func (sess *Session) isConnected() bool {

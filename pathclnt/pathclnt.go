@@ -125,20 +125,6 @@ func (pathc *PathClnt) Detach(pn string) error {
 	return nil
 }
 
-// Disconnect session with server to simulate network partition to
-// server that exports pn
-func (pathc *PathClnt) Disconnect(pn string) error {
-	fid, _, err := pathc.mnt.umount(path.Split(pn), true)
-	if err != nil {
-		return err
-	}
-	defer pathc.FidClnt.Free(fid)
-	if err := pathc.FidClnt.Lookup(fid).Disconnect(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (pathc *PathClnt) mount(fid sp.Tfid, pn string) *serr.Err {
 	if err := pathc.mnt.add(path.Split(pn), fid); err != nil {
 		if err.Code() == serr.TErrExists {
@@ -408,6 +394,7 @@ func (pathc *PathClnt) resolve(p path.Path, uname sp.Tuname, resolve bool) (sp.T
 	return pathc.mnt.resolve(p, resolve)
 }
 
+// XXX use MountedAt
 func (pathc *PathClnt) LastMount(pn string, uname sp.Tuname) (path.Path, path.Path, error) {
 	p := path.Split(pn)
 	_, left, err := pathc.resolve(p, uname, path.EndSlash(pn))
@@ -417,4 +404,28 @@ func (pathc *PathClnt) LastMount(pn string, uname sp.Tuname) (path.Path, path.Pa
 	}
 	p = p[0 : len(p)-len(left)]
 	return p, left, nil
+}
+
+// Disconnect client from server permanently to simulate network
+// partition to server that exports pn
+func (pathc *PathClnt) Disconnect(pn string, fids []sp.Tfid) error {
+	db.DPrintf(db.CRASH, "Disconnect %v mnts %v\n", pn, pathc.mnt.mountedPaths())
+	mntp := pathc.mnt.mountedAt(path.Split(pn))
+	for _, fid := range fids {
+		ch := pathc.FidClnt.Lookup(fid)
+		if ch != nil {
+			p := path.Split(pn)
+			if p.IsParent(ch.Path()) {
+				db.DPrintf(db.CRASH, "fid disconnect fid %v %v %v\n", fid, ch, mntp)
+				pathc.FidClnt.Disconnect(fid)
+			}
+		}
+	}
+	pathc.rootmt.disconnect(mntp.String())
+	fid, err := pathc.mnt.disconnect(mntp)
+	if err != nil {
+		return err
+	}
+	pathc.FidClnt.Disconnect(fid)
+	return nil
 }

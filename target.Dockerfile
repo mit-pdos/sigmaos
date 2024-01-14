@@ -22,9 +22,8 @@ RUN mkdir bin && \
     mkdir bin/kernel && \
     mkdir bin/linux
 
-# ========== user image ==========
+# ========== local user image ==========
 FROM base AS sigmauser-local
-
 RUN mkdir jail && \
     mkdir /tmp/sigmaclntd
 
@@ -39,9 +38,10 @@ COPY bin/kernel/sigmaclntd bin/kernel/
 ## Copy rust trampoline to the user image.
 COPY bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/
 
+# ========== remote user image ==========
 FROM sigmauser-local AS sigmauser-remote
 
-# ========== kernel image, omitting user binaries ==========
+# ========== local kernel image ==========
 FROM base AS sigmaos-local
 WORKDIR /home/sigmaos
 ENV kernelid kernel
@@ -60,7 +60,10 @@ COPY create-net.sh /home/sigmaos/bin/kernel/create-net.sh
 RUN mkdir -p /home/sigmaos/bin/user/common
 CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${gvisor}"]
 
+# ========== remote kernel image ==========
 FROM sigmaos-local as sigmaos-remote
+# Copy linux bins
+COPY bin/linux /home/sigmaos/bin/linux/
 # Copy kernel bins
 COPY bin/kernel /home/sigmaos/bin/kernel/
 # Copy user bins

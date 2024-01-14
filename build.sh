@@ -182,8 +182,11 @@ echo "========== Done building Docker targets =========="
 if [ "${TARGET}" == "local" ]; then
   # If developing locally, rename the sigmaos image which includes binaries to
   # be the default sigmaos image.
-  docker tag sigmaos-with-userbin sigmaos
+  docker tag sigmaos-local sigmaos
+  docker tag sigmauser-local sigmauser
 else
+  docker tag sigmaos-remote sigmaos
+  docker tag sigmauser-remote sigmauser
   echo "========== Copying user rust bins to $USRBIN =========="
   docker run --rm -it \
     --mount type=bind,src=$USRBIN,dst=/tmp/bin \

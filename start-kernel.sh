@@ -131,32 +131,41 @@ if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q sigmamongo; then
   MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
 fi
 
+# If running in local configuration, mount bin directory.
+MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
+  --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
+  --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos \
+  --mount type=bind,src=/tmp/sigmaclntd,dst=/tmp/sigmaclntd \
+  --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data \
+  --mount type=bind,src=/tmp/sigmaos-bin,dst=/home/sigmaos/bin/user/realms \
+  --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf \
+  --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws"
+if [ "$TAG" == "local-build" ]; then
+  MOUNTS="$MOUNTS\
+    --mount type=bind,src=$(pwd)/../bin/user,dst=/home/sigmaos/bin/user/common \
+    --mount type=bind,src=$(pwd)/../bin/kernel,dst=/home/sigmaos/bin/kernel \
+    --mount type=bind,src=$(pwd)/../bin/linux,dst=/home/sigmaos/bin/linux"
+fi
+
 # Mounting docker.sock is bad idea in general because it requires to
 # give rw permission on host to privileged daemon.  But maybe ok in
 # our case where kernel is trusted.
-CID=$(docker run -dit\
-             --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock\
-             --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup\
-             --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos\
-             --mount type=bind,src=/tmp/sigmaclntd,dst=/tmp/sigmaclntd\
-             --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data\
-             --mount type=bind,src=/tmp/sigmaos-bin,dst=/home/sigmaos/bin/user/realms\
-             --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf\
-             --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws\
-             --pid host\
-             --privileged\
-             --network ${NET}\
-             --name ${KERNELID}\
-             -e kernelid=${KERNELID}\
-             -e named=${NAMED}\
-             -e boot=${BOOT}\
-             -e dbip=${DBIP}\
-             -e mongoip=${MONGOIP}\
-             -e overlays=${OVERLAYS}\
-             -e gvisor=${GVISOR}\
-             -e SIGMAPERF=${SIGMAPERF}\
-             -e SIGMADEBUG=${SIGMADEBUG}\
-             -e reserveMcpu=${RMCPU}\
+CID=$(docker run -dit \
+             $MOUNTS \
+             --pid host \
+             --privileged \
+             --network ${NET} \
+             --name ${KERNELID} \
+             -e kernelid=${KERNELID} \
+             -e named=${NAMED} \
+             -e boot=${BOOT} \
+             -e dbip=${DBIP} \
+             -e mongoip=${MONGOIP} \
+             -e overlays=${OVERLAYS} \
+             -e gvisor=${GVISOR} \
+             -e SIGMAPERF=${SIGMAPERF} \
+             -e SIGMADEBUG=${SIGMADEBUG} \
+             -e reserveMcpu=${RMCPU} \
              sigmaos)
 
 if [ -z ${CID} ]; then

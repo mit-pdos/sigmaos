@@ -41,7 +41,7 @@ ROOT=$(pwd)
 OUTPATH=bin
 
 mkdir -p $OUTPATH/kernel
-mkdir -p $OUTPATH/linux
+mkdir -p $OUTPATH/user
 
 LDF="-X sigmaos/sigmap.Target=$TARGET -s -w"
 
@@ -50,6 +50,12 @@ TARGETS="exec-uproc-rs spawn-latency"
 # If building in parallel, build with (n - 1) threads.
 njobs=$(nproc)
 njobs="$(($njobs-1))"
-build="parallel -j$njobs bash \"-c cd rs/{} && $CARGO build --release\" ::: $TARGETS"
+build="parallel -j$njobs $CARGO \"build --manifest-path=rs/{}/Cargo.toml --release\" ::: $TARGETS"
 echo $build
 eval $build
+
+#cp 
+
+# Copy rust bins
+cp rs/exec-uproc-rs/target/release/exec-uproc-rs bin/kernel
+cp rs/spawn-latency/target/release/spawn-latency bin/user

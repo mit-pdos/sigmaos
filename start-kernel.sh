@@ -140,11 +140,11 @@ MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/tmp/sigmaos-bin,dst=/home/sigmaos/bin/user/realms \
   --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf \
   --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws"
-if [ -z "$TAG" ]; then
+if [ "$TAG" == "local-build" ]; then
   MOUNTS="$MOUNTS\
-    --mount type=bind,src=./bin/user,dst=/home/sigmaos/bin/user/common \
-    --mount type=bind,src=./bin/kernel,dst=/home/sigmaos/bin/kernel \
-    --mount type=bind,src=./bin/linux,dst=/home/sigmaos/bin/linux"
+    --mount type=bind,src=$(pwd)/../bin/user,dst=/home/sigmaos/bin/user/common \
+    --mount type=bind,src=$(pwd)/../bin/kernel,dst=/home/sigmaos/bin/kernel \
+    --mount type=bind,src=$(pwd)/../bin/linux,dst=/home/sigmaos/bin/linux"
 fi
 
 # Mounting docker.sock is bad idea in general because it requires to

@@ -253,7 +253,8 @@ func (r *Reducer) doReduce() *proc.Status {
 	// Include time spent writing output.
 	duration += time.Since(start)
 
-	if err := r.Symlink([]byte(r.tmp), r.outlink, 0777); err != nil {
+	// Create symlink atomically.
+	if err := r.PutFileAtomic(r.outlink, 0777|sp.DMSYMLINK, []byte(r.tmp), sp.NoLeaseId); err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
 	}
 	//	err = r.Rename(r.tmp, r.output)

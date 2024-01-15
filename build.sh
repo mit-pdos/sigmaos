@@ -167,6 +167,7 @@ echo "========== Done building Rust bins =========="
 
 echo "========== Copying kernel bins for uprocd =========="
 if [ "${TARGET}" == "local" ]; then
+  echo $KERNELBIN
   cp $KERNELBIN/uprocd $UPROCD_BIN/
   cp $KERNELBIN/sigmaclntd $UPROCD_BIN/
   cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
@@ -200,12 +201,6 @@ if [ "${TARGET}" == "local" ]; then
 else
   docker tag sigmaos-remote sigmaos
   docker tag sigmauser-remote sigmauser
-  echo "========== Copying user rust bins to $USRBIN =========="
-  docker run --rm -it \
-    --mount type=bind,src=$USRBIN,dst=/tmp/bin \
-    -e "TAG=$TAG" \
-    sigma-build-user-rust
-  echo "========== Done copying user bins to $USRBIN =========="
   # Upload the user bins to S3
   echo "========== Pushing user bins to aws =========="
   ./upload.sh --tag $TAG --profile sigmaos

@@ -226,7 +226,7 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) {
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
 
 	if rerror != nil {
-		db.DPrintf(db.TEST, "%v: Dispatch %v rerror %v", sess.Sid, fc, rerror)
+		db.DPrintf(db.SESSSRV, "%v: Dispatch %v rerror %v", sess.Sid, fc, rerror)
 		msg = rerror
 	}
 

@@ -116,7 +116,7 @@ func (k *Kernel) Shutdown() error {
 func startSrvs(k *Kernel) error {
 	n := len(k.Param.Services)
 	for _, s := range k.Param.Services {
-		_, err := k.BootSub(s, nil, k.Param, n > 1) // XXX kernel should wait instead of procd?
+		_, err := k.BootSub(s, nil, k.Param, n > 1)
 		if err != nil {
 			db.DPrintf(db.KERNEL, "Start %v err %v\n", k.Param, err)
 			return err

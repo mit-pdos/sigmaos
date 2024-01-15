@@ -9,6 +9,11 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+// Return the pathname for posting in a directory of a service
+func MountPathName(pn string, mnt sp.Tmount) string {
+	return pn + "/" + mnt.Address().HostPort()
+}
+
 func (fsl *FsLib) MkMountFile(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	b, err := mnt.Marshal()
 	if err != nil {
@@ -21,8 +26,8 @@ func (fsl *FsLib) MkMountFile(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	return nil
 }
 
-func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string, lid sp.TleaseId) error {
-	p := pn + "/" + name
+func (fsl *FsLib) postInServiceDir(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
+	p := MountPathName(pn, mnt)
 	dir, err := fsl.IsDir(pn)
 	if err != nil {
 		return err
@@ -33,9 +38,14 @@ func (fsl *FsLib) MountServiceUnion(pn string, mnt sp.Tmount, name string, lid s
 	return fsl.MkMountFile(p, mnt, lid)
 }
 
-func (fsl *FsLib) NewMount(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
+func (fsl *FsLib) RemoveMount(pn string) error {
+	db.DPrintf(db.ALWAYS, "RemoveMount %v\n", pn)
+	return fsl.Remove(pn)
+}
+
+func (fsl *FsLib) PostMount(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	if path.EndSlash(pn) {
-		return fsl.MountServiceUnion(pn, mnt, mnt.Address().HostPort(), lid)
+		return fsl.postInServiceDir(pn, mnt, lid)
 	} else {
 		return fsl.MkMountFile(pn, mnt, lid)
 	}

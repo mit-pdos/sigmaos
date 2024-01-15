@@ -197,8 +197,8 @@ func TestRemoveSymlink(t *testing.T) {
 	fn := gopath.Join(d1, "f")
 
 	mnt := ts.GetNamedMount()
-	err = ts.NewMount(fn, mnt, sp.NoLeaseId)
-	assert.Nil(t, err, "NewMount: %v", err)
+	err = ts.PostMount(fn, mnt, sp.NoLeaseId)
+	assert.Nil(t, err, "PostMount: %v", err)
 
 	sts, err := ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
@@ -222,8 +222,8 @@ func TestRmDirWithSymlink(t *testing.T) {
 	fn := gopath.Join(d1, "f")
 
 	mnt := ts.GetNamedMount()
-	err = ts.NewMount(fn, mnt, sp.NoLeaseId)
-	assert.Nil(t, err, "NewMount: %v", err)
+	err = ts.PostMount(fn, mnt, sp.NoLeaseId)
+	assert.Nil(t, err, "PostMount: %v", err)
 
 	sts, err := ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
@@ -244,8 +244,8 @@ func TestReadSymlink(t *testing.T) {
 	fn := gopath.Join(d1, "f")
 
 	mnt := ts.GetNamedMount()
-	err = ts.NewMount(fn, mnt, sp.NoLeaseId)
-	assert.Nil(t, err, "NewMount: %v", err)
+	err = ts.PostMount(fn, mnt, sp.NoLeaseId)
+	assert.Nil(t, err, "PostMount: %v", err)
 
 	_, err = ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)

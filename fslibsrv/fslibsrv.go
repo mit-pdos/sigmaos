@@ -1,3 +1,11 @@
+// Package fslibsrv allows caller to make a server and post their
+// existence in the global name space. Servers plug in what a
+// file/directory is by passing in their root directory, which is a
+// concrete instance of the fs.Dir interface; for example, memfsd
+// passes in an in-memory directory, fsux passes in a unix directory
+// etc. This allows servers to implement their notions of
+// directories/files, but they don't have to implement sigmaP, because
+// fslibsrv provides that through sesssrv and protsrv.
 package fslibsrv
 
 import (
@@ -11,18 +19,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-//
-// Servers use fslibsrv to make a server and to post their existence
-// in the global name space. Servers plug in what a file/directory is
-// by passing in their root directory, which is a concrete instance of
-// the fs.Dir interface; for example, memfsd passes in an in-memory
-// directory, fsux passes in a unix directory etc. This allows servers
-// to implement their notions of directories/files, but they don't
-// have to implement sigmaP, because fslibsrv provides that through
-// sesssrv and protsrv.
-//
-
-func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error {
+func postMount(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error {
 	if len(path) > 0 {
 		mnt := sp.NewMountServer(sesssrv.MyAddr())
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
@@ -31,7 +28,7 @@ func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error 
 			return err
 		}
 		li.KeepExtending()
-		if err := sc.NewMount(path, mnt, li.Lease()); err != nil {
+		if err := sc.PostMount(path, mnt, li.Lease()); err != nil {
 			return err
 		}
 	}
@@ -41,7 +38,7 @@ func Post(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error 
 func NewSrv(root fs.Dir, path string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*sesssrv.SessSrv, error) {
 	et := ephemeralmap.NewEphemeralMap()
 	srv := sesssrv.NewSessSrv(sc.ProcEnv(), root, addr, protsrv.NewProtServer, nil, nil, et, fencefs)
-	if err := Post(srv, sc, path); err != nil {
+	if err := postMount(srv, sc, path); err != nil {
 		return nil, err
 	}
 	return srv, nil

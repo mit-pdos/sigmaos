@@ -132,8 +132,8 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 
 	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.ProcEnv().GetPID(), bl.lc.Fence())
 
-	if err := bl.NewMount(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
-		db.DFatalf("mount %v at %v err %v\n", mnt, KVBalancer(bl.job), err)
+	if err := bl.PostMount(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
+		db.DFatalf("PostMount %v at %v err %v\n", mnt, KVBalancer(bl.job), err)
 	}
 
 	// first epoch is used to create a functional system (e.g.,

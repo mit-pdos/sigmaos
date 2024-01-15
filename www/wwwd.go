@@ -63,8 +63,8 @@ func RunWwwd(job, tree string) {
 	//	mnt := sp.NewMountService(sp.NewTaddrs([]*sp.Taddr{sp.NewTaddrRealm(l.Addr().String())}))
 	db.DFatalf("TODO: split host port")
 	mnt := sp.NewMountService(nil)
-	if err = www.ssrv.SigmaClnt().NewMount(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
-		db.DFatalf("MountService %v", err)
+	if err = www.ssrv.SigmaClnt().PostMount(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
+		db.DFatalf("PostMount %v", err)
 	}
 
 	go func() {

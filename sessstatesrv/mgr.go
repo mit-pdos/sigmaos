@@ -96,7 +96,7 @@ func (sm *SessionMgr) runDetaches() {
 		for _, s := range sess {
 			clnts := s.getClnts()
 			for _, c := range clnts {
-				db.DPrintf(db.ALWAYS, "Session %v timed out", s.Sid)
+				db.DPrintf(db.SESS_STATE_SRV, "Session %v timed out", s.Sid)
 				detach := sessp.NewFcallMsg(&sp.Tdetach{ClntId: uint64(c)}, nil, s.Sid, nil)
 				sm.srvfcall(detach)
 			}

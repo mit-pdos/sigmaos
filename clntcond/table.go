@@ -64,7 +64,7 @@ func (sct *ClntCondTable) toSlice() []*ClntCond {
 // close those.
 func (sct *ClntCondTable) DeleteClnt(cid sp.TclntId) {
 	t := sct.toSlice()
-	db.DPrintf(db.ALWAYS, "DeleteClnt cid %v %v\n", cid, t)
+	db.DPrintf(db.CLNTCOND, "DeleteClnt cid %v %v\n", cid, t)
 	for _, sc := range t {
 		sc.closed(cid)
 	}

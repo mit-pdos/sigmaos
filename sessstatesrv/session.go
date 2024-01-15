@@ -80,7 +80,7 @@ func (sess *Session) CloseConn() {
 func (sess *Session) AddClnt(cid sp.TclntId) {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DPrintf(db.ALWAYS, "Add cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
+	db.DPrintf(db.SESS_STATE_SRV, "Add cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 	sess.clnts[cid] = true
 }
 
@@ -89,14 +89,14 @@ func (sess *Session) DelClnt(cid sp.TclntId) {
 	sess.Lock()
 	defer sess.Unlock()
 	delete(sess.clnts, cid)
-	db.DPrintf(db.ALWAYS, "Del cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
+	db.DPrintf(db.SESS_STATE_SRV, "Del cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 }
 
 // Server may call Close() several times because client may reconnect
 // on a session that server has terminated and the Close() will close
 // the new reply channel.
 func (sess *Session) close() {
-	db.DPrintf(db.ALWAYS, "Srv Close sess %v %d\n", sess.Sid, len(sess.clnts))
+	db.DPrintf(db.SESS_STATE_SRV, "Srv Close sess %v %d\n", sess.Sid, len(sess.clnts))
 	sess.closed = true
 	// Close the connection so that writer in srvconn exits
 	if sess.conn != nil {

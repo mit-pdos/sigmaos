@@ -147,7 +147,7 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.NAMED, "%v: named done %v %v\n", pcfg.GetPID(), nd.realm, mnt)
+	db.DPrintf(db.ALWAYS, "%v: named done %v %v\n", pcfg.GetPID(), nd.realm, mnt)
 
 	if err := nd.resign(); err != nil {
 		db.DPrintf(db.NAMED, "resign %v err %v\n", pcfg.GetPID(), err)
@@ -224,12 +224,13 @@ func (nd *Named) getRoot(pn string) error {
 func (nd *Named) waitExit(ch chan struct{}) {
 	for {
 		err := nd.WaitEvict(nd.ProcEnv().GetPID())
-		if err != nil {
-			db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
-			time.Sleep(time.Second)
-			continue
+		if err == nil {
+			db.DPrintf(db.ALWAYS, "candidate %v %v evicted\n", nd.realm, nd.ProcEnv().GetPID().String())
+			ch <- struct{}{}
+			break
 		}
-		db.DPrintf(db.NAMED, "candidate %v %v evicted\n", nd.realm, nd.ProcEnv().GetPID().String())
-		ch <- struct{}{}
+		db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
+		time.Sleep(time.Second)
+		continue
 	}
 }

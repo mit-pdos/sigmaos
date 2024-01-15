@@ -6,8 +6,9 @@ commands are intended to be run from the root of the repo.
 
 ## Dependencies
 
-You will need to have `golang`, `docker`, `mysql`, and `libseccomp-dev` installed in
-order to build and run SigmaOS and its benchmarks. 
+You will need to have `golang`, `docker`, `docker buildx`, `mysql`, `parallel`,
+and `libseccomp-dev` installed in order to build and run SigmaOS and its
+benchmarks. 
 
 In order to download Docker Desktop (which includes buildx, a plugin required
 by the SigmaOS build sequence), follow the following guide:
@@ -34,20 +35,20 @@ machine. If you want to skip this, you can temporarily change the permissions
 on the docker socket using:
 
 ```
-sudo chmod 666 /var/run/docker.sock
+sudo chmod 0666 /var/run/docker.sock
 ```
 
 ## Building SigmaOS Locally
 
-We have two build configurations for SigmaOS: `local` and
-`aws`. `local` is intended for development and correctness testing,
-whereas `aws` is intended for performance benchmarking and
-multi-machine deployments (including CloudLab).  The primary
-differences are:
-  - `local` builds the user `procs` directly into the `sigmaos` container,
-    which enables offline development. `aws` builds the user `procs` in a
-    dedicated build container and uploads them to an AWS S3 bucket, omitting them
-    from the `sigmaos` container. This keeps the `sigmaos` container small,
+We have two build configurations for SigmaOS: `local` and `aws`. `local` is
+intended for development and correctness testing, whereas `aws` is intended for
+performance benchmarking and multi-machine deployments (including CloudLab).
+The primary differences are:
+  - `local` builds all `procs` locally and stores them in the local host file
+    system (rather than copying them to the target docker images) to speed up
+    build times. `aws` copies some of the proc binaries (e.g. `linux` and
+    `kernel` binaries) to the target docker images, and uploads user `proc`
+    binaries to an AWS S3 bucket. This keeps the `sigmaos` container small,
     decreases its cold-start time, and mirrors a more realistic deployment
     scenario, in which the datacenter provider would download tenant's binaries
     into a generic `sigmaos` container before running them.
@@ -55,7 +56,7 @@ differences are:
     frequent `raft` leader elections, which makes tests which stress
     fault-tolerance run faster. `aws` has longer timeouts, which decreases the
     system overhead when benchmarking. The exact hyperparameter settings can be
-    found [here](../sigmaps/hyperparams.go).
+    found [here](../sigmap/hyperparams.go).
   - `local` keeps the built container images local, while `aws` pushes the
     container images to [DockerHub](https://hub.docker.com/) repos.
 
@@ -71,15 +72,38 @@ If you wish to speed up your build by building the binaries in parallel, run:
 $ ./build.sh --parallel
 ```
 
-Warning: the parallel build uses much memory and all the cores on the
+Warning: the parallel build uses much memory and all but one core on the
 machine you are building on.
 
-SigmaOS uses `etcd` for fault-tolerant storage and you may have to (re)start etcd:
+There are many user procs in the repo, and building them all can take a long
+time. If you only wish to build only a subset of the user procs (e.g. `sleeper`
+and `spinner`), you can specify which user procs to build in a comma-separated
+list like so:
+
+```
+$ ./build.sh --userbin sleeper,spinner
+```
+
+In order to speed up builds, SigmaOS runs a Golang builder container and a Rust
+buidler container in the background, with the root directory of the repo
+mounted. These builder containers should only need to be restarted and rebuilt
+if their Dockerfile definitions change (which is expected to happen very
+rarely, if ever). To rebuild and restart the builder containers, run:
+
+```
+$ ./build.sh --rebuildbuilder
+```
+
+## SigmaOS run dependencies
+
+SigmaOS uses `etcd` for fault-tolerant storage and you may have to (re)start
+etcd:
+
 ```
 ./start-etcd.sh
 ```
 
-You can check if `etcd` is running as follows:
+You can check if `etcd` is running and accessible as follows:
 ```
 docker exec etcd-server etcdctl version
 ```
@@ -93,8 +117,8 @@ mkdir /mnt/9p
 sudo chown $USER /mnt/9p
 ```
 
-In order to make sure the build succeeded, run a simple test which
-starts SigmaOS up and exits immediately:
+In order to make sure the build succeeded, run a simple test which starts
+SigmaOS up and exits immediately:
 
 ```
 go test -v sigmaos/fslib --run InitFs --start
@@ -110,13 +134,13 @@ The output should look something like:
 
 ## Testing SigmaOS
 
-SigmaOS leverages Golang's testing infrastructure for its benchmarks
-and correctness tests. We have tests for many of the SigmaOS
-packages. We expect all of the tests to pass, but we are sure there
-must be bugs. If you find one, please add a minimal test that exposes
-it to the appropriate package before fixing it. This way, we can
-ensure that the software doesn't regress to incorporate old bugs as we
-continue to develop it.
+SigmaOS leverages Golang's testing infrastructure for its benchmarks and
+correctness tests. We have tests for many of the SigmaOS packages. We expect
+all of the tests to pass, but we have not tested extensively on different
+hardware setups or OS versions, and we are sure there must be bugs. If you find
+a bug, please add a minimal test that exposes it to the appropriate package
+before fixing it. This way, we can ensure that the software doesn't regress to
+incorporate old bugs as we continue to develop it.
 
 Occasionally, we run the full-slew of SigmaOS tests. In order to do so, run:
 
@@ -154,17 +178,17 @@ In order to run a specific test from a package, run:
 $ go test -v sigmaos/<pkg_name> --start --run <test_name>
 ```
 
-The --start flag indicates to the test program that an instance of
-SigmaOS must be started. When benchmarking and testing on a real cluster, you will likely
-omit the `--start` flag. [Lesson 2](./02_remote_dev.md) explains the remote development
-and benchmarking workflow in detail.
+The --start flag indicates to the test program that an instance of SigmaOS must
+be started. When benchmarking and testing on a real cluster, you will likely
+omit the `--start` flag. [Lesson 2](./02_remote_dev.md) explains the remote
+development and benchmarking workflow in detail.
 
 ## Exercise: Start SigmaOS
 
-In this exercise, you will start SigmaOS and introspect it.  SigmaOS
-leverage's Linux's 9P VFS layer to allow interaction with SigmaOS via
-the command line. In order to do so, we implemented a 9P-to-SigmaP
-proxy `proxyd`. First find your machine's local IP by running:
+In this exercise, you will start SigmaOS and introspect it.  SigmaOS leverage's
+Linux's 9P VFS layer to allow interaction with SigmaOS via the command line. In
+order to do so, we implemented a 9P-to-SigmaP proxy `proxyd`. First find your
+machine's local IP by running:
 
 ```
 $ hostname -I

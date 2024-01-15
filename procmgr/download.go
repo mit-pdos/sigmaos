@@ -73,7 +73,7 @@ func (mgr *ProcMgr) downloadProcBin(realm sp.Trealm, prog, buildTag string) erro
 	}
 	var err error
 	for _, pp := range paths {
-		db.DPrintf(db.ALWAYS, "Download buildtag %v pp %v prog %v", buildTag, pp, prog)
+		db.DPrintf(db.PROCMGR, "Download buildtag %v pp %v prog %v", buildTag, pp, prog)
 		if e := mgr.downloadProcPath(realm, pp, prog); e == nil {
 			mgr.cachedProcBins[realm][prog] = true
 			return nil

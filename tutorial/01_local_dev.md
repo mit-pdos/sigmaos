@@ -232,9 +232,14 @@ $ ./stop.sh --parallel
 ```
 
 Note: this will try to purge your machine of any traces of the running
-containers, including logs. We do this to avoid filling your disk up, but you
-may want to refrain from running `stop.sh` if you want to inspect the
-containers' logs.
+containers, including logs and cached build images. We do this to avoid filling
+your disk up, but you may want to refrain from running `stop.sh` if you want to
+inspect the containers' logs. If you wish to preserve the docker build cache
+(but still delete the logs), you can run:
+
+```
+$ ./stop.sh --parallel --nopurge
+```
 
 ## Exercise: Access S3 through SigmaOS
 

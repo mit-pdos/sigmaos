@@ -51,7 +51,7 @@ func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 }
 
 func (pathc *PathClnt) String() string {
-	str := fmt.Sprintf("Pathclnt mount table:\n")
+	str := fmt.Sprintf("Pathclnt cid %v mount table:\n", pathc.cid)
 	str += fmt.Sprintf("%v\n", pathc.mnt)
 	return str
 }

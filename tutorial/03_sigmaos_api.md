@@ -1,14 +1,13 @@
 # 03. SigmaOS APIs
 
-This tutorial helps you writing applications with SigmaOS by making
-you familiar with its main APIs.  Applications using SigmaOS live in
-`cmd/user`.  The root directory contains the support packages for the
-major applications: `mr` (a MapReduce Library), `hotel` and
-`socialnetwork` (two microservices based on DeathStarBench),
-`imgresized` (an image resizing service), and `kv` (a sharded
-key-value service).  The exercises below will help you get familiar
-with the SigmaOS APIs; the last one, exercise 4, puts the earlier
-exercises together into a simple application.
+This tutorial helps you writing applications with SigmaOS by making you
+familiar with its main APIs.  Applications (user procs) using SigmaOS live in
+`cmd/user`.  The root directory contains the support packages for the major
+applications: `mr` (a MapReduce Library), `hotel` and `socialnetwork` (two
+microservices based on DeathStarBench), `imgresized` (an image resizing
+service), and `kv` (a sharded key-value service).  The exercises below will
+help you get familiar with the SigmaOS APIs; the last one, exercise 4, puts the
+earlier exercises together into a simple application.
 
 ## Client-side libraries
 
@@ -98,56 +97,60 @@ $ ./stop.sh; go test -v sigmaos/example --start --run Named
 
 Now extend `TestExerciseNamed` to implement the exercise.
 `fslib/fslib_test.go` and `fslib/file.go` may provide inspiration.
-(If you are unfamiliar with Golang, checkout [go
+(If you are unfamiliar with Golang, check out [go
 tutorial](https://go.dev/doc/tutorial/getting-started).
 
-Note that the state stored in the `named` root directory is
-persistent; `named` uses an `etcd` for storage, which is a
-widely-used, fault-tolerant, key-value server implemented using Raft.
-So, your test should clean up after itself, because, otherwise, if you
-run it again, it will fail, because your file already exists.
+Note that the state stored in the `named` root directory is persistent; `named`
+uses an `etcd` for storage, which is a widely-used, fault-tolerant, key-value
+server implemented using Raft.  So, your test should clean up after itself,
+because, otherwise, if you run it again, it will fail, because your file
+already exists. To manually clear out `etcd`, run:
+
+```
+$ ./fsetcd-wipe.sh
+```
 
 ### Exercise 2: Read a file from S3
     
 SigmaOS's `named` is good for storing small files (e.g., symbolic links that
-servers use to advertise their existence). SigmaOS has proxy servers
-to access other storage systems, including AWS S3.  Each machine in
-SigmaOS runs an `s3` proxy and you can read/write files in S3 using
-the pathname `name/s3/~any/` (`any` tells SigmaOS to use any of the
-available S3 proxies in `name/s3`).
+servers use to advertise their existence). SigmaOS has proxy servers to access
+other storage systems, including AWS S3.  Each machine in SigmaOS runs an `s3`
+proxy and you can read/write files in S3 using the pathname `name/s3/~any/`
+(`any` tells SigmaOS to use any of the available S3 proxies in `name/s3`).
 
-For this exercise you need an AWS credential file in your home
-directory `~/.aws/credentials` [local](01_local_dev.md). You may also
-have to copy the files in `input` into an S3 bucket of your creation, at the
-path `<YOUR_BUCKET_NAME>/gutenberg`.
+For this exercise you need an AWS credential file in your home directory
+`~/.aws/credentials` [local](01_local_dev.md). You may also have to copy the
+files in `input` into an S3 bucket of your creation, at the path
+`<YOUR_BUCKET_NAME>/gutenberg`.
 
 Using the same FsLib interface as in the previous exercise, extend
-`TestExerciseS3` to
+`TestExerciseS3` to:
   - [ ] Read the file
   `name/s3/~any/<YOUR_BUCKET_NAME>/gutenberg/pg-tom_sawyer.txt`
   - [ ] Count the number of occurrences of the word `the` in this file
     
-Note that `test.MakeTstateAll` creates an instance of SigmaOS with
-`named` and other kernel services (such as `s3` proxies).
+Note that `test.MakeTstateAll` creates an instance of SigmaOS with `named` and
+other kernel services (such as `s3` proxies).
 
-Hint: The function `OpenReader` from `FsLib` along with Golang's
-`NewScanner` and `scanner.Split(bufio.ScanWords)` may be helpful.
+Hint: The function `OpenReader` from `FsLib` along with Golang's `NewScanner`
+and `scanner.Split(bufio.ScanWords)` may be helpful.
 
 ### Exercise 3: Spawn a `proc`
 
-In this exercise, you will familiarize yourself with the `procclnt`
-API.  The function `TestExerciseProc` spawns the example proc from
-`cmd/user/example/`.  The test function runs this proc using `Spawn`,
-which queues the proc for execution. The test function wait until the
-proc starts (if many procs are spawned, SigmaOS may not start the proc
-for a while), and then wait until it exits. 
+In this exercise, you will familiarize yourself with the `procclnt` API.  The
+function `TestExerciseProc` spawns the example proc from `cmd/user/example/`.
+The test function runs this proc using `Spawn`, which queues the proc for
+execution. The test function wait until the proc starts (if many procs are
+spawned, SigmaOS may not start the proc for a while), and then wait until it
+exits. 
 
-The proc in `cmd/user/example/` makes an `SigmaClnt` object, tells
-SigmaOS it started using `Started`, prints "Hello World", and then
-exits using `ClntExitOK`.
+The proc in `cmd/user/example/` makes an `SigmaClnt` object, tells SigmaOS it
+started using `Started`, prints "Hello World", and then exits using
+`ClntExitOK`.
 
-If you run ```go test -v sigmaos/example --start --run Proc```, you
-should see output like this:
+If you run ```go test -v sigmaos/example --start --run Proc```, you should see
+output like this:
+
 ```
 === RUN   TestExerciseProc
     example_test.go:70: 
@@ -166,12 +169,11 @@ should see output like this:
 --- FAIL: TestExerciseProc (6.33s)
 ```
 
-Test programs will direct logging output directly to your
-terminal. However, SigmaOS kernel components and user `procs` run in
-containers. These store their output elsewhere. In order to scrape all
-containers' logging output, run:
+Test programs will direct logging output directly to your terminal. However,
+SigmaOS kernel components and user `procs` run in containers. These store their
+output elsewhere. In order to scrape all containers' logging output, run:
 
-If you run,
+If you run
 ```
 $ ./logs.sh
 ```
@@ -180,12 +182,12 @@ statement from the example proc.
 
 Modify the example proc to return `hello world` its exit status:
   - [ ] Edit the `main` function in `cmd/user/example/main.go` and replace
-        `ClntExitOK` with `ClntExit`, passing in the appropriate
-        `proc.Status` using `MakeStatusInfo`.
-  - [ ] Recompile and build SigmaOS: ```$./build.sh --parallel```. It
-    is sometimes convenient to just the compile the SigmaOS programs
-    to see if they compile correctly: ```$./make.sh --norace user``` compiles
-    the user programs.   Or compile an individual user program:
+    `ClntExitOK` with `ClntExit`, passing in the appropriate `proc.Status`
+    using `MakeStatusInfo`.
+  - [ ] Recompile and build SigmaOS: ```$./build.sh --parallel```. It is
+    sometimes convenient to just the compile the SigmaOS programs to see if
+    they compile correctly: ```$./make.sh --norace user``` compiles the user
+    programs.   Or compile an individual user program:
 ```
     go build -ldflags="-X sigmaos/sigmap.Target=local" -o bin/user/example cmd/user/example/main.go
 ```
@@ -195,20 +197,18 @@ Modify the example proc to return `hello world` its exit status:
 
 ### Exercise 4: Process data in parallel
 
-This exercise puts the previous exercises together into a simple
-application with several procs. Your job is to implement
-`TestExerciseParallel` to process the input files in
-`name/s3/~any/<YOUR_BUCKET_NAME>/gutenberg/` in parallel:
-  - [ ] Modify the example proc in `cmd/user/example` to take as
-    argument a pathname for an input file (using Golang's `os.Args`),
-    counts the occurrences of the world `the` in that file, and
-    returns the number of words through `proc.Status`.  Your code from
-    Exercise 2 may be helpful.
-  - [ ] Modify the `TestExerciseParallel` to spawn an example proc for
-    each input file, wait until they exited, and add up the number of
-    `the`'s.  To make the procs run in parallel, you may want to
-    create a go routine for each spawn, using Golang's `go`, and
-    collect the results from go routine using a channel.
+This exercise puts the previous exercises together into a simple application
+with several procs. Your job is to implement `TestExerciseParallel` to process
+the input files in `name/s3/~any/<YOUR_BUCKET_NAME>/gutenberg/` in parallel:
+  - [ ] Modify the example proc in `cmd/user/example` to take as argument a
+    pathname for an input file (using Golang's `os.Args`), counts the
+    occurrences of the world `the` in that file, and returns the number of
+    words through `proc.Status`.  Your code from Exercise 2 may be helpful.
+  - [ ] Modify the `TestExerciseParallel` to spawn an example proc for each
+    input file, wait until they exited, and add up the number of `the`'s.  To
+    make the procs run in parallel, you may want to create a go routine for
+    each spawn, using Golang's `go`, and collect the results from go routine
+    using a channel.
 
 If you would run this test in the remote-mode configuration
 [remote](02_remote_dev.md) of SigmaOS, SigmaOS would schedule the
@@ -227,8 +227,8 @@ $ export SIGMADEBUG="TEST;BENCH;"
 ```
 
 This will make output from any logging statements with the `TEST` and `BENCH`
-selectors print to stdout. For example, the following logging statements
-will produce output, when `SIGMADEBUG` is set as above:
+selectors print to stdout. For example, the following logging statements will
+produce output, when `SIGMADEBUG` is set as above:
 
 ```
 db.DPrintf(db.TEST, "Hello world 1");
@@ -247,24 +247,23 @@ list, refer to the debbug package's [list of selectors](../debug/selector.go).
 
 ### Exercise 5: Run and extend an RPC server. 
 
-In this exercise, you will familiarize with SigmaOS RPC, specifically
-`rpcclnt` and `sigmasrv` by running a simple RPC server that echo its
-input:
-  - [ ] Navigate to the `example_echo_server` directory. Check the files and 
-	try running the test cases. If you have already built SigmaOS through `build.sh`, 
-	you may run `go test sigmaos/example_echo_server -v --start`. Overall, the test
-	case starts an instance of the Echo server, then starts a client sending request
-	to the server. By default, all operations are local. 
-  - [ ] To see the logs, source the environment variable file `example_echo_server/echo_env.sh`
-	before running test, and run `logs.sh` afterwards. You may modify the content
-	of the environment variable file to turn on/off logging for different modules. 
-	After finishing test and logging, you may run `stop.sh` to clear
-	up.
+In this exercise, you will familiarize with SigmaOS RPC, specifically `rpcclnt`
+and `sigmasrv` by running a simple RPC server that echo its input:
+  - [ ] Navigate to the `example_echo_server` directory. Check the files and
+    try running the test cases. If you have already built SigmaOS through
+    `build.sh`, you may run `go test sigmaos/example_echo_server -v --start`.
+    Overall, the test case starts an instance of the Echo server, then starts a
+    client sending request to the server. By default, all operations are local. 
+  - [ ] To see the logs, source the environment variable file
+    `example_echo_server/echo_env.sh` before running test, and run `logs.sh`
+    afterwards. You may modify the content of the environment variable file to
+    turn on/off logging for different modules.  After finishing test and
+    logging, you may run `stop.sh` to clear up.
 
-Extend the client and server to support addition: the client sends two
-numbers to the server and server responds with the sum:
- - [ ] Add the request and response struct to echo.proto and
- compile them using compile-proto.sh.
+Extend the client and server to support addition: the client sends two numbers
+to the server and server responds with the sum:
+ - [ ] Add the request and response struct to echo.proto and compile them using
+   compile-proto.sh.
  - [ ] Add the handler to echosrv.go and run `build.sh` to build server
  - [ ] Write a new test function that tests the new RPC
 

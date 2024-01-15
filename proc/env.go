@@ -109,13 +109,14 @@ func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 	return &ProcEnv{p}
 }
 
-func NewBootProcEnv(uname sp.Tuname, etcdIP string, localIP sp.Thost, overlays bool) *ProcEnv {
+func NewBootProcEnv(uname sp.Tuname, etcdIP string, localIP sp.Thost, buildTag string, overlays bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetUname(uname)
 	pe.Program = "kernel"
 	pe.SetPID(sp.GenPid(string(uname)))
 	pe.EtcdIP = etcdIP
 	pe.LocalIPStr = localIP.String()
+	pe.BuildTag = buildTag
 	pe.SetRealm(sp.ROOTREALM, overlays)
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
 	pe.Privileged = true

@@ -47,6 +47,7 @@ func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 	pathc.ndMntCache = NewNamedMountCache(pcfg)
 	pathc.rootmt = newRootMountTable()
 	pathc.cid = sp.TclntId(rand.Uint64())
+	db.DPrintf(db.TEST, "New cid %v\n", pathc.cid)
 	return pathc
 }
 

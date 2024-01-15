@@ -31,7 +31,7 @@ platform-specific quirks and installation instructions.
 When benchmarking and remotely deploying SigmaOS, we build a version of the
 SigmaOS container images which excludes user-level `proc` binaries.  Instead,
 the binaries are uploaded and stored in an S3 bucket, which the SigmaOS
-infrastructure downlaods the binaries from at runtime. The build scripts expect
+infrastructure downloads the binaries from at runtime. The build scripts expect
 the S3 bucket to already exist and for the AWS and DockerHub credentials to be
 installed on your computer, so make sure to poke a member of the existing
 development team and tell them to complete their side of the [onboarding
@@ -52,10 +52,10 @@ S3 bucket in which the user `proc` binaries will be stored. For now, the "tag"
 should be the same as the name of the S3 bucket which the SigmaOS development
 team created for you during [onboarding](./onboarding.md).
 
-For the remainder of this tutorial, I will refer to your tag as `TAG`. When
-running the scripts, make sure to replace `TAG` with your own tag name.
-However, the `--target` argument will be `aws` regardless of deployment
-platform (CloudLab or EC2).
+The remainder of this tutorial will refer to your tag as `TAG`. When running
+the scripts, make sure to replace `TAG` with your own tag name.  However, the
+`--target` argument will be `aws` regardless of deployment platform (CloudLab
+or EC2).
 
 Build the SigmaOS images for remote deployment and push user `proc` binaries to
 S3 with:
@@ -157,7 +157,8 @@ git repo will not be automatically reflected on remote machines. This is
 particularly relevant to benchmarks, which are implemented as `go` files
 included in the repo. 
 
-In order to update the repo on a remote cluster, run (you only need VPCID for AWS): 
+In order to update the repo on a remote cluster, run (you only need VPCID for
+AWS): 
 
 ```
 $ cd PLATFORM
@@ -194,8 +195,8 @@ To verify SigmaOS status on each machine, run
 for h in $(cat servers.txt | cut -d " " -f 2); do echo $h; ssh USER@$h "docker ps -a"; done
 ```
 
-Each node should be running an instance of sigmaos image. Plus, node 0, should have mariadb 
-and sigmajaeger images. 
+Each node should be running an instance of the sigmaos container. Node 0, should
+additionally have the mariadb container. 
 
 In order to stop the SigmaOS deployment, run:
 

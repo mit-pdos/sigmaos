@@ -101,7 +101,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 // Delete ephemeral files created by this client and delete this client
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
 	fes := ps.ft.ClientFids(args.TclntId())
-	db.DPrintf(db.TEST, "Detach clnt %v fes %v\n", args.TclntId(), fes)
+	db.DPrintf(db.PROTSRV, "Detach clnt %v fes %v\n", args.TclntId(), fes)
 	for _, fe := range fes {
 		ps.clunk(fe.fid, fe.f)
 	}

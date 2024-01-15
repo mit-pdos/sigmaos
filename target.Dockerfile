@@ -63,8 +63,6 @@ ENV buildtag "remote-build"
 COPY bin/linux /home/sigmaos/bin/linux/
 # Copy kernel bins
 COPY bin/kernel /home/sigmaos/bin/kernel/
-# Copy user bins
-COPY bin/user/* /home/sigmaos/bin/user/common
 # Copy named
 RUN cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
 CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${buildtag} ${gvisor}"]

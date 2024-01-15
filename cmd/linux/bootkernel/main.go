@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 9 {
-		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu gvisor\nprovided:%v", os.Args[0], os.Args)
+	if len(os.Args) < 10 {
+		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu buildTag gvisor\nprovided:%v", os.Args[0], os.Args)
 	}
 	db.DPrintf(db.BOOT, "Boot %v", os.Args[1:])
 	srvs := strings.Split(os.Args[3], ";")
@@ -22,7 +22,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error parse overlays: %v", err)
 	}
-	gvisor, err := strconv.ParseBool(os.Args[8])
+	gvisor, err := strconv.ParseBool(os.Args[9])
 	if err != nil {
 		db.DFatalf("Error parse gvisor: %v", err)
 	}
@@ -32,6 +32,7 @@ func main() {
 		Dbip:     os.Args[4],
 		Mongoip:  os.Args[5],
 		Overlays: overlays,
+		BuildTag: os.Args[8],
 		GVisor:   gvisor,
 	}
 	if len(os.Args) >= 8 {
@@ -45,7 +46,7 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	pcfg := proc.NewBootProcEnv(sp.Tuname(param.KernelId), os.Args[2], localIP, param.Overlays)
+	pcfg := proc.NewBootProcEnv(sp.Tuname(param.KernelId), os.Args[2], localIP, param.BuildTag, param.Overlays)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 	if err := boot.BootUp(&param, pcfg); err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)

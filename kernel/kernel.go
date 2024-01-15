@@ -37,6 +37,7 @@ type Param struct {
 	Dbip        string
 	Mongoip     string
 	Overlays    bool
+	BuildTag    string
 	GVisor      bool
 	ReserveMcpu string
 }

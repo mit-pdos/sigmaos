@@ -111,8 +111,8 @@ mkdir -p /tmp/sigmaos-perf
 mkdir -p /tmp/sigmaos-data
 chmod a+w /tmp/sigmaos-perf
 
-# Pull latest docker images
-if ! [ -z "$TAG" ]; then
+# Pull latest docker images, if not running a local build.
+if [ "$TAG" != "local-build" ]; then
   docker pull arielszekely/sigmaos:$TAG > /dev/null
   docker tag arielszekely/sigmaos:$TAG sigmaos > /dev/null
   docker pull arielszekely/sigmauser:$TAG > /dev/null

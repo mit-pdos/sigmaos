@@ -162,6 +162,7 @@ CID=$(docker run -dit \
              -e dbip=${DBIP} \
              -e mongoip=${MONGOIP} \
              -e overlays=${OVERLAYS} \
+             -e buildtag=${TAG} \
              -e gvisor=${GVISOR} \
              -e SIGMAPERF=${SIGMAPERF} \
              -e SIGMADEBUG=${SIGMADEBUG} \

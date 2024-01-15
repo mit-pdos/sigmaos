@@ -270,15 +270,15 @@ to the server and server responds with the sum:
 You can use `echo_env.sh` to set SIGMADEBUG.
 
 ### Optional exercises for RPC server
-  - [ ] Try to modify the echo server so that it caches results by connecting to 
-	some caching client. Existing caching implementations can be found at `cacheclnt`,
-	 `memcached`, and `kv`. Example usage can be found at `hotel` and `socialnetwork`, 
-	which are two major example applications built on top of SigmaOS.
-  - [ ] Try to modify the echo server so that it reads and writes to a database by
-	connecting to a database proxy. Existing implementations can be found at `dbd`
-	and `dbclnt`.  
-  - [ ] Try to profile the echo server through `perf` package,
-        described below.
+  - [ ] Try to modify the echo server so that it caches results by connecting
+    to some caching client. Existing caching implementations can be found at
+    `cacheclnt`, `memcached`, and `kv`. Example usage can be found at `hotel`
+    and `socialnetwork`, which are two major example applications built on top
+    of SigmaOS.
+  - [ ] Try to modify the echo server so that it reads and writes to a database
+    by connecting to a database proxy. Existing implementations can be found at
+    `dbd` and `dbclnt`.  
+  - [ ] Try to profile the echo server through `perf` package, described below.
 
 ## Performance debugging
 

@@ -61,7 +61,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err)
 	if db.WillBePrinted(db.SESS_STATE_CLNT) {
 		db.DPrintf(db.SESS_STATE_CLNT, "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Fcm.Fc.Seqno, req, rep.Type(), rep, c.addrs)
 	}
-	return rep, err1
+	return rep, nil
 }
 
 func (c *SessClnt) sendHeartbeat() {

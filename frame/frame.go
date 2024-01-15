@@ -73,11 +73,14 @@ func PushToFrame(wr io.Writer, b []byte) error {
 func PopFromFrame(rd io.Reader) ([]byte, error) {
 	var l uint32
 	if err := binary.Read(rd, binary.LittleEndian, &l); err != nil {
+		if err != io.EOF {
+			return nil, serr.NewErr(serr.TErrUnreachable, err.Error())
+		}
 		return nil, err
 	}
 	b := make([]byte, int(l))
 	if _, err := io.ReadFull(rd, b); err != nil && !(err == io.EOF && l == 0) {
-		return nil, err
+		return nil, serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	return b, nil
 }

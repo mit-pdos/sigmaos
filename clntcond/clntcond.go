@@ -41,6 +41,19 @@ func newClntCond(sct *ClntCondTable, lock sync.Locker) *ClntCond {
 	return sc
 }
 
+func (sc *ClntCond) String() string {
+	s := fmt.Sprintf("ClntCond: cond: [")
+	for cid, sl := range sc.conds {
+		s += fmt.Sprintf("%v %v ", cid, sl)
+	}
+	s += fmt.Sprintf("], [")
+	for cid, m := range sc.wakingConds {
+		s += fmt.Sprintf("%v %p ", cid, m)
+	}
+	s += fmt.Sprintf("]")
+	return s
+}
+
 func (sc *ClntCond) alloc(cid sp.TclntId) *cond {
 	if _, ok := sc.conds[cid]; !ok {
 		sc.conds[cid] = []*cond{}

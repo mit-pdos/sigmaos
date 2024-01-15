@@ -1,6 +1,7 @@
 package protsrv
 
 import (
+	"fmt"
 	"sync"
 
 	"sigmaos/fid"
@@ -46,6 +47,10 @@ func (ft *fidTable) Del(fid sp.Tfid) {
 type fidEntry struct {
 	fid sp.Tfid
 	f   *fid.Fid
+}
+
+func (fe *fidEntry) String() string {
+	return fmt.Sprintf("{fid %v %v}", fe.fid, fe.f)
 }
 
 func (ft *fidTable) ClientFids(cid sp.TclntId) []*fidEntry {

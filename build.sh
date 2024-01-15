@@ -148,14 +148,6 @@ docker exec -it $buildercid \
   2>&1 | tee $BUILD_LOG/make-kernel.out
 echo "========== Done building kernel bins =========="
 
-echo "========== Copying kernel bins for uprocd =========="
-if [ "${TARGET}" == "local" ]; then
-  cp $KERNELBIN/uprocd $UPROCD_BIN/
-  cp $KERNELBIN/sigmaclntd $UPROCD_BIN/
-  cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
-fi
-echo "========== Done copying kernel bins for uproc =========="
-
 echo "========== Building user bins =========="
 docker exec -it $buildercid \
   /usr/bin/time -f "Build time: %e sec" \
@@ -172,6 +164,14 @@ docker exec -it $rsbuildercid \
   ./make-rs.sh $RS_BUILD_ARGS \
   2>&1 | tee $BUILD_LOG/make-user.out
 echo "========== Done building Rust bins =========="
+
+echo "========== Copying kernel bins for uprocd =========="
+if [ "${TARGET}" == "local" ]; then
+  cp $KERNELBIN/uprocd $UPROCD_BIN/
+  cp $KERNELBIN/sigmaclntd $UPROCD_BIN/
+  cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
+fi
+echo "========== Done copying kernel bins for uproc =========="
 
 # Now, prepare to build final containers which will actually run.
 targets="sigmauser-remote sigmaos-remote"

@@ -40,4 +40,4 @@ DIR=$(dirname $0)
 . $DIR/env/env.sh
 
 # Copy versioned user procs to s3.
-aws s3 cp --recursive bin/user/common s3://$TAG/bin $PROFILE
+aws s3 cp --recursive bin/user s3://$TAG/bin $PROFILE

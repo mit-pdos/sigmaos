@@ -27,15 +27,14 @@ FROM base AS sigmauser-local
 RUN mkdir jail && \
     mkdir /tmp/sigmaclntd
 
+# ========== remote user image ==========
+FROM sigmauser-local AS sigmauser-remote
 # Copy uprocd, the entrypoint for this container, to the user image.
 COPY bin/kernel/uprocd bin/kernel/
 # Copy sigmaclntd to the user image.
 COPY bin/kernel/sigmaclntd bin/kernel/
 ## Copy rust trampoline to the user image.
 COPY bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/
-
-# ========== remote user image ==========
-FROM sigmauser-local AS sigmauser-remote
 
 # ========== local kernel image ==========
 FROM base AS sigmaos-local
@@ -45,6 +44,7 @@ ENV boot named
 ENV dbip x.x.x.x
 ENV mongoip x.x.x.x
 ENV overlays "false"
+ENV buildtag "local-build"
 ENV gvisor "false"
 # Install docker-cli
 RUN apk add --update docker openrc
@@ -54,10 +54,11 @@ ENV reserveMcpu "0"
 COPY create-net.sh /home/sigmaos/bin/kernel/create-net.sh
 # Make a directory for binaries shared between realms.
 RUN mkdir -p /home/sigmaos/bin/user/common
-CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${gvisor}"]
+CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${buildtag} ${gvisor}"]
 
 # ========== remote kernel image ==========
 FROM sigmaos-local as sigmaos-remote
+ENV buildtag "remote-build"
 # Copy linux bins
 COPY bin/linux /home/sigmaos/bin/linux/
 # Copy kernel bins
@@ -66,4 +67,4 @@ COPY bin/kernel /home/sigmaos/bin/kernel/
 COPY bin/user/* /home/sigmaos/bin/user/common
 # Copy named
 RUN cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
-CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${gvisor}"]
+CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${buildtag} ${gvisor}"]

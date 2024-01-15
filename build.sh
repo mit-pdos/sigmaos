@@ -57,6 +57,7 @@ fi
 
 TMP=/tmp/sigmaos
 BUILD_LOG=/tmp/sigmaos-build
+UPROCD_BIN=/tmp/sigmaos-uprocd-bin
 
 # tests uses hosts /tmp, which mounted in kernel container.
 mkdir -p $TMP
@@ -65,8 +66,12 @@ mkdir -p $BUILD_LOG
 # Make a dir to hold user proc build output
 ROOT=$(pwd)
 BIN=${ROOT}/bin
+KERNELBIN=${BIN}/kernel
 USRBIN=${BIN}/user
 mkdir -p $USRBIN
+# Clear the uprocd bin directory
+rm -rf $UPROCD_BIN
+mkdir -p $UPROCD_BIN
 
 # build and start db container
 if [ "${TARGET}" != "aws" ]; then
@@ -97,7 +102,7 @@ fi
 if [ -z "$buildercid" ]; then
   # Build builder
   echo "========== Build builder image =========="
-  DOCKER_BUILDKIT=1 docker build $BUILD_ARGS -f builder.Dockerfile -t sig-builder . 2>&1 | tee $BUILD_LOG/sig-builder.out
+  DOCKER_BUILDKIT=1 docker build --progress=plain -f builder.Dockerfile -t sig-builder . 2>&1 | tee $BUILD_LOG/sig-builder.out
   echo "========== Done building builder =========="
   # Start builder
   echo "========== Starting builder container =========="
@@ -115,7 +120,7 @@ fi
 if [ -z "$rsbuildercid" ]; then
   # Build builder
   echo "========== Build Rust builder image =========="
-  DOCKER_BUILDKIT=1 docker build $BUILD_ARGS -f rs-builder.Dockerfile -t sig-rs-builder . 2>&1 | tee $BUILD_LOG/sig-rs-builder.out
+  DOCKER_BUILDKIT=1 docker build --progress=plain -f rs-builder.Dockerfile -t sig-rs-builder . 2>&1 | tee $BUILD_LOG/sig-rs-builder.out
   echo "========== Done building Rust builder =========="
   # Start builder
   echo "========== Starting Rust builder container =========="
@@ -142,6 +147,14 @@ docker exec -it $buildercid \
   ./make.sh $BUILD_ARGS kernel \
   2>&1 | tee $BUILD_LOG/make-kernel.out
 echo "========== Done building kernel bins =========="
+
+echo "========== Copying kernel bins for uprocd =========="
+if [ "${TARGET}" == "local" ]; then
+  cp $KERNELBIN/uprocd $UPROCD_BIN/
+  cp $KERNELBIN/sigmaclntd $UPROCD_BIN/
+  cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
+fi
+echo "========== Done copying kernel bins for uproc =========="
 
 echo "========== Building user bins =========="
 docker exec -it $buildercid \

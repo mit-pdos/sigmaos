@@ -73,6 +73,41 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 		db.DPrintf(db.CONTAINER, "Running uprocd with Docker")
 	}
 
+	// Set up default mounts.
+	mnts := []mount.Mount{
+		// user bin dir.
+		mount.Mount{
+			Type:   mount.TypeBind,
+			Source: path.Join("/tmp/sigmaos-bin"),
+			Target: path.Join(sp.SIGMAHOME, "all-realm-bin"),
+			//					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
+			//					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
+			ReadOnly: true,
+		},
+		// perf output dir
+		mount.Mount{
+			Type:     mount.TypeBind,
+			Source:   perf.OUTPUT_PATH,
+			Target:   perf.OUTPUT_PATH,
+			ReadOnly: false,
+		},
+	}
+
+	// If developing locally, mount kernel bins (exec-uproc-rs, sigmaclntd, and
+	// uprocd) from host, since they are excluded from the container image
+	// during local dev in order to speed up build times.
+	if p.GetBuildTag() == sp.LOCAL_BUILD {
+		db.DPrintf(db.CONTAINER, "Mounting kernel bins to user container for local build")
+		mnts = append(mnts,
+			mount.Mount{
+				Type:     mount.TypeBind,
+				Source:   path.Join("/tmp/sigmaos-uprocd-bin"),
+				Target:   path.Join(sp.SIGMAHOME, "bin/kernel"),
+				ReadOnly: true,
+			},
+		)
+	}
+
 	resp, err := cli.ContainerCreate(ctx,
 		&container.Config{
 			Image:        image,
@@ -81,26 +116,9 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 			Env:          p.GetEnv(),
 			ExposedPorts: pset,
 		}, &container.HostConfig{
-			Runtime:     runtime,
-			NetworkMode: container.NetworkMode(netmode),
-			Mounts: []mount.Mount{
-				// user bin dir.
-				mount.Mount{
-					Type:   mount.TypeBind,
-					Source: path.Join("/tmp/sigmaos-bin"),
-					Target: path.Join(sp.SIGMAHOME, "all-realm-bin"),
-					//					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
-					//					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
-					ReadOnly: true,
-				},
-				// perf output dir
-				mount.Mount{
-					Type:     mount.TypeBind,
-					Source:   perf.OUTPUT_PATH,
-					Target:   perf.OUTPUT_PATH,
-					ReadOnly: false,
-				},
-			},
+			Runtime:      runtime,
+			NetworkMode:  container.NetworkMode(netmode),
+			Mounts:       mnts,
 			Privileged:   true,
 			PortBindings: pmap,
 			OomScoreAdj:  score,

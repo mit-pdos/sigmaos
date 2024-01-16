@@ -146,6 +146,8 @@ docker exec -it $buildercid \
   /usr/bin/time -f "Build time: %e sec" \
   ./make.sh $BUILD_ARGS kernel \
   2>&1 | tee $BUILD_LOG/make-kernel.out
+  # Copy named, which is also a user bin
+  cp $KERNELBIN/named $USRBIN/named
 echo "========== Done building kernel bins =========="
 
 echo "========== Building user bins =========="

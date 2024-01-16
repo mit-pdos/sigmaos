@@ -1,3 +1,4 @@
+// Package procclnt implements the proc API
 package procclnt
 
 import (

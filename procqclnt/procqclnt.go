@@ -1,3 +1,4 @@
+// Package proqqclnt implements the client-side of the procq scheduler
 package procqclnt
 
 import (

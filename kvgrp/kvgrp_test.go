@@ -46,7 +46,11 @@ func newTstate(t *testing.T, nrepl int, persist bool) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) Shutdown() {
+func (ts *Tstate) Shutdown(crash bool) {
+	if crash {
+		err := ts.gm.Crash()
+		assert.Nil(ts.T, err)
+	}
 	ts.Tstate.Shutdown()
 }
 
@@ -62,18 +66,18 @@ func TestStartStopRepl0(t *testing.T) {
 
 	_, err = ts.gm.StopGroup()
 	assert.Nil(ts.T, err, "Stop")
-	ts.Shutdown()
+	ts.Shutdown(false)
 }
 
 func TestStartStopReplN(t *testing.T) {
 	ts := newTstate(t, N_REPL, false)
 	_, err := ts.gm.StopGroup()
 	assert.Nil(ts.T, err, "Stop")
-	ts.Shutdown()
+	ts.Shutdown(false)
 }
 
 func (ts *Tstate) testRecover() {
-	ts.Shutdown()
+	ts.Shutdown(true)
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 	ts.Tstate = test.NewTstateAll(ts.T)
 	gms, err := groupmgr.Recover(ts.SigmaClnt)
@@ -86,7 +90,7 @@ func (ts *Tstate) testRecover() {
 	time.Sleep(1 * fsetcd.LeaseTTL * time.Second)
 	gms[0].StopGroup()
 	ts.RmDir(groupmgr.GRPMGRDIR)
-	ts.Shutdown()
+	ts.Shutdown(false)
 }
 
 func TestRestartRepl0(t *testing.T) {

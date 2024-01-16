@@ -280,7 +280,7 @@ func (ts *Tstate) checkJob() {
 	}
 }
 
-func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor bool) {
+func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux int, monitor bool) {
 	ts := newTstate(t)
 
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
@@ -297,7 +297,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}
-	for i := 0; i < crashprocd; i++ {
+	for i := 0; i < crashschedd; i++ {
 		// Sleep for a random time, then crash a server.
 		go ts.CrashServer(sp.SCHEDDREL, (i+1)*CRASHSRV, l1, crashchan)
 	}
@@ -306,10 +306,15 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 		// Sleep for a random time, then crash a server.
 		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l2, crashchan)
 	}
+	l3 := &sync.Mutex{}
+	for i := 0; i < crashprocq; i++ {
+		// Sleep for a random time, then crash a server.
+		go ts.CrashServer(sp.PROCQREL, (i+1)*CRASHSRV, l3, crashchan)
+	}
 
 	cm.WaitGroup()
 
-	for i := 0; i < crashprocd+crashux; i++ {
+	for i := 0; i < crashschedd+crashux; i++ {
 		<-crashchan
 	}
 
@@ -323,51 +328,65 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int, monitor 
 }
 
 func TestMRJob(t *testing.T) {
-	runN(t, 0, 0, 0, 0, true)
+	runN(t, 0, 0, 0, 0, 0, true)
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, CRASHTASK, 0, 0, 0, false)
+	runN(t, CRASHTASK, 0, 0, 0, 0, false)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, 0, CRASHCOORD, 0, 0, false)
+	runN(t, 0, CRASHCOORD, 0, 0, 0, false)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	runN(t, CRASHTASK, CRASHCOORD, 0, 0, false)
+	runN(t, CRASHTASK, CRASHCOORD, 0, 0, 0, false)
 }
 
 func TestCrashSchedd1(t *testing.T) {
-	runN(t, 0, 0, 1, 0, false)
+	runN(t, 0, 0, 1, 0, 0, false)
 }
 
 func TestCrashSchedd2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, N, 0, false)
+	runN(t, 0, 0, N, 0, 0, false)
 }
 
 func TestCrashScheddN(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N, 0, false)
+	runN(t, 0, 0, N, 0, 0, false)
+}
+
+func TestCrashProcq1(t *testing.T) {
+	runN(t, 0, 0, 0, 1, 0, false)
+}
+
+func TestCrashProcq2(t *testing.T) {
+	N := 2
+	runN(t, 0, 0, 0, N, 0, false)
+}
+
+func TestCrashProcqN(t *testing.T) {
+	N := 5
+	runN(t, 0, 0, 0, N, 0, false)
 }
 
 func TestCrashUx1(t *testing.T) {
 	N := 1
-	runN(t, 0, 0, 0, N, false)
+	runN(t, 0, 0, 0, 0, N, false)
 }
 
 func TestCrashUx2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, 0, N, false)
+	runN(t, 0, 0, 0, 0, N, false)
 }
 
 func TestCrashUx5(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, 0, N, false)
+	runN(t, 0, 0, 0, 0, N, false)
 }
 
-func TestCrashScheddUx5(t *testing.T) {
+func TestCrashScheddProcqUx5(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N, N, false)
+	runN(t, 0, 0, N, N, N, false)
 }

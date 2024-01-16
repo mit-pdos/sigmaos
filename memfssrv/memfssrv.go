@@ -136,7 +136,9 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode, ltype lockmap.Tlock) (fs.FsObj, *s
 
 func (mfs *MemFs) MemFsExit(status *proc.Status) error {
 	if mfs.pn != "" {
-		// XXX remove mount
+		if err := mfs.sc.RemoveMount(mfs.pn); err != nil {
+			db.DPrintf(db.ALWAYS, "RemoveMount %v err %v", mfs.pn, err)
+		}
 	}
 	return mfs.sc.ClntExit(status)
 }

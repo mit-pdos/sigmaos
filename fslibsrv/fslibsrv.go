@@ -13,33 +13,55 @@ import (
 	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
+	"sigmaos/path"
 	"sigmaos/protsrv"
+	"sigmaos/serr"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
-func postMount(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, path string) error {
-	if len(path) > 0 {
-		mnt := sp.NewMountServer(sesssrv.MyAddr())
-		db.DPrintf(db.BOOT, "Advertise %s at %v\n", path, mnt)
-		li, err := sc.LeaseClnt.AskLease(path, fsetcd.LeaseTTL)
-		if err != nil {
-			return err
-		}
-		li.KeepExtending()
-		if err := sc.PostMount(path, mnt, li.Lease()); err != nil {
-			return err
-		}
-	}
-	return nil
+// Return the pathname for posting in a directory of a service
+func mountPathName(pn string, mnt sp.Tmount) string {
+	return pn + "/" + mnt.Address().HostPort()
 }
 
-func NewSrv(root fs.Dir, path string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*sesssrv.SessSrv, error) {
+func postMount(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
+	mnt := sp.NewMountServer(sesssrv.MyAddr())
+	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
+
+	if path.EndSlash(pn) {
+		dir, err := sc.IsDir(pn)
+		if err != nil {
+			return "", err
+		}
+		if !dir {
+			return "", serr.NewErr(serr.TErrNotDir, pn)
+		}
+		pn = mountPathName(pn, mnt)
+	}
+
+	li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
+	if err != nil {
+		return "", err
+	}
+	li.KeepExtending()
+
+	if err := sc.MkMountFile(pn, mnt, li.Lease()); err != nil {
+		return "", err
+	}
+	return pn, nil
+}
+
+func NewSrv(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*sesssrv.SessSrv, string, error) {
 	et := ephemeralmap.NewEphemeralMap()
 	srv := sesssrv.NewSessSrv(sc.ProcEnv(), root, addr, protsrv.NewProtServer, nil, nil, et, fencefs)
-	if err := postMount(srv, sc, path); err != nil {
-		return nil, err
+	if len(pn) > 0 {
+		if mpn, err := postMount(srv, sc, pn); err != nil {
+			return nil, "", err
+		} else {
+			pn = mpn
+		}
 	}
-	return srv, nil
+	return srv, pn, nil
 }

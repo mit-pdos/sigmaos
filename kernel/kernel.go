@@ -149,17 +149,15 @@ func (k *Kernel) shutdown() {
 			}
 			return true
 		})
-		db.DPrintf(db.ALWAYS, "Shutdown children %v", cpids)
 		db.DPrintf(db.KERNEL, "Shutdown children %v", cpids)
 		for _, pid := range cpids {
 			for i := 0; i < MAX_EVICT_RETRIES; i++ {
 				err := k.svcs.svcMap[pid].Evict()
 				if err == nil || !serr.IsErrCode(err, serr.TErrUnreachable) {
-					db.DPrintf(db.KERNEL, "Evicted proc %v err %v", pid, err)
+					db.DPrintf(db.KERNEL, "Evicted proc %v %T err %v", pid, k.svcs.svcMap[pid], err)
 					break
 				}
 				if i == MAX_EVICT_RETRIES-1 {
-					db.DPrintf(db.ALWAYS, "Giving up trying to evict kernel proc! %v", pid)
 					db.DPrintf(db.KERNEL, "Giving up trying to evict kernel proc! %v", pid)
 				}
 				db.DPrintf(db.KERNEL, "Error unreachable evict kernel proc. Retrying.")

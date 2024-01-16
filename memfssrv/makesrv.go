@@ -42,11 +42,11 @@ func NewMemFsPortClntFence(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, f
 }
 
 func NewMemFsRootPortClntFence(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
-	srv, err := fslibsrv.NewSrv(root, pn, addr, sc, fencefs)
+	srv, mpn, err := fslibsrv.NewSrv(root, pn, addr, sc, fencefs)
 	if err != nil {
 		return nil, err
 	}
-	mfs := NewMemFsSrv(pn, srv, sc, nil)
+	mfs := NewMemFsSrv(mpn, srv, sc, nil)
 	return mfs, nil
 }
 

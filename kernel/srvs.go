@@ -193,7 +193,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		addr := sp.NewTaddr(sp.LOCALHOST, pm.HostPort)
 		mnt := sp.NewMountServer(addr)
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
-		if err := k.PostMount(pn, mnt, sp.NoLeaseId); err != nil {
+		if err := k.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
 			return nil, err
 		}
 		db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s, %v\n", realm, ptype, pn, pm)

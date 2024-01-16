@@ -1,18 +1,11 @@
 package fslib
 
 import (
-	"fmt"
-
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
-
-// Return the pathname for posting in a directory of a service
-func MountPathName(pn string, mnt sp.Tmount) string {
-	return pn + "/" + mnt.Address().HostPort()
-}
 
 func (fsl *FsLib) MkMountFile(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	b, err := mnt.Marshal()
@@ -26,29 +19,9 @@ func (fsl *FsLib) MkMountFile(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
 	return nil
 }
 
-func (fsl *FsLib) postInServiceDir(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
-	p := MountPathName(pn, mnt)
-	dir, err := fsl.IsDir(pn)
-	if err != nil {
-		return err
-	}
-	if !dir {
-		return fmt.Errorf("Not a directory")
-	}
-	return fsl.MkMountFile(p, mnt, lid)
-}
-
 func (fsl *FsLib) RemoveMount(pn string) error {
 	db.DPrintf(db.ALWAYS, "RemoveMount %v\n", pn)
 	return fsl.Remove(pn)
-}
-
-func (fsl *FsLib) PostMount(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
-	if path.EndSlash(pn) {
-		return fsl.postInServiceDir(pn, mnt, lid)
-	} else {
-		return fsl.MkMountFile(pn, mnt, lid)
-	}
 }
 
 // Return pn, replacing first ~local/~any with a mount point for a specific

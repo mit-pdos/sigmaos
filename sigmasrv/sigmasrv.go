@@ -200,7 +200,7 @@ func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 	}
 	db.DPrintf(db.SIGMASRV, "cpumon done %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	ssrv.MemFs.StopServing()
-	db.DPrintf(db.SIGMASRV, "StopServing %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
+	db.DPrintf(db.ALWAYS, "StopServing %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	return ssrv.MemFs.MemFsExit(proc.NewStatus(proc.StatusEvicted))
 }
 

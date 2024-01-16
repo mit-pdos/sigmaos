@@ -1,6 +1,6 @@
 package sigmap
 
-// if name ends in "/", it is the union directory for that service
+// if name ends in "/", it is a directory with mount files for that service
 const (
 	KNAMED        = "knamed"
 	NAME          = "name"

@@ -314,7 +314,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux 
 
 	cm.WaitGroup()
 
-	for i := 0; i < crashschedd+crashux; i++ {
+	for i := 0; i < crashschedd+crashux+crashprocq; i++ {
 		<-crashchan
 	}
 

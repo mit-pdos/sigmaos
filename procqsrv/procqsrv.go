@@ -98,13 +98,14 @@ func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.Enque
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCQ, "[%v] Enqueue %v", p.GetRealm(), p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv time %v", p.GetPid(), time.Since(p.GetSpawnTime()))
-	ch := pq.addProc(p)
+	ch := make(chan string)
+	pq.addProc(p, ch)
 	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
 	res.KernelID = <-ch
 	return nil
 }
 
-func (pq *ProcQ) addProc(p *proc.Proc) chan string {
+func (pq *ProcQ) addProc(p *proc.Proc, kidch chan string) {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 
@@ -115,10 +116,9 @@ func (pq *ProcQ) addProc(p *proc.Proc) chan string {
 	// Get the queue for the realm.
 	q := pq.getRealmQueue(p.GetRealm())
 	// Enqueue the proc according to its realm.
-	ch := q.Enqueue(p)
+	q.Enqueue(p, kidch)
 	// Broadcast that a new proc may be runnable.
 	pq.cond.Broadcast()
-	return ch
 }
 
 func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS time.Time) {
@@ -130,7 +130,9 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 	// parent could ask schedd about the proc before the schedd learns about the
 	// proc.
 	if err := pq.scheddclnt.ForceRun(kernelID, true, p); err != nil {
-		db.DFatalf("Error ForceRun proc: %v", err)
+		db.DPrintf(db.PROCQ_ERR, "Error ForceRun proc on kid %v: %v", kernelID, err)
+		pq.addProc(p, ch)
+		return
 	}
 	db.DPrintf(db.PROCQ, "Done runProc on kid %v", kernelID)
 	ch <- kernelID

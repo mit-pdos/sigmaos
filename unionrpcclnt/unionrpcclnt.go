@@ -45,6 +45,9 @@ func (urpcc *UnionRPCClnt) Nsrv() (int, error) {
 }
 
 func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
+	db.DPrintf(urpcc.lSelector, "GetClnt for %v", srvID)
+	defer db.DPrintf(urpcc.lSelector, "Done GetClnt for %v", srvID)
+
 	urpcc.Lock()
 	defer urpcc.Unlock()
 
@@ -64,6 +67,9 @@ func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
 
 // Update the list of active procds.
 func (urpcc *UnionRPCClnt) UpdateSrvs(force bool) {
+	db.DPrintf(urpcc.lSelector, "UpdateSrvs")
+	defer db.DPrintf(urpcc.lSelector, "Done UpdateSrvs")
+
 	urpcc.Lock()
 	defer urpcc.Unlock()
 
@@ -97,6 +103,9 @@ func (urpcc *UnionRPCClnt) updateSrvsL(srvs []string) {
 }
 
 func (urpcc *UnionRPCClnt) UnregisterSrv(srvID string) {
+	db.DPrintf(urpcc.lSelector, "UnregisterSrv %v", srvID)
+	defer db.DPrintf(urpcc.lSelector, "Done UnregisterSrv")
+
 	urpcc.Lock()
 	defer urpcc.Unlock()
 
@@ -111,6 +120,13 @@ func (urpcc *UnionRPCClnt) UnregisterSrv(srvID string) {
 
 // Get the next server, round-robin.
 func (urpcc *UnionRPCClnt) NextSrv() (string, error) {
+	var srvID string
+
+	db.DPrintf(urpcc.lSelector, "NextSrv")
+	defer func(sid *string) {
+		db.DPrintf(urpcc.lSelector, "Done NextSrv %v", *sid)
+	}(&srvID)
+
 	urpcc.Lock()
 	defer urpcc.Unlock()
 
@@ -118,20 +134,27 @@ func (urpcc *UnionRPCClnt) NextSrv() (string, error) {
 		return "", serr.NewErr(serr.TErrNotfound, "no srvs to spawn on")
 	}
 
-	srvID := urpcc.srvs[urpcc.rrOffset%len(urpcc.srvs)]
+	srvID = urpcc.srvs[urpcc.rrOffset%len(urpcc.srvs)]
 	urpcc.rrOffset++
 	return srvID, nil
 }
 
 // Get the next server, randomly.
 func (urpcc *UnionRPCClnt) RandomSrv() (string, error) {
+	var srvID string
+
+	db.DPrintf(urpcc.lSelector, "RandomSrv")
+	defer func(sid *string) {
+		db.DPrintf(urpcc.lSelector, "Done RandomSrv %v", *sid)
+	}(&srvID)
+
 	urpcc.Lock()
 	defer urpcc.Unlock()
 
 	if len(urpcc.srvs) == 0 {
 		return "", serr.NewErr(serr.TErrNotfound, "no srvs to spawn on")
 	}
-	srvID := urpcc.srvs[rand.Int64(int64(len(urpcc.srvs)))]
+	srvID = urpcc.srvs[rand.Int64(int64(len(urpcc.srvs)))]
 	return srvID, nil
 }
 

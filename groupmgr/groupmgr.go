@@ -173,9 +173,11 @@ func (m *member) spawn() error {
 		db.DPrintf(db.GROUPMGR, "Error Spawn pid %v err %v", p.GetPid(), err)
 		return err
 	}
+	db.DPrintf(db.GROUPMGR, "WaitStart p %v", p)
 	if err := m.WaitStart(p.GetPid()); err != nil {
 		return err
 	}
+	db.DPrintf(db.GROUPMGR, "Done WaitStart p %v", p)
 	m.pid = p.GetPid()
 	return nil
 }
@@ -226,7 +228,7 @@ func (gm *GroupMgr) manager(done chan *procret, n int) {
 			gstatus = append(gstatus, pr.status)
 			n--
 		} else { // restart member i
-			db.DPrintf(db.GROUPMGR, "%v start %v\n", gm.members[pr.member].Program, pr)
+			db.DPrintf(db.GROUPMGR, "%v: start %v\n", gm.members[pr.member].Program, pr)
 			gm.start(pr.member, done)
 		}
 	}
@@ -245,7 +247,10 @@ func (gm *GroupMgr) Crash() error {
 }
 
 func (gm *GroupMgr) WaitGroup() []*proc.Status {
-	return <-gm.ch
+	db.DPrintf(db.GROUPMGR, "GroupMgr Wait Group")
+	statuses := <-gm.ch
+	db.DPrintf(db.GROUPMGR, "Done GroupMgr Wait Group")
+	return statuses
 }
 
 // Start separate go routine to evict each member, because members may

@@ -164,9 +164,15 @@ if [[ $APPS == "--apps" ]]; then
        	go test $VERB sigmaos/socialnetwork -start $GVISOR $SIGMACLNTD -run TestCompose
         cleanup
     else
-        for T in imgresized mr kv hotel socialnetwork www; do
+        for T in imgresized mr hotel socialnetwork www; do
             ./start-db.sh
             go test -timeout 20m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD
+            cleanup
+        done
+        # On machines with many cores, kv tests may take a long time.
+        for T in kv; do
+            ./start-db.sh
+            go test -timeout 50m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD
             cleanup
         done
     fi

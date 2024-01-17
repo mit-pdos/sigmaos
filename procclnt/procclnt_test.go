@@ -445,6 +445,7 @@ func TestEarlyExit1(t *testing.T) {
 func TestEarlyExitN(t *testing.T) {
 	ts := test.NewTstateAll(t)
 	nProcs := 50 // 500
+	const MAX_RETRY = 10
 	var done sync.WaitGroup
 	done.Add(nProcs)
 
@@ -460,12 +461,20 @@ func TestEarlyExitN(t *testing.T) {
 			assert.Nil(t, err, "WaitExit err: %v", err)
 			assert.True(t, status != nil && status.IsStatusOK(), "WaitExit: %v", status)
 
-			time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
+			var gotfile bool
+			var contentsCorrect bool
+			var b []byte
+			var err2 error
+			for i := 0; i < MAX_RETRY && (!gotfile || !contentsCorrect); i++ {
+				b, err2 = ts.GetFile("name/" + pid1.String() + "_out")
+				gotfile = gotfile || err2 == nil
+				contentsCorrect = contentsCorrect || string(b) == "hello"
+				time.Sleep(time.Second)
+			}
 
 			// Child should have exited
-			b, err := ts.GetFile("name/" + pid1.String() + "_out")
-			assert.Nil(t, err, "GetFile")
-			assert.Equal(t, string(b), "hello", "Output")
+			assert.True(t, gotfile, "GetFile failed: %v", err2)
+			assert.True(t, contentsCorrect, "Incorrect file contents: %v", string(b))
 
 			// .. and cleaned up
 			_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))

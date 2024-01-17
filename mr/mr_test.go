@@ -312,18 +312,24 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux 
 		go ts.CrashServer(sp.PROCQREL, (i+1)*CRASHSRV, l3, crashchan)
 	}
 
+	db.DPrintf(db.TEST, "WaitGroup")
 	cm.WaitGroup()
+	db.DPrintf(db.TEST, "Done WaitGroup")
 
 	for i := 0; i < crashschedd+crashux+crashprocq; i++ {
 		<-crashchan
 	}
 
+	db.DPrintf(db.TEST, "Check Job")
 	ts.checkJob()
+	db.DPrintf(db.TEST, "Done check Job")
 
 	err = mr.PrintMRStats(ts.FsLib, ts.job)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
+	db.DPrintf(db.TEST, "Cleanup MR outputs")
 	mr.CleanupMROutputs(ts.FsLib, job.Output, job.Intermediate)
+	db.DPrintf(db.TEST, "Done cleanup MR outputs")
 	ts.Shutdown()
 }
 

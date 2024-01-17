@@ -85,7 +85,8 @@ func (lcs *LCSched) Enqueue(ctx fs.CtxI, req pqproto.EnqueueRequest, res *pqprot
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.LCSCHED, "[%v] Enqueued %v", p.GetRealm(), p)
 
-	ch := lcs.addProc(p)
+	ch := make(chan string)
+	lcs.addProc(p, ch)
 	res.KernelID = <-ch
 	return nil
 }
@@ -140,7 +141,7 @@ func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Re
 	if err := lcs.scheddclnt.ForceRun(kernelID, false, p); err != nil {
 		db.DPrintf(db.ALWAYS, "Schedd.Run %v err %v", kernelID, err)
 		// Re-enqueue the proc
-		lcs.addProc(p)
+		lcs.addProc(p, ch)
 		return
 	}
 	// Notify the spawner that a schedd has been chosen.
@@ -166,7 +167,7 @@ func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
 	lcs.cond.Broadcast()
 }
 
-func (lcs *LCSched) addProc(p *proc.Proc) chan string {
+func (lcs *LCSched) addProc(p *proc.Proc, ch chan string) {
 	lcs.mu.Lock()
 	defer lcs.mu.Unlock()
 
@@ -175,10 +176,9 @@ func (lcs *LCSched) addProc(p *proc.Proc) chan string {
 		q = lcs.addRealmQueueL(p.GetRealm())
 	}
 	// Enqueue the proc according to its realm
-	ch := q.Enqueue(p)
+	q.Enqueue(p, ch)
 	// Signal that a new proc may be runnable.
 	lcs.cond.Signal()
-	return ch
 }
 
 // Caller must hold lock.

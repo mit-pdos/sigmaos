@@ -17,10 +17,10 @@ type Qitem struct {
 	kidch chan string
 }
 
-func newQitem(p *proc.Proc) *Qitem {
+func newQitem(p *proc.Proc, kidch chan string) *Qitem {
 	return &Qitem{
 		p:     p,
-		kidch: make(chan string),
+		kidch: kidch,
 	}
 }
 
@@ -37,14 +37,13 @@ func newQueue() *Queue {
 	}
 }
 
-func (q *Queue) Enqueue(p *proc.Proc) chan string {
+func (q *Queue) Enqueue(p *proc.Proc, kidch chan string) {
 	q.Lock()
 	defer q.Unlock()
 
 	q.pmap[p.GetPid()] = p
-	qi := newQitem(p)
+	qi := newQitem(p, kidch)
 	q.procs = append(q.procs, qi)
-	return qi.kidch
 }
 
 // Dequeue a proc with certain resource requirements.

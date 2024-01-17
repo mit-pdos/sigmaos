@@ -110,7 +110,7 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in reader writer stats fslib semclnt electclnt; do
-        go test $VERB$ -timeout 20m sigmaos/$T -start $SIGMACLNTD
+        go test $VERB -timeout 20m sigmaos/$T -start $SIGMACLNTD
         cleanup
     done
 
@@ -126,7 +126,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in named ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt; do
+    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt; do
         go test $VERB sigmaos/$T -start $GVISOR  $SIGMACLNTD
         cleanup
     done

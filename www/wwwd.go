@@ -15,7 +15,6 @@ import (
 	"sigmaos/netsigma"
 	"sigmaos/pipe"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

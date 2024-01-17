@@ -210,9 +210,9 @@ else
 fi
 
 # Build proxy for host
-echo "========== Building linux bins =========="
+echo "========== Building proxy =========="
 /usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL proxy 
-echo "========== Done building linux bins =========="
+echo "========== Done building proxy =========="
 
 if ! [ -z "$TAG" ]; then
   echo "========== Pushing container images to DockerHub =========="

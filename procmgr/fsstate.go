@@ -16,6 +16,7 @@ func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 	if p.IsPrivileged() {
 		if err := mgr.rootsc.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), proc.HSCHEDD); err != nil {
 			db.DPrintf(db.PROCMGR_ERR, "Err procmgr MakeProcDir: %v\n", err)
+			db.DFatalf("Err MakeProcDir: %v", err)
 		}
 	} else {
 		mgr.Lock()

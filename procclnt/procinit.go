@@ -4,10 +4,13 @@ import (
 	"path"
 	"time"
 
+	"runtime/debug"
+
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/rpc"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -53,8 +56,14 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) (*ProcClnt, 
 	}
 	clnt := newProcClnt(fsl, pid, true)
 	if err := clnt.MakeProcDir(pid, fsl.ProcEnv().ProcDir, false, proc.HSCHEDD); err != nil {
-		db.DPrintf(db.ALWAYS, "NewProcClntInit: MakeProcDir err %v", err)
-		// ignore error; the initial process may make several fslibs,
+		// If the error is not ErrExists, bail out.
+		if !serr.IsErrCode(err, serr.TErrExists) {
+			debug.PrintStack()
+			db.DFatalf("Error MakeProcDir mkdir pid %v procdir %v err %v stack\n%v", pid, fsl.ProcEnv().ProcDir, err, string(debug.Stack()))
+			return nil, err
+		}
+		db.DPrintf(db.PROCCLNT_ERR, "NewProcClntInit: MakeProcDir err %v", err)
+		// ignore ErrExists: the initial test process may make several procclnts,
 		// which each need to add mount point, but already has created
 		// ProcDir.
 		return clnt, nil

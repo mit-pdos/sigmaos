@@ -2,24 +2,17 @@ package procclnt
 
 import (
 	"path"
-	"runtime/debug"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
-	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
 // For documentation on dir structure, see sigmaos/proc/dir.go
-
 func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool, how proc.Thow) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {
-		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			debug.PrintStack()
-			db.DFatalf("MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
-		}
 		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
 	}

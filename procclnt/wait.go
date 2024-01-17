@@ -12,8 +12,8 @@ import (
 
 // Wait for an event. Method must be one of "Exit", "Evict", or "Start"
 func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow) (*proc.Status, error) {
-	db.DPrintf(db.PROCCLNT, "Wait%v %v how %v", method, pid, how)
-	defer db.DPrintf(db.PROCCLNT, "Wait%v done %v", method, pid)
+	db.DPrintf(db.PROCCLNT, "Wait%v %v how %v kid %v", method, pid, how, kernelID)
+	defer db.DPrintf(db.PROCCLNT, "Wait%v done %v, kid %v", method, pid, kernelID)
 
 	var status *proc.Status
 	// If spawned via schedd, wait via RPC.

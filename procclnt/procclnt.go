@@ -89,6 +89,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 	p.InheritParentProcEnv(clnt.ProcEnv())
 
 	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v", kernelId, p)
+	defer db.DPrintf(db.PROCCLNT, "Spawn done [%v]: %v", kernelId, p)
 	if clnt.hasExited() != "" {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn error called after Exited")
 		db.DFatalf("Spawn error called after Exited")
@@ -100,7 +101,9 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 		clnt.cs.Spawned(p.GetPid())
 		// Transparently spawn in a background thread.
 		go func() {
+			db.DPrintf(db.PROCCLNT, "pre spawnRetry %v %v", kernelId, p)
 			spawnedKernelID, err := clnt.spawnRetry(kernelId, p)
+			db.DPrintf(db.PROCCLNT, "spawned on kernelID %v err %v proc %v", spawnedKernelID, err, p)
 			clnt.cs.Started(p.GetPid(), spawnedKernelID, err)
 			if err != nil {
 				clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
@@ -191,6 +194,7 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 	if err != nil {
 		return fmt.Errorf("Unknown kernel ID %v", err)
 	}
+	db.DPrintf(db.PROCCLNT, "WaitStart %v got kid %v", pid, kernelID)
 	_, err = clnt.wait(scheddclnt.START, pid, kernelID, proc.START_SEM, how)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Err WaitStart %v %v", pid, err)

@@ -110,7 +110,7 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in reader writer stats fslib semclnt electclnt; do
-        go test $VERB$ -timeout 20m sigmaos/$T -start $SIGMACLNTD
+        go test $VERB -timeout 20m sigmaos/$T -start $SIGMACLNTD
         cleanup
     done
 

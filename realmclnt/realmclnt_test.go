@@ -513,6 +513,10 @@ func TestSpinPerfDoubleSlowdown(t *testing.T) {
 }
 
 func TestSpinPerfDoubleBEandLC(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 
@@ -551,6 +555,10 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 }
 
 func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	ts2 := test.NewRealmTstate(rootts, REALM2)

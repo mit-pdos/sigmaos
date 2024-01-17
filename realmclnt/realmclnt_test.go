@@ -479,6 +479,9 @@ func targetTime(baseline time.Duration, tslowdown float64) time.Duration {
 	return time.Duration(float64(baseline) * tslowdown)
 }
 
+// XXX May fail on Linux systems (especially when they have multiple NUMA
+// nodes), due to a linux scheduler bug. See:
+// https://www.usenix.org/system/files/login/articles/login_winter16_02_lozi.pdf
 func TestSpinPerfDoubleSlowdown(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)

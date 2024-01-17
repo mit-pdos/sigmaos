@@ -36,7 +36,10 @@ func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // XXX deduplicate with Spawn()
 // XXX deduplicate with NewProcClnt()
 func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) (*ProcClnt, error) {
-	MountPids(fsl)
+	if err := MountPids(fsl); err != nil {
+		db.DFatalf("error MountPids: %v", err)
+		return nil, err
+	}
 	// XXX needed?
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", sp.SCHEDDREL, sp.SCHEDDREL)
 	if err := fsl.NewRootMount(sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
@@ -60,6 +63,5 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) (*ProcClnt, 
 }
 
 func MountPids(fsl *fslib.FsLib) error {
-	fsl.NewRootMount(sp.KPIDS, sp.KPIDSREL)
-	return nil
+	return fsl.NewRootMount(sp.KPIDS, sp.KPIDSREL)
 }

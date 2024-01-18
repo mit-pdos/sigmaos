@@ -50,7 +50,7 @@ func RunUprocSrv(kernelId string, up string) error {
 		if err != nil {
 			db.DFatalf("Error parse port: %v", err)
 		}
-		addr := sp.NewTaddrRealm(pe.GetLocalIP(), port, pe.GetNet())
+		addr := sp.NewTaddrRealm(sp.NO_HOST, port, pe.GetNet())
 
 		// The kernel will advertise the server, so pass "" as pn.
 		ssrv, err = sigmasrv.NewSigmaSrvAddr("", addr, pe, ups)

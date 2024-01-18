@@ -9,40 +9,9 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-
-	"sigmaos/rand"
 )
 
-type Tfid uint32
-type Tpath uint64
-type Tiounit uint32
-type Tperm uint32
-type Toffset uint64
-type Tsize uint32
-type Tlength uint64
-type Tgid uint32
-type Trealm string
-type Tpid string
-type Tuname string
-type TclntId uint64
-type TleaseId uint64
-type Tttl uint64
-type Thost string
-type Tport uint32
-
 const ROOTREALM Trealm = "rootrealm"
-
-func GenPid(program string) Tpid {
-	return Tpid(program + "-" + rand.String(8))
-}
-
-func (r Trealm) String() string {
-	return string(r)
-}
-
-func (pid Tpid) String() string {
-	return string(pid)
-}
 
 func (fid Tfid) String() string {
 	if fid == NoFid {

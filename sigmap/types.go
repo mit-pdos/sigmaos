@@ -16,3 +16,10 @@ type TleaseId uint64
 type Tttl uint64
 type Thost string
 type Tport uint32
+
+type Qtype uint32
+type TQversion uint32
+
+type Tmode uint32
+
+type Taddrs []*Taddr

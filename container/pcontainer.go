@@ -143,7 +143,7 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 
 	pm := port.NewPortMap(json.NetworkSettings.NetworkSettingsBase.Ports, r)
 
-	db.DPrintf(db.CONTAINER, "network setting: ip %v portmap %v\n", ip, pm)
+	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v portmap %v", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks, pm)
 	cgroupPath := path.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
 	c := &Container{
 		PortMap:    pm,

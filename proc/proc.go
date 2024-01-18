@@ -113,6 +113,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Net = parentPE.Net
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
+	p.ProcEnvProto.IDStr = parentPE.IDStr
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {

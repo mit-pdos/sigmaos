@@ -100,3 +100,8 @@ const (
 	LOCALHOST Thost = "127.0.0.1"
 	NO_PORT   Tport = 0
 )
+
+// ID consts
+const (
+	ROOT Tidentity = "ROOT"
+)

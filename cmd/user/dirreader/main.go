@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	db "sigmaos/debug"
@@ -25,7 +24,7 @@ func main() {
 	if err != nil {
 		sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	} else {
-		log.Printf("%v sts %v\n", os.Args[1], sp.Names(sts))
+		db.DPrintf(db.ALWAYS, "%v sts %v", os.Args[1], sp.Names(sts))
 		sc.ClntExit(proc.NewStatusInfo(proc.StatusOK, "GetDir", sp.Names(sts)))
 	}
 	os.Exit(0)

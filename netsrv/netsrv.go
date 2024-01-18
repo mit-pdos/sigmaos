@@ -32,6 +32,7 @@ type NetServer struct {
 func NewNetServer(pcfg *proc.ProcEnv, ss sps.SessServer, addr *sp.Taddr, m WriteF, u ReadF) *NetServer {
 	srv := &NetServer{pcfg: pcfg, sesssrv: ss, writefcall: m, readframe: u}
 
+	db.DPrintf(db.PORT, "Listen addr %v", addr.HostPort())
 	// Create and start the main server listener
 	var l net.Listener
 	l, err := net.Listen("tcp", addr.HostPort())

@@ -169,7 +169,6 @@ echo "========== Done building Rust bins =========="
 
 echo "========== Copying kernel bins for uprocd =========="
 if [ "${TARGET}" == "local" ]; then
-  echo $KERNELBIN
   sudo cp $ROOT/create-net.sh $KERNELBIN/
   cp $KERNELBIN/uprocd $UPROCD_BIN/
   cp $KERNELBIN/sigmaclntd $UPROCD_BIN/

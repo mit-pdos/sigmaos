@@ -2,7 +2,6 @@ package leaderclnt
 
 import (
 	"strconv"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -49,7 +48,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 
 		l.ReleaseLeadership()
 
-		time.Sleep(1 * time.Second)
+		<-ch
 
 		db.DPrintf(db.TEST, "Try to write..\n")
 
@@ -68,7 +67,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		fsl2.Close()
 	}()
 
-	// Wait until other thread is leader
+	// Wait until other thread is leader and resigns
 	<-ch
 
 	db.DPrintf(db.TEST, "Become leader..\n")
@@ -89,7 +88,10 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		assert.Nil(ts.T, err)
 	}
 
-	db.DPrintf(db.TEST, "Let old leader run..\n")
+	// let old leader run
+	ch <- true
+
+	db.DPrintf(db.TEST, "Wait until old leader is done..\n")
 
 	<-ch
 

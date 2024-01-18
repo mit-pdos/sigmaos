@@ -177,10 +177,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		return nil, err
 	}
 	if k.Param.Overlays {
-		realm := args[0]
-		ptype := args[1]
-
-		pn := path.Join(sp.SCHEDD, args[2], sp.UPROCDREL, s.GetProc().GetPid().String())
+		pn := path.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
 
 		// container's first port is for uprocd
 		pm, err := s.GetContainer().AllocFirst()
@@ -196,7 +193,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		if err := k.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
 			return nil, err
 		}
-		db.DPrintf(db.KERNEL, "bootUprocd: started %v %s at %s, %v\n", realm, ptype, pn, pm)
+		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s", pn, pm)
 	}
 
 	return s, nil

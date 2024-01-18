@@ -2,7 +2,6 @@ package realmclnt_test
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -389,7 +388,7 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	pn = pn + "/"
 
 	status := spawnDirreader(ts1, pn)
-	assert.True(t, status.IsStatusOK())
+	assert.True(t, status.IsStatusOK(), "Wrong status (not OK): %v", status)
 
 	cm.Stop()
 
@@ -437,7 +436,7 @@ func TestRealmNetIsolationFail(t *testing.T) {
 		assert.True(t, status.IsStatusErr(), "Status is: %v", status)
 	} else {
 		assert.True(t, status.IsStatusOK())
-		log.Printf("status %v %v\n", status.Msg(), status.Data())
+		db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
 	}
 
 	cm.Stop()

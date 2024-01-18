@@ -50,8 +50,6 @@ ENV gvisor "false"
 RUN apk add --update docker openrc
 ENV reserveMcpu "0"
 
-# Copy script needed to set up network
-COPY create-net.sh /home/sigmaos/bin/kernel/create-net.sh
 # Make a directory for binaries shared between realms.
 RUN mkdir -p /home/sigmaos/bin/user/common
 CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${buildtag} ${gvisor}"]
@@ -63,6 +61,8 @@ ENV buildtag "remote-build"
 COPY bin/linux /home/sigmaos/bin/linux/
 # Copy kernel bins
 COPY bin/kernel /home/sigmaos/bin/kernel/
+# Copy script needed to set up network
+COPY create-net.sh /home/sigmaos/bin/kernel/create-net.sh
 # Copy named
 RUN cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
 CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${buildtag} ${gvisor}"]

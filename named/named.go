@@ -159,7 +159,7 @@ func Run(args []string) error {
 }
 
 func (nd *Named) newSrv() (sp.Tmount, error) {
-	ip := nd.ProcEnv().GetLocalIP()
+	ip := sp.NO_HOST
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
 	var pi portclnt.PortInfo
@@ -171,7 +171,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 			return sp.NullMount(), err
 		}
 		pi = pi0
-		addr = sp.NewTaddr(ip, sp.NO_PORT)
+		addr = sp.NewTaddr(ip, pi.Pb.RealmPort)
 	}
 
 	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)

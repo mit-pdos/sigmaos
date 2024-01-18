@@ -36,11 +36,11 @@ func (mnt *Tmount) SetAddr(addr Taddrs) {
 	mnt.Addr = addr
 }
 
-func (mnt Tmount) Marshal() ([]byte, error) {
-	return proto.Marshal(&mnt)
+func (mnt *Tmount) Marshal() ([]byte, error) {
+	return proto.Marshal(mnt)
 }
 
-func (mnt Tmount) Address() *Taddr {
+func (mnt *Tmount) Address() *Taddr {
 	return mnt.Addr[0]
 }
 
@@ -53,6 +53,6 @@ func NewMountServer(addr *Taddr) Tmount {
 	return NewMountService(addrs)
 }
 
-func (mnt Tmount) TargetHostPort() (Thost, Tport) {
+func (mnt *Tmount) TargetHostPort() (Thost, Tport) {
 	return mnt.Addr[0].GetHost(), mnt.Addr[0].GetPort()
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 
@@ -24,6 +25,7 @@ const (
 
 type Container struct {
 	*port.PortMap
+	overlays     bool
 	ctx          context.Context
 	cli          *client.Client
 	container    string
@@ -68,6 +70,12 @@ func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
 			}
 		}
 		db.DPrintf(db.SPAWN_LAT, "Get/Set sched attr %v", time.Since(s))
+	}
+	if c.overlays && realm != sp.ROOTREALM {
+		// TODO: Add to net
+		if err := c.cli.NetworkConnect(c.ctx, "sigmanet-"+realm.String(), c.container, &network.EndpointSettings{}); err != nil {
+			db.DFatalf("Error NetworkConnect: %v", err)
+		}
 	}
 	return nil
 }

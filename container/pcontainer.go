@@ -146,6 +146,7 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v portmap %v", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks, pm)
 	cgroupPath := path.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
 	c := &Container{
+		overlays:   p.GetProcEnv().GetOverlays(),
 		PortMap:    pm,
 		ctx:        ctx,
 		cli:        cli,

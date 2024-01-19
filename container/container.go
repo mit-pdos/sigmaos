@@ -72,10 +72,13 @@ func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
 		db.DPrintf(db.SPAWN_LAT, "Get/Set sched attr %v", time.Since(s))
 	}
 	if c.overlays && realm != sp.ROOTREALM {
-		// TODO: Add to net
-		if err := c.cli.NetworkConnect(c.ctx, "sigmanet-"+realm.String(), c.container, &network.EndpointSettings{}); err != nil {
+		s := time.Now()
+		netns := "sigmanet-" + realm.String()
+		db.DPrintf(db.CONTAINER, "Add container %v to net %v", c.container, netns)
+		if err := c.cli.NetworkConnect(c.ctx, netns, c.container, &network.EndpointSettings{}); err != nil {
 			db.DFatalf("Error NetworkConnect: %v", err)
 		}
+		db.DPrintf(db.SPAWN_LAT, "Add to overlay network %v", time.Since(s))
 	}
 	return nil
 }

@@ -126,12 +126,12 @@ func NewBootProcEnv(uname sp.Tuname, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.T
 	return pe
 }
 
-func NewTestProcEnv(realm sp.Trealm, etcdIP string, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool) *ProcEnv {
+func NewTestProcEnv(realm sp.Trealm, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetUname("test")
 	pe.SetPID(sp.GenPid("test"))
 	pe.SetRealm(realm, overlays)
-	pe.EtcdIP = etcdIP
+	pe.EtcdIP = string(etcdIP)
 	pe.InnerContainerIPStr = innerIP.String()
 	pe.OuterContainerIPStr = outerIP.String()
 	pe.BuildTag = buildTag

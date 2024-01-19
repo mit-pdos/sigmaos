@@ -133,7 +133,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 			assert.Nil(ts.Ts.T, err, "Err split host port %v: %v", ji.k8ssrvaddr, err)
 			port, err := strconv.Atoi(p)
 			assert.Nil(ts.Ts.T, err, "Err parse port %v: %v", p, err)
-			addr := sp.NewTaddrRealm(sp.Thost(h), sp.Tport(port), ts.ProcEnv().GetNet())
+			addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port), ts.ProcEnv().GetNet())
 			mnt := sp.NewMountService([]*sp.Taddr{addr})
 			if err = ts.MkMountFile(p, mnt, sp.NoLeaseId); err != nil {
 				db.DFatalf("MkMountFile %v", err)

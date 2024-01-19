@@ -253,7 +253,7 @@ func TestReadSymlink(t *testing.T) {
 	mnt1, err := ts.ReadMount(fn)
 	assert.Nil(t, err, "ReadMount: %v", err)
 
-	assert.Equal(t, mnt.Addr[0].GetHost(), mnt1.Addr[0].GetHost())
+	assert.Equal(t, mnt.Addr[0].GetIP(), mnt1.Addr[0].GetIP())
 	assert.Equal(t, mnt.Addr[0].GetPort(), mnt1.Addr[0].GetPort())
 	assert.Equal(t, mnt.Addr[0].GetNetNS(), mnt1.Addr[0].GetNetNS())
 
@@ -994,7 +994,7 @@ func newMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 	mnt, left, err := ts.CopyMount(pathname)
 	assert.Nil(t, err)
 	mnt.SetTree(left)
-	h, p := mnt.TargetHostPort()
+	h, p := mnt.TargetIPPort(0)
 	if h == "" {
 		ts.SetLocalMount(&mnt, p)
 	}
@@ -1033,7 +1033,7 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself0"), newMount(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkMountFile")
 
-	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself1"), sp.NewMountServer(sp.NewTaddrRealm(sp.NO_HOST, 2222, ts.ProcEnv().GetNet())), sp.NoLeaseId)
+	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself1"), sp.NewMountServer(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222, ts.ProcEnv().GetNet())), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MountService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "d/~any") + "/")
@@ -1067,7 +1067,7 @@ func TestUnionRoot(t *testing.T) {
 	pn1 := gopath.Join(pathname, "namedself1")
 	err := ts.MkMountFile(pn0, newMount(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkMountFile")
-	err = ts.MkMountFile(pn1, sp.NewMountServer(sp.NewTaddr("xxx", sp.NO_PORT)), sp.NoLeaseId)
+	err = ts.MkMountFile(pn1, sp.NewMountServer(sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkMountFile")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "~any") + "/")
@@ -1203,7 +1203,7 @@ func TestMountUnion(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself0"), sp.NewMountServer(sp.NewTaddrRealm(sp.NO_HOST, 1111, ts.ProcEnv().GetNet())), sp.NoLeaseId)
+	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself0"), sp.NewMountServer(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111, ts.ProcEnv().GetNet())), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkMountFile")
 
 	pn := gopath.Join(pathname, "mount")

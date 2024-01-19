@@ -103,7 +103,7 @@ func setupK8sState(t *testing.T) *TstateSN {
 	assert.Nil(tssn.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 	port, err := strconv.Atoi(p)
 	assert.Nil(tssn.T, err, "Err parse port %v: %v", p, err)
-	addr := sp.NewTaddrRealm(sp.Thost(h), sp.Tport(port), tssn.ProcEnv().GetNet())
+	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port), tssn.ProcEnv().GetNet())
 	mnt := sp.NewMountService([]*sp.Taddr{addr})
 	assert.Nil(t, tssn.MkMountFile(p, mnt, sp.NoLeaseId))
 	// forward mongo port and init users and graphs.

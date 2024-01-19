@@ -81,7 +81,7 @@ func TestBasicSimple(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetLocalIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetInnerContainerIP())
 
 	sts1, err := rootts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -113,8 +113,8 @@ func TestBasicMultiRealmSingleNode(t *testing.T) {
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 	ts2 := test.NewRealmTstate(rootts, REALM2)
 
-	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts1.ProcEnv().GetLocalIP())
-	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM2, ts2.ProcEnv().GetLocalIP())
+	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts1.ProcEnv().GetInnerContainerIP())
+	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM2, ts2.ProcEnv().GetInnerContainerIP())
 
 	schedds1, err := ts1.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -228,7 +228,7 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetLocalIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetInnerContainerIP())
 
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
@@ -257,7 +257,7 @@ func TestEvictSingle(t *testing.T) {
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetLocalIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetInnerContainerIP())
 
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
@@ -298,7 +298,7 @@ func TestEvictMultiRealm(t *testing.T) {
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetLocalIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetInnerContainerIP())
 
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")

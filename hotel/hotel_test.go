@@ -378,7 +378,7 @@ func setupK8sState(ts *Tstate) {
 	assert.Nil(ts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 	port, err := strconv.Atoi(po)
 	assert.Nil(ts.T, err, "Err parse port %v: %v", po, err)
-	addr := sp.NewTaddrRealm(sp.Thost(h), sp.Tport(port), ts.ProcEnv().GetNet())
+	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port), ts.ProcEnv().GetNet())
 	mnt := sp.NewMountService([]*sp.Taddr{addr})
 	if err := ts.MkMountFile(p, mnt, sp.NoLeaseId); err != nil {
 		db.DFatalf("MkMountFile %v", err)

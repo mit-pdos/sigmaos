@@ -6,6 +6,8 @@ const (
 	NAME          = "name"
 	NAMED         = NAME + "/"
 	NAMEDREL      = "named"
+	MEMFSREL      = "memfs"
+	MEMFS         = NAMED + MEMFSREL + "/"
 	REALMREL      = "realm"
 	REALM         = NAMED + REALMREL + "/"
 	REALMDREL     = "realmd"

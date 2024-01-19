@@ -115,11 +115,11 @@ func RunWww(job string, public bool) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		host, port, err := netsigma.QualifyAddrLocalIP(www.ProcEnv().GetLocalIP(), l.Addr().String())
+		host, port, err := netsigma.QualifyAddrLocalIP(www.ProcEnv().GetInnerContainerIP(), l.Addr().String())
 		if err != nil {
 			db.DFatalf("QualifyAddr %v %v err %v", host, port, err)
 		}
-		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, www.ProcEnv().GetNet(), sp.NewTaddrRealm(host, port, www.ProcEnv().GetNet())); err != nil {
+		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, www.ProcEnv().GetNet(), sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, www.ProcEnv().GetNet())); err != nil {
 			db.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
@@ -133,12 +133,12 @@ func RunWww(job string, public bool) error {
 		go http.Serve(l, mux)
 		//		}
 
-		host, port, err := netsigma.QualifyAddrLocalIP(www.ProcEnv().GetLocalIP(), l.Addr().String())
+		host, port, err := netsigma.QualifyAddrLocalIP(www.ProcEnv().GetInnerContainerIP(), l.Addr().String())
 		if err != nil {
 			db.DFatalf("QualifyAddr %v %v err %v", host, port, err)
 		}
 		db.DPrintf(db.ALWAYS, "Hotel advertise %v:%v", host, port)
-		mnt := sp.NewMountService([]*sp.Taddr{sp.NewTaddrRealm(host, port, www.ProcEnv().GetNet())})
+		mnt := sp.NewMountService([]*sp.Taddr{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, www.ProcEnv().GetNet())})
 		if err = www.MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 			db.DFatalf("MkMountFile %v", err)
 		}

@@ -136,12 +136,12 @@ func RunFrontendSrv(public bool, job string) error {
 	go http.Serve(l, mux)
 	//		}
 
-	host, port, err := netsigma.QualifyAddrLocalIP(frontend.ProcEnv().GetLocalIP(), l.Addr().String())
+	host, port, err := netsigma.QualifyAddrLocalIP(frontend.ProcEnv().GetInnerContainerIP(), l.Addr().String())
 	if err != nil {
 		dbg.DFatalf("QualifyAddr %v %v err %v", host, port, err)
 	}
 	dbg.DPrintf(dbg.ALWAYS, "SN advertise %v:%v", host, port)
-	mnt := sp.NewMountService([]*sp.Taddr{sp.NewTaddrRealm(host, port, frontend.ProcEnv().GetNet())})
+	mnt := sp.NewMountService([]*sp.Taddr{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, frontend.ProcEnv().GetNet())})
 	if err = frontend.MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 		dbg.DFatalf("MkMountFile %v", err)
 	}

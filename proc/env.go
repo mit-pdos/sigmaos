@@ -110,12 +110,12 @@ func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 	return &ProcEnv{p}
 }
 
-func NewBootProcEnv(uname sp.Tuname, etcdIP string, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool) *ProcEnv {
+func NewBootProcEnv(uname sp.Tuname, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetUname(uname)
 	pe.Program = "kernel"
 	pe.SetPID(sp.GenPid(string(uname)))
-	pe.EtcdIP = etcdIP
+	pe.EtcdIP = string(etcdIP)
 	pe.InnerContainerIPStr = innerIP.String()
 	pe.OuterContainerIPStr = outerIP.String()
 	pe.BuildTag = buildTag

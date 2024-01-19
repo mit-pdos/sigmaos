@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
+	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclntsrv"
@@ -131,8 +132,14 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
 		return nil
 	}
 
-	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v", realm)
-	err := container.MountRealmBinDir(realm)
+	innerIP, err := netsigma.LocalIP()
+	if err != nil {
+		db.DFatalf("Error LocalIP: %v", err)
+	}
+	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
+
+	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v, new innerIP %v", realm, innerIP)
+	err = container.MountRealmBinDir(realm)
 	if err != nil {
 		db.DFatalf("Error mount realm bin dir: %v", err)
 	}
@@ -161,7 +168,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	if err := ups.assignToRealm(uproc.GetRealm()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
+	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	return container.RunUProc(uproc)
-
 }

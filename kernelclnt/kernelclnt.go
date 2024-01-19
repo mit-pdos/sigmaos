@@ -70,11 +70,11 @@ func (kc *KernelClnt) Shutdown() error {
 	return kc.rpcc.RPC("KernelSrv.Shutdown", req, &res)
 }
 
-func (kc *KernelClnt) Port(pid sp.Tpid, p sp.Tport) (sp.Thost, port.PortBinding, error) {
+func (kc *KernelClnt) Port(pid sp.Tpid, p sp.Tport) (sp.Tip, port.PortBinding, error) {
 	var res proto.PortResult
 	req := &proto.PortRequest{PidStr: pid.String(), Port: int32(p)}
 	if err := kc.rpcc.RPC("KernelSrv.AllocPort", req, &res); err != nil {
 		return "", port.PortBinding{}, err
 	}
-	return sp.Thost(res.HostIp), port.PortBinding{sp.Tport(res.RealmPort), sp.Tport(res.HostPort)}, nil
+	return sp.Tip(res.HostIp), port.PortBinding{sp.Tport(res.RealmPort), sp.Tport(res.HostPort)}, nil
 }

@@ -67,7 +67,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how proc.Thow, kernelId stri
 		// as a local Linux process
 		p.InheritParentProcEnv(clnt.ProcEnv())
 		p.SetKernelID(kernelId, false)
-		return kproc.RunKernelProc(clnt.ProcEnv().GetLocalIP(), p, nil)
+		return kproc.RunKernelProc(clnt.ProcEnv().GetInnerContainerIP(), p, nil)
 	}
 	return nil, nil
 }

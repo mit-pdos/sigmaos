@@ -16,15 +16,15 @@ const (
 )
 
 // XXX type?
-func NewPublicAddrs(host sp.Thost, pb PortBinding, netns string, laddr *sp.Taddr) sp.Taddrs {
+func NewPublicAddrs(outerIP sp.Tip, pb PortBinding, netns string, laddr *sp.Taddr) sp.Taddrs {
 	addrs := make(sp.Taddrs, 2)
 	addrs[0] = laddr
-	addrs[1] = sp.NewTaddr(host, pb.HostPort)
+	addrs[1] = sp.NewTaddr(outerIP, sp.OUTER_CONTAINER_IP, pb.HostPort)
 	return addrs
 }
 
-func NewPublicMount(host sp.Thost, pb PortBinding, net string, laddr *sp.Taddr) sp.Tmount {
-	return sp.NewMountService(NewPublicAddrs(host, pb, net, laddr))
+func NewPublicMount(outerIP sp.Tip, pb PortBinding, net string, laddr *sp.Taddr) sp.Tmount {
+	return sp.NewMountService(NewPublicAddrs(outerIP, pb, net, laddr))
 }
 
 type PortBinding struct {

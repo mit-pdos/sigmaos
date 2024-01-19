@@ -36,7 +36,7 @@ func RunFsUx(rootux string) {
 		db.DFatalf("newDir %v\n", sr)
 	}
 	pcfg := proc.GetProcEnv()
-	addr := sp.NewTaddr(ip, sp.NO_PORT)
+	addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 	srv, err := sigmasrv.NewSigmaSrvRoot(root, sp.UX, addr, pcfg)
 	if err != nil {
 		db.DFatalf("BootSrvAndPost %v\n", err)

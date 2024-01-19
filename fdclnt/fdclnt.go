@@ -221,7 +221,7 @@ func (fdc *FdClient) IsLocalMount(mnt sp.Tmount) (bool, error) {
 }
 
 func (fdc *FdClient) SetLocalMount(mnt *sp.Tmount, port sp.Tport) {
-	mnt.SetAddr([]*sp.Taddr{sp.NewTaddr(fdc.pcfg.GetLocalIP(), port)})
+	mnt.SetAddr([]*sp.Taddr{sp.NewTaddr(fdc.pcfg.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
 }
 
 func (fdc *FdClient) PathLastMount(pn string) (path.Path, path.Path, error) {

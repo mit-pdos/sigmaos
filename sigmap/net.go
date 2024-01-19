@@ -6,11 +6,23 @@ import (
 	"strconv"
 )
 
+func (iptype Tiptype) String() string {
+	switch iptype {
+	case INNER_CONTAINER_IP:
+		return "innerIP"
+	case OUTER_CONTAINER_IP:
+		return "outerIP"
+	default:
+		log.Fatalf("Error unkown ip type: %v", uint32(iptype))
+		return "unknown"
+	}
+}
+
 func (p Tport) String() string {
 	return strconv.FormatUint(uint64(p), 10)
 }
 
-func (p Thost) String() string {
+func (p Tip) String() string {
 	return string(p)
 }
 
@@ -19,35 +31,37 @@ func ParsePort(ps string) (Tport, error) {
 	return Tport(pi), err
 }
 
-func (a *Taddr) HostPort() string {
-	return a.HostStr + ":" + a.GetPort().String()
+func (a *Taddr) IPPort() string {
+	return a.IPStr + ":" + a.GetPort().String()
 }
 
-func (a *Taddr) GetHost() Thost {
-	return Thost(a.HostStr)
+func (a *Taddr) GetIP() Tip {
+	return Tip(a.IPStr)
 }
 
 func (a *Taddr) GetPort() Tport {
 	return Tport(a.PortInt)
 }
 
-func NewTaddrAnyPort(netns string) *Taddr {
-	return NewTaddrRealm(NO_HOST, NO_PORT, netns)
+func NewTaddrAnyPort(iptype Tiptype, netns string) *Taddr {
+	return NewTaddrRealm(NO_IP, iptype, NO_PORT, netns)
 }
 
-func NewTaddr(host Thost, port Tport) *Taddr {
+func NewTaddr(ip Tip, iptype Tiptype, port Tport) *Taddr {
 	return &Taddr{
-		HostStr: string(host),
-		PortInt: uint32(port),
-		NetNS:   ROOTREALM.String(),
+		IPStr:     string(ip),
+		IPTypeInt: uint32(iptype),
+		PortInt:   uint32(port),
+		NetNS:     ROOTREALM.String(),
 	}
 }
 
-func NewTaddrRealm(host Thost, port Tport, netns string) *Taddr {
+func NewTaddrRealm(ip Tip, iptype Tiptype, port Tport, netns string) *Taddr {
 	return &Taddr{
-		HostStr: string(host),
-		PortInt: uint32(port),
-		NetNS:   netns,
+		IPStr:     string(ip),
+		IPTypeInt: uint32(iptype),
+		PortInt:   uint32(port),
+		NetNS:     netns,
 	}
 }
 
@@ -80,7 +94,7 @@ func UnmarshalTaddr(a string) *Taddr {
 func (as Taddrs) String() string {
 	s := ""
 	for i, a := range as {
-		s += a.HostPort()
+		s += a.IPPort()
 		if i < len(as)-1 {
 			s += ","
 		}

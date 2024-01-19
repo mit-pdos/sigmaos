@@ -23,7 +23,7 @@ import (
 
 // Return the pathname for posting in a directory of a service
 func mountPathName(pn string, mnt sp.Tmount) string {
-	return pn + "/" + mnt.Address().HostPort()
+	return pn + "/" + mnt.Address().IPPort()
 }
 
 func postMount(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, pn string) (string, error) {

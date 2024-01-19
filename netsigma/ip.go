@@ -45,29 +45,29 @@ func swap(addrs sp.Taddrs, i int) sp.Taddrs {
 	return addrs
 }
 
-func QualifyAddr(addrstr string) (sp.Thost, sp.Tport, error) {
+func QualifyAddr(addrstr string) (sp.Tip, sp.Tport, error) {
 	return QualifyAddrLocalIP("", addrstr)
 }
 
-func QualifyAddrLocalIP(lip sp.Thost, addrstr string) (sp.Thost, sp.Tport, error) {
+func QualifyAddrLocalIP(lip sp.Tip, addrstr string) (sp.Tip, sp.Tport, error) {
 	h, pstr, err := net.SplitHostPort(addrstr)
 	if err != nil {
 		db.DFatalf("Err split host port %v: %v", addrstr, err)
-		return sp.NO_HOST, sp.NO_PORT, err
+		return sp.NO_IP, sp.NO_PORT, err
 	}
 	p, err := sp.ParsePort(pstr)
 	if err != nil {
 		db.DFatalf("Err split host port %v: %v", addrstr, err)
-		return sp.NO_HOST, sp.NO_PORT, err
+		return sp.NO_IP, sp.NO_PORT, err
 	}
-	var host sp.Thost = lip
+	var host sp.Tip = lip
 	var port sp.Tport = p
 	if h == "::" {
 		if lip == "" {
 			ip, err := LocalIP()
 			if err != nil {
 				db.DFatalf("LocalIP \"%v\" %v", addrstr, err)
-				return sp.NO_HOST, sp.NO_PORT, err
+				return sp.NO_IP, sp.NO_PORT, err
 			}
 			host = ip
 		}
@@ -139,7 +139,7 @@ func localIPs() ([]net.IP, error) {
 }
 
 // XXX should find what outgoing ip is
-func LocalIP() (sp.Thost, error) {
+func LocalIP() (sp.Tip, error) {
 	ips, err := localIPs()
 	if err != nil {
 		return "", err
@@ -148,10 +148,10 @@ func LocalIP() (sp.Thost, error) {
 	// if we have a local ip in 10.10.x.x (for Cloudlab), prioritize that first
 	for _, i := range ips {
 		if strings.HasPrefix(i.String(), "10.10.") {
-			return sp.Thost(i.String()), nil
+			return sp.Tip(i.String()), nil
 		}
 		if !strings.HasPrefix(i.String(), "127.") {
-			return sp.Thost(i.String()), nil
+			return sp.Tip(i.String()), nil
 		}
 	}
 
@@ -159,5 +159,5 @@ func LocalIP() (sp.Thost, error) {
 		return "", fmt.Errorf("LocalIP: no IP")
 	}
 
-	return sp.Thost(ips[len(ips)-1].String()), nil
+	return sp.Tip(ips[len(ips)-1].String()), nil
 }

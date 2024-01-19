@@ -81,8 +81,8 @@ func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
 	addrs = netsigma.Rearrange(clntnet, addrs)
 	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", clntnet, addrs, addrs[0])
 	for _, addr := range addrs {
-		c, err := net.DialTimeout("tcp", addr.HostPort(), sp.Conf.Session.TIMEOUT/10)
-		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.HostPort(), err)
+		c, err := net.DialTimeout("tcp", addr.IPPort(), sp.Conf.Session.TIMEOUT/10)
+		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
 		if err != nil {
 			continue
 		}

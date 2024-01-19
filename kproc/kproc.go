@@ -11,8 +11,8 @@ import (
 )
 
 // To run kernel procs
-func RunKernelProc(localIP sp.Thost, p *proc.Proc, extra []*os.File) (*exec.Cmd, error) {
-	p.FinalizeEnv(localIP, "")
+func RunKernelProc(outerIP sp.Tip, p *proc.Proc, extra []*os.File) (*exec.Cmd, error) {
+	p.FinalizeEnv(outerIP, outerIP, "")
 	env := p.GetEnv()
 	cmd := exec.Command(p.GetProgram(), p.Args...)
 	// Create a process group ID to kill all children if necessary.

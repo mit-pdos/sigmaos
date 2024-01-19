@@ -9,7 +9,7 @@ import (
 )
 
 type PortInfo struct {
-	Hip sp.Thost
+	Hip sp.Tip
 	Pb  port.PortBinding
 }
 

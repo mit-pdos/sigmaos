@@ -159,7 +159,7 @@ func Run(args []string) error {
 }
 
 func (nd *Named) newSrv() (sp.Tmount, error) {
-	ip := sp.NO_HOST
+	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
 	var pi portclnt.PortInfo

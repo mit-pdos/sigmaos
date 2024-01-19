@@ -15,7 +15,7 @@ import (
 
 // Make an MemFs and advertise it at pn
 func NewMemFs(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
-	return NewMemFsAddr(pn, sp.NewTaddrRealm(sp.NO_HOST, sp.NO_PORT, pcfg.GetNet()), pcfg)
+	return NewMemFsAddr(pn, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, pcfg.GetNet()), pcfg)
 }
 
 // Make an MemFs for a specific port and advertise it at pn
@@ -61,7 +61,7 @@ func NewMemFsPublic(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
 		return nil, err
 	}
 	// Make server without advertising mnt
-	mfs, err := NewMemFsPortClnt("", sp.NewTaddrRealm(sp.NO_HOST, pi.Pb.RealmPort, pcfg.GetNet()), sc)
+	mfs, err := NewMemFsPortClnt("", sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.Pb.RealmPort, pcfg.GetNet()), sc)
 	if err != nil {
 		return nil, err
 	}

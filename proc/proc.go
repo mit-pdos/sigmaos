@@ -124,8 +124,9 @@ func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 
 // Finalize env details which can only be set once a physical machine and
 // uprocd container have been chosen.
-func (p *Proc) FinalizeEnv(localIP sp.Thost, uprocdPid sp.Tpid) {
-	p.ProcEnvProto.LocalIPStr = localIP.String()
+func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
+	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
+	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
 	p.ProcEnvProto.SetUprocdPID(uprocdPid)
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
 }

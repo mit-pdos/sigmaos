@@ -73,7 +73,7 @@ func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 	if kernelId == "" {
 		var pn1 string
 		var err error
-		if pcfg.EtcdIP != pcfg.GetLocalIP().String() {
+		if pcfg.EtcdIP != pcfg.GetOuterContainerIP().String() {
 			// If running in a distributed setting, bootkernel clnt can be ~any
 			pn1, _, err = sc.ResolveMount(sp.BOOT + "~any")
 		} else {

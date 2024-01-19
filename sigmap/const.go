@@ -96,7 +96,9 @@ const (
 
 // Networking consts
 const (
-	NO_HOST   Thost = ""
-	LOCALHOST Thost = "127.0.0.1"
-	NO_PORT   Tport = 0
+	NO_IP              Tip     = ""
+	LOCALHOST          Tip     = "127.0.0.1"
+	INNER_CONTAINER_IP Tiptype = 1
+	OUTER_CONTAINER_IP Tiptype = 2
+	NO_PORT            Tport   = 0
 )

@@ -32,18 +32,18 @@ type NetServer struct {
 func NewNetServer(pcfg *proc.ProcEnv, ss sps.SessServer, addr *sp.Taddr, m WriteF, u ReadF) *NetServer {
 	srv := &NetServer{pcfg: pcfg, sesssrv: ss, writefcall: m, readframe: u}
 
-	db.DPrintf(db.PORT, "Listen addr %v", addr.HostPort())
+	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
 	var l net.Listener
-	l, err := net.Listen("tcp", addr.HostPort())
+	l, err := net.Listen("tcp", addr.IPPort())
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}
-	h, p, err := netsigma.QualifyAddrLocalIP(pcfg.GetLocalIP(), l.Addr().String())
+	h, p, err := netsigma.QualifyAddrLocalIP(pcfg.GetInnerContainerIP(), l.Addr().String())
 	if err != nil {
 		db.DFatalf("QualifyAddr \"%v\" -> \"%v:%v\" error: %v\n%s", l.Addr().String(), h, p, err, debug.Stack())
 	}
-	srv.addr = sp.NewTaddrRealm(h, p, pcfg.GetNet())
+	srv.addr = sp.NewTaddrRealm(h, sp.INNER_CONTAINER_IP, p, pcfg.GetNet())
 	srv.l = l
 	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.addr)
 	go srv.runsrv(l)

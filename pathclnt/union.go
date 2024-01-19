@@ -8,13 +8,13 @@ import (
 )
 
 func (pathc *PathClnt) IsLocalMount(mnt sp.Tmount) (bool, error) {
-	lip := pathc.pcfg.GetLocalIP()
-	tip, _ := mnt.TargetHostPort()
+	outerIP := pathc.pcfg.GetOuterContainerIP()
+	tip, _ := mnt.TargetIPPort(0)
 	if tip == "" {
-		tip = lip
+		tip = outerIP
 	}
-	db.DPrintf(db.MOUNT, "IsLocalMount: tip %v lip %v\n", tip, lip)
-	if tip == lip {
+	db.DPrintf(db.MOUNT, "IsLocalMount: tip %v outerIP %v\n", tip, outerIP)
+	if tip == outerIP {
 		return true, nil
 	}
 	return false, nil

@@ -53,6 +53,6 @@ func NewMountServer(addr *Taddr) Tmount {
 	return NewMountService(addrs)
 }
 
-func (mnt *Tmount) TargetHostPort() (Thost, Tport) {
-	return mnt.Addr[0].GetHost(), mnt.Addr[0].GetPort()
+func (mnt *Tmount) TargetIPPort(idx int) (Tip, Tport) {
+	return mnt.Addr[idx].GetIP(), mnt.Addr[idx].GetPort()
 }

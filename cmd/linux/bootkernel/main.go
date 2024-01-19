@@ -46,7 +46,7 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	pcfg := proc.NewBootProcEnv(sp.Tuname(param.KernelId), os.Args[2], localIP, param.BuildTag, param.Overlays)
+	pcfg := proc.NewBootProcEnv(sp.Tuname(param.KernelId), os.Args[2], localIP, localIP, param.BuildTag, param.Overlays)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 	if err := boot.BootUp(&param, pcfg); err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)

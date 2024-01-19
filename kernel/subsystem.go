@@ -33,7 +33,7 @@ type Subsystem interface {
 	GetIp(fsl *fslib.FsLib) *sp.Taddr
 	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
 	AllocPort(p sp.Tport) (*port.PortBinding, error)
-	Run(how proc.Thow, kernelId string, localIP sp.Thost) error
+	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
 
 type KernelSubsystem struct {
@@ -87,7 +87,8 @@ func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Th
 func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	pid := sp.GenPid(program)
 	p := proc.NewPrivProcPid(pid, program, args, true)
-	p.GetProcEnv().SetLocalIP(k.ip)
+	p.GetProcEnv().SetInnerContainerIP(k.ip)
+	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	p.SetMcpu(mcpu)
 	ss := newSubsystem(k.ProcClnt, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelId, k.ip)
@@ -101,7 +102,7 @@ func (s *KernelSubsystem) Evict() error {
 	return s.k.EvictKernelProc(s.p.GetPid(), s.how)
 }
 
-func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Thost) error {
+func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) error {
 	if how == proc.HLINUX || how == proc.HSCHEDD {
 		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {
@@ -115,7 +116,7 @@ func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Thost) 
 		// XXX don't hard code
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
-		s.p.FinalizeEnv(localIP, sp.Tpid(proc.NOT_SET))
+		s.p.FinalizeEnv(localIP, localIP, sp.Tpid(proc.NOT_SET))
 		var r *port.Range
 		up := sp.NO_PORT
 		if s.k.Param.Overlays {

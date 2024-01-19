@@ -115,7 +115,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, EtcdIP, localIP, tag, Overlays, useSigmaclntd)
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, EtcdIP, localIP, localIP, tag, Overlays, useSigmaclntd)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 	var kernelid string
 	var err error
@@ -215,7 +215,7 @@ func (ts *Tstate) Shutdown() error {
 }
 
 func Dump(t *testing.T) {
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, EtcdIP, "", "", false, false)
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, EtcdIP, "", "", "", false, false)
 	fs, err := fsetcd.NewFsEtcd(pcfg.GetRealm(), pcfg.GetEtcdIP())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)

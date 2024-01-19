@@ -187,7 +187,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 
 		// Use 127.0.0.1, because only the local schedd should be talking
 		// to uprocd.
-		addr := sp.NewTaddr(sp.LOCALHOST, pm.HostPort)
+		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
 		mnt := sp.NewMountServer(addr)
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 		if err := k.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {

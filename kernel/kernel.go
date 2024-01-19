@@ -47,7 +47,7 @@ type Kernel struct {
 	*sigmaclnt.SigmaClntKernel
 	Param        *Param
 	svcs         *Services
-	ip           sp.Thost
+	ip           sp.Tip
 	shuttingDown bool
 }
 
@@ -66,7 +66,8 @@ func NewKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 	}
 	db.DPrintf(db.KERNEL, "NewKernel ip %v", ip)
 	k.ip = ip
-	pcfg.SetLocalIP(ip)
+	pcfg.SetInnerContainerIP(ip)
+	pcfg.SetOuterContainerIP(ip)
 	if p.Services[0] == sp.KNAMED {
 		if err := k.bootKNamed(pcfg, true); err != nil {
 			return nil, err
@@ -96,7 +97,7 @@ func NewKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
 	return k, err
 }
 
-func (k *Kernel) Ip() sp.Thost {
+func (k *Kernel) Ip() sp.Tip {
 	return k.ip
 }
 
@@ -206,7 +207,7 @@ func runKNamed(pe *proc.ProcEnv, p *proc.Proc, realmId sp.Trealm, init bool) (*e
 		return nil, err
 	}
 	p.InheritParentProcEnv(pe)
-	cmd, err := kproc.RunKernelProc(pe.GetLocalIP(), p, []*os.File{w1, r2, w2})
+	cmd, err := kproc.RunKernelProc(pe.GetInnerContainerIP(), p, []*os.File{w1, r2, w2})
 	if err != nil {
 		r1.Close()
 		w1.Close()
@@ -236,13 +237,13 @@ func stopKNamed(cmd *exec.Cmd) error {
 	return err
 }
 
-func SetNamedIP(host sp.Thost, ports sp.Taddrs) (sp.Taddrs, error) {
+func SetNamedIP(host sp.Tip, ports sp.Taddrs) (sp.Taddrs, error) {
 	nameds := make(sp.Taddrs, len(ports))
 	for i, s := range ports {
-		if s.GetHost() != sp.NO_HOST {
-			db.DFatalf("Tried to substitute named ip when port exists: %v -> %v %v", s, s.GetHost(), s.GetPort())
+		if s.GetIP() != sp.NO_IP {
+			db.DFatalf("Tried to substitute named ip when port exists: %v -> %v %v", s, s.GetIP(), s.GetPort())
 		}
-		nameds[i] = sp.NewTaddr(host, s.GetPort())
+		nameds[i] = sp.NewTaddr(host, sp.INNER_CONTAINER_IP, s.GetPort())
 	}
 	return nameds, nil
 }

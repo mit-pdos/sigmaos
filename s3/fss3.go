@@ -27,7 +27,7 @@ func RunFss3(buckets []string) {
 	fss3 = &Fss3{}
 	root := newDir("", path.Path{}, sp.DMDIR)
 	pe := proc.GetProcEnv()
-	addr := sp.NewTaddrAnyPort(pe.GetNet())
+	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, pe.GetNet())
 	ssrv, err := sigmasrv.NewSigmaSrvRoot(root, sp.S3, addr, pe)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

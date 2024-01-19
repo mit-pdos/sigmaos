@@ -31,7 +31,7 @@ func newSigmaClntSrv() (*SigmaClntSrv, error) {
 	if err != nil {
 		db.DFatalf("Error local IP: %v", err)
 	}
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, "127.0.0.1", localIP, "local-build", false, false)
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, "127.0.0.1", localIP, localIP, "local-build", false, false)
 	pcfg.Program = "sigmaclntd"
 	pcfg.SetUname("sigmaclntd")
 	pcfg.SetPID(sp.GenPid("sigmaclntd"))
@@ -112,7 +112,7 @@ type Subsystem interface {
 	GetIp(fsl *fslib.FsLib) *sp.Taddr
 	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
 	AllocPort(p sp.Tport) (*port.PortBinding, error)
-	Run(how proc.Thow, kernelId string, localIP sp.Thost) error
+	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
 
 func (scsc *SigmaClntSrvCmd) GetProc() *proc.Proc {
@@ -179,7 +179,7 @@ func (scsc *SigmaClntSrvCmd) AllocPort(p sp.Tport) (*port.PortBinding, error) {
 	return nil, nil
 }
 
-func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Thost) error {
+func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip) error {
 	db.DFatalf("Unimplemented")
 	return nil
 }

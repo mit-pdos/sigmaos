@@ -37,7 +37,7 @@ func RunUprocSrv(kernelId string, up string) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pe: pe}
 
-	db.DPrintf(db.UPROCD, "Run %v %v %s IP %s", kernelId, up, os.Environ(), pe.GetLocalIP())
+	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
 
 	var ssrv *sigmasrv.SigmaSrv
 	var err error
@@ -50,7 +50,7 @@ func RunUprocSrv(kernelId string, up string) error {
 		if err != nil {
 			db.DFatalf("Error parse port: %v", err)
 		}
-		addr := sp.NewTaddrRealm(sp.NO_HOST, port, pe.GetNet())
+		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port, pe.GetNet())
 
 		// The kernel will advertise the server, so pass "" as pn.
 		ssrv, err = sigmasrv.NewSigmaSrvAddr("", addr, pe, ups)

@@ -164,14 +164,14 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 	var addr *sp.Taddr
 	var pi portclnt.PortInfo
 	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
-		addr = sp.NewTaddr(ip, sp.NO_PORT)
+		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 	} else {
 		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
 		if err != nil {
 			return sp.NullMount(), err
 		}
 		pi = pi0
-		addr = sp.NewTaddr(ip, pi.Pb.RealmPort)
+		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.Pb.RealmPort)
 	}
 
 	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)

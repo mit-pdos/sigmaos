@@ -30,7 +30,6 @@ message ProcEnvProto {
   Taddr scheddAddr = 23;
   TmountProto namedMountProto = 24;
   bool useSigmaclntd = 25;
-  string iDStr = 26;
 }
 
 message ProcProto {

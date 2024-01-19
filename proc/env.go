@@ -96,7 +96,6 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, uname sp.Tuname, p
 			Privileged:    priv,
 			Overlays:      overlays,
 			UseSigmaclntd: useSigmaclntd,
-			IDStr:         NOT_SET,
 		},
 	}
 }

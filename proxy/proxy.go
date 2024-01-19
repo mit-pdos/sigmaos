@@ -18,19 +18,19 @@ import (
 )
 
 type Npd struct {
-	lip  string
+	lip  sp.Tip
 	pcfg *proc.ProcEnv
 	st   *sessstatesrv.SessionTable
 }
 
-func NewNpd(pcfg *proc.ProcEnv, lip string) *Npd {
+func NewNpd(pcfg *proc.ProcEnv, lip sp.Tip) *Npd {
 	npd := &Npd{lip, pcfg, nil}
 	npd.st = sessstatesrv.NewSessionTable(npd.newProtServer, npd, nil, nil)
 	return npd
 }
 
 func (npd *Npd) newProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Protsrv {
-	return newNpConn(npd.pcfg, npd.lip)
+	return newNpConn(npd.pcfg, string(npd.lip))
 }
 
 func (npd *Npd) serve(fm *sessp.FcallMsg) {

@@ -21,7 +21,7 @@ VERB="-v"
 CONTAINER=""
 CLEANUP=""
 COMPILE=""
-HOST_IP="127.0.0.1"
+HOST_IP="IP_NOT_SET"
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
         --apps-fast)
@@ -191,6 +191,10 @@ fi
 #
 
 if [[ $OVERLAY == "--overlay" ]] ; then
+    if [ "$HOST_IP" == "IP_NOT_SET" ] || [ -z "$HOST_IP" ]; then
+      echo "ERROR: Host IP not provided"
+      exit 1
+    fi
     echo "Overlay tests running with host IP $HOST_IP"
     ./start-network.sh
     

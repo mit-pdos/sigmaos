@@ -374,7 +374,7 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	mnt, err := ts1.ReadMount(cc.Server(0))
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "mnt %v\n", mnt)
+	db.DPrintf(db.TEST, "mnt %v", mnt)
 
 	// Remove public port
 	if len(mnt.Addr) > 1 {
@@ -419,6 +419,8 @@ func TestRealmNetIsolationFail(t *testing.T) {
 
 	mnt, err := ts1.ReadMount(cc.Server(0))
 	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "mnt %v", mnt)
 
 	// Remove public port
 	if len(mnt.Addr) > 1 {

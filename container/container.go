@@ -79,6 +79,13 @@ func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
 			db.DFatalf("Error NetworkConnect: %v", err)
 		}
 		db.DPrintf(db.SPAWN_LAT, "Add to overlay network %v", time.Since(s))
+		s = time.Now()
+		rootnetns := "sigmanet-testuser"
+		db.DPrintf(db.CONTAINER, "Remove container %v from net %v", c.container, netns)
+		if err := c.cli.NetworkDisconnect(c.ctx, rootnetns, c.container, true); err != nil {
+			db.DFatalf("Error NetworkConnect: %v", err)
+		}
+		db.DPrintf(db.SPAWN_LAT, "Remove from overlay network %v", time.Since(s))
 	}
 	return nil
 }

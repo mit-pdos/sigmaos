@@ -1,17 +1,19 @@
 package leaderclnt_test
 
 import (
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	db "sigmaos/debug"
 	"sigmaos/leaderclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 const (
-	dirnamed = sp.NAMED + "outdir"
+	DIR = "outdir"
 )
 
 func TestCompile(t *testing.T) {
@@ -20,7 +22,7 @@ func TestCompile(t *testing.T) {
 func TestOldLeaderOK(t *testing.T) {
 	ts := test.NewTstateAll(t)
 
-	l := leaderclnt.OldleaderTest(ts, dirnamed, false)
+	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, false)
 
 	l.ReleaseLeadership()
 
@@ -33,7 +35,35 @@ func TestOldLeaderCrash(t *testing.T) {
 	err := ts.Boot(sp.NAMEDREL)
 	assert.Nil(t, err)
 
-	l := leaderclnt.OldleaderTest(ts, dirnamed, true)
+	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, true)
+
+	l.ReleaseLeadership()
+
+	ts.Shutdown()
+}
+
+func TestMemfs(t *testing.T) {
+	dir := sp.MEMFS + "~local/"
+	fencedir := path.Join(dir, sp.FENCEDIR)
+
+	ts := test.NewTstatePath(t, dir)
+
+	l := leaderclnt.OldleaderTest(ts, dir+DIR, false)
+
+	sts, err := l.GetFences(fencedir)
+	assert.Nil(ts.T, err, "GetFences")
+	assert.Equal(ts.T, 1, len(sts), "Fences")
+
+	db.DPrintf(db.TEST, "fences %v\n", sp.Names(sts))
+
+	err = l.RemoveFence([]string{fencedir})
+	assert.Nil(ts.T, err, "RemoveFences")
+
+	sts, err = l.GetFences(fencedir)
+	assert.Nil(ts.T, err, "GetFences")
+	assert.Equal(ts.T, 0, len(sts), "Fences")
+
+	db.DPrintf(db.TEST, "fences %v\n", sp.Names(sts))
 
 	l.ReleaseLeadership()
 

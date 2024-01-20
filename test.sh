@@ -116,11 +116,11 @@ if [[ $BASIC == "--basic" ]]; then
 
     # go test $VERB sigmaos/fslibsrv -start  # no perf
 
-    # test memfs using schedd's memfs
-    go test $VERB sigmaos/fslib -start -path "name/schedd/~local/"  $SIGMACLNTD
+    # test memfs
+    go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SIGMACLNTD
     cleanup
     go test $VERB sigmaos/memfs -start $SIGMACLNTD
-    cleanup
+    cleanupx
 
     #
     # tests a full kernel using root realm

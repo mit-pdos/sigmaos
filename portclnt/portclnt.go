@@ -9,8 +9,8 @@ import (
 )
 
 type PortInfo struct {
-	Hip sp.Tip
-	Pb  port.PortBinding
+	HostIP   sp.Tip
+	PBinding port.PortBinding
 }
 
 type PortClnt struct {
@@ -48,7 +48,7 @@ func (pc *PortClnt) AllocPort(p sp.Tport) (PortInfo, error) {
 }
 
 func (pc *PortClnt) AdvertisePort(pn string, pi PortInfo, net string, laddr *sp.Taddr) error {
-	mnt := port.NewPublicMount(pi.Hip, pi.Pb, net, laddr)
+	mnt := port.NewPublicMount(pi.HostIP, pi.PBinding, net, laddr)
 	db.DPrintf(db.PORT, "AdvertisePort %v %v\n", pn, mnt)
 	if err := pc.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
 		return err

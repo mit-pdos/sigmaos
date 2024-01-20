@@ -171,7 +171,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 			return sp.NullMount(), err
 		}
 		pi = pi0
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.Pb.RealmPort)
+		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
 	}
 
 	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)
@@ -186,7 +186,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 
 	mnt := sp.NewMountServer(nd.MyAddr())
 	if nd.realm != sp.ROOTREALM {
-		mnt = port.NewPublicMount(pi.Hip, pi.Pb, nd.ProcEnv().GetNet(), nd.MyAddr())
+		mnt = port.NewPublicMount(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.MyAddr())
 	}
 
 	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.MyAddr(), nd.elect.Key(), mnt)

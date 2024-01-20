@@ -106,7 +106,7 @@ func RunWww(job string, public bool) error {
 			db.DFatalf("AllocPort err %v", err)
 		}
 		www.pc = pc
-		l, err := net.Listen("tcp", ":"+pi.Pb.RealmPort.String())
+		l, err := net.Listen("tcp", ":"+pi.PBinding.RealmPort.String())
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}

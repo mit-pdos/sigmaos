@@ -61,7 +61,7 @@ func NewMemFsPublic(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
 		return nil, err
 	}
 	// Make server without advertising mnt
-	mfs, err := NewMemFsPortClnt("", sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.Pb.RealmPort, pcfg.GetNet()), sc)
+	mfs, err := NewMemFsPortClnt("", sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, pcfg.GetNet()), sc)
 	if err != nil {
 		return nil, err
 	}

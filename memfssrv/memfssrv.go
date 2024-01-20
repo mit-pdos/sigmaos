@@ -52,7 +52,7 @@ func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 }
 
 func (mfs *MemFs) MyAddrsPublic(net string) sp.Taddrs {
-	return port.NewPublicAddrs(mfs.pi.Hip, mfs.pi.Pb, net, mfs.MyAddr())
+	return port.NewPublicAddrs(mfs.pi.HostIP, mfs.pi.PBinding, net, mfs.MyAddr())
 }
 
 // Note: NewDev() sets parent

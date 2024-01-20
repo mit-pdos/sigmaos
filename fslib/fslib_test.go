@@ -1321,6 +1321,8 @@ func TestEphemeralFileOK(t *testing.T) {
 	err = ts.Remove(fn)
 	assert.Nil(t, err)
 
+	ts.LeaseClnt.EndLeases()
+
 	ts.Shutdown()
 }
 
@@ -1347,7 +1349,7 @@ func TestEphemeralFileExpire(t *testing.T) {
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 
 	_, err = ts.Stat(fn)
-	assert.NotNil(t, err)
+	assert.NotNil(t, err, fn)
 
 	sts, _, err = ts.ReadDir(dn)
 	assert.Nil(t, err)

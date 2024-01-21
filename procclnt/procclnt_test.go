@@ -592,14 +592,16 @@ func TestSpawnBurst(t *testing.T) {
 
 	ts := test.NewTstateAll(t)
 
+	const N_NODES = 2
+
 	// Number of spinners to burst-spawn
-	N := (linuxsched.GetNCores()) * 3
+	N := (linuxsched.GetNCores()) * N_NODES
 
 	// Start a couple new procds.
-	err := ts.BootNode(1)
-	assert.Nil(t, err, "BootNode %v", err)
-	err = ts.BootNode(1)
-	assert.Nil(t, err, "BootNode %v", err)
+	for i := 0; i < N_NODES; i++ {
+		err := ts.BootNode(1)
+		assert.Nil(t, err, "BootNode %v", err)
+	}
 
 	db.DPrintf(db.TEST, "Start burst spawn %v", N)
 

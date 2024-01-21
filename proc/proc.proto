@@ -8,7 +8,7 @@ message ProcEnvProto {
   string pidStr = 1;
   string program = 2;
   string realmStr = 3;
-  string unameStr = 4;
+  string principalStr = 4;
   string procDir = 5;
   string parentDir = 6;
   string etcdIP = 7;

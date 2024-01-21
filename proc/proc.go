@@ -70,7 +70,7 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		// If this is a privileged proc, we already know its procdir.
 		procdir = KProcDir(pid)
 	}
-	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), sp.Tuname(pid), procdir, NOT_SET, priv, false, false).GetProto()
+	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), sp.Tprincipal(pid), procdir, NOT_SET, priv, false, false).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
 	p.McpuInt = uint32(0)

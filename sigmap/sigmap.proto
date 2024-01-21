@@ -56,7 +56,7 @@ message Rversion {
 
 message Tauth {
         uint32 afid = 1;
-        repeated string Unames = 2;
+        repeated string Principals = 2;
         repeated string Anames = 3;
 }
 

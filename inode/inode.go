@@ -17,7 +17,7 @@ type Inode struct {
 	perm   sp.Tperm
 	mtime  int64
 	parent fs.Dir
-	owner  sp.Tuname
+	owner  sp.Tprincipal
 }
 
 var NextInum = uint64(0)
@@ -31,7 +31,7 @@ func NewInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 	if ctx == nil {
 		i.owner = ""
 	} else {
-		i.owner = ctx.Uname()
+		i.owner = ctx.Principal()
 	}
 	return i
 }

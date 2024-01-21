@@ -8,23 +8,23 @@ import (
 )
 
 type Ctx struct {
-	uname   sp.Tuname
-	sessid  sessp.Tsession
-	clntid  sp.TclntId
-	sct     *clntcond.ClntCondTable
-	fencefs fs.Dir
+	principal sp.Tprincipal
+	sessid    sessp.Tsession
+	clntid    sp.TclntId
+	sct       *clntcond.ClntCondTable
+	fencefs   fs.Dir
 }
 
-func NewCtx(uname sp.Tuname, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
-	return &Ctx{uname: uname, sessid: sessid, clntid: clntid, sct: sct, fencefs: fencefs}
+func NewCtx(principal sp.Tprincipal, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
+	return &Ctx{principal: principal, sessid: sessid, clntid: clntid, sct: sct, fencefs: fencefs}
 }
 
 func NewCtxNull() *Ctx {
 	return NewCtx("", 0, sp.NoClntId, nil, nil)
 }
 
-func (ctx *Ctx) Uname() sp.Tuname {
-	return ctx.uname
+func (ctx *Ctx) Principal() sp.Tprincipal {
+	return ctx.principal
 }
 
 func (ctx *Ctx) SessionId() sessp.Tsession {

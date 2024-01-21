@@ -248,7 +248,7 @@ const (
 func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
 	fsl, err := sigmaclnt.NewFsLib(pcfg)
 	assert.Nil(t, err)
-	fn := sp.UX + "~local/file-" + string(pcfg.GetUname())
+	fn := sp.UX + "~local/file-" + string(pcfg.GetPrincipal())
 	stop := false
 	nfile := 0
 	for !stop {

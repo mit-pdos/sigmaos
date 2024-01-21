@@ -68,12 +68,12 @@ func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) {
 
 // The connection from the kernel/client
 type NpConn struct {
-	mu    sync.Mutex
-	uname sp.Tuname
-	fidc  *fidclnt.FidClnt
-	pc    *pathclnt.PathClnt
-	fm    *fidMap
-	cid   sp.TclntId
+	mu        sync.Mutex
+	principal sp.Tprincipal
+	fidc      *fidclnt.FidClnt
+	pc        *pathclnt.PathClnt
+	fm        *fidMap
+	cid       sp.TclntId
 }
 
 func newNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
@@ -100,10 +100,10 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	if error != nil {
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
-	npc.uname = sp.Tuname(u.Uid)
+	npc.principal = sp.Tprincipal(u.Uid)
 
 	mnt := npc.pc.GetNamedMount()
-	fid, err := npc.fidc.Attach(npc.uname, npc.cid, mnt.Addr, "", "")
+	fid, err := npc.fidc.Attach(npc.principal, npc.cid, mnt.Addr, "", "")
 	if err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v err %v\n", args, err)
 		return sp.NoClntId, sp.NewRerrorSerr(err)

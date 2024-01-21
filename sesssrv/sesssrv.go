@@ -154,8 +154,8 @@ func (ssrv *SessSrv) GetSessionCondTable() *clntcond.ClntCondTable {
 	return ssrv.sct
 }
 
-func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
-	return ssrv.dirover, ctx.NewCtx(uname, sessid, clntid, ssrv.sct, ssrv.fencefs)
+func (ssrv *SessSrv) GetRootCtx(principal sp.Tprincipal, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
+	return ssrv.dirover, ctx.NewCtx(principal, sessid, clntid, ssrv.sct, ssrv.fencefs)
 }
 
 // New session or new connection for existing session

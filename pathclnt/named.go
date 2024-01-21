@@ -49,7 +49,7 @@ func (pathc *PathClnt) getNamedMount(realm sp.Trealm) (sp.Tmount, *serr.Err) {
 			}
 		}
 		pn := gpath.Join("root", sp.REALMREL, sp.REALMDREL, sp.REALMSREL, realm.String())
-		target, err := pathc.GetFile(pn, pathc.pcfg.GetUname(), sp.OREAD, 0, sp.MAXGETSET, sp.NullFence())
+		target, err := pathc.GetFile(pn, pathc.pcfg.GetPrincipal(), sp.OREAD, 0, sp.MAXGETSET, sp.NullFence())
 		if err != nil {
 			db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] GetFile err %v", realm, err)
 			return sp.Tmount{}, serr.NewErrError(err)
@@ -72,7 +72,7 @@ func (pathc *PathClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
 		db.DPrintf(db.NAMED_ERR, "mountNamed [%v]: getNamedMount err %v", realm, err)
 		return err
 	}
-	if err := pathc.autoMount(pathc.pcfg.GetUname(), mnt, path.Path{name}); err != nil {
+	if err := pathc.autoMount(pathc.pcfg.GetPrincipal(), mnt, path.Path{name}); err != nil {
 		db.DPrintf(db.NAMED_ERR, "mountNamed: automount err %v", err)
 		// If mounting failed, the named is unreachable. Invalidate the cache entry
 		// for this realm.

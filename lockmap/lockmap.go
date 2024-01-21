@@ -98,7 +98,7 @@ func (plt *PathLockTable) Acquire(ctx fs.CtxI, path path.Path, ltype Tlock) *Pat
 	} else {
 		lk.RLock()
 	}
-	db.DPrintf(db.LOCKMAP, "%v: Lock '%s'", ctx.Uname(), lk.path)
+	db.DPrintf(db.LOCKMAP, "%v: Lock '%s'", ctx.Principal(), lk.path)
 	return lk
 }
 
@@ -111,7 +111,7 @@ func (plt *PathLockTable) release(lk *PathLock) bool {
 // Release lock for path. Caller should have watch locked through
 // Acquire().
 func (plt *PathLockTable) Release(ctx fs.CtxI, lk *PathLock, ltype Tlock) {
-	db.DPrintf(db.LOCKMAP, "%v: Release '%s'", ctx.Uname(), lk.path)
+	db.DPrintf(db.LOCKMAP, "%v: Release '%s'", ctx.Principal(), lk.path)
 	if ltype == WLOCK {
 		lk.Unlock()
 	} else {
@@ -124,7 +124,7 @@ func (plt *PathLockTable) Release(ctx fs.CtxI, lk *PathLock, ltype Tlock) {
 func (plt *PathLockTable) HandOverLock(ctx fs.CtxI, dlk *PathLock, name string, ltype Tlock) *PathLock {
 	flk := plt.allocLockString(dlk.path + "/" + name)
 
-	db.DPrintf(db.LOCKMAP, "%v: HandoverLock '%s' %s", ctx.Uname(), dlk.path, name)
+	db.DPrintf(db.LOCKMAP, "%v: HandoverLock '%s' %s", ctx.Principal(), dlk.path, name)
 
 	if ltype == WLOCK {
 		flk.Lock()

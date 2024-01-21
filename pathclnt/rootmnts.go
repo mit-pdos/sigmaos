@@ -13,10 +13,10 @@ import (
 )
 
 type RootMount struct {
-	svcpn  path.Path
-	tree   path.Path
-	uname  sp.Tuname
-	closed bool
+	svcpn     path.Path
+	tree      path.Path
+	principal sp.Tprincipal
+	closed    bool
 }
 
 type RootMountTable struct {
@@ -31,7 +31,7 @@ func newRootMountTable() *RootMountTable {
 	return mt
 }
 
-// XXX lookup should involve uname
+// XXX lookup should involve principal
 func (rootmt *RootMountTable) lookup(name string) (*RootMount, *serr.Err) {
 	rootmt.Lock()
 	defer rootmt.Unlock()
@@ -54,7 +54,7 @@ func (rootmt *RootMountTable) disconnect(name string) error {
 	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
 }
 
-func (rootmt *RootMountTable) add(uname sp.Tuname, svcpn, tree path.Path, mntname string) *serr.Err {
+func (rootmt *RootMountTable) add(principal sp.Tprincipal, svcpn, tree path.Path, mntname string) *serr.Err {
 	rootmt.Lock()
 	defer rootmt.Unlock()
 
@@ -97,7 +97,7 @@ func (pathc *PathClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
 
 			// this may remount the service that this root is relying on
 			// and repair this root mount
-			if _, err := pathc.Stat(sm.svcpn.String()+"/", pathc.pcfg.GetUname()); err != nil {
+			if _, err := pathc.Stat(sm.svcpn.String()+"/", pathc.pcfg.GetPrincipal()); err != nil {
 				var sr *serr.Err
 				if errors.As(err, &sr) {
 					return sr, false
@@ -111,12 +111,12 @@ func (pathc *PathClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
 	return nil, false
 }
 
-func (pathc *PathClnt) NewRootMount(uname sp.Tuname, pn, mntname string) error {
+func (pathc *PathClnt) NewRootMount(principal sp.Tprincipal, pn, mntname string) error {
 	if !strings.HasPrefix(pn, sp.NAME) {
 		pn = sp.NAMED + pn
 	}
 	db.DPrintf(db.SVCMOUNT, "NewRootMount: %v %v\n", pn, mntname)
-	svc, rest, err := pathc.PathLastMount(pn, uname)
+	svc, rest, err := pathc.PathLastMount(pn, principal)
 	if err != nil {
 		db.DPrintf(db.SVCMOUNT, "NewRootMount %v err %v\n", pn, err)
 		return err
@@ -124,7 +124,7 @@ func (pathc *PathClnt) NewRootMount(uname sp.Tuname, pn, mntname string) error {
 	if err := pathc.mountRoot(svc, rest, mntname); err != nil {
 		return err
 	}
-	if err := pathc.rootmt.add(uname, svc, rest, mntname); err != nil {
+	if err := pathc.rootmt.add(principal, svc, rest, mntname); err != nil {
 		db.DPrintf(db.SVCMOUNT, "NewRootMount: add %v err %v\n", svc, err)
 		return err
 	}
@@ -143,7 +143,7 @@ func (pathc *PathClnt) mountRoot(svc, rest path.Path, mntname string) *serr.Err 
 		db.DPrintf(db.SVCMOUNT, "mountRoot: lookup %v %v err nil\n", svc, fid)
 	}
 	addr := ch.Servers()
-	if err := pathc.MountTree(pathc.pcfg.GetUname(), addr, rest.String(), mntname); err != nil {
+	if err := pathc.MountTree(pathc.pcfg.GetPrincipal(), addr, rest.String(), mntname); err != nil {
 		db.DPrintf(db.SVCMOUNT, "mountRoot: MountTree %v err %v\n", svc, err)
 	}
 	db.DPrintf(db.SVCMOUNT, "mountRoot: attached %v(%v):%v at %v\n", svc, addr, rest, mntname)

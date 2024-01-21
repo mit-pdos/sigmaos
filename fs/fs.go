@@ -16,7 +16,7 @@ type NewInodeF func(CtxI, sp.Tperm, sp.Tmode, Dir, MkDirF) (Inode, *serr.Err)
 type MkDirF func(Inode, NewInodeF) Inode
 
 type CtxI interface {
-	Uname() sp.Tuname
+	Principal() sp.Tprincipal
 	SessionId() sessp.Tsession
 	ClntCondTable() *clntcond.ClntCondTable
 	ClntId() sp.TclntId

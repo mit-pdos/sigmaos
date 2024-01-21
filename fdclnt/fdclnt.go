@@ -49,11 +49,11 @@ func (fdc *FdClient) CloseFd(fd int) error {
 }
 
 func (fdc *FdClient) Stat(name string) (*sp.Stat, error) {
-	return fdc.pc.Stat(name, fdc.pcfg.GetUname())
+	return fdc.pc.Stat(name, fdc.pcfg.GetPrincipal())
 }
 
 func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
-	fid, err := fdc.pc.Create(path, fdc.pcfg.GetUname(), perm, mode, sp.NoLeaseId, sp.NoFence())
+	fid, err := fdc.pc.Create(path, fdc.pcfg.GetPrincipal(), perm, mode, sp.NoLeaseId, sp.NoFence())
 	if err != nil {
 		return -1, err
 	}
@@ -62,7 +62,7 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 }
 
 func (fdc *FdClient) CreateEphemeral(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
-	fid, err := fdc.pc.Create(path, fdc.pcfg.GetUname(), perm|sp.DMTMP, mode, lid, f)
+	fid, err := fdc.pc.Create(path, fdc.pcfg.GetPrincipal(), perm|sp.DMTMP, mode, lid, f)
 	if err != nil {
 		return -1, err
 	}
@@ -74,7 +74,7 @@ func (fdc *FdClient) openWait(path string, mode sp.Tmode) (int, error) {
 	ch := make(chan error)
 	fd := -1
 	for {
-		fid, err := fdc.pc.Open(path, fdc.pcfg.GetUname(), mode, func(err error) {
+		fid, err := fdc.pc.Open(path, fdc.pcfg.GetPrincipal(), mode, func(err error) {
 			ch <- err
 		})
 		db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", path, err)
@@ -97,7 +97,7 @@ func (fdc *FdClient) Open(path string, mode sp.Tmode, w sos.Twait) (int, error) 
 	if w {
 		return fdc.openWait(path, mode)
 	} else {
-		fid, err := fdc.pc.Open(path, fdc.pcfg.GetUname(), mode, nil)
+		fid, err := fdc.pc.Open(path, fdc.pcfg.GetPrincipal(), mode, nil)
 		if err != nil {
 			return -1, err
 		}
@@ -108,22 +108,22 @@ func (fdc *FdClient) Open(path string, mode sp.Tmode, w sos.Twait) (int, error) 
 
 func (fdc *FdClient) Rename(old, new string) error {
 	f := fdc.ft.lookup(old)
-	return fdc.pc.Rename(old, new, fdc.pcfg.GetUname(), f)
+	return fdc.pc.Rename(old, new, fdc.pcfg.GetPrincipal(), f)
 }
 
 func (fdc *FdClient) Remove(pn string) error {
 	f := fdc.ft.lookup(pn)
-	return fdc.pc.Remove(pn, fdc.pcfg.GetUname(), f)
+	return fdc.pc.Remove(pn, fdc.pcfg.GetPrincipal(), f)
 }
 
 func (fdc *FdClient) GetFile(pn string) ([]byte, error) {
 	f := fdc.ft.lookup(pn)
-	return fdc.pc.GetFile(pn, fdc.pcfg.GetUname(), sp.OREAD, 0, sp.MAXGETSET, f)
+	return fdc.pc.GetFile(pn, fdc.pcfg.GetPrincipal(), sp.OREAD, 0, sp.MAXGETSET, f)
 }
 
 func (fdc *FdClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte, off sp.Toffset, lid sp.TleaseId) (sp.Tsize, error) {
 	f := fdc.ft.lookup(fname)
-	return fdc.pc.PutFile(fname, fdc.pcfg.GetUname(), mode|sp.OWRITE, perm, data, off, lid, f)
+	return fdc.pc.PutFile(fname, fdc.pcfg.GetPrincipal(), mode|sp.OWRITE, perm, data, off, lid, f)
 }
 
 func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
@@ -225,11 +225,11 @@ func (fdc *FdClient) SetLocalMount(mnt *sp.Tmount, port sp.Tport) {
 }
 
 func (fdc *FdClient) PathLastMount(pn string) (path.Path, path.Path, error) {
-	return fdc.pc.PathLastMount(pn, fdc.pcfg.GetUname())
+	return fdc.pc.PathLastMount(pn, fdc.pcfg.GetPrincipal())
 }
 
 func (fdc *FdClient) MountTree(addrs sp.Taddrs, tree, mount string) error {
-	return fdc.pc.MountTree(fdc.pcfg.GetUname(), addrs, tree, mount)
+	return fdc.pc.MountTree(fdc.pcfg.GetPrincipal(), addrs, tree, mount)
 }
 
 func (fdc *FdClient) GetNamedMount() sp.Tmount {
@@ -237,7 +237,7 @@ func (fdc *FdClient) GetNamedMount() sp.Tmount {
 }
 
 func (fdc *FdClient) NewRootMount(pn, mntname string) error {
-	return fdc.pc.NewRootMount(fdc.pcfg.GetUname(), pn, mntname)
+	return fdc.pc.NewRootMount(fdc.pcfg.GetPrincipal(), pn, mntname)
 }
 
 func (fdc *FdClient) Mounts() []string {

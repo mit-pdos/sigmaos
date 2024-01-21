@@ -37,7 +37,7 @@ func GetProcEnv() *ProcEnv {
 	pestr := os.Getenv(SIGMACONFIG)
 	if pestr == "" {
 		stack := debug.Stack()
-		log.Fatalf("%s\nError: No Sigma Config", stack)
+		log.Fatalf("FATAL %s: No Sigma Config\n%s", stack)
 	}
 	return Unmarshal(pestr)
 }

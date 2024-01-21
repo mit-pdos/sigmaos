@@ -1,6 +1,7 @@
 package fsux
 
 import (
+	"path"
 	"sync"
 
 	db "sigmaos/debug"
@@ -37,7 +38,7 @@ func RunFsUx(rootux string) {
 	}
 	pcfg := proc.GetProcEnv()
 	addr := sp.NewTaddr(ip, sp.NO_PORT)
-	srv, err := sigmasrv.NewSigmaSrvRoot(root, sp.UX, addr, pcfg)
+	srv, err := sigmasrv.NewSigmaSrvRoot(root, path.Join(sp.UX, pcfg.GetKernelID()), addr, pcfg)
 	if err != nil {
 		db.DFatalf("BootSrvAndPost %v\n", err)
 	}

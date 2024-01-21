@@ -601,7 +601,7 @@ func TestSpawnBurst(t *testing.T) {
 	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootNode %v", err)
 
-	db.DPrintf(db.TEST, "Start burst spawn")
+	db.DPrintf(db.TEST, "Start burst spawn %v", N)
 
 	ps := burstSpawnSpinner(t, ts, N)
 
@@ -617,10 +617,12 @@ func TestSpawnBurst(t *testing.T) {
 		assert.Nil(t, err, "Evict: %v", err)
 	}
 
+	db.DPrintf(db.TEST, "Evict wait/exit spawn")
+
 	for _, p := range ps {
 		status, err := ts.WaitExit(p.GetPid())
 		assert.Nil(t, err, "WaitExit: %v", err)
-		assert.True(t, status != nil && status.IsStatusEvicted(), "Wrong status: %v", status)
+		assert.True(t, status != nil && status.IsStatusEvicted(), "%v: Wrong status: %v", p.GetPid(), status)
 	}
 
 	ts.Shutdown()

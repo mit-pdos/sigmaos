@@ -34,8 +34,6 @@ const (
 	MONGOREL      = "mongo"
 	MONGO         = NAMED + MONGOREL + "/"
 
-	UXBIN = UX + "~local/bin/"
-
 	IMGREL = "img"
 	IMG    = NAMED + IMGREL + "/"
 

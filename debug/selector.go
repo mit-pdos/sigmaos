@@ -226,6 +226,8 @@ const (
 	MEMFSSRV                     = "MEMFSSRV"
 	THREADMGR                    = "THREADMGR"
 	PROTSRV                      = "PROTSRV"
+	AUTH                         = "AUTH"
+	AUTH_ERR                     = AUTH + ERR
 	REFMAP_SUFFIX                = "_REFMAP"
 	VERSION                      = "VERSION"
 	CLNTCOND                     = "CLNTCOND"

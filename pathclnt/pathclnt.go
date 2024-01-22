@@ -77,7 +77,7 @@ func (pathc *PathClnt) Mounts() []string {
 	return pathc.mnt.mountedPaths()
 }
 
-func (pathc *PathClnt) MountTree(principal sp.Tprincipal, addrs sp.Taddrs, tree, mnt string) error {
+func (pathc *PathClnt) MountTree(principal *sp.Tprincipal, addrs sp.Taddrs, tree, mnt string) error {
 	db.DPrintf(db.PATHCLNT, "MountTree [%v]/%v mnt %v", addrs, tree, mnt)
 	if fd, err := pathc.Attach(principal, pathc.cid, addrs, "", tree); err == nil {
 		return pathc.Mount(fd, mnt)
@@ -89,7 +89,7 @@ func (pathc *PathClnt) MountTree(principal sp.Tprincipal, addrs sp.Taddrs, tree,
 
 // Return path including the last mount file on this path and the rest
 // of the path on the server.
-func (pathc *PathClnt) PathLastMount(pn string, principal sp.Tprincipal) (path.Path, path.Path, error) {
+func (pathc *PathClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Path, path.Path, error) {
 	// Automount the longest prefix of pn; if pn exist, then the
 	// server holding the directory/file correspending to pn.
 	if _, err := pathc.Stat(pn+"/", principal); err != nil {
@@ -148,7 +148,7 @@ func (pathc *PathClnt) Mount(fid sp.Tfid, path string) error {
 	return nil
 }
 
-func (pathc *PathClnt) Create(p string, principal sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
+func (pathc *PathClnt) Create(p string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Create %v perm %v lid %v\n", pathc.cid, p, perm, lid)
 	path := path.Split(p)
 	dir := path.Dir()
@@ -168,7 +168,7 @@ func (pathc *PathClnt) Create(p string, principal sp.Tprincipal, perm sp.Tperm, 
 
 // Rename using renameat() for across directories or using wstat()
 // for within a directory.
-func (pathc *PathClnt) Rename(old, new string, principal sp.Tprincipal, f *sp.Tfence) error {
+func (pathc *PathClnt) Rename(old, new string, principal *sp.Tprincipal, f *sp.Tfence) error {
 	db.DPrintf(db.PATHCLNT, "%v: Rename %v %v\n", pathc.cid, old, new)
 	opath := path.Split(old)
 	npath := path.Split(new)
@@ -202,7 +202,7 @@ func (pathc *PathClnt) Rename(old, new string, principal sp.Tprincipal, f *sp.Tf
 }
 
 // Rename across directories of a single server using Renameat
-func (pathc *PathClnt) renameat(old, new string, principal sp.Tprincipal, f *sp.Tfence) *serr.Err {
+func (pathc *PathClnt) renameat(old, new string, principal *sp.Tprincipal, f *sp.Tfence) *serr.Err {
 	db.DPrintf(db.PATHCLNT, "%v: Renameat %v %v\n", pathc.cid, old, new)
 	opath := path.Split(old)
 	npath := path.Split(new)
@@ -221,7 +221,7 @@ func (pathc *PathClnt) renameat(old, new string, principal sp.Tprincipal, f *sp.
 	return pathc.FidClnt.Renameat(fid, o, fid1, n, f)
 }
 
-func (pathc *PathClnt) Remove(name string, principal sp.Tprincipal, f *sp.Tfence) error {
+func (pathc *PathClnt) Remove(name string, principal *sp.Tprincipal, f *sp.Tfence) error {
 	db.DPrintf(db.PATHCLNT, "%v: Remove %v\n", pathc.cid, name)
 	pn := path.Split(name)
 	fid, rest, err := pathc.resolve(pn, principal, path.EndSlash(name))
@@ -242,7 +242,7 @@ func (pathc *PathClnt) Remove(name string, principal sp.Tprincipal, f *sp.Tfence
 	return nil
 }
 
-func (pathc *PathClnt) Stat(name string, principal sp.Tprincipal) (*sp.Stat, error) {
+func (pathc *PathClnt) Stat(name string, principal *sp.Tprincipal) (*sp.Stat, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Stat %v\n", pathc.cid, name)
 	pn := path.Split(name)
 	target, rest, err := pathc.resolve(pn, principal, true)
@@ -268,7 +268,7 @@ func (pathc *PathClnt) Stat(name string, principal sp.Tprincipal) (*sp.Stat, err
 	}
 }
 
-func (pathc *PathClnt) Open(pn string, principal sp.Tprincipal, mode sp.Tmode, w Watch) (sp.Tfid, error) {
+func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, w Watch) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Open %v %v %v\n", pathc.cid, pn, mode, w)
 	p := path.Split(pn)
 	fid, err := pathc.walk(p, principal, path.EndSlash(pn), w)
@@ -296,7 +296,7 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w Watch) error {
 	return nil
 }
 
-func (pathc *PathClnt) SetRemoveWatch(pn string, principal sp.Tprincipal, w Watch) error {
+func (pathc *PathClnt) SetRemoveWatch(pn string, principal *sp.Tprincipal, w Watch) error {
 	db.DPrintf(db.PATHCLNT, "%v: SetRemoveWatch %v", pathc.cid, pn)
 	p := path.Split(pn)
 	fid, err := pathc.walk(p, principal, path.EndSlash(pn), nil)
@@ -330,7 +330,7 @@ func Retry(err *serr.Err) bool {
 	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
 }
 
-func (pathc *PathClnt) GetFile(pn string, principal sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
+func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v\n", pathc.cid, pn, mode)
 	p := path.Split(pn)
 	fid, rest, err := pathc.resolve(p, principal, path.EndSlash(pn))
@@ -355,7 +355,7 @@ func (pathc *PathClnt) GetFile(pn string, principal sp.Tprincipal, mode sp.Tmode
 }
 
 // Create or open file and write it
-func (pathc *PathClnt) PutFile(pn string, principal sp.Tprincipal, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId, f *sp.Tfence) (sp.Tsize, error) {
+func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId, f *sp.Tfence) (sp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "%v: PutFile %v %v %v\n", pathc.cid, pn, mode, lid)
 	p := path.Split(pn)
 	fid, rest, err := pathc.resolve(p, principal, path.EndSlash(pn))
@@ -388,7 +388,7 @@ func (pathc *PathClnt) PutFile(pn string, principal sp.Tprincipal, mode sp.Tmode
 	return cnt, nil
 }
 
-func (pathc *PathClnt) resolve(p path.Path, principal sp.Tprincipal, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
+func (pathc *PathClnt) resolve(p path.Path, principal *sp.Tprincipal, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
 	if err, b := pathc.resolveRoot(p); err != nil {
 		db.DPrintf(db.ALWAYS, "%v: resolveRoot %v err %v b %v\n", pathc.cid, p, err, b)
 	}
@@ -396,7 +396,7 @@ func (pathc *PathClnt) resolve(p path.Path, principal sp.Tprincipal, resolve boo
 }
 
 // XXX use MountedAt
-func (pathc *PathClnt) LastMount(pn string, principal sp.Tprincipal) (path.Path, path.Path, error) {
+func (pathc *PathClnt) LastMount(pn string, principal *sp.Tprincipal) (path.Path, path.Path, error) {
 	p := path.Split(pn)
 	_, left, err := pathc.resolve(p, principal, path.EndSlash(pn))
 	if err != nil {

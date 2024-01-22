@@ -10,7 +10,6 @@ type Tlength uint64
 type Tgid uint32
 type Trealm string
 type Tpid string
-type Tprincipal string
 type TclntId uint64
 type TleaseId uint64
 type Tttl uint64

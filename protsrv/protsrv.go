@@ -1,8 +1,6 @@
 package protsrv
 
 import (
-	"strings"
-
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/ephemeralmap"
@@ -128,28 +126,12 @@ func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachC
 }
 
 // Check if a principal is authorized to attach to the server
-func (ps *ProtSrv) authorized(principal sp.Tprincipal) bool {
+func (ps *ProtSrv) authorized(principal *sp.Tprincipal) bool {
 	db.DPrintf(db.AUTH, "Authorization check p %v", principal)
 	// TODO: do a real check
-	privPrincipals := []string{
-		"test",
-		"sigma-",
-		"lcsched-",
-		"schedd-",
-		"procq-",
-		"uprocd-",
-		"named-",
-		"fss3d-",
-		"fsuxd-",
-		"realmd-",
-		"named-",
-		"knamed-",
-	}
-	for _, pfx := range privPrincipals {
-		if strings.HasPrefix(string(principal), pfx) {
-			db.DPrintf(db.AUTH, "Authorization check successful p %v", principal)
-			return true
-		}
+	if principal.TokenPresent {
+		db.DPrintf(db.AUTH, "Authorization check successful p %v", principal)
+		return true
 	}
 	db.DPrintf(db.AUTH, "Authorization check failed p %v", principal)
 	return false

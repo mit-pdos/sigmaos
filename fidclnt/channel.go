@@ -14,10 +14,10 @@ type Channel struct {
 	pc        *protclnt.ProtClnt
 	path      path.Path
 	qids      []*sp.Tqid
-	principal sp.Tprincipal
+	principal *sp.Tprincipal
 }
 
-func newChannel(pc *protclnt.ProtClnt, principal sp.Tprincipal, path path.Path, qs []*sp.Tqid) *Channel {
+func newChannel(pc *protclnt.ProtClnt, principal *sp.Tprincipal, path path.Path, qs []*sp.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
 	c.path = path
@@ -30,7 +30,7 @@ func (c *Channel) String() string {
 	return fmt.Sprintf("{ Path %v Qids %v }", c.path, c.qids)
 }
 
-func (c *Channel) Uname() sp.Tprincipal {
+func (c *Channel) Principal() *sp.Tprincipal {
 	return c.principal
 }
 

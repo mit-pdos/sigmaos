@@ -17,7 +17,7 @@ type Inode struct {
 	perm   sp.Tperm
 	mtime  int64
 	parent fs.Dir
-	owner  sp.Tprincipal
+	owner  *sp.Tprincipal
 }
 
 var NextInum = uint64(0)
@@ -29,7 +29,7 @@ func NewInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 	i.mtime = time.Now().Unix()
 	i.parent = parent
 	if ctx == nil {
-		i.owner = ""
+		i.owner = sp.NO_PRINCIPAL
 	} else {
 		i.owner = ctx.Principal()
 	}
@@ -101,6 +101,6 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	defer inode.mu.Unlock()
 
 	st := sp.NewStat(sp.NewQidPerm(inode.perm, 0, inode.inum),
-		inode.Mode(), uint32(inode.mtime), "", string(inode.owner))
+		inode.Mode(), uint32(inode.mtime), "", inode.owner.ID)
 	return st, nil
 }

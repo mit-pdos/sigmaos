@@ -24,7 +24,7 @@ func TestStartStop(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestBasicOK(t *testing.T) {
+func TestOK(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 
 	sts, err := rootts.GetDir(sp.NAMED)
@@ -47,12 +47,41 @@ func TestBasicOK(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestBasicFail(t *testing.T) {
+func TestMaliciousPrincipalFail(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 
 	// Create a new sigma clnt, with an unexpected principal
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
-	pe.SetPrincipal("malicious-user")
+	pe.SetPrincipal(&sp.Tprincipal{
+		ID:           "malicious-user",
+		TokenPresent: false,
+	})
+	sc1, err := sigmaclnt.NewSigmaClnt(pe)
+	assert.Nil(t, err, "Err NewClnt: %v", err)
+
+	_, err = sc1.GetDir(sp.NAMED)
+	assert.NotNil(t, err)
+
+	sts, err := rootts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "realm names sched %v", sp.Names(sts))
+
+	_, err = sc1.GetDir(path.Join(sp.SCHEDD, sts[0].Name) + "/")
+	assert.NotNil(t, err)
+
+	rootts.Shutdown()
+}
+
+func TestNoDelegationPrincipalFail(t *testing.T) {
+	rootts := test.NewTstateWithRealms(t)
+
+	// Create a new sigma clnt, with an unexpected principal
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	pe.SetPrincipal(&sp.Tprincipal{
+		ID:           "malicious-user",
+		TokenPresent: false,
+	})
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "Err NewClnt: %v", err)
 

@@ -125,7 +125,7 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(principal sp.Tprincipal, cid sp.TclntId, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
+func (fidc *FidClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
 	fid := fidc.allocFid()
 	pc := protclnt.NewProtClnt(addrs, fidc.sm)
 	reply, err := pc.Attach(principal, cid, fid, path.Split(tree))

@@ -44,16 +44,16 @@ func (w *Twalk) Tnewfid() Tfid {
 	return Tfid(w.NewFid)
 }
 
-func NewTattach(fid, afid Tfid, principal Tprincipal, cid TclntId, path path.Path) *Tattach {
-	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Principal: string(principal), Aname: path.String(), ClntId: uint64(cid)}
+func NewTattach(fid, afid Tfid, principal *Tprincipal, cid TclntId, path path.Path) *Tattach {
+	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Principal: principal, Aname: path.String(), ClntId: uint64(cid)}
 }
 
 func (a *Tattach) Tfid() Tfid {
 	return Tfid(a.Fid)
 }
 
-func (a *Tattach) Tprincipal() Tprincipal {
-	return Tprincipal(a.Principal)
+func (a *Tattach) Tprincipal() *Tprincipal {
+	return a.Principal
 }
 
 func (a *Tattach) TclntId() TclntId {

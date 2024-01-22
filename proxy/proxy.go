@@ -69,7 +69,7 @@ func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) {
 // The connection from the kernel/client
 type NpConn struct {
 	mu        sync.Mutex
-	principal sp.Tprincipal
+	principal *sp.Tprincipal
 	fidc      *fidclnt.FidClnt
 	pc        *pathclnt.PathClnt
 	fm        *fidMap
@@ -100,7 +100,10 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	if error != nil {
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
-	npc.principal = sp.Tprincipal(u.Uid)
+	npc.principal = &sp.Tprincipal{
+		ID:           u.Uid,
+		TokenPresent: true,
+	}
 
 	mnt := npc.pc.GetNamedMount()
 	fid, err := npc.fidc.Attach(npc.principal, npc.cid, mnt.Addr, "", "")
@@ -129,7 +132,10 @@ func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	fid1, err := npc.pc.Walk(fid, args.Wnames, "proxy")
+	fid1, err := npc.pc.Walk(fid, args.Wnames, &sp.Tprincipal{
+		ID:           "proxy",
+		TokenPresent: true,
+	})
 	if err != nil {
 		db.DPrintf(db.PROXY, "Walk args %v err: %v\n", args, err)
 		return sp.NewRerrorSerr(err)

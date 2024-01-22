@@ -154,7 +154,7 @@ func (ssrv *SessSrv) GetSessionCondTable() *clntcond.ClntCondTable {
 	return ssrv.sct
 }
 
-func (ssrv *SessSrv) GetRootCtx(principal sp.Tprincipal, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
+func (ssrv *SessSrv) GetRootCtx(principal *sp.Tprincipal, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
 	return ssrv.dirover, ctx.NewCtx(principal, sessid, clntid, ssrv.sct, ssrv.fencefs)
 }
 

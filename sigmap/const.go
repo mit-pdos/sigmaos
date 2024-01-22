@@ -102,3 +102,5 @@ const (
 	OUTER_CONTAINER_IP Tiptype = 2
 	NO_PORT            Tport   = 0
 )
+
+var NO_PRINCIPAL *Tprincipal = &Tprincipal{ID: "NO_PRINCIPAL", TokenPresent: false}

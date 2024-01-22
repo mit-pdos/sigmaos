@@ -11,6 +11,11 @@ message Tqid {
         uint64  path = 3;
 };
 
+message Tprincipal {
+        string iD = 1;
+        bool   tokenPresent = 2;
+}
+
 message Stat {
         uint32  type = 1;
         uint32  dev = 2;
@@ -56,7 +61,7 @@ message Rversion {
 
 message Tauth {
         uint32 afid = 1;
-        repeated string Principals = 2;
+        repeated Tprincipal Principals = 2;
         repeated string Anames = 3;
 }
 
@@ -67,7 +72,7 @@ message Rauth {
 message Tattach {
         uint32 fid = 1;
         uint32 afid = 2;
-        string principal = 3;
+        Tprincipal principal = 3;
         string aname = 4;
         uint64 clntId = 5;
 }

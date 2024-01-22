@@ -16,7 +16,7 @@ const (
 	MAXRETRY   = (fsetcd.SessionTTL + 1) * (1000 / TIMEOUT)
 )
 
-func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, principal sp.Tprincipal) (sp.Tfid, *serr.Err) {
+func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
 	ch := pathc.FidClnt.Lookup(fid)
 	if ch == nil {
 		return sp.NoFid, serr.NewErr(serr.TErrNotfound, fid)
@@ -31,7 +31,7 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, principal sp.Tprincipal
 // unreachable, it umounts the path it walked to, and starts over
 // again, perhaps switching to another replica.  (Note:
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
-func (pathc *PathClnt) walk(path path.Path, principal sp.Tprincipal, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
+func (pathc *PathClnt) walk(path path.Path, principal *sp.Tprincipal, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
 	for i := 0; i < MAXRETRY; i++ {
 		if err, cont := pathc.resolveRoot(path); err != nil {
 			if cont && err.IsErrUnreachable() {

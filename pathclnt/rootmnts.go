@@ -15,7 +15,7 @@ import (
 type RootMount struct {
 	svcpn     path.Path
 	tree      path.Path
-	principal sp.Tprincipal
+	principal *sp.Tprincipal
 	closed    bool
 }
 
@@ -27,7 +27,7 @@ type RootMountTable struct {
 func newRootMountTable() *RootMountTable {
 	mt := &RootMountTable{}
 	mt.mounts = make(map[string]*RootMount)
-	mt.add("", nil, nil, sp.NAME)
+	mt.add(sp.NO_PRINCIPAL, nil, nil, sp.NAME)
 	return mt
 }
 
@@ -54,7 +54,7 @@ func (rootmt *RootMountTable) disconnect(name string) error {
 	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
 }
 
-func (rootmt *RootMountTable) add(principal sp.Tprincipal, svcpn, tree path.Path, mntname string) *serr.Err {
+func (rootmt *RootMountTable) add(principal *sp.Tprincipal, svcpn, tree path.Path, mntname string) *serr.Err {
 	rootmt.Lock()
 	defer rootmt.Unlock()
 
@@ -111,7 +111,7 @@ func (pathc *PathClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
 	return nil, false
 }
 
-func (pathc *PathClnt) NewRootMount(principal sp.Tprincipal, pn, mntname string) error {
+func (pathc *PathClnt) NewRootMount(principal *sp.Tprincipal, pn, mntname string) error {
 	if !strings.HasPrefix(pn, sp.NAME) {
 		pn = sp.NAMED + pn
 	}

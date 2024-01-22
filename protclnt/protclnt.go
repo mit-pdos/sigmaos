@@ -44,7 +44,7 @@ func (pclnt *ProtClnt) CallData(args sessp.Tmsg, data []byte) (*sessp.FcallMsg, 
 	return pclnt.CallServer(pclnt.addrs, args, data)
 }
 
-func (pclnt *ProtClnt) Attach(principal sp.Tprincipal, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
+func (pclnt *ProtClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
 	args := sp.NewTattach(fid, sp.NoFid, principal, cid, path)
 	reply, err := pclnt.CallServer(pclnt.addrs, args, nil)
 	if err != nil {

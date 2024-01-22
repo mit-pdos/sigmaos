@@ -75,13 +75,13 @@ func GetLabels(s string) map[string]bool {
 	return m
 }
 
-func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal sp.Tprincipal, procDir string, parentDir string, priv, overlays, useSigmaclntd bool) *ProcEnv {
+func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, overlays, useSigmaclntd bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
 			PidStr:              string(pid),
 			RealmStr:            string(realm),
-			PrincipalStr:        string(principal),
+			Principal:           principal,
 			ProcDir:             procDir,
 			ParentDir:           parentDir,
 			Program:             program,
@@ -103,18 +103,18 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal sp.Tprin
 
 func NewProcEnvUnset(priv, overlays bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
-	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), sp.Tprincipal(NOT_SET), NOT_SET, NOT_SET, priv, overlays, false)
+	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), &sp.Tprincipal{ID: NOT_SET}, NOT_SET, NOT_SET, priv, overlays, false)
 }
 
 func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 	return &ProcEnv{p}
 }
 
-func NewBootProcEnv(principal sp.Tprincipal, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool) *ProcEnv {
+func NewBootProcEnv(principal *sp.Tprincipal, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetPrincipal(principal)
 	pe.Program = "kernel"
-	pe.SetPID(sp.GenPid(string(principal)))
+	pe.SetPID(sp.GenPid(principal.ID))
 	pe.EtcdIP = string(etcdIP)
 	pe.InnerContainerIPStr = innerIP.String()
 	pe.OuterContainerIPStr = outerIP.String()
@@ -128,7 +128,10 @@ func NewBootProcEnv(principal sp.Tprincipal, etcdIP sp.Tip, innerIP sp.Tip, oute
 
 func NewTestProcEnv(realm sp.Trealm, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
-	pe.SetPrincipal("test")
+	pe.SetPrincipal(&sp.Tprincipal{
+		ID:           "test",
+		TokenPresent: true,
+	})
 	pe.SetPID(sp.GenPid("test"))
 	pe.SetRealm(realm, overlays)
 	pe.EtcdIP = string(etcdIP)
@@ -146,7 +149,10 @@ func NewTestProcEnv(realm sp.Trealm, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.T
 func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
-	pe2.SetPrincipal(sp.Tprincipal(string(pe.GetPrincipal()) + "-clnt-" + strconv.Itoa(idx)))
+	pe2.SetPrincipal(&sp.Tprincipal{
+		ID:           pe.GetPrincipal().ID + "-clnt-" + strconv.Itoa(idx),
+		TokenPresent: pe.GetPrincipal().TokenPresent,
+	})
 	return pe2
 }
 
@@ -154,7 +160,10 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, pe.Overlays)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetRealm(realm, pe.Overlays)
-	pe2.SetPrincipal(sp.Tprincipal(string(pe.GetPrincipal()) + "-realm-" + realm.String()))
+	pe2.SetPrincipal(&sp.Tprincipal{
+		ID:           pe.GetPrincipal().ID + "-realm-" + realm.String(),
+		TokenPresent: pe.GetPrincipal().TokenPresent,
+	})
 	return pe2
 }
 
@@ -199,12 +208,8 @@ func (pe *ProcEnvProto) SetRealm(realm sp.Trealm, overlays bool) {
 	}
 }
 
-func (pe *ProcEnvProto) GetPrincipal() sp.Tprincipal {
-	return sp.Tprincipal(pe.PrincipalStr)
-}
-
-func (pe *ProcEnvProto) SetPrincipal(principal sp.Tprincipal) {
-	pe.PrincipalStr = string(principal)
+func (pe *ProcEnvProto) SetPrincipal(principal *sp.Tprincipal) {
+	pe.Principal = principal
 }
 
 func (pe *ProcEnvProto) SetUprocdPID(pid sp.Tpid) {
@@ -274,5 +279,5 @@ func Unmarshal(pestr string) *ProcEnv {
 
 // TODO: cleanup
 func (pe *ProcEnv) String() string {
-	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdIP:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.EtcdIP, pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail)
+	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdIP:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal().String(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.EtcdIP, pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail)
 }

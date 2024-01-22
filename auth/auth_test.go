@@ -76,25 +76,24 @@ func TestMaliciousPrincipalFail(t *testing.T) {
 func TestNoDelegationPrincipalFail(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 
-	// Create a new sigma clnt, with an unexpected principal
-	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
-	pe.SetPrincipal(&sp.Tprincipal{
-		ID:           "malicious-user",
-		TokenPresent: false,
-	})
-	sc1, err := sigmaclnt.NewSigmaClnt(pe)
-	assert.Nil(t, err, "Err NewClnt: %v", err)
+	p1 := proc.NewProc("sleeper", []string{"2s", "name/"})
+	// Wipe the token from the child proc's env
+	p1.GetProcEnv().Principal.TokenPresent = false
 
-	_, err = sc1.GetDir(sp.NAMED)
-	assert.NotNil(t, err)
+	err := rootts.Spawn(p1)
+	assert.Nil(t, err, "Spawn")
+	db.DPrintf(db.TEST, "Spawned proc")
 
-	sts, err := rootts.GetDir(sp.SCHEDD)
-	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := rootts.WaitExit(p1.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
 
-	db.DPrintf(db.TEST, "realm names sched %v", sp.Names(sts))
+	// Make sure that WaitExit didn't return an error
+	assert.Nil(t, err, "WaitExit error: %v", err)
+	// Ensure the proc crashed
+	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
 
-	_, err = sc1.GetDir(path.Join(sp.SCHEDD, sts[0].Name) + "/")
-	assert.NotNil(t, err)
+	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
 
 	rootts.Shutdown()
 }

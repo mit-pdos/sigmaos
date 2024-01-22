@@ -6,6 +6,8 @@ const (
 	NAME          = "name"
 	NAMED         = NAME + "/"
 	NAMEDREL      = "named"
+	MEMFSREL      = "memfs"
+	MEMFS         = NAMED + MEMFSREL + "/"
 	REALMREL      = "realm"
 	REALM         = NAMED + REALMREL + "/"
 	REALMDREL     = "realmd"
@@ -31,8 +33,6 @@ const (
 	DBD           = DB + "~any/"
 	MONGOREL      = "mongo"
 	MONGO         = NAMED + MONGOREL + "/"
-
-	UXBIN = UX + "~local/bin/"
 
 	IMGREL = "img"
 	IMG    = NAMED + IMGREL + "/"

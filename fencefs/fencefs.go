@@ -86,6 +86,7 @@ func CheckFence(root fs.Dir, new sp.Tfence) (*Fence, *serr.Err) {
 	if f == nil {
 		return nil, err
 	}
+	db.DPrintf(db.FENCEFS, "CheckFence f %v new %v\n", f.fence, new)
 	if new.LessThan(&f.fence) {
 		db.DPrintf(db.FENCEFS_ERR, "Stale fence %v\n", new)
 		f.RUnlock()

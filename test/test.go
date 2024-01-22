@@ -1,8 +1,12 @@
+// Package sets up an environment for testing sigmaos.  If running
+// test with --start, test will start sigmaos kernel.  Without
+// --start, it will test create a kernelclnt without starting kernel.
 package test
 
 import (
 	"flag"
 	"fmt"
+	gopath "path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,12 +21,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
-
-//
-// If running test with --start, test will start sigmaos kernel.
-// Without --start, it will test create a kernelclnt without starting
-// kernel.
-//
 
 const (
 	BOOT_REALM = "realm"
@@ -66,6 +64,7 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 type Tstate struct {
 	*sigmaclnt.SigmaClnt
 	rc      *realmclnt.RealmClnt
+	memfs   *proc.Proc
 	kclnts  []*bootkernelclnt.Kernel
 	killidx int
 	T       *testing.T
@@ -77,6 +76,13 @@ func NewTstatePath(t *testing.T, path string) *Tstate {
 	ts, err := newSysClntPath(t, path)
 	if err != nil {
 		db.DFatalf("NewTstatePath: %v\n", err)
+	}
+	if path == gopath.Join(sp.MEMFS, "~local/")+"/" {
+		ts.memfs = proc.NewProc("memfsd", []string{})
+		err := ts.Spawn(ts.memfs)
+		assert.Nil(t, err)
+		err = ts.WaitStart(ts.memfs.GetPid())
+		assert.Nil(t, err, "WaitStart error")
 	}
 	return ts
 }
@@ -195,6 +201,13 @@ func (ts *Tstate) Shutdown() error {
 		db.DPrintf(db.TEST, "Skipping shutdown")
 	} else {
 		db.DPrintf(db.SYSTEM, "Shutdown")
+		if ts.memfs != nil {
+			db.DPrintf(db.SYSTEM, "Shutdown memfs")
+			err := ts.Evict(ts.memfs.GetPid())
+			assert.Nil(ts.T, err, "evict")
+			_, err = ts.WaitExit(ts.memfs.GetPid())
+			assert.Nil(ts.T, err, "WaitExit error")
+		}
 		if err := ts.RmDir(ts.ProcEnv().ProcDir); err != nil {
 			db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", ts.ProcEnv().ProcDir, err)
 		}

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -19,10 +20,18 @@ var pathname string // e.g., --path "name/ux/~local/fslibtest"
 
 func init() {
 	// use a memfs file system
-	flag.StringVar(&pathname, "path", "name/schedd/~local/", "path for file system")
+	flag.StringVar(&pathname, "path", "name/memfs/~local/", "path for file system")
 }
 
 func TestCompile(t *testing.T) {
+}
+
+func TestMemfsd(t *testing.T) {
+	ts := test.NewTstatePath(t, pathname)
+	sts, err := ts.GetDir(pathname)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "%v %v\n", pathname, sp.Names(sts))
+	ts.Shutdown()
 }
 
 func TestPipeBasic(t *testing.T) {

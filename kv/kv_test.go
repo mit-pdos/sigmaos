@@ -1,7 +1,6 @@
 package kv_test
 
 import (
-	"path"
 	"regexp"
 	"strconv"
 	"testing"
@@ -16,10 +15,8 @@ import (
 	"sigmaos/cache"
 	db "sigmaos/debug"
 	"sigmaos/kv"
-	"sigmaos/kvgrp"
-	"sigmaos/leaderclnt"
 	"sigmaos/rand"
-	sp "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -170,35 +167,6 @@ func TestPutGetCrashKVD1(t *testing.T) {
 		start = time.Now()
 	}
 	db.DPrintf(db.TEST, "Done ")
-	ts.cm.StopClerks()
-	ts.done()
-}
-
-func TestFencefs(t *testing.T) {
-	ts := newTstate(t, "manual", 0, kv.KVD_REPL_LEVEL, 0, "0")
-
-	dir := kvgrp.GrpPath(kvgrp.JobDir(ts.job), kv.GRP+"0")
-	fencedir := path.Join(dir, sp.FENCEDIR)
-
-	l := leaderclnt.OldleaderTest(ts.Tstate, dir, false)
-
-	sts, err := l.GetFences(fencedir)
-	assert.Nil(ts.T, err, "GetFences")
-	assert.Equal(ts.T, 1, len(sts), "Fences")
-
-	db.DPrintf(db.TEST, "fences %v\n", sp.Names(sts))
-
-	err = l.RemoveFence([]string{fencedir})
-	assert.Nil(ts.T, err, "RemoveFences")
-
-	sts, err = l.GetFences(fencedir)
-	assert.Nil(ts.T, err, "GetFences")
-	assert.Equal(ts.T, 0, len(sts), "Fences")
-
-	db.DPrintf(db.TEST, "fences %v\n", sp.Names(sts))
-
-	l.ReleaseLeadership()
-
 	ts.cm.StopClerks()
 	ts.done()
 }

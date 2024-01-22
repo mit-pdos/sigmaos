@@ -72,14 +72,21 @@ func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, e
 	return newSigmaSrvMemFs(mfs, svci)
 }
 
-func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
+// For an memfs server: memfs, lease srv, and fences
+func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
 	ffs := fencefs.NewRoot(ctx.NewCtxNull(), nil)
 	mfs, error := memfssrv.NewMemFsPortClntFence(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc, ffs)
 	if error != nil {
 		db.DFatalf("NewSigmaSrvClntFence %v err %v\n", fn, error)
 	}
 	mfs.Mount(sp.FENCEDIR, ffs.(*dir.DirImpl))
-	return newSigmaSrvRPC(mfs, svci)
+	lsrv := newLeaseSrv(mfs)
+	ssrv, err := newSigmaSrvRPC(mfs, lsrv)
+	if err != nil {
+		return nil, err
+	}
+	ssrv.lsrv = lsrv
+	return ssrv, nil
 }
 
 func NewSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {

@@ -37,7 +37,7 @@ func GetProcEnv() *ProcEnv {
 	pestr := os.Getenv(SIGMACONFIG)
 	if pestr == "" {
 		stack := debug.Stack()
-		log.Fatalf("%s\nError: No Sigma Config", stack)
+		log.Fatalf("FATAL %v: No ProcEnv\n%s", GetSigmaDebugPid(), stack)
 	}
 	return Unmarshal(pestr)
 }
@@ -258,7 +258,7 @@ func (pe *ProcEnv) GetNamedMount() (sp.Tmount, bool) {
 func (pe *ProcEnv) Marshal() string {
 	b, err := json.Marshal(pe)
 	if err != nil {
-		log.Fatalf("FATAL Error marshal sigmaconfig: %v")
+		log.Fatalf("FATAL %v: Error marshal ProcEnv: %v", GetSigmaDebugPid(), err)
 	}
 	return string(b)
 }
@@ -267,7 +267,7 @@ func Unmarshal(pestr string) *ProcEnv {
 	pe := &ProcEnv{}
 	err := json.Unmarshal([]byte(pestr), pe)
 	if err != nil {
-		log.Fatalf("FATAL Error unmarshal ProcEnv %v", err)
+		log.Fatalf("FATAL %v: Error unmarshal ProcEnv: %v", GetSigmaDebugPid(), err)
 	}
 	return pe
 }

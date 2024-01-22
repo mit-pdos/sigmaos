@@ -197,7 +197,7 @@ func Run() {
 	lcs := NewLCSched(sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {
-		db.DFatalf("Error NewSIgmaSrv: %v", err)
+		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
 
 	// export queued procs through procfs. XXX maybe

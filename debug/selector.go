@@ -220,7 +220,6 @@ const (
 	LOCKMAP                      = "LOCKMAP"
 	SNAP                         = "SNAP"
 	NAMEI                        = "NAMEI"
-	FENCESRV                     = "FENCESRV"
 	FENCEFS                      = "FENCEFS"
 	FENCEFS_ERR                  = FENCEFS + ERR
 	LEASESRV                     = "LEASESRV"

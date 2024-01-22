@@ -70,7 +70,20 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		// If this is a privileged proc, we already know its procdir.
 		procdir = KProcDir(pid)
 	}
-	p.ProcEnvProto = NewProcEnv(program, pid, sp.Trealm(NOT_SET), &sp.Tprincipal{ID: pid.String()}, procdir, NOT_SET, priv, false, false).GetProto()
+	p.ProcEnvProto = NewProcEnv(
+		program,
+		pid,
+		sp.Trealm(NOT_SET),
+		&sp.Tprincipal{
+			ID:           pid.String(),
+			TokenPresent: true,
+		},
+		procdir,
+		NOT_SET,
+		priv,
+		false,
+		false,
+	).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
 	p.McpuInt = uint32(0)
@@ -113,7 +126,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Net = parentPE.Net
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
-	p.ProcEnvProto.Principal.TokenPresent = parentPE.Principal.TokenPresent
+	p.ProcEnvProto.Principal.TokenPresent = p.ProcEnvProto.Principal.TokenPresent && parentPE.Principal.TokenPresent
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {

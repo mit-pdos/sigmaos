@@ -1,6 +1,7 @@
 package protsrv
 
 import (
+	"sigmaos/auth"
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/ephemeralmap"
@@ -33,6 +34,7 @@ type ProtSrv struct {
 	stats *stats.StatInfo            // shared across sessions
 	et    *ephemeralmap.EphemeralMap // shared across sessions
 	sct   *clntcond.ClntCondTable    // shared across sessions
+	auth  *auth.AuthSrv
 	ft    *fidTable
 	sid   sessp.Tsession
 }
@@ -49,6 +51,7 @@ func NewProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	ps.vt = srv.GetVersionTable()
 	ps.sct = srv.GetSessionCondTable()
 	ps.stats = srv.GetStats()
+	ps.auth = auth.NewAuthSrv()
 	ps.sid = sid
 	db.DPrintf(db.PROTSRV, "NewProtSrv -> %v", ps)
 	return ps
@@ -78,7 +81,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	//
 	// 2. For now, authorization checks are trivial (strcmp on the Principal).
 	// They should be done using some authorization scheme (like OAuth).
-	if !ps.authorized(args.Tprincipal()) {
+	if !ps.auth.IsAuthorized(args.Tprincipal()) {
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErr(serr.TErrPerm, "Authorization check failed"))
 	}
 	p := path.Split(args.Aname)
@@ -123,18 +126,6 @@ func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachC
 	// clnt. DeleteClnt will unblock them so that they can bail out.
 	ps.sct.DeleteClnt(args.TclntId())
 	return nil
-}
-
-// Check if a principal is authorized to attach to the server
-func (ps *ProtSrv) authorized(principal *sp.Tprincipal) bool {
-	db.DPrintf(db.AUTH, "Authorization check p %v", principal)
-	// TODO: do a real check
-	if principal.TokenPresent {
-		db.DPrintf(db.AUTH, "Authorization check successful p %v", principal)
-		return true
-	}
-	db.DPrintf(db.AUTH, "Authorization check failed p %v", principal)
-	return false
 }
 
 func (ps *ProtSrv) newQids(os []fs.FsObj) []*sp.Tqid {

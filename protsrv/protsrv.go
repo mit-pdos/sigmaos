@@ -70,7 +70,17 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) (sp.TclntId, *sp.Rerror) {
 	db.DPrintf(db.PROTSRV, "Attach %v cid %v sid %v", args, args.TclntId(), ps.sid)
-	db.DPrintf(db.ALWAYS, "Attach principal %v", args.Tprincipal())
+	// TODO:
+	//
+	// 1. For now, access control is all-or-nothing (at the server granularity).
+	// It should definitely be done at finer granularity (files and dirs) later
+	// on.
+	//
+	// 2. For now, authorization checks are trivial (strcmp on the Principal).
+	// They should be done using some authorization scheme (like OAuth).
+	if !ps.authorized(args.Tprincipal()) {
+		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErr(serr.TErrPerm, "Authorization check failed"))
+	}
 	p := path.Split(args.Aname)
 	root, ctx := ps.ssrv.GetRootCtx(args.Tprincipal(), args.Aname, ps.sid, args.TclntId())
 	tree := root.(fs.FsObj)
@@ -113,6 +123,13 @@ func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachC
 	// clnt. DeleteClnt will unblock them so that they can bail out.
 	ps.sct.DeleteClnt(args.TclntId())
 	return nil
+}
+
+// Check if a principal is authorized to attach to the server
+func (ps *ProtSrv) authorized(principal sp.Tprincipal) bool {
+	db.DPrintf(db.AUTH, "Authorization check p %v", principal)
+	// XXX do a real check
+	return true
 }
 
 func (ps *ProtSrv) newQids(os []fs.FsObj) []*sp.Tqid {

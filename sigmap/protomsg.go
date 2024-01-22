@@ -45,7 +45,7 @@ func (w *Twalk) Tnewfid() Tfid {
 }
 
 func NewTattach(fid, afid Tfid, principal Tprincipal, cid TclntId, path path.Path) *Tattach {
-	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Uname: string(principal), Aname: path.String(), ClntId: uint64(cid)}
+	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Principal: string(principal), Aname: path.String(), ClntId: uint64(cid)}
 }
 
 func (a *Tattach) Tfid() Tfid {
@@ -53,7 +53,7 @@ func (a *Tattach) Tfid() Tfid {
 }
 
 func (a *Tattach) Tprincipal() Tprincipal {
-	return Tprincipal(a.Uname)
+	return Tprincipal(a.Principal)
 }
 
 func (a *Tattach) TclntId() TclntId {

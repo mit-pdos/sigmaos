@@ -67,7 +67,7 @@ message Rauth {
 message Tattach {
         uint32 fid = 1;
         uint32 afid = 2;
-        string uname = 3;
+        string principal = 3;
         string aname = 4;
         uint64 clntId = 5;
 }

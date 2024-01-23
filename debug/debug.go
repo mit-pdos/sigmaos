@@ -43,7 +43,7 @@ func DPrintf(label Tselector, format string, v ...interface{}) {
 		log.Printf("%v %v %v", proc.GetSigmaDebugPid(), label, fmt.Sprintf(format, v...))
 	} else {
 		if label == ERROR {
-			log.Printf("%v %v %v %v", proc.GetSigmaDebugPid(), label, fmt.Sprintf(format, v...), string(debug.Stack()))
+			log.Printf("%v %v %v\nStack trace:\n%v", proc.GetSigmaDebugPid(), label, fmt.Sprintf(format, v...), string(debug.Stack()))
 		}
 	}
 }

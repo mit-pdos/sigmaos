@@ -97,3 +97,6 @@ func TestNoDelegationPrincipalFail(t *testing.T) {
 
 	rootts.Shutdown()
 }
+
+func TestGetToken(t *testing.T) {
+}

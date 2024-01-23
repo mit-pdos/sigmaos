@@ -23,11 +23,14 @@ func TestCompile(t *testing.T) {
 }
 
 func TestSymlink1(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	// Make a target file
 	targetPath := sp.UX + "/~local/symlink-test-file"
-	contents := "symlink test!"
+	contents, err1 := "symlink test!"
 	ts.Remove(targetPath)
 	_, err := ts.PutFile(targetPath, 0777, sp.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
@@ -68,12 +71,15 @@ func TestSymlink1(t *testing.T) {
 }
 
 func TestSymlink2(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	// Make a target file
 	targetDirPath := sp.UX + "/~local/dir1"
 	targetPath := targetDirPath + "/symlink-test-file"
-	contents := "symlink test!"
+	contents, err1 := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
 	err := ts.MkDir(targetDirPath, 0777)
@@ -103,7 +109,10 @@ func TestSymlink2(t *testing.T) {
 }
 
 func TestSymlink3(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	uxs, err := ts.GetDir(sp.UX)
 	assert.Nil(t, err, "Error reading ux dir")
@@ -113,7 +122,7 @@ func TestSymlink3(t *testing.T) {
 	// Make a target file
 	targetDirPath := sp.UX + "/" + uxip + "/tdir"
 	targetPath := targetDirPath + "/target"
-	contents := "symlink test!"
+	contents, err1 := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
 	err = ts.MkDir(targetDirPath, 0777)
@@ -156,7 +165,10 @@ func TestSymlink3(t *testing.T) {
 }
 
 func TestEphemeral(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	name := path.Join(sp.SCHEDD, "~any")
 
@@ -198,7 +210,10 @@ func TestEphemeral(t *testing.T) {
 }
 
 func TestBootMulti1(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	db.DPrintf(db.TEST, "Boot second node")
 
@@ -209,7 +224,10 @@ func TestBootMulti1(t *testing.T) {
 }
 
 func TestBootMulti2(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	db.DPrintf(db.TEST, "Boot second node")
 

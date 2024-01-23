@@ -100,6 +100,11 @@ func (k *Kernel) Ip() sp.Thost {
 	return k.ip
 }
 
+func (k *Kernel) IsSigmaclntdKernel() bool {
+	db.DPrintf(db.KERNEL, "Check is sigmaclntd kernel: %v", k.Param.Services)
+	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.SIGMACLNTDREL
+}
+
 func (k *Kernel) Shutdown() error {
 	k.Lock()
 	defer k.Unlock()
@@ -183,6 +188,7 @@ func (k *Kernel) shutdown() {
 		ss.Kill()
 		// d.Wait()
 	}
+	db.DPrintf(db.KERNEL, "Shutdown nameds done %d\n", len(k.svcs.svcs[sp.KNAMED]))
 }
 
 func newKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {

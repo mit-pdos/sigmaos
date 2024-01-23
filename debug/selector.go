@@ -5,6 +5,7 @@ type Tselector string
 // ALWAYS
 const (
 	ALWAYS Tselector = "ALWAYS"
+	ERROR            = "ERROR"
 	NEVER            = "NEVER"
 )
 

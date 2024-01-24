@@ -15,7 +15,7 @@ import (
 )
 
 // Called by a sigmaOS process after being spawned
-func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
+func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 	if fsl.ProcEnv().GetPrivileged() {
 		db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)
 		fsl.NewRootMount(fsl.ProcEnv().ProcDir, proc.PROCDIR)
@@ -28,11 +28,12 @@ func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
 		start := time.Now()
 		err := fsl.MountTree([]*sp.Taddr{addr}, rpc.RPC, pn)
 		if err != nil {
-			db.DFatalf("Err MountTree: %v", err)
+			db.DPrintf(db.ERROR, "Err MountTree: %v", err)
+			return nil, err
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] MountTree latency: %v", fsl.ProcEnv().GetPID(), time.Since(start))
 	}
-	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged())
+	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged()), nil
 }
 
 // Fake an initial process for, for example, tests.
@@ -40,7 +41,7 @@ func NewProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // XXX deduplicate with NewProcClnt()
 func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) (*ProcClnt, error) {
 	if err := MountPids(fsl); err != nil {
-		db.DFatalf("error MountPids: %v", err)
+		db.DPrintf(db.ERROR, "error MountPids: %v", err)
 		return nil, err
 	}
 	// XXX needed?
@@ -59,7 +60,7 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) (*ProcClnt, 
 		// If the error is not ErrExists, bail out.
 		if !serr.IsErrCode(err, serr.TErrExists) {
 			debug.PrintStack()
-			db.DFatalf("Error MakeProcDir mkdir pid %v procdir %v err %v stack\n%v", pid, fsl.ProcEnv().ProcDir, err, string(debug.Stack()))
+			db.DPrintf(db.ERROR, "Error MakeProcDir mkdir pid %v procdir %v err %v stack\n%v", pid, fsl.ProcEnv().ProcDir, err, string(debug.Stack()))
 			return nil, err
 		}
 		db.DPrintf(db.PROCCLNT_ERR, "NewProcClntInit: MakeProcDir err %v", err)

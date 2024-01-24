@@ -331,7 +331,8 @@ func doNext(t *testing.T, ivs *intervals.Intervals, retrieved map[uint64]bool, s
 	assert.Equal(t, len(starts), len(ends))
 	iv = ivs.Next()
 	if !assert.NotNil(t, iv) {
-		db.DFatalf("Error")
+		db.DPrintf(db.ERROR, "Error")
+		assert.False(t.T, true, "Error")
 	}
 	processIV(t, retrieved, &iv)
 	for i := range starts {

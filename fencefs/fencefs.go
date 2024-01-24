@@ -64,7 +64,7 @@ func allocFence(root fs.Dir, name string) (*Fence, *serr.Err) {
 		return f, nil
 	}
 	if err != nil && err.Code() != serr.TErrExists {
-		db.DFatalf("allocFence create %v err %v\n", name, err)
+		db.DPrintf(db.ERROR, "allocFence create %v err %v\n", name, err)
 		return nil, err
 	}
 	f := i.(*Fence)

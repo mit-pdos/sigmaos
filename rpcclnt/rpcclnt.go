@@ -80,7 +80,7 @@ func (ch *sigmaCh) SendReceive(b []byte) ([]byte, error) {
 func (ch *sigmaCh) StatsSrv() (*rpc.SigmaRPCStats, error) {
 	stats := &rpc.SigmaRPCStats{}
 	if err := ch.fsls[0].GetFileJson(path.Join(ch.pn, rpc.RPC, rpc.STATS), stats); err != nil {
-		db.DFatalf("Error getting stats")
+		db.DPrintf(db.ERROR, "Error getting stats")
 		return nil, err
 	}
 	return stats, nil

@@ -44,7 +44,9 @@ func newTstate(t1 *test.Tstate) *Tstate {
 	err = ts.WaitStart(ts.pid)
 	assert.Nil(t1.T, err)
 
-	ts.WWWClnt = www.NewWWWClnt(ts.Tstate.FsLib, ts.job)
+	clnt, err := www.NewWWWClnt(ts.Tstate.FsLib, ts.job)
+	assert.Nil(t1.T, err)
+	ts.WWWClnt = clnt
 
 	return ts
 }

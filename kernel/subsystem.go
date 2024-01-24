@@ -160,7 +160,8 @@ func (ss *KernelSubsystem) GetIp(fsl *fslib.FsLib) *sp.Taddr {
 func (s *KernelSubsystem) Terminate() error {
 	db.DPrintf(db.KERNEL, "Terminate %v %v\n", s.cmd.Process.Pid, s.cmd)
 	if s.how != proc.HLINUX {
-		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
+		db.DPrintf(db.ERROR, "Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
+		return fmt.Errorf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
 	}
 	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGTERM)
 }

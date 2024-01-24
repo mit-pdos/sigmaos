@@ -97,7 +97,11 @@ func RunReserveSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := NewCacheClnt(cache, NewFsLibs(HOTELRESERVE), job)
+	fsls, err := NewFsLibs(HOTELRESERVE)
+	if err != nil {
+		return err
+	}
+	cachec, err := NewCacheClnt(cache, fsls, job)
 	if err != nil {
 		return err
 	}

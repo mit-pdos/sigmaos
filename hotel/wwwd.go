@@ -48,7 +48,10 @@ func RunWww(job string, public bool) error {
 	}
 	www.SigmaClnt = sc
 
-	fsls := NewFsLibs("hotel-wwwd")
+	fsls, err := NewFsLibs("hotel-wwwd")
+	if err != nil {
+		return err
+	}
 	rpcc, err := rpcclnt.NewRPCClnt(fsls, HOTELUSER)
 	if err != nil {
 		return err

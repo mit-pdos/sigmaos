@@ -304,9 +304,11 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	sd := NewSchedd(sc, kernelId, reserveMcpu)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
-		db.DFatalf("Error NewSIgmaSrv: %v", err)
+		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
-	sd.pmgr.SetupFs(ssrv.MemFs)
+	if err := sd.pmgr.SetupFs(ssrv.MemFs); err != nil {
+		db.DFatalf("Error SetupFs: %v", err)
+	}
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.SCHEDD)
 	if err != nil {

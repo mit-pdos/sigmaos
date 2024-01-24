@@ -50,12 +50,14 @@ func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 	mgr.pstate.spawn(p)
 }
 
-func (mgr *ProcMgr) SetupFs(mfs *memfssrv.MemFs) {
+func (mgr *ProcMgr) SetupFs(mfs *memfssrv.MemFs) error {
 	mgr.mfs = mfs
 	dir := procfs.NewProcDir(mgr.pstate)
 	if err := mfs.MkNod(sp.RUNNING, dir); err != nil {
-		db.DFatalf("Error mknod %v: %v", sp.RUNNING, err)
+		db.DPrintf(db.ERROR, "Error mknod %v: %v", sp.RUNNING, err)
+		return err
 	}
+	return nil
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {

@@ -80,7 +80,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error {
 	// Sanity check.
 	if p.GetMcpu() > 0 && p.GetType() != proc.T_LC {
-		db.DFatalf("Spawn non-LC proc with Mcpu set %v", p)
+		db.DPrintf(db.ERROR, "Spawn non-LC proc with Mcpu set %v", p)
 		return fmt.Errorf("Spawn non-LC proc with Mcpu set %v", p)
 	}
 
@@ -92,7 +92,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 	defer db.DPrintf(db.PROCCLNT, "Spawn done [%v]: %v", kernelId, p)
 	if clnt.hasExited() != "" {
 		db.DPrintf(db.PROCCLNT_ERR, "Spawn error called after Exited")
-		db.DFatalf("Spawn error called after Exited")
+		db.DPrintf(db.ERROR, "Spawn error called after Exited")
+		return fmt.Errorf("Spawn error called after Exited")
 	}
 
 	p.SetSpawnTime(time.Now())
@@ -116,7 +117,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), how)
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc MakeProcDir: %v", err)
-			db.DFatalf("Err spawn MakeProcDir: %v", err)
+			db.DPrintf(db.ERROR, "Err spawn MakeProcDir: %v", err)
+			return err
 		}
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, schedd will create the semaphore.

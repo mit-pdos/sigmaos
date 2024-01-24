@@ -1,6 +1,8 @@
 package sesssrv
 
 import (
+	"fmt"
+
 	"sigmaos/clntcond"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -166,13 +168,14 @@ func (ssrv *SessSrv) Unregister(sid sessp.Tsession, conn sps.Conn) {
 	sess.UnsetConn(conn)
 }
 
-func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
+func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *serr.Err {
 	ssrv.qlen.Inc(1)
 	s := sessp.Tsession(fc.Fc.Session)
 	_, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
 	if !ok && s != 0 {
-		db.DFatalf("SrvFcall: no session %v for req %v\n", s, fc)
+		db.DPrintf(db.ERROR, "SrvFcall: no session %v for req %v", s, fc)
+		return serr.NewErrError(fmt.Errorf("Error: no session %v for req %v", s, fc))
 	}
 	// If the fcall is a server-generated heartbeat, it won't block;
 	// don't start a new thread.
@@ -183,6 +186,7 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 			ssrv.srvfcall(fc)
 		}()
 	}
+	return nil
 }
 
 func (ssrv *SessSrv) sendReply(request *sessp.FcallMsg, reply *sessp.FcallMsg, sess *sessstatesrv.Session) {

@@ -98,7 +98,10 @@ func TestNewWordCount(t *testing.T) {
 
 func TestSplits(t *testing.T) {
 	const SPLITSZ = 10 * sp.MBYTE
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	job = mr.ReadJobConfig(app)
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
@@ -122,7 +125,10 @@ func TestMapper(t *testing.T) {
 		REDUCEOUT = "name/ux/~local/test-reducer-out.txt"
 	)
 
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, "", "", "", false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
@@ -195,7 +201,10 @@ func TestMapper(t *testing.T) {
 }
 
 func TestSeqGrep(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	job = mr.ReadJobConfig(app)
 
 	p := proc.NewProc("seqgrep", []string{job.Input})
@@ -210,7 +219,10 @@ func TestSeqGrep(t *testing.T) {
 
 func TestSeqWc(t *testing.T) {
 	const OUT = "name/ux/~local/seqout.txt"
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	job = mr.ReadJobConfig(app)
 
 	ts.Remove(OUT)
@@ -231,9 +243,9 @@ type Tstate struct {
 	nreducetask int
 }
 
-func newTstate(t *testing.T) *Tstate {
+func newTstate(t1 *test.Tstate) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = test.NewTstateAll(t)
+	ts.Tstate = t1
 	job = mr.ReadJobConfig(app)
 	ts.nreducetask = job.Nreduce
 	ts.job = rd.String(4)
@@ -281,7 +293,11 @@ func (ts *Tstate) checkJob() {
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux int, monitor bool) {
-	ts := newTstate(t)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	if monitor {

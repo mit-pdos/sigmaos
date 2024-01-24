@@ -51,7 +51,10 @@ func TestResizeImg(t *testing.T) {
 }
 
 func TestResizeProc(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	in := path.Join(sp.S3, "~local/9ps3/img-save/6.jpg")
 	//	in := path.Join(sp.S3, "~local/9ps3/img-save/6.jpg")
 	out := path.Join(sp.S3, "~local/9ps3/img/6-thumb-xxx.jpg")
@@ -73,9 +76,9 @@ type Tstate struct {
 	ch chan bool
 }
 
-func newTstate(t *testing.T) *Tstate {
+func newTstate(t *test.Tstate) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = test.NewTstateAll(t)
+	ts.Tstate = t
 	ts.job = rd.String(4)
 	ts.ch = make(chan bool)
 	ts.cleanup()
@@ -107,7 +110,11 @@ func (ts *Tstate) progress() {
 }
 
 func TestImgdFatal(t *testing.T) {
-	ts := newTstate(t)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(ts.T, err)
@@ -153,14 +160,22 @@ func (ts *Tstate) imgdJob(paths []string) {
 }
 
 func TestImgdOne(t *testing.T) {
-	ts := newTstate(t)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 	fn := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
 	ts.imgdJob([]string{fn})
 	ts.shutdown()
 }
 
 func TestImgdMany(t *testing.T) {
-	ts := newTstate(t)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 
 	sts, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/img-save"))
 	assert.Nil(t, err)
@@ -176,7 +191,11 @@ func TestImgdMany(t *testing.T) {
 }
 
 func TestImgdRestart(t *testing.T) {
-	ts := newTstate(t)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 
 	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
 	assert.Nil(t, err)
@@ -198,7 +217,11 @@ func TestImgdRestart(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Restart")
 
-	ts.Tstate = test.NewTstateAll(t)
+	t2, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts.Tstate = t2
 
 	gms, err := groupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")

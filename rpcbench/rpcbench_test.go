@@ -22,7 +22,11 @@ const (
 )
 
 func TestRPCPerf(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
 	p := proc.NewProc("rpcbenchsrv", []string{PATH, strconv.FormatBool(test.Overlays)})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
@@ -54,7 +58,11 @@ func TestRPCPerf(t *testing.T) {
 }
 
 func TestCreateFilePerf(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
 	p := proc.NewProc("rpcbenchsrv", []string{PATH, strconv.FormatBool(test.Overlays)})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
@@ -81,7 +89,11 @@ func TestCreateFilePerf(t *testing.T) {
 }
 
 func TestMkDirPerf(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
 	p := proc.NewProc("rpcbenchsrv", []string{PATH, strconv.FormatBool(test.Overlays)})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
@@ -108,7 +120,11 @@ func TestMkDirPerf(t *testing.T) {
 }
 
 func TestMkDir1DeepPerf(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
 	p := proc.NewProc("rpcbenchsrv", []string{PATH, strconv.FormatBool(test.Overlays)})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
@@ -138,7 +154,11 @@ func TestMkDir1DeepPerf(t *testing.T) {
 }
 
 func TestMkDir2DeepPerf(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
 	p := proc.NewProc("rpcbenchsrv", []string{PATH, strconv.FormatBool(test.Overlays)})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
@@ -171,7 +191,11 @@ func TestMkDir2DeepPerf(t *testing.T) {
 }
 
 func TestMkDir3DeepPerf(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
 	p := proc.NewProc("rpcbenchsrv", []string{PATH, strconv.FormatBool(test.Overlays)})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")

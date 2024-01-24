@@ -20,7 +20,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestOldLeaderOK(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, false)
 
@@ -30,7 +33,10 @@ func TestOldLeaderOK(t *testing.T) {
 }
 
 func TestOldLeaderCrash(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	err := ts.Boot(sp.NAMEDREL)
 	assert.Nil(t, err)
@@ -46,7 +52,10 @@ func TestMemfs(t *testing.T) {
 	dir := sp.MEMFS + "~local/"
 	fencedir := path.Join(dir, sp.FENCEDIR)
 
-	ts := test.NewTstatePath(t, dir)
+	ts, err1 := test.NewTstatePath(t, dir)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	l := leaderclnt.OldleaderTest(ts, dir+DIR, false)
 

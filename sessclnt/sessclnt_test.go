@@ -36,17 +36,17 @@ type Tstate struct {
 	job string
 }
 
-func newTstate(t *testing.T, ncrash, crash, partition, netfail int) *Tstate {
+func newTstate(t1 *test.Tstate, ncrash, crash, partition, netfail int) *Tstate {
 	ts := &Tstate{job: rand.String(4), grp: GRP}
-	ts.Tstate = test.NewTstateAll(t)
+	ts.Tstate = t1
 	ts.MkDir(kvgrp.KVDIR, 0777)
 	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
-	assert.Nil(t, err)
+	assert.Nil(t1.T, err)
 	mcfg := groupmgr.NewGroupConfig(0, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, 0, ts.job)
 	mcfg.SetTest(crash, partition, netfail)
 	ts.gm = mcfg.StartGrpMgr(ts.SigmaClnt, ncrash)
 	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
-	assert.Nil(t, err)
+	assert.Nil(t1.T, err)
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	return ts
 }
@@ -58,7 +58,11 @@ func TestCompile(t *testing.T) {
 // not-found for the semaphore, which is interpreted as a successful
 // down by the semclnt.
 func TestServerCrash(t *testing.T) {
-	ts := newTstate(t, 1, CRASH, 0, 0)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, 1, CRASH, 0, 0)
 
 	sem := semclnt.NewSemClnt(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 	err := sem.Init(0)
@@ -100,7 +104,10 @@ func BurstProc(n int, f func(chan error)) error {
 }
 
 func TestProcManyOK(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	a := proc.NewProc("proctest", []string{NTRIALS, "sleeper", "1us", ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
@@ -113,7 +120,10 @@ func TestProcManyOK(t *testing.T) {
 }
 
 func TestProcCrashMany(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	a := proc.NewProc("proctest", []string{NTRIALS, "crash"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
@@ -126,7 +136,10 @@ func TestProcCrashMany(t *testing.T) {
 }
 
 func TestProcPartitionMany(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	a := proc.NewProc("proctest", []string{NTRIALS, "partition"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
@@ -142,7 +155,11 @@ func TestProcPartitionMany(t *testing.T) {
 
 func TestReconnectSimple(t *testing.T) {
 	const N = 10
-	ts := newTstate(t, 0, 0, 0, NETFAIL)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, 0, 0, 0, NETFAIL)
 
 	ch := make(chan error)
 	go func() {
@@ -186,7 +203,11 @@ func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
 func TestServerPartitionNonBlockingSimple(t *testing.T) {
 	const N = 3
 
-	ts := newTstate(t, 0, 0, PARTITION, 0)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, 0, 0, PARTITION, 0)
 	ch := make(chan error)
 	for i := 0; i < N; i++ {
 		go ts.stat(t, i, ch)
@@ -201,7 +222,11 @@ func TestServerPartitionNonBlockingSimple(t *testing.T) {
 func TestServerPartitionNonBlockingConcur(t *testing.T) {
 	const N = sessstatesrv.NLAST
 
-	ts := newTstate(t, 0, 0, PARTITION, 0)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, 0, 0, PARTITION, 0)
 	ch := make(chan error)
 	for i := 0; i < N; i++ {
 		go ts.stat(t, i, ch)
@@ -218,7 +243,11 @@ func TestServerPartitionNonBlockingConcur(t *testing.T) {
 func TestServerPartitionBlocking(t *testing.T) {
 	const N = 10
 
-	ts := newTstate(t, 0, 0, PARTITION, 0)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, 0, 0, PARTITION, 0)
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
@@ -286,7 +315,10 @@ func TestWriteCrash(t *testing.T) {
 		CRASHSRV = 1000000
 	)
 
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	ch := make(chan error)
 
 	for i := 0; i < N; i++ {

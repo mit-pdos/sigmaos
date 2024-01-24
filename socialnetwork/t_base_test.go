@@ -7,7 +7,6 @@ import (
 	"sigmaos/rand"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/test"
-	"testing"
 )
 
 const (
@@ -21,11 +20,11 @@ type TstateSN struct {
 	dbu     *sn.DBUtil
 }
 
-func newTstateSN(t *testing.T, srvs []sn.Srv, nsrv int) *TstateSN {
+func newTstateSN(t *test.Tstate, srvs []sn.Srv, nsrv int) *TstateSN {
 	var err error
 	tssn := &TstateSN{}
 	tssn.jobname = rand.String(8)
-	tssn.Tstate = test.NewTstateAll(t)
+	tssn.Tstate = t
 	if test.Start {
 		nMoreKernel := ((len(srvs)*2 + NCACHESRV) - 1) / int(linuxsched.GetNCores())
 		if nMoreKernel > 0 {

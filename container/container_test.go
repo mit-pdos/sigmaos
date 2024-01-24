@@ -22,7 +22,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestSyscallBlock(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	p := proc.NewProc("test-syscall", []string{})
 	err := ts.Spawn(p)
 	st, err := ts.WaitExit(p.GetPid())
@@ -84,7 +87,10 @@ func evictMemBlock(ts *test.Tstate, p *proc.Proc) {
 }
 
 func TestLCAlone(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	mem := mem.GetTotalMem()
 	lcC := make(chan error)
@@ -95,7 +101,10 @@ func TestLCAlone(t *testing.T) {
 }
 
 func TestReapBE(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	duration := "60s"
 	mem := mem.GetTotalMem()
@@ -112,7 +121,10 @@ func TestReapBE(t *testing.T) {
 
 // Test that the mem blocker does indeed block off physical memory.
 func TestMemBlock(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	memt := mem.GetTotalMem()
 	mema := mem.GetAvailableMem()
 	assert.True(ts.T, mema > memt/2, "Too little mem available")
@@ -125,7 +137,10 @@ func TestMemBlock(t *testing.T) {
 
 // Test that we can spawn a mem blocker on each node.
 func TestMemBlockMany(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	ts.BootNode(1)
 	memt := mem.GetTotalMem()
 	mema := mem.GetAvailableMem()
@@ -140,7 +155,10 @@ func TestMemBlockMany(t *testing.T) {
 }
 
 func TestMemBlockManyFail(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	memt := mem.GetTotalMem()
 	mema := mem.GetAvailableMem()
 	assert.True(ts.T, mema > memt/2, "Too little mem available")

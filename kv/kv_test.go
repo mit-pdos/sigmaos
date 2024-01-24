@@ -80,21 +80,21 @@ type Tstate struct {
 	job string
 }
 
-func newTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) *Tstate {
+func newTstate(t1 *test.Tstate, auto string, crashbal, repl, ncrash int, crashhelper string) *Tstate {
 	ts := &Tstate{job: rand.String(4)}
-	ts.Tstate = test.NewTstateAll(t)
+	ts.Tstate = t1
 
 	kvf, err := kv.NewKvdFleet(ts.SigmaClnt, ts.job, crashbal, 1, repl, ncrash, 0, crashhelper, auto)
-	assert.Nil(t, err)
+	assert.Nil(t1.T, err)
 	ts.kvf = kvf
 	ts.cm, err = kv.NewClerkMgr(ts.SigmaClnt, ts.job, 0, repl > 0)
-	assert.Nil(t, err)
+	assert.Nil(t1.T, err)
 	err = ts.kvf.Start()
-	assert.Nil(t, err)
+	assert.Nil(t1.T, err)
 	err = ts.cm.StartCmClerk()
-	assert.Nil(t, err)
+	assert.Nil(t1.T, err)
 	err = ts.cm.InitKeys(kv.NKEYS)
-	assert.Nil(t, err)
+	assert.Nil(t1.T, err)
 	return ts
 }
 
@@ -105,14 +105,22 @@ func (ts *Tstate) done() {
 }
 
 func TestMiss(t *testing.T) {
-	ts := newTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 	err := ts.cm.Get(cache.NewKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.True(t, cache.IsMiss(err))
 	ts.done()
 }
 
 func TestGetPut0(t *testing.T) {
-	ts := newTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
 	err := ts.cm.Get(cache.NewKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.NotNil(ts.T, err, "Get")
@@ -136,7 +144,11 @@ func TestGetPut0(t *testing.T) {
 func TestPutGetRepl(t *testing.T) {
 	const TIME = 100
 
-	ts := newTstate(t, "manual", 0, kv.KVD_REPL_LEVEL, 0, "0")
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, "manual", 0, kv.KVD_REPL_LEVEL, 0, "0")
 
 	err := ts.cm.StartClerks("", 1)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
@@ -155,7 +167,12 @@ func TestPutGetRepl(t *testing.T) {
 func TestPutGetCrashKVD1(t *testing.T) {
 	const TIME = 100
 
-	ts := newTstate(t, "manual", 0, kv.KVD_REPL_LEVEL, 1, "0")
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	ts := newTstate(t1, "manual", 0, kv.KVD_REPL_LEVEL, 1, "0")
 
 	err := ts.cm.StartClerks("", 1)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
@@ -174,7 +191,12 @@ func TestPutGetCrashKVD1(t *testing.T) {
 func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper string) {
 	const TIME = 100
 
-	ts := newTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	ts := newTstate(t1, "manual", crashbal, repl, ncrash, crashhelper)
 
 	err := ts.cm.StartClerks("", nclerk)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
@@ -289,8 +311,12 @@ func XTestReplCrashN(t *testing.T) {
 
 func TestAuto(t *testing.T) {
 	// runtime.GOMAXPROCS(2) // XXX for KV
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
-	ts := newTstate(t, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+	ts := newTstate(t1, "manual", 0, kv.KVD_NO_REPL, 0, "0")
 
 	for i := 0; i < 0; i++ {
 		err := ts.kvf.AddKVDGroup()

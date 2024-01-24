@@ -114,7 +114,10 @@ func TestWriteFilePerfSingle(t *testing.T) {
 	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {
 		return
 	}
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	fn := gopath.Join(pathname, "f")
 	buf := test.NewBuf(WRITESZ)
 	// Remove just in case it was left over from a previous run.
@@ -153,7 +156,10 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {
 		return
 	}
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	N_CLI := 10
 	buf := test.NewBuf(WRITESZ)
 	done := make(chan sp.Tlength)
@@ -244,7 +250,10 @@ func TestReadFilePerfSingle(t *testing.T) {
 	var sz sp.Tlength
 	var err error
 
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	fn := gopath.Join(pathname, "f")
 	buf := test.NewBuf(WRITESZ)
 
@@ -310,7 +319,10 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 		NTRIAL = 3
 	)
 
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	N_CLI := 4
 	buf := test.NewBuf(WRITESZ)
 	done := make(chan sp.Tlength)
@@ -435,7 +447,10 @@ func newDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
 
 func TestDirCreatePerf(t *testing.T) {
 	const N = 1000
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	dir := gopath.Join(pathname, "d")
 	measuredir("create dir", 1, func() int {
 		n := newDir(t, ts.FsLib, dir, N)
@@ -473,7 +488,10 @@ func TestDirReadPerf(t *testing.T) {
 	const N = 10000
 	const NFILE = 10
 	const NCLERK = 1
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	dir := pathname + "d"
 	n := newDir(t, ts.FsLib, dir, NFILE)
 	assert.Equal(t, NFILE, n)
@@ -494,7 +512,10 @@ func TestDirReadPerf(t *testing.T) {
 
 func TestRmDirPerf(t *testing.T) {
 	const N = 5000
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	dir := gopath.Join(pathname, "d")
 	n := newDir(t, ts.FsLib, dir, N)
 	assert.Equal(t, N, n)
@@ -510,7 +531,10 @@ func TestLookupDepthPerf(t *testing.T) {
 	const N = 10
 	const NFILE = 10
 	const NOP = 10000
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	ts.RmDir(gopath.Join(pathname, "d0"))
 
@@ -539,7 +563,10 @@ func TestLookupConcurPerf(t *testing.T) {
 	const NFILE = 10
 	const NGO = 10
 	const NTRIAL = 100
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	ts.RmDir(gopath.Join(pathname, "d0"))
 

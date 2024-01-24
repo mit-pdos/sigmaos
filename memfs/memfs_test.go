@@ -27,7 +27,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestMemfsd(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	sts, err := ts.GetDir(pathname)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "%v %v\n", pathname, sp.Names(sts))
@@ -35,7 +38,10 @@ func TestMemfsd(t *testing.T) {
 }
 
 func TestPipeBasic(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	pipe := gopath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
@@ -70,7 +76,10 @@ func TestPipeBasic(t *testing.T) {
 }
 
 func TestPipeClose(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	pipe := gopath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
@@ -110,7 +119,10 @@ func TestPipeClose(t *testing.T) {
 }
 
 func TestPipeRemove(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	pipe := gopath.Join(pathname, "pipe")
 
 	err := ts.NewPipe(pipe, 0777)
@@ -135,7 +147,10 @@ func TestPipeRemove(t *testing.T) {
 }
 
 func TestPipeCrash0(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	pipe := gopath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
@@ -160,7 +175,10 @@ func TestPipeCrash0(t *testing.T) {
 }
 
 func TestPipeCrash1(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	pipe := gopath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")

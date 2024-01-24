@@ -105,7 +105,7 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	mnt, err := npc.pc.GetNamedMount()
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", err)
-		return sp.NoClntId, sp.NewRerrorErr(err)
+		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
 	fid, err := npc.fidc.Attach(npc.uname, npc.cid, mnt.Addr, "", "")
 	if err != nil {

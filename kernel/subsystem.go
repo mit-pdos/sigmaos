@@ -7,8 +7,6 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/kernelsubinfo"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -30,7 +28,6 @@ type Subsystem interface {
 	Kill() error
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
-	GetIp(fsl *fslib.FsLib) *sp.Taddr
 	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
 	AllocPort(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Thost) error
@@ -150,10 +147,6 @@ func (ss *KernelSubsystem) AllocPort(p sp.Tport) (*port.PortBinding, error) {
 	} else {
 		return ss.container.AllocPortOne(p)
 	}
-}
-
-func (ss *KernelSubsystem) GetIp(fsl *fslib.FsLib) *sp.Taddr {
-	return kernelsubinfo.GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Addr
 }
 
 // Send SIGTERM to a system.

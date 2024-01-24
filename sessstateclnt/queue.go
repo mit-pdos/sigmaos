@@ -1,6 +1,7 @@
 package sessstateclnt
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 
@@ -40,16 +41,18 @@ func NewRequestQueue(addrs sp.Taddrs) *RequestQueue {
 }
 
 // Add a new request to the queue.
-func (rq *RequestQueue) Enqueue(rpc *netclnt.Rpc) {
+func (rq *RequestQueue) Enqueue(rpc *netclnt.Rpc) error {
 	rq.Lock()
 	defer rq.Unlock()
 
 	if rq.closed {
-		db.DFatalf("Tried to enqueue a request on a closed request queue %v", rpc.Req.Fcm)
+		db.DPrintf(db.ERROR, "Tried to enqueue a request on a closed request queue %v", rpc.Req.Fcm)
+		return fmt.Errorf("Tried to enqueue a request on a closed request queue %v", rpc.Req.Fcm)
 	}
 	s := rpc.Req.Fcm.Seqno()
 	if _, ok := rq.outstanding[s]; ok {
-		db.DFatalf("Tried to enqueue a duplicate request %v", rpc.Req.Fcm)
+		db.DPrintf(db.ERROR, "Tried to enqueue a duplicate request %v", rpc.Req.Fcm)
+		return fmt.Errorf("Tried to enqueue a duplicate request %v", rpc.Req.Fcm)
 	}
 	if db.WillBePrinted(db.SESS_CLNT_Q) {
 		db.DPrintf(db.SESS_CLNT_Q, "Enqueue req %v seqno %v to %v", rpc.Req, s, rq.addrs)
@@ -60,6 +63,7 @@ func (rq *RequestQueue) Enqueue(rpc *netclnt.Rpc) {
 		db.DPrintf(db.SESS_CLNT_Q, "Outstanding %v seq %v to %v", rpc.Req, s, rq.addrs)
 	}
 	rq.Signal()
+	return nil
 }
 
 // Get the next request to be processed, in order of sequence numbers.

@@ -17,7 +17,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "sigmaos/debug"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -137,24 +136,23 @@ func TestUnionFile(t *testing.T) {
 	assert.Nil(t, err, "Stat")
 
 	fd, err := ts.Open(name, sp.OREAD)
-	if err != nil {
-		db.DFatalf("%v", err)
+	if assert.Nil(ts.T, err, "Error Open: %v", err) {
+		n := len(file)
+		for {
+			data, err := ts.Read(fd, 8192)
+			if len(data) == 0 {
+				break
+			}
+			if !assert.Nil(ts.T, err, "Error Read: %v", err) {
+				break
+			}
+			for i := 0; i < len(data); i++ {
+				assert.Equal(t, file[i], data[i])
+			}
+			file = file[len(data):]
+		}
+		assert.Equal(ts.T, int(st.Length), n)
 	}
-	n := len(file)
-	for {
-		data, err := ts.Read(fd, 8192)
-		if len(data) == 0 {
-			break
-		}
-		if err != nil {
-			db.DFatalf("%v", err)
-		}
-		for i := 0; i < len(data); i++ {
-			assert.Equal(t, file[i], data[i])
-		}
-		file = file[len(data):]
-	}
-	assert.Equal(ts.T, int(st.Length), n)
 
 	ts.Shutdown()
 }

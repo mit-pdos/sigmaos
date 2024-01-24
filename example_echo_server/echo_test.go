@@ -34,12 +34,12 @@ func newTstateEcho(t *testing.T) (*TstateEcho, error) {
 	// Start proc
 	p := proc.NewProc("example-echo", []string{strconv.FormatBool(test.Overlays)})
 	p.SetMcpu(proc.Tmcpu(1000))
-	if _, errs := tse.SpawnBurst([]*proc.Proc{p}, 2); len(errs) > 0 {
-		dbg.DFatalf("Error burst-spawnn proc %v: %v", p, errs)
+	if _, errs := tse.SpawnBurst([]*proc.Proc{p}, 2); !assert.True(t, len(errs) > 0, "Errors spawnBurst: %v", errs) {
+		dbg.DPrintf(dbg.ERROR, "Error burst-spawnn proc %v: %v", p, errs)
 		return nil, err
 	}
-	if err = tse.WaitStart(p.GetPid()); err != nil {
-		dbg.DFatalf("Error spawn proc %v: %v", p, err)
+	if err = tse.WaitStart(p.GetPid()); !assert.Nil(t, err, "Error spawn proc: %v", nil) {
+		dbg.DPrintf(dbg.ERROR, "Error spawn proc %v: %v", p, err)
 		return nil, err
 	}
 	tse.pid = p.GetPid()
@@ -106,8 +106,8 @@ func TestEchoLoad(t *testing.T) {
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
 		fsl, err := fslib.NewFsLib(tse.jobname + "-" + strconv.Itoa(i))
-		if err != nil {
-			dbg.DFatalf("Error newfsl: %v", err)
+		if !assert.Nil(t, err, "Error newfsl: %v", nil) {
+			dbg.DPrintf(dbg.ERROR, "Error newfsl: %v", err)
 		}
 		fsls = append(fsls, fsl)
 	}

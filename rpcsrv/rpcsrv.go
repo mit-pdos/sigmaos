@@ -63,11 +63,15 @@ func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, b []byte) ([]byte, *serr.Err
 	method := m[dot+1:]
 	tname := m[:dot]
 	db.DPrintf(db.SIGMASRV, "serveRPC svc %v name %v\n", tname, method)
-	repmsg, err := rpcs.svc.lookup(tname).dispatch(ctx, m, b)
+	serv, r := rpcs.svc.lookup(tname)
+	if r != nil {
+		return nil, serr.NewErrError(r)
+	}
+	repmsg, err := serv.dispatch(ctx, m, b)
 	if err != nil {
 		return nil, err
 	}
-	b, r := proto.Marshal(repmsg)
+	b, r = proto.Marshal(repmsg)
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}

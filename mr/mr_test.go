@@ -102,7 +102,8 @@ func TestSplits(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	job = mr.ReadJobConfig(app)
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
 	sum := sp.Tlength(0)
@@ -135,7 +136,8 @@ func TestMapper(t *testing.T) {
 	ts.Remove(REDUCEIN)
 	ts.Remove(REDUCEOUT)
 
-	job = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
+	job, err1 = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	job.Nreduce = 1
 
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
@@ -205,7 +207,8 @@ func TestSeqGrep(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	job = mr.ReadJobConfig(app)
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 
 	p := proc.NewProc("seqgrep", []string{job.Input})
 	err := ts.Spawn(p)
@@ -223,7 +226,8 @@ func TestSeqWc(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	job = mr.ReadJobConfig(app)
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 
 	ts.Remove(OUT)
 
@@ -246,7 +250,8 @@ type Tstate struct {
 func newTstate(t1 *test.Tstate) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = t1
-	job = mr.ReadJobConfig(app)
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	ts.nreducetask = job.Nreduce
 	ts.job = rd.String(4)
 
@@ -256,7 +261,8 @@ func newTstate(t1 *test.Tstate) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll(path.Join(sp.SIGMAHOME, "mr"))
 
-	mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
+	err := mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
+	assert.Nil(t, err1, "Error InitCoordFS: %v", err)
 
 	os.Remove(OUTPUT)
 

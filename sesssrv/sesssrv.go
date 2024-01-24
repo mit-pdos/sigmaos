@@ -111,15 +111,6 @@ func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) 
 	return nil
 }
 
-func (ssrv *SessSrv) Sess(sid sessp.Tsession) *sessstatesrv.Session {
-	sess, ok := ssrv.st.Lookup(sid)
-	if !ok {
-		db.DFatalf("no sess %v\n", sid)
-		return nil
-	}
-	return sess
-}
-
 func (ssrv *SessSrv) MyAddr() *sp.Taddr {
 	return ssrv.srv.MyAddr()
 }

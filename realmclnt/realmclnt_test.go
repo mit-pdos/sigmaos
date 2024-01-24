@@ -169,13 +169,17 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 		return
 	}
 
-	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, ts1.GetNamedMount())
-	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, ts2.GetNamedMount())
+	m1, err3 := ts1.GetNamedMount()
+	assert.Nil(t, err3, "GetNamedMount: %v", err3)
+	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, m1)
+	m2, err3 := ts2.GetNamedMount()
+	assert.Nil(t, err3, "GetNamedMount: %v", err3)
+	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, m2)
 
 	// Should have a public and private address
 	if test.Overlays {
-		assert.Equal(rootts.T, 2, len(ts1.GetNamedMount().Addr))
-		assert.Equal(rootts.T, 2, len(ts1.GetNamedMount().Addr))
+		assert.Equal(rootts.T, 2, len(m1.Addr))
+		assert.Equal(rootts.T, 2, len(m1.Addr))
 	}
 
 	schedds1, err := ts1.GetDir(sp.SCHEDD)

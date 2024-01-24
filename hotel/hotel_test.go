@@ -438,7 +438,7 @@ func setupK8sState(ts *Tstate) error {
 	assert.Nil(ts.T, err, "Err parse port %v: %v", po, err)
 	addr := sp.NewTaddrRealm(sp.Thost(h), sp.Tport(port), ts.ProcEnv().GetNet())
 	mnt := sp.NewMountService([]*sp.Taddr{addr})
-	err := ts.MkMountFile(p, mnt, sp.NoLeaseId)
+	err = ts.MkMountFile(p, mnt, sp.NoLeaseId)
 	if !assert.Nil(ts.T, err) {
 		db.DPrintf(db.ERROR, "MkMountFile %v", err)
 		return err

@@ -250,8 +250,9 @@ type Tstate struct {
 func newTstate(t1 *test.Tstate) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = t1
+	var err1 error
 	job, err1 = mr.ReadJobConfig(app)
-	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
+	assert.Nil(t1.T, err1, "Error ReadJobConfig: %v", err1)
 	ts.nreducetask = job.Nreduce
 	ts.job = rd.String(4)
 
@@ -261,8 +262,8 @@ func newTstate(t1 *test.Tstate) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll(path.Join(sp.SIGMAHOME, "mr"))
 
-	err := mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
-	assert.Nil(t, err1, "Error InitCoordFS: %v", err)
+	err1 = mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
+	assert.Nil(t1.T, err1, "Error InitCoordFS: %v", err1)
 
 	os.Remove(OUTPUT)
 

@@ -576,7 +576,8 @@ func TestLookupConcurPerf(t *testing.T) {
 		n := newDir(t, ts.FsLib, dir, NFILE)
 		assert.Equal(t, NFILE, n)
 	}
-	ndMnt := ts.GetNamedMount()
+	ndMnt, err := ts.GetNamedMount()
+	assert.Nil(t, err, "GetNamedMount: %v", err)
 	// dump(t)
 	done := make(chan int)
 	fsls := make([][]*fslib.FsLib, 0, NGO)

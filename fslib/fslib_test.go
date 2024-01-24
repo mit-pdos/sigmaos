@@ -220,7 +220,8 @@ func TestRemoveSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := ts.GetNamedMount()
+	mnt, err := ts.GetNamedMount()
+	assert.Nil(t, err, "GetNamedMount: %v", err)
 	err = ts.MkMountFile(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "MkMountFile: %v", err)
 
@@ -248,7 +249,8 @@ func TestRmDirWithSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := ts.GetNamedMount()
+	mnt, err := ts.GetNamedMount()
+	assert.Nil(t, err, "GetNamedMount: %v", err)
 	err = ts.MkMountFile(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "MkMountFile: %v", err)
 
@@ -273,7 +275,8 @@ func TestReadSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := ts.GetNamedMount()
+	mnt, err := ts.GetNamedMount()
+	assert.Nil(t, err, "GetNamedMount: %v", err)
 	err = ts.MkMountFile(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "MkMountFile: %v", err)
 

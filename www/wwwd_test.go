@@ -37,7 +37,7 @@ func newTstate(t1 *test.Tstate) *Tstate {
 
 	ts.job = rd.String(4)
 
-	err := www.InitWwwFs(ts.Tstate.FsLib, ts.job)
+	err = www.InitWwwFs(ts.Tstate.FsLib, ts.job)
 	assert.Nil(t1.T, err)
 
 	ts.pid = spawn(t1.T, ts)
@@ -88,7 +88,8 @@ func TestStatic(t *testing.T) {
 }
 
 func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, done chan bool) {
-	clnt := www.NewWWWClnt(ts.Tstate.FsLib, ts.job)
+	clnt, err := www.NewWWWClnt(ts.Tstate.FsLib, ts.job)
+	assert.Nil(ts.T, err, "Err WWWClnt: %v", err)
 	for i := 0; i < nreq; i++ {
 		slp := avgslp * time.Duration(rd.Uint64()%100) / 100
 		db.DPrintf(db.TEST, "[%v] iteration %v Random sleep %v", clntid, i, slp)

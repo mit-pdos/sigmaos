@@ -241,14 +241,3 @@ func stopKNamed(cmd *exec.Cmd) error {
 	w2.Close()
 	return err
 }
-
-func SetNamedIP(host sp.Thost, ports sp.Taddrs) (sp.Taddrs, error) {
-	nameds := make(sp.Taddrs, len(ports))
-	for i, s := range ports {
-		if s.GetHost() != sp.NO_HOST {
-			db.DFatalf("Tried to substitute named ip when port exists: %v -> %v %v", s, s.GetHost(), s.GetPort())
-		}
-		nameds[i] = sp.NewTaddr(host, s.GetPort())
-	}
-	return nameds, nil
-}

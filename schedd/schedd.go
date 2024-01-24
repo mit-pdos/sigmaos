@@ -62,7 +62,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Sche
 // Warm the cache of proc binaries.
 func (sd *Schedd) WarmCacheBin(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
 	if err := sd.pmgr.DownloadProcBin(sp.Trealm(req.RealmStr), req.Program, req.BuildTag, proc.Ttype(req.ProcType)); err != nil {
-		db.DFatalf("Error Download Proc Bin: %v", err)
+		db.DPrintf(db.ERROR, "Error Download Proc Bin: %v", err)
 		res.OK = false
 		return err
 	}

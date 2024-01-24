@@ -52,12 +52,12 @@ func QualifyAddr(addrstr string) (sp.Thost, sp.Tport, error) {
 func QualifyAddrLocalIP(lip sp.Thost, addrstr string) (sp.Thost, sp.Tport, error) {
 	h, pstr, err := net.SplitHostPort(addrstr)
 	if err != nil {
-		db.DFatalf("Err split host port %v: %v", addrstr, err)
+		db.DPrintf(db.ERROR, "Err split host port %v: %v", addrstr, err)
 		return sp.NO_HOST, sp.NO_PORT, err
 	}
 	p, err := sp.ParsePort(pstr)
 	if err != nil {
-		db.DFatalf("Err split host port %v: %v", addrstr, err)
+		db.DPrintf(db.ERROR, "Err split host port %v: %v", addrstr, err)
 		return sp.NO_HOST, sp.NO_PORT, err
 	}
 	var host sp.Thost = lip
@@ -66,7 +66,7 @@ func QualifyAddrLocalIP(lip sp.Thost, addrstr string) (sp.Thost, sp.Tport, error
 		if lip == "" {
 			ip, err := LocalIP()
 			if err != nil {
-				db.DFatalf("LocalIP \"%v\" %v", addrstr, err)
+				db.DPrintf(db.ERROR, "LocalIP \"%v\" %v", addrstr, err)
 				return sp.NO_HOST, sp.NO_PORT, err
 			}
 			host = ip
@@ -110,7 +110,7 @@ func localIPs() ([]net.IP, error) {
 	var ips []net.IP
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		db.DFatalf("Err Get net interfaces %v: %v\n%s", ifaces, err, debug.Stack())
+		db.DPrintf(db.ERROR, "Err Get net interfaces %v: %v\n%s", ifaces, err, debug.Stack())
 		return nil, err
 	}
 	for _, i := range ifaces {

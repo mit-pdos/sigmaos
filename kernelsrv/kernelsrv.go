@@ -70,12 +70,20 @@ func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilReques
 
 func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
 	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown", ks.k.Param.KernelId)
-	if err := ks.k.Remove(sp.BOOT + ks.k.Param.KernelId); err != nil {
-		db.DPrintf(db.KERNEL, "%v: Shutdown remove err %v", ks.k.Param.KernelId, err)
+	if ks.k.IsSigmaclntdKernel() {
+		// This is the last container to shut down, so no named isn't up anymore.
+		// Normal shutdown would involve ending leases, etc., which takes a long
+		// time. Instead, shortcut this by killing sigmaclntd and just exiting.
+		db.DPrintf(db.KERNEL, "Shutdown sigmaclntd kernelsrv")
+	} else {
+		if err := ks.k.Remove(sp.BOOT + ks.k.Param.KernelId); err != nil {
+			db.DPrintf(db.KERNEL, "%v: kernelsrv shutdown remove err %v", ks.k.Param.KernelId, err)
+		}
 	}
 	if err := ks.k.Shutdown(); err != nil {
 		return err
 	}
+	db.DPrintf(db.KERNEL, "%v: kernelsrv done shutdown", ks.k.Param.KernelId)
 	ks.ch <- struct{}{}
 	return nil
 }

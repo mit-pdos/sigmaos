@@ -1,6 +1,7 @@
 package cgroup
 
 import (
+	"fmt"
 	"path"
 	"sync"
 
@@ -21,16 +22,18 @@ func NewCgroupMgr() *CgroupMgr {
 	}
 }
 
-func (cmgr *CgroupMgr) SetCPUShares(cgroupPath string, n int64) {
+func (cmgr *CgroupMgr) SetCPUShares(cgroupPath string, n int64) error {
 	cmgr.Lock()
 	defer cmgr.Unlock()
 
 	if err := cmgr.cfs.writeFile(path.Join(cgroupPath, "cpu.weight"), uint64(n)); err != nil {
-		db.DFatalf("Error writeFile: %v", err)
+		db.DPrintf(db.ERROR, "Error writeFile: %v", err)
+		return fmt.Errorf("Error writeFile: %v", err)
 	}
+	return nil
 }
 
-func (cmgr *CgroupMgr) SetMemoryLimit(cgroupPath string, membytes int64, memswap int64) {
+func (cmgr *CgroupMgr) SetMemoryLimit(cgroupPath string, membytes int64, memswap int64) error {
 	cmgr.Lock()
 	defer cmgr.Unlock()
 
@@ -55,8 +58,10 @@ func (cmgr *CgroupMgr) SetMemoryLimit(cgroupPath string, membytes int64, memswap
 				continue
 			} else {
 				// The memory.max file should always be present.
-				db.DFatalf("Error getFD: %v", err)
+				db.DPrintf(db.ERROR, "Error getFD: %v", err)
+				return fmt.Errorf("Error getFD: %v", err)
 			}
 		}
 	}
+	return nil
 }

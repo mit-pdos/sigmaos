@@ -38,7 +38,11 @@ func RunProfSrv(job string, public bool, cache string) error {
 		return err
 	}
 	ps.dbc = dbc
-	cachec, err := NewCacheClnt(cache, NewFsLibs(HOTELPROF), job)
+	fsls, err := NewFsLibs(HOTELPROF)
+	if err != nil {
+		return err
+	}
+	cachec, err := NewCacheClnt(cache, fsls, job)
 	if err != nil {
 		return err
 	}

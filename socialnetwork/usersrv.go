@@ -53,7 +53,10 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"username"})
 	usrv.mongoc = mongoc
-	fsls := NewFsLibs(SOCIAL_NETWORK_USER)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_USER)
+	if err != nil {
+		return err
+	}
 	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err

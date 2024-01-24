@@ -21,7 +21,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestSemClntSimple(t *testing.T) {
-	ts := test.NewTstate(t)
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
@@ -59,7 +62,10 @@ func TestSemClntSimple(t *testing.T) {
 }
 
 func TestSemClntConcur(t *testing.T) {
-	ts := test.NewTstate(t)
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")

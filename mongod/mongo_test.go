@@ -1,22 +1,21 @@
 package mongod_test
 
 import (
-	"testing"
 	"context"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"fmt"
-	"time"
+	bson2 "gopkg.in/mgo.v2/bson"
 	"sigmaos/dbclnt"
+	dbg "sigmaos/debug"
 	"sigmaos/mongoclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"strconv"
-	sp "sigmaos/sigmap"
-	dbg "sigmaos/debug"
-	bson2 "gopkg.in/mgo.v2/bson"
-
+	"testing"
+	"time"
 )
 
 type MyObj struct {
@@ -31,12 +30,12 @@ func TestConnet(t *testing.T) {
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoUrl).SetMaxPoolSize(1000))
 	assert.Nil(t, err)
 	assert.Nil(t, client.Ping(context.TODO(), nil))
-	
+
 	// insert an item
 	col := client.Database("myDB").Collection("myTbl")
 	col.Drop(context.TODO())
 	indexModel := mongo.IndexModel{
-    	Keys: bson.D{{"key", 1}},
+		Keys: bson.D{{"key", 1}},
 	}
 	_, err = col.Indexes().CreateOne(context.TODO(), indexModel)
 	assert.Nil(t, err)
@@ -71,7 +70,7 @@ func TestEncodeDecode(t *testing.T) {
 	col := client.Database("myDB").Collection("myTbl")
 	col.Drop(context.TODO())
 	indexModel := mongo.IndexModel{
-    	Keys: bson.D{{"key", 1}},
+		Keys: bson.D{{"key", 1}},
 	}
 	_, err = col.Indexes().CreateOne(context.TODO(), indexModel)
 	assert.Nil(t, err)
@@ -91,7 +90,7 @@ func TestEncodeDecode(t *testing.T) {
 	// Find: client encode
 	m := bson.M{"key": "objKey"}
 	fmt.Printf("%v: original query: %v\n", time.Now().String(), m)
-	mEncoded, err := bson.Marshal(m) 
+	mEncoded, err := bson.Marshal(m)
 	assert.Nil(t, err)
 
 	// Find: server logic
@@ -124,7 +123,10 @@ func TestEncodeDecode(t *testing.T) {
 
 func TestQuerySpeed(t *testing.T) {
 	// create mongo and sql dbs
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	mongoc, err := mongoclnt.NewMongoClnt(ts.FsLib)
 	assert.Nil(t, err)
 	dbc, err := dbclnt.NewDbClnt(ts.FsLib, sp.DBD)
@@ -139,7 +141,7 @@ func TestQuerySpeed(t *testing.T) {
 		keys[i] = "key" + strconv.Itoa(i)
 		vals[i] = "val" + strconv.Itoa(i)
 	}
-	
+
 	// mongo write
 	db := "TestDB"
 	col := "TestTable"

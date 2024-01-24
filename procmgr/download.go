@@ -25,16 +25,18 @@ func (mgr *ProcMgr) cachePath(realm sp.Trealm, prog string) string {
 	return path.Join(mgr.uxBinPath(), "user", "realms", realm.String(), prog)
 }
 
-func (mgr *ProcMgr) setupUserBinCacheL(realm sp.Trealm) {
+func (mgr *ProcMgr) setupUserBinCacheL(realm sp.Trealm) error {
 	if _, ok := mgr.cachedProcBins[realm]; !ok {
 		db.DPrintf(db.PROCMGR, "Make user bin cache for realm %v", realm)
 		mgr.cachedProcBins[realm] = make(map[string]bool)
 		cachePn := path.Dir(mgr.cachePath(realm, "PROGRAM"))
 		// Make a dir to cache the realm's binaries.
 		if err := mgr.rootsc.MkDir(cachePn, 0777); err != nil {
-			db.DFatalf("Error MkDir cache dir [%v]: %v", cachePn, err)
+			db.DPrintf(db.ERROR, "Error MkDir cache dir [%v]: %v", cachePn, err)
+			return err
 		}
 	}
+	return nil
 }
 
 // Returns true if the proc is already cached.
@@ -43,15 +45,17 @@ func (mgr *ProcMgr) alreadyCached(realm sp.Trealm, prog string) bool {
 	return mgr.cachedProcBins[realm][prog]
 }
 
-func (mgr *ProcMgr) downloadProc(p *proc.Proc) {
+func (mgr *ProcMgr) downloadProc(p *proc.Proc) error {
 	// Privileged procs' bins should be part of the base image.
 	if p.IsPrivileged() {
-		return
+		return nil
 	}
 	// Download the bin from s3, if it isn't already cached locally.
 	if err := mgr.downloadProcBin(p.GetRealm(), p.GetProgram(), p.GetBuildTag()); err != nil {
-		db.DFatalf("failed to download proc err:%v proc:%v", err, p)
+		db.DPrintf(db.ERROR, "failed to download proc err:%v proc:%v", err, p)
+		return err
 	}
+	return nil
 }
 
 // Lock to ensure the bin is downloaded only once, even if multiple copies of

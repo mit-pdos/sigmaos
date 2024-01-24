@@ -75,7 +75,8 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 func NewSigmaClntFsLibFidClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
 	fsl, err := newFsLibFidClnt(pcfg, fidc)
 	if err != nil {
-		db.DFatalf("NewSigmaClnt: %v", err)
+		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
+		return nil, err
 	}
 	lmc, err := leaseclnt.NewLeaseClnt(fsl)
 	if err != nil {
@@ -92,11 +93,17 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
 	sc, err := NewSigmaClntFsLib(pcfg)
 	if err != nil {
-		db.DFatalf("NewSigmaClnt: %v", err)
+		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
+		return nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Make FsLib: %v", pcfg.GetPID(), time.Since(start))
 	start = time.Now()
-	sc.ProcAPI = procclnt.NewProcClnt(sc.FsLib)
+	papi, err := procclnt.NewProcClnt(sc.FsLib)
+	if err != nil {
+		db.DPrintf(db.ERROR, "NewProcClnt: %v", err)
+		return nil, err
+	}
+	sc.ProcAPI = papi
 	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", pcfg.GetPID(), time.Since(start))
 	return sc, nil
 }

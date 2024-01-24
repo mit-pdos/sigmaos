@@ -83,7 +83,7 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 				db.DPrintf(db.FENCEFS, "PutFile p %v nf %v f %v resp %v stale\n", p, nf, f, resp)
 				return serr.NewErr(serr.TErrStale, f)
 			}
-			db.DFatalf("PutFile failed %v %v %v\n", p, nf, resp.Responses[0])
+			db.DPrintf(db.ERROR, "PutFile failed %v %v %v\n", p, nf, resp.Responses[0])
 		}
 
 		return nil

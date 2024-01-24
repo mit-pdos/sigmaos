@@ -131,7 +131,11 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		return err
 	}
 	// Make some rootrealm services available in new realm
-	namedMount := rm.sc.GetNamedMount()
+	namedMount, err := rm.sc.GetNamedMount()
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", err)
+		return err
+	}
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
 		mnt := sp.NewMountService(namedMount.Addr)

@@ -12,7 +12,6 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	"sigmaos/fslib"
 	"sigmaos/netsigma"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -112,7 +111,6 @@ type Subsystem interface {
 	Kill() error
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
-	GetIp(fsl *fslib.FsLib) *sp.Taddr
 	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
 	AllocPort(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
@@ -165,11 +163,6 @@ func (scsc *SigmaClntSrvCmd) SetCPUShares(shares int64) error {
 func (scsc *SigmaClntSrvCmd) GetCPUUtil() (float64, error) {
 	db.DFatalf("Unimplemented")
 	return 0, nil
-}
-
-func (scsc *SigmaClntSrvCmd) GetIp(fsl *fslib.FsLib) *sp.Taddr {
-	db.DFatalf("Unimplemented")
-	return nil
 }
 
 func (scsc *SigmaClntSrvCmd) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {

@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	db "sigmaos/debug"
 )
 
@@ -20,13 +22,13 @@ func (ts *Tstate) CrashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 	db.DPrintf(db.ALWAYS, "Booting a node Before crashing a %v.", srv)
 	err := ts.BootNode(1)
 	db.DPrintf(db.ALWAYS, "Done booting a node before crashing a %v.", srv)
-	if err != nil {
-		db.DFatalf("Error BootNode %v", srv)
+	if !assert.Nil(ts.T, err) {
+		db.DPrintf(db.ERROR, "Error BootNode %v", srv)
 	}
 	db.DPrintf(db.ALWAYS, "Kill one %v", srv)
 	err = ts.KillOne(srv)
-	if err != nil {
-		db.DFatalf("Error non-nil kill %v: %v", srv, err)
+	if !assert.Nil(ts.T, err) {
+		db.DPrintf(db.ERROR, "Error non-nil kill %v: %v", srv, err)
 	}
 	db.DPrintf(db.ALWAYS, "Done Kill one %v", srv)
 	l.Unlock()

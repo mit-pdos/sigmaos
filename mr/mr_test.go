@@ -98,8 +98,12 @@ func TestNewWordCount(t *testing.T) {
 
 func TestSplits(t *testing.T) {
 	const SPLITSZ = 10 * sp.MBYTE
-	ts := test.NewTstateAll(t)
-	job = mr.ReadJobConfig(app)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
 	sum := sp.Tlength(0)
@@ -122,14 +126,18 @@ func TestMapper(t *testing.T) {
 		REDUCEOUT = "name/ux/~local/test-reducer-out.txt"
 	)
 
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, sp.NO_IP, sp.NO_IP, sp.NO_IP, "", false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
 	ts.Remove(REDUCEIN)
 	ts.Remove(REDUCEOUT)
 
-	job = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
+	job, err1 = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	job.Nreduce = 1
 
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
@@ -195,8 +203,12 @@ func TestMapper(t *testing.T) {
 }
 
 func TestSeqGrep(t *testing.T) {
-	ts := test.NewTstateAll(t)
-	job = mr.ReadJobConfig(app)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 
 	p := proc.NewProc("seqgrep", []string{job.Input})
 	err := ts.Spawn(p)
@@ -210,8 +222,12 @@ func TestSeqGrep(t *testing.T) {
 
 func TestSeqWc(t *testing.T) {
 	const OUT = "name/ux/~local/seqout.txt"
-	ts := test.NewTstateAll(t)
-	job = mr.ReadJobConfig(app)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 
 	ts.Remove(OUT)
 
@@ -231,10 +247,12 @@ type Tstate struct {
 	nreducetask int
 }
 
-func newTstate(t *testing.T) *Tstate {
+func newTstate(t1 *test.Tstate) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = test.NewTstateAll(t)
-	job = mr.ReadJobConfig(app)
+	ts.Tstate = t1
+	var err1 error
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t1.T, err1, "Error ReadJobConfig: %v", err1)
 	ts.nreducetask = job.Nreduce
 	ts.job = rd.String(4)
 
@@ -244,7 +262,8 @@ func newTstate(t *testing.T) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll(path.Join(sp.SIGMAHOME, "mr"))
 
-	mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
+	err1 = mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
+	assert.Nil(t1.T, err1, "Error InitCoordFS: %v", err1)
 
 	os.Remove(OUTPUT)
 
@@ -281,7 +300,11 @@ func (ts *Tstate) checkJob() {
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux int, monitor bool) {
-	ts := newTstate(t)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	if monitor {

@@ -232,7 +232,7 @@ func (fdc *FdClient) MountTree(addrs sp.Taddrs, tree, mount string) error {
 	return fdc.pc.MountTree(fdc.pcfg.GetPrincipal(), addrs, tree, mount)
 }
 
-func (fdc *FdClient) GetNamedMount() sp.Tmount {
+func (fdc *FdClient) GetNamedMount() (sp.Tmount, error) {
 	return fdc.pc.GetNamedMount()
 }
 

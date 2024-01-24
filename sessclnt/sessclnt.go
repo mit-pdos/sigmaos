@@ -148,7 +148,9 @@ func (c *SessClnt) send(req sessp.Tmsg, data []byte) (*netclnt.Rpc, *serr.Err) {
 	}
 
 	// Enqueue a request
-	c.queue.Enqueue(rpc)
+	if err := c.queue.Enqueue(rpc); err != nil {
+		return nil, serr.NewErr(serr.TErrError, err)
+	}
 	return rpc, nil
 }
 

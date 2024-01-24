@@ -87,14 +87,20 @@ func TestCompile(t *testing.T) {
 }
 
 func TestOldPrimary(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	fn, pids := runLeaders(t, ts, "")
 	check(t, ts, fn, pids)
 	ts.Shutdown()
 }
 
 func TestOldProc(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	fn, pids := runLeaders(t, ts, "child")
 	check(t, ts, fn, pids)
 	ts.Shutdown()

@@ -72,10 +72,11 @@ type Tstate struct {
 	scsck   *bootkernelclnt.Kernel
 }
 
-func NewTstatePath(t *testing.T, path string) *Tstate {
+func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
 	ts, err := newSysClntPath(t, path)
 	if err != nil {
-		db.DFatalf("NewTstatePath: %v\n", err)
+		db.DPrintf(db.ERROR, "NewTstatePath: %v\n", err)
+		return nil, err
 	}
 	if path == gopath.Join(sp.MEMFS, "~local/")+"/" {
 		ts.memfs = proc.NewProc("memfsd", []string{})
@@ -84,28 +85,30 @@ func NewTstatePath(t *testing.T, path string) *Tstate {
 		err = ts.WaitStart(ts.memfs.GetPid())
 		assert.Nil(t, err, "WaitStart error")
 	}
-	return ts
+	return ts, nil
 }
 
-func NewTstate(t *testing.T) *Tstate {
+func NewTstate(t *testing.T) (*Tstate, error) {
 	return NewTstatePath(t, sp.NAMED)
 }
 
-func NewTstateAll(t *testing.T) *Tstate {
+func NewTstateAll(t *testing.T) (*Tstate, error) {
 	return NewTstatePath(t, "all")
 }
 
-func NewTstateWithRealms(t *testing.T) *Tstate {
+func NewTstateWithRealms(t *testing.T) (*Tstate, error) {
 	ts, err := newSysClnt(t, BOOT_REALM)
 	if err != nil {
-		db.DFatalf("NewTstateRealm: %v\n", err)
+		db.DPrintf(db.ERROR, "NewTstateRealm: %v\n", err)
+		return nil, err
 	}
 	rc, err := realmclnt.NewRealmClnt(ts.FsLib)
 	if err != nil {
-		db.DFatalf("NewRealmClnt make realmclnt: %v\n", err)
+		db.DPrintf(db.ERROR, "NewRealmClnt make realmclnt: %v\n", err)
+		return nil, err
 	}
 	ts.rc = rc
-	return ts
+	return ts, nil
 }
 
 func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
@@ -119,7 +122,8 @@ func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	localIP, err1 := netsigma.LocalIP()
 	if err1 != nil {
-		db.DFatalf("Error local IP: %v", err1)
+		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
+		return nil, err1
 	}
 	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())

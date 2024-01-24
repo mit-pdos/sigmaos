@@ -101,6 +101,11 @@ func (k *Kernel) Ip() sp.Tip {
 	return k.ip
 }
 
+func (k *Kernel) IsSigmaclntdKernel() bool {
+	db.DPrintf(db.KERNEL, "Check is sigmaclntd kernel: %v", k.Param.Services)
+	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.SIGMACLNTDREL
+}
+
 func (k *Kernel) Shutdown() error {
 	k.Lock()
 	defer k.Unlock()
@@ -184,6 +189,7 @@ func (k *Kernel) shutdown() {
 		ss.Kill()
 		// d.Wait()
 	}
+	db.DPrintf(db.KERNEL, "Shutdown nameds done %d\n", len(k.svcs.svcs[sp.KNAMED]))
 }
 
 func newKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
@@ -235,15 +241,4 @@ func stopKNamed(cmd *exec.Cmd) error {
 	_, err := fmt.Fprintf(w2, "stop")
 	w2.Close()
 	return err
-}
-
-func SetNamedIP(host sp.Tip, ports sp.Taddrs) (sp.Taddrs, error) {
-	nameds := make(sp.Taddrs, len(ports))
-	for i, s := range ports {
-		if s.GetIP() != sp.NO_IP {
-			db.DFatalf("Tried to substitute named ip when port exists: %v -> %v %v", s, s.GetIP(), s.GetPort())
-		}
-		nameds[i] = sp.NewTaddr(host, sp.INNER_CONTAINER_IP, s.GetPort())
-	}
-	return nameds, nil
 }

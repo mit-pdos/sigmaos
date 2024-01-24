@@ -118,15 +118,16 @@ func JobDone(fsl *fslib.FsLib, job string) {
 	sc.Up()
 }
 
-func ReadJobConfig(app string) *Job {
+func ReadJobConfig(app string) (*Job, error) {
 	job := &Job{}
 	if err := yaml.ReadYaml(app, job); err != nil {
-		db.DFatalf("ReadConfig err %v\n", err)
+		db.DPrintf(db.ERROR, "ReadConfig err %v\n", err)
+		return nil, err
 	}
-	return job
+	return job, nil
 }
 
-func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
+func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) error {
 	fsl.MkDir(MRDIRTOP, 0777)
 	fsl.MkDir(MRDIRELECT, 0777)
 	dirs := []string{
@@ -144,30 +145,36 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
 	}
 	for _, n := range dirs {
 		if err := fsl.MkDir(n, 0777); err != nil {
-			db.DFatalf("Mkdir %v err %v\n", n, err)
+			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
+			return err
 		}
 	}
 
 	if err := InitJobSem(fsl, jobname); err != nil {
-		db.DFatalf("Err init job sem")
+		db.DPrintf(db.ERROR, "Err init job sem")
+		return err
 	}
 
 	// Make task and input directories for reduce tasks
 	for r := 0; r < nreducetask; r++ {
 		n := ReduceTask(jobname) + "/" + strconv.Itoa(r)
 		if _, err := fsl.PutFile(n, 0777, sp.OWRITE, []byte{}); err != nil {
-			db.DFatalf("Putfile %v err %v\n", n, err)
+			db.DPrintf(db.ERROR, "Putfile %v err %v\n", n, err)
+			return err
 		}
 		n = ReduceIn(jobname) + "/" + strconv.Itoa(r)
 		if err := fsl.MkDir(n, 0777); err != nil {
-			db.DFatalf("Mkdir %v err %v\n", n, err)
+			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
+			return err
 		}
 	}
 
 	// Create empty stats file
 	if _, err := fsl.PutFile(MRstats(jobname), 0777, sp.OWRITE, []byte{}); err != nil {
-		db.DFatalf("Putfile %v err %v\n", MRstats(jobname), err)
+		db.DPrintf(db.ERROR, "Putfile %v err %v\n", MRstats(jobname), err)
+		return err
 	}
+	return nil
 }
 
 // Clean up all old MR outputs

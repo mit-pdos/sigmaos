@@ -263,7 +263,11 @@ func (scs *SigmaClntSrvAPI) PathLastMount(ctx fs.CtxI, req scproto.SigmaPathRequ
 }
 
 func (scs *SigmaClntSrvAPI) GetNamedMount(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaMountReply) error {
-	mnt := scs.sc.GetNamedMount()
+	mnt, err := scs.sc.GetNamedMount()
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err GetNamedMount: %v", err)
+		return err
+	}
 	rep.Mount = mnt.TmountProto
 	rep.Err = scs.setErr(nil)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: PastLastMount %v %v\n", scs.sc.ClntId(), req, rep)

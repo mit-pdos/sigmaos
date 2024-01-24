@@ -1,11 +1,11 @@
 package mongoclnt_test
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/mgo.v2/bson"
-	"sigmaos/test"
 	"sigmaos/mongoclnt"
+	"sigmaos/test"
+	"testing"
 )
 
 type MyObj struct {
@@ -15,21 +15,24 @@ type MyObj struct {
 
 func TestMongoClnt(t *testing.T) {
 	// create a client
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	mongoc, err := mongoclnt.NewMongoClnt(ts.FsLib)
 	assert.Nil(t, err)
 	assert.NotNil(t, mongoc)
-	
+
 	// Configure table
 	db := "TestDB"
 	col := "TestTable"
 	mongoc.DropCollection(db, col)
 	mongoc.EnsureIndex(db, col, []string{"key"})
-	
-	// Insert 
+
+	// Insert
 	obj := MyObj{"k1", []string{"v1"}}
 	assert.Nil(t, mongoc.Insert(db, col, obj))
-	
+
 	// Find
 	var result MyObj
 	f, err := mongoc.FindOne(db, col, bson.M{"key": "k1"}, &result)
@@ -43,7 +46,7 @@ func TestMongoClnt(t *testing.T) {
 	assert.Nil(t, err)
 	assert.False(t, f)
 	assert.Nil(t, mongoc.Insert(db, col, obj))
-	
+
 	// Update
 	var result1 MyObj
 	assert.Nil(t, mongoc.Update(db, col, bson.M{"key": "k1"}, bson.M{"$push": bson.M{"val": "v2"}}))
@@ -52,7 +55,7 @@ func TestMongoClnt(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, f)
 	assert.Equal(t, []string{"v2"}, result1.Val)
-	
+
 	// Upsert
 	var result2 MyObj
 	assert.Nil(t, mongoc.Upsert(db, col, bson.M{"key": "k2"}, bson.M{"$push": bson.M{"val": "vv1"}}))
@@ -65,5 +68,3 @@ func TestMongoClnt(t *testing.T) {
 	// shutdown test system
 	assert.Nil(t, ts.Shutdown())
 }
-
-

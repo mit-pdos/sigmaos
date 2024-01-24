@@ -1,9 +1,9 @@
 package socialnetwork_test
 
 import (
-	"sigmaos/proc"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/mgo.v2/bson"
+	"sigmaos/proc"
 
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
@@ -15,7 +15,11 @@ import (
 
 func TestUser(t *testing.T) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1000}}, NCACHESRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1000}}, NCACHESRV)
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
@@ -82,7 +86,11 @@ func TestUser(t *testing.T) {
 
 func TestGraph(t *testing.T) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000}}, NCACHESRV)
 	snCfg := tssn.snCfg
@@ -156,7 +164,11 @@ func TestGraph(t *testing.T) {
 
 func TestUserAndGraph(t *testing.T) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000}}, NCACHESRV)
 	tssn.dbu.InitGraph()
@@ -231,7 +243,11 @@ func TestUserAndGraph(t *testing.T) {
 
 func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, mcpu}}, 1)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, mcpu}}, 1)
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query

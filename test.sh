@@ -120,7 +120,7 @@ if [[ $BASIC == "--basic" ]]; then
     go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SIGMACLNTD
     cleanup
     go test $VERB sigmaos/memfs -start $SIGMACLNTD
-    cleanupx
+    cleanup
 
     #
     # tests a full kernel using root realm

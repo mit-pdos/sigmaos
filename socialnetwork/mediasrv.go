@@ -46,7 +46,10 @@ func RunMediaSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, MEDIA_COL, []string{"mediaid"})
 	msrv.mongoc = mongoc
-	fsls := NewFsLibs(SOCIAL_NETWORK_MEDIA)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_MEDIA)
+	if err != nil {
+		return err
+	}
 	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err

@@ -80,8 +80,8 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 	assert.Equal(t, 73, len(results[0].Edges))
 }
 
-func setupSigmaState(t *testing.T) *TstateSN {
-	tssn := newTstateSN(t, []sn.Srv{
+func setupSigmaState(t1 *test.Tstate) *TstateSN {
+	tssn := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
@@ -91,13 +91,13 @@ func setupSigmaState(t *testing.T) *TstateSN {
 		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-compose", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-frontend", test.Overlays, 1000}}, NCACHESRV)
-	initUserAndGraph(t, MONGO_URL)
+	initUserAndGraph(t1.T, MONGO_URL)
 	return tssn
 }
 
-func setupK8sState(t *testing.T) *TstateSN {
+func setupK8sState(t1 *test.Tstate) *TstateSN {
 	// Advertise server address
-	tssn := newTstateSN(t, nil, 0)
+	tssn := newTstateSN(t1, nil, 0)
 	p := sn.JobHTTPAddrsPath(tssn.jobname)
 	h, p, err := net.SplitHostPort(K8S_ADDR)
 	assert.Nil(tssn.T, err, "Err split host port %v: %v", K8S_ADDR, err)
@@ -105,16 +105,16 @@ func setupK8sState(t *testing.T) *TstateSN {
 	assert.Nil(tssn.T, err, "Err parse port %v: %v", p, err)
 	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port), tssn.ProcEnv().GetNet())
 	mnt := sp.NewMountService([]*sp.Taddr{addr})
-	assert.Nil(t, tssn.MkMountFile(p, mnt, sp.NoLeaseId))
+	assert.Nil(t1.T, tssn.MkMountFile(p, mnt, sp.NoLeaseId))
 	// forward mongo port and init users and graphs.
 	cmd := exec.Command("kubectl", "port-forward", "svc/mongodb-sn", K8S_MONGO_FWD_PORT+":27017")
-	assert.Nil(t, cmd.Start())
+	assert.Nil(t1.T, cmd.Start())
 	defer cmd.Process.Kill()
-	initUserAndGraph(t, "localhost:"+K8S_MONGO_FWD_PORT)
+	initUserAndGraph(t1.T, "localhost:"+K8S_MONGO_FWD_PORT)
 	return tssn
 }
 
-func testTemplate(t *testing.T, isBenchTest bool, testFunc func(*testing.T, *sn.WebClnt)) {
+func testTemplate(t1 *test.Tstate, isBenchTest bool, testFunc func(*testing.T, *sn.WebClnt)) {
 	if isBenchTest && !BENCH_TEST {
 		dbg.DPrintf(dbg.ALWAYS, "Skipping benchmark test")
 		return
@@ -122,37 +122,53 @@ func testTemplate(t *testing.T, isBenchTest bool, testFunc func(*testing.T, *sn.
 	var tssn *TstateSN
 	if K8S_ADDR == "" {
 		dbg.DPrintf(dbg.ALWAYS, "No k8s addr. Running SigmaOS")
-		tssn = setupSigmaState(t)
+		tssn = setupSigmaState(t1)
 	} else {
 		dbg.DPrintf(dbg.ALWAYS, "Running K8s at %v", K8S_ADDR)
-		tssn = setupK8sState(t)
+		tssn = setupK8sState(t1)
 	}
 	wc := sn.NewWebClnt(tssn.FsLib, tssn.jobname)
 
 	// run tests
-	testFunc(t, wc)
+	testFunc(t1.T, wc)
 
 	//stop server
-	assert.Nil(t, tssn.Shutdown())
+	assert.Nil(t1.T, tssn.Shutdown())
 }
 
 func TestCompile(t *testing.T) {
 }
 
 func TestBenchmarkSeqCompose(t *testing.T) {
-	testTemplate(t, true, testSeqComposeInner)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	testTemplate(t1, true, testSeqComposeInner)
 }
 
 func TestBenchmarkSeqMix(t *testing.T) {
-	testTemplate(t, true, testSeqMixInner)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	testTemplate(t1, true, testSeqMixInner)
 }
 
 func TestFrontend(t *testing.T) {
-	testTemplate(t, false, testFrontendInner)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	testTemplate(t1, false, testFrontendInner)
 }
 
 func TestLoadgen(t *testing.T) {
-	testTemplate(t, true, testLoadgenInner)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	testTemplate(t1, true, testLoadgenInner)
 }
 
 // Definition of benchmark functions

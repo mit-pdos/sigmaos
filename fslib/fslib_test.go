@@ -35,7 +35,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestInitFs(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	sts, err := ts.GetDir(pathname)
 	assert.Nil(t, err)
 	if pathname == sp.NAMED {
@@ -51,7 +54,10 @@ func TestInitFs(t *testing.T) {
 }
 
 func TestRemoveBasic(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("hello")
@@ -74,7 +80,10 @@ func TestRemoveBasic(t *testing.T) {
 }
 
 func TestDirBasic(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	dn := gopath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
@@ -101,7 +110,10 @@ func TestDirBasic(t *testing.T) {
 }
 
 func TestCreateTwice(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("hello")
@@ -118,7 +130,10 @@ func TestCreateTwice(t *testing.T) {
 }
 
 func TestRemoveNonExistent(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("hello")
@@ -138,7 +153,10 @@ func TestRemoveNonExistent(t *testing.T) {
 }
 
 func TestRemovePath(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	d1 := gopath.Join(pathname, "d1")
 	err := ts.MkDir(d1, 0777)
@@ -161,7 +179,10 @@ func TestRemovePath(t *testing.T) {
 }
 
 func TestRenameInDir(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	d1 := gopath.Join(pathname, "d1")
 	err := ts.MkDir(d1, 0777)
@@ -188,7 +209,10 @@ func TestRenameInDir(t *testing.T) {
 }
 
 func TestRemoveSymlink(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	d1 := gopath.Join(pathname, "d1")
 	db.DPrintf(db.TEST, "path %v", pathname)
@@ -196,7 +220,8 @@ func TestRemoveSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := ts.GetNamedMount()
+	mnt, err := ts.GetNamedMount()
+	assert.Nil(t, err, "GetNamedMount: %v", err)
 	err = ts.MkMountFile(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "MkMountFile: %v", err)
 
@@ -214,14 +239,18 @@ func TestRemoveSymlink(t *testing.T) {
 }
 
 func TestRmDirWithSymlink(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	d1 := gopath.Join(pathname, "d1")
 	err := ts.MkDir(d1, 0777)
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := ts.GetNamedMount()
+	mnt, err := ts.GetNamedMount()
+	assert.Nil(t, err, "GetNamedMount: %v", err)
 	err = ts.MkMountFile(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "MkMountFile: %v", err)
 
@@ -236,14 +265,18 @@ func TestRmDirWithSymlink(t *testing.T) {
 }
 
 func TestReadSymlink(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	d1 := gopath.Join(pathname, "d1")
 	err := ts.MkDir(d1, 0777)
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt := ts.GetNamedMount()
+	mnt, err := ts.GetNamedMount()
+	assert.Nil(t, err, "GetNamedMount: %v", err)
 	err = ts.MkMountFile(fn, mnt, sp.NoLeaseId)
 	assert.Nil(t, err, "MkMountFile: %v", err)
 
@@ -264,7 +297,10 @@ func TestReadSymlink(t *testing.T) {
 }
 
 func TestReadOff(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("hello")
@@ -287,7 +323,10 @@ func TestReadOff(t *testing.T) {
 }
 
 func TestRenameAcrossDir(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	d1 := gopath.Join(pathname, "d1")
 	d2 := gopath.Join(pathname, "d2")
@@ -321,7 +360,10 @@ func TestRenameAcrossDir(t *testing.T) {
 func TestRenameAndRemove(t *testing.T) {
 	d1 := gopath.Join(pathname, "d1")
 	d2 := gopath.Join(pathname, "d2")
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	err := ts.MkDir(d1, 0777)
 	assert.Equal(t, nil, err)
 	err = ts.MkDir(d2, 0777)
@@ -359,7 +401,10 @@ func TestNonEmpty(t *testing.T) {
 	d1 := gopath.Join(pathname, "d1")
 	d2 := gopath.Join(pathname, "d2")
 
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	err := ts.MkDir(d1, 0777)
 	assert.Equal(t, nil, err)
 	err = ts.MkDir(d2, 0777)
@@ -386,7 +431,10 @@ func TestNonEmpty(t *testing.T) {
 }
 
 func TestSetAppend(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	d := []byte("1234")
 	fn := gopath.Join(pathname, "f")
 
@@ -406,7 +454,10 @@ func TestSetAppend(t *testing.T) {
 }
 
 func TestCopy(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	d := []byte("hello")
 	src := gopath.Join(pathname, "f")
 	dst := gopath.Join(pathname, "g")
@@ -429,7 +480,10 @@ func TestCopy(t *testing.T) {
 }
 
 func TestDirDot(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	dn := gopath.Join(pathname, "dir0")
 	dot := dn + "/."
 	err := ts.MkDir(dn, 0777)
@@ -449,7 +503,10 @@ func TestDirDot(t *testing.T) {
 }
 
 func TestPageDir(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	dn := gopath.Join(pathname, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
@@ -508,7 +565,10 @@ func TestDirConcur(t *testing.T) {
 		NFILE = 3
 		NSCAN = 100
 	)
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	dn := gopath.Join(pathname, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
@@ -563,7 +623,10 @@ func TestDirConcur(t *testing.T) {
 }
 
 func TestWaitCreate(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "w")
 	ch := make(chan bool)
@@ -597,7 +660,10 @@ func TestWaitCreate(t *testing.T) {
 }
 
 func TestWaitRemoveOne(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "w")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, nil)
@@ -628,7 +694,10 @@ func TestWaitRemoveOne(t *testing.T) {
 }
 
 func TestWaitDir(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	f := "x"
 	pn := gopath.Join(pathname, "d1")
@@ -674,7 +743,10 @@ func TestWaitDir(t *testing.T) {
 //	const N = 50 // 5_000
 //	const MS = 10
 //
-//	ts := test.NewTstatePath(t, pathname)
+//ts, err1 :=test.NewTstatePath(t, pathname)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
 //	dn := gopath.Join(pathname, "d1")
 //	err := ts.MkDir(dn, 0777)
 //	assert.Equal(t, nil, err)
@@ -732,7 +804,10 @@ func TestWaitDir(t *testing.T) {
 func TestWaitRemoveWaitConcur(t *testing.T) {
 	const N = 100 // 10_000
 
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	dn := gopath.Join(pathname, "d1")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
@@ -772,7 +847,10 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 func TestConcurFile(t *testing.T) {
 	const I = 20
 	const N = 100
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	ch := make(chan int)
 	for i := 0; i < I; i++ {
 		go func(i int) {
@@ -850,7 +928,10 @@ func checkFs(ts *test.Tstate, DONE string) {
 
 func TestConcurRename(t *testing.T) {
 	const N = 20
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	cont := make(chan bool)
 	done := make(chan int)
 	TODO := gopath.Join(pathname, "todo")
@@ -907,7 +988,10 @@ func TestConcurRename(t *testing.T) {
 
 func TestConcurAssignedRename(t *testing.T) {
 	const N = 20
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	cont := make(chan string)
 	done := make(chan int)
 	TODO := gopath.Join(pathname, "todo")
@@ -971,7 +1055,10 @@ func TestConcurAssignedRename(t *testing.T) {
 }
 
 func TestSymlinkPath(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dn := gopath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
@@ -1002,7 +1089,10 @@ func newMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
 }
 
 func TestMountSimple(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dn := gopath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
@@ -1024,7 +1114,10 @@ func TestMountSimple(t *testing.T) {
 }
 
 func TestUnionDir(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dn := gopath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
@@ -1061,7 +1154,10 @@ func TestUnionDir(t *testing.T) {
 }
 
 func TestUnionRoot(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	pn0 := gopath.Join(pathname, "namedself0")
 	pn1 := gopath.Join(pathname, "namedself1")
@@ -1083,7 +1179,10 @@ func TestUnionRoot(t *testing.T) {
 }
 
 func TestUnionSymlinkRead(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	pn0 := gopath.Join(pathname, "namedself0")
 	mnt := newMount(t, ts, pathname)
@@ -1115,7 +1214,10 @@ func TestUnionSymlinkRead(t *testing.T) {
 }
 
 func TestUnionSymlinkPut(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	pn0 := gopath.Join(pathname, "namedself0")
 	err := ts.MkMountFile(pn0, newMount(t, ts, pathname), sp.NoLeaseId)
@@ -1152,7 +1254,10 @@ func TestUnionSymlinkPut(t *testing.T) {
 }
 
 func TestSetFileSymlink(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("hello")
@@ -1197,7 +1302,10 @@ func TestSetFileSymlink(t *testing.T) {
 }
 
 func TestMountUnion(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dn := gopath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
@@ -1223,7 +1331,10 @@ func TestMountUnion(t *testing.T) {
 }
 
 func TestOpenRemoveRead(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("hello")
@@ -1249,7 +1360,10 @@ func TestOpenRemoveRead(t *testing.T) {
 }
 
 func TestFslibClose(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dot := pathname + "/."
 
@@ -1275,7 +1389,10 @@ func TestFslibClose(t *testing.T) {
 }
 
 func TestDisconnect(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("hello")
@@ -1301,7 +1418,10 @@ func TestDisconnect(t *testing.T) {
 }
 
 func TestEphemeralFileOK(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "f")
 
@@ -1327,7 +1447,10 @@ func TestEphemeralFileOK(t *testing.T) {
 }
 
 func TestEphemeralFileExpire(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dn := gopath.Join(pathname, "dir")
 	err := ts.MkDir(dn, 0777)

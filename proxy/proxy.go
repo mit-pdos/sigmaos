@@ -62,8 +62,9 @@ func (npd *Npd) Unregister(sid sessp.Tsession, conn sps.Conn) {
 	sess.UnsetConn(conn)
 }
 
-func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) {
+func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) *serr.Err {
 	go npd.serve(fc)
+	return nil
 }
 
 // The connection from the kernel/client
@@ -105,7 +106,11 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 		TokenPresent: true,
 	}
 
-	mnt := npc.pc.GetNamedMount()
+	mnt, error := npc.pc.GetNamedMount()
+	if error != nil {
+		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", error)
+		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
+	}
 	fid, err := npc.fidc.Attach(npc.principal, npc.cid, mnt.Addr, "", "")
 	if err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v err %v\n", args, err)

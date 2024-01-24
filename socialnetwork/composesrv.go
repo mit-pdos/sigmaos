@@ -41,7 +41,10 @@ func RunComposeSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls := NewFsLibs(SOCIAL_NETWORK_POST)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_POST)
+	if err != nil {
+		return err
+	}
 	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err

@@ -23,26 +23,25 @@ type Tstate struct {
 	cmd *exec.Cmd
 }
 
-func initTest(t *testing.T) *Tstate {
+func initTest(t1 *test.Tstate) *Tstate {
 	ts := &Tstate{}
 
 	// start named
-	ts.Tstate = test.NewTstatePath(t, sp.NAMED)
+	ts.Tstate = t1
 	sts, err := ts.GetDir(sp.NAMED)
-	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, named.InitRootDir))
+	assert.Equal(t1.T, nil, err)
+	assert.True(t1.T, fslib.Present(sts, named.InitRootDir))
 
 	// start proxy
-
-	ts.cmd = exec.Command("../bin/linux/proxyd", append([]string{ts.ProcEnv().GetInnerContainerIP().String()})...)
+	ts.cmd = exec.Command("../bin/proxy/proxyd", append([]string{ts.ProcEnv().GetInnerContainerIP().String()})...)
 	ts.cmd.Stdout = os.Stdout
 	ts.cmd.Stderr = os.Stderr
 	err = ts.cmd.Start()
-	assert.Nil(t, err)
+	assert.Nil(t1.T, err)
 
 	// mount proxy
 	_, err = run("sudo mount -t 9p -o trans=tcp,aname=`whoami`,uname=`whoami`,port=1110 127.0.0.1 /mnt/9p")
-	assert.Nil(t, err)
+	assert.Nil(t1.T, err)
 
 	return ts
 }
@@ -66,10 +65,14 @@ func run(cmd string) ([]byte, error) {
 }
 
 func TestProxyBasic(t *testing.T) {
-	ts := initTest(t)
+	t1, err1 := test.NewTstatePath(t, sp.NAMED)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := initTest(t1)
 
 	out, err := run("ls -a /mnt/9p/ | grep '.statsd'")
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err run ls: %v", err)
 	assert.Equal(t, ".statsd\n", string(out))
 
 	out, err = run("cat /mnt/9p/.statsd | grep Nwalk")
@@ -114,13 +117,19 @@ func TestProxyBasic(t *testing.T) {
 }
 
 func TestProxyMountPath(t *testing.T) {
-	ts := initTest(t)
+	t1, err1 := test.NewTstatePath(t, sp.NAMED)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := initTest(t1)
 
 	dn := "name/d"
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	mnt := sp.NewMountService(ts.GetNamedMount().Addr)
+	m1, err := ts.GetNamedMount()
+	assert.Nil(ts.T, err, "MountService: %v", err)
+	mnt := sp.NewMountService(m1.Addr)
 	err = ts.NewMount9P("name/namedself", mnt)
 	assert.Nil(ts.T, err, "NewMount9P")
 

@@ -9,7 +9,7 @@ usage() {
 }
 
 UPDATE=""
-TAG=""
+TAG="XXX"
 BOOT="named"
 NAMED="127.0.0.1"
 DBIP="x.x.x.x"

@@ -23,10 +23,11 @@ type WebClnt struct {
 	*fslib.FsLib
 }
 
-func NewWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
+func NewWebClnt(fsl *fslib.FsLib, job string) (*WebClnt, error) {
 	addrs, err := GetJobHTTPAddrs(fsl, job)
 	if err != nil {
-		db.DFatalf("Error wwwd job http addrs: %v", err)
+		db.DPrintf(db.ERROR, "Error wwwd job http addrs: %v", err)
+		return nil, err
 	}
 	//	transport := &http.Transport{
 	//		Dial: (&net.Dialer{
@@ -41,7 +42,7 @@ func NewWebClnt(fsl *fslib.FsLib, job string) *WebClnt {
 	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 10000
 	addrs = netsigma.Rearrange(sp.ROOTREALM.String(), addrs)
 	db.DPrintf(db.ALWAYS, "Advertised addr %v", addrs[0])
-	return &WebClnt{job, addrs, "http://" + addrs[0].IPPort(), clnt, fsl}
+	return &WebClnt{job, addrs, "http://" + addrs[0].IPPort(), clnt, fsl}, nil
 }
 
 func (wc *WebClnt) request(path string, vals url.Values) ([]byte, error) {

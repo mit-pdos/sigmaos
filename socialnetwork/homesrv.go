@@ -37,7 +37,10 @@ func RunHomeSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls := NewFsLibs(SOCIAL_NETWORK_HOME)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_HOME)
+	if err != nil {
+		return err
+	}
 	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err

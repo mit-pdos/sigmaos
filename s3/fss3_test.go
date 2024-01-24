@@ -17,7 +17,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "sigmaos/debug"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -29,7 +28,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestOne(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dirents, err := ts.GetDir(sp.S3)
 	assert.Nil(t, err, "GetDir")
@@ -40,7 +42,10 @@ func TestOne(t *testing.T) {
 }
 
 func TestReadOff(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt"))
 	assert.Nil(t, err, "Error ReadOff %v", err)
@@ -62,7 +67,10 @@ func TestReadOff(t *testing.T) {
 }
 
 func TestTwo(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	// Make a second one
 	ts.BootFss3d()
@@ -78,7 +86,10 @@ func TestTwo(t *testing.T) {
 }
 
 func TestUnionSimple(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	// Make a second one
 	ts.BootFss3d()
@@ -92,7 +103,10 @@ func TestUnionSimple(t *testing.T) {
 }
 
 func TestUnionDir(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	// Make a second one
 	ts.BootFss3d()
@@ -106,7 +120,10 @@ func TestUnionDir(t *testing.T) {
 }
 
 func TestUnionFile(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	// Make a second one
 	ts.BootFss3d()
@@ -119,24 +136,23 @@ func TestUnionFile(t *testing.T) {
 	assert.Nil(t, err, "Stat")
 
 	fd, err := ts.Open(name, sp.OREAD)
-	if err != nil {
-		db.DFatalf("%v", err)
+	if assert.Nil(ts.T, err, "Error Open: %v", err) {
+		n := len(file)
+		for {
+			data, err := ts.Read(fd, 8192)
+			if len(data) == 0 {
+				break
+			}
+			if !assert.Nil(ts.T, err, "Error Read: %v", err) {
+				break
+			}
+			for i := 0; i < len(data); i++ {
+				assert.Equal(t, file[i], data[i])
+			}
+			file = file[len(data):]
+		}
+		assert.Equal(ts.T, int(st.Length), n)
 	}
-	n := len(file)
-	for {
-		data, err := ts.Read(fd, 8192)
-		if len(data) == 0 {
-			break
-		}
-		if err != nil {
-			db.DFatalf("%v", err)
-		}
-		for i := 0; i < len(data); i++ {
-			assert.Equal(t, file[i], data[i])
-		}
-		file = file[len(data):]
-	}
-	assert.Equal(ts.T, int(st.Length), n)
 
 	ts.Shutdown()
 }
@@ -150,7 +166,10 @@ func s3Name(ts *test.Tstate) string {
 }
 
 func TestSymlinkFile(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dn := s3Name(ts)
 	fn := path.Join(dn, "9ps3", "gutenberg/pg-being_ernest.txt")
@@ -166,7 +185,10 @@ func TestSymlinkFile(t *testing.T) {
 }
 
 func TestSymlinkDir(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dn := s3Name(ts)
 
@@ -184,7 +206,10 @@ func TestSymlinkDir(t *testing.T) {
 func TestReadSplit(t *testing.T) {
 	const SPLITSZ = 64 * sp.MBYTE
 
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/wiki/enwiki-latest-pages-articles-multistream.xml"))
 	assert.Nil(t, err)

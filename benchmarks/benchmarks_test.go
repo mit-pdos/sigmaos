@@ -168,8 +168,14 @@ func TestCompile(t *testing.T) {
 
 // Test how long it takes to init a semaphore.
 func TestMicroInitSemaphore(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	newOutDir(ts1)
 	_, is := newNSemaphores(ts1, N_TRIALS)
@@ -181,8 +187,14 @@ func TestMicroInitSemaphore(t *testing.T) {
 
 // Test how long it takes to up a semaphore.
 func TestMicroUpSemaphore(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	newOutDir(ts1)
 	_, is := newNSemaphores(ts1, N_TRIALS)
@@ -198,8 +210,14 @@ func TestMicroUpSemaphore(t *testing.T) {
 
 // Test how long it takes to down a semaphore.
 func TestMicroDownSemaphore(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	newOutDir(ts1)
 	_, is := newNSemaphores(ts1, N_TRIALS)
@@ -216,8 +234,14 @@ func TestMicroDownSemaphore(t *testing.T) {
 
 // Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
 func TestMicroSpawnWaitStart(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	if PREWARM_REALM {
 		warmupRealm(ts1, []string{"sleeper"})
 	}
@@ -234,8 +258,14 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 
 // Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
 func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	if PREWARM_REALM {
 		warmupRealm(ts1, []string{"sleeper"})
 	}
@@ -250,8 +280,14 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 
 // Test the throughput of spawning procs.
 func TestMicroSpawnBurstTpt(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs (ncore=%v) with max parallelism %v", N_PROC, MCPU, MAX_PARALLEL)
 	ps, _ := newNProcs(N_PROC, "sleeper", []string{"0s", ""}, nil, proc.Tmcpu(MCPU))
@@ -262,8 +298,14 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 }
 
 func TestMicroScheddSpawn(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
 	db.DPrintf(db.BENCH, "rust %v ux %v nclnt %v durs %v rps %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS)
@@ -322,8 +364,14 @@ func TestMicroHTTPLoadGen(t *testing.T) {
 }
 
 func TestAppMR(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	if PREWARM_REALM {
 		warmupRealm(ts1, []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
 	}
@@ -346,8 +394,14 @@ func TestAppMR(t *testing.T) {
 }
 
 func runKVTest(t *testing.T, nReplicas int) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
@@ -378,8 +432,14 @@ func TestAppKVRepl(t *testing.T) {
 }
 
 func TestAppCached(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
@@ -403,8 +463,14 @@ func TestAppCached(t *testing.T) {
 // Burst a bunch of spinning procs, and see how long it takes for all of them
 // to start.
 func TestRealmBurst(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	ncores := countClusterCores(rootts) - 1
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	newOutDir(ts1)
@@ -423,8 +489,14 @@ func TestRealmBurst(t *testing.T) {
 }
 
 func TestLambdaBurst(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	newOutDir(ts1)
 	N_LAMBDAS := 720
@@ -441,8 +513,14 @@ func TestLambdaBurst(t *testing.T) {
 }
 
 func TestLambdaInvokeWaitStart(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(720, benchmarks.E2E)
 	newOutDir(ts1)
 	N_LAMBDAS := 640
@@ -463,15 +541,24 @@ func TestLambdaInvokeWaitStart(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceMRHotel(t *testing.T) {
 	done := make(chan bool)
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	blockers := blockMem(rootts, BLOCK_MEM)
 	// Structures for mr
-	ts1 := test.NewRealmTstate(rootts, REALM2)
+	ts1, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
 	// Structure for hotel
-	ts2 := test.NewRealmTstate(rootts, REALM1)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
@@ -532,10 +619,16 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceHotelImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	blockers := blockMem(rootts, BLOCK_MEM)
 	// Structures for imgresize
-	ts1 := test.NewRealmTstate(rootts, REALM2)
+	ts1, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
@@ -543,7 +636,10 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 		warmupRealm(ts1, []string{"imgresize", "imgresized"})
 	}
 	// Structure for hotel
-	ts2 := test.NewRealmTstate(rootts, REALM1)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
@@ -604,7 +700,10 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceMRMR(t *testing.T) {
 	done := make(chan bool)
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	tses := make([]*test.RealmTstate, N_REALM)
 	rses := make([]*benchmarks.Results, N_REALM)
 	ps := make([]*perf.Perf, N_REALM)
@@ -612,7 +711,11 @@ func TestRealmBalanceMRMR(t *testing.T) {
 	mrapps := make([][]interface{}, N_REALM)
 	// Create structures for MR jobs.
 	for i := range tses {
-		tses[i] = test.NewRealmTstate(rootts, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+		tsn, err1 := test.NewRealmTstate(rootts, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+		if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+			return
+		}
+		tses[i] = tsn
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(tses[i])
 		defer ps[i].Done()
@@ -656,7 +759,10 @@ func TestRealmBalanceMRMR(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	tses := make([]*test.RealmTstate, N_REALM)
 	rses := make([]*benchmarks.Results, N_REALM)
 	ps := make([]*perf.Perf, N_REALM)
@@ -664,7 +770,11 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 	imgapps := make([][]interface{}, N_REALM)
 	// Create structures for imgresize jobs.
 	for i := range tses {
-		tses[i] = test.NewRealmTstate(rootts, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+		tsn, err1 := test.NewRealmTstate(rootts, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+		if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+			return
+		}
+		tses[i] = tsn
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(tses[i])
 		defer ps[i].Done()
@@ -709,14 +819,23 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 // realm-level software balance resource requests across realms.
 func TestKVMRRRB(t *testing.T) {
 	done := make(chan bool)
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	// Structures for mr
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
 	// Structure for kv
-	ts2 := test.NewRealmTstate(rootts, REALM2)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
@@ -756,8 +875,14 @@ func TestKVMRRRB(t *testing.T) {
 }
 
 func testWww(t *testing.T, sigmaos bool) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
 	jobs, ji := newWwwJobs(ts1, sigmaos, 1, proc.Tmcpu(WWWD_MCPU), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
@@ -850,16 +975,28 @@ func testSocialNet(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sig
 }
 
 func TestSocialNetSigmaos(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
 	testSocialNet(rootts, ts1, p1, true)
 }
 
 func TestSocialNetK8s(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
 	testSocialNet(rootts, ts1, p1, false)
@@ -869,8 +1006,14 @@ func TestSocialNetK8s(t *testing.T) {
 var reservec *rpcclnt.RPCClnt
 
 func TestHotelSigmaosReserve(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandCheckAvailabilityReq(reservec, r)
 		assert.Nil(t, err, "Error reserve req: %v", err)
@@ -878,8 +1021,14 @@ func TestHotelSigmaosReserve(t *testing.T) {
 }
 
 func TestHotelSigmaosSearch(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
@@ -887,8 +1036,14 @@ func TestHotelSigmaosSearch(t *testing.T) {
 }
 
 func TestHotelSigmaosJustCliSearch(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstateClnt(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	clientReady(rootts)
 	// Sleep for a bit
@@ -911,8 +1066,14 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 }
 
 func TestHotelK8sJustCliSearch(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstateClnt(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	db.DPrintf(db.ALWAYS, "Clnt ready")
 	clientReady(rootts)
@@ -935,8 +1096,14 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 }
 
 func TestHotelK8sSearch(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
@@ -945,31 +1112,52 @@ func TestHotelK8sSearch(t *testing.T) {
 }
 
 func TestHotelK8sSearchCli(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RandSearchReq(wc, r)
 	})
 }
 
 func TestHotelSigmaosAll(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RunDSB(rootts.T, 1, wc, r)
 	})
 }
 
 func TestHotelK8sAll(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		hotel.RunDSB(rootts.T, 1, wc, r)
 	})
 }
 
 func TestMRK8s(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
 	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass s3 reulst dir")
 	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
@@ -982,7 +1170,10 @@ func TestMRK8s(t *testing.T) {
 }
 
 func TestK8sMRMulti(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
 	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass s3 result dir")
 	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
@@ -995,7 +1186,11 @@ func TestK8sMRMulti(t *testing.T) {
 	for i := 0; i < N_REALM; i++ {
 		rName := sp.Trealm(REALM_BASENAME.String() + strconv.Itoa(i+1))
 		db.DPrintf(db.TEST, "Create realm srtructs for %v", rName)
-		ts = append(ts, test.NewRealmTstate(rootts, rName))
+		tsn, err1 := test.NewRealmTstate(rootts, rName)
+		if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+			return
+		}
+		ts = append(ts, tsn)
 		ps = append(ps, newRealmPerf(ts[i]))
 		defer ps[i].Done()
 	}
@@ -1039,13 +1234,22 @@ func TestK8sMRMulti(t *testing.T) {
 }
 
 func TestK8sBalanceHotelMR(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	// Structures for mr
-	ts1 := test.NewRealmTstate(rootts, REALM2)
+	ts1, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
 	// Structure for hotel
-	ts2 := test.NewRealmTstate(rootts, REALM1)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Monitor cores assigned to MR.
@@ -1076,8 +1280,14 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 }
 
 func TestImgResize(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	if PREWARM_REALM {
 		warmupRealm(ts1, []string{"imgresize", "imgresized"})
 	}
@@ -1100,8 +1310,14 @@ func TestImgResize(t *testing.T) {
 }
 
 func TestK8sImgResize(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstateClnt(rootts, sp.ROOTREALM)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstateClnt(rootts, sp.ROOTREALM)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	if PREWARM_REALM {
 		warmupRealm(ts1, nil)
 	}
@@ -1133,15 +1349,24 @@ func TestK8sImgResize(t *testing.T) {
 
 func TestRealmBalanceSimpleImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	blockers := blockMem(rootts, BLOCK_MEM)
 	// Structures for BE image resize
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
 	// Structure for LC image resize
-	ts2 := test.NewRealmTstate(rootts, REALM2)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
@@ -1185,18 +1410,30 @@ func TestRealmBalanceSimpleImgResize(t *testing.T) {
 
 func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	blockers := blockMem(rootts, BLOCK_MEM)
-	ts0 := test.NewRealmTstateClnt(rootts, "rootrealm")
+	ts0, err1 := test.NewRealmTstateClnt(rootts, "rootrealm")
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	p0 := newRealmPerf(ts0)
 	defer p0.Done()
 	// Structures for image resize
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
 	// Structure for social network
-	ts2 := test.NewRealmTstate(rootts, REALM2)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
@@ -1244,10 +1481,16 @@ func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 
 func TestK8sSocialNetworkImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	blockers := blockMem(rootts, BLOCK_MEM)
 	// make realm to run k8s scrapper
-	ts0 := test.NewRealmTstateClnt(rootts, sp.ROOTREALM)
+	ts0, err1 := test.NewRealmTstateClnt(rootts, sp.ROOTREALM)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	p0 := newRealmPerf(ts0)
 	defer p0.Done()
 	if PREWARM_REALM {
@@ -1265,12 +1508,18 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	spawnBurstProcs(ts0, ps)
 	waitStartProcs(ts0, ps)
 	// Structures for image resize
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	//rs1 := benchmarks.NewResults(1, benchmarks.E2E)
 	p1 := newRealmPerf(ts1)
 	defer p1.Done()
 	// Structure for social network
-	ts2 := test.NewRealmTstate(rootts, REALM2)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()

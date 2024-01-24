@@ -16,13 +16,14 @@ import (
 //			return sp.Tmount{Addr: []*sp.Taddr{sp.NewTaddr(pathc.pcfg.GetNamedIP())}}
 //		}
 
-func (pathc *PathClnt) GetNamedMount() sp.Tmount {
+func (pathc *PathClnt) GetNamedMount() (sp.Tmount, error) {
 	mnt, err := pathc.getNamedMount(pathc.pcfg.GetRealm())
 	if err != nil {
-		db.DFatalf("Err getNamedMount [%v]: %v", pathc.pcfg.GetRealm(), err)
+		db.DPrintf(db.ERROR, "Err getNamedMount [%v]: %v", pathc.pcfg.GetRealm(), err)
+		return mnt, err
 	}
 	db.DPrintf(db.NAMED, "GetNamedMount %v %v", pathc.pcfg.GetRealm(), mnt)
-	return mnt
+	return mnt, nil
 }
 
 func (pathc *PathClnt) getNamedMount(realm sp.Trealm) (sp.Tmount, *serr.Err) {

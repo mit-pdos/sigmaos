@@ -155,7 +155,10 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 		ip:         ip,
 		cmgr:       cgroup.NewCgroupMgr(),
 	}
-	c.cmgr.SetMemoryLimit(c.cgroupPath, membytes, memswap)
+
+	if err := c.cmgr.SetMemoryLimit(c.cgroupPath, membytes, memswap); err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 

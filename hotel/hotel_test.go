@@ -50,11 +50,11 @@ type Tstate struct {
 	hotel *hotel.HotelJob
 }
 
-func newTstate(t *testing.T, srvs []hotel.Srv, nserver int) *Tstate {
+func newTstate(t1 *test.Tstate, srvs []hotel.Srv, nserver int) *Tstate {
 	var err error
 	ts := &Tstate{}
 	ts.job = rd.String(8)
-	ts.Tstate = test.NewTstateAll(t)
+	ts.Tstate = t1
 	n := 0
 	for i := 1; int(linuxsched.GetNCores())*i < len(srvs)*2+nserver*2; i++ {
 		n += 1
@@ -100,7 +100,11 @@ func TestCompile(t *testing.T) {
 }
 
 func TestGeoSingle(t *testing.T) {
-	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: test.Overlays}}, 0)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: test.Overlays}}, 0)
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
 	assert.Nil(t, err)
 	arg := proto.GeoRequest{
@@ -117,7 +121,11 @@ func TestGeoSingle(t *testing.T) {
 }
 
 func TestRateSingle(t *testing.T) {
-	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-rated", Public: test.Overlays}}, NCACHESRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-rated", Public: test.Overlays}}, NCACHESRV)
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
 	assert.Nil(t, err)
 	arg := &proto.RateRequest{
@@ -137,7 +145,11 @@ func TestRateSingle(t *testing.T) {
 }
 
 func TestRecSingle(t *testing.T) {
-	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-recd", Public: test.Overlays}}, 0)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-recd", Public: test.Overlays}}, 0)
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
 	assert.Nil(t, err)
 	arg := &proto.RecRequest{
@@ -155,7 +167,11 @@ func TestRecSingle(t *testing.T) {
 }
 
 func TestUserSingle(t *testing.T) {
-	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-userd", Public: test.Overlays}}, 0)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-userd", Public: test.Overlays}}, 0)
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
 	assert.Nil(t, err)
 	arg := &proto.UserRequest{
@@ -171,7 +187,11 @@ func TestUserSingle(t *testing.T) {
 }
 
 func TestProfile(t *testing.T) {
-	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-profd", Public: test.Overlays}}, NCACHESRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-profd", Public: test.Overlays}}, NCACHESRV)
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
 	assert.Nil(t, err)
 	arg := &proto.ProfRequest{
@@ -192,7 +212,12 @@ func TestProfile(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
@@ -214,7 +239,12 @@ func TestCheck(t *testing.T) {
 }
 
 func TestReserve(t *testing.T) {
-	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
 	assert.Nil(t, err)
 	arg := &proto.ReserveRequest{
@@ -239,7 +269,10 @@ func TestReserve(t *testing.T) {
 }
 
 func TestQueryDev(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dbc, err := dbclnt.NewDbClnt(ts.FsLib, sp.DBD)
 	assert.Nil(t, err)
@@ -253,7 +286,11 @@ func TestQueryDev(t *testing.T) {
 }
 
 func TestSingleSearch(t *testing.T) {
-	ts := newTstate(t, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: false}, hotel.Srv{Name: "hotel-rated", Public: false}, hotel.Srv{Name: "hotel-searchd", Public: test.Overlays}}, NCACHESRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: false}, hotel.Srv{Name: "hotel-rated", Public: false}, hotel.Srv{Name: "hotel-searchd", Public: test.Overlays}}, NCACHESRV)
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
 	assert.Nil(t, err)
 	arg := &proto.SearchRequest{
@@ -274,9 +311,14 @@ func TestSingleSearch(t *testing.T) {
 }
 
 func TestWww(t *testing.T) {
-	ts := newTstate(t, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
 
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 
 	s, err := wc.Login("Cornell_0", hotel.NewPassword("0"))
 	assert.Nil(t, err)
@@ -329,8 +371,13 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 }
 
 func TestBenchDeathStarSingle(t *testing.T) {
-	ts := newTstate(t, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
 	//ts.PrintStats(nil)
@@ -344,19 +391,30 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	ts := newTstate(t, nil, 0)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, nil, 0)
 
-	setupK8sState(ts)
+	err1 = setupK8sState(ts)
+	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
 
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
 	ts.Shutdown()
 }
 
 func TestBenchSearchSigma(t *testing.T) {
-	ts := newTstate(t, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
@@ -371,7 +429,7 @@ func TestBenchSearchSigma(t *testing.T) {
 	ts.Shutdown()
 }
 
-func setupK8sState(ts *Tstate) {
+func setupK8sState(ts *Tstate) error {
 	// Advertise server address
 	p := hotel.JobHTTPAddrsPath(ts.job)
 	h, po, err := net.SplitHostPort(K8S_ADDR)
@@ -380,9 +438,12 @@ func setupK8sState(ts *Tstate) {
 	assert.Nil(ts.T, err, "Err parse port %v: %v", po, err)
 	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port), ts.ProcEnv().GetNet())
 	mnt := sp.NewMountService([]*sp.Taddr{addr})
-	if err := ts.MkMountFile(p, mnt, sp.NoLeaseId); err != nil {
-		db.DFatalf("MkMountFile %v", err)
+	err = ts.MkMountFile(p, mnt, sp.NoLeaseId)
+	if !assert.Nil(ts.T, err) {
+		db.DPrintf(db.ERROR, "MkMountFile %v", err)
+		return err
 	}
+	return nil
 }
 
 func TestBenchSearchK8s(t *testing.T) {
@@ -391,9 +452,15 @@ func TestBenchSearchK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	ts := newTstate(t, nil, 0)
-	setupK8sState(ts)
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, nil, 0)
+	err1 = setupK8sState(ts)
+	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	pf, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
@@ -407,8 +474,13 @@ func TestBenchSearchK8s(t *testing.T) {
 }
 
 func TestBenchGeoSigma(t *testing.T) {
-	ts := newTstate(t, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
@@ -429,9 +501,15 @@ func TestBenchGeoK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	ts := newTstate(t, nil, 0)
-	setupK8sState(ts)
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, nil, 0)
+	err1 = setupK8sState(ts)
+	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	pf, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
@@ -448,8 +526,13 @@ func testMultiSearch(t *testing.T, nthread int) {
 	const (
 		N = 1000
 	)
-	ts := newTstate(t, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	ch := make(chan bool)
 	start := time.Now()
 	for t := 0; t < nthread; t++ {

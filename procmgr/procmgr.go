@@ -75,7 +75,9 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
 	s = time.Now()
-	mgr.downloadProc(p)
+	if err := mgr.downloadProc(p); err != nil {
+		db.DFatalf("Error downloadProc: %v", err)
+	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Binary download time %v", p.GetPid(), time.Since(s))
 	mgr.runProc(p)
 }
@@ -120,10 +122,12 @@ func (mgr *ProcMgr) DownloadProcBin(realm sp.Trealm, prog, buildTag string, ptyp
 	db.DPrintf(db.PROCMGR, "Download proc bin for realm %v proc %v", realm, prog)
 	// Make sure the OS-level directory which holds proc bins exists. This must
 	// be done before starting the Uprocd, because the Uprocd mounts it.
-	mgr.setupUserBinCacheL(realm)
+	if err := mgr.setupUserBinCacheL(realm); err != nil {
+		return err
+	}
 
 	if err := mgr.updm.WarmStartUprocd(realm, ptype); err != nil {
-		db.DFatalf("Error start uprocd: %v", err)
+		db.DPrintf(db.ERROR, "Error start uprocd: %v", err)
 		return err
 	}
 	return mgr.downloadProcBin(realm, prog, buildTag)

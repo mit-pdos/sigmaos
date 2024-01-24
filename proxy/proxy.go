@@ -62,8 +62,9 @@ func (npd *Npd) Unregister(sid sessp.Tsession, conn sps.Conn) {
 	sess.UnsetConn(conn)
 }
 
-func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) {
+func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) *serr.Err {
 	go npd.serve(fc)
+	return nil
 }
 
 // The connection from the kernel/client

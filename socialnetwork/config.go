@@ -89,12 +89,12 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 		db.DPrintf(db.SOCIAL_NETWORK, "social network running with cached: %v caches", nsrv)
 		cm, err = cachedsvc.NewCacheMgr(sc, jobname, nsrv, proc.Tmcpu(cacheMcpu), gc, public)
 		if err != nil {
-			db.DFatalf("Error NewCacheMgr %v", err)
+			db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 			return nil, err
 		}
 		cc, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, jobname)
 		if err != nil {
-			db.DFatalf("Error cacheclnt %v", err)
+			db.DPrintf(db.ERROR, "Error cacheclnt %v", err)
 			return nil, err
 		}
 	}
@@ -105,14 +105,14 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 		p := proc.NewProc(srv.Name, []string{strconv.FormatBool(srv.Public), jobname})
 		p.SetMcpu(srv.Mcpu)
 		if err := sc.Spawn(p); err != nil {
-			db.DFatalf("Error burst-spawnn proc %v: %v", p, err)
+			db.DPrintf(db.ERROR, "Error burst-spawnn proc %v: %v", p, err)
 			return nil, err
 		}
 		if !gc {
 			p.AppendEnv("GOGC", "off")
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {
-			db.DFatalf("Error spawn proc %v: %v", p, err)
+			db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
 			return nil, err
 		}
 		pids = append(pids, p.GetPid())

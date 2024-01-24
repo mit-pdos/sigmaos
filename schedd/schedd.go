@@ -254,7 +254,7 @@ func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
 	go sd.runProc(p)
 }
 
-// Run a proc via the local procd. Caller holds lock.
+// Run a proc via the local schedd. Caller holds lock.
 func (sd *Schedd) runProc(p *proc.Proc) {
 	defer sd.decRealmStats(p)
 	db.DPrintf(db.SCHEDD, "[%v] %v runProc %v", p.GetRealm(), sd.kernelId, p)

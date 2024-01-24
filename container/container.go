@@ -49,9 +49,9 @@ func (c *Container) GetCPUUtil() (float64, error) {
 
 func (c *Container) SetCPUShares(cpu int64) error {
 	s := time.Now()
-	c.cmgr.SetCPUShares(c.cgroupPath, cpu)
+	err := c.cmgr.SetCPUShares(c.cgroupPath, cpu)
 	db.DPrintf(db.SPAWN_LAT, "Container.SetCPUShares %v", time.Since(s))
-	return nil
+	return err
 }
 
 func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {

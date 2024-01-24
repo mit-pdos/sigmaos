@@ -91,7 +91,7 @@ func (cfs *cgroupFs) getFile(p string, mode int) (*file, error) {
 		off, err := f.Seek(0, 0)
 		if err != nil || off != 0 {
 			db.DPrintf(db.ERROR, "Error seeking in file: off %v err %v", off, err)
-			return err
+			return nil, err
 		}
 	}
 	return f, nil

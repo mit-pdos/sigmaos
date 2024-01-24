@@ -1,6 +1,7 @@
 package cgroup
 
 import (
+	"fmt"
 	"path"
 	"sync"
 
@@ -41,10 +42,14 @@ func (cmon *CgroupMonitor) GetCPUStats(cgroupPath string) (*CPUStat, error) {
 	// Read total CPU time for cgroup.
 	u1, err := cmon.getCPUUsecs(cgroupPath)
 	if err != nil {
-		db.DFatalf("Error get CPU usecs container: %v", err)
+		db.DPrintf(db.ERROR, "Error get CPU usecs container: %v", err)
+		return nil, fmt.Errorf("Error get CPU usecs container: %v", err)
 	}
 	// Read total CPU time for the entire system
-	s1 := cmon.getSystemCPUUsecs()
+	s1, err := cmon.getSystemCPUUsecs()
+	if err != nil {
+		return nil, err
+	}
 
 	// If this isn't the first time GetCPUStats has been called, calculate
 	// utilization.
@@ -68,15 +73,16 @@ func (cmon *CgroupMonitor) GetCPUStats(cgroupPath string) (*CPUStat, error) {
 	return cur, nil
 }
 
-func (cmon *CgroupMonitor) GetPIDs(cgroupPath string) []int {
+func (cmon *CgroupMonitor) GetPIDs(cgroupPath string) ([]int, error) {
 	cmon.Lock()
 	defer cmon.Unlock()
 
 	pids, err := cmon.cfs.readFileMulti(path.Join(cgroupPath, "cgroup.procs"), parseInts)
 	if err != nil {
-		db.DFatalf("Error readFile: %v", err)
+		db.DPrintf(db.ERROR, "Error readFile: %v", err)
+		return nil, fmt.Errorf("Error readFile: %v", err)
 	}
-	return pids
+	return pids, nil
 }
 
 func (cmon *CgroupMonitor) getCPUShares(cgroupPath string) (int64, error) {
@@ -98,10 +104,11 @@ func (cmon *CgroupMonitor) getCPUUsecs(cgroupPath string) (uint64, error) {
 	return n, nil
 }
 
-func (cmon *CgroupMonitor) getSystemCPUUsecs() uint64 {
+func (cmon *CgroupMonitor) getSystemCPUUsecs() (uint64, error) {
 	n, err := cmon.cfs.readFile(SYS_CPU_STAT, cmon.cfs.parseSysCpuStat)
 	if err != nil {
-		db.DFatalf("Error readFile: %v", err)
+		db.DPrintf(db.ERROR, "Error readFile: %v", err)
+		return 0, fmt.Errorf("Error readFile: %v", err)
 	}
-	return n
+	return n, nil
 }

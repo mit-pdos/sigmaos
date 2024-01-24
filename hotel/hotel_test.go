@@ -395,7 +395,10 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 	}
 	ts := newTstate(t1, nil, 0)
 
-	setupK8sState(ts)
+	err1 = setupK8sState(ts)
+	if !assert.Nil(t, err1, "Error setupK8sState: %v", err1) {
+		return
+	}
 
 	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -424,7 +427,7 @@ func TestBenchSearchSigma(t *testing.T) {
 	ts.Shutdown()
 }
 
-func setupK8sState(ts *Tstate) {
+func setupK8sState(ts *Tstate) error {
 	// Advertise server address
 	p := hotel.JobHTTPAddrsPath(ts.job)
 	h, po, err := net.SplitHostPort(K8S_ADDR)
@@ -433,9 +436,12 @@ func setupK8sState(ts *Tstate) {
 	assert.Nil(ts.T, err, "Err parse port %v: %v", po, err)
 	addr := sp.NewTaddrRealm(sp.Thost(h), sp.Tport(port), ts.ProcEnv().GetNet())
 	mnt := sp.NewMountService([]*sp.Taddr{addr})
-	if err := ts.MkMountFile(p, mnt, sp.NoLeaseId); err != nil {
-		db.DFatalf("MkMountFile %v", err)
+	err := ts.MkMountFile(p, mnt, sp.NoLeaseId)
+	if !assert.Nil(ts.T, err) {
+		db.DPrintf(db.ERROR, "MkMountFile %v", err)
+		return err
 	}
+	return nil
 }
 
 func TestBenchSearchK8s(t *testing.T) {
@@ -449,7 +455,10 @@ func TestBenchSearchK8s(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, nil, 0)
-	setupK8sState(ts)
+	err1 = setupK8sState(ts)
+	if !assert.Nil(t, err1, "Error setupK8sState: %v", err1) {
+		return
+	}
 	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
 	pf, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
@@ -495,7 +504,10 @@ func TestBenchGeoK8s(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, nil, 0)
-	setupK8sState(ts)
+	err1 = setupK8sState(ts)
+	if !assert.Nil(t, err1, "Error setupK8sState: %v", err1) {
+		return
+	}
 	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
 	pf, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)

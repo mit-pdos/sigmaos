@@ -269,7 +269,7 @@ func (sti *StatInfo) stats() []byte {
 	st := sti.StatsCopy()
 	data, err := json.Marshal(st)
 	if err != nil {
-		db.DFatalf("stats: json failed %v\n", err)
+		db.DFatalf("stats: json marshaling failed %v", err)
 	}
 	return data
 }

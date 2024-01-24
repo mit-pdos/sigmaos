@@ -34,7 +34,7 @@ func NewCacheClnt(cache string, fsls []*fslib.FsLib, job string) (cache.CacheCln
 		}
 		return cc, nil
 	default:
-		db.DFatalf("Error unknown cache type %v", cache)
+		db.DPrintf(db.ERROR, "Unknown cache type %v", cache)
+		return nil, fmt.Errorf("Unknown cache type %v", cache)
 	}
-	return nil, fmt.Errorf("Unknown cache")
 }

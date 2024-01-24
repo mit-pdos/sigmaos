@@ -611,7 +611,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		<-done
 	}
 
-	err := ts.RmDir(gopath.Join(pathname, "d0"))
+	err = ts.RmDir(gopath.Join(pathname, "d0"))
 	assert.Nil(t, err)
 
 	ts.Shutdown()

@@ -71,7 +71,8 @@ func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
 // content of mount and the mount file's name.
 func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if pn == sp.NAMED {
-		return fsl.SigmaOS.GetNamedMount(), "", nil
+		mnt, err := fsl.SigmaOS.GetNamedMount()
+		return mnt, "", err
 	}
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()

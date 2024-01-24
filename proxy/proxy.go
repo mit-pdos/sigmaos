@@ -102,7 +102,11 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	}
 	npc.uname = sp.Tuname(u.Uid)
 
-	mnt := npc.pc.GetNamedMount()
+	mnt, err := npc.pc.GetNamedMount()
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", err)
+		return sp.NoClntId, sp.NewRerrorErr(err)
+	}
 	fid, err := npc.fidc.Attach(npc.uname, npc.cid, mnt.Addr, "", "")
 	if err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v err %v\n", args, err)

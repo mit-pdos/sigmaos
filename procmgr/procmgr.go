@@ -148,7 +148,11 @@ func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) sp.Tmount {
 	mnt, ok := mgr.namedMnts[realm]
 	if !ok {
 		sc := mgr.getSigmaClntL(realm)
-		mnt = sc.GetNamedMount()
+		var err error
+		mnt, err = sc.GetNamedMount()
+		if err != nil {
+			db.DFatalf("GetNamedMount: %v", err)
+		}
 		mgr.namedMnts[realm] = mnt
 	}
 	return mnt

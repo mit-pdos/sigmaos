@@ -317,7 +317,8 @@ func TestWww(t *testing.T) {
 	}
 	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
 
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 
 	s, err := wc.Login("Cornell_0", hotel.NewPassword("0"))
 	assert.Nil(t, err)
@@ -375,7 +376,8 @@ func TestBenchDeathStarSingle(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
 	//ts.PrintStats(nil)
@@ -396,11 +398,10 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 	ts := newTstate(t1, nil, 0)
 
 	err1 = setupK8sState(ts)
-	if !assert.Nil(t, err1, "Error setupK8sState: %v", err1) {
-		return
-	}
+	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
 
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
 	ts.Shutdown()
@@ -412,7 +413,8 @@ func TestBenchSearchSigma(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
@@ -456,10 +458,9 @@ func TestBenchSearchK8s(t *testing.T) {
 	}
 	ts := newTstate(t1, nil, 0)
 	err1 = setupK8sState(ts)
-	if !assert.Nil(t, err1, "Error setupK8sState: %v", err1) {
-		return
-	}
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	pf, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
@@ -478,7 +479,8 @@ func TestBenchGeoSigma(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
@@ -505,10 +507,9 @@ func TestBenchGeoK8s(t *testing.T) {
 	}
 	ts := newTstate(t1, nil, 0)
 	err1 = setupK8sState(ts)
-	if !assert.Nil(t, err1, "Error setupK8sState: %v", err1) {
-		return
-	}
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	pf, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
@@ -530,7 +531,8 @@ func testMultiSearch(t *testing.T, nthread int) {
 		return
 	}
 	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
-	wc := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	ch := make(chan bool)
 	start := time.Now()
 	for t := 0; t < nthread; t++ {

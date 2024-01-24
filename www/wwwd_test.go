@@ -37,7 +37,8 @@ func newTstate(t1 *test.Tstate) *Tstate {
 
 	ts.job = rd.String(4)
 
-	www.InitWwwFs(ts.Tstate.FsLib, ts.job)
+	err := www.InitWwwFs(ts.Tstate.FsLib, ts.job)
+	assert.Nil(t1.T, err)
 
 	ts.pid = spawn(t1.T, ts)
 

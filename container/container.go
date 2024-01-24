@@ -42,7 +42,7 @@ type cpustats struct {
 func (c *Container) GetCPUUtil() (float64, error) {
 	st, err := c.cmgr.GetCPUStats(c.cgroupPath)
 	if err != nil {
-		db.DFatalf("Err get cpu stats: %v", err)
+		db.DPrintf(db.ERROR, "Err get cpu stats: %v", err)
 	}
 	return st.Util, nil
 }
@@ -63,7 +63,7 @@ func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
 		for _, pid := range pids {
 			db.DPrintf(db.CONTAINER, "Set %v SCHED_IDLE", pid)
 			if err := setSchedPolicy(pid, linuxsched.SCHED_IDLE); err != nil {
-				db.DFatalf("Err setSchedPolicy: %v", err)
+				db.DPrintf(db.ERROR, "Err setSchedPolicy: %v", err)
 				return err
 			}
 		}

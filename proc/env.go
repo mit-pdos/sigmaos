@@ -189,6 +189,7 @@ func (pe *ProcEnvProto) SetAllowedPaths(paths []string) {
 
 func (pe *ProcEnvProto) SetPID(pid sp.Tpid) {
 	pe.PidStr = string(pid)
+	pe.Claims.PidStr = string(pid)
 }
 
 func (pe *ProcEnvProto) SetInnerContainerIP(ip sp.Tip) {

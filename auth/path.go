@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"path/filepath"
+	"strings"
 )
 
 // Test if the child path is in the directory subtree of the parent path
@@ -10,8 +10,8 @@ func IsInSubtree(cpath, ppath string) bool {
 	if ppath == cpath {
 		return true
 	}
-	cp := filepath.SplitList(cpath)
-	pp := filepath.SplitList(ppath)
+	cp := strings.Split(cpath, "/")
+	pp := strings.Split(ppath, "/")
 	// Iterate through parent path
 	for i := range pp {
 		// If this element is a wildcard, then child path must be in the subtree

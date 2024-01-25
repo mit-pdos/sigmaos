@@ -229,30 +229,60 @@ func TestDelegatePartialAccess(t *testing.T) {
 	rootts.Shutdown()
 }
 
-//func TestDelegateNoAccessFail(t *testing.T) {
-//	rootts, err1 := test.NewTstateWithRealms(t)
-//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-//		return
-//	}
-//
-//	p1 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
-//	// Wipe the list of allowed paths (except for schedd)
-//	p1.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*")})
-//
-//	err := rootts.Spawn(p1)
-//	assert.Nil(t, err, "Spawn")
-//	db.DPrintf(db.TEST, "Spawned proc")
-//
-//	db.DPrintf(db.TEST, "Pre waitexit")
-//	status, err := rootts.WaitExit(p1.GetPid())
-//	db.DPrintf(db.TEST, "Post waitexit")
-//
-//	// Make sure that WaitExit didn't return an error
-//	assert.Nil(t, err, "WaitExit error: %v", err)
-//	// Ensure the proc crashed
-//	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
-//
-//	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
-//
-//	rootts.Shutdown()
-//}
+func TestTryDelegateNonSubsetToChildFail(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	// Create an auth server
+	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
+	assert.Nil(t, err)
+
+	// Create a new proc env to create a new client
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	// Only let it talk to schedd and named
+	pe.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.PROCQ, "*")})
+	pc := auth.NewProcClaims(pe)
+	token, err := as.NewToken(pc)
+	assert.Nil(t, err)
+	// Set the token of the proc env to the newly authorized token
+	pe.SetToken(token)
+
+	// Create a new client with the proc env
+	sc1, err := sigmaclnt.NewSigmaClnt(pe)
+	assert.Nil(t, err, "Err NewClnt: %v", err)
+
+	// Spawn a proc which can read a subset of the parent's allowed paths
+	p1 := proc.NewProc("dirreader", []string{path.Join(sp.SCHEDD, "~any")})
+	// Wipe the list of allowed paths (except for schedd)
+	p1.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*")})
+	err = sc1.Spawn(p1)
+	assert.Nil(t, err, "Spawn")
+	db.DPrintf(db.TEST, "Spawned proc")
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := sc1.WaitExit(p1.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+	// Make sure that WaitExit didn't return an error
+	assert.Nil(t, err, "WaitExit error: %v", err)
+	// Ensure the proc succeeded
+	assert.True(t, status != nil && status.IsStatusOK(), "Exit status not OK: %v", status)
+	db.DPrintf(db.TEST, "Authorized child proc return status: %v", status)
+
+	// Spawn a proc which tries to access a superset of the parent's paths
+	p2 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
+	// Only allow access to UX
+	p2.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.UX, "*")})
+	err = sc1.Spawn(p2)
+	assert.Nil(t, err, "Spawn")
+	db.DPrintf(db.TEST, "Spawned proc")
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err = sc1.WaitExit(p2.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+	// Make sure that WaitExit didn't return an error
+	assert.Nil(t, err, "WaitExit error: %v", err)
+	// Ensure the proc crashed
+	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
+	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
+	rootts.Shutdown()
+}

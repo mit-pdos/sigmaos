@@ -61,7 +61,12 @@ func (as *HMACAuthSrv) IsAuthorized(principal *sp.Tprincipal) (bool, error) {
 	}
 	// Check that the server path is a subpath of one of the allowed paths
 	for _, ap := range pc.AllowedPaths {
-		if IsInSubtree(ap, as.srvpath) {
+		db.DPrintf(db.AUTH, "Check if %v is in %v subtree", as.srvpath, ap)
+		if as.srvpath == "" && ap == sp.NAMED {
+			db.DPrintf(db.AUTH, "Authorization check to named successful p %v claims %v", principal.ID, pc)
+			return true, nil
+		}
+		if IsInSubtree(as.srvpath, ap) {
 			db.DPrintf(db.AUTH, "Authorization check successful p %v claims %v", principal.ID, pc)
 			return true, nil
 		}

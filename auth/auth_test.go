@@ -120,9 +120,9 @@ func TestDelegateNoAccessFail(t *testing.T) {
 		return
 	}
 
-	p1 := proc.NewProc("dirreader", []string{path.Join(sp.SCHEDD, "~any")})
-	// Wipe the list of allowed paths
-	p1.SetAllowedPaths([]string{})
+	p1 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
+	// Wipe the list of allowed paths (except for schedd)
+	p1.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*")})
 
 	err := rootts.Spawn(p1)
 	assert.Nil(t, err, "Spawn")
@@ -148,9 +148,9 @@ func TestDelegatePartialAccess(t *testing.T) {
 		return
 	}
 
-	p1 := proc.NewProc("dirreader", []string{path.Join(sp.SCHEDD, "~any")})
-	// Only allow access to UX
-	p1.SetAllowedPaths([]string{path.Join(sp.UX, "*")})
+	p1 := proc.NewProc("dirreader", []string{path.Join(sp.S3, "~any")})
+	// Only allow access to S3
+	p1.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*")})
 
 	err := rootts.Spawn(p1)
 	assert.Nil(t, err, "Spawn")
@@ -168,7 +168,7 @@ func TestDelegatePartialAccess(t *testing.T) {
 
 	p2 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
 	// Only allow access to UX
-	p2.SetAllowedPaths([]string{path.Join(sp.UX, "*")})
+	p2.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.UX, "*")})
 
 	err = rootts.Spawn(p2)
 	assert.Nil(t, err, "Spawn")

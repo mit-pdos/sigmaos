@@ -126,6 +126,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Net = parentPE.Net
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
+	p.ProcEnvProto.ParentTokenStr = parentPE.Principal.TokenStr
 	p.ProcEnvProto.Principal.TokenStr = parentPE.Principal.TokenStr // XXX remove
 }
 
@@ -143,6 +144,8 @@ func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 // Finalize env details which can only be set once a physical machine and
 // uprocd container have been chosen.
 func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
+	// Clear parent token string
+	p.ProcEnvProto.ParentTokenStr = NOT_SET
 	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
 	p.ProcEnvProto.SetUprocdPID(uprocdPid)

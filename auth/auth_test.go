@@ -30,7 +30,7 @@ func TestStartStop(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestBootOK(t *testing.T) {
+func TestInspectNamespaceOK(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -56,6 +56,7 @@ func TestBootOK(t *testing.T) {
 	rootts.Shutdown()
 }
 
+// Test that a principal without a signed token can't access anything
 func TestMaliciousPrincipalFail(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

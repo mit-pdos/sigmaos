@@ -116,7 +116,7 @@ func TestNoDelegationPrincipalFail(t *testing.T) {
 func TestSignHMACToken(t *testing.T) {
 	// TODO: generate key properly
 	var hmacSecret []byte = []byte("PDOS")
-	as, err := auth.NewHmacAuthSrv(hmacSecret)
+	as, err := auth.NewHMACAuthSrv(hmacSecret)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -136,7 +136,7 @@ func TestSignHMACToken(t *testing.T) {
 func TestVerifyHMACToken(t *testing.T) {
 	// TODO: generate key properly
 	var hmacSecret []byte = []byte("PDOS")
-	as, err := auth.NewHmacAuthSrv(hmacSecret)
+	as, err := auth.NewHMACAuthSrv(hmacSecret)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{

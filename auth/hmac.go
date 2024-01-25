@@ -9,23 +9,23 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type HmacAuthSrv struct {
+type HMACAuthSrv struct {
 	hmacSecret []byte
 }
 
-func NewHmacAuthSrv(hmacSecret []byte) (*HmacAuthSrv, error) {
-	return &HmacAuthSrv{
+func NewHMACAuthSrv(hmacSecret []byte) (*HMACAuthSrv, error) {
+	return &HMACAuthSrv{
 		hmacSecret: hmacSecret,
 	}, nil
 }
 
-func (as *HmacAuthSrv) NewToken(claims *ProcClaims) (string, error) {
+func (as *HMACAuthSrv) NewToken(claims *ProcClaims) (string, error) {
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(as.hmacSecret)
 }
 
-func (as *HmacAuthSrv) VerifyTokenGetClaims(signedToken string) (*ProcClaims, error) {
+func (as *HMACAuthSrv) VerifyTokenGetClaims(signedToken string) (*ProcClaims, error) {
 	// Parse the jwt, passing in a function to look up the key.
 	//
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-Parse-Hmac
@@ -54,7 +54,7 @@ func (as *HmacAuthSrv) VerifyTokenGetClaims(signedToken string) (*ProcClaims, er
 }
 
 // TODO: kill
-func (as *HmacAuthSrv) IsAuthorized(principal *sp.Tprincipal) bool {
+func (as *HMACAuthSrv) IsAuthorized(principal *sp.Tprincipal) bool {
 	db.DPrintf(db.AUTH, "Authorization check p %v", principal)
 	// TODO: do a real check
 	if principal.TokenPresent {

@@ -3,6 +3,7 @@ package sesssrv
 import (
 	"fmt"
 
+	"sigmaos/auth"
 	"sigmaos/clntcond"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -36,7 +37,6 @@ import (
 
 type SessSrv struct {
 	pe       *proc.ProcEnv
-	srvpath  string
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
 	newps    sps.NewProtServer
@@ -48,6 +48,7 @@ type SessSrv struct {
 	wt       *watch.WatchTable
 	vt       *version.VersionTable
 	et       *ephemeralmap.EphemeralMap
+	as       auth.AuthSrv
 	fencefs  fs.Dir
 	srv      *netsrv.NetServer
 	qlen     stats.Tcounter
@@ -56,7 +57,6 @@ type SessSrv struct {
 func NewSessSrv(pe *proc.ProcEnv, srvpath string, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
-	ssrv.srvpath = srvpath
 	ssrv.dirover = overlay.MkDirOverlay(root)
 	ssrv.dirunder = root
 	ssrv.newps = newps
@@ -69,6 +69,11 @@ func NewSessSrv(pe *proc.ProcEnv, srvpath string, root fs.Dir, addr *sp.Taddr, n
 	ssrv.vt = version.NewVersionTable()
 	ssrv.vt.Insert(ssrv.dirover.Path())
 	ssrv.fencefs = fencefs
+	as, err := auth.NewHMACAuthSrv(srvpath, []byte("PDOS")) // TODO: generate key properly
+	if err != nil {
+		db.DFatalf("Unable to create new auth server: %v", err)
+	}
+	ssrv.as = as
 
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
@@ -78,12 +83,12 @@ func NewSessSrv(pe *proc.ProcEnv, srvpath string, root fs.Dir, addr *sp.Taddr, n
 	return ssrv
 }
 
-func (ssrv *SessSrv) GetSrvPath() string {
-	return ssrv.srvpath
-}
-
 func (ssrv *SessSrv) ProcEnv() *proc.ProcEnv {
 	return ssrv.pe
+}
+
+func (ssrv *SessSrv) GetAuthSrv() auth.AuthSrv {
+	return ssrv.as
 }
 
 func (ssrv *SessSrv) GetPathLockTable() *lockmap.PathLockTable {

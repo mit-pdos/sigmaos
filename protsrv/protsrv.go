@@ -36,7 +36,7 @@ type ProtSrv struct {
 	stats *stats.StatInfo            // shared across sessions
 	et    *ephemeralmap.EphemeralMap // shared across sessions
 	sct   *clntcond.ClntCondTable    // shared across sessions
-	auth  auth.AuthSrv
+	auth  auth.AuthSrv               // shared across sessions
 	ft    *fidTable
 	sid   sessp.Tsession
 }
@@ -53,11 +53,7 @@ func NewProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	ps.vt = srv.GetVersionTable()
 	ps.sct = srv.GetSessionCondTable()
 	ps.stats = srv.GetStats()
-	as, err := auth.NewHMACAuthSrv(srv.GetSrvPath(), []byte("PDOS")) // TODO: generate key properly
-	if err != nil {
-		db.DFatalf("Unable to create new auth server: %v", err)
-	}
-	ps.auth = as
+	ps.auth = srv.GetAuthSrv()
 	ps.sid = sid
 	db.DPrintf(db.PROTSRV, "NewProtSrv -> %v", ps)
 	return ps

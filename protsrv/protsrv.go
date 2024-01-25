@@ -53,7 +53,7 @@ func NewProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	ps.vt = srv.GetVersionTable()
 	ps.sct = srv.GetSessionCondTable()
 	ps.stats = srv.GetStats()
-	as, err := auth.NewHMACAuthSrv([]byte("PDOS")) // TODO: generate key properly
+	as, err := auth.NewHMACAuthSrv(srv.GetSrvPath(), []byte("PDOS")) // TODO: generate key properly
 	if err != nil {
 		db.DFatalf("Unable to create new auth server: %v", err)
 	}

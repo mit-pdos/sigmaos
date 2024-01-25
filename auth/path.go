@@ -18,6 +18,11 @@ func IsInSubtree(cpath, ppath string) bool {
 		if pp[i] == "*" {
 			return true
 		}
+		// If the cpath has already ended, then it is not a subpath of the ppath
+		// (it is a parent of the ppath)
+		if i >= len(cp) {
+			return false
+		}
 		// If the path elements don't match, the child isn't in the parent's
 		// subtree
 		if pp[i] != cp[i] {

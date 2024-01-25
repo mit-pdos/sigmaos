@@ -10,11 +10,13 @@ import (
 )
 
 type HMACAuthSrv struct {
+	srvpath    string
 	hmacSecret []byte
 }
 
-func NewHMACAuthSrv(hmacSecret []byte) (*HMACAuthSrv, error) {
+func NewHMACAuthSrv(srvpath string, hmacSecret []byte) (*HMACAuthSrv, error) {
 	return &HMACAuthSrv{
+		srvpath:    srvpath,
 		hmacSecret: hmacSecret,
 	}, nil
 }
@@ -37,16 +39,13 @@ func (as *HMACAuthSrv) VerifyTokenGetClaims(signedToken string) (*ProcClaims, er
 		// hmacSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
 		return as.hmacSecret, nil
 	})
-
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error parsing jwt: %v", err)
 		return nil, err
 	}
-
 	if !token.Valid {
 		return nil, fmt.Errorf("Invalid token")
 	}
-
 	if pclaims, ok := token.Claims.(*ProcClaims); ok {
 		return pclaims, nil
 	}
@@ -60,8 +59,14 @@ func (as *HMACAuthSrv) IsAuthorized(principal *sp.Tprincipal) (bool, error) {
 		db.DPrintf(db.AUTH, "Token verification failed %v", principal)
 		return false, fmt.Errorf("Token verification failed: %v", err)
 	}
-	db.DPrintf(db.AUTH, "Authorization check successful p %v claims %v", principal, pc)
-	// TODO: check paths in claims
+	// Check that the server path is a subpath of one of the allowed paths
+	for _, ap := range pc.AllowedPaths {
+		if IsInSubtree(as.srvpath, ap) {
+			db.DPrintf(db.AUTH, "Authorization check successful p %v claims %v", principal, pc)
+			return true, nil
+		}
+	}
+	db.DPrintf(db.AUTH, "Authorization check failed (path not allowed) srvpath %v p %v claims %v", as.srvpath, principal, pc)
 	//db.DPrintf(db.AUTH, "Authorization check failed p %v", principal)
-	return true, nil
+	return false, nil
 }

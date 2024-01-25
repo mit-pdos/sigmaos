@@ -142,10 +142,56 @@ func TestDelegateNoAccessFail(t *testing.T) {
 	rootts.Shutdown()
 }
 
+func TestDelegatePartialAccess(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	p1 := proc.NewProc("dirreader", []string{path.Join(sp.SCHEDD, "~any")})
+	// Only allow access to UX
+	p1.SetAllowedPaths([]string{path.Join(sp.UX, "*")})
+
+	err := rootts.Spawn(p1)
+	assert.Nil(t, err, "Spawn")
+	db.DPrintf(db.TEST, "Spawned proc")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := rootts.WaitExit(p1.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+
+	// Make sure that WaitExit didn't return an error
+	assert.Nil(t, err, "WaitExit error: %v", err)
+	// Ensure the proc crashed
+	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
+	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
+
+	p2 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
+	// Only allow access to UX
+	p2.SetAllowedPaths([]string{path.Join(sp.UX, "*")})
+
+	err = rootts.Spawn(p2)
+	assert.Nil(t, err, "Spawn")
+	db.DPrintf(db.TEST, "Spawned proc")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err = rootts.WaitExit(p2.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+
+	// Make sure that WaitExit didn't return an error
+	assert.Nil(t, err, "WaitExit error: %v", err)
+	// Ensure the proc succeeded
+	assert.True(t, status != nil && status.IsStatusOK(), "Exit status not OK: %v", status)
+
+	db.DPrintf(db.TEST, "Authorized child proc return status: %v", status)
+
+	rootts.Shutdown()
+}
+
 func TestSignHMACToken(t *testing.T) {
 	// TODO: generate key properly
 	var hmacSecret []byte = []byte("PDOS")
-	as, err := auth.NewHMACAuthSrv(hmacSecret)
+	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, hmacSecret)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -164,7 +210,7 @@ func TestSignHMACToken(t *testing.T) {
 func TestVerifyHMACToken(t *testing.T) {
 	// TODO: generate key properly
 	var hmacSecret []byte = []byte("PDOS")
-	as, err := auth.NewHMACAuthSrv(hmacSecret)
+	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, hmacSecret)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{

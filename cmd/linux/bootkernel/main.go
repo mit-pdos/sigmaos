@@ -50,7 +50,7 @@ func main() {
 	}
 	pe := proc.NewBootProcEnv(&sp.Tprincipal{ID: param.KernelId, TokenStr: proc.NOT_SET}, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	as, err1 := auth.NewHMACAuthSrv([]byte("PDOS"))
+	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}

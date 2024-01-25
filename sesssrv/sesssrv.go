@@ -36,6 +36,7 @@ import (
 
 type SessSrv struct {
 	pe       *proc.ProcEnv
+	srvpath  string
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
 	newps    sps.NewProtServer
@@ -52,9 +53,10 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, srvpath string, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
+	ssrv.srvpath = srvpath
 	ssrv.dirover = overlay.MkDirOverlay(root)
 	ssrv.dirunder = root
 	ssrv.newps = newps
@@ -74,6 +76,10 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProt
 	ssrv.sm = sessstatesrv.NewSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv
+}
+
+func (ssrv *SessSrv) GetSrvPath() string {
+	return ssrv.srvpath
 }
 
 func (ssrv *SessSrv) ProcEnv() *proc.ProcEnv {

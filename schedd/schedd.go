@@ -46,7 +46,7 @@ type Schedd struct {
 }
 
 func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Schedd {
-	as, err := auth.NewHMACAuthSrv([]byte("PDOS"))
+	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
 	if err != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err)
 	}

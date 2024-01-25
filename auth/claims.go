@@ -28,7 +28,7 @@ func NewProcClaims(pe *proc.ProcEnv) *ProcClaims {
 		PID:          pe.GetClaims().GetPID().String(),
 		AllowedPaths: pe.GetClaims().GetAllowedPaths(),
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 100).Unix(), // TODO: set expiry properly
+			ExpiresAt: time.Now().Add(time.Hour * 999).Unix(), // TODO: set expiry properly
 			Issuer:    ISSUER,
 		},
 	}

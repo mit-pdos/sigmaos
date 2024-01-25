@@ -3,9 +3,12 @@ package auth_test
 import (
 	"path"
 	"testing"
+	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -19,13 +22,19 @@ const (
 )
 
 func TestStartStop(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	db.DPrintf(db.TEST, "Started successfully")
 	rootts.Shutdown()
 }
 
 func TestOK(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	sts, err := rootts.GetDir(sp.NAMED)
 	assert.Nil(t, err)
@@ -48,7 +57,10 @@ func TestOK(t *testing.T) {
 }
 
 func TestMaliciousPrincipalFail(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	// Create a new sigma clnt, with an unexpected principal
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
@@ -74,7 +86,10 @@ func TestMaliciousPrincipalFail(t *testing.T) {
 }
 
 func TestNoDelegationPrincipalFail(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	p1 := proc.NewProc("sleeper", []string{"2s", "name/"})
 	// Wipe the token from the child proc's env
@@ -98,5 +113,45 @@ func TestNoDelegationPrincipalFail(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestGetToken(t *testing.T) {
+func TestSignHMACToken(t *testing.T) {
+	// TODO: generate key properly
+	var hmacSecret []byte = []byte("PDOS")
+	as, err := auth.NewHmacAuthSrv(hmacSecret)
+	assert.Nil(t, err, "Err make auth clnt: %v", err)
+	// Create the Claims
+	claims := &auth.ProcClaims{
+		PID:          "my-pid",
+		PrincipalID:  "root",
+		AllowedPaths: []string{"/*"},
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: 15000, // TODO: how to set these properly?
+			Issuer:    "test",
+		},
+	}
+	signedToken, err := as.NewToken(claims)
+	assert.Nil(t, err, "Err sign token: %v", err)
+	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
+}
+
+func TestVerifyHMACToken(t *testing.T) {
+	// TODO: generate key properly
+	var hmacSecret []byte = []byte("PDOS")
+	as, err := auth.NewHmacAuthSrv(hmacSecret)
+	assert.Nil(t, err, "Err make auth clnt: %v", err)
+	// Create the Claims
+	claims := &auth.ProcClaims{
+		PID:          "my-pid",
+		PrincipalID:  "root",
+		AllowedPaths: []string{"/*"},
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
+			Issuer:    "test",
+		},
+	}
+	signedToken, err := as.NewToken(claims)
+	assert.Nil(t, err, "Err sign token: %v", err)
+	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
+	claims2, err := as.VerifyTokenGetClaims(signedToken)
+	assert.Nil(t, err, "Err verify token get claims: %v", err)
+	db.DPrintf(db.TEST, "Signed token: %v", claims2)
 }

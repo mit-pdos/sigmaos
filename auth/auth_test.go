@@ -114,33 +114,33 @@ func TestDelegateFullAccessOK(t *testing.T) {
 	rootts.Shutdown()
 }
 
-//func TestNoDelegationPrincipalFail(t *testing.T) {
-//	rootts, err1 := test.NewTstateWithRealms(t)
-//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-//		return
-//	}
-//
-//	p1 := proc.NewProc("sleeper", []string{"2s", "name/"})
-//	// Wipe the token from the child proc's env
-//	p1.GetProcEnv().Principal.TokenPresent = false
-//
-//	err := rootts.Spawn(p1)
-//	assert.Nil(t, err, "Spawn")
-//	db.DPrintf(db.TEST, "Spawned proc")
-//
-//	db.DPrintf(db.TEST, "Pre waitexit")
-//	status, err := rootts.WaitExit(p1.GetPid())
-//	db.DPrintf(db.TEST, "Post waitexit")
-//
-//	// Make sure that WaitExit didn't return an error
-//	assert.Nil(t, err, "WaitExit error: %v", err)
-//	// Ensure the proc crashed
-//	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
-//
-//	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
-//
-//	rootts.Shutdown()
-//}
+func TestDelegateNoAccessFail(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	p1 := proc.NewProc("dirreader", []string{path.Join(sp.SCHEDD, "~any")})
+	// Wipe the list of allowed paths
+	p1.SetAllowedPaths([]string{})
+
+	err := rootts.Spawn(p1)
+	assert.Nil(t, err, "Spawn")
+	db.DPrintf(db.TEST, "Spawned proc")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := rootts.WaitExit(p1.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+
+	// Make sure that WaitExit didn't return an error
+	assert.Nil(t, err, "WaitExit error: %v", err)
+	// Ensure the proc crashed
+	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
+
+	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
+
+	rootts.Shutdown()
+}
 
 func TestSignHMACToken(t *testing.T) {
 	// TODO: generate key properly

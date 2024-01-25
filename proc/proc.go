@@ -134,6 +134,10 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Principal.TokenStr = parentPE.Principal.TokenStr // XXX remove
 }
 
+func (p *Proc) SetAllowedPaths(paths []string) {
+	p.ProcEnvProto.SetAllowedPaths(paths)
+}
+
 func (p *Proc) SetToken(token string) {
 	p.ProcEnvProto.SetToken(token)
 }

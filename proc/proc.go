@@ -142,6 +142,10 @@ func (p *Proc) SetToken(token string) {
 	p.ProcEnvProto.SetToken(token)
 }
 
+func (p *Proc) GetParentToken() string {
+	return p.ProcEnvProto.ParentTokenStr
+}
+
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 	p.ProcEnvProto.KernelID = kernelID
 	if setProcDir {

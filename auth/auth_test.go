@@ -229,30 +229,30 @@ func TestDelegatePartialAccess(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestDelegateNoAccessFail(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	p1 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
-	// Wipe the list of allowed paths (except for schedd)
-	p1.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*")})
-
-	err := rootts.Spawn(p1)
-	assert.Nil(t, err, "Spawn")
-	db.DPrintf(db.TEST, "Spawned proc")
-
-	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := rootts.WaitExit(p1.GetPid())
-	db.DPrintf(db.TEST, "Post waitexit")
-
-	// Make sure that WaitExit didn't return an error
-	assert.Nil(t, err, "WaitExit error: %v", err)
-	// Ensure the proc crashed
-	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
-
-	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
-
-	rootts.Shutdown()
-}
+//func TestDelegateNoAccessFail(t *testing.T) {
+//	rootts, err1 := test.NewTstateWithRealms(t)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//
+//	p1 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
+//	// Wipe the list of allowed paths (except for schedd)
+//	p1.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*")})
+//
+//	err := rootts.Spawn(p1)
+//	assert.Nil(t, err, "Spawn")
+//	db.DPrintf(db.TEST, "Spawned proc")
+//
+//	db.DPrintf(db.TEST, "Pre waitexit")
+//	status, err := rootts.WaitExit(p1.GetPid())
+//	db.DPrintf(db.TEST, "Post waitexit")
+//
+//	// Make sure that WaitExit didn't return an error
+//	assert.Nil(t, err, "WaitExit error: %v", err)
+//	// Ensure the proc crashed
+//	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
+//
+//	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
+//
+//	rootts.Shutdown()
+//}

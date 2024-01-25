@@ -22,10 +22,37 @@ func NewHMACAuthSrv(srvpath string, hmacSecret []byte) (*HMACAuthSrv, error) {
 	}, nil
 }
 
-// Set a proc's token
+// Set a proc's token after it has been spawned by the parent
 func (as *HMACAuthSrv) SetDelegatedProcToken(p *proc.Proc) error {
-	// TODO: check that the claims are a valid derivation of the parent's claims
+	// Retrieve and validate the proc's parent's claims
+	parentPC, err := as.VerifyTokenGetClaims(p.GetParentToken())
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error verify parent token: %v", err)
+		db.DPrintf(db.AUTH, "Error verify parent token: %v", err)
+		return err
+	}
+	// Retrieve the proc's claims
 	pc := NewProcClaims(p.GetProcEnv())
+	// Ensure the child proc's allowed paths are a subset of the parent proc's
+	// allowed paths
+	for _, ap := range pc.AllowedPaths {
+		subset := false
+		for _, parentAP := range parentPC.AllowedPaths {
+			// If the child path is a subset of one of the parent's allowed paths,
+			// stop iterating
+			if IsInSubtree(ap, parentAP) {
+				subset = true
+				break
+			}
+		}
+		if !subset {
+			db.DPrintf(db.ERROR, "Child's allowed paths not a subset of parent's: p %v c %v", ap, parentPC.AllowedPaths)
+			db.DPrintf(db.AUTH, "Child's allowed paths not a subset of parent's: p %v c %v", ap, parentPC.AllowedPaths)
+			return fmt.Errorf("Child's allowed paths not a subset of parent's: p %v c %v", ap, parentPC.AllowedPaths)
+		}
+	}
+	// Parent's token is valid, and child's token only contains allowed paths
+	// which are a subset of the parent's. Sign the child's token.
 	token, err := as.NewToken(pc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewToken: %v", err)

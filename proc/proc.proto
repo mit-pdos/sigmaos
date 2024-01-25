@@ -4,6 +4,11 @@ option go_package = "sigmaos/proc";
 import "google/protobuf/timestamp.proto";
 import "sigmap/sigmap.proto";
 
+message ProcClaimsProto {
+  string pidStr = 1;
+  repeated string allowedPaths = 2;
+}
+
 message ProcEnvProto {
   string pidStr = 1;
   string program = 2;
@@ -32,6 +37,7 @@ message ProcEnvProto {
   TmountProto namedMountProto = 25;
   bool useSigmaclntd = 26;
   string parentTokenStr = 27;
+  ProcClaimsProto claims = 28;
 }
 
 message ProcProto {

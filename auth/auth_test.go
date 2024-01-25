@@ -11,7 +11,8 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	//	"sigmaos/sigmaclnt"
+	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -55,35 +56,35 @@ func TestBootOK(t *testing.T) {
 	rootts.Shutdown()
 }
 
-//func TestMaliciousPrincipalFail(t *testing.T) {
-//	rootts, err1 := test.NewTstateWithRealms(t)
-//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-//		return
-//	}
-//
-//	// Create a new sigma clnt, with an unexpected principal
-//	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
-//	pe.SetPrincipal(&sp.Tprincipal{
-//		ID:           "malicious-user",
-//		TokenPresent: false,
-//	})
-//	sc1, err := sigmaclnt.NewSigmaClnt(pe)
-//	assert.Nil(t, err, "Err NewClnt: %v", err)
-//
-//	_, err = sc1.GetDir(sp.NAMED)
-//	assert.NotNil(t, err)
-//
-//	sts, err := rootts.GetDir(sp.SCHEDD)
-//	assert.Nil(t, err)
-//
-//	db.DPrintf(db.TEST, "realm names sched %v", sp.Names(sts))
-//
-//	_, err = sc1.GetDir(path.Join(sp.SCHEDD, sts[0].Name) + "/")
-//	assert.NotNil(t, err)
-//
-//	rootts.Shutdown()
-//}
-//
+func TestMaliciousPrincipalFail(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	// Create a new sigma clnt, with an unexpected principal
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	pe.SetPrincipal(&sp.Tprincipal{
+		ID:       "malicious-user",
+		TokenStr: proc.NOT_SET,
+	})
+	sc1, err := sigmaclnt.NewSigmaClnt(pe)
+	assert.Nil(t, err, "Err NewClnt: %v", err)
+
+	_, err = sc1.GetDir(sp.NAMED)
+	assert.NotNil(t, err)
+
+	sts, err := rootts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "realm names sched %v", sp.Names(sts))
+
+	_, err = sc1.GetDir(path.Join(sp.SCHEDD, sts[0].Name) + "/")
+	assert.NotNil(t, err)
+
+	rootts.Shutdown()
+}
+
 //func TestNoDelegationPrincipalFail(t *testing.T) {
 //	rootts, err1 := test.NewTstateWithRealms(t)
 //	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

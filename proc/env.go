@@ -97,6 +97,10 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Privileged:          priv,
 			Overlays:            overlays,
 			UseSigmaclntd:       useSigmaclntd,
+			Claims: &ProcClaimsProto{
+				PidStr:       string(pid),
+				AllowedPaths: nil, // By default, will be set to the parent's AllowedPaths unless otherwise specified
+			},
 		},
 	}
 }
@@ -113,6 +117,8 @@ func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 func NewBootProcEnv(principal *sp.Tprincipal, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetPrincipal(principal)
+	// Allow all paths for boot env
+	pe.SetAllowedPaths([]string{"*"})
 	pe.Program = "kernel"
 	pe.SetPID(sp.GenPid(principal.ID))
 	pe.EtcdIP = string(etcdIP)
@@ -132,6 +138,8 @@ func NewTestProcEnv(realm sp.Trealm, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.T
 		ID:       "test",
 		TokenStr: NOT_SET,
 	})
+	// Allow all paths for boot env
+	pe.SetAllowedPaths([]string{"*"})
 	pe.SetPID(sp.GenPid("test"))
 	pe.SetRealm(realm, overlays)
 	pe.EtcdIP = string(etcdIP)
@@ -173,6 +181,10 @@ func (pe *ProcEnvProto) GetPID() sp.Tpid {
 
 func (pe *ProcEnvProto) SetToken(token string) {
 	pe.Principal.TokenStr = token
+}
+
+func (pe *ProcEnvProto) SetAllowedPaths(paths []string) {
+	pe.Claims.AllowedPaths = paths
 }
 
 func (pe *ProcEnvProto) SetPID(pid sp.Tpid) {

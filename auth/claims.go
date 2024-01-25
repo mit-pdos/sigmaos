@@ -23,10 +23,10 @@ type ProcClaims struct {
 }
 
 // Construct proc claims from a proc env
-func NewProcClaims(pe *proc.ProcEnv, paths []string) *ProcClaims {
+func NewProcClaims(pe *proc.ProcEnv) *ProcClaims {
 	return &ProcClaims{
-		PID:          pe.GetPID().String(),
-		AllowedPaths: paths,
+		PID:          pe.GetClaims().GetPID().String(),
+		AllowedPaths: pe.GetClaims().GetAllowedPaths(),
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 100).Unix(), // TODO: set expiry properly
 			Issuer:    ISSUER,

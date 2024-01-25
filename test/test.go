@@ -134,7 +134,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	pc := auth.NewProcClaims(pe, auth.ALL_PATHS)
+	pc := auth.NewProcClaims(pe)
 	token, err1 := as.NewToken(pc)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error NewToken: %v", err1)

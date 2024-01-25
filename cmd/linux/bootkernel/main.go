@@ -54,7 +54,7 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}
-	pc := auth.NewProcClaims(pe, auth.ALL_PATHS)
+	pc := auth.NewProcClaims(pe)
 	token, err1 := as.NewToken(pc)
 	if err1 != nil {
 		db.DFatalf("Error NewToken: %v", err1)

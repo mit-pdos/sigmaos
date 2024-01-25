@@ -21,6 +21,47 @@ const (
 	REALM1 sp.Trealm = "testrealm1"
 )
 
+func TestSignHMACToken(t *testing.T) {
+	// TODO: generate key properly
+	var hmacSecret []byte = []byte("PDOS")
+	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, hmacSecret)
+	assert.Nil(t, err, "Err make auth clnt: %v", err)
+	// Create the Claims
+	claims := &auth.ProcClaims{
+		PID:          "my-pid",
+		AllowedPaths: []string{"/*"},
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: 15000, // TODO: how to set these properly?
+			Issuer:    "test",
+		},
+	}
+	signedToken, err := as.NewToken(claims)
+	assert.Nil(t, err, "Err sign token: %v", err)
+	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
+}
+
+func TestVerifyHMACToken(t *testing.T) {
+	// TODO: generate key properly
+	var hmacSecret []byte = []byte("PDOS")
+	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, hmacSecret)
+	assert.Nil(t, err, "Err make auth clnt: %v", err)
+	// Create the Claims
+	claims := &auth.ProcClaims{
+		PID:          "my-pid",
+		AllowedPaths: []string{"/*"},
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
+			Issuer:    "test",
+		},
+	}
+	signedToken, err := as.NewToken(claims)
+	assert.Nil(t, err, "Err sign token: %v", err)
+	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
+	claims2, err := as.VerifyTokenGetClaims(signedToken)
+	assert.Nil(t, err, "Err verify token get claims: %v", err)
+	db.DPrintf(db.TEST, "Signed token: %v", claims2)
+}
+
 func TestStartStop(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -188,43 +229,30 @@ func TestDelegatePartialAccess(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestSignHMACToken(t *testing.T) {
-	// TODO: generate key properly
-	var hmacSecret []byte = []byte("PDOS")
-	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, hmacSecret)
-	assert.Nil(t, err, "Err make auth clnt: %v", err)
-	// Create the Claims
-	claims := &auth.ProcClaims{
-		PID:          "my-pid",
-		AllowedPaths: []string{"/*"},
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: 15000, // TODO: how to set these properly?
-			Issuer:    "test",
-		},
+func TestDelegateNoAccessFail(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
 	}
-	signedToken, err := as.NewToken(claims)
-	assert.Nil(t, err, "Err sign token: %v", err)
-	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
-}
 
-func TestVerifyHMACToken(t *testing.T) {
-	// TODO: generate key properly
-	var hmacSecret []byte = []byte("PDOS")
-	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, hmacSecret)
-	assert.Nil(t, err, "Err make auth clnt: %v", err)
-	// Create the Claims
-	claims := &auth.ProcClaims{
-		PID:          "my-pid",
-		AllowedPaths: []string{"/*"},
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
-			Issuer:    "test",
-		},
-	}
-	signedToken, err := as.NewToken(claims)
-	assert.Nil(t, err, "Err sign token: %v", err)
-	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
-	claims2, err := as.VerifyTokenGetClaims(signedToken)
-	assert.Nil(t, err, "Err verify token get claims: %v", err)
-	db.DPrintf(db.TEST, "Signed token: %v", claims2)
+	p1 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
+	// Wipe the list of allowed paths (except for schedd)
+	p1.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*")})
+
+	err := rootts.Spawn(p1)
+	assert.Nil(t, err, "Spawn")
+	db.DPrintf(db.TEST, "Spawned proc")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := rootts.WaitExit(p1.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+
+	// Make sure that WaitExit didn't return an error
+	assert.Nil(t, err, "WaitExit error: %v", err)
+	// Ensure the proc crashed
+	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
+
+	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
+
+	rootts.Shutdown()
 }

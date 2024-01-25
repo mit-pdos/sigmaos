@@ -6,6 +6,7 @@ import (
 	"github.com/golang-jwt/jwt"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -19,6 +20,20 @@ func NewHMACAuthSrv(srvpath string, hmacSecret []byte) (*HMACAuthSrv, error) {
 		srvpath:    srvpath,
 		hmacSecret: hmacSecret,
 	}, nil
+}
+
+// Set a proc's token
+func (as *HMACAuthSrv) SetDelegatedProcToken(p *proc.Proc) error {
+	// TODO: check that the claims are a valid derivation of the parent's claims
+	pc := NewProcClaims(p.GetProcEnv())
+	token, err := as.NewToken(pc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+		db.DPrintf(db.AUTH, "Error NewToken: %v", err)
+		return err
+	}
+	p.SetToken(token)
+	return nil
 }
 
 func (as *HMACAuthSrv) NewToken(pc *ProcClaims) (string, error) {

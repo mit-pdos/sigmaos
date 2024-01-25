@@ -256,14 +256,10 @@ func (sd *Schedd) procDone(p *proc.Proc) {
 
 func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
 	p.SetKernelID(sd.kernelId, false)
-	// TODO: check that the claims are a valid derivation of the parent's claims
-	// Sign the proc's claims
-	pc := auth.NewProcClaims(p.GetProcEnv())
-	token, err := sd.as.NewToken(pc)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+	// Set the new proc's token
+	if err := sd.as.SetDelegatedProcToken(p); err != nil {
+		db.DPrintf(db.ERROR, "Error SetToken: %v", err)
 	}
-	p.SetToken(token)
 	sd.pmgr.Spawn(p)
 	// Run the proc
 	go sd.runProc(p)

@@ -129,8 +129,8 @@ func NewBootProcEnv(principal *sp.Tprincipal, etcdIP sp.Tip, innerIP sp.Tip, out
 func NewTestProcEnv(realm sp.Trealm, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetPrincipal(&sp.Tprincipal{
-		ID:           "test",
-		TokenPresent: true,
+		ID:       "test",
+		TokenStr: NOT_SET,
 	})
 	pe.SetPID(sp.GenPid("test"))
 	pe.SetRealm(realm, overlays)
@@ -150,8 +150,8 @@ func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetPrincipal(&sp.Tprincipal{
-		ID:           pe.GetPrincipal().ID + "-clnt-" + strconv.Itoa(idx),
-		TokenPresent: pe.GetPrincipal().TokenPresent,
+		ID:       pe.GetPrincipal().ID + "-clnt-" + strconv.Itoa(idx),
+		TokenStr: NOT_SET,
 	})
 	return pe2
 }
@@ -161,14 +161,18 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetRealm(realm, pe.Overlays)
 	pe2.SetPrincipal(&sp.Tprincipal{
-		ID:           pe.GetPrincipal().ID + "-realm-" + realm.String(),
-		TokenPresent: pe.GetPrincipal().TokenPresent,
+		ID:       pe.GetPrincipal().ID + "-realm-" + realm.String(),
+		TokenStr: NOT_SET,
 	})
 	return pe2
 }
 
 func (pe *ProcEnvProto) GetPID() sp.Tpid {
 	return sp.Tpid(pe.PidStr)
+}
+
+func (pe *ProcEnvProto) SetToken(token string) {
+	pe.Principal.TokenStr = token
 }
 
 func (pe *ProcEnvProto) SetPID(pid sp.Tpid) {

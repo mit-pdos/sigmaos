@@ -1,6 +1,8 @@
 package protsrv
 
 import (
+	"fmt"
+
 	"sigmaos/auth"
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
@@ -34,7 +36,7 @@ type ProtSrv struct {
 	stats *stats.StatInfo            // shared across sessions
 	et    *ephemeralmap.EphemeralMap // shared across sessions
 	sct   *clntcond.ClntCondTable    // shared across sessions
-	auth  *auth.AuthSrv
+	auth  auth.AuthSrv
 	ft    *fidTable
 	sid   sessp.Tsession
 }
@@ -51,7 +53,11 @@ func NewProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
 	ps.vt = srv.GetVersionTable()
 	ps.sct = srv.GetSessionCondTable()
 	ps.stats = srv.GetStats()
-	ps.auth = auth.NewAuthSrv()
+	as, err := auth.NewHMACAuthSrv([]byte("PDOS")) // TODO: generate key properly
+	if err != nil {
+		db.DFatalf("Unable to create new auth server: %v", err)
+	}
+	ps.auth = as
 	ps.sid = sid
 	db.DPrintf(db.PROTSRV, "NewProtSrv -> %v", ps)
 	return ps
@@ -81,8 +87,8 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	//
 	// 2. For now, authorization checks are trivial (strcmp on the Principal).
 	// They should be done using some authorization scheme (like OAuth).
-	if !ps.auth.IsAuthorized(args.Tprincipal()) {
-		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErr(serr.TErrPerm, "Authorization check failed"))
+	if ok, err := ps.auth.IsAuthorized(args.Tprincipal()); err != nil || !ok {
+		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErr(serr.TErrPerm, fmt.Errorf("Authorization check failed: ok %v err %v", ok, err)))
 	}
 	p := path.Split(args.Aname)
 	root, ctx := ps.ssrv.GetRootCtx(args.Tprincipal(), args.Aname, ps.sid, args.TclntId())

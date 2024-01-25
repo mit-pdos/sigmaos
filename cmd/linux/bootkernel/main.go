@@ -2,14 +2,16 @@ package main
 
 import (
 	"os"
+	"strconv"
+	"strings"
+
+	"sigmaos/auth"
 	"sigmaos/boot"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
-	"strconv"
-	"strings"
 )
 
 func main() {
@@ -46,9 +48,19 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	pcfg := proc.NewBootProcEnv(&sp.Tprincipal{ID: param.KernelId, TokenPresent: true}, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
-	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-	if err := boot.BootUp(&param, pcfg); err != nil {
+	pe := proc.NewBootProcEnv(&sp.Tprincipal{ID: param.KernelId, TokenStr: proc.NOT_SET}, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
+	proc.SetSigmaDebugPid(pe.GetPID().String())
+	as, err1 := auth.NewHMACAuthSrv([]byte("PDOS"))
+	if err1 != nil {
+		db.DFatalf("Error NewAuthSrv: %v", err1)
+	}
+	pc := auth.NewProcClaims(pe, auth.ALL_PATHS)
+	token, err1 := as.NewToken(pc)
+	if err1 != nil {
+		db.DFatalf("Error NewToken: %v", err1)
+	}
+	pe.SetToken(token)
+	if err := boot.BootUp(&param, pe, as); err != nil {
 		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)
 	}
 	os.Exit(0)

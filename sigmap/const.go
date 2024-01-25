@@ -103,4 +103,4 @@ const (
 	NO_PORT            Tport   = 0
 )
 
-var NO_PRINCIPAL *Tprincipal = &Tprincipal{ID: "NO_PRINCIPAL", TokenPresent: false}
+var NO_PRINCIPAL *Tprincipal = &Tprincipal{ID: "NO_PRINCIPAL", TokenStr: "NOT_SET"}

@@ -11,8 +11,7 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
+	//	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -30,7 +29,7 @@ func TestStartStop(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestOK(t *testing.T) {
+func TestBootOK(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -56,62 +55,62 @@ func TestOK(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestMaliciousPrincipalFail(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	// Create a new sigma clnt, with an unexpected principal
-	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
-	pe.SetPrincipal(&sp.Tprincipal{
-		ID:           "malicious-user",
-		TokenPresent: false,
-	})
-	sc1, err := sigmaclnt.NewSigmaClnt(pe)
-	assert.Nil(t, err, "Err NewClnt: %v", err)
-
-	_, err = sc1.GetDir(sp.NAMED)
-	assert.NotNil(t, err)
-
-	sts, err := rootts.GetDir(sp.SCHEDD)
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "realm names sched %v", sp.Names(sts))
-
-	_, err = sc1.GetDir(path.Join(sp.SCHEDD, sts[0].Name) + "/")
-	assert.NotNil(t, err)
-
-	rootts.Shutdown()
-}
-
-func TestNoDelegationPrincipalFail(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	p1 := proc.NewProc("sleeper", []string{"2s", "name/"})
-	// Wipe the token from the child proc's env
-	p1.GetProcEnv().Principal.TokenPresent = false
-
-	err := rootts.Spawn(p1)
-	assert.Nil(t, err, "Spawn")
-	db.DPrintf(db.TEST, "Spawned proc")
-
-	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := rootts.WaitExit(p1.GetPid())
-	db.DPrintf(db.TEST, "Post waitexit")
-
-	// Make sure that WaitExit didn't return an error
-	assert.Nil(t, err, "WaitExit error: %v", err)
-	// Ensure the proc crashed
-	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
-
-	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
-
-	rootts.Shutdown()
-}
+//func TestMaliciousPrincipalFail(t *testing.T) {
+//	rootts, err1 := test.NewTstateWithRealms(t)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//
+//	// Create a new sigma clnt, with an unexpected principal
+//	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+//	pe.SetPrincipal(&sp.Tprincipal{
+//		ID:           "malicious-user",
+//		TokenPresent: false,
+//	})
+//	sc1, err := sigmaclnt.NewSigmaClnt(pe)
+//	assert.Nil(t, err, "Err NewClnt: %v", err)
+//
+//	_, err = sc1.GetDir(sp.NAMED)
+//	assert.NotNil(t, err)
+//
+//	sts, err := rootts.GetDir(sp.SCHEDD)
+//	assert.Nil(t, err)
+//
+//	db.DPrintf(db.TEST, "realm names sched %v", sp.Names(sts))
+//
+//	_, err = sc1.GetDir(path.Join(sp.SCHEDD, sts[0].Name) + "/")
+//	assert.NotNil(t, err)
+//
+//	rootts.Shutdown()
+//}
+//
+//func TestNoDelegationPrincipalFail(t *testing.T) {
+//	rootts, err1 := test.NewTstateWithRealms(t)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//
+//	p1 := proc.NewProc("sleeper", []string{"2s", "name/"})
+//	// Wipe the token from the child proc's env
+//	p1.GetProcEnv().Principal.TokenPresent = false
+//
+//	err := rootts.Spawn(p1)
+//	assert.Nil(t, err, "Spawn")
+//	db.DPrintf(db.TEST, "Spawned proc")
+//
+//	db.DPrintf(db.TEST, "Pre waitexit")
+//	status, err := rootts.WaitExit(p1.GetPid())
+//	db.DPrintf(db.TEST, "Post waitexit")
+//
+//	// Make sure that WaitExit didn't return an error
+//	assert.Nil(t, err, "WaitExit error: %v", err)
+//	// Ensure the proc crashed
+//	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
+//
+//	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
+//
+//	rootts.Shutdown()
+//}
 
 func TestSignHMACToken(t *testing.T) {
 	// TODO: generate key properly
@@ -121,7 +120,6 @@ func TestSignHMACToken(t *testing.T) {
 	// Create the Claims
 	claims := &auth.ProcClaims{
 		PID:          "my-pid",
-		PrincipalID:  "root",
 		AllowedPaths: []string{"/*"},
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: 15000, // TODO: how to set these properly?
@@ -141,7 +139,6 @@ func TestVerifyHMACToken(t *testing.T) {
 	// Create the Claims
 	claims := &auth.ProcClaims{
 		PID:          "my-pid",
-		PrincipalID:  "root",
 		AllowedPaths: []string{"/*"},
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),

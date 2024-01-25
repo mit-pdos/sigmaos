@@ -5,7 +5,7 @@ import (
 )
 
 type AuthSrv interface {
-	NewToken(claims *ProcClaims) (string, error)
+	NewToken(pc *ProcClaims) (string, error)
 	VerifyTokenGetClaims(signedToken string) (*ProcClaims, error)
-	IsAuthorized(principal *sp.Tprincipal) bool // XXX remove
+	IsAuthorized(principal *sp.Tprincipal) (bool, error)
 }

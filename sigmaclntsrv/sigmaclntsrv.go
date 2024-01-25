@@ -33,8 +33,8 @@ func newSigmaClntSrv() (*SigmaClntSrv, error) {
 	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, "127.0.0.1", localIP, localIP, "local-build", false, false)
 	pcfg.Program = "sigmaclntd"
 	pcfg.SetPrincipal(&sp.Tprincipal{
-		ID:           "sigmaclntd",
-		TokenPresent: true,
+		ID:       "sigmaclntd",
+		TokenStr: proc.NOT_SET,
 	})
 	pcfg.SetPID(sp.GenPid("sigmaclntd"))
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())

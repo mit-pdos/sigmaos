@@ -19,9 +19,9 @@ func NewHMACAuthSrv(hmacSecret []byte) (*HMACAuthSrv, error) {
 	}, nil
 }
 
-func (as *HMACAuthSrv) NewToken(claims *ProcClaims) (string, error) {
+func (as *HMACAuthSrv) NewToken(pc *ProcClaims) (string, error) {
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, pc)
 	return token.SignedString(as.hmacSecret)
 }
 
@@ -53,14 +53,15 @@ func (as *HMACAuthSrv) VerifyTokenGetClaims(signedToken string) (*ProcClaims, er
 	return nil, fmt.Errorf("Claims wrong type")
 }
 
-// TODO: kill
-func (as *HMACAuthSrv) IsAuthorized(principal *sp.Tprincipal) bool {
+func (as *HMACAuthSrv) IsAuthorized(principal *sp.Tprincipal) (bool, error) {
 	db.DPrintf(db.AUTH, "Authorization check p %v", principal)
-	// TODO: do a real check
-	if principal.TokenPresent {
-		db.DPrintf(db.AUTH, "Authorization check successful p %v", principal)
-		return true
+	pc, err := as.VerifyTokenGetClaims(principal.TokenStr)
+	if err != nil {
+		db.DPrintf(db.AUTH, "Token verification failed %v", principal)
+		return false, fmt.Errorf("Token verification failed: %v", err)
 	}
-	db.DPrintf(db.AUTH, "Authorization check failed p %v", principal)
-	return false
+	db.DPrintf(db.AUTH, "Authorization check successful p %v claims %v", principal, pc)
+	// TODO: check paths in claims
+	//db.DPrintf(db.AUTH, "Authorization check failed p %v", principal)
+	return true, nil
 }

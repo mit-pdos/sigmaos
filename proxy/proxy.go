@@ -102,8 +102,8 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
 	npc.principal = &sp.Tprincipal{
-		ID:           u.Uid,
-		TokenPresent: true,
+		ID:       u.Uid,
+		TokenStr: proc.NOT_SET,
 	}
 
 	mnt, error := npc.pc.GetNamedMount()
@@ -138,8 +138,8 @@ func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
 	fid1, err := npc.pc.Walk(fid, args.Wnames, &sp.Tprincipal{
-		ID:           "proxy",
-		TokenPresent: true,
+		ID:       "proxy",
+		TokenStr: proc.NOT_SET,
 	})
 	if err != nil {
 		db.DPrintf(db.PROXY, "Walk args %v err: %v\n", args, err)

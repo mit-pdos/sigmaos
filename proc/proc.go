@@ -75,8 +75,8 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		pid,
 		sp.Trealm(NOT_SET),
 		&sp.Tprincipal{
-			ID:           pid.String(),
-			TokenPresent: true,
+			ID:       pid.String(),
+			TokenStr: NOT_SET,
 		},
 		procdir,
 		NOT_SET,
@@ -126,7 +126,11 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Net = parentPE.Net
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
-	p.ProcEnvProto.Principal.TokenPresent = p.ProcEnvProto.Principal.TokenPresent && parentPE.Principal.TokenPresent
+	p.ProcEnvProto.Principal.TokenStr = parentPE.Principal.TokenStr // XXX remove
+}
+
+func (p *Proc) SetToken(token string) {
+	p.ProcEnvProto.SetToken(token)
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {

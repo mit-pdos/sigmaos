@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/kproc"
 	"sigmaos/netsigma"
@@ -48,33 +49,35 @@ type Kernel struct {
 	Param        *Param
 	svcs         *Services
 	ip           sp.Tip
+	as           auth.AuthSrv
 	shuttingDown bool
 }
 
-func newKernel(param *Param) *Kernel {
+func newKernel(param *Param, as auth.AuthSrv) *Kernel {
 	k := &Kernel{}
 	k.Param = param
+	k.as = as
 	k.svcs = newServices()
 	return k
 }
 
-func NewKernel(p *Param, pcfg *proc.ProcEnv) (*Kernel, error) {
-	k := newKernel(p)
+func NewKernel(p *Param, pe *proc.ProcEnv, as auth.AuthSrv) (*Kernel, error) {
+	k := newKernel(p, as)
 	ip, err := netsigma.LocalIP()
 	if err != nil {
 		return nil, err
 	}
 	db.DPrintf(db.KERNEL, "NewKernel ip %v", ip)
 	k.ip = ip
-	pcfg.SetInnerContainerIP(ip)
-	pcfg.SetOuterContainerIP(ip)
+	pe.SetInnerContainerIP(ip)
+	pe.SetOuterContainerIP(ip)
 	if p.Services[0] == sp.KNAMED {
-		if err := k.bootKNamed(pcfg, true); err != nil {
+		if err := k.bootKNamed(pe, true); err != nil {
 			return nil, err
 		}
 		p.Services = p.Services[1:]
 	}
-	sc, err := sigmaclnt.NewSigmaClntRootInit(pcfg)
+	sc, err := sigmaclnt.NewSigmaClntRootInit(pe)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error NewSigmaClntProc: %v", err)
 		return nil, err

@@ -13,7 +13,7 @@ message Tqid {
 
 message Tprincipal {
         string iD = 1;
-        bool   tokenPresent = 2;
+        string   tokenStr = 2;
 }
 
 message Stat {

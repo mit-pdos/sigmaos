@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/auth"
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
@@ -70,6 +71,7 @@ type Tstate struct {
 	T       *testing.T
 	proc    *proc.Proc
 	scsck   *bootkernelclnt.Kernel
+	as      auth.AuthSrv
 }
 
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
@@ -125,14 +127,26 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
-	proc.SetSigmaDebugPid(pcfg.GetPID().String())
+	as, err1 := auth.NewHMACAuthSrv([]byte("PDOS"))
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
+		return nil, err1
+	}
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
+	proc.SetSigmaDebugPid(pe.GetPID().String())
+	pc := auth.NewProcClaims(pe, auth.ALL_PATHS)
+	token, err1 := as.NewToken(pc)
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error NewToken: %v", err1)
+		return nil, err1
+	}
+	pe.SetToken(token)
 	var kernelid string
 	var err error
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, pcfg, srvs, Overlays, GVisor)
+		_, err := bootkernelclnt.Start(kernelid, pe, srvs, Overlays, GVisor)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -143,18 +157,18 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if useSigmaclntd {
 		db.DPrintf(db.BOOT, "Use sigmaclntd")
 		sckid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(sckid, pcfg, sp.SIGMACLNTDREL, Overlays, GVisor)
+		_, err := bootkernelclnt.Start(sckid, pe, sp.SIGMACLNTDREL, Overlays, GVisor)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for sigmaclntd")
 			return nil, err
 		}
-		scsck, err = bootkernelclnt.NewKernelClnt(sckid, pcfg)
+		scsck, err = bootkernelclnt.NewKernelClnt(sckid, pe)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error make kernel clnt for sigmaclntd")
 			return nil, err
 		}
 	}
-	k, err = bootkernelclnt.NewKernelClnt(kernelid, pcfg)
+	k, err = bootkernelclnt.NewKernelClnt(kernelid, pe)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make kernel clnt")
 		return nil, err
@@ -165,6 +179,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		killidx:   0,
 		T:         t,
 		scsck:     scsck,
+		as:        as,
 	}, nil
 }
 
@@ -193,8 +208,8 @@ func (ts *Tstate) KillOne(s string) error {
 	return ts.kclnts[idx].Kill(s)
 }
 
-func (ts *Tstate) NewClnt(idx int, pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
-	return ts.kclnts[idx].NewSigmaClnt(pcfg)
+func (ts *Tstate) NewClnt(idx int, pe *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
+	return ts.kclnts[idx].NewSigmaClnt(pe)
 }
 
 func (ts *Tstate) Shutdown() error {
@@ -232,8 +247,8 @@ func (ts *Tstate) Shutdown() error {
 }
 
 func Dump(t *testing.T) {
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, sp.Tip(EtcdIP), "", "", "", false, false)
-	fs, err := fsetcd.NewFsEtcd(pcfg.GetRealm(), pcfg.GetEtcdIP())
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, sp.Tip(EtcdIP), "", "", "", false, false)
+	fs, err := fsetcd.NewFsEtcd(pe.GetRealm(), pe.GetEtcdIP())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)
 	assert.Nil(t, err)

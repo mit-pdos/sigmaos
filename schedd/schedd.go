@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
@@ -31,6 +32,7 @@ type Schedd struct {
 	pmgr                *procmgr.ProcMgr
 	scheddclnt          *scheddclnt.ScheddClnt
 	procqclnt           *procqclnt.ProcQClnt
+	as                  auth.AuthSrv
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
 	kernelId            string
@@ -44,6 +46,10 @@ type Schedd struct {
 }
 
 func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Schedd {
+	as, err := auth.NewHMACAuthSrv([]byte("PDOS"))
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv: %v", err)
+	}
 	sd := &Schedd{
 		pmgr:        procmgr.NewProcMgr(sc, kernelId),
 		scheddStats: make(map[sp.Trealm]*proto.RealmStats),
@@ -51,6 +57,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Sche
 		memfree:     mem.GetTotalMem(),
 		kernelId:    kernelId,
 		sc:          sc,
+		as:          as,
 		cpuStats:    &cpuStats{},
 	}
 	sd.cond = sync.NewCond(&sd.mu)
@@ -249,6 +256,14 @@ func (sd *Schedd) procDone(p *proc.Proc) {
 
 func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
 	p.SetKernelID(sd.kernelId, false)
+	// TODO: check that the claims are a valid derivation of the parent's claims
+	// Sign the proc's claims
+	pc := auth.NewProcClaims(p.GetProcEnv())
+	token, err := sd.as.NewToken(pc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+	}
+	p.SetToken(token)
 	sd.pmgr.Spawn(p)
 	// Run the proc
 	go sd.runProc(p)

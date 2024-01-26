@@ -53,7 +53,7 @@ func (mgr *ProcMgr) downloadProc(p *proc.Proc) error {
 	// Download the bin from s3, if it isn't already cached locally.
 	if err := mgr.downloadProcBin(p.GetRealm(), p.GetProgram(), p.GetBuildTag()); err != nil {
 		db.DPrintf(db.ERROR, "failed to download proc err:%v proc:%v", err, p)
-		return err
+		return fmt.Errorf("Unable to download proc: %v", err)
 	}
 	return nil
 }

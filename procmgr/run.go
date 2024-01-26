@@ -8,7 +8,7 @@ import (
 	"sigmaos/proc"
 )
 
-func (mgr *ProcMgr) runProc(p *proc.Proc) {
+func (mgr *ProcMgr) runProc(p *proc.Proc) error {
 	db.DPrintf(db.PROCMGR, "Procd run: %v\nQueueing delay: %v", p, time.Since(p.GetSpawnTime()))
 	var err error
 	if p.IsPrivileged() {
@@ -16,9 +16,7 @@ func (mgr *ProcMgr) runProc(p *proc.Proc) {
 	} else {
 		err = mgr.runUserProc(p)
 	}
-	if err != nil {
-		mgr.procCrashed(p, err)
-	}
+	return err
 }
 
 func (mgr *ProcMgr) runPrivilegedProc(p *proc.Proc) error {

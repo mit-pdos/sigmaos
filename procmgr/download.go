@@ -28,13 +28,13 @@ func (mgr *ProcMgr) cachePath(realm sp.Trealm, prog string) string {
 func (mgr *ProcMgr) setupUserBinCacheL(realm sp.Trealm) error {
 	if _, ok := mgr.cachedProcBins[realm]; !ok {
 		db.DPrintf(db.PROCMGR, "Make user bin cache for realm %v", realm)
-		mgr.cachedProcBins[realm] = make(map[string]bool)
 		cachePn := path.Dir(mgr.cachePath(realm, "PROGRAM"))
 		// Make a dir to cache the realm's binaries.
 		if err := mgr.rootsc.MkDir(cachePn, 0777); err != nil {
 			db.DPrintf(db.ERROR, "Error MkDir cache dir [%v]: %v", cachePn, err)
 			return err
 		}
+		mgr.cachedProcBins[realm] = make(map[string]bool)
 	}
 	return nil
 }

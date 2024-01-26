@@ -63,6 +63,7 @@ if ! [ -z $PURGE ]; then
 fi
 
 sudo rm -rf /tmp/sigmaos-bin
+sudo rm -rf /tmp/sigmaos-kernel-start-logs
 
 # delete all keys from etcd
 docker exec etcd-server etcdctl del --prefix ''

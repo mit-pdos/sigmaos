@@ -71,10 +71,10 @@ func (fdt *FdTable) openfids() []sp.Tfid {
 // Caller must have locked fdt
 func (fdt *FdTable) lookupL(fd int) (*FdState, *serr.Err) {
 	if fd < 0 || fd >= len(fdt.fds) {
-		return nil, serr.NewErr(serr.TErrBadFd, fd)
+		return nil, serr.NewErr(serr.TErrNotfound, fd)
 	}
 	if fdt.fds[fd].fid == sp.NoFid {
-		return nil, serr.NewErr(serr.TErrBadFd, fd)
+		return nil, serr.NewErr(serr.TErrNotfound, fd)
 	}
 	return &fdt.fds[fd], nil
 }

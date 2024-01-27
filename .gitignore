@@ -13,3 +13,4 @@ benchmarks/results/
 *.err
 *.pdf
 scratch.sh
+run_until_fail.sh

@@ -57,7 +57,6 @@ const (
 	//
 
 	TErrRetry // tell client to retry
-	TErrBadFd
 
 	//
 	// To propagate non-sigma errors.
@@ -140,8 +139,6 @@ func (err Terror) String() string {
 	// sigma OS errors
 	case TErrRetry:
 		return "retry"
-	case TErrBadFd:
-		return "Bad fd"
 
 	// for passing non-sigma errors through
 	case TErrError:

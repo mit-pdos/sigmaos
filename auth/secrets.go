@@ -10,6 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 type Secret struct {
@@ -29,20 +30,34 @@ func (s *Secret) String() string {
 }
 
 func GetAWSSecrets() (*proc.ProcSecretProto, error) {
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithSharedConfigProfile("sigmaos"))
+	sharedCredsFiles := []string{
+		config.DefaultSharedCredentialsFilename(),
+		"/home/sigmaos/.aws/credentials",
+	}
+	sharedConfFiles := []string{
+		config.DefaultSharedConfigFilename(),
+		"/home/sigmaos/.aws/config",
+	}
+	cfg, err := config.LoadSharedConfigProfile(
+		context.TODO(),
+		sp.AWS_PROFILE,
+		func(o *config.LoadSharedConfigOptions) {
+			o.ConfigFiles = sharedConfFiles
+			o.CredentialsFiles = sharedCredsFiles
+		},
+	)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Load AWS config: %v", err)
 		return nil, err
 	}
-	creds, err := cfg.Credentials.Retrieve(context.TODO())
-	if err != nil {
-		db.DPrintf(db.ERROR, "Retreive AWS cred: %v", err)
-		return nil, err
-	}
+	//	creds, err := cfg.Credentials.Retrieve(context.TODO())
+	//	if err != nil {
+	//		db.DPrintf(db.ERROR, "Retreive AWS cred: %v", err)
+	//		return nil, err
+	//	}
 	return &proc.ProcSecretProto{
-		ID:  creds.AccessKeyID,
-		Key: creds.SecretAccessKey,
+		ID:  cfg.Credentials.AccessKeyID,
+		Key: cfg.Credentials.SecretAccessKey,
 	}, nil
 }
 

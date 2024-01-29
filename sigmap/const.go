@@ -94,6 +94,11 @@ const (
 	ROOTREALM Trealm = "rootrealm"
 )
 
+// AWS Profile consts
+const (
+	AWS_PROFILE = "sigmaos"
+)
+
 // Networking consts
 const (
 	NO_IP              Tip     = ""

@@ -78,10 +78,15 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
 	s = time.Now()
 	if err := mgr.downloadProc(p); err != nil {
-		db.DFatalf("Error downloadProc: %v", err)
+		// If unable to download the proc, mark it as crashed & return
+		mgr.procCrashed(p, err)
+		return
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Binary download time %v", p.GetPid(), time.Since(s))
-	mgr.runProc(p)
+	err := mgr.runProc(p)
+	if err != nil {
+		mgr.procCrashed(p, err)
+	}
 }
 
 func (mgr *ProcMgr) Started(pid sp.Tpid) {

@@ -244,6 +244,7 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap,
 func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) error {
 	file, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
+		db.DPrintf(db.MR, "Error OpenFile out: %v", err)
 		return err
 	}
 	defer file.Close()
@@ -252,9 +253,11 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) erro
 		r := strconv.Itoa(i)
 		rdr, err := fsl.OpenReader(ReduceOut(jobName) + r + "/")
 		if err != nil {
+			db.DPrintf(db.MR, "Error OpenReader [%v]: %v", ReduceOut(jobName)+r+"/", err)
 			return err
 		}
 		if _, err := io.Copy(wrt, rdr.Reader); err != nil {
+			db.DPrintf(db.MR, "Error Copy: %v", err)
 			return err
 		}
 	}

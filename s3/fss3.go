@@ -20,11 +20,40 @@ var fss3 *Fss3
 
 type Fss3 struct {
 	*sigmasrv.SigmaSrv
-	mu sync.Mutex
+	mu      sync.Mutex
+	clients map[string]*s3.Client
+}
+
+func (fss3 *Fss3) GetClient(p *sp.Tprincipal) *s3.Client {
+	fss3.mu.Lock()
+	defer fss3.mu.Unlock()
+
+	var clnt *s3.Client
+	var ok bool
 	// TODO: don't create a new client for each PID... create a new client for
 	// each principal...
-	//	clients map[string]*s3.Client
-	client *s3.Client
+	if clnt, ok = fss3.clients[p.ID]; ok {
+		return clnt
+	}
+	// TODO: load aws secrets from context
+	secrets, err := auth.GetAWSSecrets()
+	if err != nil {
+		db.DFatalf("Failed to load AWS secrets %v", err)
+	}
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithCredentialsProvider(
+			auth.NewAWSCredentialsProvider(secrets),
+		),
+	)
+	if err != nil {
+		db.DFatalf("Failed to load SDK configuration %v", err)
+	}
+	clnt = s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = true
+	})
+	fss3.clients[p.ID] = clnt
+	return clnt
 }
 
 func RunFss3(buckets []string) {
@@ -43,18 +72,5 @@ func RunFss3(buckets []string) {
 	defer p.Done()
 
 	fss3.SigmaSrv = ssrv
-	secrets, err := auth.GetAWSSecrets()
-	if err != nil {
-		db.DFatalf("Failed to load AWS secrets %v", err)
-	}
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(auth.NewAWSCredentialsProvider(secrets)))
-
-	if err != nil {
-		db.DFatalf("Failed to load SDK configuration %v", err)
-	}
-
-	fss3.client = s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.UsePathStyle = true
-	})
 	ssrv.RunServer()
 }

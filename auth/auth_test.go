@@ -67,6 +67,12 @@ func TestStartStop(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+
+	sts, err := rootts.GetDir(path.Join(sp.S3, "~local", "9ps3"))
+	assert.Nil(t, err, "Error getdir: %v", err)
+
+	db.DPrintf(db.TEST, "realm s3 root %v", sp.Names(sts))
+
 	db.DPrintf(db.TEST, "Started successfully")
 	rootts.Shutdown()
 }

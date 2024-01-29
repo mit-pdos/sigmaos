@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 
 	db "sigmaos/debug"
 )
@@ -41,4 +43,8 @@ func GetAWSSecrets() (*Secret, error) {
 		ID:  creds.AccessKeyID,
 		Key: creds.SecretAccessKey,
 	}, nil
+}
+
+func NewAWSCredentialsProvider(s *Secret) aws.CredentialsProvider {
+	return credentials.NewStaticCredentialsProvider(s.ID, s.Key, "")
 }

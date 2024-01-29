@@ -114,7 +114,11 @@ func (pathc *PathClnt) detachAll() error {
 
 // Detach from server
 func (pathc *PathClnt) Detach(pn string) error {
-	fid, _, err := pathc.mnt.umount(path.Split(pn), true)
+	p, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return err
+	}
+	fid, _, err := pathc.mnt.umount(p, true)
 	if err != nil {
 		db.DPrintf(db.TEST, "%v: Detach %q err %v\n", pathc.cid, pn, err)
 		return err
@@ -127,7 +131,11 @@ func (pathc *PathClnt) Detach(pn string) error {
 }
 
 func (pathc *PathClnt) mount(fid sp.Tfid, pn string) *serr.Err {
-	if err := pathc.mnt.add(path.Split(pn), fid); err != nil {
+	p, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return err
+	}
+	if err := pathc.mnt.add(p, fid); err != nil {
 		if err.Code() == serr.TErrExists {
 			// Another thread may already have mounted
 			// path; clunk the fid and don't return an
@@ -150,7 +158,10 @@ func (pathc *PathClnt) Mount(fid sp.Tfid, path string) error {
 
 func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Create %v perm %v lid %v\n", pathc.cid, p, perm, lid)
-	path := path.Split(p)
+	path, err := serr.PathSplitErr(p)
+	if err != nil {
+		return sp.NoFid, err
+	}
 	dir := path.Dir()
 	base := path.Base()
 	fid, err := pathc.walk(dir, uname, true, nil)
@@ -170,9 +181,14 @@ func (pathc *PathClnt) Create(p string, uname sp.Tuname, perm sp.Tperm, mode sp.
 // for within a directory.
 func (pathc *PathClnt) Rename(old, new string, uname sp.Tuname, f *sp.Tfence) error {
 	db.DPrintf(db.PATHCLNT, "%v: Rename %v %v\n", pathc.cid, old, new)
-	opath := path.Split(old)
-	npath := path.Split(new)
-
+	opath, err := serr.PathSplitErr(old)
+	if err != nil {
+		return err
+	}
+	npath, err := serr.PathSplitErr(new)
+	if err != nil {
+		return err
+	}
 	if len(opath) != len(npath) {
 		if err := pathc.renameat(old, new, uname, f); err != nil {
 			return err
@@ -204,8 +220,14 @@ func (pathc *PathClnt) Rename(old, new string, uname sp.Tuname, f *sp.Tfence) er
 // Rename across directories of a single server using Renameat
 func (pathc *PathClnt) renameat(old, new string, uname sp.Tuname, f *sp.Tfence) *serr.Err {
 	db.DPrintf(db.PATHCLNT, "%v: Renameat %v %v\n", pathc.cid, old, new)
-	opath := path.Split(old)
-	npath := path.Split(new)
+	opath, err := serr.PathSplitErr(old)
+	if err != nil {
+		return err
+	}
+	npath, err := serr.PathSplitErr(new)
+	if err != nil {
+		return err
+	}
 	o := opath[len(opath)-1]
 	n := npath[len(npath)-1]
 	fid, err := pathc.walk(opath[:len(opath)-1], uname, path.EndSlash(old), nil)
@@ -223,7 +245,10 @@ func (pathc *PathClnt) renameat(old, new string, uname sp.Tuname, f *sp.Tfence) 
 
 func (pathc *PathClnt) Remove(name string, uname sp.Tuname, f *sp.Tfence) error {
 	db.DPrintf(db.PATHCLNT, "%v: Remove %v\n", pathc.cid, name)
-	pn := path.Split(name)
+	pn, err := serr.PathSplitErr(name)
+	if err != nil {
+		return err
+	}
 	fid, rest, err := pathc.resolve(pn, uname, path.EndSlash(name))
 	if err != nil {
 		return err
@@ -244,7 +269,10 @@ func (pathc *PathClnt) Remove(name string, uname sp.Tuname, f *sp.Tfence) error 
 
 func (pathc *PathClnt) Stat(name string, uname sp.Tuname) (*sp.Stat, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Stat %v\n", pathc.cid, name)
-	pn := path.Split(name)
+	pn, err := serr.PathSplitErr(name)
+	if err != nil {
+		return nil, err
+	}
 	target, rest, err := pathc.resolve(pn, uname, true)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "%v: Stat resolve %v err %v\n", pathc.cid, pn, err)
@@ -255,7 +283,7 @@ func (pathc *PathClnt) Stat(name string, uname sp.Tuname) (*sp.Stat, error) {
 		st.Name = pathc.FidClnt.Lookup(target).Servers().String()
 		return st, nil
 	} else {
-		fid, err := pathc.walk(path.Split(name), uname, path.EndSlash(name), nil)
+		fid, err := pathc.walk(pn, uname, path.EndSlash(name), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -270,7 +298,10 @@ func (pathc *PathClnt) Stat(name string, uname sp.Tuname) (*sp.Stat, error) {
 
 func (pathc *PathClnt) Open(pn string, uname sp.Tuname, mode sp.Tmode, w Watch) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Open %v %v %v\n", pathc.cid, pn, mode, w)
-	p := path.Split(pn)
+	p, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return sp.NoFid, err
+	}
 	fid, err := pathc.walk(p, uname, path.EndSlash(pn), w)
 	if err != nil {
 		return sp.NoFid, err
@@ -298,7 +329,10 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w Watch) error {
 
 func (pathc *PathClnt) SetRemoveWatch(pn string, uname sp.Tuname, w Watch) error {
 	db.DPrintf(db.PATHCLNT, "%v: SetRemoveWatch %v", pathc.cid, pn)
-	p := path.Split(pn)
+	p, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return err
+	}
 	fid, err := pathc.walk(p, uname, path.EndSlash(pn), nil)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "%v: SetRemoveWatch: Walk %v err %v", pathc.cid, pn, err)
@@ -332,7 +366,10 @@ func Retry(err *serr.Err) bool {
 
 func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v\n", pathc.cid, pn, mode)
-	p := path.Split(pn)
+	p, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return nil, err
+	}
 	fid, rest, err := pathc.resolve(p, uname, path.EndSlash(pn))
 	if err != nil {
 		return nil, err
@@ -357,7 +394,10 @@ func (pathc *PathClnt) GetFile(pn string, uname sp.Tuname, mode sp.Tmode, off sp
 // Create or open file and write it
 func (pathc *PathClnt) PutFile(pn string, uname sp.Tuname, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId, f *sp.Tfence) (sp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "%v: PutFile %v %v %v\n", pathc.cid, pn, mode, lid)
-	p := path.Split(pn)
+	p, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return 0, err
+	}
 	fid, rest, err := pathc.resolve(p, uname, path.EndSlash(pn))
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "%v: Error PutFile resolve %v %v %v: %v", pathc.cid, pn, mode, lid, err)
@@ -397,7 +437,10 @@ func (pathc *PathClnt) resolve(p path.Path, uname sp.Tuname, resolve bool) (sp.T
 
 // XXX use MountedAt
 func (pathc *PathClnt) LastMount(pn string, uname sp.Tuname) (path.Path, path.Path, error) {
-	p := path.Split(pn)
+	p, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return nil, nil, err
+	}
 	_, left, err := pathc.resolve(p, uname, path.EndSlash(pn))
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "%v: resolve  %v err %v\n", pathc.cid, pn, err)
@@ -411,11 +454,14 @@ func (pathc *PathClnt) LastMount(pn string, uname sp.Tuname) (path.Path, path.Pa
 // partition to server that exports pn
 func (pathc *PathClnt) Disconnect(pn string, fids []sp.Tfid) error {
 	db.DPrintf(db.CRASH, "Disconnect %v mnts %v\n", pn, pathc.mnt.mountedPaths())
-	mntp := pathc.mnt.mountedAt(path.Split(pn))
+	p, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return err
+	}
+	mntp := pathc.mnt.mountedAt(p)
 	for _, fid := range fids {
 		ch := pathc.FidClnt.Lookup(fid)
 		if ch != nil {
-			p := path.Split(pn)
 			if p.IsParent(ch.Path()) {
 				db.DPrintf(db.CRASH, "fid disconnect fid %v %v %v\n", fid, ch, mntp)
 				pathc.FidClnt.Disconnect(fid)

@@ -287,8 +287,11 @@ func (ts *Tstate) compare() {
 	}
 	b1 := out1.Bytes()
 	b2 := out2.Bytes()
-	assert.Equal(ts.T, len(b1), len(b2), "Output files have different length")
-	assert.Equal(ts.T, b1, b2, "Output files have different contents")
+	if assert.Equal(ts.T, len(b1), len(b2), "Output files have different length") {
+		// Only do byte-by-byte comparison if output lengths are the same
+		// (otherwise we just crowd the test output)
+		assert.Equal(ts.T, b1, b2, "Output files have different contents")
+	}
 }
 
 func (ts *Tstate) checkJob() {

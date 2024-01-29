@@ -57,7 +57,9 @@ func (fss3 *Fss3) GetClient(p *sp.Tprincipal) *s3.Client {
 }
 
 func RunFss3(buckets []string) {
-	fss3 = &Fss3{}
+	fss3 = &Fss3{
+		clients: make(map[string]*s3.Client),
+	}
 	root := newDir("", path.Path{}, sp.DMDIR)
 	pe := proc.GetProcEnv()
 	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, pe.GetNet())

@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 
-	"sigmaos/auth"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
@@ -31,11 +30,13 @@ func newSigmaClntSrv() (*SigmaClntSrv, error) {
 	if err != nil {
 		db.DFatalf("Error local IP: %v", err)
 	}
-	s3secrets, err := auth.GetAWSSecrets()
-	if err != nil {
-		db.DFatalf("Failed to load AWS secrets %v", err)
-	}
-	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	//	s3secrets, err := auth.GetAWSSecrets()
+	//	if err != nil {
+	//		db.DFatalf("Failed to load AWS secrets %v", err)
+	//	}
+	//	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	// TODO: get s3 secrets
+	secrets := map[string]*proc.ProcSecretProto{"s3": nil}
 	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, secrets, "127.0.0.1", localIP, localIP, "local-build", false, false)
 	pcfg.Program = "sigmaclntd"
 	pcfg.SetPrincipal(&sp.Tprincipal{

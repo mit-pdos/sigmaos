@@ -131,7 +131,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	if p.ProcEnvProto.Claims.AllowedPaths == nil {
 		p.ProcEnvProto.Claims.AllowedPaths = parentPE.Claims.AllowedPaths
 	}
-	p.ProcEnvProto.Principal.TokenStr = parentPE.Principal.TokenStr // XXX remove
+	// p.ProcEnvProto.Principal.TokenStr = parentPE.Principal.TokenStr // XXX remove
 }
 
 func (p *Proc) SetAllowedPaths(paths []string) {

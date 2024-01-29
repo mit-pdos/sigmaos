@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -118,6 +119,14 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 	if err != nil {
 		return err
 	}
+	pc := auth.NewProcClaims(p.GetProcEnv())
+	pc.AllowedPaths = []string{"*"}
+	token, err := k.as.NewToken(pc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+		return err
+	}
+	p.SetToken(token)
 	cmd, err := runKNamed(pcfg, p, sp.ROOTREALM, init)
 	if err != nil {
 		return err

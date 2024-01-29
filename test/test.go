@@ -132,7 +132,13 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
 		return nil, err1
 	}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
+	s3secrets, err1 := auth.GetAWSSecrets()
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
+		return nil, err1
+	}
+	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	pc := auth.NewProcClaims(pe)
 	token, err1 := as.NewToken(pc)
@@ -247,7 +253,10 @@ func (ts *Tstate) Shutdown() error {
 }
 
 func Dump(t *testing.T) {
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, sp.Tip(EtcdIP), "", "", "", false, false)
+	s3secrets, err1 := auth.GetAWSSecrets()
+	assert.Nil(t, err1)
+	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), "", "", "", false, false)
 	fs, err := fsetcd.NewFsEtcd(pe.GetRealm(), pe.GetEtcdIP())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)

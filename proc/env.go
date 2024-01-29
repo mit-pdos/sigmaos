@@ -100,6 +100,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Claims: &ProcClaimsProto{
 				PidStr:       string(pid),
 				AllowedPaths: nil, // By default, will be set to the parent's AllowedPaths unless otherwise specified
+				Secrets:      nil, // By default, will be set to the parent's Secrets unless otherwise specified
 			},
 		},
 	}
@@ -114,7 +115,7 @@ func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 	return &ProcEnv{p}
 }
 
-func NewBootProcEnv(principal *sp.Tprincipal, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool) *ProcEnv {
+func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProto, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetPrincipal(principal)
 	// Allow all paths for boot env
@@ -132,12 +133,13 @@ func NewBootProcEnv(principal *sp.Tprincipal, etcdIP sp.Tip, innerIP sp.Tip, out
 	return pe
 }
 
-func NewTestProcEnv(realm sp.Trealm, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool) *ProcEnv {
+func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetPrincipal(&sp.Tprincipal{
 		ID:       "test",
 		TokenStr: NOT_SET,
 	})
+	pe.SetSecrets(secrets)
 	// Allow all paths for boot env
 	pe.SetAllowedPaths([]string{"*"})
 	pe.SetPID(sp.GenPid("test"))
@@ -177,6 +179,10 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 
 func (pe *ProcEnvProto) GetPID() sp.Tpid {
 	return sp.Tpid(pe.PidStr)
+}
+
+func (pe *ProcEnvProto) SetSecrets(secrets map[string]*ProcSecretProto) {
+	pe.Claims.Secrets = secrets
 }
 
 func (pe *ProcEnvProto) SetToken(token string) {

@@ -131,6 +131,10 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	if p.ProcEnvProto.Claims.AllowedPaths == nil {
 		p.ProcEnvProto.Claims.AllowedPaths = parentPE.Claims.AllowedPaths
 	}
+	// If parent didn't specify secrets, inherit the parent's secrets
+	if p.ProcEnvProto.Claims.Secrets == nil {
+		p.ProcEnvProto.Claims.Secrets = parentPE.Claims.Secrets
+	}
 }
 
 func (p *Proc) SetAllowedPaths(paths []string) {

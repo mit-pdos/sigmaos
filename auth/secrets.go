@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 )
 
 type Secret struct {
@@ -27,7 +28,7 @@ func (s *Secret) String() string {
 	return fmt.Sprintf("&{ id:%v key:redacted }", s.ID)
 }
 
-func GetAWSSecrets() (*Secret, error) {
+func GetAWSSecrets() (*proc.ProcSecretProto, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("sigmaos"))
 	if err != nil {
@@ -39,12 +40,12 @@ func GetAWSSecrets() (*Secret, error) {
 		db.DPrintf(db.ERROR, "Retreive AWS cred: %v", err)
 		return nil, err
 	}
-	return &Secret{
+	return &proc.ProcSecretProto{
 		ID:  creds.AccessKeyID,
 		Key: creds.SecretAccessKey,
 	}, nil
 }
 
-func NewAWSCredentialsProvider(s *Secret) aws.CredentialsProvider {
+func NewAWSCredentialsProvider(s *proc.ProcSecretProto) aws.CredentialsProvider {
 	return credentials.NewStaticCredentialsProvider(s.ID, s.Key, "")
 }

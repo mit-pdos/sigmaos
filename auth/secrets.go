@@ -50,11 +50,6 @@ func GetAWSSecrets() (*proc.ProcSecretProto, error) {
 		db.DPrintf(db.ERROR, "Load AWS config: %v", err)
 		return nil, err
 	}
-	//	creds, err := cfg.Credentials.Retrieve(context.TODO())
-	//	if err != nil {
-	//		db.DPrintf(db.ERROR, "Retreive AWS cred: %v", err)
-	//		return nil, err
-	//	}
 	return &proc.ProcSecretProto{
 		ID:  cfg.Credentials.AccessKeyID,
 		Key: cfg.Credentials.SecretAccessKey,

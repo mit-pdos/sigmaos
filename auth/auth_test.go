@@ -88,7 +88,7 @@ func TestInspectNamespaceOK(t *testing.T) {
 	sts, err = rootts.GetDir(path.Join(sp.S3, "~local", "9ps3"))
 	assert.Nil(t, err, "Error getdir: %v", err)
 
-	db.DPrintf(db.TEST, "realm s3 root %v", sp.Names(sts))
+	db.DPrintf(db.TEST, "9ps3 root %v", sp.Names(sts))
 
 	sts, err = rootts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)

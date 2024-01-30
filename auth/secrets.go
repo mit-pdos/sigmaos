@@ -25,6 +25,13 @@ func NewSecret(id, key string) *Secret {
 	}
 }
 
+func NewSecretFromProto(psp *proc.ProcSecretProto) *Secret {
+	return &Secret{
+		ID:  psp.ID,
+		Key: psp.Key,
+	}
+}
+
 func (s *Secret) String() string {
 	return fmt.Sprintf("&{ id:%v key:<<redacted>> }", s.ID)
 }

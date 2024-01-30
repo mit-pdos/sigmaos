@@ -5,6 +5,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type SigVerificationKey []byte
+
 type AuthSrv interface {
 	SetDelegatedProcToken(p *proc.Proc) error
 	NewToken(pc *ProcClaims) (string, error)

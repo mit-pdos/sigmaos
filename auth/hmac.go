@@ -15,10 +15,10 @@ type HMACAuthSrv struct {
 	hmacSecret []byte
 }
 
-func NewHMACAuthSrv(srvpath string, hmacSecret []byte) (*HMACAuthSrv, error) {
+func NewHMACAuthSrv(srvpath string, hmacSecret SigVerificationKey) (*HMACAuthSrv, error) {
 	return &HMACAuthSrv{
 		srvpath:    srvpath,
-		hmacSecret: hmacSecret,
+		hmacSecret: []byte(hmacSecret),
 	}, nil
 }
 

@@ -84,7 +84,10 @@ func (mfs *MemFs) lookupParent(path path.Path, ltype lockmap.Tlock) (fs.Dir, *lo
 }
 
 func (mfs *MemFs) NewDev(pn string, dev fs.Inode) *serr.Err {
-	path := path.Split(pn)
+	path, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return err
+	}
 	d, lk, err := mfs.lookupParent(path.Dir(), lockmap.WLOCK)
 	if err != nil {
 		return err
@@ -95,7 +98,10 @@ func (mfs *MemFs) NewDev(pn string, dev fs.Inode) *serr.Err {
 }
 
 func (mfs *MemFs) MkNod(pn string, i fs.Inode) *serr.Err {
-	path := path.Split(pn)
+	path, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return err
+	}
 	d, lk, err := mfs.lookupParent(path.Dir(), lockmap.WLOCK)
 	if err != nil {
 		return err
@@ -105,7 +111,10 @@ func (mfs *MemFs) MkNod(pn string, i fs.Inode) *serr.Err {
 }
 
 func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
-	path := path.Split(pn)
+	path, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return nil, err
+	}
 	d, lk, err := mfs.lookupParent(path.Dir(), lockmap.WLOCK)
 	if err != nil {
 		return nil, err
@@ -115,7 +124,10 @@ func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs
 }
 
 func (mfs *MemFs) Remove(pn string) *serr.Err {
-	path := path.Split(pn)
+	path, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return err
+	}
 	d, lk, err := mfs.lookupParent(path.Dir(), lockmap.WLOCK)
 	if err != nil {
 		return err
@@ -125,7 +137,10 @@ func (mfs *MemFs) Remove(pn string) *serr.Err {
 }
 
 func (mfs *MemFs) Open(pn string, m sp.Tmode, ltype lockmap.Tlock) (fs.FsObj, *serr.Err) {
-	path := path.Split(pn)
+	path, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return nil, err
+	}
 	lo, lk, err := mfs.lookup(path, ltype)
 	if err != nil {
 		return nil, err

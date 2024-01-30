@@ -250,6 +250,13 @@ func IsErrCode(error error, code Terror) bool {
 	return false
 }
 
+func PathSplitErr(p string) (path.Path, *Err) {
+	if p == "" {
+		return nil, NewErr(TErrInval, p)
+	}
+	return path.Split(p), nil
+}
+
 func errnoToErr(errno syscall.Errno, err error, name string) *Err {
 	switch errno {
 	case syscall.ENOENT:

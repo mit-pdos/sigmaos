@@ -53,6 +53,18 @@ func TestInitFs(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestEmptyPath(t *testing.T) {
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	_, err := ts.GetDir(pathname)
+	assert.Nil(t, err)
+	_, err = ts.GetFile("")
+	assert.NotNil(t, err)
+	ts.Shutdown()
+}
+
 func TestRemoveBasic(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

@@ -33,8 +33,6 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 
 	var clnt *s3.Client
 	var ok bool
-	// TODO: don't create a new client for each PID... create a new client for
-	// each principal...
 	if clnt, ok = fss3.clients[ctx.Principal().ID]; ok {
 		return clnt, nil
 	}

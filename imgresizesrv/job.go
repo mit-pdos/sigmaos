@@ -1,4 +1,4 @@
-package imgresized
+package imgresizesrv
 
 import (
 	"strconv"

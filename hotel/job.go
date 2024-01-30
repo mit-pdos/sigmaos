@@ -5,6 +5,7 @@ import (
 	"path"
 	"strconv"
 
+	"sigmaos/cache"
 	"sigmaos/cachedsvc"
 	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
@@ -113,18 +114,25 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) error {
 }
 
 type Srv struct {
-	Name   string
-	Public bool
-	Mcpu   proc.Tmcpu
+	Name         string
+	Public       bool
+	Mcpu         proc.Tmcpu
+	AllowedPaths []string
 }
+
+//	,[]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}
 
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func NewHotelSvc(public bool) []Srv {
 	return []Srv{
-		Srv{"hotel-userd", public, 0}, Srv{"hotel-rated", public, 2000},
-		Srv{"hotel-geod", public, 2000}, Srv{"hotel-profd", public, 2000},
-		Srv{"hotel-searchd", public, 3000}, Srv{"hotel-reserved", public, 3000},
-		Srv{"hotel-recd", public, 0}, Srv{"hotel-wwwd", public, 3000},
+		Srv{"hotel-userd", public, 0, []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
+		Srv{"hotel-rated", public, 2000, []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*")}},
+		Srv{"hotel-geod", public, 2000, []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
+		Srv{"hotel-profd", public, 2000, []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*")}},
+		Srv{"hotel-searchd", public, 3000, []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), HOTELRATE, HOTELGEO}},
+		Srv{"hotel-reserved", public, 3000, []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*")}},
+		Srv{"hotel-recd", public, 0, []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
+		Srv{"hotel-wwwd", public, 3000, []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), HOTELSEARCH, HOTELUSER, HOTELPROF, HOTELREC, HOTELGEO, HOTELRESERVE}},
 	}
 }
 
@@ -200,6 +208,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 	for _, srv := range srvs {
 		db.DPrintf(db.TEST, "Hotel spawn %v", srv.Name)
 		p := proc.NewProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
+		p.SetAllowedPaths(srv.AllowedPaths)
 		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)

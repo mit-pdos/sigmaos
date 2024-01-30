@@ -68,7 +68,7 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 		return nil, fmt.Errorf("NewImgSrv: error parse crash %v", err)
 	}
 	imgd.crash = int64(crashing)
-	imgd.ft, err = fttasks.NewFtTasks(sc, IMG, imgd.job)
+	imgd.ft, err = fttasks.NewFtTasks(sc.FsLib, IMG, imgd.job)
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: NewFtTasks %v", err)
 	}
@@ -138,7 +138,7 @@ func (imgd *ImgSrv) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s", imgd.job)
 
-	ftm, err := fttasks.NewTaskMgr(imgd.ft)
+	ftm, err := fttasks.NewTaskMgr(imgd.SigmaClnt.ProcAPI, imgd.ft)
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}

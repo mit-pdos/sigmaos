@@ -84,7 +84,7 @@ func newTstate(t *test.Tstate) *Tstate {
 	ts.job = rd.String(4)
 	ts.ch = make(chan bool)
 	ts.cleanup()
-	ft, err := fttasks.MkFtTasks(ts.SigmaClnt, imgresizesrv.IMG, ts.job)
+	ft, err := fttasks.MkFtTasks(ts.SigmaClnt.FsLib, imgresizesrv.IMG, ts.job)
 	assert.Nil(ts.T, err)
 	ts.ft = ft
 	return ts

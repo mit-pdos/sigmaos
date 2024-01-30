@@ -12,6 +12,7 @@ import (
 
 type FtTaskMgr struct {
 	*FtTasks
+	proc.ProcAPI
 	ntask int32
 }
 
@@ -27,11 +28,11 @@ type Ttask struct {
 	fn   string
 }
 
-func NewTaskMgr(ft *FtTasks) (*FtTaskMgr, error) {
+func NewTaskMgr(pclnt proc.ProcAPI, ft *FtTasks) (*FtTaskMgr, error) {
 	if err := ft.RecoverTasks(); err != nil {
 		return nil, err
 	}
-	return &FtTaskMgr{FtTasks: ft}, nil
+	return &FtTaskMgr{ProcAPI: pclnt, FtTasks: ft}, nil
 }
 
 func (ftm *FtTaskMgr) ExecuteTasks(mkProc func(n string) *proc.Proc) *proc.Status {

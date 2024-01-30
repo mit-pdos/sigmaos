@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	rd "sigmaos/rand"
 	"sigmaos/serr"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -17,7 +17,7 @@ const (
 )
 
 type FtTasks struct {
-	*sigmaclnt.SigmaClnt
+	*fslib.FsLib
 	dir   string
 	job   string
 	done  string
@@ -26,32 +26,32 @@ type FtTasks struct {
 	error string
 }
 
-func MkFtTasks(sc *sigmaclnt.SigmaClnt, dir, job string) (*FtTasks, error) {
-	sc.RmDir(dir)
-	if err := sc.MkDir(dir, 0777); err != nil {
+func MkFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
+	fsl.RmDir(dir)
+	if err := fsl.MkDir(dir, 0777); err != nil {
 		return nil, err
 	}
 	// job can be a pathname
-	if err := sc.MkDirPath(dir, job, 0777); err != nil {
+	if err := fsl.MkDirPath(dir, job, 0777); err != nil {
 		return nil, err
 	}
-	if err := sc.MkDir(path.Join(dir, job, "done"), 0777); err != nil {
+	if err := fsl.MkDir(path.Join(dir, job, "done"), 0777); err != nil {
 		return nil, err
 	}
-	if err := sc.MkDir(path.Join(dir, job, "todo"), 0777); err != nil {
+	if err := fsl.MkDir(path.Join(dir, job, "todo"), 0777); err != nil {
 		return nil, err
 	}
-	if err := sc.MkDir(path.Join(dir, job, "wip"), 0777); err != nil {
+	if err := fsl.MkDir(path.Join(dir, job, "wip"), 0777); err != nil {
 		return nil, err
 	}
-	if err := sc.MkDir(path.Join(dir, job, "error"), 0777); err != nil {
+	if err := fsl.MkDir(path.Join(dir, job, "error"), 0777); err != nil {
 		return nil, err
 	}
-	return NewFtTasks(sc, dir, job)
+	return NewFtTasks(fsl, dir, job)
 }
 
-func NewFtTasks(sc *sigmaclnt.SigmaClnt, dir, job string) (*FtTasks, error) {
-	ft := &FtTasks{SigmaClnt: sc, dir: dir, job: job}
+func NewFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
+	ft := &FtTasks{FsLib: fsl, dir: dir, job: job}
 	ft.done = path.Join(dir, job, "done")
 	ft.todo = path.Join(dir, job, "todo")
 	ft.wip = path.Join(dir, job, "wip")

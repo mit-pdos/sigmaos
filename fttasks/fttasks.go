@@ -31,7 +31,8 @@ func MkFtTasks(sc *sigmaclnt.SigmaClnt, dir, job string) (*FtTasks, error) {
 	if err := sc.MkDir(dir, 0777); err != nil {
 		return nil, err
 	}
-	if err := sc.MkDir(path.Join(dir, job), 0777); err != nil {
+	// job can be a pathname
+	if err := sc.MkDirPath(dir, job, 0777); err != nil {
 		return nil, err
 	}
 	if err := sc.MkDir(path.Join(dir, job, "done"), 0777); err != nil {

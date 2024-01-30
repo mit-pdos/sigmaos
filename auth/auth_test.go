@@ -133,6 +133,60 @@ func TestMaliciousPrincipalFail(t *testing.T) {
 	rootts.Shutdown()
 }
 
+// Test that a principal without a signed token can't access anything
+func TestMaliciousPrincipalS3Fail(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	sts, err := rootts.GetDir(path.Join(sp.S3, "~local", "9ps3"))
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
+
+	// Create an auth server
+	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
+	assert.Nil(t, err)
+	// Create a new sigma clnt
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	// Clear AWS secrets
+	pe.SetSecrets(map[string]*proc.ProcSecretProto{})
+	pc := auth.NewProcClaims(pe)
+	token, err := as.NewToken(pc)
+	assert.Nil(t, err)
+	// Set the token of the proc env to the newly authorized token
+	pe.SetToken(token)
+
+	sc1, err := sigmaclnt.NewSigmaClnt(pe)
+	assert.Nil(t, err, "Err NewClnt: %v", err)
+
+	sts, err = sc1.GetDir(sp.NAMED)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "realm names %v", sp.Names(sts))
+
+	sts, err = sc1.GetDir(path.Join(sp.S3, "~local"))
+	assert.NotNil(t, err)
+	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
+
+	sts, err = sc1.GetDir(path.Join(sp.S3, "~local", "9ps3"))
+	assert.NotNil(t, err)
+	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
+
+	sts, err = rootts.GetDir(path.Join(sp.S3, "~local", "9ps3"))
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
+
+	sts, err = rootts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "realm names sched %v", sp.Names(sts))
+
+	_, err = sc1.GetDir(path.Join(sp.SCHEDD, sts[0].Name) + "/")
+	assert.Nil(t, err)
+
+	rootts.Shutdown()
+}
+
 func TestDelegateFullAccessOK(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

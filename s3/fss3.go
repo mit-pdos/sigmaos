@@ -2,6 +2,7 @@ package fss3
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -13,6 +14,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/perf"
 	proc "sigmaos/proc"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -25,7 +27,7 @@ type Fss3 struct {
 	clients map[string]*s3.Client
 }
 
-func (fss3 *Fss3) getClient(ctx fs.CtxI) *s3.Client {
+func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 	fss3.mu.Lock()
 	defer fss3.mu.Unlock()
 
@@ -34,12 +36,17 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) *s3.Client {
 	// TODO: don't create a new client for each PID... create a new client for
 	// each principal...
 	if clnt, ok = fss3.clients[ctx.Principal().ID]; ok {
-		return clnt
+		return clnt, nil
+	}
+	s3secrets, ok := ctx.Claims().GetSecrets()["s3"]
+	// If this principal doesn't carry any s3 secrets, return EPERM
+	if !ok {
+		return nil, serr.NewErr(serr.TErrPerm, fmt.Errorf("Principal %v has no S3 secrets", ctx.Principal().ID))
 	}
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
 		config.WithCredentialsProvider(
-			auth.NewAWSCredentialsProvider(ctx.Claims().GetSecrets()["s3"]),
+			auth.NewAWSCredentialsProvider(s3secrets),
 		),
 	)
 	if err != nil {
@@ -49,7 +56,7 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) *s3.Client {
 		o.UsePathStyle = true
 	})
 	fss3.clients[ctx.Principal().ID] = clnt
-	return clnt
+	return clnt, nil
 }
 
 func RunFss3(buckets []string) {

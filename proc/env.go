@@ -161,7 +161,7 @@ func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetPrincipal(&sp.Tprincipal{
 		ID:       pe.GetPrincipal().ID + "-clnt-" + strconv.Itoa(idx),
-		TokenStr: NOT_SET,
+		TokenStr: pe.GetPrincipal().TokenStr,
 	})
 	return pe2
 }

@@ -36,11 +36,13 @@ func RunSearchSrv(n string, public bool) error {
 	}
 	rpcc, err := rpcclnt.NewRPCClnt(fsls, HOTELRATE)
 	if err != nil {
+		db.DFatalf("Err new rpcclnt rate: %v", err)
 		return err
 	}
 	s.ratec = rpcc
 	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELGEO)
 	if err != nil {
+		db.DFatalf("Err new rpcclnt geo: %v", err)
 		return err
 	}
 	s.geoc = rpcc

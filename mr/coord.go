@@ -3,6 +3,7 @@ package mr
 import (
 	"errors"
 	"fmt"
+	"path"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -128,9 +129,10 @@ func NewCoord(args []string) (*Coord, error) {
 	return c, nil
 }
 
-func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
+func (c *Coord) newTask(bin string, args []string, mb proc.Tmem, allowedPaths []string) *proc.Proc {
 	pid := sp.GenPid(bin + "-" + c.job)
 	p := proc.NewProcPid(pid, bin, args)
+	p.SetAllowedPaths(allowedPaths)
 	//	if mb > 0 {
 	//		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
 	//	}
@@ -143,14 +145,16 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := MapTask(c.job) + TIP + task
-	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask)
+	allowedPaths := []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.S3, "*"), path.Join(sp.UX, "*")}
+	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
 }
 
 func (c *Coord) reducerProc(task string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + task
 	outlink := ReduceOut(c.job) + task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + task
-	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask)
+	allowedPaths := []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.S3, "*"), path.Join(sp.UX, "*")}
+	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
 }
 
 func (c *Coord) claimEntry(dir string, st *sp.Stat) (string, error) {

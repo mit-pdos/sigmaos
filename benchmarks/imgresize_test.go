@@ -49,7 +49,9 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ji.mem = mem
 	ji.nrounds = nrounds
 
-	ft, err := fttasks.MkFtTasks(ji.SigmaClnt, imgresizesrv.IMG, ji.job)
+	ts.RmDir(imgresizesrv.IMG)
+
+	ft, err := fttasks.MkFtTasks(ji.SigmaClnt.FsLib, imgresizesrv.IMG, ji.job)
 	assert.Nil(ts.Ts.T, err, "Error MkDirs: %v", err)
 	ji.ft = ft
 

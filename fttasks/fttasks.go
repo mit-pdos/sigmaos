@@ -27,7 +27,6 @@ type FtTasks struct {
 }
 
 func MkFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
-	fsl.RmDir(dir)
 	if err := fsl.MkDir(dir, 0777); err != nil {
 		return nil, err
 	}

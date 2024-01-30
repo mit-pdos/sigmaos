@@ -17,14 +17,12 @@ type SessionTable struct {
 	newps     sps.NewProtServer
 	sesssrv   sps.SessServer
 	sessions  map[sessp.Tsession]*Session
-	attachf   sps.AttachClntF
-	detachf   sps.DetachClntF
 	lasts     map[sessp.Tsession]*Session   // for testing
 	lastClnts map[sp.TclntId]sessp.Tsession // for testing
 }
 
-func NewSessionTable(newps sps.NewProtServer, sesssrv sps.SessServer, attachf sps.AttachClntF, detachf sps.DetachClntF) *SessionTable {
-	st := &SessionTable{sesssrv: sesssrv, newps: newps, attachf: attachf, detachf: detachf}
+func NewSessionTable(newps sps.NewProtServer, sesssrv sps.SessServer) *SessionTable {
+	st := &SessionTable{sesssrv: sesssrv, newps: newps}
 	st.sessions = make(map[sessp.Tsession]*Session)
 	st.lasts = make(map[sessp.Tsession]*Session)
 	st.lastClnts = make(map[sp.TclntId]sessp.Tsession)
@@ -83,7 +81,7 @@ func (st *SessionTable) allocRL(sid sessp.Tsession) *Session {
 			}
 		}
 	}
-	sess := newSession(st.newps(st.sesssrv, sid), sid, st.attachf, st.detachf)
+	sess := newSession(st.newps(st.sesssrv, sid), sid)
 	st.sessions[sid] = sess
 	if len(st.lasts) < NLAST {
 		st.lasts[sid] = sess

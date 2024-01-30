@@ -25,7 +25,7 @@ type Npd struct {
 
 func NewNpd(pcfg *proc.ProcEnv, lip string) *Npd {
 	npd := &Npd{lip, pcfg, nil}
-	npd.st = sessstatesrv.NewSessionTable(npd.newProtServer, npd, nil, nil)
+	npd.st = sessstatesrv.NewSessionTable(npd.newProtServer, npd)
 	return npd
 }
 
@@ -96,7 +96,7 @@ func (npc *NpConn) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.NewRerrorCode(serr.TErrNotSupported)
 }
 
-func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) (sp.TclntId, *sp.Rerror) {
+func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
 	u, error := user.Current()
 	if error != nil {
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
@@ -124,7 +124,7 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachC
 	return args.TclntId(), nil
 }
 
-func (npc *NpConn) Detach(args *sp.Tdetach, rets *sp.Rdetach, detach sps.DetachClntF) *sp.Rerror {
+func (npc *NpConn) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
 	db.DPrintf(db.PROXY, "Detach\n")
 	return nil
 }

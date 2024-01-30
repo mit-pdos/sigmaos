@@ -1,7 +1,6 @@
 package fttasks
 
 import (
-	"path"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -76,7 +75,7 @@ func (ftm *FtTaskMgr) doTasks(sts []*sp.Stat, ch chan Tresult, mkProc func(n str
 		if err != nil || t == "" {
 			continue
 		}
-		s3fn, err := ftm.GetFile(path.Join(ftm.wip, t))
+		s3fn, err := ftm.ReadTask(t)
 		if err != nil {
 			continue
 		}

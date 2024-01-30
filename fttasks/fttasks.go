@@ -112,6 +112,10 @@ func (ft *FtTasks) ClaimTask(name string) (string, error) {
 	return name, nil
 }
 
+func (ft *FtTasks) ReadTask(name string) ([]byte, error) {
+	return ft.GetFile(path.Join(ft.wip, name))
+}
+
 func (ft *FtTasks) MarkDone(name string) error {
 	return ft.Rename(ft.wip+"/"+name, ft.done+"/"+name)
 }

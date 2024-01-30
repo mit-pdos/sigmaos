@@ -7,8 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fttasks"
 	"sigmaos/groupmgr"
-	"sigmaos/imgresized"
+	"sigmaos/imgresizesrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
@@ -29,6 +30,7 @@ type ImgResizeJobInstance struct {
 	ready    chan bool
 	imgd     *groupmgr.GroupMgr
 	p        *perf.Perf
+	ft       *fttasks.FtTasks
 	*test.RealmTstate
 }
 
@@ -47,8 +49,9 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ji.mem = mem
 	ji.nrounds = nrounds
 
-	err := imgresized.MkDirs(ji.FsLib, ji.job)
+	ft, err := fttasks.MkFtTasks(ji.SigmaClnt, imgresizesrv.IMG, ji.job)
 	assert.Nil(ts.Ts.T, err, "Error MkDirs: %v", err)
+	ji.ft = ft
 
 	fn := ji.input
 	fns := make([]string, 0, ji.ninputs)
@@ -58,7 +61,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 	db.DPrintf(db.ALWAYS, "Submit ImgResizeJob tasks")
 	for i := 0; i < ji.ntasks; i++ {
-		err := imgresized.SubmitTaskMulti(ji.SigmaClnt.FsLib, ji.job, fns)
+		err := ft.SubmitTaskMulti(fns)
 		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
 	}
 	db.DPrintf(db.ALWAYS, "Done submitting ImgResize tasks")
@@ -68,14 +71,14 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v job %v", ji.input, ji.ntasks, ji.mcpu, ji.job)
-	ji.imgd = imgresized.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu)
+	ji.imgd = imgresizesrv.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu)
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
 
 func (ji *ImgResizeJobInstance) Wait() {
 	db.DPrintf(db.TEST, "Waiting for ImgResizeJOb to finish")
 	for {
-		n, err := imgresized.NTaskDone(ji.SigmaClnt.FsLib, ji.job)
+		n, err := ji.ft.NTaskDone()
 		assert.Nil(ji.Ts.T, err, "Error NTaskDone: %v", err)
 		db.DPrintf(db.TEST, "ImgResizeJob NTaskDone: %v", n)
 		if n == ji.ntasks {
@@ -91,5 +94,5 @@ func (ji *ImgResizeJobInstance) Wait() {
 func (ji *ImgResizeJobInstance) Cleanup() {
 	dir := path.Join(sp.UX, "~local", path.Dir(ji.input))
 	db.DPrintf(db.TEST, "Cleaning up dir %v", dir)
-	imgresized.Cleanup(ji.FsLib, dir)
+	imgresizesrv.Cleanup(ji.FsLib, dir)
 }

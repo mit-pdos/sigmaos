@@ -70,7 +70,7 @@ func (o *Obj) readHead(ctx fs.CtxI, fss3 *Fss3) *serr.Err {
 		Bucket: &o.bucket,
 		Key:    &key,
 	}
-	result, err := fss3.GetClient(ctx.Principal()).HeadObject(context.TODO(), input)
+	result, err := fss3.getClient(ctx).HeadObject(context.TODO(), input)
 	if err != nil {
 		db.DPrintf(db.S3, "readHead: %v err %v\n", key, err)
 		return serr.NewErrError(err)
@@ -171,7 +171,7 @@ func (o *Obj) s3Read(ctx fs.CtxI, off, cnt int) (io.ReadCloser, sp.Tlength, *ser
 		Key:    &key,
 		Range:  &region,
 	}
-	result, err := fss3.GetClient(ctx.Principal()).GetObject(context.TODO(), input)
+	result, err := fss3.getClient(ctx).GetObject(context.TODO(), input)
 	if err != nil {
 		return nil, 0, serr.NewErrError(err)
 	}
@@ -207,7 +207,7 @@ func (o *Obj) s3Create(ctx fs.CtxI) *serr.Err {
 		Bucket: &o.bucket,
 		Key:    &key,
 	}
-	if _, err := fss3.GetClient(ctx.Principal()).PutObject(context.TODO(), input); err != nil {
+	if _, err := fss3.getClient(ctx).PutObject(context.TODO(), input); err != nil {
 		return serr.NewErrError(err)
 	}
 	return nil
@@ -227,7 +227,7 @@ func (o *Obj) setupWriter(ctx fs.CtxI) {
 
 func (o *Obj) writer(ctx fs.CtxI, ch chan error) {
 	key := o.key.String()
-	uploader := manager.NewUploader(fss3.GetClient(ctx.Principal()))
+	uploader := manager.NewUploader(fss3.getClient(ctx))
 	_, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
 		Bucket: &o.bucket,
 		Key:    &key,

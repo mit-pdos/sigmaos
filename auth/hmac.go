@@ -94,25 +94,25 @@ func (as *HMACAuthSrv) VerifyTokenGetClaims(signedToken string) (*ProcClaims, er
 	return nil, fmt.Errorf("Claims wrong type")
 }
 
-func (as *HMACAuthSrv) IsAuthorized(principal *sp.Tprincipal) (bool, error) {
+func (as *HMACAuthSrv) IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error) {
 	db.DPrintf(db.AUTH, "Authorization check p %v", principal.ID)
 	pc, err := as.VerifyTokenGetClaims(principal.TokenStr)
 	if err != nil {
 		db.DPrintf(db.AUTH, "Token verification failed %v", principal.ID)
-		return false, fmt.Errorf("Token verification failed: %v", err)
+		return nil, false, fmt.Errorf("Token verification failed: %v", err)
 	}
 	// Check that the server path is a subpath of one of the allowed paths
 	for _, ap := range pc.AllowedPaths {
 		db.DPrintf(db.AUTH, "Check if %v is in %v subtree", as.srvpath, ap)
 		if as.srvpath == "" && ap == sp.NAMED {
 			db.DPrintf(db.AUTH, "Authorization check to named successful p %v claims %v", principal.ID, pc)
-			return true, nil
+			return pc, true, nil
 		}
 		if IsInSubtree(as.srvpath, ap) {
 			db.DPrintf(db.AUTH, "Authorization check successful p %v claims %v", principal.ID, pc)
-			return true, nil
+			return pc, true, nil
 		}
 	}
 	db.DPrintf(db.AUTH, "Authorization check failed (path not allowed) srvpath %v p %v claims %v", as.srvpath, principal.ID, pc)
-	return false, nil
+	return nil, false, nil
 }

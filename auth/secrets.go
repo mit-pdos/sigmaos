@@ -26,7 +26,7 @@ func NewSecret(id, key string) *Secret {
 }
 
 func (s *Secret) String() string {
-	return fmt.Sprintf("&{ id:%v key:redacted }", s.ID)
+	return fmt.Sprintf("&{ id:%v key:<<redacted>> }", s.ID)
 }
 
 func GetAWSSecrets() (*proc.ProcSecretProto, error) {

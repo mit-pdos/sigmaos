@@ -40,6 +40,10 @@ func NewProcClaims(pe *proc.ProcEnv) *ProcClaims {
 	}
 }
 
+func (pc *ProcClaims) GetSecrets() map[string]*Secret {
+	return pc.Secrets
+}
+
 // Add a secret to a proc claim
 func (pc *ProcClaims) AddSecret(svc string, s *Secret) {
 	pc.Secrets[svc] = s

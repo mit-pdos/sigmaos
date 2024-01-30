@@ -1,6 +1,7 @@
 package ctx
 
 import (
+	"sigmaos/auth"
 	"sigmaos/clntcond"
 	"sigmaos/fs"
 	"sigmaos/sessp"
@@ -9,22 +10,34 @@ import (
 
 type Ctx struct {
 	principal *sp.Tprincipal
+	claims    *auth.ProcClaims
 	sessid    sessp.Tsession
 	clntid    sp.TclntId
 	sct       *clntcond.ClntCondTable
 	fencefs   fs.Dir
 }
 
-func NewCtx(principal *sp.Tprincipal, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
-	return &Ctx{principal: principal, sessid: sessid, clntid: clntid, sct: sct, fencefs: fencefs}
+func NewCtx(principal *sp.Tprincipal, claims *auth.ProcClaims, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
+	return &Ctx{
+		principal: principal,
+		claims:    claims,
+		sessid:    sessid,
+		clntid:    clntid,
+		sct:       sct,
+		fencefs:   fencefs,
+	}
 }
 
 func NewCtxNull() *Ctx {
-	return NewCtx(sp.NO_PRINCIPAL, 0, sp.NoClntId, nil, nil)
+	return NewCtx(sp.NO_PRINCIPAL, nil, 0, sp.NoClntId, nil, nil)
 }
 
 func (ctx *Ctx) Principal() *sp.Tprincipal {
 	return ctx.principal
+}
+
+func (ctx *Ctx) Claims() *auth.ProcClaims {
+	return ctx.claims
 }
 
 func (ctx *Ctx) SessionId() sessp.Tsession {

@@ -75,19 +75,12 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach, attach sps.AttachClntF) (sp.TclntId, *sp.Rerror) {
 	db.DPrintf(db.PROTSRV, "Attach %v cid %v sid %v", args, args.TclntId(), ps.sid)
-	// TODO:
-	//
-	// 1. For now, access control is all-or-nothing (at the server granularity).
-	// It should definitely be done at finer granularity (files and dirs) later
-	// on.
-	//
-	// 2. For now, authorization checks are trivial (strcmp on the Principal).
-	// They should be done using some authorization scheme (like OAuth).
-	if ok, err := ps.auth.IsAuthorized(args.Tprincipal()); err != nil || !ok {
+	claims, ok, err := ps.auth.IsAuthorized(args.Tprincipal())
+	if err != nil || !ok {
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErr(serr.TErrPerm, fmt.Errorf("Authorization check failed: ok %v err %v", ok, err)))
 	}
 	p := path.Split(args.Aname)
-	root, ctx := ps.ssrv.GetRootCtx(args.Tprincipal(), args.Aname, ps.sid, args.TclntId())
+	root, ctx := ps.ssrv.GetRootCtx(args.Tprincipal(), claims, args.Aname, ps.sid, args.TclntId())
 	tree := root.(fs.FsObj)
 	qid := ps.newQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {

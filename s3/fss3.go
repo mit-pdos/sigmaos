@@ -9,6 +9,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/path"
 	"sigmaos/perf"
 	proc "sigmaos/proc"
@@ -24,7 +25,7 @@ type Fss3 struct {
 	clients map[string]*s3.Client
 }
 
-func (fss3 *Fss3) GetClient(p *sp.Tprincipal) *s3.Client {
+func (fss3 *Fss3) getClient(ctx fs.CtxI) *s3.Client {
 	fss3.mu.Lock()
 	defer fss3.mu.Unlock()
 
@@ -32,18 +33,13 @@ func (fss3 *Fss3) GetClient(p *sp.Tprincipal) *s3.Client {
 	var ok bool
 	// TODO: don't create a new client for each PID... create a new client for
 	// each principal...
-	if clnt, ok = fss3.clients[p.ID]; ok {
+	if clnt, ok = fss3.clients[ctx.Principal().ID]; ok {
 		return clnt
-	}
-	// TODO: load aws secrets from context
-	secrets, err := auth.GetAWSSecrets()
-	if err != nil {
-		db.DFatalf("Failed to load AWS secrets %v", err)
 	}
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
 		config.WithCredentialsProvider(
-			auth.NewAWSCredentialsProvider(secrets),
+			auth.NewAWSCredentialsProvider(ctx.Claims().GetSecrets()["s3"]),
 		),
 	)
 	if err != nil {
@@ -52,7 +48,7 @@ func (fss3 *Fss3) GetClient(p *sp.Tprincipal) *s3.Client {
 	clnt = s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 	})
-	fss3.clients[p.ID] = clnt
+	fss3.clients[ctx.Principal().ID] = clnt
 	return clnt
 }
 

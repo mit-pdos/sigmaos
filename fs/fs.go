@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"sigmaos/auth"
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
@@ -17,6 +18,7 @@ type MkDirF func(Inode, NewInodeF) Inode
 
 type CtxI interface {
 	Principal() *sp.Tprincipal
+	Claims() *auth.ProcClaims
 	SessionId() sessp.Tsession
 	ClntCondTable() *clntcond.ClntCondTable
 	ClntId() sp.TclntId

@@ -55,7 +55,7 @@ func newDir(bucket string, key path.Path, perm sp.Tperm) *Dir {
 func (d *Dir) readRoot(ctx fs.CtxI) *serr.Err {
 	db.DPrintf(db.S3, "readRoot %v\n", d)
 	input := &s3.ListBucketsInput{}
-	result, err := fss3.GetClient(ctx.Principal()).ListBuckets(context.TODO(), input)
+	result, err := fss3.getClient(ctx).ListBuckets(context.TODO(), input)
 	if err != nil {
 		return serr.NewErr(serr.TErrError, err)
 	} else {
@@ -97,7 +97,7 @@ func (d *Dir) s3ReadDir(ctx fs.CtxI, fss3 *Fss3) *serr.Err {
 		Delimiter: aws.String("/"),
 	}
 	db.DPrintf(db.S3, "s3ReadDir %v params %v\n", d, params)
-	p := s3.NewListObjectsV2Paginator(fss3.GetClient(ctx.Principal()), params,
+	p := s3.NewListObjectsV2Paginator(fss3.getClient(ctx), params,
 		func(o *s3.ListObjectsV2PaginatorOptions) {
 			if v := int32(maxKeys); v != 0 {
 				o.Limit = v
@@ -271,7 +271,7 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *ser
 		Bucket: &d.bucket,
 		Key:    &key,
 	}
-	_, err := fss3.GetClient(ctx.Principal()).PutObject(context.TODO(), input)
+	_, err := fss3.getClient(ctx).PutObject(context.TODO(), input)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
@@ -341,7 +341,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 		Bucket: &d.bucket,
 		Key:    &k,
 	}
-	if _, err := fss3.GetClient(ctx.Principal()).DeleteObject(context.TODO(), input); err != nil {
+	if _, err := fss3.getClient(ctx).DeleteObject(context.TODO(), input); err != nil {
 		db.DPrintf(db.S3, "DeleteObject %v err %v\n", k, err)
 		return serr.NewErrError(err)
 	}

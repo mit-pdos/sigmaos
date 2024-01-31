@@ -59,6 +59,10 @@ func NewFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
 	return ft, nil
 }
 
+func (ft *FtTasks) Cleanup() error {
+	return ft.RmDir(path.Join(ft.dir, ft.job))
+}
+
 func (ft *FtTasks) Jobs() ([]*sp.Stat, error) {
 	return ft.GetDir(ft.dir)
 }

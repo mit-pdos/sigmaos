@@ -129,8 +129,8 @@ func ReadJobConfig(app string) (*Job, error) {
 }
 
 type Tasks struct {
-	mft *fttasks.FtTasks
-	rft *fttasks.FtTasks
+	Mft *fttasks.FtTasks
+	Rft *fttasks.FtTasks
 }
 
 func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, error) {
@@ -233,7 +233,7 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobName string, job *Job) (int, err
 		return len(bins), err
 	}
 	for _, b := range bins {
-		if err := ts.mft.SubmitTask(b); err != nil {
+		if err := ts.Mft.SubmitTask(b); err != nil {
 			return len(bins), err
 		}
 

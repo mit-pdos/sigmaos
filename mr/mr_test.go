@@ -356,6 +356,8 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux 
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
 	db.DPrintf(db.TEST, "Cleanup MR outputs")
+	ts.tasks.Mft.Cleanup()
+	ts.tasks.Rft.Cleanup()
 	mr.CleanupMROutputs(ts.FsLib, job.Output, job.Intermediate)
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
 	ts.Shutdown()

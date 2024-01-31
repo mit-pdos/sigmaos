@@ -44,7 +44,10 @@ func RunTimelineSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, TIMELINE_COL, []string{"userid"})
 	tlsrv.mongoc = mongoc
-	fsls := NewFsLibs(SOCIAL_NETWORK_TIMELINE)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_TIMELINE)
+	if err != nil {
+		return err
+	}
 	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err

@@ -57,7 +57,6 @@ const (
 	//
 
 	TErrRetry // tell client to retry
-	TErrBadFd
 
 	//
 	// To propagate non-sigma errors.
@@ -140,8 +139,6 @@ func (err Terror) String() string {
 	// sigma OS errors
 	case TErrRetry:
 		return "retry"
-	case TErrBadFd:
-		return "Bad fd"
 
 	// for passing non-sigma errors through
 	case TErrError:
@@ -251,6 +248,13 @@ func IsErrCode(error error, code Terror) bool {
 		return err.Code() == code
 	}
 	return false
+}
+
+func PathSplitErr(p string) (path.Path, *Err) {
+	if p == "" {
+		return nil, NewErr(TErrInval, p)
+	}
+	return path.Split(p), nil
 }
 
 func errnoToErr(errno syscall.Errno, err error, name string) *Err {

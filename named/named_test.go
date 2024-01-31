@@ -16,7 +16,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestBootNamed(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	sts, err := ts.GetDir(sp.NAMED + "/")
 	assert.Nil(t, err)
@@ -30,7 +33,10 @@ func TestBootNamed(t *testing.T) {
 }
 
 func TestKillNamed(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	sts, err := ts.GetDir(sp.NAMED + "/")
 	assert.Nil(t, err)

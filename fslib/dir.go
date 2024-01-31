@@ -2,10 +2,11 @@ package fslib
 
 import (
 	"fmt"
-	"path"
+	gopath "path"
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -31,6 +32,26 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 		return false, err
 	}
 	return st.Tmode().IsDir(), nil
+}
+
+// Create all parent dirs in pn if they don't exist.  If the last one
+// exists, return error.
+func (fl *FsLib) MkDirPath(dir, pn string, perm sp.Tperm) error {
+	p := path.Split(pn)
+	for i, c := range p {
+		dir = gopath.Join(dir, c)
+		err := fl.MkDir(dir, perm)
+		if err == nil {
+			continue
+		}
+		if !serr.IsErrCode(err, serr.TErrExists) {
+			return err
+		}
+		if i == len(p)-1 {
+			return err
+		}
+	}
+	return nil
 }
 
 // Too stop early, f must return true.  Returns true if stopped early.
@@ -154,7 +175,7 @@ func Present(sts []*sp.Stat, names []string) bool {
 	n := 0
 	m := make(map[string]bool)
 	for _, n := range names {
-		m[path.Base(n)] = true
+		m[gopath.Base(n)] = true
 	}
 	for _, st := range sts {
 		if _, ok := m[st.Name]; ok {
@@ -195,8 +216,8 @@ func (fsl *FsLib) ReadDirWait(dir string, wait Fwait) error {
 }
 
 func (fsl *FsLib) WaitRemove(pn string) error {
-	dir := path.Dir(pn) + "/"
-	f := path.Base(pn)
+	dir := gopath.Dir(pn) + "/"
+	f := gopath.Base(pn)
 	db.DPrintf(db.TEST, "WaitRemove: ReadDirWait dir %v\n", dir)
 	err := fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.TEST, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)

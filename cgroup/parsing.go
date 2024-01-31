@@ -3,6 +3,7 @@ package cgroup
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -30,7 +31,8 @@ func parseUint64(r io.Reader) (uint64, error) {
 	}
 	n, err := strconv.ParseUint(strings.TrimSpace(string(b)), 10, 64)
 	if err != nil {
-		db.DFatalf("Error strconv: %v", err)
+		db.DPrintf(db.ERROR, "Error strconv: %v", err)
+		return 0, err
 	}
 	return n, nil
 }
@@ -46,7 +48,8 @@ func parseInts(r io.Reader) ([]int, error) {
 	for _, str := range strs {
 		n, err := strconv.Atoi(str)
 		if err != nil {
-			db.DFatalf("Error strconv: %v", err)
+			db.DPrintf(db.ERROR, "Error strconv: %v", err)
+			return nil, err
 		}
 		ints = append(ints, n)
 	}
@@ -62,7 +65,8 @@ func parseCgroupCpuStat(r io.Reader) (uint64, error) {
 	totalUsecsStr := strings.Fields(string(b))[1]
 	totalUsecs, err := strconv.ParseUint(totalUsecsStr, 10, 64)
 	if err != nil {
-		db.DFatalf("Error strconv totalUsecs: %v", err)
+		db.DPrintf(db.ERROR, "Error strconv totalUsecs: %v", err)
+		return 0, fmt.Errorf("Error strconv totalUsecs: %v", err)
 	}
 	return totalUsecs, nil
 }
@@ -92,19 +96,21 @@ func (cfs *cgroupFs) parseSysCpuStat(r io.Reader) (uint64, error) {
 		switch parts[0] {
 		case "cpu":
 			if len(parts) < 8 {
-				db.DFatalf("invalid number of cpu fields %v", parts)
+				db.DPrintf(db.ERROR, "invalid number of cpu fields %v", parts)
+				return 0, fmt.Errorf("invalid number of cpu fields %v", parts)
 			}
 			var totalClockTicks uint64
 			for _, i := range parts[1:8] {
 				v, err := strconv.ParseUint(i, 10, 64)
 				if err != nil {
-					db.DFatalf("Unable to convert value %s to int: %s", i, err)
+					db.DPrintf(db.ERROR, "Unable to convert value %s to int: %s", i, err)
+					return 0, fmt.Errorf("Unable to convert value %s to int: %s", i, err)
 				}
 				totalClockTicks += v
 			}
 			return (totalClockTicks * microSecondsPerSecond) / clockTicksPerSecond, nil
 		}
 	}
-	db.DFatalf("Error getSysCPUUsage")
+	db.DPrintf(db.ERROR, "Error getSysCPUUsage")
 	return 0, errors.New("Unexpected end of function parseSysCpuStat")
 }

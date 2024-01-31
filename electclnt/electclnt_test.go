@@ -19,7 +19,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestAcquireRelease(t *testing.T) {
-	ts := test.NewTstate(t)
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	N := 20
 
@@ -44,7 +47,10 @@ func TestAcquireRelease(t *testing.T) {
 
 // n thread become try to become a leader and on success add 1 to shared file
 func TestLeaderConcur(t *testing.T) {
-	ts := test.NewTstate(t)
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	N := 3000
 	n_threads := 20
@@ -82,7 +88,10 @@ func TestLeaderConcur(t *testing.T) {
 
 // n thread become leader in turn and add 1
 func TestLeaderInTurn(t *testing.T) {
-	ts := test.NewTstate(t)
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	N := uint64(20)
 	sum := uint64(0)

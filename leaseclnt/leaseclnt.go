@@ -42,7 +42,7 @@ func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 			lid: sp.TleaseId(res.LeaseId),
 			lmc: lmc,
 		}
-		db.DPrintf(db.LEASECLNT, "AskLease %q %v\n", srv, li)
+		db.DPrintf(db.LEASECLNT, "AskLease %q lease %v\n", srv, li)
 		lmc.lm.Insert(srv.String(), li)
 		return li, nil
 	} else {

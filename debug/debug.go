@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"runtime"
-	// "runtime/debug"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -41,6 +41,10 @@ func WillBePrinted(label Tselector) bool {
 func DPrintf(label Tselector, format string, v ...interface{}) {
 	if _, ok := labels[label]; ok || label == ALWAYS {
 		log.Printf("%v %v %v", proc.GetSigmaDebugPid(), label, fmt.Sprintf(format, v...))
+	} else {
+		if label == ERROR {
+			log.Printf("%v %v %v\nStack trace:\n%v", proc.GetSigmaDebugPid(), label, fmt.Sprintf(format, v...), string(debug.Stack()))
+		}
 	}
 }
 

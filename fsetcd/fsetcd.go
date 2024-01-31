@@ -43,7 +43,8 @@ func NewFsEtcd(realm sp.Trealm, etcdIP string) (*FsEtcd, error) {
 	if err != nil {
 		return nil, err
 	}
-	fs := &FsEtcd{Client: cli, realm: realm, dc: newDcache()}
+	dc, err := newDcache()
+	fs := &FsEtcd{Client: cli, realm: realm, dc: dc}
 	return fs, nil
 }
 

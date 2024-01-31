@@ -90,7 +90,8 @@ func (cfs *cgroupFs) getFile(p string, mode int) (*file, error) {
 		// Seek to beginning of the file, if it was already open.
 		off, err := f.Seek(0, 0)
 		if err != nil || off != 0 {
-			db.DFatalf("Error seeking in file: off %v err %v", off, err)
+			db.DPrintf(db.ERROR, "Error seeking in file: off %v err %v", off, err)
+			return nil, err
 		}
 	}
 	return f, nil

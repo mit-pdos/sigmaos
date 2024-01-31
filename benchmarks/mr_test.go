@@ -40,12 +40,15 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string, m
 }
 
 func (ji *MRJobInstance) PrepareMRJob() {
-	ji.job = mr.ReadJobConfig(path.Join("..", "mr", ji.app))
+	jobf, err := mr.ReadJobConfig(path.Join("..", "mr", ji.app))
+	assert.Nil(ji.Ts.T, err, "Error ReadJobConfig: %v", err)
+	ji.job = jobf
 	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)
-	mr.InitCoordFS(ji.FsLib, ji.jobname, ji.job.Nreduce)
+	tasks, err := mr.InitCoordFS(ji.FsLib, ji.jobname, ji.job.Nreduce)
+	assert.Nil(ji.Ts.T, err, "Error InitCoordFS: %v", err)
 	db.DPrintf(db.TEST, "Done prepare MR FS %v", ji.jobname)
 	db.DPrintf(db.TEST, "Prepare MR job %v %v", ji.jobname, ji.job)
-	nmap, err := mr.PrepareJob(ji.FsLib, ji.jobname, ji.job)
+	nmap, err := mr.PrepareJob(ji.FsLib, tasks, ji.jobname, ji.job)
 	db.DPrintf(db.TEST, "Done prepare MR job %v %v", ji.jobname, ji.job)
 	ji.nmap = nmap
 	assert.Nil(ji.Ts.T, err, "Error PrepareJob: %v", err)

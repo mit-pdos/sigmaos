@@ -162,7 +162,7 @@ func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) (*Gr
 		}
 	}
 
-	ssrv, err := sigmasrv.NewSigmaSrvClntFence("", g.SigmaClnt, cs)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt("", g.SigmaClnt, cs)
 	if err != nil {
 		return nil, err
 	}

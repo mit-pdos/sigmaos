@@ -62,7 +62,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Sche
 // Warm the cache of proc binaries.
 func (sd *Schedd) WarmCacheBin(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
 	if err := sd.pmgr.DownloadProcBin(sp.Trealm(req.RealmStr), req.Program, req.BuildTag, proc.Ttype(req.ProcType)); err != nil {
-		db.DFatalf("Error Download Proc Bin: %v", err)
+		db.DPrintf(db.ERROR, "Error Download Proc Bin: %v", err)
 		res.OK = false
 		return err
 	}
@@ -254,7 +254,7 @@ func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
 	go sd.runProc(p)
 }
 
-// Run a proc via the local procd. Caller holds lock.
+// Run a proc via the local schedd. Caller holds lock.
 func (sd *Schedd) runProc(p *proc.Proc) {
 	defer sd.decRealmStats(p)
 	db.DPrintf(db.SCHEDD, "[%v] %v runProc %v", p.GetRealm(), sd.kernelId, p)
@@ -304,9 +304,11 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 	sd := NewSchedd(sc, kernelId, reserveMcpu)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
-		db.DFatalf("Error NewSIgmaSrv: %v", err)
+		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
-	sd.pmgr.SetupFs(ssrv.MemFs)
+	if err := sd.pmgr.SetupFs(ssrv.MemFs); err != nil {
+		db.DFatalf("Error SetupFs: %v", err)
+	}
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.SCHEDD)
 	if err != nil {

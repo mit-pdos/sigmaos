@@ -14,7 +14,11 @@ import (
 
 func TestUrl(t *testing.T) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-url", test.Overlays, 1000}}, NCACHESRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-url", test.Overlays, 1000}}, NCACHESRV)
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
@@ -47,7 +51,11 @@ func TestUrl(t *testing.T) {
 
 func TestText(t *testing.T) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-text", test.Overlays, 1000}}, NCACHESRV)
@@ -91,7 +99,11 @@ func TestText(t *testing.T) {
 
 func TestCompose(t *testing.T) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},

@@ -14,7 +14,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
-	ts := test.NewTstate(t)
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	go func() {
 		err := ts.ReadDirWait("name/", func([]*sp.Stat) bool { return true })

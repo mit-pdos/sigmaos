@@ -16,20 +16,27 @@ const (
 	N_DOWNLOAD_RETRIES = 100
 )
 
-// ProcMgr caches binary locally. There is a cache directory for each realm.
-func cachePath(realm sp.Trealm, prog string) string {
-	return path.Join(sp.UXBIN, "user", "realms", realm.String(), prog)
+func (mgr *ProcMgr) uxBinPath() string {
+	return path.Join(sp.UX, mgr.kernelId, "bin")
 }
 
-func (mgr *ProcMgr) setupUserBinCacheL(realm sp.Trealm) {
+// ProcMgr caches binary locally. There is a cache directory for each realm.
+func (mgr *ProcMgr) cachePath(realm sp.Trealm, prog string) string {
+	return path.Join(mgr.uxBinPath(), "user", "realms", realm.String(), prog)
+}
+
+func (mgr *ProcMgr) setupUserBinCacheL(realm sp.Trealm) error {
 	if _, ok := mgr.cachedProcBins[realm]; !ok {
-		mgr.cachedProcBins[realm] = make(map[string]bool)
-		cachePn := path.Dir(cachePath(realm, "PROGRAM"))
+		db.DPrintf(db.PROCMGR, "Make user bin cache for realm %v", realm)
+		cachePn := path.Dir(mgr.cachePath(realm, "PROGRAM"))
 		// Make a dir to cache the realm's binaries.
-		if err := mgr.rootsc.MkDir(cachePn, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
-			db.DFatalf("Error MkDir cache dir [%v]: %v", cachePn, err)
+		if err := mgr.rootsc.MkDir(cachePn, 0777); err != nil {
+			db.DPrintf(db.ERROR, "Error MkDir cache dir [%v]: %v", cachePn, err)
+			return err
 		}
+		mgr.cachedProcBins[realm] = make(map[string]bool)
 	}
+	return nil
 }
 
 // Returns true if the proc is already cached.
@@ -38,15 +45,17 @@ func (mgr *ProcMgr) alreadyCached(realm sp.Trealm, prog string) bool {
 	return mgr.cachedProcBins[realm][prog]
 }
 
-func (mgr *ProcMgr) downloadProc(p *proc.Proc) {
+func (mgr *ProcMgr) downloadProc(p *proc.Proc) error {
 	// Privileged procs' bins should be part of the base image.
 	if p.IsPrivileged() {
-		return
+		return nil
 	}
 	// Download the bin from s3, if it isn't already cached locally.
 	if err := mgr.downloadProcBin(p.GetRealm(), p.GetProgram(), p.GetBuildTag()); err != nil {
-		db.DFatalf("failed to download proc err:%v proc:%v", err, p)
+		db.DPrintf(db.ERROR, "failed to download proc err:%v proc:%v", err, p)
+		return fmt.Errorf("Unable to download proc: %v", err)
 	}
+	return nil
 }
 
 // Lock to ensure the bin is downloaded only once, even if multiple copies of
@@ -59,7 +68,7 @@ func (mgr *ProcMgr) downloadProcBin(realm sp.Trealm, prog, buildTag string) erro
 	if mgr.alreadyCached(realm, prog) {
 		return nil
 	}
-	commonBins := path.Join(sp.UXBIN, "user", "common")
+	commonBins := path.Join(mgr.uxBinPath(), "user", "common")
 	// Search order:
 	// 1. Try to copy from the local bin cache (user bins will be here when built locally).
 	// 2. Try the global version repo.
@@ -107,7 +116,7 @@ func (mgr *ProcMgr) tryDownloadProcPath(realm sp.Trealm, from, prog string) erro
 	src := path.Join(from, prog)
 	start := time.Now()
 	db.DPrintf(db.PROCMGR, "tryDownloadProcPath %s", src)
-	cachePn := cachePath(realm, prog)
+	cachePn := mgr.cachePath(realm, prog)
 	// Copy the binary from s3 to a temporary file.
 	tmppath := path.Join(cachePn + "-tmp-" + rand.String(8))
 	if err := mgr.rootsc.CopyFile(src, tmppath); err != nil {

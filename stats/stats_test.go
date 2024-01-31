@@ -15,7 +15,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestStatsd(t *testing.T) {
-	ts := test.NewTstate(t)
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	st := &stats.Stats{}
 	err := ts.GetFileJson("name/"+sp.STATSD, st)

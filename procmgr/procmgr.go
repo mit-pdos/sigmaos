@@ -50,12 +50,14 @@ func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 	mgr.pstate.spawn(p)
 }
 
-func (mgr *ProcMgr) SetupFs(mfs *memfssrv.MemFs) {
+func (mgr *ProcMgr) SetupFs(mfs *memfssrv.MemFs) error {
 	mgr.mfs = mfs
 	dir := procfs.NewProcDir(mgr.pstate)
 	if err := mfs.MkNod(sp.RUNNING, dir); err != nil {
-		db.DFatalf("Error mknod %v: %v", sp.RUNNING, err)
+		db.DPrintf(db.ERROR, "Error mknod %v: %v", sp.RUNNING, err)
+		return err
 	}
+	return nil
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {
@@ -75,9 +77,16 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
 	s = time.Now()
-	mgr.downloadProc(p)
+	if err := mgr.downloadProc(p); err != nil {
+		// If unable to download the proc, mark it as crashed & return
+		mgr.procCrashed(p, err)
+		return
+	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Binary download time %v", p.GetPid(), time.Since(s))
-	mgr.runProc(p)
+	err := mgr.runProc(p)
+	if err != nil {
+		mgr.procCrashed(p, err)
+	}
 }
 
 func (mgr *ProcMgr) Started(pid sp.Tpid) {
@@ -120,10 +129,12 @@ func (mgr *ProcMgr) DownloadProcBin(realm sp.Trealm, prog, buildTag string, ptyp
 	db.DPrintf(db.PROCMGR, "Download proc bin for realm %v proc %v", realm, prog)
 	// Make sure the OS-level directory which holds proc bins exists. This must
 	// be done before starting the Uprocd, because the Uprocd mounts it.
-	mgr.setupUserBinCacheL(realm)
+	if err := mgr.setupUserBinCacheL(realm); err != nil {
+		return err
+	}
 
 	if err := mgr.updm.WarmStartUprocd(realm, ptype); err != nil {
-		db.DFatalf("Error start uprocd: %v", err)
+		db.DPrintf(db.ERROR, "Error start uprocd: %v", err)
 		return err
 	}
 	return mgr.downloadProcBin(realm, prog, buildTag)
@@ -144,7 +155,11 @@ func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) sp.Tmount {
 	mnt, ok := mgr.namedMnts[realm]
 	if !ok {
 		sc := mgr.getSigmaClntL(realm)
-		mnt = sc.GetNamedMount()
+		var err error
+		mnt, err = sc.GetNamedMount()
+		if err != nil {
+			db.DFatalf("GetNamedMount: %v", err)
+		}
 		mgr.namedMnts[realm] = mnt
 	}
 	return mnt

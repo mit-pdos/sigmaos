@@ -23,7 +23,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestRoot(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	dirents, err := ts.GetDir(fn)
 	assert.Nil(t, err, "GetDir")
@@ -34,7 +37,10 @@ func TestRoot(t *testing.T) {
 }
 
 func TestFile(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	d := []byte("hello")
 	_, err := ts.PutFile(fn+"f", 0777, sp.OWRITE, d)
@@ -50,7 +56,10 @@ func TestFile(t *testing.T) {
 }
 
 func TestDir(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	err := ts.MkDir(fn+"d1", 0777)
 	assert.Equal(t, nil, err)

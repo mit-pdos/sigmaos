@@ -87,7 +87,8 @@ func (sdc *ScheddClnt) WarmCacheBin(kernelID string, realm sp.Trealm, prog, buil
 		return err
 	}
 	if !res.OK {
-		db.DFatalf("Err couldn't warm cache bin: realm %v prog %v tag %v", prog, prog, buildTag)
+		db.DPrintf(db.ERROR, "Err couldn't warm cache bin: realm %v prog %v tag %v", prog, prog, buildTag)
+		return fmt.Errorf("Err couldn't warm cache bin: realm %v prog %v tag %v", prog, prog, buildTag)
 	}
 	return nil
 }
@@ -165,7 +166,7 @@ func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc,
 	for i := 0; i < nsample; i++ {
 		kernelID, err := sdc.urpcc.RandomSrv()
 		if err != nil {
-			db.DFatalf("Can't get random srv: %v", err)
+			db.DPrintf(db.ERROR, "Can't get random srv: %v", err)
 			return nil, err
 		}
 		// Don't double-sample

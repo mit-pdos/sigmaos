@@ -1,7 +1,7 @@
 package rpcsrv
 
 import (
-	"log"
+	"fmt"
 	"reflect"
 	"runtime/debug"
 	"strings"
@@ -59,7 +59,7 @@ func (svcmap *svcMap) RegisterService(svci any) {
 			mtype.NumOut() != 1 ||
 			mtype.Out(0) != typeOfError {
 			// the method is not suitable for a handler
-			log.Printf("%v: bad method: %v\n", tname, mname)
+			db.DPrintf(db.ALWAYS, "%v: bad method: %v\n", tname, mname)
 		} else {
 			// the method looks like a handler
 			svc.methods[mname] = &method{methodt, mtype.In(2), mtype.In(3)}
@@ -68,15 +68,16 @@ func (svcmap *svcMap) RegisterService(svci any) {
 	svcmap.svc[tname] = svc
 }
 
-func (svcmap *svcMap) lookup(tname string) *service {
+func (svcmap *svcMap) lookup(tname string) (*service, error) {
 	svcmap.Lock()
 	defer svcmap.Unlock()
 
 	svc, ok := svcmap.svc[tname]
 	if !ok {
-		db.DFatalf("Unknown tname %q %v\n%s", tname, svcmap, debug.Stack())
+		db.DPrintf(db.ERROR, "Unknown tname %q %v\n%s", tname, svcmap, debug.Stack())
+		return nil, fmt.Errorf("Unknown tname %q %v\n%s", tname, svcmap, debug.Stack())
 	}
-	return svc
+	return svc, nil
 }
 
 func structName(svci any) string {

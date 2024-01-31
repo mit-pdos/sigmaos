@@ -22,12 +22,13 @@ type Dcache struct {
 	c *lru.Cache[sp.Tpath, *dcEntry]
 }
 
-func newDcache() *Dcache {
+func newDcache() (*Dcache, error) {
 	c, err := lru.New[sp.Tpath, *dcEntry](N)
 	if err != nil {
-		db.DFatalf("newDcache err %v\n", err)
+		db.DPrintf(db.ERROR, "newDcache err %v\n", err)
+		return nil, err
 	}
-	return &Dcache{c: c}
+	return &Dcache{c: c}, nil
 }
 
 func (dc *Dcache) lookup(d sp.Tpath) (*dcEntry, bool) {

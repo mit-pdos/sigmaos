@@ -1,6 +1,8 @@
 package sesssrv
 
 import (
+	"fmt"
+
 	"sigmaos/clntcond"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -50,7 +52,7 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, attachf sps.AttachClntF, detachf sps.DetachClntF, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
 	ssrv.dirover = overlay.MkDirOverlay(root)
@@ -58,7 +60,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProt
 	ssrv.newps = newps
 	ssrv.et = et
 	ssrv.stats = stats.NewStatsDev(ssrv.dirover)
-	ssrv.st = sessstatesrv.NewSessionTable(newps, ssrv, attachf, detachf)
+	ssrv.st = sessstatesrv.NewSessionTable(newps, ssrv)
 	ssrv.sct = clntcond.NewClntCondTable()
 	ssrv.plt = lockmap.NewPathLockTable()
 	ssrv.wt = watch.NewWatchTable(ssrv.sct)
@@ -109,15 +111,6 @@ func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) 
 	}
 	sess.RegisterDetachSess(f)
 	return nil
-}
-
-func (ssrv *SessSrv) Sess(sid sessp.Tsession) *sessstatesrv.Session {
-	sess, ok := ssrv.st.Lookup(sid)
-	if !ok {
-		db.DFatalf("no sess %v\n", sid)
-		return nil
-	}
-	return sess
 }
 
 func (ssrv *SessSrv) MyAddr() *sp.Taddr {
@@ -175,13 +168,14 @@ func (ssrv *SessSrv) Unregister(sid sessp.Tsession, conn sps.Conn) {
 	sess.UnsetConn(conn)
 }
 
-func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
+func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *serr.Err {
 	ssrv.qlen.Inc(1)
 	s := sessp.Tsession(fc.Fc.Session)
 	_, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
 	if !ok && s != 0 {
-		db.DFatalf("SrvFcall: no session %v for req %v\n", s, fc)
+		db.DPrintf(db.ERROR, "SrvFcall: no session %v for req %v", s, fc)
+		return serr.NewErrError(fmt.Errorf("Error: no session %v for req %v", s, fc))
 	}
 	// If the fcall is a server-generated heartbeat, it won't block;
 	// don't start a new thread.
@@ -192,6 +186,7 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) {
 			ssrv.srvfcall(fc)
 		}()
 	}
+	return nil
 }
 
 func (ssrv *SessSrv) sendReply(request *sessp.FcallMsg, reply *sessp.FcallMsg, sess *sessstatesrv.Session) {

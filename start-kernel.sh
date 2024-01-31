@@ -9,7 +9,7 @@ usage() {
 }
 
 UPDATE=""
-TAG=""
+TAG="XXX"
 BOOT="named"
 NAMED="127.0.0.1"
 DBIP="x.x.x.x"
@@ -107,6 +107,7 @@ mkdir -p /tmp/sigmaos
 # every kernel instance on a machine?
 mkdir -p /tmp/sigmaclntd
 mkdir -p /tmp/sigmaos-bin
+mkdir -p /tmp/sigmaos-bin/$KERNELID
 mkdir -p /tmp/sigmaos-perf
 mkdir -p /tmp/sigmaos-data
 chmod a+w /tmp/sigmaos-perf
@@ -137,7 +138,7 @@ MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos \
   --mount type=bind,src=/tmp/sigmaclntd,dst=/tmp/sigmaclntd \
   --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data \
-  --mount type=bind,src=/tmp/sigmaos-bin,dst=/home/sigmaos/bin/user/realms \
+  --mount type=bind,src=/tmp/sigmaos-bin/${KERNELID},dst=/home/sigmaos/bin/user/realms \
   --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf \
   --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws"
 if [ "$TAG" == "local-build" ]; then

@@ -80,18 +80,19 @@ func MemFsPath(job string) string {
 	return path.Join(JobDir(job), MEMFS)
 }
 
-func NewFsLibs(uname string) []*fslib.FsLib {
+func NewFsLibs(uname string) ([]*fslib.FsLib, error) {
 	pe := proc.GetProcEnv()
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
 		pen := proc.NewAddedProcEnv(pe, i)
 		fsl, err := sigmaclnt.NewFsLib(pen)
 		if err != nil {
-			db.DFatalf("Error newfsl: %v", err)
+			db.DPrintf(db.ERROR, "Error newfsl: %v", err)
+			return nil, err
 		}
 		fsls = append(fsls, fsl)
 	}
-	return fsls
+	return fsls, nil
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
@@ -102,11 +103,13 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 	return mnt.Addr, err
 }
 
-func InitHotelFs(fsl *fslib.FsLib, jobname string) {
+func InitHotelFs(fsl *fslib.FsLib, jobname string) error {
 	fsl.MkDir(HOTELDIR, 0777)
 	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
-		db.DFatalf("Mkdir %v err %v\n", JobDir(jobname), err)
+		db.DPrintf(db.ERROR, "Mkdir %v err %v\n", JobDir(jobname), err)
+		return err
 	}
+	return nil
 }
 
 type Srv struct {
@@ -154,7 +157,9 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 	var kvf *kv.KVFleet
 
 	// Init fs.
-	InitHotelFs(sc.FsLib, job)
+	if err := InitHotelFs(sc.FsLib, job); err != nil {
+		return nil, err
+	}
 
 	// Create a cache clnt.
 	if nsrv > 0 {
@@ -163,12 +168,12 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
 			cm, err = cachedsvc.NewCacheMgr(sc, job, nsrv, cacheMcpu, gc, test.Overlays)
 			if err != nil {
-				db.DFatalf("Error NewCacheMgr %v", err)
+				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err
 			}
 			cc, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, job)
 			if err != nil {
-				db.DFatalf("Error NewCachedSvcClnt %v", err)
+				db.DPrintf(db.ERROR, "Error NewCachedSvcClnt %v", err)
 				return nil, err
 			}
 			ca = cachedsvcclnt.NewAutoscaler(cm, cc)
@@ -186,7 +191,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 		case "memcached":
 			db.DPrintf(db.ALWAYS, "Hotel running with memcached")
 		default:
-			db.DFatalf("Unrecognized hotel cache type: %v", cache)
+			db.DPrintf(db.ERROR, "Unrecognized hotel cache type: %v", cache)
 		}
 	}
 
@@ -199,11 +204,11 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)
 		if err := sc.Spawn(p); err != nil {
-			db.DFatalf("Error burst-spawnn proc %v: %v", p, err)
+			db.DPrintf(db.ERROR, "Error burst-spawnn proc %v: %v", p, err)
 			return nil, err
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {
-			db.DFatalf("Error spawn proc %v: %v", p, err)
+			db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
 			return nil, err
 		}
 		pids = append(pids, p.GetPid())

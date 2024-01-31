@@ -147,7 +147,9 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		}
 	}
 
-	ji.wc = hotel.NewWebClnt(ts.FsLib, ji.job)
+	wc, err := hotel.NewWebClnt(ts.FsLib, ji.job)
+	assert.Nil(ts.Ts.T, err, "Err NewWebClnt: %v", err)
+	ji.wc = wc
 	// Make a load generators.
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {

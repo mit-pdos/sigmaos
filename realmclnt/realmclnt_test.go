@@ -78,8 +78,14 @@ func TestCompile(t *testing.T) {
 }
 
 func TestBasicSimple(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetInnerContainerIP())
 
@@ -109,9 +115,18 @@ func TestBasicSimple(t *testing.T) {
 }
 
 func TestBasicMultiRealmSingleNode(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
-	ts2 := test.NewRealmTstate(rootts, REALM2)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts1.ProcEnv().GetInnerContainerIP())
 	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM2, ts2.ProcEnv().GetInnerContainerIP())
@@ -139,19 +154,32 @@ func TestBasicMultiRealmSingleNode(t *testing.T) {
 }
 
 func TestBasicMultiRealmMultiNode(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	rootts.BootNode(1)
 	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
-	ts2 := test.NewRealmTstate(rootts, REALM2)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
-	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, ts1.GetNamedMount())
-	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, ts2.GetNamedMount())
+	m1, err3 := ts1.GetNamedMount()
+	assert.Nil(t, err3, "GetNamedMount: %v", err3)
+	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, m1)
+	m2, err3 := ts2.GetNamedMount()
+	assert.Nil(t, err3, "GetNamedMount: %v", err3)
+	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, m2)
 
 	// Should have a public and private address
 	if test.Overlays {
-		assert.Equal(rootts.T, 2, len(ts1.GetNamedMount().Addr))
-		assert.Equal(rootts.T, 2, len(ts1.GetNamedMount().Addr))
+		assert.Equal(rootts.T, 2, len(m1.Addr))
+		assert.Equal(rootts.T, 2, len(m1.Addr))
 	}
 
 	schedds1, err := ts1.GetDir(sp.SCHEDD)
@@ -175,8 +203,14 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 }
 
 func TestBasicFairness(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
 
 	p1 := proc.NewProc("sleeper", []string{"100000s", "name/"})
@@ -189,7 +223,10 @@ func TestBasicFairness(t *testing.T) {
 	assert.Nil(rootts.T, err, "Err WaitStart: %v", err)
 	db.DPrintf(db.TEST, "Big realm's proc started")
 
-	ts2 := test.NewRealmTstate(rootts, REALM2)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	db.DPrintf(db.TEST, "Created realm 2")
 
 	p2 := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
@@ -220,8 +257,14 @@ func TestBasicFairness(t *testing.T) {
 }
 
 func TestWaitExitSimpleSingle(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	sts1, err := rootts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -249,8 +292,14 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 }
 
 func TestEvictSingle(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	sts1, err := rootts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -288,10 +337,19 @@ func TestEvictSingle(t *testing.T) {
 }
 
 func TestEvictMultiRealm(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	// Make a second realm
-	ts2 := test.NewRealmTstate(rootts, REALM2)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	sts1, err := rootts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -342,9 +400,15 @@ func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
 }
 
 func TestRealmNetIsolationOK(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	// Make a second realm
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	job := rd.String(16)
 	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
@@ -399,10 +463,19 @@ func TestRealmNetIsolationOK(t *testing.T) {
 }
 
 func TestRealmNetIsolationFail(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	// Make a second realm
-	ts2 := test.NewRealmTstate(rootts, REALM2)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	job := rd.String(16)
 	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
@@ -452,8 +525,14 @@ func TestRealmNetIsolationFail(t *testing.T) {
 }
 
 func TestSpinPerfCalibrate(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
 	// -1 for named
@@ -484,8 +563,14 @@ func targetTime(baseline time.Duration, tslowdown float64) time.Duration {
 // nodes), due to a linux scheduler bug. See:
 // https://www.usenix.org/system/files/login/articles/login_winter16_02_lozi.pdf
 func TestSpinPerfDoubleSlowdown(t *testing.T) {
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
 	// - 2 to account for NAMED reserved cores
@@ -521,8 +606,14 @@ func TestSpinPerfDoubleBEandLC(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
 	// - 2 to account for NAMED reserved cores
@@ -563,9 +654,18 @@ func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	rootts := test.NewTstateWithRealms(t)
-	ts1 := test.NewRealmTstate(rootts, REALM1)
-	ts2 := test.NewRealmTstate(rootts, REALM2)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
 	// - 2 to account for NAMED reserved cores

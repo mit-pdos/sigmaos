@@ -128,7 +128,14 @@ func (c *SrvConn) reader() {
 		} else if c.sessid != sessp.Tsession(fc.Session()) {
 			db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fc.Session())
 		}
-		c.sesssrv.SrvFcall(fc)
+		if err := c.sesssrv.SrvFcall(fc); err != nil {
+			// Push a message telling the client that it's session has been closed,
+			// and it shouldn't try to reconnect.
+			fm := sessp.NewFcallMsgReply(fc, sp.NewRerrorSerr(err))
+			c.GetReplyChan() <- sessconn.NewPartMarshaledMsg(fm)
+			close(c.replies)
+			return
+		}
 	}
 }
 

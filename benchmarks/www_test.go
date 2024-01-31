@@ -69,8 +69,10 @@ func NewWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype s
 
 func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 	var clnt *www.WWWClnt
+	var err error
 	if ji.sigmaos {
-		clnt = www.NewWWWClnt(ji.FsLib, ji.job)
+		clnt, err = www.NewWWWClnt(ji.FsLib, ji.job)
+		assert.Nil(ji.Ts.T, err, "Err new www clnt: %v", err)
 	} else {
 		h, po, err := net.SplitHostPort(ji.k8ssrvaddr)
 		assert.Nil(ji.Ts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
@@ -129,8 +131,9 @@ func (ji *WwwJobInstance) StartWwwJob() {
 
 func (ji *WwwJobInstance) Wait() {
 	if ji.sigmaos {
-		clnt := www.NewWWWClnt(ji.FsLib, ji.job)
-		err := clnt.StopServer(ji.ProcAPI, ji.pid)
+		clnt, err := www.NewWWWClnt(ji.FsLib, ji.job)
+		assert.Nil(ji.Ts.T, err, "Err new www clnt: %v", err)
+		err = clnt.StopServer(ji.ProcAPI, ji.pid)
 		assert.Nil(ji.Ts.T, err)
 	}
 }

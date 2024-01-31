@@ -61,7 +61,11 @@ func RunRateSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	cachec, err := NewCacheClnt(cache, NewFsLibs(HOTELRATE), job)
+	fsls, err := NewFsLibs(HOTELRATE)
+	if err != nil {
+		return err
+	}
+	cachec, err := NewCacheClnt(cache, fsls, job)
 	if err != nil {
 		return err
 	}

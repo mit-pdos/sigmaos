@@ -54,7 +54,11 @@ func writeHomeTimeline(t *testing.T, rpcc *rpcclnt.RPCClnt, post *proto.Post, us
 
 func TestTimeline(t *testing.T) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000}}, NCACHESRV)
 	snCfg := tssn.snCfg
@@ -102,7 +106,11 @@ func TestTimeline(t *testing.T) {
 
 func TestHome(t *testing.T) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},

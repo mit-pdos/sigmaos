@@ -35,9 +35,11 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 	return mnt.Addr, err
 }
 
-func InitWwwFs(fsl *fslib.FsLib, jobname string) {
+func InitWwwFs(fsl *fslib.FsLib, jobname string) error {
 	fsl.MkDir(WWWDIR, 0777)
 	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
-		db.DFatalf("Mkdir %v err %v\n", JobDir(jobname), err)
+		db.DPrintf(db.ERROR, "Mkdir %v err %v\n", JobDir(jobname), err)
+		return err
 	}
+	return nil
 }

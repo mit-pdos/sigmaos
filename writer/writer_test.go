@@ -21,7 +21,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestWriter1(t *testing.T) {
-	ts := test.NewTstate(t)
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	fn := gopath.Join(pathname, "f")
 	d := []byte("abcdefg")

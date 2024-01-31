@@ -37,7 +37,11 @@ func IsPostEqual(a, b *proto.Post) bool {
 
 func TestMedia(t *testing.T) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-media", test.Overlays, 1000}}, NCACHESRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-media", test.Overlays, 1000}}, NCACHESRV)
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
@@ -75,7 +79,11 @@ func TestMedia(t *testing.T) {
 
 func TestPost(t *testing.T) {
 	// start server
-	tssn := newTstateSN(t, []sn.Srv{sn.Srv{"socialnetwork-post", test.Overlays, 1000}}, NCACHESRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-post", test.Overlays, 1000}}, NCACHESRV)
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query

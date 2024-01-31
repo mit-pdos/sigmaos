@@ -5,6 +5,7 @@ type Tselector string
 // ALWAYS
 const (
 	ALWAYS Tselector = "ALWAYS"
+	ERROR            = "ERROR"
 	NEVER            = "NEVER"
 )
 
@@ -157,6 +158,8 @@ const (
 	SEMCLNT_ERR             = SEMCLNT + ERR
 	EPOCHCLNT               = "EPOCHCLNT"
 	EPOCHCLNT_ERR           = EPOCHCLNT + ERR
+	FTTASKS                 = "FTTASKS"
+	FTTASKMGR               = "FTTASKMGR"
 	LEADER                  = "LEADER"
 	LEADER_ERR              = LEADER + ERR
 	GROUPMGR                = "GROUPMGR"
@@ -220,7 +223,6 @@ const (
 	LOCKMAP                      = "LOCKMAP"
 	SNAP                         = "SNAP"
 	NAMEI                        = "NAMEI"
-	FENCESRV                     = "FENCESRV"
 	FENCEFS                      = "FENCEFS"
 	FENCEFS_ERR                  = FENCEFS + ERR
 	LEASESRV                     = "LEASESRV"

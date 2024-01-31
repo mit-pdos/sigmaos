@@ -7,8 +7,6 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/kernelsubinfo"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -30,7 +28,6 @@ type Subsystem interface {
 	Kill() error
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
-	GetIp(fsl *fslib.FsLib) *sp.Taddr
 	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
 	AllocPort(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
@@ -153,15 +150,12 @@ func (ss *KernelSubsystem) AllocPort(p sp.Tport) (*port.PortBinding, error) {
 	}
 }
 
-func (ss *KernelSubsystem) GetIp(fsl *fslib.FsLib) *sp.Taddr {
-	return kernelsubinfo.GetSubsystemInfo(fsl, sp.KPIDS, ss.p.GetPid().String()).Addr
-}
-
 // Send SIGTERM to a system.
 func (s *KernelSubsystem) Terminate() error {
 	db.DPrintf(db.KERNEL, "Terminate %v %v\n", s.cmd.Process.Pid, s.cmd)
 	if s.how != proc.HLINUX {
-		db.DFatalf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
+		db.DPrintf(db.ERROR, "Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
+		return fmt.Errorf("Tried to terminate a kernel subsystem spawned through procd: %v", s.p)
 	}
 	return syscall.Kill(s.cmd.Process.Pid, syscall.SIGTERM)
 }

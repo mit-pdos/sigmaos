@@ -1,6 +1,7 @@
 package lcschedsrv
 
 import (
+	"fmt"
 	"path"
 	"sync"
 
@@ -97,7 +98,8 @@ func (lcs *LCSched) RegisterSchedd(ctx fs.CtxI, req proto.RegisterScheddRequest,
 
 	db.DPrintf(db.LCSCHED, "Register Schedd id:%v mcpu:%v mem:%v", req.KernelID, req.McpuInt, req.MemInt)
 	if _, ok := lcs.schedds[req.KernelID]; ok {
-		db.DFatalf("Double-register schedd %v", req.KernelID)
+		db.DPrintf(db.ERROR, "Double-register schedd %v", req.KernelID)
+		return fmt.Errorf("Double-register schedd %v", req.KernelID)
 	}
 	lcs.schedds[req.KernelID] = newResources(req.McpuInt, req.MemInt)
 	lcs.cond.Broadcast()
@@ -197,7 +199,7 @@ func Run() {
 	lcs := NewLCSched(sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {
-		db.DFatalf("Error NewSIgmaSrv: %v", err)
+		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
 
 	// export queued procs through procfs. XXX maybe

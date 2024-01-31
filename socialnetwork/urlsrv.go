@@ -47,7 +47,10 @@ func RunUrlSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, URL_COL, []string{"shorturl"})
 	urlsrv.mongoc = mongoc
-	fsls := NewFsLibs(SOCIAL_NETWORK_URL)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_URL)
+	if err != nil {
+		return err
+	}
 	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	if err != nil {
 		return err

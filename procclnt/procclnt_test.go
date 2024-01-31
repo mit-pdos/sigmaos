@@ -105,7 +105,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestWaitExitSimpleSingleBE(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
 	err := ts.Spawn(a)
@@ -125,7 +128,10 @@ func TestWaitExitSimpleSingleBE(t *testing.T) {
 }
 
 func TestWaitExitSimpleSingleLC(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	a.SetMcpu(1000)
 	db.DPrintf(db.TEST, "Pre spawn")
@@ -145,7 +151,10 @@ func TestWaitExitSimpleSingleLC(t *testing.T) {
 }
 
 func TestWaitExitSimpleMultiKernel(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "Boot node: %v", err)
@@ -168,7 +177,10 @@ func TestWaitExitSimpleMultiKernel(t *testing.T) {
 }
 
 func TestWaitExitOne(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	start := time.Now()
 
@@ -194,7 +206,10 @@ func TestWaitExitOne(t *testing.T) {
 }
 
 func TestWaitExitN(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	nProcs := 100
 	var done sync.WaitGroup
 	done.Add(nProcs)
@@ -223,7 +238,10 @@ func TestWaitExitN(t *testing.T) {
 }
 
 func TestWaitExitParentRetStat(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	start := time.Now()
 
@@ -254,7 +272,10 @@ func TestWaitExitParentRetStat(t *testing.T) {
 }
 
 func TestWaitExitParentAbandons(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	start := time.Now()
 
@@ -280,7 +301,10 @@ func TestWaitExitParentAbandons(t *testing.T) {
 }
 
 func TestWaitExitParentCrash(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	start := time.Now()
 
@@ -306,7 +330,10 @@ func TestWaitExitParentCrash(t *testing.T) {
 }
 
 func TestWaitStart(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	pid := spawnSleeper(t, ts)
 	err := ts.WaitStart(pid)
@@ -327,7 +354,10 @@ func TestWaitStart(t *testing.T) {
 
 // Should exit immediately
 func TestWaitNonexistentProc(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	ch := make(chan bool)
 
@@ -346,7 +376,10 @@ func TestWaitNonexistentProc(t *testing.T) {
 }
 
 func TestSpawnManyProcsParallel(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	const N_CONCUR = 5  // 13
 	const N_SPAWNS = 50 // 500
@@ -393,7 +426,10 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 }
 
 func TestCrashProcOne(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	a := proc.NewProc("crash", []string{})
 	err := ts.Spawn(a)
@@ -411,7 +447,10 @@ func TestCrashProcOne(t *testing.T) {
 }
 
 func TestEarlyExit1(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	pid1 := sp.GenPid("parentexit")
 	a := proc.NewProc("parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1.String()})
@@ -443,7 +482,10 @@ func TestEarlyExit1(t *testing.T) {
 }
 
 func TestEarlyExitN(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	nProcs := 50 // 500
 	const MAX_RETRY = 10
 	var done sync.WaitGroup
@@ -493,7 +535,10 @@ func TestEarlyExitN(t *testing.T) {
 // Spawn a bunch of procs concurrently, then wait for all of them & check
 // their result
 func TestConcurrentProcs(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	nProcs := 8
 	pids := map[sp.Tpid]int{}
@@ -550,7 +595,10 @@ func evict(ts *test.Tstate, pid sp.Tpid) {
 }
 
 func TestEvict(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	pid := spawnSpinner(t, ts)
 
@@ -564,7 +612,10 @@ func TestEvict(t *testing.T) {
 }
 
 func TestEvictN(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	N := int(linuxsched.GetNCores())
 
@@ -590,18 +641,23 @@ func TestSpawnBurst(t *testing.T) {
 		return
 	}
 
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	const N_NODES = 2
 
 	// Number of spinners to burst-spawn
-	N := (linuxsched.GetNCores()) * 3
+	N := (linuxsched.GetNCores()) * N_NODES
 
 	// Start a couple new procds.
-	err := ts.BootNode(1)
-	assert.Nil(t, err, "BootNode %v", err)
-	err = ts.BootNode(1)
-	assert.Nil(t, err, "BootNode %v", err)
+	for i := 0; i < N_NODES; i++ {
+		err := ts.BootNode(1)
+		assert.Nil(t, err, "BootNode %v", err)
+	}
 
-	db.DPrintf(db.TEST, "Start burst spawn")
+	db.DPrintf(db.TEST, "Start burst spawn %v", N)
 
 	ps := burstSpawnSpinner(t, ts, N)
 
@@ -617,10 +673,12 @@ func TestSpawnBurst(t *testing.T) {
 		assert.Nil(t, err, "Evict: %v", err)
 	}
 
+	db.DPrintf(db.TEST, "Evict wait/exit spawn")
+
 	for _, p := range ps {
 		status, err := ts.WaitExit(p.GetPid())
 		assert.Nil(t, err, "WaitExit: %v", err)
-		assert.True(t, status != nil && status.IsStatusEvicted(), "Wrong status: %v", status)
+		assert.True(t, status != nil && status.IsStatusEvicted(), "%v: Wrong status: %v", p.GetPid(), status)
 	}
 
 	ts.Shutdown()
@@ -632,7 +690,10 @@ func TestReserveCores(t *testing.T) {
 		return
 	}
 
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	start := time.Now()
 	pid := sp.Tpid("sleeper-aaaaaaa")
@@ -672,7 +733,10 @@ func TestReserveCores(t *testing.T) {
 }
 
 func TestSpawnCrashLCSched(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	db.DPrintf(db.TEST, "Spawn proc which will queue forever")
 
@@ -701,7 +765,10 @@ func TestSpawnCrashLCSched(t *testing.T) {
 
 // Make sure this test is still meaningful
 func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	N_REPL := 3
 	OUTDIR := "name/spinner-ephs"

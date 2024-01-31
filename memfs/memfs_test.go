@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -19,14 +20,28 @@ var pathname string // e.g., --path "name/ux/~local/fslibtest"
 
 func init() {
 	// use a memfs file system
-	flag.StringVar(&pathname, "path", "name/schedd/~local/", "path for file system")
+	flag.StringVar(&pathname, "path", "name/memfs/~local/", "path for file system")
 }
 
 func TestCompile(t *testing.T) {
 }
 
+func TestMemfsd(t *testing.T) {
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	sts, err := ts.GetDir(pathname)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "%v %v\n", pathname, sp.Names(sts))
+	ts.Shutdown()
+}
+
 func TestPipeBasic(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	pipe := gopath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
@@ -61,7 +76,10 @@ func TestPipeBasic(t *testing.T) {
 }
 
 func TestPipeClose(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	pipe := gopath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
@@ -101,7 +119,10 @@ func TestPipeClose(t *testing.T) {
 }
 
 func TestPipeRemove(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	pipe := gopath.Join(pathname, "pipe")
 
 	err := ts.NewPipe(pipe, 0777)
@@ -126,7 +147,10 @@ func TestPipeRemove(t *testing.T) {
 }
 
 func TestPipeCrash0(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	pipe := gopath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
@@ -151,7 +175,10 @@ func TestPipeCrash0(t *testing.T) {
 }
 
 func TestPipeCrash1(t *testing.T) {
-	ts := test.NewTstatePath(t, pathname)
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	pipe := gopath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")

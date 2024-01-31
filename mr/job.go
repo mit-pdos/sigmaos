@@ -11,6 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/fttasks"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
@@ -118,56 +119,73 @@ func JobDone(fsl *fslib.FsLib, job string) {
 	sc.Up()
 }
 
-func ReadJobConfig(app string) *Job {
+func ReadJobConfig(app string) (*Job, error) {
 	job := &Job{}
 	if err := yaml.ReadYaml(app, job); err != nil {
-		db.DFatalf("ReadConfig err %v\n", err)
+		db.DPrintf(db.ERROR, "ReadConfig err %v\n", err)
+		return nil, err
 	}
-	return job
+	return job, nil
 }
 
-func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) {
+type Tasks struct {
+	Mft *fttasks.FtTasks
+	Rft *fttasks.FtTasks
+}
+
+func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, error) {
 	fsl.MkDir(MRDIRTOP, 0777)
 	fsl.MkDir(MRDIRELECT, 0777)
+
+	mft, err := fttasks.MkFtTasks(fsl, MRDIRTOP, path.Join(jobname, "/mtasks"))
+	if err != nil {
+		db.DPrintf(db.ERROR, "MkFtTasks %v err %v\n", jobname, err)
+		return nil, err
+	}
+	rft, err := fttasks.MkFtTasks(fsl, MRDIRTOP, path.Join(jobname, "/rtasks"))
+	if err != nil {
+		db.DPrintf(db.ERROR, "MkFtTasks %v err %v\n", jobname, err)
+		return nil, err
+	}
+
 	dirs := []string{
 		LeaderElectDir(jobname),
-		JobDir(jobname),
 		MapTask(jobname),
 		ReduceTask(jobname),
 		ReduceIn(jobname),
-		MapTask(jobname) + TIP,
-		ReduceTask(jobname) + TIP,
-		MapTask(jobname) + DONE,
-		ReduceTask(jobname) + DONE,
-		MapTask(jobname) + NEXT,
-		ReduceTask(jobname) + NEXT,
 	}
 	for _, n := range dirs {
 		if err := fsl.MkDir(n, 0777); err != nil {
-			db.DFatalf("Mkdir %v err %v\n", n, err)
+			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
+			return nil, err
 		}
 	}
-
 	if err := InitJobSem(fsl, jobname); err != nil {
-		db.DFatalf("Err init job sem")
+		db.DPrintf(db.ERROR, "Err init job sem")
+		return nil, err
 	}
 
-	// Make task and input directories for reduce tasks
+	// Make input directories for reduce tasks and submit task
 	for r := 0; r < nreducetask; r++ {
-		n := ReduceTask(jobname) + "/" + strconv.Itoa(r)
-		if _, err := fsl.PutFile(n, 0777, sp.OWRITE, []byte{}); err != nil {
-			db.DFatalf("Putfile %v err %v\n", n, err)
-		}
-		n = ReduceIn(jobname) + "/" + strconv.Itoa(r)
+		rs := strconv.Itoa(r)
+		n := ReduceIn(jobname) + "/" + rs
 		if err := fsl.MkDir(n, 0777); err != nil {
-			db.DFatalf("Mkdir %v err %v\n", n, err)
+			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
+			return nil, err
+		}
+		t := &TreduceTask{rs}
+		if err := rft.SubmitTask(t); err != nil {
+			db.DPrintf(db.ERROR, "SubmitTask %v err %v\n", t, err)
+			return nil, err
 		}
 	}
 
 	// Create empty stats file
 	if _, err := fsl.PutFile(MRstats(jobname), 0777, sp.OWRITE, []byte{}); err != nil {
-		db.DFatalf("Putfile %v err %v\n", MRstats(jobname), err)
+		db.DPrintf(db.ERROR, "Putfile %v err %v\n", MRstats(jobname), err)
+		return nil, err
 	}
+	return &Tasks{mft, rft}, nil
 }
 
 // Clean up all old MR outputs
@@ -179,7 +197,8 @@ func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string) {
 }
 
 // Put names of input files in name/mr/m
-func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
+func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobName string, job *Job) (int, error) {
+	db.DPrintf(db.TEST, "job %v", job)
 	if job.Output == "" || job.Intermediate == "" {
 		return 0, fmt.Errorf("Err job output (\"%v\") or intermediate (\"%v\") not supplied", job.Output, job.Intermediate)
 	}
@@ -213,16 +232,11 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 	if err != nil || len(bins) == 0 {
 		return len(bins), err
 	}
-	for i, b := range bins {
-		n := MapTask(jobName) + "/" + BinName(i)
-		if _, err := fsl.PutFile(n, 0777, sp.OWRITE, []byte{}); err != nil {
+	for _, b := range bins {
+		if err := ts.Mft.SubmitTask(b); err != nil {
 			return len(bins), err
 		}
-		for _, s := range b {
-			if err := fsl.AppendFileJson(n, s); err != nil {
-				return len(bins), err
-			}
-		}
+
 	}
 	return len(bins), nil
 }
@@ -237,6 +251,7 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobname string, job *Job, ncoord, nmap,
 func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) error {
 	file, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
+		db.DPrintf(db.MR, "Error OpenFile out: %v", err)
 		return err
 	}
 	defer file.Close()
@@ -245,9 +260,11 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) erro
 		r := strconv.Itoa(i)
 		rdr, err := fsl.OpenReader(ReduceOut(jobName) + r + "/")
 		if err != nil {
+			db.DPrintf(db.MR, "Error OpenReader [%v]: %v", ReduceOut(jobName)+r+"/", err)
 			return err
 		}
 		if _, err := io.Copy(wrt, rdr.Reader); err != nil {
+			db.DPrintf(db.MR, "Error Copy: %v", err)
 			return err
 		}
 	}

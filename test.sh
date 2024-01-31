@@ -82,7 +82,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap proxy reader writer stats fslib semclnt electclnt fslib memfs named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www fslibsrv realmclnt mr imgresized kv hotel socialnetwork benchmarks; do
+    for T in path intervals serr linuxsched perf sigmap proxy reader writer stats fslib semclnt electclnt fslib memfs named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www fslibsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks; do
         go test $VERB sigmaos/$T --run TestCompile
     done
 fi
@@ -116,8 +116,8 @@ if [[ $BASIC == "--basic" ]]; then
 
     # go test $VERB sigmaos/fslibsrv -start  # no perf
 
-    # test memfs using schedd's memfs
-    go test $VERB sigmaos/fslib -start -path "name/schedd/~local/"  $SIGMACLNTD
+    # test memfs
+    go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SIGMACLNTD
     cleanup
     go test $VERB sigmaos/memfs -start $SIGMACLNTD
     cleanup
@@ -153,7 +153,7 @@ if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
         go test $VERB sigmaos/mr -start $GVISOR $SIGMACLNTD -run MRJob
         cleanup
-        go test $VERB sigmaos/imgresized -start $GVISOR $SIGMACLNTD -run ImgdOne
+        go test $VERB sigmaos/imgresizesrv -start $GVISOR $SIGMACLNTD -run ImgdOne
         cleanup
         go test $VERB sigmaos/kv -start $GVISOR $SIGMACLNTD -run KVOKN
         cleanup
@@ -164,7 +164,7 @@ if [[ $APPS == "--apps" ]]; then
        	go test $VERB sigmaos/socialnetwork -start $GVISOR $SIGMACLNTD -run TestCompose
         cleanup
     else
-        for T in imgresized mr hotel socialnetwork www; do
+        for T in imgresizesrv mr hotel socialnetwork www; do
             ./start-db.sh
             go test -timeout 20m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD
             cleanup

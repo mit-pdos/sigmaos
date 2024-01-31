@@ -30,7 +30,10 @@ func RunSearchSrv(n string, public bool) error {
 	if err != nil {
 		return err
 	}
-	fsls := NewFsLibs(HOTELSEARCH)
+	fsls, err := NewFsLibs(HOTELSEARCH)
+	if err != nil {
+		return err
+	}
 	rpcc, err := rpcclnt.NewRPCClnt(fsls, HOTELRATE)
 	if err != nil {
 		return err

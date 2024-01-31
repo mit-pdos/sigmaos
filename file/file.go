@@ -63,7 +63,7 @@ func (f *File) write(ctx fs.CtxI, offset sp.Toffset, data []byte) (sp.Tsize, *se
 }
 
 func (f *File) Write(ctx fs.CtxI, offset sp.Toffset, data []byte, fence sp.Tfence) (sp.Tsize, *serr.Err) {
-	db.DPrintf(db.FENCEFS, "File.Write %v %p\n", fence, ctx.FenceFs())
+	db.DPrintf(db.FENCEFS, "File.Write %v %v\n", fence, ctx.FenceFs())
 	if fi, err := fencefs.CheckFence(ctx.FenceFs(), fence); err != nil {
 		return 0, err
 	} else {

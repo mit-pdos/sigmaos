@@ -98,8 +98,12 @@ func TestNewWordCount(t *testing.T) {
 
 func TestSplits(t *testing.T) {
 	const SPLITSZ = 10 * sp.MBYTE
-	ts := test.NewTstateAll(t)
-	job = mr.ReadJobConfig(app)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
 	sum := sp.Tlength(0)
@@ -122,14 +126,18 @@ func TestMapper(t *testing.T) {
 		REDUCEOUT = "name/ux/~local/test-reducer-out.txt"
 	)
 
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, sp.NO_IP, sp.NO_IP, sp.NO_IP, "", false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
 	ts.Remove(REDUCEIN)
 	ts.Remove(REDUCEOUT)
 
-	job = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
+	job, err1 = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	job.Nreduce = 1
 
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
@@ -195,8 +203,12 @@ func TestMapper(t *testing.T) {
 }
 
 func TestSeqGrep(t *testing.T) {
-	ts := test.NewTstateAll(t)
-	job = mr.ReadJobConfig(app)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 
 	p := proc.NewProc("seqgrep", []string{job.Input})
 	err := ts.Spawn(p)
@@ -210,8 +222,12 @@ func TestSeqGrep(t *testing.T) {
 
 func TestSeqWc(t *testing.T) {
 	const OUT = "name/ux/~local/seqout.txt"
-	ts := test.NewTstateAll(t)
-	job = mr.ReadJobConfig(app)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	job, err1 = mr.ReadJobConfig(app)
+	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 
 	ts.Remove(OUT)
 
@@ -226,15 +242,18 @@ func TestSeqWc(t *testing.T) {
 }
 
 type Tstate struct {
-	job string
 	*test.Tstate
+	job         string
 	nreducetask int
+	tasks       *mr.Tasks
 }
 
-func newTstate(t *testing.T) *Tstate {
+func newTstate(t1 *test.Tstate) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = test.NewTstateAll(t)
-	job = mr.ReadJobConfig(app)
+	ts.Tstate = t1
+	j, err := mr.ReadJobConfig(app)
+	assert.Nil(t1.T, err, "Error ReadJobConfig: %v", err)
+	job = j
 	ts.nreducetask = job.Nreduce
 	ts.job = rd.String(4)
 
@@ -244,8 +263,9 @@ func newTstate(t *testing.T) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll(path.Join(sp.SIGMAHOME, "mr"))
 
-	mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
-
+	tasks, err := mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
+	assert.Nil(t1.T, err, "Error InitCoordFS: %v", err)
+	ts.tasks = tasks
 	os.Remove(OUTPUT)
 
 	return ts
@@ -268,8 +288,11 @@ func (ts *Tstate) compare() {
 	}
 	b1 := out1.Bytes()
 	b2 := out2.Bytes()
-	assert.Equal(ts.T, len(b1), len(b2), "Output files have different length")
-	assert.Equal(ts.T, b1, b2, "Output files have different contents")
+	if assert.Equal(ts.T, len(b1), len(b2), "Output files have different length") {
+		// Only do byte-by-byte comparison if output lengths are the same
+		// (otherwise we just crowd the test output)
+		assert.Equal(ts.T, b1, b2, "Output files have different contents")
+	}
 }
 
 func (ts *Tstate) checkJob() {
@@ -281,7 +304,11 @@ func (ts *Tstate) checkJob() {
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux int, monitor bool) {
-	ts := newTstate(t)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	if monitor {
@@ -289,10 +316,11 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux 
 		defer sdc.Done()
 	}
 
-	nmap, err := mr.PrepareJob(ts.FsLib, ts.job, job)
+	nmap, err := mr.PrepareJob(ts.FsLib, ts.tasks, ts.job, job)
 	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
+	//db.DFatalf("xx")
 	cm := mr.StartMRJob(ts.SigmaClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, true)
 
 	crashchan := make(chan bool)
@@ -328,6 +356,8 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux 
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
 	db.DPrintf(db.TEST, "Cleanup MR outputs")
+	ts.tasks.Mft.Cleanup()
+	ts.tasks.Rft.Cleanup()
 	mr.CleanupMROutputs(ts.FsLib, job.Output, job.Intermediate)
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
 	ts.Shutdown()

@@ -17,18 +17,18 @@ type Conn interface {
 	GetReplyChan() chan *sessconn.PartMarshaledMsg
 }
 
-type Fsrvfcall func(*sessp.FcallMsg)
+type Fsrvfcall func(*sessp.FcallMsg) *serr.Err
 
 type SessServer interface {
 	Register(sessp.Tsession, Conn) *serr.Err
 	Unregister(sessp.Tsession, Conn)
-	SrvFcall(*sessp.FcallMsg)
+	SrvFcall(*sessp.FcallMsg) *serr.Err
 }
 
 type Protsrv interface {
 	Version(*sp.Tversion, *sp.Rversion) *sp.Rerror
 	Auth(*sp.Tauth, *sp.Rauth) *sp.Rerror
-	Attach(*sp.Tattach, *sp.Rattach, AttachClntF) (sp.TclntId, *sp.Rerror)
+	Attach(*sp.Tattach, *sp.Rattach) (sp.TclntId, *sp.Rerror)
 	Walk(*sp.Twalk, *sp.Rwalk) *sp.Rerror
 	Create(*sp.Tcreate, *sp.Rcreate) *sp.Rerror
 	Open(*sp.Topen, *sp.Ropen) *sp.Rerror
@@ -44,12 +44,9 @@ type Protsrv interface {
 	GetFile(*sp.Tgetfile, *sp.Rread) ([]byte, *sp.Rerror)
 	PutFile(*sp.Tputfile, []byte, *sp.Rwrite) *sp.Rerror
 	WriteRead(*sp.Twriteread, []byte, *sp.Rread) ([]byte, *sp.Rerror)
-	Detach(*sp.Tdetach, *sp.Rdetach, DetachClntF) *sp.Rerror
+	Detach(*sp.Tdetach, *sp.Rdetach) *sp.Rerror
 }
 
 type NewProtServer func(SessServer, sessp.Tsession) Protsrv
 
 type DetachSessF func(sessp.Tsession)
-
-type AttachClntF func(sp.TclntId)
-type DetachClntF func(sp.TclntId)

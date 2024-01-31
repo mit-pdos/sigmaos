@@ -35,19 +35,15 @@ type Session struct {
 	began         bool // true if the fssrv has already begun processing ops
 	closed        bool // true if the session has been closed.
 	timedout      bool // for debugging
-	attachClnt    sps.AttachClntF
 	detachSess    sps.DetachSessF
-	detachClnt    sps.DetachClntF
 	clnts         map[sp.TclntId]bool
 }
 
-func newSession(protsrv sps.Protsrv, sid sessp.Tsession, attachf sps.AttachClntF, detachf sps.DetachClntF) *Session {
+func newSession(protsrv sps.Protsrv, sid sessp.Tsession) *Session {
 	sess := &Session{
 		protsrv:       protsrv,
 		lastHeartbeat: time.Now(),
 		Sid:           sid,
-		attachClnt:    attachf,
-		detachClnt:    detachf,
 		clnts:         make(map[sp.TclntId]bool),
 	}
 	return sess
@@ -213,10 +209,4 @@ func (sess *Session) GetDetachSess() sps.DetachSessF {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.detachSess
-}
-
-func (sess *Session) RegisterDetachClnt(f sps.DetachClntF) {
-	sess.Lock()
-	defer sess.Unlock()
-	sess.detachClnt = f
 }

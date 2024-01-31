@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"sigmaos/cgroup"
-	"sigmaos/proc"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/k8sutil/proto"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -45,13 +45,16 @@ func (s *scraper) GetCPUUtil(ctx fs.CtxI, req proto.CPUUtilRequest, res *proto.C
 	var burst *cgroup.CPUStat
 	var err error
 	if be, err = s.cmon.GetCPUStats(QOS_BE_CGROUP); err != nil {
-		db.DFatalf("Error BE: %v", err)
+		db.DPrintf(db.ERROR, "Error BE: %v", err)
+		return err
 	}
 	if burst, err = s.cmon.GetCPUStats(QOS_BURSTABLE_CGROUP); err != nil {
-		db.DFatalf("Error burstable: %v", err)
+		db.DPrintf(db.ERROR, "Error burstable: %v", err)
+		return err
 	}
 	if total, err = s.cmon.GetCPUStats(K8S_CGROUP); err != nil {
-		db.DFatalf("Error total: %v", err)
+		db.DPrintf(db.ERROR, "Error total: %v", err)
+		return err
 	}
 	db.DPrintf(db.K8S_UTIL, "Total %v BE %v Burst %v", total.Util, be.Util, burst.Util)
 	// Guaranteed QoS class is total CPU utillzation, minus BE & Burstable
@@ -63,7 +66,7 @@ func (s *scraper) GetCPUUtil(ctx fs.CtxI, req proto.CPUUtilRequest, res *proto.C
 		res.Util = burst.Util
 	case "Guaranteed":
 		res.Util = total.Util - be.Util - burst.Util
-	default: 
+	default:
 		return fmt.Errorf("Error: QoS class \"%v\" unsupported", req.QoSClass)
 	}
 	return nil

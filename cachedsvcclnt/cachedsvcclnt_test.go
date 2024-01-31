@@ -34,18 +34,18 @@ type Tstate struct {
 	sem   *semclnt.SemClnt
 }
 
-func newTstate(t *testing.T, nsrv int) *Tstate {
+func newTstate(t *test.Tstate, nsrv int) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = test.NewTstateAll(t)
+	ts.Tstate = t
 	ts.job = rd.String(16)
 	ts.Remove(cache.CACHE)
 	cm, err := cachedsvc.NewCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
-	assert.Nil(t, err)
+	assert.Nil(t.T, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
 	ts.sem = semclnt.NewSemClnt(ts.FsLib, ts.sempn)
 	err = ts.sem.Init(0)
-	assert.Nil(t, err)
+	assert.Nil(t.T, err)
 	return ts
 }
 
@@ -73,8 +73,11 @@ func TestCacheSingle(t *testing.T) {
 		N    = 1
 		NSRV = 1
 	)
-
-	ts := newTstate(t, NSRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, NSRV)
 	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	assert.Nil(t, err)
 
@@ -117,7 +120,11 @@ func testCacheSharded(t *testing.T, nsrv int) {
 	const (
 		N = 10
 	)
-	ts := newTstate(t, nsrv)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, nsrv)
 	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	assert.Nil(t, err)
 
@@ -169,7 +176,11 @@ func TestCacheConcur(t *testing.T) {
 		N    = 3
 		NSRV = 1
 	)
-	ts := newTstate(t, NSRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, NSRV)
 	v := "hello"
 	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	assert.Nil(t, err)
@@ -202,7 +213,11 @@ func TestCacheClerk(t *testing.T) {
 		DUR   = 10 * time.Second
 	)
 
-	ts := newTstate(t, NSRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, NSRV)
 
 	for i := 0; i < N; i++ {
 		ts.StartClerk(DUR, NKEYS, i*NKEYS, 0)
@@ -222,7 +237,11 @@ func TestElasticCache(t *testing.T) {
 		DUR   = 30 * time.Second
 	)
 
-	ts := newTstate(t, NSRV)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, NSRV)
 
 	for i := 0; i < N; i++ {
 		ts.StartClerk(DUR, NKEYS, i*NKEYS, 2*1000)

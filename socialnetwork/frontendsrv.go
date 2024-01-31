@@ -56,7 +56,10 @@ func RunFrontendSrv(public bool, job string) error {
 		return err
 	}
 	frontend.SigmaClnt = sc
-	fsls := NewFsLibs(SERVER_NAME)
+	fsls, err := NewFsLibs(SERVER_NAME)
+	if err != nil {
+		return err
+	}
 	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err

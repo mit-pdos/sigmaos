@@ -1,4 +1,4 @@
-package imgresized_test
+package imgresizesrv_test
 
 import (
 	"fmt"
@@ -13,8 +13,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
+	"sigmaos/fttasks"
 	"sigmaos/groupmgr"
-	"sigmaos/imgresized"
+	"sigmaos/imgresizesrv"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
@@ -51,7 +52,10 @@ func TestResizeImg(t *testing.T) {
 }
 
 func TestResizeProc(t *testing.T) {
-	ts := test.NewTstateAll(t)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	in := path.Join(sp.S3, "~local/9ps3/img-save/6.jpg")
 	//	in := path.Join(sp.S3, "~local/9ps3/img-save/6.jpg")
 	out := path.Join(sp.S3, "~local/9ps3/img/6-thumb-xxx.jpg")
@@ -71,19 +75,25 @@ type Tstate struct {
 	job string
 	*test.Tstate
 	ch chan bool
+	ft *fttasks.FtTasks
 }
 
-func newTstate(t *testing.T) *Tstate {
+func newTstate(t *test.Tstate) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = test.NewTstateAll(t)
+	ts.Tstate = t
 	ts.job = rd.String(4)
 	ts.ch = make(chan bool)
 	ts.cleanup()
+
+	ft, err := fttasks.MkFtTasks(ts.SigmaClnt.FsLib, imgresizesrv.IMG, ts.job)
+	assert.Nil(ts.T, err)
+	ts.ft = ft
 	return ts
 }
 
 func (ts *Tstate) cleanup() {
-	imgresized.Cleanup(ts.FsLib, path.Join(sp.S3, "~local/9ps3/img-save"))
+	ts.RmDir(imgresizesrv.IMG)
+	imgresizesrv.Cleanup(ts.FsLib, path.Join(sp.S3, "~local/9ps3/img-save"))
 }
 
 func (ts *Tstate) shutdown() {
@@ -97,7 +107,7 @@ func (ts *Tstate) progress() {
 		case <-ts.ch:
 			return
 		case <-time.After(1 * time.Second):
-			if n, err := imgresized.NTaskDone(ts.SigmaClnt.FsLib, ts.job); err != nil {
+			if n, err := ts.ft.NTaskDone(); err != nil {
 				assert.Nil(ts.T, err)
 			} else {
 				fmt.Printf("%d..", n)
@@ -107,18 +117,20 @@ func (ts *Tstate) progress() {
 }
 
 func TestImgdFatal(t *testing.T) {
-	ts := newTstate(t)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 
-	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
-	assert.Nil(ts.T, err)
+	imgd := imgresizesrv.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0)
 	fn := path.Join(sp.S3, "~local/9ps3/img-save/", "yyy.jpg")
 
-	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
+	err := ts.ft.SubmitTask(imgresizesrv.NewTask(fn))
 	assert.Nil(ts.T, err)
 
-	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
+	err = ts.ft.SubmitStop()
 	assert.Nil(ts.T, err)
 
 	gs := imgd.WaitGroup()
@@ -130,18 +142,15 @@ func TestImgdFatal(t *testing.T) {
 }
 
 func (ts *Tstate) imgdJob(paths []string) {
-	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
-	assert.Nil(ts.T, err)
-
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0)
+	imgd := imgresizesrv.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0)
 
 	for _, pn := range paths {
 		db.DPrintf(db.TEST, "submit %v\n", pn)
-		err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, pn)
+		err := ts.ft.SubmitTask(imgresizesrv.NewTask(pn))
 		assert.Nil(ts.T, err)
 	}
 
-	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
+	err := ts.ft.SubmitStop()
 	assert.Nil(ts.T, err)
 
 	go ts.progress()
@@ -153,14 +162,22 @@ func (ts *Tstate) imgdJob(paths []string) {
 }
 
 func TestImgdOne(t *testing.T) {
-	ts := newTstate(t)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 	fn := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
 	ts.imgdJob([]string{fn})
 	ts.shutdown()
 }
 
 func TestImgdMany(t *testing.T) {
-	ts := newTstate(t)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 
 	sts, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/img-save"))
 	assert.Nil(t, err)
@@ -176,17 +193,18 @@ func TestImgdMany(t *testing.T) {
 }
 
 func TestImgdRestart(t *testing.T) {
-	ts := newTstate(t)
-
-	err := imgresized.MkDirs(ts.SigmaClnt.FsLib, ts.job)
-	assert.Nil(t, err)
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1)
 
 	fn := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
 
-	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, fn)
+	err := ts.ft.SubmitTask(imgresizesrv.NewTask(fn))
 	assert.Nil(t, err)
 
-	imgd := imgresized.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0)
+	imgd := imgresizesrv.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0)
 
 	time.Sleep(2 * time.Second)
 
@@ -198,13 +216,17 @@ func TestImgdRestart(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Restart")
 
-	ts.Tstate = test.NewTstateAll(t)
+	t2, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts.Tstate = t2
 
 	gms, err := groupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")
 	assert.Equal(ts.T, 1, len(gms))
 
-	err = imgresized.SubmitTask(ts.SigmaClnt.FsLib, ts.job, imgresized.STOP)
+	err = ts.ft.SubmitStop()
 	assert.Nil(t, err)
 
 	go ts.progress()

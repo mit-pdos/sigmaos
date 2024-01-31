@@ -117,7 +117,7 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 	for i := 0; i < nsample; i++ {
 		pqID, err := pqc.urpcc.RandomSrv()
 		if err != nil {
-			db.DFatalf("Can't get random srv: %v", err)
+			db.DPrintf(db.ERROR, "Can't get random srv: %v", err)
 			return nil, err
 		}
 		// Don't double-sample
@@ -127,13 +127,13 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 		sampled[pqID] = true
 		rpcc, err := pqc.urpcc.GetClnt(pqID)
 		if err != nil {
-			db.DFatalf("Can't get random srv clnt: %v", err)
+			db.DPrintf(db.ERROR, "Can't get random srv clnt: %v", err)
 			return nil, err
 		}
 		req := &proto.GetStatsRequest{}
 		res := &proto.GetStatsResponse{}
 		if err := rpcc.RPC("ProcQ.GetStats", req, res); err != nil {
-			db.DFatalf("Can't get stats: %v", err)
+			db.DPrintf(db.ERROR, "Can't get stats: %v", err)
 			return nil, err
 		}
 		for rstr, l := range res.Nqueued {

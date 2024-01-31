@@ -78,7 +78,7 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 		// user bin dir.
 		mount.Mount{
 			Type:   mount.TypeBind,
-			Source: path.Join("/tmp/sigmaos-bin"),
+			Source: path.Join("/tmp/sigmaos-bin", kernelId),
 			Target: path.Join(sp.SIGMAHOME, "all-realm-bin"),
 			//					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
 			//					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
@@ -155,7 +155,10 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 		ip:         ip,
 		cmgr:       cgroup.NewCgroupMgr(),
 	}
-	c.cmgr.SetMemoryLimit(c.cgroupPath, membytes, memswap)
+
+	if err := c.cmgr.SetMemoryLimit(c.cgroupPath, membytes, memswap); err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 

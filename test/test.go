@@ -1,8 +1,12 @@
+// Package sets up an environment for testing sigmaos.  If running
+// test with --start, test will start sigmaos kernel.  Without
+// --start, it will test create a kernelclnt without starting kernel.
 package test
 
 import (
 	"flag"
 	"fmt"
+	gopath "path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,12 +21,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
-
-//
-// If running test with --start, test will start sigmaos kernel.
-// Without --start, it will test create a kernelclnt without starting
-// kernel.
-//
 
 const (
 	BOOT_REALM = "realm"
@@ -66,6 +64,7 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 type Tstate struct {
 	*sigmaclnt.SigmaClnt
 	rc      *realmclnt.RealmClnt
+	memfs   *proc.Proc
 	kclnts  []*bootkernelclnt.Kernel
 	killidx int
 	T       *testing.T
@@ -73,33 +72,43 @@ type Tstate struct {
 	scsck   *bootkernelclnt.Kernel
 }
 
-func NewTstatePath(t *testing.T, path string) *Tstate {
+func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
 	ts, err := newSysClntPath(t, path)
 	if err != nil {
-		db.DFatalf("NewTstatePath: %v\n", err)
+		db.DPrintf(db.ERROR, "NewTstatePath: %v\n", err)
+		return nil, err
 	}
-	return ts
+	if path == gopath.Join(sp.MEMFS, "~local/")+"/" {
+		ts.memfs = proc.NewProc("memfsd", []string{})
+		err := ts.Spawn(ts.memfs)
+		assert.Nil(t, err)
+		err = ts.WaitStart(ts.memfs.GetPid())
+		assert.Nil(t, err, "WaitStart error")
+	}
+	return ts, nil
 }
 
-func NewTstate(t *testing.T) *Tstate {
+func NewTstate(t *testing.T) (*Tstate, error) {
 	return NewTstatePath(t, sp.NAMED)
 }
 
-func NewTstateAll(t *testing.T) *Tstate {
+func NewTstateAll(t *testing.T) (*Tstate, error) {
 	return NewTstatePath(t, "all")
 }
 
-func NewTstateWithRealms(t *testing.T) *Tstate {
+func NewTstateWithRealms(t *testing.T) (*Tstate, error) {
 	ts, err := newSysClnt(t, BOOT_REALM)
 	if err != nil {
-		db.DFatalf("NewTstateRealm: %v\n", err)
+		db.DPrintf(db.ERROR, "NewTstateRealm: %v\n", err)
+		return nil, err
 	}
 	rc, err := realmclnt.NewRealmClnt(ts.FsLib)
 	if err != nil {
-		db.DFatalf("NewRealmClnt make realmclnt: %v\n", err)
+		db.DPrintf(db.ERROR, "NewRealmClnt make realmclnt: %v\n", err)
+		return nil, err
 	}
 	ts.rc = rc
-	return ts
+	return ts, nil
 }
 
 func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
@@ -113,7 +122,8 @@ func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	localIP, err1 := netsigma.LocalIP()
 	if err1 != nil {
-		db.DFatalf("Error local IP: %v", err1)
+		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
+		return nil, err1
 	}
 	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
@@ -195,6 +205,13 @@ func (ts *Tstate) Shutdown() error {
 		db.DPrintf(db.TEST, "Skipping shutdown")
 	} else {
 		db.DPrintf(db.SYSTEM, "Shutdown")
+		if ts.memfs != nil {
+			db.DPrintf(db.SYSTEM, "Shutdown memfs")
+			err := ts.Evict(ts.memfs.GetPid())
+			assert.Nil(ts.T, err, "evict")
+			_, err = ts.WaitExit(ts.memfs.GetPid())
+			assert.Nil(ts.T, err, "WaitExit error")
+		}
 		if err := ts.RmDir(ts.ProcEnv().ProcDir); err != nil {
 			db.DPrintf(db.ALWAYS, "Failed to clean up %v err %v", ts.ProcEnv().ProcDir, err)
 		}

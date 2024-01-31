@@ -34,7 +34,7 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, *sp
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Tattach:
 		reply := &sp.Rattach{}
-		cid, err := s.protsrv.Attach(req, reply, s.attachClnt)
+		cid, err := s.protsrv.Attach(req, reply)
 		if cid != sp.NoClntId {
 			return reply, nil, err, TSESS_ADD, cid
 		} else {
@@ -98,7 +98,7 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, *sp
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Tdetach:
 		reply := &sp.Rdetach{}
-		err := s.protsrv.Detach(req, reply, s.detachClnt)
+		err := s.protsrv.Detach(req, reply)
 		return reply, nil, err, TSESS_DEL, req.TclntId()
 	case *sp.Theartbeat:
 		reply := &sp.Rheartbeat{}

@@ -50,7 +50,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 
 		<-ch
 
-		db.DPrintf(db.TEST, "Try to write..\n")
+		db.DPrintf(db.TEST, "Old leader try to write..\n")
 
 		// A thread shouldn't write after resigning, but this thread
 		// lost leader status, and the other thread should have it by

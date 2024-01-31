@@ -2,6 +2,7 @@ package clonedev
 
 import (
 	"path"
+	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -19,6 +20,7 @@ type NewSessionF func(*memfssrv.MemFs, sessp.Tsession) *serr.Err
 type WriteCtlF func(sessp.Tsession, fs.CtxI, sp.Toffset, []byte, sp.Tfence) (sp.Tsize, *serr.Err)
 
 type Clone struct {
+	mu sync.Mutex
 	*inode.Inode
 	mfs        *memfssrv.MemFs
 	newsession NewSessionF
@@ -48,6 +50,9 @@ func newClone(mfs *memfssrv.MemFs, dir string, news NewSessionF, d sps.DetachSes
 
 // XXX clean up in case of error
 func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	sid := ctx.SessionId()
 	pn := path.Join(c.dir, sid.String())
 	db.DPrintf(db.CLONEDEV, "Clone create %q\n", pn)

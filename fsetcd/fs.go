@@ -74,16 +74,16 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 			clientv3.OpGet(f.Prefix(), opts...),
 		}
 		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
-		db.DPrintf(db.FSETCD, "PutFile %v %v %v %v err %v\n", p, nf, f, resp, err)
+		db.DPrintf(db.FSETCD, "PutFile p %v nf %v f %v resp %v err %v\n", p, nf, f, resp, err)
 		if err != nil {
 			return serr.NewErrError(err)
 		}
 		if !resp.Succeeded {
 			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
-				db.DPrintf(db.FSETCD, "PutFile %v %v %v %v stale\n", p, nf, f, resp)
+				db.DPrintf(db.FENCEFS, "PutFile p %v nf %v f %v resp %v stale\n", p, nf, f, resp)
 				return serr.NewErr(serr.TErrStale, f)
 			}
-			db.DFatalf("PutFile failed %v %v %v\n", p, nf, resp.Responses[0])
+			db.DPrintf(db.ERROR, "PutFile failed %v %v %v\n", p, nf, resp.Responses[0])
 		}
 
 		return nil

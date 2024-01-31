@@ -34,11 +34,20 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 	return st.Tmode().IsDir(), nil
 }
 
+// Create all parent dirs in pn if they don't exist.  If the last one
+// exists, return error.
 func (fl *FsLib) MkDirPath(dir, pn string, perm sp.Tperm) error {
 	p := path.Split(pn)
-	for _, c := range p {
+	for i, c := range p {
 		dir = gopath.Join(dir, c)
-		if err := fl.MkDir(dir, perm); err != nil {
+		err := fl.MkDir(dir, perm)
+		if err == nil {
+			continue
+		}
+		if !serr.IsErrCode(err, serr.TErrExists) {
+			return err
+		}
+		if i == len(p)-1 {
 			return err
 		}
 	}

@@ -7,7 +7,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 )
 
 type FtTaskMgr struct {
@@ -44,11 +43,14 @@ func (ftm *FtTaskMgr) ExecuteTasks(new Tnew, mkProc TmkProc) *proc.Status {
 	// unrecoverable error) or until a client stops ftm.
 	stop := false
 	for !stop {
-		sts, err := ftm.WaitForTasks()
+		ts, b, err := ftm.WaitForTasks()
 		if err != nil {
-			db.DFatalf("WaitForTasks %v err %v", err)
+			db.DFatalf("WaitForTasks err %v", err)
 		}
-		stop = ftm.doTasks(sts, ch, new, mkProc)
+		stop = b
+		if err := ftm.StartTasks(ts, ch, new, mkProc); err != nil {
+			db.DFatalf("startTasks %v err %v", ts, err)
+		}
 	}
 	// tell collector to finish up
 	finish <- true
@@ -58,30 +60,14 @@ func (ftm *FtTaskMgr) ExecuteTasks(new Tnew, mkProc TmkProc) *proc.Status {
 	return nil
 }
 
-func (ftm *FtTaskMgr) doTasks(sts []*sp.Stat, ch chan Tresult, new Tnew, mkProc TmkProc) bool {
-	// Due to inconsistent views of the WIP directory (concurrent adds by
-	// clients and paging reads in the parent of this function), some
-	// entries may be duplicated.
-	entries := make(map[string]bool)
-	for _, st := range sts {
-		entries[st.Name] = true
-	}
-	db.DPrintf(db.FTTASKMGR, "Removed %v duplicate entries", len(sts)-len(entries))
-	stop := false
+func (ftm *FtTaskMgr) StartTasks(ts []string, ch chan Tresult, new Tnew, mkProc TmkProc) error {
 	ntask := 0
-	for entry, _ := range entries {
-		t, err := ftm.ClaimTask(entry)
-		if err != nil || t == "" {
-			continue
-		}
-		if t == STOP {
-			// stop after processing remaining entries
-			stop = true
-			continue
-		}
+	var r error
+	for _, t := range ts {
 		rdr, err := ftm.TaskReader(t)
 		if err != nil {
 			db.DPrintf(db.FTTASKMGR, "TaskReader %s err %v", t, err)
+			r = err
 			continue
 		}
 		defer rdr.Close()
@@ -93,12 +79,9 @@ func (ftm *FtTaskMgr) doTasks(sts []*sp.Stat, ch chan Tresult, new Tnew, mkProc 
 			go ftm.runTask(p, t, ch)
 			return nil
 		})
-		if err != nil {
-			db.DPrintf(db.FTTASKMGR, "JsonReader err %v", err)
-		}
 	}
-	db.DPrintf(db.FTTASKMGR, "Started %v tasks stop %v ntask in progress %v", ntask, stop, atomic.LoadInt32(&ftm.ntask))
-	return stop
+	db.DPrintf(db.FTTASKMGR, "Started %v tasks ntask in progress %v", ntask, atomic.LoadInt32(&ftm.ntask))
+	return r
 }
 
 func (ftm *FtTaskMgr) runTask(p *proc.Proc, t string, ch chan Tresult) {

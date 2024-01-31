@@ -10,6 +10,7 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/fttaskmgr"
 	"sigmaos/fttasks"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
@@ -149,7 +150,7 @@ func (imgd *ImgSrv) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s", imgd.job)
 
-	ftm, err := fttasks.NewTaskMgr(imgd.SigmaClnt.ProcAPI, imgd.ft)
+	ftm, err := fttaskmgr.NewTaskMgr(imgd.SigmaClnt.ProcAPI, imgd.ft)
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}

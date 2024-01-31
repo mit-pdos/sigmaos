@@ -83,7 +83,7 @@ func newTstate(t *test.Tstate) *Tstate {
 	ts.Tstate = t
 	ts.job = rd.String(4)
 	ts.ch = make(chan bool)
-	ts.cleanup1()
+	ts.cleanup()
 
 	ft, err := fttasks.MkFtTasks(ts.SigmaClnt.FsLib, imgresizesrv.IMG, ts.job)
 	assert.Nil(ts.T, err)
@@ -91,7 +91,7 @@ func newTstate(t *test.Tstate) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) cleanup1() {
+func (ts *Tstate) cleanup() {
 	ts.RmDir(imgresizesrv.IMG)
 	imgresizesrv.Cleanup(ts.FsLib, path.Join(sp.S3, "~local/9ps3/img-save"))
 }

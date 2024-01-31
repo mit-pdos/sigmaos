@@ -242,17 +242,18 @@ func TestSeqWc(t *testing.T) {
 }
 
 type Tstate struct {
-	job string
 	*test.Tstate
+	job         string
 	nreducetask int
+	tasks       *mr.Tasks
 }
 
 func newTstate(t1 *test.Tstate) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = t1
-	var err1 error
-	job, err1 = mr.ReadJobConfig(app)
-	assert.Nil(t1.T, err1, "Error ReadJobConfig: %v", err1)
+	j, err := mr.ReadJobConfig(app)
+	assert.Nil(t1.T, err, "Error ReadJobConfig: %v", err)
+	job = j
 	ts.nreducetask = job.Nreduce
 	ts.job = rd.String(4)
 
@@ -262,9 +263,9 @@ func newTstate(t1 *test.Tstate) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll(path.Join(sp.SIGMAHOME, "mr"))
 
-	err1 = mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
-	assert.Nil(t1.T, err1, "Error InitCoordFS: %v", err1)
-
+	tasks, err := mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
+	assert.Nil(t1.T, err, "Error InitCoordFS: %v", err)
+	ts.tasks = tasks
 	os.Remove(OUTPUT)
 
 	return ts
@@ -315,10 +316,11 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux 
 		defer sdc.Done()
 	}
 
-	nmap, err := mr.PrepareJob(ts.FsLib, ts.job, job)
+	nmap, err := mr.PrepareJob(ts.FsLib, ts.tasks, ts.job, job)
 	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
+	//db.DFatalf("xx")
 	cm := mr.StartMRJob(ts.SigmaClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, true)
 
 	crashchan := make(chan bool)

@@ -127,10 +127,10 @@ func TestImgdFatal(t *testing.T) {
 
 	fn := path.Join(sp.S3, "~local/9ps3/img-save/", "yyy.jpg")
 
-	err := ts.ft.SubmitTask(fn)
+	err := ts.ft.SubmitTask(imgresizesrv.NewTask(fn))
 	assert.Nil(ts.T, err)
 
-	err = ts.ft.SubmitTask(fttasks.STOP)
+	err = ts.ft.SubmitStop()
 	assert.Nil(ts.T, err)
 
 	gs := imgd.WaitGroup()
@@ -146,11 +146,11 @@ func (ts *Tstate) imgdJob(paths []string) {
 
 	for _, pn := range paths {
 		db.DPrintf(db.TEST, "submit %v\n", pn)
-		err := ts.ft.SubmitTask(pn)
+		err := ts.ft.SubmitTask(imgresizesrv.NewTask(pn))
 		assert.Nil(ts.T, err)
 	}
 
-	err := ts.ft.SubmitTask(fttasks.STOP)
+	err := ts.ft.SubmitStop()
 	assert.Nil(ts.T, err)
 
 	go ts.progress()
@@ -201,7 +201,7 @@ func TestImgdRestart(t *testing.T) {
 
 	fn := path.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
 
-	err := ts.ft.SubmitTask(fn)
+	err := ts.ft.SubmitTask(imgresizesrv.NewTask(fn))
 	assert.Nil(t, err)
 
 	imgd := imgresizesrv.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0)
@@ -226,7 +226,7 @@ func TestImgdRestart(t *testing.T) {
 	assert.Nil(ts.T, err, "Recover")
 	assert.Equal(ts.T, 1, len(gms))
 
-	err = ts.ft.SubmitTask(fttasks.STOP)
+	err = ts.ft.SubmitStop()
 	assert.Nil(t, err)
 
 	go ts.progress()

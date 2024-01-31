@@ -22,6 +22,14 @@ const (
 	IMG = "name/img"
 )
 
+type Ttask struct {
+	FileName string `json:"File"`
+}
+
+func NewTask(fn string) *Ttask {
+	return &Ttask{fn}
+}
+
 type ImgSrv struct {
 	*sigmaclnt.SigmaClnt
 	ft         *fttasks.FtTasks
@@ -117,8 +125,11 @@ func IsThumbNail(fn string) bool {
 	return strings.Contains(fn, "-thumb")
 }
 
-func (imgd *ImgSrv) mkProc(t string) *proc.Proc {
-	p := proc.NewProcPid(sp.GenPid(imgd.job), "imgresize", []string{t, ThumbName(t), strconv.Itoa(imgd.nrounds)})
+func (imgd *ImgSrv) mkProc(tn string, t interface{}) *proc.Proc {
+	task := *t.(*Ttask)
+	db.DPrintf(db.FTTASKS, "mkProc %s %v", tn, task)
+	fn := task.FileName
+	p := proc.NewProcPid(sp.GenPid(imgd.job), "imgresize", []string{fn, ThumbName(fn), strconv.Itoa(imgd.nrounds)})
 	if imgd.crash > 0 {
 		p.SetCrash(imgd.crash)
 	}
@@ -142,7 +153,7 @@ func (imgd *ImgSrv) Work() {
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}
-	status := ftm.ExecuteTasks(imgd.mkProc)
+	status := ftm.ExecuteTasks(func() interface{} { return new(Ttask) }, imgd.mkProc)
 	db.DPrintf(db.ALWAYS, "imgresized exit")
 	imgd.exited = true
 	if status == nil {

@@ -3,7 +3,6 @@ package fttasks
 
 import (
 	"path"
-	"strings"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -27,7 +26,7 @@ type FtTasks struct {
 }
 
 func MkFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
-	if err := fsl.MkDir(dir, 0777); err != nil {
+	if err := fsl.MkDir(dir, 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		return nil, err
 	}
 	// job can be a pathname
@@ -70,14 +69,16 @@ func (ft *FtTasks) NTaskDone() (int, error) {
 	return len(sts), nil
 }
 
-func (ft *FtTasks) SubmitTask(fn string) error {
-	return ft.SubmitTaskMulti([]string{fn})
+func (ft *FtTasks) SubmitTask(i interface{}) error {
+	db.DPrintf(db.FTTASKS, "SubmitTask %v", i)
+	t := path.Join(sp.IMG, ft.job, "todo", rd.String(4))
+	return ft.PutFileJson(t, 0777, i)
 }
 
-func (ft *FtTasks) SubmitTaskMulti(fns []string) error {
-	db.DPrintf(db.FTTASKS, "SubmitTaskMulti %v", fns)
-	t := path.Join(sp.IMG, ft.job, "todo", rd.String(4))
-	_, err := ft.PutFile(t, 0777, sp.OREAD, []byte(strings.Join(fns, ",")))
+func (ft *FtTasks) SubmitStop() error {
+	db.DPrintf(db.FTTASKS, "SubmitStop")
+	t := path.Join(sp.IMG, ft.job, "todo", STOP)
+	_, err := ft.PutFile(t, 0777, sp.OWRITE, []byte{})
 	return err
 }
 
@@ -99,6 +100,8 @@ func (ft *FtTasks) WaitForTasks() ([]*sp.Stat, error) {
 	return sts, err
 }
 
+// Try to claim task <name>. If success, return <name>.  If
+// someone else has taken it, return "".
 func (ft *FtTasks) ClaimTask(name string) (string, error) {
 	if err := ft.Rename(ft.todo+"/"+name, ft.wip+"/"+name); err != nil {
 		if serr.IsErrCode(err, serr.TErrUnreachable) { // partitioned?
@@ -112,8 +115,8 @@ func (ft *FtTasks) ClaimTask(name string) (string, error) {
 	return name, nil
 }
 
-func (ft *FtTasks) ReadTask(name string) ([]byte, error) {
-	return ft.GetFile(path.Join(ft.wip, name))
+func (ft *FtTasks) TaskReader(name string) (*fslib.FdReader, error) {
+	return ft.OpenReader(path.Join(ft.wip, name))
 }
 
 func (ft *FtTasks) MarkDone(name string) error {

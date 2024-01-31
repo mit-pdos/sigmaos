@@ -74,14 +74,14 @@ func (ft *FtTasks) NTaskDone() (int, error) {
 // Causes the server to stop after processing remaining tasks
 func (ft *FtTasks) SubmitStop() error {
 	db.DPrintf(db.FTTASKS, "SubmitStop")
-	t := path.Join(sp.IMG, ft.job, "todo", STOP)
+	t := path.Join(ft.todo, STOP)
 	_, err := ft.PutFile(t, 0777, sp.OWRITE, []byte{})
 	return err
 }
 
 func (ft *FtTasks) SubmitTask(i interface{}) error {
 	db.DPrintf(db.FTTASKS, "SubmitTask %v", i)
-	t := path.Join(sp.IMG, ft.job, "todo", rd.String(4))
+	t := path.Join(ft.todo, rd.String(4))
 	return ft.PutFileJson(t, 0777, i)
 }
 
@@ -94,7 +94,7 @@ func (ft *FtTasks) SubmitTaskMulti(is []interface{}) error {
 		}
 		bs = append(bs, b...)
 	}
-	t := path.Join(sp.IMG, ft.job, "todo", rd.String(4))
+	t := path.Join(ft.todo, rd.String(4))
 	_, err := ft.PutFile(t, 0777, sp.OWRITE, bs)
 	return err
 }
@@ -174,8 +174,18 @@ func (ft *FtTasks) GetTasks() ([]string, bool, error) {
 	return ft.claimTasks(sts)
 }
 
+// Read tasks by reading file in one shot
+func (ft *FtTasks) ReadTask(name string, i interface{}) error {
+	return ft.GetFileJson(ft.wip+"/"+name, i)
+}
+
+// Read tasks using a reader
 func (ft *FtTasks) TaskReader(name string) (*fslib.FdReader, error) {
 	return ft.OpenReader(path.Join(ft.wip, name))
+}
+
+func (ft *FtTasks) TaskPathName(name string) string {
+	return ft.wip + "/" + name
 }
 
 func (ft *FtTasks) MarkDone(name string) error {
@@ -184,4 +194,17 @@ func (ft *FtTasks) MarkDone(name string) error {
 
 func (ft *FtTasks) MarkRunnable(name string) error {
 	return ft.Rename(ft.wip+"/"+name, ft.todo+"/"+name)
+}
+
+// Mark a task as errored out to restart it later
+func (ft *FtTasks) MarkError(name string) error {
+	if err := ft.Rename(ft.done+"/"+name, ft.error+"/"+name); err == nil {
+		return nil
+	}
+	return ft.Rename(ft.wip+"/"+name, ft.error+"/"+name)
+}
+
+// Mark all error-ed tasks as runnable
+func (ft *FtTasks) Restart() (int, error) {
+	return ft.MoveFiles(ft.error, ft.todo)
 }

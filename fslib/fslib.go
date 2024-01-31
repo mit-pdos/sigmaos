@@ -13,7 +13,7 @@ type FsLib struct {
 }
 
 func NewFsLibAPI(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*FsLib, error) {
-	db.DPrintf(db.PORT, "NewFsLib: uname %s innerip %s addrs %v\n", pcfg.GetUname(), pcfg.GetInnerContainerIP(), pcfg.EtcdIP)
+	db.DPrintf(db.FSLIB, "NewFsLib: uname %s innerip %s etcdIP %v\n", pcfg.GetUname(), pcfg.GetInnerContainerIP(), pcfg.EtcdIP)
 	fl := &FsLib{
 		pcfg:    pcfg,
 		SigmaOS: sos,

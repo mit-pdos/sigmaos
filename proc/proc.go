@@ -136,7 +136,7 @@ func (p *Proc) IsPrivileged() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t KernelId:%v UseSigmaclntd %t Realm:%v Perf:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
+	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t KernelId:%v UseSigmaclntd %t Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.GetPID(),
 		p.ProcEnvProto.GetBuildTag(),
@@ -145,6 +145,8 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.UseSigmaclntd,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.GetPerf(),
+		p.ProcEnvProto.GetInnerContainerIP(),
+		p.ProcEnvProto.GetOuterContainerIP(),
 		p.Args,
 		p.GetType(),
 		p.GetMcpu(),

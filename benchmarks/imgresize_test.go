@@ -63,7 +63,11 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 	db.DPrintf(db.ALWAYS, "Submit ImgResizeJob tasks")
 	for i := 0; i < ji.ntasks; i++ {
-		err := ft.SubmitTaskMulti(fns)
+		ts := make([]interface{}, len(fns))
+		for _, fn := range fns {
+			ts = append(ts, imgresizesrv.NewTask(fn))
+		}
+		err := ft.SubmitTaskMulti(ts)
 		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
 	}
 	db.DPrintf(db.ALWAYS, "Done submitting ImgResize tasks")

@@ -84,6 +84,7 @@ func (ftm *FtTaskMgr) doTasks(sts []*sp.Stat, ch chan Tresult, new Tnew, mkProc 
 			db.DPrintf(db.FTTASKMGR, "TaskReader %s err %v", t, err)
 			continue
 		}
+		defer rdr.Close()
 		err = fslib.JsonReader(rdr.Reader, new, func(i interface{}) error {
 			atomic.AddInt32(&ftm.ntask, 1)
 			ntask += 1

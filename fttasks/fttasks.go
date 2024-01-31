@@ -2,6 +2,8 @@
 package fttasks
 
 import (
+	"encoding/json"
+	"fmt"
 	"path"
 
 	db "sigmaos/debug"
@@ -69,16 +71,31 @@ func (ft *FtTasks) NTaskDone() (int, error) {
 	return len(sts), nil
 }
 
+// Causes the server to stop after processing remaining tasks
+func (ft *FtTasks) SubmitStop() error {
+	db.DPrintf(db.FTTASKS, "SubmitStop")
+	t := path.Join(sp.IMG, ft.job, "todo", STOP)
+	_, err := ft.PutFile(t, 0777, sp.OWRITE, []byte{})
+	return err
+}
+
 func (ft *FtTasks) SubmitTask(i interface{}) error {
 	db.DPrintf(db.FTTASKS, "SubmitTask %v", i)
 	t := path.Join(sp.IMG, ft.job, "todo", rd.String(4))
 	return ft.PutFileJson(t, 0777, i)
 }
 
-func (ft *FtTasks) SubmitStop() error {
-	db.DPrintf(db.FTTASKS, "SubmitStop")
-	t := path.Join(sp.IMG, ft.job, "todo", STOP)
-	_, err := ft.PutFile(t, 0777, sp.OWRITE, []byte{})
+func (ft *FtTasks) SubmitTaskMulti(is []interface{}) error {
+	bs := make([]byte, 0)
+	for _, i := range is {
+		b, err := json.Marshal(i)
+		if err != nil {
+			return fmt.Errorf("Marshal error %v", err)
+		}
+		bs = append(bs, b...)
+	}
+	t := path.Join(sp.IMG, ft.job, "todo", rd.String(4))
+	_, err := ft.PutFile(t, 0777, sp.OWRITE, bs)
 	return err
 }
 

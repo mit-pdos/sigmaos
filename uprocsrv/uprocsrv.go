@@ -69,12 +69,6 @@ func RunUprocSrv(kernelId string, up string) error {
 	}
 	defer p.Done()
 
-	scsc, err := sigmaclntsrv.ExecSigmaClntSrv()
-	if err != nil {
-		return err
-	}
-	ups.scsc = scsc
-
 	err = ssrv.RunServer()
 	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)
 	return nil
@@ -147,6 +141,16 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v done", realm)
 	// Note that the uprocsrv has been assigned.
 	ups.assigned = true
+
+	// Now that the uprocd's innerIP has been established, spawn sigmaclntd
+	pid := sp.GenPid("sigmaclntd")
+	scdp := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
+	scdp.InheritParentProcEnv(ups.pe)
+	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), proc.NOT_SET)
+	if err != nil {
+		return err
+	}
+	ups.scsc = scsc
 
 	// Demote to reader lock
 	ups.mu.Unlock()

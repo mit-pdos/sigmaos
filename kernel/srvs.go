@@ -165,7 +165,10 @@ func (k *Kernel) bootNamed() (Subsystem, error) {
 }
 
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
-	return sigmaclntsrv.ExecSigmaClntSrv()
+	pid := sp.GenPid("sigmaclntd")
+	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
+	p.InheritParentProcEnv(k.ProcEnv())
+	return sigmaclntsrv.ExecSigmaClntSrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"))
 }
 
 // Start uprocd in a sigmauser container and post the mount for

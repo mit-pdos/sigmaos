@@ -12,7 +12,6 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	"sigmaos/netsigma"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -26,15 +25,16 @@ type SigmaClntSrv struct {
 }
 
 func newSigmaClntSrv() (*SigmaClntSrv, error) {
-	localIP, err := netsigma.LocalIP()
-	if err != nil {
-		db.DFatalf("Error local IP: %v", err)
-	}
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, "127.0.0.1", localIP, localIP, "local-build", false, false)
-	pcfg.Program = "sigmaclntd"
-	pcfg.SetUname("sigmaclntd")
-	pcfg.SetPID(sp.GenPid("sigmaclntd"))
-	proc.SetSigmaDebugPid(pcfg.GetPID().String())
+	//	localIP, err := netsigma.LocalIP()
+	//	if err != nil {
+	//		db.DFatalf("Error local IP: %v", err)
+	//	}
+	pcfg := proc.GetProcEnv()
+	//	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, "127.0.0.1", localIP, "local-build", false, false)
+	//	pcfg.Program = "sigmaclntd"
+	//	pcfg.SetUname("sigmaclntd")
+	//	pcfg.SetPID(sp.GenPid("sigmaclntd"))
+	//	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 
 	scs := &SigmaClntSrv{
 		pcfg,
@@ -178,8 +178,11 @@ func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip)
 }
 
 // Start the sigmaclntd process
-func ExecSigmaClntSrv() (*SigmaClntSrvCmd, error) {
+func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) (*SigmaClntSrvCmd, error) {
+	p.FinalizeEnv(innerIP, outerIP, uprocdPid)
+	db.DPrintf(db.SIGMACLNTSRV, "ExecSigmaclntsrv: %v", p)
 	cmd := exec.Command("sigmaclntd", []string{}...)
+	cmd.Env = p.GetEnv()
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err

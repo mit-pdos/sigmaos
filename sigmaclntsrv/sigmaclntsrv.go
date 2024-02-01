@@ -51,7 +51,7 @@ func (scs *SigmaClntSrv) runServer() error {
 	if err := os.Chmod(sp.SIGMASOCKET, 0777); err != nil {
 		db.DFatalf("Err chmod sigmasocket: %v", err)
 	}
-	db.DPrintf(db.SIGMACLNTSRV, "runServer: listening on %v", sp.SIGMASOCKET)
+	db.DPrintf(db.TEST, "runServer: sigmaclntd listening on %v", sp.SIGMASOCKET)
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
 		return err
 	}

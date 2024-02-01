@@ -1,4 +1,10 @@
-package fttasks
+// The fttaskmgr implements a task manager using [fttasks], which
+// stores tasks persistently.  The manger proc spawns procs to process
+// these tasks, and restarts them if a proc crashes.  The fttask mgr
+// itself is fault-tolerant: after a crash, another mgr procs will
+// take over and resumes from the fttask state. [imgrsizesrv] uses
+// [fttaskmgr] to proces image-resizing tasks.
+package fttaskmgr
 
 import (
 	"sync/atomic"
@@ -6,11 +12,12 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/fttasks"
 	"sigmaos/proc"
 )
 
 type FtTaskMgr struct {
-	*FtTasks
+	*fttasks.FtTasks
 	proc.ProcAPI
 	ntask int32
 }
@@ -25,7 +32,7 @@ type Tresult struct {
 type Tnew func() interface{}
 type TmkProc func(n string, i interface{}) *proc.Proc
 
-func NewTaskMgr(pclnt proc.ProcAPI, ft *FtTasks) (*FtTaskMgr, error) {
+func NewTaskMgr(pclnt proc.ProcAPI, ft *fttasks.FtTasks) (*FtTaskMgr, error) {
 	if err := ft.RecoverTasks(); err != nil {
 		return nil, err
 	}

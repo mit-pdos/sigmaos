@@ -26,5 +26,5 @@ func TestDump(t *testing.T) {
 	nd, err := fs.ReadDir(fsetcd.ROOT)
 	assert.Nil(t, err, "Err %v", err)
 	err = fs.Dump(0, nd, path.Path{}, fsetcd.ROOT)
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err %v", err)
 }

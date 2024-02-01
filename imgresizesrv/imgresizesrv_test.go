@@ -91,6 +91,17 @@ func newTstate(t *test.Tstate) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) restartTstate() {
+	ts1, err := test.NewTstateAll(ts.T)
+	if !assert.Nil(ts.T, err, "Error New Tstate: %v", err) {
+		return
+	}
+	ts.Tstate = ts1
+	ft, err := fttasks.NewFtTasks(ts.SigmaClnt.FsLib, imgresizesrv.IMG, ts.job)
+	assert.Nil(ts.T, err)
+	ts.ft = ft
+}
+
 func (ts *Tstate) cleanup() {
 	ts.RmDir(imgresizesrv.IMG)
 	imgresizesrv.Cleanup(ts.FsLib, path.Join(sp.S3, "~local/9ps3/img-save"))
@@ -216,11 +227,7 @@ func TestImgdRestart(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Restart")
 
-	t2, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts.Tstate = t2
+	ts.restartTstate()
 
 	gms, err := groupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")

@@ -8,7 +8,7 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usesigmaclntd] [--cleanup]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usesigmaclntd] [--reuse-kernel] [--cleanup]" 
 }
 
 BASIC="--basic"
@@ -17,6 +17,7 @@ APPS=""
 OVERLAY=""
 GVISOR=""
 SIGMACLNTD=""
+REUSEKERNEL=""
 VERB="-v"
 CONTAINER=""
 CLEANUP=""
@@ -55,6 +56,10 @@ while [[ "$#" -gt 0 ]]; do
             shift
             SIGMACLNTD="--usesigmaclntd" 
             ;;
+        --reuse-kernel)
+            shift
+            REUSEKERNEL="--reuse-kernel"
+            ;;
         --cleanup)
             shift
             CLEANUP="true" 
@@ -76,13 +81,20 @@ cleanup() {
 go clean -testcache
 cleanup
 
+if ! [ -z "$REUSEKERNEL" ]; then
+  if [ -z "$CLEANUP" ]; then
+    echo "Must use flag --cleanup when using flag --reuse-kernel"
+    exit 1
+  fi
+fi
+
 if [[ $COMPILE == "--compile" ]]; then
 
     #
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap proxy reader writer stats fslib semclnt electclnt fslib memfs named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www fslibsrv realmclnt auth mr imgresized kv hotel socialnetwork benchmarks; do
+    for T in path intervals serr linuxsched perf sigmap proxy reader writer stats fslib semclnt electclnt fslib memfs named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www fslibsrv realmclnt auth mr imgresizesrv kv hotel socialnetwork benchmarks; do
         go test $VERB sigmaos/$T --run TestCompile
     done
 fi
@@ -110,16 +122,16 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in reader writer stats fslib semclnt electclnt; do
-        go test $VERB -timeout 20m sigmaos/$T -start $SIGMACLNTD
+        go test $VERB -timeout 20m sigmaos/$T -start $SIGMACLNTD $REUSEKERNEL
         cleanup
     done
 
     # go test $VERB sigmaos/fslibsrv -start  # no perf
 
     # test memfs
-    go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SIGMACLNTD
+    go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SIGMACLNTD $REUSEKERNEL
     cleanup
-    go test $VERB sigmaos/memfs -start $SIGMACLNTD
+    go test $VERB sigmaos/memfs -start $SIGMACLNTD $REUSEKERNEL
     cleanup
 
     #
@@ -127,7 +139,7 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt; do
-        go test $VERB sigmaos/$T -start $GVISOR  $SIGMACLNTD
+        go test $VERB sigmaos/$T -start $GVISOR  $SIGMACLNTD $REUSEKERNEL
         cleanup
     done
 
@@ -140,9 +152,8 @@ if [[ $BASIC == "--basic" ]]; then
     # test with realms
     #
 
-    go test $VERB sigmaos/realmclnt -start $GVISOR $SIGMACLNTD
+    go test $VERB sigmaos/realmclnt -start $GVISOR $SIGMACLNTD $REUSEKERNEL
     cleanup
-
 fi
 
 #
@@ -153,7 +164,7 @@ if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
         go test $VERB sigmaos/mr -start $GVISOR $SIGMACLNTD -run MRJob
         cleanup
-        go test $VERB sigmaos/imgresized -start $GVISOR $SIGMACLNTD -run ImgdOne
+        go test $VERB sigmaos/imgresizesrv -start $GVISOR $SIGMACLNTD -run ImgdOne
         cleanup
         go test $VERB sigmaos/kv -start $GVISOR $SIGMACLNTD -run KVOKN
         cleanup
@@ -164,15 +175,15 @@ if [[ $APPS == "--apps" ]]; then
        	go test $VERB sigmaos/socialnetwork -start $GVISOR $SIGMACLNTD -run TestCompose
         cleanup
     else
-        for T in imgresized mr hotel socialnetwork www; do
+        for T in imgresizesrv mr hotel socialnetwork www; do
             ./start-db.sh
-            go test -timeout 20m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD
+            go test -timeout 20m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD $REUSEKERNEL
             cleanup
         done
         # On machines with many cores, kv tests may take a long time.
         for T in kv; do
             ./start-db.sh
-            go test -timeout 50m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD
+            go test -timeout 50m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD $REUSEKERNEL
             cleanup
         done
     fi

@@ -12,7 +12,6 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	"sigmaos/netsigma"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -26,26 +25,7 @@ type SigmaClntSrv struct {
 }
 
 func newSigmaClntSrv() (*SigmaClntSrv, error) {
-	localIP, err := netsigma.LocalIP()
-	if err != nil {
-		db.DFatalf("Error local IP: %v", err)
-	}
-	//	s3secrets, err := auth.GetAWSSecrets()
-	//	if err != nil {
-	//		db.DFatalf("Failed to load AWS secrets %v", err)
-	//	}
-	//	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	// TODO: get s3 secrets
-	secrets := map[string]*proc.ProcSecretProto{"s3": nil}
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, secrets, "127.0.0.1", localIP, localIP, "local-build", false, false)
-	pcfg.Program = "sigmaclntd"
-	pcfg.SetPrincipal(&sp.Tprincipal{
-		ID:       "sigmaclntd",
-		TokenStr: proc.NOT_SET,
-	})
-	pcfg.SetPID(sp.GenPid("sigmaclntd"))
-	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-
+	pcfg := proc.GetProcEnv()
 	scs := &SigmaClntSrv{
 		pcfg,
 		fidclnt.NewFidClnt(pcfg.Net),
@@ -61,7 +41,7 @@ func (scs *SigmaClntSrv) runServer() error {
 	if err := os.Chmod(sp.SIGMASOCKET, 0777); err != nil {
 		db.DFatalf("Err chmod sigmasocket: %v", err)
 	}
-	db.DPrintf(db.SIGMACLNTSRV, "runServer: listening on %v", sp.SIGMASOCKET)
+	db.DPrintf(db.TEST, "runServer: sigmaclntd listening on %v", sp.SIGMASOCKET)
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
 		return err
 	}
@@ -188,8 +168,11 @@ func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip)
 }
 
 // Start the sigmaclntd process
-func ExecSigmaClntSrv() (*SigmaClntSrvCmd, error) {
+func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) (*SigmaClntSrvCmd, error) {
+	p.FinalizeEnv(innerIP, outerIP, uprocdPid)
+	db.DPrintf(db.SIGMACLNTSRV, "ExecSigmaclntsrv: %v", p)
 	cmd := exec.Command("sigmaclntd", []string{}...)
+	cmd.Env = p.GetEnv()
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err

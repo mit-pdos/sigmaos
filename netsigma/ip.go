@@ -52,7 +52,6 @@ func QualifyAddr(addrstr string) (sp.Tip, sp.Tport, error) {
 func QualifyAddrLocalIP(lip sp.Tip, addrstr string) (sp.Tip, sp.Tport, error) {
 	h, pstr, err := net.SplitHostPort(addrstr)
 	if err != nil {
-
 		db.DPrintf(db.ERROR, "Err split host port %v: %v", addrstr, err)
 		return sp.NO_IP, sp.NO_PORT, err
 	}

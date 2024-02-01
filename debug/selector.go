@@ -158,6 +158,8 @@ const (
 	SEMCLNT_ERR             = SEMCLNT + ERR
 	EPOCHCLNT               = "EPOCHCLNT"
 	EPOCHCLNT_ERR           = EPOCHCLNT + ERR
+	FTTASKS                 = "FTTASKS"
+	FTTASKMGR               = "FTTASKMGR"
 	LEADER                  = "LEADER"
 	LEADER_ERR              = LEADER + ERR
 	GROUPMGR                = "GROUPMGR"

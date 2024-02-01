@@ -17,10 +17,11 @@ import (
 )
 
 type SigmaClntClnt struct {
-	dmx   *demux.DemuxClnt
-	rpcc  *rpcclnt.RPCClnt
-	seqno sessp.Tseqno
-	conn  net.Conn
+	dmx          *demux.DemuxClnt
+	rpcc         *rpcclnt.RPCClnt
+	seqno        sessp.Tseqno
+	conn         net.Conn
+	disconnected bool
 }
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
@@ -43,7 +44,7 @@ func NewSigmaClntClnt() (*SigmaClntClnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	scc := &SigmaClntClnt{nil, nil, 0, conn}
+	scc := &SigmaClntClnt{nil, nil, 0, conn, false}
 	scc.dmx = demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), scc)
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)

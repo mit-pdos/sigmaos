@@ -289,7 +289,12 @@ func (scc *SigmaClntClnt) Detach(path string) error {
 	return err
 }
 
+func (scc *SigmaClntClnt) Disconnected() bool {
+	return scc.disconnected
+}
+
 func (scc *SigmaClntClnt) Disconnect(path string) error {
+	scc.disconnected = true
 	req := scproto.SigmaPathRequest{Path: path}
 	rep := scproto.SigmaErrReply{}
 	err := scc.rpcErr("SigmaClntSrvAPI.Disconnect", &req, &rep)

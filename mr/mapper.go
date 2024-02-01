@@ -270,15 +270,13 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 	}
 	dec := json.NewDecoder(rdr.Reader)
 	ni := sp.Tlength(0)
-	for {
-		var s Split
-		if err := dec.Decode(&s); err == io.EOF {
-			break
-		} else if err != nil {
-			c, _ := m.GetFile(m.input)
-			db.DPrintf(db.MR, "Mapper %s: decode %v err %v\n", m.bin, string(c), err)
-			return 0, 0, err
-		}
+	var bin Bin
+	if err := dec.Decode(&bin); err != nil && err != io.EOF {
+		c, _ := m.GetFile(m.input)
+		db.DPrintf(db.MR, "Mapper %s: decode %v err %v\n", m.bin, string(c), err)
+		return 0, 0, err
+	}
+	for _, s := range bin {
 		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)
 		n, err := m.DoSplit(&s)
 		if err != nil {

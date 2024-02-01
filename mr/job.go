@@ -11,6 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/fttasks"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
@@ -127,54 +128,64 @@ func ReadJobConfig(app string) (*Job, error) {
 	return job, nil
 }
 
-func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) error {
+type Tasks struct {
+	Mft *fttasks.FtTasks
+	Rft *fttasks.FtTasks
+}
+
+func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, error) {
 	fsl.MkDir(MRDIRTOP, 0777)
 	fsl.MkDir(MRDIRELECT, 0777)
+
+	mft, err := fttasks.MkFtTasks(fsl, MRDIRTOP, path.Join(jobname, "/mtasks"))
+	if err != nil {
+		db.DPrintf(db.ERROR, "MkFtTasks %v err %v\n", jobname, err)
+		return nil, err
+	}
+	rft, err := fttasks.MkFtTasks(fsl, MRDIRTOP, path.Join(jobname, "/rtasks"))
+	if err != nil {
+		db.DPrintf(db.ERROR, "MkFtTasks %v err %v\n", jobname, err)
+		return nil, err
+	}
+
 	dirs := []string{
 		LeaderElectDir(jobname),
-		JobDir(jobname),
 		MapTask(jobname),
 		ReduceTask(jobname),
 		ReduceIn(jobname),
-		MapTask(jobname) + TIP,
-		ReduceTask(jobname) + TIP,
-		MapTask(jobname) + DONE,
-		ReduceTask(jobname) + DONE,
-		MapTask(jobname) + NEXT,
-		ReduceTask(jobname) + NEXT,
 	}
 	for _, n := range dirs {
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
-			return err
+			return nil, err
 		}
 	}
-
 	if err := InitJobSem(fsl, jobname); err != nil {
 		db.DPrintf(db.ERROR, "Err init job sem")
-		return err
+		return nil, err
 	}
 
-	// Make task and input directories for reduce tasks
+	// Make input directories for reduce tasks and submit task
 	for r := 0; r < nreducetask; r++ {
-		n := ReduceTask(jobname) + "/" + strconv.Itoa(r)
-		if _, err := fsl.PutFile(n, 0777, sp.OWRITE, []byte{}); err != nil {
-			db.DPrintf(db.ERROR, "Putfile %v err %v\n", n, err)
-			return err
-		}
-		n = ReduceIn(jobname) + "/" + strconv.Itoa(r)
+		rs := strconv.Itoa(r)
+		n := ReduceIn(jobname) + "/" + rs
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
-			return err
+			return nil, err
+		}
+		t := &TreduceTask{rs}
+		if err := rft.SubmitTask(t); err != nil {
+			db.DPrintf(db.ERROR, "SubmitTask %v err %v\n", t, err)
+			return nil, err
 		}
 	}
 
 	// Create empty stats file
 	if _, err := fsl.PutFile(MRstats(jobname), 0777, sp.OWRITE, []byte{}); err != nil {
 		db.DPrintf(db.ERROR, "Putfile %v err %v\n", MRstats(jobname), err)
-		return err
+		return nil, err
 	}
-	return nil
+	return &Tasks{mft, rft}, nil
 }
 
 // Clean up all old MR outputs
@@ -186,7 +197,8 @@ func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string) {
 }
 
 // Put names of input files in name/mr/m
-func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
+func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobName string, job *Job) (int, error) {
+	db.DPrintf(db.TEST, "job %v", job)
 	if job.Output == "" || job.Intermediate == "" {
 		return 0, fmt.Errorf("Err job output (\"%v\") or intermediate (\"%v\") not supplied", job.Output, job.Intermediate)
 	}
@@ -220,16 +232,11 @@ func PrepareJob(fsl *fslib.FsLib, jobName string, job *Job) (int, error) {
 	if err != nil || len(bins) == 0 {
 		return len(bins), err
 	}
-	for i, b := range bins {
-		n := MapTask(jobName) + "/" + BinName(i)
-		if _, err := fsl.PutFile(n, 0777, sp.OWRITE, []byte{}); err != nil {
+	for _, b := range bins {
+		if err := ts.Mft.SubmitTask(b); err != nil {
 			return len(bins), err
 		}
-		for _, s := range b {
-			if err := fsl.AppendFileJson(n, s); err != nil {
-				return len(bins), err
-			}
-		}
+
 	}
 	return len(bins), nil
 }

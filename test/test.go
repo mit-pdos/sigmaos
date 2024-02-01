@@ -225,7 +225,7 @@ func (ts *Tstate) NewClnt(idx int, pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, er
 func (ts *Tstate) Shutdown() error {
 	// If the test asked for a lease at some point, clear the saved Tstate to
 	// avoid having leases carry over to the next test
-	if ts.AskedForLease() {
+	if ts.AskedForLease() || ts.Disconnected() {
 		savedTstate = nil
 	}
 	// If the developer chose to reuse the kernel, and there is a saved kernel

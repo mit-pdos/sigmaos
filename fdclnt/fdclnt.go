@@ -16,10 +16,11 @@ import (
 )
 
 type FdClient struct {
-	pcfg *proc.ProcEnv
-	pc   *pathclnt.PathClnt
-	fds  *FdTable
-	ft   *FenceTable
+	pcfg         *proc.ProcEnv
+	pc           *pathclnt.PathClnt
+	fds          *FdTable
+	ft           *FenceTable
+	disconnected bool
 }
 
 func NewFdClient(pcfg *proc.ProcEnv, fsc *fidclnt.FidClnt) sos.SigmaOS {
@@ -252,7 +253,12 @@ func (fdc *FdClient) FenceDir(pn string, fence sp.Tfence) error {
 	return fdc.ft.insert(pn, fence)
 }
 
+func (fdc *FdClient) Disconnected() bool {
+	return fdc.disconnected
+}
+
 func (fdc *FdClient) Disconnect(pn string) error {
+	fdc.disconnected = true
 	fids := fdc.fds.openfids()
 	return fdc.pc.Disconnect(pn, fids)
 }

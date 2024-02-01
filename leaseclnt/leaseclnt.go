@@ -14,7 +14,7 @@ type LeaseClnt struct {
 	*fslib.FsLib
 	lm            *syncmap.SyncMap[string, *LeaseInfo]
 	cc            *rpcclnt.ClntCache
-	askedForLease bool
+	askedForLease bool // Used by test harness
 }
 
 func NewLeaseClnt(fsl *fslib.FsLib) (*LeaseClnt, error) {

@@ -24,13 +24,14 @@ type Watch func(error)
 
 type PathClnt struct {
 	*fidclnt.FidClnt
-	pcfg       *proc.ProcEnv
-	ndMntCache *NamedMountCache
-	mnt        *MntTable
-	rootmt     *RootMountTable
-	realm      sp.Trealm
-	lip        string
-	cid        sp.TclntId
+	pcfg         *proc.ProcEnv
+	ndMntCache   *NamedMountCache
+	mnt          *MntTable
+	rootmt       *RootMountTable
+	realm        sp.Trealm
+	lip          string
+	cid          sp.TclntId
+	disconnected bool // Used by test harness
 }
 
 func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
@@ -450,10 +451,15 @@ func (pathc *PathClnt) LastMount(pn string, uname sp.Tuname) (path.Path, path.Pa
 	return p, left, nil
 }
 
+func (pathc *PathClnt) Disconnected() bool {
+	return pathc.disconnected
+}
+
 // Disconnect client from server permanently to simulate network
 // partition to server that exports pn
 func (pathc *PathClnt) Disconnect(pn string, fids []sp.Tfid) error {
 	db.DPrintf(db.CRASH, "Disconnect %v mnts %v\n", pn, pathc.mnt.mountedPaths())
+	pathc.disconnected = true
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return err

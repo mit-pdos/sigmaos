@@ -62,4 +62,5 @@ type SigmaOS interface {
 	Mounts() []string
 	Detach(path string) error
 	Disconnect(path string) error
+	Disconnected() bool
 }

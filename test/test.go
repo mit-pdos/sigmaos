@@ -182,6 +182,9 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 }
 
 func (ts *Tstate) BootNode(n int) error {
+	// Clear the saved kernel, since the next test may not need an additional
+	// node
+	savedTstate = nil
 	for i := 0; i < n; i++ {
 		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays, GVisor)
 		if err != nil {

@@ -1400,35 +1400,6 @@ func TestFslibClose(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestDisconnect(t *testing.T) {
-	ts, err1 := test.NewTstatePath(t, pathname)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	fn := gopath.Join(pathname, "f")
-	d := []byte("hello")
-	fd, err := ts.Create(fn, 0777, sp.OWRITE)
-	assert.Equal(t, nil, err)
-	_, err = ts.Write(fd, d)
-	assert.Equal(t, nil, err)
-
-	err = ts.Disconnect(fn)
-	assert.Nil(t, err, "Disconnect")
-	time.Sleep(100 * time.Millisecond)
-
-	_, err = ts.Write(fd, d)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
-
-	err = ts.CloseFd(fd)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
-
-	fd, err = ts.Open(fn, sp.OREAD)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err not unreachable: %v", err)
-
-	ts.Shutdown()
-}
-
 func TestEphemeralFileOK(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -1495,6 +1466,35 @@ func TestEphemeralFileExpire(t *testing.T) {
 
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
+
+	ts.Shutdown()
+}
+
+func TestDisconnect(t *testing.T) {
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	fn := gopath.Join(pathname, "f")
+	d := []byte("hello")
+	fd, err := ts.Create(fn, 0777, sp.OWRITE)
+	assert.Equal(t, nil, err)
+	_, err = ts.Write(fd, d)
+	assert.Equal(t, nil, err)
+
+	err = ts.Disconnect(fn)
+	assert.Nil(t, err, "Disconnect")
+	time.Sleep(100 * time.Millisecond)
+
+	_, err = ts.Write(fd, d)
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+
+	err = ts.CloseFd(fd)
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+
+	fd, err = ts.Open(fn, sp.OREAD)
+	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err not unreachable: %v", err)
 
 	ts.Shutdown()
 }

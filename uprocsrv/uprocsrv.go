@@ -146,6 +146,7 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
 	pid := sp.GenPid("sigmaclntd")
 	scdp := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
 	scdp.InheritParentProcEnv(ups.pe)
+	scdp.SetHow(proc.HLINUX)
 	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), proc.NOT_SET)
 	if err != nil {
 		return err

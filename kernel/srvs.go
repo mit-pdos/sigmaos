@@ -167,6 +167,7 @@ func (k *Kernel) bootNamed() (Subsystem, error) {
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	pid := sp.GenPid("sigmaclntd")
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
+	p.SetHow(proc.HLINUX)
 	p.InheritParentProcEnv(k.ProcEnv())
 	return sigmaclntsrv.ExecSigmaClntSrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"))
 }

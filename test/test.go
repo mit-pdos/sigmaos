@@ -30,6 +30,7 @@ const (
 )
 
 var Start bool
+var reuseKernel bool
 var noShutdown bool
 var tag string
 var EtcdIP string
@@ -41,11 +42,14 @@ func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
 	flag.StringVar(&tag, "tag", sp.LOCAL_BUILD, "Docker image tag")
 	flag.BoolVar(&Start, "start", false, "Start system")
+	flag.BoolVar(&reuseKernel, "reuse-kernel", false, "Reuse system, avoid restarting when possible")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
 	flag.BoolVar(&useSigmaclntd, "usesigmaclntd", false, "Use sigmaclntd?")
 }
+
+var savedTstate *Tstate
 
 func Mbyte(sz sp.Tlength) float64 {
 	return float64(sz) / float64(sp.MBYTE)
@@ -120,6 +124,10 @@ func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 }
 
 func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
+	if reuseKernel && savedTstate != nil {
+		db.DPrintf(db.TEST, "Reusing previously-booted system")
+		return savedTstate, nil
+	}
 	localIP, err1 := netsigma.LocalIP()
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
@@ -159,13 +167,14 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ALWAYS, "Error make kernel clnt")
 		return nil, err
 	}
-	return &Tstate{
+	savedTstate = &Tstate{
 		SigmaClnt: k.SigmaClnt,
 		kclnts:    []*bootkernelclnt.Kernel{k},
 		killidx:   0,
 		T:         t,
 		scsck:     scsck,
-	}, nil
+	}
+	return savedTstate, nil
 }
 
 func (ts *Tstate) BootNode(n int) error {
@@ -190,6 +199,9 @@ func (ts *Tstate) BootFss3d() error {
 func (ts *Tstate) KillOne(s string) error {
 	idx := ts.killidx
 	ts.killidx++
+	// Clear the saved kernel, to make sure it is fully shut down and then
+	// brought back up again before the next test
+	savedTstate = nil
 	return ts.kclnts[idx].Kill(s)
 }
 
@@ -198,8 +210,18 @@ func (ts *Tstate) NewClnt(idx int, pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, er
 }
 
 func (ts *Tstate) Shutdown() error {
+	// If the developer chose to reuse the kernel, and there is a saved kernel
+	// (meaning that the saved kernel hasn't been cleared, e.g., due to a crash
+	// test), then skip shutdown
+	if reuseKernel && savedTstate != nil {
+		db.DPrintf(db.ALWAYS, "Skipping shutdown to reuse kernel")
+		db.DPrintf(db.TEST, "Skipping shutdown to reuse kernel")
+		return nil
+	}
+
 	db.DPrintf(db.TEST, "Shutdown")
 	defer db.DPrintf(db.TEST, "Done Shutdown")
+
 	if noShutdown {
 		db.DPrintf(db.ALWAYS, "Skipping shutdown")
 		db.DPrintf(db.TEST, "Skipping shutdown")

@@ -128,6 +128,8 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	// If the tests are invoked trying to reuse booted systems, and the same
 	// servers are meant to be booted, skip the boot.
 	if reuseKernel && savedTstate != nil && savedTstate.srvs == srvs {
+		// Reset the Tstate's *testing.T
+		savedTstate.T = t
 		db.DPrintf(db.TEST, "Reusing previously-booted system")
 		return savedTstate, nil
 	}

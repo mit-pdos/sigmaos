@@ -196,10 +196,16 @@ func (ts *Tstate) BootNode(n int) error {
 }
 
 func (ts *Tstate) Boot(s string) error {
+	// Clear the saved kernel, since the next test may not need an additional
+	// node
+	savedTstate = nil
 	return ts.kclnts[0].Boot(s)
 }
 
 func (ts *Tstate) BootFss3d() error {
+	// Clear the saved kernel, since the next test may not need an additional
+	// node
+	savedTstate = nil
 	return ts.Boot(sp.S3REL)
 }
 
@@ -217,6 +223,11 @@ func (ts *Tstate) NewClnt(idx int, pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, er
 }
 
 func (ts *Tstate) Shutdown() error {
+	// If the test asked for a lease at some point, clear the saved Tstate to
+	// avoid having leases carry over to the next test
+	if ts.AskedForLease() {
+		savedTstate = nil
+	}
 	// If the developer chose to reuse the kernel, and there is a saved kernel
 	// (meaning that the saved kernel hasn't been cleared, e.g., due to a crash
 	// test), then skip shutdown

@@ -66,6 +66,7 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 }
 
 type Tstate struct {
+	srvs string
 	*sigmaclnt.SigmaClnt
 	rc      *realmclnt.RealmClnt
 	memfs   *proc.Proc
@@ -124,7 +125,9 @@ func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 }
 
 func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
-	if reuseKernel && savedTstate != nil {
+	// If the tests are invoked trying to reuse booted systems, and the same
+	// servers are meant to be booted, skip the boot.
+	if reuseKernel && savedTstate != nil && savedTstate.srvs == srvs {
 		db.DPrintf(db.TEST, "Reusing previously-booted system")
 		return savedTstate, nil
 	}
@@ -168,6 +171,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err
 	}
 	savedTstate = &Tstate{
+		srvs:      srvs,
 		SigmaClnt: k.SigmaClnt,
 		kclnts:    []*bootkernelclnt.Kernel{k},
 		killidx:   0,

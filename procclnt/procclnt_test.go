@@ -150,32 +150,6 @@ func TestWaitExitSimpleSingleLC(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWaitExitSimpleMultiKernel(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	err := ts.BootNode(1)
-	assert.Nil(t, err, "Boot node: %v", err)
-
-	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
-	db.DPrintf(db.TEST, "Pre spawn")
-	err = ts.Spawn(a)
-	db.DPrintf(db.TEST, "Post spawn")
-	assert.Nil(t, err, "Spawn")
-
-	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := ts.WaitExit(a.GetPid())
-	db.DPrintf(db.TEST, "Post waitexit")
-	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong")
-
-	cleanSleeperResult(t, ts, a.GetPid())
-
-	ts.Shutdown()
-}
-
 func TestWaitExitOne(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -371,56 +345,6 @@ func TestWaitNonexistentProc(t *testing.T) {
 	assert.True(t, done, "Nonexistent proc")
 
 	close(ch)
-
-	ts.Shutdown()
-}
-
-func TestSpawnManyProcsParallel(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	const N_CONCUR = 5  // 13
-	const N_SPAWNS = 50 // 500
-
-	err := ts.BootNode(1)
-	assert.Nil(t, err, "BootProcd 1")
-
-	err = ts.BootNode(1)
-	assert.Nil(t, err, "BootProcd 2")
-
-	done := make(chan int)
-
-	for i := 0; i < N_CONCUR; i++ {
-		go func(i int) {
-			for j := 0; j < N_SPAWNS; j++ {
-				pid := sp.GenPid("sleeper")
-				db.DPrintf(db.TEST, "Prep spawn %v", pid)
-				a := proc.NewProcPid(pid, "sleeper", []string{"0ms", "name/"})
-				err := ts.Spawn(a)
-				assert.Nil(t, err, "Spawn err %v", err)
-				db.DPrintf(db.TEST, "Done spawn %v", pid)
-
-				db.DPrintf(db.TEST, "Prep WaitStart %v", pid)
-				err = ts.WaitStart(a.GetPid())
-				db.DPrintf(db.TEST, "Done WaitStart %v", pid)
-				assert.Nil(t, err, "WaitStart error")
-
-				db.DPrintf(db.TEST, "Prep WaitExit %v", pid)
-				status, err := ts.WaitExit(a.GetPid())
-				db.DPrintf(db.TEST, "Done WaitExit %v", pid)
-				assert.Nil(t, err, "WaitExit")
-				assert.True(t, status != nil && status.IsStatusOK(), "Status not OK: %v", status)
-				cleanSleeperResult(t, ts, pid)
-			}
-			done <- i
-		}(i)
-	}
-	for i := 0; i < N_CONCUR; i++ {
-		x := <-done
-		db.DPrintf(db.TEST, "Done %v", x)
-	}
 
 	ts.Shutdown()
 }
@@ -635,6 +559,80 @@ func TestEvictN(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestReserveCores(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	start := time.Now()
+	pid := sp.Tpid("sleeper-aaaaaaa")
+	majorityCpu := 1000 * (linuxsched.GetNCores()/2 + 1)
+	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
+
+	err := ts.WaitStart(pid)
+	assert.Nil(t, err, "WaitStart error")
+
+	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
+	// proc is only picked up *after* the other one.
+	pid1 := sp.Tpid("sleeper-bbbbbb")
+	spawnSleeperMcpu(t, ts, pid1, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
+
+	status, err := ts.WaitExit(pid)
+	assert.Nil(t, err, "WaitExit")
+	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit status")
+
+	// Make sure the second proc didn't finish
+	checkSleeperResult(t, ts, pid)
+	checkSleeperResultFalse(t, ts, pid1)
+
+	cleanSleeperResult(t, ts, pid)
+
+	status, err = ts.WaitExit(pid1)
+	assert.Nil(t, err, "WaitExit 2")
+	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit status 2: %v", status)
+	end := time.Now()
+
+	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
+
+	checkSleeperResult(t, ts, pid1)
+
+	cleanSleeperResult(t, ts, pid1)
+
+	ts.Shutdown()
+}
+
+func TestWaitExitSimpleMultiKernel(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "Boot node: %v", err)
+
+	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	db.DPrintf(db.TEST, "Pre spawn")
+	err = ts.Spawn(a)
+	db.DPrintf(db.TEST, "Post spawn")
+	assert.Nil(t, err, "Spawn")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := ts.WaitExit(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong")
+
+	cleanSleeperResult(t, ts, a.GetPid())
+
+	ts.Shutdown()
+}
+
 func TestSpawnBurst(t *testing.T) {
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
@@ -684,50 +682,52 @@ func TestSpawnBurst(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestReserveCores(t *testing.T) {
-	// Bail out early if machine has too many cores (which messes with the cgroups setting)
-	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
-		return
-	}
-
+func TestSpawnManyProcsParallel(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
-	start := time.Now()
-	pid := sp.Tpid("sleeper-aaaaaaa")
-	majorityCpu := 1000 * (linuxsched.GetNCores()/2 + 1)
-	spawnSleeperMcpu(t, ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
+	const N_CONCUR = 5  // 13
+	const N_SPAWNS = 50 // 500
 
-	err := ts.WaitStart(pid)
-	assert.Nil(t, err, "WaitStart error")
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "BootProcd 1")
 
-	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
-	// proc is only picked up *after* the other one.
-	pid1 := sp.Tpid("sleeper-bbbbbb")
-	spawnSleeperMcpu(t, ts, pid1, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
+	err = ts.BootNode(1)
+	assert.Nil(t, err, "BootProcd 2")
 
-	status, err := ts.WaitExit(pid)
-	assert.Nil(t, err, "WaitExit")
-	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit status")
+	done := make(chan int)
 
-	// Make sure the second proc didn't finish
-	checkSleeperResult(t, ts, pid)
-	checkSleeperResultFalse(t, ts, pid1)
+	for i := 0; i < N_CONCUR; i++ {
+		go func(i int) {
+			for j := 0; j < N_SPAWNS; j++ {
+				pid := sp.GenPid("sleeper")
+				db.DPrintf(db.TEST, "Prep spawn %v", pid)
+				a := proc.NewProcPid(pid, "sleeper", []string{"0ms", "name/"})
+				err := ts.Spawn(a)
+				assert.Nil(t, err, "Spawn err %v", err)
+				db.DPrintf(db.TEST, "Done spawn %v", pid)
 
-	cleanSleeperResult(t, ts, pid)
+				db.DPrintf(db.TEST, "Prep WaitStart %v", pid)
+				err = ts.WaitStart(a.GetPid())
+				db.DPrintf(db.TEST, "Done WaitStart %v", pid)
+				assert.Nil(t, err, "WaitStart error")
 
-	status, err = ts.WaitExit(pid1)
-	assert.Nil(t, err, "WaitExit 2")
-	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit status 2: %v", status)
-	end := time.Now()
-
-	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
-
-	checkSleeperResult(t, ts, pid1)
-
-	cleanSleeperResult(t, ts, pid1)
+				db.DPrintf(db.TEST, "Prep WaitExit %v", pid)
+				status, err := ts.WaitExit(a.GetPid())
+				db.DPrintf(db.TEST, "Done WaitExit %v", pid)
+				assert.Nil(t, err, "WaitExit")
+				assert.True(t, status != nil && status.IsStatusOK(), "Status not OK: %v", status)
+				cleanSleeperResult(t, ts, pid)
+			}
+			done <- i
+		}(i)
+	}
+	for i := 0; i < N_CONCUR; i++ {
+		x := <-done
+		db.DPrintf(db.TEST, "Done %v", x)
+	}
 
 	ts.Shutdown()
 }

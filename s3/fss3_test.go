@@ -66,97 +66,6 @@ func TestReadOff(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestTwo(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	// Make a second one
-	ts.BootFss3d()
-
-	time.Sleep(100 * time.Millisecond)
-
-	dirents, err := ts.GetDir(sp.S3)
-	assert.Nil(t, err, "GetDir")
-
-	assert.Equal(t, 2, len(dirents))
-
-	ts.Shutdown()
-}
-
-func TestUnionSimple(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	// Make a second one
-	ts.BootFss3d()
-
-	dirents, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/"))
-	assert.Nil(t, err, "GetDir: %v", err)
-
-	assert.True(t, fslib.Present(dirents, ROOT), "%v not in %v", ROOT, dirents)
-
-	ts.Shutdown()
-}
-
-func TestUnionDir(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	// Make a second one
-	ts.BootFss3d()
-
-	dirents, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/gutenberg"))
-	assert.Nil(t, err, "GetDir")
-
-	assert.Equal(t, 8, len(dirents))
-
-	ts.Shutdown()
-}
-
-func TestUnionFile(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	// Make a second one
-	ts.BootFss3d()
-
-	file, err := os.ReadFile("../input/pg-being_ernest.txt")
-	assert.Nil(t, err, "ReadFile")
-
-	name := path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt")
-	st, err := ts.Stat(name)
-	assert.Nil(t, err, "Stat")
-
-	fd, err := ts.Open(name, sp.OREAD)
-	if assert.Nil(ts.T, err, "Error Open: %v", err) {
-		n := len(file)
-		for {
-			data, err := ts.Read(fd, 8192)
-			if len(data) == 0 {
-				break
-			}
-			if !assert.Nil(ts.T, err, "Error Read: %v", err) {
-				break
-			}
-			for i := 0; i < len(data); i++ {
-				assert.Equal(t, file[i], data[i])
-			}
-			file = file[len(data):]
-		}
-		assert.Equal(ts.T, int(st.Length), n)
-	}
-
-	ts.Shutdown()
-}
-
 func s3Name(ts *test.Tstate) string {
 	sts, err := ts.GetDir(sp.S3)
 	assert.Nil(ts.T, err, sp.S3)
@@ -310,4 +219,95 @@ func BenchmarkPutObj(b *testing.B) {
 	log.Printf("%d took %vms (%.1f file/s)", n, ms, float64(n)/s)
 
 	cleanup(cfg)
+}
+
+func TestTwo(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	// Make a second one
+	ts.BootFss3d()
+
+	time.Sleep(100 * time.Millisecond)
+
+	dirents, err := ts.GetDir(sp.S3)
+	assert.Nil(t, err, "GetDir")
+
+	assert.Equal(t, 2, len(dirents))
+
+	ts.Shutdown()
+}
+
+func TestUnionSimple(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	// Make a second one
+	ts.BootFss3d()
+
+	dirents, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/"))
+	assert.Nil(t, err, "GetDir: %v", err)
+
+	assert.True(t, fslib.Present(dirents, ROOT), "%v not in %v", ROOT, dirents)
+
+	ts.Shutdown()
+}
+
+func TestUnionDir(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	// Make a second one
+	ts.BootFss3d()
+
+	dirents, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/gutenberg"))
+	assert.Nil(t, err, "GetDir")
+
+	assert.Equal(t, 8, len(dirents))
+
+	ts.Shutdown()
+}
+
+func TestUnionFile(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	// Make a second one
+	ts.BootFss3d()
+
+	file, err := os.ReadFile("../input/pg-being_ernest.txt")
+	assert.Nil(t, err, "ReadFile")
+
+	name := path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt")
+	st, err := ts.Stat(name)
+	assert.Nil(t, err, "Stat")
+
+	fd, err := ts.Open(name, sp.OREAD)
+	if assert.Nil(ts.T, err, "Error Open: %v", err) {
+		n := len(file)
+		for {
+			data, err := ts.Read(fd, 8192)
+			if len(data) == 0 {
+				break
+			}
+			if !assert.Nil(ts.T, err, "Error Read: %v", err) {
+				break
+			}
+			for i := 0; i < len(data); i++ {
+				assert.Equal(t, file[i], data[i])
+			}
+			file = file[len(data):]
+		}
+		assert.Equal(ts.T, int(st.Length), n)
+	}
+
+	ts.Shutdown()
 }

@@ -197,8 +197,8 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 			if err := ft.MarkRunnable(t); err != nil {
 				db.DFatalf("MarkRunnable %v err %v", t, err)
 			}
-			ch <- Tresult{t, false, ms, "", nil}
 		}
+		ch <- Tresult{t, false, ms, "", nil}
 	}
 }
 
@@ -252,12 +252,12 @@ func (c *Coord) restart(files []string, task string) {
 		}
 		// Record that we have to rerun mapper f
 		if err := c.mft.MarkError(f); err != nil {
-			db.DPrintf(db.ALWAYS, "Restart %v err %v\n", f, err)
+			db.DPrintf(db.ALWAYS, "restart %v err %v\n", f, err)
 		}
 	}
 	// Record that we have to rerun reducer task
 	if err := c.rft.MarkError(task); err != nil {
-		db.DPrintf(db.ALWAYS, "Restart reducer %v err %v\n", task, err)
+		db.DPrintf(db.ALWAYS, "restart reducer %v err %v\n", task, err)
 	}
 }
 
@@ -270,6 +270,9 @@ func (c *Coord) doRestart() bool {
 	m, err := c.rft.Restart()
 	if err != nil {
 		db.DFatalf("Restart reducers err %v\n", err)
+	}
+	if n+m > 0 {
+		db.DPrintf(db.ALWAYS, "restarted %d tasks\n", n+m)
 	}
 	return n+m > 0
 }
@@ -296,7 +299,7 @@ func (c *Coord) Round(ttype string) {
 			break
 		}
 		res := <-ch
-		db.DPrintf(db.MR, "%v ok %v ms %d msg %v res %v\n", res.t, res.ok, res.ms, res.msg, res.res)
+		db.DPrintf(db.MR, "Round: task done %v ok %v ms %d msg %v res %v\n", res.t, res.ok, res.ms, res.msg, res.res)
 		if res.ok {
 			if err := c.AppendFileJson(MRstats(c.job), res.res); err != nil {
 				db.DFatalf("Appendfile %v err %v\n", MRstats(c.job), err)

@@ -176,6 +176,15 @@ func (k *Kernel) bootNamed() (Subsystem, error) {
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	pid := sp.GenPid("sigmaclntd")
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
+	pc := auth.NewProcClaims(p.GetProcEnv())
+	pc.AllowedPaths = []string{"*"}
+	token, err := k.as.NewToken(pc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+		return nil, err
+	}
+	p.SetToken(token)
+	p.SetHow(proc.HLINUX)
 	p.InheritParentProcEnv(k.ProcEnv())
 	return sigmaclntsrv.ExecSigmaClntSrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"))
 }

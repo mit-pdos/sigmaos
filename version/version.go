@@ -50,10 +50,10 @@ func (vt *VersionTable) Insert(path sp.Tpath) {
 	vt.RefTable.Insert(path, newVersion)
 }
 
-func (vt *VersionTable) Delete(p sp.Tpath) {
+func (vt *VersionTable) Delete(p sp.Tpath) (bool, error) {
 	vt.Lock()
 	defer vt.Unlock()
-	vt.RefTable.Delete(p)
+	return vt.RefTable.Delete(p)
 }
 
 func (vt *VersionTable) IncVersion(path sp.Tpath) {

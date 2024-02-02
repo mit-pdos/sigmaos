@@ -44,7 +44,7 @@ func newFsLibFidClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, e
 	var err error
 	var s sos.SigmaOS
 	if pcfg.UseSigmaclntd {
-		s, err = sigmaclntclnt.NewSigmaClntClnt()
+		s, err = sigmaclntclnt.NewSigmaClntClnt(pcfg)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
 			return nil, err

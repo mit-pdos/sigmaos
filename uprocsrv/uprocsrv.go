@@ -69,8 +69,10 @@ func RunUprocSrv(kernelId string, up string) error {
 	}
 	defer p.Done()
 
-	err = ssrv.RunServer()
-	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)
+	if err = ssrv.RunServer(); err != nil {
+		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
+	}
+	db.DPrintf(db.UPROCD, "RunServer done\n")
 	return nil
 }
 
@@ -146,6 +148,7 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
 	pid := sp.GenPid("sigmaclntd")
 	scdp := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
 	scdp.InheritParentProcEnv(ups.pe)
+	scdp.SetHow(proc.HLINUX)
 	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), proc.NOT_SET)
 	if err != nil {
 		return err

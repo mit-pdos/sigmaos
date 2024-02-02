@@ -56,6 +56,14 @@ func (scc *SigmaClntClnt) rpcSize(method string, req proto.Message, rep *scproto
 	}
 }
 
+func (scc *SigmaClntClnt) Init() error {
+	req := scproto.SigmaInitRequest{ProcEnvProto: scc.pe.GetProto()}
+	rep := scproto.SigmaErrReply{}
+	err := scc.rpcErr("SigmaClntSrvAPI.Init", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Init %v %v %v", req, rep, err)
+	return err
+}
+
 func (scc *SigmaClntClnt) CloseFd(fd int) error {
 	req := scproto.SigmaCloseRequest{Fd: uint32(fd)}
 	rep := scproto.SigmaErrReply{}

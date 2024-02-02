@@ -1,7 +1,6 @@
 package protsrv
 
 import (
-	"fmt"
 	"sync"
 
 	"sigmaos/fid"
@@ -30,37 +29,32 @@ func (ft *fidTable) Lookup(fid sp.Tfid) (*fid.Fid, *serr.Err) {
 	return f, nil
 }
 
-func (ft *fidTable) Add(fid sp.Tfid, f *fid.Fid) {
+func (ft *fidTable) LookupDel(fid sp.Tfid) (*fid.Fid, *serr.Err) {
+	ft.Lock()
+	defer ft.Unlock()
+	f, ok := ft.fids[fid]
+	if !ok {
+		return nil, serr.NewErr(serr.TErrUnknownfid, fid)
+	}
+	delete(ft.fids, fid)
+	return f, nil
+}
+
+func (ft *fidTable) Insert(fid sp.Tfid, f *fid.Fid) {
 	ft.Lock()
 	defer ft.Unlock()
 
 	ft.fids[fid] = f
 }
 
-func (ft *fidTable) Del(fid sp.Tfid) {
+func (ft *fidTable) ClientFids(cid sp.TclntId) []sp.Tfid {
 	ft.Lock()
 	defer ft.Unlock()
 
-	delete(ft.fids, fid)
-}
-
-type fidEntry struct {
-	fid sp.Tfid
-	f   *fid.Fid
-}
-
-func (fe *fidEntry) String() string {
-	return fmt.Sprintf("{fid %v %v}", fe.fid, fe.f)
-}
-
-func (ft *fidTable) ClientFids(cid sp.TclntId) []*fidEntry {
-	ft.Lock()
-	defer ft.Unlock()
-
-	fids := make([]*fidEntry, 0)
+	fids := make([]sp.Tfid, 0)
 	for fid, f := range ft.fids {
 		if f.Pobj().Ctx().ClntId() == cid {
-			fids = append(fids, &fidEntry{fid, f})
+			fids = append(fids, fid)
 		}
 	}
 	return fids

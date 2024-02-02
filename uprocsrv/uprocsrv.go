@@ -69,8 +69,10 @@ func RunUprocSrv(kernelId string, up string) error {
 	}
 	defer p.Done()
 
-	err = ssrv.RunServer()
-	db.DPrintf(db.UPROCD, "RunServer done %v\n", err)
+	if err = ssrv.RunServer(); err != nil {
+		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
+	}
+	db.DPrintf(db.UPROCD, "RunServer done\n")
 	return nil
 }
 

@@ -196,8 +196,7 @@ func (ssrv *SigmaSrv) MonitorCPU(ufn cpumon.UtilFn) {
 func (ssrv *SigmaSrv) RunServer() error {
 	db.DPrintf(db.SIGMASRV, "Run %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	ssrv.Serve()
-	ssrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
-	return nil
+	return ssrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
 }
 
 func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {

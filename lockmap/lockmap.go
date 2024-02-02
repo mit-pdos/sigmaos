@@ -102,7 +102,7 @@ func (plt *PathLockTable) Acquire(ctx fs.CtxI, path path.Path, ltype Tlock) *Pat
 	return lk
 }
 
-func (plt *PathLockTable) release(lk *PathLock) bool {
+func (plt *PathLockTable) release(lk *PathLock) (bool, error) {
 	plt.Lock()
 	defer plt.Unlock()
 	return plt.Delete(lk.path)

@@ -90,17 +90,17 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		// just the refcnt.
 		ps.vt.Insert(root.Path())
 	}
-	ps.ft.Add(args.Tfid(), fid.NewFidPath(fid.NewPobj(p, tree, ctx), 0, qid))
+	ps.ft.Insert(args.Tfid(), fid.NewFidPath(fid.NewPobj(p, tree, ctx), 0, qid))
 	rets.Qid = qid
 	return args.TclntId(), nil
 }
 
 // Delete ephemeral files created by this client and delete this client
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
-	fes := ps.ft.ClientFids(args.TclntId())
-	db.DPrintf(db.PROTSRV, "Detach clnt %v fes %v\n", args.TclntId(), fes)
-	for _, fe := range fes {
-		ps.clunk(fe.fid, fe.f)
+	fids := ps.ft.ClientFids(args.TclntId())
+	db.DPrintf(db.PROTSRV, "Detach clnt %v fes %v\n", args.TclntId(), fids)
+	for _, fid := range fids {
+		ps.clunk(fid)
 	}
 	// Several threads maybe waiting in a clntcond of this
 	// clnt. DeleteClnt will unblock them so that they can bail out.
@@ -157,30 +157,31 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	rets.Qids = ps.newQids(os)
 	qid := ps.newQid(lo.Perm(), lo.Path())
 	db.DPrintf(db.PROTSRV, "%v: Walk NewFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().ClntId(), p, lo, qid, os)
-	ps.ft.Add(args.Tnewfid(), fid.NewFidPath(fid.NewPobj(p, lo, f.Pobj().Ctx()), 0, qid))
+	ps.ft.Insert(args.Tnewfid(), fid.NewFidPath(fid.NewPobj(p, lo, f.Pobj().Ctx()), 0, qid))
 
 	ps.vt.Insert(qid.Tpath())
 
 	return nil
 }
 
-func (ps *ProtSrv) clunk(fid sp.Tfid, f *fid.Fid) {
+func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
+	f, err := ps.ft.LookupDel(fid)
+	if err != nil {
+		return sp.NewRerrorSerr(err)
+	}
 	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %q", f.Pobj().Ctx().ClntId(), fid, f, f.Pobj().Path())
 	if f.IsOpen() { // has the fid been opened?
 		f.Pobj().Obj().Close(f.Pobj().Ctx(), f.Mode())
 		f.Close()
 	}
-	ps.ft.Del(fid)
-	ps.vt.Delete(f.Pobj().Obj().Path())
+	if _, err := ps.vt.Delete(f.Pobj().Obj().Path()); err != nil {
+		db.DFatalf("%v: clunk %v vt del failed %v err %v\n", f.Pobj().Ctx().ClntId(), fid, f.Pobj(), err)
+	}
+	return nil
 }
 
 func (ps *ProtSrv) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
-	f, err := ps.ft.Lookup(args.Tfid())
-	if err != nil {
-		return sp.NewRerrorSerr(err)
-	}
-	ps.clunk(args.Tfid(), f)
-	return nil
+	return ps.clunk(args.Tfid())
 }
 
 func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
@@ -288,7 +289,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	ps.vt.IncVersion(o1.Path())
 	qid := ps.newQid(o1.Perm(), o1.Path())
 	nf := ps.newFid(f.Pobj().Ctx(), f.Pobj().Path(), args.Name, o1, args.TleaseId(), qid)
-	ps.ft.Add(args.Tfid(), nf)
+	ps.ft.Insert(args.Tfid(), nf)
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	nf.SetMode(args.Tmode())
 	rets.Qid = qid

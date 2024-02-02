@@ -63,11 +63,12 @@ func (rf *RefTable[K, T]) Insert(k K, newT func() T) (T, bool) {
 	return e.e, false
 }
 
-func (rf *RefTable[K, T]) Delete(k K) bool {
+func (rf *RefTable[K, T]) Delete(k K) (bool, error) {
 	del := false
 	e, ok := rf.refs[k]
 	if !ok {
-		db.DFatalf("delete %v %v", rf.debug, k)
+		db.DPrintf(db.ERROR, "delete %v %v", rf.debug, k)
+		return false, fmt.Errorf("Delete: %v not present\n", k)
 	}
 	e.n -= 1
 	if e.n <= 0 {
@@ -75,5 +76,5 @@ func (rf *RefTable[K, T]) Delete(k K) bool {
 		del = true
 		delete(rf.refs, k)
 	}
-	return del
+	return del, nil
 }

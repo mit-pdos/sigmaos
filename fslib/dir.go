@@ -195,7 +195,7 @@ func (fsl *FsLib) ReadDirWait(dir string, wait Fwait) error {
 		if err != nil {
 			return err
 		}
-		if wait(sts) { // wait for new inputs?
+		if wait(sts) { // keep waiting?
 			db.DPrintf(db.FSLIB, "ReadDirWatch wait %v\n", dir)
 			if err := fsl.DirWait(rdr.fd); err != nil {
 				rdr.Close()
@@ -218,9 +218,9 @@ func (fsl *FsLib) ReadDirWait(dir string, wait Fwait) error {
 func (fsl *FsLib) WaitRemove(pn string) error {
 	dir := gopath.Dir(pn) + "/"
 	f := gopath.Base(pn)
-	db.DPrintf(db.TEST, "WaitRemove: ReadDirWait dir %v\n", dir)
+	db.DPrintf(db.FSLIB, "WaitRemove: ReadDirWait dir %v\n", dir)
 	err := fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
-		db.DPrintf(db.TEST, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
+		db.DPrintf(db.FSLIB, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {
 			if st.Name == f {
 				return true

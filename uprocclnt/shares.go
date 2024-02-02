@@ -1,6 +1,8 @@
 package uprocclnt
 
 import (
+	"runtime/debug"
+
 	db "sigmaos/debug"
 	"sigmaos/proc"
 )
@@ -29,6 +31,10 @@ func (updm *UprocdMgr) startBalanceShares(p *proc.Proc) {
 	switch p.GetType() {
 	case proc.T_LC:
 		rpcc := updm.upcs[p.GetRealm()][p.GetType()]
+		// Reset rpcc share amount to 0, since it was set to min before.
+		if rpcc.share == MIN_SHARE {
+			rpcc.share = 0
+		}
 		updm.setShare(rpcc, rpcc.share+mcpuToShare(p.GetMcpu()))
 	case proc.T_BE:
 		updm.balanceBEShares()
@@ -85,7 +91,7 @@ func (updm *UprocdMgr) setShare(rpcc *UprocdClnt, share Tshare) {
 	}
 	rpcc.share = share
 	if rpcc.share > 10000 {
-		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v", rpcc.share)
+		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v\n%v", rpcc.share, string(debug.Stack()))
 	}
 	if err := updm.kclnt.SetCPUShares(rpcc.pid, int64(share)); err != nil {
 		db.DFatalf("Error SetCPUShares[%v] %v", rpcc.pid, err)

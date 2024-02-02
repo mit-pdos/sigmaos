@@ -3,6 +3,7 @@ package sigmaclntsrv
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 
@@ -31,15 +32,19 @@ type SigmaClntConn struct {
 
 func newSigmaClntConn(conn net.Conn, pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntConn, error) {
 	scs, err := NewSigmaClntSrvAPI(pcfg, fidc)
-	//scs, err := NewSigmaClntSrvAPI(pcfg, nil)
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.ALWAYS, "Create SigmaClntConn with pcfg %v", pcfg)
 	rpcs := rpcsrv.NewRPCSrv(scs, nil)
-	scc := &SigmaClntConn{rpcs: rpcs, ctx: ctx.NewCtxNull(), conn: conn, api: scs}
+	scc := &SigmaClntConn{
+		rpcs: rpcs,
+		ctx:  ctx.NewCtxNull(),
+		conn: conn,
+		api:  scs,
+	}
 	scc.dmx = demux.NewDemuxSrv(bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), scc)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: newSigmaClntConn for %v", scs.sc.ClntId(), conn)
 	return scc, nil
 }
 
@@ -74,6 +79,7 @@ func (scc *SigmaClntConn) close() error {
 type SigmaClntSrvAPI struct {
 	mu     sync.Mutex
 	closed bool
+	fidc   *fidclnt.FidClnt
 	sc     *sigmaclnt.SigmaClnt
 }
 
@@ -86,12 +92,7 @@ func (scc *SigmaClntSrvAPI) testAndSetClosed() bool {
 }
 
 func NewSigmaClntSrvAPI(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntSrvAPI, error) {
-	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pcfg, fidc)
-	if err != nil {
-		return nil, err
-	}
-
-	scsa := &SigmaClntSrvAPI{sc: sc}
+	scsa := &SigmaClntSrvAPI{sc: nil, fidc: fidc}
 	return scsa, nil
 }
 
@@ -106,6 +107,28 @@ func (scs *SigmaClntSrvAPI) setErr(err error) *sp.Rerror {
 			return sp.NewRerrorErr(err)
 		}
 	}
+}
+
+func (scs *SigmaClntSrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitRequest, rep *scproto.SigmaErrReply) error {
+	scs.mu.Lock()
+	defer scs.mu.Unlock()
+
+	if scs.sc != nil {
+		err := fmt.Errorf("Error, re-init SigmaClntSrvAPI")
+		rep.Err = scs.setErr(err)
+		return err
+	}
+	pe := proc.NewProcEnvFromProto(req.ProcEnvProto)
+	pe.UseSigmaclntd = false
+	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pe, scs.fidc)
+	if err != nil {
+		rep.Err = scs.setErr(fmt.Errorf("Error init SigmaClntSrvAPI: %v pe %v", err, pe))
+		return err
+	}
+	scs.sc = sc
+	db.DPrintf(db.SIGMACLNTSRV, "%v: Init %v err %v", scs.sc.ClntId(), pe, err)
+	rep.Err = scs.setErr(nil)
+	return nil
 }
 
 func (scs *SigmaClntSrvAPI) CloseFd(ctx fs.CtxI, req scproto.SigmaCloseRequest, rep *scproto.SigmaErrReply) error {

@@ -1,8 +1,13 @@
 syntax = "proto3";
 
 import "sigmap/sigmap.proto";
+import "proc/proc.proto";
 
 option go_package = "sigmaos/sigmaclntsrv/proto";
+
+message SigmaInitRequest {
+        ProcEnvProto procEnvProto = 1;
+}
 
 message SigmaNullRequest {
 }

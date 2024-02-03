@@ -162,6 +162,7 @@ func (ssrv *SessSrv) ReportError(conn sps.Conn, err error) {
 	sess.UnsetConn(conn)
 }
 
+// Calls from netsrv
 func (ss *SessSrv) ServeRequest(conn sps.Conn, req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
 	fc := spcodec.UnmarshalFcallAndData(req[0], req[1])
 	reply := ss.srvFcall(conn, fc)
@@ -172,13 +173,6 @@ func (ss *SessSrv) ServeRequest(conn sps.Conn, req []frame.Tframe) ([]frame.Tfra
 // Serve server-generated fcalls.
 func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
 	s := sessp.Tsession(fc.Fc.Session)
-	if s == 0 {
-		// Server-generated heartbeats will have session number 0;
-		// heartbeat all of the contained sessions, and then return
-		// immediately (no further processing is necessary).
-		ssrv.st.ProcessHeartbeats(fc.Msg.(*sp.Theartbeat))
-		return nil
-	}
 	sess := ssrv.st.Alloc(s)
 	return ssrv.serve(sess, fc)
 }

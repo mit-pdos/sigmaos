@@ -19,7 +19,6 @@ func NewSessionMgr(st *SessionTable, pfn sps.Fsrvfcall) *SessionMgr {
 	sm := &SessionMgr{}
 	sm.st = st
 	sm.srvfcall = pfn
-	go sm.runHeartbeats()
 	go sm.runDetaches()
 	return sm
 }
@@ -43,22 +42,6 @@ func (sm *SessionMgr) CloseConn() {
 	}
 }
 
-// Find connected sessions.
-func (sm *SessionMgr) getConnectedSessions() map[uint64]bool {
-	// Lock the session table.
-	sm.st.mu.RLock()
-	defer sm.st.mu.RUnlock()
-	sess := make(map[uint64]bool, len(sm.st.sessions))
-	for sid, s := range sm.st.sessions {
-		// Find timed-out sessions which haven't been closed yet.
-		if s.isConnected() {
-			db.DPrintf(db.SESS_STATE_SRV, "Sess %v is connected, generating heartbeat.", sid)
-			sess[uint64(s.Sid)] = true
-		}
-	}
-	return sess
-}
-
 // Find timed-out sessions.
 func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	// Lock the session table.
@@ -66,6 +49,11 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	defer sm.st.mu.RUnlock()
 	sess := make([]*Session, 0, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
+		if s.isConnected() {
+			db.DPrintf(db.SESS_STATE_SRV, "Sess %v is connected", sid)
+			s.lastHeartbeat = time.Now()
+			continue
+		}
 		// Find timed-out sessions which haven't been closed yet.
 		if timedout, lhb := s.timedOut(); timedout && !s.IsClosed() {
 			db.DPrintf(db.SESS_STATE_SRV, "Sess %v timed out, last heartbeat: %v", sid, lhb)
@@ -73,17 +61,6 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 		}
 	}
 	return sess
-}
-
-// Scan for live/connected sessions, and send heartbeats on their behalf.
-func (sm *SessionMgr) runHeartbeats() {
-	sessHeartbeatT := time.NewTicker(sp.Conf.Session.HEARTBEAT_INTERVAL)
-	for !sm.Done() {
-		<-sessHeartbeatT.C
-		sess := sm.getConnectedSessions()
-		hbs := sessp.NewFcallMsg(sp.NewTheartbeat(sess), nil, 0, nil)
-		sm.srvfcall(hbs)
-	}
 }
 
 // Scan for detachable sessions, and request that they be detached.

@@ -89,20 +89,6 @@ func (st *SessionTable) allocRL(sid sessp.Tsession) *Session {
 	return sess
 }
 
-func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
-	st.mu.RLock()
-	defer st.mu.RUnlock()
-
-	for sid, _ := range hbs.Sids {
-		sess := st.allocRL(sessp.Tsession(sid))
-		sess.Lock()
-		if !sess.closed {
-			sess.heartbeatL(hbs)
-		}
-		sess.Unlock()
-	}
-}
-
 // Return a last session
 func (st *SessionTable) lastSession() *Session {
 	st.mu.RLock()

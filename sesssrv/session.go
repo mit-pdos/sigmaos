@@ -9,7 +9,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
-	"sigmaos/sessconn"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
@@ -104,26 +103,6 @@ func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
 	sess.close()
-}
-
-// If the conn is nil, a reply is not needed. Conn maybe be nil
-// because server closed session unilaterally.
-func (sess *Session) SendConn(fm *sessp.FcallMsg) {
-	var replies chan *sessconn.PartMarshaledMsg
-
-	sess.Lock()
-	if sess.conn != nil {
-		// Must get replies channel under lock. This ensures that the connection's
-		// WaitGroup is added to before the connection is closed, and ensures the
-		// replies channel isn't closed from under our feet.
-		replies = sess.conn.GetReplyChan()
-	}
-	sess.Unlock()
-
-	// If there was a connection associated with this session...
-	if replies != nil {
-		replies <- sessconn.NewPartMarshaledMsg(fm)
-	}
 }
 
 func (sess *Session) getClnts() []sp.TclntId {

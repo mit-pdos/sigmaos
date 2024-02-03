@@ -150,27 +150,11 @@ func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tses
 	return ssrv.dirover, ctx.NewCtx(uname, sessid, clntid, ssrv.sct, ssrv.fencefs)
 }
 
-func (ss *SessSrv) ReportError(err error) {
-	db.DPrintf(db.SESSSRV, "ReportError %v\n", err)
-}
+func (ssrv *SessSrv) ReportError(conn sps.Conn, err error) {
+	db.DPrintf(db.SESSSRV, "ReportError %v err %v\n", conn, err)
 
-func (ss *SessSrv) ServeRequest(req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
-	fc := spcodec.UnmarshalFcallAndData(req[0], req[1])
-	reply := ss.SrvFcall(fc)
-	rep := spcodec.MarshalFcallWithoutData(reply)
-	return []frame.Tframe{rep, reply.Data}, nil
-}
-
-// New session or new connection for existing session
-func (ssrv *SessSrv) Register(sid sessp.Tsession, conn sps.Conn) *serr.Err {
-	db.DPrintf(db.SESSSRV, "Register sid %v %v\n", sid, conn)
-	sess := ssrv.st.Alloc(sid)
-	return sess.SetConn(conn)
-}
-
-// Disassociate a connection with a session, and let it close gracefully.
-func (ssrv *SessSrv) Unregister(sid sessp.Tsession, conn sps.Conn) {
-	// If this connection hasn't been associated with a session yet, return.
+	// Disassociate a connection with a session, and let it close gracefully.
+	sid := conn.GetSessId()
 	if sid == sessp.NoSession {
 		return
 	}
@@ -178,24 +162,44 @@ func (ssrv *SessSrv) Unregister(sid sessp.Tsession, conn sps.Conn) {
 	sess.UnsetConn(conn)
 }
 
+func (ss *SessSrv) ServeRequest(conn sps.Conn, req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
+	fc := spcodec.UnmarshalFcallAndData(req[0], req[1])
+	reply := ss.srvFcall(conn, fc)
+	rep := spcodec.MarshalFcallWithoutData(reply)
+	return []frame.Tframe{rep, reply.Data}, nil
+}
+
+// Serve server-generated fcalls.
 func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
-	ssrv.qlen.Inc(1)
-	defer ssrv.qlen.Dec()
-	// If this was a server-generated heartbeat message, heartbeat all of the
-	// contained sessions, and then return immediately (no further processing is
-	// necessary).
 	s := sessp.Tsession(fc.Fc.Session)
 	if s == 0 {
+		// Server-generated heartbeats will have session number 0;
+		// heartbeat all of the contained sessions, and then return
+		// immediately (no further processing is necessary).
 		ssrv.st.ProcessHeartbeats(fc.Msg.(*sp.Theartbeat))
 		return nil
 	}
 	sess := ssrv.st.Alloc(s)
-	qlen := ssrv.QueueLen()
-	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
+	return ssrv.serve(sess, fc)
+}
+
+func (ssrv *SessSrv) srvFcall(conn sps.Conn, fc *sessp.FcallMsg) *sessp.FcallMsg {
+	s := sessp.Tsession(fc.Fc.Session)
+	if conn.CondSet(s) != s {
+		db.DFatalf("Bad sid %v sess associated with conn %v\n", conn.GetSessId(), conn)
+	}
+	sess := ssrv.st.Alloc(s)
+	sess.SetConn(conn)
 	return ssrv.serve(sess, fc)
 }
 
 func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
+	ssrv.qlen.Inc(1)
+	defer ssrv.qlen.Dec()
+
+	qlen := ssrv.QueueLen()
+	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
+
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
 	msg, data, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)

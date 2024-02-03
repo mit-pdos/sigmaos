@@ -21,16 +21,17 @@ import (
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmaprotsrv"
 	"sigmaos/spcodec"
 )
 
 type SessSrv struct {
 }
 
-func (ss *SessSrv) ReportError(err error) {
+func (ss *SessSrv) ReportError(conn sigmaprotsrv.Conn, err error) {
 }
 
-func (ss *SessSrv) ServeRequest(req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
+func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
 	fc0 := spcodec.UnmarshalFcallAndData(req[0], req[1])
 	db.DPrintf(db.TEST, "fcall %v\n", fc0)
 	msg := &sp.Rattach{Qid: sp.NewQidPerm(0777, 0, 0)}
@@ -111,7 +112,16 @@ func TestDisconnectMfsSrv(t *testing.T) {
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
+	// check if session isn't timed out
+	time.Sleep(3 * sp.Conf.Session.TIMEOUT)
+
+	//rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	//assert.Nil(t, err)
+
+	// client disconnects session
 	ts.shutdown()
+
 	// allow server session to timeout
-	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
+	time.Sleep(3 * sp.Conf.Session.TIMEOUT)
 }

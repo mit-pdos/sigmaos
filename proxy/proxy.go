@@ -6,6 +6,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/frame"
+	// "sigmaos/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
@@ -46,24 +48,21 @@ func (npd *Npd) serve(fm *sessp.FcallMsg) *sessp.FcallMsg {
 	return reply
 }
 
-func (npd *Npd) Register(sid sessp.Tsession, conn sps.Conn) *serr.Err {
-	sess := npd.st.Alloc(sid)
-	sess.SetConn(conn)
-	return nil
-}
-
-// Disassociate a connection with a session, and let it close gracefully.
-func (npd *Npd) Unregister(sid sessp.Tsession, conn sps.Conn) {
+func (npd *Npd) ReportError(conn sps.Conn, err error) {
+	db.DPrintf(db.PROXY, "ReportError %v err %v\n", conn, err)
 	// If this connection hasn't been associated with a session yet, return.
-	if sid == sessp.NoSession {
-		return
-	}
-	sess := npd.st.Alloc(sid)
-	sess.UnsetConn(conn)
+	//if sid == sessp.NoSession {
+	//	return
+	//}
+	//sess := npd.st.Alloc(sid)
+	//sess.UnsetConn(conn)
 }
 
-func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
-	return serve(fc)
+func (npd *Npd) ServeRequest(conn sps.Conn, req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
+	//fc := npcodec.UnmarshalFrame(req[0])
+	//reply := npd.serve(fc)
+	//rep := npcodec.MarshalFrame(rep[0])
+	return []frame.Tframe{}, nil
 }
 
 // The connection from the kernel/client

@@ -68,7 +68,7 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
 		if timedout, lhb := s.timedOut(); timedout && !s.IsClosed() {
-			db.DPrintf(db.SESS_STATE_SRV_ERR, "Sess %v timed out, last heartbeat: %v", sid, lhb)
+			db.DPrintf(db.SESS_STATE_SRV, "Sess %v timed out, last heartbeat: %v", sid, lhb)
 			sess = append(sess, s)
 		}
 	}
@@ -96,7 +96,7 @@ func (sm *SessionMgr) runDetaches() {
 		for _, s := range sess {
 			clnts := s.getClnts()
 			for _, c := range clnts {
-				db.DPrintf(db.ALWAYS, "%v: Clnt %v timed out", s.Sid, c)
+				db.DPrintf(db.ALWAYS, "Sess %v Clnt %v timed out", s.Sid, c)
 				detach := sessp.NewFcallMsg(&sp.Tdetach{ClntId: uint64(c)}, nil, s.Sid, nil)
 				sm.srvfcall(detach)
 			}

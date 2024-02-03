@@ -33,7 +33,7 @@ func (npd *Npd) newProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Pr
 	return newNpConn(npd.pcfg, string(npd.lip))
 }
 
-func (npd *Npd) serve(fm *sessp.FcallMsg) {
+func (npd *Npd) serve(fm *sessp.FcallMsg) *sessp.FcallMsg {
 	s := sessp.Tsession(fm.Fc.Session)
 	sess, _ := npd.st.Lookup(s)
 	msg, data, rerror, _, _ := sess.Dispatch(fm.Msg, fm.Data)
@@ -43,7 +43,7 @@ func (npd *Npd) serve(fm *sessp.FcallMsg) {
 	reply := sessp.NewFcallMsg(msg, nil, s, nil)
 	reply.Data = data
 	reply.Fc.Tag = fm.Fc.Tag
-	sess.SendConn(reply)
+	return reply
 }
 
 func (npd *Npd) Register(sid sessp.Tsession, conn sps.Conn) *serr.Err {
@@ -62,9 +62,8 @@ func (npd *Npd) Unregister(sid sessp.Tsession, conn sps.Conn) {
 	sess.UnsetConn(conn)
 }
 
-func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) *serr.Err {
-	go npd.serve(fc)
-	return nil
+func (npd *Npd) SrvFcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
+	return serve(fc)
 }
 
 // The connection from the kernel/client

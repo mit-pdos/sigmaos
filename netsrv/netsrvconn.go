@@ -61,18 +61,22 @@ func (c *NetSrvConn) GetSessId() sessp.Tsession {
 }
 
 func (c *NetSrvConn) Close() error {
+	c.Lock()
+	defer c.Unlock()
+
 	db.DPrintf(db.NETSRV, "Close %v\n", c)
-	return nil
+	c.conn.Close()
+	return c.dmx.Close()
 }
 
 func (c *NetSrvConn) IsClosed() bool {
 	db.DPrintf(db.NETSRV, "IsClosed %v\n", c)
-	return false
+	return c.dmx.IsClosed()
 }
 
 func (c *NetSrvConn) CloseConnTest() error {
 	db.DPrintf(db.CRASH, "CloseConnTest %v\n", c)
-	return nil
+	return c.conn.Close()
 }
 
 func (c *NetSrvConn) ReportError(err error) {

@@ -100,6 +100,12 @@ func (dmx *DemuxSrv) Close() error {
 	return nil
 }
 
+func (dmx *DemuxSrv) IsClosed() bool {
+	dmx.mu.Lock()
+	defer dmx.mu.Unlock()
+	return dmx.closed
+}
+
 func (dmx *DemuxSrv) IncNreq() bool {
 	dmx.mu.Lock()
 	defer dmx.mu.Unlock()

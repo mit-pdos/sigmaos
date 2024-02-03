@@ -40,23 +40,24 @@ func (ss *SessSrv) ServeRequest(req []frame.Tframe) ([]frame.Tframe, *serr.Err) 
 }
 
 type Tstate struct {
+	T    *testing.T
 	lip  sp.Tip
 	pcfg *proc.ProcEnv
 	addr *sp.Taddr
 }
 
-func NewTstate() *Tstate {
+func newTstate(t *testing.T) *Tstate {
 	lip := sp.Tip("127.0.0.1")
 	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, lip, lip, lip, "", false, false)
 	pcfg.Program = "srv"
 	pcfg.SetUname("srv")
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-	return &Tstate{lip: lip, pcfg: pcfg, addr: addr}
+	return &Tstate{T: t, lip: lip, pcfg: pcfg, addr: addr}
 }
 
 func TestConnectSessSrv(t *testing.T) {
-	ts := NewTstate()
+	ts := newTstate(t)
 	ss := &SessSrv{}
 
 	srv := netsrv.NewNetServer(ts.pcfg, ss, ts.addr)
@@ -70,15 +71,44 @@ func TestConnectSessSrv(t *testing.T) {
 	srv.CloseListener()
 }
 
-func TestConnectMfsSrv(t *testing.T) {
-	ts := NewTstate()
+type TstateSp struct {
+	*Tstate
+	srv  *sesssrv.SessSrv
+	clnt *sessclnt.Mgr
+}
+
+func newTstateSp(t *testing.T) *TstateSp {
+	ts := &TstateSp{}
+	ts.Tstate = newTstate(t)
 	et := ephemeralmap.NewEphemeralMap()
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	srv := sesssrv.NewSessSrv(ts.pcfg, root, ts.addr, protsrv.NewProtServer, et, nil)
+	ts.srv = sesssrv.NewSessSrv(ts.pcfg, root, ts.addr, protsrv.NewProtServer, et, nil)
+	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
+	return ts
+}
 
-	smgr := sessclnt.NewMgr(sp.ROOTREALM.String())
+func (ts *TstateSp) shutdown() {
+	scs := ts.clnt.SessClnts()
+	for _, sc := range scs {
+		err := sc.Close()
+		assert.Nil(ts.T, err)
+	}
+}
+
+func TestConnectMfsSrv(t *testing.T) {
+	ts := newTstateSp(t)
 	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
-	rep, err := smgr.RPC(sp.Taddrs{srv.MyAddr()}, req, nil)
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
+	ts.srv.StopServing()
+}
+
+func TestDisconnectMfsSrv(t *testing.T) {
+	ts := newTstateSp(t)
+	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+	ts.shutdown()
 }

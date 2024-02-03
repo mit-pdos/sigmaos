@@ -1,4 +1,6 @@
-// The sesssrv package implements a protsrv for a session
+// The sesssrv package dispatches incoming calls on a session to a
+// protsrv for that session.  The clients on a session share an fid
+// table.
 package sesssrv
 
 import (
@@ -179,6 +181,7 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
 }
 
 func (ss *SessSrv) ReportError(err error) {
+	db.DPrintf(db.SESSSRV, "ReportError %v\n", err)
 }
 
 // Call SrvFcall

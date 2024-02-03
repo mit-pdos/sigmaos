@@ -50,6 +50,9 @@ func (nc *NetClnt) Src() string {
 }
 
 func (nc *NetClnt) Close() error {
+	if err := nc.conn.Close(); err != nil {
+		return err
+	}
 	return nc.DemuxClnt.Close()
 }
 

@@ -2,6 +2,7 @@ package sessclnt_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -111,4 +112,6 @@ func TestDisconnectMfsSrv(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
 	ts.shutdown()
+	// allow server session to timeout
+	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
 }

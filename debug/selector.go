@@ -189,23 +189,23 @@ const (
 
 // Client-side Infrastructure
 const (
-	NETCLNT             Tselector = "NETCLNT"
-	NETCLNT_ERR                   = NETCLNT + ERR
-	DEMUXCLNT                     = "DEMUXCLNT"
-	SESS_CLNT_Q                   = "SESS_CLNT_Q"
-	SESS_STATE_CLNT               = "SESS_STATE_CLNT"
-	SESS_STATE_CLNT_ERR           = SESS_STATE_CLNT + ERR
-	FIDCLNT                       = "FIDCLNT"
-	FIDCLNT_ERR                   = FIDCLNT + ERR
-	RPCCLNT                       = "RPCCLNT"
-	MOUNT                         = "MOUNT"
-	MOUNT_ERR                     = MOUNT + ERR
-	FDCLNT                        = "FDCLNT"
-	PATHCLNT                      = "PATHCLNT"
-	PATHCLNT_ERR                  = PATHCLNT + ERR
-	WALK                          = "WALK"
-	WALK_ERR                      = "WALK" + ERR
-	SVCMOUNT                      = "SVCMOUNT"
+	NETCLNT      Tselector = "NETCLNT"
+	NETCLNT_ERR            = NETCLNT + ERR
+	DEMUXCLNT              = "DEMUXCLNT"
+	SESS_CLNT_Q            = "SESS_CLNT_Q"
+	SESSCLNT               = "SESSCLNT"
+	SESSCLNT_ERR           = SESSCLNT + ERR
+	FIDCLNT                = "FIDCLNT"
+	FIDCLNT_ERR            = FIDCLNT + ERR
+	RPCCLNT                = "RPCCLNT"
+	MOUNT                  = "MOUNT"
+	MOUNT_ERR              = MOUNT + ERR
+	FDCLNT                 = "FDCLNT"
+	PATHCLNT               = "PATHCLNT"
+	PATHCLNT_ERR           = PATHCLNT + ERR
+	WALK                   = "WALK"
+	WALK_ERR               = "WALK" + ERR
+	SVCMOUNT               = "SVCMOUNT"
 )
 
 // Server-side Infrastructure

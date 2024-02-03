@@ -1,23 +1,26 @@
+// The sessclnt package establishes a session server using a TCP
+// connection.  If TCP connection fails, it will try to re-establish
+// the connection.
 package sessclnt
 
 import (
 	//	"github.com/sasha-s/go-deadlock"
 	"sync"
 
-	"time"
+	//"time"
 
 	db "sigmaos/debug"
+	"sigmaos/frame"
 	"sigmaos/netclnt"
 	"sigmaos/rand"
 	"sigmaos/serr"
-	"sigmaos/sessconn"
+	//"sigmaos/sessconn"
 	"sigmaos/sessp"
 	"sigmaos/sessstateclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
-// A session from a client to a logical server (either one server or a
-// replica group)
 type SessClnt struct {
 	sync.Mutex
 	sid     sessp.Tsession
@@ -37,37 +40,36 @@ func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c.nc = nil
 	c.clntnet = clntnet
 	c.queue = sessstateclnt.NewRequestQueue(addrs)
-	db.DPrintf(db.SESS_STATE_CLNT, "Make session %v to srvs %v", c.sid, addrs)
-	nc, err := netclnt.NewNetClnt(c, clntnet, addrs)
+	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, addrs)
+	nc, err := netclnt.NewNetClnt(clntnet, addrs, c)
 	if err != nil {
 		return nil, err
 	}
 	c.nc = nc
-	go c.writer()
 	return c, nil
 }
 
+func (c *SessClnt) ReportError(err error) {
+	db.DPrintf(db.SESSCLNT, "Netclnt reports err %v\n", err)
+}
+
 func (c *SessClnt) RPC(req sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
-	rpc, err := c.send(req, data)
+	fc := sessp.NewFcallMsg(req, data, c.sid, &c.seqno)
+	r := make([]frame.Tframe, 2)
+	r[0] = spcodec.MarshalFcallWithoutData(fc)
+	r[1] = data
+	rep, err := c.nc.SendReceive(r)
 	if err != nil {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
 		return nil, err
 	}
-	rep, err1 := c.recv(rpc)
-	if err1 != nil {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Unable to recv response to req %v %v seqno %v err %v from %v\n", c.sid, req.Type(), rpc.Req.Fcm.Fc.Seqno, req, err1, c.addrs)
-		return nil, err1
-	}
-	if db.WillBePrinted(db.SESS_STATE_CLNT) {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Fcm.Fc.Seqno, req, rep.Type(), rep, c.addrs)
-	}
-	return rep, nil
+	fm := spcodec.UnmarshalFcallAndData(rep[0], rep[1])
+	return fm, nil
 }
 
 func (c *SessClnt) sendHeartbeat() {
 	_, err := c.RPC(sp.NewTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil)
 	if err != nil {
-		db.DPrintf(db.SESS_STATE_CLNT_ERR, "%v heartbeat %v err %v", c.sid, c.addrs, err)
+		db.DPrintf(db.SESSCLNT_ERR, "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}
 }
 
@@ -81,24 +83,10 @@ func (c *SessClnt) Reset() {
 		c.nc = nil
 	}
 	// Reset outstanding request queue.
-	db.DPrintf(db.SESS_STATE_CLNT, "%v Reset outstanding request queue to %v", c.sid, c.addrs)
+	db.DPrintf(db.SESSCLNT, "%v Reset outstanding request queue to %v", c.sid, c.addrs)
 	c.queue.Reset()
 	// Try to send a heartbeat to force a reconnect to the replica group.
 	go c.sendHeartbeat()
-}
-
-// Complete an RPC and pass the response up the stack.
-func (c *SessClnt) CompleteRPC(seqno sessp.Tseqno, f []byte, d []byte, err *serr.Err) {
-	rpc, ok := c.queue.Remove(seqno)
-	// the outstanding request may have been cleared if the conn is closing, or
-	// if a previous version of this request was sent and received, in which case
-	// rpc == nil and ok == false.
-	if ok {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v from %v", c.sid, rpc.Req, c.addrs)
-		rpc.Complete(f, d, err)
-	} else {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Already completed rpc from %v\n", c.sid, c.addrs)
-	}
 }
 
 // Check if the session needs to be closed because the server killed
@@ -113,65 +101,6 @@ func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {
 	return false
 }
 
-func (c *SessClnt) send(req sessp.Tmsg, data []byte) (*netclnt.Rpc, *serr.Err) {
-	s := time.Now()
-
-	// If the request is not an RPC, we need to ensure strict ordering by seqno.
-	// So, hold the lock between incrementing the seqno (which happens in
-	// sessp.NewFcallMsg) and enqueueing the message. This holds the lock during
-	// marshaling.
-	if req.Type() != sessp.TTwriteread {
-		c.Lock()
-		defer c.Unlock()
-	}
-
-	// For TTwriteread (RPCs) we make no ordering guarantees. This allows us to
-	// avoid holding the lock between the Fcall message creation step (which
-	// allocates a sequence number), the marshaling step (which often takes a
-	// long time), and the request enqueue step (which ordinarily expects fcalls
-	// to be enqueued in order).
-	fc := sessp.NewFcallMsg(req, data, c.sid, &c.seqno)
-	rpc := netclnt.NewRpc(c.addrs, sessconn.NewPartMarshaledMsg(fc), s)
-
-	// If the request is an RPC, then we don't have strict ordering requirements.
-	// We haven't taken the lock yet in order to avoid holding the lock while
-	// marshaling the message, which may take a long time. However, we need to
-	// take the lock here to ensure the status of the session (c.closed) is
-	// checked atomically with the RPC enqueueing.
-	if req.Type() == sessp.TTwriteread {
-		c.Lock()
-		defer c.Unlock()
-	}
-
-	if c.closed {
-		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)
-	}
-
-	// Enqueue a request
-	if err := c.queue.Enqueue(rpc); err != nil {
-		return nil, serr.NewErr(serr.TErrError, err)
-	}
-	return rpc, nil
-}
-
-// Wait for an RPC to be completed. When this happens, we reset the heartbeat
-// timer.
-func (c *SessClnt) recv(rpc *netclnt.Rpc) (*sessp.FcallMsg, *serr.Err) {
-	reply, err := rpc.Await()
-	// Reply may be nil if the server became unreachable, the session was closed,
-	// and outstanding RPCs were aborted.
-	if reply != nil {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Complete rpc req %v reply %v from %v\n", c.sid, rpc.Req, reply, c.addrs)
-		// If the server closed the session (this is a sessclosed error or an
-		// Rdetach), close the SessClnt.
-		if srvClosedSess(reply.Msg, err) {
-			db.DPrintf(db.SESS_STATE_CLNT, "Srv %v closed sess %v on req seqno %v\n", c.addrs, c.sid, reply.Seqno())
-			c.close()
-		}
-	}
-	return reply, err
-}
-
 // Get a connection to the server. If it isn't possible to make a connection,
 // return an error.
 func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
@@ -183,13 +112,13 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 	}
 
 	if c.nc == nil {
-		db.DPrintf(db.SESS_STATE_CLNT, "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
-		nc, err := netclnt.NewNetClnt(c, c.clntnet, c.addrs)
+		db.DPrintf(db.SESSCLNT, "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
+		nc, err := netclnt.NewNetClnt(c.clntnet, c.addrs, c)
 		if err != nil {
-			db.DPrintf(db.SESS_STATE_CLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
+			db.DPrintf(db.SESSCLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
 			return nil, err
 		}
-		db.DPrintf(db.SESS_STATE_CLNT, "%v Successful connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
+		db.DPrintf(db.SESSCLNT, "%v Successful connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
 		c.nc = nc
 	}
 	return c.nc, nil
@@ -208,7 +137,7 @@ func (c *SessClnt) Close() error {
 	return nil
 }
 
-// Close the sessclnt connection to this replica group.
+// Close the sessclnt connection
 func (c *SessClnt) close() {
 	c.Lock()
 	defer c.Unlock()
@@ -217,7 +146,7 @@ func (c *SessClnt) close() {
 		return
 	}
 	c.closed = true
-	db.DPrintf(db.SESS_STATE_CLNT, "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
+	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
 	if c.nc != nil {
 		c.nc.Close()
 	}
@@ -226,30 +155,4 @@ func (c *SessClnt) close() {
 	for _, rpc := range outstanding {
 		rpc.Abort()
 	}
-}
-
-func (c *SessClnt) writer() {
-	for !c.isClosed() {
-		// Try to get the next request to be sent
-		req := c.queue.Next()
-
-		if req == nil {
-			break
-		}
-
-		s := time.Now()
-		nc, err := c.getConn()
-		if time.Since(s) > 100*time.Microsecond {
-			db.DPrintf(db.SESS_LAT, "Long getconn %v", time.Since(s))
-		}
-
-		// If we can't connect to the replica group, return.
-		if err != nil {
-			c.close()
-			break
-		}
-
-		nc.Send(req)
-	}
-	db.DPrintf(db.SESS_STATE_CLNT, "%v writer returns %v %v\n", c.sid, c.addrs, c.closed)
 }

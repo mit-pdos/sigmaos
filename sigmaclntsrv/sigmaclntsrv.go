@@ -25,17 +25,7 @@ type SigmaClntSrv struct {
 }
 
 func newSigmaClntSrv() (*SigmaClntSrv, error) {
-	//	localIP, err := netsigma.LocalIP()
-	//	if err != nil {
-	//		db.DFatalf("Error local IP: %v", err)
-	//	}
 	pcfg := proc.GetProcEnv()
-	//	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, "127.0.0.1", localIP, "local-build", false, false)
-	//	pcfg.Program = "sigmaclntd"
-	//	pcfg.SetUname("sigmaclntd")
-	//	pcfg.SetPID(sp.GenPid("sigmaclntd"))
-	//	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-
 	scs := &SigmaClntSrv{
 		pcfg,
 		fidclnt.NewFidClnt(pcfg.Net),

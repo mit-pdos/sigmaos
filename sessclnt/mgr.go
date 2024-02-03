@@ -20,7 +20,7 @@ func NewMgr(clntnet string) *Mgr {
 	sc := &Mgr{}
 	sc.sessions = make(map[string]*SessClnt)
 	sc.clntnet = clntnet
-	db.DPrintf(db.SESS_STATE_CLNT, "Session Mgr for session")
+	db.DPrintf(db.SESSCLNT, "Session Mgr for session")
 	return sc
 }
 
@@ -60,10 +60,10 @@ func (sc *Mgr) RPC(addr sp.Taddrs, req sessp.Tmsg, data []byte) (*sessp.FcallMsg
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
 	if err != nil {
-		db.DPrintf(db.SESS_STATE_CLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, addr)
+		db.DPrintf(db.SESSCLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, addr)
 		return nil, err
 	}
-	db.DPrintf(db.SESS_STATE_CLNT, "sess %v RPC %v %v to %v", sess.sid, req.Type(), req, addr)
+	db.DPrintf(db.SESSCLNT, "sess %v RPC %v %v to %v", sess.sid, req.Type(), req, addr)
 	msg, err := sess.RPC(req, data)
 	return msg, err
 }

@@ -9,17 +9,19 @@ import (
 	"sigmaos/sessp"
 )
 
-func ReadFrame(rd io.Reader) ([]byte, *serr.Err) {
+type Tframe []byte
+
+func ReadFrame(rd io.Reader) (Tframe, *serr.Err) {
 	var len uint32
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, err)
 	}
 	db.DPrintf(db.FRAME, "ReadFrame %d\n", len)
 	len = len - 4
-	if len <= 0 {
+	if len < 0 {
 		return nil, serr.NewErr(serr.TErrUnreachable, "readMsg too short")
 	}
-	frame := make([]byte, len)
+	frame := make(Tframe, len)
 	n, e := io.ReadFull(rd, frame)
 	if n != int(len) {
 		return nil, serr.NewErr(serr.TErrUnreachable, e)
@@ -27,14 +29,14 @@ func ReadFrame(rd io.Reader) ([]byte, *serr.Err) {
 	return frame, nil
 }
 
-func ReadBuf(rd io.Reader) ([]byte, *serr.Err) {
+func ReadBuf(rd io.Reader) (Tframe, *serr.Err) {
 	var len uint32
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, err)
 	}
-	var buf []byte
+	var buf Tframe
 	if len > 0 {
-		buf = make([]byte, len)
+		buf = make(Tframe, len)
 		n, e := io.ReadFull(rd, buf)
 		if n != int(len) {
 			return nil, serr.NewErr(serr.TErrUnreachable, e)
@@ -43,7 +45,7 @@ func ReadBuf(rd io.Reader) ([]byte, *serr.Err) {
 	return buf, nil
 }
 
-func WriteFrame(wr io.Writer, frame []byte) *serr.Err {
+func WriteFrame(wr io.Writer, frame Tframe) *serr.Err {
 	l := uint32(len(frame) + 4) // +4 because that is how 9P wants it
 	if err := binary.Write(wr, binary.LittleEndian, l); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
@@ -51,7 +53,7 @@ func WriteFrame(wr io.Writer, frame []byte) *serr.Err {
 	return WriteRawBuffer(wr, frame)
 }
 
-func WriteRawBuffer(wr io.Writer, buf []byte) *serr.Err {
+func WriteRawBuffer(wr io.Writer, buf Tframe) *serr.Err {
 	if n, err := wr.Write(buf); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	} else if n < len(buf) {
@@ -60,7 +62,7 @@ func WriteRawBuffer(wr io.Writer, buf []byte) *serr.Err {
 	return nil
 }
 
-func PushToFrame(wr io.Writer, b []byte) error {
+func PushToFrame(wr io.Writer, b Tframe) error {
 	if err := binary.Write(wr, binary.LittleEndian, uint32(len(b))); err != nil {
 		return err
 	}
@@ -70,7 +72,7 @@ func PushToFrame(wr io.Writer, b []byte) error {
 	return nil
 }
 
-func PopFromFrame(rd io.Reader) ([]byte, error) {
+func PopFromFrame(rd io.Reader) (Tframe, error) {
 	var l uint32
 	if err := binary.Read(rd, binary.LittleEndian, &l); err != nil {
 		if err != io.EOF {
@@ -78,7 +80,7 @@ func PopFromFrame(rd io.Reader) ([]byte, error) {
 		}
 		return nil, err
 	}
-	b := make([]byte, int(l))
+	b := make(Tframe, int(l))
 	if _, err := io.ReadFull(rd, b); err != nil && !(err == io.EOF && l == 0) {
 		return nil, serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
@@ -99,4 +101,27 @@ func ReadSeqno(rdr io.Reader) (sessp.Tseqno, *serr.Err) {
 		return 0, serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	return sessp.Tseqno(sn), nil
+}
+
+func WriteFrames(fs []Tframe, wrt io.Writer) *serr.Err {
+	for _, f := range fs {
+		db.DPrintf(db.FRAME, "writeFrame %v\n", f)
+		if err := WriteFrame(wrt, f); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ReadFrames(rdr io.Reader, nframe int) ([]Tframe, *serr.Err) {
+	reply := make([]Tframe, nframe)
+	for i := 0; i < nframe; i++ {
+		f, err := ReadFrame(rdr)
+		db.DPrintf(db.FRAME, "readFrame %v %v\n", f, err)
+		if err != nil {
+			return nil, err
+		}
+		reply[i] = f
+	}
+	return reply, nil
 }

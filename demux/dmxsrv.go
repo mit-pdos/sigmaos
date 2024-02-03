@@ -11,12 +11,12 @@ import (
 )
 
 type DemuxSrvI interface {
-	ServeRequest([]byte) ([]byte, *serr.Err)
+	ServeRequest([]frame.Tframe) ([]frame.Tframe, *serr.Err)
 	ReportError(err error)
 }
 
 type reply struct {
-	data  []byte
+	data  []frame.Tframe
 	seqno sessp.Tseqno
 	err   *serr.Err
 }
@@ -33,26 +33,26 @@ type DemuxSrv struct {
 	nreq    int
 }
 
-func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, serve DemuxSrvI) *DemuxSrv {
+func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, nframe int, serve DemuxSrvI) *DemuxSrv {
 	dmx := &DemuxSrv{in: in, out: out, serve: serve, replies: make(chan reply)}
-	go dmx.reader()
+	go dmx.reader(nframe)
 	go dmx.writer()
 	return dmx
 }
 
-func (dmx *DemuxSrv) reader() {
+func (dmx *DemuxSrv) reader(nframe int) {
 	for {
 		seqno, err := frame.ReadSeqno(dmx.in)
 		if err != nil {
 			dmx.serve.ReportError(err)
 			break
 		}
-		request, err := frame.ReadFrame(dmx.in)
+		request, err := frame.ReadFrames(dmx.in, nframe)
 		if err != nil {
 			dmx.serve.ReportError(err)
 			break
 		}
-		go func(r []byte, s sessp.Tseqno) {
+		go func(r []frame.Tframe, s sessp.Tseqno) {
 			if !dmx.IncNreq() { // handle req?
 				return // done
 			}
@@ -82,7 +82,7 @@ func (dmx *DemuxSrv) writer() {
 			dmx.serve.ReportError(err)
 			continue
 		}
-		if err := frame.WriteFrame(dmx.out, reply.data); err != nil {
+		if err := frame.WriteFrames(reply.data, dmx.out); err != nil {
 			dmx.serve.ReportError(err)
 			continue
 		}

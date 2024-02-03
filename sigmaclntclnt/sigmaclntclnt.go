@@ -25,7 +25,8 @@ type SigmaClntClnt struct {
 }
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
-	return scc.dmx.SendReceive(a)
+	rep, err := scc.dmx.SendReceive([]demux.Tframe{a})
+	return rep[0], err
 }
 
 func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
@@ -46,7 +47,7 @@ func NewSigmaClntClnt() (*SigmaClntClnt, error) {
 	}
 	scc := &SigmaClntClnt{nil, nil, 0, conn, false}
 	scc.dmx = demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), scc)
+		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), 1, scc)
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	return scc, nil
 }

@@ -12,7 +12,7 @@ import (
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
-	"sigmaos/sessstatesrv"
+	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
 )
@@ -20,12 +20,12 @@ import (
 type Npd struct {
 	lip  sp.Tip
 	pcfg *proc.ProcEnv
-	st   *sessstatesrv.SessionTable
+	st   *sesssrv.SessionTable
 }
 
 func NewNpd(pcfg *proc.ProcEnv, lip sp.Tip) *Npd {
 	npd := &Npd{lip, pcfg, nil}
-	npd.st = sessstatesrv.NewSessionTable(npd.newProtServer, npd)
+	npd.st = sesssrv.NewSessionTable(npd.newProtServer, npd)
 	return npd
 }
 

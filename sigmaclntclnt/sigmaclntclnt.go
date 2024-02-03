@@ -9,6 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
+	"sigmaos/frame"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sessp"
@@ -25,7 +26,7 @@ type SigmaClntClnt struct {
 }
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
-	rep, err := scc.dmx.SendReceive([]demux.Tframe{a})
+	rep, err := scc.dmx.SendReceive([]frame.Tframe{a})
 	return rep[0], err
 }
 

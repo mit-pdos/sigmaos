@@ -10,6 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/fidclnt"
+	"sigmaos/frame"
 	"sigmaos/fs"
 	"sigmaos/proc"
 	"sigmaos/rpcsrv"
@@ -38,17 +39,17 @@ func newSigmaClntConn(conn net.Conn, pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) 
 	rpcs := rpcsrv.NewRPCSrv(scs, nil)
 	scc := &SigmaClntConn{rpcs: rpcs, ctx: ctx.NewCtxNull(), conn: conn, api: scs}
 	scc.dmx = demux.NewDemuxSrv(bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), scc)
+		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), 1, scc)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: newSigmaClntConn for %v", scs.sc.ClntId(), conn)
 	return scc, nil
 }
 
-func (scc *SigmaClntConn) ServeRequest(f []byte) ([]byte, *serr.Err) {
-	b, err := scc.rpcs.WriteRead(scc.ctx, f)
+func (scc *SigmaClntConn) ServeRequest(f []frame.Tframe) ([]frame.Tframe, *serr.Err) {
+	b, err := scc.rpcs.WriteRead(scc.ctx, f[0])
 	if err != nil {
 		db.DPrintf(db.SIGMACLNTSRV, "ServeRequest: writeRead err %v", err)
 	}
-	return b, err
+	return []frame.Tframe{b}, err
 }
 
 func (scc *SigmaClntConn) ReportError(err error) {

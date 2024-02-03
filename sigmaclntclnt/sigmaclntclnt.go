@@ -10,6 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/frame"
+	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sessp"
@@ -18,6 +19,7 @@ import (
 )
 
 type SigmaClntClnt struct {
+	pe           *proc.ProcEnv
 	dmx          *demux.DemuxClnt
 	rpcc         *rpcclnt.RPCClnt
 	seqno        sessp.Tseqno
@@ -41,15 +43,26 @@ func (scc *SigmaClntClnt) ReportError(err error) {
 	}()
 }
 
-func NewSigmaClntClnt() (*SigmaClntClnt, error) {
+func NewSigmaClntClnt(pe *proc.ProcEnv) (*SigmaClntClnt, error) {
 	conn, err := net.Dial("unix", sp.SIGMASOCKET)
 	if err != nil {
 		return nil, err
 	}
-	scc := &SigmaClntClnt{nil, nil, 0, conn, false}
+	scc := &SigmaClntClnt{
+		pe:    pe,
+		dmx:   nil,
+		rpcc:  nil,
+		seqno: 0, conn: conn, disconnected: false,
+	}
 	scc.dmx = demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), 1, scc)
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
+	// Initialize the server-side component of sigmaclnt by sending the proc env
+	db.DPrintf(db.SIGMACLNTCLNT, "Init sigmaclntclnt for %v", pe.GetPID())
+	if err := scc.Init(); err != nil {
+		db.DPrintf(db.ERROR, "Error init sigmaclnt: %v", err)
+		return nil, err
+	}
 	return scc, nil
 }
 

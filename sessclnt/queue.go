@@ -1,4 +1,4 @@
-package sessstateclnt
+package sessclnt
 
 import (
 	"fmt"

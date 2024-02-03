@@ -25,11 +25,12 @@ type SigmaClntSrv struct {
 }
 
 func newSigmaClntSrv() (*SigmaClntSrv, error) {
-	pcfg := proc.GetProcEnv()
+	pe := proc.GetProcEnv()
 	scs := &SigmaClntSrv{
-		pcfg,
-		fidclnt.NewFidClnt(pcfg.Net),
+		pe,
+		fidclnt.NewFidClnt(pe.Net),
 	}
+	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)
 	return scs, nil
 }
 
@@ -192,7 +193,7 @@ func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp
 		return nil, err
 	}
 	return &SigmaClntSrvCmd{
-		p:   proc.NewPrivProcPid(sp.Tpid("sigmaclntd"), "sigmaclntd", nil, true),
+		p:   p,
 		cmd: cmd,
 		out: stdin,
 	}, nil

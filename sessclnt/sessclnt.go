@@ -16,7 +16,6 @@ import (
 	"sigmaos/serr"
 	//"sigmaos/sessconn"
 	"sigmaos/sessp"
-	"sigmaos/sessstateclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
@@ -28,7 +27,7 @@ type SessClnt struct {
 	closed  bool
 	addrs   sp.Taddrs
 	nc      *netclnt.NetClnt
-	queue   *sessstateclnt.RequestQueue
+	queue   *RequestQueue
 	clntnet string
 }
 
@@ -39,7 +38,7 @@ func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c.addrs = addrs
 	c.nc = nil
 	c.clntnet = clntnet
-	c.queue = sessstateclnt.NewRequestQueue(addrs)
+	c.queue = NewRequestQueue(addrs)
 	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, addrs)
 	nc, err := netclnt.NewNetClnt(clntnet, addrs, c)
 	if err != nil {

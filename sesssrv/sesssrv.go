@@ -18,7 +18,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
-	"sigmaos/sessstatesrv"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/spcodec"
@@ -40,8 +39,8 @@ type SessSrv struct {
 	dirover  *overlay.DirOverlay
 	newps    sps.NewProtServer
 	stats    *stats.StatInfo
-	st       *sessstatesrv.SessionTable
-	sm       *sessstatesrv.SessionMgr
+	st       *SessionTable
+	sm       *SessionMgr
 	sct      *clntcond.ClntCondTable
 	plt      *lockmap.PathLockTable
 	wt       *watch.WatchTable
@@ -60,7 +59,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProt
 	ssrv.newps = newps
 	ssrv.et = et
 	ssrv.stats = stats.NewStatsDev(ssrv.dirover)
-	ssrv.st = sessstatesrv.NewSessionTable(newps, ssrv)
+	ssrv.st = NewSessionTable(newps, ssrv)
 	ssrv.sct = clntcond.NewClntCondTable()
 	ssrv.plt = lockmap.NewPathLockTable()
 	ssrv.wt = watch.NewWatchTable(ssrv.sct)
@@ -71,7 +70,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProt
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
 	ssrv.srv = netsrv.NewNetServer(pe, ssrv, addr)
-	ssrv.sm = sessstatesrv.NewSessionMgr(ssrv.st, ssrv.SrvFcall)
+	ssrv.sm = NewSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv
 }
@@ -208,7 +207,7 @@ func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
 	return ssrv.serve(sess, fc)
 }
 
-func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
+func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
 	msg, data, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
@@ -222,13 +221,13 @@ func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *sessp.FcallMsg) *sess
 	reply.Data = data
 
 	switch op {
-	case sessstatesrv.TSESS_DEL:
+	case TSESS_DEL:
 		sess.DelClnt(clntid)
 		ssrv.st.DelLastClnt(clntid)
-	case sessstatesrv.TSESS_ADD:
+	case TSESS_ADD:
 		sess.AddClnt(clntid)
 		ssrv.st.AddLastClnt(clntid, sess.Sid)
-	case sessstatesrv.TSESS_NONE:
+	case TSESS_NONE:
 	}
 
 	return reply

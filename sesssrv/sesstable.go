@@ -1,4 +1,4 @@
-package sessstatesrv
+package sesssrv
 
 import (
 	"sync"

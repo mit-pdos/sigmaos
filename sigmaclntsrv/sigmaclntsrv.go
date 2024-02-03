@@ -193,7 +193,7 @@ func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp
 		return nil, err
 	}
 	return &SigmaClntSrvCmd{
-		p:   proc.NewPrivProcPid(sp.Tpid("sigmaclntd"), "sigmaclntd", nil, true),
+		p:   p,
 		cmd: cmd,
 		out: stdin,
 	}, nil

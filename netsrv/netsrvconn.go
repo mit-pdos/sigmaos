@@ -61,9 +61,6 @@ func (c *NetSrvConn) GetSessId() sessp.Tsession {
 }
 
 func (c *NetSrvConn) Close() error {
-	c.Lock()
-	defer c.Unlock()
-
 	db.DPrintf(db.NETSRV, "Close %v\n", c)
 	c.conn.Close()
 	return c.dmx.Close()

@@ -2,8 +2,6 @@
 package sesssrv
 
 import (
-	"fmt"
-
 	"sigmaos/clntcond"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -168,43 +166,25 @@ func (ssrv *SessSrv) Unregister(sid sessp.Tsession, conn sps.Conn) {
 	sess.UnsetConn(conn)
 }
 
-func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *serr.Err {
+func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
 	ssrv.qlen.Inc(1)
-	s := sessp.Tsession(fc.Fc.Session)
-	_, ok := ssrv.st.Lookup(s)
+	//s := sessp.Tsession(fc.Fc.Session)
+	//_, ok := ssrv.st.Lookup(s)
 	// Server-generated heartbeats will have session number 0. Pass them through.
-	if !ok && s != 0 {
-		db.DPrintf(db.ERROR, "SrvFcall: no session %v for req %v", s, fc)
-		return serr.NewErrError(fmt.Errorf("Error: no session %v for req %v", s, fc))
-	}
-	// If the fcall is a server-generated heartbeat, it won't block;
-	// don't start a new thread.
-	if s == 0 {
-		ssrv.srvfcall(fc)
-	} else {
-		go func() {
-			ssrv.srvfcall(fc)
-		}()
-	}
-	return nil
-}
-
-func (ssrv *SessSrv) sendReply(request *sessp.FcallMsg, reply *sessp.FcallMsg, sess *sessstatesrv.Session) {
-	db.DPrintf(db.SESSSRV, "sendReply req %v rep %v", request, reply)
-
-	// If a client sent the request (seqno != 0) (as opposed to an
-	// internally-generated detach or heartbeat), send reply.
-	if request.Fc.Seqno != 0 {
-		sess.SendConn(reply)
-	}
+	//if !ok && s != 0 {
+	//	db.DPrintf(db.ERROR, "SrvFcall: no session %v for req %v", s, fc)
+	//	//return serr.NewErrError(fmt.Errorf("Error: no session %v for req %v", s, fc))
+	//}
+	return ssrv.srvfcall(fc)
 }
 
 func (ss *SessSrv) ReportError(err error) {
 }
 
+// Call SrvFcall
 func (ss *SessSrv) ServeRequest(req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
 	fc := spcodec.UnmarshalFcallAndData(req[0], req[1])
-	reply := ss.srvfcall(fc)
+	reply := ss.SrvFcall(fc)
 	rep := spcodec.MarshalFcallWithoutData(reply)
 	return []frame.Tframe{rep, reply.Data}, nil
 }

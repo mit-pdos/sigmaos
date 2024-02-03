@@ -17,12 +17,12 @@ type Conn interface {
 	GetReplyChan() chan *sessconn.PartMarshaledMsg
 }
 
-type Fsrvfcall func(*sessp.FcallMsg) *serr.Err
+type Fsrvfcall func(*sessp.FcallMsg) *sessp.FcallMsg
 
 type SessServer interface {
 	Register(sessp.Tsession, Conn) *serr.Err
 	Unregister(sessp.Tsession, Conn)
-	SrvFcall(*sessp.FcallMsg) *serr.Err
+	SrvFcall(*sessp.FcallMsg) *sessp.FcallMsg
 }
 
 type Protsrv interface {

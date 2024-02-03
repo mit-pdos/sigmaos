@@ -543,7 +543,7 @@ func TestPageDir(t *testing.T) {
 		return false, nil
 
 	})
-	assert.Equal(t, i, n)
+	assert.Equal(t, n, i)
 
 	db.DPrintf(db.TEST, "Pre RmDir")
 	err = ts.RmDir(dn)

@@ -1,4 +1,4 @@
-package memcached
+package memcachedclnt
 
 import (
 	"hash/fnv"

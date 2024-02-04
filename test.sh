@@ -111,6 +111,13 @@ if [[ $BASIC == "--basic" ]]; then
     done
 
     #
+    # test sessions
+    #
+    
+    go test $VERB sigmaos/sessclnt
+    cleanup
+
+    #
     # test proxy with just named
     #
 

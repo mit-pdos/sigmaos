@@ -51,7 +51,7 @@ func (nc *NetClnt) Src() string {
 
 func (nc *NetClnt) Close() error {
 	if err := nc.conn.Close(); err != nil {
-		return err
+		db.DPrintf(db.ALWAYS, "NetClnt.Close: err %v\n", err)
 	}
 	return nc.DemuxClnt.Close()
 }

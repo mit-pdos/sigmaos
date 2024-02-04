@@ -116,12 +116,15 @@ func TestDisconnectMfsSrv(t *testing.T) {
 	// check if session isn't timed out
 	time.Sleep(3 * sp.Conf.Session.TIMEOUT)
 
-	//rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
-	//assert.Nil(t, err)
+	sess, err := ts.clnt.LookupSessClnt(sp.Taddrs{ts.srv.MyAddr()})
+	assert.Nil(t, err)
+	assert.True(t, sess.IsConnected())
 
 	// client disconnects session
 	ts.shutdown()
 
+	assert.False(t, sess.IsConnected())
+
 	// allow server session to timeout
-	time.Sleep(3 * sp.Conf.Session.TIMEOUT)
+	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
 }

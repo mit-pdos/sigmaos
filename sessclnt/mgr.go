@@ -17,9 +17,10 @@ type Mgr struct {
 }
 
 func NewMgr(clntnet string) *Mgr {
-	sc := &Mgr{}
-	sc.sessions = make(map[string]*SessClnt)
-	sc.clntnet = clntnet
+	sc := &Mgr{
+		sessions: make(map[string]*SessClnt),
+		clntnet:  clntnet,
+	}
 	db.DPrintf(db.SESSCLNT, "Session Mgr for session")
 	return sc
 }
@@ -54,6 +55,16 @@ func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	}
 	sc.sessions[key] = sess
 	return sess, nil
+}
+
+func (sc *Mgr) LookupSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	key := sessKey(addrs)
+	if sess, ok := sc.sessions[key]; ok {
+		return sess, nil
+	}
+	return nil, serr.NewErr(serr.TErrNotfound, addrs)
 }
 
 func (sc *Mgr) RPC(addr sp.Taddrs, req sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {

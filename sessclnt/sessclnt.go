@@ -50,6 +50,9 @@ func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 
 func (c *SessClnt) ReportError(err error) {
 	db.DPrintf(db.SESSCLNT, "Netclnt reports err %v\n", err)
+	if c.nc != nil {
+		c.nc.Close()
+	}
 }
 
 func (c *SessClnt) RPC(req sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
@@ -88,18 +91,6 @@ func (c *SessClnt) Reset() {
 	go c.sendHeartbeat()
 }
 
-// Check if the session needs to be closed because the server killed
-// it.
-func srvClosedSess(msg sessp.Tmsg, err *serr.Err) bool {
-	if rerr, ok := msg.(*sp.Rerror); ok {
-		err := sp.NewErr(rerr)
-		if err.IsErrSessClosed() {
-			return true
-		}
-	}
-	return false
-}
-
 // Get a connection to the server. If it isn't possible to make a connection,
 // return an error.
 func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
@@ -123,26 +114,26 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 	return c.nc, nil
 }
 
-func (c *SessClnt) isClosed() bool {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.closed
+// Creator of sessclnt closes session
+func (c *SessClnt) IsConnected() bool {
+	if c.nc != nil {
+		return !c.nc.IsClosed()
+	}
+	return false
 }
 
 // Creator of sessclnt closes session
 func (c *SessClnt) Close() error {
-	c.close()
-	return nil
+	return c.close()
 }
 
 // Close the sessclnt connection
-func (c *SessClnt) close() {
+func (c *SessClnt) close() error {
 	c.Lock()
 	defer c.Unlock()
 
 	if c.closed {
-		return
+		return nil
 	}
 	c.closed = true
 	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
@@ -154,4 +145,5 @@ func (c *SessClnt) close() {
 	for _, rpc := range outstanding {
 		rpc.Abort()
 	}
+	return nil
 }

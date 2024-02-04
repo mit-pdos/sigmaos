@@ -62,7 +62,9 @@ func (c *NetSrvConn) GetSessId() sessp.Tsession {
 
 func (c *NetSrvConn) Close() error {
 	db.DPrintf(db.NETSRV, "Close %v\n", c)
-	c.conn.Close()
+	if err := c.conn.Close(); err != nil {
+		db.DPrintf(db.ALWAYS, "NetSrvConn.Close: err %v\n", err)
+	}
 	return c.dmx.Close()
 }
 

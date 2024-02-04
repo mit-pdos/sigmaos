@@ -33,11 +33,19 @@ func newCallMap() *callMap {
 	return &callMap{calls: make(map[sessp.Tseqno]*call)}
 }
 
-func (cm *callMap) close() {
+func (cm *callMap) close() error {
 	cm.Lock()
 	defer cm.Unlock()
 
 	cm.closed = true
+	return nil
+}
+
+func (cm *callMap) isClosed() bool {
+	cm.Lock()
+	defer cm.Unlock()
+
+	return cm.closed
 }
 
 func (cm *callMap) outstanding() []sessp.Tseqno {

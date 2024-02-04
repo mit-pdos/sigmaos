@@ -104,6 +104,9 @@ func (dmx *DemuxClnt) SendReceive(a []frame.Tframe) ([]frame.Tframe, *serr.Err) 
 }
 
 func (dmx *DemuxClnt) Close() error {
-	dmx.callmap.close()
-	return nil
+	return dmx.callmap.close()
+}
+
+func (dmx *DemuxClnt) IsClosed() bool {
+	return dmx.callmap.isClosed()
 }

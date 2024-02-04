@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+	const NFRAME = 1
 	if len(os.Args) < 2 {
 		log.Fatalf("%s: Usage <lip>\n", os.Args[0])
 	}
@@ -21,7 +22,7 @@ func main() {
 	pcfg.SetUname("proxy")
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-	netsrv.NewNetServer(pcfg, proxy.NewNpd(pcfg, lip), addr)
+	netsrv.NewNetServer(pcfg, proxy.NewNpd(pcfg, lip), addr, NFRAME)
 	ch := make(chan struct{})
 	<-ch
 }

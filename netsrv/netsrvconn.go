@@ -31,7 +31,7 @@ func NewNetSrvConn(srv *NetServer, conn net.Conn) *NetSrvConn {
 		sessid:  sessp.NoSession,
 	}
 	dmx := demux.NewDemuxSrv(bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), 2, c)
+		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), srv.nframe, c)
 	c.dmx = dmx
 	return c
 }

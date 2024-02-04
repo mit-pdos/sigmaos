@@ -19,10 +19,11 @@ type NetServer struct {
 	addr    *sp.Taddr
 	sesssrv sps.SessServer
 	l       net.Listener
+	nframe  int
 }
 
-func NewNetServer(pcfg *proc.ProcEnv, sesssrv sps.SessServer, addr *sp.Taddr) *NetServer {
-	srv := &NetServer{pcfg: pcfg, sesssrv: sesssrv}
+func NewNetServer(pcfg *proc.ProcEnv, sesssrv sps.SessServer, addr *sp.Taddr, nframe int) *NetServer {
+	srv := &NetServer{pcfg: pcfg, sesssrv: sesssrv, nframe: nframe}
 
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener

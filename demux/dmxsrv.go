@@ -16,9 +16,9 @@ type DemuxSrvI interface {
 }
 
 type reply struct {
-	data  []frame.Tframe
-	seqno sessp.Tseqno
-	err   *serr.Err
+	data []frame.Tframe
+	tag  sessp.Ttag
+	err  *serr.Err
 }
 
 // DemuxSrv demultiplexes RPCs from a single transport and multiplexes
@@ -42,28 +42,23 @@ func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, nframe int, serve DemuxSrv
 
 func (dmx *DemuxSrv) reader(nframe int) {
 	for {
-		seqno, err := frame.ReadSeqno(dmx.in)
+		request, tag, err := frame.ReadTagFrames(dmx.in, nframe)
 		if err != nil {
 			dmx.serve.ReportError(err)
 			break
 		}
-		request, err := frame.ReadFrames(dmx.in, nframe)
-		if err != nil {
-			dmx.serve.ReportError(err)
-			break
-		}
-		go func(r []frame.Tframe, s sessp.Tseqno) {
+		go func(r []frame.Tframe, tag sessp.Ttag) {
 			if !dmx.IncNreq() { // handle req?
 				return // done
 			}
-			db.DPrintf(db.DEMUXSRV, "reader: serve %v\n", s)
+			db.DPrintf(db.DEMUXSRV, "reader: serve %v\n", tag)
 			rep, err := dmx.serve.ServeRequest(r)
-			db.DPrintf(db.DEMUXSRV, "reader: reply %v %v\n", s, err)
-			dmx.replies <- reply{rep, s, err}
+			db.DPrintf(db.DEMUXSRV, "reader: reply %v %v\n", tag, err)
+			dmx.replies <- reply{rep, tag, err}
 			if dmx.DecNreq() {
 				close(dmx.replies)
 			}
-		}(request, seqno)
+		}(request, tag)
 	}
 }
 
@@ -78,11 +73,7 @@ func (dmx *DemuxSrv) writer() {
 			dmx.serve.ReportError(reply.err)
 			continue
 		}
-		if err := frame.WriteSeqno(reply.seqno, dmx.out); err != nil {
-			dmx.serve.ReportError(err)
-			continue
-		}
-		if err := frame.WriteFrames(reply.data, dmx.out); err != nil {
+		if err := frame.WriteTagFrames(reply.data, reply.tag, dmx.out); err != nil {
 			dmx.serve.ReportError(err)
 			continue
 		}

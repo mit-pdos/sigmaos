@@ -1,8 +1,10 @@
 package sessconn
 
+// XXX delete
+
 import (
 	"sigmaos/sessp"
-	"sigmaos/spcodec"
+	//"sigmaos/spcodec"
 )
 
 // A partially marshaled message, ready to be sent on a session.
@@ -13,7 +15,7 @@ type PartMarshaledMsg struct {
 
 func NewPartMarshaledMsg(fcm *sessp.FcallMsg) *PartMarshaledMsg {
 	return &PartMarshaledMsg{
-		fcm,
-		spcodec.MarshalFcallWithoutData(fcm),
+		Fcm: fcm,
+		//spcodec.MarshalFcallWithoutData(fcm),
 	}
 }

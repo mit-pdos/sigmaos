@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/frame"
-	// "sigmaos/npcodec"
+	"sigmaos/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
@@ -36,6 +36,7 @@ func (npd *Npd) newProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Pr
 }
 
 func (npd *Npd) serve(fm *sessp.FcallMsg) *sessp.FcallMsg {
+	db.DPrintf(db.PROXY, "serve %v\n", fm)
 	s := sessp.Tsession(fm.Fc.Session)
 	sess, _ := npd.st.Lookup(s)
 	msg, data, rerror, _, _ := sess.Dispatch(fm.Msg, fm.Data)
@@ -59,10 +60,16 @@ func (npd *Npd) ReportError(conn sps.Conn, err error) {
 }
 
 func (npd *Npd) ServeRequest(conn sps.Conn, req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
-	//fc := npcodec.UnmarshalFrame(req[0])
-	//reply := npd.serve(fc)
-	//rep := npcodec.MarshalFrame(rep[0])
-	return []frame.Tframe{}, nil
+	_, fc, err := npcodec.UnmarshalFrame(req[0])
+	if err != nil {
+		return nil, err
+	}
+	reply := npd.serve(fc)
+	rep, err := npcodec.MarshalFrame(reply)
+	if err != nil {
+		return nil, err
+	}
+	return []frame.Tframe{rep}, nil
 }
 
 // The connection from the kernel/client

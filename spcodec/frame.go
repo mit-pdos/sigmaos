@@ -21,7 +21,7 @@ func MarshalFcallWithoutData(fcm *sessp.FcallMsg) []byte {
 }
 
 func WriteFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Writer) *serr.Err {
-	if err := frame.WriteSeqno(fcm.Seqno(), bwr); err != nil {
+	if err := frame.WriteTag(fcm.Tag(), bwr); err != nil {
 		return err
 	}
 	if err := frame.WriteFrame(bwr, marshaledFcall); err != nil {
@@ -53,10 +53,11 @@ func MarshalFcallAndData(fcm *sessp.FcallMsg) ([]byte, *serr.Err) {
 	return f.Bytes(), nil
 }
 
-func ReadFcallAndDataFrames(rdr io.Reader) (sn sessp.Tseqno, fc []byte, data []byte, se *serr.Err) {
-	seqno, err := frame.ReadSeqno(rdr)
+// XXX use frame
+func ReadFcallAndDataFrames(rdr io.Reader) (t sessp.Ttag, fc []byte, data []byte, se *serr.Err) {
+	t, err := frame.ReadTag(rdr)
 	if err != nil {
-		db.DPrintf(db.SPCODEC, "ReadSeqno err %v\n", err)
+		db.DPrintf(db.SPCODEC, "Readtag err %v\n", err)
 		return 0, nil, nil, err
 	}
 	f, err := frame.ReadFrame(rdr)
@@ -69,7 +70,7 @@ func ReadFcallAndDataFrames(rdr io.Reader) (sn sessp.Tseqno, fc []byte, data []b
 		db.DPrintf(db.SPCODEC, "ReadBuf err %v\n", err)
 		return 0, nil, nil, err
 	}
-	return seqno, f, buf, nil
+	return t, f, buf, nil
 }
 
 func UnmarshalFcallAndData(f []byte, buf []byte) *sessp.FcallMsg {
@@ -82,11 +83,11 @@ func UnmarshalFcallAndData(f []byte, buf []byte) *sessp.FcallMsg {
 	return fm
 }
 
-func ReadUnmarshalFcallAndData(rdr io.Reader) (sessp.Tseqno, *sessp.FcallMsg, *serr.Err) {
-	seqno, f, buf, err := ReadFcallAndDataFrames(rdr)
+func ReadUnmarshalFcallAndData(rdr io.Reader) (sessp.Ttag, *sessp.FcallMsg, *serr.Err) {
+	t, f, buf, err := ReadFcallAndDataFrames(rdr)
 	if err != nil {
 		return 0, nil, err
 	}
 	fm := UnmarshalFcallAndData(f, buf)
-	return seqno, fm, nil
+	return t, fm, nil
 }

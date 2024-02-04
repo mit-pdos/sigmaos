@@ -13,24 +13,24 @@ import (
 // or reply, which in turns are a slice of frames.
 type call struct {
 	ch      chan *serr.Err
-	seqno   sessp.Tseqno
+	tag     sessp.Ttag
 	request []frame.Tframe
 	reply   []frame.Tframe
 }
 
 func (r *call) String() string {
-	return fmt.Sprintf("{call %d %d %d}", r.seqno, len(r.request), len(r.reply))
+	return fmt.Sprintf("{call %d %d %d}", r.tag, len(r.request), len(r.reply))
 }
 
 // Map of outstanding calls indexed by sequence number
 type callMap struct {
 	sync.Mutex
 	closed bool
-	calls  map[sessp.Tseqno]*call
+	calls  map[sessp.Ttag]*call
 }
 
 func newCallMap() *callMap {
-	return &callMap{calls: make(map[sessp.Tseqno]*call)}
+	return &callMap{calls: make(map[sessp.Ttag]*call)}
 }
 
 func (cm *callMap) close() error {
@@ -48,34 +48,34 @@ func (cm *callMap) isClosed() bool {
 	return cm.closed
 }
 
-func (cm *callMap) outstanding() []sessp.Tseqno {
+func (cm *callMap) outstanding() []sessp.Ttag {
 	cm.Lock()
 	defer cm.Unlock()
 
-	o := make([]sessp.Tseqno, 0, len(cm.calls))
+	o := make([]sessp.Ttag, 0, len(cm.calls))
 	for k, _ := range cm.calls {
 		o = append(o, k)
 	}
 	return o
 }
 
-func (cm *callMap) put(seqno sessp.Tseqno, call *call) *serr.Err {
+func (cm *callMap) put(tag sessp.Ttag, call *call) *serr.Err {
 	cm.Lock()
 	defer cm.Unlock()
 	if cm.closed {
 		return serr.NewErr(serr.TErrUnreachable, "dmxclnt")
 	}
-	cm.calls[seqno] = call
+	cm.calls[tag] = call
 	return nil
 }
 
-func (cm *callMap) remove(seqno sessp.Tseqno) (*call, bool) {
+func (cm *callMap) remove(tag sessp.Ttag) (*call, bool) {
 	cm.Lock()
 	defer cm.Unlock()
 
 	last := false
-	if call, ok := cm.calls[seqno]; ok {
-		delete(cm.calls, seqno)
+	if call, ok := cm.calls[tag]; ok {
+		delete(cm.calls, tag)
 		if len(cm.calls) == 0 && cm.closed {
 			last = true
 		}

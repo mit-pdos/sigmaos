@@ -29,7 +29,7 @@ type NetClnt struct {
 	realm  sp.Trealm
 }
 
-func NewNetClnt(clntnet string, addrs sp.Taddrs, clnti demux.DemuxClntI) (*NetClnt, *serr.Err) {
+func NewNetClnt(clntnet string, addrs sp.Taddrs, rf demux.ReadCallF, wf demux.WriteCallF, clnti demux.DemuxClntI) (*NetClnt, *serr.Err) {
 	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", addrs)
 	nc := &NetClnt{}
 	err := nc.connect(clntnet, addrs)
@@ -37,7 +37,7 @@ func NewNetClnt(clntnet string, addrs sp.Taddrs, clnti demux.DemuxClntI) (*NetCl
 		db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", addrs, err)
 		return nil, err
 	}
-	nc.DemuxClnt = demux.NewDemuxClnt(nc.bw, nc.br, 2, clnti)
+	nc.DemuxClnt = demux.NewDemuxClnt(nc.bw, nc.br, rf, wf, clnti)
 	return nc, nil
 }
 

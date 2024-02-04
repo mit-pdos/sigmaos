@@ -8,9 +8,9 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
+	"sigmaos/demux"
 	"sigmaos/dir"
 	"sigmaos/ephemeralmap"
-	"sigmaos/frame"
 	"sigmaos/memfs"
 	"sigmaos/netsrv"
 	"sigmaos/path"
@@ -31,14 +31,12 @@ type SessSrv struct {
 func (ss *SessSrv) ReportError(conn sigmaprotsrv.Conn, err error) {
 }
 
-func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
-	fc0 := spcodec.UnmarshalFcallAndData(req[0], req[1])
-	db.DPrintf(db.TEST, "fcall %v\n", fc0)
+func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.CallI, *serr.Err) {
+	fcm := req.(*sessp.FcallMsg)
+	db.DPrintf(db.TEST, "fcall %v\n", fcm)
 	msg := &sp.Rattach{Qid: sp.NewQidPerm(0777, 0, 0)}
-	fc1 := sessp.NewFcallMsgReply(fc0, msg)
-	fc1.Data = nil
-	rep := spcodec.MarshalFcallWithoutData(fc1)
-	return []frame.Tframe{rep, fc1.Data}, nil
+	rep := sessp.NewFcallMsgReply(fcm, msg)
+	return rep, nil
 }
 
 type Tstate struct {
@@ -62,7 +60,7 @@ func TestConnectSessSrv(t *testing.T) {
 	ts := newTstate(t)
 	ss := &SessSrv{}
 
-	srv := netsrv.NewNetServer(ts.pcfg, ss, ts.addr)
+	srv := netsrv.NewNetServer(ts.pcfg, ss, ts.addr, spcodec.ReadCall, spcodec.WriteCall)
 	db.DPrintf(db.TEST, "srv %v\n", srv.MyAddr())
 
 	smgr := sessclnt.NewMgr(sp.ROOTREALM.String())

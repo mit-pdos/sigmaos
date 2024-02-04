@@ -2,23 +2,28 @@ package demux
 
 import (
 	"bufio"
+	"io"
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/frame"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 )
 
+type CallI interface {
+	Tag() sessp.Ttag
+}
+
+type ReadCallF func(io.Reader) (CallI, *serr.Err)
+
 type DemuxSrvI interface {
-	ServeRequest([]frame.Tframe) ([]frame.Tframe, *serr.Err)
+	ServeRequest(CallI) (CallI, *serr.Err)
 	ReportError(err error)
 }
 
 type reply struct {
-	data []frame.Tframe
-	tag  sessp.Ttag
-	err  *serr.Err
+	rep CallI
+	err *serr.Err
 }
 
 // DemuxSrv demultiplexes RPCs from a single transport and multiplexes
@@ -33,36 +38,36 @@ type DemuxSrv struct {
 	nreq    int
 }
 
-func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, nframe int, serve DemuxSrvI) *DemuxSrv {
+func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, rf ReadCallF, wf WriteCallF, serve DemuxSrvI) *DemuxSrv {
 	dmx := &DemuxSrv{in: in, out: out, serve: serve, replies: make(chan reply)}
-	go dmx.reader(nframe)
-	go dmx.writer()
+	go dmx.reader(rf)
+	go dmx.writer(wf)
 	return dmx
 }
 
-func (dmx *DemuxSrv) reader(nframe int) {
+func (dmx *DemuxSrv) reader(rf ReadCallF) {
 	for {
-		request, tag, err := frame.ReadTagFrames(dmx.in, nframe)
+		c, err := rf(dmx.in)
 		if err != nil {
 			dmx.serve.ReportError(err)
 			break
 		}
-		go func(r []frame.Tframe, tag sessp.Ttag) {
+		go func(c CallI) {
 			if !dmx.IncNreq() { // handle req?
 				return // done
 			}
-			db.DPrintf(db.DEMUXSRV, "reader: serve %v\n", tag)
-			rep, err := dmx.serve.ServeRequest(r)
-			db.DPrintf(db.DEMUXSRV, "reader: reply %v %v\n", tag, err)
-			dmx.replies <- reply{rep, tag, err}
+			db.DPrintf(db.DEMUXSRV, "reader: serve %v\n", c.Tag())
+			rep, err := dmx.serve.ServeRequest(c)
+			db.DPrintf(db.DEMUXSRV, "reader: reply %v %v %v\n", c.Tag(), rep.Tag(), err)
+			dmx.replies <- reply{rep, err}
 			if dmx.DecNreq() {
 				close(dmx.replies)
 			}
-		}(request, tag)
+		}(c)
 	}
 }
 
-func (dmx *DemuxSrv) writer() {
+func (dmx *DemuxSrv) writer(wf WriteCallF) {
 	for {
 		reply, ok := <-dmx.replies
 		if !ok {
@@ -73,7 +78,8 @@ func (dmx *DemuxSrv) writer() {
 			dmx.serve.ReportError(reply.err)
 			continue
 		}
-		if err := frame.WriteTagFrames(reply.data, reply.tag, dmx.out); err != nil {
+
+		if err := wf(dmx.out, reply.rep); err != nil {
 			dmx.serve.ReportError(err)
 			continue
 		}

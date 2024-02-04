@@ -4,7 +4,6 @@ import (
 	"bufio"
 
 	db "sigmaos/debug"
-	"sigmaos/frame"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 )
@@ -12,6 +11,8 @@ import (
 type DemuxClntI interface {
 	ReportError(err error)
 }
+
+type WriteCallF func(*bufio.Writer, CallI) *serr.Err
 
 // DemuxClnt multiplexes calls (a request/reply pair) on a single
 // transport and demultiplexes responses.
@@ -24,7 +25,7 @@ type DemuxClnt struct {
 	clnti   DemuxClntI
 }
 
-func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, nframe int, clnti DemuxClntI) *DemuxClnt {
+func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, rf ReadCallF, wf WriteCallF, clnti DemuxClntI) *DemuxClnt {
 	dmx := &DemuxClnt{
 		out:     out,
 		in:      in,
@@ -32,8 +33,8 @@ func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, nframe int, clnti DemuxCl
 		calls:   make(chan *call),
 		clnti:   clnti,
 	}
-	go dmx.reader(nframe)
-	go dmx.writer()
+	go dmx.reader(rf)
+	go dmx.writer(wf)
 	return dmx
 }
 
@@ -43,29 +44,28 @@ func (dmx *DemuxClnt) NextTag() sessp.Ttag {
 	return sessp.Ttag(s)
 }
 
-func (dmx *DemuxClnt) writer() {
+func (dmx *DemuxClnt) writer(wf WriteCallF) {
 	for {
 		call, ok := <-dmx.calls
 		if !ok {
 			db.DPrintf(db.DEMUXCLNT, "writer: replies closed\n")
 			return
 		}
-		if err := frame.WriteTagFrames(call.request, call.tag, dmx.out); err != nil {
-			db.DPrintf(db.DEMUXCLNT, "WriteTagFrames err %v\n", err)
-			dmx.reply(call.tag, nil, serr.NewErr(serr.TErrUnreachable, err.Error()))
+		if err := wf(dmx.out, call.request); err != nil {
+			dmx.reply(call.reply, serr.NewErr(serr.TErrUnreachable, err.Error()))
 			break
 		}
 		if error := dmx.out.Flush(); error != nil {
 			db.DPrintf(db.DEMUXCLNT, "Flush error %v\n", error)
-			dmx.reply(call.tag, nil, serr.NewErr(serr.TErrUnreachable, error.Error()))
+			dmx.reply(call.reply, serr.NewErr(serr.TErrUnreachable, error.Error()))
 		}
 	}
 }
 
-func (dmx *DemuxClnt) reply(tag sessp.Ttag, reply []frame.Tframe, err *serr.Err) {
-	call, last := dmx.callmap.remove(tag)
+func (dmx *DemuxClnt) reply(reply CallI, err *serr.Err) {
+	call, last := dmx.callmap.remove(reply.Tag())
 	if call == nil {
-		db.DFatalf("Remove err %v\n", tag)
+		db.DFatalf("Remove err %v\n", reply.Tag())
 	}
 	if last {
 		close(dmx.calls)
@@ -74,30 +74,24 @@ func (dmx *DemuxClnt) reply(tag sessp.Ttag, reply []frame.Tframe, err *serr.Err)
 	call.ch <- err
 }
 
-func (dmx *DemuxClnt) reader(nframe int) {
+func (dmx *DemuxClnt) reader(rf ReadCallF) {
 	for {
-		tag, err := frame.ReadTag(dmx.in)
+		c, err := rf(dmx.in)
 		if err != nil {
 			dmx.clnti.ReportError(err)
 			break
 		}
-		reply, err := frame.ReadFrames(dmx.in, nframe)
-		if err != nil {
-			dmx.clnti.ReportError(err)
-			break
-		}
-		db.DPrintf(db.DEMUXCLNT, "reader: reply %v\n", tag)
-		dmx.reply(tag, reply, nil)
+		db.DPrintf(db.DEMUXCLNT, "reader: reply %v\n", c)
+		dmx.reply(c, nil)
 	}
-	for _, s := range dmx.callmap.outstanding() {
-		dmx.reply(s, nil, serr.NewErr(serr.TErrUnreachable, "dmxclnt"))
+	for _, c := range dmx.callmap.outstanding() {
+		dmx.reply(c.reply, serr.NewErr(serr.TErrUnreachable, "dmxclnt"))
 	}
 }
 
-func (dmx *DemuxClnt) SendReceive(a []frame.Tframe) ([]frame.Tframe, *serr.Err) {
-	t := dmx.NextTag()
-	call := &call{request: a, tag: t, ch: make(chan *serr.Err)}
-	if err := dmx.callmap.put(t, call); err != nil {
+func (dmx *DemuxClnt) SendReceive(req CallI) (CallI, *serr.Err) {
+	call := &call{request: req, ch: make(chan *serr.Err)}
+	if err := dmx.callmap.put(req.Tag(), call); err != nil {
 		db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue err %v\n", err)
 		return nil, err
 	}

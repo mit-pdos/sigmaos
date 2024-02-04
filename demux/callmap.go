@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"sigmaos/frame"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 )
@@ -13,13 +12,12 @@ import (
 // or reply, which in turns are a slice of frames.
 type call struct {
 	ch      chan *serr.Err
-	tag     sessp.Ttag
-	request []frame.Tframe
-	reply   []frame.Tframe
+	request CallI
+	reply   CallI
 }
 
-func (r *call) String() string {
-	return fmt.Sprintf("{call %d %d %d}", r.tag, len(r.request), len(r.reply))
+func (c *call) String() string {
+	return fmt.Sprintf("{call %v %v}", c.request, c.reply)
 }
 
 // Map of outstanding calls indexed by sequence number
@@ -48,13 +46,13 @@ func (cm *callMap) isClosed() bool {
 	return cm.closed
 }
 
-func (cm *callMap) outstanding() []sessp.Ttag {
+func (cm *callMap) outstanding() []*call {
 	cm.Lock()
 	defer cm.Unlock()
 
-	o := make([]sessp.Ttag, 0, len(cm.calls))
-	for k, _ := range cm.calls {
-		o = append(o, k)
+	o := make([]*call, 0, len(cm.calls))
+	for _, v := range cm.calls {
+		o = append(o, v)
 	}
 	return o
 }

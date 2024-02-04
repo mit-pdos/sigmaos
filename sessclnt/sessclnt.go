@@ -10,11 +10,10 @@ import (
 	//"time"
 
 	db "sigmaos/debug"
-	"sigmaos/frame"
+	"sigmaos/demux"
 	"sigmaos/netclnt"
 	"sigmaos/rand"
 	"sigmaos/serr"
-	//"sigmaos/sessconn"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
@@ -31,16 +30,14 @@ type SessClnt struct {
 	clntnet string
 }
 
-func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
-	c := &SessClnt{}
-	c.sid = sessp.Tsession(rand.Uint64())
-	c.seqno = 0
-	c.addrs = addrs
-	c.nc = nil
-	c.clntnet = clntnet
-	c.queue = NewRequestQueue(addrs)
+func newSessClnt(clntnet string, addrs sp.Taddrs, rf demux.ReadCallF, wf demux.WriteCallF) (*SessClnt, *serr.Err) {
+	c := &SessClnt{sid: sessp.Tsession(rand.Uint64()),
+		clntnet: clntnet,
+		addrs:   addrs,
+		queue:   NewRequestQueue(addrs),
+	}
 	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, addrs)
-	nc, err := netclnt.NewNetClnt(clntnet, addrs, c)
+	nc, err := netclnt.NewNetClnt(clntnet, addrs, spcodec.ReadCall, spcodec.WriteCall, c)
 	if err != nil {
 		return nil, err
 	}
@@ -68,15 +65,11 @@ func (c *SessClnt) ReportError(err error) {
 
 func (c *SessClnt) RPC(req sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
 	fc := sessp.NewFcallMsg(req, data, c.sid, &c.seqno)
-	r := make([]frame.Tframe, 2)
-	r[0] = spcodec.MarshalFcallWithoutData(fc)
-	r[1] = data
-	rep, err := c.nc.SendReceive(r)
+	rep, err := c.nc.SendReceive(fc)
 	if err != nil {
 		return nil, err
 	}
-	fm := spcodec.UnmarshalFcallAndData(rep[0], rep[1])
-	return fm, nil
+	return rep.(*sessp.FcallMsg), nil
 }
 
 func (c *SessClnt) sendHeartbeat() {
@@ -114,7 +107,7 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 
 	if c.nc == nil {
 		db.DPrintf(db.SESSCLNT, "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
-		nc, err := netclnt.NewNetClnt(c.clntnet, c.addrs, c)
+		nc, err := netclnt.NewNetClnt(c.clntnet, c.addrs, spcodec.ReadCall, spcodec.WriteCall, c)
 		if err != nil {
 			db.DPrintf(db.SESSCLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
 			return nil, err

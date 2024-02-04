@@ -7,9 +7,9 @@ import (
 	"sigmaos/clntcond"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
+	"sigmaos/demux"
 	"sigmaos/dir"
 	"sigmaos/ephemeralmap"
-	"sigmaos/frame"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/netsrv"
@@ -21,7 +21,6 @@ import (
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/spcodec"
-	// "sigmaos/spcodec"
 	"sigmaos/stats"
 	"sigmaos/version"
 	"sigmaos/watch"
@@ -70,7 +69,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProt
 
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
-	ssrv.srv = netsrv.NewNetServer(pe, ssrv, addr, NFRAME)
+	ssrv.srv = netsrv.NewNetServer(pe, ssrv, addr, spcodec.ReadCall, spcodec.WriteCall)
 	ssrv.sm = NewSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv
@@ -168,11 +167,8 @@ func (ssrv *SessSrv) ReportError(conn sps.Conn, err error) {
 }
 
 // Calls from netsrv
-func (ss *SessSrv) ServeRequest(conn sps.Conn, req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
-	fc := spcodec.UnmarshalFcallAndData(req[0], req[1])
-	reply := ss.srvFcall(conn, fc)
-	rep := spcodec.MarshalFcallWithoutData(reply)
-	return []frame.Tframe{rep, reply.Data}, nil
+func (ss *SessSrv) ServeRequest(conn sps.Conn, fc demux.CallI) (demux.CallI, *serr.Err) {
+	return ss.srvFcall(conn, fc.(*sessp.FcallMsg)), nil
 }
 
 // Serve server-generated fcalls.

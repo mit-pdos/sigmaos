@@ -7,7 +7,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/frame"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -31,7 +30,7 @@ func NewNetSrvConn(srv *NetServer, conn net.Conn) *NetSrvConn {
 		sessid:  sessp.NoSession,
 	}
 	dmx := demux.NewDemuxSrv(bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), srv.nframe, c)
+		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), srv.readCall, srv.writeCall, c)
 	c.dmx = dmx
 	return c
 }
@@ -83,6 +82,6 @@ func (c *NetSrvConn) ReportError(err error) {
 	c.sesssrv.ReportError(c, err)
 }
 
-func (c *NetSrvConn) ServeRequest(req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
-	return c.sesssrv.ServeRequest(c, req)
+func (c *NetSrvConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
+	return c.sesssrv.ServeRequest(c, fc)
 }

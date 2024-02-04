@@ -8,6 +8,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 )
 
 type Mgr struct {
@@ -49,7 +50,7 @@ func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := newSessClnt(sc.clntnet, addrs)
+	sess, err := newSessClnt(sc.clntnet, addrs, spcodec.ReadCall, spcodec.WriteCall)
 	if err != nil {
 		return nil, err
 	}

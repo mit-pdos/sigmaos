@@ -1,7 +1,7 @@
 package sigmaprotsrv
 
 import (
-	"sigmaos/frame"
+	"sigmaos/demux"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -21,7 +21,7 @@ type Conn interface {
 type Fsrvfcall func(*sessp.FcallMsg) *sessp.FcallMsg
 
 type SessServer interface {
-	ServeRequest(Conn, []frame.Tframe) ([]frame.Tframe, *serr.Err)
+	ServeRequest(Conn, demux.CallI) (demux.CallI, *serr.Err)
 	ReportError(Conn, error)
 }
 

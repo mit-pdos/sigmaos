@@ -7,23 +7,24 @@ import (
 	"runtime/debug"
 
 	db "sigmaos/debug"
+	"sigmaos/demux"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
-	//"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
 )
 
 type NetServer struct {
-	pcfg    *proc.ProcEnv
-	addr    *sp.Taddr
-	sesssrv sps.SessServer
-	l       net.Listener
-	nframe  int
+	pcfg      *proc.ProcEnv
+	addr      *sp.Taddr
+	sesssrv   sps.SessServer
+	l         net.Listener
+	readCall  demux.ReadCallF
+	writeCall demux.WriteCallF
 }
 
-func NewNetServer(pcfg *proc.ProcEnv, sesssrv sps.SessServer, addr *sp.Taddr, nframe int) *NetServer {
-	srv := &NetServer{pcfg: pcfg, sesssrv: sesssrv, nframe: nframe}
+func NewNetServer(pcfg *proc.ProcEnv, sesssrv sps.SessServer, addr *sp.Taddr, rf demux.ReadCallF, wf demux.WriteCallF) *NetServer {
+	srv := &NetServer{pcfg: pcfg, sesssrv: sesssrv, readCall: rf, writeCall: wf}
 
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener

@@ -59,7 +59,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProt
 	ssrv.newps = newps
 	ssrv.et = et
 	ssrv.stats = stats.NewStatsDev(ssrv.dirover)
-	ssrv.st = newSessionTable(newps, ssrv)
+	ssrv.st = NewSessionTable(newps, ssrv)
 	ssrv.sct = clntcond.NewClntCondTable()
 	ssrv.plt = lockmap.NewPathLockTable()
 	ssrv.wt = watch.NewWatchTable(ssrv.sct)

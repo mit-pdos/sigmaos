@@ -21,7 +21,7 @@ type SessionTable struct {
 	lastClnts map[sp.TclntId]sessp.Tsession // for testing
 }
 
-func newSessionTable(newps sps.NewProtServer, sesssrv sps.SessServer) *SessionTable {
+func NewSessionTable(newps sps.NewProtServer, sesssrv sps.SessServer) *SessionTable {
 	st := &SessionTable{sesssrv: sesssrv, newps: newps}
 	st.sessions = make(map[sessp.Tsession]*Session)
 	st.lasts = make(map[sessp.Tsession]*Session)

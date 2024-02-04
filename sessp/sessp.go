@@ -57,8 +57,9 @@ func (fcm *FcallMsg) Seqno() Tseqno {
 	return fcm.Fc.Tseqno()
 }
 
+// Use seqno as tag
 func (fcm *FcallMsg) Tag() Ttag {
-	return Ttag(fcm.Fc.Tag)
+	return Ttag(fcm.Fc.Seqno)
 }
 
 func NewFcallMsgNull() *FcallMsg {
@@ -69,7 +70,6 @@ func NewFcallMsgNull() *FcallMsg {
 func NewFcallMsg(msg Tmsg, data []byte, sess Tsession, seqno *Tseqno) *FcallMsg {
 	fcall := &Fcall{
 		Type:    uint32(msg.Type()),
-		Tag:     0,
 		Session: uint64(sess),
 	}
 	if seqno != nil {
@@ -81,12 +81,11 @@ func NewFcallMsg(msg Tmsg, data []byte, sess Tsession, seqno *Tseqno) *FcallMsg 
 func NewFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
 	fm := NewFcallMsg(reply, nil, Tsession(req.Fc.Session), nil)
 	fm.Fc.Seqno = req.Fc.Seqno
-	fm.Fc.Tag = req.Fc.Tag
 	return fm
 }
 
 func (fm *FcallMsg) String() string {
-	return fmt.Sprintf("%v t %v sid %v seq %v msg %v", fm.Msg.Type(), fm.Fc.Tag, fm.Fc.Session, fm.Fc.Seqno, fm.Msg)
+	return fmt.Sprintf("%v seq %v sid %v msg %v", fm.Msg.Type(), Tseqno(fm.Fc.Seqno), Tsession(fm.Fc.Session), fm.Msg)
 }
 
 func (fm *FcallMsg) GetType() Tfcall {

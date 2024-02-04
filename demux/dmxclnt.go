@@ -5,7 +5,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
-	"sigmaos/sessp"
 )
 
 type DemuxClntI interface {
@@ -17,7 +16,6 @@ type WriteCallF func(*bufio.Writer, CallI) *serr.Err
 // DemuxClnt multiplexes calls (a request/reply pair) on a single
 // transport and demultiplexes responses.
 type DemuxClnt struct {
-	tag     sessp.Tseqno
 	out     *bufio.Writer
 	in      *bufio.Reader
 	callmap *callMap
@@ -36,12 +34,6 @@ func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, rf ReadCallF, wf WriteCal
 	go dmx.reader(rf)
 	go dmx.writer(wf)
 	return dmx
-}
-
-func (dmx *DemuxClnt) NextTag() sessp.Ttag {
-	seqp := &dmx.tag
-	s := seqp.Next()
-	return sessp.Ttag(s)
 }
 
 func (dmx *DemuxClnt) writer(wf WriteCallF) {

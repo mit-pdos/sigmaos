@@ -46,7 +46,6 @@ func newSigmaClntConn(conn net.Conn, pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) 
 	}
 	scc.dmx = demux.NewDemuxSrv(bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), 1, scc)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: newSigmaClntConn for %v", scs.sc.ClntId(), conn)
 	return scc, nil
 }
 

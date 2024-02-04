@@ -9,11 +9,11 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/frame"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sessp"
+	"sigmaos/sigmaclntcodec"
 	scproto "sigmaos/sigmaclntsrv/proto"
 	sp "sigmaos/sigmap"
 )
@@ -28,11 +28,14 @@ type SigmaClntClnt struct {
 }
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
-	rep, err := scc.dmx.SendReceive([]frame.Tframe{a})
+	seq := &scc.seqno
+	c := sigmaclntcodec.NewCall(seq.Next(), a)
+	rep, err := scc.dmx.SendReceive(c)
 	if err != nil {
 		return nil, err
 	} else {
-		return rep[0], nil
+		c := rep.(*sigmaclntcodec.Call)
+		return c.Data, nil
 	}
 }
 
@@ -59,7 +62,7 @@ func NewSigmaClntClnt(pe *proc.ProcEnv) (*SigmaClntClnt, error) {
 		seqno: 0, conn: conn, disconnected: false,
 	}
 	scc.dmx = demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), 1, scc)
+		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), sigmaclntcodec.ReadCall, sigmaclntcodec.WriteCall, scc)
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	// Initialize the server-side component of sigmaclnt by sending the proc env
 	db.DPrintf(db.SIGMACLNTCLNT, "Init sigmaclntclnt for %v", pe.GetPID())

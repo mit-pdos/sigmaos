@@ -5,9 +5,8 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/demux"
 	"sigmaos/fidclnt"
-	"sigmaos/frame"
-	"sigmaos/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
@@ -35,17 +34,15 @@ func (npd *Npd) newProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Pr
 	return newNpConn(npd.pcfg, string(npd.lip))
 }
 
-func (npd *Npd) serve(fm *sessp.FcallMsg) *sessp.FcallMsg {
+func (npd *Npd) serve(sess *sesssrv.Session, fm *sessp.FcallMsg) *sessp.FcallMsg {
 	db.DPrintf(db.PROXY, "serve %v\n", fm)
-	s := sessp.Tsession(fm.Fc.Session)
-	sess, _ := npd.st.Lookup(s)
 	msg, data, rerror, _, _ := sess.Dispatch(fm.Msg, fm.Data)
 	if rerror != nil {
 		msg = rerror
 	}
-	reply := sessp.NewFcallMsg(msg, nil, s, nil)
+	reply := sessp.NewFcallMsg(msg, nil, sessp.Tsession(fm.Fc.Session), nil)
 	reply.Data = data
-	reply.Fc.Tag = fm.Fc.Tag
+	reply.Fc.Seqno = fm.Fc.Seqno
 	return reply
 }
 
@@ -59,17 +56,16 @@ func (npd *Npd) ReportError(conn sps.Conn, err error) {
 	//sess.UnsetConn(conn)
 }
 
-func (npd *Npd) ServeRequest(conn sps.Conn, req []frame.Tframe) ([]frame.Tframe, *serr.Err) {
-	_, fc, err := npcodec.UnmarshalFrame(req[0])
-	if err != nil {
-		return nil, err
+func (npd *Npd) ServeRequest(conn sps.Conn, fc demux.CallI) (demux.CallI, *serr.Err) {
+	fcm := fc.(*sessp.FcallMsg)
+	s := sessp.Tsession(fcm.Fc.Session)
+	if conn.CondSet(s) != s {
+		db.DFatalf("Bad sid %v sess associated with conn %v\n", conn.GetSessId(), conn)
 	}
-	reply := npd.serve(fc)
-	rep, err := npcodec.MarshalFrame(reply)
-	if err != nil {
-		return nil, err
-	}
-	return []frame.Tframe{rep}, nil
+	sess := npd.st.Alloc(s)
+	sess.SetConn(conn)
+	reply := npd.serve(sess, fcm)
+	return reply, nil
 }
 
 // The connection from the kernel/client

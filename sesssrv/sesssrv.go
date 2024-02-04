@@ -51,7 +51,6 @@ type SessSrv struct {
 }
 
 func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
-	const NFRAME = 2
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
 	ssrv.dirover = overlay.MkDirOverlay(root)

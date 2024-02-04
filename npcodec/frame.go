@@ -1,7 +1,11 @@
 package npcodec
 
 import (
+	"bufio"
+	"io"
+
 	db "sigmaos/debug"
+	"sigmaos/demux"
 	"sigmaos/frame"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -18,13 +22,34 @@ func MarshalFrame(fcm *sessp.FcallMsg) (frame.Tframe, *serr.Err) {
 	return f, nil
 }
 
-func UnmarshalFrame(f frame.Tframe) (sessp.Ttag, *sessp.FcallMsg, *serr.Err) {
+func UnmarshalFrame(f frame.Tframe) (*sessp.FcallMsg, *serr.Err) {
 	fc9p := &Fcall9P{}
 	if err := unmarshal(f, fc9p); err != nil {
 		db.DPrintf(db.NPCODEC, "unmarshal err %v\n", err)
-		return 0, nil, serr.NewErr(serr.TErrBadFcall, err)
+		return nil, serr.NewErr(serr.TErrBadFcall, err)
 	}
 	fc := toSP(fc9p)
 	np2SpMsg(fc)
-	return 0, fc, nil
+	return fc, nil
+}
+
+func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
+	f, err := frame.ReadFrame(rdr)
+	if err != nil {
+		db.DPrintf(db.NPCODEC, "ReadFrame err %v\n", err)
+		return nil, err
+	}
+	return UnmarshalFrame(f)
+}
+
+func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
+	fcm := c.(*sessp.FcallMsg)
+	b, err := MarshalFrame(fcm)
+	if err != nil {
+		return err
+	}
+	if err := frame.WriteFrame(wrt, b); err != nil {
+		return err
+	}
+	return nil
 }

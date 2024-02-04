@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
 type DemuxClntI interface {
@@ -44,20 +45,20 @@ func (dmx *DemuxClnt) writer(wf WriteCallF) {
 			return
 		}
 		if err := wf(dmx.out, call.request); err != nil {
-			dmx.reply(call.reply, serr.NewErr(serr.TErrUnreachable, err.Error()))
+			dmx.reply(call.request.Tag(), nil, serr.NewErr(serr.TErrUnreachable, err.Error()))
 			break
 		}
 		if error := dmx.out.Flush(); error != nil {
 			db.DPrintf(db.DEMUXCLNT, "Flush error %v\n", error)
-			dmx.reply(call.reply, serr.NewErr(serr.TErrUnreachable, error.Error()))
+			dmx.reply(call.request.Tag(), nil, serr.NewErr(serr.TErrUnreachable, error.Error()))
 		}
 	}
 }
 
-func (dmx *DemuxClnt) reply(reply CallI, err *serr.Err) {
-	call, last := dmx.callmap.remove(reply.Tag())
+func (dmx *DemuxClnt) reply(tag sessp.Ttag, reply CallI, err *serr.Err) {
+	call, last := dmx.callmap.remove(tag)
 	if call == nil {
-		db.DFatalf("Remove err %v\n", reply.Tag())
+		db.DFatalf("Remove err %v\n", tag)
 	}
 	if last {
 		close(dmx.calls)
@@ -74,10 +75,10 @@ func (dmx *DemuxClnt) reader(rf ReadCallF) {
 			break
 		}
 		db.DPrintf(db.DEMUXCLNT, "reader: reply %v\n", c)
-		dmx.reply(c, nil)
+		dmx.reply(c.Tag(), c, nil)
 	}
 	for _, c := range dmx.callmap.outstanding() {
-		dmx.reply(c.reply, serr.NewErr(serr.TErrUnreachable, "dmxclnt"))
+		dmx.reply(c.request.Tag(), nil, serr.NewErr(serr.TErrUnreachable, "dmxclnt"))
 	}
 }
 

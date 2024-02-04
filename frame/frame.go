@@ -87,65 +87,18 @@ func PopFromFrame(rd io.Reader) (Tframe, error) {
 	return b, nil
 }
 
-func WriteTag(tag sessp.Ttag, wr io.Writer) *serr.Err {
-	t := uint32(tag)
-	if err := binary.Write(wr, binary.LittleEndian, t); err != nil {
+func WriteSeqno(seqno sessp.Tseqno, wr io.Writer) *serr.Err {
+	sn := uint64(seqno)
+	if err := binary.Write(wr, binary.LittleEndian, sn); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	return nil
 }
 
-func ReadTag(rdr io.Reader) (sessp.Ttag, *serr.Err) {
-	var t uint32
-	if err := binary.Read(rdr, binary.LittleEndian, &t); err != nil {
+func ReadSeqno(rdr io.Reader) (sessp.Tseqno, *serr.Err) {
+	var sn uint64
+	if err := binary.Read(rdr, binary.LittleEndian, &sn); err != nil {
 		return 0, serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
-	return sessp.Ttag(t), nil
-}
-
-func WriteFrames(fs []Tframe, wrt io.Writer) *serr.Err {
-	for _, f := range fs {
-		db.DPrintf(db.FRAME, "writeFrame %v\n", f)
-		if err := WriteFrame(wrt, f); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func ReadFrames(rdr io.Reader, nframe int) ([]Tframe, *serr.Err) {
-	reply := make([]Tframe, nframe)
-	for i := 0; i < nframe; i++ {
-		f, err := ReadFrame(rdr)
-		db.DPrintf(db.FRAME, "readFrame %v %v\n", f, err)
-		if err != nil {
-			return nil, err
-		}
-		reply[i] = f
-	}
-	return reply, nil
-}
-
-func ReadTagFrames(rdr io.Reader, nframe int) ([]Tframe, sessp.Ttag, *serr.Err) {
-	tag, err := ReadTag(rdr)
-	if err != nil {
-		return nil, 0, err
-	}
-	db.DPrintf(db.TEST, "tag %v n %d\n", tag, nframe)
-	fs, err := ReadFrames(rdr, nframe)
-	if err != nil {
-		return nil, 0, err
-	}
-	db.DPrintf(db.TEST, "tag %v fs %v\n", tag, fs)
-	return fs, tag, err
-}
-
-func WriteTagFrames(fs []Tframe, tag sessp.Ttag, wrt io.Writer) *serr.Err {
-	if err := WriteTag(tag, wrt); err != nil {
-		return err
-	}
-	if err := WriteFrames(fs, wrt); err != nil {
-		return err
-	}
-	return nil
+	return sessp.Tseqno(sn), nil
 }

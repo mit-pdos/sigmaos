@@ -59,7 +59,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProt
 	ssrv.newps = newps
 	ssrv.et = et
 	ssrv.stats = stats.NewStatsDev(ssrv.dirover)
-	ssrv.st = NewSessionTable(newps, ssrv)
+	ssrv.st = newSessionTable(newps, ssrv)
 	ssrv.sct = clntcond.NewClntCondTable()
 	ssrv.plt = lockmap.NewPathLockTable()
 	ssrv.wt = watch.NewWatchTable(ssrv.sct)
@@ -148,6 +148,10 @@ func (ssrv *SessSrv) GetSessionCondTable() *clntcond.ClntCondTable {
 
 func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
 	return ssrv.dirover, ctx.NewCtx(uname, sessid, clntid, ssrv.sct, ssrv.fencefs)
+}
+
+func (ssrv *SessSrv) GetSessionTable() *SessionTable {
+	return ssrv.st
 }
 
 func (ssrv *SessSrv) ReportError(conn sps.Conn, err error) {

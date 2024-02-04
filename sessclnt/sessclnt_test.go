@@ -113,11 +113,17 @@ func TestDisconnectMfsSrv(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
 
+	sess, err := ts.clnt.LookupSessClnt(sp.Taddrs{ts.srv.MyAddr()})
+	assert.Nil(t, err)
+	assert.True(t, sess.IsConnected())
+
+	ssess, ok := ts.srv.GetSessionTable().Lookup(sess.SessId())
+	assert.True(t, ok)
+	assert.True(t, ssess.IsConnected())
+
 	// check if session isn't timed out
 	time.Sleep(3 * sp.Conf.Session.TIMEOUT)
 
-	sess, err := ts.clnt.LookupSessClnt(sp.Taddrs{ts.srv.MyAddr()})
-	assert.Nil(t, err)
 	assert.True(t, sess.IsConnected())
 
 	// client disconnects session
@@ -127,4 +133,6 @@ func TestDisconnectMfsSrv(t *testing.T) {
 
 	// allow server session to timeout
 	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
+
+	assert.False(t, sess.IsConnected())
 }

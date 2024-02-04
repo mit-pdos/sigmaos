@@ -48,6 +48,17 @@ func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	return c, nil
 }
 
+func (c *SessClnt) SessId() sessp.Tsession {
+	return c.sid
+}
+
+func (c *SessClnt) IsConnected() bool {
+	if c.nc != nil {
+		return !c.nc.IsClosed()
+	}
+	return false
+}
+
 func (c *SessClnt) ReportError(err error) {
 	db.DPrintf(db.SESSCLNT, "Netclnt reports err %v\n", err)
 	if c.nc != nil {
@@ -112,14 +123,6 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 		c.nc = nc
 	}
 	return c.nc, nil
-}
-
-// Creator of sessclnt closes session
-func (c *SessClnt) IsConnected() bool {
-	if c.nc != nil {
-		return !c.nc.IsClosed()
-	}
-	return false
 }
 
 // Creator of sessclnt closes session

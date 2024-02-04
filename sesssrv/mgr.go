@@ -49,7 +49,7 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	defer sm.st.mu.RUnlock()
 	sess := make([]*Session, 0, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
-		if s.isConnected() {
+		if s.IsConnected() {
 			db.DPrintf(db.SESS_STATE_SRV, "Sess %v is connected", sid)
 			s.lastHeartbeat = time.Now()
 			continue

@@ -149,7 +149,7 @@ func (sess *Session) unsetConnL(conn sps.Conn) {
 	conn.Close()
 }
 
-func (sess *Session) isConnected() bool {
+func (sess *Session) IsConnected() bool {
 	sess.Lock()
 	defer sess.Unlock()
 

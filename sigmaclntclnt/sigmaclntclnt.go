@@ -29,7 +29,11 @@ type SigmaClntClnt struct {
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
 	rep, err := scc.dmx.SendReceive([]frame.Tframe{a})
-	return rep[0], err
+	if err != nil {
+		return nil, err
+	} else {
+		return rep[0], nil
+	}
 }
 
 func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {

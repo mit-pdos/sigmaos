@@ -82,10 +82,7 @@ func (scc *SigmaClntClnt) Shutdown() error {
 	return err
 }
 
-// Close the socket connection
+// Close the socket connection, which closes dmxclnt too.
 func (scc *SigmaClntClnt) close() error {
-	if err := scc.conn.Close(); err != nil {
-		return err
-	}
-	return scc.dmx.Close()
+	return scc.conn.Close()
 }

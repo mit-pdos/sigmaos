@@ -11,12 +11,17 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/proc"
+	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 const (
-	fn = sp.UX + "/~local/"
+	fn      = sp.UX + "/~local/"
+	FILESZ  = 50 * sp.MBYTE
+	WRITESZ = 4096
 )
 
 func TestCompile(t *testing.T) {
@@ -121,4 +126,74 @@ func TestFsPerfMulti(t *testing.T) {
 		done.Done()
 	}()
 	done.Wait()
+}
+
+func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
+	fsl, err := sigmaclnt.NewFsLib(pcfg)
+	assert.Nil(t, err)
+	fn := sp.UX + "~local/file-" + string(pcfg.GetUname())
+	stop := false
+	nfile := 0
+	for !stop {
+		select {
+		case <-ch:
+			stop = true
+		default:
+			if err := fsl.Remove(fn); serr.IsErrCode(err, serr.TErrUnreachable) {
+				break
+			}
+			w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
+			if err != nil {
+				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+				break
+			}
+			nfile += 1
+			buf := test.NewBuf(WRITESZ)
+			if err := test.Writer(t, w, buf, FILESZ); err != nil {
+				break
+			}
+			if err := w.Close(); err != nil {
+				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+				break
+			}
+		}
+	}
+	assert.True(t, nfile >= 3) // a bit arbitrary
+	fsl.Remove(fn)
+	// fsl.Close()
+}
+
+func TestWriteCrash(t *testing.T) {
+	const (
+		N        = 20
+		NCRASH   = 5
+		CRASHSRV = 1000000
+	)
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ch := make(chan error)
+
+	for i := 0; i < N; i++ {
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+		go writer(ts.T, ch, pcfg)
+	}
+
+	crashchan := make(chan bool)
+	l := &sync.Mutex{}
+	for i := 0; i < NCRASH; i++ {
+		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l, crashchan)
+	}
+
+	for i := 0; i < NCRASH; i++ {
+		<-crashchan
+	}
+
+	for i := 0; i < N; i++ {
+		ch <- nil
+	}
+
+	ts.Shutdown()
 }

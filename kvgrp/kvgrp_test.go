@@ -11,15 +11,21 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/groupmgr"
 	"sigmaos/kvgrp"
+	"sigmaos/proc"
 	"sigmaos/rand"
+	"sigmaos/semclnt"
+	"sigmaos/sesssrv"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 const (
-	GRP    = "grp-0"
-	N_REPL = 3
-	N_KEYS = 10000
+	GRP       = "grp-0"
+	N_REPL    = 3
+	CRASH     = 1000
+	PARTITION = 200
+	NETFAIL   = 200
 )
 
 type Tstate struct {
@@ -29,7 +35,7 @@ type Tstate struct {
 	job string
 }
 
-func newTstate(t1 *test.Tstate, nrepl int, persist bool) *Tstate {
+func newTstate(t1 *test.Tstate, nrepl, ncrash, crash, partition, netfail int, persist bool) *Tstate {
 	ts := &Tstate{job: rand.String(4), grp: GRP}
 	ts.Tstate = t1
 	ts.MkDir(kvgrp.KVDIR, 0777)
@@ -39,7 +45,8 @@ func newTstate(t1 *test.Tstate, nrepl int, persist bool) *Tstate {
 	if persist {
 		mcfg.Persist(ts.SigmaClnt.FsLib)
 	}
-	ts.gm = mcfg.StartGrpMgr(ts.SigmaClnt, 0)
+	mcfg.SetTest(crash, partition, netfail)
+	ts.gm = mcfg.StartGrpMgr(ts.SigmaClnt, ncrash)
 	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
 	assert.Nil(t1.T, err)
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
@@ -62,7 +69,7 @@ func TestStartStopRepl0(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, 0, false)
+	ts := newTstate(t1, 0, 0, 0, 0, 0, false)
 
 	sts, _, err := ts.ReadDir(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
 	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
@@ -78,7 +85,7 @@ func TestStartStopReplN(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, N_REPL, false)
+	ts := newTstate(t1, N_REPL, 0, 0, 0, 0, false)
 	_, err := ts.gm.StopGroup()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown(false)
@@ -110,7 +117,7 @@ func TestRestartRepl0(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, 0, true)
+	ts := newTstate(t1, 0, 0, 0, 0, 0, true)
 	ts.testRecover()
 }
 
@@ -119,43 +126,11 @@ func TestRestartReplN(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, N_REPL, true)
+	ts := newTstate(t1, N_REPL, 0, 0, 0, 0, true)
 	ts.testRecover()
 }
 
-const (
-	CRASH     = 1000
-	PARTITION = 200
-	NETFAIL   = 200
-	NTRIALS   = "3001"
-)
-
-type Tstate struct {
-	*test.Tstate
-	grp string
-	gm  *groupmgr.GroupMgr
-	job string
-}
-
-func newTstate(t1 *test.Tstate, ncrash, crash, partition, netfail int) *Tstate {
-	ts := &Tstate{job: rand.String(4), grp: GRP}
-	ts.Tstate = t1
-	ts.MkDir(kvgrp.KVDIR, 0777)
-	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
-	assert.Nil(t1.T, err)
-	mcfg := groupmgr.NewGroupConfig(0, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, 0, ts.job)
-	mcfg.SetTest(crash, partition, netfail)
-	ts.gm = mcfg.StartGrpMgr(ts.SigmaClnt, ncrash)
-	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
-	assert.Nil(t1.T, err)
-	db.DPrintf(db.TEST, "cfg %v\n", cfg)
-	return ts
-}
-
-func TestCompile(t *testing.T) {
-}
-
-// Server crashes storing a semaphore. The test's down() will return a
+// kvd crashes storing a semaphore. The test's down() will return a
 // not-found for the semaphore, which is interpreted as a successful
 // down by the semclnt.
 func TestServerCrash(t *testing.T) {
@@ -163,7 +138,7 @@ func TestServerCrash(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, 1, CRASH, 0, 0)
+	ts := newTstate(t1, 0, 1, CRASH, 0, 0, false)
 
 	sem := semclnt.NewSemClnt(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 	err := sem.Init(0)
@@ -186,72 +161,7 @@ func TestServerCrash(t *testing.T) {
 
 	ts.gm.StopGroup()
 
-	ts.Shutdown()
-}
-
-func BurstProc(n int, f func(chan error)) error {
-	ch := make(chan error)
-	for i := 0; i < n; i++ {
-		go f(ch)
-	}
-	var err error
-	for i := 0; i < n; i++ {
-		r := <-ch
-		if r != nil && err != nil {
-			err = r
-		}
-	}
-	return err
-}
-
-func TestProcManyOK(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	a := proc.NewProc("proctest", []string{NTRIALS, "sleeper", "1us", ""})
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.GetPid())
-	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.GetPid())
-	assert.Nil(t, err, "waitexit")
-	assert.True(t, status.IsStatusOK(), status)
-	ts.Shutdown()
-}
-
-func TestProcCrashMany(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	a := proc.NewProc("proctest", []string{NTRIALS, "crash"})
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.GetPid())
-	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.GetPid())
-	assert.Nil(t, err, "waitexit")
-	assert.True(t, status.IsStatusOK(), status)
-	ts.Shutdown()
-}
-
-func TestProcPartitionMany(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	a := proc.NewProc("proctest", []string{NTRIALS, "partition"})
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.GetPid())
-	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.GetPid())
-	assert.Nil(t, err, "waitexit")
-	if assert.NotNil(t, status, "nil status") {
-		assert.True(t, status.IsStatusOK(), status)
-	}
-	ts.Shutdown()
+	ts.Shutdown(false)
 }
 
 func TestReconnectSimple(t *testing.T) {
@@ -260,7 +170,7 @@ func TestReconnectSimple(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, 0, 0, 0, NETFAIL)
+	ts := newTstate(t1, 0, 0, 0, 0, NETFAIL, false)
 
 	ch := make(chan error)
 	go func() {
@@ -282,7 +192,7 @@ func TestReconnectSimple(t *testing.T) {
 	assert.Nil(ts.T, err, "fsl1")
 
 	ts.gm.StopGroup()
-	ts.Shutdown()
+	ts.Shutdown(false)
 }
 
 func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
@@ -308,7 +218,7 @@ func TestServerPartitionNonBlockingSimple(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, 0, 0, PARTITION, 0)
+	ts := newTstate(t1, 0, 0, 0, PARTITION, 0, false)
 	ch := make(chan error)
 	for i := 0; i < N; i++ {
 		go ts.stat(t, i, ch)
@@ -317,17 +227,17 @@ func TestServerPartitionNonBlockingSimple(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "Stopping group")
 	ts.gm.StopGroup()
-	ts.Shutdown()
+	ts.Shutdown(false)
 }
 
 func TestServerPartitionNonBlockingConcur(t *testing.T) {
-	const N = sessstatesrv.NLAST
+	const N = sesssrv.NLAST
 
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, 0, 0, PARTITION, 0)
+	ts := newTstate(t1, 0, 0, 0, PARTITION, 0, false)
 	ch := make(chan error)
 	for i := 0; i < N; i++ {
 		go ts.stat(t, i, ch)
@@ -338,7 +248,7 @@ func TestServerPartitionNonBlockingConcur(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "Stopping group")
 	ts.gm.StopGroup()
-	ts.Shutdown()
+	ts.Shutdown(false)
 }
 
 func TestServerPartitionBlocking(t *testing.T) {
@@ -348,7 +258,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, 0, 0, PARTITION, 0)
+	ts := newTstate(t1, 0, 0, 0, PARTITION, 0, false)
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
@@ -367,79 +277,5 @@ func TestServerPartitionBlocking(t *testing.T) {
 		assert.NotNil(ts.T, err, "down")
 	}
 	ts.gm.StopGroup()
-	ts.Shutdown()
-}
-
-const (
-	FILESZ  = 50 * sp.MBYTE
-	WRITESZ = 4096
-)
-
-func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
-	fsl, err := sigmaclnt.NewFsLib(pcfg)
-	assert.Nil(t, err)
-	fn := sp.UX + "~local/file-" + string(pcfg.GetUname())
-	stop := false
-	nfile := 0
-	for !stop {
-		select {
-		case <-ch:
-			stop = true
-		default:
-			if err := fsl.Remove(fn); serr.IsErrCode(err, serr.TErrUnreachable) {
-				break
-			}
-			w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
-			if err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
-				break
-			}
-			nfile += 1
-			buf := test.NewBuf(WRITESZ)
-			if err := test.Writer(t, w, buf, FILESZ); err != nil {
-				break
-			}
-			if err := w.Close(); err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
-				break
-			}
-		}
-	}
-	assert.True(t, nfile >= 3) // a bit arbitrary
-	fsl.Remove(fn)
-}
-
-func TestWriteCrash(t *testing.T) {
-	const (
-		N        = 20
-		NCRASH   = 5
-		CRASHSRV = 1000000
-	)
-
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ch := make(chan error)
-
-	for i := 0; i < N; i++ {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		go writer(ts.T, ch, pcfg)
-	}
-
-	crashchan := make(chan bool)
-	l := &sync.Mutex{}
-	for i := 0; i < NCRASH; i++ {
-		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l, crashchan)
-	}
-
-	for i := 0; i < NCRASH; i++ {
-		<-crashchan
-	}
-
-	for i := 0; i < N; i++ {
-		ch <- nil
-	}
-
-	ts.Shutdown()
+	ts.Shutdown(false)
 }

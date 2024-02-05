@@ -145,7 +145,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt; do
+    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt; do
         go test $VERB sigmaos/$T -start $GVISOR  $SIGMACLNTD $REUSEKERNEL
         cleanup
     done

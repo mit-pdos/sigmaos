@@ -71,6 +71,7 @@ func (dmx *DemuxClnt) reader(rf ReadCallF) {
 	for {
 		c, err := rf(dmx.in)
 		if err != nil {
+			dmx.callmap.close()
 			dmx.clnti.ReportError(err)
 			break
 		}

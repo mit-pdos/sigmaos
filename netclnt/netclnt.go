@@ -49,11 +49,9 @@ func (nc *NetClnt) Src() string {
 	return nc.conn.LocalAddr().String()
 }
 
+// Close connection. This also causes dmxclnt to be closed
 func (nc *NetClnt) Close() error {
-	if err := nc.conn.Close(); err != nil {
-		db.DPrintf(db.ALWAYS, "NetClnt.Close: err %v\n", err)
-	}
-	return nc.DemuxClnt.Close()
+	return nc.conn.Close()
 }
 
 func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {

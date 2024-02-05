@@ -1,6 +1,6 @@
-// The sessclnt package establishes a session server using a TCP
-// connection.  If TCP connection fails, it will try to re-establish
-// the connection.
+// The sessclnt package establishes a session with a server using a
+// [netclnt], which sets up a TCP connection.  If [netclnt] fails,
+// sessclnt may try to re-establish the connection.
 package sessclnt
 
 import (
@@ -49,23 +49,41 @@ func (c *SessClnt) SessId() sessp.Tsession {
 	return c.sid
 }
 
+func (c *SessClnt) netClnt() *netclnt.NetClnt {
+	c.Lock()
+	defer c.Unlock()
+	return c.nc
+}
+
+func (c *SessClnt) ownNetClnt() *netclnt.NetClnt {
+	c.Lock()
+	defer c.Unlock()
+	r := c.nc
+	c.nc = nil
+	return r
+}
+
 func (c *SessClnt) IsConnected() bool {
-	if c.nc != nil {
-		return !c.nc.IsClosed()
+	if nc := c.netClnt(); nc != nil {
+		return !nc.IsClosed()
 	}
 	return false
 }
 
+// XXX if unreachable, nothing to be done (netconn is closed), but if
+// marshaling error, close conn?
 func (c *SessClnt) ReportError(err error) {
-	db.DPrintf(db.SESSCLNT, "Netclnt reports err %v\n", err)
-	if c.nc != nil {
-		c.nc.Close()
-	}
+	db.DPrintf(db.SESSCLNT, "Netclnt sess %v reports err %v\n", c.sid, err)
 }
 
 func (c *SessClnt) RPC(req sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
 	fc := sessp.NewFcallMsg(req, data, c.sid, &c.seqno)
-	rep, err := c.nc.SendReceive(fc)
+	nc := c.netClnt()
+	if nc == nil {
+		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)
+	}
+
+	rep, err := nc.SendReceive(fc)
 	if err != nil {
 		return nil, err
 	}
@@ -118,28 +136,38 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 	return c.nc, nil
 }
 
+func (c *SessClnt) ownClosed() bool {
+	c.Lock()
+	defer c.Unlock()
+
+	if c.closed {
+		return false
+	}
+	c.closed = true
+	return true
+}
+
 // Creator of sessclnt closes session
 func (c *SessClnt) Close() error {
 	return c.close()
 }
 
-// Close the sessclnt connection
+// Close the session permanently
 func (c *SessClnt) close() error {
-	c.Lock()
-	defer c.Unlock()
-
-	if c.closed {
+	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
+	if !c.ownClosed() {
 		return nil
 	}
-	c.closed = true
-	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
-	if c.nc != nil {
-		c.nc.Close()
+	nc := c.ownNetClnt()
+	if nc == nil {
+		return nil
 	}
-	outstanding := c.queue.Close()
+	return nc.Close()
+
+	//outstanding := c.queue.Close()
 	// Kill outstanding requests.
-	for _, rpc := range outstanding {
-		rpc.Abort()
-	}
-	return nil
+	//for _, rpc := range outstanding {
+	//	rpc.Abort()
+	//}
+	//return nil
 }

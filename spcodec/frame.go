@@ -21,7 +21,7 @@ func MarshalFcallWithoutData(fcm *sessp.FcallMsg) []byte {
 	return f.Bytes()
 }
 
-func WriteFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Writer) *serr.Err {
+func writeFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Writer) *serr.Err {
 	if err := frame.WriteFrame(bwr, marshaledFcall); err != nil {
 		return err
 	}
@@ -45,13 +45,13 @@ func MarshalFcallAndData(fcm *sessp.FcallMsg) ([]byte, *serr.Err) {
 	wr := bufio.NewWriter(&f)
 	b := MarshalFcallWithoutData(fcm)
 	db.DPrintf(db.SPCODEC, "Marshal frame %v %d buf %d\n", fcm.Msg, len(b), len(fcm.Data))
-	if err := WriteFcallAndData(fcm, b, wr); err != nil {
+	if err := writeFcallAndData(fcm, b, wr); err != nil {
 		return nil, err
 	}
 	return f.Bytes(), nil
 }
 
-func ReadFcallAndDataFrames(rdr io.Reader) (fc []byte, data []byte, se *serr.Err) {
+func readFcallAndDataFrames(rdr io.Reader) (fc []byte, data []byte, se *serr.Err) {
 	f, err := frame.ReadFrame(rdr)
 	if err != nil {
 		db.DPrintf(db.SPCODEC, "ReadFrame err %v\n", err)
@@ -75,8 +75,8 @@ func UnmarshalFcallAndData(f []byte, buf []byte) *sessp.FcallMsg {
 	return fm
 }
 
-func ReadUnmarshalFcallAndData(rdr io.Reader) (*sessp.FcallMsg, *serr.Err) {
-	f, buf, err := ReadFcallAndDataFrames(rdr)
+func readUnmarshalFcallAndData(rdr io.Reader) (*sessp.FcallMsg, *serr.Err) {
+	f, buf, err := readFcallAndDataFrames(rdr)
 	if err != nil {
 		return nil, err
 	}
@@ -85,11 +85,11 @@ func ReadUnmarshalFcallAndData(rdr io.Reader) (*sessp.FcallMsg, *serr.Err) {
 }
 
 func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
-	return ReadUnmarshalFcallAndData(rdr)
+	return readUnmarshalFcallAndData(rdr)
 }
 
 func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
 	fcm := c.(*sessp.FcallMsg)
 	fc := MarshalFcallWithoutData(fcm)
-	return WriteFcallAndData(fcm, fc, wrt)
+	return writeFcallAndData(fcm, fc, wrt)
 }

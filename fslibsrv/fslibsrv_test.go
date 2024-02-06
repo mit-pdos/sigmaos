@@ -227,16 +227,33 @@ func TestWriteMarshalPerfSingle(t *testing.T) {
 	assert.Nil(ts.T, err)
 	buf := test.NewBuf(FILESZ)
 	measure(p1, "marshal", func() sp.Tlength {
+		// Marshal the sigmaclnt RPC proto
 		req := &scproto.SigmaWriteRequest{Fd: uint32(0), Data: buf}
 		b, err := proto.Marshal(req)
 		assert.Nil(ts.T, err)
+		// Marshal the rpc package's proto
 		req2 := rpcproto.Request{Method: "XXX", Args: b}
 		b2, err := proto.Marshal(&req2)
 		assert.Nil(ts.T, err)
+		// Marshal the WriteRead fcall carrying the RPC package's proto
 		args := sp.NewTwriteread(1000)
 		var seqno sessp.Tseqno
 		fcm := sessp.NewFcallMsg(args, b2, 0, &seqno)
-		_, err2 := spcodec.MarshalFcallAndData(fcm)
+		b3 := spcodec.MarshalFcallWithoutData(fcm)
+		// Unmarshal the WriteRead fcall
+		_ = spcodec.UnmarshalFcallAndData(b3, b2)
+		reqrec := rpcproto.Request{}
+		// Unmarshal the RPC package's proto
+		err = proto.Unmarshal(b2, &reqrec)
+		assert.Nil(ts.T, err)
+		// Unmarshal the sigmaclnt RPC proto
+		reqrec2 := &scproto.SigmaWriteRequest{}
+		err = proto.Unmarshal(b, reqrec2)
+		assert.Nil(ts.T, err)
+		f := sp.NoFence()
+		args2 := sp.NewTwriteF(1000, 0, &f)
+		fcm2 := sessp.NewFcallMsg(args2, buf, 0, &seqno)
+		_, err2 := spcodec.MarshalFcallAndData(fcm2)
 		assert.Nil(ts.T, err2)
 		return sp.Tlength(len(buf))
 	})

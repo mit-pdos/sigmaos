@@ -53,6 +53,11 @@ func RandLoginReq(wc *WebClnt, r *rand.Rand) (string, error) {
 }
 
 func RandReserveReq(wc *WebClnt, r *rand.Rand) (string, error) {
+	userID := r.Intn(500)
+	return RandReserveReqUser(wc, r, userID)
+}
+
+func RandReserveReqUser(wc *WebClnt, r *rand.Rand, userID int) (string, error) {
 	in_date := r.Intn(14) + 9
 	out_date := in_date + r.Intn(5) + 1
 	in_date_str := fmt.Sprintf("2015-04-%d", in_date)
@@ -64,7 +69,7 @@ func RandReserveReq(wc *WebClnt, r *rand.Rand) (string, error) {
 		out_date_str = fmt.Sprintf("2015-04-0%d", out_date)
 	}
 	hotelid := strconv.Itoa(r.Intn(nhotel) + 1)
-	suffix := strconv.Itoa(r.Intn(500))
+	suffix := strconv.Itoa(userID)
 	user := "Cornell_" + suffix
 	pw := NewPassword(suffix)
 	cust_name := user

@@ -85,7 +85,7 @@ func NewFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
 }
 
 func (fm *FcallMsg) String() string {
-	return fmt.Sprintf("%v seq %v sid %v msg %v", fm.Msg.Type(), Tseqno(fm.Fc.Seqno), Tsession(fm.Fc.Session), fm.Msg)
+	return fmt.Sprintf("{%v seq %v sid %v msg %v}", fm.Msg.Type(), Tseqno(fm.Fc.Seqno), Tsession(fm.Fc.Session), fm.Msg)
 }
 
 func (fm *FcallMsg) GetType() Tfcall {

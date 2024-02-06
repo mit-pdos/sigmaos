@@ -1,3 +1,6 @@
+// The demux package multiplexes calls over a transport (e.g., TCP
+// connection, unix socket, etc.), and matches responses with requests
+// using the call's tag.
 package demux
 
 import (
@@ -15,8 +18,6 @@ type DemuxClntI interface {
 
 type WriteCallF func(*bufio.Writer, CallI) *serr.Err
 
-// DemuxClnt multiplexes calls (a request/reply pair) on a single
-// transport and demultiplexes responses.
 type DemuxClnt struct {
 	out     *bufio.Writer
 	in      *bufio.Reader

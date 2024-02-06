@@ -21,8 +21,6 @@ type DemuxSrvI interface {
 	ReportError(err error)
 }
 
-// DemuxSrv demultiplexes RPCs from a single transport and multiplexes
-// the reponses on the transport.
 type DemuxSrv struct {
 	mu      sync.Mutex
 	in      *bufio.Reader

@@ -36,7 +36,7 @@ func init() {
 
 const (
 	KBYTE      = 1 << 10
-	NRUNS      = 3
+	NRUNS      = 100
 	SYNCFILESZ = 100 * KBYTE
 	//	SYNCFILESZ = 250 * KBYTE
 	// SYNCFILESZ = WRITESZ
@@ -215,9 +215,6 @@ func TestWriteSocketPerfSingle(t *testing.T) {
 }
 
 func TestWriteMarshalPerfSingle(t *testing.T) {
-	const (
-		N_MARSHALS = 10000
-	)
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -240,6 +237,8 @@ func TestWriteMarshalPerfSingle(t *testing.T) {
 		var seqno sessp.Tseqno
 		fcm := sessp.NewFcallMsg(args, b2, 0, &seqno)
 		b3 := spcodec.MarshalFcallWithoutData(fcm)
+		_, err2 := spcodec.MarshalFcallAndData(fcm)
+		assert.Nil(ts.T, err2)
 		// Unmarshal the WriteRead fcall
 		_ = spcodec.UnmarshalFcallAndData(b3, b2)
 		reqrec := rpcproto.Request{}
@@ -255,6 +254,8 @@ func TestWriteMarshalPerfSingle(t *testing.T) {
 		args2 := sp.NewTwriteF(1000, 0, &f)
 		fcm2 := sessp.NewFcallMsg(args2, buf, 0, &seqno)
 		b4 := spcodec.MarshalFcallWithoutData(fcm2)
+		_, err2 = spcodec.MarshalFcallAndData(fcm)
+		assert.Nil(ts.T, err2)
 		//		assert.Nil(ts.T, err2)
 		_ = spcodec.UnmarshalFcallAndData(b4, buf)
 		return sp.Tlength(len(buf))

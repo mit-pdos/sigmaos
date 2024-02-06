@@ -19,9 +19,12 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	rpcproto "sigmaos/rpc/proto"
+	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	scproto "sigmaos/sigmaclntsrv/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 	"sigmaos/test"
 )
 
@@ -211,7 +214,7 @@ func TestWriteSocketPerfSingle(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWriteMarshalUnmarshalPerfSingle(t *testing.T) {
+func TestWriteMarshalPerfSingle(t *testing.T) {
 	const (
 		N_MARSHALS = 10000
 	)
@@ -225,8 +228,16 @@ func TestWriteMarshalUnmarshalPerfSingle(t *testing.T) {
 	buf := test.NewBuf(FILESZ)
 	measure(p1, "marshal", func() sp.Tlength {
 		req := &scproto.SigmaWriteRequest{Fd: uint32(0), Data: buf}
-		_, err := proto.Marshal(req)
+		b, err := proto.Marshal(req)
 		assert.Nil(ts.T, err)
+		req2 := rpcproto.Request{Method: "XXX", Args: b}
+		b2, err := proto.Marshal(&req2)
+		assert.Nil(ts.T, err)
+		args := sp.NewTwriteread(1000)
+		var seqno sessp.Tseqno
+		fcm := sessp.NewFcallMsg(args, b2, 0, &seqno)
+		_, err2 := spcodec.MarshalFcallAndData(fcm)
+		assert.Nil(ts.T, err2)
 		return sp.Tlength(len(buf))
 	})
 	ts.Shutdown()

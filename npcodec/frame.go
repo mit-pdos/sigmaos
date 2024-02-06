@@ -11,7 +11,7 @@ import (
 	"sigmaos/sessp"
 )
 
-func MarshalFrame(fcm *sessp.FcallMsg) (frame.Tframe, *serr.Err) {
+func marshalFrame(fcm *sessp.FcallMsg) (frame.Tframe, *serr.Err) {
 	sp2NpMsg(fcm)
 	fc9P := to9P(fcm)
 	db.DPrintf(db.NPCODEC, "MarshalFrame %v\n", fc9P)
@@ -22,7 +22,7 @@ func MarshalFrame(fcm *sessp.FcallMsg) (frame.Tframe, *serr.Err) {
 	return f, nil
 }
 
-func UnmarshalFrame(f frame.Tframe) (*sessp.FcallMsg, *serr.Err) {
+func unmarshalFrame(f frame.Tframe) (*sessp.FcallMsg, *serr.Err) {
 	fc9p := &Fcall9P{}
 	if err := unmarshal(f, fc9p); err != nil {
 		db.DPrintf(db.NPCODEC, "unmarshal err %v\n", err)
@@ -39,12 +39,12 @@ func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 		db.DPrintf(db.NPCODEC, "ReadFrame err %v\n", err)
 		return nil, err
 	}
-	return UnmarshalFrame(f)
+	return unmarshalFrame(f)
 }
 
 func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
 	fcm := c.(*sessp.FcallMsg)
-	b, err := MarshalFrame(fcm)
+	b, err := marshalFrame(fcm)
 	if err != nil {
 		return err
 	}

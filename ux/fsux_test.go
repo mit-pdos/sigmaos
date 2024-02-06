@@ -160,7 +160,7 @@ func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
 	}
 	assert.True(t, nfile >= 3) // a bit arbitrary
 	fsl.Remove(fn)
-	// fsl.Close()
+	fsl.Close()
 }
 
 func TestWriteCrash(t *testing.T) {

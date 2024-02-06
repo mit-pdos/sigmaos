@@ -82,8 +82,9 @@ func (c *SessClnt) RPC(req sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err)
 	if nc == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)
 	}
-
 	rep, err := nc.SendReceive(fc)
+	db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
+
 	if err != nil {
 		return nil, err
 	}

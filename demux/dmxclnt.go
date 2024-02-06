@@ -2,6 +2,7 @@ package demux
 
 import (
 	"bufio"
+	"sync/atomic"
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
@@ -20,8 +21,14 @@ type DemuxClnt struct {
 	out     *bufio.Writer
 	in      *bufio.Reader
 	callmap *callMap
-	calls   chan *call
+	calls   chan CallI
 	clnti   DemuxClntI
+	nwriter *atomic.Int64
+}
+
+type reply struct {
+	rep CallI
+	err *serr.Err
 }
 
 func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, rf ReadCallF, wf WriteCallF, clnti DemuxClntI) *DemuxClnt {
@@ -29,8 +36,9 @@ func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, rf ReadCallF, wf WriteCal
 		out:     out,
 		in:      in,
 		callmap: newCallMap(),
-		calls:   make(chan *call),
+		calls:   make(chan CallI),
 		clnti:   clnti,
+		nwriter: new(atomic.Int64),
 	}
 	go dmx.reader(rf)
 	go dmx.writer(wf)
@@ -39,61 +47,67 @@ func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, rf ReadCallF, wf WriteCal
 
 func (dmx *DemuxClnt) writer(wf WriteCallF) {
 	for {
-		call, ok := <-dmx.calls
+		req, ok := <-dmx.calls
 		if !ok {
 			db.DPrintf(db.DEMUXCLNT, "writer: replies closed\n")
 			return
 		}
-		if err := wf(dmx.out, call.request); err != nil {
-			dmx.reply(call.request.Tag(), nil, serr.NewErr(serr.TErrUnreachable, err.Error()))
-			break
+
+		// In error cases, drain calls until SendReceive calls close
+		// on calls
+
+		if dmx.IsClosed() {
+			continue
 		}
-		if error := dmx.out.Flush(); error != nil {
-			db.DPrintf(db.DEMUXCLNT, "Flush error %v\n", error)
-			dmx.reply(call.request.Tag(), nil, serr.NewErr(serr.TErrUnreachable, error.Error()))
+		if err := wf(dmx.out, req); err != nil {
+			db.DPrintf(db.DEMUXCLNT, "wf req %v error %v\n", req, err)
+			continue
+		}
+		if err := dmx.out.Flush(); err != nil {
+			db.DPrintf(db.DEMUXCLNT, "Flush req %v err %v\n", req, err)
+			continue
 		}
 	}
 }
 
-func (dmx *DemuxClnt) reply(tag sessp.Ttag, reply CallI, err *serr.Err) {
-	call, last := dmx.callmap.remove(tag)
-	if call == nil {
-		db.DFatalf("Remove err %v\n", tag)
+func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
+	if ch, ok := dmx.callmap.remove(tag); ok {
+		ch <- reply{rep, err}
+	} else {
+		db.DFatalf("reply remove missing %v\n", tag)
 	}
-	if last {
-		close(dmx.calls)
-	}
-	call.reply = reply
-	call.ch <- err
 }
 
 func (dmx *DemuxClnt) reader(rf ReadCallF) {
 	for {
 		c, err := rf(dmx.in)
 		if err != nil {
+			db.DPrintf(db.DEMUXCLNT, "reader rf err %v\n", err)
 			dmx.callmap.close()
-			dmx.clnti.ReportError(err)
 			break
 		}
-		db.DPrintf(db.DEMUXCLNT, "reader: reply %v\n", c)
 		dmx.reply(c.Tag(), c, nil)
 	}
-	for _, c := range dmx.callmap.outstanding() {
-		dmx.reply(c.request.Tag(), nil, serr.NewErr(serr.TErrUnreachable, "dmxclnt"))
+	for _, t := range dmx.callmap.outstanding() {
+		db.DPrintf(db.DEMUXCLNT, "reader fail %v\n", t)
+		dmx.reply(t, nil, serr.NewErr(serr.TErrUnreachable, "reader"))
 	}
+
 }
 
 func (dmx *DemuxClnt) SendReceive(req CallI) (CallI, *serr.Err) {
-	call := &call{request: req, ch: make(chan *serr.Err)}
-	if err := dmx.callmap.put(req.Tag(), call); err != nil {
-		db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue err %v\n", err)
+	ch := make(chan reply)
+	if err := dmx.callmap.put(req.Tag(), ch); err != nil {
+		db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue req %v err %v\n", req, err)
 		return nil, err
 	}
-	db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue %v\n", call)
-	dmx.calls <- call
-	err := <-call.ch
-	db.DPrintf(db.DEMUXCLNT, "SendReceive: return %v %v\n", call, err)
-	return call.reply, err
+	dmx.nwriter.Add(1)
+	dmx.calls <- req
+	rep := <-ch
+	if dmx.nwriter.Add(-1) == 0 && dmx.callmap.isClosed() {
+		close(dmx.calls)
+	}
+	return rep.rep, rep.err
 }
 
 func (dmx *DemuxClnt) Close() error {

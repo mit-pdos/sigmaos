@@ -75,9 +75,8 @@ func (sc *Mgr) RPC(addr sp.Taddrs, req sessp.Tmsg, data []byte) (*sessp.FcallMsg
 		db.DPrintf(db.SESSCLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, addr)
 		return nil, err
 	}
-	db.DPrintf(db.SESSCLNT, "sess %v RPC %v %v to %v", sess.sid, req.Type(), req, addr)
-	msg, err := sess.RPC(req, data)
-	return msg, err
+	rep, err := sess.RPC(req, data)
+	return rep, err
 }
 
 func sessKey(addrs sp.Taddrs) string {

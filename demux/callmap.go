@@ -1,26 +1,18 @@
 package demux
 
 import (
-	"fmt"
 	"sync"
 
 	"sigmaos/serr"
 	"sigmaos/sessp"
 )
 
-// One call struct per outstanding call, which consists of a request
-// or reply, which in turns are a slice of frames.
+// One call struct per outstanding call
 type call struct {
-	ch      chan *serr.Err
-	request CallI
-	reply   CallI
+	ch chan reply
 }
 
-func (c *call) String() string {
-	return fmt.Sprintf("{call %v %v}", c.request, c.reply)
-}
-
-// Map of outstanding calls indexed by sequence number
+// Map of outstanding calls indexed by tag
 type callMap struct {
 	sync.Mutex
 	closed bool
@@ -46,38 +38,35 @@ func (cm *callMap) isClosed() bool {
 	return cm.closed
 }
 
-func (cm *callMap) outstanding() []*call {
+func (cm *callMap) put(tag sessp.Ttag, ch chan reply) *serr.Err {
 	cm.Lock()
 	defer cm.Unlock()
-
-	o := make([]*call, 0, len(cm.calls))
-	for _, v := range cm.calls {
-		o = append(o, v)
-	}
-	return o
-}
-
-func (cm *callMap) put(tag sessp.Ttag, call *call) *serr.Err {
-	cm.Lock()
-	defer cm.Unlock()
+	c := &call{ch: ch}
 	if cm.closed {
 		return serr.NewErr(serr.TErrUnreachable, "dmxclnt")
 	}
-	cm.calls[tag] = call
+	cm.calls[tag] = c
 	return nil
 }
 
-func (cm *callMap) remove(tag sessp.Ttag) (*call, bool) {
+func (cm *callMap) remove(tag sessp.Ttag) (chan reply, bool) {
 	cm.Lock()
 	defer cm.Unlock()
 
-	last := false
-	if call, ok := cm.calls[tag]; ok {
+	if c, ok := cm.calls[tag]; ok {
 		delete(cm.calls, tag)
-		if len(cm.calls) == 0 && cm.closed {
-			last = true
-		}
-		return call, last
+		return c.ch, true
 	}
-	return nil, last
+	return nil, false
+}
+
+func (cm *callMap) outstanding() []sessp.Ttag {
+	cm.Lock()
+	defer cm.Unlock()
+
+	ts := make([]sessp.Ttag, 0, len(cm.calls))
+	for t, _ := range cm.calls {
+		ts = append(ts, t)
+	}
+	return ts
 }

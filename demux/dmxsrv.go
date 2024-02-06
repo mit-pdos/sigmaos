@@ -21,11 +21,6 @@ type DemuxSrvI interface {
 	ReportError(err error)
 }
 
-type reply struct {
-	rep CallI
-	err *serr.Err
-}
-
 // DemuxSrv demultiplexes RPCs from a single transport and multiplexes
 // the reponses on the transport.
 type DemuxSrv struct {
@@ -49,6 +44,7 @@ func (dmx *DemuxSrv) reader(rf ReadCallF) {
 	for {
 		c, err := rf(dmx.in)
 		if err != nil {
+			db.DPrintf(db.DEMUXSRV, "reader: rf err %v\n", err)
 			dmx.serve.ReportError(err)
 			break
 		}
@@ -56,9 +52,8 @@ func (dmx *DemuxSrv) reader(rf ReadCallF) {
 			if !dmx.IncNreq() { // handle req?
 				return // done
 			}
-			db.DPrintf(db.DEMUXSRV, "reader: serve %v\n", c.Tag())
+
 			rep, err := dmx.serve.ServeRequest(c)
-			db.DPrintf(db.DEMUXSRV, "reader: reply %v %v %v\n", c.Tag(), rep.Tag(), err)
 			dmx.replies <- reply{rep, err}
 			if dmx.DecNreq() {
 				close(dmx.replies)
@@ -74,17 +69,19 @@ func (dmx *DemuxSrv) writer(wf WriteCallF) {
 			db.DPrintf(db.DEMUXSRV, "writer: replies closed\n")
 			return
 		}
+
+		// In error cases drain replies until reader closes replies
+
 		if reply.err != nil {
-			dmx.serve.ReportError(reply.err)
 			continue
 		}
-
 		if err := wf(dmx.out, reply.rep); err != nil {
-			dmx.serve.ReportError(err)
+			db.DPrintf(db.DEMUXSRV, "wf reply %v error %v\n", reply, err)
 			continue
 		}
 		if err := dmx.out.Flush(); err != nil {
-			dmx.serve.ReportError(err)
+			db.DPrintf(db.DEMUXSRV, "Flush reply %v err %v\n", reply, err)
+			continue
 		}
 	}
 }

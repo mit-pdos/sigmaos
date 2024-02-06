@@ -68,17 +68,17 @@ func (c *NetSrvConn) Close() error {
 }
 
 func (c *NetSrvConn) IsClosed() bool {
-	db.DPrintf(db.NETSRV, "IsClosed %v\n", c)
+	db.DPrintf(db.NETSRV, "IsClosed %v\n", c.sessid)
 	return c.dmx.IsClosed()
 }
 
 func (c *NetSrvConn) CloseConnTest() error {
-	db.DPrintf(db.CRASH, "CloseConnTest %v\n", c)
+	db.DPrintf(db.CRASH, "CloseConnTest: close conn for sid %v\n", c.sessid)
 	return c.conn.Close()
 }
 
 func (c *NetSrvConn) ReportError(err error) {
-	db.DPrintf(db.NETSRV, "ReportError %v %v\n", c, err)
+	db.DPrintf(db.NETSRV, "ReportError %v %v\n", c.sessid, err)
 	c.sesssrv.ReportError(c, err)
 }
 

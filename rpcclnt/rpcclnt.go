@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -94,6 +95,24 @@ func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 	return NewRPCClntCh(ch), nil
 }
 
+// return the blob in Blob message, if this message contains a Blob message
+func hasBlob(msg proto.Message) []byte {
+	var blob []byte
+	msg.ProtoReflect().Range(func(f protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		if f.Kind() == protoreflect.MessageKind {
+			if m := f.Message(); m.FullName() == "Blob" {
+				if field := f.Message().Fields().ByName("data"); field != nil {
+					blob = v.Message().Get(field).Bytes()
+				}
+				// v.Message().Clear(field)
+				return false
+			}
+		}
+		return true
+	})
+	return blob
+}
+
 func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 	req := rpcproto.Request{Method: method, Args: a}
 	b, err := proto.Marshal(&req)
@@ -120,6 +139,9 @@ func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
 }
 
 func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
+	if blob := hasBlob(arg); blob != nil {
+		db.DPrintf(db.TEST, "method %v blob %d\n", method, len(blob))
+	}
 	b, err := proto.Marshal(arg)
 	if err != nil {
 		return err

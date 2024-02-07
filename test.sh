@@ -94,7 +94,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap proxy reader writer stats fslib semclnt electclnt fslib memfs named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt www fslibsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks; do
+    for T in path intervals serr linuxsched perf sigmap sessclnt proxy reader writer stats fslib semclnt electclnt fslib memfs named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www fslibsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks; do
         go test $VERB sigmaos/$T --run TestCompile
     done
 fi
@@ -109,6 +109,13 @@ if [[ $BASIC == "--basic" ]]; then
         go test $VERB sigmaos/$T
         cleanup
     done
+
+    #
+    # test sessions
+    #
+    
+    go test $VERB sigmaos/sessclnt
+    cleanup
 
     #
     # test proxy with just named
@@ -138,7 +145,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp sessclnt cachedsvcclnt; do
+    for T in named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt; do
         go test $VERB sigmaos/$T -start $GVISOR  $SIGMACLNTD $REUSEKERNEL
         cleanup
     done

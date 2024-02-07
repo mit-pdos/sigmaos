@@ -1,11 +1,13 @@
+// The sesssrv package dispatches incoming calls on a session to a
+// protsrv for that session.  The clients on a session share an fid
+// table.
 package sesssrv
 
 import (
-	"fmt"
-
 	"sigmaos/clntcond"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
+	"sigmaos/demux"
 	"sigmaos/dir"
 	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
@@ -24,9 +26,6 @@ import (
 	"sigmaos/watch"
 )
 
-//
-// There is one SessSrv per server. The SessSrv has one protsrv per
-// session (i.e., TCP connection).
 //
 // SessSrv has a table with all sess conds in use so that it can
 // unblock threads that are waiting in a sess cond when a session
@@ -69,7 +68,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProt
 
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
-	ssrv.srv = netsrv.NewNetServer(pe, ssrv, addr, spcodec.WriteFcallAndData, spcodec.ReadUnmarshalFcallAndData)
+	ssrv.srv = netsrv.NewNetServer(pe, ssrv, addr, spcodec.ReadCall, spcodec.WriteCall)
 	ssrv.sm = NewSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv
@@ -150,16 +149,15 @@ func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tses
 	return ssrv.dirover, ctx.NewCtx(uname, sessid, clntid, ssrv.sct, ssrv.fencefs)
 }
 
-// New session or new connection for existing session
-func (ssrv *SessSrv) Register(sid sessp.Tsession, conn sps.Conn) *serr.Err {
-	db.DPrintf(db.SESSSRV, "Register sid %v %v\n", sid, conn)
-	sess := ssrv.st.Alloc(sid)
-	return sess.SetConn(conn)
+func (ssrv *SessSrv) GetSessionTable() *SessionTable {
+	return ssrv.st
 }
 
-// Disassociate a connection with a session, and let it close gracefully.
-func (ssrv *SessSrv) Unregister(sid sessp.Tsession, conn sps.Conn) {
-	// If this connection hasn't been associated with a session yet, return.
+func (ssrv *SessSrv) ReportError(conn sps.Conn, err error) {
+	db.DPrintf(db.SESSSRV, "ReportError %v err %v\n", conn, err)
+
+	// Disassociate a connection with a session, and let it close gracefully.
+	sid := conn.GetSessId()
 	if sid == sessp.NoSession {
 		return
 	}
@@ -167,54 +165,35 @@ func (ssrv *SessSrv) Unregister(sid sessp.Tsession, conn sps.Conn) {
 	sess.UnsetConn(conn)
 }
 
-func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *serr.Err {
-	ssrv.qlen.Inc(1)
-	s := sessp.Tsession(fc.Fc.Session)
-	_, ok := ssrv.st.Lookup(s)
-	// Server-generated heartbeats will have session number 0. Pass them through.
-	if !ok && s != 0 {
-		db.DPrintf(db.ERROR, "SrvFcall: no session %v for req %v", s, fc)
-		return serr.NewErrError(fmt.Errorf("Error: no session %v for req %v", s, fc))
-	}
-	// If the fcall is a server-generated heartbeat, it won't block;
-	// don't start a new thread.
-	if s == 0 {
-		ssrv.srvfcall(fc)
-	} else {
-		go func() {
-			ssrv.srvfcall(fc)
-		}()
-	}
-	return nil
+// Calls from netsrv
+func (ss *SessSrv) ServeRequest(conn sps.Conn, fc demux.CallI) (demux.CallI, *serr.Err) {
+	return ss.srvFcall(conn, fc.(*sessp.FcallMsg)), nil
 }
 
-func (ssrv *SessSrv) sendReply(request *sessp.FcallMsg, reply *sessp.FcallMsg, sess *Session) {
-	db.DPrintf(db.SESSSRV, "sendReply req %v rep %v", request, reply)
-
-	// If a client sent the request (seqno != 0) (as opposed to an
-	// internally-generated detach or heartbeat), send reply.
-	if request.Fc.Seqno != 0 {
-		sess.SendConn(reply)
-	}
+// Serve server-generated fcalls.
+func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
+	s := sessp.Tsession(fc.Fc.Session)
+	sess := ssrv.st.Alloc(s)
+	return ssrv.serve(sess, fc)
 }
 
-func (ssrv *SessSrv) srvfcall(fc *sessp.FcallMsg) {
-	defer ssrv.qlen.Dec()
-	// If this was a server-generated heartbeat message, heartbeat all of the
-	// contained sessions, and then return immediately (no further processing is
-	// necessary).
+func (ssrv *SessSrv) srvFcall(conn sps.Conn, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	s := sessp.Tsession(fc.Fc.Session)
-	if s == 0 {
-		ssrv.st.ProcessHeartbeats(fc.Msg.(*sp.Theartbeat))
-		return
+	if conn.CondSet(s) != s {
+		db.DFatalf("Bad sid %v sess associated with conn %v\n", conn.GetSessId(), conn)
 	}
 	sess := ssrv.st.Alloc(s)
-	qlen := ssrv.QueueLen()
-	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
-	ssrv.serve(sess, fc)
+	sess.SetConn(conn)
+	return ssrv.serve(sess, fc)
 }
 
-func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) {
+func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
+	ssrv.qlen.Inc(1)
+	defer ssrv.qlen.Dec()
+
+	qlen := ssrv.QueueLen()
+	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
+
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
 	msg, data, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Data)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
@@ -226,7 +205,6 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) {
 
 	reply := sessp.NewFcallMsgReply(fc, msg)
 	reply.Data = data
-	ssrv.sendReply(fc, reply, sess)
 
 	switch op {
 	case TSESS_DEL:
@@ -237,6 +215,8 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) {
 		ssrv.st.AddLastClnt(clntid, sess.Sid)
 	case TSESS_NONE:
 	}
+
+	return reply
 }
 
 func (ssrv *SessSrv) PartitionClient(permanent bool) {

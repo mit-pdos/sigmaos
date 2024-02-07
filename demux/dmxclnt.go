@@ -1,109 +1,120 @@
+// The demux package multiplexes calls over a transport (e.g., TCP
+// connection, unix socket, etc.), and matches responses with requests
+// using the call's tag.
 package demux
 
 import (
 	"bufio"
+	"sync/atomic"
 
 	db "sigmaos/debug"
-	"sigmaos/frame"
-	"sigmaos/sessp"
-	// sp "sigmaos/sigmap"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 )
 
 type DemuxClntI interface {
 	ReportError(err error)
 }
 
-// DemuxClnt multiplexes RPCs on a single transport and
-// demultiplexes responses.
+type WriteCallF func(*bufio.Writer, CallI) *serr.Err
+
 type DemuxClnt struct {
-	out    *bufio.Writer
-	in     *bufio.Reader
-	seqno  sessp.Tseqno
-	rpcmap *rpcMap
-	rpcs   chan *rpc
-	clnti  DemuxClntI
+	out     *bufio.Writer
+	in      *bufio.Reader
+	callmap *callMap
+	calls   chan CallI
+	clnti   DemuxClntI
+	nwriter *atomic.Int64
 }
 
-func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, clnti DemuxClntI) *DemuxClnt {
-	dmx := &DemuxClnt{out, in, 0, newRpcMap(), make(chan *rpc), clnti}
-	go dmx.reader()
-	go dmx.writer()
+type reply struct {
+	rep CallI
+	err *serr.Err
+}
+
+func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, rf ReadCallF, wf WriteCallF, clnti DemuxClntI) *DemuxClnt {
+	dmx := &DemuxClnt{
+		out:     out,
+		in:      in,
+		callmap: newCallMap(),
+		calls:   make(chan CallI),
+		clnti:   clnti,
+		nwriter: new(atomic.Int64),
+	}
+	go dmx.reader(rf)
+	go dmx.writer(wf)
 	return dmx
 }
 
-func (dmx *DemuxClnt) writer() {
+func (dmx *DemuxClnt) writer(wf WriteCallF) {
 	for {
-		rpc, ok := <-dmx.rpcs
+		req, ok := <-dmx.calls
 		if !ok {
 			db.DPrintf(db.DEMUXCLNT, "writer: replies closed\n")
 			return
 		}
-		if err := frame.WriteSeqno(rpc.seqno, dmx.out); err != nil {
-			db.DPrintf(db.DEMUXCLNT, "WriteSeqno err %v\n", err)
-			dmx.reply(rpc.seqno, nil, serr.NewErr(serr.TErrUnreachable, err.Error()))
-			break
+
+		// In error cases, drain calls until SendReceive calls close
+		// on calls
+
+		if dmx.IsClosed() {
+			continue
 		}
-		if err := frame.WriteFrame(dmx.out, rpc.request); err != nil {
-			db.DPrintf(db.DEMUXCLNT, "WriteFrame err %v\n", err)
-			dmx.reply(rpc.seqno, nil, serr.NewErr(serr.TErrUnreachable, err.Error()))
-			break
+		if err := wf(dmx.out, req); err != nil {
+			db.DPrintf(db.DEMUXCLNT, "wf req %v error %v\n", req, err)
+			continue
 		}
-		if error := dmx.out.Flush(); error != nil {
-			db.DPrintf(db.DEMUXCLNT, "Flush error %v\n", error)
-			dmx.reply(rpc.seqno, nil, serr.NewErr(serr.TErrUnreachable, error.Error()))
+		if err := dmx.out.Flush(); err != nil {
+			db.DPrintf(db.DEMUXCLNT, "Flush req %v err %v\n", req, err)
+			continue
 		}
 	}
 }
 
-func (dmx *DemuxClnt) reply(seqno sessp.Tseqno, reply []byte, err error) {
-	rpc, last := dmx.rpcmap.remove(seqno)
-	if rpc == nil {
-		db.DFatalf("Remove err %v\n", seqno)
+func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
+	if ch, ok := dmx.callmap.remove(tag); ok {
+		ch <- reply{rep, err}
+	} else {
+		db.DFatalf("reply remove missing %v\n", tag)
 	}
-	if last {
-		close(dmx.rpcs)
-	}
-	rpc.reply = reply
-	rpc.ch <- err
 }
 
-func (dmx *DemuxClnt) reader() {
+func (dmx *DemuxClnt) reader(rf ReadCallF) {
 	for {
-		seqno, err := frame.ReadSeqno(dmx.in)
+		c, err := rf(dmx.in)
 		if err != nil {
-			dmx.clnti.ReportError(err)
+			db.DPrintf(db.DEMUXCLNT, "reader rf err %v\n", err)
+			dmx.callmap.close()
 			break
 		}
-		reply, err := frame.ReadFrame(dmx.in)
-		if err != nil {
-			dmx.clnti.ReportError(err)
-			break
-		}
-		db.DPrintf(db.DEMUXCLNT, "reader: reply %v\n", seqno)
-		dmx.reply(seqno, reply, nil)
+		dmx.reply(c.Tag(), c, nil)
 	}
-	for _, s := range dmx.rpcmap.outstanding() {
-		dmx.reply(s, nil, serr.NewErr(serr.TErrUnreachable, "dmxclnt"))
+	for _, t := range dmx.callmap.outstanding() {
+		db.DPrintf(db.DEMUXCLNT, "reader fail %v\n", t)
+		dmx.reply(t, nil, serr.NewErr(serr.TErrUnreachable, "reader"))
 	}
+
 }
 
-func (dmx *DemuxClnt) SendReceive(a []byte) ([]byte, error) {
-	seqp := &dmx.seqno
-	s := seqp.Next()
-	rpc := &rpc{request: a, seqno: s, ch: make(chan error)}
-	if err := dmx.rpcmap.put(s, rpc); err != nil {
-		db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue err %v\n", err)
+func (dmx *DemuxClnt) SendReceive(req CallI) (CallI, *serr.Err) {
+	ch := make(chan reply)
+	if err := dmx.callmap.put(req.Tag(), ch); err != nil {
+		db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue req %v err %v\n", req, err)
 		return nil, err
 	}
-	db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue %v\n", rpc)
-	dmx.rpcs <- rpc
-	err := <-rpc.ch
-	db.DPrintf(db.DEMUXCLNT, "SendReceive: return %v %v\n", rpc, err)
-	return rpc.reply, err
+	dmx.nwriter.Add(1)
+	dmx.calls <- req
+	rep := <-ch
+	if dmx.nwriter.Add(-1) == 0 && dmx.callmap.isClosed() {
+		close(dmx.calls)
+	}
+	return rep.rep, rep.err
 }
 
 func (dmx *DemuxClnt) Close() error {
-	dmx.rpcmap.close()
-	return nil
+	return dmx.callmap.close()
+}
+
+func (dmx *DemuxClnt) IsClosed() bool {
+	return dmx.callmap.isClosed()
 }

@@ -1,344 +1,229 @@
 package sessclnt_test
 
 import (
-	"strconv"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/groupmgr"
-	"sigmaos/kvgrp"
+	"sigmaos/demux"
+	"sigmaos/dir"
+	"sigmaos/ephemeralmap"
+	"sigmaos/memfs"
+	"sigmaos/netsrv"
+	"sigmaos/path"
 	"sigmaos/proc"
+	"sigmaos/protsrv"
 	"sigmaos/rand"
-	"sigmaos/semclnt"
 	"sigmaos/serr"
-	"sigmaos/sessstatesrv"
-	"sigmaos/sigmaclnt"
+	"sigmaos/sessclnt"
+	"sigmaos/sessp"
+	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
-	"sigmaos/test"
+	"sigmaos/sigmaprotsrv"
+	"sigmaos/spcodec"
 )
 
-const (
-	CRASH     = 1000
-	PARTITION = 200
-	NETFAIL   = 200
-	NTRIALS   = "3001"
-	GRP       = "grp-0"
-)
-
-type Tstate struct {
-	*test.Tstate
-	grp string
-	gm  *groupmgr.GroupMgr
-	job string
+type SessSrv struct {
+	crash int
 }
 
-func newTstate(t1 *test.Tstate, ncrash, crash, partition, netfail int) *Tstate {
-	ts := &Tstate{job: rand.String(4), grp: GRP}
-	ts.Tstate = t1
-	ts.MkDir(kvgrp.KVDIR, 0777)
-	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
-	assert.Nil(t1.T, err)
-	mcfg := groupmgr.NewGroupConfig(0, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, 0, ts.job)
-	mcfg.SetTest(crash, partition, netfail)
-	ts.gm = mcfg.StartGrpMgr(ts.SigmaClnt, ncrash)
-	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
-	assert.Nil(t1.T, err)
-	db.DPrintf(db.TEST, "cfg %v\n", cfg)
+func (ss *SessSrv) ReportError(conn sigmaprotsrv.Conn, err error) {
+	db.DPrintf(db.TEST, "Server ReportError sid %v err %v\n", conn.GetSessId(), err)
+}
+
+func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.CallI, *serr.Err) {
+	fcm := req.(*sessp.FcallMsg)
+	qid := sp.NewQidPerm(0777, 0, 0)
+	if fcm.Type() == sessp.TTwatch {
+		time.Sleep(1 * time.Second)
+		conn.CloseConnTest()
+		msg := &sp.Ropen{Qid: qid}
+		rep := sessp.NewFcallMsgReply(fcm, msg)
+		return rep, nil
+	} else {
+		msg := &sp.Rattach{Qid: qid}
+		rep := sessp.NewFcallMsgReply(fcm, msg)
+		r := rand.Int64(100)
+		if r < uint64(ss.crash) {
+			conn.CloseConnTest()
+		}
+		return rep, nil
+	}
+}
+
+type Tstate struct {
+	T    *testing.T
+	lip  sp.Tip
+	pcfg *proc.ProcEnv
+	addr *sp.Taddr
+}
+
+func newTstate(t *testing.T) *Tstate {
+	lip := sp.Tip("127.0.0.1")
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, lip, lip, lip, "", false, false)
+	pcfg.Program = "srv"
+	pcfg.SetUname("srv")
+	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
+	proc.SetSigmaDebugPid(pcfg.GetPID().String())
+	return &Tstate{T: t, lip: lip, pcfg: pcfg, addr: addr}
+}
+
+type TstateSrv struct {
+	*Tstate
+	srv  *netsrv.NetServer
+	clnt *sessclnt.Mgr
+}
+
+func newTstateSrv(t *testing.T, crash int) *TstateSrv {
+	ts := &TstateSrv{Tstate: newTstate(t)}
+	ss := &SessSrv{crash}
+	ts.srv = netsrv.NewNetServer(ts.pcfg, ss, ts.addr, spcodec.ReadCall, spcodec.WriteCall)
+	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
+	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts
 }
 
-func TestCompile(t *testing.T) {
+func TestConnectSessSrv(t *testing.T) {
+	ts := newTstateSrv(t, 0)
+	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+	ts.srv.CloseListener()
 }
 
-// Server crashes storing a semaphore. The test's down() will return a
-// not-found for the semaphore, which is interpreted as a successful
-// down by the semclnt.
-func TestServerCrash(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts := newTstate(t1, 1, CRASH, 0, 0)
-
-	sem := semclnt.NewSemClnt(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
-	err := sem.Init(0)
+func TestDisconnectSessSrv(t *testing.T) {
+	ts := newTstateSrv(t, 0)
+	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "Sem %v", kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
-
-	ch := make(chan error)
+	ch := make(chan *serr.Err)
 	go func() {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := sigmaclnt.NewFsLib(pcfg)
-		assert.Nil(t, err)
-		sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
-		err = sem.Down()
+		req := sp.NewTwatch(sp.NoFid)
+		_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 		ch <- err
 	}()
-
-	err = <-ch
-	assert.Nil(ts.T, err, "down")
-
-	ts.gm.StopGroup()
-
-	ts.Shutdown()
+	time.Sleep(1 * time.Second)
+	r := <-ch
+	assert.NotNil(t, r)
+	ts.srv.CloseListener()
 }
 
-func BurstProc(n int, f func(chan error)) error {
-	ch := make(chan error)
-	for i := 0; i < n; i++ {
-		go f(ch)
-	}
-	var err error
-	for i := 0; i < n; i++ {
-		r := <-ch
-		if r != nil && err != nil {
-			err = r
-		}
-	}
-	return err
-}
-
-func TestProcManyOK(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	a := proc.NewProc("proctest", []string{NTRIALS, "sleeper", "1us", ""})
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.GetPid())
-	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.GetPid())
-	assert.Nil(t, err, "waitexit")
-	assert.True(t, status.IsStatusOK(), status)
-	ts.Shutdown()
-}
-
-func TestProcCrashMany(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	a := proc.NewProc("proctest", []string{NTRIALS, "crash"})
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.GetPid())
-	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.GetPid())
-	assert.Nil(t, err, "waitexit")
-	assert.True(t, status.IsStatusOK(), status)
-	ts.Shutdown()
-}
-
-func TestProcPartitionMany(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	a := proc.NewProc("proctest", []string{NTRIALS, "partition"})
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.GetPid())
-	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.GetPid())
-	assert.Nil(t, err, "waitexit")
-	if assert.NotNil(t, status, "nil status") {
-		assert.True(t, status.IsStatusOK(), status)
-	}
-	ts.Shutdown()
-}
-
-func TestReconnectSimple(t *testing.T) {
-	const N = 10
-	t1, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts := newTstate(t1, 0, 0, 0, NETFAIL)
-
-	ch := make(chan error)
-	go func() {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl, err := sigmaclnt.NewFsLib(pcfg)
-		assert.Nil(t, err)
-		for i := 0; i < N; i++ {
-			_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
-			if err != nil {
-				ch <- err
-				return
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-		ch <- nil
-	}()
-
-	err := <-ch
-	assert.Nil(ts.T, err, "fsl1")
-
-	ts.gm.StopGroup()
-	ts.Shutdown()
-}
-
-func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
-	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-	fsl, err := sigmaclnt.NewFsLib(pcfg)
-	assert.Nil(t, err)
-	for true {
-		_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
-		if err != nil {
-			db.DPrintf(db.TEST, "Stat %d err %v", i, err)
-			ch <- err
-			break
-		}
-	}
-	db.DPrintf(db.TEST, "Client %v %v done", fsl.ClntId(), i)
-	fsl.Close()
-}
-
-func TestServerPartitionNonBlockingSimple(t *testing.T) {
-	const N = 3
-
-	t1, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts := newTstate(t1, 0, 0, PARTITION, 0)
-	ch := make(chan error)
-	for i := 0; i < N; i++ {
-		go ts.stat(t, i, ch)
-		err := <-ch
-		assert.NotNil(ts.T, err, "stat")
-	}
-	db.DPrintf(db.TEST, "Stopping group")
-	ts.gm.StopGroup()
-	ts.Shutdown()
-}
-
-func TestServerPartitionNonBlockingConcur(t *testing.T) {
-	const N = sessstatesrv.NLAST
-
-	t1, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts := newTstate(t1, 0, 0, PARTITION, 0)
-	ch := make(chan error)
-	for i := 0; i < N; i++ {
-		go ts.stat(t, i, ch)
-	}
-	for i := 0; i < N; i++ {
-		err := <-ch
-		assert.NotNil(ts.T, err, "stat")
-	}
-	db.DPrintf(db.TEST, "Stopping group")
-	ts.gm.StopGroup()
-	ts.Shutdown()
-}
-
-func TestServerPartitionBlocking(t *testing.T) {
-	const N = 10
-
-	t1, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts := newTstate(t1, 0, 0, PARTITION, 0)
-
-	for i := 0; i < N; i++ {
-		ch := make(chan error)
-		go func(i int) {
-			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-			fsl, err := sigmaclnt.NewFsLib(pcfg)
-			assert.Nil(t, err)
-			sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
-			sem.Init(0)
-			err = sem.Down()
-			ch <- err
-			fsl.Close()
-		}(i)
-
-		err := <-ch
-		assert.NotNil(ts.T, err, "down")
-	}
-	ts.gm.StopGroup()
-	ts.Shutdown()
-}
-
-const (
-	FILESZ  = 50 * sp.MBYTE
-	WRITESZ = 4096
-)
-
-func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
-	fsl, err := sigmaclnt.NewFsLib(pcfg)
-	assert.Nil(t, err)
-	fn := sp.UX + "~local/file-" + string(pcfg.GetUname())
-	stop := false
-	nfile := 0
-	for !stop {
-		select {
-		case <-ch:
-			stop = true
-		default:
-			if err := fsl.Remove(fn); serr.IsErrCode(err, serr.TErrUnreachable) {
-				break
-			}
-			w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
-			if err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
-				break
-			}
-			nfile += 1
-			buf := test.NewBuf(WRITESZ)
-			if err := test.Writer(t, w, buf, FILESZ); err != nil {
-				break
-			}
-			if err := w.Close(); err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
-				break
-			}
-		}
-	}
-	assert.True(t, nfile >= 3) // a bit arbitrary
-	fsl.Remove(fn)
-}
-
-func TestWriteCrash(t *testing.T) {
+func testManyClients(t *testing.T, crash int) {
 	const (
-		N        = 20
-		NCRASH   = 5
-		CRASHSRV = 1000000
+		NCLNT = 50
 	)
-
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
+	ts := newTstateSrv(t, crash)
+	ch := make(chan bool)
+	for i := 0; i < NCLNT; i++ {
+		go func(i int) {
+			for j := 0; true; j++ {
+				select {
+				case <-ch:
+					ch <- true
+					break
+				default:
+					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, "clnt", sp.TclntId(i), path.Path{})
+					_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+					if err != nil && crash > 0 && serr.IsErrCode(err, serr.TErrUnreachable) {
+						// wait for stop signal
+						<-ch
+						ch <- true
+						break
+					}
+					assert.True(t, err == nil)
+				}
+			}
+		}(i)
 	}
-	ch := make(chan error)
 
+	time.Sleep(1 * time.Second)
+
+	for i := 0; i < NCLNT; i++ {
+		ch <- true
+		<-ch
+	}
+	ts.srv.CloseListener()
+}
+
+func TestManyClientsOK(t *testing.T) {
+	testManyClients(t, 0)
+}
+
+func TestManyClientsCrash(t *testing.T) {
+	const (
+		N     = 20
+		CRASH = 10
+	)
 	for i := 0; i < N; i++ {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		go writer(ts.T, ch, pcfg)
+		db.DPrintf(db.TEST, "=== TestManyClientsCrash: %d\n", i)
+		testManyClients(t, CRASH)
 	}
+}
 
-	crashchan := make(chan bool)
-	l := &sync.Mutex{}
-	for i := 0; i < NCRASH; i++ {
-		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l, crashchan)
+type TstateSp struct {
+	*Tstate
+	srv  *sesssrv.SessSrv
+	clnt *sessclnt.Mgr
+}
+
+func newTstateSp(t *testing.T) *TstateSp {
+	ts := &TstateSp{}
+	ts.Tstate = newTstate(t)
+	et := ephemeralmap.NewEphemeralMap()
+	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
+	ts.srv = sesssrv.NewSessSrv(ts.pcfg, root, ts.addr, protsrv.NewProtServer, et, nil)
+	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
+	return ts
+}
+
+func (ts *TstateSp) shutdown() {
+	scs := ts.clnt.SessClnts()
+	for _, sc := range scs {
+		err := sc.Close()
+		assert.Nil(ts.T, err)
 	}
+}
 
-	for i := 0; i < NCRASH; i++ {
-		<-crashchan
-	}
+func TestConnectMfsSrv(t *testing.T) {
+	ts := newTstateSp(t)
+	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+	ts.srv.StopServing()
+}
 
-	for i := 0; i < N; i++ {
-		ch <- nil
-	}
+func TestDisconnectMfsSrv(t *testing.T) {
+	ts := newTstateSp(t)
+	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
 
-	ts.Shutdown()
+	sess, err := ts.clnt.LookupSessClnt(sp.Taddrs{ts.srv.MyAddr()})
+	assert.Nil(t, err)
+	assert.True(t, sess.IsConnected())
+
+	ssess, ok := ts.srv.GetSessionTable().Lookup(sess.SessId())
+	assert.True(t, ok)
+	assert.True(t, ssess.IsConnected())
+
+	// check if session isn't timed out
+	time.Sleep(3 * sp.Conf.Session.TIMEOUT)
+
+	assert.True(t, sess.IsConnected())
+
+	// client disconnects session
+	ts.shutdown()
+
+	assert.False(t, sess.IsConnected())
+
+	// allow server session to timeout
+	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
+
+	assert.False(t, sess.IsConnected())
 }

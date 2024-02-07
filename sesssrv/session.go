@@ -9,7 +9,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
-	"sigmaos/sessconn"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
@@ -106,26 +105,6 @@ func (sess *Session) Close() {
 	sess.close()
 }
 
-// If the conn is nil, a reply is not needed. Conn maybe be nil
-// because server closed session unilaterally.
-func (sess *Session) SendConn(fm *sessp.FcallMsg) {
-	var replies chan *sessconn.PartMarshaledMsg
-
-	sess.Lock()
-	if sess.conn != nil {
-		// Must get replies channel under lock. This ensures that the connection's
-		// WaitGroup is added to before the connection is closed, and ensures the
-		// replies channel isn't closed from under our feet.
-		replies = sess.conn.GetReplyChan()
-	}
-	sess.Unlock()
-
-	// If there was a connection associated with this session...
-	if replies != nil {
-		replies <- sessconn.NewPartMarshaledMsg(fm)
-	}
-}
-
 func (sess *Session) getClnts() []sp.TclntId {
 	cs := make([]sp.TclntId, 0, len(sess.clnts))
 	for c, _ := range sess.clnts {
@@ -170,16 +149,7 @@ func (sess *Session) unsetConnL(conn sps.Conn) {
 	conn.Close()
 }
 
-// Caller holds lock.
-func (sess *Session) heartbeatL(msg sessp.Tmsg) {
-	db.DPrintf(db.SESS_STATE_SRV, "Heartbeat sess %v msg %v %v", sess.Sid, msg.Type(), msg)
-	if sess.closed {
-		db.DFatalf("heartbeat %v on closed sess %v", msg, sess.Sid)
-	}
-	sess.lastHeartbeat = time.Now()
-}
-
-func (sess *Session) isConnected() bool {
+func (sess *Session) IsConnected() bool {
 	sess.Lock()
 	defer sess.Unlock()
 

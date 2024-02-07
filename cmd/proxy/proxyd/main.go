@@ -25,10 +25,10 @@ func main() {
 	// By default, proxy doesn't use overlays.
 	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
 	pcfg.Program = "proxy"
-	pcfg.SetPrincipal(&sp.Tprincipal{
-		ID:       "proxy",
-		TokenStr: proc.NOT_SET,
-	})
+	pcfg.SetPrincipal(sp.NewPrincipal(
+		sp.TprincipalID("proxy"),
+		sp.NO_TOKEN,
+	))
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 	netsrv.NewNetServer(pcfg, proxy.NewNpd(pcfg, lip), addr, npcodec.ReadCall, npcodec.WriteCall)

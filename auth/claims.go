@@ -16,10 +16,10 @@ const (
 var ALL_PATHS []string = []string{"*"}
 
 type ProcClaims struct {
-	PID string `json:"pid"`
+	PrincipalID string `json:"principal_id"`
 	//	PrincipalID  string   `json:"principal_id"`
 	AllowedPaths []string           `json:"allowed_paths"`
-	Secrets      map[string]*Secret `json:"secrets"` // XXX should secrets really be authenticated?
+	Secrets      map[string]*Secret `json:"secrets"`
 	jwt.StandardClaims
 }
 
@@ -30,7 +30,7 @@ func NewProcClaims(pe *proc.ProcEnv) *ProcClaims {
 		secrets[svc] = NewSecret(s.ID, s.Key)
 	}
 	return &ProcClaims{
-		PID:          pe.GetClaims().GetPID().String(),
+		PrincipalID:  pe.GetClaims().GetPrincipalID(),
 		AllowedPaths: pe.GetClaims().GetAllowedPaths(),
 		Secrets:      secrets,
 		StandardClaims: jwt.StandardClaims{
@@ -50,5 +50,5 @@ func (pc *ProcClaims) AddSecret(svc string, s *Secret) {
 }
 
 func (pc *ProcClaims) String() string {
-	return fmt.Sprintf("&{ PID:%v AllowedPaths:%v Secrets:%v }", pc.PID, pc.AllowedPaths, pc.Secrets)
+	return fmt.Sprintf("&{ PrincipalID:%v AllowedPaths:%v Secrets:%v }", pc.PrincipalID, pc.AllowedPaths, pc.Secrets)
 }

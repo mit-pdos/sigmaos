@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"runtime/debug"
-	"strconv"
 	"strings"
 	"time"
 
@@ -98,9 +97,9 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Overlays:            overlays,
 			UseSigmaclntd:       useSigmaclntd,
 			Claims: &ProcClaimsProto{
-				PidStr:       string(pid),
-				AllowedPaths: nil, // By default, will be set to the parent's AllowedPaths unless otherwise specified
-				Secrets:      nil, // By default, will be set to the parent's Secrets unless otherwise specified
+				PrincipalIDStr: principal.ID,
+				AllowedPaths:   nil, // By default, will be set to the parent's AllowedPaths unless otherwise specified
+				Secrets:        nil, // By default, will be set to the parent's Secrets unless otherwise specified
 			},
 		},
 	}
@@ -160,7 +159,7 @@ func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetPrincipal(&sp.Tprincipal{
-		ID:       pe.GetPrincipal().ID + "-clnt-" + strconv.Itoa(idx),
+		ID:       pe.GetPrincipal().ID,
 		TokenStr: pe.GetPrincipal().TokenStr,
 	})
 	return pe2
@@ -195,7 +194,6 @@ func (pe *ProcEnvProto) SetAllowedPaths(paths []string) {
 
 func (pe *ProcEnvProto) SetPID(pid sp.Tpid) {
 	pe.PidStr = string(pid)
-	pe.Claims.PidStr = string(pid)
 }
 
 func (pe *ProcEnvProto) SetInnerContainerIP(ip sp.Tip) {
@@ -233,6 +231,7 @@ func (pe *ProcEnvProto) SetRealm(realm sp.Trealm, overlays bool) {
 
 func (pe *ProcEnvProto) SetPrincipal(principal *sp.Tprincipal) {
 	pe.Principal = principal
+	pe.Claims.PrincipalIDStr = principal.ID
 }
 
 func (pe *ProcEnvProto) SetUprocdPID(pid sp.Tpid) {

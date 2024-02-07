@@ -21,6 +21,9 @@ const (
 	REALM1 sp.Trealm = "testrealm1"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestSignHMACToken(t *testing.T) {
 	// TODO: generate key properly
 	var hmacSecret []byte = []byte("PDOS")
@@ -28,7 +31,7 @@ func TestSignHMACToken(t *testing.T) {
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
-		PID:          "my-pid",
+		PrincipalID:  "my-principal",
 		AllowedPaths: []string{"/*"},
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: 15000, // TODO: how to set these properly?
@@ -47,7 +50,7 @@ func TestVerifyHMACToken(t *testing.T) {
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
-		PID:          "my-pid",
+		PrincipalID:  "my-principal",
 		AllowedPaths: []string{"/*"},
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
@@ -149,6 +152,10 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	assert.Nil(t, err)
 	// Create a new sigma clnt
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	pe.SetPrincipal(&sp.Tprincipal{
+		ID:       "scoped-down-principal",
+		TokenStr: proc.NOT_SET,
+	})
 	// Clear AWS secrets
 	pe.SetSecrets(map[string]*proc.ProcSecretProto{})
 	pc := auth.NewProcClaims(pe)
@@ -169,7 +176,7 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
 	sts, err = sc1.GetDir(path.Join(sp.S3, "~local", "9ps3"))
-	assert.NotNil(t, err)
+	assert.NotNil(t, err, "Successfully got dir. \n\tPE: %v\n\tPC: %v", sc1.ProcEnv(), pc)
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
 	sts, err = rootts.GetDir(path.Join(sp.S3, "~local", "9ps3"))

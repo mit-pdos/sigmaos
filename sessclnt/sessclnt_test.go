@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/auth"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/demux"
@@ -56,19 +57,38 @@ func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.
 
 type Tstate struct {
 	T    *testing.T
-	lip  sp.Tip
-	pcfg *proc.ProcEnv
+	pe   *proc.ProcEnv
 	addr *sp.Taddr
 }
 
-func newTstate(t *testing.T) *Tstate {
-	lip := sp.Tip("127.0.0.1")
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, lip, lip, lip, "", false, false)
-	pcfg.Program = "srv"
-	pcfg.SetUname("srv")
+func newTstate(t *testing.T) (*Tstate, error) {
+	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
+	if err1 != nil {
+		return nil, err1
+	}
+	s3secrets, err1 := auth.GetAWSSecrets()
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
+		return nil, err1
+	}
+	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.LOCALHOST, sp.LOCALHOST, sp.LOCALHOST, "", false, false)
+	pe.Program = "srv"
+	proc.SetSigmaDebugPid(pe.GetPID().String())
+	pc := auth.NewProcClaims(pe)
+	token, err1 := as.NewToken(pc)
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error NewToken: %v", err1)
+		return nil, err1
+	}
+	pe.SetToken(token)
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-	return &Tstate{T: t, lip: lip, pcfg: pcfg, addr: addr}
+	proc.SetSigmaDebugPid(pe.GetPID().String())
+	return &Tstate{
+		T:    t,
+		pe:   pe,
+		addr: addr,
+	}, nil
 }
 
 type TstateSrv struct {
@@ -77,18 +97,25 @@ type TstateSrv struct {
 	clnt *sessclnt.Mgr
 }
 
-func newTstateSrv(t *testing.T, crash int) *TstateSrv {
-	ts := &TstateSrv{Tstate: newTstate(t)}
+func newTstateSrv(t *testing.T, crash int) (*TstateSrv, error) {
+	tsi, err := newTstate(t)
+	if err != nil {
+		return nil, err
+	}
+	ts := &TstateSrv{Tstate: tsi}
 	ss := &SessSrv{crash}
-	ts.srv = netsrv.NewNetServer(ts.pcfg, ss, ts.addr, spcodec.ReadCall, spcodec.WriteCall)
+	ts.srv = netsrv.NewNetServer(ts.pe, ss, ts.addr, spcodec.ReadCall, spcodec.WriteCall)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
-	return ts
+	return ts, nil
 }
 
 func TestConnectSessSrv(t *testing.T) {
-	ts := newTstateSrv(t, 0)
-	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	ts, err1 := newTstateSrv(t, 0)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	req := sp.NewTattach(0, sp.NoFid, ts.pe.GetPrincipal(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
@@ -96,8 +123,12 @@ func TestConnectSessSrv(t *testing.T) {
 }
 
 func TestDisconnectSessSrv(t *testing.T) {
-	ts := newTstateSrv(t, 0)
-	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	ts, err1 := newTstateSrv(t, 0)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	req := sp.NewTattach(0, sp.NoFid, ts.pe.GetPrincipal(), 0, path.Path{})
 	_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	ch := make(chan *serr.Err)
@@ -116,7 +147,10 @@ func testManyClients(t *testing.T, crash int) {
 	const (
 		NCLNT = 50
 	)
-	ts := newTstateSrv(t, crash)
+	ts, err1 := newTstateSrv(t, crash)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 	ch := make(chan bool)
 	for i := 0; i < NCLNT; i++ {
 		go func(i int) {
@@ -126,7 +160,7 @@ func testManyClients(t *testing.T, crash int) {
 					ch <- true
 					break
 				default:
-					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, "clnt", sp.TclntId(i), path.Path{})
+					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.pe.GetPrincipal(), sp.TclntId(i), path.Path{})
 					_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 					if err != nil && crash > 0 && serr.IsErrCode(err, serr.TErrUnreachable) {
 						// wait for stop signal
@@ -170,14 +204,19 @@ type TstateSp struct {
 	clnt *sessclnt.Mgr
 }
 
-func newTstateSp(t *testing.T) *TstateSp {
+func newTstateSp(t *testing.T) (*TstateSp, error) {
+	tsi, err := newTstate(t)
+	if err != nil {
+		return nil, err
+	}
 	ts := &TstateSp{}
-	ts.Tstate = newTstate(t)
+	ts.Tstate = tsi
 	et := ephemeralmap.NewEphemeralMap()
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sesssrv.NewSessSrv(ts.pcfg, root, ts.addr, protsrv.NewProtServer, et, nil)
+	// XXX is name/ correct for srv path?
+	ts.srv = sesssrv.NewSessSrv(ts.pe, "name/", root, ts.addr, protsrv.NewProtServer, et, nil)
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
-	return ts
+	return ts, nil
 }
 
 func (ts *TstateSp) shutdown() {
@@ -189,8 +228,11 @@ func (ts *TstateSp) shutdown() {
 }
 
 func TestConnectMfsSrv(t *testing.T) {
-	ts := newTstateSp(t)
-	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	ts, err1 := newTstateSp(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	req := sp.NewTattach(0, sp.NoFid, ts.pe.GetPrincipal(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
@@ -198,8 +240,11 @@ func TestConnectMfsSrv(t *testing.T) {
 }
 
 func TestDisconnectMfsSrv(t *testing.T) {
-	ts := newTstateSp(t)
-	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	ts, err1 := newTstateSp(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	req := sp.NewTattach(0, sp.NoFid, ts.pe.GetPrincipal(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)

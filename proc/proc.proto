@@ -10,7 +10,7 @@ message ProcSecretProto {
 }
 
 message ProcClaimsProto {
-  string pidStr = 1;
+  string principalIDStr = 1;
   repeated string allowedPaths = 2;
   map<string, ProcSecretProto> secrets = 3;
 }

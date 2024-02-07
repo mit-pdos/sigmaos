@@ -118,7 +118,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetPrincipal(principal)
 	// Allow all paths for boot env
-	pe.SetAllowedPaths([]string{"*"})
+	pe.SetAllowedPaths(sp.ALL_PATHS)
 	pe.Program = "kernel"
 	pe.SetPID(sp.GenPid(principal.GetID().String()))
 	pe.EtcdIP = string(etcdIP)
@@ -137,7 +137,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP
 	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), NOT_SET))
 	pe.SetSecrets(secrets)
 	// Allow all paths for boot env
-	pe.SetAllowedPaths([]string{"*"})
+	pe.SetAllowedPaths(sp.ALL_PATHS)
 	pe.SetPID(sp.GenPid("test"))
 	pe.SetRealm(realm, overlays)
 	pe.EtcdIP = string(etcdIP)

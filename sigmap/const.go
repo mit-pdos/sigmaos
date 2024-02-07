@@ -114,6 +114,8 @@ const (
 	NO_TOKEN        Ttoken       = "NO_TOKEN"
 )
 
+var ALL_PATHS []string = []string{"*"}
+
 func NoPrincipal() *Tprincipal {
 	return &Tprincipal{
 		IDStr:    NO_PRINCIPAL_ID.String(),

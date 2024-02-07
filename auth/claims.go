@@ -14,8 +14,6 @@ const (
 	ISSUER = "sigmaos"
 )
 
-var ALL_PATHS []string = []string{"*"}
-
 type ProcClaims struct {
 	PrincipalID sp.TprincipalID `json:"principal_id"`
 	//	PrincipalID  string   `json:"principal_id"`

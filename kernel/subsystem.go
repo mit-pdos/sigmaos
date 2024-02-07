@@ -88,7 +88,7 @@ func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.T
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	pc := auth.NewProcClaims(p.GetProcEnv())
-	pc.AllowedPaths = []string{"*"}
+	pc.AllowedPaths = auth.ALL_PATHS
 	token, err := k.as.NewToken(pc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewToken: %v", err)

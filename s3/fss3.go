@@ -24,7 +24,7 @@ var fss3 *Fss3
 type Fss3 struct {
 	*sigmasrv.SigmaSrv
 	mu      sync.Mutex
-	clients map[string]*s3.Client
+	clients map[sp.TprincipalID]*s3.Client
 }
 
 func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
@@ -33,13 +33,13 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 
 	var clnt *s3.Client
 	var ok bool
-	if clnt, ok = fss3.clients[ctx.Principal().ID]; ok {
+	if clnt, ok = fss3.clients[ctx.Principal().GetID()]; ok {
 		return clnt, nil
 	}
 	s3secrets, ok := ctx.Claims().GetSecrets()["s3"]
 	// If this principal doesn't carry any s3 secrets, return EPERM
 	if !ok {
-		return nil, serr.NewErr(serr.TErrPerm, fmt.Errorf("Principal %v has no S3 secrets", ctx.Principal().ID))
+		return nil, serr.NewErr(serr.TErrPerm, fmt.Errorf("Principal %v has no S3 secrets", ctx.Principal().GetID()))
 	}
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
@@ -53,13 +53,13 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 	clnt = s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 	})
-	fss3.clients[ctx.Principal().ID] = clnt
+	fss3.clients[ctx.Principal().GetID()] = clnt
 	return clnt, nil
 }
 
 func RunFss3(buckets []string) {
 	fss3 = &Fss3{
-		clients: make(map[string]*s3.Client),
+		clients: make(map[sp.TprincipalID]*s3.Client),
 	}
 	root := newDir("", path.Path{}, sp.DMDIR)
 	pe := proc.GetProcEnv()

@@ -12,8 +12,8 @@ message Tqid {
 };
 
 message Tprincipal {
-        string iD = 1;
-        string   tokenStr = 2;
+        string iDStr = 1;
+        string   tokenStr2 = 2;
 }
 
 message Stat {

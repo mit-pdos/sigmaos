@@ -108,4 +108,15 @@ const (
 	NO_PORT            Tport   = 0
 )
 
-var NO_PRINCIPAL *Tprincipal = &Tprincipal{ID: "NO_PRINCIPAL", TokenStr: "NOT_SET"}
+// Auth consts
+const (
+	NO_PRINCIPAL_ID TprincipalID = "NO_PRINCIPAL_ID"
+	NO_TOKEN        Ttoken       = "NO_TOKEN"
+)
+
+func NoPrincipal() *Tprincipal {
+	return &Tprincipal{
+		IDStr:     NO_PRINCIPAL_ID.String(),
+		TokenStr2: "NOT_SET",
+	}
+}

@@ -63,17 +63,21 @@ func (as *HMACAuthSrv) SetDelegatedProcToken(p *proc.Proc) error {
 	return nil
 }
 
-func (as *HMACAuthSrv) NewToken(pc *ProcClaims) (string, error) {
+func (as *HMACAuthSrv) NewToken(pc *ProcClaims) (sp.Ttoken, error) {
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, pc)
-	return token.SignedString(as.hmacSecret)
+	tstr, err := token.SignedString(as.hmacSecret)
+	if err != nil {
+		return sp.NO_TOKEN, err
+	}
+	return sp.Ttoken(tstr), err
 }
 
-func (as *HMACAuthSrv) VerifyTokenGetClaims(signedToken string) (*ProcClaims, error) {
+func (as *HMACAuthSrv) VerifyTokenGetClaims(signedToken sp.Ttoken) (*ProcClaims, error) {
 	// Parse the jwt, passing in a function to look up the key.
 	//
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-Parse-Hmac
-	token, err := jwt.ParseWithClaims(signedToken, &ProcClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(signedToken.String(), &ProcClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// Validate the alg is expected
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
@@ -95,28 +99,28 @@ func (as *HMACAuthSrv) VerifyTokenGetClaims(signedToken string) (*ProcClaims, er
 }
 
 func (as *HMACAuthSrv) IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error) {
-	db.DPrintf(db.AUTH, "Authorization check p %v", principal.ID)
-	pc, err := as.VerifyTokenGetClaims(principal.TokenStr)
+	db.DPrintf(db.AUTH, "Authorization check p %v", principal.GetID())
+	pc, err := as.VerifyTokenGetClaims(principal.GetToken())
 	if err != nil {
-		db.DPrintf(db.AUTH, "Token verification failed %v", principal.ID)
+		db.DPrintf(db.AUTH, "Token verification failed %v", principal.GetID())
 		return nil, false, fmt.Errorf("Token verification failed: %v", err)
 	}
-	if principal.ID != pc.PrincipalID {
-		db.DPrintf(db.AUTH, "Token & principal ID don't match ( %v != %v )", principal.ID, pc.PrincipalID)
+	if principal.GetID() != pc.PrincipalID {
+		db.DPrintf(db.AUTH, "Token & principal ID don't match ( %v != %v )", principal.GetID(), pc.PrincipalID)
 		return nil, false, fmt.Errorf("Mismatch between principal ID and token ID: %v", err)
 	}
 	// Check that the server path is a subpath of one of the allowed paths
 	for _, ap := range pc.AllowedPaths {
 		db.DPrintf(db.AUTH, "Check if %v is in %v subtree", as.srvpath, ap)
 		if as.srvpath == "" && ap == sp.NAMED {
-			db.DPrintf(db.AUTH, "Authorization check to named successful p %v claims %v", principal.ID, pc)
+			db.DPrintf(db.AUTH, "Authorization check to named successful p %v claims %v", principal.GetID(), pc)
 			return pc, true, nil
 		}
 		if IsInSubtree(as.srvpath, ap) {
-			db.DPrintf(db.AUTH, "Authorization check successful p %v claims %v", principal.ID, pc)
+			db.DPrintf(db.AUTH, "Authorization check successful p %v claims %v", principal.GetID(), pc)
 			return pc, true, nil
 		}
 	}
-	db.DPrintf(db.AUTH, "Authorization check failed (path not allowed) srvpath %v p %v claims %v", as.srvpath, principal.ID, pc)
+	db.DPrintf(db.AUTH, "Authorization check failed (path not allowed) srvpath %v p %v claims %v", as.srvpath, principal.GetID(), pc)
 	return nil, false, nil
 }

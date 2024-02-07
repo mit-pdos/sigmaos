@@ -29,7 +29,7 @@ func NewCtx(principal *sp.Tprincipal, claims *auth.ProcClaims, sessid sessp.Tses
 }
 
 func NewCtxNull() *Ctx {
-	return NewCtx(sp.NO_PRINCIPAL, nil, 0, sp.NoClntId, nil, nil)
+	return NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, nil)
 }
 
 func (ctx *Ctx) Principal() *sp.Tprincipal {

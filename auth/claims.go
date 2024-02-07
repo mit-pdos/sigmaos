@@ -7,6 +7,7 @@ import (
 	"github.com/golang-jwt/jwt"
 
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 var ALL_PATHS []string = []string{"*"}
 
 type ProcClaims struct {
-	PrincipalID string `json:"principal_id"`
+	PrincipalID sp.TprincipalID `json:"principal_id"`
 	//	PrincipalID  string   `json:"principal_id"`
 	AllowedPaths []string           `json:"allowed_paths"`
 	Secrets      map[string]*Secret `json:"secrets"`

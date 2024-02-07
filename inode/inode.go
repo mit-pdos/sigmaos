@@ -29,7 +29,7 @@ func NewInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 	i.mtime = time.Now().Unix()
 	i.parent = parent
 	if ctx == nil {
-		i.owner = sp.NO_PRINCIPAL
+		i.owner = sp.NoPrincipal()
 	} else {
 		i.owner = ctx.Principal()
 	}
@@ -101,6 +101,6 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	defer inode.mu.Unlock()
 
 	st := sp.NewStat(sp.NewQidPerm(inode.perm, 0, inode.inum),
-		inode.Mode(), uint32(inode.mtime), "", inode.owner.ID)
+		inode.Mode(), uint32(inode.mtime), "", inode.owner.GetID().String())
 	return st, nil
 }

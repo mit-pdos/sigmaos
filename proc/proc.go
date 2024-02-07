@@ -74,10 +74,10 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		program,
 		pid,
 		sp.Trealm(NOT_SET),
-		&sp.Tprincipal{
-			ID:       pid.String(),
-			TokenStr: NOT_SET,
-		},
+		sp.NewPrincipal(
+			sp.TprincipalID(pid.String()),
+			sp.NO_TOKEN,
+		),
 		procdir,
 		NOT_SET,
 		priv,
@@ -126,7 +126,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Net = parentPE.Net
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
-	p.ProcEnvProto.ParentTokenStr = parentPE.Principal.TokenStr
+	p.ProcEnvProto.ParentTokenStr = parentPE.Principal.GetToken().String()
 	// If parent didn't specify allowed paths, inherit the parent's allowed paths
 	if p.ProcEnvProto.Claims.AllowedPaths == nil {
 		p.ProcEnvProto.Claims.AllowedPaths = parentPE.Claims.AllowedPaths
@@ -141,12 +141,12 @@ func (p *Proc) SetAllowedPaths(paths []string) {
 	p.ProcEnvProto.SetAllowedPaths(paths)
 }
 
-func (p *Proc) SetToken(token string) {
+func (p *Proc) SetToken(token sp.Ttoken) {
 	p.ProcEnvProto.SetToken(token)
 }
 
-func (p *Proc) GetParentToken() string {
-	return p.ProcEnvProto.ParentTokenStr
+func (p *Proc) GetParentToken() sp.Ttoken {
+	return sp.Ttoken(p.ProcEnvProto.ParentTokenStr)
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {

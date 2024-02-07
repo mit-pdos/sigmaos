@@ -1,7 +1,9 @@
 package proc
 
-import ()
+import (
+	sp "sigmaos/sigmap"
+)
 
-func (pc *ProcClaimsProto) GetPrincipalID() string {
-	return pc.PrincipalIDStr
+func (pc *ProcClaimsProto) GetPrincipalID() sp.TprincipalID {
+	return sp.TprincipalID(pc.PrincipalIDStr)
 }

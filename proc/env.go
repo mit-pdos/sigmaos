@@ -97,7 +97,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Overlays:            overlays,
 			UseSigmaclntd:       useSigmaclntd,
 			Claims: &ProcClaimsProto{
-				PrincipalIDStr: principal.ID,
+				PrincipalIDStr: principal.GetID().String(),
 				AllowedPaths:   nil, // By default, will be set to the parent's AllowedPaths unless otherwise specified
 				Secrets:        nil, // By default, will be set to the parent's Secrets unless otherwise specified
 			},
@@ -107,7 +107,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 
 func NewProcEnvUnset(priv, overlays bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
-	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), &sp.Tprincipal{ID: NOT_SET}, NOT_SET, NOT_SET, priv, overlays, false)
+	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), sp.NoPrincipal(), NOT_SET, NOT_SET, priv, overlays, false)
 }
 
 func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
@@ -120,7 +120,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 	// Allow all paths for boot env
 	pe.SetAllowedPaths([]string{"*"})
 	pe.Program = "kernel"
-	pe.SetPID(sp.GenPid(principal.ID))
+	pe.SetPID(sp.GenPid(principal.GetID().String()))
 	pe.EtcdIP = string(etcdIP)
 	pe.InnerContainerIPStr = innerIP.String()
 	pe.OuterContainerIPStr = outerIP.String()
@@ -134,10 +134,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 
 func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
-	pe.SetPrincipal(&sp.Tprincipal{
-		ID:       "test",
-		TokenStr: NOT_SET,
-	})
+	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), NOT_SET))
 	pe.SetSecrets(secrets)
 	// Allow all paths for boot env
 	pe.SetAllowedPaths([]string{"*"})
@@ -158,10 +155,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP
 func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
-	pe2.SetPrincipal(&sp.Tprincipal{
-		ID:       pe.GetPrincipal().ID,
-		TokenStr: pe.GetPrincipal().TokenStr,
-	})
+	pe2.SetPrincipal(sp.NewPrincipal(pe.GetPrincipal().GetID(), pe.GetPrincipal().GetToken()))
 	return pe2
 }
 
@@ -169,10 +163,10 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, pe.Overlays)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetRealm(realm, pe.Overlays)
-	pe2.SetPrincipal(&sp.Tprincipal{
-		ID:       pe.GetPrincipal().ID + "-realm-" + realm.String(),
-		TokenStr: NOT_SET,
-	})
+	pe2.SetPrincipal(sp.NewPrincipal(
+		sp.TprincipalID(pe.GetPrincipal().GetID().String()+"-realm-"+realm.String()),
+		sp.NO_TOKEN,
+	))
 	return pe2
 }
 
@@ -184,8 +178,8 @@ func (pe *ProcEnvProto) SetSecrets(secrets map[string]*ProcSecretProto) {
 	pe.Claims.Secrets = secrets
 }
 
-func (pe *ProcEnvProto) SetToken(token string) {
-	pe.Principal.TokenStr = token
+func (pe *ProcEnvProto) SetToken(token sp.Ttoken) {
+	pe.Principal.SetToken(token)
 }
 
 func (pe *ProcEnvProto) SetAllowedPaths(paths []string) {
@@ -231,7 +225,7 @@ func (pe *ProcEnvProto) SetRealm(realm sp.Trealm, overlays bool) {
 
 func (pe *ProcEnvProto) SetPrincipal(principal *sp.Tprincipal) {
 	pe.Principal = principal
-	pe.Claims.PrincipalIDStr = principal.ID
+	pe.Claims.PrincipalIDStr = principal.GetID().String()
 }
 
 func (pe *ProcEnvProto) SetUprocdPID(pid sp.Tpid) {

@@ -53,7 +53,7 @@ func main() {
 		db.DFatalf("Failed to load AWS secrets %v", err)
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewBootProcEnv(&sp.Tprincipal{ID: param.KernelId, TokenStr: proc.NOT_SET}, secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
+	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelId), sp.NO_TOKEN), secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
 	if err1 != nil {

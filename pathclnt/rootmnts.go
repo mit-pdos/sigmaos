@@ -27,7 +27,7 @@ type RootMountTable struct {
 func newRootMountTable() *RootMountTable {
 	mt := &RootMountTable{}
 	mt.mounts = make(map[string]*RootMount)
-	mt.add(sp.NO_PRINCIPAL, nil, nil, sp.NAME)
+	mt.add(sp.NoPrincipal(), nil, nil, sp.NAME)
 	return mt
 }
 

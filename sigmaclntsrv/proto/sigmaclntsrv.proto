@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "sigmap/sigmap.proto";
 import "proc/proc.proto";
+import "rpc/proto/rpc.proto";
 
 option go_package = "sigmaos/sigmaclntsrv/proto";
 
@@ -49,7 +50,7 @@ message SigmaRenameRequest {
 }
 
 message SigmaDataReply {
-        bytes data = 1;
+        Blob blob = 1;
         Rerror err = 2;
 }
 
@@ -59,7 +60,7 @@ message SigmaPutFileRequest {
         uint32 mode = 3;
         uint64 offset = 4;
         uint64 leaseId = 5;
-        bytes data = 6;
+        Blob blob = 6;
 }
 
 message SigmaSizeReply {
@@ -74,8 +75,8 @@ message SigmaReadRequest {
 
 message SigmaWriteRequest {
         uint32 fd = 1;
-        bytes data = 2;
-        TfenceProto fence = 3;
+        TfenceProto fence = 2;
+        Blob blob = 3;
 }
 
 message SigmaSeekRequest {

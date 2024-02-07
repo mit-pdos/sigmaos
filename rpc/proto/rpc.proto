@@ -13,3 +13,9 @@ message Reply {
         bytes res = 1;
         Rerror err = 2;
 }
+
+// Users of rpc package can use Blob to pass data directly through to
+// the transport without marshaling it.
+message Blob {
+        bytes data = 1;
+}

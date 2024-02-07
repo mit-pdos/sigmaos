@@ -116,7 +116,7 @@ const (
 
 func NoPrincipal() *Tprincipal {
 	return &Tprincipal{
-		IDStr:     NO_PRINCIPAL_ID.String(),
-		TokenStr2: "NOT_SET",
+		IDStr:    NO_PRINCIPAL_ID.String(),
+		TokenStr: "NOT_SET",
 	}
 }

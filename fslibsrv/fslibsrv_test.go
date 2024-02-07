@@ -8,6 +8,7 @@ import (
 	"os"
 	gopath "path"
 	"strconv"
+	"syscall"
 	"testing"
 	"time"
 
@@ -29,9 +30,11 @@ import (
 )
 
 var pathname string // e.g., --path "name/ux/~local/"
+var withmarshal bool
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
+	flag.BoolVar(&withmarshal, "withmarshal", false, "With marshal?")
 }
 
 const (
@@ -215,50 +218,123 @@ func TestWriteSocketPerfSingle(t *testing.T) {
 }
 
 func TestWriteMarshalPerfSingle(t *testing.T) {
+	const (
+		FPATH = "/tmp/testfile"
+	)
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
+	err := os.Remove(FPATH)
+	assert.True(ts.T, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
+
+	fd, err := syscall.Open(FPATH, syscall.O_RDWR|syscall.O_CREAT|syscall.O_EXCL, uint32(0777))
+	assert.Nil(ts.T, err)
+	db.DPrintf(db.ALWAYS, "Fd: %v", fd)
+
 	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.WRITER.String())
 	assert.Nil(ts.T, err)
 	buf := test.NewBuf(FILESZ)
 	measure(p1, "marshal", func() sp.Tlength {
-		// Marshal the sigmaclnt RPC proto
-		req := &scproto.SigmaWriteRequest{Fd: uint32(0), Data: buf}
-		b, err := proto.Marshal(req)
-		assert.Nil(ts.T, err)
-		// Marshal the rpc package's proto
-		req2 := rpcproto.Request{Method: "XXX", Args: b}
-		b2, err := proto.Marshal(&req2)
-		assert.Nil(ts.T, err)
-		// Marshal the WriteRead fcall carrying the RPC package's proto
-		args := sp.NewTwriteread(1000)
-		var seqno sessp.Tseqno
-		fcm := sessp.NewFcallMsg(args, b2, 0, &seqno)
-		b3 := spcodec.MarshalFcallWithoutData(fcm)
-		_, err2 := spcodec.MarshalFcallAndData(fcm)
-		assert.Nil(ts.T, err2)
-		// Unmarshal the WriteRead fcall
-		_ = spcodec.UnmarshalFcallAndData(b3, b2)
-		reqrec := rpcproto.Request{}
-		// Unmarshal the RPC package's proto
-		err = proto.Unmarshal(b2, &reqrec)
-		assert.Nil(ts.T, err)
-		// Unmarshal the sigmaclnt RPC proto
-		reqrec2 := &scproto.SigmaWriteRequest{}
-		err = proto.Unmarshal(b, reqrec2)
-		assert.Nil(ts.T, err)
-		f := sp.NoFence()
-		// Marshal the final fcall and send it to the server
-		args2 := sp.NewTwriteF(1000, 0, &f)
-		fcm2 := sessp.NewFcallMsg(args2, buf, 0, &seqno)
-		b4 := spcodec.MarshalFcallWithoutData(fcm2)
-		_, err2 = spcodec.MarshalFcallAndData(fcm)
-		assert.Nil(ts.T, err2)
-		//		assert.Nil(ts.T, err2)
-		_ = spcodec.UnmarshalFcallAndData(b4, buf)
+		minibuf := buf[:sp.BUFSZ]
+		for i := 0; i < len(buf); i += sp.BUFSZ {
+			// Marshal the sigmaclnt RPC proto
+			req := &scproto.SigmaWriteRequest{Fd: uint32(0), Data: minibuf}
+			b, err := proto.Marshal(req)
+			assert.Nil(ts.T, err)
+			// Marshal the rpc package's proto
+			req2 := rpcproto.Request{Method: "XXX", Args: b}
+			b2, err := proto.Marshal(&req2)
+			assert.Nil(ts.T, err)
+			// Marshal the WriteRead fcall carrying the RPC package's proto
+			args := sp.NewTwriteread(1000)
+			var seqno sessp.Tseqno
+			fcm := sessp.NewFcallMsg(args, b2, 0, &seqno)
+			b3 := spcodec.MarshalFcallWithoutData(fcm)
+			_, err2 := spcodec.MarshalFcallAndData(fcm)
+			assert.Nil(ts.T, err2)
+			// Unmarshal the WriteRead fcall
+			_ = spcodec.UnmarshalFcallAndData(b3, b2)
+			reqrec := rpcproto.Request{}
+			// Unmarshal the RPC package's proto
+			err = proto.Unmarshal(b2, &reqrec)
+			assert.Nil(ts.T, err)
+			// Unmarshal the sigmaclnt RPC proto
+			reqrec2 := &scproto.SigmaWriteRequest{}
+			err = proto.Unmarshal(b, reqrec2)
+			assert.Nil(ts.T, err)
+			f := sp.NoFence()
+			// Marshal the final fcall and send it to the server
+			args2 := sp.NewTwriteF(1000, 0, &f)
+			fcm2 := sessp.NewFcallMsg(args2, minibuf, 0, &seqno)
+			b4 := spcodec.MarshalFcallWithoutData(fcm2)
+			_, err2 = spcodec.MarshalFcallAndData(fcm)
+			assert.Nil(ts.T, err2)
+			//		assert.Nil(ts.T, err2)
+			_ = spcodec.UnmarshalFcallAndData(b4, minibuf)
+			_, err = syscall.Pwrite(fd, minibuf, int64(0))
+			assert.Nil(ts.T, err, "Error pwrite: %v", err)
+		}
 		return sp.Tlength(len(buf))
+	})
+	err = os.Remove(FPATH)
+	assert.Nil(ts.T, err)
+	ts.Shutdown()
+}
+
+func TestWriteAndMarshFilePerfSingle(t *testing.T) {
+	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {
+		return
+	}
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	fn := gopath.Join(pathname, "f")
+	buf2 := test.NewBuf(FILESZ)
+	buf := test.NewBuf(WRITESZ)
+	// Remove just in case it was left over from a previous run.
+	ts.Remove(fn)
+	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFWRITER)
+	assert.Nil(t, err)
+	defer p1.Done()
+	measure(p1, "bufwriter", func() sp.Tlength {
+		if withmarshal {
+			minibuf := buf2[:sp.BUFSZ]
+			for i := 0; i < len(buf2); i += sp.BUFSZ {
+				// Marshal the sigmaclnt RPC proto
+				req := &scproto.SigmaWriteRequest{Fd: uint32(0), Data: minibuf}
+				b, err := proto.Marshal(req)
+				assert.Nil(ts.T, err)
+				// Marshal the rpc package's proto
+				req2 := rpcproto.Request{Method: "XXX", Args: b}
+				b2, err := proto.Marshal(&req2)
+				assert.Nil(ts.T, err)
+				// Marshal the WriteRead fcall carrying the RPC package's proto
+				args := sp.NewTwriteread(1000)
+				var seqno sessp.Tseqno
+				fcm := sessp.NewFcallMsg(args, b2, 0, &seqno)
+				b3 := spcodec.MarshalFcallWithoutData(fcm)
+				_, err2 := spcodec.MarshalFcallAndData(fcm)
+				assert.Nil(ts.T, err2)
+				// Unmarshal the WriteRead fcall
+				_ = spcodec.UnmarshalFcallAndData(b3, b2)
+				reqrec := rpcproto.Request{}
+				// Unmarshal the RPC package's proto
+				err = proto.Unmarshal(b2, &reqrec)
+				assert.Nil(ts.T, err)
+				// Unmarshal the sigmaclnt RPC proto
+				reqrec2 := &scproto.SigmaWriteRequest{}
+				err = proto.Unmarshal(b, reqrec2)
+				assert.Nil(ts.T, err)
+			}
+		}
+
+		sz := newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+		err := ts.Remove(fn)
+		assert.Nil(t, err)
+		return sz
 	})
 	ts.Shutdown()
 }

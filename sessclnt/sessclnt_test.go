@@ -110,6 +110,9 @@ func newTstateSrv(t *testing.T, crash int) (*TstateSrv, error) {
 	return ts, nil
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestConnectSessSrv(t *testing.T) {
 	ts, err1 := newTstateSrv(t, 0)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

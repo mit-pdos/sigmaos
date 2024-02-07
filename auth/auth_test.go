@@ -115,10 +115,10 @@ func TestMaliciousPrincipalFail(t *testing.T) {
 
 	// Create a new sigma clnt, with an unexpected principal
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
-	pe.SetPrincipal(&sp.Tprincipal{
-		ID:       "malicious-user",
-		TokenStr: proc.NOT_SET,
-	})
+	pe.SetPrincipal(sp.NewPrincipal(
+		sp.TprincipalID("malicious-user"),
+		sp.NO_TOKEN,
+	))
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "Err NewClnt: %v", err)
 
@@ -152,10 +152,10 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	assert.Nil(t, err)
 	// Create a new sigma clnt
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
-	pe.SetPrincipal(&sp.Tprincipal{
-		ID:       "scoped-down-principal",
-		TokenStr: proc.NOT_SET,
-	})
+	pe.SetPrincipal(sp.NewPrincipal(
+		sp.TprincipalID("scoped-down-principal"),
+		sp.NO_TOKEN,
+	))
 	// Clear AWS secrets
 	pe.SetSecrets(map[string]*proc.ProcSecretProto{})
 	pc := auth.NewProcClaims(pe)

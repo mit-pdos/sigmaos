@@ -32,6 +32,7 @@ var K8S_ADDR string
 var MAX_RPS int
 var DURATION time.Duration
 var cache string
+var TEST_AUTH bool
 
 const (
 	NCACHESRV = 6
@@ -40,6 +41,7 @@ const (
 func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
 	flag.IntVar(&MAX_RPS, "maxrps", 1000, "Max number of requests/sec.")
+	flag.BoolVar(&TEST_AUTH, "auth", false, "Testing k8s auth")
 	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration of load generation benchmarks.")
 	flag.StringVar(&cache, "cache", "cached", "Cache service")
 }
@@ -557,4 +559,38 @@ func TestMultiSearch(t *testing.T) {
 	for _, n := range []int{1, 4} {
 		testMultiSearch(t, n)
 	}
+}
+
+func TestAuthK8s(t *testing.T) {
+	// Bail out if no addr was provided.
+	if K8S_ADDR == "" {
+		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
+		return
+	}
+	if !TEST_AUTH {
+		db.DPrintf(db.ALWAYS, "Not testing auth, skipping auth test")
+		return
+	}
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, nil, 0)
+	err1 = setupK8sState(ts)
+	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
+	allowedUID := 10
+	s, err := hotel.RandReserveReqUser(wc, r, allowedUID)
+	assert.Nil(t, err, "Error: %v", err)
+	assert.Equal(t, "Reserve successfully!", s)
+	disallowedUID := 20
+	s, err = hotel.RandReserveReqUser(wc, r, disallowedUID)
+	assert.NotNil(t, err)
+	assert.NotEqual(t, "Reserve successfully!", s)
+	s, err = hotel.RandLoginReq(wc, r)
+	assert.Nil(t, err)
+	assert.Equal(t, "Login successfully!", s)
+	ts.Shutdown()
 }

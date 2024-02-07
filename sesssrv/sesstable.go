@@ -1,4 +1,4 @@
-package sessstatesrv
+package sesssrv
 
 import (
 	"sync"
@@ -87,20 +87,6 @@ func (st *SessionTable) allocRL(sid sessp.Tsession) *Session {
 		st.lasts[sid] = sess
 	}
 	return sess
-}
-
-func (st *SessionTable) ProcessHeartbeats(hbs *sp.Theartbeat) {
-	st.mu.RLock()
-	defer st.mu.RUnlock()
-
-	for sid, _ := range hbs.Sids {
-		sess := st.allocRL(sessp.Tsession(sid))
-		sess.Lock()
-		if !sess.closed {
-			sess.heartbeatL(hbs)
-		}
-		sess.Unlock()
-	}
 }
 
 // Return a last session

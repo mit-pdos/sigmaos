@@ -65,7 +65,7 @@ func Np2SpStat(npst np.Stat9P) *sp.Stat {
 func to9P(fm *sessp.FcallMsg) *Fcall9P {
 	fcall9P := &Fcall9P{}
 	fcall9P.Type = sessp.Tfcall(fm.Fc.Type)
-	fcall9P.Tag = sessp.Ttag(fm.Fc.Tag)
+	fcall9P.Tag = sessp.Ttag(fm.Fc.Seqno)
 	fcall9P.Msg = fm.Msg
 	return fcall9P
 }
@@ -73,9 +73,8 @@ func to9P(fm *sessp.FcallMsg) *Fcall9P {
 func toSP(fcall9P *Fcall9P) *sessp.FcallMsg {
 	fm := sessp.NewFcallMsgNull()
 	fm.Fc.Type = uint32(fcall9P.Type)
-	fm.Fc.Tag = uint32(fcall9P.Tag)
+	fm.Fc.Seqno = uint64(fcall9P.Tag)
 	fm.Fc.Session = uint64(sessp.NoSession)
-	fm.Fc.Seqno = uint64(sessp.NoSeqno)
 	fm.Msg = fcall9P.Msg
 	return fm
 }

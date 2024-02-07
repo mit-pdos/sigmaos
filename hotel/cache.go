@@ -8,7 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kv"
-	"sigmaos/memcached"
+	"sigmaos/memcachedclnt"
 )
 
 func NewCacheClnt(cache string, fsls []*fslib.FsLib, job string) (cache.CacheClnt, error) {
@@ -28,7 +28,7 @@ func NewCacheClnt(cache string, fsls []*fslib.FsLib, job string) (cache.CacheCln
 		db.DPrintf(db.ALWAYS, "NewClerkFsl done %v\n", cache)
 		return cc, nil
 	case "memcached":
-		cc, err := memcached.NewMemcachedClnt(fsls[0], job)
+		cc, err := memcachedclnt.NewMemcachedClnt(fsls[0], job)
 		if err != nil {
 			return nil, err
 		}

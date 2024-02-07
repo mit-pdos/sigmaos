@@ -31,7 +31,7 @@ func main() {
 	})
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-	netsrv.NewNetServer(pcfg, proxy.NewNpd(pcfg, lip), addr, npcodec.MarshalFrame, npcodec.UnmarshalFrame)
+	netsrv.NewNetServer(pcfg, proxy.NewNpd(pcfg, lip), addr, npcodec.ReadCall, npcodec.WriteCall)
 	ch := make(chan struct{})
 	<-ch
 }

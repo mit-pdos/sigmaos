@@ -1,36 +1,30 @@
 package netsrv
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"net"
 
 	"runtime/debug"
 
 	db "sigmaos/debug"
+	"sigmaos/demux"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
-	"sigmaos/serr"
-	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
 )
 
-type WriteF func(*sessp.FcallMsg, []byte, *bufio.Writer) *serr.Err
-type ReadF func(rdr io.Reader) (sessp.Tseqno, *sessp.FcallMsg, *serr.Err)
-
 type NetServer struct {
-	pcfg       *proc.ProcEnv
-	addr       *sp.Taddr
-	sesssrv    sps.SessServer
-	writefcall WriteF
-	readframe  ReadF
-	l          net.Listener
+	pcfg      *proc.ProcEnv
+	addr      *sp.Taddr
+	sesssrv   sps.SessServer
+	l         net.Listener
+	readCall  demux.ReadCallF
+	writeCall demux.WriteCallF
 }
 
-func NewNetServer(pcfg *proc.ProcEnv, ss sps.SessServer, addr *sp.Taddr, m WriteF, u ReadF) *NetServer {
-	srv := &NetServer{pcfg: pcfg, sesssrv: ss, writefcall: m, readframe: u}
+func NewNetServer(pcfg *proc.ProcEnv, sesssrv sps.SessServer, addr *sp.Taddr, rf demux.ReadCallF, wf demux.WriteCallF) *NetServer {
+	srv := &NetServer{pcfg: pcfg, sesssrv: sesssrv, readCall: rf, writeCall: wf}
 
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
@@ -67,7 +61,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)
-		NewSrvConn(srv, conn)
+		NewNetSrvConn(srv, conn)
 	}
 }
 

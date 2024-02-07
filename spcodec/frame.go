@@ -7,6 +7,7 @@ import (
 	"io"
 
 	db "sigmaos/debug"
+	"sigmaos/demux"
 	"sigmaos/frame"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -20,10 +21,7 @@ func MarshalFcallWithoutData(fcm *sessp.FcallMsg) []byte {
 	return f.Bytes()
 }
 
-func WriteFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Writer) *serr.Err {
-	if err := frame.WriteSeqno(fcm.Seqno(), bwr); err != nil {
-		return err
-	}
+func writeFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Writer) *serr.Err {
 	if err := frame.WriteFrame(bwr, marshaledFcall); err != nil {
 		return err
 	}
@@ -47,29 +45,24 @@ func MarshalFcallAndData(fcm *sessp.FcallMsg) ([]byte, *serr.Err) {
 	wr := bufio.NewWriter(&f)
 	b := MarshalFcallWithoutData(fcm)
 	db.DPrintf(db.SPCODEC, "Marshal frame %v %d buf %d\n", fcm.Msg, len(b), len(fcm.Data))
-	if err := WriteFcallAndData(fcm, b, wr); err != nil {
+	if err := writeFcallAndData(fcm, b, wr); err != nil {
 		return nil, err
 	}
 	return f.Bytes(), nil
 }
 
-func ReadFcallAndDataFrames(rdr io.Reader) (sn sessp.Tseqno, fc []byte, data []byte, se *serr.Err) {
-	seqno, err := frame.ReadSeqno(rdr)
-	if err != nil {
-		db.DPrintf(db.SPCODEC, "ReadSeqno err %v\n", err)
-		return 0, nil, nil, err
-	}
+func readFcallAndDataFrames(rdr io.Reader) (fc []byte, data []byte, se *serr.Err) {
 	f, err := frame.ReadFrame(rdr)
 	if err != nil {
 		db.DPrintf(db.SPCODEC, "ReadFrame err %v\n", err)
-		return 0, nil, nil, err
+		return nil, nil, err
 	}
 	buf, err := frame.ReadBuf(rdr)
 	if err != nil {
 		db.DPrintf(db.SPCODEC, "ReadBuf err %v\n", err)
-		return 0, nil, nil, err
+		return nil, nil, err
 	}
-	return seqno, f, buf, nil
+	return f, buf, nil
 }
 
 func UnmarshalFcallAndData(f []byte, buf []byte) *sessp.FcallMsg {
@@ -82,11 +75,21 @@ func UnmarshalFcallAndData(f []byte, buf []byte) *sessp.FcallMsg {
 	return fm
 }
 
-func ReadUnmarshalFcallAndData(rdr io.Reader) (sessp.Tseqno, *sessp.FcallMsg, *serr.Err) {
-	seqno, f, buf, err := ReadFcallAndDataFrames(rdr)
+func readUnmarshalFcallAndData(rdr io.Reader) (*sessp.FcallMsg, *serr.Err) {
+	f, buf, err := readFcallAndDataFrames(rdr)
 	if err != nil {
-		return 0, nil, err
+		return nil, err
 	}
 	fm := UnmarshalFcallAndData(f, buf)
-	return seqno, fm, nil
+	return fm, nil
+}
+
+func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
+	return readUnmarshalFcallAndData(rdr)
+}
+
+func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
+	fcm := c.(*sessp.FcallMsg)
+	fc := MarshalFcallWithoutData(fcm)
+	return writeFcallAndData(fcm, fc, wrt)
 }

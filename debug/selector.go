@@ -189,53 +189,51 @@ const (
 
 // Client-side Infrastructure
 const (
-	NETCLNT             Tselector = "NETCLNT"
-	NETCLNT_ERR                   = NETCLNT + ERR
-	DEMUXCLNT                     = "DEMUXCLNT"
-	SESS_CLNT_Q                   = "SESS_CLNT_Q"
-	SESS_STATE_CLNT               = "SESS_STATE_CLNT"
-	SESS_STATE_CLNT_ERR           = SESS_STATE_CLNT + ERR
-	FIDCLNT                       = "FIDCLNT"
-	FIDCLNT_ERR                   = FIDCLNT + ERR
-	RPCCLNT                       = "RPCCLNT"
-	MOUNT                         = "MOUNT"
-	MOUNT_ERR                     = MOUNT + ERR
-	FDCLNT                        = "FDCLNT"
-	PATHCLNT                      = "PATHCLNT"
-	PATHCLNT_ERR                  = PATHCLNT + ERR
-	WALK                          = "WALK"
-	WALK_ERR                      = "WALK" + ERR
-	SVCMOUNT                      = "SVCMOUNT"
+	NETCLNT      Tselector = "NETCLNT"
+	NETCLNT_ERR            = NETCLNT + ERR
+	DEMUXCLNT              = "DEMUXCLNT"
+	SESS_CLNT_Q            = "SESS_CLNT_Q"
+	SESSCLNT               = "SESSCLNT"
+	SESSCLNT_ERR           = SESSCLNT + ERR
+	FIDCLNT                = "FIDCLNT"
+	FIDCLNT_ERR            = FIDCLNT + ERR
+	RPCCLNT                = "RPCCLNT"
+	MOUNT                  = "MOUNT"
+	MOUNT_ERR              = MOUNT + ERR
+	FDCLNT                 = "FDCLNT"
+	PATHCLNT               = "PATHCLNT"
+	PATHCLNT_ERR           = PATHCLNT + ERR
+	WALK                   = "WALK"
+	WALK_ERR               = "WALK" + ERR
+	SVCMOUNT               = "SVCMOUNT"
 )
 
 // Server-side Infrastructure
 const (
-	NETSRV             Tselector = "NETSRV"
-	NETSRV_ERR                   = NETSRV + ERR
-	DEMUXSRV                     = "DEMUXSRV"
-	REPLRAFT                     = "REPLRAFT"
-	RAFT_TIMING                  = "RAFT_TIMING"
-	REPLY_TABLE                  = "REPLY_TABLE"
-	INTERVALS                    = "INTERVALS"
-	SESSSRV                      = "SESSSRV"
-	WATCH                        = "WATCH"
-	WATCH_ERR                    = WATCH + ERR
-	LOCKMAP                      = "LOCKMAP"
-	SNAP                         = "SNAP"
-	NAMEI                        = "NAMEI"
-	FENCEFS                      = "FENCEFS"
-	FENCEFS_ERR                  = FENCEFS + ERR
-	LEASESRV                     = "LEASESRV"
-	MEMFSSRV                     = "MEMFSSRV"
-	THREADMGR                    = "THREADMGR"
-	PROTSRV                      = "PROTSRV"
-	AUTH                         = "AUTH"
-	AUTH_ERR                     = AUTH + ERR
-	REFMAP_SUFFIX                = "_REFMAP"
-	VERSION                      = "VERSION"
-	CLNTCOND                     = "CLNTCOND"
-	SESS_STATE_SRV               = "SESS_STATE_SRV"
-	SESS_STATE_SRV_ERR           = SESS_STATE_SRV + ERR
+	AUTH                     = "AUTH"
+	AUTH_ERR                 = AUTH + ERR
+	NETSRV         Tselector = "NETSRV"
+	DEMUXSRV                 = "DEMUXSRV"
+	REPLRAFT                 = "REPLRAFT"
+	RAFT_TIMING              = "RAFT_TIMING"
+	REPLY_TABLE              = "REPLY_TABLE"
+	INTERVALS                = "INTERVALS"
+	SESSSRV                  = "SESSSRV"
+	WATCH                    = "WATCH"
+	WATCH_ERR                = WATCH + ERR
+	LOCKMAP                  = "LOCKMAP"
+	SNAP                     = "SNAP"
+	NAMEI                    = "NAMEI"
+	FENCEFS                  = "FENCEFS"
+	FENCEFS_ERR              = FENCEFS + ERR
+	LEASESRV                 = "LEASESRV"
+	MEMFSSRV                 = "MEMFSSRV"
+	THREADMGR                = "THREADMGR"
+	PROTSRV                  = "PROTSRV"
+	REFMAP_SUFFIX            = "_REFMAP"
+	VERSION                  = "VERSION"
+	CLNTCOND                 = "CLNTCOND"
+	SESS_STATE_SRV           = "SESS_STATE_SRV"
 )
 
 // 9P

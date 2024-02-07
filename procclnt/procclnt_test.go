@@ -22,6 +22,7 @@ import (
 const (
 	SLEEP_MSECS = 2000
 	CRASH_MSECS = 5
+	NTRIALS     = "3001"
 )
 
 const program = "procclnt_test"
@@ -729,6 +730,56 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 		db.DPrintf(db.TEST, "Done %v", x)
 	}
 
+	ts.Shutdown()
+}
+
+func TestProcManyOK(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	a := proc.NewProc("proctest", []string{NTRIALS, "sleeper", "1us", ""})
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	err = ts.WaitStart(a.GetPid())
+	assert.Nil(t, err, "WaitStart error")
+	status, err := ts.WaitExit(a.GetPid())
+	assert.Nil(t, err, "waitexit")
+	assert.True(t, status.IsStatusOK(), status)
+	ts.Shutdown()
+}
+
+func TestProcCrashMany(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	a := proc.NewProc("proctest", []string{NTRIALS, "crash"})
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	err = ts.WaitStart(a.GetPid())
+	assert.Nil(t, err, "WaitStart error")
+	status, err := ts.WaitExit(a.GetPid())
+	assert.Nil(t, err, "waitexit")
+	assert.True(t, status.IsStatusOK(), status)
+	ts.Shutdown()
+}
+
+func TestProcPartitionMany(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	a := proc.NewProc("proctest", []string{NTRIALS, "partition"})
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	err = ts.WaitStart(a.GetPid())
+	assert.Nil(t, err, "WaitStart error")
+	status, err := ts.WaitExit(a.GetPid())
+	assert.Nil(t, err, "waitexit")
+	if assert.NotNil(t, status, "nil status") {
+		assert.True(t, status.IsStatusOK(), status)
+	}
 	ts.Shutdown()
 }
 

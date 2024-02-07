@@ -1,8 +1,8 @@
 package sigmaprotsrv
 
 import (
+	"sigmaos/demux"
 	"sigmaos/serr"
-	"sigmaos/sessconn"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -12,17 +12,17 @@ type Isrvconn interface {
 
 type Conn interface {
 	IsClosed() bool
-	Close()
-	CloseConnTest()
-	GetReplyChan() chan *sessconn.PartMarshaledMsg
+	Close() error
+	CloseConnTest() error
+	CondSet(sid sessp.Tsession) sessp.Tsession
+	GetSessId() sessp.Tsession
 }
 
-type Fsrvfcall func(*sessp.FcallMsg) *serr.Err
+type Fsrvfcall func(*sessp.FcallMsg) *sessp.FcallMsg
 
 type SessServer interface {
-	Register(sessp.Tsession, Conn) *serr.Err
-	Unregister(sessp.Tsession, Conn)
-	SrvFcall(*sessp.FcallMsg) *serr.Err
+	ServeRequest(Conn, demux.CallI) (demux.CallI, *serr.Err)
+	ReportError(Conn, error)
 }
 
 type Protsrv interface {

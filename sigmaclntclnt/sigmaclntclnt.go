@@ -13,6 +13,7 @@ import (
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sessp"
+	"sigmaos/sigmaclntcodec"
 	scproto "sigmaos/sigmaclntsrv/proto"
 	sp "sigmaos/sigmap"
 )
@@ -27,7 +28,15 @@ type SigmaClntClnt struct {
 }
 
 func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
-	return scc.dmx.SendReceive(a)
+	seq := &scc.seqno
+	c := sigmaclntcodec.NewCall(seq.Next(), a)
+	rep, err := scc.dmx.SendReceive(c)
+	if err != nil {
+		return nil, err
+	} else {
+		c := rep.(*sigmaclntcodec.Call)
+		return c.Data, nil
+	}
 }
 
 func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
@@ -53,7 +62,7 @@ func NewSigmaClntClnt(pe *proc.ProcEnv) (*SigmaClntClnt, error) {
 		seqno: 0, conn: conn, disconnected: false,
 	}
 	scc.dmx = demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), scc)
+		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), sigmaclntcodec.ReadCall, sigmaclntcodec.WriteCall, scc)
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	// Initialize the server-side component of sigmaclnt by sending the proc env
 	db.DPrintf(db.SIGMACLNTCLNT, "Init sigmaclntclnt for %v", pe.GetPID())
@@ -73,10 +82,7 @@ func (scc *SigmaClntClnt) Shutdown() error {
 	return err
 }
 
-// Close the socket connection
+// Close the socket connection, which closes dmxclnt too.
 func (scc *SigmaClntClnt) close() error {
-	if err := scc.conn.Close(); err != nil {
-		return err
-	}
-	return scc.dmx.Close()
+	return scc.conn.Close()
 }

@@ -2,27 +2,25 @@ package demux
 
 import (
 	"bufio"
+	"io"
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/frame"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 )
 
+type CallI interface {
+	Tag() sessp.Ttag
+}
+
+type ReadCallF func(io.Reader) (CallI, *serr.Err)
+
 type DemuxSrvI interface {
-	ServeRequest([]byte) ([]byte, *serr.Err)
+	ServeRequest(CallI) (CallI, *serr.Err)
 	ReportError(err error)
 }
 
-type reply struct {
-	data  []byte
-	seqno sessp.Tseqno
-	err   *serr.Err
-}
-
-// DemuxSrv demultiplexes RPCs from a single transport and multiplexes
-// the reponses on the transport.
 type DemuxSrv struct {
 	mu      sync.Mutex
 	in      *bufio.Reader
@@ -33,61 +31,55 @@ type DemuxSrv struct {
 	nreq    int
 }
 
-func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, serve DemuxSrvI) *DemuxSrv {
+func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, rf ReadCallF, wf WriteCallF, serve DemuxSrvI) *DemuxSrv {
 	dmx := &DemuxSrv{in: in, out: out, serve: serve, replies: make(chan reply)}
-	go dmx.reader()
-	go dmx.writer()
+	go dmx.reader(rf)
+	go dmx.writer(wf)
 	return dmx
 }
 
-func (dmx *DemuxSrv) reader() {
+func (dmx *DemuxSrv) reader(rf ReadCallF) {
 	for {
-		seqno, err := frame.ReadSeqno(dmx.in)
+		c, err := rf(dmx.in)
 		if err != nil {
+			db.DPrintf(db.DEMUXSRV, "reader: rf err %v\n", err)
 			dmx.serve.ReportError(err)
 			break
 		}
-		request, err := frame.ReadFrame(dmx.in)
-		if err != nil {
-			dmx.serve.ReportError(err)
-			break
-		}
-		go func(r []byte, s sessp.Tseqno) {
+		go func(c CallI) {
 			if !dmx.IncNreq() { // handle req?
 				return // done
 			}
-			db.DPrintf(db.DEMUXSRV, "reader: serve %v\n", s)
-			rep, err := dmx.serve.ServeRequest(r)
-			db.DPrintf(db.DEMUXSRV, "reader: reply %v %v\n", s, err)
-			dmx.replies <- reply{rep, s, err}
+
+			rep, err := dmx.serve.ServeRequest(c)
+			dmx.replies <- reply{rep, err}
 			if dmx.DecNreq() {
 				close(dmx.replies)
 			}
-		}(request, seqno)
+		}(c)
 	}
 }
 
-func (dmx *DemuxSrv) writer() {
+func (dmx *DemuxSrv) writer(wf WriteCallF) {
 	for {
 		reply, ok := <-dmx.replies
 		if !ok {
 			db.DPrintf(db.DEMUXSRV, "writer: replies closed\n")
 			return
 		}
+
+		// In error cases drain replies until reader closes replies
+
 		if reply.err != nil {
-			dmx.serve.ReportError(reply.err)
 			continue
 		}
-		if err := frame.WriteSeqno(reply.seqno, dmx.out); err != nil {
-			dmx.serve.ReportError(err)
-			continue
-		}
-		if err := frame.WriteFrame(dmx.out, reply.data); err != nil {
-			dmx.serve.ReportError(err)
+		if err := wf(dmx.out, reply.rep); err != nil {
+			db.DPrintf(db.DEMUXSRV, "wf reply %v error %v\n", reply, err)
 			continue
 		}
 		if err := dmx.out.Flush(); err != nil {
-			dmx.serve.ReportError(err)
+			db.DPrintf(db.DEMUXSRV, "Flush reply %v err %v\n", reply, err)
+			continue
 		}
 	}
 }
@@ -98,6 +90,12 @@ func (dmx *DemuxSrv) Close() error {
 	dmx.closed = true
 	db.DPrintf(db.DEMUXSRV, "Close %d\n", dmx.nreq)
 	return nil
+}
+
+func (dmx *DemuxSrv) IsClosed() bool {
+	dmx.mu.Lock()
+	defer dmx.mu.Unlock()
+	return dmx.closed
 }
 
 func (dmx *DemuxSrv) IncNreq() bool {

@@ -12,6 +12,7 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -74,6 +75,13 @@ func RunSigmaClntSrv(args []string) error {
 		db.DPrintf(db.SIGMACLNTSRV, "runServer err %v\n", err)
 		return err
 	}
+	// Perf monitoring
+	p, err := perf.NewPerf(scs.pcfg, perf.SIGMACLNTSRV)
+	if err != nil {
+		db.DFatalf("Error NewPerf: %v", err)
+	}
+	defer p.Done()
+
 	if err := scs.runServer(); err != nil {
 		db.DPrintf(db.SIGMACLNTSRV, "runServer err %v\n", err)
 		return err

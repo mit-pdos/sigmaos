@@ -1,4 +1,4 @@
-package sessstatesrv
+package sesssrv
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ const (
 
 func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, *sp.Rerror, Tsessop, sp.TclntId) {
 	if s.IsClosed() {
-		db.DPrintf(db.SESS_STATE_SRV_ERR, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
+		db.DPrintf(db.SESS_STATE_SRV, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
 		err := serr.NewErr(serr.TErrClosed, fmt.Sprintf("session %v", s.Sid))
 		return nil, nil, sp.NewRerrorSerr(err), TSESS_NONE, sp.NoClntId
 	}

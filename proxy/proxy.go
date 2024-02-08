@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"os/user"
 	"sync"
 
 	db "sigmaos/debug"
@@ -80,6 +79,7 @@ type NpConn struct {
 
 func newNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
 	npc := &NpConn{}
+	npc.principal = pcfg.GetPrincipal()
 	npc.fidc = fidclnt.NewFidClnt(sp.ROOTREALM.String())
 	npc.pc = pathclnt.NewPathClnt(pcfg, npc.fidc)
 	npc.fm = newFidMap()
@@ -98,15 +98,6 @@ func (npc *NpConn) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 }
 
 func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
-	u, error := user.Current()
-	if error != nil {
-		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
-	}
-	npc.principal = sp.NewPrincipal(
-		sp.TprincipalID(u.Uid),
-		sp.NO_TOKEN,
-	)
-
 	mnt, error := npc.pc.GetNamedMount()
 	if error != nil {
 		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", error)

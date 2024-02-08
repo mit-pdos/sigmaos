@@ -23,15 +23,27 @@ func main() {
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	// By default, proxy doesn't use overlays.
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
-	pcfg.Program = "proxy"
-	pcfg.SetPrincipal(sp.NewPrincipal(
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
+	pe.Program = "proxy"
+	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
 		sp.NO_TOKEN,
 	))
+	///
+	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
+	if err1 != nil {
+		db.DFatalf("Error NewAuthSrv: %v", err1)
+	}
+	pc := auth.NewProcClaims(pe)
+	token, err1 := as.NewToken(pc)
+	if err1 != nil {
+		db.DFatalf("Error NewToken: %v", err1)
+	}
+	pe.SetToken(token)
+	///
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-	netsrv.NewNetServer(pcfg, proxy.NewNpd(pcfg, lip), addr, npcodec.ReadCall, npcodec.WriteCall)
+	proc.SetSigmaDebugPid(pe.GetPID().String())
+	netsrv.NewNetServer(pe, proxy.NewNpd(pe, lip), addr, npcodec.ReadCall, npcodec.WriteCall)
 	ch := make(chan struct{})
 	<-ch
 }

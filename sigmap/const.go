@@ -111,16 +111,24 @@ const (
 // Auth consts
 const (
 	NO_PRINCIPAL_ID TprincipalID = "NO_PRINCIPAL_ID"
-	NO_TOKEN        Ttoken       = "NO_TOKEN"
 	KEY_LEN         int          = 256
 	HOST_KEY_FILE   string       = "/tmp/sigmaos/master-key"
+	NO_SIGNER       string       = "NO_SIGNER"
+	NO_SIGNED_TOKEN string       = "NO_SIGNED_TOKEN"
 )
 
 var ALL_PATHS []string = []string{"*"}
 
+func NoToken() *Ttoken {
+	return &Ttoken{
+		Signer:      NO_SIGNER,
+		SignedToken: NO_SIGNED_TOKEN,
+	}
+}
+
 func NoPrincipal() *Tprincipal {
 	return &Tprincipal{
-		IDStr:    NO_PRINCIPAL_ID.String(),
-		TokenStr: "NOT_SET",
+		IDStr: NO_PRINCIPAL_ID.String(),
+		Token: NoToken(),
 	}
 }

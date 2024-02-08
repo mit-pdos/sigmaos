@@ -11,14 +11,14 @@ message Tqid {
         uint64  path = 3;
 };
 
-//message Ttoken {
-//        string signer = 1;
-//        bytes  sig = 2;
-//}
+message Ttoken {
+        string signer = 1;
+        string signedToken = 2;
+}
 
 message Tprincipal {
         string iDStr = 1;
-        string tokenStr = 2;
+        Ttoken token = 2;
 }
 
 message Stat {

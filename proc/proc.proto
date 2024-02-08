@@ -42,7 +42,7 @@ message ProcEnvProto {
   Taddr scheddAddr = 24;
   TmountProto namedMountProto = 25;
   bool useSigmaclntd = 26;
-  string parentTokenStr = 27;
+  Ttoken parentToken = 27;
   ProcClaimsProto claims = 28;
 }
 

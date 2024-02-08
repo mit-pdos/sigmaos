@@ -131,7 +131,7 @@ func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	}
 	fid1, err := npc.pc.Walk(fid, args.Wnames, sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
-		sp.NO_TOKEN,
+		sp.NoToken(),
 	))
 	if err != nil {
 		db.DPrintf(db.PROXY, "Walk args %v err: %v\n", args, err)

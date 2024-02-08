@@ -134,7 +134,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 
 func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
-	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), NOT_SET))
+	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), sp.NoToken()))
 	pe.SetSecrets(secrets)
 	// Allow all paths for boot env
 	pe.SetAllowedPaths(sp.ALL_PATHS)
@@ -165,7 +165,7 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 	pe2.SetRealm(realm, pe.Overlays)
 	pe2.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID(pe.GetPrincipal().GetID().String()+"-realm-"+realm.String()),
-		sp.NO_TOKEN,
+		sp.NoToken(),
 	))
 	return pe2
 }
@@ -178,7 +178,7 @@ func (pe *ProcEnvProto) SetSecrets(secrets map[string]*ProcSecretProto) {
 	pe.Claims.Secrets = secrets
 }
 
-func (pe *ProcEnvProto) SetToken(token sp.Ttoken) {
+func (pe *ProcEnvProto) SetToken(token *sp.Ttoken) {
 	pe.Principal.SetToken(token)
 }
 

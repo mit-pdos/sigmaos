@@ -76,7 +76,7 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		sp.Trealm(NOT_SET),
 		sp.NewPrincipal(
 			sp.TprincipalID(pid.String()),
-			sp.NO_TOKEN,
+			sp.NoToken(),
 		),
 		procdir,
 		NOT_SET,
@@ -126,7 +126,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Net = parentPE.Net
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
-	p.ProcEnvProto.ParentTokenStr = parentPE.Principal.GetToken().String()
+	p.ProcEnvProto.ParentToken = parentPE.Principal.GetToken()
 	// If parent didn't specify allowed paths, inherit the parent's allowed paths
 	if p.ProcEnvProto.Claims.AllowedPaths == nil {
 		p.ProcEnvProto.Claims.AllowedPaths = parentPE.Claims.AllowedPaths
@@ -141,12 +141,12 @@ func (p *Proc) SetAllowedPaths(paths []string) {
 	p.ProcEnvProto.SetAllowedPaths(paths)
 }
 
-func (p *Proc) SetToken(token sp.Ttoken) {
+func (p *Proc) SetToken(token *sp.Ttoken) {
 	p.ProcEnvProto.SetToken(token)
 }
 
-func (p *Proc) GetParentToken() sp.Ttoken {
-	return sp.Ttoken(p.ProcEnvProto.ParentTokenStr)
+func (p *Proc) GetParentToken() *sp.Ttoken {
+	return p.ProcEnvProto.ParentToken
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
@@ -160,7 +160,7 @@ func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 // uprocd container have been chosen.
 func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
 	// Clear parent token string
-	p.ProcEnvProto.ParentTokenStr = NOT_SET
+	p.ProcEnvProto.ParentToken = sp.NoToken()
 	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
 	p.ProcEnvProto.SetUprocdPID(uprocdPid)

@@ -27,13 +27,13 @@ func main() {
 	pe.Program = "proxy"
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
-		sp.NO_TOKEN,
+		sp.NoToken(),
 	))
 	masterKey, err1 := os.ReadFile(sp.HOST_KEY_FILE)
 	if err1 != nil {
 		db.DFatalf("Error Read master key: %v", err1)
 	}
-	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, masterKey)
+	as, err1 := auth.NewHMACAuthSrv("proxy", proc.NOT_SET, masterKey)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}

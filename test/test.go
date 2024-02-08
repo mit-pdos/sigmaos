@@ -146,11 +146,6 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error NewSymmetricKey: %v", err1)
 		return nil, err1
 	}
-	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, key)
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
-		return nil, err1
-	}
 	s3secrets, err1 := auth.GetAWSSecrets()
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
@@ -159,6 +154,11 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
+	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, key)
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
+		return nil, err1
+	}
 	pc := auth.NewProcClaims(pe)
 	token, err1 := as.NewToken(pc)
 	if err1 != nil {
@@ -239,7 +239,7 @@ func (ts *Tstate) BootFss3d() error {
 	return ts.Boot(sp.S3REL)
 }
 
-func (ts *Tstate) MintToken(pc *auth.ProcClaims) (sp.Ttoken, error) {
+func (ts *Tstate) MintToken(pc *auth.ProcClaims) (*sp.Ttoken, error) {
 	return ts.as.NewToken(pc)
 }
 

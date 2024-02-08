@@ -1,9 +1,9 @@
 package sigmap
 
-func NewPrincipal(id TprincipalID, token Ttoken) *Tprincipal {
+func NewPrincipal(id TprincipalID, token *Ttoken) *Tprincipal {
 	return &Tprincipal{
-		IDStr:    id.String(),
-		TokenStr: token.String(),
+		IDStr: id.String(),
+		Token: token,
 	}
 }
 
@@ -15,16 +15,8 @@ func (p *Tprincipal) GetID() TprincipalID {
 	return TprincipalID(p.IDStr)
 }
 
-func (p *Tprincipal) GetToken() Ttoken {
-	return Ttoken(p.TokenStr)
-}
-
-func (p *Tprincipal) SetToken(t Ttoken) {
-	p.TokenStr = t.String()
-}
-
-func (t Ttoken) String() string {
-	return string(t)
+func (p *Tprincipal) SetToken(t *Ttoken) {
+	p.Token = t
 }
 
 func (id TprincipalID) String() string {

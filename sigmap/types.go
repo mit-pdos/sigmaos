@@ -25,4 +25,4 @@ type Tmode uint32
 type Taddrs []*Taddr
 
 type TprincipalID string
-type Ttoken string
+type Tsigner string

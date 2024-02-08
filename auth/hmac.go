@@ -11,12 +11,14 @@ import (
 )
 
 type HMACAuthSrv struct {
+	signer  sp.Tsigner
 	srvpath string
 	hmacKey SymmetricKey
 }
 
-func NewHMACAuthSrv(srvpath string, hmacKey SymmetricKey) (*HMACAuthSrv, error) {
+func NewHMACAuthSrv(signer sp.Tsigner, srvpath string, hmacKey SymmetricKey) (*HMACAuthSrv, error) {
 	return &HMACAuthSrv{
+		signer:  signer,
 		srvpath: srvpath,
 		hmacKey: []byte(hmacKey),
 	}, nil
@@ -63,21 +65,21 @@ func (as *HMACAuthSrv) SetDelegatedProcToken(p *proc.Proc) error {
 	return nil
 }
 
-func (as *HMACAuthSrv) NewToken(pc *ProcClaims) (sp.Ttoken, error) {
+func (as *HMACAuthSrv) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, pc)
 	tstr, err := token.SignedString([]byte(as.hmacKey))
 	if err != nil {
-		return sp.NO_TOKEN, err
+		return nil, err
 	}
-	return sp.Ttoken(tstr), err
+	return sp.NewToken(as.signer, tstr), err
 }
 
-func (as *HMACAuthSrv) VerifyTokenGetClaims(signedToken sp.Ttoken) (*ProcClaims, error) {
+func (as *HMACAuthSrv) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error) {
 	// Parse the jwt, passing in a function to look up the key.
 	//
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-Parse-Hmac
-	token, err := jwt.ParseWithClaims(signedToken.String(), &ProcClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(t.GetSignedToken(), &ProcClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// Validate the alg is expected
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])

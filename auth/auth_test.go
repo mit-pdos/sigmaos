@@ -27,7 +27,7 @@ func TestCompile(t *testing.T) {
 func TestSignHMACToken(t *testing.T) {
 	key, err := auth.NewSymmetricKey(sp.KEY_LEN)
 	assert.Nil(t, err, "Err NewKey: %v", err)
-	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, key)
+	as, err := auth.NewHMACAuthSrv("test", proc.NOT_SET, key)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -46,7 +46,7 @@ func TestSignHMACToken(t *testing.T) {
 func TestVerifyHMACToken(t *testing.T) {
 	key, err := auth.NewSymmetricKey(sp.KEY_LEN)
 	assert.Nil(t, err, "Err NewKey: %v", err)
-	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, key)
+	as, err := auth.NewHMACAuthSrv("test", proc.NOT_SET, key)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -117,7 +117,7 @@ func TestMaliciousPrincipalFail(t *testing.T) {
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("malicious-user"),
-		sp.NO_TOKEN,
+		sp.NoToken(),
 	))
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "Err NewClnt: %v", err)
@@ -151,7 +151,7 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
-		sp.NO_TOKEN,
+		sp.NoToken(),
 	))
 	// Clear AWS secrets
 	pe.SetSecrets(map[string]*proc.ProcSecretProto{})

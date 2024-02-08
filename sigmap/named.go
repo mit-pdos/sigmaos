@@ -50,6 +50,9 @@ const (
 	RUNNING = "running"
 	PIDS    = "pids"
 
+	// Auth
+	MASTER_KEY = NAME + "/" + "master-key"
+
 	// special devs/dirs exported by SigmaSrv/SessSrv
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"

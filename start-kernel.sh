@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--reserveMcpu rmcpu] [--key KEY] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -18,6 +18,7 @@ NET="host"
 KERNELID=""
 OVERLAYS="false"
 GVISOR="false"
+KEY=$(head -c256 /dev/urandom | base64)
 RMCPU="0"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
@@ -63,6 +64,11 @@ while [[ "$#" -gt 1 ]]; do
   --gvisor)
     shift
     GVISOR="true"
+    ;;
+  --key)
+    shift
+    KEY=$1
+    shift
     ;;
   --named)
     shift
@@ -165,6 +171,7 @@ CID=$(docker run -dit \
              -e overlays=${OVERLAYS} \
              -e buildtag=${TAG} \
              -e gvisor=${GVISOR} \
+             -e key=${KEY} \
              -e SIGMAPERF=${SIGMAPERF} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \
@@ -192,6 +199,8 @@ while [ ! -f "/tmp/sigmaos/${KERNELID}" ]; do
     sleep 0.1
 done;
 rm -f "/tmp/sigmaos/${KERNELID}"
+
+echo $KEY > /tmp/sigmaos/master-key
 
 echo -n $IP
 

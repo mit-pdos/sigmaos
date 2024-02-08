@@ -15,8 +15,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 10 {
-		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu buildTag gvisor\nprovided:%v", os.Args[0], os.Args)
+	if len(os.Args) < 11 {
+		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu buildTag gvisor key\nprovided:%v", os.Args[0], os.Args)
 	}
 	db.DPrintf(db.BOOT, "Boot %v", os.Args[1:])
 	srvs := strings.Split(os.Args[3], ";")
@@ -28,14 +28,16 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error parse gvisor: %v", err)
 	}
+	masterKey := os.Args[10]
 	param := kernel.Param{
-		KernelId: os.Args[1],
-		Services: srvs,
-		Dbip:     os.Args[4],
-		Mongoip:  os.Args[5],
-		Overlays: overlays,
-		BuildTag: os.Args[8],
-		GVisor:   gvisor,
+		MasterKey: auth.SymmetricKey(masterKey),
+		KernelId:  os.Args[1],
+		Services:  srvs,
+		Dbip:      os.Args[4],
+		Mongoip:   os.Args[5],
+		Overlays:  overlays,
+		BuildTag:  os.Args[8],
+		GVisor:    gvisor,
 	}
 	if len(os.Args) >= 8 {
 		param.ReserveMcpu = os.Args[7]
@@ -55,7 +57,7 @@ func main() {
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelId), sp.NO_TOKEN), secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
+	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, []byte(masterKey))
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}

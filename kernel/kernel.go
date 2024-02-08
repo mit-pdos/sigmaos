@@ -41,6 +41,7 @@ type Param struct {
 	BuildTag    string
 	GVisor      bool
 	ReserveMcpu string
+	MasterKey   auth.SymmetricKey
 }
 
 type Kernel struct {
@@ -80,6 +81,13 @@ func NewKernel(p *Param, pe *proc.ProcEnv, as auth.AuthSrv) (*Kernel, error) {
 	sc, err := sigmaclnt.NewSigmaClntRootInit(pe)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error NewSigmaClntProc: %v", err)
+		return nil, err
+	}
+	// Master key file may already exist if this isn't the first kernel to boot
+	n, err := sc.PutFile(sp.MASTER_KEY, 0777, sp.OWRITE, p.MasterKey)
+	if (err != nil && serr.IsErrCode(err, serr.TErrExists)) || int(n) != len(p.MasterKey) {
+		// XXX Remove exists check when we switch to PK crypto
+		db.DPrintf(db.ALWAYS, "Error post Master Key: %v", err)
 		return nil, err
 	}
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
@@ -195,12 +203,12 @@ func (k *Kernel) shutdown() {
 	db.DPrintf(db.KERNEL, "Shutdown nameds done %d\n", len(k.svcs.svcs[sp.KNAMED]))
 }
 
-func newKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
+func newKNamedProc(realmId sp.Trealm, init bool, masterKey auth.SymmetricKey) (*proc.Proc, error) {
 	i := "start"
 	if init {
 		i = "init"
 	}
-	args := []string{realmId.String(), i}
+	args := []string{realmId.String(), i, masterKey.String()}
 	p := proc.NewPrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }

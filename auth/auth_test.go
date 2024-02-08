@@ -25,9 +25,9 @@ func TestCompile(t *testing.T) {
 }
 
 func TestSignHMACToken(t *testing.T) {
-	// TODO: generate key properly
-	var hmacSecret []byte = []byte("PDOS")
-	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, hmacSecret)
+	key, err := auth.NewSymmetricKey(sp.KEY_LEN)
+	assert.Nil(t, err, "Err NewKey: %v", err)
+	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, key)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -44,9 +44,9 @@ func TestSignHMACToken(t *testing.T) {
 }
 
 func TestVerifyHMACToken(t *testing.T) {
-	// TODO: generate key properly
-	var hmacSecret []byte = []byte("PDOS")
-	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, hmacSecret)
+	key, err := auth.NewSymmetricKey(sp.KEY_LEN)
+	assert.Nil(t, err, "Err NewKey: %v", err)
+	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, key)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -147,9 +147,6 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
-	// Create an auth server
-	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
-	assert.Nil(t, err)
 	// Create a new sigma clnt
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
 	pe.SetPrincipal(sp.NewPrincipal(
@@ -159,7 +156,7 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	// Clear AWS secrets
 	pe.SetSecrets(map[string]*proc.ProcSecretProto{})
 	pc := auth.NewProcClaims(pe)
-	token, err := as.NewToken(pc)
+	token, err := rootts.MintToken(pc)
 	assert.Nil(t, err)
 	// Set the token of the proc env to the newly authorized token
 	pe.SetToken(token)
@@ -302,16 +299,12 @@ func TestTryDelegateNonSubsetToChildFail(t *testing.T) {
 		return
 	}
 
-	// Create an auth server
-	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
-	assert.Nil(t, err)
-
 	// Create a new proc env to create a new client
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
 	// Only let it talk to schedd and named
 	pe.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.PROCQ, "*")})
 	pc := auth.NewProcClaims(pe)
-	token, err := as.NewToken(pc)
+	token, err := rootts.MintToken(pc)
 	assert.Nil(t, err)
 	// Set the token of the proc env to the newly authorized token
 	pe.SetToken(token)

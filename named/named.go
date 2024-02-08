@@ -9,6 +9,7 @@ import (
 
 	//	"runtime"
 
+	"sigmaos/auth"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
@@ -29,13 +30,14 @@ import (
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sigmasrv.SigmaSrv
-	mu    sync.Mutex
-	fs    *fsetcd.FsEtcd
-	elect *leaderetcd.Election
-	job   string
-	realm sp.Trealm
-	crash int
-	sess  *fsetcd.Session
+	mu        sync.Mutex
+	fs        *fsetcd.FsEtcd
+	elect     *leaderetcd.Election
+	job       string
+	realm     sp.Trealm
+	crash     int
+	sess      *fsetcd.Session
+	masterKey auth.SymmetricKey
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -54,7 +56,7 @@ func Run(args []string) error {
 
 	pcfg := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pcfg)
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	nd := &Named{}
@@ -64,6 +66,7 @@ func Run(args []string) error {
 		return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 	}
 	nd.crash = crashing
+	nd.masterKey = auth.SymmetricKey(args[3])
 
 	p, err := perf.NewPerf(pcfg, perf.NAMED)
 	if err != nil {
@@ -174,7 +177,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
 	}
 
-	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClntKey(root, addr, "", nd.SigmaClnt, nd.masterKey)
 	if err != nil {
 		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}

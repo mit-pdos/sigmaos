@@ -3,6 +3,7 @@ package sigmasrv
 import (
 	"runtime/debug"
 
+	"sigmaos/auth"
 	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -137,12 +138,16 @@ func (ssrv *SigmaSrv) newRPCSrv(svci any) error {
 	return nil
 }
 
-func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsRootPortClntFence(root, path, addr, sc, nil)
+func NewSigmaSrvRootClntKey(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, key auth.SymmetricKey) (*SigmaSrv, error) {
+	mfs, err := memfssrv.NewMemFsRootPortClntFenceKey(root, path, addr, sc, key, nil)
 	if err != nil {
 		return nil, err
 	}
 	return newSigmaSrv(mfs), nil
+}
+
+func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
+	return NewSigmaSrvRootClntKey(root, addr, path, sc, nil)
 }
 
 func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv) (*SigmaSrv, error) {

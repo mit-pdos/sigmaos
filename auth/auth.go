@@ -5,7 +5,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type SigVerificationKey []byte
+type SymmetricKey []byte
 
 type AuthSrv interface {
 	SetDelegatedProcToken(p *proc.Proc) error

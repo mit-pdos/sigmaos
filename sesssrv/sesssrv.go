@@ -52,7 +52,7 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, srvpath string, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, srvpath string, as auth.AuthSrv, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
 	ssrv.dirover = overlay.MkDirOverlay(root)
@@ -67,10 +67,6 @@ func NewSessSrv(pe *proc.ProcEnv, srvpath string, root fs.Dir, addr *sp.Taddr, n
 	ssrv.vt = version.NewVersionTable()
 	ssrv.vt.Insert(ssrv.dirover.Path())
 	ssrv.fencefs = fencefs
-	as, err := auth.NewHMACAuthSrv(srvpath, []byte("PDOS")) // TODO: generate key properly
-	if err != nil {
-		db.DFatalf("Unable to create new auth server: %v", err)
-	}
 	ssrv.as = as
 
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)

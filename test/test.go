@@ -69,14 +69,15 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 type Tstate struct {
 	srvs string
 	*sigmaclnt.SigmaClnt
-	rc      *realmclnt.RealmClnt
-	memfs   *proc.Proc
-	kclnts  []*bootkernelclnt.Kernel
-	killidx int
-	T       *testing.T
-	proc    *proc.Proc
-	scsck   *bootkernelclnt.Kernel
-	as      auth.AuthSrv
+	rc        *realmclnt.RealmClnt
+	memfs     *proc.Proc
+	kclnts    []*bootkernelclnt.Kernel
+	killidx   int
+	T         *testing.T
+	proc      *proc.Proc
+	scsck     *bootkernelclnt.Kernel
+	masterKey auth.SymmetricKey
+	as        auth.AuthSrv
 }
 
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
@@ -140,7 +141,12 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
+	key, err1 := auth.NewSymmetricKey(sp.KEY_LEN)
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error NewSymmetricKey: %v", err1)
+		return nil, err1
+	}
+	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, key)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
 		return nil, err1
@@ -165,7 +171,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, pe, srvs, Overlays, GVisor)
+		_, err := bootkernelclnt.Start(kernelid, pe, srvs, Overlays, GVisor, key)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -176,7 +182,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if useSigmaclntd {
 		db.DPrintf(db.BOOT, "Use sigmaclntd")
 		sckid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(sckid, pe, sp.SIGMACLNTDREL, Overlays, GVisor)
+		_, err := bootkernelclnt.Start(sckid, pe, sp.SIGMACLNTDREL, Overlays, GVisor, key)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for sigmaclntd")
 			return nil, err
@@ -199,6 +205,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		killidx:   0,
 		T:         t,
 		scsck:     scsck,
+		masterKey: key,
 		as:        as,
 	}
 	return savedTstate, nil
@@ -209,7 +216,7 @@ func (ts *Tstate) BootNode(n int) error {
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays, GVisor)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays, GVisor, ts.masterKey)
 		if err != nil {
 			return err
 		}
@@ -230,6 +237,10 @@ func (ts *Tstate) BootFss3d() error {
 	// node
 	savedTstate = nil
 	return ts.Boot(sp.S3REL)
+}
+
+func (ts *Tstate) MintToken(pc *auth.ProcClaims) (sp.Ttoken, error) {
+	return ts.as.NewToken(pc)
 }
 
 func (ts *Tstate) KillOne(s string) error {

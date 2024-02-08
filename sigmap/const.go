@@ -112,6 +112,8 @@ const (
 const (
 	NO_PRINCIPAL_ID TprincipalID = "NO_PRINCIPAL_ID"
 	NO_TOKEN        Ttoken       = "NO_TOKEN"
+	KEY_LEN         int          = 256
+	HOST_KEY_FILE   string       = "/tmp/sigmaos/master-key"
 )
 
 var ALL_PATHS []string = []string{"*"}

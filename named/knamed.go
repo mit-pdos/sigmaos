@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -15,7 +16,7 @@ import (
 func RunKNamed(args []string) error {
 	pcfg := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "%v: knamed %v\n", pcfg.GetPID(), args)
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	nd := &Named{}
@@ -34,6 +35,8 @@ func RunKNamed(args []string) error {
 	nd.SigmaClnt = sc
 
 	init := args[2]
+
+	nd.masterKey = auth.SymmetricKey(args[3])
 
 	db.DPrintf(db.NAMED, "started %v %v", pcfg.GetPID(), nd.realm)
 

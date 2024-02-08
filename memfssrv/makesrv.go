@@ -1,6 +1,7 @@
 package memfssrv
 
 import (
+	"sigmaos/auth"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -38,15 +39,28 @@ func NewMemFsPortClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt) (*MemF
 func NewMemFsPortClntFence(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, fencefs)
 	root := dir.NewRootDir(ctx, memfs.NewInode, nil)
-	return NewMemFsRootPortClntFence(root, pn, addr, sc, fencefs)
+	return NewMemFsRootPortClntFenceKey(root, pn, addr, sc, nil, fencefs)
 }
 
-func NewMemFsRootPortClntFence(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
-	srv, mpn, err := fslibsrv.NewSrv(root, pn, addr, sc, fencefs)
+func NewMemFsRootPortClntFenceKey(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, key auth.SymmetricKey, fencefs fs.Dir) (*MemFs, error) {
+	var as auth.AuthSrv
+	var err error
+	if key == nil {
+		as, err = NewHMACVerificationSrv(pn, sc)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		as, err = NewHMACVerificationSrvKey(pn, sc, key)
+		if err != nil {
+			return nil, err
+		}
+	}
+	srv, mpn, err := fslibsrv.NewSrv(root, pn, as, addr, sc, fencefs)
 	if err != nil {
 		return nil, err
 	}
-	mfs := NewMemFsSrv(mpn, srv, sc, nil)
+	mfs := NewMemFsSrv(mpn, srv, sc, as, nil)
 	return mfs, nil
 }
 

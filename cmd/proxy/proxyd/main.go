@@ -29,8 +29,11 @@ func main() {
 		sp.TprincipalID("proxy"),
 		sp.NO_TOKEN,
 	))
-	///
-	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
+	masterKey, err1 := os.ReadFile(sp.HOST_KEY_FILE)
+	if err1 != nil {
+		db.DFatalf("Error Read master key: %v", err1)
+	}
+	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, masterKey)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}
@@ -40,7 +43,6 @@ func main() {
 		db.DFatalf("Error NewToken: %v", err1)
 	}
 	pe.SetToken(token)
-	///
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	netsrv.NewNetServer(pe, proxy.NewNpd(pe, lip), addr, npcodec.ReadCall, npcodec.WriteCall)

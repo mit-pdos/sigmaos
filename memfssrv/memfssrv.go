@@ -1,6 +1,7 @@
 package memfssrv
 
 import (
+	"sigmaos/auth"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -31,17 +32,19 @@ type MemFs struct {
 	ctx fs.CtxI // server context
 	plt *lockmap.PathLockTable
 	sc  *sigmaclnt.SigmaClnt
+	as  auth.AuthSrv
 	pc  *portclnt.PortClnt
 	pi  portclnt.PortInfo
 	pn  string
 }
 
-func NewMemFsSrv(pn string, srv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) *MemFs {
+func NewMemFsSrv(pn string, srv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, as auth.AuthSrv, fencefs fs.Dir) *MemFs {
 	mfs := &MemFs{
 		SessSrv: srv,
 		ctx:     ctx.NewCtx(sc.ProcEnv().GetPrincipal(), nil, 0, sp.NoClntId, nil, fencefs),
 		plt:     srv.GetPathLockTable(),
 		sc:      sc,
+		as:      as,
 		pn:      pn,
 	}
 	return mfs

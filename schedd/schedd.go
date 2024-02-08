@@ -45,8 +45,8 @@ type Schedd struct {
 	nProcGetsSuccessful uint64
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Schedd {
-	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, key auth.SymmetricKey) *Schedd {
+	as, err := auth.NewHMACAuthSrv(proc.NOT_SET, key)
 	if err != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err)
 	}
@@ -307,12 +307,12 @@ func (sd *Schedd) stats() {
 	}
 }
 
-func RunSchedd(kernelId string, reserveMcpu uint) error {
+func RunSchedd(kernelId string, reserveMcpu uint, key auth.SymmetricKey) error {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	sd := NewSchedd(sc, kernelId, reserveMcpu)
+	sd := NewSchedd(sc, kernelId, reserveMcpu, key)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

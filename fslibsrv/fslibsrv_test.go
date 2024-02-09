@@ -19,6 +19,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/sigmaclnt"
 	scproto "sigmaos/sigmaclntsrv/proto"
 	sp "sigmaos/sigmap"
@@ -224,7 +225,7 @@ func TestWriteMarshalUnmarshalPerfSingle(t *testing.T) {
 	assert.Nil(ts.T, err)
 	buf := test.NewBuf(FILESZ)
 	measure(p1, "marshal", func() sp.Tlength {
-		req := &scproto.SigmaWriteRequest{Fd: uint32(0), Data: buf}
+		req := &scproto.SigmaWriteRequest{Fd: uint32(0), Blob: &rpcproto.Blob{Iov: [][]byte{buf}}}
 		_, err := proto.Marshal(req)
 		assert.Nil(ts.T, err)
 		return sp.Tlength(len(buf))

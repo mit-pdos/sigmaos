@@ -24,20 +24,23 @@ func NewKeyMgr(fn GetKeyFn) *KeyMgr {
 }
 
 func (mgr *KeyMgr) GetKey(s sp.Tsigner) (SymmetricKey, error) {
-	mgr.mu.Lock()
-	defer mgr.mu.Unlock()
-
 	db.DPrintf(db.AUTH, "Get key for signer %v", s)
-	var key SymmetricKey
-	var ok bool
-	if key, ok = mgr.keys[s]; !ok {
+	mgr.mu.Lock()
+	key, ok := mgr.keys[s]
+	mgr.mu.Unlock()
+	if !ok {
 		var err error
+		// Must not hold lock across getKey, which may be a circular RPC. getKey
+		// should be deterministic, so not holding the lock (and setting the value
+		// in the map twice) should be fine.
 		key, err = mgr.getKey(s)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error GetKey for signer %v: %v", s, err)
 			return nil, fmt.Errorf("Error GetKey for signer %v: %v", s, err)
 		}
+		mgr.mu.Lock()
 		mgr.keys[s] = key
+		mgr.mu.Unlock()
 	} else {
 		db.DPrintf(db.AUTH, "Key for signer %v cached", s)
 	}

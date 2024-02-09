@@ -113,10 +113,11 @@ func (as *HMACAuthSrv) IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool
 	pc, err := as.VerifyTokenGetClaims(principal.GetToken())
 	if err != nil {
 		db.DPrintf(db.AUTH, "Token verification failed %v", principal.GetID())
+		db.DPrintf(db.AUTH, "Authorization check failed p %v, Token verification failed", principal.GetID())
 		return nil, false, fmt.Errorf("Token verification failed: %v", err)
 	}
 	if principal.GetID() != pc.PrincipalID {
-		db.DPrintf(db.AUTH, "Token & principal ID don't match ( %v != %v )", principal.GetID(), pc.PrincipalID)
+		db.DPrintf(db.AUTH, "Authorization check failed p %v, Token & principal ID don't match ( %v != %v )", principal.GetID(), principal.GetID(), pc.PrincipalID)
 		return nil, false, fmt.Errorf("Mismatch between principal ID and token ID: %v", err)
 	}
 	// Check that the server path is a subpath of one of the allowed paths

@@ -14,6 +14,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/leaderetcd"
+	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/portclnt"
@@ -177,7 +178,9 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
 	}
 
-	ssrv, err := sigmasrv.NewSigmaSrvRootClntKey(root, addr, "", nd.SigmaClnt, nd.masterKey)
+	kmgr := auth.NewKeyMgr(memfssrv.WithSigmaClntGetKeyFn(nd.SigmaClnt))
+	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterKey)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
 		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}

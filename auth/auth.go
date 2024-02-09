@@ -7,6 +7,8 @@ import (
 
 type SymmetricKey []byte
 
+type GetKeyFn func(signer sp.Tsigner) (SymmetricKey, error)
+
 type AuthSrv interface {
 	SetDelegatedProcToken(p *proc.Proc) error
 	NewToken(pc *ProcClaims) (*sp.Ttoken, error)

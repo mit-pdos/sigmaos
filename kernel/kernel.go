@@ -13,6 +13,7 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/kproc"
+	"sigmaos/memfssrv"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -54,16 +55,16 @@ type Kernel struct {
 	shuttingDown bool
 }
 
-func newKernel(param *Param, as auth.AuthSrv) *Kernel {
+func newKernel(param *Param, bootstrapAS auth.AuthSrv) *Kernel {
 	k := &Kernel{}
 	k.Param = param
-	k.as = as
+	k.as = bootstrapAS
 	k.svcs = newServices()
 	return k
 }
 
-func NewKernel(p *Param, pe *proc.ProcEnv, as auth.AuthSrv) (*Kernel, error) {
-	k := newKernel(p, as)
+func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, error) {
+	k := newKernel(p, bootstrapAS)
 	ip, err := netsigma.LocalIP()
 	if err != nil {
 		return nil, err
@@ -91,6 +92,16 @@ func NewKernel(p *Param, pe *proc.ProcEnv, as auth.AuthSrv) (*Kernel, error) {
 		return nil, err
 	}
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
+	// Create an AuthServer which dynamically pulls keys from the namespace, now
+	// that knamed has booted.
+	kmgr := auth.NewKeyMgr(memfssrv.WithSigmaClntGetKeyFn(sc))
+	kmgr.AddKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterKey)
+	as, err := auth.NewHMACAuthSrv(sp.Tsigner(k.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NeHMACAUthServer %v", err)
+		return nil, err
+	}
+	k.as = as
 	db.DPrintf(db.KERNEL, "Kernel start srvs %v", k.Param.Services)
 	err = startSrvs(k)
 	if err != nil {

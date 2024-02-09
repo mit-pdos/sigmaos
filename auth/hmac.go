@@ -13,14 +13,14 @@ import (
 type HMACAuthSrv struct {
 	signer  sp.Tsigner
 	srvpath string
-	hmacKey SymmetricKey
+	kmgr    *KeyMgr
 }
 
-func NewHMACAuthSrv(signer sp.Tsigner, srvpath string, hmacKey SymmetricKey) (*HMACAuthSrv, error) {
+func NewHMACAuthSrv(signer sp.Tsigner, srvpath string, kmgr *KeyMgr) (*HMACAuthSrv, error) {
 	return &HMACAuthSrv{
 		signer:  signer,
 		srvpath: srvpath,
-		hmacKey: []byte(hmacKey),
+		kmgr:    kmgr,
 	}, nil
 }
 
@@ -66,9 +66,13 @@ func (as *HMACAuthSrv) SetDelegatedProcToken(p *proc.Proc) error {
 }
 
 func (as *HMACAuthSrv) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
+	key, err := as.kmgr.GetKey(as.signer)
+	if err != nil {
+		return nil, err
+	}
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, pc)
-	tstr, err := token.SignedString([]byte(as.hmacKey))
+	tstr, err := token.SignedString([]byte(key))
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +88,12 @@ func (as *HMACAuthSrv) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
+		key, err := as.kmgr.GetKey(sp.Tsigner(t.GetSigner()))
+		if err != nil {
+			return nil, err
+		}
 		// hmacKey is a []byte containing your secret, e.g. []byte("my_secret_key")
-		return []byte(as.hmacKey), nil
+		return []byte(key), nil
 	})
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error parsing jwt: %v", err)

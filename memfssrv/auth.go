@@ -7,13 +7,26 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+func WithSigmaClntGetKeyFn(sc *sigmaclnt.SigmaClnt) auth.GetKeyFn {
+	return func(signer sp.Tsigner) (auth.SymmetricKey, error) {
+		// TODO: use signer
+		// Mount the master key file, which should be mountable by anyone
+		key, err := sc.GetFile(sp.MASTER_KEY)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error get master key: %v", err)
+			return nil, err
+		}
+		return auth.SymmetricKey(key), nil
+	}
+}
+
 type HMACVerificationSrv struct {
 	sc *sigmaclnt.SigmaClnt
 	auth.AuthSrv
 }
 
-func NewHMACVerificationSrvKey(signer sp.Tsigner, srvpath string, sc *sigmaclnt.SigmaClnt, key auth.SymmetricKey) (*HMACVerificationSrv, error) {
-	as, err := auth.NewHMACAuthSrv(signer, srvpath, key)
+func NewHMACVerificationSrvKeyMgr(signer sp.Tsigner, srvpath string, sc *sigmaclnt.SigmaClnt, kmgr *auth.KeyMgr) (*HMACVerificationSrv, error) {
+	as, err := auth.NewHMACAuthSrv(signer, srvpath, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error make auth server: %v", err)
 		return nil, err
@@ -25,11 +38,6 @@ func NewHMACVerificationSrvKey(signer sp.Tsigner, srvpath string, sc *sigmaclnt.
 }
 
 func NewHMACVerificationSrv(signer sp.Tsigner, srvpath string, sc *sigmaclnt.SigmaClnt) (*HMACVerificationSrv, error) {
-	// Mount the master key file, which should be mountable by anyone
-	key, err := sc.GetFile(sp.MASTER_KEY)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error get master key: %v", err)
-		return nil, err
-	}
-	return NewHMACVerificationSrvKey(signer, srvpath, sc, auth.SymmetricKey(key))
+	kmgr := auth.NewKeyMgr(WithSigmaClntGetKeyFn(sc))
+	return NewHMACVerificationSrvKeyMgr(signer, srvpath, sc, kmgr)
 }

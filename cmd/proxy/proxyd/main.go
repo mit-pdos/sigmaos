@@ -33,7 +33,9 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error Read master key: %v", err1)
 	}
-	as, err1 := auth.NewHMACAuthSrv("proxy", proc.NOT_SET, masterKey)
+	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(masterKey))
+	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
+	as, err1 := auth.NewHMACAuthSrv("proxy", proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}

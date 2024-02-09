@@ -39,19 +39,19 @@ func NewMemFsPortClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt) (*MemF
 func NewMemFsPortClntFence(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, fencefs)
 	root := dir.NewRootDir(ctx, memfs.NewInode, nil)
-	return NewMemFsRootPortClntFenceKey(root, pn, addr, sc, nil, fencefs)
+	return NewMemFsRootPortClntFenceKeyMgr(root, pn, addr, sc, nil, fencefs)
 }
 
-func NewMemFsRootPortClntFenceKey(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, key auth.SymmetricKey, fencefs fs.Dir) (*MemFs, error) {
+func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, kmgr *auth.KeyMgr, fencefs fs.Dir) (*MemFs, error) {
 	var as auth.AuthSrv
 	var err error
-	if key == nil {
+	if kmgr == nil {
 		as, err = NewHMACVerificationSrv(sp.Tsigner(sc.ProcEnv().GetPID()), pn, sc)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		as, err = NewHMACVerificationSrvKey(sp.Tsigner(sc.ProcEnv().GetPID()), pn, sc, key)
+		as, err = NewHMACVerificationSrvKeyMgr(sp.Tsigner(sc.ProcEnv().GetPID()), pn, sc, kmgr)
 		if err != nil {
 			return nil, err
 		}

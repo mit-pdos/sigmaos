@@ -138,8 +138,8 @@ func (ssrv *SigmaSrv) newRPCSrv(svci any) error {
 	return nil
 }
 
-func NewSigmaSrvRootClntKey(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, key auth.SymmetricKey) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsRootPortClntFenceKey(root, path, addr, sc, key, nil)
+func NewSigmaSrvRootClntKeyMgr(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, keymgr *auth.KeyMgr) (*SigmaSrv, error) {
+	mfs, err := memfssrv.NewMemFsRootPortClntFenceKeyMgr(root, path, addr, sc, keymgr, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func NewSigmaSrvRootClntKey(root fs.Dir, addr *sp.Taddr, path string, sc *sigmac
 }
 
 func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	return NewSigmaSrvRootClntKey(root, addr, path, sc, nil)
+	return NewSigmaSrvRootClntKeyMgr(root, addr, path, sc, nil)
 }
 
 func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv) (*SigmaSrv, error) {

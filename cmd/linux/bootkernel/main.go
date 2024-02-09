@@ -57,7 +57,12 @@ func main() {
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelId), sp.NoToken()), secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, []byte(masterKey))
+	// Create an auth server with a constant GetKeyFn, to bootstrap with the
+	// initial master key. This auth server should *not* be used long-term. It
+	// needs to be replaced with one which queries the namespace for keys once
+	// knamed has booted.
+	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(auth.SymmetricKey(masterKey)))
+	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}

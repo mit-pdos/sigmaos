@@ -13,6 +13,7 @@ import (
 	lcproto "sigmaos/lcschedsrv/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
+	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procmgr"
@@ -46,7 +47,9 @@ type Schedd struct {
 }
 
 func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, key auth.SymmetricKey) *Schedd {
-	as, err := auth.NewHMACAuthSrv(sp.Tsigner(sc.ProcEnv().GetPID()), proc.NOT_SET, key)
+	kmgr := auth.NewKeyMgr(memfssrv.WithSigmaClntGetKeyFn(sc))
+	kmgr.AddKey(sp.Tsigner(sc.ProcEnv().GetPID()), key)
+	as, err := auth.NewHMACAuthSrv(sp.Tsigner(sc.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err)
 	}

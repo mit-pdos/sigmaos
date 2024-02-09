@@ -4,9 +4,49 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"sync"
 
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 )
+
+type KeyMgr struct {
+	mu     sync.Mutex
+	getKey GetKeyFn
+	keys   map[sp.Tsigner]SymmetricKey
+}
+
+func NewKeyMgr(fn GetKeyFn) *KeyMgr {
+	return &KeyMgr{
+		getKey: fn,
+		keys:   make(map[sp.Tsigner]SymmetricKey),
+	}
+}
+
+func (mgr *KeyMgr) GetKey(s sp.Tsigner) (SymmetricKey, error) {
+	mgr.mu.Lock()
+	defer mgr.mu.Unlock()
+
+	var key SymmetricKey
+	var ok bool
+	if key, ok = mgr.keys[s]; !ok {
+		var err error
+		key, err = mgr.getKey(s)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error GetKey for signer %v: %v", s, err)
+			return nil, fmt.Errorf("Error GetKey for signer %v: %v", s, err)
+		}
+		mgr.keys[s] = key
+	}
+	return key, nil
+}
+
+func (mgr *KeyMgr) AddKey(s sp.Tsigner, key SymmetricKey) {
+	mgr.mu.Lock()
+	defer mgr.mu.Unlock()
+
+	mgr.keys[s] = key
+}
 
 func NewSymmetricKey(nbyte int) (SymmetricKey, error) {
 	file, err := os.Open("/dev/urandom") // For read access.
@@ -31,4 +71,10 @@ func NewSymmetricKey(nbyte int) (SymmetricKey, error) {
 
 func (sk SymmetricKey) String() string {
 	return string(sk)
+}
+
+func WithConstGetKeyFn(key SymmetricKey) GetKeyFn {
+	return func(sp.Tsigner) (SymmetricKey, error) {
+		return key, nil
+	}
 }

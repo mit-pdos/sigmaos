@@ -8,6 +8,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/path"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -99,17 +100,17 @@ func (f *Fid) Write(off sp.Toffset, b []byte, fence sp.Tfence) (sp.Tsize, *serr.
 	return sz, err
 }
 
-func (f *Fid) WriteRead(req []byte) ([]byte, *serr.Err) {
+func (f *Fid) WriteRead(req sessp.IoVec) (sessp.IoVec, *serr.Err) {
 	o := f.Pobj().Obj()
 	var err *serr.Err
-	var b []byte
+	var iov sessp.IoVec
 	switch i := o.(type) {
 	case fs.RPC:
-		b, err = i.WriteRead(f.Pobj().Ctx(), req)
+		iov, err = i.WriteRead(f.Pobj().Ctx(), req)
 	default:
 		db.DFatalf("Write: obj type %T isn't RPC\n", o)
 	}
-	return b, err
+	return iov, err
 }
 
 func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count sp.Tsize) ([]byte, *serr.Err) {

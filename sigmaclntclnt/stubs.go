@@ -7,6 +7,7 @@ import (
 	"sigmaos/path"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 	scproto "sigmaos/sigmaclntsrv/proto"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
@@ -34,7 +35,7 @@ func (scc *SigmaClntClnt) rpcFd(method string, req proto.Message, rep *scproto.S
 	return int(rep.Fd), nil
 }
 
-func (scc *SigmaClntClnt) rpcData(method string, req proto.Message, rep *scproto.SigmaDataReply) ([]byte, error) {
+func (scc *SigmaClntClnt) rpcData(method string, req proto.Message, rep *scproto.SigmaDataReply) (sessp.IoVec, error) {
 	err := scc.rpcc.RPC(method, req, rep)
 	if err != nil {
 		return nil, err
@@ -42,7 +43,7 @@ func (scc *SigmaClntClnt) rpcData(method string, req proto.Message, rep *scproto
 	if rep.Err.TErrCode() != serr.TErrNoError {
 		return nil, sp.NewErr(rep.Err)
 	}
-	return rep.Blob.Data, nil
+	return sessp.NewIoVec(rep.Blob.Iov), nil
 }
 
 func (scc *SigmaClntClnt) rpcSize(method string, req proto.Message, rep *scproto.SigmaSizeReply) (sp.Tsize, error) {
@@ -125,11 +126,14 @@ func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
 	rep := scproto.SigmaDataReply{}
 	d, err := scc.rpcData("SigmaClntSrvAPI.GetFile", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "GetFile %v %v %v", req, d, err)
-	return d, err
+	if err != nil {
+		return nil, err
+	}
+	return d[0], nil
 }
 
 func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error) {
-	blob := &rpcproto.Blob{Data: data}
+	blob := &rpcproto.Blob{Iov: [][]byte{data}}
 	req := scproto.SigmaPutFileRequest{Path: path, Perm: uint32(p), Mode: uint32(m), Offset: uint64(o), LeaseId: uint64(l), Blob: blob}
 	rep := scproto.SigmaSizeReply{}
 	sz, err := scc.rpcSize("SigmaClntSrvAPI.PutFile", &req, &rep)
@@ -142,11 +146,14 @@ func (scc *SigmaClntClnt) Read(fd int, sz sp.Tsize) ([]byte, error) {
 	rep := scproto.SigmaDataReply{}
 	d, err := scc.rpcData("SigmaClntSrvAPI.Read", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "Read %v %v %v", req, len(d), err)
-	return d, err
+	if err != nil {
+		return nil, err
+	}
+	return d[0], nil
 }
 
 func (scc *SigmaClntClnt) Write(fd int, data []byte) (sp.Tsize, error) {
-	blob := &rpcproto.Blob{Data: data}
+	blob := &rpcproto.Blob{Iov: [][]byte{data}}
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: blob}
 	rep := scproto.SigmaSizeReply{}
 	sz, err := scc.rpcSize("SigmaClntSrvAPI.Write", &req, &rep)
@@ -193,7 +200,7 @@ func (scc *SigmaClntClnt) FenceDir(path string, f sp.Tfence) error {
 }
 
 func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
-	blob := &rpcproto.Blob{Data: d}
+	blob := &rpcproto.Blob{Iov: [][]byte{d}}
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: blob, Fence: f.FenceProto()}
 	rep := scproto.SigmaSizeReply{}
 	sz, err := scc.rpcSize("SigmaClntSrvAPI.Write", &req, &rep)
@@ -201,12 +208,12 @@ func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, e
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) WriteRead(fd int, data []byte) ([]byte, error) {
-	blob := &rpcproto.Blob{Data: data}
+func (scc *SigmaClntClnt) WriteRead(fd int, iov sessp.IoVec) (sessp.IoVec, error) {
+	blob := rpcproto.NewBlob(iov)
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: blob}
 	rep := scproto.SigmaDataReply{}
 	d, err := scc.rpcData("SigmaClntSrvAPI.WriteRead", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v %v", req.Fd, len(data), len(d), err)
+	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v %v", req.Fd, len(iov), len(d), err)
 	return d, err
 }
 

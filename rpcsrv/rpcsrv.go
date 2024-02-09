@@ -2,6 +2,7 @@ package rpcsrv
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -31,23 +33,23 @@ func (rpcs *RPCSrv) RegisterService(svci any) {
 	rpcs.svc.RegisterService(svci)
 }
 
-func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, arg []byte) ([]byte, *serr.Err) {
+func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
 	var start time.Time
 	if rpcs.sti != nil {
 		start = time.Now()
 	}
 	req := rpcproto.Request{}
-	if err := proto.Unmarshal(arg, &req); err != nil {
+	if err := proto.Unmarshal(iov[0], &req); err != nil {
 		return nil, serr.NewErrError(err)
 	}
 	var rerr *sp.Rerror
-	b, sr := rpcs.ServeRPC(ctx, req.Method, req.Args)
+	d, sr := rpcs.ServeRPC(ctx, req.Method, iov[1])
 	if sr != nil {
 		rerr = sp.NewRerrorSerr(sr)
 	} else {
 		rerr = sp.NewRerror()
 	}
-	rep := &rpcproto.Reply{Res: b, Err: rerr}
+	rep := &rpcproto.Reply{Err: rerr}
 	b, err := proto.Marshal(rep)
 	if err != nil {
 		return nil, serr.NewErrError(err)
@@ -55,11 +57,14 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, arg []byte) ([]byte, *serr.Err) {
 	if rpcs.sti != nil {
 		rpcs.sti.Stat(req.Method, time.Since(start).Microseconds())
 	}
-	return b, nil
+	return sessp.IoVec{b, d}, nil
 }
 
 func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, b []byte) ([]byte, *serr.Err) {
 	dot := strings.LastIndex(m, ".")
+	if dot <= 0 {
+		return nil, serr.NewErrError(fmt.Errorf("Invalid method %q", m))
+	}
 	method := m[dot+1:]
 	tname := m[:dot]
 	db.DPrintf(db.SIGMASRV, "serveRPC svc %v name %v\n", tname, method)

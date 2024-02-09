@@ -195,7 +195,7 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
 
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
-	msg, data, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Data)
+	msg, iov, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Iov)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
 
 	if rerror != nil {
@@ -204,7 +204,7 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	}
 
 	reply := sessp.NewFcallMsgReply(fc, msg)
-	reply.Data = data
+	reply.Iov = iov
 
 	switch op {
 	case TSESS_DEL:

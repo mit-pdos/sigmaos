@@ -11,7 +11,7 @@ import (
 	"sigmaos/sessp"
 )
 
-func marshalFrame(fcm *sessp.FcallMsg) (frame.Tframe, *serr.Err) {
+func marshalFrame(fcm *sessp.FcallMsg) (sessp.Tframe, *serr.Err) {
 	sp2NpMsg(fcm)
 	fc9P := to9P(fcm)
 	db.DPrintf(db.NPCODEC, "MarshalFrame %v\n", fc9P)
@@ -22,7 +22,7 @@ func marshalFrame(fcm *sessp.FcallMsg) (frame.Tframe, *serr.Err) {
 	return f, nil
 }
 
-func unmarshalFrame(f frame.Tframe) (*sessp.FcallMsg, *serr.Err) {
+func unmarshalFrame(f sessp.Tframe) (*sessp.FcallMsg, *serr.Err) {
 	fc9p := &Fcall9P{}
 	if err := unmarshal(f, fc9p); err != nil {
 		db.DPrintf(db.NPCODEC, "unmarshal err %v\n", err)

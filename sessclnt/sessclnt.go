@@ -76,8 +76,8 @@ func (c *SessClnt) ReportError(err error) {
 	db.DPrintf(db.SESSCLNT, "Netclnt sess %v reports err %v\n", c.sid, err)
 }
 
-func (c *SessClnt) RPC(req sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
-	fc := sessp.NewFcallMsg(req, data, c.sid, &c.seqno)
+func (c *SessClnt) RPC(req sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	fc := sessp.NewFcallMsg(req, iov, c.sid, &c.seqno)
 	nc := c.netClnt()
 	if nc == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)

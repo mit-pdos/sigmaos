@@ -88,6 +88,7 @@ func newTstateSrv(t *testing.T, crash int) *TstateSrv {
 
 func TestConnectSessSrv(t *testing.T) {
 	ts := newTstateSrv(t, 0)
+
 	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
@@ -194,6 +195,13 @@ func TestConnectMfsSrv(t *testing.T) {
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
+	req1 := sp.NewTwriteread(sp.NoFid)
+	iov := sessp.NewIoVec([][]byte{make([]byte, 10)})
+	rep, err = ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req1, iov)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
 	ts.srv.StopServing()
 }
 

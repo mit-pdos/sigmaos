@@ -3,6 +3,7 @@ package sigmaos
 
 import (
 	path "sigmaos/path"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -40,7 +41,7 @@ type SigmaOS interface {
 	WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error)
 
 	// RPC
-	WriteRead(fd int, d []byte) ([]byte, error)
+	WriteRead(fd int, iov sessp.IoVec) (sessp.IoVec, error)
 
 	// Wait unil directory changes
 	DirWait(fd int) error

@@ -39,7 +39,7 @@ type File interface {
 }
 
 type RPC interface {
-	WriteRead(CtxI, []byte) ([]byte, *serr.Err)
+	WriteRead(CtxI, sessp.IoVec) (sessp.IoVec, *serr.Err)
 }
 
 type FsObj interface {

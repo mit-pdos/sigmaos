@@ -12,7 +12,7 @@ import (
 
 type Reply struct {
 	f   []byte
-	d   []byte
+	iov sessp.IoVec
 	err *serr.Err
 }
 
@@ -41,13 +41,13 @@ func (rpc *Rpc) Await() (*sessp.FcallMsg, *serr.Err) {
 	}
 
 	// Unmarshal reply, now on the receiver thread.
-	fm := spcodec.UnmarshalFcallAndData(reply.f, reply.d)
+	fm := spcodec.UnmarshalFcall(reply.f, reply.iov)
 	return fm, reply.err
 }
 
 // Complete a reply
-func (rpc *Rpc) Complete(f []byte, d []byte, err *serr.Err) {
-	rpc.ReplyC <- &Reply{f, d, err}
+func (rpc *Rpc) Complete(f []byte, iov sessp.IoVec, err *serr.Err) {
+	rpc.ReplyC <- &Reply{f, iov, err}
 	close(rpc.ReplyC)
 }
 

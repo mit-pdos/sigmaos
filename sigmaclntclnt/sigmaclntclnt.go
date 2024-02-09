@@ -27,15 +27,15 @@ type SigmaClntClnt struct {
 	disconnected bool
 }
 
-func (scc *SigmaClntClnt) SendReceive(a []byte) ([]byte, error) {
+func (scc *SigmaClntClnt) SendReceive(iov sessp.IoVec) (sessp.IoVec, error) {
 	seq := &scc.seqno
-	c := sigmaclntcodec.NewCall(seq.Next(), a)
+	c := sigmaclntcodec.NewCall(seq.Next(), iov)
 	rep, err := scc.dmx.SendReceive(c)
 	if err != nil {
 		return nil, err
 	} else {
 		c := rep.(*sigmaclntcodec.Call)
-		return c.Data, nil
+		return c.Iov, nil
 	}
 }
 

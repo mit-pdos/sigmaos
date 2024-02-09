@@ -27,7 +27,8 @@ func TestCompile(t *testing.T) {
 func TestSignHMACToken(t *testing.T) {
 	key, err := auth.NewSymmetricKey(sp.KEY_LEN)
 	assert.Nil(t, err, "Err NewKey: %v", err)
-	as, err := auth.NewHMACAuthSrv("test", proc.NOT_SET, key)
+	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(key))
+	as, err := auth.NewHMACAuthSrv("test", proc.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -46,7 +47,8 @@ func TestSignHMACToken(t *testing.T) {
 func TestVerifyHMACToken(t *testing.T) {
 	key, err := auth.NewSymmetricKey(sp.KEY_LEN)
 	assert.Nil(t, err, "Err NewKey: %v", err)
-	as, err := auth.NewHMACAuthSrv("test", proc.NOT_SET, key)
+	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(key))
+	as, err := auth.NewHMACAuthSrv("test", proc.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{

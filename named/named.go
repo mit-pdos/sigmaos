@@ -180,6 +180,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 
 	kmgr := auth.NewKeyMgr(memfssrv.WithSigmaClntGetKeyFn(nd.SigmaClnt))
 	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterKey)
+	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetKernelID()), nd.masterKey)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
 		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)

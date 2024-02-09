@@ -120,7 +120,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 	// Allow all paths for boot env
 	pe.SetAllowedPaths(sp.ALL_PATHS)
 	pe.Program = "kernel"
-	pe.SetPID(sp.GenPid(principal.GetID().String()))
+	pe.SetPID(sp.Tpid(principal.GetID().String()))
 	pe.EtcdIP = string(etcdIP)
 	pe.InnerContainerIPStr = innerIP.String()
 	pe.OuterContainerIPStr = outerIP.String()

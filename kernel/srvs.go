@@ -127,6 +127,7 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 		return err
 	}
 	p.SetToken(token)
+	p.SetKernelID(k.Param.KernelId, false)
 	cmd, err := runKNamed(pcfg, p, sp.ROOTREALM, init)
 	if err != nil {
 		return err

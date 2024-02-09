@@ -27,6 +27,7 @@ func (mgr *KeyMgr) GetKey(s sp.Tsigner) (SymmetricKey, error) {
 	mgr.mu.Lock()
 	defer mgr.mu.Unlock()
 
+	db.DPrintf(db.AUTH, "Get key for signer %v", s)
 	var key SymmetricKey
 	var ok bool
 	if key, ok = mgr.keys[s]; !ok {
@@ -37,6 +38,8 @@ func (mgr *KeyMgr) GetKey(s sp.Tsigner) (SymmetricKey, error) {
 			return nil, fmt.Errorf("Error GetKey for signer %v: %v", s, err)
 		}
 		mgr.keys[s] = key
+	} else {
+		db.DPrintf(db.AUTH, "Key for signer %v cached", s)
 	}
 	return key, nil
 }
@@ -46,6 +49,7 @@ func (mgr *KeyMgr) AddKey(s sp.Tsigner, key SymmetricKey) {
 	defer mgr.mu.Unlock()
 
 	mgr.keys[s] = key
+	db.DPrintf(db.AUTH, "Add key for signer %v", s)
 }
 
 func NewSymmetricKey(nbyte int) (SymmetricKey, error) {

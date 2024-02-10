@@ -149,7 +149,8 @@ func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) er
 	if err := proto.Unmarshal(iov[0], res); err != nil {
 		return err
 	}
-	if len(iov) > 1 { // handle blob
+	blob = rpc.GetBlob(res)
+	if blob != nil && len(iov) > 1 { // handle blob
 		blob.SetIoVec(iov[1:])
 	}
 	return nil

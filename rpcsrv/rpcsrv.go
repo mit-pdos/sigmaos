@@ -77,12 +77,19 @@ func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov sessp.IoVec) (sessp.IoVe
 	if err != nil {
 		return nil, err
 	}
+	var iovrep sessp.IoVec
+	blob := rpc.GetBlob(repmsg)
+	if blob != nil {
+		iovrep = blob.GetIoVec()
+		blob.SetIoVec(nil)
+	}
 	b, r := proto.Marshal(repmsg)
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	return sessp.IoVec{b}, nil
-
+	iovrep = append(sessp.IoVec{b}, iovrep...)
+	db.DPrintf(db.TEST, "iovrep %v\n", iovrep)
+	return iovrep, nil
 }
 
 func (svc *service) dispatch(ctx fs.CtxI, methname string, iov sessp.IoVec) (proto.Message, *serr.Err) {

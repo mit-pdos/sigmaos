@@ -23,6 +23,7 @@ func RunKNamed(args []string) error {
 	// Self-sign token for bootstrapping purposes
 	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(masterKey))
 	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
+	kmgr.AddKey(sp.Tsigner(pe.GetKernelID()), masterKey)
 	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)

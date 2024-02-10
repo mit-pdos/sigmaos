@@ -30,7 +30,7 @@ func (mgr *KeyMgr) GetKey(s sp.Tsigner) (SymmetricKey, error) {
 	key, ok := mgr.keys[s]
 	mgr.mu.Unlock()
 	if !ok {
-		db.DPrintf(db.AUTH, "Key for signer %v not in map", s)
+		db.DPrintf(db.AUTH, "Key for signer %v not in map %v", s, mgr)
 		var err error
 		// Must not hold lock across getKey, which may be a circular RPC. getKey
 		// should be deterministic, so not holding the lock (and setting the value
@@ -44,7 +44,7 @@ func (mgr *KeyMgr) GetKey(s sp.Tsigner) (SymmetricKey, error) {
 		mgr.keys[s] = key
 		mgr.mu.Unlock()
 	} else {
-		db.DPrintf(db.AUTH, "GetKey for signer %v cached", s)
+		db.DPrintf(db.AUTH, "GetKey cached for signer %v", s)
 	}
 	return key, nil
 }
@@ -55,6 +55,14 @@ func (mgr *KeyMgr) AddKey(s sp.Tsigner, key SymmetricKey) {
 
 	mgr.keys[s] = key
 	db.DPrintf(db.AUTH, "Add key for signer %v", s)
+}
+
+func (mgr *KeyMgr) String() string {
+	signers := make([]sp.Tsigner, 0)
+	for s, _ := range mgr.keys {
+		signers = append(signers, s)
+	}
+	return fmt.Sprintf("&{ signers:%v }", signers)
 }
 
 func NewSymmetricKey(nbyte int) (SymmetricKey, error) {

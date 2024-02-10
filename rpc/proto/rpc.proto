@@ -13,7 +13,7 @@ message Reply {
 }
 
 // Users of rpc package can use Blob to pass data directly through to
-// the transport without marshaling it.
+// the transport without the rpc package marshaling it.
 message Blob {
         repeated bytes iov = 1;
 }

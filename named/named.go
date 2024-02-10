@@ -31,6 +31,7 @@ import (
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sigmasrv.SigmaSrv
+	kmgr      *auth.KeyMgr
 	mu        sync.Mutex
 	fs        *fsetcd.FsEtcd
 	elect     *leaderetcd.Election
@@ -55,11 +56,27 @@ func Run(args []string) error {
 	//		}
 	//	}()
 
-	pcfg := proc.GetProcEnv()
-	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pcfg)
+	pe := proc.GetProcEnv()
+	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pe)
 	if len(args) != 4 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
+	masterKey := auth.SymmetricKey(args[3])
+	// Self-sign token for bootstrapping purposes
+	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(masterKey))
+	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
+	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
+		return err1
+	}
+	pc := auth.NewProcClaims(pe)
+	token, err1 := as.NewToken(pc)
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error NewToken: %v", err1)
+		return err1
+	}
+	pe.SetToken(token)
 	nd := &Named{}
 	nd.realm = sp.Trealm(args[1])
 	crashing, err := strconv.Atoi(args[2])
@@ -67,15 +84,15 @@ func Run(args []string) error {
 		return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 	}
 	nd.crash = crashing
-	nd.masterKey = auth.SymmetricKey(args[3])
+	nd.masterKey = masterKey
 
-	p, err := perf.NewPerf(pcfg, perf.NAMED)
+	p, err := perf.NewPerf(pe, perf.NAMED)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
 
-	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		return err
 	}
@@ -100,10 +117,10 @@ func Run(args []string) error {
 	ch := make(chan struct{})
 	go nd.waitExit(ch)
 
-	db.DPrintf(db.NAMED, "started %v %v", pcfg.GetPID(), nd.realm)
+	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
 
 	if err := nd.startLeader(); err != nil {
-		db.DPrintf(db.NAMED, "%v: startLeader %v err %v\n", pcfg.GetPID(), nd.realm, err)
+		db.DPrintf(db.NAMED, "%v: startLeader %v err %v\n", pe.GetPID(), nd.realm, err)
 		return err
 	}
 	defer nd.fs.Close()
@@ -151,10 +168,10 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.ALWAYS, "%v: named done %v %v\n", pcfg.GetPID(), nd.realm, mnt)
+	db.DPrintf(db.ALWAYS, "%v: named done %v %v\n", pe.GetPID(), nd.realm, mnt)
 
 	if err := nd.resign(); err != nil {
-		db.DPrintf(db.NAMED, "resign %v err %v\n", pcfg.GetPID(), err)
+		db.DPrintf(db.NAMED, "resign %v err %v\n", pe.GetPID(), err)
 	}
 
 	nd.SigmaSrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
@@ -180,8 +197,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 
 	kmgr := auth.NewKeyMgr(memfssrv.WithSigmaClntGetKeyFn(nd.SigmaClnt))
 	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterKey)
-	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetKernelID()), nd.masterKey)
-	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, nd.kmgr)
 	if err != nil {
 		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}

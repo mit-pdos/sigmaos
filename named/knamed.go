@@ -14,21 +14,38 @@ import (
 )
 
 func RunKNamed(args []string) error {
-	pcfg := proc.GetProcEnv()
-	db.DPrintf(db.NAMED, "%v: knamed %v\n", pcfg.GetPID(), args)
+	pe := proc.GetProcEnv()
+	db.DPrintf(db.NAMED, "%v: knamed %v\n", pe.GetPID(), args)
 	if len(args) != 4 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
+	masterKey := auth.SymmetricKey(args[3])
+	// Self-sign token for bootstrapping purposes
+	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(masterKey))
+	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
+	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
+		return err1
+	}
+	pc := auth.NewProcClaims(pe)
+	token, err1 := as.NewToken(pc)
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error NewToken: %v", err1)
+		return err1
+	}
+	pe.SetToken(token)
+
 	nd := &Named{}
 	nd.realm = sp.Trealm(args[1])
 
-	p, err := perf.NewPerf(pcfg, perf.KNAMED)
+	p, err := perf.NewPerf(pe, perf.KNAMED)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
 
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pcfg)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe)
 	if err != nil {
 		db.DFatalf("NewSigmaClntFsLib: err %v", err)
 	}
@@ -36,9 +53,9 @@ func RunKNamed(args []string) error {
 
 	init := args[2]
 
-	nd.masterKey = auth.SymmetricKey(args[3])
+	nd.masterKey = masterKey
 
-	db.DPrintf(db.NAMED, "started %v %v", pcfg.GetPID(), nd.realm)
+	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
 
 	w := os.NewFile(uintptr(3), "pipew")
 	r := os.NewFile(uintptr(4), "piper")
@@ -79,7 +96,7 @@ func RunKNamed(args []string) error {
 	}
 	r.Close()
 
-	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", pcfg.GetPID(), nd.realm, mnt, string(data))
+	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", pe.GetPID(), nd.realm, mnt, string(data))
 
 	nd.resign()
 

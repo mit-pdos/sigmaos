@@ -11,6 +11,7 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/keys"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -25,9 +26,9 @@ func TestCompile(t *testing.T) {
 }
 
 func TestSignHMACToken(t *testing.T) {
-	key, err := auth.NewSymmetricKey(sp.KEY_LEN)
+	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
 	assert.Nil(t, err, "Err NewKey: %v", err)
-	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(key))
+	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(key))
 	as, err := auth.NewHMACAuthSrv("test", proc.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
@@ -45,9 +46,9 @@ func TestSignHMACToken(t *testing.T) {
 }
 
 func TestVerifyHMACToken(t *testing.T) {
-	key, err := auth.NewSymmetricKey(sp.KEY_LEN)
+	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
 	assert.Nil(t, err, "Err NewKey: %v", err)
-	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(key))
+	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(key))
 	as, err := auth.NewHMACAuthSrv("test", proc.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims

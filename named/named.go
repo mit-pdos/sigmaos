@@ -31,7 +31,6 @@ import (
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sigmasrv.SigmaSrv
-	kmgr      *auth.KeyMgr
 	mu        sync.Mutex
 	fs        *fsetcd.FsEtcd
 	elect     *leaderetcd.Election
@@ -65,6 +64,7 @@ func Run(args []string) error {
 	// Self-sign token for bootstrapping purposes
 	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(masterKey))
 	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
+	kmgr.AddKey(sp.Tsigner(pe.GetKernelID()), masterKey)
 	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
@@ -197,7 +197,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 
 	kmgr := auth.NewKeyMgr(memfssrv.WithSigmaClntGetKeyFn(nd.SigmaClnt))
 	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterKey)
-	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, nd.kmgr)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
 		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}

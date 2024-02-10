@@ -121,7 +121,7 @@ var ALL_PATHS []string = []string{"*"}
 
 func NoToken() *Ttoken {
 	return &Ttoken{
-		Signer:      NO_SIGNER,
+		SignerStr:   NO_SIGNER,
 		SignedToken: NO_SIGNED_TOKEN,
 	}
 }

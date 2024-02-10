@@ -88,7 +88,7 @@ func (as *HMACAuthSrv) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-		key, err := as.kmgr.GetKey(sp.Tsigner(t.GetSigner()))
+		key, err := as.kmgr.GetKey(t.GetSigner())
 		if err != nil {
 			return nil, err
 		}

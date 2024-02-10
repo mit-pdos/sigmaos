@@ -12,7 +12,7 @@ message Tqid {
 };
 
 message Ttoken {
-        string signer = 1;
+        string signerStr = 1;
         string signedToken = 2;
 }
 

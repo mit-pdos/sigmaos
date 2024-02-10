@@ -15,6 +15,7 @@ import (
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
+	"sigmaos/keys"
 	"sigmaos/netsigma"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -141,12 +142,12 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	key, err1 := auth.NewSymmetricKey(sp.KEY_LEN)
+	key, err1 := keys.NewSymmetricKey(sp.KEY_LEN)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error NewSymmetricKey: %v", err1)
 		return nil, err1
 	}
-	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(key))
+	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(key))
 	s3secrets, err1 := auth.GetAWSSecrets()
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)

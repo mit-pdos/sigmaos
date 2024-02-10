@@ -7,6 +7,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/keys"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -21,7 +22,7 @@ func RunKNamed(args []string) error {
 	}
 	masterKey := auth.SymmetricKey(args[3])
 	// Self-sign token for bootstrapping purposes
-	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(masterKey))
+	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(masterKey))
 	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
 	kmgr.AddKey(sp.Tsigner(pe.GetKernelID()), masterKey)
 	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)

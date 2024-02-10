@@ -138,7 +138,7 @@ func (ssrv *SigmaSrv) newRPCSrv(svci any) error {
 	return nil
 }
 
-func NewSigmaSrvRootClntKeyMgr(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, keymgr *auth.KeyMgr) (*SigmaSrv, error) {
+func NewSigmaSrvRootClntKeyMgr(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, keymgr auth.KeyMgr) (*SigmaSrv, error) {
 	mfs, err := memfssrv.NewMemFsRootPortClntFenceKeyMgr(root, path, addr, sc, keymgr, nil)
 	if err != nil {
 		return nil, err

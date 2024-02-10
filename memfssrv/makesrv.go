@@ -42,7 +42,7 @@ func NewMemFsPortClntFence(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, f
 	return NewMemFsRootPortClntFenceKeyMgr(root, pn, addr, sc, nil, fencefs)
 }
 
-func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, kmgr *auth.KeyMgr, fencefs fs.Dir) (*MemFs, error) {
+func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr, fencefs fs.Dir) (*MemFs, error) {
 	var as auth.AuthSrv
 	var err error
 	if kmgr == nil {

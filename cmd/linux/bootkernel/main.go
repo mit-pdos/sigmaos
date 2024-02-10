@@ -9,6 +9,7 @@ import (
 	"sigmaos/boot"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
+	"sigmaos/keys"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -61,7 +62,7 @@ func main() {
 	// initial master key. This auth server should *not* be used long-term. It
 	// needs to be replaced with one which queries the namespace for keys once
 	// knamed has booted.
-	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(auth.SymmetricKey(masterKey)))
+	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(auth.SymmetricKey(masterKey)))
 	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)

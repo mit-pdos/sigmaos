@@ -13,8 +13,8 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
+	"sigmaos/keys"
 	"sigmaos/leaderetcd"
-	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/portclnt"
@@ -62,7 +62,7 @@ func Run(args []string) error {
 	}
 	masterKey := auth.SymmetricKey(args[3])
 	// Self-sign token for bootstrapping purposes
-	kmgr := auth.NewKeyMgr(auth.WithConstGetKeyFn(masterKey))
+	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(masterKey))
 	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
 	kmgr.AddKey(sp.Tsigner(pe.GetKernelID()), masterKey)
 	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
@@ -195,7 +195,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
 	}
 
-	kmgr := auth.NewKeyMgr(memfssrv.WithSigmaClntGetKeyFn(nd.SigmaClnt))
+	kmgr := keys.NewSymmetricKeyMgr(keys.WithSigmaClntGetKeyFn(nd.SigmaClnt))
 	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterKey)
 	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetKernelID()), nd.masterKey)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)

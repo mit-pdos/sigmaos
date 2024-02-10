@@ -13,10 +13,10 @@ import (
 type HMACAuthSrv struct {
 	signer  sp.Tsigner
 	srvpath string
-	kmgr    *KeyMgr
+	kmgr    KeyMgr
 }
 
-func NewHMACAuthSrv(signer sp.Tsigner, srvpath string, kmgr *KeyMgr) (*HMACAuthSrv, error) {
+func NewHMACAuthSrv(signer sp.Tsigner, srvpath string, kmgr KeyMgr) (*HMACAuthSrv, error) {
 	return &HMACAuthSrv{
 		signer:  signer,
 		srvpath: srvpath,

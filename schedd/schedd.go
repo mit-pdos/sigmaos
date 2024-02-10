@@ -10,10 +10,10 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
+	"sigmaos/keys"
 	lcproto "sigmaos/lcschedsrv/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
-	"sigmaos/memfssrv"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procmgr"
@@ -47,7 +47,7 @@ type Schedd struct {
 }
 
 func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, key auth.SymmetricKey) *Schedd {
-	kmgr := auth.NewKeyMgr(memfssrv.WithSigmaClntGetKeyFn(sc))
+	kmgr := keys.NewSymmetricKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
 	kmgr.AddKey(sp.Tsigner(sc.ProcEnv().GetPID()), key)
 	as, err := auth.NewHMACAuthSrv(sp.Tsigner(sc.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {

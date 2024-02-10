@@ -15,3 +15,12 @@ type AuthSrv interface {
 	VerifyTokenGetClaims(signedToken *sp.Ttoken) (*ProcClaims, error)
 	IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error)
 }
+
+type KeyMgr interface {
+	GetKey(s sp.Tsigner) (SymmetricKey, error)
+	AddKey(s sp.Tsigner, key SymmetricKey)
+}
+
+func (sk SymmetricKey) String() string {
+	return string(sk)
+}

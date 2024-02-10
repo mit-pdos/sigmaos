@@ -12,8 +12,8 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/keys"
 	"sigmaos/kproc"
-	"sigmaos/memfssrv"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -94,7 +94,7 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
 	// Create an AuthServer which dynamically pulls keys from the namespace, now
 	// that knamed has booted.
-	kmgr := auth.NewKeyMgr(memfssrv.WithSigmaClntGetKeyFn(sc))
+	kmgr := keys.NewSymmetricKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
 	kmgr.AddKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterKey)
 	as, err := auth.NewHMACAuthSrv(sp.Tsigner(k.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {

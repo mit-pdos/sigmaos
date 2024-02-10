@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 
+	// db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/frame"
 	"sigmaos/serr"
@@ -25,6 +26,7 @@ func (c *Call) Tag() sessp.Ttag {
 
 func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
 	fc := c.(*Call)
+	// db.DPrintf(db.TEST, "writecall %v\n", c)
 	if err := frame.WriteSeqno(fc.Seqno, wrt); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
@@ -43,5 +45,7 @@ func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	return NewCall(seqno, iov), nil
+	c := NewCall(seqno, iov)
+	// db.DPrintf(db.TEST, "readcall %v\n", c)
+	return c, nil
 }

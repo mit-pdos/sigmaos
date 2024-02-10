@@ -42,6 +42,15 @@ func NewIoVec(fs [][]byte) IoVec {
 	return iov
 }
 
+func (iov IoVec) String() string {
+	s := fmt.Sprintf("len %d [", len(iov))
+	for _, f := range iov {
+		s += fmt.Sprintf("%d,", len(f))
+	}
+	s += fmt.Sprintf("]")
+	return s
+}
+
 type Tmsg interface {
 	Type() Tfcall
 }

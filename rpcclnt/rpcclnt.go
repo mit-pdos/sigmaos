@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -101,21 +100,6 @@ func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 	return NewRPCClntCh(ch), nil
 }
 
-// return the Blob message, if this message contains one
-func getBlob(msg proto.Message) *rpcproto.Blob {
-	var blob *rpcproto.Blob
-	msg.ProtoReflect().Range(func(f protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-		if f.Kind() == protoreflect.MessageKind {
-			if m := f.Message(); m.FullName() == "Blob" {
-				blob = v.Message().Interface().(*rpcproto.Blob)
-				return false
-			}
-		}
-		return true
-	})
-	return blob
-}
-
 func (rpcc *RPCClnt) rpc(method string, blob sessp.IoVec) (*rpcproto.Reply, sessp.IoVec, error) {
 	req := rpcproto.Request{Method: method}
 	b, err := proto.Marshal(&req)
@@ -145,10 +129,11 @@ func (rpcc *RPCClnt) rpc(method string, blob sessp.IoVec) (*rpcproto.Reply, sess
 // the blob from the message and pass it down in an IoVec to avoid
 // marshaling overhead of large blobs.
 func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
-	blob := getBlob(arg)
+	blob := rpc.GetBlob(arg)
 	var iov sessp.IoVec
 	if blob != nil {
 		iov = blob.GetIoVec()
+		blob.SetIoVec(nil)
 	}
 	a, err := proto.Marshal(arg)
 	if err != nil {

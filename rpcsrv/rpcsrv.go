@@ -43,7 +43,7 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.
 		return nil, serr.NewErrError(err)
 	}
 	var rerr *sp.Rerror
-	d, sr := rpcs.ServeRPC(ctx, req.Method, iov[1])
+	iov, sr := rpcs.ServeRPC(ctx, req.Method, iov[1:])
 	if sr != nil {
 		rerr = sp.NewRerrorSerr(sr)
 	} else {
@@ -57,10 +57,11 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.
 	if rpcs.sti != nil {
 		rpcs.sti.Stat(req.Method, time.Since(start).Microseconds())
 	}
-	return sessp.IoVec{b, d}, nil
+	iov = append(sessp.IoVec{b}, iov...)
+	return iov, nil
 }
 
-func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, b []byte) ([]byte, *serr.Err) {
+func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
 	dot := strings.LastIndex(m, ".")
 	if dot <= 0 {
 		return nil, serr.NewErrError(fmt.Errorf("Invalid method %q", m))
@@ -72,19 +73,19 @@ func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, b []byte) ([]byte, *serr.Err
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	repmsg, err := serv.dispatch(ctx, m, b)
+	repmsg, err := serv.dispatch(ctx, m, iov)
 	if err != nil {
 		return nil, err
 	}
-	b, r = proto.Marshal(repmsg)
+	b, r := proto.Marshal(repmsg)
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	return b, nil
+	return sessp.IoVec{b}, nil
 
 }
 
-func (svc *service) dispatch(ctx fs.CtxI, methname string, req []byte) (proto.Message, *serr.Err) {
+func (svc *service) dispatch(ctx fs.CtxI, methname string, iov sessp.IoVec) (proto.Message, *serr.Err) {
 	dot := strings.LastIndex(methname, ".")
 	name := methname[dot+1:]
 	if method, ok := svc.methods[name]; ok {
@@ -92,10 +93,13 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req []byte) (proto.Me
 		// the Value's type will be a pointer to req.argsType.
 		args := reflect.New(method.argType)
 		reqmsg := args.Interface().(proto.Message)
-		if err := proto.Unmarshal(req, reqmsg); err != nil {
+		if err := proto.Unmarshal(iov[0], reqmsg); err != nil {
 			return nil, serr.NewErrError(err)
 		}
-
+		blob := rpc.GetBlob(reqmsg)
+		if blob != nil {
+			blob.SetIoVec(iov[1:])
+		}
 		db.DPrintf(db.SIGMASRV, "dispatchproto %v %v %v\n", svc.svc, name, reqmsg)
 
 		// allocate space for the reply.

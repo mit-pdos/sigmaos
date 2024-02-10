@@ -52,7 +52,7 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, srvpath string, as auth.AuthSrv, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, as auth.AuthSrv, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
 	ssrv.dirover = overlay.MkDirOverlay(root)

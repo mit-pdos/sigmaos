@@ -56,7 +56,7 @@ func postMount(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, pn string) (st
 
 func NewSrv(root fs.Dir, pn string, as auth.AuthSrv, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*sesssrv.SessSrv, string, error) {
 	et := ephemeralmap.NewEphemeralMap()
-	srv := sesssrv.NewSessSrv(sc.ProcEnv(), pn, as, root, addr, protsrv.NewProtServer, et, fencefs)
+	srv := sesssrv.NewSessSrv(sc.ProcEnv(), as, root, addr, protsrv.NewProtServer, et, fencefs)
 	if len(pn) > 0 {
 		if mpn, err := postMount(srv, sc, pn); err != nil {
 			return nil, "", err

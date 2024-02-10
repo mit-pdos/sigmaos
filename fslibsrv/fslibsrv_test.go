@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"net"
-	"os"
 	gopath "path"
 	"strconv"
 	"testing"
@@ -154,61 +152,6 @@ func TestWriteFilePerfSingle(t *testing.T) {
 		assert.Nil(t, err)
 		return sz
 	})
-	ts.Shutdown()
-}
-
-func TestWriteSocketPerfSingle(t *testing.T) {
-	const (
-		SOCKPATH = "/tmp/test-perf-socket"
-	)
-
-	ts, err1 := test.NewTstatePath(t, pathname)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	err := os.Remove(SOCKPATH)
-	assert.True(ts.T, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
-
-	socket, err := net.Listen("unix", SOCKPATH)
-	assert.Nil(ts.T, err)
-	err = os.Chmod(SOCKPATH, 0777)
-	assert.Nil(ts.T, err)
-
-	buf := test.NewBuf(WRITESZ)
-
-	// Serve requests in another thread
-	go func() {
-		conn, err := socket.Accept()
-		assert.Nil(ts.T, err)
-		rdr := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
-		rb := test.NewBuf(WRITESZ)
-		for {
-			n, err := rdr.Read(rb)
-			if n != len(rb) || err != nil {
-				db.DFatalf("Err read: len %v err %v", n, err)
-			}
-		}
-	}()
-
-	conn, err := net.Dial("unix", SOCKPATH)
-	assert.Nil(ts.T, err)
-
-	sz := sp.Tlength(SYNCFILESZ)
-	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.WRITER.String())
-	wrt := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
-	measure(p1, "writer", func() sp.Tlength {
-		db.DPrintf(db.ALWAYS, "Write sz %v", sz)
-		err = test.Writer(t, wrt, buf, sz)
-		assert.Nil(t, err)
-		err = wrt.Flush()
-		assert.Nil(t, err)
-		return sz
-	})
-
-	err = os.Remove(SOCKPATH)
-	assert.True(ts.T, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
-
 	ts.Shutdown()
 }
 

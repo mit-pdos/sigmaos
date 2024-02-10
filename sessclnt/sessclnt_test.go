@@ -1,9 +1,14 @@
 package sessclnt_test
 
 import (
+	"bufio"
+	"io"
+	"net"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/ctx"
@@ -24,6 +29,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmaprotsrv"
 	"sigmaos/spcodec"
+	"sigmaos/test"
 )
 
 type SessSrv struct {
@@ -234,4 +240,62 @@ func TestDisconnectMfsSrv(t *testing.T) {
 	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
 
 	assert.False(t, sess.IsConnected())
+}
+
+func TestWriteSocketPerfSingle(t *testing.T) {
+	const (
+		SOCKPATH = "/tmp/test-perf-socket"
+		WRITESZ  = 4096
+	)
+
+	err := os.Remove(SOCKPATH)
+	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
+
+	socket, err := net.Listen("unix", SOCKPATH)
+	assert.Nil(t, err)
+	err = os.Chmod(SOCKPATH, 0777)
+	assert.Nil(t, err)
+
+	buf := test.NewBuf(WRITESZ)
+	ch := make(chan bool)
+	// Serve requests in another thread
+	go func() {
+		conn, err := socket.Accept()
+		assert.Nil(t, err)
+		rdr := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
+		rb := test.NewBuf(WRITESZ)
+		for {
+			n, err := io.ReadFull(rdr, rb)
+			if err == io.EOF {
+				break
+			}
+			if n != len(rb) || err != nil {
+				db.DFatalf("Err read: len %v err %v", n, err)
+			}
+		}
+		ch <- true
+
+	}()
+
+	conn, err := net.Dial("unix", SOCKPATH)
+	assert.Nil(t, err)
+
+	sz := sp.Tlength(100 * sp.MBYTE)
+	wrt := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
+	t0 := time.Now()
+	err = test.Writer(t, wrt, buf, sz)
+	assert.Nil(t, err)
+	err = wrt.Flush()
+	assert.Nil(t, err)
+
+	conn.Close()
+
+	<-ch
+
+	tot := uint64(sz)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(sz, ms))
+
+	err = os.Remove(SOCKPATH)
+	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
 }

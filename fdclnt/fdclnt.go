@@ -11,6 +11,7 @@ import (
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
@@ -177,16 +178,16 @@ func (fdc *FdClient) WriteFence(fd int, data []byte, f sp.Tfence) (sp.Tsize, err
 	return fdc.writeFid(fd, fid, off, data, f)
 }
 
-func (fdc *FdClient) WriteRead(fd int, data []byte) ([]byte, error) {
+func (fdc *FdClient) WriteRead(fd int, iov sessp.IoVec) (sessp.IoVec, error) {
 	fid, _, error := fdc.fds.lookupOff(fd)
 	if error != nil {
 		return nil, error
 	}
-	b, err := fdc.pc.WriteRead(fid, data)
+	iov, err := fdc.pc.WriteRead(fid, iov)
 	if err != nil {
 		return nil, err
 	}
-	return b, nil
+	return iov, nil
 }
 
 func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {

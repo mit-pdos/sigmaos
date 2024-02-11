@@ -43,7 +43,7 @@ type Protsrv interface {
 	Renameat(*sp.Trenameat, *sp.Rrenameat) *sp.Rerror
 	GetFile(*sp.Tgetfile, *sp.Rread) ([]byte, *sp.Rerror)
 	PutFile(*sp.Tputfile, []byte, *sp.Rwrite) *sp.Rerror
-	WriteRead(*sp.Twriteread, []byte, *sp.Rread) ([]byte, *sp.Rerror)
+	WriteRead(*sp.Twriteread, sessp.IoVec, *sp.Rread) (sessp.IoVec, *sp.Rerror)
 	Detach(*sp.Tdetach, *sp.Rdetach) *sp.Rerror
 }
 

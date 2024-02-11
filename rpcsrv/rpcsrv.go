@@ -2,6 +2,7 @@ package rpcsrv
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -31,23 +33,23 @@ func (rpcs *RPCSrv) RegisterService(svci any) {
 	rpcs.svc.RegisterService(svci)
 }
 
-func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, arg []byte) ([]byte, *serr.Err) {
+func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
 	var start time.Time
 	if rpcs.sti != nil {
 		start = time.Now()
 	}
 	req := rpcproto.Request{}
-	if err := proto.Unmarshal(arg, &req); err != nil {
+	if err := proto.Unmarshal(iov[0], &req); err != nil {
 		return nil, serr.NewErrError(err)
 	}
 	var rerr *sp.Rerror
-	b, sr := rpcs.ServeRPC(ctx, req.Method, req.Args)
+	iov, sr := rpcs.ServeRPC(ctx, req.Method, iov[1:])
 	if sr != nil {
 		rerr = sp.NewRerrorSerr(sr)
 	} else {
 		rerr = sp.NewRerror()
 	}
-	rep := &rpcproto.Reply{Res: b, Err: rerr}
+	rep := &rpcproto.Reply{Err: rerr}
 	b, err := proto.Marshal(rep)
 	if err != nil {
 		return nil, serr.NewErrError(err)
@@ -55,11 +57,15 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, arg []byte) ([]byte, *serr.Err) {
 	if rpcs.sti != nil {
 		rpcs.sti.Stat(req.Method, time.Since(start).Microseconds())
 	}
-	return b, nil
+	iov = append(sessp.IoVec{b}, iov...)
+	return iov, nil
 }
 
-func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, b []byte) ([]byte, *serr.Err) {
+func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
 	dot := strings.LastIndex(m, ".")
+	if dot <= 0 {
+		return nil, serr.NewErrError(fmt.Errorf("Invalid method %q", m))
+	}
 	method := m[dot+1:]
 	tname := m[:dot]
 	db.DPrintf(db.SIGMASRV, "serveRPC svc %v name %v\n", tname, method)
@@ -67,19 +73,26 @@ func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, b []byte) ([]byte, *serr.Err
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	repmsg, err := serv.dispatch(ctx, m, b)
+	repmsg, err := serv.dispatch(ctx, m, iov)
 	if err != nil {
 		return nil, err
 	}
-	b, r = proto.Marshal(repmsg)
+	var iovrep sessp.IoVec
+	blob := rpc.GetBlob(repmsg)
+	if blob != nil {
+		iovrep = blob.GetIoVec()
+		blob.SetIoVec(nil)
+	}
+	b, r := proto.Marshal(repmsg)
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	return b, nil
-
+	iovrep = append(sessp.IoVec{b}, iovrep...)
+	db.DPrintf(db.TEST, "iovrep %v\n", iovrep)
+	return iovrep, nil
 }
 
-func (svc *service) dispatch(ctx fs.CtxI, methname string, req []byte) (proto.Message, *serr.Err) {
+func (svc *service) dispatch(ctx fs.CtxI, methname string, iov sessp.IoVec) (proto.Message, *serr.Err) {
 	dot := strings.LastIndex(methname, ".")
 	name := methname[dot+1:]
 	if method, ok := svc.methods[name]; ok {
@@ -87,10 +100,13 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, req []byte) (proto.Me
 		// the Value's type will be a pointer to req.argsType.
 		args := reflect.New(method.argType)
 		reqmsg := args.Interface().(proto.Message)
-		if err := proto.Unmarshal(req, reqmsg); err != nil {
+		if err := proto.Unmarshal(iov[0], reqmsg); err != nil {
 			return nil, serr.NewErrError(err)
 		}
-
+		blob := rpc.GetBlob(reqmsg)
+		if blob != nil {
+			blob.SetIoVec(iov[1:])
+		}
 		db.DPrintf(db.SIGMASRV, "dispatchproto %v %v %v\n", svc.svc, name, reqmsg)
 
 		// allocate space for the reply.

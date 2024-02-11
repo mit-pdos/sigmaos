@@ -1,9 +1,14 @@
 package sessclnt_test
 
 import (
+	"bufio"
+	"io"
+	"net"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/ctx"
@@ -24,6 +29,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmaprotsrv"
 	"sigmaos/spcodec"
+	"sigmaos/test"
 )
 
 type SessSrv struct {
@@ -37,21 +43,27 @@ func (ss *SessSrv) ReportError(conn sigmaprotsrv.Conn, err error) {
 func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.CallI, *serr.Err) {
 	fcm := req.(*sessp.FcallMsg)
 	qid := sp.NewQidPerm(0777, 0, 0)
-	if fcm.Type() == sessp.TTwatch {
+	var rep *sessp.FcallMsg
+	switch fcm.Type() {
+	case sessp.TTwatch:
 		time.Sleep(1 * time.Second)
 		conn.CloseConnTest()
 		msg := &sp.Ropen{Qid: qid}
-		rep := sessp.NewFcallMsgReply(fcm, msg)
+		rep = sessp.NewFcallMsgReply(fcm, msg)
+	case sessp.TTwrite:
+		msg := &sp.Rwrite{Count: uint32(len(fcm.Iov[0]))}
+		rep = sessp.NewFcallMsgReply(fcm, msg)
 		return rep, nil
-	} else {
+	default:
 		msg := &sp.Rattach{Qid: qid}
-		rep := sessp.NewFcallMsgReply(fcm, msg)
+		rep = sessp.NewFcallMsgReply(fcm, msg)
 		r := rand.Int64(100)
 		if r < uint64(ss.crash) {
 			conn.CloseConnTest()
 		}
-		return rep, nil
 	}
+	pmfc := spcodec.NewPartMarshaledMsg(rep)
+	return pmfc, nil
 }
 
 type Tstate struct {
@@ -194,6 +206,13 @@ func TestConnectMfsSrv(t *testing.T) {
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
+	req1 := sp.NewTwriteread(sp.NoFid)
+	iov := sessp.NewIoVec([][]byte{make([]byte, 10)})
+	rep, err = ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req1, iov)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
 	ts.srv.StopServing()
 }
 
@@ -226,4 +245,87 @@ func TestDisconnectMfsSrv(t *testing.T) {
 	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
 
 	assert.False(t, sess.IsConnected())
+
+	ts.srv.StopServing()
+}
+
+func TestWriteSocketPerfSingle(t *testing.T) {
+	const (
+		SOCKPATH = "/tmp/test-perf-socket"
+		WRITESZ  = 4096
+	)
+
+	err := os.Remove(SOCKPATH)
+	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
+
+	socket, err := net.Listen("unix", SOCKPATH)
+	assert.Nil(t, err)
+	err = os.Chmod(SOCKPATH, 0777)
+	assert.Nil(t, err)
+
+	buf := test.NewBuf(WRITESZ)
+	ch := make(chan bool)
+	// Serve requests in another thread
+	go func() {
+		conn, err := socket.Accept()
+		assert.Nil(t, err)
+		rdr := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
+		rb := test.NewBuf(WRITESZ)
+		for {
+			n, err := io.ReadFull(rdr, rb)
+			if err == io.EOF {
+				break
+			}
+			if n != len(rb) || err != nil {
+				db.DFatalf("Err read: len %v err %v", n, err)
+			}
+		}
+		ch <- true
+
+	}()
+
+	conn, err := net.Dial("unix", SOCKPATH)
+	assert.Nil(t, err)
+
+	sz := sp.Tlength(100 * sp.MBYTE)
+	wrt := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
+	t0 := time.Now()
+	err = test.Writer(t, wrt, buf, sz)
+	assert.Nil(t, err)
+	err = wrt.Flush()
+	assert.Nil(t, err)
+
+	conn.Close()
+
+	<-ch
+
+	tot := uint64(sz)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(sz, ms))
+
+	err = os.Remove(SOCKPATH)
+	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
+
+	socket.Close()
+}
+
+func TestPerfSessSrv(t *testing.T) {
+	const (
+		WRITESZ = 4 * sp.MBYTE
+		TOTAL   = 100 * sp.MBYTE
+	)
+	ts := newTstateSrv(t, 0)
+	buf := test.NewBuf(WRITESZ)
+	t0 := time.Now()
+	for i := 0; i < TOTAL/WRITESZ; i++ {
+		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
+		iov := sessp.IoVec{buf}
+		_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, iov)
+		assert.Nil(t, err)
+	}
+	tot := uint64(TOTAL)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
+
+	ts.srv.CloseListener()
 }

@@ -31,6 +31,6 @@ func (rd *rpcDev) newRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Ino
 	return rpc, nil
 }
 
-func (rpc *rpcSession) WriteRead(ctx fs.CtxI, b []byte) ([]byte, *serr.Err) {
-	return rpc.rpcs.WriteRead(ctx, b)
+func (rpc *rpcSession) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+	return rpc.rpcs.WriteRead(ctx, iov)
 }

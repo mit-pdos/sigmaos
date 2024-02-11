@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 
+	// db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/frame"
 	"sigmaos/serr"
@@ -12,11 +13,11 @@ import (
 
 type Call struct {
 	Seqno sessp.Tseqno
-	Data  []byte
+	Iov   sessp.IoVec
 }
 
-func NewCall(s sessp.Tseqno, data []byte) *Call {
-	return &Call{Seqno: s, Data: data}
+func NewCall(s sessp.Tseqno, iov sessp.IoVec) *Call {
+	return &Call{Seqno: s, Iov: iov}
 }
 
 func (c *Call) Tag() sessp.Ttag {
@@ -25,10 +26,11 @@ func (c *Call) Tag() sessp.Ttag {
 
 func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
 	fc := c.(*Call)
+	// db.DPrintf(db.TEST, "writecall %v\n", c)
 	if err := frame.WriteSeqno(fc.Seqno, wrt); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
-	if err := frame.WriteFrame(wrt, fc.Data); err != nil {
+	if err := frame.WriteFrames(wrt, fc.Iov); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	return nil
@@ -39,9 +41,11 @@ func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := frame.ReadFrame(rdr)
+	iov, err := frame.ReadFrames(rdr)
 	if err != nil {
 		return nil, err
 	}
-	return NewCall(seqno, data), nil
+	c := NewCall(seqno, iov)
+	// db.DPrintf(db.TEST, "readcall %v\n", c)
+	return c, nil
 }

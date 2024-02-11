@@ -19,11 +19,17 @@ import (
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
 	"sigmaos/sessdevclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
+type RPCcall struct {
+	method string
+	iov    sessp.IoVec
+}
+
 type RPCCh interface {
-	SendReceive([]byte) ([]byte, error)
+	SendReceive(sessp.IoVec) (sessp.IoVec, error)
 	StatsSrv() (*rpc.SigmaRPCStats, error)
 }
 
@@ -68,9 +74,9 @@ func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
 	return rpcch, nil
 }
 
-func (ch *sigmaCh) SendReceive(b []byte) ([]byte, error) {
+func (ch *sigmaCh) SendReceive(iov sessp.IoVec) (sessp.IoVec, error) {
 	idx := int(atomic.AddInt32(&ch.idx, 1))
-	b, err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], b)
+	b, err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], iov)
 	if err != nil {
 		return nil, err
 	}
@@ -94,45 +100,58 @@ func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 	return NewRPCClntCh(ch), nil
 }
 
-func (rpcc *RPCClnt) rpc(method string, a []byte) (*rpcproto.Reply, error) {
-	req := rpcproto.Request{Method: method, Args: a}
+func (rpcc *RPCClnt) rpc(method string, blob sessp.IoVec) (*rpcproto.Reply, sessp.IoVec, error) {
+	req := rpcproto.Request{Method: method}
 	b, err := proto.Marshal(&req)
 	if err != nil {
-		return nil, serr.NewErrError(err)
+		return nil, nil, serr.NewErrError(err)
 	}
 
 	start := time.Now()
 
-	b, err = rpcc.ch.SendReceive(b)
+	iov, err := rpcc.ch.SendReceive(append(sessp.IoVec{b}, blob...))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Record stats
 	rpcc.si.Stat(method, time.Since(start).Microseconds())
 
 	rep := &rpcproto.Reply{}
-	if err := proto.Unmarshal(b, rep); err != nil {
-		return nil, serr.NewErrError(err)
+	if err := proto.Unmarshal(iov[0], rep); err != nil {
+		return nil, nil, serr.NewErrError(err)
 	}
 
-	return rep, nil
+	return rep, iov[1:], nil
 }
 
+// RPC handles arg and res that contain a Blob specially: it removes
+// the blob from the message and pass it down in an IoVec to avoid
+// marshaling overhead of large blobs.
 func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
-	b, err := proto.Marshal(arg)
+	blob := rpc.GetBlob(arg)
+	var iov sessp.IoVec
+	if blob != nil {
+		iov = blob.GetIoVec()
+		blob.SetIoVec(nil)
+	}
+	a, err := proto.Marshal(arg)
 	if err != nil {
 		return err
 	}
-	rep, err := rpcc.rpc(method, b)
+	rep, iov, err := rpcc.rpc(method, append(sessp.IoVec{a}, iov...))
 	if err != nil {
 		return err
 	}
 	if rep.Err.ErrCode != 0 {
 		return sp.NewErr(rep.Err)
 	}
-	if err := proto.Unmarshal(rep.Res, res); err != nil {
+	if err := proto.Unmarshal(iov[0], res); err != nil {
 		return err
+	}
+	blob = rpc.GetBlob(res)
+	if blob != nil && len(iov) > 1 { // handle blob
+		blob.SetIoVec(iov[1:])
 	}
 	return nil
 }

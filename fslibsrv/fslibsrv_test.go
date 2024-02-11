@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"net"
-	"os"
 	gopath "path"
 	"strconv"
 	"syscall"
@@ -21,7 +19,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rpcproto "sigmaos/rpc/proto"
-	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	scproto "sigmaos/sigmaclntsrv/proto"
 	sp "sigmaos/sigmap"
@@ -162,62 +159,7 @@ func TestWriteFilePerfSingle(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWriteSocketPerfSingle(t *testing.T) {
-	const (
-		SOCKPATH = "/tmp/test-perf-socket"
-	)
-
-	ts, err1 := test.NewTstatePath(t, pathname)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	err := os.Remove(SOCKPATH)
-	assert.True(ts.T, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
-
-	socket, err := net.Listen("unix", SOCKPATH)
-	assert.Nil(ts.T, err)
-	err = os.Chmod(SOCKPATH, 0777)
-	assert.Nil(ts.T, err)
-
-	buf := test.NewBuf(WRITESZ)
-
-	// Serve requests in another thread
-	go func() {
-		conn, err := socket.Accept()
-		assert.Nil(ts.T, err)
-		rdr := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
-		rb := test.NewBuf(WRITESZ)
-		for {
-			n, err := rdr.Read(rb)
-			if n != len(rb) || err != nil {
-				db.DFatalf("Err read: len %v err %v", n, err)
-			}
-		}
-	}()
-
-	conn, err := net.Dial("unix", SOCKPATH)
-	assert.Nil(ts.T, err)
-
-	sz := sp.Tlength(SYNCFILESZ)
-	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.WRITER.String())
-	wrt := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
-	measure(p1, "writer", func() sp.Tlength {
-		db.DPrintf(db.ALWAYS, "Write sz %v", sz)
-		err = test.Writer(t, wrt, buf, sz)
-		assert.Nil(t, err)
-		err = wrt.Flush()
-		assert.Nil(t, err)
-		return sz
-	})
-
-	err = os.Remove(SOCKPATH)
-	assert.True(ts.T, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
-
-	ts.Shutdown()
-}
-
-func TestWriteMarshalPerfSingle(t *testing.T) {
+func TestWriteMarshalUnmarshalPerfSingle(t *testing.T) {
 	const (
 		FPATH = "/tmp/testfile"
 	)
@@ -237,45 +179,9 @@ func TestWriteMarshalPerfSingle(t *testing.T) {
 	assert.Nil(ts.T, err)
 	buf := test.NewBuf(FILESZ)
 	measure(p1, "marshal", func() sp.Tlength {
-		minibuf := buf[:sp.BUFSZ]
-		for i := 0; i < len(buf); i += sp.BUFSZ {
-			// Marshal the sigmaclnt RPC proto
-			req := &scproto.SigmaWriteRequest{Fd: uint32(0), Data: minibuf}
-			b, err := proto.Marshal(req)
-			assert.Nil(ts.T, err)
-			// Marshal the rpc package's proto
-			req2 := rpcproto.Request{Method: "XXX", Args: b}
-			b2, err := proto.Marshal(&req2)
-			assert.Nil(ts.T, err)
-			// Marshal the WriteRead fcall carrying the RPC package's proto
-			args := sp.NewTwriteread(1000)
-			var seqno sessp.Tseqno
-			fcm := sessp.NewFcallMsg(args, b2, 0, &seqno)
-			b3 := spcodec.MarshalFcallWithoutData(fcm)
-			_, err2 := spcodec.MarshalFcallAndData(fcm)
-			assert.Nil(ts.T, err2)
-			// Unmarshal the WriteRead fcall
-			_ = spcodec.UnmarshalFcallAndData(b3, b2)
-			reqrec := rpcproto.Request{}
-			// Unmarshal the RPC package's proto
-			err = proto.Unmarshal(b2, &reqrec)
-			assert.Nil(ts.T, err)
-			// Unmarshal the sigmaclnt RPC proto
-			reqrec2 := &scproto.SigmaWriteRequest{}
-			err = proto.Unmarshal(b, reqrec2)
-			assert.Nil(ts.T, err)
-			f := sp.NoFence()
-			// Marshal the final fcall and send it to the server
-			args2 := sp.NewTwriteF(1000, 0, &f)
-			fcm2 := sessp.NewFcallMsg(args2, minibuf, 0, &seqno)
-			b4 := spcodec.MarshalFcallWithoutData(fcm2)
-			_, err2 = spcodec.MarshalFcallAndData(fcm)
-			assert.Nil(ts.T, err2)
-			//		assert.Nil(ts.T, err2)
-			_ = spcodec.UnmarshalFcallAndData(b4, minibuf)
-			_, err = syscall.Pwrite(fd, minibuf, int64(0))
-			assert.Nil(ts.T, err, "Error pwrite: %v", err)
-		}
+		req := &scproto.SigmaWriteRequest{Fd: uint32(0), Blob: &rpcproto.Blob{Iov: [][]byte{buf}}}
+		_, err := proto.Marshal(req)
+		assert.Nil(ts.T, err)
 		return sp.Tlength(len(buf))
 	})
 	err = os.Remove(FPATH)

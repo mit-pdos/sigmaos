@@ -11,6 +11,7 @@ import (
 	"sigmaos/repl"
 	"sigmaos/replraft"
 	"sigmaos/rpcsrv"
+	"sigmaos/sessp"
 )
 
 //
@@ -52,14 +53,15 @@ func (rs *ReplSrv) applyOp(req *replproto.ReplOpRequest, rep *replproto.ReplOpRe
 		}
 		return err
 	}
-	if b, err := rs.rpcs.ServeRPC(ctx.NewCtxNull(), req.Method, req.Msg); err != nil {
+	iov := sessp.IoVec{req.Msg}
+	if iov, err := rs.rpcs.ServeRPC(ctx.NewCtxNull(), req.Method, iov); err != nil {
 		rs.rt.PutReply(req.TclntId(), req.Tseqno(), err, nil)
 		return err
 	} else {
 		if rep != nil {
-			rep.Msg = b
+			rep.Msg = iov[0]
 		}
-		rs.rt.PutReply(req.TclntId(), req.Tseqno(), nil, b)
+		rs.rt.PutReply(req.TclntId(), req.Tseqno(), nil, iov[0])
 	}
 	return nil
 }

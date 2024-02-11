@@ -3,7 +3,6 @@ package spcodec
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"io"
 
 	db "sigmaos/debug"
@@ -13,7 +12,7 @@ import (
 	"sigmaos/sessp"
 )
 
-func MarshalFcallWithoutData(fcm *sessp.FcallMsg) []byte {
+func MarshalFcall(fcm *sessp.FcallMsg) []byte {
 	var f bytes.Buffer
 	if error := encode(&f, fcm); error != nil {
 		db.DFatalf("error encoding fcall %v", error)
@@ -21,17 +20,12 @@ func MarshalFcallWithoutData(fcm *sessp.FcallMsg) []byte {
 	return f.Bytes()
 }
 
-func writeFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Writer) *serr.Err {
+func writeFcall(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Writer) *serr.Err {
 	if err := frame.WriteFrame(bwr, marshaledFcall); err != nil {
 		return err
 	}
-	if error := binary.Write(bwr, binary.LittleEndian, uint32(len(fcm.Data))); error != nil {
-		return serr.NewErr(serr.TErrUnreachable, error.Error())
-	}
-	if len(fcm.Data) > 0 {
-		if err := frame.WriteRawBuffer(bwr, fcm.Data); err != nil {
-			return serr.NewErr(serr.TErrUnreachable, err.Error())
-		}
+	if err := frame.WriteFrames(bwr, fcm.Iov); err != nil {
+		return err
 	}
 	if error := bwr.Flush(); error != nil {
 		db.DPrintf(db.SPCODEC, "flush %v err %v", fcm, error)
@@ -40,56 +34,50 @@ func writeFcallAndData(fcm *sessp.FcallMsg, marshaledFcall []byte, bwr *bufio.Wr
 	return nil
 }
 
-func MarshalFcallAndData(fcm *sessp.FcallMsg) ([]byte, *serr.Err) {
-	var f bytes.Buffer
-	wr := bufio.NewWriter(&f)
-	b := MarshalFcallWithoutData(fcm)
-	db.DPrintf(db.SPCODEC, "Marshal frame %v %d buf %d\n", fcm.Msg, len(b), len(fcm.Data))
-	if err := writeFcallAndData(fcm, b, wr); err != nil {
-		return nil, err
-	}
-	return f.Bytes(), nil
-}
-
-func readFcallAndDataFrames(rdr io.Reader) (fc []byte, data []byte, se *serr.Err) {
+func readFcallAndIoVec(rdr io.Reader) (fc []byte, iov sessp.IoVec, se *serr.Err) {
 	f, err := frame.ReadFrame(rdr)
 	if err != nil {
 		db.DPrintf(db.SPCODEC, "ReadFrame err %v\n", err)
 		return nil, nil, err
 	}
-	buf, err := frame.ReadBuf(rdr)
+	iov, err = frame.ReadFrames(rdr)
 	if err != nil {
-		db.DPrintf(db.SPCODEC, "ReadBuf err %v\n", err)
+		db.DPrintf(db.SPCODEC, "ReadFrames err %v\n", err)
 		return nil, nil, err
 	}
-	return f, buf, nil
+	return f, iov, nil
 }
 
-func UnmarshalFcallAndData(f []byte, buf []byte) *sessp.FcallMsg {
+func UnmarshalFcall(f []byte, iov sessp.IoVec) *sessp.FcallMsg {
 	fm := sessp.NewFcallMsgNull()
 	if err := decode(bytes.NewReader(f), fm); err != nil {
 		db.DFatalf("Decode error: %v", err)
 	}
-	db.DPrintf(db.SPCODEC, "Decode %v\n", fm)
-	fm.Data = buf
+	fm.Iov = iov
 	return fm
 }
 
-func readUnmarshalFcallAndData(rdr io.Reader) (*sessp.FcallMsg, *serr.Err) {
-	f, buf, err := readFcallAndDataFrames(rdr)
+func readUnmarshalFcall(rdr io.Reader) (*sessp.FcallMsg, *serr.Err) {
+	f, iov, err := readFcallAndIoVec(rdr)
 	if err != nil {
 		return nil, err
 	}
-	fm := UnmarshalFcallAndData(f, buf)
+	fm := UnmarshalFcall(f, iov)
 	return fm, nil
 }
 
 func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
-	return readUnmarshalFcallAndData(rdr)
+	return readUnmarshalFcall(rdr)
 }
 
 func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
-	fcm := c.(*sessp.FcallMsg)
-	fc := MarshalFcallWithoutData(fcm)
-	return writeFcallAndData(fcm, fc, wrt)
+	fcm := c.(*sessp.PartMarshaledMsg)
+	return writeFcall(fcm.Fcm, fcm.MarshaledFcm, wrt)
+}
+
+func NewPartMarshaledMsg(fcm *sessp.FcallMsg) *sessp.PartMarshaledMsg {
+	return &sessp.PartMarshaledMsg{
+		Fcm:          fcm,
+		MarshaledFcm: MarshalFcall(fcm),
+	}
 }

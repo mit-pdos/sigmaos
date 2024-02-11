@@ -6,10 +6,14 @@ option go_package = "sigmaos/rpc/proto";
 
 message Request {
         string method = 1;
-        bytes args = 2;
 }
 
 message Reply {
-        bytes res = 1;
         Rerror err = 2;
+}
+
+// Users of rpc package can use Blob to pass data directly through to
+// the transport without the rpc package marshaling it.
+message Blob {
+        repeated bytes iov = 1;
 }

@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	"sigmaos/boot"
 	db "sigmaos/debug"
@@ -63,7 +65,7 @@ func main() {
 	// needs to be replaced with one which queries the namespace for keys once
 	// knamed has booted.
 	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(auth.SymmetricKey(masterKey)))
-	as, err1 := auth.NewHMACAuthSrv(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}

@@ -1,6 +1,8 @@
 package memfssrv
 
 import (
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/keys"
@@ -14,7 +16,7 @@ type HMACVerificationSrv struct {
 }
 
 func NewHMACVerificationSrvKeyMgr(signer sp.Tsigner, srvpath string, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr) (*HMACVerificationSrv, error) {
-	as, err := auth.NewHMACAuthSrv(signer, srvpath, kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, signer, srvpath, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error make auth server: %v", err)
 		return nil, err

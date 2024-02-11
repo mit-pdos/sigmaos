@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/keys"
@@ -35,8 +37,8 @@ func main() {
 		db.DFatalf("Error Read master key: %v", err1)
 	}
 	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(masterKey))
-	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
-	as, err1 := auth.NewHMACAuthSrv("proxy", proc.NOT_SET, kmgr)
+	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterKey)
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}

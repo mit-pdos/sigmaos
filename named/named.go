@@ -8,6 +8,7 @@ import (
 	"time"
 
 	//	"runtime"
+	"github.com/golang-jwt/jwt"
 
 	"sigmaos/auth"
 	"sigmaos/crash"
@@ -75,7 +76,7 @@ func Run(args []string) error {
 	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(masterKey))
 	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
 	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterKey)
-	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
 		return err1

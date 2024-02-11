@@ -10,28 +10,29 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type HMACAuthSrv[M jwt.SigningMethod] struct {
+type AuthSrvImpl[M jwt.SigningMethod] struct {
 	signingMethod M
 	signer        sp.Tsigner
 	srvpath       string
 	KeyMgr
 }
 
-func NewHMACAuthSrv(signer sp.Tsigner, srvpath string, kmgr KeyMgr) (*HMACAuthSrv[*jwt.SigningMethodHMAC], error) {
-	return &HMACAuthSrv[*jwt.SigningMethodHMAC]{
-		signingMethod: jwt.SigningMethodHS256,
+// jwt.SigningMethodHS256
+func NewAuthSrv[M jwt.SigningMethod](method M, signer sp.Tsigner, srvpath string, kmgr KeyMgr) (AuthSrv, error) {
+	return &AuthSrvImpl[M]{
+		signingMethod: method,
 		signer:        signer,
 		srvpath:       srvpath,
 		KeyMgr:        kmgr,
 	}, nil
 }
 
-func (as *HMACAuthSrv[M]) GetSrvPath() string {
+func (as *AuthSrvImpl[M]) GetSrvPath() string {
 	return as.srvpath
 }
 
 // Set a proc's token after it has been spawned by the parent
-func (as *HMACAuthSrv[M]) SetDelegatedProcToken(p *proc.Proc) error {
+func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	// Retrieve and validate the proc's parent's claims
 	parentPC, err := as.VerifyTokenGetClaims(p.GetParentToken())
 	if err != nil {
@@ -71,7 +72,7 @@ func (as *HMACAuthSrv[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	return nil
 }
 
-func (as *HMACAuthSrv[M]) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
+func (as *AuthSrvImpl[M]) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	key, err := as.GetPrivateKey(as.signer)
 	if err != nil {
 		return nil, err
@@ -85,7 +86,7 @@ func (as *HMACAuthSrv[M]) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	return sp.NewToken(as.signer, tstr), err
 }
 
-func (as *HMACAuthSrv[M]) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error) {
+func (as *AuthSrvImpl[M]) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error) {
 	// Parse the jwt, passing in a function to look up the key.
 	//
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-Parse-Hmac
@@ -114,7 +115,7 @@ func (as *HMACAuthSrv[M]) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error
 	return nil, fmt.Errorf("Claims wrong type")
 }
 
-func (as *HMACAuthSrv[M]) IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error) {
+func (as *AuthSrvImpl[M]) IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error) {
 	db.DPrintf(db.AUTH, "Authorization check p %v", principal.GetID())
 	pc, err := as.VerifyTokenGetClaims(principal.GetToken())
 	if err != nil {

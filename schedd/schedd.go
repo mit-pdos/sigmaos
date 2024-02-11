@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -51,7 +53,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, key a
 	kmgr.AddKey(sp.Tsigner(sc.ProcEnv().GetPID()), key)
 	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, key)
 	db.DPrintf(db.ALWAYS, "kmgr %v", kmgr)
-	as, err := auth.NewHMACAuthSrv(sp.Tsigner(sc.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, sp.Tsigner(sc.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err)
 	}

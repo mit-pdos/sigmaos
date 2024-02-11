@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/keys"
@@ -99,7 +101,7 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	// that knamed has booted.
 	kmgr := keys.NewSymmetricKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
 	kmgr.AddKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterKey)
-	as, err := auth.NewHMACAuthSrv(sp.Tsigner(k.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, sp.Tsigner(k.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NeHMACAUthServer %v", err)
 		return nil, err

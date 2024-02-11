@@ -16,7 +16,6 @@ type KeyMgr interface {
 }
 
 type AuthSrv interface {
-	GetSrvPath() string
 	SetDelegatedProcToken(p *proc.Proc) error
 	NewToken(pc *ProcClaims) (*sp.Ttoken, error)
 	VerifyTokenGetClaims(signedToken *sp.Ttoken) (*ProcClaims, error)

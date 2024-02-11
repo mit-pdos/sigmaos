@@ -22,20 +22,20 @@ type KernelSrv struct {
 func RunKernelSrv(k *kernel.Kernel) error {
 	ks := &KernelSrv{k: k}
 	ks.ch = make(chan struct{})
-	db.DPrintf(db.KERNEL, "Run KernelSrv %v", k.Param.KernelId)
+	db.DPrintf(db.KERNEL, "Run KernelSrv %v", k.Param.KernelID)
 	sc := sigmaclnt.NewSigmaClntProcAPI(k.SigmaClntKernel)
-	_, err := sigmasrv.NewSigmaSrvClnt(sp.BOOT+k.Param.KernelId, sc, ks)
+	_, err := sigmasrv.NewSigmaSrvClnt(sp.BOOT+k.Param.KernelID, sc, ks)
 	if err != nil {
 		return err
 	}
 	// let start-kernel.sh know that the kernel is ready
-	f, err := os.Create("/tmp/sigmaos/" + k.Param.KernelId)
+	f, err := os.Create("/tmp/sigmaos/" + k.Param.KernelID)
 	if err != nil {
 		return err
 	}
 	f.Close()
 	<-ks.ch
-	db.DPrintf(db.KERNEL, "Run KernelSrv done %v", k.Param.KernelId)
+	db.DPrintf(db.KERNEL, "Run KernelSrv done %v", k.Param.KernelID)
 	return nil
 }
 
@@ -69,21 +69,21 @@ func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilReques
 }
 
 func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
-	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown", ks.k.Param.KernelId)
+	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown", ks.k.Param.KernelID)
 	if ks.k.IsSigmaclntdKernel() {
 		// This is the last container to shut down, so no named isn't up anymore.
 		// Normal shutdown would involve ending leases, etc., which takes a long
 		// time. Instead, shortcut this by killing sigmaclntd and just exiting.
 		db.DPrintf(db.KERNEL, "Shutdown sigmaclntd kernelsrv")
 	} else {
-		if err := ks.k.Remove(sp.BOOT + ks.k.Param.KernelId); err != nil {
-			db.DPrintf(db.KERNEL, "%v: kernelsrv shutdown remove err %v", ks.k.Param.KernelId, err)
+		if err := ks.k.Remove(sp.BOOT + ks.k.Param.KernelID); err != nil {
+			db.DPrintf(db.KERNEL, "%v: kernelsrv shutdown remove err %v", ks.k.Param.KernelID, err)
 		}
 	}
 	if err := ks.k.Shutdown(); err != nil {
 		return err
 	}
-	db.DPrintf(db.KERNEL, "%v: kernelsrv done shutdown", ks.k.Param.KernelId)
+	db.DPrintf(db.KERNEL, "%v: kernelsrv done shutdown", ks.k.Param.KernelID)
 	ks.ch <- struct{}{}
 	return nil
 }
@@ -93,7 +93,7 @@ func (ks *KernelSrv) Kill(ctx fs.CtxI, req proto.KillRequest, rep *proto.KillRes
 }
 
 func (ks *KernelSrv) AllocPort(ctx fs.CtxI, req proto.PortRequest, rep *proto.PortResult) error {
-	db.DPrintf(db.KERNEL, "%v: AllocPort %v\n", ks.k.Param.KernelId, req)
+	db.DPrintf(db.KERNEL, "%v: AllocPort %v\n", ks.k.Param.KernelID, req)
 	pb, err := ks.k.AllocPort(sp.Tpid(req.PidStr), sp.Tport(req.Port))
 	if err != nil {
 		return err

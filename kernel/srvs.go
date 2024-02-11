@@ -127,7 +127,7 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 		return err
 	}
 	p.SetToken(token)
-	p.SetKernelID(k.Param.KernelId, false)
+	p.SetKernelID(k.Param.KernelID, false)
 	cmd, err := runKNamed(pcfg, p, sp.ROOTREALM, init)
 	if err != nil {
 		return err
@@ -167,7 +167,7 @@ func (k *Kernel) bootProcq() (Subsystem, error) {
 }
 
 func (k *Kernel) bootSchedd() (Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{k.Param.KernelId, k.Param.ReserveMcpu, k.Param.MasterKey.String()}, proc.HLINUX)
+	return k.bootSubsystem("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu, k.Param.MasterKey.String()}, proc.HLINUX)
 }
 
 func (k *Kernel) bootNamed() (Subsystem, error) {

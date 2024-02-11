@@ -97,7 +97,7 @@ func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.T
 	p.SetToken(token)
 	p.SetMcpu(mcpu)
 	ss := newSubsystem(k.ProcClnt, k, p, how)
-	return ss, ss.Run(how, k.Param.KernelId, k.ip)
+	return ss, ss.Run(how, k.Param.KernelID, k.ip)
 }
 
 func (k *Kernel) bootSubsystem(program string, args []string, how proc.Thow) (Subsystem, error) {

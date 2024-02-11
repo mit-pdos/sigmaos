@@ -32,7 +32,7 @@ func main() {
 	masterKey := os.Args[10]
 	param := kernel.Param{
 		MasterKey: auth.SymmetricKey(masterKey),
-		KernelId:  os.Args[1],
+		KernelID:  os.Args[1],
 		Services:  srvs,
 		Dbip:      os.Args[4],
 		Mongoip:   os.Args[5],
@@ -56,14 +56,14 @@ func main() {
 		db.DFatalf("Failed to load AWS secrets %v", err)
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelId), sp.NoToken()), secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
+	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.NoToken()), secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	// Create an auth server with a constant GetKeyFn, to bootstrap with the
 	// initial master key. This auth server should *not* be used long-term. It
 	// needs to be replaced with one which queries the namespace for keys once
 	// knamed has booted.
 	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(auth.SymmetricKey(masterKey)))
-	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
+	as, err1 := auth.NewHMACAuthSrv(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}

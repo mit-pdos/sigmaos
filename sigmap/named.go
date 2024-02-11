@@ -51,9 +51,8 @@ const (
 	PIDS    = "pids"
 
 	// Auth
-	//	KEYSREL = "keys"
-	//	KEYS    = NAME + "/" + KEYSREL
-	MASTER_KEY = NAME + "/" + "master-key"
+	KEYSREL = "keys"
+	KEYS    = NAME + "/" + KEYSREL
 
 	// special devs/dirs exported by SigmaSrv/SessSrv
 	STATSD   = ".statsd"

@@ -60,11 +60,21 @@ func Run(args []string) error {
 	if len(args) != 4 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
+	// For boostrapping purposes, post the key for this named using the ProcEnv
+	// (and by extension, token), signed by the kernel.
+	bootstrapSC, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		return err
+	}
 	masterKey := auth.SymmetricKey(args[3])
+	if err := keys.PostSymmetricKey(bootstrapSC, sp.Tsigner(pe.GetPID()), masterKey); err != nil {
+		db.DPrintf(db.ERROR, "Error post named key: %v", err)
+		return err
+	}
 	// Self-sign token for bootstrapping purposes
 	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(masterKey))
 	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
-	kmgr.AddKey(sp.Tsigner(pe.GetKernelID()), masterKey)
+	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterKey)
 	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
@@ -197,7 +207,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 
 	kmgr := keys.NewSymmetricKeyMgr(keys.WithSigmaClntGetKeyFn(nd.SigmaClnt))
 	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterKey)
-	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetKernelID()), nd.masterKey)
+	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterKey)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
 		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)

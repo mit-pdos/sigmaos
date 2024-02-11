@@ -49,6 +49,8 @@ type Schedd struct {
 func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, key auth.SymmetricKey) *Schedd {
 	kmgr := keys.NewSymmetricKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
 	kmgr.AddKey(sp.Tsigner(sc.ProcEnv().GetPID()), key)
+	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, key)
+	db.DPrintf(db.ALWAYS, "kmgr %v", kmgr)
 	as, err := auth.NewHMACAuthSrv(sp.Tsigner(sc.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err)
@@ -314,6 +316,9 @@ func RunSchedd(kernelId string, reserveMcpu uint, key auth.SymmetricKey) error {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
+	if err := keys.PostSymmetricKey(sc, sp.Tsigner(sc.ProcEnv().GetPID()), key); err != nil {
+		db.DFatalf("Error PostSymmetricKey: %v", err)
 	}
 	sd := NewSchedd(sc, kernelId, reserveMcpu, key)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)

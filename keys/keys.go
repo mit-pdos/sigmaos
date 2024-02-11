@@ -4,9 +4,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"path"
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 func NewSymmetricKey(nbyte int) (auth.SymmetricKey, error) {
@@ -28,4 +31,18 @@ func NewSymmetricKey(nbyte int) (auth.SymmetricKey, error) {
 	key := make([]byte, base64.StdEncoding.EncodedLen(len(randBytes)))
 	base64.StdEncoding.Encode(key, randBytes)
 	return auth.SymmetricKey(key), nil
+}
+
+func keyPath(s sp.Tsigner) string {
+	return path.Join(sp.KEYS, s.String())
+}
+
+func PostSymmetricKey(sc *sigmaclnt.SigmaClnt, s sp.Tsigner, key auth.SymmetricKey) error {
+	// Post the signer's symmetric key in a file
+	n, err := sc.PutFile(keyPath(s), 0777, sp.OWRITE, key)
+	if err != nil || int(n) != len(key) {
+		db.DPrintf(db.ERROR, "Error post key: %v n1 %v n2 %v", err, n, len(key))
+		return err
+	}
+	return nil
 }

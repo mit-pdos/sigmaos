@@ -21,12 +21,9 @@ func BootUp(param *kernel.Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) err
 	if err != nil {
 		return err
 	}
-
 	db.DPrintf(db.BOOT, "container %s booted %v\n", os.Args[1], k.Ip())
-
 	if err := kernelsrv.RunKernelSrv(k); err != nil {
 		return err
 	}
-
 	return nil
 }

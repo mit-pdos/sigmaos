@@ -19,7 +19,7 @@ func WithConstGetKeyFn(key auth.SymmetricKey) auth.GetKeyFn {
 func WithSigmaClntGetKeyFn(sc *sigmaclnt.SigmaClnt) auth.GetKeyFn {
 	return func(signer sp.Tsigner) (auth.SymmetricKey, error) {
 		// Mount the master key file, which should be mountable by anyone
-		key, err := sc.GetFile(sp.MASTER_KEY)
+		key, err := sc.GetFile(keyPath(signer))
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error get master key: %v", err)
 			return nil, err
@@ -80,5 +80,5 @@ func (mgr *SymmetricKeyMgr) String() string {
 	for s, _ := range mgr.keys {
 		signers = append(signers, s)
 	}
-	return fmt.Sprintf("&{ signers:%v }", signers)
+	return fmt.Sprintf("%p=&{ signers:%v }", mgr, signers)
 }

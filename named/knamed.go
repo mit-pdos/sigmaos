@@ -24,7 +24,7 @@ func RunKNamed(args []string) error {
 	// Self-sign token for bootstrapping purposes
 	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(masterKey))
 	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
-	kmgr.AddKey(sp.Tsigner(pe.GetKernelID()), masterKey)
+	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterKey)
 	as, err1 := auth.NewHMACAuthSrv(sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
@@ -105,7 +105,7 @@ func RunKNamed(args []string) error {
 	return nil
 }
 
-var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.PROCQ, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM}
+var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.PROCQ, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.KEYS}
 
 // If initial root dir doesn't exist, create it.
 func (nd *Named) initfs() error {

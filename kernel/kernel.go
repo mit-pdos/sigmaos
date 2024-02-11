@@ -34,7 +34,7 @@ const (
 )
 
 type Param struct {
-	KernelId    string
+	KernelID    string
 	Services    []string
 	Dbip        string
 	Mongoip     string
@@ -84,11 +84,14 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 		db.DPrintf(db.ALWAYS, "Error NewSigmaClntProc: %v", err)
 		return nil, err
 	}
-	// Master key file may already exist if this isn't the first kernel to boot
-	n, err := sc.PutFile(sp.MASTER_KEY, 0777, sp.OWRITE, p.MasterKey)
-	if (err != nil && serr.IsErrCode(err, serr.TErrExists)) || int(n) != len(p.MasterKey) {
-		// XXX Remove exists check when we switch to PK crypto
-		db.DPrintf(db.ALWAYS, "Error post Master Key: %v", err)
+	// For completeness, post master signing key. This may be done redundantly
+	// by future kernels, so tolerate an ErrExists
+	if err := keys.PostSymmetricKey(sc, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, p.MasterKey); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+		db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
+		return nil, err
+	}
+	if err := keys.PostSymmetricKey(sc, sp.Tsigner(p.KernelID), p.MasterKey); err != nil {
+		db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
 		return nil, err
 	}
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
@@ -134,9 +137,9 @@ func (k *Kernel) Shutdown() error {
 
 	k.shuttingDown = true
 
-	db.DPrintf(db.KERNEL, "Shutdown %v\n", k.Param.KernelId)
+	db.DPrintf(db.KERNEL, "Shutdown %v\n", k.Param.KernelID)
 	k.shutdown()
-	db.DPrintf(db.KERNEL, "Shutdown %s done\n", k.Param.KernelId)
+	db.DPrintf(db.KERNEL, "Shutdown %s done\n", k.Param.KernelID)
 	return nil
 }
 

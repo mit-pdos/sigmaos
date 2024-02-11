@@ -167,7 +167,9 @@ func (ssrv *SessSrv) ReportError(conn sps.Conn, err error) {
 
 // Calls from netsrv
 func (ss *SessSrv) ServeRequest(conn sps.Conn, fc demux.CallI) (demux.CallI, *serr.Err) {
-	return ss.srvFcall(conn, fc.(*sessp.FcallMsg)), nil
+	rep := ss.srvFcall(conn, fc.(*sessp.FcallMsg))
+	pmfc := spcodec.NewPartMarshaledMsg(rep)
+	return pmfc, nil
 }
 
 // Serve server-generated fcalls.

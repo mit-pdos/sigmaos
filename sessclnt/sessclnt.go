@@ -78,11 +78,12 @@ func (c *SessClnt) ReportError(err error) {
 
 func (c *SessClnt) RPC(req sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	fc := sessp.NewFcallMsg(req, iov, c.sid, &c.seqno)
+	pmfc := spcodec.NewPartMarshaledMsg(fc)
 	nc := c.netClnt()
 	if nc == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)
 	}
-	rep, err := nc.SendReceive(fc)
+	rep, err := nc.SendReceive(pmfc)
 	db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
 
 	if err != nil {

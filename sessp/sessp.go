@@ -116,6 +116,17 @@ func (fm *FcallMsg) GetMsg() Tmsg {
 	return fm.Msg
 }
 
+// A partially marshaled message to push the cost of marshaling Fcm
+// out of demux clnt.
+type PartMarshaledMsg struct {
+	Fcm          *FcallMsg
+	MarshaledFcm []byte
+}
+
+func (pmfc *PartMarshaledMsg) Tag() Ttag {
+	return pmfc.Fcm.Tag()
+}
+
 const (
 
 	//

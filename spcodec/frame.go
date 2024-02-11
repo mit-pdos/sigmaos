@@ -71,7 +71,13 @@ func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 }
 
 func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
-	fcm := c.(*sessp.FcallMsg)
-	fc := MarshalFcall(fcm)
-	return writeFcall(fcm, fc, wrt)
+	fcm := c.(*sessp.PartMarshaledMsg)
+	return writeFcall(fcm.Fcm, fcm.MarshaledFcm, wrt)
+}
+
+func NewPartMarshaledMsg(fcm *sessp.FcallMsg) *sessp.PartMarshaledMsg {
+	return &sessp.PartMarshaledMsg{
+		Fcm:          fcm,
+		MarshaledFcm: MarshalFcall(fcm),
+	}
 }

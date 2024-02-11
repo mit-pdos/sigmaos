@@ -43,26 +43,27 @@ func (ss *SessSrv) ReportError(conn sigmaprotsrv.Conn, err error) {
 func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.CallI, *serr.Err) {
 	fcm := req.(*sessp.FcallMsg)
 	qid := sp.NewQidPerm(0777, 0, 0)
+	var rep *sessp.FcallMsg
 	switch fcm.Type() {
 	case sessp.TTwatch:
 		time.Sleep(1 * time.Second)
 		conn.CloseConnTest()
 		msg := &sp.Ropen{Qid: qid}
-		rep := sessp.NewFcallMsgReply(fcm, msg)
-		return rep, nil
+		rep = sessp.NewFcallMsgReply(fcm, msg)
 	case sessp.TTwrite:
 		msg := &sp.Rwrite{Count: uint32(len(fcm.Iov[0]))}
-		rep := sessp.NewFcallMsgReply(fcm, msg)
+		rep = sessp.NewFcallMsgReply(fcm, msg)
 		return rep, nil
 	default:
 		msg := &sp.Rattach{Qid: qid}
-		rep := sessp.NewFcallMsgReply(fcm, msg)
+		rep = sessp.NewFcallMsgReply(fcm, msg)
 		r := rand.Int64(100)
 		if r < uint64(ss.crash) {
 			conn.CloseConnTest()
 		}
-		return rep, nil
 	}
+	pmfc := spcodec.NewPartMarshaledMsg(rep)
+	return pmfc, nil
 }
 
 type Tstate struct {
@@ -99,7 +100,6 @@ func newTstateSrv(t *testing.T, crash int) *TstateSrv {
 
 func TestConnectSessSrv(t *testing.T) {
 	ts := newTstateSrv(t, 0)
-
 	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
@@ -245,6 +245,8 @@ func TestDisconnectMfsSrv(t *testing.T) {
 	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
 
 	assert.False(t, sess.IsConnected())
+
+	ts.srv.StopServing()
 }
 
 func TestWriteSocketPerfSingle(t *testing.T) {
@@ -303,6 +305,8 @@ func TestWriteSocketPerfSingle(t *testing.T) {
 
 	err = os.Remove(SOCKPATH)
 	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
+
+	socket.Close()
 }
 
 func TestPerfSessSrv(t *testing.T) {

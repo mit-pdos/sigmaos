@@ -10,26 +10,28 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type HMACAuthSrv struct {
-	signer  sp.Tsigner
-	srvpath string
+type HMACAuthSrv[M jwt.SigningMethod] struct {
+	signingMethod M
+	signer        sp.Tsigner
+	srvpath       string
 	KeyMgr
 }
 
-func NewHMACAuthSrv(signer sp.Tsigner, srvpath string, kmgr KeyMgr) (*HMACAuthSrv, error) {
-	return &HMACAuthSrv{
-		signer:  signer,
-		srvpath: srvpath,
-		KeyMgr:  kmgr,
+func NewHMACAuthSrv(signer sp.Tsigner, srvpath string, kmgr KeyMgr) (*HMACAuthSrv[*jwt.SigningMethodHMAC], error) {
+	return &HMACAuthSrv[*jwt.SigningMethodHMAC]{
+		signingMethod: jwt.SigningMethodHS256,
+		signer:        signer,
+		srvpath:       srvpath,
+		KeyMgr:        kmgr,
 	}, nil
 }
 
-func (as *HMACAuthSrv) GetSrvPath() string {
+func (as *HMACAuthSrv[M]) GetSrvPath() string {
 	return as.srvpath
 }
 
 // Set a proc's token after it has been spawned by the parent
-func (as *HMACAuthSrv) SetDelegatedProcToken(p *proc.Proc) error {
+func (as *HMACAuthSrv[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	// Retrieve and validate the proc's parent's claims
 	parentPC, err := as.VerifyTokenGetClaims(p.GetParentToken())
 	if err != nil {
@@ -69,13 +71,13 @@ func (as *HMACAuthSrv) SetDelegatedProcToken(p *proc.Proc) error {
 	return nil
 }
 
-func (as *HMACAuthSrv) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
+func (as *HMACAuthSrv[M]) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	key, err := as.GetPrivateKey(as.signer)
 	if err != nil {
 		return nil, err
 	}
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, pc)
+	token := jwt.NewWithClaims(as.signingMethod, pc)
 	tstr, err := token.SignedString([]byte(key))
 	if err != nil {
 		return nil, err
@@ -83,13 +85,13 @@ func (as *HMACAuthSrv) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	return sp.NewToken(as.signer, tstr), err
 }
 
-func (as *HMACAuthSrv) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error) {
+func (as *HMACAuthSrv[M]) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error) {
 	// Parse the jwt, passing in a function to look up the key.
 	//
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-Parse-Hmac
 	token, err := jwt.ParseWithClaims(t.GetSignedToken(), &ProcClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// Validate the alg is expected
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		if _, ok := token.Method.(M); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
 		key, err := as.GetPublicKey(t.GetSigner())
@@ -112,7 +114,7 @@ func (as *HMACAuthSrv) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error) {
 	return nil, fmt.Errorf("Claims wrong type")
 }
 
-func (as *HMACAuthSrv) IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error) {
+func (as *HMACAuthSrv[M]) IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error) {
 	db.DPrintf(db.AUTH, "Authorization check p %v", principal.GetID())
 	pc, err := as.VerifyTokenGetClaims(principal.GetToken())
 	if err != nil {

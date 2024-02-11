@@ -7,8 +7,6 @@ import (
 
 type SymmetricKey []byte
 
-type GetKeyFn func(signer sp.Tsigner) (SymmetricKey, error)
-
 type KeyMgr interface {
 	GetPublicKey(s sp.Tsigner) (SymmetricKey, error)
 	GetPrivateKey(s sp.Tsigner) (SymmetricKey, error)

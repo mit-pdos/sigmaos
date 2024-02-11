@@ -10,13 +10,15 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func WithConstGetKeyFn(key auth.SymmetricKey) auth.GetKeyFn {
+type GetKeyFn func(signer sp.Tsigner) (auth.SymmetricKey, error)
+
+func WithConstGetKeyFn(key auth.SymmetricKey) GetKeyFn {
 	return func(sp.Tsigner) (auth.SymmetricKey, error) {
 		return key, nil
 	}
 }
 
-func WithSigmaClntGetKeyFn(sc *sigmaclnt.SigmaClnt) auth.GetKeyFn {
+func WithSigmaClntGetKeyFn(sc *sigmaclnt.SigmaClnt) GetKeyFn {
 	return func(signer sp.Tsigner) (auth.SymmetricKey, error) {
 		// Mount the master key file, which should be mountable by anyone
 		key, err := sc.GetFile(keyPath(signer))
@@ -30,11 +32,11 @@ func WithSigmaClntGetKeyFn(sc *sigmaclnt.SigmaClnt) auth.GetKeyFn {
 
 type SymmetricKeyMgr struct {
 	mu     sync.Mutex
-	getKey auth.GetKeyFn
+	getKey GetKeyFn
 	keys   map[sp.Tsigner]auth.SymmetricKey
 }
 
-func NewSymmetricKeyMgr(fn auth.GetKeyFn) *SymmetricKeyMgr {
+func NewSymmetricKeyMgr(fn GetKeyFn) *SymmetricKeyMgr {
 	return &SymmetricKeyMgr{
 		getKey: fn,
 		keys:   make(map[sp.Tsigner]auth.SymmetricKey),

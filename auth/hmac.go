@@ -13,14 +13,14 @@ import (
 type HMACAuthSrv struct {
 	signer  sp.Tsigner
 	srvpath string
-	kmgr    KeyMgr
+	KeyMgr
 }
 
 func NewHMACAuthSrv(signer sp.Tsigner, srvpath string, kmgr KeyMgr) (*HMACAuthSrv, error) {
 	return &HMACAuthSrv{
 		signer:  signer,
 		srvpath: srvpath,
-		kmgr:    kmgr,
+		KeyMgr:  kmgr,
 	}, nil
 }
 
@@ -66,7 +66,7 @@ func (as *HMACAuthSrv) SetDelegatedProcToken(p *proc.Proc) error {
 }
 
 func (as *HMACAuthSrv) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
-	key, err := as.kmgr.GetKey(as.signer)
+	key, err := as.GetKey(as.signer)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (as *HMACAuthSrv) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-		key, err := as.kmgr.GetKey(t.GetSigner())
+		key, err := as.GetKey(t.GetSigner())
 		if err != nil {
 			return nil, err
 		}

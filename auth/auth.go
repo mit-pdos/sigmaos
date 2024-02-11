@@ -9,16 +9,17 @@ type SymmetricKey []byte
 
 type GetKeyFn func(signer sp.Tsigner) (SymmetricKey, error)
 
+type KeyMgr interface {
+	GetKey(s sp.Tsigner) (SymmetricKey, error)
+	AddKey(s sp.Tsigner, key SymmetricKey)
+}
+
 type AuthSrv interface {
 	SetDelegatedProcToken(p *proc.Proc) error
 	NewToken(pc *ProcClaims) (*sp.Ttoken, error)
 	VerifyTokenGetClaims(signedToken *sp.Ttoken) (*ProcClaims, error)
 	IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error)
-}
-
-type KeyMgr interface {
-	GetKey(s sp.Tsigner) (SymmetricKey, error)
-	AddKey(s sp.Tsigner, key SymmetricKey)
+	KeyMgr
 }
 
 func (sk SymmetricKey) String() string {

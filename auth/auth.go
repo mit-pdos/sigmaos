@@ -10,11 +10,13 @@ type SymmetricKey []byte
 type GetKeyFn func(signer sp.Tsigner) (SymmetricKey, error)
 
 type KeyMgr interface {
-	GetKey(s sp.Tsigner) (SymmetricKey, error)
+	GetPublicKey(s sp.Tsigner) (SymmetricKey, error)
+	GetPrivateKey(s sp.Tsigner) (SymmetricKey, error)
 	AddKey(s sp.Tsigner, key SymmetricKey)
 }
 
 type AuthSrv interface {
+	GetSrvPath() string
 	SetDelegatedProcToken(p *proc.Proc) error
 	NewToken(pc *ProcClaims) (*sp.Ttoken, error)
 	VerifyTokenGetClaims(signedToken *sp.Ttoken) (*ProcClaims, error)

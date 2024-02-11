@@ -41,6 +41,14 @@ func NewSymmetricKeyMgr(fn auth.GetKeyFn) *SymmetricKeyMgr {
 	}
 }
 
+func (mgr *SymmetricKeyMgr) GetPublicKey(s sp.Tsigner) (auth.SymmetricKey, error) {
+	return mgr.GetKey(s)
+}
+
+func (mgr *SymmetricKeyMgr) GetPrivateKey(s sp.Tsigner) (auth.SymmetricKey, error) {
+	return mgr.GetKey(s)
+}
+
 func (mgr *SymmetricKeyMgr) GetKey(s sp.Tsigner) (auth.SymmetricKey, error) {
 	db.DPrintf(db.AUTH, "GetKey for signer %v", s)
 	defer db.DPrintf(db.AUTH, "GetKey for signer %v done", s)

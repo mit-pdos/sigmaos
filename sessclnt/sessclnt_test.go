@@ -43,13 +43,18 @@ func (ss *SessSrv) ReportError(conn sigmaprotsrv.Conn, err error) {
 func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.CallI, *serr.Err) {
 	fcm := req.(*sessp.FcallMsg)
 	qid := sp.NewQidPerm(0777, 0, 0)
-	if fcm.Type() == sessp.TTwatch {
+	switch fcm.Type() {
+	case sessp.TTwatch:
 		time.Sleep(1 * time.Second)
 		conn.CloseConnTest()
 		msg := &sp.Ropen{Qid: qid}
 		rep := sessp.NewFcallMsgReply(fcm, msg)
 		return rep, nil
-	} else {
+	case sessp.TTwrite:
+		msg := &sp.Rwrite{Count: uint32(len(fcm.Iov[0]))}
+		rep := sessp.NewFcallMsgReply(fcm, msg)
+		return rep, nil
+	default:
 		msg := &sp.Rattach{Qid: qid}
 		rep := sessp.NewFcallMsgReply(fcm, msg)
 		r := rand.Int64(100)
@@ -298,4 +303,25 @@ func TestWriteSocketPerfSingle(t *testing.T) {
 
 	err = os.Remove(SOCKPATH)
 	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
+}
+
+func TestPerfSessSrv(t *testing.T) {
+	const (
+		WRITESZ = 4 * sp.MBYTE
+		TOTAL   = 100 * sp.MBYTE
+	)
+	ts := newTstateSrv(t, 0)
+	buf := test.NewBuf(WRITESZ)
+	t0 := time.Now()
+	for i := 0; i < TOTAL/WRITESZ; i++ {
+		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
+		iov := sessp.IoVec{buf}
+		_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, iov)
+		assert.Nil(t, err)
+	}
+	tot := uint64(TOTAL)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
+
+	ts.srv.CloseListener()
 }

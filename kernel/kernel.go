@@ -36,15 +36,16 @@ const (
 )
 
 type Param struct {
-	KernelID    string
-	Services    []string
-	Dbip        string
-	Mongoip     string
-	Overlays    bool
-	BuildTag    string
-	GVisor      bool
-	ReserveMcpu string
-	MasterKey   auth.SymmetricKey
+	KernelID      string
+	Services      []string
+	Dbip          string
+	Mongoip       string
+	Overlays      bool
+	BuildTag      string
+	GVisor        bool
+	ReserveMcpu   string
+	MasterPubKey  auth.PublicKey
+	MasterPrivKey auth.PrivateKey
 }
 
 type Kernel struct {
@@ -88,19 +89,19 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	}
 	// For completeness, post master signing key. This may be done redundantly
 	// by future kernels, so tolerate an ErrExists
-	if err := keys.PostSymmetricKey(sc, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, p.MasterKey); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+	if err := keys.PostPublicKey(sc, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, p.MasterPubKey); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
 		return nil, err
 	}
-	if err := keys.PostSymmetricKey(sc, sp.Tsigner(p.KernelID), p.MasterKey); err != nil {
+	if err := keys.PostPublicKey(sc, sp.Tsigner(p.KernelID), p.MasterPubKey); err != nil {
 		db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
 		return nil, err
 	}
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
 	// Create an AuthServer which dynamically pulls keys from the namespace, now
 	// that knamed has booted.
-	kmgr := keys.NewSymmetricKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
-	kmgr.AddKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterKey)
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
+	kmgr.AddPublicKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPubKey)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, sp.Tsigner(k.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NeHMACAUthServer %v", err)
@@ -219,12 +220,12 @@ func (k *Kernel) shutdown() {
 	db.DPrintf(db.KERNEL, "Shutdown nameds done %d\n", len(k.svcs.svcs[sp.KNAMED]))
 }
 
-func newKNamedProc(realmId sp.Trealm, init bool, masterKey auth.SymmetricKey) (*proc.Proc, error) {
+func newKNamedProc(realmId sp.Trealm, init bool, masterPubKey auth.PublicKey) (*proc.Proc, error) {
 	i := "start"
 	if init {
 		i = "init"
 	}
-	args := []string{realmId.String(), i, masterKey.String()}
+	args := []string{realmId.String(), i, masterPubKey.String()}
 	p := proc.NewPrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }

@@ -32,14 +32,14 @@ import (
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sigmasrv.SigmaSrv
-	mu        sync.Mutex
-	fs        *fsetcd.FsEtcd
-	elect     *leaderetcd.Election
-	job       string
-	realm     sp.Trealm
-	crash     int
-	sess      *fsetcd.Session
-	masterKey auth.SymmetricKey
+	mu              sync.Mutex
+	fs              *fsetcd.FsEtcd
+	elect           *leaderetcd.Election
+	job             string
+	realm           sp.Trealm
+	crash           int
+	sess            *fsetcd.Session
+	masterPublicKey auth.PublicKey
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -67,15 +67,15 @@ func Run(args []string) error {
 	if err != nil {
 		return err
 	}
-	masterKey := auth.SymmetricKey(args[3])
-	if err := keys.PostSymmetricKey(bootstrapSC, sp.Tsigner(pe.GetPID()), masterKey); err != nil {
+	masterPublicKey := auth.PublicKey(args[3])
+	if err := keys.PostPublicKey(bootstrapSC, sp.Tsigner(pe.GetPID()), masterPublicKey); err != nil {
 		db.DPrintf(db.ERROR, "Error post named key: %v", err)
 		return err
 	}
 	// Self-sign token for bootstrapping purposes
-	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(masterKey))
-	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
-	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterKey)
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPublicKey))
+	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), masterPublicKey)
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPublicKey)
 	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
@@ -95,7 +95,7 @@ func Run(args []string) error {
 		return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 	}
 	nd.crash = crashing
-	nd.masterKey = masterKey
+	nd.masterPublicKey = masterPublicKey
 
 	p, err := perf.NewPerf(pe, perf.NAMED)
 	if err != nil {
@@ -206,9 +206,9 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
 	}
 
-	kmgr := keys.NewSymmetricKeyMgr(keys.WithSigmaClntGetKeyFn(nd.SigmaClnt))
-	kmgr.AddKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterKey)
-	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterKey)
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(nd.SigmaClnt))
+	kmgr.AddPublicKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterPublicKey)
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterPublicKey)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
 		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)

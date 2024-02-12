@@ -28,6 +28,6 @@ func NewHMACVerificationSrvKeyMgr(signer sp.Tsigner, srvpath string, sc *sigmacl
 }
 
 func NewHMACVerificationSrv(signer sp.Tsigner, srvpath string, sc *sigmaclnt.SigmaClnt) (*HMACVerificationSrv, error) {
-	kmgr := keys.NewSymmetricKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
 	return NewHMACVerificationSrvKeyMgr(signer, srvpath, sc, kmgr)
 }

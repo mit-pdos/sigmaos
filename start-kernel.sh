@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--reserveMcpu rmcpu] [--key KEY] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--reserveMcpu rmcpu] [--pubkey PUB_KEY] [--privkey PRIV_KEY] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -18,7 +18,8 @@ NET="host"
 KERNELID=""
 OVERLAYS="false"
 GVISOR="false"
-KEY=$(head -c256 /dev/urandom | base64)
+PUB_KEY=$(head -c256 /dev/urandom | base64)
+PRIV_KEY=$PUB_KEY
 RMCPU="0"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
@@ -65,9 +66,14 @@ while [[ "$#" -gt 1 ]]; do
     shift
     GVISOR="true"
     ;;
-  --key)
+  --pubkey)
     shift
-    KEY=$1
+    PUB_KEY=$1
+    shift
+    ;;
+  --privkey)
+    shift
+    PRIV_KEY=$1
     shift
     ;;
   --named)
@@ -171,7 +177,8 @@ CID=$(docker run -dit \
              -e overlays=${OVERLAYS} \
              -e buildtag=${TAG} \
              -e gvisor=${GVISOR} \
-             -e key=${KEY} \
+             -e pubkey=${PUB_KEY} \
+             -e privkey=${PRIV_KEY} \
              -e SIGMAPERF=${SIGMAPERF} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \
@@ -200,7 +207,8 @@ while [ ! -f "/tmp/sigmaos/${KERNELID}" ]; do
 done;
 rm -f "/tmp/sigmaos/${KERNELID}"
 
-echo $KEY > /tmp/sigmaos/master-key
+echo $PUB_KEY > /tmp/sigmaos/master-key.pub
+echo $PRIV_KEY > /tmp/sigmaos/master-key.priv
 
 echo -n $IP
 

@@ -12,7 +12,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func NewSymmetricKey(nbyte int) (auth.SymmetricKey, error) {
+func NewSymmetricKey(nbyte int) (auth.PrivateKey, error) {
 	file, err := os.Open("/dev/urandom") // For read access.
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error open /dev/urandom: %v", err)
@@ -30,14 +30,14 @@ func NewSymmetricKey(nbyte int) (auth.SymmetricKey, error) {
 	}
 	key := make([]byte, base64.StdEncoding.EncodedLen(len(randBytes)))
 	base64.StdEncoding.Encode(key, randBytes)
-	return auth.SymmetricKey(key), nil
+	return auth.PrivateKey(key), nil
 }
 
 func keyPath(s sp.Tsigner) string {
 	return path.Join(sp.KEYS, s.String())
 }
 
-func PostSymmetricKey(sc *sigmaclnt.SigmaClnt, s sp.Tsigner, key auth.SymmetricKey) error {
+func PostPublicKey(sc *sigmaclnt.SigmaClnt, s sp.Tsigner, key auth.PublicKey) error {
 	// Post the signer's symmetric key in a file
 	n, err := sc.PutFile(keyPath(s), 0777, sp.OWRITE, key)
 	if err != nil || int(n) != len(key) {

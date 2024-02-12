@@ -48,10 +48,10 @@ type Schedd struct {
 	nProcGetsSuccessful uint64
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, key auth.SymmetricKey) *Schedd {
-	kmgr := keys.NewSymmetricKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
-	kmgr.AddKey(sp.Tsigner(sc.ProcEnv().GetPID()), key)
-	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, key)
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, key auth.PublicKey) *Schedd {
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
+	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetPID()), key)
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, key)
 	db.DPrintf(db.ALWAYS, "kmgr %v", kmgr)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, sp.Tsigner(sc.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {
@@ -314,13 +314,13 @@ func (sd *Schedd) stats() {
 	}
 }
 
-func RunSchedd(kernelId string, reserveMcpu uint, key auth.SymmetricKey) error {
+func RunSchedd(kernelId string, reserveMcpu uint, key auth.PublicKey) error {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	if err := keys.PostSymmetricKey(sc, sp.Tsigner(sc.ProcEnv().GetPID()), key); err != nil {
-		db.DFatalf("Error PostSymmetricKey: %v", err)
+	if err := keys.PostPublicKey(sc, sp.Tsigner(sc.ProcEnv().GetPID()), key); err != nil {
+		db.DFatalf("Error PostPublicKey: %v", err)
 	}
 	sd := NewSchedd(sc, kernelId, reserveMcpu, key)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)

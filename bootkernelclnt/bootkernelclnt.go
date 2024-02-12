@@ -22,12 +22,13 @@ const (
 	K_OUT_DIR = "/tmp/sigmaos-kernel-start-logs"
 )
 
-func Start(kernelId string, pcfg *proc.ProcEnv, srvs string, overlays, gvisor bool, masterKey auth.SymmetricKey) (string, error) {
+func Start(kernelId string, pcfg *proc.ProcEnv, srvs string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (string, error) {
 	args := []string{
 		"--pull", pcfg.BuildTag,
 		"--boot", srvs,
 		"--named", pcfg.EtcdIP,
-		"--key", masterKey.String(),
+		"--pubkey", masterPubKey.String(),
+		"--privkey", masterPrivKey.String(),
 		"--host",
 	}
 	if overlays {
@@ -85,9 +86,9 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays, gvisor bool, masterKey auth.SymmetricKey) (*Kernel, error) {
+func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, pcfg, conf, overlays, gvisor, masterKey)
+	_, err := Start(kernelId, pcfg, conf, overlays, gvisor, masterPubKey, masterPrivKey)
 	if err != nil {
 		return nil, err
 	}

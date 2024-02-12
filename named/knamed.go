@@ -22,11 +22,11 @@ func RunKNamed(args []string) error {
 	if len(args) != 4 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	masterKey := auth.SymmetricKey(args[3])
+	masterPublicKey := auth.PublicKey(args[3])
 	// Self-sign token for bootstrapping purposes
-	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(masterKey))
-	kmgr.AddKey(sp.Tsigner(pe.GetPID()), masterKey)
-	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterKey)
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPublicKey))
+	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), masterPublicKey)
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPublicKey)
 	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
@@ -57,7 +57,7 @@ func RunKNamed(args []string) error {
 
 	init := args[2]
 
-	nd.masterKey = masterKey
+	nd.masterPublicKey = masterPublicKey
 
 	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
 

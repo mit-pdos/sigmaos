@@ -31,16 +31,17 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error parse gvisor: %v", err)
 	}
-	masterKey := os.Args[10]
+	masterPublicKey := os.Args[10]
 	param := kernel.Param{
-		MasterKey: auth.SymmetricKey(masterKey),
-		KernelID:  os.Args[1],
-		Services:  srvs,
-		Dbip:      os.Args[4],
-		Mongoip:   os.Args[5],
-		Overlays:  overlays,
-		BuildTag:  os.Args[8],
-		GVisor:    gvisor,
+		MasterPubKey:  auth.PublicKey(masterPublicKey),
+		MasterPrivKey: auth.PrivateKey(masterPublicKey),
+		KernelID:      os.Args[1],
+		Services:      srvs,
+		Dbip:          os.Args[4],
+		Mongoip:       os.Args[5],
+		Overlays:      overlays,
+		BuildTag:      os.Args[8],
+		GVisor:        gvisor,
 	}
 	if len(os.Args) >= 8 {
 		param.ReserveMcpu = os.Args[7]
@@ -64,7 +65,7 @@ func main() {
 	// initial master key. This auth server should *not* be used long-term. It
 	// needs to be replaced with one which queries the namespace for keys once
 	// knamed has booted.
-	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(auth.SymmetricKey(masterKey)))
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(masterPublicKey)))
 	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)

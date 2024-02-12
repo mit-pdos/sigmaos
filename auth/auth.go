@@ -5,12 +5,14 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type SymmetricKey []byte
+type PublicKey []byte
+type PrivateKey []byte
 
 type KeyMgr interface {
-	GetPublicKey(s sp.Tsigner) (SymmetricKey, error)
-	GetPrivateKey(s sp.Tsigner) (SymmetricKey, error)
-	AddKey(s sp.Tsigner, key SymmetricKey)
+	GetPublicKey(s sp.Tsigner) (PublicKey, error)
+	GetPrivateKey(s sp.Tsigner) (PrivateKey, error)
+	AddPublicKey(s sp.Tsigner, key PublicKey)
+	AddPrivateKey(s sp.Tsigner, key PrivateKey)
 }
 
 type AuthSrv interface {
@@ -21,6 +23,10 @@ type AuthSrv interface {
 	KeyMgr
 }
 
-func (sk SymmetricKey) String() string {
+func (sk PublicKey) String() string {
+	return string(sk)
+}
+
+func (sk PrivateKey) String() string {
 	return string(sk)
 }

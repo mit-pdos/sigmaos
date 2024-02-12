@@ -58,7 +58,7 @@ func Run(args []string) error {
 
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pe)
-	if len(args) != 4 {
+	if len(args) != 5 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	// For boostrapping purposes, post the key for this named using the ProcEnv
@@ -67,15 +67,17 @@ func Run(args []string) error {
 	if err != nil {
 		return err
 	}
-	masterPublicKey := auth.PublicKey(args[3])
-	if err := keys.PostPublicKey(bootstrapSC, sp.Tsigner(pe.GetPID()), masterPublicKey); err != nil {
+	masterPubKey := auth.PublicKey(args[3])
+	masterPrivKey := auth.PrivateKey(args[4])
+	if err := keys.PostPublicKey(bootstrapSC, sp.Tsigner(pe.GetPID()), masterPubKey); err != nil {
 		db.DPrintf(db.ERROR, "Error post named key: %v", err)
 		return err
 	}
 	// Self-sign token for bootstrapping purposes
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPublicKey))
-	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), masterPublicKey)
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPublicKey)
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPubKey))
+	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), masterPubKey)
+	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), masterPrivKey)
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
 	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
@@ -95,7 +97,7 @@ func Run(args []string) error {
 		return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 	}
 	nd.crash = crashing
-	nd.masterPublicKey = masterPublicKey
+	nd.masterPublicKey = masterPubKey
 
 	p, err := perf.NewPerf(pe, perf.NAMED)
 	if err != nil {

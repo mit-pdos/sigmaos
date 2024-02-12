@@ -115,7 +115,7 @@ func (k *Kernel) KillOne(srv string) error {
 }
 
 func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
-	p, err := newKNamedProc(sp.ROOTREALM, init, k.Param.MasterPubKey)
+	p, err := newKNamedProc(sp.ROOTREALM, init, k.Param.MasterPubKey, k.Param.MasterPrivKey)
 	if err != nil {
 		return err
 	}
@@ -167,11 +167,11 @@ func (k *Kernel) bootProcq() (Subsystem, error) {
 }
 
 func (k *Kernel) bootSchedd() (Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu, k.Param.MasterPubKey.String()}, proc.HLINUX)
+	return k.bootSubsystem("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu, k.Param.MasterPubKey.String(), k.Param.MasterPrivKey.String()}, proc.HLINUX)
 }
 
 func (k *Kernel) bootNamed() (Subsystem, error) {
-	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0", k.Param.MasterPubKey.String()}, proc.HSCHEDD)
+	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0", k.Param.MasterPubKey.String(), k.Param.MasterPrivKey.String()}, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {

@@ -18,8 +18,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 11 {
-		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu buildTag gvisor key\nprovided:%v", os.Args[0], os.Args)
+	if len(os.Args) != 12 {
+		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu buildTag gvisor pubkey privkey\nprovided:%v", os.Args[0], os.Args)
 	}
 	db.DPrintf(db.BOOT, "Boot %v", os.Args[1:])
 	srvs := strings.Split(os.Args[3], ";")
@@ -31,10 +31,11 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error parse gvisor: %v", err)
 	}
-	masterPublicKey := os.Args[10]
+	masterPubKey := auth.PublicKey(os.Args[10])
+	masterPrivKey := auth.PrivateKey(os.Args[10])
 	param := kernel.Param{
-		MasterPubKey:  auth.PublicKey(masterPublicKey),
-		MasterPrivKey: auth.PrivateKey(masterPublicKey),
+		MasterPubKey:  masterPubKey,
+		MasterPrivKey: masterPrivKey,
 		KernelID:      os.Args[1],
 		Services:      srvs,
 		Dbip:          os.Args[4],
@@ -65,7 +66,8 @@ func main() {
 	// initial master key. This auth server should *not* be used long-term. It
 	// needs to be replaced with one which queries the namespace for keys once
 	// knamed has booted.
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(masterPublicKey)))
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(masterPubKey)))
+	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPrivKey)
 	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)

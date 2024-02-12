@@ -102,6 +102,7 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	// that knamed has booted.
 	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
 	kmgr.AddPublicKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPubKey)
+	kmgr.AddPrivateKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPrivKey)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, sp.Tsigner(k.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NeHMACAUthServer %v", err)
@@ -220,12 +221,12 @@ func (k *Kernel) shutdown() {
 	db.DPrintf(db.KERNEL, "Shutdown nameds done %d\n", len(k.svcs.svcs[sp.KNAMED]))
 }
 
-func newKNamedProc(realmId sp.Trealm, init bool, masterPubKey auth.PublicKey) (*proc.Proc, error) {
+func newKNamedProc(realmId sp.Trealm, init bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*proc.Proc, error) {
 	i := "start"
 	if init {
 		i = "init"
 	}
-	args := []string{realmId.String(), i, masterPubKey.String()}
+	args := []string{realmId.String(), i, masterPubKey.String(), masterPrivKey.String()}
 	p := proc.NewPrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }

@@ -28,7 +28,7 @@ func TestCompile(t *testing.T) {
 func TestSignHMACToken(t *testing.T) {
 	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
 	assert.Nil(t, err, "Err NewKey: %v", err)
-	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(key))
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(key)))
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", proc.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
@@ -48,7 +48,7 @@ func TestSignHMACToken(t *testing.T) {
 func TestVerifyHMACToken(t *testing.T) {
 	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
 	assert.Nil(t, err, "Err NewKey: %v", err)
-	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(key))
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(key)))
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", proc.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims

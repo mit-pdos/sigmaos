@@ -150,6 +150,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err1
 	}
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(key)))
+	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, key)
 	s3secrets, err1 := auth.GetAWSSecrets()
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)

@@ -32,12 +32,17 @@ func main() {
 		sp.TprincipalID("proxy"),
 		sp.NoToken(),
 	))
-	masterKey, err1 := os.ReadFile(sp.HOST_KEY_FILE)
+	masterPrivKey, err1 := os.ReadFile(sp.HOST_PRIV_KEY_FILE)
 	if err1 != nil {
-		db.DFatalf("Error Read master key: %v", err1)
+		db.DFatalf("Error Read master private key: %v", err1)
 	}
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterKey))
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterKey)
+	masterPubKey, err1 := os.ReadFile(sp.HOST_PUB_KEY_FILE)
+	if err1 != nil {
+		db.DFatalf("Error Read master private key: %v", err1)
+	}
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPubKey))
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
+	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPrivKey)
 	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)

@@ -36,8 +36,8 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error Read master key: %v", err1)
 	}
-	kmgr := keys.NewSymmetricKeyMgr(keys.WithConstGetKeyFn(masterKey))
-	kmgr.AddKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterKey)
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterKey))
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterKey)
 	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"crypto/x509"
 	"fmt"
 
 	"github.com/golang-jwt/jwt"
@@ -17,7 +18,6 @@ type AuthSrvImpl[M jwt.SigningMethod] struct {
 	KeyMgr
 }
 
-// jwt.SigningMethodHS256
 func NewAuthSrv[M jwt.SigningMethod](method M, signer sp.Tsigner, srvpath string, kmgr KeyMgr) (AuthSrv, error) {
 	return &AuthSrvImpl[M]{
 		signingMethod: method,
@@ -73,13 +73,23 @@ func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 }
 
 func (as *AuthSrvImpl[M]) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
-	key, err := as.GetPrivateKey(as.signer)
+	privkey, err := as.GetPrivateKey(as.signer)
 	if err != nil {
 		return nil, err
 	}
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
 	token := jwt.NewWithClaims(as.signingMethod, pc)
-	tstr, err := token.SignedString([]byte(key))
+	var key interface{}
+	switch any(as.signingMethod).(type) {
+	case *jwt.SigningMethodECDSA:
+		key, err = x509.ParseECPrivateKey(privkey)
+		if err != nil {
+			return nil, err
+		}
+	case *jwt.SigningMethodHMAC:
+		key = []byte(privkey)
+	}
+	tstr, err := token.SignedString(key)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +105,22 @@ func (as *AuthSrvImpl[M]) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error
 		if _, ok := token.Method.(M); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-		key, err := as.GetPublicKey(t.GetSigner())
+		pubkey, err := as.GetPublicKey(t.GetSigner())
 		if err != nil {
 			return nil, err
 		}
 		// hmacKey is a []byte containing your secret, e.g. []byte("my_secret_key")
-		return []byte(key), nil
+		var key interface{}
+		switch any(as.signingMethod).(type) {
+		case *jwt.SigningMethodECDSA:
+			key, err = x509.ParsePKIXPublicKey(pubkey)
+			if err != nil {
+				return nil, err
+			}
+		case *jwt.SigningMethodHMAC:
+			key = []byte(pubkey)
+		}
+		return key, nil
 	})
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error parsing jwt: %v", err)

@@ -32,7 +32,7 @@ func main() {
 		db.DFatalf("Error parse gvisor: %v", err)
 	}
 	masterPubKey := auth.PublicKey(os.Args[10])
-	masterPrivKey := auth.PrivateKey(os.Args[10])
+	masterPrivKey := auth.PrivateKey(os.Args[11])
 	param := kernel.Param{
 		MasterPubKey:  masterPubKey,
 		MasterPrivKey: masterPrivKey,

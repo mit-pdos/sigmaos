@@ -31,7 +31,6 @@ func Start(kernelId string, pcfg *proc.ProcEnv, srvs string, overlays, gvisor bo
 		"--privkey", masterPrivKey.String(),
 		"--host",
 	}
-	db.DPrintf(db.ALWAYS, "pub %v priv %v", masterPubKey.String(), masterPrivKey.String())
 	if overlays {
 		args = append(args, "--overlays")
 	}

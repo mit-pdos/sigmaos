@@ -10,24 +10,24 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type HMACVerificationSrv struct {
+type VerificationSrv struct {
 	sc *sigmaclnt.SigmaClnt
 	auth.AuthSrv
 }
 
-func NewHMACVerificationSrvKeyMgr(signer sp.Tsigner, srvpath string, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr) (*HMACVerificationSrv, error) {
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, signer, srvpath, kmgr)
+func NewVerificationSrvKeyMgr(signer sp.Tsigner, srvpath string, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr) (*VerificationSrv, error) {
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, signer, srvpath, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error make auth server: %v", err)
 		return nil, err
 	}
-	return &HMACVerificationSrv{
+	return &VerificationSrv{
 		sc:      sc,
 		AuthSrv: as,
 	}, nil
 }
 
-func NewHMACVerificationSrv(signer sp.Tsigner, srvpath string, sc *sigmaclnt.SigmaClnt) (*HMACVerificationSrv, error) {
+func NewVerificationSrv(signer sp.Tsigner, srvpath string, sc *sigmaclnt.SigmaClnt) (*VerificationSrv, error) {
 	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
-	return NewHMACVerificationSrvKeyMgr(signer, srvpath, sc, kmgr)
+	return NewVerificationSrvKeyMgr(signer, srvpath, sc, kmgr)
 }

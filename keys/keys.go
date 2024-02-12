@@ -33,7 +33,11 @@ func NewECDSAKey() (auth.PublicKey, auth.PrivateKey, error) {
 		db.DPrintf(db.ERROR, "Error marshal pubkey: %v", err)
 		return nil, nil, err
 	}
-	return privBytes, pubBytes, nil
+	encPubBytes := make([]byte, base64.StdEncoding.EncodedLen(len(pubBytes)))
+	base64.StdEncoding.Encode(encPubBytes, pubBytes)
+	encPrivBytes := make([]byte, base64.StdEncoding.EncodedLen(len(privBytes)))
+	base64.StdEncoding.Encode(encPrivBytes, privBytes)
+	return encPubBytes, encPrivBytes, nil
 }
 
 func NewSymmetricKey(nbyte int) (auth.PrivateKey, error) {

@@ -46,12 +46,12 @@ func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, pn string, addr *sp.Taddr, sc 
 	var as auth.AuthSrv
 	var err error
 	if kmgr == nil {
-		as, err = NewHMACVerificationSrv(sp.Tsigner(sc.ProcEnv().GetPID()), pn, sc)
+		as, err = NewVerificationSrv(sp.Tsigner(sc.ProcEnv().GetPID()), pn, sc)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		as, err = NewHMACVerificationSrvKeyMgr(sp.Tsigner(sc.ProcEnv().GetPID()), pn, sc, kmgr)
+		as, err = NewVerificationSrvKeyMgr(sp.Tsigner(sc.ProcEnv().GetPID()), pn, sc, kmgr)
 		if err != nil {
 			return nil, err
 		}

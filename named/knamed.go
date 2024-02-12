@@ -36,7 +36,7 @@ func RunKNamed(args []string) error {
 	//	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), key)
 	//	kmgr.AddPrivKey(sp.Tsigner(pe.GetPID()), key)
 	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
 		return err1

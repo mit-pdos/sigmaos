@@ -2,6 +2,7 @@ package auth
 
 import (
 	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/golang-jwt/jwt"
@@ -82,7 +83,8 @@ func (as *AuthSrvImpl[M]) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	var key interface{}
 	switch any(as.signingMethod).(type) {
 	case *jwt.SigningMethodECDSA:
-		key, err = x509.ParseECPrivateKey(privkey)
+		b, err := base64.StdEncoding.DecodeString(string(privkey))
+		key, err = x509.ParseECPrivateKey(b)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +115,8 @@ func (as *AuthSrvImpl[M]) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error
 		var key interface{}
 		switch any(as.signingMethod).(type) {
 		case *jwt.SigningMethodECDSA:
-			key, err = x509.ParsePKIXPublicKey(pubkey)
+			b, err := base64.StdEncoding.DecodeString(string(pubkey))
+			key, err = x509.ParsePKIXPublicKey(b)
 			if err != nil {
 				return nil, err
 			}

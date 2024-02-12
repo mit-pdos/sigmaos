@@ -144,13 +144,14 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	key, err1 := keys.NewSymmetricKey(sp.KEY_LEN)
+	//	key, err1 := keys.NewSymmetricKey(sp.KEY_LEN)
+	pubkey, privkey, err1 := keys.NewECDSAKey()
 	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewSymmetricKey: %v", err1)
+		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err1)
 		return nil, err1
 	}
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(key)))
-	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, key)
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
+	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
 	s3secrets, err1 := auth.GetAWSSecrets()
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
@@ -159,7 +160,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
 		return nil, err1
@@ -176,7 +177,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, pe, srvs, Overlays, GVisor, auth.PublicKey(key), key)
+		_, err := bootkernelclnt.Start(kernelid, pe, srvs, Overlays, GVisor, pubkey, privkey)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -187,7 +188,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if useSigmaclntd {
 		db.DPrintf(db.BOOT, "Use sigmaclntd")
 		sckid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(sckid, pe, sp.SIGMACLNTDREL, Overlays, GVisor, auth.PublicKey(key), key)
+		_, err := bootkernelclnt.Start(sckid, pe, sp.SIGMACLNTDREL, Overlays, GVisor, pubkey, privkey)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for sigmaclntd")
 			return nil, err
@@ -210,8 +211,8 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		killidx:       0,
 		T:             t,
 		scsck:         scsck,
-		masterPubKey:  auth.PublicKey(key),
-		masterPrivKey: key,
+		masterPubKey:  pubkey,
+		masterPrivKey: privkey,
 		as:            as,
 	}
 	return savedTstate, nil

@@ -1,6 +1,10 @@
 package keys
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -11,6 +15,26 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
+
+func NewECDSAKey() (auth.PublicKey, auth.PrivateKey, error) {
+	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error generate key: %v", err)
+		return nil, nil, err
+	}
+	pubkey := privkey.Public()
+	privBytes, err := x509.MarshalECPrivateKey(privkey)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error marshal privkey: %v", err)
+		return nil, nil, err
+	}
+	pubBytes, err := x509.MarshalPKIXPublicKey(pubkey)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error marshal pubkey: %v", err)
+		return nil, nil, err
+	}
+	return privBytes, pubBytes, nil
+}
 
 func NewSymmetricKey(nbyte int) (auth.PrivateKey, error) {
 	file, err := os.Open("/dev/urandom") // For read access.

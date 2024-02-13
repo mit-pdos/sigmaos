@@ -250,10 +250,14 @@ func TestDisconnectMfsSrv(t *testing.T) {
 	ts.srv.StopServing()
 }
 
+const (
+	BUFSZ = 64 * sp.KBYTE
+	TOTAL = 1000 * sp.MBYTE
+)
+
 func TestWriteSocketPerfSingle(t *testing.T) {
 	const (
 		SOCKPATH = "/tmp/test-perf-socket"
-		WRITESZ  = 4096
 	)
 
 	err := os.Remove(SOCKPATH)
@@ -264,19 +268,22 @@ func TestWriteSocketPerfSingle(t *testing.T) {
 	err = os.Chmod(SOCKPATH, 0777)
 	assert.Nil(t, err)
 
-	buf := test.NewBuf(WRITESZ)
+	buf := test.NewBuf(BUFSZ)
 	ch := make(chan bool)
 	// Serve requests in another thread
 	go func() {
 		conn, err := socket.Accept()
 		assert.Nil(t, err)
-		rdr := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
-		rb := test.NewBuf(WRITESZ)
+		rdr := bufio.NewReaderSize(conn, BUFSZ)
+		tot := 0
 		for {
+			rb := make([]byte, BUFSZ)
 			n, err := io.ReadFull(rdr, rb)
 			if err == io.EOF {
+				db.DPrintf(db.TEST, "tot %d\n", tot)
 				break
 			}
+			tot += n
 			if n != len(rb) || err != nil {
 				db.DFatalf("Err read: len %v err %v", n, err)
 			}
@@ -288,13 +295,14 @@ func TestWriteSocketPerfSingle(t *testing.T) {
 	conn, err := net.Dial("unix", SOCKPATH)
 	assert.Nil(t, err)
 
-	sz := sp.Tlength(1000 * sp.MBYTE)
-	wrt := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
+	sz := sp.Tlength(TOTAL)
+
 	t0 := time.Now()
-	err = test.Writer(t, wrt, buf, sz)
-	assert.Nil(t, err)
-	err = wrt.Flush()
-	assert.Nil(t, err)
+	for i := 0; i < TOTAL/BUFSZ; i++ {
+		n, err := conn.Write(buf)
+		assert.Nil(t, err)
+		assert.Equal(t, BUFSZ, n)
+	}
 
 	conn.Close()
 
@@ -378,17 +386,16 @@ func (awrt *Awriter) Close() error {
 
 func TestPerfSessSrvAsync(t *testing.T) {
 	const (
-		WRITESZ = 4 * sp.MBYTE
-		TOTAL   = 1000 * sp.MBYTE
+		TOTAL = 1000 * sp.MBYTE
 	)
 	ts := newTstateSrv(t, 0)
-	buf := test.NewBuf(WRITESZ)
+	buf := test.NewBuf(BUFSZ)
 
 	aw := NewAwriter(1, ts.clnt, ts.srv.MyAddr())
 
 	t0 := time.Now()
 
-	for i := 0; i < TOTAL/WRITESZ; i++ {
+	for i := 0; i < TOTAL/BUFSZ; i++ {
 		err := aw.Write(sessp.IoVec{buf})
 		assert.Nil(t, err)
 	}
@@ -403,16 +410,12 @@ func TestPerfSessSrvAsync(t *testing.T) {
 }
 
 func TestPerfSessSrvSync(t *testing.T) {
-	const (
-		WRITESZ = 4 * sp.MBYTE
-		TOTAL   = 1000 * sp.MBYTE
-	)
 	ts := newTstateSrv(t, 0)
-	buf := test.NewBuf(WRITESZ)
+	buf := test.NewBuf(BUFSZ)
 
 	t0 := time.Now()
 
-	for i := 0; i < TOTAL/WRITESZ; i++ {
+	for i := 0; i < TOTAL/BUFSZ; i++ {
 		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
 		iov := sessp.IoVec{buf}
 		_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, iov)

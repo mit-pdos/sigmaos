@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -287,7 +288,7 @@ func TestWriteSocketPerfSingle(t *testing.T) {
 	conn, err := net.Dial("unix", SOCKPATH)
 	assert.Nil(t, err)
 
-	sz := sp.Tlength(100 * sp.MBYTE)
+	sz := sp.Tlength(1000 * sp.MBYTE)
 	wrt := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
 	t0 := time.Now()
 	err = test.Writer(t, wrt, buf, sz)
@@ -309,20 +310,124 @@ func TestWriteSocketPerfSingle(t *testing.T) {
 	socket.Close()
 }
 
-func TestPerfSessSrv(t *testing.T) {
+type Call struct {
+	Iov sessp.IoVec
+	Err error
+}
+
+func NewCall(iov sessp.IoVec) *Call {
+	return &Call{Iov: iov}
+}
+
+type Awriter struct {
+	nthread int
+	clnt    *sessclnt.Mgr
+	addr    *sp.Taddr
+	req     chan *Call
+	rep     chan *Call
+	err     error
+	wg      sync.WaitGroup
+}
+
+func NewAwriter(n int, clnt *sessclnt.Mgr, addr *sp.Taddr) *Awriter {
+	req := make(chan *Call)
+	rep := make(chan *Call)
+	awrt := &Awriter{nthread: n, clnt: clnt, addr: addr, req: req, rep: rep}
+	for i := 0; i < n; i++ {
+		go awrt.Writer()
+	}
+	go awrt.Collector()
+	return awrt
+}
+
+func (awrt *Awriter) Writer() {
+	for {
+		call, ok := <-awrt.req
+		if !ok {
+			return
+		}
+		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
+		_, err := awrt.clnt.RPC(sp.Taddrs{awrt.addr}, req, call.Iov)
+		if err != nil {
+			call.Err = err
+		}
+		awrt.rep <- call
+	}
+	db.DPrintf(db.TEST, "Writer closed\n")
+}
+
+func (awrt *Awriter) Collector() {
+	for {
+		call, ok := <-awrt.rep
+		if !ok {
+			return
+		}
+		awrt.wg.Done()
+		if call.Err != nil {
+			db.DPrintf(db.TEST, "Writer call %v\n", call)
+			awrt.err = call.Err
+		}
+	}
+}
+
+func (awrt *Awriter) Write(iov sessp.IoVec) chan error {
+	c := NewCall(iov)
+	awrt.wg.Add(1)
+	awrt.req <- c
+	return nil
+}
+
+func (awrt *Awriter) Close() error {
+	db.DPrintf(db.TEST, "Close %v\n", awrt.wg)
+	awrt.wg.Wait()
+	close(awrt.req)
+	close(awrt.rep)
+	return nil
+}
+
+func TestPerfSessSrvAsync(t *testing.T) {
 	const (
 		WRITESZ = 4 * sp.MBYTE
-		TOTAL   = 100 * sp.MBYTE
+		TOTAL   = 1000 * sp.MBYTE
 	)
 	ts := newTstateSrv(t, 0)
 	buf := test.NewBuf(WRITESZ)
+
+	aw := NewAwriter(1, ts.clnt, ts.srv.MyAddr())
+
 	t0 := time.Now()
+
+	for i := 0; i < TOTAL/WRITESZ; i++ {
+		err := aw.Write(sessp.IoVec{buf})
+		assert.Nil(t, err)
+	}
+
+	aw.Close()
+
+	tot := uint64(TOTAL)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
+
+	ts.srv.CloseListener()
+}
+
+func TestPerfSessSrvSync(t *testing.T) {
+	const (
+		WRITESZ = 4 * sp.MBYTE
+		TOTAL   = 1000 * sp.MBYTE
+	)
+	ts := newTstateSrv(t, 0)
+	buf := test.NewBuf(WRITESZ)
+
+	t0 := time.Now()
+
 	for i := 0; i < TOTAL/WRITESZ; i++ {
 		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
 		iov := sessp.IoVec{buf}
 		_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, iov)
 		assert.Nil(t, err)
 	}
+
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
 	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))

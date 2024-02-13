@@ -310,28 +310,19 @@ func TestWriteSocketPerfSingle(t *testing.T) {
 	socket.Close()
 }
 
-type Call struct {
-	Iov sessp.IoVec
-	Err error
-}
-
-func NewCall(iov sessp.IoVec) *Call {
-	return &Call{Iov: iov}
-}
-
 type Awriter struct {
 	nthread int
 	clnt    *sessclnt.Mgr
 	addr    *sp.Taddr
-	req     chan *Call
-	rep     chan *Call
+	req     chan sessp.IoVec
+	rep     chan error
 	err     error
 	wg      sync.WaitGroup
 }
 
 func NewAwriter(n int, clnt *sessclnt.Mgr, addr *sp.Taddr) *Awriter {
-	req := make(chan *Call)
-	rep := make(chan *Call)
+	req := make(chan sessp.IoVec)
+	rep := make(chan error)
 	awrt := &Awriter{nthread: n, clnt: clnt, addr: addr, req: req, rep: rep}
 	for i := 0; i < n; i++ {
 		go awrt.Writer()
@@ -342,38 +333,38 @@ func NewAwriter(n int, clnt *sessclnt.Mgr, addr *sp.Taddr) *Awriter {
 
 func (awrt *Awriter) Writer() {
 	for {
-		call, ok := <-awrt.req
+		iov, ok := <-awrt.req
 		if !ok {
 			return
 		}
 		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
-		_, err := awrt.clnt.RPC(sp.Taddrs{awrt.addr}, req, call.Iov)
+		_, err := awrt.clnt.RPC(sp.Taddrs{awrt.addr}, req, iov)
 		if err != nil {
-			call.Err = err
+			awrt.rep <- err
+		} else {
+			awrt.rep <- nil
 		}
-		awrt.rep <- call
 	}
 	db.DPrintf(db.TEST, "Writer closed\n")
 }
 
 func (awrt *Awriter) Collector() {
 	for {
-		call, ok := <-awrt.rep
+		r, ok := <-awrt.rep
 		if !ok {
 			return
 		}
 		awrt.wg.Done()
-		if call.Err != nil {
-			db.DPrintf(db.TEST, "Writer call %v\n", call)
-			awrt.err = call.Err
+		if r != nil {
+			db.DPrintf(db.TEST, "Writer call %v\n", r)
+			awrt.err = r
 		}
 	}
 }
 
 func (awrt *Awriter) Write(iov sessp.IoVec) chan error {
-	c := NewCall(iov)
 	awrt.wg.Add(1)
-	awrt.req <- c
+	awrt.req <- iov
 	return nil
 }
 

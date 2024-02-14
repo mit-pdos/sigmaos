@@ -28,7 +28,9 @@ func TestCompile(t *testing.T) {
 func TestSignHMACToken(t *testing.T) {
 	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
 	assert.Nil(t, err, "Err NewKey: %v", err)
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(key)))
+	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, key.B64())
+	assert.Nil(t, err, "Err NewPublicKey: %v", err)
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey("test", key)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", proc.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
@@ -49,7 +51,9 @@ func TestSignHMACToken(t *testing.T) {
 func TestVerifyHMACToken(t *testing.T) {
 	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
 	assert.Nil(t, err, "Err NewKey: %v", err)
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(key)))
+	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, key.B64())
+	assert.Nil(t, err, "Err NewPublicKey: %v", err)
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey("test", key)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", proc.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)

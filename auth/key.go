@@ -28,7 +28,7 @@ type PrivateKey interface {
 }
 
 func NewPublicKey[M jwt.SigningMethod](signingMethod M, b64 []byte) (PublicKey, error) {
-	k, err := newKey[M](signingMethod, b64)
+	k, err := newKey[M](signingMethod, b64, false)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func NewPublicKey[M jwt.SigningMethod](signingMethod M, b64 []byte) (PublicKey, 
 }
 
 func NewPrivateKey[M jwt.SigningMethod](signingMethod M, b64 []byte) (PrivateKey, error) {
-	k, err := newKey[M](signingMethod, b64)
+	k, err := newKey[M](signingMethod, b64, true)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ type privateKey struct {
 	Key
 }
 
-func newKey[M jwt.SigningMethod](m M, b64 []byte) (*key, error) {
+func newKey[M jwt.SigningMethod](m M, b64 []byte, private bool) (*key, error) {
 	var i interface{}
 	switch any(m).(type) {
 	case *jwt.SigningMethodECDSA:
@@ -69,7 +69,11 @@ func newKey[M jwt.SigningMethod](m M, b64 []byte) (*key, error) {
 			db.DPrintf(db.ERROR, "Error newKey base64.DecodeString: %v", err)
 			return nil, err
 		}
-		i, err = x509.ParseECPrivateKey(b)
+		if private {
+			i, err = x509.ParseECPrivateKey(b)
+		} else {
+			i, err = x509.ParsePKIXPublicKey(b)
+		}
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error newKey x509.ParseECPrivateKey: %v", err)
 			return nil, err

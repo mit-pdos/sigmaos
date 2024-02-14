@@ -18,8 +18,8 @@ NET="host"
 KERNELID=""
 OVERLAYS="false"
 GVISOR="false"
-PUB_KEY=$(head -c256 /dev/urandom | base64)
-PRIV_KEY=$PUB_KEY
+PUB_KEY="NOT_SET"
+PRIV_KEY="NOT_SET"
 RMCPU="0"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
@@ -144,6 +144,13 @@ if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q sigmamongo; then
   MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
 fi
 
+if [ "$PRIV_KEY" == "NOT_SET" ]; then
+  openssl ecparam -name prime256v1 -genkey -noout -out /tmp/sigmaos/master-key.priv -outform DER
+  PRIV_KEY="$(cat /tmp/sigmaos/master-key.priv | base64)"
+  openssl ec -in /tmp/sigmaos/master-key.priv -pubout -out /tmp/sigmaos/master-key.pub -outform DER
+  PUB_KEY="$(cat /tmp/sigmaos/master-key.pub | base64)"
+fi
+
 # If running in local configuration, mount bin directory.
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
@@ -177,8 +184,8 @@ CID=$(docker run -dit \
              -e overlays=${OVERLAYS} \
              -e buildtag=${TAG} \
              -e gvisor=${GVISOR} \
-             -e pubkey=${PUB_KEY} \
-             -e privkey=${PRIV_KEY} \
+             -e pubkey="${PUB_KEY}" \
+             -e privkey="${PRIV_KEY}" \
              -e SIGMAPERF=${SIGMAPERF} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \
@@ -207,8 +214,8 @@ while [ ! -f "/tmp/sigmaos/${KERNELID}" ]; do
 done;
 rm -f "/tmp/sigmaos/${KERNELID}"
 
-echo $PUB_KEY > /tmp/sigmaos/master-key.pub
-echo $PRIV_KEY > /tmp/sigmaos/master-key.priv
+echo "$PRIV_KEY" > /tmp/sigmaos/master-key.priv 
+echo "$PUB_KEY" > /tmp/sigmaos/master-key.pub
 
 echo -n $IP
 

@@ -50,9 +50,9 @@ func main() {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}
 	pc := auth.NewProcClaims(pe)
-	token, err1 := as.NewToken(pc)
+	token, err1 := as.MintToken(pc)
 	if err1 != nil {
-		db.DFatalf("Error NewToken: %v", err1)
+		db.DFatalf("Error MintToken: %v", err1)
 	}
 	pe.SetToken(token)
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)

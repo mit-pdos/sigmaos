@@ -50,23 +50,14 @@ type Schedd struct {
 	privkey             auth.PrivateKey
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, masterPubkey auth.PublicKey) *Schedd {
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) *Schedd {
 	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
 	// Add the master deployment key, to allow connections from kernel to this
 	// schedd.
 	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubkey)
-	// Generate keypair for schedd
-	pubkey, privkey, err := keys.NewECDSAKey()
-	if err != nil {
-		db.DFatalf("Error generate ECDSA keypair: %v", err)
-	}
 	// Add this schedd's keypair to the keymgr
 	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetPID()), pubkey)
 	kmgr.AddPrivateKey(sp.Tsigner(sc.ProcEnv().GetPID()), privkey)
-	// Post this schedd's public key
-	if err := keys.PostPublicKey(sc, sp.Tsigner(sc.ProcEnv().GetPID()), pubkey); err != nil {
-		db.DFatalf("Error post kernel key: %v", err)
-	}
 	db.DPrintf(db.ALWAYS, "kmgr %v", kmgr)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {
@@ -331,15 +322,12 @@ func (sd *Schedd) stats() {
 	}
 }
 
-func RunSchedd(kernelId string, reserveMcpu uint, pubkey auth.PublicKey) error {
+func RunSchedd(kernelId string, reserveMcpu uint, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	if err := keys.PostPublicKey(sc, sp.Tsigner(sc.ProcEnv().GetPID()), pubkey); err != nil {
-		db.DFatalf("Error PostPublicKey: %v", err)
-	}
-	sd := NewSchedd(sc, kernelId, reserveMcpu, pubkey)
+	sd := NewSchedd(sc, kernelId, reserveMcpu, masterPubKey, pubkey, privkey)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

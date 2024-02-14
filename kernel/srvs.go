@@ -155,7 +155,8 @@ func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {
 }
 
 func (k *Kernel) bootMongod(hostip string) (Subsystem, error) {
-	return k.bootSubsystemWithMcpu("mongod", []string{hostip}, proc.HSCHEDD, 1000)
+	pid := sp.GenPid("mongod")
+	return k.bootSubsystemPIDWithMcpu(pid, "mongod", []string{hostip}, proc.HSCHEDD, 1000)
 }
 
 func (k *Kernel) bootLCSched() (Subsystem, error) {
@@ -167,11 +168,11 @@ func (k *Kernel) bootProcq() (Subsystem, error) {
 }
 
 func (k *Kernel) bootSchedd() (Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu, k.Param.MasterPubKey.String()}, proc.HLINUX)
+	return k.bootSubsystemBootstrapKeys("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu}, proc.HLINUX)
 }
 
 func (k *Kernel) bootNamed() (Subsystem, error) {
-	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0", k.Param.MasterPubKey.String(), k.Param.MasterPrivKey.String()}, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("named", []string{sp.ROOTREALM.String(), "0"}, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {

@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	//	"runtime"
 	"github.com/golang-jwt/jwt"
 
 	"sigmaos/auth"
@@ -40,6 +39,8 @@ type Named struct {
 	crash           int
 	sess            *fsetcd.Session
 	masterPublicKey auth.PublicKey
+	pubkey          auth.PublicKey
+	privkey         auth.PrivateKey
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -58,46 +59,23 @@ func Run(args []string) error {
 
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pe)
-	if len(args) != 5 {
+	if len(args) != 6 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	// For boostrapping purposes, post the key for this named using the ProcEnv
-	// (and by extension, token), signed by the kernel.
-	bootstrapSC, err := sigmaclnt.NewSigmaClnt(pe)
-	if err != nil {
-		return err
-	}
 	masterPubKey := auth.PublicKey(args[3])
-	masterPrivKey := auth.PrivateKey(args[4])
-	if err := keys.PostPublicKey(bootstrapSC, sp.Tsigner(pe.GetPID()), masterPubKey); err != nil {
-		db.DPrintf(db.ERROR, "Error post named key: %v", err)
-		return err
-	}
-	// Self-sign token for bootstrapping purposes
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPubKey))
-	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), masterPubKey)
-	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), masterPrivKey)
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
-		return err1
-	}
-	pc := auth.NewProcClaims(pe)
-	token, err1 := as.NewToken(pc)
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err1)
-		return err1
-	}
-	pe.SetToken(token)
+	pubkey := auth.PublicKey(args[4])
+	privkey := auth.PrivateKey(args[5])
 	nd := &Named{}
+	nd.masterPublicKey = masterPubKey
+	nd.pubkey = pubkey
+	nd.privkey = privkey
+	selfSignToken(pe, masterPubKey, pubkey, privkey)
 	nd.realm = sp.Trealm(args[1])
 	crashing, err := strconv.Atoi(args[2])
 	if err != nil {
 		return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
 	}
 	nd.crash = crashing
-	nd.masterPublicKey = masterPubKey
 
 	p, err := perf.NewPerf(pe, perf.NAMED)
 	if err != nil {
@@ -192,6 +170,25 @@ func Run(args []string) error {
 	return nil
 }
 
+func selfSignToken(pe *proc.ProcEnv, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPubKey))
+	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), pubkey)
+	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err)
+		return err
+	}
+	pc := auth.NewProcClaims(pe)
+	token, err := as.NewToken(pc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+		return err
+	}
+	pe.SetToken(token)
+	return nil
+}
+
 func (nd *Named) newSrv() (sp.Tmount, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
@@ -209,8 +206,12 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 	}
 
 	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(nd.SigmaClnt))
-	kmgr.AddPublicKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterPublicKey)
+	// Add the master deployment key, to allow connections from kernel to this
+	// named.
 	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterPublicKey)
+	// Add this named's keypair to the keymgr
+	kmgr.AddPublicKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.pubkey)
+	kmgr.AddPrivateKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.privkey)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
 		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)

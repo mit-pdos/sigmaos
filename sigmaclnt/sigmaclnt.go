@@ -37,6 +37,7 @@ type SigmaClntKernel struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	*leaseclnt.LeaseClnt
+	sc *SigmaClnt
 }
 
 // Create FsLib using either sigmalcntd or fdclnt
@@ -61,8 +62,12 @@ func NewFsLib(pcfg *proc.ProcEnv) (*fslib.FsLib, error) {
 
 // Convert to SigmaClntKernel from SigmaClnt
 func NewSigmaClntKernel(sc *SigmaClnt) *SigmaClntKernel {
-	sck := &SigmaClntKernel{sc.FsLib, sc.ProcAPI.(*procclnt.ProcClnt), sc.LeaseClnt}
+	sck := &SigmaClntKernel{sc.FsLib, sc.ProcAPI.(*procclnt.ProcClnt), sc.LeaseClnt, sc}
 	return sck
+}
+
+func (sck *SigmaClntKernel) SigmaClnt() *SigmaClnt {
+	return sck.sc
 }
 
 // Convert to SigmaClnt from SigmaClntKernel

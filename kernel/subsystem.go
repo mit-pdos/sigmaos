@@ -8,6 +8,7 @@ import (
 	"sigmaos/auth"
 	"sigmaos/container"
 	db "sigmaos/debug"
+	"sigmaos/keys"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -82,8 +83,7 @@ func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Th
 	return newSubsystemCmd(pclnt, k, p, how, nil)
 }
 
-func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
-	pid := sp.GenPid(program)
+func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []string, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	p := proc.NewPrivProcPid(pid, program, args, true)
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
@@ -100,8 +100,38 @@ func (k *Kernel) bootSubsystemWithMcpu(program string, args []string, how proc.T
 	return ss, ss.Run(how, k.Param.KernelID, k.ip)
 }
 
+func (k *Kernel) bootstrapKeys(pid sp.Tpid) ([]string, error) {
+	pubkey, privkey, err := keys.NewECDSAKey()
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
+		return nil, err
+	}
+	// Post the public key for the subsystem
+	if err := keys.PostPublicKey(k.SigmaClnt(), sp.Tsigner(pid), pubkey); err != nil {
+		db.DPrintf(db.ERROR, "Error post subsystem key: %v", err)
+		return nil, err
+	}
+	return []string{
+		k.Param.MasterPubKey.String(),
+		pubkey.String(),
+		privkey.String(),
+	}, nil
+}
+
+func (k *Kernel) bootSubsystemBootstrapKeys(program string, args []string, how proc.Thow) (Subsystem, error) {
+	pid := sp.GenPid(program)
+	// bootstrap keys for the subsystem
+	keys, err := k.bootstrapKeys(pid)
+	if err != nil {
+		return nil, err
+	}
+	argsWithKeys := append(args, keys...)
+	return k.bootSubsystemPIDWithMcpu(pid, program, argsWithKeys, how, 0)
+}
+
 func (k *Kernel) bootSubsystem(program string, args []string, how proc.Thow) (Subsystem, error) {
-	return k.bootSubsystemWithMcpu(program, args, how, 0)
+	pid := sp.GenPid(program)
+	return k.bootSubsystemPIDWithMcpu(pid, program, args, how, 0)
 }
 
 func (s *KernelSubsystem) Evict() error {

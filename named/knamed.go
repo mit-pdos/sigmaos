@@ -5,11 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/golang-jwt/jwt"
-
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/keys"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -22,34 +19,18 @@ func RunKNamed(args []string) error {
 	if len(args) != 5 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	//	key, err1 := keys.NewSymmetricKey(sp.KEY_LEN)
-	//	if err1 != nil {
-	//		db.DPrintf(db.ERROR, "Error NewSymmetricKey: %v", err1)
-	//		return err1
-	//	}
+	// Since knamed is the first "host" of the realm namespace to start up, no
+	// one (even the kernel it is started by) can bootstrap keys for it. So,
+	// just have it use the kernel's master keys. This should be ok, in theory,
+	// because knamed is short-lived anyway, and is only really used to start up
+	// the other services.
 	masterPubKey := auth.PublicKey(args[3])
 	masterPrivKey := auth.PrivateKey(args[4])
 	// Self-sign token for bootstrapping purposes
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPubKey))
-	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), masterPubKey)
-	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), masterPrivKey)
-	//	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), key)
-	//	kmgr.AddPrivKey(sp.Tsigner(pe.GetPID()), key)
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err1)
-		return err1
-	}
-	pc := auth.NewProcClaims(pe)
-	token, err1 := as.NewToken(pc)
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err1)
-		return err1
-	}
-	pe.SetToken(token)
-
+	selfSignToken(pe, masterPubKey, masterPubKey, masterPrivKey)
 	nd := &Named{}
+	nd.pubkey = masterPubKey
+	nd.privkey = masterPrivKey
 	nd.realm = sp.Trealm(args[1])
 
 	p, err := perf.NewPerf(pe, perf.KNAMED)

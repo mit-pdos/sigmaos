@@ -243,7 +243,7 @@ func (p *Proc) GetType() Ttype {
 func (p *Proc) GetMcpu() Tmcpu {
 	mcpu := p.ProcProto.McpuInt
 	if mcpu > 0 && mcpu%10 != 0 {
-		log.Fatalf("Error! Suspected missed MCPU conversion in GetMcpu: %v", mcpu)
+		log.Fatalf("%v FATAL: Error! Suspected missed MCPU conversion in GetMcpu: %v", GetSigmaDebugPid(), mcpu)
 	}
 	return Tmcpu(p.ProcProto.McpuInt)
 }
@@ -330,7 +330,7 @@ func (p *Proc) GetEnv() []string {
 func (p *Proc) SetMcpu(mcpu Tmcpu) {
 	if mcpu > Tmcpu(0) {
 		if mcpu%10 != 0 {
-			log.Fatalf("Error! Suspected missed MCPU conversion: %v", mcpu)
+			log.Fatalf("%v FATAL: Error! Suspected missed MCPU conversion in GetMcpu: %v", GetSigmaDebugPid(), mcpu)
 		}
 		p.TypeInt = uint32(T_LC)
 		p.McpuInt = uint32(mcpu)

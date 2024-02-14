@@ -27,11 +27,13 @@ func main() {
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	// By default, proxy doesn't use overlays.
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
+	pe.SetPID("proxy")
 	pe.Program = "proxy"
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
 		sp.NoToken(),
 	))
+	proc.SetSigmaDebugPid(pe.GetPID().String())
 	masterPrivKey, err1 := os.ReadFile(sp.HOST_PRIV_KEY_FILE)
 	if err1 != nil {
 		db.DFatalf("Error Read master private key: %v", err1)
@@ -54,7 +56,6 @@ func main() {
 	}
 	pe.SetToken(token)
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	proc.SetSigmaDebugPid(pe.GetPID().String())
 	netsrv.NewNetServer(pe, proxy.NewNpd(pe, lip), addr, npcodec.ReadCall, npcodec.WriteCall)
 	ch := make(chan struct{})
 	<-ch

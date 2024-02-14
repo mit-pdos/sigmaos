@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/auth"
@@ -12,6 +13,7 @@ import (
 	"sigmaos/demux"
 	"sigmaos/dir"
 	"sigmaos/ephemeralmap"
+	"sigmaos/keys"
 	"sigmaos/memfs"
 	"sigmaos/netsrv"
 	"sigmaos/path"
@@ -62,7 +64,10 @@ type Tstate struct {
 }
 
 func newTstate(t *testing.T) (*Tstate, error) {
-	as, err1 := auth.NewHMACAuthSrv(proc.NOT_SET, []byte("PDOS"))
+	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
+	assert.Nil(t, err, "Err NewKey: %v", err)
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(key)))
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", proc.NOT_SET, kmgr)
 	if err1 != nil {
 		return nil, err1
 	}
@@ -216,8 +221,14 @@ func newTstateSp(t *testing.T) (*TstateSp, error) {
 	ts.Tstate = tsi
 	et := ephemeralmap.NewEphemeralMap()
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	// XXX is name/ correct for srv path?
-	ts.srv = sesssrv.NewSessSrv(ts.pe, "name/", root, ts.addr, protsrv.NewProtServer, et, nil)
+	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
+	assert.Nil(t, err, "Err NewKey: %v", err)
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(key)))
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", proc.NOT_SET, kmgr)
+	if err1 != nil {
+		return nil, err1
+	}
+	ts.srv = sesssrv.NewSessSrv(ts.pe, as, root, ts.addr, protsrv.NewProtServer, et, nil)
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts, nil
 }

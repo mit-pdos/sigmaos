@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	dbg "sigmaos/debug"
+	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
 	sp "sigmaos/sigmap"
 	sn "sigmaos/socialnetwork"
@@ -140,6 +141,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestBenchmarkSeqCompose(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -148,6 +153,10 @@ func TestBenchmarkSeqCompose(t *testing.T) {
 }
 
 func TestBenchmarkSeqMix(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -156,6 +165,10 @@ func TestBenchmarkSeqMix(t *testing.T) {
 }
 
 func TestFrontend(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -164,6 +177,10 @@ func TestFrontend(t *testing.T) {
 }
 
 func TestLoadgen(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

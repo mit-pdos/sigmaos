@@ -93,7 +93,7 @@ func TestNetClntPerf(t *testing.T) {
 	}
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
 }
@@ -130,6 +130,7 @@ func TestSocketPerf(t *testing.T) {
 			if n != len(rb) || err != nil {
 				db.DFatalf("Err read: len %v err %v", n, err)
 			}
+			conn.Write(rb[0:1])
 		}
 		ch <- true
 
@@ -145,6 +146,9 @@ func TestSocketPerf(t *testing.T) {
 		n, err := conn.Write(buf)
 		assert.Nil(t, err)
 		assert.Equal(t, BUFSZ, n)
+		rb := make([]byte, 1)
+		_, err = conn.Read(rb)
+		assert.Nil(t, err)
 	}
 
 	conn.Close()
@@ -153,7 +157,7 @@ func TestSocketPerf(t *testing.T) {
 
 	tot := uint64(sz)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(sz, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), test.TputStr(sz, ms))
 
 	err = os.Remove(SOCKPATH)
 	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)

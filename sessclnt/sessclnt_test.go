@@ -1,10 +1,6 @@
 package sessclnt_test
 
 import (
-	"bufio"
-	"io"
-	"net"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -20,7 +16,6 @@ import (
 	"sigmaos/memfs"
 	"sigmaos/netsrv"
 	"sigmaos/path"
-	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/rand"
 	"sigmaos/serr"
@@ -67,33 +62,16 @@ func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.
 	return pmfc, nil
 }
 
-type Tstate struct {
-	T    *testing.T
-	lip  sp.Tip
-	pcfg *proc.ProcEnv
-	addr *sp.Taddr
-}
-
-func newTstate(t *testing.T) *Tstate {
-	lip := sp.Tip("127.0.0.1")
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, lip, lip, lip, "", false, false)
-	pcfg.Program = "srv"
-	pcfg.SetUname("srv")
-	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-	return &Tstate{T: t, lip: lip, pcfg: pcfg, addr: addr}
-}
-
 type TstateSrv struct {
-	*Tstate
+	*test.TstateMin
 	srv  *netsrv.NetServer
 	clnt *sessclnt.Mgr
 }
 
 func newTstateSrv(t *testing.T, crash int) *TstateSrv {
-	ts := &TstateSrv{Tstate: newTstate(t)}
+	ts := &TstateSrv{TstateMin: test.NewTstateMin(t)}
 	ss := &SessSrv{crash}
-	ts.srv = netsrv.NewNetServer(ts.pcfg, ss, ts.addr, spcodec.ReadCall, spcodec.WriteCall)
+	ts.srv = netsrv.NewNetServer(ts.Pcfg, ss, ts.Addr, spcodec.ReadCall, spcodec.WriteCall)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts
@@ -178,17 +156,17 @@ func TestManyClientsCrash(t *testing.T) {
 }
 
 type TstateSp struct {
-	*Tstate
+	*test.TstateMin
 	srv  *sesssrv.SessSrv
 	clnt *sessclnt.Mgr
 }
 
 func newTstateSp(t *testing.T) *TstateSp {
 	ts := &TstateSp{}
-	ts.Tstate = newTstate(t)
+	ts.TstateMin = test.NewTstateMin(t)
 	et := ephemeralmap.NewEphemeralMap()
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sesssrv.NewSessSrv(ts.pcfg, root, ts.addr, protsrv.NewProtServer, et, nil)
+	ts.srv = sesssrv.NewSessSrv(ts.Pcfg, root, ts.Addr, protsrv.NewProtServer, et, nil)
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts
 }
@@ -254,69 +232,6 @@ const (
 	BUFSZ = 64 * sp.KBYTE
 	TOTAL = 1000 * sp.MBYTE
 )
-
-func TestWriteSocketPerfSingle(t *testing.T) {
-	const (
-		SOCKPATH = "/tmp/test-perf-socket"
-	)
-
-	err := os.Remove(SOCKPATH)
-	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
-
-	socket, err := net.Listen("unix", SOCKPATH)
-	assert.Nil(t, err)
-	err = os.Chmod(SOCKPATH, 0777)
-	assert.Nil(t, err)
-
-	buf := test.NewBuf(BUFSZ)
-	ch := make(chan bool)
-	// Serve requests in another thread
-	go func() {
-		conn, err := socket.Accept()
-		assert.Nil(t, err)
-		rdr := bufio.NewReaderSize(conn, BUFSZ)
-		tot := 0
-		for {
-			rb := make([]byte, BUFSZ)
-			n, err := io.ReadFull(rdr, rb)
-			if err == io.EOF {
-				db.DPrintf(db.TEST, "tot %d\n", tot)
-				break
-			}
-			tot += n
-			if n != len(rb) || err != nil {
-				db.DFatalf("Err read: len %v err %v", n, err)
-			}
-		}
-		ch <- true
-
-	}()
-
-	conn, err := net.Dial("unix", SOCKPATH)
-	assert.Nil(t, err)
-
-	sz := sp.Tlength(TOTAL)
-
-	t0 := time.Now()
-	for i := 0; i < TOTAL/BUFSZ; i++ {
-		n, err := conn.Write(buf)
-		assert.Nil(t, err)
-		assert.Equal(t, BUFSZ, n)
-	}
-
-	conn.Close()
-
-	<-ch
-
-	tot := uint64(sz)
-	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(sz, ms))
-
-	err = os.Remove(SOCKPATH)
-	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
-
-	socket.Close()
-}
 
 type Awriter struct {
 	nthread int

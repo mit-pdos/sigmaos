@@ -180,9 +180,9 @@ func selfSignToken(pe *proc.ProcEnv, masterPubKey auth.PublicKey, pubkey auth.Pu
 		return err
 	}
 	pc := auth.NewProcClaims(pe)
-	token, err := as.NewToken(pc)
+	token, err := as.MintToken(pc)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
 	pe.SetToken(token)

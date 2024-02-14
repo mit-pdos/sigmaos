@@ -165,9 +165,9 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err1
 	}
 	pc := auth.NewProcClaims(pe)
-	token, err1 := as.NewToken(pc)
+	token, err1 := as.MintToken(pc)
 	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err1)
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err1)
 		return nil, err1
 	}
 	pe.SetToken(token)
@@ -246,7 +246,7 @@ func (ts *Tstate) BootFss3d() error {
 }
 
 func (ts *Tstate) MintToken(pc *auth.ProcClaims) (*sp.Ttoken, error) {
-	return ts.as.NewToken(pc)
+	return ts.as.MintToken(pc)
 }
 
 func (ts *Tstate) KillOne(s string) error {

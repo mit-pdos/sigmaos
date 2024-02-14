@@ -121,9 +121,9 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 	}
 	pc := auth.NewProcClaims(p.GetProcEnv())
 	pc.AllowedPaths = sp.ALL_PATHS
-	token, err := k.as.NewToken(pc)
+	token, err := k.as.MintToken(pc)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
 	p.SetToken(token)
@@ -180,9 +180,9 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
 	pc := auth.NewProcClaims(p.GetProcEnv())
 	pc.AllowedPaths = sp.ALL_PATHS
-	token, err := k.as.NewToken(pc)
+	token, err := k.as.MintToken(pc)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}
 	p.SetToken(token)

@@ -63,17 +63,17 @@ func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	}
 	// Parent's token is valid, and child's token only contains allowed paths
 	// which are a subset of the parent's. Sign the child's token.
-	token, err := as.NewToken(pc)
+	token, err := as.MintToken(pc)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
-		db.DPrintf(db.AUTH, "Error NewToken: %v", err)
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
+		db.DPrintf(db.AUTH, "Error MintToken: %v", err)
 		return err
 	}
 	p.SetToken(token)
 	return nil
 }
 
-func (as *AuthSrvImpl[M]) NewToken(pc *ProcClaims) (*sp.Ttoken, error) {
+func (as *AuthSrvImpl[M]) MintToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	privkey, err := as.GetPrivateKey(as.signer)
 	if err != nil {
 		return nil, err

@@ -89,9 +89,9 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	pc := auth.NewProcClaims(p.GetProcEnv())
 	pc.AllowedPaths = sp.ALL_PATHS
-	token, err := k.as.NewToken(pc)
+	token, err := k.as.MintToken(pc)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}
 	p.SetToken(token)

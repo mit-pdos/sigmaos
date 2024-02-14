@@ -41,7 +41,7 @@ func TestSignHMACToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
-	signedToken, err := as.NewToken(claims)
+	signedToken, err := as.MintToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
 }
@@ -62,7 +62,7 @@ func TestVerifyHMACToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
-	signedToken, err := as.NewToken(claims)
+	signedToken, err := as.MintToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
 	claims2, err := as.VerifyTokenGetClaims(signedToken)
@@ -86,7 +86,7 @@ func TestSignECDSAToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
-	signedToken, err := as.NewToken(claims)
+	signedToken, err := as.MintToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
 }
@@ -107,7 +107,7 @@ func TestVerifyECDSAToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
-	signedToken, err := as.NewToken(claims)
+	signedToken, err := as.MintToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
 	claims2, err := as.VerifyTokenGetClaims(signedToken)

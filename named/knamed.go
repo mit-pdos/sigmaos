@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/perf"
@@ -24,8 +26,14 @@ func RunKNamed(args []string) error {
 	// just have it use the kernel's master keys. This should be ok, in theory,
 	// because knamed is short-lived anyway, and is only really used to start up
 	// the other services.
-	masterPubKey := auth.PublicKey(args[3])
-	masterPrivKey := auth.PrivateKey(args[4])
+	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[3]))
+	if err != nil {
+		db.DFatalf("Error NewPublicKey: %v", err)
+	}
+	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[4]))
+	if err != nil {
+		db.DFatalf("Error NewPrivateKey: %v", err)
+	}
 	// Self-sign token for bootstrapping purposes
 	selfSignToken(pe, masterPubKey, masterPubKey, masterPrivKey)
 	nd := &Named{}

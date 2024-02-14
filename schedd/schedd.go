@@ -51,7 +51,7 @@ type Schedd struct {
 }
 
 func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) *Schedd {
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
 	// Add the master deployment key, to allow connections from kernel to this
 	// schedd.
 	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubkey)

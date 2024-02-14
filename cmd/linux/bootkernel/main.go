@@ -31,8 +31,14 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error parse gvisor: %v", err)
 	}
-	masterPubKey := auth.PublicKey(os.Args[10])
-	masterPrivKey := auth.PrivateKey(os.Args[11])
+	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[10]))
+	if err != nil {
+		db.DFatalf("Error NewPublicKey", err)
+	}
+	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[11]))
+	if err != nil {
+		db.DFatalf("Error NewPrivateKey", err)
+	}
 	param := kernel.Param{
 		MasterPubKey:  masterPubKey,
 		MasterPrivKey: masterPrivKey,

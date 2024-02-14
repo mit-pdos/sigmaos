@@ -4,6 +4,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/schedd"
@@ -17,5 +19,17 @@ func main() {
 	if err != nil {
 		db.DFatalf("Cannot parse reserve cpu unit \"%v\": %v", os.Args[2], err)
 	}
-	schedd.RunSchedd(os.Args[1], uint(reserveMcpu), auth.PublicKey(os.Args[3]), auth.PublicKey(os.Args[4]), auth.PrivateKey(os.Args[5]))
+	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[3]))
+	if err != nil {
+		db.DFatalf("Error NewPublicKey", err)
+	}
+	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[4]))
+	if err != nil {
+		db.DFatalf("Error NewPublicKey", err)
+	}
+	privkey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[5]))
+	if err != nil {
+		db.DFatalf("Error NewPrivateKey", err)
+	}
+	schedd.RunSchedd(os.Args[1], uint(reserveMcpu), masterPubKey, pubkey, privkey)
 }

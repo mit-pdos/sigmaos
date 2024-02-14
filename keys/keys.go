@@ -10,6 +10,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
@@ -35,9 +37,19 @@ func NewECDSAKey() (auth.PublicKey, auth.PrivateKey, error) {
 	}
 	encPubBytes := make([]byte, base64.StdEncoding.EncodedLen(len(pubBytes)))
 	base64.StdEncoding.Encode(encPubBytes, pubBytes)
+	pk, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, encPubBytes)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewPublicKey: %v", err)
+		return nil, nil, err
+	}
 	encPrivBytes := make([]byte, base64.StdEncoding.EncodedLen(len(privBytes)))
 	base64.StdEncoding.Encode(encPrivBytes, privBytes)
-	return encPubBytes, encPrivBytes, nil
+	sk, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, encPrivBytes)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewPrivateKey: %v", err)
+		return nil, nil, err
+	}
+	return pk, sk, nil
 }
 
 func NewSymmetricKey(nbyte int) (auth.PrivateKey, error) {
@@ -58,7 +70,7 @@ func NewSymmetricKey(nbyte int) (auth.PrivateKey, error) {
 	}
 	key := make([]byte, base64.StdEncoding.EncodedLen(len(randBytes)))
 	base64.StdEncoding.Encode(key, randBytes)
-	return auth.PrivateKey(key), nil
+	return auth.NewPrivateKey[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, key)
 }
 
 func keyPath(s sp.Tsigner) string {
@@ -67,9 +79,9 @@ func keyPath(s sp.Tsigner) string {
 
 func PostPublicKey(sc *sigmaclnt.SigmaClnt, s sp.Tsigner, key auth.PublicKey) error {
 	// Post the signer's symmetric key in a file
-	n, err := sc.PutFile(keyPath(s), 0777, sp.OWRITE, key)
-	if err != nil || int(n) != len(key) {
-		db.DPrintf(db.ERROR, "Error post key: %v n1 %v n2 %v", err, n, len(key))
+	n, err := sc.PutFile(keyPath(s), 0777, sp.OWRITE, key.B64())
+	if err != nil || int(n) != len(key.B64()) {
+		db.DPrintf(db.ERROR, "Error post key: %v n1 %v n2 %v", err, n, len(key.B64()))
 		return err
 	}
 	return nil

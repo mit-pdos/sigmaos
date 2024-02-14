@@ -62,9 +62,18 @@ func Run(args []string) error {
 	if len(args) != 6 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	masterPubKey := auth.PublicKey(args[3])
-	pubkey := auth.PublicKey(args[4])
-	privkey := auth.PrivateKey(args[5])
+	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[3]))
+	if err != nil {
+		db.DFatalf("Error NewPublicKey: %v", err)
+	}
+	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[4]))
+	if err != nil {
+		db.DFatalf("Error NewPublicKey: %v", err)
+	}
+	privkey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[5]))
+	if err != nil {
+		db.DFatalf("Error NewPrivatecKey: %v", err)
+	}
 	nd := &Named{}
 	nd.masterPublicKey = masterPubKey
 	nd.pubkey = pubkey
@@ -205,7 +214,7 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
 	}
 
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(nd.SigmaClnt))
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.SigmaClnt))
 	// Add the master deployment key, to allow connections from kernel to this
 	// named.
 	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterPublicKey)

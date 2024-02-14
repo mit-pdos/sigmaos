@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"crypto/x509"
-	"encoding/base64"
 	"fmt"
 
 	"github.com/golang-jwt/jwt"
@@ -80,18 +78,7 @@ func (as *AuthSrvImpl[M]) MintToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	}
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
 	token := jwt.NewWithClaims(as.signingMethod, pc)
-	var key interface{}
-	switch any(as.signingMethod).(type) {
-	case *jwt.SigningMethodECDSA:
-		b, err := base64.StdEncoding.DecodeString(string(privkey))
-		key, err = x509.ParseECPrivateKey(b)
-		if err != nil {
-			return nil, err
-		}
-	case *jwt.SigningMethodHMAC:
-		key = []byte(privkey)
-	}
-	tstr, err := token.SignedString(key)
+	tstr, err := token.SignedString(privkey.KeyI())
 	if err != nil {
 		return nil, err
 	}
@@ -112,18 +99,7 @@ func (as *AuthSrvImpl[M]) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error
 			return nil, err
 		}
 		// hmacKey is a []byte containing your secret, e.g. []byte("my_secret_key")
-		var key interface{}
-		switch any(as.signingMethod).(type) {
-		case *jwt.SigningMethodECDSA:
-			b, err := base64.StdEncoding.DecodeString(string(pubkey))
-			key, err = x509.ParsePKIXPublicKey(b)
-			if err != nil {
-				return nil, err
-			}
-		case *jwt.SigningMethodHMAC:
-			key = []byte(pubkey)
-		}
-		return key, nil
+		return pubkey.KeyI(), nil
 	})
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error parsing jwt: %v", err)

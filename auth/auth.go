@@ -5,9 +5,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type PublicKey []byte
-type PrivateKey []byte
-
 type KeyMgr interface {
 	GetPublicKey(s sp.Tsigner) (PublicKey, error)
 	GetPrivateKey(s sp.Tsigner) (PrivateKey, error)
@@ -21,12 +18,4 @@ type AuthSrv interface {
 	VerifyTokenGetClaims(signedToken *sp.Ttoken) (*ProcClaims, error)
 	IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error)
 	KeyMgr
-}
-
-func (sk PublicKey) String() string {
-	return string(sk)
-}
-
-func (sk PrivateKey) String() string {
-	return string(sk)
 }

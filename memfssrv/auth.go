@@ -28,6 +28,6 @@ func NewVerificationSrvKeyMgr(signer sp.Tsigner, srvpath string, sc *sigmaclnt.S
 }
 
 func NewVerificationSrv(signer sp.Tsigner, srvpath string, sc *sigmaclnt.SigmaClnt) (*VerificationSrv, error) {
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
 	return NewVerificationSrvKeyMgr(signer, srvpath, sc, kmgr)
 }

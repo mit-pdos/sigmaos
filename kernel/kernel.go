@@ -100,7 +100,7 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
 	// Create an AuthServer which dynamically pulls keys from the namespace, now
 	// that knamed has booted.
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
 	kmgr.AddPublicKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPubKey)
 	kmgr.AddPrivateKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPrivKey)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(k.ProcEnv().GetPID()), proc.NOT_SET, kmgr)

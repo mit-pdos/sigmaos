@@ -34,13 +34,21 @@ func main() {
 		sp.NoToken(),
 	))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	masterPrivKey, err1 := os.ReadFile(sp.HOST_PRIV_KEY_FILE)
+	masterPrivKeyBytes, err1 := os.ReadFile(sp.HOST_PRIV_KEY_FILE)
 	if err1 != nil {
 		db.DFatalf("Error Read master private key: %v", err1)
 	}
-	masterPubKey, err1 := os.ReadFile(sp.HOST_PUB_KEY_FILE)
+	masterPubKeyBytes, err1 := os.ReadFile(sp.HOST_PUB_KEY_FILE)
 	if err1 != nil {
 		db.DFatalf("Error Read master private key: %v", err1)
+	}
+	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, masterPubKeyBytes)
+	if err != nil {
+		db.DFatalf("Error NewPublicKey: %v", err)
+	}
+	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, masterPrivKeyBytes)
+	if err != nil {
+		db.DFatalf("Error NewPrivateKey: %v", err)
 	}
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPubKey))
 	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)

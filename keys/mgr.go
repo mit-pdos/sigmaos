@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/serr"
@@ -24,7 +26,7 @@ func WithConstGetKeyFn(key auth.PublicKey) GetKeyFn {
 	}
 }
 
-func WithSigmaClntGetKeyFn(sc *sigmaclnt.SigmaClnt) GetKeyFn {
+func WithSigmaClntGetKeyFn[M jwt.SigningMethod](signingMethod M, sc *sigmaclnt.SigmaClnt) GetKeyFn {
 	return func(signer sp.Tsigner) (auth.PublicKey, error) {
 		var key []byte = nil
 		var err error
@@ -44,7 +46,7 @@ func WithSigmaClntGetKeyFn(sc *sigmaclnt.SigmaClnt) GetKeyFn {
 			db.DPrintf(db.ERROR, "Error get key: %v", err)
 			return nil, err
 		}
-		return auth.PublicKey(key), err
+		return auth.NewPublicKey[M](signingMethod, key)
 	}
 }
 

@@ -112,9 +112,9 @@ func (k *Kernel) bootstrapKeys(pid sp.Tpid) ([]string, error) {
 		return nil, err
 	}
 	return []string{
-		k.Param.MasterPubKey.String(),
-		pubkey.String(),
-		privkey.String(),
+		k.Param.MasterPubKey.Marshal(),
+		pubkey.Marshal(),
+		privkey.Marshal(),
 	}, nil
 }
 

@@ -3,11 +3,17 @@ package keys
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+)
+
+const (
+	MAX_RETRIES = 50
 )
 
 type GetKeyFn func(signer sp.Tsigner) (auth.PublicKey, error)
@@ -20,13 +26,25 @@ func WithConstGetKeyFn(key auth.PublicKey) GetKeyFn {
 
 func WithSigmaClntGetKeyFn(sc *sigmaclnt.SigmaClnt) GetKeyFn {
 	return func(signer sp.Tsigner) (auth.PublicKey, error) {
+		var key []byte = nil
+		var err error
 		// Mount the master key file, which should be mountable by anyone
-		key, err := sc.GetFile(keyPath(signer))
+		for i := 0; i < MAX_RETRIES; i++ {
+			key, err = sc.GetFile(keyPath(signer))
+			if err == nil {
+				break
+			}
+			if err != nil && !serr.IsErrCode(err, serr.TErrUnreachable) {
+				db.DPrintf(db.ERROR, "Error get key: %v", err)
+				return nil, err
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 		if err != nil {
-			db.DPrintf(db.ERROR, "Error get master key: %v", err)
+			db.DPrintf(db.ERROR, "Error get key: %v", err)
 			return nil, err
 		}
-		return auth.PublicKey(key), nil
+		return auth.PublicKey(key), err
 	}
 }
 
@@ -102,7 +120,7 @@ func (mgr *KeyMgr) AddPrivateKey(s sp.Tsigner, key auth.PrivateKey) {
 	db.DPrintf(db.AUTH, "Add priv key for signer %v", s)
 }
 
-func (mgr *KeyMgr) string() string {
+func (mgr *KeyMgr) String() string {
 	pub := make([]sp.Tsigner, 0)
 	priv := make([]sp.Tsigner, 0)
 	for s, _ := range mgr.pubkeys {

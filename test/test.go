@@ -144,7 +144,6 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	//	key, err1 := keys.NewSymmetricKey(sp.KEY_LEN)
 	pubkey, privkey, err1 := keys.NewECDSAKey()
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err1)

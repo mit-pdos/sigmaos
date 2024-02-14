@@ -167,7 +167,7 @@ func (k *Kernel) bootProcq() (Subsystem, error) {
 }
 
 func (k *Kernel) bootSchedd() (Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu, k.Param.MasterPubKey.String(), k.Param.MasterPrivKey.String()}, proc.HLINUX)
+	return k.bootSubsystem("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu, k.Param.MasterPubKey.String()}, proc.HLINUX)
 }
 
 func (k *Kernel) bootNamed() (Subsystem, error) {

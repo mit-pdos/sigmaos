@@ -46,13 +46,27 @@ type Schedd struct {
 	nProcsRun           uint64
 	nProcGets           uint64
 	nProcGetsSuccessful uint64
+	pubkey              auth.PublicKey
+	privkey             auth.PrivateKey
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, pubkey auth.PublicKey, privkey auth.PrivateKey) *Schedd {
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, masterPubkey auth.PublicKey) *Schedd {
 	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn(sc))
+	// Add the master deployment key, to allow connections from kernel to this
+	// schedd.
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubkey)
+	// Generate keypair for schedd
+	pubkey, privkey, err := keys.NewECDSAKey()
+	if err != nil {
+		db.DFatalf("Error generate ECDSA keypair: %v", err)
+	}
+	// Add this schedd's keypair to the keymgr
 	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetPID()), pubkey)
 	kmgr.AddPrivateKey(sp.Tsigner(sc.ProcEnv().GetPID()), privkey)
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, pubkey)
+	// Post this schedd's public key
+	if err := keys.PostPublicKey(sc, sp.Tsigner(sc.ProcEnv().GetPID()), pubkey); err != nil {
+		db.DFatalf("Error post kernel key: %v", err)
+	}
 	db.DPrintf(db.ALWAYS, "kmgr %v", kmgr)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
 	if err != nil {
@@ -67,6 +81,8 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, pubke
 		sc:          sc,
 		as:          as,
 		cpuStats:    &cpuStats{},
+		pubkey:      pubkey,
+		privkey:     privkey,
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.scheddclnt = scheddclnt.NewScheddClnt(sc.FsLib)
@@ -315,7 +331,7 @@ func (sd *Schedd) stats() {
 	}
 }
 
-func RunSchedd(kernelId string, reserveMcpu uint, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunSchedd(kernelId string, reserveMcpu uint, pubkey auth.PublicKey) error {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
@@ -323,7 +339,7 @@ func RunSchedd(kernelId string, reserveMcpu uint, pubkey auth.PublicKey, privkey
 	if err := keys.PostPublicKey(sc, sp.Tsigner(sc.ProcEnv().GetPID()), pubkey); err != nil {
 		db.DFatalf("Error PostPublicKey: %v", err)
 	}
-	sd := NewSchedd(sc, kernelId, reserveMcpu, pubkey, privkey)
+	sd := NewSchedd(sc, kernelId, reserveMcpu, pubkey)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

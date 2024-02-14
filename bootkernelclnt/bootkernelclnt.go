@@ -27,8 +27,8 @@ func Start(kernelId string, pcfg *proc.ProcEnv, srvs string, overlays, gvisor bo
 		"--pull", pcfg.BuildTag,
 		"--boot", srvs,
 		"--named", pcfg.EtcdIP,
-		"--pubkey", masterPubKey.String(),
-		"--privkey", masterPrivKey.String(),
+		"--pubkey", masterPubKey.Marshal(),
+		"--privkey", masterPrivKey.Marshal(),
 		"--host",
 	}
 	if overlays {

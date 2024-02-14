@@ -13,18 +13,19 @@ import (
 type Key interface {
 	KeyI() interface{} // Get key as an interface
 	B64() []byte       // Get key encoded in base64
+	Marshal() string   // Get key in marshaled base64 format
 }
 
 type PublicKey interface {
 	Key
 	Public()        // Ensure Pub/Priv key can't be substituted for each other
-	String() string // Get key as a string
+	String() string // Get key as a string for printing purposes
 }
 
 type PrivateKey interface {
 	Key
 	Private()       // Ensure Pub/Priv key can't be substituted for each other
-	String() string // Get key as a string
+	String() string // Get key as a string for printing purposes
 }
 
 func NewPublicKey[M jwt.SigningMethod](signingMethod M, b64 []byte) (PublicKey, error) {
@@ -87,6 +88,10 @@ func newKey[M jwt.SigningMethod](m M, b64 []byte, private bool) (*key, error) {
 		i:   i,
 		b64: b64,
 	}, nil
+}
+
+func (k *key) Marshal() string {
+	return string(k.b64)
 }
 
 func (k *key) B64() []byte {

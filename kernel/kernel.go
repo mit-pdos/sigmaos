@@ -226,7 +226,7 @@ func newKNamedProc(realmId sp.Trealm, init bool, masterPubKey auth.PublicKey, ma
 	if init {
 		i = "init"
 	}
-	args := []string{realmId.String(), i, masterPubKey.String(), masterPrivKey.String()}
+	args := []string{realmId.String(), i, masterPubKey.Marshal(), masterPrivKey.Marshal()}
 	p := proc.NewPrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }

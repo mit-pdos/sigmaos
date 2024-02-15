@@ -104,6 +104,19 @@ func NewSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error)
 	return ssrv, nil
 }
 
+// Create the rpc server directory in memfs and make the RPC dev and
+// register svci.
+func (ssrv *SigmaSrv) AddRPCSrv(relpath string, svci any) error {
+	db.DPrintf(db.SIGMASRV, "newRPCSrv: %v\n", svci)
+	if _, err := ssrv.Create(relpath, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
+		return err
+	}
+	if err := ssrv.newRPCDev(relpath, svci); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Creates a sigmasrv with an memfs, rpc server, and LeaseSrv service.
 func newSigmaSrvMemFs(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	ssrv, err := newSigmaSrvRPC(mfs, svci)
@@ -122,20 +135,7 @@ func newSigmaSrv(mfs *memfssrv.MemFs) *SigmaSrv {
 // Make a sigmasrv with an RPC server
 func newSigmaSrvRPC(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	ssrv := newSigmaSrv(mfs)
-	return ssrv, ssrv.newRPCSrv(svci)
-}
-
-// Create the rpc server directory in memfs and make the RPC dev and
-// register svci.
-func (ssrv *SigmaSrv) newRPCSrv(svci any) error {
-	db.DPrintf(db.SIGMASRV, "newRPCSrv: %v\n", svci)
-	if _, err := ssrv.Create(rpc.RPC, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
-		return err
-	}
-	if err := ssrv.newRPCDev(svci); err != nil {
-		return err
-	}
-	return nil
+	return ssrv, ssrv.AddRPCSrv(rpc.RPC, svci)
 }
 
 func NewSigmaSrvRootClntKeyMgr(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, keymgr auth.KeyMgr) (*SigmaSrv, error) {
@@ -164,20 +164,20 @@ func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv)
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
 	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
 	ssrv.MemFs.SessSrv.Mount(rpc.RPC, d.(*dir.DirImpl))
-	if err := ssrv.newRPCDev(svci); err != nil {
+	if err := ssrv.newRPCDev(rpc.RPC, svci); err != nil {
 		return err
 	}
 	return nil
 }
 
 // Make the rpc device and register the svci service
-func (ssrv *SigmaSrv) newRPCDev(svci any) error {
-	if si, err := newStatsDev(ssrv.MemFs, rpc.RPC); err != nil {
+func (ssrv *SigmaSrv) newRPCDev(relpath string, svci any) error {
+	if si, err := newStatsDev(ssrv.MemFs, relpath); err != nil {
 		return err
 	} else {
 		ssrv.rpcs = rpcsrv.NewRPCSrv(svci, si)
 		rd := newRpcDev(ssrv.rpcs)
-		if err := sessdevsrv.NewSessDev(ssrv.MemFs, rpc.RPC, rd.newRpcSession, nil); err != nil {
+		if err := sessdevsrv.NewSessDev(ssrv.MemFs, relpath, rd.newRpcSession, nil); err != nil {
 			return err
 		}
 		return nil

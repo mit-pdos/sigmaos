@@ -89,6 +89,11 @@ const (
 	DMSETVTX    Tperm = 0x00010000
 )
 
+// Generic consts
+const (
+	NOT_SET = "NOT_SET"
+)
+
 // Realm consts
 const (
 	ROOTREALM Trealm = "rootrealm"

@@ -40,9 +40,13 @@ var EtcdIP string
 var Overlays bool
 var GVisor bool
 var useSigmaclntd bool
+var pk string
+var sk string
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
+	flag.StringVar(&pk, "privkey", sp.NOT_SET, "Master private key of the deployment")
+	flag.StringVar(&sk, "pubkey", sp.NOT_SET, "Master public key of the deployment")
 	flag.StringVar(&tag, "tag", sp.LOCAL_BUILD, "Docker image tag")
 	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&reuseKernel, "reuse-kernel", false, "Reuse system, avoid restarting when possible")
@@ -144,10 +148,29 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	pubkey, privkey, err1 := keys.NewECDSAKey()
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err1)
-		return nil, err1
+	assert.True(t, (pk == sp.NOT_SET && sk == sp.NOT_SET) || (pk != sp.NOT_SET && sk != sp.NOT_SET), "Error: only one of (pk, sk) specified")
+	var pubkey auth.PublicKey
+	var privkey auth.PrivateKey
+	var err error
+	// If no key was specified, generate a fresh one
+	if pk == sp.NOT_SET {
+		pubkey, privkey, err = keys.NewECDSAKey()
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
+			return nil, err
+		}
+	} else {
+		// Get public key from input params
+		pubkey, err = auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(pk))
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error NewPublicKey", err)
+			return nil, err
+		}
+		privkey, err = auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(sk))
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error NewPrivateKey", err)
+			return nil, err
+		}
 	}
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
@@ -172,7 +195,6 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	pe.SetToken(token)
 	var kernelid string
-	var err error
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()

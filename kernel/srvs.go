@@ -56,6 +56,8 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (sp.Tpid,
 		ss, err = k.bootLCSched()
 	case sp.PROCQREL:
 		ss, err = k.bootProcq()
+	case sp.KEYDREL:
+		ss, err = k.bootKeyd()
 	case sp.SCHEDDREL:
 		ss, err = k.bootSchedd()
 	case sp.REALMDREL:
@@ -165,6 +167,10 @@ func (k *Kernel) bootLCSched() (Subsystem, error) {
 
 func (k *Kernel) bootProcq() (Subsystem, error) {
 	return k.bootSubsystem("procq", []string{}, proc.HLINUX)
+}
+
+func (k *Kernel) bootKeyd() (Subsystem, error) {
+	return k.bootSubsystem("keyd", []string{}, proc.HLINUX)
 }
 
 func (k *Kernel) bootSchedd() (Subsystem, error) {

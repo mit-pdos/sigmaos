@@ -74,7 +74,7 @@ func NewSymmetricKey(nbyte int) (auth.PrivateKey, error) {
 }
 
 func keyPath(s sp.Tsigner) string {
-	return path.Join(sp.KEYS, s.String())
+	return path.Join(sp.KEYD, s.String())
 }
 
 func PostPublicKey(sc *sigmaclnt.SigmaClnt, s sp.Tsigner, key auth.PublicKey) error {

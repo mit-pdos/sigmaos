@@ -65,7 +65,7 @@ func RunKeySrv(masterPubKey auth.PublicKey) {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	ks := NewKeySrv(masterPubKey)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.KEYS, sc, ks)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.KEYD, sc, ks)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
@@ -88,6 +88,6 @@ func RunKeySrv(masterPubKey auth.PublicKey) {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
-	// TODO: run the srv
+	db.DPrintf(db.KEYD, "Keyd running!")
 	ssrv.RunServer()
 }

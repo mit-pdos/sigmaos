@@ -51,12 +51,12 @@ const (
 	PIDS    = "pids"
 
 	// Auth
-	KEYSREL    = "keys"
-	KEYS       = NAME + "/" + KEYSREL
+	KEYDREL    = "keys"
+	KEYD       = NAME + "/" + KEYDREL
 	RW_REL     = "rw"
 	RONLY_REL  = "ronly"
-	KEYS_RW    = NAME + "/" + KEYSREL + "/" + RW_REL
-	KEYS_RONLY = NAME + "/" + KEYSREL + "/" + RONLY_REL
+	KEYS_RW    = KEYD + "/" + RW_REL
+	KEYS_RONLY = KEYD + "/" + RONLY_REL
 
 	// special devs/dirs exported by SigmaSrv/SessSrv
 	STATSD   = ".statsd"

@@ -30,6 +30,7 @@ const (
 	S3                     = "S3"
 	UX                     = "UX"
 	SCHEDD                 = "SCHEDD"
+	KEYD                   = "KEYD"
 	SIGMACLNTSRV           = "SIGMACLNTSRV"
 	UPROCD                 = "UPROCD"
 	PROCQ                  = "PROCQ"

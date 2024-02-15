@@ -26,6 +26,18 @@ func WithConstGetKeyFn(key auth.PublicKey) GetKeyFn {
 	}
 }
 
+func WithLocalMapGetKeyFn(mu *sync.Mutex, m map[sp.Tsigner]auth.PublicKey) GetKeyFn {
+	return func(signer sp.Tsigner) (auth.PublicKey, error) {
+		mu.Lock()
+		defer mu.Unlock()
+
+		if key, ok := m[signer]; ok {
+			return key, nil
+		}
+		return nil, fmt.Errorf("No key for signer %v in local map", signer)
+	}
+}
+
 func WithSigmaClntGetKeyFn[M jwt.SigningMethod](signingMethod M, sc *sigmaclnt.SigmaClnt) GetKeyFn {
 	return func(signer sp.Tsigner) (auth.PublicKey, error) {
 		var key []byte = nil

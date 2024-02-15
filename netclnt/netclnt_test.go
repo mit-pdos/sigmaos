@@ -87,31 +87,34 @@ func TestNetClntPerf(t *testing.T) {
 	c := &call{buf: test.NewBuf(BUFSZ)}
 
 	t0 := time.Now()
-	for i := 0; i < TOTAL/BUFSZ; i++ {
+	n := TOTAL / BUFSZ
+	for i := 0; i < n; i++ {
 		_, err := ts.clnt.SendReceive(c)
 		assert.Nil(t, err)
 	}
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), test.TputStr(TOTAL, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
 }
 
-func TestSocketPerf(t *testing.T) {
-	const (
-		SOCKPATH = "/tmp/test-perf-socket"
-	)
+func testLocalPerf(t *testing.T, typ, arg string) {
+	var socket net.Listener
+	if typ == "unix" {
+		db.DPrintf(db.TEST, "local %v %v\n", typ, arg)
+		err := os.Remove(arg)
+		assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
+		socket, err = net.Listen("unix", arg)
+		assert.Nil(t, err)
+		err = os.Chmod(arg, 0777)
+		assert.Nil(t, err)
+	} else {
+		var err error
+		socket, err = net.Listen(typ, arg)
+		assert.Nil(t, err)
+	}
 
-	err := os.Remove(SOCKPATH)
-	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
-
-	socket, err := net.Listen("unix", SOCKPATH)
-	assert.Nil(t, err)
-	err = os.Chmod(SOCKPATH, 0777)
-	assert.Nil(t, err)
-
-	buf := test.NewBuf(BUFSZ)
 	ch := make(chan bool)
 	// Serve requests in another thread
 	go func() {
@@ -136,13 +139,15 @@ func TestSocketPerf(t *testing.T) {
 
 	}()
 
-	conn, err := net.Dial("unix", SOCKPATH)
+	time.Sleep(1 * time.Second)
+	conn, err := net.Dial(typ, arg)
 	assert.Nil(t, err)
 
 	sz := sp.Tlength(TOTAL)
-
+	buf := test.NewBuf(BUFSZ)
 	t0 := time.Now()
-	for i := 0; i < TOTAL/BUFSZ; i++ {
+	n := TOTAL / BUFSZ
+	for i := 0; i < n; i++ {
 		n, err := conn.Write(buf)
 		assert.Nil(t, err)
 		assert.Equal(t, BUFSZ, n)
@@ -157,10 +162,23 @@ func TestSocketPerf(t *testing.T) {
 
 	tot := uint64(sz)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), test.TputStr(sz, ms))
+	db.DPrintf(db.ALWAYS, "%v wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", typ, humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(sz, ms))
 
-	err = os.Remove(SOCKPATH)
-	assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
+	if typ == "unix" {
+		err = os.Remove(arg)
+		assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
+	}
 
 	socket.Close()
+}
+
+func TestSocketPerf(t *testing.T) {
+	const (
+		SOCKPATH = "/tmp/test-perf-socket"
+	)
+	testLocalPerf(t, "unix", SOCKPATH)
+}
+
+func TestTCPPerf(t *testing.T) {
+	testLocalPerf(t, "tcp", "127.0.0.1:4444")
 }

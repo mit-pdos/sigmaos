@@ -2,6 +2,7 @@ package netclnt_test
 
 import (
 	"bufio"
+	"encoding/binary"
 	"io"
 	"net"
 	"os"
@@ -13,13 +14,11 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/frame"
 	"sigmaos/netclnt"
 	"sigmaos/netsrv"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmaprotsrv"
 	"sigmaos/test"
 )
 
@@ -37,15 +36,31 @@ func (c *call) Tag() sessp.Ttag {
 }
 
 func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
-	f, err := frame.ReadFrame(rdr)
-	return &call{buf: f}, err
+	var l uint32
+	if err := binary.Read(rdr, binary.LittleEndian, &l); err != nil {
+		return nil, serr.NewErr(serr.TErrUnreachable, err)
+	}
+	l = l - 4
+	if l < 0 {
+		return nil, serr.NewErr(serr.TErrUnreachable, "readMsg too short")
+	}
+	frame := make(sessp.Tframe, l)
+	n, e := io.ReadFull(rdr, frame)
+	if n != len(frame) {
+		return nil, serr.NewErr(serr.TErrUnreachable, e)
+	}
+	return &call{buf: frame}, nil
 }
 
 func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
-	wrt := wr.(*bufio.Writer)
 	call := c.(*call)
-	if err := frame.WriteFrame(wrt, call.buf); err != nil {
-		return err
+	wrt := wr.(*bufio.Writer)
+	l := uint32(len(call.buf) + 4) // +4 because that is how 9P wants it
+	if err := binary.Write(wrt, binary.LittleEndian, l); err != nil {
+		return serr.NewErr(serr.TErrUnreachable, err.Error())
+	}
+	if n, err := wrt.Write(call.buf); err != nil || n != len(call.buf) {
+		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	if err := wrt.Flush(); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
@@ -53,22 +68,31 @@ func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
 	return nil
 }
 
-type netSrv struct {
+type netConn struct {
+	conn net.Conn
 }
 
-func (ns *netSrv) ServeRequest(c sigmaprotsrv.Conn, req demux.CallI) (demux.CallI, *serr.Err) {
+func (nc *netConn) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	r := req.(*call)
 	rep := &call{buf: r.buf}
 	return rep, nil
 }
 
-func (ns *netSrv) ReportError(c sigmaprotsrv.Conn, err error) {
+func (nc *netConn) ReportError(err error) {
 }
 
 type TstateNet struct {
 	*test.TstateMin
 	srv  *netsrv.NetServer
 	clnt *netclnt.NetClnt
+	dmx  *demux.DemuxClnt
+}
+
+func (ts *TstateNet) NewConn(conn net.Conn) *demux.DemuxSrv {
+	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
+	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
+	nc := &netConn{conn}
+	return demux.NewDemuxSrv(br, wr, ReadCall, WriteCall, nc)
 }
 
 func (ts *TstateNet) ReportError(err error) {
@@ -78,14 +102,15 @@ func newTstateNet(t *testing.T) *TstateNet {
 	ts := &TstateNet{}
 	ts.TstateMin = test.NewTstateMin(t)
 
-	ns := &netSrv{}
-	ts.srv = netsrv.NewNetServer(ts.Pcfg, ns, ts.Addr, ReadCall, WriteCall)
+	ts.srv = netsrv.NewNetServer(ts.Pcfg, ts.Addr, ts)
 
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
 
-	nc, err := netclnt.NewNetClnt(sp.ROOTREALM.String(), sp.Taddrs{ts.srv.MyAddr()}, ReadCall, WriteCall, ts)
+	nc, err := netclnt.NewNetClnt(sp.ROOTREALM.String(), sp.Taddrs{ts.srv.MyAddr()})
 	assert.Nil(t, err)
-	ts.clnt = nc
+	br := bufio.NewReaderSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
+	bw := bufio.NewWriterSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
+	ts.dmx = demux.NewDemuxClnt(bw, br, ReadCall, WriteCall, ts)
 	return ts
 }
 
@@ -96,7 +121,7 @@ func TestNetClntPerf(t *testing.T) {
 	t0 := time.Now()
 	n := TOTAL / BUFSZ
 	for i := 0; i < n; i++ {
-		_, err := ts.clnt.SendReceive(c)
+		_, err := ts.dmx.SendReceive(c)
 		assert.Nil(t, err)
 	}
 	tot := uint64(TOTAL)

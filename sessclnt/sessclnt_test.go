@@ -1,6 +1,8 @@
 package sessclnt_test
 
 import (
+	"bufio"
+	"net"
 	"sync"
 	"testing"
 	"time"
@@ -23,27 +25,28 @@ import (
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmaprotsrv"
+	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/spcodec"
 	"sigmaos/test"
 )
 
 type SessSrv struct {
 	crash int
+	conn  net.Conn
 }
 
-func (ss *SessSrv) ReportError(conn sigmaprotsrv.Conn, err error) {
-	db.DPrintf(db.TEST, "Server ReportError sid %v err %v\n", conn.GetSessId(), err)
+func (ss *SessSrv) ReportError(err error) {
+	db.DPrintf(db.TEST, "Server ReportError sid %v err %v\n", ss, err)
 }
 
-func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.CallI, *serr.Err) {
+func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	fcm := req.(*sessp.FcallMsg)
 	qid := sp.NewQidPerm(0777, 0, 0)
 	var rep *sessp.FcallMsg
 	switch fcm.Type() {
 	case sessp.TTwatch:
 		time.Sleep(1 * time.Second)
-		conn.CloseConnTest()
+		ss.conn.Close()
 		msg := &sp.Ropen{Qid: qid}
 		rep = sessp.NewFcallMsgReply(fcm, msg)
 	case sessp.TTwrite:
@@ -55,7 +58,7 @@ func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.
 		rep = sessp.NewFcallMsgReply(fcm, msg)
 		r := rand.Int64(100)
 		if r < uint64(ss.crash) {
-			conn.CloseConnTest()
+			ss.conn.Close()
 		}
 	}
 	pmfc := spcodec.NewPartMarshaledMsg(rep)
@@ -64,17 +67,25 @@ func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.
 
 type TstateSrv struct {
 	*test.TstateMin
-	srv  *netsrv.NetServer
-	clnt *sessclnt.Mgr
+	srv   *netsrv.NetServer
+	clnt  *sessclnt.Mgr
+	crash int
 }
 
 func newTstateSrv(t *testing.T, crash int) *TstateSrv {
-	ts := &TstateSrv{TstateMin: test.NewTstateMin(t)}
-	ss := &SessSrv{crash}
-	ts.srv = netsrv.NewNetServer(ts.Pcfg, ss, ts.Addr, spcodec.ReadCall, spcodec.WriteCall)
+	ts := &TstateSrv{TstateMin: test.NewTstateMin(t), crash: crash}
+	ts.srv = netsrv.NewNetServer(ts.Pcfg, ts.Addr, ts)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts
+}
+
+func (ts *TstateSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
+	ss := &SessSrv{crash: ts.crash, conn: conn}
+	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
+	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
+	dmx := demux.NewDemuxSrv(br, wr, spcodec.ReadCall, spcodec.WriteCall, ss)
+	return dmx
 }
 
 func TestConnectSessSrv(t *testing.T) {
@@ -166,9 +177,13 @@ func newTstateSp(t *testing.T) *TstateSp {
 	ts.TstateMin = test.NewTstateMin(t)
 	et := ephemeralmap.NewEphemeralMap()
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sesssrv.NewSessSrv(ts.Pcfg, root, ts.Addr, protsrv.NewProtServer, et, nil)
+	ts.srv = sesssrv.NewSessSrv(ts.Pcfg, root, ts.Addr, ts, et, nil)
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts
+}
+
+func (ts *TstateSp) NewSession(sid sessp.Tsession) sps.Protsrv {
+	return protsrv.NewProtServer(ts.srv, sid)
 }
 
 func (ts *TstateSp) shutdown() {

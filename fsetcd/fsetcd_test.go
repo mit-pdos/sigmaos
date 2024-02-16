@@ -20,7 +20,7 @@ func init() {
 }
 
 func TestDump(t *testing.T) {
-	pcfg := proc.NewTestProcEnv(sp.Trealm(realm), sp.Tip(test.EtcdIP), sp.NO_IP, sp.NO_IP, "", false, false)
+	pcfg := proc.NewTestProcEnv(sp.Trealm(realm), nil, sp.Tip(test.EtcdIP), sp.NO_IP, sp.NO_IP, "", false, false)
 	fs, err := fsetcd.NewFsEtcd(pcfg.GetRealm(), pcfg.GetEtcdIP())
 	assert.Nil(t, err, "Err %v", err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)

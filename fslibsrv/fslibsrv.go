@@ -16,20 +16,38 @@ import (
 	"sigmaos/path"
 	"sigmaos/protsrv"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	sps "sigmaos/sigmaprotsrv"
 )
 
-// Return the pathname for posting in a directory of a service
-func mountPathName(pn string, mnt sp.Tmount) string {
-	return pn + "/" + mnt.Address().IPPort()
+type ProtSrv struct {
+	*sesssrv.SessSrv
 }
 
-func postMount(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
-	mnt := sp.NewMountServer(sesssrv.MyAddr())
-	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
+func NewSrv(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*ProtSrv, string, error) {
+	et := ephemeralmap.NewEphemeralMap()
+	psrv := &ProtSrv{}
+	psrv.SessSrv = sesssrv.NewSessSrv(sc.ProcEnv(), root, addr, psrv, et, fencefs)
+	if len(pn) > 0 {
+		if mpn, err := psrv.postMount(sc, pn); err != nil {
+			return nil, "", err
+		} else {
+			pn = mpn
+		}
+	}
+	return psrv, pn, nil
+}
 
+func (psrv *ProtSrv) NewSession(sessid sessp.Tsession) sps.Protsrv {
+	return protsrv.NewProtServer(psrv.SessSrv, sessid)
+}
+
+func (psrv *ProtSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
+	mnt := sp.NewMountServer(psrv.MyAddr())
+	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 	if path.EndSlash(pn) {
 		dir, err := sc.IsDir(pn)
 		if err != nil {
@@ -53,15 +71,7 @@ func postMount(sesssrv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, pn string) (st
 	return pn, nil
 }
 
-func NewSrv(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*sesssrv.SessSrv, string, error) {
-	et := ephemeralmap.NewEphemeralMap()
-	srv := sesssrv.NewSessSrv(sc.ProcEnv(), root, addr, protsrv.NewProtServer, et, fencefs)
-	if len(pn) > 0 {
-		if mpn, err := postMount(srv, sc, pn); err != nil {
-			return nil, "", err
-		} else {
-			pn = mpn
-		}
-	}
-	return srv, pn, nil
+// Return the pathname for posting in a directory of a service
+func mountPathName(pn string, mnt sp.Tmount) string {
+	return pn + "/" + mnt.Address().IPPort()
 }

@@ -1,29 +1,11 @@
 package sigmaprotsrv
 
 import (
-	"sigmaos/demux"
-	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
-type Isrvconn interface {
-}
-
-type Conn interface {
-	IsClosed() bool
-	Close() error
-	CloseConnTest() error
-	CondSet(sid sessp.Tsession) sessp.Tsession
-	GetSessId() sessp.Tsession
-}
-
 type Fsrvfcall func(*sessp.FcallMsg) *sessp.FcallMsg
-
-type SessServer interface {
-	ServeRequest(Conn, demux.CallI) (demux.CallI, *serr.Err)
-	ReportError(Conn, error)
-}
 
 type Protsrv interface {
 	Version(*sp.Tversion, *sp.Rversion) *sp.Rerror
@@ -46,7 +28,5 @@ type Protsrv interface {
 	WriteRead(*sp.Twriteread, sessp.IoVec, *sp.Rread) (sessp.IoVec, *sp.Rerror)
 	Detach(*sp.Tdetach, *sp.Rdetach) *sp.Rerror
 }
-
-type NewProtServer func(SessServer, sessp.Tsession) Protsrv
 
 type DetachSessF func(sessp.Tsession)

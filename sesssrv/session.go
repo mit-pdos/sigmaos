@@ -27,7 +27,7 @@ const NLAST = 10
 
 type Session struct {
 	sync.Mutex
-	conn          sps.Conn
+	conn          *netConn
 	protsrv       sps.Protsrv
 	lastHeartbeat time.Time
 	Sid           sessp.Tsession
@@ -53,7 +53,7 @@ func (sess *Session) QueueLen() int64 {
 	return 0
 }
 
-func (sess *Session) GetConn() sps.Conn {
+func (sess *Session) GetConn() *netConn {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.conn
@@ -64,7 +64,7 @@ func (sess *Session) GetConn() sps.Conn {
 // won't the connection be re-established by client?
 func (sess *Session) CloseConn() {
 	sess.Lock()
-	var conn sps.Conn
+	var conn *netConn
 	if sess.conn != nil {
 		conn = sess.conn
 	}
@@ -121,7 +121,7 @@ func (sess *Session) IsClosed() bool {
 
 // Change conn associated with this session. This may occur if, for example, a
 // client starts client reconnects quickly.
-func (sess *Session) SetConn(conn sps.Conn) *serr.Err {
+func (sess *Session) SetConn(conn *netConn) *serr.Err {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
@@ -132,21 +132,21 @@ func (sess *Session) SetConn(conn sps.Conn) *serr.Err {
 	return nil
 }
 
-func (sess *Session) UnsetConn(conn sps.Conn) {
+func (sess *Session) UnsetConn(nc *netConn) {
 	sess.Lock()
 	defer sess.Unlock()
 
-	sess.unsetConnL(conn)
+	sess.unsetConnL(nc)
 }
 
 // Disassociate a connection with this session, and safely close the
 // connection.
-func (sess *Session) unsetConnL(conn sps.Conn) {
-	if sess.conn == conn {
+func (sess *Session) unsetConnL(nc *netConn) {
+	if sess.conn == nc {
 		db.DPrintf(db.SESS_STATE_SRV, "%v close connection", sess.Sid)
 		sess.conn = nil
 	}
-	conn.Close()
+	nc.Close()
 }
 
 func (sess *Session) IsConnected() bool {

@@ -37,9 +37,8 @@ type ProtSrv struct {
 	sid   sessp.Tsession
 }
 
-func NewProtServer(s sps.SessServer, sid sessp.Tsession) sps.Protsrv {
+func NewProtServer(srv *sesssrv.SessSrv, sid sessp.Tsession) sps.Protsrv {
 	ps := &ProtSrv{}
-	srv := s.(*sesssrv.SessSrv)
 	ps.ssrv = srv
 
 	ps.ft = newFidTable()

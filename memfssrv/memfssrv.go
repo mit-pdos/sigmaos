@@ -5,6 +5,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
+	"sigmaos/fslibsrv"
 	"sigmaos/inode"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
@@ -13,7 +14,6 @@ import (
 	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -27,7 +27,7 @@ var rootP = path.Path{""}
 //
 
 type MemFs struct {
-	*sesssrv.SessSrv
+	*fslibsrv.ProtSrv
 	ctx fs.CtxI // server context
 	plt *lockmap.PathLockTable
 	sc  *sigmaclnt.SigmaClnt
@@ -36,9 +36,9 @@ type MemFs struct {
 	pn  string
 }
 
-func NewMemFsSrv(pn string, srv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) *MemFs {
+func NewMemFsSrv(pn string, srv *fslibsrv.ProtSrv, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) *MemFs {
 	mfs := &MemFs{
-		SessSrv: srv,
+		ProtSrv: srv,
 		ctx:     ctx.NewCtx(sc.ProcEnv().GetUname(), 0, sp.NoClntId, nil, fencefs),
 		plt:     srv.GetPathLockTable(),
 		sc:      sc,

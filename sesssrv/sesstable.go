@@ -8,21 +8,19 @@ import (
 	// db "sigmaos/debug"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
 )
 
 type SessionTable struct {
-	mu sync.RWMutex
+	newSess NewSessionI
+	mu      sync.RWMutex
 	//	deadlock.Mutex
-	newps     sps.NewProtServer
-	sesssrv   sps.SessServer
 	sessions  map[sessp.Tsession]*Session
 	lasts     map[sessp.Tsession]*Session   // for testing
 	lastClnts map[sp.TclntId]sessp.Tsession // for testing
 }
 
-func NewSessionTable(newps sps.NewProtServer, sesssrv sps.SessServer) *SessionTable {
-	st := &SessionTable{sesssrv: sesssrv, newps: newps}
+func NewSessionTable(newSess NewSessionI) *SessionTable {
+	st := &SessionTable{newSess: newSess}
 	st.sessions = make(map[sessp.Tsession]*Session)
 	st.lasts = make(map[sessp.Tsession]*Session)
 	st.lastClnts = make(map[sp.TclntId]sessp.Tsession)
@@ -81,7 +79,7 @@ func (st *SessionTable) allocRL(sid sessp.Tsession) *Session {
 			}
 		}
 	}
-	sess := newSession(st.newps(st.sesssrv, sid), sid)
+	sess := newSession(st.newSess.NewSession(sid), sid)
 	st.sessions[sid] = sess
 	if len(st.lasts) < NLAST {
 		st.lasts[sid] = sess

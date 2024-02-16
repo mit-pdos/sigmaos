@@ -4,6 +4,9 @@
 package sesssrv
 
 import (
+	"bufio"
+	"net"
+
 	"sigmaos/clntcond"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -26,6 +29,10 @@ import (
 	"sigmaos/watch"
 )
 
+type NewSessionI interface {
+	NewSession(sessp.Tsession) sps.Protsrv
+}
+
 //
 // SessSrv has a table with all sess conds in use so that it can
 // unblock threads that are waiting in a sess cond when a session
@@ -36,7 +43,6 @@ type SessSrv struct {
 	pe       *proc.ProcEnv
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
-	newps    sps.NewProtServer
 	stats    *stats.StatInfo
 	st       *SessionTable
 	sm       *SessionMgr
@@ -50,15 +56,14 @@ type SessSrv struct {
 	qlen     stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newSess NewSessionI, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
 	ssrv := &SessSrv{}
 	ssrv.pe = pe
 	ssrv.dirover = overlay.MkDirOverlay(root)
 	ssrv.dirunder = root
-	ssrv.newps = newps
 	ssrv.et = et
 	ssrv.stats = stats.NewStatsDev(ssrv.dirover)
-	ssrv.st = NewSessionTable(newps, ssrv)
+	ssrv.st = NewSessionTable(newSess)
 	ssrv.sct = clntcond.NewClntCondTable()
 	ssrv.plt = lockmap.NewPathLockTable()
 	ssrv.wt = watch.NewWatchTable(ssrv.sct)
@@ -68,7 +73,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newps sps.NewProt
 
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
-	ssrv.srv = netsrv.NewNetServer(pe, ssrv, addr, spcodec.ReadCall, spcodec.WriteCall)
+	ssrv.srv = netsrv.NewNetServer(pe, addr, ssrv)
 	ssrv.sm = NewSessionMgr(ssrv.st, ssrv.SrvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv
@@ -153,23 +158,12 @@ func (ssrv *SessSrv) GetSessionTable() *SessionTable {
 	return ssrv.st
 }
 
-func (ssrv *SessSrv) ReportError(conn sps.Conn, err error) {
-	db.DPrintf(db.SESSSRV, "ReportError %v err %v\n", conn, err)
-
-	// Disassociate a connection with a session, and let it close gracefully.
-	sid := conn.GetSessId()
-	if sid == sessp.NoSession {
-		return
-	}
-	sess := ssrv.st.Alloc(sid)
-	sess.UnsetConn(conn)
-}
-
-// Calls from netsrv
-func (ss *SessSrv) ServeRequest(conn sps.Conn, fc demux.CallI) (demux.CallI, *serr.Err) {
-	rep := ss.srvFcall(conn, fc.(*sessp.FcallMsg))
-	pmfc := spcodec.NewPartMarshaledMsg(rep)
-	return pmfc, nil
+func (ssrv *SessSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
+	nc := &netConn{conn: conn, ssrv: ssrv, sessid: sessp.NoSession}
+	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
+	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
+	nc.dmx = demux.NewDemuxSrv(br, wr, spcodec.ReadCall, spcodec.WriteCall, nc)
+	return nc.dmx
 }
 
 // Serve server-generated fcalls.
@@ -179,13 +173,13 @@ func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
 	return ssrv.serve(sess, fc)
 }
 
-func (ssrv *SessSrv) srvFcall(conn sps.Conn, fc *sessp.FcallMsg) *sessp.FcallMsg {
+func (ssrv *SessSrv) srvFcall(nc *netConn, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	s := sessp.Tsession(fc.Fc.Session)
-	if conn.CondSet(s) != s {
-		db.DFatalf("Bad sid %v sess associated with conn %v\n", conn.GetSessId(), conn)
+	if nc.CondSet(s) != s {
+		db.DFatalf("Bad sid %v sess associated with conn %v\n", nc.sessid, nc)
 	}
 	sess := ssrv.st.Alloc(s)
-	sess.SetConn(conn)
+	sess.SetConn(nc)
 	return ssrv.serve(sess, fc)
 }
 

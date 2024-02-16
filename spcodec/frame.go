@@ -70,9 +70,16 @@ func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 	return readUnmarshalFcall(rdr)
 }
 
-func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
+func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
+	wrt := wr.(*bufio.Writer)
 	fcm := c.(*sessp.PartMarshaledMsg)
-	return writeFcall(fcm.Fcm, fcm.MarshaledFcm, wrt)
+	if err := writeFcall(fcm.Fcm, fcm.MarshaledFcm, wrt); err != nil {
+		return err
+	}
+	if err := wrt.Flush(); err != nil {
+		return serr.NewErr(serr.TErrUnreachable, err.Error())
+	}
+	return nil
 }
 
 func NewPartMarshaledMsg(fcm *sessp.FcallMsg) *sessp.PartMarshaledMsg {

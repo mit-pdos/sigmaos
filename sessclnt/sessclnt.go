@@ -11,7 +11,6 @@ import (
 	//"time"
 
 	db "sigmaos/debug"
-	"sigmaos/demux"
 	"sigmaos/netclnt"
 	"sigmaos/rand"
 	"sigmaos/serr"
@@ -30,7 +29,7 @@ type SessClnt struct {
 	clntnet string
 }
 
-func newSessClnt(clntnet string, addrs sp.Taddrs, rf demux.ReadCallF, wf demux.WriteCallF) (*SessClnt, *serr.Err) {
+func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c := &SessClnt{sid: sessp.Tsession(rand.Uint64()),
 		clntnet: clntnet,
 		addrs:   addrs,

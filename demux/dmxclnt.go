@@ -4,7 +4,7 @@
 package demux
 
 import (
-	"bufio"
+	"io"
 	"sync/atomic"
 
 	db "sigmaos/debug"
@@ -16,11 +16,11 @@ type DemuxClntI interface {
 	ReportError(err error)
 }
 
-type WriteCallF func(*bufio.Writer, CallI) *serr.Err
+type WriteCallF func(io.Writer, CallI) *serr.Err
 
 type DemuxClnt struct {
-	out     *bufio.Writer
-	in      *bufio.Reader
+	out     io.Writer
+	in      io.Reader
 	callmap *callMap
 	calls   chan CallI
 	clnti   DemuxClntI
@@ -32,7 +32,7 @@ type reply struct {
 	err *serr.Err
 }
 
-func NewDemuxClnt(out *bufio.Writer, in *bufio.Reader, rf ReadCallF, wf WriteCallF, clnti DemuxClntI) *DemuxClnt {
+func NewDemuxClnt(out io.Writer, in io.Reader, rf ReadCallF, wf WriteCallF, clnti DemuxClntI) *DemuxClnt {
 	dmx := &DemuxClnt{
 		out:     out,
 		in:      in,
@@ -62,10 +62,6 @@ func (dmx *DemuxClnt) writer(wf WriteCallF) {
 		}
 		if err := wf(dmx.out, req); err != nil {
 			db.DPrintf(db.DEMUXCLNT, "wf req %v error %v\n", req, err)
-			continue
-		}
-		if err := dmx.out.Flush(); err != nil {
-			db.DPrintf(db.DEMUXCLNT, "Flush req %v err %v\n", req, err)
 			continue
 		}
 	}

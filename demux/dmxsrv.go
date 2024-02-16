@@ -1,7 +1,6 @@
 package demux
 
 import (
-	"bufio"
 	"io"
 	"sync"
 
@@ -23,15 +22,15 @@ type DemuxSrvI interface {
 
 type DemuxSrv struct {
 	mu      sync.Mutex
-	in      *bufio.Reader
-	out     *bufio.Writer
+	in      io.Reader
+	out     io.Writer
 	serve   DemuxSrvI
 	replies chan reply
 	closed  bool
 	nreq    int
 }
 
-func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, rf ReadCallF, wf WriteCallF, serve DemuxSrvI) *DemuxSrv {
+func NewDemuxSrv(in io.Reader, out io.Writer, rf ReadCallF, wf WriteCallF, serve DemuxSrvI) *DemuxSrv {
 	dmx := &DemuxSrv{in: in, out: out, serve: serve, replies: make(chan reply)}
 	go dmx.reader(rf)
 	go dmx.writer(wf)
@@ -75,10 +74,6 @@ func (dmx *DemuxSrv) writer(wf WriteCallF) {
 		}
 		if err := wf(dmx.out, reply.rep); err != nil {
 			db.DPrintf(db.DEMUXSRV, "wf reply %v error %v\n", reply, err)
-			continue
-		}
-		if err := dmx.out.Flush(); err != nil {
-			db.DPrintf(db.DEMUXSRV, "Flush reply %v err %v\n", reply, err)
 			continue
 		}
 	}

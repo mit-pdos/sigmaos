@@ -49,7 +49,7 @@ func (srv *NetServer) MyAddr() *sp.Taddr {
 }
 
 func (srv *NetServer) CloseListener() error {
-	db.DPrintf(db.ALWAYS, "Close %v\n", srv.addr)
+	db.DPrintf(db.NETSRV, "Close %v\n", srv.addr)
 	return srv.l.Close()
 }
 
@@ -57,7 +57,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "%v: Accept err %v", srv.pcfg.GetPID(), err)
+			db.DPrintf(db.NETSRV, "%v: Accept err %v", srv.pcfg.GetPID(), err)
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)

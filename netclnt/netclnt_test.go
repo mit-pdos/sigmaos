@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	BUFSZ = 64 * sp.KBYTE
-	TOTAL = 1000 * sp.MBYTE
+	BUFSZ = 100          // 64 * sp.KBYTE
+	TOTAL = 1 * sp.MBYTE // 1000 * sp.MBYTE
 )
 
 type call struct {
@@ -51,7 +51,8 @@ type netSrv struct {
 }
 
 func (ns *netSrv) ServeRequest(c sigmaprotsrv.Conn, req demux.CallI) (demux.CallI, *serr.Err) {
-	rep := &call{buf: make([]byte, 0)}
+	r := req.(*call)
+	rep := &call{buf: r.buf}
 	return rep, nil
 }
 
@@ -120,11 +121,10 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 	go func() {
 		conn, err := socket.Accept()
 		assert.Nil(t, err)
-		rdr := bufio.NewReaderSize(conn, BUFSZ)
 		tot := 0
 		for {
 			rb := make([]byte, BUFSZ)
-			n, err := io.ReadFull(rdr, rb)
+			n, err := io.ReadFull(conn, rb)
 			if err == io.EOF {
 				db.DPrintf(db.TEST, "tot %d\n", tot)
 				break
@@ -133,7 +133,7 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 			if n != len(rb) || err != nil {
 				db.DFatalf("Err read: len %v err %v", n, err)
 			}
-			conn.Write(rb[0:1])
+			conn.Write(rb)
 		}
 		ch <- true
 
@@ -151,8 +151,8 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 		n, err := conn.Write(buf)
 		assert.Nil(t, err)
 		assert.Equal(t, BUFSZ, n)
-		rb := make([]byte, 1)
-		_, err = conn.Read(rb)
+		rb := make([]byte, BUFSZ)
+		_, err = io.ReadFull(conn, rb)
 		assert.Nil(t, err)
 	}
 

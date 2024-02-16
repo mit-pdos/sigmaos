@@ -5,7 +5,7 @@ package demux
 
 import (
 	"io"
-	"sync/atomic"
+	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
@@ -22,9 +22,10 @@ type DemuxClnt struct {
 	out     io.Writer
 	in      io.Reader
 	callmap *callMap
-	calls   chan CallI
 	clnti   DemuxClntI
-	nwriter *atomic.Int64
+	rf      ReadCallF
+	wf      WriteCallF
+	mu      sync.Mutex
 }
 
 type reply struct {
@@ -37,34 +38,12 @@ func NewDemuxClnt(out io.Writer, in io.Reader, rf ReadCallF, wf WriteCallF, clnt
 		out:     out,
 		in:      in,
 		callmap: newCallMap(),
-		calls:   make(chan CallI),
 		clnti:   clnti,
-		nwriter: new(atomic.Int64),
+		rf:      rf,
+		wf:      wf,
 	}
-	go dmx.reader(rf)
-	go dmx.writer(wf)
+	go dmx.reader()
 	return dmx
-}
-
-func (dmx *DemuxClnt) writer(wf WriteCallF) {
-	for {
-		req, ok := <-dmx.calls
-		if !ok {
-			db.DPrintf(db.DEMUXCLNT, "writer: replies closed\n")
-			return
-		}
-
-		// In error cases, drain calls until SendReceive calls close
-		// on calls
-
-		if dmx.IsClosed() {
-			continue
-		}
-		if err := wf(dmx.out, req); err != nil {
-			db.DPrintf(db.DEMUXCLNT, "wf req %v error %v\n", req, err)
-			continue
-		}
-	}
 }
 
 func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
@@ -75,9 +54,9 @@ func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
 	}
 }
 
-func (dmx *DemuxClnt) reader(rf ReadCallF) {
+func (dmx *DemuxClnt) reader() {
 	for {
-		c, err := rf(dmx.in)
+		c, err := dmx.rf(dmx.in)
 		if err != nil {
 			db.DPrintf(db.DEMUXCLNT, "reader rf err %v\n", err)
 			dmx.callmap.close()
@@ -98,12 +77,14 @@ func (dmx *DemuxClnt) SendReceive(req CallI) (CallI, *serr.Err) {
 		db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue req %v err %v\n", req, err)
 		return nil, err
 	}
-	dmx.nwriter.Add(1)
-	dmx.calls <- req
-	rep := <-ch
-	if dmx.nwriter.Add(-1) == 0 && dmx.callmap.isClosed() {
-		close(dmx.calls)
+	dmx.mu.Lock()
+	err := dmx.wf(dmx.out, req)
+	dmx.mu.Unlock()
+	if err != nil {
+		db.DPrintf(db.DEMUXCLNT, "wf req %v error %v\n", req, err)
+		return nil, err
 	}
+	rep := <-ch
 	return rep.rep, rep.err
 }
 

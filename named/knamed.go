@@ -18,7 +18,7 @@ import (
 func RunKNamed(args []string) error {
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "%v: knamed %v\n", pe.GetPID(), args)
-	if len(args) != 5 {
+	if len(args) != 4 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	// Since knamed is the first "host" of the realm namespace to start up, no
@@ -30,15 +30,8 @@ func RunKNamed(args []string) error {
 	if err != nil {
 		db.DFatalf("Error NewPublicKey: %v", err)
 	}
-	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[4]))
-	if err != nil {
-		db.DFatalf("Error NewPrivateKey: %v", err)
-	}
 	// Self-sign token for bootstrapping purposes
-	selfSignToken(pe, masterPubKey, masterPubKey, masterPrivKey)
 	nd := &Named{}
-	nd.pubkey = masterPubKey
-	nd.privkey = masterPrivKey
 	nd.realm = sp.Trealm(args[1])
 
 	p, err := perf.NewPerf(pe, perf.KNAMED)

@@ -39,8 +39,6 @@ type Named struct {
 	crash           int
 	sess            *fsetcd.Session
 	masterPublicKey auth.PublicKey
-	pubkey          auth.PublicKey
-	privkey         auth.PrivateKey
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -66,19 +64,8 @@ func Run(args []string) error {
 	if err != nil {
 		db.DFatalf("Error NewPublicKey: %v", err)
 	}
-	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[4]))
-	if err != nil {
-		db.DFatalf("Error NewPublicKey: %v", err)
-	}
-	privkey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[5]))
-	if err != nil {
-		db.DFatalf("Error NewPrivatecKey: %v", err)
-	}
 	nd := &Named{}
 	nd.masterPublicKey = masterPubKey
-	nd.pubkey = pubkey
-	nd.privkey = privkey
-	selfSignToken(pe, masterPubKey, pubkey, privkey)
 	nd.realm = sp.Trealm(args[1])
 	crashing, err := strconv.Atoi(args[2])
 	if err != nil {
@@ -179,25 +166,6 @@ func Run(args []string) error {
 	return nil
 }
 
-func selfSignToken(pe *proc.ProcEnv, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPubKey))
-	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), pubkey)
-	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error bootstrapping auth srv: %v", err)
-		return err
-	}
-	pc := auth.NewProcClaims(pe)
-	token, err := as.MintToken(pc)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return err
-	}
-	pe.SetToken(token)
-	return nil
-}
-
 func (nd *Named) newSrv() (sp.Tmount, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
@@ -218,9 +186,9 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 	// Add the master deployment key, to allow connections from kernel to this
 	// named.
 	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterPublicKey)
+	kmgr.AddPublicKey(sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()), nd.masterPublicKey)
 	// Add this named's keypair to the keymgr
-	kmgr.AddPublicKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.pubkey)
-	kmgr.AddPrivateKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.privkey)
+	kmgr.AddPublicKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterPublicKey)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
 		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)

@@ -1,12 +1,15 @@
 package proxy
 
 import (
+	"bufio"
+	"net"
 	"os/user"
 	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/fidclnt"
+	"sigmaos/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
@@ -18,6 +21,29 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 )
 
+type proxyConn struct {
+	conn net.Conn
+	npd  *Npd
+	sid  sessp.Tsession
+}
+
+func (pc *proxyConn) ReportError(err error) {
+	db.DPrintf(db.PROXY, "ReportError %v err %v\n", pc, err)
+}
+
+func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
+	fcm := fc.(*sessp.FcallMsg)
+	s := sessp.Tsession(fcm.Fc.Session)
+	if pc.sid != s || pc.sid != sessp.NoSession {
+		db.DFatalf("Bad sid %v sess associated with conn %v\n", pc.sid, pc)
+	}
+	pc.sid = s
+	sess := pc.npd.st.Alloc(s)
+	// XXX sess.SetConn(pc.conn)
+	reply := pc.npd.serve(sess, fcm)
+	return reply, nil
+}
+
 type Npd struct {
 	lip  sp.Tip
 	pcfg *proc.ProcEnv
@@ -26,12 +52,20 @@ type Npd struct {
 
 func NewNpd(pcfg *proc.ProcEnv, lip sp.Tip) *Npd {
 	npd := &Npd{lip, pcfg, nil}
-	npd.st = sesssrv.NewSessionTable(npd.newProtServer, npd)
+	npd.st = sesssrv.NewSessionTable(npd)
 	return npd
 }
 
-func (npd *Npd) newProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Protsrv {
-	return newNpConn(npd.pcfg, string(npd.lip))
+func (ps *Npd) NewConn(conn net.Conn) *demux.DemuxSrv {
+	pc := &proxyConn{conn: conn, npd: ps, sid: sessp.NoSession}
+	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
+	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
+	dmx := demux.NewDemuxSrv(br, wr, npcodec.ReadCall, npcodec.WriteCall, pc)
+	return dmx
+}
+
+func (npd *Npd) NewSession(sid sessp.Tsession) sps.Protsrv {
+	return newNpSess(npd.pcfg, string(npd.lip))
 }
 
 func (npd *Npd) serve(sess *sesssrv.Session, fm *sessp.FcallMsg) *sessp.FcallMsg {
@@ -46,24 +80,8 @@ func (npd *Npd) serve(sess *sesssrv.Session, fm *sessp.FcallMsg) *sessp.FcallMsg
 	return reply
 }
 
-func (npd *Npd) ReportError(conn sps.Conn, err error) {
-	db.DPrintf(db.PROXY, "ReportError %v err %v\n", conn, err)
-}
-
-func (npd *Npd) ServeRequest(conn sps.Conn, fc demux.CallI) (demux.CallI, *serr.Err) {
-	fcm := fc.(*sessp.FcallMsg)
-	s := sessp.Tsession(fcm.Fc.Session)
-	if conn.CondSet(s) != s {
-		db.DFatalf("Bad sid %v sess associated with conn %v\n", conn.GetSessId(), conn)
-	}
-	sess := npd.st.Alloc(s)
-	sess.SetConn(conn)
-	reply := npd.serve(sess, fcm)
-	return reply, nil
-}
-
-// The connection from the kernel/client
-type NpConn struct {
+// The protsrv session from the kernel/client
+type NpSess struct {
 	mu    sync.Mutex
 	uname sp.Tuname
 	fidc  *fidclnt.FidClnt
@@ -72,8 +90,8 @@ type NpConn struct {
 	cid   sp.TclntId
 }
 
-func newNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
-	npc := &NpConn{}
+func newNpSess(pcfg *proc.ProcEnv, lip string) *NpSess {
+	npc := &NpSess{}
 	npc.fidc = fidclnt.NewFidClnt(sp.ROOTREALM.String())
 	npc.pc = pathclnt.NewPathClnt(pcfg, npc.fidc)
 	npc.fm = newFidMap()
@@ -81,17 +99,17 @@ func newNpConn(pcfg *proc.ProcEnv, lip string) *NpConn {
 	return npc
 }
 
-func (npc *NpConn) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
+func (npc *NpSess) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
 	return nil
 }
 
-func (npc *NpConn) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
+func (npc *NpSess) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.NewRerrorCode(serr.TErrNotSupported)
 }
 
-func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
+func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
 	u, error := user.Current()
 	if error != nil {
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
@@ -119,12 +137,12 @@ func (npc *NpConn) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 	return args.TclntId(), nil
 }
 
-func (npc *NpConn) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
+func (npc *NpSess) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
 	db.DPrintf(db.PROXY, "Detach\n")
 	return nil
 }
 
-func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
+func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
@@ -140,7 +158,7 @@ func (npc *NpConn) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
+func (npc *NpSess) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
@@ -155,11 +173,11 @@ func (npc *NpConn) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
+func (npc *NpSess) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
+func (npc *NpSess) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
@@ -177,7 +195,7 @@ func (npc *NpConn) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
+func (npc *NpSess) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
@@ -191,7 +209,7 @@ func (npc *NpConn) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
+func (npc *NpSess) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
@@ -205,11 +223,11 @@ func (npc *NpConn) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror {
+func (npc *NpSess) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
+func (npc *NpSess) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
@@ -224,7 +242,7 @@ func (npc *NpConn) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
+func (npc *NpSess) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
@@ -238,11 +256,11 @@ func (npc *NpConn) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
+func (npc *NpSess) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	return sp.NewRerrorCode(serr.TErrNotSupported)
 }
 
-func (npc *NpConn) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
+func (npc *NpSess) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return nil, sp.NewRerrorCode(serr.TErrNotfound)
@@ -266,7 +284,7 @@ func (npc *NpConn) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	return d, nil
 }
 
-func (npc *NpConn) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Rerror {
+func (npc *NpSess) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
@@ -281,14 +299,14 @@ func (npc *NpConn) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 	return nil
 }
 
-func (npc *NpConn) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerror) {
+func (npc *NpSess) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	return nil, nil
 }
 
-func (npc *NpConn) PutFile(args *sp.Tputfile, d []byte, rets *sp.Rwrite) *sp.Rerror {
+func (npc *NpSess) PutFile(args *sp.Tputfile, d []byte, rets *sp.Rwrite) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpConn) WriteRead(args *sp.Twriteread, iov sessp.IoVec, rets *sp.Rread) (sessp.IoVec, *sp.Rerror) {
+func (npc *NpSess) WriteRead(args *sp.Twriteread, iov sessp.IoVec, rets *sp.Rread) (sessp.IoVec, *sp.Rerror) {
 	return nil, nil
 }

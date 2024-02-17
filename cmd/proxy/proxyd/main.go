@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"sigmaos/netsrv"
-	"sigmaos/npcodec"
 	"sigmaos/proc"
 	"sigmaos/proxy"
 	sp "sigmaos/sigmap"
@@ -22,7 +21,8 @@ func main() {
 	pcfg.SetUname("proxy")
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-	netsrv.NewNetServer(pcfg, proxy.NewNpd(pcfg, lip), addr, npcodec.ReadCall, npcodec.WriteCall)
+	npd := proxy.NewNpd(pcfg, lip)
+	netsrv.NewNetServer(pcfg, addr, npd)
 	ch := make(chan struct{})
 	<-ch
 }

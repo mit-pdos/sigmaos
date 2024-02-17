@@ -51,7 +51,7 @@ const (
 	PIDS    = "pids"
 
 	// Auth
-	KEYDREL    = "keys"
+	KEYDREL    = "keyd"
 	KEYD       = NAME + "/" + KEYDREL
 	RW_REL     = "rw"
 	RONLY_REL  = "ronly"

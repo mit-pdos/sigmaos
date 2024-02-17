@@ -281,7 +281,7 @@ func Run() {
 	pq := NewProcQ(sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {
-		db.DFatalf("Error NewSIgmaSrv: %v", err)
+		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
 	// export queued procs through procfs. maybe a subdir per realm?
 	dir := procfs.NewProcDir(&QDir{pq})

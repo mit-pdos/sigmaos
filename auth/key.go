@@ -111,5 +111,5 @@ func (pk *publicKey) String() string {
 func (pk *privateKey) Private() {}
 
 func (sk *privateKey) String() string {
-	return "priv-key-redacted"
+	return "<<redacted>>"
 }

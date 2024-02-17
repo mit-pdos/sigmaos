@@ -59,6 +59,14 @@ func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 			return fmt.Errorf("Child's allowed paths not a subset of parent's: p %v c %v", ap, parentPC.AllowedPaths)
 		}
 	}
+	// If this proc already contains a valid signed token (presumably signed by
+	// the kernelsrv during spawn), then bail out. No need to re-sign. What's
+	// more, baliing out is important for bootstrapping, because the keyd server
+	// will only know about the kernel srv's key during bootstrapping, not
+	// schedd's key.
+	if p.GetPrincipal().GetToken().GetSignedToken() != sp.NO_SIGNED_TOKEN {
+		return nil
+	}
 	// Parent's token is valid, and child's token only contains allowed paths
 	// which are a subset of the parent's. Sign the child's token.
 	token, err := as.MintToken(pc)

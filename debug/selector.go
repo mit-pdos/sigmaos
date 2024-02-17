@@ -112,6 +112,10 @@ const (
 	PROCQ_ERR                 = "PROCQ" + ERR
 	PROCQCLNT                 = "PROCQCLNT"
 	PROCQCLNT_ERR             = "PROCQCLNT" + ERR
+	KEYCLNT                   = "KEYCLNT"
+	KEYCLNT_ERR               = "KEYCLNT" + ERR
+	KEYD                      = "KEYD"
+	KEYD_ERR                  = "KEYD" + ERR
 	SCHEDD                    = "SCHEDD"
 	SCHEDD_ERR                = "SCHEDD" + ERR
 	SCHEDDCLNT                = "SCHEDDCLNT"

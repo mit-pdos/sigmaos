@@ -107,7 +107,7 @@ func (k *Kernel) bootstrapKeys(pid sp.Tpid) ([]string, error) {
 		return nil, err
 	}
 	// Post the public key for the subsystem
-	if err := keys.PostPublicKey(k.SigmaClnt(), sp.Tsigner(pid), pubkey); err != nil {
+	if err := k.kc.SetKey(sp.Tsigner(pid), pubkey); err != nil {
 		db.DPrintf(db.ERROR, "Error post subsystem key: %v", err)
 		return nil, err
 	}

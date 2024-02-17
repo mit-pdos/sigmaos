@@ -170,7 +170,14 @@ func (k *Kernel) bootProcq() (Subsystem, error) {
 }
 
 func (k *Kernel) bootKeyd() (Subsystem, error) {
-	return k.bootSubsystem("keyd", []string{}, proc.HLINUX)
+	ss, err := k.bootSubsystem("keyd", []string{k.Param.MasterPubKey.Marshal()}, proc.HLINUX)
+	if err == nil {
+		if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
+			db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
+			return nil, err
+		}
+	}
+	return ss, err
 }
 
 func (k *Kernel) bootSchedd() (Subsystem, error) {

@@ -14,6 +14,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/keyclnt"
 	"sigmaos/keys"
 	"sigmaos/kproc"
 	"sigmaos/netsigma"
@@ -51,6 +52,7 @@ type Param struct {
 type Kernel struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClntKernel
+	kc           *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
 	Param        *Param
 	svcs         *Services
 	ip           sp.Tip
@@ -87,16 +89,17 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 		db.DPrintf(db.ALWAYS, "Error NewSigmaClntProc: %v", err)
 		return nil, err
 	}
+	k.kc = keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](sc)
 	// For completeness, post master signing key. This may be done redundantly
 	// by future kernels, so tolerate an ErrExists
-	if err := keys.PostPublicKey(sc, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, p.MasterPubKey); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
-		db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
-		return nil, err
-	}
-	if err := keys.PostPublicKey(sc, sp.Tsigner(p.KernelID), p.MasterPubKey); err != nil {
-		db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
-		return nil, err
-	}
+	//	if err := keys.PostPublicKey(sc, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, p.MasterPubKey); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+	//		db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
+	//		return nil, err
+	//	}
+	//	if err := keys.PostPublicKey(sc, sp.Tsigner(p.KernelID), p.MasterPubKey); err != nil {
+	//		db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
+	//		return nil, err
+	//	}
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
 	// Create an AuthServer which dynamically pulls keys from the namespace, now
 	// that knamed has booted.
@@ -113,6 +116,10 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	err = startSrvs(k)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
+		return nil, err
+	}
+	if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
+		db.DPrintf(db.ERROR, "Error post kernel key after boot: %v", err)
 		return nil, err
 	}
 	if len(k.svcs.svcs[sp.KNAMED]) > 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
@@ -226,7 +233,7 @@ func newKNamedProc(realmId sp.Trealm, init bool, masterPubKey auth.PublicKey, ma
 	if init {
 		i = "init"
 	}
-	args := []string{realmId.String(), i, masterPubKey.Marshal(), masterPrivKey.Marshal()}
+	args := []string{realmId.String(), i, masterPubKey.Marshal()}
 	p := proc.NewPrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }

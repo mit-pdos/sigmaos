@@ -1,6 +1,8 @@
 package sigmaprotsrv
 
 import (
+	db "sigmaos/debug"
+	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -30,3 +32,103 @@ type Protsrv interface {
 }
 
 type DetachSessF func(sessp.Tsession)
+
+type Tsessop int
+
+const (
+	TSESS_NONE Tsessop = iota
+	TSESS_ADD
+	TSESS_DEL
+)
+
+func Dispatch(protsrv Protsrv, msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, sessp.IoVec, *sp.Rerror, Tsessop, sp.TclntId) {
+	switch req := msg.(type) {
+	case *sp.Tversion:
+		reply := &sp.Rversion{}
+		err := protsrv.Version(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Tauth:
+		reply := &sp.Rauth{}
+		err := protsrv.Auth(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Tattach:
+		reply := &sp.Rattach{}
+		cid, err := protsrv.Attach(req, reply)
+		if cid != sp.NoClntId {
+			return reply, nil, err, TSESS_ADD, cid
+		} else {
+			return reply, nil, err, TSESS_NONE, sp.NoClntId
+		}
+	case *sp.Twalk:
+		reply := &sp.Rwalk{}
+		err := protsrv.Walk(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Topen:
+		reply := &sp.Ropen{}
+		err := protsrv.Open(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Twatch:
+		reply := &sp.Ropen{}
+		err := protsrv.Watch(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Tcreate:
+		reply := &sp.Rcreate{}
+		err := protsrv.Create(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.TreadF:
+		reply := &sp.Rread{}
+		data, err := protsrv.ReadF(req, reply)
+		return reply, sessp.IoVec{data}, err, TSESS_NONE, sp.NoClntId
+	case *sp.TwriteF:
+		reply := &sp.Rwrite{}
+		err := protsrv.WriteF(req, iov[0], reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Tclunk:
+		reply := &sp.Rclunk{}
+		err := protsrv.Clunk(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Tremove:
+		reply := &sp.Rremove{}
+		err := protsrv.Remove(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Tremovefile:
+		reply := &sp.Rremove{}
+		err := protsrv.RemoveFile(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Tstat:
+		reply := &sp.Rstat{}
+		err := protsrv.Stat(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Twstat:
+		reply := &sp.Rwstat{}
+		err := protsrv.Wstat(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Trenameat:
+		reply := &sp.Rrenameat{}
+		err := protsrv.Renameat(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Tgetfile:
+		reply := &sp.Rread{}
+		data, err := protsrv.GetFile(req, reply)
+		return reply, sessp.IoVec{data}, err, TSESS_NONE, sp.NoClntId
+	case *sp.Tputfile:
+		reply := &sp.Rwrite{}
+		err := protsrv.PutFile(req, iov[0], reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Tdetach:
+		reply := &sp.Rdetach{}
+		err := protsrv.Detach(req, reply)
+		return reply, nil, err, TSESS_DEL, req.TclntId()
+	case *sp.Theartbeat:
+		reply := &sp.Rheartbeat{}
+		reply.Sids = req.Sids
+		return reply, nil, nil, TSESS_NONE, sp.NoClntId
+	case *sp.Twriteread:
+		reply := &sp.Rread{}
+		iov, err := protsrv.WriteRead(req, iov, reply)
+		return reply, iov, err, TSESS_NONE, sp.NoClntId
+	default:
+		db.DPrintf(db.ALWAYS, "Unexpected type: %v", msg)
+		return nil, nil, sp.NewRerrorSerr(serr.NewErr(serr.TErrUnknownMsg, msg)), TSESS_NONE, sp.NoClntId
+	}
+}

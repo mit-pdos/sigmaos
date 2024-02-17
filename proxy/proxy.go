@@ -16,15 +16,14 @@ import (
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
-	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
+	"sigmaos/sigmaprotsrv"
 )
 
 type proxyConn struct {
 	conn net.Conn
 	npd  *Npd
-	sid  sessp.Tsession
+	sess *NpSess
 }
 
 func (pc *proxyConn) ReportError(err error) {
@@ -32,52 +31,34 @@ func (pc *proxyConn) ReportError(err error) {
 }
 
 func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
-	fcm := fc.(*sessp.FcallMsg)
-	s := sessp.Tsession(fcm.Fc.Session)
-	if pc.sid != s || pc.sid != sessp.NoSession {
-		db.DFatalf("Bad sid %v sess associated with conn %v\n", pc.sid, pc)
-	}
-	pc.sid = s
-	sess := pc.npd.st.Alloc(s)
-	// XXX sess.SetConn(pc.conn)
-	reply := pc.npd.serve(sess, fcm)
-	return reply, nil
-}
-
-type Npd struct {
-	lip  sp.Tip
-	pcfg *proc.ProcEnv
-	st   *sesssrv.SessionTable
-}
-
-func NewNpd(pcfg *proc.ProcEnv, lip sp.Tip) *Npd {
-	npd := &Npd{lip, pcfg, nil}
-	npd.st = sesssrv.NewSessionTable(npd)
-	return npd
-}
-
-func (ps *Npd) NewConn(conn net.Conn) *demux.DemuxSrv {
-	pc := &proxyConn{conn: conn, npd: ps, sid: sessp.NoSession}
-	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
-	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
-	dmx := demux.NewDemuxSrv(br, wr, npcodec.ReadCall, npcodec.WriteCall, pc)
-	return dmx
-}
-
-func (npd *Npd) NewSession(sid sessp.Tsession) sps.Protsrv {
-	return newNpSess(npd.pcfg, string(npd.lip))
-}
-
-func (npd *Npd) serve(sess *sesssrv.Session, fm *sessp.FcallMsg) *sessp.FcallMsg {
+	fm := fc.(*sessp.FcallMsg)
 	db.DPrintf(db.PROXY, "serve %v\n", fm)
-	msg, iov, rerror, _, _ := sess.Dispatch(fm.Msg, fm.Iov)
+	msg, iov, rerror, _, _ := sigmaprotsrv.Dispatch(pc.sess, fm.Msg, fm.Iov)
 	if rerror != nil {
 		msg = rerror
 	}
 	reply := sessp.NewFcallMsg(msg, nil, sessp.Tsession(fm.Fc.Session), nil)
 	reply.Iov = iov
 	reply.Fc.Seqno = fm.Fc.Seqno
-	return reply
+	return reply, nil
+}
+
+type Npd struct {
+	lip  sp.Tip
+	pcfg *proc.ProcEnv
+}
+
+func NewNpd(pcfg *proc.ProcEnv, lip sp.Tip) *Npd {
+	return &Npd{lip, pcfg}
+}
+
+func (npd *Npd) NewConn(conn net.Conn) *demux.DemuxSrv {
+	sess := newNpSess(npd.pcfg, string(npd.lip))
+	pc := &proxyConn{conn: conn, npd: npd, sess: sess}
+	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
+	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
+	dmx := demux.NewDemuxSrv(br, wr, npcodec.ReadCall, npcodec.WriteCall, pc)
+	return dmx
 }
 
 // The protsrv session from the kernel/client

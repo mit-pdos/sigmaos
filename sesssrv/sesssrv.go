@@ -203,13 +203,13 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	reply.Iov = iov
 
 	switch op {
-	case TSESS_DEL:
+	case sps.TSESS_DEL:
 		sess.DelClnt(clntid)
 		ssrv.st.DelLastClnt(clntid)
-	case TSESS_ADD:
+	case sps.TSESS_ADD:
 		sess.AddClnt(clntid)
 		ssrv.st.AddLastClnt(clntid, sess.Sid)
-	case TSESS_NONE:
+	case sps.TSESS_NONE:
 	}
 
 	return reply

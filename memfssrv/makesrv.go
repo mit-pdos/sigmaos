@@ -37,9 +37,13 @@ func NewMemFsPortClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt) (*MemF
 }
 
 func NewMemFsPortClntFence(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
+	return NewMemFsPortClntFenceKeyMgr(pn, addr, sc, fencefs, nil)
+}
+
+func NewMemFsPortClntFenceKeyMgr(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, kmgr auth.KeyMgr) (*MemFs, error) {
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, fencefs)
 	root := dir.NewRootDir(ctx, memfs.NewInode, nil)
-	return NewMemFsRootPortClntFenceKeyMgr(root, pn, addr, sc, nil, fencefs)
+	return NewMemFsRootPortClntFenceKeyMgr(root, pn, addr, sc, kmgr, fencefs)
 }
 
 func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr, fencefs fs.Dir) (*MemFs, error) {

@@ -78,7 +78,9 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	k.ip = ip
 	pe.SetInnerContainerIP(ip)
 	pe.SetOuterContainerIP(ip)
+	isFirstKernel := false
 	if p.Services[0] == sp.KNAMED {
+		isFirstKernel = true
 		if err := k.bootKNamed(pe, true); err != nil {
 			return nil, err
 		}
@@ -91,6 +93,15 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	}
 	k.kc = keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](sc)
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
+	if !isFirstKernel {
+		// Post kernel key before booting any services, if this is a node added to
+		// the cluster (not the initial kernel/node in the cluster). If it is the
+		// first kernel, we have to boot keyd before we can post the kernel key.
+		if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
+			db.DPrintf(db.ERROR, "Error post kernel key after boot: %v", err)
+			return nil, err
+		}
+	}
 	// Create an AuthServer which dynamically pulls keys from the namespace, now
 	// that knamed has booted.
 	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
@@ -108,10 +119,13 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
 		return nil, err
 	}
-	// Post kernel ke
-	if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
-		db.DPrintf(db.ERROR, "Error post kernel key after boot: %v", err)
-		return nil, err
+	if isFirstKernel {
+		// Post kernel key, if this was the first kernel, since we have now booted
+		// keyd
+		if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
+			db.DPrintf(db.ERROR, "Error post kernel key after boot: %v", err)
+			return nil, err
+		}
 	}
 	if len(k.svcs.svcs[sp.KNAMED]) > 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
 		// a kernel with knamed and named; stop knamed

@@ -124,7 +124,17 @@ func TestStartStop(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	db.DPrintf(db.TEST, "Started successfully")
+	rootts.Shutdown()
+}
 
+func TestStartMultiNodeStop(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	err := rootts.BootNode(1)
+	assert.Nil(rootts.T, err, "Err boot node: %v", err)
 	db.DPrintf(db.TEST, "Started successfully")
 	rootts.Shutdown()
 }

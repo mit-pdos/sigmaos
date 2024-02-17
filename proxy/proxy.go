@@ -22,7 +22,6 @@ import (
 
 type proxyConn struct {
 	conn net.Conn
-	npd  *Npd
 	sess *NpSess
 }
 
@@ -52,9 +51,10 @@ func NewNpd(pcfg *proc.ProcEnv, lip sp.Tip) *Npd {
 	return &Npd{lip, pcfg}
 }
 
+// Create a sigmap session for conn
 func (npd *Npd) NewConn(conn net.Conn) *demux.DemuxSrv {
 	sess := newNpSess(npd.pcfg, string(npd.lip))
-	pc := &proxyConn{conn: conn, npd: npd, sess: sess}
+	pc := &proxyConn{conn: conn, sess: sess}
 	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
 	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
 	dmx := demux.NewDemuxSrv(br, wr, npcodec.ReadCall, npcodec.WriteCall, pc)

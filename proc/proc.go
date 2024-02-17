@@ -145,6 +145,10 @@ func (p *Proc) SetToken(token *sp.Ttoken) {
 	p.ProcEnvProto.SetToken(token)
 }
 
+func (p *Proc) GetPrincipal() *sp.Tprincipal {
+	return p.ProcEnvProto.GetPrincipal()
+}
+
 func (p *Proc) GetParentToken() *sp.Ttoken {
 	return p.ProcEnvProto.ParentToken
 }

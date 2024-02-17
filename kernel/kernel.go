@@ -90,16 +90,6 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 		return nil, err
 	}
 	k.kc = keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](sc)
-	// For completeness, post master signing key. This may be done redundantly
-	// by future kernels, so tolerate an ErrExists
-	//	if err := keys.PostPublicKey(sc, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, p.MasterPubKey); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
-	//		db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
-	//		return nil, err
-	//	}
-	//	if err := keys.PostPublicKey(sc, sp.Tsigner(p.KernelID), p.MasterPubKey); err != nil {
-	//		db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
-	//		return nil, err
-	//	}
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
 	// Create an AuthServer which dynamically pulls keys from the namespace, now
 	// that knamed has booted.
@@ -118,6 +108,7 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
 		return nil, err
 	}
+	// Post kernel ke
 	if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
 		db.DPrintf(db.ERROR, "Error post kernel key after boot: %v", err)
 		return nil, err

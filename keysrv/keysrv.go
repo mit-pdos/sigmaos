@@ -4,9 +4,12 @@ import (
 	"path"
 	"sync"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/keys"
 	"sigmaos/keysrv/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -50,12 +53,27 @@ func NewKeySrv(masterPubKey auth.PublicKey) *KeySrv {
 }
 
 func (ks rOnlyKeySrv) GetKey(ctx fs.CtxI, req proto.GetKeyRequest, res *proto.GetKeyResponse) error {
-	db.DFatalf("Unimplemented")
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+
+	s := sp.Tsigner(req.SignerStr)
+	if b, ok := ks.keys[s]; ok {
+		res.OK = true
+		res.B64 = b
+		db.DPrintf(db.KEYD, "Got key for signer %v", s)
+	} else {
+		db.DPrintf(db.KEYD, "No key for signer %v", s)
+	}
 	return nil
 }
 
 func (ks rwKeySrv) SetKey(ctx fs.CtxI, req proto.SetKeyRequest, res *proto.SetKeyResponse) error {
-	db.DFatalf("Unimplemented")
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+
+	s := sp.Tsigner(req.SignerStr)
+	ks.keys[s] = req.GetB64()
+	db.DPrintf(db.KEYD, "Set key for signer %v", s)
 	return nil
 }
 
@@ -65,7 +83,12 @@ func RunKeySrv(masterPubKey auth.PublicKey) {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	ks := NewKeySrv(masterPubKey)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.KEYD, sc, ks)
+	kmgr := keys.NewKeyMgr(keys.WithLocalMapGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, &ks.mu, ks.keys))
+	// Add the master deployment key, to allow connections from kernel to this
+	// named.
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
+	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetKernelID()), masterPubKey)
+	ssrv, err := sigmasrv.NewSigmaSrvClntKeyMgr(sp.KEYD, sc, kmgr, ks)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

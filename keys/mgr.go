@@ -9,6 +9,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/keyclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -26,25 +27,28 @@ func WithConstGetKeyFn(key auth.PublicKey) GetKeyFn {
 	}
 }
 
-func WithLocalMapGetKeyFn(mu *sync.Mutex, m map[sp.Tsigner]auth.PublicKey) GetKeyFn {
+func WithLocalMapGetKeyFn[M jwt.SigningMethod](signingMethod M, mu *sync.Mutex, m map[sp.Tsigner][]byte) GetKeyFn {
 	return func(signer sp.Tsigner) (auth.PublicKey, error) {
 		mu.Lock()
 		defer mu.Unlock()
 
-		if key, ok := m[signer]; ok {
-			return key, nil
+		if b, ok := m[signer]; ok {
+			return auth.NewPublicKey[M](signingMethod, b)
 		}
 		return nil, fmt.Errorf("No key for signer %v in local map", signer)
 	}
 }
 
 func WithSigmaClntGetKeyFn[M jwt.SigningMethod](signingMethod M, sc *sigmaclnt.SigmaClnt) GetKeyFn {
+	kc := keyclnt.NewKeyClnt[M](sc)
 	return func(signer sp.Tsigner) (auth.PublicKey, error) {
-		var key []byte = nil
+		db.DPrintf(db.KEYCLNT, "SigmaClntGetKey for signer %v", signer)
+		defer db.DPrintf(db.KEYCLNT, "SigmaClntGetKey done for signer %v", signer)
+		var key auth.PublicKey
 		var err error
 		// Mount the master key file, which should be mountable by anyone
 		for i := 0; i < MAX_RETRIES; i++ {
-			key, err = sc.GetFile(keyPath(signer))
+			key, err = kc.GetKey(signingMethod, signer)
 			if err == nil {
 				break
 			}
@@ -58,7 +62,7 @@ func WithSigmaClntGetKeyFn[M jwt.SigningMethod](signingMethod M, sc *sigmaclnt.S
 			db.DPrintf(db.ERROR, "Error get key: %v", err)
 			return nil, err
 		}
-		return auth.NewPublicKey[M](signingMethod, key)
+		return key, nil
 	}
 }
 

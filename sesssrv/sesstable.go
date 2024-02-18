@@ -10,7 +10,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type SessionTable struct {
+type sessionTable struct {
 	newSess NewSessionI
 	mu      sync.RWMutex
 	//	deadlock.Mutex
@@ -19,15 +19,15 @@ type SessionTable struct {
 	lastClnts map[sp.TclntId]*Session     // for testing
 }
 
-func NewSessionTable(newSess NewSessionI) *SessionTable {
-	st := &SessionTable{newSess: newSess}
+func newSessionTable(newSess NewSessionI) *sessionTable {
+	st := &sessionTable{newSess: newSess}
 	st.sessions = make(map[sessp.Tsession]*Session)
 	st.lasts = make(map[sessp.Tsession]*Session)
 	st.lastClnts = make(map[sp.TclntId]*Session)
 	return st
 }
 
-func (st *SessionTable) CloseSessions() error {
+func (st *sessionTable) CloseSessions() error {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 
@@ -37,14 +37,14 @@ func (st *SessionTable) CloseSessions() error {
 	return nil
 }
 
-func (st *SessionTable) Lookup(sid sessp.Tsession) (*Session, bool) {
+func (st *sessionTable) Lookup(sid sessp.Tsession) (*Session, bool) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 	sess, ok := st.sessions[sid]
 	return sess, ok
 }
 
-func (st *SessionTable) Alloc(sid sessp.Tsession, nc *netConn) *Session {
+func (st *sessionTable) Alloc(sid sessp.Tsession, nc *netConn) *Session {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
@@ -60,7 +60,7 @@ func (st *SessionTable) Alloc(sid sessp.Tsession, nc *netConn) *Session {
 }
 
 // Return a last session
-func (st *SessionTable) lastSession() *Session {
+func (st *sessionTable) lastSession() *Session {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 
@@ -72,7 +72,7 @@ func (st *SessionTable) lastSession() *Session {
 	return sess
 }
 
-func (st *SessionTable) AddLastClnt(cid sp.TclntId, sess *Session) {
+func (st *sessionTable) AddLastClnt(cid sp.TclntId, sess *Session) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
@@ -81,7 +81,7 @@ func (st *SessionTable) AddLastClnt(cid sp.TclntId, sess *Session) {
 	}
 }
 
-func (st *SessionTable) DelLastClnt(cid sp.TclntId) {
+func (st *sessionTable) DelLastClnt(cid sp.TclntId) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
@@ -91,7 +91,7 @@ func (st *SessionTable) DelLastClnt(cid sp.TclntId) {
 }
 
 // Return a last clnt
-func (st *SessionTable) lastClnt() (sp.TclntId, *Session) {
+func (st *sessionTable) lastClnt() (sp.TclntId, *Session) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 	c := sp.NoClntId

@@ -1,4 +1,4 @@
-// Package sigmapsrv allows caller to make a server and post their
+// Package sigmapsrv allows caller to make a sigmap server and post their
 // existence in the global name space. Servers plug in what a
 // file/directory is by passing in their root directory, which is a
 // concrete instance of the fs.Dir interface; for example, memfsd

@@ -44,8 +44,8 @@ type SessSrv struct {
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
 	stats    *stats.StatInfo
-	st       *SessionTable
-	sm       *SessionMgr
+	st       *sessionTable
+	sm       *sessionMgr
 	sct      *clntcond.ClntCondTable
 	plt      *lockmap.PathLockTable
 	wt       *watch.WatchTable
@@ -63,7 +63,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newSess NewSessio
 	ssrv.dirunder = root
 	ssrv.et = et
 	ssrv.stats = stats.NewStatsDev(ssrv.dirover)
-	ssrv.st = NewSessionTable(newSess)
+	ssrv.st = newSessionTable(newSess)
 	ssrv.sct = clntcond.NewClntCondTable()
 	ssrv.plt = lockmap.NewPathLockTable()
 	ssrv.wt = watch.NewWatchTable(ssrv.sct)
@@ -74,7 +74,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newSess NewSessio
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
 	ssrv.srv = netsrv.NewNetServer(pe, addr, ssrv)
-	ssrv.sm = NewSessionMgr(ssrv.st, ssrv.srvFcall)
+	ssrv.sm = newSessionMgr(ssrv.st, ssrv.srvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv
 }
@@ -154,7 +154,8 @@ func (ssrv *SessSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tses
 	return ssrv.dirover, ctx.NewCtx(uname, sessid, clntid, ssrv.sct, ssrv.fencefs)
 }
 
-func (ssrv *SessSrv) GetSessionTable() *SessionTable {
+// for testing
+func (ssrv *SessSrv) GetSessionTable() *sessionTable {
 	return ssrv.st
 }
 

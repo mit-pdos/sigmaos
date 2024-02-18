@@ -10,14 +10,14 @@ import (
 
 type Fsrvfcall func(*Session, *sessp.FcallMsg) *sessp.FcallMsg
 
-type SessionMgr struct {
-	st       *SessionTable
+type sessionMgr struct {
+	st       *sessionTable
 	srvfcall Fsrvfcall
 	done     bool
 }
 
-func NewSessionMgr(st *SessionTable, pfn Fsrvfcall) *SessionMgr {
-	sm := &SessionMgr{}
+func newSessionMgr(st *sessionTable, pfn Fsrvfcall) *sessionMgr {
+	sm := &sessionMgr{}
 	sm.st = st
 	sm.srvfcall = pfn
 	go sm.runDetaches()
@@ -25,7 +25,7 @@ func NewSessionMgr(st *SessionTable, pfn Fsrvfcall) *SessionMgr {
 }
 
 // Force a client on the last session to detach for testing purposes
-func (sm *SessionMgr) DisconnectClient() {
+func (sm *sessionMgr) DisconnectClient() {
 	c, sess := sm.st.lastClnt()
 	if c != sp.NoClntId {
 		db.DPrintf(db.CRASH, "DisconnectClient %v %v", c, sess)
@@ -35,7 +35,7 @@ func (sm *SessionMgr) DisconnectClient() {
 }
 
 // Close last the conn associated with last sess for testing purposes
-func (sm *SessionMgr) CloseConn() {
+func (sm *sessionMgr) CloseConn() {
 	sess := sm.st.lastSession()
 	if sess != nil {
 		db.DPrintf(db.CRASH, "%v: CloseConn", sess.Sid)
@@ -44,7 +44,7 @@ func (sm *SessionMgr) CloseConn() {
 }
 
 // Find timed-out sessions.
-func (sm *SessionMgr) getTimedOutSessions() []*Session {
+func (sm *sessionMgr) getTimedOutSessions() []*Session {
 	// Lock the session table.
 	sm.st.mu.RLock()
 	defer sm.st.mu.RUnlock()
@@ -65,7 +65,7 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 }
 
 // Scan for detachable sessions, and request that they be detached.
-func (sm *SessionMgr) runDetaches() {
+func (sm *sessionMgr) runDetaches() {
 	sessTimeoutT := time.NewTicker(sp.Conf.Session.TIMEOUT)
 
 	for !sm.Done() {
@@ -82,14 +82,14 @@ func (sm *SessionMgr) runDetaches() {
 	}
 }
 
-func (sm *SessionMgr) Done() bool {
+func (sm *sessionMgr) Done() bool {
 	sm.st.mu.RLock()
 	defer sm.st.mu.RUnlock()
 
 	return sm.done
 }
 
-func (sm *SessionMgr) Stop() {
+func (sm *sessionMgr) Stop() {
 	sm.st.mu.Lock()
 	defer sm.st.mu.Unlock()
 

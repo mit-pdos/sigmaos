@@ -1,4 +1,4 @@
-package fslibsrv_test
+package sigmapsrv_test
 
 import (
 	"bufio"

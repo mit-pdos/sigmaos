@@ -5,12 +5,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/fslibsrv"
 	"sigmaos/memfs"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmapsrv"
 )
 
 // Make an MemFs and advertise it at pn
@@ -42,7 +42,7 @@ func NewMemFsPortClntFence(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, f
 }
 
 func NewMemFsRootPortClntFence(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
-	srv, mpn, err := fslibsrv.NewSrv(root, pn, addr, sc, fencefs)
+	srv, mpn, err := sigmapsrv.NewSigmaPSrv(root, pn, addr, sc, fencefs)
 	if err != nil {
 		return nil, err
 	}

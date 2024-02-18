@@ -1,12 +1,12 @@
-// Package fslibsrv allows caller to make a server and post their
+// Package sigmapsrv allows caller to make a server and post their
 // existence in the global name space. Servers plug in what a
 // file/directory is by passing in their root directory, which is a
 // concrete instance of the fs.Dir interface; for example, memfsd
 // passes in an in-memory directory, fsux passes in a unix directory
 // etc. This allows servers to implement their notions of
 // directories/files, but they don't have to implement sigmaP, because
-// fslibsrv provides that through sesssrv and protsrv.
-package fslibsrv
+// sigmapsrv provides that through sesssrv and protsrv.
+package sigmapsrv
 
 import (
 	db "sigmaos/debug"
@@ -23,13 +23,13 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 )
 
-type ProtSrv struct {
+type SigmaPSrv struct {
 	*sesssrv.SessSrv
 }
 
-func NewSrv(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*ProtSrv, string, error) {
+func NewSigmaPSrv(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
 	et := ephemeralmap.NewEphemeralMap()
-	psrv := &ProtSrv{}
+	psrv := &SigmaPSrv{}
 	psrv.SessSrv = sesssrv.NewSessSrv(sc.ProcEnv(), root, addr, psrv, et, fencefs)
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
@@ -41,11 +41,11 @@ func NewSrv(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fen
 	return psrv, pn, nil
 }
 
-func (psrv *ProtSrv) NewSession(sessid sessp.Tsession) sps.Protsrv {
+func (psrv *SigmaPSrv) NewSession(sessid sessp.Tsession) sps.Protsrv {
 	return protsrv.NewProtServer(psrv.SessSrv, sessid)
 }
 
-func (psrv *ProtSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
+func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
 	mnt := sp.NewMountServer(psrv.MyAddr())
 	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 	if path.EndSlash(pn) {

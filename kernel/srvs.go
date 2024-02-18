@@ -140,7 +140,7 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 }
 
 func (k *Kernel) bootRealmd() (Subsystem, error) {
-	return k.bootSubsystem("realmd", []string{}, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("realmd", []string{}, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootUxd() (Subsystem, error) {

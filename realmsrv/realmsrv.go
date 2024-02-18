@@ -7,8 +7,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/keyclnt"
+	"sigmaos/keys"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
 	"sigmaos/realmsrv/proto"
@@ -39,24 +44,32 @@ type Realm struct {
 }
 
 type RealmSrv struct {
-	mu         sync.Mutex
-	realms     map[sp.Trealm]*Realm
-	sc         *sigmaclnt.SigmaClntKernel
-	pq         *procqclnt.ProcQClnt
-	sd         *scheddclnt.ScheddClnt
-	lastNDPort int
-	ch         chan struct{}
+	mu              sync.Mutex
+	realms          map[sp.Trealm]*Realm
+	sc              *sigmaclnt.SigmaClntKernel
+	pq              *procqclnt.ProcQClnt
+	sd              *scheddclnt.ScheddClnt
+	kc              *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
+	as              auth.AuthSrv
+	masterPublicKey auth.PublicKey
+	pubkey          auth.PublicKey
+	privkey         auth.PrivateKey
+	lastNDPort      int
+	ch              chan struct{}
 }
 
-func RunRealmSrv() error {
+func RunRealmSrv(masterPublicKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+	pe := proc.GetProcEnv()
 	rs := &RealmSrv{
-		lastNDPort: MIN_PORT,
-		realms:     make(map[sp.Trealm]*Realm),
+		lastNDPort:      MIN_PORT,
+		realms:          make(map[sp.Trealm]*Realm),
+		masterPublicKey: masterPublicKey,
+		pubkey:          pubkey,
+		privkey:         privkey,
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
-	pcfg := proc.GetProcEnv()
-	ssrv, err := sigmasrv.NewSigmaSrv(sp.REALMD, rs, pcfg)
+	ssrv, err := sigmasrv.NewSigmaSrv(sp.REALMD, rs, pe)
 	if err != nil {
 		return err
 	}
@@ -65,9 +78,19 @@ func RunRealmSrv() error {
 		return serr
 	}
 	db.DPrintf(db.REALMD, "newsrv ok")
+	rs.kc = keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](ssrv.MemFs.SigmaClnt())
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
 	rs.pq = procqclnt.NewProcQClnt(rs.sc.FsLib)
 	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib)
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, ssrv.MemFs.SigmaClnt()))
+	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), pubkey)
+	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NeHMACAUthServer %v", err)
+		return err
+	}
+	rs.as = as
 	go rs.enforceResourcePolicy()
 	err = ssrv.RunServer()
 	return nil
@@ -87,6 +110,35 @@ func NewNet(net string) error {
 	return nil
 }
 
+func (rm *RealmSrv) bootstrapNamedKeys(p *proc.Proc) error {
+	pubkey, privkey, err := keys.NewECDSAKey()
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
+		return err
+	}
+	// Post the public key for the subsystem
+	if err := rm.kc.SetKey(sp.Tsigner(p.GetPid()), pubkey); err != nil {
+		db.DPrintf(db.ERROR, "Error post subsystem key: %v", err)
+		return err
+	}
+	p.Args = append(p.Args,
+		[]string{
+			rm.masterPublicKey.Marshal(),
+			pubkey.Marshal(),
+			privkey.Marshal(),
+		}...,
+	)
+	pc := auth.NewProcClaims(p.GetProcEnv())
+	pc.AllowedPaths = sp.ALL_PATHS
+	token, err := rm.as.MintToken(pc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
+		return err
+	}
+	p.SetToken(token)
+	return nil
+}
+
 // XXX clean up if fail during Make
 func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResult) error {
 	rm.mu.Lock()
@@ -101,9 +153,9 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	if err := NewNet(req.Network); err != nil {
 		return err
 	}
-
 	p := proc.NewProc("named", []string{req.Realm, "0"})
 	p.SetMcpu(NAMED_MCPU)
+	rm.bootstrapNamedKeys(p)
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named", req.Realm)
 	if err := rm.sc.Spawn(p); err != nil {
@@ -123,9 +175,16 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make named ready to serve for %v", rid)
-
-	pcfg := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pcfg)
+	pe := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
+	pc := auth.NewProcClaims(pe)
+	pc.AllowedPaths = sp.ALL_PATHS
+	token, err := rm.as.MintToken(pc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
+		return err
+	}
+	pe.SetToken(token)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe)
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error NewSigmaClntRealm: %v", err)
 		return err

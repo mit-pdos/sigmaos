@@ -1,6 +1,7 @@
 package test
 
 import (
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -37,9 +38,17 @@ func newRealmTstateClnt(ts *Tstate, realm sp.Trealm, newrealm bool) (*RealmTstat
 		}
 		db.DPrintf(db.TEST, "Done making realm %v", realm)
 	}
-	pcfg := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
-	db.DPrintf(db.TEST, "ProcEnv for new realm %v", pcfg)
-	if sc, err := sigmaclnt.NewSigmaClntRootInit(pcfg); err != nil {
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
+	pc := auth.NewProcClaims(pe)
+	pc.AllowedPaths = sp.ALL_PATHS
+	token, err := ts.MintToken(pc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
+		return nil, err
+	}
+	pe.SetToken(token)
+	db.DPrintf(db.TEST, "ProcEnv for new realm %v", pe)
+	if sc, err := sigmaclnt.NewSigmaClntRootInit(pe); err != nil {
 		db.DPrintf(db.ERROR, "Error NewRealmTstate NewSigmaClnt: %v", err)
 		return nil, err
 	} else {

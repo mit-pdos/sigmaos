@@ -205,7 +205,7 @@ func (nd *Named) detach(cid sp.TclntId) {
 }
 
 func (nd *Named) resign() error {
-	if err := nd.SessSrv.StopServing(); err != nil {
+	if err := nd.SigmaPSrv.StopServing(); err != nil {
 		return err
 	}
 	return nd.elect.Resign()

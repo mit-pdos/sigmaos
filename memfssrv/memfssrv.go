@@ -40,7 +40,7 @@ func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, f
 	mfs := &MemFs{
 		SigmaPSrv: srv,
 		ctx:       ctx.NewCtx(sc.ProcEnv().GetUname(), 0, sp.NoClntId, nil, fencefs),
-		plt:       srv.GetPathLockTable(),
+		plt:       srv.PathLockTable(),
 		sc:        sc,
 		pn:        pn,
 	}
@@ -52,7 +52,7 @@ func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 }
 
 func (mfs *MemFs) MyAddrsPublic(net string) sp.Taddrs {
-	return port.NewPublicAddrs(mfs.pi.HostIP, mfs.pi.PBinding, net, mfs.MyAddr())
+	return port.NewPublicAddrs(mfs.pi.HostIP, mfs.pi.PBinding, net, mfs.SigmaPSrv.MyAddr())
 }
 
 // Note: NewDev() sets parent

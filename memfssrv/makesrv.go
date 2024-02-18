@@ -42,7 +42,7 @@ func NewMemFsPortClntFence(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, f
 }
 
 func NewMemFsRootPortClntFence(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
-	srv, mpn, err := sigmapsrv.NewSigmaPSrv(root, pn, addr, sc, fencefs)
+	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, pn, addr, sc, fencefs)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func NewMemFsPublic(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
 	}
 	mfs.pc = pc
 
-	if err = pc.AdvertisePort(pn, pi, pcfg.GetNet(), mfs.MyAddr()); err != nil {
+	if err = pc.AdvertisePort(pn, pi, pcfg.GetNet(), mfs.SigmaPSrv.MyAddr()); err != nil {
 		return nil, err
 	}
 	return mfs, err

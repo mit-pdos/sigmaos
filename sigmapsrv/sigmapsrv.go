@@ -9,11 +9,14 @@
 package sigmapsrv
 
 import (
+	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/ephemeralmap"
+	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
+	"sigmaos/overlaydir"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -21,16 +24,34 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
+	"sigmaos/stats"
 )
 
 type SigmaPSrv struct {
+	*protsrv.ProtSrvState
 	*sesssrv.SessSrv
+	dirunder fs.Dir
+	dirover  *overlay.DirOverlay
+	fencefs  fs.Dir
+	stats    *stats.StatInfo
 }
 
-func NewSigmaPSrv(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
-	et := ephemeralmap.NewEphemeralMap()
-	psrv := &SigmaPSrv{}
-	psrv.SessSrv = sesssrv.NewSessSrv(sc.ProcEnv(), root, addr, psrv, et, fencefs)
+func NewSigmaPSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
+	psrv := &SigmaPSrv{
+		dirunder: root,
+		dirover:  overlay.MkDirOverlay(root),
+		fencefs:  fencefs,
+	}
+	psrv.stats = stats.NewStatsDev(psrv.dirover)
+	psrv.ProtSrvState = protsrv.NewProtSrvState(psrv.stats)
+	psrv.VersionTable().Insert(psrv.dirover.Path())
+	psrv.dirover.Mount(sp.STATSD, psrv.stats)
+	psrv.SessSrv = sesssrv.NewSessSrv(pe, addr, psrv.stats, psrv)
+	return psrv
+}
+
+func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
+	psrv := NewSigmaPSrv(sc.ProcEnv(), root, addr, fencefs)
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
 			return nil, "", err
@@ -42,7 +63,27 @@ func NewSigmaPSrv(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaCln
 }
 
 func (psrv *SigmaPSrv) NewSession(sessid sessp.Tsession) sps.Protsrv {
-	return protsrv.NewProtServer(psrv.SessSrv, sessid)
+	return protsrv.NewProtServer(psrv.ProtSrvState, sessid, psrv.GetRootCtx)
+}
+
+func (psrv *SigmaPSrv) Root(path path.Path) (fs.Dir, path.Path) {
+	d := psrv.dirunder
+	if len(path) > 0 {
+		o, err := psrv.dirover.Lookup(ctx.NewCtxNull(), path[0])
+		if err == nil {
+			return o.(fs.Dir), path[1:]
+		}
+	}
+	return d, path
+}
+
+func (psrv *SigmaPSrv) Mount(name string, dir *dir.DirImpl) {
+	dir.SetParent(psrv.dirover)
+	psrv.dirover.Mount(name, dir)
+}
+
+func (psrv *SigmaPSrv) GetRootCtx(uname sp.Tuname, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
+	return psrv.dirover, ctx.NewCtx(uname, sessid, clntid, psrv.CondTable(), psrv.fencefs)
 }
 
 func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {

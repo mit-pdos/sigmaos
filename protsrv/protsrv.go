@@ -1,9 +1,7 @@
 package protsrv
 
 import (
-	"sigmaos/clntcond"
 	db "sigmaos/debug"
-	"sigmaos/ephemeralmap"
 	"sigmaos/fid"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
@@ -14,41 +12,25 @@ import (
 	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
-	"sigmaos/stats"
-	"sigmaos/version"
-	"sigmaos/watch"
 )
 
-//
-// There is one protsrv per session, but they share the watch table,
-// version table, and stats across sessions.  Each session has its own
-// fid table, ephemeral table, and lease table.
-//
+type GetRootCtxF func(sp.Tuname, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI)
 
+// Each session has its own protsrv, but they share ProtSrvState
 type ProtSrv struct {
-	ssrv  *sesssrv.SessSrv
-	plt   *lockmap.PathLockTable     // shared across sessions
-	wt    *watch.WatchTable          // shared across sessions
-	vt    *version.VersionTable      // shared across sessions
-	stats *stats.StatInfo            // shared across sessions
-	et    *ephemeralmap.EphemeralMap // shared across sessions
-	sct   *clntcond.ClntCondTable    // shared across sessions
-	ft    *fidTable
-	sid   sessp.Tsession
+	*ProtSrvState
+	ssrv       *sesssrv.SessSrv
+	ft         *fidTable
+	sid        sessp.Tsession
+	getRootCtx GetRootCtxF
 }
 
-func NewProtServer(srv *sesssrv.SessSrv, sid sessp.Tsession) sps.Protsrv {
+func NewProtServer(pss *ProtSrvState, sid sessp.Tsession, grf GetRootCtxF) sps.Protsrv {
 	ps := &ProtSrv{}
-	ps.ssrv = srv
-
+	ps.ProtSrvState = pss
 	ps.ft = newFidTable()
-	ps.et = srv.GetEphemeralMap()
-	ps.plt = srv.GetPathLockTable()
-	ps.wt = srv.GetWatchTable()
-	ps.vt = srv.GetVersionTable()
-	ps.sct = srv.GetSessionCondTable()
-	ps.stats = srv.GetStats()
 	ps.sid = sid
+	ps.getRootCtx = grf
 	db.DPrintf(db.PROTSRV, "NewProtSrv -> %v", ps)
 	return ps
 }
@@ -70,7 +52,7 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
 	db.DPrintf(db.PROTSRV, "Attach %v cid %v sid %v", args, args.TclntId(), ps.sid)
 	p := path.Split(args.Aname)
-	root, ctx := ps.ssrv.GetRootCtx(args.Tuname(), args.Aname, ps.sid, args.TclntId())
+	root, ctx := ps.getRootCtx(args.Tuname(), args.Aname, ps.sid, args.TclntId())
 	tree := root.(fs.FsObj)
 	qid := ps.newQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {
@@ -103,7 +85,7 @@ func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
 	}
 	// Several threads maybe waiting in a clntcond of this
 	// clnt. DeleteClnt will unblock them so that they can bail out.
-	ps.sct.DeleteClnt(args.TclntId())
+	ps.cct.DeleteClnt(args.TclntId())
 	return nil
 }
 

@@ -14,18 +14,15 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/dir"
-	"sigmaos/ephemeralmap"
 	"sigmaos/memfs"
 	"sigmaos/netsrv"
 	"sigmaos/path"
-	"sigmaos/protsrv"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
 	"sigmaos/sessp"
-	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
+	"sigmaos/sigmapsrv"
 	"sigmaos/spcodec"
 	"sigmaos/test"
 )
@@ -166,83 +163,6 @@ func TestManyClientsCrash(t *testing.T) {
 	}
 }
 
-type TstateSp struct {
-	*test.TstateMin
-	srv  *sesssrv.SessSrv
-	clnt *sessclnt.Mgr
-}
-
-func newTstateSp(t *testing.T) *TstateSp {
-	ts := &TstateSp{}
-	ts.TstateMin = test.NewTstateMin(t)
-	et := ephemeralmap.NewEphemeralMap()
-	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sesssrv.NewSessSrv(ts.Pcfg, root, ts.Addr, ts, et, nil)
-	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
-	return ts
-}
-
-func (ts *TstateSp) NewSession(sid sessp.Tsession) sps.Protsrv {
-	return protsrv.NewProtServer(ts.srv, sid)
-}
-
-func (ts *TstateSp) shutdown() {
-	scs := ts.clnt.SessClnts()
-	for _, sc := range scs {
-		err := sc.Close()
-		assert.Nil(ts.T, err)
-	}
-}
-
-func TestConnectMfsSrv(t *testing.T) {
-	ts := newTstateSp(t)
-	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
-	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
-	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "fcall %v\n", rep)
-
-	req1 := sp.NewTwriteread(sp.NoFid)
-	iov := sessp.NewIoVec([][]byte{make([]byte, 10)})
-	rep, err = ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req1, iov)
-	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "fcall %v\n", rep)
-
-	ts.srv.StopServing()
-}
-
-func TestDisconnectMfsSrv(t *testing.T) {
-	ts := newTstateSp(t)
-	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
-	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
-	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "fcall %v\n", rep)
-
-	sess, err := ts.clnt.LookupSessClnt(sp.Taddrs{ts.srv.MyAddr()})
-	assert.Nil(t, err)
-	assert.True(t, sess.IsConnected())
-
-	ssess, ok := ts.srv.GetSessionTable().Lookup(sess.SessId())
-	assert.True(t, ok)
-	assert.True(t, ssess.IsConnected())
-
-	// check if session isn't timed out
-	time.Sleep(3 * sp.Conf.Session.TIMEOUT)
-
-	assert.True(t, sess.IsConnected())
-
-	// client disconnects session
-	ts.shutdown()
-
-	assert.False(t, sess.IsConnected())
-
-	// allow server session to timeout
-	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
-
-	assert.False(t, sess.IsConnected())
-
-	ts.srv.StopServing()
-}
-
 const (
 	BUFSZ = 64 * sp.KBYTE
 	TOTAL = 1000 * sp.MBYTE
@@ -357,4 +277,76 @@ func TestPerfSessSrvSync(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
+}
+
+type TstateSp struct {
+	*test.TstateMin
+	srv  *sigmapsrv.SigmaPSrv
+	clnt *sessclnt.Mgr
+}
+
+func newTstateSp(t *testing.T) *TstateSp {
+	ts := &TstateSp{}
+	ts.TstateMin = test.NewTstateMin(t)
+	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.Pcfg, root, ts.Addr, nil)
+	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
+	return ts
+}
+
+func (ts *TstateSp) shutdown() {
+	scs := ts.clnt.SessClnts()
+	for _, sc := range scs {
+		err := sc.Close()
+		assert.Nil(ts.T, err)
+	}
+}
+
+func TestConnectSigmaPSrv(t *testing.T) {
+	ts := newTstateSp(t)
+	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
+	req1 := sp.NewTwriteread(sp.NoFid)
+	iov := sessp.NewIoVec([][]byte{make([]byte, 10)})
+	rep, err = ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req1, iov)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
+	ts.srv.StopServing()
+}
+
+func TestDisconnectSigmaPSrv(t *testing.T) {
+	ts := newTstateSp(t)
+	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
+	sess, err := ts.clnt.LookupSessClnt(sp.Taddrs{ts.srv.MyAddr()})
+	assert.Nil(t, err)
+	assert.True(t, sess.IsConnected())
+
+	ssess, ok := ts.srv.GetSessionTable().Lookup(sess.SessId())
+	assert.True(t, ok)
+	assert.True(t, ssess.IsConnected())
+
+	// check if session isn't timed out
+	time.Sleep(3 * sp.Conf.Session.TIMEOUT)
+
+	assert.True(t, sess.IsConnected())
+
+	// client disconnects session
+	ts.shutdown()
+
+	assert.False(t, sess.IsConnected())
+
+	// allow server session to timeout
+	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
+
+	assert.False(t, sess.IsConnected())
+
+	ts.srv.StopServing()
 }

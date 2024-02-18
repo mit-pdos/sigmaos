@@ -36,7 +36,7 @@ func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence
 
 	db.DPrintf(db.SIGMASRV, "Read stats: %v\n", std.si)
 	st := &rpc.SigmaRPCStats{}
-	st.SigmapStat = std.mfs.GetStats().StatsCopy()
+	st.SigmapStat = std.mfs.Stats().StatsCopy()
 	st.RpcStat = std.si.Stats()
 	b, err := json.Marshal(st)
 	if err != nil {

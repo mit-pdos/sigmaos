@@ -35,7 +35,7 @@ func newLeaseSrv(mfs *memfssrv.MemFs) *LeaseSrv {
 	ls := &LeaseSrv{
 		mfs:     mfs,
 		lt:      syncmap.NewSyncMap[sp.TleaseId, *leaseInfo](),
-		et:      mfs.GetEphemeralMap(),
+		et:      mfs.EphemeralMap(),
 		nextLid: 1,
 		ch:      make(chan struct{}),
 	}

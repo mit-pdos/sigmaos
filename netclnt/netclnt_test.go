@@ -121,8 +121,10 @@ func TestNetClntPerf(t *testing.T) {
 	t0 := time.Now()
 	n := TOTAL / BUFSZ
 	for i := 0; i < n; i++ {
-		_, err := ts.dmx.SendReceive(c)
+		d, err := ts.dmx.SendReceive(c)
 		assert.Nil(t, err)
+		call := d.(*call)
+		assert.True(t, len(call.buf) == BUFSZ)
 	}
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
@@ -183,8 +185,9 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 		assert.Nil(t, err)
 		assert.Equal(t, BUFSZ, n)
 		rb := make([]byte, BUFSZ)
-		_, err = io.ReadFull(conn, rb)
+		m, err := io.ReadFull(conn, rb)
 		assert.Nil(t, err)
+		assert.True(t, m == BUFSZ)
 	}
 
 	conn.Close()

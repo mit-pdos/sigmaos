@@ -19,22 +19,25 @@ type netConn struct {
 	conn   net.Conn
 	ssrv   *SessSrv
 	sessid sessp.Tsession
+	sess   *Session
 }
 
-// If no sid associated with nc, then associated sid with nc.
-func (nc *netConn) CondSet(sid sessp.Tsession) sessp.Tsession {
+func (nc *netConn) getSess(sid sessp.Tsession) *Session {
 	nc.Lock()
 	defer nc.Unlock()
 	if nc.sessid == sessp.NoSession {
 		nc.sessid = sid
 	}
-	return nc.sessid
+	if nc.sessid != sid {
+		db.DFatalf("Bad sid %v sess associated with conn %v\n", nc.sessid, nc)
+	}
+	return nc.sess
 }
 
-func (nc *netConn) GetSessId() sessp.Tsession {
+func (nc *netConn) setSess(sess *Session) {
 	nc.Lock()
 	defer nc.Unlock()
-	return nc.sessid
+	nc.sess = sess
 }
 
 func (nc *netConn) Close() error {
@@ -71,12 +74,18 @@ func (nc *netConn) ReportError(err error) {
 	if sid == sessp.NoSession {
 		return
 	}
-	sess := nc.ssrv.st.Alloc(sid)
-	sess.UnsetConn(nc)
+	nc.sess.UnsetConn(nc)
 }
 
-func (nc *netConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
-	rep := nc.ssrv.srvFcall(nc, fc.(*sessp.FcallMsg))
+func (nc *netConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
+	fc := c.(*sessp.FcallMsg)
+	s := sessp.Tsession(fc.Fc.Session)
+	sess := nc.getSess(s)
+	if sess == nil {
+		sess = nc.ssrv.st.Alloc(s, nc)
+		nc.setSess(sess)
+	}
+	rep := nc.ssrv.serve(nc.sess, fc)
 	pmfc := spcodec.NewPartMarshaledMsg(rep)
 	return pmfc, nil
 }

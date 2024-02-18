@@ -7,8 +7,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Fsrvfcall func(*sessp.FcallMsg) *sessp.FcallMsg
-
 type Protsrv interface {
 	Version(*sp.Tversion, *sp.Rversion) *sp.Rerror
 	Auth(*sp.Tauth, *sp.Rauth) *sp.Rerror

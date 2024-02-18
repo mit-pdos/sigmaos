@@ -74,7 +74,7 @@ func NewSessSrv(pe *proc.ProcEnv, root fs.Dir, addr *sp.Taddr, newSess NewSessio
 	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
 
 	ssrv.srv = netsrv.NewNetServer(pe, addr, ssrv)
-	ssrv.sm = NewSessionMgr(ssrv.st, ssrv.SrvFcall)
+	ssrv.sm = NewSessionMgr(ssrv.st, ssrv.srvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv
 }
@@ -167,19 +167,7 @@ func (ssrv *SessSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
 }
 
 // Serve server-generated fcalls.
-func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
-	s := sessp.Tsession(fc.Fc.Session)
-	sess := ssrv.st.Alloc(s)
-	return ssrv.serve(sess, fc)
-}
-
-func (ssrv *SessSrv) srvFcall(nc *netConn, fc *sessp.FcallMsg) *sessp.FcallMsg {
-	s := sessp.Tsession(fc.Fc.Session)
-	if nc.CondSet(s) != s {
-		db.DFatalf("Bad sid %v sess associated with conn %v\n", nc.sessid, nc)
-	}
-	sess := ssrv.st.Alloc(s)
-	sess.SetConn(nc)
+func (ssrv *SessSrv) srvFcall(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	return ssrv.serve(sess, fc)
 }
 
@@ -208,7 +196,7 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 		ssrv.st.DelLastClnt(clntid)
 	case sps.TSESS_ADD:
 		sess.AddClnt(clntid)
-		ssrv.st.AddLastClnt(clntid, sess.Sid)
+		ssrv.st.AddLastClnt(clntid, sess)
 	case sps.TSESS_NONE:
 	}
 

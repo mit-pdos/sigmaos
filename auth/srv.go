@@ -94,9 +94,13 @@ func (as *AuthSrvImpl[M]) MintToken(pc *ProcClaims) (*sp.Ttoken, error) {
 }
 
 func (as *AuthSrvImpl[M]) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error) {
+	if t.GetSignedToken() == sp.NO_SIGNED_TOKEN {
+		db.DPrintf(db.ERROR, "Tried to veryify token when no signed token provided")
+		return nil, fmt.Errorf("No signed token provided")
+	}
 	// Parse the jwt, passing in a function to look up the key.
 	//
-	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-Parse-Hmac
+	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt
 	token, err := jwt.ParseWithClaims(t.GetSignedToken(), &ProcClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// Validate the alg is expected
 		if _, ok := token.Method.(M); !ok {
@@ -110,7 +114,7 @@ func (as *AuthSrvImpl[M]) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error
 		return pubkey.KeyI(), nil
 	})
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error parsing jwt: %v", err)
+		db.DPrintf(db.ERROR, "Error parsing jwt: jwt %v err %v", t.GetSignedToken(), err)
 		return nil, err
 	}
 	if !token.Valid {

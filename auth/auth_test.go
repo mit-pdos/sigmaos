@@ -219,11 +219,8 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	))
 	// Clear AWS secrets
 	pe.SetSecrets(map[string]*proc.ProcSecretProto{})
-	pc := auth.NewProcClaims(pe)
-	token, err := rootts.MintToken(pc)
+	err = rootts.MintAndSetToken(pe)
 	assert.Nil(t, err)
-	// Set the token of the proc env to the newly authorized token
-	pe.SetToken(token)
 
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "Err NewClnt: %v", err)
@@ -237,7 +234,7 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
 	sts, err = sc1.GetDir(path.Join(sp.S3, "~local", "9ps3"))
-	assert.NotNil(t, err, "Successfully got dir. \n\tPE: %v\n\tPC: %v", sc1.ProcEnv(), pc)
+	assert.NotNil(t, err, "Successfully got dir. \n\tPE: %v", sc1.ProcEnv())
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
 	sts, err = rootts.GetDir(path.Join(sp.S3, "~local", "9ps3"))

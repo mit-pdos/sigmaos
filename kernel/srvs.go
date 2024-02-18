@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path"
 
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -121,14 +120,11 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 	if err != nil {
 		return err
 	}
-	pc := auth.NewProcClaims(p.GetProcEnv())
-	pc.AllowedPaths = sp.ALL_PATHS
-	token, err := k.as.MintToken(pc)
-	if err != nil {
+	p.SetAllowedPaths(sp.ALL_PATHS)
+	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
-	p.SetToken(token)
 	p.SetKernelID(k.Param.KernelID, false)
 	cmd, err := runKNamed(pcfg, p, sp.ROOTREALM, init)
 	if err != nil {
@@ -191,14 +187,11 @@ func (k *Kernel) bootNamed() (Subsystem, error) {
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	pid := sp.GenPid("sigmaclntd")
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
-	pc := auth.NewProcClaims(p.GetProcEnv())
-	pc.AllowedPaths = sp.ALL_PATHS
-	token, err := k.as.MintToken(pc)
-	if err != nil {
+	p.SetAllowedPaths(sp.ALL_PATHS)
+	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}
-	p.SetToken(token)
 	p.SetHow(proc.HLINUX)
 	p.InheritParentProcEnv(k.ProcEnv())
 	return sigmaclntsrv.ExecSigmaClntSrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"))

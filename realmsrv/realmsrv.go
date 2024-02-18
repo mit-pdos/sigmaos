@@ -128,14 +128,11 @@ func (rm *RealmSrv) bootstrapNamedKeys(p *proc.Proc) error {
 			privkey.Marshal(),
 		}...,
 	)
-	pc := auth.NewProcClaims(p.GetProcEnv())
-	pc.AllowedPaths = sp.ALL_PATHS
-	token, err := rm.as.MintToken(pc)
-	if err != nil {
+	p.SetAllowedPaths(sp.ALL_PATHS)
+	if err := rm.as.MintAndSetToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
-	p.SetToken(token)
 	return nil
 }
 
@@ -176,14 +173,11 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make named ready to serve for %v", rid)
 	pe := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
-	pc := auth.NewProcClaims(pe)
-	pc.AllowedPaths = sp.ALL_PATHS
-	token, err := rm.as.MintToken(pc)
-	if err != nil {
+	pe.SetAllowedPaths(sp.ALL_PATHS)
+	if err := rm.as.MintAndSetToken(pe); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
-	pe.SetToken(token)
 	sc, err := sigmaclnt.NewSigmaClntFsLib(pe)
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error NewSigmaClntRealm: %v", err)

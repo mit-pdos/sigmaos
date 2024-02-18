@@ -80,13 +80,10 @@ func newTstate(t *testing.T) (*Tstate, error) {
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.LOCALHOST, sp.LOCALHOST, sp.LOCALHOST, "", false, false)
 	pe.Program = "srv"
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	pc := auth.NewProcClaims(pe)
-	token, err1 := as.NewToken(pc)
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err1)
-		return nil, err1
+	if err := as.MintAndSetToken(pe); err != nil {
+		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
+		return nil, err
 	}
-	pe.SetToken(token)
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	return &Tstate{

@@ -5,7 +5,6 @@ import (
 	"os/exec"
 	"syscall"
 
-	"sigmaos/auth"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/keys"
@@ -87,14 +86,11 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	p := proc.NewPrivProcPid(pid, program, args, true)
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
-	pc := auth.NewProcClaims(p.GetProcEnv())
-	pc.AllowedPaths = sp.ALL_PATHS
-	token, err := k.as.MintToken(pc)
-	if err != nil {
+	p.SetAllowedPaths(sp.ALL_PATHS)
+	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}
-	p.SetToken(token)
 	p.SetMcpu(mcpu)
 	ss := newSubsystem(k.ProcClnt, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelID, k.ip)

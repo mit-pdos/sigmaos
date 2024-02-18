@@ -79,6 +79,17 @@ func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	return nil
 }
 
+func (as *AuthSrvImpl[M]) MintAndSetToken(pe *proc.ProcEnv) error {
+	pc := NewProcClaims(pe)
+	token, err := as.MintToken(pc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
+		return err
+	}
+	pe.SetToken(token)
+	return nil
+}
+
 func (as *AuthSrvImpl[M]) MintToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	privkey, err := as.GetPrivateKey(as.signer)
 	if err != nil {

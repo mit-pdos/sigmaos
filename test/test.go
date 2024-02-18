@@ -187,13 +187,11 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
 		return nil, err1
 	}
-	pc := auth.NewProcClaims(pe)
-	token, err1 := as.MintToken(pc)
+	err1 = as.MintAndSetToken(pe)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err1)
 		return nil, err1
 	}
-	pe.SetToken(token)
 	var kernelid string
 	var k *bootkernelclnt.Kernel
 	if Start {
@@ -265,6 +263,10 @@ func (ts *Tstate) BootFss3d() error {
 	// node
 	savedTstate = nil
 	return ts.Boot(sp.S3REL)
+}
+
+func (ts *Tstate) MintAndSetToken(pe *proc.ProcEnv) error {
+	return ts.as.MintAndSetToken(pe)
 }
 
 func (ts *Tstate) MintToken(pc *auth.ProcClaims) (*sp.Ttoken, error) {

@@ -37,6 +37,7 @@ func (ss *SessSrv) ReportError(err error) {
 }
 
 func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
+	// db.DPrintf(db.TEST, "serve %v\n", req)
 	fcm := req.(*sessp.FcallMsg)
 	qid := sp.NewQidPerm(0777, 0, 0)
 	var rep *sessp.FcallMsg
@@ -49,7 +50,10 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	case sessp.TTwrite:
 		msg := &sp.Rwrite{Count: uint32(len(fcm.Iov[0]))}
 		rep = sessp.NewFcallMsgReply(fcm, msg)
-		return rep, nil
+	case sessp.TTwriteread:
+		msg := &sp.Rread{}
+		rep = sessp.NewFcallMsgReply(fcm, msg)
+		rep.Iov = sessp.IoVec{fcm.Iov[0]}
 	default:
 		msg := &sp.Rattach{Qid: qid}
 		rep = sessp.NewFcallMsgReply(fcm, msg)
@@ -164,8 +168,8 @@ func TestManyClientsCrash(t *testing.T) {
 }
 
 const (
-	BUFSZ = 64 * sp.KBYTE
-	TOTAL = 1000 * sp.MBYTE
+	BUFSZ = 100      // 64 * sp.KBYTE
+	TOTAL = sp.MBYTE // 1000 * sp.MBYTE
 )
 
 type Awriter struct {
@@ -265,16 +269,17 @@ func TestPerfSessSrvSync(t *testing.T) {
 
 	t0 := time.Now()
 
+	n := TOTAL / BUFSZ
 	for i := 0; i < TOTAL/BUFSZ; i++ {
-		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
-		iov := sessp.IoVec{buf}
-		_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, iov)
+		req := sp.NewTwriteread(sp.NoFid)
+		rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, sessp.IoVec{buf})
 		assert.Nil(t, err)
+		assert.True(t, BUFSZ == len(rep.Iov[0]))
 	}
 
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
 }

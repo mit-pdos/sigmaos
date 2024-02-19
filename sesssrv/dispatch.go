@@ -17,7 +17,7 @@ const (
 	TSESS_DEL
 )
 
-func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, *sp.Rerror, Tsessop, sp.TclntId) {
+func (s *Session) Dispatch(msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, sessp.IoVec, *sp.Rerror, Tsessop, sp.TclntId) {
 	if s.IsClosed() {
 		db.DPrintf(db.SESS_STATE_SRV, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
 		err := serr.NewErr(serr.TErrClosed, fmt.Sprintf("session %v", s.Sid))
@@ -59,10 +59,10 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, *sp
 	case *sp.TreadF:
 		reply := &sp.Rread{}
 		data, err := s.protsrv.ReadF(req, reply)
-		return reply, data, err, TSESS_NONE, sp.NoClntId
+		return reply, sessp.IoVec{data}, err, TSESS_NONE, sp.NoClntId
 	case *sp.TwriteF:
 		reply := &sp.Rwrite{}
-		err := s.protsrv.WriteF(req, data, reply)
+		err := s.protsrv.WriteF(req, iov[0], reply)
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Tclunk:
 		reply := &sp.Rclunk{}
@@ -91,10 +91,10 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, *sp
 	case *sp.Tgetfile:
 		reply := &sp.Rread{}
 		data, err := s.protsrv.GetFile(req, reply)
-		return reply, data, err, TSESS_NONE, sp.NoClntId
+		return reply, sessp.IoVec{data}, err, TSESS_NONE, sp.NoClntId
 	case *sp.Tputfile:
 		reply := &sp.Rwrite{}
-		err := s.protsrv.PutFile(req, data, reply)
+		err := s.protsrv.PutFile(req, iov[0], reply)
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Tdetach:
 		reply := &sp.Rdetach{}
@@ -106,8 +106,8 @@ func (s *Session) Dispatch(msg sessp.Tmsg, data []byte) (sessp.Tmsg, []byte, *sp
 		return reply, nil, nil, TSESS_NONE, sp.NoClntId
 	case *sp.Twriteread:
 		reply := &sp.Rread{}
-		data, err := s.protsrv.WriteRead(req, data, reply)
-		return reply, data, err, TSESS_NONE, sp.NoClntId
+		iov, err := s.protsrv.WriteRead(req, iov, reply)
+		return reply, iov, err, TSESS_NONE, sp.NoClntId
 	default:
 		db.DPrintf(db.ALWAYS, "Unexpected type: %v", msg)
 		return nil, nil, sp.NewRerrorSerr(serr.NewErr(serr.TErrUnknownMsg, msg)), TSESS_NONE, sp.NoClntId

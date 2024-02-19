@@ -16,6 +16,7 @@ import (
 	"sigmaos/protclnt"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
+	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
@@ -299,12 +300,12 @@ func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfen
 	return reply.Tcount(), nil
 }
 
-func (fidc *FidClnt) WriteRead(fid sp.Tfid, data []byte) ([]byte, *serr.Err) {
+func (fidc *FidClnt) WriteRead(fid sp.Tfid, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, "WriteRead")
 	}
-	data, err := fidc.fids.lookup(fid).pc.WriteRead(fid, data)
+	data, err := fidc.fids.lookup(fid).pc.WriteRead(fid, iov)
 	if err != nil {
 		return nil, err
 	}

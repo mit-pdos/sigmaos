@@ -72,6 +72,23 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 	return Mbyte(sz) / t
 }
 
+type TstateMin struct {
+	T    *testing.T
+	lip  sp.Tip
+	Pcfg *proc.ProcEnv
+	Addr *sp.Taddr
+}
+
+func NewTstateMin(t *testing.T) *TstateMin {
+	lip := sp.Tip("127.0.0.1")
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, lip, lip, lip, "", false, false)
+	pcfg.Program = "srv"
+	pcfg.SetUname("srv")
+	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
+	proc.SetSigmaDebugPid(pcfg.GetPID().String())
+	return &TstateMin{T: t, lip: lip, Pcfg: pcfg, Addr: addr}
+}
+
 type Tstate struct {
 	srvs string
 	*sigmaclnt.SigmaClnt

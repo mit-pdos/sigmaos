@@ -174,7 +174,9 @@ func (ssrv *SessSrv) ReportError(conn sps.Conn, err error) {
 
 // Calls from netsrv
 func (ss *SessSrv) ServeRequest(conn sps.Conn, fc demux.CallI) (demux.CallI, *serr.Err) {
-	return ss.srvFcall(conn, fc.(*sessp.FcallMsg)), nil
+	rep := ss.srvFcall(conn, fc.(*sessp.FcallMsg))
+	pmfc := spcodec.NewPartMarshaledMsg(rep)
+	return pmfc, nil
 }
 
 // Serve server-generated fcalls.
@@ -202,7 +204,7 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
 
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
-	msg, data, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Data)
+	msg, iov, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Iov)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
 
 	if rerror != nil {
@@ -211,7 +213,7 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	}
 
 	reply := sessp.NewFcallMsgReply(fc, msg)
-	reply.Data = data
+	reply.Iov = iov
 
 	switch op {
 	case TSESS_DEL:

@@ -35,24 +35,18 @@ func (npd *Npd) newProtServer(sesssrv sps.SessServer, sid sessp.Tsession) sps.Pr
 
 func (npd *Npd) serve(sess *sesssrv.Session, fm *sessp.FcallMsg) *sessp.FcallMsg {
 	db.DPrintf(db.PROXY, "serve %v\n", fm)
-	msg, data, rerror, _, _ := sess.Dispatch(fm.Msg, fm.Data)
+	msg, iov, rerror, _, _ := sess.Dispatch(fm.Msg, fm.Iov)
 	if rerror != nil {
 		msg = rerror
 	}
 	reply := sessp.NewFcallMsg(msg, nil, sessp.Tsession(fm.Fc.Session), nil)
-	reply.Data = data
+	reply.Iov = iov
 	reply.Fc.Seqno = fm.Fc.Seqno
 	return reply
 }
 
 func (npd *Npd) ReportError(conn sps.Conn, err error) {
 	db.DPrintf(db.PROXY, "ReportError %v err %v\n", conn, err)
-	// If this connection hasn't been associated with a session yet, return.
-	//if sid == sessp.NoSession {
-	//	return
-	//}
-	//sess := npd.st.Alloc(sid)
-	//sess.UnsetConn(conn)
 }
 
 func (npd *Npd) ServeRequest(conn sps.Conn, fc demux.CallI) (demux.CallI, *serr.Err) {
@@ -292,6 +286,6 @@ func (npc *NpConn) PutFile(args *sp.Tputfile, d []byte, rets *sp.Rwrite) *sp.Rer
 	return nil
 }
 
-func (npc *NpConn) WriteRead(args *sp.Twriteread, d []byte, rets *sp.Rread) ([]byte, *sp.Rerror) {
+func (npc *NpConn) WriteRead(args *sp.Twriteread, iov sessp.IoVec, rets *sp.Rread) (sessp.IoVec, *sp.Rerror) {
 	return nil, nil
 }

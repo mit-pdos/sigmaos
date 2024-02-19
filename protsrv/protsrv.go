@@ -323,18 +323,18 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	return data, nil
 }
 
-func (ps *ProtSrv) WriteRead(args *sp.Twriteread, data []byte, rets *sp.Rread) ([]byte, *sp.Rerror) {
+func (ps *ProtSrv) WriteRead(args *sp.Twriteread, iov sessp.IoVec, rets *sp.Rread) (sessp.IoVec, *sp.Rerror) {
 	f, err := ps.ft.Lookup(sp.Tfid(args.Fid))
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: WriteRead %v args {%v} path %d\n", f.Pobj().Ctx().ClntId(), f.Pobj().Path(), args, f.Pobj().Obj().Path())
-	retdata, err := f.WriteRead(data)
+	retiov, err := f.WriteRead(iov)
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
-	return retdata, nil
+	return retiov, nil
 }
 
 func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Rerror {

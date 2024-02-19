@@ -24,8 +24,8 @@ func (pclnt *ProtClnt) Servers() sp.Taddrs {
 	return pclnt.addrs
 }
 
-func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
-	reply, err := pclnt.sm.RPC(addrs, args, data)
+func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	reply, err := pclnt.sm.RPC(addrs, args, iov)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,11 @@ func (pclnt *ProtClnt) Call(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
 }
 
 func (pclnt *ProtClnt) CallData(args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(pclnt.addrs, args, data)
+	return pclnt.CallServer(pclnt.addrs, args, sessp.IoVec{data})
+}
+
+func (pclnt *ProtClnt) CallIoVec(args sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	return pclnt.CallServer(pclnt.addrs, args, iov)
 }
 
 func (pclnt *ProtClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
@@ -171,7 +175,7 @@ func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, cnt sp.Tsize, f *sp
 	if !ok {
 		return nil, serr.NewErr(serr.TErrBadFcall, "Rread")
 	}
-	return reply.Data, nil
+	return reply.Iov[0], nil
 }
 
 func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
@@ -187,9 +191,9 @@ func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, data []byte) ([]byte, *serr.Err) {
+func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
 	args := sp.NewTwriteread(fid)
-	reply, err := pclnt.CallData(args, data)
+	reply, err := pclnt.CallIoVec(args, iov)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +201,7 @@ func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, data []byte) ([]byte, *serr.Err) {
 	if !ok {
 		return nil, serr.NewErr(serr.TErrBadFcall, "Rwriteread")
 	}
-	return reply.Data, nil
+	return reply.Iov, nil
 }
 
 func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rstat, *serr.Err) {
@@ -262,7 +266,7 @@ func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offse
 	if !ok {
 		return nil, serr.NewErr(serr.TErrBadFcall, "Rgetfile")
 	}
-	return reply.Data, nil
+	return reply.Iov[0], nil
 }
 
 func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sp.Tfence, data []byte, lid sp.TleaseId) (*sp.Rwrite, *serr.Err) {

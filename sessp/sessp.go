@@ -31,14 +31,34 @@ func (s Tsession) String() string {
 	return strconv.FormatUint(uint64(s), 16)
 }
 
+type Tframe []byte
+type IoVec []Tframe
+
+func NewIoVec(fs [][]byte) IoVec {
+	iov := make(IoVec, len(fs))
+	for i := 0; i < len(fs); i++ {
+		iov[i] = fs[i]
+	}
+	return iov
+}
+
+func (iov IoVec) String() string {
+	s := fmt.Sprintf("len %d [", len(iov))
+	for _, f := range iov {
+		s += fmt.Sprintf("%d,", len(f))
+	}
+	s += fmt.Sprintf("]")
+	return s
+}
+
 type Tmsg interface {
 	Type() Tfcall
 }
 
 type FcallMsg struct {
-	Fc   *Fcall
-	Msg  Tmsg
-	Data []byte
+	Fc  *Fcall
+	Msg Tmsg
+	Iov IoVec
 }
 
 func (fcm *FcallMsg) Session() Tsession {
@@ -67,7 +87,7 @@ func NewFcallMsgNull() *FcallMsg {
 	return &FcallMsg{fc, nil, nil}
 }
 
-func NewFcallMsg(msg Tmsg, data []byte, sess Tsession, seqno *Tseqno) *FcallMsg {
+func NewFcallMsg(msg Tmsg, iov IoVec, sess Tsession, seqno *Tseqno) *FcallMsg {
 	fcall := &Fcall{
 		Type:    uint32(msg.Type()),
 		Session: uint64(sess),
@@ -75,7 +95,7 @@ func NewFcallMsg(msg Tmsg, data []byte, sess Tsession, seqno *Tseqno) *FcallMsg 
 	if seqno != nil {
 		fcall.Seqno = uint64(seqno.Next())
 	}
-	return &FcallMsg{fcall, msg, data}
+	return &FcallMsg{fcall, msg, iov}
 }
 
 func NewFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
@@ -85,7 +105,7 @@ func NewFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
 }
 
 func (fm *FcallMsg) String() string {
-	return fmt.Sprintf("{%v seq %v sid %v msg %v}", fm.Msg.Type(), Tseqno(fm.Fc.Seqno), Tsession(fm.Fc.Session), fm.Msg)
+	return fmt.Sprintf("{%v seq %v sid %v msg %v iov %d}", fm.Msg.Type(), Tseqno(fm.Fc.Seqno), Tsession(fm.Fc.Session), fm.Msg, len(fm.Iov))
 }
 
 func (fm *FcallMsg) GetType() Tfcall {
@@ -94,6 +114,17 @@ func (fm *FcallMsg) GetType() Tfcall {
 
 func (fm *FcallMsg) GetMsg() Tmsg {
 	return fm.Msg
+}
+
+// A partially marshaled message to push the cost of marshaling Fcm
+// out of demux clnt.
+type PartMarshaledMsg struct {
+	Fcm          *FcallMsg
+	MarshaledFcm []byte
+}
+
+func (pmfc *PartMarshaledMsg) Tag() Ttag {
+	return pmfc.Fcm.Tag()
 }
 
 const (

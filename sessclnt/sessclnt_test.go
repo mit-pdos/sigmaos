@@ -1,9 +1,11 @@
 package sessclnt_test
 
 import (
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 
@@ -17,7 +19,6 @@ import (
 	"sigmaos/memfs"
 	"sigmaos/netsrv"
 	"sigmaos/path"
-	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/rand"
 	"sigmaos/serr"
@@ -27,6 +28,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmaprotsrv"
 	"sigmaos/spcodec"
+	"sigmaos/test"
 )
 
 type SessSrv struct {
@@ -40,75 +42,39 @@ func (ss *SessSrv) ReportError(conn sigmaprotsrv.Conn, err error) {
 func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.CallI, *serr.Err) {
 	fcm := req.(*sessp.FcallMsg)
 	qid := sp.NewQidPerm(0777, 0, 0)
-	if fcm.Type() == sessp.TTwatch {
+	var rep *sessp.FcallMsg
+	switch fcm.Type() {
+	case sessp.TTwatch:
 		time.Sleep(1 * time.Second)
 		conn.CloseConnTest()
 		msg := &sp.Ropen{Qid: qid}
-		rep := sessp.NewFcallMsgReply(fcm, msg)
+		rep = sessp.NewFcallMsgReply(fcm, msg)
+	case sessp.TTwrite:
+		msg := &sp.Rwrite{Count: uint32(len(fcm.Iov[0]))}
+		rep = sessp.NewFcallMsgReply(fcm, msg)
 		return rep, nil
-	} else {
+	default:
 		msg := &sp.Rattach{Qid: qid}
-		rep := sessp.NewFcallMsgReply(fcm, msg)
+		rep = sessp.NewFcallMsgReply(fcm, msg)
 		r := rand.Int64(100)
 		if r < uint64(ss.crash) {
 			conn.CloseConnTest()
 		}
-		return rep, nil
 	}
-}
-
-type Tstate struct {
-	T    *testing.T
-	pe   *proc.ProcEnv
-	addr *sp.Taddr
-}
-
-func newTstate(t *testing.T) (*Tstate, error) {
-	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
-	assert.Nil(t, err, "Err NewKey: %v", err)
-	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, key.B64())
-	assert.Nil(t, err, "Err NewPublicKey: %v", err)
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", proc.NOT_SET, kmgr)
-	if err1 != nil {
-		return nil, err1
-	}
-	s3secrets, err1 := auth.GetAWSSecrets()
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
-		return nil, err1
-	}
-	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.LOCALHOST, sp.LOCALHOST, sp.LOCALHOST, "", false, false)
-	pe.Program = "srv"
-	proc.SetSigmaDebugPid(pe.GetPID().String())
-	if err := as.MintAndSetToken(pe); err != nil {
-		db.DPrintf(db.ERROR, "Error NewToken: %v", err)
-		return nil, err
-	}
-	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	proc.SetSigmaDebugPid(pe.GetPID().String())
-	return &Tstate{
-		T:    t,
-		pe:   pe,
-		addr: addr,
-	}, nil
+	pmfc := spcodec.NewPartMarshaledMsg(rep)
+	return pmfc, nil
 }
 
 type TstateSrv struct {
-	*Tstate
+	*test.TstateMin
 	srv  *netsrv.NetServer
 	clnt *sessclnt.Mgr
 }
 
-func newTstateSrv(t *testing.T, crash int) (*TstateSrv, error) {
-	tsi, err := newTstate(t)
-	if err != nil {
-		return nil, err
-	}
-	ts := &TstateSrv{Tstate: tsi}
+func newTstateSrv(t *testing.T, crash int) *TstateSrv {
+	ts := &TstateSrv{TstateMin: test.NewTstateMin(t)}
 	ss := &SessSrv{crash}
-	ts.srv = netsrv.NewNetServer(ts.pe, ss, ts.addr, spcodec.ReadCall, spcodec.WriteCall)
+	ts.srv = netsrv.NewNetServer(ts.Pcfg, ss, ts.Addr, spcodec.ReadCall, spcodec.WriteCall)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts, nil
@@ -206,7 +172,7 @@ func TestManyClientsCrash(t *testing.T) {
 }
 
 type TstateSp struct {
-	*Tstate
+	*test.TstateMin
 	srv  *sesssrv.SessSrv
 	clnt *sessclnt.Mgr
 }
@@ -217,19 +183,10 @@ func newTstateSp(t *testing.T) (*TstateSp, error) {
 		return nil, err
 	}
 	ts := &TstateSp{}
-	ts.Tstate = tsi
+	ts.TstateMin = test.NewTstateMin(t)
 	et := ephemeralmap.NewEphemeralMap()
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
-	assert.Nil(t, err, "Err NewKey: %v", err)
-	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, key.B64())
-	assert.Nil(t, err, "Err NewPublicKey: %v", err)
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", proc.NOT_SET, kmgr)
-	if err1 != nil {
-		return nil, err1
-	}
-	ts.srv = sesssrv.NewSessSrv(ts.pe, as, root, ts.addr, protsrv.NewProtServer, et, nil)
+	ts.srv = sesssrv.NewSessSrv(ts.Pcfg, root, ts.Addr, protsrv.NewProtServer, et, nil)
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts, nil
 }
@@ -251,6 +208,13 @@ func TestConnectMfsSrv(t *testing.T) {
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
+	req1 := sp.NewTwriteread(sp.NoFid)
+	iov := sessp.NewIoVec([][]byte{make([]byte, 10)})
+	rep, err = ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req1, iov)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
 	ts.srv.StopServing()
 }
 
@@ -286,4 +250,122 @@ func TestDisconnectMfsSrv(t *testing.T) {
 	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
 
 	assert.False(t, sess.IsConnected())
+
+	ts.srv.StopServing()
+}
+
+const (
+	BUFSZ = 64 * sp.KBYTE
+	TOTAL = 1000 * sp.MBYTE
+)
+
+type Awriter struct {
+	nthread int
+	clnt    *sessclnt.Mgr
+	addr    *sp.Taddr
+	req     chan sessp.IoVec
+	rep     chan error
+	err     error
+	wg      sync.WaitGroup
+}
+
+func NewAwriter(n int, clnt *sessclnt.Mgr, addr *sp.Taddr) *Awriter {
+	req := make(chan sessp.IoVec)
+	rep := make(chan error)
+	awrt := &Awriter{nthread: n, clnt: clnt, addr: addr, req: req, rep: rep}
+	for i := 0; i < n; i++ {
+		go awrt.Writer()
+	}
+	go awrt.Collector()
+	return awrt
+}
+
+func (awrt *Awriter) Writer() {
+	for {
+		iov, ok := <-awrt.req
+		if !ok {
+			return
+		}
+		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
+		_, err := awrt.clnt.RPC(sp.Taddrs{awrt.addr}, req, iov)
+		if err != nil {
+			awrt.rep <- err
+		} else {
+			awrt.rep <- nil
+		}
+	}
+	db.DPrintf(db.TEST, "Writer closed\n")
+}
+
+func (awrt *Awriter) Collector() {
+	for {
+		r, ok := <-awrt.rep
+		if !ok {
+			return
+		}
+		awrt.wg.Done()
+		if r != nil {
+			db.DPrintf(db.TEST, "Writer call %v\n", r)
+			awrt.err = r
+		}
+	}
+}
+
+func (awrt *Awriter) Write(iov sessp.IoVec) chan error {
+	awrt.wg.Add(1)
+	awrt.req <- iov
+	return nil
+}
+
+func (awrt *Awriter) Close() error {
+	db.DPrintf(db.TEST, "Close %v\n", awrt.wg)
+	awrt.wg.Wait()
+	close(awrt.req)
+	close(awrt.rep)
+	return nil
+}
+
+func TestPerfSessSrvAsync(t *testing.T) {
+	const (
+		TOTAL = 1000 * sp.MBYTE
+	)
+	ts := newTstateSrv(t, 0)
+	buf := test.NewBuf(BUFSZ)
+
+	aw := NewAwriter(1, ts.clnt, ts.srv.MyAddr())
+
+	t0 := time.Now()
+
+	for i := 0; i < TOTAL/BUFSZ; i++ {
+		err := aw.Write(sessp.IoVec{buf})
+		assert.Nil(t, err)
+	}
+
+	aw.Close()
+
+	tot := uint64(TOTAL)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
+
+	ts.srv.CloseListener()
+}
+
+func TestPerfSessSrvSync(t *testing.T) {
+	ts := newTstateSrv(t, 0)
+	buf := test.NewBuf(BUFSZ)
+
+	t0 := time.Now()
+
+	for i := 0; i < TOTAL/BUFSZ; i++ {
+		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
+		iov := sessp.IoVec{buf}
+		_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, iov)
+		assert.Nil(t, err)
+	}
+
+	tot := uint64(TOTAL)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
+
+	ts.srv.CloseListener()
 }

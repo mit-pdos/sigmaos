@@ -75,7 +75,7 @@ func Tput(sz sp.Tlength, ms int64) float64 {
 type TstateMin struct {
 	T    *testing.T
 	lip  sp.Tip
-	Pcfg *proc.ProcEnv
+	PE   *proc.ProcEnv
 	Addr *sp.Taddr
 }
 
@@ -89,7 +89,7 @@ func NewTstateMin(t *testing.T) *TstateMin {
 	pcfg.SetPrincipal(sp.NewPrincipal("srv", sp.NoToken()))
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-	return &TstateMin{T: t, lip: lip, Pcfg: pcfg, Addr: addr}
+	return &TstateMin{T: t, lip: lip, PE: pcfg, Addr: addr}
 }
 
 type Tstate struct {

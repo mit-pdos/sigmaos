@@ -19,6 +19,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	"sigmaos/spcodec"
 	"sigmaos/test"
 )
 
@@ -37,6 +38,7 @@ func (c *call) Tag() sessp.Ttag {
 
 func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 	var l uint32
+
 	if err := binary.Read(rdr, binary.LittleEndian, &l); err != nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, err)
 	}
@@ -55,6 +57,7 @@ func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
 	call := c.(*call)
 	wrt := wr.(*bufio.Writer)
+
 	l := uint32(len(call.buf) + 4) // +4 because that is how 9P wants it
 	if err := binary.Write(wrt, binary.LittleEndian, l); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
@@ -66,6 +69,24 @@ func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	return nil
+}
+
+var seqno sessp.Tseqno
+
+func ReadFcall(rdr io.Reader) (demux.CallI, *serr.Err) {
+	c, err := spcodec.ReadCall(rdr)
+	fcm := c.(*sessp.FcallMsg)
+	// db.DPrintf(db.TEST, "ReadFcall %v\n", fcm)
+	return &call{buf: fcm.Iov[0]}, err
+}
+
+func WriteFcall(wr io.Writer, c demux.CallI) *serr.Err {
+	call := c.(*call)
+	req := sp.NewTheartbeat(map[uint64]bool{uint64(1): true})
+	fcm := sessp.NewFcallMsg(req, sessp.IoVec{call.buf}, 1, &seqno)
+	pmfc := spcodec.NewPartMarshaledMsg(fcm)
+	// db.DPrintf(db.TEST, "fcall %v\n", fcm)
+	return spcodec.WriteCall(wr, pmfc)
 }
 
 type netConn struct {
@@ -86,20 +107,22 @@ type TstateNet struct {
 	srv  *netsrv.NetServer
 	clnt *netclnt.NetClnt
 	dmx  *demux.DemuxClnt
+	rf   demux.ReadCallF
+	wf   demux.WriteCallF
 }
 
 func (ts *TstateNet) NewConn(conn net.Conn) *demux.DemuxSrv {
 	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
 	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
 	nc := &netConn{conn}
-	return demux.NewDemuxSrv(br, wr, ReadCall, WriteCall, nc)
+	return demux.NewDemuxSrv(br, wr, ts.rf, ts.wf, nc)
 }
 
 func (ts *TstateNet) ReportError(err error) {
 }
 
-func newTstateNet(t *testing.T) *TstateNet {
-	ts := &TstateNet{}
+func newTstateNet(t *testing.T, rf demux.ReadCallF, wf demux.WriteCallF) *TstateNet {
+	ts := &TstateNet{rf: rf, wf: wf}
 	ts.TstateMin = test.NewTstateMin(t)
 
 	ts.srv = netsrv.NewNetServer(ts.Pcfg, ts.Addr, ts)
@@ -110,12 +133,31 @@ func newTstateNet(t *testing.T) *TstateNet {
 	assert.Nil(t, err)
 	br := bufio.NewReaderSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
 	bw := bufio.NewWriterSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
-	ts.dmx = demux.NewDemuxClnt(bw, br, ReadCall, WriteCall, ts)
+	ts.dmx = demux.NewDemuxClnt(bw, br, rf, wf, ts)
 	return ts
 }
 
-func TestNetClntPerf(t *testing.T) {
-	ts := newTstateNet(t)
+func TestNetClntPerfFrame(t *testing.T) {
+	ts := newTstateNet(t, ReadCall, WriteCall)
+	c := &call{buf: test.NewBuf(BUFSZ)}
+
+	t0 := time.Now()
+	n := TOTAL / BUFSZ
+	for i := 0; i < n; i++ {
+		d, err := ts.dmx.SendReceive(c)
+		assert.Nil(t, err)
+		call := d.(*call)
+		assert.True(t, len(call.buf) == BUFSZ)
+	}
+	tot := uint64(TOTAL)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
+
+	ts.srv.CloseListener()
+}
+
+func TestNetClntPerfFcall(t *testing.T) {
+	ts := newTstateNet(t, ReadFcall, WriteFcall)
 	c := &call{buf: test.NewBuf(BUFSZ)}
 
 	t0 := time.Now()

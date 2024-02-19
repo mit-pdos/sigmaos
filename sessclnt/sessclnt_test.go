@@ -284,6 +284,10 @@ func TestPerfSessSrvSync(t *testing.T) {
 	ts.srv.CloseListener()
 }
 
+//
+// sessclnt with a sigmap server
+//
+
 type TstateSp struct {
 	*test.TstateMin
 	srv  *sigmapsrv.SigmaPSrv

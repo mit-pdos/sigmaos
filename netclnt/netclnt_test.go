@@ -75,17 +75,12 @@ var seqno sessp.Tseqno
 
 func ReadFcall(rdr io.Reader) (demux.CallI, *serr.Err) {
 	c, err := spcodec.ReadCall(rdr)
-	fcm := c.(*sessp.FcallMsg)
-	// db.DPrintf(db.TEST, "ReadFcall %v\n", fcm)
-	return &call{buf: fcm.Iov[0]}, err
+	return c, err
 }
 
 func WriteFcall(wr io.Writer, c demux.CallI) *serr.Err {
-	call := c.(*call)
-	req := sp.NewTheartbeat(map[uint64]bool{uint64(1): true})
-	fcm := sessp.NewFcallMsg(req, sessp.IoVec{call.buf}, 1, &seqno)
-	pmfc := spcodec.NewPartMarshaledMsg(fcm)
-	// db.DPrintf(db.TEST, "fcall %v\n", fcm)
+	fc := c.(*sessp.FcallMsg)
+	pmfc := spcodec.NewPartMarshaledMsg(fc)
 	return spcodec.WriteCall(wr, pmfc)
 }
 
@@ -94,8 +89,13 @@ type netConn struct {
 }
 
 func (nc *netConn) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
-	r := req.(*call)
-	rep := &call{buf: r.buf}
+	var rep demux.CallI
+	switch r := req.(type) {
+	case *call:
+		rep = &call{buf: r.buf}
+	case *sessp.FcallMsg:
+		rep = r
+	}
 	return rep, nil
 }
 
@@ -158,15 +158,16 @@ func TestNetClntPerfFrame(t *testing.T) {
 
 func TestNetClntPerfFcall(t *testing.T) {
 	ts := newTstateNet(t, ReadFcall, WriteFcall)
-	c := &call{buf: test.NewBuf(BUFSZ)}
+	req := sp.NewTheartbeat(map[uint64]bool{uint64(1): true})
+	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
 
 	t0 := time.Now()
 	n := TOTAL / BUFSZ
 	for i := 0; i < n; i++ {
-		d, err := ts.dmx.SendReceive(c)
+		c, err := ts.dmx.SendReceive(fc)
 		assert.Nil(t, err)
-		call := d.(*call)
-		assert.True(t, len(call.buf) == BUFSZ)
+		fcm := c.(*sessp.FcallMsg)
+		assert.True(t, len(fcm.Iov[0]) == BUFSZ)
 	}
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()

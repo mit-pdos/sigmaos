@@ -11,6 +11,7 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/keyclnt"
 	"sigmaos/keys"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -247,6 +248,57 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	db.DPrintf(db.TEST, "realm names sched %v", sp.Names(sts))
 
 	_, err = sc1.GetDir(path.Join(sp.SCHEDD, sts[0].Name) + "/")
+	assert.Nil(t, err)
+
+	rootts.Shutdown()
+}
+
+// Test that an unauthorized principal can't write a public key to keyd (or
+// overwrite an existing one)
+func TestMaliciousPrincipalKeydFail(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	kc1 := keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](rootts.SigmaClnt)
+	// Make sure the root sigma clnt can get a key
+	k, err := kc1.GetKey(jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER)
+	assert.Nil(t, err)
+	// Make sure the root sigma clnt can set an existing key
+	err = kc1.SetKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, k)
+	assert.Nil(t, err)
+	// Make sure the root sigma clnt can set a new key
+	err = kc1.SetKey(sp.Tsigner("woohoo"), k)
+	assert.Nil(t, err)
+
+	RONLY_KEYD := []string{
+		sp.NAMED,
+		sp.KEYS_RONLY,
+	}
+	// Create a new sigma clnt
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	pe.SetPrincipal(sp.NewPrincipal(
+		sp.TprincipalID("scoped-down-principal"),
+		sp.NoToken(),
+	))
+	// Restrict paths to only allow reads of keyd, not writes
+	pe.SetAllowedPaths(RONLY_KEYD)
+	err = rootts.MintAndSetToken(pe)
+	assert.Nil(t, err)
+	// Create a new, more restricted sigmaclnt
+	sc1, err := sigmaclnt.NewSigmaClnt(pe)
+	assert.Nil(t, err, "Err NewClnt: %v", err)
+
+	kc2 := keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](sc1)
+	// Make sure the new sigma clnt can get a key
+	k2, err := kc2.GetKey(jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER)
+	assert.Nil(t, err)
+	// Make sure the new sigma clnt cannot set an existing key
+	err = kc2.SetKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, k2)
+	assert.NotNil(t, err)
+	// Make sure the root sigma clnt cannot set a new key
+	err = kc1.SetKey(sp.Tsigner("woohaa"), k2)
 	assert.Nil(t, err)
 
 	rootts.Shutdown()

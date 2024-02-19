@@ -45,7 +45,7 @@ func (kc *KeyClnt[M]) getClnt(rw bool) (*rpcclnt.RPCClnt, error) {
 			addr := mnt.Address()
 			err = kc.sc.MountTree([]*sp.Taddr{addr}, sp.RW_REL, sp.KEYS_RW)
 			if err != nil {
-				db.DPrintf(db.ERROR, "Error MountTree: %v", err)
+				db.DPrintf(db.KEYCLNT_ERR, "Error MountTree: %v", err)
 				return nil, err
 			}
 			rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{kc.sc.FsLib}, sp.KEYS_RW)

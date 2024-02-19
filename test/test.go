@@ -81,9 +81,12 @@ type TstateMin struct {
 
 func NewTstateMin(t *testing.T) *TstateMin {
 	lip := sp.Tip("127.0.0.1")
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, lip, lip, lip, "", false, false)
+	s3secrets, err1 := auth.GetAWSSecrets()
+	assert.Nil(t, err1)
+	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
 	pcfg.Program = "srv"
-	pcfg.SetUname("srv")
+	pcfg.SetPrincipal(sp.NewPrincipal("srv", sp.NoToken()))
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	proc.SetSigmaDebugPid(pcfg.GetPID().String())
 	return &TstateMin{T: t, lip: lip, Pcfg: pcfg, Addr: addr}

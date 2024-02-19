@@ -2,6 +2,7 @@ package netclnt_test
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"io"
 	"net"
@@ -11,9 +12,11 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
+	"sigmaos/frame"
 	"sigmaos/netclnt"
 	"sigmaos/netsrv"
 	"sigmaos/serr"
@@ -24,8 +27,8 @@ import (
 )
 
 const (
-	BUFSZ = 100          // 64 * sp.KBYTE
-	TOTAL = 1 * sp.MBYTE // 1000 * sp.MBYTE
+	BUFSZ = 100           // 64 * sp.KBYTE
+	TOTAL = 10 * sp.MBYTE // 1000 * sp.MBYTE
 )
 
 type call struct {
@@ -82,6 +85,77 @@ func WriteFcall(wr io.Writer, c demux.CallI) *serr.Err {
 	fc := c.(*sessp.FcallMsg)
 	pmfc := spcodec.NewPartMarshaledMsg(fc)
 	return spcodec.WriteCall(wr, pmfc)
+}
+
+func ReadFcall1(rdr io.Reader) (demux.CallI, *serr.Err) {
+	f, err := frame.ReadFrame(rdr)
+	if err != nil {
+		return nil, err
+	}
+	iov, err := frame.ReadFrames(rdr)
+	if err != nil {
+		return nil, err
+	}
+
+	fm := sessp.NewFcallMsgNull()
+	rdr1 := bytes.NewReader(f)
+	b, error := frame.PopFromFrame(rdr1)
+	if error != nil {
+		db.DFatalf("error popfromframe %v", error)
+	}
+	if err := proto.Unmarshal(b, fm.Fc); err != nil {
+		db.DFatalf("error decoding fcall %v", err)
+	}
+	// db.DPrintf(db.TEST, "unmarshall %v\n", fm.Fc)
+	msg, error1 := spcodec.NewMsg(fm.Type())
+	if error1 != nil {
+		db.DFatalf("error type %v", error1)
+	}
+	b, error = frame.PopFromFrame(rdr1)
+	if error != nil {
+		db.DFatalf("error popfromframe %v", error)
+	}
+	m := msg.(proto.Message)
+	if err := proto.Unmarshal(b, m); err != nil {
+		db.DFatalf("error decoding msg %v", err)
+	}
+
+	fm.Msg = msg
+	fm.Iov = iov
+	return fm, nil
+}
+
+func WriteFcall1(wr io.Writer, c demux.CallI) *serr.Err {
+	wrt := wr.(*bufio.Writer)
+	fc := c.(*sessp.FcallMsg)
+
+	var f bytes.Buffer
+	// db.DPrintf(db.TEST, "marshall %v\n", fc.Fc)
+	b, err := proto.Marshal(fc.Fc)
+	if err != nil {
+		db.DFatalf("error encoding fcall %v", err)
+	}
+	if err := frame.PushToFrame(&f, b); err != nil {
+		db.DFatalf("PushToframe %v", err)
+	}
+	b, err = proto.Marshal(fc.Msg.(proto.Message))
+	if err != nil {
+		db.DFatalf("error encoding msg %v", err)
+	}
+	if err := frame.PushToFrame(&f, b); err != nil {
+		db.DFatalf("PushToframe %v", err)
+	}
+
+	if err := frame.WriteFrame(wrt, f.Bytes()); err != nil {
+		return err
+	}
+	if err := frame.WriteFrames(wrt, fc.Iov); err != nil {
+		return err
+	}
+	if err := wrt.Flush(); err != nil {
+		return serr.NewErr(serr.TErrUnreachable, err.Error())
+	}
+	return nil
 }
 
 type netConn struct {
@@ -148,6 +222,26 @@ func TestNetClntPerfFrame(t *testing.T) {
 		assert.Nil(t, err)
 		call := d.(*call)
 		assert.True(t, len(call.buf) == BUFSZ)
+	}
+	tot := uint64(TOTAL)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
+
+	ts.srv.CloseListener()
+}
+
+func TestNetClntPerfFcall1(t *testing.T) {
+	ts := newTstateNet(t, ReadFcall1, WriteFcall1)
+	req := sp.NewTheartbeat(map[uint64]bool{uint64(1): true})
+	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
+
+	t0 := time.Now()
+	n := TOTAL / BUFSZ
+	for i := 0; i < n; i++ {
+		c, err := ts.dmx.SendReceive(fc)
+		assert.Nil(t, err)
+		fcm := c.(*sessp.FcallMsg)
+		assert.True(t, len(fcm.Iov[0]) == BUFSZ)
 	}
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()

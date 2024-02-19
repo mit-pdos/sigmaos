@@ -2,7 +2,7 @@ package netclnt_test
 
 import (
 	"bufio"
-	"bytes"
+	// "bytes"
 	"encoding/binary"
 	"io"
 	"net"
@@ -10,9 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
@@ -92,32 +93,33 @@ func ReadFcall1(rdr io.Reader) (demux.CallI, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	iov, err := frame.ReadFrames(rdr)
-	if err != nil {
-		return nil, err
-	}
-
 	fm := sessp.NewFcallMsgNull()
-	rdr1 := bytes.NewReader(f)
-	b, error := frame.PopFromFrame(rdr1)
-	if error != nil {
-		db.DFatalf("error popfromframe %v", error)
-	}
-	if err := proto.Unmarshal(b, fm.Fc); err != nil {
+	if err := proto.Unmarshal(f, fm.Fc); err != nil {
 		db.DFatalf("error decoding fcall %v", err)
 	}
-	// db.DPrintf(db.TEST, "unmarshall %v\n", fm.Fc)
+
+	// db.DPrintf(db.TEST, "unmarshall %v %d\n", fm.Fc, len(f))
+
 	msg, error1 := spcodec.NewMsg(fm.Type())
 	if error1 != nil {
-		db.DFatalf("error type %v", error1)
-	}
-	b, error = frame.PopFromFrame(rdr1)
-	if error != nil {
-		db.DFatalf("error popfromframe %v", error)
+		db.DFatalf("error type %v %v", msg, error1)
 	}
 	m := msg.(proto.Message)
+
+	b := make(sessp.Tframe, fm.Fc.Len)
+	n, error := io.ReadFull(rdr, b)
+	if n != len(b) {
+		return nil, serr.NewErr(serr.TErrUnreachable, error)
+	}
 	if err := proto.Unmarshal(b, m); err != nil {
 		db.DFatalf("error decoding msg %v", err)
+	}
+
+	// db.DPrintf(db.TEST, "unmarshall %v msg %v\n", fm, m)
+
+	iov, err := frame.ReadFramesN(rdr, fm.Fc.Nvec)
+	if err != nil {
+		return nil, err
 	}
 
 	fm.Msg = msg
@@ -129,29 +131,42 @@ func WriteFcall1(wr io.Writer, c demux.CallI) *serr.Err {
 	wrt := wr.(*bufio.Writer)
 	fc := c.(*sessp.FcallMsg)
 
-	var f bytes.Buffer
-	// db.DPrintf(db.TEST, "marshall %v\n", fc.Fc)
+	msg, err := proto.Marshal(fc.Msg.(proto.Message))
+	if err != nil {
+		db.DFatalf("error encoding msg %v", err)
+	}
+	fc.Fc.Len = uint32(len(msg))
+	fc.Fc.Nvec = uint32(len(fc.Iov))
+
 	b, err := proto.Marshal(fc.Fc)
 	if err != nil {
 		db.DFatalf("error encoding fcall %v", err)
 	}
-	if err := frame.PushToFrame(&f, b); err != nil {
-		db.DFatalf("PushToframe %v", err)
-	}
-	b, err = proto.Marshal(fc.Msg.(proto.Message))
-	if err != nil {
-		db.DFatalf("error encoding msg %v", err)
-	}
-	if err := frame.PushToFrame(&f, b); err != nil {
-		db.DFatalf("PushToframe %v", err)
+
+	// db.DPrintf(db.TEST, "marshall %v %d\n", fc.Fc, len(b))
+
+	if err := binary.Write(wrt, binary.LittleEndian, uint32(len(b)+4)); err != nil {
+		db.DFatalf("error write %v", err)
 	}
 
-	if err := frame.WriteFrame(wrt, f.Bytes()); err != nil {
-		return err
+	if _, err := wrt.Write(b); err != nil {
+		db.DFatalf("error write %v", err)
 	}
-	if err := frame.WriteFrames(wrt, fc.Iov); err != nil {
-		return err
+
+	if _, err := wrt.Write(msg); err != nil {
+		db.DFatalf("error write %v", err)
 	}
+
+	//this write will be copied (< 4096)
+	for _, f := range fc.Iov {
+		if err := frame.WriteFrame(wrt, f); err != nil {
+			return err
+		}
+	}
+
+	// db.DPrintf(db.TEST, "buf %d\n", wrt.Buffered())
+
+	// writes all bytes
 	if err := wrt.Flush(); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}

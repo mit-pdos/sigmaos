@@ -27,6 +27,18 @@ func ReadFrame(rd io.Reader) (sessp.Tframe, *serr.Err) {
 	return frame, nil
 }
 
+func ReadFramesN(rd io.Reader, len uint32) (sessp.IoVec, *serr.Err) {
+	iov := make(sessp.IoVec, len)
+	for i := 0; i < int(len); i++ {
+		f, err := ReadFrame(rd)
+		if err != nil {
+			return nil, err
+		}
+		iov[i] = f
+	}
+	return iov, nil
+}
+
 func ReadFrames(rd io.Reader) (sessp.IoVec, *serr.Err) {
 	var len uint32
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {

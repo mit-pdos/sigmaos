@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/golang-jwt/jwt"
 
@@ -137,7 +138,7 @@ func (as *AuthSrvImpl[M]) VerifyTokenGetClaims(t *sp.Ttoken) (*ProcClaims, error
 	return nil, fmt.Errorf("Claims wrong type")
 }
 
-func (as *AuthSrvImpl[M]) IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error) {
+func (as *AuthSrvImpl[M]) IsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error) {
 	db.DPrintf(db.AUTH, "Authorization check p %v", principal.GetID())
 	pc, err := as.VerifyTokenGetClaims(principal.GetToken())
 	if err != nil {
@@ -151,12 +152,13 @@ func (as *AuthSrvImpl[M]) IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, b
 	}
 	// Check that the server path is a subpath of one of the allowed paths
 	for _, ap := range pc.AllowedPaths {
-		db.DPrintf(db.AUTH, "Check if %v is in %v subtree", as.srvpath, ap)
+		mntPath := path.Join(as.srvpath, attachPath)
+		db.DPrintf(db.AUTH, "Check if %v or %v is in %v subtree", as.srvpath, mntPath, ap)
 		if as.srvpath == "" && ap == sp.NAMED {
 			db.DPrintf(db.AUTH, "Authorization check to named successful p %v claims %v", principal.GetID(), pc)
 			return pc, true, nil
 		}
-		if IsInSubtree(as.srvpath, ap) {
+		if IsInSubtree(as.srvpath, ap) || IsInSubtree(mntPath, ap) {
 			db.DPrintf(db.AUTH, "Authorization check successful p %v claims %v", principal.GetID(), pc)
 			return pc, true, nil
 		}

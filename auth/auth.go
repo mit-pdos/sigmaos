@@ -17,6 +17,6 @@ type AuthSrv interface {
 	MintToken(pc *ProcClaims) (*sp.Ttoken, error)
 	MintAndSetToken(pe *proc.ProcEnv) error
 	VerifyTokenGetClaims(signedToken *sp.Ttoken) (*ProcClaims, error)
-	IsAuthorized(principal *sp.Tprincipal) (*ProcClaims, bool, error)
+	IsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error)
 	KeyMgr
 }

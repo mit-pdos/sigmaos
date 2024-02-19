@@ -98,6 +98,8 @@ if ! [ -z "$TAG" ]; then
 fi
 
 vm_ncores=4 #$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
+MASTER_PUB_KEY="NOT_SET"
+MASTER_PRIV_KEY="NOT_SET"
 
 for vm in $vms; do
   echo "starting SigmaOS on $vm!"
@@ -146,7 +148,7 @@ for vm in $vms; do
       echo "START etcd"
       ./start-etcd.sh
     fi
-    ./start-kernel.sh --boot realm --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot realm --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} --pubkey "${MASTER_PUB_KEY}" --privkey "${MASTER_PRIV_KEY}" ${KERNELID} 2>&1 | tee /tmp/start.out
     docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
     docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
     docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
@@ -154,7 +156,7 @@ for vm in $vms; do
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
-    ./start-kernel.sh --boot node --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot node --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} --pubkey "${MASTER_PUB_KEY}" --privkey "${MASTER_PRIV_KEY}" ${KERNELID} 2>&1 | tee /tmp/join.out
     docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
     docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
     docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
@@ -163,5 +165,9 @@ for vm in $vms; do
 ENDSSH
  if [ "${vm}" = "${MAIN}" ]; then
      TOKEN=$(ssh -i key-$VPC.pem ubuntu@$vm docker swarm join-token worker | grep docker)
+     # Once the first kernel has booted, get the pubkey and privkey for the
+     # SigmaOS deployment
+     MASTER_PUB_KEY="$(ssh -i key-$VPC.pem ubuntu@$vm cat /tmp/sigmaos/master-key.pub)"
+     MASTER_PRIV_KEY="$(ssh -i key-$VPC.pem ubuntu@$vm cat /tmp/sigmaos/master-key.priv)"
  fi   
 done

@@ -37,6 +37,17 @@ func (kc *KeyClnt[M]) getClnt(rw bool) (*rpcclnt.RPCClnt, error) {
 
 	if rw {
 		if kc.rw == nil {
+			mnt, err := kc.sc.ReadMount(sp.KEYD)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Error ReadMount: %v", err)
+				return nil, err
+			}
+			addr := mnt.Address()
+			err = kc.sc.MountTree([]*sp.Taddr{addr}, sp.RW_REL, sp.KEYS_RW)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Error MountTree: %v", err)
+				return nil, err
+			}
 			rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{kc.sc.FsLib}, sp.KEYS_RW)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error new RPC clnt rw: %v", err)
@@ -47,6 +58,17 @@ func (kc *KeyClnt[M]) getClnt(rw bool) (*rpcclnt.RPCClnt, error) {
 		return kc.rw, nil
 	} else {
 		if kc.ronly == nil {
+			mnt, err := kc.sc.ReadMount(sp.KEYD)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Error ReadMount: %v", err)
+				return nil, err
+			}
+			addr := mnt.Address()
+			err = kc.sc.MountTree([]*sp.Taddr{addr}, sp.RONLY_REL, sp.KEYS_RONLY)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Error MountTree: %v", err)
+				return nil, err
+			}
 			rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{kc.sc.FsLib}, sp.KEYS_RONLY)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error new RPC clnt ronly: %v", err)
@@ -61,6 +83,7 @@ func (kc *KeyClnt[M]) getClnt(rw bool) (*rpcclnt.RPCClnt, error) {
 func (kc *KeyClnt[M]) GetKey(signingMethod M, s sp.Tsigner) (auth.PublicKey, error) {
 	db.DPrintf(db.KEYCLNT, "GetKey for signer %v", s)
 	defer db.DPrintf(db.KEYCLNT, "GetKey done for signer %v", s)
+
 	rpcc, err := kc.getClnt(false)
 	if err != nil {
 		return nil, err
@@ -87,6 +110,9 @@ func (kc *KeyClnt[M]) GetKey(signingMethod M, s sp.Tsigner) (auth.PublicKey, err
 }
 
 func (kc *KeyClnt[M]) SetKey(s sp.Tsigner, key auth.PublicKey) error {
+	db.DPrintf(db.KEYCLNT, "SetKey for signer %v", s)
+	defer db.DPrintf(db.KEYCLNT, "SetKey done for signer %v", s)
+
 	rpcc, err := kc.getClnt(true)
 	if err != nil {
 		return err

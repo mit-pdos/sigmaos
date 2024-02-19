@@ -19,6 +19,7 @@ import (
 	"sigmaos/memfs"
 	"sigmaos/netsrv"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/rand"
 	"sigmaos/serr"
@@ -74,21 +75,18 @@ type TstateSrv struct {
 func newTstateSrv(t *testing.T, crash int) *TstateSrv {
 	ts := &TstateSrv{TstateMin: test.NewTstateMin(t)}
 	ss := &SessSrv{crash}
-	ts.srv = netsrv.NewNetServer(ts.Pcfg, ss, ts.Addr, spcodec.ReadCall, spcodec.WriteCall)
+	ts.srv = netsrv.NewNetServer(ts.PE, ss, ts.Addr, spcodec.ReadCall, spcodec.WriteCall)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
-	return ts, nil
+	return ts
 }
 
 func TestCompile(t *testing.T) {
 }
 
 func TestConnectSessSrv(t *testing.T) {
-	ts, err1 := newTstateSrv(t, 0)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	req := sp.NewTattach(0, sp.NoFid, ts.pe.GetPrincipal(), 0, path.Path{})
+	ts := newTstateSrv(t, 0)
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
@@ -96,12 +94,8 @@ func TestConnectSessSrv(t *testing.T) {
 }
 
 func TestDisconnectSessSrv(t *testing.T) {
-	ts, err1 := newTstateSrv(t, 0)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	req := sp.NewTattach(0, sp.NoFid, ts.pe.GetPrincipal(), 0, path.Path{})
+	ts := newTstateSrv(t, 0)
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
 	_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	ch := make(chan *serr.Err)
@@ -120,10 +114,7 @@ func testManyClients(t *testing.T, crash int) {
 	const (
 		NCLNT = 50
 	)
-	ts, err1 := newTstateSrv(t, crash)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	ts := newTstateSrv(t, crash)
 	ch := make(chan bool)
 	for i := 0; i < NCLNT; i++ {
 		go func(i int) {
@@ -133,7 +124,7 @@ func testManyClients(t *testing.T, crash int) {
 					ch <- true
 					break
 				default:
-					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.pe.GetPrincipal(), sp.TclntId(i), path.Path{})
+					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.PE.GetPrincipal(), sp.TclntId(i), path.Path{})
 					_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 					if err != nil && crash > 0 && serr.IsErrCode(err, serr.TErrUnreachable) {
 						// wait for stop signal
@@ -178,15 +169,23 @@ type TstateSp struct {
 }
 
 func newTstateSp(t *testing.T) (*TstateSp, error) {
-	tsi, err := newTstate(t)
-	if err != nil {
-		return nil, err
-	}
 	ts := &TstateSp{}
 	ts.TstateMin = test.NewTstateMin(t)
 	et := ephemeralmap.NewEphemeralMap()
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sesssrv.NewSessSrv(ts.Pcfg, root, ts.Addr, protsrv.NewProtServer, et, nil)
+	pubkey, privkey, err := keys.NewECDSAKey()
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
+		return nil, err
+	}
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
+	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
+		return nil, err1
+	}
+	ts.srv = sesssrv.NewSessSrv(ts.PE, as, root, ts.Addr, protsrv.NewProtServer, et, nil)
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts, nil
 }
@@ -204,7 +203,7 @@ func TestConnectMfsSrv(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	req := sp.NewTattach(0, sp.NoFid, ts.pe.GetPrincipal(), 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
@@ -223,7 +222,7 @@ func TestDisconnectMfsSrv(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	req := sp.NewTattach(0, sp.NoFid, ts.pe.GetPrincipal(), 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)

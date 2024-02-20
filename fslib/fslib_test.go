@@ -15,7 +15,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
-	"sigmaos/named"
+	"sigmaos/namesrv"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -43,7 +43,7 @@ func TestInitFs(t *testing.T) {
 	assert.Nil(t, err)
 	if pathname == sp.NAMED {
 		db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
-		assert.True(t, fslib.Present(sts, named.InitRootDir), "initfs")
+		assert.True(t, fslib.Present(sts, namesrv.InitRootDir), "initfs")
 		sts, err = ts.GetDir(pathname + "/boot")
 		assert.Nil(t, err)
 	} else {
@@ -239,7 +239,7 @@ func TestRemoveSymlink(t *testing.T) {
 
 	sts, err := ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
-	assert.True(t, fslib.Present(sts, named.InitRootDir))
+	assert.True(t, fslib.Present(sts, namesrv.InitRootDir))
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err, "Remove: %v", err)
@@ -268,7 +268,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 
 	sts, err := ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
-	assert.True(t, fslib.Present(sts, named.InitRootDir))
+	assert.True(t, fslib.Present(sts, namesrv.InitRootDir))
 
 	err = ts.RmDir(d1)
 	assert.Nil(t, err, "RmDir: %v", err)

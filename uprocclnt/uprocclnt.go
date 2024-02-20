@@ -10,10 +10,6 @@ import (
 	"sigmaos/uprocsrv/proto"
 )
 
-const (
-	NOT_SET = "NOT_SET"
-)
-
 type UprocdClnt struct {
 	pid sp.Tpid
 	*rpcclnt.RPCClnt
@@ -26,7 +22,7 @@ func NewUprocdClnt(pid sp.Tpid, rpcc *rpcclnt.RPCClnt) *UprocdClnt {
 	return &UprocdClnt{
 		pid:     pid,
 		RPCClnt: rpcc,
-		realm:   NOT_SET,
+		realm:   sp.NOT_SET,
 		ptype:   proc.T_LC,
 		share:   0,
 	}

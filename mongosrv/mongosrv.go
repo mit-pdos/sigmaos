@@ -1,4 +1,4 @@
-package mongod
+package mongosrv
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/mongod/proto"
+	"sigmaos/mongosrv/proto"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

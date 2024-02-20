@@ -4,7 +4,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	dbg "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/mongod/proto"
+	"sigmaos/mongosrv/proto"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 )
@@ -24,7 +24,7 @@ func NewMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
 }
 
 func NewMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
-	return NewMongoClntWithName(fsl, sp.MONGO + "~local/")
+	return NewMongoClntWithName(fsl, sp.MONGO+"~local/")
 }
 
 func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {

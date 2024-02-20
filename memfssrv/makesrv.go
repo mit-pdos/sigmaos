@@ -1,12 +1,15 @@
 package memfssrv
 
 import (
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fslibsrv"
+	"sigmaos/keys"
 	"sigmaos/memfs"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
@@ -46,21 +49,16 @@ func NewMemFsPortClntFenceKeyMgr(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaC
 	return NewMemFsRootPortClntFenceKeyMgr(root, pn, addr, sc, kmgr, fencefs)
 }
 
-func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr, fencefs fs.Dir) (*MemFs, error) {
-	var as auth.AuthSrv
-	var err error
+func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr, fencefs fs.Dir) (*MemFs, error) {
+	// If key mgr is not specified, create a new one
 	if kmgr == nil {
-		as, err = NewVerificationSrv(sp.Tsigner(sc.ProcEnv().GetPID()), pn, sc)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		as, err = NewVerificationSrvKeyMgr(sp.Tsigner(sc.ProcEnv().GetPID()), pn, sc, kmgr)
-		if err != nil {
-			return nil, err
-		}
+		kmgr = keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
 	}
-	srv, mpn, err := fslibsrv.NewSrv(root, pn, as, addr, sc, fencefs)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), srvpath, kmgr)
+	if err != nil {
+		return nil, err
+	}
+	srv, mpn, err := fslibsrv.NewSrv(root, srvpath, as, addr, sc, fencefs)
 	if err != nil {
 		return nil, err
 	}

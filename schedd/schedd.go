@@ -59,7 +59,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, maste
 	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetPID()), pubkey)
 	kmgr.AddPrivateKey(sp.Tsigner(sc.ProcEnv().GetPID()), privkey)
 	db.DPrintf(db.ALWAYS, "kmgr %v", kmgr)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), proc.NOT_SET, kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err)
 	}

@@ -65,7 +65,7 @@ func NewProc(program string, args []string) *Proc {
 func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
-	procdir := NOT_SET
+	procdir := sp.NOT_SET
 	if priv {
 		// If this is a privileged proc, we already know its procdir.
 		procdir = KProcDir(pid)
@@ -73,13 +73,13 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 	p.ProcEnvProto = NewProcEnv(
 		program,
 		pid,
-		sp.Trealm(NOT_SET),
+		sp.Trealm(sp.NOT_SET),
 		sp.NewPrincipal(
 			sp.TprincipalID(pid.String()),
 			sp.NoToken(),
 		),
 		procdir,
-		NOT_SET,
+		sp.NOT_SET,
 		priv,
 		false,
 		false,
@@ -225,7 +225,7 @@ func (p *Proc) GetProgram() string {
 }
 
 func (p *Proc) GetProcDir() string {
-	if p.ProcEnvProto.ProcDir == NOT_SET {
+	if p.ProcEnvProto.ProcDir == sp.NOT_SET {
 		b := debug.Stack()
 		log.Fatalf("Error, getting unset proc dir: %v", string(b))
 	}

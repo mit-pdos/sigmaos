@@ -24,10 +24,6 @@ const (
 	SIGMACONFIG   = "SIGMACONFIG"
 )
 
-const (
-	NOT_SET = "NOT_SET" // Catch cases where we fail to set a variable.
-)
-
 type ProcEnv struct {
 	*ProcEnvProto
 }
@@ -84,15 +80,15 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			ProcDir:             procDir,
 			ParentDir:           parentDir,
 			Program:             program,
-			InnerContainerIPStr: NOT_SET,
-			OuterContainerIPStr: NOT_SET,
-			KernelID:            NOT_SET,
-			BuildTag:            NOT_SET,
-			Net:                 NOT_SET,
+			InnerContainerIPStr: sp.NOT_SET,
+			OuterContainerIPStr: sp.NOT_SET,
+			KernelID:            sp.NOT_SET,
+			BuildTag:            sp.NOT_SET,
+			Net:                 sp.NOT_SET,
 			Perf:                os.Getenv(SIGMAPERF),
 			Strace:              os.Getenv(SIGMASTRACE),
 			Debug:               os.Getenv(SIGMADEBUG),
-			UprocdPIDStr:        NOT_SET,
+			UprocdPIDStr:        sp.NOT_SET,
 			Privileged:          priv,
 			Overlays:            overlays,
 			UseSigmaclntd:       useSigmaclntd,
@@ -107,7 +103,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 
 func NewProcEnvUnset(priv, overlays bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
-	return NewProcEnv(NOT_SET, sp.Tpid(NOT_SET), sp.Trealm(NOT_SET), sp.NoPrincipal(), NOT_SET, NOT_SET, priv, overlays, false)
+	return NewProcEnv(sp.NOT_SET, sp.Tpid(sp.NOT_SET), sp.Trealm(sp.NOT_SET), sp.NoPrincipal(), sp.NOT_SET, sp.NOT_SET, priv, overlays, false)
 }
 
 func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {

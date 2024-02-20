@@ -85,7 +85,7 @@ func RunRealmSrv(masterPublicKey auth.PublicKey, pubkey auth.PublicKey, privkey 
 	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, ssrv.MemFs.SigmaClnt()))
 	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), pubkey)
 	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), proc.NOT_SET, kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NeHMACAUthServer %v", err)
 		return err

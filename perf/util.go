@@ -117,7 +117,7 @@ func NewPerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 		os.Exit(143)
 	}()
 	// Make sure the PID is set (used to name the output files).
-	if pcfg.GetPID() == proc.NOT_SET {
+	if pcfg.GetPID() == sp.NOT_SET {
 		db.DFatalf("Must set PID before starting Perf")
 	}
 	// Make the output dir

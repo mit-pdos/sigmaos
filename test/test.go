@@ -202,7 +202,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
 		return nil, err1

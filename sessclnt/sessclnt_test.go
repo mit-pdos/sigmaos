@@ -19,7 +19,6 @@ import (
 	"sigmaos/memfs"
 	"sigmaos/netsrv"
 	"sigmaos/path"
-	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/rand"
 	"sigmaos/serr"
@@ -180,7 +179,7 @@ func newTstateSp(t *testing.T) (*TstateSp, error) {
 	}
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, proc.NOT_SET, kmgr)
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
 		return nil, err1

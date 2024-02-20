@@ -33,7 +33,7 @@ func TestSignHMACToken(t *testing.T) {
 	assert.Nil(t, err, "Err NewPublicKey: %v", err)
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey("test", key)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", proc.NOT_SET, kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", sp.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -56,7 +56,7 @@ func TestVerifyHMACToken(t *testing.T) {
 	assert.Nil(t, err, "Err NewPublicKey: %v", err)
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey("test", key)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", proc.NOT_SET, kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", sp.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -80,7 +80,7 @@ func TestSignECDSAToken(t *testing.T) {
 	assert.Nil(t, err, "Err NewKey: %v", err)
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey("test", privkey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, "test", proc.NOT_SET, kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, "test", sp.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -101,7 +101,7 @@ func TestVerifyECDSAToken(t *testing.T) {
 	assert.Nil(t, err, "Err NewKey: %v", err)
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey("test", privkey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, "test", proc.NOT_SET, kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, "test", sp.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{

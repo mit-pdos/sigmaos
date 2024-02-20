@@ -1,4 +1,4 @@
-package dbd
+package dbsrv
 
 import (
 	"database/sql"

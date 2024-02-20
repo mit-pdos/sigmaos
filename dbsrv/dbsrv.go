@@ -1,10 +1,10 @@
-package dbd
+package dbsrv
 
 import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
-	"sigmaos/dbd/proto"
+	"sigmaos/dbsrv/proto"
 	"sigmaos/debug"
 	"sigmaos/fs"
 )

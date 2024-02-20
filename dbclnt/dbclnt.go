@@ -3,7 +3,7 @@ package dbclnt
 import (
 	"encoding/json"
 
-	"sigmaos/dbd/proto"
+	"sigmaos/dbsrv/proto"
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
 )

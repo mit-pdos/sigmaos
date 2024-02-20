@@ -112,12 +112,14 @@ func TestVerifyECDSAToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
+	s := time.Now()
 	signedToken, err := as.MintToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
-	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
+	db.DPrintf(db.TEST, "Signed token in %v sec: %v", time.Since(s).Seconds(), signedToken)
+	s = time.Now()
 	claims2, err := as.VerifyTokenGetClaims(signedToken)
 	assert.Nil(t, err, "Err verify token get claims: %v", err)
-	db.DPrintf(db.TEST, "Signed token: %v", claims2)
+	db.DPrintf(db.TEST, "Verified token: in %v sec: %v", time.Since(s).Seconds(), claims2)
 }
 
 func TestStartStop(t *testing.T) {

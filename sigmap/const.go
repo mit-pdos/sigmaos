@@ -76,8 +76,8 @@ const (
 	DMEXEC  = 0x1 // mode bit for execute permission
 
 	// 9P2000.u extensions
-	// A few are used by ulambda, but not supported in driver/proxy,
-	// so ulambda mounts on Linux without these extensions.
+	// A few are used by sigmaos, but not supported in driver/proxy,
+	// so sigmaos mounts on Linux without these extensions.
 	DMSYMLINK   Tperm = 0x02000000
 	DMLINK      Tperm = 0x01000000
 	DMDEVICE    Tperm = 0x00800000

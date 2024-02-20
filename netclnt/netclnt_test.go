@@ -35,7 +35,7 @@ const (
 func TestProto(t *testing.T) {
 	const N = 1000
 
-	req := sp.NewTheartbeat(map[uint64]bool{uint64(1): true})
+	req := sp.NewTwriteread(sp.NoFid)
 	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
 
 	t0 := time.Now()
@@ -274,7 +274,7 @@ func TestNetClntPerfFrame(t *testing.T) {
 
 func TestNetClntPerfFcall1(t *testing.T) {
 	ts := newTstateNet(t, ReadFcall1, WriteFcall1)
-	req := sp.NewTheartbeat(map[uint64]bool{uint64(1): true})
+	req := sp.NewTwriteread(sp.NoFid)
 	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
 
 	t0 := time.Now()
@@ -294,7 +294,7 @@ func TestNetClntPerfFcall1(t *testing.T) {
 
 func TestNetClntPerfFcall(t *testing.T) {
 	ts := newTstateNet(t, ReadFcall, WriteFcall)
-	req := sp.NewTheartbeat(map[uint64]bool{uint64(1): true})
+	req := sp.NewTwriteread(sp.NoFid)
 	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
 
 	t0 := time.Now()

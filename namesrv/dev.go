@@ -1,4 +1,4 @@
-package named
+package namesrv
 
 import (
 	db "sigmaos/debug"

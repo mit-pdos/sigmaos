@@ -1,4 +1,4 @@
-package named_test
+package namesrv_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/named"
+	"sigmaos/namesrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )

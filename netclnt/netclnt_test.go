@@ -32,6 +32,33 @@ const (
 	TOTAL = 10 * sp.MBYTE // 1000 * sp.MBYTE
 )
 
+func TestProto(t *testing.T) {
+	const N = 1000
+
+	req := sp.NewTheartbeat(map[uint64]bool{uint64(1): true})
+	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
+
+	t0 := time.Now()
+	for i := 0; i < N; i++ {
+		m, err := proto.Marshal(fc.Msg.(proto.Message))
+		assert.Nil(t, err)
+		f, err := proto.Marshal(fc.Fc)
+		assert.Nil(t, err)
+
+		fm := sessp.NewFcallMsgNull()
+		err = proto.Unmarshal(f, fm.Fc)
+		assert.Nil(t, err)
+		msg, error := spcodec.NewMsg(fm.Type())
+		assert.Nil(t, error)
+		msg0 := msg.(proto.Message)
+		err = proto.Unmarshal(m, msg0)
+		assert.Nil(t, err)
+		fm.Msg = msg
+		// db.DPrintf(db.TEST, "fm %v\n", fm)
+	}
+	db.DPrintf(db.ALWAYS, "proto %v usec\n", time.Since(t0).Microseconds())
+}
+
 type call struct {
 	buf []byte
 }

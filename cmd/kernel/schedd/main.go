@@ -8,7 +8,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/schedd"
+	"sigmaos/schedsrv"
 )
 
 func main() {
@@ -31,5 +31,5 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error NewPrivateKey", err)
 	}
-	schedd.RunSchedd(os.Args[1], uint(reserveMcpu), masterPubKey, pubkey, privkey)
+	schedsrv.RunSchedd(os.Args[1], uint(reserveMcpu), masterPubKey, pubkey, privkey)
 }

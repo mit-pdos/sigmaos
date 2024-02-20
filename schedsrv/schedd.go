@@ -1,4 +1,4 @@
-package schedd
+package schedsrv
 
 import (
 	"path"
@@ -21,8 +21,8 @@ import (
 	"sigmaos/procmgr"
 	"sigmaos/procqclnt"
 	"sigmaos/rpcclnt"
-	"sigmaos/schedd/proto"
 	"sigmaos/scheddclnt"
+	"sigmaos/schedsrv/proto"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/schedd/proto"
+	"sigmaos/schedsrv/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/unionrpcclnt"
 )

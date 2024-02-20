@@ -1,4 +1,4 @@
-package schedd
+package schedsrv
 
 import (
 	"sync/atomic"

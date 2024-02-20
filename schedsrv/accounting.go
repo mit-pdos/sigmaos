@@ -1,10 +1,10 @@
-package schedd
+package schedsrv
 
 import (
 	"sync/atomic"
 
 	"sigmaos/proc"
-	"sigmaos/schedd/proto"
+	"sigmaos/schedsrv/proto"
 	sp "sigmaos/sigmap"
 )
 

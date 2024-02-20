@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "proc/proc.proto";
 
-option go_package = "sigmaos/schedd/proto";
+option go_package = "sigmaos/schedsrv/proto";
 
 service Schedd {
   rpc ForceRun(ForceRunRequest) returns (ForceRunResponse);

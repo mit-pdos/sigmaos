@@ -120,57 +120,57 @@ func ReadFcall1(rdr io.Reader) (demux.CallI, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	msg := sp.NewTwriteread(sp.NoFid)
-	if err := proto.Unmarshal(f, msg); err != nil {
+	fm := sessp.NewFcallMsgNull()
+	if err := proto.Unmarshal(f, fm.Fc); err != nil {
 		db.DFatalf("error decoding fcall %v", err)
 	}
 
-	// db.DPrintf(db.TEST, "unmarshall %v %d\n", msg, len(f))
+	// db.DPrintf(db.TEST, "unmarshall %v %d\n", fm.Fc, len(f))
 
-	// msg, error1 := spcodec.NewMsg(fm.Type())
-	// if error1 != nil {
-	// 	db.DFatalf("error type %v %v", msg, error1)
-	// }
-	// m := msg.(proto.Message)
+	msg, error1 := spcodec.NewMsg(fm.Type())
+	if error1 != nil {
+		db.DFatalf("error type %v %v", msg, error1)
+	}
+	m := msg.(proto.Message)
 
-	// b := make(sessp.Tframe, fm.Fc.Len)
-	// n, error := io.ReadFull(rdr, b)
-	// if n != len(b) {
-	// 	return nil, serr.NewErr(serr.TErrUnreachable, error)
-	// }
-	// if err := proto.Unmarshal(b, m); err != nil {
-	// 	db.DFatalf("error decoding msg %v", err)
-	// }
+	b := make(sessp.Tframe, fm.Fc.Len)
+	n, error := io.ReadFull(rdr, b)
+	if n != len(b) {
+		return nil, serr.NewErr(serr.TErrUnreachable, error)
+	}
+	if err := proto.Unmarshal(b, m); err != nil {
+		db.DFatalf("error decoding msg %v", err)
+	}
 
 	// db.DPrintf(db.TEST, "unmarshall %v msg %v\n", fm, m)
 
-	iov, err := frame.ReadFramesN(rdr, msg.Nvec)
+	iov, err := frame.ReadFramesN(rdr, fm.Fc.Nvec)
 	if err != nil {
 		return nil, err
 	}
-	fc := sessp.NewFcallMsg(msg, iov, sessp.Tsession(msg.Session), nil)
-	fc.Fc.Seqno = msg.Seqno
-	fc.Msg = msg
-	return fc, nil
+
+	fm.Msg = msg
+	fm.Iov = iov
+	return fm, nil
 }
 
 func WriteFcall1(wr io.Writer, c demux.CallI) *serr.Err {
 	wrt := wr.(*bufio.Writer)
 	fc := c.(*sessp.FcallMsg)
-	//msg, err := proto.Marshal(fc.Msg.(proto.Message))
-	//if err != nil {
-	//	db.DFatalf("error encoding msg %v", err)
-	//}
-	// fc.Fcall.Len = uint32(len(msg))
-	msg := fc.Msg.(*sp.Twriteread)
-	msg.Nvec = uint32(len(fc.Iov))
 
-	b, err := proto.Marshal(msg)
+	msg, err := proto.Marshal(fc.Msg.(proto.Message))
+	if err != nil {
+		db.DFatalf("error encoding msg %v", err)
+	}
+	fc.Fc.Len = uint32(len(msg))
+	fc.Fc.Nvec = uint32(len(fc.Iov))
+
+	b, err := proto.Marshal(fc.Fc)
 	if err != nil {
 		db.DFatalf("error encoding fcall %v", err)
 	}
 
-	// db.DPrintf(db.TEST, "marshall %v len %d\n", msg, len(b))
+	// db.DPrintf(db.TEST, "marshall %v %d\n", fc.Fc, len(b))
 
 	if err := binary.Write(wrt, binary.LittleEndian, uint32(len(b)+4)); err != nil {
 		db.DFatalf("error write %v", err)
@@ -180,9 +180,9 @@ func WriteFcall1(wr io.Writer, c demux.CallI) *serr.Err {
 		db.DFatalf("error write %v", err)
 	}
 
-	// if _, err := wrt.Write(msg); err != nil {
-	// 	db.DFatalf("error write %v", err)
-	// }
+	if _, err := wrt.Write(msg); err != nil {
+		db.DFatalf("error write %v", err)
+	}
 
 	//this write will be copied (< 4096)
 	for _, f := range fc.Iov {
@@ -210,8 +210,6 @@ func (nc *netConn) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	case *call:
 		rep = &call{buf: r.buf}
 	case *sessp.FcallMsg:
-		rep = r
-	case *sp.Twriteread:
 		rep = r
 	}
 	return rep, nil
@@ -276,8 +274,8 @@ func TestNetClntPerfFrame(t *testing.T) {
 
 func TestNetClntPerfFcall1(t *testing.T) {
 	ts := newTstateNet(t, ReadFcall1, WriteFcall1)
-	req := sp.NewTwritereadFcall(sp.NoFid, 1, &seqno)
-	fc := sessp.NewFcallMsgInit(req.Seqno, req, sessp.IoVec{test.NewBuf(BUFSZ)})
+	req := sp.NewTwriteread(sp.NoFid)
+	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
 
 	t0 := time.Now()
 	n := TOTAL / BUFSZ

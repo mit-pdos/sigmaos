@@ -51,17 +51,6 @@ func (iov IoVec) String() string {
 	return s
 }
 
-func NewFcall(typ Tfcall, sess Tsession, seqno *Tseqno) *Fcall {
-	fcall := &Fcall{
-		Type:    uint32(typ),
-		Session: uint64(sess),
-	}
-	if seqno != nil {
-		fcall.Seqno = uint64(seqno.Next())
-	}
-	return fcall
-}
-
 type Tmsg interface {
 	Type() Tfcall
 }
@@ -98,13 +87,14 @@ func NewFcallMsgNull() *FcallMsg {
 	return &FcallMsg{fc, nil, nil}
 }
 
-func NewFcallMsgInit(seqno uint64, msg Tmsg, iov IoVec) *FcallMsg {
-	fc := &Fcall{Seqno: seqno}
-	return &FcallMsg{fc, msg, iov}
-}
-
 func NewFcallMsg(msg Tmsg, iov IoVec, sess Tsession, seqno *Tseqno) *FcallMsg {
-	fcall := NewFcall(msg.Type(), sess, seqno)
+	fcall := &Fcall{
+		Type:    uint32(msg.Type()),
+		Session: uint64(sess),
+	}
+	if seqno != nil {
+		fcall.Seqno = uint64(seqno.Next())
+	}
 	return &FcallMsg{fcall, msg, iov}
 }
 

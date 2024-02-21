@@ -145,10 +145,8 @@ func (ts *TstateNet) ReportError(err error) {
 }
 
 func newTstateNet(t *testing.T, rf demux.ReadCallF, wf demux.WriteCallF) *TstateNet {
-	ts := &TstateNet{rf: rf, wf: wf}
-	ts.TstateMin = test.NewTstateMin(t)
-
-	ts.srv = netsrv.NewNetServer(ts.Pcfg, ts.Addr, ts)
+	ts := &TstateNet{TstateMin: test.NewTstateMin(t), rf: rf, wf: wf}
+	ts.srv = netsrv.NewNetServer(ts.PE, ts.Addr, ts)
 
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
 
@@ -179,48 +177,6 @@ func TestNetClntPerfFrame(t *testing.T) {
 	ts.srv.CloseListener()
 }
 
-<<<<<<< HEAD
-func TestNetClntPerfFcall1(t *testing.T) {
-	ts := newTstateNet(t, ReadFcall1, WriteFcall1)
-	req := sp.NewTwriteread(sp.NoFid)
-	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
-
-	t0 := time.Now()
-	n := TOTAL / BUFSZ
-	for i := 0; i < n; i++ {
-		c, err := ts.dmx.SendReceive(fc)
-		assert.Nil(t, err)
-		fcm := c.(*sessp.FcallMsg)
-		assert.True(t, len(fcm.Iov[0]) == BUFSZ)
-	}
-	tot := uint64(TOTAL)
-	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
-
-	ts.srv.CloseListener()
-}
-
-func TestNetClntPerfFcall(t *testing.T) {
-	ts := newTstateNet(t, ReadFcall, WriteFcall)
-	req := sp.NewTwriteread(sp.NoFid)
-	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
-
-	t0 := time.Now()
-	n := TOTAL / BUFSZ
-	for i := 0; i < n; i++ {
-		c, err := ts.dmx.SendReceive(fc)
-		assert.Nil(t, err)
-		fcm := c.(*sessp.FcallMsg)
-		assert.True(t, len(fcm.Iov[0]) == BUFSZ)
-	}
-	tot := uint64(TOTAL)
-	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
-
-	ts.srv.CloseListener()
-}
-
-=======
 func TestNetClntPerfFcall(t *testing.T) {
 	ts := newTstateNet(t, spcodec.ReadCall, spcodec.WriteCall)
 	req := sp.NewTwriteread(sp.NoFid)
@@ -241,7 +197,6 @@ func TestNetClntPerfFcall(t *testing.T) {
 	ts.srv.CloseListener()
 }
 
->>>>>>> sessdemux
 func testLocalPerf(t *testing.T, typ, arg string) {
 	var socket net.Listener
 	if typ == "unix" {

@@ -94,7 +94,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap sessclnt proxy reader writer stats fslib semclnt electclnt memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www fslibsrv realmclnt auth mr imgresizesrv kv hotel socialnetwork benchmarks; do
+    for T in path intervals serr linuxsched perf sigmap sessclnt proxy reader writer stats fslib semclnt electclnt fslib memfs named procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt auth mr imgresizesrv kv hotel socialnetwork benchmarks; do
         go test $VERB sigmaos/$T --run TestCompile
     done
 fi
@@ -133,7 +133,7 @@ if [[ $BASIC == "--basic" ]]; then
         cleanup
     done
 
-    # go test $VERB sigmaos/fslibsrv -start  # no perf
+    # go test $VERB sigmaos/sigmapsrv -start  # no perf
 
     # test memfs
     go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SIGMACLNTD $REUSEKERNEL
@@ -150,9 +150,9 @@ if [[ $BASIC == "--basic" ]]; then
         cleanup
     done
 
-    go test $VERB sigmaos/fslibsrv -start -path "name/ux/~local/" -run ReadPerf
+    go test $VERB sigmaos/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf
     cleanup
-    go test $VERB sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
+    go test $VERB sigmaos/sigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
     cleanup
 
     #

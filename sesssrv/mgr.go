@@ -6,17 +6,18 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
 )
 
-type SessionMgr struct {
-	st       *SessionTable
-	srvfcall sps.Fsrvfcall
+type Fsrvfcall func(*Session, *sessp.FcallMsg) *sessp.FcallMsg
+
+type sessionMgr struct {
+	st       *sessionTable
+	srvfcall Fsrvfcall
 	done     bool
 }
 
-func NewSessionMgr(st *SessionTable, pfn sps.Fsrvfcall) *SessionMgr {
-	sm := &SessionMgr{}
+func newSessionMgr(st *sessionTable, pfn Fsrvfcall) *sessionMgr {
+	sm := &sessionMgr{}
 	sm.st = st
 	sm.srvfcall = pfn
 	go sm.runDetaches()
@@ -24,17 +25,17 @@ func NewSessionMgr(st *SessionTable, pfn sps.Fsrvfcall) *SessionMgr {
 }
 
 // Force a client on the last session to detach for testing purposes
-func (sm *SessionMgr) DisconnectClient() {
-	c, sid := sm.st.lastClnt()
+func (sm *sessionMgr) DisconnectClient() {
+	c, sess := sm.st.lastClnt()
 	if c != sp.NoClntId {
-		db.DPrintf(db.CRASH, "DisconnectClient %v %v", c, sid)
-		detach := sessp.NewFcallMsg(&sp.Tdetach{ClntId: uint64(c)}, nil, sid, nil)
-		sm.srvfcall(detach)
+		db.DPrintf(db.CRASH, "DisconnectClient %v %v", c, sess)
+		detach := sessp.NewFcallMsg(&sp.Tdetach{ClntId: uint64(c)}, nil, sess.Sid, nil)
+		sm.srvfcall(sess, detach)
 	}
 }
 
 // Close last the conn associated with last sess for testing purposes
-func (sm *SessionMgr) CloseConn() {
+func (sm *sessionMgr) CloseConn() {
 	sess := sm.st.lastSession()
 	if sess != nil {
 		db.DPrintf(db.CRASH, "%v: CloseConn", sess.Sid)
@@ -43,20 +44,20 @@ func (sm *SessionMgr) CloseConn() {
 }
 
 // Find timed-out sessions.
-func (sm *SessionMgr) getTimedOutSessions() []*Session {
+func (sm *sessionMgr) getTimedOutSessions() []*Session {
 	// Lock the session table.
 	sm.st.mu.RLock()
 	defer sm.st.mu.RUnlock()
 	sess := make([]*Session, 0, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
 		if s.IsConnected() {
-			db.DPrintf(db.SESS_STATE_SRV, "Sess %v is connected", sid)
+			db.DPrintf(db.SESSSRV, "Sess %v is connected", sid)
 			s.lastHeartbeat = time.Now()
 			continue
 		}
 		// Find timed-out sessions which haven't been closed yet.
 		if timedout, lhb := s.timedOut(); timedout && !s.IsClosed() {
-			db.DPrintf(db.SESS_STATE_SRV, "Sess %v timed out, last heartbeat: %v", sid, lhb)
+			db.DPrintf(db.SESSSRV, "Sess %v timed out, last heartbeat: %v", sid, lhb)
 			sess = append(sess, s)
 		}
 	}
@@ -64,7 +65,7 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 }
 
 // Scan for detachable sessions, and request that they be detached.
-func (sm *SessionMgr) runDetaches() {
+func (sm *sessionMgr) runDetaches() {
 	sessTimeoutT := time.NewTicker(sp.Conf.Session.TIMEOUT)
 
 	for !sm.Done() {
@@ -75,20 +76,20 @@ func (sm *SessionMgr) runDetaches() {
 			for _, c := range clnts {
 				db.DPrintf(db.ALWAYS, "Sess %v Clnt %v timed out", s.Sid, c)
 				detach := sessp.NewFcallMsg(&sp.Tdetach{ClntId: uint64(c)}, nil, s.Sid, nil)
-				sm.srvfcall(detach)
+				sm.srvfcall(s, detach)
 			}
 		}
 	}
 }
 
-func (sm *SessionMgr) Done() bool {
+func (sm *sessionMgr) Done() bool {
 	sm.st.mu.RLock()
 	defer sm.st.mu.RUnlock()
 
 	return sm.done
 }
 
-func (sm *SessionMgr) Stop() {
+func (sm *sessionMgr) Stop() {
 	sm.st.mu.Lock()
 	defer sm.st.mu.Unlock()
 

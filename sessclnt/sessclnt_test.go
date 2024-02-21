@@ -1,6 +1,8 @@
 package sessclnt_test
 
 import (
+	"bufio"
+	"net"
 	"sync"
 	"testing"
 	"time"
@@ -19,46 +21,49 @@ import (
 	"sigmaos/memfs"
 	"sigmaos/netsrv"
 	"sigmaos/path"
-	"sigmaos/protsrv"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
 	"sigmaos/sessp"
-	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmaprotsrv"
+	"sigmaos/sigmapsrv"
 	"sigmaos/spcodec"
 	"sigmaos/test"
 )
 
 type SessSrv struct {
 	crash int
+	conn  net.Conn
 }
 
-func (ss *SessSrv) ReportError(conn sigmaprotsrv.Conn, err error) {
-	db.DPrintf(db.TEST, "Server ReportError sid %v err %v\n", conn.GetSessId(), err)
+func (ss *SessSrv) ReportError(err error) {
+	db.DPrintf(db.TEST, "Server ReportError sid %v err %v\n", ss, err)
 }
 
-func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.CallI, *serr.Err) {
+func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
+	// db.DPrintf(db.TEST, "serve %v\n", req)
 	fcm := req.(*sessp.FcallMsg)
 	qid := sp.NewQidPerm(0777, 0, 0)
 	var rep *sessp.FcallMsg
 	switch fcm.Type() {
 	case sessp.TTwatch:
 		time.Sleep(1 * time.Second)
-		conn.CloseConnTest()
+		ss.conn.Close()
 		msg := &sp.Ropen{Qid: qid}
 		rep = sessp.NewFcallMsgReply(fcm, msg)
 	case sessp.TTwrite:
 		msg := &sp.Rwrite{Count: uint32(len(fcm.Iov[0]))}
 		rep = sessp.NewFcallMsgReply(fcm, msg)
-		return rep, nil
+	case sessp.TTwriteread:
+		msg := &sp.Rread{}
+		rep = sessp.NewFcallMsgReply(fcm, msg)
+		rep.Iov = sessp.IoVec{fcm.Iov[0]}
 	default:
 		msg := &sp.Rattach{Qid: qid}
 		rep = sessp.NewFcallMsgReply(fcm, msg)
 		r := rand.Int64(100)
 		if r < uint64(ss.crash) {
-			conn.CloseConnTest()
+			ss.conn.Close()
 		}
 	}
 	pmfc := spcodec.NewPartMarshaledMsg(rep)
@@ -67,17 +72,25 @@ func (ss *SessSrv) ServeRequest(conn sigmaprotsrv.Conn, req demux.CallI) (demux.
 
 type TstateSrv struct {
 	*test.TstateMin
-	srv  *netsrv.NetServer
-	clnt *sessclnt.Mgr
+	srv   *netsrv.NetServer
+	clnt  *sessclnt.Mgr
+	crash int
 }
 
 func newTstateSrv(t *testing.T, crash int) *TstateSrv {
-	ts := &TstateSrv{TstateMin: test.NewTstateMin(t)}
-	ss := &SessSrv{crash}
-	ts.srv = netsrv.NewNetServer(ts.PE, ss, ts.Addr, spcodec.ReadCall, spcodec.WriteCall)
+	ts := &TstateSrv{TstateMin: test.NewTstateMin(t), crash: crash}
+	ts.srv = netsrv.NewNetServer(ts.PE, ts.Addr, ts)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts
+}
+
+func (ts *TstateSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
+	ss := &SessSrv{crash: ts.crash, conn: conn}
+	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
+	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
+	dmx := demux.NewDemuxSrv(br, wr, spcodec.ReadCall, spcodec.WriteCall, ss)
+	return dmx
 }
 
 func TestCompile(t *testing.T) {
@@ -161,100 +174,9 @@ func TestManyClientsCrash(t *testing.T) {
 	}
 }
 
-type TstateSp struct {
-	*test.TstateMin
-	srv  *sesssrv.SessSrv
-	clnt *sessclnt.Mgr
-}
-
-func newTstateSp(t *testing.T) (*TstateSp, error) {
-	ts := &TstateSp{}
-	ts.TstateMin = test.NewTstateMin(t)
-	et := ephemeralmap.NewEphemeralMap()
-	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	pubkey, privkey, err := keys.NewECDSAKey()
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
-		return nil, err
-	}
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
-	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
-		return nil, err1
-	}
-	ts.srv = sesssrv.NewSessSrv(ts.PE, as, root, ts.Addr, protsrv.NewProtServer, et, nil)
-	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
-	return ts, nil
-}
-
-func (ts *TstateSp) shutdown() {
-	scs := ts.clnt.SessClnts()
-	for _, sc := range scs {
-		err := sc.Close()
-		assert.Nil(ts.T, err)
-	}
-}
-
-func TestConnectMfsSrv(t *testing.T) {
-	ts, err1 := newTstateSp(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
-	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
-	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "fcall %v\n", rep)
-
-	req1 := sp.NewTwriteread(sp.NoFid)
-	iov := sessp.NewIoVec([][]byte{make([]byte, 10)})
-	rep, err = ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req1, iov)
-	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "fcall %v\n", rep)
-
-	ts.srv.StopServing()
-}
-
-func TestDisconnectMfsSrv(t *testing.T) {
-	ts, err1 := newTstateSp(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
-	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
-	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "fcall %v\n", rep)
-
-	sess, err := ts.clnt.LookupSessClnt(sp.Taddrs{ts.srv.MyAddr()})
-	assert.Nil(t, err)
-	assert.True(t, sess.IsConnected())
-
-	ssess, ok := ts.srv.GetSessionTable().Lookup(sess.SessId())
-	assert.True(t, ok)
-	assert.True(t, ssess.IsConnected())
-
-	// check if session isn't timed out
-	time.Sleep(3 * sp.Conf.Session.TIMEOUT)
-
-	assert.True(t, sess.IsConnected())
-
-	// client disconnects session
-	ts.shutdown()
-
-	assert.False(t, sess.IsConnected())
-
-	// allow server session to timeout
-	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
-
-	assert.False(t, sess.IsConnected())
-
-	ts.srv.StopServing()
-}
-
 const (
-	BUFSZ = 64 * sp.KBYTE
-	TOTAL = 1000 * sp.MBYTE
+	BUFSZ = 100      // 64 * sp.KBYTE
+	TOTAL = sp.MBYTE // 1000 * sp.MBYTE
 )
 
 type Awriter struct {
@@ -354,16 +276,93 @@ func TestPerfSessSrvSync(t *testing.T) {
 
 	t0 := time.Now()
 
+	n := TOTAL / BUFSZ
 	for i := 0; i < TOTAL/BUFSZ; i++ {
-		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
-		iov := sessp.IoVec{buf}
-		_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, iov)
+		req := sp.NewTwriteread(sp.NoFid)
+		rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, sessp.IoVec{buf})
 		assert.Nil(t, err)
+		assert.True(t, BUFSZ == len(rep.Iov[0]))
 	}
 
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
+}
+
+//
+// sessclnt with a sigmap server
+//
+
+type TstateSp struct {
+	*test.TstateMin
+	srv  *sigmapsrv.SigmaPSrv
+	clnt *sessclnt.Mgr
+}
+
+func newTstateSp(t *testing.T) *TstateSp {
+	ts := &TstateSp{}
+	ts.TstateMin = test.NewTstateMin(t)
+	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, root, ts.Addr, nil)
+	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
+	return ts
+}
+
+func (ts *TstateSp) shutdown() {
+	scs := ts.clnt.SessClnts()
+	for _, sc := range scs {
+		err := sc.Close()
+		assert.Nil(ts.T, err)
+	}
+}
+
+func TestConnectSigmaPSrv(t *testing.T) {
+	ts := newTstateSp(t)
+	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
+	req1 := sp.NewTwriteread(sp.NoFid)
+	iov := sessp.NewIoVec([][]byte{make([]byte, 10)})
+	rep, err = ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req1, iov)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
+	ts.srv.StopServing()
+}
+
+func TestDisconnectSigmaPSrv(t *testing.T) {
+	ts := newTstateSp(t)
+	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "fcall %v\n", rep)
+
+	sess, err := ts.clnt.LookupSessClnt(sp.Taddrs{ts.srv.MyAddr()})
+	assert.Nil(t, err)
+	assert.True(t, sess.IsConnected())
+
+	ssess, ok := ts.srv.GetSessionTable().Lookup(sess.SessId())
+	assert.True(t, ok)
+	assert.True(t, ssess.IsConnected())
+
+	// check if session isn't timed out
+	time.Sleep(3 * sp.Conf.Session.TIMEOUT)
+
+	assert.True(t, sess.IsConnected())
+
+	// client disconnects session
+	ts.shutdown()
+
+	assert.False(t, sess.IsConnected())
+
+	// allow server session to timeout
+	time.Sleep(2 * sp.Conf.Session.TIMEOUT)
+
+	assert.False(t, sess.IsConnected())
+
+	ts.srv.StopServing()
 }

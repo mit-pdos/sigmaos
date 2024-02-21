@@ -4,18 +4,12 @@
 package sesssrv
 
 import (
-	"sigmaos/auth"
-	"sigmaos/clntcond"
-	"sigmaos/ctx"
+	"bufio"
+	"net"
+
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/dir"
-	"sigmaos/ephemeralmap"
-	"sigmaos/fs"
-	"sigmaos/lockmap"
 	"sigmaos/netsrv"
-	"sigmaos/overlaydir"
-	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -23,9 +17,11 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 	"sigmaos/spcodec"
 	"sigmaos/stats"
-	"sigmaos/version"
-	"sigmaos/watch"
 )
+
+type NewSessionI interface {
+	NewSession(sessp.Tsession) sps.Protsrv
+}
 
 //
 // SessSrv has a table with all sess conds in use so that it can
@@ -34,79 +30,28 @@ import (
 //
 
 type SessSrv struct {
-	pe       *proc.ProcEnv
-	dirunder fs.Dir
-	dirover  *overlay.DirOverlay
-	newps    sps.NewProtServer
-	stats    *stats.StatInfo
-	st       *SessionTable
-	sm       *SessionMgr
-	sct      *clntcond.ClntCondTable
-	plt      *lockmap.PathLockTable
-	wt       *watch.WatchTable
-	vt       *version.VersionTable
-	et       *ephemeralmap.EphemeralMap
-	as       auth.AuthSrv
-	fencefs  fs.Dir
-	srv      *netsrv.NetServer
-	qlen     stats.Tcounter
+	pe    *proc.ProcEnv
+	st    *sessionTable
+	sm    *sessionMgr
+	srv   *netsrv.NetServer
+	stats *stats.StatInfo
+	qlen  stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, as auth.AuthSrv, root fs.Dir, addr *sp.Taddr, newps sps.NewProtServer, et *ephemeralmap.EphemeralMap, fencefs fs.Dir) *SessSrv {
-	ssrv := &SessSrv{}
-	ssrv.pe = pe
-	ssrv.dirover = overlay.MkDirOverlay(root)
-	ssrv.dirunder = root
-	ssrv.newps = newps
-	ssrv.et = et
-	ssrv.stats = stats.NewStatsDev(ssrv.dirover)
-	ssrv.st = NewSessionTable(newps, ssrv)
-	ssrv.sct = clntcond.NewClntCondTable()
-	ssrv.plt = lockmap.NewPathLockTable()
-	ssrv.wt = watch.NewWatchTable(ssrv.sct)
-	ssrv.vt = version.NewVersionTable()
-	ssrv.vt.Insert(ssrv.dirover.Path())
-	ssrv.fencefs = fencefs
-	ssrv.as = as
-
-	ssrv.dirover.Mount(sp.STATSD, ssrv.stats)
-
-	ssrv.srv = netsrv.NewNetServer(pe, ssrv, addr, spcodec.ReadCall, spcodec.WriteCall)
-	ssrv.sm = NewSessionMgr(ssrv.st, ssrv.SrvFcall)
+func NewSessSrv(pe *proc.ProcEnv, addr *sp.Taddr, stats *stats.StatInfo, newSess NewSessionI) *SessSrv {
+	ssrv := &SessSrv{
+		pe:    pe,
+		stats: stats,
+		st:    newSessionTable(newSess),
+	}
+	ssrv.srv = netsrv.NewNetServer(pe, addr, ssrv)
+	ssrv.sm = newSessionMgr(ssrv.st, ssrv.srvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
 	return ssrv
 }
 
 func (ssrv *SessSrv) ProcEnv() *proc.ProcEnv {
 	return ssrv.pe
-}
-
-func (ssrv *SessSrv) GetAuthSrv() auth.AuthSrv {
-	return ssrv.as
-}
-
-func (ssrv *SessSrv) GetPathLockTable() *lockmap.PathLockTable {
-	return ssrv.plt
-}
-
-func (ssrv *SessSrv) GetEphemeralMap() *ephemeralmap.EphemeralMap {
-	return ssrv.et
-}
-
-func (ssrv *SessSrv) Root(path path.Path) (fs.Dir, path.Path) {
-	d := ssrv.dirunder
-	if len(path) > 0 {
-		o, err := ssrv.dirover.Lookup(ctx.NewCtxNull(), path[0])
-		if err == nil {
-			return o.(fs.Dir), path[1:]
-		}
-	}
-	return d, path
-}
-
-func (ssrv *SessSrv) Mount(name string, dir *dir.DirImpl) {
-	dir.SetParent(ssrv.dirover)
-	ssrv.dirover.Mount(name, dir)
 }
 
 func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) *serr.Err {
@@ -132,67 +77,25 @@ func (ssrv *SessSrv) StopServing() error {
 	return nil
 }
 
-func (ssrv *SessSrv) GetStats() *stats.StatInfo {
-	return ssrv.stats
-}
-
 func (ssrv *SessSrv) QueueLen() int64 {
 	return ssrv.qlen.Read()
 }
 
-func (ssrv *SessSrv) GetWatchTable() *watch.WatchTable {
-	return ssrv.wt
-}
-
-func (ssrv *SessSrv) GetVersionTable() *version.VersionTable {
-	return ssrv.vt
-}
-
-func (ssrv *SessSrv) GetSessionCondTable() *clntcond.ClntCondTable {
-	return ssrv.sct
-}
-
-func (ssrv *SessSrv) GetRootCtx(principal *sp.Tprincipal, claims *auth.ProcClaims, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
-	return ssrv.dirover, ctx.NewCtx(principal, claims, sessid, clntid, ssrv.sct, ssrv.fencefs)
-}
-
-func (ssrv *SessSrv) GetSessionTable() *SessionTable {
+// for testing
+func (ssrv *SessSrv) GetSessionTable() *sessionTable {
 	return ssrv.st
 }
 
-func (ssrv *SessSrv) ReportError(conn sps.Conn, err error) {
-	db.DPrintf(db.SESSSRV, "ReportError %v err %v\n", conn, err)
-
-	// Disassociate a connection with a session, and let it close gracefully.
-	sid := conn.GetSessId()
-	if sid == sessp.NoSession {
-		return
-	}
-	sess := ssrv.st.Alloc(sid)
-	sess.UnsetConn(conn)
-}
-
-// Calls from netsrv
-func (ss *SessSrv) ServeRequest(conn sps.Conn, fc demux.CallI) (demux.CallI, *serr.Err) {
-	rep := ss.srvFcall(conn, fc.(*sessp.FcallMsg))
-	pmfc := spcodec.NewPartMarshaledMsg(rep)
-	return pmfc, nil
+func (ssrv *SessSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
+	nc := &netConn{conn: conn, ssrv: ssrv, sessid: sessp.NoSession}
+	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
+	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
+	nc.dmx = demux.NewDemuxSrv(br, wr, spcodec.ReadCall, spcodec.WriteCall, nc)
+	return nc.dmx
 }
 
 // Serve server-generated fcalls.
-func (ssrv *SessSrv) SrvFcall(fc *sessp.FcallMsg) *sessp.FcallMsg {
-	s := sessp.Tsession(fc.Fc.Session)
-	sess := ssrv.st.Alloc(s)
-	return ssrv.serve(sess, fc)
-}
-
-func (ssrv *SessSrv) srvFcall(conn sps.Conn, fc *sessp.FcallMsg) *sessp.FcallMsg {
-	s := sessp.Tsession(fc.Fc.Session)
-	if conn.CondSet(s) != s {
-		db.DFatalf("Bad sid %v sess associated with conn %v\n", conn.GetSessId(), conn)
-	}
-	sess := ssrv.st.Alloc(s)
-	sess.SetConn(conn)
+func (ssrv *SessSrv) srvFcall(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	return ssrv.serve(sess, fc)
 }
 
@@ -216,13 +119,13 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	reply.Iov = iov
 
 	switch op {
-	case TSESS_DEL:
+	case sps.TSESS_DEL:
 		sess.DelClnt(clntid)
 		ssrv.st.DelLastClnt(clntid)
-	case TSESS_ADD:
+	case sps.TSESS_ADD:
 		sess.AddClnt(clntid)
-		ssrv.st.AddLastClnt(clntid, sess.Sid)
-	case TSESS_NONE:
+		ssrv.st.AddLastClnt(clntid, sess)
+	case sps.TSESS_NONE:
 	}
 
 	return reply

@@ -172,7 +172,7 @@ func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv)
 // (e.g., knamed/named).
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
 	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ssrv.MemFs.SessSrv.Mount(rpc.RPC, d.(*dir.DirImpl))
+	ssrv.MemFs.SigmaPSrv.Mount(rpc.RPC, d.(*dir.DirImpl))
 	if err := ssrv.newRPCDev(rpc.RPC, svci); err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func (ssrv *SigmaSrv) QueueLen() int64 {
 }
 
 func (ssrv *SigmaSrv) MonitorCPU(ufn cpumon.UtilFn) {
-	ssrv.cpumon = cpumon.NewCpuMon(ssrv.GetStats(), ufn)
+	ssrv.cpumon = cpumon.NewCpuMon(ssrv.MemFs.Stats(), ufn)
 }
 
 func (ssrv *SigmaSrv) RunServer() error {

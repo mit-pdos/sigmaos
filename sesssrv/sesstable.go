@@ -8,28 +8,26 @@ import (
 	// db "sigmaos/debug"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
 )
 
-type SessionTable struct {
-	mu sync.RWMutex
+type sessionTable struct {
+	newSess NewSessionI
+	mu      sync.RWMutex
 	//	deadlock.Mutex
-	newps     sps.NewProtServer
-	sesssrv   sps.SessServer
 	sessions  map[sessp.Tsession]*Session
-	lasts     map[sessp.Tsession]*Session   // for testing
-	lastClnts map[sp.TclntId]sessp.Tsession // for testing
+	lasts     map[sessp.Tsession]*Session // for testing
+	lastClnts map[sp.TclntId]*Session     // for testing
 }
 
-func NewSessionTable(newps sps.NewProtServer, sesssrv sps.SessServer) *SessionTable {
-	st := &SessionTable{sesssrv: sesssrv, newps: newps}
+func newSessionTable(newSess NewSessionI) *sessionTable {
+	st := &sessionTable{newSess: newSess}
 	st.sessions = make(map[sessp.Tsession]*Session)
 	st.lasts = make(map[sessp.Tsession]*Session)
-	st.lastClnts = make(map[sp.TclntId]sessp.Tsession)
+	st.lastClnts = make(map[sp.TclntId]*Session)
 	return st
 }
 
-func (st *SessionTable) CloseSessions() error {
+func (st *sessionTable) CloseSessions() error {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 
@@ -39,49 +37,21 @@ func (st *SessionTable) CloseSessions() error {
 	return nil
 }
 
-func (st *SessionTable) Lookup(sid sessp.Tsession) (*Session, bool) {
+func (st *sessionTable) Lookup(sid sessp.Tsession) (*Session, bool) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 	sess, ok := st.sessions[sid]
 	return sess, ok
 }
 
-func (st *SessionTable) Alloc(sid sessp.Tsession) *Session {
-	st.mu.RLock()
-	defer st.mu.RUnlock()
+func (st *sessionTable) Alloc(sid sessp.Tsession, nc *netConn) *Session {
+	st.mu.Lock()
+	defer st.mu.Unlock()
 
-	return st.allocRL(sid)
-}
-
-func (st *SessionTable) allocRL(sid sessp.Tsession) *Session {
-	// Loop to first try with reader lock, then retry with writer lock.
-	for i := 0; i < 2; i++ {
-		if sess, ok := st.sessions[sid]; ok {
-			sess.Lock()
-			defer sess.Unlock()
-			return sess
-		} else {
-			if i == 0 {
-				// Session not in the session table. Upgrade to write lock.
-				st.mu.RUnlock()
-				st.mu.Lock()
-				// Make sure to re-lock the reader lock, as the caller expects it to be
-				// held.
-				defer st.mu.RLock()
-				// Defer statements happen in LIFO order, so make sure to unlock the
-				// writer lock before the reader lock is taken.
-				defer st.mu.Unlock()
-				// Retry to see if the session is now in the table. This may happen if
-				// between releasing the reader lock and grabbing the writer lock another
-				// caller sneaked in, grabbed the writer lock, and allocated the session.
-				continue
-			} else {
-				// Second pass was unsuccessful. Continue to allocation.
-				break
-			}
-		}
+	if sess, ok := st.sessions[sid]; ok {
+		return sess
 	}
-	sess := newSession(st.newps(st.sesssrv, sid), sid)
+	sess := newSession(st.newSess.NewSession(sid), sid, nc)
 	st.sessions[sid] = sess
 	if len(st.lasts) < NLAST {
 		st.lasts[sid] = sess
@@ -90,7 +60,7 @@ func (st *SessionTable) allocRL(sid sessp.Tsession) *Session {
 }
 
 // Return a last session
-func (st *SessionTable) lastSession() *Session {
+func (st *sessionTable) lastSession() *Session {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 
@@ -102,16 +72,16 @@ func (st *SessionTable) lastSession() *Session {
 	return sess
 }
 
-func (st *SessionTable) AddLastClnt(cid sp.TclntId, sid sessp.Tsession) {
+func (st *sessionTable) AddLastClnt(cid sp.TclntId, sess *Session) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
 	if len(st.lastClnts) < NLAST {
-		st.lastClnts[cid] = sid
+		st.lastClnts[cid] = sess
 	}
 }
 
-func (st *SessionTable) DelLastClnt(cid sp.TclntId) {
+func (st *sessionTable) DelLastClnt(cid sp.TclntId) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
@@ -121,18 +91,18 @@ func (st *SessionTable) DelLastClnt(cid sp.TclntId) {
 }
 
 // Return a last clnt
-func (st *SessionTable) lastClnt() (sp.TclntId, sessp.Tsession) {
+func (st *sessionTable) lastClnt() (sp.TclntId, *Session) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 	c := sp.NoClntId
-	s := sessp.Tsession(0)
-	for cid, sid := range st.lastClnts {
+	var sess *Session
+	for cid, s := range st.lastClnts {
 		c = cid
-		s = sid
+		sess = s
 		break
 	}
 	if c != sp.NoClntId {
 		delete(st.lastClnts, c)
 	}
-	return c, s
+	return c, sess
 }

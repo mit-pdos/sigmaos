@@ -42,7 +42,8 @@ func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 	return unmarshalFrame(f)
 }
 
-func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
+func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
+	wrt := wr.(*bufio.Writer)
 	fcm := c.(*sessp.FcallMsg)
 	b, err := marshalFrame(fcm)
 	if err != nil {
@@ -50,6 +51,9 @@ func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
 	}
 	if err := frame.WriteFrame(wrt, b); err != nil {
 		return err
+	}
+	if err := wrt.Flush(); err != nil {
+		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	return nil
 }

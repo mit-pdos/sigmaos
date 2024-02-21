@@ -1,14 +1,16 @@
 // The sessclnt package establishes a session with a server using a
 // [netclnt], which sets up a TCP connection.  If [netclnt] fails,
 // sessclnt could re-establish a new [netclnt] (but no longer
-// supported for now).
+// supported for now).  Sessclnt uses [demux] to multiplex
+// requests/replies over the connetion.
 package sessclnt
 
 import (
-	//	"github.com/sasha-s/go-deadlock"
+	"bufio"
 	"sync"
-
 	//"time"
+
+	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
@@ -28,19 +30,18 @@ type SessClnt struct {
 	addrs   sp.Taddrs
 	nc      *netclnt.NetClnt
 	clntnet string
+	dmx     *demux.DemuxClnt
 }
 
-func newSessClnt(clntnet string, addrs sp.Taddrs, rf demux.ReadCallF, wf demux.WriteCallF) (*SessClnt, *serr.Err) {
+func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c := &SessClnt{sid: sessp.Tsession(rand.Uint64()),
 		clntnet: clntnet,
 		addrs:   addrs,
 	}
 	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, addrs)
-	nc, err := netclnt.NewNetClnt(clntnet, addrs, spcodec.ReadCall, spcodec.WriteCall, c)
-	if err != nil {
+	if err := c.getConn(); err != nil {
 		return nil, err
 	}
-	c.nc = nc
 	return c, nil
 }
 
@@ -64,7 +65,7 @@ func (c *SessClnt) ownNetClnt() *netclnt.NetClnt {
 
 func (c *SessClnt) IsConnected() bool {
 	if nc := c.netClnt(); nc != nil {
-		return !nc.IsClosed()
+		return !c.dmx.IsClosed()
 	}
 	return false
 }
@@ -83,7 +84,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.
 	if nc == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)
 	}
-	rep, err := nc.SendReceive(pmfc)
+	rep, err := c.dmx.SendReceive(pmfc)
 	db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
 
 	if err != nil {
@@ -100,27 +101,29 @@ func (c *SessClnt) sendHeartbeat() {
 	}
 }
 
-// Get a connection to the server. If it isn't possible to make a connection,
-// return an error.
-func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
+// Get a connection to the server and demux it with [demux]
+func (c *SessClnt) getConn() *serr.Err {
 	c.Lock()
 	defer c.Unlock()
 
 	if c.closed {
-		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)
+		return serr.NewErr(serr.TErrUnreachable, c.addrs)
 	}
 
 	if c.nc == nil {
-		db.DPrintf(db.SESSCLNT, "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
-		nc, err := netclnt.NewNetClnt(c.clntnet, c.addrs, spcodec.ReadCall, spcodec.WriteCall, c)
+		db.DPrintf(db.SESSCLNT, "%v Connect to %v %v\n", c.sid, c.addrs, c.closed)
+		nc, err := netclnt.NewNetClnt(c.clntnet, c.addrs)
 		if err != nil {
 			db.DPrintf(db.SESSCLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
-			return nil, err
+			return err
 		}
-		db.DPrintf(db.SESSCLNT, "%v Successful connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
+		db.DPrintf(db.SESSCLNT, "%v connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
 		c.nc = nc
+		br := bufio.NewReaderSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
+		bw := bufio.NewWriterSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
+		c.dmx = demux.NewDemuxClnt(bw, br, spcodec.ReadCall, spcodec.WriteCall, c)
 	}
-	return c.nc, nil
+	return nil
 }
 
 func (c *SessClnt) ownClosed() bool {
@@ -144,5 +147,6 @@ func (c *SessClnt) Close() error {
 	if nc == nil {
 		return nil
 	}
+	// Close connection. This also causes dmxclnt to be closed
 	return nc.Close()
 }

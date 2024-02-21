@@ -214,30 +214,29 @@ const (
 
 // Server-side Infrastructure
 const (
-	AUTH                     = "AUTH"
-	AUTH_ERR                 = AUTH + ERR
-	NETSRV         Tselector = "NETSRV"
-	DEMUXSRV                 = "DEMUXSRV"
-	REPLRAFT                 = "REPLRAFT"
-	RAFT_TIMING              = "RAFT_TIMING"
-	REPLY_TABLE              = "REPLY_TABLE"
-	INTERVALS                = "INTERVALS"
-	SESSSRV                  = "SESSSRV"
-	WATCH                    = "WATCH"
-	WATCH_ERR                = WATCH + ERR
-	LOCKMAP                  = "LOCKMAP"
-	SNAP                     = "SNAP"
-	NAMEI                    = "NAMEI"
-	FENCEFS                  = "FENCEFS"
-	FENCEFS_ERR              = FENCEFS + ERR
-	LEASESRV                 = "LEASESRV"
-	MEMFSSRV                 = "MEMFSSRV"
-	THREADMGR                = "THREADMGR"
-	PROTSRV                  = "PROTSRV"
-	REFMAP_SUFFIX            = "_REFMAP"
-	VERSION                  = "VERSION"
-	CLNTCOND                 = "CLNTCOND"
-	SESS_STATE_SRV           = "SESS_STATE_SRV"
+	AUTH          Tselector = "AUTH"
+	AUTH_ERR                = AUTH + ERR
+	NETSRV                  = "NETSRV"
+	DEMUXSRV                = "DEMUXSRV"
+	REPLRAFT                = "REPLRAFT"
+	RAFT_TIMING             = "RAFT_TIMING"
+	REPLY_TABLE             = "REPLY_TABLE"
+	INTERVALS               = "INTERVALS"
+	SESSSRV                 = "SESSSRV"
+	WATCH                   = "WATCH"
+	WATCH_ERR               = WATCH + ERR
+	LOCKMAP                 = "LOCKMAP"
+	SNAP                    = "SNAP"
+	NAMEI                   = "NAMEI"
+	FENCEFS                 = "FENCEFS"
+	FENCEFS_ERR             = FENCEFS + ERR
+	LEASESRV                = "LEASESRV"
+	MEMFSSRV                = "MEMFSSRV"
+	THREADMGR               = "THREADMGR"
+	PROTSRV                 = "PROTSRV"
+	REFMAP_SUFFIX           = "_REFMAP"
+	VERSION                 = "VERSION"
+	CLNTCOND                = "CLNTCOND"
 )
 
 // 9P

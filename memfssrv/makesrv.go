@@ -8,13 +8,13 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/fslibsrv"
 	"sigmaos/keys"
 	"sigmaos/memfs"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmapsrv"
 )
 
 // Make an MemFs and advertise it at pn
@@ -55,10 +55,7 @@ func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, srvpath string, addr *sp.Taddr
 		kmgr = keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
 	}
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), srvpath, kmgr)
-	if err != nil {
-		return nil, err
-	}
-	srv, mpn, err := fslibsrv.NewSrv(root, srvpath, as, addr, sc, fencefs)
+	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, as, addr, sc, fencefs)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +80,7 @@ func NewMemFsPublic(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
 	}
 	mfs.pc = pc
 
-	if err = pc.AdvertisePort(pn, pi, pcfg.GetNet(), mfs.MyAddr()); err != nil {
+	if err = pc.AdvertisePort(pn, pi, pcfg.GetNet(), mfs.SigmaPSrv.MyAddr()); err != nil {
 		return nil, err
 	}
 	return mfs, err

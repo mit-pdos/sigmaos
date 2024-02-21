@@ -7,20 +7,15 @@ import (
 	"sigmaos/sessp"
 )
 
-// One call struct per outstanding call
-type call struct {
-	ch chan reply
-}
-
 // Map of outstanding calls indexed by tag
 type callMap struct {
 	sync.Mutex
 	closed bool
-	calls  map[sessp.Ttag]*call
+	calls  map[sessp.Ttag]chan reply
 }
 
 func newCallMap() *callMap {
-	return &callMap{calls: make(map[sessp.Ttag]*call)}
+	return &callMap{calls: make(map[sessp.Ttag]chan reply)}
 }
 
 func (cm *callMap) close() error {
@@ -41,11 +36,10 @@ func (cm *callMap) isClosed() bool {
 func (cm *callMap) put(tag sessp.Ttag, ch chan reply) *serr.Err {
 	cm.Lock()
 	defer cm.Unlock()
-	c := &call{ch: ch}
 	if cm.closed {
 		return serr.NewErr(serr.TErrUnreachable, "dmxclnt")
 	}
-	cm.calls[tag] = c
+	cm.calls[tag] = ch
 	return nil
 }
 
@@ -53,9 +47,9 @@ func (cm *callMap) remove(tag sessp.Ttag) (chan reply, bool) {
 	cm.Lock()
 	defer cm.Unlock()
 
-	if c, ok := cm.calls[tag]; ok {
+	if ch, ok := cm.calls[tag]; ok {
 		delete(cm.calls, tag)
-		return c.ch, true
+		return ch, true
 	}
 	return nil, false
 }

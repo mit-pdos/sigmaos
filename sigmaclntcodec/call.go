@@ -24,13 +24,17 @@ func (c *Call) Tag() sessp.Ttag {
 	return sessp.Ttag(c.Seqno)
 }
 
-func WriteCall(wrt *bufio.Writer, c demux.CallI) *serr.Err {
+func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
 	fc := c.(*Call)
 	// db.DPrintf(db.TEST, "writecall %v\n", c)
+	wrt := wr.(*bufio.Writer)
 	if err := frame.WriteSeqno(fc.Seqno, wrt); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	if err := frame.WriteFrames(wrt, fc.Iov); err != nil {
+		return serr.NewErr(serr.TErrUnreachable, err.Error())
+	}
+	if err := wrt.Flush(); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	return nil

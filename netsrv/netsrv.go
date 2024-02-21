@@ -11,21 +11,21 @@ import (
 	"sigmaos/netsigma"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
 )
 
-type NetServer struct {
-	pcfg      *proc.ProcEnv
-	addr      *sp.Taddr
-	sesssrv   sps.SessServer
-	l         net.Listener
-	readCall  demux.ReadCallF
-	writeCall demux.WriteCallF
+type NewConnI interface {
+	NewConn(net.Conn) *demux.DemuxSrv
 }
 
-func NewNetServer(pcfg *proc.ProcEnv, sesssrv sps.SessServer, addr *sp.Taddr, rf demux.ReadCallF, wf demux.WriteCallF) *NetServer {
-	srv := &NetServer{pcfg: pcfg, sesssrv: sesssrv, readCall: rf, writeCall: wf}
+type NetServer struct {
+	pcfg    *proc.ProcEnv
+	addr    *sp.Taddr
+	l       net.Listener
+	newConn NewConnI
+}
 
+func NewNetServer(pcfg *proc.ProcEnv, addr *sp.Taddr, newConn NewConnI) *NetServer {
+	srv := &NetServer{pcfg: pcfg, newConn: newConn}
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
 	var l net.Listener
@@ -49,7 +49,7 @@ func (srv *NetServer) MyAddr() *sp.Taddr {
 }
 
 func (srv *NetServer) CloseListener() error {
-	db.DPrintf(db.ALWAYS, "Close %v\n", srv.addr)
+	db.DPrintf(db.NETSRV, "Close %v\n", srv.addr)
 	return srv.l.Close()
 }
 
@@ -57,11 +57,11 @@ func (srv *NetServer) runsrv(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "%v: Accept err %v", srv.pcfg.GetPID(), err)
+			db.DPrintf(db.NETSRV, "%v: Accept err %v", srv.pcfg.GetPID(), err)
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)
-		NewNetSrvConn(srv, conn)
+		srv.newConn.NewConn(conn)
 	}
 }
 

@@ -1,7 +1,6 @@
 package demux
 
 import (
-	"bufio"
 	"io"
 	"sync"
 
@@ -22,65 +21,42 @@ type DemuxSrvI interface {
 }
 
 type DemuxSrv struct {
-	mu      sync.Mutex
-	in      *bufio.Reader
-	out     *bufio.Writer
-	serve   DemuxSrvI
-	replies chan reply
-	closed  bool
-	nreq    int
+	mu     sync.Mutex
+	in     io.Reader
+	out    io.Writer
+	serve  DemuxSrvI
+	closed bool
+	nreq   int
+	rf     ReadCallF
+	wf     WriteCallF
 }
 
-func NewDemuxSrv(in *bufio.Reader, out *bufio.Writer, rf ReadCallF, wf WriteCallF, serve DemuxSrvI) *DemuxSrv {
-	dmx := &DemuxSrv{in: in, out: out, serve: serve, replies: make(chan reply)}
-	go dmx.reader(rf)
-	go dmx.writer(wf)
+func NewDemuxSrv(in io.Reader, out io.Writer, rf ReadCallF, wf WriteCallF, serve DemuxSrvI) *DemuxSrv {
+	dmx := &DemuxSrv{in: in, out: out, serve: serve, wf: wf, rf: rf}
+	go dmx.reader()
 	return dmx
 }
 
-func (dmx *DemuxSrv) reader(rf ReadCallF) {
+func (dmx *DemuxSrv) reader() {
 	for {
-		c, err := rf(dmx.in)
+		c, err := dmx.rf(dmx.in)
 		if err != nil {
 			db.DPrintf(db.DEMUXSRV, "reader: rf err %v\n", err)
 			dmx.serve.ReportError(err)
 			break
 		}
 		go func(c CallI) {
-			if !dmx.IncNreq() { // handle req?
-				return // done
-			}
-
 			rep, err := dmx.serve.ServeRequest(c)
-			dmx.replies <- reply{rep, err}
-			if dmx.DecNreq() {
-				close(dmx.replies)
+			if err != nil {
+				return
+			}
+			dmx.mu.Lock()
+			err = dmx.wf(dmx.out, rep)
+			dmx.mu.Unlock()
+			if err != nil {
+				db.DPrintf(db.DEMUXSRV, "wf reply %v error %v\n", rep, err)
 			}
 		}(c)
-	}
-}
-
-func (dmx *DemuxSrv) writer(wf WriteCallF) {
-	for {
-		reply, ok := <-dmx.replies
-		if !ok {
-			db.DPrintf(db.DEMUXSRV, "writer: replies closed\n")
-			return
-		}
-
-		// In error cases drain replies until reader closes replies
-
-		if reply.err != nil {
-			continue
-		}
-		if err := wf(dmx.out, reply.rep); err != nil {
-			db.DPrintf(db.DEMUXSRV, "wf reply %v error %v\n", reply, err)
-			continue
-		}
-		if err := dmx.out.Flush(); err != nil {
-			db.DPrintf(db.DEMUXSRV, "Flush reply %v err %v\n", reply, err)
-			continue
-		}
 	}
 }
 
@@ -96,26 +72,4 @@ func (dmx *DemuxSrv) IsClosed() bool {
 	dmx.mu.Lock()
 	defer dmx.mu.Unlock()
 	return dmx.closed
-}
-
-func (dmx *DemuxSrv) IncNreq() bool {
-	dmx.mu.Lock()
-	defer dmx.mu.Unlock()
-
-	if dmx.closed {
-		return false
-	}
-	dmx.nreq++
-	return true
-}
-
-func (dmx *DemuxSrv) DecNreq() bool {
-	dmx.mu.Lock()
-	defer dmx.mu.Unlock()
-
-	dmx.nreq--
-	if dmx.nreq == 0 && dmx.closed {
-		return true
-	}
-	return false
 }

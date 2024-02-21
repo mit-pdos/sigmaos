@@ -27,7 +27,7 @@ const NLAST = 10
 
 type Session struct {
 	sync.Mutex
-	conn          sps.Conn
+	conn          *netConn
 	protsrv       sps.Protsrv
 	lastHeartbeat time.Time
 	Sid           sessp.Tsession
@@ -38,11 +38,12 @@ type Session struct {
 	clnts         map[sp.TclntId]bool
 }
 
-func newSession(protsrv sps.Protsrv, sid sessp.Tsession) *Session {
+func newSession(protsrv sps.Protsrv, sid sessp.Tsession, nc *netConn) *Session {
 	sess := &Session{
 		protsrv:       protsrv,
 		lastHeartbeat: time.Now(),
 		Sid:           sid,
+		conn:          nc,
 		clnts:         make(map[sp.TclntId]bool),
 	}
 	return sess
@@ -53,7 +54,7 @@ func (sess *Session) QueueLen() int64 {
 	return 0
 }
 
-func (sess *Session) GetConn() sps.Conn {
+func (sess *Session) GetConn() *netConn {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.conn
@@ -64,7 +65,7 @@ func (sess *Session) GetConn() sps.Conn {
 // won't the connection be re-established by client?
 func (sess *Session) CloseConn() {
 	sess.Lock()
-	var conn sps.Conn
+	var conn *netConn
 	if sess.conn != nil {
 		conn = sess.conn
 	}
@@ -75,7 +76,7 @@ func (sess *Session) CloseConn() {
 func (sess *Session) AddClnt(cid sp.TclntId) {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DPrintf(db.SESS_STATE_SRV, "Add cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
+	db.DPrintf(db.SESSSRV, "Add cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 	sess.clnts[cid] = true
 }
 
@@ -84,14 +85,14 @@ func (sess *Session) DelClnt(cid sp.TclntId) {
 	sess.Lock()
 	defer sess.Unlock()
 	delete(sess.clnts, cid)
-	db.DPrintf(db.SESS_STATE_SRV, "Del cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
+	db.DPrintf(db.SESSSRV, "Del cid %v sess %v %d\n", cid, sess.Sid, len(sess.clnts))
 }
 
 // Server may call Close() several times because client may reconnect
 // on a session that server has terminated and the Close() will close
 // the new reply channel.
 func (sess *Session) close() {
-	db.DPrintf(db.SESS_STATE_SRV, "Srv Close sess %v %d\n", sess.Sid, len(sess.clnts))
+	db.DPrintf(db.SESSSRV, "Srv Close sess %v %d\n", sess.Sid, len(sess.clnts))
 	sess.closed = true
 	// Close the connection so that writer in srvconn exits
 	if sess.conn != nil {
@@ -121,32 +122,32 @@ func (sess *Session) IsClosed() bool {
 
 // Change conn associated with this session. This may occur if, for example, a
 // client starts client reconnects quickly.
-func (sess *Session) SetConn(conn sps.Conn) *serr.Err {
+func (sess *Session) SetConn(conn *netConn) *serr.Err {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
 		return serr.NewErr(serr.TErrClosed, fmt.Sprintf("sess %v", sess.Sid))
 	}
-	db.DPrintf(db.SESS_STATE_SRV, "%v SetConn new %v\n", sess.Sid, conn)
+	db.DPrintf(db.SESSSRV, "%v SetConn new %v\n", sess.Sid, conn)
 	sess.conn = conn
 	return nil
 }
 
-func (sess *Session) UnsetConn(conn sps.Conn) {
+func (sess *Session) UnsetConn(nc *netConn) {
 	sess.Lock()
 	defer sess.Unlock()
 
-	sess.unsetConnL(conn)
+	sess.unsetConnL(nc)
 }
 
 // Disassociate a connection with this session, and safely close the
 // connection.
-func (sess *Session) unsetConnL(conn sps.Conn) {
-	if sess.conn == conn {
-		db.DPrintf(db.SESS_STATE_SRV, "%v close connection", sess.Sid)
+func (sess *Session) unsetConnL(nc *netConn) {
+	if sess.conn == nc {
+		db.DPrintf(db.SESSSRV, "%v close connection", sess.Sid)
 		sess.conn = nil
 	}
-	conn.Close()
+	nc.Close()
 }
 
 func (sess *Session) IsConnected() bool {
@@ -179,4 +180,13 @@ func (sess *Session) GetDetachSess() sps.DetachSessF {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.detachSess
+}
+
+func (s *Session) Dispatch(msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, sessp.IoVec, *sp.Rerror, sps.Tsessop, sp.TclntId) {
+	if s.IsClosed() {
+		db.DPrintf(db.SESSSRV, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
+		err := serr.NewErr(serr.TErrClosed, fmt.Sprintf("session %v", s.Sid))
+		return nil, nil, sp.NewRerrorSerr(err), sps.TSESS_NONE, sp.NoClntId
+	}
+	return sps.Dispatch(s.protsrv, msg, iov)
 }

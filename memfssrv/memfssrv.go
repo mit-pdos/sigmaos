@@ -14,9 +14,9 @@ import (
 	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmapsrv"
 )
 
 var rootP = path.Path{""}
@@ -28,7 +28,7 @@ var rootP = path.Path{""}
 //
 
 type MemFs struct {
-	*sesssrv.SessSrv
+	*sigmapsrv.SigmaPSrv
 	ctx fs.CtxI // server context
 	plt *lockmap.PathLockTable
 	sc  *sigmaclnt.SigmaClnt
@@ -38,14 +38,14 @@ type MemFs struct {
 	pn  string
 }
 
-func NewMemFsSrv(pn string, srv *sesssrv.SessSrv, sc *sigmaclnt.SigmaClnt, as auth.AuthSrv, fencefs fs.Dir) *MemFs {
+func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, as auth.AuthSrv, fencefs fs.Dir) *MemFs {
 	mfs := &MemFs{
-		SessSrv: srv,
-		ctx:     ctx.NewCtx(sc.ProcEnv().GetPrincipal(), nil, 0, sp.NoClntId, nil, fencefs),
-		plt:     srv.GetPathLockTable(),
-		sc:      sc,
-		as:      as,
-		pn:      pn,
+		SigmaPSrv: srv,
+		ctx:       ctx.NewCtx(sc.ProcEnv().GetPrincipal(), nil, 0, sp.NoClntId, nil, fencefs),
+		plt:       srv.PathLockTable(),
+		sc:        sc,
+		as:        as,
+		pn:        pn,
 	}
 	return mfs
 }
@@ -55,7 +55,7 @@ func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 }
 
 func (mfs *MemFs) MyAddrsPublic(net string) sp.Taddrs {
-	return port.NewPublicAddrs(mfs.pi.HostIP, mfs.pi.PBinding, net, mfs.MyAddr())
+	return port.NewPublicAddrs(mfs.pi.HostIP, mfs.pi.PBinding, net, mfs.SigmaPSrv.MyAddr())
 }
 
 // Note: NewDev() sets parent

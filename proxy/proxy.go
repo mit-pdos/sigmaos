@@ -62,16 +62,18 @@ func (npd *Npd) NewConn(conn net.Conn) *demux.DemuxSrv {
 
 // The protsrv session from the kernel/client
 type NpSess struct {
-	mu   sync.Mutex
-	fidc *fidclnt.FidClnt
-	pc   *pathclnt.PathClnt
-	fm   *fidMap
-	cid  sp.TclntId
+	mu        sync.Mutex
+	principal *sp.Tprincipal
+	fidc      *fidclnt.FidClnt
+	pc        *pathclnt.PathClnt
+	fm        *fidMap
+	cid       sp.TclntId
 }
 
 func newNpSess(pcfg *proc.ProcEnv, lip string) *NpSess {
 	npc := &NpSess{}
 	npc.fidc = fidclnt.NewFidClnt(sp.ROOTREALM.String())
+	npc.principal = pcfg.GetPrincipal()
 	npc.pc = pathclnt.NewPathClnt(pcfg, npc.fidc)
 	npc.fm = newFidMap()
 	npc.cid = sp.TclntId(rand.Uint64())

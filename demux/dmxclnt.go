@@ -50,7 +50,7 @@ func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
 	if ch, ok := dmx.callmap.remove(tag); ok {
 		ch <- reply{rep, err}
 	} else {
-		db.DFatalf("reply remove missing %v\n", tag)
+		db.DFatalf("reply %v no matching req %v\n", rep, tag)
 	}
 }
 

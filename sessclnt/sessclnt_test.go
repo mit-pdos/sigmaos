@@ -177,8 +177,8 @@ func TestManyClientsCrash(t *testing.T) {
 }
 
 const (
-	BUFSZ = 100      // 64 * sp.KBYTE
-	TOTAL = sp.MBYTE // 1000 * sp.MBYTE
+	BUFSZ = 100           // 64 * sp.KBYTE
+	TOTAL = 10 * sp.MBYTE // 1000 * sp.MBYTE
 )
 
 type Awriter struct {
@@ -248,9 +248,6 @@ func (awrt *Awriter) Close() error {
 }
 
 func TestPerfSessSrvAsync(t *testing.T) {
-	const (
-		TOTAL = 1000 * sp.MBYTE
-	)
 	ts := newTstateSrv(t, 0)
 	buf := test.NewBuf(BUFSZ)
 
@@ -258,7 +255,8 @@ func TestPerfSessSrvAsync(t *testing.T) {
 
 	t0 := time.Now()
 
-	for i := 0; i < TOTAL/BUFSZ; i++ {
+	n := TOTAL / BUFSZ
+	for i := 0; i < n; i++ {
 		err := aw.Write(sessp.IoVec{buf})
 		assert.Nil(t, err)
 	}
@@ -267,7 +265,7 @@ func TestPerfSessSrvAsync(t *testing.T) {
 
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
 }

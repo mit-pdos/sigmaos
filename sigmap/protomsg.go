@@ -319,6 +319,18 @@ func NewTwriteread(fid Tfid) *Twriteread {
 	return &Twriteread{Fid: uint32(fid)}
 }
 
+func NewTwritereadFcall(fid Tfid, sess sessp.Tsession, seqno *sessp.Tseqno) *Twriteread {
+	msg := &Twriteread{Fid: uint32(fid), Session: uint64(sess)}
+	if seqno != nil {
+		msg.Seqno = uint64(seqno.Next())
+	}
+	return msg
+}
+
+func (wr *Twriteread) Tag() sessp.Ttag {
+	return sessp.Ttag(wr.Seqno)
+}
+
 func (wr *Twriteread) Tfid() Tfid {
 	return Tfid(wr.Fid)
 }

@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+// import "sessp/sessp.proto";
+
 option go_package = "sigmaos/sigmap";
 
 // A Qid is the server's unique identification for the file being
@@ -229,4 +231,7 @@ message Tremovefile {
 
 message Twriteread {
         uint32 fid = 1;
+        uint64 session = 2;
+        uint64 seqno = 3;
+        uint32 nvec = 4;       
 }

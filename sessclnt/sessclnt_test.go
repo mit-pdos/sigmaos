@@ -89,6 +89,9 @@ func (ts *TstateSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
 	return dmx
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestConnectSessSrv(t *testing.T) {
 	ts := newTstateSrv(t, 0)
 	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})

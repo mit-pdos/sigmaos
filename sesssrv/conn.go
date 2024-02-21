@@ -78,14 +78,17 @@ func (nc *netConn) ReportError(err error) {
 }
 
 func (nc *netConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
-	fc := c.(*sessp.FcallMsg)
-	s := sessp.Tsession(fc.Fc.Session)
+	fcm := c.(*sessp.PartMarshaledMsg)
+	s := sessp.Tsession(fcm.Fcm.Session())
 	sess := nc.getSess(s)
 	if sess == nil {
 		sess = nc.ssrv.st.Alloc(s, nc)
 		nc.setSess(sess)
 	}
-	rep := nc.ssrv.serve(nc.sess, fc)
+	if err := spcodec.UnmarshalMsg(fcm); err != nil {
+		return nil, err
+	}
+	rep := nc.ssrv.serve(nc.sess, fcm.Fcm)
 	pmfc := spcodec.NewPartMarshaledMsg(rep)
 	return pmfc, nil
 }

@@ -40,26 +40,32 @@ func (ss *SessSrv) ReportError(err error) {
 }
 
 func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
-	// db.DPrintf(db.TEST, "serve %v\n", req)
-	fcm := req.(*sessp.FcallMsg)
+	fcm := req.(*sessp.PartMarshaledMsg)
+
+	if err := spcodec.UnmarshalMsg(fcm); err != nil {
+		return nil, err
+	}
+
+	// db.DPrintf(db.TEST, "serve %v\n", fcm)
+
 	qid := sp.NewQidPerm(0777, 0, 0)
 	var rep *sessp.FcallMsg
-	switch fcm.Type() {
+	switch fcm.Fcm.Type() {
 	case sessp.TTwatch:
 		time.Sleep(1 * time.Second)
 		ss.conn.Close()
 		msg := &sp.Ropen{Qid: qid}
-		rep = sessp.NewFcallMsgReply(fcm, msg)
+		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 	case sessp.TTwrite:
-		msg := &sp.Rwrite{Count: uint32(len(fcm.Iov[0]))}
-		rep = sessp.NewFcallMsgReply(fcm, msg)
+		msg := &sp.Rwrite{Count: uint32(len(fcm.Fcm.Iov[0]))}
+		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 	case sessp.TTwriteread:
 		msg := &sp.Rread{}
-		rep = sessp.NewFcallMsgReply(fcm, msg)
-		rep.Iov = sessp.IoVec{fcm.Iov[0]}
+		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
+		rep.Iov = sessp.IoVec{fcm.Fcm.Iov[0]}
 	default:
 		msg := &sp.Rattach{Qid: qid}
-		rep = sessp.NewFcallMsgReply(fcm, msg)
+		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 		r := rand.Int64(100)
 		if r < uint64(ss.crash) {
 			ss.conn.Close()
@@ -174,8 +180,8 @@ func TestManyClientsCrash(t *testing.T) {
 }
 
 const (
-	BUFSZ = 100      // 64 * sp.KBYTE
-	TOTAL = sp.MBYTE // 1000 * sp.MBYTE
+	BUFSZ = 100           // 64 * sp.KBYTE
+	TOTAL = 10 * sp.MBYTE // 1000 * sp.MBYTE
 )
 
 type Awriter struct {
@@ -245,9 +251,6 @@ func (awrt *Awriter) Close() error {
 }
 
 func TestPerfSessSrvAsync(t *testing.T) {
-	const (
-		TOTAL = 1000 * sp.MBYTE
-	)
 	ts := newTstateSrv(t, 0)
 	buf := test.NewBuf(BUFSZ)
 
@@ -255,7 +258,8 @@ func TestPerfSessSrvAsync(t *testing.T) {
 
 	t0 := time.Now()
 
-	for i := 0; i < TOTAL/BUFSZ; i++ {
+	n := TOTAL / BUFSZ
+	for i := 0; i < n; i++ {
 		err := aw.Write(sessp.IoVec{buf})
 		assert.Nil(t, err)
 	}
@@ -264,7 +268,7 @@ func TestPerfSessSrvAsync(t *testing.T) {
 
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms tput %v\n", humanize.Bytes(tot), ms, test.TputStr(TOTAL, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
 }

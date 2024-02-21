@@ -90,7 +90,13 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.
 	if err != nil {
 		return nil, err
 	}
-	return rep.(*sessp.FcallMsg), nil
+
+	r := rep.(*sessp.PartMarshaledMsg)
+	if err := spcodec.UnmarshalMsg(r); err != nil {
+		return nil, err
+	}
+
+	return r.Fcm, nil
 }
 
 // For supporting reconnect

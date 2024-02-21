@@ -2,7 +2,6 @@ package netclnt_test
 
 import (
 	"bufio"
-	// "bytes"
 	"encoding/binary"
 	"io"
 	"net"
@@ -17,7 +16,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/frame"
 	"sigmaos/netclnt"
 	"sigmaos/netsrv"
 	"sigmaos/serr"
@@ -104,113 +102,22 @@ func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
 
 var seqno sessp.Tseqno
 
-func ReadFcall(rdr io.Reader) (demux.CallI, *serr.Err) {
-	c, err := spcodec.ReadCall(rdr)
-	return c, err
-}
-
-func WriteFcall(wr io.Writer, c demux.CallI) *serr.Err {
-	fc := c.(*sessp.FcallMsg)
-	pmfc := spcodec.NewPartMarshaledMsg(fc)
-	return spcodec.WriteCall(wr, pmfc)
-}
-
-func ReadFcall1(rdr io.Reader) (demux.CallI, *serr.Err) {
-	f, err := frame.ReadFrame(rdr)
-	if err != nil {
-		return nil, err
-	}
-	fm := sessp.NewFcallMsgNull()
-	if err := proto.Unmarshal(f, fm.Fc); err != nil {
-		db.DFatalf("error decoding fcall %v", err)
-	}
-
-	// db.DPrintf(db.TEST, "unmarshall %v %d\n", fm.Fc, len(f))
-
-	msg, error1 := spcodec.NewMsg(fm.Type())
-	if error1 != nil {
-		db.DFatalf("error type %v %v", msg, error1)
-	}
-	m := msg.(proto.Message)
-
-	b := make(sessp.Tframe, fm.Fc.Len)
-	n, error := io.ReadFull(rdr, b)
-	if n != len(b) {
-		return nil, serr.NewErr(serr.TErrUnreachable, error)
-	}
-	if err := proto.Unmarshal(b, m); err != nil {
-		db.DFatalf("error decoding msg %v", err)
-	}
-
-	// db.DPrintf(db.TEST, "unmarshall %v msg %v\n", fm, m)
-
-	iov, err := frame.ReadFramesN(rdr, fm.Fc.Nvec)
-	if err != nil {
-		return nil, err
-	}
-
-	fm.Msg = msg
-	fm.Iov = iov
-	return fm, nil
-}
-
-func WriteFcall1(wr io.Writer, c demux.CallI) *serr.Err {
-	wrt := wr.(*bufio.Writer)
-	fc := c.(*sessp.FcallMsg)
-
-	msg, err := proto.Marshal(fc.Msg.(proto.Message))
-	if err != nil {
-		db.DFatalf("error encoding msg %v", err)
-	}
-	fc.Fc.Len = uint32(len(msg))
-	fc.Fc.Nvec = uint32(len(fc.Iov))
-
-	b, err := proto.Marshal(fc.Fc)
-	if err != nil {
-		db.DFatalf("error encoding fcall %v", err)
-	}
-
-	// db.DPrintf(db.TEST, "marshall %v %d\n", fc.Fc, len(b))
-
-	if err := binary.Write(wrt, binary.LittleEndian, uint32(len(b)+4)); err != nil {
-		db.DFatalf("error write %v", err)
-	}
-
-	if _, err := wrt.Write(b); err != nil {
-		db.DFatalf("error write %v", err)
-	}
-
-	if _, err := wrt.Write(msg); err != nil {
-		db.DFatalf("error write %v", err)
-	}
-
-	//this write will be copied (< 4096)
-	for _, f := range fc.Iov {
-		if err := frame.WriteFrame(wrt, f); err != nil {
-			return err
-		}
-	}
-
-	// db.DPrintf(db.TEST, "buf %d\n", wrt.Buffered())
-
-	// writes all bytes
-	if err := wrt.Flush(); err != nil {
-		return serr.NewErr(serr.TErrUnreachable, err.Error())
-	}
-	return nil
-}
-
 type netConn struct {
 	conn net.Conn
 }
 
 func (nc *netConn) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
+	//	db.DPrintf(db.TEST, "serve %v\n", req)
 	var rep demux.CallI
 	switch r := req.(type) {
 	case *call:
 		rep = &call{buf: r.buf}
 	case *sessp.FcallMsg:
 		rep = r
+	case *sessp.PartMarshaledMsg:
+		rep = r
+	default:
+		panic("ServeRequest")
 	}
 	return rep, nil
 }
@@ -272,6 +179,7 @@ func TestNetClntPerfFrame(t *testing.T) {
 	ts.srv.CloseListener()
 }
 
+<<<<<<< HEAD
 func TestNetClntPerfFcall1(t *testing.T) {
 	ts := newTstateNet(t, ReadFcall1, WriteFcall1)
 	req := sp.NewTwriteread(sp.NoFid)
@@ -312,6 +220,28 @@ func TestNetClntPerfFcall(t *testing.T) {
 	ts.srv.CloseListener()
 }
 
+=======
+func TestNetClntPerfFcall(t *testing.T) {
+	ts := newTstateNet(t, spcodec.ReadCall, spcodec.WriteCall)
+	req := sp.NewTwriteread(sp.NoFid)
+	fcm := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
+	pfcm := spcodec.NewPartMarshaledMsg(fcm)
+	t0 := time.Now()
+	n := TOTAL / BUFSZ
+	for i := 0; i < n; i++ {
+		c, err := ts.dmx.SendReceive(pfcm)
+		assert.Nil(t, err)
+		fcm := c.(*sessp.PartMarshaledMsg)
+		assert.True(t, len(fcm.Fcm.Iov[0]) == BUFSZ)
+	}
+	tot := uint64(TOTAL)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
+
+	ts.srv.CloseListener()
+}
+
+>>>>>>> sessdemux
 func testLocalPerf(t *testing.T, typ, arg string) {
 	var socket net.Listener
 	if typ == "unix" {

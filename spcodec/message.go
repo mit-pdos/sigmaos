@@ -43,7 +43,7 @@ func NewMsg(typ sessp.Tfcall) (sessp.Tmsg, *serr.Err) {
 	case sessp.TTclunk:
 		return &sp.Tclunk{}, nil
 	case sessp.TRclunk:
-		return &sp.Rclunk{}, nil // no response body
+		return &sp.Rclunk{}, nil
 	case sessp.TTremove:
 		return &sp.Tremove{}, nil
 	case sessp.TRremove:

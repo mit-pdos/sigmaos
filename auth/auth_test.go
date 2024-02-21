@@ -257,7 +257,7 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 
 // Test that an unauthorized principal can't write a public key to keyd (or
 // overwrite an existing one)
-func TestMaliciousPrincipalKeydFail(t *testing.T) {
+func TestMaliciousPrincipalKeydFailXXX(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -306,7 +306,7 @@ func TestMaliciousPrincipalKeydFail(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestDelegateFullAccessOK(t *testing.T) {
+func TestDelegateFullAccessOKXXX(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

@@ -152,6 +152,21 @@ func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetPrincipal(sp.NewPrincipal(pe.GetPrincipal().GetID(), pe.GetPrincipal().GetToken()))
+	// Make a deep copy of the proc claims
+	pe2.Claims = &ProcClaimsProto{
+		PrincipalIDStr: pe2.GetPrincipal().GetID().String(),
+		AllowedPaths:   make([]string, len(pe.Claims.GetAllowedPaths())),
+		Secrets:        make(map[string]*ProcSecretProto),
+	}
+	// Deep copy allowed paths
+	copy(pe2.Claims.AllowedPaths, pe.Claims.GetAllowedPaths())
+	// Deep copy secrets
+	for k, v := range pe.Claims.GetSecrets() {
+		pe2.Claims.Secrets[k] = &ProcSecretProto{
+			ID:  v.ID,
+			Key: v.Key,
+		}
+	}
 	return pe2
 }
 
@@ -163,6 +178,21 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 		sp.TprincipalID(pe.GetPrincipal().GetID().String()+"-realm-"+realm.String()),
 		sp.NoToken(),
 	))
+	// Make a deep copy of the proc claims
+	pe2.Claims = &ProcClaimsProto{
+		PrincipalIDStr: pe2.GetPrincipal().GetID().String(),
+		AllowedPaths:   make([]string, len(pe.Claims.GetAllowedPaths())),
+		Secrets:        make(map[string]*ProcSecretProto),
+	}
+	// Deep copy allowed paths
+	copy(pe2.Claims.AllowedPaths, pe.Claims.GetAllowedPaths())
+	// Deep copy secrets
+	for k, v := range pe.Claims.GetSecrets() {
+		pe2.Claims.Secrets[k] = &ProcSecretProto{
+			ID:  v.ID,
+			Key: v.Key,
+		}
+	}
 	return pe2
 }
 

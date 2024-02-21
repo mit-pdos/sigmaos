@@ -133,7 +133,7 @@ if [[ $BASIC == "--basic" ]]; then
         cleanup
     done
 
-    # go test $VERB sigmaos/fslibsrv -start  # no perf
+    # go test $VERB sigmaos/sigmapsrv -start  # no perf
 
     # test memfs
     go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SIGMACLNTD $REUSEKERNEL
@@ -150,9 +150,9 @@ if [[ $BASIC == "--basic" ]]; then
         cleanup
     done
 
-    go test $VERB sigmaos/fslibsrv -start -path "name/ux/~local/" -run ReadPerf
+    go test $VERB sigmaos/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf
     cleanup
-    go test $VERB sigmaos/fslibsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
+    go test $VERB sigmaos/sigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
     cleanup
 
     #

@@ -16,7 +16,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/dir"
-	"sigmaos/ephemeralmap"
 	"sigmaos/keys"
 	"sigmaos/memfs"
 	"sigmaos/netsrv"
@@ -297,15 +296,24 @@ func TestPerfSessSrvSync(t *testing.T) {
 
 type TstateSp struct {
 	*test.TstateMin
-	srv  *sigmapsrv.SigmaPSrv
-	clnt *sessclnt.Mgr
+	srv     *sigmapsrv.SigmaPSrv
+	clnt    *sessclnt.Mgr
+	pubkey  auth.PublicKey
+	privkey auth.PrivateKey
 }
 
 func newTstateSp(t *testing.T) *TstateSp {
 	ts := &TstateSp{}
 	ts.TstateMin = test.NewTstateMin(t)
+	pubkey, privkey, err := keys.NewECDSAKey()
+	assert.Nil(t, err, "Err NewKey: %v", err)
+	ts.pubkey = pubkey
+	ts.privkey = privkey
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(ts.pubkey))
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(ts.PE.GetPID()), "", kmgr)
+	assert.Nil(t, err, "Err NewAuthSrv: %v", err)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, root, ts.Addr, nil)
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, root, as, ts.Addr, nil)
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts
 }
@@ -320,7 +328,7 @@ func (ts *TstateSp) shutdown() {
 
 func TestConnectSigmaPSrv(t *testing.T) {
 	ts := newTstateSp(t)
-	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
@@ -336,7 +344,7 @@ func TestConnectSigmaPSrv(t *testing.T) {
 
 func TestDisconnectSigmaPSrv(t *testing.T) {
 	ts := newTstateSp(t)
-	req := sp.NewTattach(0, sp.NoFid, "clnt", 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)

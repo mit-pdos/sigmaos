@@ -11,6 +11,7 @@ type Ttag uint16
 
 type Tsession uint64
 type Tseqno uint64
+type Tseqcntr = atomic.Uint64
 
 // NoTag is the tag for Tversion and Rversion requests.
 const NoTag Ttag = ^Ttag(0)
@@ -19,8 +20,8 @@ const NoTag Ttag = ^Ttag(0)
 const NoSeqno Tseqno = ^Tseqno(0)
 
 // Atomically increment pointer and return result
-func (n *Tseqno) Next() Tseqno {
-	next := atomic.AddUint64((*uint64)(n), 1)
+func NextSeqno(sc *Tseqcntr) Tseqno {
+	next := sc.Add(1)
 	return Tseqno(next)
 }
 
@@ -87,13 +88,13 @@ func NewFcallMsgNull() *FcallMsg {
 	return &FcallMsg{fc, nil, nil}
 }
 
-func NewFcallMsg(msg Tmsg, iov IoVec, sess Tsession, seqno *Tseqno) *FcallMsg {
+func NewFcallMsg(msg Tmsg, iov IoVec, sess Tsession, seqcntr *Tseqcntr) *FcallMsg {
 	fcall := &Fcall{
 		Type:    uint32(msg.Type()),
 		Session: uint64(sess),
 	}
-	if seqno != nil {
-		fcall.Seqno = uint64(seqno.Next())
+	if seqcntr != nil {
+		fcall.Seqno = uint64(NextSeqno(seqcntr))
 	}
 	return &FcallMsg{fcall, msg, iov}
 }

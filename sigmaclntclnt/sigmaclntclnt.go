@@ -22,14 +22,13 @@ type SigmaClntClnt struct {
 	pe           *proc.ProcEnv
 	dmx          *demux.DemuxClnt
 	rpcc         *rpcclnt.RPCClnt
-	seqno        sessp.Tseqno
+	seqcntr      *sessp.Tseqcntr
 	conn         net.Conn
 	disconnected bool
 }
 
 func (scc *SigmaClntClnt) SendReceive(iov sessp.IoVec) (sessp.IoVec, error) {
-	seq := &scc.seqno
-	c := sigmaclntcodec.NewCall(seq.Next(), iov)
+	c := sigmaclntcodec.NewCall(sessp.NextSeqno(scc.seqcntr), iov)
 	rep, err := scc.dmx.SendReceive(c)
 	if err != nil {
 		return nil, err
@@ -56,10 +55,12 @@ func NewSigmaClntClnt(pe *proc.ProcEnv) (*SigmaClntClnt, error) {
 		return nil, err
 	}
 	scc := &SigmaClntClnt{
-		pe:    pe,
-		dmx:   nil,
-		rpcc:  nil,
-		seqno: 0, conn: conn, disconnected: false,
+		pe:           pe,
+		dmx:          nil,
+		rpcc:         nil,
+		seqcntr:      new(sessp.Tseqcntr),
+		conn:         conn,
+		disconnected: false,
 	}
 	scc.dmx = demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
 		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), sigmaclntcodec.ReadCall, sigmaclntcodec.WriteCall, scc)

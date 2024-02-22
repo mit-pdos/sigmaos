@@ -33,8 +33,9 @@ const (
 func TestProto(t *testing.T) {
 	const N = 1000
 
+	seqcntr := new(sessp.Tseqcntr)
 	req := sp.NewTwriteread(sp.NoFid)
-	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
+	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, seqcntr)
 
 	t0 := time.Now()
 	for i := 0; i < N; i++ {
@@ -99,8 +100,6 @@ func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
 	}
 	return nil
 }
-
-var seqno sessp.Tseqno
 
 type netConn struct {
 	conn net.Conn
@@ -180,7 +179,8 @@ func TestNetClntPerfFrame(t *testing.T) {
 func TestNetClntPerfFcall(t *testing.T) {
 	ts := newTstateNet(t, spcodec.ReadCall, spcodec.WriteCall)
 	req := sp.NewTwriteread(sp.NoFid)
-	fcm := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
+	seqcntr := new(sessp.Tseqcntr)
+	fcm := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, seqcntr)
 	pfcm := spcodec.NewPartMarshaledMsg(fcm)
 	t0 := time.Now()
 	n := TOTAL / BUFSZ

@@ -146,3 +146,7 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 	}
 	return qstats, nil
 }
+
+func (pqc *ProcQClnt) StopMonitoring() {
+	pqc.urpcc.StopMonitoring()
+}

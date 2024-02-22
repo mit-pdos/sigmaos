@@ -16,6 +16,7 @@ type UnionRPCClnt struct {
 	*fslib.FsLib
 	sync.Mutex
 	monitoring bool
+	done       bool
 	path       string
 	clnts      map[string]*rpcclnt.RPCClnt
 	srvs       []string
@@ -166,9 +167,13 @@ func (urpcc *UnionRPCClnt) GetSrvs() ([]string, error) {
 	return sp.Names(sts), nil
 }
 
+func (urpcc *UnionRPCClnt) StopMonitoring() {
+	urpcc.done = true
+}
+
 // Monitor for changes to the set of servers listed in the union directory.
 func (urpcc *UnionRPCClnt) monitorSrvs() {
-	for {
+	for !urpcc.done {
 		var srvs []string
 		err := urpcc.ReadDirWait(urpcc.path, func(sts []*sp.Stat) bool {
 			// Construct a map of the service IDs in the union dir.

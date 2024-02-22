@@ -109,7 +109,7 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	kmgr.AddPrivateKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPrivKey)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(k.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NeHMACAUthServer %v", err)
+		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
 		return nil, err
 	}
 	k.as = as

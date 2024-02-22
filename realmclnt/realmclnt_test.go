@@ -108,6 +108,12 @@ func TestBasicSimple(t *testing.T) {
 
 	assert.True(t, sts1[0].Name == sts[0].Name)
 
+	sts, err = ts1.GetDir(sp.S3)
+	assert.Nil(t, err)
+	assert.True(t, len(sts) > 0, "No S3s")
+
+	db.DPrintf(db.TEST, "realm names s3 %v\n", sp.Names(sts))
+
 	err = ts1.Remove()
 	assert.Nil(t, err)
 

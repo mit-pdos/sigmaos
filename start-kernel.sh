@@ -33,7 +33,7 @@ while [[ "$#" -gt 1 ]]; do
             BOOT="procq;schedd;ux;s3;db;mongo"
             ;;
         "named")
-            BOOT="knamed"
+            BOOT="knamed;keyd"
             ;;
         "sigmaclntd")
             BOOT="sigmaclntd"

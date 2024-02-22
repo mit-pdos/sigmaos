@@ -25,7 +25,7 @@ func TestBootNamed(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
 
-	assert.True(t, fslib.Present(sts, named.InitRootDir), "initfs")
+	assert.True(t, fslib.Present(sts, namesrv.InitRootDir), "initfs")
 
 	// test.Dump(t)
 

@@ -1170,9 +1170,13 @@ func TestUnionRoot(t *testing.T) {
 	err = ts.MkMountFile(pn1, sp.NewMountServer(sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkMountFile")
 
-	sts, err := ts.GetDir(gopath.Join(pathname, "~any") + "/")
+	pn := pathname
+	if pathname != sp.NAMED {
+		pn = gopath.Join(pathname, "~any")
+	}
+	sts, err := ts.GetDir(pn + "/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, path.Path{"namedself0", "namedself1"}), "dir")
+	assert.True(t, fslib.Present(sts, path.Path{"namedself0", "namedself1"}), "dir: %v", sp.Names(sts))
 
 	err = ts.Remove(pn0)
 	assert.Nil(t, err)

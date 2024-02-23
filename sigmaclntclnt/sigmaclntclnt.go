@@ -4,7 +4,6 @@
 package sigmaclntclnt
 
 import (
-	"bufio"
 	"net"
 
 	db "sigmaos/debug"
@@ -62,8 +61,8 @@ func NewSigmaClntClnt(pe *proc.ProcEnv) (*SigmaClntClnt, error) {
 		conn:         conn,
 		disconnected: false,
 	}
-	scc.dmx = demux.NewDemuxClnt(bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN), sigmaclntcodec.ReadCall, sigmaclntcodec.WriteCall, scc)
+
+	scc.dmx = demux.NewDemuxClnt(sigmaclntcodec.NewTransport(conn))
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	// Initialize the server-side component of sigmaclnt by sending the proc env
 	db.DPrintf(db.SIGMACLNTCLNT, "Init sigmaclntclnt for %v", pe.GetPID())

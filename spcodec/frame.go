@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"io"
+	"net"
 
 	"google.golang.org/protobuf/proto"
 
@@ -12,10 +13,23 @@ import (
 	"sigmaos/frame"
 	"sigmaos/serr"
 	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 )
 
-func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
-	f, err := frame.ReadFrame(rdr)
+type Transport struct {
+	rdr io.Reader
+	wrt *bufio.Writer
+}
+
+func NewTransport(conn net.Conn) demux.TransportI {
+	return &Transport{
+		rdr: bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
+		wrt: bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+	}
+}
+
+func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
+	f, err := frame.ReadFrame(t.rdr)
 	if err != nil {
 		return nil, err
 	}
@@ -25,12 +39,12 @@ func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 	}
 
 	b := make(sessp.Tframe, fm.Fc.Len)
-	n, error := io.ReadFull(rdr, b)
+	n, error := io.ReadFull(t.rdr, b)
 	if n != len(b) {
 		return nil, serr.NewErr(serr.TErrUnreachable, error)
 	}
 
-	iov, err := frame.ReadFramesN(rdr, fm.Fc.Nvec)
+	iov, err := frame.ReadFramesN(t.rdr, fm.Fc.Nvec)
 	if err != nil {
 		return nil, err
 	}
@@ -42,8 +56,7 @@ func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 	return pmm, nil
 }
 
-func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
-	wrt := wr.(*bufio.Writer)
+func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
 	fcm := c.(*sessp.PartMarshaledMsg)
 	fcm.Fcm.Fc.Len = uint32(len(fcm.MarshaledFcm))
 	fcm.Fcm.Fc.Nvec = uint32(len(fcm.Fcm.Iov))
@@ -52,21 +65,21 @@ func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
 	if err != nil {
 		db.DFatalf("Encoding fcall %v err %v", fcm.Fcm.Fc, err)
 	}
-	if err := binary.Write(wrt, binary.LittleEndian, uint32(len(b)+4)); err != nil {
+	if err := binary.Write(t.wrt, binary.LittleEndian, uint32(len(b)+4)); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
-	if _, err := wrt.Write(b); err != nil {
+	if _, err := t.wrt.Write(b); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
-	if _, err := wrt.Write(fcm.MarshaledFcm); err != nil {
+	if _, err := t.wrt.Write(fcm.MarshaledFcm); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
 	for _, f := range fcm.Fcm.Iov {
-		if err := frame.WriteFrame(wrt, f); err != nil {
+		if err := frame.WriteFrame(t.wrt, f); err != nil {
 			return err
 		}
 	}
-	if err := wrt.Flush(); err != nil {
+	if err := t.wrt.Flush(); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
 	return nil

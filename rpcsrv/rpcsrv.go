@@ -88,7 +88,6 @@ func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov sessp.IoVec) (sessp.IoVe
 		return nil, serr.NewErrError(r)
 	}
 	iovrep = append(sessp.IoVec{b}, iovrep...)
-	db.DPrintf(db.TEST, "iovrep %v\n", iovrep)
 	return iovrep, nil
 }
 

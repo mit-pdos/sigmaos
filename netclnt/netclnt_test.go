@@ -30,7 +30,7 @@ const (
 	TOTAL = 10 * sp.MBYTE // 1000 * sp.MBYTE
 )
 
-func TestProto(t *testing.T) {
+func TestProtobuf(t *testing.T) {
 	const N = 1000
 
 	seqcntr := new(sessp.Tseqcntr)
@@ -43,7 +43,6 @@ func TestProto(t *testing.T) {
 		assert.Nil(t, err)
 		f, err := proto.Marshal(fc.Fc)
 		assert.Nil(t, err)
-
 		fm := sessp.NewFcallMsgNull()
 		err = proto.Unmarshal(f, fm.Fc)
 		assert.Nil(t, err)
@@ -56,6 +55,40 @@ func TestProto(t *testing.T) {
 		// db.DPrintf(db.TEST, "fm %v\n", fm)
 	}
 	db.DPrintf(db.ALWAYS, "proto %v usec\n", time.Since(t0).Microseconds())
+}
+
+type data struct {
+	a0 uint64
+	a1 uint64
+	a2 uint64
+	a3 uint64
+	a4 uint64
+}
+
+func f(n uint64, d data) uint64 {
+	if n == 0 {
+		return n + d.a0 + d.a1 + d.a2 + d.a3 + d.a4
+	} else {
+		return f(n-1, data{d.a0 + n, d.a1 + n, d.a2 + 2*n, d.a3 + 3*n, d.a4 + 4*n})
+	}
+}
+
+func TestStack(t *testing.T) {
+	const N = 1000000
+	const M = 9
+
+	ch := make(chan uint64, N)
+	t0 := time.Now()
+	for i := 0; i < N; i++ {
+		go func(i int) {
+			r := f(M, data{uint64(i), 1, 1, 1, 1})
+			ch <- r
+		}(i)
+	}
+	for i := 0; i < N; i++ {
+		<-ch
+	}
+	db.DPrintf(db.ALWAYS, "stack %v usec\n", time.Since(t0).Microseconds())
 }
 
 type call struct {

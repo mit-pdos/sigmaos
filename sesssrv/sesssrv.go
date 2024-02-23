@@ -4,7 +4,6 @@
 package sesssrv
 
 import (
-	"bufio"
 	"net"
 
 	db "sigmaos/debug"
@@ -88,9 +87,7 @@ func (ssrv *SessSrv) GetSessionTable() *sessionTable {
 
 func (ssrv *SessSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
 	nc := &netConn{conn: conn, ssrv: ssrv, sessid: sessp.NoSession}
-	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
-	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
-	nc.dmx = demux.NewDemuxSrv(br, wr, spcodec.ReadCall, spcodec.WriteCall, nc)
+	nc.dmx = demux.NewDemuxSrv(nc, spcodec.NewTransport(conn))
 	return nc.dmx
 }
 

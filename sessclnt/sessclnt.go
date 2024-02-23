@@ -6,7 +6,6 @@
 package sessclnt
 
 import (
-	"bufio"
 	"sync"
 	//"time"
 
@@ -72,13 +71,6 @@ func (c *SessClnt) IsConnected() bool {
 	return false
 }
 
-// XXX if unreachable, nothing to be done (netconn is closed), but if
-// marshaling error, close conn?  If we want to support reconnect, we
-// can get outstanding requests from dmxclnt.
-func (c *SessClnt) ReportError(err error) {
-	db.DPrintf(db.SESSCLNT, "Netclnt sess %v reports err %v\n", c.sid, err)
-}
-
 func (c *SessClnt) RPC(req sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	fc := sessp.NewFcallMsg(req, iov, c.sid, c.seqcntr)
 	pmfc := spcodec.NewPartMarshaledMsg(fc)
@@ -127,9 +119,7 @@ func (c *SessClnt) getConn() *serr.Err {
 		}
 		db.DPrintf(db.SESSCLNT, "%v connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
 		c.nc = nc
-		br := bufio.NewReaderSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
-		bw := bufio.NewWriterSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
-		c.dmx = demux.NewDemuxClnt(bw, br, spcodec.ReadCall, spcodec.WriteCall, c)
+		c.dmx = demux.NewDemuxClnt(spcodec.NewTransport(nc.Conn()))
 	}
 	return nil
 }

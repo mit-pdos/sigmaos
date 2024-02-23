@@ -1,7 +1,6 @@
 package sigmaclntsrv
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"net"
@@ -45,8 +44,7 @@ func newSigmaClntConn(conn net.Conn, pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) 
 		conn: conn,
 		api:  scs,
 	}
-	scc.dmx = demux.NewDemuxSrv(bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN), sigmaclntcodec.ReadCall, sigmaclntcodec.WriteCall, scc)
+	scc.dmx = demux.NewDemuxSrv(scc, sigmaclntcodec.NewTransport(conn))
 	return scc, nil
 }
 

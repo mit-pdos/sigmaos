@@ -301,6 +301,7 @@ func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, s
 // Called voluntarily by the proc when it Exits normally.
 func (clnt *ProcClnt) Exited(status *proc.Status) {
 	db.DPrintf(db.PROCCLNT, "Exited normally %v parent %v pid %v status %v", clnt.ProcEnv().ProcDir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetPID(), status)
+	db.DPrintf(db.PROCCLNT, "Done Exited normally")
 	clnt.StopMonitoringProcqs()
 	// will catch some unintended misuses: a proc calling exited
 	// twice or schedd calling exited twice.

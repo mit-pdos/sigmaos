@@ -202,6 +202,7 @@ func (k *Kernel) shutdown() {
 				err := k.svcs.svcMap[pid].Evict()
 				if err == nil || !serr.IsErrCode(err, serr.TErrUnreachable) {
 					db.DPrintf(db.KERNEL, "Evicted proc %v %T err %v", pid, k.svcs.svcMap[pid], err)
+					k.svcs.svcMap[pid].Wait()
 					break
 				}
 				if i == MAX_EVICT_RETRIES-1 {
@@ -211,13 +212,6 @@ func (k *Kernel) shutdown() {
 				time.Sleep(100 * time.Millisecond)
 			}
 			db.DPrintf(db.KERNEL, "Evicted %v", pid)
-		}
-	}
-	for key, val := range k.svcs.svcs {
-		if key != sp.KNAMED {
-			for _, ss := range val {
-				ss.Wait()
-			}
 		}
 	}
 	if err := k.RmDir(k.ProcEnv().ProcDir); err != nil {

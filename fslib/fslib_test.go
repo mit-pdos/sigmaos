@@ -1204,11 +1204,15 @@ func TestUnionSymlinkRead(t *testing.T) {
 	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself1"), mnt, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkMountFile")
 
-	sts, err := ts.GetDir(gopath.Join(pathname, "~any/d/namedself1") + "/")
+	basepn := pathname
+	if pathname != sp.NAMED {
+		basepn = gopath.Join(pathname, "~any")
+	}
+	sts, err := ts.GetDir(gopath.Join(basepn, "d/namedself1") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself0"}), "root wrong")
 
-	sts, err = ts.GetDir(gopath.Join(pathname, "~any/d/namedself1/d") + "/")
+	sts, err = ts.GetDir(gopath.Join(basepn, "d/namedself1/d") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"namedself1"}), "d wrong")
 
@@ -1232,23 +1236,27 @@ func TestUnionSymlinkPut(t *testing.T) {
 	assert.Nil(ts.T, err, "MkMountFile")
 
 	b := []byte("hello")
-	fn := gopath.Join(pathname, "~any/namedself0/f")
+	basepn := pathname
+	if pathname != sp.NAMED {
+		basepn = gopath.Join(pathname, "~any")
+	}
+	fn := gopath.Join(basepn, "namedself0/f")
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, b)
 	assert.Equal(t, nil, err)
 
-	fn1 := gopath.Join(pathname, "~any/namedself0/g")
+	fn1 := gopath.Join(basepn, "namedself0/g")
 	_, err = ts.PutFile(fn1, 0777, sp.OWRITE, b)
 	assert.Equal(t, nil, err)
 
-	sts, err := ts.GetDir(gopath.Join(pathname, "~any/namedself0") + "/")
+	sts, err := ts.GetDir(gopath.Join(basepn, "namedself0") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"f", "g"}), "root wrong")
 
-	d, err := ts.GetFile(gopath.Join(pathname, "~any/namedself0/f"))
+	d, err := ts.GetFile(gopath.Join(basepn, "namedself0/f"))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, b, d, "GetFile")
 
-	d, err = ts.GetFile(gopath.Join(pathname, "~any/namedself0/g"))
+	d, err = ts.GetFile(gopath.Join(basepn, "namedself0/g"))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, b, d, "GetFile")
 
@@ -1326,7 +1334,12 @@ func TestMountUnion(t *testing.T) {
 	err = ts.MkMountFile(pn, newMount(t, ts, dn), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkMountFile")
 
-	sts, err := ts.GetDir(gopath.Join(pathname, "mount/~any") + "/")
+	mntpn := "mount/"
+	if pathname != sp.NAMED {
+		mntpn = gopath.Join(mntpn, "~any")
+	}
+
+	sts, err := ts.GetDir(gopath.Join(pathname, mntpn) + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 

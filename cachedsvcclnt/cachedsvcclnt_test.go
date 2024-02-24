@@ -70,7 +70,7 @@ func TestCompile(t *testing.T) {
 
 func TestCacheSingle(t *testing.T) {
 	const (
-		N    = 1
+		N    = 10000
 		NSRV = 1
 	)
 	t1, err1 := test.NewTstateAll(t)
@@ -86,6 +86,7 @@ func TestCacheSingle(t *testing.T) {
 		err = cc.Put(key, &proto.CacheString{Val: key})
 		assert.Nil(t, err)
 	}
+	t0 := time.Now()
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
 		res := &proto.CacheString{}
@@ -94,6 +95,8 @@ func TestCacheSingle(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, key, s)
 	}
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "Get %v keys in %v ms (%v us per Get)\n", N, ms, (ms*1000)/N)
 
 	m, err := cc.Dump(0)
 	assert.Nil(t, err)

@@ -2,8 +2,8 @@
 
 FROM archlinux
 
-RUN yes | pacman -Syu
-RUN yes | pacman -Sy git libseccomp wget gcc pkg-config parallel time
+RUN pacman --noconfirm -Syu
+RUN pacman --noconfirm -Sy git libseccomp wget gcc pkg-config parallel time
 
 # Download an initial version of Go
 RUN wget "https://go.dev/dl/go1.20.4.linux-amd64.tar.gz" && \

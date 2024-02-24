@@ -1,7 +1,6 @@
 package demux
 
 import (
-	"io"
 	"sync"
 
 	db "sigmaos/debug"
@@ -12,9 +11,6 @@ import (
 type CallI interface {
 	Tag() sessp.Ttag
 }
-
-type ReadCallF func(io.Reader) (CallI, *serr.Err)
-type WriteCallF func(io.Writer, CallI) *serr.Err
 
 type TransportI interface {
 	ReadCall() (CallI, *serr.Err)

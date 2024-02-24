@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"bufio"
 	"net"
 	"sync"
 
@@ -54,10 +53,7 @@ func NewNpd(pcfg *proc.ProcEnv, lip sp.Tip) *Npd {
 func (npd *Npd) NewConn(conn net.Conn) *demux.DemuxSrv {
 	sess := newNpSess(npd.pcfg, string(npd.lip))
 	pc := &proxyConn{conn: conn, sess: sess}
-	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
-	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
-	dmx := demux.NewDemuxSrv(br, wr, npcodec.ReadCall, npcodec.WriteCall, pc)
-	return dmx
+	return demux.NewDemuxSrv(pc, npcodec.NewTransport(conn))
 }
 
 // The protsrv session from the kernel/client

@@ -142,3 +142,7 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 func (sc *SigmaClnt) ClntExitOK() {
 	sc.ClntExit(proc.NewStatus(proc.StatusOK))
 }
+
+func (sc *SigmaClnt) StopMonitoringSrvs() {
+	sc.ProcAPI.(*procclnt.ProcClnt).StopMonitoringSrvs()
+}

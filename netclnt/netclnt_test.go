@@ -30,11 +30,12 @@ const (
 	TOTAL = 10 * sp.MBYTE // 1000 * sp.MBYTE
 )
 
-func TestProto(t *testing.T) {
+func TestProtobuf(t *testing.T) {
 	const N = 1000
 
+	seqcntr := new(sessp.Tseqcntr)
 	req := sp.NewTwriteread(sp.NoFid)
-	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
+	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, seqcntr)
 
 	t0 := time.Now()
 	for i := 0; i < N; i++ {
@@ -42,7 +43,6 @@ func TestProto(t *testing.T) {
 		assert.Nil(t, err)
 		f, err := proto.Marshal(fc.Fc)
 		assert.Nil(t, err)
-
 		fm := sessp.NewFcallMsgNull()
 		err = proto.Unmarshal(f, fm.Fc)
 		assert.Nil(t, err)
@@ -57,6 +57,40 @@ func TestProto(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "proto %v usec\n", time.Since(t0).Microseconds())
 }
 
+type data struct {
+	a0 uint64
+	a1 uint64
+	a2 uint64
+	a3 uint64
+	a4 uint64
+}
+
+func f(n uint64, d data) uint64 {
+	if n == 0 {
+		return n + d.a0 + d.a1 + d.a2 + d.a3 + d.a4
+	} else {
+		return f(n-1, data{d.a0 + n, d.a1 + n, d.a2 + 2*n, d.a3 + 3*n, d.a4 + 4*n})
+	}
+}
+
+func TestStack(t *testing.T) {
+	const N = 1000000
+	const M = 9
+
+	ch := make(chan uint64, N)
+	t0 := time.Now()
+	for i := 0; i < N; i++ {
+		go func(i int) {
+			r := f(M, data{uint64(i), 1, 1, 1, 1})
+			ch <- r
+		}(i)
+	}
+	for i := 0; i < N; i++ {
+		<-ch
+	}
+	db.DPrintf(db.ALWAYS, "stack %v usec\n", time.Since(t0).Microseconds())
+}
+
 type call struct {
 	buf []byte
 }
@@ -65,10 +99,22 @@ func (c *call) Tag() sessp.Ttag {
 	return 0
 }
 
-func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
+type transport struct {
+	rdr io.Reader
+	wrt *bufio.Writer
+}
+
+func newTransport(conn net.Conn) demux.TransportI {
+	return &transport{
+		rdr: bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
+		wrt: bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+	}
+}
+
+func (t *transport) ReadCall() (demux.CallI, *serr.Err) {
 	var l uint32
 
-	if err := binary.Read(rdr, binary.LittleEndian, &l); err != nil {
+	if err := binary.Read(t.rdr, binary.LittleEndian, &l); err != nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, err)
 	}
 	l = l - 4
@@ -76,31 +122,28 @@ func ReadCall(rdr io.Reader) (demux.CallI, *serr.Err) {
 		return nil, serr.NewErr(serr.TErrUnreachable, "readMsg too short")
 	}
 	frame := make(sessp.Tframe, l)
-	n, e := io.ReadFull(rdr, frame)
+	n, e := io.ReadFull(t.rdr, frame)
 	if n != len(frame) {
 		return nil, serr.NewErr(serr.TErrUnreachable, e)
 	}
 	return &call{buf: frame}, nil
 }
 
-func WriteCall(wr io.Writer, c demux.CallI) *serr.Err {
+func (t *transport) WriteCall(c demux.CallI) *serr.Err {
 	call := c.(*call)
-	wrt := wr.(*bufio.Writer)
 
 	l := uint32(len(call.buf) + 4) // +4 because that is how 9P wants it
-	if err := binary.Write(wrt, binary.LittleEndian, l); err != nil {
+	if err := binary.Write(t.wrt, binary.LittleEndian, l); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
-	if n, err := wrt.Write(call.buf); err != nil || n != len(call.buf) {
+	if n, err := t.wrt.Write(call.buf); err != nil || n != len(call.buf) {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
-	if err := wrt.Flush(); err != nil {
+	if err := t.wrt.Flush(); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
 	return nil
 }
-
-var seqno sessp.Tseqno
 
 type netConn struct {
 	conn net.Conn
@@ -127,39 +170,31 @@ func (nc *netConn) ReportError(err error) {
 
 type TstateNet struct {
 	*test.TstateMin
-	srv  *netsrv.NetServer
-	clnt *netclnt.NetClnt
-	dmx  *demux.DemuxClnt
-	rf   demux.ReadCallF
-	wf   demux.WriteCallF
+	srv     *netsrv.NetServer
+	clnt    *netclnt.NetClnt
+	dmx     *demux.DemuxClnt
+	mktrans func(net.Conn) demux.TransportI
 }
 
 func (ts *TstateNet) NewConn(conn net.Conn) *demux.DemuxSrv {
-	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
-	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
 	nc := &netConn{conn}
-	return demux.NewDemuxSrv(br, wr, ts.rf, ts.wf, nc)
+	return demux.NewDemuxSrv(nc, ts.mktrans(conn))
 }
 
-func (ts *TstateNet) ReportError(err error) {
-}
-
-func newTstateNet(t *testing.T, rf demux.ReadCallF, wf demux.WriteCallF) *TstateNet {
-	ts := &TstateNet{TstateMin: test.NewTstateMin(t), rf: rf, wf: wf}
+func newTstateNet(t *testing.T, mktrans func(net.Conn) demux.TransportI) *TstateNet {
+	ts := &TstateNet{TstateMin: test.NewTstateMin(t), mktrans: mktrans}
 	ts.srv = netsrv.NewNetServer(ts.PE, ts.Addr, ts)
 
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
 
 	nc, err := netclnt.NewNetClnt(sp.ROOTREALM.String(), sp.Taddrs{ts.srv.MyAddr()})
 	assert.Nil(t, err)
-	br := bufio.NewReaderSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
-	bw := bufio.NewWriterSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
-	ts.dmx = demux.NewDemuxClnt(bw, br, rf, wf, ts)
+	ts.dmx = demux.NewDemuxClnt(mktrans(nc.Conn()))
 	return ts
 }
 
 func TestNetClntPerfFrame(t *testing.T) {
-	ts := newTstateNet(t, ReadCall, WriteCall)
+	ts := newTstateNet(t, newTransport)
 	c := &call{buf: test.NewBuf(BUFSZ)}
 
 	t0 := time.Now()
@@ -178,9 +213,10 @@ func TestNetClntPerfFrame(t *testing.T) {
 }
 
 func TestNetClntPerfFcall(t *testing.T) {
-	ts := newTstateNet(t, spcodec.ReadCall, spcodec.WriteCall)
+	ts := newTstateNet(t, spcodec.NewTransport)
 	req := sp.NewTwriteread(sp.NoFid)
-	fcm := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, &seqno)
+	seqcntr := new(sessp.Tseqcntr)
+	fcm := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, seqcntr)
 	pfcm := spcodec.NewPartMarshaledMsg(fcm)
 	t0 := time.Now()
 	n := TOTAL / BUFSZ

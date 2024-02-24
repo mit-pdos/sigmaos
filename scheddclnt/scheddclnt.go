@@ -270,3 +270,7 @@ func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 	}
 	return total, nil
 }
+
+func (sdc *ScheddClnt) StopMonitoring() {
+	sdc.urpcc.StopMonitoring()
+}

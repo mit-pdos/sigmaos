@@ -1,7 +1,6 @@
 package sessclnt_test
 
 import (
-	"bufio"
 	"net"
 	"sync"
 	"testing"
@@ -92,10 +91,7 @@ func newTstateSrv(t *testing.T, crash int) *TstateSrv {
 
 func (ts *TstateSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
 	ss := &SessSrv{crash: ts.crash, conn: conn}
-	br := bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN)
-	wr := bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN)
-	dmx := demux.NewDemuxSrv(br, wr, spcodec.ReadCall, spcodec.WriteCall, ss)
-	return dmx
+	return demux.NewDemuxSrv(ss, spcodec.NewTransport(conn))
 }
 
 func TestCompile(t *testing.T) {

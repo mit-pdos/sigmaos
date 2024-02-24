@@ -56,3 +56,7 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 	db.DPrintf(db.LCSCHEDCLNT, "[%v] Got Proc %v", p.GetRealm(), p)
 	return res.KernelID, nil
 }
+
+func (lcs *LCSchedClnt) StopMonitoring() {
+	lcs.urpcc.StopMonitoring()
+}

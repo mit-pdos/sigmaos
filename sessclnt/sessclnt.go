@@ -6,7 +6,6 @@
 package sessclnt
 
 import (
-	"bufio"
 	"sync"
 	//"time"
 
@@ -25,7 +24,7 @@ import (
 type SessClnt struct {
 	sync.Mutex
 	sid     sessp.Tsession
-	seqno   sessp.Tseqno
+	seqcntr *sessp.Tseqcntr
 	closed  bool
 	addrs   sp.Taddrs
 	nc      *netclnt.NetClnt
@@ -34,9 +33,11 @@ type SessClnt struct {
 }
 
 func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
-	c := &SessClnt{sid: sessp.Tsession(rand.Uint64()),
+	c := &SessClnt{
+		sid:     sessp.Tsession(rand.Uint64()),
 		clntnet: clntnet,
 		addrs:   addrs,
+		seqcntr: new(sessp.Tseqcntr),
 	}
 	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, addrs)
 	if err := c.getConn(); err != nil {
@@ -70,15 +71,8 @@ func (c *SessClnt) IsConnected() bool {
 	return false
 }
 
-// XXX if unreachable, nothing to be done (netconn is closed), but if
-// marshaling error, close conn?  If we want to support reconnect, we
-// can get outstanding requests from dmxclnt.
-func (c *SessClnt) ReportError(err error) {
-	db.DPrintf(db.SESSCLNT, "Netclnt sess %v reports err %v\n", c.sid, err)
-}
-
 func (c *SessClnt) RPC(req sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
-	fc := sessp.NewFcallMsg(req, iov, c.sid, &c.seqno)
+	fc := sessp.NewFcallMsg(req, iov, c.sid, c.seqcntr)
 	pmfc := spcodec.NewPartMarshaledMsg(fc)
 	nc := c.netClnt()
 	if nc == nil {
@@ -125,9 +119,7 @@ func (c *SessClnt) getConn() *serr.Err {
 		}
 		db.DPrintf(db.SESSCLNT, "%v connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
 		c.nc = nc
-		br := bufio.NewReaderSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
-		bw := bufio.NewWriterSize(nc.Conn(), sp.Conf.Conn.MSG_LEN)
-		c.dmx = demux.NewDemuxClnt(bw, br, spcodec.ReadCall, spcodec.WriteCall, c)
+		c.dmx = demux.NewDemuxClnt(spcodec.NewTransport(nc.Conn()))
 	}
 	return nil
 }

@@ -344,12 +344,13 @@ func (ts *Tstate) Shutdown() error {
 			if err := ts.kclnts[i].Shutdown(); err != nil {
 				db.DPrintf(db.ALWAYS, "Shutdown %v err %v", ts.kclnts[i].KernelId, err)
 			}
-			// ts.kclnts[i].Close()
+			ts.kclnts[i].Close()
 		}
 		if ts.scsck != nil {
 			if err := ts.scsck.Shutdown(); err != nil {
 				db.DPrintf(db.ALWAYS, "Shutdown sigmaclntd err %v", err)
 			}
+			ts.scsck.Close()
 		}
 	}
 	return nil

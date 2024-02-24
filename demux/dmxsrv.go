@@ -1,7 +1,6 @@
 package demux
 
 import (
-	"io"
 	"sync"
 
 	db "sigmaos/debug"
@@ -13,45 +12,45 @@ type CallI interface {
 	Tag() sessp.Ttag
 }
 
-type ReadCallF func(io.Reader) (CallI, *serr.Err)
+type TransportI interface {
+	ReadCall() (CallI, *serr.Err)
+	WriteCall(CallI) *serr.Err
+}
 
-type DemuxSrvI interface {
+type ServerI interface {
 	ServeRequest(CallI) (CallI, *serr.Err)
 	ReportError(err error)
 }
 
 type DemuxSrv struct {
 	mu     sync.Mutex
-	in     io.Reader
-	out    io.Writer
-	serve  DemuxSrvI
+	srv    ServerI
 	closed bool
 	nreq   int
-	rf     ReadCallF
-	wf     WriteCallF
+	trans  TransportI
 }
 
-func NewDemuxSrv(in io.Reader, out io.Writer, rf ReadCallF, wf WriteCallF, serve DemuxSrvI) *DemuxSrv {
-	dmx := &DemuxSrv{in: in, out: out, serve: serve, wf: wf, rf: rf}
+func NewDemuxSrv(srv ServerI, trans TransportI) *DemuxSrv {
+	dmx := &DemuxSrv{srv: srv, trans: trans}
 	go dmx.reader()
 	return dmx
 }
 
 func (dmx *DemuxSrv) reader() {
 	for {
-		c, err := dmx.rf(dmx.in)
+		c, err := dmx.trans.ReadCall()
 		if err != nil {
 			db.DPrintf(db.DEMUXSRV, "reader: rf err %v\n", err)
-			dmx.serve.ReportError(err)
+			dmx.srv.ReportError(err)
 			break
 		}
 		go func(c CallI) {
-			rep, err := dmx.serve.ServeRequest(c)
+			rep, err := dmx.srv.ServeRequest(c)
 			if err != nil {
 				return
 			}
 			dmx.mu.Lock()
-			err = dmx.wf(dmx.out, rep)
+			err = dmx.trans.WriteCall(rep)
 			dmx.mu.Unlock()
 			if err != nil {
 				db.DPrintf(db.DEMUXSRV, "wf reply %v error %v\n", rep, err)

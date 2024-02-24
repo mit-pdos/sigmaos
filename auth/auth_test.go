@@ -70,7 +70,7 @@ func TestVerifyHMACToken(t *testing.T) {
 	signedToken, err := as.MintToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
-	claims2, err := as.VerifyTokenGetClaims(signedToken)
+	claims2, err := as.VerifyTokenGetClaims("my-principal", signedToken)
 	assert.Nil(t, err, "Err verify token get claims: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", claims2)
 }
@@ -117,7 +117,7 @@ func TestVerifyECDSAToken(t *testing.T) {
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token in %v sec: %v", time.Since(s).Seconds(), signedToken)
 	s = time.Now()
-	claims2, err := as.VerifyTokenGetClaims(signedToken)
+	claims2, err := as.VerifyTokenGetClaims("my-principal", signedToken)
 	assert.Nil(t, err, "Err verify token get claims: %v", err)
 	db.DPrintf(db.TEST, "Verified token: in %v sec: %v", time.Since(s).Seconds(), claims2)
 }

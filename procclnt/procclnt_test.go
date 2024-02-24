@@ -128,7 +128,7 @@ func TestWaitExitSimpleSingleBE(t *testing.T) {
 	// test.Dump(t)
 }
 
-func TestWaitExitSimpleSingleLCXXX(t *testing.T) {
+func TestWaitExitSimpleSingleLC(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -151,7 +151,7 @@ func TestWaitExitSimpleSingleLCXXX(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWaitExitOneXXX(t *testing.T) {
+func TestWaitExitOne(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

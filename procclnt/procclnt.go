@@ -319,6 +319,7 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 func (clnt *ProcClnt) StopMonitoringSrvs() {
 	clnt.procqclnt.StopMonitoring()
 	clnt.lcschedclnt.StopMonitoring()
+	clnt.scheddclnt.StopMonitoring()
 }
 
 // Called on behalf of the proc by schedd when the proc crashes.

@@ -166,7 +166,6 @@ func (k *Kernel) getRealmSigmaClnt(realm sp.Trealm) (*sigmaclnt.SigmaClntKernel,
 	if ok {
 		return sck, nil
 	}
-
 	pe := proc.NewDifferentRealmProcEnv(k.ProcEnv(), realm)
 	pe.SetAllowedPaths(sp.ALL_PATHS)
 	if err := k.as.MintAndSetToken(pe); err != nil {

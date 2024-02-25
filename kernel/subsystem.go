@@ -98,7 +98,6 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	if realm == sp.ROOTREALM {
 		sck = k.SigmaClntKernel
 	} else {
-		// TODO: only create sigmaclnt once
 		pe := proc.NewDifferentRealmProcEnv(k.ProcEnv(), realm)
 		pe.SetAllowedPaths(sp.ALL_PATHS)
 		if err := k.as.MintAndSetToken(pe); err != nil {

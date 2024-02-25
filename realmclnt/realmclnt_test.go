@@ -108,13 +108,6 @@ func TestBasicSimple(t *testing.T) {
 
 	assert.True(t, sts1[0].Name == sts[0].Name)
 
-<<<<<<< Updated upstream
-=======
-	sts1, err = rootts.GetDir(sp.S3)
-	assert.Nil(t, err)
-	assert.True(t, len(sts) > 0, "No S3s in root realm")
-
->>>>>>> Stashed changes
 	err = ts1.Remove()
 	assert.Nil(t, err)
 

@@ -35,10 +35,3 @@ func Max(max *Tcounter, v int64) {
 		}
 	}
 }
-
-func Read(c *Tcounter) int64 {
-	if STATS {
-		return c.Load()
-	}
-	return 0
-}

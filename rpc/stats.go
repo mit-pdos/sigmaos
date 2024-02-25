@@ -64,9 +64,9 @@ func (si *StatInfo) Stats() map[string]*MethodStatSnapshot {
 	si.st.MStats.Range(func(key, value any) bool {
 		k := key.(string)
 		st := value.(*MethodStat)
-		stN := stats.Read(&st.N)
-		stTot := stats.Read(&st.Tot)
-		stMax := stats.Read(&st.Max)
+		stN := st.N.Load()
+		stTot := st.Tot.Load()
+		stMax := st.Max.Load()
 		n += stN
 		var avg float64
 		if stN > 0 {

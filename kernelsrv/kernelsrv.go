@@ -43,7 +43,7 @@ func (ks *KernelSrv) Boot(ctx fs.CtxI, req proto.BootRequest, rep *proto.BootRes
 	db.DPrintf(db.KERNEL, "kernelsrv boot %v args %v", req.Name, req.Args)
 	var pid sp.Tpid
 	var err error
-	if pid, err = ks.k.BootSub(req.Name, req.Args, ks.k.Param, false); err != nil {
+	if pid, err = ks.k.BootSub(req.Name, req.Args, ks.k.Param, sp.ROOTREALM); err != nil {
 		return err
 	}
 	rep.PidStr = pid.String()

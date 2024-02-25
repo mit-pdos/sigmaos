@@ -285,6 +285,18 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
 
+	sts1, err = rootts.GetDir(sp.S3)
+	assert.Nil(t, err)
+	assert.True(t, len(sts1) > 0, "No S3s in root realm")
+
+	sts, err := ts1.GetDir(sp.S3)
+	db.DPrintf(db.TEST, "realm names s3 %v\n", sp.Names(sts))
+	assert.Nil(t, err)
+	assert.True(t, len(sts) > 0, "No S3s in user realm")
+	for _, st := range sts1 {
+		assert.False(t, fslib.Present(sts, []string{st.Name}), "cross-over")
+	}
+
 	err = ts1.Remove()
 	assert.Nil(t, err)
 

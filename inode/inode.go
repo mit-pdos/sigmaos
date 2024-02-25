@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

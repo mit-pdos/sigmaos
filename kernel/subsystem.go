@@ -95,22 +95,14 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	}
 	p.SetMcpu(mcpu)
 	var sck *sigmaclnt.SigmaClntKernel
+	var err error
 	if realm == sp.ROOTREALM {
 		sck = k.SigmaClntKernel
 	} else {
-		pe := proc.NewDifferentRealmProcEnv(k.ProcEnv(), realm)
-		pe.SetAllowedPaths(sp.ALL_PATHS)
-		if err := k.as.MintAndSetToken(pe); err != nil {
-			db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-			return nil, err
-		}
-		db.DPrintf(db.ALWAYS, "ProcEnv Kernel: %v", pe)
-		sc, err := sigmaclnt.NewSigmaClnt(pe)
+		sck, err = k.getRealmSigmaClnt(realm)
 		if err != nil {
-			db.DPrintf(db.ERROR, "Error NewSigmaClnt: %v", err)
 			return nil, err
 		}
-		sck = sigmaclnt.NewSigmaClntKernel(sc)
 	}
 	ss := newSubsystem(sck.ProcClnt, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelID, k.ip)

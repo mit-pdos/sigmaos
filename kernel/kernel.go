@@ -54,6 +54,7 @@ type Kernel struct {
 	*sigmaclnt.SigmaClntKernel
 	kc           *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
 	Param        *Param
+	realms       map[sp.Trealm]*sigmaclnt.SigmaClntKernel
 	svcs         *Services
 	ip           sp.Tip
 	as           auth.AuthSrv
@@ -61,11 +62,12 @@ type Kernel struct {
 }
 
 func newKernel(param *Param, bootstrapAS auth.AuthSrv) *Kernel {
-	k := &Kernel{}
-	k.Param = param
-	k.as = bootstrapAS
-	k.svcs = newServices()
-	return k
+	return &Kernel{
+		realms: make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
+		Param:  param,
+		as:     bootstrapAS,
+		svcs:   newServices(),
+	}
 }
 
 func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, error) {
@@ -157,6 +159,28 @@ func (k *Kernel) Shutdown() error {
 	k.shutdown()
 	db.DPrintf(db.KERNEL, "Shutdown %s done\n", k.Param.KernelID)
 	return nil
+}
+
+func (k *Kernel) getRealmSigmaClnt(realm sp.Trealm) (*sigmaclnt.SigmaClntKernel, error) {
+	sck, ok := k.realms[realm]
+	if ok {
+		return sck, nil
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(k.ProcEnv(), realm)
+	pe.SetAllowedPaths(sp.ALL_PATHS)
+	if err := k.as.MintAndSetToken(pe); err != nil {
+		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
+		return nil, err
+	}
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewSigmaClnt: %v", err)
+		return nil, err
+	}
+	sck = sigmaclnt.NewSigmaClntKernel(sc)
+	k.realms[realm] = sck
+	return sck, nil
 }
 
 // Start kernel services

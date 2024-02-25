@@ -189,7 +189,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", err)
 		return err
 	}
-	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.UXREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
+	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
 		mnt := sp.NewMountService(namedMount.Addr)
 		mnt.SetTree(s)
@@ -200,7 +200,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		}
 	}
 	// Make some realm dirs
-	for _, s := range []string{sp.KPIDSREL, sp.S3REL} {
+	for _, s := range []string{sp.KPIDSREL, sp.S3REL, sp.UXREL} {
 		pn := path.Join(sp.NAMED, s)
 		db.DPrintf(db.REALMD, "Mkdir %v", pn)
 		if err := sc.MkDir(pn, 0777); err != nil {

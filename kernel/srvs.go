@@ -48,7 +48,7 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp
 	case sp.S3REL:
 		ss, err = k.bootS3d(realm)
 	case sp.UXREL:
-		ss, err = k.bootUxd()
+		ss, err = k.bootUxd(realm)
 	case sp.DBREL:
 		ss, err = k.bootDbd(p.Dbip)
 	case sp.MONGOREL:
@@ -84,8 +84,15 @@ func (k *Kernel) bootPerRealmSubs(realm sp.Trealm) error {
 		db.DPrintf(db.KERNEL, "Skip booting per-realm subs for root realm")
 		return nil
 	}
-	_, err := k.BootSub(sp.S3REL, nil, k.Param, realm)
-	return err
+	if _, err := k.BootSub(sp.S3REL, nil, k.Param, realm); err != nil {
+		db.DPrintf(db.ERROR, "Err boot s3: %v", err)
+		return err
+	}
+	if _, err := k.BootSub(sp.UXREL, nil, k.Param, realm); err != nil {
+		db.DPrintf(db.ERROR, "Err boot s3: %v", err)
+		return err
+	}
+	return nil
 }
 
 func (k *Kernel) AssignUprocdToRealm(pid sp.Tpid, realm sp.Trealm, ptype proc.Ttype) error {
@@ -155,9 +162,8 @@ func (k *Kernel) bootRealmd() (Subsystem, error) {
 	return k.bootSubsystemBootstrapKeys("realmd", []string{}, sp.ROOTREALM, proc.HSCHEDD)
 }
 
-func (k *Kernel) bootUxd() (Subsystem, error) {
-	// XXX ignore realm for now
-	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, sp.ROOTREALM, proc.HSCHEDD)
+func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {
+	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, realm, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {

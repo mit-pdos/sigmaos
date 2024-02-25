@@ -285,16 +285,24 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
 
-	sts1, err = rootts.GetDir(sp.S3)
-	assert.Nil(t, err)
-	assert.True(t, len(sts1) > 0, "No S3s in root realm")
-
-	sts, err := ts1.GetDir(sp.S3)
-	db.DPrintf(db.TEST, "realm names s3 %v\n", sp.Names(sts))
-	assert.Nil(t, err)
-	assert.True(t, len(sts) > 0, "No S3s in user realm")
-	for _, st := range sts1 {
-		assert.False(t, fslib.Present(sts, []string{st.Name}), "cross-over")
+	for _, d := range []string{sp.S3, sp.UX} {
+		sts1, err := rootts.GetDir(d)
+		assert.Nil(t, err)
+		assert.True(t, len(sts1) > 0, "No %vs in root realm", d)
+		sts, err := ts1.GetDir(d)
+		db.DPrintf(db.TEST, "realm names %v %v\n", d, sp.Names(sts))
+		assert.Nil(t, err)
+		assert.True(t, len(sts) > 0, "No %vs in user realm", d)
+		for _, st := range sts1 {
+			// If there is a name in common in the directory, check that they are for different mounts
+			if fslib.Present(sts, []string{st.Name}) {
+				mnt, err := ts1.ReadMount(path.Join(d, st.Name))
+				assert.Nil(t, err, "ReadMount: %v", err)
+				mnt1, err := rootts.ReadMount(path.Join(d, st.Name))
+				assert.Nil(t, err, "ReadMount: %v", err)
+				assert.False(t, mnt.Address() == mnt1.Address(), "%v cross-over", d)
+			}
+		}
 	}
 
 	err = ts1.Remove()

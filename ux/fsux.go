@@ -30,22 +30,21 @@ func RunFsUx(rootux string) {
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
-	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := newUx(rootux)
 	root, sr := newDir([]string{rootux})
 	if sr != nil {
 		db.DFatalf("newDir %v\n", sr)
 	}
-	pcfg := proc.GetProcEnv()
+	pe := proc.GetProcEnv()
 	addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
-	srv, err := sigmasrv.NewSigmaSrvRoot(root, path.Join(sp.UX, pcfg.GetKernelID()), addr, pcfg)
+	srv, err := sigmasrv.NewSigmaSrvRoot(root, path.Join(sp.UX, pe.GetKernelID()), addr, pe)
 	if err != nil {
 		db.DFatalf("BootSrvAndPost %v\n", err)
 	}
 	fsux.SigmaSrv = srv
 
 	// Perf monitoring
-	p, err := perf.NewPerf(pcfg, perf.UX)
+	p, err := perf.NewPerf(pe, perf.UX)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}

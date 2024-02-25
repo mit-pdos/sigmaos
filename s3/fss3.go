@@ -63,6 +63,7 @@ func RunFss3(buckets []string) {
 	}
 	root := newDir("", path.Path{}, sp.DMDIR)
 	pe := proc.GetProcEnv()
+	db.DPrintf(db.ALWAYS, "ProcEnv: %v", pe)
 	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, pe.GetNet())
 	ssrv, err := sigmasrv.NewSigmaSrvRoot(root, sp.S3, addr, pe)
 	if err != nil {

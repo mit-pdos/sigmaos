@@ -29,6 +29,8 @@ func (ss *Services) addSvc(s string, sub Subsystem) {
 }
 
 func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp.Tpid, error) {
+	db.DPrintf(db.KERNEL, "Boot sub %v realm %v", s, realm)
+
 	k.Lock()
 	defer k.Unlock()
 
@@ -78,6 +80,10 @@ func (k *Kernel) SetCPUShares(pid sp.Tpid, shares int64) error {
 }
 
 func (k *Kernel) bootPerRealmSubs(realm sp.Trealm) error {
+	if realm == sp.ROOTREALM {
+		db.DPrintf(db.KERNEL, "Skip booting per-realm subs for root realm")
+		return nil
+	}
 	_, err := k.BootSub(sp.S3REL, nil, k.Param, realm)
 	return err
 }
@@ -85,6 +91,7 @@ func (k *Kernel) bootPerRealmSubs(realm sp.Trealm) error {
 func (k *Kernel) AssignUprocdToRealm(pid sp.Tpid, realm sp.Trealm, ptype proc.Ttype) error {
 	err := k.svcs.svcMap[pid].AssignToRealm(realm, ptype)
 	if err != nil {
+		db.DPrintf(db.ERROR, "Error assign uprocd to realm: %v", err)
 		return err
 	}
 	return k.bootPerRealmSubs(realm)

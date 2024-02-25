@@ -11,6 +11,7 @@ import (
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -84,6 +85,7 @@ func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Th
 
 func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	p := proc.NewPrivProcPid(pid, program, args, true)
+	p.GetProcEnv().SetRealm(realm, k.Param.Overlays)
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	p.SetAllowedPaths(sp.ALL_PATHS)
@@ -92,7 +94,26 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 		return nil, err
 	}
 	p.SetMcpu(mcpu)
-	ss := newSubsystem(k.ProcClnt, k, p, how)
+	var sck *sigmaclnt.SigmaClntKernel
+	if realm == sp.ROOTREALM {
+		sck = k.SigmaClntKernel
+	} else {
+		// TODO: only create sigmaclnt once
+		pe := proc.NewDifferentRealmProcEnv(k.ProcEnv(), realm)
+		pe.SetAllowedPaths(sp.ALL_PATHS)
+		if err := k.as.MintAndSetToken(pe); err != nil {
+			db.DPrintf(db.ERROR, "Error MintToken: %v", err)
+			return nil, err
+		}
+		db.DPrintf(db.ALWAYS, "ProcEnv Kernel: %v", pe)
+		sc, err := sigmaclnt.NewSigmaClnt(pe)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error NewSigmaClnt: %v", err)
+			return nil, err
+		}
+		sck = sigmaclnt.NewSigmaClntKernel(sc)
+	}
+	ss := newSubsystem(sck.ProcClnt, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelID, k.ip)
 }
 

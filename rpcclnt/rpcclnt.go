@@ -49,7 +49,7 @@ type sigmaCh struct {
 	fsls []*fslib.FsLib
 	fds  []int
 	pn   string
-	idx  int32
+	idx  atomic.Int32
 }
 
 func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
@@ -74,7 +74,7 @@ func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
 }
 
 func (ch *sigmaCh) SendReceive(iov sessp.IoVec) (sessp.IoVec, error) {
-	idx := int(atomic.AddInt32(&ch.idx, 1))
+	idx := int(ch.idx.Add(1))
 	b, err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], iov)
 	if err != nil {
 		return nil, err

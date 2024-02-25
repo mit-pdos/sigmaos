@@ -77,7 +77,7 @@ func (ssrv *SessSrv) StopServing() error {
 }
 
 func (ssrv *SessSrv) QueueLen() int64 {
-	return ssrv.qlen.Read()
+	return ssrv.qlen.Load()
 }
 
 // for testing
@@ -97,8 +97,8 @@ func (ssrv *SessSrv) srvFcall(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg
 }
 
 func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
-	ssrv.qlen.Inc(1)
-	defer ssrv.qlen.Dec()
+	stats.Inc(&ssrv.qlen, 1)
+	defer stats.Dec(&ssrv.qlen)
 
 	qlen := ssrv.QueueLen()
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)

@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"path"
 	"strconv"
 	"sync"
 
@@ -11,8 +10,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
-	"sigmaos/stats"
 )
 
 //
@@ -138,13 +135,12 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	var lowload perf.Tload
 	n := 0
 	for gn, _ := range kvs.Set {
-		kvgrp := path.Join(kvgrp.GrpPath(kvgrp.JobDir(mo.job), gn), sp.STATSD)
-		st := stats.Stats{}
-		err := mo.GetFileJson(kvgrp, &st)
+		kvgrp := kvgrp.GrpPath(kvgrp.JobDir(mo.job), gn)
+		st, err := mo.ReadStats(kvgrp)
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "ReadFileJson %v failed %v\n", kvgrp, err)
+			db.DPrintf(db.ALWAYS, "ReadStats %v failed %v\n", kvgrp, err)
 		}
-		db.DPrintf(db.KVMON, "%v: sti %v\n", kvgrp, &st)
+		db.DPrintf(db.KVMON, "%v: sti %v\n", kvgrp, st)
 		n += 1
 		util += st.Util
 		if st.Util < low {

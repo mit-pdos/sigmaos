@@ -21,7 +21,6 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/stats"
 	"sigmaos/test"
 )
 
@@ -1283,30 +1282,29 @@ func TestSetFileSymlink(t *testing.T) {
 	err = ts.MkMountFile(gopath.Join(pathname, "namedself0"), newMount(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkMountFile")
 
-	st := stats.Stats{}
-	err = ts.GetFileJson(gopath.Join("name", sp.STATSD), &st)
+	st, err := ts.ReadStats("name")
 	assert.Nil(t, err, "statsd")
-	nwalk := st.Nwalk
+	nwalk := st.Counters["Nwalk"]
 
 	d = []byte("byebye")
 	n, err := ts.SetFile(gopath.Join(pathname, "namedself0/f"), d, sp.OWRITE, 0)
 	assert.Nil(ts.T, err, "SetFile: %v", err)
 	assert.Equal(ts.T, sp.Tsize(len(d)), n, "SetFile")
 
-	err = ts.GetFileJson(gopath.Join(pathname, sp.STATSD), &st)
+	st, err = ts.ReadStats("name")
 	assert.Nil(t, err, "statsd")
 
-	assert.NotEqual(ts.T, nwalk, st.Nwalk, "setfile")
-	nwalk = st.Nwalk
+	assert.NotEqual(ts.T, nwalk, st.Counters["Nwalk"], "setfile")
+	nwalk = st.Counters["Nwalk"]
 
 	b, err := ts.GetFile(gopath.Join(pathname, "namedself0/f"))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, d, b, "GetFile")
 
-	err = ts.GetFileJson(gopath.Join(pathname, sp.STATSD), &st)
+	st, err = ts.ReadStats("name")
 	assert.Nil(t, err, "statsd")
 
-	assert.Equal(ts.T, nwalk, st.Nwalk, "getfile")
+	assert.Equal(ts.T, nwalk, st.Counters["Nwalk"], "getfile")
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err)

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"unsafe"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -20,34 +19,23 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const STATS = true
+type StatsCommon struct {
+	Paths map[string]int
 
-type Tcounter int64
-type TCycles uint64
+	Qlen    Tcounter
+	AvgQlen float64
 
-func (c *Tcounter) Inc(v int64) {
-	if STATS {
-		n := (*int64)(unsafe.Pointer(c))
-		atomic.AddInt64(n, v)
-	}
+	Util       float64
+	CustomUtil float64
+
+	Load       perf.Tload
+	CustomLoad perf.Tload
 }
 
-func (c *Tcounter) Dec() {
-	if STATS {
-		n := (*int64)(unsafe.Pointer(c))
-		atomic.AddInt64(n, -1)
-	}
+func (st *StatsCommon) String() string {
+	return fmt.Sprintf("&{Qlen: %v AvgQlen: %.3f Paths:%v Load:%v Util:%v }", st.Qlen.Load(), st.AvgQlen, st.Paths, st.Load, st.Util)
 }
 
-func (c *Tcounter) Read() int64 {
-	if STATS {
-		n := (*int64)(unsafe.Pointer(c))
-		return atomic.LoadInt64(n)
-	}
-	return 0
-}
-
-// XXX separate cache lines
 type Stats struct {
 	Ntotal      Tcounter
 	Nversion    Tcounter
@@ -71,16 +59,35 @@ type Stats struct {
 	Nput        Tcounter
 	Nrpc        Tcounter
 
-	Paths map[string]int
+	StatsCommon
+}
 
-	Qlen    Tcounter
-	AvgQlen float64
+// For reading and marshaling
+type StatsSnapshot struct {
+	Counters map[string]int64
+	StatsCommon
+}
 
-	Util       float64
-	CustomUtil float64
+func newStatsSnapshot() *StatsSnapshot {
+	st := &StatsSnapshot{}
+	st.Counters = make(map[string]int64)
+	return st
+}
 
-	Load       perf.Tload
-	CustomLoad perf.Tload
+func (st *StatsSnapshot) String() string {
+	ks := make([]string, 0, len(st.Counters))
+	for k := range st.Counters {
+		ks = append(ks, k)
+	}
+	sort.Strings(ks)
+	s := "["
+	for _, k := range ks {
+		s += fmt.Sprintf("{%s: %d}", k, st.Counters[k])
+	}
+	s += "] "
+	c := &st.StatsCommon
+	s += c.String()
+	return s
 }
 
 func NewStats() *Stats {
@@ -91,50 +98,50 @@ func NewStats() *Stats {
 func (si *Stats) Inc(fct sessp.Tfcall, ql int64) {
 	switch fct {
 	case sessp.TTversion:
-		si.Nversion.Inc(1)
+		Inc(&si.Nversion, 1)
 	case sessp.TTauth:
-		si.Nauth.Inc(1)
+		Inc(&si.Nauth, 1)
 	case sessp.TTattach:
-		si.Nattach.Inc(1)
+		Inc(&si.Nattach, 1)
 	case sessp.TTdetach:
-		si.Ndetach.Inc(1)
+		Inc(&si.Ndetach, 1)
 	case sessp.TTflush:
-		si.Nflush.Inc(1)
+		Inc(&si.Nflush, 1)
 	case sessp.TTwalk:
-		si.Nwalk.Inc(1)
+		Inc(&si.Nwalk, 1)
 	case sessp.TTopen:
-		si.Nopen.Inc(1)
+		Inc(&si.Nopen, 1)
 	case sessp.TTcreate:
-		si.Ncreate.Inc(1)
+		Inc(&si.Ncreate, 1)
 	case sessp.TTread, sessp.TTreadF:
-		si.Nread.Inc(1)
+		Inc(&si.Nread, 1)
 	case sessp.TTwrite, sessp.TTwriteF:
-		si.Nwrite.Inc(1)
+		Inc(&si.Nwrite, 1)
 	case sessp.TTclunk:
-		si.Nclunk.Inc(1)
+		Inc(&si.Nclunk, 1)
 	case sessp.TTremove:
-		si.Nremove.Inc(1)
+		Inc(&si.Nremove, 1)
 	case sessp.TTremovefile:
-		si.Nremovefile.Inc(1)
+		Inc(&si.Nremovefile, 1)
 	case sessp.TTstat:
-		si.Nstat.Inc(1)
+		Inc(&si.Nstat, 1)
 	case sessp.TTwstat:
-		si.Nwstat.Inc(1)
+		Inc(&si.Nwstat, 1)
 	case sessp.TTwatch:
-		si.Nwatch.Inc(1)
+		Inc(&si.Nwatch, 1)
 	case sessp.TTrenameat:
-		si.Nrenameat.Inc(1)
+		Inc(&si.Nrenameat, 1)
 	case sessp.TTgetfile:
-		si.Nget.Inc(1)
+		Inc(&si.Nget, 1)
 	case sessp.TTputfile:
-		si.Nput.Inc(1)
+		Inc(&si.Nput, 1)
 	case sessp.TTwriteread:
-		si.Nrpc.Inc(1)
+		Inc(&si.Nrpc, 1)
 	default:
 		db.DPrintf(db.ALWAYS, "StatInfo: missing counter for %v\n", fct)
 	}
-	si.Ntotal.Inc(1)
-	si.Qlen.Inc(ql)
+	Inc(&si.Ntotal, 1)
+	Inc(&si.Qlen, ql)
 }
 
 type StatInfo struct {
@@ -233,47 +240,41 @@ func (st *Stats) SortPath() []pair {
 	return s
 }
 
-// Make a copy of st while concurrent Inc()s may happen
-func (st *Stats) acopy() Stats {
-	stcp := &Stats{}
+// Make a StatsSnapshot from st while concurrent Inc()s may happen
+func (st *Stats) statsSnapshot() *StatsSnapshot {
+	stro := newStatsSnapshot()
 
 	v := reflect.ValueOf(st).Elem()
-	v1 := reflect.ValueOf(stcp).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		t := v.Field(i).Type().String()
-		if strings.HasSuffix(t, "Tcounter") {
-			p := v.Field(i).Addr().Interface().(*Tcounter)
-			ptr := (*uint64)(unsafe.Pointer(p))
-			n := atomic.LoadUint64(ptr)
-			p1 := v1.Field(i).Addr().Interface().(*Tcounter)
-			*p1 = Tcounter(n)
+		n := v.Type().Field(i).Name
+		db.DPrintf(db.TEST, "%v %v\n", t, n)
+		if strings.HasSuffix(t, "atomic.Int64") {
+			p := v.Field(i).Addr().Interface().(*atomic.Int64)
+			stro.Counters[n] = p.Load()
 		}
 	}
-	return *stcp
+	return stro
 }
 
-func (sti *StatInfo) StatsCopy() Stats {
-	stcp := sti.st.acopy()
+func (sti *StatInfo) StatsSnapshot() *StatsSnapshot {
+	stro := sti.st.statsSnapshot()
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
-	stcp.AvgQlen = float64(sti.st.Qlen) / float64(sti.st.Ntotal)
-	stcp.Paths = sti.st.Paths
-	stcp.Util = sti.st.Util
-	stcp.Load = sti.st.Load
-	stcp.CustomUtil = sti.st.CustomUtil
-	stcp.CustomLoad = sti.st.CustomLoad
-	return stcp
+	stro.AvgQlen = float64(sti.st.Qlen.Load()) / float64(sti.st.Ntotal.Load())
+	stro.Paths = sti.st.Paths
+	stro.Util = sti.st.Util
+	stro.Load = sti.st.Load
+	stro.CustomUtil = sti.st.CustomUtil
+	stro.CustomLoad = sti.st.CustomLoad
+	return stro
 }
 
 func (sti *StatInfo) stats() []byte {
-	st := sti.StatsCopy()
+	st := sti.StatsSnapshot()
 	data, err := json.Marshal(st)
 	if err != nil {
 		db.DFatalf("stats: json marshaling failed %v", err)
 	}
 	return data
-}
-
-func (st *Stats) String() string {
-	return fmt.Sprintf("&{ Ntotal:%v Nattach:%v Ndetach:%v Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nput:%v Nrpc: %v Qlen: %v AvgQlen: %.3f Paths:%v Load:%v Util:%v }", st.Ntotal, st.Nattach, st.Ndetach, st.Nwalk, st.Nclunk, st.Nopen, st.Nwatch, st.Ncreate, st.Nflush, st.Nread, st.Nwrite, st.Nremove, st.Nstat, st.Nwstat, st.Nrenameat, st.Nget, st.Nput, st.Nrpc, st.Qlen, st.AvgQlen, st.Paths, st.Load, st.Util)
 }

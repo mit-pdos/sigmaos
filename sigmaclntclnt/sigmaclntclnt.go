@@ -37,7 +37,7 @@ func (scc *SigmaClntClnt) SendReceive(iov sessp.IoVec) (sessp.IoVec, error) {
 	}
 }
 
-func (scc *SigmaClntClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
+func (scc *SigmaClntClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 	return nil, nil
 }
 

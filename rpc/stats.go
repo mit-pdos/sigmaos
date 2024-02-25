@@ -3,19 +3,26 @@ package rpc
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	"sigmaos/stats"
 )
 
 type MethodStat struct {
-	N   uint64 // number of invocations of method
-	Tot int64  // tot us for this method
+	N   stats.Tcounter // number of invocations of method
+	Tot stats.Tcounter // tot us for this method
+	Max stats.Tcounter
+	Avg float64
+}
+
+// For reading and marshaling
+type MethodStatSnapshot struct {
+	N   int64
+	Tot int64
 	Max int64
 	Avg float64
 }
 
-func (ms *MethodStat) String() string {
+func (ms *MethodStatSnapshot) String() string {
 	return fmt.Sprintf("N %d Tot %dus Max %dus Avg %.1fms", ms.N, ms.Tot, ms.Max, ms.Avg)
 }
 
@@ -23,13 +30,13 @@ type RPCStats struct {
 	MStats sync.Map
 }
 
-type SigmaRPCStats struct {
-	SigmapStat stats.Stats
-	RpcStat    map[string]*MethodStat
+type RPCStatsSnapshot struct {
+	*stats.StatsSnapshot
+	RpcStat map[string]*MethodStatSnapshot
 }
 
-func (st *SigmaRPCStats) String() string {
-	s := "Sigma stats:\n" + st.SigmapStat.String() + "\n"
+func (st *RPCStatsSnapshot) String() string {
+	s := "Sigma stats:\n" + st.StatsSnapshot.String() + "\n"
 	s += "RPC stats:\n methods:\n"
 	for m, st := range st.RpcStat {
 		s += fmt.Sprintf("  %s: %s\n", m, st.String())
@@ -39,17 +46,6 @@ func (st *SigmaRPCStats) String() string {
 
 func newStats() *RPCStats {
 	return &RPCStats{}
-}
-
-func (st *RPCStats) String() string {
-	s := "RPC stats:\n methods:\n"
-	st.MStats.Range(func(key, value any) bool {
-		k := key.(string)
-		st := value.(*MethodStat)
-		s += fmt.Sprintf("  %s: %s\n", k, st.String())
-		return true
-	})
-	return s
 }
 
 type StatInfo struct {
@@ -62,26 +58,27 @@ func NewStatInfo() *StatInfo {
 	return si
 }
 
-func (si *StatInfo) Stats() map[string]*MethodStat {
-	sto := make(map[string]*MethodStat)
-	n := uint64(0)
+func (si *StatInfo) Stats() map[string]*MethodStatSnapshot {
+	sto := make(map[string]*MethodStatSnapshot)
+	n := int64(0)
 	si.st.MStats.Range(func(key, value any) bool {
 		k := key.(string)
 		st := value.(*MethodStat)
-		stN := atomic.LoadUint64(&st.N)
-		stTot := atomic.LoadInt64(&st.Tot)
-		stMax := atomic.LoadInt64(&st.Max)
+		stN := stats.Read(&st.N)
+		stTot := stats.Read(&st.Tot)
+		stMax := stats.Read(&st.Max)
 		n += stN
 		var avg float64
-		if st.N > 0 {
+		if stN > 0 {
 			avg = float64(stTot) / float64(stN) / 1000.0
 		}
-		sto[k] = &MethodStat{
+		ms := &MethodStatSnapshot{
+			Avg: avg,
 			N:   stN,
 			Tot: stTot,
 			Max: stMax,
-			Avg: avg,
 		}
+		sto[k] = ms
 		return true
 	})
 	return sto
@@ -95,10 +92,7 @@ func (sts *StatInfo) Stat(m string, t int64) {
 		stif, _ = sts.st.MStats.LoadOrStore(m, st)
 	}
 	st = stif.(*MethodStat)
-	atomic.AddUint64(&st.N, 1)
-	atomic.AddInt64(&st.Tot, t)
-	oldMax := atomic.LoadInt64(&st.Max)
-	if oldMax == 0 || t > oldMax {
-		atomic.StoreInt64(&st.Max, t)
-	}
+	stats.Inc(&st.N, 1)
+	stats.Inc(&st.Tot, t)
+	stats.Max(&st.Max, t)
 }

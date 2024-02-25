@@ -248,7 +248,7 @@ func (hj *HotelJob) Stop() error {
 	return nil
 }
 
-func (hj *HotelJob) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
+func (hj *HotelJob) StatsSrv() ([]*rpc.RPCStatsSnapshot, error) {
 	if hj.cacheClnt != nil {
 		return hj.cacheClnt.StatsSrvs()
 	}

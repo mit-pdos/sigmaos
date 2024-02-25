@@ -180,8 +180,8 @@ func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 		if realm == sp.ROOTREALM {
 			clnt = mgr.rootsc
 		} else {
-			pcfg := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
-			if sc, err := sigmaclnt.NewSigmaClnt(pcfg); err != nil {
+			pe := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
+			if sc, err := sigmaclnt.NewSigmaClnt(pe); err != nil {
 				db.DFatalf("Err NewSigmaClntRealm: %v", err)
 			} else {
 				// Mount KPIDS.

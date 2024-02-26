@@ -22,7 +22,6 @@ import (
 type StatsCommon struct {
 	Paths map[string]int
 
-	Qlen    Tcounter
 	AvgQlen float64
 
 	Util       float64
@@ -33,7 +32,7 @@ type StatsCommon struct {
 }
 
 func (st *StatsCommon) String() string {
-	return fmt.Sprintf("&{Qlen: %v AvgQlen: %.3f Paths:%v Load:%v Util:%v }", st.Qlen.Load(), st.AvgQlen, st.Paths, st.Load, st.Util)
+	return fmt.Sprintf("&{AvgQlen: %.3f Paths:%v Load:%v Util:%v }", st.AvgQlen, st.Paths, st.Load, st.Util)
 }
 
 type Stats struct {
@@ -58,6 +57,8 @@ type Stats struct {
 	Nget        Tcounter
 	Nput        Tcounter
 	Nrpc        Tcounter
+
+	Qlen Tcounter
 
 	StatsCommon
 }

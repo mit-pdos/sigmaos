@@ -29,7 +29,7 @@ func main() {
 		db.DPrintf(db.ERROR, "HAHAHA! I can access your restricted S3 bucket [%v] ;)\n%v", path.Join(sp.S3, "~local", "9ps3"), sp.Names(sts))
 		sc.ClntExitOK()
 	} else {
-		db.DPrintf(db.ALWAYS, "ARGH! Malicious mapper foiled!")
+		db.DPrintf(db.ALWAYS, "ARGH! Malicious mapper foiled!: %v", err)
 		sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}
 }

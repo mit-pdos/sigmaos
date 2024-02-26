@@ -462,7 +462,7 @@ func TestTryDelegateNonSubsetToChildFail(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestMRS3BucketAccess(t *testing.T) {
+func TestAWSRestrictedProfileS3BucketAccess(t *testing.T) {
 	// First, try to get restricted AWS secrets
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_S3_RESTRICTED_PROFILE)
 	if !assert.Nil(t, err1, "Can't get secrets for aws profile %v: %v", sp.AWS_S3_RESTRICTED_PROFILE, err1) {
@@ -497,17 +497,18 @@ func TestMRS3BucketAccess(t *testing.T) {
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "Err NewClnt: %v", err)
 
-	sts2, err := sc1.GetDir(path.Join(sp.S3, "~local"))
-	assert.NotNil(t, err)
-	db.DPrintf(db.TEST, "accessbile s3 buckets %v", sp.Names(sts))
+	sts2, err := sc1.GetDir(path.Join(sp.S3, "~local") + "/")
+	assert.Nil(t, err, "Err GetDir [%v]: %v", path.Join(sp.S3, "~local/"), err)
+	db.DPrintf(db.TEST, "accessbile s3 buckets %v", sp.Names(sts2))
 
 	sts2, err = sc1.GetDir(path.Join(sp.S3, "~local", "9ps3"))
 	assert.NotNil(t, err, "Successfully got dir. \n\tPE: %v", sc1.ProcEnv())
 
-	sts2, err = rootts.GetDir(pn1)
+	sts2, err = sc1.GetDir(pn1)
 	assert.Nil(t, err)
-	sts2, err = rootts.GetDir(pn2)
+	sts2, err = sc1.GetDir(pn2)
 	assert.Nil(t, err)
+	assert.True(t, len(sts2) == 8, "Wrong number of gutenberg entries: %v != 8", len(sts2))
 	db.DPrintf(db.TEST, "s3 contents (using restricted AWS account/role) %v", sp.Names(sts2))
 
 	rootts.Shutdown()

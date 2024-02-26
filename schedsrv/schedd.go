@@ -64,7 +64,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, maste
 		db.DFatalf("Error NewAuthSrv: %v", err)
 	}
 	sd := &Schedd{
-		pmgr:        procmgr.NewProcMgr(sc, kernelId),
+		pmgr:        procmgr.NewProcMgr(as, sc, kernelId),
 		scheddStats: make(map[sp.Trealm]*realmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),

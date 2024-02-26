@@ -3,7 +3,7 @@
 FROM archlinux
 ARG APP_NAME
 
-RUN yes | pacman -Sy git libseccomp wget gcc pkg-config
+RUN pacman --noconfirm -Sy git libseccomp wget gcc pkg-config
 
 # Download an initial version of Go
 RUN wget "https://go.dev/dl/go1.20.4.linux-amd64.tar.gz" && \

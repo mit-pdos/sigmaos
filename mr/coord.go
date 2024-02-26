@@ -14,13 +14,15 @@ import (
 	"sigmaos/fttasks"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
+	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
 const (
-	NCOORD  = 3
-	RESTART = "restart" // restart message from reducer
+	NCOORD               = 3
+	RESTART              = "restart" // restart message from reducer
+	MALICIOUS_MAPPER_BIN = "mr-m-malicious"
 )
 
 // mr_test puts pathnames of input files (split into bins) in
@@ -41,25 +43,26 @@ const (
 
 type Coord struct {
 	*sigmaclnt.SigmaClnt
-	mft         *fttasks.FtTasks
-	rft         *fttasks.FtTasks
-	job         string
-	nmaptask    int
-	nreducetask int
-	crash       int64
-	linesz      string
-	mapperbin   string
-	reducerbin  string
-	leaderclnt  *leaderclnt.LeaderClnt
-	outdir      string
-	intOutdir   string
-	done        int32
-	memPerTask  proc.Tmem
-	asyncrw     bool
+	mft             *fttasks.FtTasks
+	rft             *fttasks.FtTasks
+	job             string
+	nmaptask        int
+	nreducetask     int
+	crash           int64
+	maliciousMapper uint64
+	linesz          string
+	mapperbin       string
+	reducerbin      string
+	leaderclnt      *leaderclnt.LeaderClnt
+	outdir          string
+	intOutdir       string
+	done            int32
+	memPerTask      proc.Tmem
+	asyncrw         bool
 }
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 9 {
+	if len(args) != 10 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
@@ -88,6 +91,12 @@ func NewCoord(args []string) (*Coord, error) {
 		return nil, fmt.Errorf("NewCoord: crash %v isn't int", args[5])
 	}
 	c.crash = int64(ctime)
+
+	malmap, err := strconv.Atoi(args[9])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[9])
+	}
+	c.maliciousMapper = uint64(malmap)
 
 	c.linesz = args[6]
 
@@ -152,7 +161,17 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem, allowedPaths []
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := c.mft.TaskPathName(task)
 	allowedPaths := []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.S3, "*"), path.Join(sp.UX, "*")}
-	return c.newTask(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
+	mapperbin := c.mapperbin
+	// If running with malicious mappers, roll the dice and see if we should
+	// spawn a benign mapper or a malicious one.
+	if c.maliciousMapper > 0 {
+		roll := rand.Int64(1000)
+		if roll < c.maliciousMapper {
+			// Roll successful: switch to malicious mapper
+			mapperbin = MALICIOUS_MAPPER_BIN
+		}
+	}
+	return c.newTask(mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
 }
 
 type TreduceTask struct {
@@ -185,6 +204,16 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 	// Record end time.
 	ms := time.Since(start).Milliseconds()
 	if err == nil && status.IsStatusOK() {
+		if c.maliciousMapper > 0 && p.GetProgram() == MALICIOUS_MAPPER_BIN {
+			// If running with malicious mapper, then exit status should not be OK.
+			// The task should be restarted automatically by the MR FT
+			// infrastructure.  If the exit status *was* OK, then the output files
+			// won't match, because the malicious mapper doesn't actually do the map
+			// (it just touches some buckets it shouldn't have access to). Because of
+			// this, letting the coordinator proceed by marking the task as done
+			// should cause the test to fail.
+			db.DPrintf(db.ERROR, "!!! WARNING: MALICIOUS MAPPER SUCCEEDED !!!")
+		}
 		// mark task as done
 		if err := ft.MarkDone(t); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)

@@ -61,7 +61,7 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
-	s3secrets, err := auth.GetAWSSecrets()
+	s3secrets, err := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	if err != nil {
 		db.DFatalf("Failed to load AWS secrets %v", err)
 	}

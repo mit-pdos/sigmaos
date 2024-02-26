@@ -101,7 +101,8 @@ const (
 
 // AWS Profile consts
 const (
-	AWS_PROFILE = "sigmaos"
+	AWS_PROFILE               = "sigmaos"
+	AWS_S3_RESTRICTED_PROFILE = "mr-restricted"
 )
 
 // Networking consts

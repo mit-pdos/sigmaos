@@ -10,7 +10,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 )
 
 type Secret struct {
@@ -36,7 +35,7 @@ func (s *Secret) String() string {
 	return fmt.Sprintf("&{ id:%v key:<<redacted>> }", s.ID)
 }
 
-func GetAWSSecrets() (*proc.ProcSecretProto, error) {
+func GetAWSSecrets(profile string) (*proc.ProcSecretProto, error) {
 	sharedCredsFiles := []string{
 		config.DefaultSharedCredentialsFilename(),
 		"/home/sigmaos/.aws/credentials",
@@ -47,7 +46,7 @@ func GetAWSSecrets() (*proc.ProcSecretProto, error) {
 	}
 	cfg, err := config.LoadSharedConfigProfile(
 		context.TODO(),
-		sp.AWS_PROFILE,
+		profile,
 		func(o *config.LoadSharedConfigOptions) {
 			o.ConfigFiles = sharedConfFiles
 			o.CredentialsFiles = sharedCredsFiles

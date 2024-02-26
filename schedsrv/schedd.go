@@ -39,7 +39,7 @@ type Schedd struct {
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
 	kernelId            string
-	scheddStats         map[sp.Trealm]*proto.RealmStats
+	scheddStats         map[sp.Trealm]*realmStats
 	sc                  *sigmaclnt.SigmaClnt
 	cpuStats            *cpuStats
 	cpuUtil             int64
@@ -65,7 +65,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, maste
 	}
 	sd := &Schedd{
 		pmgr:        procmgr.NewProcMgr(sc, kernelId),
-		scheddStats: make(map[sp.Trealm]*proto.RealmStats),
+		scheddStats: make(map[sp.Trealm]*realmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
 		kernelId:    kernelId,
@@ -192,8 +192,8 @@ func (sd *Schedd) GetScheddStats(ctx fs.CtxI, req proto.GetScheddStatsRequest, r
 	sd.realmMu.RLock()
 	for r, s := range sd.scheddStats {
 		st := &proto.RealmStats{
-			Running:  atomic.LoadInt64(&s.Running),
-			TotalRan: atomic.LoadInt64(&s.TotalRan),
+			Running:  s.running.Load(),
+			TotalRan: s.totalRan.Load(),
 		}
 		scheddStats[r.String()] = st
 	}

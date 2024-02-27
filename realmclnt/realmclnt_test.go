@@ -158,11 +158,11 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	rootts.BootNode(1)
 	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	rootts.BootNode(1)
 	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
 	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

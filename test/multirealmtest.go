@@ -3,6 +3,7 @@ package test
 import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/realmsrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -31,7 +32,7 @@ func newRealmTstateClnt(ts *Tstate, realm sp.Trealm, newrealm bool) (*RealmTstat
 			net = realm.String()
 		}
 		db.DPrintf(db.TEST, "Make realm %v", realm)
-		if err := ts.rc.NewRealm(realm, net); err != nil {
+		if err := ts.rc.NewRealm(realm, net, realmsrv.SUBSYSTEM_PER_NODE, realmsrv.SUBSYSTEM_PER_NODE); err != nil {
 			db.DPrintf(db.ERROR, "Error NewRealmTstate NewRealm: %v", err)
 			return nil, err
 		}

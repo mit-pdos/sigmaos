@@ -288,11 +288,11 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	for _, d := range []string{sp.S3, sp.UX} {
 		sts1, err := rootts.GetDir(d)
 		assert.Nil(t, err)
-		assert.True(t, len(sts1) > 0, "No %vs in root realm", d)
+		assert.True(t, len(sts1) == 1, "No %vs in root realm", d)
 		sts, err := ts1.GetDir(d)
 		db.DPrintf(db.TEST, "realm names %v %v\n", d, sp.Names(sts))
 		assert.Nil(t, err)
-		assert.True(t, len(sts) > 0, "No %vs in user realm", d)
+		assert.True(t, len(sts) == 1, "No %vs in user realm", d)
 		for _, st := range sts1 {
 			// If there is a name in common in the directory, check that they are for different mounts
 			if fslib.Present(sts, []string{st.Name}) {

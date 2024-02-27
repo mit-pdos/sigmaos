@@ -261,7 +261,7 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n i
 		db.DPrintf(db.ERROR, "Tried to boot more than one kernel subsystem per kernel")
 		return fmt.Errorf("Tried to boot more than one kernel subsystem per kernel")
 	}
-	if n != SUBSYSTEM_PER_NODE {
+	if n == SUBSYSTEM_PER_NODE {
 		// Boot one subsystem for the realm on each node in the deployment, so use
 		// the full slice of kernels
 	} else {
@@ -271,7 +271,7 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n i
 			kernels[i], kernels[j] = kernels[j], kernels[i]
 		}
 		// Take the first N of them
-		kernels = kernels[:n+1]
+		kernels = kernels[:n]
 	}
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems selected kernels: %v", realm, kernels)
 	for _, kid := range kernels {

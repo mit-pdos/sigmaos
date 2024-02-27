@@ -1,6 +1,7 @@
 package realmsrv
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -255,6 +256,10 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n i
 	kernels, err := rm.mkc.GetKernelSrvs()
 	if err != nil {
 		return err
+	}
+	if int64(len(kernels)) < n {
+		db.DPrintf(db.ERROR, "Tried to boot more than one kernel subsystem per kernel")
+		return fmt.Errorf("Tried to boot more than one kernel subsystem per kernel")
 	}
 	if n != SUBSYSTEM_PER_NODE {
 		// Boot one subsystem for the realm on each node in the deployment, so use

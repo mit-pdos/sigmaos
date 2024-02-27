@@ -94,6 +94,8 @@ const (
 // Kernel
 const (
 	KERNEL          Tselector = "KERNEL"
+	KERNELCLNT                = "KERNELCLNT"
+	KERNELCLNT_ERR            = "KERNELCLNT_ERR"
 	BOOTCLNT                  = "BOOTCLNT"
 	BOOT                      = "BOOT"
 	CONTAINER                 = "CONTAINER"

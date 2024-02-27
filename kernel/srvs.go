@@ -79,29 +79,13 @@ func (k *Kernel) SetCPUShares(pid sp.Tpid, shares int64) error {
 	return k.svcs.svcMap[pid].SetCPUShares(shares)
 }
 
-func (k *Kernel) bootPerRealmSubs(realm sp.Trealm) error {
-	if realm == sp.ROOTREALM {
-		db.DPrintf(db.KERNEL, "Skip booting per-realm subs for root realm")
-		return nil
-	}
-	if _, err := k.BootSub(sp.S3REL, nil, k.Param, realm); err != nil {
-		db.DPrintf(db.ERROR, "Err boot s3: %v", err)
-		return err
-	}
-	if _, err := k.BootSub(sp.UXREL, nil, k.Param, realm); err != nil {
-		db.DPrintf(db.ERROR, "Err boot s3: %v", err)
-		return err
-	}
-	return nil
-}
-
 func (k *Kernel) AssignUprocdToRealm(pid sp.Tpid, realm sp.Trealm, ptype proc.Ttype) error {
 	err := k.svcs.svcMap[pid].AssignToRealm(realm, ptype)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error assign uprocd to realm: %v", err)
 		return err
 	}
-	return k.bootPerRealmSubs(realm)
+	return nil
 }
 
 func (k *Kernel) GetCPUUtil(pid sp.Tpid) (float64, error) {

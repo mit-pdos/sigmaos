@@ -5,6 +5,8 @@ option go_package = "sigmaos/realmsrv/proto";
 message MakeRequest {
   string realm = 1;
   string network = 2;
+  int64 numS3 = 3;
+  int64 numUX = 4;
 }
 
 message MakeResult {

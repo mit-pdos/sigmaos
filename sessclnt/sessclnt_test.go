@@ -61,7 +61,7 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	case sessp.TTwriteread:
 		msg := &sp.Rread{}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
-		rep.Iov = sessp.IoVec{fcm.Fcm.Iov[0]}
+		rep.Iov = sessp.IoVec{fcm.Fcm.Iov[0][0:REPBUFSZ]}
 	default:
 		msg := &sp.Rattach{Qid: qid}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
@@ -176,8 +176,15 @@ func TestManyClientsCrash(t *testing.T) {
 }
 
 const (
-	BUFSZ = 100           // 64 * sp.KBYTE
-	TOTAL = 10 * sp.MBYTE // 1000 * sp.MBYTE
+	// For latency measurement
+	//REQBUFSZ = 100           // 64 * sp.KBYTE
+	//REPBUFSZ = 100           // 64 * sp.KBYTE
+	//TOTAL    = 10 * sp.MBYTE // 1000 * sp.MBYTE
+
+	// For tput measurement
+	REQBUFSZ = 1 * sp.MBYTE
+	REPBUFSZ = 10
+	TOTAL    = 1000 * sp.MBYTE
 )
 
 type Awriter struct {
@@ -248,13 +255,13 @@ func (awrt *Awriter) Close() error {
 
 func TestPerfSessSrvAsync(t *testing.T) {
 	ts := newTstateSrv(t, 0)
-	buf := test.NewBuf(BUFSZ)
+	buf := test.NewBuf(REQBUFSZ)
 
 	aw := NewAwriter(1, ts.clnt, ts.srv.MyAddr())
 
 	t0 := time.Now()
 
-	n := TOTAL / BUFSZ
+	n := TOTAL / REQBUFSZ
 	for i := 0; i < n; i++ {
 		err := aw.Write(sessp.IoVec{buf})
 		assert.Nil(t, err)
@@ -264,28 +271,28 @@ func TestPerfSessSrvAsync(t *testing.T) {
 
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/REQBUFSZ), n, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
 }
 
 func TestPerfSessSrvSync(t *testing.T) {
 	ts := newTstateSrv(t, 0)
-	buf := test.NewBuf(BUFSZ)
+	buf := test.NewBuf(REQBUFSZ)
 
 	t0 := time.Now()
 
-	n := TOTAL / BUFSZ
-	for i := 0; i < TOTAL/BUFSZ; i++ {
+	n := TOTAL / REQBUFSZ
+	for i := 0; i < TOTAL/REQBUFSZ; i++ {
 		req := sp.NewTwriteread(sp.NoFid)
 		rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, sessp.IoVec{buf})
 		assert.Nil(t, err)
-		assert.True(t, BUFSZ == len(rep.Iov[0]))
+		assert.True(t, REPBUFSZ == len(rep.Iov[0]))
 	}
 
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/REQBUFSZ), n, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
 }

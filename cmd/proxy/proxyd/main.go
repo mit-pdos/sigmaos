@@ -19,7 +19,7 @@ func main() {
 		db.DFatalf("%s: Usage <lip>\n", os.Args[0])
 	}
 	lip := sp.Tip(os.Args[1])
-	s3secrets, err1 := auth.GetAWSSecrets()
+	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	if err1 != nil {
 		db.DFatalf("Failed to load AWS secrets %v", err1)
 	}

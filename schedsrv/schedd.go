@@ -39,13 +39,13 @@ type Schedd struct {
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
 	kernelId            string
-	scheddStats         map[sp.Trealm]*proto.RealmStats
+	scheddStats         map[sp.Trealm]*realmStats
 	sc                  *sigmaclnt.SigmaClnt
 	cpuStats            *cpuStats
 	cpuUtil             int64
-	nProcsRun           uint64
-	nProcGets           uint64
-	nProcGetsSuccessful uint64
+	nProcsRun           atomic.Uint64
+	nProcGets           atomic.Uint64
+	nProcGetsSuccessful atomic.Uint64
 	pubkey              auth.PublicKey
 	privkey             auth.PrivateKey
 }
@@ -65,7 +65,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, maste
 	}
 	sd := &Schedd{
 		pmgr:        procmgr.NewProcMgr(as, sc, kernelId),
-		scheddStats: make(map[sp.Trealm]*proto.RealmStats),
+		scheddStats: make(map[sp.Trealm]*realmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
 		kernelId:    kernelId,
@@ -93,7 +93,7 @@ func (sd *Schedd) WarmCacheBin(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *
 }
 
 func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
-	atomic.AddUint64(&sd.nProcsRun, 1)
+	sd.nProcsRun.Add(1)
 	p := proc.NewProcFromProto(req.ProcProto)
 	// If this proc's memory has not been accounted for (it was not spawned via
 	// the ProcQ), account for it.
@@ -192,8 +192,8 @@ func (sd *Schedd) GetScheddStats(ctx fs.CtxI, req proto.GetScheddStatsRequest, r
 	sd.realmMu.RLock()
 	for r, s := range sd.scheddStats {
 		st := &proto.RealmStats{
-			Running:  atomic.LoadInt64(&s.Running),
-			TotalRan: atomic.LoadInt64(&s.TotalRan),
+			Running:  s.running.Load(),
+			TotalRan: s.totalRan.Load(),
 		}
 		scheddStats[r.String()] = st
 	}
@@ -236,7 +236,7 @@ func (sd *Schedd) getQueuedProcs() {
 			}
 			continue
 		}
-		atomic.AddUint64(&sd.nProcGets, 1)
+		sd.nProcGets.Add(1)
 		if !ok {
 			db.DPrintf(db.SCHEDD, "[%v] No proc on procq, try another, bias=%v qlen=%v", sd.kernelId, bias, qlen)
 			// If already biased to this schedd's kernel, and no proc was available,
@@ -254,7 +254,7 @@ func (sd *Schedd) getQueuedProcs() {
 		// Restore bias if successful (since getProc may have been unbiased and led
 		// to a successful claim before)
 		bias = true
-		atomic.AddUint64(&sd.nProcGetsSuccessful, 1)
+		sd.nProcGetsSuccessful.Add(1)
 		// Allocate memory for the proc before this loop runs again so that
 		// subsequent getProc requests carry the updated memory accounting
 		// information.
@@ -318,7 +318,7 @@ func (sd *Schedd) stats() {
 	}
 	for {
 		time.Sleep(time.Second)
-		db.DPrintf(db.ALWAYS, "nget %v successful %v", atomic.LoadUint64(&sd.nProcGets), atomic.LoadUint64(&sd.nProcGetsSuccessful))
+		db.DPrintf(db.ALWAYS, "nget %v successful %v", sd.nProcGets.Load(), sd.nProcGetsSuccessful.Load())
 	}
 }
 

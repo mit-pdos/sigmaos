@@ -255,11 +255,11 @@ func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (cac
 	return res.Vals, nil
 }
 
-func (cc *CacheClnt) StatsSrv(srv string) (*rpc.SigmaRPCStats, error) {
+func (cc *CacheClnt) StatsSrv(srv string) (*rpc.RPCStatsSnapshot, error) {
 	return cc.ClntCache.StatsSrv(srv)
 }
 
-func (cc *CacheClnt) StatsClnt() []map[string]*rpc.MethodStat {
+func (cc *CacheClnt) StatsClnt() []map[string]*rpc.MethodStatSnapshot {
 	return cc.ClntCache.StatsClnt()
 }
 

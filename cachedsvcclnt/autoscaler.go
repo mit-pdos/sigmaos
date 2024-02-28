@@ -59,11 +59,11 @@ func (a *Autoscaler) isDone() bool {
 	return a.done
 }
 
-func globalAvgQlen(sts []*rpc.SigmaRPCStats) float64 {
+func globalAvgQlen(sts []*rpc.RPCStatsSnapshot) float64 {
 	avg := float64(0.0)
 	for i, st := range sts {
-		db.DPrintf(db.ALWAYS, "Cache %v qlen: %v", i, st.SigmapStat.AvgQlen)
-		avg += st.SigmapStat.AvgQlen
+		db.DPrintf(db.ALWAYS, "Cache %v qlen: %v", i, st.StatsSnapshot.AvgQlen)
+		avg += st.StatsSnapshot.AvgQlen
 	}
 	return avg / float64(len(sts))
 }

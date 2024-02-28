@@ -85,7 +85,7 @@ func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.
 	return cc.RPCRetry(pn, method, arg, res)
 }
 
-func (cc *ClntCache) StatsSrv(pn string) (*rpc.SigmaRPCStats, error) {
+func (cc *ClntCache) StatsSrv(pn string) (*rpc.RPCStatsSnapshot, error) {
 	rpcc, err := cc.Lookup(pn)
 	if err != nil {
 		return nil, err
@@ -93,8 +93,8 @@ func (cc *ClntCache) StatsSrv(pn string) (*rpc.SigmaRPCStats, error) {
 	return rpcc.StatsSrv()
 }
 
-func (cc *ClntCache) StatsClnt() []map[string]*rpc.MethodStat {
-	stats := make([]map[string]*rpc.MethodStat, 0, len(cc.rpccs))
+func (cc *ClntCache) StatsClnt() []map[string]*rpc.MethodStatSnapshot {
+	stats := make([]map[string]*rpc.MethodStatSnapshot, 0, len(cc.rpccs))
 	for _, rpcc := range cc.rpccs {
 		stats = append(stats, rpcc.StatsClnt())
 	}

@@ -257,7 +257,7 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 
 // Test that an unauthorized principal can't write a public key to keyd (or
 // overwrite an existing one)
-func TestMaliciousPrincipalKeydFailXXX(t *testing.T) {
+func TestMaliciousPrincipalKeydFail(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -306,7 +306,7 @@ func TestMaliciousPrincipalKeydFailXXX(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestDelegateFullAccessOKXXX(t *testing.T) {
+func TestDelegateFullAccessOK(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -459,5 +459,57 @@ func TestTryDelegateNonSubsetToChildFail(t *testing.T) {
 	// Ensure the proc crashed
 	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
 	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
+	rootts.Shutdown()
+}
+
+func TestAWSRestrictedProfileS3BucketAccess(t *testing.T) {
+	// First, try to get restricted AWS secrets
+	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_S3_RESTRICTED_PROFILE)
+	if !assert.Nil(t, err1, "Can't get secrets for aws profile %v: %v", sp.AWS_S3_RESTRICTED_PROFILE, err1) {
+		return
+	}
+
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	pn1 := path.Join(sp.S3, "~local", "mr-restricted")
+	pn2 := path.Join(pn1, "gutenberg")
+	sts, err := rootts.GetDir(pn1)
+	assert.Nil(t, err)
+	sts, err = rootts.GetDir(pn2)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
+
+	// Create a new sigma clnt
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	pe.SetPrincipal(sp.NewPrincipal(
+		sp.TprincipalID("scoped-down-principal"),
+		sp.NoToken(),
+	))
+
+	// Load scoped-down AWS secrets
+	pe.SetSecrets(map[string]*proc.ProcSecretProto{"s3": s3secrets})
+	err = rootts.MintAndSetToken(pe)
+	assert.Nil(t, err)
+
+	sc1, err := sigmaclnt.NewSigmaClnt(pe)
+	assert.Nil(t, err, "Err NewClnt: %v", err)
+
+	sts2, err := sc1.GetDir(path.Join(sp.S3, "~local") + "/")
+	assert.Nil(t, err, "Err GetDir [%v]: %v", path.Join(sp.S3, "~local/"), err)
+	db.DPrintf(db.TEST, "accessbile s3 buckets %v", sp.Names(sts2))
+
+	sts2, err = sc1.GetDir(path.Join(sp.S3, "~local", "9ps3"))
+	assert.NotNil(t, err, "Successfully got dir. \n\tPE: %v", sc1.ProcEnv())
+
+	sts2, err = sc1.GetDir(pn1)
+	assert.Nil(t, err)
+	sts2, err = sc1.GetDir(pn2)
+	assert.Nil(t, err)
+	assert.True(t, len(sts2) == 8, "Wrong number of gutenberg entries: %v != 8", len(sts2))
+	db.DPrintf(db.TEST, "s3 contents (using restricted AWS account/role) %v", sp.Names(sts2))
+
 	rootts.Shutdown()
 }

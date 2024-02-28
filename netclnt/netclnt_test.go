@@ -26,8 +26,15 @@ import (
 )
 
 const (
-	BUFSZ = 100           // 64 * sp.KBYTE
-	TOTAL = 10 * sp.MBYTE // 1000 * sp.MBYTE
+	// For latency measurements
+	// REQBUFSZ = 100
+	// REPBUFSZ = 100
+	// TOTAL    = 10 * sp.MBYTE
+
+	// For tput measurements
+	REQBUFSZ = 1 * sp.MBYTE // 128 * sp.KBYTE
+	REPBUFSZ = 10
+	TOTAL    = 1000 * sp.MBYTE
 )
 
 func measureProtobuf(t *testing.T, fc *sessp.FcallMsg) {
@@ -55,11 +62,11 @@ func measureProtobuf(t *testing.T, fc *sessp.FcallMsg) {
 func TestProtobuf(t *testing.T) {
 	seqcntr := new(sessp.Tseqcntr)
 	req := sp.NewTwriteread(sp.NoFid)
-	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, seqcntr)
+	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(REQBUFSZ)}, 1, seqcntr)
 	measureProtobuf(t, fc)
 	f := sp.NullFence()
 	req1 := sp.NewTwriteF(sp.NoFid, 0, f)
-	fc = sessp.NewFcallMsg(req1, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, seqcntr)
+	fc = sessp.NewFcallMsg(req1, sessp.IoVec{test.NewBuf(REQBUFSZ)}, 1, seqcntr)
 	measureProtobuf(t, fc)
 }
 
@@ -81,7 +88,7 @@ func f(n uint64, d data) uint64 {
 
 func TestStack(t *testing.T) {
 	const N = 1000000
-	const M = 8
+	const M = 9 // with 8 no stack grows
 
 	ch := make(chan uint64, N)
 	t0 := time.Now()
@@ -160,11 +167,19 @@ func (nc *netConn) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	var rep demux.CallI
 	switch r := req.(type) {
 	case *call:
-		rep = &call{buf: r.buf}
+		rep = &call{buf: r.buf[0:REPBUFSZ]}
 	case *sessp.FcallMsg:
 		rep = r
 	case *sessp.PartMarshaledMsg:
-		rep = r
+		fcm := &sessp.FcallMsg{
+			Fc:  r.Fcm.Fc,
+			Msg: r.Fcm.Msg,
+			Iov: sessp.IoVec{r.Fcm.Iov[0][0:REPBUFSZ]},
+		}
+		rep = &sessp.PartMarshaledMsg{
+			Fcm:          fcm,
+			MarshaledFcm: r.MarshaledFcm,
+		}
 	default:
 		panic("ServeRequest")
 	}
@@ -201,19 +216,19 @@ func newTstateNet(t *testing.T, mktrans func(net.Conn) demux.TransportI) *Tstate
 
 func TestNetClntPerfFrame(t *testing.T) {
 	ts := newTstateNet(t, newTransport)
-	c := &call{buf: test.NewBuf(BUFSZ)}
+	c := &call{buf: test.NewBuf(REQBUFSZ)}
 
 	t0 := time.Now()
-	n := TOTAL / BUFSZ
+	n := TOTAL / REQBUFSZ
 	for i := 0; i < n; i++ {
 		d, err := ts.dmx.SendReceive(c)
 		assert.Nil(t, err)
 		call := d.(*call)
-		assert.True(t, len(call.buf) == BUFSZ)
+		assert.True(t, len(call.buf) == REPBUFSZ)
 	}
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/REQBUFSZ), n, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
 }
@@ -222,19 +237,19 @@ func TestNetClntPerfFcall(t *testing.T) {
 	ts := newTstateNet(t, spcodec.NewTransport)
 	req := sp.NewTwriteread(sp.NoFid)
 	seqcntr := new(sessp.Tseqcntr)
-	fcm := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, seqcntr)
+	fcm := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(REQBUFSZ)}, 1, seqcntr)
 	pfcm := spcodec.NewPartMarshaledMsg(fcm)
 	t0 := time.Now()
-	n := TOTAL / BUFSZ
+	n := TOTAL / REQBUFSZ
 	for i := 0; i < n; i++ {
 		c, err := ts.dmx.SendReceive(pfcm)
 		assert.Nil(t, err)
 		fcm := c.(*sessp.PartMarshaledMsg)
-		assert.True(t, len(fcm.Fcm.Iov[0]) == BUFSZ)
+		assert.True(t, len(fcm.Fcm.Iov[0]) == REPBUFSZ)
 	}
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(TOTAL, ms))
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/REQBUFSZ), n, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
 }
@@ -262,7 +277,7 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 		assert.Nil(t, err)
 		tot := 0
 		for {
-			rb := make([]byte, BUFSZ)
+			rb := make([]byte, REQBUFSZ)
 			n, err := io.ReadFull(conn, rb)
 			if err == io.EOF {
 				db.DPrintf(db.TEST, "tot %d\n", tot)
@@ -272,7 +287,7 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 			if n != len(rb) || err != nil {
 				db.DFatalf("Err read: len %v err %v", n, err)
 			}
-			conn.Write(rb)
+			conn.Write(rb[0:REPBUFSZ])
 		}
 		ch <- true
 
@@ -283,17 +298,17 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 	assert.Nil(t, err)
 
 	sz := sp.Tlength(TOTAL)
-	buf := test.NewBuf(BUFSZ)
+	buf := test.NewBuf(REQBUFSZ)
 	t0 := time.Now()
-	n := TOTAL / BUFSZ
+	n := TOTAL / REQBUFSZ
 	for i := 0; i < n; i++ {
 		n, err := conn.Write(buf)
 		assert.Nil(t, err)
-		assert.Equal(t, BUFSZ, n)
-		rb := make([]byte, BUFSZ)
+		assert.Equal(t, REQBUFSZ, n)
+		rb := make([]byte, REPBUFSZ)
 		m, err := io.ReadFull(conn, rb)
 		assert.Nil(t, err)
-		assert.True(t, m == BUFSZ)
+		assert.True(t, m == REPBUFSZ)
 	}
 
 	conn.Close()
@@ -302,7 +317,7 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 
 	tot := uint64(sz)
 	ms := time.Since(t0).Milliseconds()
-	db.DPrintf(db.ALWAYS, "%v wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", typ, humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/BUFSZ), n, test.TputStr(sz, ms))
+	db.DPrintf(db.ALWAYS, "%v wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", typ, humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/REQBUFSZ), n, test.TputStr(sz, ms))
 
 	if typ == "unix" {
 		err = os.Remove(arg)

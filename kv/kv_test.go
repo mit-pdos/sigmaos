@@ -316,7 +316,7 @@ func TestAuto(t *testing.T) {
 		return
 	}
 
-	ts := newTstate(t1, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+	ts := newTstate(t1, "auto", 0, kv.KVD_NO_REPL, 0, "0")
 
 	for i := 0; i < 0; i++ {
 		err := ts.kvf.AddKVDGroup()

@@ -95,7 +95,7 @@ func TestLeaderInTurn(t *testing.T) {
 
 	N := uint64(20)
 	sum := uint64(0)
-	current := uint64(0)
+	var current atomic.Uint64
 	done := make(chan uint64)
 
 	for i := uint64(0); i < N; i++ {
@@ -106,13 +106,13 @@ func TestLeaderInTurn(t *testing.T) {
 			for !me {
 				err := leader.AcquireLeadership([]byte{})
 				assert.Nil(ts.T, err, "AcquireLeadership")
-				if atomic.LoadUint64(&current) == i {
+				if current.Load() == i {
 					me = true
 				}
 				err = leader.ReleaseLeadership()
 				assert.Nil(ts.T, err, "ReleaseLeadership")
 				if me {
-					atomic.AddUint64(&current, 1)
+					current.Add(1)
 					done <- i
 				}
 			}

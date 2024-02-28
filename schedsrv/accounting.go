@@ -4,9 +4,13 @@ import (
 	"sync/atomic"
 
 	"sigmaos/proc"
-	"sigmaos/schedsrv/proto"
 	sp "sigmaos/sigmap"
 )
+
+type realmStats struct {
+	running  atomic.Int64
+	totalRan atomic.Int64
+}
 
 func (sd *Schedd) incRealmStats(p *proc.Proc) {
 	// Don't count named or other privileged procs.
@@ -18,8 +22,8 @@ func (sd *Schedd) incRealmStats(p *proc.Proc) {
 		return
 	}
 	st := sd.getRealmStats(p.GetRealm())
-	atomic.AddInt64(&st.Running, 1)
-	atomic.AddInt64(&st.TotalRan, 1)
+	st.running.Add(1)
+	st.totalRan.Add(1)
 }
 
 func (sd *Schedd) decRealmStats(p *proc.Proc) {
@@ -32,10 +36,10 @@ func (sd *Schedd) decRealmStats(p *proc.Proc) {
 		return
 	}
 	st := sd.getRealmStats(p.GetRealm())
-	atomic.AddInt64(&st.Running, -1)
+	st.running.Add(-1)
 }
 
-func (sd *Schedd) getRealmStats(realm sp.Trealm) *proto.RealmStats {
+func (sd *Schedd) getRealmStats(realm sp.Trealm) *realmStats {
 	sd.realmMu.RLock()
 	defer sd.realmMu.RUnlock()
 
@@ -47,10 +51,7 @@ func (sd *Schedd) getRealmStats(realm sp.Trealm) *proto.RealmStats {
 		// Check if the count was created during lock promotion.
 		st, ok = sd.scheddStats[realm]
 		if !ok {
-			st = &proto.RealmStats{
-				Running:  0,
-				TotalRan: 0,
-			}
+			st = &realmStats{}
 			sd.scheddStats[realm] = st
 		}
 		// Demote to reader lock

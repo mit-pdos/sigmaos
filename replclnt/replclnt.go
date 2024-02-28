@@ -1,6 +1,8 @@
 package replclnt
 
 import (
+	"sync/atomic"
+
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/fslib"
@@ -12,7 +14,7 @@ import (
 type ReplClnt struct {
 	*rpcclnt.ClntCache
 	cid   sp.TclntId
-	seqno sp.Tseqno
+	seqno atomic.Uint64
 }
 
 func NewReplClnt(fsls []*fslib.FsLib) *ReplClnt {
@@ -24,8 +26,7 @@ func NewReplClnt(fsls []*fslib.FsLib) *ReplClnt {
 }
 
 func (rc *ReplClnt) nextSeqno() sp.Tseqno {
-	seq := &rc.seqno
-	return seq.Next()
+	return sp.Tseqno(rc.seqno.Add(1))
 }
 
 func (rc *ReplClnt) NewReplOp(method, key string, val proto.Message) (*replproto.ReplOpRequest, error) {

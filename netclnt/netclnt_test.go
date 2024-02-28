@@ -30,13 +30,8 @@ const (
 	TOTAL = 10 * sp.MBYTE // 1000 * sp.MBYTE
 )
 
-func TestProtobuf(t *testing.T) {
-	const N = 1000
-
-	seqcntr := new(sessp.Tseqcntr)
-	req := sp.NewTwriteread(sp.NoFid)
-	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, seqcntr)
-
+func measureProtobuf(t *testing.T, fc *sessp.FcallMsg) {
+	const N = 100000
 	t0 := time.Now()
 	for i := 0; i < N; i++ {
 		m, err := proto.Marshal(fc.Msg.(proto.Message))
@@ -54,7 +49,18 @@ func TestProtobuf(t *testing.T) {
 		fm.Msg = msg
 		// db.DPrintf(db.TEST, "fm %v\n", fm)
 	}
-	db.DPrintf(db.ALWAYS, "proto %v usec\n", time.Since(t0).Microseconds())
+	db.DPrintf(db.ALWAYS, "proto %v %v usec (%d iter)\n", fc.Type(), time.Since(t0).Microseconds(), N)
+}
+
+func TestProtobuf(t *testing.T) {
+	seqcntr := new(sessp.Tseqcntr)
+	req := sp.NewTwriteread(sp.NoFid)
+	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, seqcntr)
+	measureProtobuf(t, fc)
+	f := sp.NullFence()
+	req1 := sp.NewTwriteF(sp.NoFid, 0, f)
+	fc = sessp.NewFcallMsg(req1, sessp.IoVec{test.NewBuf(BUFSZ)}, 1, seqcntr)
+	measureProtobuf(t, fc)
 }
 
 type data struct {
@@ -75,7 +81,7 @@ func f(n uint64, d data) uint64 {
 
 func TestStack(t *testing.T) {
 	const N = 1000000
-	const M = 9
+	const M = 8
 
 	ch := make(chan uint64, N)
 	t0 := time.Now()

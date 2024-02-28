@@ -6,17 +6,10 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync/atomic"
 )
 
 type Tepoch int64
 type Tseqno uint64
-
-// Atomically increment pointer and return result
-func (n *Tseqno) Next() Tseqno {
-	next := atomic.AddUint64((*uint64)(n), 1)
-	return Tseqno(next)
-}
 
 const NoEpoch Tepoch = ^Tepoch(0)
 

@@ -20,11 +20,11 @@ type Inode struct {
 	owner  *sp.Tprincipal
 }
 
-var NextInum = uint64(0)
+var NextInum atomic.Uint64
 
 func NewInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 	i := &Inode{}
-	i.inum = sp.Tpath(atomic.AddUint64(&NextInum, 1))
+	i.inum = sp.Tpath(NextInum.Add(1))
 	i.perm = p
 	i.mtime = time.Now().Unix()
 	i.parent = parent

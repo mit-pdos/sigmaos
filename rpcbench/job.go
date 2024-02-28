@@ -51,6 +51,6 @@ func (rj *RPCBenchJob) Stop() error {
 	return nil
 }
 
-func (rj *RPCBenchJob) StatsSrv() ([]*rpc.SigmaRPCStats, error) {
+func (rj *RPCBenchJob) StatsSrv() ([]*rpc.RPCStatsSnapshot, error) {
 	return nil, nil
 }

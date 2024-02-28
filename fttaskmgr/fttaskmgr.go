@@ -19,7 +19,7 @@ import (
 type FtTaskMgr struct {
 	*fttasks.FtTasks
 	proc.ProcAPI
-	ntask int32
+	ntask atomic.Int32
 }
 
 type Tresult struct {
@@ -79,7 +79,7 @@ func (ftm *FtTaskMgr) StartTasks(ts []string, ch chan Tresult, new Tnew, mkProc 
 		}
 		defer rdr.Close()
 		err = fslib.JsonReader(rdr.Reader, new, func(i interface{}) error {
-			atomic.AddInt32(&ftm.ntask, 1)
+			ftm.ntask.Add(1)
 			ntask += 1
 			p := mkProc(t, i)
 			// Run the task in another thread.
@@ -87,7 +87,7 @@ func (ftm *FtTaskMgr) StartTasks(ts []string, ch chan Tresult, new Tnew, mkProc 
 			return nil
 		})
 	}
-	db.DPrintf(db.FTTASKMGR, "Started %v tasks ntask in progress %v", ntask, atomic.LoadInt32(&ftm.ntask))
+	db.DPrintf(db.FTTASKMGR, "Started %v tasks ntask in progress %v", ntask, ftm.ntask.Load())
 	return r
 }
 
@@ -135,12 +135,12 @@ func (ftm *FtTaskMgr) waitForTask(start time.Time, p *proc.Proc, t string) Tresu
 func (ftm *FtTaskMgr) collector(ch chan Tresult, finish chan bool, res chan *Tresult) {
 	var r *Tresult
 	stop := false
-	for !stop || atomic.LoadInt32(&ftm.ntask) > 0 {
+	for !stop || ftm.ntask.Load() > 0 {
 		select {
 		case <-finish:
 			stop = true
 		case res := <-ch:
-			atomic.AddInt32(&ftm.ntask, -1)
+			ftm.ntask.Add(-1)
 			if res.ok {
 				db.DPrintf(db.FTTASKMGR, "%v ok %v ms %d msg %v", res.t, res.ok, res.ms, res.status)
 			}

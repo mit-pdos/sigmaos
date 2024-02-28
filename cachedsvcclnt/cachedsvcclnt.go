@@ -103,9 +103,9 @@ func (csc *CachedSvcClnt) nServer() int {
 	return len(csc.srvs)
 }
 
-func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.SigmaRPCStats, error) {
+func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.RPCStatsSnapshot, error) {
 	n := csc.nServer()
-	stats := make([]*rpc.SigmaRPCStats, 0, n)
+	stats := make([]*rpc.RPCStatsSnapshot, 0, n)
 	for i := 0; i < n; i++ {
 		st, err := csc.cc.StatsSrv(csc.Server(i))
 		if err != nil {

@@ -32,7 +32,7 @@ type ProcQ struct {
 	qs         map[sp.Trealm]*Queue
 	realms     []sp.Trealm
 	qlen       int // Aggregate queue length, across all queues
-	tot        int64
+	tot        atomic.Int64
 }
 
 type QDir struct {
@@ -112,7 +112,7 @@ func (pq *ProcQ) addProc(p *proc.Proc, kidch chan string) {
 	// Increase aggregate queue length.
 	pq.qlen++
 	// Increase the total number of procs spawned
-	atomic.AddInt64(&pq.tot, 1)
+	pq.tot.Add(1)
 	// Get the queue for the realm.
 	q := pq.getRealmQueue(p.GetRealm())
 	// Enqueue the proc according to its realm.
@@ -268,7 +268,7 @@ func (pq *ProcQ) stats() {
 	for {
 		time.Sleep(time.Second)
 		// Increase the total number of procs spawned
-		db.DPrintf(db.PROCQ, "Procq total size %v", atomic.LoadInt64(&pq.tot))
+		db.DPrintf(db.PROCQ, "Procq total size %v", pq.tot.Load())
 	}
 }
 

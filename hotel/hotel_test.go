@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
-	"path"
 	"strconv"
 	"testing"
 	"time"
@@ -22,7 +21,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
-	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -83,11 +81,9 @@ func (ts *Tstate) PrintStats(lg *loadgen.LoadGenerator) {
 }
 
 func (ts *Tstate) statsSrv(fn string) {
-	stats := &rpc.SigmaRPCStats{}
-	pn := path.Join(fn, rpc.RPC, rpc.STATS)
-	err := ts.GetFileJson(pn, stats)
+	stats, err := ts.ReadRPCStats(fn)
 	assert.Nil(ts.T, err, "error get stats %v", err)
-	fmt.Printf("= %s: %v\n", pn, stats)
+	fmt.Printf("= %s: %v\n", fn, stats)
 }
 
 func (ts *Tstate) stop() {
@@ -426,7 +422,7 @@ func TestBenchDeathStarSingle(t *testing.T) {
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
-	//ts.PrintStats(nil)
+	ts.PrintStats(nil)
 	ts.stop()
 	ts.Shutdown()
 }

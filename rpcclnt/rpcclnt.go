@@ -13,7 +13,6 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
@@ -30,7 +29,7 @@ type RPCcall struct {
 
 type RPCCh interface {
 	SendReceive(sessp.IoVec) (sessp.IoVec, error)
-	StatsSrv() (*rpc.SigmaRPCStats, error)
+	StatsSrv() (*rpc.RPCStatsSnapshot, error)
 }
 
 type RPCClnt struct {
@@ -50,7 +49,7 @@ type sigmaCh struct {
 	fsls []*fslib.FsLib
 	fds  []int
 	pn   string
-	idx  int32
+	idx  atomic.Int32
 }
 
 func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
@@ -75,7 +74,7 @@ func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
 }
 
 func (ch *sigmaCh) SendReceive(iov sessp.IoVec) (sessp.IoVec, error) {
-	idx := int(atomic.AddInt32(&ch.idx, 1))
+	idx := int(ch.idx.Add(1))
 	b, err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], iov)
 	if err != nil {
 		return nil, err
@@ -83,10 +82,9 @@ func (ch *sigmaCh) SendReceive(iov sessp.IoVec) (sessp.IoVec, error) {
 	return b, nil
 }
 
-func (ch *sigmaCh) StatsSrv() (*rpc.SigmaRPCStats, error) {
-	stats := &rpc.SigmaRPCStats{}
-	if err := ch.fsls[0].GetFileJson(path.Join(ch.pn, rpc.RPC, rpc.STATS), stats); err != nil {
-		db.DPrintf(db.ERROR, "Error getting stats")
+func (ch *sigmaCh) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
+	stats, err := ch.fsls[0].ReadRPCStats(ch.pn)
+	if err != nil {
 		return nil, err
 	}
 	return stats, nil
@@ -156,10 +154,10 @@ func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) er
 	return nil
 }
 
-func (rpcc *RPCClnt) StatsClnt() map[string]*rpc.MethodStat {
+func (rpcc *RPCClnt) StatsClnt() map[string]*rpc.MethodStatSnapshot {
 	return rpcc.si.Stats()
 }
 
-func (rpcc *RPCClnt) StatsSrv() (*rpc.SigmaRPCStats, error) {
+func (rpcc *RPCClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 	return rpcc.ch.StatsSrv()
 }

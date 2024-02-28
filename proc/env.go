@@ -148,7 +148,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP
 }
 
 // Create a new sigma config which is a derivative of an existing sigma config.
-func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
+func NewAddedProcEnv(pe *ProcEnv) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetPrincipal(sp.NewPrincipal(pe.GetPrincipal().GetID(), pe.GetPrincipal().GetToken()))

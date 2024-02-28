@@ -181,7 +181,7 @@ func TestMaliciousPrincipalFail(t *testing.T) {
 	}
 
 	// Create a new sigma clnt, with an unexpected principal
-	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("malicious-user"),
 		sp.NoToken(),
@@ -215,7 +215,7 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
 	// Create a new sigma clnt
-	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
 		sp.NoToken(),
@@ -279,7 +279,7 @@ func TestMaliciousPrincipalKeydFail(t *testing.T) {
 		sp.KEYS_RONLY,
 	}
 	// Create a new sigma clnt
-	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
 		sp.NoToken(),
@@ -415,7 +415,7 @@ func TestTryDelegateNonSubsetToChildFail(t *testing.T) {
 	}
 
 	// Create a new proc env to create a new client
-	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	// Only let it talk to schedd and named
 	pe.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.PROCQ, "*")})
 	pc := auth.NewProcClaims(pe)
@@ -483,7 +483,7 @@ func TestAWSRestrictedProfileS3BucketAccess(t *testing.T) {
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
 	// Create a new sigma clnt
-	pe := proc.NewAddedProcEnv(rootts.ProcEnv(), 1)
+	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
 		sp.NoToken(),

@@ -169,7 +169,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
 		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
@@ -332,7 +332,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
 		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
@@ -468,7 +468,7 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {
 		go func(c int) {
-			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), c)
+			pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
 			fsl, err := sigmaclnt.NewFsLib(pcfg)
 			assert.Nil(ts.T, err)
 			measuredir("lookup dir entry", NITER, func() int {
@@ -586,7 +586,7 @@ func TestLookupConcurPerf(t *testing.T) {
 	for i := 0; i < NGO; i++ {
 		fsl2 := make([]*fslib.FsLib, 0, NTRIAL)
 		for j := 0; j < NTRIAL; j++ {
-			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+			pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
 			pcfg.NamedMountProto = ndMnt.TmountProto
 			fsl, err := sigmaclnt.NewFsLib(pcfg)
 			assert.Nil(t, err)

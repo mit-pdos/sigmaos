@@ -143,7 +143,7 @@ func TestSymlink3(t *testing.T) {
 	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
-	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+	pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
 	sc, err := ts.NewClnt(0, pcfg)
 	assert.Nil(t, err)
 	sc.ProcessDir(linkDir, func(st *sp.Stat) (bool, error) {

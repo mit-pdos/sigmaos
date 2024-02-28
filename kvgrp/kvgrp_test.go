@@ -148,7 +148,7 @@ func TestServerCrash(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
 		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
@@ -174,7 +174,7 @@ func TestReconnectSimple(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
+		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
 		fsl, err := sigmaclnt.NewFsLib(pcfg)
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
@@ -196,7 +196,7 @@ func TestReconnectSimple(t *testing.T) {
 }
 
 func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
-	pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+	pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
 	fsl, err := sigmaclnt.NewFsLib(pcfg)
 	assert.Nil(t, err)
 	for true {
@@ -263,7 +263,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
+			pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
 			fsl, err := sigmaclnt.NewFsLib(pcfg)
 			assert.Nil(t, err)
 			sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")

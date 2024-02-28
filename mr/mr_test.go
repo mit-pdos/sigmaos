@@ -333,7 +333,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 		runApp = MALICIOUS_APP
 
 		// Create a new sigma clnt
-		pe := proc.NewAddedProcEnv(t1.ProcEnv(), 1)
+		pe := proc.NewAddedProcEnv(t1.ProcEnv())
 		pe.SetPrincipal(sp.NewPrincipal(
 			sp.TprincipalID("mr-restricted-principal"),
 			sp.NoToken(),

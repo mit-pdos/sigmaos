@@ -214,7 +214,7 @@ func (awrt *Awriter) Writer() {
 		if !ok {
 			return
 		}
-		req := sp.NewTwriteF(sp.NoFid, 0, sp.NullFence())
+		req := sp.NewTwriteread(sp.NoFid)
 		_, err := awrt.clnt.RPC(sp.Taddrs{awrt.addr}, req, iov)
 		if err != nil {
 			awrt.rep <- err

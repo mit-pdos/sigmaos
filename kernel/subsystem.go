@@ -143,7 +143,7 @@ func (k *Kernel) bootSubsystem(program string, args []string, realm sp.Trealm, h
 }
 
 func (s *KernelSubsystem) Evict() error {
-	return s.k.EvictKernelProc(s.p.GetPid(), s.how)
+	return s.EvictKernelProc(s.p.GetPid(), s.how)
 }
 
 func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) error {

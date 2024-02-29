@@ -88,6 +88,7 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	p.GetProcEnv().SetRealm(realm, k.Param.Overlays)
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
+	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetAllowedPaths(sp.ALL_PATHS)
 	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)

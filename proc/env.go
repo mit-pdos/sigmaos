@@ -220,6 +220,18 @@ func (pe *ProcEnvProto) SetInnerContainerIP(ip sp.Tip) {
 	pe.InnerContainerIPStr = ip.String()
 }
 
+func (pe *ProcEnvProto) GetSecrets() map[string]*ProcSecretProto {
+	secrets := make(map[string]*ProcSecretProto)
+	// Deep copy secrets
+	for k, v := range pe.Claims.GetSecrets() {
+		secrets[k] = &ProcSecretProto{
+			ID:  v.ID,
+			Key: v.Key,
+		}
+	}
+	return secrets
+}
+
 func (pe *ProcEnvProto) GetInnerContainerIP() sp.Tip {
 	return sp.Tip(pe.InnerContainerIPStr)
 }

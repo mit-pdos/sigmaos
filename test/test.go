@@ -40,14 +40,12 @@ var EtcdIP string
 var Overlays bool
 var GVisor bool
 var useSigmaclntd bool
-var pk string
-var sk string
+var loadMasterKey bool
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
-	flag.StringVar(&pk, "privkey", sp.NOT_SET, "Master private key of the deployment")
-	flag.StringVar(&sk, "pubkey", sp.NOT_SET, "Master public key of the deployment")
 	flag.StringVar(&tag, "tag", sp.LOCAL_BUILD, "Docker image tag")
+	flag.BoolVar(&loadMasterKey, "load-master-key", false, "Load master deployment key from the host FS instead of generating a new one")
 	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&reuseKernel, "reuse-kernel", false, "Reuse system, avoid restarting when possible")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
@@ -168,27 +166,20 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	assert.True(t, (pk == sp.NOT_SET && sk == sp.NOT_SET) || (pk != sp.NOT_SET && sk != sp.NOT_SET), "Error: only one of (pk, sk) specified")
 	var pubkey auth.PublicKey
 	var privkey auth.PrivateKey
 	var err error
-	// If no key was specified, generate a fresh one
-	if pk == sp.NOT_SET {
-		pubkey, privkey, err = keys.NewECDSAKey()
+	if loadMasterKey {
+		// Load master deployment key from Host FS
+		pubkey, privkey, err = keys.LoadMasterECDSAKey()
 		if err != nil {
-			db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
 			return nil, err
 		}
 	} else {
-		// Get public key from input params
-		pubkey, err = auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(pk))
+		// Genereate a fresh master deployment key
+		pubkey, privkey, err = keys.NewECDSAKey()
 		if err != nil {
-			db.DPrintf(db.ERROR, "Error NewPublicKey", err)
-			return nil, err
-		}
-		privkey, err = auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(sk))
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error NewPrivateKey", err)
+			db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
 			return nil, err
 		}
 	}

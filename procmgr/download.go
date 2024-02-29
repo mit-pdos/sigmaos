@@ -28,7 +28,7 @@ func (mgr *ProcMgr) cachePath(realm sp.Trealm, prog string) string {
 func (mgr *ProcMgr) setupUserBinCacheL(realm sp.Trealm) error {
 	start := time.Now()
 	defer func() {
-		db.DPrintf(db.DL_LAT, "[%v] setupUserBinCache latency: %v", realm, time.Since(start))
+		db.DPrintf(db.REALM_GROW_LAT, "[%v] setupUserBinCache latency: %v", realm, time.Since(start))
 	}()
 	if _, ok := mgr.cachedProcBins[realm]; !ok {
 		db.DPrintf(db.PROCMGR, "Make user bin cache for realm %v", realm)
@@ -67,7 +67,7 @@ func (mgr *ProcMgr) downloadProc(p *proc.Proc) error {
 func (mgr *ProcMgr) downloadProcBin(realm sp.Trealm, prog, buildTag string) error {
 	start := time.Now()
 	defer func() {
-		db.DPrintf(db.DL_LAT, "[%v.%v] downloadProcBin latency: %v", realm, prog, time.Since(start))
+		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] downloadProcBin latency: %v", realm, prog, time.Since(start))
 	}()
 
 	mgr.Lock()

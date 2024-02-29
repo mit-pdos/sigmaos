@@ -131,7 +131,7 @@ func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
 func (mgr *ProcMgr) DownloadProcBin(realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.DL_LAT, "[%v.%v] DownloadProcBin latency: %v", realm, prog, time.Since(start))
+		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] DownloadProcBin latency: %v", realm, prog, time.Since(start))
 	}(start)
 	db.DPrintf(db.PROCMGR, "Download proc bin for realm %v proc %v", realm, prog)
 	// Make sure the OS-level directory which holds proc bins exists. This must

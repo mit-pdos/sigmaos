@@ -56,9 +56,9 @@ func (t Tload) String() string {
 
 var labels map[Tselector]bool = nil
 
-func initLabels(pcfg *proc.ProcEnv) {
+func initLabels(pe *proc.ProcEnv) {
 	if labels == nil {
-		labelstr := proc.GetLabels(pcfg.GetPerf())
+		labelstr := proc.GetLabels(pe.GetPerf())
 		labels = make(map[Tselector]bool, len(labelstr))
 		for k, v := range labelstr {
 			labels[Tselector(k)] = v
@@ -97,14 +97,14 @@ type Perf struct {
 	sigc           chan os.Signal
 }
 
-func NewPerf(pcfg *proc.ProcEnv, s Tselector) (*Perf, error) {
-	return NewPerfMulti(pcfg, s, "")
+func NewPerf(pe *proc.ProcEnv, s Tselector) (*Perf, error) {
+	return NewPerfMulti(pe, s, "")
 }
 
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
-func NewPerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
-	initLabels(pcfg)
+func NewPerfMulti(pe *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
+	initLabels(pe)
 	db.DPrintf(db.PERF, "Perf tracking selector %v labels %v", s, labels)
 	p := &Perf{}
 	p.selector = s
@@ -117,7 +117,7 @@ func NewPerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 		os.Exit(143)
 	}()
 	// Make sure the PID is set (used to name the output files).
-	if pcfg.GetPID() == sp.NOT_SET {
+	if pe.GetPID() == sp.NOT_SET {
 		db.DFatalf("Must set PID before starting Perf")
 	}
 	// Make the output dir
@@ -125,7 +125,7 @@ func NewPerfMulti(pcfg *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 		db.DPrintf(db.ALWAYS, "NewPerfMulti: MkdirAll %s err %v", OUTPUT_PATH, err)
 		return nil, err
 	}
-	basePath := path.Join(OUTPUT_PATH, path.Base(pcfg.GetPID().String()))
+	basePath := path.Join(OUTPUT_PATH, path.Base(pe.GetPID().String()))
 	if s2 != "" {
 		basePath += "-" + s2
 	}

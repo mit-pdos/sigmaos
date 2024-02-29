@@ -21,7 +21,7 @@ import (
 // SigmaClntSrv maintains the state of the sigmaclntsrv. All
 // SigmaSrvClnt's share one fid table
 type SigmaClntSrv struct {
-	pcfg *proc.ProcEnv
+	pe   *proc.ProcEnv
 	fidc *fidclnt.FidClnt
 }
 
@@ -64,7 +64,7 @@ func (scs *SigmaClntSrv) runServer() error {
 		if err != nil {
 			return err
 		}
-		newSigmaClntConn(conn, scs.pcfg, scs.fidc)
+		newSigmaClntConn(conn, scs.pe, scs.fidc)
 	}
 }
 
@@ -76,7 +76,7 @@ func RunSigmaClntSrv(args []string) error {
 		return err
 	}
 	// Perf monitoring
-	p, err := perf.NewPerf(scs.pcfg, perf.SIGMACLNTSRV)
+	p, err := perf.NewPerf(scs.pe, perf.SIGMACLNTSRV)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}

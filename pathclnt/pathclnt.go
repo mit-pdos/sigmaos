@@ -24,7 +24,7 @@ type Watch func(error)
 
 type PathClnt struct {
 	*fidclnt.FidClnt
-	pcfg         *proc.ProcEnv
+	pe           *proc.ProcEnv
 	ndMntCache   *NamedMountCache
 	mnt          *MntTable
 	rootmt       *RootMountTable
@@ -34,18 +34,18 @@ type PathClnt struct {
 	disconnected bool // Used by test harness
 }
 
-func NewPathClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
+func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 	pathc := &PathClnt{
-		pcfg: pcfg,
-		mnt:  newMntTable(),
+		pe:  pe,
+		mnt: newMntTable(),
 	}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.NewFidClnt(pcfg.Net)
+		pathc.FidClnt = fidclnt.NewFidClnt(pe.Net)
 	} else {
 		pathc.FidClnt = fidc
 		fidc.NewClnt()
 	}
-	pathc.ndMntCache = NewNamedMountCache(pcfg)
+	pathc.ndMntCache = NewNamedMountCache(pe)
 	pathc.rootmt = newRootMountTable()
 	pathc.cid = sp.TclntId(rand.Uint64())
 	db.DPrintf(db.TEST, "New cid %v\n", pathc.cid)

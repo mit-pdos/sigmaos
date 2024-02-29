@@ -122,7 +122,7 @@ func (k *Kernel) KillOne(srv string) error {
 	}
 }
 
-func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
+func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 	p, err := newKNamedProc(sp.ROOTREALM, init, k.Param.MasterPubKey, k.Param.MasterPrivKey)
 	if err != nil {
 		return err
@@ -133,7 +133,7 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 		return err
 	}
 	p.SetKernelID(k.Param.KernelID, false)
-	cmd, err := runKNamed(pcfg, p, sp.ROOTREALM, init)
+	cmd, err := runKNamed(pe, p, sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}

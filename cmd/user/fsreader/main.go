@@ -40,10 +40,10 @@ func NewReader(args []string) (*Reader, error) {
 	if len(args) != 2 {
 		return nil, errors.New("NewReader: too few arguments")
 	}
-	pcfg := proc.GetProcEnv()
-	db.DPrintf(db.ALWAYS, "NewReader %v: %v\n", pcfg.GetPID(), args)
+	pe := proc.GetProcEnv()
+	db.DPrintf(db.ALWAYS, "NewReader %v: %v\n", pe.GetPID(), args)
 	r := &Reader{}
-	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		return nil, err
 	}

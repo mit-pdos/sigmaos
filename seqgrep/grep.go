@@ -8,9 +8,9 @@ import (
 
 	"github.com/klauspost/readahead"
 
-	"sigmaos/proc"
 	"sigmaos/mr"
 	"sigmaos/perf"
+	"sigmaos/proc"
 )
 
 //func grepline1(n int, line string) {
@@ -40,8 +40,8 @@ func grepline(n int, line string, sbc *mr.ScanByteCounter) int {
 	return cnt
 }
 
-func Grep(pcfg *proc.ProcEnv, rdr io.Reader) int {
-	p, err := perf.NewPerf(pcfg, perf.SEQGREP)
+func Grep(pe *proc.ProcEnv, rdr io.Reader) int {
+	p, err := perf.NewPerf(pe, perf.SEQGREP)
 	if err != nil {
 		log.Fatalf("NewPerf err %v\n", err)
 	}

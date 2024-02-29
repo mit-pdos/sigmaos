@@ -41,23 +41,23 @@ type SigmaClntKernel struct {
 }
 
 // Create FsLib using either sigmalcntd or fdclnt
-func newFsLibFidClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
+func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
 	var s sos.SigmaOS
-	if pcfg.UseSigmaclntd {
-		s, err = sigmaclntclnt.NewSigmaClntClnt(pcfg)
+	if pe.UseSigmaclntd {
+		s, err = sigmaclntclnt.NewSigmaClntClnt(pe)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
 			return nil, err
 		}
 	} else {
-		s = fdclnt.NewFdClient(pcfg, fidc)
+		s = fdclnt.NewFdClient(pe, fidc)
 	}
-	return fslib.NewFsLibAPI(pcfg, s)
+	return fslib.NewFsLibAPI(pe, s)
 }
 
-func NewFsLib(pcfg *proc.ProcEnv) (*fslib.FsLib, error) {
-	return newFsLibFidClnt(pcfg, nil)
+func NewFsLib(pe *proc.ProcEnv) (*fslib.FsLib, error) {
+	return newFsLibFidClnt(pe, nil)
 }
 
 // Convert to SigmaClntKernel from SigmaClnt
@@ -77,8 +77,8 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 }
 
 // Create a SigmaClnt (using sigmaclntd or fdclient), as a proc, without ProcAPI.
-func NewSigmaClntFsLibFidClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
-	fsl, err := newFsLibFidClnt(pcfg, fidc)
+func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
+	fsl, err := newFsLibFidClnt(pe, fidc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
@@ -90,18 +90,18 @@ func NewSigmaClntFsLibFidClnt(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*Sigma
 	return &SigmaClnt{fsl, nil, lmc}, nil
 }
 
-func NewSigmaClntFsLib(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	return NewSigmaClntFsLibFidClnt(pcfg, nil)
+func NewSigmaClntFsLib(pe *proc.ProcEnv) (*SigmaClnt, error) {
+	return NewSigmaClntFsLibFidClnt(pe, nil)
 }
 
-func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
+func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
-	sc, err := NewSigmaClntFsLib(pcfg)
+	sc, err := NewSigmaClntFsLib(pe)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Make FsLib: %v", pcfg.GetPID(), time.Since(start))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Make FsLib: %v", pe.GetPID(), time.Since(start))
 	start = time.Now()
 	papi, err := procclnt.NewProcClnt(sc.FsLib)
 	if err != nil {
@@ -109,18 +109,18 @@ func NewSigmaClnt(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
 		return nil, err
 	}
 	sc.ProcAPI = papi
-	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", pcfg.GetPID(), time.Since(start))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", pe.GetPID(), time.Since(start))
 	return sc, nil
 }
 
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
-func NewSigmaClntRootInit(pcfg *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := NewSigmaClntFsLib(pcfg)
+func NewSigmaClntRootInit(pe *proc.ProcEnv) (*SigmaClnt, error) {
+	sc, err := NewSigmaClntFsLib(pe)
 	if err != nil {
 		return nil, err
 	}
-	papi, err := procclnt.NewProcClntInit(pcfg.GetPID(), sc.FsLib, pcfg.GetPrincipal().GetID().String())
+	papi, err := procclnt.NewProcClntInit(pe.GetPID(), sc.FsLib, pe.GetPrincipal().GetID().String())
 	if err != nil {
 		return nil, err
 	}

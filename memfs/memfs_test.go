@@ -49,8 +49,8 @@ func TestPipeBasic(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pcfg)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		fsl, err := sigmaclnt.NewFsLib(pe)
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
@@ -87,8 +87,8 @@ func TestPipeClose(t *testing.T) {
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pcfg)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		fsl, err := sigmaclnt.NewFsLib(pe)
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
@@ -130,8 +130,8 @@ func TestPipeRemove(t *testing.T) {
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pcfg)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		fsl, err := sigmaclnt.NewFsLib(pe)
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OREAD)
 		assert.NotNil(ts.T, err, "Open")
@@ -156,8 +156,8 @@ func TestPipeCrash0(t *testing.T) {
 	assert.Nil(ts.T, err, "NewPipe")
 
 	go func() {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pcfg)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		fsl, err := sigmaclnt.NewFsLib(pe)
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OWRITE)
 		assert.Nil(ts.T, err, "Open")
@@ -183,8 +183,8 @@ func TestPipeCrash1(t *testing.T) {
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
 
-	pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl1, err := sigmaclnt.NewFsLib(pcfg)
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	fsl1, err := sigmaclnt.NewFsLib(pe)
 
 	assert.Nil(t, err)
 	go func() {
@@ -202,8 +202,8 @@ func TestPipeCrash1(t *testing.T) {
 
 	// start up second write to pipe
 	go func() {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl2, err := sigmaclnt.NewFsLib(pcfg)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		fsl2, err := sigmaclnt.NewFsLib(pe)
 		assert.Nil(t, err)
 		// the pipe has been closed for writing due to crash;
 		// this open should fail.

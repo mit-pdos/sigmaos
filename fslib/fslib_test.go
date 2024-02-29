@@ -551,8 +551,8 @@ func TestPageDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func dirwriter(t *testing.T, pcfg *proc.ProcEnv, dn, name string, ch chan bool) {
-	fsl, err := sigmaclnt.NewFsLib(pcfg)
+func dirwriter(t *testing.T, pe *proc.ProcEnv, dn, name string, ch chan bool) {
+	fsl, err := sigmaclnt.NewFsLib(pe)
 	assert.Nil(t, err)
 	stop := false
 	for !stop {
@@ -592,8 +592,8 @@ func TestDirConcur(t *testing.T) {
 
 	ch := make(chan bool)
 	for i := 0; i < N; i++ {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-		go dirwriter(t, pcfg, dn, strconv.Itoa(i), ch)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		go dirwriter(t, pe, dn, strconv.Itoa(i), ch)
 	}
 
 	for i := 0; i < NSCAN; i++ {
@@ -763,8 +763,8 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	done := make(chan bool)
-	pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pcfg)
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	fsl, err := sigmaclnt.NewFsLib(pe)
 	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
 		fn := gopath.Join(dn, strconv.Itoa(i))
@@ -814,8 +814,8 @@ func TestWaitCreateRemoveConcur(t *testing.T) {
 		_, err = ts.PutFile(fn, 0777, sp.OWRITE, nil)
 		assert.Equal(t, nil, err)
 		done := make(chan bool)
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pcfg)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		fsl, err := sigmaclnt.NewFsLib(pe)
 		assert.Nil(t, err)
 
 		go func() {
@@ -945,8 +945,8 @@ func TestConcurRename(t *testing.T) {
 
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pcfg)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		fsl, err := sigmaclnt.NewFsLib(pe)
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 		go func(fsl *fslib.FsLib, t string) {
@@ -1012,8 +1012,8 @@ func TestConcurAssignedRename(t *testing.T) {
 
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pcfg)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		fsl, err := sigmaclnt.NewFsLib(pe)
 		assert.Nil(t, err, "Err newfslib: %v", err)
 		fsls = append(fsls, fsl)
 		go func(fsl *fslib.FsLib, t string) {
@@ -1388,8 +1388,8 @@ func TestFslibClose(t *testing.T) {
 
 	// Make a new fsl for this test, because we want to use ts.FsLib
 	// to shutdown the system.
-	pcfg := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pcfg)
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	fsl, err := sigmaclnt.NewFsLib(pe)
 	assert.Nil(t, err)
 
 	// connect

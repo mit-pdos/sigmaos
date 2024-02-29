@@ -22,11 +22,11 @@ const (
 	K_OUT_DIR = "/tmp/sigmaos-kernel-start-logs"
 )
 
-func Start(kernelId string, pcfg *proc.ProcEnv, srvs string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (string, error) {
+func Start(kernelId string, pe *proc.ProcEnv, srvs string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (string, error) {
 	args := []string{
-		"--pull", pcfg.BuildTag,
+		"--pull", pe.BuildTag,
 		"--boot", srvs,
-		"--named", pcfg.EtcdIP,
+		"--named", pe.EtcdIP,
 		"--pubkey", masterPubKey.Marshal(),
 		"--privkey", masterPrivKey.Marshal(),
 		"--host",
@@ -86,18 +86,18 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(pcfg *proc.ProcEnv, conf string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*Kernel, error) {
+func NewKernelClntStart(pe *proc.ProcEnv, conf string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, pcfg, conf, overlays, gvisor, masterPubKey, masterPrivKey)
+	_, err := Start(kernelId, pe, conf, overlays, gvisor, masterPubKey, masterPrivKey)
 	if err != nil {
 		return nil, err
 	}
-	return NewKernelClnt(kernelId, pcfg)
+	return NewKernelClnt(kernelId, pe)
 }
 
-func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
+func NewKernelClnt(kernelId string, pe *proc.ProcEnv) (*Kernel, error) {
 	db.DPrintf(db.SYSTEM, "NewKernelClnt %s\n", kernelId)
-	sc, err := sigmaclnt.NewSigmaClntRootInit(pcfg)
+	sc, err := sigmaclnt.NewSigmaClntRootInit(pe)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "NewKernelClnt sigmaclnt err %v", err)
 		return nil, err
@@ -106,7 +106,7 @@ func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 	if kernelId == "" {
 		var pn1 string
 		var err error
-		if pcfg.EtcdIP != pcfg.GetOuterContainerIP().String() {
+		if pe.EtcdIP != pe.GetOuterContainerIP().String() {
 			// If running in a distributed setting, bootkernel clnt can be ~any
 			pn1, _, err = sc.ResolveMount(sp.BOOT + "~any")
 		} else {
@@ -129,8 +129,8 @@ func NewKernelClnt(kernelId string, pcfg *proc.ProcEnv) (*Kernel, error) {
 	return &Kernel{sc, kernelId, kclnt}, nil
 }
 
-func (k *Kernel) NewSigmaClnt(pcfg *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
-	return sigmaclnt.NewSigmaClntRootInit(pcfg)
+func (k *Kernel) NewSigmaClnt(pe *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
+	return sigmaclnt.NewSigmaClntRootInit(pe)
 }
 
 func (k *Kernel) Shutdown() error {

@@ -8,7 +8,7 @@ import (
 )
 
 func (pathc *PathClnt) IsLocalMount(mnt sp.Tmount) (bool, error) {
-	outerIP := pathc.pcfg.GetOuterContainerIP()
+	outerIP := pathc.pe.GetOuterContainerIP()
 	tip, _ := mnt.TargetIPPort(0)
 	if tip == "" {
 		tip = outerIP

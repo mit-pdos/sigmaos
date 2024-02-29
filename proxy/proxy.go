@@ -41,17 +41,17 @@ func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
 }
 
 type Npd struct {
-	lip  sp.Tip
-	pcfg *proc.ProcEnv
+	lip sp.Tip
+	pe  *proc.ProcEnv
 }
 
-func NewNpd(pcfg *proc.ProcEnv, lip sp.Tip) *Npd {
-	return &Npd{lip, pcfg}
+func NewNpd(pe *proc.ProcEnv, lip sp.Tip) *Npd {
+	return &Npd{lip, pe}
 }
 
 // Create a sigmap session for conn
 func (npd *Npd) NewConn(conn net.Conn) *demux.DemuxSrv {
-	sess := newNpSess(npd.pcfg, string(npd.lip))
+	sess := newNpSess(npd.pe, string(npd.lip))
 	pc := &proxyConn{conn: conn, sess: sess}
 	return demux.NewDemuxSrv(pc, npcodec.NewTransport(conn))
 }
@@ -66,11 +66,11 @@ type NpSess struct {
 	cid       sp.TclntId
 }
 
-func newNpSess(pcfg *proc.ProcEnv, lip string) *NpSess {
+func newNpSess(pe *proc.ProcEnv, lip string) *NpSess {
 	npc := &NpSess{}
 	npc.fidc = fidclnt.NewFidClnt(sp.ROOTREALM.String())
-	npc.principal = pcfg.GetPrincipal()
-	npc.pc = pathclnt.NewPathClnt(pcfg, npc.fidc)
+	npc.principal = pe.GetPrincipal()
+	npc.pc = pathclnt.NewPathClnt(pe, npc.fidc)
 	npc.fm = newFidMap()
 	npc.cid = sp.TclntId(rand.Uint64())
 	return npc

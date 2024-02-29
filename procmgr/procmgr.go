@@ -129,13 +129,16 @@ func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
 }
 
 func (mgr *ProcMgr) DownloadProcBin(realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.DL_LAT, "[%v.%v] DownloadProcBin latency: %v", realm, prog, time.Since(start))
+	}(start)
 	db.DPrintf(db.PROCMGR, "Download proc bin for realm %v proc %v", realm, prog)
 	// Make sure the OS-level directory which holds proc bins exists. This must
 	// be done before starting the Uprocd, because the Uprocd mounts it.
 	if err := mgr.setupUserBinCacheL(realm); err != nil {
 		return err
 	}
-
 	if err := mgr.updm.WarmStartUprocd(realm, ptype); err != nil {
 		db.DPrintf(db.ERROR, "Error start uprocd: %v", err)
 		return err

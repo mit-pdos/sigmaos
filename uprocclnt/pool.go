@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	POOL_SZ = 1 // Size of running-but-unused pool uprocds to be maintained at all times
+	POOL_SZ = 1 // Size of running-but-unused pool of uprocds to be maintained at all times
 )
 
 // A pool of booted, but unused, uprocds.

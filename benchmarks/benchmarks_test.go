@@ -297,6 +297,21 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	rootts.Shutdown()
 }
 
+func TestMicroWarmupRealm(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	rs := benchmarks.NewResults(1, benchmarks.OPS)
+	runOps(ts1, []interface{}{"spawn-latency"}, warmupRealmBench, rs)
+	printResultSummary(rs)
+	rootts.Shutdown()
+}
+
 func TestMicroScheddSpawn(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

@@ -79,6 +79,11 @@ func NewUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 }
 
 func (updm *UprocdMgr) WarmStartUprocd(realm sp.Trealm, ptype proc.Ttype) error {
+	start := time.Now()
+	defer func() {
+		db.DPrintf(db.DL_LAT, "[%v] WarmStartUprocd latency: %v", realm, time.Since(start))
+	}()
+
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
 

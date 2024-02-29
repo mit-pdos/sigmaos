@@ -25,6 +25,7 @@ const (
 // Latency break-down.
 const (
 	SPAWN_LAT Tselector = "SPAWN_LAT"
+	DL_LAT              = "DL_LAT"
 	SESS_LAT            = "SESS_LAT"
 	CACHE_LAT           = "CACHE_LAT"
 )

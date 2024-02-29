@@ -26,6 +26,10 @@ func (mgr *ProcMgr) cachePath(realm sp.Trealm, prog string) string {
 }
 
 func (mgr *ProcMgr) setupUserBinCacheL(realm sp.Trealm) error {
+	start := time.Now()
+	defer func() {
+		db.DPrintf(db.DL_LAT, "[%v] setupUserBinCache latency: %v", realm, time.Since(start))
+	}()
 	if _, ok := mgr.cachedProcBins[realm]; !ok {
 		db.DPrintf(db.PROCMGR, "Make user bin cache for realm %v", realm)
 		cachePn := path.Dir(mgr.cachePath(realm, "PROGRAM"))
@@ -61,6 +65,11 @@ func (mgr *ProcMgr) downloadProc(p *proc.Proc) error {
 // Lock to ensure the bin is downloaded only once, even if multiple copies of
 // the proc are starting up on the same schedd.
 func (mgr *ProcMgr) downloadProcBin(realm sp.Trealm, prog, buildTag string) error {
+	start := time.Now()
+	defer func() {
+		db.DPrintf(db.DL_LAT, "[%v.%v] downloadProcBin latency: %v", realm, prog, time.Since(start))
+	}()
+
 	mgr.Lock()
 	defer mgr.Unlock()
 

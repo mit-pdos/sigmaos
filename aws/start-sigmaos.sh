@@ -79,6 +79,7 @@ fi
 
 vms_full=$(./lsvpc.py  --privaddr $VPC)
 vms=`echo "$vms_full" | grep -w VMInstance | cut -d " " -f 5`
+all_vms="$vms"
 vms_privaddr=`echo "$vms_full" | grep -w VMInstance | cut -d " " -f 6`
 
 vma=($vms)
@@ -170,4 +171,15 @@ ENDSSH
      MASTER_PUB_KEY="$(ssh -i key-$VPC.pem ubuntu@$vm cat /tmp/sigmaos/master-key.pub)"
      MASTER_PRIV_KEY="$(ssh -i key-$VPC.pem ubuntu@$vm cat /tmp/sigmaos/master-key.priv)"
  fi   
+done
+
+# Eagerly copy deployment keys to all cluster servers (even those which aren't
+# running SigmaOS nodes
+for vm in $all_vms; do
+  echo "Copy deployment key to $vm"
+  ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+  mkdir -p /tmp/sigmaos
+  echo "$MASTER_PRIV_KEY" > /tmp/sigmaos/master-key.priv 
+  echo "$MASTER_PUB_KEY" > /tmp/sigmaos/master-key.pub
+ENDSSH
 done

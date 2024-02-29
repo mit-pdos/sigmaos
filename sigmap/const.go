@@ -99,6 +99,11 @@ const (
 	ROOTREALM Trealm = "rootrealm"
 )
 
+// PID consts
+const (
+	NO_PID Tpid = "no-pid"
+)
+
 // AWS Profile consts
 const (
 	AWS_PROFILE               = "sigmaos"

@@ -59,12 +59,12 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []sp.Tpid) {
 	rdr, err := ts.OpenReader(fn)
 	assert.Nil(t, err, "GetFile")
 	m := make(map[sp.Tpid]bool)
-	last := sp.Tpid("")
+	last := sp.NO_PID
 	e := sp.Tepoch(0)
 	err = fslib.JsonReader(rdr.Reader, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
 		log.Printf("conf: %v\n", conf)
-		if conf.Leader == sp.Tpid("") && e != 0 {
+		if conf.Leader == sp.NO_PID && e != 0 {
 			assert.Equal(t, conf.Epoch, e)
 		} else if last != conf.Leader { // new leader
 			assert.Equal(t, conf.Pid, conf.Leader, "new leader")

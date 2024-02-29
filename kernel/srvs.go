@@ -35,7 +35,7 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp
 	defer k.Unlock()
 
 	if k.shuttingDown {
-		return sp.Tpid(""), fmt.Errorf("Shutting down")
+		return sp.NO_PID, fmt.Errorf("Shutting down")
 	}
 
 	var err error
@@ -69,7 +69,7 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
 	if err != nil {
-		return sp.Tpid(""), err
+		return sp.NO_PID, err
 	}
 	k.svcs.addSvc(s, ss)
 	return ss.GetProc().GetPid(), err

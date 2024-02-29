@@ -86,7 +86,7 @@ func bootInRealm(rpcc *rpcclnt.RPCClnt, realm sp.Trealm, s string, args []string
 	}
 	err := rpcc.RPC("KernelSrv.Boot", req, &res)
 	if err != nil {
-		return sp.Tpid(""), err
+		return sp.NO_PID, err
 	}
 	return sp.Tpid(res.PidStr), nil
 }

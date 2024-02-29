@@ -194,6 +194,7 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	pid := sp.GenPid("sigmaclntd")
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
 	p.SetAllowedPaths(sp.ALL_PATHS)
+	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err

@@ -3,6 +3,7 @@ package netclnt_test
 import (
 	"bufio"
 	"encoding/binary"
+	"flag"
 	"io"
 	"net"
 	"os"
@@ -24,6 +25,12 @@ import (
 	"sigmaos/spcodec"
 	"sigmaos/test"
 )
+
+var srvaddr string
+
+func init() {
+	flag.StringVar(&srvaddr, "srvaddr", sp.NOT_SET, "service addr")
+}
 
 const (
 	// For latency measurements
@@ -254,8 +261,9 @@ func TestNetClntPerfFcall(t *testing.T) {
 	ts.srv.CloseListener()
 }
 
-func testLocalPerf(t *testing.T, typ, arg string) {
+func runSrv(t *testing.T, typ, arg string) func() {
 	var socket net.Listener
+	ch := make(chan bool)
 	if typ == "unix" {
 		db.DPrintf(db.TEST, "local %v %v\n", typ, arg)
 		err := os.Remove(arg)
@@ -270,7 +278,6 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 		assert.Nil(t, err)
 	}
 
-	ch := make(chan bool)
 	// Serve requests in another thread
 	go func() {
 		conn, err := socket.Accept()
@@ -290,10 +297,14 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 			conn.Write(rb[0:REPBUFSZ])
 		}
 		ch <- true
-
 	}()
+	return func() {
+		<-ch
+		socket.Close()
+	}
+}
 
-	time.Sleep(1 * time.Second)
+func runClnt(t *testing.T, typ, arg string) {
 	conn, err := net.Dial(typ, arg)
 	assert.Nil(t, err)
 
@@ -310,21 +321,22 @@ func testLocalPerf(t *testing.T, typ, arg string) {
 		assert.Nil(t, err)
 		assert.True(t, m == REPBUFSZ)
 	}
-
 	conn.Close()
-
-	<-ch
 
 	tot := uint64(sz)
 	ms := time.Since(t0).Milliseconds()
 	db.DPrintf(db.ALWAYS, "%v wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", typ, humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/REQBUFSZ), n, test.TputStr(sz, ms))
+}
 
+func testLocalPerf(t *testing.T, typ, arg string) {
+	waitf := runSrv(t, typ, arg)
+	defer waitf()
+	time.Sleep(1 * time.Second)
+	runClnt(t, typ, arg)
 	if typ == "unix" {
-		err = os.Remove(arg)
+		err := os.Remove(arg)
 		assert.True(t, err == nil || os.IsNotExist(err), "Err remove sock: %v", err)
 	}
-
-	socket.Close()
 }
 
 func TestSocketPerf(t *testing.T) {
@@ -336,4 +348,23 @@ func TestSocketPerf(t *testing.T) {
 
 func TestTCPPerf(t *testing.T) {
 	testLocalPerf(t, "tcp", "127.0.0.1:4444")
+}
+
+func TestTCPPerfClnt(t *testing.T) {
+	if srvaddr == sp.NOT_SET {
+		db.DPrintf(db.TEST, "Srv addr not set. Skipping test.")
+		return
+	}
+	// Run the client
+	runClnt(t, "tcp", srvaddr)
+}
+
+func TestTCPPerfSrv(t *testing.T) {
+	if srvaddr == sp.NOT_SET {
+		db.DPrintf(db.TEST, "Srv addr not set. Skipping test.")
+		return
+	}
+	// Run the server
+	waitf := runSrv(t, "tcp", srvaddr)
+	defer waitf()
 }

@@ -35,8 +35,8 @@ type SigmaSrv struct {
 }
 
 // Make a sigmasrv with an memfs, and publish server at fn.
-func NewSigmaSrv(fn string, svci any, pcfg *proc.ProcEnv) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFs(fn, pcfg)
+func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
+	mfs, error := memfssrv.NewMemFs(fn, pe)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrv %v err %v\n", fn, error)
 		return nil, error
@@ -44,22 +44,22 @@ func NewSigmaSrv(fn string, svci any, pcfg *proc.ProcEnv) (*SigmaSrv, error) {
 	return newSigmaSrvMemFs(mfs, svci)
 }
 
-func NewSigmaSrvPublic(fn string, svci any, pcfg *proc.ProcEnv, public bool) (*SigmaSrv, error) {
+func NewSigmaSrvPublic(fn string, svci any, pe *proc.ProcEnv, public bool) (*SigmaSrv, error) {
 	db.DPrintf(db.ALWAYS, "NewSigmaSrvPublic %T\n", svci)
 	if public {
-		mfs, error := memfssrv.NewMemFsPublic(fn, pcfg)
+		mfs, error := memfssrv.NewMemFsPublic(fn, pe)
 		if error != nil {
 			db.DPrintf(db.ERROR, "NewMemFsPublic %v err %v\n", fn, error)
 			return nil, error
 		}
 		return newSigmaSrvMemFs(mfs, svci)
 	} else {
-		return NewSigmaSrv(fn, svci, pcfg)
+		return NewSigmaSrv(fn, svci, pe)
 	}
 }
 
-func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pcfg *proc.ProcEnv, svci any) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsAddr(fn, addr, pcfg)
+func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pe *proc.ProcEnv, svci any) (*SigmaSrv, error) {
+	mfs, error := memfssrv.NewMemFsAddr(fn, addr, pe)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrvPort %v err %v\n", fn, error)
 		return nil, error

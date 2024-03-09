@@ -16,21 +16,21 @@ type Election struct {
 	sess *fsetcd.Session
 	pn   string
 	*concurrency.Election
-	pcfg *proc.ProcEnv
+	pe *proc.ProcEnv
 }
 
-func NewElection(pcfg *proc.ProcEnv, s *fsetcd.Session, pn string) (*Election, error) {
-	el := &Election{sess: s, pn: pn, pcfg: pcfg}
+func NewElection(pe *proc.ProcEnv, s *fsetcd.Session, pn string) (*Election, error) {
+	el := &Election{sess: s, pn: pn, pe: pe}
 	return el, nil
 }
 
 func (el *Election) Candidate() error {
-	db.DPrintf(db.LEADER, "candidate %v %v\n", el.pcfg.GetPID().String(), el.pn)
+	db.DPrintf(db.LEADER, "candidate %v %v\n", el.pe.GetPID().String(), el.pn)
 
 	el.Election = concurrency.NewElection(el.sess.Session, el.pn)
 
 	// XXX stick fence's sequence number in val?
-	if err := el.Campaign(context.TODO(), el.pcfg.GetPID().String()); err != nil {
+	if err := el.Campaign(context.TODO(), el.pe.GetPID().String()); err != nil {
 		return err
 	}
 
@@ -39,7 +39,7 @@ func (el *Election) Candidate() error {
 		return err
 	}
 
-	db.DPrintf(db.LEADER, "leader %v %v\n", el.pcfg.GetPID().String(), resp)
+	db.DPrintf(db.LEADER, "leader %v %v\n", el.pe.GetPID().String(), resp)
 	return nil
 }
 
@@ -48,6 +48,6 @@ func (el Election) Fence() sp.Tfence {
 }
 
 func (el *Election) Resign() error {
-	db.DPrintf(db.LEADER, "leader %v resign %v\n", el.pcfg.GetPID().String(), el.pn)
+	db.DPrintf(db.LEADER, "leader %v resign %v\n", el.pe.GetPID().String(), el.pn)
 	return el.Election.Resign(context.TODO())
 }

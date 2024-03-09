@@ -30,8 +30,8 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	go func() {
 		// Make a new fsl for this test, because we want to use ts.FsLib
 		// to shutdown the system.
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), 1)
-		fsl2, err := sigmaclnt.NewFsLib(pcfg)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		fsl2, err := sigmaclnt.NewFsLib(pe)
 		assert.Nil(ts.T, err, "NewFsLib")
 
 		l, err := NewLeaderClnt(fsl2, leadername, 0777)

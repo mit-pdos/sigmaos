@@ -58,7 +58,7 @@ func TestKillNamed(t *testing.T) {
 	db.DPrintf(db.TEST, "GetDir..\n")
 
 	sts, err = ts.GetDir(sp.NAMED + "/")
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err GetDir: %v", err)
 	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
 
 	ts.Shutdown()

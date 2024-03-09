@@ -28,12 +28,14 @@ func (ss *Services) addSvc(s string, sub Subsystem) {
 	ss.svcMap[sub.GetProc().GetPid()] = sub
 }
 
-func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (sp.Tpid, error) {
+func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp.Tpid, error) {
+	db.DPrintf(db.KERNEL, "Boot sub %v realm %v", s, realm)
+
 	k.Lock()
 	defer k.Unlock()
 
 	if k.shuttingDown {
-		return sp.Tpid(""), fmt.Errorf("Shutting down")
+		return sp.NO_PID, fmt.Errorf("Shutting down")
 	}
 
 	var err error
@@ -44,9 +46,9 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (sp.Tpid,
 	case sp.SIGMACLNTDREL:
 		ss, err = k.bootSigmaclntd()
 	case sp.S3REL:
-		ss, err = k.bootS3d()
+		ss, err = k.bootS3d(realm)
 	case sp.UXREL:
-		ss, err = k.bootUxd()
+		ss, err = k.bootUxd(realm)
 	case sp.DBREL:
 		ss, err = k.bootDbd(p.Dbip)
 	case sp.MONGOREL:
@@ -67,7 +69,7 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, full bool) (sp.Tpid,
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
 	if err != nil {
-		return sp.Tpid(""), err
+		return sp.NO_PID, err
 	}
 	k.svcs.addSvc(s, ss)
 	return ss.GetProc().GetPid(), err
@@ -78,7 +80,12 @@ func (k *Kernel) SetCPUShares(pid sp.Tpid, shares int64) error {
 }
 
 func (k *Kernel) AssignUprocdToRealm(pid sp.Tpid, realm sp.Trealm, ptype proc.Ttype) error {
-	return k.svcs.svcMap[pid].AssignToRealm(realm, ptype)
+	err := k.svcs.svcMap[pid].AssignToRealm(realm, ptype)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error assign uprocd to realm: %v", err)
+		return err
+	}
+	return nil
 }
 
 func (k *Kernel) GetCPUUtil(pid sp.Tpid) (float64, error) {
@@ -115,7 +122,7 @@ func (k *Kernel) KillOne(srv string) error {
 	}
 }
 
-func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
+func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 	p, err := newKNamedProc(sp.ROOTREALM, init, k.Param.MasterPubKey, k.Param.MasterPrivKey)
 	if err != nil {
 		return err
@@ -126,7 +133,7 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 		return err
 	}
 	p.SetKernelID(k.Param.KernelID, false)
-	cmd, err := runKNamed(pcfg, p, sp.ROOTREALM, init)
+	cmd, err := runKNamed(pe, p, sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}
@@ -136,37 +143,36 @@ func (k *Kernel) bootKNamed(pcfg *proc.ProcEnv, init bool) error {
 }
 
 func (k *Kernel) bootRealmd() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("realmd", []string{}, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("realmd", []string{}, sp.ROOTREALM, proc.HSCHEDD)
 }
 
-func (k *Kernel) bootUxd() (Subsystem, error) {
-	// XXX ignore realm for now
-	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, proc.HSCHEDD)
+func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {
+	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, realm, proc.HSCHEDD)
 }
 
-func (k *Kernel) bootS3d() (Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{}, proc.HSCHEDD)
+func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {
+	return k.bootSubsystem("fss3d", []string{}, realm, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {
-	return k.bootSubsystem("dbd", []string{hostip}, proc.HSCHEDD)
+	return k.bootSubsystem("dbd", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootMongod(hostip string) (Subsystem, error) {
 	pid := sp.GenPid("mongod")
-	return k.bootSubsystemPIDWithMcpu(pid, "mongod", []string{hostip}, proc.HSCHEDD, 1000)
+	return k.bootSubsystemPIDWithMcpu(pid, "mongod", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD, 1000)
 }
 
 func (k *Kernel) bootLCSched() (Subsystem, error) {
-	return k.bootSubsystem("lcsched", []string{}, proc.HLINUX)
+	return k.bootSubsystem("lcsched", []string{}, sp.ROOTREALM, proc.HLINUX)
 }
 
 func (k *Kernel) bootProcq() (Subsystem, error) {
-	return k.bootSubsystem("procq", []string{}, proc.HLINUX)
+	return k.bootSubsystem("procq", []string{}, sp.ROOTREALM, proc.HLINUX)
 }
 
 func (k *Kernel) bootKeyd() (Subsystem, error) {
-	ss, err := k.bootSubsystem("keyd", []string{k.Param.MasterPubKey.Marshal()}, proc.HLINUX)
+	ss, err := k.bootSubsystem("keyd", []string{k.Param.MasterPubKey.Marshal()}, sp.ROOTREALM, proc.HLINUX)
 	if err == nil {
 		if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
 			db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
@@ -177,17 +183,18 @@ func (k *Kernel) bootKeyd() (Subsystem, error) {
 }
 
 func (k *Kernel) bootSchedd() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu}, proc.HLINUX)
+	return k.bootSubsystemBootstrapKeys("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu}, sp.ROOTREALM, proc.HLINUX)
 }
 
 func (k *Kernel) bootNamed() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("named", []string{sp.ROOTREALM.String(), "0"}, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("named", []string{sp.ROOTREALM.String(), "0"}, sp.ROOTREALM, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	pid := sp.GenPid("sigmaclntd")
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
 	p.SetAllowedPaths(sp.ALL_PATHS)
+	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
@@ -201,7 +208,7 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
-	s, err := k.bootSubsystem("uprocd", args, proc.HDOCKER)
+	s, err := k.bootSubsystem("uprocd", args, sp.ROOTREALM, proc.HDOCKER)
 	if err != nil {
 		return nil, err
 	}

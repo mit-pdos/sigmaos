@@ -45,7 +45,7 @@ type RaftNode struct {
 	snapshotIndex uint64
 	appliedIndex  uint64
 	currentLeader uint64
-	pcfg          *proc.ProcEnv
+	pe            *proc.ProcEnv
 }
 
 type committedEntries struct {
@@ -54,7 +54,7 @@ type committedEntries struct {
 }
 
 // etcd numbers nodes start from 1.  0 is not a valid id.
-func newRaftNode(pcfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
+func newRaftNode(pe *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
 	node := &RaftNode{
 		id:        id,
 		peerAddrs: peerAddrs,
@@ -63,7 +63,7 @@ func newRaftNode(pcfg *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []stri
 		commit:    commit,
 		propose:   propose,
 		storage:   raft.NewMemoryStorage(),
-		pcfg:      pcfg,
+		pe:        pe,
 	}
 	node.config = &raft.Config{
 		ID:                        uint64(id),
@@ -89,7 +89,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 	}
 	// Make sure the logging dir exists
 	os.Mkdir("./raftlogs/", 0777)
-	logPath := "./raftlogs/" + n.pcfg.GetPID().String()
+	logPath := "./raftlogs/" + n.pe.GetPID().String()
 	log.Printf("Raft logs being written to: %v", logPath)
 	logCfg := zap.NewDevelopmentConfig()
 	logCfg.OutputPaths = []string{string(logPath)}

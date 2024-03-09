@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	POOL_SZ = 1 // Size of running-but-unused pool uprocds to be maintained at all times
+	POOL_SZ = 2 // Size of running-but-unused pool of uprocds to be maintained at all times
 )
 
 // A pool of booted, but unused, uprocds.
@@ -37,9 +37,16 @@ func (p *pool) fill() {
 
 	db.DPrintf(db.UPROCDMGR, "Fill uprocd pool len %v target %v", len(p.clnts), POOL_SZ)
 	for len(p.clnts) < POOL_SZ {
+		// Unlock to allow clients to take a uprocd off the queue while another is
+		// being started
+		p.Unlock()
 		pid, clnt := p.startUprocd()
+		// Reclaim lock
+		p.Lock()
 		p.pids = append(p.pids, pid)
 		p.clnts = append(p.clnts, clnt)
+		// Wake up any potentially waiting clients
+		p.cond.Broadcast()
 	}
 	db.DPrintf(db.UPROCDMGR, "Done Fill uprocd pool len %v target %v", len(p.clnts), POOL_SZ)
 	p.cond.Broadcast()

@@ -40,14 +40,12 @@ var EtcdIP string
 var Overlays bool
 var GVisor bool
 var useSigmaclntd bool
-var pk string
-var sk string
+var loadMasterKey bool
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
-	flag.StringVar(&pk, "privkey", sp.NOT_SET, "Master private key of the deployment")
-	flag.StringVar(&sk, "pubkey", sp.NOT_SET, "Master public key of the deployment")
 	flag.StringVar(&tag, "tag", sp.LOCAL_BUILD, "Docker image tag")
+	flag.BoolVar(&loadMasterKey, "load-master-key", false, "Load master deployment key from the host FS instead of generating a new one")
 	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&reuseKernel, "reuse-kernel", false, "Reuse system, avoid restarting when possible")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
@@ -81,15 +79,15 @@ type TstateMin struct {
 
 func NewTstateMin(t *testing.T) *TstateMin {
 	lip := sp.Tip("127.0.0.1")
-	s3secrets, err1 := auth.GetAWSSecrets()
+	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pcfg := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
-	pcfg.Program = "srv"
-	pcfg.SetPrincipal(sp.NewPrincipal("srv", sp.NoToken()))
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
+	pe.Program = "srv"
+	pe.SetPrincipal(sp.NewPrincipal("srv", sp.NoToken()))
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	proc.SetSigmaDebugPid(pcfg.GetPID().String())
-	return &TstateMin{T: t, lip: lip, PE: pcfg, Addr: addr}
+	proc.SetSigmaDebugPid(pe.GetPID().String())
+	return &TstateMin{T: t, lip: lip, PE: pe, Addr: addr}
 }
 
 type Tstate struct {
@@ -168,33 +166,26 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	assert.True(t, (pk == sp.NOT_SET && sk == sp.NOT_SET) || (pk != sp.NOT_SET && sk != sp.NOT_SET), "Error: only one of (pk, sk) specified")
 	var pubkey auth.PublicKey
 	var privkey auth.PrivateKey
 	var err error
-	// If no key was specified, generate a fresh one
-	if pk == sp.NOT_SET {
+	if loadMasterKey {
+		// Load master deployment key from Host FS
+		pubkey, privkey, err = keys.LoadMasterECDSAKey()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Genereate a fresh master deployment key
 		pubkey, privkey, err = keys.NewECDSAKey()
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
 			return nil, err
 		}
-	} else {
-		// Get public key from input params
-		pubkey, err = auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(pk))
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error NewPublicKey", err)
-			return nil, err
-		}
-		privkey, err = auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(sk))
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error NewPrivateKey", err)
-			return nil, err
-		}
 	}
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
-	s3secrets, err1 := auth.GetAWSSecrets()
+	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
 		return nil, err1
@@ -357,7 +348,7 @@ func (ts *Tstate) Shutdown() error {
 }
 
 func Dump(t *testing.T) {
-	s3secrets, err1 := auth.GetAWSSecrets()
+	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), "", "", "", false, false)

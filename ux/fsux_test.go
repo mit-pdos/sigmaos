@@ -3,6 +3,7 @@ package fsux
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"syscall"
 	"testing"
@@ -128,10 +129,10 @@ func TestFsPerfMulti(t *testing.T) {
 	done.Wait()
 }
 
-func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
-	fsl, err := sigmaclnt.NewFsLib(pcfg)
+func writer(t *testing.T, ch chan error, pe *proc.ProcEnv, idx int) {
+	fsl, err := sigmaclnt.NewFsLib(pe)
 	assert.Nil(t, err)
-	fn := sp.UX + "~local/file-" + string(pcfg.GetPrincipal().GetID())
+	fn := sp.UX + "~local/file-" + string(pe.GetPrincipal().GetID()) + "-" + strconv.Itoa(idx)
 	stop := false
 	nfile := 0
 	for !stop {
@@ -144,7 +145,7 @@ func writer(t *testing.T, ch chan error, pcfg *proc.ProcEnv) {
 			}
 			w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
 			if err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err code %v", err)
 				break
 			}
 			nfile += 1
@@ -177,8 +178,10 @@ func TestWriteCrash(t *testing.T) {
 	ch := make(chan error)
 
 	for i := 0; i < N; i++ {
-		pcfg := proc.NewAddedProcEnv(ts.ProcEnv(), i)
-		go writer(ts.T, ch, pcfg)
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		err := ts.MintAndSetToken(pe)
+		assert.Nil(t, err)
+		go writer(ts.T, ch, pe, i)
 	}
 
 	crashchan := make(chan bool)

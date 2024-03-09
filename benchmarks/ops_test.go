@@ -43,6 +43,12 @@ func downSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64)
 	return time.Since(start), 1.0
 }
 
+func warmupRealmBench(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	prog := i.(string)
+	start, nDL := warmupRealm(ts, []string{prog})
+	return time.Since(start), float64(nDL)
+}
+
 // TODO for matmul, possibly only benchmark internal time
 func runProc(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()

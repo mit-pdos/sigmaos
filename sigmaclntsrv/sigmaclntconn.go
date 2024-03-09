@@ -31,12 +31,12 @@ type SigmaClntConn struct {
 	api  *SigmaClntSrvAPI
 }
 
-func newSigmaClntConn(conn net.Conn, pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntConn, error) {
-	scs, err := NewSigmaClntSrvAPI(pcfg, fidc)
+func newSigmaClntConn(conn net.Conn, pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntConn, error) {
+	scs, err := NewSigmaClntSrvAPI(pe, fidc)
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.ALWAYS, "Create SigmaClntConn with pcfg %v", pcfg)
+	db.DPrintf(db.ALWAYS, "Create SigmaClntConn with pe %v", pe)
 	rpcs := rpcsrv.NewRPCSrv(scs, nil)
 	scc := &SigmaClntConn{
 		rpcs: rpcs,
@@ -92,7 +92,7 @@ func (scc *SigmaClntSrvAPI) testAndSetClosed() bool {
 	return b
 }
 
-func NewSigmaClntSrvAPI(pcfg *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntSrvAPI, error) {
+func NewSigmaClntSrvAPI(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClntSrvAPI, error) {
 	scsa := &SigmaClntSrvAPI{sc: nil, fidc: fidc}
 	return scsa, nil
 }

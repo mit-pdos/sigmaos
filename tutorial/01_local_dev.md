@@ -23,11 +23,19 @@ On a Ubuntu system, you can install the remaining packages by running:
 $ sudo apt install golang-go libseccomp-dev mysql-client parallel
 ```
 
+On a Ubuntu system, you may also have to install the SigmaOS AppArmor
+profile, if you have AppArmor enabled. You can do this by running:
+
+```
+$ cd sigmaos
+$ ./load-apparmor.sh
+```
+
 Note: `/var/run/docker.sock` must be accessible to SigmaOS. You can add your
 user account to the docker group by running:
 
 ```
-sudo usermod -aG docker $USER
+$ sudo usermod -aG docker $USER
 ```
 
 In order for this to take effect, you will have to log out and back into your
@@ -35,7 +43,7 @@ machine. If you want to skip this, you can temporarily change the permissions
 on the docker socket using:
 
 ```
-sudo chmod 0666 /var/run/docker.sock
+$ sudo chmod 0666 /var/run/docker.sock
 ```
 
 ## Building SigmaOS Locally

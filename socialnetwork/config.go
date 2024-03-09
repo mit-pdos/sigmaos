@@ -52,7 +52,7 @@ func NewFsLibs(uname string) ([]*fslib.FsLib, error) {
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
 		pe := proc.GetProcEnv()
-		fsl, err := sigmaclnt.NewFsLib(proc.NewAddedProcEnv(pe, i))
+		fsl, err := sigmaclnt.NewFsLib(proc.NewAddedProcEnv(pe))
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error newfsl: %v", err)
 			return nil, err

@@ -8,25 +8,25 @@ import (
 )
 
 type FsLib struct {
-	pcfg *proc.ProcEnv
+	pe *proc.ProcEnv
 	sos.SigmaOS
 }
 
-func NewFsLibAPI(pcfg *proc.ProcEnv, sos sos.SigmaOS) (*FsLib, error) {
-	db.DPrintf(db.FSLIB, "NewFsLib: principal %s innerip %s addrs %v\n", pcfg.GetPrincipal(), pcfg.GetInnerContainerIP(), pcfg.EtcdIP)
+func NewFsLibAPI(pe *proc.ProcEnv, sos sos.SigmaOS) (*FsLib, error) {
+	db.DPrintf(db.FSLIB, "NewFsLib: principal %s innerip %s addrs %v\n", pe.GetPrincipal(), pe.GetInnerContainerIP(), pe.EtcdIP)
 	fl := &FsLib{
-		pcfg:    pcfg,
+		pe:      pe,
 		SigmaOS: sos,
 	}
 	return fl, nil
 }
 
 func (fl *FsLib) GetInnerContainerIP() sp.Tip {
-	return fl.pcfg.GetInnerContainerIP()
+	return fl.pe.GetInnerContainerIP()
 }
 
 func (fl *FsLib) ProcEnv() *proc.ProcEnv {
-	return fl.pcfg
+	return fl.pe
 }
 
 func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {

@@ -23,13 +23,11 @@ func NewKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
 }
 
 func (kc *KernelClnt) Boot(s string, args []string) (sp.Tpid, error) {
-	var res proto.BootResult
-	req := &proto.BootRequest{Name: s, Args: args}
-	err := kc.rpcc.RPC("KernelSrv.Boot", req, &res)
-	if err != nil {
-		return sp.Tpid(""), err
-	}
-	return sp.Tpid(res.PidStr), nil
+	return kc.BootInRealm(sp.ROOTREALM, s, args)
+}
+
+func (kc *KernelClnt) BootInRealm(realm sp.Trealm, s string, args []string) (sp.Tpid, error) {
+	return bootInRealm(kc.rpcc, realm, s, args)
 }
 
 func (kc *KernelClnt) SetCPUShares(pid sp.Tpid, shares int64) error {
@@ -77,4 +75,18 @@ func (kc *KernelClnt) Port(pid sp.Tpid, p sp.Tport) (sp.Tip, port.PortBinding, e
 		return "", port.PortBinding{}, err
 	}
 	return sp.Tip(res.HostIp), port.PortBinding{sp.Tport(res.RealmPort), sp.Tport(res.HostPort)}, nil
+}
+
+func bootInRealm(rpcc *rpcclnt.RPCClnt, realm sp.Trealm, s string, args []string) (sp.Tpid, error) {
+	var res proto.BootResult
+	req := &proto.BootRequest{
+		Name:     s,
+		RealmStr: realm.String(),
+		Args:     args,
+	}
+	err := rpcc.RPC("KernelSrv.Boot", req, &res)
+	if err != nil {
+		return sp.NO_PID, err
+	}
+	return sp.Tpid(res.PidStr), nil
 }

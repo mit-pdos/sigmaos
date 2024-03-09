@@ -301,13 +301,13 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 func RunMapper(mapf MapT, args []string) {
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
-	pcfg := proc.GetProcEnv()
-	p, err := perf.NewPerf(pcfg, perf.MRMAPPER)
+	pe := proc.GetProcEnv()
+	p, err := perf.NewPerf(pe, perf.MRMAPPER)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
-	db.DPrintf(db.BENCH, "Mapper [%v] spawn latency: %v", args[2], time.Since(pcfg.GetSpawnTime()))
+	db.DPrintf(db.BENCH, "Mapper [%v] spawn latency: %v", args[2], time.Since(pe.GetSpawnTime()))
 	m, err := newMapper(mapf, args, p)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)

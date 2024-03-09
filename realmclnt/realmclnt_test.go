@@ -158,11 +158,11 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	rootts.BootNode(1)
 	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	rootts.BootNode(1)
 	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
 	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -284,6 +284,83 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
+
+	for _, d := range []string{sp.S3, sp.UX} {
+		sts1, err := rootts.GetDir(d)
+		assert.Nil(t, err)
+		assert.True(t, len(sts1) == 1, "No %vs in root realm", d)
+		sts, err := ts1.GetDir(d)
+		db.DPrintf(db.TEST, "realm names %v %v\n", d, sp.Names(sts))
+		assert.Nil(t, err)
+		assert.True(t, len(sts) == 1, "No %vs in user realm", d)
+		for _, st := range sts1 {
+			// If there is a name in common in the directory, check that they are for different mounts
+			if fslib.Present(sts, []string{st.Name}) {
+				mnt, err := ts1.ReadMount(path.Join(d, st.Name))
+				assert.Nil(t, err, "ReadMount: %v", err)
+				mnt1, err := rootts.ReadMount(path.Join(d, st.Name))
+				assert.Nil(t, err, "ReadMount: %v", err)
+				assert.False(t, mnt.Address() == mnt1.Address(), "%v cross-over", d)
+			}
+		}
+	}
+
+	err = ts1.Remove()
+	assert.Nil(t, err)
+
+	rootts.Shutdown()
+}
+
+func TestWaitExitMultiNode(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	rootts.BootNode(1)
+	subsysCnts := []int64{2, 1}
+	ts1, err1 := test.NewRealmTstateNumSubsystems(rootts, REALM1, subsysCnts[0], subsysCnts[1])
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	sts1, err := rootts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
+
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetInnerContainerIP())
+
+	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	db.DPrintf(db.TEST, "Pre spawn")
+	err = ts1.Spawn(a)
+	assert.Nil(t, err, "Error spawn: %v", err)
+	db.DPrintf(db.TEST, "Post spawn")
+
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := ts1.WaitExit(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
+
+	for i, d := range []string{sp.S3, sp.UX} {
+		sts1, err := rootts.GetDir(d)
+		assert.Nil(t, err)
+		assert.True(t, len(sts1) == 2, "No %vs in root realm", d)
+		sts, err := ts1.GetDir(d)
+		db.DPrintf(db.TEST, "realm names %v %v\n", d, sp.Names(sts))
+		assert.Nil(t, err)
+		assert.True(t, int64(len(sts)) == subsysCnts[i], "No %vs in user realm", d)
+		for _, st := range sts1 {
+			// If there is a name in common in the directory, check that they are for different mounts
+			if fslib.Present(sts, []string{st.Name}) {
+				mnt, err := ts1.ReadMount(path.Join(d, st.Name))
+				assert.Nil(t, err, "ReadMount: %v", err)
+				mnt1, err := rootts.ReadMount(path.Join(d, st.Name))
+				assert.Nil(t, err, "ReadMount: %v", err)
+				assert.False(t, mnt.Address() == mnt1.Address(), "%v cross-over", d)
+			}
+		}
+	}
 
 	err = ts1.Remove()
 	assert.Nil(t, err)

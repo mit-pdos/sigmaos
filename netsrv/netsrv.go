@@ -18,14 +18,14 @@ type NewConnI interface {
 }
 
 type NetServer struct {
-	pcfg    *proc.ProcEnv
+	pe      *proc.ProcEnv
 	addr    *sp.Taddr
 	l       net.Listener
 	newConn NewConnI
 }
 
-func NewNetServer(pcfg *proc.ProcEnv, addr *sp.Taddr, newConn NewConnI) *NetServer {
-	srv := &NetServer{pcfg: pcfg, newConn: newConn}
+func NewNetServer(pe *proc.ProcEnv, addr *sp.Taddr, newConn NewConnI) *NetServer {
+	srv := &NetServer{pe: pe, newConn: newConn}
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
 	var l net.Listener
@@ -33,11 +33,11 @@ func NewNetServer(pcfg *proc.ProcEnv, addr *sp.Taddr, newConn NewConnI) *NetServ
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}
-	h, p, err := netsigma.QualifyAddrLocalIP(pcfg.GetInnerContainerIP(), l.Addr().String())
+	h, p, err := netsigma.QualifyAddrLocalIP(pe.GetInnerContainerIP(), l.Addr().String())
 	if err != nil {
 		db.DFatalf("QualifyAddr \"%v\" -> \"%v:%v\" error: %v\n%s", l.Addr().String(), h, p, err, debug.Stack())
 	}
-	srv.addr = sp.NewTaddrRealm(h, sp.INNER_CONTAINER_IP, p, pcfg.GetNet())
+	srv.addr = sp.NewTaddrRealm(h, sp.INNER_CONTAINER_IP, p, pe.GetNet())
 	srv.l = l
 	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.addr)
 	go srv.runsrv(l)
@@ -57,7 +57,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			db.DPrintf(db.NETSRV, "%v: Accept err %v", srv.pcfg.GetPID(), err)
+			db.DPrintf(db.NETSRV, "%v: Accept err %v", srv.pe.GetPID(), err)
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)

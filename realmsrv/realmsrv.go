@@ -1,6 +1,8 @@
 package realmsrv
 
 import (
+	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path"
@@ -12,6 +14,7 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/kernelclnt"
 	"sigmaos/keyclnt"
 	"sigmaos/keys"
 	"sigmaos/proc"
@@ -49,6 +52,7 @@ type RealmSrv struct {
 	sc              *sigmaclnt.SigmaClntKernel
 	pq              *procqclnt.ProcQClnt
 	sd              *scheddclnt.ScheddClnt
+	mkc             *kernelclnt.MultiKernelClnt
 	kc              *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
 	as              auth.AuthSrv
 	masterPublicKey auth.PublicKey
@@ -80,6 +84,7 @@ func RunRealmSrv(masterPublicKey auth.PublicKey, pubkey auth.PublicKey, privkey 
 	db.DPrintf(db.REALMD, "newsrv ok")
 	rs.kc = keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](ssrv.MemFs.SigmaClnt())
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
+	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	rs.pq = procqclnt.NewProcQClnt(rs.sc.FsLib)
 	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib)
 	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, ssrv.MemFs.SigmaClnt()))
@@ -93,6 +98,7 @@ func RunRealmSrv(masterPublicKey auth.PublicKey, pubkey auth.PublicKey, privkey 
 	rs.as = as
 	go rs.enforceResourcePolicy()
 	err = ssrv.RunServer()
+	rs.mkc.StopMonitoring()
 	return nil
 }
 
@@ -189,24 +195,45 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", err)
 		return err
 	}
-	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.UXREL, sp.S3REL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
+	// Mount some service union dirs from the root realm
+	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
 		mnt := sp.NewMountService(namedMount.Addr)
 		mnt.SetTree(s)
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
 		if err := sc.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
-			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
+			db.DPrintf(db.ERROR, "MountService %v err %v\n", pn, err)
 			return err
 		}
 	}
+	// Mount keyd into the user realm
+	keydMnt, err := rm.sc.ReadMount(sp.KEYD)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error ReadMount %v: %v", sp.KEYD, err)
+		return err
+	}
+	db.DPrintf(db.REALMD, "Link %v at %s", keydMnt, sp.KEYD)
+	if err := sc.MkMountFile(sp.KEYD, keydMnt, sp.NoLeaseId); err != nil {
+		db.DPrintf(db.ERROR, "MountService %v err %v\n", sp.KEYD, err)
+		return err
+	}
 	// Make some realm dirs
-	for _, s := range []string{sp.KPIDSREL} {
+	for _, s := range []string{sp.KPIDSREL, sp.S3REL, sp.UXREL} {
 		pn := path.Join(sp.NAMED, s)
 		db.DPrintf(db.REALMD, "Mkdir %v", pn)
 		if err := sc.MkDir(pn, 0777); err != nil {
 			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
 			return err
 		}
+	}
+	// Spawn per-realm kernel procs
+	if err := rm.bootPerRealmKernelSubsystems(sp.Trealm(req.Realm), sp.S3REL, req.GetNumS3()); err != nil {
+		db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.S3REL, err)
+		return err
+	}
+	if err := rm.bootPerRealmKernelSubsystems(sp.Trealm(req.Realm), sp.UXREL, req.GetNumUX()); err != nil {
+		db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.UXREL, err)
+		return err
 	}
 	rm.realms[rid] = &Realm{named: p, sc: sc}
 	return nil
@@ -233,6 +260,35 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveRequest, res *proto.Remo
 		return err
 	}
 	delete(rm.realms, rid)
+	return nil
+}
+
+func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n int64) error {
+	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems [%v] n %v", realm, ss, n)
+	kernels, err := rm.mkc.GetKernelSrvs()
+	if err != nil {
+		return err
+	}
+	if int64(len(kernels)) < n {
+		db.DPrintf(db.ERROR, "Tried to boot more than one kernel subsystem per kernel")
+		return fmt.Errorf("Tried to boot more than one kernel subsystem per kernel")
+	}
+	if n == SUBSYSTEM_PER_NODE {
+		// Boot one subsystem for the realm on each node in the deployment, so use
+		// the full slice of kernels
+	} else {
+		// Shuffle the slice of kernels
+		for i := range kernels {
+			j := rand.Intn(i + 1)
+			kernels[i], kernels[j] = kernels[j], kernels[i]
+		}
+		// Take the first N of them
+		kernels = kernels[:n]
+	}
+	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems selected kernels: %v", realm, kernels)
+	for _, kid := range kernels {
+		rm.mkc.BootInRealm(kid, realm, ss, nil)
+	}
 	return nil
 }
 

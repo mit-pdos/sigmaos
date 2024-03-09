@@ -16,6 +16,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/mr"
 	"sigmaos/perf"
@@ -23,6 +24,7 @@ import (
 	rd "sigmaos/rand"
 	"sigmaos/scheddclnt"
 	"sigmaos/seqwc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	// "sigmaos/stats"
 	"sigmaos/test"
@@ -30,7 +32,8 @@ import (
 )
 
 const (
-	OUTPUT = "/tmp/par-mr.out"
+	OUTPUT        = "/tmp/par-mr.out"
+	MALICIOUS_APP = "mr-wc-restricted.yml"
 
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
@@ -248,7 +251,7 @@ type Tstate struct {
 	tasks       *mr.Tasks
 }
 
-func newTstate(t1 *test.Tstate) *Tstate {
+func newTstate(t1 *test.Tstate, app string) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = t1
 	j, err := mr.ReadJobConfig(app)
@@ -271,7 +274,8 @@ func newTstate(t1 *test.Tstate) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) compare() {
+// Returns true if comparison was successful (expected output == actual output)
+func (ts *Tstate) compare() bool {
 	cmd := exec.Command("sort", "gutenberg.txt.out")
 	var out1 bytes.Buffer
 	cmd.Stdout = &out1
@@ -291,37 +295,74 @@ func (ts *Tstate) compare() {
 	if assert.Equal(ts.T, len(b1), len(b2), "Output files have different length") {
 		// Only do byte-by-byte comparison if output lengths are the same
 		// (otherwise we just crowd the test output)
-		assert.Equal(ts.T, b1, b2, "Output files have different contents")
+		return assert.Equal(ts.T, b1, b2, "Output files have different contents")
 	}
+	return false
 }
 
-func (ts *Tstate) checkJob() {
+func (ts *Tstate) checkJob(app string) bool {
 	err := mr.MergeReducerOutput(ts.FsLib, ts.job, OUTPUT, ts.nreducetask)
 	assert.Nil(ts.T, err, "Merge output files: %v", err)
-	if app == "mr-wc.yml" {
-		ts.compare()
+	if app == "mr-wc.yml" || app == MALICIOUS_APP {
+		return ts.compare()
 	}
+	return true
 }
 
-func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux int, monitor bool) {
+func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux, maliciousMapper int, monitor bool) {
+	var s3secrets *proc.ProcSecretProto
+	var err1 error
+	// If running with malicious mappers, try to get restricted AWS secrets
+	// before starting the system
+	if maliciousMapper > 0 {
+		s3secrets, err1 = auth.GetAWSSecrets(sp.AWS_S3_RESTRICTED_PROFILE)
+		if !assert.Nil(t, err1, "Can't get secrets for aws profile %v: %v", sp.AWS_S3_RESTRICTED_PROFILE, err1) {
+			return
+		}
+	}
+
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1)
 
-	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
+	var sc *sigmaclnt.SigmaClnt = t1.SigmaClnt
+	runApp := app
+	if maliciousMapper > 0 {
+		db.DPrintf(db.ALWAYS, "Overriding MR app settting to run on restricted S3 bucket with malicious mapper: %v", MALICIOUS_APP)
+		runApp = MALICIOUS_APP
+
+		// Create a new sigma clnt
+		pe := proc.NewAddedProcEnv(t1.ProcEnv())
+		pe.SetPrincipal(sp.NewPrincipal(
+			sp.TprincipalID("mr-restricted-principal"),
+			sp.NoToken(),
+		))
+
+		// Load restricted AWS secrets
+		pe.SetSecrets(map[string]*proc.ProcSecretProto{"s3": s3secrets})
+		err1 = t1.MintAndSetToken(pe)
+		assert.Nil(t, err1)
+
+		// Create a SigmaClnt with the more restricted principal.
+		sc, err1 = sigmaclnt.NewSigmaClnt(pe)
+		if assert.Nil(t, err1, "Err NewSigmaClnt: %v", err1) {
+			defer sc.StopMonitoringSrvs()
+		}
+	}
+	ts := newTstate(t1, runApp)
+
+	sdc := scheddclnt.NewScheddClnt(sc.FsLib)
 	if monitor {
 		sdc.MonitorScheddStats(ts.ProcEnv().GetRealm(), time.Second)
 		defer sdc.Done()
 	}
 
-	nmap, err := mr.PrepareJob(ts.FsLib, ts.tasks, ts.job, job)
+	nmap, err := mr.PrepareJob(sc.FsLib, ts.tasks, ts.job, job)
 	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	//db.DFatalf("xx")
-	cm := mr.StartMRJob(ts.SigmaClnt, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, true)
+	cm := mr.StartMRJob(sc, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, true, maliciousMapper)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}
@@ -349,7 +390,12 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux 
 	}
 
 	db.DPrintf(db.TEST, "Check Job")
-	ts.checkJob()
+	ok := ts.checkJob(runApp)
+	// Check that the malicious mapper didn't succeed (which would cause the
+	// output files not to match)
+	if !ok && maliciousMapper > 0 {
+		assert.False(ts.T, true, "Output files don't match when running with malicious mapper. Suspected security authorization violation. Check error logs.")
+	}
 	db.DPrintf(db.TEST, "Done check Job")
 
 	err = mr.PrintMRStats(ts.FsLib, ts.job)
@@ -364,65 +410,69 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux 
 }
 
 func TestMRJob(t *testing.T) {
-	runN(t, 0, 0, 0, 0, 0, true)
+	runN(t, 0, 0, 0, 0, 0, 0, true)
+}
+
+func TestMaliciousMapper(t *testing.T) {
+	runN(t, 0, 0, 0, 0, 0, 500, true)
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, CRASHTASK, 0, 0, 0, 0, false)
+	runN(t, CRASHTASK, 0, 0, 0, 0, 0, false)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, 0, CRASHCOORD, 0, 0, 0, false)
+	runN(t, 0, CRASHCOORD, 0, 0, 0, 0, false)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	runN(t, CRASHTASK, CRASHCOORD, 0, 0, 0, false)
+	runN(t, CRASHTASK, CRASHCOORD, 0, 0, 0, 0, false)
 }
 
 func TestCrashSchedd1(t *testing.T) {
-	runN(t, 0, 0, 1, 0, 0, false)
+	runN(t, 0, 0, 1, 0, 0, 0, false)
 }
 
 func TestCrashSchedd2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, N, 0, 0, false)
+	runN(t, 0, 0, N, 0, 0, 0, false)
 }
 
 func TestCrashScheddN(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N, 0, 0, false)
+	runN(t, 0, 0, N, 0, 0, 0, false)
 }
 
 func TestCrashProcq1(t *testing.T) {
-	runN(t, 0, 0, 0, 1, 0, false)
+	runN(t, 0, 0, 0, 1, 0, 0, false)
 }
 
 func TestCrashProcq2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, 0, N, 0, false)
+	runN(t, 0, 0, 0, N, 0, 0, false)
 }
 
 func TestCrashProcqN(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, 0, N, 0, false)
+	runN(t, 0, 0, 0, N, 0, 0, false)
 }
 
 func TestCrashUx1(t *testing.T) {
 	N := 1
-	runN(t, 0, 0, 0, 0, N, false)
+	runN(t, 0, 0, 0, 0, N, 0, false)
 }
 
 func TestCrashUx2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, 0, 0, N, false)
+	runN(t, 0, 0, 0, 0, N, 0, false)
 }
 
 func TestCrashUx5(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, 0, 0, N, false)
+	runN(t, 0, 0, 0, 0, N, 0, false)
 }
 
 func TestCrashScheddProcqUx5(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N, N, N, false)
+	runN(t, 0, 0, N, N, N, 0, false)
 }

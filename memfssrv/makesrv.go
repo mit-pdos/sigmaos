@@ -18,12 +18,12 @@ import (
 )
 
 // Make an MemFs and advertise it at pn
-func NewMemFs(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
-	return NewMemFsAddr(pn, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, pcfg.GetNet()), pcfg)
+func NewMemFs(pn string, pe *proc.ProcEnv) (*MemFs, error) {
+	return NewMemFsAddr(pn, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, pe.GetNet()), pe)
 }
 
 // Make an MemFs for a specific port and advertise it at pn
-func NewMemFsAddr(pn string, addr *sp.Taddr, pcfg *proc.ProcEnv) (*MemFs, error) {
+func NewMemFsAddr(pn string, addr *sp.Taddr, pe *proc.ProcEnv) (*MemFs, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, srvpath string, addr *sp.Taddr
 }
 
 // Allocate server with public port and advertise it
-func NewMemFsPublic(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
+func NewMemFsPublic(pn string, pe *proc.ProcEnv) (*MemFs, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
@@ -74,13 +74,13 @@ func NewMemFsPublic(pn string, pcfg *proc.ProcEnv) (*MemFs, error) {
 		return nil, err
 	}
 	// Make server without advertising mnt
-	mfs, err := NewMemFsPortClnt("", sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, pcfg.GetNet()), sc)
+	mfs, err := NewMemFsPortClnt("", sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, pe.GetNet()), sc)
 	if err != nil {
 		return nil, err
 	}
 	mfs.pc = pc
 
-	if err = pc.AdvertisePort(pn, pi, pcfg.GetNet(), mfs.SigmaPSrv.MyAddr()); err != nil {
+	if err = pc.AdvertisePort(pn, pi, pe.GetNet(), mfs.SigmaPSrv.MyAddr()); err != nil {
 		return nil, err
 	}
 	return mfs, err

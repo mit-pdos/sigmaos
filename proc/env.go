@@ -113,6 +113,7 @@ func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProto, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetPrincipal(principal)
+	pe.SetSecrets(secrets)
 	// Allow all paths for boot env
 	pe.SetAllowedPaths(sp.ALL_PATHS)
 	pe.Program = "kernel"
@@ -148,7 +149,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP
 }
 
 // Create a new sigma config which is a derivative of an existing sigma config.
-func NewAddedProcEnv(pe *ProcEnv, idx int) *ProcEnv {
+func NewAddedProcEnv(pe *ProcEnv) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetPrincipal(sp.NewPrincipal(pe.GetPrincipal().GetID(), pe.GetPrincipal().GetToken()))
@@ -218,6 +219,18 @@ func (pe *ProcEnvProto) SetPID(pid sp.Tpid) {
 
 func (pe *ProcEnvProto) SetInnerContainerIP(ip sp.Tip) {
 	pe.InnerContainerIPStr = ip.String()
+}
+
+func (pe *ProcEnvProto) GetSecrets() map[string]*ProcSecretProto {
+	secrets := make(map[string]*ProcSecretProto)
+	// Deep copy secrets
+	for k, v := range pe.Claims.GetSecrets() {
+		secrets[k] = &ProcSecretProto{
+			ID:  v.ID,
+			Key: v.Key,
+		}
+	}
+	return secrets
 }
 
 func (pe *ProcEnvProto) GetInnerContainerIP() sp.Tip {
@@ -321,5 +334,5 @@ func Unmarshal(pestr string) *ProcEnv {
 
 // TODO: cleanup
 func (pe *ProcEnv) String() string {
-	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdIP:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v UseSigmacltnd:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal().String(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.EtcdIP, pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail, pe.UseSigmaclntd)
+	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdIP:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v UseSigmacltnd:%v Claims:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal().String(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.EtcdIP, pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail, pe.UseSigmaclntd, pe.Claims)
 }

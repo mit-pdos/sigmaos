@@ -22,9 +22,11 @@ func NewRealmClnt(fsl *fslib.FsLib) (*RealmClnt, error) {
 	return rc, nil
 }
 
-func (rc *RealmClnt) NewRealm(realm sp.Trealm, net string) error {
+func (rc *RealmClnt) NewRealm(realm sp.Trealm, net string, numS3 int64, numUX int64) error {
 	req := &proto.MakeRequest{
 		Realm:   realm.String(),
+		NumS3:   numS3,
+		NumUX:   numUX,
 		Network: net,
 	}
 	res := &proto.MakeResult{}

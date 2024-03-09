@@ -13,7 +13,32 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 )
+
+func LoadMasterECDSAKey() (auth.PublicKey, auth.PrivateKey, error) {
+	masterPrivKeyBytes, err := os.ReadFile(sp.HOST_PRIV_KEY_FILE)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error Read master private key: %v", err)
+		return nil, nil, err
+	}
+	masterPubKeyBytes, err := os.ReadFile(sp.HOST_PUB_KEY_FILE)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error Read master private key: %v", err)
+		return nil, nil, err
+	}
+	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, masterPubKeyBytes)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewPublicKey: %v", err)
+		return nil, nil, err
+	}
+	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, masterPrivKeyBytes)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewPrivateKey: %v", err)
+		return nil, nil, err
+	}
+	return masterPubKey, masterPrivKey, nil
+}
 
 func NewECDSAKey() (auth.PublicKey, auth.PrivateKey, error) {
 	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

@@ -91,13 +91,13 @@ func (pathc *PathClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
 			return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed root)", pn[0])), false
 		}
 		if pn[0] == sp.NAME {
-			return pathc.mountNamed(pathc.pcfg.GetRealm(), sp.NAME), true
+			return pathc.mountNamed(pathc.pe.GetRealm(), sp.NAME), true
 		} else {
 			db.DPrintf(db.SVCMOUNT, "resolveRoot: remount %v at %v\n", sm, pn[0])
 
 			// this may remount the service that this root is relying on
 			// and repair this root mount
-			if _, err := pathc.Stat(sm.svcpn.String()+"/", pathc.pcfg.GetPrincipal()); err != nil {
+			if _, err := pathc.Stat(sm.svcpn.String()+"/", pathc.pe.GetPrincipal()); err != nil {
 				var sr *serr.Err
 				if errors.As(err, &sr) {
 					return sr, false
@@ -143,7 +143,7 @@ func (pathc *PathClnt) mountRoot(svc, rest path.Path, mntname string) *serr.Err 
 		db.DPrintf(db.SVCMOUNT, "mountRoot: lookup %v %v err nil\n", svc, fid)
 	}
 	addr := ch.Servers()
-	if err := pathc.MountTree(pathc.pcfg.GetPrincipal(), addr, rest.String(), mntname); err != nil {
+	if err := pathc.MountTree(pathc.pe.GetPrincipal(), addr, rest.String(), mntname); err != nil {
 		db.DPrintf(db.SVCMOUNT, "mountRoot: MountTree %v err %v\n", svc, err)
 	}
 	db.DPrintf(db.SVCMOUNT, "mountRoot: attached %v(%v):%v at %v\n", svc, addr, rest, mntname)

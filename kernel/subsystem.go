@@ -11,6 +11,7 @@ import (
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -82,17 +83,29 @@ func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Th
 	return newSubsystemCmd(pclnt, k, p, how, nil)
 }
 
-func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []string, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
+func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	p := proc.NewPrivProcPid(pid, program, args, true)
+	p.GetProcEnv().SetRealm(realm, k.Param.Overlays)
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
+	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetAllowedPaths(sp.ALL_PATHS)
 	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}
 	p.SetMcpu(mcpu)
-	ss := newSubsystem(k.ProcClnt, k, p, how)
+	var sck *sigmaclnt.SigmaClntKernel
+	var err error
+	if realm == sp.ROOTREALM {
+		sck = k.SigmaClntKernel
+	} else {
+		sck, err = k.getRealmSigmaClnt(realm)
+		if err != nil {
+			return nil, err
+		}
+	}
+	ss := newSubsystem(sck.ProcClnt, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelID, k.ip)
 }
 
@@ -114,7 +127,7 @@ func (k *Kernel) bootstrapKeys(pid sp.Tpid) ([]string, error) {
 	}, nil
 }
 
-func (k *Kernel) bootSubsystemBootstrapKeys(program string, args []string, how proc.Thow) (Subsystem, error) {
+func (k *Kernel) bootSubsystemBootstrapKeys(program string, args []string, realm sp.Trealm, how proc.Thow) (Subsystem, error) {
 	pid := sp.GenPid(program)
 	// bootstrap keys for the subsystem
 	keys, err := k.bootstrapKeys(pid)
@@ -122,16 +135,16 @@ func (k *Kernel) bootSubsystemBootstrapKeys(program string, args []string, how p
 		return nil, err
 	}
 	argsWithKeys := append(args, keys...)
-	return k.bootSubsystemPIDWithMcpu(pid, program, argsWithKeys, how, 0)
+	return k.bootSubsystemPIDWithMcpu(pid, program, argsWithKeys, realm, how, 0)
 }
 
-func (k *Kernel) bootSubsystem(program string, args []string, how proc.Thow) (Subsystem, error) {
+func (k *Kernel) bootSubsystem(program string, args []string, realm sp.Trealm, how proc.Thow) (Subsystem, error) {
 	pid := sp.GenPid(program)
-	return k.bootSubsystemPIDWithMcpu(pid, program, args, how, 0)
+	return k.bootSubsystemPIDWithMcpu(pid, program, args, realm, how, 0)
 }
 
 func (s *KernelSubsystem) Evict() error {
-	return s.k.EvictKernelProc(s.p.GetPid(), s.how)
+	return s.EvictKernelProc(s.p.GetPid(), s.how)
 }
 
 func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) error {

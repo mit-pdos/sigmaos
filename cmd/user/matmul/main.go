@@ -32,10 +32,10 @@ type MatrixMult struct {
 }
 
 func NewMatrixMult(args []string) (*MatrixMult, error) {
-	pcfg := proc.GetProcEnv()
-	db.DPrintf(db.MATMUL, "NewMatrixMul: %v %v", pcfg.GetPID(), args)
+	pe := proc.GetProcEnv()
+	db.DPrintf(db.MATMUL, "NewMatrixMul: %v %v", pe.GetPID(), args)
 	m := &MatrixMult{}
-	sc, err := sigmaclnt.NewSigmaClnt(pcfg)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		return nil, err
 	}

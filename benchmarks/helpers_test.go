@@ -168,22 +168,26 @@ func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
 }
 
 // Warm up a realm, by starting uprocds for it on all machines in the cluster.
-func warmupRealm(ts *test.RealmTstate, progs []string) {
+func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
 	db.DPrintf(db.TEST, "Warm up realm %v for progs %v", ts.GetRealm(), progs)
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	// Get the list of schedds.
 	sds, err := sdc.GetSchedds()
 	assert.Nil(ts.Ts.T, err, "Get Schedds: %v", err)
+	start := time.Now()
+	nDL := 0
 	for _, kid := range sds {
-		// Spawn one BE and one LC proc on each schedd, to force uprocds to start.
+		// Warm the cache for a binary
 		for _, ptype := range []proc.Ttype{proc.T_LC, proc.T_BE} {
 			for _, prog := range progs {
 				err := sdc.WarmCacheBin(kid, ts.GetRealm(), prog, ts.Ts.ProcEnv().GetBuildTag(), ptype)
+				nDL++
 				assert.Nil(ts.Ts.T, err, "WarmCacheBin: %v", err)
 			}
 		}
 	}
 	db.DPrintf(db.TEST, "Warmed up realm %v", ts.GetRealm())
+	return start, nDL
 }
 
 // ========== Dir Helpers ==========

@@ -24,6 +24,7 @@ type UprocdMgr struct {
 	pool          *pool
 	kclnt         *kernelclnt.KernelClnt
 	upcs          map[sp.Trealm]map[proc.Ttype]*UprocdClnt // We use a separate uprocd for each type of proc (BE or LC) to simplify cgroup management.
+	realms        map[sp.Trealm]bool
 	beUprocds     []*UprocdClnt
 	sharesAlloced Tshare
 }
@@ -78,6 +79,11 @@ func NewUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 }
 
 func (updm *UprocdMgr) WarmStartUprocd(realm sp.Trealm, ptype proc.Ttype) error {
+	start := time.Now()
+	defer func() {
+		db.DPrintf(db.REALM_GROW_LAT, "[%v] WarmStartUprocd latency: %v", realm, time.Since(start))
+	}()
+
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
 
@@ -153,16 +159,20 @@ func (updm *UprocdMgr) getClntOrStartUprocd(realm sp.Trealm, ptype proc.Ttype) (
 	}
 	rpcc, ok2 := pdcm[ptype]
 	if !ok1 || !ok2 {
+		start := time.Now()
 		pid, clnt := updm.pool.get()
+		db.DPrintf(db.REALM_GROW_LAT, "[%v] UprocdMgr.pool.get latency: %v", realm, time.Since(start))
 		db.DPrintf(db.UPROCDMGR, "[realm:%v] get uprocd %v ptype %v", realm, pid, ptype)
 		updm.upcs[realm][ptype] = clnt
 		rpcc = clnt
 		if ptype == proc.T_BE {
 			updm.beUprocds = append(updm.beUprocds, rpcc)
 		}
+		start = time.Now()
 		if err := updm.kclnt.AssignToRealm(pid, realm, ptype); err != nil {
 			db.DFatalf("Err assign uprocd to realm: %v", err)
 		}
+		db.DPrintf(db.REALM_GROW_LAT, "[%v] AssignToRealm latency: %v", realm, time.Since(start))
 	}
 	return rpcc, nil
 }
@@ -171,6 +181,8 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
 
+	// Try to either get the clnt for an existing uprocd, or start a new uprocd
+	// for the realm & return its client
 	return updm.getClntOrStartUprocd(realm, ptype)
 }
 

@@ -130,8 +130,8 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 
 func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
-	pcfg := proc.NewAddedProcEnv(r.ProcEnv(), int(rand.Uint64()))
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pcfg)
+	pe := proc.NewAddedProcEnv(r.ProcEnv())
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe)
 	if err != nil {
 		db.DPrintf(db.MR, "NewSigmaClntFsLib err %v", err)
 		return 0, 0, false
@@ -266,13 +266,13 @@ func (r *Reducer) doReduce() *proc.Status {
 }
 
 func RunReducer(reducef ReduceT, args []string) {
-	pcfg := proc.GetProcEnv()
-	p, err := perf.NewPerf(pcfg, perf.MRREDUCER)
+	pe := proc.GetProcEnv()
+	p, err := perf.NewPerf(pe, perf.MRREDUCER)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
-	db.DPrintf(db.BENCH, "Reducer spawn latency: %v", time.Since(pcfg.GetSpawnTime()))
+	db.DPrintf(db.BENCH, "Reducer spawn latency: %v", time.Since(pe.GetSpawnTime()))
 	r, err := newReducer(reducef, args, p)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)

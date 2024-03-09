@@ -18,12 +18,5 @@ func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 			db.DPrintf(db.PROCMGR_ERR, "Err procmgr MakeProcDir: %v\n", err)
 			db.DFatalf("Err MakeProcDir: %v", err)
 		}
-	} else {
-		mgr.Lock()
-		defer mgr.Unlock()
-
-		// Make sure the OS-level directory which holds proc bins exists. This must
-		// be done before starting the Uprocd, because the Uprocd mounts it.
-		mgr.setupUserBinCacheL(p.GetRealm())
 	}
 }

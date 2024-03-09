@@ -157,10 +157,11 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
 	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
 
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v, new innerIP %v", realm, innerIP)
-	err = container.MountRealmBinDir(realm)
-	if err != nil {
-		db.DFatalf("Error mount realm bin dir: %v", err)
-	}
+
+	//err = container.MountRealmBinDir(realm)
+	//if err != nil {
+	//	db.DFatalf("Error mount realm bin dir: %v", err)
+	//}
 
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v done", realm)
 	// Note that the uprocsrv has been assigned.

@@ -3,7 +3,6 @@ package container
 import (
 	"context"
 	"path"
-	"syscall"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -159,13 +158,4 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 		return nil, err
 	}
 	return c, nil
-}
-
-func MountRealmBinDir(realm sp.Trealm) error {
-	// Mount realm bin directory
-	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "all-realm-bin", realm.String()), path.Join(sp.SIGMAHOME, "bin", "user"), "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /realm bin dir: %v", err)
-		return err
-	}
-	return nil
 }

@@ -2,7 +2,6 @@ package binsrv
 
 import (
 	"context"
-	"log"
 	"sync"
 	"syscall"
 
@@ -10,7 +9,7 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
-	// db "sigmaos/debug"
+	db "sigmaos/debug"
 )
 
 func newBinFsFile(fd int, path string) fs.FileHandle {
@@ -42,11 +41,10 @@ func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.R
 func (f *binfsFile) Release(ctx context.Context) syscall.Errno {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	log.Printf("read %q %d\n", f.path, f.n)
 	if f.fd != -1 {
 		err := syscall.Close(f.fd)
 		f.fd = -1
-		// db.DPrintf(db.TEST, "read %q %d\n", f.path, f.n)
+		db.DPrintf(db.BINSRV, "read %q %d\n", f.path, f.n)
 		return fs.ToErrno(err)
 	}
 	return syscall.EBADF

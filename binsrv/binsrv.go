@@ -22,6 +22,7 @@ import (
 const (
 	BINFSMNT = "/mnt/binfs/"
 	BINCACHE = "bin/cache"
+	DEBUG    = false
 )
 
 type binFsRoot struct {
@@ -127,7 +128,7 @@ func RunBinFS(kernelId string) error {
 		NullPermissions: true, // Leave file permissions on "000" files as-is
 
 		MountOptions: fuse.MountOptions{
-			Debug:  true,
+			Debug:  DEBUG,
 			FsName: BINCACHE, // First column in "df -T": original dir
 			Name:   "binfs",  // Second column in "df -T" will be shown as "fuse." + Name
 		},

@@ -2,6 +2,7 @@ package uprocsrv
 
 import (
 	"os"
+	"os/exec"
 	"path"
 	"sync"
 	"time"
@@ -29,9 +30,21 @@ type UprocSrv struct {
 	ssrv     *sigmasrv.SigmaSrv
 	kc       *kernelclnt.KernelClnt
 	scsc     *sigmaclntsrv.SigmaClntSrvCmd
+	binsrv   *exec.Cmd
 	kernelId string
 	realm    sp.Trealm
 	assigned bool
+}
+
+func lsdir(path string) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		db.DFatalf("readdir %v", err)
+	}
+	db.DPrintf(db.ALWAYS, "lsdir: %q", path)
+	for _, e := range entries {
+		db.DPrintf(db.ALWAYS, "%q", e.Name())
+	}
 }
 
 func RunUprocSrv(kernelId string, up string) error {
@@ -39,6 +52,15 @@ func RunUprocSrv(kernelId string, up string) error {
 	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pe: pe}
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
+
+	ups.binsrv = exec.Command("binfsd", kernelId)
+	ups.binsrv.Stdout = os.Stdout
+	ups.binsrv.Stderr = os.Stderr
+
+	if err := ups.binsrv.Start(); err != nil {
+		db.DPrintf(db.UPROCD, "Error start %v %v", ups.binsrv, err)
+		return err
+	}
 
 	var ssrv *sigmasrv.SigmaSrv
 	var err error

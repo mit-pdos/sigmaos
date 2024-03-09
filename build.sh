@@ -173,6 +173,7 @@ if [ "${TARGET}" == "local" ]; then
   cp $KERNELBIN/uprocd $UPROCD_BIN/
   cp $KERNELBIN/sigmaclntd $UPROCD_BIN/
   cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
+  cp $KERNELBIN/binfsd $UPROCD_BIN/
 fi
 echo "========== Done copying kernel bins for uproc =========="
 

@@ -132,6 +132,7 @@ const (
 	MONGO_ERR                 = "MONGO_ERR"
 	PROXY                     = "PROXY"
 	SIGMACLNTSRV              = "SIGMACLNTSRV"
+	BINSRV                    = "BINSRV"
 )
 
 // Realm

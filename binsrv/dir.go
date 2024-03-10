@@ -7,7 +7,6 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
-
 	db "sigmaos/debug"
 	// sp "sigmaos/sigmap"
 )
@@ -33,14 +32,35 @@ func (n *binFsNode) path() string {
 
 var _ = (fs.NodeLookuper)((*binFsNode)(nil))
 
+func (n *binFsNode) download(pn string) error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	st := syscall.Stat_t{}
+	if err := syscall.Lstat(pn, &st); err == nil {
+		return nil
+	}
+
+	if n.dl == nil {
+		n.dl = newDownloader(n.waiters, pn, n.RootData.Sc, n.RootData.KernelId)
+	}
+	n.nwaiter++
+	db.DPrintf(db.BINSRV, "nwaiters %d", n.nwaiter)
+	n.waiters.Wait()
+	n.nwaiter--
+	if n.nwaiter == 0 {
+		db.DPrintf(db.BINSRV, "reset downloader")
+		n.dl = nil
+	}
+	return nil
+}
+
 func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
 	p := filepath.Join(n.path(), name)
 	st := syscall.Stat_t{}
 	err := syscall.Lstat(p, &st)
 	if err != nil {
-		if err := n.downloadProcBin(p); err != nil {
-			db.DPrintf(db.BINSRV, "download %q err %v\n", p, err)
-		}
+		n.download(p)
 		if err := syscall.Lstat(p, &st); err != nil {
 			return nil, fs.ToErrno(err)
 		}

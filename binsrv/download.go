@@ -5,11 +5,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/rand"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -17,8 +19,30 @@ const (
 	N_DOWNLOAD_RETRIES = 100
 )
 
-func (n *binFsNode) copyFile(src string, dst string) error {
-	rdr, err := n.RootData.Sc.OpenAsyncReader(src, 0)
+type downloader struct {
+	pn       string
+	kernelId string
+	sc       *sigmaclnt.SigmaClnt
+	c        *sync.Cond
+}
+
+func newDownloader(c *sync.Cond, pn string, sc *sigmaclnt.SigmaClnt, kernelId string) *downloader {
+	dl := &downloader{c: c, pn: pn, sc: sc, kernelId: kernelId}
+	go dl.loader()
+	return dl
+}
+
+func (dl *downloader) loader() {
+	db.DPrintf(db.BINSRV, "start downloader for %q", dl.pn)
+	time.Sleep(2 * time.Second)
+	if err := dl.downloadProcBin(); err != nil {
+		db.DPrintf(db.BINSRV, "download %q err %v\n", dl.pn, err)
+	}
+	dl.c.Broadcast()
+}
+
+func (dl *downloader) copyFile(src string, dst string) error {
+	rdr, err := dl.sc.OpenAsyncReader(src, 0)
 	if err != nil {
 		return err
 	}
@@ -53,18 +77,18 @@ func (n *binFsNode) copyFile(src string, dst string) error {
 	return nil
 }
 
-func (n *binFsNode) download(src, dst string) error {
-	st, err := n.RootData.Sc.Stat(src)
+func (dl *downloader) download(src string) error {
+	st, err := dl.sc.Stat(src)
 	if err != nil {
 		return err
 	}
 	db.DPrintf(db.BINSRV, "Stat %q %v\n", src, st)
-	tmpdst := dst + rand.String(8)
+	tmpdst := dl.pn + rand.String(8)
 	start := time.Now()
-	if err := n.copyFile(src, tmpdst); err != nil {
+	if err := dl.copyFile(src, tmpdst); err != nil {
 		return err
 	}
-	if err := os.Rename(tmpdst, dst); err != nil {
+	if err := os.Rename(tmpdst, dl.pn); err != nil {
 		return err
 	}
 	db.DPrintf(db.BINSRV, "Took %v to download proc %v", time.Since(start), src)
@@ -72,11 +96,11 @@ func (n *binFsNode) download(src, dst string) error {
 	return nil
 }
 
-func (n *binFsNode) downloadRetry(src, dst string) error {
+func (dl *downloader) downloadRetry(src string) error {
 	var r error
 	for i := 0; i < N_DOWNLOAD_RETRIES; i++ {
 		// Return if successful. Else, retry
-		if err := n.download(src, dst); err == nil {
+		if err := dl.download(src); err == nil {
 			return nil
 		} else {
 			db.DPrintf(db.BINSRV, "download %q err %v", src, err)
@@ -89,11 +113,11 @@ func (n *binFsNode) downloadRetry(src, dst string) error {
 	return fmt.Errorf("downloadRetry: couldn't download %q in %v retries err %v", src, N_DOWNLOAD_RETRIES, r)
 }
 
-func (n *binFsNode) downloadProcBin(dst string) error {
-	name := filepath.Base(dst)
+func (dl *downloader) downloadProcBin() error {
+	name := filepath.Base(dl.pn)
 	buildTag := "TODO XXX" // don't have the proc here
 	paths := []string{
-		filepath.Join(sp.UX, n.RootData.KernelId, "bin/user/common", name),
+		filepath.Join(sp.UX, dl.kernelId, "bin/user/common", name),
 		filepath.Join(sp.S3, "~local", buildTag, "bin"),
 	}
 	// For user bins, go straight to S3 instead of checking locally first.
@@ -102,7 +126,7 @@ func (n *binFsNode) downloadProcBin(dst string) error {
 	}
 	var r error
 	for _, pp := range paths {
-		if err := n.downloadRetry(pp, dst); err == nil {
+		if err := dl.downloadRetry(pp); err == nil {
 			return nil
 		} else {
 			db.DPrintf(db.BINSRV, "download pp %q err %v", pp, err)

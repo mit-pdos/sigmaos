@@ -9,6 +9,7 @@ package binsrv
 import (
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -47,9 +48,11 @@ func (r *binFsRoot) newNode(parent *fs.Inode, name string, st *syscall.Stat_t) f
 	if r.NewNode != nil {
 		return r.NewNode(r, parent, name, st)
 	}
-	return &binFsNode{
+	n := &binFsNode{
 		RootData: r,
 	}
+	n.waiters = sync.NewCond(&n.mu)
+	return n
 }
 
 func (r *binFsRoot) idFromStat(st *syscall.Stat_t) fs.StableAttr {
@@ -75,6 +78,12 @@ type binFsNode struct {
 	fs.Inode
 
 	RootData *binFsRoot
+
+	mu      sync.Mutex
+	waiters *sync.Cond
+	nwaiter int
+
+	dl *downloader
 }
 
 func newBinRoot(rootPath, kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmbedder, error) {

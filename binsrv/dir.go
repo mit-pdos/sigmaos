@@ -64,19 +64,17 @@ func (n *binFsNode) sStat(pn string, ust *syscall.Stat_t) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	if n.st != nil {
-		*ust = *n.st
-		return nil
-	}
+	db.DPrintf(db.BINSRV, "%v: sStat %q\n", n, pn)
 	paths := downloadPaths(pn, n.RootData.KernelId)
 	var r error
 	for _, p := range paths {
 		sst, err := n.RootData.Sc.Stat(p)
 		if err == nil {
+			db.DPrintf(db.BINSRV, "%v: Stat %q %v\n", n, p, sst)
 			toUstat(sst, ust)
-			n.st = ust
 			return nil
 		}
+		db.DPrintf(db.BINSRV, "%v: Stat %q err %v\n", n, p, err)
 		r = err
 	}
 	return r
@@ -94,6 +92,9 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 	out.Attr.FromStat(&st)
 	node := n.RootData.newNode(n.EmbeddedInode(), name, &st)
 	ch := n.NewInode(ctx, node, n.RootData.idFromStat(&st))
+
+	db.DPrintf(db.BINSRV, "%v: Lookup %q %v\n", n, name, node)
+
 	return ch, 0
 }
 
@@ -101,9 +102,11 @@ var _ = (fs.NodeOpener)((*binFsNode)(nil))
 
 func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
 	p := n.path()
-	var lf fs.FileHandle
+
+	db.DPrintf(db.BINSRV, "%v: Open %q\n", n, p)
+
 	dl := n.getDownload(p)
-	lf = newBinFsFile(p, dl, n.st)
+	lf := newBinFsFile(p, dl, n.st)
 	return lf, 0, 0
 }
 
@@ -127,6 +130,9 @@ func (n *binFsNode) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 var _ = (fs.NodeGetattrer)((*binFsNode)(nil))
 
 func (n *binFsNode) Getattr(ctx context.Context, f fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
+
+	db.DPrintf(db.BINSRV, "%v: Getattr: %v\n", n, f)
+
 	if f != nil {
 		return f.(fs.FileGetattrer).Getattr(ctx, out)
 	}

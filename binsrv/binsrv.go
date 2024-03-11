@@ -23,7 +23,7 @@ import (
 const (
 	BINFSMNT = "/mnt/binfs/"
 	BINCACHE = "bin/cache"
-	DEBUG    = false
+	DEBUG    = true
 )
 
 type binFsRoot struct {
@@ -40,7 +40,7 @@ type binFsRoot struct {
 
 	// NewNode returns a new InodeEmbedder to be used to respond
 	// to a LOOKUP/CREATE/MKDIR/MKNOD opcode. If not set, use a
-	// LoopbackNode.
+	// binFsNode
 	NewNode func(rootData *binFsRoot, parent *fs.Inode, name string, st *syscall.Stat_t) fs.InodeEmbedder
 }
 
@@ -51,7 +51,6 @@ func (r *binFsRoot) newNode(parent *fs.Inode, name string, st *syscall.Stat_t) f
 	n := &binFsNode{
 		RootData: r,
 	}
-	n.waiters = sync.NewCond(&n.mu)
 	return n
 }
 
@@ -79,10 +78,8 @@ type binFsNode struct {
 
 	RootData *binFsRoot
 
-	mu      sync.Mutex
-	waiters *sync.Cond
-	nwaiter int
-
+	mu sync.Mutex
+	st *syscall.Stat_t
 	dl *downloader
 }
 

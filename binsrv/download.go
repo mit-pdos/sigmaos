@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	db "sigmaos/debug"
@@ -20,25 +21,50 @@ const (
 )
 
 type downloader struct {
+	mu       sync.Mutex
 	pn       string
 	kernelId string
 	sc       *sigmaclnt.SigmaClnt
-	c        *sync.Cond
+	waiters  *sync.Cond
+	nwaiter  int
+	done     bool
 }
 
-func newDownloader(c *sync.Cond, pn string, sc *sigmaclnt.SigmaClnt, kernelId string) *downloader {
-	dl := &downloader{c: c, pn: pn, sc: sc, kernelId: kernelId}
+func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string) *downloader {
+	dl := &downloader{pn: pn, sc: sc, kernelId: kernelId}
+	dl.waiters = sync.NewCond(&dl.mu)
 	go dl.loader()
 	return dl
 }
 
 func (dl *downloader) loader() {
-	db.DPrintf(db.BINSRV, "start downloader for %q", dl.pn)
-	time.Sleep(2 * time.Second)
+	db.DPrintf(db.BINSRV, "loader starting for %q", dl.pn)
 	if err := dl.downloadProcBin(); err != nil {
 		db.DPrintf(db.BINSRV, "download %q err %v\n", dl.pn, err)
 	}
-	dl.c.Broadcast()
+	db.DPrintf(db.BINSRV, "loader download done for %q", dl.pn)
+	// time.Sleep(2 * time.Second)
+	dl.mu.Lock()
+	defer dl.mu.Unlock()
+	dl.done = true
+	dl.waiters.Broadcast()
+}
+
+func (dl *downloader) waitDownload() int {
+	dl.mu.Lock()
+	defer dl.mu.Unlock()
+
+	if !dl.done {
+		dl.nwaiter++
+		db.DPrintf(db.BINSRV, "nwaiters %d", dl.nwaiter)
+		dl.waiters.Wait()
+		dl.nwaiter--
+	}
+	fd, err := syscall.Open(dl.pn, syscall.O_RDONLY, 0)
+	if err != nil {
+		db.DFatalf("open %q err %v", dl.pn, err)
+	}
+	return fd
 }
 
 func (dl *downloader) copyFile(src string, dst string) error {
@@ -78,11 +104,6 @@ func (dl *downloader) copyFile(src string, dst string) error {
 }
 
 func (dl *downloader) download(src string) error {
-	st, err := dl.sc.Stat(src)
-	if err != nil {
-		return err
-	}
-	db.DPrintf(db.BINSRV, "Stat %q %v\n", src, st)
 	tmpdst := dl.pn + rand.String(8)
 	start := time.Now()
 	if err := dl.copyFile(src, tmpdst); err != nil {
@@ -113,19 +134,23 @@ func (dl *downloader) downloadRetry(src string) error {
 	return fmt.Errorf("downloadRetry: couldn't download %q in %v retries err %v", src, N_DOWNLOAD_RETRIES, r)
 }
 
-func (dl *downloader) downloadProcBin() error {
-	name := filepath.Base(dl.pn)
+func downloadPaths(pn, kernelId string) []string {
+	name := filepath.Base(pn)
 	buildTag := "TODO XXX" // don't have the proc here
 	paths := []string{
-		filepath.Join(sp.UX, dl.kernelId, "bin/user/common", name),
+		filepath.Join(sp.UX, kernelId, "bin/user/common", name),
 		filepath.Join(sp.S3, "~local", buildTag, "bin"),
 	}
 	// For user bins, go straight to S3 instead of checking locally first.
 	if sp.Target != "local" && name != "named" && name != "spawn-latency-ux" {
 		paths = paths[1:]
 	}
+	return paths
+}
+
+func (dl *downloader) downloadProcBin() error {
 	var r error
-	for _, pp := range paths {
+	for _, pp := range downloadPaths(dl.pn, dl.kernelId) {
 		if err := dl.downloadRetry(pp); err == nil {
 			return nil
 		} else {

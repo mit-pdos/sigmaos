@@ -7,8 +7,9 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
+
 	db "sigmaos/debug"
-	// sp "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 var _ = (fs.NodeStatfser)((*binFsNode)(nil))
@@ -32,27 +33,53 @@ func (n *binFsNode) path() string {
 
 var _ = (fs.NodeLookuper)((*binFsNode)(nil))
 
-func (n *binFsNode) download(pn string) error {
+func (n *binFsNode) getDownload(pn string) *downloader {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	st := syscall.Stat_t{}
-	if err := syscall.Lstat(pn, &st); err == nil {
+	if n.dl == nil {
+		db.DPrintf(db.BINSRV, "start downloader for %q\n", pn)
+		n.dl = newDownloader(pn, n.RootData.Sc, n.RootData.KernelId)
+	}
+	return n.dl
+}
+
+func toUstat(sst *sp.Stat, ust *syscall.Stat_t) {
+	const BLOCKSIZE = 4096
+
+	ust.Ino = sst.Qid.Path
+	ust.Size = int64(sst.Length)
+	ust.Blocks = int64(sst.Length/BLOCKSIZE + 1)
+	ust.Atim.Sec = int64(sst.Atime)
+	ust.Mtim.Sec = int64(sst.Mtime)
+	ust.Ctim.Sec = int64(sst.Mtime)
+	ust.Mode = 0777
+	ust.Nlink = 2
+	//ust.Uid = sst.Uid
+	//ust.Gid = sst.Gid
+	ust.Blksize = BLOCKSIZE
+}
+
+func (n *binFsNode) sStat(pn string, ust *syscall.Stat_t) error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	if n.st != nil {
+		*ust = *n.st
 		return nil
 	}
-
-	if n.dl == nil {
-		n.dl = newDownloader(n.waiters, pn, n.RootData.Sc, n.RootData.KernelId)
+	paths := downloadPaths(pn, n.RootData.KernelId)
+	var r error
+	for _, p := range paths {
+		sst, err := n.RootData.Sc.Stat(p)
+		if err == nil {
+			toUstat(sst, ust)
+			n.st = ust
+			return nil
+		}
+		r = err
 	}
-	n.nwaiter++
-	db.DPrintf(db.BINSRV, "nwaiters %d", n.nwaiter)
-	n.waiters.Wait()
-	n.nwaiter--
-	if n.nwaiter == 0 {
-		db.DPrintf(db.BINSRV, "reset downloader")
-		n.dl = nil
-	}
-	return nil
+	return r
 }
 
 func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
@@ -60,8 +87,7 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 	st := syscall.Stat_t{}
 	err := syscall.Lstat(p, &st)
 	if err != nil {
-		n.download(p)
-		if err := syscall.Lstat(p, &st); err != nil {
+		if n.sStat(p, &st) != nil {
 			return nil, fs.ToErrno(err)
 		}
 	}
@@ -74,13 +100,10 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 var _ = (fs.NodeOpener)((*binFsNode)(nil))
 
 func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
-	flags = flags &^ syscall.O_APPEND
 	p := n.path()
-	f, err := syscall.Open(p, int(flags), 0)
-	if err != nil {
-		return nil, 0, fs.ToErrno(err)
-	}
-	lf := newBinFsFile(f, p)
+	var lf fs.FileHandle
+	dl := n.getDownload(p)
+	lf = newBinFsFile(p, dl, n.st)
 	return lf, 0, 0
 }
 

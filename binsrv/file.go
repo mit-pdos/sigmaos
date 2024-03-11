@@ -2,6 +2,7 @@ package binsrv
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"syscall"
 
@@ -25,6 +26,10 @@ type binfsFile struct {
 	fd   int
 }
 
+func (f *binfsFile) String() string {
+	return fmt.Sprintf("{F %q st %p dl %p %d}", f.path, f.st, f.dl, f.fd)
+}
+
 var _ = (fs.FileHandle)((*binfsFile)(nil))
 var _ = (fs.FileReleaser)((*binfsFile)(nil))
 var _ = (fs.FileGetattrer)((*binfsFile)(nil))
@@ -40,6 +45,9 @@ func (f *binfsFile) Fd() int {
 }
 
 func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.ReadResult, errno syscall.Errno) {
+
+	db.DPrintf(db.BINSRV, "%v: Read %d %d\n", f, len(buf), off)
+
 	fd := f.Fd()
 	if fd == -1 {
 		fd = f.dl.waitDownload()

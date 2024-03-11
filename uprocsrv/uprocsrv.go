@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"sigmaos/binsrv"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -34,17 +35,6 @@ type UprocSrv struct {
 	kernelId string
 	realm    sp.Trealm
 	assigned bool
-}
-
-func lsdir(path string) {
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		db.DFatalf("readdir %v", err)
-	}
-	db.DPrintf(db.ALWAYS, "lsdir: %q", path)
-	for _, e := range entries {
-		db.DPrintf(db.ALWAYS, "%q", e.Name())
-	}
 }
 
 func RunUprocSrv(kernelId string, up string) error {
@@ -94,7 +84,9 @@ func RunUprocSrv(kernelId string, up string) error {
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
 	}
-	db.DPrintf(db.UPROCD, "RunServer done\n")
+	db.DPrintf(db.UPROCD, "RunServer done; rm %q\n", binsrv.BINCACHE)
+	os.RemoveAll(binsrv.BINCACHE)
+	ups.binsrv.Process.Kill()
 	return nil
 }
 

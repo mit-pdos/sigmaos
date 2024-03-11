@@ -3,8 +3,8 @@ package rpcbench
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/rpcclnt"
 	"sigmaos/rpcbench/proto"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	"sigmaos/tracing"
 )

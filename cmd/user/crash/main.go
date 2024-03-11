@@ -4,8 +4,8 @@ import (
 	"os"
 	"time"
 
-	"sigmaos/proc"
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 )
 

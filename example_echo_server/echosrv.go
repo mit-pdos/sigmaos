@@ -1,9 +1,9 @@
 package example_echo_server
 
 import (
-	"sigmaos/proc"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/proc"
 	"sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

@@ -7,6 +7,7 @@
 package binsrv
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -16,6 +17,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 )
@@ -37,19 +39,13 @@ type binFsRoot struct {
 	KernelId string
 
 	Sc *sigmaclnt.SigmaClnt
-
-	// NewNode returns a new InodeEmbedder to be used to respond
-	// to a LOOKUP/CREATE/MKDIR/MKNOD opcode. If not set, use a
-	// binFsNode
-	NewNode func(rootData *binFsRoot, parent *fs.Inode, name string, st *syscall.Stat_t) fs.InodeEmbedder
 }
 
 func (r *binFsRoot) newNode(parent *fs.Inode, name string, st *syscall.Stat_t) fs.InodeEmbedder {
-	if r.NewNode != nil {
-		return r.NewNode(r, parent, name, st)
-	}
 	n := &binFsNode{
 		RootData: r,
+		st:       st,
+		name:     name,
 	}
 	return n
 }
@@ -78,9 +74,14 @@ type binFsNode struct {
 
 	RootData *binFsRoot
 
-	mu sync.Mutex
-	st *syscall.Stat_t
-	dl *downloader
+	mu   sync.Mutex
+	st   *syscall.Stat_t
+	dl   *downloader
+	name string
+}
+
+func (n *binFsNode) String() string {
+	return fmt.Sprintf("{N %q st %p dl %p}", n.path(), n.st, n.dl)
 }
 
 func newBinRoot(rootPath, kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmbedder, error) {
@@ -111,11 +112,7 @@ func RunBinFS(kernelId string) error {
 		return err
 	}
 
-	f, err := os.Create(BINCACHE + "/xxx")
-	if err != nil {
-		return err
-	}
-	f.Close()
+	db.DPrintf(db.BINSRV, "%s", db.LsDir(BINCACHE))
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -165,11 +162,12 @@ func RunBinFS(kernelId string) error {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
+		db.DPrintf(db.BINSRV, "terminate\n")
 		server.Unmount()
 	}()
 
 	server.Wait()
 	//<-ch
-	//db.DPrintf(db.ALWAYS, "Wait returned\n")
+	db.DPrintf(db.ALWAYS, "Wait returned\n")
 	return nil
 }

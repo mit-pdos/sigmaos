@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"io"
 
+	"runtime/debug"
+
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -20,19 +22,25 @@ func ReadFrameInto(rd io.Reader, frame *sessp.Tframe) *serr.Err {
 	if err := binary.Read(rd, binary.LittleEndian, &nbyte); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
-	db.DPrintf(db.FRAME, "ReadFrame %d", nbyte)
+	db.DPrintf(db.FRAME, "ReadFrameInto %d", nbyte)
 	nbyte = nbyte - 4
 	if nbyte < 0 {
 		return serr.NewErr(serr.TErrUnreachable, "readMsg too short")
 	}
 	// If no frame to read into was specified, allocate one
 	if *frame == nil {
+		db.DPrintf(db.ALWAYS, "ReadFrameInto %d no buf specified", nbyte)
 		*frame = make(sessp.Tframe, nbyte)
+	} else {
+		db.DPrintf(db.ALWAYS, "ReadFrameInto %d WITH buf specified\n%s", nbyte, debug.Stack())
 	}
 	if nbyte > uint32(len(*frame)) {
 		db.DFatalf("Output buf too smal: %v < %v", len(*frame), nbyte)
 	}
-	n, e := io.ReadFull(rd, *frame)
+	// Only read the first nbyte bytes
+	buf := (*frame)[:nbyte]
+	n, e := io.ReadFull(rd, buf)
+	db.DPrintf(db.ALWAYS, "ReadFrameInto %d ReadFull returned %v %v", nbyte, n, e)
 	if n != int(nbyte) {
 		return serr.NewErr(serr.TErrUnreachable, e)
 	}

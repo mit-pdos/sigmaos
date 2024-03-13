@@ -54,7 +54,7 @@ func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
 		// Sanity check: if the caller supplied IoVecs to write outputs to, ensure
 		// that they supplied the right number of them.
 		if len(iov) != int(fm.Fc.Nvec) {
-			db.DFatalf("mismatch between reply nvec and supplied destination nvec: %v != %v", len(iov), fm.Fc.Nvec)
+			db.DFatalf("mismatch between supplied destination nvec and reply nvec: %v != %v\nrep:%v", len(iov), fm.Fc.Nvec, fm)
 		}
 	} else {
 		// If there are ouptuts, but the caller didn't supply any IoVecs to write

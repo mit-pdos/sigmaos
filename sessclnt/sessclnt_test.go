@@ -30,6 +30,10 @@ import (
 	"sigmaos/test"
 )
 
+const (
+	READ_TEST_STR = "PDOS!"
+)
+
 var srvaddr string
 
 func init() {
@@ -52,7 +56,7 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 		return nil, err
 	}
 
-	// db.DPrintf(db.TEST, "serve %v\n", fcm)
+	//	db.DPrintf(db.TEST, "serve %v\n", fcm)
 
 	qid := sp.NewQidPerm(0777, 0, 0)
 	var rep *sessp.FcallMsg
@@ -65,6 +69,10 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	case sessp.TTwrite:
 		msg := &sp.Rwrite{Count: uint32(len(fcm.Fcm.Iov[0]))}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
+	case sessp.TTreadF:
+		msg := &sp.Rread{}
+		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
+		rep.Iov = sessp.IoVec{[]byte(READ_TEST_STR)}
 	case sessp.TTwriteread:
 		msg := &sp.Rread{}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
@@ -269,6 +277,17 @@ func (awrt *Awriter) Close() error {
 	close(awrt.req)
 	close(awrt.rep)
 	return nil
+}
+
+func TestRead(t *testing.T) {
+	ts := newTstateSrv(t, 0)
+	buf := make([]byte, len(READ_TEST_STR))
+	req := sp.NewReadF(sp.NoFid, 0, sp.Tsize(len(buf)), sp.NullFence())
+	iov := sessp.IoVec{buf}
+	_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil, iov)
+	assert.Nil(t, err, "Err Read: %v", err)
+	assert.Equal(t, READ_TEST_STR, string(buf))
+	ts.srv.CloseListener()
 }
 
 func TestPerfSessSrvAsync(t *testing.T) {

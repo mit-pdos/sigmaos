@@ -25,7 +25,7 @@ import (
 const (
 	BINFSMNT = "/mnt/binfs/"
 	BINCACHE = "bin/cache"
-	DEBUG    = true
+	DEBUG    = false
 )
 
 type binFsRoot struct {

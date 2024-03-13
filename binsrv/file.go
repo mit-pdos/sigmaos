@@ -46,8 +46,6 @@ func (f *binfsFile) Fd() int {
 
 func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.ReadResult, errno syscall.Errno) {
 
-	db.DPrintf(db.BINSRV, "%v: Read %d %d\n", f, len(buf), off)
-
 	fd := f.Fd()
 	if fd == -1 {
 		fd = f.dl.waitDownload()
@@ -71,7 +69,7 @@ func (f *binfsFile) Release(ctx context.Context) syscall.Errno {
 	if f.fd != -1 {
 		err := syscall.Close(f.fd)
 		f.fd = -1
-		db.DPrintf(db.BINSRV, "read %q %d\n", f.path, f.n)
+		db.DPrintf(db.BINSRV, "Release %q %d\n", f.path, f.n)
 		return fs.ToErrno(err)
 	}
 	return syscall.EBADF

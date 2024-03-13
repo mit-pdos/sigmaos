@@ -37,6 +37,17 @@ func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string) *downloa
 	return dl
 }
 
+func newDownloaderPresent(pn string, sc *sigmaclnt.SigmaClnt, kernelId string) *downloader {
+	dl := &downloader{pn: pn, sc: sc, kernelId: kernelId}
+	dl.waiters = sync.NewCond(&dl.mu)
+	dl.done = true
+	return dl
+}
+
+func (dl *downloader) String() string {
+	return fmt.Sprintf("{pn %q nwaiter %d done %t}", dl.pn, dl.nwaiter, dl.done)
+}
+
 func (dl *downloader) loader() {
 	db.DPrintf(db.BINSRV, "loader starting for %q", dl.pn)
 	if err := dl.downloadProcBin(); err != nil {
@@ -54,6 +65,7 @@ func (dl *downloader) waitDownload() int {
 	dl.mu.Lock()
 	defer dl.mu.Unlock()
 
+	db.DPrintf(db.BINSRV, "waitDownload %v\n", dl)
 	if !dl.done {
 		dl.nwaiter++
 		db.DPrintf(db.BINSRV, "nwaiters %d", dl.nwaiter)
@@ -117,23 +129,6 @@ func (dl *downloader) download(src string) error {
 	return nil
 }
 
-func (dl *downloader) downloadRetry(src string) error {
-	var r error
-	for i := 0; i < N_DOWNLOAD_RETRIES; i++ {
-		// Return if successful. Else, retry
-		if err := dl.download(src); err == nil {
-			return nil
-		} else {
-			db.DPrintf(db.BINSRV, "download %q err %v", src, err)
-			r = err
-			if serr.IsErrCode(err, serr.TErrNotfound) {
-				break
-			}
-		}
-	}
-	return fmt.Errorf("downloadRetry: couldn't download %q in %v retries err %v", src, N_DOWNLOAD_RETRIES, r)
-}
-
 func downloadPaths(pn, kernelId string) []string {
 	name := filepath.Base(pn)
 	buildTag := "TODO XXX" // don't have the proc here
@@ -149,9 +144,32 @@ func downloadPaths(pn, kernelId string) []string {
 }
 
 func (dl *downloader) downloadProcBin() error {
+	paths := downloadPaths(dl.pn, dl.kernelId)
+	return retryPaths(paths, dl.download)
+}
+
+func retryLoop(f func(pn string) error, src string) error {
 	var r error
-	for _, pp := range downloadPaths(dl.pn, dl.kernelId) {
-		if err := dl.downloadRetry(pp); err == nil {
+	for i := 0; i < N_DOWNLOAD_RETRIES; i++ {
+		// Return if successful. Else, retry
+		if err := f(src); err == nil {
+			return nil
+		} else {
+			db.DPrintf(db.BINSRV, "download %q err %v", src, err)
+			r = err
+			if serr.IsErrCode(err, serr.TErrNotfound) {
+				break
+			}
+		}
+	}
+	return fmt.Errorf("retryRetry: couldn't %v %q in %d retries err %v", f, src, N_DOWNLOAD_RETRIES, r)
+
+}
+
+func retryPaths(paths []string, f func(pn string) error) error {
+	var r error
+	for _, pp := range paths {
+		if err := f(pp); err == nil {
 			return nil
 		} else {
 			db.DPrintf(db.BINSRV, "download pp %q err %v", pp, err)

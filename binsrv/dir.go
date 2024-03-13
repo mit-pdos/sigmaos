@@ -37,8 +37,16 @@ func (n *binFsNode) getDownload(pn string) *downloader {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
+	st := syscall.Stat_t{}
+	err := syscall.Lstat(pn, &st)
+	if err == nil {
+		db.DPrintf(db.BINSRV, "getDownload: %q present\n", pn)
+		n.dl = newDownloaderPresent(pn, n.RootData.Sc, n.RootData.KernelId)
+		return n.dl
+	}
+
 	if n.dl == nil {
-		db.DPrintf(db.BINSRV, "start downloader for %q\n", pn)
+		db.DPrintf(db.BINSRV, "getDownload: new downloader %q\n", pn)
 		n.dl = newDownloader(pn, n.RootData.Sc, n.RootData.KernelId)
 	}
 	return n.dl
@@ -66,20 +74,18 @@ func (n *binFsNode) sStat(pn string, ust *syscall.Stat_t) error {
 
 	db.DPrintf(db.BINSRV, "%v: sStat %q\n", n, pn)
 	paths := downloadPaths(pn, n.RootData.KernelId)
-	var r error
-	for _, p := range paths {
-		sst, err := n.RootData.Sc.Stat(p)
+	return retryPaths(paths, func(pn string) error {
+		sst, err := n.RootData.Sc.Stat(pn)
 		if err == nil {
-			db.DPrintf(db.BINSRV, "%v: Stat %q %v\n", n, p, sst)
 			toUstat(sst, ust)
 			return nil
 		}
-		db.DPrintf(db.BINSRV, "%v: Stat %q err %v\n", n, p, err)
-		r = err
-	}
-	return r
+		return err
+	})
 }
 
+// Check cache first. If not present, Stat file in sigmaos and create
+// a fake unix inode.
 func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
 	p := filepath.Join(n.path(), name)
 	st := syscall.Stat_t{}
@@ -100,6 +106,10 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 
 var _ = (fs.NodeOpener)((*binFsNode)(nil))
 
+// Open a file in the cache. It returns a binFsFile with a download
+// obj.  If the file isn't present in cache, getDownload starts a
+// downloader and returns download object for others to wait on.  If
+// the file is in the cache, the download object is marked done.
 func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
 	p := n.path()
 

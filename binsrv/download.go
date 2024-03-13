@@ -115,7 +115,7 @@ func (dl *downloader) copyFile(src string, dst string) error {
 	return nil
 }
 
-func (dl *downloader) download(src string) error {
+func (dl *downloader) download(i int, src string) error {
 	tmpdst := dl.pn + rand.String(8)
 	start := time.Now()
 	if err := dl.copyFile(src, tmpdst); err != nil {
@@ -148,11 +148,11 @@ func (dl *downloader) downloadProcBin() error {
 	return retryPaths(paths, dl.download)
 }
 
-func retryLoop(f func(pn string) error, src string) error {
+func retryLoop(i int, f func(i int, pn string) error, src string) error {
 	var r error
 	for i := 0; i < N_DOWNLOAD_RETRIES; i++ {
 		// Return if successful. Else, retry
-		if err := f(src); err == nil {
+		if err := f(i, src); err == nil {
 			return nil
 		} else {
 			db.DPrintf(db.BINSRV, "download %q err %v", src, err)
@@ -162,14 +162,14 @@ func retryLoop(f func(pn string) error, src string) error {
 			}
 		}
 	}
-	return fmt.Errorf("retryRetry: couldn't %v %q in %d retries err %v", f, src, N_DOWNLOAD_RETRIES, r)
+	return fmt.Errorf("retryLoop: couldn't do %T for %q in %d retries err %v", f, src, N_DOWNLOAD_RETRIES, r)
 
 }
 
-func retryPaths(paths []string, f func(pn string) error) error {
+func retryPaths(paths []string, f func(i int, pn string) error) error {
 	var r error
-	for _, pp := range paths {
-		if err := f(pp); err == nil {
+	for i, pp := range paths {
+		if err := retryLoop(i, f, pp); err == nil {
 			return nil
 		} else {
 			db.DPrintf(db.BINSRV, "download pp %q err %v", pp, err)

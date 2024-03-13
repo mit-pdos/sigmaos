@@ -52,9 +52,19 @@ func (n *binFsNode) getDownload(pn string) *downloader {
 	return n.dl
 }
 
+func idFromStat(st *syscall.Stat_t) fs.StableAttr {
+	swapped := (uint64(st.Dev) << 32) | (uint64(st.Dev) >> 32)
+	return fs.StableAttr{
+		Mode: uint32(st.Mode),
+		Gen:  1,
+		Ino:  swapped ^ st.Ino,
+	}
+}
+
 func toUstat(sst *sp.Stat, ust *syscall.Stat_t) {
 	const BLOCKSIZE = 4096
 
+	ust.Dev = uint64(sst.Dev)
 	ust.Ino = sst.Qid.Path
 	ust.Size = int64(sst.Length)
 	ust.Blocks = int64(sst.Length/BLOCKSIZE + 1)
@@ -74,9 +84,10 @@ func (n *binFsNode) sStat(pn string, ust *syscall.Stat_t) error {
 
 	db.DPrintf(db.BINSRV, "%v: sStat %q\n", n, pn)
 	paths := downloadPaths(pn, n.RootData.KernelId)
-	return retryPaths(paths, func(pn string) error {
+	return retryPaths(paths, func(i int, pn string) error {
 		sst, err := n.RootData.Sc.Stat(pn)
 		if err == nil {
+			sst.Dev = uint32(i)
 			toUstat(sst, ust)
 			return nil
 		}
@@ -97,7 +108,7 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 	}
 	out.Attr.FromStat(&st)
 	node := n.RootData.newNode(n.EmbeddedInode(), name, &st)
-	ch := n.NewInode(ctx, node, n.RootData.idFromStat(&st))
+	ch := n.NewInode(ctx, node, idFromStat(&st))
 
 	db.DPrintf(db.BINSRV, "%v: Lookup %q %v\n", n, name, node)
 

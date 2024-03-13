@@ -29,12 +29,8 @@ const (
 )
 
 type binFsRoot struct {
-	// The path to the root of the underlying file system.
+	// The path to the directory that holds cached binaries
 	Path string
-
-	// The device on which the Path resides. This must be set if
-	// the underlying filesystem crosses file systems.
-	Dev uint64
 
 	KernelId string
 
@@ -48,25 +44,6 @@ func (r *binFsRoot) newNode(parent *fs.Inode, name string, st *syscall.Stat_t) f
 		name:     name,
 	}
 	return n
-}
-
-func (r *binFsRoot) idFromStat(st *syscall.Stat_t) fs.StableAttr {
-	// We compose an inode number by the underlying inode, and
-	// mixing in the device number. In traditional filesystems,
-	// the inode numbers are small. The device numbers are also
-	// small (typically 16 bit). Finally, we mask out the root
-	// device number of the root, so a loopback FS that does not
-	// encompass multiple mounts will reflect the inode numbers of
-	// the underlying filesystem
-	swapped := (uint64(st.Dev) << 32) | (uint64(st.Dev) >> 32)
-	swappedRootDev := (r.Dev << 32) | (r.Dev >> 32)
-	return fs.StableAttr{
-		Mode: uint32(st.Mode),
-		Gen:  1,
-		// This should work well for traditional backing FSes,
-		// not so much for other go-fuse FS-es
-		Ino: (swapped ^ swappedRootDev) ^ st.Ino,
-	}
 }
 
 type binFsNode struct {
@@ -93,7 +70,6 @@ func newBinRoot(rootPath, kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmb
 
 	root := &binFsRoot{
 		Path:     rootPath,
-		Dev:      uint64(st.Dev),
 		KernelId: kernelId,
 		Sc:       sc,
 	}

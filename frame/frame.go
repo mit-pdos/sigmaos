@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"io"
 
-	"runtime/debug"
-
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -29,10 +27,8 @@ func ReadFrameInto(rd io.Reader, frame *sessp.Tframe) *serr.Err {
 	}
 	// If no frame to read into was specified, allocate one
 	if *frame == nil {
-		db.DPrintf(db.ALWAYS, "ReadFrameInto %d no buf specified", nbyte)
 		*frame = make(sessp.Tframe, nbyte)
 	} else {
-		db.DPrintf(db.ALWAYS, "ReadFrameInto %d WITH buf specified\n%s", nbyte, debug.Stack())
 	}
 	if nbyte > uint32(len(*frame)) {
 		db.DFatalf("Output buf too smal: %v < %v", len(*frame), nbyte)
@@ -40,7 +36,6 @@ func ReadFrameInto(rd io.Reader, frame *sessp.Tframe) *serr.Err {
 	// Only read the first nbyte bytes
 	buf := (*frame)[:nbyte]
 	n, e := io.ReadFull(rd, buf)
-	db.DPrintf(db.ALWAYS, "ReadFrameInto %d ReadFull returned %v %v", nbyte, n, e)
 	if n != int(nbyte) {
 		return serr.NewErr(serr.TErrUnreachable, e)
 	}
@@ -120,13 +115,11 @@ func PushToFrame(wr io.Writer, b sessp.Tframe) error {
 func PopFromFrame(rd io.Reader) (sessp.Tframe, error) {
 	var l uint32
 	if err := binary.Read(rd, binary.LittleEndian, &l); err != nil {
-		db.DPrintf(db.ALWAYS, "Error PopFromFrame: %v", err)
 		if err != io.EOF {
 			return nil, serr.NewErr(serr.TErrUnreachable, err.Error())
 		}
 		return nil, err
 	}
-	db.DPrintf(db.ALWAYS, "PopFromFrame L: %v", l)
 	b := make(sessp.Tframe, int(l))
 	if _, err := io.ReadFull(rd, b); err != nil && !(err == io.EOF && l == 0) {
 		return nil, serr.NewErr(serr.TErrUnreachable, err.Error())

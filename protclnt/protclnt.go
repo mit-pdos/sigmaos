@@ -169,11 +169,11 @@ func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfe
 	if err != nil {
 		return 0, err
 	}
-	_, ok := reply.Msg.(*sp.Rread)
+	rep, ok := reply.Msg.(*sp.Rread)
 	if !ok {
 		return 0, serr.NewErr(serr.TErrBadFcall, "Rread")
 	}
-	return sp.Tsize(len(reply.Iov[0])), nil
+	return rep.Tcount(), nil
 }
 
 func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {

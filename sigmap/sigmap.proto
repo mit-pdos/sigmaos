@@ -134,6 +134,7 @@ message TreadF {
 }
 
 message Rread {
+        uint32 count = 1;
 }
 
 message TwriteF {

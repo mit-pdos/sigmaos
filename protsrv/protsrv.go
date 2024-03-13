@@ -299,6 +299,7 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
+	rets.Count = uint32(len(data))
 	return data, nil
 }
 

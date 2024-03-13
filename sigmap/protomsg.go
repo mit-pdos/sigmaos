@@ -116,6 +116,10 @@ func (r *TreadF) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
+func (r *Rread) Tcount() Tsize {
+	return Tsize(r.Count)
+}
+
 func NewTwriteF(fid Tfid, o Toffset, f *Tfence) *TwriteF {
 	return &TwriteF{Fid: uint32(fid), Offset: uint64(o), Fence: f.FenceProto()}
 }

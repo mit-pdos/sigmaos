@@ -24,8 +24,8 @@ func (pclnt *ProtClnt) Servers() sp.Taddrs {
 	return pclnt.addrs
 }
 
-func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
-	reply, err := pclnt.sm.RPC(addrs, args, iov)
+func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	reply, err := pclnt.sm.RPC(addrs, args, iniov, outiov)
 	if err != nil {
 		return nil, err
 	}
@@ -37,20 +37,16 @@ func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, iov sessp.Io
 }
 
 func (pclnt *ProtClnt) Call(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(pclnt.addrs, args, nil)
+	return pclnt.CallServer(pclnt.addrs, args, nil, nil)
 }
 
-func (pclnt *ProtClnt) CallData(args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(pclnt.addrs, args, sessp.IoVec{data})
-}
-
-func (pclnt *ProtClnt) CallIoVec(args sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(pclnt.addrs, args, iov)
+func (pclnt *ProtClnt) CallIoVec(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	return pclnt.CallServer(pclnt.addrs, args, iniov, outiov)
 }
 
 func (pclnt *ProtClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
 	args := sp.NewTattach(fid, sp.NoFid, principal, cid, path)
-	reply, err := pclnt.CallServer(pclnt.addrs, args, nil)
+	reply, err := pclnt.CallServer(pclnt.addrs, args, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +163,7 @@ func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 
 func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
 	args := sp.NewReadF(fid, offset, sp.Tsize(len(b)), f)
-	reply, err := pclnt.CallIoVec(args, sessp.IoVec{b})
+	reply, err := pclnt.CallIoVec(args, nil, sessp.IoVec{b})
 	if err != nil {
 		return 0, err
 	}
@@ -180,7 +176,7 @@ func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfe
 
 func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
 	args := sp.NewTwriteF(fid, offset, f)
-	reply, err := pclnt.CallData(args, data)
+	reply, err := pclnt.CallIoVec(args, sessp.IoVec{data}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +189,7 @@ func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data
 
 func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
 	args := sp.NewTwriteread(fid)
-	reply, err := pclnt.CallIoVec(args, iov)
+	reply, err := pclnt.CallIoVec(args, iov, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +267,7 @@ func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offse
 
 func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sp.Tfence, data []byte, lid sp.TleaseId) (*sp.Rwrite, *serr.Err) {
 	args := sp.NewTputfile(fid, mode, perm, offset, path, resolve, lid, f)
-	reply, err := pclnt.CallData(args, data)
+	reply, err := pclnt.CallIoVec(args, sessp.IoVec{data}, nil)
 	if err != nil {
 		return nil, err
 	}

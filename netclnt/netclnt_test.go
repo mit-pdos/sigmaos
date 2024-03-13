@@ -120,14 +120,16 @@ func (c *call) Tag() sessp.Ttag {
 }
 
 type transport struct {
-	rdr io.Reader
-	wrt *bufio.Writer
+	rdr  io.Reader
+	wrt  *bufio.Writer
+	iovm *demux.IoVecMap
 }
 
-func newTransport(conn net.Conn) demux.TransportI {
+func newTransport(conn net.Conn, iovm *demux.IoVecMap) demux.TransportI {
 	return &transport{
-		rdr: bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		wrt: bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		rdr:  bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
+		wrt:  bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		iovm: iovm,
 	}
 }
 
@@ -201,23 +203,28 @@ type TstateNet struct {
 	srv     *netsrv.NetServer
 	clnt    *netclnt.NetClnt
 	dmx     *demux.DemuxClnt
-	mktrans func(net.Conn) demux.TransportI
+	mktrans func(net.Conn, *demux.IoVecMap) demux.TransportI
 }
 
 func (ts *TstateNet) NewConn(conn net.Conn) *demux.DemuxSrv {
 	nc := &netConn{conn}
-	return demux.NewDemuxSrv(nc, ts.mktrans(conn))
+	iovm := demux.NewIoVecMap()
+	return demux.NewDemuxSrv(nc, ts.mktrans(conn, iovm))
 }
 
-func newTstateNet(t *testing.T, mktrans func(net.Conn) demux.TransportI) *TstateNet {
-	ts := &TstateNet{TstateMin: test.NewTstateMin(t), mktrans: mktrans}
+func newTstateNet(t *testing.T, mktrans func(net.Conn, *demux.IoVecMap) demux.TransportI) *TstateNet {
+	ts := &TstateNet{
+		TstateMin: test.NewTstateMin(t),
+		mktrans:   mktrans,
+	}
 	ts.srv = netsrv.NewNetServer(ts.PE, ts.Addr, ts)
 
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
 
 	nc, err := netclnt.NewNetClnt(sp.ROOTREALM.String(), sp.Taddrs{ts.srv.MyAddr()})
 	assert.Nil(t, err)
-	ts.dmx = demux.NewDemuxClnt(mktrans(nc.Conn()))
+	iovm := demux.NewIoVecMap()
+	ts.dmx = demux.NewDemuxClnt(mktrans(nc.Conn(), iovm), iovm)
 	return ts
 }
 
@@ -228,7 +235,7 @@ func TestNetClntPerfFrame(t *testing.T) {
 	t0 := time.Now()
 	n := TOTAL / REQBUFSZ
 	for i := 0; i < n; i++ {
-		d, err := ts.dmx.SendReceive(c)
+		d, err := ts.dmx.SendReceive(c, nil)
 		assert.Nil(t, err)
 		call := d.(*call)
 		assert.True(t, len(call.buf) == REPBUFSZ)
@@ -249,7 +256,7 @@ func TestNetClntPerfFcall(t *testing.T) {
 	t0 := time.Now()
 	n := TOTAL / REQBUFSZ
 	for i := 0; i < n; i++ {
-		c, err := ts.dmx.SendReceive(pfcm)
+		c, err := ts.dmx.SendReceive(pfcm, nil)
 		assert.Nil(t, err)
 		fcm := c.(*sessp.PartMarshaledMsg)
 		assert.True(t, len(fcm.Fcm.Iov[0]) == REPBUFSZ)

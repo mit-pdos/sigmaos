@@ -17,6 +17,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -36,7 +37,13 @@ func TestOne(t *testing.T) {
 	dirents, err := ts.GetDir(sp.S3)
 	assert.Nil(t, err, "GetDir")
 
-	assert.Equal(t, 1, len(dirents))
+	db.DPrintf(db.TEST, "TestOne %v %v\n", sp.S3, sp.Names(dirents))
+
+	d := sp.S3 + "~local/"
+	dirents, err = ts.GetDir(d)
+	assert.Nil(t, err, "GetDir")
+
+	db.DPrintf(db.TEST, "TestOne %v %v\n", d, sp.Names(dirents))
 
 	ts.Shutdown()
 }

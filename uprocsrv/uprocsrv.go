@@ -43,7 +43,7 @@ func RunUprocSrv(kernelId string, up string) error {
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
 
-	ups.binsrv = exec.Command("binfsd", kernelId)
+	ups.binsrv = exec.Command("binfsd", kernelId, pe.GetPID().String())
 	ups.binsrv.Stdout = os.Stdout
 	ups.binsrv.Stderr = os.Stderr
 
@@ -84,8 +84,8 @@ func RunUprocSrv(kernelId string, up string) error {
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
 	}
-	db.DPrintf(db.UPROCD, "RunServer done; rm %q\n", binsrv.BINCACHE)
-	os.RemoveAll(binsrv.BINCACHE)
+	db.DPrintf(db.UPROCD, "RunServer done\n")
+	binsrv.Cleanup(pe.GetPID().String())
 	ups.binsrv.Process.Kill()
 	return nil
 }

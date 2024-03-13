@@ -24,7 +24,7 @@ import (
 
 const (
 	BINFSMNT = "/mnt/binfs/"
-	BINCACHE = "bin/cache"
+	BINCACHE = "bin/cache/"
 	DEBUG    = false
 )
 
@@ -101,7 +101,15 @@ func newBinRoot(rootPath, kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmb
 	return root.newNode(nil, "", &st), nil
 }
 
-func RunBinFS(kernelId string) error {
+func BinFsCacheDir(instance string) string {
+	return BINCACHE + instance
+}
+
+func Cleanup(instance string) error {
+	return os.RemoveAll(BinFsCacheDir(instance))
+}
+
+func RunBinFS(kernelId, dir string) error {
 	pe := proc.GetProcEnv()
 
 	if err := os.MkdirAll(BINFSMNT, 0750); err != nil {
@@ -112,14 +120,19 @@ func RunBinFS(kernelId string) error {
 		return err
 	}
 
-	db.DPrintf(db.BINSRV, "%s", db.LsDir(BINCACHE))
+	d := BinFsCacheDir(dir)
+	if err := os.MkdirAll(d, 0750); err != nil {
+		return err
+	}
+
+	db.DPrintf(db.BINSRV, "%s", db.LsDir(d))
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		return err
 	}
 
-	loopbackRoot, err := newBinRoot(BINCACHE, kernelId, sc)
+	loopbackRoot, err := newBinRoot(d, kernelId, sc)
 	if err != nil {
 		return err
 	}

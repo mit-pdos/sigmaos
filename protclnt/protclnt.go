@@ -4,6 +4,7 @@
 package protclnt
 
 import (
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
@@ -162,6 +163,7 @@ func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 }
 
 func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
+	db.DPrintf(db.PROTCLNT, "Read fid %v o %v")
 	args := sp.NewReadF(fid, offset, sp.Tsize(len(b)), f)
 	reply, err := pclnt.CallIoVec(args, nil, sessp.IoVec{b})
 	if err != nil {

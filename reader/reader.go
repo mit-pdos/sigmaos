@@ -29,7 +29,6 @@ func (rdr *Reader) Nbytes() sp.Tlength {
 }
 
 func (rdr *Reader) Read(p []byte) (int, error) {
-	db.DPrintf(db.ALWAYS, "%p Read[%v] %v bytes", rdr, rdr.Path(), len(p))
 	if len(p) == 0 {
 		return 0, nil
 	}
@@ -41,14 +40,12 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 		db.DPrintf(db.READER_ERR, "Read %v err %v\n", rdr.path, err)
 		return 0, err
 	}
-	db.DPrintf(db.ALWAYS, "%p Read[%v] %v bytes returned %v \nslice %v", rdr, rdr.Path(), len(p), n, p[:n])
 	if n == 0 {
 		rdr.eof = true
 		return 0, io.EOF
 	}
 	if int(n) < len(p) {
 		db.DPrintf(db.READER_ERR, "Read short %v %v %v\n", rdr.path, len(p), n)
-		db.DPrintf(db.ERROR, "Read short %v %v %v\n", rdr.path, len(p), n)
 		err = io.EOF
 		rdr.eof = true
 	}
@@ -58,7 +55,6 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 
 func (rdr *Reader) GetData() ([]byte, error) {
 	// XXX too big?
-	db.DPrintf(db.ALWAYS, "%p GetData[%v]", rdr, rdr.Path())
 	b := make([]byte, sp.MAXGETSET)
 	sz, err := rdr.rdr.Read(0, b)
 	return b[:sz], err

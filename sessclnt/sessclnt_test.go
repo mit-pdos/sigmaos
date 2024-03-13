@@ -1,6 +1,7 @@
 package sessclnt_test
 
 import (
+	"flag"
 	"net"
 	"sync"
 	"testing"
@@ -28,6 +29,12 @@ import (
 	"sigmaos/spcodec"
 	"sigmaos/test"
 )
+
+var srvaddr string
+
+func init() {
+	flag.StringVar(&srvaddr, "srvaddr", sp.NOT_SET, "service addr")
+}
 
 type SessSrv struct {
 	crash int
@@ -81,12 +88,22 @@ type TstateSrv struct {
 	crash int
 }
 
-func newTstateSrv(t *testing.T, crash int) *TstateSrv {
-	ts := &TstateSrv{TstateMin: test.NewTstateMin(t), crash: crash}
-	ts.srv = netsrv.NewNetServer(ts.PE, ts.Addr, ts)
-	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
+func newTstateClntAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
+	ts := &TstateSrv{TstateMin: test.NewTstateMinAddr(t, addr), crash: crash}
 	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
 	return ts
+}
+
+func newTstateSrvAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
+	ts := newTstateClntAddr(t, addr, crash)
+	ts.srv = netsrv.NewNetServer(ts.PE, ts.Addr, ts)
+	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
+	return ts
+}
+
+func newTstateSrv(t *testing.T, crash int) *TstateSrv {
+	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
+	return newTstateSrvAddr(t, addr, crash)
 }
 
 func (ts *TstateSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
@@ -276,6 +293,57 @@ func TestPerfSessSrvAsync(t *testing.T) {
 	ts.srv.CloseListener()
 }
 
+func TestPerfSessSrvAsyncSrv(t *testing.T) {
+	if srvaddr == sp.NOT_SET {
+		db.DPrintf(db.TEST, "Srv addr not set. Skipping test.")
+		return
+	}
+
+	h, pstr, err := net.SplitHostPort(srvaddr)
+	assert.Nil(t, err, "Err split host port: %v", err)
+	p, err := sp.ParsePort(pstr)
+	assert.Nil(t, err, "Err parse port: %v", err)
+
+	addr := sp.NewTaddr(sp.Tip(h), sp.OUTER_CONTAINER_IP, p)
+
+	ts := newTstateSrvAddr(t, addr, 0)
+	defer ts.srv.CloseListener()
+	time.Sleep(20 * time.Second)
+
+}
+
+func TestPerfSessSrvAsyncClnt(t *testing.T) {
+	if srvaddr == sp.NOT_SET {
+		db.DPrintf(db.TEST, "Srv addr not set. Skipping test.")
+		return
+	}
+
+	h, pstr, err := net.SplitHostPort(srvaddr)
+	assert.Nil(t, err, "Err split host port: %v", err)
+	p, err := sp.ParsePort(pstr)
+	assert.Nil(t, err, "Err parse port: %v", err)
+
+	addr := sp.NewTaddr(sp.Tip(h), sp.OUTER_CONTAINER_IP, p)
+	ts := newTstateClntAddr(t, addr, 0)
+	aw := NewAwriter(1, ts.clnt, addr)
+	buf := test.NewBuf(REQBUFSZ)
+
+	t0 := time.Now()
+
+	n := TOTAL / REQBUFSZ
+	for i := 0; i < n; i++ {
+		err := aw.Write(sessp.IoVec{buf})
+		assert.Nil(t, err)
+	}
+
+	aw.Close()
+
+	tot := uint64(TOTAL)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/REQBUFSZ), n, test.TputStr(TOTAL, ms))
+
+}
+
 func TestPerfSessSrvSync(t *testing.T) {
 	ts := newTstateSrv(t, 0)
 	buf := test.NewBuf(REQBUFSZ)
@@ -295,6 +363,55 @@ func TestPerfSessSrvSync(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/REQBUFSZ), n, test.TputStr(TOTAL, ms))
 
 	ts.srv.CloseListener()
+}
+
+func TestPerfSessSrvSyncSrv(t *testing.T) {
+	if srvaddr == sp.NOT_SET {
+		db.DPrintf(db.TEST, "Srv addr not set. Skipping test.")
+		return
+	}
+
+	h, pstr, err := net.SplitHostPort(srvaddr)
+	assert.Nil(t, err, "Err split host port: %v", err)
+	p, err := sp.ParsePort(pstr)
+	assert.Nil(t, err, "Err parse port: %v", err)
+
+	addr := sp.NewTaddr(sp.Tip(h), sp.OUTER_CONTAINER_IP, p)
+
+	ts := newTstateSrvAddr(t, addr, 0)
+	defer ts.srv.CloseListener()
+	time.Sleep(20 * time.Second)
+}
+
+func TestPerfSessSrvSyncClnt(t *testing.T) {
+	if srvaddr == sp.NOT_SET {
+		db.DPrintf(db.TEST, "Srv addr not set. Skipping test.")
+		return
+	}
+
+	h, pstr, err := net.SplitHostPort(srvaddr)
+	assert.Nil(t, err, "Err split host port: %v", err)
+	p, err := sp.ParsePort(pstr)
+	assert.Nil(t, err, "Err parse port: %v", err)
+
+	addr := sp.NewTaddr(sp.Tip(h), sp.OUTER_CONTAINER_IP, p)
+
+	ts := newTstateClntAddr(t, addr, 0)
+	buf := test.NewBuf(REQBUFSZ)
+
+	t0 := time.Now()
+
+	n := TOTAL / REQBUFSZ
+	for i := 0; i < TOTAL/REQBUFSZ; i++ {
+		req := sp.NewTwriteread(sp.NoFid)
+		rep, err := ts.clnt.RPC(sp.Taddrs{ts.Addr}, req, sessp.IoVec{buf})
+		assert.Nil(t, err)
+		assert.True(t, REPBUFSZ == len(rep.Iov[0]))
+	}
+
+	tot := uint64(TOTAL)
+	ms := time.Since(t0).Milliseconds()
+	db.DPrintf(db.ALWAYS, "wrote %v bytes in %v ms (%v us per iter, %d iter) tput %v\n", humanize.Bytes(tot), ms, (ms*1000)/(TOTAL/REQBUFSZ), n, test.TputStr(TOTAL, ms))
 }
 
 //

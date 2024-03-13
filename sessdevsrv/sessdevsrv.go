@@ -16,8 +16,8 @@ import (
 type NewSessionF func(*memfssrv.MemFs, sessp.Tsession) (fs.Inode, *serr.Err)
 
 type SessDev struct {
-	mfs *memfssrv.MemFs
-	dir string
+	mfs  *memfssrv.MemFs
+	dir  string
 	news NewSessionF
 }
 

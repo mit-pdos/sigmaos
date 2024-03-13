@@ -46,11 +46,9 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 	}
 	if int(n) < len(p) {
 		db.DPrintf(db.READER_ERR, "Read short %v %v %v\n", rdr.path, len(p), n)
-		err = io.EOF
-		rdr.eof = true
 	}
 	rdr.off += sp.Toffset(n)
-	return int(n), err
+	return int(n), nil
 }
 
 func (rdr *Reader) GetData() ([]byte, error) {

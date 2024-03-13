@@ -326,6 +326,7 @@ func TestReadOff(t *testing.T) {
 	n, err := rdr.Reader.Read(b)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, n)
+	assert.Equal(t, "lo", string(b[:2]))
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err, "Remove: %v", err)

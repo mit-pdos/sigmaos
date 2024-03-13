@@ -239,23 +239,24 @@ func (npc *NpSess) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if !ok {
 		return nil, sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	d, err := npc.fidc.ReadF(fid, args.Toffset(), args.Tcount(), sp.NullFence())
+	b := make([]byte, args.Tcount())
+	cnt, err := npc.fidc.ReadF(fid, args.Toffset(), b, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Read: args %v err %v\n", args, err)
 		return nil, sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROXY, "ReadUV: args %v rets %v %d\n", args, rets, len(d))
+	db.DPrintf(db.PROXY, "ReadUV: args %v rets %v %d\n", args, rets, cnt)
 	qid := npc.pc.Qid(fid)
 	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
-		d1, err1 := Sp2NpDir(d, args.Tcount())
+		d1, err1 := Sp2NpDir(b, args.Tcount())
 		if err != nil {
 			db.DPrintf(db.PROXY, "Read: Sp2NpDir err %v\n", err1)
 			return nil, sp.NewRerrorSerr(serr.NewErrError(err1))
 		}
-		d = d1
+		b = d1
 	}
-	db.DPrintf(db.PROXY, "Read: args %v rets %v %v\n", args, rets, len(d))
-	return d, nil
+	db.DPrintf(db.PROXY, "Read: args %v rets %v %v\n", args, rets, cnt)
+	return b, nil
 }
 
 func (npc *NpSess) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Rerror {

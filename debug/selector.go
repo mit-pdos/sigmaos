@@ -161,6 +161,7 @@ const (
 	READER_ERR              = "READER" + ERR
 	AWRITER                 = "AWRITER"
 	FSLIB                   = "FSLIB"
+	FSLIB_ERR               = "FSLIB" + ERR
 	SEMCLNT                 = "SEMCLNT"
 	SEMCLNT_ERR             = SEMCLNT + ERR
 	EPOCHCLNT               = "EPOCHCLNT"

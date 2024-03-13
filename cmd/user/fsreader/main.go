@@ -68,8 +68,9 @@ func (r *Reader) Work() *proc.Status {
 	}
 	defer r.CloseFd(fd)
 	for {
-		data, err := r.Read(fd, pipe.PIPESZ)
-		if len(data) == 0 || err != nil {
+		data := make([]byte, pipe.PIPESZ)
+		cnt, err := r.Read(fd, data)
+		if cnt == 0 || err != nil {
 			break
 		}
 		_, err = r.Write(pipefd, data)

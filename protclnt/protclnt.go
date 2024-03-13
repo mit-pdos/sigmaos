@@ -165,17 +165,17 @@ func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, *serr.Err) {
-	args := sp.NewReadF(fid, offset, cnt, f)
-	reply, err := pclnt.Call(args)
+func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
+	args := sp.NewReadF(fid, offset, sp.Tsize(len(b)), f)
+	reply, err := pclnt.CallIoVec(args, sessp.IoVec{b})
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	_, ok := reply.Msg.(*sp.Rread)
 	if !ok {
-		return nil, serr.NewErr(serr.TErrBadFcall, "Rread")
+		return 0, serr.NewErr(serr.TErrBadFcall, "Rread")
 	}
-	return reply.Iov[0], nil
+	return sp.Tsize(len(reply.Iov[0])), nil
 }
 
 func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {

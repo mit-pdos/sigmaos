@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
@@ -20,7 +21,9 @@ func MkDirReader(rdr io.Reader) *bufio.Reader {
 // Too stop early, f must return true.  Returns true if stopped early.
 func ReadDir(drdr *bufio.Reader, f func(*sp.Stat) (bool, error)) (bool, error) {
 	for {
+		db.DPrintf(db.ALWAYS, "Unmarshal dir ent")
 		st, err := spcodec.UnmarshalDirEnt(drdr)
+		db.DPrintf(db.ALWAYS, "Unmarshal dir ent %v post err %v", st, err)
 		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}

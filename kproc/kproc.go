@@ -21,7 +21,7 @@ func RunKernelProc(outerIP sp.Tip, p *proc.Proc, extra []*os.File) (*exec.Cmd, e
 	cmd.Stderr = os.Stderr
 	cmd.ExtraFiles = extra
 	cmd.Env = env
-	db.DPrintf(db.KERNEL, "RunKernelProc %v env %v", p, env)
+	db.DPrintf(db.KERNEL, "RunKernelProc %v", p)
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}

@@ -28,7 +28,7 @@ type SigmaOS interface {
 	Remove(path string) error
 	GetFile(path string) ([]byte, error)
 	PutFile(path string, p sp.Tperm, m sp.Tmode, d []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error)
-	Read(fd int, sz sp.Tsize) ([]byte, error)
+	Read(fd int, b []byte) (sp.Tsize, error)
 	Write(fd int, d []byte) (sp.Tsize, error)
 	Seek(fd int, o sp.Toffset) error
 

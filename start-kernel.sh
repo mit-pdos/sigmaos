@@ -146,10 +146,13 @@ fi
 
 if [ "$PRIV_KEY" == "NOT_SET" ]; then
   openssl ecparam -name prime256v1 -genkey -noout -out /tmp/sigmaos/master-key.priv -outform DER
-  PRIV_KEY="$(cat /tmp/sigmaos/master-key.priv | base64)"
+  PRIV_KEY="$(cat /tmp/sigmaos/master-key.priv | base64 | awk '{$1=$1;print}')"
   openssl ec -in /tmp/sigmaos/master-key.priv -pubout -out /tmp/sigmaos/master-key.pub -outform DER
-  PUB_KEY="$(cat /tmp/sigmaos/master-key.pub | base64)"
+  PUB_KEY="$(cat /tmp/sigmaos/master-key.pub | base64 | awk '{$1=$1;print}')"
 fi
+
+echo -n "$PRIV_KEY" | awk '{$1=$1;print}' > /tmp/sigmaos/master-key.priv 
+echo -n "$PUB_KEY" | awk '{$1=$1;print}' > /tmp/sigmaos/master-key.pub
 
 # If running in local configuration, mount bin directory.
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
@@ -213,9 +216,6 @@ while [ ! -f "/tmp/sigmaos/${KERNELID}" ]; do
     sleep 0.1
 done;
 rm -f "/tmp/sigmaos/${KERNELID}"
-
-echo "$PRIV_KEY" > /tmp/sigmaos/master-key.priv 
-echo "$PUB_KEY" > /tmp/sigmaos/master-key.pub
 
 echo -n $IP
 

@@ -105,8 +105,10 @@ func BinFsCacheDir(instance string) string {
 	return BINCACHE + instance
 }
 
-func Cleanup(instance string) error {
-	return os.RemoveAll(BinFsCacheDir(instance))
+func Cleanup(dir string) error {
+	d := BinFsCacheDir(dir)
+	db.DPrintf(db.BINSRV, "Cleanup %s", d)
+	return os.RemoveAll(d)
 }
 
 func RunBinFS(kernelId, dir string) error {

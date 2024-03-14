@@ -58,6 +58,8 @@ func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.R
 		f.fd = fd
 	}
 
+	db.DPrintf(db.BINSRV, "Read %q l %d o %d\n", f.path, len(buf), off)
+
 	f.n += len(buf)
 	r := fuse.ReadResultFd(uintptr(f.fd), off, len(buf))
 	return r, fs.OK

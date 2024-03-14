@@ -72,9 +72,7 @@ func toUstat(sst *sp.Stat, ust *syscall.Stat_t) {
 	ust.Mtim.Sec = int64(sst.Mtime)
 	ust.Ctim.Sec = int64(sst.Mtime)
 	ust.Mode = 0777
-	ust.Nlink = 2
-	//ust.Uid = sst.Uid
-	//ust.Gid = sst.Gid
+	ust.Nlink = 1
 	ust.Blksize = BLOCKSIZE
 }
 

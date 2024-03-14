@@ -13,8 +13,8 @@ import (
 	db "sigmaos/debug"
 )
 
-func newBinFsFile(path string, dl *downloader, st *syscall.Stat_t) fs.FileHandle {
-	return &binfsFile{path: path, dl: dl, st: st, fd: -1}
+func newBinFsFile(path string, dl *downloader) fs.FileHandle {
+	return &binfsFile{path: path, dl: dl, fd: -1}
 }
 
 type binfsFile struct {
@@ -22,17 +22,15 @@ type binfsFile struct {
 	path string
 	n    int
 	dl   *downloader
-	st   *syscall.Stat_t
 	fd   int
 }
 
 func (f *binfsFile) String() string {
-	return fmt.Sprintf("{F %q st %p dl %p %d}", f.path, f.st, f.dl, f.fd)
+	return fmt.Sprintf("{F %q st %p dl %p %d}", f.path, f.dl, f.fd)
 }
 
 var _ = (fs.FileHandle)((*binfsFile)(nil))
 var _ = (fs.FileReleaser)((*binfsFile)(nil))
-var _ = (fs.FileGetattrer)((*binfsFile)(nil))
 var _ = (fs.FileReader)((*binfsFile)(nil))
 var _ = (fs.FileGetlker)((*binfsFile)(nil))
 var _ = (fs.FileLseeker)((*binfsFile)(nil))
@@ -45,10 +43,9 @@ func (f *binfsFile) Fd() int {
 }
 
 func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.ReadResult, errno syscall.Errno) {
-
 	fd := f.Fd()
 	if fd == -1 {
-		fd = f.dl.waitDownload()
+		fd = f.dl.waitDownload(off, len(buf))
 	}
 
 	f.mu.Lock()
@@ -89,13 +86,6 @@ func (f *binfsFile) Getlk(ctx context.Context, owner uint64, lk *fuse.FileLock, 
 	errno = fs.ToErrno(syscall.FcntlFlock(uintptr(f.fd), _OFD_GETLK, &flk))
 	out.FromFlockT(&flk)
 	return
-}
-
-func (f *binfsFile) Getattr(ctx context.Context, a *fuse.AttrOut) syscall.Errno {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	a.FromStat(f.st)
-	return fs.OK
 }
 
 func (f *binfsFile) Lseek(ctx context.Context, off uint64, whence uint32) (uint64, syscall.Errno) {

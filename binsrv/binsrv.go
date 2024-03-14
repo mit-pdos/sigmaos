@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -30,17 +29,13 @@ const (
 
 type binFsRoot struct {
 	// The path to the directory that holds cached binaries
-	Path string
-
-	KernelId string
-
-	Sc *sigmaclnt.SigmaClnt
+	Path     string
+	bincache *bincache
 }
 
 func (r *binFsRoot) newNode(parent *fs.Inode, name string, st *syscall.Stat_t) fs.InodeEmbedder {
 	n := &binFsNode{
 		RootData: r,
-		st:       st,
 		name:     name,
 	}
 	return n
@@ -50,15 +45,11 @@ type binFsNode struct {
 	fs.Inode
 
 	RootData *binFsRoot
-
-	mu   sync.Mutex
-	st   *syscall.Stat_t
-	dl   *downloader
-	name string
+	name     string
 }
 
 func (n *binFsNode) String() string {
-	return fmt.Sprintf("{N %q st %p dl %p}", n.path(), n.st, n.dl)
+	return fmt.Sprintf("{N %q}", n.path())
 }
 
 func newBinRoot(rootPath, kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmbedder, error) {
@@ -70,8 +61,7 @@ func newBinRoot(rootPath, kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmb
 
 	root := &binFsRoot{
 		Path:     rootPath,
-		KernelId: kernelId,
-		Sc:       sc,
+		bincache: newBinCache(kernelId, sc),
 	}
 
 	return root.newNode(nil, "", &st), nil
@@ -114,7 +104,7 @@ func RunBinFS(kernelId, dir string) error {
 	if err != nil {
 		return err
 	}
-	sec := time.Second
+	sec := 100 * time.Second
 	opts := &fs.Options{
 		AttrTimeout:  &sec,
 		EntryTimeout: &sec,

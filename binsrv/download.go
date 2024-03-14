@@ -10,7 +10,6 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -20,32 +19,38 @@ const (
 	N_DOWNLOAD_RETRIES = 100
 )
 
+type waiter struct {
+	cond     *sync.Cond
+	nwaiters int
+}
+
 type downloader struct {
 	mu       sync.Mutex
 	pn       string
 	kernelId string
 	sc       *sigmaclnt.SigmaClnt
-	waiters  *sync.Cond
-	nwaiter  int
+	waiters  map[int64]*waiter
 	done     bool
 }
 
+func newDownload(pn string, sc *sigmaclnt.SigmaClnt, kernelId string) *downloader {
+	dl := &downloader{
+		pn:       pn,
+		sc:       sc,
+		kernelId: kernelId,
+		waiters:  make(map[int64]*waiter),
+	}
+	return dl
+}
+
 func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string) *downloader {
-	dl := &downloader{pn: pn, sc: sc, kernelId: kernelId}
-	dl.waiters = sync.NewCond(&dl.mu)
+	dl := newDownload(pn, sc, kernelId)
 	go dl.loader()
 	return dl
 }
 
-func newDownloaderPresent(pn string, sc *sigmaclnt.SigmaClnt, kernelId string) *downloader {
-	dl := &downloader{pn: pn, sc: sc, kernelId: kernelId}
-	dl.waiters = sync.NewCond(&dl.mu)
-	dl.done = true
-	return dl
-}
-
 func (dl *downloader) String() string {
-	return fmt.Sprintf("{pn %q nwaiter %d done %t}", dl.pn, dl.nwaiter, dl.done)
+	return fmt.Sprintf("{pn %q nwaiter %d done %t}", dl.pn, len(dl.waiters), dl.done)
 }
 
 func (dl *downloader) loader() {
@@ -54,23 +59,30 @@ func (dl *downloader) loader() {
 		db.DPrintf(db.BINSRV, "download %q err %v\n", dl.pn, err)
 	}
 	db.DPrintf(db.BINSRV, "loader download done for %q", dl.pn)
-	// time.Sleep(2 * time.Second)
 	dl.mu.Lock()
 	defer dl.mu.Unlock()
 	dl.done = true
-	dl.waiters.Broadcast()
+	for _, w := range dl.waiters {
+		w.cond.Broadcast()
+	}
 }
 
-func (dl *downloader) waitDownload() int {
+func (dl *downloader) waitDownload(off int64, l int) int {
 	dl.mu.Lock()
 	defer dl.mu.Unlock()
 
-	db.DPrintf(db.BINSRV, "waitDownload %v\n", dl)
+	db.DPrintf(db.BINSRV, "waitDownload %v o %d l %d\n", dl, off, l)
 	if !dl.done {
-		dl.nwaiter++
-		db.DPrintf(db.BINSRV, "nwaiters %d", dl.nwaiter)
-		dl.waiters.Wait()
-		dl.nwaiter--
+		end := off + int64(l)
+		w, ok := dl.waiters[end]
+		if !ok {
+			w = &waiter{cond: sync.NewCond(&dl.mu)}
+			dl.waiters[end] = w
+		}
+		w.nwaiters++
+		db.DPrintf(db.BINSRV, "waitDownload nwaiters %d chunk %d %d", dl.waiters, end, w.nwaiters)
+		w.cond.Wait()
+		delete(dl.waiters, end)
 	}
 	fd, err := syscall.Open(dl.pn, syscall.O_RDONLY, 0)
 	if err != nil {
@@ -116,14 +128,16 @@ func (dl *downloader) copyFile(src string, dst string) error {
 }
 
 func (dl *downloader) download(i int, src string) error {
-	tmpdst := dl.pn + rand.String(8)
+	//tmpdst := dl.pn + rand.String(8)
 	start := time.Now()
-	if err := dl.copyFile(src, tmpdst); err != nil {
+	if err := dl.copyFile(src, dl.pn); err != nil {
 		return err
 	}
-	if err := os.Rename(tmpdst, dl.pn); err != nil {
-		return err
-	}
+	// time.Sleep(2 * time.Second)
+
+	//if err := os.Rename(tmpdst, dl.pn); err != nil {
+	//	return err
+	//}
 	db.DPrintf(db.BINSRV, "Took %v to download proc %v", time.Since(start), src)
 	db.DPrintf(db.SPAWN_LAT, "Took %v to download proc %v", time.Since(start), src)
 	return nil

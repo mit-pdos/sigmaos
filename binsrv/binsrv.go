@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -26,6 +27,15 @@ const (
 	BINCACHE = "bin/cache/"
 	DEBUG    = false
 )
+
+func BinPath(program, buildtag string) string {
+	return BINFSMNT + program + ":" + buildtag
+}
+
+func binPathParse(pn string) (string, string) {
+	p := strings.Split(pn, ":")
+	return p[0], p[1]
+}
 
 type binFsRoot struct {
 	// The path to the directory that holds cached binaries

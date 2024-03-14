@@ -144,8 +144,9 @@ func (dl *downloader) download(i int, src string) error {
 }
 
 func downloadPaths(pn, kernelId string) []string {
+	buildTag := ""
+	pn, buildTag = binPathParse(pn)
 	name := filepath.Base(pn)
-	buildTag := "TODO XXX" // don't have the proc here
 	paths := []string{
 		filepath.Join(sp.UX, kernelId, "bin/user/common", name),
 		filepath.Join(sp.S3, "~local", buildTag, "bin"),

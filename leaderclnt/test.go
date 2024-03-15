@@ -99,7 +99,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	assert.Nil(ts.T, err, "Open")
 	b := make([]byte, 100)
 	cnt, err := ts.Read(fd, b)
-	assert.Equal(ts.T, 0, cnt, "buf %v", string(b))
+	assert.Equal(ts.T, sp.Tsize(0), cnt, "buf %v", string(b))
 
 	return l
 }

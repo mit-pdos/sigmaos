@@ -245,7 +245,8 @@ func (npc *NpSess) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 		db.DPrintf(db.PROXY, "Read: args %v err %v\n", args, err)
 		return nil, sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROXY, "ReadUV: args %v rets %v %d\n", args, rets, cnt)
+	b = b[:cnt]
+	db.DPrintf(db.PROXY, "ReadUV: args %v rets %v %d", args, rets, cnt)
 	qid := npc.pc.Qid(fid)
 	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
 		d1, err1 := Sp2NpDir(b, args.Tcount())
@@ -255,6 +256,7 @@ func (npc *NpSess) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 		}
 		b = d1
 	}
+	rets.Count = uint32(len(b))
 	db.DPrintf(db.PROXY, "Read: args %v rets %v %v\n", args, rets, cnt)
 	return b, nil
 }

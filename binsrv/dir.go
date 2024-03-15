@@ -61,7 +61,8 @@ func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, f
 
 	dl := n.RootData.bincache.getDownload(p)
 	lf := newBinFsFile(p, dl)
-	return lf, fuse.FOPEN_KEEP_CACHE, 0
+	// return lf, fuse.FOPEN_KEEP_CACHE, 0
+	return lf, 0, 0
 }
 
 var _ = (fs.NodeOpendirer)((*binFsNode)(nil))

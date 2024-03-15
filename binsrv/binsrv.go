@@ -25,7 +25,8 @@ import (
 const (
 	BINFSMNT = "/mnt/binfs/"
 	BINCACHE = "bin/cache/"
-	DEBUG    = false
+	DEBUG    = true
+	ONDEMAND = false
 )
 
 func BinPath(program, buildtag string) string {

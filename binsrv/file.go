@@ -13,20 +13,20 @@ import (
 	db "sigmaos/debug"
 )
 
-func newBinFsFile(path string, dl *downloader) fs.FileHandle {
-	return &binfsFile{path: path, dl: dl, fd: -1}
+func newBinFsFile(pn string, dl *downloader) fs.FileHandle {
+	return &binfsFile{pn: pn, dl: dl, fd: -1}
 }
 
 type binfsFile struct {
-	mu   sync.Mutex
-	path string
-	n    int
-	dl   *downloader
-	fd   int
+	mu sync.Mutex
+	pn string
+	n  int
+	dl *downloader
+	fd int
 }
 
 func (f *binfsFile) String() string {
-	return fmt.Sprintf("{F %q st %p dl %p %d}", f.path, f.dl, f.fd)
+	return fmt.Sprintf("{F %q st %p dl %p %d}", f.pn, f.dl, f.fd)
 }
 
 var _ = (fs.FileHandle)((*binfsFile)(nil))
@@ -35,29 +35,28 @@ var _ = (fs.FileReader)((*binfsFile)(nil))
 var _ = (fs.FileGetlker)((*binfsFile)(nil))
 var _ = (fs.FileLseeker)((*binfsFile)(nil))
 
-func (f *binfsFile) Fd() int {
+func (f *binfsFile) open() int {
+	db.DPrintf(db.BINSRV, "open %q\n", f.pn)
+	fd, err := syscall.Open(f.pn, syscall.O_RDONLY, 0)
+	if err != nil {
+		db.DFatalf("open %q err %v", f.pn, err)
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
-
+	f.fd = fd
 	return f.fd
 }
 
 func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.ReadResult, errno syscall.Errno) {
-	fd := f.Fd()
-	if fd == -1 {
-		fd = f.dl.waitDownload(off, len(buf))
+	db.DPrintf(db.BINSRV, "Read %q off %d %d\n", f.pn, off, len(buf))
+	n, eof := f.dl.waitDownload(off, len(buf))
+	if off == 0 {
+		f.open()
 	}
-
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if f.fd == -1 {
-		f.fd = fd
+	if n < off && !eof {
+		db.DFatalf("Read: o %d off %d\n", n, off)
 	}
-
-	db.DPrintf(db.BINSRV, "Read %q l %d o %d\n", f.path, len(buf), off)
-
-	f.n += len(buf)
+	db.DPrintf(db.BINSRV, "ReadResult %q fd %d o %d l %d\n", f.pn, f.fd, off, len(buf))
 	r := fuse.ReadResultFd(uintptr(f.fd), off, len(buf))
 	return r, fs.OK
 }
@@ -68,7 +67,7 @@ func (f *binfsFile) Release(ctx context.Context) syscall.Errno {
 	if f.fd != -1 {
 		err := syscall.Close(f.fd)
 		f.fd = -1
-		db.DPrintf(db.BINSRV, "Release %q %d\n", f.path, f.n)
+		db.DPrintf(db.BINSRV, "Release %q %d\n", f.pn, f.n)
 		return fs.ToErrno(err)
 	}
 	return syscall.EBADF

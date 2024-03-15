@@ -28,7 +28,7 @@ type SigmaClntClnt struct {
 
 func (scc *SigmaClntClnt) SendReceive(iov sessp.IoVec) (sessp.IoVec, error) {
 	c := sigmaclntcodec.NewCall(sessp.NextSeqno(scc.seqcntr), iov)
-	rep, err := scc.dmx.SendReceive(c)
+	rep, err := scc.dmx.SendReceive(c, nil)
 	if err != nil {
 		return nil, err
 	} else {
@@ -62,7 +62,8 @@ func NewSigmaClntClnt(pe *proc.ProcEnv) (*SigmaClntClnt, error) {
 		disconnected: false,
 	}
 
-	scc.dmx = demux.NewDemuxClnt(sigmaclntcodec.NewTransport(conn))
+	iovm := demux.NewIoVecMap()
+	scc.dmx = demux.NewDemuxClnt(sigmaclntcodec.NewTransport(conn), iovm)
 	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
 	// Initialize the server-side component of sigmaclnt by sending the proc env
 	db.DPrintf(db.SIGMACLNTCLNT, "Init sigmaclntclnt for %v", pe.GetPID())

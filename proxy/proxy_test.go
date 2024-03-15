@@ -23,7 +23,7 @@ type Tstate struct {
 	cmd *exec.Cmd
 }
 
-func initTest(t1 *test.Tstate) *Tstate {
+func initTest(t1 *test.Tstate) (*Tstate, bool) {
 	ts := &Tstate{}
 
 	// start named
@@ -41,9 +41,8 @@ func initTest(t1 *test.Tstate) *Tstate {
 
 	// mount proxy
 	_, err = run("sudo mount -t 9p -o trans=tcp,aname=`whoami`,uname=`whoami`,port=1110 127.0.0.1 /mnt/9p")
-	assert.Nil(t1.T, err)
 
-	return ts
+	return ts, assert.Nil(t1.T, err, "Error mount proxy: %v", err)
 }
 
 func (ts *Tstate) cleanup() {
@@ -69,10 +68,16 @@ func TestProxyBasic(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := initTest(t1)
+	ts, ok := initTest(t1)
+	defer ts.cleanup()
+	if !ok {
+		return
+	}
 
 	out, err := run("ls -a /mnt/9p/ | grep '.statsd'")
-	assert.Nil(t, err, "Err run ls: %v", err)
+	if !assert.Nil(t, err, "Err run ls: %v", err) {
+		return
+	}
 	assert.Equal(t, ".statsd\n", string(out))
 
 	out, err = run("cat /mnt/9p/.statsd | grep Nwalk")
@@ -112,8 +117,6 @@ func TestProxyBasic(t *testing.T) {
 
 	out, err = run("ls /mnt/9p/xxx")
 	assert.NotNil(t, err)
-
-	ts.cleanup()
 }
 
 func TestProxyMountPath(t *testing.T) {
@@ -121,7 +124,11 @@ func TestProxyMountPath(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := initTest(t1)
+	ts, ok := initTest(t1)
+	defer ts.cleanup()
+	if !ok {
+		return
+	}
 
 	dn := "name/d"
 	err := ts.MkDir(dn, 0777)
@@ -140,6 +147,4 @@ func TestProxyMountPath(t *testing.T) {
 
 	ts.Remove("name/namedself")
 	ts.RmDir(dn)
-
-	ts.cleanup()
 }

@@ -141,15 +141,17 @@ func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []by
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) Read(fd int, sz sp.Tsize) ([]byte, error) {
-	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(sz)}
+func (scc *SigmaClntClnt) Read(fd int, b []byte) (sp.Tsize, error) {
+	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b))}
 	rep := scproto.SigmaDataReply{}
 	d, err := scc.rpcData("SigmaClntSrvAPI.Read", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "Read %v %v %v", req, len(d), err)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return d[0], nil
+	// XXX TODO avoid copy?
+	copy(b, d[0])
+	return sp.Tsize(len(d[0])), nil
 }
 
 func (scc *SigmaClntClnt) Write(fd int, data []byte) (sp.Tsize, error) {

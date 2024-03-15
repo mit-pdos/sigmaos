@@ -194,10 +194,11 @@ func (scs *SigmaClntSrvAPI) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest
 }
 
 func (scs *SigmaClntSrvAPI) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaDataReply) error {
-	d, err := scs.sc.Read(int(req.Fd), sp.Tsize(req.Size))
-	rep.Blob = &rpcproto.Blob{Iov: [][]byte{d}}
+	b := make([]byte, req.Size)
+	cnt, err := scs.sc.Read(int(req.Fd), b)
+	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: Read %v %v", scs.sc.ClntId(), req, len(rep.Blob.Iov))
+	db.DPrintf(db.SIGMACLNTSRV, "%v: Read %v %v cnt %v", scs.sc.ClntId(), req, len(rep.Blob.Iov), cnt)
 	return nil
 }
 

@@ -157,8 +157,9 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	}
 	defer www.ssrv.SigmaClnt().CloseFd(fd)
 	for {
-		b, err := www.ssrv.SigmaClnt().Read(fd, pipe.PIPESZ)
-		if err != nil || len(b) == 0 {
+		b := make([]byte, pipe.PIPESZ)
+		cnt, err := www.ssrv.SigmaClnt().Read(fd, b)
+		if err != nil || cnt == 0 {
 			break
 		}
 		_, err = w.Write(b)

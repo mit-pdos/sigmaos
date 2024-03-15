@@ -87,7 +87,8 @@ func (ssrv *SessSrv) GetSessionTable() *sessionTable {
 
 func (ssrv *SessSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
 	nc := &netConn{conn: conn, ssrv: ssrv, sessid: sessp.NoSession}
-	nc.dmx = demux.NewDemuxSrv(nc, spcodec.NewTransport(conn))
+	iovm := demux.NewIoVecMap()
+	nc.dmx = demux.NewDemuxSrv(nc, spcodec.NewTransport(conn, iovm))
 	return nc.dmx
 }
 

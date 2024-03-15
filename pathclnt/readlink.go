@@ -24,12 +24,12 @@ func (rd *rdr) Close() error {
 	return rd.FidClnt.Clunk(rd.fid)
 }
 
-func (rd *rdr) Read(o sp.Toffset, sz sp.Tsize) ([]byte, error) {
-	b, err := rd.ReadF(rd.fid, o, sz, rd.f)
+func (rd *rdr) Read(o sp.Toffset, b []byte) (int, error) {
+	n, err := rd.ReadF(rd.fid, o, b, rd.f)
 	if err != nil {
-		return b, err
+		return int(n), err
 	}
-	return b, nil
+	return int(n), nil
 }
 
 func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
@@ -43,7 +43,7 @@ func (pathc *PathClnt) readlink(fid sp.Tfid) ([]byte, *serr.Err) {
 		return nil, err
 	}
 	rdr := reader.NewReader(newRdr(pathc.FidClnt, fid, sp.NullFence()), "")
-	b, r := rdr.GetDataErr()
+	b, r := rdr.GetData()
 	if errors.As(r, &err) {
 		return nil, err
 	}

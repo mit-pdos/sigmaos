@@ -14,6 +14,7 @@ import (
 type DemuxClnt struct {
 	callmap *callMap
 	trans   TransportI
+	iovm    *IoVecMap
 	mu      sync.Mutex
 }
 
@@ -22,10 +23,11 @@ type reply struct {
 	err *serr.Err
 }
 
-func NewDemuxClnt(trans TransportI) *DemuxClnt {
+func NewDemuxClnt(trans TransportI, iovm *IoVecMap) *DemuxClnt {
 	dmx := &DemuxClnt{
 		callmap: newCallMap(),
 		trans:   trans,
+		iovm:    iovm,
 	}
 	go dmx.reader()
 	return dmx
@@ -55,10 +57,14 @@ func (dmx *DemuxClnt) reader() {
 	}
 }
 
-func (dmx *DemuxClnt) SendReceive(req CallI) (CallI, *serr.Err) {
+func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.Err) {
 	ch := make(chan reply)
 	if err := dmx.callmap.put(req.Tag(), ch); err != nil {
 		db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue req %v err %v\n", req, err)
+		return nil, err
+	}
+	if err := dmx.iovm.Put(req.Tag(), outiov); err != nil {
+		db.DPrintf(db.DEMUXCLNT, "SendReceive: iovm enqueue req %v err %v\n", req, err)
 		return nil, err
 	}
 	dmx.mu.Lock()

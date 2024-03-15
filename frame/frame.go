@@ -10,33 +10,46 @@ import (
 )
 
 func ReadFrame(rd io.Reader) (sessp.Tframe, *serr.Err) {
-	var len uint32
-	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
-		return nil, serr.NewErr(serr.TErrUnreachable, err)
-	}
-	db.DPrintf(db.FRAME, "ReadFrame %d\n", len)
-	len = len - 4
-	if len < 0 {
-		return nil, serr.NewErr(serr.TErrUnreachable, "readMsg too short")
-	}
-	frame := make(sessp.Tframe, len)
-	n, e := io.ReadFull(rd, frame)
-	if n != int(len) {
-		return nil, serr.NewErr(serr.TErrUnreachable, e)
-	}
-	return frame, nil
+	var f sessp.Tframe = nil
+	err := ReadFrameInto(rd, &f)
+	return f, err
 }
 
-func ReadFramesN(rd io.Reader, len uint32) (sessp.IoVec, *serr.Err) {
-	iov := make(sessp.IoVec, len)
-	for i := 0; i < int(len); i++ {
-		f, err := ReadFrame(rd)
-		if err != nil {
-			return nil, err
-		}
-		iov[i] = f
+func ReadFrameInto(rd io.Reader, frame *sessp.Tframe) *serr.Err {
+	var nbyte uint32
+	if err := binary.Read(rd, binary.LittleEndian, &nbyte); err != nil {
+		return serr.NewErr(serr.TErrUnreachable, err)
 	}
-	return iov, nil
+	db.DPrintf(db.FRAME, "ReadFrameInto %d", nbyte)
+	nbyte = nbyte - 4
+	if nbyte < 0 {
+		return serr.NewErr(serr.TErrUnreachable, "readMsg too short")
+	}
+	// If no frame to read into was specified, allocate one
+	if *frame == nil {
+		*frame = make(sessp.Tframe, nbyte)
+	} else {
+	}
+	if nbyte > uint32(len(*frame)) {
+		db.DFatalf("Output buf too smal: %v < %v", len(*frame), nbyte)
+	}
+	// Only read the first nbyte bytes
+	buf := (*frame)[:nbyte]
+	n, e := io.ReadFull(rd, buf)
+	if n != int(nbyte) {
+		return serr.NewErr(serr.TErrUnreachable, e)
+	}
+	return nil
+}
+
+func ReadNFramesInto(rd io.Reader, iov sessp.IoVec) *serr.Err {
+	for i := 0; i < len(iov); i++ {
+		err := ReadFrameInto(rd, &iov[i])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ReadFrames(rd io.Reader) (sessp.IoVec, *serr.Err) {
@@ -51,11 +64,10 @@ func ReadFrames(rd io.Reader) (sessp.IoVec, *serr.Err) {
 	}
 	iov := make(sessp.IoVec, len)
 	for i := 0; i < int(len); i++ {
-		f, err := ReadFrame(rd)
+		err := ReadFrameInto(rd, &iov[i])
 		if err != nil {
 			return nil, err
 		}
-		iov[i] = f
 	}
 	return iov, nil
 }

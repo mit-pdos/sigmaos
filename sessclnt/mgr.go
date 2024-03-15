@@ -67,14 +67,14 @@ func (sc *Mgr) LookupSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	return nil, serr.NewErr(serr.TErrNotfound, addrs)
 }
 
-func (sc *Mgr) RPC(addr sp.Taddrs, req sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+func (sc *Mgr) RPC(addr sp.Taddrs, req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(addr)
 	if err != nil {
 		db.DPrintf(db.SESSCLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, addr)
 		return nil, err
 	}
-	rep, err := sess.RPC(req, iov)
+	rep, err := sess.RPC(req, iniov, outiov)
 	return rep, err
 }
 

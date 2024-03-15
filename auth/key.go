@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
+	"strings"
 
 	"github.com/golang-jwt/jwt"
 
@@ -105,7 +106,7 @@ func (k *key) KeyI() interface{} {
 func (pk *publicKey) Public() {}
 
 func (pk *publicKey) String() string {
-	return string(pk.Key.B64())
+	return strings.TrimSpace(string(pk.Key.B64()))
 }
 
 func (pk *privateKey) Private() {}

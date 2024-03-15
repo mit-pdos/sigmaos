@@ -57,8 +57,8 @@ func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
 			db.DFatalf("mismatch between supplied destination nvec and reply nvec: %v != %v\nrep:%v", len(iov), fm.Fc.Nvec, fm)
 		}
 	} else {
-		// If there are ouptuts, but the caller didn't supply any IoVecs to write
-		// them to, create an IoVec to hold the ouptuts
+		// If there are outputs, but the caller didn't supply any IoVecs to write
+		// them to, create an IoVec to hold the outputs
 		if fm.Fc.Nvec > 0 {
 			iov = make(sessp.IoVec, fm.Fc.Nvec)
 		}

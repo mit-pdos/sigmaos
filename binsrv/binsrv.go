@@ -114,7 +114,7 @@ func RunBinFS(kernelId, dir string) error {
 	if err != nil {
 		return err
 	}
-	sec := 100 * time.Second
+	sec := time.Second
 	opts := &fs.Options{
 		AttrTimeout:  &sec,
 		EntryTimeout: &sec,

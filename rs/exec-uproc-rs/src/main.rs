@@ -76,7 +76,6 @@ fn main() {
     );
 
     if VERBOSE {
-        lsdir("/mnt/binfs");
         log::info!("exec: {} {:?}", program, new_args);
     }
 

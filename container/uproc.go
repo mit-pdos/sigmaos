@@ -24,8 +24,8 @@ func RunUProc(uproc *proc.Proc) error {
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
 
-	// Optionally strace the proc
 	pn := binsrv.BinPath(uproc.GetProgram(), uproc.GetBuildTag())
+	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
 		cmd = exec.Command("strace", append([]string{"-f", "exec-uproc-rs", uproc.GetPid().String(), pn}, uproc.Args...)...)
 	} else {

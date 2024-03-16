@@ -13,8 +13,8 @@ import (
 	db "sigmaos/debug"
 )
 
-func newBinFsFile(pn string, dl *downloader) fs.FileHandle {
-	return &binfsFile{pn: pn, dl: dl, fd: -1}
+func newBinFsFile(pn string, dl *downloader, fd int) fs.FileHandle {
+	return &binfsFile{pn: pn, dl: dl, fd: fd}
 }
 
 type binfsFile struct {
@@ -49,14 +49,11 @@ func (f *binfsFile) open() int {
 
 func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.ReadResult, errno syscall.Errno) {
 	db.DPrintf(db.BINSRV, "Read %q off %d %d\n", f.pn, off, len(buf))
-	n, eof := f.dl.waitDownload(off, len(buf))
-	if off == 0 {
-		f.open()
+	err := f.dl.read(off, len(buf))
+	if err != nil {
+		return nil, syscall.EBADF
 	}
-	if n < off && !eof {
-		db.DFatalf("Read: o %d off %d\n", n, off)
-	}
-	db.DPrintf(db.BINSRV, "ReadResult %q fd %d o %d l %d\n", f.pn, f.fd, off, len(buf))
+	db.DPrintf(db.BINSRV, "ReadResult %q o %d l %d\n", f.pn, off, len(buf))
 	r := fuse.ReadResultFd(uintptr(f.fd), off, len(buf))
 	return r, fs.OK
 }

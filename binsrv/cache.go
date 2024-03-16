@@ -91,10 +91,7 @@ func (bc *bincache) lookup(pn string) (*sp.Stat, error) {
 	return st, nil
 }
 
-// If the file isn't present in the on-disk cache, getDownload starts
-// a downloader and returns download object for others to wait on.  If
-// the file is in the cache, the download object is marked done.
-func (bc *bincache) getDownload(pn string) *downloader {
+func (bc *bincache) getDownload(pn string, sz int64) (*downloader, error) {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
@@ -105,9 +102,13 @@ func (bc *bincache) getDownload(pn string) *downloader {
 
 	if e.dl == nil {
 		db.DPrintf(db.BINSRV, "getDownload: new downloader %q\n", pn)
-		e.dl = newDownloader(pn, bc.sc, bc.kernelId)
+		if dl, err := newDownloader(pn, bc.sc, bc.kernelId, sz); err != nil {
+			return nil, err
+		} else {
+			e.dl = dl
+		}
 	} else {
 		db.DPrintf(db.BINSRV, "getDownload: %q downloader %v\n", pn, e.dl)
 	}
-	return e.dl
+	return e.dl, nil
 }

@@ -25,8 +25,7 @@ import (
 const (
 	BINFSMNT = "/mnt/binfs/"
 	BINCACHE = "bin/cache/"
-	DEBUG    = true
-	ONDEMAND = false
+	DEBUG    = false
 )
 
 func BinPath(program, buildtag string) string {
@@ -44,10 +43,11 @@ type binFsRoot struct {
 	bincache *bincache
 }
 
-func (r *binFsRoot) newNode(parent *fs.Inode, name string, st *syscall.Stat_t) fs.InodeEmbedder {
+func (r *binFsRoot) newNode(parent *fs.Inode, name string, sz int64) fs.InodeEmbedder {
 	n := &binFsNode{
 		RootData: r,
 		name:     name,
+		sz:       sz,
 	}
 	return n
 }
@@ -57,6 +57,7 @@ type binFsNode struct {
 
 	RootData *binFsRoot
 	name     string
+	sz       int64
 }
 
 func (n *binFsNode) String() string {
@@ -75,7 +76,7 @@ func newBinRoot(rootPath, kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmb
 		bincache: newBinCache(kernelId, sc),
 	}
 
-	return root.newNode(nil, "", &st), nil
+	return root.newNode(nil, "", 0), nil
 }
 
 func BinFsCacheDir(instance string) string {

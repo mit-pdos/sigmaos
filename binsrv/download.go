@@ -2,11 +2,9 @@ package binsrv
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
@@ -16,11 +14,19 @@ import (
 
 const (
 	N_DOWNLOAD_RETRIES = 100
+	CHUNKSZ            = 1 * sp.MBYTE
 )
 
-type waiter struct {
+func index(o int64) int { return int(o / CHUNKSZ) }
+func ckoff(i int) int64 { return int64(i * CHUNKSZ) }
+
+type chunk struct {
 	cond     *sync.Cond
 	nwaiters int
+	i        int
+	n        int // bytes read
+	b        []byte
+	ch       chan error
 }
 
 type downloader struct {
@@ -28,123 +34,168 @@ type downloader struct {
 	pn       string
 	kernelId string
 	sc       *sigmaclnt.SigmaClnt
-	waiters  map[int64]*waiter
+	sz       int64
+	chunks   []*chunk
 	n        int64
-	eof      bool
+	sfd      int      // sigma fd
+	ufd      *os.File // unix fd
+	ch       chan *chunk
+	err      error
 }
 
-func newDownload(pn string, sc *sigmaclnt.SigmaClnt, kernelId string) *downloader {
+func newDownload(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sfd int, ufd *os.File, sz int64) *downloader {
 	dl := &downloader{
 		pn:       pn,
 		sc:       sc,
 		kernelId: kernelId,
-		waiters:  make(map[int64]*waiter),
+		chunks:   make([]*chunk, index(sz)+1),
+		sfd:      sfd,
+		ufd:      ufd,
+		sz:       sz,
+		ch:       make(chan *chunk),
 	}
 	return dl
 }
 
-func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string) *downloader {
-	dl := newDownload(pn, sc, kernelId)
-	go dl.loader()
-	return dl
+func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sz int64) (*downloader, error) {
+	sfd := 0
+	paths := downloadPaths(pn, kernelId)
+	if err := retryPaths(paths, func(i int, pn string) error {
+		db.DPrintf(db.BINSRV, "open %q\n", pn)
+		fd, err := sc.Open(pn, sp.OREAD)
+		if err == nil {
+			sfd = fd
+			return nil
+		}
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	ufd, err := os.OpenFile(pn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
+	if err != nil {
+		return nil, err
+	}
+	dl := newDownload(pn, sc, kernelId, sfd, ufd, sz)
+	go dl.downloader()
+	return dl, nil
 }
 
 func (dl *downloader) String() string {
-	return fmt.Sprintf("{pn %q nwaiter %d n %d eof %t}", dl.pn, len(dl.waiters), dl.n, dl.eof)
+	return fmt.Sprintf("{pn %q sz %d chunks %d n %d sfd %d}", dl.pn, dl.sz, len(dl.chunks), dl.n, dl.sfd)
 }
 
-func (dl *downloader) loader() {
-	db.DPrintf(db.BINSRV, "loader starting for %q", dl.pn)
-	if err := dl.downloadProcBin(); err != nil {
-		db.DPrintf(db.BINSRV, "download %q err %v\n", dl.pn, err)
-	}
-	db.DPrintf(db.BINSRV, "loader download done for %q", dl.pn)
-}
-
-func (dl *downloader) waitDownload(off int64, l int) (int64, bool) {
+func (dl *downloader) file() string {
 	dl.mu.Lock()
 	defer dl.mu.Unlock()
 
-	end := off + int64(l)
-	db.DPrintf(db.BINSRV, "waitDownload %v o %d end %d\n", dl, off, end)
-	if !dl.eof && end > dl.n {
-		w, ok := dl.waiters[end]
-		if !ok {
-			w = &waiter{cond: sync.NewCond(&dl.mu)}
-			dl.waiters[end] = w
+	s := fmt.Sprintf("%d [", dl.sz)
+	n := 0
+	for _, ck := range dl.chunks {
+		if ck != nil {
+			n += ck.n
+			s += fmt.Sprintf("%d(%d)[%d, %d) ", ck.i, ck.n, ckoff(ck.i), ckoff(ck.i)+int64(ck.n))
 		}
-		w.nwaiters++
-		db.DPrintf(db.BINSRV, "waitDownload: wait chunk %d nw %d", end, w.nwaiters)
-		w.cond.Wait()
-		delete(dl.waiters, end)
 	}
-	return dl.n, dl.eof
+	s += fmt.Sprintf("] tot %d", n)
+	return s
 }
 
-func (dl *downloader) signal(n int64, eof bool, err error) {
+func (dl *downloader) write(off int64, b []byte) error {
+	if _, err := dl.ufd.Seek(off, 0); err != nil {
+		return err
+	}
+	db.DPrintf(db.BINSRV, "write %q %d %d\n", dl.pn, off, len(b))
+	nn, err := dl.ufd.Write(b)
+	if nn != len(b) {
+		return err
+	}
+	return nil
+}
+
+func (dl *downloader) downloader() {
+	for ck := range dl.ch {
+		b, err := dl.readChunk(ckoff(ck.i), CHUNKSZ)
+		if err == nil {
+			err = dl.write(ckoff(ck.i), b)
+			if err == nil {
+				dl.insert(ck.i, len(b), b)
+				db.DPrintf(db.BINSRV, "file: %v\n", dl.file())
+			}
+		}
+		ck.ch <- err
+	}
+}
+
+// Note: don't invoke readChunk concurrently
+func (dl *downloader) readChunk(off int64, l int) ([]byte, error) {
+	if err := dl.sc.Seek(dl.sfd, sp.Toffset(off)); err != nil {
+		return nil, err
+	}
+	db.DPrintf(db.BINSRV, "read %q %d %d\n", dl.pn, off, l)
+	b, err := dl.sc.Read(dl.sfd, sp.Tsize(l))
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (dl *downloader) insert(i int, len int, b []byte) {
 	dl.mu.Lock()
 	defer dl.mu.Unlock()
 
-	dl.n += n
-	dl.eof = eof
-	for e, w := range dl.waiters {
-		if (dl.n > e && ONDEMAND) || eof {
-			db.DPrintf(db.BINSRV, "signal end %d eof %t\n", e, eof)
-			w.cond.Broadcast()
-		}
+	dl.n += int64(len)
+	db.DPrintf(db.BINSRV, "insert %q i %d len %d tot %d\n", dl.pn, i, len, dl.n)
+	ck := dl.chunks[i]
+	if ck == nil {
+		db.DFatalf("end: unknown %d %d\n", i)
 	}
+	ck.b = b
+	ck.n = len
 }
 
-func (dl *downloader) copyFile(src string, dst string) error {
-	rdr, err := dl.sc.OpenAsyncReader(src, 0)
-	if err != nil {
-		return err
-	}
-	defer rdr.Close()
-	f, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+func (dl *downloader) getChunk(i int) *chunk {
+	dl.mu.Lock()
+	defer dl.mu.Unlock()
 
-	b := make([]byte, sp.BUFSZ)
-	var r error
-	for {
-		// start := time.Now()
-		n, err := rdr.Read(b)
-		if err != nil && err != io.EOF {
-			r = err
-			break
-		}
-		// Nothing left to read
-		if n == 0 {
-			break
-		}
-		//	db.DPrintf(db.ALWAYS, "Time reading in copyFile: %v", time.Since(start))
-		b2 := b[:n]
-		nn, err := f.Write(b2)
-		if err != nil {
-			r = err
-			break
-		}
-		if nn != n {
-			r = fmt.Errorf("short write %v != %v", nn, n)
-			break
-		}
-		dl.signal(int64(n), false, nil)
+	db.DPrintf(db.BINSRV, "getChunk %d", i)
+
+	ck := dl.chunks[i]
+	if ck == nil {
+		ck = &chunk{cond: sync.NewCond(&dl.mu), i: i, ch: make(chan error)}
+		dl.chunks[i] = ck
+		return ck
 	}
-	db.DPrintf(db.BINSRV, "Download %q done", src)
-	dl.signal(0, true, r)
-	return nil
+	if ck.n == 0 {
+		ck.nwaiters++
+		db.DPrintf(db.BINSRV, "waitDownload: wait chunk %d nw %d", i, ck.nwaiters)
+		ck.cond.Wait()
+		ck.nwaiters--
+	}
+	return ck
 }
 
-func (dl *downloader) download(i int, src string) error {
-	start := time.Now()
-	if err := dl.copyFile(src, dl.pn); err != nil {
-		return err
+func (dl *downloader) signal(i int) {
+	c := dl.chunks[i]
+	if c == nil {
+		db.DFatalf("signal: unknown %d\n", i)
 	}
-	db.DPrintf(db.SPAWN_LAT, "Took %v to download proc %v", time.Since(start), src)
-	return nil
+	c.cond.Broadcast()
+}
+
+func (dl *downloader) read(off int64, len int) error {
+	var err error
+	i := index(off)
+	j := index(off+int64(len)) + 1
+	db.DPrintf(db.BINSRV, "read %d %d: chunks [%d,%d)", off, len, i, j)
+	for c := i; c < j; c++ {
+		ck := dl.getChunk(c)
+		if ck.n == 0 {
+			dl.ch <- ck
+			err = <-ck.ch
+			dl.signal(c)
+		}
+	}
+	return err
 }
 
 func downloadPaths(pn, kernelId string) []string {
@@ -160,11 +211,6 @@ func downloadPaths(pn, kernelId string) []string {
 		paths = paths[1:]
 	}
 	return paths
-}
-
-func (dl *downloader) downloadProcBin() error {
-	paths := downloadPaths(dl.pn, dl.kernelId)
-	return retryPaths(paths, dl.download)
 }
 
 func retryLoop(i int, f func(i int, pn string) error, src string) error {

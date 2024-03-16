@@ -43,7 +43,7 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 	ust := syscall.Stat_t{}
 	toUstat(sst, &ust)
 	out.Attr.FromStat(&ust)
-	node := n.RootData.newNode(n.EmbeddedInode(), name, &ust)
+	node := n.RootData.newNode(n.EmbeddedInode(), name, ust.Size)
 	ch := n.NewInode(ctx, node, idFromStat(&ust))
 
 	db.DPrintf(db.BINSRV, "%v: Lookup %q %v\n", n, name, node)
@@ -59,10 +59,17 @@ func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, f
 
 	db.DPrintf(db.BINSRV, "%v: Open %q\n", n, p)
 
-	dl := n.RootData.bincache.getDownload(p)
-	lf := newBinFsFile(p, dl)
-	// return lf, fuse.FOPEN_KEEP_CACHE, 0
-	return lf, 0, 0
+	dl, err := n.RootData.bincache.getDownload(p, n.sz)
+	if err != nil {
+		return nil, 0, fs.ToErrno(os.ErrNotExist)
+	}
+	fd, err := syscall.Open(p, syscall.O_RDONLY, 0)
+	if err != nil {
+		db.DFatalf("open %q err %v", p, err)
+	}
+	lf := newBinFsFile(p, dl, fd)
+	return lf, fuse.FOPEN_KEEP_CACHE, 0
+	//return lf, 0, 0
 }
 
 var _ = (fs.NodeOpendirer)((*binFsNode)(nil))

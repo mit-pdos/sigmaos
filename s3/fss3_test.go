@@ -302,6 +302,7 @@ func TestUnionFile(t *testing.T) {
 			if !assert.Nil(ts.T, err, "Error Read: %v", err) {
 				break
 			}
+			b = b[:n]
 			for i := 0; i < int(n); i++ {
 				assert.Equal(t, file[i], b[i])
 			}

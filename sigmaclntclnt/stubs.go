@@ -210,12 +210,13 @@ func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, e
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) WriteRead(fd int, iov sessp.IoVec) (sessp.IoVec, error) {
-	blob := rpcproto.NewBlob(iov)
+// TODO: use outiov
+func (scc *SigmaClntClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) (sessp.IoVec, error) {
+	blob := rpcproto.NewBlob(iniov)
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: blob}
 	rep := scproto.SigmaDataReply{}
 	d, err := scc.rpcData("SigmaClntSrvAPI.WriteRead", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v %v", req.Fd, len(iov), len(d), err)
+	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v %v", req.Fd, len(iniov), len(d), err)
 	return d, err
 }
 

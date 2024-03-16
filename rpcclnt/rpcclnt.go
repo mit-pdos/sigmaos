@@ -73,9 +73,10 @@ func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
 	return rpcch, nil
 }
 
+// TODO: add outiov
 func (ch *sigmaCh) SendReceive(iov sessp.IoVec) (sessp.IoVec, error) {
 	idx := int(ch.idx.Add(1))
-	b, err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], iov)
+	b, err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], iov, nil)
 	if err != nil {
 		return nil, err
 	}

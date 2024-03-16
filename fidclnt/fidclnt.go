@@ -300,12 +300,12 @@ func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfen
 	return reply.Tcount(), nil
 }
 
-func (fidc *FidClnt) WriteRead(fid sp.Tfid, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+func (fidc *FidClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) (sessp.IoVec, *serr.Err) {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, "WriteRead")
 	}
-	data, err := fidc.fids.lookup(fid).pc.WriteRead(fid, iov)
+	data, err := fidc.fids.lookup(fid).pc.WriteRead(fid, iniov, outiov)
 	if err != nil {
 		return nil, err
 	}

@@ -218,8 +218,9 @@ func (scs *SigmaClntSrvAPI) Seek(ctx fs.CtxI, req scproto.SigmaSeekRequest, rep 
 	return nil
 }
 
+// TODO: use outiov
 func (scs *SigmaClntSrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaDataReply) error {
-	bl, err := scs.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec())
+	bl, err := scs.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec(), nil)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: WriteRead %v %v %v %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov), len(bl), err)
 	rep.Blob = rpcproto.NewBlob(bl)
 	rep.Err = scs.setErr(err)

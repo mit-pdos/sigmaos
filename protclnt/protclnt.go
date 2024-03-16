@@ -189,9 +189,9 @@ func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) (sessp.IoVec, *serr.Err) {
 	args := sp.NewTwriteread(fid)
-	reply, err := pclnt.CallIoVec(args, iov, nil)
+	reply, err := pclnt.CallIoVec(args, iniov, outiov)
 	if err != nil {
 		return nil, err
 	}

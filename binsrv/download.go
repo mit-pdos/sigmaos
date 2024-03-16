@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
@@ -41,6 +42,7 @@ type downloader struct {
 	ufd      *os.File // unix fd
 	ch       chan *chunk
 	err      error
+	tot      time.Duration
 }
 
 func newDownload(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sfd int, ufd *os.File, sz int64) *downloader {
@@ -59,6 +61,7 @@ func newDownload(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sfd int, u
 
 func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sz int64) (*downloader, error) {
 	sfd := 0
+	s := time.Now()
 	paths := downloadPaths(pn, kernelId)
 	if err := retryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.BINSRV, "open %q\n", pn)
@@ -71,10 +74,13 @@ func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sz int64
 	}); err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] SigmaOS Open %d %v", pn, sfd, time.Since(s))
+	s = time.Now()
 	ufd, err := os.OpenFile(pn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Ux Open %d %v", pn, ufd, time.Since(s))
 	dl := newDownload(pn, sc, kernelId, sfd, ufd, sz)
 	go dl.downloader()
 	return dl, nil
@@ -114,12 +120,16 @@ func (dl *downloader) write(off int64, b []byte) error {
 
 func (dl *downloader) downloader() {
 	for ck := range dl.ch {
+		s := time.Now()
 		b, err := dl.readChunk(ckoff(ck.i), CHUNKSZ)
 		if err == nil {
 			err = dl.write(ckoff(ck.i), b)
 			if err == nil {
 				dl.insert(ck.i, len(b), b)
-				db.DPrintf(db.BINSRV, "file: %v\n", dl.file())
+				d := time.Since(s)
+				dl.tot += d
+				db.DPrintf(db.SPAWN_LAT, "[%v] Chunk %v %v tot %v", dl.pn, ck.i, d, dl.tot)
+
 			}
 		}
 		ck.ch <- err

@@ -1,3 +1,6 @@
+// The uprocsrv package implements uprocd that starts procs inside an
+// inner container.  Uprocd itself runs in a realm-aganostic outer
+// container; it is started by [container.StartPcontainer].
 package uprocsrv
 
 import (

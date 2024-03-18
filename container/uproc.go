@@ -15,10 +15,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-//
 // Contain user procs using exec-uproc-rs trampoline
-//
-
 func RunUProc(uproc *proc.Proc) error {
 	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
 	var cmd *exec.Cmd

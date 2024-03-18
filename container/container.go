@@ -1,3 +1,8 @@
+// This package implements the outer and inter containers.
+// StartPContainer starts the outer container running uprocd from
+// [uprocsrv].  uprocd calls RunUproc to run a user proc, which
+// creates the inner container using the exec-uproc-rs program and
+// runs a proc inside of it.
 package container
 
 import (

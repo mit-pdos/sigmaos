@@ -20,7 +20,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Start container for uprocd. If r is nil, don't use overlays.
+// Start outer container for uprocd. If r is nil, don't use overlays.
 func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, gvisor bool) (*Container, error) {
 	image := "sigmauser"
 	ctx := context.Background()
@@ -75,11 +75,9 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 	mnts := []mount.Mount{
 		// user bin dir.
 		mount.Mount{
-			Type:   mount.TypeBind,
-			Source: path.Join("/tmp/sigmaos-bin", kernelId),
-			Target: path.Join(sp.SIGMAHOME, "all-realm-bin"),
-			//					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
-			//					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
+			Type:     mount.TypeBind,
+			Source:   path.Join("/tmp/sigmaos-bin", kernelId),
+			Target:   path.Join(sp.SIGMAHOME, "all-realm-bin"),
 			ReadOnly: true,
 		},
 		// perf output dir

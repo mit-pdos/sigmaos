@@ -135,7 +135,7 @@ func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) er
 		return err
 	}
 	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Reply
-	// wrappper, and one for the marshaled res proto.Message
+	// wrapper, and one for the marshaled res proto.Message
 	outiov := make(sessp.IoVec, 2)
 	outblob := rpc.GetBlob(res)
 	if outblob != nil { // handle blob

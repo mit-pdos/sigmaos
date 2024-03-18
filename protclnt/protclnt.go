@@ -202,7 +202,13 @@ func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.Io
 		return serr.NewErr(serr.TErrBadFcall, "Rwriteread")
 	}
 	if len(outiov) != len(reply.Iov) {
-		return serr.NewErr(serr.TErrBadFcall, fmt.Sprintf("protclnt outiov len wrong: %v != %v", len(outiov), len(reply.Iov)))
+		// Sanity check: if the caller supplied IoVecs to write outputs to, ensure
+		// that they supplied at least enough of them. In the event that
+		// the result of the RPC is an error, we may get the case that
+		// len(iov) < fm.Fc.Nvec
+		if len(outiov) < len(reply.Iov) {
+			return serr.NewErr(serr.TErrBadFcall, fmt.Sprintf("protclnt outiov len insufficient: prov %v != %v res", len(outiov), len(reply.Iov)))
+		}
 	}
 	// XXX copy needed?
 	copy(outiov, reply.Iov)

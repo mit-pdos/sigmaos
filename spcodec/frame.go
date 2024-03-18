@@ -51,6 +51,11 @@ func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
 	// RPC
 	iov, _ := t.iovm.Get(fm.Tag())
 
+	db.DPrintf(db.ALWAYS, "frame.ReadCall iov len %v", len(iov))
+	if len(iov) > 0 {
+		db.DPrintf(db.ALWAYS, "frame.ReadCall iov len %v p %p", len(iov), iov[len(iov)-1])
+	}
+
 	if len(iov) > 0 {
 		// Sanity check: if the caller supplied IoVecs to write outputs to, ensure
 		// that they supplied at least the right number of them. In the event that

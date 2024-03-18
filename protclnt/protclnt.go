@@ -165,7 +165,6 @@ func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 }
 
 func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
-	db.DPrintf(db.PROTCLNT, "Read fid %v o %v")
 	args := sp.NewReadF(fid, offset, sp.Tsize(len(b)), f)
 	reply, err := pclnt.CallIoVec(args, nil, sessp.IoVec{b})
 	if err != nil {
@@ -175,6 +174,8 @@ func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfe
 	if !ok {
 		return 0, serr.NewErr(serr.TErrBadFcall, "Rread")
 	}
+	db.DPrintf(db.PROTCLNT, "Read fid %v cnt %v", fid, rep.Tcount())
+	db.DPrintf(db.ALWAYS, "Read fid %v cnt %v b %v", fid, rep.Tcount(), b)
 	return rep.Tcount(), nil
 }
 
@@ -193,10 +194,12 @@ func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data
 
 func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) *serr.Err {
 	args := sp.NewTwriteread(fid)
+	db.DPrintf(db.ALWAYS, "protclnt iov %p", outiov[len(outiov)-1])
 	reply, err := pclnt.CallIoVec(args, iniov, outiov)
 	if err != nil {
 		return err
 	}
+	db.DPrintf(db.ALWAYS, "protclnt iov 2 %p", outiov[len(outiov)-1])
 	_, ok := reply.Msg.(*sp.Rread)
 	if !ok {
 		return serr.NewErr(serr.TErrBadFcall, "Rwriteread")

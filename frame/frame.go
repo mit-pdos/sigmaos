@@ -52,10 +52,18 @@ func ReadNFramesInto(rd io.Reader, iov sessp.IoVec) *serr.Err {
 	return nil
 }
 
-func ReadFrames(rd io.Reader) (sessp.IoVec, *serr.Err) {
+func GetNFrames(rd io.Reader) (uint32, *serr.Err) {
 	var len uint32
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
-		return nil, serr.NewErr(serr.TErrUnreachable, err)
+		return 0, serr.NewErr(serr.TErrUnreachable, err)
+	}
+	return len, nil
+}
+
+func ReadFrames(rd io.Reader) (sessp.IoVec, *serr.Err) {
+	len, err := GetNFrames(rd)
+	if err != nil {
+		return nil, err
 	}
 	db.DPrintf(db.FRAME, "ReadFrames %d\n", len)
 	len = len - 4
@@ -120,9 +128,12 @@ func PopFromFrame(rd io.Reader) (sessp.Tframe, error) {
 		}
 		return nil, err
 	}
+	db.DPrintf(db.ALWAYS, "Read %v byte frame", l)
 	b := make(sessp.Tframe, int(l))
 	if _, err := io.ReadFull(rd, b); err != nil && !(err == io.EOF && l == 0) {
 		return nil, serr.NewErr(serr.TErrUnreachable, err.Error())
+	} else {
+		db.DPrintf(db.ALWAYS, "Read %v byte frame err %v", l, err)
 	}
 	return b, nil
 }

@@ -45,7 +45,8 @@ func newSigmaClntConn(conn net.Conn, pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*
 		conn: conn,
 		api:  scs,
 	}
-	scc.dmx = demux.NewDemuxSrv(scc, sigmaclntcodec.NewTransport(conn))
+	iovm := demux.NewIoVecMap()
+	scc.dmx = demux.NewDemuxSrv(scc, sigmaclntcodec.NewTransport(conn, iovm))
 	return scc, nil
 }
 
@@ -200,7 +201,8 @@ func (scs *SigmaClntSrvAPI) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep 
 	b = b[:cnt]
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: Read %v %v cnt %v", scs.sc.ClntId(), req, len(rep.Blob.Iov), cnt)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: Read %v %v cnt %v len %v err %v", scs.sc.ClntId(), req, len(rep.Blob.Iov), cnt, len(b), err)
+	db.DPrintf(db.ALWAYS, "%v: Read %v", scs.sc.ClntId(), b)
 	return nil
 }
 
@@ -220,7 +222,7 @@ func (scs *SigmaClntSrvAPI) Seek(ctx fs.CtxI, req scproto.SigmaSeekRequest, rep 
 }
 
 func (scs *SigmaClntSrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaDataReply) error {
-	bl := make(sessp.IoVec, 1)
+	bl := make(sessp.IoVec, req.NOutVec+1)
 	err := scs.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec(), bl)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: WriteRead %v %v %v %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov), len(bl), err)
 	rep.Blob = rpcproto.NewBlob(bl)

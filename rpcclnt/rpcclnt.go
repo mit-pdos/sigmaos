@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	db "sigmaos/debug"
+
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/fslib"
@@ -75,6 +77,7 @@ func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
 
 func (ch *sigmaCh) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
 	idx := int(ch.idx.Add(1))
+	db.DPrintf(db.ALWAYS, "About to writeread")
 	err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], iniov, outiov)
 	if err != nil {
 		return err
@@ -99,15 +102,19 @@ func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 }
 
 func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (*rpcproto.Reply, error) {
+	db.DPrintf(db.ALWAYS, "about to rpc")
 	req := rpcproto.Request{Method: method}
 	b, err := proto.Marshal(&req)
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "err Marshal: %v", err)
 		return nil, serr.NewErrError(err)
 	}
 
+	db.DPrintf(db.ALWAYS, "about to SendReceive")
 	start := time.Now()
 	err = rpcc.ch.SendReceive(append(sessp.IoVec{b}, iniov...), outiov)
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "err SendReceive: %v", err)
 		return nil, err
 	}
 	// Record stats
@@ -139,9 +146,11 @@ func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) er
 	outiov := make(sessp.IoVec, 2)
 	outblob := rpc.GetBlob(res)
 	if outblob != nil { // handle blob
+		db.DPrintf(db.ALWAYS, "Outblob %p", outblob.Iov[0])
 		// Get the reply's blob, if it has one, so that data can be read directly
 		// into buffers in its IoVec
 		outiov = append(outiov, outblob.GetIoVec()...)
+		db.DPrintf(db.ALWAYS, "Outiov %v %p", outiov, outiov[2])
 	}
 	// Add an IoVec spot for the RPC wrappers
 	rep, err := rpcc.rpc(method, append(sessp.IoVec{a}, iniov...), outiov)

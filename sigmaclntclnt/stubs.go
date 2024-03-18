@@ -148,11 +148,14 @@ func (scc *SigmaClntClnt) Read(fd int, b []byte) (sp.Tsize, error) {
 	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b))}
 	rep := scproto.SigmaDataReply{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
+	db.DPrintf(db.ALWAYS, "Outblob caller %p", rep.Blob.Iov[0])
 	d, err := scc.rpcData("SigmaClntSrvAPI.Read", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Read %v %v %v", req, len(d), err)
+	db.DPrintf(db.SIGMACLNTCLNT, "Read %v len %v err %v", req, len(d), err)
 	if err != nil {
 		return 0, err
 	}
+	db.DPrintf(db.SIGMACLNTCLNT, "Read %v len %v", req, len(d[0]))
+	db.DPrintf(db.ALWAYS, "Read %v %v d: %v\nb: %v", req, len(d[0]), d[0], b)
 	return sp.Tsize(len(d[0])), nil
 }
 
@@ -212,17 +215,17 @@ func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, e
 	return sz, err
 }
 
-// TODO: use outiov
 func (scc *SigmaClntClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error {
 	inblob := rpcproto.NewBlob(iniov)
 	outblob := rpcproto.NewBlob(outiov)
-	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: inblob}
+	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: inblob, NOutVec: uint32(len(outiov))}
 	rep := scproto.SigmaDataReply{Blob: outblob}
 	d, err := scc.rpcData("SigmaClntSrvAPI.WriteRead", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v %v", req.Fd, len(iniov), len(d), err)
 	if err == nil && len(outiov) != len(d) {
 		return fmt.Errorf("sigmaclntclnt outiov len wrong: supplied %v != %v returned", len(outiov), len(d))
 	}
+	copy(outiov, d)
 	return err
 }
 

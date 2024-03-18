@@ -4,6 +4,8 @@
 package protclnt
 
 import (
+	"fmt"
+
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -189,17 +191,22 @@ func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) *serr.Err {
 	args := sp.NewTwriteread(fid)
 	reply, err := pclnt.CallIoVec(args, iniov, outiov)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	_, ok := reply.Msg.(*sp.Rread)
 	if !ok {
-		return nil, serr.NewErr(serr.TErrBadFcall, "Rwriteread")
+		return serr.NewErr(serr.TErrBadFcall, "Rwriteread")
 	}
-	return reply.Iov, nil
+	if len(outiov) != len(reply.Iov) {
+		return serr.NewErr(serr.TErrBadFcall, fmt.Sprintf("protclnt outiov len wrong: %v != %v", len(outiov), len(reply.Iov)))
+	}
+	// XXX copy needed?
+	copy(outiov, reply.Iov)
+	return nil
 }
 
 func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rstat, *serr.Err) {

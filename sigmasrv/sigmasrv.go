@@ -38,18 +38,18 @@ type SigmaSrv struct {
 func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
 	mfs, error := memfssrv.NewMemFs(fn, pe)
 	if error != nil {
-		db.DPrintf(db.ERROR, "NewSigmaSrv %v err %v\n", fn, error)
+		db.DPrintf(db.ERROR, "NewSigmaSrv %v err %v", fn, error)
 		return nil, error
 	}
 	return newSigmaSrvMemFs(mfs, svci)
 }
 
 func NewSigmaSrvPublic(fn string, svci any, pe *proc.ProcEnv, public bool) (*SigmaSrv, error) {
-	db.DPrintf(db.ALWAYS, "NewSigmaSrvPublic %T\n", svci)
+	db.DPrintf(db.ALWAYS, "NewSigmaSrvPublic %T", svci)
 	if public {
 		mfs, error := memfssrv.NewMemFsPublic(fn, pe)
 		if error != nil {
-			db.DPrintf(db.ERROR, "NewMemFsPublic %v err %v\n", fn, error)
+			db.DPrintf(db.ERROR, "NewMemFsPublic %v err %v", fn, error)
 			return nil, error
 		}
 		return newSigmaSrvMemFs(mfs, svci)
@@ -61,7 +61,7 @@ func NewSigmaSrvPublic(fn string, svci any, pe *proc.ProcEnv, public bool) (*Sig
 func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pe *proc.ProcEnv, svci any) (*SigmaSrv, error) {
 	mfs, error := memfssrv.NewMemFsAddr(fn, addr, pe)
 	if error != nil {
-		db.DPrintf(db.ERROR, "NewSigmaSrvPort %v err %v\n", fn, error)
+		db.DPrintf(db.ERROR, "NewSigmaSrvPort %v err %v", fn, error)
 		return nil, error
 	}
 	return newSigmaSrvMemFs(mfs, svci)
@@ -70,17 +70,17 @@ func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pe *proc.ProcEnv, svci any) (*Si
 func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
 	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc)
 	if error != nil {
-		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v\n", fn, error)
+		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v", fn, error)
 		return nil, error
 	}
 	return newSigmaSrvMemFs(mfs, svci)
 }
 
 func NewSigmaSrvClntKeyMgr(fn string, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr, svci any) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsPortClntFenceKeyMgr(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc, nil, kmgr)
-	if error != nil {
-		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v\n", fn, error)
-		return nil, error
+	mfs, err := memfssrv.NewMemFsPortClntFenceKeyMgr(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc, nil, kmgr)
+	if err != nil {
+		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v", fn, err)
+		return nil, err
 	}
 	return newSigmaSrvMemFs(mfs, svci)
 }
@@ -90,7 +90,7 @@ func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error)
 	ffs := fencefs.NewRoot(ctx.NewCtxNull(), nil)
 	mfs, error := memfssrv.NewMemFsPortClntFence(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc, ffs)
 	if error != nil {
-		db.DPrintf(db.ERROR, "NewSigmaSrvClntFence %v err %v\n", fn, error)
+		db.DPrintf(db.ERROR, "NewSigmaSrvClntFence %v err %v", fn, error)
 		return nil, error
 	}
 	mfs.Mount(sp.FENCEDIR, ffs.(*dir.DirImpl))
@@ -106,7 +106,7 @@ func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error)
 func NewSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
 	mfs, err := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc)
 	if err != nil {
-		db.DPrintf(db.ERROR, "NewMemFsPortClnt %v err %v\n", fn, err)
+		db.DPrintf(db.ERROR, "NewMemFsPortClnt %v err %v", fn, err)
 		return nil, err
 	}
 	ssrv := newSigmaSrv(mfs)
@@ -116,7 +116,7 @@ func NewSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error)
 // Create the rpc server directory in memfs and make the RPC dev and
 // register svci.
 func (ssrv *SigmaSrv) AddRPCSrv(relpath string, svci any) error {
-	db.DPrintf(db.SIGMASRV, "newRPCSrv: %v\n", svci)
+	db.DPrintf(db.SIGMASRV, "newRPCSrv: %v", svci)
 	if _, err := ssrv.Create(relpath, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}

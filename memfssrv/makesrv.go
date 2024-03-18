@@ -55,6 +55,10 @@ func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, srvpath string, addr *sp.Taddr
 		kmgr = keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
 	}
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), srvpath, kmgr)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error new auth srv %v err %v", srvpath, err)
+		return nil, err
+	}
 	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, as, addr, sc, fencefs)
 	if err != nil {
 		return nil, err

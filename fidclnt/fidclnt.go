@@ -300,16 +300,16 @@ func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfen
 	return reply.Tcount(), nil
 }
 
-func (fidc *FidClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+func (fidc *FidClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) *serr.Err {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
-		return nil, serr.NewErr(serr.TErrUnreachable, "WriteRead")
+		return serr.NewErr(serr.TErrUnreachable, "WriteRead")
 	}
-	data, err := fidc.fids.lookup(fid).pc.WriteRead(fid, iniov, outiov)
+	err := fidc.fids.lookup(fid).pc.WriteRead(fid, iniov, outiov)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return data, nil
+	return nil
 }
 
 func (fidc *FidClnt) GetFile(fid sp.Tfid, path []string, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, resolve bool, f *sp.Tfence) ([]byte, *serr.Err) {

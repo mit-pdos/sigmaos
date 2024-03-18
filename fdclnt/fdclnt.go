@@ -178,16 +178,16 @@ func (fdc *FdClient) WriteFence(fd int, data []byte, f sp.Tfence) (sp.Tsize, err
 	return fdc.writeFid(fd, fid, off, data, f)
 }
 
-func (fdc *FdClient) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) (sessp.IoVec, error) {
+func (fdc *FdClient) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error {
 	fid, _, error := fdc.fds.lookupOff(fd)
 	if error != nil {
-		return nil, error
+		return error
 	}
-	iov, err := fdc.pc.WriteRead(fid, iniov, outiov)
+	err := fdc.pc.WriteRead(fid, iniov, outiov)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return iov, nil
+	return nil
 }
 
 func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {

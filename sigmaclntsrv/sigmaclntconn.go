@@ -15,6 +15,7 @@ import (
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/rpcsrv"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclntcodec"
 	scproto "sigmaos/sigmaclntsrv/proto"
@@ -218,9 +219,9 @@ func (scs *SigmaClntSrvAPI) Seek(ctx fs.CtxI, req scproto.SigmaSeekRequest, rep 
 	return nil
 }
 
-// TODO: use outiov
 func (scs *SigmaClntSrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaDataReply) error {
-	bl, err := scs.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec(), nil)
+	bl := make(sessp.IoVec, 1)
+	err := scs.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec(), bl)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: WriteRead %v %v %v %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov), len(bl), err)
 	rep.Blob = rpcproto.NewBlob(bl)
 	rep.Err = scs.setErr(err)

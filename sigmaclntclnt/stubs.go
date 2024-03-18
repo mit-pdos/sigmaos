@@ -1,6 +1,8 @@
 package sigmaclntclnt
 
 import (
+	"fmt"
+
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
@@ -124,6 +126,7 @@ func (scc *SigmaClntClnt) Remove(path string) error {
 func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
 	req := scproto.SigmaPathRequest{Path: path}
 	rep := scproto.SigmaDataReply{}
+	rep.Blob = &rpcproto.Blob{Iov: [][]byte{nil}}
 	d, err := scc.rpcData("SigmaClntSrvAPI.GetFile", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "GetFile %v %v %v", req, d, err)
 	if err != nil {
@@ -144,13 +147,12 @@ func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []by
 func (scc *SigmaClntClnt) Read(fd int, b []byte) (sp.Tsize, error) {
 	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b))}
 	rep := scproto.SigmaDataReply{}
+	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	d, err := scc.rpcData("SigmaClntSrvAPI.Read", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "Read %v %v %v", req, len(d), err)
 	if err != nil {
 		return 0, err
 	}
-	// XXX TODO avoid copy?
-	copy(b, d[0])
 	return sp.Tsize(len(d[0])), nil
 }
 
@@ -211,13 +213,17 @@ func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, e
 }
 
 // TODO: use outiov
-func (scc *SigmaClntClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) (sessp.IoVec, error) {
-	blob := rpcproto.NewBlob(iniov)
-	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: blob}
-	rep := scproto.SigmaDataReply{}
+func (scc *SigmaClntClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error {
+	inblob := rpcproto.NewBlob(iniov)
+	outblob := rpcproto.NewBlob(outiov)
+	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: inblob}
+	rep := scproto.SigmaDataReply{Blob: outblob}
 	d, err := scc.rpcData("SigmaClntSrvAPI.WriteRead", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v %v", req.Fd, len(iniov), len(d), err)
-	return d, err
+	if err == nil && len(outiov) != len(d) {
+		return fmt.Errorf("sigmaclntclnt outiov len wrong: supplied %v != %v returned", len(outiov), len(d))
+	}
+	return err
 }
 
 func (scc *SigmaClntClnt) DirWait(fd int) error {

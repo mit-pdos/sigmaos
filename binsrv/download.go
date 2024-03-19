@@ -76,7 +76,7 @@ func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sz int64
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] SigmaOS Open %d %v", pn, sfd, time.Since(s))
 	s = time.Now()
-	ufd, err := os.OpenFile(pn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
+	ufd, err := os.OpenFile(binCachePath(pn), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
 	if err != nil {
 		return nil, err
 	}

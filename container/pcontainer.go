@@ -78,7 +78,7 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 			Type:     mount.TypeBind,
 			Source:   path.Join("/tmp/sigmaos-bin", kernelId),
 			Target:   path.Join(sp.SIGMAHOME, "all-realm-bin"),
-			ReadOnly: true,
+			ReadOnly: false,
 		},
 		// perf output dir
 		mount.Mount{

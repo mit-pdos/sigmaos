@@ -20,16 +20,26 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 const (
+	// binfsd mounts itself here:
 	BINFSMNT = "/mnt/binfs/"
-	BINCACHE = "bin/cache/"
-	DEBUG    = false
+
+	// The directory /tmp/sigmaos-bin/realms/<realm> in the host file
+	// system is mounted here by uprocd:
+	BINCACHE = sp.SIGMAHOME + "/bin/user/"
+
+	DEBUG = true
 )
 
 func BinPath(program, buildtag string) string {
 	return BINFSMNT + program + ":" + buildtag
+}
+
+func binCachePath(program string) string {
+	return BINCACHE + program
 }
 
 func binPathParse(pn string) (string, string) {
@@ -38,8 +48,7 @@ func binPathParse(pn string) (string, string) {
 }
 
 type binFsRoot struct {
-	// The path to the directory that holds cached binaries
-	Path     string
+	Path     string // the directory that holds cached binaries
 	bincache *bincache
 }
 
@@ -64,55 +73,36 @@ func (n *binFsNode) String() string {
 	return fmt.Sprintf("{N %q}", n.path())
 }
 
-func newBinRoot(rootPath, kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmbedder, error) {
+func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmbedder, error) {
 	var st syscall.Stat_t
-	err := syscall.Stat(rootPath, &st)
+	err := syscall.Stat(BINCACHE, &st)
 	if err != nil {
 		return nil, err
 	}
-
 	root := &binFsRoot{
-		Path:     rootPath,
 		bincache: newBinCache(kernelId, sc),
 	}
 
 	return root.newNode(nil, "", 0), nil
 }
 
-func BinFsCacheDir(instance string) string {
-	return BINCACHE + instance
-}
-
-func Cleanup(dir string) error {
-	d := BinFsCacheDir(dir)
-	db.DPrintf(db.BINSRV, "Cleanup %s", d)
-	return os.RemoveAll(d)
-}
-
 func RunBinFS(kernelId, dir string) error {
 	pe := proc.GetProcEnv()
+
+	db.DPrintf(db.BINSRV, "MkDir %q", BINFSMNT)
 
 	if err := os.MkdirAll(BINFSMNT, 0750); err != nil {
 		return err
 	}
 
-	if err := os.MkdirAll(BINCACHE, 0750); err != nil {
-		return err
-	}
-
-	d := BinFsCacheDir(dir)
-	if err := os.MkdirAll(d, 0750); err != nil {
-		return err
-	}
-
-	db.DPrintf(db.BINSRV, "%s", db.LsDir(d))
+	db.DPrintf(db.BINSRV, "%s", db.LsDir(BINCACHE))
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		return err
 	}
 
-	loopbackRoot, err := newBinRoot(d, kernelId, sc)
+	loopbackRoot, err := newBinRoot(kernelId, sc)
 	if err != nil {
 		return err
 	}

@@ -8,12 +8,12 @@ import (
 	"os/exec"
 	"path"
 	"sync"
+	"syscall"
 	"time"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
 
-	"sigmaos/binsrv"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -46,7 +46,10 @@ func RunUprocSrv(kernelId string, up string) error {
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
 
-	ups.binsrv = exec.Command("binfsd", kernelId, pe.GetPID().String())
+	// Start binfsd now; when uprocds gets assigned, then uprocd
+	// mounts the realm's bin directory that binfs will cache in and
+	// serve from.
+	ups.binsrv = exec.Command("binfsd", ups.kernelId, ups.pe.GetPID().String())
 	ups.binsrv.Stdout = os.Stdout
 	ups.binsrv.Stderr = os.Stderr
 
@@ -88,8 +91,9 @@ func RunUprocSrv(kernelId string, up string) error {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
 	}
 	db.DPrintf(db.UPROCD, "RunServer done\n")
-	binsrv.Cleanup(pe.GetPID().String())
-	ups.binsrv.Process.Kill()
+	if ups.binsrv != nil {
+		ups.binsrv.Process.Kill()
+	}
 	return nil
 }
 
@@ -153,10 +157,9 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
 
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v, new innerIP %v", realm, innerIP)
 
-	//err = container.MountRealmBinDir(realm)
-	//if err != nil {
-	//	db.DFatalf("Error mount realm bin dir: %v", err)
-	//}
+	if err := mountRealmBinDir(realm); err != nil {
+		db.DFatalf("Error mount realm bin dir: %v", err)
+	}
 
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v done", realm)
 	// Note that the uprocsrv has been assigned.
@@ -196,4 +199,21 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	return container.RunUProc(uproc)
+}
+
+// Make and mount realm bin directory
+func mountRealmBinDir(realm sp.Trealm) error {
+	dir := path.Join(sp.SIGMAHOME, "all-realm-bin", realm.String())
+
+	// fails is already exist and if it fails for another reason Mount will fail
+	if err := os.Mkdir(dir, 0750); err != nil {
+		db.DPrintf(db.UPROCD, "Mkdir %q err %v\n", dir, err)
+	}
+
+	mnt := path.Join(sp.SIGMAHOME, "bin", "user")
+	if err := syscall.Mount(dir, mnt, "none", syscall.MS_BIND, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount realm's bin dir %q to %q err %v", dir, mnt, err)
+		return err
+	}
+	return nil
 }

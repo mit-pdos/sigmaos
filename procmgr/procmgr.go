@@ -121,15 +121,22 @@ func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
 	return mgr.pstate.GetProcs()
 }
 
-// TOODO: warm cache
 func (mgr *ProcMgr) WarmUprocd(realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
 	start := time.Now()
 	defer func(start time.Time) {
 		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] WarmUprocd latency: %v", realm, prog, time.Since(start))
 	}(start)
+
 	if err := mgr.updm.WarmStartUprocd(realm, ptype); err != nil {
-		db.DPrintf(db.ERROR, "WarmUprocd %v err %v", realm, err)
+		db.DPrintf(db.ERROR, "WarmStartUprocd %v err %v", realm, err)
 		return err
+	}
+	if uprocErr, childErr := mgr.updm.WarmProc(realm, prog, buildTag, ptype); childErr != nil {
+		return childErr
+	} else if uprocErr != nil {
+		// Unexpected error with uproc server.
+		db.DPrintf(db.PROCMGR, "WarmUproc err %v", uprocErr)
+		return uprocErr
 	}
 	return nil
 }

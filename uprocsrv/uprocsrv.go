@@ -46,9 +46,9 @@ func RunUprocSrv(kernelId string, up string) error {
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
 
-	// Start binfsd now; when uprocds gets assigned, then uprocd
-	// mounts the realm's bin directory that binfs will cache in and
-	// serve from.
+	// Start binfsd now; when uprocds gets assigned to a realm, then
+	// uprocd mounts the realm's bin directory that binfs will cache
+	// in and serve from.
 	ups.binsrv = exec.Command("binfsd", ups.kernelId, ups.pe.GetPID().String())
 	ups.binsrv.Stdout = os.Stdout
 	ups.binsrv.Stderr = os.Stderr
@@ -199,6 +199,11 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	return container.RunUProc(uproc)
+}
+
+func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
+	res.OK = true
+	return nil
 }
 
 // Make and mount realm bin directory

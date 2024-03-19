@@ -81,10 +81,14 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, maste
 	return sd
 }
 
-// Warm the cache of proc binaries.  XXX TODO
-func (sd *Schedd) WarmCacheBin(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
-	db.DPrintf(db.ERROR, "Error WarmCacheBin: unimplemented")
-	res.OK = false
+// Start uprocd and warm cache of binaries
+func (sd *Schedd) WarmUprocd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
+	if err := sd.pmgr.WarmUprocd(sp.Trealm(req.RealmStr), req.Program, req.BuildTag, proc.Ttype(req.ProcType)); err != nil {
+		db.DPrintf(db.ERROR, "WarmUprocd %v err %v", req, err)
+		res.OK = false
+		return err
+	}
+	res.OK = true
 	return nil
 }
 

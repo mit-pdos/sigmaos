@@ -31,7 +31,7 @@ const (
 	// system is mounted here by uprocd:
 	BINCACHE = sp.SIGMAHOME + "/bin/user/"
 
-	DEBUG = true
+	DEBUG = false
 )
 
 func BinPath(program, buildtag string) string {

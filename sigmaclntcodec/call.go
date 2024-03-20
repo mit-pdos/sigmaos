@@ -5,6 +5,8 @@ import (
 	"io"
 	"net"
 
+	//	"runtime/debug"
+
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/frame"
@@ -44,7 +46,7 @@ func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
 	fc := c.(*Call)
 	// db.DPrintf(db.TEST, "writecall %v\n", c)
 	if err := frame.WriteSeqno(fc.Seqno, t.wrt); err != nil {
-		return serr.NewErr(serr.TErrUnreachable, err.Error())
+		return err
 	}
 	if err := frame.WriteFrames(t.wrt, fc.Iov); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
@@ -66,11 +68,10 @@ func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
 		iov, err = frame.ReadFrames(t.rdr)
 	} else {
 		var n uint32
-		n, err = frame.GetNFrames(t.rdr)
+		n, err = frame.ReadNumOfFrames(t.rdr)
 		if err != nil {
 			return nil, err
 		}
-		iov = append(make(sessp.IoVec, 4), iov...)
 		if uint32(len(iov)) != n {
 			db.DFatalf("mismatch between supplied destination nvec and incoming nvec: %v != %v", len(iov), n)
 		}

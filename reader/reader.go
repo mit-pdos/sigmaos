@@ -48,7 +48,6 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 		db.DPrintf(db.READER_ERR, "Read short %v %v %v\n", rdr.path, len(p), n)
 	}
 	rdr.off += sp.Toffset(n)
-	db.DPrintf(db.ALWAYS, "Reader %v bytes p %v", n, p)
 	return int(n), nil
 }
 

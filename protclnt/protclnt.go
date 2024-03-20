@@ -175,7 +175,6 @@ func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfe
 		return 0, serr.NewErr(serr.TErrBadFcall, "Rread")
 	}
 	db.DPrintf(db.PROTCLNT, "Read fid %v cnt %v", fid, rep.Tcount())
-	db.DPrintf(db.ALWAYS, "Read fid %v cnt %v b %v", fid, rep.Tcount(), b)
 	return rep.Tcount(), nil
 }
 

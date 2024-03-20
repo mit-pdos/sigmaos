@@ -126,21 +126,6 @@ func RunBinFS(kernelId, dir string) error {
 		return err
 	}
 
-	// ch := make(chan bool)
-	// go func() {
-	// 	if err := sc.WaitEvict(pe.GetPID()); err != nil {
-	// 		db.DPrintf(db.ALWAYS, "WaitEvict err %v", err)
-	// 	}
-	// 	server.Unmount()
-	// 	sc.ClntExitOK()
-	// 	ch <- true
-	// }()
-
-	// if err := sc.Started(); err != nil {
-	// 	db.DPrintf(db.ALWAYS, "Error Started: %v", err)
-	// 	return err
-	// }
-
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {

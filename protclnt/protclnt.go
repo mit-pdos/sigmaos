@@ -210,8 +210,6 @@ func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.Io
 			return serr.NewErr(serr.TErrBadFcall, fmt.Sprintf("protclnt outiov len insufficient: prov %v != %v res", len(outiov), len(reply.Iov)))
 		}
 	}
-	// XXX copy needed?
-	copy(outiov, reply.Iov)
 	return nil
 }
 

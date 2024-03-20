@@ -37,8 +37,6 @@ func (scc *SigmaClntClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) err
 		if len(outiov) != len(c.Iov) {
 			return fmt.Errorf("sigmaclntclnt outiov len wrong: %v != %v", len(outiov), len(c.Iov))
 		}
-		//		// XXX copy needed?
-		//		copy(outiov, c.Iov)
 		return nil
 	}
 }

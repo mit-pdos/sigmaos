@@ -35,18 +35,6 @@ var _ = (fs.FileReader)((*binfsFile)(nil))
 var _ = (fs.FileGetlker)((*binfsFile)(nil))
 var _ = (fs.FileLseeker)((*binfsFile)(nil))
 
-func (f *binfsFile) open() int {
-	db.DPrintf(db.BINSRV, "open %q\n", f.pn)
-	fd, err := syscall.Open(f.pn, syscall.O_RDONLY, 0)
-	if err != nil {
-		db.DFatalf("open %q err %v", f.pn, err)
-	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.fd = fd
-	return f.fd
-}
-
 func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.ReadResult, errno syscall.Errno) {
 	db.DPrintf(db.BINSRV, "Read %q off %d %d\n", f.pn, off, len(buf))
 	err := f.dl.read(off, len(buf))

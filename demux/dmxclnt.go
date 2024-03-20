@@ -6,8 +6,6 @@ package demux
 import (
 	"sync"
 
-	"runtime/debug"
-
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -64,13 +62,6 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 	if err := dmx.callmap.put(req.Tag(), ch); err != nil {
 		db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue req %v err %v\n", req, err)
 		return nil, err
-	}
-	db.DPrintf(db.ALWAYS, "demuxclnt iov len %v", len(outiov))
-	if len(outiov) > 0 {
-		db.DPrintf(db.ALWAYS, "demuxclnt iov len %v p %p", len(outiov), outiov[len(outiov)-1])
-	}
-	if false {
-		db.DPrintf(db.ALWAYS, "Put %v outiovlen %v\nstack %v", req, len(outiov), string(debug.Stack()))
 	}
 	if err := dmx.iovm.Put(req.Tag(), outiov); err != nil {
 		db.DPrintf(db.DEMUXCLNT, "SendReceive: iovm enqueue req %v err %v\n", req, err)

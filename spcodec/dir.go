@@ -35,17 +35,17 @@ func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *serr.Err) {
 	if cnt < uint64(len(b)+sz) {
 		return nil, nil
 	}
-	if err := frame.PushToFrame(&buf, b); err != nil {
-		return nil, serr.NewErrError(err)
+	if err := frame.WriteFrame(&buf, b); err != nil {
+		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
 func UnmarshalDirEnt(rdr io.Reader) (*sp.Stat, *serr.Err) {
 	st := sp.NewStatNull()
-	b, err := frame.PopFromFrame(rdr)
+	b, err := frame.ReadFrame(rdr)
 	if err != nil {
-		return nil, serr.NewErrError(err)
+		return nil, err
 	}
 	if err := proto.Unmarshal(b, st); err != nil {
 		return nil, serr.NewErrError(err)

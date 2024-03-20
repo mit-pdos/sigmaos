@@ -65,7 +65,9 @@ func GetLabels(s string) map[string]bool {
 	}
 	labels := strings.Split(s, ";")
 	for _, l := range labels {
-		m[l] = true
+		if l != "" {
+			m[l] = true
+		}
 	}
 	return m
 }

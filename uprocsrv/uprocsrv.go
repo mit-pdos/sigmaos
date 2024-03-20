@@ -4,6 +4,7 @@
 package uprocsrv
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -14,6 +15,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"sigmaos/binsrv"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -130,6 +132,7 @@ func shrinkMountTable() error {
 	return nil
 }
 
+// Set up uprocd for use for a specific realm
 func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
 	ups.mu.RLock()
 	defer ups.mu.RUnlock()
@@ -189,6 +192,7 @@ func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.Ass
 	return nil
 }
 
+// Run a proc inside of an inner container
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
@@ -201,12 +205,43 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	return container.RunUProc(uproc)
 }
 
+// Read the binary so that binfs loads it into its cache for
+// experiments with a warm cache.
+func readFile(pn string) error {
+	f, err := os.Open(pn)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	buf := make([]byte, 1024)
+	for {
+		_, err := f.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Warm uprocd to run a program for experiments with warm start.
 func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
+	pn := binsrv.BinPath(req.Program, req.BuildTag)
+	db.DPrintf(db.UPROCD, "WarmProc %q %v", pn, req)
+	if err := ups.assignToRealm(sp.Trealm(req.RealmStr)); err != nil {
+		db.DFatalf("Err assign to realm: %v", err)
+	}
+	if err := readFile(pn); err != nil {
+		res.OK = false
+		return err
+	}
 	res.OK = true
 	return nil
 }
 
-// Make and mount realm bin directory
+// Make and mount realm bin directory for [binsrv].
 func mountRealmBinDir(realm sp.Trealm) error {
 	dir := path.Join(sp.SIGMAHOME, "all-realm-bin", realm.String())
 

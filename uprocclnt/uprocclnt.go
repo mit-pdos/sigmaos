@@ -52,7 +52,7 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 func (clnt *UprocdClnt) WarmProc(realm sp.Trealm, prog, buildTag string) (uprocErr error, childErr error) {
 	req := &proto.WarmBinRequest{
 		RealmStr: realm.String(),
-		Prog:     prog,
+		Program:  prog,
 		BuildTag: buildTag,
 	}
 	res := &proto.RunResult{}

@@ -193,12 +193,10 @@ func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data
 
 func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) *serr.Err {
 	args := sp.NewTwriteread(fid)
-	db.DPrintf(db.ALWAYS, "protclnt iov %p", outiov[len(outiov)-1])
 	reply, err := pclnt.CallIoVec(args, iniov, outiov)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.ALWAYS, "protclnt iov 2 %p", outiov[len(outiov)-1])
 	_, ok := reply.Msg.(*sp.Rread)
 	if !ok {
 		return serr.NewErr(serr.TErrBadFcall, "Rwriteread")

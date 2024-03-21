@@ -16,6 +16,9 @@ import (
 const (
 	N_DOWNLOAD_RETRIES = 100
 	CHUNKSZ            = 1 * sp.MBYTE
+
+	SEEK_DATA = 3
+	SEEK_HOLE = 4
 )
 
 func index(o int64) int { return int(o / CHUNKSZ) }
@@ -28,6 +31,45 @@ type chunk struct {
 	n        int // bytes read
 	b        []byte
 	ch       chan error
+}
+
+func newChunk(dl *downloader, i int) *chunk {
+	return &chunk{cond: sync.NewCond(&dl.mu), i: i, ch: make(chan error)}
+}
+
+func readChunkSlice(dl *downloader, cks []*chunk) error {
+	db.DPrintf(db.BINSRV, "readChunkSlice %q %d\n", dl.pn, dl.sz)
+	f, err := os.OpenFile(binCachePath(dl.pn), os.O_RDONLY, 0777)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	for off := int64(0); off < dl.sz; {
+		db.DPrintf(db.BINSRV, "%q seek data from %d\n", dl.pn, off)
+		o1, err := f.Seek(off, SEEK_DATA)
+		if err != nil {
+			db.DPrintf(db.BINSRV, "Seek data %q %d err %v\n", dl.pn, o1, err)
+			return nil
+		}
+		db.DPrintf(db.BINSRV, "%q data at %d\n", dl.pn, o1)
+		o2, err := f.Seek(o1, SEEK_HOLE)
+		if err != nil {
+			db.DPrintf(db.BINSRV, "Seek hole %q %d err %v\n", dl.pn, o2, err)
+			return err
+		}
+		db.DPrintf(db.BINSRV, "%q hole at %d\n", dl.pn, o2)
+		for o := o1; o < o2; o += CHUNKSZ {
+			if o%CHUNKSZ != 0 {
+				db.DFatalf("offset %d\n", o)
+			}
+			if o+CHUNKSZ <= o2 || o2 >= dl.sz { // a complete chunk?
+				i := index(o)
+				cks[i] = newChunk(dl, i)
+			}
+		}
+		off = o2
+	}
+	return nil
 }
 
 type downloader struct {
@@ -129,7 +171,11 @@ func (dl *downloader) downloader() {
 				d := time.Since(s)
 				dl.tot += d
 				db.DPrintf(db.SPAWN_LAT, "[%v] Chunk %v %v tot %v", dl.pn, ck.i, d, dl.tot)
-
+				chks := make([]*chunk, index(dl.sz)+1)
+				if err := readChunkSlice(dl, chks); err != nil {
+					db.DPrintf(db.BINSRV, "readChunkSlice err %v\n", err)
+				}
+				db.DPrintf(db.BINSRV, "readChunkSlice: %v\n", chks)
 			}
 		}
 		ck.ch <- err
@@ -171,7 +217,7 @@ func (dl *downloader) getChunk(i int) *chunk {
 
 	ck := dl.chunks[i]
 	if ck == nil {
-		ck = &chunk{cond: sync.NewCond(&dl.mu), i: i, ch: make(chan error)}
+		ck = newChunk(dl, i)
 		dl.chunks[i] = ck
 		return ck
 	}

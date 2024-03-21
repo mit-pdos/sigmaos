@@ -12,6 +12,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -140,23 +141,32 @@ func writer(t *testing.T, ch chan error, pe *proc.ProcEnv, idx int) {
 		case <-ch:
 			stop = true
 		default:
+			db.DPrintf(db.ALWAYS, "Writer %v remove", idx)
 			if err := fsl.Remove(fn); serr.IsErrCode(err, serr.TErrUnreachable) {
+				db.DPrintf(db.ALWAYS, "Writer %v remove async done err %v", idx, err)
 				break
 			}
+			db.DPrintf(db.ALWAYS, "Writer %v create async", idx)
 			w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
 			if err != nil {
+				db.DPrintf(db.ALWAYS, "Writer %v create async done err %v", idx, err)
 				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err code %v", err)
 				break
 			}
+			db.DPrintf(db.ALWAYS, "Writer %v writer", idx)
 			nfile += 1
 			buf := test.NewBuf(WRITESZ)
 			if err := test.Writer(t, w, buf, FILESZ); err != nil {
+				db.DPrintf(db.ALWAYS, "Writer %v writer done err %v", idx, err)
 				break
 			}
+			db.DPrintf(db.ALWAYS, "Writer %v close", idx)
 			if err := w.Close(); err != nil {
+				db.DPrintf(db.ALWAYS, "Writer %v close done err %v", idx, err)
 				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
 				break
 			}
+			db.DPrintf(db.ALWAYS, "Writer %v close done", idx)
 		}
 	}
 	assert.True(t, nfile >= 3) // a bit arbitrary
@@ -164,7 +174,47 @@ func writer(t *testing.T, ch chan error, pe *proc.ProcEnv, idx int) {
 	fsl.Close()
 }
 
-func TestWriteCrash(t *testing.T) {
+func TestWriteCrash1(t *testing.T) {
+	const (
+		N        = 20
+		NCRASH   = 1
+		CRASHSRV = 1000000
+	)
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ch := make(chan error)
+
+	for i := 0; i < N; i++ {
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		err := ts.MintAndSetToken(pe)
+		assert.Nil(t, err)
+		go writer(ts.T, ch, pe, i)
+	}
+
+	crashchan := make(chan bool)
+	l := &sync.Mutex{}
+	for i := 0; i < NCRASH; i++ {
+		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l, crashchan)
+	}
+
+	for i := 0; i < NCRASH; i++ {
+		<-crashchan
+	}
+
+	db.DPrintf(db.TEST, "Done waiting for crashes")
+
+	for i := 0; i < N; i++ {
+		ch <- nil
+		db.DPrintf(db.TEST, "Done stopping writer #%v", i)
+	}
+
+	ts.Shutdown()
+}
+
+func TestWriteCrash5(t *testing.T) {
 	const (
 		N        = 20
 		NCRASH   = 5

@@ -156,8 +156,8 @@ then
 #  yes | sudo apt install openjdk-8-jdk \
 #  openjdk-8-jre-headless
 
-  wget 'https://golang.org/dl/go1.20.3.linux-amd64.tar.gz'
-  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.20.3.linux-amd64.tar.gz
+  wget 'https://golang.org/dl/go1.22.1.linux-amd64.tar.gz'
+  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.22.1.linux-amd64.tar.gz
   export PATH=/bin:/sbin:/usr/sbin:\$PATH:/usr/local/go/bin
   echo "PATH=\$PATH:/usr/local/go/bin" >> ~/.profile
   go version

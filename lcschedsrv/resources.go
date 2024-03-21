@@ -2,20 +2,22 @@ package lcschedsrv
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
-	"sigmaos/mem"
 	"sigmaos/proc"
 )
 
 type Resources struct {
-	mcpu proc.Tmcpu
-	mem  proc.Tmem
+	maxmcpu proc.Tmcpu
+	maxmem  proc.Tmem
+	mcpu    proc.Tmcpu
+	mem     proc.Tmem
 }
 
 func newResources(mcpuInt uint32, memInt uint32) *Resources {
 	return &Resources{
-		mcpu: proc.Tmcpu(mcpuInt),
-		mem:  proc.Tmem(memInt),
+		maxmcpu: proc.Tmcpu(mcpuInt),
+		maxmem:  proc.Tmem(memInt),
+		mcpu:    proc.Tmcpu(mcpuInt),
+		mem:     proc.Tmem(memInt),
 	}
 }
 
@@ -39,7 +41,7 @@ func (r *Resources) sanityCheck() {
 	if r.mcpu < 0 || r.mem < 0 {
 		db.DFatalf("Invalid mcpu (%v) or mem (%v): too little", r.mcpu, r.mem)
 	}
-	if r.mcpu > proc.Tmcpu(uint32(linuxsched.GetNCores())*1000) || r.mem > mem.GetTotalMem() {
+	if r.mcpu > r.maxmcpu || r.mem > r.maxmem {
 		db.DFatalf("Invalid mcpu (%v) or mem (%v): too much", r.mcpu, r.mem)
 	}
 }

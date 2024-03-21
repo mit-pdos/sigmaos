@@ -254,6 +254,43 @@ func TestWriteCrash1x20(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestWriteCrash5x1(t *testing.T) {
+	const (
+		N        = 20
+		NCRASH   = 5
+		CRASHSRV = 1000000
+	)
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ch := make(chan error)
+
+	for i := 0; i < N; i++ {
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		err := ts.MintAndSetToken(pe)
+		assert.Nil(t, err)
+		go writer(ts.T, ch, pe, i)
+	}
+
+	crashchan := make(chan bool)
+	l := &sync.Mutex{}
+	for i := 0; i < NCRASH; i++ {
+		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l, crashchan)
+	}
+
+	for i := 0; i < NCRASH; i++ {
+		<-crashchan
+	}
+
+	for i := 0; i < N; i++ {
+		ch <- nil
+	}
+
+	ts.Shutdown()
+}
+
 func TestWriteCrash5x20(t *testing.T) {
 	const (
 		N        = 20

@@ -256,7 +256,7 @@ func TestWriteCrash1x20(t *testing.T) {
 
 func TestWriteCrash5x1(t *testing.T) {
 	const (
-		N        = 20
+		N        = 1
 		NCRASH   = 5
 		CRASHSRV = 1000000
 	)

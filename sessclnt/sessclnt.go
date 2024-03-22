@@ -71,14 +71,14 @@ func (c *SessClnt) IsConnected() bool {
 	return false
 }
 
-func (c *SessClnt) RPC(req sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
-	fc := sessp.NewFcallMsg(req, iov, c.sid, c.seqcntr)
+func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	fc := sessp.NewFcallMsg(req, iniov, c.sid, c.seqcntr)
 	pmfc := spcodec.NewPartMarshaledMsg(fc)
 	nc := c.netClnt()
 	if nc == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)
 	}
-	rep, err := c.dmx.SendReceive(pmfc)
+	rep, err := c.dmx.SendReceive(pmfc, outiov)
 	db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
 
 	if err != nil {
@@ -95,7 +95,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.
 
 // For supporting reconnect
 func (c *SessClnt) sendHeartbeat() {
-	_, err := c.RPC(sp.NewTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil)
+	_, err := c.RPC(sp.NewTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil, nil)
 	if err != nil {
 		db.DPrintf(db.SESSCLNT_ERR, "%v heartbeat %v err %v", c.sid, c.addrs, err)
 	}
@@ -119,7 +119,8 @@ func (c *SessClnt) getConn() *serr.Err {
 		}
 		db.DPrintf(db.SESSCLNT, "%v connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
 		c.nc = nc
-		c.dmx = demux.NewDemuxClnt(spcodec.NewTransport(nc.Conn()))
+		iovm := demux.NewIoVecMap()
+		c.dmx = demux.NewDemuxClnt(spcodec.NewTransport(nc.Conn(), iovm), iovm)
 	}
 	return nil
 }

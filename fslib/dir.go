@@ -76,6 +76,7 @@ func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
 func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
+		db.DPrintf(db.FSLIB_ERR, "Err ReadDir.OpenReader: %v", err)
 		return nil, nil, err
 	}
 	dirents := []*sp.Stat{}
@@ -83,6 +84,9 @@ func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
 		dirents = append(dirents, st)
 		return false, nil
 	})
+	if error != nil {
+		db.DPrintf(db.FSLIB_ERR, "Err reader.ReadDir: %v", error)
+	}
 	return dirents, rdr, error
 }
 

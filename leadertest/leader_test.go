@@ -1,12 +1,12 @@
 package leadertest
 
 import (
-	"log"
 	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -63,7 +63,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []sp.Tpid) {
 	e := sp.Tepoch(0)
 	err = fslib.JsonReader(rdr.Reader, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
-		log.Printf("conf: %v\n", conf)
+		db.DPrintf(db.ALWAYS, "conf: %v", conf)
 		if conf.Leader == sp.NO_PID && e != 0 {
 			assert.Equal(t, conf.Epoch, e)
 		} else if last != conf.Leader { // new leader
@@ -72,7 +72,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []sp.Tpid) {
 			assert.False(t, ok, "pid")
 			m[conf.Leader] = true
 			last = conf.Leader
-			assert.True(t, conf.Epoch > e)
+			assert.True(t, conf.Epoch > e, "Conf epoch %v <= %v", conf.Epoch, e)
 			e = conf.Epoch
 		}
 		return nil

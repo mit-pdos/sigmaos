@@ -19,7 +19,7 @@ import (
 
 func main() {
 	if len(os.Args) != 12 {
-		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu buildTag gvisor pubkey privkey\nprovided:%v", os.Args[0], os.Args)
+		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu buildTag gvisor pubkey privkeyprovided:%v", os.Args[0], os.Args)
 	}
 	db.DPrintf(db.BOOT, "Boot %v", os.Args[1:])
 	srvs := strings.Split(os.Args[3], ";")
@@ -53,7 +53,7 @@ func main() {
 	if len(os.Args) >= 8 {
 		param.ReserveMcpu = os.Args[7]
 	}
-	db.DPrintf(db.KERNEL, "param %v\n", param)
+	db.DPrintf(db.KERNEL, "param %v", param)
 	h := sp.SIGMAHOME
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+h+"/bin/kernel:"+h+"/bin/linux:"+h+"/bin/user")
@@ -82,7 +82,7 @@ func main() {
 		db.DFatalf("Error MintToken: %v", err1)
 	}
 	if err := boot.BootUp(&param, pe, as); err != nil {
-		db.DFatalf("%v: boot %v err %v\n", os.Args[0], os.Args[1:], err)
+		db.DFatalf("%v: boot %v err %v", os.Args[0], os.Args[1:], err)
 	}
 	os.Exit(0)
 }

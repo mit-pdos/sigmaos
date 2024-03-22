@@ -55,8 +55,9 @@ func (rd *FdReader) Close() error {
 	return rd.sos.CloseFd(rd.fd)
 }
 
-func (rd *FdReader) Read(o sp.Toffset, sz sp.Tsize) ([]byte, error) {
-	return rd.sos.Read(rd.fd, sz)
+func (rd *FdReader) Read(o sp.Toffset, b []byte) (int, error) {
+	sz, err := rd.sos.Read(rd.fd, b)
+	return int(sz), err
 }
 
 func (rd *FdReader) Fd() int {

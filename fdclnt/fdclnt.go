@@ -128,21 +128,21 @@ func (fdc *FdClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []
 	return fdc.pc.PutFile(fname, fdc.pe.GetPrincipal(), mode|sp.OWRITE, perm, data, off, lid, f)
 }
 
-func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, cnt sp.Tsize) ([]byte, error) {
-	data, err := fdc.pc.ReadF(fid, off, cnt, sp.NullFence())
+func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, b []byte) (sp.Tsize, error) {
+	cnt, err := fdc.pc.ReadF(fid, off, b, sp.NullFence())
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	fdc.fds.incOff(fd, sp.Toffset(len(data)))
-	return data, nil
+	fdc.fds.incOff(fd, sp.Toffset(cnt))
+	return cnt, nil
 }
 
-func (fdc *FdClient) Read(fd int, cnt sp.Tsize) ([]byte, error) {
+func (fdc *FdClient) Read(fd int, b []byte) (sp.Tsize, error) {
 	fid, off, error := fdc.fds.lookupOff(fd)
 	if error != nil {
-		return nil, error
+		return 0, error
 	}
-	return fdc.readFid(fd, fid, off, cnt)
+	return fdc.readFid(fd, fid, off, b)
 }
 
 func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, error) {
@@ -178,16 +178,16 @@ func (fdc *FdClient) WriteFence(fd int, data []byte, f sp.Tfence) (sp.Tsize, err
 	return fdc.writeFid(fd, fid, off, data, f)
 }
 
-func (fdc *FdClient) WriteRead(fd int, iov sessp.IoVec) (sessp.IoVec, error) {
+func (fdc *FdClient) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error {
 	fid, _, error := fdc.fds.lookupOff(fd)
 	if error != nil {
-		return nil, error
+		return error
 	}
-	iov, err := fdc.pc.WriteRead(fid, iov)
+	err := fdc.pc.WriteRead(fid, iniov, outiov)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return iov, nil
+	return nil
 }
 
 func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {

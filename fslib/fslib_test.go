@@ -39,12 +39,12 @@ func TestInitFs(t *testing.T) {
 		return
 	}
 	sts, err := ts.GetDir(pathname)
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Error GetDir: %v", err)
 	if pathname == sp.NAMED {
 		db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
 		assert.True(t, fslib.Present(sts, namesrv.InitRootDir), "initfs")
 		sts, err = ts.GetDir(pathname + "/boot")
-		assert.Nil(t, err)
+		assert.Nil(t, err, "Err getdir: %v", err)
 	} else {
 		db.DPrintf(db.TEST, "%v %v\n", pathname, sp.Names(sts))
 		assert.True(t, len(sts) >= 2, "initfs")
@@ -326,6 +326,7 @@ func TestReadOff(t *testing.T) {
 	n, err := rdr.Reader.Read(b)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, n)
+	assert.Equal(t, "lo", string(b[:2]))
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err, "Remove: %v", err)

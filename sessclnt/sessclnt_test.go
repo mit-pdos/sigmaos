@@ -30,6 +30,10 @@ import (
 	"sigmaos/test"
 )
 
+const (
+	READ_TEST_STR = "PDOS!"
+)
+
 var srvaddr string
 
 func init() {
@@ -52,7 +56,7 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 		return nil, err
 	}
 
-	// db.DPrintf(db.TEST, "serve %v\n", fcm)
+	//	db.DPrintf(db.TEST, "serve %v\n", fcm)
 
 	qid := sp.NewQidPerm(0777, 0, 0)
 	var rep *sessp.FcallMsg
@@ -65,6 +69,10 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	case sessp.TTwrite:
 		msg := &sp.Rwrite{Count: uint32(len(fcm.Fcm.Iov[0]))}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
+	case sessp.TTreadF:
+		msg := &sp.Rread{}
+		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
+		rep.Iov = sessp.IoVec{[]byte(READ_TEST_STR)}
 	case sessp.TTwriteread:
 		msg := &sp.Rread{}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
@@ -108,7 +116,8 @@ func newTstateSrv(t *testing.T, crash int) *TstateSrv {
 
 func (ts *TstateSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
 	ss := &SessSrv{crash: ts.crash, conn: conn}
-	return demux.NewDemuxSrv(ss, spcodec.NewTransport(conn))
+	iovm := demux.NewIoVecMap()
+	return demux.NewDemuxSrv(ss, spcodec.NewTransport(conn, iovm))
 }
 
 func TestCompile(t *testing.T) {
@@ -117,7 +126,7 @@ func TestCompile(t *testing.T) {
 func TestConnectSessSrv(t *testing.T) {
 	ts := newTstateSrv(t, 0)
 	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
-	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
 	ts.srv.CloseListener()
@@ -126,12 +135,12 @@ func TestConnectSessSrv(t *testing.T) {
 func TestDisconnectSessSrv(t *testing.T) {
 	ts := newTstateSrv(t, 0)
 	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
-	_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil, nil)
 	assert.Nil(t, err)
 	ch := make(chan *serr.Err)
 	go func() {
 		req := sp.NewTwatch(sp.NoFid)
-		_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+		_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil, nil)
 		ch <- err
 	}()
 	time.Sleep(1 * time.Second)
@@ -155,7 +164,7 @@ func testManyClients(t *testing.T, crash int) {
 					break
 				default:
 					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.PE.GetPrincipal(), sp.TclntId(i), path.Path{})
-					_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+					_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil, nil)
 					if err != nil && crash > 0 && serr.IsErrCode(err, serr.TErrUnreachable) {
 						// wait for stop signal
 						<-ch
@@ -232,7 +241,7 @@ func (awrt *Awriter) Writer() {
 			return
 		}
 		req := sp.NewTwriteread(sp.NoFid)
-		_, err := awrt.clnt.RPC(sp.Taddrs{awrt.addr}, req, iov)
+		_, err := awrt.clnt.RPC(sp.Taddrs{awrt.addr}, req, iov, nil)
 		if err != nil {
 			awrt.rep <- err
 		} else {
@@ -268,6 +277,17 @@ func (awrt *Awriter) Close() error {
 	close(awrt.req)
 	close(awrt.rep)
 	return nil
+}
+
+func TestRead(t *testing.T) {
+	ts := newTstateSrv(t, 0)
+	buf := make([]byte, len(READ_TEST_STR))
+	req := sp.NewReadF(sp.NoFid, 0, sp.Tsize(len(buf)), sp.NullFence())
+	iov := sessp.IoVec{buf}
+	_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil, iov)
+	assert.Nil(t, err, "Err Read: %v", err)
+	assert.Equal(t, READ_TEST_STR, string(buf))
+	ts.srv.CloseListener()
 }
 
 func TestPerfSessSrvAsync(t *testing.T) {
@@ -353,7 +373,7 @@ func TestPerfSessSrvSync(t *testing.T) {
 	n := TOTAL / REQBUFSZ
 	for i := 0; i < TOTAL/REQBUFSZ; i++ {
 		req := sp.NewTwriteread(sp.NoFid)
-		rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, sessp.IoVec{buf})
+		rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, sessp.IoVec{buf}, nil)
 		assert.Nil(t, err)
 		assert.True(t, REPBUFSZ == len(rep.Iov[0]))
 	}
@@ -404,7 +424,7 @@ func TestPerfSessSrvSyncClnt(t *testing.T) {
 	n := TOTAL / REQBUFSZ
 	for i := 0; i < TOTAL/REQBUFSZ; i++ {
 		req := sp.NewTwriteread(sp.NoFid)
-		rep, err := ts.clnt.RPC(sp.Taddrs{ts.Addr}, req, sessp.IoVec{buf})
+		rep, err := ts.clnt.RPC(sp.Taddrs{ts.Addr}, req, sessp.IoVec{buf}, nil)
 		assert.Nil(t, err)
 		assert.True(t, REPBUFSZ == len(rep.Iov[0]))
 	}
@@ -456,13 +476,13 @@ func (ts *TstateSp) shutdown() {
 func TestConnectSigmaPSrv(t *testing.T) {
 	ts := newTstateSp(t)
 	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
-	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
 
 	req1 := sp.NewTwriteread(sp.NoFid)
 	iov := sessp.NewIoVec([][]byte{make([]byte, 10)})
-	rep, err = ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req1, iov)
+	rep, err = ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req1, iov, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
 
@@ -472,7 +492,7 @@ func TestConnectSigmaPSrv(t *testing.T) {
 func TestDisconnectSigmaPSrv(t *testing.T) {
 	ts := newTstateSp(t)
 	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
-	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil)
+	rep, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
 

@@ -1,6 +1,8 @@
 package sigmaclntclnt
 
 import (
+	"fmt"
+
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
@@ -118,12 +120,12 @@ func (scc *SigmaClntClnt) Remove(path string) error {
 	err := scc.rpcErr("SigmaClntSrvAPI.Remove", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "Remove %v %v %v", req, rep, err)
 	return err
-
 }
 
 func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
 	req := scproto.SigmaPathRequest{Path: path}
 	rep := scproto.SigmaDataReply{}
+	rep.Blob = &rpcproto.Blob{Iov: [][]byte{nil}}
 	d, err := scc.rpcData("SigmaClntSrvAPI.GetFile", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "GetFile %v %v %v", req, d, err)
 	if err != nil {
@@ -141,23 +143,25 @@ func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []by
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) Read(fd int, sz sp.Tsize) ([]byte, error) {
-	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(sz)}
+func (scc *SigmaClntClnt) Read(fd int, b []byte) (sp.Tsize, error) {
+	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b))}
 	rep := scproto.SigmaDataReply{}
+	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	d, err := scc.rpcData("SigmaClntSrvAPI.Read", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Read %v %v %v", req, len(d), err)
+	db.DPrintf(db.SIGMACLNTCLNT, "Read %v size %v niov %v err %v", req, req.Size, len(d), err)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return d[0], nil
+	return sp.Tsize(len(d[0])), nil
 }
 
 func (scc *SigmaClntClnt) Write(fd int, data []byte) (sp.Tsize, error) {
 	blob := &rpcproto.Blob{Iov: [][]byte{data}}
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: blob}
 	rep := scproto.SigmaSizeReply{}
+	db.DPrintf(db.SIGMACLNTCLNT, "Write begin %v %v", req.Fd, len(data))
 	sz, err := scc.rpcSize("SigmaClntSrvAPI.Write", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Write %v %v %v %v", req.Fd, len(data), rep, err)
+	db.DPrintf(db.SIGMACLNTCLNT, "Write returned %v %v %v %v", req.Fd, len(data), rep, err)
 	return sz, err
 }
 
@@ -208,13 +212,18 @@ func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, e
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) WriteRead(fd int, iov sessp.IoVec) (sessp.IoVec, error) {
-	blob := rpcproto.NewBlob(iov)
-	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: blob}
-	rep := scproto.SigmaDataReply{}
+func (scc *SigmaClntClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error {
+	inblob := rpcproto.NewBlob(iniov)
+	outblob := rpcproto.NewBlob(outiov)
+	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: inblob, NOutVec: uint32(len(outiov))}
+	rep := scproto.SigmaDataReply{Blob: outblob}
 	d, err := scc.rpcData("SigmaClntSrvAPI.WriteRead", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v %v", req.Fd, len(iov), len(d), err)
-	return d, err
+	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v %v", req.Fd, len(iniov), len(d), err)
+	if err == nil && len(outiov) != len(d) {
+		return fmt.Errorf("sigmaclntclnt outiov len wrong: supplied %v != %v returned", len(outiov), len(d))
+	}
+	copy(outiov, d)
+	return err
 }
 
 func (scc *SigmaClntClnt) DirWait(fd int) error {

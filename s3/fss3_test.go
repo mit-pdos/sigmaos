@@ -301,17 +301,19 @@ func TestUnionFile(t *testing.T) {
 	if assert.Nil(ts.T, err, "Error Open: %v", err) {
 		n := len(file)
 		for {
-			data, err := ts.Read(fd, 8192)
-			if len(data) == 0 {
+			b := make([]byte, 8192)
+			n, err := ts.Read(fd, b)
+			if n == 0 {
 				break
 			}
 			if !assert.Nil(ts.T, err, "Error Read: %v", err) {
 				break
 			}
-			for i := 0; i < len(data); i++ {
-				assert.Equal(t, file[i], data[i])
+			b = b[:n]
+			for i := 0; i < int(n); i++ {
+				assert.Equal(t, file[i], b[i])
 			}
-			file = file[len(data):]
+			file = file[len(b):]
 		}
 		assert.Equal(ts.T, int(st.Length), n)
 	}

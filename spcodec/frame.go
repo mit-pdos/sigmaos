@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
+	"runtime/debug"
 
 	"google.golang.org/protobuf/proto"
 
@@ -17,14 +18,16 @@ import (
 )
 
 type Transport struct {
-	rdr io.Reader
-	wrt *bufio.Writer
+	rdr  io.Reader
+	wrt  *bufio.Writer
+	iovm *demux.IoVecMap
 }
 
-func NewTransport(conn net.Conn) demux.TransportI {
+func NewTransport(conn net.Conn, iovm *demux.IoVecMap) demux.TransportI {
 	return &Transport{
-		rdr: bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		wrt: bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		rdr:  bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
+		wrt:  bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		iovm: iovm,
 	}
 }
 
@@ -44,7 +47,32 @@ func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
 		return nil, serr.NewErr(serr.TErrUnreachable, error)
 	}
 
-	iov, err := frame.ReadFramesN(t.rdr, fm.Fc.Nvec)
+	// Get any IoVecs which were supplied as destinations for the output of the
+	// RPC
+	iov, _ := t.iovm.Get(fm.Tag())
+
+	if len(iov) > 0 {
+		// Sanity check: if the caller supplied IoVecs to write outputs to, ensure
+		// that they supplied at least the right number of them. In the event that
+		// the result of the RPC is an error, we may get the case that
+		// len(iov) < fm.Fc.Nvec
+		if len(iov) < int(fm.Fc.Nvec) {
+			db.DFatalf("mismatch between supplied destination nvec and reply nvec: %v != %v\nrep:%v reptype:%v\n%v", len(iov), fm.Fc.Nvec, fm.Fc, sessp.Tfcall(fm.Fc.Type), string(debug.Stack()))
+		}
+		// Trim the number of IOVecs if receiving fewer than expected
+		if len(iov) > int(fm.Fc.Nvec) {
+			iov = iov[:fm.Fc.Nvec]
+		}
+	} else {
+		// If there are outputs, but the caller didn't supply any IoVecs to write
+		// them to, create an IoVec to hold the outputs
+		if fm.Fc.Nvec > 0 {
+			iov = make(sessp.IoVec, fm.Fc.Nvec)
+		}
+	}
+
+	// Read frames into the IoVec
+	err = frame.ReadNFramesInto(t.rdr, iov)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,9 @@
 package protclnt
 
 import (
+	"fmt"
+
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
@@ -24,8 +27,8 @@ func (pclnt *ProtClnt) Servers() sp.Taddrs {
 	return pclnt.addrs
 }
 
-func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
-	reply, err := pclnt.sm.RPC(addrs, args, iov)
+func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	reply, err := pclnt.sm.RPC(addrs, args, iniov, outiov)
 	if err != nil {
 		return nil, err
 	}
@@ -37,20 +40,16 @@ func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, iov sessp.Io
 }
 
 func (pclnt *ProtClnt) Call(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(pclnt.addrs, args, nil)
+	return pclnt.CallServer(pclnt.addrs, args, nil, nil)
 }
 
-func (pclnt *ProtClnt) CallData(args sessp.Tmsg, data []byte) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(pclnt.addrs, args, sessp.IoVec{data})
-}
-
-func (pclnt *ProtClnt) CallIoVec(args sessp.Tmsg, iov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(pclnt.addrs, args, iov)
+func (pclnt *ProtClnt) CallIoVec(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	return pclnt.CallServer(pclnt.addrs, args, iniov, outiov)
 }
 
 func (pclnt *ProtClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
 	args := sp.NewTattach(fid, sp.NoFid, principal, cid, path)
-	reply, err := pclnt.CallServer(pclnt.addrs, args, nil)
+	reply, err := pclnt.CallServer(pclnt.addrs, args, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -165,22 +164,23 @@ func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, *serr.Err) {
-	args := sp.NewReadF(fid, offset, cnt, f)
-	reply, err := pclnt.Call(args)
+func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
+	args := sp.NewReadF(fid, offset, sp.Tsize(len(b)), f)
+	reply, err := pclnt.CallIoVec(args, nil, sessp.IoVec{b})
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	_, ok := reply.Msg.(*sp.Rread)
+	rep, ok := reply.Msg.(*sp.Rread)
 	if !ok {
-		return nil, serr.NewErr(serr.TErrBadFcall, "Rread")
+		return 0, serr.NewErr(serr.TErrBadFcall, "Rread")
 	}
-	return reply.Iov[0], nil
+	db.DPrintf(db.PROTCLNT, "Read fid %v cnt %v", fid, rep.Tcount())
+	return rep.Tcount(), nil
 }
 
 func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
 	args := sp.NewTwriteF(fid, offset, f)
-	reply, err := pclnt.CallData(args, data)
+	reply, err := pclnt.CallIoVec(args, sessp.IoVec{data}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -191,17 +191,26 @@ func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) *serr.Err {
 	args := sp.NewTwriteread(fid)
-	reply, err := pclnt.CallIoVec(args, iov)
+	reply, err := pclnt.CallIoVec(args, iniov, outiov)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	_, ok := reply.Msg.(*sp.Rread)
 	if !ok {
-		return nil, serr.NewErr(serr.TErrBadFcall, "Rwriteread")
+		return serr.NewErr(serr.TErrBadFcall, "Rwriteread")
 	}
-	return reply.Iov, nil
+	if len(outiov) != len(reply.Iov) {
+		// Sanity check: if the caller supplied IoVecs to write outputs to, ensure
+		// that they supplied at least enough of them. In the event that
+		// the result of the RPC is an error, we may get the case that
+		// len(iov) < fm.Fc.Nvec
+		if len(outiov) < len(reply.Iov) {
+			return serr.NewErr(serr.TErrBadFcall, fmt.Sprintf("protclnt outiov len insufficient: prov %v != %v res", len(outiov), len(reply.Iov)))
+		}
+	}
+	return nil
 }
 
 func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rstat, *serr.Err) {
@@ -271,7 +280,7 @@ func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Path, mode sp.Tmode, offse
 
 func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Path, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sp.Tfence, data []byte, lid sp.TleaseId) (*sp.Rwrite, *serr.Err) {
 	args := sp.NewTputfile(fid, mode, perm, offset, path, resolve, lid, f)
-	reply, err := pclnt.CallData(args, data)
+	reply, err := pclnt.CallIoVec(args, sessp.IoVec{data}, nil)
 	if err != nil {
 		return nil, err
 	}

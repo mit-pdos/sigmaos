@@ -107,8 +107,12 @@ func TestGeoSingle(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: test.Overlays}}, 0)
+	defer ts.Shutdown()
+	defer ts.stop()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	arg := proto.GeoRequest{
 		Lat: 37.7749,
 		Lon: -122.4194,
@@ -118,8 +122,6 @@ func TestGeoSingle(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
 	assert.Equal(t, 5, len(res.HotelIds))
-	ts.stop()
-	ts.Shutdown()
 }
 
 func TestRateSingle(t *testing.T) {
@@ -132,8 +134,12 @@ func TestRateSingle(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-rated", Public: test.Overlays}}, NCACHESRV)
+	defer ts.Shutdown()
+	defer ts.stop()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	arg := &proto.RateRequest{
 		HotelIds: []string{"5", "3", "1", "6", "2"}, // from TestGeo
 		InDate:   "2015-04-09",
@@ -146,8 +152,6 @@ func TestRateSingle(t *testing.T) {
 	err = rpcc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
-	ts.stop()
-	ts.Shutdown()
 }
 
 func TestRecSingle(t *testing.T) {
@@ -160,8 +164,12 @@ func TestRecSingle(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-recd", Public: test.Overlays}}, 0)
+	defer ts.Shutdown()
+	defer ts.stop()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	arg := &proto.RecRequest{
 		Require: "dis",
 		Lat:     38.0235,
@@ -172,8 +180,6 @@ func TestRecSingle(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
 	assert.Equal(t, 1, len(res.HotelIds))
-	ts.stop()
-	ts.Shutdown()
 }
 
 func TestUserSingle(t *testing.T) {
@@ -186,8 +192,12 @@ func TestUserSingle(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-userd", Public: test.Overlays}}, 0)
+	defer ts.Shutdown()
+	defer ts.stop()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	arg := &proto.UserRequest{
 		Name:     "Cornell_0",
 		Password: hotel.NewPassword("0"),
@@ -196,8 +206,6 @@ func TestUserSingle(t *testing.T) {
 	err = rpcc.RPC("Users.CheckUser", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res)
-	ts.stop()
-	ts.Shutdown()
 }
 
 func TestProfile(t *testing.T) {
@@ -210,8 +218,12 @@ func TestProfile(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-profd", Public: test.Overlays}}, NCACHESRV)
+	defer ts.Shutdown()
+	defer ts.stop()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	arg := &proto.ProfRequest{
 		HotelIds: []string{"1", "2"},
 	}
@@ -224,9 +236,6 @@ func TestProfile(t *testing.T) {
 	err = rpcc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
-
-	ts.stop()
-	ts.Shutdown()
 }
 
 func TestCheck(t *testing.T) {
@@ -240,8 +249,12 @@ func TestCheck(t *testing.T) {
 	}
 
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
+	defer ts.Shutdown()
+	defer ts.stop()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
 		CustomerName: "Cornell_0",
@@ -256,8 +269,6 @@ func TestCheck(t *testing.T) {
 	err = rpcc.RPC("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
-	ts.stop()
-	ts.Shutdown()
 }
 
 func TestReserve(t *testing.T) {
@@ -271,8 +282,12 @@ func TestReserve(t *testing.T) {
 	}
 
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
+	defer ts.Shutdown()
+	defer ts.stop()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
 		CustomerName: "Cornell_0",
@@ -289,9 +304,6 @@ func TestReserve(t *testing.T) {
 	err = rpcc.RPC("Reserve.NewReservation", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
-
-	ts.stop()
-	ts.Shutdown()
 }
 
 func TestQueryDev(t *testing.T) {
@@ -303,16 +315,17 @@ func TestQueryDev(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-
+	defer ts.Shutdown()
 	dbc, err := dbclnt.NewDbClnt(ts.FsLib, sp.DBD)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	assert.Nil(t, err)
 	q := fmt.Sprintf("select * from reservation")
 	res := []hotel.Reservation{}
 	err = dbc.Query(q, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res))
-
-	ts.Shutdown()
 }
 
 func TestSingleSearch(t *testing.T) {
@@ -325,8 +338,12 @@ func TestSingleSearch(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: false}, hotel.Srv{Name: "hotel-rated", Public: false}, hotel.Srv{Name: "hotel-searchd", Public: test.Overlays}}, NCACHESRV)
+	defer ts.Shutdown()
+	defer ts.stop()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	arg := &proto.SearchRequest{
 		Lat:     37.7749,
 		Lon:     -122.4194,
@@ -340,8 +357,6 @@ func TestSingleSearch(t *testing.T) {
 	err = rpcc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
-	ts.stop()
-	ts.Shutdown()
 }
 
 func TestWww(t *testing.T) {

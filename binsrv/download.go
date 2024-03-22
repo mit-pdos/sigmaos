@@ -201,6 +201,7 @@ func (dl *downloader) readRemoteChunk(off int64, l int) ([]byte, error) {
 	db.DPrintf(db.BINSRV, "readRemoteChunk %q %d(%d) %d\n", dl.pn, index(off), off, l)
 	b, err := dl.sc.Read(dl.sfd, sp.Tsize(l))
 	if err != nil {
+		db.DPrintf(db.ERROR, "readRemoteChunk %q %d(%d) %d err %v\n", dl.pn, index(off), off, l, err)
 		return nil, err
 	}
 	return b, nil
@@ -239,9 +240,6 @@ func (dl *downloader) signal(i int) {
 	defer dl.mu.Unlock()
 
 	r := dl.readers[i]
-	if r == nil {
-		db.DFatalf("signal: unknown %d\n", i)
-	}
 	r.cached = true
 	r.cond.Broadcast()
 }

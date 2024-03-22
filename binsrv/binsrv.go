@@ -135,7 +135,6 @@ func RunBinFS(kernelId, dir string) error {
 	}()
 
 	server.Wait()
-	//<-ch
 	db.DPrintf(db.ALWAYS, "Wait returned\n")
 	return nil
 }

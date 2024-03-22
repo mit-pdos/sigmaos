@@ -29,8 +29,8 @@ for vm in $vms; do
     
 #    sudo apt install -y apparmor-utils
 #    (cd sigmaos; sudo apparmor_parser -r container/sigmaos-uproc )
-#    (cd sigmaos; ./set-cores.sh --set 1 --start 4 --end 39 )
+    (cd sigmaos; ./set-cores.sh --set 0 --start 4 --end 39 )
 #    sudo rm -rf /data/volumes/*
-aa-status | grep sigmaos
+#aa-status | grep sigmaos
 ENDSSH
 done

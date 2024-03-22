@@ -41,7 +41,7 @@ type SigmaOS interface {
 	WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error)
 
 	// RPC
-	WriteRead(fd int, iov sessp.IoVec) (sessp.IoVec, error)
+	WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error
 
 	// Wait unil directory changes
 	DirWait(fd int) error

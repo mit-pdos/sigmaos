@@ -34,7 +34,7 @@ func RunProc(fencestr, dir string) {
 
 	fn := dir + "/out"
 
-	conf := &Config{fence.Epoch, "", sc.ProcEnv().GetPID()}
+	conf := &Config{fence.Epoch, sp.NO_PID, sc.ProcEnv().GetPID()}
 
 	// wait a little before starting to write
 	time.Sleep(10 * time.Millisecond)

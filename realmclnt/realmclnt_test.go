@@ -349,7 +349,7 @@ func TestWaitExitMultiNode(t *testing.T) {
 		sts, err := ts1.GetDir(d)
 		db.DPrintf(db.TEST, "realm names %v %v\n", d, sp.Names(sts))
 		assert.Nil(t, err)
-		assert.True(t, int64(len(sts)) == subsysCnts[i], "No %vs in user realm", d)
+		assert.True(t, int64(len(sts)) == subsysCnts[i], "Wrong number of %vs in user realm: %v != %v", d, len(sts), subsysCnts[i])
 		for _, st := range sts1 {
 			// If there is a name in common in the directory, check that they are for different mounts
 			if fslib.Present(sts, []string{st.Name}) {

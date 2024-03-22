@@ -5,7 +5,9 @@ import (
 	"io"
 	"net"
 
-	// db "sigmaos/debug"
+	//	"runtime/debug"
+
+	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/frame"
 	"sigmaos/serr"
@@ -27,14 +29,16 @@ func (c *Call) Tag() sessp.Ttag {
 }
 
 type Transport struct {
-	rdr io.Reader
-	wrt *bufio.Writer
+	rdr  io.Reader
+	wrt  *bufio.Writer
+	iovm *demux.IoVecMap
 }
 
-func NewTransport(conn net.Conn) *Transport {
+func NewTransport(conn net.Conn, iovm *demux.IoVecMap) *Transport {
 	return &Transport{
-		rdr: bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		wrt: bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		rdr:  bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
+		wrt:  bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		iovm: iovm,
 	}
 }
 
@@ -42,7 +46,7 @@ func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
 	fc := c.(*Call)
 	// db.DPrintf(db.TEST, "writecall %v\n", c)
 	if err := frame.WriteSeqno(fc.Seqno, t.wrt); err != nil {
-		return serr.NewErr(serr.TErrUnreachable, err.Error())
+		return err
 	}
 	if err := frame.WriteFrames(t.wrt, fc.Iov); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
@@ -58,10 +62,26 @@ func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	iov, err := frame.ReadFrames(t.rdr)
+	iov, _ := t.iovm.Get(sessp.Ttag(seqno))
+	if len(iov) == 0 {
+		// Read frames, creating an IO vec
+		iov, err = frame.ReadFrames(t.rdr)
+	} else {
+		var n uint32
+		n, err = frame.ReadNumOfFrames(t.rdr)
+		if err != nil {
+			return nil, err
+		}
+		if uint32(len(iov)) != n {
+			db.DFatalf("mismatch between supplied destination nvec and incoming nvec: %v != %v", len(iov), n)
+		}
+		// Read frames into the IoVec
+		err = frame.ReadNFramesInto(t.rdr, iov)
+	}
 	if err != nil {
 		return nil, err
 	}
+
 	c := NewCall(seqno, iov)
 	// db.DPrintf(db.TEST, "readcall %v\n", c)
 	return c, nil

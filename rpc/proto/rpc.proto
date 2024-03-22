@@ -9,7 +9,7 @@ message Request {
 }
 
 message Reply {
-        Rerror err = 2;
+        Rerror err = 1;
 }
 
 // Users of rpc package can use Blob to pass data directly through to

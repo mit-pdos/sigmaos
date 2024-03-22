@@ -15,6 +15,7 @@ import (
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/rpcsrv"
 	"sigmaos/serr"
+	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclntcodec"
 	scproto "sigmaos/sigmaclntsrv/proto"
@@ -44,7 +45,8 @@ func newSigmaClntConn(conn net.Conn, pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*
 		conn: conn,
 		api:  scs,
 	}
-	scc.dmx = demux.NewDemuxSrv(scc, sigmaclntcodec.NewTransport(conn))
+	iovm := demux.NewIoVecMap()
+	scc.dmx = demux.NewDemuxSrv(scc, sigmaclntcodec.NewTransport(conn, iovm))
 	return scc, nil
 }
 
@@ -196,17 +198,19 @@ func (scs *SigmaClntSrvAPI) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest
 func (scs *SigmaClntSrvAPI) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaDataReply) error {
 	b := make([]byte, req.Size)
 	cnt, err := scs.sc.Read(int(req.Fd), b)
+	b = b[:cnt]
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: Read %v %v cnt %v", scs.sc.ClntId(), req, len(rep.Blob.Iov), cnt)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: Read %v %v size %v cnt %v len %v err %v", scs.sc.ClntId(), req.Size, req, len(rep.Blob.Iov), cnt, len(b), err)
 	return nil
 }
 
 func (scs *SigmaClntSrvAPI) Write(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaSizeReply) error {
+	db.DPrintf(db.SIGMACLNTSRV, "%v: Write sigmaclntsrv begin %v %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov))
 	sz, err := scs.sc.Write(int(req.Fd), req.Blob.Iov[0])
 	rep.Size = uint64(sz)
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: Write %v %v %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov), rep)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: Write sigmaclntsrv returned %v %v %v err %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov), rep, err)
 	return nil
 }
 
@@ -218,7 +222,8 @@ func (scs *SigmaClntSrvAPI) Seek(ctx fs.CtxI, req scproto.SigmaSeekRequest, rep 
 }
 
 func (scs *SigmaClntSrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaDataReply) error {
-	bl, err := scs.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec())
+	bl := make(sessp.IoVec, req.NOutVec)
+	err := scs.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec(), bl)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: WriteRead %v %v %v %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov), len(bl), err)
 	rep.Blob = rpcproto.NewBlob(bl)
 	rep.Err = scs.setErr(err)

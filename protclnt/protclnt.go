@@ -4,6 +4,8 @@
 package protclnt
 
 import (
+	"fmt"
+
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -163,7 +165,6 @@ func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 }
 
 func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
-	db.DPrintf(db.PROTCLNT, "Read fid %v o %v")
 	args := sp.NewReadF(fid, offset, sp.Tsize(len(b)), f)
 	reply, err := pclnt.CallIoVec(args, nil, sessp.IoVec{b})
 	if err != nil {
@@ -173,6 +174,7 @@ func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfe
 	if !ok {
 		return 0, serr.NewErr(serr.TErrBadFcall, "Rread")
 	}
+	db.DPrintf(db.PROTCLNT, "Read fid %v cnt %v", fid, rep.Tcount())
 	return rep.Tcount(), nil
 }
 
@@ -189,17 +191,26 @@ func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) *serr.Err {
 	args := sp.NewTwriteread(fid)
-	reply, err := pclnt.CallIoVec(args, iov, nil)
+	reply, err := pclnt.CallIoVec(args, iniov, outiov)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	_, ok := reply.Msg.(*sp.Rread)
 	if !ok {
-		return nil, serr.NewErr(serr.TErrBadFcall, "Rwriteread")
+		return serr.NewErr(serr.TErrBadFcall, "Rwriteread")
 	}
-	return reply.Iov, nil
+	if len(outiov) != len(reply.Iov) {
+		// Sanity check: if the caller supplied IoVecs to write outputs to, ensure
+		// that they supplied at least enough of them. In the event that
+		// the result of the RPC is an error, we may get the case that
+		// len(iov) < fm.Fc.Nvec
+		if len(outiov) < len(reply.Iov) {
+			return serr.NewErr(serr.TErrBadFcall, fmt.Sprintf("protclnt outiov len insufficient: prov %v != %v res", len(outiov), len(reply.Iov)))
+		}
+	}
+	return nil
 }
 
 func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rstat, *serr.Err) {

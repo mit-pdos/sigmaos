@@ -55,7 +55,7 @@ func TestPipeBasic(t *testing.T) {
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
 		b := make([]byte, 100)
-		_, err := fsl.Read(fd, b)
+		_, err = fsl.Read(fd, b)
 		assert.Nil(ts.T, err, "Read")
 		assert.Equal(ts.T, "hello", string(b))
 		err = fsl.CloseFd(fd)
@@ -94,7 +94,8 @@ func TestPipeClose(t *testing.T) {
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
 		for true {
-			b, err := fsl.Read(fd, 100)
+			b := make([]byte, 100)
+			_, err := fsl.Read(fd, b)
 			if err != nil { // writer closed pipe
 				break
 			}
@@ -168,7 +169,8 @@ func TestPipeCrash0(t *testing.T) {
 	}()
 	fd, err := ts.Open(pipe, sp.OREAD)
 	assert.Nil(ts.T, err, "Open")
-	_, err = ts.Read(fd, 100)
+	b := make([]byte, 100)
+	_, err = ts.Read(fd, b)
 	assert.NotNil(ts.T, err, "read")
 
 	ts.Remove(pipe)
@@ -216,7 +218,8 @@ func TestPipeCrash1(t *testing.T) {
 
 	fd, err := ts.Open(pipe, sp.OREAD)
 	assert.Nil(ts.T, err, "Open")
-	_, err = ts.Read(fd, 100)
+	b := make([]byte, 100)
+	_, err = ts.Read(fd, b)
 	assert.NotNil(ts.T, err, "read")
 
 	ts.Remove(pipe)

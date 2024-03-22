@@ -30,6 +30,7 @@ func (ss *Services) addSvc(s string, sub Subsystem) {
 
 func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp.Tpid, error) {
 	db.DPrintf(db.KERNEL, "Boot sub %v realm %v", s, realm)
+	defer db.DPrintf(db.KERNEL, "Boot sub %v done realm %v", s, realm)
 
 	k.Lock()
 	defer k.Unlock()

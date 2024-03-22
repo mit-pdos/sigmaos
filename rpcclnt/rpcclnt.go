@@ -28,7 +28,7 @@ type RPCcall struct {
 }
 
 type RPCCh interface {
-	SendReceive(sessp.IoVec) (sessp.IoVec, error)
+	SendReceive(sessp.IoVec, sessp.IoVec) error
 	StatsSrv() (*rpc.RPCStatsSnapshot, error)
 }
 
@@ -73,13 +73,13 @@ func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
 	return rpcch, nil
 }
 
-func (ch *sigmaCh) SendReceive(iov sessp.IoVec) (sessp.IoVec, error) {
+func (ch *sigmaCh) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
 	idx := int(ch.idx.Add(1))
-	b, err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], iov)
+	err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], iniov, outiov)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return b, nil
+	return nil
 }
 
 func (ch *sigmaCh) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
@@ -98,58 +98,68 @@ func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
 	return NewRPCClntCh(ch), nil
 }
 
-func (rpcc *RPCClnt) rpc(method string, blob sessp.IoVec) (*rpcproto.Reply, sessp.IoVec, error) {
+func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (*rpcproto.Reply, error) {
 	req := rpcproto.Request{Method: method}
 	b, err := proto.Marshal(&req)
 	if err != nil {
-		return nil, nil, serr.NewErrError(err)
+		return nil, serr.NewErrError(err)
 	}
 
 	start := time.Now()
-
-	iov, err := rpcc.ch.SendReceive(append(sessp.IoVec{b}, blob...))
+	err = rpcc.ch.SendReceive(append(sessp.IoVec{b}, iniov...), outiov)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
 	// Record stats
 	rpcc.si.Stat(method, time.Since(start).Microseconds())
 
 	rep := &rpcproto.Reply{}
-	if err := proto.Unmarshal(iov[0], rep); err != nil {
-		return nil, nil, serr.NewErrError(err)
+	if err := proto.Unmarshal(outiov[0], rep); err != nil {
+		return nil, serr.NewErrError(err)
 	}
-
-	return rep, iov[1:], nil
+	return rep, nil
 }
 
 // RPC handles arg and res that contain a Blob specially: it removes
 // the blob from the message and pass it down in an IoVec to avoid
 // marshaling overhead of large blobs.
 func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
-	blob := rpc.GetBlob(arg)
-	var iov sessp.IoVec
-	if blob != nil {
-		iov = blob.GetIoVec()
-		blob.SetIoVec(nil)
+	inblob := rpc.GetBlob(arg)
+	var iniov sessp.IoVec
+	if inblob != nil {
+		iniov = inblob.GetIoVec()
+		inblob.SetIoVec(nil)
 	}
 	a, err := proto.Marshal(arg)
 	if err != nil {
 		return err
 	}
-	rep, iov, err := rpcc.rpc(method, append(sessp.IoVec{a}, iov...))
+	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Reply
+	// wrapper, and one for the marshaled res proto.Message
+	outiov := make(sessp.IoVec, 2)
+	outblob := rpc.GetBlob(res)
+	if outblob != nil { // handle blob
+		// Get the reply's blob, if it has one, so that data can be read directly
+		// into buffers in its IoVec
+		outiov = append(outiov, outblob.GetIoVec()...)
+	}
+	// Add an IoVec spot for the RPC wrappers
+	rep, err := rpcc.rpc(method, append(sessp.IoVec{a}, iniov...), outiov)
 	if err != nil {
 		return err
 	}
 	if rep.Err.ErrCode != 0 {
 		return sp.NewErr(rep.Err)
 	}
-	if err := proto.Unmarshal(iov[0], res); err != nil {
+	if err := proto.Unmarshal(outiov[1], res); err != nil {
 		return err
 	}
-	blob = rpc.GetBlob(res)
-	if blob != nil && len(iov) > 1 { // handle blob
-		blob.SetIoVec(iov[1:])
+	if outblob != nil {
+		// Need to get the blob again, because its value will be reset during
+		// unmarshaling
+		outblob = rpc.GetBlob(res)
+		// Set the IoVec to handle replies with blobs
+		outblob.SetIoVec(outiov[2:])
 	}
 	return nil
 }

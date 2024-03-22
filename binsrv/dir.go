@@ -63,11 +63,7 @@ func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, f
 	if err != nil {
 		return nil, 0, fs.ToErrno(os.ErrNotExist)
 	}
-	fd, err := syscall.Open(binCachePath(p), syscall.O_RDONLY, 0)
-	if err != nil {
-		db.DFatalf("open %q err %v", p, err)
-	}
-	lf := newBinFsFile(p, dl, fd)
+	lf := newBinFsFile(p, dl)
 	return lf, fuse.FOPEN_KEEP_CACHE, 0
 }
 

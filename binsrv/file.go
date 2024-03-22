@@ -13,16 +13,16 @@ import (
 	db "sigmaos/debug"
 )
 
-func newBinFsFile(pn string, dl *downloader, fd int) fs.FileHandle {
-	return &binfsFile{pn: pn, dl: dl, fd: fd}
-}
-
 type binfsFile struct {
 	mu sync.Mutex
 	pn string
 	n  int
 	dl *downloader
 	fd int
+}
+
+func newBinFsFile(pn string, dl *downloader) fs.FileHandle {
+	return &binfsFile{pn: pn, dl: dl, fd: -1}
 }
 
 func (f *binfsFile) String() string {
@@ -35,12 +35,25 @@ var _ = (fs.FileReader)((*binfsFile)(nil))
 var _ = (fs.FileGetlker)((*binfsFile)(nil))
 var _ = (fs.FileLseeker)((*binfsFile)(nil))
 
+func (f *binfsFile) open() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.fd == -1 {
+		fd, err := syscall.Open(binCachePath(f.pn), syscall.O_RDONLY, 0)
+		if err != nil {
+			db.DFatalf("open %q err %v", f.pn, err)
+		}
+		f.fd = fd
+	}
+}
+
 func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.ReadResult, errno syscall.Errno) {
 	db.DPrintf(db.BINSRV, "Read %q off %d %d\n", f.pn, off, len(buf))
 	err := f.dl.read(off, len(buf))
 	if err != nil {
 		return nil, syscall.EBADF
 	}
+	f.open()
 	db.DPrintf(db.BINSRV, "ReadResult %q o %d l %d\n", f.pn, off, len(buf))
 	r := fuse.ReadResultFd(uintptr(f.fd), off, len(buf))
 	return r, fs.OK

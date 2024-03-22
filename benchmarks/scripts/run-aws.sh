@@ -1225,7 +1225,7 @@ schedd_scalability_rs_single_machine() {
 }
 
 schedd_scalability_rs() {
-  driver_vm=9
+  driver_vm=23
 #  qps_per_machine=1100
 #  qps_per_machine=1800
   dur="5s"
@@ -1235,7 +1235,7 @@ schedd_scalability_rs() {
   prewarm="--prewarm_realm"
 #  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
   for qps_per_machine in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400; do
-    n_vm=8
+    n_vm=23
     rps=$((n_vm * $qps_per_machine))
     run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
     echo "========== Running $run =========="
@@ -1573,11 +1573,11 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #socialnet_tail_multi
 #hotel_tail_multi
-#schedd_scalability_rs
+schedd_scalability_rs
 #schedd_scalability_rs_single_machine
 #socialnet_tail
 #realm_balance_be
-mr_vs_corral
+#mr_vs_corral
 #realm_balance_be_img
 #schedd_scalability
 

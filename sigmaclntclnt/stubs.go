@@ -159,8 +159,9 @@ func (scc *SigmaClntClnt) Write(fd int, data []byte) (sp.Tsize, error) {
 	blob := &rpcproto.Blob{Iov: [][]byte{data}}
 	req := scproto.SigmaWriteRequest{Fd: uint32(fd), Blob: blob}
 	rep := scproto.SigmaSizeReply{}
+	db.DPrintf(db.SIGMACLNTCLNT, "Write begin %v %v", req.Fd, len(data))
 	sz, err := scc.rpcSize("SigmaClntSrvAPI.Write", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Write %v %v %v %v", req.Fd, len(data), rep, err)
+	db.DPrintf(db.SIGMACLNTCLNT, "Write returned %v %v %v %v", req.Fd, len(data), rep, err)
 	return sz, err
 }
 

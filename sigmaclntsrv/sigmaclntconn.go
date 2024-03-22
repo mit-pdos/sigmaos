@@ -206,10 +206,11 @@ func (scs *SigmaClntSrvAPI) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep 
 }
 
 func (scs *SigmaClntSrvAPI) Write(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaSizeReply) error {
+	db.DPrintf(db.SIGMACLNTSRV, "%v: Write sigmaclntsrv begin %v %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov))
 	sz, err := scs.sc.Write(int(req.Fd), req.Blob.Iov[0])
 	rep.Size = uint64(sz)
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: Write %v %v %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov), rep)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: Write sigmaclntsrv returned %v %v %v err %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov), rep, err)
 	return nil
 }
 

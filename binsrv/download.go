@@ -181,10 +181,11 @@ func (dl *downloader) readLocal(ck int) (int64, bool) {
 
 func (dl *downloader) cacheRemoteChunk(ck int) error {
 	s := time.Now()
-	b, err := dl.readRemoteChunk(ckoff(ck), CHUNKSZ)
+	b := make([]byte, CHUNKSZ)
+	sz, err := dl.readRemoteChunk(ckoff(ck), b)
 	if err == nil {
-		if err := dl.writeCache(ckoff(ck), b); err == nil {
-			dl.register(ck, len(b))
+		if err := dl.writeCache(ckoff(ck), b[0:sz]); err == nil {
+			dl.register(ck, sz)
 			d := time.Since(s)
 			dl.tot += d
 			db.DPrintf(db.SPAWN_LAT, "[%v] cacheRemoteChunk %v %v tot %v", dl.pn, ck, d, dl.tot)
@@ -194,26 +195,26 @@ func (dl *downloader) cacheRemoteChunk(ck int) error {
 }
 
 // Note: don't invoke readChunk concurrently
-func (dl *downloader) readRemoteChunk(off int64, l int) ([]byte, error) {
+func (dl *downloader) readRemoteChunk(off int64, b []byte) (int64, error) {
 	if err := dl.sc.Seek(dl.sfd, sp.Toffset(off)); err != nil {
-		return nil, err
+		return 0, err
 	}
-	db.DPrintf(db.BINSRV, "readRemoteChunk %q %d(%d) %d\n", dl.pn, index(off), off, l)
-	b, err := dl.sc.Read(dl.sfd, sp.Tsize(l))
+	db.DPrintf(db.BINSRV, "readRemoteChunk %q %d(%d) %d\n", dl.pn, index(off), off)
+	sz, err := dl.sc.Read(dl.sfd, b)
 	if err != nil {
-		db.DPrintf(db.ERROR, "readRemoteChunk %q %d(%d) %d err %v\n", dl.pn, index(off), off, l, err)
-		return nil, err
+		db.DPrintf(db.ERROR, "readRemoteChunk %q %d(%d) err %v\n", dl.pn, index(off), off, err)
+		return 0, err
 	}
-	return b, nil
+	return int64(sz), nil
 }
 
-func (dl *downloader) register(ck int, len int) {
+func (dl *downloader) register(ck int, len int64) {
 	dl.mu.Lock()
 	defer dl.mu.Unlock()
 
 	db.DPrintf(db.BINSRV, "register %q i %d len %d tot %d\n", dl.pn, ck, len, dl.n)
-	dl.n += int64(len)
-	dl.chunks[ck] = int64(len)
+	dl.n += len
+	dl.chunks[ck] = len
 }
 
 func (dl *downloader) getReader(i int) *reader {

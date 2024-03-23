@@ -51,9 +51,12 @@ func (dmx *DemuxClnt) reader() {
 		}
 		dmx.reply(c.Tag(), c, nil)
 	}
-	for _, t := range dmx.callmap.outstanding() {
-		db.DPrintf(db.DEMUXCLNT, "reader fail %v\n", t)
+	outstanding := dmx.callmap.outstanding()
+	db.DPrintf(db.DEMUXCLNT, "reader fail %v oustanding %v", outstanding)
+	for _, t := range outstanding {
+		db.DPrintf(db.DEMUXCLNT, "reader reply fail %v", t)
 		dmx.reply(t, nil, serr.NewErr(serr.TErrUnreachable, "reader"))
+		db.DPrintf(db.DEMUXCLNT, "reader reply fail done %v", t)
 	}
 }
 
@@ -72,6 +75,12 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 	dmx.mu.Unlock()
 	if err != nil {
 		db.DPrintf(db.DEMUXCLNT, "wf req %v error %v\n", req, err)
+		// Listen to the reply channel (in a different thread), so the reader
+		// thread doesn't block indefinitely trying to deliver the
+		// "TErrUnreachable" reply.
+		go func() {
+			<-ch
+		}()
 		return nil, err
 	}
 	rep := <-ch

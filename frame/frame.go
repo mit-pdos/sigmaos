@@ -35,7 +35,6 @@ func ReadFrameInto(rd io.Reader, frame *sessp.Tframe) *serr.Err {
 	}
 	// Only read the first nbyte bytes
 	*frame = (*frame)[:nbyte]
-	//	buf := (*frame)[:nbyte]
 	n, e := io.ReadFull(rd, *frame)
 	if n != int(nbyte) {
 		return serr.NewErr(serr.TErrUnreachable, e)

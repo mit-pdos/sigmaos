@@ -36,6 +36,7 @@ func (cm *callMap) isClosed() bool {
 func (cm *callMap) put(tag sessp.Ttag, ch chan reply) *serr.Err {
 	cm.Lock()
 	defer cm.Unlock()
+
 	if cm.closed {
 		return serr.NewErr(serr.TErrUnreachable, "dmxclnt")
 	}

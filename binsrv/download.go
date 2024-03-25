@@ -199,12 +199,13 @@ func (dl *downloader) readRemoteChunk(off int64, b []byte) (int64, error) {
 	if err := dl.sc.Seek(dl.sfd, sp.Toffset(off)); err != nil {
 		return 0, err
 	}
-	db.DPrintf(db.BINSRV, "readRemoteChunk %q %d(%d) %d\n", dl.pn, index(off), off)
+	db.DPrintf(db.BINSRV, "readRemoteChunk %q %d(%d)\n", dl.pn, index(off), off)
 	sz, err := dl.sc.Read(dl.sfd, b)
 	if err != nil {
 		db.DPrintf(db.ERROR, "readRemoteChunk %q %d(%d) err %v\n", dl.pn, index(off), off, err)
 		return 0, err
 	}
+	db.DPrintf(db.BINSRV, "readRemoteChunk %q read %d\n", dl.pn, sz)
 	return int64(sz), nil
 }
 
@@ -245,10 +246,20 @@ func (dl *downloader) signal(i int) {
 	r.cond.Broadcast()
 }
 
-func (dl *downloader) read(off int64, len int) error {
+func min(n int64, l int) int {
+	if int64(l) < n {
+		return l
+	} else {
+		return int(n)
+	}
+}
+
+func (dl *downloader) read(off int64, len int) (int, error) {
 	var err error
 	i := index(off)
+	o := off - ckoff(i)
 	j := index(off+int64(len)) + 1
+	n := int64(0)
 	db.DPrintf(db.BINSRV, "read %d %d: chunks [%d,%d)", off, len, i, j)
 	for c := i; c < j; c++ {
 		r := dl.getReader(c)
@@ -257,8 +268,9 @@ func (dl *downloader) read(off int64, len int) error {
 			err = <-r.ch
 			dl.signal(c)
 		}
+		n += dl.chunks[c]
 	}
-	return err
+	return min(n-o, len), err
 }
 
 func downloadPaths(pn, kernelId string) []string {

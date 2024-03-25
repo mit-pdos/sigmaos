@@ -199,7 +199,7 @@ func (dl *downloader) readRemoteChunk(off int64, b []byte) (int64, error) {
 	if err := dl.sc.Seek(dl.sfd, sp.Toffset(off)); err != nil {
 		return 0, err
 	}
-	db.DPrintf(db.BINSRV, "readRemoteChunk %q %d(%d) %d\n", dl.pn, index(off), off)
+	db.DPrintf(db.BINSRV, "readRemoteChunk %q %d(%d)", dl.pn, index(off), off)
 	sz, err := dl.sc.Read(dl.sfd, b)
 	if err != nil {
 		db.DPrintf(db.ERROR, "readRemoteChunk %q %d(%d) err %v\n", dl.pn, index(off), off, err)

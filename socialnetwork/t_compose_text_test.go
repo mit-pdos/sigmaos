@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"sigmaos/fslib"
+	"sigmaos/linuxsched"
 	"sigmaos/rpcclnt"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/socialnetwork/proto"
@@ -13,17 +14,24 @@ import (
 )
 
 func TestUrl(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	// start server
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-url", test.Overlays, 1000}}, NCACHESRV)
+	defer assert.Nil(t, tssn.Shutdown())
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_URL)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// compose urls
 	url1 := "http://www.google.com/q=apple"
@@ -44,12 +52,13 @@ func TestUrl(t *testing.T) {
 	assert.Equal(t, 2, len(res_get.Extendedurls))
 	assert.Equal(t, url1, res_get.Extendedurls[0])
 	assert.Equal(t, url2, res_get.Extendedurls[1])
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }
 
 func TestText(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	// start server
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -59,12 +68,15 @@ func TestText(t *testing.T) {
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-text", test.Overlays, 1000}}, NCACHESRV)
+	defer assert.Nil(t, tssn.Shutdown())
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
 	tssn.dbu.InitUser()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TEXT)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// process text
 	arg_text := proto.ProcessTextRequest{}
@@ -92,12 +104,13 @@ func TestText(t *testing.T) {
 	sUrl2 := res_text.Urls[1]
 	expectedText := fmt.Sprintf("First post! @user_1@user_2 %v @user_4 %v Over!", sUrl1, sUrl2)
 	assert.Equal(t, expectedText, res_text.Text)
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }
 
 func TestCompose(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	// start server
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -112,17 +125,24 @@ func TestCompose(t *testing.T) {
 		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-compose", test.Overlays, 1000}}, NCACHESRV)
+	defer assert.Nil(t, tssn.Shutdown())
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
 	tssn.dbu.InitUser()
 	tssn.dbu.InitGraph()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_COMPOSE)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	trpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	hrpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// compose empty post not allowed
 	arg_compose := proto.ComposePostRequest{}
@@ -176,7 +196,4 @@ func TestCompose(t *testing.T) {
 	assert.Nil(t, hrpcc.RPC("HomeSrv.ReadHomeTimeline", &arg_home, &res_home))
 	assert.Equal(t, "OK", res_home.Ok)
 	assert.True(t, IsPostEqual(post1, res_home.Posts[0]))
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }

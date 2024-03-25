@@ -37,9 +37,11 @@ func newTstateSN(t *test.Tstate, srvs []sn.Srv, nsrv int) (*TstateSN, error) {
 	tssn.snCfg, err = sn.NewConfig(tssn.SigmaClnt, tssn.jobname, srvs, nsrv, false, test.Overlays)
 	assert.Nil(tssn.T, err, "config should initialize properly.")
 	tssn.dbu, err = sn.NewDBUtil(tssn.SigmaClnt)
-	assert.Nil(tssn.T, err, "DBUtil should initialize properly.")
-	err = tssn.dbu.Clear()
 	if !assert.Nil(tssn.T, err, "Err create mongoc: %v", err) {
+		return tssn, err
+	}
+	err = tssn.dbu.Clear()
+	if !assert.Nil(tssn.T, err, "Err clear mongoc: %v", err) {
 		return tssn, err
 	}
 	return tssn, nil

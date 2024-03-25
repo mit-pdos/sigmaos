@@ -169,7 +169,6 @@ func testManyClients(t *testing.T, crash int) {
 					_, err := ts.clnt.RPC(sp.Taddrs{ts.srv.MyAddr()}, req, nil, nil)
 					if err != nil && crash > 0 && serr.IsErrCode(err, serr.TErrUnreachable) {
 						// wait for stop signal
-						db.DPrintf(db.DEMUXCLNT, "wait for stop %d", i)
 						<-stop
 						ch <- true
 						done = true
@@ -196,7 +195,7 @@ func TestManyClientsOK(t *testing.T) {
 
 func TestManyClientsCrash(t *testing.T) {
 	const (
-		N     = 1 // 20
+		N     = 20
 		CRASH = 10
 	)
 	for i := 0; i < N; i++ {

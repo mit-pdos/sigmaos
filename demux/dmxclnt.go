@@ -71,8 +71,7 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 	err := dmx.trans.WriteCall(req)
 	dmx.mu.Unlock()
 	if err != nil {
-		db.DPrintf(db.DEMUXCLNT, "wf req %v error %v\n", req, err)
-		return nil, err
+		db.DPrintf(db.DEMUXCLNT, "WriteCall req %v error %v\n", req, err)
 	}
 	rep := <-ch
 	return rep.rep, rep.err

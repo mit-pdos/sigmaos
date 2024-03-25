@@ -63,10 +63,13 @@ func TestTimeline(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{
+	tssn, err := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 
 	// create RPC clients for posts and timelines
@@ -121,12 +124,15 @@ func TestHome(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{
+	tssn, err := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-home", test.Overlays, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 	tssn.dbu.InitGraph()
 

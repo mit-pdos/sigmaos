@@ -81,8 +81,8 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 	assert.Equal(t, 73, len(results[0].Edges))
 }
 
-func setupSigmaState(t1 *test.Tstate) *TstateSN {
-	tssn := newTstateSN(t1, []sn.Srv{
+func setupSigmaState(t1 *test.Tstate) (*TstateSN, error) {
+	tssn, err := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
@@ -92,13 +92,19 @@ func setupSigmaState(t1 *test.Tstate) *TstateSN {
 		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-compose", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-frontend", test.Overlays, 1000}}, NCACHESRV)
+	if err != nil {
+		return tssn, err
+	}
 	initUserAndGraph(t1.T, MONGO_URL)
-	return tssn
+	return tssn, nil
 }
 
-func setupK8sState(t1 *test.Tstate) *TstateSN {
+func setupK8sState(t1 *test.Tstate) (*TstateSN, error) {
 	// Advertise server address
-	tssn := newTstateSN(t1, nil, 0)
+	tssn, err := newTstateSN(t1, nil, 0)
+	if err != nil {
+		return tssn, err
+	}
 	p := sn.JobHTTPAddrsPath(tssn.jobname)
 	h, p, err := net.SplitHostPort(K8S_ADDR)
 	assert.Nil(tssn.T, err, "Err split host port %v: %v", K8S_ADDR, err)
@@ -112,7 +118,7 @@ func setupK8sState(t1 *test.Tstate) *TstateSN {
 	assert.Nil(t1.T, cmd.Start())
 	defer cmd.Process.Kill()
 	initUserAndGraph(t1.T, "localhost:"+K8S_MONGO_FWD_PORT)
-	return tssn
+	return tssn, nil
 }
 
 func testTemplate(t1 *test.Tstate, isBenchTest bool, testFunc func(*testing.T, *sn.WebClnt)) {
@@ -121,20 +127,22 @@ func testTemplate(t1 *test.Tstate, isBenchTest bool, testFunc func(*testing.T, *
 		return
 	}
 	var tssn *TstateSN
+	var err error
 	if K8S_ADDR == "" {
 		dbg.DPrintf(dbg.ALWAYS, "No k8s addr. Running SigmaOS")
-		tssn = setupSigmaState(t1)
+		tssn, err = setupSigmaState(t1)
 	} else {
 		dbg.DPrintf(dbg.ALWAYS, "Running K8s at %v", K8S_ADDR)
-		tssn = setupK8sState(t1)
+		tssn, err = setupK8sState(t1)
+	}
+	defer assert.Nil(t1.T, tssn.Shutdown())
+	if err != nil {
+		return
 	}
 	wc := sn.NewWebClnt(tssn.FsLib, tssn.jobname)
 
 	// run tests
 	testFunc(t1.T, wc)
-
-	//stop server
-	assert.Nil(t1.T, tssn.Shutdown())
 }
 
 func TestCompile(t *testing.T) {

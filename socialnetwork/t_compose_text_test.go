@@ -23,8 +23,11 @@ func TestUrl(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-url", test.Overlays, 1000}}, NCACHESRV)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-url", test.Overlays, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
@@ -64,11 +67,14 @@ func TestText(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{
+	tssn, err := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-text", test.Overlays, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
@@ -116,7 +122,7 @@ func TestCompose(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{
+	tssn, err := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
@@ -126,6 +132,9 @@ func TestCompose(t *testing.T) {
 		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-compose", test.Overlays, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 
 	// create RPC clients text

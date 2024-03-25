@@ -51,8 +51,8 @@ MAIN="${vma[0]}"
 SSHVM="${vma[$VM]}"
 
 # Get the pubkey and privkey for the SigmaOS deployment
-MASTER_PUB_KEY="$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm cat /tmp/sigmaos/master-key.pub)"
-MASTER_PRIV_KEY="$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm cat /tmp/sigmaos/master-key.priv)"
+MASTER_PUB_KEY="$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN cat /tmp/sigmaos/master-key.pub)"
+MASTER_PRIV_KEY="$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN cat /tmp/sigmaos/master-key.priv)"
 
 echo "Run [$SSHVM]: $COMMAND"
 ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM <<ENDSSH

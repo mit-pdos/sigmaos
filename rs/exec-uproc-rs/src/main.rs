@@ -176,7 +176,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/mnt/", "mnt")?;
-    
+
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)

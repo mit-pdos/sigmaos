@@ -183,12 +183,13 @@ func (dl *downloader) cacheRemoteChunk(ck int) error {
 	s := time.Now()
 	b := make([]byte, CHUNKSZ)
 	sz, err := dl.readRemoteChunk(ckoff(ck), b)
+	db.DPrintf(db.SPAWN_LAT, "[%v] readRemoteChunk %v dur %v tot %v", dl.pn, ck, time.Since(s), dl.tot)
 	if err == nil {
 		if err := dl.writeCache(ckoff(ck), b[0:sz]); err == nil {
 			dl.register(ck, sz)
 			d := time.Since(s)
 			dl.tot += d
-			db.DPrintf(db.SPAWN_LAT, "[%v] cacheRemoteChunk %v %v tot %v", dl.pn, ck, d, dl.tot)
+			db.DPrintf(db.SPAWN_LAT, "[%v] cacheRemoteChunk %v chunkDur %v tot %v", dl.pn, ck, d, dl.tot)
 		}
 	}
 	return nil

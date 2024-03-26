@@ -1178,6 +1178,7 @@ schedd_scalability() {
     stop_k8s_cluster $KVPC
     cmd="
       export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+      ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
       go clean -testcache; \
       go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown $prewarm --load-master-key > /tmp/bench.out 2>&1
     "
@@ -1211,6 +1212,7 @@ schedd_scalability_rs_single_machine() {
     stop_k8s_cluster $KVPC
     cmd="
       export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+      ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
       go clean -testcache; \
       go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key > /tmp/bench.out 2>&1
     "
@@ -1247,6 +1249,7 @@ schedd_scalability_rs() {
     stop_k8s_cluster $KVPC
     cmd="
       export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+      ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
       go clean -testcache; \
       go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key > /tmp/bench.out 2>&1
     "
@@ -1517,7 +1520,8 @@ graph_schedd_scalability_rs_hockey() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
-  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/input_rate_vs_completion_rate.pdf --prefix "8-vm-" --tpt_v_tpt
+  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/input_rate_vs_completion_rate.pdf --prefix "23-vm-" --tpt_v_tpt
+#  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/input_rate_vs_completion_rate.pdf --prefix "8-vm-" --tpt_v_tpt
 #  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/$graph.pdf --prefix "8-vm-" --server_tpt --log_scale
 #  $GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $OUT_DIR/schedd_scalability_rs --out $GRAPH_OUT_DIR/$graph.pdf --prefix "8-vm-" --cutoff 16000
 }
@@ -1571,9 +1575,9 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
+schedd_scalability_rs
 #socialnet_tail_multi
 #hotel_tail_multi
-schedd_scalability_rs
 #schedd_scalability_rs_single_machine
 #socialnet_tail
 #realm_balance_be
@@ -1609,13 +1613,13 @@ schedd_scalability_rs
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
-#graph_schedd_scalability_rs_hockey
+#graph_schedd_scalability_rs
+graph_schedd_scalability_rs_hockey
 #graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
 #graph_realm_balance_be_img
 #graph_start_latency_breakdown
 #graph_start_latency
-#graph_schedd_scalability_rs
 
 #graph_mr_vs_corral
 #graph_realm_balance_multi_img

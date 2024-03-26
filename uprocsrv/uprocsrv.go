@@ -238,7 +238,7 @@ func readFile(pn string) error {
 func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
 	pn := binsrv.BinPath(req.Program, req.BuildTag)
 	db.DPrintf(db.UPROCD, "WarmProc %q %v", pn, req)
-	if err := ups.assignToRealm(sp.Trealm(req.RealmStr)); err != nil {
+	if err := ups.assignToRealm(sp.Trealm(req.RealmStr), sp.NO_PID); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
 	if err := readFile(pn); err != nil {

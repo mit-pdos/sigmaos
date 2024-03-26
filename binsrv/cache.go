@@ -87,6 +87,7 @@ func (bc *bincache) lookup(pn string) (*sp.Stat, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.BINSRV, "lookup %q %v err %v\n", pn, st, err)
 	bc.cache[pn] = &entry{st, nil}
 	return st, nil
 }

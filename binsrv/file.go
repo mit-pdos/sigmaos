@@ -49,13 +49,13 @@ func (f *binfsFile) open() {
 
 func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.ReadResult, errno syscall.Errno) {
 	db.DPrintf(db.BINSRV, "Read %q off %d %d\n", f.pn, off, len(buf))
-	err := f.dl.read(off, len(buf))
+	sz, err := f.dl.read(off, len(buf))
 	if err != nil {
 		return nil, syscall.EBADF
 	}
 	f.open()
-	db.DPrintf(db.BINSRV, "ReadResult %q o %d l %d\n", f.pn, off, len(buf))
-	r := fuse.ReadResultFd(uintptr(f.fd), off, len(buf))
+	db.DPrintf(db.BINSRV, "ReadResult %q o %d sz %d\n", f.pn, off, sz)
+	r := fuse.ReadResultFd(uintptr(f.fd), off, int(sz))
 	return r, fs.OK
 }
 

@@ -133,7 +133,7 @@ func shrinkMountTable() error {
 }
 
 // Set up uprocd for use for a specific realm
-func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
+func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	ups.mu.RLock()
 	defer ups.mu.RUnlock()
 
@@ -151,18 +151,24 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
 		ups.mu.RLock()
 		return nil
 	}
+	start := time.Now()
+	defer db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
 
+	start = time.Now()
 	innerIP, err := netsigma.LocalIP()
 	if err != nil {
 		db.DFatalf("Error LocalIP: %v", err)
 	}
 	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
+	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.setLocalIP: %v", upid, time.Since(start))
 
+	start = time.Now()
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v, new innerIP %v", realm, innerIP)
 
 	if err := mountRealmBinDir(realm); err != nil {
 		db.DFatalf("Error mount realm bin dir: %v", err)
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.mountRealmBinDir: %v", upid, time.Since(start))
 
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v done", realm)
 	// Note that the uprocsrv has been assigned.
@@ -173,11 +179,13 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm) error {
 	scdp := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
 	scdp.InheritParentProcEnv(ups.pe)
 	scdp.SetHow(proc.HLINUX)
+	start = time.Now()
 	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
 	if err != nil {
 		return err
 	}
 	ups.scsc = scsc
+	db.DPrintf(db.SPAWN_LAT, "[%v] execSigmaClntSrv: %v", upid, time.Since(start))
 
 	// Demote to reader lock
 	ups.mu.Unlock()
@@ -197,7 +205,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
 	// Assign this uprocsrv to the realm, if not already assigned.
-	if err := ups.assignToRealm(uproc.GetRealm()); err != nil {
+	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())

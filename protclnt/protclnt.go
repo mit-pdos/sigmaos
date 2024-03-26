@@ -57,6 +57,7 @@ func (pclnt *ProtClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, fid sp.T
 	if !ok {
 		return nil, serr.NewErr(serr.TErrBadFcall, "clnt")
 	}
+	db.DPrintf(db.PROTCLNT, "Attach path %v cid %v sessid %v", path, cid, reply.Fc.Session)
 	return msg, nil
 }
 

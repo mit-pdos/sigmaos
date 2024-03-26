@@ -3,6 +3,7 @@ package socialnetwork_test
 import (
 	"github.com/stretchr/testify/assert"
 	"sigmaos/fslib"
+	"sigmaos/linuxsched"
 	"sigmaos/rpcclnt"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/socialnetwork/proto"
@@ -36,17 +37,27 @@ func IsPostEqual(a, b *proto.Post) bool {
 }
 
 func TestMedia(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	// start server
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-media", test.Overlays, 1000}}, NCACHESRV)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-media", test.Overlays, 1000}}, NCACHESRV)
+	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_MEDIA)
-	assert.Nil(t, err, "RPC client should be created properly")
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// store two media
 	mdata1 := []byte{1, 3, 5, 7, 9, 11, 13, 15}
@@ -72,23 +83,30 @@ func TestMedia(t *testing.T) {
 	assert.Equal(t, "Video", res_read.Mediatypes[1])
 	assert.Equal(t, mdata1, res_read.Mediadatas[0])
 	assert.Equal(t, mdata2, res_read.Mediadatas[1])
-
-	// stop server
-	assert.Nil(t, tssn.Shutdown())
 }
 
 func TestPost(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	// start server
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-post", test.Overlays, 1000}}, NCACHESRV)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-post", test.Overlays, 1000}}, NCACHESRV)
+	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
-	assert.Nil(t, err, "RPC client should be created properly")
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// create two posts
 	post1 := proto.Post{
@@ -131,7 +149,4 @@ func TestPost(t *testing.T) {
 	assert.Equal(t, "OK", res_read.Ok)
 	assert.True(t, IsPostEqual(&post1, res_read.Posts[0]))
 	assert.True(t, IsPostEqual(&post2, res_read.Posts[1]))
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }

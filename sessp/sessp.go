@@ -106,7 +106,23 @@ func NewFcallMsgReply(req *FcallMsg, reply Tmsg) *FcallMsg {
 }
 
 func (fm *FcallMsg) String() string {
-	return fmt.Sprintf("{%v seq %v sid %v len %d nvec %d msg %v iov %d}", fm.Msg.Type(), Tseqno(fm.Fc.Seqno), Tsession(fm.Fc.Session), fm.Fc.Len, fm.Fc.Nvec, fm.Msg, len(fm.Iov))
+	var typ Tfcall
+	var msg Tmsg
+	var seqno Tseqno
+	var sess Tsession
+	var l int
+	var nvec int
+	if fm.Msg != nil {
+		typ = fm.Msg.Type()
+		msg = fm.Msg
+	}
+	if fm.Fc != nil {
+		seqno = Tseqno(fm.Fc.Seqno)
+		sess = Tsession(fm.Fc.Session)
+		l = int(fm.Fc.Len)
+		nvec = int(fm.Fc.Nvec)
+	}
+	return fmt.Sprintf("{ %v seq %v sid %v len %d nvec %d msg %v iov %d }", typ, seqno, sess, l, nvec, msg, len(fm.Iov))
 }
 
 func (fm *FcallMsg) GetType() Tfcall {
@@ -126,6 +142,14 @@ type PartMarshaledMsg struct {
 
 func (pmfc *PartMarshaledMsg) Tag() Ttag {
 	return pmfc.Fcm.Tag()
+}
+
+func (pmfc *PartMarshaledMsg) String() string {
+	var typ Tfcall
+	if pmfc.Fcm != nil {
+		typ = Tfcall(pmfc.Fcm.Type())
+	}
+	return fmt.Sprintf("&{ type:%v fc:%v }", typ, pmfc.Fcm)
 }
 
 const (

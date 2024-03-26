@@ -62,6 +62,7 @@ func (dmx *DemuxSrv) reader() {
 func (dmx *DemuxSrv) Close() error {
 	dmx.mu.Lock()
 	defer dmx.mu.Unlock()
+
 	dmx.closed = true
 	db.DPrintf(db.DEMUXSRV, "Close %d\n", dmx.nreq)
 	return nil
@@ -70,5 +71,6 @@ func (dmx *DemuxSrv) Close() error {
 func (dmx *DemuxSrv) IsClosed() bool {
 	dmx.mu.Lock()
 	defer dmx.mu.Unlock()
+
 	return dmx.closed
 }

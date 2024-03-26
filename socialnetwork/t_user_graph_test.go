@@ -6,6 +6,7 @@ import (
 	"sigmaos/proc"
 
 	"sigmaos/fslib"
+	"sigmaos/linuxsched"
 	"sigmaos/rpcclnt"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/socialnetwork/proto"
@@ -14,18 +15,28 @@ import (
 )
 
 func TestUser(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	// start server
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1000}}, NCACHESRV)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1000}}, NCACHESRV)
+	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
-	assert.Nil(t, err, "RPC client should be created properly")
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// check user
 	arg_check := proto.CheckUserRequest{Usernames: []string{"test_user"}}
@@ -79,26 +90,33 @@ func TestUser(t *testing.T) {
 	assert.Equal(t, "Alice", user.Firstname)
 	assert.Equal(t, "Test", user.Lastname)
 	assert.Equal(t, created_userid, user.Userid)
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }
 
 func TestGraph(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	// start server
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{
+	tssn, err := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000}}, NCACHESRV)
+	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
 	tssn.dbu.InitGraph()
 	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// get follower and followee list
 	arg_get_fler := proto.GetFollowersRequest{}
@@ -157,26 +175,36 @@ func TestGraph(t *testing.T) {
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 1, len(res_get.Userids))
 	assert.Equal(t, int64(2), res_get.Userids[0]) // user 1 now again has one followee user 2
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }
 
 func TestUserAndGraph(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	// start server
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{
+	tssn, err := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000}}, NCACHESRV)
+	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	tssn.dbu.InitGraph()
 	tssn.dbu.InitUser()
 	snCfg := tssn.snCfg
 	urpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	grpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// Create two users Alice and Bob
 	arg_reg1 := proto.RegisterUserRequest{
@@ -236,9 +264,6 @@ func TestUserAndGraph(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 0, len(res_get.Userids))
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }
 
 func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
@@ -247,13 +272,19 @@ func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, mcpu}}, 1)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, mcpu}}, 1)
+	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
 	urpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
-	assert.Nil(t, err, "RPC client should be created properly")
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// check user
 	arg_check := proto.CheckUserRequest{Usernames: []string{"user_1"}}
@@ -263,14 +294,20 @@ func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 		assert.Equal(t, "OK", res_check.Ok)
 		assert.Equal(t, int64(1), res_check.Userids[0])
 	}
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }
 
 func TestRPCTimeOneMachine(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	testRPCTime(t, 1000)
 }
 
 func TestRPCTimeTwoMachines(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	testRPCTime(t, 2500)
 }

@@ -221,7 +221,11 @@ func (sd *Schedd) getQueuedProcs() {
 		// Try to get a proc from the proc queue.
 		procMem, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, memFree, bias)
 		db.DPrintf(db.SCHEDD, "[%v] GetProc result procMem %v qlen %v ok %v", sd.kernelId, procMem, qlen, ok)
-		db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
+		if ok {
+			db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
+		} else {
+			db.DPrintf(db.SPAWN_LAT, "GetProc timeout")
+		}
 		if err != nil {
 			db.DPrintf(db.SCHEDD_ERR, "Error GetProc: %v", err)
 			// If previously biased to this schedd's kernel, and GetProc returned an

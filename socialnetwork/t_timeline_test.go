@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"sigmaos/fslib"
+	"sigmaos/linuxsched"
 	"sigmaos/rpcclnt"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/socialnetwork/proto"
@@ -53,21 +54,33 @@ func writeHomeTimeline(t *testing.T, rpcc *rpcclnt.RPCClnt, post *proto.Post, us
 }
 
 func TestTimeline(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	// start server
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{
+	tssn, err := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000}}, NCACHESRV)
+	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 
 	// create RPC clients for posts and timelines
 	trpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	prpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// create and store N posts
 	NPOST, userid := 4, int64(200)
@@ -99,30 +112,39 @@ func TestTimeline(t *testing.T) {
 		// posts should be in reverse order
 		assert.True(t, IsPostEqual(posts[NPOST-i-2], tlpost))
 	}
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }
 
 func TestHome(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "Test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
 	// start server
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn := newTstateSN(t1, []sn.Srv{
+	tssn, err := newTstateSN(t1, []sn.Srv{
 		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
 		sn.Srv{"socialnetwork-home", test.Overlays, 1000}}, NCACHESRV)
+	defer assert.Nil(t, tssn.Shutdown())
+	if err != nil {
+		return
+	}
 	snCfg := tssn.snCfg
 	tssn.dbu.InitGraph()
 
 	// create RPC clients for posts and timelines
 	hrpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 	prpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
 
 	// create and store N posts
 	NPOST, userid := 3, int64(1)
@@ -149,7 +171,4 @@ func TestHome(t *testing.T) {
 		assert.Equal(t, 1, len(res_read.Posts))
 		assert.True(t, IsPostEqual(posts[i], res_read.Posts[0]))
 	}
-
-	//stop server
-	assert.Nil(t, tssn.Shutdown())
 }

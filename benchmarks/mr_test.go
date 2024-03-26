@@ -56,7 +56,7 @@ func (ji *MRJobInstance) PrepareMRJob() {
 }
 
 func (ji *MRJobInstance) StartMRJob() {
-	db.DPrintf(db.TEST, "Start MR job %v %v", ji.jobname, ji.job)
+	db.DPrintf(db.TEST, "Start MR job %v %v asyncrw", ji.jobname, ji.job, ji.asyncrw)
 	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0, ji.memreq, ji.asyncrw, 0)
 }
 

@@ -32,7 +32,10 @@ def tpt_stats(dpath):
   fname = [ f for f in os.listdir(dpath) if "bench.out" in f ][0]
   with open(os.path.join(dpath, fname), "r") as f:
     x = f.read()
-  line = [ l.strip() for l in x.split("\n") if "Avg req/sec server-side" in l ][0]
+  line = [ l.strip() for l in x.split("\n") if "Avg req/sec server-side" in l ]
+  if len(line) == 0:
+    print("No data for dpath {}".format(dpath))
+  line = line[0]
   tpt = float(line.split(" ")[-1])
   return tpt
   

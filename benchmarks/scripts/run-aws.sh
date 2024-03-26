@@ -255,7 +255,7 @@ run_mr() {
     export SIGMADEBUG=\"TEST;BENCH;MR;\"; \
     $set_perf; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp --mr_mem_req $mem_req --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp --mr_mem_req $mem_req --load-master-key --mr_asyncrw > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores "" $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
@@ -1575,13 +1575,13 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-schedd_scalability_rs
+#schedd_scalability_rs
 #socialnet_tail_multi
 #hotel_tail_multi
 #schedd_scalability_rs_single_machine
 #socialnet_tail
 #realm_balance_be
-#mr_vs_corral
+mr_vs_corral
 #realm_balance_be_img
 #schedd_scalability
 
@@ -1614,7 +1614,7 @@ schedd_scalability_rs
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
 #graph_schedd_scalability_rs
-graph_schedd_scalability_rs_hockey
+#graph_schedd_scalability_rs_hockey
 #graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
 #graph_realm_balance_be_img

@@ -279,7 +279,7 @@ func downloadPaths(pn, kernelId string) []string {
 	name := filepath.Base(pn)
 	paths := []string{
 		filepath.Join(sp.UX, kernelId, "bin/user/common", name),
-		filepath.Join(sp.S3, "~local", buildTag, "bin"),
+		filepath.Join(sp.S3, "~local", buildTag, "bin", name),
 	}
 	// For user bins, go straight to S3 instead of checking locally first.
 	if sp.Target != "local" && name != "named" && name != "spawn-latency-ux" {

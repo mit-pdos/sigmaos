@@ -128,7 +128,9 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 		return nil
 	}
 	start := time.Now()
-	defer db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
+	defer func(start time.Time) {
+		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
+	}(start)
 
 	start = time.Now()
 	innerIP, err := netsigma.LocalIP()

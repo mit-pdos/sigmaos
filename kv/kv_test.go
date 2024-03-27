@@ -137,7 +137,6 @@ func TestGetPut0(t *testing.T) {
 		assert.Nil(ts.T, err, "Get "+key)
 	}
 
-	ts.cm.StopClerks()
 	ts.done()
 }
 
@@ -160,7 +159,6 @@ func TestPutGetRepl(t *testing.T) {
 		start = time.Now()
 	}
 	db.DPrintf(db.TEST, "Done ")
-	ts.cm.StopClerks()
 	ts.done()
 }
 
@@ -184,7 +182,6 @@ func TestPutGetCrashKVD1(t *testing.T) {
 		start = time.Now()
 	}
 	db.DPrintf(db.TEST, "Done ")
-	ts.cm.StopClerks()
 	ts.done()
 }
 

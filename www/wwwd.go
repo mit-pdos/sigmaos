@@ -1,7 +1,6 @@
 package www
 
 import (
-	"net"
 	"net/http"
 	"os"
 	"path"
@@ -48,12 +47,12 @@ func RunWwwd(job, tree string) {
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
-	ip, err := netsigma.LocalIP()
-	if err != nil {
-		db.DFatalf("Error LocalIP: %v", err)
-	}
+	//	ip, err := netsigma.LocalIP()
+	//	if err != nil {
+	//		db.DFatalf("Error LocalIP: %v", err)
+	//	}
 
-	l, err := net.Listen("tcp", ip.String()+":0")
+	l, err := netsigma.Listen(www.ssrv.ProcEnv(), sp.NewTaddrAnyPort(sp.OUTER_CONTAINER_IP, www.ssrv.ProcEnv().GetNet()))
 	if err != nil {
 		db.DFatalf("Error Listen: %v", err)
 	}

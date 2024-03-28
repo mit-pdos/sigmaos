@@ -2,7 +2,6 @@ package hotel
 
 import (
 	"encoding/json"
-	"net"
 	"net/http"
 	"strconv"
 
@@ -109,7 +108,7 @@ func RunWww(job string, public bool) error {
 			db.DFatalf("AllocPort err %v", err)
 		}
 		www.pc = pc
-		l, err := net.Listen("tcp", ":"+pi.PBinding.RealmPort.String())
+		l, err := netsigma.Listen(www.ProcEnv(), sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, www.ProcEnv().GetNet()))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -126,7 +125,7 @@ func RunWww(job string, public bool) error {
 			db.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
-		l, err := net.Listen("tcp", ":0")
+		l, err := netsigma.Listen(www.ProcEnv(), sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, www.ProcEnv().GetNet()))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}

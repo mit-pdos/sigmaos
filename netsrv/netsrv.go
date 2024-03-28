@@ -28,8 +28,7 @@ func NewNetServer(pe *proc.ProcEnv, addr *sp.Taddr, newConn NewConnI) *NetServer
 	srv := &NetServer{pe: pe, newConn: newConn}
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
-	var l net.Listener
-	l, err := net.Listen("tcp", addr.IPPort())
+	l, err := netsigma.Listen(pe, addr)
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}

@@ -2,7 +2,6 @@ package socialnetwork
 
 import (
 	"encoding/json"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -129,7 +128,7 @@ func RunFrontendSrv(public bool, job string) error {
 			}
 		} else {
 	*/
-	l, err := net.Listen("tcp", ":0")
+	l, err := netsigma.Listen(frontend.ProcEnv(), sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, frontend.ProcEnv().GetNet()))
 	if err != nil {
 		dbg.DFatalf("Error %v Listen: %v", public, err)
 	}

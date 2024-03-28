@@ -187,12 +187,14 @@ const (
 
 // Server Libraries
 const (
-	MEMFS      Tselector = "MEMFS"
-	PIPE                 = "PIPE"
-	OVERLAYDIR           = "OVERLAYDIR"
-	CLONEDEV             = "CLONEDEV"
-	SESSDEV              = "SESSDEV"
-	SIGMASRV             = "SIGMASRV"
+	MEMFS        Tselector = "MEMFS"
+	PIPE                   = "PIPE"
+	OVERLAYDIR             = "OVERLAYDIR"
+	CLONEDEV               = "CLONEDEV"
+	SESSDEV                = "SESSDEV"
+	SIGMASRV               = "SIGMASRV"
+	NETSIGMA               = "NETSIGMA"
+	NETSIGMA_ERR           = "NETSIGMA_ERR"
 )
 
 // Client-side Infrastructure

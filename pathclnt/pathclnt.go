@@ -259,7 +259,7 @@ func (pathc *PathClnt) Remove(name string, principal *sp.Tprincipal, f *sp.Tfenc
 		return err
 	}
 	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name), f)
-	if Retry(err) {
+	if serr.Retry(err) {
 		fid, err = pathc.walk(pn, principal, path.EndSlash(name), nil)
 		if err != nil {
 			return err
@@ -359,16 +359,6 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, principal *sp.Tprincipal, w Wat
 	return nil
 }
 
-// Several calls optimistically connect to a recently-mounted server
-// without doing a pathname walk; this may fail, and the call should
-// walk. retry() says when to retry.
-func Retry(err *serr.Err) bool {
-	if err == nil {
-		return false
-	}
-	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
-}
-
 func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v\n", pathc.cid, pn, mode)
 	p, err := serr.PathSplitErr(pn)
@@ -380,7 +370,7 @@ func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 		return nil, err
 	}
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn), f)
-	if Retry(err) {
+	if serr.Retry(err) {
 		fid, err = pathc.walk(p, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return nil, err
@@ -409,7 +399,7 @@ func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 		return 0, err
 	}
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid, f)
-	if Retry(err) {
+	if serr.Retry(err) {
 		dir := p.Dir()
 		base := path.Path{p.Base()}
 		resolve := true

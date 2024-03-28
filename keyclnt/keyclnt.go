@@ -13,6 +13,7 @@ import (
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 )
 
 type KeyClnt[M jwt.SigningMethod] struct {
@@ -48,11 +49,12 @@ func (kc *KeyClnt[M]) getClnt(rw bool) (*rpcclnt.RPCClnt, error) {
 				db.DPrintf(db.KEYCLNT_ERR, "Error MountTree: %v", err)
 				return nil, err
 			}
-			rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{kc.sc.FsLib}, sp.KEYS_RW)
+			ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{kc.sc.FsLib}, sp.KEYS_RW)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error new RPC clnt rw: %v", err)
 				return nil, err
 			}
+			rpcc := rpcclnt.NewRPCClnt(ch)
 			kc.rw = rpcc
 		}
 		return kc.rw, nil
@@ -69,11 +71,12 @@ func (kc *KeyClnt[M]) getClnt(rw bool) (*rpcclnt.RPCClnt, error) {
 				db.DPrintf(db.ERROR, "Error MountTree: %v", err)
 				return nil, err
 			}
-			rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{kc.sc.FsLib}, sp.KEYS_RONLY)
+			ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{kc.sc.FsLib}, sp.KEYS_RONLY)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error new RPC clnt ronly: %v", err)
 				return nil, err
 			}
+			rpcc := rpcclnt.NewRPCClnt(ch)
 			kc.ronly = rpcc
 		}
 		return kc.ronly, nil

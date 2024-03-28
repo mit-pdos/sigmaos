@@ -7,20 +7,18 @@
 package rpcclnt
 
 import (
-	"path"
-	"sync/atomic"
 	"time"
 
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/fslib"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
-	"sigmaos/sessdevclnt"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
+
+type NewRPCChFn func(pn string) (RPCCh, error)
 
 type RPCcall struct {
 	method string
@@ -37,65 +35,12 @@ type RPCClnt struct {
 	ch RPCCh
 }
 
-func NewRPCClntCh(ch RPCCh) *RPCClnt {
+func NewRPCClnt(ch RPCCh) *RPCClnt {
 	rpcc := &RPCClnt{
 		si: rpc.NewStatInfo(),
 		ch: ch,
 	}
 	return rpcc
-}
-
-type sigmaCh struct {
-	fsls []*fslib.FsLib
-	fds  []int
-	pn   string
-	idx  atomic.Int32
-}
-
-func newSigmaCh(fsls []*fslib.FsLib, pn string) (RPCCh, error) {
-	rpcch := &sigmaCh{
-		fsls: make([]*fslib.FsLib, 0, len(fsls)),
-		fds:  make([]int, 0, len(fsls)),
-		pn:   pn,
-	}
-	sdc, err := sessdevclnt.NewSessDevClnt(fsls[0], path.Join(pn, rpc.RPC))
-	if err != nil {
-		return nil, err
-	}
-	for _, fsl := range fsls {
-		rpcch.fsls = append(rpcch.fsls, fsl)
-		fd, err := fsl.Open(sdc.DataPn(), sp.ORDWR)
-		if err != nil {
-			return nil, err
-		}
-		rpcch.fds = append(rpcch.fds, fd)
-	}
-	return rpcch, nil
-}
-
-func (ch *sigmaCh) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
-	idx := int(ch.idx.Add(1))
-	err := ch.fsls[idx%len(ch.fsls)].WriteRead(ch.fds[idx%len(ch.fds)], iniov, outiov)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (ch *sigmaCh) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
-	stats, err := ch.fsls[0].ReadRPCStats(ch.pn)
-	if err != nil {
-		return nil, err
-	}
-	return stats, nil
-}
-
-func NewRPCClnt(fsls []*fslib.FsLib, pn string) (*RPCClnt, error) {
-	ch, err := newSigmaCh(fsls, pn)
-	if err != nil {
-		return nil, err
-	}
-	return NewRPCClntCh(ch), nil
 }
 
 func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (*rpcproto.Reply, error) {

@@ -16,6 +16,7 @@ import (
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/tracing"
 )
@@ -59,30 +60,35 @@ func RunFrontendSrv(public bool, job string) error {
 	if err != nil {
 		return err
 	}
-	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	frontend.userc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.graphc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.tlc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_HOME)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.homec = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_COMPOSE)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.composec = rpcc
 	//	frontend.tracer = tracing.Init("frontend", proc.GetSigmaJaegerIP())
 

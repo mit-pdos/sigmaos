@@ -18,6 +18,7 @@ import (
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/tracing"
 )
 
@@ -51,35 +52,41 @@ func RunWww(job string, public bool) error {
 	if err != nil {
 		return err
 	}
-	rpcc, err := rpcclnt.NewRPCClnt(fsls, HOTELUSER)
+	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, HOTELUSER)
 	if err != nil {
 		return err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	www.userc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELSEARCH)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELSEARCH)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	www.searchc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELPROF)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELPROF)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	www.profc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELRESERVE)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELRESERVE)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	www.reservec = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELREC)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELREC)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	www.recc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELGEO)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELGEO)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	www.geoc = rpcc
 
 	//	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())

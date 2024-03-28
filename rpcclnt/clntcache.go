@@ -8,10 +8,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/pathclnt"
 	"sigmaos/rpc"
 	"sigmaos/serr"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -20,12 +19,15 @@ import (
 
 type ClntCache struct {
 	sync.Mutex
-	fsls  []*fslib.FsLib
-	rpccs map[string]*RPCClnt
+	rpccs   map[string]*RPCClnt
+	newChFn NewRPCChFn
 }
 
-func NewRPCClntCache(fsls []*fslib.FsLib) *ClntCache {
-	return &ClntCache{fsls: fsls, rpccs: make(map[string]*RPCClnt)}
+func NewRPCClntCache(fn NewRPCChFn) *ClntCache {
+	return &ClntCache{
+		rpccs:   make(map[string]*RPCClnt),
+		newChFn: fn,
+	}
 }
 
 // Note: several threads may call Lookup for same pn, overwriting the
@@ -38,11 +40,12 @@ func (cc *ClntCache) Lookup(pn string) (*RPCClnt, error) {
 		return rpcc, nil
 	}
 	cc.Unlock()
-	rpcc, err := NewRPCClnt(cc.fsls, pn)
+	ch, err := cc.newChFn(pn)
 	cc.Lock()
 	if err != nil {
 		return nil, err
 	}
+	rpcc = NewRPCClnt(ch)
 	cc.rpccs[pn] = rpcc
 	return rpcc, nil
 }
@@ -54,11 +57,11 @@ func (cc *ClntCache) Delete(pn string) {
 }
 
 func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res proto.Message) error {
-	for i := 0; i < pathclnt.MAXRETRY; i++ {
+	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
 		rpcc, err := cc.Lookup(pn)
 		if err != nil {
 			var sr *serr.Err
-			if errors.As(err, &sr) && pathclnt.Retry(sr) {
+			if errors.As(err, &sr) && serr.Retry(sr) {
 				db.DPrintf(db.RPCCLNT, "RPC retry lookup failure pn %v", pn)
 				continue
 			}
@@ -67,8 +70,8 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 		}
 		if err := rpcc.RPC(method, arg, res); err != nil {
 			var sr *serr.Err
-			if errors.As(err, &sr) && pathclnt.Retry(sr) {
-				time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
+			if errors.As(err, &sr) && serr.Retry(sr) {
+				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 				db.DPrintf(db.RPCCLNT, "RPC: retry %v %v err %v", pn, method, sr)
 				cc.Delete(pn)
 				continue

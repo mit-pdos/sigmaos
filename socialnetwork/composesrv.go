@@ -8,6 +8,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"sync"
@@ -45,25 +46,29 @@ func RunComposeSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_TEXT)
+	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	csrv.textc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_POST)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	csrv.postc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	csrv.tlc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_HOME)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	csrv.homec = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Starting compose service %v\n", csrv.sid)
 	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_COMPOSE)

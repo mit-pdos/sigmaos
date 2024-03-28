@@ -43,7 +43,7 @@ func NewSigmaClntClnt(pe *proc.ProcEnv) (*SigmaClntClnt, error) {
 
 	iovm := demux.NewIoVecMap()
 	scc.dmx = demux.NewDemuxClnt(sigmaclntcodec.NewTransport(conn, iovm), iovm)
-	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
+	scc.rpcc = rpcclnt.NewRPCClnt(scc)
 	// Initialize the server-side component of sigmaclnt by sending the proc env
 	db.DPrintf(db.SIGMACLNTCLNT, "Init sigmaclntclnt for %v", pe.GetPID())
 	if err := scc.Init(); err != nil {

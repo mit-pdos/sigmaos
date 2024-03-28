@@ -94,6 +94,17 @@ const (
 	NOT_SET = "NOT_SET"
 )
 
+// FSETCD consts
+const (
+	EtcdSessionTTL = 5
+)
+
+// Path lookup consts
+const (
+	PATHCLNT_TIMEOUT  = 200 // ms  (XXX belongs in hyperparam?)
+	PATHCLNT_MAXRETRY = (EtcdSessionTTL + 1) * (1000 / PATHCLNT_TIMEOUT)
+)
+
 // Realm consts
 const (
 	ROOTREALM Trealm = "rootrealm"

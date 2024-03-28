@@ -12,7 +12,7 @@ type Session struct {
 }
 
 func (fs *FsEtcd) NewSession() (*Session, error) {
-	s, err := concurrency.NewSession(fs.Clnt(), concurrency.WithTTL(SessionTTL))
+	s, err := concurrency.NewSession(fs.Clnt(), concurrency.WithTTL(sp.EtcdSessionTTL))
 	if err != nil {
 		return nil, err
 	}

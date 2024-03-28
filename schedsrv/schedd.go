@@ -25,6 +25,7 @@ import (
 	"sigmaos/schedsrv/proto"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 )
 
@@ -301,10 +302,11 @@ func (sd *Schedd) shouldGetBEProc() (proc.Tmem, bool) {
 }
 
 func (sd *Schedd) register() {
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sd.sc.FsLib}, path.Join(sp.LCSCHED, "~any"))
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sd.sc.FsLib}, path.Join(sp.LCSCHED, "~any"))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	req := &lcproto.RegisterScheddRequest{
 		KernelID: sd.kernelId,
 		McpuInt:  uint32(sd.mcpufree),

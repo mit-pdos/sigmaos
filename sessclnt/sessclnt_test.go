@@ -18,6 +18,7 @@ import (
 	"sigmaos/dir"
 	"sigmaos/keys"
 	"sigmaos/memfs"
+	"sigmaos/netsigma"
 	"sigmaos/netsrv"
 	"sigmaos/path"
 	"sigmaos/rand"
@@ -98,7 +99,7 @@ type TstateSrv struct {
 
 func newTstateClntAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := &TstateSrv{TstateMin: test.NewTstateMinAddr(t, addr), crash: crash}
-	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
+	ts.clnt = sessclnt.NewMgr(ts.PE, netsigma.NewNetProxyClnt(ts.PE))
 	return ts
 }
 
@@ -461,7 +462,7 @@ func newTstateSp(t *testing.T) *TstateSp {
 	assert.Nil(t, err, "Err MintAndSetToken: %v", err)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
 	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, root, as, ts.Addr, nil)
-	ts.clnt = sessclnt.NewMgr(sp.ROOTREALM.String())
+	ts.clnt = sessclnt.NewMgr(ts.PE, netsigma.NewNetProxyClnt(ts.PE))
 	return ts
 }
 

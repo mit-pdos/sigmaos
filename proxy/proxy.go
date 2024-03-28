@@ -68,7 +68,7 @@ type NpSess struct {
 
 func newNpSess(pe *proc.ProcEnv, lip string) *NpSess {
 	npc := &NpSess{}
-	npc.fidc = fidclnt.NewFidClnt(sp.ROOTREALM.String())
+	npc.fidc = fidclnt.NewFidClnt(pe)
 	npc.principal = pe.GetPrincipal()
 	npc.pc = pathclnt.NewPathClnt(pe, npc.fidc)
 	npc.fm = newFidMap()

@@ -29,7 +29,7 @@ func newSigmaClntSrv() (*SigmaClntSrv, error) {
 	pe := proc.GetProcEnv()
 	scs := &SigmaClntSrv{
 		pe,
-		fidclnt.NewFidClnt(pe.Net),
+		fidclnt.NewFidClnt(pe),
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)
 	return scs, nil

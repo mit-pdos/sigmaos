@@ -40,7 +40,7 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 		mnt: newMntTable(),
 	}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.NewFidClnt(pe.Net)
+		pathc.FidClnt = fidclnt.NewFidClnt(pe)
 	} else {
 		pathc.FidClnt = fidc
 		fidc.NewClnt()

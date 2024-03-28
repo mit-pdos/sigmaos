@@ -13,6 +13,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/protclnt"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
@@ -27,11 +28,11 @@ type FidClnt struct {
 	sm     *sessclnt.Mgr
 }
 
-func NewFidClnt(clntnet string) *FidClnt {
+func NewFidClnt(pe *proc.ProcEnv) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = newFidMap()
 	fidc.refcnt = 1
-	fidc.sm = sessclnt.NewMgr(clntnet)
+	fidc.sm = sessclnt.NewMgr(pe)
 	return fidc
 }
 

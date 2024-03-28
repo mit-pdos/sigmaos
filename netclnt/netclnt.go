@@ -9,22 +9,26 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/netsigma"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
 type NetClnt struct {
 	mu     sync.Mutex
+	pe     *proc.ProcEnv
 	conn   net.Conn
 	addr   *sp.Taddr
 	closed bool
 	realm  sp.Trealm
 }
 
-func NewNetClnt(clntnet string, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
+func NewNetClnt(pe *proc.ProcEnv, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
 	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", addrs)
-	nc := &NetClnt{}
-	if err := nc.connect(clntnet, addrs); err != nil {
+	nc := &NetClnt{
+		pe: pe,
+	}
+	if err := nc.connect(addrs); err != nil {
 		db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", addrs, err)
 		return nil, err
 	}
@@ -47,11 +51,11 @@ func (nc *NetClnt) Close() error {
 	return nc.conn.Close()
 }
 
-func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
-	addrs = netsigma.Rearrange(clntnet, addrs)
-	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", clntnet, addrs, addrs[0])
+func (nc *NetClnt) connect(addrs sp.Taddrs) *serr.Err {
+	addrs = netsigma.Rearrange(nc.pe.GetNet(), addrs)
+	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), addrs, addrs[0])
 	for _, addr := range addrs {
-		c, err := net.DialTimeout("tcp", addr.IPPort(), sp.Conf.Session.TIMEOUT/10)
+		c, err := netsigma.Dial(nc.pe, addr)
 		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
 		if err != nil {
 			continue

@@ -14,6 +14,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/netclnt"
+	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -28,14 +29,14 @@ type SessClnt struct {
 	closed  bool
 	addrs   sp.Taddrs
 	nc      *netclnt.NetClnt
-	clntnet string
+	pe      *proc.ProcEnv
 	dmx     *demux.DemuxClnt
 }
 
-func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
+func newSessClnt(pe *proc.ProcEnv, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	c := &SessClnt{
 		sid:     sessp.Tsession(rand.Uint64()),
-		clntnet: clntnet,
+		pe:      pe,
 		addrs:   addrs,
 		seqcntr: new(sessp.Tseqcntr),
 	}
@@ -113,7 +114,7 @@ func (c *SessClnt) getConn() *serr.Err {
 
 	if c.nc == nil {
 		db.DPrintf(db.SESSCLNT, "%v Connect to %v %v\n", c.sid, c.addrs, c.closed)
-		nc, err := netclnt.NewNetClnt(c.clntnet, c.addrs)
+		nc, err := netclnt.NewNetClnt(c.pe, c.addrs)
 		if err != nil {
 			db.DPrintf(db.SESSCLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
 			return err

@@ -12,6 +12,7 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -21,15 +22,17 @@ import (
 // SigmaClntSrv maintains the state of the sigmaclntsrv. All
 // SigmaSrvClnt's share one fid table
 type SigmaClntSrv struct {
-	pe   *proc.ProcEnv
-	fidc *fidclnt.FidClnt
+	pe     *proc.ProcEnv
+	nproxy *netsigma.NetProxySrv
+	fidc   *fidclnt.FidClnt
 }
 
 func newSigmaClntSrv() (*SigmaClntSrv, error) {
 	pe := proc.GetProcEnv()
 	scs := &SigmaClntSrv{
-		pe,
-		fidclnt.NewFidClnt(pe),
+		pe:     pe,
+		nproxy: netsigma.NewNetProxySrv(),
+		fidc:   fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe)),
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)
 	return scs, nil
@@ -56,6 +59,7 @@ func (scs *SigmaClntSrv) runServer() error {
 		db.DPrintf(db.SIGMACLNTSRV, "exiting")
 		os.Remove(sp.SIGMASOCKET)
 		scs.fidc.Close()
+		scs.nproxy.Shutdown()
 		os.Exit(0)
 	}()
 

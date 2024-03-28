@@ -7,6 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/fidclnt"
+	"sigmaos/netsigma"
 	"sigmaos/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
@@ -68,7 +69,7 @@ type NpSess struct {
 
 func newNpSess(pe *proc.ProcEnv, lip string) *NpSess {
 	npc := &NpSess{}
-	npc.fidc = fidclnt.NewFidClnt(pe)
+	npc.fidc = fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe))
 	npc.principal = pe.GetPrincipal()
 	npc.pc = pathclnt.NewPathClnt(pe, npc.fidc)
 	npc.fm = newFidMap()

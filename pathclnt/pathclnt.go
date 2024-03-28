@@ -13,6 +13,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/netsigma"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -25,6 +26,7 @@ type Watch func(error)
 type PathClnt struct {
 	*fidclnt.FidClnt
 	pe           *proc.ProcEnv
+	npc          *netsigma.NetProxyClnt
 	ndMntCache   *NamedMountCache
 	mnt          *MntTable
 	rootmt       *RootMountTable
@@ -37,10 +39,11 @@ type PathClnt struct {
 func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 	pathc := &PathClnt{
 		pe:  pe,
+		npc: netsigma.NewNetProxyClnt(pe),
 		mnt: newMntTable(),
 	}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.NewFidClnt(pe)
+		pathc.FidClnt = fidclnt.NewFidClnt(pe, pathc.npc)
 	} else {
 		pathc.FidClnt = fidc
 		fidc.NewClnt()

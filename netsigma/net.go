@@ -8,6 +8,18 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type DialFn func(addr *sp.Taddr) (net.Conn, error)
+
+func DialDirect(addr *sp.Taddr) (net.Conn, error) {
+	c, err := net.DialTimeout("tcp", addr.IPPort(), sp.Conf.Session.TIMEOUT/10)
+	if err != nil {
+		db.DPrintf(db.NETSIGMA_ERR, "Dial direct addr %v: err %v", addr, err)
+	} else {
+		db.DPrintf(db.NETSIGMA, "Dial direct addr %v", addr)
+	}
+	return c, err
+}
+
 func Listen(pe *proc.ProcEnv, addr *sp.Taddr) (net.Listener, error) {
 	// TODO: if ProcEnv has usesigmaclntd switched on, then get listener from
 	// sigmaclntd

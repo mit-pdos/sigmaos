@@ -17,16 +17,18 @@ import (
 type NetClnt struct {
 	mu     sync.Mutex
 	pe     *proc.ProcEnv
+	npc    *netsigma.NetProxyClnt
 	conn   net.Conn
 	addr   *sp.Taddr
 	closed bool
 	realm  sp.Trealm
 }
 
-func NewNetClnt(pe *proc.ProcEnv, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
+func NewNetClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
 	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", addrs)
 	nc := &NetClnt{
-		pe: pe,
+		pe:  pe,
+		npc: npc,
 	}
 	if err := nc.connect(addrs); err != nil {
 		db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", addrs, err)
@@ -55,7 +57,7 @@ func (nc *NetClnt) connect(addrs sp.Taddrs) *serr.Err {
 	addrs = netsigma.Rearrange(nc.pe.GetNet(), addrs)
 	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), addrs, addrs[0])
 	for _, addr := range addrs {
-		c, err := netsigma.Dial(nc.pe, addr)
+		c, err := nc.npc.Dial(addr)
 		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
 		if err != nil {
 			continue

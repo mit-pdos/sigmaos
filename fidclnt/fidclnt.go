@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/netsigma"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/protclnt"
@@ -28,11 +29,11 @@ type FidClnt struct {
 	sm     *sessclnt.Mgr
 }
 
-func NewFidClnt(pe *proc.ProcEnv) *FidClnt {
+func NewFidClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = newFidMap()
 	fidc.refcnt = 1
-	fidc.sm = sessclnt.NewMgr(pe)
+	fidc.sm = sessclnt.NewMgr(pe, npc)
 	return fidc
 }
 

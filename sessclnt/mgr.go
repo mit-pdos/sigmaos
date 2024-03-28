@@ -5,6 +5,7 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
+	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -15,12 +16,14 @@ type Mgr struct {
 	mu       sync.Mutex
 	sessions map[string]*SessClnt
 	pe       *proc.ProcEnv
+	npc      *netsigma.NetProxyClnt
 }
 
-func NewMgr(pe *proc.ProcEnv) *Mgr {
+func NewMgr(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) *Mgr {
 	sc := &Mgr{
 		sessions: make(map[string]*SessClnt),
 		pe:       pe,
+		npc:      npc,
 	}
 	db.DPrintf(db.SESSCLNT, "Session Mgr for session")
 	return sc
@@ -50,7 +53,7 @@ func (sc *Mgr) allocSessClnt(addrs sp.Taddrs) (*SessClnt, *serr.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := newSessClnt(sc.pe, addrs)
+	sess, err := newSessClnt(sc.pe, sc.npc, addrs)
 	if err != nil {
 		return nil, err
 	}

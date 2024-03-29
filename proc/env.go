@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -99,6 +100,9 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 				AllowedPaths:   nil, // By default, will be set to the parent's AllowedPaths unless otherwise specified
 				Secrets:        nil, // By default, will be set to the parent's Secrets unless otherwise specified
 			},
+			SigmaPath: []string{
+				filepath.Join(sp.UX, "~local", "bin/user/common"),
+			},
 		},
 	}
 }
@@ -127,6 +131,9 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 	pe.SetRealm(sp.ROOTREALM, overlays)
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
 	pe.Privileged = true
+	if buildTag != sp.LOCAL_BUILD {
+		pe.SetSigmaPath(buildTag)
+	}
 	pe.HowInt = int32(BOOT)
 	return pe
 }
@@ -147,6 +154,9 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
 	pe.HowInt = int32(TEST)
 	pe.UseSigmaclntd = useSigmaclntd
+	if buildTag != sp.LOCAL_BUILD {
+		pe.SetSigmaPath(buildTag)
+	}
 	return pe
 }
 
@@ -221,6 +231,10 @@ func (pe *ProcEnvProto) SetPID(pid sp.Tpid) {
 
 func (pe *ProcEnvProto) SetInnerContainerIP(ip sp.Tip) {
 	pe.InnerContainerIPStr = ip.String()
+}
+
+func (pe *ProcEnvProto) SetSigmaPath(buildTag string) {
+	pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.S3, "~local", buildTag, "bin"))
 }
 
 func (pe *ProcEnvProto) GetSecrets() map[string]*ProcSecretProto {
@@ -336,5 +350,5 @@ func Unmarshal(pestr string) *ProcEnv {
 
 // TODO: cleanup
 func (pe *ProcEnv) String() string {
-	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdIP:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v UseSigmacltnd:%v Claims:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal().String(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.EtcdIP, pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail, pe.UseSigmaclntd, pe.Claims)
+	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdIP:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v UseSigmacltnd:%v Claims:%v SigmaPath:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal().String(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.EtcdIP, pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail, pe.UseSigmaclntd, pe.Claims, pe.SigmaPath)
 }

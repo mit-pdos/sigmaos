@@ -127,6 +127,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
 	p.ProcEnvProto.ParentToken = parentPE.Principal.GetToken()
+	p.ProcEnvProto.SigmaPath = parentPE.SigmaPath
 	// If parent didn't specify allowed paths, inherit the parent's allowed paths
 	if p.ProcEnvProto.Claims.AllowedPaths == nil {
 		p.ProcEnvProto.Claims.AllowedPaths = parentPE.Claims.AllowedPaths
@@ -222,6 +223,10 @@ func (p *Proc) GetProcEnv() *ProcEnv {
 
 func (p *Proc) GetProgram() string {
 	return p.ProcEnvProto.Program
+}
+
+func (p *Proc) GetSigmaPath() []string {
+	return p.ProcEnvProto.SigmaPath
 }
 
 func (p *Proc) GetProcDir() string {

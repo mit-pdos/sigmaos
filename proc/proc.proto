@@ -44,6 +44,7 @@ message ProcEnvProto {
   bool useSigmaclntd = 26;
   Ttoken parentToken = 27;
   ProcClaimsProto claims = 28;
+  repeated string sigmaPath = 29;
 }
 
 message ProcProto {

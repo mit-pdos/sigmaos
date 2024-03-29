@@ -3,7 +3,7 @@ package binsrv
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -85,10 +85,10 @@ func newDownload(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sfd int, s
 func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sz int64) (*downloader, error) {
 	sfd := 0
 	s := time.Now()
-	paths := downloadPaths(pn, kernelId)
+	bin, paths := downloadPaths(pn, kernelId)
 	if err := retryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.BINSRV, "open %q\n", pn)
-		fd, err := sc.Open(pn, sp.OREAD)
+		fd, err := sc.Open(pn+"/"+bin, sp.OREAD)
 		if err == nil {
 			sfd = fd
 			return nil
@@ -274,19 +274,22 @@ func (dl *downloader) read(off int64, len int) (int, error) {
 	return min(n-o, len), err
 }
 
-func downloadPaths(pn, kernelId string) []string {
-	buildTag := ""
-	pn, buildTag = binPathParse(pn)
-	name := filepath.Base(pn)
-	paths := []string{
-		filepath.Join(sp.UX, kernelId, "bin/user/common", name),
-		filepath.Join(sp.S3, "~local", buildTag, "bin", name),
-	}
+func downloadPaths(pn, kernelId string) (string, []string) {
+	bin, paths := binPathParse(pn)
+
+	// XXX hack clean up
 	// For user bins, go straight to S3 instead of checking locally first.
-	if sp.Target != "local" && name != "named" && name != "spawn-latency-ux" {
+	if sp.Target != "local" && bin != "named" && bin != "spawn-latency-ux" {
 		paths = paths[1:]
 	}
-	return paths
+
+	// XXX hack; how to handle ~local?
+	for i, p := range paths {
+		if strings.HasPrefix(p, sp.UX) {
+			paths[i] = strings.Replace(p, "~local", kernelId, 1)
+		}
+	}
+	return bin, paths
 }
 
 func retryLoop(i int, f func(i int, pn string) error, src string) error {

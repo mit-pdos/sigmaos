@@ -236,7 +236,7 @@ func readFile(pn string) error {
 
 // Warm uprocd to run a program for experiments with warm start.
 func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
-	pn := binsrv.BinPath(req.Program, req.BuildTag)
+	pn := binsrv.BinPath(req.Program, req.SigmaPath)
 	db.DPrintf(db.UPROCD, "WarmProc %q %v", pn, req)
 	if err := ups.assignToRealm(sp.Trealm(req.RealmStr), sp.NO_PID); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)

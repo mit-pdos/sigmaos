@@ -68,7 +68,7 @@ message GetRunningProcsResponse {
 message WarmCacheBinRequest {
   string realmStr = 1;
   string program = 2;
-  string buildTag = 3;
+  repeated string SigmaPath = 3;
   int32 procType = 4;
 }
 

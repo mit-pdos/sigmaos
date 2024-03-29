@@ -1,7 +1,6 @@
 package binsrv
 
 import (
-	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -49,12 +48,12 @@ type bincache struct {
 }
 
 func (bc *bincache) sStat(pn string) (*sp.Stat, error) {
-	n := filepath.Base(pn)
-	db.DPrintf(db.BINSRV, "%v: sStat %q\n", n, pn)
-	paths := downloadPaths(pn, bc.kernelId)
+	bin, paths := downloadPaths(pn, bc.kernelId)
+	db.DPrintf(db.BINSRV, "sStat %q %v\n", bin, paths)
 	var st *sp.Stat
 	err := retryPaths(paths, func(i int, pn string) error {
-		sst, err := bc.sc.Stat(pn)
+		db.DPrintf(db.BINSRV, "Stat %q/%q\n", pn, bin)
+		sst, err := bc.sc.Stat(pn + "/" + bin)
 		if err == nil {
 			sst.Dev = uint32(i)
 			st = sst

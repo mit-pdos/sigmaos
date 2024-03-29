@@ -22,7 +22,7 @@ message AssignResult {
 message WarmBinRequest {
   string realmStr = 1;
   string program = 2;
-  string buildTag = 3;
+  repeated string sigmaPath = 3;
 }
 
 message WarmBinResult {

@@ -49,11 +49,11 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 }
 
-func (clnt *UprocdClnt) WarmProc(realm sp.Trealm, prog, buildTag string) (uprocErr error, childErr error) {
+func (clnt *UprocdClnt) WarmProc(realm sp.Trealm, prog string, path []string) (uprocErr error, childErr error) {
 	req := &proto.WarmBinRequest{
-		RealmStr: realm.String(),
-		Program:  prog,
-		BuildTag: buildTag,
+		RealmStr:  realm.String(),
+		Program:   prog,
+		SigmaPath: path,
 	}
 	res := &proto.RunResult{}
 	if err := clnt.RPC("UprocSrv.WarmProc", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {

@@ -29,10 +29,13 @@ type SigmaClntSrv struct {
 
 func newSigmaClntSrv() (*SigmaClntSrv, error) {
 	pe := proc.GetProcEnv()
+	// TODO XXX remove
+	pe2 := proc.GetProcEnv()
+	pe2.Privileged = false
 	scs := &SigmaClntSrv{
 		pe:     pe,
 		nproxy: netsigma.NewNetProxySrv(),
-		fidc:   fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe)),
+		fidc:   fidclnt.NewFidClnt(pe2, netsigma.NewNetProxyClnt(pe2)),
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)
 	return scs, nil

@@ -87,7 +87,7 @@ func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sz int64
 	s := time.Now()
 	bin, paths := downloadPaths(pn, kernelId)
 	if err := retryPaths(paths, func(i int, pn string) error {
-		db.DPrintf(db.BINSRV, "sOpen %q\n", pn)
+		db.DPrintf(db.BINSRV, "sOpen %q/%v\n", pn, bin)
 		fd, err := sc.Open(pn+"/"+bin, sp.OREAD)
 		if err == nil {
 			sfd = fd

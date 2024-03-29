@@ -210,10 +210,6 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 
-	//if uproc.UpdateSigmaPath(ups.kernelId) {
-	//	db.DPrintf(db.UPROCD, "Update SigmaPath %v\n", uproc.GetSigmaPath())
-	//}
-
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	return container.RunUProc(uproc)
 }

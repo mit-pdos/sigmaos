@@ -87,7 +87,7 @@ func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, kernelId string, sz int64
 	s := time.Now()
 	bin, paths := downloadPaths(pn, kernelId)
 	if err := retryPaths(paths, func(i int, pn string) error {
-		db.DPrintf(db.BINSRV, "open %q\n", pn)
+		db.DPrintf(db.BINSRV, "sOpen %q\n", pn)
 		fd, err := sc.Open(pn+"/"+bin, sp.OREAD)
 		if err == nil {
 			sfd = fd
@@ -277,12 +277,6 @@ func (dl *downloader) read(off int64, len int) (int, error) {
 func downloadPaths(pn, kernelId string) (string, []string) {
 	bin, paths := binPathParse(pn)
 
-	// XXX hack clean up
-	// For user bins, go straight to S3 instead of checking locally first.
-	if sp.Target != "local" && bin != "named" && bin != "spawn-latency-ux" {
-		paths = paths[1:]
-	}
-
 	// XXX hack; how to handle ~local?
 	for i, p := range paths {
 		if strings.HasPrefix(p, sp.UX) {
@@ -307,7 +301,6 @@ func retryLoop(i int, f func(i int, pn string) error, src string) error {
 		}
 	}
 	return fmt.Errorf("retryLoop: couldn't do %T for %q in %d retries err %v", f, src, N_DOWNLOAD_RETRIES, r)
-
 }
 
 func retryPaths(paths []string, f func(i int, pn string) error) error {

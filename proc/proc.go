@@ -161,6 +161,10 @@ func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 	}
 }
 
+func (p *Proc) UpdateSigmaPath(kernelID string) bool {
+	return p.ProcEnvProto.UpdateSigmaPath(kernelID)
+}
+
 // Finalize env details which can only be set once a physical machine and
 // uprocd container have been chosen.
 func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
@@ -177,11 +181,12 @@ func (p *Proc) IsPrivileged() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t KernelId:%v UseSigmaclntd %t Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
+	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t SigmaPath:%v KernelId:%v UseSigmaclntd %t Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.GetPID(),
 		p.ProcEnvProto.GetBuildTag(),
 		p.ProcEnvProto.Privileged,
+		p.ProcEnvProto.GetSigmaPath(),
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.UseSigmaclntd,
 		p.ProcEnvProto.GetRealm(),

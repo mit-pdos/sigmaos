@@ -100,9 +100,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 				AllowedPaths:   nil, // By default, will be set to the parent's AllowedPaths unless otherwise specified
 				Secrets:        nil, // By default, will be set to the parent's Secrets unless otherwise specified
 			},
-			SigmaPath: []string{
-				filepath.Join(sp.UX, "~local", "bin/user/common"),
-			},
+			SigmaPath: []string{},
 		},
 	}
 }
@@ -131,9 +129,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 	pe.SetRealm(sp.ROOTREALM, overlays)
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
 	pe.Privileged = true
-	if buildTag != sp.LOCAL_BUILD {
-		pe.SetSigmaPath(buildTag)
-	}
+	pe.SetSigmaPath(buildTag)
 	pe.HowInt = int32(BOOT)
 	return pe
 }
@@ -154,9 +150,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
 	pe.HowInt = int32(TEST)
 	pe.UseSigmaclntd = useSigmaclntd
-	if buildTag != sp.LOCAL_BUILD {
-		pe.SetSigmaPath(buildTag)
-	}
+	pe.SetSigmaPath(buildTag)
 	return pe
 }
 
@@ -234,7 +228,22 @@ func (pe *ProcEnvProto) SetInnerContainerIP(ip sp.Tip) {
 }
 
 func (pe *ProcEnvProto) SetSigmaPath(buildTag string) {
-	pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.S3, "~local", buildTag, "bin"))
+	if buildTag == sp.LOCAL_BUILD {
+		pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.UX, "~local", "bin/user/common"))
+	} else {
+		pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.S3, "~local", buildTag, "bin"))
+	}
+}
+
+func (pe *ProcEnvProto) UpdateSigmaPath(kernelId string) bool {
+	for _, pn := range pe.SigmaPath {
+		if strings.Contains(pn, kernelId) {
+			return false
+		}
+	}
+	p := []string{filepath.Join(sp.UX, kernelId, "bin/user/common")}
+	pe.SigmaPath = append(p, pe.SigmaPath...)
+	return true
 }
 
 func (pe *ProcEnvProto) GetSecrets() map[string]*ProcSecretProto {

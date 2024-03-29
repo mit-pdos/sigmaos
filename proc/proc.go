@@ -161,8 +161,8 @@ func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 	}
 }
 
-func (p *Proc) UpdateSigmaPath(kernelID string) bool {
-	return p.ProcEnvProto.UpdateSigmaPath(kernelID)
+func (p *Proc) PrependSigmaPath(pn string) {
+	p.ProcEnvProto.PrependSigmaPath(pn)
 }
 
 // Finalize env details which can only be set once a physical machine and

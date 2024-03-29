@@ -6,6 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/rand"
 	sp "sigmaos/sigmap"
 )
 
@@ -14,12 +15,14 @@ type ChildState struct {
 	sync.Mutex
 	ranOn      map[sp.Tpid]*SpawnFuture
 	exitStatus map[sp.Tpid]*proc.Status
+	bins       map[string][]string // map from bin name to kernelIdy
 }
 
 func newChildState() *ChildState {
 	return &ChildState{
 		ranOn:      make(map[sp.Tpid]*SpawnFuture),
 		exitStatus: make(map[sp.Tpid]*proc.Status),
+		bins:       make(map[string][]string),
 	}
 }
 
@@ -111,4 +114,26 @@ func (cs *ChildState) GetKernelID(pid sp.Tpid) (string, error) {
 		return fut.Get()
 	}
 	return "NO_SCHEDD", fmt.Errorf("Proc %v child state not found", pid)
+}
+
+func (cs *ChildState) BinKernelID(bin string) (string, bool) {
+	cs.Lock()
+	defer cs.Unlock()
+
+	if kids, ok := cs.bins[bin]; ok {
+		i := rand.Int64(int64(len(kids)))
+		return kids[int(i)], true
+	}
+	return "", false
+}
+
+func (cs *ChildState) SetBinKernelID(bin, kernelId string) {
+	cs.Lock()
+	defer cs.Unlock()
+
+	if _, ok := cs.bins[bin]; ok {
+		cs.bins[bin] = append(cs.bins[bin], kernelId)
+	} else {
+		cs.bins[bin] = []string{kernelId}
+	}
 }

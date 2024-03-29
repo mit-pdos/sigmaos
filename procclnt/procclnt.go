@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -86,6 +87,14 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 
 	p.SetHow(how)
 
+	if kid, ok := clnt.cs.BinKernelID(p.GetProgram()); ok {
+		pn := filepath.Join(sp.UX, kernelId, "bin/user/common")
+		p.PrependSigmaPath(pn)
+		db.DPrintf(db.ALWAYS, "spawn: BinKernelID %v %v\n", p.GetProgram(), kid)
+	} else {
+		db.DPrintf(db.ALWAYS, "spawn: no BinKernelID %v\n", p.GetProgram())
+	}
+
 	p.InheritParentProcEnv(clnt.ProcEnv())
 
 	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v", kernelId, p)
@@ -97,6 +106,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 	}
 
 	p.SetSpawnTime(time.Now())
+
 	// Optionally spawn the proc through schedd.
 	if how == proc.HSCHEDD {
 		clnt.cs.Spawned(p.GetPid())
@@ -105,6 +115,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 			db.DPrintf(db.PROCCLNT, "pre spawnRetry %v %v", kernelId, p)
 			spawnedKernelID, err := clnt.spawnRetry(kernelId, p)
 			db.DPrintf(db.PROCCLNT, "spawned on kernelID %v err %v proc %v", spawnedKernelID, err, p)
+			clnt.cs.SetBinKernelID(p.GetProgram(), spawnedKernelID)
+			db.DPrintf(db.ALWAYS, "SetBinKernelID %q %v\n", p.GetProgram(), spawnedKernelID)
 			clnt.cs.Started(p.GetPid(), spawnedKernelID, err)
 			if err != nil {
 				clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))

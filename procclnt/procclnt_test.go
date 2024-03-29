@@ -23,6 +23,7 @@ const (
 	SLEEP_MSECS = 2000
 	CRASH_MSECS = 5
 	NTRIALS     = "3001"
+	N_NODES     = 2
 )
 
 const program = "procclnt_test"
@@ -644,8 +645,6 @@ func TestSpawnBurst(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-
-	const N_NODES = 2
 
 	// Number of spinners to burst-spawn
 	N := (linuxsched.GetNCores()) * N_NODES

@@ -235,15 +235,8 @@ func (pe *ProcEnvProto) SetSigmaPath(buildTag string) {
 	}
 }
 
-func (pe *ProcEnvProto) UpdateSigmaPath(kernelId string) bool {
-	for _, pn := range pe.SigmaPath {
-		if strings.Contains(pn, kernelId) {
-			return false
-		}
-	}
-	p := []string{filepath.Join(sp.UX, kernelId, "bin/user/common")}
-	pe.SigmaPath = append(p, pe.SigmaPath...)
-	return true
+func (pe *ProcEnvProto) PrependSigmaPath(pn string) {
+	pe.SigmaPath = append([]string{pn}, pe.SigmaPath...)
 }
 
 func (pe *ProcEnvProto) GetSecrets() map[string]*ProcSecretProto {

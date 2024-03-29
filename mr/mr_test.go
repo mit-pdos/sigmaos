@@ -352,6 +352,12 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	}
 	ts := newTstate(t1, runApp)
 
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "BootProcd 1")
+
+	err = ts.BootNode(1)
+	assert.Nil(t, err, "BootProcd 2")
+
 	sdc := scheddclnt.NewScheddClnt(sc.FsLib)
 	if monitor {
 		sdc.MonitorScheddStats(ts.ProcEnv().GetRealm(), time.Second)

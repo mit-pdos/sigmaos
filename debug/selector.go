@@ -194,7 +194,7 @@ const (
 	SESSDEV                   = "SESSDEV"
 	SIGMASRV                  = "SIGMASRV"
 	NETPROXYSRV               = "NETPROXYSRV"
-	NETPROXYSRV_ERR           = "NETPROXYSRV_ERR"
+	NETPROXYSRV_ERR           = "NETPROXYSRV" + ERR
 	NETSIGMA                  = "NETSIGMA"
 	NETSIGMA_ERR              = "NETSIGMA_ERR"
 )

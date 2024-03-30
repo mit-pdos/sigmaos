@@ -2,30 +2,26 @@ package netsigma
 
 import (
 	"net"
-	"os"
 	"sync"
 
-	"golang.org/x/sys/unix"
-
 	db "sigmaos/debug"
-	"sigmaos/frame"
+	"sigmaos/netsigma/proto"
 	"sigmaos/proc"
-	//	"sigmaos/rpcclnt"
+	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 )
 
 type NetProxyClnt struct {
 	sync.Mutex
-	init         bool
-	proxyConn    *net.UnixConn
 	pe           *proc.ProcEnv
 	directDialFn DialFn
 	proxyDialFn  DialFn
+	rpcc         *rpcclnt.RPCClnt
+	rpcch        *NetProxyRPCCh
 }
 
 func NewNetProxyClnt(pe *proc.ProcEnv) *NetProxyClnt {
 	return &NetProxyClnt{
-		init:         false,
 		pe:           pe,
 		directDialFn: DialDirect,
 	}
@@ -45,15 +41,15 @@ func (npc *NetProxyClnt) Dial(addr *sp.Taddr) (net.Conn, error) {
 	return c, err
 }
 
-func (npc *NetProxyClnt) initConnToNetProxySrv() error {
-	npc.init = true
+// Lazily init connection to the netproxy srv
+func (npc *NetProxyClnt) init() error {
 	// Connect to the netproxy server
-	conn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
+	ch, err := NewNetProxyRPCCh()
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error dial netproxy srv")
 		return err
 	}
-	npc.proxyConn = conn.(*net.UnixConn)
+	npc.rpcch = ch
+	npc.rpcc = rpcclnt.NewRPCClnt(ch)
 	return nil
 }
 
@@ -62,39 +58,26 @@ func (npc *NetProxyClnt) proxyDial(addr *sp.Taddr) (net.Conn, error) {
 	defer npc.Unlock()
 
 	// Ensure that the connection to the netproxy server has been initialized
-	if !npc.init {
-		npc.initConnToNetProxySrv()
+	if npc.rpcc == nil {
+		if err := npc.init(); err != nil {
+			db.DPrintf(db.NETPROXYCLNT_ERR, "Error dial netproxysrv %v", err)
+			return nil, err
+		}
 	}
-
-	b := []byte(addr.Marshal())
-	// Send the desired address to be dialed to the server
-	frame.WriteFrame(npc.proxyConn, b)
-
-	oob := make([]byte, unix.CmsgSpace(4))
-	// Send connection FD to child via socket
-	_, _, _, _, err := npc.proxyConn.ReadMsgUnix(nil, oob)
-	if err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error recv proxied conn fd: err %v", err)
+	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request addr %v", npc.rpcch.conn, addr.String())
+	req := &proto.DialRequest{
+		Addr: addr,
+	}
+	res := &proto.DialResponse{}
+	if err := npc.rpcc.RPC("NetProxySrv.Dial", req, res); err != nil {
 		return nil, err
 	}
-	scma, err := unix.ParseSocketControlMessage(oob)
-	if err != nil {
-		db.DFatalf("Error parse socket control message: %v", err)
+	db.DPrintf(db.NETPROXYCLNT, "proxyDial response %v", res)
+	// If an error occurred during dialing, bail out
+	if res.Err.ErrCode != 0 {
+		err := sp.NewErr(res.Err)
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Dial: %v", err)
+		return nil, err
 	}
-	fds, err := unix.ParseUnixRights(&scma[0])
-	if err != nil || len(fds) != 1 {
-		db.DFatalf("Error parse unix rights: len %v err %v", len(fds), err)
-	}
-	db.DPrintf(db.NETPROXYCLNT, "got socket fd %v", fds[0])
-	// Make the returned FD into a Golang file object
-	f := os.NewFile(uintptr(fds[0]), "tcp-conn")
-	if f == nil {
-		db.DFatalf("Error new file")
-	}
-	// Create a FileConn from the file
-	pconn, err := net.FileConn(f)
-	if err != nil {
-		db.DFatalf("Error make FileConn: %v", err)
-	}
-	return pconn.(*net.TCPConn), nil
+	return npc.rpcch.GetReturnedConn()
 }

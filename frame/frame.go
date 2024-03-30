@@ -2,6 +2,7 @@ package frame
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	db "sigmaos/debug"
@@ -20,11 +21,12 @@ func ReadFrameInto(rd io.Reader, frame *sessp.Tframe) *serr.Err {
 		}
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
-	db.DPrintf(db.FRAME, "ReadFrameInto nbyte %d", nbyte)
-	if nbyte == 0 {
-		return serr.NewErr(serr.TErrUnreachable, "readMsg too short (0)")
+	if nbyte < 4 {
+		db.DPrintf(db.FRAME, "[%p] Error ReadFrameInto nbyte too short %d", rd, nbyte)
+		return serr.NewErr(serr.TErrUnreachable, fmt.Errorf("readMsg too short (%v)", nbyte))
 	}
 	nbyte = nbyte - 4
+	db.DPrintf(db.FRAME, "[%p] ReadFrameInto nbyte %d", rd, nbyte)
 	// If no frame to read into was specified, allocate one
 	if *frame == nil {
 		*frame = make(sessp.Tframe, nbyte)
@@ -68,7 +70,7 @@ func ReadFrames(rd io.Reader) (sessp.IoVec, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.FRAME, "ReadFrames %d\n", nframes)
+	db.DPrintf(db.FRAME, "[%p] ReadFrames %d", rd, nframes)
 	if nframes < 0 {
 		return nil, serr.NewErr(serr.TErrUnreachable, "ReadFrames too short")
 	}
@@ -81,7 +83,7 @@ func ReadFrames(rd io.Reader) (sessp.IoVec, *serr.Err) {
 
 // Write a single frame
 func WriteFrame(wr io.Writer, frame sessp.Tframe) *serr.Err {
-	db.DPrintf(db.FRAME, "WriteFrame nbyte %d", len(frame))
+	db.DPrintf(db.FRAME, "[%p] WriteFrame nbyte %v %v", wr, len(frame), uint32(len(frame)+4))
 	nbyte := uint32(len(frame) + 4) // +4 because that is how 9P wants it
 	if err := binary.Write(wr, binary.LittleEndian, nbyte); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err.Error())
@@ -91,6 +93,7 @@ func WriteFrame(wr io.Writer, frame sessp.Tframe) *serr.Err {
 
 // Write many frames
 func WriteFrames(wr io.Writer, iov sessp.IoVec) *serr.Err {
+	db.DPrintf(db.FRAME, "[%p] WriteFrames %d", wr, len(iov))
 	if err := WriteNumOfFrames(wr, uint32(len(iov))); err != nil {
 		return err
 	}

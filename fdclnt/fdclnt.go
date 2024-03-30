@@ -133,16 +133,28 @@ func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, b []byte) (sp.
 	if err != nil {
 		return 0, err
 	}
-	fdc.fds.incOff(fd, sp.Toffset(cnt))
 	return cnt, nil
 }
 
 func (fdc *FdClient) Read(fd int, b []byte) (sp.Tsize, error) {
-	fid, off, error := fdc.fds.lookupOff(fd)
-	if error != nil {
-		return 0, error
+	fid, off, sr := fdc.fds.lookupOff(fd)
+	if sr != nil {
+		return 0, sr
 	}
-	return fdc.readFid(fd, fid, off, b)
+	cnt, err := fdc.readFid(fd, fid, off, b)
+	if err != nil {
+		return 0, err
+	}
+	fdc.fds.incOff(fd, sp.Toffset(cnt))
+	return cnt, nil
+}
+
+func (fdc *FdClient) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
+	fid, _, sr := fdc.fds.lookupOff(fd)
+	if sr != nil {
+		return 0, sr
+	}
+	return fdc.readFid(fd, fid, o, b)
 }
 
 func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, error) {

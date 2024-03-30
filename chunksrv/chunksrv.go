@@ -51,14 +51,11 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fet
 	}); err != nil {
 		return err
 	}
+	defer cksrv.sc.CloseFd(sfd)
 
-	// XXX Pread
-	if err := cksrv.sc.Seek(sfd, sp.Toffset(Ckoff(ckid))); err != nil {
-		return err
-	}
 	db.DPrintf(db.CHUNKSRV, "Fetch: read %q %d", req.Prog, ckid)
 	b := make([]byte, CHUNKSZ)
-	sz, err := cksrv.sc.Read(sfd, b)
+	sz, err := cksrv.sc.Pread(sfd, b, sp.Toffset(Ckoff(ckid)))
 	if err != nil {
 		db.DPrintf(db.CHUNKSRV, "Fetch: read %q ck %d err %v", req.Prog, ckid, err)
 		return err

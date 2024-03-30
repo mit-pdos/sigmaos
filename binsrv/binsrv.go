@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
 	"strings"
 	"syscall"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 
+	"sigmaos/chunkclnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -57,7 +59,7 @@ type binFsRoot struct {
 	bincache *bincache
 }
 
-func (r *binFsRoot) newNode(parent *fs.Inode, name string, sz int64) fs.InodeEmbedder {
+func (r *binFsRoot) newNode(parent *fs.Inode, name string, sz sp.Tsize) fs.InodeEmbedder {
 	n := &binFsNode{
 		RootData: r,
 		name:     name,
@@ -71,23 +73,22 @@ type binFsNode struct {
 
 	RootData *binFsRoot
 	name     string
-	sz       int64
+	sz       sp.Tsize
 }
 
 func (n *binFsNode) String() string {
 	return fmt.Sprintf("{N %q}", n.path())
 }
 
-func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmbedder, error) {
+func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, ckclnt *chunkclnt.ChunkClnt) (fs.InodeEmbedder, error) {
 	var st syscall.Stat_t
 	err := syscall.Stat(BINCACHE, &st)
 	if err != nil {
 		return nil, err
 	}
 	root := &binFsRoot{
-		bincache: newBinCache(kernelId, sc),
+		bincache: newBinCache(kernelId, sc, ckclnt),
 	}
-
 	return root.newNode(nil, "", 0), nil
 }
 
@@ -107,13 +108,19 @@ func RunBinFS(kernelId, dir string) error {
 		return err
 	}
 
-	if sts, err := sc.GetDir(sp.UX); err == nil {
-		db.DPrintf(db.ALWAYS, "uxes %v", sp.Names(sts))
+	if sts, err := sc.GetDir(sp.CHUNKD); err == nil {
+		db.DPrintf(db.ALWAYS, "chunksrvs %v", sp.Names(sts))
 	} else {
-		db.DPrintf(db.ALWAYS, "uxes err %v", err)
+		db.DPrintf(db.ALWAYS, "chunksrvs err %v", err)
 	}
 
-	loopbackRoot, err := newBinRoot(kernelId, sc)
+	ckclnt, err := chunkclnt.NewChunkClnt(sc.FsLib, path.Join(sp.CHUNKD, kernelId))
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "ckclnt err %v", err)
+		return err
+	}
+
+	loopbackRoot, err := newBinRoot(kernelId, sc, ckclnt)
 	if err != nil {
 		return err
 	}

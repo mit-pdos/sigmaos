@@ -87,13 +87,15 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 
 	p.SetHow(how)
 
+	pn := filepath.Join(sp.CHUNKD, kernelId)
 	if kid, ok := clnt.cs.BinKernelID(p.GetProgram()); ok {
-		pn := filepath.Join(sp.UX, kernelId, "bin/user/common")
-		p.PrependSigmaPath(pn)
+		pn = filepath.Join(sp.CHUNKD, kid)
 		db.DPrintf(db.ALWAYS, "spawn: BinKernelID %v %v\n", p.GetProgram(), kid)
 	} else {
-		db.DPrintf(db.ALWAYS, "spawn: no BinKernelID %v\n", p.GetProgram())
+		db.DPrintf(db.ALWAYS, "spawn: no BinKernelID %v; use %q\n", p.GetProgram(), pn)
 	}
+
+	p.PrependSigmaPath(pn)
 
 	p.InheritParentProcEnv(clnt.ProcEnv())
 

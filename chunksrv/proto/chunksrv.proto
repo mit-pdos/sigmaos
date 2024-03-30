@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/chunksrv/proto";
+
+message FetchRequest {
+   string prog = 1;
+   int32 chunkId = 2;
+   uint64 size = 3;
+   string realm = 4;
+   repeated string path = 5;
+}
+
+message FetchResponse {
+  bytes chunk = 1;
+  uint64 size = 2;
+}

@@ -60,6 +60,9 @@ func RunUprocSrv(kernelId string, up string) error {
 		return err
 	}
 
+	// XXX
+	time.Sleep(1 * time.Second)
+
 	var ssrv *sigmasrv.SigmaSrv
 	var err error
 	if up == sp.NO_PORT.String() {
@@ -260,7 +263,10 @@ func mountRealmBinDir(realm sp.Trealm) error {
 	}
 
 	mnt := path.Join(sp.SIGMAHOME, "bin", "user")
-	if err := syscall.Mount(dir, mnt, "none", syscall.MS_BIND, ""); err != nil {
+
+	db.DPrintf(db.UPROCD, "mountRealmBinDir: %q %q\n", dir, mnt)
+
+	if err := syscall.Mount(dir, mnt, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount realm's bin dir %q to %q err %v", dir, mnt, err)
 		return err
 	}

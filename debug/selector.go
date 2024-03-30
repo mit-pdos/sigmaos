@@ -136,6 +136,8 @@ const (
 	PROXY                     = "PROXY"
 	SIGMACLNTSRV              = "SIGMACLNTSRV"
 	BINSRV                    = "BINSRV"
+	CHUNKSRV                  = "CHUNKSRV"
+	CHUNKCLNT                 = "CHUNKCLNT"
 )
 
 // Realm

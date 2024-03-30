@@ -10,6 +10,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse"
 
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 )
 
 var _ = (fs.NodeStatfser)((*binFsNode)(nil))
@@ -35,6 +36,8 @@ var _ = (fs.NodeLookuper)((*binFsNode)(nil))
 
 // Lookup name in bincache and fake a unix inode
 func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
+	db.DPrintf(db.BINSRV, "%v: Lookup %q\n", n.path(), name)
+
 	pn := filepath.Join(n.path(), name)
 	sst, err := n.RootData.bincache.lookup(pn)
 	if err != nil {
@@ -43,7 +46,7 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 	ust := syscall.Stat_t{}
 	toUstat(sst, &ust)
 	out.Attr.FromStat(&ust)
-	node := n.RootData.newNode(n.EmbeddedInode(), name, ust.Size)
+	node := n.RootData.newNode(n.EmbeddedInode(), name, sp.Tsize(sst.Length))
 	ch := n.NewInode(ctx, node, idFromStat(&ust))
 
 	db.DPrintf(db.BINSRV, "%v: Lookup %q %v\n", n, name, node)

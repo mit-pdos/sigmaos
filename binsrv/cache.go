@@ -6,7 +6,9 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 
+	"sigmaos/chunkclnt"
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -45,13 +47,14 @@ type bincache struct {
 	sc       *sigmaclnt.SigmaClnt
 	kernelId string
 	cache    map[string]*entry
+	ckclnt   *chunkclnt.ChunkClnt
 }
 
 func (bc *bincache) sStat(pn string) (*sp.Stat, error) {
 	bin, paths := downloadPaths(pn, bc.kernelId)
 	db.DPrintf(db.BINSRV, "sStat %q %v\n", bin, paths)
 	var st *sp.Stat
-	err := retryPaths(paths, func(i int, pn string) error {
+	err := fslib.RetryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.BINSRV, "Stat %q/%q\n", pn, bin)
 		sst, err := bc.sc.Stat(pn + "/" + bin)
 		if err == nil {
@@ -64,11 +67,12 @@ func (bc *bincache) sStat(pn string) (*sp.Stat, error) {
 	return st, err
 }
 
-func newBinCache(kernelId string, sc *sigmaclnt.SigmaClnt) *bincache {
+func newBinCache(kernelId string, sc *sigmaclnt.SigmaClnt, ckclnt *chunkclnt.ChunkClnt) *bincache {
 	bc := &bincache{
 		cache:    make(map[string]*entry),
 		sc:       sc,
 		kernelId: kernelId,
+		ckclnt:   ckclnt,
 	}
 	return bc
 }
@@ -91,7 +95,7 @@ func (bc *bincache) lookup(pn string) (*sp.Stat, error) {
 	return st, nil
 }
 
-func (bc *bincache) getDownload(pn string, sz int64) (*downloader, error) {
+func (bc *bincache) getDownload(pn string, sz sp.Tsize) (*downloader, error) {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
@@ -102,7 +106,7 @@ func (bc *bincache) getDownload(pn string, sz int64) (*downloader, error) {
 
 	if e.dl == nil {
 		db.DPrintf(db.BINSRV, "getDownload: new downloader %q\n", pn)
-		if dl, err := newDownloader(pn, bc.sc, bc.kernelId, sz); err != nil {
+		if dl, err := newDownloader(pn, bc.sc, bc.ckclnt, sz); err != nil {
 			return nil, err
 		} else {
 			e.dl = dl

@@ -92,7 +92,7 @@ func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, ckclnt *chunkclnt.Chun
 	return root.newNode(nil, "", 0), nil
 }
 
-func RunBinFS(kernelId, dir string) error {
+func RunBinFS(kernelId string) error {
 	pe := proc.GetProcEnv()
 
 	db.DPrintf(db.BINSRV, "MkDir %q", BINFSMNT)

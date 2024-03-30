@@ -72,16 +72,25 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 	}
 }
 
+func connToFD(proxyConn net.Conn) (int, error) {
+	f, err := proxyConn.(*net.TCPConn).File()
+	if err != nil {
+		db.DFatalf("Error get unix conn fd: %v", err)
+		return 0, err
+	}
+	// Return the unix FD for the socket
+	return int(f.Fd()), nil
+}
+
 // Send the FD corresponding to the socket of the established (proxied)
 // connection to the client.
 func sendProxiedConnSocketFD(clntConn *net.UnixConn, proxyConn net.Conn) error {
-	f, err := proxyConn.(*net.TCPConn).File()
+	// Get the unix FD for the socket
+	proxyConnFD, err := connToFD(proxyConn)
 	if err != nil {
 		db.DFatalf("Error get unix conn fd: %v", err)
 		return err
 	}
-	// Get the unix FD for the socket
-	proxyConnFD := int(f.Fd())
 	oob := unix.UnixRights(proxyConnFD)
 	db.DPrintf(db.NETPROXYSRV, "Send fd %v", proxyConnFD)
 	// Send connection FD to child via socket

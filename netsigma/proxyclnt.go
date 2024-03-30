@@ -10,6 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/frame"
 	"sigmaos/proc"
+	//	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -46,7 +47,6 @@ func (npc *NetProxyClnt) Dial(addr *sp.Taddr) (net.Conn, error) {
 
 func (npc *NetProxyClnt) initConnToNetProxySrv() error {
 	npc.init = true
-
 	// Connect to the netproxy server
 	conn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
 	if err != nil {

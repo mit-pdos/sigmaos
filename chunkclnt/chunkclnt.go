@@ -37,8 +37,8 @@ func (ckclnt *ChunkClnt) Fetch(pn string, realm sp.Trealm, ck int, sz sp.Tsize, 
 		Path:    path,
 	}
 	res := &proto.FetchResponse{}
-	if err := ckclnt.rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
-		db.DPrintf(db.CHUNKCLNT, "ChunkSrv.Fetch %v err %v", req, err)
+	if err := ckclnt.rpcc.RPC("UprocSrv.Fetch", req, res); err != nil {
+		db.DPrintf(db.CHUNKCLNT, "UprocSrv.Fetch %v err %v", req, err)
 		return 0, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch latency %v", pn, time.Since(s))

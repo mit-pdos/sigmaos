@@ -92,8 +92,10 @@ func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, ckclnt *chunkclnt.Chun
 	return root.newNode(nil, "", 0), nil
 }
 
-func RunBinFS(kernelId string) error {
+func RunBinFS(kernelId, uprocdpid string) error {
 	pe := proc.GetProcEnv()
+
+	proc.SetSigmaDebugPid("binfsd-" + uprocdpid)
 
 	db.DPrintf(db.BINSRV, "MkDir %q", BINFSMNT)
 
@@ -114,11 +116,20 @@ func RunBinFS(kernelId string) error {
 		db.DPrintf(db.ALWAYS, "chunksrvs err %v", err)
 	}
 
-	ckclnt, err := chunkclnt.NewChunkClnt(sc.FsLib, path.Join(sp.CHUNKD, kernelId))
+	pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
+	//if sts, err := sc.GetDir(pn); err == nil {
+	//	db.DPrintf(db.ALWAYS, "uprocds %v", sp.Names(sts))
+	//} else {
+	//	db.DPrintf(db.ALWAYS, "uprocds %q err %v", pn, err)
+	//}
+
+	ckclnt, err := chunkclnt.NewChunkClnt(sc.FsLib, pn)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "ckclnt err %v", err)
 		return err
 	}
+
+	db.DPrintf(db.ALWAYS, "ckclnt %q", pn)
 
 	loopbackRoot, err := newBinRoot(kernelId, sc, ckclnt)
 	if err != nil {

@@ -16,6 +16,8 @@ import (
 	"golang.org/x/sys/unix"
 
 	"sigmaos/binsrv"
+	"sigmaos/chunksrv"
+	ckproto "sigmaos/chunksrv/proto"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -23,6 +25,7 @@ import (
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -40,6 +43,7 @@ type UprocSrv struct {
 	kernelId string
 	realm    sp.Trealm
 	assigned bool
+	sc       *sigmaclnt.SigmaClnt
 }
 
 func RunUprocSrv(kernelId string, up string) error {
@@ -48,23 +52,13 @@ func RunUprocSrv(kernelId string, up string) error {
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
 
-	// Start binfsd now; when uprocds gets assigned to a realm, then
-	// uprocd mounts the realm's bin directory that binfs will cache
-	// in and serve from.
-	ups.binsrv = exec.Command("binfsd", ups.kernelId, ups.pe.GetPID().String())
-	ups.binsrv.Stdout = os.Stdout
-	ups.binsrv.Stderr = os.Stderr
-
-	if err := ups.binsrv.Start(); err != nil {
-		db.DPrintf(db.UPROCD, "Error start %v %v", ups.binsrv, err)
-		return err
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-
-	// XXX
-	time.Sleep(1 * time.Second)
+	ups.sc = sc
 
 	var ssrv *sigmasrv.SigmaSrv
-	var err error
 	if up == sp.NO_PORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
 		ssrv, err = sigmasrv.NewSigmaSrv(pn, ups, pe)
@@ -91,6 +85,20 @@ func RunUprocSrv(kernelId string, up string) error {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
+
+	// Start binfsd now; when uprocds gets assigned to a realm, then
+	// uprocd mounts the realm's bin directory that binfs will cache
+	// in and serve from.
+	ups.binsrv = exec.Command("binfsd", ups.kernelId, ups.pe.GetPID().String())
+	ups.binsrv.Stdout = os.Stdout
+	ups.binsrv.Stderr = os.Stderr
+
+	if err := ups.binsrv.Start(); err != nil {
+		db.DPrintf(db.UPROCD, "Error start %v %v", ups.binsrv, err)
+		return err
+	}
+
+	time.Sleep(1 * time.Second)
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
@@ -176,6 +184,7 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v done", realm)
 	// Note that the uprocsrv has been assigned.
 	ups.assigned = true
+	ups.realm = realm
 
 	// Now that the uprocd's innerIP has been established, spawn sigmaclntd
 	pid := sp.GenPid("sigmaclntd")
@@ -271,4 +280,10 @@ func mountRealmBinDir(realm sp.Trealm) error {
 		return err
 	}
 	return nil
+}
+
+func (ups *UprocSrv) Fetch(ctx fs.CtxI, req ckproto.FetchRequest, res *ckproto.FetchResponse) error {
+	pn := path.Join(sp.SIGMAHOME, "all-realm-bin", ups.realm.String(), req.Prog)
+	db.DPrintf(db.CHUNKSRV, "Uprocd fetch %v %q", req, pn)
+	return chunksrv.Fetch(ups.sc, pn, req, res)
 }

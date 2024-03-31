@@ -47,7 +47,7 @@ func newFsLibFidClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, fidc *fidclnt
 	var err error
 	var s sos.SigmaOS
 	if pe.UseSigmaclntd {
-		s, err = sigmaclntclnt.NewSigmaClntClnt(pe)
+		s, err = sigmaclntclnt.NewSigmaClntClnt(pe, npc)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
 			return nil, err

@@ -7,7 +7,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) IsLocalMount(mnt sp.Tmount) (bool, error) {
+func (pathc *PathClnt) IsLocalMount(mnt *sp.Tmount) (bool, error) {
 	outerIP := pathc.pe.GetOuterContainerIP()
 	tip, _ := mnt.TargetIPPort(0)
 	if tip == "" {

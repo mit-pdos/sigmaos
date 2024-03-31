@@ -28,15 +28,15 @@ func NewNetProxyClnt(pe *proc.ProcEnv) *NetProxyClnt {
 	}
 }
 
-func (npc *NetProxyClnt) Dial(addr *sp.Taddr) (net.Conn, error) {
+func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
 	var c net.Conn
 	var err error
 	if npc.useProxy() {
-		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v", addr)
-		c, err = npc.proxyDial(addr)
+		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v", mnt)
+		c, err = npc.proxyDial(mnt)
 	} else {
-		db.DPrintf(db.NETPROXYCLNT, "directDial %v", addr)
-		c, err = npc.directDialFn(addr)
+		db.DPrintf(db.NETPROXYCLNT, "directDial %v", mnt)
+		c, err = npc.directDialFn(mnt)
 	}
 	return c, err
 }
@@ -71,7 +71,7 @@ func (npc *NetProxyClnt) init() error {
 	return nil
 }
 
-func (npc *NetProxyClnt) proxyDial(addr *sp.Taddr) (net.Conn, error) {
+func (npc *NetProxyClnt) proxyDial(mnt *sp.Tmount) (net.Conn, error) {
 	npc.Lock()
 	defer npc.Unlock()
 
@@ -82,9 +82,9 @@ func (npc *NetProxyClnt) proxyDial(addr *sp.Taddr) (net.Conn, error) {
 			return nil, err
 		}
 	}
-	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request addr %v", npc.rpcch.conn, addr.String())
+	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request mnt %v", npc.rpcch.conn, mnt)
 	req := &proto.DialRequest{
-		Addr: addr,
+		Mount: mnt.GetProto(),
 	}
 	res := &proto.DialResponse{}
 	if err := npc.rpcc.RPC("NetProxySrv.Dial", req, res); err != nil {

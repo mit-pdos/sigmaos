@@ -7,15 +7,15 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type DialFn func(addr *sp.Taddr) (net.Conn, error)
+type DialFn func(mnt *sp.Tmount) (net.Conn, error)
 type ListenFn func(addr *sp.Taddr) (net.Listener, error)
 
-func DialDirect(addr *sp.Taddr) (net.Conn, error) {
-	c, err := net.DialTimeout("tcp", addr.IPPort(), sp.Conf.Session.TIMEOUT/10)
+func DialDirect(mnt *sp.Tmount) (net.Conn, error) {
+	c, err := net.DialTimeout("tcp", mnt.Address().IPPort(), sp.Conf.Session.TIMEOUT/10)
 	if err != nil {
-		db.DPrintf(db.NETSIGMA_ERR, "Dial direct addr %v: err %v", addr, err)
+		db.DPrintf(db.NETSIGMA_ERR, "Dial direct addr %v: err %v", mnt.Address(), err)
 	} else {
-		db.DPrintf(db.NETSIGMA, "Dial direct addr %v", addr)
+		db.DPrintf(db.NETSIGMA, "Dial direct addr %v", mnt.Address())
 	}
 	return c, err
 }

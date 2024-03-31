@@ -39,7 +39,7 @@ message ProcEnvProto {
   int32 howInt = 21;
   google.protobuf.Timestamp spawnTimePB = 22;
   string strace = 23;
-  Taddr scheddAddr = 24;
+  TmountProto scheddMountProto = 24;
   TmountProto namedMountProto = 25;
   bool useSigmaclntd = 26;
   Ttoken parentToken = 27;

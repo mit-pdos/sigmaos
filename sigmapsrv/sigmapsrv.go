@@ -31,6 +31,7 @@ import (
 type SigmaPSrv struct {
 	*protsrv.ProtSrvState
 	*sesssrv.SessSrv
+	srvmnt   *sp.Tmount
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
 	fencefs  fs.Dir
@@ -87,8 +88,13 @@ func (psrv *SigmaPSrv) GetRootCtx(p *sp.Tprincipal, claims *auth.ProcClaims, ana
 	return psrv.dirover, ctx.NewCtx(p, claims, sessid, clntid, psrv.CondTable(), psrv.fencefs)
 }
 
+func (psrv *SigmaPSrv) GetSigmaPSrvMount() *sp.Tmount {
+	return psrv.srvmnt
+}
+
 func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
 	mnt := sp.NewMountServer(psrv.MyAddr())
+	psrv.srvmnt = mnt
 	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 	if path.EndSlash(pn) {
 		dir, err := sc.IsDir(pn)
@@ -114,6 +120,6 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 }
 
 // Return the pathname for posting in a directory of a service
-func mountPathName(pn string, mnt sp.Tmount) string {
+func mountPathName(pn string, mnt *sp.Tmount) string {
 	return pn + "/" + mnt.Address().IPPort()
 }

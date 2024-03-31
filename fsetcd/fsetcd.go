@@ -64,7 +64,7 @@ func (fs *FsEtcd) Fence(key string, rev int64) {
 func (fs *FsEtcd) Detach(cid sp.TclntId) {
 }
 
-func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
+func (fs *FsEtcd) SetRootNamed(mnt *sp.Tmount) *serr.Err {
 	db.DPrintf(db.FSETCD, "SetRootNamed %v", mnt)
 	d, err := mnt.Marshal()
 	if err != nil {
@@ -90,22 +90,22 @@ func (fs *FsEtcd) SetRootNamed(mnt sp.Tmount) *serr.Err {
 	}
 }
 
-func GetRootNamed(realm sp.Trealm, etcdIP string) (sp.Tmount, *serr.Err) {
+func GetRootNamed(realm sp.Trealm, etcdIP string) (*sp.Tmount, *serr.Err) {
 	fs, err := NewFsEtcd(realm, etcdIP)
 	if err != nil {
-		return sp.Tmount{}, serr.NewErrError(err)
+		return &sp.Tmount{}, serr.NewErrError(err)
 	}
 	defer fs.Close()
 
 	nf, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, sp.Tpath(BOOT)))
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v realm %v etcdIP %v", BOOT, nf, sr, realm, etcdIP)
-		return sp.Tmount{}, sr
+		return &sp.Tmount{}, sr
 	}
 	mnt, sr := sp.NewMount(nf.Data)
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "NewMount %v err %v\n", BOOT, err)
-		return sp.Tmount{}, sr
+		return &sp.Tmount{}, sr
 	}
 	db.DPrintf(db.FSETCD, "GetNamed mnt %v\n", mnt)
 	fs.Close()

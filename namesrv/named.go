@@ -166,7 +166,7 @@ func Run(args []string) error {
 	return nil
 }
 
-func (nd *Named) newSrv() (sp.Tmount, error) {
+func (nd *Named) newSrv() (*sp.Tmount, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr

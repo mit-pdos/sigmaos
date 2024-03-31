@@ -269,7 +269,7 @@ func (scs *SigmaClntSrvAPI) DirWait(ctx fs.CtxI, req scproto.SigmaReadRequest, r
 }
 
 func (scs *SigmaClntSrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountRequest, rep *scproto.SigmaMountReply) error {
-	ok, err := scs.sc.IsLocalMount(sp.Tmount{req.Mount})
+	ok, err := scs.sc.IsLocalMount(sp.NewMountFromProto(req.Mount))
 	rep.Local = ok
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: IsLocalMount %v %v", scs.sc.ClntId(), req, rep)
@@ -277,7 +277,7 @@ func (scs *SigmaClntSrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountRequ
 }
 
 func (scs *SigmaClntSrvAPI) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
-	err := scs.sc.MountTree(req.Addr, req.Tree, req.Mount)
+	err := scs.sc.MountTree(sp.NewMountFromProto(req.Mount), req.Tree, req.MountName)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: MountTree %v %v", scs.sc.ClntId(), req, rep)
 	return nil
@@ -306,7 +306,7 @@ func (scs *SigmaClntSrvAPI) GetNamedMount(ctx fs.CtxI, req scproto.SigmaPathRequ
 
 // XXX need a few fslib instead of reusing bootkernel one?
 func (scs *SigmaClntSrvAPI) NewRootMount(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
-	err := scs.sc.NewRootMount(req.Tree, req.Mount)
+	err := scs.sc.NewRootMount(req.Tree, req.MountName)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: NewRootMount %v %v", scs.sc.ClntId(), req, rep)
 	return nil

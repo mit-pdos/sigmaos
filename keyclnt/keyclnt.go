@@ -43,8 +43,7 @@ func (kc *KeyClnt[M]) getClnt(rw bool) (*rpcclnt.RPCClnt, error) {
 				db.DPrintf(db.ERROR, "Error ReadMount: %v", err)
 				return nil, err
 			}
-			addr := mnt.Address()
-			err = kc.sc.MountTree([]*sp.Taddr{addr}, sp.RW_REL, sp.KEYS_RW)
+			err = kc.sc.MountTree(mnt, sp.RW_REL, sp.KEYS_RW)
 			if err != nil {
 				db.DPrintf(db.KEYCLNT_ERR, "Error MountTree: %v", err)
 				return nil, err
@@ -65,8 +64,7 @@ func (kc *KeyClnt[M]) getClnt(rw bool) (*rpcclnt.RPCClnt, error) {
 				db.DPrintf(db.ERROR, "Error ReadMount: %v", err)
 				return nil, err
 			}
-			addr := mnt.Address()
-			err = kc.sc.MountTree([]*sp.Taddr{addr}, sp.RONLY_REL, sp.KEYS_RONLY)
+			err = kc.sc.MountTree(mnt, sp.RONLY_REL, sp.KEYS_RONLY)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error MountTree: %v", err)
 				return nil, err

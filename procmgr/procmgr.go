@@ -26,7 +26,7 @@ type ProcMgr struct {
 	rootsc         *sigmaclnt.SigmaClntKernel
 	updm           *uprocclnt.UprocdMgr
 	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClntKernel
-	namedMnts      map[sp.Trealm]sp.Tmount
+	namedMnts      map[sp.Trealm]*sp.Tmount
 	cachedProcBins map[sp.Trealm]map[string]bool
 	as             auth.AuthSrv
 	pstate         *ProcState
@@ -39,7 +39,7 @@ func NewProcMgr(as auth.AuthSrv, sc *sigmaclnt.SigmaClnt, kernelId string) *Proc
 		rootsc:         sigmaclnt.NewSigmaClntKernel(sc),
 		updm:           uprocclnt.NewUprocdMgr(sc.FsLib, kernelId),
 		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
-		namedMnts:      make(map[sp.Trealm]sp.Tmount),
+		namedMnts:      make(map[sp.Trealm]*sp.Tmount),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
 		as:             as,
 		pstate:         NewProcState(),
@@ -69,7 +69,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	p.SetKernelID(mgr.kernelId, true)
 	// Set the schedd IP for the proc, so it can mount this schedd in one RPC
 	// (without walking down to it).
-	p.SetScheddAddr(mgr.mfs.MyAddr())
+	p.SetScheddMount(mgr.mfs.GetSigmaPSrvMount())
 	// Set the named mount point if this isn't a privileged proc. If we were to
 	// do this for a privileged proc, it could cause issues as it may save the
 	// knamed address.
@@ -154,7 +154,7 @@ func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }
 
-func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) sp.Tmount {
+func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) *sp.Tmount {
 	mgr.Lock()
 	defer mgr.Unlock()
 

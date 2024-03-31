@@ -309,12 +309,20 @@ func (pe *ProcEnvProto) GetSpawnTime() time.Time {
 	return pe.SpawnTimePB.AsTime()
 }
 
-func (pe *ProcEnv) GetNamedMount() (sp.Tmount, bool) {
-	mnt := pe.ProcEnvProto.GetNamedMountProto()
-	if mnt == nil {
-		return sp.Tmount{}, false
+func (pe *ProcEnv) GetScheddMount() (*sp.Tmount, bool) {
+	mp := pe.ProcEnvProto.GetScheddMountProto()
+	if mp == nil {
+		return &sp.Tmount{}, false
 	}
-	return sp.Tmount{mnt}, true
+	return sp.NewMountFromProto(mp), true
+}
+
+func (pe *ProcEnv) GetNamedMount() (*sp.Tmount, bool) {
+	mp := pe.ProcEnvProto.GetNamedMountProto()
+	if mp == nil {
+		return &sp.Tmount{}, false
+	}
+	return sp.NewMountFromProto(mp), true
 }
 
 func (pe *ProcEnv) Marshal() string {

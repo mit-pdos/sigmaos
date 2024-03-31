@@ -19,19 +19,21 @@ type NetClnt struct {
 	pe     *proc.ProcEnv
 	npc    *netsigma.NetProxyClnt
 	conn   net.Conn
+	mnt    *sp.Tmount
 	addr   *sp.Taddr
 	closed bool
 	realm  sp.Trealm
 }
 
-func NewNetClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
-	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", addrs)
+func NewNetClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, mnt *sp.Tmount) (*NetClnt, *serr.Err) {
+	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", mnt)
 	nc := &NetClnt{
 		pe:  pe,
 		npc: npc,
+		mnt: mnt,
 	}
-	if err := nc.connect(addrs); err != nil {
-		db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", addrs, err)
+	if err := nc.connect(mnt); err != nil {
+		db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", mnt, err)
 		return nil, err
 	}
 	return nc, nil
@@ -53,13 +55,17 @@ func (nc *NetClnt) Close() error {
 	return nc.conn.Close()
 }
 
-func (nc *NetClnt) connect(addrs sp.Taddrs) *serr.Err {
-	addrs = netsigma.Rearrange(nc.pe.GetNet(), addrs)
-	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), addrs, addrs[0])
-	for _, addr := range addrs {
-		c, err := nc.npc.Dial(addr)
+func (nc *NetClnt) connect(mnt *sp.Tmount) *serr.Err {
+	// TODO XXX need rearrange?
+	//	addrs = netsigma.Rearrange(nc.pe.GetNet(), addrs)
+	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), mnt, mnt.Addresses()[0])
+	//	for _, addr := range addrs {
+	for _, addr := range mnt.Addresses() {
+		c, err := nc.npc.Dial(mnt)
 		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
 		if err != nil {
+			// TODO XXX: support multi-dialing
+			db.DFatalf("Do not support multi-dialing yet")
 			continue
 		}
 		nc.conn = c
@@ -67,6 +73,6 @@ func (nc *NetClnt) connect(addrs sp.Taddrs) *serr.Err {
 		db.DPrintf(db.PORT, "NetClnt connected %v -> %v\n", c.LocalAddr(), nc.addr)
 		return nil
 	}
-	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", addrs)
+	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", mnt)
 	return serr.NewErr(serr.TErrUnreachable, "no connection")
 }

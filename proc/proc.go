@@ -312,11 +312,11 @@ func (p *Proc) GetHow() Thow {
 	return p.ProcEnvProto.GetHow()
 }
 
-func (p *Proc) SetScheddAddr(addr *sp.Taddr) {
-	p.ProcEnvProto.ScheddAddr = addr
+func (p *Proc) SetScheddMount(mnt *sp.Tmount) {
+	p.ProcEnvProto.ScheddMountProto = mnt.GetProto()
 }
 
-func (p *Proc) SetNamedMount(mnt sp.Tmount) {
+func (p *Proc) SetNamedMount(mnt *sp.Tmount) {
 	p.ProcEnvProto.NamedMountProto = mnt.TmountProto
 }
 

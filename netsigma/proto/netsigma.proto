@@ -13,7 +13,7 @@ message ListenResponse {
 };
 
 message DialRequest {
-        Taddr addr = 1;
+        TmountProto Mount = 1;
 };
 
 message DialResponse {

@@ -7,7 +7,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fsl *FsLib) MkMountFile(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
+func (fsl *FsLib) MkMountFile(pn string, mnt *sp.Tmount, lid sp.TleaseId) error {
 	b, err := mnt.Marshal()
 	if err != nil {
 		return err
@@ -55,21 +55,21 @@ func (fsl *FsLib) ResolveMounts(pn string) (string, error) {
 	}
 }
 
-func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
+func (fsl *FsLib) ReadMount(pn string) (*sp.Tmount, error) {
 	target, err := fsl.GetFile(pn)
 	if err != nil {
-		return sp.Tmount{}, err
+		return &sp.Tmount{}, err
 	}
 	mnt, error := sp.NewMount(target)
 	if error != nil {
-		return sp.Tmount{}, err
+		return &sp.Tmount{}, err
 	}
 	return mnt, err
 }
 
 // Make copy of root mount or first mount in pn. Return the
 // content of mount and the mount file's name.
-func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
+func (fsl *FsLib) CopyMount(pn string) (*sp.Tmount, string, error) {
 	if pn == sp.NAMED {
 		mnt, err := fsl.SigmaOS.GetNamedMount()
 		return mnt, "", err
@@ -90,7 +90,7 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	return sp.NullMount(), "", serr.NewErr(serr.TErrInval, pn)
 }
 
-func (fsl *FsLib) resolveMount(d string, q string) (string, sp.Tmount, error) {
+func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tmount, error) {
 	rmnt := sp.NullMount()
 	rname := ""
 	// Make sure to resolve d in case it is a symlink or mount point.
@@ -121,7 +121,7 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, sp.Tmount, error) {
 }
 
 // For code running using /mnt/9p, which doesn't support PutFile.
-func (fsl *FsLib) NewMount9P(pn string, mnt sp.Tmount) error {
+func (fsl *FsLib) NewMount9P(pn string, mnt *sp.Tmount) error {
 	b, err := mnt.Marshal()
 	if err != nil {
 		return err

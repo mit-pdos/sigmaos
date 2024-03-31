@@ -84,7 +84,7 @@ func NewMemFsPublic(pn string, pe *proc.ProcEnv) (*MemFs, error) {
 	}
 	mfs.pc = pc
 
-	if err = pc.AdvertisePort(pn, pi, pe.GetNet(), mfs.SigmaPSrv.MyAddr()); err != nil {
+	if err = pc.AdvertisePort(pn, pi, pe.GetNet(), mfs.SigmaPSrv.GetMount()); err != nil {
 		return nil, err
 	}
 	return mfs, err

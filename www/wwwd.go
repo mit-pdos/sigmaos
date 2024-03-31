@@ -51,15 +51,12 @@ func RunWwwd(job, tree string) {
 	//		db.DFatalf("Error LocalIP: %v", err)
 	//	}
 
-	l, err := www.ssrv.SigmaClnt().GetNetProxyClnt().Listen(sp.NewTaddrAnyPort(sp.OUTER_CONTAINER_IP, www.ssrv.ProcEnv().GetNet()))
+	mnt, l, err := www.ssrv.SigmaClnt().GetNetProxyClnt().Listen(sp.NewTaddrAnyPort(sp.OUTER_CONTAINER_IP, www.ssrv.ProcEnv().GetNet()))
 	if err != nil {
 		db.DFatalf("Error Listen: %v", err)
 	}
 
 	// Write a file for clients to discover the server's address.
-	//	mnt := sp.NewMountService(sp.NewTaddrs([]*sp.Taddr{sp.NewTaddrRealm(l.Addr().String())}))
-	db.DFatalf("TODO: split host port")
-	mnt := sp.NewMountService(nil)
 	if err = www.ssrv.SigmaClnt().MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 		db.DFatalf("MkMountFile %v", err)
 	}

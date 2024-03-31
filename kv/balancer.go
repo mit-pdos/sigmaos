@@ -120,7 +120,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 		ch <- true
 	}()
 
-	mnt := sp.NewMountServer(ssrv.MyAddr())
+	mnt := ssrv.GetMount()
 	b, error := mnt.Marshal()
 	if error != nil {
 		db.DFatalf("Marshal failed %v\n", error)

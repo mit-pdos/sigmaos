@@ -199,12 +199,12 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 	}
 	nd.SigmaSrv = ssrv
 
-	mnt := sp.NewMountServer(nd.MyAddr())
+	mnt := nd.GetMount()
 	if nd.realm != sp.ROOTREALM {
-		mnt = port.NewPublicMount(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.MyAddr())
+		mnt = port.NewPublicMount(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetMount())
 	}
 
-	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.MyAddr(), nd.elect.Key(), mnt)
+	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetMount(), nd.elect.Key(), mnt)
 
 	return mnt, nil
 }

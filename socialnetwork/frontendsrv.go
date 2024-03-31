@@ -9,7 +9,6 @@ import (
 	"time"
 
 	dbg "sigmaos/debug"
-	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
@@ -134,7 +133,7 @@ func RunFrontendSrv(public bool, job string) error {
 			}
 		} else {
 	*/
-	l, err := sc.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, frontend.ProcEnv().GetNet()))
+	mnt, l, err := sc.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, frontend.ProcEnv().GetNet()))
 	if err != nil {
 		dbg.DFatalf("Error %v Listen: %v", public, err)
 	}
@@ -144,12 +143,7 @@ func RunFrontendSrv(public bool, job string) error {
 	go http.Serve(l, mux)
 	//		}
 
-	host, port, err := netsigma.QualifyAddrLocalIP(frontend.ProcEnv().GetInnerContainerIP(), l.Addr().String())
-	if err != nil {
-		dbg.DFatalf("QualifyAddr %v %v err %v", host, port, err)
-	}
-	dbg.DPrintf(dbg.ALWAYS, "SN advertise %v:%v", host, port)
-	mnt := sp.NewMountService([]*sp.Taddr{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, frontend.ProcEnv().GetNet())})
+	dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", mnt)
 	if err = frontend.MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 		dbg.DFatalf("MkMountFile %v", err)
 	}

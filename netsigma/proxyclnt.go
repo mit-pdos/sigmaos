@@ -41,7 +41,7 @@ func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
 	return c, err
 }
 
-func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (net.Listener, error) {
+func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error) {
 	var l net.Listener
 	var err error
 	if npc.useProxy() {
@@ -51,7 +51,17 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (net.Listener, error) {
 		db.DPrintf(db.NETPROXYCLNT, "directListen %v", addr)
 		l, err = npc.directListenFn(addr)
 	}
-	return l, err
+	if err != nil {
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
+		return nil, nil, err
+	}
+	host, port, err := QualifyAddrLocalIP(npc.pe.GetInnerContainerIP(), l.Addr().String())
+	if err != nil {
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen construct mount %v: %v", addr, err)
+		return nil, nil, err
+	}
+	resaddr := sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, npc.pe.GetNet())
+	return sp.NewMountService(sp.Taddrs{resaddr}), l, err
 }
 
 func (npc *NetProxyClnt) useProxy() bool {

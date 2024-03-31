@@ -93,7 +93,7 @@ func (psrv *SigmaPSrv) GetSigmaPSrvMount() *sp.Tmount {
 }
 
 func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
-	mnt := sp.NewMountServer(psrv.MyAddr())
+	mnt := psrv.GetMount()
 	psrv.srvmnt = mnt
 	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 	if path.EndSlash(pn) {

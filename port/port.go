@@ -23,8 +23,8 @@ func NewPublicAddrs(outerIP sp.Tip, pb PortBinding, netns string, laddr *sp.Tadd
 	return addrs
 }
 
-func NewPublicMount(outerIP sp.Tip, pb PortBinding, net string, laddr *sp.Taddr) *sp.Tmount {
-	return sp.NewMountService(NewPublicAddrs(outerIP, pb, net, laddr))
+func NewPublicMount(outerIP sp.Tip, pb PortBinding, net string, lmnt *sp.Tmount) *sp.Tmount {
+	return sp.NewMountService(NewPublicAddrs(outerIP, pb, net, lmnt.Addresses()[0]))
 }
 
 type PortBinding struct {

@@ -36,6 +36,7 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 }
 
 func Fetch(sc *sigmaclnt.SigmaClnt, pn string, req proto.FetchRequest, res *proto.FetchResponse) error {
+	s := time.Now()
 	ckid := int(req.ChunkId)
 	sfd := 0
 	if err := fslib.RetryPaths(req.Path, func(i int, pn string) error {
@@ -64,8 +65,8 @@ func Fetch(sc *sigmaclnt.SigmaClnt, pn string, req proto.FetchRequest, res *prot
 		db.DPrintf(db.CHUNKSRV, "Fetch: writechunk %q %d err %v", pn, ckid, err)
 		return err
 	}
-
 	res.Size = uint64(sz)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch %v chunk %d %v", req.Prog, ckid, time.Since(s))
 	return nil
 }
 

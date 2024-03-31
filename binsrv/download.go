@@ -104,8 +104,7 @@ func (dl *downloader) downloader() {
 
 func (dl *downloader) cacheRemoteChunk(ck int) error {
 	s := time.Now()
-	b := make([]byte, chunksrv.CHUNKSZ)
-	sz, err := dl.readRemoteChunk(chunksrv.Ckoff(ck), b)
+	sz, err := dl.readRemoteChunk(ck)
 	db.DPrintf(db.SPAWN_LAT, "[%v] readRemoteChunk %v dur %v tot %v", dl.pn, ck, time.Since(s), dl.tot)
 	if err == nil {
 		dl.register(ck, sz)
@@ -116,15 +115,16 @@ func (dl *downloader) cacheRemoteChunk(ck int) error {
 	return nil
 }
 
-// TODO: get right realm
-func (dl *downloader) readRemoteChunk(off int64, b []byte) (int64, error) {
+// Fetch chunk through uprocd, which will fill in the realm and
+// write it a local file, which binsrv can read.
+func (dl *downloader) readRemoteChunk(ck int) (int64, error) {
 	prog, paths := binPathParse(dl.pn)
-	sz, err := dl.ckclnt.Fetch(prog, sp.ROOTREALM, chunksrv.Index(off), dl.sz, paths, b)
+	sz, err := dl.ckclnt.UprocdFetch(prog, sp.NOREALM, ck, dl.sz, paths, nil)
 	if err != nil {
-		db.DPrintf(db.ERROR, "readRemoteChunk %q fetch %d(%d) err %v\n", dl.pn, chunksrv.Index(off), off, err)
+		db.DPrintf(db.ERROR, "readRemoteChunk %q fetch %d err %v\n", dl.pn, ck, err)
 		return 0, err
 	}
-	db.DPrintf(db.BINSRV, "readRemoteChunk %q read %d\n", dl.pn, sz)
+	db.DPrintf(db.BINSRV, "readRemoteChunk %q read ck %d sz %d\n", dl.pn, ck, sz)
 	return int64(sz), nil
 }
 

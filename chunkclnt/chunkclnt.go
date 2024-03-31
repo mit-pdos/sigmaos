@@ -27,7 +27,7 @@ func NewChunkClnt(fsl *fslib.FsLib, pn string) (*ChunkClnt, error) {
 	return ckclnt, nil
 }
 
-func (ckclnt *ChunkClnt) Fetch(pn string, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, error) {
+func (ckclnt *ChunkClnt) UprocdFetch(pn string, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, error) {
 	s := time.Now()
 	req := &proto.FetchRequest{
 		Prog:    pn,

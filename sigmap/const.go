@@ -97,6 +97,7 @@ const (
 // Realm consts
 const (
 	ROOTREALM Trealm = "rootrealm"
+	NOREALM   Trealm = "no-realm"
 )
 
 // PID consts

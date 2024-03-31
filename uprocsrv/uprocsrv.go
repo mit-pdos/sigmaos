@@ -42,13 +42,12 @@ type UprocSrv struct {
 	binsrv   *exec.Cmd
 	kernelId string
 	realm    sp.Trealm
-	assigned bool
 	sc       *sigmaclnt.SigmaClnt
 }
 
 func RunUprocSrv(kernelId string, up string) error {
 	pe := proc.GetProcEnv()
-	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pe: pe}
+	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pe: pe, realm: sp.NOREALM}
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
 
@@ -149,7 +148,7 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	defer ups.mu.RUnlock()
 
 	// If already assigned, bail out
-	if ups.assigned {
+	if ups.realm != sp.NOREALM {
 		return nil
 	}
 
@@ -157,7 +156,7 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	ups.mu.RUnlock()
 	ups.mu.Lock()
 	// If already assigned, demote lock & bail out
-	if ups.assigned {
+	if ups.realm != sp.NOREALM {
 		ups.mu.Unlock()
 		ups.mu.RLock()
 		return nil
@@ -183,7 +182,6 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v done", realm)
 	// Note that the uprocsrv has been assigned.
-	ups.assigned = true
 	ups.realm = realm
 
 	// Now that the uprocd's innerIP has been established, spawn sigmaclntd

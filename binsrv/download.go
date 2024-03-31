@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/uprocclnt"
 )
 
 const (
@@ -56,33 +56,33 @@ type downloader struct {
 	chunks   chksT
 	readers  readersT
 	n        int64
-	ckclnt   *chunkclnt.ChunkClnt
+	updc     *uprocclnt.UprocdClnt
 	ch       chan *reader
 	err      error
 	tot      time.Duration
 }
 
-func newDownload(pn string, sc *sigmaclnt.SigmaClnt, ckclnt *chunkclnt.ChunkClnt, sz sp.Tsize) *downloader {
+func newDownload(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, sz sp.Tsize) *downloader {
 	dl := &downloader{
 		pn:      pn,
 		sc:      sc,
 		chunks:  make(chksT, chunksrv.Index(int64(sz))+1),
 		readers: make(readersT, chunksrv.Index(int64(sz))+1),
-		ckclnt:  ckclnt,
+		updc:    updc,
 		sz:      sz,
 		ch:      make(chan *reader),
 	}
 	return dl
 }
 
-func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, ckclnt *chunkclnt.ChunkClnt, sz sp.Tsize) (*downloader, error) {
-	dl := newDownload(pn, sc, ckclnt, sz)
+func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, sz sp.Tsize) (*downloader, error) {
+	dl := newDownload(pn, sc, updc, sz)
 	go dl.downloader()
 	return dl, nil
 }
 
 func (dl *downloader) String() string {
-	return fmt.Sprintf("{pn %q sz %d chunks %d n %d ckclnt %v}", dl.pn, dl.sz, len(dl.chunks), dl.n, dl.ckclnt)
+	return fmt.Sprintf("{pn %q sz %d chunks %d n %d ckclnt %v}", dl.pn, dl.sz, len(dl.chunks), dl.n, dl.updc)
 }
 
 func (dl *downloader) downloader() {
@@ -116,7 +116,8 @@ func (dl *downloader) cacheRemoteChunk(ck int) error {
 // write it a local file, which binsrv can read.
 func (dl *downloader) readRemoteChunk(ck int) (int64, error) {
 	prog, paths := binPathParse(dl.pn)
-	sz, err := dl.ckclnt.UprocdFetch(prog, sp.NOREALM, ck, dl.sz, paths, nil)
+	db.DPrintf(db.BINSRV, "readRemoteChunk invoke %q read ck %d\n", dl.pn, ck)
+	sz, err := dl.updc.Fetch(prog, ck, dl.sz, paths)
 	if err != nil {
 		db.DPrintf(db.ERROR, "readRemoteChunk %q fetch %d err %v\n", dl.pn, ck, err)
 		return 0, err

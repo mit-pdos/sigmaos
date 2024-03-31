@@ -35,51 +35,54 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 	return cksrv
 }
 
-func Fetch(sc *sigmaclnt.SigmaClnt, pn string, req proto.FetchRequest, res *proto.FetchResponse) error {
-	ckid := int(req.ChunkId)
+func Fetch(sc *sigmaclnt.SigmaClnt, pn, prog string, ckid int, path []string) (sp.Tsize, error) {
 	s := time.Now()
 	sfd := 0
-	db.DPrintf(db.CHUNKSRV, "Fetch: read %q ck %d", req.Prog, ckid)
-	if err := fslib.RetryPaths(req.Path, func(i int, pn string) error {
-		db.DPrintf(db.CHUNKSRV, "sOpen %q/%v\n", pn, req.Prog)
-		fd, err := sc.Open(pn+"/"+req.Prog, sp.OREAD)
+	db.DPrintf(db.CHUNKSRV, "Fetch: read %q ck %d", prog, ckid)
+	if err := fslib.RetryPaths(path, func(i int, pn string) error {
+		db.DPrintf(db.CHUNKSRV, "sOpen %q/%v\n", pn, prog)
+		fd, err := sc.Open(pn+"/"+prog, sp.OREAD)
 		if err == nil {
 			sfd = fd
 			return nil
 		}
 		return err
 	}); err != nil {
-		return err
+		return 0, err
 	}
 	defer func() {
 		sc.CloseFd(sfd)
-		db.DPrintf(db.SPAWN_LAT, "[%v] Fetch chunk %d %v", req.Prog, ckid, time.Since(s))
+		db.DPrintf(db.SPAWN_LAT, "[%v] Fetch chunk %d %v", prog, ckid, time.Since(s))
 	}()
-	db.DPrintf(db.SPAWN_LAT, "[%v] Open %v %v", req.Prog, req.Path, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Open %v %v", prog, path, time.Since(s))
 
 	s1 := time.Now()
 	b := make([]byte, CHUNKSZ)
 	sz, err := sc.Pread(sfd, b, sp.Toffset(Ckoff(ckid)))
 	if err != nil {
-		db.DPrintf(db.CHUNKSRV, "Fetch: read %q ck %d err %v", req.Prog, ckid, err)
-		return err
+		db.DPrintf(db.CHUNKSRV, "Fetch: read %q ck %d err %v", prog, ckid, err)
+		return 0, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Read ck %d %v", req.Prog, ckid, time.Since(s1))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Read ck %d %v", prog, ckid, time.Since(s1))
 
 	db.DPrintf(db.CHUNKSRV, "Fetch: write %q ck %d", pn, ckid)
 	if err := WriteChunk(pn, Ckoff(ckid), b[0:sz]); err != nil {
 		db.DPrintf(db.CHUNKSRV, "Fetch: writechunk %q %d err %v", pn, ckid, err)
+		return 0, err
+	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: write %d %v", prog, ckid, time.Since(s))
+	return sz, nil
+}
+
+func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
+	db.DPrintf(db.CHUNKSRV, "Fetch %v", req)
+	pn := path.Join(sp.SIGMAHOME, "bin/user/realms", req.Realm, req.Prog)
+	sz, err := Fetch(cksrv.sc, pn, req.Prog, int(req.ChunkId), req.Path)
+	if err != nil {
 		return err
 	}
 	res.Size = uint64(sz)
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: write %d %v", req.Prog, ckid, time.Since(s))
 	return nil
-}
-
-func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.FetchResponse) error {
-	db.DPrintf(db.CHUNKSRV, "Fetch %v", req)
-	pn := path.Join(sp.SIGMAHOME, "bin/user/realms", req.Realm, req.Prog)
-	return Fetch(cksrv.sc, pn, req, res)
 }
 
 func ReadChunk(pn string, ck int, totsz sp.Tsize) (int64, bool) {

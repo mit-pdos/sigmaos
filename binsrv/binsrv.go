@@ -18,11 +18,13 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 
-	"sigmaos/chunkclnt"
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/uprocclnt"
 )
 
 const (
@@ -80,14 +82,14 @@ func (n *binFsNode) String() string {
 	return fmt.Sprintf("{N %q}", n.path())
 }
 
-func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, ckclnt *chunkclnt.ChunkClnt) (fs.InodeEmbedder, error) {
+func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) (fs.InodeEmbedder, error) {
 	var st syscall.Stat_t
 	err := syscall.Stat(BINCACHE, &st)
 	if err != nil {
 		return nil, err
 	}
 	root := &binFsRoot{
-		bincache: newBinCache(kernelId, sc, ckclnt),
+		bincache: newBinCache(kernelId, sc, updc),
 	}
 	return root.newNode(nil, "", 0), nil
 }
@@ -123,15 +125,14 @@ func RunBinFS(kernelId, uprocdpid string) error {
 	//	db.DPrintf(db.ALWAYS, "uprocds %q err %v", pn, err)
 	//}
 
-	ckclnt, err := chunkclnt.NewChunkClnt(sc.FsLib, pn)
+	rc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sc.FsLib}, pn)
 	if err != nil {
-		db.DPrintf(db.ERROR, "ckclnt err %v", err)
+		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
 		return err
 	}
+	updc := uprocclnt.NewUprocdClnt(sp.Tpid(uprocdpid), rc)
 
-	db.DPrintf(db.ALWAYS, "ckclnt %q", pn)
-
-	loopbackRoot, err := newBinRoot(kernelId, sc, ckclnt)
+	loopbackRoot, err := newBinRoot(kernelId, sc, updc)
 	if err != nil {
 		return err
 	}

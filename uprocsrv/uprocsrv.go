@@ -17,7 +17,6 @@ import (
 
 	"sigmaos/binsrv"
 	"sigmaos/chunksrv"
-	ckproto "sigmaos/chunksrv/proto"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -280,8 +279,13 @@ func mountRealmBinDir(realm sp.Trealm) error {
 	return nil
 }
 
-func (ups *UprocSrv) Fetch(ctx fs.CtxI, req ckproto.FetchRequest, res *ckproto.FetchResponse) error {
+func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.FetchResponse) error {
+	db.DPrintf(db.CHUNKSRV, "Uprocd fetch %v", req)
 	pn := path.Join(sp.SIGMAHOME, "all-realm-bin", ups.realm.String(), req.Prog)
-	db.DPrintf(db.CHUNKSRV, "Uprocd fetch %v %q", req, pn)
-	return chunksrv.Fetch(ups.sc, pn, req, res)
+	sz, err := chunksrv.Fetch(ups.sc, pn, req.Prog, int(req.ChunkId), req.Path)
+	if err != nil {
+		return err
+	}
+	res.Size = uint64(sz)
+	return nil
 }

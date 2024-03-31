@@ -6,11 +6,11 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 
-	"sigmaos/chunkclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/uprocclnt"
 )
 
 func idFromStat(st *syscall.Stat_t) fs.StableAttr {
@@ -47,7 +47,7 @@ type bincache struct {
 	sc       *sigmaclnt.SigmaClnt
 	kernelId string
 	cache    map[string]*entry
-	ckclnt   *chunkclnt.ChunkClnt
+	updc     *uprocclnt.UprocdClnt
 }
 
 func (bc *bincache) sStat(pn string) (*sp.Stat, error) {
@@ -67,12 +67,12 @@ func (bc *bincache) sStat(pn string) (*sp.Stat, error) {
 	return st, err
 }
 
-func newBinCache(kernelId string, sc *sigmaclnt.SigmaClnt, ckclnt *chunkclnt.ChunkClnt) *bincache {
+func newBinCache(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) *bincache {
 	bc := &bincache{
 		cache:    make(map[string]*entry),
 		sc:       sc,
 		kernelId: kernelId,
-		ckclnt:   ckclnt,
+		updc:     updc,
 	}
 	return bc
 }
@@ -106,7 +106,7 @@ func (bc *bincache) getDownload(pn string, sz sp.Tsize) (*downloader, error) {
 
 	if e.dl == nil {
 		db.DPrintf(db.BINSRV, "getDownload: new downloader %q\n", pn)
-		if dl, err := newDownloader(pn, bc.sc, bc.ckclnt, sz); err != nil {
+		if dl, err := newDownloader(pn, bc.sc, bc.updc, sz); err != nil {
 			return nil, err
 		} else {
 			e.dl = dl

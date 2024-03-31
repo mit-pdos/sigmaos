@@ -28,3 +28,14 @@ message WarmBinRequest {
 message WarmBinResult {
   bool oK = 1;
 }
+
+message FetchRequest {
+   string prog = 1;
+   int32 chunkId = 2;
+   uint64 size = 3;
+   repeated string path = 5;
+}
+
+message FetchResponse {
+  uint64 size = 1;
+}

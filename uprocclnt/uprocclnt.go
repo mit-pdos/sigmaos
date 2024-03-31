@@ -2,7 +2,9 @@ package uprocclnt
 
 import (
 	"fmt"
+	"time"
 
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/serr"
@@ -61,6 +63,23 @@ func (clnt *UprocdClnt) WarmProc(realm sp.Trealm, prog string, path []string) (u
 	} else {
 		return nil, err
 	}
+}
+
+func (clnt *UprocdClnt) Fetch(pn string, ck int, sz sp.Tsize, path []string) (sp.Tsize, error) {
+	s := time.Now()
+	req := &proto.FetchRequest{
+		Prog:    pn,
+		ChunkId: int32(ck),
+		Size:    uint64(sz),
+		Path:    path,
+	}
+	res := &proto.FetchResponse{}
+	if err := clnt.RPC("UprocSrv.Fetch", req, res); err != nil {
+		db.DPrintf(db.CHUNKCLNT, "UprocSrv.Fetch %v err %v", req, err)
+		return 0, err
+	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch latency from clnt %d %v", pn, ck, time.Since(s))
+	return sp.Tsize(res.Size), nil
 }
 
 func (clnt *UprocdClnt) String() string {

@@ -11,7 +11,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/microbenchmarks"
-	"sigmaos/netsigma"
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -52,7 +51,7 @@ func RunWwwd(job, tree string) {
 	//		db.DFatalf("Error LocalIP: %v", err)
 	//	}
 
-	l, err := netsigma.Listen(www.ssrv.ProcEnv(), sp.NewTaddrAnyPort(sp.OUTER_CONTAINER_IP, www.ssrv.ProcEnv().GetNet()))
+	l, err := www.ssrv.SigmaClnt().GetNetProxyClnt().Listen(sp.NewTaddrAnyPort(sp.OUTER_CONTAINER_IP, www.ssrv.ProcEnv().GetNet()))
 	if err != nil {
 		db.DFatalf("Error Listen: %v", err)
 	}

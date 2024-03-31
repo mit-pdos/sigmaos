@@ -8,6 +8,7 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/keys"
+	"sigmaos/netsigma"
 	"sigmaos/netsrv"
 	"sigmaos/proc"
 	"sigmaos/proxy"
@@ -48,8 +49,9 @@ func main() {
 		db.DFatalf("Error MintToken: %v", err1)
 	}
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	npd := proxy.NewNpd(pe, lip)
-	netsrv.NewNetServer(pe, addr, npd)
+	npc := netsigma.NewNetProxyClnt(pe)
+	npd := proxy.NewNpd(pe, npc, lip)
+	netsrv.NewNetServer(pe, npc, addr, npd)
 	ch := make(chan struct{})
 	<-ch
 }

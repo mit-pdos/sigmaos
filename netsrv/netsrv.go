@@ -19,16 +19,21 @@ type NewConnI interface {
 
 type NetServer struct {
 	pe      *proc.ProcEnv
+	npc     *netsigma.NetProxyClnt
 	addr    *sp.Taddr
 	l       net.Listener
 	newConn NewConnI
 }
 
-func NewNetServer(pe *proc.ProcEnv, addr *sp.Taddr, newConn NewConnI) *NetServer {
-	srv := &NetServer{pe: pe, newConn: newConn}
+func NewNetServer(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, addr *sp.Taddr, newConn NewConnI) *NetServer {
+	srv := &NetServer{
+		pe:      pe,
+		newConn: newConn,
+		npc:     npc,
+	}
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
-	l, err := netsigma.Listen(pe, addr)
+	l, err := npc.Listen(addr)
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}

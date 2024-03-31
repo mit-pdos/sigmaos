@@ -26,7 +26,6 @@ type Watch func(error)
 type PathClnt struct {
 	*fidclnt.FidClnt
 	pe           *proc.ProcEnv
-	npc          *netsigma.NetProxyClnt
 	ndMntCache   *NamedMountCache
 	mnt          *MntTable
 	rootmt       *RootMountTable
@@ -36,14 +35,13 @@ type PathClnt struct {
 	disconnected bool // Used by test harness
 }
 
-func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
+func NewPathClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, fidc *fidclnt.FidClnt) *PathClnt {
 	pathc := &PathClnt{
 		pe:  pe,
-		npc: netsigma.NewNetProxyClnt(pe),
 		mnt: newMntTable(),
 	}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.NewFidClnt(pe, pathc.npc)
+		pathc.FidClnt = fidclnt.NewFidClnt(pe, npc)
 	} else {
 		pathc.FidClnt = fidc
 		fidc.NewClnt()

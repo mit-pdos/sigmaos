@@ -5,10 +5,11 @@ import "sigmap/sigmap.proto";
 option go_package = "sigmaos/netsigma/proto";
 
 message ListenRequest {
+        Taddr addr = 1;
 };
 
 message ListenResponse {
-        bool oK = 1;
+        Rerror err = 1;
 };
 
 message DialRequest {

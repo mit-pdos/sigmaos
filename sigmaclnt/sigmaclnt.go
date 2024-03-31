@@ -9,6 +9,7 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/leaseclnt"
+	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclntclnt"
@@ -29,6 +30,7 @@ func init() {
 
 type SigmaClnt struct {
 	*fslib.FsLib
+	npc *netsigma.NetProxyClnt
 	proc.ProcAPI
 	*leaseclnt.LeaseClnt
 }
@@ -41,7 +43,7 @@ type SigmaClntKernel struct {
 }
 
 // Create FsLib using either sigmalcntd or fdclnt
-func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
+func newFsLibFidClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
 	var s sos.SigmaOS
 	if pe.UseSigmaclntd {
@@ -51,13 +53,13 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 			return nil, err
 		}
 	} else {
-		s = fdclnt.NewFdClient(pe, fidc)
+		s = fdclnt.NewFdClient(pe, npc, fidc)
 	}
-	return fslib.NewFsLibAPI(pe, s)
+	return fslib.NewFsLibAPI(pe, npc, s)
 }
 
 func NewFsLib(pe *proc.ProcEnv) (*fslib.FsLib, error) {
-	return newFsLibFidClnt(pe, nil)
+	return newFsLibFidClnt(pe, netsigma.NewNetProxyClnt(pe), nil)
 }
 
 // Convert to SigmaClntKernel from SigmaClnt
@@ -72,13 +74,19 @@ func (sck *SigmaClntKernel) SigmaClnt() *SigmaClnt {
 
 // Convert to SigmaClnt from SigmaClntKernel
 func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
-	sc := &SigmaClnt{sck.FsLib, sck.ProcClnt, sck.LeaseClnt}
+	sc := &SigmaClnt{
+		FsLib:     sck.FsLib,
+		ProcAPI:   sck.ProcClnt,
+		LeaseClnt: sck.LeaseClnt,
+		npc:       netsigma.NewNetProxyClnt(sck.ProcEnv()),
+	}
 	return sc
 }
 
 // Create a SigmaClnt (using sigmaclntd or fdclient), as a proc, without ProcAPI.
 func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
-	fsl, err := newFsLibFidClnt(pe, fidc)
+	npc := netsigma.NewNetProxyClnt(pe)
+	fsl, err := newFsLibFidClnt(pe, npc, fidc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
@@ -87,7 +95,12 @@ func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaCl
 	if err != nil {
 		return nil, err
 	}
-	return &SigmaClnt{fsl, nil, lmc}, nil
+	return &SigmaClnt{
+		FsLib:     fsl,
+		npc:       npc,
+		ProcAPI:   nil,
+		LeaseClnt: lmc,
+	}, nil
 }
 
 func NewSigmaClntFsLib(pe *proc.ProcEnv) (*SigmaClnt, error) {

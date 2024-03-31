@@ -13,9 +13,10 @@ import (
 )
 
 type NetProxySrv struct {
-	directDialFn DialFn
-	trans        *NetProxyRPCTrans
-	rpcs         *rpcsrv.RPCSrv
+	directDialFn   DialFn
+	directListenFn ListenFn
+	trans          *NetProxyRPCTrans
+	rpcs           *rpcsrv.RPCSrv
 }
 
 func NewNetProxySrv() (*NetProxySrv, error) {
@@ -30,7 +31,8 @@ func NewNetProxySrv() (*NetProxySrv, error) {
 	db.DPrintf(db.TEST, "runServer: netproxysrv listening on %v", sp.SIGMA_NETPROXY_SOCKET)
 
 	nps := &NetProxySrv{
-		directDialFn: DialDirect,
+		directDialFn:   DialDirect,
+		directListenFn: ListenDirect,
 	}
 	rpcs := rpcsrv.NewRPCSrv(nps, rpc.NewStatInfo())
 	nps.rpcs = rpcs
@@ -58,10 +60,40 @@ func (nps *NetProxySrv) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.Dial
 	return nil
 }
 
+func (nps *NetProxySrv) Listen(ctx fs.CtxI, req proto.DialRequest, res *proto.DialResponse) error {
+	proxyListener, err := nps.directListenFn(req.GetAddr())
+	// If Dial was unsuccessful, set the reply error appropriately
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error listen direct: %v", err)
+		res.Err = sp.NewRerrorErr(err)
+		return nil
+	} else {
+		res.Err = sp.NewRerror()
+	}
+	fd, err := listenerToFD(proxyListener)
+	if err != nil {
+		db.DFatalf("Error convert conn to FD: %v", err)
+	}
+	// Get wrapper context in order to set output FD
+	wctx := ctx.(*WrapperCtx)
+	wctx.SetFD(fd)
+	return nil
+}
+
+func listenerToFD(proxyListener net.Listener) (int, error) {
+	f, err := proxyListener.(*net.TCPListener).File()
+	if err != nil {
+		db.DFatalf("Error get TCP listener fd: %v", err)
+		return 0, err
+	}
+	// Return the unix FD for the socket
+	return int(f.Fd()), nil
+}
+
 func connToFD(proxyConn net.Conn) (int, error) {
 	f, err := proxyConn.(*net.TCPConn).File()
 	if err != nil {
-		db.DFatalf("Error get unix conn fd: %v", err)
+		db.DFatalf("Error get TCP conn fd: %v", err)
 		return 0, err
 	}
 	// Return the unix FD for the socket

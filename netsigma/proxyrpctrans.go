@@ -63,7 +63,7 @@ func (npt *NetProxyRPCTrans) handleNewConn(conn *net.UnixConn) {
 		}
 		if fd, ok := ctx.GetFD(); ok {
 			// Send back the FD, if a connection was successfully opened
-			if err := sendProxiedConnFD(conn, fd); err != nil {
+			if err := sendProxiedFD(conn, fd); err != nil {
 				db.DPrintf(db.NETPROXYSRV_ERR, "Error send FD: %v", err)
 				return
 			}
@@ -75,9 +75,9 @@ func (npt *NetProxyRPCTrans) handleNewConn(conn *net.UnixConn) {
 
 // Send the FD corresponding to the socket of the established (proxied)
 // connection to the client.
-func sendProxiedConnFD(conn *net.UnixConn, proxiedConnFD int) error {
-	oob := unix.UnixRights(proxiedConnFD)
-	db.DPrintf(db.NETPROXYSRV, "Send fd %v", proxiedConnFD)
+func sendProxiedFD(conn *net.UnixConn, proxiedFD int) error {
+	oob := unix.UnixRights(proxiedFD)
+	db.DPrintf(db.NETPROXYSRV, "Send fd %v", proxiedFD)
 	// Send connection FD to child via socket
 	_, _, err := conn.WriteMsgUnix(nil, oob, nil)
 	if err != nil {

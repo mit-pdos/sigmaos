@@ -67,20 +67,30 @@ func fdToConn(fd int) (*net.TCPConn, error) {
 	return pconn.(*net.TCPConn), nil
 }
 
+func fdToListener(fd int) (*net.TCPListener, error) {
+	f := os.NewFile(uintptr(fd), "tcp-listener")
+	if f == nil {
+		db.DFatalf("Error new file")
+	}
+	l, err := net.FileListener(f)
+	if err != nil {
+		db.DFatalf("Error make FileConn: %v", err)
+	}
+	return l.(*net.TCPListener), nil
+}
+
 func (ch *NetProxyRPCCh) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 	db.DPrintf(db.ERROR, "StatsSrv unimplemented")
 	return nil, fmt.Errorf("Unimplemented")
 }
 
-// Receive the connection FD corresponding to a successful Dial or Listen
-// request
-func (ch *NetProxyRPCCh) GetReturnedConn() (*net.TCPConn, error) {
+func (ch *NetProxyRPCCh) getReturnedFD() (int, error) {
 	oob := make([]byte, unix.CmsgSpace(4))
 	// Send connection FD to child via socket
 	_, _, _, _, err := ch.conn.ReadMsgUnix(nil, oob)
 	if err != nil {
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error recv proxied conn fd: err %v", err)
-		return nil, err
+		return 0, err
 	}
 	scma, err := unix.ParseSocketControlMessage(oob)
 	if err != nil {
@@ -91,5 +101,23 @@ func (ch *NetProxyRPCCh) GetReturnedConn() (*net.TCPConn, error) {
 		db.DFatalf("Error parse unix rights: len %v err %v", len(fds), err)
 	}
 	db.DPrintf(db.NETPROXYCLNT, "got socket fd %v", fds[0])
-	return fdToConn(fds[0])
+	return fds[0], nil
+}
+
+// Receive the connection FD corresponding to a successful Dial request
+func (ch *NetProxyRPCCh) GetReturnedConn() (*net.TCPConn, error) {
+	fd, err := ch.getReturnedFD()
+	if err != nil {
+		return nil, err
+	}
+	return fdToConn(fd)
+}
+
+// Receive the connection FD corresponding to a successful Listen request
+func (ch *NetProxyRPCCh) GetReturnedListener() (net.Listener, error) {
+	fd, err := ch.getReturnedFD()
+	if err != nil {
+		return nil, err
+	}
+	return fdToListener(fd)
 }

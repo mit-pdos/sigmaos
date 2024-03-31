@@ -1081,13 +1081,13 @@ func TestSymlinkPath(t *testing.T) {
 	ts.Shutdown()
 }
 
-func newMount(t *testing.T, ts *test.Tstate, path string) sp.Tmount {
+func newMount(t *testing.T, ts *test.Tstate, path string) *sp.Tmount {
 	mnt, left, err := ts.CopyMount(pathname)
 	assert.Nil(t, err)
 	mnt.SetTree(left)
 	h, p := mnt.TargetIPPort(0)
 	if h == "" {
-		ts.SetLocalMount(&mnt, p)
+		ts.SetLocalMount(mnt, p)
 	}
 	return mnt
 }

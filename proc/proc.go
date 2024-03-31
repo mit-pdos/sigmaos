@@ -83,6 +83,7 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		priv,
 		false,
 		false,
+		false,
 	).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
@@ -126,6 +127,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Net = parentPE.Net
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
+	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy
 	p.ProcEnvProto.ParentToken = parentPE.Principal.GetToken()
 	// If parent didn't specify allowed paths, inherit the parent's allowed paths
 	if p.ProcEnvProto.Claims.AllowedPaths == nil {
@@ -176,13 +178,14 @@ func (p *Proc) IsPrivileged() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t KernelId:%v UseSigmaclntd %t Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
+	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t KernelId:%v UseSigmaclntd:%v UseNetProxy:%v Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.GetPID(),
 		p.ProcEnvProto.GetBuildTag(),
 		p.ProcEnvProto.Privileged,
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.UseSigmaclntd,
+		p.ProcEnvProto.UseNetProxy,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.GetPerf(),
 		p.ProcEnvProto.GetInnerContainerIP(),

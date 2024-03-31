@@ -40,6 +40,7 @@ var EtcdIP string
 var Overlays bool
 var GVisor bool
 var useSigmaclntd bool
+var useNetProxy bool
 var loadMasterKey bool
 
 func init() {
@@ -52,6 +53,7 @@ func init() {
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
 	flag.BoolVar(&useSigmaclntd, "usesigmaclntd", false, "Use sigmaclntd?")
+	flag.BoolVar(&useNetProxy, "usenetproxy", false, "Use proxy for network dialing/listening?")
 }
 
 var savedTstate *Tstate
@@ -82,7 +84,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false, false)
 	pe.Program = "srv"
 	pe.SetPrincipal(sp.NewPrincipal("srv", sp.NoToken()))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
@@ -195,7 +197,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err1
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err1 != nil {
@@ -219,8 +221,8 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	var scsck *bootkernelclnt.Kernel
 	var sckid string
-	if useSigmaclntd {
-		db.DPrintf(db.BOOT, "Use sigmaclntd")
+	if useSigmaclntd || useNetProxy {
+		db.DPrintf(db.BOOT, "Booting sigmaclntd: usesigmaclntd %v usenetproxy %v", useSigmaclntd, useNetProxy)
 		sckid = bootkernelclnt.GenKernelId()
 		_, err := bootkernelclnt.Start(sckid, pe, sp.SIGMACLNTDREL, Overlays, GVisor, pubkey, privkey)
 		if err != nil {
@@ -355,7 +357,7 @@ func Dump(t *testing.T) {
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), "", "", "", false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), "", "", "", false, false, false)
 	fs, err := fsetcd.NewFsEtcd(pe.GetRealm(), pe.GetEtcdIP())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)

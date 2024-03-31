@@ -123,6 +123,7 @@ func (scs *SigmaClntSrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitRequest, rep 
 	}
 	pe := proc.NewProcEnvFromProto(req.ProcEnvProto)
 	pe.UseSigmaclntd = false
+	pe.UseNetProxy = false
 	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pe, scs.fidc)
 	if err != nil {
 		rep.Err = scs.setErr(fmt.Errorf("Error init SigmaClntSrvAPI: %v pe %v", err, pe))

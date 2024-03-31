@@ -26,7 +26,7 @@ func main() {
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	// By default, proxy doesn't use overlays.
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false, false)
 	pe.SetPID("proxy")
 	pe.Program = "proxy"
 	pe.SetPrincipal(sp.NewPrincipal(

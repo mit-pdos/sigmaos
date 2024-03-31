@@ -45,7 +45,7 @@ func (nps *NetProxySrv) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.Dial
 	proxyConn, err := nps.directDialFn(mnt)
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error dial direct: %v", err)
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error dial direct: %v", err)
 		res.Err = sp.NewRerrorErr(err)
 		return nil
 	} else {
@@ -65,7 +65,7 @@ func (nps *NetProxySrv) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.
 	proxyListener, err := nps.directListenFn(req.GetAddr())
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error listen direct: %v", err)
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error listen direct: %v", err)
 		res.Err = sp.NewRerrorErr(err)
 		return nil
 	} else {

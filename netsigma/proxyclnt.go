@@ -64,9 +64,9 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error
 	return sp.NewMountService(sp.Taddrs{resaddr}), l, err
 }
 
+// If true, use the net proxy server for dialing & listening.
 func (npc *NetProxyClnt) useProxy() bool {
-	// TODO XXX : a hack to force use by sigmaclntd procs. Remove GetPriv part
-	return npc.pe.GetUseSigmaclntd() || !npc.pe.GetPrivileged()
+	return npc.pe.GetUseNetProxy()
 }
 
 // Lazily init connection to the netproxy srv

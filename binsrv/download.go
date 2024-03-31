@@ -76,8 +76,6 @@ func newDownload(pn string, sc *sigmaclnt.SigmaClnt, ckclnt *chunkclnt.ChunkClnt
 }
 
 func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, ckclnt *chunkclnt.ChunkClnt, sz sp.Tsize) (*downloader, error) {
-	s := time.Now()
-	db.DPrintf(db.SPAWN_LAT, "[%v] NewChunkClnt %v", pn, time.Since(s))
 	dl := newDownload(pn, sc, ckclnt, sz)
 	go dl.downloader()
 	return dl, nil
@@ -105,12 +103,11 @@ func (dl *downloader) downloader() {
 func (dl *downloader) cacheRemoteChunk(ck int) error {
 	s := time.Now()
 	sz, err := dl.readRemoteChunk(ck)
-	db.DPrintf(db.SPAWN_LAT, "[%v] readRemoteChunk %v dur %v tot %v", dl.pn, ck, time.Since(s), dl.tot)
+	d := time.Since(s)
+	db.DPrintf(db.SPAWN_LAT, "[%v] readRemoteChunk %v dur %v tot %v", dl.pn, ck, d, dl.tot)
 	if err == nil {
 		dl.register(ck, sz)
-		d := time.Since(s)
 		dl.tot += d
-		db.DPrintf(db.SPAWN_LAT, "[%v] cacheRemoteChunk %v chunkDur %v tot %v", dl.pn, ck, d, dl.tot)
 	}
 	return nil
 }

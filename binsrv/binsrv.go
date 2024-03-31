@@ -125,7 +125,7 @@ func RunBinFS(kernelId, uprocdpid string) error {
 
 	ckclnt, err := chunkclnt.NewChunkClnt(sc.FsLib, pn)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "ckclnt err %v", err)
+		db.DPrintf(db.ERROR, "ckclnt err %v", err)
 		return err
 	}
 

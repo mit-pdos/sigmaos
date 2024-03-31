@@ -18,7 +18,7 @@ func retryLoop(i int, f func(i int, pn string) error, src string) error {
 		if err := f(i, src); err == nil {
 			return nil
 		} else {
-			db.DPrintf(db.BINSRV, "download %q err %v", src, err)
+			db.DPrintf(db.ERROR, "download %q err %v", src, err)
 			r = err
 			if serr.IsErrCode(err, serr.TErrNotfound) {
 				break
@@ -34,7 +34,7 @@ func RetryPaths(paths []string, f func(i int, pn string) error) error {
 		if err := retryLoop(i, f, pp); err == nil {
 			return nil
 		} else {
-			db.DPrintf(db.BINSRV, "download pp %q err %v", pp, err)
+			db.DPrintf(db.ERROR, "download pp %q err %v", pp, err)
 			r = err
 		}
 	}

@@ -49,7 +49,7 @@ func RunUprocSrv(kernelId string, up string) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pe: pe, realm: sp.NOREALM}
 
-	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
+	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {

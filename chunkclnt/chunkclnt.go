@@ -41,6 +41,6 @@ func (ckclnt *ChunkClnt) UprocdFetch(pn string, realm sp.Trealm, ck int, sz sp.T
 		db.DPrintf(db.CHUNKCLNT, "UprocSrv.Fetch %v err %v", req, err)
 		return 0, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch latency %v", pn, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch latency from clnt %d %v", pn, ck, time.Since(s))
 	return sp.Tsize(res.Size), nil
 }

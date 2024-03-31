@@ -55,7 +55,7 @@ func (npt *NetProxyRPCTrans) handleNewConn(conn *net.UnixConn) {
 			db.DPrintf(db.NETPROXYSRV_ERR, "Error WriteRead: %v", err)
 			return
 		}
-		db.DPrintf(db.ALWAYS, "[%p] Write n frames: %v", conn, len(rep))
+		db.DPrintf(db.NETPROXYSRV, "[%p] Write n frames: %v", conn, len(rep))
 		// Send back the RPC response
 		if err := frame.WriteFrames(conn, rep); err != nil {
 			db.DPrintf(db.NETPROXYSRV_ERR, "Error WriteFrames: %v", err)

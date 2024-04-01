@@ -128,6 +128,7 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 	if err != nil {
 		return err
 	}
+	p.GetProcEnv().SetRealm(sp.ROOTREALM, k.Param.Overlays)
 	p.SetAllowedPaths(sp.ALL_PATHS)
 	if err := k.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)

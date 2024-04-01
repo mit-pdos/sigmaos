@@ -255,7 +255,8 @@ func (pe *ProcEnvProto) GetRealm() sp.Trealm {
 }
 
 func (pe *ProcEnvProto) SetRealm(realm sp.Trealm, overlays bool) {
-	pe.RealmStr = string(realm)
+	pe.Claims.RealmStr = realm.String()
+	pe.RealmStr = realm.String()
 	// Changing the realm changes the overlay network name. Therefore, set the
 	// overlay network for the new realm.
 	pe.Net = sp.ROOTREALM.String()

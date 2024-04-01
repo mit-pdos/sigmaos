@@ -26,7 +26,7 @@ func NewProcClaims(pe *proc.ProcEnv) *ProcClaims {
 	}
 	return &ProcClaims{
 		PrincipalID:  pe.GetClaims().GetPrincipalID(),
-		Realm:        pe.GetRealm(),
+		Realm:        pe.GetClaims().GetRealm(),
 		AllowedPaths: pe.GetClaims().GetAllowedPaths(),
 		Secrets:      secrets,
 		StandardClaims: jwt.StandardClaims{

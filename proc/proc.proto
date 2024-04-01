@@ -11,8 +11,9 @@ message ProcSecretProto {
 
 message ProcClaimsProto {
   string principalIDStr = 1;
-  repeated string allowedPaths = 2;
-  map<string, ProcSecretProto> secrets = 3;
+  string realmStr = 2;
+  repeated string allowedPaths = 3;
+  map<string, ProcSecretProto> secrets = 4;
 }
 
 message ProcEnvProto {

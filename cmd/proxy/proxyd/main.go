@@ -31,6 +31,7 @@ func main() {
 	pe.Program = "proxy"
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
+		sp.ROOTREALM,
 		sp.NoToken(),
 	))
 	proc.SetSigmaDebugPid(pe.GetPID().String())

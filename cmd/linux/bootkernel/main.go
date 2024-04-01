@@ -78,7 +78,7 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}
-	if err1 := as.MintAndSetToken(pe); err1 != nil {
+	if err1 := as.MintAndSetProcToken(pe); err1 != nil {
 		db.DFatalf("Error MintToken: %v", err1)
 	}
 	if err := boot.BootUp(&param, pe, as); err != nil {

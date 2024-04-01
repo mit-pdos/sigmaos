@@ -341,7 +341,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 
 		// Load restricted AWS secrets
 		pe.SetSecrets(map[string]*proc.ProcSecretProto{"s3": s3secrets})
-		err1 = t1.MintAndSetToken(pe)
+		err1 = t1.MintAndSetProcToken(pe)
 		assert.Nil(t, err1)
 
 		// Create a SigmaClnt with the more restricted principal.

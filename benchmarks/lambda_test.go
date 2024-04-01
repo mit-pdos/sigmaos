@@ -20,7 +20,7 @@ func spawnLambda(ts *test.RealmTstate, semPath string) {
 	client := lambda.New(sess, &aws.Config{Region: aws.String("us-east-1")})
 	mnt, err := ts.GetNamedMount()
 	assert.Nil(ts.Ts.T, err, "Err GetNamedMOunt: %v", err)
-	request := []string{mnt.Addr[0].IPPort(), semPath}
+	request := []string{mnt.Addresses()[0].IPPort(), semPath}
 
 	payload, err := json.Marshal(request)
 	if err != nil {

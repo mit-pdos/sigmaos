@@ -54,7 +54,7 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
 	db.DPrintf(db.PROTSRV, "Attach %v cid %v sid %v", args, args.TclntId(), ps.sid)
-	claims, ok, err := ps.auth.IsAuthorized(args.Tprincipal(), args.Aname)
+	claims, ok, err := ps.auth.AttachIsAuthorized(args.Tprincipal(), args.Aname)
 	if err != nil || !ok {
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErr(serr.TErrPerm, fmt.Errorf("Authorization check failed: ok %v err %v", ok, err)))
 	}

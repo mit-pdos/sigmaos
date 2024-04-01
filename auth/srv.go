@@ -34,7 +34,7 @@ func (as *AuthSrvImpl[M]) GetSrvPath() string {
 // Set a proc's token after it has been spawned by the parent
 func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	// Retrieve and validate the proc's parent's claims
-	parentPC, err := as.VerifyTokenGetClaims(p.GetPrincipal().GetID(), p.GetParentToken())
+	parentPC, err := as.VerifyProcTokenGetClaims(p.GetPrincipal().GetID(), p.GetParentToken())
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error verify parent token: %v", err)
 		db.DPrintf(db.AUTH, "Error verify parent token: %v", err)
@@ -70,7 +70,7 @@ func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	}
 	// Parent's token is valid, and child's token only contains allowed paths
 	// which are a subset of the parent's. Sign the child's token.
-	token, err := as.MintToken(pc)
+	token, err := as.MintProcToken(pc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		db.DPrintf(db.AUTH, "Error MintToken: %v", err)
@@ -80,9 +80,9 @@ func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	return nil
 }
 
-func (as *AuthSrvImpl[M]) MintAndSetToken(pe *proc.ProcEnv) error {
+func (as *AuthSrvImpl[M]) MintAndSetProcToken(pe *proc.ProcEnv) error {
 	pc := NewProcClaims(pe)
-	token, err := as.MintToken(pc)
+	token, err := as.MintProcToken(pc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
@@ -91,7 +91,7 @@ func (as *AuthSrvImpl[M]) MintAndSetToken(pe *proc.ProcEnv) error {
 	return nil
 }
 
-func (as *AuthSrvImpl[M]) MintToken(pc *ProcClaims) (*sp.Ttoken, error) {
+func (as *AuthSrvImpl[M]) MintProcToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	privkey, err := as.GetPrivateKey(as.signer)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (as *AuthSrvImpl[M]) MintToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	return sp.NewToken(as.signer, tstr), err
 }
 
-func (as *AuthSrvImpl[M]) VerifyTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*ProcClaims, error) {
+func (as *AuthSrvImpl[M]) VerifyProcTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*ProcClaims, error) {
 	if t.GetSignedToken() == sp.NO_SIGNED_TOKEN {
 		db.DPrintf(db.ERROR, "Tried to veryify token when no signed token provided")
 		return nil, fmt.Errorf("No signed token provided")
@@ -138,9 +138,9 @@ func (as *AuthSrvImpl[M]) VerifyTokenGetClaims(principalID sp.TprincipalID, t *s
 	return nil, fmt.Errorf("Claims wrong type")
 }
 
-func (as *AuthSrvImpl[M]) IsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error) {
+func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error) {
 	db.DPrintf(db.AUTH, "Authorization check p %v", principal.GetID())
-	pc, err := as.VerifyTokenGetClaims(principal.GetID(), principal.GetToken())
+	pc, err := as.VerifyProcTokenGetClaims(principal.GetID(), principal.GetToken())
 	if err != nil {
 		db.DPrintf(db.AUTH, "Token verification failed %v", principal.GetID())
 		db.DPrintf(db.AUTH, "Authorization check failed p %v, Token verification failed", principal.GetID())

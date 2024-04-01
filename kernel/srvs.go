@@ -129,7 +129,7 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 		return err
 	}
 	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
+	if err := k.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
@@ -196,7 +196,7 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
 	p.SetAllowedPaths(sp.ALL_PATHS)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
-	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
+	if err := k.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}

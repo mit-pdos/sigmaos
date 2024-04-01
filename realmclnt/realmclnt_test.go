@@ -178,8 +178,8 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 
 	// Should have a public and private address
 	if test.Overlays {
-		assert.Equal(rootts.T, 2, len(m1.Addr))
-		assert.Equal(rootts.T, 2, len(m1.Addr))
+		assert.Equal(rootts.T, 2, len(m1.Addresses()))
+		assert.Equal(rootts.T, 2, len(m1.Addresses()))
 	}
 
 	schedds1, err := ts1.GetDir(sp.SCHEDD)
@@ -518,8 +518,8 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	db.DPrintf(db.TEST, "mnt %v", mnt)
 
 	// Remove public port
-	if len(mnt.Addr) > 1 {
-		mnt.Addr = mnt.Addr[:1]
+	if len(mnt.Addresses()) > 1 {
+		mnt.SetAddr(mnt.Addresses()[:1])
 	}
 
 	pn := path.Join(sp.NAMED, "srv")
@@ -573,8 +573,8 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	db.DPrintf(db.TEST, "mnt %v", mnt)
 
 	// Remove public port
-	if len(mnt.Addr) > 1 {
-		mnt.Addr = mnt.Addr[:1]
+	if len(mnt.Addresses()) > 1 {
+		mnt.SetAddr(mnt.Addresses()[:1])
 	}
 
 	pn := path.Join(sp.NAMED, "srv")

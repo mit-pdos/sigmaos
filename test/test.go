@@ -204,7 +204,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
 		return nil, err1
 	}
-	err1 = as.MintAndSetToken(pe)
+	err1 = as.MintAndSetProcToken(pe)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err1)
 		return nil, err1
@@ -282,12 +282,12 @@ func (ts *Tstate) BootFss3d() error {
 	return ts.Boot(sp.S3REL)
 }
 
-func (ts *Tstate) MintAndSetToken(pe *proc.ProcEnv) error {
-	return ts.as.MintAndSetToken(pe)
+func (ts *Tstate) MintAndSetProcToken(pe *proc.ProcEnv) error {
+	return ts.as.MintAndSetProcToken(pe)
 }
 
-func (ts *Tstate) MintToken(pc *auth.ProcClaims) (*sp.Ttoken, error) {
-	return ts.as.MintToken(pc)
+func (ts *Tstate) MintProcToken(pc *auth.ProcClaims) (*sp.Ttoken, error) {
+	return ts.as.MintProcToken(pc)
 }
 
 func (ts *Tstate) KillOne(s string) error {

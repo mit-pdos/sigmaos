@@ -45,7 +45,7 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}
-	if err1 := as.MintAndSetToken(pe); err1 != nil {
+	if err1 := as.MintAndSetProcToken(pe); err1 != nil {
 		db.DFatalf("Error MintToken: %v", err1)
 	}
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)

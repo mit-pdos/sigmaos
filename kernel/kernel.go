@@ -168,7 +168,7 @@ func (k *Kernel) getRealmSigmaClnt(realm sp.Trealm) (*sigmaclnt.SigmaClntKernel,
 	}
 	pe := proc.NewDifferentRealmProcEnv(k.ProcEnv(), realm)
 	pe.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.as.MintAndSetToken(pe); err != nil {
+	if err := k.as.MintAndSetProcToken(pe); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}

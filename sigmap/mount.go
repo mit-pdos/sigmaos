@@ -59,6 +59,10 @@ func (mnt *Tmount) Marshal() ([]byte, error) {
 	return proto.Marshal(mnt)
 }
 
+func (mnt *Tmount) GetRealm() Trealm {
+	return Trealm(mnt.Claims.GetRealmStr())
+}
+
 // TODO XXX kill
 func (mnt *Tmount) Address() *Taddr {
 	return mnt.Claims.Addr[0]

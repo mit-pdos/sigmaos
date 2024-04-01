@@ -135,7 +135,7 @@ func (rm *RealmSrv) bootstrapNamedKeys(p *proc.Proc) error {
 		}...,
 	)
 	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := rm.as.MintAndSetToken(p.GetProcEnv()); err != nil {
+	if err := rm.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
@@ -180,7 +180,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	db.DPrintf(db.REALMD, "RealmSrv.Make named ready to serve for %v", rid)
 	pe := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
 	pe.SetAllowedPaths(sp.ALL_PATHS)
-	if err := rm.as.MintAndSetToken(pe); err != nil {
+	if err := rm.as.MintAndSetProcToken(pe); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}

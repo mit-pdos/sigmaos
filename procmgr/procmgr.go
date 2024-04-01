@@ -187,7 +187,7 @@ func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 			clnt = mgr.rootsc
 		} else {
 			pe := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
-			if err := mgr.as.MintAndSetToken(pe); err != nil {
+			if err := mgr.as.MintAndSetProcToken(pe); err != nil {
 				db.DFatalf("Err MintAndSetToken: %v", err)
 			}
 			if sc, err := sigmaclnt.NewSigmaClnt(pe); err != nil {

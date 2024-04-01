@@ -464,7 +464,7 @@ func newTstateSp(t *testing.T) *TstateSp {
 	kmgr.AddPrivateKey(sp.Tsigner(ts.PE.GetPID()), ts.privkey)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(ts.PE.GetPID()), "", kmgr)
 	assert.Nil(t, err, "Err NewAuthSrv: %v", err)
-	err = as.MintAndSetToken(ts.PE)
+	err = as.MintAndSetProcToken(ts.PE)
 	assert.Nil(t, err, "Err MintAndSetToken: %v", err)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
 	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, root, as, ts.Addr, nil)

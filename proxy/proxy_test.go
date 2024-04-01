@@ -136,7 +136,7 @@ func TestProxyMountPath(t *testing.T) {
 
 	m1, err := ts.GetNamedMount()
 	assert.Nil(ts.T, err, "MountService: %v", err)
-	mnt := sp.NewMountService(m1.Addr)
+	mnt := sp.NewMountService(m1.Addresses())
 	err = ts.NewMount9P("name/namedself", mnt)
 	assert.Nil(ts.T, err, "NewMount9P")
 

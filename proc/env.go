@@ -97,6 +97,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			UseNetProxy:         useNetProxy,
 			Claims: &ProcClaimsProto{
 				PrincipalIDStr: principal.GetID().String(),
+				RealmStr:       sp.NOT_SET,
 				AllowedPaths:   nil, // By default, will be set to the parent's AllowedPaths unless otherwise specified
 				Secrets:        nil, // By default, will be set to the parent's Secrets unless otherwise specified
 			},
@@ -255,8 +256,9 @@ func (pe *ProcEnvProto) GetRealm() sp.Trealm {
 }
 
 func (pe *ProcEnvProto) SetRealm(realm sp.Trealm, overlays bool) {
-	pe.Claims.RealmStr = realm.String()
 	pe.RealmStr = realm.String()
+	pe.Principal.RealmStr = realm.String()
+	pe.Claims.RealmStr = realm.String()
 	// Changing the realm changes the overlay network name. Therefore, set the
 	// overlay network for the new realm.
 	pe.Net = sp.ROOTREALM.String()

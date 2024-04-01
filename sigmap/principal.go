@@ -17,7 +17,7 @@ func (p *Tprincipal) GetID() TprincipalID {
 }
 
 func (p *Tprincipal) GetRealm() Trealm {
-	return Trealm(p.IDStr)
+	return Trealm(p.RealmStr)
 }
 
 func (p *Tprincipal) SetToken(t *Ttoken) {

@@ -90,7 +90,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	if err := spcodec.UnmarshalMsg(r); err != nil {
 		return nil, err
 	}
-
+	db.DPrintf(db.NET_LAT, "ReadCall fm %v\n", r.Fcm)
 	return r.Fcm, nil
 }
 

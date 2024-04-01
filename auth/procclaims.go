@@ -11,8 +11,8 @@ import (
 )
 
 type ProcClaims struct {
-	PrincipalID sp.TprincipalID `json:"principal_id"`
-	//	PrincipalID  string   `json:"principal_id"`
+	PrincipalID  sp.TprincipalID    `json:"principal_id"`
+	Realm        sp.Trealm          `json:"realm"`
 	AllowedPaths []string           `json:"allowed_paths"`
 	Secrets      map[string]*Secret `json:"secrets"`
 	jwt.StandardClaims

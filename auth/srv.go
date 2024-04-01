@@ -142,6 +142,10 @@ func (as *AuthSrvImpl[M]) verifyPrincipalIdentity(principal *sp.Tprincipal) (*Pr
 		db.DPrintf(db.AUTH, "ID verification failed p %v, Token & principal ID don't match ( %v != %v )", principal.GetID(), principal.GetID(), pc.PrincipalID)
 		return nil, fmt.Errorf("Mismatch between principal ID and token ID: %v", err)
 	}
+	if principal.GetRealm() != pc.Realm {
+		db.DPrintf(db.AUTH, "ID verification failed p %v, Token & realm ID don't match ( %v != %v )", principal.GetID(), principal.GetRealm(), pc.Realm)
+		return nil, fmt.Errorf("Mismatch between realm ID and token ID: %v", err)
+	}
 	return pc, nil
 }
 

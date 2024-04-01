@@ -18,7 +18,8 @@ message Ttoken {
 
 message Tprincipal {
         string iDStr = 1;
-        Ttoken token = 2;
+        string realmStr = 2;
+        Ttoken token = 3;
 }
 
 message Stat {

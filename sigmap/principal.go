@@ -15,6 +15,10 @@ func (p *Tprincipal) GetID() TprincipalID {
 	return TprincipalID(p.IDStr)
 }
 
+func (p *Tprincipal) GetRealm() Trealm {
+	return Trealm(p.IDStr)
+}
+
 func (p *Tprincipal) SetToken(t *Ttoken) {
 	p.Token = t
 }

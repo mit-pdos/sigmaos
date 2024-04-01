@@ -47,6 +47,10 @@ func (mnt *Tmount) GetProto() *TmountProto {
 	return mnt.TmountProto
 }
 
+func (mnt *Tmount) SetToken(token *Ttoken) {
+	mnt.Token = token
+}
+
 func (mnt *Tmount) SetTree(tree string) {
 	mnt.Root = tree
 }

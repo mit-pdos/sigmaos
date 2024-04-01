@@ -80,6 +80,31 @@ func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	return nil
 }
 
+func (as *AuthSrvImpl[M]) MintMountToken(mnt *sp.Tmount) (*sp.Ttoken, error) {
+	mc := NewMountClaims(mnt)
+	return as.mintTokenWithClaims(mc)
+}
+
+func (as *AuthSrvImpl[M]) MintAndSetMountToken(mnt *sp.Tmount) error {
+	token, err := as.MintMountToken(mnt)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error MintMountToken: %v", err)
+	}
+	mnt.SetToken(token)
+	return nil
+}
+
+func (as *AuthSrvImpl[M]) VerifyMountTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*MountClaims, error) {
+	claims, err := as.verifyTokenGetClaims(principalID, t)
+	if err != nil {
+		return nil, err
+	}
+	if mclaims, ok := claims.(*MountClaims); ok {
+		return mclaims, nil
+	}
+	return nil, fmt.Errorf("Claims wrong type")
+}
+
 func (as *AuthSrvImpl[M]) MintAndSetProcToken(pe *proc.ProcEnv) error {
 	pc := NewProcClaims(pe)
 	token, err := as.MintProcToken(pc)
@@ -92,47 +117,15 @@ func (as *AuthSrvImpl[M]) MintAndSetProcToken(pe *proc.ProcEnv) error {
 }
 
 func (as *AuthSrvImpl[M]) MintProcToken(pc *ProcClaims) (*sp.Ttoken, error) {
-	privkey, err := as.GetPrivateKey(as.signer)
-	if err != nil {
-		return nil, err
-	}
-	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
-	token := jwt.NewWithClaims(as.signingMethod, pc)
-	tstr, err := token.SignedString(privkey.KeyI())
-	if err != nil {
-		return nil, err
-	}
-	return sp.NewToken(as.signer, tstr), err
+	return as.mintTokenWithClaims(pc)
 }
 
 func (as *AuthSrvImpl[M]) VerifyProcTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*ProcClaims, error) {
-	if t.GetSignedToken() == sp.NO_SIGNED_TOKEN {
-		db.DPrintf(db.ERROR, "Tried to veryify token when no signed token provided")
-		return nil, fmt.Errorf("No signed token provided")
-	}
-	// Parse the jwt, passing in a function to look up the key.
-	//
-	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt
-	token, err := jwt.ParseWithClaims(t.GetSignedToken(), &ProcClaims{}, func(token *jwt.Token) (interface{}, error) {
-		// Validate the alg is expected
-		if _, ok := token.Method.(M); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
-		pubkey, err := as.GetPublicKey(t.GetSigner())
-		if err != nil {
-			return nil, err
-		}
-		// hmacKey is a []byte containing your secret, e.g. []byte("my_secret_key")
-		return pubkey.KeyI(), nil
-	})
+	claims, err := as.verifyTokenGetClaims(principalID, t)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error parsing jwt for principal %v: jwt %v err %v", principalID, t.GetSignedToken(), err)
 		return nil, err
 	}
-	if !token.Valid {
-		return nil, fmt.Errorf("Invalid token")
-	}
-	if pclaims, ok := token.Claims.(*ProcClaims); ok {
+	if pclaims, ok := claims.(*ProcClaims); ok {
 		return pclaims, nil
 	}
 	return nil, fmt.Errorf("Claims wrong type")
@@ -165,4 +158,55 @@ func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPat
 	}
 	db.DPrintf(db.AUTH, "Authorization check failed (path not allowed) srvpath %v p %v claims %v", as.srvpath, principal.GetID(), pc)
 	return nil, false, nil
+}
+
+func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, attachPath string) (*MountClaims, bool, error) {
+	// TODO
+	db.DFatalf("Unimplemented")
+	return nil, false, nil
+}
+
+// Mint a token with associated claims
+func (as *AuthSrvImpl[M]) mintTokenWithClaims(claims jwt.Claims) (*sp.Ttoken, error) {
+	privkey, err := as.GetPrivateKey(as.signer)
+	if err != nil {
+		return nil, err
+	}
+	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
+	token := jwt.NewWithClaims(as.signingMethod, claims)
+	tstr, err := token.SignedString(privkey.KeyI())
+	if err != nil {
+		return nil, err
+	}
+	return sp.NewToken(as.signer, tstr), err
+}
+
+func (as *AuthSrvImpl[M]) verifyTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (jwt.Claims, error) {
+	if t.GetSignedToken() == sp.NO_SIGNED_TOKEN {
+		db.DPrintf(db.ERROR, "Tried to veryify token when no signed token provided")
+		return nil, fmt.Errorf("No signed token provided")
+	}
+	// Parse the jwt, passing in a function to look up the key.
+	//
+	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt
+	token, err := jwt.ParseWithClaims(t.GetSignedToken(), &ProcClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Validate the alg is expected
+		if _, ok := token.Method.(M); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		pubkey, err := as.GetPublicKey(t.GetSigner())
+		if err != nil {
+			return nil, err
+		}
+		// hmacKey is a []byte containing your secret, e.g. []byte("my_secret_key")
+		return pubkey.KeyI(), nil
+	})
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error parsing jwt for principal %v: jwt %v err %v", principalID, t.GetSignedToken(), err)
+		return nil, err
+	}
+	if !token.Valid {
+		return nil, fmt.Errorf("Invalid token")
+	}
+	return token.Claims, nil
 }

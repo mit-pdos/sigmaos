@@ -129,6 +129,7 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	}
 	fid1, err := npc.pc.Walk(fid, args.Wnames, sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
+		sp.ROOTREALM,
 		sp.NoToken(),
 	))
 	if err != nil {

@@ -66,7 +66,7 @@ func main() {
 		db.DFatalf("Failed to load AWS secrets %v", err)
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.NoToken()), secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
+	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.ROOTREALM, sp.NoToken()), secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	// Create an auth server with a constant GetKeyFn, to bootstrap with the
 	// initial master key. This auth server should *not* be used long-term. It

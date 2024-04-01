@@ -86,7 +86,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false, false)
 	pe.Program = "srv"
-	pe.SetPrincipal(sp.NewPrincipal("srv", sp.NoToken()))
+	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM, sp.NoToken()))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	return &TstateMin{T: t, lip: lip, PE: pe, Addr: addr}
 }

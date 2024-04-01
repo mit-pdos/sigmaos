@@ -1,9 +1,10 @@
 package sigmap
 
-func NewPrincipal(id TprincipalID, token *Ttoken) *Tprincipal {
+func NewPrincipal(id TprincipalID, realm Trealm, token *Ttoken) *Tprincipal {
 	return &Tprincipal{
-		IDStr: id.String(),
-		Token: token,
+		IDStr:    id.String(),
+		RealmStr: realm.String(),
+		Token:    token,
 	}
 }
 

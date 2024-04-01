@@ -134,7 +134,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 
 func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool, useNetProxy bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
-	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), sp.NoToken()))
+	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), realm, sp.NoToken()))
 	pe.SetSecrets(secrets)
 	// Allow all paths for boot env
 	pe.SetAllowedPaths(sp.ALL_PATHS)
@@ -156,7 +156,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP
 func NewAddedProcEnv(pe *ProcEnv) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
-	pe2.SetPrincipal(sp.NewPrincipal(pe.GetPrincipal().GetID(), pe.GetPrincipal().GetToken()))
+	pe2.SetPrincipal(sp.NewPrincipal(pe.GetPrincipal().GetID(), pe.GetRealm(), pe.GetPrincipal().GetToken()))
 	// Make a deep copy of the proc claims
 	pe2.Claims = &ProcClaimsProto{
 		PrincipalIDStr: pe2.GetPrincipal().GetID().String(),
@@ -181,6 +181,7 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 	pe2.SetRealm(realm, pe.Overlays)
 	pe2.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID(pe.GetPrincipal().GetID().String()+"-realm-"+realm.String()),
+		realm,
 		sp.NoToken(),
 	))
 	// Make a deep copy of the proc claims

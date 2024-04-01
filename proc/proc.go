@@ -76,6 +76,7 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		sp.Trealm(sp.NOT_SET),
 		sp.NewPrincipal(
 			sp.TprincipalID(pid.String()),
+			sp.Trealm(sp.NOT_SET),
 			sp.NoToken(),
 		),
 		procdir,

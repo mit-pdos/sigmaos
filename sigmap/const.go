@@ -133,6 +133,7 @@ const (
 // Auth consts
 const (
 	NO_PRINCIPAL_ID    TprincipalID = "NO_PRINCIPAL_ID"
+	NO_REALM           Trealm       = "NO_REALM"
 	KEY_LEN            int          = 256
 	HOST_PRIV_KEY_FILE string       = "/tmp/sigmaos/master-key.priv"
 	HOST_PUB_KEY_FILE  string       = "/tmp/sigmaos/master-key.pub"
@@ -151,7 +152,8 @@ func NoToken() *Ttoken {
 
 func NoPrincipal() *Tprincipal {
 	return &Tprincipal{
-		IDStr: NO_PRINCIPAL_ID.String(),
-		Token: NoToken(),
+		IDStr:    NO_PRINCIPAL_ID.String(),
+		RealmStr: NO_REALM.String(),
+		Token:    NoToken(),
 	}
 }

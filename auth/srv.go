@@ -131,17 +131,25 @@ func (as *AuthSrvImpl[M]) VerifyProcTokenGetClaims(principalID sp.TprincipalID, 
 	return nil, fmt.Errorf("Claims wrong type")
 }
 
-func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error) {
-	db.DPrintf(db.AUTH, "Authorization check p %v", principal.GetID())
+func (as *AuthSrvImpl[M]) verifyPrincipalIdentity(principal *sp.Tprincipal) (*ProcClaims, error) {
+	db.DPrintf(db.AUTH, "Verify ID p %v", principal.GetID())
 	pc, err := as.VerifyProcTokenGetClaims(principal.GetID(), principal.GetToken())
 	if err != nil {
-		db.DPrintf(db.AUTH, "Token verification failed %v", principal.GetID())
-		db.DPrintf(db.AUTH, "Authorization check failed p %v, Token verification failed", principal.GetID())
-		return nil, false, fmt.Errorf("Token verification failed: %v", err)
+		db.DPrintf(db.AUTH, "ID token verification failed %v", principal.GetID())
+		return nil, fmt.Errorf("Token verification failed: %v", err)
 	}
 	if principal.GetID() != pc.PrincipalID {
-		db.DPrintf(db.AUTH, "Authorization check failed p %v, Token & principal ID don't match ( %v != %v )", principal.GetID(), principal.GetID(), pc.PrincipalID)
-		return nil, false, fmt.Errorf("Mismatch between principal ID and token ID: %v", err)
+		db.DPrintf(db.AUTH, "ID verification failed p %v, Token & principal ID don't match ( %v != %v )", principal.GetID(), principal.GetID(), pc.PrincipalID)
+		return nil, fmt.Errorf("Mismatch between principal ID and token ID: %v", err)
+	}
+	return pc, nil
+}
+
+func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error) {
+	pc, err := as.verifyPrincipalIdentity(principal)
+	if err != nil {
+		db.DPrintf(db.AUTH, "Authorization check failed p %v: err %v", principal.GetID(), err)
+		return nil, false, err
 	}
 	// Check that the server path is a subpath of one of the allowed paths
 	for _, ap := range pc.AllowedPaths {
@@ -160,7 +168,13 @@ func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPat
 	return nil, false, nil
 }
 
-func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, attachPath string) (*MountClaims, bool, error) {
+func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, mount *sp.Tmount) (*MountClaims, bool, error) {
+	pc, err := as.verifyPrincipalIdentity(principal)
+	if err != nil {
+		db.DPrintf(db.AUTH, "Authorization check failed p %v: err %v", principal.GetID(), err)
+		return nil, false, err
+	}
+	_ = pc
 	// TODO
 	db.DFatalf("Unimplemented")
 	return nil, false, nil

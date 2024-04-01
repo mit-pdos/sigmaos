@@ -10,10 +10,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const (
-	ISSUER = "sigmaos"
-)
-
 type ProcClaims struct {
 	PrincipalID sp.TprincipalID `json:"principal_id"`
 	//	PrincipalID  string   `json:"principal_id"`

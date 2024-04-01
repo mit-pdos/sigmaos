@@ -276,10 +276,10 @@ func (scc *SigmaClntClnt) GetNamedMount() (*sp.Tmount, error) {
 	err := scc.rpcc.RPC("SigmaClntSrvAPI.GetNamedMount", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "GetNamedMount %v %v %v", req, rep, err)
 	if err != nil {
-		return sp.NullMount(), nil
+		return sp.NewNullMount(), nil
 	}
 	if rep.Err.TErrCode() != serr.TErrNoError {
-		return sp.NullMount(), nil
+		return sp.NewNullMount(), nil
 	}
 	return sp.NewMountFromProto(rep.Mount), nil
 }

@@ -79,7 +79,7 @@ func (fsl *FsLib) CopyMount(pn string) (*sp.Tmount, string, error) {
 	if ok {
 		_, mnt, err := fsl.resolveMount(d, left[0])
 		if err != nil {
-			return sp.NullMount(), "", err
+			return sp.NewNullMount(), "", err
 		}
 		return mnt, left[1:].String(), nil
 	} else if s, p, err := fsl.SigmaOS.PathLastMount(pn); err == nil {
@@ -87,11 +87,11 @@ func (fsl *FsLib) CopyMount(pn string) (*sp.Tmount, string, error) {
 			return mnt, p.String(), nil
 		}
 	}
-	return sp.NullMount(), "", serr.NewErr(serr.TErrInval, pn)
+	return sp.NewNullMount(), "", serr.NewErr(serr.TErrInval, pn)
 }
 
 func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tmount, error) {
-	rmnt := sp.NullMount()
+	rmnt := sp.NewNullMount()
 	rname := ""
 	// Make sure to resolve d in case it is a symlink or mount point.
 	_, err := fsl.ProcessDir(d+"/", func(st *sp.Stat) (bool, error) {

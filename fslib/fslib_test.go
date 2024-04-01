@@ -297,9 +297,9 @@ func TestReadSymlink(t *testing.T) {
 	mnt1, err := ts.ReadMount(fn)
 	assert.Nil(t, err, "ReadMount: %v", err)
 
-	assert.Equal(t, mnt.Addr[0].GetIP(), mnt1.Addr[0].GetIP())
-	assert.Equal(t, mnt.Addr[0].GetPort(), mnt1.Addr[0].GetPort())
-	assert.Equal(t, mnt.Addr[0].GetNetNS(), mnt1.Addr[0].GetNetNS())
+	assert.Equal(t, mnt.Addresses()[0].GetIP(), mnt1.Addresses()[0].GetIP())
+	assert.Equal(t, mnt.Addresses()[0].GetPort(), mnt1.Addresses()[0].GetPort())
+	assert.Equal(t, mnt.Addresses()[0].GetNetNS(), mnt1.Addresses()[0].GetNetNS())
 
 	err = ts.RmDir(d1)
 	assert.Nil(t, err, "RmDir: %v", err)

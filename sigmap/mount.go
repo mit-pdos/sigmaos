@@ -13,15 +13,26 @@ type Tmount struct {
 }
 
 func (mnt *Tmount) String() string {
-	return fmt.Sprintf("{addr %v root %q}", mnt.Addr, mnt.Root)
+	return fmt.Sprintf("{ addr:%v realm:%v root:%v }", mnt.Claims.Addr, Trealm(mnt.Claims.RealmStr), mnt.Root)
 }
 
-func NullMount() *Tmount {
-	return &Tmount{&TmountProto{}}
+func NewMountClaimsProto(addrs Taddrs, realm Trealm) *TmountClaimsProto {
+	return &TmountClaimsProto{
+		RealmStr: realm.String(),
+		Addr:     addrs,
+	}
+}
+
+func NewNullMount() *Tmount {
+	return &Tmount{
+		&TmountProto{
+			Claims: NewMountClaimsProto(nil, NOT_SET),
+		},
+	}
 }
 
 func NewMount(b []byte) (*Tmount, *serr.Err) {
-	mnt := NullMount()
+	mnt := NewNullMount()
 	if err := proto.Unmarshal(b, mnt); err != nil {
 		return mnt, serr.NewErrError(err)
 	}
@@ -41,23 +52,30 @@ func (mnt *Tmount) SetTree(tree string) {
 }
 
 func (mnt *Tmount) SetAddr(addr Taddrs) {
-	mnt.Addr = addr
+	mnt.Claims.Addr = addr
 }
 
 func (mnt *Tmount) Marshal() ([]byte, error) {
 	return proto.Marshal(mnt)
 }
 
+// TODO XXX kill
 func (mnt *Tmount) Address() *Taddr {
-	return mnt.Addr[0]
+	return mnt.Claims.Addr[0]
 }
 
+// XXX Dedup?
 func (mnt *Tmount) Addresses() Taddrs {
-	return mnt.Addr
+	return mnt.Claims.Addr
 }
 
+// TODO XXX take in realm
 func NewMountService(srvaddrs Taddrs) *Tmount {
-	return &Tmount{&TmountProto{Addr: srvaddrs}}
+	return &Tmount{
+		&TmountProto{
+			Claims: NewMountClaimsProto(srvaddrs, NOT_SET),
+		},
+	}
 }
 
 func NewMountServer(addr *Taddr) *Tmount {
@@ -66,5 +84,6 @@ func NewMountServer(addr *Taddr) *Tmount {
 }
 
 func (mnt *Tmount) TargetIPPort(idx int) (Tip, Tport) {
-	return mnt.Addr[idx].GetIP(), mnt.Addr[idx].GetPort()
+	a := mnt.Claims.Addr[idx]
+	return a.GetIP(), a.GetPort()
 }

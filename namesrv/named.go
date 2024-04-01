@@ -176,7 +176,7 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 	} else {
 		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
 		if err != nil {
-			return sp.NullMount(), err
+			return sp.NewNullMount(), err
 		}
 		pi = pi0
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
@@ -191,11 +191,11 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 	kmgr.AddPublicKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterPublicKey)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
-		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
+		return sp.NewNullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}
 
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
-		return sp.NullMount(), err
+		return sp.NewNullMount(), err
 	}
 	nd.SigmaSrv = ssrv
 

@@ -45,7 +45,7 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mnt.Addr, err
+	return mnt.Addresses(), err
 }
 
 func NewFsLibs(uname string) ([]*fslib.FsLib, error) {

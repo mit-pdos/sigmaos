@@ -77,8 +77,8 @@ func (nps *NetProxySrv) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.
 	} else {
 		res.Err = sp.NewRerror()
 	}
-	// TODO: get realm
-	mnt, err := constructMount(nps.innerContainerIP, sp.ROOTREALM, proxyListener)
+	// Construct a mount for the listener
+	mnt, err := constructMount(nps.innerContainerIP, ctx.Principal().GetRealm(), proxyListener)
 	if err != nil {
 		db.DFatalf("Error construct mount: %v", err)
 		return err

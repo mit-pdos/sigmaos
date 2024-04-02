@@ -60,12 +60,14 @@ func (nc *NetClnt) connect(mnt *sp.Tmount) *serr.Err {
 	//	addrs = netsigma.Rearrange(nc.pe.GetNet(), addrs)
 	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), mnt, mnt.Addresses()[0])
 	//	for _, addr := range addrs {
-	for _, addr := range mnt.Addresses() {
+	for i, addr := range mnt.Addresses() {
+		if i > 0 {
+			// TODO XXX: support multi-dialing
+			db.DFatalf("Do not support multi-dialing yet")
+		}
 		c, err := nc.npc.Dial(mnt)
 		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
 		if err != nil {
-			// TODO XXX: support multi-dialing
-			db.DFatalf("Do not support multi-dialing yet")
 			continue
 		}
 		nc.conn = c

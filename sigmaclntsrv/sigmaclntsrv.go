@@ -98,7 +98,7 @@ func (scs *SigmaClntSrv) runServer() error {
 	go func() {
 		buf := make([]byte, 1)
 		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
-			db.DFatalf("read pipe err %v\n", err)
+			db.DPrintf(db.ERROR, "read pipe err %v\n", err)
 		}
 		db.DPrintf(db.SIGMACLNTSRV, "exiting")
 		os.Remove(sp.SIGMASOCKET)

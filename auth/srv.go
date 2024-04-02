@@ -206,7 +206,7 @@ func (as *AuthSrvImpl[M]) mintTokenWithClaims(claims jwt.Claims) (*sp.Ttoken, er
 
 func (as *AuthSrvImpl[M]) verifyTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (jwt.Claims, error) {
 	if t.GetSignedToken() == sp.NO_SIGNED_TOKEN {
-		db.DPrintf(db.ERROR, "Tried to veryify token when no signed token provided")
+		db.DPrintf(db.ERROR, "Tried to verify token when no signed token provided")
 		return nil, fmt.Errorf("No signed token provided")
 	}
 	// Parse the jwt, passing in a function to look up the key.

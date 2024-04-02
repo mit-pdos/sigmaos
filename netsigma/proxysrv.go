@@ -46,6 +46,7 @@ func NewNetProxySrv(ip sp.Tip, as auth.AuthSrv) (*NetProxySrv, error) {
 
 func (nps *NetProxySrv) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.DialResponse) error {
 	mnt := sp.NewMountFromProto(req.GetMount())
+	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> mnt %v", ctx.Principal(), mnt)
 	proxyConn, err := nps.directDialFn(mnt)
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {
@@ -66,6 +67,7 @@ func (nps *NetProxySrv) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.Dial
 }
 
 func (nps *NetProxySrv) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.ListenResponse) error {
+	db.DPrintf(db.NETPROXYSRV, "Listen principal %v", ctx.Principal())
 	proxyListener, err := nps.directListenFn(req.GetAddr())
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {

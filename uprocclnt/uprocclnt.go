@@ -30,6 +30,14 @@ func NewUprocdClnt(pid sp.Tpid, rpcc *rpcclnt.RPCClnt) *UprocdClnt {
 	}
 }
 
+func (clnt *UprocdClnt) String() string {
+	return fmt.Sprintf("&{ realm:%v ptype:%v share:%v }", clnt.realm, clnt.ptype, clnt.share)
+}
+
+func (clnt *UprocdClnt) GetPid() sp.Tpid {
+	return clnt.pid
+}
+
 func (clnt *UprocdClnt) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
 	clnt.ptype = ptype
 	req := &proto.AssignRequest{
@@ -82,6 +90,11 @@ func (clnt *UprocdClnt) Fetch(pn string, ck int, sz sp.Tsize, path []string) (sp
 	return sp.Tsize(res.Size), nil
 }
 
-func (clnt *UprocdClnt) String() string {
-	return fmt.Sprintf("&{ realm:%v ptype:%v share:%v }", clnt.realm, clnt.ptype, clnt.share)
+func (clnt *UprocdClnt) Assign() error {
+	req := &proto.AssignRequest{}
+	res := &proto.FetchResponse{}
+	if err := clnt.RPC("UprocSrv.Assign", req, res); err != nil {
+		return err
+	}
+	return nil
 }

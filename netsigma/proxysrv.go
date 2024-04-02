@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 
+	//	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/netsigma/proto"

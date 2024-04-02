@@ -4,6 +4,7 @@
 package sigmaclntsrv
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -191,6 +192,9 @@ func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip)
 func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) (*SigmaClntSrvCmd, error) {
 	p.FinalizeEnv(innerIP, outerIP, uprocdPid)
 	db.DPrintf(db.SIGMACLNTSRV, "ExecSigmaclntsrv: %v", p)
+	if len(p.GetArgs()) != 4 {
+		return nil, fmt.Errorf("Sigmaclntd usage expects bootstrapped keys")
+	}
 	cmd := exec.Command("sigmaclntd", p.GetArgs()...)
 	cmd.Env = p.GetEnv()
 	stdin, err := cmd.StdinPipe()

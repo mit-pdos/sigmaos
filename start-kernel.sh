@@ -205,10 +205,15 @@ if [ -z  ${IP} ]; then
     IP=$(ip route get 8.8.8.8 | head -1 | cut -d ' ' -f 7)
 fi
 
-until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ]; do
+until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ] || [ "`docker inspect -f {{.State.Status}} ${CID}`"=="exited" ]; do
     echo -n "." 1>&2
     sleep 0.1;
 done;
+
+if [ "`docker inspect -f {{.State.Status}} ${CID}`"=="exited" ] && [ "`docker inspect -f {{.State.ExitCode}} ${CID}`"=="1" ]; then 
+  echo "Error booting kernel"
+  exit 1
+fi
 
 # Wait until kernel is ready
 while [ ! -f "/tmp/sigmaos/${KERNELID}" ]; do

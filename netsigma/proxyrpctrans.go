@@ -45,7 +45,7 @@ func (npt *NetProxyRPCTrans) handleNewConn(conn *net.UnixConn) {
 		// Read the RPC
 		req, err := frame.ReadFrames(conn)
 		if err != nil {
-			db.DPrintf(db.ERROR, "Error ReadFrame: %v", err)
+			db.DPrintf(db.NETPROXYSRV_ERR, "Error ReadFrame: %v", err)
 			return
 		}
 		ctx := NewWrapperCtx(ctx.NewCtxNull())

@@ -146,7 +146,7 @@ func (updm *UprocdMgr) startUprocd() (sp.Tpid, *UprocdClnt) {
 	pn := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL, pid.String())
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{updm.fsl}, pn)
 	if err != nil {
-		db.DFatalf("Error Make RPCClnt Uprocd: %v", err)
+		db.DPrintf(db.ERROR, "Error Make RPCClnt Uprocd: %v", err)
 	}
 	rc := rpcclnt.NewRPCClnt(ch)
 	c := NewUprocdClnt(pid, rc)

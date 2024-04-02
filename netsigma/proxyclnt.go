@@ -42,26 +42,30 @@ func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
 }
 
 func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error) {
+	var mnt *sp.Tmount
 	var l net.Listener
 	var err error
 	if npc.useProxy() {
 		db.DPrintf(db.NETPROXYCLNT, "proxyListen %v", addr)
-		l, err = npc.proxyListen(addr)
+		mnt, l, err = npc.proxyListen(addr)
+		if err != nil {
+			db.DPrintf(db.NETPROXYCLNT_ERR, "Error proxyListen %v: %v", addr, err)
+			return nil, nil, err
+		}
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directListen %v", addr)
 		l, err = npc.directListenFn(addr)
+		if err != nil {
+			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
+			return nil, nil, err
+		}
+		mnt, err = constructMount(npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error construct mount: %v", err)
+			return nil, nil, err
+		}
 	}
-	if err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
-		return nil, nil, err
-	}
-	host, port, err := QualifyAddrLocalIP(npc.pe.GetInnerContainerIP(), l.Addr().String())
-	if err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen construct mount %v: %v", addr, err)
-		return nil, nil, err
-	}
-	resaddr := sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, npc.pe.GetNet())
-	return sp.NewMountService(sp.Taddrs{resaddr}), l, err
+	return mnt, l, err
 }
 
 // If true, use the net proxy server for dialing & listening.
@@ -110,7 +114,7 @@ func (npc *NetProxyClnt) proxyDial(mnt *sp.Tmount) (net.Conn, error) {
 	return npc.rpcch.GetReturnedConn()
 }
 
-func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (net.Listener, error) {
+func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error) {
 	npc.Lock()
 	defer npc.Unlock()
 
@@ -118,7 +122,7 @@ func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (net.Listener, error) {
 	if npc.rpcc == nil {
 		if err := npc.init(); err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error dial netproxysrv %v", err)
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyListen request addr", npc.rpcch.conn)
@@ -127,14 +131,16 @@ func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (net.Listener, error) {
 	}
 	res := &proto.ListenResponse{}
 	if err := npc.rpcc.RPC("NetProxySrv.Listen", req, res); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "proxyListen response %v", res)
+	mnt := sp.NewMountFromProto(res.Mount)
+	db.DPrintf(db.NETPROXYCLNT, "proxyListen response mnt %v err %v", mnt, res.Err)
 	// If an error occurred during dialing, bail out
 	if res.Err.ErrCode != 0 {
 		err := sp.NewErr(res.Err)
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Listen: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
-	return npc.rpcch.GetReturnedListener()
+	l, err := npc.rpcch.GetReturnedListener()
+	return mnt, l, err
 }

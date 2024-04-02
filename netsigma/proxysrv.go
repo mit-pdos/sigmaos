@@ -4,7 +4,7 @@ import (
 	"net"
 	"os"
 
-	//	"sigmaos/auth"
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/netsigma/proto"
@@ -14,13 +14,15 @@ import (
 )
 
 type NetProxySrv struct {
-	directDialFn   DialFn
-	directListenFn ListenFn
-	trans          *NetProxyRPCTrans
-	rpcs           *rpcsrv.RPCSrv
+	innerContainerIP sp.Tip
+	auth             auth.AuthSrv
+	directDialFn     DialFn
+	directListenFn   ListenFn
+	trans            *NetProxyRPCTrans
+	rpcs             *rpcsrv.RPCSrv
 }
 
-func NewNetProxySrv() (*NetProxySrv, error) {
+func NewNetProxySrv(ip sp.Tip, as auth.AuthSrv) (*NetProxySrv, error) {
 	// Create the net proxy socket
 	socket, err := net.Listen("unix", sp.SIGMA_NETPROXY_SOCKET)
 	if err != nil {
@@ -30,10 +32,11 @@ func NewNetProxySrv() (*NetProxySrv, error) {
 		db.DFatalf("Err chmod sigmasocket: %v", err)
 	}
 	db.DPrintf(db.TEST, "runServer: netproxysrv listening on %v", sp.SIGMA_NETPROXY_SOCKET)
-
 	nps := &NetProxySrv{
-		directDialFn:   DialDirect,
-		directListenFn: ListenDirect,
+		innerContainerIP: ip,
+		auth:             as,
+		directDialFn:     DialDirect,
+		directListenFn:   ListenDirect,
 	}
 	rpcs := rpcsrv.NewRPCSrv(nps, rpc.NewStatInfo())
 	nps.rpcs = rpcs
@@ -72,6 +75,18 @@ func (nps *NetProxySrv) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.
 	} else {
 		res.Err = sp.NewRerror()
 	}
+	// TODO: get realm
+	mnt, err := constructMount(nps.innerContainerIP, sp.ROOTREALM, proxyListener)
+	if err != nil {
+		db.DFatalf("Error construct mount: %v", err)
+		return err
+	}
+	// Sign the mount
+	if err := nps.auth.MintAndSetMountToken(mnt); err != nil {
+		db.DFatalf("Error sign mount: %v", err)
+		return err
+	}
+	res.Mount = mnt.GetProto()
 	fd, err := listenerToFD(proxyListener)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
@@ -100,6 +115,16 @@ func connToFD(proxyConn net.Conn) (int, error) {
 	}
 	// Return the unix FD for the socket
 	return int(f.Fd()), nil
+}
+
+func constructMount(ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tmount, error) {
+	host, port, err := QualifyAddrLocalIP(ip, l.Addr().String())
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
+		return nil, err
+	}
+	return sp.NewMountService(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}), nil
 }
 
 func (nps *NetProxySrv) Shutdown() {

@@ -10,6 +10,7 @@ message ListenRequest {
 
 message ListenResponse {
         Rerror err = 1;
+        TmountProto mount = 2;
 };
 
 message DialRequest {

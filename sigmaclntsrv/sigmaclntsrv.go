@@ -30,7 +30,6 @@ import (
 type SigmaClntSrv struct {
 	pe   *proc.ProcEnv
 	nps  *netsigma.NetProxySrv
-	auth auth.AuthSrv
 	fidc *fidclnt.FidClnt
 }
 
@@ -69,7 +68,7 @@ func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey
 	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
 	db.DPrintf(db.SCHEDD, "kmgr %v", kmgr)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	nps, err := netsigma.NewNetProxySrv()
+	nps, err := netsigma.NewNetProxySrv(pe.GetInnerContainerIP(), as)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewNetProxySrv: %v", err)
 		return nil, err
@@ -77,7 +76,6 @@ func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey
 	scs := &SigmaClntSrv{
 		pe:   pe,
 		nps:  nps,
-		auth: as,
 		fidc: fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe)),
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)

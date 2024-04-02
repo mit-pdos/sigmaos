@@ -177,11 +177,16 @@ func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, mount *sp.
 	db.DPrintf(db.AUTH, "Mount Authorization check p %v", principal.GetID())
 	pc, err := as.VerifyPrincipalIdentity(principal)
 	if err != nil {
-		db.DPrintf(db.AUTH, "Mount Authorization check failed p %v: err %v", principal.GetID(), err)
+		db.DPrintf(db.AUTH, "Mount Authorization identity check failed p %v: err %v", principal.GetID(), err)
+		return false, err
+	}
+	mc, err := as.VerifyMountTokenGetClaims(principal.GetID(), mount.GetToken())
+	if err != nil {
+		db.DPrintf(db.AUTH, "Mount Authorization token check failed p %v: err %v", principal.GetID(), err)
 		return false, err
 	}
 	// Check if the mount is for the principal's realm
-	if pc.Realm != mount.GetRealm() {
+	if pc.Realm != mc.Realm {
 		err := fmt.Errorf("Mismatch between p %v realm %v and mount %v realm %v", principal.GetID(), pc.Realm, mount, mount.GetRealm())
 		db.DPrintf(db.AUTH, "Mount Authorization check failed p %v: err %v", principal.GetID(), err)
 		return false, err

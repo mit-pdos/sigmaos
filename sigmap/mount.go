@@ -27,6 +27,7 @@ func NewNullMount() *Tmount {
 	return &Tmount{
 		&TmountProto{
 			Claims: NewMountClaimsProto(nil, NOT_SET),
+			Token:  NoToken(),
 		},
 	}
 }

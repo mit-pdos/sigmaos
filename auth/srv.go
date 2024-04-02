@@ -150,9 +150,10 @@ func (as *AuthSrvImpl[M]) verifyPrincipalIdentity(principal *sp.Tprincipal) (*Pr
 }
 
 func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error) {
+	db.DPrintf(db.AUTH, "Attach Authorization check p %v", principal.GetID())
 	pc, err := as.verifyPrincipalIdentity(principal)
 	if err != nil {
-		db.DPrintf(db.AUTH, "Authorization check failed p %v: err %v", principal.GetID(), err)
+		db.DPrintf(db.AUTH, "Attach Authorization check failed p %v: err %v", principal.GetID(), err)
 		return nil, false, err
 	}
 	// Check that the server path is a subpath of one of the allowed paths
@@ -160,28 +161,32 @@ func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPat
 		mntPath := path.Join(as.srvpath, attachPath)
 		db.DPrintf(db.AUTH, "Check if %v or %v is in %v subtree", as.srvpath, mntPath, ap)
 		if as.srvpath == "" && ap == sp.NAMED {
-			db.DPrintf(db.AUTH, "Authorization check to named successful p %v claims %v", principal.GetID(), pc)
+			db.DPrintf(db.AUTH, "Attach Authorization check to named successful p %v claims %v", principal.GetID(), pc)
 			return pc, true, nil
 		}
 		if IsInSubtree(as.srvpath, ap) || IsInSubtree(mntPath, ap) {
-			db.DPrintf(db.AUTH, "Authorization check successful p %v claims %v", principal.GetID(), pc)
+			db.DPrintf(db.AUTH, "Attach Authorization check successful p %v claims %v", principal.GetID(), pc)
 			return pc, true, nil
 		}
 	}
-	db.DPrintf(db.AUTH, "Authorization check failed (path not allowed) srvpath %v p %v claims %v", as.srvpath, principal.GetID(), pc)
+	db.DPrintf(db.AUTH, "Attach Authorization check failed (path not allowed) srvpath %v p %v claims %v", as.srvpath, principal.GetID(), pc)
 	return nil, false, nil
 }
 
-func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, mount *sp.Tmount) (*MountClaims, bool, error) {
+func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, mount *sp.Tmount) (bool, error) {
+	db.DPrintf(db.AUTH, "Mount Authorization check p %v", principal.GetID())
 	pc, err := as.verifyPrincipalIdentity(principal)
 	if err != nil {
-		db.DPrintf(db.AUTH, "Authorization check failed p %v: err %v", principal.GetID(), err)
-		return nil, false, err
+		db.DPrintf(db.AUTH, "Mount Authorization check failed p %v: err %v", principal.GetID(), err)
+		return false, err
 	}
-	_ = pc
-	// TODO
-	db.DFatalf("Unimplemented")
-	return nil, false, nil
+	// Check if the mount is for the principal's realm
+	if pc.Realm != mount.GetRealm() {
+		err := fmt.Errorf("Mismatch between p %v realm %v and mount %v realm %v", principal.GetID(), pc.Realm, mount, mount.GetRealm())
+		db.DPrintf(db.AUTH, "Mount Authorization check failed p %v: err %v", principal.GetID(), err)
+		return false, err
+	}
+	return true, nil
 }
 
 // Mint a token with associated claims

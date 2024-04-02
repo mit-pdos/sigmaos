@@ -18,7 +18,7 @@ type AuthSrv interface {
 	MintMountToken(mnt *sp.Tmount) (*sp.Ttoken, error)
 	MintAndSetMountToken(mnt *sp.Tmount) error
 	VerifyMountTokenGetClaims(principalID sp.TprincipalID, signedMountToken *sp.Ttoken) (*MountClaims, error)
-	MountIsAuthorized(principal *sp.Tprincipal, mnt *sp.Tmount) (*MountClaims, bool, error)
+	MountIsAuthorized(principal *sp.Tprincipal, mnt *sp.Tmount) (bool, error)
 	// Proc tokens
 	MintProcToken(pc *ProcClaims) (*sp.Ttoken, error)
 	MintAndSetProcToken(pe *proc.ProcEnv) error

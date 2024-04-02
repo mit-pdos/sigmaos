@@ -189,14 +189,14 @@ func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip)
 }
 
 // Start the sigmaclntd process
-func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) (*SigmaClntSrvCmd, error) {
+func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid, marshaledKeys []string) (*SigmaClntSrvCmd, error) {
 	p.FinalizeEnv(innerIP, outerIP, uprocdPid)
 	db.DPrintf(db.SIGMACLNTSRV, "ExecSigmaclntsrv: %v", p)
-	if len(p.GetArgs()) != 3 {
+	if len(marshaledKeys) != 3 {
 		db.DPrintf(db.ERROR, "Sigmaclntd usage expects bootstrapped keys")
 		return nil, fmt.Errorf("Sigmaclntd usage expects bootstrapped keys")
 	}
-	cmd := exec.Command("sigmaclntd", p.GetArgs()...)
+	cmd := exec.Command("sigmaclntd", marshaledKeys...)
 	cmd.Env = p.GetEnv()
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

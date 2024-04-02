@@ -23,20 +23,28 @@ import (
 )
 
 type UprocSrv struct {
-	mu       sync.RWMutex
-	ch       chan struct{}
-	pe       *proc.ProcEnv
-	ssrv     *sigmasrv.SigmaSrv
-	kc       *kernelclnt.KernelClnt
-	scsc     *sigmaclntsrv.SigmaClntSrvCmd
-	kernelId string
-	realm    sp.Trealm
-	assigned bool
+	mu              sync.RWMutex
+	ch              chan struct{}
+	pe              *proc.ProcEnv
+	ssrv            *sigmasrv.SigmaSrv
+	kc              *kernelclnt.KernelClnt
+	scsc            *sigmaclntsrv.SigmaClntSrvCmd
+	kernelId        string
+	realm           sp.Trealm
+	assigned        bool
+	sigmaclntdPID   sp.Tpid
+	marshaledSCKeys []string
 }
 
-func RunUprocSrv(kernelId string, up string) error {
+func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCKeys []string) error {
 	pe := proc.GetProcEnv()
-	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pe: pe}
+	ups := &UprocSrv{
+		kernelId:        kernelId,
+		ch:              make(chan struct{}),
+		pe:              pe,
+		sigmaclntdPID:   sigmaclntdPID,
+		marshaledSCKeys: marshaledSCKeys,
+	}
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
 
@@ -153,12 +161,11 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	ups.assigned = true
 
 	// Now that the uprocd's innerIP has been established, spawn sigmaclntd
-	pid := sp.GenPid("sigmaclntd")
-	scdp := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
+	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
 	scdp.InheritParentProcEnv(ups.pe)
 	scdp.SetHow(proc.HLINUX)
 	start = time.Now()
-	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET, ups.marshaledSCKeys)
 	if err != nil {
 		return err
 	}

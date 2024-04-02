@@ -199,7 +199,7 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	if err != nil {
 		return nil, err
 	}
-	p := proc.NewPrivProcPid(pid, "sigmaclntd", keys, true)
+	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
 	p.SetAllowedPaths(sp.ALL_PATHS)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	if err := k.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
@@ -208,14 +208,22 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	}
 	p.SetHow(proc.HLINUX)
 	p.InheritParentProcEnv(k.ProcEnv())
-	return sigmaclntsrv.ExecSigmaClntSrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"))
+	return sigmaclntsrv.ExecSigmaClntSrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"), keys)
 }
 
 // Start uprocd in a sigmauser container and post the mount for
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
-	s, err := k.bootSubsystem("uprocd", args, sp.ROOTREALM, proc.HDOCKER)
+	sigmaclntdPID := sp.GenPid("sigmaclntd")
+	// bootstrap keys for sigmaclntd
+	keys, err := k.bootstrapKeys(sigmaclntdPID)
+	if err != nil {
+		return nil, err
+	}
+	sigmaclntdArgs := append([]string{sigmaclntdPID.String()}, keys...)
+	db.DPrintf(db.ALWAYS, "Uprocd args %v", args)
+	s, err := k.bootSubsystem("uprocd", append(args, sigmaclntdArgs...), sp.ROOTREALM, proc.HDOCKER)
 	if err != nil {
 		return nil, err
 	}

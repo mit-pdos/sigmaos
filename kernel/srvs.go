@@ -194,7 +194,12 @@ func (k *Kernel) bootNamed() (Subsystem, error) {
 
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	pid := sp.GenPid("sigmaclntd")
-	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
+	// bootstrap keys for sigmaclntd
+	keys, err := k.bootstrapKeys(pid)
+	if err != nil {
+		return nil, err
+	}
+	p := proc.NewPrivProcPid(pid, "sigmaclntd", keys, true)
 	p.SetAllowedPaths(sp.ALL_PATHS)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	if err := k.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {

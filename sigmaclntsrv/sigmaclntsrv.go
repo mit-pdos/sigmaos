@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 
+	"sigmaos/auth"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
@@ -22,12 +23,13 @@ import (
 // SigmaClntSrv maintains the state of the sigmaclntsrv. All
 // SigmaSrvClnt's share one fid table
 type SigmaClntSrv struct {
-	pe     *proc.ProcEnv
-	nproxy *netsigma.NetProxySrv
-	fidc   *fidclnt.FidClnt
+	pe   *proc.ProcEnv
+	nps  *netsigma.NetProxySrv
+	auth auth.AuthSrv
+	fidc *fidclnt.FidClnt
 }
 
-func newSigmaClntSrv() (*SigmaClntSrv, error) {
+func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) (*SigmaClntSrv, error) {
 	pe := proc.GetProcEnv()
 	nps, err := netsigma.NewNetProxySrv()
 	if err != nil {
@@ -35,9 +37,9 @@ func newSigmaClntSrv() (*SigmaClntSrv, error) {
 		return nil, err
 	}
 	scs := &SigmaClntSrv{
-		pe:     pe,
-		nproxy: nps,
-		fidc:   fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe)),
+		pe:   pe,
+		nps:  nps,
+		fidc: fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe)),
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)
 	return scs, nil
@@ -64,7 +66,7 @@ func (scs *SigmaClntSrv) runServer() error {
 		db.DPrintf(db.SIGMACLNTSRV, "exiting")
 		os.Remove(sp.SIGMASOCKET)
 		scs.fidc.Close()
-		scs.nproxy.Shutdown()
+		scs.nps.Shutdown()
 		os.Exit(0)
 	}()
 
@@ -78,8 +80,8 @@ func (scs *SigmaClntSrv) runServer() error {
 }
 
 // The sigmaclntd process enter here
-func RunSigmaClntSrv(args []string) error {
-	scs, err := newSigmaClntSrv()
+func RunSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+	scs, err := newSigmaClntSrv(masterPubkey, pubkey, privkey)
 	if err != nil {
 		db.DPrintf(db.SIGMACLNTSRV, "runServer err %v\n", err)
 		return err

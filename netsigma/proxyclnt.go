@@ -1,6 +1,7 @@
 package netsigma
 
 import (
+	"fmt"
 	"net"
 	"sync"
 
@@ -97,6 +98,11 @@ func (npc *NetProxyClnt) proxyDial(mnt *sp.Tmount) (net.Conn, error) {
 		}
 	}
 	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request mnt %v", npc.rpcch.conn, mnt)
+	// Mounts should always have realms specified
+	if mnt.GetRealm() == sp.NOT_SET {
+		db.DPrintf(db.ERROR, "Dial mount without realm set: %v", mnt)
+		return nil, fmt.Errorf("Realm not set")
+	}
 	req := &proto.DialRequest{
 		Mount: mnt.GetProto(),
 	}

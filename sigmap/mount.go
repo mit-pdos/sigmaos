@@ -79,17 +79,18 @@ func (mnt *Tmount) Addresses() Taddrs {
 }
 
 // TODO XXX take in realm
-func NewMountService(srvaddrs Taddrs) *Tmount {
+func NewMountService(srvaddrs Taddrs, realm Trealm) *Tmount {
 	return &Tmount{
 		&TmountProto{
-			Claims: NewMountClaimsProto(srvaddrs, NOT_SET),
+			Claims: NewMountClaimsProto(srvaddrs, realm),
 		},
 	}
 }
 
-func NewMountServer(addr *Taddr) *Tmount {
+// TODO XXX dedup
+func NewMountServer(addr *Taddr, realm Trealm) *Tmount {
 	addrs := []*Taddr{addr}
-	return NewMountService(addrs)
+	return NewMountService(addrs, realm)
 }
 
 func (mnt *Tmount) TargetIPPort(idx int) (Tip, Tport) {

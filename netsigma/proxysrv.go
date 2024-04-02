@@ -47,6 +47,12 @@ func NewNetProxySrv(ip sp.Tip, as auth.AuthSrv) (*NetProxySrv, error) {
 func (nps *NetProxySrv) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.DialResponse) error {
 	mnt := sp.NewMountFromProto(req.GetMount())
 	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> mnt %v", ctx.Principal(), mnt)
+	// Verify the principal is authorized to establish the connection
+	if _, err := nps.auth.MountIsAuthorized(ctx.Principal(), mnt); err != nil {
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error Dial unauthorized mount: %v", err)
+		res.Err = sp.NewRerrorErr(err)
+		return nil
+	}
 	proxyConn, err := nps.directDialFn(mnt)
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {
@@ -70,7 +76,9 @@ func (nps *NetProxySrv) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.
 	db.DPrintf(db.NETPROXYSRV, "Listen principal %v", ctx.Principal())
 	// Verify the principal is who they say they are
 	if _, err := nps.auth.VerifyPrincipalIdentity(ctx.Principal()); err != nil {
-		return err
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen unable to verify principal identity: %v", err)
+		res.Err = sp.NewRerrorErr(err)
+		return nil
 	}
 	proxyListener, err := nps.directListenFn(req.GetAddr())
 	// If Dial was unsuccessful, set the reply error appropriately
@@ -130,7 +138,7 @@ func constructMount(ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tmount, err
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		return nil, err
 	}
-	return sp.NewMountService(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}), nil
+	return sp.NewMountService(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm), nil
 }
 
 func (nps *NetProxySrv) Shutdown() {

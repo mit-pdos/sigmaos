@@ -131,7 +131,7 @@ func (as *AuthSrvImpl[M]) VerifyProcTokenGetClaims(principalID sp.TprincipalID, 
 	return nil, fmt.Errorf("Claims wrong type")
 }
 
-func (as *AuthSrvImpl[M]) verifyPrincipalIdentity(principal *sp.Tprincipal) (*ProcClaims, error) {
+func (as *AuthSrvImpl[M]) VerifyPrincipalIdentity(principal *sp.Tprincipal) (*ProcClaims, error) {
 	db.DPrintf(db.AUTH, "Verify ID p %v", principal.GetID())
 	pc, err := as.VerifyProcTokenGetClaims(principal.GetID(), principal.GetToken())
 	if err != nil {
@@ -151,7 +151,7 @@ func (as *AuthSrvImpl[M]) verifyPrincipalIdentity(principal *sp.Tprincipal) (*Pr
 
 func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error) {
 	db.DPrintf(db.AUTH, "Attach Authorization check p %v", principal.GetID())
-	pc, err := as.verifyPrincipalIdentity(principal)
+	pc, err := as.VerifyPrincipalIdentity(principal)
 	if err != nil {
 		db.DPrintf(db.AUTH, "Attach Authorization check failed p %v: err %v", principal.GetID(), err)
 		return nil, false, err
@@ -175,7 +175,7 @@ func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPat
 
 func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, mount *sp.Tmount) (bool, error) {
 	db.DPrintf(db.AUTH, "Mount Authorization check p %v", principal.GetID())
-	pc, err := as.verifyPrincipalIdentity(principal)
+	pc, err := as.VerifyPrincipalIdentity(principal)
 	if err != nil {
 		db.DPrintf(db.AUTH, "Mount Authorization check failed p %v: err %v", principal.GetID(), err)
 		return false, err

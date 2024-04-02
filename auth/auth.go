@@ -14,6 +14,7 @@ type KeyMgr interface {
 
 type AuthSrv interface {
 	SetDelegatedProcToken(p *proc.Proc) error
+	VerifyPrincipalIdentity(principal *sp.Tprincipal) (*ProcClaims, error)
 	// Mount tokens
 	MintMountToken(mnt *sp.Tmount) (*sp.Ttoken, error)
 	MintAndSetMountToken(mnt *sp.Tmount) error

@@ -68,6 +68,10 @@ func (nps *NetProxySrv) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.Dial
 
 func (nps *NetProxySrv) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.ListenResponse) error {
 	db.DPrintf(db.NETPROXYSRV, "Listen principal %v", ctx.Principal())
+	// Verify the principal is who they say they are
+	if _, err := nps.auth.VerifyPrincipalIdentity(ctx.Principal()); err != nil {
+		return err
+	}
 	proxyListener, err := nps.directListenFn(req.GetAddr())
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {

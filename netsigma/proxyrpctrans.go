@@ -5,10 +5,13 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"google.golang.org/protobuf/proto"
+
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/frame"
 	"sigmaos/rpcsrv"
+	sp "sigmaos/sigmap"
 )
 
 type NetProxyRPCTrans struct {
@@ -41,6 +44,18 @@ func (npt *NetProxyRPCTrans) runTransport() error {
 func (npt *NetProxyRPCTrans) handleNewConn(conn *net.UnixConn) {
 	defer conn.Close()
 
+	b, err := frame.ReadFrame(conn)
+	if err != nil {
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error Read PrincipalID frame: %v", err)
+		return
+	}
+	p := sp.NoPrincipal()
+	if err := proto.Unmarshal(b, p); err != nil {
+		db.DPrintf(db.ERROR, "Error Unmarshal PrincipalID: %v", err)
+		return
+	}
+	db.DPrintf(db.NETPROXYSRV, "Handle connection from principal %v", p)
+
 	for {
 		// Read the RPC
 		req, err := frame.ReadFrames(conn)
@@ -48,7 +63,7 @@ func (npt *NetProxyRPCTrans) handleNewConn(conn *net.UnixConn) {
 			db.DPrintf(db.NETPROXYSRV_ERR, "Error ReadFrame: %v", err)
 			return
 		}
-		ctx := NewWrapperCtx(ctx.NewCtxNull())
+		ctx := NewWrapperCtx(ctx.NewPrincipalOnlyCtx(p))
 		// Handle the RPC
 		rep, err := npt.rpcs.WriteRead(ctx, req)
 		if err != nil {

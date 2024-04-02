@@ -7,8 +7,11 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"google.golang.org/protobuf/proto"
+
 	db "sigmaos/debug"
 	"sigmaos/frame"
+	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -18,11 +21,22 @@ type NetProxyRPCCh struct {
 	conn *net.UnixConn
 }
 
-func NewNetProxyRPCCh() (*NetProxyRPCCh, error) {
+func NewNetProxyRPCCh(pe *proc.ProcEnv) (*NetProxyRPCCh, error) {
 	// Connect to the netproxy server
 	conn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error dial netproxy srv")
+		return nil, err
+	}
+	b, err := proto.Marshal(pe.GetPrincipal())
+	if err != nil {
+		db.DFatalf("Error marshal principal: %v", err)
+		return nil, err
+	}
+	// Write the authenticated principal ID to the server, so that the server
+	// knows the principal associated with this connection
+	if err := frame.WriteFrame(conn, b); err != nil {
+		db.DPrintf(db.ERROR, "Error WriteFrame principal: %v", err)
 		return nil, err
 	}
 	return &NetProxyRPCCh{

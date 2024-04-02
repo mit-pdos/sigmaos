@@ -76,7 +76,7 @@ func (npc *NetProxyClnt) useProxy() bool {
 // Lazily init connection to the netproxy srv
 func (npc *NetProxyClnt) init() error {
 	// Connect to the netproxy server
-	ch, err := NewNetProxyRPCCh()
+	ch, err := NewNetProxyRPCCh(npc.pe)
 	if err != nil {
 		return err
 	}

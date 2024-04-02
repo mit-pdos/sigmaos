@@ -10,14 +10,18 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/keys"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -30,8 +34,41 @@ type SigmaClntSrv struct {
 	fidc *fidclnt.FidClnt
 }
 
+// Bootstrap the sigmacltnsrv's ProcEnv by self-signing the token
+func bootstrapToken(pe *proc.ProcEnv, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(pubkey)))
+	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv: %v", err)
+		return err
+	}
+	if err := as.MintAndSetProcToken(pe); err != nil {
+		db.DFatalf("Error MintToken: %v", err)
+		return err
+	}
+	return nil
+}
+
 func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) (*SigmaClntSrv, error) {
 	pe := proc.GetProcEnv()
+	if err := bootstrapToken(pe, pubkey, privkey); err != nil {
+		db.DFatalf("Error bootstrap token: %v", err)
+		return nil, err
+	}
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+		return nil, err
+	}
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
+	// Add the master deployment key
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubkey)
+	// Add this sigmaclntd's keypair to the keymgr
+	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), pubkey)
+	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
+	db.DPrintf(db.SCHEDD, "kmgr %v", kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	nps, err := netsigma.NewNetProxySrv()
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewNetProxySrv: %v", err)
@@ -40,6 +77,7 @@ func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey
 	scs := &SigmaClntSrv{
 		pe:   pe,
 		nps:  nps,
+		auth: as,
 		fidc: fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe)),
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)

@@ -2,7 +2,6 @@ package binsrv
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -53,6 +52,7 @@ type downloader struct {
 	kernelId string
 	sc       *sigmaclnt.SigmaClnt
 	sz       sp.Tsize
+	pid      uint32
 	chunks   chksT
 	readers  readersT
 	n        int64
@@ -62,7 +62,7 @@ type downloader struct {
 	tot      time.Duration
 }
 
-func newDownload(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, kernelId string, sz sp.Tsize) *downloader {
+func newDownload(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, kernelId string, sz sp.Tsize, pid uint32) *downloader {
 	dl := &downloader{
 		pn:       pn,
 		sc:       sc,
@@ -72,12 +72,13 @@ func newDownload(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt,
 		sz:       sz,
 		ch:       make(chan *reader),
 		kernelId: kernelId,
+		pid:      pid,
 	}
 	return dl
 }
 
-func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, kernelId string, sz sp.Tsize) (*downloader, error) {
-	dl := newDownload(pn, sc, updc, kernelId, sz)
+func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, kernelId string, sz sp.Tsize, pid uint32) (*downloader, error) {
+	dl := newDownload(pn, sc, updc, kernelId, sz, pid)
 	go dl.downloader()
 	return dl, nil
 }
@@ -116,10 +117,8 @@ func (dl *downloader) cacheRemoteChunk(ck int) error {
 // Fetch chunk through uprocd, which will fill in the realm and
 // write it a local file, which binsrv can read.
 func (dl *downloader) readRemoteChunk(ck int) (int64, error) {
-	prog, paths := downloadPaths(dl.pn, dl.kernelId)
 	db.DPrintf(db.BINSRV, "readRemoteChunk invoke %q read ck %d\n", dl.pn, ck)
-
-	sz, err := dl.updc.Fetch(prog, ck, dl.sz, paths)
+	sz, err := dl.updc.Fetch(dl.pn, ck, dl.sz, dl.pid)
 	if err != nil {
 		db.DPrintf(db.ERROR, "readRemoteChunk %q fetch %d err %v\n", dl.pn, ck, err)
 		return 0, err
@@ -190,16 +189,4 @@ func (dl *downloader) read(off int64, len int) (int, error) {
 		n += dl.chunks[c]
 	}
 	return min(n-o, len), err
-}
-
-func downloadPaths(pn, kernelId string) (string, []string) {
-	bin, paths := binPathParse(pn)
-
-	// XXX hack; how to handle ~local?
-	for i, p := range paths {
-		if strings.HasPrefix(p, sp.UX) {
-			paths[i] = strings.Replace(p, "~local", kernelId, 1)
-		}
-	}
-	return bin, paths
 }

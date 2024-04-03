@@ -39,11 +39,10 @@ func (f *binfsFile) open() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.fd == -1 {
-		prog, _ := binPathParse(f.pn)
-		pn := binCachePath(prog)
+		pn := binCachePath(f.pn)
 		fd, err := syscall.Open(pn, syscall.O_RDONLY, 0)
 		if err != nil {
-			db.DFatalf("open %q err %v", pn, err)
+			db.DFatalf("open %q err %v", f.pn, err)
 		}
 		f.fd = fd
 	}

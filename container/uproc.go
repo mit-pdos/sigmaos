@@ -15,13 +15,25 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type uprocCmd struct {
+	cmd *exec.Cmd
+}
+
+func (upc *uprocCmd) Wait() error {
+	return upc.cmd.Wait()
+}
+
+func (upc *uprocCmd) Pid() int {
+	return upc.cmd.Process.Pid
+}
+
 // Contain user procs using exec-uproc-rs trampoline
-func RunUProc(uproc *proc.Proc) error {
+func StartUProc(uproc *proc.Proc) (*uprocCmd, error) {
 	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
 
-	pn := binsrv.BinPath(uproc.GetProgram(), uproc.GetSigmaPath())
+	pn := binsrv.BinPath(uproc.GetProgram())
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
 		cmd = exec.Command("strace", append([]string{"-f", "exec-uproc-rs", uproc.GetPid().String(), pn}, uproc.Args...)...)
@@ -48,15 +60,10 @@ func RunUProc(uproc *proc.Proc) error {
 	s := time.Now()
 	if err := cmd.Start(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error start %v %v", cmd, err)
-		return err
+		return nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc cmd.Start %v", uproc.GetPid(), time.Since(s))
-
-	if err := cmd.Wait(); err != nil {
-		return err
-	}
-	db.DPrintf(db.CONTAINER, "ExecUProc done  %v\n", uproc)
-	return nil
+	return &uprocCmd{cmd: cmd}, nil
 }
 
 func cleanupJail(pid sp.Tpid) {

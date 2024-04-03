@@ -73,21 +73,36 @@ func (clnt *UprocdClnt) WarmProc(realm sp.Trealm, prog string, path []string) (u
 	}
 }
 
-func (clnt *UprocdClnt) Fetch(pn string, ck int, sz sp.Tsize, path []string) (sp.Tsize, error) {
+func (clnt *UprocdClnt) Fetch(pn string, ck int, sz sp.Tsize, pid uint32) (sp.Tsize, error) {
 	s := time.Now()
 	req := &proto.FetchRequest{
 		Prog:    pn,
 		ChunkId: int32(ck),
 		Size:    uint64(sz),
-		Path:    path,
+		Pid:     pid,
 	}
 	res := &proto.FetchResponse{}
 	if err := clnt.RPC("UprocSrv.Fetch", req, res); err != nil {
-		db.DPrintf(db.CHUNKCLNT, "UprocSrv.Fetch %v err %v", req, err)
+		db.DPrintf(db.ERROR, "UprocSrv.Fetch %v err %v", req, err)
 		return 0, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch latency from clnt %d %v", pn, ck, time.Since(s))
 	return sp.Tsize(res.Size), nil
+}
+
+func (clnt *UprocdClnt) Lookup(pn string, pid uint32) (*sp.Stat, error) {
+	s := time.Now()
+	req := &proto.LookupRequest{
+		Prog: pn,
+		Pid:  pid,
+	}
+	res := &proto.LookupResponse{}
+	if err := clnt.RPC("UprocSrv.Lookup", req, res); err != nil {
+		db.DPrintf(db.ERROR, "UprocSrv.Looup %v err %v", req, err)
+		return nil, err
+	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup latency from clnt %v", pn, time.Since(s))
+	return res.Stat, nil
 }
 
 func (clnt *UprocdClnt) Assign() error {

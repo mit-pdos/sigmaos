@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 	"syscall"
 	"time"
 
@@ -39,22 +38,12 @@ const (
 	DEBUG = false
 )
 
-func BinPath(program string, p []string) string {
-	x := strings.Join(p, ":")
-	x = strings.Replace(x, "/", ",", -1)
-	return BINFSMNT + program + ":" + x
+func BinPath(program string) string {
+	return BINFSMNT + program
 }
 
 func binCachePath(program string) string {
 	return BINCACHE + program
-}
-
-func binPathParse(pn string) (string, []string) {
-	ss := strings.Split(pn, ":")
-	for i, p := range ss[1:] {
-		ss[i+1] = strings.Replace(p, ",", "/", -1)
-	}
-	return ss[0], ss[1:]
 }
 
 type binFsRoot struct {

@@ -3,6 +3,7 @@ package chunksrv
 import (
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	proto "sigmaos/chunksrv/proto"
@@ -33,6 +34,40 @@ type ChunkSrv struct {
 func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 	cksrv := &ChunkSrv{sc: sc, kernelId: kernelId}
 	return cksrv
+}
+
+func downloadPaths(paths []string, kernelId string) []string {
+	// XXX hack; how to handle ~local?
+	for i, p := range paths {
+		if strings.HasPrefix(p, sp.UX) {
+			paths[i] = strings.Replace(p, "~local", kernelId, 1)
+		}
+	}
+	return paths
+}
+
+func Lookup(sc *sigmaclnt.SigmaClnt, prog, kernelId string, path []string) (*sp.Stat, error) {
+	paths := downloadPaths(path, kernelId)
+	db.DPrintf(db.CHUNKSRV, "Lookup %q %v\n", prog, paths)
+
+	s := time.Now()
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v", prog, paths)
+
+	var st *sp.Stat
+	err := fslib.RetryPaths(paths, func(i int, pn string) error {
+		db.DPrintf(db.CHUNKSRV, "Stat %q/%q\n", pn, prog)
+		sst, err := sc.Stat(pn + "/" + prog)
+		if err == nil {
+			sst.Dev = uint32(i)
+			st = sst
+			return nil
+		}
+		return err
+	})
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v %v", prog, paths, time.Since(s))
+
+	return st, err
 }
 
 func Fetch(sc *sigmaclnt.SigmaClnt, pn, prog string, ckid int, path []string) (sp.Tsize, error) {

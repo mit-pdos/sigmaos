@@ -42,11 +42,18 @@ type UprocSrv struct {
 	kernelId string
 	realm    sp.Trealm
 	sc       *sigmaclnt.SigmaClnt
+	procs    map[int]*proc.Proc
 }
 
 func RunUprocSrv(kernelId string, up string) error {
 	pe := proc.GetProcEnv()
-	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pe: pe, realm: sp.NOREALM}
+	ups := &UprocSrv{
+		kernelId: kernelId,
+		ch:       make(chan struct{}),
+		pe:       pe,
+		realm:    sp.NOREALM,
+		procs:    make(map[int]*proc.Proc),
+	}
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
 
@@ -214,7 +221,14 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-	return container.RunUProc(uproc)
+	cmd, err := container.StartUProc(uproc)
+	if err != nil {
+		return err
+	}
+	ups.procs[cmd.Pid()] = uproc
+	err = cmd.Wait()
+	delete(ups.procs, cmd.Pid())
+	return err
 }
 
 // Read the binary so that binfs loads it into its cache for
@@ -240,7 +254,7 @@ func readFile(pn string) error {
 
 // Warm uprocd to run a program for experiments with warm start.
 func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
-	pn := binsrv.BinPath(req.Program, req.SigmaPath)
+	pn := binsrv.BinPath(req.Program)
 	db.DPrintf(db.UPROCD, "WarmProc %q %v", pn, req)
 	if err := ups.assignToRealm(sp.Trealm(req.RealmStr), sp.NO_PID); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
@@ -274,12 +288,31 @@ func mountRealmBinDir(realm sp.Trealm) error {
 }
 
 func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.FetchResponse) error {
-	db.DPrintf(db.CHUNKSRV, "Uprocd fetch %v", req)
+	db.DPrintf(db.UPROCD, "Uprocd fetch %v", req)
 	pn := path.Join(sp.SIGMAHOME, "all-realm-bin", ups.realm.String(), req.Prog)
-	sz, err := chunksrv.Fetch(ups.sc, pn, req.Prog, int(req.ChunkId), req.Path)
+
+	uproc, ok := ups.procs[int(req.Pid)]
+	if !ok {
+		db.DFatalf("Fetch: no proc for %d\n", req.Pid)
+	}
+	sz, err := chunksrv.Fetch(ups.sc, pn, req.Prog, int(req.ChunkId), uproc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
 	res.Size = uint64(sz)
+	return nil
+}
+
+func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.LookupResponse) error {
+	db.DPrintf(db.UPROCD, "Uprocd Lookup %v", req)
+	uproc, ok := ups.procs[int(req.Pid)]
+	if !ok {
+		db.DFatalf("Fetch: no proc for %d\n", req.Pid)
+	}
+	st, err := chunksrv.Lookup(ups.sc, req.Prog, ups.kernelId, uproc.GetSigmaPath())
+	if err != nil {
+		return err
+	}
+	res.Stat = st
 	return nil
 }

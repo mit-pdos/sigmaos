@@ -36,13 +36,14 @@ var _ = (fs.NodeLookuper)((*binFsNode)(nil))
 
 // Lookup name in bincache and fake a unix inode
 func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-	db.DPrintf(db.BINSRV, "%v: Lookup %q\n", n.path(), name)
+	c := ctx.(*fuse.Context).Caller
+	db.DPrintf(db.BINSRV, "%v: Lookup %q %d\n", n.path(), name, c.Pid)
 
 	pn := filepath.Join(n.path(), name)
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] fuse lookup", pn)
 
-	sst, err := n.RootData.bincache.lookup(pn)
+	sst, err := n.RootData.bincache.lookup(pn, c.Pid)
 	if err != nil {
 		return nil, fs.ToErrno(os.ErrNotExist)
 	}
@@ -63,11 +64,12 @@ var _ = (fs.NodeOpener)((*binFsNode)(nil))
 func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
 	p := n.path()
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] fuse open", p)
+	c := ctx.(*fuse.Context).Caller
+	db.DPrintf(db.SPAWN_LAT, "[%v] fuse open %d", p, c.Pid)
 
 	db.DPrintf(db.BINSRV, "%v: Open %q\n", n, p)
 
-	dl, err := n.RootData.bincache.getDownload(p, n.sz)
+	dl, err := n.RootData.bincache.getDownload(p, n.sz, c.Pid)
 	if err != nil {
 		return nil, 0, fs.ToErrno(os.ErrNotExist)
 	}
@@ -95,8 +97,9 @@ func (n *binFsNode) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 var _ = (fs.NodeGetattrer)((*binFsNode)(nil))
 
 func (n *binFsNode) Getattr(ctx context.Context, f fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
+	c := ctx.(*fuse.Context).Caller
 	pn := n.path()
-	sst, err := n.RootData.bincache.lookup(pn)
+	sst, err := n.RootData.bincache.lookup(pn, c.Pid)
 	if err != nil {
 		return fs.ToErrno(os.ErrNotExist)
 	}

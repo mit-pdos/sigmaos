@@ -3,12 +3,10 @@ package binsrv
 import (
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
@@ -51,30 +49,6 @@ type bincache struct {
 	updc     *uprocclnt.UprocdClnt
 }
 
-func (bc *bincache) sStat(pn string) (*sp.Stat, error) {
-	bin, paths := downloadPaths(pn, bc.kernelId)
-	db.DPrintf(db.BINSRV, "sStat %q %v\n", bin, paths)
-
-	s := time.Now()
-	db.DPrintf(db.SPAWN_LAT, "[%v] sStat %v", bin, paths)
-
-	var st *sp.Stat
-	err := fslib.RetryPaths(paths, func(i int, pn string) error {
-		db.DPrintf(db.BINSRV, "Stat %q/%q\n", pn, bin)
-		sst, err := bc.sc.Stat(pn + "/" + bin)
-		if err == nil {
-			sst.Dev = uint32(i)
-			st = sst
-			return nil
-		}
-		return err
-	})
-
-	db.DPrintf(db.SPAWN_LAT, "[%v] sStat %v %v", bin, paths, time.Since(s))
-
-	return st, err
-}
-
 func newBinCache(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) *bincache {
 	bc := &bincache{
 		cache:    make(map[string]*entry),
@@ -86,7 +60,7 @@ func newBinCache(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.Uproc
 }
 
 // Check cache first. If not present, Stat file in sigmaos.
-func (bc *bincache) lookup(pn string) (*sp.Stat, error) {
+func (bc *bincache) lookup(pn string, pid uint32) (*sp.Stat, error) {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
@@ -94,7 +68,7 @@ func (bc *bincache) lookup(pn string) (*sp.Stat, error) {
 	if ok {
 		return e.st, nil
 	}
-	st, err := bc.sStat(pn)
+	st, err := bc.updc.Lookup(pn, pid)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +77,7 @@ func (bc *bincache) lookup(pn string) (*sp.Stat, error) {
 	return st, nil
 }
 
-func (bc *bincache) getDownload(pn string, sz sp.Tsize) (*downloader, error) {
+func (bc *bincache) getDownload(pn string, sz sp.Tsize, pid uint32) (*downloader, error) {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
@@ -114,7 +88,7 @@ func (bc *bincache) getDownload(pn string, sz sp.Tsize) (*downloader, error) {
 
 	if e.dl == nil {
 		db.DPrintf(db.BINSRV, "getDownload: new downloader %q\n", pn)
-		if dl, err := newDownloader(pn, bc.sc, bc.updc, bc.kernelId, sz); err != nil {
+		if dl, err := newDownloader(pn, bc.sc, bc.updc, bc.kernelId, sz, pid); err != nil {
 			return nil, err
 		} else {
 			e.dl = dl

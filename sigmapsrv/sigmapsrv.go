@@ -15,6 +15,7 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
+	"sigmaos/netsigma"
 	"sigmaos/overlaydir"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -38,7 +39,7 @@ type SigmaPSrv struct {
 	stats    *stats.StatInfo
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, root fs.Dir, as auth.AuthSrv, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, root fs.Dir, as auth.AuthSrv, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
 	psrv := &SigmaPSrv{
 		dirunder: root,
 		dirover:  overlay.MkDirOverlay(root),
@@ -48,12 +49,12 @@ func NewSigmaPSrv(pe *proc.ProcEnv, root fs.Dir, as auth.AuthSrv, addr *sp.Taddr
 	psrv.ProtSrvState = protsrv.NewProtSrvState(as, psrv.stats)
 	psrv.VersionTable().Insert(psrv.dirover.Path())
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
-	psrv.SessSrv = sesssrv.NewSessSrv(pe, addr, psrv.stats, psrv)
+	psrv.SessSrv = sesssrv.NewSessSrv(pe, npc, addr, psrv.stats, psrv)
 	return psrv
 }
 
 func NewSigmaPSrvPost(root fs.Dir, pn string, as auth.AuthSrv, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
-	psrv := NewSigmaPSrv(sc.ProcEnv(), root, as, addr, fencefs)
+	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, as, addr, fencefs)
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
 			return nil, "", err

@@ -59,7 +59,7 @@ func newFsLibFidClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, fidc *fidclnt
 }
 
 func NewFsLib(pe *proc.ProcEnv) (*fslib.FsLib, error) {
-	return newFsLibFidClnt(pe, netsigma.NewNetProxyClnt(pe), nil)
+	return newFsLibFidClnt(pe, netsigma.NewNetProxyClnt(pe, nil), nil)
 }
 
 // Convert to SigmaClntKernel from SigmaClnt
@@ -78,14 +78,14 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 		FsLib:     sck.FsLib,
 		ProcAPI:   sck.ProcClnt,
 		LeaseClnt: sck.LeaseClnt,
-		npc:       netsigma.NewNetProxyClnt(sck.ProcEnv()),
+		npc:       netsigma.NewNetProxyClnt(sck.ProcEnv(), nil),
 	}
 	return sc
 }
 
 // Create a SigmaClnt (using sigmaclntd or fdclient), as a proc, without ProcAPI.
 func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
-	npc := netsigma.NewNetProxyClnt(pe)
+	npc := netsigma.NewNetProxyClnt(pe, nil)
 	fsl, err := newFsLibFidClnt(pe, npc, fidc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)

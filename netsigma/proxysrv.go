@@ -90,14 +90,9 @@ func (nps *NetProxySrv) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.
 		res.Err = sp.NewRerror()
 	}
 	// Construct a mount for the listener
-	mnt, err := constructMount(nps.innerContainerIP, ctx.Principal().GetRealm(), proxyListener)
+	mnt, err := constructMount(nps.auth, nps.innerContainerIP, ctx.Principal().GetRealm(), proxyListener)
 	if err != nil {
 		db.DFatalf("Error construct mount: %v", err)
-		return err
-	}
-	// Sign the mount
-	if err := nps.auth.MintAndSetMountToken(mnt); err != nil {
-		db.DFatalf("Error sign mount: %v", err)
 		return err
 	}
 	res.Mount = mnt.GetProto()
@@ -131,14 +126,20 @@ func connToFD(proxyConn net.Conn) (int, error) {
 	return int(f.Fd()), nil
 }
 
-func constructMount(ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tmount, error) {
+func constructMount(as auth.AuthSrv, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tmount, error) {
 	host, port, err := QualifyAddrLocalIP(ip, l.Addr().String())
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		return nil, err
 	}
-	return sp.NewMountService(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm), nil
+	mnt := sp.NewMountService(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm)
+	// Sign the mount
+	if err := as.MintAndSetMountToken(mnt); err != nil {
+		db.DFatalf("Error sign mount: %v", err)
+		return nil, err
+	}
+	return mnt, nil
 }
 
 func (nps *NetProxySrv) Shutdown() {

@@ -50,7 +50,7 @@ func main() {
 		db.DFatalf("Error MintToken: %v", err1)
 	}
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	npc := netsigma.NewNetProxyClnt(pe)
+	npc := netsigma.NewNetProxyClnt(pe, as)
 	npd := proxy.NewNpd(pe, npc, lip)
 	netsrv.NewNetServer(pe, npc, addr, npd)
 	ch := make(chan struct{})

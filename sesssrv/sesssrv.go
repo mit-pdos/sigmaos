@@ -44,7 +44,7 @@ func NewSessSrv(pe *proc.ProcEnv, addr *sp.Taddr, stats *stats.StatInfo, newSess
 		stats: stats,
 		st:    newSessionTable(newSess),
 	}
-	ssrv.srv = netsrv.NewNetServer(pe, netsigma.NewNetProxyClnt(pe), addr, ssrv)
+	ssrv.srv = netsrv.NewNetServer(pe, netsigma.NewNetProxyClnt(pe, nil), addr, ssrv)
 	ssrv.sm = newSessionMgr(ssrv.st, ssrv.srvFcall)
 	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.GetMount())
 	return ssrv

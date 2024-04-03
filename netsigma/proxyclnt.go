@@ -5,6 +5,7 @@ import (
 	"net"
 	"sync"
 
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/netsigma/proto"
 	"sigmaos/proc"
@@ -15,15 +16,17 @@ import (
 type NetProxyClnt struct {
 	sync.Mutex
 	pe             *proc.ProcEnv
+	auth           auth.AuthSrv
 	directDialFn   DialFn
 	directListenFn ListenFn
 	rpcc           *rpcclnt.RPCClnt
 	rpcch          *NetProxyRPCCh
 }
 
-func NewNetProxyClnt(pe *proc.ProcEnv) *NetProxyClnt {
+func NewNetProxyClnt(pe *proc.ProcEnv, as auth.AuthSrv) *NetProxyClnt {
 	return &NetProxyClnt{
 		pe:             pe,
+		auth:           as,
 		directDialFn:   DialDirect,
 		directListenFn: ListenDirect,
 	}
@@ -55,12 +58,17 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error
 		}
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directListen %v", addr)
+		if npc.auth == nil {
+			err := fmt.Errorf("Try to listen on netproxyclnt without AuthSrv")
+			db.DPrintf(db.ERROR, "Err listen: %v", err)
+			return nil, nil, err
+		}
 		l, err = npc.directListenFn(addr)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
 			return nil, nil, err
 		}
-		mnt, err = constructMount(npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
+		mnt, err = constructMount(npc.auth, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error construct mount: %v", err)
 			return nil, nil, err

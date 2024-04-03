@@ -13,7 +13,7 @@ type Tmount struct {
 }
 
 func (mnt *Tmount) String() string {
-	return fmt.Sprintf("{ addr:%v realm:%v root:%v }", mnt.Claims.Addr, Trealm(mnt.Claims.RealmStr), mnt.Root)
+	return fmt.Sprintf("{ addr:%v realm:%v root:%v signed:%v }", mnt.Claims.Addr, Trealm(mnt.Claims.RealmStr), mnt.Root, mnt.IsSigned())
 }
 
 func NewMountClaimsProto(addrs Taddrs, realm Trealm) *TmountClaimsProto {
@@ -42,6 +42,10 @@ func NewMount(b []byte) (*Tmount, *serr.Err) {
 
 func NewMountFromProto(p *TmountProto) *Tmount {
 	return &Tmount{p}
+}
+
+func (mnt *Tmount) IsSigned() bool {
+	return mnt.Token != nil && mnt.Token.GetSignedToken() != NO_SIGNED_TOKEN
 }
 
 func (mnt *Tmount) GetProto() *TmountProto {
@@ -83,6 +87,7 @@ func NewMountService(srvaddrs Taddrs, realm Trealm) *Tmount {
 	return &Tmount{
 		&TmountProto{
 			Claims: NewMountClaimsProto(srvaddrs, realm),
+			Token:  NoToken(),
 		},
 	}
 }

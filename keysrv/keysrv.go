@@ -77,7 +77,7 @@ func (ks rwKeySrv) SetKey(ctx fs.CtxI, req proto.SetKeyRequest, res *proto.SetKe
 	return nil
 }
 
-func RunKeySrv(masterPubKey auth.PublicKey) {
+func RunKeySrv(masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
@@ -88,6 +88,12 @@ func RunKeySrv(masterPubKey auth.PublicKey) {
 	// named.
 	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
 	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetKernelID()), masterPubKey)
+	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPrivKey)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf(db.ERROR, "Error New authsrv: %v", err)
+	}
+	sc.SetAuthSrv(as)
 	ssrv, err := sigmasrv.NewSigmaSrvClntKeyMgr(sp.KEYD, sc, kmgr, ks)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

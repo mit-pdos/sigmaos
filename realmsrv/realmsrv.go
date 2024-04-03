@@ -198,7 +198,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	// Mount some service union dirs from the root realm
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
-		mnt := sp.NewMountService(namedMount.Addresses(), rid)
+		mnt := sp.NewMount(namedMount.Addresses(), rid)
 		mnt.SetTree(s)
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
 		if err := sc.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {

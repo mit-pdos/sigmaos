@@ -12,24 +12,17 @@ type Tmount struct {
 	*TmountProto
 }
 
-func (mnt *Tmount) String() string {
-	return fmt.Sprintf("{ addr:%v realm:%v root:%v signed:%v }", mnt.Claims.Addr, Trealm(mnt.Claims.RealmStr), mnt.Root, mnt.IsSigned())
-}
-
-func NewMountClaimsProto(addrs Taddrs, realm Trealm) *TmountClaimsProto {
-	return &TmountClaimsProto{
-		RealmStr: realm.String(),
-		Addr:     addrs,
+func NewMount(srvaddrs Taddrs, realm Trealm) *Tmount {
+	return &Tmount{
+		&TmountProto{
+			Claims: NewMountClaimsProto(srvaddrs, realm),
+			Token:  NoToken(),
+		},
 	}
 }
 
 func NewNullMount() *Tmount {
-	return &Tmount{
-		&TmountProto{
-			Claims: NewMountClaimsProto(nil, NOT_SET),
-			Token:  NoToken(),
-		},
-	}
+	return NewMount(nil, NOT_SET)
 }
 
 func NewMountFromBytes(b []byte) (*Tmount, *serr.Err) {
@@ -42,6 +35,13 @@ func NewMountFromBytes(b []byte) (*Tmount, *serr.Err) {
 
 func NewMountFromProto(p *TmountProto) *Tmount {
 	return &Tmount{p}
+}
+
+func NewMountClaimsProto(addrs Taddrs, realm Trealm) *TmountClaimsProto {
+	return &TmountClaimsProto{
+		RealmStr: realm.String(),
+		Addr:     addrs,
+	}
 }
 
 func (mnt *Tmount) IsSigned() bool {
@@ -82,23 +82,11 @@ func (mnt *Tmount) Addresses() Taddrs {
 	return mnt.Claims.Addr
 }
 
-// TODO XXX take in realm
-func NewMountService(srvaddrs Taddrs, realm Trealm) *Tmount {
-	return &Tmount{
-		&TmountProto{
-			Claims: NewMountClaimsProto(srvaddrs, realm),
-			Token:  NoToken(),
-		},
-	}
-}
-
-// TODO XXX dedup
-func NewMountServer(addr *Taddr, realm Trealm) *Tmount {
-	addrs := []*Taddr{addr}
-	return NewMountService(addrs, realm)
-}
-
 func (mnt *Tmount) TargetIPPort(idx int) (Tip, Tport) {
 	a := mnt.Claims.Addr[idx]
 	return a.GetIP(), a.GetPort()
+}
+
+func (mnt *Tmount) String() string {
+	return fmt.Sprintf("{ addr:%v realm:%v root:%v signed:%v }", mnt.Claims.Addr, Trealm(mnt.Claims.RealmStr), mnt.Root, mnt.IsSigned())
 }

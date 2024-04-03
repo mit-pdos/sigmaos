@@ -133,7 +133,7 @@ func constructMount(as auth.AuthSrv, ip sp.Tip, realm sp.Trealm, l net.Listener)
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		return nil, err
 	}
-	mnt := sp.NewMountService(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm)
+	mnt := sp.NewMount(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm)
 	// Sign the mount
 	if err := as.MintAndSetMountToken(mnt); err != nil {
 		db.DFatalf("Error sign mount: %v", err)

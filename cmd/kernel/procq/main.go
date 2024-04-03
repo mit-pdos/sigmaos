@@ -10,7 +10,7 @@ import (
 
 func main() {
 	if len(os.Args) != 4 {
-		db.DFatalf("Usage: %v masterPubKey pubKey privKey\n", os.Args[0])
+		db.DFatalf("Usage: %v masterPubKey pubKey privKey", os.Args[0])
 	}
 	masterPubKey, pubkey, privkey, err := keys.BootstrappedKeysFromArgs(os.Args[1:])
 	if err != nil {

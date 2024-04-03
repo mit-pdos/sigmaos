@@ -157,7 +157,7 @@ func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {
 }
 
 func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {
-	return k.bootSubsystem("dbd", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("dbd", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootMongod(hostip string) (Subsystem, error) {

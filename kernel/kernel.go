@@ -144,7 +144,7 @@ func (k *Kernel) Ip() sp.Tip {
 	return k.ip
 }
 
-func (k *Kernel) IsSigmaclntdKernel() bool {
+func (k *Kernel) IsPurelySigmaclntdKernel() bool {
 	db.DPrintf(db.KERNEL, "Check is sigmaclntd kernel: %v", k.Param.Services)
 	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.SIGMACLNTDREL
 }

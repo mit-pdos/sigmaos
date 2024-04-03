@@ -187,15 +187,14 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 		pi = pi0
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
 	}
-
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.SigmaClnt))
-	// Add the master deployment key, to allow connections from kernel to this
-	// named.
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterPublicKey)
-	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterPrivKey)
-	kmgr.AddPublicKey(sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()), nd.masterPublicKey)
-	// Add this named's keypair to the keymgr
-	kmgr.AddPublicKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterPublicKey)
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.SigmaClnt),
+		nd.masterPublicKey,
+		nd.masterPrivKey,
+		sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()),
+		nd.masterPublicKey,
+		nil,
+	)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error New authsrv: %v", err)

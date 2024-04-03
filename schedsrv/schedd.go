@@ -51,14 +51,15 @@ type Schedd struct {
 	privkey             auth.PrivateKey
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) *Schedd {
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
-	// Add the master deployment key, to allow connections from kernel to this
-	// schedd.
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubkey)
-	// Add this schedd's keypair to the keymgr
-	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetPID()), pubkey)
-	kmgr.AddPrivateKey(sp.Tsigner(sc.ProcEnv().GetPID()), privkey)
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) *Schedd {
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(sc.ProcEnv().GetPID()),
+		pubkey,
+		privkey,
+	)
 	db.DPrintf(db.SCHEDD, "kmgr %v", kmgr)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {

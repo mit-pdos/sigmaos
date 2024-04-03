@@ -83,12 +83,16 @@ func RunKeySrv(masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	ks := NewKeySrv(masterPubKey)
-	kmgr := keys.NewKeyMgr(keys.WithLocalMapGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, &ks.mu, ks.keys))
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithLocalMapGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, &ks.mu, ks.keys),
+		masterPubKey,
+		masterPrivKey,
+		sp.Tsigner(sc.ProcEnv().GetKernelID()),
+		masterPubKey,
+		nil,
+	)
 	// Add the master deployment key, to allow connections from kernel to this
 	// named.
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
-	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetKernelID()), masterPubKey)
-	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPrivKey)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DFatalf(db.ERROR, "Error New authsrv: %v", err)

@@ -60,7 +60,7 @@ func (fsl *FsLib) ReadMount(pn string) (*sp.Tmount, error) {
 	if err != nil {
 		return &sp.Tmount{}, err
 	}
-	mnt, error := sp.NewMount(target)
+	mnt, error := sp.NewMountFromBytes(target)
 	if error != nil {
 		return &sp.Tmount{}, err
 	}
@@ -99,7 +99,7 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tmount, error) {
 		if err != nil {
 			return false, nil
 		}
-		mnt, error := sp.NewMount(b)
+		mnt, error := sp.NewMountFromBytes(b)
 		if error != nil {
 			return false, nil
 		}

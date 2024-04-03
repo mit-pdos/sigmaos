@@ -102,7 +102,7 @@ func GetRootNamed(realm sp.Trealm, etcdIP string) (*sp.Tmount, *serr.Err) {
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v realm %v etcdIP %v", BOOT, nf, sr, realm, etcdIP)
 		return &sp.Tmount{}, sr
 	}
-	mnt, sr := sp.NewMount(nf.Data)
+	mnt, sr := sp.NewMountFromBytes(nf.Data)
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "NewMount %v err %v\n", BOOT, err)
 		return &sp.Tmount{}, sr

@@ -32,7 +32,7 @@ func NewNullMount() *Tmount {
 	}
 }
 
-func NewMount(b []byte) (*Tmount, *serr.Err) {
+func NewMountFromBytes(b []byte) (*Tmount, *serr.Err) {
 	mnt := NewNullMount()
 	if err := proto.Unmarshal(b, mnt); err != nil {
 		return mnt, serr.NewErrError(err)

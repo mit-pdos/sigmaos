@@ -56,7 +56,7 @@ func (pathc *PathClnt) getNamedMount(realm sp.Trealm) (*sp.Tmount, *serr.Err) {
 			return &sp.Tmount{}, serr.NewErrError(err)
 		}
 		var sr *serr.Err
-		mnt, sr = sp.NewMount(target)
+		mnt, sr = sp.NewMountFromBytes(target)
 		if sr != nil {
 			return &sp.Tmount{}, sr
 		}

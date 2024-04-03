@@ -79,7 +79,7 @@ func newNpSess(pe *proc.ProcEnv, npcs *netsigma.NetProxyClnt, lip string) *NpSes
 	npc := &NpSess{}
 	npc.fidc = fidclnt.NewFidClnt(pe, npcs)
 	npc.principal = pe.GetPrincipal()
-	npc.pc = pathclnt.NewPathClnt(pe, npcs, npc.fidc)
+	npc.pc = pathclnt.NewPathClnt(pe, npc.fidc)
 	npc.fm = newFidMap()
 	npc.cid = sp.TclntId(rand.Uint64())
 	return npc

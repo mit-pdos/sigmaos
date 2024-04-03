@@ -39,6 +39,7 @@ type Named struct {
 	crash           int
 	sess            *fsetcd.Session
 	masterPublicKey auth.PublicKey
+	masterPrivKey   auth.PrivateKey
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -57,15 +58,20 @@ func Run(args []string) error {
 
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pe)
-	if len(args) != 6 {
+	if len(args) != 7 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[3]))
 	if err != nil {
 		db.DFatalf("Error NewPublicKey: %v", err)
 	}
+	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[4]))
+	if err != nil {
+		db.DFatalf("Error NewPublicKey: %v", err)
+	}
 	nd := &Named{}
 	nd.masterPublicKey = masterPubKey
+	nd.masterPrivKey = masterPrivKey
 	nd.realm = sp.Trealm(args[1])
 	crashing, err := strconv.Atoi(args[2])
 	if err != nil {
@@ -186,6 +192,7 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 	// Add the master deployment key, to allow connections from kernel to this
 	// named.
 	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterPublicKey)
+	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterPrivKey)
 	kmgr.AddPublicKey(sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()), nd.masterPublicKey)
 	// Add this named's keypair to the keymgr
 	kmgr.AddPublicKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterPublicKey)
@@ -203,11 +210,12 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 	if nd.realm != sp.ROOTREALM {
 		mnt = port.NewPublicMount(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetMount())
 	}
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(nd.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error New authsrv: %v", err)
 		return sp.NewNullMount(), fmt.Errorf("NewAuthSrv err: %v", err)
 	}
+	// Self-sign mount
 	if err := as.MintAndSetMountToken(mnt); err != nil {
 		db.DFatalf("Error mint mount token: %v", err)
 		return sp.NewNullMount(), fmt.Errorf("NewAuthSrv err: %v", err)

@@ -64,22 +64,14 @@ func Run(args []string) error {
 	if len(args) != 7 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[1]))
+	masterPubKey, pubkey, privkey, err := keys.BootstrappedKeysFromArgs(args[1:])
 	if err != nil {
-		db.DFatalf("Error NewPublicKey: %v", err)
+		db.DFatalf("Error get bootstrapped keys", err)
 	}
 	//	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[2]))
 	//	if err != nil {
 	//		db.DFatalf("Error NewPublicKey: %v", err)
 	//	}
-	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[3]))
-	if err != nil {
-		db.DFatalf("Error NewPublicKey: %v", err)
-	}
-	privkey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[4]))
-	if err != nil {
-		db.DFatalf("Error NewPublicKey: %v", err)
-	}
 
 	nd := &Named{}
 	nd.masterPublicKey = masterPubKey

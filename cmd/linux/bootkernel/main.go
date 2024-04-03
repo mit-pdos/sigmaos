@@ -72,8 +72,14 @@ func main() {
 	// initial master key. This auth server should *not* be used long-term. It
 	// needs to be replaced with one which queries the namespace for keys once
 	// knamed has booted.
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(masterPubKey)))
-	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPrivKey)
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithConstGetKeyFn(auth.PublicKey(masterPubKey)),
+		masterPubKey,
+		masterPrivKey,
+		auth.SIGMA_DEPLOYMENT_MASTER_SIGNER,
+		masterPubKey,
+		masterPrivKey,
+	)
 	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)

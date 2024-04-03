@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -106,9 +107,14 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	}
 	// Create an AuthServer which dynamically pulls keys from the namespace, now
 	// that knamed has booted.
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
-	kmgr.AddPublicKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPubKey)
-	kmgr.AddPrivateKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPrivKey)
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		k.Param.MasterPubKey,
+		k.Param.MasterPrivKey,
+		sp.Tsigner(k.ProcEnv().GetPID()),
+		k.Param.MasterPubKey,
+		k.Param.MasterPrivKey,
+	)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(k.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
@@ -116,6 +122,12 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	}
 	k.as = as
 	k.SigmaClntKernel.SetAuthSrv(as)
+	//	if !k.IsPurelySigmaclntdKernel() {
+	//		if err := os.Mkdir(path.Dir(sp.SIGMASOCKET), 0777); err != nil {
+	//			db.DPrintf(db.ERROR, "Error mkdir sigmasocket: %v", err)
+	//			return nil, err
+	//		}
+	//	}
 	db.DPrintf(db.KERNEL, "Kernel start srvs %v", k.Param.Services)
 	err = startSrvs(k)
 	if err != nil {

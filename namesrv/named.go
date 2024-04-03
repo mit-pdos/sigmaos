@@ -203,6 +203,15 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 	if nd.realm != sp.ROOTREALM {
 		mnt = port.NewPublicMount(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetMount())
 	}
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(nd.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error New authsrv: %v", err)
+		return sp.NewNullMount(), fmt.Errorf("NewAuthSrv err: %v", err)
+	}
+	if err := as.MintAndSetMountToken(mnt); err != nil {
+		db.DFatalf("Error mint mount token: %v", err)
+		return sp.NewNullMount(), fmt.Errorf("NewAuthSrv err: %v", err)
+	}
 
 	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetMount(), nd.elect.Key(), mnt)
 

@@ -3,6 +3,7 @@ package auth
 import (
 	"fmt"
 	"path"
+	"reflect"
 
 	"github.com/golang-jwt/jwt"
 
@@ -95,14 +96,14 @@ func (as *AuthSrvImpl[M]) MintAndSetMountToken(mnt *sp.Tmount) error {
 }
 
 func (as *AuthSrvImpl[M]) VerifyMountTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*MountClaims, error) {
-	claims, err := as.verifyTokenGetClaims(principalID, t)
+	claims, err := as.verifyTokenGetClaims(principalID, &MountClaims{}, t)
 	if err != nil {
 		return nil, err
 	}
 	if mclaims, ok := claims.(*MountClaims); ok {
 		return mclaims, nil
 	}
-	return nil, fmt.Errorf("Claims wrong type")
+	return nil, fmt.Errorf("Claims wrong type: %v", reflect.TypeOf(claims))
 }
 
 func (as *AuthSrvImpl[M]) MintAndSetProcToken(pe *proc.ProcEnv) error {
@@ -121,14 +122,14 @@ func (as *AuthSrvImpl[M]) MintProcToken(pc *ProcClaims) (*sp.Ttoken, error) {
 }
 
 func (as *AuthSrvImpl[M]) VerifyProcTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*ProcClaims, error) {
-	claims, err := as.verifyTokenGetClaims(principalID, t)
+	claims, err := as.verifyTokenGetClaims(principalID, &ProcClaims{}, t)
 	if err != nil {
 		return nil, err
 	}
 	if pclaims, ok := claims.(*ProcClaims); ok {
 		return pclaims, nil
 	}
-	return nil, fmt.Errorf("Claims wrong type")
+	return nil, fmt.Errorf("Claims wrong type: %v", reflect.TypeOf(claims))
 }
 
 func (as *AuthSrvImpl[M]) VerifyPrincipalIdentity(principal *sp.Tprincipal) (*ProcClaims, error) {
@@ -209,7 +210,7 @@ func (as *AuthSrvImpl[M]) mintTokenWithClaims(claims jwt.Claims) (*sp.Ttoken, er
 	return sp.NewToken(as.signer, tstr), err
 }
 
-func (as *AuthSrvImpl[M]) verifyTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (jwt.Claims, error) {
+func (as *AuthSrvImpl[M]) verifyTokenGetClaims(principalID sp.TprincipalID, c jwt.Claims, t *sp.Ttoken) (jwt.Claims, error) {
 	if t.GetSignedToken() == sp.NO_SIGNED_TOKEN {
 		db.DPrintf(db.ERROR, "Tried to verify token when no signed token provided")
 		return nil, fmt.Errorf("No signed token provided")
@@ -217,7 +218,7 @@ func (as *AuthSrvImpl[M]) verifyTokenGetClaims(principalID sp.TprincipalID, t *s
 	// Parse the jwt, passing in a function to look up the key.
 	//
 	// Taken from: https://pkg.go.dev/github.com/golang-jwt/jwt
-	token, err := jwt.ParseWithClaims(t.GetSignedToken(), &ProcClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(t.GetSignedToken(), c, func(token *jwt.Token) (interface{}, error) {
 		// Validate the alg is expected
 		if _, ok := token.Method.(M); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])

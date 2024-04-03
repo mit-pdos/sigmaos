@@ -27,19 +27,25 @@ type FidClnt struct {
 	fids   *FidMap
 	refcnt int
 	sm     *sessclnt.Mgr
+	npc    *netsigma.NetProxyClnt
 }
 
 func NewFidClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) *FidClnt {
-	fidc := &FidClnt{}
-	fidc.fids = newFidMap()
-	fidc.refcnt = 1
-	fidc.sm = sessclnt.NewMgr(pe, npc)
-	return fidc
+	return &FidClnt{
+		fids:   newFidMap(),
+		refcnt: 1,
+		sm:     sessclnt.NewMgr(pe, npc),
+		npc:    npc,
+	}
 }
 
 func (fidc *FidClnt) String() string {
 	str := fmt.Sprintf("Fsclnt fid table %p:\n%v", fidc, fidc.fids)
 	return str
+}
+
+func (fidc *FidClnt) GetNetProxyClnt() *netsigma.NetProxyClnt {
+	return fidc.npc
 }
 
 func (fidc *FidClnt) NewClnt() {

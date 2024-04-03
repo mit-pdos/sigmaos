@@ -16,6 +16,7 @@ import (
 type NetProxyClnt struct {
 	sync.Mutex
 	pe             *proc.ProcEnv
+	canSignMounts  bool
 	auth           auth.AuthSrv
 	directDialFn   DialFn
 	directListenFn ListenFn
@@ -26,10 +27,19 @@ type NetProxyClnt struct {
 func NewNetProxyClnt(pe *proc.ProcEnv, as auth.AuthSrv) *NetProxyClnt {
 	return &NetProxyClnt{
 		pe:             pe,
+		canSignMounts:  as != nil,
 		auth:           as,
 		directDialFn:   DialDirect,
 		directListenFn: ListenDirect,
 	}
+}
+
+func (npc *NetProxyClnt) SetAuthSrv(as auth.AuthSrv) {
+	npc.Lock()
+	defer npc.Unlock()
+
+	npc.auth = as
+	npc.canSignMounts = true
 }
 
 func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
@@ -46,6 +56,9 @@ func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
 }
 
 func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error) {
+	npc.Lock()
+	defer npc.Unlock()
+
 	var mnt *sp.Tmount
 	var l net.Listener
 	var err error
@@ -58,7 +71,7 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error
 		}
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directListen %v", addr)
-		if npc.auth == nil {
+		if !npc.canSignMounts {
 			err := fmt.Errorf("Try to listen on netproxyclnt without AuthSrv")
 			db.DPrintf(db.ERROR, "Err listen: %v", err)
 			return nil, nil, err

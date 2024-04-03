@@ -35,13 +35,16 @@ type PathClnt struct {
 	disconnected bool // Used by test harness
 }
 
-func NewPathClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, fidc *fidclnt.FidClnt) *PathClnt {
+func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 	pathc := &PathClnt{
 		pe:  pe,
 		mnt: newMntTable(),
 	}
 	if fidc == nil {
-		pathc.FidClnt = fidclnt.NewFidClnt(pe, npc)
+		// XXX Why would this be the case??
+		db.DPrintf(db.ERROR, "Nil fid clnt")
+		db.DFatalf("Nil fid clnt")
+		pathc.FidClnt = fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe, nil))
 	} else {
 		pathc.FidClnt = fidc
 		fidc.NewClnt()

@@ -7,7 +7,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	"sigmaos/netsigma"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
@@ -25,9 +24,9 @@ type FdClient struct {
 	disconnected bool
 }
 
-func NewFdClient(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, fsc *fidclnt.FidClnt) sos.SigmaOS {
+func NewFdClient(pe *proc.ProcEnv, fsc *fidclnt.FidClnt) sos.SigmaOS {
 	fdc := &FdClient{pe: pe}
-	fdc.pc = pathclnt.NewPathClnt(pe, npc, fsc)
+	fdc.pc = pathclnt.NewPathClnt(pe, fsc)
 	fdc.fds = newFdTable()
 	fdc.ft = newFenceTable()
 	return fdc

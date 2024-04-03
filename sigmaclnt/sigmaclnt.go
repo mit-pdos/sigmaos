@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
 	"sigmaos/fidclnt"
@@ -43,23 +44,23 @@ type SigmaClntKernel struct {
 }
 
 // Create FsLib using either sigmalcntd or fdclnt
-func newFsLibFidClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
+func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
 	var s sos.SigmaOS
 	if pe.UseSigmaclntd {
-		s, err = sigmaclntclnt.NewSigmaClntClnt(pe, npc)
+		s, err = sigmaclntclnt.NewSigmaClntClnt(pe, fidc.GetNetProxyClnt())
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
 			return nil, err
 		}
 	} else {
-		s = fdclnt.NewFdClient(pe, npc, fidc)
+		s = fdclnt.NewFdClient(pe, fidc)
 	}
-	return fslib.NewFsLibAPI(pe, npc, s)
+	return fslib.NewFsLibAPI(pe, fidc.GetNetProxyClnt(), s)
 }
 
 func NewFsLib(pe *proc.ProcEnv) (*fslib.FsLib, error) {
-	return newFsLibFidClnt(pe, netsigma.NewNetProxyClnt(pe, nil), nil)
+	return newFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe, nil)))
 }
 
 // Convert to SigmaClntKernel from SigmaClnt
@@ -78,15 +79,13 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 		FsLib:     sck.FsLib,
 		ProcAPI:   sck.ProcClnt,
 		LeaseClnt: sck.LeaseClnt,
-		npc:       netsigma.NewNetProxyClnt(sck.ProcEnv(), nil),
 	}
 	return sc
 }
 
 // Create a SigmaClnt (using sigmaclntd or fdclient), as a proc, without ProcAPI.
 func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
-	npc := netsigma.NewNetProxyClnt(pe, nil)
-	fsl, err := newFsLibFidClnt(pe, npc, fidc)
+	fsl, err := newFsLibFidClnt(pe, fidc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
@@ -97,7 +96,6 @@ func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaCl
 	}
 	return &SigmaClnt{
 		FsLib:     fsl,
-		npc:       npc,
 		ProcAPI:   nil,
 		LeaseClnt: lmc,
 	}, nil
@@ -150,6 +148,10 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	db.DPrintf(db.SIGMACLNT, "EndLeases done")
 	defer db.DPrintf(db.SIGMACLNT, "ClntExit done")
 	return sc.FsLib.Close()
+}
+
+func (sc *SigmaClnt) SetAuthSrv(as auth.AuthSrv) {
+	sc.npc.SetAuthSrv(as)
 }
 
 func (sc *SigmaClnt) ClntExitOK() {

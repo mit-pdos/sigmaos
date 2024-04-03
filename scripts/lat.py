@@ -14,6 +14,14 @@ reps = {}
 lsreq = {}
 lsrep = {}
 
+def add(key, msgs, ls, d, l):
+    if not key in msgs:
+        msgs[key] = {t.group(1): d}
+        ls[key] = {t.group(1): l}
+    else:
+        msgs[key][t.group(1)] = d
+        ls[key][t.group(1)] = l
+        
 k0 = ("a2610d4aa1325fa9","11")
 for l in lines:
     sid = re.search(r'sid ([\da-fA-F]+)', l)
@@ -28,27 +36,52 @@ for l in lines:
             print("parse error", l)
             continue
         if m.groups(1)[0] == 'T':
-            if not key in reqs:
-                reqs[key] = {t.group(1): d}
-                lsreq[key] = {t.group(1): l}
-            else:
-                reqs[key][t.group(1)] = d
-                lsreq[key][t.group(1)] = l
-
+            add(key,reqs, lsreq, d, l)
+        if m.groups(1)[0] == 'R':
+            add(key,reps, lsrep, d, l)
+                        
 def printlines(ls):
  for l in ls:
      sys.stdout.write(ls[l])
-                
-for k in lsreq:
-    # ignore reqs that don't have a corresponding flush,
-    # which are from test program
-    if "Flush" in reqs[k]:
-        # closing a connection may result in no readcall for flush
-        if not "ReadCall" in reqs[k]:
-            continue
-        d0 = reqs[k]['Flush']
-        d1 = reqs[k]['ReadCall']
-        diff = d1-d0
-        if d1 > d0 and diff.microseconds > 1000:
-            print("== long net latency for", k, diff.microseconds)
-            printlines(lsreq[k])
+
+def longmsglat():
+    for k in lsreq:
+        # ignore reqs that don't have a flush, which are from test
+        # program
+        if "Flush" in reqs[k]:
+            # closing a connection may result in no readcall for flush
+            if not "ReadCall" in reqs[k]:
+                continue
+            d0 = reqs[k]['Flush']
+            d1 = reqs[k]['ReadCall']
+            diff = d1-d0
+            if d1 > d0 and diff.microseconds > 1000:
+                print("== long net latency for", k, diff.microseconds)
+                printlines(lsreq[k])
+
+k0 = ('d76634d9dc65ccdd', '11')
+def longrpclat():
+    lrpcs = {}
+    for k in lsreq:
+        # ignore reqs that don't have a flush, which are from test
+        # program
+        # if k != k0:
+        #    continue
+        if "Flush" in reqs[k]:
+            # closing a connection may result in no readcall for flush
+            if not k in reps or not "ReadCall" in reps[k]:
+                continue
+            d0 = reqs[k]['Flush']
+            d1 = reps[k]['ReadCall']
+            diff = d1-d0
+            if d1 > d0 and diff.microseconds > 1000:
+                print("== long rpc latency for", k, diff)
+                lrpcs[k] = diff
+                printlines(lsreq[k])
+                printlines(lsrep[k])
+    d = sorted(lrpcs.items(), key=lambda item: item[1])
+    for k,v in d:
+        print(k, v)
+
+longrpclat()
+

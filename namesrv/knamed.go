@@ -54,6 +54,9 @@ func RunKNamed(args []string) error {
 
 	nd.masterPublicKey = masterPubKey
 	nd.masterPrivKey = masterPrivKey
+	nd.pubkey = masterPubKey
+	nd.privkey = masterPrivKey
+	nd.signer = sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID())
 
 	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
 

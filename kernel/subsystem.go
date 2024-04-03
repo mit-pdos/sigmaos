@@ -134,7 +134,7 @@ func (k *Kernel) bootSubsystemBootstrapKeys(program string, args []string, realm
 	if err != nil {
 		return nil, err
 	}
-	argsWithKeys := append(args, keys...)
+	argsWithKeys := append(keys, args...)
 	return k.bootSubsystemPIDWithMcpu(pid, program, argsWithKeys, realm, how, 0)
 }
 

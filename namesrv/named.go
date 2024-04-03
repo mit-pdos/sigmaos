@@ -40,6 +40,9 @@ type Named struct {
 	sess            *fsetcd.Session
 	masterPublicKey auth.PublicKey
 	masterPrivKey   auth.PrivateKey
+	signer          sp.Tsigner
+	pubkey          auth.PublicKey
+	privkey         auth.PrivateKey
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -61,21 +64,33 @@ func Run(args []string) error {
 	if len(args) != 7 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[3]))
+	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[1]))
 	if err != nil {
 		db.DFatalf("Error NewPublicKey: %v", err)
 	}
-	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[4]))
+	//	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[2]))
+	//	if err != nil {
+	//		db.DFatalf("Error NewPublicKey: %v", err)
+	//	}
+	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[3]))
 	if err != nil {
 		db.DFatalf("Error NewPublicKey: %v", err)
 	}
+	privkey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[4]))
+	if err != nil {
+		db.DFatalf("Error NewPublicKey: %v", err)
+	}
+
 	nd := &Named{}
 	nd.masterPublicKey = masterPubKey
-	nd.masterPrivKey = masterPrivKey
-	nd.realm = sp.Trealm(args[1])
-	crashing, err := strconv.Atoi(args[2])
+	nd.masterPrivKey = nil // masterPrivKey
+	nd.signer = sp.Tsigner(nd.SigmaClnt.ProcEnv().GetPID())
+	nd.pubkey = pubkey
+	nd.privkey = privkey
+	nd.realm = sp.Trealm(args[4])
+	crashing, err := strconv.Atoi(args[5])
 	if err != nil {
-		return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
+		return fmt.Errorf("%v: crash %v isn't int", args[0], args[5])
 	}
 	nd.crash = crashing
 
@@ -191,9 +206,12 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.SigmaClnt),
 		nd.masterPublicKey,
 		nd.masterPrivKey,
-		sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()),
-		nd.masterPublicKey,
-		nil,
+		nd.signer,
+		nd.pubkey,
+		nd.privkey,
+		//		sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()),
+		//		nd.masterPublicKey,
+		//		nil,
 	)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err != nil {

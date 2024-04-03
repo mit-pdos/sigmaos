@@ -47,29 +47,29 @@ type Realm struct {
 }
 
 type RealmSrv struct {
-	mu              sync.Mutex
-	realms          map[sp.Trealm]*Realm
-	sc              *sigmaclnt.SigmaClntKernel
-	pq              *procqclnt.ProcQClnt
-	sd              *scheddclnt.ScheddClnt
-	mkc             *kernelclnt.MultiKernelClnt
-	kc              *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
-	as              auth.AuthSrv
-	masterPublicKey auth.PublicKey
-	pubkey          auth.PublicKey
-	privkey         auth.PrivateKey
-	lastNDPort      int
-	ch              chan struct{}
+	mu           sync.Mutex
+	realms       map[sp.Trealm]*Realm
+	sc           *sigmaclnt.SigmaClntKernel
+	pq           *procqclnt.ProcQClnt
+	sd           *scheddclnt.ScheddClnt
+	mkc          *kernelclnt.MultiKernelClnt
+	kc           *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
+	as           auth.AuthSrv
+	masterPubKey auth.PublicKey
+	pubkey       auth.PublicKey
+	privkey      auth.PrivateKey
+	lastNDPort   int
+	ch           chan struct{}
 }
 
-func RunRealmSrv(masterPublicKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunRealmSrv(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	pe := proc.GetProcEnv()
 	rs := &RealmSrv{
-		lastNDPort:      MIN_PORT,
-		realms:          make(map[sp.Trealm]*Realm),
-		masterPublicKey: masterPublicKey,
-		pubkey:          pubkey,
-		privkey:         privkey,
+		lastNDPort:   MIN_PORT,
+		realms:       make(map[sp.Trealm]*Realm),
+		masterPubKey: masterPubKey,
+		pubkey:       pubkey,
+		privkey:      privkey,
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
@@ -97,7 +97,7 @@ func RunRealmSrv(masterPublicKey auth.PublicKey, pubkey auth.PublicKey, privkey 
 	)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NeHMACAUthServer %v", err)
+		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
 		return err
 	}
 	rs.as = as
@@ -134,7 +134,7 @@ func (rm *RealmSrv) bootstrapNamedKeys(p *proc.Proc) error {
 	}
 	p.Args = append(p.Args,
 		[]string{
-			rm.masterPublicKey.Marshal(),
+			rm.masterPubKey.Marshal(),
 			pubkey.Marshal(),
 			privkey.Marshal(),
 		}...,

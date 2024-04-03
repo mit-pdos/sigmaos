@@ -6,8 +6,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/keys"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
@@ -273,11 +277,25 @@ func (pq *ProcQ) stats() {
 }
 
 // Run a ProcQ
-func Run() {
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+func Run(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) {
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf(db.ERROR, "Error NewAuthSrv %v", err)
+	}
+	sc.SetAuthSrv(as)
 	pq := NewProcQ(sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {

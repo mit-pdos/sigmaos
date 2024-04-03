@@ -170,7 +170,7 @@ func (k *Kernel) bootLCSched() (Subsystem, error) {
 }
 
 func (k *Kernel) bootProcq() (Subsystem, error) {
-	return k.bootSubsystem("procq", []string{}, sp.ROOTREALM, proc.HLINUX)
+	return k.bootSubsystemBootstrapKeys("procq", []string{}, sp.ROOTREALM, proc.HLINUX)
 }
 
 func (k *Kernel) bootKeyd() (Subsystem, error) {

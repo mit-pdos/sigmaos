@@ -31,7 +31,6 @@ func init() {
 
 type SigmaClnt struct {
 	*fslib.FsLib
-	npc *netsigma.NetProxyClnt
 	proc.ProcAPI
 	*leaseclnt.LeaseClnt
 }
@@ -102,7 +101,7 @@ func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaCl
 }
 
 func NewSigmaClntFsLib(pe *proc.ProcEnv) (*SigmaClnt, error) {
-	return NewSigmaClntFsLibFidClnt(pe, nil)
+	return NewSigmaClntFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe, nil)))
 }
 
 func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
@@ -151,7 +150,7 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 }
 
 func (sc *SigmaClnt) SetAuthSrv(as auth.AuthSrv) {
-	sc.npc.SetAuthSrv(as)
+	sc.GetNetProxyClnt().SetAuthSrv(as)
 }
 
 func (sc *SigmaClnt) ClntExitOK() {

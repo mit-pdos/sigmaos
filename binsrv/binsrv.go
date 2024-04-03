@@ -8,8 +8,9 @@ package binsrv
 
 import (
 	"fmt"
+	"io"
 	"os"
-	"os/signal"
+	"os/exec"
 	"path"
 	"strings"
 	"syscall"
@@ -151,15 +152,59 @@ func RunBinFS(kernelId, uprocdpid string) error {
 		return err
 	}
 
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	// Tell ExecBinSrv we are running
+	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
+		return err
+	}
 	go func() {
-		<-c
-		db.DPrintf(db.BINSRV, "terminate\n")
+		buf := make([]byte, 1)
+		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
+			db.DFatalf("read pipe err %v\n", err)
+		}
+		db.DPrintf(db.BINSRV, "exiting\n")
 		server.Unmount()
+		os.Exit(0)
 	}()
 
 	server.Wait()
 	db.DPrintf(db.ALWAYS, "Wait returned\n")
+	return nil
+}
+
+type BinSrvCmd struct {
+	cmd *exec.Cmd
+	out io.WriteCloser
+}
+
+func ExecBinSrv(kernelId, uprocdpid string) (*BinSrvCmd, error) {
+	cmd := exec.Command("binfsd", kernelId, uprocdpid)
+	// cmd.Env = p.GetEnv()
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Start(); err != nil {
+		db.DPrintf(db.BINSRV, "Error start %v %v", cmd, err)
+		return nil, err
+	}
+	buf := make([]byte, 1)
+	if _, err := io.ReadFull(stdout, buf); err != nil {
+		db.DPrintf(db.BINSRV, "read pipe err %v\n", err)
+		return nil, err
+	}
+
+	return &BinSrvCmd{cmd: cmd, out: stdin}, nil
+}
+
+func (bsc *BinSrvCmd) Shutdown() error {
+	if _, err := io.WriteString(bsc.out, "e"); err != nil {
+		return err
+	}
 	return nil
 }

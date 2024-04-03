@@ -85,26 +85,20 @@ func RunUprocSrv(kernelId string, up string) error {
 	defer p.Done()
 
 	// Start binfsd now; when uprocds gets assigned to a realm, then
-	// uprocd mounts the realm's bin directory that binfs will cache
-	// in and serve from.
-	ups.binsrv = exec.Command("binfsd", ups.kernelId, ups.pe.GetPID().String())
-	ups.binsrv.Stdout = os.Stdout
-	ups.binsrv.Stderr = os.Stderr
-
-	if err := ups.binsrv.Start(); err != nil {
-		db.DPrintf(db.UPROCD, "Error start %v %v", ups.binsrv, err)
+	// uprocd mounts the realm's bin directory that binfs will serve
+	// from.
+	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String())
+	if err != nil {
+		db.DPrintf(db.ERROR, "ExecBinSrv err %v\n", err)
 		return err
 	}
 
-	time.Sleep(100 * time.Millisecond)
-
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
+		return err
 	}
 	db.DPrintf(db.UPROCD, "RunServer done\n")
-	if ups.binsrv != nil {
-		ups.binsrv.Process.Kill()
-	}
+	binsrv.Shutdown()
 	return nil
 }
 

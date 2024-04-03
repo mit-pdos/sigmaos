@@ -51,11 +51,17 @@ func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
 	addrs = netsigma.Rearrange(clntnet, addrs)
 	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", clntnet, addrs, addrs[0])
 	for _, addr := range addrs {
-		c, err := net.DialTimeout("tcp", addr.IPPort(), sp.Conf.Session.TIMEOUT/10)
+		tcpaddr, err := net.ResolveTCPAddr("tcp", addr.IPPort())
+		if err != nil {
+			continue
+		}
+		//c, err := net.DialTimeout("tcp", addr.IPPort(), sp.Conf.Session.TIMEOUT/10)
+		c, err := net.DialTCP("tcp", nil, tcpaddr)
 		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
 		if err != nil {
 			continue
 		}
+		c.SetNoDelay(true)
 		nc.conn = c
 		nc.addr = addr
 		db.DPrintf(db.PORT, "NetClnt connected %v -> %v\n", c.LocalAddr(), nc.addr)

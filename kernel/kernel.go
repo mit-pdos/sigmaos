@@ -115,6 +115,7 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 		return nil, err
 	}
 	k.as = as
+	k.SigmaClntKernel.SetAuthSrv(as)
 	db.DPrintf(db.KERNEL, "Kernel start srvs %v", k.Param.Services)
 	err = startSrvs(k)
 	if err != nil {

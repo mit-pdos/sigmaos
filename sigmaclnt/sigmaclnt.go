@@ -149,6 +149,10 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	return sc.FsLib.Close()
 }
 
+func (sc *SigmaClntKernel) SetAuthSrv(as auth.AuthSrv) {
+	sc.GetNetProxyClnt().SetAuthSrv(as)
+}
+
 func (sc *SigmaClnt) SetAuthSrv(as auth.AuthSrv) {
 	sc.GetNetProxyClnt().SetAuthSrv(as)
 }

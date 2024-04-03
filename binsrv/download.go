@@ -62,21 +62,22 @@ type downloader struct {
 	tot      time.Duration
 }
 
-func newDownload(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, sz sp.Tsize) *downloader {
+func newDownload(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, kernelId string, sz sp.Tsize) *downloader {
 	dl := &downloader{
-		pn:      pn,
-		sc:      sc,
-		chunks:  make(chksT, chunksrv.Index(int64(sz))+1),
-		readers: make(readersT, chunksrv.Index(int64(sz))+1),
-		updc:    updc,
-		sz:      sz,
-		ch:      make(chan *reader),
+		pn:       pn,
+		sc:       sc,
+		chunks:   make(chksT, chunksrv.Index(int64(sz))+1),
+		readers:  make(readersT, chunksrv.Index(int64(sz))+1),
+		updc:     updc,
+		sz:       sz,
+		ch:       make(chan *reader),
+		kernelId: kernelId,
 	}
 	return dl
 }
 
-func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, sz sp.Tsize) (*downloader, error) {
-	dl := newDownload(pn, sc, updc, sz)
+func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, kernelId string, sz sp.Tsize) (*downloader, error) {
+	dl := newDownload(pn, sc, updc, kernelId, sz)
 	go dl.downloader()
 	return dl, nil
 }
@@ -115,8 +116,9 @@ func (dl *downloader) cacheRemoteChunk(ck int) error {
 // Fetch chunk through uprocd, which will fill in the realm and
 // write it a local file, which binsrv can read.
 func (dl *downloader) readRemoteChunk(ck int) (int64, error) {
-	prog, paths := binPathParse(dl.pn)
+	prog, paths := downloadPaths(dl.pn, dl.kernelId)
 	db.DPrintf(db.BINSRV, "readRemoteChunk invoke %q read ck %d\n", dl.pn, ck)
+
 	sz, err := dl.updc.Fetch(prog, ck, dl.sz, paths)
 	if err != nil {
 		db.DPrintf(db.ERROR, "readRemoteChunk %q fetch %d err %v\n", dl.pn, ck, err)

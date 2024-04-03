@@ -39,6 +39,9 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 	db.DPrintf(db.BINSRV, "%v: Lookup %q\n", n.path(), name)
 
 	pn := filepath.Join(n.path(), name)
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] fuse lookup", pn)
+
 	sst, err := n.RootData.bincache.lookup(pn)
 	if err != nil {
 		return nil, fs.ToErrno(os.ErrNotExist)
@@ -59,6 +62,8 @@ var _ = (fs.NodeOpener)((*binFsNode)(nil))
 // Open returns a binFsFile with a download obj.
 func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
 	p := n.path()
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] fuse open", p)
 
 	db.DPrintf(db.BINSRV, "%v: Open %q\n", n, p)
 

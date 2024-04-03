@@ -3,6 +3,7 @@ package binsrv
 import (
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
 
@@ -53,6 +54,10 @@ type bincache struct {
 func (bc *bincache) sStat(pn string) (*sp.Stat, error) {
 	bin, paths := downloadPaths(pn, bc.kernelId)
 	db.DPrintf(db.BINSRV, "sStat %q %v\n", bin, paths)
+
+	s := time.Now()
+	db.DPrintf(db.SPAWN_LAT, "[%v] sStat %v", bin, paths)
+
 	var st *sp.Stat
 	err := fslib.RetryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.BINSRV, "Stat %q/%q\n", pn, bin)
@@ -64,6 +69,9 @@ func (bc *bincache) sStat(pn string) (*sp.Stat, error) {
 		}
 		return err
 	})
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] sStat %v %v", bin, paths, time.Since(s))
+
 	return st, err
 }
 
@@ -106,7 +114,7 @@ func (bc *bincache) getDownload(pn string, sz sp.Tsize) (*downloader, error) {
 
 	if e.dl == nil {
 		db.DPrintf(db.BINSRV, "getDownload: new downloader %q\n", pn)
-		if dl, err := newDownloader(pn, bc.sc, bc.updc, sz); err != nil {
+		if dl, err := newDownloader(pn, bc.sc, bc.updc, bc.kernelId, sz); err != nil {
 			return nil, err
 		} else {
 			e.dl = dl

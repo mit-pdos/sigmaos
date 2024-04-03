@@ -112,24 +112,19 @@ func RunBinFS(kernelId, uprocdpid string) error {
 		return err
 	}
 
-	if sts, err := sc.GetDir(sp.CHUNKD); err == nil {
-		db.DPrintf(db.ALWAYS, "chunksrvs %v", sp.Names(sts))
-	} else {
-		db.DPrintf(db.ALWAYS, "chunksrvs err %v", err)
-	}
+	// if sts, err := sc.GetDir(sp.CHUNKD); err == nil {
+	// 	db.DPrintf(db.ALWAYS, "chunksrvs %v", sp.Names(sts))
+	// } else {
+	// 	db.DPrintf(db.ALWAYS, "chunksrvs err %v", err)
+	// }
 
 	pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
-	//if sts, err := sc.GetDir(pn); err == nil {
-	//	db.DPrintf(db.ALWAYS, "uprocds %v", sp.Names(sts))
-	//} else {
-	//	db.DPrintf(db.ALWAYS, "uprocds %q err %v", pn, err)
-	//}
-
 	rc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sc.FsLib}, pn)
 	if err != nil {
 		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
 		return err
 	}
+
 	updc := uprocclnt.NewUprocdClnt(sp.Tpid(uprocdpid), rc)
 
 	loopbackRoot, err := newBinRoot(kernelId, sc, updc)

@@ -41,7 +41,7 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 
 	pn := filepath.Join(n.path(), name)
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] fuse lookup", pn)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup", pn)
 
 	sst, err := n.RootData.bincache.lookup(pn, c.Pid)
 	if err != nil {
@@ -65,7 +65,7 @@ func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, f
 	p := n.path()
 
 	c := ctx.(*fuse.Context).Caller
-	db.DPrintf(db.SPAWN_LAT, "[%v] fuse open %d", p, c.Pid)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Open %d", p, c.Pid)
 
 	db.DPrintf(db.BINSRV, "%v: Open %q\n", n, p)
 

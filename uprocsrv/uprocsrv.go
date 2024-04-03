@@ -28,6 +28,7 @@ import (
 	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/syncmap"
 	"sigmaos/uprocsrv/proto"
 )
 
@@ -42,7 +43,7 @@ type UprocSrv struct {
 	kernelId string
 	realm    sp.Trealm
 	sc       *sigmaclnt.SigmaClnt
-	procs    map[int]*proc.Proc
+	procs    *syncmap.SyncMap[int, *proc.Proc]
 }
 
 func RunUprocSrv(kernelId string, up string) error {
@@ -52,7 +53,7 @@ func RunUprocSrv(kernelId string, up string) error {
 		ch:       make(chan struct{}),
 		pe:       pe,
 		realm:    sp.NOREALM,
-		procs:    make(map[int]*proc.Proc),
+		procs:    syncmap.NewSyncMap[int, *proc.Proc](),
 	}
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
@@ -220,14 +221,14 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	cmd, err := container.StartUProc(uproc)
 	if err != nil {
 		return err
 	}
-	ups.procs[cmd.Pid()] = uproc
+	ups.procs.Insert(cmd.Pid(), uproc)
 	err = cmd.Wait()
-	delete(ups.procs, cmd.Pid())
+	ups.procs.Delete(cmd.Pid())
 	return err
 }
 
@@ -291,28 +292,41 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 	db.DPrintf(db.UPROCD, "Uprocd fetch %v", req)
 	pn := path.Join(sp.SIGMAHOME, "all-realm-bin", ups.realm.String(), req.Prog)
 
-	uproc, ok := ups.procs[int(req.Pid)]
+	uproc, ok := ups.procs.Lookup(int(req.Pid))
 	if !ok {
-		db.DFatalf("Fetch: no proc for %d\n", req.Pid)
+		db.DFatalf("procs.Lookup %d\n", req.Pid)
 	}
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: ck %d spawn %v", req.Prog, req.ChunkId, time.Since(uproc.GetSpawnTime()))
+
 	sz, err := chunksrv.Fetch(ups.sc, pn, req.Prog, int(req.ChunkId), uproc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
 	res.Size = uint64(sz)
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d spawn %v", req.Prog, req.ChunkId, time.Since(uproc.GetSpawnTime()))
+
 	return nil
 }
 
 func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.LookupResponse) error {
 	db.DPrintf(db.UPROCD, "Uprocd Lookup %v", req)
-	uproc, ok := ups.procs[int(req.Pid)]
+
+	uproc, ok := ups.procs.Lookup(int(req.Pid))
 	if !ok {
-		db.DFatalf("Fetch: no proc for %d\n", req.Pid)
+		db.DFatalf("procs.Lookup %d\n", req.Pid)
 	}
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v spawn %v", req.Prog, uproc.GetSigmaPath(), time.Since(uproc.GetSpawnTime()))
+
 	st, err := chunksrv.Lookup(ups.sc, req.Prog, ups.kernelId, uproc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
 	res.Stat = st
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done spawn %v", req.Prog, time.Since(uproc.GetSpawnTime()))
+
 	return nil
 }

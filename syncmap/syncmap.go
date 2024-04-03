@@ -24,6 +24,16 @@ func (sm *SyncMap[K, T]) Lookup(k K) (T, bool) {
 	return r, ok
 }
 
+func (sm *SyncMap[K, T]) Alloc(k K, ne T) (T, bool) {
+	sm.Lock()
+	defer sm.Unlock()
+	if e, ok := sm.tbl[k]; ok {
+		return e, false
+	}
+	sm.tbl[k] = ne
+	return ne, true
+}
+
 func (sm *SyncMap[K, T]) Insert(k K, t T) bool {
 	sm.Lock()
 	defer sm.Unlock()

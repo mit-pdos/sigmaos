@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/syncmap"
 	"sigmaos/uprocclnt"
 )
 
@@ -37,21 +38,21 @@ func toUstat(sst *sp.Stat, ust *syscall.Stat_t) {
 }
 
 type entry struct {
+	mu sync.Mutex
 	st *sp.Stat
 	dl *downloader
 }
 
 type bincache struct {
-	mu       sync.Mutex
 	sc       *sigmaclnt.SigmaClnt
 	kernelId string
-	cache    map[string]*entry
+	cache    *syncmap.SyncMap[string, *entry]
 	updc     *uprocclnt.UprocdClnt
 }
 
 func newBinCache(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) *bincache {
 	bc := &bincache{
-		cache:    make(map[string]*entry),
+		cache:    syncmap.NewSyncMap[string, *entry](),
 		sc:       sc,
 		kernelId: kernelId,
 		updc:     updc,
@@ -59,33 +60,33 @@ func newBinCache(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.Uproc
 	return bc
 }
 
-// Check cache first. If not present, Stat file in sigmaos.
+// Check cache first. If not present, get stat from uprocd
 func (bc *bincache) lookup(pn string, pid uint32) (*sp.Stat, error) {
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
-
-	e, ok := bc.cache[pn]
+	e, ok := bc.cache.Lookup(pn)
 	if ok {
 		return e.st, nil
 	}
-	st, err := bc.updc.Lookup(pn, pid)
-	if err != nil {
-		return nil, err
+	e, _ = bc.cache.Alloc(pn, &entry{})
+	db.DPrintf(db.BINSRV, "alloc %q\n", pn)
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.st == nil {
+		st, err := bc.updc.Lookup(pn, pid)
+		if err != nil {
+			return nil, err
+		}
+		e.st = st
 	}
-	db.DPrintf(db.BINSRV, "lookup %q %v err %v\n", pn, st, err)
-	bc.cache[pn] = &entry{st, nil}
-	return st, nil
+	return e.st, nil
 }
 
 func (bc *bincache) getDownload(pn string, sz sp.Tsize, pid uint32) (*downloader, error) {
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
-
-	e, ok := bc.cache[pn]
+	e, ok := bc.cache.Lookup(pn)
 	if !ok {
 		db.DFatalf("getDownload %q not present", pn)
 	}
-
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	if e.dl == nil {
 		db.DPrintf(db.BINSRV, "getDownload: new downloader %q\n", pn)
 		if dl, err := newDownloader(pn, bc.sc, bc.updc, bc.kernelId, sz, pid); err != nil {

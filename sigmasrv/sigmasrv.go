@@ -155,7 +155,7 @@ func NewSigmaSrvRootClntKeyMgr(root fs.Dir, addr *sp.Taddr, path string, sc *sig
 	return newSigmaSrv(mfs), nil
 }
 
-func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
+func NewSigmaSrvRootClnt(root fs.Dir, path string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
 	return NewSigmaSrvRootClntKeyMgr(root, addr, path, sc, nil)
 }
 
@@ -164,7 +164,7 @@ func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv)
 	if err != nil {
 		return nil, err
 	}
-	return NewSigmaSrvRootClnt(root, addr, path, sc)
+	return NewSigmaSrvRootClnt(root, path, addr, sc)
 }
 
 // Mount the rpc directory in sessrv and create the RPC service in

@@ -149,7 +149,7 @@ func (k *Kernel) bootRealmd() (Subsystem, error) {
 }
 
 func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, realm, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("fsuxd", []string{sp.SIGMAHOME}, realm, proc.HSCHEDD)
 }
 
 func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {

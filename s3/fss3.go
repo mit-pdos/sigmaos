@@ -80,7 +80,6 @@ func RunFss3(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.Pr
 		db.DFatalf(db.ERROR, "Error NewAuthSrv %v", err)
 	}
 	sc.SetAuthSrv(as)
-
 	fss3 = &Fss3{
 		clients: make(map[sp.TprincipalID]*s3.Client),
 	}

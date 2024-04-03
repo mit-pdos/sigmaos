@@ -24,7 +24,7 @@ func NewPublicAddrs(outerIP sp.Tip, pb PortBinding, netns string, laddr *sp.Tadd
 }
 
 func NewPublicMount(outerIP sp.Tip, pb PortBinding, net string, lmnt *sp.Tmount) *sp.Tmount {
-	return sp.NewMount(NewPublicAddrs(outerIP, pb, net, lmnt.Addresses()[0]), lmnt.GetRealm())
+	return sp.NewMount(NewPublicAddrs(outerIP, pb, net, lmnt.Addrs()[0]), lmnt.GetRealm())
 }
 
 type PortBinding struct {

@@ -84,5 +84,5 @@ func (sc *Mgr) RPC(mnt *sp.Tmount, req sessp.Tmsg, iniov sessp.IoVec, outiov ses
 }
 
 func sessKey(mnt *sp.Tmount) string {
-	return mnt.Addresses().String()
+	return mnt.Addrs().String()
 }

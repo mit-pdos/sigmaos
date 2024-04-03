@@ -121,5 +121,5 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 
 // Return the pathname for posting in a directory of a service
 func mountPathName(pn string, mnt *sp.Tmount) string {
-	return pn + "/" + mnt.Address().IPPort()
+	return pn + "/" + mnt.Addrs()[0].IPPort()
 }

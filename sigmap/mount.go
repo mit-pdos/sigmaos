@@ -72,13 +72,7 @@ func (mnt *Tmount) GetRealm() Trealm {
 	return Trealm(mnt.Claims.GetRealmStr())
 }
 
-// TODO XXX kill
-func (mnt *Tmount) Address() *Taddr {
-	return mnt.Claims.Addr[0]
-}
-
-// XXX Dedup?
-func (mnt *Tmount) Addresses() Taddrs {
+func (mnt *Tmount) Addrs() Taddrs {
 	return mnt.Claims.Addr
 }
 

@@ -168,7 +168,7 @@ func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) (*Gr
 	}
 	g.ssrv = ssrv
 
-	cfg.SigmaAddrs[g.myid] = []*sp.Taddr{ssrv.GetMount().Addresses()[0]}
+	cfg.SigmaAddrs[g.myid] = []*sp.Taddr{ssrv.GetMount().Addrs()[0]}
 
 	pn := grpConfPath(g.jobdir, g.grp)
 

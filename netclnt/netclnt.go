@@ -58,9 +58,9 @@ func (nc *NetClnt) Close() error {
 func (nc *NetClnt) connect(mnt *sp.Tmount) *serr.Err {
 	// TODO XXX need rearrange?
 	//	addrs = netsigma.Rearrange(nc.pe.GetNet(), addrs)
-	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), mnt, mnt.Addresses()[0])
+	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), mnt, mnt.Addrs()[0])
 	//	for _, addr := range addrs {
-	for i, addr := range mnt.Addresses() {
+	for i, addr := range mnt.Addrs() {
 		if i > 0 {
 			// TODO XXX: support multi-dialing
 			db.DFatalf("Do not support multi-dialing yet")

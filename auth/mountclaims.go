@@ -19,7 +19,7 @@ type MountClaims struct {
 func NewMountClaims(mnt *sp.Tmount) *MountClaims {
 	return &MountClaims{
 		Realm: mnt.GetRealm(),
-		Addr:  mnt.Addresses(),
+		Addr:  mnt.Addrs(),
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 999).Unix(), // TODO: set expiry properly
 			Issuer:    ISSUER,

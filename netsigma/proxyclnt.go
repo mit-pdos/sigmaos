@@ -103,6 +103,10 @@ func (npc *NetProxyClnt) proxyDial(mnt *sp.Tmount) (net.Conn, error) {
 		db.DPrintf(db.ERROR, "Dial mount without realm set: %v", mnt)
 		return nil, fmt.Errorf("Realm not set")
 	}
+	if !mnt.IsSigned() {
+		db.DPrintf(db.ERROR, "Dial unsigned mount: %v", mnt)
+		return nil, fmt.Errorf("Mount not signed")
+	}
 	req := &proto.DialRequest{
 		Mount: mnt.GetProto(),
 	}

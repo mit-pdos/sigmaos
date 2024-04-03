@@ -145,32 +145,31 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 }
 
 func (k *Kernel) bootRealmd() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("realmd", []string{}, sp.ROOTREALM, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("realmd", []string{}, sp.ROOTREALM, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("fsuxd", []string{sp.SIGMAHOME}, realm, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("fsuxd", []string{sp.SIGMAHOME}, realm, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("fss3d", []string{}, realm, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("fss3d", []string{}, realm, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("dbd", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("dbd", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootMongod(hostip string) (Subsystem, error) {
-	pid := sp.GenPid("mongod")
-	return k.bootSubsystemPIDWithMcpu(pid, "mongod", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD, 1000)
+	return k.bootSubsystemBootstrapKeys("mongod", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD, 1000)
 }
 
 func (k *Kernel) bootLCSched() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("lcsched", []string{}, sp.ROOTREALM, proc.HLINUX)
+	return k.bootSubsystemBootstrapKeys("lcsched", []string{}, sp.ROOTREALM, proc.HLINUX, 0)
 }
 
 func (k *Kernel) bootProcq() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("procq", []string{}, sp.ROOTREALM, proc.HLINUX)
+	return k.bootSubsystemBootstrapKeys("procq", []string{}, sp.ROOTREALM, proc.HLINUX, 0)
 }
 
 func (k *Kernel) bootKeyd() (Subsystem, error) {
@@ -185,11 +184,11 @@ func (k *Kernel) bootKeyd() (Subsystem, error) {
 }
 
 func (k *Kernel) bootSchedd() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu}, sp.ROOTREALM, proc.HLINUX)
+	return k.bootSubsystemBootstrapKeys("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu}, sp.ROOTREALM, proc.HLINUX, 0)
 }
 
 func (k *Kernel) bootNamed() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("named", []string{sp.ROOTREALM.String(), "0"}, sp.ROOTREALM, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("named", []string{sp.ROOTREALM.String(), "0"}, sp.ROOTREALM, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {

@@ -127,7 +127,7 @@ func (k *Kernel) bootstrapKeys(pid sp.Tpid) ([]string, error) {
 	}, nil
 }
 
-func (k *Kernel) bootSubsystemBootstrapKeys(program string, args []string, realm sp.Trealm, how proc.Thow) (Subsystem, error) {
+func (k *Kernel) bootSubsystemBootstrapKeys(program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	pid := sp.GenPid(program)
 	// bootstrap keys for the subsystem
 	keys, err := k.bootstrapKeys(pid)
@@ -135,7 +135,7 @@ func (k *Kernel) bootSubsystemBootstrapKeys(program string, args []string, realm
 		return nil, err
 	}
 	argsWithKeys := append(keys, args...)
-	return k.bootSubsystemPIDWithMcpu(pid, program, argsWithKeys, realm, how, 0)
+	return k.bootSubsystemPIDWithMcpu(pid, program, argsWithKeys, realm, how, mcpu)
 }
 
 func (k *Kernel) bootSubsystem(program string, args []string, realm sp.Trealm, how proc.Thow) (Subsystem, error) {

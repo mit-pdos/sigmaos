@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error get bootstrapped keys", err)
 	}
-	if err := dbsrv.RunDbd(os.Args[1], masterPubKey, pubkey, privkey); err != nil {
+	if err := dbsrv.RunDbd(os.Args[4], masterPubKey, pubkey, privkey); err != nil {
 		db.DFatalf("Fatal start: %v %v\n", os.Args[0], err)
 	}
 }

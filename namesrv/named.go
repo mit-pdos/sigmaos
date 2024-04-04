@@ -61,12 +61,12 @@ func Run(args []string) error {
 
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pe)
-	if len(args) != 7 {
+	if len(args) != 6 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 	masterPubKey, pubkey, privkey, err := keys.BootstrappedKeysFromArgs(args[1:])
 	if err != nil {
-		db.DFatalf("Error get bootstrapped keys", err)
+		db.DFatalf("Error get bootstrapped keys: %v", err)
 	}
 	//	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[2]))
 	//	if err != nil {
@@ -76,7 +76,7 @@ func Run(args []string) error {
 	nd := &Named{}
 	nd.masterPublicKey = masterPubKey
 	nd.masterPrivKey = nil // masterPrivKey
-	nd.signer = sp.Tsigner(nd.SigmaClnt.ProcEnv().GetPID())
+	nd.signer = sp.Tsigner(pe.GetPID())
 	nd.pubkey = pubkey
 	nd.privkey = privkey
 	nd.realm = sp.Trealm(args[4])
@@ -205,7 +205,8 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 		//		nd.masterPublicKey,
 		//		nil,
 	)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
+	kmgr.AddPublicKey(sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()), nd.masterPublicKey)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.signer, sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error New authsrv: %v", err)
 		return sp.NewNullMount(), fmt.Errorf("NewAuthSrv err: %v", err)

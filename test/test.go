@@ -77,18 +77,41 @@ type TstateMin struct {
 	lip  sp.Tip
 	PE   *proc.ProcEnv
 	Addr *sp.Taddr
+	AS   auth.AuthSrv
 }
 
 func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
-	lip := sp.Tip("127.0.0.1")
+	var pubkey auth.PublicKey
+	var privkey auth.PrivateKey
+	var err error
+	if loadMasterKey {
+		// Load master deployment key from Host FS
+		pubkey, privkey, err = keys.LoadMasterECDSAKey()
+		assert.Nil(t, err, "Error LoadECDSAKey: %v", err)
+	} else {
+		// Genereate a fresh master deployment key
+		pubkey, privkey, err = keys.NewECDSAKey()
+		assert.Nil(t, err, "Error NewECDSAKey: %v", err)
+	}
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
+	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
-	assert.Nil(t, err1)
+	assert.Nil(t, err1, "Error load s3 secrets: %v", err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
+	assert.Nil(t, err1, "Error new auth srv: %v", err1)
+	lip := sp.Tip("127.0.0.1")
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false, false)
 	pe.Program = "srv"
 	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM, sp.NoToken()))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	return &TstateMin{T: t, lip: lip, PE: pe, Addr: addr}
+	return &TstateMin{
+		T:    t,
+		lip:  lip,
+		PE:   pe,
+		Addr: addr,
+		AS:   as,
+	}
 }
 
 func NewTstateMin(t *testing.T) *TstateMin {

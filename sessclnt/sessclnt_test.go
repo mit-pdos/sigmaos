@@ -99,13 +99,14 @@ type TstateSrv struct {
 
 func newTstateClntAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := &TstateSrv{TstateMin: test.NewTstateMinAddr(t, addr), crash: crash}
-	ts.clnt = sessclnt.NewMgr(ts.PE, netsigma.NewNetProxyClnt(ts.PE))
+	ts.clnt = sessclnt.NewMgr(ts.PE, netsigma.NewNetProxyClnt(ts.PE, nil))
 	return ts
 }
 
 func newTstateSrvAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := newTstateClntAddr(t, addr, crash)
-	ts.srv = netsrv.NewNetServer(ts.PE, netsigma.NewNetProxyClnt(ts.PE), ts.Addr, ts)
+	db.DPrintf(db.ALWAYS, "pe: %v", ts.PE)
+	ts.srv = netsrv.NewNetServer(ts.PE, netsigma.NewNetProxyClnt(ts.PE, ts.AS), ts.Addr, ts)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.GetMount())
 	return ts
 }
@@ -467,8 +468,8 @@ func newTstateSp(t *testing.T) *TstateSp {
 	err = as.MintAndSetProcToken(ts.PE)
 	assert.Nil(t, err, "Err MintAndSetToken: %v", err)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, root, as, ts.Addr, nil)
-	ts.clnt = sessclnt.NewMgr(ts.PE, netsigma.NewNetProxyClnt(ts.PE))
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, netsigma.NewNetProxyClnt(ts.PE, as), root, as, ts.Addr, nil)
+	ts.clnt = sessclnt.NewMgr(ts.PE, netsigma.NewNetProxyClnt(ts.PE, nil))
 	return ts
 }
 

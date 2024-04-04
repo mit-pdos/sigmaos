@@ -45,7 +45,7 @@ func RunFsUx(rootux string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, 
 	)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DFatalf(db.ERROR, "Error NewAuthSrv %v", err)
+		db.DFatalf("Error NewAuthSrv %v", err)
 	}
 	sc.SetAuthSrv(as)
 

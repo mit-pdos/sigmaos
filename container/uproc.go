@@ -46,8 +46,10 @@ func StartUProc(uproc *proc.Proc) (*uprocCmd, error) {
 	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
 	// uproc.AppendEnv("RUST_BACKTRACE", "1")
 	cmd.Env = uproc.GetEnv()
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
 	// Set up new namespaces
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS |
@@ -56,17 +58,18 @@ func StartUProc(uproc *proc.Proc) (*uprocCmd, error) {
 			syscall.CLONE_NEWNS,
 	}
 	db.DPrintf(db.CONTAINER, "exec cmd %v", cmd)
-	defer cleanupJail(uproc.GetPid())
+
 	s := time.Now()
 	if err := cmd.Start(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error start %v %v", cmd, err)
+		CleanupUproc(uproc.GetPid())
 		return nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc cmd.Start %v", uproc.GetPid(), time.Since(s))
 	return &uprocCmd{cmd: cmd}, nil
 }
 
-func cleanupJail(pid sp.Tpid) {
+func CleanupUproc(pid sp.Tpid) {
 	if err := os.RemoveAll(jailPath(pid)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
 	}

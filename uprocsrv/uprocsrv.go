@@ -32,6 +32,39 @@ import (
 	"sigmaos/uprocsrv/proto"
 )
 
+// A running uproc may ask for proc in the procEntry before uprocsrv
+// has set proc in procEntry.  To handle this case, procEntry has a
+// condition varialble on which the Lookup req sleeps until uprocsrv
+// sets proc.
+type procEntry struct {
+	mu   sync.Mutex
+	cond *sync.Cond
+	proc *proc.Proc
+}
+
+func (pe *procEntry) insertSignal(proc *proc.Proc) {
+	pe.mu.Lock()
+	defer pe.mu.Unlock()
+
+	pe.proc = proc
+	if pe.cond != nil { // some thread is waiting for proc info
+		pe.cond.Broadcast()
+	}
+}
+
+func (pe *procEntry) wait() {
+	pe.mu.Lock()
+	defer pe.mu.Unlock()
+
+	if pe.proc == nil {
+		pe.cond = sync.NewCond(&pe.mu)
+	}
+	for pe.proc == nil {
+		pe.cond.Wait()
+	}
+}
+
+// Uprocsrv holds the state for serving procs.
 type UprocSrv struct {
 	mu       sync.RWMutex
 	ch       chan struct{}
@@ -43,7 +76,7 @@ type UprocSrv struct {
 	kernelId string
 	realm    sp.Trealm
 	sc       *sigmaclnt.SigmaClnt
-	procs    *syncmap.SyncMap[int, *proc.Proc]
+	procs    *syncmap.SyncMap[int, *procEntry]
 }
 
 func RunUprocSrv(kernelId string, up string) error {
@@ -53,7 +86,7 @@ func RunUprocSrv(kernelId string, up string) error {
 		ch:       make(chan struct{}),
 		pe:       pe,
 		realm:    sp.NOREALM,
-		procs:    syncmap.NewSyncMap[int, *proc.Proc](),
+		procs:    syncmap.NewSyncMap[int, *procEntry](),
 	}
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
@@ -226,9 +259,17 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	if err != nil {
 		return err
 	}
-	ups.procs.Insert(cmd.Pid(), uproc)
+
+	pid := cmd.Pid()
+	db.DPrintf(db.UPROCD, "Pid %d\n", pid)
+	pe, ok := ups.procs.Alloc(pid, &procEntry{proc: uproc})
+	if !ok { // it was already inserted
+		pe.insertSignal(uproc)
+	}
+
 	err = cmd.Wait()
-	ups.procs.Delete(cmd.Pid())
+	container.CleanupUproc(uproc.GetPid())
+	ups.procs.Delete(pid)
 	return err
 }
 
@@ -292,20 +333,20 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 	db.DPrintf(db.UPROCD, "Uprocd fetch %v", req)
 	pn := path.Join(sp.SIGMAHOME, "all-realm-bin", ups.realm.String(), req.Prog)
 
-	uproc, ok := ups.procs.Lookup(int(req.Pid))
-	if !ok {
-		db.DFatalf("procs.Lookup %d\n", req.Pid)
+	pe, ok := ups.procs.Lookup(int(req.Pid))
+	if !ok || pe.proc == nil {
+		db.DFatalf("Fetch: procs.Lookup %d\n", req.Pid)
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: ck %d spawn %v", req.Prog, req.ChunkId, time.Since(uproc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: ck %d spawn %v", req.Prog, req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
 
-	sz, err := chunksrv.Fetch(ups.sc, pn, req.Prog, int(req.ChunkId), uproc.GetSigmaPath())
+	sz, err := chunksrv.Fetch(ups.sc, pn, req.Prog, int(req.ChunkId), pe.proc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
 	res.Size = uint64(sz)
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d spawn %v", req.Prog, req.ChunkId, time.Since(uproc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d spawn %v", req.Prog, req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
 
 	return nil
 }
@@ -313,20 +354,19 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.LookupResponse) error {
 	db.DPrintf(db.UPROCD, "Uprocd Lookup %v", req)
 
-	uproc, ok := ups.procs.Lookup(int(req.Pid))
+	pe, ok := ups.procs.Alloc(int(req.Pid), &procEntry{})
 	if !ok {
-		db.DFatalf("procs.Lookup %d\n", req.Pid)
+		pe.wait()
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v spawn %v", req.Prog, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v spawn %v", req.Prog, uproc.GetSigmaPath(), time.Since(uproc.GetSpawnTime()))
-
-	st, err := chunksrv.Lookup(ups.sc, req.Prog, ups.kernelId, uproc.GetSigmaPath())
+	st, err := chunksrv.Lookup(ups.sc, req.Prog, ups.kernelId, pe.proc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
 	res.Stat = st
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done spawn %v", req.Prog, time.Since(uproc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done spawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
 
 	return nil
 }

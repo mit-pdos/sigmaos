@@ -45,7 +45,9 @@ func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
 }
 
 func NewSigmaSrvPublic(fn string, svci any, pe *proc.ProcEnv, public bool) (*SigmaSrv, error) {
-	db.DPrintf(db.ALWAYS, "NewSigmaSrvPublic %T", svci)
+	db.DPrintf(db.SIGMASRV, "NewSigmaSrvPublic %T", svci)
+	defer db.DPrintf(db.SIGMASRV, "NewSigmaSrvPublic done %T", svci)
+
 	if public {
 		mfs, error := memfssrv.NewMemFsPublic(fn, pe)
 		if error != nil {

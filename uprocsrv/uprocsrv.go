@@ -9,13 +9,18 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/golang-jwt/jwt"
+
+	"sigmaos/auth"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
+	"sigmaos/keys"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -36,7 +41,7 @@ type UprocSrv struct {
 	marshaledSCKeys []string
 }
 
-func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCKeys []string) error {
+func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCKeys []string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{
 		kernelId:        kernelId,
@@ -48,11 +53,27 @@ func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCK
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
 
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf(db.ERROR, "Error NewAuthSrv %v", err)
+	}
+	sc.SetAuthSrv(as)
 	var ssrv *sigmasrv.SigmaSrv
-	var err error
 	if up == sp.NO_PORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
-		ssrv, err = sigmasrv.NewSigmaSrv(pn, ups, pe)
+		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
 	} else {
 		var port sp.Tport
 		port, err = sp.ParsePort(up)
@@ -62,7 +83,7 @@ func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCK
 		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port, pe.GetNet())
 
 		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.NewSigmaSrvAddr("", addr, pe, ups)
+		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
 	}
 	if err != nil {
 		return err

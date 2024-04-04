@@ -222,7 +222,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 	}
 	sigmaclntdArgs := append([]string{sigmaclntdPID.String()}, keys...)
 	db.DPrintf(db.ALWAYS, "Uprocd args %v", args)
-	s, err := k.bootSubsystem("uprocd", append(args, sigmaclntdArgs...), sp.ROOTREALM, proc.HDOCKER)
+	s, err := k.bootSubsystemBootstrapKeys("uprocd", append(args, sigmaclntdArgs...), sp.ROOTREALM, proc.HDOCKER, 0)
 	if err != nil {
 		return nil, err
 	}

@@ -142,6 +142,7 @@ func Run(args []string) error {
 		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = path.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewMountSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
+		nd.GetAuthSrv().MintAndSetMountToken(mnt)
 		if err := nd.MkMountFile(pn, mnt, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "MkMountFile %v at %v err %v\n", nd.realm, pn, err)
 			return err

@@ -157,6 +157,10 @@ func (sc *SigmaClntKernel) GetAuthSrv() auth.AuthSrv {
 	return sc.GetNetProxyClnt().GetAuthSrv()
 }
 
+func (sc *SigmaClnt) GetAuthSrv() auth.AuthSrv {
+	return sc.GetNetProxyClnt().GetAuthSrv()
+}
+
 func (sc *SigmaClnt) SetAuthSrv(as auth.AuthSrv) {
 	sc.GetNetProxyClnt().SetAuthSrv(as)
 }

@@ -1,6 +1,8 @@
 package fslib
 
 import (
+	"fmt"
+
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -8,6 +10,10 @@ import (
 )
 
 func (fsl *FsLib) MkMountFile(pn string, mnt *sp.Tmount, lid sp.TleaseId) error {
+	if !mnt.IsSigned() {
+		db.DPrintf(db.ERROR, "Error make unsigned mount file")
+		return fmt.Errorf("Unsigned mount: %v", mnt)
+	}
 	b, err := mnt.Marshal()
 	if err != nil {
 		return err

@@ -184,6 +184,7 @@ func TestMaliciousPrincipalFail(t *testing.T) {
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("malicious-user"),
+		pe.GetRealm(),
 		sp.NoToken(),
 	))
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
@@ -218,6 +219,7 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
+		pe.GetRealm(),
 		sp.NoToken(),
 	))
 	// Clear AWS secrets
@@ -282,6 +284,7 @@ func TestMaliciousPrincipalKeydFail(t *testing.T) {
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
+		pe.GetRealm(),
 		sp.NoToken(),
 	))
 	// Restrict paths to only allow reads of keyd, not writes
@@ -486,6 +489,7 @@ func TestAWSRestrictedProfileS3BucketAccess(t *testing.T) {
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
+		pe.GetRealm(),
 		sp.NoToken(),
 	))
 

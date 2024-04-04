@@ -56,9 +56,6 @@ func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
 }
 
 func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error) {
-	npc.Lock()
-	defer npc.Unlock()
-
 	var mnt *sp.Tmount
 	var l net.Listener
 	var err error
@@ -92,6 +89,9 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error
 
 // If true, use the net proxy server for dialing & listening.
 func (npc *NetProxyClnt) useProxy() bool {
+	npc.Lock()
+	defer npc.Unlock()
+
 	return npc.pe.GetUseNetProxy()
 }
 

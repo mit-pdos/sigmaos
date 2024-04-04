@@ -96,7 +96,7 @@ func sendProxiedFD(conn *net.UnixConn, proxiedFD int) error {
 	// Send connection FD to child via socket
 	_, _, err := conn.WriteMsgUnix(nil, oob, nil)
 	if err != nil {
-		db.DPrintf(db.NETPROXYSRV_ERR, "Error send conn fd: %v", err)
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error send conn fd (%v): %v", proxiedFD, err)
 		return err
 	}
 	return nil

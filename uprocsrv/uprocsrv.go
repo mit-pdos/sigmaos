@@ -67,7 +67,7 @@ func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCK
 	)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DFatalf(db.ERROR, "Error NewAuthSrv %v", err)
+		db.DFatalf("Error NewAuthSrv %v", err)
 	}
 	sc.SetAuthSrv(as)
 	var ssrv *sigmasrv.SigmaSrv

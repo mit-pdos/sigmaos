@@ -77,7 +77,7 @@ func RunFss3(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.Pr
 	)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DFatalf(db.ERROR, "Error NewAuthSrv %v", err)
+		db.DFatalf("Error NewAuthSrv %v", err)
 	}
 	sc.SetAuthSrv(as)
 	fss3 = &Fss3{

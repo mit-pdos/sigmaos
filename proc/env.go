@@ -161,6 +161,7 @@ func NewAddedProcEnv(pe *ProcEnv) *ProcEnv {
 	// Make a deep copy of the proc claims
 	pe2.Claims = &ProcClaimsProto{
 		PrincipalIDStr: pe2.GetPrincipal().GetID().String(),
+		RealmStr:       pe2.GetPrincipal().GetRealm().String(),
 		AllowedPaths:   make([]string, len(pe.Claims.GetAllowedPaths())),
 		Secrets:        make(map[string]*ProcSecretProto),
 	}

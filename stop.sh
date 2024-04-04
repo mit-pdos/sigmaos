@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--parallel] [--nopurge]" 1>&2
+  echo "Usage: $0 [--parallel] [--nopurge] [--skipdb]" 1>&2
 }
 
 PARALLEL=""
 PURGE="true"
+SKIPDB="false"
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -16,6 +17,10 @@ while [[ $# -gt 0 ]]; do
   --nopurge)
     shift
     PURGE=""
+    ;;
+  --skipdb)
+    shift
+    SKIPDB="true"
     ;;
   -help)
     usage
@@ -42,6 +47,14 @@ sudo rm -f /tmp/sigmaclntd/sigmaclntd-netproxy.sock
 
 if docker ps -a | grep -qE 'sigma|uprocd|bootkerne'; then
   for container in $(docker ps -a | grep -E 'sigma|uprocd|bootkerne' | cut -d ' ' -f1) ; do
+    # Optionally skip DB shutdown
+    if [ "$SKIPDB" == "true" ]; then
+      cname=$(docker ps -a | grep $container | cut -d ' ' -f4)
+      if [ "$cname" == "mariadb" ] || [ "$cname" == "mongo:4.4.6" ]; then
+        echo "skipping stop db $cname"
+        continue
+      fi
+    fi
     stop="
       docker stop $container 
       docker rm $container

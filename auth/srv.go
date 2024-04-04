@@ -185,11 +185,14 @@ func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, mount *sp.
 		db.DPrintf(db.AUTH, "Mount Authorization token check failed p %v: err %v", principal.GetID(), err)
 		return false, err
 	}
-	// Check if the mount is for the principal's realm
-	if pc.Realm != mc.Realm {
-		err := fmt.Errorf("Mismatch between p %v realm %v and mount %v realm %v", principal.GetID(), pc.Realm, mount, mount.GetRealm())
-		db.DPrintf(db.AUTH, "Mount Authorization check failed p %v: err %v", principal.GetID(), err)
-		return false, err
+	// Root realm (kernel) procs are accessible from any realm
+	if mc.Realm != sp.ROOTREALM {
+		// Check if the mount is for the principal's realm
+		if pc.Realm != mc.Realm {
+			err := fmt.Errorf("Mismatch between p %v realm %v and mount %v realm %v", principal.GetID(), pc.Realm, mount, mount.GetRealm())
+			db.DPrintf(db.AUTH, "Mount Authorization check failed p %v: err %v", principal.GetID(), err)
+			return false, err
+		}
 	}
 	return true, nil
 }

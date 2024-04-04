@@ -180,7 +180,6 @@ func NewAddedProcEnv(pe *ProcEnv) *ProcEnv {
 func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, pe.Overlays)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
-	pe2.SetRealm(realm, pe.Overlays)
 	pe2.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID(pe.GetPrincipal().GetID().String()+"-realm-"+realm.String()),
 		realm,
@@ -193,6 +192,7 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 		AllowedPaths:   make([]string, len(pe.Claims.GetAllowedPaths())),
 		Secrets:        make(map[string]*ProcSecretProto),
 	}
+	pe2.SetRealm(realm, pe.Overlays)
 	// Deep copy allowed paths
 	copy(pe2.Claims.AllowedPaths, pe.Claims.GetAllowedPaths())
 	// Deep copy secrets

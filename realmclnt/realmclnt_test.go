@@ -178,8 +178,8 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 
 	// Should have a public and private address
 	if test.Overlays {
-		assert.Equal(rootts.T, 2, len(m1.Addresses()))
-		assert.Equal(rootts.T, 2, len(m1.Addresses()))
+		assert.Equal(rootts.T, 2, len(m1.Addrs()))
+		assert.Equal(rootts.T, 2, len(m1.Addrs()))
 	}
 
 	schedds1, err := ts1.GetDir(sp.SCHEDD)
@@ -300,7 +300,7 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 				assert.Nil(t, err, "ReadMount: %v", err)
 				mnt1, err := rootts.ReadMount(path.Join(d, st.Name))
 				assert.Nil(t, err, "ReadMount: %v", err)
-				assert.False(t, mnt.Address() == mnt1.Address(), "%v cross-over", d)
+				assert.False(t, mnt.Addrs()[0] == mnt1.Addrs()[0], "%v cross-over", d)
 			}
 		}
 	}
@@ -357,7 +357,7 @@ func TestWaitExitMultiNode(t *testing.T) {
 				assert.Nil(t, err, "ReadMount: %v", err)
 				mnt1, err := rootts.ReadMount(path.Join(d, st.Name))
 				assert.Nil(t, err, "ReadMount: %v", err)
-				assert.False(t, mnt.Address() == mnt1.Address(), "%v cross-over", d)
+				assert.False(t, mnt.Addrs()[0] == mnt1.Addrs()[0], "%v cross-over", d)
 			}
 		}
 	}
@@ -518,8 +518,8 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	db.DPrintf(db.TEST, "mnt %v", mnt)
 
 	// Remove public port
-	if len(mnt.Addresses()) > 1 {
-		mnt.SetAddr(mnt.Addresses()[:1])
+	if len(mnt.Addrs()) > 1 {
+		mnt.SetAddr(mnt.Addrs()[:1])
 	}
 
 	pn := path.Join(sp.NAMED, "srv")
@@ -573,8 +573,8 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	db.DPrintf(db.TEST, "mnt %v", mnt)
 
 	// Remove public port
-	if len(mnt.Addresses()) > 1 {
-		mnt.SetAddr(mnt.Addresses()[:1])
+	if len(mnt.Addrs()) > 1 {
+		mnt.SetAddr(mnt.Addrs()[:1])
 	}
 
 	pn := path.Join(sp.NAMED, "srv")

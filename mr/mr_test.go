@@ -336,6 +336,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 		pe := proc.NewAddedProcEnv(t1.ProcEnv())
 		pe.SetPrincipal(sp.NewPrincipal(
 			sp.TprincipalID("mr-restricted-principal"),
+			sp.ROOTREALM,
 			sp.NoToken(),
 		))
 

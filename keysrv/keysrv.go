@@ -95,7 +95,7 @@ func RunKeySrv(masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) {
 	// named.
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DFatalf(db.ERROR, "Error New authsrv: %v", err)
+		db.DFatalf("Error New authsrv: %v", err)
 	}
 	sc.SetAuthSrv(as)
 	ssrv, err := sigmasrv.NewSigmaSrvClntKeyMgr(sp.KEYD, sc, kmgr, ks)

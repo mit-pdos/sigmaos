@@ -132,7 +132,7 @@ func (mgr *KeyMgr) GetPrivateKey(s sp.Tsigner) (auth.PrivateKey, error) {
 	defer mgr.mu.Unlock()
 
 	if key, ok := mgr.privkeys[s]; !ok {
-		return nil, fmt.Errorf("Error GetPrivateKey no key for signer %v: %v", s)
+		return nil, fmt.Errorf("Error GetPrivateKey no key for signer %v", s)
 	} else {
 		db.DPrintf(db.AUTH, "GetPrivateKey cached for signer %v", s)
 		return key, nil

@@ -137,12 +137,13 @@ func (rm *RealmSrv) bootstrapNamedKeys(p *proc.Proc) error {
 		db.DPrintf(db.ERROR, "Error post subsystem key: %v", err)
 		return err
 	}
-	p.Args = append(p.Args,
+	p.Args = append(
 		[]string{
 			rm.masterPubKey.Marshal(),
 			pubkey.Marshal(),
 			privkey.Marshal(),
-		}...,
+		},
+		p.Args...,
 	)
 	p.SetAllowedPaths(sp.ALL_PATHS)
 	if err := rm.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
@@ -167,6 +168,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		return err
 	}
 	p := proc.NewProc("named", []string{req.Realm, "0"})
+	p.GetProcEnv().SetRealm(sp.ROOTREALM, p.GetProcEnv().Overlays)
 	p.SetMcpu(NAMED_MCPU)
 	rm.bootstrapNamedKeys(p)
 

@@ -3,7 +3,6 @@ package auth
 import (
 	"fmt"
 	"path"
-	"reflect"
 
 	"github.com/golang-jwt/jwt"
 
@@ -103,7 +102,7 @@ func (as *AuthSrvImpl[M]) VerifyMountTokenGetClaims(principalID sp.TprincipalID,
 	if mclaims, ok := claims.(*MountClaims); ok {
 		return mclaims, nil
 	}
-	return nil, fmt.Errorf("Claims wrong type: %v", reflect.TypeOf(claims))
+	return nil, fmt.Errorf("Claims wrong type: %T", claims)
 }
 
 func (as *AuthSrvImpl[M]) MintAndSetProcToken(pe *proc.ProcEnv) error {
@@ -129,7 +128,7 @@ func (as *AuthSrvImpl[M]) VerifyProcTokenGetClaims(principalID sp.TprincipalID, 
 	if pclaims, ok := claims.(*ProcClaims); ok {
 		return pclaims, nil
 	}
-	return nil, fmt.Errorf("Claims wrong type: %v", reflect.TypeOf(claims))
+	return nil, fmt.Errorf("Claims wrong type: %T", claims)
 }
 
 func (as *AuthSrvImpl[M]) VerifyPrincipalIdentity(principal *sp.Tprincipal) (*ProcClaims, error) {

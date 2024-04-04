@@ -13,7 +13,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	"sigmaos/netsigma"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -40,15 +39,8 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 		pe:  pe,
 		mnt: newMntTable(),
 	}
-	if fidc == nil {
-		// XXX Why would this be the case??
-		db.DPrintf(db.ERROR, "Nil fid clnt")
-		db.DFatalf("Nil fid clnt")
-		pathc.FidClnt = fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe, nil))
-	} else {
-		pathc.FidClnt = fidc
-		fidc.NewClnt()
-	}
+	pathc.FidClnt = fidc
+	fidc.NewClnt()
 	pathc.ndMntCache = NewNamedMountCache(pe)
 	pathc.rootmt = newRootMountTable()
 	pathc.cid = sp.TclntId(rand.Uint64())

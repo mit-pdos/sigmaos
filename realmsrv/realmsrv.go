@@ -212,6 +212,10 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		pn := path.Join(sp.NAMED, s)
 		mnt := sp.NewMount(namedMount.Addrs(), rid)
 		mnt.SetTree(s)
+		if err := rm.sc.GetAuthSrv().MintAndSetMountToken(mnt); err != nil {
+			db.DPrintf(db.ERROR, "Error mint & set mount token: %v", err)
+			return err
+		}
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
 		if err := sc.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
 			db.DPrintf(db.ERROR, "MountService %v err %v\n", pn, err)

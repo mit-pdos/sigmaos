@@ -42,6 +42,13 @@ func (npc *NetProxyClnt) SetAuthSrv(as auth.AuthSrv) {
 	npc.canSignMounts = true
 }
 
+func (npc *NetProxyClnt) GetAuthSrv() auth.AuthSrv {
+	npc.Lock()
+	defer npc.Unlock()
+
+	return npc.auth
+}
+
 func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
 	var c net.Conn
 	var err error

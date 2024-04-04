@@ -189,6 +189,7 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 	// Make a deep copy of the proc claims
 	pe2.Claims = &ProcClaimsProto{
 		PrincipalIDStr: pe2.GetPrincipal().GetID().String(),
+		RealmStr:       realm.String(),
 		AllowedPaths:   make([]string, len(pe.Claims.GetAllowedPaths())),
 		Secrets:        make(map[string]*ProcSecretProto),
 	}

@@ -64,16 +64,35 @@ type RealmSrv struct {
 
 func RunRealmSrv(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		nil,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
+		return err
+	}
+	sc.SetAuthSrv(as)
 	rs := &RealmSrv{
 		lastNDPort:   MIN_PORT,
 		realms:       make(map[sp.Trealm]*Realm),
 		masterPubKey: masterPubKey,
+		as:           as,
 		pubkey:       pubkey,
 		privkey:      privkey,
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
-	ssrv, err := sigmasrv.NewSigmaSrv(sp.REALMD, rs, pe)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.REALMD, sc, rs)
 	if err != nil {
 		return err
 	}
@@ -87,20 +106,6 @@ func RunRealmSrv(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey aut
 	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	rs.pq = procqclnt.NewProcQClnt(rs.sc.FsLib)
 	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib)
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, ssrv.MemFs.SigmaClnt()),
-		nil,
-		nil,
-		sp.Tsigner(pe.GetPID()),
-		pubkey,
-		privkey,
-	)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
-		return err
-	}
-	rs.as = as
 	go rs.enforceResourcePolicy()
 	err = ssrv.RunServer()
 	rs.mkc.StopMonitoring()

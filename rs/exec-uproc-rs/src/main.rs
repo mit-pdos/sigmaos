@@ -59,11 +59,10 @@ fn main() {
     print_elapsed_time("trampoline.setcap_proc", now, false);
     now = SystemTime::now();
     // Connect to the netproxy socket
-    let netproxy_conn_fd = UnixStream::connect("/tmp/sigmaclntd/sigmaclntd-netproxy.sock")
-        .unwrap()
-        .into_raw_fd();
+    let netproxy_conn = UnixStream::connect("/tmp/sigmaclntd/sigmaclntd-netproxy.sock").unwrap();
     // Remove O_CLOEXEC flag so that the connection remains open when the
     // trampoline execs the proc.
+    let netproxy_conn_fd = netproxy_conn.into_raw_fd();
     fcntl::fcntl(netproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
     // Pass the netproxy socket connection FD to the user proc
     env::set_var("SIGMA_NETPROXY_FD", netproxy_conn_fd.to_string());
@@ -250,12 +249,11 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,
     // but the mini rust proc for our spawn latency microbenchmarks requires
     // it.
-    //    const ALLOWED_SYSCALLS: [ScmpSyscall; 70] = [
-    const ALLOWED_SYSCALLS: [ScmpSyscall; 67] = [
-        //const ALLOWED_SYSCALLS: [ScmpSyscall; 67] = [
+    const ALLOWED_SYSCALLS: [ScmpSyscall; 66] = [
         //        ScmpSyscall::new("bind"),
         //        ScmpSyscall::new("listen"),
         //        ScmpSyscall::new("connect"),
+        //        ScmpSyscall::new("setsockopt"),
         ScmpSyscall::new("ioctl"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("poll"),  // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("lstat"), // XXX Only needed for rust proc spawn microbenchmark
@@ -313,7 +311,6 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("setitimer"),
         ScmpSyscall::new("set_robust_list"),
         ScmpSyscall::new("set_tid_address"),
-        ScmpSyscall::new("setsockopt"),
         ScmpSyscall::new("sigaltstack"),
         ScmpSyscall::new("sync"),
         ScmpSyscall::new("timer_create"),

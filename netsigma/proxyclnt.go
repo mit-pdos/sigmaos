@@ -104,6 +104,7 @@ func (npc *NetProxyClnt) useProxy() bool {
 
 // Lazily init connection to the netproxy srv
 func (npc *NetProxyClnt) init() error {
+	db.DPrintf(db.NETPROXYCLNT, "Init netproxyclnt %p", npc)
 	// Connect to the netproxy server
 	ch, err := NewNetProxyRPCCh(npc.pe)
 	if err != nil {

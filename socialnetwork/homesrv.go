@@ -38,7 +38,7 @@ func RunHomeSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_HOME)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_HOME, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

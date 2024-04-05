@@ -62,13 +62,13 @@ func (nps *NetProxySrv) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.Dial
 	} else {
 		res.Err = sp.NewRerror()
 	}
-	fd, err := connToFD(proxyConn)
+	file, err := connToFile(proxyConn)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
 	// Get wrapper context in order to set output FD
 	wctx := ctx.(*WrapperCtx)
-	wctx.SetFD(fd)
+	wctx.SetFile(file)
 	return nil
 }
 
@@ -96,34 +96,34 @@ func (nps *NetProxySrv) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.
 		return err
 	}
 	res.Mount = mnt.GetProto()
-	fd, err := listenerToFD(proxyListener)
+	file, err := listenerToFile(proxyListener)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
 	// Get wrapper context in order to set output FD
 	wctx := ctx.(*WrapperCtx)
-	wctx.SetFD(fd)
+	wctx.SetFile(file)
 	return nil
 }
 
-func listenerToFD(proxyListener net.Listener) (int, error) {
+func listenerToFile(proxyListener net.Listener) (*os.File, error) {
 	f, err := proxyListener.(*net.TCPListener).File()
 	if err != nil {
 		db.DFatalf("Error get TCP listener fd: %v", err)
-		return 0, err
+		return nil, err
 	}
-	// Return the unix FD for the socket
-	return int(f.Fd()), nil
+	// Return the file object for the socket
+	return f, nil
 }
 
-func connToFD(proxyConn net.Conn) (int, error) {
+func connToFile(proxyConn net.Conn) (*os.File, error) {
 	f, err := proxyConn.(*net.TCPConn).File()
 	if err != nil {
 		db.DFatalf("Error get TCP conn fd: %v", err)
-		return 0, err
+		return nil, err
 	}
-	// Return the unix FD for the socket
-	return int(f.Fd()), nil
+	// Return the file object for the socket
+	return f, nil
 }
 
 func constructMount(as auth.AuthSrv, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tmount, error) {

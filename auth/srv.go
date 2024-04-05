@@ -174,7 +174,7 @@ func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPat
 }
 
 func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, mount *sp.Tmount) (bool, error) {
-	db.DPrintf(db.AUTH, "Mount Authorization check p %v", principal.GetID())
+	db.DPrintf(db.AUTH, "Mount Authorization check p %v mnt %v", principal.GetID(), mount)
 	pc, err := as.VerifyPrincipalIdentity(principal)
 	if err != nil {
 		db.DPrintf(db.AUTH, "Mount Authorization identity check failed p %v: err %v", principal.GetID(), err)
@@ -194,6 +194,7 @@ func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, mount *sp.
 			return false, err
 		}
 	}
+	db.DPrintf(db.AUTH, "Mount Authorization check succeeded p %v mnt %v", principal.GetID(), mount)
 	return true, nil
 }
 

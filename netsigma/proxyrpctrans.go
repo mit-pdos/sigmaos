@@ -2,6 +2,7 @@ package netsigma
 
 import (
 	"net"
+	"os"
 
 	"golang.org/x/sys/unix"
 
@@ -44,12 +45,14 @@ func (npt *NetProxyRPCTrans) runTransport() error {
 func (npt *NetProxyRPCTrans) handleNewConn(conn *net.UnixConn) {
 	defer conn.Close()
 
+	p := sp.NoPrincipal()
+	defer db.DPrintf(db.NETPROXYSRV, "Close conn principal %v", p)
+
 	b, err := frame.ReadFrame(conn)
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error Read PrincipalID frame: %v", err)
 		return
 	}
-	p := sp.NoPrincipal()
 	if err := proto.Unmarshal(b, p); err != nil {
 		db.DPrintf(db.ERROR, "Error Unmarshal PrincipalID: %v", err)
 		return
@@ -60,43 +63,45 @@ func (npt *NetProxyRPCTrans) handleNewConn(conn *net.UnixConn) {
 		// Read the RPC
 		req, err := frame.ReadFrames(conn)
 		if err != nil {
-			db.DPrintf(db.NETPROXYSRV_ERR, "Error ReadFrame: %v", err)
+			db.DPrintf(db.NETPROXYSRV_ERR, "Error ReadFrame p %v: %v", p.GetID(), err)
 			return
 		}
 		ctx := NewWrapperCtx(ctx.NewPrincipalOnlyCtx(p))
 		// Handle the RPC
 		rep, err := npt.rpcs.WriteRead(ctx, req)
 		if err != nil {
-			db.DPrintf(db.NETPROXYSRV_ERR, "Error WriteRead: %v", err)
+			db.DPrintf(db.NETPROXYSRV_ERR, "Error WriteRead p %v: %v", p.GetID(), err)
 			return
 		}
 		db.DPrintf(db.NETPROXYSRV, "[%p] Write n frames: %v", conn, len(rep))
 		// Send back the RPC response
 		if err := frame.WriteFrames(conn, rep); err != nil {
-			db.DPrintf(db.NETPROXYSRV_ERR, "Error WriteFrames: %v", err)
+			db.DPrintf(db.NETPROXYSRV_ERR, "Error WriteFrames p %v: %v", p.GetID(), err)
 			return
 		}
-		if fd, ok := ctx.GetFD(); ok {
+		if file, ok := ctx.GetFile(); ok {
 			// Send back the FD, if a connection was successfully opened
-			if err := sendProxiedFD(conn, fd); err != nil {
-				db.DPrintf(db.NETPROXYSRV_ERR, "Error send FD: %v", err)
+			if err := sendProxiedFD(p, conn, file); err != nil {
+				db.DPrintf(db.NETPROXYSRV_ERR, "Error send FD p %v: %v", p.GetID(), err)
 				return
 			}
+			file.Close()
 		} else {
-			db.DPrintf(db.NETPROXYSRV_ERR, "Skipping sending FD: operation unsuccessful")
+			db.DPrintf(db.NETPROXYSRV_ERR, "Skipping sending FD %v: operation unsuccessful", p.GetID())
 		}
 	}
 }
 
 // Send the FD corresponding to the socket of the established (proxied)
 // connection to the client.
-func sendProxiedFD(conn *net.UnixConn, proxiedFD int) error {
-	oob := unix.UnixRights(proxiedFD)
-	db.DPrintf(db.NETPROXYSRV, "Send fd %v", proxiedFD)
+func sendProxiedFD(p *sp.Tprincipal, conn *net.UnixConn, proxiedFile *os.File) error {
+	fd := int(proxiedFile.Fd())
+	oob := unix.UnixRights(fd)
+	db.DPrintf(db.NETPROXYSRV, "Send p %v fd %v", p.GetID(), fd)
 	// Send connection FD to child via socket
 	_, _, err := conn.WriteMsgUnix(nil, oob, nil)
 	if err != nil {
-		db.DPrintf(db.NETPROXYSRV_ERR, "Error send conn fd (%v): %v", proxiedFD, err)
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error send conn fd (%v): %v", fd, err)
 		return err
 	}
 	return nil

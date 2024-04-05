@@ -15,10 +15,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kvgrp"
-	"sigmaos/proc"
 	"sigmaos/replclnt"
 	"sigmaos/serr"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"
 )
@@ -53,14 +51,6 @@ func NewClerkStart(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
 
 func NewClerkFsLib(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 	return newClerk(fsl, job, repl)
-}
-
-func NewClerk(pe *proc.ProcEnv, job string, repl bool) (*KvClerk, error) {
-	fsl, err := sigmaclnt.NewFsLib(pe)
-	if err != nil {
-		return nil, err
-	}
-	return newClerkStart(fsl, job, repl)
 }
 
 func newClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {

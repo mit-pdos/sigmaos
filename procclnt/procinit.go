@@ -27,7 +27,7 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 		start := time.Now()
 		err := fsl.MountTree(mnt, rpc.RPC, pn)
 		if err != nil {
-			db.DPrintf(db.ERROR, "Err MountTree: %v", err)
+			db.DPrintf(db.ERROR, "Err MountTree: mnt %v err %v", mnt, err)
 			return nil, err
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] MountTree latency: %v", fsl.ProcEnv().GetPID(), time.Since(start))

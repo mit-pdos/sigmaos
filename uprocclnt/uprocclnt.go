@@ -86,7 +86,7 @@ func (clnt *UprocdClnt) Fetch(pn string, ck int, sz sp.Tsize, pid uint32) (sp.Ts
 		db.DPrintf(db.ERROR, "UprocSrv.Fetch %v err %v", req, err)
 		return 0, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch latency from clnt %d %v", pn, ck, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] uprocdclnt.Fetch ck %d %v", pn, ck, time.Since(s))
 	return sp.Tsize(res.Size), nil
 }
 
@@ -101,7 +101,7 @@ func (clnt *UprocdClnt) Lookup(pn string, pid uint32) (*sp.Stat, error) {
 		db.DPrintf(db.ERROR, "UprocSrv.Looup %v err %v", req, err)
 		return nil, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup latency from clnt %v", pn, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] uprocdclnt.Lookup pid %d %v", pn, pid, time.Since(s))
 	return res.Stat, nil
 }
 

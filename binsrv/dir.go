@@ -65,7 +65,7 @@ func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, f
 	p := n.path()
 
 	c := ctx.(*fuse.Context).Caller
-	db.DPrintf(db.SPAWN_LAT, "[%v] Open %d", p, c.Pid)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Open pid %d", p, c.Pid)
 
 	db.DPrintf(db.BINSRV, "%v: Open %q\n", n, p)
 

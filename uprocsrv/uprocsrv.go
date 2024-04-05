@@ -32,14 +32,18 @@ import (
 	"sigmaos/uprocsrv/proto"
 )
 
-// A running uproc may ask for proc in the procEntry before uprocsrv
-// has set proc in procEntry.  To handle this case, procEntry has a
-// condition varialble on which the Lookup req sleeps until uprocsrv
-// sets proc.
+// Lookup may try to read proc in a proc's procEntry before uprocsrv
+// has set it.  To handle this case, procEntry has a condition
+// varialble on which Lookup sleeps until uprocsrv sets proc.
 type procEntry struct {
 	mu   sync.Mutex
 	cond *sync.Cond
 	proc *proc.Proc
+	fd   int
+}
+
+func newProcEntry(proc *proc.Proc) *procEntry {
+	return &procEntry{proc: proc, fd: -1}
 }
 
 func (pe *procEntry) insertSignal(proc *proc.Proc) {
@@ -52,7 +56,7 @@ func (pe *procEntry) insertSignal(proc *proc.Proc) {
 	}
 }
 
-func (pe *procEntry) wait() {
+func (pe *procEntry) procWait() {
 	pe.mu.Lock()
 	defer pe.mu.Unlock()
 
@@ -62,6 +66,21 @@ func (pe *procEntry) wait() {
 	for pe.proc == nil {
 		pe.cond.Wait()
 	}
+}
+
+func (pe *procEntry) getFd(sc *sigmaclnt.SigmaClnt, prog string) (int, error) {
+	pe.mu.Lock()
+	defer pe.mu.Unlock()
+
+	if pe.fd == -1 {
+		fd, err := chunksrv.Open(sc, prog, pe.proc.GetSigmaPath())
+		if err != nil {
+			return -1, err
+		}
+		pe.fd = fd
+		db.DPrintf(db.SPAWN_LAT, "[%v] Open %q spawn %v", prog, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
+	}
+	return pe.fd, nil
 }
 
 // Uprocsrv holds the state for serving procs.
@@ -262,7 +281,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 
 	pid := cmd.Pid()
 	db.DPrintf(db.UPROCD, "Pid %d\n", pid)
-	pe, ok := ups.procs.Alloc(pid, &procEntry{proc: uproc})
+	pe, ok := ups.procs.Alloc(pid, newProcEntry(uproc))
 	if !ok { // it was already inserted
 		pe.insertSignal(uproc)
 	}
@@ -270,6 +289,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	err = cmd.Wait()
 	container.CleanupUproc(uproc.GetPid())
 	ups.procs.Delete(pid)
+	ups.sc.CloseFd(pe.fd)
 	return err
 }
 
@@ -340,7 +360,11 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: ck %d spawn %v", req.Prog, req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
 
-	sz, err := chunksrv.Fetch(ups.sc, pn, req.Prog, int(req.ChunkId), pe.proc.GetSigmaPath())
+	fd, err := pe.getFd(ups.sc, req.Prog)
+	if err != nil {
+		return err
+	}
+	sz, err := chunksrv.Fetch(ups.sc, pn, fd, req.Prog, int(req.ChunkId))
 	if err != nil {
 		return err
 	}
@@ -354,13 +378,16 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.LookupResponse) error {
 	db.DPrintf(db.UPROCD, "Uprocd Lookup %v", req)
 
-	pe, ok := ups.procs.Alloc(int(req.Pid), &procEntry{})
+	pe, ok := ups.procs.Alloc(int(req.Pid), newProcEntry(nil))
 	if !ok {
-		pe.wait()
+		pe.procWait()
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v spawn %v", req.Prog, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
-	st, err := chunksrv.Lookup(ups.sc, req.Prog, ups.kernelId, pe.proc.GetSigmaPath())
+	// XX also in Open()
+	// paths := downloadPaths(path, kernelId)
+
+	st, err := chunksrv.Lookup(ups.sc, req.Prog, pe.proc.GetSigmaPath())
 	if err != nil {
 		return err
 	}

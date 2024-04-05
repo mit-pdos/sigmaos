@@ -38,12 +38,17 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 
 func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
 	db.DPrintf(db.CHUNKSRV, "Fetch %v", req)
+	fd, err := Open(cksrv.sc, req.Prog, req.Path)
+	if err != nil {
+		return err
+	}
 	pn := path.Join(sp.SIGMAHOME, "bin/user/realms", req.Realm, req.Prog)
-	sz, err := Fetch(cksrv.sc, pn, req.Prog, int(req.ChunkId), req.Path)
+	sz, err := Fetch(cksrv.sc, pn, fd, req.Prog, int(req.ChunkId))
 	if err != nil {
 		return err
 	}
 	res.Size = uint64(sz)
+	cksrv.sc.CloseFd(fd)
 	return nil
 }
 
@@ -57,8 +62,7 @@ func downloadPaths(paths []string, kernelId string) []string {
 	return paths
 }
 
-func Lookup(sc *sigmaclnt.SigmaClnt, prog, kernelId string, path []string) (*sp.Stat, error) {
-	paths := downloadPaths(path, kernelId)
+func Lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, error) {
 	db.DPrintf(db.CHUNKSRV, "Lookup %q %v\n", prog, paths)
 
 	var st *sp.Stat
@@ -75,10 +79,9 @@ func Lookup(sc *sigmaclnt.SigmaClnt, prog, kernelId string, path []string) (*sp.
 	return st, err
 }
 
-func Fetch(sc *sigmaclnt.SigmaClnt, pn, prog string, ckid int, path []string) (sp.Tsize, error) {
-	sfd := 0
-	s := time.Now()
-	if err := fslib.RetryPaths(path, func(i int, pn string) error {
+func Open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, error) {
+	sfd := -1
+	if err := fslib.RetryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.CHUNKSRV, "sOpen %q/%v\n", pn, prog)
 		fd, err := sc.Open(pn+"/"+prog, sp.OREAD)
 		if err == nil {
@@ -87,22 +90,20 @@ func Fetch(sc *sigmaclnt.SigmaClnt, pn, prog string, ckid int, path []string) (s
 		}
 		return err
 	}); err != nil {
-		return 0, err
+		return sfd, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Open %v %v", prog, path, time.Since(s))
+	return sfd, nil
+}
 
-	defer func() {
-		sc.CloseFd(sfd)
-	}()
-
-	s = time.Now()
+func Fetch(sc *sigmaclnt.SigmaClnt, pn string, fd int, prog string, ckid int) (sp.Tsize, error) {
+	s := time.Now()
 	b := make([]byte, CHUNKSZ)
-	sz, err := sc.Pread(sfd, b, sp.Toffset(Ckoff(ckid)))
+	sz, err := sc.Pread(fd, b, sp.Toffset(Ckoff(ckid)))
 	if err != nil {
 		db.DPrintf(db.CHUNKSRV, "Fetch: read %q ck %d err %v", prog, ckid, err)
 		return 0, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Read ck %d %v", prog, ckid, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Pread ck %d %v", prog, ckid, time.Since(s))
 
 	s = time.Now()
 	db.DPrintf(db.CHUNKSRV, "Fetch: write %q ck %d", pn, ckid)
@@ -155,7 +156,6 @@ func ReadChunk(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 }
 
 func WriteChunk(pn string, off int64, b []byte) error {
-	s := time.Now()
 	ufd, err := os.OpenFile(pn, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		return err
@@ -168,7 +168,6 @@ func WriteChunk(pn string, off int64, b []byte) error {
 	if nn != len(b) {
 		return err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] writeCache %v", pn, time.Since(s))
 	return nil
 }
 

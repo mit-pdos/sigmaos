@@ -1,28 +1,29 @@
 package netsigma
 
 import (
+	"os"
+
 	"sigmaos/fs"
 )
 
 type WrapperCtx struct {
 	fs.CtxI
-	fd int
-	ok bool
+	file *os.File
+	ok   bool
 }
 
 // An fs.CtxI wrapper, used to pass the proxied FD back past the rpcsrv layer
 func NewWrapperCtx(ctx fs.CtxI) *WrapperCtx {
 	return &WrapperCtx{
 		CtxI: ctx,
-		fd:   0,
 	}
 }
 
-func (ctx *WrapperCtx) SetFD(fd int) {
-	ctx.fd = fd
+func (ctx *WrapperCtx) SetFile(f *os.File) {
+	ctx.file = f
 	ctx.ok = true
 }
 
-func (ctx *WrapperCtx) GetFD() (int, bool) {
-	return ctx.fd, ctx.ok
+func (ctx *WrapperCtx) GetFile() (*os.File, bool) {
+	return ctx.file, ctx.ok
 }

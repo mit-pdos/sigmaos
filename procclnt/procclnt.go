@@ -116,7 +116,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 			spawnedKernelID, err := clnt.spawnRetry(kernelId, p)
 			db.DPrintf(db.PROCCLNT, "spawned on kernelID %v err %v proc %v", spawnedKernelID, err, p)
 			clnt.cs.SetBinKernelID(p.GetProgram(), spawnedKernelID)
-			db.DPrintf(db.ALWAYS, "SetBinKernelID %q %v\n", p.GetProgram(), spawnedKernelID)
+			db.DPrintf(db.TEST, "SetBinKernelID %q %v\n", p.GetProgram(), spawnedKernelID)
 			clnt.cs.Started(p.GetPid(), spawnedKernelID, err)
 			if err != nil {
 				clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))

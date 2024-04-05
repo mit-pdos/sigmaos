@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 
 	"golang.org/x/sys/unix"
 
@@ -17,16 +18,39 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const (
+	SIGMA_NETPROXY_FD = "SIGMA_NETPROXY_FD"
+)
+
 type NetProxyRPCCh struct {
 	conn *net.UnixConn
 }
 
 func NewNetProxyRPCCh(pe *proc.ProcEnv) (*NetProxyRPCCh, error) {
-	// Connect to the netproxy server
-	conn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error dial netproxy srv")
-		return nil, err
+	var conn *net.UnixConn
+	fdstr := os.Getenv(SIGMA_NETPROXY_FD)
+	if fdstr == "" {
+		// Connect to the netproxy server by dialing the unix socket (should only
+		// be done by the test program)
+		uconn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error connect netproxy srv")
+			return nil, err
+		}
+		conn = uconn.(*net.UnixConn)
+	} else {
+		// Connect to the netproxy server using the FD set up by the trampoline
+		// (should be done by user procs)
+		fd, err := strconv.Atoi(fdstr)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error get netproxy fd (%v): %v", fdstr, err)
+			return nil, err
+		}
+		conn, err = fdToUnixConn(fd)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error connect netproxy srv")
+			return nil, err
+		}
 	}
 	b, err := proto.Marshal(pe.GetPrincipal())
 	if err != nil {
@@ -40,7 +64,7 @@ func NewNetProxyRPCCh(pe *proc.ProcEnv) (*NetProxyRPCCh, error) {
 		return nil, err
 	}
 	return &NetProxyRPCCh{
-		conn: conn.(*net.UnixConn),
+		conn: conn,
 	}, nil
 }
 
@@ -67,18 +91,36 @@ func (ch *NetProxyRPCCh) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) erro
 	return nil
 }
 
-func fdToConn(fd int) (*net.TCPConn, error) {
+func fdToUnixConn(fd int) (*net.UnixConn, error) {
+	// Create a FileConn from the file descriptor
+	conn, err := fdToConn(fd)
+	if err != nil {
+		db.DFatalf("Error make FileConn: %v", err)
+	}
+	return conn.(*net.UnixConn), nil
+}
+
+func fdToTCPConn(fd int) (*net.TCPConn, error) {
+	// Create a FileConn from the file descriptor
+	conn, err := fdToConn(fd)
+	if err != nil {
+		db.DFatalf("Error make FileConn: %v", err)
+	}
+	return conn.(*net.TCPConn), nil
+}
+
+func fdToConn(fd int) (net.Conn, error) {
 	// Make the  FD into a Golang file object
 	f := os.NewFile(uintptr(fd), "tcp-conn")
 	if f == nil {
 		db.DFatalf("Error new file")
 	}
 	// Create a FileConn from the file
-	pconn, err := net.FileConn(f)
+	conn, err := net.FileConn(f)
 	if err != nil {
-		db.DFatalf("Error make FileConn: %v", err)
+		db.DFatalf("Error make FileConn (%v): %v", fd, err)
 	}
-	return pconn.(*net.TCPConn), nil
+	return conn, nil
 }
 
 func fdToListener(fd int) (*net.TCPListener, error) {
@@ -124,7 +166,7 @@ func (ch *NetProxyRPCCh) GetReturnedConn() (*net.TCPConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return fdToConn(fd)
+	return fdToTCPConn(fd)
 }
 
 // Receive the connection FD corresponding to a successful Listen request

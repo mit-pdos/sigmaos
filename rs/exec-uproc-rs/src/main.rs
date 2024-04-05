@@ -1,9 +1,14 @@
 use chrono::Local;
 use env_logger::Builder;
 use log::LevelFilter;
+use nix::fcntl;
+use nix::fcntl::FcntlArg;
+use nix::fcntl::FdFlag;
 use std::env;
 use std::fs;
 use std::io::Write;
+use std::os::fd::IntoRawFd;
+use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -52,6 +57,17 @@ fn main() {
     now = SystemTime::now();
     setcap_proc().expect("set caps failed");
     print_elapsed_time("trampoline.setcap_proc", now, false);
+    now = SystemTime::now();
+    // Connect to the netproxy socket
+    let netproxy_conn_fd = UnixStream::connect("/tmp/sigmaclntd/sigmaclntd-netproxy.sock")
+        .unwrap()
+        .into_raw_fd();
+    // Remove O_CLOEXEC flag so that the connection remains open when the
+    // trampoline execs the proc.
+    fcntl::fcntl(netproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
+    // Pass the netproxy socket connection FD to the user proc
+    env::set_var("SIGMA_NETPROXY_FD", netproxy_conn_fd.to_string());
+    print_elapsed_time("trampoline.connect_netproxy", now, false);
     now = SystemTime::now();
     seccomp_proc().expect("seccomp failed");
     print_elapsed_time("trampoline.seccomp_proc", now, false);
@@ -234,8 +250,12 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,
     // but the mini rust proc for our spawn latency microbenchmarks requires
     // it.
-    const ALLOWED_SYSCALLS: [ScmpSyscall; 70] = [
+    //    const ALLOWED_SYSCALLS: [ScmpSyscall; 70] = [
+    const ALLOWED_SYSCALLS: [ScmpSyscall; 67] = [
         //const ALLOWED_SYSCALLS: [ScmpSyscall; 67] = [
+        //        ScmpSyscall::new("bind"),
+        //        ScmpSyscall::new("listen"),
+        //        ScmpSyscall::new("connect"),
         ScmpSyscall::new("ioctl"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("poll"),  // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("lstat"), // XXX Only needed for rust proc spawn microbenchmark
@@ -244,10 +264,8 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("accept4"),
         ScmpSyscall::new("access"),
         ScmpSyscall::new("arch_prctl"), // Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.
-        ScmpSyscall::new("bind"),
         ScmpSyscall::new("brk"),
         ScmpSyscall::new("close"),
-        ScmpSyscall::new("connect"),
         ScmpSyscall::new("epoll_create1"),
         ScmpSyscall::new("epoll_ctl"),
         ScmpSyscall::new("epoll_ctl_old"),
@@ -268,7 +286,6 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("getsockname"),
         ScmpSyscall::new("getsockopt"),
         ScmpSyscall::new("gettid"),
-        ScmpSyscall::new("listen"),
         ScmpSyscall::new("lseek"),
         ScmpSyscall::new("madvise"),
         ScmpSyscall::new("mkdirat"),
@@ -308,15 +325,16 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("readlink"), // Needed for MUSL/Alpine
     ];
 
-    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 2] = [
+    //    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 2] = [
+    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 1] = [
         (
             ScmpSyscall::new("clone"),
             ScmpArgCompare::new(0, ScmpCompareOp::MaskedEqual(0), 0x7E020000),
         ),
-        (
-            ScmpSyscall::new("socket"),
-            ScmpArgCompare::new(0, ScmpCompareOp::NotEqual, 40),
-        ),
+        //        (
+        //            ScmpSyscall::new("socket"),
+        //            ScmpArgCompare::new(0, ScmpCompareOp::NotEqual, 40),
+        //        ),
     ];
 
     let mut filter = ScmpFilterContext::new_filter(ScmpAction::Errno(1))?;

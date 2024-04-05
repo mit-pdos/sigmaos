@@ -100,13 +100,13 @@ func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaCl
 	}, nil
 }
 
-func NewSigmaClntFsLib(pe *proc.ProcEnv) (*SigmaClnt, error) {
-	return NewSigmaClntFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe, nil)))
+func NewSigmaClntFsLib(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) (*SigmaClnt, error) {
+	return NewSigmaClntFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
 }
 
 func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
-	sc, err := NewSigmaClntFsLib(pe)
+	sc, err := NewSigmaClntFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
@@ -126,7 +126,7 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
 func NewSigmaClntRootInit(pe *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := NewSigmaClntFsLib(pe)
+	sc, err := NewSigmaClntFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		return nil, err
 	}

@@ -131,7 +131,7 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
 	pe := proc.NewAddedProcEnv(r.ProcEnv())
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, r.GetNetProxyClnt())
 	if err != nil {
 		db.DPrintf(db.MR, "NewSigmaClntFsLib err %v", err)
 		return 0, 0, false

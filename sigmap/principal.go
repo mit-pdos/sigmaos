@@ -24,6 +24,14 @@ func (p *Tprincipal) SetToken(t *Ttoken) {
 	p.Token = t
 }
 
+func (p *Tprincipal) IsSigned() bool {
+	return p.Token != nil && p.Token.GetSignedToken() != NO_SIGNED_TOKEN
+}
+
 func (id TprincipalID) String() string {
 	return string(id)
 }
+
+//func (p *Tprincipal) String() string {
+//	return fmt.Sprintf("{ id:%v realm:%v signed:%v }", p.GetID(), p.GetRealm(), p.IsSigned())
+//}

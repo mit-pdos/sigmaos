@@ -66,19 +66,25 @@ func main() {
 		db.DFatalf("Failed to load AWS secrets %v", err)
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.NoToken()), secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
+	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.ROOTREALM, sp.NoToken()), secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	// Create an auth server with a constant GetKeyFn, to bootstrap with the
 	// initial master key. This auth server should *not* be used long-term. It
 	// needs to be replaced with one which queries the namespace for keys once
 	// knamed has booted.
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(masterPubKey)))
-	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPrivKey)
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithConstGetKeyFn(auth.PublicKey(masterPubKey)),
+		masterPubKey,
+		masterPrivKey,
+		auth.SIGMA_DEPLOYMENT_MASTER_SIGNER,
+		masterPubKey,
+		masterPrivKey,
+	)
 	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}
-	if err1 := as.MintAndSetToken(pe); err1 != nil {
+	if err1 := as.MintAndSetProcToken(pe); err1 != nil {
 		db.DFatalf("Error MintToken: %v", err1)
 	}
 	if err := boot.BootUp(&param, pe, as); err != nil {

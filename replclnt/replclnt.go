@@ -9,6 +9,7 @@ import (
 	replproto "sigmaos/repl/proto"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 )
 
 type ReplClnt struct {
@@ -20,7 +21,7 @@ type ReplClnt struct {
 func NewReplClnt(fsls []*fslib.FsLib) *ReplClnt {
 	rc := &ReplClnt{
 		cid:       fsls[0].ClntId(),
-		ClntCache: rpcclnt.NewRPCClntCache(fsls),
+		ClntCache: rpcclnt.NewRPCClntCache(sigmarpcchan.SigmaRPCChanFactory(fsls)),
 	}
 	return rc
 }

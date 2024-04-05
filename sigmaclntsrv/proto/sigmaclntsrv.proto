@@ -97,9 +97,9 @@ message SigmaFenceRequest {
 }
 
 message SigmaMountTreeRequest {
-        repeated Taddr addr = 1;
+        TmountProto Mount = 1;
         string tree = 2;
-        string mount = 3;
+        string mountName = 3;
 }
 
 message SigmaLastMountReply {

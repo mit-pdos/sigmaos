@@ -10,7 +10,6 @@ import (
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
-	"sigmaos/port"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -52,10 +51,6 @@ func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, a
 
 func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 	return mfs.sc
-}
-
-func (mfs *MemFs) MyAddrsPublic(net string) sp.Taddrs {
-	return port.NewPublicAddrs(mfs.pi.HostIP, mfs.pi.PBinding, net, mfs.SigmaPSrv.MyAddr())
 }
 
 // Note: NewDev() sets parent

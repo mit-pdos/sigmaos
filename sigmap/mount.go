@@ -12,20 +12,48 @@ type Tmount struct {
 	*TmountProto
 }
 
-func (mnt Tmount) String() string {
-	return fmt.Sprintf("{addr %v root %q}", mnt.Addr, mnt.Root)
+func NewMount(srvaddrs Taddrs, realm Trealm) *Tmount {
+	return &Tmount{
+		&TmountProto{
+			Claims: NewMountClaimsProto(srvaddrs, realm),
+			Token:  NoToken(),
+		},
+	}
 }
 
-func NullMount() Tmount {
-	return Tmount{&TmountProto{}}
+func NewNullMount() *Tmount {
+	return NewMount(nil, NOT_SET)
 }
 
-func NewMount(b []byte) (Tmount, *serr.Err) {
-	mnt := NullMount()
-	if err := proto.Unmarshal(b, &mnt); err != nil {
+func NewMountFromBytes(b []byte) (*Tmount, *serr.Err) {
+	mnt := NewNullMount()
+	if err := proto.Unmarshal(b, mnt); err != nil {
 		return mnt, serr.NewErrError(err)
 	}
 	return mnt, nil
+}
+
+func NewMountFromProto(p *TmountProto) *Tmount {
+	return &Tmount{p}
+}
+
+func NewMountClaimsProto(addrs Taddrs, realm Trealm) *TmountClaimsProto {
+	return &TmountClaimsProto{
+		RealmStr: realm.String(),
+		Addr:     addrs,
+	}
+}
+
+func (mnt *Tmount) IsSigned() bool {
+	return mnt.Token != nil && mnt.Token.GetSignedToken() != NO_SIGNED_TOKEN
+}
+
+func (mnt *Tmount) GetProto() *TmountProto {
+	return mnt.TmountProto
+}
+
+func (mnt *Tmount) SetToken(token *Ttoken) {
+	mnt.Token = token
 }
 
 func (mnt *Tmount) SetTree(tree string) {
@@ -33,26 +61,26 @@ func (mnt *Tmount) SetTree(tree string) {
 }
 
 func (mnt *Tmount) SetAddr(addr Taddrs) {
-	mnt.Addr = addr
+	mnt.Claims.Addr = addr
 }
 
 func (mnt *Tmount) Marshal() ([]byte, error) {
 	return proto.Marshal(mnt)
 }
 
-func (mnt *Tmount) Address() *Taddr {
-	return mnt.Addr[0]
+func (mnt *Tmount) GetRealm() Trealm {
+	return Trealm(mnt.Claims.GetRealmStr())
 }
 
-func NewMountService(srvaddrs Taddrs) Tmount {
-	return Tmount{&TmountProto{Addr: srvaddrs}}
-}
-
-func NewMountServer(addr *Taddr) Tmount {
-	addrs := []*Taddr{addr}
-	return NewMountService(addrs)
+func (mnt *Tmount) Addrs() Taddrs {
+	return mnt.Claims.Addr
 }
 
 func (mnt *Tmount) TargetIPPort(idx int) (Tip, Tport) {
-	return mnt.Addr[idx].GetIP(), mnt.Addr[idx].GetPort()
+	a := mnt.Claims.Addr[idx]
+	return a.GetIP(), a.GetPort()
+}
+
+func (mnt *Tmount) String() string {
+	return fmt.Sprintf("{ addr:%v realm:%v root:%v signed:%v }", mnt.Claims.Addr, Trealm(mnt.Claims.RealmStr), mnt.Root, mnt.IsSigned())
 }

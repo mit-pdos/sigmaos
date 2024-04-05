@@ -4,7 +4,11 @@ import (
 	"path"
 	"sync"
 
+	"github.com/golang-jwt/jwt"
+
+	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/keys"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -25,7 +29,26 @@ type FsUx struct {
 	ot *ObjTable
 }
 
-func RunFsUx(rootux string) {
+func RunFsUx(rootux string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) {
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv %v", err)
+	}
+	sc.SetAuthSrv(as)
+
 	ip, err := netsigma.LocalIP()
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
@@ -35,9 +58,8 @@ func RunFsUx(rootux string) {
 	if sr != nil {
 		db.DFatalf("newDir %v\n", sr)
 	}
-	pe := proc.GetProcEnv()
 	addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
-	srv, err := sigmasrv.NewSigmaSrvRoot(root, path.Join(sp.UX, pe.GetKernelID()), addr, pe)
+	srv, err := sigmasrv.NewSigmaSrvRootClnt(root, path.Join(sp.UX, pe.GetKernelID()), addr, sc)
 	if err != nil {
 		db.DFatalf("BootSrvAndPost %v\n", err)
 	}

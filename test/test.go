@@ -40,6 +40,7 @@ var EtcdIP string
 var Overlays bool
 var GVisor bool
 var useSigmaclntd bool
+var useNetProxy bool
 var loadMasterKey bool
 
 func init() {
@@ -52,6 +53,7 @@ func init() {
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
 	flag.BoolVar(&useSigmaclntd, "usesigmaclntd", false, "Use sigmaclntd?")
+	flag.BoolVar(&useNetProxy, "usenetproxy", false, "Use proxy for network dialing/listening?")
 }
 
 var savedTstate *Tstate
@@ -75,18 +77,29 @@ type TstateMin struct {
 	lip  sp.Tip
 	PE   *proc.ProcEnv
 	Addr *sp.Taddr
+	AS   auth.AuthSrv
 }
 
 func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
-	lip := sp.Tip("127.0.0.1")
+	_, _, as, err := newAuthSrv()
+	if !assert.Nil(t, err, "Error new auth srv: %v", err) {
+		return nil
+	}
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
-	assert.Nil(t, err1)
+	assert.Nil(t, err1, "Error load s3 secrets: %v", err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
+	lip := sp.Tip("127.0.0.1")
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false, false)
 	pe.Program = "srv"
-	pe.SetPrincipal(sp.NewPrincipal("srv", sp.NoToken()))
+	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM, sp.NoToken()))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	return &TstateMin{T: t, lip: lip, PE: pe, Addr: addr}
+	return &TstateMin{
+		T:    t,
+		lip:  lip,
+		PE:   pe,
+		Addr: addr,
+		AS:   as,
+	}
 }
 
 func NewTstateMin(t *testing.T) *TstateMin {
@@ -148,6 +161,34 @@ func NewTstateWithRealms(t *testing.T) (*Tstate, error) {
 	return ts, nil
 }
 
+func newAuthSrv() (auth.PublicKey, auth.PrivateKey, auth.AuthSrv, error) {
+	var pubkey auth.PublicKey
+	var privkey auth.PrivateKey
+	var err error
+	if loadMasterKey {
+		// Load master deployment key from Host FS
+		pubkey, privkey, err = keys.LoadMasterECDSAKey()
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	} else {
+		// Genereate a fresh master deployment key
+		pubkey, privkey, err = keys.NewECDSAKey()
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
+			return nil, nil, nil, err
+		}
+	}
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
+	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
+	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
+	if err1 != nil {
+		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
+		return nil, nil, nil, err1
+	}
+	return pubkey, privkey, as, nil
+}
+
 func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
 		return newSysClnt(t, BOOT_NAMED)
@@ -170,39 +211,19 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	var pubkey auth.PublicKey
-	var privkey auth.PrivateKey
-	var err error
-	if loadMasterKey {
-		// Load master deployment key from Host FS
-		pubkey, privkey, err = keys.LoadMasterECDSAKey()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Genereate a fresh master deployment key
-		pubkey, privkey, err = keys.NewECDSAKey()
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
-			return nil, err
-		}
+	pubkey, privkey, as, err := newAuthSrv()
+	if !assert.Nil(t, err, "Error new auth srv: %v", err) {
+		return nil, err
 	}
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
-	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
 		return nil, err1
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
-		return nil, err1
-	}
-	err1 = as.MintAndSetToken(pe)
+	err1 = as.MintAndSetProcToken(pe)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err1)
 		return nil, err1
@@ -219,8 +240,8 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	var scsck *bootkernelclnt.Kernel
 	var sckid string
-	if useSigmaclntd {
-		db.DPrintf(db.BOOT, "Use sigmaclntd")
+	if useSigmaclntd || useNetProxy {
+		db.DPrintf(db.BOOT, "Booting sigmaclntd: usesigmaclntd %v usenetproxy %v", useSigmaclntd, useNetProxy)
 		sckid = bootkernelclnt.GenKernelId()
 		_, err := bootkernelclnt.Start(sckid, pe, sp.SIGMACLNTDREL, Overlays, GVisor, pubkey, privkey)
 		if err != nil {
@@ -280,12 +301,12 @@ func (ts *Tstate) BootFss3d() error {
 	return ts.Boot(sp.S3REL)
 }
 
-func (ts *Tstate) MintAndSetToken(pe *proc.ProcEnv) error {
-	return ts.as.MintAndSetToken(pe)
+func (ts *Tstate) MintAndSetProcToken(pe *proc.ProcEnv) error {
+	return ts.as.MintAndSetProcToken(pe)
 }
 
-func (ts *Tstate) MintToken(pc *auth.ProcClaims) (*sp.Ttoken, error) {
-	return ts.as.MintToken(pc)
+func (ts *Tstate) MintProcToken(pc *auth.ProcClaims) (*sp.Ttoken, error) {
+	return ts.as.MintProcToken(pc)
 }
 
 func (ts *Tstate) KillOne(s string) error {
@@ -355,7 +376,7 @@ func Dump(t *testing.T) {
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), "", "", "", false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), "", "", "", false, false, false)
 	fs, err := fsetcd.NewFsEtcd(pe.GetRealm(), pe.GetEtcdIP())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)

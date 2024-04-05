@@ -12,7 +12,9 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/netsigma"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/protclnt"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
@@ -25,19 +27,25 @@ type FidClnt struct {
 	fids   *FidMap
 	refcnt int
 	sm     *sessclnt.Mgr
+	npc    *netsigma.NetProxyClnt
 }
 
-func NewFidClnt(clntnet string) *FidClnt {
-	fidc := &FidClnt{}
-	fidc.fids = newFidMap()
-	fidc.refcnt = 1
-	fidc.sm = sessclnt.NewMgr(clntnet)
-	return fidc
+func NewFidClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) *FidClnt {
+	return &FidClnt{
+		fids:   newFidMap(),
+		refcnt: 1,
+		sm:     sessclnt.NewMgr(pe, npc),
+		npc:    npc,
+	}
 }
 
 func (fidc *FidClnt) String() string {
 	str := fmt.Sprintf("Fsclnt fid table %p:\n%v", fidc, fidc.fids)
 	return str
+}
+
+func (fidc *FidClnt) GetNetProxyClnt() *netsigma.NetProxyClnt {
+	return fidc.npc
 }
 
 func (fidc *FidClnt) NewClnt() {
@@ -126,12 +134,12 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
+func (fidc *FidClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, mnt *sp.Tmount, pn, tree string) (sp.Tfid, *serr.Err) {
 	fid := fidc.allocFid()
-	pc := protclnt.NewProtClnt(addrs, fidc.sm)
+	pc := protclnt.NewProtClnt(mnt, fidc.sm)
 	reply, err := pc.Attach(principal, cid, fid, path.Split(tree))
 	if err != nil {
-		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", addrs, err)
+		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", mnt, err)
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}

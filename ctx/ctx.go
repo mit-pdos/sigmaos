@@ -15,6 +15,7 @@ type Ctx struct {
 	clntid    sp.TclntId
 	sct       *clntcond.ClntCondTable
 	fencefs   fs.Dir
+	fd        int
 }
 
 func NewCtx(principal *sp.Tprincipal, claims *auth.ProcClaims, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
@@ -25,11 +26,16 @@ func NewCtx(principal *sp.Tprincipal, claims *auth.ProcClaims, sessid sessp.Tses
 		clntid:    clntid,
 		sct:       sct,
 		fencefs:   fencefs,
+		fd:        0,
 	}
 }
 
+func NewPrincipalOnlyCtx(principal *sp.Tprincipal) *Ctx {
+	return NewCtx(principal, nil, 0, sp.NoClntId, nil, nil)
+}
+
 func NewCtxNull() *Ctx {
-	return NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, nil)
+	return NewPrincipalOnlyCtx(sp.NoPrincipal())
 }
 
 func (ctx *Ctx) Principal() *sp.Tprincipal {

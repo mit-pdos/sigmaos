@@ -1,13 +1,19 @@
 package fslib
 
 import (
+	"fmt"
+
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
-func (fsl *FsLib) MkMountFile(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
+func (fsl *FsLib) MkMountFile(pn string, mnt *sp.Tmount, lid sp.TleaseId) error {
+	if !mnt.IsSigned() {
+		db.DPrintf(db.ERROR, "Error make unsigned mount file")
+		return fmt.Errorf("Unsigned mount: %v", mnt)
+	}
 	b, err := mnt.Marshal()
 	if err != nil {
 		return err
@@ -55,21 +61,21 @@ func (fsl *FsLib) ResolveMounts(pn string) (string, error) {
 	}
 }
 
-func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
+func (fsl *FsLib) ReadMount(pn string) (*sp.Tmount, error) {
 	target, err := fsl.GetFile(pn)
 	if err != nil {
-		return sp.Tmount{}, err
+		return &sp.Tmount{}, err
 	}
-	mnt, error := sp.NewMount(target)
+	mnt, error := sp.NewMountFromBytes(target)
 	if error != nil {
-		return sp.Tmount{}, err
+		return &sp.Tmount{}, err
 	}
 	return mnt, err
 }
 
 // Make copy of root mount or first mount in pn. Return the
 // content of mount and the mount file's name.
-func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
+func (fsl *FsLib) CopyMount(pn string) (*sp.Tmount, string, error) {
 	if pn == sp.NAMED {
 		mnt, err := fsl.SigmaOS.GetNamedMount()
 		return mnt, "", err
@@ -79,7 +85,7 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 	if ok {
 		_, mnt, err := fsl.resolveMount(d, left[0])
 		if err != nil {
-			return sp.NullMount(), "", err
+			return sp.NewNullMount(), "", err
 		}
 		return mnt, left[1:].String(), nil
 	} else if s, p, err := fsl.SigmaOS.PathLastMount(pn); err == nil {
@@ -87,11 +93,11 @@ func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
 			return mnt, p.String(), nil
 		}
 	}
-	return sp.NullMount(), "", serr.NewErr(serr.TErrInval, pn)
+	return sp.NewNullMount(), "", serr.NewErr(serr.TErrInval, pn)
 }
 
-func (fsl *FsLib) resolveMount(d string, q string) (string, sp.Tmount, error) {
-	rmnt := sp.NullMount()
+func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tmount, error) {
+	rmnt := sp.NewNullMount()
 	rname := ""
 	// Make sure to resolve d in case it is a symlink or mount point.
 	_, err := fsl.ProcessDir(d+"/", func(st *sp.Stat) (bool, error) {
@@ -99,7 +105,7 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, sp.Tmount, error) {
 		if err != nil {
 			return false, nil
 		}
-		mnt, error := sp.NewMount(b)
+		mnt, error := sp.NewMountFromBytes(b)
 		if error != nil {
 			return false, nil
 		}
@@ -121,7 +127,7 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, sp.Tmount, error) {
 }
 
 // For code running using /mnt/9p, which doesn't support PutFile.
-func (fsl *FsLib) NewMount9P(pn string, mnt sp.Tmount) error {
+func (fsl *FsLib) NewMount9P(pn string, mnt *sp.Tmount) error {
 	b, err := mnt.Marshal()
 	if err != nil {
 		return err

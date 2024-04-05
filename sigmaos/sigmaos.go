@@ -48,10 +48,10 @@ type SigmaOS interface {
 	DirWait(fd int) error
 
 	// Mounting
-	MountTree(addrs sp.Taddrs, tree, mount string) error
-	IsLocalMount(mnt sp.Tmount) (bool, error)
+	MountTree(mnt *sp.Tmount, tree, mount string) error
+	IsLocalMount(mnt *sp.Tmount) (bool, error)
 	PathLastMount(path string) (path.Path, path.Path, error)
-	GetNamedMount() (sp.Tmount, error)
+	GetNamedMount() (*sp.Tmount, error)
 	NewRootMount(path string, mntname string) error
 
 	// Done using SigmaOS, which detaches from any mounted servers

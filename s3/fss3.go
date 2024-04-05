@@ -8,13 +8,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
+	"github.com/golang-jwt/jwt"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/keys"
 	"sigmaos/path"
 	"sigmaos/perf"
 	proc "sigmaos/proc"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -57,14 +61,31 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 	return clnt, nil
 }
 
-func RunFss3(buckets []string) {
+func RunFss3(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) {
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv %v", err)
+	}
+	sc.SetAuthSrv(as)
 	fss3 = &Fss3{
 		clients: make(map[sp.TprincipalID]*s3.Client),
 	}
 	root := newDir("", path.Path{}, sp.DMDIR)
-	pe := proc.GetProcEnv()
 	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, pe.GetNet())
-	ssrv, err := sigmasrv.NewSigmaSrvRoot(root, sp.S3, addr, pe)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, sp.S3, addr, sc)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

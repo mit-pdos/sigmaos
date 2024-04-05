@@ -6,6 +6,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/rpcclnt"
+	"sigmaos/sigmarpcchan"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/test"
@@ -73,14 +74,16 @@ func TestTimeline(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients for posts and timelines
-	trpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	prpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
+	trpcc := rpcclnt.NewRPCClnt(ch)
+	prpch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	prpcc := rpcclnt.NewRPCClnt(prpch)
 
 	// create and store N posts
 	NPOST, userid := 4, int64(200)
@@ -137,14 +140,16 @@ func TestHome(t *testing.T) {
 	tssn.dbu.InitGraph()
 
 	// create RPC clients for posts and timelines
-	hrpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	prpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
+	hrpcc := rpcclnt.NewRPCClnt(ch)
+	prpch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	prpcc := rpcclnt.NewRPCClnt(prpch)
 
 	// create and store N posts
 	NPOST, userid := 3, int64(1)

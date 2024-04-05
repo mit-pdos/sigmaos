@@ -20,7 +20,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -203,7 +202,7 @@ func (gm *GroupMgr) start(i int, done chan *procret) {
 	if err != nil {
 		go func() {
 			db.DPrintf(db.GROUPMGR_ERR, "failed to start %v: %v; try again\n", i, err)
-			time.Sleep(time.Duration(pathclnt.TIMEOUT) * time.Millisecond)
+			time.Sleep(time.Duration(sp.PATHCLNT_TIMEOUT) * time.Millisecond)
 			done <- &procret{i, err, nil}
 		}()
 	}

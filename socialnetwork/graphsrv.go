@@ -2,6 +2,7 @@ package socialnetwork
 
 import (
 	"fmt"
+
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
@@ -11,6 +12,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -56,10 +58,11 @@ func RunGraphSrv(public bool, jobname string) error {
 		return err
 	}
 	gsrv.cachec = cachec
-	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	gsrv.userc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Starting graph service\n")
 	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_GRAPH)

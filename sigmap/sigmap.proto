@@ -18,7 +18,8 @@ message Ttoken {
 
 message Tprincipal {
         string iDStr = 1;
-        Ttoken token = 2;
+        string realmStr = 2;
+        Ttoken token = 3;
 }
 
 message Stat {
@@ -42,10 +43,16 @@ message Taddr {
         string netNS = 4;
 }
 
+message TmountClaimsProto {
+  string realmStr = 1;
+  repeated Taddr addr = 2;
+}
+
 message TmountProto {
-        repeated Taddr addr = 1;
+        TmountClaimsProto claims = 1;
         string root = 2;
         bytes pubKey = 3;
+        Ttoken token = 4;
 }
 
 message TfenceProto {

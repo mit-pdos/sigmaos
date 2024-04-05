@@ -8,6 +8,7 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/keys"
+	"sigmaos/netsigma"
 	"sigmaos/netsrv"
 	"sigmaos/proc"
 	"sigmaos/proxy"
@@ -25,11 +26,12 @@ func main() {
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	// By default, proxy doesn't use overlays.
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false, false)
 	pe.SetPID("proxy")
 	pe.Program = "proxy"
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
+		sp.ROOTREALM,
 		sp.NoToken(),
 	))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
@@ -44,12 +46,13 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}
-	if err1 := as.MintAndSetToken(pe); err1 != nil {
+	if err1 := as.MintAndSetProcToken(pe); err1 != nil {
 		db.DFatalf("Error MintToken: %v", err1)
 	}
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	npd := proxy.NewNpd(pe, lip)
-	netsrv.NewNetServer(pe, addr, npd)
+	npc := netsigma.NewNetProxyClnt(pe, as)
+	npd := proxy.NewNpd(pe, npc, lip)
+	netsrv.NewNetServer(pe, npc, addr, npd)
 	ch := make(chan struct{})
 	<-ch
 }

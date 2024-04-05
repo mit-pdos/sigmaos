@@ -73,7 +73,7 @@ func GetLabels(s string) map[string]bool {
 	return m
 }
 
-func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, overlays, useSigmaclntd bool) *ProcEnv {
+func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, overlays, useSigmaclntd bool, useNetProxy bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
@@ -95,8 +95,10 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Privileged:          priv,
 			Overlays:            overlays,
 			UseSigmaclntd:       useSigmaclntd,
+			UseNetProxy:         useNetProxy,
 			Claims: &ProcClaimsProto{
 				PrincipalIDStr: principal.GetID().String(),
+				RealmStr:       sp.NOT_SET,
 				AllowedPaths:   nil, // By default, will be set to the parent's AllowedPaths unless otherwise specified
 				Secrets:        nil, // By default, will be set to the parent's Secrets unless otherwise specified
 			},
@@ -107,7 +109,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 
 func NewProcEnvUnset(priv, overlays bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
-	return NewProcEnv(sp.NOT_SET, sp.Tpid(sp.NOT_SET), sp.Trealm(sp.NOT_SET), sp.NoPrincipal(), sp.NOT_SET, sp.NOT_SET, priv, overlays, false)
+	return NewProcEnv(sp.NOT_SET, sp.Tpid(sp.NOT_SET), sp.Trealm(sp.NOT_SET), sp.NoPrincipal(), sp.NOT_SET, sp.NOT_SET, priv, overlays, false, false)
 }
 
 func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
@@ -134,9 +136,9 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 	return pe
 }
 
-func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool) *ProcEnv {
+func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP sp.Tip, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool, useNetProxy bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
-	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), sp.NoToken()))
+	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), realm, sp.NoToken()))
 	pe.SetSecrets(secrets)
 	// Allow all paths for boot env
 	pe.SetAllowedPaths(sp.ALL_PATHS)
@@ -151,6 +153,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP
 	pe.HowInt = int32(TEST)
 	pe.UseSigmaclntd = useSigmaclntd
 	pe.SetSigmaPath(buildTag)
+	pe.UseNetProxy = useNetProxy
 	return pe
 }
 
@@ -158,10 +161,11 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdIP
 func NewAddedProcEnv(pe *ProcEnv) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, false)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
-	pe2.SetPrincipal(sp.NewPrincipal(pe.GetPrincipal().GetID(), pe.GetPrincipal().GetToken()))
+	pe2.SetPrincipal(sp.NewPrincipal(pe.GetPrincipal().GetID(), pe.GetRealm(), pe.GetPrincipal().GetToken()))
 	// Make a deep copy of the proc claims
 	pe2.Claims = &ProcClaimsProto{
 		PrincipalIDStr: pe2.GetPrincipal().GetID().String(),
+		RealmStr:       pe2.GetPrincipal().GetRealm().String(),
 		AllowedPaths:   make([]string, len(pe.Claims.GetAllowedPaths())),
 		Secrets:        make(map[string]*ProcSecretProto),
 	}
@@ -180,17 +184,19 @@ func NewAddedProcEnv(pe *ProcEnv) *ProcEnv {
 func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 	pe2 := NewProcEnvUnset(pe.Privileged, pe.Overlays)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
-	pe2.SetRealm(realm, pe.Overlays)
 	pe2.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID(pe.GetPrincipal().GetID().String()+"-realm-"+realm.String()),
+		realm,
 		sp.NoToken(),
 	))
 	// Make a deep copy of the proc claims
 	pe2.Claims = &ProcClaimsProto{
 		PrincipalIDStr: pe2.GetPrincipal().GetID().String(),
+		RealmStr:       realm.String(),
 		AllowedPaths:   make([]string, len(pe.Claims.GetAllowedPaths())),
 		Secrets:        make(map[string]*ProcSecretProto),
 	}
+	pe2.SetRealm(realm, pe.Overlays)
 	// Deep copy allowed paths
 	copy(pe2.Claims.AllowedPaths, pe.Claims.GetAllowedPaths())
 	// Deep copy secrets
@@ -268,7 +274,9 @@ func (pe *ProcEnvProto) GetRealm() sp.Trealm {
 }
 
 func (pe *ProcEnvProto) SetRealm(realm sp.Trealm, overlays bool) {
-	pe.RealmStr = string(realm)
+	pe.RealmStr = realm.String()
+	pe.Principal.RealmStr = realm.String()
+	pe.Claims.RealmStr = realm.String()
 	// Changing the realm changes the overlay network name. Therefore, set the
 	// overlay network for the new realm.
 	pe.Net = sp.ROOTREALM.String()
@@ -325,12 +333,20 @@ func (pe *ProcEnvProto) GetSpawnTime() time.Time {
 	return pe.SpawnTimePB.AsTime()
 }
 
-func (pe *ProcEnv) GetNamedMount() (sp.Tmount, bool) {
-	mnt := pe.ProcEnvProto.GetNamedMountProto()
-	if mnt == nil {
-		return sp.Tmount{}, false
+func (pe *ProcEnv) GetScheddMount() (*sp.Tmount, bool) {
+	mp := pe.ProcEnvProto.GetScheddMountProto()
+	if mp == nil {
+		return &sp.Tmount{}, false
 	}
-	return sp.Tmount{mnt}, true
+	return sp.NewMountFromProto(mp), true
+}
+
+func (pe *ProcEnv) GetNamedMount() (*sp.Tmount, bool) {
+	mp := pe.ProcEnvProto.GetNamedMountProto()
+	if mp == nil {
+		return &sp.Tmount{}, false
+	}
+	return sp.NewMountFromProto(mp), true
 }
 
 func (pe *ProcEnv) Marshal() string {
@@ -352,5 +368,5 @@ func Unmarshal(pestr string) *ProcEnv {
 
 // TODO: cleanup
 func (pe *ProcEnv) String() string {
-	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdIP:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v UseSigmacltnd:%v Claims:%v SigmaPath:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal().String(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.EtcdIP, pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail, pe.UseSigmaclntd, pe.Claims, pe.SigmaPath)
+	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdIP:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v UseSigmaclntd:%v UseNetProxy:%v Claims:%v SigmaPath:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal().String(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.EtcdIP, pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail, pe.UseSigmaclntd, pe.UseNetProxy, pe.Claims, pe.SigmaPath)
 }

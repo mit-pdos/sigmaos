@@ -1,9 +1,10 @@
 package sigmap
 
-func NewPrincipal(id TprincipalID, token *Ttoken) *Tprincipal {
+func NewPrincipal(id TprincipalID, realm Trealm, token *Ttoken) *Tprincipal {
 	return &Tprincipal{
-		IDStr: id.String(),
-		Token: token,
+		IDStr:    id.String(),
+		RealmStr: realm.String(),
+		Token:    token,
 	}
 }
 
@@ -13,6 +14,10 @@ func (p *Tprincipal) SetID(principalID TprincipalID) {
 
 func (p *Tprincipal) GetID() TprincipalID {
 	return TprincipalID(p.IDStr)
+}
+
+func (p *Tprincipal) GetRealm() Trealm {
+	return Trealm(p.RealmStr)
 }
 
 func (p *Tprincipal) SetToken(t *Ttoken) {

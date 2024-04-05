@@ -9,6 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
+	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
@@ -22,9 +23,37 @@ type SigmaClntClnt struct {
 	pe           *proc.ProcEnv
 	dmx          *demux.DemuxClnt
 	rpcc         *rpcclnt.RPCClnt
+	npc          *netsigma.NetProxyClnt
 	seqcntr      *sessp.Tseqcntr
 	conn         net.Conn
 	disconnected bool
+}
+
+func NewSigmaClntClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) (*SigmaClntClnt, error) {
+	conn, err := net.Dial("unix", sp.SIGMASOCKET)
+	if err != nil {
+		return nil, err
+	}
+	scc := &SigmaClntClnt{
+		pe:           pe,
+		npc:          npc,
+		dmx:          nil,
+		rpcc:         nil,
+		seqcntr:      new(sessp.Tseqcntr),
+		conn:         conn,
+		disconnected: false,
+	}
+
+	iovm := demux.NewIoVecMap()
+	scc.dmx = demux.NewDemuxClnt(sigmaclntcodec.NewTransport(conn, iovm), iovm)
+	scc.rpcc = rpcclnt.NewRPCClnt(scc)
+	// Initialize the server-side component of sigmaclnt by sending the proc env
+	db.DPrintf(db.SIGMACLNTCLNT, "Init sigmaclntclnt for %v", pe.GetPID())
+	if err := scc.Init(); err != nil {
+		db.DPrintf(db.ERROR, "Error init sigmaclnt: %v", err)
+		return nil, err
+	}
+	return scc, nil
 }
 
 func (scc *SigmaClntClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
@@ -50,32 +79,6 @@ func (scc *SigmaClntClnt) ReportError(err error) {
 	go func() {
 		scc.close()
 	}()
-}
-
-func NewSigmaClntClnt(pe *proc.ProcEnv) (*SigmaClntClnt, error) {
-	conn, err := net.Dial("unix", sp.SIGMASOCKET)
-	if err != nil {
-		return nil, err
-	}
-	scc := &SigmaClntClnt{
-		pe:           pe,
-		dmx:          nil,
-		rpcc:         nil,
-		seqcntr:      new(sessp.Tseqcntr),
-		conn:         conn,
-		disconnected: false,
-	}
-
-	iovm := demux.NewIoVecMap()
-	scc.dmx = demux.NewDemuxClnt(sigmaclntcodec.NewTransport(conn, iovm), iovm)
-	scc.rpcc = rpcclnt.NewRPCClntCh(scc)
-	// Initialize the server-side component of sigmaclnt by sending the proc env
-	db.DPrintf(db.SIGMACLNTCLNT, "Init sigmaclntclnt for %v", pe.GetPID())
-	if err := scc.Init(); err != nil {
-		db.DPrintf(db.ERROR, "Error init sigmaclnt: %v", err)
-		return nil, err
-	}
-	return scc, nil
 }
 
 // Tell sigmaclntd to shut down

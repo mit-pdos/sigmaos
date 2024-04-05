@@ -95,50 +95,51 @@ const (
 
 // Kernel
 const (
-	KERNEL          Tselector = "KERNEL"
-	KERNELCLNT                = "KERNELCLNT"
-	KERNELCLNT_ERR            = "KERNELCLNT_ERR"
-	BOOTCLNT                  = "BOOTCLNT"
-	BOOT                      = "BOOT"
-	CONTAINER                 = "CONTAINER"
-	NAMED                     = "NAMED"
-	NAMED_ERR                 = NAMED + ERR
-	FSETCD                    = "FSETCD"
-	PROCMGR                   = "PROCMGR"
-	UPROCDMGR                 = "UPROCDMGR"
-	UPROCD                    = "UPROCD"
-	UPROCD_ERR                = "UPROCD" + ERR
-	LCSCHEDCLNT               = "LCSCHEDCLNT"
-	LCSCHEDCLNT_ERR           = "LCSCHEDCLNT" + ERR
-	LCSCHED                   = "LCSCHED"
-	LCSCHED_ERR               = "LCSCHED" + ERR
-	PROCQ                     = "PROCQ"
-	PROCQ_ERR                 = "PROCQ" + ERR
-	PROCQCLNT                 = "PROCQCLNT"
-	PROCQCLNT_ERR             = "PROCQCLNT" + ERR
-	KEYCLNT                   = "KEYCLNT"
-	KEYCLNT_ERR               = "KEYCLNT" + ERR
-	KEYD                      = "KEYD"
-	KEYD_ERR                  = "KEYD" + ERR
-	SCHEDD                    = "SCHEDD"
-	SCHEDD_ERR                = "SCHEDD" + ERR
-	SCHEDDCLNT                = "SCHEDDCLNT"
-	SCHEDDCLNT_ERR            = "SCHEDDCLNT" + ERR
-	PROCMGR_ERR               = PROCMGR + ERR
-	PROCCACHE                 = "PROCCACHE"
-	PROCFS                    = "PROCFS"
-	CGROUP                    = "CGROUP"
-	CGROUP_ERR                = "CGROUP_ERR"
-	S3                        = "S3"
-	UX                        = "UX"
-	DB                        = "DB"
-	MONGO                     = "MONGO"
-	MONGO_ERR                 = "MONGO_ERR"
-	PROXY                     = "PROXY"
-	SIGMACLNTSRV              = "SIGMACLNTSRV"
-	BINSRV                    = "BINSRV"
-	CHUNKSRV                  = "CHUNKSRV"
-	CHUNKCLNT                 = "CHUNKCLNT"
+	KERNEL           Tselector = "KERNEL"
+	KERNELCLNT                 = "KERNELCLNT"
+	KERNELCLNT_ERR             = "KERNELCLNT_ERR"
+	BOOTCLNT                   = "BOOTCLNT"
+	BOOT                       = "BOOT"
+	CONTAINER                  = "CONTAINER"
+	NAMED                      = "NAMED"
+	NAMED_ERR                  = NAMED + ERR
+	FSETCD                     = "FSETCD"
+	PROCMGR                    = "PROCMGR"
+	UPROCDMGR                  = "UPROCDMGR"
+	UPROCD                     = "UPROCD"
+	UPROCD_ERR                 = "UPROCD" + ERR
+	LCSCHEDCLNT                = "LCSCHEDCLNT"
+	LCSCHEDCLNT_ERR            = "LCSCHEDCLNT" + ERR
+	LCSCHED                    = "LCSCHED"
+	LCSCHED_ERR                = "LCSCHED" + ERR
+	PROCQ                      = "PROCQ"
+	PROCQ_ERR                  = "PROCQ" + ERR
+	PROCQCLNT                  = "PROCQCLNT"
+	PROCQCLNT_ERR              = "PROCQCLNT" + ERR
+	KEYCLNT                    = "KEYCLNT"
+	KEYCLNT_ERR                = "KEYCLNT" + ERR
+	KEYD                       = "KEYD"
+	KEYD_ERR                   = "KEYD" + ERR
+	SCHEDD                     = "SCHEDD"
+	SCHEDD_ERR                 = "SCHEDD" + ERR
+	SCHEDDCLNT                 = "SCHEDDCLNT"
+	SCHEDDCLNT_ERR             = "SCHEDDCLNT" + ERR
+	PROCMGR_ERR                = PROCMGR + ERR
+	PROCCACHE                  = "PROCCACHE"
+	PROCFS                     = "PROCFS"
+	CGROUP                     = "CGROUP"
+	CGROUP_ERR                 = "CGROUP_ERR"
+	S3                         = "S3"
+	UX                         = "UX"
+	DB                         = "DB"
+	MONGO                      = "MONGO"
+	MONGO_ERR                  = "MONGO_ERR"
+	PROXY                      = "PROXY"
+	SIGMACLNTSRV               = "SIGMACLNTSRV"
+	SIGMACLNTSRV_ERR           = "SIGMACLNTSRV" + ERR
+	BINSRV                     = "BINSRV"
+	CHUNKSRV                   = "CHUNKSRV"
+	CHUNKCLNT                  = "CHUNKCLNT"
 )
 
 // Realm
@@ -191,35 +192,41 @@ const (
 
 // Server Libraries
 const (
-	MEMFS      Tselector = "MEMFS"
-	PIPE                 = "PIPE"
-	OVERLAYDIR           = "OVERLAYDIR"
-	CLONEDEV             = "CLONEDEV"
-	SESSDEV              = "SESSDEV"
-	SIGMASRV             = "SIGMASRV"
+	MEMFS           Tselector = "MEMFS"
+	PIPE                      = "PIPE"
+	OVERLAYDIR                = "OVERLAYDIR"
+	CLONEDEV                  = "CLONEDEV"
+	SESSDEV                   = "SESSDEV"
+	SIGMASRV                  = "SIGMASRV"
+	NETPROXYSRV               = "NETPROXYSRV"
+	NETPROXYSRV_ERR           = "NETPROXYSRV" + ERR
+	NETSIGMA                  = "NETSIGMA"
+	NETSIGMA_ERR              = "NETSIGMA_ERR"
 )
 
 // Client-side Infrastructure
 const (
-	NETCLNT      Tselector = "NETCLNT"
-	NETCLNT_ERR            = NETCLNT + ERR
-	DEMUXCLNT              = "DEMUXCLNT"
-	PROTCLNT               = "PROTCLNT"
-	PROTCLNT_ERR           = "PROTCLNT" + ERR
-	SESS_CLNT_Q            = "SESS_CLNT_Q"
-	SESSCLNT               = "SESSCLNT"
-	SESSCLNT_ERR           = SESSCLNT + ERR
-	FIDCLNT                = "FIDCLNT"
-	FIDCLNT_ERR            = FIDCLNT + ERR
-	RPCCLNT                = "RPCCLNT"
-	MOUNT                  = "MOUNT"
-	MOUNT_ERR              = MOUNT + ERR
-	FDCLNT                 = "FDCLNT"
-	PATHCLNT               = "PATHCLNT"
-	PATHCLNT_ERR           = PATHCLNT + ERR
-	WALK                   = "WALK"
-	WALK_ERR               = "WALK" + ERR
-	SVCMOUNT               = "SVCMOUNT"
+	NETCLNT          Tselector = "NETCLNT"
+	NETCLNT_ERR                = NETCLNT + ERR
+	NETPROXYCLNT               = "NETPROXYCLNT"
+	NETPROXYCLNT_ERR           = "NETPROXYCLNT" + ERR
+	DEMUXCLNT                  = "DEMUXCLNT"
+	PROTCLNT                   = "PROTCLNT"
+	PROTCLNT_ERR               = "PROTCLNT" + ERR
+	SESS_CLNT_Q                = "SESS_CLNT_Q"
+	SESSCLNT                   = "SESSCLNT"
+	SESSCLNT_ERR               = SESSCLNT + ERR
+	FIDCLNT                    = "FIDCLNT"
+	FIDCLNT_ERR                = FIDCLNT + ERR
+	RPCCLNT                    = "RPCCLNT"
+	MOUNT                      = "MOUNT"
+	MOUNT_ERR                  = MOUNT + ERR
+	FDCLNT                     = "FDCLNT"
+	PATHCLNT                   = "PATHCLNT"
+	PATHCLNT_ERR               = PATHCLNT + ERR
+	WALK                       = "WALK"
+	WALK_ERR                   = "WALK" + ERR
+	SVCMOUNT                   = "SVCMOUNT"
 )
 
 // Server-side Infrastructure

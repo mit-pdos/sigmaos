@@ -7,6 +7,7 @@ import (
 	leaseproto "sigmaos/lease/proto"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/syncmap"
 )
 
@@ -21,7 +22,7 @@ func NewLeaseClnt(fsl *fslib.FsLib) (*LeaseClnt, error) {
 	return &LeaseClnt{
 		FsLib: fsl,
 		lm:    syncmap.NewSyncMap[string, *LeaseInfo](),
-		cc:    rpcclnt.NewRPCClntCache([]*fslib.FsLib{fsl}),
+		cc:    rpcclnt.NewRPCClntCache(sigmarpcchan.SigmaRPCChanFactory([]*fslib.FsLib{fsl})),
 	}, nil
 }
 

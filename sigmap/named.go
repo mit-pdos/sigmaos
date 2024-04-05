@@ -68,6 +68,7 @@ const (
 
 // Linux path
 const (
-	SIGMAHOME   = "/home/sigmaos"
-	SIGMASOCKET = "/tmp/sigmaclntd/sigmaclntd.sock"
+	SIGMAHOME             = "/home/sigmaos"
+	SIGMASOCKET           = "/tmp/sigmaclntd/sigmaclntd.sock"
+	SIGMA_NETPROXY_SOCKET = "/tmp/sigmaclntd/sigmaclntd-netproxy.sock"
 )

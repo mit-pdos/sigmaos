@@ -24,6 +24,7 @@ import (
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/uprocclnt"
 )
 
@@ -109,12 +110,12 @@ func RunBinFS(kernelId, uprocdpid string) error {
 	// }
 
 	pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
-	rc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sc.FsLib}, pn)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sc.FsLib}, pn)
 	if err != nil {
 		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
 		return err
 	}
-
+	rc := rpcclnt.NewRPCClnt(ch)
 	updc := uprocclnt.NewUprocdClnt(sp.Tpid(uprocdpid), rc)
 
 	loopbackRoot, err := newBinRoot(kernelId, sc, updc)

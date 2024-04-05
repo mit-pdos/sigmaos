@@ -13,7 +13,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kproc"
 	"sigmaos/lcschedclnt"
-	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
 	"sigmaos/scheddclnt"
@@ -165,7 +164,7 @@ func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) {
 	s := time.Now()
 	spawnedKernelID := procqclnt.NOT_ENQ
-	for i := 0; i < pathclnt.MAXRETRY; i++ {
+	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
 		var err error
 		if p.IsPrivileged() {
 			// Privileged procs are force-run on the schedd specified by kernelID in
@@ -195,7 +194,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
 		return spawnedKernelID, nil
 	}
-	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", pathclnt.MAXRETRY, p)
+	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", sp.PATHCLNT_MAXRETRY, p)
 	return spawnedKernelID, serr.NewErr(serr.TErrUnreachable, kernelId)
 }
 

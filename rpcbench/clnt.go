@@ -6,6 +6,7 @@ import (
 	"sigmaos/rpcbench/proto"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/tracing"
 )
 
@@ -15,10 +16,11 @@ type Clnt struct {
 }
 
 func NewClnt(sc *sigmaclnt.SigmaClnt, t *tracing.Tracer, path string) *Clnt {
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sc.FsLib}, path)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sc.FsLib}, path)
 	if err != nil {
 		db.DFatalf("Error NewClnt: %v", err)
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	return &Clnt{
 		c: rpcc,
 		t: t,

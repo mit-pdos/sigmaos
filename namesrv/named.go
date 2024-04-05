@@ -39,6 +39,10 @@ type Named struct {
 	crash           int
 	sess            *fsetcd.Session
 	masterPublicKey auth.PublicKey
+	masterPrivKey   auth.PrivateKey
+	signer          sp.Tsigner
+	pubkey          auth.PublicKey
+	privkey         auth.PrivateKey
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -60,16 +64,25 @@ func Run(args []string) error {
 	if len(args) != 6 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[3]))
+	masterPubKey, pubkey, privkey, err := keys.BootstrappedKeysFromArgs(args[1:])
 	if err != nil {
-		db.DFatalf("Error NewPublicKey: %v", err)
+		db.DFatalf("Error get bootstrapped keys: %v", err)
 	}
+	//	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[2]))
+	//	if err != nil {
+	//		db.DFatalf("Error NewPublicKey: %v", err)
+	//	}
+
 	nd := &Named{}
 	nd.masterPublicKey = masterPubKey
-	nd.realm = sp.Trealm(args[1])
-	crashing, err := strconv.Atoi(args[2])
+	nd.masterPrivKey = nil // masterPrivKey
+	nd.signer = sp.Tsigner(pe.GetPID())
+	nd.pubkey = pubkey
+	nd.privkey = privkey
+	nd.realm = sp.Trealm(args[4])
+	crashing, err := strconv.Atoi(args[5])
 	if err != nil {
-		return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
+		return fmt.Errorf("%v: crash %v isn't int", args[0], args[5])
 	}
 	nd.crash = crashing
 
@@ -129,6 +142,7 @@ func Run(args []string) error {
 		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = path.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewMountSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
+		nd.GetAuthSrv().MintAndSetMountToken(mnt)
 		if err := nd.MkMountFile(pn, mnt, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "MkMountFile %v at %v err %v\n", nd.realm, pn, err)
 			return err
@@ -166,7 +180,7 @@ func Run(args []string) error {
 	return nil
 }
 
-func (nd *Named) newSrv() (sp.Tmount, error) {
+func (nd *Named) newSrv() (*sp.Tmount, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
@@ -176,36 +190,44 @@ func (nd *Named) newSrv() (sp.Tmount, error) {
 	} else {
 		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
 		if err != nil {
-			return sp.NullMount(), err
+			return sp.NewNullMount(), err
 		}
 		pi = pi0
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
 	}
-
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.SigmaClnt))
-	// Add the master deployment key, to allow connections from kernel to this
-	// named.
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterPublicKey)
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.SigmaClnt),
+		nd.masterPublicKey,
+		nd.masterPrivKey,
+		nd.signer,
+		nd.pubkey,
+		nd.privkey,
+		//		sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()),
+		//		nd.masterPublicKey,
+		//		nil,
+	)
 	kmgr.AddPublicKey(sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()), nd.masterPublicKey)
-	// Add this named's keypair to the keymgr
-	kmgr.AddPublicKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterPublicKey)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.signer, sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error New authsrv: %v", err)
+		return sp.NewNullMount(), fmt.Errorf("NewAuthSrv err: %v", err)
+	}
+	nd.SigmaClnt.SetAuthSrv(as)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
-		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
+		return sp.NewNullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}
 
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
-		return sp.NullMount(), err
+		return sp.NewNullMount(), err
 	}
 	nd.SigmaSrv = ssrv
 
-	mnt := sp.NewMountServer(nd.MyAddr())
+	mnt := nd.GetMount()
 	if nd.realm != sp.ROOTREALM {
-		mnt = port.NewPublicMount(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.MyAddr())
+		mnt = port.NewPublicMount(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetMount())
 	}
-
-	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.MyAddr(), nd.elect.Key(), mnt)
-
+	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetMount(), nd.elect.Key(), mnt)
 	return mnt, nil
 }
 

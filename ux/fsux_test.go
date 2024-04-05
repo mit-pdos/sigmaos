@@ -179,7 +179,7 @@ func TestWriteCrash5x20(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		err := ts.MintAndSetToken(pe)
+		err := ts.MintAndSetProcToken(pe)
 		assert.Nil(t, err)
 		go writer(ts.T, ch, pe, i)
 	}

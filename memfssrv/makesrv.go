@@ -22,15 +22,19 @@ func NewMemFs(pn string, pe *proc.ProcEnv) (*MemFs, error) {
 	return NewMemFsAddr(pn, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, pe.GetNet()), pe)
 }
 
+func NewMemFsAddrClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {
+	db.DPrintf(db.PORT, "NewMemFsPort %v %v\n", pn, addr)
+	fs, err := NewMemFsPortClnt(pn, addr, sc)
+	return fs, err
+}
+
 // Make an MemFs for a specific port and advertise it at pn
 func NewMemFsAddr(pn string, addr *sp.Taddr, pe *proc.ProcEnv) (*MemFs, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.PORT, "NewMemFsPort %v %v\n", pn, addr)
-	fs, err := NewMemFsPortClnt(pn, addr, sc)
-	return fs, err
+	return NewMemFsAddrClnt(pn, addr, sc)
 }
 
 // Make an MemFs for a specific port and client, and advertise it at
@@ -84,7 +88,7 @@ func NewMemFsPublic(pn string, pe *proc.ProcEnv) (*MemFs, error) {
 	}
 	mfs.pc = pc
 
-	if err = pc.AdvertisePort(pn, pi, pe.GetNet(), mfs.SigmaPSrv.MyAddr()); err != nil {
+	if err = pc.AdvertisePort(pn, pi, pe.GetNet(), mfs.SigmaPSrv.GetMount()); err != nil {
 		return nil, err
 	}
 	return mfs, err

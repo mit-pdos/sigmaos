@@ -230,7 +230,7 @@ func (fdc *FdClient) DirWait(fd int) error {
 	return nil
 }
 
-func (fdc *FdClient) IsLocalMount(mnt sp.Tmount) (bool, error) {
+func (fdc *FdClient) IsLocalMount(mnt *sp.Tmount) (bool, error) {
 	return fdc.pc.IsLocalMount(mnt)
 }
 
@@ -242,11 +242,11 @@ func (fdc *FdClient) PathLastMount(pn string) (path.Path, path.Path, error) {
 	return fdc.pc.PathLastMount(pn, fdc.pe.GetPrincipal())
 }
 
-func (fdc *FdClient) MountTree(addrs sp.Taddrs, tree, mount string) error {
-	return fdc.pc.MountTree(fdc.pe.GetPrincipal(), addrs, tree, mount)
+func (fdc *FdClient) MountTree(mnt *sp.Tmount, tree, mount string) error {
+	return fdc.pc.MountTree(fdc.pe.GetPrincipal(), mnt, tree, mount)
 }
 
-func (fdc *FdClient) GetNamedMount() (sp.Tmount, error) {
+func (fdc *FdClient) GetNamedMount() (*sp.Tmount, error) {
 	return fdc.pc.GetNamedMount()
 }
 

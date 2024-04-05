@@ -6,7 +6,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/pathclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -43,7 +42,7 @@ func (c *SemClnt) InitLease(perm sp.Tperm, lid sp.TleaseId) error {
 
 // Down semaphore. If not upped yet (i.e., if file exists), block
 func (c *SemClnt) Down() error {
-	for i := 0; i < pathclnt.MAXRETRY; i++ {
+	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
 		db.DPrintf(db.SEMCLNT, "Down %d %v\n", i, c.path)
 		err := c.WaitRemove(c.path)
 		// If err is because file has been removed, then no error: the
@@ -54,7 +53,7 @@ func (c *SemClnt) Down() error {
 		}
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", c.path, err)
-			time.Sleep(pathclnt.TIMEOUT * time.Millisecond)
+			time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 			continue
 		}
 		if err == nil {
@@ -65,7 +64,7 @@ func (c *SemClnt) Down() error {
 			return err
 		}
 	}
-	db.DPrintf(db.SEMCLNT_ERR, "Down failed after %d retries\n", pathclnt.MAXRETRY)
+	db.DPrintf(db.SEMCLNT_ERR, "Down failed after %d retries\n", sp.PATHCLNT_MAXRETRY)
 	return serr.NewErr(serr.TErrUnreachable, c.path)
 }
 

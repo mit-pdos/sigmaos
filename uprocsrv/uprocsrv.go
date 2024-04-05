@@ -6,7 +6,6 @@ package uprocsrv
 import (
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"sync"
 	"syscall"
@@ -15,12 +14,16 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/golang-jwt/jwt"
+
+	"sigmaos/auth"
 	"sigmaos/binsrv"
 	"sigmaos/chunksrv"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
+	"sigmaos/keys"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -85,27 +88,31 @@ func (pe *procEntry) getFd(sc *sigmaclnt.SigmaClnt, prog string) (int, error) {
 
 // Uprocsrv holds the state for serving procs.
 type UprocSrv struct {
-	mu       sync.RWMutex
-	ch       chan struct{}
-	pe       *proc.ProcEnv
-	ssrv     *sigmasrv.SigmaSrv
-	kc       *kernelclnt.KernelClnt
-	scsc     *sigmaclntsrv.SigmaClntSrvCmd
-	binsrv   *exec.Cmd
-	kernelId string
-	realm    sp.Trealm
-	sc       *sigmaclnt.SigmaClnt
-	procs    *syncmap.SyncMap[int, *procEntry]
+	mu              sync.RWMutex
+	ch              chan struct{}
+	pe              *proc.ProcEnv
+	ssrv            *sigmasrv.SigmaSrv
+	kc              *kernelclnt.KernelClnt
+	sc              *sigmaclnt.SigmaClnt
+	scsc            *sigmaclntsrv.SigmaClntSrvCmd
+	kernelId        string
+	realm           sp.Trealm
+	assigned        bool
+	sigmaclntdPID   sp.Tpid
+	marshaledSCKeys []string
+	procs           *syncmap.SyncMap[int, *procEntry]
 }
 
-func RunUprocSrv(kernelId string, up string) error {
+func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCKeys []string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{
-		kernelId: kernelId,
-		ch:       make(chan struct{}),
-		pe:       pe,
-		realm:    sp.NOREALM,
-		procs:    syncmap.NewSyncMap[int, *procEntry](),
+		kernelId:        kernelId,
+		ch:              make(chan struct{}),
+		pe:              pe,
+		sigmaclntdPID:   sigmaclntdPID,
+		marshaledSCKeys: marshaledSCKeys,
+		realm:           sp.NOREALM,
+		procs:           syncmap.NewSyncMap[int, *procEntry](),
 	}
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
@@ -115,11 +122,23 @@ func RunUprocSrv(kernelId string, up string) error {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	ups.sc = sc
-
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv %v", err)
+	}
+	sc.SetAuthSrv(as)
 	var ssrv *sigmasrv.SigmaSrv
 	if up == sp.NO_PORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
-		ssrv, err = sigmasrv.NewSigmaSrv(pn, ups, pe)
+		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
 	} else {
 		var port sp.Tport
 		port, err = sp.ParsePort(up)
@@ -129,7 +148,7 @@ func RunUprocSrv(kernelId string, up string) error {
 		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port, pe.GetNet())
 
 		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.NewSigmaSrvAddr("", addr, pe, ups)
+		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
 	}
 	if err != nil {
 		return err
@@ -215,7 +234,9 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 		return nil
 	}
 	start := time.Now()
-	defer db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
+	defer func(start time.Time) {
+		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
+	}(start)
 
 	start = time.Now()
 	innerIP, err := netsigma.LocalIP()
@@ -238,12 +259,11 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	ups.realm = realm
 
 	// Now that the uprocd's innerIP has been established, spawn sigmaclntd
-	pid := sp.GenPid("sigmaclntd")
-	scdp := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
+	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
 	scdp.InheritParentProcEnv(ups.pe)
 	scdp.SetHow(proc.HLINUX)
 	start = time.Now()
-	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET, ups.marshaledSCKeys)
 	if err != nil {
 		return err
 	}

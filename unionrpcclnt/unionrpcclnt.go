@@ -10,6 +10,7 @@ import (
 	"sigmaos/rpcclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 )
 
 type UnionRPCClnt struct {
@@ -55,12 +56,12 @@ func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
 	var rpcc *rpcclnt.RPCClnt
 	var ok bool
 	if rpcc, ok = urpcc.clnts[srvID]; !ok {
-		var err error
-		rpcc, err = rpcclnt.NewRPCClnt([]*fslib.FsLib{urpcc.FsLib}, path.Join(urpcc.path, srvID))
+		ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{urpcc.FsLib}, path.Join(urpcc.path, srvID))
 		if err != nil {
-			db.DPrintf(urpcc.eSelector, "Error newRPCClnt[srvID:%v]: %v", srvID, err)
+			db.DPrintf(urpcc.eSelector, "Error NewSigmaRPCChan[srvID:%v]: %v", srvID, err)
 			return nil, err
 		}
+		rpcc = rpcclnt.NewRPCClnt(ch)
 		urpcc.clnts[srvID] = rpcc
 	}
 	return rpcc, nil

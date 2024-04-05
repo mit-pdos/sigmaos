@@ -9,6 +9,7 @@ import (
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 )
 
 type StatScraperClnt struct {
@@ -31,10 +32,11 @@ func (clnt *StatScraperClnt) GetStatScrapers() []string {
 	scrapers := sp.Names(st)
 	for _, s := range scrapers {
 		if _, ok := clnt.rpccs[s]; !ok {
-			rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.K8S_SCRAPER, s))
+			ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.K8S_SCRAPER, s))
 			if err != nil {
 				db.DFatalf("Error NewRPCClnt: %v", err)
 			}
+			rpcc := rpcclnt.NewRPCClnt(ch)
 			clnt.rpccs[s] = rpcc
 		}
 	}

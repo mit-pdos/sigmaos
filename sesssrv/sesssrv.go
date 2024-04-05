@@ -8,6 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
+	"sigmaos/netsigma"
 	"sigmaos/netsrv"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -37,15 +38,15 @@ type SessSrv struct {
 	qlen  stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, addr *sp.Taddr, stats *stats.StatInfo, newSess NewSessionI) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, addr *sp.Taddr, stats *stats.StatInfo, newSess NewSessionI) *SessSrv {
 	ssrv := &SessSrv{
 		pe:    pe,
 		stats: stats,
 		st:    newSessionTable(newSess),
 	}
-	ssrv.srv = netsrv.NewNetServer(pe, addr, ssrv)
+	ssrv.srv = netsrv.NewNetServer(pe, npc, addr, ssrv)
 	ssrv.sm = newSessionMgr(ssrv.st, ssrv.srvFcall)
-	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
+	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.GetMount())
 	return ssrv
 }
 
@@ -62,8 +63,8 @@ func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) 
 	return nil
 }
 
-func (ssrv *SessSrv) MyAddr() *sp.Taddr {
-	return ssrv.srv.MyAddr()
+func (ssrv *SessSrv) GetMount() *sp.Tmount {
+	return ssrv.srv.GetMount()
 }
 
 func (ssrv *SessSrv) StopServing() error {

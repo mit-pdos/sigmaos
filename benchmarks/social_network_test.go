@@ -111,7 +111,7 @@ func NewSocialNetworkJob(
 		port, err := strconv.Atoi(po)
 		assert.Nil(ts.Ts.T, err, "Err parse port %v: %v", po, err)
 		addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port), ts.ProcEnv().GetNet())
-		mnt := sp.NewMountService([]*sp.Taddr{addr})
+		mnt := sp.NewMount([]*sp.Taddr{addr}, ts.ProcEnv().GetRealm())
 		assert.Nil(ts.Ts.T, ts.MkMountFile(p, mnt, sp.NoLeaseId))
 		// forward mongo port and init users and graphs.
 		cmd := exec.Command("kubectl", "port-forward", "svc/mongodb-sn", K8_FWD_PORT+":27017")

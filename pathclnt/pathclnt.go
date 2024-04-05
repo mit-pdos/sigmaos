@@ -39,12 +39,8 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 		pe:  pe,
 		mnt: newMntTable(),
 	}
-	if fidc == nil {
-		pathc.FidClnt = fidclnt.NewFidClnt(pe.Net)
-	} else {
-		pathc.FidClnt = fidc
-		fidc.NewClnt()
-	}
+	pathc.FidClnt = fidc
+	fidc.NewClnt()
 	pathc.ndMntCache = NewNamedMountCache(pe)
 	pathc.rootmt = newRootMountTable()
 	pathc.cid = sp.TclntId(rand.Uint64())
@@ -78,12 +74,12 @@ func (pathc *PathClnt) Mounts() []string {
 	return pathc.mnt.mountedPaths()
 }
 
-func (pathc *PathClnt) MountTree(principal *sp.Tprincipal, addrs sp.Taddrs, tree, mnt string) error {
-	db.DPrintf(db.PATHCLNT, "MountTree [%v]/%v mnt %v", addrs, tree, mnt)
-	if fd, err := pathc.Attach(principal, pathc.cid, addrs, "", tree); err == nil {
-		return pathc.Mount(fd, mnt)
+func (pathc *PathClnt) MountTree(principal *sp.Tprincipal, mnt *sp.Tmount, tree, mntname string) error {
+	db.DPrintf(db.PATHCLNT, "MountTree [%v]/%v mnt %v", mnt, tree, mntname)
+	if fd, err := pathc.Attach(principal, pathc.cid, mnt, "", tree); err == nil {
+		return pathc.Mount(fd, mntname)
 	} else {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: MountTree Attach [%v]/%v err %v", pathc.cid, addrs, tree, err)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: MountTree Attach [%v]/%v err %v", pathc.cid, mnt, tree, err)
 		return err
 	}
 }
@@ -256,7 +252,7 @@ func (pathc *PathClnt) Remove(name string, principal *sp.Tprincipal, f *sp.Tfenc
 		return err
 	}
 	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name), f)
-	if Retry(err) {
+	if serr.Retry(err) {
 		fid, err = pathc.walk(pn, principal, path.EndSlash(name), nil)
 		if err != nil {
 			return err
@@ -356,16 +352,6 @@ func (pathc *PathClnt) SetRemoveWatch(pn string, principal *sp.Tprincipal, w Wat
 	return nil
 }
 
-// Several calls optimistically connect to a recently-mounted server
-// without doing a pathname walk; this may fail, and the call should
-// walk. retry() says when to retry.
-func Retry(err *serr.Err) bool {
-	if err == nil {
-		return false
-	}
-	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
-}
-
 func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v\n", pathc.cid, pn, mode)
 	p, err := serr.PathSplitErr(pn)
@@ -377,7 +363,7 @@ func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 		return nil, err
 	}
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn), f)
-	if Retry(err) {
+	if serr.Retry(err) {
 		fid, err = pathc.walk(p, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return nil, err
@@ -406,7 +392,7 @@ func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 		return 0, err
 	}
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid, f)
-	if Retry(err) {
+	if serr.Retry(err) {
 		dir := p.Dir()
 		base := path.Path{p.Base()}
 		resolve := true

@@ -60,11 +60,10 @@ fn main() {
     print_elapsed_time("trampoline.setcap_proc", now, false);
     now = SystemTime::now();
     // Connect to the netproxy socket
-    let netproxy_conn_fd = UnixStream::connect("/tmp/sigmaclntd/sigmaclntd-netproxy.sock")
-        .unwrap()
-        .into_raw_fd();
+    let netproxy_conn = UnixStream::connect("/tmp/sigmaclntd/sigmaclntd-netproxy.sock").unwrap();
     // Remove O_CLOEXEC flag so that the connection remains open when the
     // trampoline execs the proc.
+    let netproxy_conn_fd = netproxy_conn.into_raw_fd();
     fcntl::fcntl(netproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
     // Pass the netproxy socket connection FD to the user proc
     env::set_var("SIGMA_NETPROXY_FD", netproxy_conn_fd.to_string());
@@ -314,16 +313,16 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("readlink"), // Needed for MUSL/Alpine
     ];
 
-    //    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 2] = [
-    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 1] = [
+    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 2] = [
+        //    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 1] = [
         (
             ScmpSyscall::new("clone"),
             ScmpArgCompare::new(0, ScmpCompareOp::MaskedEqual(0), 0x7E020000),
         ),
-        //        (
-        //            ScmpSyscall::new("socket"),
-        //            ScmpArgCompare::new(0, ScmpCompareOp::NotEqual, 40),
-        //        ),
+        (
+            ScmpSyscall::new("socket"),
+            ScmpArgCompare::new(0, ScmpCompareOp::NotEqual, 40),
+        ),
     ];
 
     let mut filter = ScmpFilterContext::new_filter(ScmpAction::Errno(1))?;

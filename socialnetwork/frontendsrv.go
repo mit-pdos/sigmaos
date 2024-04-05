@@ -55,7 +55,7 @@ func RunFrontendSrv(public bool, job string) error {
 		return err
 	}
 	frontend.SigmaClnt = sc
-	fsls, err := NewFsLibs(SERVER_NAME)
+	fsls, err := NewFsLibs(SERVER_NAME, sc.GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

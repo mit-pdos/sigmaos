@@ -36,7 +36,7 @@ func RunTextSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_TEXT)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_TEXT, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

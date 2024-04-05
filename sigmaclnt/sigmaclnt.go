@@ -58,8 +58,8 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 	return fslib.NewFsLibAPI(pe, fidc.GetNetProxyClnt(), s)
 }
 
-func NewFsLib(pe *proc.ProcEnv) (*fslib.FsLib, error) {
-	return newFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe, nil)))
+func NewFsLib(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) (*fslib.FsLib, error) {
+	return newFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
 }
 
 // Convert to SigmaClntKernel from SigmaClnt

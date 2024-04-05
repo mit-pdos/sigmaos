@@ -97,7 +97,7 @@ func RunReserveSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	fsls, err := NewFsLibs(HOTELRESERVE)
+	fsls, err := NewFsLibs(HOTELRESERVE, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

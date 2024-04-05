@@ -31,7 +31,7 @@ func RunSearchSrv(n string, public bool) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(HOTELSEARCH)
+	fsls, err := NewFsLibs(HOTELSEARCH, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"runtime/debug"
 	"strconv"
 
 	"golang.org/x/sys/unix"
@@ -17,6 +18,8 @@ import (
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
+
+var hasBeenInit bool
 
 const (
 	SIGMA_NETPROXY_FD = "SIGMA_NETPROXY_FD"
@@ -39,6 +42,13 @@ func NewNetProxyRPCCh(pe *proc.ProcEnv) (*NetProxyRPCCh, error) {
 		}
 		conn = uconn.(*net.UnixConn)
 	} else {
+		// Sanity check that a proc only has one NetProxyClnt, since using the fd
+		// set up by the trampoline consumes it destructively.
+		if hasBeenInit {
+			db.DPrintf(db.ERROR, "Error double-init netproxyclnt")
+			return nil, fmt.Errorf("Error double-init netproxyclnt: %v", string(debug.Stack()))
+		}
+		hasBeenInit = true
 		// Connect to the netproxy server using the FD set up by the trampoline
 		// (should be done by user procs)
 		fd, err := strconv.Atoi(fdstr)
@@ -111,7 +121,7 @@ func fdToTCPConn(fd int) (*net.TCPConn, error) {
 
 func fdToConn(fd int) (net.Conn, error) {
 	// Make the  FD into a Golang file object
-	f := os.NewFile(uintptr(fd), "tcp-conn")
+	f := os.NewFile(uintptr(fd), "netproxy-conn")
 	if f == nil {
 		db.DFatalf("Error new file")
 	}

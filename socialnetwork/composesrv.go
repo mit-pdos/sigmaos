@@ -42,7 +42,7 @@ func RunComposeSrv(public bool, jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_POST)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_POST, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

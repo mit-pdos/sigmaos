@@ -47,7 +47,7 @@ func RunWww(job string, public bool) error {
 	}
 	www.SigmaClnt = sc
 
-	fsls, err := NewFsLibs("hotel-wwwd")
+	fsls, err := NewFsLibs("hotel-wwwd", www.GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

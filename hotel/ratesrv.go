@@ -61,7 +61,7 @@ func RunRateSrv(job string, public bool, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	fsls, err := NewFsLibs(HOTELRATE)
+	fsls, err := NewFsLibs(HOTELRATE, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

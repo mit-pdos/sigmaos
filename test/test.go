@@ -89,7 +89,11 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	assert.Nil(t, err1, "Error load s3 secrets: %v", err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	lip := sp.Tip("127.0.0.1")
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, lip, lip, lip, "", false, false, false)
+	etcdMnt, err := fsetcd.NewFsEtcdMount(as, sp.Tip(EtcdIP))
+	if !assert.Nil(t, err, "Error NewFsEtcdMount: %v", err) {
+		return nil
+	}
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false)
 	pe.Program = "srv"
 	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM, sp.NoToken()))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
@@ -220,8 +224,12 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
 		return nil, err1
 	}
+	etcdMnt, err := fsetcd.NewFsEtcdMount(as, sp.Tip(EtcdIP))
+	if !assert.Nil(t, err, "Error NewFsEtcdMount: %v", err) {
+		return nil, err
+	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	err1 = as.MintAndSetProcToken(pe)
 	if err1 != nil {
@@ -232,7 +240,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, pe, srvs, Overlays, GVisor, pubkey, privkey)
+		_, err := bootkernelclnt.Start(kernelid, EtcdIP, pe, srvs, Overlays, GVisor, pubkey, privkey)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -243,18 +251,18 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if useSigmaclntd || useNetProxy {
 		db.DPrintf(db.BOOT, "Booting sigmaclntd: usesigmaclntd %v usenetproxy %v", useSigmaclntd, useNetProxy)
 		sckid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(sckid, pe, sp.SIGMACLNTDREL, Overlays, GVisor, pubkey, privkey)
+		_, err := bootkernelclnt.Start(sckid, EtcdIP, pe, sp.SIGMACLNTDREL, Overlays, GVisor, pubkey, privkey)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for sigmaclntd")
 			return nil, err
 		}
-		scsck, err = bootkernelclnt.NewKernelClnt(sckid, pe)
+		scsck, err = bootkernelclnt.NewKernelClnt(sckid, EtcdIP, pe)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error make kernel clnt for sigmaclntd")
 			return nil, err
 		}
 	}
-	k, err = bootkernelclnt.NewKernelClnt(kernelid, pe)
+	k, err = bootkernelclnt.NewKernelClnt(kernelid, EtcdIP, pe)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make kernel clnt")
 		return nil, err
@@ -278,7 +286,7 @@ func (ts *Tstate) BootNode(n int) error {
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(ts.ProcEnv(), BOOT_NODE, Overlays, GVisor, ts.masterPubKey, ts.masterPrivKey)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(EtcdIP, ts.ProcEnv(), BOOT_NODE, Overlays, GVisor, ts.masterPubKey, ts.masterPrivKey)
 		if err != nil {
 			return err
 		}
@@ -376,8 +384,12 @@ func Dump(t *testing.T) {
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, sp.Tip(EtcdIP), "", "", "", false, false, false)
-	fs, err := fsetcd.NewFsEtcd(pe.GetRealm(), pe.GetEtcdIP())
+	// TODO: pass proper mount
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, nil, "", "", "", false, false, false)
+	assert.False(t, true, "Unimplemented")
+	return
+	// TODO: implement properly
+	fs, err := fsetcd.NewFsEtcd(nil, nil, pe.GetRealm())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)
 	assert.Nil(t, err)

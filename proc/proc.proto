@@ -23,7 +23,7 @@ message ProcEnvProto {
   Tprincipal principal = 4;
   string procDir = 5;
   string parentDir = 6;
-  string etcdIP = 7;
+  map<string, TmountProto> etcdMounts = 7;
   string outerContainerIPStr = 8;
   string innerContainerIPStr = 9;
   string kernelID = 10;

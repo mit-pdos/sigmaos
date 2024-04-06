@@ -10,6 +10,7 @@ import (
 	"sigmaos/auth"
 	"sigmaos/boot"
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/kernel"
 	"sigmaos/keys"
 	"sigmaos/netsigma"
@@ -65,9 +66,6 @@ func main() {
 	if err != nil {
 		db.DFatalf("Failed to load AWS secrets %v", err)
 	}
-	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.ROOTREALM, sp.NoToken()), secrets, sp.Tip(os.Args[2]), localIP, localIP, param.BuildTag, param.Overlays)
-	proc.SetSigmaDebugPid(pe.GetPID().String())
 	// Create an auth server with a constant GetKeyFn, to bootstrap with the
 	// initial master key. This auth server should *not* be used long-term. It
 	// needs to be replaced with one which queries the namespace for keys once
@@ -84,6 +82,13 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}
+	etcdMnt, err := fsetcd.NewFsEtcdMount(as, sp.Tip(os.Args[2]))
+	if err != nil {
+		db.DFatalf("Error NewFsEtcdMount: %v", err)
+	}
+	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.ROOTREALM, sp.NoToken()), secrets, etcdMnt, localIP, localIP, param.BuildTag, param.Overlays)
+	proc.SetSigmaDebugPid(pe.GetPID().String())
 	if err1 := as.MintAndSetProcToken(pe); err1 != nil {
 		db.DFatalf("Error MintToken: %v", err1)
 	}

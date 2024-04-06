@@ -16,5 +16,5 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error get bootstrapped keys", err)
 	}
-	chunksrv.Run(os.Args[1], masterPubKey, pubkey, privkey)
+	chunksrv.Run(os.Args[4], masterPubKey, pubkey, privkey)
 }

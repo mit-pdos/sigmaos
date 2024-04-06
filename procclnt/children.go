@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"golang.org/x/exp/slices" // todo: upgrade to > 1.21
+
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -135,5 +137,15 @@ func (cs *ChildState) SetBinKernelID(bin, kernelId string) {
 		cs.bins[bin] = append(cs.bins[bin], kernelId)
 	} else {
 		cs.bins[bin] = []string{kernelId}
+	}
+}
+
+func (cs *ChildState) DelBinKernelID(bin, kernelId string) {
+	cs.Lock()
+	defer cs.Unlock()
+
+	if _, ok := cs.bins[bin]; ok {
+		i := slices.IndexFunc(cs.bins[bin], func(s string) bool { return s == kernelId })
+		cs.bins[bin] = append(cs.bins[bin][:i], cs.bins[bin][i+1:]...)
 	}
 }

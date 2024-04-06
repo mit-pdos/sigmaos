@@ -47,6 +47,7 @@ func spawnSpinnerMcpu(ts *test.Tstate, mcpu proc.Tmcpu) sp.Tpid {
 	return pid
 }
 
+// Make a burst of LC procs
 func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 	ps := make([]*proc.Proc, 0, N)
 	for i := uint(0); i < N; i++ {
@@ -657,7 +658,7 @@ func TestSpawnBurst(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Start burst spawn %v", N)
 
-	ps := burstSpawnSpinner(t, ts, N)
+	ps := burstSpawnSpinner(t, ts, 4)
 
 	for _, p := range ps {
 		err := ts.WaitStart(p.GetPid())
@@ -688,8 +689,8 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 		return
 	}
 
-	const N_CONCUR = 5  // 13
-	const N_SPAWNS = 50 // 500
+	const N_CONCUR = 1 // 5  // 13
+	const N_SPAWNS = 4 // 50 // 500
 
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 1")

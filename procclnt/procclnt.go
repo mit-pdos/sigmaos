@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -50,11 +51,7 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool) *ProcClnt {
 
 // Create the named state the proc (and its parent) expects.
 func (clnt *ProcClnt) NewProc(p *proc.Proc, how proc.Thow, kernelId string) error {
-	if how == proc.HSCHEDD {
-		return clnt.spawn(kernelId, how, p)
-	} else {
-		return clnt.spawn(kernelId, how, p)
-	}
+	return clnt.spawn(kernelId, how, p)
 }
 
 func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how proc.Thow, kernelId string) (*exec.Cmd, error) {
@@ -85,14 +82,11 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 
 	p.SetHow(how)
 
-	//if kid, ok := clnt.cs.BinKernelID(p.GetProgram()); ok {
-	//	pn = filepath.Join(sp.CHUNKD, kid)
-	//	db.DPrintf(db.ALWAYS, "spawn: BinKernelID %v %v\n", p.GetProgram(), kid)
-	//} else {
-	//	db.DPrintf(db.ALWAYS, "spawn: no BinKernelID %v; use %q\n", p.GetProgram(), pn)
-	//}
-
-	//p.PrependSigmaPath(pn)
+	if kid, ok := clnt.cs.BinKernelID(p.GetProgram()); ok {
+		pn := filepath.Join(sp.CHUNKD, kid)
+		db.DPrintf(db.ALWAYS, "spawn: prepend BinKernelID %v %v\n", p.GetProgram(), pn)
+		p.PrependSigmaPath(pn)
+	}
 
 	p.InheritParentProcEnv(clnt.ProcEnv())
 
@@ -177,10 +171,13 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 			if p.GetType() == proc.T_BE {
 				// BE Non-kernel procs are enqueued via the procq.
 				pqId, err := clnt.chooseProcQ(p.GetPid())
+				db.DPrintf(db.TEST, "SetBinKernelID %q %v\n", p.GetProgram(), pqId)
 				if err == nil {
-					db.DPrintf(db.TEST, "SetBinKernelID %q %v\n", p.GetProgram(), pqId)
 					clnt.cs.SetBinKernelID(p.GetProgram(), pqId)
 					spawnedKernelID, err = clnt.enqueueViaProcQ(p, pqId)
+					if err != nil {
+						clnt.cs.DelBinKernelID(p.GetProgram(), pqId)
+					}
 				}
 			} else {
 				// LC Non-kernel procs are enqueued via the procq.

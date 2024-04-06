@@ -1,8 +1,6 @@
 package chunkclnt
 
 import (
-	"time"
-
 	proto "sigmaos/chunksrv/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -16,6 +14,7 @@ type ChunkClnt struct {
 }
 
 func NewChunkClnt(fsl *fslib.FsLib, pn string) (*ChunkClnt, error) {
+	db.DPrintf(db.CHUNKCLNT, "NewChunkClnt %q", pn)
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{fsl}, pn)
 	if err != nil {
 		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
@@ -28,7 +27,6 @@ func NewChunkClnt(fsl *fslib.FsLib, pn string) (*ChunkClnt, error) {
 }
 
 func (ckclnt *ChunkClnt) FetchChunk(pn string, realm sp.Trealm, ck int, sz sp.Tsize, b []byte) (sp.Tsize, error) {
-	s := time.Now()
 	req := &proto.FetchChunkRequest{
 		Prog:    pn,
 		ChunkId: int32(ck),
@@ -40,6 +38,5 @@ func (ckclnt *ChunkClnt) FetchChunk(pn string, realm sp.Trealm, ck int, sz sp.Ts
 		db.DPrintf(db.CHUNKCLNT, "ChunkSrv.Fetch %v err %v", req, err)
 		return 0, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch ck %d %v", pn, ck, time.Since(s))
 	return sp.Tsize(res.Size), nil
 }

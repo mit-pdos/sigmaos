@@ -114,7 +114,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 			db.DPrintf(db.PROCCLNT, "pre spawnRetry %v %v", kernelId, p)
 			spawnedKernelID, err := clnt.spawnRetry(kernelId, p)
 			db.DPrintf(db.PROCCLNT, "spawned on kernelID %v err %v proc %v", spawnedKernelID, err, p)
-			clnt.cs.SetBinKernelID(p.GetProgram(), spawnedKernelID)
 			db.DPrintf(db.TEST, "SetBinKernelID %q %v\n", p.GetProgram(), spawnedKernelID)
 			clnt.cs.Started(p.GetPid(), spawnedKernelID, err)
 			if err != nil {
@@ -153,8 +152,12 @@ func (clnt *ProcClnt) forceRunViaSchedd(kernelID string, p *proc.Proc) error {
 	return nil
 }
 
-func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, error) {
-	return clnt.procqclnt.Enqueue(p)
+func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc, pqId string) (string, error) {
+	return clnt.procqclnt.Enqueue(p, pqId)
+}
+
+func (clnt *ProcClnt) chooseProcQ(pid sp.Tpid) (string, error) {
+	return clnt.procqclnt.ChooseProcQ(pid)
 }
 
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
@@ -174,7 +177,12 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 		} else {
 			if p.GetType() == proc.T_BE {
 				// BE Non-kernel procs are enqueued via the procq.
-				spawnedKernelID, err = clnt.enqueueViaProcQ(p)
+				pqId, err := clnt.chooseProcQ(p.GetPid())
+				db.DPrintf(db.TEST, "chooseProcQ %q err %v\n", pqId, err)
+				if err == nil {
+					clnt.cs.SetBinKernelID(p.GetProgram(), pqId)
+					spawnedKernelID, err = clnt.enqueueViaProcQ(p, pqId)
+				}
 			} else {
 				// LC Non-kernel procs are enqueued via the procq.
 				spawnedKernelID, err = clnt.enqueueViaLCSched(p)

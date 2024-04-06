@@ -6,10 +6,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+
+	"sigmaos/auth"
 	proto "sigmaos/chunksrv/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
+	"sigmaos/keys"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -171,11 +175,27 @@ func WriteChunk(pn string, off int64, b []byte) error {
 	return nil
 }
 
-func Run(kernelId string) {
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+func Run(kernelId string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) {
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
+
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv %v", err)
+	}
+	sc.SetAuthSrv(as)
+
 	cksrv := newChunkSrv(kernelId, sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.CHUNKD, sc.ProcEnv().GetKernelID()), sc, cksrv)
 	if err != nil {

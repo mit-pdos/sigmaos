@@ -159,7 +159,7 @@ func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {
 }
 
 func (k *Kernel) bootChunkd(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("chunkd", []string{k.Param.KernelID}, realm, proc.HSCHEDD)
+	return k.bootSubsystemBootstrapKeys("chunkd", []string{k.Param.KernelID}, realm, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {

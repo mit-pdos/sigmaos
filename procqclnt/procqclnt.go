@@ -41,14 +41,18 @@ func (pqc *ProcQClnt) ChooseProcQ(pid sp.Tpid) (string, error) {
 
 // Enqueue a proc on the procq. Returns the ID of the kernel that is running
 // the proc.
-func (pqc *ProcQClnt) Enqueue(p *proc.Proc, pqID string) (string, error) {
+func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
+	pqID, err := pqc.ChooseProcQ(p.GetPid())
+	if err != nil {
+		return NOT_ENQ, err
+	}
 	s := time.Now()
 	rpcc, err := pqc.urpcc.GetClnt(pqID)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error: Can't get procq clnt: %v", err)
 		return NOT_ENQ, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt make clnt %v", p.GetPid(), time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt make clnt %v %v", p.GetPid(), pqID, time.Since(s))
 	req := &proto.EnqueueRequest{
 		ProcProto: p.GetProto(),
 	}

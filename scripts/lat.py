@@ -5,9 +5,21 @@
 import re
 import sys
 import time
+import argparse
 from datetime import datetime
 
-f = open(sys.argv[1], "r") 
+net=True
+
+parser = argparse.ArgumentParser()
+parser.add_argument('filename')
+parser.add_argument('-r', action='store_true')
+args = parser.parse_args()
+
+if args.r:
+    net=False
+
+f = open(args.filename, "r")
+
 lines = f.readlines()
 reqs = {}
 reps = {}
@@ -83,5 +95,8 @@ def longrpclat():
     for k,v in d:
         print(k, v)
 
-longrpclat()
+if net:
+    longmsglat()
+else:
+    longrpclat()
 

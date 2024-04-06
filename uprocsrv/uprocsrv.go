@@ -18,6 +18,7 @@ import (
 
 	"sigmaos/auth"
 	"sigmaos/binsrv"
+	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	"sigmaos/container"
 	db "sigmaos/debug"
@@ -84,6 +85,12 @@ func (pe *procEntry) getFd(sc *sigmaclnt.SigmaClnt, prog string) (int, error) {
 		db.DPrintf(db.SPAWN_LAT, "[%v] Open %q spawn %v", prog, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 	}
 	return pe.fd, nil
+}
+
+func (pe *procEntry) getClnt(sc *sigmaclnt.SigmaClnt, prog string) (*chunkclnt.ChunkClnt, error) {
+	pe.mu.Lock()
+	defer pe.mu.Unlock()
+	return nil, nil
 }
 
 // Uprocsrv holds the state for serving procs.
@@ -293,6 +300,12 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 
+	if sts, err := ups.sc.GetDir(sp.CHUNKD); err == nil {
+		db.DPrintf(db.ALWAYS, "chunksrvs %v", sp.Names(sts))
+	} else {
+		db.DPrintf(db.ALWAYS, "chunksrvs err %v", err)
+	}
+
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	cmd, err := container.StartUProc(uproc)
 	if err != nil {
@@ -371,7 +384,6 @@ func mountRealmBinDir(realm sp.Trealm) error {
 
 func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.FetchResponse) error {
 	db.DPrintf(db.UPROCD, "Uprocd fetch %v", req)
-	pn := path.Join(sp.SIGMAHOME, "all-realm-bin", ups.realm.String(), req.Prog)
 
 	pe, ok := ups.procs.Lookup(int(req.Pid))
 	if !ok || pe.proc == nil {
@@ -380,12 +392,33 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: ck %d spawn %v", req.Prog, req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
 
-	fd, err := pe.getFd(ups.sc, req.Prog)
-	if err != nil {
-		return err
+	sz := sp.Tsize(0)
+	b := make([]byte, chunksrv.CHUNKSZ)
+	if chunksrv.IsChunkSrvPath(pe.proc.GetSigmaPath()[0]) {
+		clnt, err := pe.getClnt(ups.sc, pe.proc.GetSigmaPath()[0])
+		if err != nil {
+			return err
+		}
+		sz, err = clnt.FetchChunk(req.Prog, ups.realm, int(req.ChunkId), sp.Tsize(req.Size), b)
+		if err != nil {
+			return err
+		}
+	} else {
+		fd, err := pe.getFd(ups.sc, req.Prog)
+		if err != nil {
+			return err
+		}
+		sz, err = chunksrv.FetchOrigin(ups.sc, ups.realm, fd, req.Prog, int(req.ChunkId), b)
+		if err != nil {
+			return err
+		}
 	}
-	sz, err := chunksrv.Fetch(ups.sc, pn, fd, req.Prog, int(req.ChunkId))
-	if err != nil {
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: get ck %d %v", req.Prog, req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
+
+	pn := chunksrv.BinPath(ups.realm, req.Prog)
+	if err := chunksrv.WriteChunk(pn, chunksrv.Ckoff(int(req.ChunkId)), b[0:sz]); err != nil {
+		db.DPrintf(db.UPROCD, "Fetch: Writechunk %q %d err %v", pn, req.ChunkId, err)
 		return err
 	}
 	res.Size = uint64(sz)

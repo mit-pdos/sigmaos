@@ -103,12 +103,6 @@ func RunBinFS(kernelId, uprocdpid string) error {
 		return err
 	}
 
-	// if sts, err := sc.GetDir(sp.CHUNKD); err == nil {
-	// 	db.DPrintf(db.ALWAYS, "chunksrvs %v", sp.Names(sts))
-	// } else {
-	// 	db.DPrintf(db.ALWAYS, "chunksrvs err %v", err)
-	// }
-
 	pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sc.FsLib}, pn)
 	if err != nil {

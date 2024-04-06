@@ -4,7 +4,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/golang-jwt/jwt"
 
@@ -25,10 +24,20 @@ const (
 
 	SEEK_DATA = 3
 	SEEK_HOLE = 4
+
+	ROOT = sp.SIGMAHOME + "/all-realm-bin"
 )
 
 func Index(o int64) int { return int(o / CHUNKSZ) }
 func Ckoff(i int) int64 { return int64(i * CHUNKSZ) }
+
+func BinPath(realm sp.Trealm, prog string) string {
+	return path.Join(ROOT, realm.String(), prog)
+}
+
+func IsChunkSrvPath(path string) bool {
+	return strings.Contains(path, sp.CHUNKD)
+}
 
 type ChunkSrv struct {
 	sc       *sigmaclnt.SigmaClnt
@@ -42,17 +51,6 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 
 func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
 	db.DPrintf(db.CHUNKSRV, "Fetch %v", req)
-	fd, err := Open(cksrv.sc, req.Prog, req.Path)
-	if err != nil {
-		return err
-	}
-	pn := path.Join(sp.SIGMAHOME, "bin/user/realms", req.Realm, req.Prog)
-	sz, err := Fetch(cksrv.sc, pn, fd, req.Prog, int(req.ChunkId))
-	if err != nil {
-		return err
-	}
-	res.Size = uint64(sz)
-	cksrv.sc.CloseFd(fd)
 	return nil
 }
 
@@ -99,23 +97,12 @@ func Open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, error) {
 	return sfd, nil
 }
 
-func Fetch(sc *sigmaclnt.SigmaClnt, pn string, fd int, prog string, ckid int) (sp.Tsize, error) {
-	s := time.Now()
-	b := make([]byte, CHUNKSZ)
+func FetchOrigin(sc *sigmaclnt.SigmaClnt, realm sp.Trealm, fd int, prog string, ckid int, b []byte) (sp.Tsize, error) {
 	sz, err := sc.Pread(fd, b, sp.Toffset(Ckoff(ckid)))
 	if err != nil {
 		db.DPrintf(db.CHUNKSRV, "Fetch: read %q ck %d err %v", prog, ckid, err)
 		return 0, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Pread ck %d %v", prog, ckid, time.Since(s))
-
-	s = time.Now()
-	db.DPrintf(db.CHUNKSRV, "Fetch: write %q ck %d", pn, ckid)
-	if err := WriteChunk(pn, Ckoff(ckid), b[0:sz]); err != nil {
-		db.DPrintf(db.CHUNKSRV, "Fetch: writechunk %q %d err %v", pn, ckid, err)
-		return 0, err
-	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: write %d %v", prog, ckid, time.Since(s))
 	return sz, nil
 }
 

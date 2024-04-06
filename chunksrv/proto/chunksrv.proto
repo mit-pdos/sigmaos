@@ -7,7 +7,6 @@ message FetchChunkRequest {
    int32 chunkId = 2;
    uint64 size = 3;
    string realm = 4;
-   repeated string path = 5;
 }
 
 message FetchChunkResponse {

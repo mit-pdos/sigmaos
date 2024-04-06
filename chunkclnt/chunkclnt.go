@@ -8,39 +8,38 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 )
 
 type ChunkClnt struct {
-	*fslib.FsLib
 	rpcc *rpcclnt.RPCClnt
 }
 
 func NewChunkClnt(fsl *fslib.FsLib, pn string) (*ChunkClnt, error) {
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{fsl}, pn)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{fsl}, pn)
 	if err != nil {
+		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
 		return nil, err
 	}
 	ckclnt := &ChunkClnt{
-		FsLib: fsl,
-		rpcc:  rpcc,
+		rpcc: rpcclnt.NewRPCClnt(ch),
 	}
 	return ckclnt, nil
 }
 
-func (ckclnt *ChunkClnt) UprocdFetch(pn string, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, error) {
+func (ckclnt *ChunkClnt) FetchChunk(pn string, realm sp.Trealm, ck int, sz sp.Tsize, b []byte) (sp.Tsize, error) {
 	s := time.Now()
-	req := &proto.FetchRequest{
+	req := &proto.FetchChunkRequest{
 		Prog:    pn,
 		ChunkId: int32(ck),
 		Size:    uint64(sz),
 		Realm:   string(realm),
-		Path:    path,
 	}
-	res := &proto.FetchResponse{}
-	if err := ckclnt.rpcc.RPC("UprocSrv.Fetch", req, res); err != nil {
-		db.DPrintf(db.CHUNKCLNT, "UprocSrv.Fetch %v err %v", req, err)
+	res := &proto.FetchChunkResponse{}
+	if err := ckclnt.rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
+		db.DPrintf(db.CHUNKCLNT, "ChunkSrv.Fetch %v err %v", req, err)
 		return 0, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch latency from clnt %d %v", pn, ck, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch ck %d %v", pn, ck, time.Since(s))
 	return sp.Tsize(res.Size), nil
 }

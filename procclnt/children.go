@@ -118,7 +118,7 @@ func (cs *ChildState) GetKernelID(pid sp.Tpid) (string, error) {
 	return "NO_SCHEDD", fmt.Errorf("Proc %v child state not found", pid)
 }
 
-func (cs *ChildState) BinKernelID(bin string) (string, bool) {
+func (cs *ChildState) GetBinKernelID(bin string) (string, bool) {
 	cs.Lock()
 	defer cs.Unlock()
 

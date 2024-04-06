@@ -114,7 +114,6 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 			db.DPrintf(db.PROCCLNT, "pre spawnRetry %v %v", kernelId, p)
 			spawnedKernelID, err := clnt.spawnRetry(kernelId, p)
 			db.DPrintf(db.PROCCLNT, "spawned on kernelID %v err %v proc %v", spawnedKernelID, err, p)
-			db.DPrintf(db.TEST, "SetBinKernelID %q %v\n", p.GetProgram(), spawnedKernelID)
 			clnt.cs.Started(p.GetPid(), spawnedKernelID, err)
 			if err != nil {
 				clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
@@ -178,8 +177,8 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 			if p.GetType() == proc.T_BE {
 				// BE Non-kernel procs are enqueued via the procq.
 				pqId, err := clnt.chooseProcQ(p.GetPid())
-				db.DPrintf(db.TEST, "chooseProcQ %q err %v\n", pqId, err)
 				if err == nil {
+					db.DPrintf(db.TEST, "SetBinKernelID %q %v\n", p.GetProgram(), pqId)
 					clnt.cs.SetBinKernelID(p.GetProgram(), pqId)
 					spawnedKernelID, err = clnt.enqueueViaProcQ(p, pqId)
 				}

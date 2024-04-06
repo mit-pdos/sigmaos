@@ -238,11 +238,12 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,
     // but the mini rust proc for our spawn latency microbenchmarks requires
     // it.
-    const ALLOWED_SYSCALLS: [ScmpSyscall; 66] = [
+    //    const ALLOWED_SYSCALLS: [ScmpSyscall; 67] = [
+    const ALLOWED_SYSCALLS: [ScmpSyscall; 68] = [
         //        ScmpSyscall::new("bind"),
         //        ScmpSyscall::new("listen"),
-        //        ScmpSyscall::new("connect"),
-        //        ScmpSyscall::new("setsockopt"),
+        ScmpSyscall::new("connect"),
+        ScmpSyscall::new("setsockopt"),
         ScmpSyscall::new("ioctl"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("poll"),  // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("lstat"), // XXX Only needed for rust proc spawn microbenchmark
@@ -311,16 +312,15 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("readlink"), // Needed for MUSL/Alpine
     ];
 
-    //    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 2] = [
-    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 1] = [
+    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 2] = [
         (
             ScmpSyscall::new("clone"),
             ScmpArgCompare::new(0, ScmpCompareOp::MaskedEqual(0), 0x7E020000),
         ),
-        //        (
-        //            ScmpSyscall::new("socket"),
-        //            ScmpArgCompare::new(0, ScmpCompareOp::NotEqual, 40),
-        //        ),
+        (
+            ScmpSyscall::new("socket"),
+            ScmpArgCompare::new(0, ScmpCompareOp::NotEqual, 40),
+        ),
     ];
 
     let mut filter = ScmpFilterContext::new_filter(ScmpAction::Errno(1))?;

@@ -190,6 +190,12 @@ func TestImgdMany(t *testing.T) {
 	}
 	ts := newTstate(t1)
 
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "BootProcd 1")
+
+	err = ts.BootNode(1)
+	assert.Nil(t, err, "BootProcd 2")
+
 	sts, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/img-save"))
 	assert.Nil(t, err)
 

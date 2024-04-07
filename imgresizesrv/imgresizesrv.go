@@ -134,7 +134,7 @@ func (imgd *ImgSrv) mkProc(tn string, t interface{}) *proc.Proc {
 	if imgd.crash > 0 {
 		p.SetCrash(imgd.crash)
 	}
-	p.SetMcpu(imgd.workerMcpu)
+	//p.SetMcpu(imgd.workerMcpu)
 	p.SetMem(imgd.workerMem)
 	return p
 }

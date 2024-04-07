@@ -158,6 +158,13 @@ func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.Get
 	return nil
 }
 
+func (pq *ProcQ) updateSigmaPath(r sp.Trealm, prog, kernelId string) {
+	db.DPrintf(db.PROCQ1, "updateSigmaPath %v %v %v", r, prog, kernelId)
+	if q, ok := pq.qs[r]; ok {
+		q.updateSigmaPath(prog, kernelId)
+	}
+}
+
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
@@ -201,7 +208,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 			if ok {
 				// Decrease aggregate queue length.
 				pq.qlen--
-				db.DPrintf(db.PROCQ, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
+				db.DPrintf(db.PROCQ1, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
 				// Push proc to schedd. Do this asynchronously so we don't hold locks
 				// across RPCs.
 				go pq.runProc(req.KernelID, p, ch, ts)
@@ -211,6 +218,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// requests.
 				res.Mem = uint32(p.GetMem())
 				res.QLen = uint32(pq.qlen)
+				pq.updateSigmaPath(r, p.GetProgram(), req.KernelID)
 				pq.mu.Unlock()
 				return nil
 			}

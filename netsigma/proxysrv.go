@@ -14,6 +14,10 @@ import (
 )
 
 type NetProxySrv struct {
+	*NetProxySrvStubs
+}
+
+type NetProxySrvStubs struct {
 	innerContainerIP sp.Tip
 	auth             auth.AuthSrv
 	directDialFn     DialFn
@@ -33,18 +37,20 @@ func NewNetProxySrv(ip sp.Tip, as auth.AuthSrv) (*NetProxySrv, error) {
 	}
 	db.DPrintf(db.TEST, "runServer: netproxysrv listening on %v", sp.SIGMA_NETPROXY_SOCKET)
 	nps := &NetProxySrv{
-		innerContainerIP: ip,
-		auth:             as,
-		directDialFn:     DialDirect,
-		directListenFn:   ListenDirect,
+		&NetProxySrvStubs{
+			innerContainerIP: ip,
+			auth:             as,
+			directDialFn:     DialDirect,
+			directListenFn:   ListenDirect,
+		},
 	}
-	rpcs := rpcsrv.NewRPCSrv(nps, rpc.NewStatInfo())
+	rpcs := rpcsrv.NewRPCSrv(nps.NetProxySrvStubs, rpc.NewStatInfo())
 	nps.rpcs = rpcs
 	nps.trans = NewNetProxyRPCTrans(rpcs, socket)
 	return nps, nil
 }
 
-func (nps *NetProxySrv) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.DialResponse) error {
+func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.DialResponse) error {
 	mnt := sp.NewMountFromProto(req.GetMount())
 	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> mnt %v", ctx.Principal(), mnt)
 	// Verify the principal is authorized to establish the connection
@@ -72,7 +78,7 @@ func (nps *NetProxySrv) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.Dial
 	return nil
 }
 
-func (nps *NetProxySrv) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.ListenResponse) error {
+func (nps *NetProxySrvStubs) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.ListenResponse) error {
 	db.DPrintf(db.NETPROXYSRV, "Listen principal %v", ctx.Principal())
 	// Verify the principal is who they say they are
 	if _, err := nps.auth.VerifyPrincipalIdentity(ctx.Principal()); err != nil {

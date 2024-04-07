@@ -42,6 +42,7 @@ type Param struct {
 	Dbip          string
 	Mongoip       string
 	Overlays      bool
+	NetProxy      bool
 	BuildTag      string
 	GVisor        bool
 	ReserveMcpu   string

@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--reserveMcpu rmcpu] [--pubkey PUB_KEY] [--privkey PRIV_KEY] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--netproxy] [--reserveMcpu rmcpu] [--pubkey PUB_KEY] [--privkey PRIV_KEY] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -18,6 +18,7 @@ NET="host"
 KERNELID=""
 OVERLAYS="false"
 GVISOR="false"
+NETPROXY="false"
 PUB_KEY="NOT_SET"
 PRIV_KEY="NOT_SET"
 RMCPU="0"
@@ -65,6 +66,10 @@ while [[ "$#" -gt 1 ]]; do
   --gvisor)
     shift
     GVISOR="true"
+    ;;
+  --netproxy)
+    shift
+    NETPROXY="true"
     ;;
   --pubkey)
     shift
@@ -187,6 +192,7 @@ CID=$(docker run -dit \
              -e overlays=${OVERLAYS} \
              -e buildtag=${TAG} \
              -e gvisor=${GVISOR} \
+             -e netproxy=${NETPROXY} \
              -e pubkey="${PUB_KEY}" \
              -e privkey="${PRIV_KEY}" \
              -e SIGMAPERF=${SIGMAPERF} \

@@ -22,7 +22,7 @@ const (
 	K_OUT_DIR = "/tmp/sigmaos-kernel-start-logs"
 )
 
-func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (string, error) {
+func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overlays, gvisor, netproxy bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (string, error) {
 	args := []string{
 		"--pull", pe.BuildTag,
 		"--boot", srvs,
@@ -36,6 +36,9 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 	}
 	if gvisor {
 		args = append(args, "--gvisor")
+	}
+	if netproxy {
+		args = append(args, "--netproxy")
 	}
 	args = append(args, kernelId)
 	// Ensure the kernel output directory has been created
@@ -72,7 +75,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v", kernelId, srvs, ip, overlays, gvisor)
+	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v netproxy %v", kernelId, srvs, ip, overlays, netproxy)
 	return ip, nil
 }
 
@@ -86,9 +89,9 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*Kernel, error) {
+func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, overlays, gvisor, netproxy bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, etcdIP, pe, conf, overlays, gvisor, masterPubKey, masterPrivKey)
+	_, err := Start(kernelId, etcdIP, pe, conf, overlays, gvisor, netproxy, masterPubKey, masterPrivKey)
 	if err != nil {
 		return nil, err
 	}

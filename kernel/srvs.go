@@ -3,6 +3,7 @@ package kernel
 import (
 	"fmt"
 	"path"
+	"strconv"
 
 	db "sigmaos/debug"
 	"sigmaos/port"
@@ -147,7 +148,7 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 }
 
 func (k *Kernel) bootRealmd() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("realmd", []string{}, sp.ROOTREALM, proc.HSCHEDD, 0)
+	return k.bootSubsystemBootstrapKeys("realmd", []string{strconv.FormatBool(k.Param.NetProxy)}, sp.ROOTREALM, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {

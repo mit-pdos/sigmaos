@@ -142,7 +142,7 @@ func (npc *NetProxyClnt) proxyDial(mnt *sp.Tmount) (net.Conn, error) {
 		Mount: mnt.GetProto(),
 	}
 	res := &proto.DialResponse{}
-	if err := npc.rpcc.RPC("NetProxySrv.Dial", req, res); err != nil {
+	if err := npc.rpcc.RPC("NetProxySrvStubs.Dial", req, res); err != nil {
 		return nil, err
 	}
 	db.DPrintf(db.NETPROXYCLNT, "proxyDial response %v", res)
@@ -171,7 +171,7 @@ func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tmount, net.Listener, 
 		Addr: addr,
 	}
 	res := &proto.ListenResponse{}
-	if err := npc.rpcc.RPC("NetProxySrv.Listen", req, res); err != nil {
+	if err := npc.rpcc.RPC("NetProxySrvStubs.Listen", req, res); err != nil {
 		return nil, nil, err
 	}
 	mnt := sp.NewMountFromProto(res.Mount)

@@ -240,7 +240,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, srvs, Overlays, GVisor, pubkey, privkey)
+		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, srvs, Overlays, GVisor, useNetProxy, pubkey, privkey)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -251,7 +251,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if useSigmaclntd || useNetProxy {
 		db.DPrintf(db.BOOT, "Booting sigmaclntd: usesigmaclntd %v usenetproxy %v", useSigmaclntd, useNetProxy)
 		sckid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SIGMACLNTDREL, Overlays, GVisor, pubkey, privkey)
+		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SIGMACLNTDREL, Overlays, GVisor, useNetProxy, pubkey, privkey)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for sigmaclntd")
 			return nil, err
@@ -286,7 +286,7 @@ func (ts *Tstate) BootNode(n int) error {
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), BOOT_NODE, Overlays, GVisor, ts.masterPubKey, ts.masterPrivKey)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), BOOT_NODE, Overlays, GVisor, useNetProxy, ts.masterPubKey, ts.masterPrivKey)
 		if err != nil {
 			return err
 		}

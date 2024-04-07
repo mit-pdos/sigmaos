@@ -90,7 +90,7 @@ func (ch *NetProxyRPCCh) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) erro
 		return err
 	}
 	if uint32(len(outiov)) != n {
-		db.DFatalf("NetProxyRPCChan mismatch between supplied destination nvec and incoming nvec: %v != %v", len(outiov), n)
+		db.DFatalf("NetProxyRPCChan mismatch between supplied destination nvec and incoming nvec: %v != %v\n%s", len(outiov), n, debug.Stack())
 	}
 	db.DPrintf(db.NETPROXYCLNT, "[%p] Read n frames: %v", ch.conn, len(outiov))
 	if err := frame.ReadNFramesInto(ch.conn, outiov); err != nil {

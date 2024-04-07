@@ -90,7 +90,7 @@ func (dl *downloader) String() string {
 func (dl *downloader) downloader() {
 	for r := range dl.ch {
 		pn := binCachePath(dl.pn)
-		sz, ok := chunksrv.ReadChunk(pn, r.ck, dl.sz)
+		sz, ok := chunksrv.IsPresent(pn, r.ck, dl.sz)
 		if ok {
 			dl.chunks[r.ck] = sz
 			db.DPrintf(db.BINSRV, "readLocal %q %d cks %v\n", pn, sz, dl.chunks)

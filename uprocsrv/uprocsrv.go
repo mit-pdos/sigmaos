@@ -402,7 +402,7 @@ func mountRealmBinDir(realm sp.Trealm) error {
 }
 
 func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.FetchResponse) error {
-	db.DPrintf(db.UPROCD, "Uprocd fetch %v", req)
+	db.DPrintf(db.UPROCD, "Uprocd %v fetch %v", ups.kernelId, req)
 
 	pe, ok := ups.procs.Lookup(int(req.Pid))
 	if !ok || pe.proc == nil {
@@ -433,13 +433,14 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 		}
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: get ck %d %d %v", req.Prog, req.ChunkId, sz, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: get ck %d sz %d %v", req.Prog, req.ChunkId, sz, time.Since(pe.proc.GetSpawnTime()))
 
-	pn := chunksrv.BinPath(ups.realm, req.Prog)
-	if err := chunksrv.WriteChunk(pn, chunksrv.Ckoff(int(req.ChunkId)), b[0:sz]); err != nil {
+	pn := chunksrv.BinPathUprocd(ups.realm, req.Prog)
+	if err := chunksrv.WriteChunk(pn, int(req.ChunkId), b[0:sz]); err != nil {
 		db.DPrintf(db.UPROCD, "Fetch: Writechunk %q %d err %v", pn, req.ChunkId, err)
 		return err
 	}
+	db.DPrintf(db.CHUNKSRV, "%v: WriteChunk %v %d", ups.kernelId, pn, req.ChunkId)
 	res.Size = uint64(sz)
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d spawn %v", req.Prog, req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
@@ -456,10 +457,11 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v spawn %v", req.Prog, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
-	// XX also in Open()
-	// paths := downloadPaths(path, kernelId)
-
-	st, err := chunksrv.Lookup(ups.sc, req.Prog, pe.proc.GetSigmaPath())
+	paths := pe.proc.GetSigmaPath()
+	if chunksrv.IsChunkSrvPath(paths[0]) {
+		paths = paths[1:]
+	}
+	st, err := chunksrv.Lookup(ups.sc, req.Prog, paths)
 	if err != nil {
 		return err
 	}

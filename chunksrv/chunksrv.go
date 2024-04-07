@@ -25,14 +25,19 @@ const (
 	SEEK_DATA = 3
 	SEEK_HOLE = 4
 
-	ROOT = sp.SIGMAHOME + "/all-realm-bin"
+	ROOTCHUNKD = sp.SIGMAHOME + "/bin/user/realms"
+	ROOTPROCD  = sp.SIGMAHOME + "/all-realm-bin"
 )
 
 func Index(o int64) int { return int(o / CHUNKSZ) }
 func Ckoff(i int) int64 { return int64(i * CHUNKSZ) }
 
-func BinPath(realm sp.Trealm, prog string) string {
-	return path.Join(ROOT, realm.String(), prog)
+func BinPathUprocd(realm sp.Trealm, prog string) string {
+	return path.Join(ROOTPROCD, realm.String(), prog)
+}
+
+func BinPathChunkd(realm sp.Trealm, prog string) string {
+	return path.Join(ROOTCHUNKD, realm.String(), prog)
 }
 
 func IsChunkSrvPath(path string) bool {
@@ -50,7 +55,21 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 }
 
 func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
-	db.DPrintf(db.CHUNKSRV, "Fetch %v", req)
+	pn := BinPathChunkd(sp.Trealm(req.Realm), req.Prog)
+	ckid := int(req.ChunkId)
+	reqsz := sp.Tsize(req.Size)
+	db.DPrintf(db.CHUNKSRV, "%v: FetchChunk %q ckid %d sz %d", cksrv.kernelId, pn, ckid, reqsz)
+	if sz, ok := IsPresent(pn, ckid, reqsz); ok {
+		b := make([]byte, sz)
+		db.DPrintf(db.CHUNKSRV, "%v: FetchChunk %v present %d", cksrv.kernelId, req, sz)
+		if err := ReadChunk(pn, ckid, b); err != nil {
+			return err
+		}
+		res.Chunk = b
+		res.Size = uint64(sz)
+		return nil
+	}
+	db.DFatalf("%v: Fetch: %q ck %d not present\n", cksrv.kernelId, pn, req.ChunkId)
 	return nil
 }
 
@@ -106,8 +125,7 @@ func FetchOrigin(sc *sigmaclnt.SigmaClnt, realm sp.Trealm, fd int, prog string, 
 	return sz, nil
 }
 
-func ReadChunk(pn string, ck int, totsz sp.Tsize) (int64, bool) {
-	db.DPrintf(db.CHUNKSRV, "readLocal %q %d sz %d\n", pn, ck, totsz)
+func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 	f, err := os.OpenFile(pn, os.O_RDONLY, 0777)
 	if err != nil {
 		return 0, false
@@ -146,16 +164,32 @@ func ReadChunk(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 	return sz, ok
 }
 
-func WriteChunk(pn string, off int64, b []byte) error {
+func WriteChunk(pn string, ckid int, b []byte) error {
 	ufd, err := os.OpenFile(pn, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		return err
 	}
 	defer ufd.Close()
-	if _, err := ufd.Seek(off, 0); err != nil {
+	if _, err := ufd.Seek(Ckoff(ckid), 0); err != nil {
 		return err
 	}
 	nn, err := ufd.Write(b)
+	if nn != len(b) {
+		return err
+	}
+	return nil
+}
+
+func ReadChunk(pn string, ckid int, b []byte) error {
+	f, err := os.OpenFile(pn, os.O_RDONLY, 0777)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := f.Seek(Ckoff(ckid), 0); err != nil {
+		return err
+	}
+	nn, err := f.Read(b)
 	if nn != len(b) {
 		return err
 	}

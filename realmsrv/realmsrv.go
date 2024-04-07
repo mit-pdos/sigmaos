@@ -49,6 +49,7 @@ type Realm struct {
 
 type RealmSrv struct {
 	mu           sync.Mutex
+	netproxy     bool
 	realms       map[sp.Trealm]*Realm
 	sc           *sigmaclnt.SigmaClntKernel
 	pq           *procqclnt.ProcQClnt
@@ -63,7 +64,7 @@ type RealmSrv struct {
 	ch           chan struct{}
 }
 
-func RunRealmSrv(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunRealmSrv(netproxy bool, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	pe := proc.GetProcEnv()
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -84,6 +85,7 @@ func RunRealmSrv(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey aut
 	}
 	sc.SetAuthSrv(as)
 	rs := &RealmSrv{
+		netproxy:     netproxy,
 		lastNDPort:   MIN_PORT,
 		realms:       make(map[sp.Trealm]*Realm),
 		masterPubKey: masterPubKey,
@@ -170,6 +172,8 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 	p := proc.NewProc("named", []string{req.Realm, "0"})
 	p.GetProcEnv().SetRealm(sp.ROOTREALM, p.GetProcEnv().Overlays)
+	// Make sure named uses netproxy
+	p.GetProcEnv().UseNetProxy = rm.netproxy
 	p.SetMcpu(NAMED_MCPU)
 	rm.bootstrapNamedKeys(p)
 

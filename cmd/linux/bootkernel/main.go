@@ -19,8 +19,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 12 {
-		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu buildTag gvisor pubkey privkeyprovided:%v", os.Args[0], os.Args)
+	if len(os.Args) != 13 {
+		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip overlays reserveMcpu buildTag gvisor netproxy pubkey privkeyprovided:%v", os.Args[0], os.Args)
 	}
 	db.DPrintf(db.BOOT, "Boot %v", os.Args[1:])
 	srvs := strings.Split(os.Args[3], ";")
@@ -32,11 +32,15 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error parse gvisor: %v", err)
 	}
-	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[10]))
+	netproxy, err := strconv.ParseBool(os.Args[10])
+	if err != nil {
+		db.DFatalf("Error parse netproxy: %v", err)
+	}
+	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[11]))
 	if err != nil {
 		db.DFatalf("Error NewPublicKey", err)
 	}
-	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[11]))
+	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[12]))
 	if err != nil {
 		db.DFatalf("Error NewPrivateKey", err)
 	}
@@ -48,6 +52,7 @@ func main() {
 		Dbip:          os.Args[4],
 		Mongoip:       os.Args[5],
 		Overlays:      overlays,
+		NetProxy:      netproxy,
 		BuildTag:      os.Args[8],
 		GVisor:        gvisor,
 	}

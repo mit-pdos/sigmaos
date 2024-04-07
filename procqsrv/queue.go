@@ -73,7 +73,7 @@ func (q *Queue) updateSigmaPath(prog, kernelId string) {
 	for _, qi := range q.procs {
 		if !chunksrv.IsChunkSrvPath(qi.p.GetSigmaPath()[0]) &&
 			qi.p.GetProgram() == prog {
-			db.DPrintf(db.PROCQ1, "PrependSigmaPath: GetBinKernelId %v %v\n", qi.p.GetProgram(), kernelId)
+			db.DPrintf(db.PROCQ, "PrependSigmaPath: GetBinKernelId %v %v\n", qi.p.GetProgram(), kernelId)
 			qi.p.PrependSigmaPath(sp.ChunkdPath(kernelId))
 		}
 	}

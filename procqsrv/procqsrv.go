@@ -159,7 +159,7 @@ func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.Get
 }
 
 func (pq *ProcQ) updateSigmaPath(r sp.Trealm, prog, kernelId string) {
-	db.DPrintf(db.PROCQ1, "updateSigmaPath %v %v %v", r, prog, kernelId)
+	db.DPrintf(db.PROCQ, "updateSigmaPath %v %v %v", r, prog, kernelId)
 	if q, ok := pq.qs[r]; ok {
 		q.updateSigmaPath(prog, kernelId)
 	}
@@ -208,7 +208,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 			if ok {
 				// Decrease aggregate queue length.
 				pq.qlen--
-				db.DPrintf(db.PROCQ1, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
+				db.DPrintf(db.PROCQ, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
 				// Push proc to schedd. Do this asynchronously so we don't hold locks
 				// across RPCs.
 				go pq.runProc(req.KernelID, p, ch, ts)

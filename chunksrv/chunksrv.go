@@ -14,6 +14,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/keys"
 	"sigmaos/proc"
+	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -58,18 +59,20 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *prot
 	pn := BinPathChunkd(sp.Trealm(req.Realm), req.Prog)
 	ckid := int(req.ChunkId)
 	reqsz := sp.Tsize(req.Size)
-	db.DPrintf(db.CHUNKSRV, "%v: FetchChunk %q ckid %d sz %d", cksrv.kernelId, pn, ckid, reqsz)
 	if sz, ok := IsPresent(pn, ckid, reqsz); ok {
+		if sz > CHUNKSZ {
+			sz = CHUNKSZ
+		}
 		b := make([]byte, sz)
-		db.DPrintf(db.CHUNKSRV, "%v: FetchChunk %v present %d", cksrv.kernelId, req, sz)
+		db.DPrintf(db.CHUNKSRV, "%v: FetchChunk %q ckid %d present %d", cksrv.kernelId, pn, ckid, sz)
 		if err := ReadChunk(pn, ckid, b); err != nil {
 			return err
 		}
-		res.Chunk = b
+		res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 		res.Size = uint64(sz)
 		return nil
 	}
-	db.DFatalf("%v: Fetch: %q ck %d not present\n", cksrv.kernelId, pn, req.ChunkId)
+	db.DFatalf("%v: FetchChunk: %q ck %d not present\n", cksrv.kernelId, pn, req.ChunkId)
 	return nil
 }
 

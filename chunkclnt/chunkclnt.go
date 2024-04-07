@@ -4,6 +4,7 @@ import (
 	proto "sigmaos/chunksrv/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
@@ -34,6 +35,7 @@ func (ckclnt *ChunkClnt) FetchChunk(pn string, realm sp.Trealm, ck int, sz sp.Ts
 		Realm:   string(realm),
 	}
 	res := &proto.FetchChunkResponse{}
+	res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	if err := ckclnt.rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
 		db.DPrintf(db.CHUNKCLNT, "ChunkSrv.Fetch %v err %v", req, err)
 		return 0, err

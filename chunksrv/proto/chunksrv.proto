@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "rpc/proto/rpc.proto";
+
 option go_package = "sigmaos/chunksrv/proto";
 
 message FetchChunkRequest {
@@ -10,6 +12,6 @@ message FetchChunkRequest {
 }
 
 message FetchChunkResponse {
-  bytes chunk = 1;
+  Blob blob = 1;
   uint64 size = 2;
 }

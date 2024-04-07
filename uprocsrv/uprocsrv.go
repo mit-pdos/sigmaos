@@ -437,10 +437,10 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 
 	pn := chunksrv.BinPathUprocd(ups.realm, req.Prog)
 	if err := chunksrv.WriteChunk(pn, int(req.ChunkId), b[0:sz]); err != nil {
-		db.DPrintf(db.UPROCD, "Fetch: Writechunk %q %d err %v", pn, req.ChunkId, err)
+		db.DPrintf(db.UPROCD, "Fetch: Writechunk %q ck %d err %v", pn, req.ChunkId, err)
 		return err
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: WriteChunk %v %d", ups.kernelId, pn, req.ChunkId)
+	db.DPrintf(db.CHUNKSRV, "%v: WriteChunk %v ck %d", ups.kernelId, pn, req.ChunkId)
 	res.Size = uint64(sz)
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d spawn %v", req.Prog, req.ChunkId, time.Since(pe.proc.GetSpawnTime()))

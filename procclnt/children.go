@@ -134,7 +134,10 @@ func (cs *ChildState) SetBinKernelID(bin, kernelId string) {
 	defer cs.Unlock()
 
 	if _, ok := cs.bins[bin]; ok {
-		cs.bins[bin] = append(cs.bins[bin], kernelId)
+		i := slices.IndexFunc(cs.bins[bin], func(s string) bool { return s == kernelId })
+		if i == -1 {
+			cs.bins[bin] = append(cs.bins[bin], kernelId)
+		}
 	} else {
 		cs.bins[bin] = []string{kernelId}
 	}
@@ -146,6 +149,8 @@ func (cs *ChildState) DelBinKernelID(bin, kernelId string) {
 
 	if _, ok := cs.bins[bin]; ok {
 		i := slices.IndexFunc(cs.bins[bin], func(s string) bool { return s == kernelId })
-		cs.bins[bin] = append(cs.bins[bin][:i], cs.bins[bin][i+1:]...)
+		if i != -1 {
+			cs.bins[bin] = append(cs.bins[bin][:i], cs.bins[bin][i+1:]...)
+		}
 	}
 }

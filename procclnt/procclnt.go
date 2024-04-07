@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -83,9 +82,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 	p.SetHow(how)
 
 	if kid, ok := clnt.cs.GetBinKernelID(p.GetProgram()); ok {
-		pn := filepath.Join(sp.CHUNKD, kid)
-		db.DPrintf(db.TEST, "spawn: prepend GetBinKernelId %v %v\n", p.GetProgram(), pn)
-		p.PrependSigmaPath(pn)
+		db.DPrintf(db.TEST, "spawn: PrependSigmaPath %v %v\n", p.GetProgram(), kid)
+		p.PrependSigmaPath(sp.ChunkdPath(kid))
 	} else {
 		db.DPrintf(db.TEST, "GetBinKernelId %v; no kernel", p.GetProgram())
 	}

@@ -122,7 +122,7 @@ func Open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, error) {
 func FetchOrigin(sc *sigmaclnt.SigmaClnt, realm sp.Trealm, fd int, prog string, ckid int, b []byte) (sp.Tsize, error) {
 	sz, err := sc.Pread(fd, b, sp.Toffset(Ckoff(ckid)))
 	if err != nil {
-		db.DPrintf(db.CHUNKSRV, "Fetch: read %q ck %d err %v", prog, ckid, err)
+		db.DPrintf(db.CHUNKSRV, "FetchOrigin: read %q ck %d err %v", prog, ckid, err)
 		return 0, err
 	}
 	return sz, nil

@@ -322,7 +322,6 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("readlink"), // Needed for MUSL/Alpine
     ];
 
-    //    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 2] = [
     const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 1] = [
         (
             ScmpSyscall::new("clone"),

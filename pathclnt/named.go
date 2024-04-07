@@ -11,11 +11,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-//		// If named has been set, don't bother getting it from fsetcd.
-//		if pathc.pe.GetNamedIP() != "" {
-//			return sp.Tmount{Addr: []*sp.Taddr{sp.NewTaddr(pathc.pe.GetNamedIP())}}
-//		}
-
 func (pathc *PathClnt) GetNamedMount() (*sp.Tmount, error) {
 	mnt, err := pathc.getNamedMount(pathc.pe.GetRealm())
 	if err != nil {
@@ -36,7 +31,7 @@ func (pathc *PathClnt) getNamedMount(realm sp.Trealm) (*sp.Tmount, *serr.Err) {
 	var err *serr.Err
 	// If this is the root realm, then get the root named.
 	if realm == sp.ROOTREALM {
-		mnt, err = fsetcd.GetRootNamed(realm, pathc.pe.EtcdIP)
+		mnt, err = fsetcd.GetRootNamed(pathc.GetNetProxyClnt(), pathc.pe.GetEtcdMounts(), realm)
 		if err != nil {
 			db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] err GetRootNamed %v", realm, mnt)
 			return &sp.Tmount{}, err

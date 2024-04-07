@@ -16,6 +16,7 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/namesrv"
+	"sigmaos/netsigma"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -559,7 +560,7 @@ func TestPageDir(t *testing.T) {
 }
 
 func dirwriter(t *testing.T, pe *proc.ProcEnv, dn, name string, ch chan bool) {
-	fsl, err := sigmaclnt.NewFsLib(pe)
+	fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 	assert.Nil(t, err)
 	stop := false
 	for !stop {
@@ -771,7 +772,7 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 
 	done := make(chan bool)
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pe)
+	fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
 		fn := gopath.Join(dn, strconv.Itoa(i))
@@ -822,7 +823,7 @@ func TestWaitCreateRemoveConcur(t *testing.T) {
 		assert.Equal(t, nil, err)
 		done := make(chan bool)
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 
 		go func() {
@@ -953,7 +954,7 @@ func TestConcurRename(t *testing.T) {
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 		go func(fsl *fslib.FsLib, t string) {
@@ -1020,7 +1021,7 @@ func TestConcurAssignedRename(t *testing.T) {
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err, "Err newfslib: %v", err)
 		fsls = append(fsls, fsl)
 		go func(fsl *fslib.FsLib, t string) {
@@ -1396,7 +1397,7 @@ func TestFslibClose(t *testing.T) {
 	// Make a new fsl for this test, because we want to use ts.FsLib
 	// to shutdown the system.
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pe)
+	fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 	assert.Nil(t, err)
 
 	// connect

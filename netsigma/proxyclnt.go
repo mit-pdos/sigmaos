@@ -55,9 +55,11 @@ func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
 	if npc.useProxy() {
 		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v", mnt)
 		c, err = npc.proxyDial(mnt)
+		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v done ok:%v", mnt, err == nil)
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directDial %v", mnt)
 		c, err = npc.directDialFn(mnt)
+		db.DPrintf(db.NETPROXYCLNT, "directDial done ok:%v", err == nil)
 	}
 	return c, err
 }

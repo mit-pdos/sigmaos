@@ -15,7 +15,7 @@ type FsLib struct {
 }
 
 func NewFsLibAPI(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, sos sos.SigmaOS) (*FsLib, error) {
-	db.DPrintf(db.FSLIB, "NewFsLib: principal %s innerip %s addrs %v\n", pe.GetPrincipal(), pe.GetInnerContainerIP(), pe.EtcdIP)
+	db.DPrintf(db.FSLIB, "NewFsLib: principal %s innerip %s addrs %v\n", pe.GetPrincipal(), pe.GetInnerContainerIP(), pe.GetEtcdMounts())
 	fl := &FsLib{
 		pe:      pe,
 		npc:     npc,

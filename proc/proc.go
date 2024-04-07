@@ -121,7 +121,7 @@ func (p *Proc) LookupEnv(name string) (string, bool) {
 func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.SetRealm(parentPE.GetRealm(), parentPE.Overlays)
 	p.ProcEnvProto.ParentDir = path.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
-	p.ProcEnvProto.EtcdIP = parentPE.EtcdIP
+	p.ProcEnvProto.EtcdMounts = parentPE.EtcdMounts
 	p.ProcEnvProto.Perf = parentPE.Perf
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag

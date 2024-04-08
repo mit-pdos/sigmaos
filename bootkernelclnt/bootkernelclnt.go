@@ -38,7 +38,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 		args = append(args, "--gvisor")
 	}
 	if netproxy {
-		args = append(args, "--netproxy")
+		args = append(args, "--usenetproxy")
 	}
 	args = append(args, kernelId)
 	// Ensure the kernel output directory has been created

@@ -396,7 +396,8 @@ func (rm *RealmSrv) enforceResourcePolicy() {
 		db.DPrintf(db.FAIRNESS, "Check BE resource allocation")
 		running, err := rm.sd.GetRunningProcs(N_SAMPLE)
 		if err != nil {
-			db.DFatalf("Err getting running procs: %v", err)
+			db.DPrintf(db.ERROR, "Err getting running procs: %v", err)
+			continue
 		}
 		db.DPrintf(db.FAIRNESS, "Running procs: %v", running)
 		resourceUsage := rm.realmResourceUsage(running)

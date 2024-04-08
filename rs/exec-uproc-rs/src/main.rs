@@ -242,12 +242,11 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         //        ScmpSyscall::new("bind"),
         //        ScmpSyscall::new("listen"),
         //        ScmpSyscall::new("connect"),
-        ScmpSyscall::new("setsockopt"),    // XXX Performance issues?
-        ScmpSyscall::new("ioctl"),         // XXX Only needed for rust proc spawn microbenchmark
-        ScmpSyscall::new("poll"),          // XXX Only needed for rust proc spawn microbenchmark
-        ScmpSyscall::new("lstat"),         // XXX Only needed for rust proc spawn microbenchmark
+        ScmpSyscall::new("ioctl"), // XXX Only needed for rust proc spawn microbenchmark
+        ScmpSyscall::new("poll"),  // XXX Only needed for rust proc spawn microbenchmark
+        ScmpSyscall::new("lstat"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("clock_gettime"), // XXX Only needed to run on gVisor
-        ScmpSyscall::new("membarrier"),    // XXX Only needed to run on gVisor
+        ScmpSyscall::new("membarrier"), // XXX Only needed to run on gVisor
         ScmpSyscall::new("accept4"),
         ScmpSyscall::new("access"),
         ScmpSyscall::new("arch_prctl"), // Enabled by Docker on AMD64, which is the only architecture we're running on at the moment.
@@ -298,6 +297,7 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("sched_yield"),
         ScmpSyscall::new("sendto"),
         ScmpSyscall::new("setitimer"),
+        ScmpSyscall::new("setsockopt"), // Important for performance! (especially hotel/socialnet)
         ScmpSyscall::new("set_robust_list"),
         ScmpSyscall::new("set_tid_address"),
         ScmpSyscall::new("sigaltstack"),

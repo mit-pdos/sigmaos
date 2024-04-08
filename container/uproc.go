@@ -18,15 +18,15 @@ import (
 // Contain user procs using exec-uproc-rs trampoline
 //
 
-func RunUProc(uproc *proc.Proc) error {
-	db.DPrintf(db.CONTAINER, "RunUProc %v env %v\n", uproc, os.Environ())
+func RunUProc(uproc *proc.Proc, netproxy bool) error {
+	db.DPrintf(db.CONTAINER, "RunUProc netproxy %v proc %v env %v\n", netproxy, uproc, os.Environ())
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
-		cmd = exec.Command("strace", append([]string{"-f", "exec-uproc-rs", uproc.GetPid().String(), uproc.GetProgram()}, uproc.Args...)...)
+		cmd = exec.Command("strace", append([]string{"-f", "exec-uproc-rs", uproc.GetPid().String(), uproc.GetProgram(), strconv.FormatBool(netproxy)}, uproc.Args...)...)
 	} else {
-		cmd = exec.Command("exec-uproc-rs", append([]string{uproc.GetPid().String(), uproc.GetProgram()}, uproc.Args...)...)
+		cmd = exec.Command("exec-uproc-rs", append([]string{uproc.GetPid().String(), uproc.GetProgram(), strconv.FormatBool(netproxy)}, uproc.Args...)...)
 	}
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))

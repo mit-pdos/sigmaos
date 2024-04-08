@@ -36,15 +36,17 @@ type UprocSrv struct {
 	scsc            *sigmaclntsrv.SigmaClntSrvCmd
 	kernelId        string
 	realm           sp.Trealm
+	netproxy        bool
 	assigned        bool
 	sigmaclntdPID   sp.Tpid
 	marshaledSCKeys []string
 }
 
-func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCKeys []string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpid, marshaledSCKeys []string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{
 		kernelId:        kernelId,
+		netproxy:        netproxy,
 		ch:              make(chan struct{}),
 		pe:              pe,
 		sigmaclntdPID:   sigmaclntdPID,
@@ -215,5 +217,5 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-	return container.RunUProc(uproc)
+	return container.RunUProc(uproc, ups.netproxy)
 }

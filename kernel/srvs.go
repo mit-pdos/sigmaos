@@ -215,6 +215,8 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
+	// Append netproxy bool to args
+	args = append(args, strconv.FormatBool(k.Param.NetProxy))
 	sigmaclntdPID := sp.GenPid("sigmaclntd")
 	// bootstrap keys for sigmaclntd
 	keys, err := k.bootstrapKeys(sigmaclntdPID)

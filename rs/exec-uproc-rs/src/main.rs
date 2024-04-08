@@ -242,7 +242,7 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         //        ScmpSyscall::new("bind"),
         //        ScmpSyscall::new("listen"),
         //        ScmpSyscall::new("connect"),
-        //        ScmpSyscall::new("setsockopt"),
+        //        ScmpSyscall::new("setsockopt"), // XXX Performance issues?
         ScmpSyscall::new("ioctl"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("poll"),  // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("lstat"), // XXX Only needed for rust proc spawn microbenchmark

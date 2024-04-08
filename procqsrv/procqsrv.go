@@ -219,7 +219,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				res.Mem = uint32(p.GetMem())
 				res.QLen = uint32(pq.qlen)
 				db.DPrintf(db.TEST, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
-				pq.updateSigmaPath(r, p.GetProgram(), req.KernelID)
+				// pq.updateSigmaPath(r, p.GetProgram(), req.KernelID)
 				pq.mu.Unlock()
 				return nil
 			}

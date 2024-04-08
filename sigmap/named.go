@@ -1,9 +1,5 @@
 package sigmap
 
-import (
-	"path/filepath"
-)
-
 // if name ends in "/", it is a directory with mount files for that service
 const (
 	KNAMED        = "knamed"
@@ -76,7 +72,3 @@ const (
 	SIGMASOCKET           = "/tmp/sigmaclntd/sigmaclntd.sock"
 	SIGMA_NETPROXY_SOCKET = "/tmp/sigmaclntd/sigmaclntd-netproxy.sock"
 )
-
-func ChunkdPath(kernelId string) string {
-	return filepath.Join(CHUNKD, kernelId)
-}

@@ -18,6 +18,7 @@ import (
 
 	"sigmaos/auth"
 	"sigmaos/binsrv"
+	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	"sigmaos/container"
@@ -43,11 +44,10 @@ type procEntry struct {
 	mu   sync.Mutex
 	cond *sync.Cond
 	proc *proc.Proc
-	fd   int
 }
 
 func newProcEntry(proc *proc.Proc) *procEntry {
-	return &procEntry{proc: proc, fd: -1}
+	return &procEntry{proc: proc}
 }
 
 func (pe *procEntry) insertSignal(proc *proc.Proc) {
@@ -72,26 +72,6 @@ func (pe *procEntry) procWait() {
 	}
 }
 
-func (pe *procEntry) getFd(sc *sigmaclnt.SigmaClnt, prog string) (int, error) {
-	pe.mu.Lock()
-	defer pe.mu.Unlock()
-
-	if pe.fd == -1 {
-		fd, err := chunksrv.Open(sc, prog, pe.proc.GetSigmaPath())
-		if err != nil {
-			return -1, err
-		}
-		pe.fd = fd
-		db.DPrintf(db.SPAWN_LAT, "[%v] Open %q spawn %v", prog, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
-	}
-	return pe.fd, nil
-}
-
-type ckclntEntry struct {
-	mu     sync.Mutex
-	ckclnt *chunkclnt.ChunkClnt
-}
-
 // Uprocsrv holds the state for serving procs.
 type UprocSrv struct {
 	mu              sync.RWMutex
@@ -107,7 +87,7 @@ type UprocSrv struct {
 	sigmaclntdPID   sp.Tpid
 	marshaledSCKeys []string
 	procs           *syncmap.SyncMap[int, *procEntry]
-	ckclnts         *syncmap.SyncMap[string, *ckclntEntry]
+	ckclnt          *chunkclnt.ChunkClnt
 }
 
 func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCKeys []string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
@@ -120,7 +100,6 @@ func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCK
 		marshaledSCKeys: marshaledSCKeys,
 		realm:           sp.NOREALM,
 		procs:           syncmap.NewSyncMap[int, *procEntry](),
-		ckclnts:         syncmap.NewSyncMap[string, *ckclntEntry](),
 	}
 
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
@@ -180,6 +159,12 @@ func RunUprocSrv(kernelId string, up string, sigmaclntdPID sp.Tpid, marshaledSCK
 		return err
 	}
 
+	clnt, err := chunkclnt.NewChunkClnt(ups.sc.FsLib, chunk.ChunkdPath(ups.kernelId))
+	if err != nil {
+		return err
+	}
+	ups.ckclnt = clnt
+
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
 		return err
@@ -220,24 +205,6 @@ func shrinkMountTable() error {
 		}
 	}
 	return nil
-}
-
-func (ups *UprocSrv) getClnt(sc *sigmaclnt.SigmaClnt, pn string) (*chunkclnt.ChunkClnt, error) {
-	e, ok := ups.ckclnts.Lookup(pn)
-	if ok {
-		return e.ckclnt, nil
-	}
-	e, _ = ups.ckclnts.Alloc(pn, &ckclntEntry{})
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if e.ckclnt == nil {
-		ckclnt, err := chunkclnt.NewChunkClnt(sc.FsLib, pn)
-		if err != nil {
-			return nil, err
-		}
-		e.ckclnt = ckclnt
-	}
-	return e.ckclnt, nil
 }
 
 // Set up uprocd for use for a specific realm
@@ -341,7 +308,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	err = cmd.Wait()
 	container.CleanupUproc(uproc.GetPid())
 	ups.procs.Delete(pid)
-	ups.sc.CloseFd(pe.fd)
+	// ups.sc.CloseFd(pe.fd)
 	return err
 }
 
@@ -409,41 +376,15 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 		db.DFatalf("Fetch: procs.Lookup %d\n", req.Pid)
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q ck %d spawn %v", req.Prog, pe.proc.GetSigmaPath()[0], req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q %v ck %d spawn %v", req.Prog, pe.proc.GetSigmaPath()[0], pe.proc.GetPid(), req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
 
-	sz := sp.Tsize(0)
-	b := make([]byte, chunksrv.CHUNKSZ)
-	if chunksrv.IsChunkSrvPath(pe.proc.GetSigmaPath()[0]) {
-		clnt, err := ups.getClnt(ups.sc, pe.proc.GetSigmaPath()[0])
-		if err != nil {
-			return err
-		}
-		sz, err = clnt.FetchChunk(req.Prog, ups.realm, int(req.ChunkId), sp.Tsize(req.Size), b)
-		if err != nil {
-			return err
-		}
-	} else {
-		fd, err := pe.getFd(ups.sc, req.Prog)
-		if err != nil {
-			return err
-		}
-		sz, err = chunksrv.FetchOrigin(ups.sc, ups.realm, fd, req.Prog, int(req.ChunkId), b)
-		if err != nil {
-			return err
-		}
-	}
-
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: get ck %d sz %d %v", req.Prog, req.ChunkId, sz, time.Since(pe.proc.GetSpawnTime()))
-
-	pn := chunksrv.BinPathUprocd(ups.realm, req.Prog)
-	if err := chunksrv.WriteChunk(pn, int(req.ChunkId), b[0:sz]); err != nil {
-		db.DPrintf(db.UPROCD, "Fetch: Writechunk %q ck %d err %v", pn, req.ChunkId, err)
+	sz, err := ups.ckclnt.Fetch(pe.proc, ups.realm, int(req.ChunkId), sp.Tsize(req.Size))
+	if err != nil {
 		return err
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: WriteChunk %v ck %d", ups.kernelId, pn, req.ChunkId)
 	res.Size = uint64(sz)
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d spawn %v", req.Prog, req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d sz %d %v", req.Prog, req.ChunkId, sz, time.Since(pe.proc.GetSpawnTime()))
 
 	return nil
 }
@@ -455,7 +396,7 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 	if !ok {
 		pe.procWait()
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v spawn %v", req.Prog, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v %v spawn %v", req.Prog, pe.proc.GetSigmaPath(), pe.proc.GetPid(), time.Since(pe.proc.GetSpawnTime()))
 
 	paths := pe.proc.GetSigmaPath()
 	if chunksrv.IsChunkSrvPath(paths[0]) {

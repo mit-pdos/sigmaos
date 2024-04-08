@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/chunk"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
@@ -82,8 +83,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 	p.SetHow(how)
 
 	if kid, ok := clnt.cs.GetBinKernelID(p.GetProgram()); ok {
-		db.DPrintf(db.TEST, "spawn: PrependSigmaPath %v %v\n", p.GetProgram(), kid)
-		p.PrependSigmaPath(sp.ChunkdPath(kid))
+		db.DPrintf(db.TEST, "spawn: %v PrependSigmaPath %v %v\n", p.GetPid(), p.GetProgram(), kid)
+		p.PrependSigmaPath(chunk.ChunkdPath(kid))
 	} else {
 		db.DPrintf(db.TEST, "GetBinKernelId %v; no kernel", p.GetProgram())
 	}

@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--netproxy] [--reserveMcpu rmcpu] [--pubkey PUB_KEY] [--privkey PRIV_KEY] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] [--pubkey PUB_KEY] [--privkey PRIV_KEY] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -67,7 +67,7 @@ while [[ "$#" -gt 1 ]]; do
     shift
     GVISOR="true"
     ;;
-  --netproxy)
+  --usenetproxy)
     shift
     NETPROXY="true"
     ;;

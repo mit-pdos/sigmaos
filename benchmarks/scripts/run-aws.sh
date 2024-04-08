@@ -144,7 +144,7 @@ start_sigmaos_cluster() {
 #  stop_k8s_cluster $vpc
   stop_sigmaos_cluster $vpc
   cd $SCRIPT_DIR
-  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG --branch $BRANCH $OVERLAYS $turbo >> $INIT_OUT 2>&1
+  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG --branch $BRANCH $OVERLAYS $NETPROXY $turbo >> $INIT_OUT 2>&1
   cd $ROOT_DIR
 }
 

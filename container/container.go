@@ -45,6 +45,7 @@ func (c *Container) GetCPUUtil() (float64, error) {
 	st, err := c.cmgr.GetCPUStats(c.cgroupPath)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err get cpu stats: %v", err)
+		return 0.0, err
 	}
 	return st.Util, nil
 }

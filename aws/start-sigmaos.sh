@@ -154,7 +154,7 @@ for vm in $vms; do
       echo "START etcd"
       ./start-etcd.sh
     fi
-    ./start-kernel.sh --boot realm --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} --pubkey "${MASTER_PUB_KEY}" --privkey "${MASTER_PRIV_KEY}" ${KERNELID} ${NETPROXY} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot realm --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} --pubkey "${MASTER_PUB_KEY}" --privkey "${MASTER_PRIV_KEY}" ${KERNELID} 2>&1 | tee /tmp/start.out
     docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
     docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
     docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg

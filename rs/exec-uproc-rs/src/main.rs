@@ -48,6 +48,7 @@ fn main() {
     print_elapsed_time("trampoline.exec_trampoline", exec_time, false);
     let pid = env::args().nth(1).expect("no pid");
     let program = env::args().nth(2).expect("no program");
+    let netproxy = env::args().nth(3).expect("no netproxy");
     let mut now = SystemTime::now();
     let aa = is_enabled_apparmor();
     print_elapsed_time("Check apparmor enabled", now, false);
@@ -68,7 +69,7 @@ fn main() {
     env::set_var("SIGMA_NETPROXY_FD", netproxy_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_netproxy", now, false);
     now = SystemTime::now();
-    seccomp_proc().expect("seccomp failed");
+    seccomp_proc(netproxy).expect("seccomp failed");
     print_elapsed_time("trampoline.seccomp_proc", now, false);
     now = SystemTime::now();
 
@@ -77,7 +78,7 @@ fn main() {
         print_elapsed_time("trampoline.apply_apparmor", now, false);
     }
 
-    let new_args: Vec<_> = std::env::args_os().skip(3).collect();
+    let new_args: Vec<_> = std::env::args_os().skip(4).collect();
     let mut cmd = Command::new(program.clone());
 
     // Reset the exec time
@@ -243,16 +244,13 @@ struct Cond {
     op: String,
 }
 
-fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
+fn seccomp_proc(netproxy: String) -> Result<(), Box<dyn std::error::Error>> {
     use libseccomp::*;
 
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,
     // but the mini rust proc for our spawn latency microbenchmarks requires
     // it.
     const ALLOWED_SYSCALLS: [ScmpSyscall; 67] = [
-        //        ScmpSyscall::new("bind"),
-        //        ScmpSyscall::new("listen"),
-        //        ScmpSyscall::new("connect"),
         ScmpSyscall::new("ioctl"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("poll"),  // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("lstat"), // XXX Only needed for rust proc spawn microbenchmark
@@ -322,16 +320,21 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("readlink"), // Needed for MUSL/Alpine
     ];
 
-    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 1] = [
-        (
-            ScmpSyscall::new("clone"),
-            ScmpArgCompare::new(0, ScmpCompareOp::MaskedEqual(0), 0x7E020000),
-        ),
-        //        (
-        //            ScmpSyscall::new("socket"),
-        //            ScmpArgCompare::new(0, ScmpCompareOp::NotEqual, 40),
-        //        ),
+    const NONETPROXY_ALLOWED_SYSCALLS: [ScmpSyscall; 3] = [
+        ScmpSyscall::new("bind"),
+        ScmpSyscall::new("listen"),
+        ScmpSyscall::new("connect"),
     ];
+
+    const COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 1] = [(
+        ScmpSyscall::new("clone"),
+        ScmpArgCompare::new(0, ScmpCompareOp::MaskedEqual(0), 0x7E020000),
+    )];
+
+    const NONETPROXY_COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 1] = [(
+        ScmpSyscall::new("socket"),
+        ScmpArgCompare::new(0, ScmpCompareOp::NotEqual, 40),
+    )];
 
     let mut filter = ScmpFilterContext::new_filter(ScmpAction::Errno(1))?;
     for syscall in ALLOWED_SYSCALLS {
@@ -341,6 +344,17 @@ fn seccomp_proc() -> Result<(), Box<dyn std::error::Error>> {
         let syscall = c.0;
         let cond = c.1;
         filter.add_rule_conditional(ScmpAction::Allow, syscall, &[cond])?;
+    }
+
+    if netproxy == "false" {
+        for syscall in NONETPROXY_ALLOWED_SYSCALLS {
+            filter.add_rule(ScmpAction::Allow, syscall)?;
+        }
+        for c in NONETPROXY_COND_ALLOWED_SYSCALLS {
+            let syscall = c.0;
+            let cond = c.1;
+            filter.add_rule_conditional(ScmpAction::Allow, syscall, &[cond])?;
+        }
     }
     let now = SystemTime::now();
     filter.load()?;

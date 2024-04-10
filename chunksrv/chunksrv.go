@@ -303,10 +303,7 @@ func writeChunk(pn string, ckid int, b []byte) error {
 		return err
 	}
 	defer ufd.Close()
-	if _, err := ufd.Seek(Ckoff(ckid), 0); err != nil {
-		return err
-	}
-	nn, err := ufd.Write(b)
+	nn, err := ufd.WriteAt(b, Ckoff(ckid))
 	if nn != len(b) {
 		return err
 	}
@@ -319,10 +316,7 @@ func ReadChunk(pn string, ckid int, b []byte) error {
 		return err
 	}
 	defer f.Close()
-	if _, err := f.Seek(Ckoff(ckid), 0); err != nil {
-		return err
-	}
-	nn, err := f.Read(b)
+	nn, err := f.ReadAt(b, Ckoff(ckid))
 	if nn != len(b) {
 		return err
 	}

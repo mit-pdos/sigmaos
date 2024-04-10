@@ -80,22 +80,6 @@ func (bc *bincache) lookup(pn string, pid uint32) (*sp.Stat, error) {
 	return e.st, nil
 }
 
-func (bc *bincache) getDownload(pn string, sz sp.Tsize, pid uint32) (*downloader, error) {
-	e, ok := bc.cache.Lookup(pn)
-	if !ok {
-		db.DFatalf("getDownload %q not present", pn)
-	}
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if e.dl == nil {
-		db.DPrintf(db.BINSRV, "getDownload: new downloader %q\n", pn)
-		if dl, err := newDownloader(pn, bc.sc, bc.updc, bc.kernelId, sz, pid); err != nil {
-			return nil, err
-		} else {
-			e.dl = dl
-		}
-	} else {
-		db.DPrintf(db.BINSRV, "getDownload: %q downloader %v\n", pn, e.dl)
-	}
-	return e.dl, nil
+func (bc *bincache) getDownload(pn string, sz sp.Tsize, pid uint32) *downloader {
+	return newDownloader(pn, bc.sc, bc.updc, bc.kernelId, sz, pid)
 }

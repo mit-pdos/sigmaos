@@ -69,10 +69,7 @@ func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, f
 
 	db.DPrintf(db.BINSRV, "%v: Open %q\n", n, p)
 
-	dl, err := n.RootData.bincache.getDownload(p, n.sz, c.Pid)
-	if err != nil {
-		return nil, 0, fs.ToErrno(os.ErrNotExist)
-	}
+	dl := n.RootData.bincache.getDownload(p, n.sz, c.Pid)
 	lf := newBinFsFile(p, dl)
 	return lf, fuse.FOPEN_KEEP_CACHE, 0
 }

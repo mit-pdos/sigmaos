@@ -1577,11 +1577,11 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #schedd_scalability_rs
 #socialnet_tail_multi
-#hotel_tail_multi
+hotel_tail_multi
 #schedd_scalability_rs_single_machine
 #socialnet_tail
 #realm_balance_be
-mr_vs_corral
+#mr_vs_corral
 #realm_balance_be_img
 #schedd_scalability
 

@@ -28,13 +28,14 @@ func NewChunkClnt(fsl *fslib.FsLib, pn string) (*ChunkClnt, error) {
 	return ckclnt, nil
 }
 
-func (ckclnt *ChunkClnt) FetchChunk(pn, pid string, realm sp.Trealm, ck int, sz sp.Tsize, b []byte) (sp.Tsize, error) {
+func (ckclnt *ChunkClnt) FetchChunk(pn, pid string, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, error) {
 	req := &proto.FetchChunkRequest{
-		Prog:    pn,
-		ChunkId: int32(ck),
-		Size:    uint64(sz),
-		Realm:   string(realm),
-		Pid:     pid,
+		Prog:      pn,
+		ChunkId:   int32(ck),
+		Size:      uint64(sz),
+		Realm:     string(realm),
+		SigmaPath: path,
+		Pid:       pid,
 	}
 	res := &proto.FetchChunkResponse{}
 	res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}

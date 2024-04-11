@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt"
 
 	"sigmaos/auth"
+	"sigmaos/chunk"
 	proto "sigmaos/chunk/proto"
 	"sigmaos/chunkclnt"
 	db "sigmaos/debug"
@@ -89,6 +90,7 @@ type ckclntEntry struct {
 type ChunkSrv struct {
 	sc       *sigmaclnt.SigmaClnt
 	kernelId string
+	path     string
 	ckclnts  *syncmap.SyncMap[string, *ckclntEntry]
 	bins     *syncmap.SyncMap[string, *binEntry]
 }
@@ -97,6 +99,7 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 	cksrv := &ChunkSrv{
 		sc:       sc,
 		kernelId: kernelId,
+		path:     chunk.ChunkdPath(kernelId),
 		ckclnts:  syncmap.NewSyncMap[string, *ckclntEntry](),
 		bins:     syncmap.NewSyncMap[string, *binEntry](),
 	}
@@ -132,78 +135,98 @@ func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string) *binEntry {
 	return be
 }
 
-// Another chunksrv is asking this chunksrv for a chunk
-func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
+func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchChunkResponse) (bool, error) {
 	r := sp.Trealm(req.Realm)
 	ckid := int(req.ChunkId)
 	reqsz := sp.Tsize(req.Size)
 
-	be := cksrv.getBin(r, req.Prog)
-	pn := BinPathChunkd(sp.Trealm(req.Realm), req.Prog)
-	be.mu.Lock()
-	defer be.mu.Unlock()
-	for {
-		if sz, ok := IsPresent(pn, ckid, reqsz); ok {
-			if sz > CHUNKSZ {
-				sz = CHUNKSZ
-			}
-			b := make([]byte, sz)
-			db.DPrintf(db.CHUNKSRV, "%v: FetchCache %q ckid %d present %d", cksrv.kernelId, pn, ckid, sz)
-			if err := ReadChunk(pn, ckid, b); err != nil {
-				return err
-			}
-			res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
-			res.Size = uint64(sz)
-			return nil
-		} else {
-			db.DPrintf(db.CHUNKSRV, "%v: FetchCache: %q pid %v ck %d not present\n", cksrv.kernelId, pn, req.Pid, ckid)
-			be.cond = sync.NewCond(&be.mu)
-			be.cond.Wait()
+	pn := BinPathChunkd(r, req.Prog)
+	if sz, ok := IsPresent(pn, ckid, reqsz); ok {
+		if sz > CHUNKSZ {
+			sz = CHUNKSZ
 		}
+		b := make([]byte, sz)
+		db.DPrintf(db.CHUNKSRV, "%v: FetchCache %q ckid %d present %d", cksrv.kernelId, pn, ckid, sz)
+		if err := ReadChunk(pn, ckid, b); err != nil {
+			return false, err
+		}
+		res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
+		res.Size = uint64(sz)
+		return true, nil
 	}
+	db.DPrintf(db.CHUNKSRV, "%v: FetchCache: %q pid %v ck %d not present\n", cksrv.kernelId, pn, req.Pid, ckid)
+	return false, nil
+}
+
+func (cksrv *ChunkSrv) fetchChunkd(req proto.FetchChunkRequest, b []byte) (sp.Tsize, error) {
+	r := sp.Trealm(req.Realm)
+	ck := int(req.ChunkId)
+	clnt, err := cksrv.getClnt(req.SigmaPath[0])
+	if err != nil {
+		return 0, err
+	}
+	db.DPrintf(db.CHUNKSRV, "%v: FetchChunk: %v ck %d %v", cksrv.kernelId, req.Prog, ck, req.SigmaPath[0])
+	sz, err := clnt.FetchChunk(req.Prog, req.Pid, r, ck, sp.Tsize(req.Size), req.SigmaPath, b)
+	if err != nil {
+		return 0, err
+	}
+	return sz, nil
+}
+
+func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, paths []string, ckid int, b []byte) (sp.Tsize, error) {
+	be := cksrv.getBin(r, prog)
+	fd, err := be.getFd(cksrv.sc, paths)
+	if err != nil {
+		return 0, err
+	}
+	sz, err := cksrv.sc.Pread(fd, b, sp.Toffset(Ckoff(ckid)))
+	if err != nil {
+		db.DPrintf(db.CHUNKSRV, "%v: FetchOrigin: read %q ck %d err %v", cksrv.kernelId, prog, ckid, err)
+		return 0, err
+	}
+	return sz, nil
+}
+
+func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
+	sz := sp.Tsize(0)
+	r := sp.Trealm(req.Realm)
+	b := make([]byte, CHUNKSZ)
+	ck := int(req.ChunkId)
+	var err error
+	if IsChunkSrvPath(req.SigmaPath[0]) { // request chunk from another chunkd?
+		sz, err = cksrv.fetchChunkd(req, b)
+	} else {
+		sz, err = cksrv.fetchOrigin(r, req.Prog, req.SigmaPath, ck, b)
+	}
+	if err != nil {
+		return err
+	}
+	pn := BinPathChunkd(r, req.Prog)
+	if err := writeChunk(pn, int(req.ChunkId), b[0:sz]); err != nil {
+		db.DPrintf(db.CHUNKSRV, "fetchChunk: Writechunk %q ck %d err %v", pn, req.ChunkId, err)
+		return err
+	}
+	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: writeChunk %v pid %v ck %d", cksrv.kernelId, pn, req.Pid, req.ChunkId)
+	res.Size = uint64(sz)
 	return nil
 }
 
 func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
 	db.DPrintf(db.CHUNKSRV, "%v: Fetch: %v", cksrv.kernelId, req)
-	if len(req.SigmaPath) == 0 {
-		db.DPrintf(db.CHUNKSRV, "%v: FetchCache: %v", cksrv.kernelId, req)
-		return cksrv.fetchCache(req, res)
-	}
-	sz := sp.Tsize(0)
-	b := make([]byte, CHUNKSZ)
-	r := sp.Trealm(req.Realm)
-	ck := int(req.ChunkId)
-	be := cksrv.getBin(r, req.Prog)
-	if IsChunkSrvPath(req.SigmaPath[0]) {
-		clnt, err := cksrv.getClnt(req.SigmaPath[0])
-		if err != nil {
-			return err
-		}
-		db.DPrintf(db.CHUNKSRV, "%v: FetchChunk: %v ck %d %v", cksrv.kernelId, req.Prog, ck, req.SigmaPath[0])
-		sz, err = clnt.FetchChunk(req.Prog, req.Pid, r, ck, sp.Tsize(req.Size), b)
-		if err != nil {
-			return err
-		}
-	} else {
-		fd, err := be.getFd(cksrv.sc, req.SigmaPath)
-		if err != nil {
-			return err
-		}
-		sz, err = cksrv.fetchOrigin(r, fd, req.Prog, ck, b)
-		if err != nil {
-			return err
-		}
-	}
-	pn := BinPathChunkd(r, req.Prog)
-	if err := writeChunk(pn, int(req.ChunkId), b[0:sz]); err != nil {
-		db.DPrintf(db.CHUNKSRV, "Fetch: Writechunk %q ck %d err %v", pn, req.ChunkId, err)
+
+	//be := cksrv.getBin(r, req.Prog)
+	//be.mu.Lock()
+	//defer be.mu.Unlock()
+
+	ok, err := cksrv.fetchCache(req, res)
+	if ok || err != nil {
 		return err
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: WriteChunk %v pid %v ck %d", cksrv.kernelId, pn, req.Pid, req.ChunkId)
-	be.signal()
-	res.Size = uint64(sz)
-	return nil
+	if req.SigmaPath[0] == cksrv.path {
+		// request for me but i don't have the chunk
+		req.SigmaPath = req.SigmaPath[1:]
+	}
+	return cksrv.fetchChunk(req, res)
 }
 
 // XXX hack; how to handle ~local?
@@ -247,15 +270,6 @@ func open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, error) {
 		return sfd, err
 	}
 	return sfd, nil
-}
-
-func (cksrv *ChunkSrv) fetchOrigin(realm sp.Trealm, fd int, prog string, ckid int, b []byte) (sp.Tsize, error) {
-	sz, err := cksrv.sc.Pread(fd, b, sp.Toffset(Ckoff(ckid)))
-	if err != nil {
-		db.DPrintf(db.CHUNKSRV, "%v: FetchOrigin: read %q ck %d err %v", cksrv.kernelId, prog, ckid, err)
-		return 0, err
-	}
-	return sz, nil
 }
 
 func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {

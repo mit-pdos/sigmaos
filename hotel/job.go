@@ -130,7 +130,7 @@ func NewHotelSvc(public bool) []Srv {
 		Srv{"hotel-rated", public, 2000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*"), path.Join(sp.REALMD, "*")}},
 		Srv{"hotel-geod", public, 2000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(sp.REALMD, "*")}},
 		Srv{"hotel-profd", public, 2000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*"), path.Join(sp.REALMD, "*")}},
-		Srv{"hotel-searchd", public, 3000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), HOTELRATE, HOTELGEO}, path.Join(sp.REALMD, "*")},
+		Srv{"hotel-searchd", public, 3000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), HOTELRATE, HOTELGEO, path.Join(sp.REALMD, "*")}},
 		Srv{"hotel-reserved", public, 3000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*"), path.Join(sp.REALMD, "*")}},
 		Srv{"hotel-recd", public, 0, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(sp.REALMD, "*")}},
 		Srv{"hotel-wwwd", public, 3000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), HOTELSEARCH, HOTELUSER, HOTELPROF, HOTELREC, HOTELGEO, HOTELRESERVE, path.Join(sp.REALMD, "*")}},

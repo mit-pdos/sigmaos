@@ -18,7 +18,7 @@ func NewChunkClnt(fsl *fslib.FsLib, pn string) (*ChunkClnt, error) {
 	db.DPrintf(db.CHUNKCLNT, "NewChunkClnt %q", pn)
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{fsl}, pn)
 	if err != nil {
-		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
+		db.DPrintf(db.CHUNKCLNT, "rpcclnt err %v", err)
 		return nil, err
 	}
 	ckclnt := &ChunkClnt{

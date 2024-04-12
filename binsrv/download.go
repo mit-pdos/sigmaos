@@ -51,7 +51,7 @@ func (dl *downloader) fetchChunk(ck int) (int64, error) {
 	db.DPrintf(db.BINSRV, "fetchChunk invoke %q ck %d\n", dl.pn, ck)
 	sz, err := dl.updc.Fetch(dl.pn, ck, dl.sz, dl.pid)
 	if err != nil {
-		db.DPrintf(db.ERROR, "fetchChunk %q fetch %d err %v\n", dl.pn, ck, err)
+		db.DPrintf(db.BINSRV, "fetchChunk %q fetch %d err %v\n", dl.pn, ck, err)
 		return 0, err
 	}
 	db.DPrintf(db.BINSRV, "fetchChunk done %q ck %d sz %d\n", dl.pn, ck, sz)

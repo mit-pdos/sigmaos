@@ -127,7 +127,7 @@ type Srv struct {
 func NewHotelSvc(public bool) []Srv {
 	return []Srv{
 		Srv{"hotel-userd", public, 0, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
-		Srv{"hotel-rated", public, 2000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*")}},
+		Srv{"hotel-rated", public, 2000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*"), path.Join(sp.REALMD, "*")}},
 		Srv{"hotel-geod", public, 2000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
 		Srv{"hotel-profd", public, 2000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*")}},
 		Srv{"hotel-searchd", public, 3000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), HOTELRATE, HOTELGEO}},

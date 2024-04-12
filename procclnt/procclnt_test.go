@@ -690,8 +690,8 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 		return
 	}
 
-	const N_CONCUR = 1 // 5  // 13
-	const N_SPAWNS = 4 // 50 // 500
+	const N_CONCUR = 5  // 13
+	const N_SPAWNS = 50 // 500
 
 	err := ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 1")

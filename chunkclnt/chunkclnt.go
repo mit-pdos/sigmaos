@@ -36,6 +36,7 @@ func (ckclnt *ChunkClnt) FetchChunk(pn, pid string, realm sp.Trealm, ck int, sz 
 		Realm:     string(realm),
 		SigmaPath: path,
 		Pid:       pid,
+		Data:      true,
 	}
 	res := &proto.FetchChunkResponse{}
 	res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
@@ -54,6 +55,7 @@ func (ckclnt *ChunkClnt) Fetch(p *proc.Proc, realm sp.Trealm, ck int, sz sp.Tsiz
 		Realm:     string(realm),
 		SigmaPath: p.GetSigmaPath(),
 		Pid:       p.GetPid().String(),
+		Data:      false,
 	}
 	res := &proto.FetchChunkResponse{}
 	if err := ckclnt.rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {

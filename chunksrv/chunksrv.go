@@ -108,14 +108,9 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 }
 
 func (cksrv *ChunkSrv) getClnt(pn string) (*chunkclnt.ChunkClnt, error) {
-	e, ok := cksrv.ckclnts.Lookup(pn)
-	if ok {
-		return e.ckclnt, nil
-	}
-	e, _ = cksrv.ckclnts.Alloc(pn, &ckclntEntry{})
+	e, _ := cksrv.ckclnts.Alloc(pn, &ckclntEntry{})
 	e.mu.Lock()
 	defer e.mu.Unlock()
-
 	if e.ckclnt == nil {
 		ckclnt, err := chunkclnt.NewChunkClnt(cksrv.sc.FsLib, pn)
 		if err != nil {

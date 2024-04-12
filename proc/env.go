@@ -72,7 +72,7 @@ func GetLabels(s string) map[string]bool {
 	return m
 }
 
-func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, overlays, useSigmaclntd bool, useNetProxy bool) *ProcEnv {
+func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, overlays, useSigmaclntd bool, useNetProxy bool, verifyMounts bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
@@ -95,6 +95,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Overlays:            overlays,
 			UseSigmaclntd:       useSigmaclntd,
 			UseNetProxy:         useNetProxy,
+			VerifyMounts:        verifyMounts,
 			Claims: &ProcClaimsProto{
 				PrincipalIDStr: principal.GetID().String(),
 				RealmStr:       sp.NOT_SET,
@@ -107,14 +108,14 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 
 func NewProcEnvUnset(priv, overlays bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
-	return NewProcEnv(sp.NOT_SET, sp.Tpid(sp.NOT_SET), sp.Trealm(sp.NOT_SET), sp.NoPrincipal(), sp.NOT_SET, sp.NOT_SET, priv, overlays, false, false)
+	return NewProcEnv(sp.NOT_SET, sp.Tpid(sp.NOT_SET), sp.Trealm(sp.NOT_SET), sp.NoPrincipal(), sp.NOT_SET, sp.NOT_SET, priv, overlays, false, false, true)
 }
 
 func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 	return &ProcEnv{p}
 }
 
-func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProto, etcdMnts map[string]*sp.TmountProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool) *ProcEnv {
+func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProto, etcdMnts map[string]*sp.TmountProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool, verifyMounts bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetPrincipal(principal)
 	pe.SetSecrets(secrets)
@@ -129,11 +130,12 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 	pe.SetRealm(sp.ROOTREALM, overlays)
 	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
 	pe.Privileged = true
+	pe.VerifyMounts = verifyMounts
 	pe.HowInt = int32(BOOT)
 	return pe
 }
 
-func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdMnts map[string]*sp.TmountProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool, useNetProxy bool) *ProcEnv {
+func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdMnts map[string]*sp.TmountProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool, useNetProxy bool, verifyMounts bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), realm, sp.NoToken()))
 	pe.SetSecrets(secrets)
@@ -150,6 +152,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdMn
 	pe.HowInt = int32(TEST)
 	pe.UseSigmaclntd = useSigmaclntd
 	pe.UseNetProxy = useNetProxy
+	pe.VerifyMounts = verifyMounts
 	return pe
 }
 

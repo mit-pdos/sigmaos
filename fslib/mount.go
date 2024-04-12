@@ -10,7 +10,7 @@ import (
 )
 
 func (fsl *FsLib) MkMountFile(pn string, mnt *sp.Tmount, lid sp.TleaseId) error {
-	if !mnt.IsSigned() {
+	if !mnt.IsSigned() && fsl.ProcEnv().GetVerifyMounts() {
 		db.DPrintf(db.ERROR, "Error make unsigned mount file")
 		return fmt.Errorf("Unsigned mount: %v", mnt)
 	}

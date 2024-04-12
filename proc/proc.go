@@ -85,6 +85,7 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		false,
 		false,
 		false,
+		true,
 	).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)

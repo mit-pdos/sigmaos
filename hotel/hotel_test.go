@@ -383,7 +383,7 @@ func TestWww(t *testing.T) {
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 
 	s, err := wc.Login("Cornell_0", hotel.NewPassword("0"))
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err login: %v", err)
 	assert.Equal(t, "Login successfully!", s)
 
 	err = wc.Search("2015-04-09", "2015-04-10", 37.7749, -122.4194)

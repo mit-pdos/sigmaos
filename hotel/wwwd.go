@@ -123,6 +123,8 @@ func RunWww(job string, public bool) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
+		mnt.Addrs()[0].IPStr = pi.HostIP.String()
+		mnt.Addrs()[0].PortInt = uint32(pi.PBinding.HostPort)
 		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, www.ProcEnv().GetNet(), mnt); err != nil {
 			db.DFatalf("AdvertisePort %v", err)
 		}

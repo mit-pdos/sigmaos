@@ -85,7 +85,7 @@ func (dl *downloader) read(off int64, len int) (int, error) {
 			}
 			d := time.Since(s)
 			dl.tot += d
-			db.DPrintf(db.SPAWN_LAT, "[%v] fetchChunk %d dur %v tot %v", dl.pn, c, dl.tot)
+			db.DPrintf(db.SPAWN_LAT, "[%v] fetchChunk %d dur %v tot %v", dl.pn, c, d, dl.tot)
 		}
 		n += sz
 		db.DPrintf(db.BINSRV, "read %q ck %d sz %d\n", pn, c, sz)

@@ -93,7 +93,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	if !assert.Nil(t, err, "Error NewFsEtcdMount: %v", err) {
 		return nil
 	}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false, false)
 	pe.Program = "srv"
 	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM, sp.NoToken()))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
@@ -229,7 +229,9 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy)
+	// Only verify mounts if running with netproxy
+	verifyMounts := useNetProxy
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy, verifyMounts)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	err1 = as.MintAndSetProcToken(pe)
 	if err1 != nil {
@@ -385,7 +387,9 @@ func Dump(t *testing.T) {
 	assert.Nil(t, err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	// TODO: pass proper mount
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, nil, "", "", "", false, false, false)
+	// Only verify mounts if running with netproxy
+	verifyMounts := useNetProxy
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, nil, "", "", "", false, false, false, verifyMounts)
 	assert.False(t, true, "Unimplemented")
 	return
 	// TODO: implement properly

@@ -248,6 +248,9 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		// to uprocd.
 		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
 		mnt := sp.NewMount([]*sp.Taddr{addr}, sp.ROOTREALM)
+		if err := k.as.MintAndSetMountToken(mnt); err != nil {
+			return nil, err
+		}
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 		if err := k.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
 			return nil, err

@@ -44,9 +44,10 @@ message ProcEnvProto {
   TmountProto namedMountProto = 25;
   bool useSigmaclntd = 26;
   bool useNetProxy = 27;
-  Ttoken parentToken = 28;
-  ProcClaimsProto claims = 29;
-  repeated string sigmaPath = 30;
+  bool verifyMounts = 28;
+  Ttoken parentToken = 29;
+  ProcClaimsProto claims = 30;
+  repeated string sigmaPath = 31;
 }
 
 message ProcProto {

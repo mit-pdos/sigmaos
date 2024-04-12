@@ -17,6 +17,7 @@ type NetProxyClnt struct {
 	sync.Mutex
 	pe             *proc.ProcEnv
 	canSignMounts  bool
+	verifyMounts   bool
 	auth           auth.AuthSrv
 	directDialFn   DialFn
 	directListenFn ListenFn
@@ -28,6 +29,7 @@ func NewNetProxyClnt(pe *proc.ProcEnv, as auth.AuthSrv) *NetProxyClnt {
 	return &NetProxyClnt{
 		pe:             pe,
 		canSignMounts:  as != nil,
+		verifyMounts:   pe.GetVerifyMounts(),
 		auth:           as,
 		directDialFn:   DialDirect,
 		directListenFn: ListenDirect,
@@ -77,7 +79,7 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error
 		}
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directListen %v", addr)
-		if !npc.canSignMounts {
+		if npc.verifyMounts && !npc.canSignMounts {
 			err := fmt.Errorf("Try to listen on netproxyclnt without AuthSrv")
 			db.DPrintf(db.ERROR, "Err listen: %v", err)
 			return nil, nil, err
@@ -87,7 +89,7 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tmount, net.Listener, error
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
 			return nil, nil, err
 		}
-		mnt, err = constructMount(npc.auth, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
+		mnt, err = constructMount(npc.verifyMounts, npc.auth, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error construct mount: %v", err)
 			return nil, nil, err

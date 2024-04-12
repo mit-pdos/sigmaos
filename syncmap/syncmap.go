@@ -24,6 +24,7 @@ func (sm *SyncMap[K, T]) Lookup(k K) (T, bool) {
 	return r, ok
 }
 
+// Returns true if allocating entry
 func (sm *SyncMap[K, T]) Alloc(k K, ne T) (T, bool) {
 	sm.Lock()
 	defer sm.Unlock()

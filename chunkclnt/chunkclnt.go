@@ -4,7 +4,6 @@ import (
 	proto "sigmaos/chunk/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/proc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
@@ -47,14 +46,14 @@ func (ckclnt *ChunkClnt) FetchChunk(pn, pid string, realm sp.Trealm, ck int, sz 
 	return sp.Tsize(res.Size), nil
 }
 
-func (ckclnt *ChunkClnt) Fetch(p *proc.Proc, realm sp.Trealm, ck int, sz sp.Tsize) (sp.Tsize, error) {
+func (ckclnt *ChunkClnt) Fetch(prog string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string) (sp.Tsize, error) {
 	req := &proto.FetchChunkRequest{
-		Prog:      p.GetProgram(),
+		Prog:      prog,
 		ChunkId:   int32(ck),
 		Size:      uint64(sz),
 		Realm:     string(realm),
-		SigmaPath: p.GetSigmaPath(),
-		Pid:       p.GetPid().String(),
+		SigmaPath: path,
+		Pid:       pid.String(),
 		Data:      false,
 	}
 	res := &proto.FetchChunkResponse{}

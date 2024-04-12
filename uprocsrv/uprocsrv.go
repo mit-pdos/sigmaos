@@ -4,7 +4,6 @@
 package uprocsrv
 
 import (
-	"io"
 	"os"
 	"path"
 	"sync"
@@ -29,6 +28,7 @@ import (
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
@@ -302,8 +302,8 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 
 	pid := cmd.Pid()
 	db.DPrintf(db.UPROCD, "Pid %d\n", pid)
-	pe, ok := ups.procs.Alloc(pid, newProcEntry(uproc))
-	if !ok { // it was already inserted
+	pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
+	if !alloc { // it was already inserted
 		pe.insertSignal(uproc)
 	}
 
@@ -314,37 +314,25 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	return err
 }
 
-// Read the binary so that binfs loads it into its cache for
-// experiments with a warm cache.
-func readFile(pn string) error {
-	f, err := os.Open(pn)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	buf := make([]byte, 1024)
-	for {
-		_, err := f.Read(buf)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Warm uprocd to run a program for experiments with warm start.
 func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
-	pn := binsrv.BinPath(req.Program)
-	db.DPrintf(db.UPROCD, "WarmProc %q %v", pn, req)
+	db.DPrintf(db.UPROCD, "WarmProc %v pid %v", req, os.Getpid())
 	if err := ups.assignToRealm(sp.Trealm(req.RealmStr), sp.NO_PID); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
-	if err := readFile(pn); err != nil {
-		res.OK = false
+	st, err := chunksrv.Lookup(ups.sc, req.Program, req.SigmaPath)
+	if err != nil {
 		return err
+	}
+	n := (st.Length / chunksrv.CHUNKSZ) + 1
+	db.DPrintf(db.UPROCD, "WarmProc lookup %q %v %d", req.Program, st, n)
+	for ck := 0; ck < int(n); ck++ {
+		reqsz := sp.Tsize(st.Length)
+		if sz, err := ups.ckclnt.Fetch(req.Program, sp.Tpid(rand.String(4)), sp.Trealm(req.RealmStr), ck, reqsz, req.SigmaPath); err != nil {
+			return err
+		} else {
+			db.DPrintf(db.UPROCD, "WarmProc fetch %q %d %v", req.Program, ck, sz)
+		}
 	}
 	res.OK = true
 	return nil
@@ -380,7 +368,7 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q %v ck %d spawn %v", req.Prog, pe.proc.GetSigmaPath()[0], pe.proc.GetPid(), req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
 
-	sz, err := ups.ckclnt.Fetch(pe.proc, ups.realm, int(req.ChunkId), sp.Tsize(req.Size))
+	sz, err := ups.ckclnt.Fetch(req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
@@ -394,8 +382,9 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.LookupResponse) error {
 	db.DPrintf(db.UPROCD, "Uprocd Lookup %v", req)
 
-	pe, ok := ups.procs.Alloc(int(req.Pid), newProcEntry(nil))
-	if !ok {
+	pe, alloc := ups.procs.Alloc(int(req.Pid), newProcEntry(nil))
+	if alloc {
+		db.DPrintf(db.UPROCD, "Lookup wait for pid %v %v\n", req.Pid, pe)
 		pe.procWait()
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v %v spawn %v", req.Prog, pe.proc.GetSigmaPath(), pe.proc.GetPid(), time.Since(pe.proc.GetSpawnTime()))

@@ -143,9 +143,6 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 
 	pn := BinPathChunkd(r, req.Prog)
 	if sz, ok := IsPresent(pn, ckid, reqsz); ok {
-		if sz > CHUNKSZ {
-			sz = CHUNKSZ
-		}
 		b := make([]byte, sz)
 		db.DPrintf(db.CHUNKSRV, "%v: FetchCache %q ckid %d present %d", cksrv.kernelId, pn, ckid, sz)
 		if err := ReadChunk(pn, ckid, b); err != nil {
@@ -231,7 +228,7 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 		db.DPrintf(db.CHUNKSRV, "fetchChunk: Writechunk %q ck %d err %v", pn, req.ChunkId, err)
 		return err
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: writeChunk %v pid %v ck %d", cksrv.kernelId, pn, req.Pid, req.ChunkId)
+	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: writeChunk %v pid %v ck %d sz %d", cksrv.kernelId, pn, req.Pid, req.ChunkId, sz)
 	res.Size = uint64(sz)
 	return nil
 }
@@ -328,6 +325,9 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 			}
 		}
 		off = o2
+	}
+	if sz > CHUNKSZ {
+		db.DFatalf("IsPresent %d sz\n", sz)
 	}
 	return sz, ok
 }

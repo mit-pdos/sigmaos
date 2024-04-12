@@ -317,11 +317,11 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 			if o+CHUNKSZ <= o2 || o2 >= int64(totsz) { // a complete chunk?
 				i := Index(o)
 				if i == ck {
-					db.DPrintf(db.CHUNKSRV, "readLocal: %q read chunk %d(%d)\n", pn, i, o)
+					db.DPrintf(db.CHUNKSRV, "IsPresent: %q read chunk %d(%d) o2 %d sz %d\n", pn, i, o, o2, totsz)
 					ok = true
 					sz = CHUNKSZ
-					if o2 >= int64(totsz) {
-						sz = int64(totsz) - o1
+					if o+CHUNKSZ >= int64(totsz) {
+						sz = int64(totsz) - o
 					}
 					break
 				}

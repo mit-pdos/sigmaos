@@ -61,9 +61,11 @@ func (nc *NetClnt) connect(mnt *sp.Tmount) *serr.Err {
 	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), mnt, mnt.Addrs()[0])
 	//	for _, addr := range addrs {
 	for i, addr := range mnt.Addrs() {
-		if i > 0 {
+		if i > 0 && nc.pe.GetVerifyMounts() {
 			// TODO XXX: support multi-dialing
-			db.DFatalf("Do not support multi-dialing yet")
+			db.DFatalf("Do not support multi-dialing yet: %v", mnt.Addrs())
+		} else {
+			mnt.Claims.Addr = append(mnt.Claims.Addr[1:], mnt.Claims.Addr[0])
 		}
 		c, err := nc.npc.Dial(mnt)
 		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)

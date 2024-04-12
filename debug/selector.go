@@ -198,6 +198,7 @@ const (
 	NETPROXYSRV_ERR           = "NETPROXYSRV" + ERR
 	NETSIGMA                  = "NETSIGMA"
 	NETSIGMA_ERR              = "NETSIGMA_ERR"
+	NETSIGMA_PERF             = "NETSIGMA_PERF"
 )
 
 // Client-side Infrastructure

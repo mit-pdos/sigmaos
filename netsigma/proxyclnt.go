@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
@@ -54,6 +55,7 @@ func (npc *NetProxyClnt) GetAuthSrv() auth.AuthSrv {
 func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
 	var c net.Conn
 	var err error
+	start := time.Now()
 	if npc.useProxy() {
 		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v", mnt)
 		c, err = npc.proxyDial(mnt)
@@ -63,6 +65,7 @@ func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
 		c, err = npc.directDialFn(mnt)
 		db.DPrintf(db.NETPROXYCLNT, "directDial done ok:%v", err == nil)
 	}
+	db.DPrintf(db.NETSIGMA_PERF, "Dial latency: %v", time.Since(start))
 	return c, err
 }
 

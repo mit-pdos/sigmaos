@@ -178,9 +178,11 @@ func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc,
 		res := &proto.GetRunningProcsResponse{}
 		rpcc, err := sdc.urpcc.GetClnt(kernelID)
 		if err != nil {
+			db.DPrintf(db.ERROR, "Can't get clnt: %v", err)
 			return nil, err
 		}
 		if err := rpcc.RPC("Schedd.GetRunningProcs", req, res); err != nil {
+			db.DPrintf(db.ERROR, "Err GetRunningProcs: %v", err)
 			return nil, err
 		}
 		for _, pp := range res.ProcProtos {

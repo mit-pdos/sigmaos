@@ -56,8 +56,9 @@ func (nc *NetClnt) Close() error {
 }
 
 func (nc *NetClnt) connect(mnt *sp.Tmount) *serr.Err {
-	// TODO XXX need rearrange?
-	//	addrs = netsigma.Rearrange(nc.pe.GetNet(), addrs)
+	if !nc.pe.GetVerifyMounts() && len(mnt.Claims.Addr) > 0 {
+		mnt.Claims.Addr = netsigma.Rearrange(nc.pe.GetNet(), mnt.Claims.Addr)
+	}
 	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), mnt, mnt.Addrs()[0])
 	//	for _, addr := range addrs {
 	for i, addr := range mnt.Addrs() {

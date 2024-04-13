@@ -162,6 +162,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	defer rm.mu.Unlock()
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v %v", req.Realm, req.Network)
+	db.DPrintf(db.REALMD, "RealmSrv.Make done %v %v", req.Realm, req.Network)
 	rid := sp.Trealm(req.Realm)
 	// If realm already exists
 	if _, ok := rm.realms[rid]; ok {
@@ -286,6 +287,7 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveRequest, res *proto.Remo
 
 func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n int64) error {
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems [%v] n %v", realm, ss, n)
+	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems done [%v] n %v", realm, ss, n)
 	kernels, err := rm.mkc.GetKernelSrvs()
 	if err != nil {
 		return err
@@ -307,8 +309,15 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n i
 		kernels = kernels[:n]
 	}
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems selected kernels: %v", realm, kernels)
+	done := make(chan bool)
 	for _, kid := range kernels {
-		rm.mkc.BootInRealm(kid, realm, ss, nil)
+		go func() {
+			rm.mkc.BootInRealm(kid, realm, ss, nil)
+			done <- true
+		}()
+	}
+	for _ = range kernels {
+		<-done
 	}
 	return nil
 }

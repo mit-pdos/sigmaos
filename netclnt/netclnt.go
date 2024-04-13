@@ -67,7 +67,6 @@ func (nc *NetClnt) connect(mnt *sp.Tmount) *serr.Err {
 				// TODO XXX: support multi-dialing
 				db.DFatalf("Do not support multi-dialing yet: %v", mnt.Addrs())
 			}
-		} else {
 			mnt.Claims.Addr = append(mnt.Claims.Addr[1:], mnt.Claims.Addr[0])
 		}
 		c, err := nc.npc.Dial(mnt)

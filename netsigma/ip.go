@@ -144,7 +144,6 @@ func LocalIP() (sp.Tip, error) {
 	if err != nil {
 		return "", err
 	}
-	db.DPrintf(db.ALWAYS, "Local ips: %v", ips)
 	db.DPrintf(db.PORT, "Local ips: %v", ips)
 
 	// if we have a local ip in 10.10.x.x (for Cloudlab), prioritize that first

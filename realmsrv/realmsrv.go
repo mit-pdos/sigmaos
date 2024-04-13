@@ -248,14 +248,28 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 			return err
 		}
 	}
+	errC := make(chan error)
 	// Spawn per-realm kernel procs
-	if err := rm.bootPerRealmKernelSubsystems(sp.Trealm(req.Realm), sp.S3REL, req.GetNumS3()); err != nil {
-		db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.S3REL, err)
-		return err
-	}
-	if err := rm.bootPerRealmKernelSubsystems(sp.Trealm(req.Realm), sp.UXREL, req.GetNumUX()); err != nil {
-		db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.UXREL, err)
-		return err
+	go func() {
+		if err := rm.bootPerRealmKernelSubsystems(sp.Trealm(req.Realm), sp.S3REL, req.GetNumS3()); err != nil {
+			db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.S3REL, err)
+			errC <- err
+			return
+		}
+		errC <- nil
+	}()
+	go func() {
+		if err := rm.bootPerRealmKernelSubsystems(sp.Trealm(req.Realm), sp.UXREL, req.GetNumUX()); err != nil {
+			db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.UXREL, err)
+			errC <- err
+			return
+		}
+		errC <- nil
+	}()
+	for i := 0; i < 2; i++ {
+		if err := <-errC; err != nil {
+			return err
+		}
 	}
 	rm.realms[rid] = &Realm{named: p, sc: sc}
 	return nil

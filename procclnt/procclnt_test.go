@@ -617,6 +617,10 @@ func TestWaitExitSimpleMultiKernel1(t *testing.T) {
 	waitExitSimpleMultiKernel(t, 1)
 }
 
+func TestWaitExitSimpleMultiKernel2(t *testing.T) {
+	waitExitSimpleMultiKernel(t, 2)
+}
+
 func waitExitSimpleMultiKernel(t *testing.T, n int) {
 	ts, err := test.NewTstateAll(t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {

@@ -144,12 +144,24 @@ func LocalIP() (sp.Tip, error) {
 	if err != nil {
 		return "", err
 	}
+	db.DPrintf(db.ALWAYS, "Local ips: %v", ips)
+	db.DPrintf(db.PORT, "Local ips: %v", ips)
 
 	// if we have a local ip in 10.10.x.x (for Cloudlab), prioritize that first
 	for _, i := range ips {
 		if strings.HasPrefix(i.String(), "10.10.") {
 			return sp.Tip(i.String()), nil
 		}
+	}
+	// if we have a local ip in 10.0.x.x (for Docker), prioritize that next
+	for _, i := range ips {
+		if strings.HasPrefix(i.String(), "10.0.") {
+			return sp.Tip(i.String()), nil
+		}
+	}
+	// XXX Should do this in a more principled way
+	// Next, prioritize non-localhost IPs
+	for _, i := range ips {
 		if !strings.HasPrefix(i.String(), "127.") {
 			return sp.Tip(i.String()), nil
 		}

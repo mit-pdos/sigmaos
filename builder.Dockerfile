@@ -2,7 +2,7 @@
 
 FROM archlinux
 
-RUN pacman --noconfirm -Syu
+#RUN pacman --noconfirm -Syu
 RUN pacman --noconfirm -Sy git libseccomp wget gcc pkg-config parallel time
 
 # Download an initial version of Go

@@ -63,7 +63,7 @@ func (npc *NetProxyClnt) Dial(mnt *sp.Tmount) (net.Conn, error) {
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directDial %v", mnt)
 		c, err = npc.directDialFn(mnt)
-		db.DPrintf(db.NETPROXYCLNT, "directDial done ok:%v", err == nil)
+		db.DPrintf(db.NETPROXYCLNT, "directDial %v done ok:%v", mnt, err == nil)
 	}
 	if err == nil {
 		db.DPrintf(db.NETSIGMA_PERF, "Dial latency: %v", time.Since(start))

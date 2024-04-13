@@ -167,6 +167,14 @@ func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 	}
 }
 
+func (p *Proc) SetKernels(kernels []string) {
+	p.ProcEnvProto.Kernels = kernels
+}
+
+func (p *Proc) HasKernelPref(kernelID string) bool {
+	return false
+}
+
 func (p *Proc) PrependSigmaPath(pn string) {
 	p.ProcEnvProto.PrependSigmaPath(pn)
 }

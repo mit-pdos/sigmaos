@@ -175,6 +175,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 				if err == nil {
 					db.DPrintf(db.TEST, "spawn: SetBinKernelId %v %v\n", p.GetProgram(), spawnedKernelID)
 					clnt.cs.SetBinKernelID(p.GetProgram(), spawnedKernelID)
+					p.SetKernelID(spawnedKernelID, false)
 				}
 				// clnt.cs.DelBinKernelID(p.GetProgram(), spawnedKernelID)
 			} else {
@@ -251,7 +252,6 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 	}
 
 	status, err := clnt.getExitStatus(pid, how)
-
 	return status, err
 }
 

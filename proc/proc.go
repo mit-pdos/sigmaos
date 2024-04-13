@@ -171,7 +171,16 @@ func (p *Proc) SetKernels(kernels []string) {
 	p.ProcEnvProto.Kernels = kernels
 }
 
+func (p *Proc) HasNoKernelPref() bool {
+	return len(p.ProcEnvProto.Kernels) == 0
+}
+
 func (p *Proc) HasKernelPref(kernelID string) bool {
+	for _, k := range p.ProcEnvProto.Kernels {
+		if k == kernelID {
+			return true
+		}
+	}
 	return false
 }
 

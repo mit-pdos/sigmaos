@@ -631,11 +631,11 @@ func waitExitSimpleMultiKernel(t *testing.T, n int) {
 	db.DPrintf(db.TEST, "Kernels %v", kernels)
 
 	p := spawnWaitSleeper(ts, []string{kernels[0]})
-	db.DPrintf(db.TEST, "proc %v ran on %v (%v)\n", p.GetPid(), p.GetKernelID(), p.GetSigmaPath())
+	assert.Equal(t, kernels[0], p.GetKernelID())
 
 	for i := 1; i < n+1; i++ {
 		p := spawnWaitSleeper(ts, []string{kernels[i]})
-		db.DPrintf(db.TEST, "proc %v ran on %v (%v)\n", p.GetPid(), p.GetKernelID(), p.GetSigmaPath())
+		assert.Equal(t, kernels[i], p.GetKernelID())
 	}
 
 	ts.Shutdown()

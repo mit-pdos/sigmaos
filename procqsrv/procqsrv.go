@@ -203,7 +203,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				db.DPrintf(db.PROCQ, "First try to dequeue from %v", r)
 			}
 			db.DPrintf(db.PROCQ, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
-			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem))
+			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem), req.KernelID)
 			db.DPrintf(db.PROCQ, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)
 			if ok {
 				// Decrease aggregate queue length.

@@ -290,7 +290,7 @@ run_hotel() {
   fi
   cmd="
     aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
-    export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
+    export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;NETSIGMA_PERF;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_mcpu $hotel_cache_mcpu $as_cache --hotel_dur $dur --hotel_max_rps $rps --sleep $slp --prewarm_realm --memcached '10.0.169.210:11211,10.0.57.124:11211,10.0.91.157:11211' --load-master-key $NETPROXY > /tmp/bench.out 2>&1
@@ -554,7 +554,7 @@ hotel_tail_multi() {
     run_hotel $testname $rps $cli_vm $n_clnt_vms $cache_type $k8saddr $dur "0s" "$scale_cache" $perf_dir $driver true
     if [[ $cli_vm == $driver_vm ]]; then
       # Give the driver time to start up the realm.
-      sleep 30s
+      sleep 45s
     fi
   done
   # Wait for all clients to terminate.
@@ -661,7 +661,7 @@ socialnet_tail_multi() {
     run_socialnet $testname $rps $cli_vm $k8saddr $dur $perf_dir $driver false
     if [[ $cli_vm == $driver_vm ]]; then
       # Give the driver time to start up the realm.
-      sleep 30s
+      sleep 45s
     fi
   done
   # Wait for all clients to terminate.
@@ -1583,11 +1583,11 @@ echo "Running benchmarks with version: $VERSION"
 # ========== Run benchmarks ==========
 #schedd_scalability_rs
 #socialnet_tail_multi
-#hotel_tail_multi
+hotel_tail_multi
 #schedd_scalability_rs_single_machine
 #socialnet_tail
 #realm_balance_be
-mr_vs_corral
+#mr_vs_corral
 #realm_balance_be_img
 #schedd_scalability
 

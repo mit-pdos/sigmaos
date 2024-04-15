@@ -1269,6 +1269,44 @@ schedd_scalability_rs() {
   done
 }
 
+schedd_scalability_rs_with_kernel_pref() {
+  driver_vm=23
+#  qps_per_machine=1100
+#  qps_per_machine=1800
+  dur="5s"
+  ncore=40
+  turbo="--turbo"
+  prewarm=""
+#  prewarm="--prewarm_realm"
+#  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
+#  for qps_per_machine in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400; do
+  for qps_per_machine in 1 ; do
+    n_vm=23
+    rps=$((n_vm * $qps_per_machine))
+    run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      continue
+    fi
+    stop_k8s_cluster $KVPC
+    cmd="
+      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+      ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
+      go clean -testcache; \
+      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key $NETPROXY --with_kernel_pref > /tmp/bench.out 2>&1
+    "
+    # Start driver VM asynchronously.
+    run_benchmark $VPC 40 $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
+    # Wait for test to terminate.
+    wait
+    end_benchmark $vpc $perf_dir
+    # Copy log files to perf dir.
+    cp /tmp/*.out $perf_dir
+  done
+}
+
 #mr_overlap() {
 #  mrapp=mr-wc-wiki4G-bench.yml
 #  n_vm=16
@@ -1581,9 +1619,10 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
+schedd_scalability_rs_with_kernel_pref
 #schedd_scalability_rs
 #socialnet_tail_multi
-hotel_tail_multi
+#hotel_tail_multi
 #schedd_scalability_rs_single_machine
 #socialnet_tail
 #realm_balance_be

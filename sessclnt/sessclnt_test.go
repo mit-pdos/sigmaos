@@ -157,32 +157,35 @@ func testManyClients(t *testing.T, crash int) {
 	)
 	ts := newTstateSrv(t, crash)
 	ch := make(chan bool)
+	stop := make(chan bool)
 	for i := 0; i < NCLNT; i++ {
 		go func(i int) {
-			for j := 0; true; j++ {
+			done := false
+			for j := 0; !done; j++ {
 				select {
-				case <-ch:
+				case <-stop:
 					ch <- true
-					break
+					done = true
 				default:
 					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.PE.GetPrincipal(), sp.TclntId(i), path.Path{})
 					_, err := ts.clnt.RPC(ts.srv.GetMount(), req, nil, nil)
 					if err != nil && crash > 0 && serr.IsErrCode(err, serr.TErrUnreachable) {
 						// wait for stop signal
-						<-ch
+						<-stop
 						ch <- true
-						break
+						done = true
+					} else {
+						assert.True(t, err == nil)
 					}
-					assert.True(t, err == nil)
 				}
 			}
 		}(i)
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	for i := 0; i < NCLNT; i++ {
-		ch <- true
+		stop <- true
 		<-ch
 	}
 	ts.srv.CloseListener()

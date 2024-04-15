@@ -13,7 +13,7 @@ FROM alpine AS base
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apk add --no-cache libseccomp gcompat musl-dev strace
+RUN apk add --no-cache libseccomp gcompat musl-dev strace fuse
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
@@ -35,6 +35,8 @@ COPY bin/kernel/uprocd bin/kernel/
 COPY bin/kernel/sigmaclntd bin/kernel/
 ## Copy rust trampoline to the user image.
 COPY bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/
+## Copy binfsd to the user image.
+COPY bin/kernel/binfsd bin/kernel/
 
 # ========== local kernel image ==========
 FROM base AS sigmaos-local

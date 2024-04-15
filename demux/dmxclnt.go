@@ -74,7 +74,7 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 	err := dmx.trans.WriteCall(req)
 	dmx.mu.Unlock()
 	if err != nil {
-		db.DPrintf(db.DEMUXCLNT, "wf req %v error %v\n", req, err)
+		db.DPrintf(db.DEMUXCLNT, "WriteCall req %v error %v", req, err)
 	}
 	// Listen to the reply channel regardless of error status, so the reader
 	// thread doesn't block indefinitely trying to deliver the "TErrUnreachable"

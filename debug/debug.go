@@ -3,6 +3,7 @@ package debug
 import (
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 	"runtime/debug"
 	"strings"
@@ -59,4 +60,17 @@ func DFatalf(format string, v ...interface{}) {
 	} else {
 		log.Fatalf("FATAL %v (missing details) %v", proc.GetSigmaDebugPid(), fmt.Sprintf(format, v...))
 	}
+}
+
+func LsDir(path string) string {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		DFatalf("readdir %v", err)
+	}
+	s := fmt.Sprintf("lsdir %q: [", path)
+	for _, e := range entries {
+		s += fmt.Sprintf("%q,", e.Name())
+	}
+	s += "]"
+	return s
 }

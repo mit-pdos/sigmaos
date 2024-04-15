@@ -66,10 +66,10 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, as au
 	return sd
 }
 
-// Warm the cache of proc binaries.
-func (sd *Schedd) WarmCacheBin(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
-	if err := sd.pmgr.DownloadProcBin(sp.Trealm(req.RealmStr), req.Program, req.BuildTag, proc.Ttype(req.ProcType)); err != nil {
-		db.DPrintf(db.ERROR, "Error Download Proc Bin: %v", err)
+// Start uprocd and warm cache of binaries
+func (sd *Schedd) WarmUprocd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
+	if err := sd.pmgr.WarmUprocd(sp.Trealm(req.RealmStr), req.Program, req.BuildTag, proc.Ttype(req.ProcType)); err != nil {
+		db.DPrintf(db.ERROR, "WarmUprocd %v err %v", req, err)
 		res.OK = false
 		return err
 	}

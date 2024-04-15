@@ -49,6 +49,20 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 }
 
+func (clnt *UprocdClnt) WarmProc(realm sp.Trealm, prog, buildTag string) (uprocErr error, childErr error) {
+	req := &proto.WarmBinRequest{
+		RealmStr: realm.String(),
+		Program:  prog,
+		BuildTag: buildTag,
+	}
+	res := &proto.RunResult{}
+	if err := clnt.RPC("UprocSrv.WarmProc", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+		return err, nil
+	} else {
+		return nil, err
+	}
+}
+
 func (clnt *UprocdClnt) String() string {
 	return fmt.Sprintf("&{ realm:%v ptype:%v share:%v }", clnt.realm, clnt.ptype, clnt.share)
 }

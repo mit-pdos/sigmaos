@@ -3,7 +3,6 @@ package container
 import (
 	"context"
 	"path"
-	"syscall"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -21,8 +20,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Start container for uprocd. If r is nil, don't use overlays.
-// func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range, up port.Tport, ptype proc.Ttype) (*Container, error) {
+// Start outer container for uprocd. If r is nil, don't use overlays.
 func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, gvisor bool) (*Container, error) {
 	image := "sigmauser"
 	ctx := context.Background()
@@ -77,12 +75,10 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 	mnts := []mount.Mount{
 		// user bin dir.
 		mount.Mount{
-			Type:   mount.TypeBind,
-			Source: path.Join("/tmp/sigmaos-bin", kernelId),
-			Target: path.Join(sp.SIGMAHOME, "all-realm-bin"),
-			//					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
-			//					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
-			ReadOnly: true,
+			Type:     mount.TypeBind,
+			Source:   path.Join("/tmp/sigmaos-bin", kernelId),
+			Target:   path.Join(sp.SIGMAHOME, "all-realm-bin"),
+			ReadOnly: false,
 		},
 		// perf output dir
 		mount.Mount{
@@ -160,13 +156,4 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 		return nil, err
 	}
 	return c, nil
-}
-
-func MountRealmBinDir(realm sp.Trealm) error {
-	// Mount realm bin directory
-	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "all-realm-bin", realm.String()), path.Join(sp.SIGMAHOME, "bin", "user"), "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /realm bin dir: %v", err)
-		return err
-	}
-	return nil
 }

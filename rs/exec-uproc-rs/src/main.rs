@@ -46,7 +46,6 @@ fn main() {
     let exec_time_micros: u64 = exec_time.parse().unwrap_or(0);
     let exec_time = UNIX_EPOCH + Duration::from_micros(exec_time_micros);
     print_elapsed_time("trampoline.exec_trampoline", exec_time, false);
-
     let pid = env::args().nth(1).expect("no pid");
     let program = env::args().nth(2).expect("no program");
     let netproxy = env::args().nth(3).expect("no netproxy");
@@ -73,6 +72,7 @@ fn main() {
     seccomp_proc(netproxy).expect("seccomp failed");
     print_elapsed_time("trampoline.seccomp_proc", now, false);
     now = SystemTime::now();
+
     if aa {
         apply_apparmor("sigmaos-uproc").expect("apparmor failed");
         print_elapsed_time("trampoline.apply_apparmor", now, false);
@@ -116,6 +116,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         "etc",
         "proc",
         "bin",
+        "mnt",
         "tmp",
         "tmp/sigmaos-perf",
     ];
@@ -186,6 +187,16 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/tmp/", "tmp")?;
+
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/mnt/", "mnt")?;
+
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/mnt/binfs/", "mnt/binfs")?;
 
     // Only mount /tmp/sigmaos-perf directory if SIGMAPERF is set (meaning we are
     // benchmarking and want to extract the results)
@@ -401,4 +412,12 @@ pub fn is_enabled_apparmor() -> bool {
 pub fn apply_apparmor(profile: &str) -> Result<(), Box<dyn std::error::Error>> {
     fs::write("/proc/self/attr/apparmor/exec", format!("exec {profile}"))?;
     Ok(())
+}
+
+pub fn lsdir(pn: &str) {
+    println!("lsdir {}", pn);
+    let paths = fs::read_dir(pn).unwrap();
+    for path in paths {
+        println!("Name: {}", path.unwrap().path().display())
+    }
 }

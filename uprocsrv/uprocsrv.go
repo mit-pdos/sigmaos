@@ -1,9 +1,15 @@
+// The uprocsrv package implements uprocd that starts procs inside an
+// inner container.  Uprocd itself runs in a realm-aganostic outer
+// container; it is started by [container.StartPcontainer].
 package uprocsrv
 
 import (
+	"io"
 	"os"
+	"os/exec"
 	"path"
 	"sync"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -12,6 +18,7 @@ import (
 	"github.com/golang-jwt/jwt"
 
 	"sigmaos/auth"
+	"sigmaos/binsrv"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -34,6 +41,7 @@ type UprocSrv struct {
 	ssrv            *sigmasrv.SigmaSrv
 	kc              *kernelclnt.KernelClnt
 	scsc            *sigmaclntsrv.SigmaClntSrvCmd
+	binsrv          *exec.Cmd
 	kernelId        string
 	realm           sp.Trealm
 	netproxy        bool
@@ -72,6 +80,17 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		db.DFatalf("Error NewAuthSrv %v", err)
 	}
 	sc.SetAuthSrv(as)
+	// Start binfsd now; when uprocds gets assigned to a realm, then
+	// uprocd mounts the realm's bin directory that binfs will cache
+	// in and serve from.
+	ups.binsrv = exec.Command("binfsd", ups.kernelId, ups.pe.GetPID().String())
+	ups.binsrv.Stdout = os.Stdout
+	ups.binsrv.Stderr = os.Stderr
+
+	if err := ups.binsrv.Start(); err != nil {
+		db.DPrintf(db.UPROCD, "Error start %v %v", ups.binsrv, err)
+		return err
+	}
 	var ssrv *sigmasrv.SigmaSrv
 	if up == sp.NO_PORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
@@ -104,6 +123,9 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
 	}
 	db.DPrintf(db.UPROCD, "RunServer done\n")
+	if ups.binsrv != nil {
+		ups.binsrv.Process.Kill()
+	}
 	return nil
 }
 
@@ -140,6 +162,7 @@ func shrinkMountTable() error {
 	return nil
 }
 
+// Set up uprocd for use for a specific realm
 func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	ups.mu.RLock()
 	defer ups.mu.RUnlock()
@@ -173,8 +196,8 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 
 	start = time.Now()
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v, new innerIP %v", realm, innerIP)
-	err = container.MountRealmBinDir(realm)
-	if err != nil {
+
+	if err := mountRealmBinDir(realm); err != nil {
 		db.DFatalf("Error mount realm bin dir: %v", err)
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.mountRealmBinDir: %v", upid, time.Since(start))
@@ -208,6 +231,7 @@ func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.Ass
 	return nil
 }
 
+// Run a proc inside of an inner container
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
@@ -218,4 +242,57 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	return container.RunUProc(uproc, ups.netproxy)
+}
+
+// Read the binary so that binfs loads it into its cache for
+// experiments with a warm cache.
+func readFile(pn string) error {
+	f, err := os.Open(pn)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	buf := make([]byte, 1024)
+	for {
+		_, err := f.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Warm uprocd to run a program for experiments with warm start.
+func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
+	pn := binsrv.BinPath(req.Program, req.BuildTag)
+	db.DPrintf(db.UPROCD, "WarmProc %q %v", pn, req)
+	if err := ups.assignToRealm(sp.Trealm(req.RealmStr), sp.NO_PID); err != nil {
+		db.DFatalf("Err assign to realm: %v", err)
+	}
+	if err := readFile(pn); err != nil {
+		res.OK = false
+		return err
+	}
+	res.OK = true
+	return nil
+}
+
+// Make and mount realm bin directory for [binsrv].
+func mountRealmBinDir(realm sp.Trealm) error {
+	dir := path.Join(sp.SIGMAHOME, "all-realm-bin", realm.String())
+
+	// fails is already exist and if it fails for another reason Mount will fail
+	if err := os.Mkdir(dir, 0750); err != nil {
+		db.DPrintf(db.UPROCD, "Mkdir %q err %v\n", dir, err)
+	}
+
+	mnt := path.Join(sp.SIGMAHOME, "bin", "user")
+	if err := syscall.Mount(dir, mnt, "none", syscall.MS_BIND, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount realm's bin dir %q to %q err %v", dir, mnt, err)
+		return err
+	}
+	return nil
 }

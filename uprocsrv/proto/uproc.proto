@@ -18,3 +18,13 @@ message AssignRequest {
 message AssignResult {
   bool oK = 1;
 }
+
+message WarmBinRequest {
+  string realmStr = 1;
+  string program = 2;
+  string buildTag = 3;
+}
+
+message WarmBinResult {
+  bool oK = 1;
+}

@@ -79,13 +79,6 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	s := time.Now()
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
-	s = time.Now()
-	if err := mgr.downloadProc(p); err != nil {
-		// If unable to download the proc, mark it as crashed & return
-		mgr.procCrashed(p, err)
-		return
-	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Binary download time %v", p.GetPid(), time.Since(s))
 	err := mgr.runProc(p)
 	if err != nil {
 		mgr.procCrashed(p, err)
@@ -128,22 +121,24 @@ func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
 	return mgr.pstate.GetProcs()
 }
 
-func (mgr *ProcMgr) DownloadProcBin(realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
+func (mgr *ProcMgr) WarmUprocd(realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] DownloadProcBin latency: %v", realm, prog, time.Since(start))
+		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] WarmUprocd latency: %v", realm, prog, time.Since(start))
 	}(start)
-	db.DPrintf(db.PROCMGR, "Download proc bin for realm %v proc %v", realm, prog)
-	// Make sure the OS-level directory which holds proc bins exists. This must
-	// be done before starting the Uprocd, because the Uprocd mounts it.
-	if err := mgr.setupUserBinCacheL(realm); err != nil {
-		return err
-	}
+
 	if err := mgr.updm.WarmStartUprocd(realm, ptype); err != nil {
-		db.DPrintf(db.ERROR, "Error start uprocd: %v", err)
+		db.DPrintf(db.ERROR, "WarmStartUprocd %v err %v", realm, err)
 		return err
 	}
-	return mgr.downloadProcBin(realm, prog, buildTag)
+	if uprocErr, childErr := mgr.updm.WarmProc(realm, prog, buildTag, ptype); childErr != nil {
+		return childErr
+	} else if uprocErr != nil {
+		// Unexpected error with uproc server.
+		db.DPrintf(db.PROCMGR, "WarmUproc err %v", uprocErr)
+		return uprocErr
+	}
+	return nil
 }
 
 // Set up state to notify parent that a proc crashed.

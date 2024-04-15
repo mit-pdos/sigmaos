@@ -26,7 +26,7 @@ func NewMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
 }
 
 func NewMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
-	return NewMongoClntWithName(fsl, sp.MONGO+"~local/")
+	return NewMongoClntWithName(fsl, sp.MONGO+"~any/")
 }
 
 func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {

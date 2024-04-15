@@ -103,6 +103,7 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 	// Start procs
 	pids := make([]sp.Tpid, 0, len(srvs))
 	for _, srv := range srvs {
+		db.DPrintf(db.TEST, "Start %v", srv.Name)
 		p := proc.NewProc(srv.Name, []string{strconv.FormatBool(srv.Public), jobname})
 		p.SetMcpu(srv.Mcpu)
 		if err := sc.Spawn(p); err != nil {
@@ -116,6 +117,7 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 			db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
 			return nil, err
 		}
+		db.DPrintf(db.TEST, "Start done %v", srv.Name)
 		pids = append(pids, p.GetPid())
 	}
 	return &SocialNetworkConfig{sc, srvs, pids, cc, cm}, nil

@@ -200,7 +200,7 @@ func (ji *SocialNetworkJobInstance) requestK8sStats() {
 
 func initUserAndGraph(t *testing.T, mongoUrl string) {
 	session, err := mgo.Dial(mongoUrl)
-	assert.Nil(t, err, "Cannot connect to Mongo: %v", err)
+	assert.Nil(t, err, "Cannot connect to Mongo (%v): %v", mongoUrl, err)
 	// clear all tables
 	session.DB(sn.SN_DB).C(sn.USER_COL).RemoveAll(&bson.M{})
 	session.DB(sn.SN_DB).C(sn.GRAPH_FLWER_COL).RemoveAll(&bson.M{})

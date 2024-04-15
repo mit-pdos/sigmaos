@@ -5,6 +5,7 @@ package uprocsrv
 
 import (
 	"os"
+	"os/exec"
 	"path"
 	"sync"
 	"syscall"

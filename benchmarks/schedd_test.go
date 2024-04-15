@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -15,25 +16,33 @@ import (
 	"sigmaos/test"
 )
 
-type scheddFn func(*sigmaclnt.SigmaClnt) time.Duration
+type scheddFn func(sc *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration
+type kernelPrefFn func() []string
 
 type ScheddJobInstance struct {
 	justCli bool
 	dur     []time.Duration
 	maxrps  []int
 	ready   chan bool
-	fn      scheddFn
+	spawnFn scheddFn
+	kpfn    kernelPrefFn
+	kidx    atomic.Int64
 	clnts   []*sigmaclnt.SigmaClnt
 	lgs     []*loadgen.LoadGenerator
 	*test.RealmTstate
 }
 
-func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, fn scheddFn) *ScheddJobInstance {
+func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, sfn scheddFn, kernels []string, withKernelPref bool) *ScheddJobInstance {
 	ji := &ScheddJobInstance{}
 	ji.ready = make(chan bool)
-	ji.fn = fn
+	ji.spawnFn = sfn
 	ji.RealmTstate = ts
 	ji.clnts = make([]*sigmaclnt.SigmaClnt, nclnt)
+	if withKernelPref {
+		ji.kpfn = withKPFnRoundRobin(&ji.kidx, kernels)
+	} else {
+		ji.kpfn = withNoKPFn()
+	}
 
 	// Make clnts for load test
 	for i := range ji.clnts {
@@ -63,11 +72,24 @@ func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, 
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
 			// Run a single request.
-			dur := ji.fn(ji.clnts[i])
+			dur := ji.spawnFn(ji.clnts[i], ji.kpfn())
 			return dur, true
 		}))
 	}
 	return ji
+}
+
+func withKPFnRoundRobin(idx *atomic.Int64, kids []string) kernelPrefFn {
+	return func() []string {
+		next := int(idx.Add(1)) % len(kids)
+		return kids[next : next+1]
+	}
+}
+
+func withNoKPFn() kernelPrefFn {
+	return func() []string {
+		return nil
+	}
 }
 
 func (ji *ScheddJobInstance) StartScheddJob() {

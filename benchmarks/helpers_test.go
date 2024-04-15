@@ -86,8 +86,9 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	}
 }
 
-func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, prog string) time.Duration {
+func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, prog string, kernelpref []string) time.Duration {
 	p := proc.NewProc(prog, nil)
+	p.SetKernels(kernelpref)
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
@@ -96,8 +97,9 @@ func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, pro
 	return 99 * time.Second
 }
 
-func runSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) time.Duration {
+func runSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration {
 	p := proc.NewProc("spawn-bench", nil)
+	p.SetKernels(kernelpref)
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
@@ -271,13 +273,13 @@ func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr 
 
 // ========== Schedd Helpers ==========
 
-func newScheddJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, fn scheddFn) ([]*ScheddJobInstance, []interface{}) {
+func newScheddJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, sfn scheddFn, kernels []string, withKernelPref bool) ([]*ScheddJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*ScheddJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewScheddJob(ts, nclnt, dur, maxrps, fn)
+		i := NewScheddJob(ts, nclnt, dur, maxrps, sfn, kernels, withKernelPref)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

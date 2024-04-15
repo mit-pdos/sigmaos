@@ -44,7 +44,7 @@ func TestSignHMACToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
-	signedToken, err := as.MintToken(claims)
+	signedToken, err := as.MintProcToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
 }
@@ -67,10 +67,10 @@ func TestVerifyHMACToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
-	signedToken, err := as.MintToken(claims)
+	signedToken, err := as.MintProcToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
-	claims2, err := as.VerifyTokenGetClaims("my-principal", signedToken)
+	claims2, err := as.VerifyProcTokenGetClaims("my-principal", signedToken)
 	assert.Nil(t, err, "Err verify token get claims: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", claims2)
 }
@@ -91,7 +91,7 @@ func TestSignECDSAToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
-	signedToken, err := as.MintToken(claims)
+	signedToken, err := as.MintProcToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
 }
@@ -113,11 +113,11 @@ func TestVerifyECDSAToken(t *testing.T) {
 		},
 	}
 	s := time.Now()
-	signedToken, err := as.MintToken(claims)
+	signedToken, err := as.MintProcToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token in %v sec: %v", time.Since(s).Seconds(), signedToken)
 	s = time.Now()
-	claims2, err := as.VerifyTokenGetClaims("my-principal", signedToken)
+	claims2, err := as.VerifyProcTokenGetClaims("my-principal", signedToken)
 	assert.Nil(t, err, "Err verify token get claims: %v", err)
 	db.DPrintf(db.TEST, "Verified token: in %v sec: %v", time.Since(s).Seconds(), claims2)
 }
@@ -184,6 +184,7 @@ func TestMaliciousPrincipalFail(t *testing.T) {
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("malicious-user"),
+		pe.GetRealm(),
 		sp.NoToken(),
 	))
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
@@ -218,11 +219,12 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
+		pe.GetRealm(),
 		sp.NoToken(),
 	))
 	// Clear AWS secrets
 	pe.SetSecrets(map[string]*proc.ProcSecretProto{})
-	err = rootts.MintAndSetToken(pe)
+	err = rootts.MintAndSetProcToken(pe)
 	assert.Nil(t, err)
 
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
@@ -282,11 +284,12 @@ func TestMaliciousPrincipalKeydFail(t *testing.T) {
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
+		pe.GetRealm(),
 		sp.NoToken(),
 	))
 	// Restrict paths to only allow reads of keyd, not writes
 	pe.SetAllowedPaths(RONLY_KEYD)
-	err = rootts.MintAndSetToken(pe)
+	err = rootts.MintAndSetProcToken(pe)
 	assert.Nil(t, err)
 	// Create a new, more restricted sigmaclnt
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
@@ -419,7 +422,7 @@ func TestTryDelegateNonSubsetToChildFail(t *testing.T) {
 	// Only let it talk to schedd and named
 	pe.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.PROCQ, "*")})
 	pc := auth.NewProcClaims(pe)
-	token, err := rootts.MintToken(pc)
+	token, err := rootts.MintProcToken(pc)
 	assert.Nil(t, err)
 	// Set the token of the proc env to the newly authorized token
 	pe.SetToken(token)
@@ -486,12 +489,13 @@ func TestAWSRestrictedProfileS3BucketAccess(t *testing.T) {
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
+		pe.GetRealm(),
 		sp.NoToken(),
 	))
 
 	// Load scoped-down AWS secrets
 	pe.SetSecrets(map[string]*proc.ProcSecretProto{"s3": s3secrets})
-	err = rootts.MintAndSetToken(pe)
+	err = rootts.MintAndSetProcToken(pe)
 	assert.Nil(t, err)
 
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)

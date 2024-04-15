@@ -8,9 +8,10 @@ package binsrv
 
 import (
 	"fmt"
+	"io"
 	"os"
-	"os/signal"
-	"strings"
+	"os/exec"
+	"path"
 	"syscall"
 	"time"
 
@@ -18,9 +19,13 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
+	"sigmaos/uprocclnt"
 )
 
 const (
@@ -34,17 +39,12 @@ const (
 	DEBUG = false
 )
 
-func BinPath(program, buildtag string) string {
-	return BINFSMNT + program + ":" + buildtag
+func BinPath(program string) string {
+	return BINFSMNT + program
 }
 
 func binCachePath(program string) string {
 	return BINCACHE + program
-}
-
-func binPathParse(pn string) (string, string) {
-	p := strings.Split(pn, ":")
-	return p[0], p[1]
 }
 
 type binFsRoot struct {
@@ -52,7 +52,7 @@ type binFsRoot struct {
 	bincache *bincache
 }
 
-func (r *binFsRoot) newNode(parent *fs.Inode, name string, sz int64) fs.InodeEmbedder {
+func (r *binFsRoot) newNode(parent *fs.Inode, name string, sz sp.Tsize) fs.InodeEmbedder {
 	n := &binFsNode{
 		RootData: r,
 		name:     name,
@@ -66,28 +66,29 @@ type binFsNode struct {
 
 	RootData *binFsRoot
 	name     string
-	sz       int64
+	sz       sp.Tsize
 }
 
 func (n *binFsNode) String() string {
 	return fmt.Sprintf("{N %q}", n.path())
 }
 
-func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt) (fs.InodeEmbedder, error) {
+func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) (fs.InodeEmbedder, error) {
 	var st syscall.Stat_t
 	err := syscall.Stat(BINCACHE, &st)
 	if err != nil {
 		return nil, err
 	}
 	root := &binFsRoot{
-		bincache: newBinCache(kernelId, sc),
+		bincache: newBinCache(kernelId, sc, updc),
 	}
-
 	return root.newNode(nil, "", 0), nil
 }
 
-func RunBinFS(kernelId, dir string) error {
+func RunBinFS(kernelId, uprocdpid string) error {
 	pe := proc.GetProcEnv()
+
+	proc.SetSigmaDebugPid("binfsd-" + uprocdpid)
 
 	db.DPrintf(db.BINSRV, "MkDir %q", BINFSMNT)
 
@@ -102,7 +103,16 @@ func RunBinFS(kernelId, dir string) error {
 		return err
 	}
 
-	loopbackRoot, err := newBinRoot(kernelId, sc)
+	pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sc.FsLib}, pn)
+	if err != nil {
+		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
+		return err
+	}
+	rc := rpcclnt.NewRPCClnt(ch)
+	updc := uprocclnt.NewUprocdClnt(sp.Tpid(uprocdpid), rc)
+
+	loopbackRoot, err := newBinRoot(kernelId, sc, updc)
 	if err != nil {
 		return err
 	}
@@ -126,15 +136,59 @@ func RunBinFS(kernelId, dir string) error {
 		return err
 	}
 
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	// Tell ExecBinSrv we are running
+	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
+		return err
+	}
 	go func() {
-		<-c
-		db.DPrintf(db.BINSRV, "terminate\n")
+		buf := make([]byte, 1)
+		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
+			db.DFatalf("read pipe err %v\n", err)
+		}
+		db.DPrintf(db.BINSRV, "exiting\n")
 		server.Unmount()
+		os.Exit(0)
 	}()
 
 	server.Wait()
 	db.DPrintf(db.ALWAYS, "Wait returned\n")
+	return nil
+}
+
+type BinSrvCmd struct {
+	cmd *exec.Cmd
+	out io.WriteCloser
+}
+
+func ExecBinSrv(kernelId, uprocdpid string) (*BinSrvCmd, error) {
+	cmd := exec.Command("binfsd", kernelId, uprocdpid)
+	// cmd.Env = p.GetEnv()
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Start(); err != nil {
+		db.DPrintf(db.BINSRV, "Error start %v %v", cmd, err)
+		return nil, err
+	}
+	buf := make([]byte, 1)
+	if _, err := io.ReadFull(stdout, buf); err != nil {
+		db.DPrintf(db.BINSRV, "read pipe err %v\n", err)
+		return nil, err
+	}
+
+	return &BinSrvCmd{cmd: cmd, out: stdin}, nil
+}
+
+func (bsc *BinSrvCmd) Shutdown() error {
+	if _, err := io.WriteString(bsc.out, "e"); err != nil {
+		return err
+	}
 	return nil
 }

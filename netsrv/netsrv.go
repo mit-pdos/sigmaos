@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net"
 
-	"runtime/debug"
-
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/netsigma"
@@ -19,37 +17,38 @@ type NewConnI interface {
 
 type NetServer struct {
 	pe      *proc.ProcEnv
-	addr    *sp.Taddr
+	npc     *netsigma.NetProxyClnt
+	mnt     *sp.Tmount
 	l       net.Listener
 	newConn NewConnI
 }
 
-func NewNetServer(pe *proc.ProcEnv, addr *sp.Taddr, newConn NewConnI) *NetServer {
-	srv := &NetServer{pe: pe, newConn: newConn}
+func NewNetServer(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, addr *sp.Taddr, newConn NewConnI) *NetServer {
+	srv := &NetServer{
+		pe:      pe,
+		newConn: newConn,
+		npc:     npc,
+	}
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
-	var l net.Listener
-	l, err := net.Listen("tcp", addr.IPPort())
+	mnt, l, err := npc.Listen(addr)
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}
-	h, p, err := netsigma.QualifyAddrLocalIP(pe.GetInnerContainerIP(), l.Addr().String())
-	if err != nil {
-		db.DFatalf("QualifyAddr \"%v\" -> \"%v:%v\" error: %v\n%s", l.Addr().String(), h, p, err, debug.Stack())
-	}
-	srv.addr = sp.NewTaddrRealm(h, sp.INNER_CONTAINER_IP, p, pe.GetNet())
+	srv.mnt = mnt
+	srv.mnt = mnt
 	srv.l = l
-	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.addr)
+	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.mnt)
 	go srv.runsrv(l)
 	return srv
 }
 
-func (srv *NetServer) MyAddr() *sp.Taddr {
-	return srv.addr
+func (srv *NetServer) GetMount() *sp.Tmount {
+	return srv.mnt
 }
 
 func (srv *NetServer) CloseListener() error {
-	db.DPrintf(db.NETSRV, "Close %v\n", srv.addr)
+	db.DPrintf(db.NETSRV, "Close %v\n", srv.mnt)
 	return srv.l.Close()
 }
 
@@ -66,5 +65,5 @@ func (srv *NetServer) runsrv(l net.Listener) {
 }
 
 func (srv *NetServer) String() string {
-	return fmt.Sprintf("{ addr: %v }", srv.addr)
+	return fmt.Sprintf("{ mnt: %v }", srv.mnt)
 }

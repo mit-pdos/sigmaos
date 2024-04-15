@@ -4,17 +4,24 @@
 package sigmaclntsrv
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"os"
 	"os/exec"
 
+	"github.com/golang-jwt/jwt"
+
+	"sigmaos/auth"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/keys"
+	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -22,14 +29,54 @@ import (
 // SigmaSrvClnt's share one fid table
 type SigmaClntSrv struct {
 	pe   *proc.ProcEnv
+	nps  *netsigma.NetProxySrv
 	fidc *fidclnt.FidClnt
 }
 
-func newSigmaClntSrv() (*SigmaClntSrv, error) {
+// Bootstrap the sigmacltnsrv's ProcEnv by self-signing the token
+func bootstrapToken(pe *proc.ProcEnv, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(pubkey)))
+	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv: %v", err)
+		return err
+	}
+	if err := as.MintAndSetProcToken(pe); err != nil {
+		db.DFatalf("Error MintToken: %v", err)
+		return err
+	}
+	return nil
+}
+
+func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) (*SigmaClntSrv, error) {
 	pe := proc.GetProcEnv()
+	if err := bootstrapToken(pe, pubkey, privkey); err != nil {
+		db.DFatalf("Error bootstrap token: %v", err)
+		return nil, err
+	}
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+		return nil, err
+	}
+	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
+	// Add the master deployment key
+	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubkey)
+	// Add this sigmaclntd's keypair to the keymgr
+	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), pubkey)
+	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
+	db.DPrintf(db.SCHEDD, "kmgr %v", kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	nps, err := netsigma.NewNetProxySrv(pe.GetInnerContainerIP(), as)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewNetProxySrv: %v", err)
+		return nil, err
+	}
 	scs := &SigmaClntSrv{
-		pe,
-		fidclnt.NewFidClnt(pe.Net),
+		pe:   pe,
+		nps:  nps,
+		fidc: fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe, as)),
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)
 	return scs, nil
@@ -51,11 +98,12 @@ func (scs *SigmaClntSrv) runServer() error {
 	go func() {
 		buf := make([]byte, 1)
 		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
-			db.DFatalf("read pipe err %v\n", err)
+			db.DPrintf(db.SIGMACLNTSRV_ERR, "read pipe err %v\n", err)
 		}
 		db.DPrintf(db.SIGMACLNTSRV, "exiting")
 		os.Remove(sp.SIGMASOCKET)
 		scs.fidc.Close()
+		scs.nps.Shutdown()
 		os.Exit(0)
 	}()
 
@@ -69,8 +117,8 @@ func (scs *SigmaClntSrv) runServer() error {
 }
 
 // The sigmaclntd process enter here
-func RunSigmaClntSrv(args []string) error {
-	scs, err := newSigmaClntSrv()
+func RunSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+	scs, err := newSigmaClntSrv(masterPubkey, pubkey, privkey)
 	if err != nil {
 		db.DPrintf(db.SIGMACLNTSRV, "runServer err %v\n", err)
 		return err
@@ -177,10 +225,14 @@ func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip)
 }
 
 // Start the sigmaclntd process
-func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) (*SigmaClntSrvCmd, error) {
+func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid, marshaledKeys []string) (*SigmaClntSrvCmd, error) {
 	p.FinalizeEnv(innerIP, outerIP, uprocdPid)
 	db.DPrintf(db.SIGMACLNTSRV, "ExecSigmaclntsrv: %v", p)
-	cmd := exec.Command("sigmaclntd", []string{}...)
+	if len(marshaledKeys) != 3 {
+		db.DPrintf(db.ERROR, "Sigmaclntd usage expects bootstrapped keys")
+		return nil, fmt.Errorf("Sigmaclntd usage expects bootstrapped keys")
+	}
+	cmd := exec.Command("sigmaclntd", marshaledKeys...)
 	cmd.Env = p.GetEnv()
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kv"
+	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
@@ -81,12 +82,12 @@ func MemFsPath(job string) string {
 	return path.Join(JobDir(job), MEMFS)
 }
 
-func NewFsLibs(uname string) ([]*fslib.FsLib, error) {
+func NewFsLibs(uname string, npc *netsigma.NetProxyClnt) ([]*fslib.FsLib, error) {
 	pe := proc.GetProcEnv()
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
 		pen := proc.NewAddedProcEnv(pe)
-		fsl, err := sigmaclnt.NewFsLib(pen)
+		fsl, err := sigmaclnt.NewFsLib(pen, npc)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error newfsl: %v", err)
 			return nil, err
@@ -101,7 +102,7 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mnt.Addr, err
+	return mnt.Addrs(), err
 }
 
 func InitHotelFs(fsl *fslib.FsLib, jobname string) error {
@@ -125,14 +126,14 @@ type Srv struct {
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func NewHotelSvc(public bool) []Srv {
 	return []Srv{
-		Srv{"hotel-userd", public, 0, []string{sp.NAMED, sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
-		Srv{"hotel-rated", public, 2000, []string{sp.NAMED, sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*")}},
-		Srv{"hotel-geod", public, 2000, []string{sp.NAMED, sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
-		Srv{"hotel-profd", public, 2000, []string{sp.NAMED, sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*")}},
-		Srv{"hotel-searchd", public, 3000, []string{sp.NAMED, sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), HOTELRATE, HOTELGEO}},
-		Srv{"hotel-reserved", public, 3000, []string{sp.NAMED, sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*")}},
-		Srv{"hotel-recd", public, 0, []string{sp.NAMED, sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
-		Srv{"hotel-wwwd", public, 3000, []string{sp.NAMED, sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), HOTELSEARCH, HOTELUSER, HOTELPROF, HOTELREC, HOTELGEO, HOTELRESERVE}},
+		Srv{"hotel-userd", public, 0, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
+		Srv{"hotel-rated", public, 2000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*"), path.Join(sp.REALMD, "*")}},
+		Srv{"hotel-geod", public, 2000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
+		Srv{"hotel-profd", public, 2000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*")}},
+		Srv{"hotel-searchd", public, 3000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), HOTELRATE, HOTELGEO}},
+		Srv{"hotel-reserved", public, 3000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), path.Join(cache.CACHE, "servers", "*")}},
+		Srv{"hotel-recd", public, 0, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}},
+		Srv{"hotel-wwwd", public, 3000, []string{sp.NAMED, path.Join(sp.BOOT, "*"), sp.KEYS_RONLY, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*"), HOTELSEARCH, HOTELUSER, HOTELPROF, HOTELREC, HOTELGEO, HOTELRESERVE}},
 	}
 }
 

@@ -20,9 +20,9 @@ func NewNamedMountCache(pe *proc.ProcEnv) *NamedMountCache {
 	if mnt, ok := pe.GetNamedMount(); ok {
 		// If this proc operates in the root realm, cache the root mount as well
 		if pe.GetRealm() == sp.ROOTREALM {
-			rootMnt = &mnt
+			rootMnt = mnt
 		} else {
-			realmMnt = &mnt
+			realmMnt = mnt
 		}
 	}
 	return &NamedMountCache{
@@ -31,31 +31,30 @@ func NewNamedMountCache(pe *proc.ProcEnv) *NamedMountCache {
 	}
 }
 
-func (nmc *NamedMountCache) Get(realm sp.Trealm) (sp.Tmount, bool) {
+func (nmc *NamedMountCache) Get(realm sp.Trealm) (*sp.Tmount, bool) {
 	nmc.RLock()
 	defer nmc.RUnlock()
 
 	if realm == sp.ROOTREALM {
 		if nmc.root == nil {
-			return sp.Tmount{}, false
+			return &sp.Tmount{}, false
 		}
-		return *nmc.root, true
+		return nmc.root, true
 	}
 	if nmc.realm == nil {
-		return sp.Tmount{}, false
+		return &sp.Tmount{}, false
 	}
-	return *nmc.realm, true
+	return nmc.realm, true
 }
 
-func (nmc *NamedMountCache) Put(realm sp.Trealm, mnt sp.Tmount) {
+func (nmc *NamedMountCache) Put(realm sp.Trealm, mnt *sp.Tmount) {
 	nmc.Lock()
 	defer nmc.Unlock()
 
-	mntCpy := mnt
 	if realm == sp.ROOTREALM {
-		nmc.root = &mntCpy
+		nmc.root = mnt
 	} else {
-		nmc.realm = &mntCpy
+		nmc.realm = mnt
 	}
 }
 

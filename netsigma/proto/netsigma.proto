@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+import "sigmap/sigmap.proto";
+
+option go_package = "sigmaos/netsigma/proto";
+
+message ListenRequest {
+        Taddr addr = 1;
+};
+
+message ListenResponse {
+        Rerror err = 1;
+        TmountProto mount = 2;
+};
+
+message DialRequest {
+        TmountProto Mount = 1;
+};
+
+message DialResponse {
+        Rerror err = 1;
+};

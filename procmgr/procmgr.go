@@ -26,7 +26,7 @@ type ProcMgr struct {
 	rootsc         *sigmaclnt.SigmaClntKernel
 	updm           *uprocclnt.UprocdMgr
 	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClntKernel
-	namedMnts      map[sp.Trealm]sp.Tmount
+	namedMnts      map[sp.Trealm]*sp.Tmount
 	cachedProcBins map[sp.Trealm]map[string]bool
 	as             auth.AuthSrv
 	pstate         *ProcState
@@ -39,7 +39,7 @@ func NewProcMgr(as auth.AuthSrv, sc *sigmaclnt.SigmaClnt, kernelId string) *Proc
 		rootsc:         sigmaclnt.NewSigmaClntKernel(sc),
 		updm:           uprocclnt.NewUprocdMgr(sc.FsLib, kernelId),
 		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
-		namedMnts:      make(map[sp.Trealm]sp.Tmount),
+		namedMnts:      make(map[sp.Trealm]*sp.Tmount),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
 		as:             as,
 		pstate:         NewProcState(),
@@ -69,7 +69,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	p.SetKernelID(mgr.kernelId, true)
 	// Set the schedd IP for the proc, so it can mount this schedd in one RPC
 	// (without walking down to it).
-	p.SetScheddAddr(mgr.mfs.MyAddr())
+	p.SetScheddMount(mgr.mfs.GetSigmaPSrvMount())
 	// Set the named mount point if this isn't a privileged proc. If we were to
 	// do this for a privileged proc, it could cause issues as it may save the
 	// knamed address.
@@ -121,7 +121,7 @@ func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
 	return mgr.pstate.GetProcs()
 }
 
-func (mgr *ProcMgr) WarmUprocd(realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
+func (mgr *ProcMgr) WarmUprocd(realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
 	start := time.Now()
 	defer func(start time.Time) {
 		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] WarmUprocd latency: %v", realm, prog, time.Since(start))
@@ -131,7 +131,7 @@ func (mgr *ProcMgr) WarmUprocd(realm sp.Trealm, prog, buildTag string, ptype pro
 		db.DPrintf(db.ERROR, "WarmStartUprocd %v err %v", realm, err)
 		return err
 	}
-	if uprocErr, childErr := mgr.updm.WarmProc(realm, prog, buildTag, ptype); childErr != nil {
+	if uprocErr, childErr := mgr.updm.WarmProc(realm, prog, path, ptype); childErr != nil {
 		return childErr
 	} else if uprocErr != nil {
 		// Unexpected error with uproc server.
@@ -149,7 +149,7 @@ func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }
 
-func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) sp.Tmount {
+func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) *sp.Tmount {
 	mgr.Lock()
 	defer mgr.Unlock()
 
@@ -182,7 +182,7 @@ func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 			clnt = mgr.rootsc
 		} else {
 			pe := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
-			if err := mgr.as.MintAndSetToken(pe); err != nil {
+			if err := mgr.as.MintAndSetProcToken(pe); err != nil {
 				db.DFatalf("Err MintAndSetToken: %v", err)
 			}
 			if sc, err := sigmaclnt.NewSigmaClnt(pe); err != nil {

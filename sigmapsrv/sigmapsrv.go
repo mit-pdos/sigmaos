@@ -15,6 +15,7 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
+	"sigmaos/netsigma"
 	"sigmaos/overlaydir"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -31,13 +32,14 @@ import (
 type SigmaPSrv struct {
 	*protsrv.ProtSrvState
 	*sesssrv.SessSrv
+	srvmnt   *sp.Tmount
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
 	fencefs  fs.Dir
 	stats    *stats.StatInfo
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, root fs.Dir, as auth.AuthSrv, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, root fs.Dir, as auth.AuthSrv, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
 	psrv := &SigmaPSrv{
 		dirunder: root,
 		dirover:  overlay.MkDirOverlay(root),
@@ -47,12 +49,12 @@ func NewSigmaPSrv(pe *proc.ProcEnv, root fs.Dir, as auth.AuthSrv, addr *sp.Taddr
 	psrv.ProtSrvState = protsrv.NewProtSrvState(as, psrv.stats)
 	psrv.VersionTable().Insert(psrv.dirover.Path())
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
-	psrv.SessSrv = sesssrv.NewSessSrv(pe, addr, psrv.stats, psrv)
+	psrv.SessSrv = sesssrv.NewSessSrv(pe, npc, addr, psrv.stats, psrv)
 	return psrv
 }
 
 func NewSigmaPSrvPost(root fs.Dir, pn string, as auth.AuthSrv, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
-	psrv := NewSigmaPSrv(sc.ProcEnv(), root, as, addr, fencefs)
+	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, as, addr, fencefs)
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
 			return nil, "", err
@@ -87,8 +89,13 @@ func (psrv *SigmaPSrv) GetRootCtx(p *sp.Tprincipal, claims *auth.ProcClaims, ana
 	return psrv.dirover, ctx.NewCtx(p, claims, sessid, clntid, psrv.CondTable(), psrv.fencefs)
 }
 
+func (psrv *SigmaPSrv) GetSigmaPSrvMount() *sp.Tmount {
+	return psrv.srvmnt
+}
+
 func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
-	mnt := sp.NewMountServer(psrv.MyAddr())
+	mnt := psrv.GetMount()
+	psrv.srvmnt = mnt
 	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 	if path.EndSlash(pn) {
 		dir, err := sc.IsDir(pn)
@@ -114,6 +121,6 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 }
 
 // Return the pathname for posting in a directory of a service
-func mountPathName(pn string, mnt sp.Tmount) string {
-	return pn + "/" + mnt.Address().IPPort()
+func mountPathName(pn string, mnt *sp.Tmount) string {
+	return pn + "/" + mnt.Addrs()[0].IPPort()
 }

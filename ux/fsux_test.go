@@ -12,6 +12,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -130,7 +131,7 @@ func TestFsPerfMulti(t *testing.T) {
 }
 
 func writer(t *testing.T, ch chan error, pe *proc.ProcEnv, idx int) {
-	fsl, err := sigmaclnt.NewFsLib(pe)
+	fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 	assert.Nil(t, err)
 	fn := sp.UX + "~local/file-" + string(pe.GetPrincipal().GetID()) + "-" + strconv.Itoa(idx)
 	stop := false
@@ -179,7 +180,7 @@ func TestWriteCrash5x20(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		err := ts.MintAndSetToken(pe)
+		err := ts.MintAndSetProcToken(pe)
 		assert.Nil(t, err)
 		go writer(ts.T, ch, pe, i)
 	}

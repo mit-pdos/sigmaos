@@ -22,11 +22,11 @@ const (
 	K_OUT_DIR = "/tmp/sigmaos-kernel-start-logs"
 )
 
-func Start(kernelId string, pe *proc.ProcEnv, srvs string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (string, error) {
+func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overlays, gvisor, netproxy bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (string, error) {
 	args := []string{
 		"--pull", pe.BuildTag,
 		"--boot", srvs,
-		"--named", pe.EtcdIP,
+		"--named", etcdIP.String(),
 		"--pubkey", masterPubKey.Marshal(),
 		"--privkey", masterPrivKey.Marshal(),
 		"--host",
@@ -36,6 +36,9 @@ func Start(kernelId string, pe *proc.ProcEnv, srvs string, overlays, gvisor bool
 	}
 	if gvisor {
 		args = append(args, "--gvisor")
+	}
+	if netproxy {
+		args = append(args, "--usenetproxy")
 	}
 	args = append(args, kernelId)
 	// Ensure the kernel output directory has been created
@@ -72,7 +75,7 @@ func Start(kernelId string, pe *proc.ProcEnv, srvs string, overlays, gvisor bool
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v", kernelId, srvs, ip, overlays, gvisor)
+	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v netproxy %v", kernelId, srvs, ip, overlays, netproxy)
 	return ip, nil
 }
 
@@ -86,16 +89,16 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(pe *proc.ProcEnv, conf string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*Kernel, error) {
+func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, overlays, gvisor, netproxy bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, pe, conf, overlays, gvisor, masterPubKey, masterPrivKey)
+	_, err := Start(kernelId, etcdIP, pe, conf, overlays, gvisor, netproxy, masterPubKey, masterPrivKey)
 	if err != nil {
 		return nil, err
 	}
-	return NewKernelClnt(kernelId, pe)
+	return NewKernelClnt(kernelId, etcdIP, pe)
 }
 
-func NewKernelClnt(kernelId string, pe *proc.ProcEnv) (*Kernel, error) {
+func NewKernelClnt(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv) (*Kernel, error) {
 	db.DPrintf(db.SYSTEM, "NewKernelClnt %s\n", kernelId)
 	sc, err := sigmaclnt.NewSigmaClntRootInit(pe)
 	if err != nil {
@@ -106,7 +109,7 @@ func NewKernelClnt(kernelId string, pe *proc.ProcEnv) (*Kernel, error) {
 	if kernelId == "" {
 		var pn1 string
 		var err error
-		if pe.EtcdIP != pe.GetOuterContainerIP().String() {
+		if etcdIP != pe.GetOuterContainerIP() {
 			// If running in a distributed setting, bootkernel clnt can be ~any
 			pn1, _, err = sc.ResolveMount(sp.BOOT + "~any")
 		} else {

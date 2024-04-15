@@ -23,6 +23,7 @@ const (
 	SLEEP_MSECS = 2000
 	CRASH_MSECS = 5
 	NTRIALS     = "3001"
+	N_NODES     = 2
 )
 
 const program = "procclnt_test"
@@ -46,6 +47,7 @@ func spawnSpinnerMcpu(ts *test.Tstate, mcpu proc.Tmcpu) sp.Tpid {
 	return pid
 }
 
+// Make a burst of LC procs
 func burstSpawnSpinner(t *testing.T, ts *test.Tstate, N uint) []*proc.Proc {
 	ps := make([]*proc.Proc, 0, N)
 	for i := uint(0); i < N; i++ {
@@ -102,6 +104,22 @@ func cleanSleeperResult(t *testing.T, ts *test.Tstate, pid sp.Tpid) {
 	ts.Remove("name/" + pid.String() + "_out")
 }
 
+func spawnWaitSleeper(ts *test.Tstate, kernels []string) *proc.Proc {
+	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	if kernels != nil {
+		a.SetKernels(kernels)
+	}
+	err := ts.Spawn(a)
+	assert.Nil(ts.T, err, "Spawn")
+
+	status, err := ts.WaitExit(a.GetPid())
+	assert.Nil(ts.T, err, "WaitExit error")
+	assert.True(ts.T, status != nil && status.IsStatusOK(), "Exit status wrong")
+
+	cleanSleeperResult(ts.T, ts, a.GetPid())
+	return a
+}
+
 func TestCompile(t *testing.T) {
 }
 
@@ -110,20 +128,7 @@ func TestWaitExitSimpleSingleBE(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
-	db.DPrintf(db.TEST, "Pre spawn")
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-	db.DPrintf(db.TEST, "Post spawn")
-
-	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := ts.WaitExit(a.GetPid())
-	db.DPrintf(db.TEST, "Post waitexit")
-	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong: %v", status)
-
-	cleanSleeperResult(t, ts, a.GetPid())
-
+	spawnWaitSleeper(ts, nil)
 	ts.Shutdown()
 	// test.Dump(t)
 }
@@ -608,28 +613,34 @@ func TestReserveCores(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWaitExitSimpleMultiKernel(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+func TestWaitExitSimpleMultiKernel1(t *testing.T) {
+	waitExitSimpleMultiKernel(t, 1)
+}
+
+func TestWaitExitSimpleMultiKernel2(t *testing.T) {
+	waitExitSimpleMultiKernel(t, 2)
+}
+
+func waitExitSimpleMultiKernel(t *testing.T, n int) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
-
-	err := ts.BootNode(1)
+	err = ts.BootNode(n)
 	assert.Nil(t, err, "Boot node: %v", err)
+	db.DPrintf(db.TEST, "Done boot node %d", n)
 
-	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
-	db.DPrintf(db.TEST, "Pre spawn")
-	err = ts.Spawn(a)
-	db.DPrintf(db.TEST, "Post spawn")
-	assert.Nil(t, err, "Spawn")
+	sts, err := ts.GetDir(sp.SCHEDD)
+	kernels := sp.Names(sts)
+	db.DPrintf(db.TEST, "Kernels %v", kernels)
 
-	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := ts.WaitExit(a.GetPid())
-	db.DPrintf(db.TEST, "Post waitexit")
-	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong")
+	p := spawnWaitSleeper(ts, []string{kernels[0]})
+	assert.Equal(t, kernels[0], p.GetKernelID())
 
-	cleanSleeperResult(t, ts, a.GetPid())
+	for i := 1; i < n+1; i++ {
+		p := spawnWaitSleeper(ts, []string{kernels[i]})
+		assert.Equal(t, kernels[i], p.GetKernelID())
+	}
 
 	ts.Shutdown()
 }
@@ -645,8 +656,6 @@ func TestSpawnBurst(t *testing.T) {
 		return
 	}
 
-	const N_NODES = 2
-
 	// Number of spinners to burst-spawn
 	N := (linuxsched.GetNCores()) * N_NODES
 
@@ -658,7 +667,7 @@ func TestSpawnBurst(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Start burst spawn %v", N)
 
-	ps := burstSpawnSpinner(t, ts, N)
+	ps := burstSpawnSpinner(t, ts, 4)
 
 	for _, p := range ps {
 		err := ts.WaitStart(p.GetPid())

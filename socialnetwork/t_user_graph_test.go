@@ -8,6 +8,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/rpcclnt"
+	"sigmaos/sigmarpcchan"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/test"
@@ -33,10 +34,11 @@ func TestUser(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 
 	// check user
 	arg_check := proto.CheckUserRequest{Usernames: []string{"test_user"}}
@@ -113,10 +115,11 @@ func TestGraph(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitGraph()
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 
 	// get follower and followee list
 	arg_get_fler := proto.GetFollowersRequest{}
@@ -197,14 +200,16 @@ func TestUserAndGraph(t *testing.T) {
 	tssn.dbu.InitGraph()
 	tssn.dbu.InitUser()
 	snCfg := tssn.snCfg
-	urpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	grpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
+	urpcc := rpcclnt.NewRPCClnt(ch)
+	grch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	grpcc := rpcclnt.NewRPCClnt(grch)
 
 	// Create two users Alice and Bob
 	arg_reg1 := proto.RegisterUserRequest{
@@ -281,10 +286,11 @@ func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
-	urpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	urpcc := rpcclnt.NewRPCClnt(ch)
 
 	// check user
 	arg_check := proto.CheckUserRequest{Usernames: []string{"user_1"}}

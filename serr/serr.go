@@ -65,6 +65,16 @@ const (
 	TErrError
 )
 
+// Several calls optimistically connect to a recently-mounted server
+// without doing a pathname walk; this may fail, and the call should
+// walk. retry() says when to retry.
+func Retry(err *Err) bool {
+	if err == nil {
+		return false
+	}
+	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
+}
+
 func (err Terror) String() string {
 	switch err {
 	case TErrNoError:

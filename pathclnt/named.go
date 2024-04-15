@@ -11,12 +11,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-//		// If named has been set, don't bother getting it from fsetcd.
-//		if pathc.pe.GetNamedIP() != "" {
-//			return sp.Tmount{Addr: []*sp.Taddr{sp.NewTaddr(pathc.pe.GetNamedIP())}}
-//		}
-
-func (pathc *PathClnt) GetNamedMount() (sp.Tmount, error) {
+func (pathc *PathClnt) GetNamedMount() (*sp.Tmount, error) {
 	mnt, err := pathc.getNamedMount(pathc.pe.GetRealm())
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err getNamedMount [%v]: %v", pathc.pe.GetRealm(), err)
@@ -26,39 +21,39 @@ func (pathc *PathClnt) GetNamedMount() (sp.Tmount, error) {
 	return mnt, nil
 }
 
-func (pathc *PathClnt) getNamedMount(realm sp.Trealm) (sp.Tmount, *serr.Err) {
+func (pathc *PathClnt) getNamedMount(realm sp.Trealm) (*sp.Tmount, *serr.Err) {
 	// If this mount was passed via the proc config, return it immediately.
 	if mnt, ok := pathc.ndMntCache.Get(pathc.pe.GetRealm()); ok {
 		db.DPrintf(db.NAMED, "getNamedMount cached %v %v", pathc.pe.GetRealm(), mnt)
 		return mnt, nil
 	}
-	var mnt sp.Tmount
+	var mnt *sp.Tmount
 	var err *serr.Err
 	// If this is the root realm, then get the root named.
 	if realm == sp.ROOTREALM {
-		mnt, err = fsetcd.GetRootNamed(realm, pathc.pe.EtcdIP)
+		mnt, err = fsetcd.GetRootNamed(pathc.GetNetProxyClnt(), pathc.pe.GetEtcdMounts(), realm)
 		if err != nil {
 			db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] err GetRootNamed %v", realm, mnt)
-			return sp.Tmount{}, err
+			return &sp.Tmount{}, err
 		}
 	} else {
 		// Otherwise, walk through the root named to find this named's mount.
 		if _, rest, err := pathc.mnt.resolve(path.Path{"root"}, true); err != nil && len(rest) >= 1 {
 			if err := pathc.mountNamed(sp.ROOTREALM, "root"); err != nil {
 				db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] err mounting root named %v", realm, err)
-				return sp.Tmount{}, err
+				return &sp.Tmount{}, err
 			}
 		}
 		pn := gpath.Join("root", sp.REALMREL, sp.REALMDREL, sp.REALMSREL, realm.String())
 		target, err := pathc.GetFile(pn, pathc.pe.GetPrincipal(), sp.OREAD, 0, sp.MAXGETSET, sp.NullFence())
 		if err != nil {
 			db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] GetFile err %v", realm, err)
-			return sp.Tmount{}, serr.NewErrError(err)
+			return &sp.Tmount{}, serr.NewErrError(err)
 		}
 		var sr *serr.Err
-		mnt, sr = sp.NewMount(target)
+		mnt, sr = sp.NewMountFromBytes(target)
 		if sr != nil {
-			return sp.Tmount{}, sr
+			return &sp.Tmount{}, sr
 		}
 	}
 	// Cache the newly resolved mount

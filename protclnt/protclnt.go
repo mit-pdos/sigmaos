@@ -15,20 +15,23 @@ import (
 )
 
 type ProtClnt struct {
-	addrs sp.Taddrs
-	sm    *sessclnt.Mgr
+	mnt *sp.Tmount
+	sm  *sessclnt.Mgr
 }
 
-func NewProtClnt(addrs sp.Taddrs, sm *sessclnt.Mgr) *ProtClnt {
-	return &ProtClnt{addrs: addrs, sm: sm}
+func NewProtClnt(mnt *sp.Tmount, sm *sessclnt.Mgr) *ProtClnt {
+	return &ProtClnt{
+		mnt: mnt,
+		sm:  sm,
+	}
 }
 
-func (pclnt *ProtClnt) Servers() sp.Taddrs {
-	return pclnt.addrs
+func (pclnt *ProtClnt) Servers() *sp.Tmount {
+	return pclnt.mnt
 }
 
-func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
-	reply, err := pclnt.sm.RPC(addrs, args, iniov, outiov)
+func (pclnt *ProtClnt) CallServer(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	reply, err := pclnt.sm.RPC(pclnt.mnt, args, iniov, outiov)
 	if err != nil {
 		return nil, err
 	}
@@ -40,16 +43,16 @@ func (pclnt *ProtClnt) CallServer(addrs sp.Taddrs, args sessp.Tmsg, iniov sessp.
 }
 
 func (pclnt *ProtClnt) Call(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(pclnt.addrs, args, nil, nil)
+	return pclnt.CallServer(args, nil, nil)
 }
 
 func (pclnt *ProtClnt) CallIoVec(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(pclnt.addrs, args, iniov, outiov)
+	return pclnt.CallServer(args, iniov, outiov)
 }
 
 func (pclnt *ProtClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
 	args := sp.NewTattach(fid, sp.NoFid, principal, cid, path)
-	reply, err := pclnt.CallServer(pclnt.addrs, args, nil, nil)
+	reply, err := pclnt.CallServer(args, nil, nil)
 	if err != nil {
 		return nil, err
 	}

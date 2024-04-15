@@ -10,13 +10,9 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const (
-	ISSUER = "sigmaos"
-)
-
 type ProcClaims struct {
-	PrincipalID sp.TprincipalID `json:"principal_id"`
-	//	PrincipalID  string   `json:"principal_id"`
+	PrincipalID  sp.TprincipalID    `json:"principal_id"`
+	Realm        sp.Trealm          `json:"realm"`
 	AllowedPaths []string           `json:"allowed_paths"`
 	Secrets      map[string]*Secret `json:"secrets"`
 	jwt.StandardClaims
@@ -30,6 +26,7 @@ func NewProcClaims(pe *proc.ProcEnv) *ProcClaims {
 	}
 	return &ProcClaims{
 		PrincipalID:  pe.GetClaims().GetPrincipalID(),
+		Realm:        pe.GetClaims().GetRealm(),
 		AllowedPaths: pe.GetClaims().GetAllowedPaths(),
 		Secrets:      secrets,
 		StandardClaims: jwt.StandardClaims{
@@ -49,5 +46,5 @@ func (pc *ProcClaims) AddSecret(svc string, s *Secret) {
 }
 
 func (pc *ProcClaims) String() string {
-	return fmt.Sprintf("&{ PrincipalID:%v AllowedPaths:%v Secrets:%v }", pc.PrincipalID, pc.AllowedPaths, pc.Secrets)
+	return fmt.Sprintf("&{ PrincipalID:%v Realm:%v AllowedPaths:%v Secrets:%v }", pc.PrincipalID, pc.Realm, pc.AllowedPaths, pc.Secrets)
 }

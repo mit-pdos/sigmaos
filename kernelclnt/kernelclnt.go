@@ -7,6 +7,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 )
 
 type KernelClnt struct {
@@ -15,10 +16,11 @@ type KernelClnt struct {
 }
 
 func NewKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{fsl}, pn)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{fsl}, pn)
 	if err != nil {
 		return nil, err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	return &KernelClnt{fsl, rpcc}, nil
 }
 

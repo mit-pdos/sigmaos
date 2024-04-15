@@ -7,6 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/fidclnt"
+	"sigmaos/netsigma"
 	"sigmaos/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
@@ -43,16 +44,24 @@ func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
 type Npd struct {
 	lip sp.Tip
 	pe  *proc.ProcEnv
+	npc *netsigma.NetProxyClnt
 }
 
-func NewNpd(pe *proc.ProcEnv, lip sp.Tip) *Npd {
-	return &Npd{lip, pe}
+func NewNpd(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, lip sp.Tip) *Npd {
+	return &Npd{
+		lip: lip,
+		pe:  pe,
+		npc: npc,
+	}
 }
 
 // Create a sigmap session for conn
 func (npd *Npd) NewConn(conn net.Conn) *demux.DemuxSrv {
-	sess := newNpSess(npd.pe, string(npd.lip))
-	pc := &proxyConn{conn: conn, sess: sess}
+	sess := newNpSess(npd.pe, npd.npc, string(npd.lip))
+	pc := &proxyConn{
+		conn: conn,
+		sess: sess,
+	}
 	return demux.NewDemuxSrv(pc, npcodec.NewTransport(conn))
 }
 
@@ -66,9 +75,9 @@ type NpSess struct {
 	cid       sp.TclntId
 }
 
-func newNpSess(pe *proc.ProcEnv, lip string) *NpSess {
+func newNpSess(pe *proc.ProcEnv, npcs *netsigma.NetProxyClnt, lip string) *NpSess {
 	npc := &NpSess{}
-	npc.fidc = fidclnt.NewFidClnt(sp.ROOTREALM.String())
+	npc.fidc = fidclnt.NewFidClnt(pe, npcs)
 	npc.principal = pe.GetPrincipal()
 	npc.pc = pathclnt.NewPathClnt(pe, npc.fidc)
 	npc.fm = newFidMap()
@@ -92,7 +101,7 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", error)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
-	fid, err := npc.fidc.Attach(npc.principal, npc.cid, mnt.Addr, "", "")
+	fid, err := npc.fidc.Attach(npc.principal, npc.cid, mnt, "", "")
 	if err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v err %v\n", args, err)
 		return sp.NoClntId, sp.NewRerrorSerr(err)
@@ -120,6 +129,7 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	}
 	fid1, err := npc.pc.Walk(fid, args.Wnames, sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
+		sp.ROOTREALM,
 		sp.NoToken(),
 	))
 	if err != nil {

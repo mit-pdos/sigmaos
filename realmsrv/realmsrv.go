@@ -17,6 +17,7 @@ import (
 	"sigmaos/kernelclnt"
 	"sigmaos/keyclnt"
 	"sigmaos/keys"
+	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
 	"sigmaos/realmsrv/proto"
@@ -47,33 +48,54 @@ type Realm struct {
 }
 
 type RealmSrv struct {
-	mu              sync.Mutex
-	realms          map[sp.Trealm]*Realm
-	sc              *sigmaclnt.SigmaClntKernel
-	pq              *procqclnt.ProcQClnt
-	sd              *scheddclnt.ScheddClnt
-	mkc             *kernelclnt.MultiKernelClnt
-	kc              *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
-	as              auth.AuthSrv
-	masterPublicKey auth.PublicKey
-	pubkey          auth.PublicKey
-	privkey         auth.PrivateKey
-	lastNDPort      int
-	ch              chan struct{}
+	mu           sync.Mutex
+	netproxy     bool
+	realms       map[sp.Trealm]*Realm
+	sc           *sigmaclnt.SigmaClntKernel
+	pq           *procqclnt.ProcQClnt
+	sd           *scheddclnt.ScheddClnt
+	mkc          *kernelclnt.MultiKernelClnt
+	kc           *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
+	as           auth.AuthSrv
+	masterPubKey auth.PublicKey
+	pubkey       auth.PublicKey
+	privkey      auth.PrivateKey
+	lastNDPort   int
+	ch           chan struct{}
 }
 
-func RunRealmSrv(masterPublicKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunRealmSrv(netproxy bool, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		nil,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
+		return err
+	}
+	sc.SetAuthSrv(as)
 	rs := &RealmSrv{
-		lastNDPort:      MIN_PORT,
-		realms:          make(map[sp.Trealm]*Realm),
-		masterPublicKey: masterPublicKey,
-		pubkey:          pubkey,
-		privkey:         privkey,
+		netproxy:     netproxy,
+		lastNDPort:   MIN_PORT,
+		realms:       make(map[sp.Trealm]*Realm),
+		masterPubKey: masterPubKey,
+		as:           as,
+		pubkey:       pubkey,
+		privkey:      privkey,
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
-	ssrv, err := sigmasrv.NewSigmaSrv(sp.REALMD, rs, pe)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.REALMD, sc, rs)
 	if err != nil {
 		return err
 	}
@@ -87,15 +109,6 @@ func RunRealmSrv(masterPublicKey auth.PublicKey, pubkey auth.PublicKey, privkey 
 	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	rs.pq = procqclnt.NewProcQClnt(rs.sc.FsLib)
 	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib)
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, ssrv.MemFs.SigmaClnt()))
-	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), pubkey)
-	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NeHMACAUthServer %v", err)
-		return err
-	}
-	rs.as = as
 	go rs.enforceResourcePolicy()
 	err = ssrv.RunServer()
 	rs.mkc.StopMonitoring()
@@ -127,15 +140,16 @@ func (rm *RealmSrv) bootstrapNamedKeys(p *proc.Proc) error {
 		db.DPrintf(db.ERROR, "Error post subsystem key: %v", err)
 		return err
 	}
-	p.Args = append(p.Args,
+	p.Args = append(
 		[]string{
-			rm.masterPublicKey.Marshal(),
+			rm.masterPubKey.Marshal(),
 			pubkey.Marshal(),
 			privkey.Marshal(),
-		}...,
+		},
+		p.Args...,
 	)
 	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := rm.as.MintAndSetToken(p.GetProcEnv()); err != nil {
+	if err := rm.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
@@ -157,6 +171,9 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		return err
 	}
 	p := proc.NewProc("named", []string{req.Realm, "0"})
+	p.GetProcEnv().SetRealm(sp.ROOTREALM, p.GetProcEnv().Overlays)
+	// Make sure named uses netproxy
+	p.GetProcEnv().UseNetProxy = rm.netproxy
 	p.SetMcpu(NAMED_MCPU)
 	rm.bootstrapNamedKeys(p)
 
@@ -180,11 +197,11 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	db.DPrintf(db.REALMD, "RealmSrv.Make named ready to serve for %v", rid)
 	pe := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
 	pe.SetAllowedPaths(sp.ALL_PATHS)
-	if err := rm.as.MintAndSetToken(pe); err != nil {
+	if err := rm.as.MintAndSetProcToken(pe); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error NewSigmaClntRealm: %v", err)
 		return err
@@ -198,8 +215,12 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	// Mount some service union dirs from the root realm
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
-		mnt := sp.NewMountService(namedMount.Addr)
+		mnt := sp.NewMount(namedMount.Addrs(), rid)
 		mnt.SetTree(s)
+		if err := rm.sc.GetAuthSrv().MintAndSetMountToken(mnt); err != nil {
+			db.DPrintf(db.ERROR, "Error mint & set mount token: %v", err)
+			return err
+		}
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
 		if err := sc.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
 			db.DPrintf(db.ERROR, "MountService %v err %v\n", pn, err)
@@ -375,7 +396,8 @@ func (rm *RealmSrv) enforceResourcePolicy() {
 		db.DPrintf(db.FAIRNESS, "Check BE resource allocation")
 		running, err := rm.sd.GetRunningProcs(N_SAMPLE)
 		if err != nil {
-			db.DFatalf("Err getting running procs: %v", err)
+			db.DPrintf(db.ERROR, "Err getting running procs: %v", err)
+			continue
 		}
 		db.DPrintf(db.FAIRNESS, "Running procs: %v", running)
 		resourceUsage := rm.realmResourceUsage(running)

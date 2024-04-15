@@ -4,7 +4,6 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -12,8 +11,6 @@ import (
 
 const (
 	MAXSYMLINK = 8
-	TIMEOUT    = 200 // ms  (XXX belongs in hyperparam?)
-	MAXRETRY   = (fsetcd.SessionTTL + 1) * (1000 / TIMEOUT)
 )
 
 func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
@@ -32,11 +29,11 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, principal *sp.Tprincipa
 // again, perhaps switching to another replica.  (Note:
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
 func (pathc *PathClnt) walk(path path.Path, principal *sp.Tprincipal, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
-	for i := 0; i < MAXRETRY; i++ {
+	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
 		if err, cont := pathc.resolveRoot(path); err != nil {
 			if cont && err.IsErrUnreachable() {
 				db.DPrintf(db.SVCMOUNT, "WalkPath: resolveRoot unreachable %v err %v\n", path, err)
-				time.Sleep(TIMEOUT * time.Millisecond)
+				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 				continue
 			}
 			db.DPrintf(db.SVCMOUNT, "WalkPath: resolveRoot %v err %v\n", path, err)
@@ -46,7 +43,7 @@ func (pathc *PathClnt) walk(path path.Path, principal *sp.Tprincipal, resolve bo
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
 		//		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
 		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v) lat: %v", path, fid, path1, left, err, time.Since(start))
-		if Retry(err) {
+		if serr.Retry(err) {
 			done := len(path1) - len(left)
 			db.DPrintf(db.WALK_ERR, "Walk retry p %v %v l %v d %v err %v by umount %v\n", path, path1, left, done, err, path1[0:done])
 			if e := pathc.umountPrefix(path1[0:done]); e != nil {
@@ -54,7 +51,7 @@ func (pathc *PathClnt) walk(path path.Path, principal *sp.Tprincipal, resolve bo
 			}
 			// try again
 			db.DPrintf(db.WALK_ERR, "walkPathUmount: retry p %v r %v\n", path, resolve)
-			time.Sleep(TIMEOUT * time.Millisecond)
+			time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 			continue
 		}
 		if err != nil {

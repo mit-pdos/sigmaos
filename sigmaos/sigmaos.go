@@ -30,6 +30,7 @@ type SigmaOS interface {
 	PutFile(path string, p sp.Tperm, m sp.Tmode, d []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error)
 	Read(fd int, b []byte) (sp.Tsize, error)
 	Write(fd int, d []byte) (sp.Tsize, error)
+	Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error)
 	Seek(fd int, o sp.Toffset) error
 
 	// Ephemeral
@@ -47,10 +48,10 @@ type SigmaOS interface {
 	DirWait(fd int) error
 
 	// Mounting
-	MountTree(addrs sp.Taddrs, tree, mount string) error
-	IsLocalMount(mnt sp.Tmount) (bool, error)
+	MountTree(mnt *sp.Tmount, tree, mount string) error
+	IsLocalMount(mnt *sp.Tmount) (bool, error)
 	PathLastMount(path string) (path.Path, path.Path, error)
-	GetNamedMount() (sp.Tmount, error)
+	GetNamedMount() (*sp.Tmount, error)
 	NewRootMount(path string, mntname string) error
 
 	// Done using SigmaOS, which detaches from any mounted servers

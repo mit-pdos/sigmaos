@@ -6,8 +6,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+
+	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/keys"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
@@ -154,6 +158,13 @@ func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.Get
 	return nil
 }
 
+func (pq *ProcQ) updateSigmaPath(r sp.Trealm, prog, kernelId string) {
+	db.DPrintf(db.PROCQ, "updateSigmaPath %v %v %v", r, prog, kernelId)
+	if q, ok := pq.qs[r]; ok {
+		q.updateSigmaPath(prog, kernelId)
+	}
+}
+
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
@@ -192,7 +203,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				db.DPrintf(db.PROCQ, "First try to dequeue from %v", r)
 			}
 			db.DPrintf(db.PROCQ, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
-			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem))
+			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem), req.KernelID)
 			db.DPrintf(db.PROCQ, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)
 			if ok {
 				// Decrease aggregate queue length.
@@ -207,6 +218,8 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// requests.
 				res.Mem = uint32(p.GetMem())
 				res.QLen = uint32(pq.qlen)
+				db.DPrintf(db.TEST, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
+				pq.updateSigmaPath(r, p.GetProgram(), req.KernelID)
 				pq.mu.Unlock()
 				return nil
 			}
@@ -273,11 +286,25 @@ func (pq *ProcQ) stats() {
 }
 
 // Run a ProcQ
-func Run() {
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+func Run(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) {
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv %v", err)
+	}
+	sc.SetAuthSrv(as)
 	pq := NewProcQ(sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {

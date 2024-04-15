@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "proc/proc.proto";
+import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/uprocsrv/proto";
 
@@ -22,9 +23,29 @@ message AssignResult {
 message WarmBinRequest {
   string realmStr = 1;
   string program = 2;
-  string buildTag = 3;
+  repeated string sigmaPath = 3;
 }
 
 message WarmBinResult {
   bool oK = 1;
+}
+
+message FetchRequest {
+   string prog = 1;
+   int32 chunkId = 2;
+   uint64 size = 3;
+   uint32 pid = 4;
+}
+
+message FetchResponse {
+  uint64 size = 1;
+}
+
+message LookupRequest {
+   string prog = 1;
+   uint32 pid = 4;
+}
+
+message LookupResponse {
+  Stat stat = 1;
 }

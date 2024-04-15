@@ -11,8 +11,9 @@ message ProcSecretProto {
 
 message ProcClaimsProto {
   string principalIDStr = 1;
-  repeated string allowedPaths = 2;
-  map<string, ProcSecretProto> secrets = 3;
+  string realmStr = 2;
+  repeated string allowedPaths = 3;
+  map<string, ProcSecretProto> secrets = 4;
 }
 
 message ProcEnvProto {
@@ -22,7 +23,7 @@ message ProcEnvProto {
   Tprincipal principal = 4;
   string procDir = 5;
   string parentDir = 6;
-  string etcdIP = 7;
+  map<string, TmountProto> etcdMounts = 7;
   string outerContainerIPStr = 8;
   string innerContainerIPStr = 9;
   string kernelID = 10;
@@ -39,11 +40,15 @@ message ProcEnvProto {
   int32 howInt = 21;
   google.protobuf.Timestamp spawnTimePB = 22;
   string strace = 23;
-  Taddr scheddAddr = 24;
+  TmountProto scheddMountProto = 24;
   TmountProto namedMountProto = 25;
   bool useSigmaclntd = 26;
-  Ttoken parentToken = 27;
-  ProcClaimsProto claims = 28;
+  bool useNetProxy = 27;
+  bool verifyMounts = 28;
+  Ttoken parentToken = 29;
+  ProcClaimsProto claims = 30;
+  repeated string sigmaPath = 31;
+  repeated string kernels = 32;
 }
 
 message ProcProto {

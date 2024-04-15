@@ -21,6 +21,8 @@ const (
 	S3            = NAMED + S3REL + "/"
 	UXREL         = "ux"
 	UX            = NAMED + UXREL + "/"
+	CHUNKDREL     = "chunkd"
+	CHUNKD        = NAMED + CHUNKDREL + "/"
 	SCHEDDREL     = "schedd"
 	SCHEDD        = NAMED + SCHEDDREL + "/"
 	LCSCHEDREL    = "lcsched"
@@ -66,6 +68,7 @@ const (
 
 // Linux path
 const (
-	SIGMAHOME   = "/home/sigmaos"
-	SIGMASOCKET = "/tmp/sigmaclntd/sigmaclntd.sock"
+	SIGMAHOME             = "/home/sigmaos"
+	SIGMASOCKET           = "/tmp/sigmaclntd/sigmaclntd.sock"
+	SIGMA_NETPROXY_SOCKET = "/tmp/sigmaclntd/sigmaclntd-netproxy.sock"
 )

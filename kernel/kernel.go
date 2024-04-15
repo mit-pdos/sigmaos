@@ -42,6 +42,7 @@ type Param struct {
 	Dbip          string
 	Mongoip       string
 	Overlays      bool
+	NetProxy      bool
 	BuildTag      string
 	GVisor        bool
 	ReserveMcpu   string
@@ -106,15 +107,21 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	}
 	// Create an AuthServer which dynamically pulls keys from the namespace, now
 	// that knamed has booted.
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
-	kmgr.AddPublicKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPubKey)
-	kmgr.AddPrivateKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPrivKey)
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		k.Param.MasterPubKey,
+		k.Param.MasterPrivKey,
+		sp.Tsigner(k.ProcEnv().GetPID()),
+		k.Param.MasterPubKey,
+		k.Param.MasterPrivKey,
+	)
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(k.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
 		return nil, err
 	}
 	k.as = as
+	k.SigmaClntKernel.SetAuthSrv(as)
 	db.DPrintf(db.KERNEL, "Kernel start srvs %v", k.Param.Services)
 	err = startSrvs(k)
 	if err != nil {
@@ -144,7 +151,7 @@ func (k *Kernel) Ip() sp.Tip {
 	return k.ip
 }
 
-func (k *Kernel) IsSigmaclntdKernel() bool {
+func (k *Kernel) IsPurelySigmaclntdKernel() bool {
 	db.DPrintf(db.KERNEL, "Check is sigmaclntd kernel: %v", k.Param.Services)
 	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.SIGMACLNTDREL
 }
@@ -168,7 +175,7 @@ func (k *Kernel) getRealmSigmaClnt(realm sp.Trealm) (*sigmaclnt.SigmaClntKernel,
 	}
 	pe := proc.NewDifferentRealmProcEnv(k.ProcEnv(), realm)
 	pe.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.as.MintAndSetToken(pe); err != nil {
+	if err := k.as.MintAndSetProcToken(pe); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}
@@ -254,7 +261,7 @@ func newKNamedProc(realmId sp.Trealm, init bool, masterPubKey auth.PublicKey, ma
 	if init {
 		i = "init"
 	}
-	args := []string{realmId.String(), i, masterPubKey.Marshal()}
+	args := []string{realmId.String(), i, masterPubKey.Marshal(), masterPrivKey.Marshal()}
 	p := proc.NewPrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }

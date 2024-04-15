@@ -144,7 +144,19 @@ func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []by
 }
 
 func (scc *SigmaClntClnt) Read(fd int, b []byte) (sp.Tsize, error) {
-	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b))}
+	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b)), Off: uint64(sp.NoOffset)}
+	rep := scproto.SigmaDataReply{}
+	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
+	d, err := scc.rpcData("SigmaClntSrvAPI.Read", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Read %v size %v niov %v err %v", req, req.Size, len(d), err)
+	if err != nil {
+		return 0, err
+	}
+	return sp.Tsize(len(d[0])), nil
+}
+
+func (scc *SigmaClntClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
+	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b)), Off: uint64(o)}
 	rep := scproto.SigmaDataReply{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	d, err := scc.rpcData("SigmaClntSrvAPI.Read", &req, &rep)
@@ -234,16 +246,16 @@ func (scc *SigmaClntClnt) DirWait(fd int) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) MountTree(addrs sp.Taddrs, tree, mount string) error {
-	req := scproto.SigmaMountTreeRequest{Addr: addrs, Tree: tree, Mount: mount}
+func (scc *SigmaClntClnt) MountTree(mnt *sp.Tmount, tree, mount string) error {
+	req := scproto.SigmaMountTreeRequest{Mount: mnt.GetProto(), Tree: tree, MountName: mount}
 	rep := scproto.SigmaErrReply{}
 	err := scc.rpcErr("SigmaClntSrvAPI.MountTree", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "MountTree %v %v %v", req, rep, err)
 	return err
 }
 
-func (scc *SigmaClntClnt) IsLocalMount(mnt sp.Tmount) (bool, error) {
-	req := scproto.SigmaMountRequest{Mount: mnt.TmountProto}
+func (scc *SigmaClntClnt) IsLocalMount(mnt *sp.Tmount) (bool, error) {
+	req := scproto.SigmaMountRequest{Mount: mnt.GetProto()}
 	rep := scproto.SigmaMountReply{}
 	err := scc.rpcc.RPC("SigmaClntSrvAPI.IsLocalMount", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "IsLocalMount %v %v %v", req, rep, err)
@@ -270,22 +282,22 @@ func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Path, path.Path, error)
 	return rep.Path1, rep.Path2, nil
 }
 
-func (scc *SigmaClntClnt) GetNamedMount() (sp.Tmount, error) {
+func (scc *SigmaClntClnt) GetNamedMount() (*sp.Tmount, error) {
 	req := scproto.SigmaNullRequest{}
 	rep := scproto.SigmaMountReply{}
 	err := scc.rpcc.RPC("SigmaClntSrvAPI.GetNamedMount", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "GetNamedMount %v %v %v", req, rep, err)
 	if err != nil {
-		return sp.NullMount(), nil
+		return sp.NewNullMount(), nil
 	}
 	if rep.Err.TErrCode() != serr.TErrNoError {
-		return sp.NullMount(), nil
+		return sp.NewNullMount(), nil
 	}
-	return sp.Tmount{rep.Mount}, nil
+	return sp.NewMountFromProto(rep.Mount), nil
 }
 
 func (scc *SigmaClntClnt) NewRootMount(pn, mntname string) error {
-	req := scproto.SigmaMountTreeRequest{Tree: pn, Mount: mntname}
+	req := scproto.SigmaMountTreeRequest{Tree: pn, MountName: mntname}
 	rep := scproto.SigmaErrReply{}
 	err := scc.rpcErr("SigmaClntSrvAPI.NewRootMount", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "NewRootMount %v %v", req, rep)

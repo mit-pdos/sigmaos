@@ -28,8 +28,12 @@ func NewCtx(principal *sp.Tprincipal, claims *auth.ProcClaims, sessid sessp.Tses
 	}
 }
 
+func NewPrincipalOnlyCtx(principal *sp.Tprincipal) *Ctx {
+	return NewCtx(principal, nil, 0, sp.NoClntId, nil, nil)
+}
+
 func NewCtxNull() *Ctx {
-	return NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, nil)
+	return NewPrincipalOnlyCtx(sp.NoPrincipal())
 }
 
 func (ctx *Ctx) Principal() *sp.Tprincipal {

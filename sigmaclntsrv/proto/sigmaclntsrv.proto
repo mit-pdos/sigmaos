@@ -71,6 +71,7 @@ message SigmaSizeReply {
 message SigmaReadRequest {
         uint32 fd = 1;
         uint64 size = 2;
+        uint64 off = 3;
 }
 
 message SigmaWriteRequest {
@@ -96,9 +97,9 @@ message SigmaFenceRequest {
 }
 
 message SigmaMountTreeRequest {
-        repeated Taddr addr = 1;
+        TmountProto Mount = 1;
         string tree = 2;
-        string mount = 3;
+        string mountName = 3;
 }
 
 message SigmaLastMountReply {

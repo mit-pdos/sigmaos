@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/chunk"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
 	"sigmaos/lcschedclnt"
-	"sigmaos/pathclnt"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
 	"sigmaos/scheddclnt"
@@ -51,11 +51,7 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool) *ProcClnt {
 
 // Create the named state the proc (and its parent) expects.
 func (clnt *ProcClnt) NewProc(p *proc.Proc, how proc.Thow, kernelId string) error {
-	if how == proc.HSCHEDD {
-		return clnt.spawn(kernelId, how, p)
-	} else {
-		return clnt.spawn(kernelId, how, p)
-	}
+	return clnt.spawn(kernelId, how, p)
 }
 
 func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how proc.Thow, kernelId string) (*exec.Cmd, error) {
@@ -86,6 +82,13 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 
 	p.SetHow(how)
 
+	if kid, ok := clnt.cs.GetBinKernelID(p.GetProgram()); ok {
+		db.DPrintf(db.TEST, "spawn: %v PrependSigmaPath %v %v\n", p.GetPid(), p.GetProgram(), kid)
+		p.PrependSigmaPath(chunk.ChunkdPath(kid))
+	} else {
+		db.DPrintf(db.TEST, "GetBinKernelId %v; no kernel", p.GetProgram())
+	}
+
 	p.InheritParentProcEnv(clnt.ProcEnv())
 
 	db.DPrintf(db.PROCCLNT, "Spawn [%v]: %v", kernelId, p)
@@ -97,6 +100,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 	}
 
 	p.SetSpawnTime(time.Now())
+
 	// Optionally spawn the proc through schedd.
 	if how == proc.HSCHEDD {
 		clnt.cs.Spawned(p.GetPid())
@@ -146,6 +150,10 @@ func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, error) {
 	return clnt.procqclnt.Enqueue(p)
 }
 
+func (clnt *ProcClnt) chooseProcQ(pid sp.Tpid) (string, error) {
+	return clnt.procqclnt.ChooseProcQ(pid)
+}
+
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 	return clnt.lcschedclnt.Enqueue(p)
 }
@@ -153,7 +161,7 @@ func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) {
 	s := time.Now()
 	spawnedKernelID := procqclnt.NOT_ENQ
-	for i := 0; i < pathclnt.MAXRETRY; i++ {
+	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
 		var err error
 		if p.IsPrivileged() {
 			// Privileged procs are force-run on the schedd specified by kernelID in
@@ -164,6 +172,12 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 			if p.GetType() == proc.T_BE {
 				// BE Non-kernel procs are enqueued via the procq.
 				spawnedKernelID, err = clnt.enqueueViaProcQ(p)
+				if err == nil {
+					db.DPrintf(db.TEST, "spawn: SetBinKernelId %v %v\n", p.GetProgram(), spawnedKernelID)
+					clnt.cs.SetBinKernelID(p.GetProgram(), spawnedKernelID)
+					p.SetKernelID(spawnedKernelID, false)
+				}
+				// clnt.cs.DelBinKernelID(p.GetProgram(), spawnedKernelID)
 			} else {
 				// LC Non-kernel procs are enqueued via the procq.
 				spawnedKernelID, err = clnt.enqueueViaLCSched(p)
@@ -183,7 +197,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
 		return spawnedKernelID, nil
 	}
-	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", pathclnt.MAXRETRY, p)
+	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", sp.PATHCLNT_MAXRETRY, p)
 	return spawnedKernelID, serr.NewErr(serr.TErrUnreachable, kernelId)
 }
 
@@ -238,7 +252,6 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 	}
 
 	status, err := clnt.getExitStatus(pid, how)
-
 	return status, err
 }
 

@@ -1,9 +1,14 @@
 package dbsrv
 
 import (
-	// db "sigmaos/debug"
+	"github.com/golang-jwt/jwt"
+
+	"sigmaos/auth"
+	db "sigmaos/debug"
+	"sigmaos/keys"
 	"sigmaos/proc"
 	"sigmaos/sessdevsrv"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -18,13 +23,32 @@ const (
 	QDEV = "query"
 )
 
-func RunDbd(dbdaddr string) error {
-	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
+func RunDbd(dbdaddr string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	s, err := newServer(dbdaddr)
 	if err != nil {
 		return err
 	}
-	ssrv, err := sigmasrv.NewSigmaSrv(sp.DB, s, proc.GetProcEnv())
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+		return err
+	}
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv %v", err)
+	}
+	sc.SetAuthSrv(as)
+
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.DB, sc, s)
 	if err != nil {
 		return err
 	}

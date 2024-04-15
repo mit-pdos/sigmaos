@@ -94,3 +94,25 @@ func NewSymmetricKey(nbyte int) (auth.PrivateKey, error) {
 	base64.StdEncoding.Encode(key, randBytes)
 	return auth.NewPrivateKey[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, key)
 }
+
+func BootstrappedKeysFromArgs(args []string) (auth.PublicKey, auth.PublicKey, auth.PrivateKey, error) {
+	if len(args) < 3 {
+		return nil, nil, nil, fmt.Errorf("Too few args for keys: %v", len(args))
+	}
+	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[0]))
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewPublicKey", err)
+		return nil, nil, nil, err
+	}
+	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[1]))
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewPublicKey", err)
+		return nil, nil, nil, err
+	}
+	privkey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[2]))
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewPrivateKey", err)
+		return nil, nil, nil, err
+	}
+	return masterPubKey, pubkey, privkey, nil
+}

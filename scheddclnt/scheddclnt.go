@@ -71,24 +71,24 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 	return len(sts), nil
 }
 
-func (sdc *ScheddClnt) WarmUprocd(kernelID string, realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
+func (sdc *ScheddClnt) WarmUprocd(kernelID string, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
 	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
 	req := &proto.WarmCacheBinRequest{
-		RealmStr: realm.String(),
-		Program:  prog,
-		BuildTag: buildTag,
-		ProcType: int32(ptype),
+		RealmStr:  realm.String(),
+		Program:   prog,
+		SigmaPath: path,
+		ProcType:  int32(ptype),
 	}
 	res := &proto.WarmCacheBinResponse{}
 	if err := rpcc.RPC("Schedd.WarmUprocd", req, res); err != nil {
 		return err
 	}
 	if !res.OK {
-		db.DPrintf(db.ERROR, "WarmUprocd failed realm %v prog %v tag %v", prog, prog, buildTag)
-		return fmt.Errorf("WarmUprocd failed: realm %v prog %v tag %v", prog, prog, buildTag)
+		db.DPrintf(db.ERROR, "WarmUprocd failed realm %v prog %v tag %v", prog, prog, path)
+		return fmt.Errorf("WarmUprocd failed: realm %v prog %v tag %v", prog, prog, path)
 	}
 	return nil
 }

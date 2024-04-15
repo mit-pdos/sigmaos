@@ -3,13 +3,17 @@ package mongosrv
 import (
 	"context"
 	"fmt"
+	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"sigmaos/auth"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/keys"
 	"sigmaos/mongosrv/proto"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"time"
@@ -44,15 +48,33 @@ func newServer(mongodUrl string) (*MongoSrv, error) {
 	return s, nil
 }
 
-func RunMongod(mongodUrl string) error {
+func RunMongod(mongodUrl string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		dbg.DFatalf("Error NewSigmaClnt: %v", err)
+	}
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		dbg.DFatalf(dbg.ERROR, "Error NewAuthSrv %v", err)
+	}
+	sc.SetAuthSrv(as)
+
 	dbg.DPrintf(dbg.MONGO, "Making mongo proxy server at %v", mongodUrl)
 	s, err := newServer(mongodUrl)
 	if err != nil {
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Starting mongo proxy server")
-	pe := proc.GetProcEnv()
-	ssrv, err := sigmasrv.NewSigmaSrv(sp.MONGO, s, pe)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.MONGO, sc, s)
 	if err != nil {
 		return err
 	}

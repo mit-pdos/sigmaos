@@ -70,7 +70,7 @@ func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilReques
 
 func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
 	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown", ks.k.Param.KernelID)
-	if ks.k.IsSigmaclntdKernel() {
+	if ks.k.IsPurelySigmaclntdKernel() {
 		// This is the last container to shut down, so no named isn't up anymore.
 		// Normal shutdown would involve ending leases, etc., which takes a long
 		// time. Instead, shortcut this by killing sigmaclntd and just exiting.

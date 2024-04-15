@@ -25,6 +25,7 @@ import (
 	"sigmaos/schedsrv/proto"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 )
 
@@ -46,23 +47,9 @@ type Schedd struct {
 	nProcsRun           atomic.Uint64
 	nProcGets           atomic.Uint64
 	nProcGetsSuccessful atomic.Uint64
-	pubkey              auth.PublicKey
-	privkey             auth.PrivateKey
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) *Schedd {
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
-	// Add the master deployment key, to allow connections from kernel to this
-	// schedd.
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubkey)
-	// Add this schedd's keypair to the keymgr
-	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetPID()), pubkey)
-	kmgr.AddPrivateKey(sp.Tsigner(sc.ProcEnv().GetPID()), privkey)
-	db.DPrintf(db.ALWAYS, "kmgr %v", kmgr)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DFatalf("Error NewAuthSrv: %v", err)
-	}
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, as auth.AuthSrv) *Schedd {
 	sd := &Schedd{
 		pmgr:        procmgr.NewProcMgr(as, sc, kernelId),
 		scheddStats: make(map[sp.Trealm]*realmStats),
@@ -72,8 +59,6 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, maste
 		sc:          sc,
 		as:          as,
 		cpuStats:    &cpuStats{},
-		pubkey:      pubkey,
-		privkey:     privkey,
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.scheddclnt = scheddclnt.NewScheddClnt(sc.FsLib)
@@ -83,7 +68,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, maste
 
 // Start uprocd and warm cache of binaries
 func (sd *Schedd) WarmUprocd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
-	if err := sd.pmgr.WarmUprocd(sp.Trealm(req.RealmStr), req.Program, req.BuildTag, proc.Ttype(req.ProcType)); err != nil {
+	if err := sd.pmgr.WarmUprocd(sp.Trealm(req.RealmStr), req.Program, req.SigmaPath, proc.Ttype(req.ProcType)); err != nil {
 		db.DPrintf(db.ERROR, "WarmUprocd %v err %v", req, err)
 		res.OK = false
 		return err
@@ -301,10 +286,11 @@ func (sd *Schedd) shouldGetBEProc() (proc.Tmem, bool) {
 }
 
 func (sd *Schedd) register() {
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sd.sc.FsLib}, path.Join(sp.LCSCHED, "~any"))
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sd.sc.FsLib}, path.Join(sp.LCSCHED, "~any"))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	req := &lcproto.RegisterScheddRequest{
 		KernelID: sd.kernelId,
 		McpuInt:  uint32(sd.mcpufree),
@@ -331,7 +317,21 @@ func RunSchedd(kernelId string, reserveMcpu uint, masterPubKey auth.PublicKey, p
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	sd := NewSchedd(sc, kernelId, reserveMcpu, masterPubKey, pubkey, privkey)
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(sc.ProcEnv().GetPID()),
+		pubkey,
+		privkey,
+	)
+	db.DPrintf(db.SCHEDD, "kmgr %v", kmgr)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv: %v", err)
+	}
+	sc.SetAuthSrv(as)
+	sd := NewSchedd(sc, kernelId, reserveMcpu, as)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

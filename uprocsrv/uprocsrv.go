@@ -4,9 +4,7 @@
 package uprocsrv
 
 import (
-	"io"
 	"os"
-	"os/exec"
 	"path"
 	"sync"
 	"syscall"
@@ -15,56 +13,121 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/golang-jwt/jwt"
+
+	"sigmaos/auth"
 	"sigmaos/binsrv"
+	"sigmaos/chunk"
+	"sigmaos/chunkclnt"
+	"sigmaos/chunksrv"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
+	"sigmaos/keys"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/rand"
+	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/syncmap"
 	"sigmaos/uprocsrv/proto"
 )
 
-type UprocSrv struct {
-	mu       sync.RWMutex
-	ch       chan struct{}
-	pe       *proc.ProcEnv
-	ssrv     *sigmasrv.SigmaSrv
-	kc       *kernelclnt.KernelClnt
-	scsc     *sigmaclntsrv.SigmaClntSrvCmd
-	binsrv   *exec.Cmd
-	kernelId string
-	realm    sp.Trealm
-	assigned bool
+// Lookup may try to read proc in a proc's procEntry before uprocsrv
+// has set it.  To handle this case, procEntry has a condition
+// varialble on which Lookup sleeps until uprocsrv sets proc.
+type procEntry struct {
+	mu   sync.Mutex
+	cond *sync.Cond
+	proc *proc.Proc
 }
 
-func RunUprocSrv(kernelId string, up string) error {
+func newProcEntry(proc *proc.Proc) *procEntry {
+	return &procEntry{proc: proc}
+}
+
+func (pe *procEntry) insertSignal(proc *proc.Proc) {
+	pe.mu.Lock()
+	defer pe.mu.Unlock()
+
+	pe.proc = proc
+	if pe.cond != nil { // some thread is waiting for proc info
+		pe.cond.Broadcast()
+	}
+}
+
+func (pe *procEntry) procWait() {
+	pe.mu.Lock()
+	defer pe.mu.Unlock()
+
+	if pe.proc == nil {
+		pe.cond = sync.NewCond(&pe.mu)
+	}
+	for pe.proc == nil {
+		pe.cond.Wait()
+	}
+}
+
+// Uprocsrv holds the state for serving procs.
+type UprocSrv struct {
+	mu              sync.RWMutex
+	ch              chan struct{}
+	pe              *proc.ProcEnv
+	ssrv            *sigmasrv.SigmaSrv
+	kc              *kernelclnt.KernelClnt
+	sc              *sigmaclnt.SigmaClnt
+	scsc            *sigmaclntsrv.SigmaClntSrvCmd
+	kernelId        string
+	realm           sp.Trealm
+	netproxy        bool
+	assigned        bool
+	sigmaclntdPID   sp.Tpid
+	marshaledSCKeys []string
+	procs           *syncmap.SyncMap[int, *procEntry]
+	ckclnt          *chunkclnt.ChunkClnt
+}
+
+func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpid, marshaledSCKeys []string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	pe := proc.GetProcEnv()
-	ups := &UprocSrv{kernelId: kernelId, ch: make(chan struct{}), pe: pe}
-
-	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP())
-
-	// Start binfsd now; when uprocds gets assigned to a realm, then
-	// uprocd mounts the realm's bin directory that binfs will cache
-	// in and serve from.
-	ups.binsrv = exec.Command("binfsd", ups.kernelId, ups.pe.GetPID().String())
-	ups.binsrv.Stdout = os.Stdout
-	ups.binsrv.Stderr = os.Stderr
-
-	if err := ups.binsrv.Start(); err != nil {
-		db.DPrintf(db.UPROCD, "Error start %v %v", ups.binsrv, err)
-		return err
+	ups := &UprocSrv{
+		kernelId:        kernelId,
+		netproxy:        netproxy,
+		ch:              make(chan struct{}),
+		pe:              pe,
+		sigmaclntdPID:   sigmaclntdPID,
+		marshaledSCKeys: marshaledSCKeys,
+		realm:           sp.NOREALM,
+		procs:           syncmap.NewSyncMap[int, *procEntry](),
 	}
 
+	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
+
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
+	ups.sc = sc
+	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
+		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
+		masterPubKey,
+		nil,
+		sp.Tsigner(pe.GetPID()),
+		pubkey,
+		privkey,
+	)
+	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	if err != nil {
+		db.DFatalf("Error NewAuthSrv %v", err)
+	}
+	sc.SetAuthSrv(as)
 	var ssrv *sigmasrv.SigmaSrv
-	var err error
 	if up == sp.NO_PORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
-		ssrv, err = sigmasrv.NewSigmaSrv(pn, ups, pe)
+		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
 	} else {
 		var port sp.Tport
 		port, err = sp.ParsePort(up)
@@ -74,7 +137,7 @@ func RunUprocSrv(kernelId string, up string) error {
 		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port, pe.GetNet())
 
 		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.NewSigmaSrvAddr("", addr, pe, ups)
+		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
 	}
 	if err != nil {
 		return err
@@ -89,13 +152,27 @@ func RunUprocSrv(kernelId string, up string) error {
 	}
 	defer p.Done()
 
+	// Start binfsd now; when uprocds gets assigned to a realm, then
+	// uprocd mounts the realm's bin directory that binfs will serve
+	// from.
+	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String())
+	if err != nil {
+		db.DPrintf(db.ERROR, "ExecBinSrv err %v\n", err)
+		return err
+	}
+
+	clnt, err := chunkclnt.NewChunkClnt(ups.sc.FsLib, chunk.ChunkdPath(ups.kernelId))
+	if err != nil {
+		return err
+	}
+	ups.ckclnt = clnt
+
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
+		return err
 	}
 	db.DPrintf(db.UPROCD, "RunServer done\n")
-	if ups.binsrv != nil {
-		ups.binsrv.Process.Kill()
-	}
+	binsrv.Shutdown()
 	return nil
 }
 
@@ -138,7 +215,7 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	defer ups.mu.RUnlock()
 
 	// If already assigned, bail out
-	if ups.assigned {
+	if ups.realm != sp.NOREALM {
 		return nil
 	}
 
@@ -146,13 +223,15 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	ups.mu.RUnlock()
 	ups.mu.Lock()
 	// If already assigned, demote lock & bail out
-	if ups.assigned {
+	if ups.realm != sp.NOREALM {
 		ups.mu.Unlock()
 		ups.mu.RLock()
 		return nil
 	}
 	start := time.Now()
-	defer db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
+	defer func(start time.Time) {
+		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
+	}(start)
 
 	start = time.Now()
 	innerIP, err := netsigma.LocalIP()
@@ -172,15 +251,14 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v done", realm)
 	// Note that the uprocsrv has been assigned.
-	ups.assigned = true
+	ups.realm = realm
 
 	// Now that the uprocd's innerIP has been established, spawn sigmaclntd
-	pid := sp.GenPid("sigmaclntd")
-	scdp := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
+	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
 	scdp.InheritParentProcEnv(ups.pe)
 	scdp.SetHow(proc.HLINUX)
 	start = time.Now()
-	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET, ups.marshaledSCKeys)
 	if err != nil {
 		return err
 	}
@@ -209,41 +287,52 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		db.DFatalf("Err assign to realm: %v", err)
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-	return container.RunUProc(uproc)
-}
 
-// Read the binary so that binfs loads it into its cache for
-// experiments with a warm cache.
-func readFile(pn string) error {
-	f, err := os.Open(pn)
+	if sts, err := ups.sc.GetDir(sp.CHUNKD); err == nil {
+		db.DPrintf(db.ALWAYS, "chunksrvs %v", sp.Names(sts))
+	} else {
+		db.DPrintf(db.ALWAYS, "chunksrvs err %v", err)
+	}
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	cmd, err := container.StartUProc(uproc, ups.netproxy)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	buf := make([]byte, 1024)
-	for {
-		_, err := f.Read(buf)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
+
+	pid := cmd.Pid()
+	db.DPrintf(db.UPROCD, "Pid %d\n", pid)
+	pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
+	if !alloc { // it was already inserted
+		pe.insertSignal(uproc)
 	}
-	return nil
+
+	err = cmd.Wait()
+	container.CleanupUproc(uproc.GetPid())
+	ups.procs.Delete(pid)
+	// ups.sc.CloseFd(pe.fd)
+	return err
 }
 
 // Warm uprocd to run a program for experiments with warm start.
 func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
-	pn := binsrv.BinPath(req.Program, req.BuildTag)
-	db.DPrintf(db.UPROCD, "WarmProc %q %v", pn, req)
+	db.DPrintf(db.UPROCD, "WarmProc %v pid %v", req, os.Getpid())
 	if err := ups.assignToRealm(sp.Trealm(req.RealmStr), sp.NO_PID); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
-	if err := readFile(pn); err != nil {
-		res.OK = false
+	st, err := chunksrv.Lookup(ups.sc, req.Program, req.SigmaPath)
+	if err != nil {
 		return err
+	}
+	n := (st.Length / chunksrv.CHUNKSZ) + 1
+	db.DPrintf(db.UPROCD, "WarmProc lookup %q %v %d", req.Program, st, n)
+	for ck := 0; ck < int(n); ck++ {
+		reqsz := sp.Tsize(st.Length)
+		if sz, err := ups.ckclnt.Fetch(req.Program, sp.Tpid(rand.String(4)), sp.Trealm(req.RealmStr), ck, reqsz, req.SigmaPath); err != nil {
+			return err
+		} else {
+			db.DPrintf(db.UPROCD, "WarmProc fetch %q %d %v", req.Program, ck, sz)
+		}
 	}
 	res.OK = true
 	return nil
@@ -259,9 +348,58 @@ func mountRealmBinDir(realm sp.Trealm) error {
 	}
 
 	mnt := path.Join(sp.SIGMAHOME, "bin", "user")
-	if err := syscall.Mount(dir, mnt, "none", syscall.MS_BIND, ""); err != nil {
+
+	db.DPrintf(db.UPROCD, "mountRealmBinDir: %q %q\n", dir, mnt)
+
+	if err := syscall.Mount(dir, mnt, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount realm's bin dir %q to %q err %v", dir, mnt, err)
 		return err
 	}
+	return nil
+}
+
+func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.FetchResponse) error {
+	db.DPrintf(db.UPROCD, "Uprocd %v fetch %v", ups.kernelId, req)
+
+	pe, ok := ups.procs.Lookup(int(req.Pid))
+	if !ok || pe.proc == nil {
+		db.DFatalf("Fetch: procs.Lookup %d\n", req.Pid)
+	}
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q %v ck %d spawn %v", req.Prog, pe.proc.GetSigmaPath()[0], pe.proc.GetPid(), req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
+
+	sz, err := ups.ckclnt.Fetch(req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
+	if err != nil {
+		return err
+	}
+	res.Size = uint64(sz)
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d sz %d %v", req.Prog, req.ChunkId, sz, time.Since(pe.proc.GetSpawnTime()))
+
+	return nil
+}
+
+func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.LookupResponse) error {
+	db.DPrintf(db.UPROCD, "Uprocd Lookup %v", req)
+
+	pe, alloc := ups.procs.Alloc(int(req.Pid), newProcEntry(nil))
+	if alloc {
+		db.DPrintf(db.UPROCD, "Lookup wait for pid %v %v\n", req.Pid, pe)
+		pe.procWait()
+	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v %v spawn %v", req.Prog, pe.proc.GetSigmaPath(), pe.proc.GetPid(), time.Since(pe.proc.GetSpawnTime()))
+
+	paths := pe.proc.GetSigmaPath()
+	if chunksrv.IsChunkSrvPath(paths[0]) {
+		paths = paths[1:]
+	}
+	st, err := chunksrv.Lookup(ups.sc, req.Prog, paths)
+	if err != nil {
+		return err
+	}
+	res.Stat = st
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done spawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
+
 	return nil
 }

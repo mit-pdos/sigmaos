@@ -2,31 +2,26 @@ package main
 
 import (
 	"os"
+	"strconv"
 
-	"github.com/golang-jwt/jwt"
-
-	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/keys"
 	"sigmaos/realmsrv"
 )
 
 func main() {
-	if len(os.Args) != 4 {
-		db.DFatalf("Usage: %v masterPubKey pubKey privKey\n", os.Args[0])
+	if len(os.Args) != 5 {
+		db.DFatalf("Usage: %v masterPubKey pubKey privKey usenetproxy", os.Args[0])
 	}
-	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[1]))
+	masterPubKey, pubkey, privkey, err := keys.BootstrappedKeysFromArgs(os.Args[1:])
 	if err != nil {
-		db.DFatalf("Error NewPublicKey", err)
+		db.DFatalf("Error get bootstrapped keys", err)
 	}
-	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[2]))
+	netproxy, err := strconv.ParseBool(os.Args[4])
 	if err != nil {
-		db.DFatalf("Error NewPublicKey", err)
+		db.DFatalf("Error parse netproxy: %v", err)
 	}
-	privkey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(os.Args[3]))
-	if err != nil {
-		db.DFatalf("Error NewPrivateKey", err)
-	}
-	if err := realmsrv.RunRealmSrv(masterPubKey, pubkey, privkey); err != nil {
+	if err := realmsrv.RunRealmSrv(netproxy, masterPubKey, pubkey, privkey); err != nil {
 		db.DFatalf("Fatal start: %v %v\n", os.Args[0], err)
 	}
 }

@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--reserveMcpu rmcpu] [--pubkey PUB_KEY] [--privkey PRIV_KEY] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] [--pubkey PUB_KEY] [--privkey PRIV_KEY] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -18,6 +18,7 @@ NET="host"
 KERNELID=""
 OVERLAYS="false"
 GVISOR="false"
+NETPROXY="false"
 PUB_KEY="NOT_SET"
 PRIV_KEY="NOT_SET"
 RMCPU="0"
@@ -27,10 +28,10 @@ while [[ "$#" -gt 1 ]]; do
     shift
     case "$1" in
         "all")
-            BOOT="knamed;keyd;procq;lcsched;schedd;ux;s3;db;mongo;named"
+            BOOT="knamed;keyd;procq;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
             ;;
         "node")
-            BOOT="procq;schedd;ux;s3;db;mongo"
+            BOOT="procq;schedd;ux;s3;db;chunkd;mongo"
             ;;
         "named")
             BOOT="knamed;keyd"
@@ -39,7 +40,7 @@ while [[ "$#" -gt 1 ]]; do
             BOOT="sigmaclntd"
             ;;
         "realm")
-            BOOT="knamed;keyd;procq;lcsched;schedd;realmd;ux;s3;db;mongo;named"
+            BOOT="knamed;keyd;procq;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
             ;;
         *)
             echo "unexpected argument $1 to boot"
@@ -65,6 +66,10 @@ while [[ "$#" -gt 1 ]]; do
   --gvisor)
     shift
     GVISOR="true"
+    ;;
+  --usenetproxy)
+    shift
+    NETPROXY="true"
     ;;
   --pubkey)
     shift
@@ -187,6 +192,7 @@ CID=$(docker run -dit \
              -e overlays=${OVERLAYS} \
              -e buildtag=${TAG} \
              -e gvisor=${GVISOR} \
+             -e netproxy=${NETPROXY} \
              -e pubkey="${PUB_KEY}" \
              -e privkey="${PRIV_KEY}" \
              -e SIGMAPERF=${SIGMAPERF} \

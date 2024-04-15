@@ -21,6 +21,7 @@ import (
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
 )
 
@@ -114,10 +115,11 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
 		if sigmaos {
-			rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{ts.SigmaClnt.FsLib}, hotel.HOTELRESERVE)
+			ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.SigmaClnt.FsLib}, hotel.HOTELRESERVE)
 			if err != nil {
 				db.DFatalf("Error make reserve pdc: %v", err)
 			}
+			rpcc := rpcclnt.NewRPCClnt(ch)
 			reservec = rpcc
 		}
 	}
@@ -132,7 +134,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 			port, err := strconv.Atoi(p)
 			assert.Nil(ts.Ts.T, err, "Err parse port %v: %v", p, err)
 			addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port), ts.ProcEnv().GetNet())
-			mnt := sp.NewMountService([]*sp.Taddr{addr})
+			mnt := sp.NewMount([]*sp.Taddr{addr}, ts.ProcEnv().GetRealm())
 			if err = ts.MkMountFile(p, mnt, sp.NoLeaseId); err != nil {
 				db.DFatalf("MkMountFile %v", err)
 			}

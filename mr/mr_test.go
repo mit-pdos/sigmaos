@@ -78,7 +78,7 @@ func TestNewWordCount(t *testing.T) {
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
 	data := make(seqwc.Tdata, 0)
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, sp.NO_IP, sp.NO_IP, sp.NO_IP, "", false, false), perf.SEQWC)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false, false), perf.SEQWC)
 	assert.Nil(t, err)
 	sbc := mr.NewScanByteCounter(p)
 	for scanner.Scan() {
@@ -133,7 +133,7 @@ func TestMapper(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, sp.NO_IP, sp.NO_IP, sp.NO_IP, "", false, false), perf.MRMAPPER)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
 	ts.Remove(REDUCEIN)
@@ -336,12 +336,13 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 		pe := proc.NewAddedProcEnv(t1.ProcEnv())
 		pe.SetPrincipal(sp.NewPrincipal(
 			sp.TprincipalID("mr-restricted-principal"),
+			pe.GetRealm(),
 			sp.NoToken(),
 		))
 
 		// Load restricted AWS secrets
 		pe.SetSecrets(map[string]*proc.ProcSecretProto{"s3": s3secrets})
-		err1 = t1.MintAndSetToken(pe)
+		err1 = t1.MintAndSetProcToken(pe)
 		assert.Nil(t, err1)
 
 		// Create a SigmaClnt with the more restricted principal.
@@ -351,6 +352,12 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 		}
 	}
 	ts := newTstate(t1, runApp)
+
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "BootProcd 1")
+
+	err = ts.BootNode(1)
+	assert.Nil(t, err, "BootProcd 2")
 
 	sdc := scheddclnt.NewScheddClnt(sc.FsLib)
 	if monitor {

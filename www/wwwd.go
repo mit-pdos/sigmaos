@@ -1,7 +1,6 @@
 package www
 
 import (
-	"net"
 	"net/http"
 	"os"
 	"path"
@@ -12,7 +11,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/microbenchmarks"
-	"sigmaos/netsigma"
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -48,20 +46,17 @@ func RunWwwd(job, tree string) {
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
-	ip, err := netsigma.LocalIP()
-	if err != nil {
-		db.DFatalf("Error LocalIP: %v", err)
-	}
+	//	ip, err := netsigma.LocalIP()
+	//	if err != nil {
+	//		db.DFatalf("Error LocalIP: %v", err)
+	//	}
 
-	l, err := net.Listen("tcp", ip.String()+":0")
+	mnt, l, err := www.ssrv.SigmaClnt().GetNetProxyClnt().Listen(sp.NewTaddrAnyPort(sp.OUTER_CONTAINER_IP, www.ssrv.ProcEnv().GetNet()))
 	if err != nil {
 		db.DFatalf("Error Listen: %v", err)
 	}
 
 	// Write a file for clients to discover the server's address.
-	//	mnt := sp.NewMountService(sp.NewTaddrs([]*sp.Taddr{sp.NewTaddrRealm(l.Addr().String())}))
-	db.DFatalf("TODO: split host port")
-	mnt := sp.NewMountService(nil)
 	if err = www.ssrv.SigmaClnt().MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
 		db.DFatalf("MkMountFile %v", err)
 	}

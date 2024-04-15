@@ -2,7 +2,6 @@
 package procqclnt
 
 import (
-	"errors"
 	"time"
 
 	db "sigmaos/debug"
@@ -30,25 +29,30 @@ func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
 	}
 }
 
+func (pqc *ProcQClnt) ChooseProcQ(pid sp.Tpid) (string, error) {
+	s := time.Now()
+	pqc.urpcc.UpdateSrvs(false)
+	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt updateProcQs %v", pid, time.Since(s))
+	s = time.Now()
+	pqId, err := pqc.urpcc.RandomSrv()
+	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt get ProcQ[%v] latency: %v", pid, pqId, time.Since(s))
+	return pqId, err
+}
+
 // Enqueue a proc on the procq. Returns the ID of the kernel that is running
 // the proc.
 func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
-	s := time.Now()
-	pqc.urpcc.UpdateSrvs(false)
-	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt updateProcQs %v", p.GetPid(), time.Since(s))
-	s = time.Now()
-	pqID, err := pqc.urpcc.RandomSrv()
+	pqID, err := pqc.ChooseProcQ(p.GetPid())
 	if err != nil {
-		return NOT_ENQ, errors.New("No procqs available")
+		return NOT_ENQ, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt get ProcQ[%v] latency: %v", p.GetPid(), pqID, time.Since(s))
-	s = time.Now()
+	s := time.Now()
 	rpcc, err := pqc.urpcc.GetClnt(pqID)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error: Can't get procq clnt: %v", err)
 		return NOT_ENQ, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt make clnt %v", p.GetPid(), time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt make clnt %v %v", p.GetPid(), pqID, time.Since(s))
 	req := &proto.EnqueueRequest{
 		ProcProto: p.GetProto(),
 	}

@@ -198,7 +198,14 @@ func (scs *SigmaClntSrvAPI) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest
 
 func (scs *SigmaClntSrvAPI) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaDataReply) error {
 	b := make([]byte, req.Size)
-	cnt, err := scs.sc.Read(int(req.Fd), b)
+	o := sp.Toffset(req.Off)
+	var cnt sp.Tsize
+	var err error
+	if o == sp.NoOffset {
+		cnt, err = scs.sc.Read(int(req.Fd), b)
+	} else {
+		cnt, err = scs.sc.Pread(int(req.Fd), b, o)
+	}
 	b = b[:cnt]
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	rep.Err = scs.setErr(err)

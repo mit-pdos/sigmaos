@@ -47,6 +47,8 @@ message ProcEnvProto {
   bool verifyMounts = 28;
   Ttoken parentToken = 29;
   ProcClaimsProto claims = 30;
+  repeated string sigmaPath = 31;
+  repeated string kernels = 32;
 }
 
 message ProcProto {

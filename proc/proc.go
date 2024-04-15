@@ -133,6 +133,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
 	p.ProcEnvProto.VerifyMounts = p.ProcEnvProto.UseNetProxy
 	p.ProcEnvProto.ParentToken = parentPE.Principal.GetToken()
+	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
 	// If parent didn't specify allowed paths, inherit the parent's allowed paths
 	if p.ProcEnvProto.Claims.AllowedPaths == nil {
 		p.ProcEnvProto.Claims.AllowedPaths = parentPE.Claims.AllowedPaths
@@ -166,6 +167,27 @@ func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 	}
 }
 
+func (p *Proc) SetKernels(kernels []string) {
+	p.ProcEnvProto.Kernels = kernels
+}
+
+func (p *Proc) HasNoKernelPref() bool {
+	return len(p.ProcEnvProto.Kernels) == 0
+}
+
+func (p *Proc) HasKernelPref(kernelID string) bool {
+	for _, k := range p.ProcEnvProto.Kernels {
+		if k == kernelID {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *Proc) PrependSigmaPath(pn string) {
+	p.ProcEnvProto.PrependSigmaPath(pn)
+}
+
 // Finalize env details which can only be set once a physical machine and
 // uprocd container have been chosen.
 func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
@@ -182,11 +204,12 @@ func (p *Proc) IsPrivileged() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t KernelId:%v UseSigmaclntd:%v UseNetProxy:%v VerifyMounts:%v Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
+	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t SigmaPath:%v KernelId:%v UseSigmaclntd:%v UseNetProxy:%v VerifyMounts:%v Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.GetPID(),
 		p.ProcEnvProto.GetBuildTag(),
 		p.ProcEnvProto.Privileged,
+		p.ProcEnvProto.GetSigmaPath(),
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.UseSigmaclntd,
 		p.ProcEnvProto.UseNetProxy,
@@ -230,6 +253,10 @@ func (p *Proc) GetProcEnv() *ProcEnv {
 
 func (p *Proc) GetProgram() string {
 	return p.ProcEnvProto.Program
+}
+
+func (p *Proc) GetSigmaPath() []string {
+	return p.ProcEnvProto.SigmaPath
 }
 
 func (p *Proc) GetProcDir() string {

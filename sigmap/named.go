@@ -21,6 +21,8 @@ const (
 	S3            = NAMED + S3REL + "/"
 	UXREL         = "ux"
 	UX            = NAMED + UXREL + "/"
+	CHUNKDREL     = "chunkd"
+	CHUNKD        = NAMED + CHUNKDREL + "/"
 	SCHEDDREL     = "schedd"
 	SCHEDD        = NAMED + SCHEDDREL + "/"
 	LCSCHEDREL    = "lcsched"

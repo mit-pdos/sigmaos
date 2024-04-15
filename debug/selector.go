@@ -25,6 +25,7 @@ const (
 // Latency break-down.
 const (
 	SPAWN_LAT      Tselector = "SPAWN_LAT"
+	NET_LAT        Tselector = "NET_LAT"
 	REALM_GROW_LAT           = "REALM_GROW_LAT"
 	SESS_LAT                 = "SESS_LAT"
 	CACHE_LAT                = "CACHE_LAT"
@@ -137,6 +138,8 @@ const (
 	SIGMACLNTSRV               = "SIGMACLNTSRV"
 	SIGMACLNTSRV_ERR           = "SIGMACLNTSRV" + ERR
 	BINSRV                     = "BINSRV"
+	CHUNKSRV                   = "CHUNKSRV"
+	CHUNKCLNT                  = "CHUNKCLNT"
 )
 
 // Realm

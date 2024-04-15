@@ -8,6 +8,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/keys"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
@@ -53,15 +54,11 @@ func RunFsUx(rootux string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, 
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
-	fsux := newUx(rootux)
-	root, sr := newDir([]string{rootux})
-	if sr != nil {
-		db.DFatalf("newDir %v\n", sr)
-	}
+	fsux, root := NewUx(rootux)
 	addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 	srv, err := sigmasrv.NewSigmaSrvRootClnt(root, path.Join(sp.UX, pe.GetKernelID()), addr, sc)
 	if err != nil {
-		db.DFatalf("BootSrvAndPost %v\n", err)
+		db.DFatalf("NewSigmaSrvRootClnt %v\n", err)
 	}
 	fsux.SigmaSrv = srv
 
@@ -75,8 +72,12 @@ func RunFsUx(rootux string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, 
 	fsux.RunServer()
 }
 
-func newUx(rootux string) *FsUx {
+func NewUx(rootux string) (*FsUx, fs.Dir) {
 	fsux = &FsUx{}
 	fsux.ot = NewObjTable()
-	return fsux
+	root, sr := newDir([]string{rootux})
+	if sr != nil {
+		db.DFatalf("newDir %v\n", sr)
+	}
+	return fsux, root
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse"
 
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 )
 
 var _ = (fs.NodeStatfser)((*binFsNode)(nil))
@@ -35,15 +36,21 @@ var _ = (fs.NodeLookuper)((*binFsNode)(nil))
 
 // Lookup name in bincache and fake a unix inode
 func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
+	c := ctx.(*fuse.Context).Caller
+	db.DPrintf(db.BINSRV, "%v: Lookup %q %d\n", n.path(), name, c.Pid)
+
 	pn := filepath.Join(n.path(), name)
-	sst, err := n.RootData.bincache.lookup(pn)
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup", pn)
+
+	sst, err := n.RootData.bincache.lookup(pn, c.Pid)
 	if err != nil {
 		return nil, fs.ToErrno(os.ErrNotExist)
 	}
 	ust := syscall.Stat_t{}
 	toUstat(sst, &ust)
 	out.Attr.FromStat(&ust)
-	node := n.RootData.newNode(n.EmbeddedInode(), name, ust.Size)
+	node := n.RootData.newNode(n.EmbeddedInode(), name, sp.Tsize(sst.Length))
 	ch := n.NewInode(ctx, node, idFromStat(&ust))
 
 	db.DPrintf(db.BINSRV, "%v: Lookup %q %v\n", n, name, node)
@@ -57,12 +64,12 @@ var _ = (fs.NodeOpener)((*binFsNode)(nil))
 func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
 	p := n.path()
 
+	c := ctx.(*fuse.Context).Caller
+	db.DPrintf(db.SPAWN_LAT, "[%v] Open pid %d", p, c.Pid)
+
 	db.DPrintf(db.BINSRV, "%v: Open %q\n", n, p)
 
-	dl, err := n.RootData.bincache.getDownload(p, n.sz)
-	if err != nil {
-		return nil, 0, fs.ToErrno(os.ErrNotExist)
-	}
+	dl := n.RootData.bincache.getDownload(p, n.sz, c.Pid)
 	lf := newBinFsFile(p, dl)
 	return lf, fuse.FOPEN_KEEP_CACHE, 0
 }
@@ -87,8 +94,9 @@ func (n *binFsNode) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 var _ = (fs.NodeGetattrer)((*binFsNode)(nil))
 
 func (n *binFsNode) Getattr(ctx context.Context, f fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
+	c := ctx.(*fuse.Context).Caller
 	pn := n.path()
-	sst, err := n.RootData.bincache.lookup(pn)
+	sst, err := n.RootData.bincache.lookup(pn, c.Pid)
 	if err != nil {
 		return fs.ToErrno(os.ErrNotExist)
 	}

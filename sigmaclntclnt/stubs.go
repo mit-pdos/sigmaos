@@ -144,7 +144,19 @@ func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []by
 }
 
 func (scc *SigmaClntClnt) Read(fd int, b []byte) (sp.Tsize, error) {
-	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b))}
+	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b)), Off: uint64(sp.NoOffset)}
+	rep := scproto.SigmaDataReply{}
+	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
+	d, err := scc.rpcData("SigmaClntSrvAPI.Read", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "Read %v size %v niov %v err %v", req, req.Size, len(d), err)
+	if err != nil {
+		return 0, err
+	}
+	return sp.Tsize(len(d[0])), nil
+}
+
+func (scc *SigmaClntClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
+	req := scproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b)), Off: uint64(o)}
 	rep := scproto.SigmaDataReply{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	d, err := scc.rpcData("SigmaClntSrvAPI.Read", &req, &rep)

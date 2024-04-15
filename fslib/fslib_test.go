@@ -329,6 +329,12 @@ func TestReadOff(t *testing.T) {
 	assert.Equal(t, 2, n)
 	assert.Equal(t, "lo", string(b[:2]))
 
+	fd, err := ts.Open(fn, sp.OREAD)
+	assert.Nil(t, err)
+	n1, err := ts.Pread(fd, b, 3)
+	assert.Equal(t, sp.Tsize(2), n1)
+	assert.Equal(t, "lo", string(b[:2]))
+
 	err = ts.Remove(fn)
 	assert.Nil(t, err, "Remove: %v", err)
 

@@ -49,6 +49,8 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp
 		ss, err = k.bootSigmaclntd()
 	case sp.S3REL:
 		ss, err = k.bootS3d(realm)
+	case sp.CHUNKDREL:
+		ss, err = k.bootChunkd(realm)
 	case sp.UXREL:
 		ss, err = k.bootUxd(realm)
 	case sp.DBREL:
@@ -155,6 +157,10 @@ func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {
 
 func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {
 	return k.bootSubsystemBootstrapKeys("fss3d", []string{}, realm, proc.HSCHEDD, 0)
+}
+
+func (k *Kernel) bootChunkd(realm sp.Trealm) (Subsystem, error) {
+	return k.bootSubsystemBootstrapKeys("chunkd", []string{k.Param.KernelID}, realm, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {

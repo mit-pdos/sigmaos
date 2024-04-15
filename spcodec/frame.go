@@ -40,7 +40,6 @@ func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
 	if error := proto.Unmarshal(f, fm.Fc); error != nil {
 		db.DFatalf("Decoding fcall err %v", error)
 	}
-
 	b := make(sessp.Tframe, fm.Fc.Len)
 	n, error := io.ReadFull(t.rdr, b)
 	if n != len(b) {
@@ -110,6 +109,7 @@ func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
 	if err := t.wrt.Flush(); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
+	db.DPrintf(db.NET_LAT, "Flush len %d %v\n", len(b), c)
 	return nil
 }
 

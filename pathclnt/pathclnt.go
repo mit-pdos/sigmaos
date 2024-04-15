@@ -102,7 +102,7 @@ func (pathc *PathClnt) detachAll() error {
 	db.DPrintf(db.ALWAYS, "%v: Fslib.detachAll %v\n", pathc.cid, mnts)
 	for _, mnt := range mnts {
 		if r := pathc.Detach(mnt); r != nil {
-			db.DPrintf(db.TEST, "%v: detachAll %v err %v\n", pathc.cid, mnt, r)
+			db.DPrintf(db.PATHCLNT_ERR, "%v: detachAll %v err %v\n", pathc.cid, mnt, r)
 			err = r
 		}
 	}

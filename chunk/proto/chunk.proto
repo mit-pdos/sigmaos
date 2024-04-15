@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+import "rpc/proto/rpc.proto";
+
+option go_package = "sigmaos/chunk/proto";
+
+message FetchChunkRequest {
+   string prog = 1;
+   int32 chunkId = 2;
+   uint64 size = 3;
+   string realm = 4;
+   repeated string sigmaPath = 5;
+   string pid = 6;
+   bool data = 7;
+}
+
+message FetchChunkResponse {
+  Blob blob = 1;
+  uint64 size = 2;
+}

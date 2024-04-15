@@ -30,6 +30,7 @@ type SigmaOS interface {
 	PutFile(path string, p sp.Tperm, m sp.Tmode, d []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error)
 	Read(fd int, b []byte) (sp.Tsize, error)
 	Write(fd int, d []byte) (sp.Tsize, error)
+	Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error)
 	Seek(fd int, o sp.Toffset) error
 
 	// Ephemeral

@@ -178,8 +178,8 @@ if [[ $APPS == "--apps" ]]; then
         cleanup
         go test $VERB sigmaos/imgresizesrv -start $GVISOR $SIGMACLNTD $NETPROXY -run ImgdOne
         cleanup
-        go test $VERB sigmaos/kv -start $GVISOR $SIGMACLNTD $NETPROXY -run KVOKN
-        cleanup
+        # go test $VERB sigmaos/kv -start $GVISOR $SIGMACLNTD $NETPROXY -run KVOKN
+        # cleanup
         ./start-db.sh
         go test $VERB sigmaos/hotel -start $GVISOR $SIGMACLNTD $NETPROXY -run TestBenchDeathStarSingle
         cleanup

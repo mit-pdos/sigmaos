@@ -88,6 +88,7 @@ func (nc *netConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
 	if err := spcodec.UnmarshalMsg(fcm); err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.NET_LAT, "ReadCall fm %v\n", fcm)
 	rep := nc.ssrv.serve(nc.sess, fcm.Fcm)
 	pmfc := spcodec.NewPartMarshaledMsg(rep)
 	return pmfc, nil

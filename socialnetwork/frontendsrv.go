@@ -108,44 +108,43 @@ func RunFrontendSrv(public bool, job string) error {
 	mux.HandleFunc("/home", frontend.homeHandler)
 	mux.HandleFunc("/startrecording", frontend.startRecordingHandler)
 	//	}
-	/*
-		if public {
-			pc, pi, err := portclnt.NewPortClntPort(frontend.FsLib)
-			if err != nil {
-				dbg.DFatalf("AllocPort err %v", err)
-			}
-			frontend.pc = pc
-			l, err := net.Listen("tcp", ":"+pi.Pb.RealmPort.String())
-			if err != nil {
-				dbg.DFatalf("Error %v Listen: %v", public, err)
-			}
-			//		if TRACING {
-			//			go tmux.Serve(l)
-			//		} else {
-			go http.Serve(l, mux)
-			//		}
-			a, err := container.QualifyAddr(l.Addr().String())
-			if err != nil {
-				dbg.DFatalf("QualifyAddr %v err %v", a, err)
-			}
-			if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, frontend.ProcEnv().GetNet(), a); err != nil {
-				dbg.DFatalf("AdvertisePort %v", err)
-			}
-		} else {
-	*/
-	mnt, l, err := sc.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, frontend.ProcEnv().GetNet()))
-	if err != nil {
-		dbg.DFatalf("Error %v Listen: %v", public, err)
-	}
-	//		if TRACING {
-	//			go tmux.Serve(l)
-	//		} else {
-	go http.Serve(l, mux)
-	//		}
+	dbg.DPrintf(dbg.ALWAYS, "SN public? %v", public)
+	if public {
+		pc, pi, err := portclnt.NewPortClntPort(frontend.FsLib)
+		if err != nil {
+			dbg.DFatalf("AllocPort err %v", err)
+		}
+		frontend.pc = pc
+		mnt, l, err := sc.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, sc.ProcEnv().GetNet()))
+		if err != nil {
+			dbg.DFatalf("Error %v Listen: %v", public, err)
+		}
+		dbg.DPrintf(dbg.ALWAYS, "SN Got mnt %v pi %v", mnt, pi)
 
-	dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", mnt)
-	if err = frontend.MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
-		dbg.DFatalf("MkMountFile %v", err)
+		//		if TRACING {
+		//			go tmux.Serve(l)
+		//		} else {
+		go http.Serve(l, mux)
+		//		}
+		mnt.Addrs()[0].IPStr = pi.HostIP.String()
+		mnt.Addrs()[0].PortInt = uint32(pi.PBinding.HostPort)
+		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, sc.ProcEnv().GetNet(), mnt); err != nil {
+			dbg.DFatalf("AdvertisePort %v", err)
+		}
+	} else {
+		mnt, l, err := sc.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, frontend.ProcEnv().GetNet()))
+		if err != nil {
+			dbg.DFatalf("Error %v Listen: %v", public, err)
+		}
+		//		if TRACING {
+		//			go tmux.Serve(l)
+		//		} else {
+		go http.Serve(l, mux)
+		dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", mnt)
+		if err = sc.MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
+			dbg.DFatalf("MkMountFile %v", err)
+		}
+
 	}
 
 	perf, err := perf.NewPerf(frontend.ProcEnv(), perf.SOCIAL_NETWORK_FRONTEND)

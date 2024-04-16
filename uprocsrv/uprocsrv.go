@@ -284,17 +284,12 @@ func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.Ass
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
+	db.DPrintf(db.SPAWN_LAT, "[%v] UprocSrv.Run recvd proc lat: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
-
-	if sts, err := ups.sc.GetDir(sp.CHUNKD); err == nil {
-		db.DPrintf(db.ALWAYS, "chunksrvs %v", sp.Names(sts))
-	} else {
-		db.DPrintf(db.ALWAYS, "chunksrvs err %v", err)
-	}
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	cmd, err := container.StartUProc(uproc, ups.netproxy)

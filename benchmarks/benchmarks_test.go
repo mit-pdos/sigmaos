@@ -340,8 +340,28 @@ func TestMicroScheddSpawn(t *testing.T) {
 		prog = "spawn-bench"
 	}
 
-	// XXX remove
+	sts, err := rootts.GetDir(sp.SCHEDD)
+	assert.Nil(rootts.T, err, "Err GetDir schedd: %v", err)
+	kernels := sp.Names(sts)
+	db.DPrintf(db.TEST, "Kernels %v", kernels)
+
+	// XXX clean up
+	// Prep the sleeper bin cache
+	db.DPrintf(db.TEST, "Warm up sleeper bin cache on kernel %v", kernels[0])
+	p1 := proc.NewProc("sleeper", []string{"1ms", "name/"})
+	p1.SetKernels([]string{kernels[0]})
+	p1s := []*proc.Proc{p1}
+	spawnProcs(ts1, p1s)
+	waitStartProcs(ts1, p1s)
+	waitExitProcs(ts1, p1s)
+	db.DPrintf(db.TEST, "Warm up remainder of the realm for sleeper")
 	warmupRealm(ts1, []string{"sleeper"})
+	db.DPrintf(db.TEST, "Warm up %v bin cache on kernel %v", prog, kernels[0])
+	p2 := proc.NewProc(prog, nil)
+	p2.SetKernels([]string{kernels[0]})
+	p2s := []*proc.Proc{p2}
+	spawnProcs(ts1, p2s)
+	waitStartProcs(ts1, p2s)
 
 	if PREWARM_REALM {
 		warmupRealm(ts1, []string{prog})
@@ -349,11 +369,6 @@ func TestMicroScheddSpawn(t *testing.T) {
 
 	// Allow the uprocd pool to refill
 	time.Sleep(5 * time.Second)
-
-	sts, err := rootts.GetDir(sp.SCHEDD)
-	assert.Nil(rootts.T, err, "Err GetDir schedd: %v", err)
-	kernels := sp.Names(sts)
-	db.DPrintf(db.TEST, "Kernels %v", kernels)
 
 	done := make(chan bool)
 	// Prep Schedd job

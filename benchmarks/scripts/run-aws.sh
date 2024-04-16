@@ -1281,7 +1281,7 @@ schedd_scalability_rs_with_kernel_pref() {
 #  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
 #  for qps_per_machine in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400; do
   for qps_per_machine in 1 ; do
-    n_vm=23
+    n_vm=8
     rps=$((n_vm * $qps_per_machine))
     run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
     echo "========== Running $run =========="
@@ -1292,7 +1292,7 @@ schedd_scalability_rs_with_kernel_pref() {
     fi
     stop_k8s_cluster $KVPC
     cmd="
-      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;SPAWN_LAT;CHUNKSRV;CHUNKCLNT;\"; \
       ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
       go clean -testcache; \
       go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key $NETPROXY --with_kernel_pref > /tmp/bench.out 2>&1

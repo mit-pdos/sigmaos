@@ -341,7 +341,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 	}
 
 	// XXX remove
-	warmupRealm(ts1, []string{"named"})
+	warmupRealm(ts1, []string{"sleeper"})
 
 	if PREWARM_REALM {
 		warmupRealm(ts1, []string{prog})

@@ -171,11 +171,11 @@ func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
 
 // Warm up a realm, by starting uprocds for it on all machines in the cluster.
 func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
-	db.DPrintf(db.TEST, "Warm up realm %v for progs %v", ts.GetRealm(), progs)
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	// Get the list of schedds.
 	sds, err := sdc.GetSchedds()
 	assert.Nil(ts.Ts.T, err, "Get Schedds: %v", err)
+	db.DPrintf(db.TEST, "Warm up realm %v for progs %v schedds %v", ts.GetRealm(), progs, sds)
 	start := time.Now()
 	nDL := 0
 	for _, kid := range sds {

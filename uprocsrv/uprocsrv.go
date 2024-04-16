@@ -361,7 +361,7 @@ func mountRealmBinDir(realm sp.Trealm) error {
 }
 
 func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.FetchResponse) error {
-	db.DPrintf(db.UPROCD, "Uprocd %v fetch %v", ups.kernelId, req)
+	db.DPrintf(db.UPROCD, "Uprocd %v Fetch %v", ups.kernelId, req)
 
 	pe, ok := ups.procs.Lookup(int(req.Pid))
 	if !ok || pe.proc == nil {
@@ -370,13 +370,14 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q %v ck %d spawn %v", req.Prog, pe.proc.GetSigmaPath()[0], pe.proc.GetPid(), req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
 
+	start := time.Now()
 	sz, err := ups.ckclnt.Fetch(req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
 	res.Size = uint64(sz)
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d sz %d %v", req.Prog, req.ChunkId, sz, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d sz %d spawnlat %v fetchlat %v", req.Prog, req.ChunkId, sz, time.Since(pe.proc.GetSpawnTime()), time.Since(start))
 
 	return nil
 }

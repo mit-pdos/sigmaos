@@ -66,16 +66,17 @@ func min(n int64, l int) int {
 	}
 }
 
-func (dl *downloader) read(off int64, len int) (int, error) {
+func (dl *downloader) read(off int64, nbyte int) (int, error) {
 	i := chunksrv.Index(off)
 	o := off - chunksrv.Ckoff(i)
-	j := chunksrv.Index(off+int64(len)) + 1
+	j := chunksrv.Index(off+int64(nbyte)) + 1
 	n := int64(0)
-	db.DPrintf(db.BINSRV, "read %d %d: chunks [%d,%d)", off, len, i, j)
+	db.DPrintf(db.BINSRV, "read %d %d: chunks [%d,%d)", off, nbyte, i, j)
 	for c := i; c < j; c++ {
 		pn := binCachePath(dl.pn)
 		sz, ok := chunksrv.IsPresent(pn, c, dl.sz)
 		if !ok {
+			db.DPrintf(db.BINSRV, "read %d %d: chunk %v not present, need to fetch", off, nbyte, c)
 			s := time.Now()
 			sz0, err := dl.fetchChunk(c)
 			if err != nil {
@@ -88,7 +89,8 @@ func (dl *downloader) read(off int64, len int) (int, error) {
 			db.DPrintf(db.SPAWN_LAT, "[%v] fetchChunk %d dur %v tot %v", dl.pn, c, d, dl.tot)
 		}
 		n += sz
-		db.DPrintf(db.BINSRV, "read %q ck %d sz %d\n", pn, c, sz)
+		db.DPrintf(db.BINSRV, "read %q ck %d sz %d", pn, c, sz)
 	}
-	return min(n-o, len), nil
+	db.DPrintf(db.BINSRV, "read done %d %d: chunks [%d,%d)", off, nbyte, i, j)
+	return min(n-o, nbyte), nil
 }

@@ -253,11 +253,11 @@ func downloadPaths(paths []string, kernelId string) []string {
 }
 
 func Lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, error) {
-	db.DPrintf(db.CHUNKSRV, "Lookup %q %v\n", prog, paths)
+	db.DPrintf(db.CHUNKSRV, "Lookup %q %v", prog, paths)
 
 	var st *sp.Stat
 	err := fslib.RetryPaths(paths, func(i int, pn string) error {
-		db.DPrintf(db.CHUNKSRV, "Stat %q/%q\n", pn, prog)
+		db.DPrintf(db.CHUNKSRV, "Stat %q/%q", pn, prog)
 		sst, err := sc.Stat(pn + "/" + prog)
 		if err == nil {
 			sst.Dev = uint32(i)
@@ -266,13 +266,14 @@ func Lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, err
 		}
 		return err
 	})
+	db.DPrintf(db.CHUNKSRV, "Lookup done %q %v st %v err %v", prog, paths, st, err)
 	return st, err
 }
 
 func open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, error) {
 	sfd := -1
 	if err := fslib.RetryPaths(paths, func(i int, pn string) error {
-		db.DPrintf(db.CHUNKSRV, "sOpen %q/%v\n", pn, prog)
+		db.DPrintf(db.CHUNKSRV, "sOpen %q/%v", pn, prog)
 		fd, err := sc.Open(pn+"/"+prog, sp.OREAD)
 		if err == nil {
 			sfd = fd
@@ -300,16 +301,16 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 		}
 		o2, err := f.Seek(o1, SEEK_HOLE)
 		if err != nil {
-			db.DFatalf("Seek hole %q %d err %v\n", pn, o2, err)
+			db.DFatalf("Seek hole %q %d err %v", pn, o2, err)
 		}
 		for o := o1; o < o2; o += CHUNKSZ {
 			if o%CHUNKSZ != 0 {
-				db.DFatalf("offset %d\n", o)
+				db.DFatalf("offset %d", o)
 			}
 			if o+CHUNKSZ <= o2 || o2 >= int64(totsz) { // a complete chunk?
 				i := Index(o)
 				if i == ck {
-					db.DPrintf(db.CHUNKSRV, "IsPresent: %q read chunk %d(%d) o2 %d sz %d\n", pn, i, o, o2, totsz)
+					db.DPrintf(db.CHUNKSRV, "IsPresent: %q read chunk %d(%d) o2 %d sz %d", pn, i, o, o2, totsz)
 					ok = true
 					sz = CHUNKSZ
 					if o+CHUNKSZ >= int64(totsz) {
@@ -322,7 +323,7 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 		off = o2
 	}
 	if sz > CHUNKSZ {
-		db.DFatalf("IsPresent %d sz\n", sz)
+		db.DFatalf("IsPresent %d sz", sz)
 	}
 	return sz, ok
 }

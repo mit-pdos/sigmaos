@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"syscall"
+	"time"
 
 	"golang.org/x/sys/unix"
 
@@ -49,13 +50,16 @@ func (f *binfsFile) open() {
 }
 
 func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.ReadResult, errno syscall.Errno) {
-	db.DPrintf(db.BINSRV, "Read %q off %d %d\n", f.pn, off, len(buf))
+	db.DPrintf(db.BINSRV, "Read %q off %d len %d", f.pn, off, len(buf))
+	start := time.Now()
 	sz, err := f.dl.read(off, len(buf))
 	if err != nil {
+		db.DPrintf(db.BINSRV, "Read %q err %v", f.pn, err)
 		return nil, syscall.EBADF
 	}
 	f.open()
-	db.DPrintf(db.BINSRV, "ReadResult %q o %d sz %d\n", f.pn, off, sz)
+	db.DPrintf(db.BINSRV, "ReadResult %q o %d sz %d", f.pn, off, sz)
+	db.DPrintf(db.SPAWN_LAT, "FUSE.Read latency %q o %d sz %d: %v", f.pn, off, sz, time.Since(start))
 	r := fuse.ReadResultFd(uintptr(f.fd), off, int(sz))
 	return r, fs.OK
 }

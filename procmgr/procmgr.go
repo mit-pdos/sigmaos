@@ -126,7 +126,8 @@ func (mgr *ProcMgr) WarmUprocd(realm sp.Trealm, prog string, path []string, ptyp
 	defer func(start time.Time) {
 		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] WarmUprocd latency: %v", realm, prog, time.Since(start))
 	}(start)
-
+	// Warm up sigmaclnt
+	mgr.getSigmaClnt(realm)
 	if err := mgr.updm.WarmStartUprocd(realm, ptype); err != nil {
 		db.DPrintf(db.ERROR, "WarmStartUprocd %v err %v", realm, err)
 		return err

@@ -53,6 +53,13 @@ func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
 	urpcc.Lock()
 	defer urpcc.Unlock()
 
+	return urpcc.getClntL(srvID)
+}
+
+func (urpcc *UnionRPCClnt) getClntL(srvID string) (*rpcclnt.RPCClnt, error) {
+	db.DPrintf(urpcc.lSelector, "getClnt for %v", srvID)
+	defer db.DPrintf(urpcc.lSelector, "Done getClnt for %v", srvID)
+
 	var rpcc *rpcclnt.RPCClnt
 	var ok bool
 	if rpcc, ok = urpcc.clnts[srvID]; !ok {
@@ -101,6 +108,8 @@ func (urpcc *UnionRPCClnt) updateSrvsL(srvs []string) {
 	urpcc.srvs = make([]string, 0, len(srvs))
 	for _, srvid := range srvs {
 		urpcc.srvs = append(urpcc.srvs, srvid)
+		// Eagerly create an RPC clnt for the srv
+		urpcc.getClntL(srvid)
 	}
 }
 

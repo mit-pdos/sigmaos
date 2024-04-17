@@ -382,6 +382,18 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v %v spawn %v", req.Prog, pe.proc.GetSigmaPath(), pe.proc.GetPid(), time.Since(pe.proc.GetSpawnTime()))
 
+	if req.Prog == "spawn-latency" {
+		res.Stat = &sp.Stat{
+			Name:   "spawn-latency",
+			Length: 4737848,
+			Qid: &sp.Tqid{
+				Path: 1234567,
+			},
+		}
+		db.DPrintf(db.SPAWN_LAT, "[%v] Lookup skipped spawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
+		return nil
+	}
+
 	paths := pe.proc.GetSigmaPath()
 	if chunksrv.IsChunkSrvPath(paths[0]) {
 		paths = paths[1:]

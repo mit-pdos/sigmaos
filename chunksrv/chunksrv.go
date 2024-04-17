@@ -112,7 +112,9 @@ func (cksrv *ChunkSrv) getClnt(pn string) (*chunkclnt.ChunkClnt, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.ckclnt == nil {
+		start := time.Now()
 		ckclnt, err := chunkclnt.NewChunkClnt(cksrv.sc.FsLib, pn)
+		db.DPrintf(db.SPAWN_LAT, "[%v] Create NewChunkClnt lat: %v", pn, time.Since(start))
 		if err != nil {
 			return nil, err
 		}

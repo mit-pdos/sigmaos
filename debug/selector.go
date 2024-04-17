@@ -128,18 +128,20 @@ const (
 	PROCCACHE                  = "PROCCACHE"
 	PROCFS                     = "PROCFS"
 	CGROUP                     = "CGROUP"
-	CGROUP_ERR                 = "CGROUP_ERR"
+	CGROUP_ERR                 = "CGROUP" + ERR
 	S3                         = "S3"
 	UX                         = "UX"
 	DB                         = "DB"
 	MONGO                      = "MONGO"
-	MONGO_ERR                  = "MONGO_ERR"
+	MONGO_ERR                  = "MONGO" + ERR
 	PROXY                      = "PROXY"
 	SIGMACLNTSRV               = "SIGMACLNTSRV"
 	SIGMACLNTSRV_ERR           = "SIGMACLNTSRV" + ERR
 	BINSRV                     = "BINSRV"
 	CHUNKSRV                   = "CHUNKSRV"
+	CHUNKSRV_ERR               = "CHUNKSRV" + ERR
 	CHUNKCLNT                  = "CHUNKCLNT"
+	CHUNKCLNT_ERR              = "CHUNKCLNT" + ERR
 )
 
 // Realm

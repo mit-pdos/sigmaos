@@ -163,6 +163,8 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	}
 
 	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
+	// Update chunkds, so that unionrpcclnt starts monitoring them
+	ups.sckclnt.UpdateChunkds()
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
@@ -358,7 +360,7 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 		db.DFatalf("Fetch: procs.Lookup %d\n", req.Pid)
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q %v ck %d spawn %v", req.Prog, pe.proc.GetSigmaPath()[0], pe.proc.GetPid(), req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q %v ck %d sinceSpawn %v", req.Prog, pe.proc.GetSigmaPath()[0], pe.proc.GetPid(), req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
 
 	start := time.Now()
 	sz, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
@@ -367,7 +369,7 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 	}
 	res.Size = uint64(sz)
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d sz %d spawnlat %v fetchlat %v", req.Prog, req.ChunkId, sz, time.Since(pe.proc.GetSpawnTime()), time.Since(start))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d sz %d sinceSpawn %v fetchlat %v", req.Prog, req.ChunkId, sz, time.Since(pe.proc.GetSpawnTime()), time.Since(start))
 
 	return nil
 }
@@ -380,31 +382,29 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 		db.DPrintf(db.UPROCD, "Lookup wait for pid %v %v\n", req.Pid, pe)
 		pe.procWait()
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v %v spawn %v", req.Prog, pe.proc.GetSigmaPath(), pe.proc.GetPid(), time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v %v sinceSpawn %v", pe.proc.GetPid(), pe.proc.GetSigmaPath(), req.Prog, time.Since(pe.proc.GetSpawnTime()))
 
-	if req.Prog == "spawn-latency" {
-		res.Stat = &sp.Stat{
-			Name:   "spawn-latency",
-			Length: 4737848,
-			Qid: &sp.Tqid{
-				Path: 1234567,
-			},
-		}
-		db.DPrintf(db.SPAWN_LAT, "[%v] Lookup skipped spawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
-		return nil
-	}
-
+	start := time.Now()
 	paths := pe.proc.GetSigmaPath()
+	var st *sp.Stat
+	var err error
 	if chunksrv.IsChunkSrvPath(paths[0]) {
-		paths = paths[1:]
-	}
-	st, err := chunksrv.Lookup(ups.sc, req.Prog, paths)
-	if err != nil {
-		return err
+		cksrv := path.Base(paths[0])
+		// XXX tolerate failures?
+		st, err = ups.ckclnt.GetFileStat(cksrv, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), paths)
+		if err != nil {
+			return err
+		}
+	} else {
+		st, err = chunksrv.Lookup(ups.sc, req.Prog, paths)
+		if err != nil {
+			return err
+		}
 	}
 	res.Stat = st
+	db.DPrintf(db.SPAWN_LAT, "[%v] GetFileStat path %v prog %v lat %v sinceSpawn %v", pe.proc.GetPid(), pe.proc.GetSigmaPath(), req.Prog, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done spawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done sinceSpawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
 
 	return nil
 }

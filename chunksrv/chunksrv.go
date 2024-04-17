@@ -1,6 +1,7 @@
 package chunksrv
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -57,6 +58,16 @@ type binEntry struct {
 	fd    int
 	prog  string
 	realm sp.Trealm
+	st    *sp.Stat
+}
+
+func newBinEntry(prog string, realm sp.Trealm) *binEntry {
+	return &binEntry{
+		prog:  prog,
+		realm: realm,
+		fd:    -1,
+		st:    nil,
+	}
 }
 
 func (be *binEntry) signal() {
@@ -107,14 +118,27 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 	return cksrv
 }
 
-func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string) *binEntry {
+func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, paths []string) (*binEntry, error) {
 	pn := filepath.Join(r.String(), prog)
 	be, ok := cksrv.bins.Lookup(pn)
 	if ok {
-		return be
+		return be, nil
 	}
-	be, _ = cksrv.bins.Alloc(pn, &binEntry{prog: prog, realm: r, fd: -1})
-	return be
+	// Allocate a new bin entry
+	be, _ = cksrv.bins.Alloc(pn, newBinEntry(prog, r))
+
+	be.mu.Lock()
+	defer be.mu.Unlock()
+
+	// Fill in stats
+	if be.st == nil {
+		st, err := Lookup(cksrv.sc, prog, paths)
+		if err != nil {
+			return nil, err
+		}
+		be.st = st
+	}
+	return be, nil
 }
 
 func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchChunkResponse) (bool, error) {
@@ -151,7 +175,11 @@ func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog string, pid sp.Tpid, paths 
 
 func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, paths []string, ck int, b []byte) (sp.Tsize, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: %v ck %d %v", cksrv.kernelId, prog, ck, paths)
-	be := cksrv.getBin(r, prog)
+	be, err := cksrv.getBin(r, prog, paths)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error fetchOrigin getBin: %v", err)
+		return 0, err
+	}
 	fd, err := be.getFd(cksrv.sc, paths)
 	if err != nil {
 		return 0, err
@@ -208,6 +236,28 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 	}
 	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: writeChunk %v pid %v ck %d sz %d", cksrv.kernelId, pn, req.Pid, req.ChunkId, sz)
 	res.Size = uint64(sz)
+	return nil
+}
+
+func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
+	db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: %v", cksrv.kernelId, req)
+	defer db.DPrintf(db.CHUNKSRV, "%v: GetFileStat done: %v", cksrv.kernelId, req)
+
+	paths := req.GetSigmaPath()
+	// Skip chunksrv paths
+	for IsChunkSrvPath(paths[0]) {
+		paths = paths[1:]
+	}
+	if len(paths) < 1 {
+		return fmt.Errorf("Error no paths left")
+	}
+
+	be, err := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg(), paths)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error getBin: %v", err)
+		return err
+	}
+	res.Stat = be.st
 	return nil
 }
 

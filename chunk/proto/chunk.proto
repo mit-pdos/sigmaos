@@ -1,8 +1,20 @@
 syntax = "proto3";
 
 import "rpc/proto/rpc.proto";
+import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/chunk/proto";
+
+message GetFileStatRequest {
+  string prog = 1;
+  string realmStr = 2;
+  string pid = 3;
+  repeated string sigmaPath = 4;
+}
+
+message GetFileStatResponse {
+  Stat stat = 1;
+}
 
 message FetchChunkRequest {
    string prog = 1;

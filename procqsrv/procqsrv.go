@@ -306,7 +306,8 @@ func Run(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.Privat
 	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
 		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}
-
+	// Update schedds, so that unionrpcclnt starts monitoring them
+	pq.scheddclnt.UpdateSchedds()
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.PROCQ)
 	if err != nil {

@@ -92,7 +92,7 @@ type ChunkSrv struct {
 	sc       *sigmaclnt.SigmaClnt
 	kernelId string
 	path     string
-	ckclnts  *syncmap.SyncMap[string, *ckclntEntry]
+	ckclnt   *chunkclnt.ChunkClnt
 	bins     *syncmap.SyncMap[string, *binEntry]
 }
 
@@ -101,26 +101,10 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 		sc:       sc,
 		kernelId: kernelId,
 		path:     chunk.ChunkdPath(kernelId),
-		ckclnts:  syncmap.NewSyncMap[string, *ckclntEntry](),
 		bins:     syncmap.NewSyncMap[string, *binEntry](),
+		ckclnt:   chunkclnt.NewChunkClnt(sc.FsLib),
 	}
 	return cksrv
-}
-
-func (cksrv *ChunkSrv) getClnt(pn string) (*chunkclnt.ChunkClnt, error) {
-	e, _ := cksrv.ckclnts.Alloc(pn, &ckclntEntry{})
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if e.ckclnt == nil {
-		start := time.Now()
-		ckclnt, err := chunkclnt.NewChunkClnt(cksrv.sc.FsLib, pn)
-		db.DPrintf(db.SPAWN_LAT, "[%v] Create NewChunkClnt lat: %v", pn, time.Since(start))
-		if err != nil {
-			return nil, err
-		}
-		e.ckclnt = ckclnt
-	}
-	return e.ckclnt, nil
 }
 
 func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string) *binEntry {
@@ -156,12 +140,9 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 }
 
 func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog, pid string, paths []string, ck int, reqsz sp.Tsize, b []byte) (sp.Tsize, error) {
-	clnt, err := cksrv.getClnt(paths[0])
-	if err != nil {
-		return 0, err
-	}
+	chunkdID := path.Base(paths[0])
 	db.DPrintf(db.CHUNKSRV, "%v: fetchChunkd: %v ck %d %v", cksrv.kernelId, prog, ck, paths)
-	sz, err := clnt.FetchChunk(prog, pid, r, ck, reqsz, paths, b)
+	sz, err := cksrv.ckclnt.FetchChunk(chunkdID, prog, pid, r, ck, reqsz, paths, b)
 	if err != nil {
 		return 0, err
 	}

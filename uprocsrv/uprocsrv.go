@@ -18,7 +18,6 @@ import (
 
 	"sigmaos/auth"
 	"sigmaos/binsrv"
-	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	"sigmaos/container"
@@ -163,11 +162,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		return err
 	}
 
-	clnt, err := chunkclnt.NewChunkClnt(ups.sc.FsLib, chunk.ChunkdPath(ups.kernelId))
-	if err != nil {
-		return err
-	}
-	ups.ckclnt = clnt
+	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
@@ -325,7 +320,7 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	db.DPrintf(db.UPROCD, "WarmProc lookup %q %v %d", req.Program, st, n)
 	for ck := 0; ck < int(n); ck++ {
 		reqsz := sp.Tsize(st.Length)
-		if sz, err := ups.ckclnt.Fetch(req.Program, sp.Tpid(rand.String(4)), sp.Trealm(req.RealmStr), ck, reqsz, req.SigmaPath); err != nil {
+		if sz, err := ups.ckclnt.Fetch(ups.kernelId, req.Program, sp.Tpid(rand.String(4)), sp.Trealm(req.RealmStr), ck, reqsz, req.SigmaPath); err != nil {
 			return err
 		} else {
 			db.DPrintf(db.UPROCD, "WarmProc fetch %q %d %v", req.Program, ck, sz)
@@ -366,7 +361,7 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q %v ck %d spawn %v", req.Prog, pe.proc.GetSigmaPath()[0], pe.proc.GetPid(), req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
 
 	start := time.Now()
-	sz, err := ups.ckclnt.Fetch(req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
+	sz, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
 	if err != nil {
 		return err
 	}

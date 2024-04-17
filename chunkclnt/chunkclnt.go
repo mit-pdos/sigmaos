@@ -5,29 +5,32 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	rpcproto "sigmaos/rpc/proto"
-	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
+	"sigmaos/unionrpcclnt"
 )
 
 type ChunkClnt struct {
-	rpcc *rpcclnt.RPCClnt
+	urpcc *unionrpcclnt.UnionRPCClnt
+	done  int32
 }
 
-func NewChunkClnt(fsl *fslib.FsLib, pn string) (*ChunkClnt, error) {
-	db.DPrintf(db.CHUNKCLNT, "NewChunkClnt %q", pn)
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{fsl}, pn)
-	if err != nil {
-		db.DPrintf(db.CHUNKCLNT, "rpcclnt err %v", err)
-		return nil, err
-	}
+func NewChunkClnt(fsl *fslib.FsLib) *ChunkClnt {
+	db.DPrintf(db.CHUNKCLNT, "NewChunkClnt")
 	ckclnt := &ChunkClnt{
-		rpcc: rpcclnt.NewRPCClnt(ch),
+		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.CHUNKD, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
 	}
-	return ckclnt, nil
+	return ckclnt
 }
 
-func (ckclnt *ChunkClnt) FetchChunk(pn, pid string, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, error) {
+func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {
+	ckclnt.urpcc.UnregisterSrv(srv)
+}
+
+func (ckclnt *ChunkClnt) FetchChunk(srvid string, pn, pid string, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, error) {
+	rpcc, err := ckclnt.urpcc.GetClnt(srvid)
+	if err != nil {
+		return 0, err
+	}
 	req := &proto.FetchChunkRequest{
 		Prog:      pn,
 		ChunkId:   int32(ck),
@@ -39,14 +42,18 @@ func (ckclnt *ChunkClnt) FetchChunk(pn, pid string, realm sp.Trealm, ck int, sz 
 	}
 	res := &proto.FetchChunkResponse{}
 	res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
-	if err := ckclnt.rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
+	if err := rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
 		db.DPrintf(db.CHUNKCLNT, "ChunkClnt.FetchChunk %v err %v", req, err)
 		return 0, err
 	}
 	return sp.Tsize(res.Size), nil
 }
 
-func (ckclnt *ChunkClnt) Fetch(prog string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string) (sp.Tsize, error) {
+func (ckclnt *ChunkClnt) Fetch(srvid string, prog string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string) (sp.Tsize, error) {
+	rpcc, err := ckclnt.urpcc.GetClnt(srvid)
+	if err != nil {
+		return 0, err
+	}
 	req := &proto.FetchChunkRequest{
 		Prog:      prog,
 		ChunkId:   int32(ck),
@@ -57,7 +64,7 @@ func (ckclnt *ChunkClnt) Fetch(prog string, pid sp.Tpid, realm sp.Trealm, ck int
 		Data:      false,
 	}
 	res := &proto.FetchChunkResponse{}
-	if err := ckclnt.rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
+	if err := rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
 		db.DPrintf(db.CHUNKCLNT, "ChunkClnt.Fetch %v err %v", req, err)
 		return 0, err
 	}

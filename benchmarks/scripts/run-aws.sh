@@ -1222,7 +1222,7 @@ schedd_scalability_rs_single_machine() {
       go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key $NETPROXY > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 40 $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC $ncore $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -1260,7 +1260,7 @@ schedd_scalability_rs() {
       go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key $NETPROXY > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 40 $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC $ncore $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -1298,7 +1298,7 @@ schedd_scalability_rs_with_kernel_pref() {
       go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key $NETPROXY --with_kernel_pref > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 40 $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC $ncore $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -1308,11 +1308,11 @@ schedd_scalability_rs_with_kernel_pref() {
 }
 
 schedd_scalability_rs_without_kernel_pref() {
-  driver_vm=23
+  driver_vm=7
 #  qps_per_machine=1100
 #  qps_per_machine=1800
   dur="5s"
-  ncore=40
+  ncore=16
   turbo="--turbo"
   prewarm=""
 #  prewarm="--prewarm_realm"
@@ -1336,7 +1336,7 @@ schedd_scalability_rs_without_kernel_pref() {
       go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key $NETPROXY > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 40 $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC $ncore $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir

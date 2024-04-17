@@ -26,7 +26,7 @@ func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {
 	ckclnt.urpcc.UnregisterSrv(srv)
 }
 
-func (ckclnt *ChunkClnt) FetchChunk(srvid string, pn, pid string, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, error) {
+func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, error) {
 	rpcc, err := ckclnt.urpcc.GetClnt(srvid)
 	if err != nil {
 		return 0, err
@@ -37,7 +37,7 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid string, pn, pid string, realm sp.Treal
 		Size:      uint64(sz),
 		Realm:     string(realm),
 		SigmaPath: path,
-		Pid:       pid,
+		Pid:       pid.String(),
 		Data:      true,
 	}
 	res := &proto.FetchChunkResponse{}

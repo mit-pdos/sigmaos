@@ -139,7 +139,7 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 	return false, nil
 }
 
-func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog, pid string, paths []string, ck int, reqsz sp.Tsize, b []byte) (sp.Tsize, error) {
+func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog string, pid sp.Tpid, paths []string, ck int, reqsz sp.Tsize, b []byte) (sp.Tsize, error) {
 	chunkdID := path.Base(paths[0])
 	db.DPrintf(db.CHUNKSRV, "%v: fetchChunkd: %v ck %d %v", cksrv.kernelId, prog, ck, paths)
 	sz, err := cksrv.ckclnt.FetchChunk(chunkdID, prog, pid, r, ck, reqsz, paths, b)
@@ -185,7 +185,7 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 
 	ok := false
 	for IsChunkSrvPath(paths[0]) {
-		sz, err = cksrv.fetchChunkd(r, req.Prog, req.Pid, []string{paths[0]}, ck, sp.Tsize(req.Size), b)
+		sz, err = cksrv.fetchChunkd(r, req.Prog, sp.Tpid(req.Pid), []string{paths[0]}, ck, sp.Tsize(req.Size), b)
 		if err == nil {
 			ok = true
 			break

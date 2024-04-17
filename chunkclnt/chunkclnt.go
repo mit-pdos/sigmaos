@@ -49,10 +49,10 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 	return res.Stat, nil
 }
 
-func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, error) {
+func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, *sp.Stat, error) {
 	rpcc, err := ckclnt.urpcc.GetClnt(srvid)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	req := &proto.FetchChunkRequest{
 		Prog:      pn,
@@ -67,9 +67,9 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 	res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	if err := rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
 		db.DPrintf(db.CHUNKCLNT_ERR, "ChunkClnt.FetchChunk %v err %v", req, err)
-		return 0, err
+		return 0, nil, err
 	}
-	return sp.Tsize(res.Size), nil
+	return sp.Tsize(res.Size), res.Stat, nil
 }
 
 func (ckclnt *ChunkClnt) Fetch(srvid string, prog string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string) (sp.Tsize, error) {

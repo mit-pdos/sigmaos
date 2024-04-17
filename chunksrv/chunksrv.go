@@ -61,12 +61,12 @@ type binEntry struct {
 	st    *sp.Stat
 }
 
-func newBinEntry(prog string, realm sp.Trealm) *binEntry {
+func newBinEntry(prog string, realm sp.Trealm, st *sp.Stat) *binEntry {
 	return &binEntry{
 		prog:  prog,
 		realm: realm,
 		fd:    -1,
-		st:    nil,
+		st:    st,
 	}
 }
 
@@ -118,14 +118,15 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 	return cksrv
 }
 
-func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, paths []string) (*binEntry, error) {
+func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, st *sp.Stat, paths []string) (*binEntry, error) {
 	pn := filepath.Join(r.String(), prog)
 	be, ok := cksrv.bins.Lookup(pn)
 	if ok {
 		return be, nil
 	}
+	db.DPrintf(db.CHUNKSRV, "getBin not present r %v prog %v st %v paths %v", r, prog, st, paths)
 	// Allocate a new bin entry
-	be, _ = cksrv.bins.Alloc(pn, newBinEntry(prog, r))
+	be, _ = cksrv.bins.Alloc(pn, newBinEntry(prog, r, st))
 
 	be.mu.Lock()
 	defer be.mu.Unlock()
@@ -157,39 +158,45 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 			res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 		}
 		res.Size = uint64(sz)
+		be, err := cksrv.getBin(r, req.GetProg(), nil, req.GetSigmaPath())
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error fetchCache getBin: %v", err)
+			return false, err
+		}
+		res.Stat = be.st
 		return true, nil
 	}
 	db.DPrintf(db.CHUNKSRV, "%v: FetchCache: %q pid %v ck %d not present\n", cksrv.kernelId, pn, req.Pid, ckid)
 	return false, nil
 }
 
-func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog string, pid sp.Tpid, paths []string, ck int, reqsz sp.Tsize, b []byte) (sp.Tsize, error) {
+func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog string, pid sp.Tpid, paths []string, ck int, reqsz sp.Tsize, b []byte) (sp.Tsize, *sp.Stat, error) {
 	chunkdID := path.Base(paths[0])
 	db.DPrintf(db.CHUNKSRV, "%v: fetchChunkd: %v ck %d %v", cksrv.kernelId, prog, ck, paths)
-	sz, err := cksrv.ckclnt.FetchChunk(chunkdID, prog, pid, r, ck, reqsz, paths, b)
+	sz, st, err := cksrv.ckclnt.FetchChunk(chunkdID, prog, pid, r, ck, reqsz, paths, b)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
-	return sz, nil
+	return sz, st, nil
 }
 
-func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, paths []string, ck int, b []byte) (sp.Tsize, error) {
+func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, paths []string, ck int, b []byte) (sp.Tsize, *sp.Stat, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: %v ck %d %v", cksrv.kernelId, prog, ck, paths)
-	be, err := cksrv.getBin(r, prog, paths)
+	be, err := cksrv.getBin(r, prog, nil, paths)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error fetchOrigin getBin: %v", err)
-		return 0, err
+		return 0, nil, err
 	}
 	fd, err := be.getFd(cksrv.sc, paths)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	sz, err := cksrv.sc.Pread(fd, b, sp.Toffset(Ckoff(ck)))
 	if err != nil {
 		db.DPrintf(db.CHUNKSRV, "%v: FetchOrigin: read %q ck %d err %v", cksrv.kernelId, prog, ck, err)
-		return 0, err
+		return 0, nil, err
 	}
-	return sz, nil
+	return sz, be.st, nil
 }
 
 func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
@@ -197,6 +204,7 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 	r := sp.Trealm(req.Realm)
 	b := make([]byte, CHUNKSZ)
 	ck := int(req.ChunkId)
+	var st *sp.Stat
 	var err error
 
 	paths := req.SigmaPath
@@ -213,17 +221,25 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 
 	ok := false
 	for IsChunkSrvPath(paths[0]) {
-		sz, err = cksrv.fetchChunkd(r, req.Prog, sp.Tpid(req.Pid), []string{paths[0]}, ck, sp.Tsize(req.Size), b)
+		sz, st, err = cksrv.fetchChunkd(r, req.Prog, sp.Tpid(req.Pid), []string{paths[0]}, ck, sp.Tsize(req.Size), b)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: chunkd %v st %v err %v", cksrv.kernelId, paths[0], st, err)
 		if err == nil {
 			ok = true
+			// Create a bin entry, so that this chunkd won't have to fetch stats from
+			// the origin if another chunkd queries it for stats
+			// XXX paths messed up
+			_, err := cksrv.getBin(r, req.Prog, st, paths[1:])
+			if err != nil {
+				db.DPrintf(db.ERROR, "Error fetchChunk getBin: %v", err)
+				return err
+			}
 			break
 		}
-		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: chunkd %v err %v", cksrv.kernelId, paths[0], err)
 		paths = paths[1:]
 	}
 
 	if !ok {
-		sz, err = cksrv.fetchOrigin(r, req.Prog, paths, ck, b)
+		sz, st, err = cksrv.fetchOrigin(r, req.Prog, paths, ck, b)
 		if err != nil {
 			db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: origin %v err %v", cksrv.kernelId, paths, err)
 			return err
@@ -236,6 +252,7 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 	}
 	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: writeChunk %v pid %v ck %d sz %d", cksrv.kernelId, pn, req.Pid, req.ChunkId, sz)
 	res.Size = uint64(sz)
+	res.Stat = st
 	return nil
 }
 
@@ -252,7 +269,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 		return fmt.Errorf("Error no paths left")
 	}
 
-	be, err := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg(), paths)
+	be, err := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg(), nil, paths)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error getBin: %v", err)
 		return err
@@ -407,11 +424,12 @@ func Run(kernelId string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, pr
 		db.DFatalf("Error NewAuthSrv %v", err)
 	}
 	sc.SetAuthSrv(as)
-
 	cksrv := newChunkSrv(kernelId, sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.CHUNKD, sc.ProcEnv().GetKernelID()), sc, cksrv)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
+	// Start monitoring for other chunkds, and establishing clients to them
+	cksrv.ckclnt.UpdateChunkds()
 	ssrv.RunServer()
 }

@@ -164,7 +164,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 
 	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
 	// Update chunkds, so that unionrpcclnt starts monitoring them
-	ups.sckclnt.UpdateChunkds()
+	ups.ckclnt.UpdateChunkds()
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)

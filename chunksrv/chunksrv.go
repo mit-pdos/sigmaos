@@ -124,7 +124,7 @@ func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, st *sp.Stat, paths []str
 	if ok {
 		return be, nil
 	}
-	db.DPrintf(db.CHUNKSRV, "getBin not present r %v prog %v st %v paths %v", r, prog, st, paths)
+	db.DPrintf(db.CHUNKSRV, "getBin not present (supplied=%v) r %v prog %v st %v paths %v", st != nil, r, prog, st, paths)
 	// Allocate a new bin entry
 	be, _ = cksrv.bins.Alloc(pn, newBinEntry(prog, r, st))
 

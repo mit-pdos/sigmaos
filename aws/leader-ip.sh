@@ -30,7 +30,7 @@ if [ -z "$VPC" ] || [ $# -gt 0 ]; then
     exit 1
 fi
 
-vms=`./lsvpc.py $VPC --privaddr | grep -w VMInstance | cut -d " " -f 6`
+vms=`./lsvpc.py $VPC --privaddr | grep '.amazonaws.com' | grep -w VMInstance | cut -d " " -f 6`
 
 vma=($vms)
 MAIN_PRIVADDR="${vma[0]}"

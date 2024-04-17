@@ -97,10 +97,12 @@ func (sdc *ScheddClnt) WarmUprocd(kernelID string, realm sp.Trealm, prog string,
 // is pushing to schedd (the schedd asked for it, and accounted for its
 // memory).
 func (sdc *ScheddClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Proc) error {
+	start := time.Now()
 	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] GetScheddClnt time %v", p.GetPid(), time.Since(start))
 	req := &proto.ForceRunRequest{
 		ProcProto:       p.GetProto(),
 		MemAccountedFor: memAccountedFor,

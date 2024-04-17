@@ -77,12 +77,12 @@ if [ -z "$VPC" ] || [ $# -gt 0 ]; then
     exit 1
 fi
 
-if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
+if [ $NCORES -ne 16 ] && [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   echo "Bad ncores $NCORES"
   exit 1
 fi
 
-vms_full=$(./lsvpc.py  --privaddr $VPC)
+vms_full=$(./lsvpc.py --privaddr $VPC | grep '.amazonaws.com')
 vms=`echo "$vms_full" | grep -w VMInstance | cut -d " " -f 5`
 all_vms="$vms"
 vms_privaddr=`echo "$vms_full" | grep -w VMInstance | cut -d " " -f 6`

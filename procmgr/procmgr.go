@@ -133,6 +133,8 @@ func (mgr *ProcMgr) DownloadProcBin(realm sp.Trealm, prog, buildTag string, ptyp
 	defer func(start time.Time) {
 		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] DownloadProcBin latency: %v", realm, prog, time.Since(start))
 	}(start)
+	// Warm up sigmaclnt
+	mgr.getSigmaClnt(realm)
 	db.DPrintf(db.PROCMGR, "Download proc bin for realm %v proc %v", realm, prog)
 	// Make sure the OS-level directory which holds proc bins exists. This must
 	// be done before starting the Uprocd, because the Uprocd mounts it.

@@ -86,7 +86,7 @@ func (ji *ImgResizeJobInstance) Wait() {
 	for {
 		n, err := ji.ft.NTaskDone()
 		assert.Nil(ji.Ts.T, err, "Error NTaskDone: %v", err)
-		db.DPrintf(db.TEST, "ImgResizeJob NTaskDone: %v", n)
+		db.DPrintf(db.TEST, "[%v] ImgResizeJob NTaskDone: %v", ji.GetRealm(), n)
 		if n == ji.ntasks {
 			break
 		}

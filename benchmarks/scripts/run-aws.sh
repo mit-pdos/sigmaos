@@ -727,7 +727,7 @@ realm_balance_be_img() {
   imgpath="name/ux/~local/8.jpg"
   ncores=4
   n_imgresize=10
-  n_imgresize_per=100
+  n_imgresize_per=10
 #  n_imgresize_per=100
   imgresize_nrounds=50
 #  imgresize_nrounds=120
@@ -736,7 +736,7 @@ realm_balance_be_img() {
   imgresize_mem=1500
 
   sl="20s"
-  n_vm=8
+  n_vm=16
   n_realm=4
   driver_vm=0
   run=${FUNCNAME[0]}
@@ -1241,8 +1241,7 @@ schedd_scalability_rs() {
 #  prewarm=""
   prewarm="--prewarm_realm"
 #  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
-#  for qps_per_machine in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400; do
-  for qps_per_machine in 400 1800 ; do
+  for qps_per_machine in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400; do
     n_vm=23
     rps=$((n_vm * $qps_per_machine))
     run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
@@ -1657,7 +1656,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
-schedd_scalability_rs_without_kernel_pref
+#schedd_scalability_rs_without_kernel_pref
 #schedd_scalability_rs_with_kernel_pref
 #schedd_scalability_rs
 #socialnet_tail_multi
@@ -1666,7 +1665,7 @@ schedd_scalability_rs_without_kernel_pref
 #socialnet_tail
 #realm_balance_be
 #mr_vs_corral
-#realm_balance_be_img
+realm_balance_be_img
 #schedd_scalability
 
 #realm_balance_multi_img
@@ -1701,7 +1700,7 @@ source ~/env/3.10/bin/activate
 #graph_schedd_scalability_rs_hockey
 #graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
-#graph_realm_balance_be_img
+graph_realm_balance_be_img
 #graph_start_latency_breakdown
 #graph_start_latency
 

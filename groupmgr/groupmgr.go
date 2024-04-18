@@ -15,8 +15,10 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
+
+	//	"sync"
+	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -30,9 +32,11 @@ const (
 )
 
 type GroupMgr struct {
+	//	sync.Mutex
+	deadlock.Mutex
 	*sigmaclnt.SigmaClnt
 	members []*member
-	stop    int32
+	running bool
 	ch      chan []*proc.Status
 }
 
@@ -106,7 +110,10 @@ func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *Gro
 	if cfg.NReplicas == 0 {
 		N = 1
 	}
-	gm := &GroupMgr{SigmaClnt: sc}
+	gm := &GroupMgr{
+		running:   true,
+		SigmaClnt: sc,
+	}
 	gm.ch = make(chan []*proc.Status)
 	gm.members = make([]*member, N)
 	for i := 0; i < N; i++ {
@@ -155,7 +162,8 @@ func newMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int, crash int64
 	return &member{SigmaClnt: sc, GroupMgrConfig: cfg, crash: crash, id: id}
 }
 
-func (m *member) spawn() error {
+// Caller holds lock
+func (m *member) spawnL() error {
 	p := proc.NewProc(m.Program, m.Args)
 	p.SetMcpu(m.Mcpu)
 	p.SetCrash(m.crash)
@@ -177,13 +185,15 @@ func (m *member) spawn() error {
 		return err
 	}
 	db.DPrintf(db.GROUPMGR, "Done WaitStart p %v", p)
+	// Lock must be held at this point, to avoid race between restart & stop
 	m.pid = p.GetPid()
 	return nil
 }
 
-func (m *member) run(start chan error, done chan *procret) {
+// Caller holds lock
+func (m *member) runL(start chan error, done chan *procret) {
 	db.DPrintf(db.GROUPMGR, "spawn %d member %v", m.id, m.Program)
-	if err := m.spawn(); err != nil {
+	if err := m.spawnL(); err != nil {
 		start <- err
 		return
 	}
@@ -195,9 +205,10 @@ func (m *member) run(start chan error, done chan *procret) {
 	done <- &procret{m.id, err, status}
 }
 
-func (gm *GroupMgr) start(i int, done chan *procret) {
+// Caller holds lock
+func (gm *GroupMgr) startL(i int, done chan *procret) {
 	start := make(chan error)
-	go gm.members[i].run(start, done)
+	go gm.members[i].runL(start, done)
 	err := <-start
 	if err != nil {
 		go func() {
@@ -213,35 +224,46 @@ func (gm *GroupMgr) stopMember(pr *procret) bool {
 	return pr.err == nil && (pr.status.IsStatusOK() || pr.status.IsStatusEvicted() || pr.status.IsStatusFatal())
 }
 
+func (gm *GroupMgr) handleProcRet(pr *procret, gstatus *[]*proc.Status, n *int, done chan *procret) {
+	// Take the lock to protect gm.running
+	gm.Lock()
+	defer gm.Unlock()
+
+	if !gm.running {
+		// we are finishing up; don't respawn the member
+		db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", gm.members[pr.member].Program, pr.member, *n)
+		*n--
+	} else if gm.stopMember(pr) {
+		db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[pr.member].Program, pr)
+		gm.running = false
+		*gstatus = append(*gstatus, pr.status)
+		*n--
+	} else { // restart member i
+		db.DPrintf(db.GROUPMGR, "%v: start %v\n", gm.members[pr.member].Program, pr)
+		gm.startL(pr.member, done)
+	}
+}
+
 func (gm *GroupMgr) manager(done chan *procret, n int) {
 	gstatus := make([]*proc.Status, 0, n)
+
 	for n > 0 {
 		pr := <-done
-		if atomic.LoadInt32(&gm.stop) == 1 {
-			// we are finishing up; don't respawn the member
-			db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", gm.members[pr.member].Program, pr.member, n)
-			n--
-		} else if gm.stopMember(pr) {
-			db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[pr.member].Program, pr)
-			atomic.StoreInt32(&gm.stop, 1)
-			gstatus = append(gstatus, pr.status)
-			n--
-		} else { // restart member i
-			db.DPrintf(db.GROUPMGR, "%v: start %v\n", gm.members[pr.member].Program, pr)
-			gm.start(pr.member, done)
-		}
+		gm.handleProcRet(pr, &gstatus, &n, done)
 	}
 	db.DPrintf(db.GROUPMGR, "%v exit\n", gm.members[0].Program)
 	for i := 0; i < len(gm.members); i++ {
 		db.DPrintf(db.GROUPMGR, "%v nstart %d exit\n", gm.members[i].Program, gm.members[i].nstart)
 	}
 	gm.ch <- gstatus
-
 }
 
 func (gm *GroupMgr) Crash() error {
 	db.DPrintf(db.GROUPMGR, "GroupMgr Crash")
-	atomic.StoreInt32(&gm.stop, 1)
+	gm.Lock()
+	defer gm.Unlock()
+
+	gm.running = false
 	return nil
 }
 
@@ -252,13 +274,14 @@ func (gm *GroupMgr) WaitGroup() []*proc.Status {
 	return statuses
 }
 
-// Start separate go routine to evict each member, because members may
-// not run in order of members, and be blocked waiting for becoming
-// leader, while the primary keeps running, because it is later in the
-// list.
-func (gm *GroupMgr) StopGroup() ([]*proc.Status, error) {
-	db.DPrintf(db.GROUPMGR, "GroupMgr Stop")
-	atomic.StoreInt32(&gm.stop, 1)
+func (gm *GroupMgr) evictGroupMembers() error {
+	// Take the lock, to ensure that the group members don't change after running
+	// is set to false
+	gm.Lock()
+	defer gm.Unlock()
+
+	gm.running = false
+
 	var err error
 	for _, c := range gm.members {
 		go func(m *member) {
@@ -269,6 +292,17 @@ func (gm *GroupMgr) StopGroup() ([]*proc.Status, error) {
 			}
 		}(c)
 	}
+	return err
+}
+
+// Start separate go routine to evict each member, because members may
+// not run in order of members, and be blocked waiting for becoming
+// leader, while the primary keeps running, because it is later in the
+// list.
+func (gm *GroupMgr) StopGroup() ([]*proc.Status, error) {
+	db.DPrintf(db.GROUPMGR, "GroupMgr Stop")
+	err := gm.evictGroupMembers()
+
 	db.DPrintf(db.GROUPMGR, "wait for members")
 	gstatus := <-gm.ch
 	db.DPrintf(db.GROUPMGR, "done members %v %v\n", gm, gstatus)

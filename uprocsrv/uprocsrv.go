@@ -401,6 +401,11 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 			return err
 		}
 	}
+	// sanity check
+	if st == nil {
+		db.DPrintf(db.ERROR, "Error st is nil %v", req)
+		return fmt.Errorf("Nil stat for lookup: %v", req)
+	}
 	res.Stat = st
 	db.DPrintf(db.SPAWN_LAT, "[%v] GetFileStat path %v prog %v lat %v sinceSpawn %v", pe.proc.GetPid(), pe.proc.GetSigmaPath(), req.Prog, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 

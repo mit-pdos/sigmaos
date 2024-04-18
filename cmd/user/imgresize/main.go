@@ -94,7 +94,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	db.DPrintf(db.ALWAYS, "Resize (%v/%v) %v", i, len(t.inputs), t.inputs[i])
 	rdr, err := t.OpenReader(t.inputs[i])
 	if err != nil {
-		return proc.NewStatusErr(fmt.Sprintf("File %v not found", t.inputs[i]), err)
+		return proc.NewStatusErr(fmt.Sprintf("File %v not found kid %v", t.inputs[i], t.ProcEnv().GetKernelID()), err)
 	}
 	//	prdr := perf.NewPerfReader(rdr, t.p)
 	db.DPrintf(db.ALWAYS, "Time %v open: %v", t.inputs[i], time.Since(do))

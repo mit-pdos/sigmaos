@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	//	"sync"
-	"github.com/sasha-s/go-deadlock"
+	"sync"
+	//"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -32,8 +32,7 @@ const (
 )
 
 type GroupMgr struct {
-	//	sync.Mutex
-	deadlock.Mutex
+	sync.Mutex
 	*sigmaclnt.SigmaClnt
 	members []*member
 	running bool

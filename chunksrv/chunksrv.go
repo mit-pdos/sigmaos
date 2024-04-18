@@ -121,12 +121,11 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, st *sp.Stat, paths []string) (*binEntry, error) {
 	pn := filepath.Join(r.String(), prog)
 	be, ok := cksrv.bins.Lookup(pn)
-	if ok {
-		return be, nil
+	if !ok {
+		db.DPrintf(db.CHUNKSRV, "getBin not present (supplied=%v) r %v prog %v st %v paths %v", st != nil, r, prog, st, paths)
+		// Allocate a new bin entry
+		be, _ = cksrv.bins.Alloc(pn, newBinEntry(prog, r, st))
 	}
-	db.DPrintf(db.CHUNKSRV, "getBin not present (supplied=%v) r %v prog %v st %v paths %v", st != nil, r, prog, st, paths)
-	// Allocate a new bin entry
-	be, _ = cksrv.bins.Alloc(pn, newBinEntry(prog, r, st))
 
 	be.mu.Lock()
 	defer be.mu.Unlock()

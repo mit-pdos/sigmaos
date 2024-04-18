@@ -73,7 +73,11 @@ func (bc *bincache) lookup(pn string, pid uint32) (*sp.Stat, error) {
 	if e.st == nil {
 		st, err := bc.updc.Lookup(pn, pid)
 		if err != nil {
+			db.DPrintf(db.ERROR, "Error lookup bin: %v", err)
 			return nil, err
+		}
+		if st == nil {
+			db.DFatalf("Error st is nil from lookup pn %v pid %v", pn, pid)
 		}
 		e.st = st
 	}

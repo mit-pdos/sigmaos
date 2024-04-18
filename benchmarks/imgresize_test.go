@@ -92,13 +92,13 @@ func (ji *ImgResizeJobInstance) Wait() {
 		}
 		time.Sleep(1 * time.Second)
 	}
-	db.DPrintf(db.TEST, "Done waiting for ImgResizeJob to finish")
+	db.DPrintf(db.TEST, "[%v] Done waiting for ImgResizeJob to finish", ji.GetRealm())
 	ji.imgd.StopGroup()
-	db.DPrintf(db.TEST, "Imgd shutdown")
+	db.DPrintf(db.TEST, "[%v] Imgd shutdown", ji.GetRealm())
 }
 
 func (ji *ImgResizeJobInstance) Cleanup() {
 	dir := path.Join(sp.UX, "~local", path.Dir(ji.input))
-	db.DPrintf(db.TEST, "Cleaning up dir %v", dir)
+	db.DPrintf(db.TEST, "[%v] Cleaning up dir %v", ji.GetRealm(), dir)
 	imgresizesrv.Cleanup(ji.FsLib, dir)
 }

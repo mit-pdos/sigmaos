@@ -727,23 +727,22 @@ realm_balance_be_img() {
   imgpath="name/ux/~local/8.jpg"
   ncores=4
   n_imgresize=10
-  n_imgresize_per=10
+  n_imgresize_per=100
 #  n_imgresize_per=100
+#  imgresize_nrounds=100
   imgresize_nrounds=50
-#  imgresize_nrounds=120
-#  imgresize_nrounds=8
   imgresize_mcpu=0
   imgresize_mem=1500
 
   sl="20s"
-  n_vm=16
+  n_vm=8
   n_realm=4
   driver_vm=0
   run=${FUNCNAME[0]}
   echo "========== Running $run =========="
   perf_dir=$OUT_DIR/$run
   cmd="
-    export SIGMADEBUG=\"TEST;BENCH;\"; \
+    export SIGMADEBUG=\"TEST;BENCH;FTTASKS;FTTASKMGR;\"; \
     go clean -testcache; \
     go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --n_imgresize_per $n_imgresize_per --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --nrealm $n_realm --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
@@ -1614,6 +1613,20 @@ graph_start_latency() {
   $GRAPH_SCRIPTS_DIR/start-latency.py --out $GRAPH_OUT_DIR/$graph.pdf
 }
 
+graph_net_microbench() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/net-microbench.py --out $GRAPH_OUT_DIR/$graph.pdf
+}
+
+graph_microservices_perf_bar_graph() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/microservices-perf-bar-graph.py --out $GRAPH_OUT_DIR/$graph.pdf
+}
+
 graph_start_latency_breakdown() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
@@ -1656,6 +1669,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
+#realm_balance_be_img
 #schedd_scalability_rs_without_kernel_pref
 #schedd_scalability_rs_with_kernel_pref
 #schedd_scalability_rs
@@ -1665,7 +1679,6 @@ echo "Running benchmarks with version: $VERSION"
 #socialnet_tail
 #realm_balance_be
 #mr_vs_corral
-realm_balance_be_img
 #schedd_scalability
 
 #realm_balance_multi_img
@@ -1700,7 +1713,9 @@ source ~/env/3.10/bin/activate
 #graph_schedd_scalability_rs_hockey
 #graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
-graph_realm_balance_be_img
+#graph_realm_balance_be_img
+graph_microservices_perf_bar_graph
+graph_net_microbench
 #graph_start_latency_breakdown
 #graph_start_latency
 

@@ -326,7 +326,7 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n i
 	done := make(chan bool)
 	for _, kid := range kernels {
 		go func(kid string) {
-			rm.mkc.BootInRealm(kid, alm, ss, nil)
+			rm.mkc.BootInRealm(kid, realm, ss, nil)
 			done <- true
 		}(kid)
 	}

@@ -261,8 +261,8 @@ func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) 
 	ji.Wait()
 	t := time.Since(start)
 	time.Sleep(2 * time.Second)
-	db.DPrintf(db.TEST, "Cleaning up imgresize")
+	db.DPrintf(db.TEST, "[%v] Cleaning up imgresize", ts.GetRealm())
 	//	ji.Cleanup()
-	db.DPrintf(db.TEST, "Done cleaning up imgresize")
+	db.DPrintf(db.TEST, "[%v] Done cleaning up imgresize", ts.GetRealm())
 	return t, 1.0
 }

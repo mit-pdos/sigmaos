@@ -325,10 +325,10 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n i
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems selected kernels: %v", realm, kernels)
 	done := make(chan bool)
 	for _, kid := range kernels {
-		go func() {
-			rm.mkc.BootInRealm(kid, realm, ss, nil)
+		go func(kid string) {
+			rm.mkc.BootInRealm(kid, alm, ss, nil)
 			done <- true
-		}()
+		}(kid)
 	}
 	for _ = range kernels {
 		<-done

@@ -10,12 +10,12 @@ import sys
 import durationpy
 
 def graph_data(out):
-  fig, (packet_lat, dial_lat, tpt) = plt.subplots(1, 3, figsize=(6.4, 2.4))
+  fig, (dial_lat, packet_lat, tpt) = plt.subplots(1, 3, figsize=(6.4, 2.4))
   # Set up lat graph
 
-  isol = [ "σOS", "none", "Docker overlay", "K8s overlay", ]
+  isol = [ "XOS", "none", "Docker overlay", "K8s overlay", ]
   d_packet_lat = [ 51, 51, 97, 189 ]
-  d_dial_lat = [ 1078, 321, 335, 438 ]
+  d_dial_lat = [ 304, 229, 335, 438 ]
   d_tpt = [ 9.4, 9.4, 8.58, 6.84 ]
 
   width = 0.15

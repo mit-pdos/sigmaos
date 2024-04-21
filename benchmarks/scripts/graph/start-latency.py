@@ -15,7 +15,7 @@ def graph_data(out):
   ax.set_yscale("log")
   ax.set_ylabel("Start Latency (ms)")
 
-  sys = [ "σOS", "AWS λ", "Docker", "K8s", "Mitosis", "FAASM", "Ray", ] # "σOS-ux",
+  sys = [ "XOS", "AWS λ", "Docker", "K8s", "Mitosis", "FAASM", "Ray", ] # "σOS-ux",
   cold = [ 13.8,  1289.6,   2671.4,  1143,       3.1,     8.8,  25.5, ] #     41.5,
   warm = [  1.9,    45.9,    469.1,   217,       3.1,     0.3,   0.6, ] #      1.9,
 

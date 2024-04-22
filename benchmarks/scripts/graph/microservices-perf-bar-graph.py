@@ -12,7 +12,7 @@ import durationpy
 def graph_data(out):
   fig, ((avg_lat, p99_lat), (p99_lat_peak, peak_tpt)) = plt.subplots(2, 2, figsize=(6.4, 2.4))
 
-  sys = [ "σOS-hotel", "σOS-hotel-overlay", "k8s-hotel", "σOS-socialnet", "σOS-socialnet-overlay", "k8s-socialnet", ]
+  sys = [ "XOS-hotel", "XOS-hotel-overlay", "k8s-hotel", "XOS-socialnet", "XOS-socialnet-overlay", "k8s-socialnet", ]
   d_avg_lat      = [  2.34,  2.60,  4.83,  2.73,  2.75,  5.49, ]
   d_p99_lat      = [  5.17,  5.78, 12.76,  5.85,  6.24,  9.01, ]
   d_p99_lat_peak = [ 31.41, 66.34, 45.25, 13.25, 31.13, 12.86, ]

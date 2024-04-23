@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"sigmaos/chunk"
+	"sigmaos/chunkclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
@@ -32,6 +33,7 @@ type ProcClnt struct {
 	procqclnt      *procqclnt.ProcQClnt
 	lcschedclnt    *lcschedclnt.LCSchedClnt
 	cs             *ChildState
+	bins           *chunkclnt.BinPaths
 }
 
 func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool) *ProcClnt {
@@ -43,6 +45,7 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool) *ProcClnt {
 		procqclnt:      procqclnt.NewProcQClnt(fsl),
 		lcschedclnt:    lcschedclnt.NewLCSchedClnt(fsl),
 		cs:             newChildState(),
+		bins:           chunkclnt.NewBinPaths(),
 	}
 	return clnt
 }
@@ -82,7 +85,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 
 	p.SetHow(how)
 
-	if kid, ok := clnt.cs.GetBinKernelID(p.GetProgram()); ok {
+	if kid, ok := clnt.bins.GetBinKernelID(p.GetProgram()); ok {
 		db.DPrintf(db.TEST, "spawn: %v PrependSigmaPath %v %v\n", p.GetPid(), p.GetProgram(), kid)
 		p.PrependSigmaPath(chunk.ChunkdPath(kid))
 	} else {
@@ -174,7 +177,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 				spawnedKernelID, err = clnt.enqueueViaProcQ(p)
 				if err == nil {
 					db.DPrintf(db.TEST, "spawn: SetBinKernelId %v %v\n", p.GetProgram(), spawnedKernelID)
-					clnt.cs.SetBinKernelID(p.GetProgram(), spawnedKernelID)
+					clnt.bins.SetBinKernelID(p.GetProgram(), spawnedKernelID)
 					p.SetKernelID(spawnedKernelID, false)
 				}
 				// clnt.cs.DelBinKernelID(p.GetProgram(), spawnedKernelID)

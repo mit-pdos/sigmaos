@@ -380,7 +380,7 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 
 	pe, alloc := ups.procs.Alloc(int(req.Pid), newProcEntry(nil))
 	if alloc {
-		db.DPrintf(db.UPROCD, "Lookup wait for pid %v %v\n", req.Pid, pe)
+		db.DPrintf(db.UPROCD, "Lookup wait for pid %v proc %v\n", req.Pid, pe)
 		pe.procWait()
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v %v sinceSpawn %v", pe.proc.GetPid(), pe.proc.GetSigmaPath(), req.Prog, time.Since(pe.proc.GetSpawnTime()))

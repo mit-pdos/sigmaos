@@ -127,10 +127,18 @@ for vm in $vms; do
     nproc
   fi
   
-#  aws s3 --profile sigmaos cp s3://9ps3/img-save/1.jpg ~/
-#  aws s3 --profile sigmaos cp s3://9ps3/img-save/6.jpg ~/
-#  aws s3 --profile sigmaos cp s3://9ps3/img-save/7.jpg ~/
-#  aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
+#  if ! [ -f ~/1.jpg ]; then
+#    aws s3 --profile sigmaos cp s3://9ps3/img-save/1.jpg ~/
+#  fi
+#  if ! [ -f ~/6.jpg ]; then
+#    aws s3 --profile sigmaos cp s3://9ps3/img-save/6.jpg ~/
+#  fi
+#  if ! [ -f ~/7.jpg ]; then
+#    aws s3 --profile sigmaos cp s3://9ps3/img-save/7.jpg ~/
+#  fi
+  if ! [ -f ~/8.jpg ]; then
+    aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
+  fi
 #
 #  # Download wiki dataset
 #  mkdir -p /tmp/sigmaos-data
@@ -155,17 +163,17 @@ for vm in $vms; do
       ./start-etcd.sh
     fi
     ./start-kernel.sh --boot realm --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} --pubkey "${MASTER_PUB_KEY}" --privkey "${MASTER_PRIV_KEY}" ${KERNELID} 2>&1 | tee /tmp/start.out
-    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
-    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
-    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
+#    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
+#    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
+#    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
     docker cp ~/8.jpg ${KERNELID}:/home/sigmaos/8.jpg
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
     ./start-kernel.sh --boot node --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} --pubkey "${MASTER_PUB_KEY}" --privkey "${MASTER_PRIV_KEY}" ${KERNELID} 2>&1 | tee /tmp/join.out
-    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
-    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
-    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
+#    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
+#    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
+#    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
     docker cp ~/8.jpg ${KERNELID}:/home/sigmaos/8.jpg
   fi
 ENDSSH

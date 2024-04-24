@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--usenetproxy] [--turbo]" 1>&2
+  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo]" 1>&2
 }
 
 VPC=""
@@ -10,7 +10,7 @@ NCORES=4
 UPDATE=""
 TAG=""
 OVERLAYS=""
-NETPROXY=""
+NETPROXY="--usenetproxy"
 TOKEN=""
 TURBO=""
 RMCPU="0"
@@ -50,9 +50,9 @@ while [[ $# -gt 0 ]]; do
     shift
     OVERLAYS="--overlays"
     ;;
-  --usenetproxy)
+  --nonetproxy)
     shift
-    NETPROXY="--usenetproxy"
+    NETPROXY=""
     ;;
   --reserveMcpu)
     shift

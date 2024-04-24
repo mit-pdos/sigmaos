@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --branch BRANCH --version VERSION [--usenetproxy] [--overlays] [--cloudlab]" 1>&2
+  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --branch BRANCH --version VERSION [--nonetproxy] [--overlays] [--cloudlab]" 1>&2
 }
 
 VPC=""
@@ -42,9 +42,9 @@ while [[ "$#" -gt 0 ]]; do
     shift
     OVERLAYS="--overlays"
     ;;
-  --usenetproxy)
+  --nonetproxy)
     shift
-    NETPROXY="--usenetproxy"
+    NETPROXY="--nonetproxy"
     ;;
   --cloudlab)
     shift

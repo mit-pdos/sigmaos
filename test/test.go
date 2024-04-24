@@ -40,7 +40,7 @@ var EtcdIP string
 var Overlays bool
 var GVisor bool
 var useSigmaclntd bool
-var useNetProxy bool
+var noNetProxy bool
 var loadMasterKey bool
 
 func init() {
@@ -53,7 +53,7 @@ func init() {
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
 	flag.BoolVar(&useSigmaclntd, "usesigmaclntd", false, "Use sigmaclntd?")
-	flag.BoolVar(&useNetProxy, "usenetproxy", false, "Use proxy for network dialing/listening?")
+	flag.BoolVar(&noNetProxy, "nonetproxy", false, "Disable use of proxy for network dialing/listening?")
 }
 
 var savedTstate *Tstate
@@ -229,6 +229,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	useNetProxy := !noNetProxy
 	// Only verify mounts if running with netproxy
 	verifyMounts := useNetProxy
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy, verifyMounts)
@@ -284,6 +285,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 }
 
 func (ts *Tstate) BootNode(n int) error {
+	useNetProxy := !noNetProxy
 	// Clear the saved kernel, since the next test may not need an additional
 	// node
 	savedTstate = nil
@@ -386,6 +388,7 @@ func Dump(t *testing.T) {
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	useNetProxy := !noNetProxy
 	// TODO: pass proper mount
 	// Only verify mounts if running with netproxy
 	verifyMounts := useNetProxy

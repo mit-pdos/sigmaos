@@ -8,7 +8,7 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usesigmaclntd] [--usenetproxy] [--reuse-kernel] [--cleanup]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usesigmaclntd] [--nonetproxy] [--reuse-kernel] [--cleanup]" 
 }
 
 BASIC="--basic"
@@ -57,9 +57,9 @@ while [[ "$#" -gt 0 ]]; do
             shift
             SIGMACLNTD="--usesigmaclntd" 
             ;;
-        --usenetproxy)
+        --nonetproxy)
             shift
-            NETPROXY="--usenetproxy" 
+            NETPROXY="--nonetproxy" 
             ;;
         --reuse-kernel)
             shift

@@ -140,8 +140,8 @@ func RunWww(job string, public bool) error {
 		//		}
 
 		db.DPrintf(db.ALWAYS, "Hotel advertise %v", mnt)
-		if err = www.MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
-			db.DFatalf("MkMountFile %v", err)
+		if err = www.MkEndpointFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
+			db.DFatalf("MkEndpointFile %v", err)
 		}
 	}
 

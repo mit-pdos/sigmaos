@@ -32,7 +32,7 @@ import (
 type SigmaPSrv struct {
 	*protsrv.ProtSrvState
 	*sesssrv.SessSrv
-	srvmnt   *sp.Tmount
+	srvmnt   *sp.Tendpoint
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
 	fencefs  fs.Dir
@@ -89,12 +89,12 @@ func (psrv *SigmaPSrv) GetRootCtx(p *sp.Tprincipal, claims *auth.ProcClaims, ana
 	return psrv.dirover, ctx.NewCtx(p, claims, sessid, clntid, psrv.CondTable(), psrv.fencefs)
 }
 
-func (psrv *SigmaPSrv) GetSigmaPSrvMount() *sp.Tmount {
+func (psrv *SigmaPSrv) GetSigmaPSrvEndpoint() *sp.Tendpoint {
 	return psrv.srvmnt
 }
 
 func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
-	mnt := psrv.GetMount()
+	mnt := psrv.GetEndpoint()
 	psrv.srvmnt = mnt
 	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
 	if path.EndSlash(pn) {
@@ -114,13 +114,13 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 	}
 	li.KeepExtending()
 
-	if err := sc.MkMountFile(pn, mnt, li.Lease()); err != nil {
+	if err := sc.MkEndpointFile(pn, mnt, li.Lease()); err != nil {
 		return "", err
 	}
 	return pn, nil
 }
 
 // Return the pathname for posting in a directory of a service
-func mountPathName(pn string, mnt *sp.Tmount) string {
+func mountPathName(pn string, mnt *sp.Tendpoint) string {
 	return pn + "/" + mnt.Addrs()[0].IPPort()
 }

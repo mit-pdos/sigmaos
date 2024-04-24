@@ -7,7 +7,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) IsLocalMount(mnt *sp.Tmount) (bool, error) {
+func (pathc *PathClnt) IsLocalMount(mnt *sp.Tendpoint) (bool, error) {
 	outerIP := pathc.pe.GetOuterContainerIP()
 	tip, _ := mnt.TargetIPPort(0)
 	if tip == "" {
@@ -34,7 +34,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 		return sp.NoFid, err
 	}
 	db.DPrintf(db.WALK, "unionScan: %v target: %v\n", name, string(target))
-	mnt, err := sp.NewMountFromBytes(target)
+	mnt, err := sp.NewEndpointFromBytes(target)
 	if err != nil {
 		db.DPrintf(db.WALK, "unionScan NewMount err %v", err)
 		return sp.NoFid, nil

@@ -19,13 +19,13 @@ type NetClnt struct {
 	pe     *proc.ProcEnv
 	npc    *netsigma.NetProxyClnt
 	conn   net.Conn
-	mnt    *sp.Tmount
+	mnt    *sp.Tendpoint
 	addr   *sp.Taddr
 	closed bool
 	realm  sp.Trealm
 }
 
-func NewNetClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, mnt *sp.Tmount) (*NetClnt, *serr.Err) {
+func NewNetClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, mnt *sp.Tendpoint) (*NetClnt, *serr.Err) {
 	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", mnt)
 	nc := &NetClnt{
 		pe:  pe,
@@ -55,15 +55,15 @@ func (nc *NetClnt) Close() error {
 	return nc.conn.Close()
 }
 
-func (nc *NetClnt) connect(mnt *sp.Tmount) *serr.Err {
-	if !nc.pe.GetVerifyMounts() && len(mnt.Claims.Addr) > 0 {
+func (nc *NetClnt) connect(mnt *sp.Tendpoint) *serr.Err {
+	if !nc.pe.GetVerifyEndpoints() && len(mnt.Claims.Addr) > 0 {
 		mnt.Claims.Addr = netsigma.Rearrange(nc.pe.GetNet(), mnt.Claims.Addr)
 	}
 	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), mnt, mnt.Addrs()[0])
 	//	for _, addr := range addrs {
 	for i, addr := range mnt.Addrs() {
 		if i > 0 {
-			if nc.pe.GetVerifyMounts() {
+			if nc.pe.GetVerifyEndpoints() {
 				// TODO XXX: support multi-dialing
 				db.DFatalf("Do not support multi-dialing yet: %v", mnt.Addrs())
 			}

@@ -74,7 +74,7 @@ func (pathc *PathClnt) Mounts() []string {
 	return pathc.mnt.mountedPaths()
 }
 
-func (pathc *PathClnt) MountTree(principal *sp.Tprincipal, mnt *sp.Tmount, tree, mntname string) error {
+func (pathc *PathClnt) MountTree(principal *sp.Tprincipal, mnt *sp.Tendpoint, tree, mntname string) error {
 	db.DPrintf(db.PATHCLNT, "MountTree [%v]/%v mnt %v", mnt, tree, mntname)
 	if fd, err := pathc.Attach(principal, pathc.cid, mnt, "", tree); err == nil {
 		return pathc.Mount(fd, mntname)

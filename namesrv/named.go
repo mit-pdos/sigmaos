@@ -141,10 +141,10 @@ func Run(args []string) error {
 	} else {
 		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = path.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.ALWAYS, "NewMountSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
-		nd.GetAuthSrv().MintAndSetMountToken(mnt)
-		if err := nd.MkMountFile(pn, mnt, nd.sess.Lease()); err != nil {
-			db.DPrintf(db.NAMED, "MkMountFile %v at %v err %v\n", nd.realm, pn, err)
+		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
+		nd.GetAuthSrv().MintAndSetEndpointToken(mnt)
+		if err := nd.MkEndpointFile(pn, mnt, nd.sess.Lease()); err != nil {
+			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v\n", nd.realm, pn, err)
 			return err
 		}
 
@@ -180,7 +180,7 @@ func Run(args []string) error {
 	return nil
 }
 
-func (nd *Named) newSrv() (*sp.Tmount, error) {
+func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
@@ -190,7 +190,7 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 	} else {
 		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
 		if err != nil {
-			return sp.NewNullMount(), err
+			return sp.NewNullEndpoint(), err
 		}
 		pi = pi0
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
@@ -210,24 +210,24 @@ func (nd *Named) newSrv() (*sp.Tmount, error) {
 	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.signer, sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error New authsrv: %v", err)
-		return sp.NewNullMount(), fmt.Errorf("NewAuthSrv err: %v", err)
+		return sp.NewNullEndpoint(), fmt.Errorf("NewAuthSrv err: %v", err)
 	}
 	nd.SigmaClnt.SetAuthSrv(as)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
-		return sp.NewNullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
+		return sp.NewNullEndpoint(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}
 
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
-		return sp.NewNullMount(), err
+		return sp.NewNullEndpoint(), err
 	}
 	nd.SigmaSrv = ssrv
 
-	mnt := nd.GetMount()
+	mnt := nd.GetEndpoint()
 	if nd.realm != sp.ROOTREALM {
-		mnt = port.NewPublicMount(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetMount())
+		mnt = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
 	}
-	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetMount(), nd.elect.Key(), mnt)
+	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), mnt)
 	return mnt, nil
 }
 

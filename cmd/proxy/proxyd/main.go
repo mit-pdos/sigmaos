@@ -38,7 +38,7 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}
-	etcdMnt, err := fsetcd.NewFsEtcdMount(as, lip)
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(as, lip)
 	if err != nil {
 		db.DFatalf("Error new fsetcd moutn: %v", err)
 	}

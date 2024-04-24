@@ -71,6 +71,6 @@ func (c *Channel) Lastqid() *sp.Tqid {
 	return c.qids[len(c.qids)-1]
 }
 
-func (c *Channel) Servers() *sp.Tmount {
+func (c *Channel) Servers() *sp.Tendpoint {
 	return c.pc.Servers()
 }

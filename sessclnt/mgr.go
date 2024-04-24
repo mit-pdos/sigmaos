@@ -42,7 +42,7 @@ func (sc *Mgr) SessClnts() []*SessClnt {
 
 // Return an existing sess if there is one, else allocate a new one. Caller
 // holds lock.
-func (sc *Mgr) allocSessClnt(mnt *sp.Tmount) (*SessClnt, *serr.Err) {
+func (sc *Mgr) allocSessClnt(mnt *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// TODO XXX: kill?
@@ -62,7 +62,7 @@ func (sc *Mgr) allocSessClnt(mnt *sp.Tmount) (*SessClnt, *serr.Err) {
 	return sess, nil
 }
 
-func (sc *Mgr) LookupSessClnt(mnt *sp.Tmount) (*SessClnt, *serr.Err) {
+func (sc *Mgr) LookupSessClnt(mnt *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	key := sessKey(mnt)
@@ -72,7 +72,7 @@ func (sc *Mgr) LookupSessClnt(mnt *sp.Tmount) (*SessClnt, *serr.Err) {
 	return nil, serr.NewErr(serr.TErrNotfound, mnt)
 }
 
-func (sc *Mgr) RPC(mnt *sp.Tmount, req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+func (sc *Mgr) RPC(mnt *sp.Tendpoint, req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(mnt)
 	if err != nil {
@@ -83,6 +83,6 @@ func (sc *Mgr) RPC(mnt *sp.Tmount, req sessp.Tmsg, iniov sessp.IoVec, outiov ses
 	return rep, err
 }
 
-func sessKey(mnt *sp.Tmount) string {
+func sessKey(mnt *sp.Tendpoint) string {
 	return mnt.Addrs().String()
 }

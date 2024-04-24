@@ -134,7 +134,7 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, mnt *sp.Tmount, pn, tree string) (sp.Tfid, *serr.Err) {
+func (fidc *FidClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, mnt *sp.Tendpoint, pn, tree string) (sp.Tfid, *serr.Err) {
 	fid := fidc.allocFid()
 	pc := protclnt.NewProtClnt(mnt, fidc.sm)
 	reply, err := pc.Attach(principal, cid, fid, path.Split(tree))
@@ -178,7 +178,7 @@ func (fidc *FidClnt) Walk(fid sp.Tfid, path []string) (sp.Tfid, []string, *serr.
 }
 
 // A defensive version of walk because fid is shared among several
-// threads (it comes out the mount table) and one thread may free the
+// threads (it comes out the endpoint table) and one thread may free the
 // fid while another thread is using it.
 func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	nfid := fidc.allocFid()

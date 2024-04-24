@@ -9,15 +9,15 @@ import (
 
 type NamedMountCache struct {
 	sync.RWMutex
-	root  *sp.Tmount
-	realm *sp.Tmount
+	root  *sp.Tendpoint
+	realm *sp.Tendpoint
 }
 
 func NewNamedMountCache(pe *proc.ProcEnv) *NamedMountCache {
-	var rootMnt *sp.Tmount = nil
-	var realmMnt *sp.Tmount = nil
+	var rootMnt *sp.Tendpoint = nil
+	var realmMnt *sp.Tendpoint = nil
 	// If an initial named mount was provided to this proc, set it.
-	if mnt, ok := pe.GetNamedMount(); ok {
+	if mnt, ok := pe.GetNamedEndpoint(); ok {
 		// If this proc operates in the root realm, cache the root mount as well
 		if pe.GetRealm() == sp.ROOTREALM {
 			rootMnt = mnt
@@ -31,23 +31,23 @@ func NewNamedMountCache(pe *proc.ProcEnv) *NamedMountCache {
 	}
 }
 
-func (nmc *NamedMountCache) Get(realm sp.Trealm) (*sp.Tmount, bool) {
+func (nmc *NamedMountCache) Get(realm sp.Trealm) (*sp.Tendpoint, bool) {
 	nmc.RLock()
 	defer nmc.RUnlock()
 
 	if realm == sp.ROOTREALM {
 		if nmc.root == nil {
-			return &sp.Tmount{}, false
+			return &sp.Tendpoint{}, false
 		}
 		return nmc.root, true
 	}
 	if nmc.realm == nil {
-		return &sp.Tmount{}, false
+		return &sp.Tendpoint{}, false
 	}
 	return nmc.realm, true
 }
 
-func (nmc *NamedMountCache) Put(realm sp.Trealm, mnt *sp.Tmount) {
+func (nmc *NamedMountCache) Put(realm sp.Trealm, mnt *sp.Tendpoint) {
 	nmc.Lock()
 	defer nmc.Unlock()
 

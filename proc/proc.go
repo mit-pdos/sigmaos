@@ -122,7 +122,7 @@ func (p *Proc) LookupEnv(name string) (string, bool) {
 func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.SetRealm(parentPE.GetRealm(), parentPE.Overlays)
 	p.ProcEnvProto.ParentDir = path.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
-	p.ProcEnvProto.EtcdMounts = parentPE.EtcdMounts
+	p.ProcEnvProto.EtcdEndpoints = parentPE.EtcdEndpoints
 	p.ProcEnvProto.Perf = parentPE.Perf
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
@@ -131,7 +131,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
 	// Don't override intentionally set net proxy settings
 	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
-	p.ProcEnvProto.VerifyMounts = p.ProcEnvProto.UseNetProxy
+	p.ProcEnvProto.VerifyEndpoints = p.ProcEnvProto.UseNetProxy
 	p.ProcEnvProto.ParentToken = parentPE.Principal.GetToken()
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
 	// If parent didn't specify allowed paths, inherit the parent's allowed paths
@@ -204,7 +204,7 @@ func (p *Proc) IsPrivileged() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t SigmaPath:%v KernelId:%v UseSigmaclntd:%v UseNetProxy:%v VerifyMounts:%v Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
+	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t SigmaPath:%v KernelId:%v UseSigmaclntd:%v UseNetProxy:%v VerifyEndpoints:%v Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.GetPID(),
 		p.ProcEnvProto.GetBuildTag(),
@@ -213,7 +213,7 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.UseSigmaclntd,
 		p.ProcEnvProto.UseNetProxy,
-		p.ProcEnvProto.VerifyMounts,
+		p.ProcEnvProto.VerifyEndpoints,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.GetPerf(),
 		p.ProcEnvProto.GetInnerContainerIP(),
@@ -347,12 +347,12 @@ func (p *Proc) GetHow() Thow {
 	return p.ProcEnvProto.GetHow()
 }
 
-func (p *Proc) SetScheddMount(mnt *sp.Tmount) {
-	p.ProcEnvProto.ScheddMountProto = mnt.GetProto()
+func (p *Proc) SetScheddEndpoint(mnt *sp.Tendpoint) {
+	p.ProcEnvProto.ScheddEndpointProto = mnt.GetProto()
 }
 
-func (p *Proc) SetNamedMount(mnt *sp.Tmount) {
-	p.ProcEnvProto.NamedMountProto = mnt.TmountProto
+func (p *Proc) SetNamedEndpoint(mnt *sp.Tendpoint) {
+	p.ProcEnvProto.NamedEndpointProto = mnt.TendpointProto
 }
 
 // Return Env map as a []string
@@ -376,7 +376,7 @@ func (p *Proc) SetMcpu(mcpu Tmcpu) {
 	}
 }
 
-// Set the amount of memory (in MB) required to run this proc.
+// Set the aendpoint of memory (in MB) required to run this proc.
 func (p *Proc) SetMem(mb Tmem) {
 	p.MemInt = uint32(mb)
 }

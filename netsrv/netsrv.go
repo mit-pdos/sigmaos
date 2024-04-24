@@ -18,7 +18,7 @@ type NewConnI interface {
 type NetServer struct {
 	pe      *proc.ProcEnv
 	npc     *netsigma.NetProxyClnt
-	mnt     *sp.Tmount
+	mnt     *sp.Tendpoint
 	l       net.Listener
 	newConn NewConnI
 }
@@ -43,7 +43,7 @@ func NewNetServer(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, addr *sp.Taddr, 
 	return srv
 }
 
-func (srv *NetServer) GetMount() *sp.Tmount {
+func (srv *NetServer) GetEndpoint() *sp.Tendpoint {
 	return srv.mnt
 }
 

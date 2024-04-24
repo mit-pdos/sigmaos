@@ -89,8 +89,8 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	assert.Nil(t, err1, "Error load s3 secrets: %v", err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	lip := sp.Tip("127.0.0.1")
-	etcdMnt, err := fsetcd.NewFsEtcdMount(as, sp.Tip(EtcdIP))
-	if !assert.Nil(t, err, "Error NewFsEtcdMount: %v", err) {
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(as, sp.Tip(EtcdIP))
+	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil
 	}
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false, false)
@@ -224,8 +224,8 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
 		return nil, err1
 	}
-	etcdMnt, err := fsetcd.NewFsEtcdMount(as, sp.Tip(EtcdIP))
-	if !assert.Nil(t, err, "Error NewFsEtcdMount: %v", err) {
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(as, sp.Tip(EtcdIP))
+	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil, err
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}

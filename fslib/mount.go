@@ -9,10 +9,10 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fsl *FsLib) MkMountFile(pn string, mnt *sp.Tmount, lid sp.TleaseId) error {
-	if !mnt.IsSigned() && fsl.ProcEnv().GetVerifyMounts() {
-		db.DPrintf(db.ERROR, "Error make unsigned mount file")
-		return fmt.Errorf("Unsigned mount: %v", mnt)
+func (fsl *FsLib) MkEndpointFile(pn string, mnt *sp.Tendpoint, lid sp.TleaseId) error {
+	if !mnt.IsSigned() && fsl.ProcEnv().GetVerifyEndpoints() {
+		db.DPrintf(db.ERROR, "Error make unsigned endpoint file")
+		return fmt.Errorf("Unsigned endpoint: %v", mnt)
 	}
 	b, err := mnt.Marshal()
 	if err != nil {
@@ -30,7 +30,7 @@ func (fsl *FsLib) RemoveMount(pn string) error {
 	return fsl.Remove(pn)
 }
 
-// Return pn, replacing first ~local/~any with a mount point for a specific
+// Return pn, replacing first ~local/~any with a endpoint point for a specific
 // server.
 func (fsl *FsLib) ResolveMount(pn string) (string, bool, error) {
 	p := path.Split(pn)
@@ -46,7 +46,7 @@ func (fsl *FsLib) ResolveMount(pn string) (string, bool, error) {
 	return "", ok, nil
 }
 
-// Return pn but with all ~local and ~any's replaced with mount points for a
+// Return pn but with all ~local and ~any's replaced with endpoint points for a
 // specific server.
 func (fsl *FsLib) ResolveMounts(pn string) (string, error) {
 	for {
@@ -61,23 +61,23 @@ func (fsl *FsLib) ResolveMounts(pn string) (string, error) {
 	}
 }
 
-func (fsl *FsLib) ReadMount(pn string) (*sp.Tmount, error) {
+func (fsl *FsLib) ReadEndpoint(pn string) (*sp.Tendpoint, error) {
 	target, err := fsl.GetFile(pn)
 	if err != nil {
-		return &sp.Tmount{}, err
+		return &sp.Tendpoint{}, err
 	}
-	mnt, error := sp.NewMountFromBytes(target)
+	mnt, error := sp.NewEndpointFromBytes(target)
 	if error != nil {
-		return &sp.Tmount{}, err
+		return &sp.Tendpoint{}, err
 	}
 	return mnt, err
 }
 
-// Make copy of root mount or first mount in pn. Return the
-// content of mount and the mount file's name.
-func (fsl *FsLib) CopyMount(pn string) (*sp.Tmount, string, error) {
+// Make copy of root endpoint or first endpoint in pn. Return the
+// content of endpoint and the endpoint file's name.
+func (fsl *FsLib) CopyMount(pn string) (*sp.Tendpoint, string, error) {
 	if pn == sp.NAMED {
-		mnt, err := fsl.SigmaOS.GetNamedMount()
+		mnt, err := fsl.SigmaOS.GetNamedEndpoint()
 		return mnt, "", err
 	}
 	p := path.Split(pn)
@@ -85,27 +85,27 @@ func (fsl *FsLib) CopyMount(pn string) (*sp.Tmount, string, error) {
 	if ok {
 		_, mnt, err := fsl.resolveMount(d, left[0])
 		if err != nil {
-			return sp.NewNullMount(), "", err
+			return sp.NewNullEndpoint(), "", err
 		}
 		return mnt, left[1:].String(), nil
 	} else if s, p, err := fsl.SigmaOS.PathLastMount(pn); err == nil {
-		if mnt, err := fsl.ReadMount(s.String()); err == nil {
+		if mnt, err := fsl.ReadEndpoint(s.String()); err == nil {
 			return mnt, p.String(), nil
 		}
 	}
-	return sp.NewNullMount(), "", serr.NewErr(serr.TErrInval, pn)
+	return sp.NewNullEndpoint(), "", serr.NewErr(serr.TErrInval, pn)
 }
 
-func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tmount, error) {
-	rmnt := sp.NewNullMount()
+func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error) {
+	rmnt := sp.NewNullEndpoint()
 	rname := ""
-	// Make sure to resolve d in case it is a symlink or mount point.
+	// Make sure to resolve d in case it is a symlink or endpoint point.
 	_, err := fsl.ProcessDir(d+"/", func(st *sp.Stat) (bool, error) {
 		b, err := fsl.GetFile(d + "/" + st.Name)
 		if err != nil {
 			return false, nil
 		}
-		mnt, error := sp.NewMountFromBytes(b)
+		mnt, error := sp.NewEndpointFromBytes(b)
 		if error != nil {
 			return false, nil
 		}
@@ -127,7 +127,7 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tmount, error) {
 }
 
 // For code running using /mnt/9p, which doesn't support PutFile.
-func (fsl *FsLib) NewMount9P(pn string, mnt *sp.Tmount) error {
+func (fsl *FsLib) NewMount9P(pn string, mnt *sp.Tendpoint) error {
 	b, err := mnt.Marshal()
 	if err != nil {
 		return err

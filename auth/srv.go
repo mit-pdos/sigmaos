@@ -80,26 +80,26 @@ func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	return nil
 }
 
-func (as *AuthSrvImpl[M]) MintMountToken(mnt *sp.Tmount) (*sp.Ttoken, error) {
-	mc := NewMountClaims(mnt)
+func (as *AuthSrvImpl[M]) MintEndpointToken(mnt *sp.Tendpoint) (*sp.Ttoken, error) {
+	mc := NewEndpointClaims(mnt)
 	return as.mintTokenWithClaims(mc)
 }
 
-func (as *AuthSrvImpl[M]) MintAndSetMountToken(mnt *sp.Tmount) error {
-	token, err := as.MintMountToken(mnt)
+func (as *AuthSrvImpl[M]) MintAndSetEndpointToken(mnt *sp.Tendpoint) error {
+	token, err := as.MintEndpointToken(mnt)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error MintMountToken: %v", err)
+		db.DPrintf(db.ERROR, "Error MintEndpointToken: %v", err)
 	}
 	mnt.SetToken(token)
 	return nil
 }
 
-func (as *AuthSrvImpl[M]) VerifyMountTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*MountClaims, error) {
-	claims, err := as.verifyTokenGetClaims(principalID, &MountClaims{}, t)
+func (as *AuthSrvImpl[M]) VerifyEndpointTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*EndpointClaims, error) {
+	claims, err := as.verifyTokenGetClaims(principalID, &EndpointClaims{}, t)
 	if err != nil {
 		return nil, err
 	}
-	if mclaims, ok := claims.(*MountClaims); ok {
+	if mclaims, ok := claims.(*EndpointClaims); ok {
 		return mclaims, nil
 	}
 	return nil, fmt.Errorf("Claims wrong type: %T", claims)
@@ -173,28 +173,28 @@ func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPat
 	return nil, false, nil
 }
 
-func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, mount *sp.Tmount) (bool, error) {
-	db.DPrintf(db.AUTH, "Mount Authorization check p %v mnt %v", principal.GetID(), mount)
+func (as *AuthSrvImpl[M]) EndpointIsAuthorized(principal *sp.Tprincipal, endpoint *sp.Tendpoint) (bool, error) {
+	db.DPrintf(db.AUTH, "Endpoint Authorization check p %v mnt %v", principal.GetID(), endpoint)
 	pc, err := as.VerifyPrincipalIdentity(principal)
 	if err != nil {
-		db.DPrintf(db.AUTH, "Mount Authorization identity check failed p %v: err %v", principal.GetID(), err)
+		db.DPrintf(db.AUTH, "Endpoint Authorization identity check failed p %v: err %v", principal.GetID(), err)
 		return false, err
 	}
-	mc, err := as.VerifyMountTokenGetClaims(principal.GetID(), mount.GetToken())
+	mc, err := as.VerifyEndpointTokenGetClaims(principal.GetID(), endpoint.GetToken())
 	if err != nil {
-		db.DPrintf(db.AUTH, "Mount Authorization token check failed p %v: err %v", principal.GetID(), err)
+		db.DPrintf(db.AUTH, "Endpoint Authorization token check failed p %v: err %v", principal.GetID(), err)
 		return false, err
 	}
 	// Root realm (kernel) procs are accessible from any realm
 	if mc.Realm != sp.ROOTREALM {
-		// Check if the mount is for the principal's realm
+		// Check if the endpoint is for the principal's realm
 		if pc.Realm != mc.Realm {
-			err := fmt.Errorf("Mismatch between p %v realm %v and mount %v realm %v", principal.GetID(), pc.Realm, mount, mount.GetRealm())
-			db.DPrintf(db.AUTH, "Mount Authorization check failed p %v: err %v", principal.GetID(), err)
+			err := fmt.Errorf("Mismatch between p %v realm %v and endpoint %v realm %v", principal.GetID(), pc.Realm, endpoint, endpoint.GetRealm())
+			db.DPrintf(db.AUTH, "Endpoint Authorization check failed p %v: err %v", principal.GetID(), err)
 			return false, err
 		}
 	}
-	db.DPrintf(db.AUTH, "Mount Authorization check succeeded p %v mnt %v", principal.GetID(), mount)
+	db.DPrintf(db.AUTH, "Endpoint Authorization check succeeded p %v mnt %v", principal.GetID(), endpoint)
 	return true, nil
 }
 

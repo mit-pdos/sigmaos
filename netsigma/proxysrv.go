@@ -52,11 +52,11 @@ func NewNetProxySrv(ip sp.Tip, as auth.AuthSrv) (*NetProxySrv, error) {
 }
 
 func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.DialResponse) error {
-	mnt := sp.NewMountFromProto(req.GetMount())
+	mnt := sp.NewEndpointFromProto(req.GetEndpoint())
 	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> mnt %v", ctx.Principal(), mnt)
 	// Verify the principal is authorized to establish the connection
-	if _, err := nps.auth.MountIsAuthorized(ctx.Principal(), mnt); err != nil {
-		db.DPrintf(db.NETPROXYSRV_ERR, "Error Dial unauthorized mount: %v", err)
+	if _, err := nps.auth.EndpointIsAuthorized(ctx.Principal(), mnt); err != nil {
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error Dial unauthorized endpoint: %v", err)
 		res.Err = sp.NewRerrorErr(err)
 		return nil
 	}
@@ -96,13 +96,13 @@ func (nps *NetProxySrvStubs) Listen(ctx fs.CtxI, req proto.ListenRequest, res *p
 	} else {
 		res.Err = sp.NewRerror()
 	}
-	// Construct a mount for the listener
-	mnt, err := constructMount(true, nps.auth, nps.innerContainerIP, ctx.Principal().GetRealm(), proxyListener)
+	// Construct a endpoint for the listener
+	mnt, err := constructEndpoint(true, nps.auth, nps.innerContainerIP, ctx.Principal().GetRealm(), proxyListener)
 	if err != nil {
-		db.DFatalf("Error construct mount: %v", err)
+		db.DFatalf("Error construct endpoint: %v", err)
 		return err
 	}
-	res.Mount = mnt.GetProto()
+	res.Endpoint = mnt.GetProto()
 	file, err := listenerToFile(proxyListener)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
@@ -133,22 +133,22 @@ func connToFile(proxyConn net.Conn) (*os.File, error) {
 	return f, nil
 }
 
-func constructMount(verifyMounts bool, as auth.AuthSrv, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tmount, error) {
+func constructEndpoint(verifyEndpoints bool, as auth.AuthSrv, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tendpoint, error) {
 	host, port, err := QualifyAddrLocalIP(ip, l.Addr().String())
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		return nil, err
 	}
-	mnt := sp.NewMount(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm)
-	if verifyMounts && as == nil {
-		db.DFatalf("Error construct mount without AuthSrv")
-		return nil, fmt.Errorf("Try to construct mount without authsrv")
+	mnt := sp.NewEndpoint(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm)
+	if verifyEndpoints && as == nil {
+		db.DFatalf("Error construct endpoint without AuthSrv")
+		return nil, fmt.Errorf("Try to construct endpoint without authsrv")
 	}
 	if as != nil {
-		// Sign the mount
-		if err := as.MintAndSetMountToken(mnt); err != nil {
-			db.DFatalf("Error sign mount: %v", err)
+		// Sign the endpoint
+		if err := as.MintAndSetEndpointToken(mnt); err != nil {
+			db.DFatalf("Error sign endpoint: %v", err)
 			return nil, err
 		}
 	}

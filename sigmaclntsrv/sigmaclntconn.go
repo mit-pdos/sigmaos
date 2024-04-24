@@ -277,7 +277,7 @@ func (scs *SigmaClntSrvAPI) DirWait(ctx fs.CtxI, req scproto.SigmaReadRequest, r
 }
 
 func (scs *SigmaClntSrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountRequest, rep *scproto.SigmaMountReply) error {
-	ok, err := scs.sc.IsLocalMount(sp.NewMountFromProto(req.Mount))
+	ok, err := scs.sc.IsLocalMount(sp.NewEndpointFromProto(req.Endpoint))
 	rep.Local = ok
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: IsLocalMount %v %v", scs.sc.ClntId(), req, rep)
@@ -285,7 +285,7 @@ func (scs *SigmaClntSrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountRequ
 }
 
 func (scs *SigmaClntSrvAPI) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
-	err := scs.sc.MountTree(sp.NewMountFromProto(req.Mount), req.Tree, req.MountName)
+	err := scs.sc.MountTree(sp.NewEndpointFromProto(req.Endpoint), req.Tree, req.MountName)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: MountTree %v %v", scs.sc.ClntId(), req, rep)
 	return nil
@@ -300,13 +300,13 @@ func (scs *SigmaClntSrvAPI) PathLastMount(ctx fs.CtxI, req scproto.SigmaPathRequ
 	return nil
 }
 
-func (scs *SigmaClntSrvAPI) GetNamedMount(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaMountReply) error {
-	mnt, err := scs.sc.GetNamedMount()
+func (scs *SigmaClntSrvAPI) GetNamedEndpoint(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaMountReply) error {
+	mnt, err := scs.sc.GetNamedEndpoint()
 	if err != nil {
-		db.DPrintf(db.ERROR, "Err GetNamedMount: %v", err)
+		db.DPrintf(db.ERROR, "Err GetNamedEndpoint: %v", err)
 		return err
 	}
-	rep.Mount = mnt.TmountProto
+	rep.Endpoint = mnt.TendpointProto
 	rep.Err = scs.setErr(nil)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: PastLastMount %v %v", scs.sc.ClntId(), req, rep)
 	return nil
@@ -322,7 +322,7 @@ func (scs *SigmaClntSrvAPI) NewRootMount(ctx fs.CtxI, req scproto.SigmaMountTree
 
 func (scs *SigmaClntSrvAPI) Mounts(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaMountsReply) error {
 	mnts := scs.sc.Mounts()
-	rep.Mounts = mnts
+	rep.Endpoints = mnts
 	rep.Err = scs.setErr(nil)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: Mounts %v %v", scs.sc.ClntId(), req, rep)
 	return nil

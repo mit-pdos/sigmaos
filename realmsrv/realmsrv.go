@@ -208,35 +208,35 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		return err
 	}
 	// Make some rootrealm services available in new realm
-	namedMount, err := rm.sc.GetNamedMount()
+	namedEndpoint, err := rm.sc.GetNamedEndpoint()
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", err)
+		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
 		return err
 	}
-	// Mount some service union dirs from the root realm
+	// Endpoint some service union dirs from the root realm
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
-		mnt := sp.NewMount(namedMount.Addrs(), rid)
+		mnt := sp.NewEndpoint(namedEndpoint.Addrs(), rid)
 		mnt.SetTree(s)
-		if err := rm.sc.GetAuthSrv().MintAndSetMountToken(mnt); err != nil {
-			db.DPrintf(db.ERROR, "Error mint & set mount token: %v", err)
+		if err := rm.sc.GetAuthSrv().MintAndSetEndpointToken(mnt); err != nil {
+			db.DPrintf(db.ERROR, "Error mint & set endpoint token: %v", err)
 			return err
 		}
 		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
-		if err := sc.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
-			db.DPrintf(db.ERROR, "MountService %v err %v\n", pn, err)
+		if err := sc.MkEndpointFile(pn, mnt, sp.NoLeaseId); err != nil {
+			db.DPrintf(db.ERROR, "EndpointService %v err %v\n", pn, err)
 			return err
 		}
 	}
-	// Mount keyd into the user realm
-	keydMnt, err := rm.sc.ReadMount(sp.KEYD)
+	// Endpoint keyd into the user realm
+	keydMnt, err := rm.sc.ReadEndpoint(sp.KEYD)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error ReadMount %v: %v", sp.KEYD, err)
+		db.DPrintf(db.ERROR, "Error ReadEndpoint %v: %v", sp.KEYD, err)
 		return err
 	}
 	db.DPrintf(db.REALMD, "Link %v at %s", keydMnt, sp.KEYD)
-	if err := sc.MkMountFile(sp.KEYD, keydMnt, sp.NoLeaseId); err != nil {
-		db.DPrintf(db.ERROR, "MountService %v err %v\n", sp.KEYD, err)
+	if err := sc.MkEndpointFile(sp.KEYD, keydMnt, sp.NoLeaseId); err != nil {
+		db.DPrintf(db.ERROR, "EndpointService %v err %v\n", sp.KEYD, err)
 		return err
 	}
 	// Make some realm dirs
@@ -244,7 +244,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		pn := path.Join(sp.NAMED, s)
 		db.DPrintf(db.REALMD, "Mkdir %v", pn)
 		if err := sc.MkDir(pn, 0777); err != nil {
-			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
+			db.DPrintf(db.REALMD, "EndpointService %v err %v\n", pn, err)
 			return err
 		}
 	}

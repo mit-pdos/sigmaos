@@ -9,15 +9,15 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type MountClaims struct {
+type EndpointClaims struct {
 	Realm sp.Trealm   `json:"realm"`
 	Addr  []*sp.Taddr `json:"addr"`
 	jwt.StandardClaims
 }
 
-// Construct mount claims from a mount
-func NewMountClaims(mnt *sp.Tmount) *MountClaims {
-	return &MountClaims{
+// Construct endpoint claims from a endpoint
+func NewEndpointClaims(mnt *sp.Tendpoint) *EndpointClaims {
+	return &EndpointClaims{
 		Realm: mnt.GetRealm(),
 		Addr:  mnt.Addrs(),
 		StandardClaims: jwt.StandardClaims{
@@ -27,6 +27,6 @@ func NewMountClaims(mnt *sp.Tmount) *MountClaims {
 	}
 }
 
-func (mc *MountClaims) String() string {
+func (mc *EndpointClaims) String() string {
 	return fmt.Sprintf("&{ Realm:%v AllowedPaths:%v }", mc.Realm, mc.Addr)
 }

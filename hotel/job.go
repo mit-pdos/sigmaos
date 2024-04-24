@@ -98,7 +98,7 @@ func NewFsLibs(uname string, npc *netsigma.NetProxyClnt) ([]*fslib.FsLib, error)
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
-	mnt, err := fsl.ReadMount(JobHTTPAddrsPath(job))
+	mnt, err := fsl.ReadEndpoint(JobHTTPAddrsPath(job))
 	if err != nil {
 		return nil, err
 	}

@@ -28,14 +28,14 @@ type SessClnt struct {
 	sid     sessp.Tsession
 	seqcntr *sessp.Tseqcntr
 	closed  bool
-	mnt     *sp.Tmount
+	mnt     *sp.Tendpoint
 	npc     *netsigma.NetProxyClnt
 	nc      *netclnt.NetClnt
 	pe      *proc.ProcEnv
 	dmx     *demux.DemuxClnt
 }
 
-func newSessClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, mnt *sp.Tmount) (*SessClnt, *serr.Err) {
+func newSessClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, mnt *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	c := &SessClnt{
 		sid:     sessp.Tsession(rand.Uint64()),
 		npc:     npc,

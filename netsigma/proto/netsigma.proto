@@ -10,11 +10,11 @@ message ListenRequest {
 
 message ListenResponse {
         Rerror err = 1;
-        TmountProto mount = 2;
+        TendpointProto endpoint = 2;
 };
 
 message DialRequest {
-        TmountProto Mount = 1;
+        TendpointProto Endpoint = 1;
 };
 
 message DialResponse {

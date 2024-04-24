@@ -42,7 +42,7 @@ func JobHTTPAddrsPath(job string) string {
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
-	mnt, err := fsl.ReadMount(JobHTTPAddrsPath(job))
+	mnt, err := fsl.ReadEndpoint(JobHTTPAddrsPath(job))
 	if err != nil {
 		return nil, err
 	}

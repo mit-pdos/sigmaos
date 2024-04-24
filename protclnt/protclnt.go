@@ -15,18 +15,18 @@ import (
 )
 
 type ProtClnt struct {
-	mnt *sp.Tmount
+	mnt *sp.Tendpoint
 	sm  *sessclnt.Mgr
 }
 
-func NewProtClnt(mnt *sp.Tmount, sm *sessclnt.Mgr) *ProtClnt {
+func NewProtClnt(mnt *sp.Tendpoint, sm *sessclnt.Mgr) *ProtClnt {
 	return &ProtClnt{
 		mnt: mnt,
 		sm:  sm,
 	}
 }
 
-func (pclnt *ProtClnt) Servers() *sp.Tmount {
+func (pclnt *ProtClnt) Servers() *sp.Tendpoint {
 	return pclnt.mnt
 }
 

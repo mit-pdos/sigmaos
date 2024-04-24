@@ -47,10 +47,10 @@ func (pc *PortClnt) AllocPort(p sp.Tport) (PortInfo, error) {
 	return PortInfo{hip, pb}, nil
 }
 
-func (pc *PortClnt) AdvertisePort(pn string, pi PortInfo, net string, lmnt *sp.Tmount) error {
-	mnt := port.NewPublicMount(pi.HostIP, pi.PBinding, net, lmnt)
+func (pc *PortClnt) AdvertisePort(pn string, pi PortInfo, net string, lmnt *sp.Tendpoint) error {
+	mnt := port.NewPublicEndpoint(pi.HostIP, pi.PBinding, net, lmnt)
 	db.DPrintf(db.PORT, "AdvertisePort %v %v\n", pn, mnt)
-	if err := pc.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
+	if err := pc.MkEndpointFile(pn, mnt, sp.NoLeaseId); err != nil {
 		return err
 	}
 	return nil

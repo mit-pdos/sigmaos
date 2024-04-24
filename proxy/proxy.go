@@ -96,9 +96,9 @@ func (npc *NpSess) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 }
 
 func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
-	mnt, error := npc.pc.GetNamedMount()
+	mnt, error := npc.pc.GetNamedEndpoint()
 	if error != nil {
-		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", error)
+		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", error)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
 	fid, err := npc.fidc.Attach(npc.principal, npc.cid, mnt, "", "")

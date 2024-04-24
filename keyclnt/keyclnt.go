@@ -38,9 +38,9 @@ func (kc *KeyClnt[M]) getClnt(rw bool) (*rpcclnt.RPCClnt, error) {
 
 	if rw {
 		if kc.rw == nil {
-			mnt, err := kc.sc.ReadMount(sp.KEYD)
+			mnt, err := kc.sc.ReadEndpoint(sp.KEYD)
 			if err != nil {
-				db.DPrintf(db.ERROR, "Error ReadMount: %v", err)
+				db.DPrintf(db.ERROR, "Error ReadEndpoint: %v", err)
 				return nil, err
 			}
 			err = kc.sc.MountTree(mnt, sp.RW_REL, sp.KEYS_RW)
@@ -59,9 +59,9 @@ func (kc *KeyClnt[M]) getClnt(rw bool) (*rpcclnt.RPCClnt, error) {
 		return kc.rw, nil
 	} else {
 		if kc.ronly == nil {
-			mnt, err := kc.sc.ReadMount(sp.KEYD)
+			mnt, err := kc.sc.ReadEndpoint(sp.KEYD)
 			if err != nil {
-				db.DPrintf(db.ERROR, "Error ReadMount: %v", err)
+				db.DPrintf(db.ERROR, "Error ReadEndpoint: %v", err)
 				return nil, err
 			}
 			err = kc.sc.MountTree(mnt, sp.RONLY_REL, sp.KEYS_RONLY)

@@ -87,14 +87,14 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Error NewAuthSrv: %v", err1)
 	}
-	etcdMnt, err := fsetcd.NewFsEtcdMount(as, sp.Tip(os.Args[2]))
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(as, sp.Tip(os.Args[2]))
 	if err != nil {
-		db.DFatalf("Error NewFsEtcdMount: %v", err)
+		db.DFatalf("Error NewFsEtcdEndpoint: %v", err)
 	}
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	// Only verify mounts if using netproxy
-	verifyMounts := param.NetProxy
-	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.ROOTREALM, sp.NoToken()), secrets, etcdMnt, localIP, localIP, param.BuildTag, param.Overlays, verifyMounts)
+	verifyEndpoints := param.NetProxy
+	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.ROOTREALM, sp.NoToken()), secrets, etcdMnt, localIP, localIP, param.BuildTag, param.Overlays, verifyEndpoints)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	if err1 := as.MintAndSetProcToken(pe); err1 != nil {
 		db.DFatalf("Error MintToken: %v", err1)

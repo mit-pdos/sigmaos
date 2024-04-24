@@ -86,10 +86,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 	p.SetHow(how)
 
 	if kid, ok := clnt.bins.GetBinKernelID(p.GetProgram()); ok {
-		db.DPrintf(db.TEST, "spawn: %v PrependSigmaPath %v %v\n", p.GetPid(), p.GetProgram(), kid)
 		p.PrependSigmaPath(chunk.ChunkdPath(kid))
-	} else {
-		db.DPrintf(db.TEST, "GetBinKernelId %v; no kernel", p.GetProgram())
 	}
 
 	p.InheritParentProcEnv(clnt.ProcEnv())
@@ -179,8 +176,9 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 					db.DPrintf(db.TEST, "spawn: SetBinKernelId %v %v\n", p.GetProgram(), spawnedKernelID)
 					clnt.bins.SetBinKernelID(p.GetProgram(), spawnedKernelID)
 					p.SetKernelID(spawnedKernelID, false)
+				} else if serr.IsErrorUnavailable(err) {
+					clnt.bins.DelBinKernelID(p.GetProgram(), spawnedKernelID)
 				}
-				// clnt.cs.DelBinKernelID(p.GetProgram(), spawnedKernelID)
 			} else {
 				// LC Non-kernel procs are enqueued via the procq.
 				spawnedKernelID, err = clnt.enqueueViaLCSched(p)

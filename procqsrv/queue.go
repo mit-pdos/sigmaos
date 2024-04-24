@@ -5,9 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/chunk"
-	"sigmaos/chunksrv"
-	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -78,16 +75,6 @@ func (q *Queue) Dequeue(mem proc.Tmem, kernelID string) (*proc.Proc, chan string
 		}
 	}
 	return nil, nil, time.UnixMicro(0), false
-}
-
-func (q *Queue) updateSigmaPath(prog, kernelId string) {
-	for _, qi := range q.procs {
-		if !chunksrv.IsChunkSrvPath(qi.p.GetSigmaPath()[0]) &&
-			qi.p.GetProgram() == prog {
-			db.DPrintf(db.TEST, "PrependSigmaPath: %v GetBinKernelId %v %v\n", qi.p.GetProgram(), qi.p.GetPid(), kernelId)
-			qi.p.PrependSigmaPath(chunk.ChunkdPath(kernelId))
-		}
-	}
 }
 
 func (q *Queue) Len() int {

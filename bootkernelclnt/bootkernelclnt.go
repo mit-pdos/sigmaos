@@ -75,7 +75,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v netproxy %v", kernelId, srvs, ip, overlays, netproxy)
+	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v netproxy %v", kernelId, srvs, ip, overlays, gvisor, netproxy)
 	return ip, nil
 }
 

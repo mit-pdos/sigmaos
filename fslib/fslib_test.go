@@ -232,10 +232,10 @@ func TestRemoveSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt, err := ts.GetNamedMount()
-	assert.Nil(t, err, "GetNamedMount: %v", err)
-	err = ts.MkMountFile(fn, mnt, sp.NoLeaseId)
-	assert.Nil(t, err, "MkMountFile: %v", err)
+	mnt, err := ts.GetNamedEndpoint()
+	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
+	err = ts.MkEndpointFile(fn, mnt, sp.NoLeaseId)
+	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
 	sts, err := ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
@@ -261,10 +261,10 @@ func TestRmDirWithSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt, err := ts.GetNamedMount()
-	assert.Nil(t, err, "GetNamedMount: %v", err)
-	err = ts.MkMountFile(fn, mnt, sp.NoLeaseId)
-	assert.Nil(t, err, "MkMountFile: %v", err)
+	mnt, err := ts.GetNamedEndpoint()
+	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
+	err = ts.MkEndpointFile(fn, mnt, sp.NoLeaseId)
+	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
 	sts, err := ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
@@ -287,16 +287,16 @@ func TestReadSymlink(t *testing.T) {
 	assert.Nil(t, err, "Mkdir %v", err)
 	fn := gopath.Join(d1, "f")
 
-	mnt, err := ts.GetNamedMount()
-	assert.Nil(t, err, "GetNamedMount: %v", err)
-	err = ts.MkMountFile(fn, mnt, sp.NoLeaseId)
-	assert.Nil(t, err, "MkMountFile: %v", err)
+	mnt, err := ts.GetNamedEndpoint()
+	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
+	err = ts.MkEndpointFile(fn, mnt, sp.NoLeaseId)
+	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
 	_, err = ts.GetDir(fn + "/")
 	assert.Nil(t, err, "GetDir: %v", err)
 
-	mnt1, err := ts.ReadMount(fn)
-	assert.Nil(t, err, "ReadMount: %v", err)
+	mnt1, err := ts.ReadEndpoint(fn)
+	assert.Nil(t, err, "ReadEndpoint: %v", err)
 
 	assert.Equal(t, mnt.Addrs()[0].GetIP(), mnt1.Addrs()[0].GetIP())
 	assert.Equal(t, mnt.Addrs()[0].GetPort(), mnt1.Addrs()[0].GetPort())
@@ -1088,8 +1088,8 @@ func TestSymlinkPath(t *testing.T) {
 	ts.Shutdown()
 }
 
-func newMount(t *testing.T, ts *test.Tstate, path string) *sp.Tmount {
-	mnt, left, err := ts.CopyMount(pathname)
+func newEndpoint(t *testing.T, ts *test.Tstate, path string) *sp.Tendpoint {
+	mnt, left, err := ts.CopyEndpoint(pathname)
 	assert.Nil(t, err)
 	mnt.SetTree(left)
 	h, p := mnt.TargetIPPort(0)
@@ -1099,7 +1099,7 @@ func newMount(t *testing.T, ts *test.Tstate, path string) *sp.Tmount {
 	return mnt
 }
 
-func TestMountSimple(t *testing.T) {
+func TestEndpointSimple(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1110,8 +1110,8 @@ func TestMountSimple(t *testing.T) {
 	assert.Nil(ts.T, err, "dir")
 
 	pn := gopath.Join(pathname, "namedself")
-	err = ts.MkMountFile(pn, newMount(t, ts, pathname), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MkMountFile")
+	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkEndpointFile")
 	sts, err := ts.GetDir(pn + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself"}), "dir")
@@ -1134,11 +1134,11 @@ func TestUnionDir(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself0"), newMount(t, ts, pathname), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MkMountFile")
+	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself1"), sp.NewMount([]*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222, ts.ProcEnv().GetNet())}, sp.ROOTREALM), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MountService")
+	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself1"), sp.NewEndpoint([]*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222, ts.ProcEnv().GetNet())}, sp.ROOTREALM), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "EndpointService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "d/~any") + "/")
 	assert.Equal(t, nil, err)
@@ -1172,10 +1172,10 @@ func TestUnionRoot(t *testing.T) {
 
 	pn0 := gopath.Join(pathname, "namedself0")
 	pn1 := gopath.Join(pathname, "namedself1")
-	err := ts.MkMountFile(pn0, newMount(t, ts, pathname), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MkMountFile")
-	err = ts.MkMountFile(pn1, sp.NewMount([]*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)}, sp.ROOTREALM), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MkMountFile")
+	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkEndpointFile")
+	err = ts.MkEndpointFile(pn1, sp.NewEndpoint([]*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)}, sp.ROOTREALM), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	pn := pathname
 	if pathname != sp.NAMED {
@@ -1200,16 +1200,16 @@ func TestUnionSymlinkRead(t *testing.T) {
 	}
 
 	pn0 := gopath.Join(pathname, "namedself0")
-	mnt := newMount(t, ts, pathname)
-	err := ts.MkMountFile(pn0, mnt, sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MkMountFile")
+	mnt := newEndpoint(t, ts, pathname)
+	err := ts.MkEndpointFile(pn0, mnt, sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	dn := gopath.Join(pathname, "d")
 	err = ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself1"), mnt, sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MkMountFile")
+	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself1"), mnt, sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	basepn := pathname
 	if pathname != sp.NAMED {
@@ -1239,8 +1239,8 @@ func TestUnionSymlinkPut(t *testing.T) {
 	}
 
 	pn0 := gopath.Join(pathname, "namedself0")
-	err := ts.MkMountFile(pn0, newMount(t, ts, pathname), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MkMountFile")
+	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	b := []byte("hello")
 	basepn := pathname
@@ -1287,8 +1287,8 @@ func TestSetFileSymlink(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	err = ts.MkMountFile(gopath.Join(pathname, "namedself0"), newMount(t, ts, pathname), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MkMountFile")
+	err = ts.MkEndpointFile(gopath.Join(pathname, "namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	st, err := ts.ReadStats("name")
 	assert.Nil(t, err, "statsd")
@@ -1323,7 +1323,7 @@ func TestSetFileSymlink(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestMountUnion(t *testing.T) {
+func TestEndpointUnion(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1333,12 +1333,12 @@ func TestMountUnion(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MkMountFile(gopath.Join(pathname, "d/namedself0"), sp.NewMount([]*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111, ts.ProcEnv().GetNet())}, sp.ROOTREALM), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MkMountFile")
+	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), sp.NewEndpoint([]*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111, ts.ProcEnv().GetNet())}, sp.ROOTREALM), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	pn := gopath.Join(pathname, "mount")
-	err = ts.MkMountFile(pn, newMount(t, ts, dn), sp.NoLeaseId)
-	assert.Nil(ts.T, err, "MkMountFile")
+	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, dn), sp.NoLeaseId)
+	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	mntpn := "mount/"
 	if pathname != sp.NAMED {

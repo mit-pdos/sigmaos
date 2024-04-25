@@ -178,8 +178,8 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name)
 
 	// check if b is indeed reasonable mounting file
-	_, error := sp.NewMountFromBytes(b)
-	assert.Nil(t, error, "NewMount")
+	_, error := sp.NewEndpointFromBytes(b)
+	assert.Nil(t, error, "NewEndpoint")
 
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")

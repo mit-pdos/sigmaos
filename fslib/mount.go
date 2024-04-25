@@ -75,7 +75,7 @@ func (fsl *FsLib) ReadEndpoint(pn string) (*sp.Tendpoint, error) {
 
 // Make copy of root endpoint or first endpoint in pn. Return the
 // content of endpoint and the endpoint file's name.
-func (fsl *FsLib) CopyMount(pn string) (*sp.Tendpoint, string, error) {
+func (fsl *FsLib) CopyEndpoint(pn string) (*sp.Tendpoint, string, error) {
 	if pn == sp.NAMED {
 		mnt, err := fsl.SigmaOS.GetNamedEndpoint()
 		return mnt, "", err

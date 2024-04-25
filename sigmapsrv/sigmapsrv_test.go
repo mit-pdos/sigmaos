@@ -579,8 +579,8 @@ func TestLookupConcurPerf(t *testing.T) {
 		n := newDir(t, ts.FsLib, dir, NFILE)
 		assert.Equal(t, NFILE, n)
 	}
-	ndMnt, err := ts.GetNamedMount()
-	assert.Nil(t, err, "GetNamedMount: %v", err)
+	ndMnt, err := ts.GetNamedEndpoint()
+	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
 	// dump(t)
 	done := make(chan int)
 	fsls := make([][]*fslib.FsLib, 0, NGO)
@@ -588,7 +588,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		fsl2 := make([]*fslib.FsLib, 0, NTRIAL)
 		for j := 0; j < NTRIAL; j++ {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			pe.NamedMountProto = ndMnt.TmountProto
+			pe.NamedEndpointProto = ndMnt.TendpointProto
 			fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)

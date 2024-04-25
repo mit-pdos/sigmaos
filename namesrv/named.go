@@ -142,7 +142,7 @@ func Run(args []string) error {
 		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = path.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
-		nd.GetAuthSrv().MintAndSetEndpointToken(ep)
+		nd.GetAuthMgr().MintAndSetEndpointToken(ep)
 		if err := nd.MkEndpointFile(pn, ep, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v\n", nd.realm, pn, err)
 			return err
@@ -207,12 +207,12 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		//		nil,
 	)
 	kmgr.AddPublicKey(sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()), nd.masterPublicKey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.signer, sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.signer, sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error New authsrv: %v", err)
-		return sp.NewNullEndpoint(), fmt.Errorf("NewAuthSrv err: %v", err)
+		return sp.NewNullEndpoint(), fmt.Errorf("NewAuthMgr err: %v", err)
 	}
-	nd.SigmaClnt.SetAuthSrv(as)
+	nd.SigmaClnt.SetAuthMgr(amgr)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
 		return sp.NewNullEndpoint(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)

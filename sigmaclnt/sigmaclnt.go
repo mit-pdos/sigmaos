@@ -149,20 +149,20 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	return sc.FsLib.Close()
 }
 
-func (sc *SigmaClntKernel) SetAuthSrv(as auth.AuthSrv) {
-	sc.GetNetProxyClnt().SetAuthSrv(as)
+func (sc *SigmaClntKernel) SetAuthMgr(amgr auth.AuthMgr) {
+	sc.GetNetProxyClnt().SetAuthMgr(amgr)
 }
 
-func (sc *SigmaClntKernel) GetAuthSrv() auth.AuthSrv {
-	return sc.GetNetProxyClnt().GetAuthSrv()
+func (sc *SigmaClntKernel) GetAuthMgr() auth.AuthMgr {
+	return sc.GetNetProxyClnt().GetAuthMgr()
 }
 
-func (sc *SigmaClnt) GetAuthSrv() auth.AuthSrv {
-	return sc.GetNetProxyClnt().GetAuthSrv()
+func (sc *SigmaClnt) GetAuthMgr() auth.AuthMgr {
+	return sc.GetNetProxyClnt().GetAuthMgr()
 }
 
-func (sc *SigmaClnt) SetAuthSrv(as auth.AuthSrv) {
-	sc.GetNetProxyClnt().SetAuthSrv(as)
+func (sc *SigmaClnt) SetAuthMgr(amgr auth.AuthMgr) {
+	sc.GetNetProxyClnt().SetAuthMgr(amgr)
 }
 
 func (sc *SigmaClnt) ClntExitOK() {

@@ -58,20 +58,20 @@ type Kernel struct {
 	realms       map[sp.Trealm]*sigmaclnt.SigmaClntKernel
 	svcs         *Services
 	ip           sp.Tip
-	as           auth.AuthSrv
+	amgr         auth.AuthMgr
 	shuttingDown bool
 }
 
-func newKernel(param *Param, bootstrapAS auth.AuthSrv) *Kernel {
+func newKernel(param *Param, bootstrapAS auth.AuthMgr) *Kernel {
 	return &Kernel{
 		realms: make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
 		Param:  param,
-		as:     bootstrapAS,
+		amgr:   bootstrapAS,
 		svcs:   newServices(),
 	}
 }
 
-func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, error) {
+func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthMgr) (*Kernel, error) {
 	k := newKernel(p, bootstrapAS)
 	ip, err := netsigma.LocalIP()
 	if err != nil {
@@ -115,13 +115,13 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 		k.Param.MasterPubKey,
 		k.Param.MasterPrivKey,
 	)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(k.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(k.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
+		db.DPrintf(db.ERROR, "Error NewAuthMgr %v", err)
 		return nil, err
 	}
-	k.as = as
-	k.SigmaClntKernel.SetAuthSrv(as)
+	k.amgr = amgr
+	k.SigmaClntKernel.SetAuthMgr(amgr)
 	db.DPrintf(db.KERNEL, "Kernel start srvs %v", k.Param.Services)
 	err = startSrvs(k)
 	if err != nil {
@@ -175,7 +175,7 @@ func (k *Kernel) getRealmSigmaClnt(realm sp.Trealm) (*sigmaclnt.SigmaClntKernel,
 	}
 	pe := proc.NewDifferentRealmProcEnv(k.ProcEnv(), realm)
 	pe.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.as.MintAndSetProcToken(pe); err != nil {
+	if err := k.amgr.MintAndSetProcToken(pe); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}

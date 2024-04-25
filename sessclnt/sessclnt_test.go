@@ -106,7 +106,7 @@ func newTstateClntAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 func newTstateSrvAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := newTstateClntAddr(t, addr, crash)
 	db.DPrintf(db.ALWAYS, "pe: %v", ts.PE)
-	ts.srv = netsrv.NewNetServer(ts.PE, netsigma.NewNetProxyClnt(ts.PE, ts.AS), ts.Addr, ts)
+	ts.srv = netsrv.NewNetServer(ts.PE, netsigma.NewNetProxyClnt(ts.PE, ts.AMgr), ts.Addr, ts)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.GetEndpoint())
 	return ts
 }
@@ -466,8 +466,8 @@ func newTstateSp(t *testing.T) *TstateSp {
 	ts.privkey = privkey
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(ts.pubkey))
 	kmgr.AddPrivateKey(sp.Tsigner(ts.PE.GetPID()), ts.privkey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(ts.PE.GetPID()), "", kmgr)
-	assert.Nil(t, err, "Err NewAuthSrv: %v", err)
+	as, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(ts.PE.GetPID()), "", kmgr)
+	assert.Nil(t, err, "Err NewAuthMgr: %v", err)
 	err = as.MintAndSetProcToken(ts.PE)
 	assert.Nil(t, err, "Err MintAndSetToken: %v", err)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)

@@ -28,12 +28,12 @@ type ProcMgr struct {
 	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClntKernel
 	namedMnts      map[sp.Trealm]*sp.Tendpoint
 	cachedProcBins map[sp.Trealm]map[string]bool
-	as             auth.AuthSrv
+	amgr           auth.AuthMgr
 	pstate         *ProcState
 }
 
 // Manages the state and lifecycle of a proc.
-func NewProcMgr(as auth.AuthSrv, sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
+func NewProcMgr(amgr auth.AuthMgr, sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
 	mgr := &ProcMgr{
 		kernelId:       kernelId,
 		rootsc:         sigmaclnt.NewSigmaClntKernel(sc),
@@ -41,7 +41,7 @@ func NewProcMgr(as auth.AuthSrv, sc *sigmaclnt.SigmaClnt, kernelId string) *Proc
 		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
 		namedMnts:      make(map[sp.Trealm]*sp.Tendpoint),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
-		as:             as,
+		amgr:           amgr,
 		pstate:         NewProcState(),
 	}
 	return mgr
@@ -183,7 +183,7 @@ func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 			clnt = mgr.rootsc
 		} else {
 			pe := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
-			if err := mgr.as.MintAndSetProcToken(pe); err != nil {
+			if err := mgr.amgr.MintAndSetProcToken(pe); err != nil {
 				db.DFatalf("Err MintAndSetToken: %v", err)
 			}
 			if sc, err := sigmaclnt.NewSigmaClnt(pe); err != nil {

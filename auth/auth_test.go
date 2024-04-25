@@ -33,7 +33,7 @@ func TestSignHMACToken(t *testing.T) {
 	assert.Nil(t, err, "Err NewPublicKey: %v", err)
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey("test", key)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", sp.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -44,7 +44,7 @@ func TestSignHMACToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
-	signedToken, err := as.MintProcToken(claims)
+	signedToken, err := amgr.MintProcToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
 }
@@ -56,7 +56,7 @@ func TestVerifyHMACToken(t *testing.T) {
 	assert.Nil(t, err, "Err NewPublicKey: %v", err)
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey("test", key)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", sp.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -67,10 +67,10 @@ func TestVerifyHMACToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
-	signedToken, err := as.MintProcToken(claims)
+	signedToken, err := amgr.MintProcToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
-	claims2, err := as.VerifyProcTokenGetClaims("my-principal", signedToken)
+	claims2, err := amgr.VerifyProcTokenGetClaims("my-principal", signedToken)
 	assert.Nil(t, err, "Err verify token get claims: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", claims2)
 }
@@ -80,7 +80,7 @@ func TestSignECDSAToken(t *testing.T) {
 	assert.Nil(t, err, "Err NewKey: %v", err)
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey("test", privkey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, "test", sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, "test", sp.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -91,7 +91,7 @@ func TestSignECDSAToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
-	signedToken, err := as.MintProcToken(claims)
+	signedToken, err := amgr.MintProcToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
 }
@@ -101,7 +101,7 @@ func TestVerifyECDSAToken(t *testing.T) {
 	assert.Nil(t, err, "Err NewKey: %v", err)
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey("test", privkey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, "test", sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, "test", sp.NOT_SET, kmgr)
 	assert.Nil(t, err, "Err make auth clnt: %v", err)
 	// Create the Claims
 	claims := &auth.ProcClaims{
@@ -113,11 +113,11 @@ func TestVerifyECDSAToken(t *testing.T) {
 		},
 	}
 	s := time.Now()
-	signedToken, err := as.MintProcToken(claims)
+	signedToken, err := amgr.MintProcToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
 	db.DPrintf(db.TEST, "Signed token in %v sec: %v", time.Since(s).Seconds(), signedToken)
 	s = time.Now()
-	claims2, err := as.VerifyProcTokenGetClaims("my-principal", signedToken)
+	claims2, err := amgr.VerifyProcTokenGetClaims("my-principal", signedToken)
 	assert.Nil(t, err, "Err verify token get claims: %v", err)
 	db.DPrintf(db.TEST, "Verified token: in %v sec: %v", time.Since(s).Seconds(), claims2)
 }

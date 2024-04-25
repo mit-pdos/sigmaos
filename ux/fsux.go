@@ -44,11 +44,11 @@ func RunFsUx(rootux string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, 
 		pubkey,
 		privkey,
 	)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DFatalf("Error NewAuthSrv %v", err)
+		db.DFatalf("Error NewAuthMgr %v", err)
 	}
-	sc.SetAuthSrv(as)
+	sc.SetAuthMgr(amgr)
 
 	ip, err := netsigma.LocalIP()
 	if err != nil {

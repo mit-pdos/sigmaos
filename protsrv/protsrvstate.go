@@ -17,10 +17,10 @@ type ProtSrvState struct {
 	stats *stats.StatInfo
 	et    *ephemeralmap.EphemeralMap
 	cct   *clntcond.ClntCondTable
-	auth  auth.AuthSrv
+	auth  auth.AuthMgr
 }
 
-func NewProtSrvState(as auth.AuthSrv, stats *stats.StatInfo) *ProtSrvState {
+func NewProtSrvState(amgr auth.AuthMgr, stats *stats.StatInfo) *ProtSrvState {
 	cct := clntcond.NewClntCondTable()
 	pss := &ProtSrvState{
 		stats: stats,
@@ -29,7 +29,7 @@ func NewProtSrvState(as auth.AuthSrv, stats *stats.StatInfo) *ProtSrvState {
 		cct:   cct,
 		wt:    watch.NewWatchTable(cct),
 		vt:    version.NewVersionTable(),
-		auth:  as,
+		auth:  amgr,
 	}
 	return pss
 }

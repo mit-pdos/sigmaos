@@ -20,14 +20,14 @@ type NetProxySrv struct {
 
 type NetProxySrvStubs struct {
 	innerContainerIP sp.Tip
-	auth             auth.AuthSrv
+	auth             auth.AuthMgr
 	directDialFn     DialFn
 	directListenFn   ListenFn
 	trans            *NetProxyRPCTrans
 	rpcs             *rpcsrv.RPCSrv
 }
 
-func NewNetProxySrv(ip sp.Tip, as auth.AuthSrv) (*NetProxySrv, error) {
+func NewNetProxySrv(ip sp.Tip, amgr auth.AuthMgr) (*NetProxySrv, error) {
 	// Create the net proxy socket
 	socket, err := net.Listen("unix", sp.SIGMA_NETPROXY_SOCKET)
 	if err != nil {
@@ -40,7 +40,7 @@ func NewNetProxySrv(ip sp.Tip, as auth.AuthSrv) (*NetProxySrv, error) {
 	nps := &NetProxySrv{
 		&NetProxySrvStubs{
 			innerContainerIP: ip,
-			auth:             as,
+			auth:             amgr,
 			directDialFn:     DialDirect,
 			directListenFn:   ListenDirect,
 		},
@@ -133,7 +133,7 @@ func connToFile(proxyConn net.Conn) (*os.File, error) {
 	return f, nil
 }
 
-func constructEndpoint(verifyEndpoints bool, as auth.AuthSrv, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tendpoint, error) {
+func constructEndpoint(verifyEndpoints bool, amgr auth.AuthMgr, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tendpoint, error) {
 	host, port, err := QualifyAddrLocalIP(ip, l.Addr().String())
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
@@ -141,13 +141,13 @@ func constructEndpoint(verifyEndpoints bool, as auth.AuthSrv, ip sp.Tip, realm s
 		return nil, err
 	}
 	ep := sp.NewEndpoint(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm)
-	if verifyEndpoints && as == nil {
-		db.DFatalf("Error construct endpoint without AuthSrv")
+	if verifyEndpoints && amgr == nil {
+		db.DFatalf("Error construct endpoint without AuthMgr")
 		return nil, fmt.Errorf("Try to construct endpoint without authsrv")
 	}
-	if as != nil {
+	if amgr != nil {
 		// Sign the endpoint
-		if err := as.MintAndSetEndpointToken(ep); err != nil {
+		if err := amgr.MintAndSetEndpointToken(ep); err != nil {
 			db.DFatalf("Error sign endpoint: %v", err)
 			return nil, err
 		}

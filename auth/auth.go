@@ -12,7 +12,7 @@ type KeyMgr interface {
 	AddPrivateKey(s sp.Tsigner, key PrivateKey)
 }
 
-type AuthSrv interface {
+type AuthMgr interface {
 	SetDelegatedProcToken(p *proc.Proc) error
 	VerifyPrincipalIdentity(principal *sp.Tprincipal) (*ProcClaims, error)
 	// Endpoint tokens

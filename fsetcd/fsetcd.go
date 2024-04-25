@@ -33,12 +33,12 @@ type FsEtcd struct {
 	dc       *Dcache
 }
 
-func NewFsEtcdEndpoint(as auth.AuthSrv, ip sp.Tip) (map[string]*sp.TendpointProto, error) {
+func NewFsEtcdEndpoint(amgr auth.AuthMgr, ip sp.Tip) (map[string]*sp.TendpointProto, error) {
 	eps := map[string]*sp.TendpointProto{}
 	for i := range endpointPorts {
 		addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, endpointPorts[i])
 		ep := sp.NewEndpoint([]*sp.Taddr{addr}, sp.ROOTREALM)
-		if err := as.MintAndSetEndpointToken(ep); err != nil {
+		if err := amgr.MintAndSetEndpointToken(ep); err != nil {
 			db.DPrintf(db.ERROR, "Unable to mint etcd endpoint token: %v", err)
 			return nil, err
 		}

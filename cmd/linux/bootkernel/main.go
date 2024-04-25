@@ -83,11 +83,11 @@ func main() {
 		masterPubKey,
 		masterPrivKey,
 	)
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
+	amgr, err1 := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err1 != nil {
-		db.DFatalf("Error NewAuthSrv: %v", err1)
+		db.DFatalf("Error NewAuthMgr: %v", err1)
 	}
-	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(as, sp.Tip(os.Args[2]))
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(amgr, sp.Tip(os.Args[2]))
 	if err != nil {
 		db.DFatalf("Error NewFsEtcdEndpoint: %v", err)
 	}
@@ -96,10 +96,10 @@ func main() {
 	verifyEndpoints := param.NetProxy
 	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.ROOTREALM, sp.NoToken()), secrets, etcdMnt, localIP, localIP, param.BuildTag, param.Overlays, verifyEndpoints)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	if err1 := as.MintAndSetProcToken(pe); err1 != nil {
+	if err1 := amgr.MintAndSetProcToken(pe); err1 != nil {
 		db.DFatalf("Error MintToken: %v", err1)
 	}
-	if err := boot.BootUp(&param, pe, as); err != nil {
+	if err := boot.BootUp(&param, pe, amgr); err != nil {
 		db.DFatalf("%v: boot %v err %v", os.Args[0], os.Args[1:], err)
 	}
 	os.Exit(0)

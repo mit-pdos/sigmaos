@@ -62,11 +62,11 @@ func RunMongod(mongodUrl string, masterPubKey auth.PublicKey, pubkey auth.Public
 		pubkey,
 		privkey,
 	)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		dbg.DFatalf(dbg.ERROR, "Error NewAuthSrv %v", err)
+		dbg.DFatalf(dbg.ERROR, "Error NewAuthMgr %v", err)
 	}
-	sc.SetAuthSrv(as)
+	sc.SetAuthMgr(amgr)
 
 	dbg.DPrintf(dbg.MONGO, "Making mongo proxy server at %v", mongodUrl)
 	s, err := newServer(mongodUrl)

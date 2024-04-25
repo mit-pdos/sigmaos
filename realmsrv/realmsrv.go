@@ -56,7 +56,7 @@ type RealmSrv struct {
 	sd           *scheddclnt.ScheddClnt
 	mkc          *kernelclnt.MultiKernelClnt
 	kc           *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
-	as           auth.AuthSrv
+	amgr         auth.AuthMgr
 	masterPubKey auth.PublicKey
 	pubkey       auth.PublicKey
 	privkey      auth.PrivateKey
@@ -78,18 +78,18 @@ func RunRealmSrv(netproxy bool, masterPubKey auth.PublicKey, pubkey auth.PublicK
 		pubkey,
 		privkey,
 	)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
+		db.DPrintf(db.ERROR, "Error NewAuthMgr %v", err)
 		return err
 	}
-	sc.SetAuthSrv(as)
+	sc.SetAuthMgr(amgr)
 	rs := &RealmSrv{
 		netproxy:     netproxy,
 		lastNDPort:   MIN_PORT,
 		realms:       make(map[sp.Trealm]*Realm),
 		masterPubKey: masterPubKey,
-		as:           as,
+		amgr:         amgr,
 		pubkey:       pubkey,
 		privkey:      privkey,
 	}
@@ -149,7 +149,7 @@ func (rm *RealmSrv) bootstrapNamedKeys(p *proc.Proc) error {
 		p.Args...,
 	)
 	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := rm.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
+	if err := rm.amgr.MintAndSetProcToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
@@ -198,7 +198,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	db.DPrintf(db.REALMD, "RealmSrv.Make named ready to serve for %v", rid)
 	pe := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
 	pe.SetAllowedPaths(sp.ALL_PATHS)
-	if err := rm.as.MintAndSetProcToken(pe); err != nil {
+	if err := rm.amgr.MintAndSetProcToken(pe); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
@@ -218,7 +218,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		pn := path.Join(sp.NAMED, s)
 		ep := sp.NewEndpoint(namedEndpoint.Addrs(), rid)
 		ep.SetTree(s)
-		if err := rm.sc.GetAuthSrv().MintAndSetEndpointToken(ep); err != nil {
+		if err := rm.sc.GetAuthMgr().MintAndSetEndpointToken(ep); err != nil {
 			db.DPrintf(db.ERROR, "Error mint & set endpoint token: %v", err)
 			return err
 		}

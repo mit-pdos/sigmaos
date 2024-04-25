@@ -209,11 +209,11 @@ func Run(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.Privat
 		pubkey,
 		privkey,
 	)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DFatalf("Error NewAuthSrv %v", err)
+		db.DFatalf("Error NewAuthMgr %v", err)
 	}
-	sc.SetAuthSrv(as)
+	sc.SetAuthMgr(amgr)
 	lcs := NewLCSched(sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {

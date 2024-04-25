@@ -39,22 +39,22 @@ type SigmaPSrv struct {
 	stats    *stats.StatInfo
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, root fs.Dir, as auth.AuthSrv, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, root fs.Dir, amgr auth.AuthMgr, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
 	psrv := &SigmaPSrv{
 		dirunder: root,
 		dirover:  overlay.MkDirOverlay(root),
 		fencefs:  fencefs,
 	}
 	psrv.stats = stats.NewStatsDev(psrv.dirover)
-	psrv.ProtSrvState = protsrv.NewProtSrvState(as, psrv.stats)
+	psrv.ProtSrvState = protsrv.NewProtSrvState(amgr, psrv.stats)
 	psrv.VersionTable().Insert(psrv.dirover.Path())
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
 	psrv.SessSrv = sesssrv.NewSessSrv(pe, npc, addr, psrv.stats, psrv)
 	return psrv
 }
 
-func NewSigmaPSrvPost(root fs.Dir, pn string, as auth.AuthSrv, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
-	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, as, addr, fencefs)
+func NewSigmaPSrvPost(root fs.Dir, pn string, amgr auth.AuthMgr, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
+	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, amgr, addr, fencefs)
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
 			return nil, "", err

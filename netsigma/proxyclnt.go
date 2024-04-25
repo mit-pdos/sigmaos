@@ -19,33 +19,33 @@ type NetProxyClnt struct {
 	pe               *proc.ProcEnv
 	canSignEndpoints bool
 	verifyEndpoints  bool
-	auth             auth.AuthSrv
+	auth             auth.AuthMgr
 	directDialFn     DialFn
 	directListenFn   ListenFn
 	rpcc             *rpcclnt.RPCClnt
 	rpcch            *NetProxyRPCCh
 }
 
-func NewNetProxyClnt(pe *proc.ProcEnv, as auth.AuthSrv) *NetProxyClnt {
+func NewNetProxyClnt(pe *proc.ProcEnv, amgr auth.AuthMgr) *NetProxyClnt {
 	return &NetProxyClnt{
 		pe:               pe,
-		canSignEndpoints: as != nil,
+		canSignEndpoints: amgr != nil,
 		verifyEndpoints:  pe.GetVerifyEndpoints(),
-		auth:             as,
+		auth:             amgr,
 		directDialFn:     DialDirect,
 		directListenFn:   ListenDirect,
 	}
 }
 
-func (npc *NetProxyClnt) SetAuthSrv(as auth.AuthSrv) {
+func (npc *NetProxyClnt) SetAuthMgr(amgr auth.AuthMgr) {
 	npc.Lock()
 	defer npc.Unlock()
 
-	npc.auth = as
+	npc.auth = amgr
 	npc.canSignEndpoints = true
 }
 
-func (npc *NetProxyClnt) GetAuthSrv() auth.AuthSrv {
+func (npc *NetProxyClnt) GetAuthMgr() auth.AuthMgr {
 	npc.Lock()
 	defer npc.Unlock()
 
@@ -85,7 +85,7 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tendpoint, net.Listener, er
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directListen %v", addr)
 		if npc.verifyEndpoints && !npc.canSignEndpoints {
-			err := fmt.Errorf("Try to listen on netproxyclnt without AuthSrv")
+			err := fmt.Errorf("Try to listen on netproxyclnt without AuthMgr")
 			db.DPrintf(db.ERROR, "Err listen: %v", err)
 			return nil, nil, err
 		}

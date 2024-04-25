@@ -77,11 +77,11 @@ type TstateMin struct {
 	lip  sp.Tip
 	PE   *proc.ProcEnv
 	Addr *sp.Taddr
-	AS   auth.AuthSrv
+	AMgr auth.AuthMgr
 }
 
 func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
-	_, _, as, err := newAuthSrv()
+	_, _, amgr, err := newAuthMgr()
 	if !assert.Nil(t, err, "Error new auth srv: %v", err) {
 		return nil
 	}
@@ -89,7 +89,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	assert.Nil(t, err1, "Error load s3 secrets: %v", err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	lip := sp.Tip("127.0.0.1")
-	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(as, sp.Tip(EtcdIP))
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(amgr, sp.Tip(EtcdIP))
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil
 	}
@@ -102,7 +102,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 		lip:  lip,
 		PE:   pe,
 		Addr: addr,
-		AS:   as,
+		AMgr: amgr,
 	}
 }
 
@@ -123,7 +123,7 @@ type Tstate struct {
 	scsck         *bootkernelclnt.Kernel
 	masterPubKey  auth.PublicKey
 	masterPrivKey auth.PrivateKey
-	as            auth.AuthSrv
+	amgr          auth.AuthMgr
 }
 
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
@@ -165,7 +165,7 @@ func NewTstateWithRealms(t *testing.T) (*Tstate, error) {
 	return ts, nil
 }
 
-func newAuthSrv() (auth.PublicKey, auth.PrivateKey, auth.AuthSrv, error) {
+func newAuthMgr() (auth.PublicKey, auth.PrivateKey, auth.AuthMgr, error) {
 	var pubkey auth.PublicKey
 	var privkey auth.PrivateKey
 	var err error
@@ -185,12 +185,12 @@ func newAuthSrv() (auth.PublicKey, auth.PrivateKey, auth.AuthSrv, error) {
 	}
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
 	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
+	amgr, err1 := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthSrv: %v", err1)
+		db.DPrintf(db.ERROR, "Error NewAuthMgr: %v", err1)
 		return nil, nil, nil, err1
 	}
-	return pubkey, privkey, as, nil
+	return pubkey, privkey, amgr, nil
 }
 
 func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
@@ -215,7 +215,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	pubkey, privkey, as, err := newAuthSrv()
+	pubkey, privkey, amgr, err := newAuthMgr()
 	if !assert.Nil(t, err, "Error new auth srv: %v", err) {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
 		return nil, err1
 	}
-	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(as, sp.Tip(EtcdIP))
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(amgr, sp.Tip(EtcdIP))
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	verifyMounts := useNetProxy
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy, verifyMounts)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	err1 = as.MintAndSetProcToken(pe)
+	err1 = amgr.MintAndSetProcToken(pe)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err1)
 		return nil, err1
@@ -279,7 +279,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		scsck:         scsck,
 		masterPubKey:  pubkey,
 		masterPrivKey: privkey,
-		as:            as,
+		amgr:          amgr,
 	}
 	return savedTstate, nil
 }
@@ -314,11 +314,11 @@ func (ts *Tstate) BootFss3d() error {
 }
 
 func (ts *Tstate) MintAndSetProcToken(pe *proc.ProcEnv) error {
-	return ts.as.MintAndSetProcToken(pe)
+	return ts.amgr.MintAndSetProcToken(pe)
 }
 
 func (ts *Tstate) MintProcToken(pc *auth.ProcClaims) (*sp.Ttoken, error) {
-	return ts.as.MintProcToken(pc)
+	return ts.amgr.MintProcToken(pc)
 }
 
 func (ts *Tstate) KillOne(s string) error {

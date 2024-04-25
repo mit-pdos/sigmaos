@@ -221,20 +221,20 @@ const (
 type Awriter struct {
 	nthread int
 	clnt    *sessclnt.Mgr
-	mnt     *sp.Tendpoint
+	ep      *sp.Tendpoint
 	req     chan sessp.IoVec
 	rep     chan error
 	err     error
 	wg      sync.WaitGroup
 }
 
-func NewAwriter(n int, clnt *sessclnt.Mgr, mnt *sp.Tendpoint) *Awriter {
+func NewAwriter(n int, clnt *sessclnt.Mgr, ep *sp.Tendpoint) *Awriter {
 	req := make(chan sessp.IoVec)
 	rep := make(chan error)
 	awrt := &Awriter{
 		nthread: n,
 		clnt:    clnt,
-		mnt:     mnt,
+		ep:      ep,
 		req:     req,
 		rep:     rep,
 	}
@@ -252,7 +252,7 @@ func (awrt *Awriter) Writer() {
 			return
 		}
 		req := sp.NewTwriteread(sp.NoFid)
-		_, err := awrt.clnt.RPC(awrt.mnt, req, iov, nil)
+		_, err := awrt.clnt.RPC(awrt.ep, req, iov, nil)
 		if err != nil {
 			awrt.rep <- err
 		} else {

@@ -296,11 +296,11 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 		for _, st := range sts1 {
 			// If there is a name in common in the directory, check that they are for different endpoints
 			if fslib.Present(sts, []string{st.Name}) {
-				mnt, err := ts1.ReadEndpoint(path.Join(d, st.Name))
+				ep, err := ts1.ReadEndpoint(path.Join(d, st.Name))
 				assert.Nil(t, err, "ReadEndpoint: %v", err)
-				mnt1, err := rootts.ReadEndpoint(path.Join(d, st.Name))
+				ep1, err := rootts.ReadEndpoint(path.Join(d, st.Name))
 				assert.Nil(t, err, "ReadEndpoint: %v", err)
-				assert.False(t, mnt.Addrs()[0] == mnt1.Addrs()[0], "%v cross-over", d)
+				assert.False(t, ep.Addrs()[0] == ep1.Addrs()[0], "%v cross-over", d)
 			}
 		}
 	}
@@ -353,11 +353,11 @@ func TestWaitExitMultiNode(t *testing.T) {
 		for _, st := range sts1 {
 			// If there is a name in common in the directory, check that they are for different endpoints
 			if fslib.Present(sts, []string{st.Name}) {
-				mnt, err := ts1.ReadEndpoint(path.Join(d, st.Name))
+				ep, err := ts1.ReadEndpoint(path.Join(d, st.Name))
 				assert.Nil(t, err, "ReadEndpoint: %v", err)
-				mnt1, err := rootts.ReadEndpoint(path.Join(d, st.Name))
+				ep1, err := rootts.ReadEndpoint(path.Join(d, st.Name))
 				assert.Nil(t, err, "ReadEndpoint: %v", err)
-				assert.False(t, mnt.Addrs()[0] == mnt1.Addrs()[0], "%v cross-over", d)
+				assert.False(t, ep.Addrs()[0] == ep1.Addrs()[0], "%v cross-over", d)
 			}
 		}
 	}
@@ -512,18 +512,18 @@ func TestRealmNetIsolationOK(t *testing.T) {
 
 	db.DPrintf(db.TEST, "readendpoint\n")
 
-	mnt, err := ts1.ReadEndpoint(cc.Server(0))
+	ep, err := ts1.ReadEndpoint(cc.Server(0))
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "mnt %v", mnt)
+	db.DPrintf(db.TEST, "ep %v", ep)
 
 	// Remove public port
-	if len(mnt.Addrs()) > 1 {
-		mnt.SetAddr(mnt.Addrs()[:1])
+	if len(ep.Addrs()) > 1 {
+		ep.SetAddr(ep.Addrs()[:1])
 	}
 
 	pn := path.Join(sp.NAMED, "srv")
-	err = ts1.MkEndpointFile(pn, mnt, sp.NoLeaseId)
+	err = ts1.MkEndpointFile(pn, ep, sp.NoLeaseId)
 	assert.Nil(t, err)
 
 	pn = pn + "/"
@@ -567,18 +567,18 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	_, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
 	assert.NotNil(t, err)
 
-	mnt, err := ts1.ReadEndpoint(cc.Server(0))
+	ep, err := ts1.ReadEndpoint(cc.Server(0))
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "mnt %v", mnt)
+	db.DPrintf(db.TEST, "ep %v", ep)
 
 	// Remove public port
-	if len(mnt.Addrs()) > 1 {
-		mnt.SetAddr(mnt.Addrs()[:1])
+	if len(ep.Addrs()) > 1 {
+		ep.SetAddr(ep.Addrs()[:1])
 	}
 
 	pn := path.Join(sp.NAMED, "srv")
-	err = ts2.MkEndpointFile(pn, mnt, sp.NoLeaseId)
+	err = ts2.MkEndpointFile(pn, ep, sp.NoLeaseId)
 	assert.Nil(t, err)
 
 	pn = pn + "/"

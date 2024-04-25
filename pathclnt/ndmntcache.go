@@ -17,12 +17,12 @@ func NewNamedMountCache(pe *proc.ProcEnv) *NamedMountCache {
 	var rootMnt *sp.Tendpoint = nil
 	var realmMnt *sp.Tendpoint = nil
 	// If an initial named mount was provided to this proc, set it.
-	if mnt, ok := pe.GetNamedEndpoint(); ok {
+	if ep, ok := pe.GetNamedEndpoint(); ok {
 		// If this proc operates in the root realm, cache the root mount as well
 		if pe.GetRealm() == sp.ROOTREALM {
-			rootMnt = mnt
+			rootMnt = ep
 		} else {
-			realmMnt = mnt
+			realmMnt = ep
 		}
 	}
 	return &NamedMountCache{
@@ -47,14 +47,14 @@ func (nmc *NamedMountCache) Get(realm sp.Trealm) (*sp.Tendpoint, bool) {
 	return nmc.realm, true
 }
 
-func (nmc *NamedMountCache) Put(realm sp.Trealm, mnt *sp.Tendpoint) {
+func (nmc *NamedMountCache) Put(realm sp.Trealm, ep *sp.Tendpoint) {
 	nmc.Lock()
 	defer nmc.Unlock()
 
 	if realm == sp.ROOTREALM {
-		nmc.root = mnt
+		nmc.root = ep
 	} else {
-		nmc.realm = mnt
+		nmc.realm = ep
 	}
 }
 

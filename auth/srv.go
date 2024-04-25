@@ -80,17 +80,17 @@ func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	return nil
 }
 
-func (as *AuthSrvImpl[M]) MintEndpointToken(mnt *sp.Tendpoint) (*sp.Ttoken, error) {
-	mc := NewEndpointClaims(mnt)
+func (as *AuthSrvImpl[M]) MintEndpointToken(ep *sp.Tendpoint) (*sp.Ttoken, error) {
+	mc := NewEndpointClaims(ep)
 	return as.mintTokenWithClaims(mc)
 }
 
-func (as *AuthSrvImpl[M]) MintAndSetEndpointToken(mnt *sp.Tendpoint) error {
-	token, err := as.MintEndpointToken(mnt)
+func (as *AuthSrvImpl[M]) MintAndSetEndpointToken(ep *sp.Tendpoint) error {
+	token, err := as.MintEndpointToken(ep)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error MintEndpointToken: %v", err)
 	}
-	mnt.SetToken(token)
+	ep.SetToken(token)
 	return nil
 }
 
@@ -158,13 +158,13 @@ func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPat
 	}
 	// Check that the server path is a subpath of one of the allowed paths
 	for _, ap := range pc.AllowedPaths {
-		mntPath := path.Join(as.srvpath, attachPath)
-		db.DPrintf(db.AUTH, "Check if %v or %v is in %v subtree", as.srvpath, mntPath, ap)
+		epPath := path.Join(as.srvpath, attachPath)
+		db.DPrintf(db.AUTH, "Check if %v or %v is in %v subtree", as.srvpath, epPath, ap)
 		if as.srvpath == "" && ap == sp.NAMED {
 			db.DPrintf(db.AUTH, "Attach Authorization check to named successful p %v claims %v", principal.GetID(), pc)
 			return pc, true, nil
 		}
-		if IsInSubtree(as.srvpath, ap) || IsInSubtree(mntPath, ap) {
+		if IsInSubtree(as.srvpath, ap) || IsInSubtree(epPath, ap) {
 			db.DPrintf(db.AUTH, "Attach Authorization check successful p %v claims %v", principal.GetID(), pc)
 			return pc, true, nil
 		}
@@ -174,7 +174,7 @@ func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPat
 }
 
 func (as *AuthSrvImpl[M]) EndpointIsAuthorized(principal *sp.Tprincipal, endpoint *sp.Tendpoint) (bool, error) {
-	db.DPrintf(db.AUTH, "Endpoint Authorization check p %v mnt %v", principal.GetID(), endpoint)
+	db.DPrintf(db.AUTH, "Endpoint Authorization check p %v ep %v", principal.GetID(), endpoint)
 	pc, err := as.VerifyPrincipalIdentity(principal)
 	if err != nil {
 		db.DPrintf(db.AUTH, "Endpoint Authorization identity check failed p %v: err %v", principal.GetID(), err)
@@ -194,7 +194,7 @@ func (as *AuthSrvImpl[M]) EndpointIsAuthorized(principal *sp.Tprincipal, endpoin
 			return false, err
 		}
 	}
-	db.DPrintf(db.AUTH, "Endpoint Authorization check succeeded p %v mnt %v", principal.GetID(), endpoint)
+	db.DPrintf(db.AUTH, "Endpoint Authorization check succeeded p %v ep %v", principal.GetID(), endpoint)
 	return true, nil
 }
 

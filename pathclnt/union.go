@@ -7,9 +7,9 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) IsLocalMount(mnt *sp.Tendpoint) (bool, error) {
+func (pathc *PathClnt) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
 	outerIP := pathc.pe.GetOuterContainerIP()
-	tip, _ := mnt.TargetIPPort(0)
+	tip, _ := ep.TargetIPPort(0)
 	if tip == "" {
 		tip = outerIP
 	}
@@ -34,13 +34,13 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 		return sp.NoFid, err
 	}
 	db.DPrintf(db.WALK, "unionScan: %v target: %v\n", name, string(target))
-	mnt, err := sp.NewEndpointFromBytes(target)
+	ep, err := sp.NewEndpointFromBytes(target)
 	if err != nil {
 		db.DPrintf(db.WALK, "unionScan NewMount err %v", err)
 		return sp.NoFid, nil
 	}
-	db.DPrintf(db.WALK, "unionScan: %v mnt: %v\n", name, mnt)
-	ok, _ := pathc.IsLocalMount(mnt)
+	db.DPrintf(db.WALK, "unionScan: %v ep: %v\n", name, ep)
+	ok, _ := pathc.IsLocalMount(ep)
 	if q == "~any" || ok {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {

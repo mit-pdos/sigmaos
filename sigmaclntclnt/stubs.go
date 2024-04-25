@@ -246,16 +246,16 @@ func (scc *SigmaClntClnt) DirWait(fd int) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) MountTree(mnt *sp.Tendpoint, tree, mount string) error {
-	req := scproto.SigmaMountTreeRequest{Endpoint: mnt.GetProto(), Tree: tree, MountName: mount}
+func (scc *SigmaClntClnt) MountTree(ep *sp.Tendpoint, tree, mount string) error {
+	req := scproto.SigmaMountTreeRequest{Endpoint: ep.GetProto(), Tree: tree, MountName: mount}
 	rep := scproto.SigmaErrReply{}
 	err := scc.rpcErr("SigmaClntSrvAPI.MountTree", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "MountTree %v %v %v", req, rep, err)
 	return err
 }
 
-func (scc *SigmaClntClnt) IsLocalMount(mnt *sp.Tendpoint) (bool, error) {
-	req := scproto.SigmaMountRequest{Endpoint: mnt.GetProto()}
+func (scc *SigmaClntClnt) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
+	req := scproto.SigmaMountRequest{Endpoint: ep.GetProto()}
 	rep := scproto.SigmaMountReply{}
 	err := scc.rpcc.RPC("SigmaClntSrvAPI.IsLocalMount", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "IsLocalMount %v %v %v", req, rep, err)
@@ -318,8 +318,8 @@ func (scc *SigmaClntClnt) Mounts() []string {
 	return rep.Endpoints
 }
 
-func (scc *SigmaClntClnt) SetLocalMount(mnt *sp.Tendpoint, port sp.Tport) {
-	db.DFatalf("SetLocalMount %v", mnt)
+func (scc *SigmaClntClnt) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
+	db.DFatalf("SetLocalMount %v", ep)
 }
 
 func (scc *SigmaClntClnt) Detach(path string) error {

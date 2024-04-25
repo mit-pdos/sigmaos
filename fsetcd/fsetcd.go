@@ -34,17 +34,17 @@ type FsEtcd struct {
 }
 
 func NewFsEtcdEndpoint(as auth.AuthSrv, ip sp.Tip) (map[string]*sp.TendpointProto, error) {
-	mnts := map[string]*sp.TendpointProto{}
+	eps := map[string]*sp.TendpointProto{}
 	for i := range endpointPorts {
 		addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, endpointPorts[i])
-		mnt := sp.NewEndpoint([]*sp.Taddr{addr}, sp.ROOTREALM)
-		if err := as.MintAndSetEndpointToken(mnt); err != nil {
+		ep := sp.NewEndpoint([]*sp.Taddr{addr}, sp.ROOTREALM)
+		if err := as.MintAndSetEndpointToken(ep); err != nil {
 			db.DPrintf(db.ERROR, "Unable to mint etcd endpoint token: %v", err)
 			return nil, err
 		}
-		mnts[addr.IPPort()] = mnt.GetProto()
+		eps[addr.IPPort()] = ep.GetProto()
 	}
-	return mnts, nil
+	return eps, nil
 }
 
 func NewFsEtcd(npc *netsigma.NetProxyClnt, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*FsEtcd, error) {
@@ -57,12 +57,12 @@ func NewFsEtcd(npc *netsigma.NetProxyClnt, etcdMnts map[string]*sp.TendpointProt
 		Endpoints:   endpoints,
 		DialTimeout: DialTimeout,
 		DialOptions: []grpc.DialOption{grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
-			mnt, ok := etcdMnts[addr]
+			ep, ok := etcdMnts[addr]
 			// Check that the endpoint is in the map
 			if !ok {
-				db.DFatalf("Unknown fsetcd endpoint proto: addr %v mnts %v", addr, etcdMnts)
+				db.DFatalf("Unknown fsetcd endpoint proto: addr %v eps %v", addr, etcdMnts)
 			}
-			return npc.Dial(sp.NewEndpointFromProto(mnt))
+			return npc.Dial(sp.NewEndpointFromProto(ep))
 		})},
 	})
 	if err != nil {
@@ -94,9 +94,9 @@ func (fs *FsEtcd) Fence(key string, rev int64) {
 func (fs *FsEtcd) Detach(cid sp.TclntId) {
 }
 
-func (fs *FsEtcd) SetRootNamed(mnt *sp.Tendpoint) *serr.Err {
-	db.DPrintf(db.FSETCD, "SetRootNamed %v", mnt)
-	d, err := mnt.Marshal()
+func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
+	db.DPrintf(db.FSETCD, "SetRootNamed %v", ep)
+	d, err := ep.Marshal()
 	if err != nil {
 		return serr.NewErrError(err)
 	}
@@ -132,12 +132,12 @@ func GetRootNamed(npc *netsigma.NetProxyClnt, etcdMnts map[string]*sp.TendpointP
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v etcdMnt %v realm %v", BOOT, nf, sr, etcdMnts, realm)
 		return &sp.Tendpoint{}, sr
 	}
-	mnt, sr := sp.NewEndpointFromBytes(nf.Data)
+	ep, sr := sp.NewEndpointFromBytes(nf.Data)
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "NewEndpoint %v err %v\n", BOOT, err)
 		return &sp.Tendpoint{}, sr
 	}
-	db.DPrintf(db.FSETCD, "GetNamed mnt %v\n", mnt)
+	db.DPrintf(db.FSETCD, "GetNamed ep %v\n", ep)
 	fs.Close()
-	return mnt, nil
+	return ep, nil
 }

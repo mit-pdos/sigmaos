@@ -230,28 +230,28 @@ func (fdc *FdClient) DirWait(fd int) error {
 	return nil
 }
 
-func (fdc *FdClient) IsLocalMount(mnt *sp.Tendpoint) (bool, error) {
-	return fdc.pc.IsLocalMount(mnt)
+func (fdc *FdClient) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
+	return fdc.pc.IsLocalMount(ep)
 }
 
-func (fdc *FdClient) SetLocalMount(mnt *sp.Tendpoint, port sp.Tport) {
-	mnt.SetAddr([]*sp.Taddr{sp.NewTaddr(fdc.pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
+func (fdc *FdClient) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
+	ep.SetAddr([]*sp.Taddr{sp.NewTaddr(fdc.pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
 }
 
 func (fdc *FdClient) PathLastMount(pn string) (path.Path, path.Path, error) {
 	return fdc.pc.PathLastMount(pn, fdc.pe.GetPrincipal())
 }
 
-func (fdc *FdClient) MountTree(mnt *sp.Tendpoint, tree, mount string) error {
-	return fdc.pc.MountTree(fdc.pe.GetPrincipal(), mnt, tree, mount)
+func (fdc *FdClient) MountTree(ep *sp.Tendpoint, tree, mount string) error {
+	return fdc.pc.MountTree(fdc.pe.GetPrincipal(), ep, tree, mount)
 }
 
 func (fdc *FdClient) GetNamedEndpoint() (*sp.Tendpoint, error) {
 	return fdc.pc.GetNamedEndpoint()
 }
 
-func (fdc *FdClient) NewRootMount(pn, mntname string) error {
-	return fdc.pc.NewRootMount(fdc.pe.GetPrincipal(), pn, mntname)
+func (fdc *FdClient) NewRootMount(pn, epname string) error {
+	return fdc.pc.NewRootMount(fdc.pe.GetPrincipal(), pn, epname)
 }
 
 func (fdc *FdClient) Mounts() []string {

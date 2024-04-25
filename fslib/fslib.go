@@ -37,8 +37,8 @@ func (fl *FsLib) GetNetProxyClnt() *netsigma.NetProxyClnt {
 	return fl.npc
 }
 
-func (fl *FsLib) MountTree(mnt *sp.Tendpoint, tree, mount string) error {
-	return fl.SigmaOS.MountTree(mnt, tree, mount)
+func (fl *FsLib) MountTree(ep *sp.Tendpoint, tree, mount string) error {
+	return fl.SigmaOS.MountTree(ep, tree, mount)
 }
 
 func (fl *FsLib) Close() error {

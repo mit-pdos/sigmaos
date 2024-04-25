@@ -82,11 +82,11 @@ func (kc *KvClerk) StartClerk() error {
 
 // Detach servers not in kvs
 func (kc *KvClerk) DetachKVs(kvs *KvSet) {
-	mnts := kc.Mounts()
-	for _, mnt := range mnts {
-		db.DPrintf(db.KVCLERK, "mnt kv %v", mnt)
-		if strings.HasPrefix(mnt, kvgrp.JobDir(kc.job)+"/grp") {
-			kvd := strings.TrimPrefix(mnt, kvgrp.JobDir(kc.job)+"/")
+	eps := kc.Mounts()
+	for _, ep := range eps {
+		db.DPrintf(db.KVCLERK, "ep kv %v", ep)
+		if strings.HasPrefix(ep, kvgrp.JobDir(kc.job)+"/grp") {
+			kvd := strings.TrimPrefix(ep, kvgrp.JobDir(kc.job)+"/")
 			if !kvs.present(kvd) {
 				db.DPrintf(db.KVCLERK, "Detach kv %v", kvd)
 				kc.Detach(kvGrpPath(kc.job, kvd))

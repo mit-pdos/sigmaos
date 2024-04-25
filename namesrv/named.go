@@ -125,25 +125,25 @@ func Run(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	mnt, err := nd.newSrv()
+	ep, err := nd.newSrv()
 	if err != nil {
 		db.DFatalf("Error newSrv %v\n", err)
 	}
 
-	db.DPrintf(db.NAMED, "newSrv %v mnt %v", nd.realm, mnt)
+	db.DPrintf(db.NAMED, "newSrv %v ep %v", nd.realm, ep)
 
 	pn = sp.NAMED
 	if nd.realm == sp.ROOTREALM {
-		db.DPrintf(db.ALWAYS, "SetRootNamed %v mnt %v\n", nd.realm, mnt)
-		if err := nd.fs.SetRootNamed(mnt); err != nil {
+		db.DPrintf(db.ALWAYS, "SetRootNamed %v ep %v\n", nd.realm, ep)
+		if err := nd.fs.SetRootNamed(ep); err != nil {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
 		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = path.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
-		nd.GetAuthSrv().MintAndSetEndpointToken(mnt)
-		if err := nd.MkEndpointFile(pn, mnt, nd.sess.Lease()); err != nil {
+		nd.GetAuthSrv().MintAndSetEndpointToken(ep)
+		if err := nd.MkEndpointFile(pn, ep, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v\n", nd.realm, pn, err)
 			return err
 		}
@@ -169,7 +169,7 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.ALWAYS, "%v: named done %v %v\n", pe.GetPID(), nd.realm, mnt)
+	db.DPrintf(db.ALWAYS, "%v: named done %v %v\n", pe.GetPID(), nd.realm, ep)
 
 	if err := nd.resign(); err != nil {
 		db.DPrintf(db.NAMED, "resign %v err %v\n", pe.GetPID(), err)
@@ -223,12 +223,12 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	}
 	nd.SigmaSrv = ssrv
 
-	mnt := nd.GetEndpoint()
+	ep := nd.GetEndpoint()
 	if nd.realm != sp.ROOTREALM {
-		mnt = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
+		ep = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
 	}
-	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), mnt)
-	return mnt, nil
+	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
+	return ep, nil
 }
 
 func (nd *Named) attach(cid sp.TclntId) {

@@ -52,15 +52,15 @@ func NewNetProxySrv(ip sp.Tip, as auth.AuthSrv) (*NetProxySrv, error) {
 }
 
 func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.DialResponse) error {
-	mnt := sp.NewEndpointFromProto(req.GetEndpoint())
-	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> mnt %v", ctx.Principal(), mnt)
+	ep := sp.NewEndpointFromProto(req.GetEndpoint())
+	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> ep %v", ctx.Principal(), ep)
 	// Verify the principal is authorized to establish the connection
-	if _, err := nps.auth.EndpointIsAuthorized(ctx.Principal(), mnt); err != nil {
+	if _, err := nps.auth.EndpointIsAuthorized(ctx.Principal(), ep); err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error Dial unauthorized endpoint: %v", err)
 		res.Err = sp.NewRerrorErr(err)
 		return nil
 	}
-	proxyConn, err := nps.directDialFn(mnt)
+	proxyConn, err := nps.directDialFn(ep)
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error dial direct: %v", err)
@@ -97,12 +97,12 @@ func (nps *NetProxySrvStubs) Listen(ctx fs.CtxI, req proto.ListenRequest, res *p
 		res.Err = sp.NewRerror()
 	}
 	// Construct a endpoint for the listener
-	mnt, err := constructEndpoint(true, nps.auth, nps.innerContainerIP, ctx.Principal().GetRealm(), proxyListener)
+	ep, err := constructEndpoint(true, nps.auth, nps.innerContainerIP, ctx.Principal().GetRealm(), proxyListener)
 	if err != nil {
 		db.DFatalf("Error construct endpoint: %v", err)
 		return err
 	}
-	res.Endpoint = mnt.GetProto()
+	res.Endpoint = ep.GetProto()
 	file, err := listenerToFile(proxyListener)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
@@ -140,19 +140,19 @@ func constructEndpoint(verifyEndpoints bool, as auth.AuthSrv, ip sp.Tip, realm s
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		return nil, err
 	}
-	mnt := sp.NewEndpoint(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm)
+	ep := sp.NewEndpoint(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm)
 	if verifyEndpoints && as == nil {
 		db.DFatalf("Error construct endpoint without AuthSrv")
 		return nil, fmt.Errorf("Try to construct endpoint without authsrv")
 	}
 	if as != nil {
 		// Sign the endpoint
-		if err := as.MintAndSetEndpointToken(mnt); err != nil {
+		if err := as.MintAndSetEndpointToken(ep); err != nil {
 			db.DFatalf("Error sign endpoint: %v", err)
 			return nil, err
 		}
 	}
-	return mnt, nil
+	return ep, nil
 }
 
 func (nps *NetProxySrv) Shutdown() {

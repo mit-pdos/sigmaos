@@ -98,11 +98,11 @@ func NewFsLibs(uname string, npc *netsigma.NetProxyClnt) ([]*fslib.FsLib, error)
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
-	mnt, err := fsl.ReadEndpoint(JobHTTPAddrsPath(job))
+	ep, err := fsl.ReadEndpoint(JobHTTPAddrsPath(job))
 	if err != nil {
 		return nil, err
 	}
-	return mnt.Addrs(), err
+	return ep.Addrs(), err
 }
 
 func InitHotelFs(fsl *fslib.FsLib, jobname string) error {

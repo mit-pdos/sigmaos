@@ -216,14 +216,14 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	// Endpoint some service union dirs from the root realm
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
-		mnt := sp.NewEndpoint(namedEndpoint.Addrs(), rid)
-		mnt.SetTree(s)
-		if err := rm.sc.GetAuthSrv().MintAndSetEndpointToken(mnt); err != nil {
+		ep := sp.NewEndpoint(namedEndpoint.Addrs(), rid)
+		ep.SetTree(s)
+		if err := rm.sc.GetAuthSrv().MintAndSetEndpointToken(ep); err != nil {
 			db.DPrintf(db.ERROR, "Error mint & set endpoint token: %v", err)
 			return err
 		}
-		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
-		if err := sc.MkEndpointFile(pn, mnt, sp.NoLeaseId); err != nil {
+		db.DPrintf(db.REALMD, "Link %v at %s\n", ep, pn)
+		if err := sc.MkEndpointFile(pn, ep, sp.NoLeaseId); err != nil {
 			db.DPrintf(db.ERROR, "EndpointService %v err %v\n", pn, err)
 			return err
 		}

@@ -26,11 +26,11 @@ func NewNullEndpoint() *Tendpoint {
 }
 
 func NewEndpointFromBytes(b []byte) (*Tendpoint, *serr.Err) {
-	mnt := NewNullEndpoint()
-	if err := proto.Unmarshal(b, mnt); err != nil {
-		return mnt, serr.NewErrError(err)
+	ep := NewNullEndpoint()
+	if err := proto.Unmarshal(b, ep); err != nil {
+		return ep, serr.NewErrError(err)
 	}
-	return mnt, nil
+	return ep, nil
 }
 
 func NewEndpointFromProto(p *TendpointProto) *Tendpoint {
@@ -44,43 +44,43 @@ func NewEndpointClaimsProto(addrs Taddrs, realm Trealm) *TendpointClaimsProto {
 	}
 }
 
-func (mnt *Tendpoint) IsSigned() bool {
-	return mnt.Token != nil && mnt.Token.GetSignedToken() != NO_SIGNED_TOKEN
+func (ep *Tendpoint) IsSigned() bool {
+	return ep.Token != nil && ep.Token.GetSignedToken() != NO_SIGNED_TOKEN
 }
 
-func (mnt *Tendpoint) GetProto() *TendpointProto {
-	return mnt.TendpointProto
+func (ep *Tendpoint) GetProto() *TendpointProto {
+	return ep.TendpointProto
 }
 
-func (mnt *Tendpoint) SetToken(token *Ttoken) {
-	mnt.Token = token
+func (ep *Tendpoint) SetToken(token *Ttoken) {
+	ep.Token = token
 }
 
-func (mnt *Tendpoint) SetTree(tree string) {
-	mnt.Root = tree
+func (ep *Tendpoint) SetTree(tree string) {
+	ep.Root = tree
 }
 
-func (mnt *Tendpoint) SetAddr(addr Taddrs) {
-	mnt.Claims.Addr = addr
+func (ep *Tendpoint) SetAddr(addr Taddrs) {
+	ep.Claims.Addr = addr
 }
 
-func (mnt *Tendpoint) Marshal() ([]byte, error) {
-	return proto.Marshal(mnt)
+func (ep *Tendpoint) Marshal() ([]byte, error) {
+	return proto.Marshal(ep)
 }
 
-func (mnt *Tendpoint) GetRealm() Trealm {
-	return Trealm(mnt.Claims.GetRealmStr())
+func (ep *Tendpoint) GetRealm() Trealm {
+	return Trealm(ep.Claims.GetRealmStr())
 }
 
-func (mnt *Tendpoint) Addrs() Taddrs {
-	return mnt.Claims.Addr
+func (ep *Tendpoint) Addrs() Taddrs {
+	return ep.Claims.Addr
 }
 
-func (mnt *Tendpoint) TargetIPPort(idx int) (Tip, Tport) {
-	a := mnt.Claims.Addr[idx]
+func (ep *Tendpoint) TargetIPPort(idx int) (Tip, Tport) {
+	a := ep.Claims.Addr[idx]
 	return a.GetIP(), a.GetPort()
 }
 
-func (mnt *Tendpoint) String() string {
-	return fmt.Sprintf("{ addr:%v realm:%v root:%v signed:%v }", mnt.Claims.Addr, Trealm(mnt.Claims.RealmStr), mnt.Root, mnt.IsSigned())
+func (ep *Tendpoint) String() string {
+	return fmt.Sprintf("{ addr:%v realm:%v root:%v signed:%v }", ep.Claims.Addr, Trealm(ep.Claims.RealmStr), ep.Root, ep.IsSigned())
 }

@@ -52,18 +52,18 @@ func (npc *NetProxyClnt) GetAuthSrv() auth.AuthSrv {
 	return npc.auth
 }
 
-func (npc *NetProxyClnt) Dial(mnt *sp.Tendpoint) (net.Conn, error) {
+func (npc *NetProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
 	var c net.Conn
 	var err error
 	start := time.Now()
 	if npc.useProxy() {
-		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v", mnt)
-		c, err = npc.proxyDial(mnt)
-		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v done ok:%v", mnt, err == nil)
+		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v", ep)
+		c, err = npc.proxyDial(ep)
+		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v done ok:%v", ep, err == nil)
 	} else {
-		db.DPrintf(db.NETPROXYCLNT, "directDial %v", mnt)
-		c, err = npc.directDialFn(mnt)
-		db.DPrintf(db.NETPROXYCLNT, "directDial %v done ok:%v", mnt, err == nil)
+		db.DPrintf(db.NETPROXYCLNT, "directDial %v", ep)
+		c, err = npc.directDialFn(ep)
+		db.DPrintf(db.NETPROXYCLNT, "directDial %v done ok:%v", ep, err == nil)
 	}
 	if err == nil {
 		db.DPrintf(db.NETSIGMA_PERF, "Dial latency: %v", time.Since(start))
@@ -72,12 +72,12 @@ func (npc *NetProxyClnt) Dial(mnt *sp.Tendpoint) (net.Conn, error) {
 }
 
 func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tendpoint, net.Listener, error) {
-	var mnt *sp.Tendpoint
+	var ep *sp.Tendpoint
 	var l net.Listener
 	var err error
 	if npc.useProxy() {
 		db.DPrintf(db.NETPROXYCLNT, "proxyListen %v", addr)
-		mnt, l, err = npc.proxyListen(addr)
+		ep, l, err = npc.proxyListen(addr)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error proxyListen %v: %v", addr, err)
 			return nil, nil, err
@@ -94,13 +94,13 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tendpoint, net.Listener, er
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
 			return nil, nil, err
 		}
-		mnt, err = constructEndpoint(npc.verifyEndpoints, npc.auth, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
+		ep, err = constructEndpoint(npc.verifyEndpoints, npc.auth, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error construct endpoint: %v", err)
 			return nil, nil, err
 		}
 	}
-	return mnt, l, err
+	return ep, l, err
 }
 
 // If true, use the net proxy server for dialing & listening.
@@ -124,7 +124,7 @@ func (npc *NetProxyClnt) init() error {
 	return nil
 }
 
-func (npc *NetProxyClnt) proxyDial(mnt *sp.Tendpoint) (net.Conn, error) {
+func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 	npc.Lock()
 	defer npc.Unlock()
 
@@ -135,18 +135,18 @@ func (npc *NetProxyClnt) proxyDial(mnt *sp.Tendpoint) (net.Conn, error) {
 			return nil, err
 		}
 	}
-	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request mnt %v", npc.rpcch.conn, mnt)
+	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request ep %v", npc.rpcch.conn, ep)
 	// Endpoints should always have realms specified
-	if mnt.GetRealm() == sp.NOT_SET {
-		db.DPrintf(db.ERROR, "Dial endpoint without realm set: %v", mnt)
+	if ep.GetRealm() == sp.NOT_SET {
+		db.DPrintf(db.ERROR, "Dial endpoint without realm set: %v", ep)
 		return nil, fmt.Errorf("Realm not set")
 	}
-	if !mnt.IsSigned() {
-		db.DPrintf(db.ERROR, "Dial unsigned endpoint: %v", mnt)
+	if !ep.IsSigned() {
+		db.DPrintf(db.ERROR, "Dial unsigned endpoint: %v", ep)
 		return nil, fmt.Errorf("Endpoint not signed")
 	}
 	req := &proto.DialRequest{
-		Endpoint: mnt.GetProto(),
+		Endpoint: ep.GetProto(),
 	}
 	res := &proto.DialResponse{}
 	if err := npc.rpcc.RPC("NetProxySrvStubs.Dial", req, res); err != nil {
@@ -181,8 +181,8 @@ func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tendpoint, net.Listene
 	if err := npc.rpcc.RPC("NetProxySrvStubs.Listen", req, res); err != nil {
 		return nil, nil, err
 	}
-	mnt := sp.NewEndpointFromProto(res.Endpoint)
-	db.DPrintf(db.NETPROXYCLNT, "proxyListen response mnt %v err %v", mnt, res.Err)
+	ep := sp.NewEndpointFromProto(res.Endpoint)
+	db.DPrintf(db.NETPROXYCLNT, "proxyListen response ep %v err %v", ep, res.Err)
 	// If an error occurred during dialing, bail out
 	if res.Err.ErrCode != 0 {
 		err := sp.NewErr(res.Err)
@@ -190,5 +190,5 @@ func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tendpoint, net.Listene
 		return nil, nil, err
 	}
 	l, err := npc.rpcch.GetReturnedListener()
-	return mnt, l, err
+	return ep, l, err
 }

@@ -347,12 +347,12 @@ func (p *Proc) GetHow() Thow {
 	return p.ProcEnvProto.GetHow()
 }
 
-func (p *Proc) SetScheddEndpoint(mnt *sp.Tendpoint) {
-	p.ProcEnvProto.ScheddEndpointProto = mnt.GetProto()
+func (p *Proc) SetScheddEndpoint(ep *sp.Tendpoint) {
+	p.ProcEnvProto.ScheddEndpointProto = ep.GetProto()
 }
 
-func (p *Proc) SetNamedEndpoint(mnt *sp.Tendpoint) {
-	p.ProcEnvProto.NamedEndpointProto = mnt.TendpointProto
+func (p *Proc) SetNamedEndpoint(ep *sp.Tendpoint) {
+	p.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
 }
 
 // Return Env map as a []string

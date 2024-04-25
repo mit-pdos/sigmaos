@@ -18,7 +18,7 @@ func spawnLambda(ts *test.RealmTstate, semPath string) {
 	}))
 
 	client := lambda.New(sess, &aws.Config{Region: aws.String("us-east-1")})
-	mnt, err := ts.GetNamedMount()
+	mnt, err := ts.GetNamedEndpoint()
 	assert.Nil(ts.Ts.T, err, "Err GetNamedMOunt: %v", err)
 	request := []string{mnt.Addrs()[0].IPPort(), semPath}
 

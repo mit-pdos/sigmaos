@@ -25,11 +25,6 @@ func (fsl *FsLib) MkEndpointFile(pn string, mnt *sp.Tendpoint, lid sp.TleaseId) 
 	return nil
 }
 
-func (fsl *FsLib) RemoveMount(pn string) error {
-	db.DPrintf(db.ALWAYS, "RemoveMount %v\n", pn)
-	return fsl.Remove(pn)
-}
-
 // Return pn, replacing first ~local/~any with a endpoint point for a specific
 // server.
 func (fsl *FsLib) ResolveMount(pn string) (string, bool, error) {

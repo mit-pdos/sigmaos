@@ -1462,7 +1462,7 @@ func TestEphemeralFileExpire(t *testing.T) {
 	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err, "Err PutEphemeral: %v", err)
 
-	sts, _, err := ts.ReadDir(dn)
+	sts, err := ts.GetDir(dn)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 1, len(sts))
@@ -1472,7 +1472,7 @@ func TestEphemeralFileExpire(t *testing.T) {
 	_, err = ts.Stat(fn)
 	assert.NotNil(t, err, fn)
 
-	sts, _, err = ts.ReadDir(dn)
+	sts, err = ts.GetDir(dn)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 0, len(sts))

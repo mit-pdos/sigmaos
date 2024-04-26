@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/golang-jwt/jwt"
 
@@ -25,7 +23,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/syncmap"
 )
 
 const (
@@ -52,81 +49,32 @@ func IsChunkSrvPath(path string) bool {
 	return strings.Contains(path, sp.CHUNKD)
 }
 
-type binEntry struct {
-	mu    sync.Mutex
-	cond  *sync.Cond
-	fd    int
-	prog  string
-	realm sp.Trealm
-	st    *sp.Stat
-}
-
-func newBinEntry(prog string, realm sp.Trealm, st *sp.Stat) *binEntry {
-	return &binEntry{
-		prog:  prog,
-		realm: realm,
-		fd:    -1,
-		st:    st,
-	}
-}
-
-func (be *binEntry) signal() {
-	be.mu.Lock()
-	defer be.mu.Unlock()
-
-	if be.cond != nil {
-		be.cond.Broadcast()
-	}
-}
-func (be *binEntry) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, error) {
-	be.mu.Lock()
-	defer be.mu.Unlock()
-	if be.fd != -1 {
-		return be.fd, nil
-	}
-	s := time.Now()
-	fd, err := open(sc, be.prog, paths)
-	if err != nil {
-		return -1, err
-	}
-	be.fd = fd
-	db.DPrintf(db.SPAWN_LAT, "[%v] getFd %q spawn %v", be.prog, paths, time.Since(s))
-	return be.fd, nil
-}
-
 type ckclntEntry struct {
 	mu     sync.Mutex
 	ckclnt *chunkclnt.ChunkClnt
 }
 
 type ChunkSrv struct {
-	sc       *sigmaclnt.SigmaClnt
-	kernelId string
-	path     string
-	ckclnt   *chunkclnt.ChunkClnt
-	bins     *syncmap.SyncMap[string, *binEntry]
+	sc        *sigmaclnt.SigmaClnt
+	kernelId  string
+	path      string
+	ckclnt    *chunkclnt.ChunkClnt
+	realmbins *realmBinEntry
 }
 
 func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 	cksrv := &ChunkSrv{
-		sc:       sc,
-		kernelId: kernelId,
-		path:     chunk.ChunkdPath(kernelId),
-		bins:     syncmap.NewSyncMap[string, *binEntry](),
-		ckclnt:   chunkclnt.NewChunkClnt(sc.FsLib),
+		sc:        sc,
+		kernelId:  kernelId,
+		path:      chunk.ChunkdPath(kernelId),
+		realmbins: newRealmBinEntry(),
+		ckclnt:    chunkclnt.NewChunkClnt(sc.FsLib),
 	}
 	return cksrv
 }
 
 func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, st *sp.Stat, paths []string) (*binEntry, error) {
-	pn := filepath.Join(r.String(), prog)
-	be, ok := cksrv.bins.Lookup(pn)
-	if !ok {
-		db.DPrintf(db.CHUNKSRV, "getBin not present (supplied=%v) r %v prog %v st %v paths %v", st != nil, r, prog, st, paths)
-		// Allocate a new bin entry
-		be, _ = cksrv.bins.Alloc(pn, newBinEntry(prog, r, st))
-	}
-
+	be := cksrv.realmbins.getBin(r, prog, st)
 	be.mu.Lock()
 	defer be.mu.Unlock()
 

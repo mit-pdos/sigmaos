@@ -1,3 +1,8 @@
+// The overlay package overlays a directory on top of another
+// directory, the underlay, transparently.  Servers can mount other
+// file systems in the overlay directory (e.g., statsd, fsfence,
+// etc.).  This allows a server to export information to clients
+// through sigmaP.
 package overlay
 
 import (
@@ -10,13 +15,6 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
-
-//
-// Overlay a directory with another directory transparently.  Servers
-// can mount other file systems in the overlay directory (e.g.,
-// statsd, fsfence, etc.).  This allows a server to export information
-// to clients through sigmaP.
-//
 
 type DirOverlay struct {
 	fs.Inode
@@ -105,6 +103,14 @@ func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmod
 		return i, serr.NewErr(serr.TErrExists, name)
 	}
 	return dir.underlay.Create(ctx, name, perm, m, lid, f)
+}
+
+func (dir *DirOverlay) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
+	return dir.underlay.Open(ctx, m)
+}
+
+func (dir *DirOverlay) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
+	return dir.underlay.Close(ctx, m)
 }
 
 // XXX account for extra entries in cursor, and sort

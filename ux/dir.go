@@ -65,6 +65,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 }
 
 func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
+	db.DPrintf(db.UX, "%v: DirOpen %v %v\n", ctx, d, m)
 	if err := d.uxReadDir(); err != nil {
 		return nil, err
 	}

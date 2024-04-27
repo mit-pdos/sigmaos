@@ -1,6 +1,7 @@
 package chunkclnt
 
 import (
+	"sigmaos/chunk"
 	proto "sigmaos/chunk/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -92,4 +93,17 @@ func (ckclnt *ChunkClnt) Fetch(srvid string, prog string, pid sp.Tpid, realm sp.
 		return 0, err
 	}
 	return sp.Tsize(res.Size), nil
+}
+
+func (ckclnt *ChunkClnt) FetchBinary(srvid, prog string, pid sp.Tpid, realm sp.Trealm, reqsz sp.Tsize, path []string) error {
+	n := (reqsz / chunk.CHUNKSZ) + 1
+	db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %v %d", prog, reqsz, n)
+	for ck := 0; ck < int(n); ck++ {
+		if sz, err := ckclnt.Fetch(srvid, prog, pid, realm, ck, reqsz, path); err != nil {
+			return err
+		} else {
+			db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %d %v", prog, ck, sz)
+		}
+	}
+	return nil
 }

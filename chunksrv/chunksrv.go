@@ -26,20 +26,14 @@ import (
 )
 
 const (
-	CHUNKSZ = 1 * sp.MBYTE
-
 	SEEK_DATA = 3
 	SEEK_HOLE = 4
 
 	ROOTCHUNKD = sp.SIGMAHOME + "/bin/user/realms"
 )
 
-func Index(o int64) int { return int(o / CHUNKSZ) }
-func Ckoff(i int) int64 { return int64(i * CHUNKSZ) }
-
-//func BinPathUprocd(realm sp.Trealm, prog string) string {
-//	return path.Join(ROOTPROCD, realm.String(), prog)
-//}
+func Index(o int64) int { return int(o / chunk.CHUNKSZ) }
+func Ckoff(i int) int64 { return int64(i * chunk.CHUNKSZ) }
 
 func BinPathChunkd(realm sp.Trealm, prog string) string {
 	return path.Join(ROOTCHUNKD, realm.String(), prog)
@@ -149,7 +143,7 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, paths []string, ck 
 func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
 	sz := sp.Tsize(0)
 	r := sp.Trealm(req.Realm)
-	b := make([]byte, CHUNKSZ)
+	b := make([]byte, chunk.CHUNKSZ)
 	ck := int(req.ChunkId)
 	var st *sp.Stat
 	var err error
@@ -300,17 +294,17 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 		if err != nil {
 			db.DFatalf("Seek hole %q %d err %v", pn, o2, err)
 		}
-		for o := o1; o < o2; o += CHUNKSZ {
-			if o%CHUNKSZ != 0 {
+		for o := o1; o < o2; o += chunk.CHUNKSZ {
+			if o%chunk.CHUNKSZ != 0 {
 				db.DFatalf("offset %d", o)
 			}
-			if o+CHUNKSZ <= o2 || o2 >= int64(totsz) { // a complete chunk?
+			if o+chunk.CHUNKSZ <= o2 || o2 >= int64(totsz) { // a complete chunk?
 				i := Index(o)
 				if i == ck {
 					db.DPrintf(db.CHUNKSRV, "IsPresent: %q read chunk %d(%d) o2 %d sz %d", pn, i, o, o2, totsz)
 					ok = true
-					sz = CHUNKSZ
-					if o+CHUNKSZ >= int64(totsz) {
+					sz = chunk.CHUNKSZ
+					if o+chunk.CHUNKSZ >= int64(totsz) {
 						sz = int64(totsz) - o
 					}
 					break
@@ -319,7 +313,7 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 		}
 		off = o2
 	}
-	if sz > CHUNKSZ {
+	if sz > chunk.CHUNKSZ {
 		db.DFatalf("IsPresent %d sz", sz)
 	}
 	return sz, ok

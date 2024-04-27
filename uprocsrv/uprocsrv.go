@@ -319,15 +319,8 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	if err != nil {
 		return err
 	}
-	n := (st.Length / chunksrv.CHUNKSZ) + 1
-	db.DPrintf(db.UPROCD, "WarmProc lookup %q %v %d", req.Program, st, n)
-	for ck := 0; ck < int(n); ck++ {
-		reqsz := sp.Tsize(st.Length)
-		if sz, err := ups.ckclnt.Fetch(ups.kernelId, req.Program, sp.Tpid(rand.String(4)), sp.Trealm(req.RealmStr), ck, reqsz, req.SigmaPath); err != nil {
-			return err
-		} else {
-			db.DPrintf(db.UPROCD, "WarmProc fetch %q %d %v", req.Program, ck, sz)
-		}
+	if err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, sp.Tpid(rand.String(4)), sp.Trealm(req.RealmStr), sp.Tsize(st.Length), req.SigmaPath); err != nil {
+		return err
 	}
 	res.OK = true
 	return nil

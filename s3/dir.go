@@ -255,7 +255,7 @@ func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	if err := d.statDir(ctx); err != nil {
 		return nil, err
 	}
-	return d, nil
+	return nil, nil
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.Err) {

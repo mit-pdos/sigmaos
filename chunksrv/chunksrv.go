@@ -29,18 +29,18 @@ const (
 	SEEK_DATA = 3
 	SEEK_HOLE = 4
 
-	ROOTCHUNKD = sp.SIGMAHOME + "/bin/user/realms"
+	ROOTBINCACHE = sp.SIGMAHOME + "/bin/user/realms"
 )
 
 func Index(o int64) int { return int(o / chunk.CHUNKSZ) }
 func Ckoff(i int) int64 { return int64(i * chunk.CHUNKSZ) }
 
-func BinPathChunkd(realm sp.Trealm, prog string) string {
-	return path.Join(ROOTCHUNKD, realm.String(), prog)
-}
-
 func IsChunkSrvPath(path string) bool {
 	return strings.Contains(path, sp.CHUNKD)
+}
+
+func pathBinCache(realm sp.Trealm, prog string) string {
+	return path.Join(ROOTBINCACHE, realm.String(), prog)
 }
 
 type ckclntEntry struct {
@@ -88,7 +88,7 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 	ckid := int(req.ChunkId)
 	reqsz := sp.Tsize(req.Size)
 
-	pn := BinPathChunkd(r, req.Prog)
+	pn := pathBinCache(r, req.Prog)
 	if sz, ok := IsPresent(pn, ckid, reqsz); ok {
 		b := make([]byte, sz)
 		db.DPrintf(db.CHUNKSRV, "%v: FetchCache %q ckid %d present %d", cksrv.kernelId, pn, ckid, sz)
@@ -186,7 +186,7 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 			return err
 		}
 	}
-	pn := BinPathChunkd(r, req.Prog)
+	pn := pathBinCache(r, req.Prog)
 	if err := writeChunk(pn, int(req.ChunkId), b[0:sz]); err != nil {
 		db.DPrintf(db.CHUNKSRV, "fetchChunk: Writechunk %q ck %d err %v", pn, req.ChunkId, err)
 		return err

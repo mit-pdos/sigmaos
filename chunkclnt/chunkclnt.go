@@ -11,28 +11,28 @@ import (
 )
 
 type ChunkClnt struct {
-	urpcc *unionrpcclnt.UnionRPCClnt
-	done  int32
+	*unionrpcclnt.UnionRPCClnt
+	done int32
 }
 
 func NewChunkClnt(fsl *fslib.FsLib) *ChunkClnt {
 	db.DPrintf(db.CHUNKCLNT, "NewChunkClnt")
 	ckclnt := &ChunkClnt{
-		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.CHUNKD, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
+		UnionRPCClnt: unionrpcclnt.NewUnionRPCClnt(fsl, sp.CHUNKD, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
 	}
 	return ckclnt
 }
 
 func (ckclnt *ChunkClnt) UpdateChunkds() {
-	ckclnt.urpcc.UpdateSrvs(false)
+	ckclnt.UnionRPCClnt.UpdateSrvs(false)
 }
 
 func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {
-	ckclnt.urpcc.UnregisterSrv(srv)
+	ckclnt.UnionRPCClnt.UnregisterSrv(srv)
 }
 
 func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, paths []string) (*sp.Stat, error) {
-	rpcc, err := ckclnt.urpcc.GetClnt(srvid)
+	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 }
 
 func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, *sp.Stat, error) {
-	rpcc, err := ckclnt.urpcc.GetClnt(srvid)
+	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -74,7 +74,7 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 }
 
 func (ckclnt *ChunkClnt) Fetch(srvid string, prog string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string) (sp.Tsize, error) {
-	rpcc, err := ckclnt.urpcc.GetClnt(srvid)
+	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
 	if err != nil {
 		return 0, err
 	}

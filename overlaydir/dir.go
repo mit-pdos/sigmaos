@@ -20,18 +20,28 @@ type DirOverlay struct {
 	fs.Inode
 	underlay fs.Dir
 	mu       sync.Mutex
-	entries  map[string]fs.Inode // XXX use sortedmap?
+	entries  map[string]fs.FsObj // XXX use sortedmap?
 }
 
 func MkDirOverlay(dir fs.Dir) *DirOverlay {
 	d := &DirOverlay{}
 	d.Inode = inode.NewInode(nil, sp.DMDIR, nil)
 	d.underlay = dir
-	d.entries = make(map[string]fs.Inode)
+	d.entries = make(map[string]fs.FsObj)
 	return d
 }
 
-func (dir *DirOverlay) Mount(name string, i fs.Inode) {
+// XXX merge underlay Stat with overlay?
+func (dir *DirOverlay) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := dir.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	st.Length = uint64(len(dir.entries))
+	return st, nil
+}
+
+func (dir *DirOverlay) Mount(name string, i fs.FsObj) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -65,17 +75,20 @@ func (dir *DirOverlay) removeMount(name string) bool {
 	return false
 }
 
-func (dir *DirOverlay) ls() []*sp.Stat {
+func (dir *DirOverlay) ls(ctx fs.CtxI) ([]*sp.Stat, error) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
 	entries := make([]*sp.Stat, 0, len(dir.entries))
 	for k, i := range dir.entries {
-		st, _ := i.Stat(nil)
+		st, err := i.Stat(ctx)
+		if err != nil {
+			return nil, err
+		}
 		st.Name = k
 		entries = append(entries, st)
 	}
-	return entries
+	return entries, nil
 }
 
 // lookup in overlay
@@ -125,7 +138,11 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize) ([]*sp.Stat,
 		return sts, err
 	}
 	// prepend the extra ones
-	sts = append(dir.ls(), sts...)
+	stso, r := dir.ls(ctx)
+	if r != nil {
+		return nil, err
+	}
+	sts = append(stso, sts...)
 	return sts, nil
 }
 

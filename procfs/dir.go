@@ -19,7 +19,7 @@ type ProcDir struct {
 	sd    *sorteddir.SortedDir
 }
 
-func NewProcDir(procs ProcFs) fs.Inode {
+func NewProcDir(procs ProcFs) fs.FsObj {
 	return &ProcDir{ProcInode: newProcInode(sp.DMDIR|0555, "pids"), procs: procs}
 }
 

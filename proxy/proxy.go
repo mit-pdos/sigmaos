@@ -30,7 +30,7 @@ func (pc *proxyConn) ReportError(err error) {
 
 func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
 	fm := fc.(*sessp.FcallMsg)
-	db.DPrintf(db.PROXY, "serve %v\n", fm)
+	db.DPrintf(db.PROXY, "ServeRequest %v\n", fm)
 	msg, iov, rerror, _, _ := sigmaprotsrv.Dispatch(pc.sess, fm.Msg, fm.Iov)
 	if rerror != nil {
 		msg = rerror

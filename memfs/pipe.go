@@ -19,10 +19,6 @@ func NewPipe(ctx fs.CtxI, i fs.Inode) *Pipe {
 	return &p
 }
 
-func (p *Pipe) Size() (sp.Tlength, *serr.Err) {
-	return p.Pipe.Size(), nil
-}
-
 func (p *Pipe) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 	return p.Pipe.Close(ctx, m)
 }
@@ -36,7 +32,7 @@ func (p *Pipe) Unlink() {
 }
 
 func (p *Pipe) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
-	st, err := p.Inode.Stat(ctx)
+	st, err := p.Inode.NewStat()
 	if err != nil {
 		return nil, err
 	}

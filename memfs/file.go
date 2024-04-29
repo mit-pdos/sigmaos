@@ -26,7 +26,7 @@ func (f *File) Size() (sp.Tlength, *serr.Err) {
 }
 
 func (f *File) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
-	st, err := f.Inode.Stat(ctx)
+	st, err := f.Inode.NewStat()
 	if err != nil {
 		return nil, err
 	}

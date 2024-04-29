@@ -166,7 +166,10 @@ func (d *Dir) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	if err := d.fill(ctx); err != nil {
 		return nil, err
 	}
-	st := d.stat()
+	st, err := d.NewStat()
+	if err != nil {
+		return nil, err
+	}
 	st.Length = uint64(d.sz)
 	return st, nil
 }
@@ -228,7 +231,7 @@ func (d *Dir) statDir(ctx fs.CtxI) *serr.Err {
 		var st *sp.Stat
 		var err *serr.Err
 		if o.perm.IsDir() {
-			st = o.stat()
+			st, err = o.NewStat()
 		} else {
 			st, err = o.Stat(ctx)
 		}
@@ -367,27 +370,4 @@ func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 	return serr.NewErr(serr.TErrNotSupported, "Rename")
-}
-
-// ===== The following functions are needed to make an s3 dir of type fs.Inode
-
-func (d *Dir) SetMtime(mtime int64) {
-	db.DFatalf("Unimplemented")
-}
-
-func (d *Dir) Mtime() int64 {
-	db.DFatalf("Unimplemented")
-	return 0
-}
-
-func (d *Dir) SetParent(di fs.Dir) {
-	db.DFatalf("Unimplemented")
-}
-
-func (d *Dir) Unlink() {
-	db.DFatalf("Unimplemented")
-}
-
-func (d *Dir) VersionInc() {
-	db.DFatalf("Unimplemented")
 }

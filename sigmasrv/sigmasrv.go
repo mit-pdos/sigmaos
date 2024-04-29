@@ -1,3 +1,8 @@
+// Many SigmaOS servers use package sigmasrv to create and run
+// servers.  A server typically consists of a MemFS (an in-memory file
+// system accessed through sigmap), one or more RPC services,
+// including one for leases. Sigmasrv creates the RPC device in the
+// memfs.
 package sigmasrv
 
 import (
@@ -19,13 +24,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
-
-//
-// Many SigmaOS servers use SigmaSrv to create and run servers.  A
-// server typically consists of a MemFS (an in-memory file system
-// accessed through sigmap), one or more RPC services, including one
-// for leases. Sigmasrv creates the RPC device in the memfs.
-//
 
 type SigmaSrv struct {
 	*memfssrv.MemFs

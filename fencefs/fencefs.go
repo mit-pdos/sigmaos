@@ -1,3 +1,6 @@
+// Package fencefs provides an in-memory fs for fences, which is used
+// by sigmasrv to keep track of the most recent fence seen. A fence is
+// named by pathname of its epoch file.
 package fencefs
 
 import (
@@ -12,12 +15,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-//
-// An in-memory fs for fences, which is used by sesssrv to keep track
-// of the most recent fence seen. A fence is named by pathname of its
-// epoch file.
-//
-
 type Fence struct {
 	sync.RWMutex
 	fs.Inode
@@ -25,9 +22,13 @@ type Fence struct {
 }
 
 func newFence(i fs.Inode) *Fence {
-	e := &Fence{}
-	e.Inode = i
-	return e
+	f := &Fence{}
+	f.Inode = i
+	return f
+}
+
+func (f *Fence) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	return nil, serr.NewErr(serr.TErrNotSupported, "Stat")
 }
 
 func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, fence sp.Tfence) (sp.Tsize, *serr.Err) {
@@ -38,7 +39,7 @@ func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, fence sp.Tfence) 
 	return nil, serr.NewErr(serr.TErrNotSupported, "Read")
 }
 
-func newInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.Inode, *serr.Err) {
+func newInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.FENCEFS, "newInode %v dir %v\n", p, parent)
 	i := inode.NewInode(ctx, p, parent)
 	if p.IsDir() {

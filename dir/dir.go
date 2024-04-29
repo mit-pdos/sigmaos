@@ -16,22 +16,22 @@ import (
 
 type DirImpl struct {
 	fs.Inode
-	mi    fs.NewInodeF
+	no    fs.NewFsObjF
 	mu    sync.Mutex
 	dents *sorteddir.SortedDir
 }
 
-func MkDir(i fs.Inode, mi fs.NewInodeF) *DirImpl {
+func MkDir(i fs.Inode, no fs.NewFsObjF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
-	d.mi = mi
+	d.no = no
 	d.dents = sorteddir.NewSortedDir()
 	d.dents.Insert(".", d)
 	return d
 }
 
-func MkDirF(i fs.Inode, mi fs.NewInodeF) fs.Inode {
-	d := MkDir(i, mi)
+func MkDirF(i fs.Inode, no fs.NewFsObjF) fs.FsObj {
+	d := MkDir(i, no)
 	return d
 }
 
@@ -76,13 +76,13 @@ func (dir *DirImpl) Dump() (string, error) {
 	return s, nil
 }
 
-func NewRootDir(ctx fs.CtxI, mi fs.NewInodeF, parent fs.Dir) fs.Dir {
-	i, _ := mi(ctx, sp.DMDIR, 0, parent, MkDirF)
+func NewRootDir(ctx fs.CtxI, no fs.NewFsObjF, parent fs.Dir) fs.Dir {
+	i, _ := no(ctx, sp.DMDIR, 0, parent, MkDirF)
 	return i.(fs.Dir)
 }
 
-func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *serr.Err {
-	err := dir.(*DirImpl).CreateDev(ctx, name, i)
+func MkNod(ctx fs.CtxI, dir fs.Dir, name string, o fs.FsObj) *serr.Err {
+	err := dir.(*DirImpl).CreateDev(ctx, name, o)
 	if err != nil {
 		return err
 	}
@@ -98,18 +98,18 @@ func (dir *DirImpl) unlinkL(name string) *serr.Err {
 	return serr.NewErr(serr.TErrNotfound, name)
 }
 
-func (dir *DirImpl) createL(ino fs.Inode, name string) *serr.Err {
-	ok := dir.dents.Insert(name, ino)
+func (dir *DirImpl) createL(no fs.FsObj, name string) *serr.Err {
+	ok := dir.dents.Insert(name, no)
 	if !ok {
 		return serr.NewErr(serr.TErrExists, name)
 	}
 	return nil
 }
 
-func (dir *DirImpl) lookup(name string) (fs.Inode, *serr.Err) {
+func (dir *DirImpl) lookup(name string) (fs.FsObj, *serr.Err) {
 	v, ok := dir.dents.Lookup(name)
 	if ok {
-		return v.(fs.Inode), nil
+		return v.(fs.FsObj), nil
 	} else {
 		return nil, serr.NewErr(serr.TErrNotfound, name)
 	}
@@ -128,7 +128,7 @@ func (dir *DirImpl) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsOb
 func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
-	st, err := dir.Inode.Stat(ctx)
+	st, err := dir.Inode.NewStat()
 	if err != nil {
 		return nil, err
 	}
@@ -144,16 +144,6 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	return st, nil
 }
 
-func (dir *DirImpl) Size() (sp.Tlength, *serr.Err) {
-	dir.mu.Lock()
-	defer dir.mu.Unlock()
-	sts, err := dir.lsL(0)
-	if err != nil {
-		return 0, err
-	}
-	return spcodec.MarshalSizeDir(sts)
-}
-
 func (dir *DirImpl) lsL(cursor int) ([]*sp.Stat, *serr.Err) {
 	entries := []*sp.Stat{}
 	var r *serr.Err
@@ -162,7 +152,7 @@ func (dir *DirImpl) lsL(cursor int) ([]*sp.Stat, *serr.Err) {
 			return true
 		}
 		i := e.(fs.Inode)
-		st, err := i.Stat(nil)
+		st, err := i.NewStat()
 		if err != nil {
 			r = err
 			return false
@@ -221,19 +211,19 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 	defer dir.mu.Unlock()
 
 	if v, ok := dir.dents.Lookup(name); ok {
-		i := v.(fs.Inode)
+		i := v.(fs.FsObj)
 		return i, serr.NewErr(serr.TErrExists, name)
 	}
-	newi, err := dir.mi(ctx, perm, m, dir, MkDirF)
+	newo, err := dir.no(ctx, perm, m, dir, MkDirF)
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.MEMFS, "Create %v in %v -> %v\n", name, dir, newi)
+	db.DPrintf(db.MEMFS, "Create %v in %v -> %v\n", name, dir, newo)
 	dir.SetMtime(time.Now().Unix())
-	return newi, dir.createL(newi, name)
+	return newo, dir.createL(newo, name)
 }
 
-func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, i fs.Inode) *serr.Err {
+func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, i fs.FsObj) *serr.Err {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 

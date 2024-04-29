@@ -7,7 +7,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func NewInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.Inode, *serr.Err) {
+func NewInode(ctx fs.CtxI, p sp.Tperm, m sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.FsObj, *serr.Err) {
 	i := inode.NewInode(ctx, p, parent)
 	if p.IsDir() {
 		return new(i, NewInode), nil

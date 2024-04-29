@@ -13,7 +13,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type NewSessionF func(*memfssrv.MemFs, sessp.Tsession) (fs.Inode, *serr.Err)
+type NewSessionF func(*memfssrv.MemFs, sessp.Tsession) (fs.FsObj, *serr.Err)
 
 type SessDev struct {
 	mfs  *memfssrv.MemFs

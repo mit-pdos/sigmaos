@@ -1,3 +1,4 @@
+// Package inode implements the Inode inteface for an in-memory inode.
 package inode
 
 import (
@@ -37,15 +38,29 @@ func NewInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 }
 
 func (inode *Inode) String() string {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
 	str := fmt.Sprintf("{ino %p %v %v}", inode, inode.inum, inode.perm)
 	return str
 }
 
+func (inode *Inode) NewStat() (*sp.Stat, *serr.Err) {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+
+	return sp.NewStat(sp.NewQidPerm(inode.perm, 0, inode.inum),
+		inode.Mode(), uint32(inode.mtime), "", inode.owner.GetID().String()), nil
+}
+
 func (inode *Inode) Path() sp.Tpath {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
 	return inode.inum
 }
 
 func (inode *Inode) Perm() sp.Tperm {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
 	return inode.perm
 }
 
@@ -73,10 +88,6 @@ func (inode *Inode) SetMtime(m int64) {
 	inode.mtime = m
 }
 
-func (i *Inode) Size() (sp.Tlength, *serr.Err) {
-	return 0, nil
-}
-
 func (i *Inode) Open(ctx fs.CtxI, mode sp.Tmode) (fs.FsObj, *serr.Err) {
 	return nil, nil
 }
@@ -94,13 +105,4 @@ func (inode *Inode) Mode() sp.Tperm {
 		perm |= sp.DMDIR
 	}
 	return perm
-}
-
-func (inode *Inode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-
-	st := sp.NewStat(sp.NewQidPerm(inode.perm, 0, inode.inum),
-		inode.Mode(), uint32(inode.mtime), "", inode.owner.GetID().String())
-	return st, nil
 }

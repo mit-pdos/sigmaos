@@ -29,18 +29,39 @@ func newStatsDev(mfs *memfssrv.MemFs, pn string) (*rpc.StatInfo, *serr.Err) {
 	return std.si, nil
 }
 
-func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
-	if off > 0 {
-		return nil, nil
-	}
-
-	db.DPrintf(db.SIGMASRV, "Read stats: %v\n", std.si)
+func (std *statsDev) marshal() ([]byte, *serr.Err) {
+	db.DPrintf(db.SIGMASRV, "Marshal stats: %v\n", std.si)
 	st := &rpc.RPCStatsSnapshot{}
 	st.StatsSnapshot = std.mfs.Stats().StatsSnapshot()
 	st.RpcStat = std.si.Stats()
 	b, err := json.Marshal(st)
 	if err != nil {
 		return nil, serr.NewErrError(err)
+	}
+	return b, nil
+}
+
+func (std *statsDev) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := std.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	b, err := std.marshal()
+	if err != nil {
+		return nil, err
+	}
+	st.Length = uint64(len(b))
+	return st, nil
+}
+
+func (std *statsDev) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
+	if off > 0 {
+		return nil, nil
+	}
+	db.DPrintf(db.SIGMASRV, "Read stats: %v\n", std.si)
+	b, err := std.marshal()
+	if err != nil {
+		return nil, err
 	}
 	return b, nil
 }

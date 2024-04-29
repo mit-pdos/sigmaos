@@ -10,7 +10,7 @@ import (
 
 func (fsl *FsLib) ReadStats(pn string) (*stats.StatsSnapshot, error) {
 	st := &stats.StatsSnapshot{}
-	err := fsl.GetFileJson(gopath.Join("name", sp.STATSD), &st)
+	err := fsl.GetFileJson(gopath.Join(pn, sp.STATSD), &st)
 	if err != nil {
 		return nil, err
 	}

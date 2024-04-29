@@ -1290,17 +1290,21 @@ func TestSetFileSymlink(t *testing.T) {
 	err = ts.MkMountFile(gopath.Join(pathname, "namedself0"), newMount(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkMountFile")
 
-	st, err := ts.ReadStats("name")
+	st, err := ts.ReadStats(pathname)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Counters["Nwalk"]
+
+	db.DPrintf(db.TEST, "st %v\n", st)
 
 	d = []byte("byebye")
 	n, err := ts.SetFile(gopath.Join(pathname, "namedself0/f"), d, sp.OWRITE, 0)
 	assert.Nil(ts.T, err, "SetFile: %v", err)
 	assert.Equal(ts.T, sp.Tsize(len(d)), n, "SetFile")
 
-	st, err = ts.ReadStats("name")
+	st, err = ts.ReadStats(pathname)
 	assert.Nil(t, err, "statsd")
+
+	db.DPrintf(db.TEST, "st %v\n", st)
 
 	assert.NotEqual(ts.T, nwalk, st.Counters["Nwalk"], "setfile")
 	nwalk = st.Counters["Nwalk"]
@@ -1309,7 +1313,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, d, b, "GetFile")
 
-	st, err = ts.ReadStats("name")
+	st, err = ts.ReadStats(pathname)
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(ts.T, nwalk, st.Counters["Nwalk"], "getfile")

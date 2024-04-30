@@ -125,6 +125,10 @@ func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string) *binEntry {
 	return be
 }
 
+//
+// Handling a FetchChunkRequest
+//
+
 func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchChunkResponse) (bool, error) {
 	r := sp.Trealm(req.Realm)
 	ckid := int(req.ChunkId)
@@ -146,16 +150,6 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 	}
 	db.DPrintf(db.CHUNKSRV, "%v: FetchCache: %q pid %v ckid %d not present\n", cksrv.kernelId, pn, req.Pid, ckid)
 	return false, nil
-}
-
-func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog string, pid sp.Tpid, paths []string, ck int, reqsz sp.Tsize, b []byte) (sp.Tsize, error) {
-	chunkdID := path.Base(paths[0])
-	db.DPrintf(db.CHUNKSRV, "%v: fetchChunkd: %v ckid %d %v", cksrv.kernelId, prog, ck, paths)
-	sz, _, err := cksrv.ckclnt.FetchChunk(chunkdID, prog, pid, r, ck, reqsz, paths, b)
-	if err != nil {
-		return 0, err
-	}
-	return sz, nil
 }
 
 func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, paths []string, ck int, b []byte) (sp.Tsize, string, error) {
@@ -196,8 +190,9 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 	srvpath := ""
 	for IsChunkSrvPath(paths[0]) {
 		srvpath = paths[0]
-		sz, err = cksrv.fetchChunkd(r, req.Prog, sp.Tpid(req.Pid), []string{srvpath}, ck, sp.Tsize(req.Size), b)
-		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: chunkd %v err %v", cksrv.kernelId, srvpath, err)
+		srv := path.Base(srvpath)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: %v ckid %d %v", cksrv.kernelId, req.Prog, ck, []string{srvpath})
+		sz, _, err = cksrv.ckclnt.FetchChunk(srv, req.Prog, sp.Tpid(req.Pid), r, ck, sp.Tsize(req.Size), []string{srvpath}, b)
 		if err == nil {
 			ok = true
 			break
@@ -226,10 +221,6 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
 	db.DPrintf(db.CHUNKSRV, "%v: Fetch: %v", cksrv.kernelId, req)
 
-	//be := cksrv.getBin(r, req.Prog)
-	//be.mu.Lock()
-	//defer be.mu.Unlock()
-
 	ok, err := cksrv.fetchCache(req, res)
 	if ok || err != nil {
 		return err
@@ -237,15 +228,28 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *prot
 	return cksrv.fetchChunk(req, res)
 }
 
-func (cksrv *ChunkSrv) getStatCache(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) (*sp.Stat, string, bool) {
+//
+// Handling a GetFileStatRequest
+//
+
+func (cksrv *ChunkSrv) getCache(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) (*sp.Stat, string, bool) {
 	be := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg())
 	be.mu.Lock()
 	defer be.mu.Unlock()
 	if be.st == nil {
 		return nil, "", false
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: getStatCache: hit %v", cksrv.kernelId, req.GetProg())
+	db.DPrintf(db.CHUNKSRV, "%v: getCache: hit %v", cksrv.kernelId, req.GetProg())
 	return be.st, cksrv.path, true
+}
+
+func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string) (*sp.Stat, string, error) {
+	db.DPrintf(db.CHUNKSRV, "%v: getOrigin %v %v", cksrv.kernelId, prog, paths)
+	st, path, err := lookup(cksrv.sc, prog, paths)
+	if err != nil {
+		return nil, "", err
+	}
+	return st, path, nil
 }
 
 func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
@@ -292,20 +296,10 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 	return nil
 }
 
-func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string) (*sp.Stat, string, error) {
-	db.DPrintf(db.CHUNKSRV, "%v: getOrigin %v %v", cksrv.kernelId, prog, paths)
-	st, path, err := lookup(cksrv.sc, prog, paths)
-	if err != nil {
-		return nil, "", err
-	}
-	return st, path, nil
-}
-
 func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
 	db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: %v", cksrv.kernelId, req)
 	defer db.DPrintf(db.CHUNKSRV, "%v: GetFileStat done: %v", cksrv.kernelId, req)
-
-	st, path, ok := cksrv.getStatCache(req, res)
+	st, path, ok := cksrv.getCache(req, res)
 	if ok {
 		res.Stat = st
 		res.Path = path

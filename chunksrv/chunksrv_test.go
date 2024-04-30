@@ -122,3 +122,21 @@ func TestFetchPath(t *testing.T) {
 	ts.fetch(ts.srvs[0], []string{pn1, PATH}, pn1)
 	ts.Shutdown()
 }
+
+func TestFetchConcur(t *testing.T) {
+	const N = 10
+	ts := newTstate(t, 1)
+
+	pn1 := chunk.ChunkdPath(ts.srvs[1])
+	ch := make(chan int)
+	for i := 0; i < N; i++ {
+		go func(i int) {
+			ts.fetch(ts.srvs[0], []string{pn1, PATH}, PATH)
+			ch <- i
+		}(i)
+	}
+	for i := 0; i < N; i++ {
+		<-ch
+	}
+	ts.Shutdown()
+}

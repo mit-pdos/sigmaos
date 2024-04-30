@@ -95,15 +95,17 @@ func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm,
 	return sp.Tsize(res.Size), res.Path, nil
 }
 
-func (ckclnt *ChunkClnt) FetchBinary(srvid, prog string, pid sp.Tpid, realm sp.Trealm, reqsz sp.Tsize, path []string) error {
+func (ckclnt *ChunkClnt) FetchBinary(srvid, prog string, pid sp.Tpid, realm sp.Trealm, reqsz sp.Tsize, path []string) (string, error) {
 	n := (reqsz / chunk.CHUNKSZ) + 1
 	db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %v %d", prog, reqsz, n)
+	last := ""
 	for ck := 0; ck < int(n); ck++ {
 		if sz, path, err := ckclnt.Fetch(srvid, prog, pid, realm, ck, reqsz, path); err != nil {
-			return err
+			return "", err
 		} else {
 			db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %d %v %q", prog, ck, sz, path)
+			last = path
 		}
 	}
-	return nil
+	return last, nil
 }

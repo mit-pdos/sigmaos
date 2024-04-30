@@ -63,15 +63,18 @@ func (ts *Tstate) check(srv string, st *sp.Stat) {
 	assert.Equal(ts.T, st.Length, uint64(fi.Size()))
 }
 
-func (ts *Tstate) fetch(srv string, paths []string) {
+func (ts *Tstate) fetch(srv string, paths []string, expect string) {
 	pid := ts.ProcEnv().GetPID()
 
 	st, path, err := ts.ckclnt.GetFileStat(srv, PROG, pid, sp.ROOTREALM, paths)
 	assert.Nil(ts.T, err)
-	db.DPrintf(db.TEST, "st %v %q\n", st, path)
+	assert.Equal(ts.T, expect, path)
+	db.DPrintf(db.TEST, "st len %v path %q\n", st.Length, path)
 
-	err = ts.ckclnt.FetchBinary(srv, PROG, pid, sp.ROOTREALM, sp.Tsize(st.Length), paths)
+	path, err = ts.ckclnt.FetchBinary(srv, PROG, pid, sp.ROOTREALM, sp.Tsize(st.Length), paths)
 	assert.Nil(ts.T, err, "err %v", err)
+	assert.Equal(ts.T, expect, path)
+	db.DPrintf(db.TEST, "bin %v %q\n", PROG, path)
 
 	ts.bins.SetBinKernelID(PROG, srv)
 
@@ -80,15 +83,15 @@ func (ts *Tstate) fetch(srv string, paths []string) {
 
 func TestFetchOrigin(t *testing.T) {
 	ts := newTstate(t, 0)
-	ts.fetch(ts.srvs[0], []string{PATH})
+	ts.fetch(ts.srvs[0], []string{PATH}, PATH)
 	ts.Shutdown()
 }
 
 func TestFetchCache(t *testing.T) {
 	ts := newTstate(t, 0)
 
-	ts.fetch(ts.srvs[0], []string{PATH})
-	ts.fetch(ts.srvs[0], []string{PATH})
+	ts.fetch(ts.srvs[0], []string{PATH}, PATH)
+	ts.fetch(ts.srvs[0], []string{PATH}, chunk.ChunkdPath(ts.srvs[0]))
 
 	ts.Shutdown()
 }
@@ -96,12 +99,13 @@ func TestFetchCache(t *testing.T) {
 func TestFetchChunkd(t *testing.T) {
 	ts := newTstate(t, 1)
 
-	ts.fetch(ts.srvs[0], []string{PATH})
+	ts.fetch(ts.srvs[0], []string{PATH}, PATH)
 
 	kid, ok := ts.bins.GetBinKernelID(PROG)
 	assert.True(ts.T, ok)
 
-	ts.fetch(ts.srvs[0], []string{chunk.ChunkdPath(kid)})
+	srv := chunk.ChunkdPath(kid)
+	ts.fetch(ts.srvs[0], []string{srv}, srv)
 
 	ts.Shutdown()
 }

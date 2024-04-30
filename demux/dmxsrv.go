@@ -39,9 +39,8 @@ func NewDemuxSrv(srv ServerI, trans TransportI) *DemuxSrv {
 func (dmx *DemuxSrv) reader() {
 	for {
 		c, err := dmx.trans.ReadCall()
-		db.DPrintf(db.DEMUXSRV, "[%p] ReadCall %v", dmx.trans, c)
 		if err != nil {
-			db.DPrintf(db.DEMUXSRV, "reader: rf err %v\n", err)
+			db.DPrintf(db.DEMUXSRV_ERR, "reader: rf err %v\n", err)
 			dmx.srv.ReportError(err)
 			break
 		}
@@ -51,11 +50,10 @@ func (dmx *DemuxSrv) reader() {
 				return
 			}
 			dmx.mu.Lock()
-			db.DPrintf(db.DEMUXSRV, "[%p] WriteCall %v", dmx.trans, rep)
 			err = dmx.trans.WriteCall(rep)
 			dmx.mu.Unlock()
 			if err != nil {
-				db.DPrintf(db.DEMUXSRV, "wf reply %v error %v\n", rep, err)
+				db.DPrintf(db.DEMUXSRV_ERR, "wf reply %v error %v\n", rep, err)
 			}
 		}(c)
 	}

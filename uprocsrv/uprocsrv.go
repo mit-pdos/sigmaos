@@ -315,7 +315,7 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	}
 	pid := sp.Tpid(req.PidStr)
 	r := sp.Trealm(req.RealmStr)
-	st, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.SigmaPath)
+	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.SigmaPath)
 	if err != nil {
 		return err
 	}
@@ -351,7 +351,7 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q %v ck %d sinceSpawn %v", req.Prog, pe.proc.GetSigmaPath()[0], pe.proc.GetPid(), req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
 
 	start := time.Now()
-	sz, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
+	sz, _, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
@@ -375,7 +375,7 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 
 	paths := pe.proc.GetSigmaPath()
 	start := time.Now()
-	st, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), paths)
+	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), paths)
 	if err != nil {
 		return err
 	}

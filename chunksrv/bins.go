@@ -17,6 +17,7 @@ type binEntry struct {
 	prog  string
 	realm sp.Trealm
 	st    *sp.Stat
+	path  string
 }
 
 func newBinEntry(prog string, realm sp.Trealm) *binEntry {
@@ -35,20 +36,21 @@ func (be *binEntry) signal() {
 		be.cond.Broadcast()
 	}
 }
-func (be *binEntry) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, error) {
+func (be *binEntry) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string, error) {
 	be.mu.Lock()
 	defer be.mu.Unlock()
 	if be.fd != -1 {
-		return be.fd, nil
+		return be.fd, be.path, nil
 	}
 	s := time.Now()
-	fd, err := open(sc, be.prog, paths)
+	fd, path, err := open(sc, be.prog, paths)
 	if err != nil {
-		return -1, err
+		return -1, "", err
 	}
 	be.fd = fd
+	be.path = path
 	db.DPrintf(db.SPAWN_LAT, "[%v] getFd %q spawn %v", be.prog, paths, time.Since(s))
-	return be.fd, nil
+	return be.fd, path, nil
 }
 
 type progBins struct {

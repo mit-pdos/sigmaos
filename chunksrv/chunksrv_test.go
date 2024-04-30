@@ -66,9 +66,9 @@ func (ts *Tstate) check(srv string, st *sp.Stat) {
 func (ts *Tstate) fetch(srv string, paths []string) {
 	pid := ts.ProcEnv().GetPID()
 
-	st, err := ts.ckclnt.GetFileStat(srv, PROG, pid, sp.ROOTREALM, paths)
+	st, path, err := ts.ckclnt.GetFileStat(srv, PROG, pid, sp.ROOTREALM, paths)
 	assert.Nil(ts.T, err)
-	db.DPrintf(db.TEST, "st %v\n", st)
+	db.DPrintf(db.TEST, "st %v %q\n", st, path)
 
 	err = ts.ckclnt.FetchBinary(srv, PROG, pid, sp.ROOTREALM, sp.Tsize(st.Length), paths)
 	assert.Nil(ts.T, err, "err %v", err)
@@ -80,9 +80,7 @@ func (ts *Tstate) fetch(srv string, paths []string) {
 
 func TestFetchOrigin(t *testing.T) {
 	ts := newTstate(t, 0)
-
 	ts.fetch(ts.srvs[0], []string{PATH})
-
 	ts.Shutdown()
 }
 

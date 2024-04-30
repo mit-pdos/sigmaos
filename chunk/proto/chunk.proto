@@ -14,6 +14,7 @@ message GetFileStatRequest {
 
 message GetFileStatResponse {
   Stat stat = 1;
+  string path = 2;
 }
 
 message FetchChunkRequest {
@@ -29,4 +30,5 @@ message FetchChunkRequest {
 message FetchChunkResponse {
   Blob blob = 1;
   uint64 size = 2;
+  string path = 3;
 }

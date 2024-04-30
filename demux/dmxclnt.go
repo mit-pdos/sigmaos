@@ -44,6 +44,7 @@ func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
 func (dmx *DemuxClnt) reader() {
 	for {
 		c, err := dmx.trans.ReadCall()
+		db.DPrintf(db.DEMUXCLNT, "ReadCall %v", c)
 		if err != nil {
 			db.DPrintf(db.DEMUXCLNT, "reader rf err %v\n", err)
 			dmx.callmap.close()
@@ -71,6 +72,7 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 		return nil, err
 	}
 	dmx.mu.Lock()
+	db.DPrintf(db.DEMUXCLNT, "WriteCall %v", req)
 	err := dmx.trans.WriteCall(req)
 	dmx.mu.Unlock()
 	if err != nil {

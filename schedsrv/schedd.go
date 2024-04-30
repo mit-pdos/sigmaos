@@ -68,7 +68,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, as au
 
 // Start uprocd and warm cache of binaries
 func (sd *Schedd) WarmUprocd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
-	if err := sd.pmgr.WarmUprocd(sp.Trealm(req.RealmStr), req.Program, req.SigmaPath, proc.Ttype(req.ProcType)); err != nil {
+	if err := sd.pmgr.WarmUprocd(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.Program, req.SigmaPath, proc.Ttype(req.ProcType)); err != nil {
 		db.DPrintf(db.ERROR, "WarmUprocd %v err %v", req, err)
 		res.OK = false
 		return err

@@ -18,6 +18,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 
+	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -32,10 +33,6 @@ const (
 	// binfsd mounts itself here:
 	BINFSMNT = "/mnt/binfs/"
 
-	// The directory /tmp/sigmaos-bin/realms/<realm> in the host file
-	// system is mounted here by uprocd:
-	BINCACHE = sp.SIGMAHOME + "/bin/user/"
-
 	DEBUG = false
 )
 
@@ -44,7 +41,7 @@ func BinPath(program string) string {
 }
 
 func binCachePath(program string) string {
-	return BINCACHE + program
+	return chunksrv.BINPROC + program
 }
 
 type binFsRoot struct {
@@ -75,7 +72,7 @@ func (n *binFsNode) String() string {
 
 func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) (fs.InodeEmbedder, error) {
 	var st syscall.Stat_t
-	err := syscall.Stat(BINCACHE, &st)
+	err := syscall.Stat(chunksrv.BINPROC, &st)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +93,7 @@ func RunBinFS(kernelId, uprocdpid string) error {
 		return err
 	}
 
-	db.DPrintf(db.BINSRV, "%s", db.LsDir(BINCACHE))
+	db.DPrintf(db.BINSRV, "%s", db.LsDir(chunksrv.BINPROC))
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -125,8 +122,8 @@ func RunBinFS(kernelId, uprocdpid string) error {
 
 		MountOptions: fuse.MountOptions{
 			Debug:  DEBUG,
-			FsName: BINCACHE, // First column in "df -T": original dir
-			Name:   "binfs",  // Second column in "df -T" will be shown as "fuse." + Name
+			FsName: chunksrv.BINPROC, // First column in "df -T": original dir
+			Name:   "binfs",          // Second column in "df -T" will be shown as "fuse." + Name
 		},
 	}
 	opts.MountOptions.Options = append(opts.MountOptions.Options, "ro")

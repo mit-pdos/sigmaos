@@ -182,7 +182,7 @@ func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
 		// Warm the cache for a binary
 		for _, ptype := range []proc.Ttype{proc.T_LC, proc.T_BE} {
 			for _, prog := range progs {
-				err := sdc.WarmUprocd(kid, ts.GetRealm(), prog, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
+				err := sdc.WarmUprocd(kid, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), prog, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
 				nDL++
 				assert.Nil(ts.Ts.T, err, "WarmUprocd: %v", err)
 			}

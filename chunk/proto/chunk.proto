@@ -29,5 +29,4 @@ message FetchChunkRequest {
 message FetchChunkResponse {
   Blob blob = 1;
   uint64 size = 2;
-  Stat stat = 3;
 }

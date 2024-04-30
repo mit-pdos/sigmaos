@@ -1,7 +1,12 @@
+// package chunksrv caches chunks of binaries and the binary's Stat
+// for procs.  It uses the proc's SigmaPath paths to locate the
+// binary, if it doesn't have it cached: typically the last entry in
+// SigmaPath is the origin for the binary (e.g., an S3 path) and
+// earlier entries are paths to other chunksrvs (e.g., prepended by
+// procclnt or procqsrv).
 package chunksrv
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -29,7 +34,22 @@ const (
 	SEEK_DATA = 3
 	SEEK_HOLE = 4
 
+	ROOTHOSTCACHE = "/tmp/sigmaos-bin"
+
+	// start-kernel.sh mounts /tmp/sigmaos-bin/${KERNELID} as
+	// ROOTBINCACHE, given each kernel its own directory in the local
+	// file system to cache binaries.  chunksrv runs as part of the
+	// kernel and uses this pathname to cache binaries.
 	ROOTBINCACHE = sp.SIGMAHOME + "/bin/user/realms"
+
+	// The kernel's scheduler starts a uprocsrv container per realm
+	// and proc type and mounts "/tmp/sigmaos-bin/<kernelid>" at
+	// ROOTBINCONTAINER for uprocsrv.
+	ROOTBINCONTAINER = sp.SIGMAHOME + "all-realm-bin"
+
+	// The directory ROOTBINCONTAINER/<realm> is mounted here by
+	// uprocsrv:
+	BINPROC = sp.SIGMAHOME + "/bin/user/"
 )
 
 func Index(o int64) int { return int(o / chunk.CHUNKSZ) }
@@ -39,8 +59,41 @@ func IsChunkSrvPath(path string) bool {
 	return strings.Contains(path, sp.CHUNKD)
 }
 
+// The path on the host where a kernel caches its binaries
+func PathHostKernel(kernelId string) string {
+	return path.Join(ROOTHOSTCACHE, kernelId)
+}
+
+// For testing: the path on the host where a kernel caches its
+// binaries for a realm.
+func PathHostKernelRealm(kernelId string, realm sp.Trealm) string {
+	return path.Join(PathHostKernel(kernelId), realm.String())
+}
+
+// The path where chunksrv caches binaries in the local file system.
 func pathBinCache(realm sp.Trealm, prog string) string {
 	return path.Join(ROOTBINCACHE, realm.String(), prog)
+}
+
+// The pathname that uprocsrv uses for the directory with cached
+// binaries.
+func pathBinRealm(realm sp.Trealm) string {
+	return path.Join(ROOTBINCONTAINER, realm.String())
+}
+
+// Uprocsrv mounts PathBinRealm at PathBinProc() providing a proc
+// accesses to its binaries through PathBinProc().
+func MkPathBinRealm(realm sp.Trealm) string {
+	dir := pathBinRealm(realm)
+	// fails is already exist and if it fails for another reason Mount will fail
+	if err := os.Mkdir(dir, 0750); err != nil {
+		db.DPrintf(db.CHUNKSRV, "Mkdir %q err %v\n", dir, err)
+	}
+	return dir
+}
+
+func PathBinProc() string {
+	return BINPROC
 }
 
 type ckclntEntry struct {
@@ -67,20 +120,9 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 	return cksrv
 }
 
-func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, st *sp.Stat, paths []string) (*binEntry, error) {
-	be := cksrv.realmbins.getBin(r, prog, st)
-	be.mu.Lock()
-	defer be.mu.Unlock()
-
-	// Fill in stats
-	if be.st == nil {
-		st, err := Lookup(cksrv.sc, prog, paths)
-		if err != nil {
-			return nil, err
-		}
-		be.st = st
-	}
-	return be, nil
+func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string) *binEntry {
+	be := cksrv.realmbins.getBin(r, prog)
+	return be
 }
 
 func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchChunkResponse) (bool, error) {
@@ -99,45 +141,35 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 			res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 		}
 		res.Size = uint64(sz)
-		be, err := cksrv.getBin(r, req.GetProg(), nil, req.GetSigmaPath())
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error fetchCache getBin: %v", err)
-			return false, err
-		}
-		res.Stat = be.st
 		return true, nil
 	}
 	db.DPrintf(db.CHUNKSRV, "%v: FetchCache: %q pid %v ck %d not present\n", cksrv.kernelId, pn, req.Pid, ckid)
 	return false, nil
 }
 
-func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog string, pid sp.Tpid, paths []string, ck int, reqsz sp.Tsize, b []byte) (sp.Tsize, *sp.Stat, error) {
+func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog string, pid sp.Tpid, paths []string, ck int, reqsz sp.Tsize, b []byte) (sp.Tsize, error) {
 	chunkdID := path.Base(paths[0])
 	db.DPrintf(db.CHUNKSRV, "%v: fetchChunkd: %v ck %d %v", cksrv.kernelId, prog, ck, paths)
-	sz, st, err := cksrv.ckclnt.FetchChunk(chunkdID, prog, pid, r, ck, reqsz, paths, b)
+	sz, err := cksrv.ckclnt.FetchChunk(chunkdID, prog, pid, r, ck, reqsz, paths, b)
 	if err != nil {
-		return 0, nil, err
+		return 0, err
 	}
-	return sz, st, nil
+	return sz, nil
 }
 
-func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, paths []string, ck int, b []byte) (sp.Tsize, *sp.Stat, error) {
+func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, paths []string, ck int, b []byte) (sp.Tsize, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: %v ck %d %v", cksrv.kernelId, prog, ck, paths)
-	be, err := cksrv.getBin(r, prog, nil, paths)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error fetchOrigin getBin: %v", err)
-		return 0, nil, err
-	}
+	be := cksrv.getBin(r, prog)
 	fd, err := be.getFd(cksrv.sc, paths)
 	if err != nil {
-		return 0, nil, err
+		return 0, err
 	}
 	sz, err := cksrv.sc.Pread(fd, b, sp.Toffset(Ckoff(ck)))
 	if err != nil {
 		db.DPrintf(db.CHUNKSRV, "%v: FetchOrigin: read %q ck %d err %v", cksrv.kernelId, prog, ck, err)
-		return 0, nil, err
+		return 0, err
 	}
-	return sz, be.st, nil
+	return sz, nil
 }
 
 func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
@@ -145,7 +177,6 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 	r := sp.Trealm(req.Realm)
 	b := make([]byte, chunk.CHUNKSZ)
 	ck := int(req.ChunkId)
-	var st *sp.Stat
 	var err error
 
 	paths := req.SigmaPath
@@ -162,25 +193,17 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 
 	ok := false
 	for IsChunkSrvPath(paths[0]) {
-		sz, st, err = cksrv.fetchChunkd(r, req.Prog, sp.Tpid(req.Pid), []string{paths[0]}, ck, sp.Tsize(req.Size), b)
-		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: chunkd %v st %v err %v", cksrv.kernelId, paths[0], st, err)
+		sz, err = cksrv.fetchChunkd(r, req.Prog, sp.Tpid(req.Pid), []string{paths[0]}, ck, sp.Tsize(req.Size), b)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: chunkd %v err %v", cksrv.kernelId, paths[0], err)
 		if err == nil {
 			ok = true
-			// Create a bin entry, so that this chunkd won't have to fetch stats from
-			// the origin if another chunkd queries it for stats
-			// XXX paths messed up
-			_, err := cksrv.getBin(r, req.Prog, st, paths[1:])
-			if err != nil {
-				db.DPrintf(db.ERROR, "Error fetchChunk getBin: %v", err)
-				return err
-			}
 			break
 		}
 		paths = paths[1:]
 	}
 
 	if !ok {
-		sz, st, err = cksrv.fetchOrigin(r, req.Prog, paths, ck, b)
+		sz, err = cksrv.fetchOrigin(r, req.Prog, paths, ck, b)
 		if err != nil {
 			db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: origin %v err %v", cksrv.kernelId, paths, err)
 			return err
@@ -193,29 +216,6 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 	}
 	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: writeChunk %v pid %v ck %d sz %d", cksrv.kernelId, pn, req.Pid, req.ChunkId, sz)
 	res.Size = uint64(sz)
-	res.Stat = st
-	return nil
-}
-
-func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
-	db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: %v", cksrv.kernelId, req)
-	defer db.DPrintf(db.CHUNKSRV, "%v: GetFileStat done: %v", cksrv.kernelId, req)
-
-	paths := req.GetSigmaPath()
-	// Skip chunksrv paths
-	for IsChunkSrvPath(paths[0]) {
-		paths = paths[1:]
-	}
-	if len(paths) < 1 {
-		return fmt.Errorf("Error no paths left")
-	}
-
-	be, err := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg(), nil, paths)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error getBin: %v", err)
-		return err
-	}
-	res.Stat = be.st
 	return nil
 }
 
@@ -233,6 +233,77 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *prot
 	return cksrv.fetchChunk(req, res)
 }
 
+func (cksrv *ChunkSrv) getStatCache(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) (*sp.Stat, bool) {
+	be := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg())
+	be.mu.Lock()
+	defer be.mu.Unlock()
+	if be.st == nil {
+		return nil, false
+	}
+	return be.st, true
+}
+
+func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
+	r := sp.Trealm(req.GetRealmStr())
+	paths := req.GetSigmaPath()
+	if req.SigmaPath[0] == cksrv.path {
+		// If the first path is me, skip myself, because i don't have the stat
+		paths = req.SigmaPath[1:]
+	}
+
+	if len(paths) == 0 {
+		return serr.NewErr(serr.TErrNotfound, req.Prog)
+	}
+
+	ok := false
+	var st *sp.Stat
+	var err error
+	for IsChunkSrvPath(paths[0]) {
+		srv := path.Base(paths[0])
+		st, err = cksrv.ckclnt.GetFileStat(srv, req.Prog, sp.Tpid(req.Pid), r, []string{paths[0]})
+		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: chunkd %v st %v err %v", cksrv.kernelId, paths[0], st, err)
+		if err == nil {
+			ok = true
+			break
+		}
+		paths = paths[1:]
+	}
+	if !ok {
+		st, err = cksrv.getOrigin(r, req.Prog, paths)
+		if err != nil {
+			db.DPrintf(db.CHUNKSRV, "%v: getFileStat: origin %v err %v", cksrv.kernelId, paths, err)
+			return err
+		}
+	}
+	db.DPrintf(db.CHUNKSRV, "%v: getFileStat pid %v st %v", cksrv.kernelId, req.Pid, st)
+	be := cksrv.getBin(r, req.GetProg())
+	be.mu.Lock()
+	defer be.mu.Unlock()
+	be.st = st
+	res.Stat = be.st
+	return nil
+}
+
+func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string) (*sp.Stat, error) {
+	st, err := lookup(cksrv.sc, prog, paths)
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
+}
+
+func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
+	db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: %v", cksrv.kernelId, req)
+	defer db.DPrintf(db.CHUNKSRV, "%v: GetFileStat done: %v", cksrv.kernelId, req)
+
+	st, ok := cksrv.getStatCache(req, res)
+	if ok {
+		res.Stat = st
+		return nil
+	}
+	return cksrv.getFileStat(req, res)
+}
+
 // XXX hack; how to handle ~local?
 func downloadPaths(paths []string, kernelId string) []string {
 	for i, p := range paths {
@@ -243,8 +314,8 @@ func downloadPaths(paths []string, kernelId string) []string {
 	return paths
 }
 
-func Lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, error) {
-	db.DPrintf(db.CHUNKSRV, "Lookup %q %v", prog, paths)
+func lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, error) {
+	db.DPrintf(db.CHUNKSRV, "lookup %q %v", prog, paths)
 
 	var st *sp.Stat
 	err := fslib.RetryPaths(paths, func(i int, pn string) error {
@@ -257,7 +328,7 @@ func Lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, err
 		}
 		return err
 	})
-	db.DPrintf(db.CHUNKSRV, "Lookup done %q %v st %v err %v", prog, paths, st, err)
+	db.DPrintf(db.CHUNKSRV, "lookup done %q %v st %v err %v", prog, paths, st, err)
 	return st, err
 }
 

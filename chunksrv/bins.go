@@ -19,12 +19,11 @@ type binEntry struct {
 	st    *sp.Stat
 }
 
-func newBinEntry(prog string, realm sp.Trealm, st *sp.Stat) *binEntry {
+func newBinEntry(prog string, realm sp.Trealm) *binEntry {
 	return &binEntry{
 		prog:  prog,
 		realm: realm,
 		fd:    -1,
-		st:    st,
 	}
 }
 
@@ -68,15 +67,15 @@ func newRealmBinEntry() *realmBinEntry {
 	return &realmBinEntry{realmbins: syncmap.NewSyncMap[sp.Trealm, *progBins]()}
 }
 
-func (rb *realmBinEntry) getBin(r sp.Trealm, prog string, st *sp.Stat) *binEntry {
+func (rb *realmBinEntry) getBin(r sp.Trealm, prog string) *binEntry {
 	re, ok := rb.realmbins.Lookup(r)
 	if !ok {
 		re, _ = rb.realmbins.Alloc(r, newProgBins())
 	}
 	be, ok := re.bins.Lookup(prog)
 	if !ok {
-		db.DPrintf(db.CHUNKSRV, "getBin: not present r %v prog %v st %v", r, prog, st)
-		be, _ = re.bins.Alloc(prog, newBinEntry(prog, r, st))
+		db.DPrintf(db.CHUNKSRV, "getBin: bin state not present r %v prog %v", r, prog)
+		be, _ = re.bins.Alloc(prog, newBinEntry(prog, r))
 	}
 	return be
 }

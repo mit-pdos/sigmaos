@@ -205,13 +205,13 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	return rpcc.RunProc(uproc)
 }
 
-func (updm *UprocdMgr) WarmProc(realm sp.Trealm, prog string, path []string, ptype proc.Ttype) (uprocErr error, childErr error) {
+func (updm *UprocdMgr) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) (uprocErr error, childErr error) {
 	db.DPrintf(db.UPROCDMGR, "[WarmUproc %v] warm uproc %v", prog)
 	rpcc, err := updm.lookupClnt(realm, ptype)
 	if err != nil {
 		return err, nil
 	}
-	return rpcc.WarmProc(realm, prog, path)
+	return rpcc.WarmProc(pid, realm, prog, path)
 }
 
 func (updm *UprocdMgr) String() string {

@@ -4,7 +4,6 @@
 package uprocsrv
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -29,7 +28,6 @@ import (
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
@@ -315,11 +313,13 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	if err := ups.assignToRealm(sp.Trealm(req.RealmStr), sp.NO_PID); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
-	st, err := chunksrv.Lookup(ups.sc, req.Program, req.SigmaPath)
+	pid := sp.Tpid(req.PidStr)
+	r := sp.Trealm(req.RealmStr)
+	st, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.SigmaPath)
 	if err != nil {
 		return err
 	}
-	if err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, sp.Tpid(rand.String(4)), sp.Trealm(req.RealmStr), sp.Tsize(st.Length), req.SigmaPath); err != nil {
+	if err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, sp.Tsize(st.Length), req.SigmaPath); err != nil {
 		return err
 	}
 	res.OK = true
@@ -328,14 +328,8 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 
 // Make and mount realm bin directory for [binsrv].
 func mountRealmBinDir(realm sp.Trealm) error {
-	dir := path.Join(sp.SIGMAHOME, "all-realm-bin", realm.String())
-
-	// fails is already exist and if it fails for another reason Mount will fail
-	if err := os.Mkdir(dir, 0750); err != nil {
-		db.DPrintf(db.UPROCD, "Mkdir %q err %v\n", dir, err)
-	}
-
-	mnt := path.Join(sp.SIGMAHOME, "bin", "user")
+	dir := chunksrv.MkPathBinRealm(realm)
+	mnt := chunksrv.PathBinProc()
 
 	db.DPrintf(db.UPROCD, "mountRealmBinDir: %q %q\n", dir, mnt)
 
@@ -376,34 +370,18 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 		db.DPrintf(db.UPROCD, "Lookup wait for pid %v proc %v\n", req.Pid, pe)
 		pe.procWait()
 	}
+
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v %v sinceSpawn %v", pe.proc.GetPid(), pe.proc.GetSigmaPath(), req.Prog, time.Since(pe.proc.GetSpawnTime()))
 
-	start := time.Now()
 	paths := pe.proc.GetSigmaPath()
-	var st *sp.Stat
-	var err error
-	if chunksrv.IsChunkSrvPath(paths[0]) {
-		cksrv := path.Base(paths[0])
-		// XXX tolerate failures?
-		st, err = ups.ckclnt.GetFileStat(cksrv, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), paths)
-		if err != nil {
-			return err
-		}
-	} else {
-		st, err = chunksrv.Lookup(ups.sc, req.Prog, paths)
-		if err != nil {
-			return err
-		}
-	}
-	// sanity check
-	if st == nil {
-		db.DPrintf(db.ERROR, "Error st is nil %v", req)
-		return fmt.Errorf("Nil stat for lookup: %v", req)
+	start := time.Now()
+	st, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), paths)
+	if err != nil {
+		return err
 	}
 	res.Stat = st
 	db.DPrintf(db.SPAWN_LAT, "[%v] GetFileStat path %v prog %v lat %v sinceSpawn %v", pe.proc.GetPid(), pe.proc.GetSigmaPath(), req.Prog, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done sinceSpawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
-
 	return nil
 }

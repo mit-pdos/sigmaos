@@ -5,26 +5,36 @@ import (
 	"net"
 	"os"
 
+	"google.golang.org/protobuf/proto"
+
 	"sigmaos/auth"
+	"sigmaos/ctx"
 	db "sigmaos/debug"
+	"sigmaos/demux"
+	"sigmaos/frame"
 	"sigmaos/fs"
-	"sigmaos/netsigma/proto"
+	netproto "sigmaos/netsigma/proto"
 	"sigmaos/rpc"
+	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/rpcsrv"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
 type NetProxySrv struct {
-	*NetProxySrvStubs
+	auth             auth.AuthMgr
+	innerContainerIP sp.Tip
 }
 
 type NetProxySrvStubs struct {
+	conn             *net.UnixConn
 	innerContainerIP sp.Tip
 	auth             auth.AuthMgr
 	directDialFn     DialFn
 	directListenFn   ListenFn
-	trans            *NetProxyRPCTrans
 	rpcs             *rpcsrv.RPCSrv
+	dmx              *demux.DemuxSrv
+	ctx              *WrapperCtx
 }
 
 func NewNetProxySrv(ip sp.Tip, amgr auth.AuthMgr) (*NetProxySrv, error) {
@@ -38,20 +48,64 @@ func NewNetProxySrv(ip sp.Tip, amgr auth.AuthMgr) (*NetProxySrv, error) {
 	}
 	db.DPrintf(db.TEST, "runServer: netproxysrv listening on %v", sp.SIGMA_NETPROXY_SOCKET)
 	nps := &NetProxySrv{
-		&NetProxySrvStubs{
-			innerContainerIP: ip,
-			auth:             amgr,
-			directDialFn:     DialDirect,
-			directListenFn:   ListenDirect,
-		},
+		auth:             amgr,
+		innerContainerIP: ip,
 	}
-	rpcs := rpcsrv.NewRPCSrv(nps.NetProxySrvStubs, rpc.NewStatInfo())
-	nps.rpcs = rpcs
-	nps.trans = NewNetProxyRPCTrans(rpcs, socket)
+
+	go nps.runTransport(socket)
+
 	return nps, nil
 }
 
-func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto.DialResponse) error {
+func (nps *NetProxySrv) runTransport(l net.Listener) {
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			db.DFatalf("Error netproxysrv Accept: %v", err)
+			return
+		}
+		// Handle incoming connection
+		go nps.handleNewConn(conn.(*net.UnixConn))
+	}
+}
+
+func (npss *NetProxySrvStubs) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
+	db.DPrintf(db.NETPROXYSRV, "ServeRequest: %v", c)
+	req := c.(*ProxyCall)
+	rep, err := npss.rpcs.WriteRead(npss.ctx, req.Iov)
+	if err != nil {
+		db.DPrintf(db.NETPROXYSRV, "ServeRequest: writeRead err %v", err)
+	}
+	return NewProxyCall(req.Seqno, rep, true), nil
+}
+
+func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
+	b, err := frame.ReadFrame(conn)
+	if err != nil {
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error Read PrincipalID frame: %v", err)
+		return
+	}
+	p := sp.NoPrincipal()
+	if err := proto.Unmarshal(b, p); err != nil {
+		db.DPrintf(db.ERROR, "Error Unmarshal PrincipalID: %v", err)
+		return
+	}
+	db.DPrintf(db.NETPROXYSRV, "Handle connection [%p] from principal %v", conn, p)
+
+	npss := &NetProxySrvStubs{
+		auth:             nps.auth,
+		conn:             conn,
+		innerContainerIP: nps.innerContainerIP,
+		directDialFn:     DialDirect,
+		directListenFn:   ListenDirect,
+		ctx:              NewWrapperCtx(ctx.NewPrincipalOnlyCtx(p)),
+	}
+
+	npss.rpcs = rpcsrv.NewRPCSrv(npss, rpc.NewStatInfo())
+	npss.dmx = demux.NewDemuxSrv(npss, NewNetProxyTrans(conn, demux.NewIoVecMap()))
+}
+
+func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req netproto.DialRequest, res *netproto.DialResponse) error {
 	ep := sp.NewEndpointFromProto(req.GetEndpoint())
 	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> ep %v", ctx.Principal(), ep)
 	// Verify the principal is authorized to establish the connection
@@ -73,13 +127,14 @@ func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req proto.DialRequest, res *proto
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
-	// Get wrapper context in order to set output FD
-	wctx := ctx.(*WrapperCtx)
-	wctx.SetFile(file)
+	// Set socket control message in output blob
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{constructSocketControlMsg(file)},
+	}
 	return nil
 }
 
-func (nps *NetProxySrvStubs) Listen(ctx fs.CtxI, req proto.ListenRequest, res *proto.ListenResponse) error {
+func (nps *NetProxySrvStubs) Listen(ctx fs.CtxI, req netproto.ListenRequest, res *netproto.ListenResponse) error {
 	db.DPrintf(db.NETPROXYSRV, "Listen principal %v", ctx.Principal())
 	// Verify the principal is who they say they are
 	if _, err := nps.auth.VerifyPrincipalIdentity(ctx.Principal()); err != nil {
@@ -111,6 +166,12 @@ func (nps *NetProxySrvStubs) Listen(ctx fs.CtxI, req proto.ListenRequest, res *p
 	wctx := ctx.(*WrapperCtx)
 	wctx.SetFile(file)
 	return nil
+}
+
+func (npss *NetProxySrvStubs) ReportError(err error) {
+	db.DPrintf(db.NETPROXYSRV_ERR, "ReportError err %v", err)
+	db.DPrintf(db.NETPROXYSRV, "Close conn principal %v", npss.ctx.Principal())
+	npss.conn.Close()
 }
 
 func listenerToFile(proxyListener net.Listener) (*os.File, error) {

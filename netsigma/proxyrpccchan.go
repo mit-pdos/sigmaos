@@ -4,19 +4,13 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"runtime/debug"
-	"strconv"
 
 	"golang.org/x/sys/unix"
 
-	"google.golang.org/protobuf/proto"
-
 	db "sigmaos/debug"
-	"sigmaos/frame"
-	"sigmaos/proc"
+	"sigmaos/demux"
 	"sigmaos/rpc"
-	"sigmaos/sessp"
-	sp "sigmaos/sigmap"
+	// "sigmaos/sessp"
 )
 
 var hasBeenInit bool
@@ -26,79 +20,46 @@ const (
 )
 
 type NetProxyRPCCh struct {
-	conn *net.UnixConn
+	dmxclnt *demux.DemuxClnt
 }
 
-func NewNetProxyRPCCh(pe *proc.ProcEnv) (*NetProxyRPCCh, error) {
-	var conn *net.UnixConn
-	fdstr := os.Getenv(SIGMA_NETPROXY_FD)
-	if fdstr == "" {
-		// Connect to the netproxy server by dialing the unix socket (should only
-		// be done by the test program)
-		uconn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error connect netproxy srv")
-			return nil, err
-		}
-		conn = uconn.(*net.UnixConn)
-	} else {
-		// Sanity check that a proc only has one NetProxyClnt, since using the fd
-		// set up by the trampoline consumes it destructively.
-		if hasBeenInit {
-			db.DPrintf(db.ERROR, "Error double-init netproxyclnt")
-			return nil, fmt.Errorf("Error double-init netproxyclnt: %v", string(debug.Stack()))
-		}
-		hasBeenInit = true
-		// Connect to the netproxy server using the FD set up by the trampoline
-		// (should be done by user procs)
-		fd, err := strconv.Atoi(fdstr)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error get netproxy fd (%v): %v", fdstr, err)
-			return nil, err
-		}
-		conn, err = fdToUnixConn(fd)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error connect netproxy srv")
-			return nil, err
-		}
-	}
-	b, err := proto.Marshal(pe.GetPrincipal())
-	if err != nil {
-		db.DFatalf("Error marshal principal: %v", err)
-		return nil, err
-	}
-	// Write the authenticated principal ID to the server, so that the server
-	// knows the principal associated with this connection
-	if err := frame.WriteFrame(conn, b); err != nil {
-		db.DPrintf(db.ERROR, "Error WriteFrame principal: %v", err)
-		return nil, err
-	}
+func NewNetProxyRPCCh(dmxclnt *demux.DemuxClnt) (*NetProxyRPCCh, error) {
 	return &NetProxyRPCCh{
-		conn: conn,
+		dmxclnt: dmxclnt,
 	}, nil
 }
 
 // Send an RPC request to either Dial or Listen
-func (ch *NetProxyRPCCh) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
-	if err := frame.WriteFrames(ch.conn, iniov); err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error WriteFrames: %v", err)
-		return err
+//func (ch *NetProxyRPCCh) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
+//	c := NewProxyCall(sessp.NextSeqno(scc.seqcntr), iniov)
+//	rep, err := scc.dmx.SendReceive(c, outiov)
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
+
+func constructSocketControlMsg(proxiedFile *os.File) []byte {
+	fd := int(proxiedFile.Fd())
+	return unix.UnixRights(fd)
+}
+
+func parseReturnedConn(oob []byte) (*net.TCPConn, error) {
+	// XXX sanity check
+	if len(oob) == 0 {
+		db.DPrintf(db.ERROR, "Error oob len 0")
+		db.DFatalf("Error oob len 0")
 	}
-	n, err := frame.ReadNumOfFrames(ch.conn)
+	scma, err := unix.ParseSocketControlMessage(oob)
 	if err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error ReadNumOfFrames: %v", err)
-		return err
+		db.DFatalf("Error parse socket control message: %v", err)
 	}
-	if uint32(len(outiov)) != n {
-		db.DFatalf("NetProxyRPCChan mismatch between supplied destination nvec and incoming nvec: %v != %v\n%s", len(outiov), n, debug.Stack())
+	fds, err := unix.ParseUnixRights(&scma[0])
+	if err != nil || len(fds) != 1 {
+		db.DFatalf("Error parse unix rights: len %v err %v", len(fds), err)
 	}
-	db.DPrintf(db.NETPROXYCLNT, "[%p] Read n frames: %v", ch.conn, len(outiov))
-	if err := frame.ReadNFramesInto(ch.conn, outiov); err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error ReadNFramesInto: %v", err)
-		return err
-	}
-	db.DPrintf(db.NETPROXYCLNT, "Read n done: %v", len(outiov))
-	return nil
+	db.DPrintf(db.NETPROXYCLNT, "got socket fd %v", fds[0])
+	return fdToTCPConn(fds[0])
 }
 
 func fdToUnixConn(fd int) (*net.UnixConn, error) {
@@ -133,57 +94,59 @@ func fdToConn(fd int) (net.Conn, error) {
 	return conn, nil
 }
 
-func fdToListener(fd int) (*net.TCPListener, error) {
-	f := os.NewFile(uintptr(fd), "tcp-listener")
-	if f == nil {
-		db.DFatalf("Error new file")
-	}
-	l, err := net.FileListener(f)
-	if err != nil {
-		db.DFatalf("Error make FileConn: %v", err)
-	}
-	return l.(*net.TCPListener), nil
-}
+//func fdToListener(fd int) (*net.TCPListener, error) {
+//	f := os.NewFile(uintptr(fd), "tcp-listener")
+//	if f == nil {
+//		db.DFatalf("Error new file")
+//	}
+//	l, err := net.FileListener(f)
+//	if err != nil {
+//		db.DFatalf("Error make FileConn: %v", err)
+//	}
+//	return l.(*net.TCPListener), nil
+//}
 
 func (ch *NetProxyRPCCh) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 	db.DPrintf(db.ERROR, "StatsSrv unimplemented")
 	return nil, fmt.Errorf("Unimplemented")
 }
 
-func (ch *NetProxyRPCCh) getReturnedFD() (int, error) {
-	oob := make([]byte, unix.CmsgSpace(4))
-	// Send connection FD to child via socket
-	_, _, _, _, err := ch.conn.ReadMsgUnix(nil, oob)
-	if err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error recv proxied conn fd: err %v", err)
-		return 0, err
-	}
-	scma, err := unix.ParseSocketControlMessage(oob)
-	if err != nil {
-		db.DFatalf("Error parse socket control message: %v", err)
-	}
-	fds, err := unix.ParseUnixRights(&scma[0])
-	if err != nil || len(fds) != 1 {
-		db.DFatalf("Error parse unix rights: len %v err %v", len(fds), err)
-	}
-	db.DPrintf(db.NETPROXYCLNT, "got socket fd %v", fds[0])
-	return fds[0], nil
-}
+//func (ch *NetProxyRPCCh) getReturnedFD() (int, error) {
+//	b := make([]byte, len("Hello!"))
+//	oob := make([]byte, unix.CmsgSpace(4))
+//	// Send connection FD to child via socket
+//	_, _, _, _, err := ch.conn.ReadMsgUnix(b, oob)
+//	if err != nil {
+//		db.DPrintf(db.NETPROXYCLNT_ERR, "Error recv proxied conn fd: err %v", err)
+//		return 0, err
+//	}
+//	db.DPrintf(db.ALWAYS, "returned fd msg %s", b)
+//	scma, err := unix.ParseSocketControlMessage(oob)
+//	if err != nil {
+//		db.DFatalf("Error parse socket control message: %v", err)
+//	}
+//	fds, err := unix.ParseUnixRights(&scma[0])
+//	if err != nil || len(fds) != 1 {
+//		db.DFatalf("Error parse unix rights: len %v err %v", len(fds), err)
+//	}
+//	db.DPrintf(db.NETPROXYCLNT, "got socket fd %v", fds[0])
+//	return fds[0], nil
+//}
 
 // Receive the connection FD corresponding to a successful Dial request
-func (ch *NetProxyRPCCh) GetReturnedConn() (*net.TCPConn, error) {
-	fd, err := ch.getReturnedFD()
-	if err != nil {
-		return nil, err
-	}
-	return fdToTCPConn(fd)
-}
+//func (ch *NetProxyRPCCh) GetReturnedConn() (*net.TCPConn, error) {
+//	fd, err := ch.getReturnedFD()
+//	if err != nil {
+//		return nil, err
+//	}
+//	return fdToTCPConn(fd)
+//}
 
-// Receive the connection FD corresponding to a successful Listen request
-func (ch *NetProxyRPCCh) GetReturnedListener() (net.Listener, error) {
-	fd, err := ch.getReturnedFD()
-	if err != nil {
-		return nil, err
-	}
-	return fdToListener(fd)
-}
+//// Receive the connection FD corresponding to a successful Listen request
+//func (ch *NetProxyRPCCh) GetReturnedListener() (net.Listener, error) {
+//	fd, err := ch.getReturnedFD()
+//	if err != nil {
+//		return nil, err
+//	}
+//	return fdToListener(fd)
+//}

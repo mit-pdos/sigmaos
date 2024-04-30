@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "sigmap/sigmap.proto";
+import "rpc/proto/rpc.proto";
 
 option go_package = "sigmaos/netsigma/proto";
 
@@ -11,12 +12,15 @@ message ListenRequest {
 message ListenResponse {
         Rerror err = 1;
         TendpointProto endpoint = 2;
+        Blob blob = 3;
 };
 
 message DialRequest {
         TendpointProto Endpoint = 1;
+        Blob blob = 2;
 };
 
 message DialResponse {
         Rerror err = 1;
+        Blob blob = 2;
 };

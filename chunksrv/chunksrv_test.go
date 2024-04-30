@@ -104,8 +104,21 @@ func TestFetchChunkd(t *testing.T) {
 	kid, ok := ts.bins.GetBinKernelID(PROG)
 	assert.True(ts.T, ok)
 
-	srv := chunk.ChunkdPath(kid)
-	ts.fetch(ts.srvs[0], []string{srv}, srv)
+	pn := chunk.ChunkdPath(kid)
+	ts.fetch(ts.srvs[0], []string{pn}, pn)
 
+	ts.Shutdown()
+}
+
+func TestFetchPath(t *testing.T) {
+	ts := newTstate(t, 1)
+
+	// fetch through chunkd1 so that it has it cached
+	pn1 := chunk.ChunkdPath(ts.srvs[1])
+	ts.fetch(ts.srvs[1], []string{pn1, PATH}, PATH)
+
+	// fetch through chunkd 0 with chunkd1 in search path,
+	// so data should come from chunkd1
+	ts.fetch(ts.srvs[0], []string{pn1, PATH}, pn1)
 	ts.Shutdown()
 }

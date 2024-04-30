@@ -15,7 +15,7 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/overlaydir"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -39,7 +39,7 @@ type SigmaPSrv struct {
 	stats    *stats.StatInfo
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, root fs.Dir, amgr auth.AuthMgr, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt, root fs.Dir, amgr auth.AuthMgr, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
 	psrv := &SigmaPSrv{
 		dirunder: root,
 		dirover:  overlay.MkDirOverlay(root),

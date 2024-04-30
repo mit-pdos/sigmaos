@@ -9,7 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
@@ -23,13 +23,13 @@ type SigmaClntClnt struct {
 	pe           *proc.ProcEnv
 	dmx          *demux.DemuxClnt
 	rpcc         *rpcclnt.RPCClnt
-	npc          *netsigma.NetProxyClnt
+	npc          *netproxy.NetProxyClnt
 	seqcntr      *sessp.Tseqcntr
 	conn         net.Conn
 	disconnected bool
 }
 
-func NewSigmaClntClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) (*SigmaClntClnt, error) {
+func NewSigmaClntClnt(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt) (*SigmaClntClnt, error) {
 	conn, err := net.Dial("unix", sp.SIGMASOCKET)
 	if err != nil {
 		return nil, err

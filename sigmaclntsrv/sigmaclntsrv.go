@@ -17,7 +17,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/keys"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -29,7 +29,7 @@ import (
 // SigmaSrvClnt's share one fid table
 type SigmaClntSrv struct {
 	pe   *proc.ProcEnv
-	nps  *netsigma.NetProxySrv
+	nps  *netproxy.NetProxySrv
 	fidc *fidclnt.FidClnt
 }
 
@@ -68,7 +68,7 @@ func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey
 	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
 	db.DPrintf(db.SCHEDD, "kmgr %v", kmgr)
 	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	nps, err := netsigma.NewNetProxySrv(pe.GetInnerContainerIP(), amgr)
+	nps, err := netproxy.NewNetProxySrv(pe.GetInnerContainerIP(), amgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewNetProxySrv: %v", err)
 		return nil, err
@@ -76,7 +76,7 @@ func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey
 	scs := &SigmaClntSrv{
 		pe:   pe,
 		nps:  nps,
-		fidc: fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe, amgr)),
+		fidc: fidclnt.NewFidClnt(pe, netproxy.NewNetProxyClnt(pe, amgr)),
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)
 	return scs, nil

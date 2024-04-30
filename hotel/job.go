@@ -11,7 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kv"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
@@ -82,7 +82,7 @@ func MemFsPath(job string) string {
 	return path.Join(JobDir(job), MEMFS)
 }
 
-func NewFsLibs(uname string, npc *netsigma.NetProxyClnt) ([]*fslib.FsLib, error) {
+func NewFsLibs(uname string, npc *netproxy.NetProxyClnt) ([]*fslib.FsLib, error) {
 	pe := proc.GetProcEnv()
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {

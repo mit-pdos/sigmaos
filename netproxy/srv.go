@@ -1,4 +1,4 @@
-package netsigma
+package netproxy
 
 import (
 	"fmt"
@@ -13,7 +13,8 @@ import (
 	"sigmaos/demux"
 	"sigmaos/frame"
 	"sigmaos/fs"
-	netproto "sigmaos/netsigma/proto"
+	netproto "sigmaos/netproxy/proto"
+	"sigmaos/netsigma"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/rpcsrv"
@@ -195,7 +196,7 @@ func connToFile(proxyConn net.Conn) (*os.File, error) {
 }
 
 func constructEndpoint(verifyEndpoints bool, amgr auth.AuthMgr, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tendpoint, error) {
-	host, port, err := QualifyAddrLocalIP(ip, l.Addr().String())
+	host, port, err := netsigma.QualifyAddrLocalIP(ip, l.Addr().String())
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)

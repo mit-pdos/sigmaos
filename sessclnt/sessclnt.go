@@ -14,7 +14,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/netclnt"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
@@ -29,13 +29,13 @@ type SessClnt struct {
 	seqcntr *sessp.Tseqcntr
 	closed  bool
 	mnt     *sp.Tendpoint
-	npc     *netsigma.NetProxyClnt
+	npc     *netproxy.NetProxyClnt
 	nc      *netclnt.NetClnt
 	pe      *proc.ProcEnv
 	dmx     *demux.DemuxClnt
 }
 
-func newSessClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, mnt *sp.Tendpoint) (*SessClnt, *serr.Err) {
+func newSessClnt(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt, mnt *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	c := &SessClnt{
 		sid:     sessp.Tsession(rand.Uint64()),
 		npc:     npc,

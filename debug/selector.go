@@ -216,6 +216,7 @@ const (
 	NETPROXYTRANS               = "NETPROXYTRANS"
 	NETPROXYTRANS_ERR           = "NETPROXYTRANS" + ERR
 	DEMUXCLNT                   = "DEMUXCLNT"
+	DEMUXCLNT_ERR               = "DEMUXCLNT" + ERR
 	PROTCLNT                    = "PROTCLNT"
 	PROTCLNT_ERR                = "PROTCLNT" + ERR
 	SESS_CLNT_Q                 = "SESS_CLNT_Q"
@@ -240,6 +241,7 @@ const (
 	AUTH_ERR                = AUTH + ERR
 	NETSRV                  = "NETSRV"
 	DEMUXSRV                = "DEMUXSRV"
+	DEMUXSRV_ERR            = "DEMUXSRV" + ERR
 	REPLRAFT                = "REPLRAFT"
 	RAFT_TIMING             = "RAFT_TIMING"
 	REPLY_TABLE             = "REPLY_TABLE"

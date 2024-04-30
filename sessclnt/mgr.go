@@ -5,7 +5,7 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -16,10 +16,10 @@ type Mgr struct {
 	mu       sync.Mutex
 	sessions map[string]*SessClnt
 	pe       *proc.ProcEnv
-	npc      *netsigma.NetProxyClnt
+	npc      *netproxy.NetProxyClnt
 }
 
-func NewMgr(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) *Mgr {
+func NewMgr(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt) *Mgr {
 	sc := &Mgr{
 		sessions: make(map[string]*SessClnt),
 		pe:       pe,

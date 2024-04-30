@@ -12,7 +12,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/protclnt"
@@ -27,10 +27,10 @@ type FidClnt struct {
 	fids   *FidMap
 	refcnt int
 	sm     *sessclnt.Mgr
-	npc    *netsigma.NetProxyClnt
+	npc    *netproxy.NetProxyClnt
 }
 
-func NewFidClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) *FidClnt {
+func NewFidClnt(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt) *FidClnt {
 	return &FidClnt{
 		fids:   newFidMap(),
 		refcnt: 1,
@@ -44,7 +44,7 @@ func (fidc *FidClnt) String() string {
 	return str
 }
 
-func (fidc *FidClnt) GetNetProxyClnt() *netsigma.NetProxyClnt {
+func (fidc *FidClnt) GetNetProxyClnt() *netproxy.NetProxyClnt {
 	return fidc.npc
 }
 

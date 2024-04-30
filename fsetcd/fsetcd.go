@@ -11,7 +11,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -47,7 +47,7 @@ func NewFsEtcdEndpoint(amgr auth.AuthMgr, ip sp.Tip) (map[string]*sp.TendpointPr
 	return eps, nil
 }
 
-func NewFsEtcd(npc *netsigma.NetProxyClnt, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*FsEtcd, error) {
+func NewFsEtcd(npc *netproxy.NetProxyClnt, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*FsEtcd, error) {
 	endpoints := []string{}
 	for addr, _ := range etcdMnts {
 		endpoints = append(endpoints, addr)
@@ -120,7 +120,7 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 	}
 }
 
-func GetRootNamed(npc *netsigma.NetProxyClnt, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
+func GetRootNamed(npc *netproxy.NetProxyClnt, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
 	fs, err := NewFsEtcd(npc, etcdMnts, realm)
 	if err != nil {
 		return &sp.Tendpoint{}, serr.NewErrError(err)

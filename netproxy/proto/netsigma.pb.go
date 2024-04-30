@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.28.1
 // 	protoc        v4.24.3
-// source: netsigma/proto/netsigma.proto
+// source: netproxy/proto/netsigma.proto
 
 package proto
 
@@ -33,7 +33,7 @@ type ListenRequest struct {
 func (x *ListenRequest) Reset() {
 	*x = ListenRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_netsigma_proto_netsigma_proto_msgTypes[0]
+		mi := &file_netproxy_proto_netsigma_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -46,7 +46,7 @@ func (x *ListenRequest) String() string {
 func (*ListenRequest) ProtoMessage() {}
 
 func (x *ListenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_netsigma_proto_netsigma_proto_msgTypes[0]
+	mi := &file_netproxy_proto_netsigma_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -59,7 +59,7 @@ func (x *ListenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListenRequest.ProtoReflect.Descriptor instead.
 func (*ListenRequest) Descriptor() ([]byte, []int) {
-	return file_netsigma_proto_netsigma_proto_rawDescGZIP(), []int{0}
+	return file_netproxy_proto_netsigma_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ListenRequest) GetAddr() *sigmap.Taddr {
@@ -82,7 +82,7 @@ type ListenResponse struct {
 func (x *ListenResponse) Reset() {
 	*x = ListenResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_netsigma_proto_netsigma_proto_msgTypes[1]
+		mi := &file_netproxy_proto_netsigma_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -95,7 +95,7 @@ func (x *ListenResponse) String() string {
 func (*ListenResponse) ProtoMessage() {}
 
 func (x *ListenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_netsigma_proto_netsigma_proto_msgTypes[1]
+	mi := &file_netproxy_proto_netsigma_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -108,7 +108,7 @@ func (x *ListenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListenResponse.ProtoReflect.Descriptor instead.
 func (*ListenResponse) Descriptor() ([]byte, []int) {
-	return file_netsigma_proto_netsigma_proto_rawDescGZIP(), []int{1}
+	return file_netproxy_proto_netsigma_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ListenResponse) GetErr() *sigmap.Rerror {
@@ -144,7 +144,7 @@ type DialRequest struct {
 func (x *DialRequest) Reset() {
 	*x = DialRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_netsigma_proto_netsigma_proto_msgTypes[2]
+		mi := &file_netproxy_proto_netsigma_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -157,7 +157,7 @@ func (x *DialRequest) String() string {
 func (*DialRequest) ProtoMessage() {}
 
 func (x *DialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_netsigma_proto_netsigma_proto_msgTypes[2]
+	mi := &file_netproxy_proto_netsigma_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -170,7 +170,7 @@ func (x *DialRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DialRequest.ProtoReflect.Descriptor instead.
 func (*DialRequest) Descriptor() ([]byte, []int) {
-	return file_netsigma_proto_netsigma_proto_rawDescGZIP(), []int{2}
+	return file_netproxy_proto_netsigma_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *DialRequest) GetEndpoint() *sigmap.TendpointProto {
@@ -199,7 +199,7 @@ type DialResponse struct {
 func (x *DialResponse) Reset() {
 	*x = DialResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_netsigma_proto_netsigma_proto_msgTypes[3]
+		mi := &file_netproxy_proto_netsigma_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -212,7 +212,7 @@ func (x *DialResponse) String() string {
 func (*DialResponse) ProtoMessage() {}
 
 func (x *DialResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_netsigma_proto_netsigma_proto_msgTypes[3]
+	mi := &file_netproxy_proto_netsigma_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -225,7 +225,7 @@ func (x *DialResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DialResponse.ProtoReflect.Descriptor instead.
 func (*DialResponse) Descriptor() ([]byte, []int) {
-	return file_netsigma_proto_netsigma_proto_rawDescGZIP(), []int{3}
+	return file_netproxy_proto_netsigma_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *DialResponse) GetErr() *sigmap.Rerror {
@@ -242,10 +242,10 @@ func (x *DialResponse) GetBlob() *proto.Blob {
 	return nil
 }
 
-var File_netsigma_proto_netsigma_proto protoreflect.FileDescriptor
+var File_netproxy_proto_netsigma_proto protoreflect.FileDescriptor
 
-var file_netsigma_proto_netsigma_proto_rawDesc = []byte{
-	0x0a, 0x1d, 0x6e, 0x65, 0x74, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+var file_netproxy_proto_netsigma_proto_rawDesc = []byte{
+	0x0a, 0x1d, 0x6e, 0x65, 0x74, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
 	0x2f, 0x6e, 0x65, 0x74, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a,
 	0x13, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x70, 0x2f, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x70, 0x2e, 0x70,
 	0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x13, 0x72, 0x70, 0x63, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f,
@@ -270,24 +270,24 @@ var file_netsigma_proto_netsigma_proto_rawDesc = []byte{
 	0x07, 0x2e, 0x52, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x12, 0x19, 0x0a,
 	0x04, 0x62, 0x6c, 0x6f, 0x62, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x42, 0x6c,
 	0x6f, 0x62, 0x52, 0x04, 0x62, 0x6c, 0x6f, 0x62, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69, 0x67, 0x6d,
-	0x61, 0x6f, 0x73, 0x2f, 0x6e, 0x65, 0x74, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x2f, 0x70, 0x72, 0x6f,
+	0x61, 0x6f, 0x73, 0x2f, 0x6e, 0x65, 0x74, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2f, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
-	file_netsigma_proto_netsigma_proto_rawDescOnce sync.Once
-	file_netsigma_proto_netsigma_proto_rawDescData = file_netsigma_proto_netsigma_proto_rawDesc
+	file_netproxy_proto_netsigma_proto_rawDescOnce sync.Once
+	file_netproxy_proto_netsigma_proto_rawDescData = file_netproxy_proto_netsigma_proto_rawDesc
 )
 
-func file_netsigma_proto_netsigma_proto_rawDescGZIP() []byte {
-	file_netsigma_proto_netsigma_proto_rawDescOnce.Do(func() {
-		file_netsigma_proto_netsigma_proto_rawDescData = protoimpl.X.CompressGZIP(file_netsigma_proto_netsigma_proto_rawDescData)
+func file_netproxy_proto_netsigma_proto_rawDescGZIP() []byte {
+	file_netproxy_proto_netsigma_proto_rawDescOnce.Do(func() {
+		file_netproxy_proto_netsigma_proto_rawDescData = protoimpl.X.CompressGZIP(file_netproxy_proto_netsigma_proto_rawDescData)
 	})
-	return file_netsigma_proto_netsigma_proto_rawDescData
+	return file_netproxy_proto_netsigma_proto_rawDescData
 }
 
-var file_netsigma_proto_netsigma_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_netsigma_proto_netsigma_proto_goTypes = []interface{}{
+var file_netproxy_proto_netsigma_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_netproxy_proto_netsigma_proto_goTypes = []interface{}{
 	(*ListenRequest)(nil),         // 0: ListenRequest
 	(*ListenResponse)(nil),        // 1: ListenResponse
 	(*DialRequest)(nil),           // 2: DialRequest
@@ -297,7 +297,7 @@ var file_netsigma_proto_netsigma_proto_goTypes = []interface{}{
 	(*sigmap.TendpointProto)(nil), // 6: TendpointProto
 	(*proto.Blob)(nil),            // 7: Blob
 }
-var file_netsigma_proto_netsigma_proto_depIdxs = []int32{
+var file_netproxy_proto_netsigma_proto_depIdxs = []int32{
 	4, // 0: ListenRequest.addr:type_name -> Taddr
 	5, // 1: ListenResponse.err:type_name -> Rerror
 	6, // 2: ListenResponse.endpoint:type_name -> TendpointProto
@@ -313,13 +313,13 @@ var file_netsigma_proto_netsigma_proto_depIdxs = []int32{
 	0, // [0:8] is the sub-list for field type_name
 }
 
-func init() { file_netsigma_proto_netsigma_proto_init() }
-func file_netsigma_proto_netsigma_proto_init() {
-	if File_netsigma_proto_netsigma_proto != nil {
+func init() { file_netproxy_proto_netsigma_proto_init() }
+func file_netproxy_proto_netsigma_proto_init() {
+	if File_netproxy_proto_netsigma_proto != nil {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_netsigma_proto_netsigma_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_netproxy_proto_netsigma_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListenRequest); i {
 			case 0:
 				return &v.state
@@ -331,7 +331,7 @@ func file_netsigma_proto_netsigma_proto_init() {
 				return nil
 			}
 		}
-		file_netsigma_proto_netsigma_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_netproxy_proto_netsigma_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListenResponse); i {
 			case 0:
 				return &v.state
@@ -343,7 +343,7 @@ func file_netsigma_proto_netsigma_proto_init() {
 				return nil
 			}
 		}
-		file_netsigma_proto_netsigma_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_netproxy_proto_netsigma_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DialRequest); i {
 			case 0:
 				return &v.state
@@ -355,7 +355,7 @@ func file_netsigma_proto_netsigma_proto_init() {
 				return nil
 			}
 		}
-		file_netsigma_proto_netsigma_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_netproxy_proto_netsigma_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DialResponse); i {
 			case 0:
 				return &v.state
@@ -372,18 +372,18 @@ func file_netsigma_proto_netsigma_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: file_netsigma_proto_netsigma_proto_rawDesc,
+			RawDescriptor: file_netproxy_proto_netsigma_proto_rawDesc,
 			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_netsigma_proto_netsigma_proto_goTypes,
-		DependencyIndexes: file_netsigma_proto_netsigma_proto_depIdxs,
-		MessageInfos:      file_netsigma_proto_netsigma_proto_msgTypes,
+		GoTypes:           file_netproxy_proto_netsigma_proto_goTypes,
+		DependencyIndexes: file_netproxy_proto_netsigma_proto_depIdxs,
+		MessageInfos:      file_netproxy_proto_netsigma_proto_msgTypes,
 	}.Build()
-	File_netsigma_proto_netsigma_proto = out.File
-	file_netsigma_proto_netsigma_proto_rawDesc = nil
-	file_netsigma_proto_netsigma_proto_goTypes = nil
-	file_netsigma_proto_netsigma_proto_depIdxs = nil
+	File_netproxy_proto_netsigma_proto = out.File
+	file_netproxy_proto_netsigma_proto_rawDesc = nil
+	file_netproxy_proto_netsigma_proto_goTypes = nil
+	file_netproxy_proto_netsigma_proto_depIdxs = nil
 }

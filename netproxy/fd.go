@@ -1,11 +1,10 @@
-package netsigma
+package netproxy
 
 import (
 	"net"
 	"os"
 
 	db "sigmaos/debug"
-	// "sigmaos/sessp"
 )
 
 func fdToUnixConn(fd int) (*net.UnixConn, error) {

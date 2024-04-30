@@ -1,4 +1,4 @@
-package netsigma
+package netproxy
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/netsigma/proto"
+	"sigmaos/netproxy/proto"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"

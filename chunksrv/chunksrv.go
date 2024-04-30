@@ -133,7 +133,7 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 	pn := pathBinCache(r, req.Prog)
 	if sz, ok := IsPresent(pn, ckid, reqsz); ok {
 		b := make([]byte, sz)
-		db.DPrintf(db.CHUNKSRV, "%v: FetchCache %q ckid %d present %d", cksrv.kernelId, pn, ckid, sz)
+		db.DPrintf(db.CHUNKSRV, "%v: FetchCache %q ckid %d hit %d", cksrv.kernelId, pn, ckid, sz)
 		if err := ReadChunk(pn, ckid, b); err != nil {
 			return false, err
 		}
@@ -143,13 +143,13 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 		res.Size = uint64(sz)
 		return true, nil
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: FetchCache: %q pid %v ck %d not present\n", cksrv.kernelId, pn, req.Pid, ckid)
+	db.DPrintf(db.CHUNKSRV, "%v: FetchCache: %q pid %v ckid %d not present\n", cksrv.kernelId, pn, req.Pid, ckid)
 	return false, nil
 }
 
 func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog string, pid sp.Tpid, paths []string, ck int, reqsz sp.Tsize, b []byte) (sp.Tsize, error) {
 	chunkdID := path.Base(paths[0])
-	db.DPrintf(db.CHUNKSRV, "%v: fetchChunkd: %v ck %d %v", cksrv.kernelId, prog, ck, paths)
+	db.DPrintf(db.CHUNKSRV, "%v: fetchChunkd: %v ckid %d %v", cksrv.kernelId, prog, ck, paths)
 	sz, err := cksrv.ckclnt.FetchChunk(chunkdID, prog, pid, r, ck, reqsz, paths, b)
 	if err != nil {
 		return 0, err
@@ -158,7 +158,7 @@ func (cksrv *ChunkSrv) fetchChunkd(r sp.Trealm, prog string, pid sp.Tpid, paths 
 }
 
 func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, paths []string, ck int, b []byte) (sp.Tsize, error) {
-	db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: %v ck %d %v", cksrv.kernelId, prog, ck, paths)
+	db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: %v ckid %d %v", cksrv.kernelId, prog, ck, paths)
 	be := cksrv.getBin(r, prog)
 	fd, err := be.getFd(cksrv.sc, paths)
 	if err != nil {
@@ -166,7 +166,7 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, paths []string, ck 
 	}
 	sz, err := cksrv.sc.Pread(fd, b, sp.Toffset(Ckoff(ck)))
 	if err != nil {
-		db.DPrintf(db.CHUNKSRV, "%v: FetchOrigin: read %q ck %d err %v", cksrv.kernelId, prog, ck, err)
+		db.DPrintf(db.CHUNKSRV, "%v: FetchOrigin: read %q ckid %d err %v", cksrv.kernelId, prog, ck, err)
 		return 0, err
 	}
 	return sz, nil
@@ -211,10 +211,10 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 	}
 	pn := pathBinCache(r, req.Prog)
 	if err := writeChunk(pn, int(req.ChunkId), b[0:sz]); err != nil {
-		db.DPrintf(db.CHUNKSRV, "fetchChunk: Writechunk %q ck %d err %v", pn, req.ChunkId, err)
+		db.DPrintf(db.CHUNKSRV, "fetchChunk: Writechunk %q ckid %d err %v", pn, req.ChunkId, err)
 		return err
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: writeChunk %v pid %v ck %d sz %d", cksrv.kernelId, pn, req.Pid, req.ChunkId, sz)
+	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: writeChunk %v pid %v ckid %d sz %d", cksrv.kernelId, pn, req.Pid, req.ChunkId, sz)
 	res.Size = uint64(sz)
 	return nil
 }
@@ -240,6 +240,7 @@ func (cksrv *ChunkSrv) getStatCache(req proto.GetFileStatRequest, res *proto.Get
 	if be.st == nil {
 		return nil, false
 	}
+	db.DPrintf(db.CHUNKSRV, "%v: getStatCache: hit %v", cksrv.kernelId, req.GetProg())
 	return be.st, true
 }
 

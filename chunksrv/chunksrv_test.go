@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	db "sigmaos/debug"
@@ -23,26 +24,29 @@ type Tstate struct {
 	*test.Tstate
 	ckclnt *chunkclnt.ChunkClnt
 	srvs   []string
-	paths  []string
+	bins   *chunkclnt.BinPaths
 }
 
 func newTstate(t *testing.T, n int) *Tstate {
-	ts := &Tstate{paths: []string{PATH}}
+	ts := &Tstate{
+		bins: chunkclnt.NewBinPaths(),
+	}
 	s, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
 	ts.Tstate = s
 
-	ts.ckclnt = chunkclnt.NewChunkClnt(s.FsLib)
-	ts.ckclnt.UpdateChunkds()
-
 	err = s.BootNode(n)
 	assert.Nil(t, err, "Boot node: %v", err)
-	db.DPrintf(db.TEST, "Done boot node %d", n)
 
 	ckclnt := chunkclnt.NewChunkClnt(ts.FsLib)
 	ckclnt.UpdateChunkds()
 	srvs, err := ckclnt.GetSrvs()
 	assert.Nil(t, err)
+
+	ts.srvs = srvs
+	ts.ckclnt = ckclnt
+
+	db.DPrintf(db.TEST, "Chunksrvs  %v", ts.srvs)
 
 	for _, srv := range srvs {
 		pn := chunksrv.PathHostKernelRealm(srv, sp.ROOTREALM)
@@ -59,27 +63,47 @@ func (ts *Tstate) check(srv string, st *sp.Stat) {
 	assert.Equal(ts.T, st.Length, uint64(fi.Size()))
 }
 
-func TestFetchOne(t *testing.T) {
-	ts := newTstate(t, 0)
+func (ts *Tstate) fetch(srv string, paths []string) {
 	pid := ts.ProcEnv().GetPID()
 
-	srv, err := ts.ckclnt.RandomSrv()
-	assert.Nil(t, err)
-
-	st, err := ts.ckclnt.GetFileStat(srv, PROG, pid, sp.ROOTREALM, ts.paths)
-	assert.Nil(t, err)
+	st, err := ts.ckclnt.GetFileStat(srv, PROG, pid, sp.ROOTREALM, paths)
+	assert.Nil(ts.T, err)
 	db.DPrintf(db.TEST, "st %v\n", st)
 
-	err = ts.ckclnt.FetchBinary(srv, PROG, pid, sp.ROOTREALM, sp.Tsize(st.Length), ts.paths)
-	assert.Nil(t, err, "err %v", err)
+	err = ts.ckclnt.FetchBinary(srv, PROG, pid, sp.ROOTREALM, sp.Tsize(st.Length), paths)
+	assert.Nil(ts.T, err, "err %v", err)
+
+	ts.bins.SetBinKernelID(PROG, srv)
 
 	ts.check(srv, st)
+}
+
+func TestFetchOrigin(t *testing.T) {
+	ts := newTstate(t, 0)
+
+	ts.fetch(ts.srvs[0], []string{PATH})
 
 	ts.Shutdown()
 }
 
-func TestFetchMulti(t *testing.T) {
-	ts := newTstate(t, 2)
+func TestFetchCache(t *testing.T) {
+	ts := newTstate(t, 0)
+
+	ts.fetch(ts.srvs[0], []string{PATH})
+	ts.fetch(ts.srvs[0], []string{PATH})
+
+	ts.Shutdown()
+}
+
+func TestFetchChunkd(t *testing.T) {
+	ts := newTstate(t, 1)
+
+	ts.fetch(ts.srvs[0], []string{PATH})
+
+	kid, ok := ts.bins.GetBinKernelID(PROG)
+	assert.True(ts.T, ok)
+
+	ts.fetch(ts.srvs[0], []string{chunk.ChunkdPath(kid)})
 
 	ts.Shutdown()
 }

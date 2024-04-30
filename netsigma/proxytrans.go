@@ -19,6 +19,12 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const (
+	SIGMA_NETPROXY_FD = "SIGMA_NETPROXY_FD"
+)
+
+var hasBeenInit bool
+
 type NetProxyTrans struct {
 	conn *net.UnixConn
 	iovm *demux.IoVecMap
@@ -217,4 +223,27 @@ func (trans *NetProxyTrans) getReturnedFD() (int, bool, error) {
 	}
 	db.DPrintf(db.NETPROXYTRANS, "got socket fd %v", fds[0])
 	return fds[0], true, nil
+}
+
+func parseReturnedConn(oob []byte) (*net.TCPConn, error) {
+	// XXX sanity check
+	if len(oob) == 0 {
+		db.DPrintf(db.ERROR, "Error oob len 0")
+		db.DFatalf("Error oob len 0")
+	}
+	scma, err := unix.ParseSocketControlMessage(oob)
+	if err != nil {
+		db.DFatalf("Error parse socket control message: %v", err)
+	}
+	fds, err := unix.ParseUnixRights(&scma[0])
+	if err != nil || len(fds) != 1 {
+		db.DFatalf("Error parse unix rights: len %v err %v", len(fds), err)
+	}
+	db.DPrintf(db.NETPROXYCLNT, "got socket fd %v", fds[0])
+	return fdToTCPConn(fds[0])
+}
+
+func constructSocketControlMsg(proxiedFile *os.File) []byte {
+	fd := int(proxiedFile.Fd())
+	return unix.UnixRights(fd)
 }

@@ -32,7 +32,6 @@ type NetProxyClnt struct {
 	trans            *NetProxyTrans
 	dmx              *demux.DemuxClnt
 	rpcc             *rpcclnt.RPCClnt
-	rpcch            *NetProxyRPCCh
 }
 
 func NewNetProxyClnt(pe *proc.ProcEnv, amgr auth.AuthMgr) *NetProxyClnt {

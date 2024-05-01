@@ -127,7 +127,7 @@ func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 	if !ok {
 		iov[len(iov)-1] = nil
 	}
-	return NewProxyCall(seqno, iov, true), nil
+	return NewProxyCall(seqno, iov), nil
 }
 
 func (trans *NetProxyTrans) WriteCall(call demux.CallI) *serr.Err {
@@ -141,13 +141,7 @@ func (trans *NetProxyTrans) WriteCall(call demux.CallI) *serr.Err {
 		db.DPrintf(db.NETPROXYTRANS_ERR, "Error WriteFrames: %v", err)
 		return err
 	}
-	var b sessp.Tframe
-	if pc.sendfd {
-		b = pc.Iov[len(pc.Iov)-1]
-	} else {
-		b = []byte{}
-	}
-	if err := trans.SendSocketControlMsg(b); err != nil {
+	if err := trans.SendSocketControlMsg(pc.Iov[len(pc.Iov)-1]); err != nil {
 		db.DPrintf(db.NETPROXYTRANS_ERR, "Error SendSocketControlMsg: %v", err)
 		return serr.NewErrError(err)
 	}
@@ -159,9 +153,11 @@ func (trans *NetProxyTrans) RecvSocketControlMsg(oob []byte) (bool, error) {
 	db.DPrintf(db.NETPROXYTRANS, "[%p] RecvSocketControlMsg len %v", trans.conn, len(oob))
 	defer db.DPrintf(db.NETPROXYTRANS, "[%p] RecvSocketControlMsg done len %v", trans.conn, len(oob))
 	// Sanity check
-	if len(oob) != unix.CmsgSpace(4) {
+	if len(oob) > 0 && len(oob) != unix.CmsgSpace(4) {
+		db.DPrintf(db.ERROR, "Error oob for control message wrong size: %v != %v", len(oob), unix.CmsgSpace(4))
 		db.DFatalf("Error oob for control message wrong size: %v != %v", len(oob), unix.CmsgSpace(4))
 	}
+	// Receive at least 1 byte
 	b := make([]byte, 1)
 	// Receive socket control message
 	_, oobn, _, _, err := trans.conn.ReadMsgUnix(b, oob)
@@ -179,8 +175,11 @@ func (trans *NetProxyTrans) RecvSocketControlMsg(oob []byte) (bool, error) {
 // Send socket control message
 func (trans *NetProxyTrans) SendSocketControlMsg(oob []byte) error {
 	db.DPrintf(db.NETPROXYTRANS, "[%p] SendSocketControlMsg len %v", trans.conn, len(oob))
+	// Send at least one byte, in case there is no socket control message to be
+	// sent
+	b := []byte{'x'}
 	// Send socket control message
-	_, _, err := trans.conn.WriteMsgUnix([]byte{'x'}, oob, nil)
+	_, _, err := trans.conn.WriteMsgUnix(b, oob, nil)
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error send conn fd (%v): %v", oob, err)
 		return err

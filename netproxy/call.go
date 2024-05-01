@@ -7,16 +7,14 @@ import (
 )
 
 type ProxyCall struct {
-	Seqno  sessp.Tseqno
-	Iov    sessp.IoVec
-	sendfd bool
+	Seqno sessp.Tseqno
+	Iov   sessp.IoVec
 }
 
-func NewProxyCall(seqno sessp.Tseqno, iov sessp.IoVec, sendfd bool) *ProxyCall {
+func NewProxyCall(seqno sessp.Tseqno, iov sessp.IoVec) *ProxyCall {
 	return &ProxyCall{
-		Seqno:  seqno,
-		Iov:    iov,
-		sendfd: sendfd,
+		Seqno: seqno,
+		Iov:   iov,
 	}
 }
 
@@ -25,5 +23,5 @@ func (pc *ProxyCall) Tag() sessp.Ttag {
 }
 
 func (pc *ProxyCall) String() string {
-	return fmt.Sprintf("&{ NetProxyCall seqno:%v iov:%v sendfd:%v }", pc.Seqno, pc.Iov, pc.sendfd)
+	return fmt.Sprintf("&{ NetProxyCall seqno:%v iov:%v }", pc.Seqno, pc.Iov)
 }

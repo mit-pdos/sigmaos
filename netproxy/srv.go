@@ -92,7 +92,7 @@ func (npss *NetProxySrvStubs) ServeRequest(c demux.CallI) (demux.CallI, *serr.Er
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV, "ServeRequest: writeRead err %v", err)
 	}
-	return NewProxyCall(req.Seqno, rep, true), nil
+	return NewProxyCall(req.Seqno, rep), nil
 }
 
 func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req netproto.DialRequest, res *netproto.DialResponse) error {

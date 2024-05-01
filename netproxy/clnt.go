@@ -144,7 +144,7 @@ func (npc *NetProxyClnt) init() error {
 }
 
 func (npc *NetProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
-	c := NewProxyCall(sessp.NextSeqno(npc.seqcntr), iniov, false)
+	c := NewProxyCall(sessp.NextSeqno(npc.seqcntr), iniov)
 	rep, err := npc.dmx.SendReceive(c, outiov)
 	if err != nil {
 		return err
@@ -186,7 +186,7 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 		Endpoint: ep.GetProto(),
 		// Requests must have blob too, so that unix sendmsg works
 		Blob: &rpcproto.Blob{
-			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
+			Iov: [][]byte{nil},
 		},
 	}
 	// Set up the blob to receive the socket control message

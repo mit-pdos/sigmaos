@@ -28,6 +28,7 @@ type NetProxySrv struct {
 }
 
 type NetProxySrvStubs struct {
+	trans            *NetProxyTrans
 	conn             *net.UnixConn
 	innerContainerIP sp.Tip
 	auth             auth.AuthMgr
@@ -35,7 +36,7 @@ type NetProxySrvStubs struct {
 	directListenFn   ListenFn
 	rpcs             *rpcsrv.RPCSrv
 	dmx              *demux.DemuxSrv
-	ctx              fs.CtxI
+	baseCtx          *ctx.Ctx
 }
 
 func NewNetProxySrv(ip sp.Tip, amgr auth.AuthMgr) (*NetProxySrv, error) {
@@ -73,29 +74,33 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 	db.DPrintf(db.NETPROXYSRV, "Handle connection [%p] from principal %v", conn, p)
 
 	npss := &NetProxySrvStubs{
+		trans:            NewNetProxyTrans(conn, demux.NewIoVecMap()),
 		auth:             nps.auth,
 		conn:             conn,
 		innerContainerIP: nps.innerContainerIP,
 		directDialFn:     DialDirect,
 		directListenFn:   ListenDirect,
-		ctx:              ctx.NewPrincipalOnlyCtx(p),
+		baseCtx:          ctx.NewPrincipalOnlyCtx(p),
 	}
 	npss.rpcs = rpcsrv.NewRPCSrv(npss, rpc.NewStatInfo())
 	// Start a demux server to handle requests & concurrency
-	npss.dmx = demux.NewDemuxSrv(npss, NewNetProxyTrans(conn, demux.NewIoVecMap()))
+	npss.dmx = demux.NewDemuxSrv(npss, npss.trans)
 }
 
 func (npss *NetProxySrvStubs) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
 	db.DPrintf(db.NETPROXYSRV, "ServeRequest: %v", c)
 	req := c.(*ProxyCall)
-	rep, err := npss.rpcs.WriteRead(npss.ctx, req.Iov)
+	ctx := NewCtx(npss.baseCtx)
+	rep, err := npss.rpcs.WriteRead(ctx, req.Iov)
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV, "ServeRequest: writeRead err %v", err)
 	}
+	npss.trans.AddConn(req.Seqno, ctx.GetConn())
 	return NewProxyCall(req.Seqno, rep), nil
 }
 
-func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req netproto.DialRequest, res *netproto.DialResponse) error {
+func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netproto.DialResponse) error {
+	ctx := c.(*Ctx)
 	ep := sp.NewEndpointFromProto(req.GetEndpoint())
 	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> ep %v", ctx.Principal(), ep)
 	// Verify the principal is authorized to establish the connection
@@ -117,6 +122,9 @@ func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req netproto.DialRequest, res *ne
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
+	// Link conn FD to context so that it stays in scope and doesn't get GC-ed
+	// before it can be sent back to the client
+	ctx.SetConn(file)
 	// Set socket control message in output blob
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{constructSocketControlMsg(file)},
@@ -126,7 +134,7 @@ func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req netproto.DialRequest, res *ne
 
 func (npss *NetProxySrvStubs) ReportError(err error) {
 	db.DPrintf(db.NETPROXYSRV_ERR, "ReportError err %v", err)
-	db.DPrintf(db.NETPROXYSRV, "Close conn principal %v", npss.ctx.Principal())
+	db.DPrintf(db.NETPROXYSRV, "Close conn principal %v", npss.baseCtx.Principal())
 	npss.conn.Close()
 }
 

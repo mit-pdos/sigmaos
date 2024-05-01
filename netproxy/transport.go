@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strconv"
+	"sync"
 
 	"golang.org/x/sys/unix"
 	"google.golang.org/protobuf/proto"
@@ -26,14 +27,17 @@ const (
 var hasBeenInit bool
 
 type NetProxyTrans struct {
-	conn *net.UnixConn
-	iovm *demux.IoVecMap
+	sync.Mutex
+	conn      *net.UnixConn
+	iovm      *demux.IoVecMap
+	openConns map[sessp.Tseqno]*os.File
 }
 
 func NewNetProxyTrans(conn *net.UnixConn, iovm *demux.IoVecMap) *NetProxyTrans {
 	return &NetProxyTrans{
-		conn: conn,
-		iovm: iovm,
+		conn:      conn,
+		iovm:      iovm,
+		openConns: make(map[sessp.Tseqno]*os.File),
 	}
 }
 
@@ -105,7 +109,7 @@ func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 			db.DPrintf(db.NETPROXYTRANS_ERR, "Error ReadNumOfFrames: %v", err)
 			return nil, err
 		}
-		if uint32(len(iov)) != n {
+		if uint32(len(iov)) < n {
 			db.DFatalf("NetProxyTrans mismatch between supplied destination nvec and incoming nvec: %v != %v\n%s", len(iov), n, debug.Stack())
 		}
 		db.DPrintf(db.NETPROXYTRANS, "[%p] Read n frames: %v", trans.conn, len(iov))
@@ -130,7 +134,7 @@ func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 }
 
 func (trans *NetProxyTrans) WriteCall(call demux.CallI) *serr.Err {
-	db.DPrintf(db.NETPROXYTRANS, " [%p] WriteCall trans %v", trans.conn, call)
+	db.DPrintf(db.NETPROXYTRANS, "[%p] WriteCall trans %v", trans.conn, call)
 	pc := call.(*ProxyCall)
 	if err := frame.WriteSeqno(pc.Seqno, trans.conn); err != nil {
 		db.DPrintf(db.NETPROXYTRANS_ERR, "Error WriteSeqno: %v", err)
@@ -142,6 +146,10 @@ func (trans *NetProxyTrans) WriteCall(call demux.CallI) *serr.Err {
 	}
 	if err := trans.SendSocketControlMsg(pc.Iov[len(pc.Iov)-1]); err != nil {
 		db.DPrintf(db.NETPROXYTRANS_ERR, "Error SendSocketControlMsg: %v", err)
+		return serr.NewErrError(err)
+	}
+	if err := trans.DelConn(pc.Seqno); err != nil {
+		db.DPrintf(db.NETPROXYTRANS_ERR, "Error DelConn: %v", err)
 		return serr.NewErrError(err)
 	}
 	return nil
@@ -165,7 +173,7 @@ func (trans *NetProxyTrans) RecvSocketControlMsg(oob []byte) (bool, error) {
 		return false, err
 	}
 	if oobn == 0 {
-		db.DPrintf(db.NETPROXYTRANS, "No socket control msg receive")
+		db.DPrintf(db.NETPROXYTRANS, "No socket control msg received")
 		return false, nil
 	}
 	return true, nil
@@ -180,8 +188,37 @@ func (trans *NetProxyTrans) SendSocketControlMsg(oob []byte) error {
 	// Send socket control message
 	_, _, err := trans.conn.WriteMsgUnix(b, oob, nil)
 	if err != nil {
-		db.DPrintf(db.NETPROXYSRV_ERR, "Error send conn fd (%v): %v", oob, err)
+		db.DPrintf(db.NETPROXYTRANS_ERR, "Error send conn fd (%v): %v", oob, err)
 		return err
 	}
 	return nil
+}
+
+func (trans *NetProxyTrans) AddConn(seqno sessp.Tseqno, conn *os.File) {
+	// If no connection, bail out
+	if conn == nil {
+		return
+	}
+
+	trans.Lock()
+	defer trans.Unlock()
+
+	// Sanity check
+	if _, ok := trans.openConns[seqno]; ok {
+		db.DFatalf("Netproxytrans overwrite conn: seqno %v", seqno)
+	}
+	trans.openConns[seqno] = conn
+}
+
+func (trans *NetProxyTrans) DelConn(seqno sessp.Tseqno) error {
+	trans.Lock()
+	defer trans.Unlock()
+
+	// If no conn associated with this seqno, bail out
+	conn, ok := trans.openConns[seqno]
+	if !ok {
+		return nil
+	}
+	delete(trans.openConns, seqno)
+	return conn.Close()
 }

@@ -11,6 +11,7 @@ import (
 	"sigmaos/auth"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
+	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/keys"
@@ -210,8 +211,10 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// Decrease aggregate queue length.
 				pq.qlen--
 				db.DPrintf(db.PROCQ, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
-				if kid, ok := pq.realmbins.GetBinKernelID(p.GetRealm(), p.GetProgram()); ok {
-					p.PrependSigmaPath(chunk.ChunkdPath(kid))
+				if !chunksrv.IsChunkSrvPath(p.GetSigmaPath()[0]) {
+					if kid, ok := pq.realmbins.GetBinKernelID(p.GetRealm(), p.GetProgram()); ok {
+						p.PrependSigmaPath(chunk.ChunkdPath(kid))
+					}
 				}
 				pq.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), req.KernelID)
 

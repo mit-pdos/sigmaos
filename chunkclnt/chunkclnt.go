@@ -50,6 +50,7 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 	return res.Stat, res.Path, nil
 }
 
+// For chunksrv to fetch chunk from another chunksrv and return data in b
 func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, string, error) {
 	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
 	if err != nil {
@@ -73,6 +74,7 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 	return sp.Tsize(res.Size), res.Path, nil
 }
 
+// For uprocsrv to ask chunksrv to fetch ck, but not return data to uprocsrv
 func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string) (sp.Tsize, string, error) {
 	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
 	if err != nil {

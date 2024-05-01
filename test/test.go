@@ -313,6 +313,10 @@ func (ts *Tstate) BootFss3d() error {
 	return ts.Boot(sp.S3REL)
 }
 
+func (ts *Tstate) MintAndSetEndpointToken(ep *sp.Tendpoint) error {
+	return ts.amgr.MintAndSetEndpointToken(ep)
+}
+
 func (ts *Tstate) MintAndSetProcToken(pe *proc.ProcEnv) error {
 	return ts.amgr.MintAndSetProcToken(pe)
 }

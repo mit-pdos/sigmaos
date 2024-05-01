@@ -617,8 +617,8 @@ func TestWaitExitSimpleMultiKernel1(t *testing.T) {
 	waitExitSimpleMultiKernel(t, 1)
 }
 
-func TestWaitExitSimpleMultiKernel2(t *testing.T) {
-	waitExitSimpleMultiKernel(t, 2)
+func TestWaitExitSimpleMultiKernel3(t *testing.T) {
+	waitExitSimpleMultiKernel(t, 3)
 }
 
 func waitExitSimpleMultiKernel(t *testing.T, n int) {

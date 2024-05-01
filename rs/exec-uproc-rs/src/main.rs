@@ -305,7 +305,7 @@ fn seccomp_proc(netproxy: String) -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("sched_getaffinity"),
         ScmpSyscall::new("sched_yield"),
         ScmpSyscall::new("sendto"),
-        ScmpSyscall::new("sendmsg"),
+        ScmpSyscall::new("sendmsg"), // Needed for current implementation of netproxy transport for simplicity of implementation, but not actually needed
         ScmpSyscall::new("setitimer"),
         ScmpSyscall::new("setsockopt"), // Important for performance! (especially hotel/socialnet)
         ScmpSyscall::new("set_robust_list"),

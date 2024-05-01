@@ -105,6 +105,11 @@ func (npss *NetProxySrvStubs) ServeRequest(c demux.CallI) (demux.CallI, *serr.Er
 }
 
 func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netproto.DialResponse) error {
+	// Set socket control message in output blob. Do this immediately to make
+	// sure it is set, even if we return early
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{nil},
+	}
 	ctx := c.(*Ctx)
 	ep := sp.NewEndpointFromProto(req.GetEndpoint())
 	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> ep %v", ctx.Principal(), ep)
@@ -131,13 +136,16 @@ func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netp
 	// before it can be sent back to the client
 	ctx.SetConn(file)
 	// Set socket control message in output blob
-	res.Blob = &rpcproto.Blob{
-		Iov: [][]byte{constructSocketControlMsg(file)},
-	}
+	res.Blob.Iov[0] = constructSocketControlMsg(file)
 	return nil
 }
 
 func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *netproto.ListenResponse) error {
+	// Set socket control message in output blob. Do this immediately to make
+	// sure it is set, even if we return early
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{nil},
+	}
 	ctx := c.(*Ctx)
 	addr := req.GetAddr()
 	db.DPrintf(db.NETPROXYSRV, "Listen principal %v -> addr %v", ctx.Principal(), addr)
@@ -158,15 +166,16 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 	lid := nps.addListener(l)
 	res.ListenerID = uint64(lid)
 	db.DPrintf(db.NETPROXYSRV, "Listen done principal %v -> addr %v lid %v ep %v", ctx.Principal(), addr, lid, ep)
-	// Set socket control message in output blob
-	res.Blob = &rpcproto.Blob{
-		Iov: [][]byte{nil},
-	}
 	res.Err = sp.NewRerror()
 	return nil
 }
 
 func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *netproto.AcceptResponse) error {
+	// Set socket control message in output blob. Do this immediately to make
+	// sure it is set, even if we return early
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{nil},
+	}
 	ctx := c.(*Ctx)
 	lid := Tlid(req.ListenerID)
 	db.DPrintf(db.NETPROXYSRV, "Accept principal %v -> lid %v", ctx.Principal(), lid)
@@ -190,9 +199,7 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 	// before it can be sent back to the client
 	ctx.SetConn(file)
 	// Set socket control message in output blob
-	res.Blob = &rpcproto.Blob{
-		Iov: [][]byte{constructSocketControlMsg(file)},
-	}
+	res.Blob.Iov[0] = constructSocketControlMsg(file)
 	res.Err = sp.NewRerror()
 	return nil
 }

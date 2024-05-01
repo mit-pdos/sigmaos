@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	IP       sp.Tip   = sp.LOCALHOST
+	IP       sp.Tip   = sp.NO_IP
 	PORT     sp.Tport = 30303
 	TEST_MSG          = "hello"
 )
@@ -54,6 +54,7 @@ func TestDial(t *testing.T) {
 		n, err := conn.Read(b)
 		assert.Nil(t, err, "Err read: %v", err)
 		assert.Equal(t, len(b), n, "Err read nbyte: %v != %v", len(b), n)
+		l.Close()
 		c <- true
 	}(l, c)
 	// Dial the listener
@@ -64,6 +65,22 @@ func TestDial(t *testing.T) {
 		assert.Equal(t, len(TEST_MSG), n, "Err Write nbyte: %v != %v", len(TEST_MSG), n)
 		<-c
 	}
+	ts.Shutdown()
+}
+
+func TestFailedDial(t *testing.T) {
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	ep := sp.NewEndpoint(sp.Taddrs{addr}, sp.ROOTREALM)
+	err := ts.MintAndSetEndpointToken(ep)
+	assert.Nil(t, err, "Err Mint EP token: %v", err)
+	npc := ts.GetNetProxyClnt()
+	// Dial an address with no corresponding listener
+	_, err = npc.Dial(ep)
+	assert.NotNil(t, err, "Err Dial: %v", err)
 	ts.Shutdown()
 }
 
@@ -86,6 +103,8 @@ func TestListen(t *testing.T) {
 		n, err := conn.Read(b)
 		assert.Nil(t, err, "Err read: %v", err)
 		assert.Equal(t, len(b), n, "Err read nbyte: %v != %v", len(b), n)
+		// TODO: enable close
+		//		l.Close()
 		c <- true
 	}(l, c)
 	// Dial the listener

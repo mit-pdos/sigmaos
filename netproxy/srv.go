@@ -148,10 +148,16 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 		res.Err = sp.NewRerrorErr(err)
 		return nil
 	}
+	ep, err := constructEndpoint(true, nps.auth, nps.innerContainerIP, ctx.Principal().GetRealm(), l)
+	if err != nil {
+		db.DFatalf("Error construct endpoint: %v", err)
+		return err
+	}
+	res.Endpoint = ep.GetProto()
 	// Store the listener & assign it an ID
 	lid := nps.addListener(l)
 	res.ListenerID = uint64(lid)
-	db.DPrintf(db.NETPROXYSRV, "Listen done principal %v -> addr %v lid %v", ctx.Principal(), addr, lid)
+	db.DPrintf(db.NETPROXYSRV, "Listen done principal %v -> addr %v lid %v ep %v", ctx.Principal(), addr, lid, ep)
 	// Set socket control message in output blob
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},

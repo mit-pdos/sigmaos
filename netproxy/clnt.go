@@ -127,6 +127,7 @@ func (npc *NetProxyClnt) init() error {
 	npc.Lock()
 	defer npc.Unlock()
 
+	// If rpc clnt has already been initialized, bail out
 	if npc.rpcc != nil {
 		return nil
 	}

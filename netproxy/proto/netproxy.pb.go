@@ -368,6 +368,116 @@ func (x *AcceptResponse) GetBlob() *proto.Blob {
 	return nil
 }
 
+type CloseRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ListenerID uint64      `protobuf:"varint,1,opt,name=listenerID,proto3" json:"listenerID,omitempty"`
+	Blob       *proto.Blob `protobuf:"bytes,2,opt,name=blob,proto3" json:"blob,omitempty"`
+}
+
+func (x *CloseRequest) Reset() {
+	*x = CloseRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_netproxy_proto_netproxy_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CloseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseRequest) ProtoMessage() {}
+
+func (x *CloseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_netproxy_proto_netproxy_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseRequest.ProtoReflect.Descriptor instead.
+func (*CloseRequest) Descriptor() ([]byte, []int) {
+	return file_netproxy_proto_netproxy_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CloseRequest) GetListenerID() uint64 {
+	if x != nil {
+		return x.ListenerID
+	}
+	return 0
+}
+
+func (x *CloseRequest) GetBlob() *proto.Blob {
+	if x != nil {
+		return x.Blob
+	}
+	return nil
+}
+
+type CloseResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Err  *sigmap.Rerror `protobuf:"bytes,1,opt,name=err,proto3" json:"err,omitempty"`
+	Blob *proto.Blob    `protobuf:"bytes,2,opt,name=blob,proto3" json:"blob,omitempty"`
+}
+
+func (x *CloseResponse) Reset() {
+	*x = CloseResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_netproxy_proto_netproxy_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CloseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseResponse) ProtoMessage() {}
+
+func (x *CloseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_netproxy_proto_netproxy_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseResponse.ProtoReflect.Descriptor instead.
+func (*CloseResponse) Descriptor() ([]byte, []int) {
+	return file_netproxy_proto_netproxy_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CloseResponse) GetErr() *sigmap.Rerror {
+	if x != nil {
+		return x.Err
+	}
+	return nil
+}
+
+func (x *CloseResponse) GetBlob() *proto.Blob {
+	if x != nil {
+		return x.Blob
+	}
+	return nil
+}
+
 var File_netproxy_proto_netproxy_proto protoreflect.FileDescriptor
 
 var file_netproxy_proto_netproxy_proto_rawDesc = []byte{
@@ -408,9 +518,18 @@ var file_netproxy_proto_netproxy_proto_rawDesc = []byte{
 	0x73, 0x65, 0x12, 0x19, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
 	0x07, 0x2e, 0x52, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x12, 0x19, 0x0a,
 	0x04, 0x62, 0x6c, 0x6f, 0x62, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x42, 0x6c,
-	0x6f, 0x62, 0x52, 0x04, 0x62, 0x6c, 0x6f, 0x62, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69, 0x67, 0x6d,
-	0x61, 0x6f, 0x73, 0x2f, 0x6e, 0x65, 0x74, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2f, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6f, 0x62, 0x52, 0x04, 0x62, 0x6c, 0x6f, 0x62, 0x22, 0x49, 0x0a, 0x0c, 0x43, 0x6c, 0x6f, 0x73,
+	0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1e, 0x0a, 0x0a, 0x6c, 0x69, 0x73, 0x74,
+	0x65, 0x6e, 0x65, 0x72, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0a, 0x6c, 0x69,
+	0x73, 0x74, 0x65, 0x6e, 0x65, 0x72, 0x49, 0x44, 0x12, 0x19, 0x0a, 0x04, 0x62, 0x6c, 0x6f, 0x62,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x42, 0x6c, 0x6f, 0x62, 0x52, 0x04, 0x62,
+	0x6c, 0x6f, 0x62, 0x22, 0x45, 0x0a, 0x0d, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x19, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x07, 0x2e, 0x52, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x03, 0x65, 0x72, 0x72, 0x12,
+	0x19, 0x0a, 0x04, 0x62, 0x6c, 0x6f, 0x62, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x05, 0x2e,
+	0x42, 0x6c, 0x6f, 0x62, 0x52, 0x04, 0x62, 0x6c, 0x6f, 0x62, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69,
+	0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x6e, 0x65, 0x74, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2f, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -425,7 +544,7 @@ func file_netproxy_proto_netproxy_proto_rawDescGZIP() []byte {
 	return file_netproxy_proto_netproxy_proto_rawDescData
 }
 
-var file_netproxy_proto_netproxy_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_netproxy_proto_netproxy_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_netproxy_proto_netproxy_proto_goTypes = []interface{}{
 	(*ListenRequest)(nil),         // 0: ListenRequest
 	(*ListenResponse)(nil),        // 1: ListenResponse
@@ -433,29 +552,34 @@ var file_netproxy_proto_netproxy_proto_goTypes = []interface{}{
 	(*DialResponse)(nil),          // 3: DialResponse
 	(*AcceptRequest)(nil),         // 4: AcceptRequest
 	(*AcceptResponse)(nil),        // 5: AcceptResponse
-	(*sigmap.Taddr)(nil),          // 6: Taddr
-	(*proto.Blob)(nil),            // 7: Blob
-	(*sigmap.Rerror)(nil),         // 8: Rerror
-	(*sigmap.TendpointProto)(nil), // 9: TendpointProto
+	(*CloseRequest)(nil),          // 6: CloseRequest
+	(*CloseResponse)(nil),         // 7: CloseResponse
+	(*sigmap.Taddr)(nil),          // 8: Taddr
+	(*proto.Blob)(nil),            // 9: Blob
+	(*sigmap.Rerror)(nil),         // 10: Rerror
+	(*sigmap.TendpointProto)(nil), // 11: TendpointProto
 }
 var file_netproxy_proto_netproxy_proto_depIdxs = []int32{
-	6,  // 0: ListenRequest.addr:type_name -> Taddr
-	7,  // 1: ListenRequest.blob:type_name -> Blob
-	8,  // 2: ListenResponse.err:type_name -> Rerror
-	9,  // 3: ListenResponse.endpoint:type_name -> TendpointProto
-	7,  // 4: ListenResponse.blob:type_name -> Blob
-	9,  // 5: DialRequest.endpoint:type_name -> TendpointProto
-	7,  // 6: DialRequest.blob:type_name -> Blob
-	8,  // 7: DialResponse.err:type_name -> Rerror
-	7,  // 8: DialResponse.blob:type_name -> Blob
-	7,  // 9: AcceptRequest.blob:type_name -> Blob
-	8,  // 10: AcceptResponse.err:type_name -> Rerror
-	7,  // 11: AcceptResponse.blob:type_name -> Blob
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	8,  // 0: ListenRequest.addr:type_name -> Taddr
+	9,  // 1: ListenRequest.blob:type_name -> Blob
+	10, // 2: ListenResponse.err:type_name -> Rerror
+	11, // 3: ListenResponse.endpoint:type_name -> TendpointProto
+	9,  // 4: ListenResponse.blob:type_name -> Blob
+	11, // 5: DialRequest.endpoint:type_name -> TendpointProto
+	9,  // 6: DialRequest.blob:type_name -> Blob
+	10, // 7: DialResponse.err:type_name -> Rerror
+	9,  // 8: DialResponse.blob:type_name -> Blob
+	9,  // 9: AcceptRequest.blob:type_name -> Blob
+	10, // 10: AcceptResponse.err:type_name -> Rerror
+	9,  // 11: AcceptResponse.blob:type_name -> Blob
+	9,  // 12: CloseRequest.blob:type_name -> Blob
+	10, // 13: CloseResponse.err:type_name -> Rerror
+	9,  // 14: CloseResponse.blob:type_name -> Blob
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_netproxy_proto_netproxy_proto_init() }
@@ -536,6 +660,30 @@ func file_netproxy_proto_netproxy_proto_init() {
 				return nil
 			}
 		}
+		file_netproxy_proto_netproxy_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CloseRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_netproxy_proto_netproxy_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CloseResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -543,7 +691,7 @@ func file_netproxy_proto_netproxy_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_netproxy_proto_netproxy_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

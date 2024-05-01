@@ -204,6 +204,25 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 	return nil
 }
 
+func (nps *NetProxySrvStubs) Close(c fs.CtxI, req netproto.CloseRequest, res *netproto.CloseResponse) error {
+	// Set socket control message in output blob. Do this immediately to make
+	// sure it is set, even if we return early
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{nil},
+	}
+	ctx := c.(*Ctx)
+	lid := Tlid(req.ListenerID)
+	db.DPrintf(db.NETPROXYSRV, "Close principal %v -> lid %v", ctx.Principal(), lid)
+	ok := nps.delListener(lid)
+	if !ok {
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error close unknown listener %v", lid)
+		res.Err = sp.NewRerrorErr(fmt.Errorf("Unknown listener: %v", lid))
+		return nil
+	}
+	res.Err = sp.NewRerror()
+	return nil
+}
+
 // Store a new listener, and assign it an ID
 func (nps *NetProxySrvStubs) addListener(l net.Listener) Tlid {
 	lid := Tlid(nps.lidctr.Add(1))
@@ -222,6 +241,19 @@ func (nps *NetProxySrvStubs) getListener(lid Tlid) (net.Listener, bool) {
 
 	l, ok := nps.listeners[lid]
 	return l, ok
+}
+
+// Given an LID, retrieve the associated Listener
+func (nps *NetProxySrvStubs) delListener(lid Tlid) bool {
+	nps.Lock()
+	defer nps.Unlock()
+
+	l, ok := nps.listeners[lid]
+	if ok {
+		delete(nps.listeners, lid)
+		l.Close()
+	}
+	return ok
 }
 
 func (npss *NetProxySrvStubs) ReportError(err error) {

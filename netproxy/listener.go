@@ -3,7 +3,6 @@ package netproxy
 import (
 	"net"
 
-	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sync/atomic"
 )
@@ -34,8 +33,7 @@ func (l *Listener) Accept() (net.Conn, error) {
 }
 
 func (l *Listener) Close() error {
-	db.DFatalf("Unimplemented")
-	return nil
+	return l.npc.proxyClose(l.lid)
 }
 
 func (l *Listener) Addr() net.Addr {

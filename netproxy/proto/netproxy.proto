@@ -36,3 +36,13 @@ message AcceptResponse {
         Rerror err = 1;
         Blob blob = 2;
 }
+
+message CloseRequest {
+        uint64 listenerID = 1;
+        Blob blob = 2;
+};
+
+message CloseResponse {
+        Rerror err = 1;
+        Blob blob = 2;
+}

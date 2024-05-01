@@ -258,6 +258,39 @@ func (npc *NetProxyClnt) proxyAccept(lid Tlid) (net.Conn, error) {
 	return parseReturnedConn(res.Blob.Iov[0])
 }
 
+func (npc *NetProxyClnt) proxyClose(lid Tlid) error {
+	// Ensure that the connection to the netproxy server has been initialized
+	if err := npc.init(); err != nil {
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		return err
+	}
+	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyClose request lip %v", npc.trans.conn, lid)
+	req := &proto.CloseRequest{
+		ListenerID: uint64(lid),
+		// Requests must have blob too, so that unix sendmsg works
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{nil},
+		},
+	}
+	// Set up the blob to receive the socket control message
+	res := &proto.CloseResponse{
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{nil},
+		},
+	}
+	if err := npc.rpcc.RPC("NetProxySrvStubs.Close", req, res); err != nil {
+		return err
+	}
+	db.DPrintf(db.NETPROXYCLNT, "proxyClose response %v", res)
+	// If an error occurred during dialing, bail out
+	if res.Err.ErrCode != 0 {
+		err := sp.NewErr(res.Err)
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Close: %v", err)
+		return err
+	}
+	return nil
+}
+
 func (npc *NetProxyClnt) newListener(lid Tlid) net.Listener {
 	db.DFatalf("Unimplemented")
 	return nil

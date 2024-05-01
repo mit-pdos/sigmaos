@@ -112,6 +112,40 @@ func TestFailedListen(t *testing.T) {
 	ts.Shutdown()
 }
 
+// Make sure Close works
+func TestClose(t *testing.T) {
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	npc := ts.GetNetProxyClnt()
+	// Create a listener via netproxy
+	ep, l, err := npc.Listen(addr)
+	assert.Nil(t, err, "Err Listen: %v", err)
+	err = l.Close()
+	assert.Nil(t, err, "Err close: %v", err)
+	// Dial the listener, to make sure it is unreachable
+	_, err = npc.Dial(ep)
+	assert.NotNil(t, err, "Err Dial: %v", err)
+	ts.Shutdown()
+}
+
+// Make sure calling Close on an unknown listener returns an error
+func TestFailedClose(t *testing.T) {
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	ep := sp.NewEndpoint(sp.Taddrs{addr}, sp.ROOTREALM)
+	npc := ts.GetNetProxyClnt()
+	l := netproxy.NewListener(npc, 1000, ep)
+	err := l.Close()
+	assert.NotNil(t, err, "Err close: %v", err)
+	ts.Shutdown()
+}
+
 // Make sure Accept works
 func TestAccept(t *testing.T) {
 	ts, err1 := test.NewTstate(t)
@@ -132,8 +166,7 @@ func TestAccept(t *testing.T) {
 		n, err := conn.Read(b)
 		assert.Nil(t, err, "Err read: %v", err)
 		assert.Equal(t, len(b), n, "Err read nbyte: %v != %v", len(b), n)
-		// TODO: enable close
-		//		l.Close()
+		l.Close()
 		c <- true
 	}(l, c)
 	// Dial the listener
@@ -147,7 +180,7 @@ func TestAccept(t *testing.T) {
 	ts.Shutdown()
 }
 
-// Make sure calling Accept on an unkown listener returns an error
+// Make sure calling Accept on an unknown listener returns an error
 func TestFailedAccept(t *testing.T) {
 	ts, err1 := test.NewTstate(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

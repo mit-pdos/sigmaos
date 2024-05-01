@@ -18,7 +18,7 @@ import (
 	"sigmaos/dir"
 	"sigmaos/keys"
 	"sigmaos/memfs"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/netsrv"
 	"sigmaos/path"
 	"sigmaos/rand"
@@ -99,14 +99,14 @@ type TstateSrv struct {
 
 func newTstateClntAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := &TstateSrv{TstateMin: test.NewTstateMinAddr(t, addr), crash: crash}
-	ts.clnt = sessclnt.NewMgr(ts.PE, netsigma.NewNetProxyClnt(ts.PE, nil))
+	ts.clnt = sessclnt.NewMgr(ts.PE, netproxy.NewNetProxyClnt(ts.PE, nil))
 	return ts
 }
 
 func newTstateSrvAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := newTstateClntAddr(t, addr, crash)
 	db.DPrintf(db.ALWAYS, "pe: %v", ts.PE)
-	ts.srv = netsrv.NewNetServer(ts.PE, netsigma.NewNetProxyClnt(ts.PE, ts.AMgr), ts.Addr, ts)
+	ts.srv = netsrv.NewNetServer(ts.PE, netproxy.NewNetProxyClnt(ts.PE, ts.AMgr), ts.Addr, ts)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.GetEndpoint())
 	return ts
 }
@@ -471,8 +471,8 @@ func newTstateSp(t *testing.T) *TstateSp {
 	err = as.MintAndSetProcToken(ts.PE)
 	assert.Nil(t, err, "Err MintAndSetToken: %v", err)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, netsigma.NewNetProxyClnt(ts.PE, as), root, as, ts.Addr, nil)
-	ts.clnt = sessclnt.NewMgr(ts.PE, netsigma.NewNetProxyClnt(ts.PE, nil))
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, netproxy.NewNetProxyClnt(ts.PE, as), root, as, ts.Addr, nil)
+	ts.clnt = sessclnt.NewMgr(ts.PE, netproxy.NewNetProxyClnt(ts.PE, nil))
 	return ts
 }
 

@@ -63,18 +63,40 @@ func (ts *Tstate) check(srv string, st *sp.Stat) {
 	assert.Equal(ts.T, st.Length, uint64(fi.Size()))
 }
 
-func (ts *Tstate) fetch(srv string, paths []string, expect string) {
+func isExpected(path string, expect []string) bool {
+	for _, e := range expect {
+		if e == path {
+			return true
+		}
+	}
+	return false
+}
+
+func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 	pid := ts.ProcEnv().GetPID()
 
 	st, path, err := ts.ckclnt.GetFileStat(srv, PROG, pid, sp.ROOTREALM, paths)
 	assert.Nil(ts.T, err)
-	assert.Equal(ts.T, expect, path)
-	db.DPrintf(db.TEST, "st len %v path %q\n", st.Length, path)
+	assert.True(ts.T, isExpected(path, expect))
 
-	path, err = ts.ckclnt.FetchBinary(srv, PROG, pid, sp.ROOTREALM, sp.Tsize(st.Length), paths)
-	assert.Nil(ts.T, err, "err %v", err)
-	assert.Equal(ts.T, expect, path)
-	db.DPrintf(db.TEST, "bin %v %q\n", PROG, path)
+	n := (st.Length / chunk.CHUNKSZ) + 1
+	l := 0
+	h := int(n - 1)
+	for i := 0; i < int(n); i++ {
+		ck := 0
+		if i%2 == 0 {
+			ck = l
+			l++
+		} else {
+			ck = h
+			h--
+		}
+		sz, path, err := ts.ckclnt.Fetch(srv, PROG, pid, sp.ROOTREALM, ck, sp.Tsize(st.Length), paths)
+		db.DPrintf(db.TEST, "path %v", path)
+		assert.Nil(ts.T, err, "err %v", err)
+		assert.True(ts.T, sz > 0 && sz <= chunk.CHUNKSZ)
+		assert.True(ts.T, isExpected(path, expect))
+	}
 
 	ts.bins.SetBinKernelID(PROG, srv)
 
@@ -83,15 +105,15 @@ func (ts *Tstate) fetch(srv string, paths []string, expect string) {
 
 func TestFetchOrigin(t *testing.T) {
 	ts := newTstate(t, 0)
-	ts.fetch(ts.srvs[0], []string{PATH}, PATH)
+	ts.fetch(ts.srvs[0], []string{PATH}, []string{PATH})
 	ts.Shutdown()
 }
 
 func TestFetchCache(t *testing.T) {
 	ts := newTstate(t, 0)
 
-	ts.fetch(ts.srvs[0], []string{PATH}, PATH)
-	ts.fetch(ts.srvs[0], []string{PATH}, chunk.ChunkdPath(ts.srvs[0]))
+	ts.fetch(ts.srvs[0], []string{PATH}, []string{PATH})
+	ts.fetch(ts.srvs[0], []string{PATH}, []string{chunk.ChunkdPath(ts.srvs[0])})
 
 	ts.Shutdown()
 }
@@ -99,13 +121,13 @@ func TestFetchCache(t *testing.T) {
 func TestFetchChunkd(t *testing.T) {
 	ts := newTstate(t, 1)
 
-	ts.fetch(ts.srvs[0], []string{PATH}, PATH)
+	ts.fetch(ts.srvs[0], []string{PATH}, []string{PATH})
 
 	kid, ok := ts.bins.GetBinKernelID(PROG)
 	assert.True(ts.T, ok)
 
 	pn := chunk.ChunkdPath(kid)
-	ts.fetch(ts.srvs[0], []string{pn}, pn)
+	ts.fetch(ts.srvs[0], []string{pn}, []string{pn})
 
 	ts.Shutdown()
 }
@@ -115,11 +137,11 @@ func TestFetchPath(t *testing.T) {
 
 	// fetch through chunkd1 so that it has it cached
 	pn1 := chunk.ChunkdPath(ts.srvs[1])
-	ts.fetch(ts.srvs[1], []string{pn1, PATH}, PATH)
+	ts.fetch(ts.srvs[1], []string{pn1, PATH}, []string{PATH})
 
 	// fetch through chunkd 0 with chunkd1 in search path,
 	// so data should come from chunkd1
-	ts.fetch(ts.srvs[0], []string{pn1, PATH}, pn1)
+	ts.fetch(ts.srvs[0], []string{pn1, PATH}, []string{pn1})
 	ts.Shutdown()
 }
 
@@ -127,11 +149,16 @@ func TestFetchConcur(t *testing.T) {
 	const N = 10
 	ts := newTstate(t, 1)
 
-	pn1 := chunk.ChunkdPath(ts.srvs[1])
 	ch := make(chan int)
 	for i := 0; i < N; i++ {
 		go func(i int) {
-			ts.fetch(ts.srvs[0], []string{pn1, PATH}, PATH)
+			pn0 := chunk.ChunkdPath(ts.srvs[0])
+			pn1 := chunk.ChunkdPath(ts.srvs[1])
+			if i%2 == 0 {
+				ts.fetch(ts.srvs[0], []string{pn1, PATH}, []string{pn0, pn1, PATH})
+			} else {
+				ts.fetch(ts.srvs[1], []string{pn0, PATH}, []string{pn0, pn1, PATH})
+			}
 			ch <- i
 		}(i)
 	}

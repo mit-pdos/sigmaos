@@ -16,10 +16,10 @@ type AuthMgr interface {
 	SetDelegatedProcToken(p *proc.Proc) error
 	VerifyPrincipalIdentity(principal *sp.Tprincipal) (*ProcClaims, error)
 	// Endpoint tokens
-	MintEndpointToken(mnt *sp.Tendpoint) (*sp.Ttoken, error)
-	MintAndSetEndpointToken(mnt *sp.Tendpoint) error
+	MintEndpointToken(ep *sp.Tendpoint) (*sp.Ttoken, error)
+	MintAndSetEndpointToken(ep *sp.Tendpoint) error
 	VerifyEndpointTokenGetClaims(principalID sp.TprincipalID, signedEndpointToken *sp.Ttoken) (*EndpointClaims, error)
-	EndpointIsAuthorized(principal *sp.Tprincipal, mnt *sp.Tendpoint) (bool, error)
+	EndpointIsAuthorized(principal *sp.Tprincipal, ep *sp.Tendpoint) (bool, error)
 	// Proc tokens
 	MintProcToken(pc *ProcClaims) (*sp.Ttoken, error)
 	MintAndSetProcToken(pe *proc.ProcEnv) error

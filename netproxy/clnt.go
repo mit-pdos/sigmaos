@@ -207,34 +207,3 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 	}
 	return parseReturnedConn(res.Blob.Iov[0])
 }
-
-//func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tendpoint, net.Listener, error) {
-//	npc.Lock()
-//	defer npc.Unlock()
-//
-//	// Ensure that the connection to the netproxy server has been initialized
-//	if npc.rpcc == nil {
-//		if err := npc.init(); err != nil {
-//			db.DPrintf(db.NETPROXYCLNT_ERR, "Error dial netproxysrv %v", err)
-//			return nil, nil, err
-//		}
-//	}
-//	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyListen request addr", npc.trans.conn)
-//	req := &proto.ListenRequest{
-//		Addr: addr,
-//	}
-//	res := &proto.ListenResponse{}
-//	if err := npc.rpcc.RPC("NetProxySrvStubs.Listen", req, res); err != nil {
-//		return nil, nil, err
-//	}
-//	ep := sp.NewEndpointFromProto(res.Endpoint)
-//	db.DPrintf(db.NETPROXYCLNT, "proxyListen response ep %v err %v", ep, res.Err)
-//	// If an error occurred during dialing, bail out
-//	if res.Err.ErrCode != 0 {
-//		err := sp.NewErr(res.Err)
-//		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Listen: %v", err)
-//		return nil, nil, err
-//	}
-//	l, err := npc.rpcch.GetReturnedListener()
-//	return ep, l, err
-//}

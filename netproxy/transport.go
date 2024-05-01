@@ -115,7 +115,6 @@ func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 		}
 	}
 	db.DPrintf(db.NETPROXYTRANS, "Read n done: %v", len(iov))
-	// XXX am I setting the right IOV here? In the right way?
 	// Set the out blob IOV to the socket control message
 	ok, err1 := trans.RecvSocketControlMsg(iov[len(iov)-1])
 	if err1 != nil {
@@ -185,64 +184,4 @@ func (trans *NetProxyTrans) SendSocketControlMsg(oob []byte) error {
 		return err
 	}
 	return nil
-}
-
-// Receive the connection FD corresponding to a successful Dial request
-func (trans *NetProxyTrans) GetReturnedConn() (*net.TCPConn, error) {
-	fd, ok, err := trans.getReturnedFD()
-	if err != nil {
-		return nil, err
-	}
-	// If no FD was passed, return a nil connection
-	if !ok {
-		return nil, nil
-	}
-	return fdToTCPConn(fd)
-}
-
-func (trans *NetProxyTrans) getReturnedFD() (int, bool, error) {
-	oob := make([]byte, unix.CmsgSpace(4))
-	// Receive connection FD via socket
-	_, oobn, _, _, err := trans.conn.ReadMsgUnix(nil, oob)
-	if err != nil {
-		db.DPrintf(db.NETPROXYTRANS_ERR, "Error recv proxied conn fd: err %v", err)
-		return 0, false, err
-	}
-	if oobn == 0 {
-		db.DPrintf(db.NETPROXYTRANS, "No conn FD to receive")
-		return 0, false, nil
-	}
-	scma, err := unix.ParseSocketControlMessage(oob)
-	if err != nil {
-		db.DFatalf("Error parse socket control message: %v", err)
-	}
-	fds, err := unix.ParseUnixRights(&scma[0])
-	if err != nil || len(fds) != 1 {
-		db.DFatalf("Error parse unix rights: len %v err %v", len(fds), err)
-	}
-	db.DPrintf(db.NETPROXYTRANS, "got socket fd %v", fds[0])
-	return fds[0], true, nil
-}
-
-func parseReturnedConn(oob []byte) (*net.TCPConn, error) {
-	// XXX sanity check
-	if len(oob) == 0 {
-		db.DPrintf(db.ERROR, "Error oob len 0")
-		db.DFatalf("Error oob len 0")
-	}
-	scma, err := unix.ParseSocketControlMessage(oob)
-	if err != nil {
-		db.DFatalf("Error parse socket control message: %v", err)
-	}
-	fds, err := unix.ParseUnixRights(&scma[0])
-	if err != nil || len(fds) != 1 {
-		db.DFatalf("Error parse unix rights: len %v err %v", len(fds), err)
-	}
-	db.DPrintf(db.NETPROXYCLNT, "got socket fd %v", fds[0])
-	return fdToTCPConn(fds[0])
-}
-
-func constructSocketControlMsg(proxiedFile *os.File) []byte {
-	fd := int(proxiedFile.Fd())
-	return unix.UnixRights(fd)
 }

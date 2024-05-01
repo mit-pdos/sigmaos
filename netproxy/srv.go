@@ -124,40 +124,6 @@ func (nps *NetProxySrvStubs) Dial(ctx fs.CtxI, req netproto.DialRequest, res *ne
 	return nil
 }
 
-//func (nps *NetProxySrvStubs) Listen(ctx fs.CtxI, req netproto.ListenRequest, res *netproto.ListenResponse) error {
-//	db.DPrintf(db.NETPROXYSRV, "Listen principal %v", ctx.Principal())
-//	// Verify the principal is who they say they are
-//	if _, err := nps.auth.VerifyPrincipalIdentity(ctx.Principal()); err != nil {
-//		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen unable to verify principal identity: %v", err)
-//		res.Err = sp.NewRerrorErr(err)
-//		return nil
-//	}
-//	proxyListener, err := nps.directListenFn(req.GetAddr())
-//	// If Dial was unsuccessful, set the reply error appropriately
-//	if err != nil {
-//		db.DPrintf(db.NETPROXYSRV_ERR, "Error listen direct: %v", err)
-//		res.Err = sp.NewRerrorErr(err)
-//		return nil
-//	} else {
-//		res.Err = sp.NewRerror()
-//	}
-//	// Construct a endpoint for the listener
-//	ep, err := constructEndpoint(true, nps.auth, nps.innerContainerIP, ctx.Principal().GetRealm(), proxyListener)
-//	if err != nil {
-//		db.DFatalf("Error construct endpoint: %v", err)
-//		return err
-//	}
-//	res.Endpoint = ep.GetProto()
-//	file, err := listenerToFile(proxyListener)
-//	if err != nil {
-//		db.DFatalf("Error convert conn to FD: %v", err)
-//	}
-//	// Get wrapper context in order to set output FD
-//	wctx := ctx.(*WrapperCtx)
-//	//	wctx.SetFile(file)
-//	return nil
-//}
-
 func (npss *NetProxySrvStubs) ReportError(err error) {
 	db.DPrintf(db.NETPROXYSRV_ERR, "ReportError err %v", err)
 	db.DPrintf(db.NETPROXYSRV, "Close conn principal %v", npss.ctx.Principal())

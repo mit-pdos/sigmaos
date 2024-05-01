@@ -134,31 +134,8 @@ func (npc *NetProxyClnt) init() error {
 	trans := NewNetProxyTrans(conn, iovm)
 	npc.trans = trans
 	npc.dmx = demux.NewDemuxClnt(trans, iovm)
-	//	// Connect to the netproxy server
-	//	ch, err := NewNetProxyRPCCh(npc.dmx)
-	//	if err != nil {
-	//		return err
-	//	}
 	npc.rpcc = rpcclnt.NewRPCClnt(npc)
 	return nil
-}
-
-func (npc *NetProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
-	c := NewProxyCall(sessp.NextSeqno(npc.seqcntr), iniov)
-	rep, err := npc.dmx.SendReceive(c, outiov)
-	if err != nil {
-		return err
-	} else {
-		c := rep.(*ProxyCall)
-		if len(outiov) != len(c.Iov) {
-			return fmt.Errorf("netproxyclnt outiov len wrong: %v != %v", len(outiov), len(c.Iov))
-		}
-		return nil
-	}
-}
-func (npc *NetProxyClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
-	db.DPrintf(db.ERROR, "StatsSrv unimplemented")
-	return nil, fmt.Errorf("Unimplemented")
 }
 
 func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
@@ -206,4 +183,22 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 		return nil, err
 	}
 	return parseReturnedConn(res.Blob.Iov[0])
+}
+
+func (npc *NetProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
+	c := NewProxyCall(sessp.NextSeqno(npc.seqcntr), iniov)
+	rep, err := npc.dmx.SendReceive(c, outiov)
+	if err != nil {
+		return err
+	} else {
+		c := rep.(*ProxyCall)
+		if len(outiov) != len(c.Iov) {
+			return fmt.Errorf("netproxyclnt outiov len wrong: %v != %v", len(outiov), len(c.Iov))
+		}
+		return nil
+	}
+}
+func (npc *NetProxyClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
+	db.DPrintf(db.ERROR, "StatsSrv unimplemented")
+	return nil, fmt.Errorf("Unimplemented")
 }

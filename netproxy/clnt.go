@@ -124,6 +124,13 @@ func (npc *NetProxyClnt) useProxy() bool {
 
 // Lazily init connection to the netproxy srv
 func (npc *NetProxyClnt) init() error {
+	npc.Lock()
+	defer npc.Unlock()
+
+	if npc.rpcc != nil {
+		return nil
+	}
+
 	db.DPrintf(db.NETPROXYCLNT, "Init netproxyclnt %p", npc)
 	iovm := demux.NewIoVecMap()
 	conn, err := getNetproxydConn(npc.pe)
@@ -139,15 +146,10 @@ func (npc *NetProxyClnt) init() error {
 }
 
 func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
-	npc.Lock()
-	defer npc.Unlock()
-
 	// Ensure that the connection to the netproxy server has been initialized
-	if npc.rpcc == nil {
-		if err := npc.init(); err != nil {
-			db.DPrintf(db.NETPROXYCLNT_ERR, "Error dial netproxysrv %v", err)
-			return nil, err
-		}
+	if err := npc.init(); err != nil {
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		return nil, err
 	}
 	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request ep %v", npc.trans.conn, ep)
 	// Endpoints should always have realms specified

@@ -7,16 +7,18 @@ option go_package = "sigmaos/netproxy/proto";
 
 message ListenRequest {
         Taddr addr = 1;
+        Blob blob = 2;
 };
 
 message ListenResponse {
         Rerror err = 1;
         TendpointProto endpoint = 2;
-        Blob blob = 3;
+        uint64 listenerID = 3;
+        Blob blob = 4;
 };
 
 message DialRequest {
-        TendpointProto Endpoint = 1;
+        TendpointProto endpoint = 1;
         Blob blob = 2;
 };
 
@@ -24,3 +26,13 @@ message DialResponse {
         Rerror err = 1;
         Blob blob = 2;
 };
+
+message AcceptRequest {
+        uint64 listenerID = 1;
+        Blob blob = 2;
+};
+
+message AcceptResponse {
+        Rerror err = 1;
+        Blob blob = 2;
+}

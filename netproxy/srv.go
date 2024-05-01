@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 
 	"google.golang.org/protobuf/proto"
 
@@ -28,6 +29,9 @@ type NetProxySrv struct {
 }
 
 type NetProxySrvStubs struct {
+	sync.Mutex
+	lidctr           Tlidctr
+	listeners        map[Tlid]net.Listener
 	trans            *NetProxyTrans
 	conn             *net.UnixConn
 	innerContainerIP sp.Tip
@@ -74,6 +78,7 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 	db.DPrintf(db.NETPROXYSRV, "Handle connection [%p] from principal %v", conn, p)
 
 	npss := &NetProxySrvStubs{
+		listeners:        make(map[Tlid]net.Listener),
 		trans:            NewNetProxyTrans(conn, demux.NewIoVecMap()),
 		auth:             nps.auth,
 		conn:             conn,
@@ -130,6 +135,80 @@ func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netp
 		Iov: [][]byte{constructSocketControlMsg(file)},
 	}
 	return nil
+}
+
+func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *netproto.ListenResponse) error {
+	ctx := c.(*Ctx)
+	addr := req.GetAddr()
+	db.DPrintf(db.NETPROXYSRV, "Listen principal %v -> addr %v", ctx.Principal(), addr)
+	l, err := nps.directListenFn(addr)
+	// If Listen was unsuccessful, set the reply error appropriately
+	if err != nil {
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error listen direct: %v", err)
+		res.Err = sp.NewRerrorErr(err)
+		return nil
+	}
+	// Store the listener & assign it an ID
+	lid := nps.addListener(l)
+	res.ListenerID = uint64(lid)
+	db.DPrintf(db.NETPROXYSRV, "Listen done principal %v -> addr %v lid %v", ctx.Principal(), addr, lid)
+	// Set socket control message in output blob
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{nil},
+	}
+	res.Err = sp.NewRerror()
+	return nil
+}
+
+func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *netproto.AcceptResponse) error {
+	ctx := c.(*Ctx)
+	lid := Tlid(req.ListenerID)
+	db.DPrintf(db.NETPROXYSRV, "Accept principal %v -> lid %v", ctx.Principal(), lid)
+	l, ok := nps.getListener(lid)
+	if !ok {
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error accept unknown listener %v", lid)
+		res.Err = sp.NewRerrorErr(fmt.Errorf("Unknown listener: %v", lid))
+		return nil
+	}
+	proxyConn, err := l.Accept()
+	if err != nil {
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error accept direct: %v", err)
+		res.Err = sp.NewRerrorErr(fmt.Errorf("Error accept: %v", err))
+		return nil
+	}
+	file, err := connToFile(proxyConn)
+	if err != nil {
+		db.DFatalf("Error convert conn to FD: %v", err)
+	}
+	// Link conn FD to context so that it stays in scope and doesn't get GC-ed
+	// before it can be sent back to the client
+	ctx.SetConn(file)
+	// Set socket control message in output blob
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{constructSocketControlMsg(file)},
+	}
+	res.Err = sp.NewRerror()
+	return nil
+}
+
+// Store a new listener, and assign it an ID
+func (nps *NetProxySrvStubs) addListener(l net.Listener) Tlid {
+	lid := Tlid(nps.lidctr.Add(1))
+
+	nps.Lock()
+	defer nps.Unlock()
+
+	nps.listeners[lid] = l
+	return lid
+}
+
+// Given an LID, retrieve the associated Listener
+func (nps *NetProxySrvStubs) getListener(lid Tlid) (net.Listener, bool) {
+	nps.Lock()
+	defer nps.Unlock()
+
+	l, ok := nps.listeners[lid]
+	return l, ok
 }
 
 func (npss *NetProxySrvStubs) ReportError(err error) {

@@ -84,15 +84,14 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tendpoint, net.Listener, er
 	var ep *sp.Tendpoint
 	var l net.Listener
 	var err error
-	// TODO: accept path. For now, all listens are direct
-	if npc.useProxy() && false {
-		db.DFatalf("Error proxy listen unimplemented")
-		//		db.DPrintf(db.NETPROXYCLNT, "proxyListen %v", addr)
-		//		ep, l, err = npc.proxyListen(addr)
-		//		if err != nil {
-		//			db.DPrintf(db.NETPROXYCLNT_ERR, "Error proxyListen %v: %v", addr, err)
-		//			return nil, nil, err
-		//		}
+	if npc.useProxy() {
+		db.DPrintf(db.NETPROXYCLNT, "proxyListen %v", addr)
+		ep, l, err = npc.proxyListen(addr)
+		db.DPrintf(db.NETPROXYCLNT, "proxyListen %v done ok:%v", addr, err == nil)
+		if err != nil {
+			db.DPrintf(db.NETPROXYCLNT_ERR, "Error proxyListen %v: %v", addr, err)
+			return nil, nil, err
+		}
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directListen %v", addr)
 		if npc.verifyEndpoints && !npc.canSignEndpoints {
@@ -186,6 +185,82 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 		return nil, err
 	}
 	return parseReturnedConn(res.Blob.Iov[0])
+}
+
+func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tendpoint, net.Listener, error) {
+	// Ensure that the connection to the netproxy server has been initialized
+	if err := npc.init(); err != nil {
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		return nil, nil, err
+	}
+	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyListen request addr %v", npc.trans.conn, addr)
+	req := &proto.ListenRequest{
+		Addr: addr,
+		// Requests must have blob too, so that unix sendmsg works
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{nil},
+		},
+	}
+	// Set up the blob to receive the socket control message
+	res := &proto.ListenResponse{
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
+		},
+	}
+	if err := npc.rpcc.RPC("NetProxySrvStubs.Listen", req, res); err != nil {
+		return nil, nil, err
+	}
+	db.DPrintf(db.NETPROXYCLNT, "proxyListen response %v", res)
+	// If an error occurred during listen, bail out
+	if res.Err.ErrCode != 0 {
+		err := sp.NewErr(res.Err)
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Listen: %v", err)
+		return nil, nil, err
+	}
+	if res.ListenerID == 0 {
+		db.DPrintf(db.ERROR, "No listener ID returned")
+		return nil, nil, fmt.Errorf("No listener ID")
+	}
+	ep := sp.NewEndpointFromProto(res.Endpoint)
+	return ep, NewListener(npc, Tlid(res.ListenerID), ep), nil
+}
+
+func (npc *NetProxyClnt) proxyAccept(lid Tlid) (net.Conn, error) {
+	// Ensure that the connection to the netproxy server has been initialized
+	if err := npc.init(); err != nil {
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		return nil, err
+	}
+	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyAccept request lip %v", npc.trans.conn, lid)
+	req := &proto.AcceptRequest{
+		ListenerID: uint64(lid),
+		// Requests must have blob too, so that unix sendmsg works
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{nil},
+		},
+	}
+	// Set up the blob to receive the socket control message
+	res := &proto.AcceptResponse{
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
+		},
+	}
+	if err := npc.rpcc.RPC("NetProxySrvStubs.Accept", req, res); err != nil {
+		return nil, err
+	}
+	db.DPrintf(db.NETPROXYCLNT, "proxyAccept response %v", res)
+	// If an error occurred during dialing, bail out
+	if res.Err.ErrCode != 0 {
+		err := sp.NewErr(res.Err)
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Accept: %v", err)
+		return nil, err
+	}
+	return parseReturnedConn(res.Blob.Iov[0])
+}
+
+func (npc *NetProxyClnt) newListener(lid Tlid) net.Listener {
+	db.DFatalf("Unimplemented")
+	return nil
 }
 
 func (npc *NetProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {

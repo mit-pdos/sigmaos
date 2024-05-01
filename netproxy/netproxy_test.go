@@ -7,9 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	//	"sigmaos/fslib"
-	//	"sigmaos/namesrv"
-	//	"sigmaos/netproxy"
+	"sigmaos/netproxy"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -32,6 +30,7 @@ func TestBoot(t *testing.T) {
 	ts.Shutdown()
 }
 
+// Make sure dialing works (against a normal net.Listener)
 func TestDial(t *testing.T) {
 	ts, err1 := test.NewTstate(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -68,6 +67,7 @@ func TestDial(t *testing.T) {
 	ts.Shutdown()
 }
 
+// Make sure failed dialing returns an error (connection refused)
 func TestFailedDial(t *testing.T) {
 	ts, err1 := test.NewTstate(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -84,7 +84,36 @@ func TestFailedDial(t *testing.T) {
 	ts.Shutdown()
 }
 
+// Make sure Listening works
 func TestListen(t *testing.T) {
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	npc := ts.GetNetProxyClnt()
+	// Create a listener via netproxy
+	_, _, err := npc.Listen(addr)
+	assert.Nil(t, err, "Err Listen: %v", err)
+	ts.Shutdown()
+}
+
+// Make sure Listening on a random address returns an error
+func TestFailedListen(t *testing.T) {
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	addr := sp.NewTaddr("123.456.789.000", sp.INNER_CONTAINER_IP, PORT)
+	npc := ts.GetNetProxyClnt()
+	// Create a listener via netproxy
+	_, _, err := npc.Listen(addr)
+	assert.NotNil(t, err, "Err Listen: %v", err)
+	ts.Shutdown()
+}
+
+// Make sure Accept works
+func TestAccept(t *testing.T) {
 	ts, err1 := test.NewTstate(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -115,5 +144,20 @@ func TestListen(t *testing.T) {
 		assert.Equal(t, len(TEST_MSG), n, "Err Write nbyte: %v != %v", len(TEST_MSG), n)
 		<-c
 	}
+	ts.Shutdown()
+}
+
+// Make sure calling Accept on an unkown listener returns an error
+func TestFailedAccept(t *testing.T) {
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	ep := sp.NewEndpoint(sp.Taddrs{addr}, sp.ROOTREALM)
+	npc := ts.GetNetProxyClnt()
+	l := netproxy.NewListener(npc, 1000, ep)
+	_, err := l.Accept()
+	assert.NotNil(t, err, "Err accept: %v", err)
 	ts.Shutdown()
 }

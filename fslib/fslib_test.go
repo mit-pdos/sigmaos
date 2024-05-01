@@ -1090,6 +1090,7 @@ func TestSymlinkPath(t *testing.T) {
 
 func newEndpoint(t *testing.T, ts *test.Tstate, path string) *sp.Tendpoint {
 	ep, left, err := ts.CopyEndpoint(pathname)
+	db.DPrintf(db.ALWAYS, "copy ep %v", ep)
 	assert.Nil(t, err)
 	ep.SetTree(left)
 	h, p := ep.TargetIPPort(0)
@@ -1137,7 +1138,10 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself1"), sp.NewEndpoint([]*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222, ts.ProcEnv().GetNet())}, sp.ROOTREALM), sp.NoLeaseId)
+	newep := sp.NewEndpoint([]*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
+	err = ts.MintAndSetEndpointToken(newep)
+	assert.Nil(ts.T, err, "SignEP")
+	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself1"), newep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "EndpointService")
 
 	sts, err := ts.GetDir(gopath.Join(pathname, "d/~any") + "/")
@@ -1174,7 +1178,10 @@ func TestUnionRoot(t *testing.T) {
 	pn1 := gopath.Join(pathname, "namedself1")
 	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
-	err = ts.MkEndpointFile(pn1, sp.NewEndpoint([]*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)}, sp.ROOTREALM), sp.NoLeaseId)
+	newep := sp.NewEndpoint([]*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)}, sp.ROOTREALM)
+	err = ts.MintAndSetEndpointToken(newep)
+	assert.Nil(ts.T, err, "SignEP")
+	err = ts.MkEndpointFile(pn1, newep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	pn := pathname
@@ -1333,7 +1340,10 @@ func TestEndpointUnion(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), sp.NewEndpoint([]*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111, ts.ProcEnv().GetNet())}, sp.ROOTREALM), sp.NoLeaseId)
+	newep := sp.NewEndpoint([]*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
+	err = ts.MintAndSetEndpointToken(newep)
+	assert.Nil(ts.T, err, "SignEP")
+	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), newep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	pn := gopath.Join(pathname, "mount")

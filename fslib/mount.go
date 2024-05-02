@@ -80,7 +80,7 @@ func (fsl *FsLib) CopyEndpoint(pn string) (*sp.Tendpoint, string, error) {
 	if ok {
 		_, ep, err := fsl.resolveMount(d, left[0])
 		if err != nil {
-			return sp.NewNullEndpoint(), "", err
+			return nil, "", err
 		}
 		return ep, left[1:].String(), nil
 	} else if s, p, err := fsl.SigmaOS.PathLastMount(pn); err == nil {
@@ -88,11 +88,11 @@ func (fsl *FsLib) CopyEndpoint(pn string) (*sp.Tendpoint, string, error) {
 			return ep, p.String(), nil
 		}
 	}
-	return sp.NewNullEndpoint(), "", serr.NewErr(serr.TErrInval, pn)
+	return nil, "", serr.NewErr(serr.TErrInval, pn)
 }
 
 func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error) {
-	rep := sp.NewNullEndpoint()
+	var rep *sp.Tendpoint
 	rname := ""
 	// Make sure to resolve d in case it is a symlink or endpoint point.
 	_, err := fsl.ProcessDir(d+"/", func(st *sp.Stat) (bool, error) {

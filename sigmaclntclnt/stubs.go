@@ -288,10 +288,10 @@ func (scc *SigmaClntClnt) GetNamedEndpoint() (*sp.Tendpoint, error) {
 	err := scc.rpcc.RPC("SigmaClntSrvAPI.GetNamedEndpoint", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "GetNamedEndpoint %v %v %v", req, rep, err)
 	if err != nil {
-		return sp.NewNullEndpoint(), nil
+		return nil, nil
 	}
 	if rep.Err.TErrCode() != serr.TErrNoError {
-		return sp.NewNullEndpoint(), nil
+		return nil, nil
 	}
 	return sp.NewEndpointFromProto(rep.Endpoint), nil
 }

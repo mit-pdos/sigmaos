@@ -190,7 +190,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	} else {
 		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
 		if err != nil {
-			return sp.NewNullEndpoint(), err
+			return nil, err
 		}
 		pi = pi0
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
@@ -210,16 +210,16 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.signer, sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error New authsrv: %v", err)
-		return sp.NewNullEndpoint(), fmt.Errorf("NewAuthMgr err: %v", err)
+		return nil, fmt.Errorf("NewAuthMgr err: %v", err)
 	}
 	nd.SigmaClnt.SetAuthMgr(amgr)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
 	if err != nil {
-		return sp.NewNullEndpoint(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
+		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}
 
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
-		return sp.NewNullEndpoint(), err
+		return nil, err
 	}
 	nd.SigmaSrv = ssrv
 

@@ -21,12 +21,8 @@ func NewEndpoint(srvaddrs Taddrs, realm Trealm) *Tendpoint {
 	}
 }
 
-func NewNullEndpoint() *Tendpoint {
-	return NewEndpoint(nil, NOT_SET)
-}
-
 func NewEndpointFromBytes(b []byte) (*Tendpoint, *serr.Err) {
-	ep := NewNullEndpoint()
+	ep := NewEndpoint(nil, NOT_SET)
 	if err := proto.Unmarshal(b, ep); err != nil {
 		return ep, serr.NewErrError(err)
 	}

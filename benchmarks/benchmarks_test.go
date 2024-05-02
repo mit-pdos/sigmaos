@@ -234,7 +234,8 @@ func TestMicroDownSemaphore(t *testing.T) {
 	rootts.Shutdown()
 }
 
-// Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
+// Test how long it takes to cold Spawn, run, and WaitExit the rust
+// hello-world proc
 func TestMicroSpawnWaitStart(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -244,12 +245,15 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	if PREWARM_REALM {
-		warmupRealm(ts1, []string{"sleeper"})
-	}
+
+	rs0 := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
+	ps, is := newNProcs(N_TRIALS, "sleeper", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(0))
+	runOps(ts1, is, spawnWaitStartProc, rs0)
+	waitExitProcs(ts1, ps)
+
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	newOutDir(ts1)
-	ps, is := newNProcs(N_TRIALS, "sleeper", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(MCPU))
+	ps, is = newNProcs(N_TRIALS, "spawn-latency", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(0))
 	runOps(ts1, is, spawnWaitStartProc, rs)
 	waitExitProcs(ts1, ps)
 	db.DPrintf(db.BENCH, "Results:\n%v", rs)

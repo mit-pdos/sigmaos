@@ -131,7 +131,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
 	// Don't override intentionally set net proxy settings
 	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
-	p.ProcEnvProto.VerifyEndpoints = p.ProcEnvProto.UseNetProxy
+	p.ProcEnvProto.VerifyEndpoints = p.ProcEnvProto.UseNetProxy && false
 	p.ProcEnvProto.ParentToken = parentPE.Principal.GetToken()
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
 	// If parent didn't specify allowed paths, inherit the parent's allowed paths

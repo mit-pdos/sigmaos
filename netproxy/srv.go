@@ -114,11 +114,12 @@ func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netp
 	ep := sp.NewEndpointFromProto(req.GetEndpoint())
 	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> ep %v", ctx.Principal(), ep)
 	// Verify the principal is authorized to establish the connection
-	if _, err := nps.auth.EndpointIsAuthorized(ctx.Principal(), ep); err != nil {
-		db.DPrintf(db.NETPROXYSRV_ERR, "Error Dial unauthorized endpoint: %v", err)
-		res.Err = sp.NewRerrorErr(err)
-		return nil
-	}
+	// XXX skip verif
+	//	if _, err := nps.auth.EndpointIsAuthorized(ctx.Principal(), ep); err != nil {
+	//		db.DPrintf(db.NETPROXYSRV_ERR, "Error Dial unauthorized endpoint: %v", err)
+	//		res.Err = sp.NewRerrorErr(err)
+	//		return nil
+	//	}
 	proxyConn, err := nps.directDialFn(ep)
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {

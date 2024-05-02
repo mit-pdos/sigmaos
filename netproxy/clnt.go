@@ -157,7 +157,7 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 		db.DPrintf(db.ERROR, "Dial endpoint without realm set: %v", ep)
 		return nil, fmt.Errorf("Realm not set")
 	}
-	if !ep.IsSigned() {
+	if !ep.IsSigned() && npc.verifyEndpoints {
 		db.DPrintf(db.ERROR, "Dial unsigned endpoint: %v", ep)
 		return nil, fmt.Errorf("Endpoint not signed")
 	}

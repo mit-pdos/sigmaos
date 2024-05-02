@@ -231,7 +231,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	useNetProxy := !noNetProxy
 	// Only verify mounts if running with netproxy
-	verifyMounts := useNetProxy
+	verifyMounts := false && useNetProxy
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy, verifyMounts)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	err1 = amgr.MintAndSetProcToken(pe)

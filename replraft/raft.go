@@ -32,7 +32,7 @@ const (
 
 type RaftNode struct {
 	id            int
-	peerAddrs     []string
+	peerEPs       []*sp.Tendpoint
 	done          chan bool
 	commit        chan<- *committedEntries
 	propose       <-chan []byte
@@ -54,16 +54,16 @@ type committedEntries struct {
 }
 
 // etcd numbers nodes start from 1.  0 is not a valid id.
-func newRaftNode(pe *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
+func newRaftNode(pe *proc.ProcEnv, id int, peers []raft.Peer, peerEPs []*sp.Tendpoint, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
 	node := &RaftNode{
-		id:        id,
-		peerAddrs: peerAddrs,
-		done:      make(chan bool),
-		clerk:     clerk,
-		commit:    commit,
-		propose:   propose,
-		storage:   raft.NewMemoryStorage(),
-		pe:        pe,
+		id:      id,
+		peerEPs: peerEPs,
+		done:    make(chan bool),
+		clerk:   clerk,
+		commit:  commit,
+		propose: propose,
+		storage: raft.NewMemoryStorage(),
+		pe:      pe,
 	}
 	node.config = &raft.Config{
 		ID:                        uint64(id),
@@ -74,7 +74,7 @@ func newRaftNode(pe *proc.ProcEnv, id int, peers []raft.Peer, peerAddrs []string
 		MaxInflightMsgs:           256,
 		MaxUncommittedEntriesSize: 1 << 30,
 	}
-	db.DPrintf(db.REPLRAFT, "newRaftNode %d peeraddrs %v\n", id, peerAddrs)
+	db.DPrintf(db.REPLRAFT, "newRaftNode %d peeraddrs %v\n", id, peerEPs)
 	if err := node.start(peers, l, init); err != nil {
 		return nil, err
 	}
@@ -107,9 +107,9 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 		ErrorC:      make(chan error),
 	}
 	n.transport.Start()
-	for i, a := range n.peerAddrs {
-		if i != n.id-1 && a != "" {
-			n.transport.AddPeer(types.ID(i+1), []string{"http://" + a})
+	for i, ep := range n.peerEPs {
+		if i != n.id-1 && ep != nil {
+			n.transport.AddPeer(types.ID(i+1), []string{"http://" + ep.Addrs()[0].IPPort()})
 		}
 	}
 	go n.serveRaft(l)
@@ -230,26 +230,26 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry, leader uint64) {
 // Send a post request, indicating that the node will join the cluster.
 // Note: unused for now.
 func (n *RaftNode) postNodeId() error {
-	db.DPrintf(db.REPLRAFT, "%v: postNodeId %v\n", n.id, n.peerAddrs)
-	for i, addr := range n.peerAddrs {
+	db.DPrintf(db.REPLRAFT, "%v: postNodeId eps %v", n.id, n.peerEPs)
+	for i, ep := range n.peerEPs {
 		if i == n.id-1 {
 			continue
 		}
-		mcr := &membershipChangeReq{uint64(n.id), n.peerAddrs[n.id-1]}
+		mcr := &membershipChangeReq{uint64(n.id), n.peerEPs[n.id-1].Addrs()[0].IPPort()}
 		b, err := json.Marshal(mcr)
 		if err != nil {
 			db.DFatalf("Error Marshal in RaftNode.postNodeID: %v", err)
 		}
-		db.DPrintf(db.REPLRAFT, "Invoke Post node ID %d %v\n", i, addr)
-		if _, err := http.Post("http://"+path.Join(addr, membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b)); err == nil {
-			db.DPrintf(db.REPLRAFT, "Posted node ID %d %v\n", i, addr)
+		db.DPrintf(db.REPLRAFT, "Invoke Post node ID %d %v\n", i, ep)
+		if _, err := http.Post("http://"+path.Join(ep.Addrs()[0].IPPort(), membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b)); err == nil {
+			db.DPrintf(db.REPLRAFT, "Posted node ID %d %v\n", i, ep)
 			// Only post the node ID to one node
 			return nil
 		} else {
-			db.DPrintf(db.REPLRAFT, "Error posting node ID %d %v err %v\n", i, addr, err)
+			db.DPrintf(db.REPLRAFT, "Error posting node ID %d %v err %v\n", i, ep, err)
 		}
 	}
-	db.DPrintf(db.REPLRAFT, "postNodeId %v unreachable %v\n", n.id, n.peerAddrs)
+	db.DPrintf(db.REPLRAFT, "postNodeId %v unreachable %v\n", n.id, n.peerEPs)
 	return serr.NewErr(serr.TErrUnreachable, "no peers")
 }
 

@@ -107,21 +107,18 @@ func WaitStarted(fsl *fslib.FsLib, jobdir, grp string) (*GroupConfig, error) {
 	return cfg, nil
 }
 
-func (g *Group) writeSymlink(sigmaAddrs []sp.Taddrs) {
-	srvAddrs := make(sp.Taddrs, 0)
-	for _, as := range sigmaAddrs {
-		addrs := sp.Taddrs{}
-		for _, a := range as {
-			addrs = append(addrs, a)
-		}
-		if len(addrs) > 0 {
-			srvAddrs = append(srvAddrs, addrs...)
+func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
+	//	srvEPs := make([]*sp.Tendpoint, 0)
+	srvAddrs := make([]*sp.Taddr, 0)
+	for _, ep := range sigmaEPs {
+		if ep != nil {
+			srvAddrs = append(srvAddrs, ep.Addrs()...)
 		}
 	}
 	ep := sp.NewEndpoint(srvAddrs, g.ProcEnv().GetRealm())
-	db.DPrintf(db.KVGRP, "Advertise %v at %v", ep, GrpPath(g.jobdir, g.grp))
+	db.DPrintf(db.KVGRP, "Advertise %v at %v", srvAddrs, GrpPath(g.jobdir, g.grp))
 	if err := g.MkEndpointFile(GrpPath(g.jobdir, g.grp), ep, g.lc.Lease()); err != nil {
-		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
+		db.DFatalf("couldn't make replica addrs file %v err %v", g.grp, err)
 	}
 }
 
@@ -162,7 +159,7 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 		db.DFatalf("startServer %v\n", err)
 	}
 
-	g.writeSymlink(cfg.SigmaAddrs)
+	g.writeSymlink(cfg.SigmaEPs)
 
 	g.ReleaseLeadership()
 

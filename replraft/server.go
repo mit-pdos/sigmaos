@@ -8,6 +8,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/repl"
 	replproto "sigmaos/repl/proto"
+	sp "sigmaos/sigmap"
 )
 
 type RaftReplServer struct {
@@ -15,17 +16,17 @@ type RaftReplServer struct {
 	clerk *Clerk
 }
 
-func NewRaftReplServer(pe *proc.ProcEnv, id int, peerAddrs []string, l net.Listener, init bool, apply repl.Tapplyf) (*RaftReplServer, error) {
+func NewRaftReplServer(pe *proc.ProcEnv, id int, peerEPs []*sp.Tendpoint, l net.Listener, init bool, apply repl.Tapplyf) (*RaftReplServer, error) {
 	var err error
 	srv := &RaftReplServer{}
 	peers := []raft.Peer{}
-	for i := range peerAddrs {
+	for i := range peerEPs {
 		peers = append(peers, raft.Peer{ID: uint64(i + 1)})
 	}
 	commitC := make(chan *committedEntries)
 	proposeC := make(chan []byte)
 	srv.clerk = newClerk(commitC, proposeC, apply)
-	srv.node, err = newRaftNode(pe, id+1, peers, peerAddrs, l, init, srv.clerk, commitC, proposeC)
+	srv.node, err = newRaftNode(pe, id+1, peers, peerEPs, l, init, srv.clerk, commitC, proposeC)
 	if err != nil {
 		return nil, err
 	}

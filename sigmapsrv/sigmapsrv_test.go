@@ -627,6 +627,7 @@ func TestLookupMultiMount(t *testing.T) {
 		return
 	}
 
+	// Running a proc forces sigmaos to create uprocds and rpc special file
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 0), "name/"})
 	err = ts.Spawn(a)
 	assert.Nil(ts.T, err, "Spawn")
@@ -649,8 +650,9 @@ func TestLookupMultiMount(t *testing.T) {
 
 	s := time.Now()
 	pn := gopath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid, rpc.RPC)
+	db.DPrintf(db.TEST, "Stat start %v\n", pn)
 	_, err = fsl.Stat(pn)
-	db.DPrintf(db.TEST, "Stat %v took %v\n", pn, time.Since(s))
+	db.DPrintf(db.TEST, "Stat done %v took %v\n", pn, time.Since(s))
 	assert.Nil(t, err)
 	ts.Shutdown()
 }

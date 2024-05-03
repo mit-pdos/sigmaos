@@ -11,6 +11,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/golang-jwt/jwt"
 
@@ -280,9 +281,10 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 		paths = paths[1:]
 	}
 	if !ok {
+		s := time.Now()
 		st, srv, err = cksrv.getOrigin(r, req.Prog, paths)
+		db.DPrintf(db.SPAWN_LAT, "[%v] getFileStat lat %v: origin %v err %v", req.Prog, time.Since(s), paths, err)
 		if err != nil {
-			db.DPrintf(db.CHUNKSRV, "%v: getFileStat: origin %v err %v", cksrv.kernelId, paths, err)
 			return err
 		}
 	}

@@ -369,7 +369,7 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 		pe.procWait()
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] %v Lookup start %v %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), req.Prog, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup start %v paths %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
 	paths := pe.proc.GetSigmaPath()
 	start := time.Now()
@@ -378,8 +378,6 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 		return err
 	}
 	res.Stat = st
-	db.DPrintf(db.SPAWN_LAT, "[%v] GetFileStat %v paths %v prog %v path %q lat %v time since spawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), req.Prog, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
-
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done; time since spawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done %v path %q GetFileStat lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 	return nil
 }

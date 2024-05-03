@@ -246,14 +246,16 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 		return
 	}
 
-	rs0 := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
-	ps, is := newNProcs(N_TRIALS, "sleeper", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(0))
-	runOps(ts1, is, spawnWaitStartProc, rs0)
-	waitExitProcs(ts1, ps)
+	if PREWARM_REALM {
+		rs0 := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
+		ps, is := newNProcs(N_TRIALS, "sleeper", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(0))
+		runOps(ts1, is, spawnWaitStartProc, rs0)
+		waitExitProcs(ts1, ps)
+	}
 
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	newOutDir(ts1)
-	ps, is = newNProcs(N_TRIALS, "spawn-latency", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(0))
+	ps, is := newNProcs(N_TRIALS, "spawn-latency", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(0))
 	runOps(ts1, is, spawnWaitStartProc, rs)
 	waitExitProcs(ts1, ps)
 	db.DPrintf(db.BENCH, "Results:\n%v", rs)

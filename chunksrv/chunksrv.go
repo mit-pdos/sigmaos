@@ -449,7 +449,5 @@ func Run(kernelId string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, pr
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
-	// Start monitoring for other chunkds, and establishing clients to them
-	cksrv.ckclnt.UpdateChunkds()
 	ssrv.RunServer()
 }

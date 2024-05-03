@@ -17,6 +17,7 @@ import (
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -617,5 +618,39 @@ func TestLookupConcurPerf(t *testing.T) {
 	err = ts.RmDir(gopath.Join(pathname, "d0"))
 	assert.Nil(t, err)
 
+	ts.Shutdown()
+}
+
+func TestLookupMultiMount(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 0), "name/"})
+	err = ts.Spawn(a)
+	assert.Nil(ts.T, err, "Spawn")
+	_, err = ts.WaitExit(a.GetPid())
+	assert.Nil(ts.T, err, "WaitExit error")
+
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	sts, err := ts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+	kernelId := sts[0].Name
+
+	sts, err = ts.GetDir(gopath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL))
+	assert.Nil(t, err)
+	uprocdpid := sts[0].Name
+
+	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, uprocdpid)
+
+	fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
+	assert.Nil(t, err)
+
+	s := time.Now()
+	pn := gopath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid, rpc.RPC)
+	_, err = fsl.Stat(pn)
+	db.DPrintf(db.TEST, "Stat %v took %v\n", pn, time.Since(s))
+	assert.Nil(t, err)
 	ts.Shutdown()
 }

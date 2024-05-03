@@ -272,7 +272,7 @@ func RunReducer(reducef ReduceT, args []string) {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
-	db.DPrintf(db.BENCH, "Reducer spawn latency: %v", time.Since(pe.GetSpawnTime()))
+	db.DPrintf(db.BENCH, "Reducer time since spawn %v", time.Since(pe.GetSpawnTime()))
 	r, err := newReducer(reducef, args, p)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)

@@ -278,14 +278,14 @@ func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.Ass
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
-	db.DPrintf(db.SPAWN_LAT, "[%v] UprocSrv.Run recvd proc lat: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] UprocSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	cmd, err := container.StartUProc(uproc, ups.netproxy)
 	if err != nil {
 		return err
@@ -346,7 +346,7 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 		db.DFatalf("Fetch: procs.Lookup %d\n", req.Pid)
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q %v %v ck %d sinceSpawn %v", req.Prog, ups.kernelId, pe.proc.GetSigmaPath()[0], pe.proc.GetPid(), req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch start: %q ck %d path %v time since spawn %v", pe.proc.GetPid(), ups.kernelId, req.ChunkId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
 	start := time.Now()
 	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
@@ -355,7 +355,7 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 	}
 	res.Size = uint64(sz)
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %v done ck %d sz %d path %q sinceSpawn %v fetchlat %v", req.Prog, ups.kernelId, req.ChunkId, sz, path, time.Since(pe.proc.GetSpawnTime()), time.Since(start))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch done: %q ck %d sz %d path %q fetch lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, req.ChunkId, sz, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 
 	return nil
 }
@@ -369,7 +369,7 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 		pe.procWait()
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] %v Lookup %v %v sinceSpawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), req.Prog, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] %v Lookup start %v %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), req.Prog, time.Since(pe.proc.GetSpawnTime()))
 
 	paths := pe.proc.GetSigmaPath()
 	start := time.Now()
@@ -378,8 +378,8 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 		return err
 	}
 	res.Stat = st
-	db.DPrintf(db.SPAWN_LAT, "[%v] GetFileStat %v paths %v prog %v path %q lat %v sinceSpawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), req.Prog, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] GetFileStat %v paths %v prog %v path %q lat %v time since spawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), req.Prog, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done sinceSpawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done; time since spawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
 	return nil
 }

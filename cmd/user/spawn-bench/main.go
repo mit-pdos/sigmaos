@@ -52,7 +52,7 @@ func main() {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc exec latency: %v", proc.GetSigmaDebugPid(), execLat)
 	pe := proc.GetProcEnv()
 	spawnLat := time.Since(pe.GetSpawnTime())
-	db.DPrintf(db.SPAWN_LAT, "[%v] E2e spawn latency until main: %v", pe.GetPID(), spawnLat)
+	db.DPrintf(db.SPAWN_LAT, "[%v] E2e time since spawn until main: %v", pe.GetPID(), spawnLat)
 	l, err := NewSpawnBench(pe, execLat, spawnLat)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)

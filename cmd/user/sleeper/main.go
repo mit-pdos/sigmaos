@@ -50,7 +50,7 @@ func main() {
 	execTime := time.UnixMicro(execTimeMicro)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc exec latency: %v", proc.GetSigmaDebugPid(), time.Since(execTime))
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.SPAWN_LAT, "[%v] E2e latency until main: %v", pe.GetPID(), time.Since(pe.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] E2e latency until main: time since spawn %v", pe.GetPID(), time.Since(pe.GetSpawnTime()))
 	if len(os.Args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: %v sleep_length outdir <native>\n", os.Args[0])
 		os.Exit(1)

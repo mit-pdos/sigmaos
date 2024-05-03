@@ -49,7 +49,7 @@ func (be *binEntry) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string,
 	}
 	be.fd = fd
 	be.path = path
-	db.DPrintf(db.SPAWN_LAT, "[%v] getFd %q spawn %v", be.prog, paths, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] getFd %q open lat %v", be.prog, paths, time.Since(s))
 	return be.fd, path, nil
 }
 

@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"google.golang.org/protobuf/proto"
-
-	"sigmaos/serr"
 )
 
 type Tmount struct {
@@ -25,10 +23,10 @@ func NewNullMount() *Tmount {
 	return NewMount(nil, NOT_SET)
 }
 
-func NewMountFromBytes(b []byte) (*Tmount, *serr.Err) {
+func NewMountFromBytes(b []byte) (*Tmount, error) {
 	mnt := NewNullMount()
 	if err := proto.Unmarshal(b, mnt); err != nil {
-		return mnt, serr.NewErrError(err)
+		return mnt, err
 	}
 	return mnt, nil
 }

@@ -34,8 +34,8 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 		return sp.NoFid, err
 	}
 	db.DPrintf(db.WALK, "unionScan: %v target: %v\n", name, string(target))
-	mnt, err := sp.NewMountFromBytes(target)
-	if err != nil {
+	mnt, r := sp.NewMountFromBytes(target)
+	if r != nil {
 		db.DPrintf(db.WALK, "unionScan NewMount err %v", err)
 		return sp.NoFid, nil
 	}

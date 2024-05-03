@@ -50,10 +50,9 @@ func (pathc *PathClnt) getNamedMount(realm sp.Trealm) (*sp.Tmount, *serr.Err) {
 			db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] GetFile err %v", realm, err)
 			return &sp.Tmount{}, serr.NewErrError(err)
 		}
-		var sr *serr.Err
-		mnt, sr = sp.NewMountFromBytes(target)
-		if sr != nil {
-			return &sp.Tmount{}, sr
+		mnt, err = sp.NewMountFromBytes(target)
+		if err != nil {
+			return &sp.Tmount{}, serr.NewErrError(err)
 		}
 	}
 	// Cache the newly resolved mount

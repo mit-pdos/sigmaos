@@ -155,7 +155,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	// Start binfsd now; when uprocds gets assigned to a realm, then
 	// uprocd mounts the realm's bin directory that binfs will serve
 	// from.
-	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String())
+	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ups.ssrv.GetSigmaPSrvMount())
 	if err != nil {
 		db.DPrintf(db.ERROR, "ExecBinSrv err %v\n", err)
 		return err

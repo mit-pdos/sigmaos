@@ -132,10 +132,10 @@ func GetRootNamed(npc *netsigma.NetProxyClnt, etcdMnts map[string]*sp.TmountProt
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v etcdMnt %v realm %v", BOOT, nf, sr, etcdMnts, realm)
 		return &sp.Tmount{}, sr
 	}
-	mnt, sr := sp.NewMountFromBytes(nf.Data)
+	mnt, err := sp.NewMountFromBytes(nf.Data)
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "NewMount %v err %v\n", BOOT, err)
-		return &sp.Tmount{}, sr
+		return &sp.Tmount{}, serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "GetNamed mnt %v\n", mnt)
 	fs.Close()

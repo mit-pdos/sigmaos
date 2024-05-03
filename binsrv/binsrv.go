@@ -82,18 +82,20 @@ func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.Uprocd
 	return root.newNode(nil, "", 0), nil
 }
 
-func RunBinFS(kernelId, uprocdpid string) error {
+func RunBinFS(kernelId, uprocdpid, smnt string) error {
 	pe := proc.GetProcEnv()
+	mnt, err := sp.NewMountFromBytes([]byte(smnt))
+	if err != nil {
+		return err
+	}
 
 	proc.SetSigmaDebugPid("binfsd-" + uprocdpid)
-
-	db.DPrintf(db.BINSRV, "MkDir %q", BINFSMNT)
 
 	if err := os.MkdirAll(BINFSMNT, 0750); err != nil {
 		return err
 	}
 
-	db.DPrintf(db.BINSRV, "%s", db.LsDir(chunksrv.BINPROC))
+	db.DPrintf(db.BINSRV, "%s mnt %v", db.LsDir(chunksrv.BINPROC), mnt)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -101,7 +103,7 @@ func RunBinFS(kernelId, uprocdpid string) error {
 	}
 
 	pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sc.FsLib}, pn)
+	ch, err := sigmarpcchan.NewSigmaRPCChMount([]*fslib.FsLib{sc.FsLib}, pn, mnt)
 	if err != nil {
 		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
 		return err
@@ -157,9 +159,12 @@ type BinSrvCmd struct {
 	out io.WriteCloser
 }
 
-func ExecBinSrv(kernelId, uprocdpid string) (*BinSrvCmd, error) {
-	cmd := exec.Command("binfsd", kernelId, uprocdpid)
-	// cmd.Env = p.GetEnv()
+func ExecBinSrv(kernelId, uprocdpid string, mnt *sp.Tmount) (*BinSrvCmd, error) {
+	d, err := mnt.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command("binfsd", kernelId, uprocdpid, string(d))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err

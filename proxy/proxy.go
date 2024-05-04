@@ -211,7 +211,7 @@ func (npc *NpSess) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror
 	return nil
 }
 
-func (npc *NpSess) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
+func (npc *NpSess) Stat(args *sp.Trstat, rets *sp.Rrstat) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
@@ -221,7 +221,7 @@ func (npc *NpSess) Stat(args *sp.Tstat, rets *sp.Rstat) *sp.Rerror {
 		db.DPrintf(db.PROXY, "Stats: args %v err %v\n", args, err)
 		return sp.NewRerrorSerr(err)
 	}
-	rets.Stat = st
+	rets.Stat = st.StatProto()
 	db.DPrintf(db.PROXY, "Stat: req %v rets %v\n", args, rets)
 	return nil
 }
@@ -231,7 +231,7 @@ func (npc *NpSess) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	err := npc.fidc.Wstat(fid, args.Stat, sp.NullFence())
+	err := npc.fidc.Wstat(fid, sp.NewStatProto(args.Stat), sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.PROXY, "Wstats: args %v err %v\n", args, err)
 		return sp.NewRerrorSerr(err)

@@ -74,7 +74,7 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 }
 
 func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
-	st := &sp.Stat{}
+	st := sp.NewStatNull()
 	st.Name = o.pn.Base()
 	st.Qid = sp.NewQidPerm(o.di.Perm, 0, o.di.Path)
 	st.Mode = uint32(o.di.Perm)

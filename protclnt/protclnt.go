@@ -217,13 +217,13 @@ func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.Io
 	return nil
 }
 
-func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rstat, *serr.Err) {
-	args := sp.NewTstat(fid)
+func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rrstat, *serr.Err) {
+	args := sp.NewTrstat(fid)
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.Msg.(*sp.Rstat)
+	msg, ok := reply.Msg.(*sp.Rrstat)
 	if !ok {
 		return nil, serr.NewErr(serr.TErrBadFcall, "Rstat")
 	}

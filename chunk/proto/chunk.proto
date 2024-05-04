@@ -13,7 +13,7 @@ message GetFileStatRequest {
 }
 
 message GetFileStatResponse {
-  Stat stat = 1;
+  TstatProto stat = 1;
   string path = 2;
 }
 

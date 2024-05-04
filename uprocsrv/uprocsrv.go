@@ -343,7 +343,7 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 
 	pe, ok := ups.procs.Lookup(int(req.Pid))
 	if !ok || pe.proc == nil {
-		db.DFatalf("Fetch: procs.Lookup %d\n", req.Pid)
+		db.DFatalf("Fetch: procs.Lookup %v\n", req)
 	}
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch start: %q ck %d path %v time since spawn %v", pe.proc.GetPid(), ups.kernelId, req.ChunkId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
@@ -377,7 +377,7 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 	if err != nil {
 		return err
 	}
-	res.Stat = st
+	res.Stat = st.StatProto()
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done %v path %q GetFileStat lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 	return nil
 }

@@ -49,7 +49,7 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 		db.DPrintf(db.CHUNKCLNT_ERR, "ChunkClnt.GetFileStat %v err %v", req, err)
 		return nil, "", err
 	}
-	return res.Stat, res.Path, nil
+	return sp.NewStatProto(res.Stat), res.Path, nil
 }
 
 // For chunksrv to fetch chunk from another chunksrv and return data in b

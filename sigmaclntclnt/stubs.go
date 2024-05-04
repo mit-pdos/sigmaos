@@ -87,7 +87,7 @@ func (scc *SigmaClntClnt) Stat(path string) (*sp.Stat, error) {
 	if rep.Err.TErrCode() != serr.TErrNoError {
 		return nil, sp.NewErr(rep.Err)
 	}
-	return rep.Stat, nil
+	return sp.NewStatProto(rep.Stat), nil
 }
 
 func (scc *SigmaClntClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, error) {

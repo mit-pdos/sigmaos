@@ -35,7 +35,7 @@ func (pathc *PathClnt) autoMount(principal *sp.Tprincipal, mnt *sp.Tmount, path 
 	var fid sp.Tfid
 	var err *serr.Err
 
-	db.DPrintf(db.ALWAYS, "automount %v to %v\n", mnt, path)
+	db.DPrintf(db.PATHCLNT, "automount %v to %v\n", mnt, path)
 	fid, err = pathc.Attach(principal, pathc.cid, mnt, path.String(), mnt.Root)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "Attach error: %v", err)

@@ -168,55 +168,16 @@ func (r *Tremove) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func NewTstat(fid Tfid) *Tstat {
-	return &Tstat{Fid: uint32(fid)}
+func NewTrstat(fid Tfid) *Trstat {
+	return &Trstat{Fid: uint32(fid)}
 }
 
-func (s *Tstat) Tfid() Tfid {
+func (s *Trstat) Tfid() Tfid {
 	return Tfid(s.Fid)
 }
 
-func NewStatNull() *Stat {
-	st := &Stat{}
-	st.Qid = NewQid(0, 0, 0)
-	return st
-}
-
-func NewStat(qid *Tqid, perm Tperm, mtime uint32, name, owner string) *Stat {
-	st := &Stat{
-		Type:   0, // XXX
-		Qid:    qid,
-		Mode:   uint32(perm),
-		Atime:  0,
-		Mtime:  mtime,
-		Name:   name,
-		Length: 0,
-		Uid:    owner,
-		Gid:    owner,
-		Muid:   "",
-	}
-	return st
-
-}
-
-func (st *Stat) Tlength() Tlength {
-	return Tlength(st.Length)
-}
-
-func (st *Stat) Tmode() Tperm {
-	return Tperm(st.Mode)
-}
-
-func Names(sts []*Stat) []string {
-	r := []string{}
-	for _, st := range sts {
-		r = append(r, st.Name)
-	}
-	return r
-}
-
-func NewTwstat(fid Tfid, st *Stat, f *Tfence) *Twstat {
-	return &Twstat{Fid: uint32(fid), Stat: st, Fence: f.FenceProto()}
+func NewTwstat(fid Tfid, st *Tstat, f *Tfence) *Twstat {
+	return &Twstat{Fid: uint32(fid), Stat: st.StatProto(), Fence: f.FenceProto()}
 }
 
 func (w *Twstat) Tfid() Tfid {
@@ -347,12 +308,12 @@ func (Tclunk) Type() sessp.Tfcall   { return sessp.TTclunk }
 func (Rclunk) Type() sessp.Tfcall   { return sessp.TRclunk }
 func (Tremove) Type() sessp.Tfcall  { return sessp.TTremove }
 func (Rremove) Type() sessp.Tfcall  { return sessp.TRremove }
-func (Tstat) Type() sessp.Tfcall    { return sessp.TTstat }
+func (Trstat) Type() sessp.Tfcall   { return sessp.TTstat }
 func (Twstat) Type() sessp.Tfcall   { return sessp.TTwstat }
 func (Rwstat) Type() sessp.Tfcall   { return sessp.TRwstat }
 
 // sigmaP
-func (Rstat) Type() sessp.Tfcall       { return sessp.TRstat }
+func (Rrstat) Type() sessp.Tfcall      { return sessp.TRstat }
 func (TreadF) Type() sessp.Tfcall      { return sessp.TTreadF }
 func (TwriteF) Type() sessp.Tfcall     { return sessp.TTwriteF }
 func (Trenameat) Type() sessp.Tfcall   { return sessp.TTrenameat }

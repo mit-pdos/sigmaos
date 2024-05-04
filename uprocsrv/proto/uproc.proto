@@ -48,5 +48,5 @@ message LookupRequest {
 }
 
 message LookupResponse {
-  Stat stat = 1;
+  TstatProto stat = 1;
 }

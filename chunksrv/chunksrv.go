@@ -293,7 +293,7 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 	be.mu.Lock()
 	defer be.mu.Unlock()
 	be.st = st
-	res.Stat = be.st
+	res.Stat = be.st.StatProto()
 	res.Path = srv
 	return nil
 }
@@ -303,7 +303,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	defer db.DPrintf(db.CHUNKSRV, "%v: GetFileStat done: %v", cksrv.kernelId, req)
 	st, path, ok := cksrv.getCache(req, res)
 	if ok {
-		res.Stat = st
+		res.Stat = st.StatProto()
 		res.Path = path
 		return nil
 	}

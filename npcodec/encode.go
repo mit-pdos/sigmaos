@@ -147,7 +147,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 		case Fcall9P:
 			msg := v.Msg
 			if v.Type == sessp.TRstat {
-				sprstat := msg.(*sp.Rstat)
+				sprstat := msg.(*sp.Rrstat)
 				npst := Sp2NpStat(sprstat.Stat)
 				msg = &np.Rstat9P{0, *npst}
 			}

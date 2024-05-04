@@ -15,7 +15,7 @@ func Sp2NpDir(d []byte, cnt sp.Tsize) ([]byte, error) {
 	rdr := bytes.NewReader(d)
 	npsts := make([]*np.Stat9P, 0)
 	_, error := reader.ReadDir(reader.MkDirReader(rdr), func(st *sp.Stat) (bool, error) {
-		npst := npcodec.Sp2NpStat(st)
+		npst := npcodec.Sp2NpStat(st.StatProto())
 		npsts = append(npsts, npst)
 		return false, nil
 	})

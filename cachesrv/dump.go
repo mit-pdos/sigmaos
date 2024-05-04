@@ -30,7 +30,7 @@ func (cs *cacheSession) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = uint64(len(cs.shards))
+	st.SetLength(sp.Tlength(len(cs.shards)))
 	return st, nil
 }
 

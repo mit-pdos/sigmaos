@@ -51,7 +51,7 @@ func ustat(path path.Path) (*sp.Stat, *serr.Err) {
 	t := statxTimestampToTime(statx.Mtime)
 	st := sp.NewStat(sp.NewQidPerm(umode2Perm(statx.Mode), 0, sp.Tpath(statx.Ino)),
 		umode2Perm(statx.Mode), uint32(t.Unix()), path.Base(), "")
-	st.Length = statx.Size
+	st.SetLength(sp.Tlength(statx.Size))
 	return st, nil
 }
 

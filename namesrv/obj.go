@@ -76,9 +76,9 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
 	st := sp.NewStatNull()
 	st.Name = o.pn.Base()
-	st.Qid = sp.NewQidPerm(o.di.Perm, 0, o.di.Path)
-	st.Mode = uint32(o.di.Perm)
-	st.Length = uint64(len(o.di.Nf.Data))
+	st.SetQid(sp.NewQidPerm(o.di.Perm, 0, o.di.Path))
+	st.SetMode(o.di.Perm)
+	st.SetLengthInt(len(o.di.Nf.Data))
 	return st, nil
 }
 

@@ -27,8 +27,8 @@ func toUstat(sst *sp.Stat, ust *syscall.Stat_t) {
 
 	ust.Dev = uint64(sst.Dev)
 	ust.Ino = sst.Qid.Path
-	ust.Size = int64(sst.Length)
-	ust.Blocks = int64(sst.Length/BLOCKSIZE + 1)
+	ust.Size = int64(sst.Tlength())
+	ust.Blocks = int64(sst.Tlength()/BLOCKSIZE + 1)
 	ust.Atim.Sec = int64(sst.Atime)
 	ust.Mtim.Sec = int64(sst.Mtime)
 	ust.Ctim.Sec = int64(sst.Mtime)

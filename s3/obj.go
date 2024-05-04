@@ -129,7 +129,7 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = uint64(o.sz)
+	st.SetLength(o.sz)
 	return st, nil
 }
 

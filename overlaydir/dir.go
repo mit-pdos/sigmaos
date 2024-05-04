@@ -37,7 +37,7 @@ func (dir *DirOverlay) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = uint64(len(dir.entries))
+	st.SetLengthInt(len(dir.entries))
 	return st, nil
 }
 

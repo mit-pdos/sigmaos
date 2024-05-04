@@ -28,7 +28,7 @@ func (fs *fileSession) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = uint64(len(fs.res))
+	st.SetLengthInt(len(fs.res))
 	return st, nil
 }
 

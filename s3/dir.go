@@ -170,7 +170,7 @@ func (d *Dir) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = uint64(d.sz)
+	st.SetLength(d.sz)
 	return st, nil
 }
 

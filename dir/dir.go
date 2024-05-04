@@ -140,7 +140,7 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = uint64(l)
+	st.SetLength(l)
 	return st, nil
 }
 

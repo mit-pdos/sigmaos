@@ -10,7 +10,6 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse"
 
 	db "sigmaos/debug"
-	sp "sigmaos/sigmap"
 )
 
 var _ = (fs.NodeStatfser)((*binFsNode)(nil))
@@ -50,7 +49,7 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 	ust := syscall.Stat_t{}
 	toUstat(sst, &ust)
 	out.Attr.FromStat(&ust)
-	node := n.RootData.newNode(n.EmbeddedInode(), name, sp.Tsize(sst.Length))
+	node := n.RootData.newNode(n.EmbeddedInode(), name, sst.Tsize())
 	ch := n.NewInode(ctx, node, idFromStat(&ust))
 
 	db.DPrintf(db.BINSRV, "%v: Lookup done name %q node %v\n", n, name, node)

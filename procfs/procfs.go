@@ -89,7 +89,7 @@ func (pi *ProcInode) Size() (sp.Tlength, *serr.Err) {
 func (pi *ProcInode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.PROCFS, "%v: Stat %v %T\n", ctx, pi, pi)
 	st := sp.NewStat(sp.NewQid(sp.QTFILE, 0, pi.path), pi.perm, 0, pi.name, "schedd")
-	st.Length = 1
-	st.Mtime = uint32(time.Now().Unix())
+	st.SetLength(1)
+	st.SetMtime(time.Now().Unix())
 	return st, nil
 }

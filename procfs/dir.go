@@ -58,8 +58,8 @@ func (pd *ProcDir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string, f sp
 
 func (pd *ProcDir) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	st := sp.NewStat(sp.NewQid(sp.QTDIR, 0, pd.path), pd.perm, 0, pd.name, "schedd")
-	st.Length = uint64(pd.procs.Len())
-	st.Mtime = uint32(time.Now().Unix())
+	st.SetLengthInt(pd.procs.Len())
+	st.SetMtime(time.Now().Unix())
 	return st, nil
 }
 

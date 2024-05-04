@@ -180,7 +180,7 @@ func (sti *StatInfo) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 		return nil, err
 	}
 	b := sti.stats()
-	st.Length = uint64(len(b))
+	st.SetLengthInt(len(b))
 	return st, nil
 }
 

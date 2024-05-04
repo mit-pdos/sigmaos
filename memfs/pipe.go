@@ -36,6 +36,6 @@ func (p *Pipe) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = uint64(p.Pipe.Size())
+	st.SetLength(p.Pipe.Size())
 	return nil, nil
 }

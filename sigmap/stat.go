@@ -53,8 +53,36 @@ func (st *Tstat) Tlength() Tlength {
 	return Tlength(st.TstatProto.Length)
 }
 
+func (st *Tstat) LengthUint64() uint64 {
+	return st.TstatProto.Length
+}
+
+func (st *Tstat) Tsize() Tsize {
+	return Tsize(st.TstatProto.Length)
+}
+
+func (st *Tstat) SetLength(l Tlength) {
+	st.TstatProto.Length = uint64(l)
+}
+
+func (st *Tstat) SetLengthInt(l int) {
+	st.TstatProto.Length = uint64(l)
+}
+
 func (st *Tstat) Tmode() Tperm {
 	return Tperm(st.TstatProto.Mode)
+}
+
+func (st *Tstat) SetMode(m Tperm) {
+	st.TstatProto.Mode = uint32(m)
+}
+
+func (st *Tstat) SetMtime(t int64) {
+	st.TstatProto.Mtime = uint32(t)
+}
+
+func (st *Tstat) SetQid(qid *Tqid) {
+	st.TstatProto.Qid = qid
 }
 
 func Names(sts []*Tstat) []string {

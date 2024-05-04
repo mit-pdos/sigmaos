@@ -59,7 +59,7 @@ func (ts *Tstate) check(srv string, st *sp.Stat) {
 	pn = path.Join(pn, PROG)
 	fi, err := os.Stat(pn)
 	assert.Nil(ts.T, err)
-	assert.Equal(ts.T, st.Length, uint64(fi.Size()))
+	assert.Equal(ts.T, st.Tlength(), sp.Tlength(fi.Size()))
 }
 
 func isExpected(path string, expect []string) bool {
@@ -78,7 +78,7 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 	assert.Nil(ts.T, err)
 	assert.True(ts.T, isExpected(path, expect))
 
-	n := (st.Length / chunk.CHUNKSZ) + 1
+	n := (st.Tlength() / chunk.CHUNKSZ) + 1
 	l := 0
 	h := int(n - 1)
 	for i := 0; i < int(n); i++ {
@@ -90,7 +90,7 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 			ck = h
 			h--
 		}
-		sz, path, err := ts.ckclnt.Fetch(srv, PROG, pid, sp.ROOTREALM, ck, sp.Tsize(st.Length), paths)
+		sz, path, err := ts.ckclnt.Fetch(srv, PROG, pid, sp.ROOTREALM, ck, st.Tsize(), paths)
 		db.DPrintf(db.TEST, "path %v", path)
 		assert.Nil(ts.T, err, "err %v", err)
 		assert.True(ts.T, sz > 0 && sz <= chunk.CHUNKSZ)

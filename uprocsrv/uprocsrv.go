@@ -317,7 +317,7 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	if err != nil {
 		return err
 	}
-	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, sp.Tsize(st.Length), req.SigmaPath); err != nil {
+	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, st.Tsize(), req.SigmaPath); err != nil {
 		return err
 	}
 	res.OK = true

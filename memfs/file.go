@@ -31,6 +31,6 @@ func (f *File) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 		return nil, err
 	}
 	l, _ := f.Size()
-	st.Length = uint64(l)
+	st.SetLength(l)
 	return st, nil
 }

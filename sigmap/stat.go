@@ -1,5 +1,9 @@
 package sigmap
 
+import (
+	"fmt"
+)
+
 type Stat = Tstat
 
 type Tstat struct {
@@ -40,12 +44,17 @@ func (st *Tstat) StatProto() *TstatProto {
 	return st.TstatProto
 }
 
+func (st *Stat) String() string {
+	return fmt.Sprintf("{%v mode=%v atime=%v mtime=%v length=%v name=%v uid=%v gid=%v muid=%v}",
+		st.Qid, st.Tmode(), st.Atime, st.Mtime, st.Tlength(), st.Name, st.Uid, st.Gid, st.Muid)
+}
+
 func (st *Tstat) Tlength() Tlength {
-	return Tlength(st.Length)
+	return Tlength(st.TstatProto.Length)
 }
 
 func (st *Tstat) Tmode() Tperm {
-	return Tperm(st.Mode)
+	return Tperm(st.TstatProto.Mode)
 }
 
 func Names(sts []*Tstat) []string {

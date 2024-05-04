@@ -42,7 +42,7 @@ func TestInitFs(t *testing.T) {
 	sts, err := ts.GetDir(pathname)
 	assert.Nil(t, err, "Error GetDir: %v", err)
 	if pathname == sp.NAMED {
-		db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
+		db.DPrintf(db.TEST, "named %v %v\n", sp.Names(sts), sts[0])
 		assert.True(t, fslib.Present(sts, namesrv.InitRootDir), "initfs")
 		sts, err = ts.GetDir(pathname + "/boot")
 		assert.Nil(t, err, "Err getdir: %v", err)

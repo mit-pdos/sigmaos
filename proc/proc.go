@@ -352,7 +352,7 @@ func (p *Proc) SetScheddMount(mnt *sp.Tmount) {
 }
 
 func (p *Proc) SetNamedMount(mnt *sp.Tmount) {
-	p.ProcEnvProto.NamedMountProto = mnt.TmountProto
+	p.ProcEnvProto.NamedMountProto = mnt.GetProto()
 }
 
 // Return Env map as a []string

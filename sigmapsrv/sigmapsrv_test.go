@@ -635,6 +635,9 @@ func TestLookupMultiMount(t *testing.T) {
 	assert.Nil(ts.T, err, "WaitExit error")
 
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	mnt, err := ts.GetNamedMount()
+	assert.Nil(ts.T, err)
+	pe.NamedMountProto = mnt.GetProto()
 	sts, err := ts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 	kernelId := sts[0].Name

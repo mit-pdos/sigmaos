@@ -80,7 +80,7 @@ func (rbp *RealmBinPaths) GetBinKernelID(r sp.Trealm, bin string) (string, bool)
 func (rbp *RealmBinPaths) SetBinKernelID(r sp.Trealm, bin, kernelId string) {
 	bp, ok := rbp.realmbins.Lookup(r)
 	if !ok {
-		db.DFatalf("SetBinKernelID: unknown %v\n", r)
+		bp, _ = rbp.realmbins.Alloc(r, NewBinPaths())
 	}
 	bp.SetBinKernelID(bin, kernelId)
 }

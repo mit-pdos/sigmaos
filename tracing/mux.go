@@ -4,7 +4,7 @@ import (
 	"net"
 	"net/http"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	//	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	db "sigmaos/debug"
 )
@@ -21,7 +21,7 @@ type TracedHTTPMux struct {
 
 func (tm *TracedHTTPMux) HandleFunc(pattern string, handler func(w http.ResponseWriter, r *http.Request)) {
 	// Tag request with route, and wrap the request in a span context.
-	tm.ServeMux.Handle(pattern, otelhttp.WithRouteTag(pattern+"/:name", http.HandlerFunc(handler)))
+	tm.ServeMux.Handle(pattern, nil) //otelhttp.WithRouteTag(pattern+"/:name", http.HandlerFunc(handler)))
 }
 
 func (tm *TracedHTTPMux) Serve(l net.Listener) {

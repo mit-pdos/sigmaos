@@ -34,10 +34,10 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 		return sp.NoFid, err
 	}
 	db.DPrintf(db.WALK, "unionScan: %v target: %v\n", name, string(target))
-	ep, err := sp.NewEndpointFromBytes(target)
+	ep, r := sp.NewEndpointFromBytes(target)
 	if err != nil {
 		db.DPrintf(db.WALK, "unionScan NewMount err %v", err)
-		return sp.NoFid, nil
+		return sp.NoFid, serr.NewErrError(r)
 	}
 	db.DPrintf(db.WALK, "unionScan: %v ep: %v\n", name, ep)
 	ok, _ := pathc.IsLocalMount(ep)

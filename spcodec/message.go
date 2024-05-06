@@ -49,9 +49,9 @@ func NewMsg(typ sessp.Tfcall) (sessp.Tmsg, *serr.Err) {
 	case sessp.TRremove:
 		return &sp.Rremove{}, nil
 	case sessp.TTstat:
-		return &sp.Tstat{}, nil
+		return &sp.Trstat{}, nil
 	case sessp.TRstat:
-		return &sp.Rstat{}, nil
+		return &sp.Rrstat{}, nil
 	case sessp.TTwstat:
 		return &sp.Twstat{}, nil
 	case sessp.TRwstat:

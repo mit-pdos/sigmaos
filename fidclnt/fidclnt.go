@@ -281,7 +281,7 @@ func (fidc *FidClnt) Stat(fid sp.Tfid) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	return reply.Stat, nil
+	return sp.NewStatProto(reply.Stat), nil
 }
 
 func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {

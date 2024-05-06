@@ -1,3 +1,6 @@
+// Servers use package memfsssrv to create an in-memory file server.
+// memfsssrv uses sesssrv and protsrv to handle client sigmaP
+// requests.
 package memfssrv
 
 import (
@@ -19,12 +22,6 @@ import (
 )
 
 var rootP = path.Path{""}
-
-//
-// Servers use memfsssrv to create an in-memory file server.
-// memfsssrv uses sesssrv and protsrv to handle client sigmaP
-// requests.
-//
 
 type MemFs struct {
 	*sigmapsrv.SigmaPSrv
@@ -81,7 +78,7 @@ func (mfs *MemFs) lookupParent(path path.Path, ltype lockmap.Tlock) (fs.Dir, *lo
 	return d, lk, nil
 }
 
-func (mfs *MemFs) NewDev(pn string, dev fs.Inode) *serr.Err {
+func (mfs *MemFs) NewDev(pn string, dev fs.FsObj) *serr.Err {
 	path, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return err
@@ -95,7 +92,7 @@ func (mfs *MemFs) NewDev(pn string, dev fs.Inode) *serr.Err {
 	return dir.MkNod(mfs.ctx, d, path.Base(), dev)
 }
 
-func (mfs *MemFs) MkNod(pn string, i fs.Inode) *serr.Err {
+func (mfs *MemFs) MkNod(pn string, i fs.FsObj) *serr.Err {
 	path, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return err

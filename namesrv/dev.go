@@ -49,3 +49,27 @@ func (d *Dev) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, f sp.Tfence) (sp.T
 	d.Obj.di.Nf.Data = b
 	return sp.Tsize(len(b)), nil
 }
+
+// Methods for Inode interface
+
+func (o *Obj) Mtime() int64 {
+	return 0
+}
+
+func (o *Obj) SetMtime(m int64) {
+}
+
+// func (o *Obj) Parent() fs.Dir {
+// 	dir := o.pathName.Dir()
+// 	d, err := newDir(dir)
+// 	if err != nil {
+// 		db.DFatalf("Parent %v err %v\n", dir, err)
+// 	}
+// 	return d
+// }
+
+func (o *Obj) SetParent(p fs.Dir) {
+}
+
+func (o *Obj) Unlink() {
+}

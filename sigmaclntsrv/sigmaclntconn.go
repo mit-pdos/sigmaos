@@ -145,7 +145,7 @@ func (scs *SigmaClntSrvAPI) CloseFd(ctx fs.CtxI, req scproto.SigmaCloseRequest, 
 func (scs *SigmaClntSrvAPI) Stat(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaStatReply) error {
 	st, err := scs.sc.Stat(req.Path)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: Stat %v st %v err %v", scs.sc.ClntId(), req, st, err)
-	rep.Stat = st
+	rep.Stat = st.StatProto()
 	rep.Err = scs.setErr(err)
 	return nil
 }

@@ -94,7 +94,7 @@ func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.P
 	return sp.NoFid, path, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
-// Umount mnt point that is the longest prefix of path, if exact is
+// Umount matches mnt point that is the longest prefix of path, if exact is
 // false, or matches path exact, if exact if true.
 func (mnt *MntTable) umount(path path.Path, exact bool) (sp.Tfid, path.Path, *serr.Err) {
 	mnt.Lock()

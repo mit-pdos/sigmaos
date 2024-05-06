@@ -307,7 +307,7 @@ func RunMapper(mapf MapT, args []string) {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
-	db.DPrintf(db.BENCH, "Mapper [%v] spawn latency: %v", args[2], time.Since(pe.GetSpawnTime()))
+	db.DPrintf(db.BENCH, "Mapper [%v] time since spawn %v", args[2], time.Since(pe.GetSpawnTime()))
 	m, err := newMapper(mapf, args, p)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"sigmaos/chunk"
+	"sigmaos/chunkclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
@@ -32,6 +33,7 @@ type ProcClnt struct {
 	procqclnt      *procqclnt.ProcQClnt
 	lcschedclnt    *lcschedclnt.LCSchedClnt
 	cs             *ChildState
+	bins           *chunkclnt.BinPaths
 }
 
 func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool) *ProcClnt {
@@ -43,6 +45,7 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool) *ProcClnt {
 		procqclnt:      procqclnt.NewProcQClnt(fsl),
 		lcschedclnt:    lcschedclnt.NewLCSchedClnt(fsl),
 		cs:             newChildState(),
+		bins:           chunkclnt.NewBinPaths(),
 	}
 	return clnt
 }
@@ -82,11 +85,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 
 	p.SetHow(how)
 
-	if kid, ok := clnt.cs.GetBinKernelID(p.GetProgram()); ok {
-		db.DPrintf(db.TEST, "spawn: %v PrependSigmaPath %v %v\n", p.GetPid(), p.GetProgram(), kid)
+	if kid, ok := clnt.bins.GetBinKernelID(p.GetProgram()); ok {
 		p.PrependSigmaPath(chunk.ChunkdPath(kid))
-	} else {
-		db.DPrintf(db.TEST, "GetBinKernelId %v; no kernel", p.GetProgram())
 	}
 
 	p.InheritParentProcEnv(clnt.ProcEnv())
@@ -174,10 +174,11 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 				spawnedKernelID, err = clnt.enqueueViaProcQ(p)
 				if err == nil {
 					db.DPrintf(db.TEST, "spawn: SetBinKernelId %v %v\n", p.GetProgram(), spawnedKernelID)
-					clnt.cs.SetBinKernelID(p.GetProgram(), spawnedKernelID)
+					clnt.bins.SetBinKernelID(p.GetProgram(), spawnedKernelID)
 					p.SetKernelID(spawnedKernelID, false)
+				} else if serr.IsErrorUnavailable(err) {
+					clnt.bins.DelBinKernelID(p.GetProgram(), spawnedKernelID)
 				}
-				// clnt.cs.DelBinKernelID(p.GetProgram(), spawnedKernelID)
 			} else {
 				// LC Non-kernel procs are enqueued via the procq.
 				spawnedKernelID, err = clnt.enqueueViaLCSched(p)
@@ -279,7 +280,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Proc calls procclnt.Started. Time since spawn: %v", clnt.ProcEnv().GetPID(), time.Since(clnt.ProcEnv().GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Proc calls procclnt.Started; time since spawn %v", clnt.ProcEnv().GetPID(), time.Since(clnt.ProcEnv().GetSpawnTime()))
 	return clnt.notify(scheddclnt.START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow(), nil, false)
 }
 

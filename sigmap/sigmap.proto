@@ -22,7 +22,7 @@ message Tprincipal {
         Ttoken token = 3;
 }
 
-message Stat {
+message TstatProto {
         uint32 type = 1;
         uint32 dev = 2;
         Tqid   qid = 3;
@@ -169,17 +169,17 @@ message Tremove {
 message Rremove {
 }
 
-message Tstat {
+message Trstat {
         uint32 fid = 1;
 }
 
-message Rstat {
-        Stat stat = 1;
+message Rrstat {
+        TstatProto stat = 1;
 }
 
 message Twstat {
         uint32 fid = 1;
-        Stat stat = 2;
+        TstatProto stat = 2;
         TfenceProto fence = 3;
 }
 

@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"google.golang.org/protobuf/proto"
-
-	"sigmaos/serr"
 )
 
 type Tendpoint struct {
@@ -21,10 +19,10 @@ func NewEndpoint(srvaddrs Taddrs, realm Trealm) *Tendpoint {
 	}
 }
 
-func NewEndpointFromBytes(b []byte) (*Tendpoint, *serr.Err) {
+func NewEndpointFromBytes(b []byte) (*Tendpoint, error) {
 	ep := NewEndpoint(nil, NOT_SET)
 	if err := proto.Unmarshal(b, ep); err != nil {
-		return ep, serr.NewErrError(err)
+		return ep, err
 	}
 	return ep, nil
 }

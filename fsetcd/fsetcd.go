@@ -132,10 +132,10 @@ func GetRootNamed(npc *netproxy.NetProxyClnt, etcdMnts map[string]*sp.TendpointP
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v etcdMnt %v realm %v", BOOT, nf, sr, etcdMnts, realm)
 		return &sp.Tendpoint{}, sr
 	}
-	ep, sr := sp.NewEndpointFromBytes(nf.Data)
+	ep, err := sp.NewEndpointFromBytes(nf.Data)
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "NewEndpoint %v err %v\n", BOOT, err)
-		return &sp.Tendpoint{}, sr
+		return &sp.Tendpoint{}, serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "GetNamed ep %v\n", ep)
 	fs.Close()

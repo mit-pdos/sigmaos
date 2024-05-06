@@ -42,7 +42,7 @@ func TestInitFs(t *testing.T) {
 	sts, err := ts.GetDir(pathname)
 	assert.Nil(t, err, "Error GetDir: %v", err)
 	if pathname == sp.NAMED {
-		db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
+		db.DPrintf(db.TEST, "named %v %v\n", sp.Names(sts), sts[0])
 		assert.True(t, fslib.Present(sts, namesrv.InitRootDir), "initfs")
 		sts, err = ts.GetDir(pathname + "/boot")
 		assert.Nil(t, err, "Err getdir: %v", err)
@@ -1297,17 +1297,21 @@ func TestSetFileSymlink(t *testing.T) {
 	err = ts.MkEndpointFile(gopath.Join(pathname, "namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	st, err := ts.ReadStats("name")
+	st, err := ts.ReadStats(pathname)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Counters["Nwalk"]
+
+	db.DPrintf(db.TEST, "st %v\n", st)
 
 	d = []byte("byebye")
 	n, err := ts.SetFile(gopath.Join(pathname, "namedself0/f"), d, sp.OWRITE, 0)
 	assert.Nil(ts.T, err, "SetFile: %v", err)
 	assert.Equal(ts.T, sp.Tsize(len(d)), n, "SetFile")
 
-	st, err = ts.ReadStats("name")
+	st, err = ts.ReadStats(pathname)
 	assert.Nil(t, err, "statsd")
+
+	db.DPrintf(db.TEST, "st %v\n", st)
 
 	assert.NotEqual(ts.T, nwalk, st.Counters["Nwalk"], "setfile")
 	nwalk = st.Counters["Nwalk"]
@@ -1316,7 +1320,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, d, b, "GetFile")
 
-	st, err = ts.ReadStats("name")
+	st, err = ts.ReadStats(pathname)
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(ts.T, nwalk, st.Counters["Nwalk"], "getfile")
@@ -1472,7 +1476,7 @@ func TestEphemeralFileExpire(t *testing.T) {
 	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err, "Err PutEphemeral: %v", err)
 
-	sts, _, err := ts.ReadDir(dn)
+	sts, err := ts.GetDir(dn)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 1, len(sts))
@@ -1482,7 +1486,7 @@ func TestEphemeralFileExpire(t *testing.T) {
 	_, err = ts.Stat(fn)
 	assert.NotNil(t, err, fn)
 
-	sts, _, err = ts.ReadDir(dn)
+	sts, err = ts.GetDir(dn)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 0, len(sts))

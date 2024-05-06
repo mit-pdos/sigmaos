@@ -71,12 +71,13 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 	return len(sts), nil
 }
 
-func (sdc *ScheddClnt) WarmUprocd(kernelID string, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
+func (sdc *ScheddClnt) WarmUprocd(kernelID string, pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
 	rpcc, err := sdc.urpcc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
 	req := &proto.WarmCacheBinRequest{
+		PidStr:    pid.String(),
 		RealmStr:  realm.String(),
 		Program:   prog,
 		SigmaPath: path,

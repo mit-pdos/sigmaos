@@ -9,6 +9,9 @@ import (
 	"github.com/golang-jwt/jwt"
 
 	"sigmaos/auth"
+	"sigmaos/chunk"
+	"sigmaos/chunkclnt"
+	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/keys"
@@ -18,6 +21,7 @@ import (
 	proto "sigmaos/procqsrv/proto"
 	"sigmaos/rand"
 	"sigmaos/scheddclnt"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -37,6 +41,7 @@ type ProcQ struct {
 	realms     []sp.Trealm
 	qlen       int // Aggregate queue length, across all queues
 	tot        atomic.Int64
+	realmbins  *chunkclnt.RealmBinPaths
 }
 
 type QDir struct {
@@ -50,6 +55,7 @@ func NewProcQ(sc *sigmaclnt.SigmaClnt) *ProcQ {
 		qs:         make(map[sp.Trealm]*Queue),
 		realms:     make([]sp.Trealm, 0),
 		qlen:       0,
+		realmbins:  chunkclnt.NewRealmBinPaths(),
 	}
 	pq.cond = sync.NewCond(&pq.mu)
 	return pq
@@ -101,7 +107,7 @@ func (qd *QDir) Len() int {
 func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCQ, "[%v] Enqueue %v", p.GetRealm(), p)
-	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv time %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv; time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	ch := make(chan string)
 	pq.addProc(p, ch)
 	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
@@ -136,6 +142,9 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 	if err := pq.scheddclnt.ForceRun(kernelID, true, p); err != nil {
 		db.DPrintf(db.PROCQ_ERR, "Error ForceRun proc on kid %v: %v", kernelID, err)
 		pq.addProc(p, ch)
+		if serr.IsErrorUnavailable(err) {
+			pq.realmbins.DelBinKernelID(p.GetRealm(), p.GetProgram(), kernelID)
+		}
 		return
 	}
 	db.DPrintf(db.PROCQ, "Done runProc on kid %v", kernelID)
@@ -156,13 +165,6 @@ func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.Get
 	res.Nqueued = realms
 
 	return nil
-}
-
-func (pq *ProcQ) updateSigmaPath(r sp.Trealm, prog, kernelId string) {
-	db.DPrintf(db.PROCQ, "updateSigmaPath %v %v %v", r, prog, kernelId)
-	if q, ok := pq.qs[r]; ok {
-		q.updateSigmaPath(prog, kernelId)
-	}
 }
 
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
@@ -209,6 +211,13 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// Decrease aggregate queue length.
 				pq.qlen--
 				db.DPrintf(db.PROCQ, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
+				if !chunksrv.IsChunkSrvPath(p.GetSigmaPath()[0]) {
+					if kid, ok := pq.realmbins.GetBinKernelID(p.GetRealm(), p.GetProgram()); ok {
+						p.PrependSigmaPath(chunk.ChunkdPath(kid))
+					}
+				}
+				pq.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), req.KernelID)
+
 				// Push proc to schedd. Do this asynchronously so we don't hold locks
 				// across RPCs.
 				go pq.runProc(req.KernelID, p, ch, ts)
@@ -219,7 +228,6 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				res.Mem = uint32(p.GetMem())
 				res.QLen = uint32(pq.qlen)
 				db.DPrintf(db.TEST, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
-				pq.updateSigmaPath(r, p.GetProgram(), req.KernelID)
 				pq.mu.Unlock()
 				return nil
 			}

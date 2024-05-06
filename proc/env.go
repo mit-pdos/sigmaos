@@ -245,6 +245,11 @@ func (pe *ProcEnvProto) SetSigmaPath(buildTag string) {
 }
 
 func (pe *ProcEnvProto) PrependSigmaPath(pn string) {
+	for _, p := range pe.SigmaPath {
+		if p == pn {
+			return
+		}
+	}
 	pe.SigmaPath = append([]string{pn}, pe.SigmaPath...)
 }
 

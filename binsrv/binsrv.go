@@ -18,6 +18,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 
+	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -32,10 +33,6 @@ const (
 	// binfsd mounts itself here:
 	BINFSMNT = "/mnt/binfs/"
 
-	// The directory /tmp/sigmaos-bin/realms/<realm> in the host file
-	// system is mounted here by uprocd:
-	BINCACHE = sp.SIGMAHOME + "/bin/user/"
-
 	DEBUG = false
 )
 
@@ -44,7 +41,7 @@ func BinPath(program string) string {
 }
 
 func binCachePath(program string) string {
-	return BINCACHE + program
+	return chunksrv.BINPROC + program
 }
 
 type binFsRoot struct {
@@ -75,7 +72,7 @@ func (n *binFsNode) String() string {
 
 func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) (fs.InodeEmbedder, error) {
 	var st syscall.Stat_t
-	err := syscall.Stat(BINCACHE, &st)
+	err := syscall.Stat(chunksrv.BINPROC, &st)
 	if err != nil {
 		return nil, err
 	}
@@ -85,18 +82,20 @@ func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.Uprocd
 	return root.newNode(nil, "", 0), nil
 }
 
-func RunBinFS(kernelId, uprocdpid string) error {
+func RunBinFS(kernelId, uprocdpid, smnt string) error {
 	pe := proc.GetProcEnv()
+	mnt, err := sp.NewEndpointFromBytes([]byte(smnt))
+	if err != nil {
+		return err
+	}
 
 	proc.SetSigmaDebugPid("binfsd-" + uprocdpid)
-
-	db.DPrintf(db.BINSRV, "MkDir %q", BINFSMNT)
 
 	if err := os.MkdirAll(BINFSMNT, 0750); err != nil {
 		return err
 	}
 
-	db.DPrintf(db.BINSRV, "%s", db.LsDir(BINCACHE))
+	db.DPrintf(db.BINSRV, "%s mnt %v", db.LsDir(chunksrv.BINPROC), mnt)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -104,7 +103,7 @@ func RunBinFS(kernelId, uprocdpid string) error {
 	}
 
 	pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sc.FsLib}, pn)
+	ch, err := sigmarpcchan.NewSigmaRPCChEndpoint([]*fslib.FsLib{sc.FsLib}, pn, mnt)
 	if err != nil {
 		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
 		return err
@@ -125,8 +124,8 @@ func RunBinFS(kernelId, uprocdpid string) error {
 
 		MountOptions: fuse.MountOptions{
 			Debug:  DEBUG,
-			FsName: BINCACHE, // First column in "df -T": original dir
-			Name:   "binfs",  // Second column in "df -T" will be shown as "fuse." + Name
+			FsName: chunksrv.BINPROC, // First column in "df -T": original dir
+			Name:   "binfs",          // Second column in "df -T" will be shown as "fuse." + Name
 		},
 	}
 	opts.MountOptions.Options = append(opts.MountOptions.Options, "ro")
@@ -160,9 +159,12 @@ type BinSrvCmd struct {
 	out io.WriteCloser
 }
 
-func ExecBinSrv(kernelId, uprocdpid string) (*BinSrvCmd, error) {
-	cmd := exec.Command("binfsd", kernelId, uprocdpid)
-	// cmd.Env = p.GetEnv()
+func ExecBinSrv(kernelId, uprocdpid string, mnt *sp.Tendpoint) (*BinSrvCmd, error) {
+	d, err := mnt.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command("binfsd", kernelId, uprocdpid, string(d))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err

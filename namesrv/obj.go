@@ -38,14 +38,6 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("pn %q di %v parent %v", o.pn, o.di, o.parent)
 }
 
-func (o *Obj) Size() (sp.Tlength, *serr.Err) {
-	return sp.Tlength(len(o.di.Nf.Data)), nil
-}
-
-func (o *Obj) SetSize(sz sp.Tlength) {
-	db.DFatalf("Unimplemented")
-}
-
 func (o *Obj) Path() sp.Tpath {
 	return o.di.Path
 }
@@ -74,17 +66,20 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 			o.di.Nf = nf
 		}
 	}
-	st := o.stat()
+	st, err := o.NewStat()
+	if err != nil {
+		return nil, err
+	}
 	return st, nil
 }
 
-func (o *Obj) stat() *sp.Stat {
-	st := &sp.Stat{}
+func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
+	st := sp.NewStatNull()
 	st.Name = o.pn.Base()
-	st.Qid = sp.NewQidPerm(o.di.Perm, 0, o.di.Path)
-	st.Mode = uint32(o.di.Perm)
-	st.Length = uint64(len(o.di.Nf.Data))
-	return st
+	st.SetQid(sp.NewQidPerm(o.di.Perm, 0, o.di.Path))
+	st.SetMode(o.di.Perm)
+	st.SetLengthInt(len(o.di.Nf.Data))
+	return st, nil
 }
 
 func (o *Obj) putObj(f sp.Tfence, data []byte) *serr.Err {

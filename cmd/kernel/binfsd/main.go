@@ -10,10 +10,10 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		db.DFatalf("%s: Usage <kernelid> <uprocpid>\n", os.Args[0])
+	if len(os.Args) < 4 {
+		db.DFatalf("%s: Usage <kernelid> <uprocpid> <mnt>\n", os.Args[0])
 	}
-	if err := binsrv.RunBinFS(os.Args[1], os.Args[2]); err != nil {
+	if err := binsrv.RunBinFS(os.Args[1], os.Args[2], os.Args[3]); err != nil {
 		db.DFatalf("RunBinFs %v err %v\n", os.Args, err)
 	}
 }

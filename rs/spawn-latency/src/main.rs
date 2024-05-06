@@ -32,7 +32,7 @@ fn main() {
     let spawn_time = UNIX_EPOCH + Duration::from_micros(spawn_time_micros);
 
     print_elapsed_time(&debug_pid, "proc.exec_proc", exec_time, false);
-    print_elapsed_time(&debug_pid, "E2e spawn latency until main", spawn_time, true);
+    print_elapsed_time(&debug_pid, "E2e spawn time since spawn until main", spawn_time, true);
 
     process::exit(1);
 }

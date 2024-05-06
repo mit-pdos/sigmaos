@@ -30,7 +30,7 @@ func np2SpQid(npqid np.Tqid9P) *sp.Tqid {
 	return spqid
 }
 
-func Sp2NpStat(spst *sp.Stat) *np.Stat9P {
+func Sp2NpStat(spst *sp.TstatProto) *np.Stat9P {
 	npst := &np.Stat9P{}
 	npst.Type = uint16(spst.Type)
 	npst.Dev = spst.Dev
@@ -47,7 +47,7 @@ func Sp2NpStat(spst *sp.Stat) *np.Stat9P {
 }
 
 func Np2SpStat(npst np.Stat9P) *sp.Stat {
-	spst := &sp.Stat{}
+	spst := sp.NewStatNull()
 	spst.Type = uint32(npst.Type)
 	spst.Dev = npst.Dev
 	spst.Qid = np2SpQid(npst.Qid)

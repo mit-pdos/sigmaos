@@ -1,6 +1,7 @@
 package chunkclnt
 
 import (
+	"sigmaos/chunk"
 	proto "sigmaos/chunk/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -10,30 +11,32 @@ import (
 )
 
 type ChunkClnt struct {
-	urpcc *unionrpcclnt.UnionRPCClnt
-	done  int32
+	*unionrpcclnt.UnionRPCClnt
+	done int32
 }
 
 func NewChunkClnt(fsl *fslib.FsLib) *ChunkClnt {
 	db.DPrintf(db.CHUNKCLNT, "NewChunkClnt")
 	ckclnt := &ChunkClnt{
-		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.CHUNKD, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
+		UnionRPCClnt: unionrpcclnt.NewUnionRPCClnt(fsl, sp.CHUNKD, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
 	}
+	// Update chunkds, so that unionrpcclnt starts monitoring them
+	ckclnt.updateChunkds()
 	return ckclnt
 }
 
-func (ckclnt *ChunkClnt) UpdateChunkds() {
-	ckclnt.urpcc.UpdateSrvs(false)
+func (ckclnt *ChunkClnt) updateChunkds() {
+	ckclnt.UnionRPCClnt.UpdateSrvs(false)
 }
 
 func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {
-	ckclnt.urpcc.UnregisterSrv(srv)
+	ckclnt.UnionRPCClnt.UnregisterSrv(srv)
 }
 
-func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, paths []string) (*sp.Stat, error) {
-	rpcc, err := ckclnt.urpcc.GetClnt(srvid)
+func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, paths []string) (*sp.Stat, string, error) {
+	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	req := &proto.GetFileStatRequest{
 		Prog:      pn,
@@ -44,15 +47,16 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 	res := &proto.GetFileStatResponse{}
 	if err := rpcc.RPC("ChunkSrv.GetFileStat", req, res); err != nil {
 		db.DPrintf(db.CHUNKCLNT_ERR, "ChunkClnt.GetFileStat %v err %v", req, err)
-		return nil, err
+		return nil, "", err
 	}
-	return res.Stat, nil
+	return sp.NewStatProto(res.Stat), res.Path, nil
 }
 
-func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, *sp.Stat, error) {
-	rpcc, err := ckclnt.urpcc.GetClnt(srvid)
+// For chunksrv to fetch chunk from another chunksrv and return data in b
+func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, string, error) {
+	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
 	if err != nil {
-		return 0, nil, err
+		return 0, "", err
 	}
 	req := &proto.FetchChunkRequest{
 		Prog:      pn,
@@ -67,15 +71,16 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 	res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	if err := rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
 		db.DPrintf(db.CHUNKCLNT_ERR, "ChunkClnt.FetchChunk %v err %v", req, err)
-		return 0, nil, err
+		return 0, "", err
 	}
-	return sp.Tsize(res.Size), res.Stat, nil
+	return sp.Tsize(res.Size), res.Path, nil
 }
 
-func (ckclnt *ChunkClnt) Fetch(srvid string, prog string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string) (sp.Tsize, error) {
-	rpcc, err := ckclnt.urpcc.GetClnt(srvid)
+// For uprocsrv to ask chunksrv to fetch ck, but not return data to uprocsrv
+func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string) (sp.Tsize, string, error) {
+	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	req := &proto.FetchChunkRequest{
 		Prog:      prog,
@@ -89,7 +94,22 @@ func (ckclnt *ChunkClnt) Fetch(srvid string, prog string, pid sp.Tpid, realm sp.
 	res := &proto.FetchChunkResponse{}
 	if err := rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
 		db.DPrintf(db.CHUNKCLNT_ERR, "ChunkClnt.Fetch %v err %v", req, err)
-		return 0, err
+		return 0, "", err
 	}
-	return sp.Tsize(res.Size), nil
+	return sp.Tsize(res.Size), res.Path, nil
+}
+
+func (ckclnt *ChunkClnt) FetchBinary(srvid, prog string, pid sp.Tpid, realm sp.Trealm, reqsz sp.Tsize, path []string) (string, error) {
+	n := (reqsz / chunk.CHUNKSZ) + 1
+	db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %v %d", prog, reqsz, n)
+	last := ""
+	for ck := 0; ck < int(n); ck++ {
+		if sz, path, err := ckclnt.Fetch(srvid, prog, pid, realm, ck, reqsz, path); err != nil {
+			return "", err
+		} else {
+			db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %d %v %q", prog, ck, sz, path)
+			last = path
+		}
+	}
+	return last, nil
 }

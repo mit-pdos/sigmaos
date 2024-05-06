@@ -48,6 +48,14 @@ func newClone(mfs *memfssrv.MemFs, dir string, news NewSessionF, d sps.DetachSes
 	return nil
 }
 
+func (c *Clone) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := c.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
+}
+
 // XXX clean up in case of error
 func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	c.mu.Lock()

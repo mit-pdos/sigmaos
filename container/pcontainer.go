@@ -12,6 +12,7 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	"sigmaos/cgroup"
+	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/mem"
 	"sigmaos/perf"
@@ -76,8 +77,8 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 		// user bin dir.
 		mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   path.Join("/tmp/sigmaos-bin", kernelId),
-			Target:   path.Join(sp.SIGMAHOME, "all-realm-bin"),
+			Source:   chunksrv.PathHostKernel(kernelId),
+			Target:   chunksrv.ROOTBINCONTAINER,
 			ReadOnly: false,
 		},
 		// perf output dir

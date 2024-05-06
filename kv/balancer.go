@@ -202,9 +202,17 @@ type Ctl struct {
 	bl *Balancer
 }
 
-func newCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
+func newCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.FsObj {
 	i := inode.NewInode(ctx, sp.DMDEVICE, parent)
 	return &Ctl{i, bl}
+}
+
+func (c *Ctl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := c.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 // XXX call balance() repeatedly for each server passed in to write

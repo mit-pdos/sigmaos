@@ -20,7 +20,7 @@ type Protsrv interface {
 	WriteF(*sp.TwriteF, []byte, *sp.Rwrite) *sp.Rerror
 	Remove(*sp.Tremove, *sp.Rremove) *sp.Rerror
 	RemoveFile(*sp.Tremovefile, *sp.Rremove) *sp.Rerror
-	Stat(*sp.Tstat, *sp.Rstat) *sp.Rerror
+	Stat(*sp.Trstat, *sp.Rrstat) *sp.Rerror
 	Wstat(*sp.Twstat, *sp.Rwstat) *sp.Rerror
 	Renameat(*sp.Trenameat, *sp.Rrenameat) *sp.Rerror
 	GetFile(*sp.Tgetfile, *sp.Rread) ([]byte, *sp.Rerror)
@@ -93,8 +93,8 @@ func Dispatch(protsrv Protsrv, msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, ses
 		reply := &sp.Rremove{}
 		err := protsrv.RemoveFile(req, reply)
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
-	case *sp.Tstat:
-		reply := &sp.Rstat{}
+	case *sp.Trstat:
+		reply := &sp.Rrstat{}
 		err := protsrv.Stat(req, reply)
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Twstat:

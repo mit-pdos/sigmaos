@@ -315,7 +315,7 @@ func TestUnionFile(t *testing.T) {
 			}
 			file = file[len(b):]
 		}
-		assert.Equal(ts.T, int(st.Length), n)
+		assert.Equal(ts.T, int(st.Tlength()), n)
 	}
 
 	ts.Shutdown()

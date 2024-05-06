@@ -49,7 +49,7 @@ func NewProcMgr(amgr auth.AuthMgr, sc *sigmaclnt.SigmaClnt, kernelId string) *Pr
 
 // Proc has been spawned.
 func (mgr *ProcMgr) Spawn(p *proc.Proc) {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Schedd proc spawn time %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Schedd proc time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	mgr.pstate.spawn(p)
 }
 
@@ -67,7 +67,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	// Set the proc's kernel ID, now that a kernel has been selected to run the
 	// proc.
 	p.SetKernelID(mgr.kernelId, true)
-	// Set the schedd IP for the proc, so it can mount this schedd in one RPC
+	// Set the schedd mount for the proc, so it can mount this schedd in one RPC
 	// (without walking down to it).
 	p.SetScheddEndpoint(mgr.mfs.GetSigmaPSrvEndpoint())
 	// Set the named mount point if this isn't a privileged proc. If we were to
@@ -121,7 +121,7 @@ func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
 	return mgr.pstate.GetProcs()
 }
 
-func (mgr *ProcMgr) WarmUprocd(realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
+func (mgr *ProcMgr) WarmUprocd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
 	start := time.Now()
 	defer func(start time.Time) {
 		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] WarmUprocd latency: %v", realm, prog, time.Since(start))
@@ -132,7 +132,7 @@ func (mgr *ProcMgr) WarmUprocd(realm sp.Trealm, prog string, path []string, ptyp
 		db.DPrintf(db.ERROR, "WarmStartUprocd %v err %v", realm, err)
 		return err
 	}
-	if uprocErr, childErr := mgr.updm.WarmProc(realm, prog, path, ptype); childErr != nil {
+	if uprocErr, childErr := mgr.updm.WarmProc(pid, realm, prog, path, ptype); childErr != nil {
 		return childErr
 	} else if uprocErr != nil {
 		// Unexpected error with uproc server.

@@ -50,10 +50,9 @@ func (pathc *PathClnt) getNamedEndpoint(realm sp.Trealm) (*sp.Tendpoint, *serr.E
 			db.DPrintf(db.NAMED_ERR, "getNamedEndpoint [%v] GetFile err %v", realm, err)
 			return &sp.Tendpoint{}, serr.NewErrError(err)
 		}
-		var sr *serr.Err
-		ep, sr = sp.NewEndpointFromBytes(target)
-		if sr != nil {
-			return &sp.Tendpoint{}, sr
+		ep, err = sp.NewEndpointFromBytes(target)
+		if err != nil {
+			return &sp.Tendpoint{}, serr.NewErrError(err)
 		}
 	}
 	// Cache the newly resolved mount

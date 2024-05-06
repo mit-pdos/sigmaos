@@ -4,7 +4,6 @@
 package uprocsrv
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -29,7 +28,6 @@ import (
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
@@ -157,15 +155,13 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	// Start binfsd now; when uprocds gets assigned to a realm, then
 	// uprocd mounts the realm's bin directory that binfs will serve
 	// from.
-	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String())
+	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ups.ssrv.GetSigmaPSrvEndpoint())
 	if err != nil {
 		db.DPrintf(db.ERROR, "ExecBinSrv err %v\n", err)
 		return err
 	}
 
 	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
-	// Update chunkds, so that unionrpcclnt starts monitoring them
-	ups.ckclnt.UpdateChunkds()
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
@@ -282,14 +278,14 @@ func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.Ass
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
-	db.DPrintf(db.SPAWN_LAT, "[%v] UprocSrv.Run recvd proc lat: %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] UprocSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	cmd, err := container.StartUProc(uproc, ups.netproxy)
 	if err != nil {
 		return err
@@ -315,19 +311,14 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	if err := ups.assignToRealm(sp.Trealm(req.RealmStr), sp.NO_PID); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
-	st, err := chunksrv.Lookup(ups.sc, req.Program, req.SigmaPath)
+	pid := sp.Tpid(req.PidStr)
+	r := sp.Trealm(req.RealmStr)
+	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.SigmaPath)
 	if err != nil {
 		return err
 	}
-	n := (st.Length / chunksrv.CHUNKSZ) + 1
-	db.DPrintf(db.UPROCD, "WarmProc lookup %q %v %d", req.Program, st, n)
-	for ck := 0; ck < int(n); ck++ {
-		reqsz := sp.Tsize(st.Length)
-		if sz, err := ups.ckclnt.Fetch(ups.kernelId, req.Program, sp.Tpid(rand.String(4)), sp.Trealm(req.RealmStr), ck, reqsz, req.SigmaPath); err != nil {
-			return err
-		} else {
-			db.DPrintf(db.UPROCD, "WarmProc fetch %q %d %v", req.Program, ck, sz)
-		}
+	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, st.Tsize(), req.SigmaPath); err != nil {
+		return err
 	}
 	res.OK = true
 	return nil
@@ -335,14 +326,8 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 
 // Make and mount realm bin directory for [binsrv].
 func mountRealmBinDir(realm sp.Trealm) error {
-	dir := path.Join(sp.SIGMAHOME, "all-realm-bin", realm.String())
-
-	// fails is already exist and if it fails for another reason Mount will fail
-	if err := os.Mkdir(dir, 0750); err != nil {
-		db.DPrintf(db.UPROCD, "Mkdir %q err %v\n", dir, err)
-	}
-
-	mnt := path.Join(sp.SIGMAHOME, "bin", "user")
+	dir := chunksrv.MkPathBinRealm(realm)
+	mnt := chunksrv.PathBinProc()
 
 	db.DPrintf(db.UPROCD, "mountRealmBinDir: %q %q\n", dir, mnt)
 
@@ -358,19 +343,19 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 
 	pe, ok := ups.procs.Lookup(int(req.Pid))
 	if !ok || pe.proc == nil {
-		db.DFatalf("Fetch: procs.Lookup %d\n", req.Pid)
+		db.DFatalf("Fetch: procs.Lookup %v\n", req)
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: %q %v ck %d sinceSpawn %v", req.Prog, pe.proc.GetSigmaPath()[0], pe.proc.GetPid(), req.ChunkId, time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch start: %q ck %d path %v time since spawn %v", pe.proc.GetPid(), ups.kernelId, req.ChunkId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
 	start := time.Now()
-	sz, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
+	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
 	res.Size = uint64(sz)
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch: done ck %d sz %d sinceSpawn %v fetchlat %v", req.Prog, req.ChunkId, sz, time.Since(pe.proc.GetSpawnTime()), time.Since(start))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch done: %q ck %d sz %d path %q fetch lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, req.ChunkId, sz, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 
 	return nil
 }
@@ -380,37 +365,19 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 
 	pe, alloc := ups.procs.Alloc(int(req.Pid), newProcEntry(nil))
 	if alloc {
-		db.DPrintf(db.UPROCD, "Lookup wait for pid %v %v\n", req.Pid, pe)
+		db.DPrintf(db.UPROCD, "Lookup wait for pid %v proc %v\n", req.Pid, pe)
 		pe.procWait()
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup %v %v sinceSpawn %v", pe.proc.GetPid(), pe.proc.GetSigmaPath(), req.Prog, time.Since(pe.proc.GetSpawnTime()))
 
-	start := time.Now()
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup start %v paths %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
+
 	paths := pe.proc.GetSigmaPath()
-	var st *sp.Stat
-	var err error
-	if chunksrv.IsChunkSrvPath(paths[0]) {
-		cksrv := path.Base(paths[0])
-		// XXX tolerate failures?
-		st, err = ups.ckclnt.GetFileStat(cksrv, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), paths)
-		if err != nil {
-			return err
-		}
-	} else {
-		st, err = chunksrv.Lookup(ups.sc, req.Prog, paths)
-		if err != nil {
-			return err
-		}
+	start := time.Now()
+	st, path, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), paths)
+	if err != nil {
+		return err
 	}
-	// sanity check
-	if st == nil {
-		db.DPrintf(db.ERROR, "Error st is nil %v", req)
-		return fmt.Errorf("Nil stat for lookup: %v", req)
-	}
-	res.Stat = st
-	db.DPrintf(db.SPAWN_LAT, "[%v] GetFileStat path %v prog %v lat %v sinceSpawn %v", pe.proc.GetPid(), pe.proc.GetSigmaPath(), req.Prog, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
-
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done sinceSpawn %v", req.Prog, time.Since(pe.proc.GetSpawnTime()))
-
+	res.Stat = st.StatProto()
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done %v path %q GetFileStat lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 	return nil
 }

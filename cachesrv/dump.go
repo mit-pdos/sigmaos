@@ -19,10 +19,19 @@ type cacheSession struct {
 	sid    sessp.Tsession
 }
 
-func (s *CacheSrv) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
+func (s *CacheSrv) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.FsObj, *serr.Err) {
 	cs := &cacheSession{mfs.NewDevInode(), s.shards, sid}
 	db.DPrintf(db.CACHESRV, "newSession %v %p\n", cs.shards, cs)
 	return cs, nil
+}
+
+func (cs *cacheSession) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := cs.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	st.SetLength(sp.Tlength(len(cs.shards)))
+	return st, nil
 }
 
 // XXX incremental read

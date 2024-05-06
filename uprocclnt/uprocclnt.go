@@ -59,11 +59,12 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 }
 
-func (clnt *UprocdClnt) WarmProc(realm sp.Trealm, prog string, path []string) (uprocErr error, childErr error) {
+func (clnt *UprocdClnt) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, path []string) (uprocErr error, childErr error) {
 	req := &proto.WarmBinRequest{
 		RealmStr:  realm.String(),
 		Program:   prog,
 		SigmaPath: path,
+		PidStr:    pid.String(),
 	}
 	res := &proto.RunResult{}
 	if err := clnt.RPC("UprocSrv.WarmProc", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
@@ -102,7 +103,7 @@ func (clnt *UprocdClnt) Lookup(pn string, pid uint32) (*sp.Stat, error) {
 		return nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] uprocdclnt.Lookup pid %d %v", pn, pid, time.Since(s))
-	return res.Stat, nil
+	return sp.NewStatProto(res.Stat), nil
 }
 
 func (clnt *UprocdClnt) Assign() error {

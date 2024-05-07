@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -17,13 +17,13 @@ type NewConnI interface {
 
 type NetServer struct {
 	pe      *proc.ProcEnv
-	npc     *netsigma.NetProxyClnt
-	mnt     *sp.Tmount
+	npc     *netproxy.NetProxyClnt
+	ep      *sp.Tendpoint
 	l       net.Listener
 	newConn NewConnI
 }
 
-func NewNetServer(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, addr *sp.Taddr, newConn NewConnI) *NetServer {
+func NewNetServer(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt, addr *sp.Taddr, newConn NewConnI) *NetServer {
 	srv := &NetServer{
 		pe:      pe,
 		newConn: newConn,
@@ -31,24 +31,24 @@ func NewNetServer(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, addr *sp.Taddr, 
 	}
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
-	mnt, l, err := npc.Listen(addr)
+	ep, l, err := npc.Listen(addr)
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}
-	srv.mnt = mnt
-	srv.mnt = mnt
+	srv.ep = ep
+	srv.ep = ep
 	srv.l = l
-	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.mnt)
+	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.ep)
 	go srv.runsrv(l)
 	return srv
 }
 
-func (srv *NetServer) GetMount() *sp.Tmount {
-	return srv.mnt
+func (srv *NetServer) GetEndpoint() *sp.Tendpoint {
+	return srv.ep
 }
 
 func (srv *NetServer) CloseListener() error {
-	db.DPrintf(db.NETSRV, "Close %v\n", srv.mnt)
+	db.DPrintf(db.NETSRV, "Close %v\n", srv.ep)
 	return srv.l.Close()
 }
 
@@ -65,5 +65,5 @@ func (srv *NetServer) runsrv(l net.Listener) {
 }
 
 func (srv *NetServer) String() string {
-	return fmt.Sprintf("{ mnt: %v }", srv.mnt)
+	return fmt.Sprintf("{ ep: %v }", srv.ep)
 }

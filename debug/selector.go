@@ -209,27 +209,30 @@ const (
 
 // Client-side Infrastructure
 const (
-	NETCLNT          Tselector = "NETCLNT"
-	NETCLNT_ERR                = NETCLNT + ERR
-	NETPROXYCLNT               = "NETPROXYCLNT"
-	NETPROXYCLNT_ERR           = "NETPROXYCLNT" + ERR
-	DEMUXCLNT                  = "DEMUXCLNT"
-	PROTCLNT                   = "PROTCLNT"
-	PROTCLNT_ERR               = "PROTCLNT" + ERR
-	SESS_CLNT_Q                = "SESS_CLNT_Q"
-	SESSCLNT                   = "SESSCLNT"
-	SESSCLNT_ERR               = SESSCLNT + ERR
-	FIDCLNT                    = "FIDCLNT"
-	FIDCLNT_ERR                = FIDCLNT + ERR
-	RPCCLNT                    = "RPCCLNT"
-	MOUNT                      = "MOUNT"
-	MOUNT_ERR                  = MOUNT + ERR
-	FDCLNT                     = "FDCLNT"
-	PATHCLNT                   = "PATHCLNT"
-	PATHCLNT_ERR               = PATHCLNT + ERR
-	WALK                       = "WALK"
-	WALK_ERR                   = "WALK" + ERR
-	SVCMOUNT                   = "SVCMOUNT"
+	NETCLNT           Tselector = "NETCLNT"
+	NETCLNT_ERR                 = NETCLNT + ERR
+	NETPROXYCLNT                = "NETPROXYCLNT"
+	NETPROXYCLNT_ERR            = "NETPROXYCLNT" + ERR
+	NETPROXYTRANS               = "NETPROXYTRANS"
+	NETPROXYTRANS_ERR           = "NETPROXYTRANS" + ERR
+	DEMUXCLNT                   = "DEMUXCLNT"
+	DEMUXCLNT_ERR               = "DEMUXCLNT" + ERR
+	PROTCLNT                    = "PROTCLNT"
+	PROTCLNT_ERR                = "PROTCLNT" + ERR
+	SESS_CLNT_Q                 = "SESS_CLNT_Q"
+	SESSCLNT                    = "SESSCLNT"
+	SESSCLNT_ERR                = SESSCLNT + ERR
+	FIDCLNT                     = "FIDCLNT"
+	FIDCLNT_ERR                 = FIDCLNT + ERR
+	RPCCLNT                     = "RPCCLNT"
+	MOUNT                       = "MOUNT"
+	MOUNT_ERR                   = MOUNT + ERR
+	FDCLNT                      = "FDCLNT"
+	PATHCLNT                    = "PATHCLNT"
+	PATHCLNT_ERR                = PATHCLNT + ERR
+	WALK                        = "WALK"
+	WALK_ERR                    = "WALK" + ERR
+	SVCMOUNT                    = "SVCMOUNT"
 )
 
 // Server-side Infrastructure
@@ -238,6 +241,7 @@ const (
 	AUTH_ERR                = AUTH + ERR
 	NETSRV                  = "NETSRV"
 	DEMUXSRV                = "DEMUXSRV"
+	DEMUXSRV_ERR            = "DEMUXSRV" + ERR
 	REPLRAFT                = "REPLRAFT"
 	RAFT_TIMING             = "RAFT_TIMING"
 	REPLY_TABLE             = "REPLY_TABLE"

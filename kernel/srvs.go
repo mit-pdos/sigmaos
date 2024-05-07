@@ -133,7 +133,7 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 	}
 	p.GetProcEnv().SetRealm(sp.ROOTREALM, k.Param.Overlays)
 	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
+	if err := k.amgr.MintAndSetProcToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
@@ -208,7 +208,7 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
 	p.SetAllowedPaths(sp.ALL_PATHS)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
-	if err := k.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
+	if err := k.amgr.MintAndSetProcToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}
@@ -247,12 +247,12 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		// Use 127.0.0.1, because only the local schedd should be talking
 		// to uprocd.
 		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
-		mnt := sp.NewMount([]*sp.Taddr{addr}, sp.ROOTREALM)
-		if err := k.as.MintAndSetMountToken(mnt); err != nil {
+		ep := sp.NewEndpoint([]*sp.Taddr{addr}, sp.ROOTREALM)
+		if err := k.amgr.MintAndSetEndpointToken(ep); err != nil {
 			return nil, err
 		}
-		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
-		if err := k.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
+		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
+		if err := k.MkEndpointFile(pn, ep, sp.NoLeaseId); err != nil {
 			return nil, err
 		}
 		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s", pn, pm)

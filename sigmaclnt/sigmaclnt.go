@@ -10,7 +10,7 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/leaseclnt"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclntclnt"
@@ -58,7 +58,7 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 	return fslib.NewFsLibAPI(pe, fidc.GetNetProxyClnt(), s)
 }
 
-func NewFsLib(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) (*fslib.FsLib, error) {
+func NewFsLib(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt) (*fslib.FsLib, error) {
 	return newFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
 }
 
@@ -100,13 +100,13 @@ func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaCl
 	}, nil
 }
 
-func NewSigmaClntFsLib(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) (*SigmaClnt, error) {
+func NewSigmaClntFsLib(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt) (*SigmaClnt, error) {
 	return NewSigmaClntFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
 }
 
 func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
-	sc, err := NewSigmaClntFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
+	sc, err := NewSigmaClntFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
@@ -126,7 +126,7 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
 func NewSigmaClntRootInit(pe *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := NewSigmaClntFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
+	sc, err := NewSigmaClntFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -149,20 +149,20 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	return sc.FsLib.Close()
 }
 
-func (sc *SigmaClntKernel) SetAuthSrv(as auth.AuthSrv) {
-	sc.GetNetProxyClnt().SetAuthSrv(as)
+func (sc *SigmaClntKernel) SetAuthMgr(amgr auth.AuthMgr) {
+	sc.GetNetProxyClnt().SetAuthMgr(amgr)
 }
 
-func (sc *SigmaClntKernel) GetAuthSrv() auth.AuthSrv {
-	return sc.GetNetProxyClnt().GetAuthSrv()
+func (sc *SigmaClntKernel) GetAuthMgr() auth.AuthMgr {
+	return sc.GetNetProxyClnt().GetAuthMgr()
 }
 
-func (sc *SigmaClnt) GetAuthSrv() auth.AuthSrv {
-	return sc.GetNetProxyClnt().GetAuthSrv()
+func (sc *SigmaClnt) GetAuthMgr() auth.AuthMgr {
+	return sc.GetNetProxyClnt().GetAuthMgr()
 }
 
-func (sc *SigmaClnt) SetAuthSrv(as auth.AuthSrv) {
-	sc.GetNetProxyClnt().SetAuthSrv(as)
+func (sc *SigmaClnt) SetAuthMgr(amgr auth.AuthMgr) {
+	sc.GetNetProxyClnt().SetAuthMgr(amgr)
 }
 
 func (sc *SigmaClnt) ClntExitOK() {

@@ -14,17 +14,17 @@ import (
 )
 
 type GroupConfig struct {
-	SigmaAddrs []sp.Taddrs
-	RaftAddrs  []string
+	SigmaEPs []*sp.Tendpoint
+	RaftEPs  []*sp.Tendpoint
 }
 
 func (cfg *GroupConfig) String() string {
-	return fmt.Sprintf("&{ SigmaAddrs:%v RaftAddrs:%v }", cfg.SigmaAddrs, cfg.RaftAddrs)
+	return fmt.Sprintf("&{ SigmaEPs:%v RaftEPs:%v }", cfg.SigmaEPs, cfg.RaftEPs)
 }
 
 func (cfg *GroupConfig) RaftInitialized() bool {
-	for _, s := range cfg.RaftAddrs {
-		if s == "" {
+	for _, ep := range cfg.RaftEPs {
+		if ep == nil {
 			return false
 		}
 	}
@@ -37,8 +37,8 @@ func newConfig(nrepl int) *GroupConfig {
 		n = nrepl
 	}
 	cfg := &GroupConfig{
-		SigmaAddrs: make([]sp.Taddrs, n),
-		RaftAddrs:  make([]string, n),
+		SigmaEPs: make([]*sp.Tendpoint, n),
+		RaftEPs:  make([]*sp.Tendpoint, n),
 	}
 	return cfg
 }
@@ -102,17 +102,20 @@ func (g *Group) newRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *re
 
 	pn := grpConfPath(g.jobdir, g.grp)
 
-	ip := cfg.RaftAddrs[myid]
+	var addr *sp.Taddr
+	ep := cfg.RaftEPs[myid]
 	initial := false
-	if ip == "" {
+	if ep == nil {
 		initial = true
-		ip = g.ip + ":0"
+		addr = sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, g.ProcEnv().GetNet())
+	} else {
+		addr = ep.Addrs()[0]
 	}
-	raftCfg = replraft.NewRaftConfig(g.ProcEnv(), myid, ip, initial)
+	raftCfg = replraft.NewRaftConfig(g.ProcEnv(), g.GetNetProxyClnt(), myid, addr, initial)
 
 	if initial {
 		// Get the listener address selected by raft and advertise it to group (if initial)
-		cfg.RaftAddrs[myid] = raftCfg.ReplAddr()
+		cfg.RaftEPs[myid] = raftCfg.ReplEP()
 		db.DPrintf(db.KVGRP, "%v:%v Writing cluster config: %v at %v", g.grp, myid, cfg, pn)
 		if err := g.writeGroupConfig(pn, cfg); err != nil {
 			db.DFatalf("registerInConfig err %v", err)
@@ -120,7 +123,7 @@ func (g *Group) newRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *re
 		cfg = g.waitRaftConfig(cfg)
 	}
 
-	raftCfg.SetPeerAddrs(cfg.RaftAddrs)
+	raftCfg.SetPeerEPs(cfg.RaftEPs)
 
 	return cfg, raftCfg
 }
@@ -168,7 +171,7 @@ func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) (*Gr
 	}
 	g.ssrv = ssrv
 
-	cfg.SigmaAddrs[g.myid] = []*sp.Taddr{ssrv.GetMount().Addrs()[0]}
+	cfg.SigmaEPs[g.myid] = ssrv.GetEndpoint()
 
 	pn := grpConfPath(g.jobdir, g.grp)
 

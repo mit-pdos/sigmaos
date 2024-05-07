@@ -52,6 +52,6 @@ for vm in $vms; do
 #  sudo apt install -y apparmor-utils
 #  sudo aa-status
 #ls -lha /tmp/sigmaos-data/wiki-20G
-df -h
+ls ~/8.jpg
 ENDSSH
 done

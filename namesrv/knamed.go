@@ -9,7 +9,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -45,7 +45,7 @@ func RunKNamed(args []string) error {
 	}
 	defer p.Done()
 
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		db.DFatalf("NewSigmaClntFsLib: err %v", err)
 	}
@@ -76,14 +76,14 @@ func RunKNamed(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	mnt, err := nd.newSrv()
+	ep, err := nd.newSrv()
 	if err != nil {
 		db.DFatalf("Error newSrv %v\n", err)
 	}
 
-	db.DPrintf(db.NAMED, "newSrv %v mnt %v", nd.realm, mnt)
+	db.DPrintf(db.NAMED, "newSrv %v ep %v", nd.realm, ep)
 
-	if err := nd.fs.SetRootNamed(mnt); err != nil {
+	if err := nd.fs.SetRootNamed(ep); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
 
@@ -100,7 +100,7 @@ func RunKNamed(args []string) error {
 	}
 	r.Close()
 
-	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", pe.GetPID(), nd.realm, mnt, string(data))
+	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", pe.GetPID(), nd.realm, ep, string(data))
 
 	nd.resign()
 

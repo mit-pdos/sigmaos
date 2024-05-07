@@ -23,8 +23,8 @@ func NewPublicAddrs(outerIP sp.Tip, pb PortBinding, netns string, laddr *sp.Tadd
 	return addrs
 }
 
-func NewPublicMount(outerIP sp.Tip, pb PortBinding, net string, lmnt *sp.Tmount) *sp.Tmount {
-	return sp.NewMount(NewPublicAddrs(outerIP, pb, net, lmnt.Addrs()[0]), lmnt.GetRealm())
+func NewPublicEndpoint(outerIP sp.Tip, pb PortBinding, net string, lmnt *sp.Tendpoint) *sp.Tendpoint {
+	return sp.NewEndpoint(NewPublicAddrs(outerIP, pb, net, lmnt.Addrs()[0]), lmnt.GetRealm())
 }
 
 type PortBinding struct {

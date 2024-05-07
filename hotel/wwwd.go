@@ -114,7 +114,7 @@ func RunWww(job string, public bool) error {
 			db.DFatalf("AllocPort err %v", err)
 		}
 		www.pc = pc
-		mnt, l, err := www.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, www.ProcEnv().GetNet()))
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, www.ProcEnv().GetNet()))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -123,13 +123,13 @@ func RunWww(job string, public bool) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		mnt.Addrs()[0].IPStr = pi.HostIP.String()
-		mnt.Addrs()[0].PortInt = uint32(pi.PBinding.HostPort)
-		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, www.ProcEnv().GetNet(), mnt); err != nil {
+		ep.Addrs()[0].IPStr = pi.HostIP.String()
+		ep.Addrs()[0].PortInt = uint32(pi.PBinding.HostPort)
+		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, www.ProcEnv().GetNet(), ep); err != nil {
 			db.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
-		mnt, l, err := www.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, www.ProcEnv().GetNet()))
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, www.ProcEnv().GetNet()))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -139,9 +139,9 @@ func RunWww(job string, public bool) error {
 		go http.Serve(l, mux)
 		//		}
 
-		db.DPrintf(db.ALWAYS, "Hotel advertise %v", mnt)
-		if err = www.MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
-			db.DFatalf("MkMountFile %v", err)
+		db.DPrintf(db.ALWAYS, "Hotel advertise %v", ep)
+		if err = www.MkEndpointFile(JobHTTPAddrsPath(job), ep, sp.NoLeaseId); err != nil {
+			db.DFatalf("MkEndpointFile %v", err)
 		}
 	}
 

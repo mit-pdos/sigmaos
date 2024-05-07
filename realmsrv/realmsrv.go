@@ -17,7 +17,7 @@ import (
 	"sigmaos/kernelclnt"
 	"sigmaos/keyclnt"
 	"sigmaos/keys"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
 	"sigmaos/realmsrv/proto"
@@ -56,7 +56,7 @@ type RealmSrv struct {
 	sd           *scheddclnt.ScheddClnt
 	mkc          *kernelclnt.MultiKernelClnt
 	kc           *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
-	as           auth.AuthSrv
+	amgr         auth.AuthMgr
 	masterPubKey auth.PublicKey
 	pubkey       auth.PublicKey
 	privkey      auth.PrivateKey
@@ -78,18 +78,18 @@ func RunRealmSrv(netproxy bool, masterPubKey auth.PublicKey, pubkey auth.PublicK
 		pubkey,
 		privkey,
 	)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
+		db.DPrintf(db.ERROR, "Error NewAuthMgr %v", err)
 		return err
 	}
-	sc.SetAuthSrv(as)
+	sc.SetAuthMgr(amgr)
 	rs := &RealmSrv{
 		netproxy:     netproxy,
 		lastNDPort:   MIN_PORT,
 		realms:       make(map[sp.Trealm]*Realm),
 		masterPubKey: masterPubKey,
-		as:           as,
+		amgr:         amgr,
 		pubkey:       pubkey,
 		privkey:      privkey,
 	}
@@ -149,7 +149,7 @@ func (rm *RealmSrv) bootstrapNamedKeys(p *proc.Proc) error {
 		p.Args...,
 	)
 	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := rm.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
+	if err := rm.amgr.MintAndSetProcToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
@@ -198,45 +198,45 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	db.DPrintf(db.REALMD, "RealmSrv.Make named ready to serve for %v", rid)
 	pe := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
 	pe.SetAllowedPaths(sp.ALL_PATHS)
-	if err := rm.as.MintAndSetProcToken(pe); err != nil {
+	if err := rm.amgr.MintAndSetProcToken(pe); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error NewSigmaClntRealm: %v", err)
 		return err
 	}
 	// Make some rootrealm services available in new realm
-	namedMount, err := rm.sc.GetNamedMount()
+	namedEndpoint, err := rm.sc.GetNamedEndpoint()
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", err)
+		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
 		return err
 	}
-	// Mount some service union dirs from the root realm
+	// Endpoint some service union dirs from the root realm
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
-		mnt := sp.NewMount(namedMount.Addrs(), rid)
-		mnt.SetTree(s)
-		if err := rm.sc.GetAuthSrv().MintAndSetMountToken(mnt); err != nil {
-			db.DPrintf(db.ERROR, "Error mint & set mount token: %v", err)
+		ep := sp.NewEndpoint(namedEndpoint.Addrs(), rid)
+		ep.SetTree(s)
+		if err := rm.sc.GetAuthMgr().MintAndSetEndpointToken(ep); err != nil {
+			db.DPrintf(db.ERROR, "Error mint & set endpoint token: %v", err)
 			return err
 		}
-		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
-		if err := sc.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
-			db.DPrintf(db.ERROR, "MountService %v err %v\n", pn, err)
+		db.DPrintf(db.REALMD, "Link %v at %s\n", ep, pn)
+		if err := sc.MkEndpointFile(pn, ep, sp.NoLeaseId); err != nil {
+			db.DPrintf(db.ERROR, "EndpointService %v err %v\n", pn, err)
 			return err
 		}
 	}
-	// Mount keyd into the user realm
-	keydMnt, err := rm.sc.ReadMount(sp.KEYD)
+	// Endpoint keyd into the user realm
+	keydMnt, err := rm.sc.ReadEndpoint(sp.KEYD)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error ReadMount %v: %v", sp.KEYD, err)
+		db.DPrintf(db.ERROR, "Error ReadEndpoint %v: %v", sp.KEYD, err)
 		return err
 	}
 	db.DPrintf(db.REALMD, "Link %v at %s", keydMnt, sp.KEYD)
-	if err := sc.MkMountFile(sp.KEYD, keydMnt, sp.NoLeaseId); err != nil {
-		db.DPrintf(db.ERROR, "MountService %v err %v\n", sp.KEYD, err)
+	if err := sc.MkEndpointFile(sp.KEYD, keydMnt, sp.NoLeaseId); err != nil {
+		db.DPrintf(db.ERROR, "EndpointService %v err %v\n", sp.KEYD, err)
 		return err
 	}
 	// Make some realm dirs
@@ -244,7 +244,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		pn := path.Join(sp.NAMED, s)
 		db.DPrintf(db.REALMD, "Mkdir %v", pn)
 		if err := sc.MkDir(pn, 0777); err != nil {
-			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
+			db.DPrintf(db.REALMD, "EndpointService %v err %v\n", pn, err)
 			return err
 		}
 	}

@@ -120,8 +120,8 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 		ch <- true
 	}()
 
-	mnt := ssrv.GetMount()
-	b, error := mnt.Marshal()
+	ep := ssrv.GetEndpoint()
+	b, error := ep.Marshal()
 	if error != nil {
 		db.DFatalf("Marshal failed %v\n", error)
 	}
@@ -132,8 +132,8 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 
 	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.ProcEnv().GetPID(), bl.lc.Fence())
 
-	if err := bl.MkMountFile(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
-		db.DFatalf("MkMountFile %v at %v err %v\n", mnt, KVBalancer(bl.job), err)
+	if err := bl.MkEndpointFile(KVBalancer(bl.job), ep, bl.lc.Lease()); err != nil {
+		db.DFatalf("MkEndpointFile %v at %v err %v\n", ep, KVBalancer(bl.job), err)
 	}
 
 	// first epoch is used to create a functional system (e.g.,

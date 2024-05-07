@@ -48,19 +48,19 @@ type SigmaOS interface {
 	DirWait(fd int) error
 
 	// Mounting
-	MountTree(mnt *sp.Tmount, tree, mount string) error
-	IsLocalMount(mnt *sp.Tmount) (bool, error)
+	MountTree(ep *sp.Tendpoint, tree, mount string) error
+	IsLocalMount(ep *sp.Tendpoint) (bool, error)
 	PathLastMount(path string) (path.Path, path.Path, error)
-	GetNamedMount() (*sp.Tmount, error)
-	NewRootMount(path string, mntname string) error
+	GetNamedEndpoint() (*sp.Tendpoint, error)
+	NewRootMount(path string, epname string) error
 
-	// Done using SigmaOS, which detaches from any mounted servers
+	// Done using SigmaOS, which detaches from any endpointed servers
 	// (which removes ephemeral files) and may close the session with
 	// those servers.
 	Close() error
 
 	// Debugging
-	SetLocalMount(mnt *sp.Tmount, port sp.Tport)
+	SetLocalMount(ep *sp.Tendpoint, port sp.Tport)
 	Mounts() []string
 	Detach(path string) error
 	Disconnect(path string) error

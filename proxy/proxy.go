@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/fidclnt"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
@@ -44,10 +44,10 @@ func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
 type Npd struct {
 	lip sp.Tip
 	pe  *proc.ProcEnv
-	npc *netsigma.NetProxyClnt
+	npc *netproxy.NetProxyClnt
 }
 
-func NewNpd(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, lip sp.Tip) *Npd {
+func NewNpd(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt, lip sp.Tip) *Npd {
 	return &Npd{
 		lip: lip,
 		pe:  pe,
@@ -75,7 +75,7 @@ type NpSess struct {
 	cid       sp.TclntId
 }
 
-func newNpSess(pe *proc.ProcEnv, npcs *netsigma.NetProxyClnt, lip string) *NpSess {
+func newNpSess(pe *proc.ProcEnv, npcs *netproxy.NetProxyClnt, lip string) *NpSess {
 	npc := &NpSess{}
 	npc.fidc = fidclnt.NewFidClnt(pe, npcs)
 	npc.principal = pe.GetPrincipal()
@@ -96,12 +96,12 @@ func (npc *NpSess) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 }
 
 func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
-	mnt, error := npc.pc.GetNamedMount()
+	ep, error := npc.pc.GetNamedEndpoint()
 	if error != nil {
-		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", error)
+		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", error)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
-	fid, err := npc.fidc.Attach(npc.principal, npc.cid, mnt, "", "")
+	fid, err := npc.fidc.Attach(npc.principal, npc.cid, ep, "", "")
 	if err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v err %v\n", args, err)
 		return sp.NoClntId, sp.NewRerrorSerr(err)

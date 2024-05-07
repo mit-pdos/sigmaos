@@ -11,7 +11,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -33,21 +33,21 @@ type FsEtcd struct {
 	dc       *Dcache
 }
 
-func NewFsEtcdMount(as auth.AuthSrv, ip sp.Tip) (map[string]*sp.TmountProto, error) {
-	mnts := map[string]*sp.TmountProto{}
+func NewFsEtcdEndpoint(amgr auth.AuthMgr, ip sp.Tip) (map[string]*sp.TendpointProto, error) {
+	eps := map[string]*sp.TendpointProto{}
 	for i := range endpointPorts {
 		addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, endpointPorts[i])
-		mnt := sp.NewMount([]*sp.Taddr{addr}, sp.ROOTREALM)
-		if err := as.MintAndSetMountToken(mnt); err != nil {
-			db.DPrintf(db.ERROR, "Unable to mint etcd mount token: %v", err)
+		ep := sp.NewEndpoint([]*sp.Taddr{addr}, sp.ROOTREALM)
+		if err := amgr.MintAndSetEndpointToken(ep); err != nil {
+			db.DPrintf(db.ERROR, "Unable to mint etcd endpoint token: %v", err)
 			return nil, err
 		}
-		mnts[addr.IPPort()] = mnt.GetProto()
+		eps[addr.IPPort()] = ep.GetProto()
 	}
-	return mnts, nil
+	return eps, nil
 }
 
-func NewFsEtcd(npc *netsigma.NetProxyClnt, etcdMnts map[string]*sp.TmountProto, realm sp.Trealm) (*FsEtcd, error) {
+func NewFsEtcd(npc *netproxy.NetProxyClnt, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*FsEtcd, error) {
 	endpoints := []string{}
 	for addr, _ := range etcdMnts {
 		endpoints = append(endpoints, addr)
@@ -57,12 +57,12 @@ func NewFsEtcd(npc *netsigma.NetProxyClnt, etcdMnts map[string]*sp.TmountProto, 
 		Endpoints:   endpoints,
 		DialTimeout: DialTimeout,
 		DialOptions: []grpc.DialOption{grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
-			mnt, ok := etcdMnts[addr]
-			// Check that the mount is in the map
+			ep, ok := etcdMnts[addr]
+			// Check that the endpoint is in the map
 			if !ok {
-				db.DFatalf("Unknown fsetcd mount proto: addr %v mnts %v", addr, etcdMnts)
+				db.DFatalf("Unknown fsetcd endpoint proto: addr %v eps %v", addr, etcdMnts)
 			}
-			return npc.Dial(sp.NewMountFromProto(mnt))
+			return npc.Dial(sp.NewEndpointFromProto(ep))
 		})},
 	})
 	if err != nil {
@@ -94,9 +94,9 @@ func (fs *FsEtcd) Fence(key string, rev int64) {
 func (fs *FsEtcd) Detach(cid sp.TclntId) {
 }
 
-func (fs *FsEtcd) SetRootNamed(mnt *sp.Tmount) *serr.Err {
-	db.DPrintf(db.FSETCD, "SetRootNamed %v", mnt)
-	d, err := mnt.Marshal()
+func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
+	db.DPrintf(db.FSETCD, "SetRootNamed %v", ep)
+	d, err := ep.Marshal()
 	if err != nil {
 		return serr.NewErrError(err)
 	}
@@ -120,24 +120,24 @@ func (fs *FsEtcd) SetRootNamed(mnt *sp.Tmount) *serr.Err {
 	}
 }
 
-func GetRootNamed(npc *netsigma.NetProxyClnt, etcdMnts map[string]*sp.TmountProto, realm sp.Trealm) (*sp.Tmount, *serr.Err) {
+func GetRootNamed(npc *netproxy.NetProxyClnt, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
 	fs, err := NewFsEtcd(npc, etcdMnts, realm)
 	if err != nil {
-		return &sp.Tmount{}, serr.NewErrError(err)
+		return &sp.Tendpoint{}, serr.NewErrError(err)
 	}
 	defer fs.Close()
 
 	nf, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, sp.Tpath(BOOT)))
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v etcdMnt %v realm %v", BOOT, nf, sr, etcdMnts, realm)
-		return &sp.Tmount{}, sr
+		return &sp.Tendpoint{}, sr
 	}
-	mnt, err := sp.NewMountFromBytes(nf.Data)
+	ep, err := sp.NewEndpointFromBytes(nf.Data)
 	if sr != nil {
-		db.DPrintf(db.FSETCD, "NewMount %v err %v\n", BOOT, err)
-		return &sp.Tmount{}, serr.NewErrError(err)
+		db.DPrintf(db.FSETCD, "NewEndpoint %v err %v\n", BOOT, err)
+		return &sp.Tendpoint{}, serr.NewErrError(err)
 	}
-	db.DPrintf(db.FSETCD, "GetNamed mnt %v\n", mnt)
+	db.DPrintf(db.FSETCD, "GetNamed ep %v\n", ep)
 	fs.Close()
-	return mnt, nil
+	return ep, nil
 }

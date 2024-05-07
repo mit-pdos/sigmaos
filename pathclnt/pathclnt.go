@@ -74,12 +74,12 @@ func (pathc *PathClnt) Mounts() []string {
 	return pathc.mnt.mountedPaths()
 }
 
-func (pathc *PathClnt) MountTree(principal *sp.Tprincipal, mnt *sp.Tmount, tree, mntname string) error {
-	db.DPrintf(db.PATHCLNT, "MountTree [%v]/%v mnt %v", mnt, tree, mntname)
-	if fd, err := pathc.Attach(principal, pathc.cid, mnt, "", tree); err == nil {
+func (pathc *PathClnt) MountTree(principal *sp.Tprincipal, ep *sp.Tendpoint, tree, mntname string) error {
+	db.DPrintf(db.PATHCLNT, "MountTree [%v]/%v mnt %v", ep, tree, mntname)
+	if fd, err := pathc.Attach(principal, pathc.cid, ep, "", tree); err == nil {
 		return pathc.Mount(fd, mntname)
 	} else {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: MountTree Attach [%v]/%v err %v", pathc.cid, mnt, tree, err)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: MountTree Attach [%v]/%v err %v", pathc.cid, ep, tree, err)
 		return err
 	}
 }
@@ -98,11 +98,11 @@ func (pathc *PathClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.
 // Detach from all servers
 func (pathc *PathClnt) detachAll() error {
 	var err error
-	mnts := pathc.Mounts()
-	db.DPrintf(db.ALWAYS, "%v: Fslib.detachAll %v\n", pathc.cid, mnts)
-	for _, mnt := range mnts {
-		if r := pathc.Detach(mnt); r != nil {
-			db.DPrintf(db.PATHCLNT_ERR, "%v: detachAll %v err %v\n", pathc.cid, mnt, r)
+	eps := pathc.Mounts()
+	db.DPrintf(db.ALWAYS, "%v: Fslib.detachAll %v\n", pathc.cid, eps)
+	for _, ep := range eps {
+		if r := pathc.Detach(ep); r != nil {
+			db.DPrintf(db.PATHCLNT_ERR, "%v: detachAll %v err %v\n", pathc.cid, ep, r)
 			err = r
 		}
 	}

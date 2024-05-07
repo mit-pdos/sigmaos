@@ -8,7 +8,7 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usesigmaclntd] [--usenetproxy] [--reuse-kernel] [--cleanup]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usesigmaclntd] [--nonetproxy] [--reuse-kernel] [--cleanup]" 
 }
 
 BASIC="--basic"
@@ -57,9 +57,9 @@ while [[ "$#" -gt 0 ]]; do
             shift
             SIGMACLNTD="--usesigmaclntd" 
             ;;
-        --usenetproxy)
+        --nonetproxy)
             shift
-            NETPROXY="--usenetproxy" 
+            NETPROXY="--nonetproxy" 
             ;;
         --reuse-kernel)
             shift
@@ -99,7 +99,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap sessclnt proxy reader writer stats fslib semclnt electclnt memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt auth mr imgresizesrv kv hotel socialnetwork benchmarks; do
+    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt proxy reader writer stats fslib semclnt electclnt memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt auth mr imgresizesrv kv hotel socialnetwork benchmarks; do
         go test $VERB sigmaos/$T --run TestCompile
     done
 fi
@@ -133,7 +133,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test with a kernel with just named
     #
 
-    for T in reader writer stats fslib semclnt electclnt; do
+    for T in reader writer stats netproxy fslib semclnt electclnt; do
         go test $VERB -timeout 20m sigmaos/$T -start $SIGMACLNTD $NETPROXY $REUSEKERNEL
         cleanup
     done

@@ -169,11 +169,11 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 		return
 	}
 
-	m1, err3 := ts1.GetNamedMount()
-	assert.Nil(t, err3, "GetNamedMount: %v", err3)
+	m1, err3 := ts1.GetNamedEndpoint()
+	assert.Nil(t, err3, "GetNamedEndpoint: %v", err3)
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, m1)
-	m2, err3 := ts2.GetNamedMount()
-	assert.Nil(t, err3, "GetNamedMount: %v", err3)
+	m2, err3 := ts2.GetNamedEndpoint()
+	assert.Nil(t, err3, "GetNamedEndpoint: %v", err3)
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, m2)
 
 	// Should have a public and private address
@@ -294,13 +294,13 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 		assert.Nil(t, err)
 		assert.True(t, len(sts) == 1, "No %vs in user realm", d)
 		for _, st := range sts1 {
-			// If there is a name in common in the directory, check that they are for different mounts
+			// If there is a name in common in the directory, check that they are for different endpoints
 			if fslib.Present(sts, []string{st.Name}) {
-				mnt, err := ts1.ReadMount(path.Join(d, st.Name))
-				assert.Nil(t, err, "ReadMount: %v", err)
-				mnt1, err := rootts.ReadMount(path.Join(d, st.Name))
-				assert.Nil(t, err, "ReadMount: %v", err)
-				assert.False(t, mnt.Addrs()[0] == mnt1.Addrs()[0], "%v cross-over", d)
+				ep, err := ts1.ReadEndpoint(path.Join(d, st.Name))
+				assert.Nil(t, err, "ReadEndpoint: %v", err)
+				ep1, err := rootts.ReadEndpoint(path.Join(d, st.Name))
+				assert.Nil(t, err, "ReadEndpoint: %v", err)
+				assert.False(t, ep.Addrs()[0] == ep1.Addrs()[0], "%v cross-over", d)
 			}
 		}
 	}
@@ -351,13 +351,13 @@ func TestWaitExitMultiNode(t *testing.T) {
 		assert.Nil(t, err)
 		assert.True(t, int64(len(sts)) == subsysCnts[i], "Wrong number of %vs in user realm: %v != %v", d, len(sts), subsysCnts[i])
 		for _, st := range sts1 {
-			// If there is a name in common in the directory, check that they are for different mounts
+			// If there is a name in common in the directory, check that they are for different endpoints
 			if fslib.Present(sts, []string{st.Name}) {
-				mnt, err := ts1.ReadMount(path.Join(d, st.Name))
-				assert.Nil(t, err, "ReadMount: %v", err)
-				mnt1, err := rootts.ReadMount(path.Join(d, st.Name))
-				assert.Nil(t, err, "ReadMount: %v", err)
-				assert.False(t, mnt.Addrs()[0] == mnt1.Addrs()[0], "%v cross-over", d)
+				ep, err := ts1.ReadEndpoint(path.Join(d, st.Name))
+				assert.Nil(t, err, "ReadEndpoint: %v", err)
+				ep1, err := rootts.ReadEndpoint(path.Join(d, st.Name))
+				assert.Nil(t, err, "ReadEndpoint: %v", err)
+				assert.False(t, ep.Addrs()[0] == ep1.Addrs()[0], "%v cross-over", d)
 			}
 		}
 	}
@@ -510,20 +510,20 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	_, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
 	assert.NotNil(t, err)
 
-	db.DPrintf(db.TEST, "readmount\n")
+	db.DPrintf(db.TEST, "readendpoint\n")
 
-	mnt, err := ts1.ReadMount(cc.Server(0))
+	ep, err := ts1.ReadEndpoint(cc.Server(0))
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "mnt %v", mnt)
+	db.DPrintf(db.TEST, "ep %v", ep)
 
 	// Remove public port
-	if len(mnt.Addrs()) > 1 {
-		mnt.SetAddr(mnt.Addrs()[:1])
+	if len(ep.Addrs()) > 1 {
+		ep.SetAddr(ep.Addrs()[:1])
 	}
 
 	pn := path.Join(sp.NAMED, "srv")
-	err = ts1.MkMountFile(pn, mnt, sp.NoLeaseId)
+	err = ts1.MkEndpointFile(pn, ep, sp.NoLeaseId)
 	assert.Nil(t, err)
 
 	pn = pn + "/"
@@ -567,18 +567,18 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	_, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
 	assert.NotNil(t, err)
 
-	mnt, err := ts1.ReadMount(cc.Server(0))
+	ep, err := ts1.ReadEndpoint(cc.Server(0))
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "mnt %v", mnt)
+	db.DPrintf(db.TEST, "ep %v", ep)
 
 	// Remove public port
-	if len(mnt.Addrs()) > 1 {
-		mnt.SetAddr(mnt.Addrs()[:1])
+	if len(ep.Addrs()) > 1 {
+		ep.SetAddr(ep.Addrs()[:1])
 	}
 
 	pn := path.Join(sp.NAMED, "srv")
-	err = ts2.MkMountFile(pn, mnt, sp.NoLeaseId)
+	err = ts2.MkEndpointFile(pn, ep, sp.NoLeaseId)
 	assert.Nil(t, err)
 
 	pn = pn + "/"

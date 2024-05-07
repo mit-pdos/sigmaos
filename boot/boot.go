@@ -15,9 +15,9 @@ type Boot struct {
 }
 
 // The boot processes enters here
-func BootUp(param *kernel.Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) error {
+func BootUp(param *kernel.Param, pe *proc.ProcEnv, bootstrapAMgr auth.AuthMgr) error {
 	db.DPrintf(db.KERNEL, "Boot param %v ProcEnv %v env %v", param, pe, os.Environ())
-	k, err := kernel.NewKernel(param, pe, bootstrapAS)
+	k, err := kernel.NewKernel(param, pe, bootstrapAMgr)
 	if err != nil {
 		return err
 	}

@@ -11,15 +11,15 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type AuthSrvImpl[M jwt.SigningMethod] struct {
+type AuthMgrImpl[M jwt.SigningMethod] struct {
 	signingMethod M
 	signer        sp.Tsigner
 	srvpath       string
 	KeyMgr
 }
 
-func NewAuthSrv[M jwt.SigningMethod](method M, signer sp.Tsigner, srvpath string, kmgr KeyMgr) (AuthSrv, error) {
-	return &AuthSrvImpl[M]{
+func NewAuthMgr[M jwt.SigningMethod](method M, signer sp.Tsigner, srvpath string, kmgr KeyMgr) (AuthMgr, error) {
+	return &AuthMgrImpl[M]{
 		signingMethod: method,
 		signer:        signer,
 		srvpath:       srvpath,
@@ -27,12 +27,12 @@ func NewAuthSrv[M jwt.SigningMethod](method M, signer sp.Tsigner, srvpath string
 	}, nil
 }
 
-func (as *AuthSrvImpl[M]) GetSrvPath() string {
+func (as *AuthMgrImpl[M]) GetSrvPath() string {
 	return as.srvpath
 }
 
 // Set a proc's token after it has been spawned by the parent
-func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
+func (as *AuthMgrImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	// Retrieve and validate the proc's parent's claims
 	parentPC, err := as.VerifyProcTokenGetClaims(p.GetPrincipal().GetID(), p.GetParentToken())
 	if err != nil {
@@ -80,32 +80,32 @@ func (as *AuthSrvImpl[M]) SetDelegatedProcToken(p *proc.Proc) error {
 	return nil
 }
 
-func (as *AuthSrvImpl[M]) MintMountToken(mnt *sp.Tmount) (*sp.Ttoken, error) {
-	mc := NewMountClaims(mnt)
+func (as *AuthMgrImpl[M]) MintEndpointToken(ep *sp.Tendpoint) (*sp.Ttoken, error) {
+	mc := NewEndpointClaims(ep)
 	return as.mintTokenWithClaims(mc)
 }
 
-func (as *AuthSrvImpl[M]) MintAndSetMountToken(mnt *sp.Tmount) error {
-	token, err := as.MintMountToken(mnt)
+func (as *AuthMgrImpl[M]) MintAndSetEndpointToken(ep *sp.Tendpoint) error {
+	token, err := as.MintEndpointToken(ep)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error MintMountToken: %v", err)
+		db.DPrintf(db.ERROR, "Error MintEndpointToken: %v", err)
 	}
-	mnt.SetToken(token)
+	ep.SetToken(token)
 	return nil
 }
 
-func (as *AuthSrvImpl[M]) VerifyMountTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*MountClaims, error) {
-	claims, err := as.verifyTokenGetClaims(principalID, &MountClaims{}, t)
+func (as *AuthMgrImpl[M]) VerifyEndpointTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*EndpointClaims, error) {
+	claims, err := as.verifyTokenGetClaims(principalID, &EndpointClaims{}, t)
 	if err != nil {
 		return nil, err
 	}
-	if mclaims, ok := claims.(*MountClaims); ok {
+	if mclaims, ok := claims.(*EndpointClaims); ok {
 		return mclaims, nil
 	}
 	return nil, fmt.Errorf("Claims wrong type: %T", claims)
 }
 
-func (as *AuthSrvImpl[M]) MintAndSetProcToken(pe *proc.ProcEnv) error {
+func (as *AuthMgrImpl[M]) MintAndSetProcToken(pe *proc.ProcEnv) error {
 	pc := NewProcClaims(pe)
 	token, err := as.MintProcToken(pc)
 	if err != nil {
@@ -116,11 +116,11 @@ func (as *AuthSrvImpl[M]) MintAndSetProcToken(pe *proc.ProcEnv) error {
 	return nil
 }
 
-func (as *AuthSrvImpl[M]) MintProcToken(pc *ProcClaims) (*sp.Ttoken, error) {
+func (as *AuthMgrImpl[M]) MintProcToken(pc *ProcClaims) (*sp.Ttoken, error) {
 	return as.mintTokenWithClaims(pc)
 }
 
-func (as *AuthSrvImpl[M]) VerifyProcTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*ProcClaims, error) {
+func (as *AuthMgrImpl[M]) VerifyProcTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*ProcClaims, error) {
 	claims, err := as.verifyTokenGetClaims(principalID, &ProcClaims{}, t)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (as *AuthSrvImpl[M]) VerifyProcTokenGetClaims(principalID sp.TprincipalID, 
 	return nil, fmt.Errorf("Claims wrong type: %T", claims)
 }
 
-func (as *AuthSrvImpl[M]) VerifyPrincipalIdentity(principal *sp.Tprincipal) (*ProcClaims, error) {
+func (as *AuthMgrImpl[M]) VerifyPrincipalIdentity(principal *sp.Tprincipal) (*ProcClaims, error) {
 	db.DPrintf(db.AUTH, "Verify ID p %v", principal.GetID())
 	pc, err := as.VerifyProcTokenGetClaims(principal.GetID(), principal.GetToken())
 	if err != nil {
@@ -149,7 +149,7 @@ func (as *AuthSrvImpl[M]) VerifyPrincipalIdentity(principal *sp.Tprincipal) (*Pr
 	return pc, nil
 }
 
-func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error) {
+func (as *AuthMgrImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error) {
 	db.DPrintf(db.AUTH, "Attach Authorization check p %v", principal.GetID())
 	pc, err := as.VerifyPrincipalIdentity(principal)
 	if err != nil {
@@ -158,13 +158,13 @@ func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPat
 	}
 	// Check that the server path is a subpath of one of the allowed paths
 	for _, ap := range pc.AllowedPaths {
-		mntPath := path.Join(as.srvpath, attachPath)
-		db.DPrintf(db.AUTH, "Check if %v or %v is in %v subtree", as.srvpath, mntPath, ap)
+		epPath := path.Join(as.srvpath, attachPath)
+		db.DPrintf(db.AUTH, "Check if %v or %v is in %v subtree", as.srvpath, epPath, ap)
 		if as.srvpath == "" && ap == sp.NAMED {
 			db.DPrintf(db.AUTH, "Attach Authorization check to named successful p %v claims %v", principal.GetID(), pc)
 			return pc, true, nil
 		}
-		if IsInSubtree(as.srvpath, ap) || IsInSubtree(mntPath, ap) {
+		if IsInSubtree(as.srvpath, ap) || IsInSubtree(epPath, ap) {
 			db.DPrintf(db.AUTH, "Attach Authorization check successful p %v claims %v", principal.GetID(), pc)
 			return pc, true, nil
 		}
@@ -173,33 +173,33 @@ func (as *AuthSrvImpl[M]) AttachIsAuthorized(principal *sp.Tprincipal, attachPat
 	return nil, false, nil
 }
 
-func (as *AuthSrvImpl[M]) MountIsAuthorized(principal *sp.Tprincipal, mount *sp.Tmount) (bool, error) {
-	db.DPrintf(db.AUTH, "Mount Authorization check p %v mnt %v", principal.GetID(), mount)
+func (as *AuthMgrImpl[M]) EndpointIsAuthorized(principal *sp.Tprincipal, endpoint *sp.Tendpoint) (bool, error) {
+	db.DPrintf(db.AUTH, "Endpoint Authorization check p %v ep %v", principal.GetID(), endpoint)
 	pc, err := as.VerifyPrincipalIdentity(principal)
 	if err != nil {
-		db.DPrintf(db.AUTH, "Mount Authorization identity check failed p %v: err %v", principal.GetID(), err)
+		db.DPrintf(db.AUTH, "Endpoint Authorization identity check failed p %v: err %v", principal.GetID(), err)
 		return false, err
 	}
-	mc, err := as.VerifyMountTokenGetClaims(principal.GetID(), mount.GetToken())
+	mc, err := as.VerifyEndpointTokenGetClaims(principal.GetID(), endpoint.GetToken())
 	if err != nil {
-		db.DPrintf(db.AUTH, "Mount Authorization token check failed p %v: err %v", principal.GetID(), err)
+		db.DPrintf(db.AUTH, "Endpoint Authorization token check failed p %v: err %v", principal.GetID(), err)
 		return false, err
 	}
 	// Root realm (kernel) procs are accessible from any realm
 	if mc.Realm != sp.ROOTREALM {
-		// Check if the mount is for the principal's realm
+		// Check if the endpoint is for the principal's realm
 		if pc.Realm != mc.Realm {
-			err := fmt.Errorf("Mismatch between p %v realm %v and mount %v realm %v", principal.GetID(), pc.Realm, mount, mount.GetRealm())
-			db.DPrintf(db.AUTH, "Mount Authorization check failed p %v: err %v", principal.GetID(), err)
+			err := fmt.Errorf("Mismatch between p %v realm %v and endpoint %v realm %v", principal.GetID(), pc.Realm, endpoint, endpoint.GetRealm())
+			db.DPrintf(db.AUTH, "Endpoint Authorization check failed p %v: err %v", principal.GetID(), err)
 			return false, err
 		}
 	}
-	db.DPrintf(db.AUTH, "Mount Authorization check succeeded p %v mnt %v", principal.GetID(), mount)
+	db.DPrintf(db.AUTH, "Endpoint Authorization check succeeded p %v ep %v", principal.GetID(), endpoint)
 	return true, nil
 }
 
 // Mint a token with associated claims
-func (as *AuthSrvImpl[M]) mintTokenWithClaims(claims jwt.Claims) (*sp.Ttoken, error) {
+func (as *AuthMgrImpl[M]) mintTokenWithClaims(claims jwt.Claims) (*sp.Ttoken, error) {
 	privkey, err := as.GetPrivateKey(as.signer)
 	if err != nil {
 		return nil, err
@@ -213,7 +213,7 @@ func (as *AuthSrvImpl[M]) mintTokenWithClaims(claims jwt.Claims) (*sp.Ttoken, er
 	return sp.NewToken(as.signer, tstr), err
 }
 
-func (as *AuthSrvImpl[M]) verifyTokenGetClaims(principalID sp.TprincipalID, c jwt.Claims, t *sp.Ttoken) (jwt.Claims, error) {
+func (as *AuthMgrImpl[M]) verifyTokenGetClaims(principalID sp.TprincipalID, c jwt.Claims, t *sp.Ttoken) (jwt.Claims, error) {
 	if t.GetSignedToken() == sp.NO_SIGNED_TOKEN {
 		db.DPrintf(db.ERROR, "Tried to verify token when no signed token provided")
 		return nil, fmt.Errorf("No signed token provided")

@@ -36,7 +36,7 @@ type Schedd struct {
 	pmgr                *procmgr.ProcMgr
 	scheddclnt          *scheddclnt.ScheddClnt
 	procqclnt           *procqclnt.ProcQClnt
-	as                  auth.AuthSrv
+	amgr                auth.AuthMgr
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
 	kernelId            string
@@ -49,15 +49,15 @@ type Schedd struct {
 	nProcGetsSuccessful atomic.Uint64
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, as auth.AuthSrv) *Schedd {
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, amgr auth.AuthMgr) *Schedd {
 	sd := &Schedd{
-		pmgr:        procmgr.NewProcMgr(as, sc, kernelId),
+		pmgr:        procmgr.NewProcMgr(amgr, sc, kernelId),
 		scheddStats: make(map[sp.Trealm]*realmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
 		kernelId:    kernelId,
 		sc:          sc,
-		as:          as,
+		amgr:        amgr,
 		cpuStats:    &cpuStats{},
 	}
 	sd.cond = sync.NewCond(&sd.mu)
@@ -261,7 +261,7 @@ func (sd *Schedd) procDone(p *proc.Proc) {
 func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
 	p.SetKernelID(sd.kernelId, false)
 	// Set the new proc's token
-	if err := sd.as.SetDelegatedProcToken(p); err != nil {
+	if err := sd.amgr.SetDelegatedProcToken(p); err != nil {
 		db.DPrintf(db.ERROR, "Error SetToken: %v", err)
 	}
 	sd.pmgr.Spawn(p)
@@ -326,12 +326,12 @@ func RunSchedd(kernelId string, reserveMcpu uint, masterPubKey auth.PublicKey, p
 		privkey,
 	)
 	db.DPrintf(db.SCHEDD, "kmgr %v", kmgr)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DFatalf("Error NewAuthSrv: %v", err)
+		db.DFatalf("Error NewAuthMgr: %v", err)
 	}
-	sc.SetAuthSrv(as)
-	sd := NewSchedd(sc, kernelId, reserveMcpu, as)
+	sc.SetAuthMgr(amgr)
+	sd := NewSchedd(sc, kernelId, reserveMcpu, amgr)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

@@ -8,6 +8,7 @@ import (
 	// "time"
 
 	db "sigmaos/debug"
+	"sigmaos/netproxy"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -17,23 +18,23 @@ import (
 type NetClnt struct {
 	mu     sync.Mutex
 	pe     *proc.ProcEnv
-	npc    *netsigma.NetProxyClnt
+	npc    *netproxy.NetProxyClnt
 	conn   net.Conn
-	mnt    *sp.Tmount
+	ep     *sp.Tendpoint
 	addr   *sp.Taddr
 	closed bool
 	realm  sp.Trealm
 }
 
-func NewNetClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, mnt *sp.Tmount) (*NetClnt, *serr.Err) {
-	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", mnt)
+func NewNetClnt(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt, ep *sp.Tendpoint) (*NetClnt, *serr.Err) {
+	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", ep)
 	nc := &NetClnt{
 		pe:  pe,
 		npc: npc,
-		mnt: mnt,
+		ep:  ep,
 	}
-	if err := nc.connect(mnt); err != nil {
-		db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", mnt, err)
+	if err := nc.connect(ep); err != nil {
+		db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", ep, err)
 		return nil, err
 	}
 	return nc, nil
@@ -55,21 +56,21 @@ func (nc *NetClnt) Close() error {
 	return nc.conn.Close()
 }
 
-func (nc *NetClnt) connect(mnt *sp.Tmount) *serr.Err {
-	if !nc.pe.GetVerifyMounts() && len(mnt.Claims.Addr) > 0 {
-		mnt.Claims.Addr = netsigma.Rearrange(nc.pe.GetNet(), mnt.Claims.Addr)
+func (nc *NetClnt) connect(ep *sp.Tendpoint) *serr.Err {
+	if !nc.pe.GetVerifyEndpoints() && len(ep.Claims.Addr) > 0 {
+		ep.Claims.Addr = netsigma.Rearrange(nc.pe.GetNet(), ep.Claims.Addr)
 	}
-	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), mnt, mnt.Addrs()[0])
+	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), ep, ep.Addrs()[0])
 	//	for _, addr := range addrs {
-	for i, addr := range mnt.Addrs() {
+	for i, addr := range ep.Addrs() {
 		if i > 0 {
-			if nc.pe.GetVerifyMounts() {
+			if nc.pe.GetVerifyEndpoints() {
 				// TODO XXX: support multi-dialing
-				db.DFatalf("Do not support multi-dialing yet: %v", mnt.Addrs())
+				db.DFatalf("Do not support multi-dialing yet: %v", ep.Addrs())
 			}
-			mnt.Claims.Addr = append(mnt.Claims.Addr[1:], mnt.Claims.Addr[0])
+			ep.Claims.Addr = append(ep.Claims.Addr[1:], ep.Claims.Addr[0])
 		}
-		c, err := nc.npc.Dial(mnt)
+		c, err := nc.npc.Dial(ep)
 		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
 		if err != nil {
 			continue
@@ -79,6 +80,6 @@ func (nc *NetClnt) connect(mnt *sp.Tmount) *serr.Err {
 		db.DPrintf(db.PORT, "NetClnt connected %v -> %v\n", c.LocalAddr(), nc.addr)
 		return nil
 	}
-	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", mnt)
+	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", ep)
 	return serr.NewErr(serr.TErrUnreachable, "no connection")
 }

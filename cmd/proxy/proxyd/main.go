@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/keys"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/netsrv"
 	"sigmaos/proc"
 	"sigmaos/proxy"
@@ -34,11 +34,11 @@ func main() {
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(masterPubKey))
 	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
 	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPrivKey)
-	as, err1 := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
+	amgr, err1 := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err1 != nil {
-		db.DFatalf("Error NewAuthSrv: %v", err1)
+		db.DFatalf("Error NewAuthMgr: %v", err1)
 	}
-	etcdMnt, err := fsetcd.NewFsEtcdMount(as, lip)
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(amgr, lip)
 	if err != nil {
 		db.DFatalf("Error new fsetcd moutn: %v", err)
 	}
@@ -51,11 +51,11 @@ func main() {
 		sp.ROOTREALM,
 		sp.NoToken(),
 	))
-	if err1 := as.MintAndSetProcToken(pe); err1 != nil {
+	if err1 := amgr.MintAndSetProcToken(pe); err1 != nil {
 		db.DFatalf("Error MintToken: %v", err1)
 	}
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	npc := netsigma.NewNetProxyClnt(pe, as)
+	npc := netproxy.NewNetProxyClnt(pe, amgr)
 	npd := proxy.NewNpd(pe, npc, lip)
 	netsrv.NewNetServer(pe, npc, addr, npd)
 	ch := make(chan struct{})

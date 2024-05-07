@@ -25,22 +25,22 @@ var rootP = path.Path{""}
 
 type MemFs struct {
 	*sigmapsrv.SigmaPSrv
-	ctx fs.CtxI // server context
-	plt *lockmap.PathLockTable
-	sc  *sigmaclnt.SigmaClnt
-	as  auth.AuthSrv
-	pc  *portclnt.PortClnt
-	pi  portclnt.PortInfo
-	pn  string
+	ctx  fs.CtxI // server context
+	plt  *lockmap.PathLockTable
+	sc   *sigmaclnt.SigmaClnt
+	amgr auth.AuthMgr
+	pc   *portclnt.PortClnt
+	pi   portclnt.PortInfo
+	pn   string
 }
 
-func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, as auth.AuthSrv, fencefs fs.Dir) *MemFs {
+func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, amgr auth.AuthMgr, fencefs fs.Dir) *MemFs {
 	mfs := &MemFs{
 		SigmaPSrv: srv,
 		ctx:       ctx.NewCtx(sc.ProcEnv().GetPrincipal(), nil, 0, sp.NoClntId, nil, fencefs),
 		plt:       srv.PathLockTable(),
 		sc:        sc,
-		as:        as,
+		amgr:      amgr,
 		pn:        pn,
 	}
 	return mfs
@@ -146,7 +146,7 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode, ltype lockmap.Tlock) (fs.FsObj, *s
 
 func (mfs *MemFs) MemFsExit(status *proc.Status) error {
 	if mfs.pn != "" {
-		if err := mfs.sc.RemoveMount(mfs.pn); err != nil {
+		if err := mfs.sc.Remove(mfs.pn); err != nil {
 			db.DPrintf(db.ALWAYS, "RemoveMount %v err %v", mfs.pn, err)
 		}
 	}

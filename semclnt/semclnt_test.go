@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/delay"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
@@ -30,7 +30,7 @@ func TestSemClntSimple(t *testing.T) {
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl0, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
+	fsl0, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
 	assert.Nil(ts.T, err, "fsl0")
 
 	sem := semclnt.NewSemClnt(ts.FsLib, WAIT_PATH+"/x")
@@ -71,10 +71,10 @@ func TestSemClntConcur(t *testing.T) {
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe1 := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl0, err := sigmaclnt.NewFsLib(pe1, netsigma.NewNetProxyClnt(pe1, nil))
+	fsl0, err := sigmaclnt.NewFsLib(pe1, netproxy.NewNetProxyClnt(pe1, nil))
 	assert.Nil(ts.T, err, "fsl0")
 	pe2 := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl1, err := sigmaclnt.NewFsLib(pe2, netsigma.NewNetProxyClnt(pe2, nil))
+	fsl1, err := sigmaclnt.NewFsLib(pe2, netproxy.NewNetProxyClnt(pe2, nil))
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {

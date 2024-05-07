@@ -17,7 +17,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/keys"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -29,7 +29,7 @@ import (
 // SigmaSrvClnt's share one fid table
 type SigmaClntSrv struct {
 	pe   *proc.ProcEnv
-	nps  *netsigma.NetProxySrv
+	nps  *netproxy.NetProxySrv
 	fidc *fidclnt.FidClnt
 }
 
@@ -37,12 +37,12 @@ type SigmaClntSrv struct {
 func bootstrapToken(pe *proc.ProcEnv, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(auth.PublicKey(pubkey)))
 	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DFatalf("Error NewAuthSrv: %v", err)
+		db.DFatalf("Error NewAuthMgr: %v", err)
 		return err
 	}
-	if err := as.MintAndSetProcToken(pe); err != nil {
+	if err := amgr.MintAndSetProcToken(pe); err != nil {
 		db.DFatalf("Error MintToken: %v", err)
 		return err
 	}
@@ -67,8 +67,8 @@ func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey
 	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), pubkey)
 	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
 	db.DPrintf(db.SCHEDD, "kmgr %v", kmgr)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	nps, err := netsigma.NewNetProxySrv(pe.GetInnerContainerIP(), as)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	nps, err := netproxy.NewNetProxySrv(pe.GetInnerContainerIP(), amgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewNetProxySrv: %v", err)
 		return nil, err
@@ -76,7 +76,7 @@ func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey
 	scs := &SigmaClntSrv{
 		pe:   pe,
 		nps:  nps,
-		fidc: fidclnt.NewFidClnt(pe, netsigma.NewNetProxyClnt(pe, as)),
+		fidc: fidclnt.NewFidClnt(pe, netproxy.NewNetProxyClnt(pe, amgr)),
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)
 	return scs, nil

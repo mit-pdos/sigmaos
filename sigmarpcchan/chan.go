@@ -25,7 +25,7 @@ func SigmaRPCChanFactory(fsls []*fslib.FsLib) rpcclnt.NewRPCChFn {
 	}
 }
 
-func NewSigmaRPCChMount(fsls []*fslib.FsLib, pn string, mnt *sp.Tmount) (rpcclnt.RPCCh, error) {
+func NewSigmaRPCChEndpoint(fsls []*fslib.FsLib, pn string, mnt *sp.Tendpoint) (rpcclnt.RPCCh, error) {
 	for _, fsl := range fsls {
 		err := fsl.MountTree(mnt, rpc.RPC, path.Join(pn, rpc.RPC))
 		if err != nil {

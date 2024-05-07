@@ -90,7 +90,7 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.as.MintAndSetProcToken(p.GetProcEnv()); err != nil {
+	if err := k.amgr.MintAndSetProcToken(p.GetProcEnv()); err != nil {
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return nil, err
 	}

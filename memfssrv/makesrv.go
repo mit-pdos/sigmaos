@@ -58,16 +58,16 @@ func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, srvpath string, addr *sp.Taddr
 	if kmgr == nil {
 		kmgr = keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
 	}
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), srvpath, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), srvpath, kmgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error new auth srv %v err %v", srvpath, err)
 		return nil, err
 	}
-	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, as, addr, sc, fencefs)
+	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, amgr, addr, sc, fencefs)
 	if err != nil {
 		return nil, err
 	}
-	mfs := NewMemFsSrv(mpn, srv, sc, as, nil)
+	mfs := NewMemFsSrv(mpn, srv, sc, amgr, nil)
 	return mfs, nil
 }
 
@@ -81,14 +81,14 @@ func NewMemFsPublic(pn string, pe *proc.ProcEnv) (*MemFs, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Make server without advertising mnt
+	// Make server without advertising ep
 	mfs, err := NewMemFsPortClnt("", sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, pe.GetNet()), sc)
 	if err != nil {
 		return nil, err
 	}
 	mfs.pc = pc
 
-	if err = pc.AdvertisePort(pn, pi, pe.GetNet(), mfs.SigmaPSrv.GetMount()); err != nil {
+	if err = pc.AdvertisePort(pn, pi, pe.GetNet(), mfs.SigmaPSrv.GetEndpoint()); err != nil {
 		return nil, err
 	}
 	return mfs, err

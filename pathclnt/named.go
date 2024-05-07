@@ -11,69 +11,69 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) GetNamedMount() (*sp.Tmount, error) {
-	mnt, err := pathc.getNamedMount(pathc.pe.GetRealm())
+func (pathc *PathClnt) GetNamedEndpoint() (*sp.Tendpoint, error) {
+	ep, err := pathc.getNamedEndpoint(pathc.pe.GetRealm())
 	if err != nil {
-		db.DPrintf(db.ERROR, "Err getNamedMount [%v]: %v", pathc.pe.GetRealm(), err)
-		return mnt, err
+		db.DPrintf(db.ERROR, "Err getNamedEndpoint [%v]: %v", pathc.pe.GetRealm(), err)
+		return ep, err
 	}
-	db.DPrintf(db.NAMED, "GetNamedMount %v %v", pathc.pe.GetRealm(), mnt)
-	return mnt, nil
+	db.DPrintf(db.NAMED, "GetNamedEndpoint %v %v", pathc.pe.GetRealm(), ep)
+	return ep, nil
 }
 
-func (pathc *PathClnt) getNamedMount(realm sp.Trealm) (*sp.Tmount, *serr.Err) {
+func (pathc *PathClnt) getNamedEndpoint(realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
 	// If this mount was passed via the proc config, return it immediately.
-	if mnt, ok := pathc.ndMntCache.Get(pathc.pe.GetRealm()); ok {
-		db.DPrintf(db.NAMED, "getNamedMount cached %v %v", pathc.pe.GetRealm(), mnt)
-		return mnt, nil
+	if ep, ok := pathc.ndMntCache.Get(pathc.pe.GetRealm()); ok {
+		db.DPrintf(db.NAMED, "getNamedEndpoint cached %v %v", pathc.pe.GetRealm(), ep)
+		return ep, nil
 	}
-	var mnt *sp.Tmount
+	var ep *sp.Tendpoint
 	var err *serr.Err
 	// If this is the root realm, then get the root named.
 	if realm == sp.ROOTREALM {
-		mnt, err = fsetcd.GetRootNamed(pathc.GetNetProxyClnt(), pathc.pe.GetEtcdMounts(), realm)
+		ep, err = fsetcd.GetRootNamed(pathc.GetNetProxyClnt(), pathc.pe.GetEtcdEndpoints(), realm)
 		if err != nil {
-			db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] err GetRootNamed %v", realm, mnt)
-			return &sp.Tmount{}, err
+			db.DPrintf(db.NAMED_ERR, "getNamedEndpoint [%v] err GetRootNamed %v", realm, ep)
+			return &sp.Tendpoint{}, err
 		}
 	} else {
 		// Otherwise, walk through the root named to find this named's mount.
 		if _, rest, err := pathc.mnt.resolve(path.Path{"root"}, true); err != nil && len(rest) >= 1 {
 			if err := pathc.mountNamed(sp.ROOTREALM, "root"); err != nil {
-				db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] err mounting root named %v", realm, err)
-				return &sp.Tmount{}, err
+				db.DPrintf(db.NAMED_ERR, "getNamedEndpoint [%v] err mounting root named %v", realm, err)
+				return &sp.Tendpoint{}, err
 			}
 		}
 		pn := gpath.Join("root", sp.REALMREL, sp.REALMDREL, sp.REALMSREL, realm.String())
 		target, err := pathc.GetFile(pn, pathc.pe.GetPrincipal(), sp.OREAD, 0, sp.MAXGETSET, sp.NullFence())
 		if err != nil {
-			db.DPrintf(db.NAMED_ERR, "getNamedMount [%v] GetFile err %v", realm, err)
-			return &sp.Tmount{}, serr.NewErrError(err)
+			db.DPrintf(db.NAMED_ERR, "getNamedEndpoint [%v] GetFile err %v", realm, err)
+			return &sp.Tendpoint{}, serr.NewErrError(err)
 		}
-		mnt, err = sp.NewMountFromBytes(target)
+		ep, err = sp.NewEndpointFromBytes(target)
 		if err != nil {
-			return &sp.Tmount{}, serr.NewErrError(err)
+			return &sp.Tendpoint{}, serr.NewErrError(err)
 		}
 	}
 	// Cache the newly resolved mount
-	pathc.ndMntCache.Put(realm, mnt)
-	db.DPrintf(db.NAMED, "getNamedMount [%v] %v", realm, mnt)
-	return mnt, nil
+	pathc.ndMntCache.Put(realm, ep)
+	db.DPrintf(db.NAMED, "getNamedEndpoint [%v] %v", realm, ep)
+	return ep, nil
 }
 
 func (pathc *PathClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
-	mnt, err := pathc.getNamedMount(realm)
+	ep, err := pathc.getNamedEndpoint(realm)
 	if err != nil {
 		db.DPrintf(db.NAMED_ERR, "mountNamed [%v]: getNamedMount err %v", realm, err)
 		return err
 	}
-	if err := pathc.autoMount(pathc.pe.GetPrincipal(), mnt, path.Path{name}); err != nil {
+	if err := pathc.autoMount(pathc.pe.GetPrincipal(), ep, path.Path{name}); err != nil {
 		db.DPrintf(db.NAMED_ERR, "mountNamed: automount err %v", err)
 		// If mounting failed, the named is unreachable. Invalidate the cache entry
 		// for this realm.
 		pathc.ndMntCache.Invalidate(realm)
 		return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v realm failure", realm))
 	}
-	db.DPrintf(db.NAMED, "mountNamed [%v]: automount mnt %v at %v", realm, mnt, name)
+	db.DPrintf(db.NAMED, "mountNamed [%v]: automount ep %v at %v", realm, ep, name)
 	return nil
 }

@@ -12,7 +12,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/protclnt"
@@ -27,10 +27,10 @@ type FidClnt struct {
 	fids   *FidMap
 	refcnt int
 	sm     *sessclnt.Mgr
-	npc    *netsigma.NetProxyClnt
+	npc    *netproxy.NetProxyClnt
 }
 
-func NewFidClnt(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) *FidClnt {
+func NewFidClnt(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt) *FidClnt {
 	return &FidClnt{
 		fids:   newFidMap(),
 		refcnt: 1,
@@ -44,7 +44,7 @@ func (fidc *FidClnt) String() string {
 	return str
 }
 
-func (fidc *FidClnt) GetNetProxyClnt() *netsigma.NetProxyClnt {
+func (fidc *FidClnt) GetNetProxyClnt() *netproxy.NetProxyClnt {
 	return fidc.npc
 }
 
@@ -134,12 +134,12 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, mnt *sp.Tmount, pn, tree string) (sp.Tfid, *serr.Err) {
+func (fidc *FidClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, ep *sp.Tendpoint, pn, tree string) (sp.Tfid, *serr.Err) {
 	fid := fidc.allocFid()
-	pc := protclnt.NewProtClnt(mnt, fidc.sm)
+	pc := protclnt.NewProtClnt(ep, fidc.sm)
 	reply, err := pc.Attach(principal, cid, fid, path.Split(tree))
 	if err != nil {
-		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", mnt, err)
+		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", ep, err)
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}
@@ -178,7 +178,7 @@ func (fidc *FidClnt) Walk(fid sp.Tfid, path []string) (sp.Tfid, []string, *serr.
 }
 
 // A defensive version of walk because fid is shared among several
-// threads (it comes out the mount table) and one thread may free the
+// threads (it comes out the endpoint table) and one thread may free the
 // fid while another thread is using it.
 func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	nfid := fidc.allocFid()

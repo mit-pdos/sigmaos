@@ -14,7 +14,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rpc"
@@ -172,7 +172,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -335,7 +335,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -471,7 +471,7 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 	for c := 0; c < nclerk; c++ {
 		go func(c int) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
+			fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
 			assert.Nil(ts.T, err)
 			measuredir("lookup dir entry", NITER, func() int {
 				for f := 0; f < nfile; f++ {
@@ -580,8 +580,8 @@ func TestLookupConcurPerf(t *testing.T) {
 		n := newDir(t, ts.FsLib, dir, NFILE)
 		assert.Equal(t, NFILE, n)
 	}
-	ndMnt, err := ts.GetNamedMount()
-	assert.Nil(t, err, "GetNamedMount: %v", err)
+	ndMnt, err := ts.GetNamedEndpoint()
+	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
 	// dump(t)
 	done := make(chan int)
 	fsls := make([][]*fslib.FsLib, 0, NGO)
@@ -589,8 +589,8 @@ func TestLookupConcurPerf(t *testing.T) {
 		fsl2 := make([]*fslib.FsLib, 0, NTRIAL)
 		for j := 0; j < NTRIAL; j++ {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			pe.NamedMountProto = ndMnt.TmountProto
-			fsl, err := sigmaclnt.NewFsLib(pe, netsigma.NewNetProxyClnt(pe, nil))
+			pe.NamedEndpointProto = ndMnt.TendpointProto
+			fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)
 		}

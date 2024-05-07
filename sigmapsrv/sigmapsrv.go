@@ -15,7 +15,7 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/overlaydir"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -32,29 +32,29 @@ import (
 type SigmaPSrv struct {
 	*protsrv.ProtSrvState
 	*sesssrv.SessSrv
-	srvmnt   *sp.Tmount
+	srvep    *sp.Tendpoint
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
 	fencefs  fs.Dir
 	stats    *stats.StatInfo
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt, root fs.Dir, as auth.AuthSrv, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt, root fs.Dir, amgr auth.AuthMgr, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
 	psrv := &SigmaPSrv{
 		dirunder: root,
 		dirover:  overlay.MkDirOverlay(root),
 		fencefs:  fencefs,
 	}
 	psrv.stats = stats.NewStatsDev(psrv.dirover)
-	psrv.ProtSrvState = protsrv.NewProtSrvState(as, psrv.stats)
+	psrv.ProtSrvState = protsrv.NewProtSrvState(amgr, psrv.stats)
 	psrv.VersionTable().Insert(psrv.dirover.Path())
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
 	psrv.SessSrv = sesssrv.NewSessSrv(pe, npc, addr, psrv.stats, psrv)
 	return psrv
 }
 
-func NewSigmaPSrvPost(root fs.Dir, pn string, as auth.AuthSrv, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
-	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, as, addr, fencefs)
+func NewSigmaPSrvPost(root fs.Dir, pn string, amgr auth.AuthMgr, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
+	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, amgr, addr, fencefs)
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
 			return nil, "", err
@@ -89,14 +89,14 @@ func (psrv *SigmaPSrv) GetRootCtx(p *sp.Tprincipal, claims *auth.ProcClaims, ana
 	return psrv.dirover, ctx.NewCtx(p, claims, sessid, clntid, psrv.CondTable(), psrv.fencefs)
 }
 
-func (psrv *SigmaPSrv) GetSigmaPSrvMount() *sp.Tmount {
-	return psrv.srvmnt
+func (psrv *SigmaPSrv) GetSigmaPSrvEndpoint() *sp.Tendpoint {
+	return psrv.srvep
 }
 
 func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
-	mnt := psrv.GetMount()
-	psrv.srvmnt = mnt
-	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
+	ep := psrv.GetEndpoint()
+	psrv.srvep = ep
+	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
 	if path.EndSlash(pn) {
 		dir, err := sc.IsDir(pn)
 		if err != nil {
@@ -105,7 +105,7 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 		if !dir {
 			return "", serr.NewErr(serr.TErrNotDir, pn)
 		}
-		pn = mountPathName(pn, mnt)
+		pn = mountPathName(pn, ep)
 	}
 
 	li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
@@ -114,13 +114,13 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 	}
 	li.KeepExtending()
 
-	if err := sc.MkMountFile(pn, mnt, li.Lease()); err != nil {
+	if err := sc.MkEndpointFile(pn, ep, li.Lease()); err != nil {
 		return "", err
 	}
 	return pn, nil
 }
 
 // Return the pathname for posting in a directory of a service
-func mountPathName(pn string, mnt *sp.Tmount) string {
-	return pn + "/" + mnt.Addrs()[0].IPPort()
+func mountPathName(pn string, ep *sp.Tendpoint) string {
+	return pn + "/" + ep.Addrs()[0].IPPort()
 }

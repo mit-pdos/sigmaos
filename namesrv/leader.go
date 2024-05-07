@@ -9,7 +9,7 @@ import (
 )
 
 func (nd *Named) startLeader() error {
-	fs, err := fsetcd.NewFsEtcd(nd.GetNetProxyClnt(), nd.ProcEnv().GetEtcdMounts(), nd.realm)
+	fs, err := fsetcd.NewFsEtcd(nd.GetNetProxyClnt(), nd.ProcEnv().GetEtcdEndpoints(), nd.realm)
 	if err != nil {
 		return err
 	}

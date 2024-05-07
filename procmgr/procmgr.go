@@ -26,22 +26,22 @@ type ProcMgr struct {
 	rootsc         *sigmaclnt.SigmaClntKernel
 	updm           *uprocclnt.UprocdMgr
 	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClntKernel
-	namedMnts      map[sp.Trealm]*sp.Tmount
+	namedMnts      map[sp.Trealm]*sp.Tendpoint
 	cachedProcBins map[sp.Trealm]map[string]bool
-	as             auth.AuthSrv
+	amgr           auth.AuthMgr
 	pstate         *ProcState
 }
 
 // Manages the state and lifecycle of a proc.
-func NewProcMgr(as auth.AuthSrv, sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
+func NewProcMgr(amgr auth.AuthMgr, sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
 	mgr := &ProcMgr{
 		kernelId:       kernelId,
 		rootsc:         sigmaclnt.NewSigmaClntKernel(sc),
 		updm:           uprocclnt.NewUprocdMgr(sc.FsLib, kernelId),
 		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
-		namedMnts:      make(map[sp.Trealm]*sp.Tmount),
+		namedMnts:      make(map[sp.Trealm]*sp.Tendpoint),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
-		as:             as,
+		amgr:           amgr,
 		pstate:         NewProcState(),
 	}
 	return mgr
@@ -69,12 +69,12 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	p.SetKernelID(mgr.kernelId, true)
 	// Set the schedd mount for the proc, so it can mount this schedd in one RPC
 	// (without walking down to it).
-	p.SetScheddMount(mgr.mfs.GetSigmaPSrvMount())
+	p.SetScheddEndpoint(mgr.mfs.GetSigmaPSrvEndpoint())
 	// Set the named mount point if this isn't a privileged proc. If we were to
 	// do this for a privileged proc, it could cause issues as it may save the
 	// knamed address.
 	if !p.IsPrivileged() {
-		p.SetNamedMount(mgr.getNamedMount(p.GetRealm()))
+		p.SetNamedEndpoint(mgr.getNamedEndpoint(p.GetRealm()))
 	}
 	s := time.Now()
 	mgr.setupProcState(p)
@@ -150,7 +150,7 @@ func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }
 
-func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) *sp.Tmount {
+func (mgr *ProcMgr) getNamedEndpoint(realm sp.Trealm) *sp.Tendpoint {
 	mgr.Lock()
 	defer mgr.Unlock()
 
@@ -158,9 +158,9 @@ func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) *sp.Tmount {
 	if !ok {
 		sc := mgr.getSigmaClntL(realm)
 		var err error
-		mnt, err = sc.GetNamedMount()
+		mnt, err = sc.GetNamedEndpoint()
 		if err != nil {
-			db.DFatalf("GetNamedMount: %v", err)
+			db.DFatalf("GetNamedEndpoint: %v", err)
 		}
 		mgr.namedMnts[realm] = mnt
 	}
@@ -183,13 +183,13 @@ func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 			clnt = mgr.rootsc
 		} else {
 			pe := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
-			if err := mgr.as.MintAndSetProcToken(pe); err != nil {
+			if err := mgr.amgr.MintAndSetProcToken(pe); err != nil {
 				db.DFatalf("Err MintAndSetToken: %v", err)
 			}
 			if sc, err := sigmaclnt.NewSigmaClnt(pe); err != nil {
 				db.DFatalf("Err NewSigmaClntRealm: %v", err)
 			} else {
-				// Mount KPIDS.
+				// Endpoint KPIDS.
 				clnt = sigmaclnt.NewSigmaClntKernel(sc)
 				if err := procclnt.MountPids(clnt.FsLib); err != nil {
 					db.DFatalf("Error MountPids: %v", err)

@@ -15,23 +15,23 @@ import (
 )
 
 type ProtClnt struct {
-	mnt *sp.Tmount
-	sm  *sessclnt.Mgr
+	ep *sp.Tendpoint
+	sm *sessclnt.Mgr
 }
 
-func NewProtClnt(mnt *sp.Tmount, sm *sessclnt.Mgr) *ProtClnt {
+func NewProtClnt(ep *sp.Tendpoint, sm *sessclnt.Mgr) *ProtClnt {
 	return &ProtClnt{
-		mnt: mnt,
-		sm:  sm,
+		ep: ep,
+		sm: sm,
 	}
 }
 
-func (pclnt *ProtClnt) Servers() *sp.Tmount {
-	return pclnt.mnt
+func (pclnt *ProtClnt) Servers() *sp.Tendpoint {
+	return pclnt.ep
 }
 
 func (pclnt *ProtClnt) CallServer(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
-	reply, err := pclnt.sm.RPC(pclnt.mnt, args, iniov, outiov)
+	reply, err := pclnt.sm.RPC(pclnt.ep, args, iniov, outiov)
 	if err != nil {
 		return nil, err
 	}

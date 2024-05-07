@@ -5,7 +5,7 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/netsigma"
+	"sigmaos/netproxy"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -16,10 +16,10 @@ type Mgr struct {
 	mu       sync.Mutex
 	sessions map[string]*SessClnt
 	pe       *proc.ProcEnv
-	npc      *netsigma.NetProxyClnt
+	npc      *netproxy.NetProxyClnt
 }
 
-func NewMgr(pe *proc.ProcEnv, npc *netsigma.NetProxyClnt) *Mgr {
+func NewMgr(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt) *Mgr {
 	sc := &Mgr{
 		sessions: make(map[string]*SessClnt),
 		pe:       pe,
@@ -42,19 +42,19 @@ func (sc *Mgr) SessClnts() []*SessClnt {
 
 // Return an existing sess if there is one, else allocate a new one. Caller
 // holds lock.
-func (sc *Mgr) allocSessClnt(mnt *sp.Tmount) (*SessClnt, *serr.Err) {
+func (sc *Mgr) allocSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// TODO XXX: kill?
 	// Store as concatenation of addresses
 	//	if len(addrs) == 0 {
-	//		return nil, serr.NewErr(serr.TErrInval, mnt)
+	//		return nil, serr.NewErr(serr.TErrInval, ep)
 	//	}
-	key := sessKey(mnt)
+	key := sessKey(ep)
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := newSessClnt(sc.pe, sc.npc, mnt)
+	sess, err := newSessClnt(sc.pe, sc.npc, ep)
 	if err != nil {
 		return nil, err
 	}
@@ -62,27 +62,27 @@ func (sc *Mgr) allocSessClnt(mnt *sp.Tmount) (*SessClnt, *serr.Err) {
 	return sess, nil
 }
 
-func (sc *Mgr) LookupSessClnt(mnt *sp.Tmount) (*SessClnt, *serr.Err) {
+func (sc *Mgr) LookupSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	key := sessKey(mnt)
+	key := sessKey(ep)
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	return nil, serr.NewErr(serr.TErrNotfound, mnt)
+	return nil, serr.NewErr(serr.TErrNotfound, ep)
 }
 
-func (sc *Mgr) RPC(mnt *sp.Tmount, req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+func (sc *Mgr) RPC(ep *sp.Tendpoint, req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	// Get or establish sessection
-	sess, err := sc.allocSessClnt(mnt)
+	sess, err := sc.allocSessClnt(ep)
 	if err != nil {
-		db.DPrintf(db.SESSCLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, mnt)
+		db.DPrintf(db.SESSCLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, ep)
 		return nil, err
 	}
 	rep, err := sess.RPC(req, iniov, outiov)
 	return rep, err
 }
 
-func sessKey(mnt *sp.Tmount) string {
-	return mnt.Addrs().String()
+func sessKey(ep *sp.Tendpoint) string {
+	return ep.Addrs().String()
 }

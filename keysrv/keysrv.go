@@ -93,11 +93,11 @@ func RunKeySrv(masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) {
 	)
 	// Add the master deployment key, to allow connections from kernel to this
 	// named.
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
 	if err != nil {
 		db.DFatalf("Error New authsrv: %v", err)
 	}
-	sc.SetAuthSrv(as)
+	sc.SetAuthMgr(amgr)
 	ssrv, err := sigmasrv.NewSigmaSrvClntKeyMgr(sp.KEYD, sc, kmgr, ks)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

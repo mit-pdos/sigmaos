@@ -119,11 +119,11 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		pubkey,
 		privkey,
 	)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
+	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
 	if err != nil {
-		db.DFatalf("Error NewAuthSrv %v", err)
+		db.DFatalf("Error NewAuthMgr %v", err)
 	}
-	sc.SetAuthSrv(as)
+	sc.SetAuthMgr(amgr)
 	var ssrv *sigmasrv.SigmaSrv
 	if up == sp.NO_PORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
@@ -155,7 +155,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	// Start binfsd now; when uprocds gets assigned to a realm, then
 	// uprocd mounts the realm's bin directory that binfs will serve
 	// from.
-	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ups.ssrv.GetSigmaPSrvMount())
+	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ups.ssrv.GetSigmaPSrvEndpoint())
 	if err != nil {
 		db.DPrintf(db.ERROR, "ExecBinSrv err %v\n", err)
 		return err

@@ -43,13 +43,13 @@ message Taddr {
         string netNS = 4;
 }
 
-message TmountClaimsProto {
+message TendpointClaimsProto {
   string realmStr = 1;
   repeated Taddr addr = 2;
 }
 
-message TmountProto {
-        TmountClaimsProto claims = 1;
+message TendpointProto {
+        TendpointClaimsProto claims = 1;
         string root = 2;
         bytes pubKey = 3;
         Ttoken token = 4;

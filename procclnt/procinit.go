@@ -21,13 +21,13 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 		fsl.NewRootMount(fsl.ProcEnv().ProcDir, proc.PROCDIR)
 	}
 	// If a schedd IP was specified for this proc, mount the RPC file directly.
-	if mnt, ok := fsl.ProcEnv().GetScheddMount(); ok {
+	if ep, ok := fsl.ProcEnv().GetScheddEndpoint(); ok {
 		pn := path.Join(sp.SCHEDD, fsl.ProcEnv().GetKernelID(), rpc.RPC)
-		db.DPrintf(db.PROCCLNT, "Mount[%v] %v as %v", mnt, rpc.RPC, pn)
+		db.DPrintf(db.PROCCLNT, "Mount[%v] %v as %v", ep, rpc.RPC, pn)
 		start := time.Now()
-		err := fsl.MountTree(mnt, rpc.RPC, pn)
+		err := fsl.MountTree(ep, rpc.RPC, pn)
 		if err != nil {
-			db.DPrintf(db.ERROR, "Err MountTree: mnt %v err %v", mnt, err)
+			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
 			return nil, err
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] MountTree latency: %v", fsl.ProcEnv().GetPID(), time.Since(start))

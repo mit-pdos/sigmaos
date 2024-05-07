@@ -20,7 +20,8 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   git pull && \
   cd src && \
   ./make.bash && \
-  go version
+  /go-custom/bin/go version
+
 
 WORKDIR /home/sigmaos
 

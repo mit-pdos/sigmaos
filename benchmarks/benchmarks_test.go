@@ -297,6 +297,8 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 		assert.Nil(t, err, "WaitExit")
 	}
 
+	time.Sleep(2 * time.Second)
+
 	s := time.Now()
 	p := proc.NewProc("spawn-latency", []string{"1us", OUT_DIR})
 	p.SetKernels([]string{kernels[1]})

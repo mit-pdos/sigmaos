@@ -2,11 +2,14 @@ package benchmarks_test
 
 import (
 	"flag"
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"math/rand"
 	"net/rpc"
 	"os/exec"
 	"path"
+
+	"github.com/stretchr/testify/assert"
+
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
@@ -236,7 +239,7 @@ func TestMicroDownSemaphore(t *testing.T) {
 
 // Test how long it takes to cold Spawn, run, and WaitExit the rust
 // hello-world proc
-func TestMicroSpawnWaitStart(t *testing.T) {
+func TestMicroSpawnWaitStartRealm(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -262,6 +265,47 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 	db.DPrintf(db.BENCH, "Results:\n%v", rs)
 	printResultSummary(rs)
 	rmOutDir(ts1)
+	rootts.Shutdown()
+}
+
+// Test how long it takes to cold Spawn, run, and WaitExit the rust
+// hello-world proc on a node that hasn't run any proc.
+func TestMicroSpawnWaitStartNode(t *testing.T) {
+	const N = 1
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	err := rootts.BootNode(N)
+	assert.Nil(t, err, "Boot node: %v", err)
+	db.DPrintf(db.TEST, "Done boot node %d", N)
+
+	sts, err := rootts.GetDir(sp.SCHEDD)
+	kernels := sp.Names(sts)
+	db.DPrintf(db.TEST, "Kernels %v", kernels)
+
+	if PREWARM_REALM {
+		p := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 0), "name/"})
+		p.SetKernels([]string{kernels[0]})
+		err := ts1.Spawn(p)
+		assert.Nil(t, err, "Spawn")
+		_, err = ts1.WaitExit(p.GetPid())
+		assert.Nil(t, err, "WaitExit")
+	}
+
+	s := time.Now()
+	p := proc.NewProc("spawn-latency", []string{"1us", OUT_DIR})
+	p.SetKernels([]string{kernels[1]})
+	err = ts1.Spawn(p)
+	assert.Nil(t, err, "Spawn")
+	_, err = ts1.WaitExit(p.GetPid())
+	assert.Nil(t, err, "WaitExit")
+	db.DPrintf(db.BENCH, "Results: %v Cold start %v", kernels[1], time.Since(s))
+
 	rootts.Shutdown()
 }
 

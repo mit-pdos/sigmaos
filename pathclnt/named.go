@@ -5,7 +5,6 @@ import (
 	gpath "path"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
 	path "sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -28,14 +27,17 @@ func (pathc *PathClnt) getNamedEndpoint(realm sp.Trealm) (*sp.Tendpoint, *serr.E
 		return ep, nil
 	}
 	var ep *sp.Tendpoint
-	var err *serr.Err
 	// If this is the root realm, then get the root named.
 	if realm == sp.ROOTREALM {
-		ep, err = fsetcd.GetRootNamed(pathc.GetNetProxyClnt().Dial, pathc.pe.GetEtcdEndpoints(), realm)
+		ep0, err := pathc.GetNetProxyClnt().GetNamedEndpoint()
 		if err != nil {
 			db.DPrintf(db.NAMED_ERR, "getNamedEndpoint [%v] err GetRootNamed %v", realm, ep)
-			return &sp.Tendpoint{}, err
+			if sr, ok := serr.IsErr(err); ok {
+				return &sp.Tendpoint{}, sr
+			}
+			return &sp.Tendpoint{}, serr.NewErrError(err)
 		}
+		ep = ep0
 	} else {
 		// Otherwise, walk through the root named to find this named's mount.
 		if _, rest, err := pathc.mnt.resolve(path.Path{"root"}, true); err != nil && len(rest) >= 1 {

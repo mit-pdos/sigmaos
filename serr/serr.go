@@ -244,6 +244,14 @@ func (err *Err) ErrPath() string {
 	}
 }
 
+func IsErr(error error) (*Err, bool) {
+	var err *Err
+	if errors.As(error, &err) {
+		return err, true
+	}
+	return nil, false
+}
+
 func IsErrorUnavailable(error error) bool {
 	var err *Err
 	if errors.As(error, &err) {

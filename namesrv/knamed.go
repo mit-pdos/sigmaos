@@ -9,7 +9,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/netproxy"
+	"sigmaos/netproxyclnt"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -45,7 +45,7 @@ func RunKNamed(args []string) error {
 	}
 	defer p.Done()
 
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		db.DFatalf("NewSigmaClntFsLib: err %v", err)
 	}

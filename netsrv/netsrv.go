@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/netproxy"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -17,13 +17,13 @@ type NewConnI interface {
 
 type NetServer struct {
 	pe      *proc.ProcEnv
-	npc     *netproxy.NetProxyClnt
+	npc     *netproxyclnt.NetProxyClnt
 	ep      *sp.Tendpoint
 	l       net.Listener
 	newConn NewConnI
 }
 
-func NewNetServer(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt, addr *sp.Taddr, newConn NewConnI) *NetServer {
+func NewNetServer(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, newConn NewConnI) *NetServer {
 	srv := &NetServer{
 		pe:      pe,
 		newConn: newConn,

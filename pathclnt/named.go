@@ -31,7 +31,7 @@ func (pathc *PathClnt) getNamedEndpoint(realm sp.Trealm) (*sp.Tendpoint, *serr.E
 	var err *serr.Err
 	// If this is the root realm, then get the root named.
 	if realm == sp.ROOTREALM {
-		ep, err = fsetcd.GetRootNamed(pathc.GetNetProxyClnt(), pathc.pe.GetEtcdEndpoints(), realm)
+		ep, err = fsetcd.GetRootNamed(pathc.GetNetProxyClnt().Dial, pathc.pe.GetEtcdEndpoints(), realm)
 		if err != nil {
 			db.DPrintf(db.NAMED_ERR, "getNamedEndpoint [%v] err GetRootNamed %v", realm, ep)
 			return &sp.Tendpoint{}, err

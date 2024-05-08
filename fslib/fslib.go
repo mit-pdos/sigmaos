@@ -2,7 +2,7 @@ package fslib
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/netproxy"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
@@ -10,11 +10,11 @@ import (
 
 type FsLib struct {
 	pe  *proc.ProcEnv
-	npc *netproxy.NetProxyClnt
+	npc *netproxyclnt.NetProxyClnt
 	sos.SigmaOS
 }
 
-func NewFsLibAPI(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt, sos sos.SigmaOS) (*FsLib, error) {
+func NewFsLibAPI(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, sos sos.SigmaOS) (*FsLib, error) {
 	db.DPrintf(db.FSLIB, "NewFsLib: principal %s innerip %s addrs %v\n", pe.GetPrincipal(), pe.GetInnerContainerIP(), pe.GetEtcdEndpoints())
 	fl := &FsLib{
 		pe:      pe,
@@ -33,7 +33,7 @@ func (fl *FsLib) ProcEnv() *proc.ProcEnv {
 }
 
 // TODO: should probably remove, and replace by a high-level SigmaOS API call.
-func (fl *FsLib) GetNetProxyClnt() *netproxy.NetProxyClnt {
+func (fl *FsLib) GetNetProxyClnt() *netproxyclnt.NetProxyClnt {
 	return fl.npc
 }
 

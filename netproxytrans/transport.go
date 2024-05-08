@@ -1,4 +1,4 @@
-package netproxy
+package netproxytrans
 
 import (
 	"fmt"
@@ -41,7 +41,7 @@ func NewNetProxyTrans(conn *net.UnixConn, iovm *demux.IoVecMap) *NetProxyTrans {
 	}
 }
 
-func getNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
+func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 	var conn *net.UnixConn
 	fdstr := os.Getenv(SIGMA_NETPROXY_FD)
 	if fdstr == "" {
@@ -86,6 +86,10 @@ func getNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 		return nil, err
 	}
 	return conn, nil
+}
+
+func (trans *NetProxyTrans) Conn() *net.UnixConn {
+	return trans.conn
 }
 
 func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {

@@ -8,7 +8,7 @@ import (
 	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/netproxy"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -49,7 +49,7 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 	return mnt.Addrs(), err
 }
 
-func NewFsLibs(uname string, npc *netproxy.NetProxyClnt) ([]*fslib.FsLib, error) {
+func NewFsLibs(uname string, npc *netproxyclnt.NetProxyClnt) ([]*fslib.FsLib, error) {
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
 		pe := proc.GetProcEnv()

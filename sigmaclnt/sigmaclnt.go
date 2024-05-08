@@ -10,7 +10,7 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/leaseclnt"
-	"sigmaos/netproxy"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclntclnt"
@@ -42,7 +42,7 @@ type SigmaClntKernel struct {
 	sc *SigmaClnt
 }
 
-// Create FsLib using either sigmalcntd or fdclnt
+// Create FsLib using either sigmacntclnt or fdclnt
 func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
 	var s sos.SigmaOS
@@ -58,7 +58,7 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 	return fslib.NewFsLibAPI(pe, fidc.GetNetProxyClnt(), s)
 }
 
-func NewFsLib(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt) (*fslib.FsLib, error) {
+func NewFsLib(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) (*fslib.FsLib, error) {
 	return newFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
 }
 
@@ -100,13 +100,13 @@ func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaCl
 	}, nil
 }
 
-func NewSigmaClntFsLib(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt) (*SigmaClnt, error) {
+func NewSigmaClntFsLib(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) (*SigmaClnt, error) {
 	return NewSigmaClntFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
 }
 
 func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
-	sc, err := NewSigmaClntFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+	sc, err := NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
@@ -126,7 +126,7 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
 func NewSigmaClntRootInit(pe *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := NewSigmaClntFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+	sc, err := NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		return nil, err
 	}

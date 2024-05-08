@@ -25,6 +25,8 @@ var (
 	endpointPorts = []sp.Tport{3379, 3380, 3381, 3382, 3383}
 )
 
+type TetcdEndpoints map[string]*sp.TendpointProto
+
 type FsEtcd struct {
 	*clientv3.Client
 	fencekey string
@@ -33,7 +35,7 @@ type FsEtcd struct {
 	dc       *Dcache
 }
 
-func NewFsEtcdEndpoint(amgr auth.AuthMgr, ip sp.Tip) (map[string]*sp.TendpointProto, error) {
+func NewFsEtcdEndpoint(amgr auth.AuthMgr, ip sp.Tip) (TetcdEndpoints, error) {
 	eps := map[string]*sp.TendpointProto{}
 	for i := range endpointPorts {
 		addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, endpointPorts[i])
@@ -47,7 +49,7 @@ func NewFsEtcdEndpoint(amgr auth.AuthMgr, ip sp.Tip) (map[string]*sp.TendpointPr
 	return eps, nil
 }
 
-func NewFsEtcd(npc *netproxy.NetProxyClnt, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*FsEtcd, error) {
+func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*FsEtcd, error) {
 	endpoints := []string{}
 	for addr, _ := range etcdMnts {
 		endpoints = append(endpoints, addr)
@@ -62,7 +64,7 @@ func NewFsEtcd(npc *netproxy.NetProxyClnt, etcdMnts map[string]*sp.TendpointProt
 			if !ok {
 				db.DFatalf("Unknown fsetcd endpoint proto: addr %v eps %v", addr, etcdMnts)
 			}
-			return npc.Dial(sp.NewEndpointFromProto(ep))
+			return dial(sp.NewEndpointFromProto(ep))
 		})},
 	})
 	if err != nil {
@@ -120,8 +122,8 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 	}
 }
 
-func GetRootNamed(npc *netproxy.NetProxyClnt, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
-	fs, err := NewFsEtcd(npc, etcdMnts, realm)
+func GetRootNamed(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
+	fs, err := NewFsEtcd(dial, etcdMnts, realm)
 	if err != nil {
 		return &sp.Tendpoint{}, serr.NewErrError(err)
 	}

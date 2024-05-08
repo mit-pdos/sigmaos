@@ -10,7 +10,7 @@ import (
 
 	// db "sigmaos/debug"
 	db "sigmaos/debug"
-	"sigmaos/netproxy"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -51,7 +51,7 @@ func TestPipeBasic(t *testing.T) {
 	ch := make(chan bool)
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
@@ -91,7 +91,7 @@ func TestPipeClose(t *testing.T) {
 	ch := make(chan bool)
 	go func(ch chan bool) {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
@@ -135,7 +135,7 @@ func TestPipeRemove(t *testing.T) {
 	ch := make(chan bool)
 	go func(ch chan bool) {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OREAD)
 		assert.NotNil(ts.T, err, "Open")
@@ -161,7 +161,7 @@ func TestPipeCrash0(t *testing.T) {
 
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OWRITE)
 		assert.Nil(ts.T, err, "Open")
@@ -189,7 +189,7 @@ func TestPipeCrash1(t *testing.T) {
 	assert.Nil(ts.T, err, "NewPipe")
 
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl1, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+	fsl1, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 
 	assert.Nil(t, err)
 	go func() {
@@ -208,7 +208,7 @@ func TestPipeCrash1(t *testing.T) {
 	// start up second write to pipe
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl2, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+		fsl2, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 		// the pipe has been closed for writing due to crash;
 		// this open should fail.

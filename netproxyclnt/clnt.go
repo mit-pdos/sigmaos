@@ -1,4 +1,4 @@
-package netproxy
+package netproxyclnt
 
 import (
 	"fmt"
@@ -11,7 +11,9 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/demux"
+	"sigmaos/netproxy"
 	"sigmaos/netproxy/proto"
+	"sigmaos/netproxytrans"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
@@ -26,10 +28,10 @@ type NetProxyClnt struct {
 	canSignEndpoints bool
 	verifyEndpoints  bool
 	auth             auth.AuthMgr
-	directDialFn     DialFn
-	directListenFn   ListenFn
+	directDialFn     netproxy.DialFn
+	directListenFn   netproxy.ListenFn
 	seqcntr          *sessp.Tseqcntr
-	trans            *NetProxyTrans
+	trans            *netproxytrans.NetProxyTrans
 	dmx              *demux.DemuxClnt
 	rpcc             *rpcclnt.RPCClnt
 }
@@ -41,8 +43,8 @@ func NewNetProxyClnt(pe *proc.ProcEnv, amgr auth.AuthMgr) *NetProxyClnt {
 		verifyEndpoints:  pe.GetVerifyEndpoints(),
 		auth:             amgr,
 		seqcntr:          new(sessp.Tseqcntr),
-		directDialFn:     DialDirect,
-		directListenFn:   ListenDirect,
+		directDialFn:     netproxy.DialDirect,
+		directListenFn:   netproxy.ListenDirect,
 	}
 }
 
@@ -104,7 +106,7 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tendpoint, net.Listener, er
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
 			return nil, nil, err
 		}
-		ep, err = constructEndpoint(npc.verifyEndpoints, npc.auth, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
+		ep, err = netproxy.NewEndpoint(npc.verifyEndpoints, npc.auth, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error construct endpoint: %v", err)
 			return nil, nil, err
@@ -133,12 +135,12 @@ func (npc *NetProxyClnt) init() error {
 
 	db.DPrintf(db.NETPROXYCLNT, "Init netproxyclnt %p", npc)
 	iovm := demux.NewIoVecMap()
-	conn, err := getNetproxydConn(npc.pe)
+	conn, err := netproxytrans.GetNetproxydConn(npc.pe)
 	if err != nil {
 		return err
 	}
 	// Connect to the netproxy server
-	trans := NewNetProxyTrans(conn, iovm)
+	trans := netproxytrans.NewNetProxyTrans(conn, iovm)
 	npc.trans = trans
 	npc.dmx = demux.NewDemuxClnt(trans, iovm)
 	npc.rpcc = rpcclnt.NewRPCClnt(npc)
@@ -151,7 +153,7 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return nil, err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request ep %v", npc.trans.conn, ep)
+	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request ep %v", npc.trans.Conn(), ep)
 	// Endpoints should always have realms specified
 	if ep.GetRealm() == sp.NOT_SET {
 		db.DPrintf(db.ERROR, "Dial endpoint without realm set: %v", ep)
@@ -184,7 +186,7 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Dial: %v", err)
 		return nil, err
 	}
-	return parseReturnedConn(res.Blob.Iov[0])
+	return netproxytrans.ParseReturnedConn(res.Blob.Iov[0])
 }
 
 func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tendpoint, net.Listener, error) {
@@ -193,7 +195,7 @@ func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tendpoint, net.Listene
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return nil, nil, err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyListen request addr %v", npc.trans.conn, addr)
+	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyListen request addr %v", npc.trans.Conn(), addr)
 	req := &proto.ListenRequest{
 		Addr: addr,
 		// Requests must have blob too, so that unix sendmsg works
@@ -222,16 +224,16 @@ func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tendpoint, net.Listene
 		return nil, nil, fmt.Errorf("No listener ID")
 	}
 	ep := sp.NewEndpointFromProto(res.Endpoint)
-	return ep, NewListener(npc, Tlid(res.ListenerID), ep), nil
+	return ep, NewListener(npc, netproxy.Tlid(res.ListenerID), ep), nil
 }
 
-func (npc *NetProxyClnt) proxyAccept(lid Tlid) (net.Conn, error) {
+func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid) (net.Conn, error) {
 	// Ensure that the connection to the netproxy server has been initialized
 	if err := npc.init(); err != nil {
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return nil, err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyAccept request lip %v", npc.trans.conn, lid)
+	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyAccept request lip %v", npc.trans.Conn(), lid)
 	req := &proto.AcceptRequest{
 		ListenerID: uint64(lid),
 		// Requests must have blob too, so that unix sendmsg works
@@ -255,16 +257,16 @@ func (npc *NetProxyClnt) proxyAccept(lid Tlid) (net.Conn, error) {
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Accept: %v", err)
 		return nil, err
 	}
-	return parseReturnedConn(res.Blob.Iov[0])
+	return netproxytrans.ParseReturnedConn(res.Blob.Iov[0])
 }
 
-func (npc *NetProxyClnt) proxyClose(lid Tlid) error {
+func (npc *NetProxyClnt) proxyClose(lid netproxy.Tlid) error {
 	// Ensure that the connection to the netproxy server has been initialized
 	if err := npc.init(); err != nil {
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyClose request lip %v", npc.trans.conn, lid)
+	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyClose request lip %v", npc.trans.Conn(), lid)
 	req := &proto.CloseRequest{
 		ListenerID: uint64(lid),
 		// Requests must have blob too, so that unix sendmsg works
@@ -291,24 +293,62 @@ func (npc *NetProxyClnt) proxyClose(lid Tlid) error {
 	return nil
 }
 
-func (npc *NetProxyClnt) newListener(lid Tlid) net.Listener {
+func (npc *NetProxyClnt) newListener(lid netproxy.Tlid) net.Listener {
 	db.DFatalf("Unimplemented")
 	return nil
 }
 
 func (npc *NetProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
-	c := NewProxyCall(sessp.NextSeqno(npc.seqcntr), iniov)
+	c := netproxytrans.NewProxyCall(sessp.NextSeqno(npc.seqcntr), iniov)
 	rep, err := npc.dmx.SendReceive(c, outiov)
 	if err != nil {
 		return err
 	} else {
-		c := rep.(*ProxyCall)
+		c := rep.(*netproxytrans.ProxyCall)
 		if len(outiov) != len(c.Iov) {
 			return fmt.Errorf("netproxyclnt outiov len wrong: %v != %v", len(outiov), len(c.Iov))
 		}
 		return nil
 	}
 }
+
+func (npc *NetProxyClnt) GetNamedEndpoint() (*sp.Tendpoint, error) {
+	var ep *sp.Tendpoint
+	var err error
+	r := npc.pe.GetRealm()
+	if npc.useProxy() {
+		db.DPrintf(db.NETPROXYCLNT, "GetNamedEndpoint %v", r)
+		ep, err = npc.getNamedEndpoint()
+		if err != nil {
+			db.DPrintf(db.NETPROXYCLNT_ERR, "GetNamedEndpoint %v err %v", r, err)
+			return nil, err
+		}
+	} else {
+		db.DPrintf(db.NETPROXYCLNT, "directGetNamed %v", npc.pe.GetRealm())
+	}
+	return ep, err
+}
+
+func (npc *NetProxyClnt) getNamedEndpoint() (*sp.Tendpoint, error) {
+	if err := npc.init(); err != nil {
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		return nil, err
+	}
+	req := &proto.NamedEndpointRequest{
+		RealmStr: npc.pe.GetRealm().String(),
+	}
+	res := &proto.NamedEndpointResponse{}
+	if err := npc.rpcc.RPC("NetProxySrvStubs.GetNamedEndpoint", req, res); err != nil {
+		return nil, err
+	}
+	if res.Err.ErrCode != 0 {
+		return nil, sp.NewErr(res.Err)
+	} else {
+		ep := sp.NewEndpointFromProto(res.Endpoint)
+		return ep, nil
+	}
+}
+
 func (npc *NetProxyClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 	db.DPrintf(db.ERROR, "StatsSrv unimplemented")
 	return nil, fmt.Errorf("Unimplemented")

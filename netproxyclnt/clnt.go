@@ -336,8 +336,15 @@ func (npc *NetProxyClnt) getNamedEndpoint() (*sp.Tendpoint, error) {
 	}
 	req := &proto.NamedEndpointRequest{
 		RealmStr: npc.pe.GetRealm().String(),
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{nil},
+		},
 	}
-	res := &proto.NamedEndpointResponse{}
+	res := &proto.NamedEndpointResponse{
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
+		},
+	}
 	if err := npc.rpcc.RPC("NetProxySrvStubs.GetNamedEndpoint", req, res); err != nil {
 		return nil, err
 	}

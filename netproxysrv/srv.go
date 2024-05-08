@@ -240,6 +240,10 @@ func (nps *NetProxySrvStubs) Close(c fs.CtxI, req netproto.CloseRequest, res *ne
 }
 
 func (nps *NetProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpointRequest, res *netproto.NamedEndpointResponse) error {
+	db.DPrintf(db.NETPROXYSRV, "GetNamedEndpoint %v", req)
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{nil},
+	}
 	realm := sp.Trealm(req.RealmStr)
 	if realm == sp.ROOTREALM {
 		ep, err := fsetcd.GetRootNamed(nps.directDialFn, nps.etcdEndpoints, realm)

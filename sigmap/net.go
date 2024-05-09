@@ -3,6 +3,7 @@ package sigmap
 import (
 	"encoding/json"
 	"log"
+	"net"
 	"strconv"
 )
 
@@ -45,6 +46,18 @@ func (a *Taddr) GetPort() Tport {
 
 func NewTaddrAnyPort(iptype Tiptype, netns string) *Taddr {
 	return NewTaddrRealm(NO_IP, iptype, NO_PORT, netns)
+}
+
+func NewTaddrFromString(address string, iptype Tiptype, netns string) (*Taddr, error) {
+	h, po, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+	port, err := strconv.Atoi(po)
+	if err != nil {
+		return nil, err
+	}
+	return NewTaddrRealm(Tip(h), iptype, Tport(port), netns), nil
 }
 
 func NewTaddr(ip Tip, iptype Tiptype, port Tport) *Taddr {

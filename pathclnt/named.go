@@ -5,31 +5,56 @@ import (
 	gpath "path"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	path "sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) GetNamedEndpoint() (*sp.Tendpoint, error) {
-	ep, err := pathc.getNamedEndpoint(pathc.pe.GetRealm())
-	if err != nil {
-		db.DPrintf(db.ERROR, "Err getNamedEndpoint [%v]: %v", pathc.pe.GetRealm(), err)
+func (pathc *PathClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
+	if ep, err := pathc.getNamedEndpointRealm(realm); err != nil {
 		return ep, err
+	} else {
+		return ep, nil
 	}
-	db.DPrintf(db.NAMED, "GetNamedEndpoint %v %v", pathc.pe.GetRealm(), ep)
-	return ep, nil
 }
 
-func (pathc *PathClnt) getNamedEndpoint(realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
-	// If this mount was passed via the proc config, return it immediately.
+// Get named enpoint via netproxy or directly
+func (pathc *PathClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
+	// If this mount was passed via the proc env, return it immediately.
 	if ep, ok := pathc.ndMntCache.Get(pathc.pe.GetRealm()); ok {
 		db.DPrintf(db.NAMED, "getNamedEndpoint cached %v %v", pathc.pe.GetRealm(), ep)
 		return ep, nil
 	}
 	var ep *sp.Tendpoint
+	if pathc.pe.UseNetProxy {
+		ep0, err := pathc.GetNetProxyClnt().GetNamedEndpoint(realm)
+		if err != nil {
+			if sr, ok := serr.IsErr(err); ok {
+				return &sp.Tendpoint{}, sr
+			}
+			return &sp.Tendpoint{}, serr.NewErrError(err)
+		}
+		ep = ep0
+	} else {
+		ep0, err := pathc.getRootNamedEndpoint(realm)
+		if err != nil {
+			return &sp.Tendpoint{}, err
+		}
+		ep = ep0
+	}
+	// Cache the newly resolved mount
+	pathc.ndMntCache.Put(realm, ep)
+	db.DPrintf(db.NAMED, "GetNamedEndpointRealm [%v] %v", realm, ep)
+	return ep, nil
+}
+
+// Get named enpoint directly
+func (pathc *PathClnt) getRootNamedEndpoint(realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
+	var ep *sp.Tendpoint
 	// If this is the root realm, then get the root named.
 	if realm == sp.ROOTREALM {
-		ep0, err := pathc.GetNetProxyClnt().GetNamedEndpoint()
+		ep0, err := fsetcd.GetRootNamed(pathc.GetNetProxyClnt().Dial, pathc.pe.GetEtcdEndpoints(), realm)
 		if err != nil {
 			db.DPrintf(db.NAMED_ERR, "getNamedEndpoint [%v] err GetRootNamed %v", realm, ep)
 			if sr, ok := serr.IsErr(err); ok {
@@ -57,14 +82,11 @@ func (pathc *PathClnt) getNamedEndpoint(realm sp.Trealm) (*sp.Tendpoint, *serr.E
 			return &sp.Tendpoint{}, serr.NewErrError(err)
 		}
 	}
-	// Cache the newly resolved mount
-	pathc.ndMntCache.Put(realm, ep)
-	db.DPrintf(db.NAMED, "getNamedEndpoint [%v] %v", realm, ep)
 	return ep, nil
 }
 
 func (pathc *PathClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
-	ep, err := pathc.getNamedEndpoint(realm)
+	ep, err := pathc.getNamedEndpointRealm(realm)
 	if err != nil {
 		db.DPrintf(db.NAMED_ERR, "mountNamed [%v]: getNamedMount err %v", realm, err)
 		return err

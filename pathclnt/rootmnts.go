@@ -74,6 +74,7 @@ func (rootmt *RootMountTable) isRootMount(mntname string) bool {
 	return ok
 }
 
+// Resolve pn that names a server's root (e.g., name/ux, name)
 func (pathc *PathClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
 	db.DPrintf(db.PATHCLNT, "resolveRoot %v", pn)
 	if len(pn) == 0 {
@@ -94,7 +95,6 @@ func (pathc *PathClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
 			return pathc.mountNamed(pathc.pe.GetRealm(), sp.NAME), true
 		} else {
 			db.DPrintf(db.SVCMOUNT, "resolveRoot: remount %v at %v\n", sm, pn[0])
-
 			// this may remount the service that this root is relying on
 			// and repair this root mount
 			if _, err := pathc.Stat(sm.svcpn.String()+"/", pathc.pe.GetPrincipal()); err != nil {

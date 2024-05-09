@@ -15,14 +15,15 @@ import (
 	"sigmaos/demux"
 	"sigmaos/frame"
 	"sigmaos/fs"
-	"sigmaos/fsetcd"
 	"sigmaos/netproxy"
 	netproto "sigmaos/netproxy/proto"
 	"sigmaos/netproxytrans"
+	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/rpcsrv"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -31,7 +32,8 @@ type Tlidctr = atomic.Uint64
 type NetProxySrv struct {
 	auth             auth.AuthMgr
 	innerContainerIP sp.Tip
-	etcdEndpoints    fsetcd.TetcdEndpoints
+	sc               *sigmaclnt.SigmaClnt
+	pe               *proc.ProcEnv
 }
 
 type NetProxySrvStubs struct {
@@ -47,10 +49,11 @@ type NetProxySrvStubs struct {
 	rpcs             *rpcsrv.RPCSrv
 	dmx              *demux.DemuxSrv
 	baseCtx          *ctx.Ctx
-	etcdEndpoints    fsetcd.TetcdEndpoints
+	pe               *proc.ProcEnv
+	sc               *sigmaclnt.SigmaClnt
 }
 
-func NewNetProxySrv(ip sp.Tip, amgr auth.AuthMgr) (*NetProxySrv, error) {
+func NewNetProxySrv(pe *proc.ProcEnv, amgr auth.AuthMgr) (*NetProxySrv, error) {
 	// Create the net proxy socket
 	socket, err := net.Listen("unix", sp.SIGMA_NETPROXY_SOCKET)
 	if err != nil {
@@ -62,15 +65,14 @@ func NewNetProxySrv(ip sp.Tip, amgr auth.AuthMgr) (*NetProxySrv, error) {
 	db.DPrintf(db.TEST, "runServer: netproxysrv listening on %v", sp.SIGMA_NETPROXY_SOCKET)
 	nps := &NetProxySrv{
 		auth:             amgr,
-		innerContainerIP: ip,
-		etcdEndpoints:    make(fsetcd.TetcdEndpoints),
+		innerContainerIP: pe.GetInnerContainerIP(),
+		pe:               pe,
 	}
-
-	eps, err := fsetcd.NewFsEtcdEndpoint(nps.auth, nps.innerContainerIP)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		return nil, err
 	}
-	nps.etcdEndpoints = eps
+	nps.sc = sc
 
 	go nps.runServer(socket)
 
@@ -100,7 +102,8 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 		directDialFn:     netproxy.DialDirect,
 		directListenFn:   netproxy.ListenDirect,
 		baseCtx:          ctx.NewPrincipalOnlyCtx(p),
-		etcdEndpoints:    nps.etcdEndpoints,
+		sc:               nps.sc,
+		pe:               nps.pe,
 	}
 	npss.rpcs = rpcsrv.NewRPCSrv(npss, rpc.NewStatInfo())
 	// Start a demux server to handle requests & concurrency
@@ -239,21 +242,19 @@ func (nps *NetProxySrvStubs) Close(c fs.CtxI, req netproto.CloseRequest, res *ne
 	return nil
 }
 
+// TODO: check if calling proc cannot look up `realm`'s endpoint
 func (nps *NetProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpointRequest, res *netproto.NamedEndpointResponse) error {
 	db.DPrintf(db.NETPROXYSRV, "GetNamedEndpoint %v", req)
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
 	realm := sp.Trealm(req.RealmStr)
-	if realm == sp.ROOTREALM {
-		ep, err := fsetcd.GetRootNamed(nps.directDialFn, nps.etcdEndpoints, realm)
-		if err != nil {
-			db.DPrintf(db.NETPROXYSRV_ERR, "GetNamedEndpoint [%v] err GetRootNamed %v", realm, ep)
-			res.Err = sp.NewRerrorErr(err)
-		} else {
-			res.Endpoint = ep.GetProto()
-			res.Err = sp.NewRerror()
-		}
+	if ep, err := nps.sc.GetNamedEndpointRealm(realm); err != nil {
+		db.DPrintf(db.NETPROXYSRV_ERR, "GetNamedEndpointRealm [%v] err %v %T", realm, err, err)
+		res.Err = sp.NewRerrorErr(err)
+	} else {
+		res.Endpoint = ep.GetProto()
+		res.Err = sp.NewRerror()
 	}
 	return nil
 }

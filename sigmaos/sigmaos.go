@@ -52,6 +52,7 @@ type SigmaOS interface {
 	IsLocalMount(ep *sp.Tendpoint) (bool, error)
 	PathLastMount(path string) (path.Path, path.Path, error)
 	GetNamedEndpoint() (*sp.Tendpoint, error)
+	GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error)
 	NewRootMount(path string, epname string) error
 
 	// Done using SigmaOS, which detaches from any endpointed servers

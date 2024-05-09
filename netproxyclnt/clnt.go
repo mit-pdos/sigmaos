@@ -11,7 +11,6 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/fsetcd"
 	"sigmaos/netproxy"
 	"sigmaos/netproxy/proto"
 	"sigmaos/netproxytrans"
@@ -313,35 +312,26 @@ func (npc *NetProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) erro
 	}
 }
 
-func (npc *NetProxyClnt) GetNamedEndpoint() (*sp.Tendpoint, error) {
-	r := npc.pe.GetRealm()
-	if npc.useProxy() {
-		db.DPrintf(db.NETPROXYCLNT, "GetNamedEndpoint %v", r)
-		ep, err := npc.getNamedEndpoint()
-		if err != nil {
-			db.DPrintf(db.NETPROXYCLNT_ERR, "GetNamedEndpoint %v err %v", r, err)
-			return nil, err
-		}
-		return ep, nil
-	} else {
-		eps := npc.pe.GetEtcdEndpoints()
-		db.DPrintf(db.NETPROXYCLNT, "directGetNamed %v %v", eps, npc.pe.GetRealm())
-		ep, err := fsetcd.GetRootNamed(npc.directDialFn, eps, r)
-		if err != nil {
-			db.DPrintf(db.NAMED_ERR, "getNamedEndpoint [%v] err GetRootNamed %v", r, ep)
-			return &sp.Tendpoint{}, err
-		}
-		return ep, nil
+func (npc *NetProxyClnt) GetNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
+	if !npc.useProxy() {
+		db.DFatalf("GetNamedEndpoint: internal %v\n", npc)
 	}
+	db.DPrintf(db.NETPROXYCLNT, "GetNamedEndpoint %v", r)
+	ep, err := npc.getNamedEndpoint(r)
+	if err != nil {
+		db.DPrintf(db.NETPROXYCLNT_ERR, "GetNamedEndpoint %v err %v", r, err)
+		return nil, err
+	}
+	return ep, nil
 }
 
-func (npc *NetProxyClnt) getNamedEndpoint() (*sp.Tendpoint, error) {
+func (npc *NetProxyClnt) getNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
 	if err := npc.init(); err != nil {
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return nil, err
 	}
 	req := &proto.NamedEndpointRequest{
-		RealmStr: npc.pe.GetRealm().String(),
+		RealmStr: r.String(),
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{nil},
 		},

@@ -247,7 +247,11 @@ func (fdc *FdClient) MountTree(ep *sp.Tendpoint, tree, mount string) error {
 }
 
 func (fdc *FdClient) GetNamedEndpoint() (*sp.Tendpoint, error) {
-	return fdc.pc.GetNamedEndpoint()
+	return fdc.pc.GetNamedEndpointRealm(fdc.pe.GetRealm())
+}
+
+func (fdc *FdClient) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
+	return fdc.pc.GetNamedEndpointRealm(realm)
 }
 
 func (fdc *FdClient) NewRootMount(pn, epname string) error {

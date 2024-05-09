@@ -69,7 +69,7 @@ func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey
 	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
 	db.DPrintf(db.SCHEDD, "kmgr %v", kmgr)
 	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	nps, err := netproxysrv.NewNetProxySrv(pe.GetInnerContainerIP(), amgr)
+	nps, err := netproxysrv.NewNetProxySrv(pe, amgr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewNetProxySrv: %v", err)
 		return nil, err

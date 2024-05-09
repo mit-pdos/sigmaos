@@ -283,10 +283,14 @@ func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Path, path.Path, error)
 }
 
 func (scc *SigmaClntClnt) GetNamedEndpoint() (*sp.Tendpoint, error) {
-	req := scproto.SigmaNullRequest{}
+	return scc.GetNamedEndpointRealm(scc.pe.GetRealm())
+}
+
+func (scc *SigmaClntClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
+	req := scproto.SigmaRealmRequest{RealmStr: realm.String()}
 	rep := scproto.SigmaMountReply{}
-	err := scc.rpcc.RPC("SigmaClntSrvAPI.GetNamedEndpoint", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "GetNamedEndpoint %v %v %v", req, rep, err)
+	err := scc.rpcc.RPC("SigmaClntSrvAPI.GetNamedEndpointRealm", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "GetNamedEndpointRealm %v %v %v", req, rep, err)
 	if err != nil {
 		return nil, nil
 	}

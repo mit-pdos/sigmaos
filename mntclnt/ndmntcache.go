@@ -1,4 +1,4 @@
-package pathclnt
+package mntclnt
 
 import (
 	"sync"

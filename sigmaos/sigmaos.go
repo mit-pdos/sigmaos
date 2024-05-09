@@ -14,6 +14,11 @@ const (
 	O_WAIT Twait = true
 )
 
+type PathClntAPI interface {
+	GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
+	Stat(name string, principal *sp.Tprincipal) (*sp.Stat, error)
+}
+
 type FileAPI interface {
 	// Core interface
 

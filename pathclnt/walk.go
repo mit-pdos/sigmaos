@@ -30,13 +30,13 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Path, principal *sp.Tprincipa
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
 func (pathc *PathClnt) walk(path path.Path, principal *sp.Tprincipal, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
 	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
-		if err, cont := pathc.resolveRoot(path); err != nil {
+		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
 			if cont && err.IsErrUnreachable() {
-				db.DPrintf(db.SVCMOUNT, "WalkPath: resolveRoot unreachable %v err %v\n", path, err)
+				db.DPrintf(db.MOUNT, "WalkPath: resolveRoot unreachable %v err %v\n", path, err)
 				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 				continue
 			}
-			db.DPrintf(db.SVCMOUNT, "WalkPath: resolveRoot %v err %v\n", path, err)
+			db.DPrintf(db.MOUNT, "WalkPath: resolveRoot %v err %v\n", path, err)
 			return sp.NoFid, err
 		}
 		start := time.Now()
@@ -46,7 +46,7 @@ func (pathc *PathClnt) walk(path path.Path, principal *sp.Tprincipal, resolve bo
 		if serr.Retry(err) {
 			done := len(path1) - len(left)
 			db.DPrintf(db.WALK_ERR, "Walk retry p %v %v l %v d %v err %v by umount %v\n", path, path1, left, done, err, path1[0:done])
-			if e := pathc.umountPrefix(path1[0:done]); e != nil {
+			if e := pathc.mntclnt.UmountPrefix(path1[0:done]); e != nil {
 				return sp.NoFid, e
 			}
 			// try again
@@ -135,7 +135,7 @@ func (pathc *PathClnt) walkPath(path path.Path, resolve bool, w Watch) (sp.Tfid,
 // responsible for clunking it. Return the fid and the remaining part
 // of the path that must be walked.
 func (pathc *PathClnt) walkMount(path path.Path, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
-	fid, left, err := pathc.mnt.resolve(path, resolve)
+	fid, left, err := pathc.mntclnt.ResolveMnt(path, resolve)
 	if err != nil {
 		return sp.NoFid, left, err
 	}
@@ -242,13 +242,4 @@ func (pathc *PathClnt) setWatch(fid sp.Tfid, p path.Path, r path.Path, w Watch) 
 		w(err)
 	}()
 	return sp.NoFid, nil
-}
-
-func (pathc *PathClnt) umountPrefix(path []string) *serr.Err {
-	if fid, _, err := pathc.mnt.umount(path, false); err != nil {
-		return err
-	} else {
-		pathc.FidClnt.Free(fid)
-		return nil
-	}
 }

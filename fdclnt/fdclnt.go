@@ -239,27 +239,27 @@ func (fdc *FdClient) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
 }
 
 func (fdc *FdClient) PathLastMount(pn string) (path.Path, path.Path, error) {
-	return fdc.pc.PathLastMount(pn, fdc.pe.GetPrincipal())
+	return fdc.pc.MntClnt().PathLastMount(pn, fdc.pe.GetPrincipal())
 }
 
 func (fdc *FdClient) MountTree(ep *sp.Tendpoint, tree, mount string) error {
-	return fdc.pc.MountTree(fdc.pe.GetPrincipal(), ep, tree, mount)
+	return fdc.pc.MntClnt().MountTree(fdc.pe.GetPrincipal(), ep, tree, mount)
 }
 
 func (fdc *FdClient) GetNamedEndpoint() (*sp.Tendpoint, error) {
-	return fdc.pc.GetNamedEndpointRealm(fdc.pe.GetRealm())
+	return fdc.GetNamedEndpointRealm(fdc.pe.GetRealm())
 }
 
 func (fdc *FdClient) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
-	return fdc.pc.GetNamedEndpointRealm(realm)
+	return fdc.pc.MntClnt().GetNamedEndpointRealm(realm)
 }
 
 func (fdc *FdClient) NewRootMount(pn, epname string) error {
-	return fdc.pc.NewRootMount(fdc.pe.GetPrincipal(), pn, epname)
+	return fdc.pc.MntClnt().NewRootMount(fdc.pe.GetPrincipal(), pn, epname)
 }
 
 func (fdc *FdClient) Mounts() []string {
-	return fdc.pc.Mounts()
+	return fdc.pc.MntClnt().Mounts()
 }
 
 func (fdc *FdClient) ClntId() sp.TclntId {
@@ -281,7 +281,7 @@ func (fdc *FdClient) Disconnect(pn string) error {
 }
 
 func (fdc *FdClient) Detach(pn string) error {
-	return fdc.pc.Detach(pn)
+	return fdc.pc.MntClnt().Detach(pn)
 }
 
 func (fdc *FdClient) Close() error {

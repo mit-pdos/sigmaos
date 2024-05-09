@@ -232,7 +232,6 @@ const (
 	PATHCLNT_ERR                = PATHCLNT + ERR
 	WALK                        = "WALK"
 	WALK_ERR                    = "WALK" + ERR
-	SVCMOUNT                    = "SVCMOUNT"
 )
 
 // Server-side Infrastructure

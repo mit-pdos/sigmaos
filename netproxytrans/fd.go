@@ -1,4 +1,4 @@
-package netproxy
+package netproxytrans
 
 import (
 	"net"
@@ -19,7 +19,7 @@ func listenerToFile(proxyListener net.Listener) (*os.File, error) {
 	return f, nil
 }
 
-func connToFile(proxyConn net.Conn) (*os.File, error) {
+func ConnToFile(proxyConn net.Conn) (*os.File, error) {
 	f, err := proxyConn.(*net.TCPConn).File()
 	if err != nil {
 		db.DFatalf("Error get TCP conn fd: %v", err)
@@ -61,12 +61,12 @@ func fdToConn(fd int) (net.Conn, error) {
 	return conn, nil
 }
 
-func constructSocketControlMsg(proxiedFile *os.File) []byte {
+func ConstructSocketControlMsg(proxiedFile *os.File) []byte {
 	fd := int(proxiedFile.Fd())
 	return unix.UnixRights(fd)
 }
 
-func parseReturnedConn(oob []byte) (*net.TCPConn, error) {
+func ParseReturnedConn(oob []byte) (*net.TCPConn, error) {
 	// Sanity check
 	if len(oob) == 0 {
 		db.DPrintf(db.ERROR, "Error oob len 0")

@@ -14,7 +14,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/netproxy"
+	"sigmaos/netproxyclnt"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rpc"
@@ -172,7 +172,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -335,7 +335,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -471,7 +471,7 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 	for c := 0; c < nclerk; c++ {
 		go func(c int) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 			assert.Nil(ts.T, err)
 			measuredir("lookup dir entry", NITER, func() int {
 				for f := 0; f < nfile; f++ {
@@ -590,7 +590,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		for j := 0; j < NTRIAL; j++ {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			pe.NamedEndpointProto = ndMnt.TendpointProto
-			fsl, err := sigmaclnt.NewFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)
 		}

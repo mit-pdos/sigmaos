@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxy"
+	"sigmaos/netproxyclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -140,7 +140,7 @@ func TestFailedClose(t *testing.T) {
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	ep := sp.NewEndpoint(sp.Taddrs{addr}, sp.ROOTREALM)
 	npc := ts.GetNetProxyClnt()
-	l := netproxy.NewListener(npc, 1000, ep)
+	l := netproxyclnt.NewListener(npc, 1000, ep)
 	err := l.Close()
 	assert.NotNil(t, err, "Err close: %v", err)
 	ts.Shutdown()
@@ -189,8 +189,20 @@ func TestFailedAccept(t *testing.T) {
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	ep := sp.NewEndpoint(sp.Taddrs{addr}, sp.ROOTREALM)
 	npc := ts.GetNetProxyClnt()
-	l := netproxy.NewListener(npc, 1000, ep)
+	l := netproxyclnt.NewListener(npc, 1000, ep)
 	_, err := l.Accept()
 	assert.NotNil(t, err, "Err accept: %v", err)
+	ts.Shutdown()
+}
+
+func TestNamedEndpoint(t *testing.T) {
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	npc := ts.GetNetProxyClnt()
+	ep, err := npc.GetNamedEndpoint()
+	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
+	db.DPrintf(db.TEST, "endpoint %v\n", ep)
 	ts.Shutdown()
 }

@@ -72,7 +72,7 @@ func (fsl *FsLib) ReadEndpoint(pn string) (*sp.Tendpoint, error) {
 // content of endpoint and the endpoint file's name.
 func (fsl *FsLib) CopyEndpoint(pn string) (*sp.Tendpoint, string, error) {
 	if pn == sp.NAMED {
-		ep, err := fsl.SigmaOS.GetNamedEndpoint()
+		ep, err := fsl.FileAPI.GetNamedEndpoint()
 		return ep, "", err
 	}
 	p := path.Split(pn)
@@ -83,7 +83,7 @@ func (fsl *FsLib) CopyEndpoint(pn string) (*sp.Tendpoint, string, error) {
 			return nil, "", err
 		}
 		return ep, left[1:].String(), nil
-	} else if s, p, err := fsl.SigmaOS.PathLastMount(pn); err == nil {
+	} else if s, p, err := fsl.FileAPI.PathLastMount(pn); err == nil {
 		if ep, err := fsl.ReadEndpoint(s.String()); err == nil {
 			return ep, p.String(), nil
 		}
@@ -104,7 +104,7 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error
 		if error != nil {
 			return false, nil
 		}
-		ok, err := fsl.SigmaOS.IsLocalMount(ep)
+		ok, err := fsl.FileAPI.IsLocalMount(ep)
 		if err != nil {
 			return false, err
 		}

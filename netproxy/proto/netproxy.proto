@@ -46,3 +46,14 @@ message CloseResponse {
         Rerror err = 1;
         Blob blob = 2;
 }
+
+message NamedEndpointRequest {
+        string realmStr = 1;
+        Blob blob = 2;
+}
+
+message NamedEndpointResponse {
+        Rerror err = 1;
+        TendpointProto endpoint = 2;
+        Blob blob = 3;
+}

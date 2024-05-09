@@ -17,7 +17,7 @@ import (
 	"sigmaos/kernelclnt"
 	"sigmaos/keyclnt"
 	"sigmaos/keys"
-	"sigmaos/netproxy"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
 	"sigmaos/realmsrv/proto"
@@ -202,7 +202,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
 		return err
 	}
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxy.NewNetProxyClnt(pe, nil))
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error NewSigmaClntRealm: %v", err)
 		return err

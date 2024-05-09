@@ -27,7 +27,7 @@ func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
 }
 
 func (fl *FsLib) IsDir(name string) (bool, error) {
-	st, err := fl.SigmaOS.Stat(name)
+	st, err := fl.FileAPI.Stat(name)
 	if err != nil {
 		return false, err
 	}

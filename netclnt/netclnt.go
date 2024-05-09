@@ -8,7 +8,7 @@ import (
 	// "time"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxy"
+	"sigmaos/netproxyclnt"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -18,7 +18,7 @@ import (
 type NetClnt struct {
 	mu     sync.Mutex
 	pe     *proc.ProcEnv
-	npc    *netproxy.NetProxyClnt
+	npc    *netproxyclnt.NetProxyClnt
 	conn   net.Conn
 	ep     *sp.Tendpoint
 	addr   *sp.Taddr
@@ -26,7 +26,7 @@ type NetClnt struct {
 	realm  sp.Trealm
 }
 
-func NewNetClnt(pe *proc.ProcEnv, npc *netproxy.NetProxyClnt, ep *sp.Tendpoint) (*NetClnt, *serr.Err) {
+func NewNetClnt(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, ep *sp.Tendpoint) (*NetClnt, *serr.Err) {
 	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", ep)
 	nc := &NetClnt{
 		pe:  pe,

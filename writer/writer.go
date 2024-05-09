@@ -2,18 +2,18 @@ package writer
 
 import (
 	db "sigmaos/debug"
-	sos "sigmaos/sigmaos"
+	sof "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
 
 type Writer struct {
-	sos sos.SigmaOS
+	sof sof.FileAPI
 	fd  int
 	off sp.Toffset
 }
 
 func (wrt *Writer) Write(p []byte) (int, error) {
-	n, err := wrt.sos.Write(wrt.fd, p)
+	n, err := wrt.sof.Write(wrt.fd, p)
 	if err != nil {
 		db.DPrintf(db.WRITER_ERR, "Write err %v" /*wrt.fc.Path(wrt.fid),*/, err)
 		return 0, err
@@ -23,7 +23,7 @@ func (wrt *Writer) Write(p []byte) (int, error) {
 }
 
 func (wrt *Writer) Close() error {
-	err := wrt.sos.CloseFd(wrt.fd)
+	err := wrt.sof.CloseFd(wrt.fd)
 	if err != nil {
 		return err
 	}
@@ -34,6 +34,6 @@ func (wrt *Writer) Nbytes() sp.Tlength {
 	return sp.Tlength(wrt.off)
 }
 
-func NewWriter(sos sos.SigmaOS, fd int) *Writer {
+func NewWriter(sos sof.FileAPI, fd int) *Writer {
 	return &Writer{sos, fd, 0}
 }

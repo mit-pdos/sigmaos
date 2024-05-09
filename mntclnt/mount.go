@@ -1,4 +1,4 @@
-package pathclnt
+package mntclnt
 
 import (
 	"fmt"
@@ -71,26 +71,26 @@ func match(mp path.Path, path path.Path) (bool, path.Path) {
 	return true, path[len(mp):]
 }
 
-func (mnt *MntTable) resolve(path path.Path, allowResolve bool) (sp.Tfid, path.Path, *serr.Err) {
+func (mnt *MntTable) resolveMnt(path path.Path, allowResolve bool) (sp.Tfid, path.Path, *serr.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
 	for _, p := range mnt.mounts {
 		ok, left := match(p.path, path)
-		db.DPrintf(db.MOUNT, "resolve: p %v path %v ok %v l %v\n", p.path, path, ok, left)
+		db.DPrintf(db.MOUNT, "resolveMnt: p %v path %v ok %v l %v\n", p.path, path, ok, left)
 		if ok {
 			if p.closed {
-				db.DPrintf(db.CRASH, "resolve %v mount closed %v", path, p.path)
+				db.DPrintf(db.CRASH, "resolveMnt %v mount closed %v", path, p.path)
 				return sp.NoFid, path, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed mount)", path))
 			}
 			if len(left) == 0 && !allowResolve {
 				continue
 			}
-			db.DPrintf(db.MOUNT, "resolve succeeded: p %v path %v l %v", p.path, path, left)
+			db.DPrintf(db.MOUNT, "resolveMnt succeeded: p %v path %v l %v", p.path, path, left)
 			return p.fid, left, nil
 		}
 	}
-	db.DPrintf(db.MOUNT_ERR, "resolve failed: path %v allowResolve %v mnt %v\n", path, allowResolve, mnt.mounts)
+	db.DPrintf(db.MOUNT_ERR, "resolveMnt failed: path %v allowResolve %v mnt %v\n", path, allowResolve, mnt.mounts)
 	return sp.NoFid, path, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 

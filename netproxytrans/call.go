@@ -1,4 +1,4 @@
-package netproxy
+package netproxytrans
 
 import (
 	"fmt"

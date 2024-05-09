@@ -1,18 +1,15 @@
-package netproxy
+package netproxyclnt
 
 import (
 	"net"
 
+	"sigmaos/netproxy"
 	sp "sigmaos/sigmap"
-	"sync/atomic"
 )
-
-type Tlid uint64
-type Tlidctr = atomic.Uint64
 
 type Listener struct {
 	npc *NetProxyClnt
-	lid Tlid
+	lid netproxy.Tlid
 	la  *ListenerAddr
 }
 
@@ -20,7 +17,7 @@ type ListenerAddr struct {
 	ep *sp.Tendpoint
 }
 
-func NewListener(npc *NetProxyClnt, lid Tlid, ep *sp.Tendpoint) net.Listener {
+func NewListener(npc *NetProxyClnt, lid netproxy.Tlid, ep *sp.Tendpoint) net.Listener {
 	return &Listener{
 		npc: npc,
 		lid: lid,

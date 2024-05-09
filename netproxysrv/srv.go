@@ -1,10 +1,11 @@
-package netproxy
+package netproxysrv
 
 import (
 	"fmt"
 	"net"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	"google.golang.org/protobuf/proto"
 
@@ -14,36 +15,45 @@ import (
 	"sigmaos/demux"
 	"sigmaos/frame"
 	"sigmaos/fs"
+	"sigmaos/netproxy"
 	netproto "sigmaos/netproxy/proto"
-	"sigmaos/netsigma"
+	"sigmaos/netproxytrans"
+	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/rpcsrv"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
+
+type Tlidctr = atomic.Uint64
 
 type NetProxySrv struct {
 	auth             auth.AuthMgr
 	innerContainerIP sp.Tip
+	sc               *sigmaclnt.SigmaClnt
+	pe               *proc.ProcEnv
 }
 
 type NetProxySrvStubs struct {
 	sync.Mutex
 	lidctr           Tlidctr
-	listeners        map[Tlid]net.Listener
-	trans            *NetProxyTrans
+	listeners        map[netproxy.Tlid]net.Listener
+	trans            *netproxytrans.NetProxyTrans
 	conn             *net.UnixConn
 	innerContainerIP sp.Tip
 	auth             auth.AuthMgr
-	directDialFn     DialFn
-	directListenFn   ListenFn
+	directDialFn     netproxy.DialFn
+	directListenFn   netproxy.ListenFn
 	rpcs             *rpcsrv.RPCSrv
 	dmx              *demux.DemuxSrv
 	baseCtx          *ctx.Ctx
+	pe               *proc.ProcEnv
+	sc               *sigmaclnt.SigmaClnt
 }
 
-func NewNetProxySrv(ip sp.Tip, amgr auth.AuthMgr) (*NetProxySrv, error) {
+func NewNetProxySrv(pe *proc.ProcEnv, amgr auth.AuthMgr) (*NetProxySrv, error) {
 	// Create the net proxy socket
 	socket, err := net.Listen("unix", sp.SIGMA_NETPROXY_SOCKET)
 	if err != nil {
@@ -55,8 +65,14 @@ func NewNetProxySrv(ip sp.Tip, amgr auth.AuthMgr) (*NetProxySrv, error) {
 	db.DPrintf(db.TEST, "runServer: netproxysrv listening on %v", sp.SIGMA_NETPROXY_SOCKET)
 	nps := &NetProxySrv{
 		auth:             amgr,
-		innerContainerIP: ip,
+		innerContainerIP: pe.GetInnerContainerIP(),
+		pe:               pe,
 	}
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		return nil, err
+	}
+	nps.sc = sc
 
 	go nps.runServer(socket)
 
@@ -78,14 +94,16 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 	db.DPrintf(db.NETPROXYSRV, "Handle connection [%p] from principal %v", conn, p)
 
 	npss := &NetProxySrvStubs{
-		listeners:        make(map[Tlid]net.Listener),
-		trans:            NewNetProxyTrans(conn, demux.NewIoVecMap()),
+		listeners:        make(map[netproxy.Tlid]net.Listener),
+		trans:            netproxytrans.NewNetProxyTrans(conn, demux.NewIoVecMap()),
 		auth:             nps.auth,
 		conn:             conn,
 		innerContainerIP: nps.innerContainerIP,
-		directDialFn:     DialDirect,
-		directListenFn:   ListenDirect,
+		directDialFn:     netproxy.DialDirect,
+		directListenFn:   netproxy.ListenDirect,
 		baseCtx:          ctx.NewPrincipalOnlyCtx(p),
+		sc:               nps.sc,
+		pe:               nps.pe,
 	}
 	npss.rpcs = rpcsrv.NewRPCSrv(npss, rpc.NewStatInfo())
 	// Start a demux server to handle requests & concurrency
@@ -94,14 +112,14 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 
 func (npss *NetProxySrvStubs) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
 	db.DPrintf(db.NETPROXYSRV, "ServeRequest: %v", c)
-	req := c.(*ProxyCall)
-	ctx := NewCtx(npss.baseCtx)
+	req := c.(*netproxytrans.ProxyCall)
+	ctx := netproxy.NewCtx(npss.baseCtx)
 	rep, err := npss.rpcs.WriteRead(ctx, req.Iov)
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV, "ServeRequest: writeRead err %v", err)
 	}
 	npss.trans.AddConn(req.Seqno, ctx.GetConn())
-	return NewProxyCall(req.Seqno, rep), nil
+	return netproxytrans.NewProxyCall(req.Seqno, rep), nil
 }
 
 func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netproto.DialResponse) error {
@@ -110,7 +128,7 @@ func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netp
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
-	ctx := c.(*Ctx)
+	ctx := c.(*netproxy.Ctx)
 	ep := sp.NewEndpointFromProto(req.GetEndpoint())
 	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> ep %v", ctx.Principal(), ep)
 	// Verify the principal is authorized to establish the connection
@@ -129,7 +147,7 @@ func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netp
 	} else {
 		res.Err = sp.NewRerror()
 	}
-	file, err := connToFile(proxyConn)
+	file, err := netproxytrans.ConnToFile(proxyConn)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
@@ -137,7 +155,7 @@ func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netp
 	// before it can be sent back to the client
 	ctx.SetConn(file)
 	// Set socket control message in output blob
-	res.Blob.Iov[0] = constructSocketControlMsg(file)
+	res.Blob.Iov[0] = netproxytrans.ConstructSocketControlMsg(file)
 	return nil
 }
 
@@ -147,7 +165,7 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
-	ctx := c.(*Ctx)
+	ctx := c.(*netproxy.Ctx)
 	addr := req.GetAddr()
 	db.DPrintf(db.NETPROXYSRV, "Listen principal %v -> addr %v", ctx.Principal(), addr)
 	l, err := nps.directListenFn(addr)
@@ -157,7 +175,7 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 		res.Err = sp.NewRerrorErr(err)
 		return nil
 	}
-	ep, err := constructEndpoint(true, nps.auth, nps.innerContainerIP, ctx.Principal().GetRealm(), l)
+	ep, err := netproxy.NewEndpoint(true, nps.auth, nps.innerContainerIP, ctx.Principal().GetRealm(), l)
 	if err != nil {
 		db.DFatalf("Error construct endpoint: %v", err)
 		return err
@@ -177,8 +195,8 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
-	ctx := c.(*Ctx)
-	lid := Tlid(req.ListenerID)
+	ctx := c.(*netproxy.Ctx)
+	lid := netproxy.Tlid(req.ListenerID)
 	db.DPrintf(db.NETPROXYSRV, "Accept principal %v -> lid %v", ctx.Principal(), lid)
 	l, ok := nps.getListener(lid)
 	if !ok {
@@ -192,7 +210,7 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Error accept: %v", err))
 		return nil
 	}
-	file, err := connToFile(proxyConn)
+	file, err := netproxytrans.ConnToFile(proxyConn)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
@@ -200,7 +218,7 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 	// before it can be sent back to the client
 	ctx.SetConn(file)
 	// Set socket control message in output blob
-	res.Blob.Iov[0] = constructSocketControlMsg(file)
+	res.Blob.Iov[0] = netproxytrans.ConstructSocketControlMsg(file)
 	res.Err = sp.NewRerror()
 	return nil
 }
@@ -211,8 +229,8 @@ func (nps *NetProxySrvStubs) Close(c fs.CtxI, req netproto.CloseRequest, res *ne
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
-	ctx := c.(*Ctx)
-	lid := Tlid(req.ListenerID)
+	ctx := c.(*netproxy.Ctx)
+	lid := netproxy.Tlid(req.ListenerID)
 	db.DPrintf(db.NETPROXYSRV, "Close principal %v -> lid %v", ctx.Principal(), lid)
 	ok := nps.delListener(lid)
 	if !ok {
@@ -224,9 +242,26 @@ func (nps *NetProxySrvStubs) Close(c fs.CtxI, req netproto.CloseRequest, res *ne
 	return nil
 }
 
+// TODO: check if calling proc cannot look up `realm`'s endpoint
+func (nps *NetProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpointRequest, res *netproto.NamedEndpointResponse) error {
+	db.DPrintf(db.NETPROXYSRV, "GetNamedEndpoint %v", req)
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{nil},
+	}
+	realm := sp.Trealm(req.RealmStr)
+	if ep, err := nps.sc.GetNamedEndpointRealm(realm); err != nil {
+		db.DPrintf(db.NETPROXYSRV_ERR, "GetNamedEndpointRealm [%v] err %v %T", realm, err, err)
+		res.Err = sp.NewRerrorErr(err)
+	} else {
+		res.Endpoint = ep.GetProto()
+		res.Err = sp.NewRerror()
+	}
+	return nil
+}
+
 // Store a new listener, and assign it an ID
-func (nps *NetProxySrvStubs) addListener(l net.Listener) Tlid {
-	lid := Tlid(nps.lidctr.Add(1))
+func (nps *NetProxySrvStubs) addListener(l net.Listener) netproxy.Tlid {
+	lid := netproxy.Tlid(nps.lidctr.Add(1))
 
 	nps.Lock()
 	defer nps.Unlock()
@@ -236,7 +271,7 @@ func (nps *NetProxySrvStubs) addListener(l net.Listener) Tlid {
 }
 
 // Given an LID, retrieve the associated Listener
-func (nps *NetProxySrvStubs) getListener(lid Tlid) (net.Listener, bool) {
+func (nps *NetProxySrvStubs) getListener(lid netproxy.Tlid) (net.Listener, bool) {
 	nps.Lock()
 	defer nps.Unlock()
 
@@ -245,7 +280,7 @@ func (nps *NetProxySrvStubs) getListener(lid Tlid) (net.Listener, bool) {
 }
 
 // Given an LID, retrieve the associated Listener
-func (nps *NetProxySrvStubs) delListener(lid Tlid) bool {
+func (nps *NetProxySrvStubs) delListener(lid netproxy.Tlid) bool {
 	nps.Lock()
 	defer nps.Unlock()
 
@@ -278,26 +313,4 @@ func (nps *NetProxySrv) runServer(l net.Listener) {
 		// Handle incoming connection
 		go nps.handleNewConn(conn.(*net.UnixConn))
 	}
-}
-
-func constructEndpoint(verifyEndpoints bool, amgr auth.AuthMgr, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tendpoint, error) {
-	host, port, err := netsigma.QualifyAddrLocalIP(ip, l.Addr().String())
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
-		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
-		return nil, err
-	}
-	ep := sp.NewEndpoint(sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm)
-	if verifyEndpoints && amgr == nil {
-		db.DFatalf("Error construct endpoint without AuthMgr")
-		return nil, fmt.Errorf("Try to construct endpoint without authsrv")
-	}
-	if amgr != nil {
-		// Sign the endpoint
-		if err := amgr.MintAndSetEndpointToken(ep); err != nil {
-			db.DFatalf("Error sign endpoint: %v", err)
-			return nil, err
-		}
-	}
-	return ep, nil
 }

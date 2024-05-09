@@ -1,4 +1,4 @@
-// Package sigmaos defines the core API of SigmaOS
+// Package sigmaos defines the file API of SigmaOS
 package sigmaos
 
 import (
@@ -14,7 +14,12 @@ const (
 	O_WAIT Twait = true
 )
 
-type SigmaOS interface {
+type PathClntAPI interface {
+	GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
+	Stat(name string, principal *sp.Tprincipal) (*sp.Stat, error)
+}
+
+type FileAPI interface {
 	// Core interface
 
 	CloseFd(fd int) error
@@ -52,6 +57,7 @@ type SigmaOS interface {
 	IsLocalMount(ep *sp.Tendpoint) (bool, error)
 	PathLastMount(path string) (path.Path, path.Path, error)
 	GetNamedEndpoint() (*sp.Tendpoint, error)
+	GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error)
 	NewRootMount(path string, epname string) error
 
 	// Done using SigmaOS, which detaches from any endpointed servers

@@ -22,7 +22,7 @@ func (mc *MntClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error)
 // Get named enpoint via netproxy or directly
 func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
 	// If this mount was passed via the proc env, return it immediately.
-	if ep, ok := mc.ndMntCache.Get(mc.pe.GetRealm()); ok {
+	if ep, ok := mc.ndMntCache.Get(realm); ok {
 		db.DPrintf(db.NAMED, "getNamedEndpoint cached %v %v", mc.pe.GetRealm(), ep)
 		return ep, nil
 	}

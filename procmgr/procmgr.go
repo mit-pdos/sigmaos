@@ -74,7 +74,13 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	// do this for a privileged proc, it could cause issues as it may save the
 	// knamed address.
 	if !p.IsPrivileged() {
-		p.SetNamedEndpoint(mgr.getNamedEndpoint(p.GetRealm()))
+		s := time.Now()
+		ep, err := mgr.rootsc.GetNamedEndpointRealm(p.GetRealm())
+		if err != nil {
+			mgr.procCrashed(p, err)
+		}
+		p.SetNamedEndpoint(ep)
+		db.DPrintf(db.SPAWN_LAT, "[%v] SetNamedEndPoint %v %v", p.GetPid(), p.GetRealm(), time.Since(s))
 	}
 	s := time.Now()
 	mgr.setupProcState(p)

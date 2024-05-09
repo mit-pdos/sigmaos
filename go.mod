@@ -4,6 +4,13 @@ go 1.21
 
 toolchain go1.21.3
 
+
+replace (
+  github.com/ArielSzekely/etcd => ../etcd
+  github.com/ArielSzekely/etcd/server/v3 => ../etcd/server
+  github.com/ArielSzekely/etcd/client/pkg/v3 => ../etcd/client/pkg
+)
+
 require (
 	github.com/aws/aws-lambda-go v1.31.0
 	github.com/aws/aws-sdk-go v1.44.107
@@ -30,7 +37,7 @@ require (
 )
 
 require (
-	github.com/ArielSzekely/etcd/server/v3 v3.5.14-0.20240506164909-b4ba8567721e
+	github.com/ArielSzekely/etcd/server/v3 v3.5.14-0.20240509124423-79a5b7243f78
 	github.com/aws/aws-sdk-go-v2/credentials v1.11.2
 	github.com/bradfitz/gomemcache v0.0.0-20230124162541-5f7a7d875746
 	github.com/docker/docker v23.0.1+incompatible
@@ -61,6 +68,7 @@ require (
 )
 
 require (
+	github.com/ArielSzekely/etcd/client/pkg/v3 v3.5.14-0.20240509124423-79a5b7243f78 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.3 // indirect
@@ -99,7 +107,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.19.0 // indirect
+	github.com/prometheus/client_golang v1.19.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.53.0 // indirect
 	github.com/prometheus/procfs v0.14.0 // indirect
@@ -129,3 +137,4 @@ require (
 	gotest.tools/v3 v3.4.0 // indirect
 	kernel.org/pub/linux/libs/security/libcap/psx v1.2.67 // indirect
 )
+

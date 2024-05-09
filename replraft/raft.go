@@ -94,7 +94,8 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 	logPath := "./raftlogs/" + n.pe.GetPID().String()
 	log.Printf("Raft logs being written to: %v", logPath)
 	logCfg := zap.NewDevelopmentConfig()
-	logCfg.OutputPaths = []string{string(logPath)}
+	logCfg.OutputPaths = []string{"stdout", string(logPath)}
+	logCfg.ErrorOutputPaths = []string{"stdout"}
 	logger, err := logCfg.Build()
 	if err != nil {
 		return err

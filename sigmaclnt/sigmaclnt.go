@@ -1,3 +1,5 @@
+// Package sigmaclnt implements the client interface of SigmaOS: the
+// proc API, the file API, and lease client.
 package sigmaclnt
 
 import (
@@ -45,7 +47,7 @@ type SigmaClntKernel struct {
 // Create FsLib using either sigmacntclnt or fdclnt
 func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
-	var s sos.SigmaOS
+	var s sos.FileAPI
 	if pe.UseSigmaclntd {
 		s, err = sigmaclntclnt.NewSigmaClntClnt(pe, fidc.GetNetProxyClnt())
 		if err != nil {

@@ -1,4 +1,4 @@
-// Package sigmaos defines the core API of SigmaOS
+// Package sigmaos defines the file API of SigmaOS
 package sigmaos
 
 import (
@@ -14,7 +14,7 @@ const (
 	O_WAIT Twait = true
 )
 
-type SigmaOS interface {
+type FileAPI interface {
 	// Core interface
 
 	CloseFd(fd int) error

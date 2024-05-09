@@ -11,15 +11,15 @@ import (
 type FsLib struct {
 	pe  *proc.ProcEnv
 	npc *netproxyclnt.NetProxyClnt
-	sos.SigmaOS
+	sos.FileAPI
 }
 
-func NewFsLibAPI(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, sos sos.SigmaOS) (*FsLib, error) {
+func NewFsLibAPI(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, sos sos.FileAPI) (*FsLib, error) {
 	db.DPrintf(db.FSLIB, "NewFsLib: principal %s innerip %s addrs %v\n", pe.GetPrincipal(), pe.GetInnerContainerIP(), pe.GetEtcdEndpoints())
 	fl := &FsLib{
 		pe:      pe,
 		npc:     npc,
-		SigmaOS: sos,
+		FileAPI: sos,
 	}
 	return fl, nil
 }
@@ -38,13 +38,13 @@ func (fl *FsLib) GetNetProxyClnt() *netproxyclnt.NetProxyClnt {
 }
 
 func (fl *FsLib) MountTree(ep *sp.Tendpoint, tree, mount string) error {
-	return fl.SigmaOS.MountTree(ep, tree, mount)
+	return fl.FileAPI.MountTree(ep, tree, mount)
 }
 
 func (fl *FsLib) Close() error {
-	return fl.SigmaOS.Close()
+	return fl.FileAPI.Close()
 }
 
-func (fl *FsLib) GetSigmaOS() sos.SigmaOS {
-	return fl.SigmaOS
+func (fl *FsLib) GetSigmaOS() sos.FileAPI {
+	return fl.FileAPI
 }

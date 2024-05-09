@@ -24,7 +24,7 @@ type FdClient struct {
 	disconnected bool
 }
 
-func NewFdClient(pe *proc.ProcEnv, fsc *fidclnt.FidClnt) sos.SigmaOS {
+func NewFdClient(pe *proc.ProcEnv, fsc *fidclnt.FidClnt) sos.FileAPI {
 	fdc := &FdClient{pe: pe}
 	fdc.pc = pathclnt.NewPathClnt(pe, fsc)
 	fdc.fds = newFdTable()

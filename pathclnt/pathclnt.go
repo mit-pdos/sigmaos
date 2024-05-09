@@ -1,7 +1,7 @@
 // The package pathclnt implements all path operations of the SigmaOS
-// API. In particular it walks pathnames, mounting servers as needed,
-// and allocates an fid for the file at the server.  All fid-based
-// operations are inherited from [fidclnt].
+// API. In particular it walks pathnames, mounting servers as needed
+// using [mntclnt], and allocates an fid for the file at the server.
+// All fid-based operations are inherited from [fidclnt].
 //
 // A typical use case is that each pathclnt has its own fidclnt.
 // [sigmaclntd], however, shares a fidclnt among all its pathclnts,

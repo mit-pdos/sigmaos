@@ -77,7 +77,7 @@ func (mnt *MntTable) resolveMnt(path path.Path, allowResolve bool) (sp.Tfid, pat
 
 	for _, p := range mnt.mounts {
 		ok, left := match(p.path, path)
-		db.DPrintf(db.MOUNT, "resolveMnt: p %v path %v ok %v l %v\n", p.path, path, ok, left)
+		//db.DPrintf(db.MOUNT, "resolveMnt: p %v path %v ok %v l %v\n", p.path, path, ok, left)
 		if ok {
 			if p.closed {
 				db.DPrintf(db.CRASH, "resolveMnt %v mount closed %v", path, p.path)
@@ -86,7 +86,7 @@ func (mnt *MntTable) resolveMnt(path path.Path, allowResolve bool) (sp.Tfid, pat
 			if len(left) == 0 && !allowResolve {
 				continue
 			}
-			db.DPrintf(db.MOUNT, "resolveMnt succeeded: p %v path %v l %v", p.path, path, left)
+			//db.DPrintf(db.MOUNT, "resolveMnt succeeded: p %v path %v l %v", p.path, path, left)
 			return p.fid, left, nil
 		}
 	}

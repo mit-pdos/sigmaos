@@ -99,7 +99,9 @@ func newTstate(t1 *test.Tstate, auto string, crashbal, repl, ncrash int, crashhe
 }
 
 func (ts *Tstate) done() {
+	db.DPrintf(db.TEST, "Stop Clerks")
 	ts.cm.StopClerks()
+	db.DPrintf(db.TEST, "Stop KVFleet")
 	ts.kvf.Stop()
 	ts.Shutdown()
 }

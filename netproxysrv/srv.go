@@ -267,6 +267,8 @@ func (nps *NetProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpo
 }
 
 func (nps *NetProxySrvStubs) closeListeners() error {
+	db.DPrintf(db.NETPROXYSRV, "Close listeners for %v", nps.pe.GetPID())
+
 	nps.Lock()
 	defer nps.Unlock()
 
@@ -278,6 +280,7 @@ func (nps *NetProxySrvStubs) closeListeners() error {
 		lids = append(lids, lid)
 	}
 	for _, lid := range lids {
+		db.DPrintf(db.NETPROXYSRV, "XXXX Close listener %v for %v", nps.listeners[lid].Addr(), nps.pe.GetPID())
 		nps.delListenerL(lid)
 	}
 	return nil

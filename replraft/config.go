@@ -52,7 +52,7 @@ func (rc *RaftConfig) SetPeerEPs(eps []*sp.Tendpoint) {
 }
 
 func (rc *RaftConfig) NewServer(applyf repl.Tapplyf) (repl.Server, error) {
-	return NewRaftReplServer(rc.pe, rc.id, rc.peerEPs, rc.l, rc.init, applyf)
+	return NewRaftReplServer(rc.npc, rc.pe, rc.id, rc.peerEPs, rc.l, rc.init, applyf)
 }
 
 func (rc *RaftConfig) ReplEP() *sp.Tendpoint {

@@ -5,6 +5,7 @@ import (
 
 	raft "go.etcd.io/etcd/raft/v3"
 
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	replproto "sigmaos/repl/proto"
@@ -16,7 +17,7 @@ type RaftReplServer struct {
 	clerk *Clerk
 }
 
-func NewRaftReplServer(pe *proc.ProcEnv, id int, peerEPs []*sp.Tendpoint, l net.Listener, init bool, apply repl.Tapplyf) (*RaftReplServer, error) {
+func NewRaftReplServer(npc *netproxyclnt.NetProxyClnt, pe *proc.ProcEnv, id int, peerEPs []*sp.Tendpoint, l net.Listener, init bool, apply repl.Tapplyf) (*RaftReplServer, error) {
 	var err error
 	srv := &RaftReplServer{}
 	peers := []raft.Peer{}
@@ -26,7 +27,7 @@ func NewRaftReplServer(pe *proc.ProcEnv, id int, peerEPs []*sp.Tendpoint, l net.
 	commitC := make(chan *committedEntries)
 	proposeC := make(chan []byte)
 	srv.clerk = newClerk(commitC, proposeC, apply)
-	srv.node, err = newRaftNode(pe, id+1, peers, peerEPs, l, init, srv.clerk, commitC, proposeC)
+	srv.node, err = newRaftNode(npc, pe, id+1, peers, peerEPs, l, init, srv.clerk, commitC, proposeC)
 	if err != nil {
 		return nil, err
 	}

@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 
 	db "sigmaos/debug"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -47,6 +48,7 @@ type RaftNode struct {
 	snapshotIndex uint64
 	appliedIndex  uint64
 	currentLeader uint64
+	npc           *netproxyclnt.NetProxyClnt
 	pe            *proc.ProcEnv
 }
 
@@ -56,8 +58,9 @@ type committedEntries struct {
 }
 
 // etcd numbers nodes start from 1.  0 is not a valid id.
-func newRaftNode(pe *proc.ProcEnv, id int, peers []raft.Peer, peerEPs []*sp.Tendpoint, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
+func newRaftNode(npc *netproxyclnt.NetProxyClnt, pe *proc.ProcEnv, id int, peers []raft.Peer, peerEPs []*sp.Tendpoint, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) (*RaftNode, error) {
 	node := &RaftNode{
+		npc:     npc,
 		id:      id,
 		peerEPs: peerEPs,
 		done:    make(chan bool),
@@ -108,6 +111,18 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 		ServerStats: stats.NewServerStats("", ""),
 		LeaderStats: stats.NewLeaderStats(zap.NewExample(), strconv.Itoa(n.id)),
 		ErrorC:      make(chan error),
+		DialContextFunc: func(ctx context.Context, network, address string) (net.Conn, error) {
+			addr, err := sp.NewTaddrFromString(address, sp.INNER_CONTAINER_IP, n.pe.GetNet())
+			if err != nil {
+				db.DFatalf("Error parse addr: %v", err)
+			}
+			ep := sp.NewEndpoint([]*sp.Taddr{addr}, sp.ROOTREALM)
+			c, err := n.npc.Dial(ep)
+			if err != nil {
+				db.DPrintf(db.REPLRAFT, "Error netproxyclnt Dial raft: %v", err)
+			}
+			return c, err
+		},
 	}
 	n.transport.Start()
 	for i, ep := range n.peerEPs {

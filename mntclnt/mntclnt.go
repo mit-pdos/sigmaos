@@ -1,6 +1,8 @@
 package mntclnt
 
 import (
+	"time"
+
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/netproxyclnt"
@@ -86,11 +88,13 @@ func (mc *MntClnt) AutoMount(principal *sp.Tprincipal, ep *sp.Tendpoint, path pa
 	var err *serr.Err
 
 	db.DPrintf(db.MOUNT, "automount %v to %v\n", ep, path)
+	s := time.Now()
 	fid, err = mc.fidc.Attach(principal, mc.cid, ep, path.String(), ep.Root)
 	if err != nil {
 		db.DPrintf(db.MOUNT_ERR, "Attach error: %v", err)
 		return err
 	}
+	db.DPrintf(db.SPAWN_LAT, "Automount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
 	err = mc.mount(fid, path.String())
 	if err != nil {
 		return err

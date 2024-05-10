@@ -38,6 +38,7 @@ type NetProxySrv struct {
 
 type NetProxySrvStubs struct {
 	sync.Mutex
+	closed           bool
 	lidctr           Tlidctr
 	listeners        map[netproxy.Tlid]net.Listener
 	trans            *netproxytrans.NetProxyTrans
@@ -182,7 +183,13 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 	}
 	res.Endpoint = ep.GetProto()
 	// Store the listener & assign it an ID
-	lid := nps.addListener(l)
+	lid, err := nps.addListener(l)
+	if err != nil {
+		db.DPrintf(db.NETPROXYSRV_ERR, "Error addListener: %v", err)
+		res.Err = sp.NewRerrorErr(err)
+		l.Close()
+		return err
+	}
 	res.ListenerID = uint64(lid)
 	db.DPrintf(db.NETPROXYSRV, "Listen done principal %v -> addr %v lid %v ep %v", ctx.Principal(), addr, lid, ep)
 	res.Err = sp.NewRerror()
@@ -259,15 +266,36 @@ func (nps *NetProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpo
 	return nil
 }
 
+func (nps *NetProxySrvStubs) closeListeners() error {
+	nps.Lock()
+	defer nps.Unlock()
+
+	if nps.closed {
+		return fmt.Errorf("Error: close closed netproxysrv")
+	}
+	lids := make([]netproxy.Tlid, 0, len(nps.listeners))
+	for lid, _ := range nps.listeners {
+		lids = append(lids, lid)
+	}
+	for _, lid := range lids {
+		nps.delListenerL(lid)
+	}
+	return nil
+}
+
 // Store a new listener, and assign it an ID
-func (nps *NetProxySrvStubs) addListener(l net.Listener) netproxy.Tlid {
+func (nps *NetProxySrvStubs) addListener(l net.Listener) (netproxy.Tlid, error) {
 	lid := netproxy.Tlid(nps.lidctr.Add(1))
 
 	nps.Lock()
 	defer nps.Unlock()
 
+	if nps.closed {
+		return 0, fmt.Errorf("Error: add listener to closed netproxy conn")
+	}
+
 	nps.listeners[lid] = l
-	return lid
+	return lid, nil
 }
 
 // Given an LID, retrieve the associated Listener
@@ -284,6 +312,11 @@ func (nps *NetProxySrvStubs) delListener(lid netproxy.Tlid) bool {
 	nps.Lock()
 	defer nps.Unlock()
 
+	return nps.delListenerL(lid)
+}
+
+// Caller holds lock
+func (nps *NetProxySrvStubs) delListenerL(lid netproxy.Tlid) bool {
 	l, ok := nps.listeners[lid]
 	if ok {
 		delete(nps.listeners, lid)
@@ -294,6 +327,9 @@ func (nps *NetProxySrvStubs) delListener(lid netproxy.Tlid) bool {
 
 func (npss *NetProxySrvStubs) ReportError(err error) {
 	db.DPrintf(db.NETPROXYSRV_ERR, "ReportError err %v", err)
+	if err := npss.closeListeners(); err != nil {
+		db.DPrintf(db.ERROR, "Err closeListeners: %v", err)
+	}
 	db.DPrintf(db.NETPROXYSRV, "Close conn principal %v", npss.baseCtx.Principal())
 	npss.conn.Close()
 }

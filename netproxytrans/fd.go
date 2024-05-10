@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 )
 
-func listenerToFile(proxyListener net.Listener) (*os.File, error) {
+func ListenerToFile(proxyListener net.Listener) (*os.File, error) {
 	f, err := proxyListener.(*net.TCPListener).File()
 	if err != nil {
 		db.DFatalf("Error get TCP listener fd: %v", err)

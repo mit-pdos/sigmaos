@@ -2,6 +2,7 @@ package protsrv
 
 import (
 	"fmt"
+	"time"
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
@@ -54,7 +55,9 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
 	db.DPrintf(db.PROTSRV, "Attach %v cid %v sid %v", args, args.TclntId(), ps.sid)
+	s := time.Now()
 	claims, ok, err := ps.auth.AttachIsAuthorized(args.Tprincipal(), args.Aname)
+	db.DPrintf(db.WALK_LAT, "Attach authorized cid %v %v path %v lat %v\n", args.TclntId(), args.Tprincipal(), args.Aname, time.Since(s))
 	if err != nil || !ok {
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErr(serr.TErrPerm, fmt.Errorf("Authorization check failed: ok %v err %v", ok, err)))
 	}

@@ -7,7 +7,7 @@ package sessclnt
 
 import (
 	"sync"
-	//"time"
+	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 
@@ -76,6 +76,7 @@ func (c *SessClnt) IsConnected() bool {
 }
 
 func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	s := time.Now()
 	fc := sessp.NewFcallMsg(req, iniov, c.sid, c.seqcntr)
 	pmfc := spcodec.NewPartMarshaledMsg(fc)
 	nc := c.netClnt()
@@ -94,7 +95,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	if err := spcodec.UnmarshalMsg(r); err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.NET_LAT, "ReadCall fm %v\n", r)
+	db.DPrintf(db.NET_LAT, "RPC req %v fm %v lat %v\n", fc, r.Fcm, time.Since(s))
 	return r.Fcm, nil
 }
 

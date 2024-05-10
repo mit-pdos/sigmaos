@@ -635,9 +635,9 @@ func TestLookupMultiMount(t *testing.T) {
 	assert.Nil(ts.T, err, "WaitExit error")
 
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	mnt, err := ts.GetNamedEndpoint()
-	assert.Nil(ts.T, err)
-	pe.NamedEndpointProto = mnt.GetProto()
+	//mnt, err := ts.GetNamedEndpoint()
+	//assert.Nil(ts.T, err)
+	//pe.NamedEndpointProto = mnt.GetProto()
 	sts, err := ts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 	kernelId := sts[0].Name
@@ -648,6 +648,7 @@ func TestLookupMultiMount(t *testing.T) {
 
 	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, uprocdpid)
 
+	pe.NamedEndpointProto = nil
 	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
 	assert.Nil(t, err)
 

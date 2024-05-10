@@ -69,7 +69,10 @@ func (mc *MntClnt) LastMount(pn string, principal *sp.Tprincipal) (path.Path, pa
 }
 
 func (mc *MntClnt) ResolveRoot(pn path.Path) (*serr.Err, bool) {
-	return mc.resolveRoot(pn)
+	s := time.Now()
+	err, ok := mc.resolveRoot(pn)
+	db.DPrintf(db.WALK_LAT, "ResolveRoot %v %v lat %v\n", mc.cid, pn, time.Since(s))
+	return err, ok
 }
 
 // Return path including the last mount file on this path and the rest
@@ -94,7 +97,7 @@ func (mc *MntClnt) AutoMount(principal *sp.Tprincipal, ep *sp.Tendpoint, path pa
 		db.DPrintf(db.MOUNT_ERR, "Attach error: %v", err)
 		return err
 	}
-	db.DPrintf(db.SPAWN_LAT, "Automount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "Automount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
 	err = mc.mount(fid, path.String())
 	if err != nil {
 		return err

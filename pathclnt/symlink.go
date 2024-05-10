@@ -21,7 +21,7 @@ func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path
 	var p path.Path
 	ep, error := sp.NewEndpointFromBytes(target)
 	if error == nil {
-		db.DPrintf(db.WALK, "walksymlink1 %v ep %v lat %v\n", fid, ep, time.Since(s))
+		db.DPrintf(db.WALK_LAT, "walksymlink1 %v %v ep %v lat %v\n", pathc.cid, fid, ep, time.Since(s))
 		err := pathc.mntclnt.AutoMount(pathc.FidClnt.Lookup(fid).Principal(), ep, resolved)
 		if err != nil {
 			db.DPrintf(db.WALK, "automount %v %v err %v\n", resolved, ep, err)

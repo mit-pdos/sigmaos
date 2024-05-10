@@ -13,17 +13,16 @@ import (
 )
 
 func (mc *MntClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
-	s := time.Now()
 	if ep, err := mc.getNamedEndpointRealm(realm); err != nil {
 		return ep, err
 	} else {
-		db.DPrintf(db.SPAWN_LAT, "GetNamedEndpointRealm %v %v %v", mc.cid, realm, time.Since(s))
 		return ep, nil
 	}
 }
 
 // Get named enpoint via netproxy or directly
 func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
+	s := time.Now()
 	if ep, ok := mc.ndMntCache.Get(realm); ok {
 		db.DPrintf(db.MOUNT, "getNamedEndpointRealm cached %v %v", realm, ep)
 		return ep, nil
@@ -49,6 +48,7 @@ func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.
 	// Cache the newly resolved mount
 	mc.ndMntCache.Put(realm, ep)
 	db.DPrintf(db.MOUNT, "getNamedEndpointRealm [%v] %v", realm, ep)
+	db.DPrintf(db.WALK_LAT, "getNamedEndpointRealm %v %v %v", mc.cid, realm, time.Since(s))
 	return ep, nil
 
 }
@@ -66,7 +66,7 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 			}
 			return &sp.Tendpoint{}, serr.NewErrError(err)
 		}
-		db.DPrintf(db.SPAWN_LAT, "getNamedEndpointDirect %v %v %v", mc.cid, sp.ROOTREALM, time.Since(s))
+		db.DPrintf(db.WALK_LAT, "getNamedEndpointDirect %v %v %v", mc.cid, sp.ROOTREALM, time.Since(s))
 		return ep, nil
 	} else {
 		// Otherwise, walk through the root named to find this named's mount.
@@ -77,7 +77,7 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 				return &sp.Tendpoint{}, err
 			}
 		}
-		db.DPrintf(db.SPAWN_LAT, "getNamedEndpointDirect %v mount %v %v", mc.cid, sp.ROOTREALM, time.Since(s))
+		db.DPrintf(db.WALK_LAT, "getNamedEndpointDirect %v mount %v %v", mc.cid, sp.ROOTREALM, time.Since(s))
 		s = time.Now()
 		pn := gpath.Join("root", sp.REALMREL, sp.REALMDREL, sp.REALMSREL, realm.String())
 		target, err := mc.pathc.GetFile(pn, mc.pe.GetPrincipal(), sp.OREAD, 0, sp.MAXGETSET, sp.NullFence())
@@ -89,12 +89,13 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 		if err != nil {
 			return &sp.Tendpoint{}, serr.NewErrError(err)
 		}
-		db.DPrintf(db.SPAWN_LAT, "getNamedEndpointDirect %v getfile %v %v", mc.cid, realm, time.Since(s))
+		db.DPrintf(db.WALK_LAT, "getNamedEndpointDirect %v getfile %v %v", mc.cid, realm, time.Since(s))
 		return ep, nil
 	}
 }
 
 func (mc *MntClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
+	s := time.Now()
 	ep, err := mc.getNamedEndpointRealm(realm)
 	if err != nil {
 		db.DPrintf(db.MOUNT_ERR, "mountNamed [%v]: getNamedMount err %v", realm, err)
@@ -108,5 +109,6 @@ func (mc *MntClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
 		return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v realm failure", realm))
 	}
 	db.DPrintf(db.MOUNT, "mountNamed [%v]: automount ep %v at %v", realm, ep, name)
+	db.DPrintf(db.WALK_LAT, "mountNamed [%v]: %v automount ep %v at %v lat %v", mc.cid, realm, ep, name, time.Since(s))
 	return nil
 }

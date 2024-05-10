@@ -41,8 +41,7 @@ func (pathc *PathClnt) walk(path path.Path, principal *sp.Tprincipal, resolve bo
 		}
 		start := time.Now()
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
-		//		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
-		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v) lat: %v", path, fid, path1, left, err, time.Since(start))
+		db.DPrintf(db.WALK_LAT, "walkPath %v %v -> (%v, %v  %v, %v) lat: %v", pathc.cid, path, fid, path1, left, err, time.Since(start))
 		if serr.Retry(err) {
 			done := len(path1) - len(left)
 			db.DPrintf(db.WALK_ERR, "Walk retry p %v %v l %v d %v err %v by umount %v\n", path, path1, left, done, err, path1[0:done])

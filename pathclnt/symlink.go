@@ -10,10 +10,8 @@ import (
 )
 
 func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path.Path, *serr.Err) {
-	// XXX change how we readlink; getfile?
-
 	s := time.Now()
-	target, err := pathc.readlink(fid)
+	target, err := pathc.FidClnt.GetFile(fid, path.Path{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.WALK, "walksymlink1 %v err %v\n", fid, err)
 		return left, err

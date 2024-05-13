@@ -12,12 +12,10 @@ import (
 	"strconv"
 	"time"
 
-	//"go.etcd.io/etcd/server/v3/etcdserver/api/rafthttp"
-	"github.com/ArielSzekely/etcd/server/v3/etcdserver/api/rafthttp"
-
 	"go.etcd.io/etcd/client/pkg/v3/types"
 	raft "go.etcd.io/etcd/raft/v3"
 	"go.etcd.io/etcd/raft/v3/raftpb"
+	"go.etcd.io/etcd/server/v3/etcdserver/api/rafthttp"
 	stats "go.etcd.io/etcd/server/v3/etcdserver/api/v2stats"
 	// etcdstorage "go.etcd.io/etcd/server/v3/storage"
 	"go.uber.org/zap"

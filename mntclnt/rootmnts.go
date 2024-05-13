@@ -76,7 +76,7 @@ func (rootmt *RootMountTable) isRootMount(mntname string) bool {
 
 // Resolve pn that names a server's root (e.g., name/ux, name)
 func (mc *MntClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
-	db.DPrintf(db.PATHCLNT, "resolveRoot %v", pn)
+	db.DPrintf(db.MOUNT, "resolveRoot %v", pn)
 	if len(pn) == 0 {
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("empty path '%v' ", pn)), false
 	}

@@ -2,6 +2,8 @@ package pathclnt
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	"sigmaos/path"
 	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -28,7 +30,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 	}
 	defer pathc.FidClnt.Clunk(fid1)
 
-	target, err := pathc.readlink(fid1)
+	target, err := pathc.FidClnt.GetFile(fid1, path.Path{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.WALK, "unionScan: Err readlink %v\n", err)
 		return sp.NoFid, err
@@ -83,4 +85,26 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *serr.Err) {
 	}
 	db.DPrintf(db.WALK, "unionLookup error ReadDir fid %v rfid %v err %v", fid, rfid, error)
 	return rfid, serr.NewErr(serr.TErrNotfound, q)
+}
+
+type rdr struct {
+	*fidclnt.FidClnt
+	fid sp.Tfid
+	f   *sp.Tfence
+}
+
+func newRdr(fdc *fidclnt.FidClnt, fid sp.Tfid, f *sp.Tfence) *rdr {
+	return &rdr{fdc, fid, f}
+}
+
+func (rd *rdr) Close() error {
+	return rd.FidClnt.Clunk(rd.fid)
+}
+
+func (rd *rdr) Read(o sp.Toffset, b []byte) (int, error) {
+	n, err := rd.ReadF(rd.fid, o, b, rd.f)
+	if err != nil {
+		return int(n), err
+	}
+	return int(n), nil
 }

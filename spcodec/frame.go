@@ -109,7 +109,7 @@ func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
 	if err := t.wrt.Flush(); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
-	db.DPrintf(db.NET_LAT, "Flush len %d %v\n", len(b), c)
+	//db.DPrintf(db.NET_LAT, "Flush len %d %v\n", len(b), c)
 	return nil
 }
 

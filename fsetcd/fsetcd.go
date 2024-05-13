@@ -1,3 +1,5 @@
+// The fsetcd package implements the [fs] API on top of etcd.
+
 package fsetcd
 
 import (

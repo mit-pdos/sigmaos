@@ -41,8 +41,7 @@ func (pathc *PathClnt) walk(path path.Path, principal *sp.Tprincipal, resolve bo
 		}
 		start := time.Now()
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
-		//		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
-		db.DPrintf(db.WALK, "walkPath %v -> (%v, %v  %v, %v) lat: %v", path, fid, path1, left, err, time.Since(start))
+		db.DPrintf(db.WALK_LAT, "walkPath %v %v -> (%v, %v  %v, %v) lat: %v", pathc.cid, path, fid, path1, left, err, time.Since(start))
 		if serr.Retry(err) {
 			done := len(path1) - len(left)
 			db.DPrintf(db.WALK_ERR, "Walk retry p %v %v l %v d %v err %v by umount %v\n", path, path1, left, done, err, path1[0:done])
@@ -135,6 +134,7 @@ func (pathc *PathClnt) walkPath(path path.Path, resolve bool, w Watch) (sp.Tfid,
 // responsible for clunking it. Return the fid and the remaining part
 // of the path that must be walked.
 func (pathc *PathClnt) walkMount(path path.Path, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
+	s := time.Now()
 	fid, left, err := pathc.mntclnt.ResolveMnt(path, resolve)
 	if err != nil {
 		return sp.NoFid, left, err
@@ -145,6 +145,7 @@ func (pathc *PathClnt) walkMount(path path.Path, resolve bool) (sp.Tfid, path.Pa
 	if err != nil {
 		return sp.NoFid, left, err
 	}
+	db.DPrintf(db.WALK_LAT, "walkMount: %v %v %v lat %v\n", pathc.cid, fid, left, time.Since(s))
 	return fid1, left, nil
 }
 
@@ -154,6 +155,7 @@ func (pathc *PathClnt) walkMount(path path.Path, resolve bool) (sp.Tfid, path.Pa
 // file is created.
 func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Path, w Watch) (sp.Tfid, path.Path, *serr.Err) {
 	db.DPrintf(db.WALK, "walkOne %v left %v\n", fid, path)
+	s := time.Now()
 	fid1, left, err := pathc.FidClnt.Walk(fid, path)
 	if err != nil { // fid1 == fid
 		if w != nil && err.IsErrNotfound() {
@@ -178,6 +180,7 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Path, w Watch) (sp.Tfid, p
 	}
 	db.DPrintf(db.WALK, "walkOne -> %v %v\n", fid1, left)
 	err = pathc.FidClnt.Clunk(fid)
+	db.DPrintf(db.WALK_LAT, "walkOne %v %v %v -> %v %v lat %v\n", pathc.cid, fid, path, fid1, left, time.Since(s))
 	return fid1, left, nil
 }
 

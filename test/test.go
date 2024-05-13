@@ -17,6 +17,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/keys"
+	"sigmaos/netproxyclnt"
 	"sigmaos/netsigma"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -81,7 +82,7 @@ type TstateMin struct {
 }
 
 func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
-	_, _, amgr, err := newAuthMgr()
+	_, _, amgr, err := NewAuthMgr()
 	if !assert.Nil(t, err, "Error new auth srv: %v", err) {
 		return nil
 	}
@@ -165,7 +166,7 @@ func NewTstateWithRealms(t *testing.T) (*Tstate, error) {
 	return ts, nil
 }
 
-func newAuthMgr() (auth.PublicKey, auth.PrivateKey, auth.AuthMgr, error) {
+func NewAuthMgr() (auth.PublicKey, auth.PrivateKey, auth.AuthMgr, error) {
 	var pubkey auth.PublicKey
 	var privkey auth.PrivateKey
 	var err error
@@ -215,7 +216,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	pubkey, privkey, amgr, err := newAuthMgr()
+	pubkey, privkey, amgr, err := NewAuthMgr()
 	if !assert.Nil(t, err, "Error new auth srv: %v", err) {
 		return nil, err
 	}
@@ -374,7 +375,7 @@ func (ts *Tstate) Shutdown() error {
 		// Shut down kernels; the one running named last
 		for i := len(ts.kclnts) - 1; i >= 0; i-- {
 			if err := ts.kclnts[i].Shutdown(); err != nil {
-				db.DPrintf(db.ALWAYS, "Shutdown %v err %v", ts.kclnts[i].KernelId, err)
+				db.DPrintf(db.ALWAYS, "Shutdown %v err %v", ts.kclnts[i].KernelId(), err)
 			}
 			ts.kclnts[i].Close()
 		}
@@ -399,8 +400,8 @@ func Dump(t *testing.T) {
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, nil, "", "", "", false, false, false, verifyMounts)
 	assert.False(t, true, "Unimplemented")
 	return
-	// TODO: implement properly
-	fs, err := fsetcd.NewFsEtcd(nil, nil, pe.GetRealm())
+	npc := netproxyclnt.NewNetProxyClnt(pe, nil)
+	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)
 	assert.Nil(t, err)

@@ -237,7 +237,7 @@ func TestMicroDownSemaphore(t *testing.T) {
 	rootts.Shutdown()
 }
 
-// Test how long it takes to cold Spawn, run, and WaitExit the rust
+// Test how long it takes to cold Spawn and run the first instruction of
 // hello-world proc
 func TestMicroSpawnWaitStartRealm(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)

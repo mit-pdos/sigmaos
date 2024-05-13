@@ -16,9 +16,7 @@ import (
 // directories involved in the operation.  Directory entries are a
 // (name, etcd key) tuple.  To implement directory operations
 // atomically with respect to crashes (e.g., updating the directory
-// and creating a file) fsetcd uses etcd's transaction API.  The
-// caller (named/protsrv) must hold read/write locks on the
-// directories.
+// and creating a file) fsetcd uses etcd's transaction API.
 
 const (
 	ROOT sp.Tpath = 1
@@ -100,6 +98,12 @@ func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f
 	if ok {
 		return DirEntInfo{}, serr.NewErr(serr.TErrExists, name)
 	}
+	if nf.Tperm().IsEphemeral() && nf.TleaseId() == sp.NoLeaseId {
+		db.DPrintf(db.FSETCD, "Create %q nf %v no lease", name, nf)
+		return DirEntInfo{}, serr.NewErr(serr.TErrInval, name)
+	}
+	// Insert name into dir so that fs.create() will write the updated
+	// directory to etcd, but undo the Insert if create fails.
 	dir.Ents.Insert(name, DirEntInfo{Nf: nf, Path: path, Perm: nf.Tperm()})
 	db.DPrintf(db.FSETCD, "Create %q dir %v (%v) nf %v\n", name, dir, d, nf)
 	if err := fs.create(d, dir, v, path, nf); err == nil {

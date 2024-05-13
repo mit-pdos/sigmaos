@@ -11,15 +11,22 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/fsetcd"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 func TestLease(t *testing.T) {
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, sp.Tip(test.EtcdIP), sp.NO_IP, sp.NO_IP, "", false, false)
-	ec, err := fsetcd.NewFsEtcd(pe.GetRealm(), pe.GetEtcdIP())
+	lip := sp.Tip("127.0.0.1")
+	_, _, amgr, err := test.NewAuthMgr()
 	assert.Nil(t, err)
+	secrets := map[string]*proc.ProcSecretProto{}
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(amgr, sp.Tip(test.EtcdIP))
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false, false)
+	npc := netproxyclnt.NewNetProxyClnt(pe, nil)
+	ec, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
+	assert.Nil(t, err, "Err %v", err)
 	l := clientv3.NewLease(ec.Client)
 	respg, err := l.Grant(context.TODO(), 30)
 	assert.Nil(t, err)

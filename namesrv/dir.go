@@ -1,6 +1,8 @@
 package namesrv
 
 import (
+	"time"
+
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
@@ -23,6 +25,7 @@ func newDir(o *Obj) *Dir {
 }
 
 func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+	s := time.Now()
 	db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx, pn, d)
 	name := pn[0]
 	di, err := d.fs.Lookup(d.Obj.di.Path, name)
@@ -37,6 +40,8 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.
 		} else {
 			o = newFile(obj)
 		}
+		db.DPrintf(db.WALK_LAT, "Lookup %v %q %v lat %v\n", ctx.ClntId(), name, d, time.Since(s))
+
 		return []fs.FsObj{o}, o, pn[1:], nil
 	}
 	return nil, nil, pn, err

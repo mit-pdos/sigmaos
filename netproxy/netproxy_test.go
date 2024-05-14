@@ -201,7 +201,7 @@ func TestNamedEndpoint(t *testing.T) {
 		return
 	}
 	npc := ts.GetNetProxyClnt()
-	ep, err := npc.GetNamedEndpoint()
+	ep, err := npc.GetNamedEndpoint(sp.ROOTREALM)
 	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
 	db.DPrintf(db.TEST, "endpoint %v\n", ep)
 	ts.Shutdown()

@@ -144,6 +144,13 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthMgr) (*Kernel, e
 		}
 		db.DPrintf(db.KERNEL, "NewKernel: switch to named\n")
 	}
+	// Eagerly remove kernel's proc dir if this is just a sigmaclntd kernel
+	// since it isn't needed (and otherwise will slow down shutdown)
+	if k.IsPurelySigmaclntdKernel() {
+		if err := k.RmDir(k.ProcEnv().ProcDir); err != nil {
+			db.DPrintf(db.KERNEL, "Failed to clean up sigmaclntkernel procdir %v err %v", k.ProcEnv().ProcDir, err)
+		}
+	}
 	return k, err
 }
 
@@ -243,8 +250,11 @@ func (k *Kernel) shutdown() {
 			db.DPrintf(db.KERNEL, "Evicted %v", pid)
 		}
 	}
-	if err := k.RmDir(k.ProcEnv().ProcDir); err != nil {
-		db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", k.ProcEnv().ProcDir, err)
+	// A purely sigmaclntd kernel won't have a procdir
+	if !k.IsPurelySigmaclntdKernel() {
+		if err := k.RmDir(k.ProcEnv().ProcDir); err != nil {
+			db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", k.ProcEnv().ProcDir, err)
+		}
 	}
 	db.DPrintf(db.KERNEL, "Shutdown nameds %d\n", len(k.svcs.svcs[sp.KNAMED]))
 	for _, ss := range k.svcs.svcs[sp.KNAMED] {

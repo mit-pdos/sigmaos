@@ -99,7 +99,7 @@ func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, overlays, 
 }
 
 func NewKernelClnt(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv) (*Kernel, error) {
-	db.DPrintf(db.SYSTEM, "NewKernelClnt %s\n", kernelId)
+	db.DPrintf(db.KERNEL, "NewKernelClnt %s\n", kernelId)
 	sc, err := sigmaclnt.NewSigmaClntRootInit(pe)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "NewKernelClnt sigmaclnt err %v", err)
@@ -123,7 +123,7 @@ func NewKernelClnt(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv) (*Kernel, e
 		kernelId = path.Base(pn)
 	}
 
-	db.DPrintf(db.SYSTEM, "NewKernelClnt %s %s\n", pn, kernelId)
+	db.DPrintf(db.KERNEL, "NewKernelClnt %s %s\n", pn, kernelId)
 	kclnt, err := kernelclnt.NewKernelClnt(sc.FsLib, pn)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error NewKernelClnt %v", err)
@@ -137,11 +137,11 @@ func (k *Kernel) NewSigmaClnt(pe *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 }
 
 func (k *Kernel) Shutdown() error {
-	db.DPrintf(db.SYSTEM, "Shutdown kernel %s", k.kernelId)
+	db.DPrintf(db.KERNEL, "Shutdown kernel %s", k.kernelId)
 	k.SigmaClnt.StopMonitoringSrvs()
-	db.DPrintf(db.SYSTEM, "Stopped monitoring srvs kernelclnt %v", k.kernelId)
+	db.DPrintf(db.KERNEL, "Stopped monitoring srvs kernelclnt %v", k.kernelId)
 	err := k.kclnt.Shutdown()
-	db.DPrintf(db.SYSTEM, "Shutdown kernel %s err %v", k.kernelId, err)
+	db.DPrintf(db.KERNEL, "Shutdown kernel %s err %v", k.kernelId, err)
 	if err != nil {
 		return err
 	}

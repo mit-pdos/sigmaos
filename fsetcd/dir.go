@@ -28,6 +28,18 @@ type DirEntInfo struct {
 	Perm sp.Tperm
 }
 
+func newDirEntInfo(nf *EtcdFile, p sp.Tpath, perm sp.Tperm) *DirEntInfo {
+	return &DirEntInfo{nf, p, perm}
+}
+
+func newDirEntInfoP(p sp.Tpath, perm sp.Tperm) *DirEntInfo {
+	return &DirEntInfo{nil, p, perm}
+}
+
+func NewDirEntInfoDir(p sp.Tpath) *DirEntInfo {
+	return &DirEntInfo{nil, p, sp.DMDIR}
+}
+
 func (di DirEntInfo) String() string {
 	if di.Nf != nil {
 		return fmt.Sprintf("{p %v perm %v cid %v lid %v len %d}", di.Path, di.Perm, di.Nf.TclntId(), di.Nf.TleaseId(), len(di.Nf.Data))
@@ -41,9 +53,9 @@ type DirInfo struct {
 	Perm sp.Tperm
 }
 
-func (fs *FsEtcd) isEmpty(di DirEntInfo) (bool, *serr.Err) {
-	if di.Perm.IsDir() {
-		dir, _, err := fs.readDir(di.Path, TSTAT_NONE)
+func (fs *FsEtcd) isEmpty(dei *DirEntInfo) (bool, *serr.Err) {
+	if dei.Perm.IsDir() {
+		dir, _, err := fs.readDir(dei, TSTAT_NONE)
 		if err != nil {
 			return false, err
 		}
@@ -63,7 +75,8 @@ func (fs *FsEtcd) NewRootDir() *serr.Err {
 		db.DPrintf(db.FSETCD, "NewEtcdFileDir err %v", r)
 		return serr.NewErrError(r)
 	}
-	if err := fs.PutFile(ROOT, nf, sp.NoFence()); err != nil {
+	dei := newDirEntInfo(nf, ROOT, nf.Tperm())
+	if err := fs.PutFile(dei, nf, sp.NoFence()); err != nil {
 		db.DPrintf(db.FSETCD, "NewRootDir PutFile err %v", err)
 		return err
 	}
@@ -72,62 +85,62 @@ func (fs *FsEtcd) NewRootDir() *serr.Err {
 }
 
 func (fs *FsEtcd) ReadRootDir() (*DirInfo, *serr.Err) {
-	return fs.ReadDir(ROOT)
+	return fs.ReadDir(newDirEntInfoP(ROOT, sp.DMDIR))
 }
 
-func (fs *FsEtcd) Lookup(d sp.Tpath, name string) (DirEntInfo, *serr.Err) {
-	dir, _, err := fs.readDir(d, TSTAT_NONE)
+func (fs *FsEtcd) Lookup(dei *DirEntInfo, name string) (*DirEntInfo, *serr.Err) {
+	dir, _, err := fs.readDir(dei, TSTAT_NONE)
 	if err != nil {
-		return DirEntInfo{}, err
+		return nil, err
 	}
-	db.DPrintf(db.FSETCD, "Lookup %q %v %v\n", name, d, dir)
+	db.DPrintf(db.FSETCD, "Lookup %q %v %v\n", name, dei.Path, dir)
 	e, ok := dir.Ents.Lookup(name)
 	if ok {
-		return e.(DirEntInfo), nil
+		return e.(*DirEntInfo), nil
 	}
-	return DirEntInfo{}, serr.NewErr(serr.TErrNotfound, name)
+	return nil, serr.NewErr(serr.TErrNotfound, name)
 }
 
 // OEXCL: should only succeed if file doesn't exist
-func (fs *FsEtcd) Create(d sp.Tpath, name string, path sp.Tpath, nf *EtcdFile, f sp.Tfence) (DirEntInfo, *serr.Err) {
-	dir, v, err := fs.readDir(d, TSTAT_NONE)
+func (fs *FsEtcd) Create(dei *DirEntInfo, name string, path sp.Tpath, nf *EtcdFile, f sp.Tfence) (*DirEntInfo, *serr.Err) {
+	dir, v, err := fs.readDir(dei, TSTAT_NONE)
 	if err != nil {
-		return DirEntInfo{}, err
+		return nil, err
 	}
 	_, ok := dir.Ents.Lookup(name)
 	if ok {
-		return DirEntInfo{}, serr.NewErr(serr.TErrExists, name)
+		return nil, serr.NewErr(serr.TErrExists, name)
 	}
 	// Insert name into dir so that fs.create() will write the updated
 	// directory to etcd, but undo the Insert if create fails.
-	dir.Ents.Insert(name, DirEntInfo{Nf: nf, Path: path, Perm: nf.Tperm()})
-	db.DPrintf(db.FSETCD, "Create %q dir %v (%v) nf %v\n", name, dir, d, nf)
-	if err := fs.create(d, dir, v, path, nf); err == nil {
-		di := DirEntInfo{Nf: nf, Perm: nf.Tperm(), Path: path}
+	di := &DirEntInfo{Nf: nf, Path: path, Perm: nf.Tperm()}
+	dir.Ents.Insert(name, di)
+	db.DPrintf(db.FSETCD, "Create %q dir %v (%v) nf %v\n", name, dir, dei.Path, nf)
+	if err := fs.create(dei, dir, v, di); err == nil {
 		if nf.Tperm().IsEphemeral() {
 			// don't cache directory anymore
-			fs.dc.remove(d)
+			fs.dc.remove(dei.Path)
 		} else {
-			fs.dc.update(d, dir)
+			fs.dc.update(dei.Path, dir)
 		}
 		return di, nil
 	} else {
 		db.DPrintf(db.FSETCD, "Create %q dir %v nf %v err %v", name, dir, nf, err)
 		dir.Ents.Delete(name)
-		return DirEntInfo{}, err
+		return nil, err
 	}
 }
 
-func (fs *FsEtcd) ReadDir(d sp.Tpath) (*DirInfo, *serr.Err) {
-	dir, _, err := fs.readDir(d, TSTAT_STAT)
+func (fs *FsEtcd) ReadDir(dei *DirEntInfo) (*DirInfo, *serr.Err) {
+	dir, _, err := fs.readDir(dei, TSTAT_STAT)
 	if err != nil {
 		return nil, err
 	}
 	return dir, nil
 }
 
-func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
-	dir, v, err := fs.readDir(d, TSTAT_NONE)
+func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence) *serr.Err {
+	dir, v, err := fs.readDir(dei, TSTAT_NONE)
 	if err != nil {
 		return err
 	}
@@ -136,7 +149,7 @@ func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
 		return serr.NewErr(serr.TErrNotfound, name)
 	}
 
-	di := e.(DirEntInfo)
+	di := e.(*DirEntInfo)
 	db.DPrintf(db.FSETCD, "Remove in %v entry %v %v v %v\n", dir, name, di, v)
 
 	empty, err := fs.isEmpty(di)
@@ -149,17 +162,17 @@ func (fs *FsEtcd) Remove(d sp.Tpath, name string, f sp.Tfence) *serr.Err {
 
 	dir.Ents.Delete(name)
 
-	if err := fs.remove(d, dir, v, di.Path); err != nil {
+	if err := fs.remove(dei, dir, v, di); err != nil {
 		db.DPrintf(db.FSETCD, "Remove entry %v err %v\n", name, err)
 		dir.Ents.Insert(name, di)
 		return err
 	}
-	fs.dc.update(d, dir)
+	fs.dc.update(dei.Path, dir)
 	return nil
 }
 
-func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
-	dir, v, err := fs.readDir(d, TSTAT_NONE)
+func (fs *FsEtcd) Rename(dei *DirEntInfo, from, to string, f sp.Tfence) *serr.Err {
+	dir, v, err := fs.readDir(dei, TSTAT_NONE)
 	if err != nil {
 		return err
 	}
@@ -168,11 +181,11 @@ func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
 	if !ok {
 		return serr.NewErr(serr.TErrNotfound, from)
 	}
-	difrom := fromi.(DirEntInfo)
-	topath := sp.Tpath(0)
+	difrom := fromi.(*DirEntInfo)
+	var di *DirEntInfo
 	toi, ok := dir.Ents.Lookup(to)
 	if ok {
-		di := toi.(DirEntInfo)
+		di = toi.(*DirEntInfo)
 		empty, err := fs.isEmpty(di)
 		if err != nil {
 			return err
@@ -180,15 +193,14 @@ func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
 		if !empty {
 			return serr.NewErr(serr.TErrNotEmpty, to)
 		}
-		topath = di.Path
 	}
 	if ok {
 		dir.Ents.Delete(to)
 	}
 	dir.Ents.Delete(from)
 	dir.Ents.Insert(to, difrom)
-	if err := fs.rename(d, dir, v, topath); err == nil {
-		fs.dc.update(d, dir)
+	if err := fs.rename(dei, dir, v, di); err == nil {
+		fs.dc.update(dei.Path, dir)
 		return nil
 	} else {
 		dir.Ents.Insert(from, difrom)
@@ -197,46 +209,45 @@ func (fs *FsEtcd) Rename(d sp.Tpath, from, to string, f sp.Tfence) *serr.Err {
 	}
 }
 
-func (fs *FsEtcd) Renameat(df sp.Tpath, from string, dt sp.Tpath, to string, f sp.Tfence) *serr.Err {
-	dirf, vf, err := fs.readDir(df, TSTAT_NONE)
+func (fs *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to string, f sp.Tfence) *serr.Err {
+	dirf, vf, err := fs.readDir(deit, TSTAT_NONE)
 	if err != nil {
 		return err
 	}
-	dirt, vt, err := fs.readDir(dt, TSTAT_NONE)
+	dirt, vt, err := fs.readDir(deit, TSTAT_NONE)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.FSETCD, "Renameat %v dir: %v %v %v %v\n", df, dirf, dirt, vt, vf)
+	db.DPrintf(db.FSETCD, "Renameat %v dir: %v %v %v %v\n", deif.Path, dirf, dirt, vt, vf)
 	fi, ok := dirf.Ents.Lookup(from)
 	if !ok {
 		return serr.NewErr(serr.TErrNotfound, from)
 	}
-	difrom := fi.(DirEntInfo)
-	topath := sp.Tpath(0)
+	difrom := fi.(*DirEntInfo)
+	var tdi *DirEntInfo
 	ti, ok := dirt.Ents.Lookup(to)
 	if ok {
-		di := ti.(DirEntInfo)
-		empty, err := fs.isEmpty(di)
+		tdi = ti.(*DirEntInfo)
+		empty, err := fs.isEmpty(tdi)
 		if err != nil {
 			return err
 		}
 		if !empty {
 			return serr.NewErr(serr.TErrNotEmpty, to)
 		}
-		topath = di.Path
 	}
 	if ok {
 		dirt.Ents.Delete(to)
 	}
 	dirf.Ents.Delete(from)
 	dirt.Ents.Insert(to, difrom)
-	if err := fs.renameAt(df, dirf, vf, dt, dirt, vt, topath); err == nil {
-		fs.dc.update(df, dirf)
+	if err := fs.renameAt(deif, dirf, vf, deit, dirt, vt, tdi); err == nil {
+		fs.dc.update(deif.Path, dirf)
 		if difrom.Perm.IsEphemeral() {
 			// don't cache directory anymore
-			fs.dc.remove(dt)
+			fs.dc.remove(deit.Path)
 		} else {
-			fs.dc.update(dt, dirt)
+			fs.dc.update(deit.Path, dirt)
 		}
 		return nil
 	} else {
@@ -253,10 +264,10 @@ func (fs *FsEtcd) Dump(l int, dir *DirInfo, pn path.Path, p sp.Tpath) error {
 	}
 	dir.Ents.Iter(func(name string, v interface{}) bool {
 		if name != "." {
-			di := v.(DirEntInfo)
+			di := v.(*DirEntInfo)
 			fmt.Printf("%v%v %v\n", s, pn.Append(name), di)
 			if di.Perm.IsDir() {
-				nd, _, err := fs.readDir(di.Path, TSTAT_NONE)
+				nd, _, err := fs.readDir(di, TSTAT_NONE)
 				if err == nil {
 					fs.Dump(l+1, nd, pn.Append(name), di.Path)
 				} else {

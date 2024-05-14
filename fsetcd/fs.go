@@ -26,8 +26,8 @@ const (
 	TCACHEABLE_YES
 )
 
-func (fs *FsEtcd) path2key(realm sp.Trealm, path sp.Tpath) string {
-	return string(realm) + ":" + strconv.FormatUint(uint64(path), 16)
+func (fs *FsEtcd) path2key(realm sp.Trealm, dei *DirEntInfo) string {
+	return string(realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
 func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
@@ -48,11 +48,11 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 	return nf, sp.TQversion(resp.Kvs[0].Version), nil
 }
 
-func (fs *FsEtcd) GetFile(p sp.Tpath) (*EtcdFile, sp.TQversion, *serr.Err) {
-	return fs.getFile(fs.path2key(fs.realm, p))
+func (fs *FsEtcd) GetFile(dei *DirEntInfo) (*EtcdFile, sp.TQversion, *serr.Err) {
+	return fs.getFile(fs.path2key(fs.realm, dei))
 }
 
-func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
+func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) *serr.Err {
 	opts := nf.LeaseOpts()
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.NewErrError(err)
@@ -68,39 +68,39 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 			}
 		}
 		opst := []clientv3.Op{
-			clientv3.OpPut(fs.path2key(fs.realm, p), string(b), opts...),
+			clientv3.OpPut(fs.path2key(fs.realm, dei), string(b), opts...),
 		}
 		opsf := []clientv3.Op{
 			clientv3.OpGet(f.Prefix(), opts...),
 		}
 		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
-		db.DPrintf(db.FSETCD, "PutFile p %v nf %v f %v resp %v err %v\n", p, nf, f, resp, err)
+		db.DPrintf(db.FSETCD, "PutFile dei %v f %v resp %v err %v\n", dei, f, resp, err)
 		if err != nil {
 			return serr.NewErrError(err)
 		}
 		if !resp.Succeeded {
 			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
-				db.DPrintf(db.FENCEFS, "PutFile p %v nf %v f %v resp %v stale\n", p, nf, f, resp)
+				db.DPrintf(db.FENCEFS, "PutFile dei %v f %v resp %v stale\n", dei, f, resp)
 				return serr.NewErr(serr.TErrStale, f)
 			}
-			db.DPrintf(db.ERROR, "PutFile failed %v %v %v\n", p, nf, resp.Responses[0])
+			db.DPrintf(db.ERROR, "PutFile failed dei %v %v\n", dei, resp.Responses[0])
 		}
 
 		return nil
 	}
 }
 
-func (fs *FsEtcd) readDir(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, *serr.Err) {
-	if de, ok := fs.dc.lookup(p); ok && (stat == TSTAT_NONE || de.stat == TSTAT_STAT) {
+func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, *serr.Err) {
+	if de, ok := fs.dc.lookup(dei.Path); ok && (stat == TSTAT_NONE || de.stat == TSTAT_STAT) {
 		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", de.dir)
 		return de.dir, de.v, nil
 	}
-	dir, v, c, err := fs.readDirEtcd(p, stat)
+	dir, v, c, err := fs.readDirEtcd(dei, stat)
 	if err != nil {
 		return nil, v, err
 	}
 	if c == TCACHEABLE_YES {
-		fs.dc.insert(p, &dcEntry{dir, v, stat})
+		fs.dc.insert(dei.Path, &dcEntry{dir, v, stat})
 	}
 	return dir, v, nil
 }
@@ -108,9 +108,9 @@ func (fs *FsEtcd) readDir(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, *serr
 // If stat is TSTAT_STAT, stat every entry in the directory.  If entry
 // is ephemeral, stat entry and filter it out if expired.  If
 // directory contains ephemeral entries, return TCACHEABLE_NO.
-func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, Tcacheable, *serr.Err) {
-	db.DPrintf(db.FSETCD, "readDirEtcd %v\n", p)
-	nf, v, err := fs.GetFile(p)
+func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, Tcacheable, *serr.Err) {
+	db.DPrintf(db.FSETCD, "readDirEtcd %v\n", dei.Path)
+	nf, v, err := fs.GetFile(dei)
 	if err != nil {
 		return nil, 0, TCACHEABLE_NO, err
 	}
@@ -123,13 +123,14 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, T
 	update := false
 	for _, e := range dir.Ents {
 		if e.Name == "." {
-			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
+			dents.Insert(e.Name, &DirEntInfo{nf, e.Tpath(), e.Tperm()})
 		} else {
+			di := newDirEntInfoP(e.Tpath(), e.Tperm())
 			if e.Tperm().IsEphemeral() || stat == TSTAT_STAT {
 				// if file is emphemeral, etcd may have expired it, so
 				// check if it still exists; if not, don't return the
 				// entry.
-				nf, _, err := fs.GetFile(e.Tpath())
+				nf, _, err := fs.GetFile(di)
 				if err != nil {
 					db.DPrintf(db.FSETCD, "readDir: expired %v err %v\n", e.Name, err)
 					update = true
@@ -139,16 +140,17 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, T
 					db.DPrintf(db.FSETCD, "readDir: %v ephemeral; not cacheable %v\n", e.Name, e.Tperm())
 					cacheable = TCACHEABLE_NO
 				}
-				dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
+				di.Nf = nf
+				dents.Insert(e.Name, di)
 			} else {
-				dents.Insert(e.Name, DirEntInfo{nil, e.Tpath(), e.Tperm()})
+				dents.Insert(e.Name, newDirEntInfoP(e.Tpath(), e.Tperm()))
 			}
 		}
 	}
 	di := &DirInfo{dents, nf.Tperm()}
 	if update {
 		// updateDir will succeed if the on-disk version is equal to v
-		if err := fs.updateDir(p, di, v); err != nil {
+		if err := fs.updateDir(dei, di, v); err != nil {
 			if err.IsErrStale() {
 				return di, v, TCACHEABLE_NO, nil
 			} else {
@@ -160,7 +162,7 @@ func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, T
 	return di, v, cacheable, nil
 }
 
-func (fs *FsEtcd) updateDir(dp sp.Tpath, dir *DirInfo, v sp.TQversion) *serr.Err {
+func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) *serr.Err {
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
@@ -168,24 +170,24 @@ func (fs *FsEtcd) updateDir(dp sp.Tpath, dir *DirInfo, v sp.TQversion) *serr.Err
 	// Update directory if directory hasn't changed.
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dp)), "=", int64(v))}
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 	ops := []clientv3.Op{
-		clientv3.OpPut(fs.path2key(fs.realm, dp), string(d1))}
+		clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
-	db.DPrintf(db.FSETCD, "updateDir %v %v %v %v err %v\n", dp, dir, v, resp, err)
+	db.DPrintf(db.FSETCD, "updateDir %v %v %v %v err %v\n", dei.Path, dir, v, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		db.DPrintf(db.FSETCD, "updateDir %v %v %v %v stale\n", dp, dir, v, resp)
-		return serr.NewErr(serr.TErrStale, dp)
+		db.DPrintf(db.FSETCD, "updateDir %v %v %v %v stale\n", dei.Path, dir, v, resp)
+		return serr.NewErr(serr.TErrStale, dei.Path)
 	}
 	return nil
 }
 
-func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, nf *EtcdFile) *serr.Err {
-	opts := nf.LeaseOpts()
-	b, err := proto.Marshal(nf)
+func (fs *FsEtcd) create(ddei *DirEntInfo, dir *DirInfo, v sp.TQversion, dei *DirEntInfo) *serr.Err {
+	opts := dei.Nf.LeaseOpts()
+	b, err := proto.Marshal(dei.Nf)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
@@ -197,23 +199,23 @@ func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, 
 	// hasn't changed.
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, p)), "=", 0),
-		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dp)), "=", int64(v))}
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", 0),
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, ddei)), "=", int64(v))}
 	ops := []clientv3.Op{
-		clientv3.OpPut(fs.path2key(fs.realm, p), string(b), opts...),
-		clientv3.OpPut(fs.path2key(fs.realm, dp), string(d1))}
+		clientv3.OpPut(fs.path2key(fs.realm, dei), string(b), opts...),
+		clientv3.OpPut(fs.path2key(fs.realm, ddei), string(d1))}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
-	db.DPrintf(db.FSETCD, "Create %v %v %v with lease %x err %v\n", p, dir, resp, nf.LeaseId, err)
+	db.DPrintf(db.FSETCD, "Create dei %v %v %v err %v\n", dei, dir, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		return serr.NewErr(serr.TErrExists, p)
+		return serr.NewErr(serr.TErrExists, dei.Path)
 	}
 	return nil
 }
 
-func (fs *FsEtcd) remove(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath) *serr.Err {
+func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *DirEntInfo) *serr.Err {
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
@@ -221,13 +223,13 @@ func (fs *FsEtcd) remove(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, del)), ">", 0),
-		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, d)), "=", int64(v))}
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 	ops := []clientv3.Op{
 		clientv3.OpDelete(fs.path2key(fs.realm, del)),
-		clientv3.OpPut(fs.path2key(fs.realm, d), string(d1))}
+		clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	resp, err := fs.Clnt().Txn(context.TODO()).
 		If(cmp...).Then(ops...).Commit()
-	db.DPrintf(db.FSETCD, "Remove %v %v %v %v err %v\n", d, dir, del, resp, err)
+	db.DPrintf(db.FSETCD, "Remove dei %v %v %v %v err %v\n", dei, dir, del, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
@@ -238,40 +240,40 @@ func (fs *FsEtcd) remove(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 }
 
 // XXX retry
-func (fs *FsEtcd) rename(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath) *serr.Err {
+func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *DirEntInfo) *serr.Err {
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
 	}
 	var cmp []clientv3.Cmp
 	var ops []clientv3.Op
-	if del != 0 {
+	if del != nil {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, del)), ">", 0),
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, d)), "=", int64(v))}
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 		ops = []clientv3.Op{
 			clientv3.OpDelete(fs.path2key(fs.realm, del)),
-			clientv3.OpPut(fs.path2key(fs.realm, d), string(d1))}
+			clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	} else {
 		cmp = []clientv3.Cmp{
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, d)), "=", int64(v))}
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 		ops = []clientv3.Op{
-			clientv3.OpPut(fs.path2key(fs.realm, d), string(d1))}
+			clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
-	db.DPrintf(db.FSETCD, "Rename %v %v %v err %v\n", d, dir, resp, err)
+	db.DPrintf(db.FSETCD, "Rename %v %v %v err %v\n", dei, dir, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		return serr.NewErr(serr.TErrNotfound, d)
+		return serr.NewErr(serr.TErrNotfound, dei.Path)
 	}
 	return nil
 }
 
 // XXX retry
-func (fs *FsEtcd) renameAt(df sp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sp.Tpath, dirt *DirInfo, vt sp.TQversion, del sp.Tpath) *serr.Err {
+func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, deit *DirEntInfo, dirt *DirInfo, vt sp.TQversion, del *DirEntInfo) *serr.Err {
 	bf, r := marshalDirInfo(dirf)
 	if r != nil {
 		return r
@@ -282,27 +284,27 @@ func (fs *FsEtcd) renameAt(df sp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sp.Tp
 	}
 	var cmp []clientv3.Cmp
 	var ops []clientv3.Op
-	if del != 0 {
+	if del != nil {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, del)), ">", 0),
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, df)), "=", int64(vf)),
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dt)), "=", int64(vt)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, deif)), "=", int64(vf)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, deit)), "=", int64(vt)),
 		}
 		ops = []clientv3.Op{
 			clientv3.OpDelete(fs.path2key(fs.realm, del)),
-			clientv3.OpPut(fs.path2key(fs.realm, df), string(bf)),
-			clientv3.OpPut(fs.path2key(fs.realm, dt), string(bt)),
+			clientv3.OpPut(fs.path2key(fs.realm, deif), string(bf)),
+			clientv3.OpPut(fs.path2key(fs.realm, deit), string(bt)),
 		}
 	} else {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, df)), "=", int64(vf)),
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dt)), "=", int64(vt)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, deif)), "=", int64(vf)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, deit)), "=", int64(vt)),
 		}
 		ops = []clientv3.Op{
-			clientv3.OpPut(fs.path2key(fs.realm, df), string(bf)),
-			clientv3.OpPut(fs.path2key(fs.realm, dt), string(bt)),
+			clientv3.OpPut(fs.path2key(fs.realm, deif), string(bf)),
+			clientv3.OpPut(fs.path2key(fs.realm, deit), string(bt)),
 		}
 	}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()

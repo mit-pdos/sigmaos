@@ -25,7 +25,7 @@ func marshalDirInfo(dir *DirInfo) ([]byte, *serr.Err) {
 	d := &EtcdDir{Ents: make([]*EtcdDirEnt, dir.Ents.Len())}
 	idx := 0
 	dir.Ents.Iter(func(name string, i interface{}) bool {
-		di := i.(DirEntInfo)
+		di := i.(*DirEntInfo)
 		d.Ents[idx] = &EtcdDirEnt{Name: name, Path: uint64(di.Path), Perm: uint32(di.Perm)}
 		idx += 1
 		return true

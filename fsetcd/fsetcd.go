@@ -108,11 +108,12 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.NewErrError(err)
 	} else {
+		dei := newDirEntInfoP(sp.Tpath(BOOT), sp.DMDIR)
 		cmp := []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 		}
 		ops := []clientv3.Op{
-			clientv3.OpPut(fs.path2key(sp.ROOTREALM, BOOT), string(b)),
+			clientv3.OpPut(fs.path2key(sp.ROOTREALM, dei), string(b)),
 		}
 		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 		if err != nil {
@@ -130,8 +131,8 @@ func GetRootNamed(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, 
 		return &sp.Tendpoint{}, serr.NewErrError(err)
 	}
 	defer fs.Close()
-
-	nf, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, sp.Tpath(BOOT)))
+	dei := newDirEntInfoP(sp.Tpath(BOOT), sp.DMDIR)
+	nf, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, dei))
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v etcdMnt %v realm %v", BOOT, nf, sr, etcdMnts, realm)
 		return &sp.Tendpoint{}, sr

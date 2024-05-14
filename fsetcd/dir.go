@@ -210,7 +210,7 @@ func (fs *FsEtcd) Rename(dei *DirEntInfo, from, to string, f sp.Tfence) *serr.Er
 }
 
 func (fs *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to string, f sp.Tfence) *serr.Err {
-	dirf, vf, err := fs.readDir(deit, TSTAT_NONE)
+	dirf, vf, err := fs.readDir(deif, TSTAT_NONE)
 	if err != nil {
 		return err
 	}
@@ -224,11 +224,11 @@ func (fs *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to s
 		return serr.NewErr(serr.TErrNotfound, from)
 	}
 	difrom := fi.(*DirEntInfo)
-	var tdi *DirEntInfo
+	var dito *DirEntInfo
 	ti, ok := dirt.Ents.Lookup(to)
 	if ok {
-		tdi = ti.(*DirEntInfo)
-		empty, err := fs.isEmpty(tdi)
+		dito = ti.(*DirEntInfo)
+		empty, err := fs.isEmpty(dito)
 		if err != nil {
 			return err
 		}
@@ -241,7 +241,7 @@ func (fs *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to s
 	}
 	dirf.Ents.Delete(from)
 	dirt.Ents.Insert(to, difrom)
-	if err := fs.renameAt(deif, dirf, vf, deit, dirt, vt, tdi); err == nil {
+	if err := fs.renameAt(deif, dirf, vf, deit, dirt, vt, dito); err == nil {
 		fs.dc.update(deif.Path, dirf)
 		if difrom.Perm.IsEphemeral() {
 			// don't cache directory anymore

@@ -39,7 +39,6 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 	}
 	pathc.FidClnt = fidc
 	pathc.cid = sp.TclntId(rand.Uint64())
-	fidc.NewClnt()
 	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, fidc.GetNetProxyClnt())
 	db.DPrintf(db.TEST, "New cid %v\n", pathc.cid)
 	return pathc
@@ -52,13 +51,14 @@ func (pathc *PathClnt) String() string {
 }
 
 func (pathc *PathClnt) Close() error {
+	db.DPrintf(db.PATHCLNT, "%v: Close", pathc.cid)
 	var err error
 	if r := pathc.detachAll(); r != nil {
-		db.DPrintf(db.TEST, "%v: detachall err %v\n", pathc.cid, r)
+		db.DPrintf(db.TEST, "%v: detachall err %v", pathc.cid, r)
 		err = r
 	}
 	if r := pathc.FidClnt.Close(); r != nil {
-		db.DPrintf(db.TEST, "%v: close err %v\n", pathc.cid, r)
+		db.DPrintf(db.TEST, "%v: close err %v", pathc.cid, r)
 	}
 	return err
 }

@@ -86,6 +86,7 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 
 // Create a SigmaClnt (using sigmaclntd or fdclient), as a proc, without ProcAPI.
 func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
+	fidc.NewClnt()
 	fsl, err := newFsLibFidClnt(pe, fidc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)

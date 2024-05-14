@@ -17,7 +17,7 @@ func TestString(t *testing.T) {
 	assert.Equal(t, qt.String(), "ts")
 
 	p := sp.Tperm(0x60001ff)
-	assert.Equal(t, "qt ts qp ff", p.String())
+	assert.Equal(t, "{qt ts qp ff}", p.String())
 }
 
 func TestNamedAddrs(t *testing.T) {

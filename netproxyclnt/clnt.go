@@ -338,7 +338,7 @@ func (npc *NetProxyClnt) getNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
 	}
 	res := &proto.NamedEndpointResponse{
 		Blob: &rpcproto.Blob{
-			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
+			Iov: [][]byte{nil},
 		},
 	}
 	if err := npc.rpcc.RPC("NetProxySrvStubs.GetNamedEndpoint", req, res); err != nil {
@@ -350,6 +350,45 @@ func (npc *NetProxyClnt) getNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
 		ep := sp.NewEndpointFromProto(res.Endpoint)
 		return ep, nil
 	}
+}
+
+func (npc *NetProxyClnt) invalidateNamedEndpointCacheEntry(r sp.Trealm) error {
+	if err := npc.init(); err != nil {
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		return err
+	}
+	req := &proto.InvalidateNamedEndpointRequest{
+		RealmStr: r.String(),
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{nil},
+		},
+	}
+	res := &proto.InvalidateNamedEndpointResponse{
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{nil},
+		},
+	}
+	if err := npc.rpcc.RPC("NetProxySrvStubs.InvalidateNamedEndpointCacheEntry", req, res); err != nil {
+		return err
+	}
+	if res.Err.ErrCode != 0 {
+		return sp.NewErr(res.Err)
+	} else {
+		return nil
+	}
+}
+
+func (npc *NetProxyClnt) InvalidateNamedEndpointCacheEntry(r sp.Trealm) error {
+	if !npc.useProxy() {
+		db.DFatalf("InvalidateNamedEndpointCacheEntry: internal %v\n", npc)
+	}
+	db.DPrintf(db.NETPROXYCLNT, "InvalidateNamedEndpointCacheEntry %v", r)
+	err := npc.invalidateNamedEndpointCacheEntry(r)
+	if err != nil {
+		db.DPrintf(db.NETPROXYCLNT_ERR, "InvalidateNamedEndpointCacheEntry %v err %v", r, err)
+		return err
+	}
+	return nil
 }
 
 func (npc *NetProxyClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {

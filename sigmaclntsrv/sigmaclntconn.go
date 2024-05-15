@@ -300,6 +300,17 @@ func (scs *SigmaClntSrvAPI) PathLastMount(ctx fs.CtxI, req scproto.SigmaPathRequ
 	return nil
 }
 
+func (scs *SigmaClntSrvAPI) InvalidateNamedEndpointCacheEntryRealm(ctx fs.CtxI, req scproto.SigmaRealmRequest, rep *scproto.SigmaMountReply) error {
+	err := scs.sc.InvalidateNamedEndpointCacheEntryRealm(sp.Trealm(req.RealmStr))
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err GetNamedEndpoint: %v", err)
+		return err
+	}
+	rep.Err = scs.setErr(nil)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: PastLastMount %v %v", scs.sc.ClntId(), req, rep)
+	return nil
+}
+
 func (scs *SigmaClntSrvAPI) GetNamedEndpoint(ctx fs.CtxI, req scproto.SigmaRealmRequest, rep *scproto.SigmaMountReply) error {
 	ep, err := scs.sc.GetNamedEndpointRealm(sp.Trealm(req.RealmStr))
 	if err != nil {

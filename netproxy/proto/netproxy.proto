@@ -57,3 +57,13 @@ message NamedEndpointResponse {
         TendpointProto endpoint = 2;
         Blob blob = 3;
 }
+
+message InvalidateNamedEndpointRequest {
+        string realmStr = 1;
+        Blob blob = 2;
+}
+
+message InvalidateNamedEndpointResponse {
+        Rerror err = 1;
+        Blob blob = 2;
+}

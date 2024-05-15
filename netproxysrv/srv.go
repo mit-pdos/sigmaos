@@ -249,6 +249,22 @@ func (nps *NetProxySrvStubs) Close(c fs.CtxI, req netproto.CloseRequest, res *ne
 	return nil
 }
 
+// TODO: check if calling proc cannot invalidate `realm`'s endpoint
+func (nps *NetProxySrvStubs) InvalidateNamedEndpointCacheEntry(c fs.CtxI, req netproto.InvalidateNamedEndpointRequest, res *netproto.InvalidateNamedEndpointResponse) error {
+	db.DPrintf(db.NETPROXYSRV, "InvalidateNamedEndpointCacheEntry %v", req)
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{nil},
+	}
+	realm := sp.Trealm(req.RealmStr)
+	if err := nps.sc.InvalidateNamedEndpointCacheEntryRealm(realm); err != nil {
+		db.DPrintf(db.NETPROXYSRV_ERR, "InvalidateNamedEndpointCacheEntry [%v] err %v %T", realm, err, err)
+		res.Err = sp.NewRerrorErr(err)
+	} else {
+		res.Err = sp.NewRerror()
+	}
+	return nil
+}
+
 // TODO: check if calling proc cannot look up `realm`'s endpoint
 func (nps *NetProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpointRequest, res *netproto.NamedEndpointResponse) error {
 	db.DPrintf(db.NETPROXYSRV, "GetNamedEndpoint %v", req)

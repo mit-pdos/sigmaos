@@ -53,7 +53,6 @@ type DirInfo struct {
 	Perm sp.Tperm
 }
 
-// XXX wrong dei
 func (di *DirInfo) find(del sp.Tpath) (string, bool) {
 	for _, n := range di.Ents.Slice(0) {
 		e, ok := di.Ents.Lookup(n)
@@ -132,12 +131,7 @@ func (fs *FsEtcd) Create(dei *DirEntInfo, name string, path sp.Tpath, nf *EtcdFi
 	dir.Ents.Insert(name, di)
 	db.DPrintf(db.FSETCD, "Create %q dir %v (%v) nf %v\n", name, dir, dei.Path, nf)
 	if err := fs.create(dei, dir, v, di); err == nil {
-		if nf.Tperm().IsEphemeral() {
-			// don't cache directory anymore
-			fs.dc.remove(dei.Path)
-		} else {
-			fs.dc.update(dei.Path, dir)
-		}
+		fs.dc.update(dei.Path, dir)
 		return di, nil
 	} else {
 		db.DPrintf(db.FSETCD, "Create %q dir %v nf %v err %v", name, dir, nf, err)
@@ -272,12 +266,7 @@ func (fs *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to s
 	dirt.Ents.Insert(to, difrom)
 	if err := fs.renameAt(deif, dirf, vf, deit, dirt, vt, dito); err == nil {
 		fs.dc.update(deif.Path, dirf)
-		if difrom.Perm.IsEphemeral() {
-			// don't cache directory anymore
-			fs.dc.remove(deit.Path)
-		} else {
-			fs.dc.update(deit.Path, dirt)
-		}
+		fs.dc.update(deit.Path, dirt)
 		return nil
 	} else {
 		dirf.Ents.Insert(from, difrom)

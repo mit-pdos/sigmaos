@@ -872,7 +872,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2", sp.Names(st))
 	db.DPrintf(db.TEST, "Got out dir again")
 
 	err = ts.KillOne(sp.SCHEDDREL)
@@ -891,9 +891,9 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	sm.StopGroup()
 	db.DPrintf(db.TEST, "Stopped GroupMgr")
 
-	err = ts.RmDir(OUTDIR)
-	assert.Nil(t, err, "RmDir: %v", err)
-	db.DPrintf(db.TEST, "Get out dir 4")
+	// don't check for errors because between seeing the spinner file
+	// exists and deleting it, the lease may have expired.
+	ts.RmDir(OUTDIR)
 
 	ts.Shutdown()
 }

@@ -35,7 +35,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 		db.DPrintf(db.WALK, "unionScan: Err readlink %v\n", err)
 		return sp.NoFid, err
 	}
-	db.DPrintf(db.WALK, "unionScan: %v target: %v\n", name, string(target))
+	db.DPrintf(db.WALK, "unionScan: %v", name)
 	ep, r := sp.NewEndpointFromBytes(target)
 	if err != nil {
 		db.DPrintf(db.WALK, "unionScan NewMount err %v", err)

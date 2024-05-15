@@ -181,12 +181,13 @@ func TestEphemeral(t *testing.T) {
 	_, error := sp.NewEndpointFromBytes(b)
 	assert.Nil(t, error, "NewEndpoint")
 
+	db.DPrintf(db.TEST, "Try GetDir on %v", name+"/")
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")
 
 	// 5: .statsd, pids, rpc, and running
 	db.DPrintf(db.TEST, "entries %v\n", sp.Names(sts))
-	assert.Equal(t, 4, len(sts), "Unexpected len(sts) != %v:", 4, sp.Names(sts))
+	assert.Equal(t, 4, len(sts), "Unexpected len(sts) %v != %v:", sp.Names(sts), 4)
 
 	ts.KillOne(sp.SCHEDDREL)
 

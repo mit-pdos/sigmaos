@@ -44,13 +44,13 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 
 		ch <- true
 
-		db.DPrintf(db.TEST, "sign off as leader..\n")
+		db.DPrintf(db.TEST, "sign off as leader...")
 
 		l.ReleaseLeadership()
 
 		<-ch
 
-		db.DPrintf(db.TEST, "Old leader try to write..\n")
+		db.DPrintf(db.TEST, "Old leader try to write...")
 
 		// A thread shouldn't write after resigning, but this thread
 		// lost leader status, and the other thread should have it by
@@ -59,7 +59,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 
 		_, err = fsl2.PutFile(pn+"/f", 0777, sp.OWRITE, []byte("should fail"))
 		assert.NotNil(ts.T, err, "Put")
-		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale))
+		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale), "Err code: %v", err)
 		fsl2.CloseFd(fd)
 
 		ch <- true
@@ -70,7 +70,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	// Wait until other thread is leader and resigns
 	<-ch
 
-	db.DPrintf(db.TEST, "Become leader..\n")
+	db.DPrintf(db.TEST, "Become leader...")
 
 	l, err := NewLeaderClnt(ts.FsLib, leadername, 0777)
 	assert.Nil(ts.T, err)
@@ -83,7 +83,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	assert.Nil(ts.T, err, "PutFile")
 
 	if crash {
-		db.DPrintf(db.TEST, "kill named..\n")
+		db.DPrintf(db.TEST, "kill named...")
 		err := ts.KillOne(sp.NAMEDREL)
 		assert.Nil(ts.T, err)
 	}
@@ -91,12 +91,12 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	// let old leader run
 	ch <- true
 
-	db.DPrintf(db.TEST, "Wait until old leader is done..\n")
+	db.DPrintf(db.TEST, "Wait until old leader is done...")
 
 	<-ch
 
 	fd, err := ts.Open(pn+"/f", sp.OREAD)
-	assert.Nil(ts.T, err, "Open")
+	assert.Nil(ts.T, err, "Open err %v", err)
 	b := make([]byte, 100)
 	cnt, err := ts.Read(fd, b)
 	assert.Equal(ts.T, sp.Tsize(0), cnt, "buf %v", string(b))

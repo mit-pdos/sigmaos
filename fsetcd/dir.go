@@ -8,7 +8,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sorteddirv1"
 )
 
 // This file implements directory operations on top of etcd.  It
@@ -49,7 +49,7 @@ func (di DirEntInfo) String() string {
 }
 
 type DirInfo struct {
-	Ents *sorteddir.SortedDir
+	Ents *sorteddir.SortedDir[string, *DirEntInfo]
 	Perm sp.Tperm
 }
 
@@ -57,8 +57,7 @@ func (di *DirInfo) find(del sp.Tpath) (string, bool) {
 	for _, n := range di.Ents.Slice(0) {
 		e, ok := di.Ents.Lookup(n)
 		if ok {
-			dei := e.(*DirEntInfo)
-			if dei.Path == del {
+			if e.Path == del {
 				db.DPrintf(db.FSETCD, "expire %q %v\n", n, del)
 				return n, true
 			}
@@ -110,7 +109,7 @@ func (fs *FsEtcd) Lookup(dei *DirEntInfo, name string) (*DirEntInfo, *serr.Err) 
 	db.DPrintf(db.FSETCD, "Lookup %q %v %v\n", name, dei.Path, dir)
 	e, ok := dir.Ents.Lookup(name)
 	if ok {
-		return e.(*DirEntInfo), nil
+		return e, nil
 	}
 	return nil, serr.NewErr(serr.TErrNotfound, name)
 }
@@ -156,12 +155,11 @@ func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del bool) *s
 	if err != nil {
 		return err
 	}
-	e, ok := dir.Ents.Lookup(name)
+	di, ok := dir.Ents.Lookup(name)
 	if !ok {
 		return serr.NewErr(serr.TErrNotfound, name)
 	}
 
-	di := e.(*DirEntInfo)
 	db.DPrintf(db.FSETCD, "Remove in %v entry %v %v v %v d %t\n", dir, name, di, v, del)
 
 	empty, err := fs.isEmpty(di)
@@ -200,15 +198,12 @@ func (fs *FsEtcd) Rename(dei *DirEntInfo, from, to string, f sp.Tfence) *serr.Er
 		return err
 	}
 	db.DPrintf(db.FSETCD, "Rename in %v from %v to %v\n", dir, from, to)
-	fromi, ok := dir.Ents.Lookup(from)
+	difrom, ok := dir.Ents.Lookup(from)
 	if !ok {
 		return serr.NewErr(serr.TErrNotfound, from)
 	}
-	difrom := fromi.(*DirEntInfo)
-	var di *DirEntInfo
-	toi, ok := dir.Ents.Lookup(to)
+	di, ok := dir.Ents.Lookup(to)
 	if ok {
-		di = toi.(*DirEntInfo)
 		empty, err := fs.isEmpty(di)
 		if err != nil {
 			return err
@@ -242,15 +237,12 @@ func (fs *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to s
 		return err
 	}
 	db.DPrintf(db.FSETCD, "Renameat %v dir: %v %v %v %v\n", deif.Path, dirf, dirt, vt, vf)
-	fi, ok := dirf.Ents.Lookup(from)
+	difrom, ok := dirf.Ents.Lookup(from)
 	if !ok {
 		return serr.NewErr(serr.TErrNotfound, from)
 	}
-	difrom := fi.(*DirEntInfo)
-	var dito *DirEntInfo
-	ti, ok := dirt.Ents.Lookup(to)
+	dito, ok := dirt.Ents.Lookup(to)
 	if ok {
-		dito = ti.(*DirEntInfo)
 		empty, err := fs.isEmpty(dito)
 		if err != nil {
 			return err
@@ -280,9 +272,8 @@ func (fs *FsEtcd) Dump(l int, dir *DirInfo, pn path.Path, p sp.Tpath) error {
 	for i := 0; i < l*4; i++ {
 		s += " "
 	}
-	dir.Ents.Iter(func(name string, v interface{}) bool {
+	dir.Ents.Iter(func(name string, di *DirEntInfo) bool {
 		if name != "." {
-			di := v.(*DirEntInfo)
 			fmt.Printf("%v%v %v\n", s, pn.Append(name), di)
 			if di.Perm.IsDir() {
 				nd, _, err := fs.readDir(di, TSTAT_NONE)

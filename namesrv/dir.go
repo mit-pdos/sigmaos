@@ -86,9 +86,8 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 	} else {
 		sts := make([]*sp.Stat, 0, len)
 		var r *serr.Err
-		dir.Ents.Iter(func(n string, e interface{}) bool {
+		dir.Ents.Iter(func(n string, di *fsetcd.DirEntInfo) bool {
 			if n != "." {
-				di := e.(*fsetcd.DirEntInfo)
 				o := newObjDi(d.fs, d.pn.Append(n), *di, d.Obj.di.Path)
 				st, err := o.NewStat()
 				if err != nil {

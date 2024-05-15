@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sorteddirv1"
 )
 
 type Tstat int
@@ -116,7 +116,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 	if err != nil {
 		return nil, 0, err
 	}
-	dents := sorteddir.NewSortedDir()
+	dents := sorteddir.NewSortedDir[string, *DirEntInfo]()
 	for _, e := range dir.Ents {
 		if e.Name == "." {
 			dents.Insert(e.Name, &DirEntInfo{nf, e.Tpath(), e.Tperm()})

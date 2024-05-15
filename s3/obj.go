@@ -72,7 +72,7 @@ func (o *Obj) readHead(ctx fs.CtxI, fss3 *Fss3) *serr.Err {
 		return serr.NewErrError(err)
 	}
 	db.DPrintf(db.S3, "readHead: %v %v %v\n", key, result.ContentLength, err)
-	o.sz = sp.Tlength(result.ContentLength)
+	o.sz = sp.Tlength(*result.ContentLength)
 	if result.LastModified != nil {
 		o.mtime = (*result.LastModified).Unix()
 	}
@@ -183,7 +183,7 @@ func (o *Obj) s3Read(ctx fs.CtxI, off, cnt int) (io.ReadCloser, sp.Tlength, *ser
 		region1 = *result.ContentRange
 	}
 	db.DPrintf(db.S3, "s3Read: %v region %v res %v %v\n", o.key, region, region1, result.ContentLength)
-	return result.Body, sp.Tlength(result.ContentLength), nil
+	return result.Body, sp.Tlength(*result.ContentLength), nil
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {

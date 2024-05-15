@@ -168,7 +168,7 @@ func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del bool) *s
 	}
 
 	di := e.(*DirEntInfo)
-	db.DPrintf(db.FSETCD, "Remove in %v entry %v %v v %v\n", dir, name, di, v)
+	db.DPrintf(db.FSETCD, "Remove in %v entry %v %v v %v d %t\n", dir, name, di, v, del)
 
 	empty, err := fs.isEmpty(di)
 	if err != nil {
@@ -183,8 +183,11 @@ func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del bool) *s
 	if del {
 		if err := fs.remove(dei, dir, v, di); err != nil {
 			db.DPrintf(db.FSETCD, "Remove entry %v err %v\n", name, err)
-			dir.Ents.Insert(name, di)
-			return err
+			if !err.IsErrNotfound() {
+				dir.Ents.Insert(name, di)
+				return err
+			}
+			// fsetcd may have deleted di already because di is ephemeral
 		}
 	} else {
 		if err := fs.updateDir(dei, dir, v); err != nil {

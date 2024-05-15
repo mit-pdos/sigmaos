@@ -53,6 +53,21 @@ type DirInfo struct {
 	Perm sp.Tperm
 }
 
+// XXX wrong dei
+func (di *DirInfo) find(del sp.Tpath) (string, bool) {
+	for _, n := range di.Ents.Slice(0) {
+		e, ok := di.Ents.Lookup(n)
+		if ok {
+			dei := e.(*DirEntInfo)
+			if dei.Path == del {
+				db.DPrintf(db.FSETCD, "expire %q %v\n", n, del)
+				return n, true
+			}
+		}
+	}
+	return "", false
+}
+
 func (fs *FsEtcd) isEmpty(dei *DirEntInfo) (bool, *serr.Err) {
 	if dei.Perm.IsDir() {
 		dir, _, err := fs.readDir(dei, TSTAT_NONE)
@@ -139,7 +154,10 @@ func (fs *FsEtcd) ReadDir(dei *DirEntInfo) (*DirInfo, *serr.Err) {
 	return dir, nil
 }
 
-func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence) *serr.Err {
+// Remove `name` and delete its directory entry.  To update only the
+// directory for a file that etcd already deleted (a leased file), set
+// del to false.
+func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del bool) *serr.Err {
 	dir, v, err := fs.readDir(dei, TSTAT_NONE)
 	if err != nil {
 		return err
@@ -162,11 +180,19 @@ func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence) *serr.Err {
 
 	dir.Ents.Delete(name)
 
-	if err := fs.remove(dei, dir, v, di); err != nil {
-		db.DPrintf(db.FSETCD, "Remove entry %v err %v\n", name, err)
-		dir.Ents.Insert(name, di)
-		return err
+	if del {
+		if err := fs.remove(dei, dir, v, di); err != nil {
+			db.DPrintf(db.FSETCD, "Remove entry %v err %v\n", name, err)
+			dir.Ents.Insert(name, di)
+			return err
+		}
+	} else {
+		if err := fs.updateDir(dei, dir, v); err != nil {
+			db.DPrintf(db.FSETCD, "Remove updateDir %v %q err %v\n", dir, name, err)
+			return err
+		}
 	}
+
 	fs.dc.update(dei.Path, dir)
 	return nil
 }

@@ -17,6 +17,10 @@ type dcEntry struct {
 	stat Tstat
 }
 
+func (dce *dcEntry) find(del sp.Tpath) (string, bool) {
+	return dce.dir.find(del)
+}
+
 type Dcache struct {
 	sync.Mutex
 	c *lru.Cache[sp.Tpath, *dcEntry]
@@ -76,4 +80,16 @@ func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 	}
 	db.DPrintf(db.FSETCD, "Update dcache no entry %v %v", d, dir)
 	return false
+}
+
+// XXX maintain reverse index; handle remove, rename, etc.
+func (dc *Dcache) find(del sp.Tpath) (*DirEntInfo, string, bool) {
+	for _, d := range dc.c.Keys() {
+		if de, ok := dc.c.Get(d); ok {
+			if n, ok := de.find(del); ok {
+				return NewDirEntInfoDir(d), n, true
+			}
+		}
+	}
+	return nil, "", false
 }

@@ -4,6 +4,7 @@ package fsetcd
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
@@ -78,7 +79,46 @@ func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, rea
 		realm:  realm,
 		dc:     dc,
 	}
+	if err := fs.watchEphemeral(); err != nil {
+		fs.Close()
+		return nil, err
+	}
 	return fs, nil
+}
+
+func (fs *FsEtcd) watchEphemeral() error {
+	wopts := make([]clientv3.OpOption, 0)
+	wopts = append(wopts, clientv3.WithPrefix())
+	wopts = append(wopts, clientv3.WithFilterPut())
+	wch := fs.Client.Watch(context.TODO(), EPHEMERAL, wopts...)
+	if wch == nil {
+		return fmt.Errorf("watchEphemeral: Watch failed")
+	}
+
+	go func() error {
+		for {
+			watchResp, ok := <-wch
+			if ok {
+				for _, e := range watchResp.Events {
+					key := string(e.Kv.Key)
+					db.DPrintf(db.FSETCD, "watchResp event %v\n", key)
+					dei, n, ok := fs.dc.find(key2path(key))
+					if ok {
+						if err := fs.Remove(dei, n, sp.NoFence(), false); err != nil {
+							db.DFatalf("event remove %v %v err %v\n", dei, n, err)
+						}
+					} else {
+						// XXX which non-cached directory contains key?
+						db.DPrintf(db.ERROR, "event not found %v\n", key)
+					}
+				}
+			} else {
+				db.DPrintf(db.FSETCD, "wch closed\n")
+				return nil
+			}
+		}
+	}()
+	return nil
 }
 
 func (fs *FsEtcd) Close() error {

@@ -13,6 +13,7 @@ import (
 )
 
 func key2path(key string) sp.Tpath {
+	key = strings.TrimPrefix(key, EPHEMERAL)
 	parts := strings.Split(key, ":")
 	p, err := strconv.ParseUint(parts[1], 16, 64)
 	if err != nil {

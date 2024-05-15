@@ -57,10 +57,12 @@ func (d *Dir) readRoot(ctx fs.CtxI) *serr.Err {
 	input := &s3.ListBucketsInput{}
 	clnt, err1 := fss3.getClient(ctx)
 	if err1 != nil {
+		db.DPrintf(db.ERROR, "getClient err %v", err1)
 		return err1
 	}
 	result, err := clnt.ListBuckets(context.TODO(), input)
 	if err != nil {
+		db.DPrintf(db.ERROR, "listBuckets err %v", err)
 		return serr.NewErr(serr.TErrError, err)
 	} else {
 		for _, b := range result.Buckets {

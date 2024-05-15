@@ -97,7 +97,7 @@ func (mc *MntClnt) AutoMount(principal *sp.Tprincipal, ep *sp.Tendpoint, path pa
 		db.DPrintf(db.MOUNT_ERR, "Attach error: %v", err)
 		return err
 	}
-	db.DPrintf(db.WALK_LAT, "Automount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "AutoMount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
 	err = mc.mount(fid, path.String())
 	if err != nil {
 		return err

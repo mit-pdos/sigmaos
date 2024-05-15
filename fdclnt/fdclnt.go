@@ -250,6 +250,10 @@ func (fdc *FdClient) GetNamedEndpoint() (*sp.Tendpoint, error) {
 	return fdc.GetNamedEndpointRealm(fdc.pe.GetRealm())
 }
 
+func (fdc *FdClient) InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error {
+	return fdc.pc.MntClnt().InvalidateNamedEndpointCacheEntryRealm(realm)
+}
+
 func (fdc *FdClient) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
 	return fdc.pc.MntClnt().GetNamedEndpointRealm(realm)
 }

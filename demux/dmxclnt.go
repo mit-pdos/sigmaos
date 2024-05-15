@@ -52,7 +52,7 @@ func (dmx *DemuxClnt) reader() {
 		dmx.reply(c.Tag(), c, nil)
 	}
 	outstanding := dmx.callmap.outstanding()
-	db.DPrintf(db.DEMUXCLNT_ERR, "reader fail %v oustanding %v", outstanding)
+	db.DPrintf(db.DEMUXCLNT_ERR, "reader fail oustanding %v", outstanding)
 	for _, t := range outstanding {
 		db.DPrintf(db.DEMUXCLNT_ERR, "reader reply fail %v", t)
 		dmx.reply(t, nil, serr.NewErr(serr.TErrUnreachable, "reader"))

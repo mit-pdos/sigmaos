@@ -20,6 +20,10 @@ func (mc *MntClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error)
 	}
 }
 
+func (mc *MntClnt) InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error {
+	return mc.invalidateNamedMountCacheEntry(realm)
+}
+
 // Get named enpoint via netproxy or directly
 func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
 	s := time.Now()
@@ -94,6 +98,14 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 	}
 }
 
+func (mc *MntClnt) invalidateNamedMountCacheEntry(realm sp.Trealm) error {
+	mc.ndMntCache.Invalidate(realm)
+	if mc.pe.UseNetProxy {
+		return mc.npc.InvalidateNamedEndpointCacheEntry(realm)
+	}
+	return nil
+}
+
 func (mc *MntClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
 	s := time.Now()
 	ep, err := mc.getNamedEndpointRealm(realm)
@@ -105,7 +117,9 @@ func (mc *MntClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
 		db.DPrintf(db.MOUNT_ERR, "mountNamed: automount err %v", err)
 		// If mounting failed, the named is unreachable. Invalidate the cache entry
 		// for this realm.
-		mc.ndMntCache.Invalidate(realm)
+		if err := mc.invalidateNamedMountCacheEntry(realm); err != nil {
+			db.DPrintf(db.ERROR, "Error invalidating named mount cache entry: %v", err)
+		}
 		return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v realm failure", realm))
 	}
 	db.DPrintf(db.MOUNT, "mountNamed [%v]: automount ep %v at %v", realm, ep, name)

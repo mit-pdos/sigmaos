@@ -286,6 +286,20 @@ func (scc *SigmaClntClnt) GetNamedEndpoint() (*sp.Tendpoint, error) {
 	return scc.GetNamedEndpointRealm(scc.pe.GetRealm())
 }
 
+func (scc *SigmaClntClnt) InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error {
+	req := scproto.SigmaRealmRequest{RealmStr: realm.String()}
+	rep := scproto.SigmaMountReply{}
+	err := scc.rpcc.RPC("SigmaClntSrvAPI.InvalidateNamedEndpointCacheEntryRealm", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "InvalidateNamedEndpointCacheEntryRealm %v %v %v", req, rep, err)
+	if err != nil {
+		return nil
+	}
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return nil
+	}
+	return nil
+}
+
 func (scc *SigmaClntClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
 	req := scproto.SigmaRealmRequest{RealmStr: realm.String()}
 	rep := scproto.SigmaMountReply{}

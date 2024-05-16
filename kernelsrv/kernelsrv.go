@@ -68,6 +68,10 @@ func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilReques
 	return nil
 }
 
+func (ks *KernelSrv) EvictKernelProc(ctx fs.CtxI, req proto.EvictKernelProcRequest, rep *proto.EvictKernelProcResponse) error {
+	return ks.k.EvictKernelProc(sp.Tpid(req.PidStr))
+}
+
 func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
 	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown", ks.k.Param.KernelID)
 	if ks.k.IsPurelySigmaclntdKernel() {

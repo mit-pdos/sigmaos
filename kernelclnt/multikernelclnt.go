@@ -20,13 +20,20 @@ func NewMultiKernelClnt(fsl *fslib.FsLib) *MultiKernelClnt {
 	}
 }
 
-func (mkc *MultiKernelClnt) BootInRealm(kernelID string, realm sp.Trealm, s string, args []string) error {
+func (mkc *MultiKernelClnt) BootInRealm(kernelID string, realm sp.Trealm, s string, args []string) (sp.Tpid, error) {
+	rpcc, err := mkc.urpcc.GetClnt(kernelID)
+	if err != nil {
+		return sp.NO_PID, err
+	}
+	return bootInRealm(rpcc, realm, s, args)
+}
+
+func (mkc *MultiKernelClnt) EvictKernelProc(kernelID string, pid sp.Tpid) error {
 	rpcc, err := mkc.urpcc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
-	_, err = bootInRealm(rpcc, realm, s, args)
-	return err
+	return evictKernelProc(rpcc, pid)
 }
 
 func (mkc *MultiKernelClnt) GetKernelSrvs() ([]string, error) {

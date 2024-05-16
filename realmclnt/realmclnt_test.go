@@ -109,7 +109,7 @@ func TestBasicSimple(t *testing.T) {
 	assert.True(t, sts1[0].Name == sts[0].Name)
 
 	err = ts1.Remove()
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Error Remove: %v", err)
 
 	rootts.Shutdown()
 }

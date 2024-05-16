@@ -10,7 +10,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sorteddirv1"
 	"sigmaos/spcodec"
 )
 
@@ -18,14 +18,14 @@ type DirImpl struct {
 	fs.Inode
 	no    fs.NewFsObjF
 	mu    sync.Mutex
-	dents *sorteddir.SortedDir
+	dents *sorteddir.SortedDir[string, fs.FsObj]
 }
 
 func MkDir(i fs.Inode, no fs.NewFsObjF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
 	d.no = no
-	d.dents = sorteddir.NewSortedDir()
+	d.dents = sorteddir.NewSortedDir[string, fs.FsObj]()
 	d.dents.Insert(".", d)
 	return d
 }
@@ -38,7 +38,7 @@ func MkDirF(i fs.Inode, no fs.NewFsObjF) fs.FsObj {
 func (dir *DirImpl) String() string {
 	str := fmt.Sprintf("dir %p i %p %T Dir{entries: ", dir, dir.Inode, dir.Inode)
 
-	dir.dents.Iter(func(n string, e interface{}) bool {
+	dir.dents.Iter(func(n string, e fs.FsObj) bool {
 		str += fmt.Sprintf("[%v]", n)
 		return true
 	})
@@ -147,7 +147,7 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 func (dir *DirImpl) lsL(cursor int) ([]*sp.Stat, *serr.Err) {
 	entries := []*sp.Stat{}
 	var r *serr.Err
-	dir.dents.Iter(func(n string, e interface{}) bool {
+	dir.dents.Iter(func(n string, e fs.FsObj) bool {
 		if n == "." {
 			return true
 		}

@@ -10,12 +10,12 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sorteddirv1"
 )
 
 type Dir struct {
 	*Obj
-	sd *sorteddir.SortedDir
+	sd *sorteddir.SortedDir[string, *sp.Tstat]
 }
 
 func (d *Dir) String() string {
@@ -29,7 +29,7 @@ func newDir(path path.Path) (*Dir, *serr.Err) {
 		return nil, err
 	}
 	d.Obj = o
-	d.sd = sorteddir.NewSortedDir()
+	d.sd = sorteddir.NewSortedDir[string, *sp.Tstat]()
 	return d, nil
 }
 
@@ -53,8 +53,8 @@ func (d *Dir) uxReadDir() *serr.Err {
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.Err) {
 	db.DPrintf(db.UX, "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
 	dents := make([]*sp.Stat, 0, d.sd.Len())
-	d.sd.Iter(func(n string, e interface{}) bool {
-		dents = append(dents, e.(*sp.Stat))
+	d.sd.Iter(func(n string, e *sp.Tstat) bool {
+		dents = append(dents, e)
 		return true
 	})
 	if cursor > len(dents) {
@@ -73,7 +73,7 @@ func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 }
 
 func (d *Dir) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
-	d.sd = sorteddir.NewSortedDir()
+	d.sd = sorteddir.NewSortedDir[string, *sp.Tstat]()
 	return nil
 }
 

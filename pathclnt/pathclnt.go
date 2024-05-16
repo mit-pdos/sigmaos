@@ -257,33 +257,6 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w Watch) error {
 	return nil
 }
 
-func (pathc *PathClnt) SetRemoveWatch(pn string, principal *sp.Tprincipal, w Watch) error {
-	db.DPrintf(db.PATHCLNT, "%v: SetRemoveWatch %v", pathc.cid, pn)
-	p, err := serr.PathSplitErr(pn)
-	if err != nil {
-		return err
-	}
-	fid, err := pathc.walk(p, principal, path.EndSlash(pn), nil)
-	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: SetRemoveWatch: Walk %v err %v", pathc.cid, pn, err)
-		return err
-	}
-	if w == nil {
-		return serr.NewErr(serr.TErrInval, "watch")
-	}
-	go func() {
-		err := pathc.FidClnt.Watch(fid)
-		db.DPrintf(db.PATHCLNT, "%v: SetRemoveWatch: Watch %v %v err %v\n", pathc.cid, fid, pn, err)
-		if err == nil {
-			w(nil)
-		} else {
-			w(err)
-		}
-		pathc.Clunk(fid)
-	}()
-	return nil
-}
-
 func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v\n", pathc.cid, pn, mode)
 	p, err := serr.PathSplitErr(pn)

@@ -8,7 +8,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddirv1"
+	"sigmaos/sorteddir"
 )
 
 // This file implements directory operations on top of etcd.  It

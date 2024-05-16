@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddirv1"
+	"sigmaos/sorteddir"
 )
 
 type Tstat int

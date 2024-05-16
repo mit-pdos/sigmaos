@@ -79,6 +79,16 @@ func (kc *KernelClnt) Port(pid sp.Tpid, p sp.Tport) (sp.Tip, port.PortBinding, e
 	return sp.Tip(res.HostIp), port.PortBinding{sp.Tport(res.RealmPort), sp.Tport(res.HostPort)}, nil
 }
 
+func evictKernelProc(rpcc *rpcclnt.RPCClnt, pid sp.Tpid) error {
+	var res proto.EvictKernelProcResponse
+	req := &proto.EvictKernelProcRequest{PidStr: pid.String()}
+	err := rpcc.RPC("KernelSrv.EvictKernelProc", req, &res)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func bootInRealm(rpcc *rpcclnt.RPCClnt, realm sp.Trealm, s string, args []string) (sp.Tpid, error) {
 	var res proto.BootResult
 	req := &proto.BootRequest{

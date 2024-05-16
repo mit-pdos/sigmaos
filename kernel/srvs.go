@@ -100,6 +100,20 @@ func (k *Kernel) AllocPort(pid sp.Tpid, port sp.Tport) (*port.PortBinding, error
 	return k.svcs.svcMap[pid].AllocPort(port)
 }
 
+func (k *Kernel) EvictKernelProc(pid sp.Tpid) error {
+	k.Lock()
+	defer k.Unlock()
+
+	db.DPrintf(db.KERNEL, "Evict kernel proc %v", pid)
+	// Evict the kernel proc
+	if err := k.svcs.svcMap[pid].Evict(); err != nil {
+		return err
+	}
+	db.DPrintf(db.KERNEL, "Wait for evicted kernel proc %v", pid)
+	// Wait for it to exit
+	return k.svcs.svcMap[pid].Wait()
+}
+
 func (k *Kernel) KillOne(srv string) error {
 	k.Lock()
 	defer k.Unlock()

@@ -42,9 +42,32 @@ const (
 	STARVATION_RATIO      = 0.1
 )
 
+type Subsystem struct {
+	kernelID string
+	pid      sp.Tpid
+}
+
 type Realm struct {
-	named *proc.Proc // XXX groupmgr for fault tolerance
-	sc    *sigmaclnt.SigmaClnt
+	sync.Mutex
+	named                    *proc.Proc // XXX groupmgr for fault tolerance
+	perRealmKernelSubsystems []*Subsystem
+	sc                       *sigmaclnt.SigmaClnt
+}
+
+func newRealm() *Realm {
+	return &Realm{
+		perRealmKernelSubsystems: []*Subsystem{},
+	}
+}
+
+func (r *Realm) addSubsystem(kernelID string, pid sp.Tpid) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.perRealmKernelSubsystems = append(r.perRealmKernelSubsystems, &Subsystem{
+		kernelID: kernelID,
+		pid:      pid,
+	})
 }
 
 type RealmSrv struct {
@@ -171,12 +194,14 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	if err := NewNet(req.Network); err != nil {
 		return err
 	}
+	r := newRealm()
 	p := proc.NewProc("named", []string{req.Realm, "0"})
 	p.GetProcEnv().SetRealm(sp.ROOTREALM, p.GetProcEnv().Overlays)
 	// Make sure named uses netproxy
 	p.GetProcEnv().UseNetProxy = rm.netproxy
 	p.SetMcpu(NAMED_MCPU)
 	rm.bootstrapNamedKeys(p)
+	r.named = p
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named", req.Realm)
 	if err := rm.sc.Spawn(p); err != nil {
@@ -207,6 +232,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		db.DPrintf(db.REALMD_ERR, "Error NewSigmaClntRealm: %v", err)
 		return err
 	}
+	r.sc = sc
 	// Make some rootrealm services available in new realm
 	namedEndpoint, err := rm.sc.GetNamedEndpoint()
 	if err != nil {
@@ -251,7 +277,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	errC := make(chan error)
 	// Spawn per-realm kernel procs
 	go func() {
-		if err := rm.bootPerRealmKernelSubsystems(sp.Trealm(req.Realm), sp.S3REL, req.GetNumS3()); err != nil {
+		if err := rm.bootPerRealmKernelSubsystems(r, sp.Trealm(req.Realm), sp.S3REL, req.GetNumS3()); err != nil {
 			db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.S3REL, err)
 			errC <- err
 			return
@@ -259,7 +285,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		errC <- nil
 	}()
 	go func() {
-		if err := rm.bootPerRealmKernelSubsystems(sp.Trealm(req.Realm), sp.UXREL, req.GetNumUX()); err != nil {
+		if err := rm.bootPerRealmKernelSubsystems(r, sp.Trealm(req.Realm), sp.UXREL, req.GetNumUX()); err != nil {
 			db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.UXREL, err)
 			errC <- err
 			return
@@ -271,7 +297,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 			return err
 		}
 	}
-	rm.realms[rid] = &Realm{named: p, sc: sc}
+	rm.realms[rid] = r
 	return nil
 }
 
@@ -290,16 +316,30 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveRequest, res *proto.Remo
 		return err
 	}
 
+	db.DPrintf(db.REALMD, "[%v] Remove realm, subsystems %v", rid, r.perRealmKernelSubsystems)
+
+	for _, ss := range r.perRealmKernelSubsystems {
+		if err := rm.mkc.EvictKernelProc(ss.kernelID, ss.pid); err != nil {
+			db.DPrintf(db.ERROR, "Error Evict per-realm kernel subsystem: %v", err)
+			return err
+		}
+	}
+
 	// XXX remove root dir
 
 	if err := rm.sc.Evict(r.named.GetPid()); err != nil {
+		db.DPrintf(db.ERROR, "Error Evict realm named: %v", err)
+		return err
+	}
+	if _, err := rm.sc.WaitExit(r.named.GetPid()); err != nil {
+		db.DPrintf(db.ERROR, "Error WaitExit realm named: %v", err)
 		return err
 	}
 	delete(rm.realms, rid)
 	return nil
 }
 
-func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n int64) error {
+func (rm *RealmSrv) bootPerRealmKernelSubsystems(r *Realm, realm sp.Trealm, ss string, n int64) error {
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems [%v] n %v", realm, ss, n)
 	defer db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems done [%v] n %v", realm, ss, n)
 	kernels, err := rm.mkc.GetKernelSrvs()
@@ -326,7 +366,12 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n i
 	done := make(chan bool)
 	for _, kid := range kernels {
 		go func(kid string) {
-			rm.mkc.BootInRealm(kid, realm, ss, nil)
+			pid, err := rm.mkc.BootInRealm(kid, realm, ss, nil)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Error boot subsystem %v in realm %v on kid %v: %v", ss, realm, kid, err)
+			} else {
+				r.addSubsystem(kid, pid)
+			}
 			done <- true
 		}(kid)
 	}

@@ -8,6 +8,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"runtime/debug"
+
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/demux"
@@ -145,7 +147,7 @@ func (npc *NetProxyClnt) Close(lid netproxy.Tlid) error {
 			return err
 		}
 	} else {
-		db.DPrintf(db.NETPROXYCLNT, "directClose %v", lid)
+		db.DPrintf(db.NETPROXYCLNT, "directClose %v stack:\n%v", lid, string(debug.Stack()))
 		err = npc.directClose(lid)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directClose %v: %v", lid, err)
@@ -280,6 +282,7 @@ func (npc *NetProxyClnt) directListen(addr *sp.Taddr) (*sp.Tendpoint, *Listener,
 	}
 	// Add to the listener map
 	lid := netproxy.Tlid(npc.lidctr.Add(1))
+	db.DPrintf(db.NETPROXYCLNT, "Listen lid %v ep %v", lid, ep)
 	npc.lm.Add(lid, l)
 	return ep, NewListener(npc, lid, ep), err
 }
@@ -336,7 +339,7 @@ func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid) (net.Conn, *sp.Tprincipa
 
 func (npc *NetProxyClnt) directClose(lid netproxy.Tlid) error {
 	if ok := npc.lm.Close(lid); !ok {
-		db.DPrintf(db.ERROR, "Error close unknown listener: %v", lid)
+		db.DPrintf(db.NETPROXYCLNT_ERR, "Error close unknown listener: %v", lid)
 		return fmt.Errorf("Close unknown listener: %v", lid)
 	}
 	return nil

@@ -8,8 +8,6 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"runtime/debug"
-
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/demux"
@@ -147,7 +145,7 @@ func (npc *NetProxyClnt) Close(lid netproxy.Tlid) error {
 			return err
 		}
 	} else {
-		db.DPrintf(db.NETPROXYCLNT, "directClose %v stack:\n%v", lid, string(debug.Stack()))
+		db.DPrintf(db.NETPROXYCLNT, "directClose %v", lid)
 		err = npc.directClose(lid)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directClose %v: %v", lid, err)

@@ -5,7 +5,6 @@ import (
 	"net"
 	"os"
 	"sync"
-	"sync/atomic"
 
 	"google.golang.org/protobuf/proto"
 
@@ -27,8 +26,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Tlidctr = atomic.Uint64
-
 type NetProxySrv struct {
 	auth             auth.AuthMgr
 	innerContainerIP sp.Tip
@@ -39,8 +36,8 @@ type NetProxySrv struct {
 type NetProxySrvStubs struct {
 	sync.Mutex
 	closed           bool
-	lidctr           Tlidctr
-	listeners        map[netproxy.Tlid]net.Listener
+	lidctr           netproxy.Tlidctr
+	lm               *netproxy.ListenerMap
 	trans            *netproxytrans.NetProxyTrans
 	conn             *net.UnixConn
 	innerContainerIP sp.Tip
@@ -95,7 +92,7 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 	db.DPrintf(db.NETPROXYSRV, "Handle connection [%p] from principal %v", conn, p)
 
 	npss := &NetProxySrvStubs{
-		listeners:        make(map[netproxy.Tlid]net.Listener),
+		lm:               netproxy.NewListenerMap(),
 		trans:            netproxytrans.NewNetProxyTrans(conn, demux.NewIoVecMap()),
 		auth:             nps.auth,
 		conn:             conn,
@@ -132,13 +129,6 @@ func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netp
 	ctx := c.(*netproxy.Ctx)
 	ep := sp.NewEndpointFromProto(req.GetEndpoint())
 	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> ep %v", ctx.Principal(), ep)
-	// Verify the principal is authorized to establish the connection
-	// XXX skip verif
-	//	if _, err := nps.auth.EndpointIsAuthorized(ctx.Principal(), ep); err != nil {
-	//		db.DPrintf(db.NETPROXYSRV_ERR, "Error Dial unauthorized endpoint: %v", err)
-	//		res.Err = sp.NewRerrorErr(err)
-	//		return nil
-	//	}
 	proxyConn, err := nps.directDialFn(ep)
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {
@@ -183,7 +173,8 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 	}
 	res.Endpoint = ep.GetProto()
 	// Store the listener & assign it an ID
-	lid, err := nps.addListener(l)
+	lid := netproxy.Tlid(nps.lidctr.Add(1))
+	err = nps.lm.Add(lid, l)
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error addListener: %v", err)
 		res.Err = sp.NewRerrorErr(err)
@@ -205,7 +196,7 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 	ctx := c.(*netproxy.Ctx)
 	lid := netproxy.Tlid(req.ListenerID)
 	db.DPrintf(db.NETPROXYSRV, "Accept principal %v -> lid %v", ctx.Principal(), lid)
-	l, ok := nps.getListener(lid)
+	l, ok := nps.lm.Get(lid)
 	if !ok {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error accept unknown listener %v", lid)
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Unknown listener: %v", lid))
@@ -239,7 +230,7 @@ func (nps *NetProxySrvStubs) Close(c fs.CtxI, req netproto.CloseRequest, res *ne
 	ctx := c.(*netproxy.Ctx)
 	lid := netproxy.Tlid(req.ListenerID)
 	db.DPrintf(db.NETPROXYSRV, "Close principal %v -> lid %v", ctx.Principal(), lid)
-	ok := nps.delListener(lid)
+	ok := nps.lm.Close(lid)
 	if !ok {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error close unknown listener %v", lid)
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Unknown listener: %v", lid))
@@ -284,64 +275,7 @@ func (nps *NetProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpo
 
 func (nps *NetProxySrvStubs) closeListeners() error {
 	db.DPrintf(db.NETPROXYSRV, "Close listeners for %v", nps.pe.GetPID())
-
-	nps.Lock()
-	defer nps.Unlock()
-
-	if nps.closed {
-		return fmt.Errorf("Error: close closed netproxysrv")
-	}
-	lids := make([]netproxy.Tlid, 0, len(nps.listeners))
-	for lid, _ := range nps.listeners {
-		lids = append(lids, lid)
-	}
-	for _, lid := range lids {
-		db.DPrintf(db.NETPROXYSRV, "XXXX Close listener %v for %v", nps.listeners[lid].Addr(), nps.pe.GetPID())
-		nps.delListenerL(lid)
-	}
-	return nil
-}
-
-// Store a new listener, and assign it an ID
-func (nps *NetProxySrvStubs) addListener(l net.Listener) (netproxy.Tlid, error) {
-	lid := netproxy.Tlid(nps.lidctr.Add(1))
-
-	nps.Lock()
-	defer nps.Unlock()
-
-	if nps.closed {
-		return 0, fmt.Errorf("Error: add listener to closed netproxy conn")
-	}
-
-	nps.listeners[lid] = l
-	return lid, nil
-}
-
-// Given an LID, retrieve the associated Listener
-func (nps *NetProxySrvStubs) getListener(lid netproxy.Tlid) (net.Listener, bool) {
-	nps.Lock()
-	defer nps.Unlock()
-
-	l, ok := nps.listeners[lid]
-	return l, ok
-}
-
-// Given an LID, retrieve the associated Listener
-func (nps *NetProxySrvStubs) delListener(lid netproxy.Tlid) bool {
-	nps.Lock()
-	defer nps.Unlock()
-
-	return nps.delListenerL(lid)
-}
-
-// Caller holds lock
-func (nps *NetProxySrvStubs) delListenerL(lid netproxy.Tlid) bool {
-	l, ok := nps.listeners[lid]
-	if ok {
-		delete(nps.listeners, lid)
-		l.Close()
-	}
-	return ok
+	return nps.lm.CloseListeners()
 }
 
 func (npss *NetProxySrvStubs) ReportError(err error) {

@@ -34,7 +34,8 @@ message AcceptRequest {
 
 message AcceptResponse {
         Rerror err = 1;
-        Blob blob = 2;
+        Tprincipal principal = 2;
+        Blob blob = 3;
 }
 
 message CloseRequest {

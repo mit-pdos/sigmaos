@@ -7,6 +7,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+// Must respect standard net.Listener API for compatibility
 type Listener struct {
 	npc *NetProxyClnt
 	lid netproxy.Tlid
@@ -17,7 +18,7 @@ type ListenerAddr struct {
 	ep *sp.Tendpoint
 }
 
-func NewListener(npc *NetProxyClnt, lid netproxy.Tlid, ep *sp.Tendpoint) net.Listener {
+func NewListener(npc *NetProxyClnt, lid netproxy.Tlid, ep *sp.Tendpoint) *Listener {
 	return &Listener{
 		npc: npc,
 		lid: lid,
@@ -26,11 +27,16 @@ func NewListener(npc *NetProxyClnt, lid netproxy.Tlid, ep *sp.Tendpoint) net.Lis
 }
 
 func (l *Listener) Accept() (net.Conn, error) {
-	return l.npc.proxyAccept(l.lid)
+	c, _, err := l.npc.Accept(l.lid)
+	return c, err
+}
+
+func (l *Listener) AcceptGetPrincipal() (net.Conn, *sp.Tprincipal, error) {
+	return l.npc.Accept(l.lid)
 }
 
 func (l *Listener) Close() error {
-	return l.npc.proxyClose(l.lid)
+	return l.npc.Close(l.lid)
 }
 
 func (l *Listener) Addr() net.Addr {

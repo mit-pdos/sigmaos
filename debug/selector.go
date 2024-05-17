@@ -201,6 +201,7 @@ const (
 	CLONEDEV                  = "CLONEDEV"
 	SESSDEV                   = "SESSDEV"
 	SIGMASRV                  = "SIGMASRV"
+	NETPROXY                  = "NETPROXY"
 	NETPROXYSRV               = "NETPROXYSRV"
 	NETPROXYSRV_ERR           = "NETPROXYSRV" + ERR
 	NETSIGMA                  = "NETSIGMA"

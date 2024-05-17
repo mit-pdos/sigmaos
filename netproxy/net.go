@@ -3,6 +3,7 @@ package netproxy
 import (
 	"fmt"
 	"net"
+	"sync/atomic"
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
@@ -11,6 +12,7 @@ import (
 )
 
 type Tlid uint64
+type Tlidctr = atomic.Uint64
 
 type DialFn func(ep *sp.Tendpoint) (net.Conn, error)
 type ListenFn func(addr *sp.Taddr) (net.Listener, error)

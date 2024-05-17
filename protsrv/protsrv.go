@@ -29,7 +29,7 @@ type ProtSrv struct {
 	getRootCtx GetRootCtxF
 }
 
-func NewProtServer(pss *ProtSrvState, sid sessp.Tsession, grf GetRootCtxF) sps.Protsrv {
+func NewProtSrv(pss *ProtSrvState, sid sessp.Tsession, grf GetRootCtxF) *ProtSrv {
 	ps := &ProtSrv{}
 	ps.ProtSrvState = pss
 	ps.ft = newFidTable()
@@ -37,6 +37,9 @@ func NewProtServer(pss *ProtSrvState, sid sessp.Tsession, grf GetRootCtxF) sps.P
 	ps.getRootCtx = grf
 	db.DPrintf(db.PROTSRV, "NewProtSrv -> %v", ps)
 	return ps
+}
+func NewProtServer(pss *ProtSrvState, sid sessp.Tsession, grf GetRootCtxF) sps.Protsrv {
+	return NewProtSrv(pss, sid, grf)
 }
 
 func (ps *ProtSrv) newQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
@@ -47,6 +50,11 @@ func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
 	return nil
+}
+
+func (ps *ProtSrv) NewRootFid(id sp.Tfid, ctx fs.CtxI, root fs.FsObj, pn path.Path) {
+	qid := ps.newQid(root.Perm(), root.Path())
+	ps.ft.Insert(id, fid.NewFidPath(fid.NewPobj(pn, root, ctx), 0, qid))
 }
 
 func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
@@ -339,41 +347,6 @@ func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 	return nil
 }
 
-func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path path.Path, f sp.Tfence) *sp.Rerror {
-	name := path.Base()
-	if name == "." {
-		return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, name))
-	}
-
-	// lock path to make WatchV and Remove interact correctly
-	dlk := ps.plt.Acquire(ctx, path.Dir(), lockmap.WLOCK)
-	flk := ps.plt.Acquire(ctx, path, lockmap.WLOCK)
-	defer ps.plt.ReleaseLocks(ctx, dlk, flk, lockmap.WLOCK)
-
-	ps.stats.IncPathString(flk.Path())
-
-	db.DPrintf(db.PROTSRV, "%v: removeObj %v in %v", ctx.ClntId(), name, o)
-
-	// Call before Remove(), because after remove o's underlying
-	// object may not exist anymore.
-	ephemeral := o.Perm().IsEphemeral()
-	err := o.Parent().Remove(ctx, name, f)
-	if err != nil {
-		return sp.NewRerrorSerr(err)
-	}
-
-	ps.vt.IncVersion(o.Path())
-	ps.vt.IncVersion(o.Parent().Path())
-
-	ps.wt.WakeupWatch(flk)
-	ps.wt.WakeupWatch(dlk)
-
-	if ephemeral && ps.et != nil {
-		ps.et.Delete(path.String())
-	}
-	return nil
-}
-
 // Remove for backwards compatability; SigmaOS uses RemoveFile (see
 // below) instead of Remove, but proxy will use it.
 func (ps *ProtSrv) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
@@ -382,7 +355,10 @@ func (ps *ProtSrv) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Remove %v", f.Pobj().Ctx().ClntId(), f.Pobj().Path())
-	return ps.removeObj(f.Pobj().Ctx(), f.Pobj().Obj(), f.Pobj().Path(), args.Tfence())
+	if err := ps.RemoveObj(f.Pobj().Ctx(), f.Pobj().Obj(), f.Pobj().Path(), args.Tfence()); err != nil {
+		return sp.NewRerrorSerr(err)
+	}
+	return nil
 }
 
 func (ps *ProtSrv) Stat(args *sp.Trstat, rets *sp.Rrstat) *sp.Rerror {
@@ -509,7 +485,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) lookupWalk(fid sp.Tfid, wnames path.Path, resolve bool, ltype lockmap.Tlock) (*fid.Fid, path.Path, fs.FsObj, *serr.Err) {
+func (ps *ProtSrv) LookupWalk(fid sp.Tfid, wnames path.Path, resolve bool, ltype lockmap.Tlock) (*fid.Fid, path.Path, fs.FsObj, *serr.Err) {
 	f, err := ps.ft.Lookup(fid)
 	if err != nil {
 		return nil, nil, nil, err
@@ -526,7 +502,7 @@ func (ps *ProtSrv) lookupWalk(fid sp.Tfid, wnames path.Path, resolve bool, ltype
 }
 
 func (ps *ProtSrv) lookupWalkOpen(fid sp.Tfid, wnames path.Path, resolve bool, mode sp.Tmode, ltype lockmap.Tlock) (*fid.Fid, path.Path, fs.FsObj, fs.File, *serr.Err) {
-	f, fname, lo, err := ps.lookupWalk(fid, wnames, resolve, ltype)
+	f, fname, lo, err := ps.LookupWalk(fid, wnames, resolve, ltype)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -546,13 +522,16 @@ func (ps *ProtSrv) lookupWalkOpen(fid sp.Tfid, wnames path.Path, resolve bool, m
 }
 
 func (ps *ProtSrv) RemoveFile(args *sp.Tremovefile, rets *sp.Rremove) *sp.Rerror {
-	f, fname, lo, err := ps.lookupWalk(args.Tfid(), args.Wnames, args.Resolve, lockmap.WLOCK)
+	f, fname, lo, err := ps.LookupWalk(args.Tfid(), args.Wnames, args.Resolve, lockmap.WLOCK)
 	if err != nil {
 		db.DPrintf(db.PROTSRV, "RemoveFile %v err %v", args, err)
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: RemoveFile %v %v %v", f.Pobj().Ctx().ClntId(), f.Pobj().Path(), fname, args.Fid)
-	return ps.removeObj(f.Pobj().Ctx(), lo, fname, args.Tfence())
+	if err := ps.RemoveObj(f.Pobj().Ctx(), lo, fname, args.Tfence()); err != nil {
+		return sp.NewRerrorSerr(err)
+	}
+	return nil
 }
 
 func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerror) {
@@ -610,7 +589,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	var dlk, flk *lockmap.PathLock
 	if len(args.Wnames) > 0 {
 		// walk to directory
-		f, dname, lo, err = ps.lookupWalk(args.Tfid(), args.Wnames[0:len(args.Wnames)-1], false, lockmap.WLOCK)
+		f, dname, lo, err = ps.LookupWalk(args.Tfid(), args.Wnames[0:len(args.Wnames)-1], false, lockmap.WLOCK)
 		if err != nil {
 			return sp.NewRerrorSerr(err)
 		}

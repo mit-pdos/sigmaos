@@ -15,6 +15,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
+	"sigmaos/protsrv"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -23,10 +24,13 @@ import (
 
 var rootP = path.Path{""}
 
+const ROOTFID = sp.Tfid(1)
+
 type MemFs struct {
 	*sigmapsrv.SigmaPSrv
 	ctx  fs.CtxI // server context
 	plt  *lockmap.PathLockTable
+	ps   *protsrv.ProtSrv
 	sc   *sigmaclnt.SigmaClnt
 	amgr auth.AuthMgr
 	pc   *portclnt.PortClnt
@@ -42,6 +46,7 @@ func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, a
 		sc:        sc,
 		amgr:      amgr,
 		pn:        pn,
+		ps:        protsrv.NewProtSrv(srv.ProtSrvState, 0, srv.GetRootCtx),
 	}
 	return mfs
 }
@@ -118,7 +123,7 @@ func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs
 	return d.Create(mfs.ctx, path.Base(), p, m, lid, sp.NoFence())
 }
 
-func (mfs *MemFs) Remove(pn string) *serr.Err {
+func (mfs *MemFs) Remove1(pn string) *serr.Err {
 	path, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return err
@@ -129,6 +134,20 @@ func (mfs *MemFs) Remove(pn string) *serr.Err {
 	}
 	defer mfs.plt.Release(mfs.ctx, lk, lockmap.WLOCK)
 	return d.Remove(mfs.ctx, path.Base(), sp.NoFence())
+}
+
+func (mfs *MemFs) Remove(pn string) *serr.Err {
+	p, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return err
+	}
+	root, rp := mfs.Root(rootP)
+	mfs.ps.NewRootFid(ROOTFID, mfs.ctx, root, rp)
+	_, _, lo, err := mfs.ps.LookupWalk(ROOTFID, p, false, lockmap.RLOCK)
+	if err != nil {
+		return err
+	}
+	return mfs.RemoveObj(mfs.ctx, lo, p, sp.NoFence())
 }
 
 func (mfs *MemFs) Open(pn string, m sp.Tmode, ltype lockmap.Tlock) (fs.FsObj, *serr.Err) {

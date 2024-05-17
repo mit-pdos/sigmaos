@@ -37,11 +37,11 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 	}
 	db.DPrintf(db.WALK, "unionScan: %v", name)
 	ep, r := sp.NewEndpointFromBytes(target)
-	if err != nil {
+	if r != nil {
 		db.DPrintf(db.WALK, "unionScan NewMount err %v", err)
 		return sp.NoFid, serr.NewErrError(r)
 	}
-	db.DPrintf(db.WALK, "unionScan: %v ep: %v\n", name, ep)
+	db.DPrintf(db.WALK, "unionScan: %v ep: %v", name, ep)
 	ok, _ := pathc.IsLocalMount(ep)
 	if q == "~any" || ok {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})

@@ -13,13 +13,14 @@ import (
 
 type NewConnI interface {
 	NewConn(net.Conn) *demux.DemuxSrv
+	// NewConn(*sp.Tprincipal, net.Conn) *demux.DemuxSrv
 }
 
 type NetServer struct {
 	pe      *proc.ProcEnv
 	npc     *netproxyclnt.NetProxyClnt
 	ep      *sp.Tendpoint
-	l       net.Listener
+	l       *netproxyclnt.Listener
 	newConn NewConnI
 }
 
@@ -52,9 +53,10 @@ func (srv *NetServer) CloseListener() error {
 	return srv.l.Close()
 }
 
-func (srv *NetServer) runsrv(l net.Listener) {
+func (srv *NetServer) runsrv(l *netproxyclnt.Listener) {
 	for {
-		conn, err := l.Accept()
+		conn, p, err := l.AcceptGetPrincipal()
+		db.DPrintf(db.NETSRV, "Accept conn from principal %v", p)
 		if err != nil {
 			db.DPrintf(db.NETSRV, "%v: Accept err %v", srv.pe.GetPID(), err)
 			return

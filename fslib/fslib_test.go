@@ -1185,7 +1185,7 @@ func TestUnionRoot(t *testing.T) {
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	pn := pathname
-	if pathname != sp.NAMED {
+	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
 		pn = gopath.Join(pathname, "~any")
 	}
 	sts, err := ts.GetDir(pn + "/")
@@ -1219,7 +1219,7 @@ func TestUnionSymlinkRead(t *testing.T) {
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	basepn := pathname
-	if pathname != sp.NAMED {
+	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
 		basepn = gopath.Join(pathname, "~any")
 	}
 	sts, err := ts.GetDir(gopath.Join(basepn, "d/namedself1") + "/")
@@ -1251,7 +1251,7 @@ func TestUnionSymlinkPut(t *testing.T) {
 
 	b := []byte("hello")
 	basepn := pathname
-	if pathname != sp.NAMED {
+	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
 		basepn = gopath.Join(pathname, "~any")
 	}
 	fn := gopath.Join(basepn, "namedself0/f")
@@ -1355,7 +1355,7 @@ func TestEndpointUnion(t *testing.T) {
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	eppn := "mount/"
-	if pathname != sp.NAMED {
+	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
 		eppn = gopath.Join(eppn, "~any")
 	}
 

@@ -202,7 +202,7 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Unknown listener: %v", lid))
 		return nil
 	}
-	proxyConn, err := l.Accept()
+	proxyConn, err := netproxy.AcceptDirect(l)
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error accept direct: %v", err)
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Error accept: %v", err))

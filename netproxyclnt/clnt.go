@@ -290,7 +290,7 @@ func (npc *NetProxyClnt) directAccept(lid netproxy.Tlid) (net.Conn, *sp.Tprincip
 	if !ok {
 		return nil, nil, fmt.Errorf("Unkown direct listener: %v", lid)
 	}
-	c, err := l.Accept()
+	c, err := netproxy.AcceptDirect(l)
 	if err != nil {
 		return nil, nil, err
 	}

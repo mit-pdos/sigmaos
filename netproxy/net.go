@@ -24,6 +24,9 @@ func DialDirect(ep *sp.Tendpoint) (net.Conn, error) {
 	} else {
 		db.DPrintf(db.NETSIGMA, "Dial direct addr ok %v", ep.Addrs()[0])
 	}
+	if ep.Type() == sp.INTERNAL_EP {
+		// TODO: send principal
+	}
 	return c, err
 }
 
@@ -35,6 +38,17 @@ func ListenDirect(addr *sp.Taddr) (net.Listener, error) {
 		db.DPrintf(db.NETSIGMA, "Listen on addr %v res addr %v", addr, l.Addr())
 	}
 	return l, err
+}
+
+func AcceptDirect(l net.Listener) (net.Conn, error) {
+	c, err := l.Accept()
+	if err != nil {
+		db.DPrintf(db.NETSIGMA_ERR, "Accept on %v err: %v", l.Addr(), err)
+	} else {
+		db.DPrintf(db.NETSIGMA, "Accept on %v ok local addr: %v", l.Addr(), c.LocalAddr())
+	}
+	// TODO: read principal
+	return c, err
 }
 
 func NewEndpoint(verifyEndpoints bool, amgr auth.AuthMgr, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tendpoint, error) {

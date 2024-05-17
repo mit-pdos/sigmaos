@@ -37,7 +37,7 @@ func TestDial(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	ep := sp.NewEndpoint(sp.Taddrs{addr}, sp.ROOTREALM)
+	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
 	err := ts.MintAndSetEndpointToken(ep)
 	assert.Nil(t, err, "Err Mint EP token: %v", err)
 	npc := ts.GetNetProxyClnt()
@@ -74,7 +74,7 @@ func TestFailedDial(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	ep := sp.NewEndpoint(sp.Taddrs{addr}, sp.ROOTREALM)
+	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
 	err := ts.MintAndSetEndpointToken(ep)
 	assert.Nil(t, err, "Err Mint EP token: %v", err)
 	npc := ts.GetNetProxyClnt()
@@ -138,7 +138,7 @@ func TestFailedClose(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	ep := sp.NewEndpoint(sp.Taddrs{addr}, sp.ROOTREALM)
+	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
 	npc := ts.GetNetProxyClnt()
 	l := netproxyclnt.NewListener(npc, 1000, ep)
 	err := l.Close()
@@ -187,7 +187,7 @@ func TestFailedAccept(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	ep := sp.NewEndpoint(sp.Taddrs{addr}, sp.ROOTREALM)
+	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
 	npc := ts.GetNetProxyClnt()
 	l := netproxyclnt.NewListener(npc, 1000, ep)
 	_, err := l.Accept()

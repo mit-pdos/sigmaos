@@ -131,6 +131,12 @@ const (
 	NO_PORT            Tport   = 0
 )
 
+// Endpoint consts
+const (
+	INTERNAL_EP TTendpoint = iota + 1
+	EXTERNAL_EP
+)
+
 // Auth consts
 const (
 	NO_PRINCIPAL_ID    TprincipalID = "NO_PRINCIPAL_ID"

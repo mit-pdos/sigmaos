@@ -10,17 +10,17 @@ type Tendpoint struct {
 	*TendpointProto
 }
 
-func NewEndpoint(srvaddrs Taddrs, realm Trealm) *Tendpoint {
+func NewEndpoint(t TTendpoint, srvaddrs Taddrs, realm Trealm) *Tendpoint {
 	return &Tendpoint{
 		&TendpointProto{
-			Claims: NewEndpointClaimsProto(srvaddrs, realm),
+			Claims: NewEndpointClaimsProto(t, srvaddrs, realm),
 			Token:  NoToken(),
 		},
 	}
 }
 
 func NewEndpointFromBytes(b []byte) (*Tendpoint, error) {
-	ep := NewEndpoint(nil, NOT_SET)
+	ep := NewEndpoint(0, nil, NOT_SET)
 	if err := proto.Unmarshal(b, ep); err != nil {
 		return ep, err
 	}
@@ -31,11 +31,18 @@ func NewEndpointFromProto(p *TendpointProto) *Tendpoint {
 	return &Tendpoint{p}
 }
 
-func NewEndpointClaimsProto(addrs Taddrs, realm Trealm) *TendpointClaimsProto {
+// XXX Currently, endpitn type is a hint. In reality, it should be verified
+// somehow by netproxy (e.g., by inspecting the IP addrs)
+func NewEndpointClaimsProto(t TTendpoint, addrs Taddrs, realm Trealm) *TendpointClaimsProto {
 	return &TendpointClaimsProto{
-		RealmStr: realm.String(),
-		Addr:     addrs,
+		RealmStr:     realm.String(),
+		EndpointType: uint32(t),
+		Addr:         addrs,
 	}
+}
+
+func (ep *Tendpoint) Type() TTendpoint {
+	return TTendpoint(ep.Claims.EndpointType)
 }
 
 func (ep *Tendpoint) IsSigned() bool {
@@ -76,5 +83,16 @@ func (ep *Tendpoint) TargetIPPort(idx int) (Tip, Tport) {
 }
 
 func (ep *Tendpoint) String() string {
-	return fmt.Sprintf("{ addr:%v realm:%v root:%v signed:%v }", ep.Claims.Addr, Trealm(ep.Claims.RealmStr), ep.Root, ep.IsSigned())
+	return fmt.Sprintf("{ type:%v addr:%v realm:%v root:%v signed:%v }", ep.Type(), ep.Claims.Addr, Trealm(ep.Claims.RealmStr), ep.Root, ep.IsSigned())
+}
+
+func (t TTendpoint) String() string {
+	switch t {
+	case EXTERNAL_EP:
+		return "E"
+	case INTERNAL_EP:
+		return "I"
+	default:
+		return "UNKOWN"
+	}
 }

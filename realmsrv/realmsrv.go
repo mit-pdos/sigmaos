@@ -243,7 +243,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	// Endpoint some service union dirs from the root realm
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := path.Join(sp.NAMED, s)
-		ep := sp.NewEndpoint(namedEndpoint.Addrs(), rid)
+		ep := sp.NewEndpoint(sp.INTERNAL_EP, namedEndpoint.Addrs(), rid)
 		ep.SetTree(s)
 		if err := rm.sc.GetAuthMgr().MintAndSetEndpointToken(ep); err != nil {
 			db.DPrintf(db.ERROR, "Error mint & set endpoint token: %v", err)

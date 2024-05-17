@@ -41,7 +41,7 @@ func NewFsEtcdEndpoint(amgr auth.AuthMgr, ip sp.Tip) (TetcdEndpoints, error) {
 	eps := map[string]*sp.TendpointProto{}
 	for i := range endpointPorts {
 		addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, endpointPorts[i])
-		ep := sp.NewEndpoint([]*sp.Taddr{addr}, sp.ROOTREALM)
+		ep := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr}, sp.ROOTREALM)
 		if err := amgr.MintAndSetEndpointToken(ep); err != nil {
 			db.DPrintf(db.ERROR, "Unable to mint etcd endpoint token: %v", err)
 			return nil, err

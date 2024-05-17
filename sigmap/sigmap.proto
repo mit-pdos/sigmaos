@@ -44,8 +44,9 @@ message Taddr {
 }
 
 message TendpointClaimsProto {
-  string realmStr = 1;
-  repeated Taddr addr = 2;
+        string   realmStr = 1;
+        uint32   endpointType = 2; // Type of endpoint (e.g. internal vs external)
+        repeated Taddr addr = 3;
 }
 
 message TendpointProto {

@@ -261,7 +261,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		// Use 127.0.0.1, because only the local schedd should be talking
 		// to uprocd.
 		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
-		ep := sp.NewEndpoint([]*sp.Taddr{addr}, sp.ROOTREALM)
+		ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{addr}, sp.ROOTREALM)
 		if err := k.amgr.MintAndSetEndpointToken(ep); err != nil {
 			return nil, err
 		}

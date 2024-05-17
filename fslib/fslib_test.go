@@ -1138,7 +1138,7 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	newep := sp.NewEndpoint([]*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
 	err = ts.MintAndSetEndpointToken(newep)
 	assert.Nil(ts.T, err, "SignEP")
 	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself1"), newep, sp.NoLeaseId)
@@ -1178,7 +1178,7 @@ func TestUnionRoot(t *testing.T) {
 	pn1 := gopath.Join(pathname, "namedself1")
 	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
-	newep := sp.NewEndpoint([]*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)}, sp.ROOTREALM)
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)}, sp.ROOTREALM)
 	err = ts.MintAndSetEndpointToken(newep)
 	assert.Nil(ts.T, err, "SignEP")
 	err = ts.MkEndpointFile(pn1, newep, sp.NoLeaseId)
@@ -1344,7 +1344,7 @@ func TestEndpointUnion(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	newep := sp.NewEndpoint([]*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
 	err = ts.MintAndSetEndpointToken(newep)
 	assert.Nil(ts.T, err, "SignEP")
 	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), newep, sp.NoLeaseId)

@@ -97,7 +97,6 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 		auth:             nps.auth,
 		conn:             conn,
 		innerContainerIP: nps.innerContainerIP,
-		directDialFn:     netproxy.DialDirect,
 		directListenFn:   netproxy.ListenDirect,
 		baseCtx:          ctx.NewPrincipalOnlyCtx(p),
 		sc:               nps.sc,
@@ -129,7 +128,7 @@ func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netp
 	ctx := c.(*netproxy.Ctx)
 	ep := sp.NewEndpointFromProto(req.GetEndpoint())
 	db.DPrintf(db.NETPROXYSRV, "Dial principal %v -> ep %v", ctx.Principal(), ep)
-	proxyConn, err := nps.directDialFn(ep)
+	proxyConn, err := netproxy.DialDirect(ctx.Principal(), ep)
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error dial direct: %v", err)
@@ -202,12 +201,14 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Unknown listener: %v", lid))
 		return nil
 	}
-	proxyConn, err := netproxy.AcceptDirect(l)
+	// TODO: optionally, accept without preamble
+	proxyConn, p, err := netproxy.AcceptDirect(l, true)
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error accept direct: %v", err)
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Error accept: %v", err))
 		return nil
 	}
+	res.Principal = p
 	file, err := netproxytrans.ConnToFile(proxyConn)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)

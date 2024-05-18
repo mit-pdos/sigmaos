@@ -2,7 +2,6 @@ package netproxy
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"sync/atomic"
 
@@ -12,28 +11,22 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const (
-	INIT_MSG = "HELLO"
-)
-
 type Tlid uint64
 type Tlidctr = atomic.Uint64
 
 type DialFn func(ep *sp.Tendpoint) (net.Conn, error)
 type ListenFn func(addr *sp.Taddr) (net.Listener, error)
 
-func DialDirect(ep *sp.Tendpoint) (net.Conn, error) {
+func DialDirect(p *sp.Tprincipal, ep *sp.Tendpoint) (net.Conn, error) {
 	c, err := net.DialTimeout("tcp", ep.Addrs()[0].IPPort(), sp.Conf.Session.TIMEOUT/10)
 	if err != nil {
 		db.DPrintf(db.NETSIGMA_ERR, "Dial direct addr err %v: err %v", ep.Addrs()[0], err)
 	} else {
 		db.DPrintf(db.NETSIGMA, "Dial direct addr ok %v", ep.Addrs()[0])
 		if ep.Type() == sp.INTERNAL_EP {
-			// TODO: send principal
-			n, err := c.Write([]byte(INIT_MSG))
-			if err != nil || n != len(INIT_MSG) {
-				db.DPrintf(db.NETSIGMA_ERR, "Dial direct addr err %v: err %v", ep.Addrs()[0], err)
-				return nil, fmt.Errorf("Error send principal preamble: n %v err %v", n, err)
+			if err := writeConnPreamble(c, p); err != nil {
+				db.DPrintf(db.NETSIGMA_ERR, "Write preamble err: %v", err)
+				return nil, err
 			}
 		}
 	}
@@ -50,26 +43,23 @@ func ListenDirect(addr *sp.Taddr) (net.Listener, error) {
 	return l, err
 }
 
-func AcceptDirect(l net.Listener) (net.Conn, error) {
+func AcceptDirect(l net.Listener, withPreamble bool) (net.Conn, *sp.Tprincipal, error) {
+	p := sp.NoPrincipal()
 	c, err := l.Accept()
 	if err != nil {
 		db.DPrintf(db.NETSIGMA_ERR, "Accept on %v err: %v", l.Addr(), err)
 	} else {
-		db.DPrintf(db.NETSIGMA, "Accept on %v ok local addr: %v", l.Addr(), c.LocalAddr())
-		// TODO: optionally, don't read principal
-		if true {
-			// TODO: read principal
-			b := make([]byte, len(INIT_MSG))
-			n, err := io.ReadFull(c, b)
-			if err != nil || n != len(INIT_MSG) {
-				if string(b) != INIT_MSG {
-					db.DFatalf("Unexpected init message: %v", string(b))
-				}
-				return nil, fmt.Errorf("Error read principal preamble: n %v err %v", n, err)
+		if withPreamble {
+			var err error
+			p, err = readConnPreamble(c)
+			if err != nil {
+				db.DPrintf(db.NETSIGMA_ERR, "Write preamble err: %v", err)
+				return nil, nil, err
 			}
 		}
+		db.DPrintf(db.NETSIGMA, "Accept on %v ok p %v local addr: %v", l.Addr(), p, c.LocalAddr())
 	}
-	return c, err
+	return c, p, err
 }
 
 func NewEndpoint(verifyEndpoints bool, amgr auth.AuthMgr, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tendpoint, error) {

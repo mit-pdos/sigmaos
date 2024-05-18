@@ -37,7 +37,7 @@ func TestDial(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
+	ep := sp.NewEndpoint(sp.EXTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
 	err := ts.MintAndSetEndpointToken(ep)
 	assert.Nil(t, err, "Err Mint EP token: %v", err)
 	npc := ts.GetNetProxyClnt()

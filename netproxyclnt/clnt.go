@@ -73,7 +73,7 @@ func (npc *NetProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
 	} else {
 		// TODO: send PE (or just realm) here
 		db.DPrintf(db.NETPROXYCLNT, "directDial %v", ep)
-		c, err = netproxy.DialDirect(ep)
+		c, err = netproxy.DialDirect(npc.pe.GetPrincipal(), ep)
 		db.DPrintf(db.NETPROXYCLNT, "directDial %v done ok:%v", ep, err == nil)
 	}
 	if err == nil {
@@ -290,12 +290,12 @@ func (npc *NetProxyClnt) directAccept(lid netproxy.Tlid) (net.Conn, *sp.Tprincip
 	if !ok {
 		return nil, nil, fmt.Errorf("Unkown direct listener: %v", lid)
 	}
-	c, err := netproxy.AcceptDirect(l)
+	// TODO: optionally accept without preamble
+	c, p, err := netproxy.AcceptDirect(l, true)
 	if err != nil {
 		return nil, nil, err
 	}
-	// TODO: get principal from conn
-	return c, nil, err
+	return c, p, err
 }
 
 func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid) (net.Conn, *sp.Tprincipal, error) {

@@ -20,6 +20,7 @@ import (
 )
 
 type proxyConn struct {
+	p    *sp.Tprincipal
 	conn net.Conn
 	sess *NpSess
 }
@@ -56,9 +57,10 @@ func NewNpd(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, lip sp.Tip) *Npd {
 }
 
 // Create a sigmap session for conn
-func (npd *Npd) NewConn(conn net.Conn) *demux.DemuxSrv {
+func (npd *Npd) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
 	sess := newNpSess(npd.pe, npd.npc, string(npd.lip))
 	pc := &proxyConn{
+		p:    p,
 		conn: conn,
 		sess: sess,
 	}

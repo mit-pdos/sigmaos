@@ -86,8 +86,13 @@ func (ssrv *SessSrv) GetSessionTable() *sessionTable {
 	return ssrv.st
 }
 
-func (ssrv *SessSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
-	nc := &netConn{conn: conn, ssrv: ssrv, sessid: sessp.NoSession}
+func (ssrv *SessSrv) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
+	nc := &netConn{
+		p:      p,
+		conn:   conn,
+		ssrv:   ssrv,
+		sessid: sessp.NoSession,
+	}
 	iovm := demux.NewIoVecMap()
 	nc.dmx = demux.NewDemuxSrv(nc, spcodec.NewTransport(conn, iovm))
 	return nc.dmx

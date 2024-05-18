@@ -10,11 +10,13 @@ import (
 	"sigmaos/spcodec"
 
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 )
 
 type netConn struct {
 	sync.Mutex
 
+	p      *sp.Tprincipal
 	dmx    *demux.DemuxSrv
 	conn   net.Conn
 	ssrv   *SessSrv

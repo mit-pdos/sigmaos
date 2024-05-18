@@ -12,8 +12,7 @@ import (
 )
 
 type NewConnI interface {
-	NewConn(net.Conn) *demux.DemuxSrv
-	// NewConn(*sp.Tprincipal, net.Conn) *demux.DemuxSrv
+	NewConn(*sp.Tprincipal, net.Conn) *demux.DemuxSrv
 }
 
 type NetServer struct {
@@ -56,13 +55,14 @@ func (srv *NetServer) CloseListener() error {
 func (srv *NetServer) runsrv(l *netproxyclnt.Listener) {
 	for {
 		conn, p, err := l.AcceptGetPrincipal()
+		db.DPrintf(db.ALWAYS, "Accept conn from principal %v", p)
 		db.DPrintf(db.NETSRV, "Accept conn from principal %v", p)
 		if err != nil {
 			db.DPrintf(db.NETSRV, "%v: Accept err %v", srv.pe.GetPID(), err)
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)
-		srv.newConn.NewConn(conn)
+		srv.newConn.NewConn(p, conn)
 	}
 }
 

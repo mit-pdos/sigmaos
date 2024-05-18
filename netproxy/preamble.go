@@ -10,10 +10,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const (
-	INIT_MSG = "HELLO"
-)
-
 func writeConnPreamble(c net.Conn, p *sp.Tprincipal) error {
 	// Marshal principal
 	b, err := proto.Marshal(p)

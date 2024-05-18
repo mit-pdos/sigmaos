@@ -43,13 +43,13 @@ func ListenDirect(addr *sp.Taddr) (net.Listener, error) {
 	return l, err
 }
 
-func AcceptDirect(l net.Listener, withPreamble bool) (net.Conn, *sp.Tprincipal, error) {
+func AcceptDirect(l net.Listener, getPrincipal bool) (net.Conn, *sp.Tprincipal, error) {
 	p := sp.NoPrincipal()
 	c, err := l.Accept()
 	if err != nil {
 		db.DPrintf(db.NETSIGMA_ERR, "Accept on %v err: %v", l.Addr(), err)
 	} else {
-		if withPreamble {
+		if getPrincipal {
 			var err error
 			p, err = readConnPreamble(c)
 			if err != nil {

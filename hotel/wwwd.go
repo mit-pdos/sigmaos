@@ -114,7 +114,7 @@ func RunWww(job string, public bool) error {
 			db.DFatalf("AllocPort err %v", err)
 		}
 		www.pc = pc
-		ep, l, err := www.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, www.ProcEnv().GetNet()))
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, www.ProcEnv().GetNet()))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -129,7 +129,7 @@ func RunWww(job string, public bool) error {
 			db.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
-		ep, l, err := www.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, www.ProcEnv().GetNet()))
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, www.ProcEnv().GetNet()))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}

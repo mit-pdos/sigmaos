@@ -7,7 +7,8 @@ option go_package = "sigmaos/netproxy/proto";
 
 message ListenRequest {
         Taddr addr = 1;
-        Blob blob = 2;
+        uint32 EndpointType = 2;
+        Blob blob = 3;
 };
 
 message ListenResponse {

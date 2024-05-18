@@ -83,13 +83,13 @@ func (npc *NetProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
 }
 
 // TODO: return *netproxy.Listener, not net.Listener
-func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tendpoint, *Listener, error) {
+func (npc *NetProxyClnt) Listen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Tendpoint, *Listener, error) {
 	var ep *sp.Tendpoint
 	var l *Listener
 	var err error
 	if npc.useProxy() {
 		db.DPrintf(db.NETPROXYCLNT, "proxyListen %v", addr)
-		ep, l, err = npc.proxyListen(addr)
+		ep, l, err = npc.proxyListen(ept, addr)
 		db.DPrintf(db.NETPROXYCLNT, "proxyListen %v done ok:%v", addr, err == nil)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error proxyListen %v: %v", addr, err)
@@ -102,7 +102,7 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tendpoint, *Listener, error
 			db.DPrintf(db.ERROR, "Err listen: %v", err)
 			return nil, nil, err
 		}
-		ep, l, err = npc.directListen(addr)
+		ep, l, err = npc.directListen(ept, addr)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
 			return nil, nil, err
@@ -229,7 +229,7 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 	return netproxytrans.ParseReturnedConn(res.Blob.Iov[0])
 }
 
-func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tendpoint, *Listener, error) {
+func (npc *NetProxyClnt) proxyListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Tendpoint, *Listener, error) {
 	// Ensure that the connection to the netproxy server has been initialized
 	if err := npc.init(); err != nil {
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
@@ -237,7 +237,8 @@ func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tendpoint, *Listener, 
 	}
 	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyListen request addr %v", npc.trans.Conn(), addr)
 	req := &proto.ListenRequest{
-		Addr: addr,
+		Addr:         addr,
+		EndpointType: uint32(ept),
 		// Requests must have blob too, so that unix sendmsg works
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{nil},
@@ -267,13 +268,13 @@ func (npc *NetProxyClnt) proxyListen(addr *sp.Taddr) (*sp.Tendpoint, *Listener, 
 	return ep, NewListener(npc, netproxy.Tlid(res.ListenerID), ep), nil
 }
 
-func (npc *NetProxyClnt) directListen(addr *sp.Taddr) (*sp.Tendpoint, *Listener, error) {
+func (npc *NetProxyClnt) directListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Tendpoint, *Listener, error) {
 	l, err := netproxy.ListenDirect(addr)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error ListenDirect: %v", err)
 		return nil, nil, err
 	}
-	ep, err := netproxy.NewEndpoint(npc.verifyEndpoints, npc.auth, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
+	ep, err := netproxy.NewEndpoint(ept, npc.verifyEndpoints, npc.auth, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error construct endpoint: %v", err)
 		return nil, nil, err

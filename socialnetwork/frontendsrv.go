@@ -115,7 +115,7 @@ func RunFrontendSrv(public bool, job string) error {
 			dbg.DFatalf("AllocPort err %v", err)
 		}
 		frontend.pc = pc
-		mnt, l, err := sc.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, sc.ProcEnv().GetNet()))
+		mnt, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, sc.ProcEnv().GetNet()))
 		if err != nil {
 			dbg.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -132,7 +132,7 @@ func RunFrontendSrv(public bool, job string) error {
 			dbg.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
-		mnt, l, err := sc.GetNetProxyClnt().Listen(sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, frontend.ProcEnv().GetNet()))
+		mnt, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, frontend.ProcEnv().GetNet()))
 		if err != nil {
 			dbg.DFatalf("Error %v Listen: %v", public, err)
 		}

@@ -32,7 +32,7 @@ func NewNetServer(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Tad
 	}
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
-	ep, l, err := npc.Listen(addr)
+	ep, l, err := npc.Listen(sp.INTERNAL_EP, addr)
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}

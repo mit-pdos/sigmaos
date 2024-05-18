@@ -28,7 +28,7 @@ func NewRaftConfig(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, id int, add
 		id:   id,
 		init: init,
 	}
-	ep, l, err := rc.npc.Listen(addr)
+	ep, l, err := rc.npc.Listen(sp.INTERNAL_EP, addr)
 	if err != nil {
 		db.DFatalf("Error listen: %v", err)
 	}

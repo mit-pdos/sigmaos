@@ -51,7 +51,7 @@ func RunWwwd(job, tree string) {
 	//		db.DFatalf("Error LocalIP: %v", err)
 	//	}
 
-	ep, l, err := www.ssrv.SigmaClnt().GetNetProxyClnt().Listen(sp.NewTaddrAnyPort(sp.OUTER_CONTAINER_IP, www.ssrv.ProcEnv().GetNet()))
+	ep, l, err := www.ssrv.SigmaClnt().GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrAnyPort(sp.OUTER_CONTAINER_IP, www.ssrv.ProcEnv().GetNet()))
 	if err != nil {
 		db.DFatalf("Error Listen: %v", err)
 	}

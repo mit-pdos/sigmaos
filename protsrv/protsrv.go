@@ -25,16 +25,19 @@ type ProtSrv struct {
 	*ProtSrvState
 	ssrv       *sesssrv.SessSrv
 	ft         *fidTable
+	p          *sp.Tprincipal
 	sid        sessp.Tsession
 	getRootCtx GetRootCtxF
 }
 
-func NewProtServer(pss *ProtSrvState, sid sessp.Tsession, grf GetRootCtxF) sps.Protsrv {
-	ps := &ProtSrv{}
-	ps.ProtSrvState = pss
-	ps.ft = newFidTable()
-	ps.sid = sid
-	ps.getRootCtx = grf
+func NewProtServer(pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF) sps.Protsrv {
+	ps := &ProtSrv{
+		ProtSrvState: pss,
+		ft:           newFidTable(),
+		p:            p,
+		sid:          sid,
+		getRootCtx:   grf,
+	}
 	db.DPrintf(db.PROTSRV, "NewProtSrv -> %v", ps)
 	return ps
 }
@@ -53,6 +56,7 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotSupported, "Auth"))
 }
 
+// TODO: auth using principal from net layer
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
 	db.DPrintf(db.PROTSRV, "Attach %v cid %v sid %v", args, args.TclntId(), ps.sid)
 	s := time.Now()

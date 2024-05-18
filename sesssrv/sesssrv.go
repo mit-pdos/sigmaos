@@ -20,7 +20,7 @@ import (
 )
 
 type NewSessionI interface {
-	NewSession(sessp.Tsession) sps.Protsrv
+	NewSession(*sp.Tprincipal, sessp.Tsession) sps.Protsrv
 }
 
 //

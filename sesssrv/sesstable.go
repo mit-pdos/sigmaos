@@ -44,14 +44,14 @@ func (st *sessionTable) Lookup(sid sessp.Tsession) (*Session, bool) {
 	return sess, ok
 }
 
-func (st *sessionTable) Alloc(sid sessp.Tsession, nc *netConn) *Session {
+func (st *sessionTable) Alloc(p *sp.Tprincipal, sid sessp.Tsession, nc *netConn) *Session {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
 	if sess, ok := st.sessions[sid]; ok {
 		return sess
 	}
-	sess := newSession(st.newSess.NewSession(sid), sid, nc)
+	sess := newSession(st.newSess.NewSession(p, sid), sid, nc)
 	st.sessions[sid] = sess
 	if len(st.lasts) < NLAST {
 		st.lasts[sid] = sess

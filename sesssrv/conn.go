@@ -84,7 +84,7 @@ func (nc *netConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
 	s := sessp.Tsession(fcm.Fcm.Session())
 	sess := nc.getSess(s)
 	if sess == nil {
-		sess = nc.ssrv.st.Alloc(s, nc)
+		sess = nc.ssrv.st.Alloc(nc.p, s, nc)
 		nc.setSess(sess)
 	}
 	if err := spcodec.UnmarshalMsg(fcm); err != nil {

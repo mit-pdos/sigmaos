@@ -65,8 +65,8 @@ func NewSigmaPSrvPost(root fs.Dir, pn string, amgr auth.AuthMgr, addr *sp.Taddr,
 	return psrv, pn, nil
 }
 
-func (psrv *SigmaPSrv) NewSession(sessid sessp.Tsession) sps.Protsrv {
-	return protsrv.NewProtServer(psrv.ProtSrvState, sessid, psrv.GetRootCtx)
+func (psrv *SigmaPSrv) NewSession(p *sp.Tprincipal, sessid sessp.Tsession) sps.Protsrv {
+	return protsrv.NewProtServer(psrv.ProtSrvState, p, sessid, psrv.GetRootCtx)
 }
 
 func (psrv *SigmaPSrv) Root(path path.Path) (fs.Dir, path.Path) {

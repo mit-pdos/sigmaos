@@ -111,13 +111,13 @@ func (npc *NetProxyClnt) Listen(addr *sp.Taddr) (*sp.Tendpoint, *Listener, error
 	return ep, l, err
 }
 
-func (npc *NetProxyClnt) Accept(lid netproxy.Tlid) (net.Conn, *sp.Tprincipal, error) {
+func (npc *NetProxyClnt) Accept(lid netproxy.Tlid, internalListener bool) (net.Conn, *sp.Tprincipal, error) {
 	var c net.Conn
 	var p *sp.Tprincipal
 	var err error
 	if npc.useProxy() {
 		db.DPrintf(db.NETPROXYCLNT, "proxyAccept %v", lid)
-		c, p, err = npc.proxyAccept(lid)
+		c, p, err = npc.proxyAccept(lid, internalListener)
 		db.DPrintf(db.NETPROXYCLNT, "proxyAccept %v done ok:%v", lid, err == nil)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error proxyAccept %v: %v", lid, err)
@@ -125,7 +125,7 @@ func (npc *NetProxyClnt) Accept(lid netproxy.Tlid) (net.Conn, *sp.Tprincipal, er
 		}
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directAccept %v", lid)
-		c, p, err = npc.directAccept(lid)
+		c, p, err = npc.directAccept(lid, internalListener)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directAccept %v: %v", lid, err)
 			return nil, nil, err
@@ -285,20 +285,19 @@ func (npc *NetProxyClnt) directListen(addr *sp.Taddr) (*sp.Tendpoint, *Listener,
 	return ep, NewListener(npc, lid, ep), err
 }
 
-func (npc *NetProxyClnt) directAccept(lid netproxy.Tlid) (net.Conn, *sp.Tprincipal, error) {
+func (npc *NetProxyClnt) directAccept(lid netproxy.Tlid, internalListener bool) (net.Conn, *sp.Tprincipal, error) {
 	l, ok := npc.lm.Get(lid)
 	if !ok {
 		return nil, nil, fmt.Errorf("Unkown direct listener: %v", lid)
 	}
-	// TODO: optionally accept without preamble
-	c, p, err := netproxy.AcceptDirect(l, true)
+	c, p, err := netproxy.AcceptDirect(l, internalListener)
 	if err != nil {
 		return nil, nil, err
 	}
 	return c, p, err
 }
 
-func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid) (net.Conn, *sp.Tprincipal, error) {
+func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid, internalListener bool) (net.Conn, *sp.Tprincipal, error) {
 	// Ensure that the connection to the netproxy server has been initialized
 	if err := npc.init(); err != nil {
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
@@ -306,7 +305,8 @@ func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid) (net.Conn, *sp.Tprincipa
 	}
 	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyAccept request lip %v", npc.trans.Conn(), lid)
 	req := &proto.AcceptRequest{
-		ListenerID: uint64(lid),
+		ListenerID:       uint64(lid),
+		InternalListener: internalListener,
 		// Requests must have blob too, so that unix sendmsg works
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{nil},

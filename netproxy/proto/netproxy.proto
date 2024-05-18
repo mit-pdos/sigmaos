@@ -29,7 +29,8 @@ message DialResponse {
 
 message AcceptRequest {
         uint64 listenerID = 1;
-        Blob blob = 2;
+        bool internalListener = 2;
+        Blob blob = 3;
 };
 
 message AcceptResponse {

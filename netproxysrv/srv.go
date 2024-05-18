@@ -202,7 +202,7 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 		return nil
 	}
 	// TODO: optionally, accept without preamble
-	proxyConn, p, err := netproxy.AcceptDirect(l, true)
+	proxyConn, p, err := netproxy.AcceptDirect(l, req.GetInternalListener())
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error accept direct: %v", err)
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Error accept: %v", err))

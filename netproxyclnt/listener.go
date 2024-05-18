@@ -27,12 +27,12 @@ func NewListener(npc *NetProxyClnt, lid netproxy.Tlid, ep *sp.Tendpoint) *Listen
 }
 
 func (l *Listener) Accept() (net.Conn, error) {
-	c, _, err := l.npc.Accept(l.lid)
+	c, _, err := l.npc.Accept(l.lid, l.la.ep.Type() == sp.INTERNAL_EP)
 	return c, err
 }
 
 func (l *Listener) AcceptGetPrincipal() (net.Conn, *sp.Tprincipal, error) {
-	return l.npc.Accept(l.lid)
+	return l.npc.Accept(l.lid, l.la.ep.Type() == sp.INTERNAL_EP)
 }
 
 func (l *Listener) Close() error {

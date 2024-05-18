@@ -66,7 +66,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErr(serr.TErrPerm, fmt.Errorf("Authorization check failed: ok %v err %v", ok, err)))
 	}
 	p := path.Split(args.Aname)
-	root, ctx := ps.getRootCtx(args.Tprincipal(), claims, args.Aname, ps.sid, args.TclntId())
+	root, ctx := ps.getRootCtx(ps.p, claims, args.Aname, ps.sid, args.TclntId())
 	tree := root.(fs.FsObj)
 	qid := ps.newQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {

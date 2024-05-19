@@ -42,10 +42,6 @@ func NewProtServer(pss *ProtSrvState, sid sessp.Tsession, grf GetRootCtxF) sps.P
 	return NewProtSrv(pss, sid, grf)
 }
 
-func (ps *ProtSrv) newQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
-	return sp.NewQidPerm(perm, ps.vt.GetVersion(path), path)
-}
-
 func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
@@ -237,62 +233,16 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) newFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *fid.Fid {
-	pn := dir.Copy().Append(name)
-	po := fid.NewPobj(pn, o, ctx)
-	nf := fid.NewFidPath(po, 0, qid)
-	if o.Perm().IsEphemeral() && ps.et != nil {
-		ps.et.Insert(pn.String(), lid)
-	}
-	return nf
-}
-
-// Create name in dir and returns lock for it.
-func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
-	name := fn.Base()
-	if name == "." {
-		return nil, nil, serr.NewErr(serr.TErrInval, name)
-	}
-	flk := ps.plt.Acquire(ctx, fn, lockmap.WLOCK)
-	o1, err := d.Create(ctx, name, perm, mode, lid, f)
-	db.DPrintf(db.PROTSRV, "%v: Create %q %v %v ephemeral %v %v lid %v", ctx.ClntId(), name, o1, err, perm.IsEphemeral(), ps.sid, lid)
-	if err == nil {
-		ps.wt.WakeupWatch(dlk)
-		return o1, flk, nil
-	} else {
-		ps.plt.Release(ctx, flk, lockmap.WLOCK)
-		return nil, nil, err
-	}
-}
-
 func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	f, err := ps.ft.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: Create f %v", f.Pobj().Ctx().ClntId(), f)
-	o := f.Pobj().Obj()
-	fn := f.Pobj().Path().Append(args.Name)
-	if !o.Perm().IsDir() {
-		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, f.Pobj().Path()))
-	}
-	d := o.(fs.Dir)
-	dlk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path(), lockmap.WLOCK)
-	defer ps.plt.Release(f.Pobj().Ctx(), dlk, lockmap.WLOCK)
-
-	o1, flk, err := ps.createObj(f.Pobj().Ctx(), d, dlk, fn, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence())
+	qid, nf, err := ps.CreateObj(f.Pobj().Ctx(), f, args.Name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	defer ps.plt.Release(f.Pobj().Ctx(), flk, lockmap.WLOCK)
-	ps.stats.IncPathString(f.Pobj().Path().String())
-	ps.vt.Insert(o1.Path())
-	ps.vt.IncVersion(o1.Path())
-	qid := ps.newQid(o1.Perm(), o1.Path())
-	nf := ps.newFid(f.Pobj().Ctx(), f.Pobj().Path(), args.Name, o1, args.TleaseId(), qid)
 	ps.ft.Insert(args.Tfid(), nf)
-	ps.vt.IncVersion(f.Pobj().Obj().Path())
-	nf.SetMode(args.Tmode())
 	rets.Qid = qid
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/ephemeralmap"
+	"sigmaos/fid"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/path"
@@ -57,6 +58,64 @@ func (pss *ProtSrvState) EphemeralMap() *ephemeralmap.EphemeralMap {
 
 func (pss *ProtSrvState) Stats() *stats.StatInfo {
 	return pss.stats
+}
+
+func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
+	return sp.NewQidPerm(perm, pss.vt.GetVersion(path), path)
+}
+
+func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *fid.Fid {
+	pn := dir.Copy().Append(name)
+	po := fid.NewPobj(pn, o, ctx)
+	nf := fid.NewFidPath(po, 0, qid)
+	if o.Perm().IsEphemeral() && pss.et != nil {
+		pss.et.Insert(pn.String(), lid)
+	}
+	return nf
+}
+
+// Create name in dir and returns lock for it.
+func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
+	name := fn.Base()
+	if name == "." {
+		return nil, nil, serr.NewErr(serr.TErrInval, name)
+	}
+	flk := pss.plt.Acquire(ctx, fn, lockmap.WLOCK)
+	o1, err := d.Create(ctx, name, perm, mode, lid, f)
+	db.DPrintf(db.PROTSRV, "%v: Create %q %v %v ephemeral %v lid %v", ctx.ClntId(), name, o1, err, perm.IsEphemeral(), lid)
+	if err == nil {
+		pss.wt.WakeupWatch(dlk)
+		return o1, flk, nil
+	} else {
+		pss.plt.Release(ctx, flk, lockmap.WLOCK)
+		return nil, nil, err
+	}
+}
+
+func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, f *fid.Fid, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence) (*sp.Tqid, *fid.Fid, *serr.Err) {
+	db.DPrintf(db.PROTSRV, "%v: Create f %v", f.Pobj().Ctx().ClntId(), f)
+	o := f.Pobj().Obj()
+	fn := f.Pobj().Path().Append(name)
+	if !o.Perm().IsDir() {
+		return nil, nil, serr.NewErr(serr.TErrNotDir, f.Pobj().Path())
+	}
+	d := o.(fs.Dir)
+	dlk := pss.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path(), lockmap.WLOCK)
+	defer pss.plt.Release(f.Pobj().Ctx(), dlk, lockmap.WLOCK)
+
+	o1, flk, err := pss.createObj(f.Pobj().Ctx(), d, dlk, fn, perm, m, lid, fence)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer pss.plt.Release(f.Pobj().Ctx(), flk, lockmap.WLOCK)
+	pss.stats.IncPathString(f.Pobj().Path().String())
+	pss.vt.Insert(o1.Path())
+	pss.vt.IncVersion(o1.Path())
+	qid := pss.newQid(o1.Perm(), o1.Path())
+	nf := pss.newFid(f.Pobj().Ctx(), f.Pobj().Path(), name, o1, lid, qid)
+	pss.vt.IncVersion(f.Pobj().Obj().Path())
+	nf.SetMode(m)
+	return qid, nf, nil
 }
 
 func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Path, f sp.Tfence) *serr.Err {

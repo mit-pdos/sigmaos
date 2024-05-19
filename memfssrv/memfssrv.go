@@ -123,19 +123,6 @@ func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs
 	return d.Create(mfs.ctx, path.Base(), p, m, lid, sp.NoFence())
 }
 
-func (mfs *MemFs) Remove1(pn string) *serr.Err {
-	path, err := serr.PathSplitErr(pn)
-	if err != nil {
-		return err
-	}
-	d, lk, err := mfs.lookupParent(path.Dir(), lockmap.WLOCK)
-	if err != nil {
-		return err
-	}
-	defer mfs.plt.Release(mfs.ctx, lk, lockmap.WLOCK)
-	return d.Remove(mfs.ctx, path.Base(), sp.NoFence())
-}
-
 func (mfs *MemFs) Remove(pn string) *serr.Err {
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {

@@ -197,7 +197,7 @@ func (pe *ProcEnvProto) SetSecrets(secrets map[string]*sp.SecretProto) {
 func (pe *ProcEnvProto) GetSecrets() map[string]*sp.SecretProto {
 	secrets := make(map[string]*sp.SecretProto)
 	// Deep copy secrets
-	for k, v := range pe.GetSecrets() {
+	for k, v := range pe.SecretsMap {
 		secrets[k] = &sp.SecretProto{
 			ID:  v.ID,
 			Key: v.Key,

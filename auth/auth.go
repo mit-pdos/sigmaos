@@ -12,10 +12,5 @@ type KeyMgr interface {
 }
 
 type AuthMgr interface {
-	// Endpoint tokens
-	MintEndpointToken(ep *sp.Tendpoint) (*sp.Ttoken, error)
-	MintAndSetEndpointToken(ep *sp.Tendpoint) error
-	VerifyEndpointTokenGetClaims(principalID sp.TprincipalID, signedEndpointToken *sp.Ttoken) (*EndpointClaims, error)
-	EndpointIsAuthorized(principal *sp.Tprincipal, ep *sp.Tendpoint) (bool, error)
 	KeyMgr
 }

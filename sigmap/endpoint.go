@@ -14,7 +14,6 @@ func NewEndpoint(t TTendpoint, srvaddrs Taddrs, realm Trealm) *Tendpoint {
 	return &Tendpoint{
 		&TendpointProto{
 			Claims: NewEndpointClaimsProto(t, srvaddrs, realm),
-			Token:  NoToken(),
 		},
 	}
 }
@@ -45,16 +44,8 @@ func (ep *Tendpoint) Type() TTendpoint {
 	return TTendpoint(ep.Claims.EndpointType)
 }
 
-func (ep *Tendpoint) IsSigned() bool {
-	return ep.Token != nil && ep.Token.GetSignedToken() != NO_SIGNED_TOKEN
-}
-
 func (ep *Tendpoint) GetProto() *TendpointProto {
 	return ep.TendpointProto
-}
-
-func (ep *Tendpoint) SetToken(token *Ttoken) {
-	ep.Token = token
 }
 
 func (ep *Tendpoint) SetTree(tree string) {
@@ -83,7 +74,7 @@ func (ep *Tendpoint) TargetIPPort(idx int) (Tip, Tport) {
 }
 
 func (ep *Tendpoint) String() string {
-	return fmt.Sprintf("{ type:%v addr:%v realm:%v root:%v signed:%v }", ep.Type(), ep.Claims.Addr, Trealm(ep.Claims.RealmStr), ep.Root, ep.IsSigned())
+	return fmt.Sprintf("{ type:%v addr:%v realm:%v root:%v }", ep.Type(), ep.Claims.Addr, Trealm(ep.Claims.RealmStr), ep.Root)
 }
 
 func (t TTendpoint) String() string {

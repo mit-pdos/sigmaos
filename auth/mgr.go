@@ -29,36 +29,6 @@ func (as *AuthMgrImpl[M]) GetSrvPath() string {
 	return as.srvpath
 }
 
-func (as *AuthMgrImpl[M]) MintEndpointToken(ep *sp.Tendpoint) (*sp.Ttoken, error) {
-	mc := NewEndpointClaims(ep)
-	return as.mintTokenWithClaims(mc)
-}
-
-func (as *AuthMgrImpl[M]) MintAndSetEndpointToken(ep *sp.Tendpoint) error {
-	token, err := as.MintEndpointToken(ep)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error MintEndpointToken: %v", err)
-	}
-	ep.SetToken(token)
-	return nil
-}
-
-func (as *AuthMgrImpl[M]) VerifyEndpointTokenGetClaims(principalID sp.TprincipalID, t *sp.Ttoken) (*EndpointClaims, error) {
-	claims, err := as.verifyTokenGetClaims(principalID, &EndpointClaims{}, t)
-	if err != nil {
-		return nil, err
-	}
-	if mclaims, ok := claims.(*EndpointClaims); ok {
-		return mclaims, nil
-	}
-	return nil, fmt.Errorf("Claims wrong type: %T", claims)
-}
-
-func (as *AuthMgrImpl[M]) EndpointIsAuthorized(principal *sp.Tprincipal, endpoint *sp.Tendpoint) (bool, error) {
-	db.DPrintf(db.AUTH, "Endpoint Authorization check p %v ep %v", principal.GetID(), endpoint)
-	return true, nil
-}
-
 // Mint a token with associated claims
 func (as *AuthMgrImpl[M]) mintTokenWithClaims(claims jwt.Claims) (*sp.Ttoken, error) {
 	privkey, err := as.GetPrivateKey(as.signer)

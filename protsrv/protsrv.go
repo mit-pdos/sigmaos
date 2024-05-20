@@ -187,23 +187,16 @@ func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Open f %v %v", f.Pobj().Ctx().ClntId(), f, args)
-
-	ps.stats.IncPathString(f.Pobj().Path().String())
-
 	o := f.Pobj().Obj()
-	no, r := o.Open(f.Pobj().Ctx(), args.Tmode())
-	if r != nil {
-		return sp.NewRerrorSerr(r)
+	no, qid, err := ps.OpenObj(f.Pobj().Ctx(), o, args.Tmode())
+	if err != nil {
+		return sp.NewRerrorSerr(err)
 	}
 	f.SetMode(args.Tmode())
-	if no != nil {
+	if no != o {
 		f.Pobj().SetObj(no)
-		ps.vt.Insert(no.Path())
-		ps.vt.IncVersion(no.Path())
-		rets.Qid = ps.newQid(no.Perm(), no.Path())
-	} else {
-		rets.Qid = ps.newQid(o.Perm(), o.Path())
 	}
+	rets.Qid = qid
 	return nil
 }
 

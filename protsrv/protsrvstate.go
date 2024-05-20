@@ -117,6 +117,21 @@ func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Path, name 
 	return qid, nf, nil
 }
 
+func (pss *ProtSrvState) OpenObj(ctx fs.CtxI, o fs.FsObj, m sp.Tmode) (fs.FsObj, *sp.Tqid, *serr.Err) {
+	pss.stats.IncPathString(o.Path().String())
+	no, r := o.Open(ctx, m)
+	if r != nil {
+		return nil, nil, r
+	}
+	if no != nil {
+		pss.vt.Insert(no.Path())
+		pss.vt.IncVersion(no.Path())
+		return no, pss.newQid(no.Perm(), no.Path()), nil
+	} else {
+		return o, pss.newQid(o.Perm(), o.Path()), nil
+	}
+}
+
 func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Path, f sp.Tfence) *serr.Err {
 	name := path.Base()
 	if name == "." {

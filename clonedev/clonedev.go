@@ -7,7 +7,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
-	"sigmaos/lockmap"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	"sigmaos/sessdev"
@@ -85,8 +84,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 			return nil, err
 		}
 	} else {
-		// XXX should this be read-only?
-		lo, err := c.mfs.Open(ctl, sp.OREAD, lockmap.WLOCK)
+		lo, err := c.mfs.Open(ctl, sp.OREAD)
 		if err != nil {
 			db.DPrintf(db.CLONEDEV, "open %q err %v\n", ctl, err)
 			return nil, err

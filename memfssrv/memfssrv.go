@@ -1,6 +1,7 @@
 // Servers use package memfsssrv to create an in-memory file server.
-// memfsssrv uses sesssrv and protsrv to handle client sigmaP
-// requests.
+// memfsssrv uses protsrv to handle client sigmaP requests. The server
+// itself can also create, remove, etc.  files in its file system,
+// which directly call into protsrv.
 package memfssrv
 
 import (
@@ -16,7 +17,6 @@ import (
 	"sigmaos/namei"
 	"sigmaos/path"
 	"sigmaos/portclnt"
-	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -188,26 +188,13 @@ func (mfs *MemFs) Remove(pn string) *serr.Err {
 	return mfs.RemoveObj(mfs.ctx, lo, path, sp.NoFence())
 }
 
-func (mfs *MemFs) Open(pn string, m sp.Tmode, ltype lockmap.Tlock) (fs.FsObj, *serr.Err) {
-	path, err := serr.PathSplitErr(pn)
+func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
+	lo, _, err := mfs.lookupWalk(pn)
 	if err != nil {
 		return nil, err
 	}
-	lo, lk, err := mfs.lookup(path, ltype)
-	if err != nil {
-		return nil, err
-	}
-	mfs.plt.Release(mfs.ctx, lk, ltype)
-	return lo, nil
-}
-
-func (mfs *MemFs) MemFsExit(status *proc.Status) error {
-	if mfs.pn != "" {
-		if err := mfs.sc.Remove(mfs.pn); err != nil {
-			db.DPrintf(db.ALWAYS, "RemoveMount %v err %v", mfs.pn, err)
-		}
-	}
-	return mfs.sc.ClntExit(status)
+	no, _, err := mfs.OpenObj(mfs.ctx, lo, m)
+	return no, nil
 }
 
 func (mfs *MemFs) Dump() error {

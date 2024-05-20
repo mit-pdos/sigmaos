@@ -23,7 +23,7 @@ func main() {
 	if err1 != nil {
 		db.DFatalf("Failed to load AWS secrets %v", err1)
 	}
-	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
 	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(lip)
 	if err != nil {
 		db.DFatalf("Error new fsetcd moutn: %v", err)

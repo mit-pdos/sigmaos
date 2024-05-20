@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 
 	db "sigmaos/debug"
-	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 type Secret struct {
@@ -24,7 +24,7 @@ func NewSecret(id, key string) *Secret {
 	}
 }
 
-func NewSecretFromProto(psp *proc.ProcSecretProto) *Secret {
+func NewSecretFromProto(psp *sp.SecretProto) *Secret {
 	return &Secret{
 		ID:  psp.ID,
 		Key: psp.Key,
@@ -35,7 +35,7 @@ func (s *Secret) String() string {
 	return fmt.Sprintf("&{ id:%v key:<<redacted>> }", s.ID)
 }
 
-func GetAWSSecrets(profile string) (*proc.ProcSecretProto, error) {
+func GetAWSSecrets(profile string) (*sp.SecretProto, error) {
 	sharedCredsFiles := []string{
 		config.DefaultSharedCredentialsFilename(),
 		"/home/sigmaos/.aws/credentials",
@@ -56,12 +56,12 @@ func GetAWSSecrets(profile string) (*proc.ProcSecretProto, error) {
 		db.DPrintf(db.ERROR, "Load AWS config: %v", err)
 		return nil, err
 	}
-	return &proc.ProcSecretProto{
+	return &sp.SecretProto{
 		ID:  cfg.Credentials.AccessKeyID,
 		Key: cfg.Credentials.SecretAccessKey,
 	}, nil
 }
 
-func NewAWSCredentialsProvider(s *proc.ProcSecretProto) aws.CredentialsProvider {
+func NewAWSCredentialsProvider(s *sp.SecretProto) aws.CredentialsProvider {
 	return credentials.NewStaticCredentialsProvider(s.GetID(), s.GetKey(), "")
 }

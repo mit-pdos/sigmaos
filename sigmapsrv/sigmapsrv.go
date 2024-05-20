@@ -84,7 +84,7 @@ func (psrv *SigmaPSrv) Mount(name string, dir *dir.DirImpl) {
 	psrv.dirover.Mount(name, dir)
 }
 
-func (psrv *SigmaPSrv) GetRootCtx(p *sp.Tprincipal, secrets map[string]*proc.ProcSecretProto, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
+func (psrv *SigmaPSrv) GetRootCtx(p *sp.Tprincipal, secrets map[string]*sp.SecretProto, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
 	return psrv.dirover, ctx.NewCtx(p, secrets, sessid, clntid, psrv.CondTable(), psrv.fencefs)
 }
 

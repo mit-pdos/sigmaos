@@ -43,6 +43,11 @@ message Taddr {
         string netNS = 4;
 }
 
+message SecretProto {
+  string iD = 1;
+  string key = 2;
+}
+
 message TendpointClaimsProto {
         string   realmStr = 1;
         uint32   endpointType = 2; // Type of endpoint (e.g. internal vs external)

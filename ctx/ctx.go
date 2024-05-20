@@ -3,21 +3,20 @@ package ctx
 import (
 	"sigmaos/clntcond"
 	"sigmaos/fs"
-	"sigmaos/proc"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
 type Ctx struct {
 	principal *sp.Tprincipal
-	secrets   map[string]*proc.ProcSecretProto
+	secrets   map[string]*sp.SecretProto
 	sessid    sessp.Tsession
 	clntid    sp.TclntId
 	sct       *clntcond.ClntCondTable
 	fencefs   fs.Dir
 }
 
-func NewCtx(principal *sp.Tprincipal, secrets map[string]*proc.ProcSecretProto, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
+func NewCtx(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
 	return &Ctx{
 		principal: principal,
 		secrets:   secrets,
@@ -36,7 +35,7 @@ func NewCtxNull() *Ctx {
 	return NewPrincipalOnlyCtx(sp.NoPrincipal())
 }
 
-func (ctx *Ctx) Secrets() map[string]*proc.ProcSecretProto {
+func (ctx *Ctx) Secrets() map[string]*sp.SecretProto {
 	return ctx.secrets
 }
 

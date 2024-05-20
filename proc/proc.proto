@@ -4,16 +4,13 @@ option go_package = "sigmaos/proc";
 import "google/protobuf/timestamp.proto";
 import "sigmap/sigmap.proto";
 
-message ProcSecretProto {
-  string iD = 1;
-  string key = 2;
-}
+
 
 message ProcClaimsProto {
   string principalIDStr = 1;
   string realmStr = 2;
   repeated string allowedPaths = 3;
-  map<string, ProcSecretProto> secrets = 4;
+  map<string, SecretProto> secrets = 4;
 }
 
 message ProcEnvProto {

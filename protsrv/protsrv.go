@@ -9,7 +9,6 @@ import (
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
-	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"
@@ -17,7 +16,7 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 )
 
-type GetRootCtxF func(*sp.Tprincipal, map[string]*proc.ProcSecretProto, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI)
+type GetRootCtxF func(*sp.Tprincipal, map[string]*sp.SecretProto, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI)
 
 // Each session has its own protsrv, but they share ProtSrvState
 type ProtSrv struct {

@@ -117,7 +117,7 @@ func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 	return &ProcEnv{p}
 }
 
-func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool, verifyEndpoints bool) *ProcEnv {
+func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool, verifyEndpoints bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays, verifyEndpoints)
 	pe.SetPrincipal(principal)
 	pe.SetSecrets(secrets)
@@ -138,7 +138,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*ProcSecretProt
 	return pe
 }
 
-func NewTestProcEnv(realm sp.Trealm, secrets map[string]*ProcSecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool, useNetProxy bool, verifyEndpoints bool) *ProcEnv {
+func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool, useNetProxy bool, verifyEndpoints bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays, verifyEndpoints)
 	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), realm, sp.NoToken()))
 	pe.SetSecrets(secrets)
@@ -170,13 +170,13 @@ func NewAddedProcEnv(pe *ProcEnv) *ProcEnv {
 		PrincipalIDStr: pe2.GetPrincipal().GetID().String(),
 		RealmStr:       pe2.GetPrincipal().GetRealm().String(),
 		AllowedPaths:   make([]string, len(pe.Claims.GetAllowedPaths())),
-		Secrets:        make(map[string]*ProcSecretProto),
+		Secrets:        make(map[string]*sp.SecretProto),
 	}
 	// Deep copy allowed paths
 	copy(pe2.Claims.AllowedPaths, pe.Claims.GetAllowedPaths())
 	// Deep copy secrets
 	for k, v := range pe.Claims.GetSecrets() {
-		pe2.Claims.Secrets[k] = &ProcSecretProto{
+		pe2.Claims.Secrets[k] = &sp.SecretProto{
 			ID:  v.ID,
 			Key: v.Key,
 		}
@@ -197,14 +197,14 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 		PrincipalIDStr: pe2.GetPrincipal().GetID().String(),
 		RealmStr:       realm.String(),
 		AllowedPaths:   make([]string, len(pe.Claims.GetAllowedPaths())),
-		Secrets:        make(map[string]*ProcSecretProto),
+		Secrets:        make(map[string]*sp.SecretProto),
 	}
 	pe2.SetRealm(realm, pe.Overlays)
 	// Deep copy allowed paths
 	copy(pe2.Claims.AllowedPaths, pe.Claims.GetAllowedPaths())
 	// Deep copy secrets
 	for k, v := range pe.Claims.GetSecrets() {
-		pe2.Claims.Secrets[k] = &ProcSecretProto{
+		pe2.Claims.Secrets[k] = &sp.SecretProto{
 			ID:  v.ID,
 			Key: v.Key,
 		}
@@ -216,7 +216,7 @@ func (pe *ProcEnvProto) GetPID() sp.Tpid {
 	return sp.Tpid(pe.PidStr)
 }
 
-func (pe *ProcEnvProto) SetSecrets(secrets map[string]*ProcSecretProto) {
+func (pe *ProcEnvProto) SetSecrets(secrets map[string]*sp.SecretProto) {
 	pe.Claims.Secrets = secrets
 }
 
@@ -253,11 +253,11 @@ func (pe *ProcEnvProto) PrependSigmaPath(pn string) {
 	pe.SigmaPath = append([]string{pn}, pe.SigmaPath...)
 }
 
-func (pe *ProcEnvProto) GetSecrets() map[string]*ProcSecretProto {
-	secrets := make(map[string]*ProcSecretProto)
+func (pe *ProcEnvProto) GetSecrets() map[string]*sp.SecretProto {
+	secrets := make(map[string]*sp.SecretProto)
 	// Deep copy secrets
 	for k, v := range pe.Claims.GetSecrets() {
-		secrets[k] = &ProcSecretProto{
+		secrets[k] = &sp.SecretProto{
 			ID:  v.ID,
 			Key: v.Key,
 		}

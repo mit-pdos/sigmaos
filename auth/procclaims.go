@@ -21,14 +21,11 @@ type ProcClaims struct {
 // Construct proc claims from a proc env
 func NewProcClaims(pe *proc.ProcEnv) *ProcClaims {
 	secrets := make(map[string]*Secret)
-	for svc, s := range pe.GetClaims().GetSecrets() {
+	for svc, s := range pe.GetSecrets() {
 		secrets[svc] = NewSecret(s.ID, s.Key)
 	}
 	return &ProcClaims{
-		PrincipalID:  pe.GetClaims().GetPrincipalID(),
-		Realm:        pe.GetClaims().GetRealm(),
-		AllowedPaths: pe.GetClaims().GetAllowedPaths(),
-		Secrets:      secrets,
+		Secrets: secrets,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 999).Unix(), // TODO: set expiry properly
 			Issuer:    ISSUER,

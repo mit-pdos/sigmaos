@@ -4,15 +4,6 @@ option go_package = "sigmaos/proc";
 import "google/protobuf/timestamp.proto";
 import "sigmap/sigmap.proto";
 
-
-
-message ProcClaimsProto {
-  string principalIDStr = 1;
-  string realmStr = 2;
-  repeated string allowedPaths = 3;
-  map<string, SecretProto> secrets = 4;
-}
-
 message ProcEnvProto {
   string pidStr = 1;
   string program = 2;
@@ -43,9 +34,9 @@ message ProcEnvProto {
   bool useNetProxy = 27;
   bool verifyEndpoints = 28;
   Ttoken parentToken = 29;
-  ProcClaimsProto claims = 30;
-  repeated string sigmaPath = 31;
-  repeated string kernels = 32;
+  map<string, SecretProto> secretsMap = 31;
+  repeated string sigmaPath = 32;
+  repeated string kernels = 33;
 }
 
 message ProcProto {

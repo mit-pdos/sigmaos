@@ -144,7 +144,6 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 		return err
 	}
 	p.GetProcEnv().SetRealm(sp.ROOTREALM, k.Param.Overlays)
-	p.SetAllowedPaths(sp.ALL_PATHS)
 	p.SetKernelID(k.Param.KernelID, false)
 	cmd, err := runKNamed(pe, p, sp.ROOTREALM, init)
 	if err != nil {
@@ -197,7 +196,6 @@ func (k *Kernel) bootNamed() (Subsystem, error) {
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	pid := sp.GenPid("sigmaclntd")
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
-	p.SetAllowedPaths(sp.ALL_PATHS)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetHow(proc.HLINUX)
 	p.InheritParentProcEnv(k.ProcEnv())

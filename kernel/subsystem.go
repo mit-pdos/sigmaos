@@ -88,7 +88,6 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
-	p.SetAllowedPaths(sp.ALL_PATHS)
 	p.SetMcpu(mcpu)
 	var sck *sigmaclnt.SigmaClntKernel
 	var err error

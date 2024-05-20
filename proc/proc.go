@@ -132,18 +132,10 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
 	p.ProcEnvProto.VerifyEndpoints = p.ProcEnvProto.UseNetProxy && false
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
-	// If parent didn't specify allowed paths, inherit the parent's allowed paths
-	if p.ProcEnvProto.Claims.AllowedPaths == nil {
-		p.ProcEnvProto.Claims.AllowedPaths = parentPE.Claims.AllowedPaths
-	}
 	// If parent didn't specify secrets, inherit the parent's secrets
-	if p.ProcEnvProto.Claims.Secrets == nil {
-		p.ProcEnvProto.Claims.Secrets = parentPE.Claims.Secrets
+	if p.ProcEnvProto.SecretsMap == nil {
+		p.ProcEnvProto.SecretsMap = parentPE.SecretsMap
 	}
-}
-
-func (p *Proc) SetAllowedPaths(paths []string) {
-	p.ProcEnvProto.SetAllowedPaths(paths)
 }
 
 func (p *Proc) GetPrincipal() *sp.Tprincipal {

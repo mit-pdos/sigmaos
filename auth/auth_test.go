@@ -112,10 +112,6 @@ func TestMaliciousPrincipalKeydFail(t *testing.T) {
 	err = kc1.SetKey(sp.Tsigner("woohoo"), k)
 	assert.Nil(t, err)
 
-	RONLY_KEYD := []string{
-		sp.NAMED,
-		sp.KEYS_RONLY,
-	}
 	// Create a new sigma clnt
 	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
 	pe.SetPrincipal(sp.NewPrincipal(

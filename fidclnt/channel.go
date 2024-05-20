@@ -11,27 +11,21 @@ import (
 // The channel associated with an fid, which connects to an object at
 // a server.
 type Channel struct {
-	pc        *protclnt.ProtClnt
-	path      path.Path
-	qids      []*sp.Tqid
-	principal *sp.Tprincipal
+	pc   *protclnt.ProtClnt
+	path path.Path
+	qids []*sp.Tqid
 }
 
-func newChannel(pc *protclnt.ProtClnt, principal *sp.Tprincipal, path path.Path, qs []*sp.Tqid) *Channel {
+func newChannel(pc *protclnt.ProtClnt, path path.Path, qs []*sp.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
 	c.path = path
 	c.qids = qs
-	c.principal = principal
 	return c
 }
 
 func (c *Channel) String() string {
 	return fmt.Sprintf("{ Path %v Qids %v }", c.path, c.qids)
-}
-
-func (c *Channel) Principal() *sp.Tprincipal {
-	return c.principal
 }
 
 func (c *Channel) Path() path.Path {
@@ -49,7 +43,7 @@ func (c *Channel) Version() sp.TQversion {
 func (c *Channel) Copy() *Channel {
 	qids := make([]*sp.Tqid, len(c.qids))
 	copy(qids, c.qids)
-	return newChannel(c.pc, c.principal, c.path.Copy(), qids)
+	return newChannel(c.pc, c.path.Copy(), qids)
 }
 
 func (c *Channel) add(name string, q *sp.Tqid) {

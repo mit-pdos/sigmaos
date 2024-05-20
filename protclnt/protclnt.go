@@ -50,8 +50,8 @@ func (pclnt *ProtClnt) CallIoVec(args sessp.Tmsg, iniov sessp.IoVec, outiov sess
 	return pclnt.CallServer(args, iniov, outiov)
 }
 
-func (pclnt *ProtClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
-	args := sp.NewTattach(fid, sp.NoFid, principal, cid, path)
+func (pclnt *ProtClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, fid sp.Tfid, path path.Path) (*sp.Rattach, *serr.Err) {
+	args := sp.NewTattach(fid, sp.NoFid, secrets, cid, path)
 	reply, err := pclnt.CallServer(args, nil, nil)
 	if err != nil {
 		return nil, err

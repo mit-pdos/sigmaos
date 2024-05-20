@@ -90,7 +90,7 @@ message Rauth {
 message Tattach {
         uint32 fid = 1;
         uint32 afid = 2;
-        Tprincipal principal = 3;
+        map<string, SecretProto> secrets = 3;
         string aname = 4;
         uint64 clntId = 5;
 }

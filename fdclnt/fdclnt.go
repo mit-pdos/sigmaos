@@ -243,7 +243,7 @@ func (fdc *FdClient) PathLastMount(pn string) (path.Path, path.Path, error) {
 }
 
 func (fdc *FdClient) MountTree(ep *sp.Tendpoint, tree, mount string) error {
-	return fdc.pc.MntClnt().MountTree(fdc.pe.GetPrincipal(), ep, tree, mount)
+	return fdc.pc.MntClnt().MountTree(fdc.pe.GetSecrets(), ep, tree, mount)
 }
 
 func (fdc *FdClient) GetNamedEndpoint() (*sp.Tendpoint, error) {

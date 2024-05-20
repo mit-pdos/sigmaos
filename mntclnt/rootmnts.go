@@ -143,7 +143,7 @@ func (mc *MntClnt) mountRoot(svc, rest path.Path, mntname string) *serr.Err {
 		db.DPrintf(db.MOUNT, "mountRoot: lookup %v %v err nil\n", svc, fid)
 	}
 	addr := ch.Servers()
-	if err := mc.MountTree(mc.pe.GetPrincipal(), addr, rest.String(), mntname); err != nil {
+	if err := mc.MountTree(mc.pe.GetSecrets(), addr, rest.String(), mntname); err != nil {
 		db.DPrintf(db.MOUNT, "mountRoot: MountTree %v err %v\n", svc, err)
 	}
 	db.DPrintf(db.MOUNT, "mountRoot: attached %v(%v):%v at %v\n", svc, addr, rest, mntname)

@@ -73,12 +73,14 @@ type NpSess struct {
 	principal *sp.Tprincipal
 	fidc      *fidclnt.FidClnt
 	pc        *pathclnt.PathClnt
+	pe        *proc.ProcEnv
 	fm        *fidMap
 	cid       sp.TclntId
 }
 
 func newNpSess(pe *proc.ProcEnv, npcs *netproxyclnt.NetProxyClnt, lip string) *NpSess {
 	npc := &NpSess{}
+	npc.pe = pe
 	npc.fidc = fidclnt.NewFidClnt(pe, npcs)
 	npc.principal = pe.GetPrincipal()
 	npc.pc = pathclnt.NewPathClnt(pe, npc.fidc)
@@ -103,7 +105,7 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", error)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
-	fid, err := npc.fidc.Attach(npc.principal, npc.cid, ep, "", "")
+	fid, err := npc.fidc.Attach(npc.pe.GetSecrets(), npc.cid, ep, "", "")
 	if err != nil {
 		db.DPrintf(db.PROXY, "Attach args %v err %v\n", args, err)
 		return sp.NoClntId, sp.NewRerrorSerr(err)

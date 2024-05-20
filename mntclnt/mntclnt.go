@@ -86,13 +86,13 @@ func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Path
 	return mc.LastMount(pn, principal)
 }
 
-func (mc *MntClnt) AutoMount(principal *sp.Tprincipal, ep *sp.Tendpoint, path path.Path) *serr.Err {
+func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, path path.Path) *serr.Err {
 	var fid sp.Tfid
 	var err *serr.Err
 
 	db.DPrintf(db.MOUNT, "automount %v to %v\n", ep, path)
 	s := time.Now()
-	fid, err = mc.fidc.Attach(principal, mc.cid, ep, path.String(), ep.Root)
+	fid, err = mc.fidc.Attach(secrets, mc.cid, ep, path.String(), ep.Root)
 	if err != nil {
 		db.DPrintf(db.MOUNT_ERR, "Attach error: %v", err)
 		return err
@@ -105,9 +105,9 @@ func (mc *MntClnt) AutoMount(principal *sp.Tprincipal, ep *sp.Tendpoint, path pa
 	return nil
 }
 
-func (mc *MntClnt) MountTree(principal *sp.Tprincipal, ep *sp.Tendpoint, tree, mntname string) error {
+func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname string) error {
 	db.DPrintf(db.MOUNT, "MountTree [%v]/%v mnt %v", ep, tree, mntname)
-	if fid, err := mc.fidc.Attach(principal, mc.cid, ep, "", tree); err == nil {
+	if fid, err := mc.fidc.Attach(secrets, mc.cid, ep, "", tree); err == nil {
 		return mc.Mount(fid, mntname)
 	} else {
 		db.DPrintf(db.MOUNT_ERR, "%v: MountTree Attach [%v]/%v err %v", mc.cid, ep, tree, err)

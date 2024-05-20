@@ -113,7 +113,7 @@ func (mc *MntClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
 		db.DPrintf(db.MOUNT_ERR, "mountNamed [%v]: getNamedMount err %v", realm, err)
 		return err
 	}
-	if err := mc.AutoMount(mc.pe.GetPrincipal(), ep, path.Path{name}); err != nil {
+	if err := mc.AutoMount(mc.pe.GetSecrets(), ep, path.Path{name}); err != nil {
 		db.DPrintf(db.MOUNT_ERR, "mountNamed: automount err %v", err)
 		// If mounting failed, the named is unreachable. Invalidate the cache entry
 		// for this realm.

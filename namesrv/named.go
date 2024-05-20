@@ -7,11 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/auth"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	"sigmaos/keys"
 	"sigmaos/leaderetcd"
 	"sigmaos/perf"
 	"sigmaos/port"
@@ -29,18 +27,14 @@ import (
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sigmasrv.SigmaSrv
-	mu              sync.Mutex
-	fs              *fsetcd.FsEtcd
-	elect           *leaderetcd.Election
-	job             string
-	realm           sp.Trealm
-	crash           int
-	sess            *fsetcd.Session
-	masterPublicKey auth.PublicKey
-	masterPrivKey   auth.PrivateKey
-	signer          sp.Tsigner
-	pubkey          auth.PublicKey
-	privkey         auth.PrivateKey
+	mu     sync.Mutex
+	fs     *fsetcd.FsEtcd
+	elect  *leaderetcd.Election
+	job    string
+	realm  sp.Trealm
+	crash  int
+	sess   *fsetcd.Session
+	signer sp.Tsigner
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -59,28 +53,16 @@ func Run(args []string) error {
 
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pe)
-	if len(args) != 6 {
+	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	masterPubKey, pubkey, privkey, err := keys.BootstrappedKeysFromArgs(args[1:])
-	if err != nil {
-		db.DFatalf("Error get bootstrapped keys: %v", err)
-	}
-	//	masterPrivKey, err := auth.NewPrivateKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[2]))
-	//	if err != nil {
-	//		db.DFatalf("Error NewPublicKey: %v", err)
-	//	}
 
 	nd := &Named{}
-	nd.masterPublicKey = masterPubKey
-	nd.masterPrivKey = nil // masterPrivKey
 	nd.signer = sp.Tsigner(pe.GetPID())
-	nd.pubkey = pubkey
-	nd.privkey = privkey
-	nd.realm = sp.Trealm(args[4])
-	crashing, err := strconv.Atoi(args[5])
+	nd.realm = sp.Trealm(args[1])
+	crashing, err := strconv.Atoi(args[2])
 	if err != nil {
-		return fmt.Errorf("%v: crash %v isn't int", args[0], args[5])
+		return fmt.Errorf("%v: crash %v isn't int", args[0], args[1])
 	}
 	nd.crash = crashing
 

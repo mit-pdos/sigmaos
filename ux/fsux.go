@@ -4,7 +4,6 @@ import (
 	"path"
 	"sync"
 
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/netsigma"
@@ -27,7 +26,7 @@ type FsUx struct {
 	ot *ObjTable
 }
 
-func RunFsUx(rootux string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) {
+func RunFsUx(rootux string) {
 	pe := proc.GetProcEnv()
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {

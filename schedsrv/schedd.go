@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
@@ -303,7 +302,7 @@ func (sd *Schedd) stats() {
 	}
 }
 
-func RunSchedd(kernelId string, reserveMcpu uint, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunSchedd(kernelId string, reserveMcpu uint) error {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)

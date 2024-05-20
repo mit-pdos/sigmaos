@@ -220,7 +220,7 @@ func newKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 	if init {
 		i = "init"
 	}
-	args := []string{realmId.String(), i, "xxx", "xxx"}
+	args := []string{realmId.String(), i}
 	p := proc.NewPrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }

@@ -59,7 +59,7 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 	return clnt, nil
 }
 
-func RunFss3(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) {
+func RunFss3() {
 	pe := proc.GetProcEnv()
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {

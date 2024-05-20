@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"sigmaos/auth"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongosrv/proto"
@@ -46,7 +45,7 @@ func newServer(mongodUrl string) (*MongoSrv, error) {
 	return s, nil
 }
 
-func RunMongod(mongodUrl string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunMongod(mongodUrl string) error {
 	pe := proc.GetProcEnv()
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {

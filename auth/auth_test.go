@@ -67,12 +67,16 @@ func TestVerifyHMACToken(t *testing.T) {
 			Issuer:    "test",
 		},
 	}
+	s := time.Now()
 	signedToken, err := amgr.MintProcToken(claims)
 	assert.Nil(t, err, "Err sign token: %v", err)
+	db.DPrintf(db.TEST, "Signed token in %v", time.Since(s))
 	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
+	s = time.Now()
 	claims2, err := amgr.VerifyProcTokenGetClaims("my-principal", signedToken)
 	assert.Nil(t, err, "Err verify token get claims: %v", err)
-	db.DPrintf(db.TEST, "Signed token: %v", claims2)
+	db.DPrintf(db.TEST, "Verified token in %v", time.Since(s))
+	db.DPrintf(db.TEST, "Verified token: %v", claims2)
 }
 
 func TestSignECDSAToken(t *testing.T) {

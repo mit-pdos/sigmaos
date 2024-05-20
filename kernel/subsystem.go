@@ -7,7 +7,6 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/keys"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -105,33 +104,9 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	return ss, ss.Run(how, k.Param.KernelID, k.ip)
 }
 
-func (k *Kernel) bootstrapKeys(pid sp.Tpid) ([]string, error) {
-	pubkey, privkey, err := keys.NewECDSAKey()
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
-		return nil, err
-	}
-	return []string{
-		pubkey.Marshal(),
-		pubkey.Marshal(),
-		privkey.Marshal(),
-	}, nil
-}
-
-func (k *Kernel) bootSubsystemBootstrapKeys(program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
+func (k *Kernel) bootSubsystem(program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	pid := sp.GenPid(program)
-	// bootstrap keys for the subsystem
-	keys, err := k.bootstrapKeys(pid)
-	if err != nil {
-		return nil, err
-	}
-	argsWithKeys := append(keys, args...)
-	return k.bootSubsystemPIDWithMcpu(pid, program, argsWithKeys, realm, how, mcpu)
-}
-
-func (k *Kernel) bootSubsystem(program string, args []string, realm sp.Trealm, how proc.Thow) (Subsystem, error) {
-	pid := sp.GenPid(program)
-	return k.bootSubsystemPIDWithMcpu(pid, program, args, realm, how, 0)
+	return k.bootSubsystemPIDWithMcpu(pid, program, args, realm, how, mcpu)
 }
 
 func (s *KernelSubsystem) Evict() error {

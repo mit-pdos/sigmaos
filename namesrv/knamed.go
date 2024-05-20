@@ -15,11 +15,10 @@ import (
 
 func RunKNamed(args []string) error {
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.NAMED, "%v: knamed %v\n", pe.GetPID(), args)
-	if len(args) != 5 {
-		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
+	db.DPrintf(db.NAMED, "%v: knamed %v", pe.GetPID(), args)
+	if len(args) != 3 {
+		db.DFatalf("%v: wrong number of arguments %v", args[0], args)
 	}
-	// Self-sign token for bootstrapping purposes
 	nd := &Named{}
 	nd.realm = sp.Trealm(args[1])
 

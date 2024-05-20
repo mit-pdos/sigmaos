@@ -5,7 +5,6 @@ import (
 	"path"
 	"sync"
 
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	proto "sigmaos/lcschedsrv/proto"
@@ -192,7 +191,7 @@ func (lcs *LCSched) addRealmQueueL(realm sp.Trealm) *Queue {
 }
 
 // Run an LCSched
-func Run(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) {
+func Run() {
 	pe := proc.GetProcEnv()
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {

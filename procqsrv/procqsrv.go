@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/auth"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
@@ -291,7 +290,7 @@ func (pq *ProcQ) stats() {
 }
 
 // Run a ProcQ
-func Run(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) {
+func Run() {
 	pe := proc.GetProcEnv()
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {

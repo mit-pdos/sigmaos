@@ -1,7 +1,6 @@
 package dbsrv
 
 import (
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sessdevsrv"
@@ -20,7 +19,7 @@ const (
 	QDEV = "query"
 )
 
-func RunDbd(dbdaddr string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunDbd(dbdaddr string) error {
 	s, err := newServer(dbdaddr)
 	if err != nil {
 		return err

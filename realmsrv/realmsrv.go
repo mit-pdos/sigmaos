@@ -10,14 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
-	"sigmaos/keyclnt"
-	"sigmaos/keys"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
@@ -72,34 +67,27 @@ func (r *Realm) addSubsystem(kernelID string, pid sp.Tpid) {
 }
 
 type RealmSrv struct {
-	mu           sync.Mutex
-	netproxy     bool
-	realms       map[sp.Trealm]*Realm
-	sc           *sigmaclnt.SigmaClntKernel
-	pq           *procqclnt.ProcQClnt
-	sd           *scheddclnt.ScheddClnt
-	mkc          *kernelclnt.MultiKernelClnt
-	kc           *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
-	masterPubKey auth.PublicKey
-	pubkey       auth.PublicKey
-	privkey      auth.PrivateKey
-	lastNDPort   int
-	ch           chan struct{}
+	mu         sync.Mutex
+	netproxy   bool
+	realms     map[sp.Trealm]*Realm
+	sc         *sigmaclnt.SigmaClntKernel
+	pq         *procqclnt.ProcQClnt
+	sd         *scheddclnt.ScheddClnt
+	mkc        *kernelclnt.MultiKernelClnt
+	lastNDPort int
+	ch         chan struct{}
 }
 
-func RunRealmSrv(netproxy bool, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunRealmSrv(netproxy bool) error {
 	pe := proc.GetProcEnv()
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	rs := &RealmSrv{
-		netproxy:     netproxy,
-		lastNDPort:   MIN_PORT,
-		realms:       make(map[sp.Trealm]*Realm),
-		masterPubKey: masterPubKey,
-		pubkey:       pubkey,
-		privkey:      privkey,
+		netproxy:   netproxy,
+		lastNDPort: MIN_PORT,
+		realms:     make(map[sp.Trealm]*Realm),
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
@@ -112,7 +100,6 @@ func RunRealmSrv(netproxy bool, masterPubKey auth.PublicKey, pubkey auth.PublicK
 		return serr
 	}
 	db.DPrintf(db.REALMD, "newsrv ok")
-	rs.kc = keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](ssrv.MemFs.SigmaClnt())
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
 	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	rs.pq = procqclnt.NewProcQClnt(rs.sc.FsLib)
@@ -137,29 +124,6 @@ func NewNet(net string) error {
 	return nil
 }
 
-func (rm *RealmSrv) bootstrapNamedKeys(p *proc.Proc) error {
-	pubkey, privkey, err := keys.NewECDSAKey()
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
-		return err
-	}
-	// Post the public key for the subsystem
-	if err := rm.kc.SetKey(sp.Tsigner(p.GetPid()), pubkey); err != nil {
-		db.DPrintf(db.ERROR, "Error post subsystem key: %v", err)
-		return err
-	}
-	p.Args = append(
-		[]string{
-			rm.masterPubKey.Marshal(),
-			pubkey.Marshal(),
-			privkey.Marshal(),
-		},
-		p.Args...,
-	)
-	p.SetAllowedPaths(sp.ALL_PATHS)
-	return nil
-}
-
 // XXX clean up if fail during Make
 func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResult) error {
 	rm.mu.Lock()
@@ -181,7 +145,6 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	// Make sure named uses netproxy
 	p.GetProcEnv().UseNetProxy = rm.netproxy
 	p.SetMcpu(NAMED_MCPU)
-	rm.bootstrapNamedKeys(p)
 	r.named = p
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named", req.Realm)
@@ -226,17 +189,6 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 			db.DPrintf(db.ERROR, "EndpointService %v err %v\n", pn, err)
 			return err
 		}
-	}
-	// Endpoint keyd into the user realm
-	keydMnt, err := rm.sc.ReadEndpoint(sp.KEYD)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error ReadEndpoint %v: %v", sp.KEYD, err)
-		return err
-	}
-	db.DPrintf(db.REALMD, "Link %v at %s", keydMnt, sp.KEYD)
-	if err := sc.MkEndpointFile(sp.KEYD, keydMnt, sp.NoLeaseId); err != nil {
-		db.DPrintf(db.ERROR, "EndpointService %v err %v\n", sp.KEYD, err)
-		return err
 	}
 	// Make some realm dirs
 	for _, s := range []string{sp.KPIDSREL, sp.S3REL, sp.UXREL} {

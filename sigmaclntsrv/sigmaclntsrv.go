@@ -4,13 +4,11 @@
 package sigmaclntsrv
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"os"
 	"os/exec"
 
-	"sigmaos/auth"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
@@ -30,7 +28,7 @@ type SigmaClntSrv struct {
 	fidc *fidclnt.FidClnt
 }
 
-func newSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) (*SigmaClntSrv, error) {
+func newSigmaClntSrv() (*SigmaClntSrv, error) {
 	pe := proc.GetProcEnv()
 	nps, err := netproxysrv.NewNetProxySrv(pe)
 	if err != nil {
@@ -81,8 +79,8 @@ func (scs *SigmaClntSrv) runServer() error {
 }
 
 // The sigmaclntd process enter here
-func RunSigmaClntSrv(masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
-	scs, err := newSigmaClntSrv(masterPubkey, pubkey, privkey)
+func RunSigmaClntSrv() error {
+	scs, err := newSigmaClntSrv()
 	if err != nil {
 		db.DPrintf(db.SIGMACLNTSRV, "runServer err %v\n", err)
 		return err
@@ -189,14 +187,10 @@ func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip)
 }
 
 // Start the sigmaclntd process
-func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid, marshaledKeys []string) (*SigmaClntSrvCmd, error) {
+func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) (*SigmaClntSrvCmd, error) {
 	p.FinalizeEnv(innerIP, outerIP, uprocdPid)
 	db.DPrintf(db.SIGMACLNTSRV, "ExecSigmaclntsrv: %v", p)
-	if len(marshaledKeys) != 3 {
-		db.DPrintf(db.ERROR, "Sigmaclntd usage expects bootstrapped keys")
-		return nil, fmt.Errorf("Sigmaclntd usage expects bootstrapped keys")
-	}
-	cmd := exec.Command("sigmaclntd", marshaledKeys...)
+	cmd := exec.Command("sigmaclntd")
 	cmd.Env = p.GetEnv()
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

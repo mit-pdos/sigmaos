@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/auth"
 	"sigmaos/chunk"
 	proto "sigmaos/chunk/proto"
 	"sigmaos/chunkclnt"
@@ -423,7 +422,7 @@ func ReadChunk(pn string, ckid int, b []byte) error {
 	return nil
 }
 
-func Run(kernelId string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) {
+func Run(kernelId string) {
 	pe := proc.GetProcEnv()
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {

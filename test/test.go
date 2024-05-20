@@ -89,7 +89,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	}
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false, false)
 	pe.Program = "srv"
-	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM, sp.NoToken()))
+	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	return &TstateMin{
 		T:    t,

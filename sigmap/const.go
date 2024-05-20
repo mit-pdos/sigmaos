@@ -161,6 +161,5 @@ func NoPrincipal() *Tprincipal {
 	return &Tprincipal{
 		IDStr:    NO_PRINCIPAL_ID.String(),
 		RealmStr: NO_REALM.String(),
-		Token:    NoToken(),
 	}
 }

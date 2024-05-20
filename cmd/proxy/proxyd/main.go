@@ -35,7 +35,6 @@ func main() {
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
 		sp.ROOTREALM,
-		sp.NoToken(),
 	))
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	npc := netproxyclnt.NewNetProxyClnt(pe)

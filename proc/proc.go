@@ -77,7 +77,6 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		sp.NewPrincipal(
 			sp.TprincipalID(pid.String()),
 			sp.Trealm(sp.NOT_SET),
-			sp.NoToken(),
 		),
 		procdir,
 		sp.NOT_SET,
@@ -132,7 +131,6 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	// Don't override intentionally set net proxy settings
 	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
 	p.ProcEnvProto.VerifyEndpoints = p.ProcEnvProto.UseNetProxy && false
-	p.ProcEnvProto.ParentToken = parentPE.Principal.GetToken()
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
 	// If parent didn't specify allowed paths, inherit the parent's allowed paths
 	if p.ProcEnvProto.Claims.AllowedPaths == nil {
@@ -148,16 +146,8 @@ func (p *Proc) SetAllowedPaths(paths []string) {
 	p.ProcEnvProto.SetAllowedPaths(paths)
 }
 
-func (p *Proc) SetToken(token *sp.Ttoken) {
-	p.ProcEnvProto.SetToken(token)
-}
-
 func (p *Proc) GetPrincipal() *sp.Tprincipal {
 	return p.ProcEnvProto.GetPrincipal()
-}
-
-func (p *Proc) GetParentToken() *sp.Ttoken {
-	return p.ProcEnvProto.ParentToken
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
@@ -191,8 +181,6 @@ func (p *Proc) PrependSigmaPath(pn string) {
 // Finalize env details which can only be set once a physical machine and
 // uprocd container have been chosen.
 func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
-	// Clear parent token string
-	p.ProcEnvProto.ParentToken = sp.NoToken()
 	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
 	p.ProcEnvProto.SetUprocdPID(uprocdPid)

@@ -6,15 +6,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-
 	"sigmaos/auth"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/keys"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
@@ -300,19 +297,6 @@ func Run(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.Privat
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
-		masterPubKey,
-		nil,
-		sp.Tsigner(pe.GetPID()),
-		pubkey,
-		privkey,
-	)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DFatalf("Error NewAuthMgr %v", err)
-	}
-	sc.SetAuthMgr(amgr)
 	pq := NewProcQ(sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {

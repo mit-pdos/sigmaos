@@ -1,11 +1,8 @@
 package dbsrv
 
 import (
-	"github.com/golang-jwt/jwt"
-
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/keys"
 	"sigmaos/proc"
 	"sigmaos/sessdevsrv"
 	"sigmaos/sigmaclnt"
@@ -34,20 +31,6 @@ func RunDbd(dbdaddr string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, 
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 		return err
 	}
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
-		masterPubKey,
-		nil,
-		sp.Tsigner(pe.GetPID()),
-		pubkey,
-		privkey,
-	)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DFatalf("Error NewAuthMgr %v", err)
-	}
-	sc.SetAuthMgr(amgr)
-
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.DB, sc, s)
 	if err != nil {
 		return err

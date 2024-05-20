@@ -3,14 +3,12 @@ package mongosrv
 import (
 	"context"
 	"fmt"
-	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"sigmaos/auth"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/keys"
 	"sigmaos/mongosrv/proto"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -54,20 +52,6 @@ func RunMongod(mongodUrl string, masterPubKey auth.PublicKey, pubkey auth.Public
 	if err != nil {
 		dbg.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
-		masterPubKey,
-		nil,
-		sp.Tsigner(pe.GetPID()),
-		pubkey,
-		privkey,
-	)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		dbg.DFatalf(dbg.ERROR, "Error NewAuthMgr %v", err)
-	}
-	sc.SetAuthMgr(amgr)
-
 	dbg.DPrintf(dbg.MONGO, "Making mongo proxy server at %v", mongodUrl)
 	s, err := newServer(mongodUrl)
 	if err != nil {

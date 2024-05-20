@@ -4,12 +4,9 @@ import (
 	"path"
 	"sync"
 
-	"github.com/golang-jwt/jwt"
-
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/keys"
 	"sigmaos/keysrv/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -83,21 +80,6 @@ func RunKeySrv(masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	ks := NewKeySrv(masterPubKey)
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithLocalMapGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, &ks.mu, ks.keys),
-		masterPubKey,
-		masterPrivKey,
-		sp.Tsigner(sc.ProcEnv().GetKernelID()),
-		masterPubKey,
-		nil,
-	)
-	// Add the master deployment key, to allow connections from kernel to this
-	// named.
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DFatalf("Error New authsrv: %v", err)
-	}
-	sc.SetAuthMgr(amgr)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.KEYD, sc, ks)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

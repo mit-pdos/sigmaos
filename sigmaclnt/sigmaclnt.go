@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fdclnt"
 	"sigmaos/fidclnt"
@@ -109,7 +108,7 @@ func NewSigmaClntFsLib(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) (*Sigma
 
 func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
-	sc, err := NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
+	sc, err := NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
@@ -129,7 +128,7 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
 func NewSigmaClntRootInit(pe *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
+	sc, err := NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	if err != nil {
 		return nil, err
 	}
@@ -150,22 +149,6 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	db.DPrintf(db.SIGMACLNT, "EndLeases done")
 	defer db.DPrintf(db.SIGMACLNT, "ClntExit done")
 	return sc.FsLib.Close()
-}
-
-func (sc *SigmaClntKernel) SetAuthMgr(amgr auth.AuthMgr) {
-	sc.GetNetProxyClnt().SetAuthMgr(amgr)
-}
-
-func (sc *SigmaClntKernel) GetAuthMgr() auth.AuthMgr {
-	return sc.GetNetProxyClnt().GetAuthMgr()
-}
-
-func (sc *SigmaClnt) GetAuthMgr() auth.AuthMgr {
-	return sc.GetNetProxyClnt().GetAuthMgr()
-}
-
-func (sc *SigmaClnt) SetAuthMgr(amgr auth.AuthMgr) {
-	sc.GetNetProxyClnt().SetAuthMgr(amgr)
 }
 
 func (sc *SigmaClnt) ClntExitOK() {

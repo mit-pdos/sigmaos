@@ -9,14 +9,12 @@ import (
 	gopath "path"
 	"testing"
 
-	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/auth"
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	"sigmaos/keys"
 	"sigmaos/netproxyclnt"
 	"sigmaos/netsigma"
 	"sigmaos/path"
@@ -78,19 +76,14 @@ type TstateMin struct {
 	lip  sp.Tip
 	PE   *proc.ProcEnv
 	Addr *sp.Taddr
-	AMgr auth.AuthMgr
 }
 
 func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
-	_, _, amgr, err := NewAuthMgr()
-	if !assert.Nil(t, err, "Error new auth srv: %v", err) {
-		return nil
-	}
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1, "Error load s3 secrets: %v", err1)
 	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
 	lip := sp.Tip("127.0.0.1")
-	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(amgr, sp.Tip(EtcdIP))
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(EtcdIP))
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil
 	}
@@ -103,7 +96,6 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 		lip:  lip,
 		PE:   pe,
 		Addr: addr,
-		AMgr: amgr,
 	}
 }
 
@@ -124,7 +116,6 @@ type Tstate struct {
 	scsck         *bootkernelclnt.Kernel
 	masterPubKey  auth.PublicKey
 	masterPrivKey auth.PrivateKey
-	amgr          auth.AuthMgr
 }
 
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
@@ -166,34 +157,6 @@ func NewTstateWithRealms(t *testing.T) (*Tstate, error) {
 	return ts, nil
 }
 
-func NewAuthMgr() (auth.PublicKey, auth.PrivateKey, auth.AuthMgr, error) {
-	var pubkey auth.PublicKey
-	var privkey auth.PrivateKey
-	var err error
-	if loadMasterKey {
-		// Load master deployment key from Host FS
-		pubkey, privkey, err = keys.LoadMasterECDSAKey()
-		if err != nil {
-			return nil, nil, nil, err
-		}
-	} else {
-		// Genereate a fresh master deployment key
-		pubkey, privkey, err = keys.NewECDSAKey()
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
-			return nil, nil, nil, err
-		}
-	}
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
-	kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, privkey)
-	amgr, err1 := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, sp.NOT_SET, kmgr)
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthMgr: %v", err1)
-		return nil, nil, nil, err1
-	}
-	return pubkey, privkey, amgr, nil
-}
-
 func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
 		return newSysClnt(t, BOOT_NAMED)
@@ -216,16 +179,12 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1
 	}
-	pubkey, privkey, amgr, err := NewAuthMgr()
-	if !assert.Nil(t, err, "Error new auth srv: %v", err) {
-		return nil, err
-	}
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Failed to load AWS secrets %v", err1)
 		return nil, err1
 	}
-	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(amgr, sp.Tip(EtcdIP))
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(EtcdIP))
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil, err
 	}
@@ -235,16 +194,11 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	verifyMounts := false && useNetProxy
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy, verifyMounts)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	err1 = amgr.MintAndSetProcToken(pe)
-	if err1 != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err1)
-		return nil, err1
-	}
 	var kernelid string
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, srvs, Overlays, GVisor, useNetProxy, pubkey, privkey)
+		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, srvs, Overlays, GVisor, useNetProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -255,7 +209,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if useSigmaclntd || useNetProxy {
 		db.DPrintf(db.BOOT, "Booting sigmaclntd: usesigmaclntd %v usenetproxy %v", useSigmaclntd, useNetProxy)
 		sckid = bootkernelclnt.GenKernelId() + "-sigmaclntd-kernel"
-		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SIGMACLNTDREL, Overlays, GVisor, useNetProxy, pubkey, privkey)
+		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SIGMACLNTDREL, Overlays, GVisor, useNetProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for sigmaclntd")
 			return nil, err
@@ -272,15 +226,12 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err
 	}
 	savedTstate = &Tstate{
-		srvs:          srvs,
-		SigmaClnt:     k.SigmaClnt,
-		kclnts:        []*bootkernelclnt.Kernel{k},
-		killidx:       0,
-		T:             t,
-		scsck:         scsck,
-		masterPubKey:  pubkey,
-		masterPrivKey: privkey,
-		amgr:          amgr,
+		srvs:      srvs,
+		SigmaClnt: k.SigmaClnt,
+		kclnts:    []*bootkernelclnt.Kernel{k},
+		killidx:   0,
+		T:         t,
+		scsck:     scsck,
 	}
 	return savedTstate, nil
 }
@@ -291,7 +242,7 @@ func (ts *Tstate) BootNode(n int) error {
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), BOOT_NODE, Overlays, GVisor, useNetProxy, ts.masterPubKey, ts.masterPrivKey)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), BOOT_NODE, Overlays, GVisor, useNetProxy)
 		if err != nil {
 			return err
 		}
@@ -312,18 +263,6 @@ func (ts *Tstate) BootFss3d() error {
 	// node
 	savedTstate = nil
 	return ts.Boot(sp.S3REL)
-}
-
-func (ts *Tstate) MintAndSetEndpointToken(ep *sp.Tendpoint) error {
-	return ts.amgr.MintAndSetEndpointToken(ep)
-}
-
-func (ts *Tstate) MintAndSetProcToken(pe *proc.ProcEnv) error {
-	return ts.amgr.MintAndSetProcToken(pe)
-}
-
-func (ts *Tstate) MintProcToken(pc *auth.ProcClaims) (*sp.Ttoken, error) {
-	return ts.amgr.MintProcToken(pc)
 }
 
 func (ts *Tstate) KillOne(s string) error {
@@ -400,7 +339,7 @@ func Dump(t *testing.T) {
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, nil, "", "", "", false, false, false, verifyMounts)
 	assert.False(t, true, "Unimplemented")
 	return
-	npc := netproxyclnt.NewNetProxyClnt(pe, nil)
+	npc := netproxyclnt.NewNetProxyClnt(pe)
 	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.ROOT)

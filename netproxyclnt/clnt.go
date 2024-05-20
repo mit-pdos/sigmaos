@@ -8,7 +8,6 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/netproxy"
@@ -24,42 +23,21 @@ import (
 
 type NetProxyClnt struct {
 	sync.Mutex
-	lidctr           netproxy.Tlidctr
-	pe               *proc.ProcEnv
-	canSignEndpoints bool
-	verifyEndpoints  bool
-	auth             auth.AuthMgr
-	lm               *netproxy.ListenerMap
-	seqcntr          *sessp.Tseqcntr
-	trans            *netproxytrans.NetProxyTrans
-	dmx              *demux.DemuxClnt
-	rpcc             *rpcclnt.RPCClnt
+	lidctr  netproxy.Tlidctr
+	pe      *proc.ProcEnv
+	lm      *netproxy.ListenerMap
+	seqcntr *sessp.Tseqcntr
+	trans   *netproxytrans.NetProxyTrans
+	dmx     *demux.DemuxClnt
+	rpcc    *rpcclnt.RPCClnt
 }
 
-func NewNetProxyClnt(pe *proc.ProcEnv, amgr auth.AuthMgr) *NetProxyClnt {
+func NewNetProxyClnt(pe *proc.ProcEnv) *NetProxyClnt {
 	return &NetProxyClnt{
-		pe:               pe,
-		canSignEndpoints: amgr != nil,
-		verifyEndpoints:  pe.GetVerifyEndpoints(),
-		auth:             amgr,
-		seqcntr:          new(sessp.Tseqcntr),
-		lm:               netproxy.NewListenerMap(),
+		pe:      pe,
+		seqcntr: new(sessp.Tseqcntr),
+		lm:      netproxy.NewListenerMap(),
 	}
-}
-
-func (npc *NetProxyClnt) SetAuthMgr(amgr auth.AuthMgr) {
-	npc.Lock()
-	defer npc.Unlock()
-
-	npc.auth = amgr
-	npc.canSignEndpoints = true
-}
-
-func (npc *NetProxyClnt) GetAuthMgr() auth.AuthMgr {
-	npc.Lock()
-	defer npc.Unlock()
-
-	return npc.auth
 }
 
 func (npc *NetProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
@@ -97,11 +75,6 @@ func (npc *NetProxyClnt) Listen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Tendpoin
 		}
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directListen %v", addr)
-		if npc.verifyEndpoints && !npc.canSignEndpoints {
-			err := fmt.Errorf("Try to listen on netproxyclnt without AuthMgr")
-			db.DPrintf(db.ERROR, "Err listen: %v", err)
-			return nil, nil, err
-		}
 		ep, l, err = npc.directListen(ept, addr)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
@@ -199,10 +172,6 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 		db.DPrintf(db.ERROR, "Dial endpoint without realm set: %v", ep)
 		return nil, fmt.Errorf("Realm not set")
 	}
-	if !ep.IsSigned() && npc.verifyEndpoints {
-		db.DPrintf(db.ERROR, "Dial unsigned endpoint: %v", ep)
-		return nil, fmt.Errorf("Endpoint not signed")
-	}
 	req := &proto.DialRequest{
 		Endpoint: ep.GetProto(),
 		// Requests must have blob too, so that unix sendmsg works
@@ -274,7 +243,7 @@ func (npc *NetProxyClnt) directListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Te
 		db.DPrintf(db.ERROR, "Error ListenDirect: %v", err)
 		return nil, nil, err
 	}
-	ep, err := netproxy.NewEndpoint(ept, npc.verifyEndpoints, npc.auth, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
+	ep, err := netproxy.NewEndpoint(ept, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error construct endpoint: %v", err)
 		return nil, nil, err

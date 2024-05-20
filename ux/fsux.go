@@ -4,12 +4,9 @@ import (
 	"path"
 	"sync"
 
-	"github.com/golang-jwt/jwt"
-
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/keys"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -36,20 +33,6 @@ func RunFsUx(rootux string, masterPubKey auth.PublicKey, pubkey auth.PublicKey, 
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
-		masterPubKey,
-		nil,
-		sp.Tsigner(pe.GetPID()),
-		pubkey,
-		privkey,
-	)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DFatalf("Error NewAuthMgr %v", err)
-	}
-	sc.SetAuthMgr(amgr)
-
 	ip, err := netsigma.LocalIP()
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)

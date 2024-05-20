@@ -14,8 +14,6 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/golang-jwt/jwt"
-
 	"sigmaos/auth"
 	"sigmaos/binsrv"
 	"sigmaos/chunkclnt"
@@ -24,7 +22,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
-	"sigmaos/keys"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -111,19 +108,6 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	ups.sc = sc
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
-		masterPubKey,
-		nil,
-		sp.Tsigner(pe.GetPID()),
-		pubkey,
-		privkey,
-	)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DFatalf("Error NewAuthMgr %v", err)
-	}
-	sc.SetAuthMgr(amgr)
 	var ssrv *sigmasrv.SigmaSrv
 	if up == sp.NO_PORT.String() {
 		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())

@@ -1,8 +1,6 @@
 package fslib
 
 import (
-	"fmt"
-
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -10,10 +8,6 @@ import (
 )
 
 func (fsl *FsLib) MkEndpointFile(pn string, ep *sp.Tendpoint, lid sp.TleaseId) error {
-	if !ep.IsSigned() && fsl.ProcEnv().GetVerifyEndpoints() {
-		db.DPrintf(db.ERROR, "Error make unsigned endpoint file")
-		return fmt.Errorf("Unsigned endpoint: %v", ep)
-	}
 	b, err := ep.Marshal()
 	if err != nil {
 		return err

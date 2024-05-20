@@ -6,13 +6,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	"sigmaos/keys"
 	lcproto "sigmaos/lcschedsrv/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
@@ -36,7 +33,6 @@ type Schedd struct {
 	pmgr                *procmgr.ProcMgr
 	scheddclnt          *scheddclnt.ScheddClnt
 	procqclnt           *procqclnt.ProcQClnt
-	amgr                auth.AuthMgr
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
 	kernelId            string
@@ -49,15 +45,14 @@ type Schedd struct {
 	nProcGetsSuccessful atomic.Uint64
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, amgr auth.AuthMgr) *Schedd {
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
-		pmgr:        procmgr.NewProcMgr(amgr, sc, kernelId),
+		pmgr:        procmgr.NewProcMgr(sc, kernelId),
 		scheddStats: make(map[sp.Trealm]*realmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
 		kernelId:    kernelId,
 		sc:          sc,
-		amgr:        amgr,
 		cpuStats:    &cpuStats{},
 	}
 	sd.cond = sync.NewCond(&sd.mu)
@@ -260,10 +255,6 @@ func (sd *Schedd) procDone(p *proc.Proc) {
 
 func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
 	p.SetKernelID(sd.kernelId, false)
-	// Set the new proc's token
-	if err := sd.amgr.SetDelegatedProcToken(p); err != nil {
-		db.DPrintf(db.ERROR, "Error SetToken: %v", err)
-	}
 	sd.pmgr.Spawn(p)
 	// Run the proc
 	go sd.runProc(p)
@@ -317,21 +308,7 @@ func RunSchedd(kernelId string, reserveMcpu uint, masterPubKey auth.PublicKey, p
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
-		masterPubKey,
-		nil,
-		sp.Tsigner(sc.ProcEnv().GetPID()),
-		pubkey,
-		privkey,
-	)
-	db.DPrintf(db.SCHEDD, "kmgr %v", kmgr)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DFatalf("Error NewAuthMgr: %v", err)
-	}
-	sc.SetAuthMgr(amgr)
-	sd := NewSchedd(sc, kernelId, reserveMcpu, amgr)
+	sd := NewSchedd(sc, kernelId, reserveMcpu)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

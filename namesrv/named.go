@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-
 	"sigmaos/auth"
 	"sigmaos/crash"
 	db "sigmaos/debug"
@@ -142,7 +140,6 @@ func Run(args []string) error {
 		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = path.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
-		nd.GetAuthMgr().MintAndSetEndpointToken(ep)
 		if err := nd.MkEndpointFile(pn, ep, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v\n", nd.realm, pn, err)
 			return err
@@ -195,24 +192,6 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		pi = pi0
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
 	}
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.SigmaClnt),
-		nd.masterPublicKey,
-		nd.masterPrivKey,
-		nd.signer,
-		nd.pubkey,
-		nd.privkey,
-		//		sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()),
-		//		nd.masterPublicKey,
-		//		nil,
-	)
-	kmgr.AddPublicKey(sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()), nd.masterPublicKey)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.signer, sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error New authsrv: %v", err)
-		return nil, fmt.Errorf("NewAuthMgr err: %v", err)
-	}
-	nd.SigmaClnt.SetAuthMgr(amgr)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)

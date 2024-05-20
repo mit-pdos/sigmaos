@@ -10,12 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-
-	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/keyclnt"
-	"sigmaos/keys"
 	"sigmaos/kproc"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
@@ -37,42 +32,37 @@ const (
 )
 
 type Param struct {
-	KernelID      string
-	Services      []string
-	Dbip          string
-	Mongoip       string
-	Overlays      bool
-	NetProxy      bool
-	BuildTag      string
-	GVisor        bool
-	ReserveMcpu   string
-	MasterPubKey  auth.PublicKey
-	MasterPrivKey auth.PrivateKey
+	KernelID    string
+	Services    []string
+	Dbip        string
+	Mongoip     string
+	Overlays    bool
+	NetProxy    bool
+	BuildTag    string
+	GVisor      bool
+	ReserveMcpu string
 }
 
 type Kernel struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClntKernel
-	kc           *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
 	Param        *Param
 	realms       map[sp.Trealm]*sigmaclnt.SigmaClntKernel
 	svcs         *Services
 	ip           sp.Tip
-	amgr         auth.AuthMgr
 	shuttingDown bool
 }
 
-func newKernel(param *Param, bootstrapAS auth.AuthMgr) *Kernel {
+func newKernel(param *Param) *Kernel {
 	return &Kernel{
 		realms: make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
 		Param:  param,
-		amgr:   bootstrapAS,
 		svcs:   newServices(),
 	}
 }
 
-func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthMgr) (*Kernel, error) {
-	k := newKernel(p, bootstrapAS)
+func NewKernel(p *Param, pe *proc.ProcEnv) (*Kernel, error) {
+	k := newKernel(p)
 	ip, err := netsigma.LocalIP()
 	if err != nil {
 		return nil, err
@@ -81,9 +71,7 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthMgr) (*Kernel, e
 	k.ip = ip
 	pe.SetInnerContainerIP(ip)
 	pe.SetOuterContainerIP(ip)
-	isFirstKernel := false
 	if p.Services[0] == sp.KNAMED {
-		isFirstKernel = true
 		if err := k.bootKNamed(pe, true); err != nil {
 			return nil, err
 		}
@@ -94,47 +82,12 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthMgr) (*Kernel, e
 		db.DPrintf(db.ALWAYS, "Error NewSigmaClntProc: %v", err)
 		return nil, err
 	}
-	k.kc = keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](sc)
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
-	if !isFirstKernel {
-		// Post kernel key before booting any services, if this is a node added to
-		// the cluster (not the initial kernel/node in the cluster). If it is the
-		// first kernel, we have to boot keyd before we can post the kernel key.
-		if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
-			db.DPrintf(db.ERROR, "Error post kernel key after boot: %v", err)
-			return nil, err
-		}
-	}
-	// Create an AuthServer which dynamically pulls keys from the namespace, now
-	// that knamed has booted.
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
-		k.Param.MasterPubKey,
-		k.Param.MasterPrivKey,
-		sp.Tsigner(k.ProcEnv().GetPID()),
-		k.Param.MasterPubKey,
-		k.Param.MasterPrivKey,
-	)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(k.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthMgr %v", err)
-		return nil, err
-	}
-	k.amgr = amgr
-	k.SigmaClntKernel.SetAuthMgr(amgr)
 	db.DPrintf(db.KERNEL, "Kernel start srvs %v", k.Param.Services)
 	err = startSrvs(k)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
 		return nil, err
-	}
-	if isFirstKernel {
-		// Post kernel key, if this was the first kernel, since we have now booted
-		// keyd
-		if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
-			db.DPrintf(db.ERROR, "Error post kernel key after boot: %v", err)
-			return nil, err
-		}
 	}
 	if len(k.svcs.svcs[sp.KNAMED]) > 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
 		// a kernel with knamed and named; stop knamed
@@ -182,10 +135,6 @@ func (k *Kernel) getRealmSigmaClnt(realm sp.Trealm) (*sigmaclnt.SigmaClntKernel,
 	}
 	pe := proc.NewDifferentRealmProcEnv(k.ProcEnv(), realm)
 	pe.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.amgr.MintAndSetProcToken(pe); err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return nil, err
-	}
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewSigmaClnt: %v", err)
@@ -266,12 +215,12 @@ func (k *Kernel) shutdown() {
 	db.DPrintf(db.KERNEL, "Shutdown nameds done %d\n", len(k.svcs.svcs[sp.KNAMED]))
 }
 
-func newKNamedProc(realmId sp.Trealm, init bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*proc.Proc, error) {
+func newKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 	i := "start"
 	if init {
 		i = "init"
 	}
-	args := []string{realmId.String(), i, masterPubKey.Marshal(), masterPrivKey.Marshal()}
+	args := []string{realmId.String(), i, "xxx", "xxx"}
 	p := proc.NewPrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }

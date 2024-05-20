@@ -8,12 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/golang-jwt/jwt"
-
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/keys"
 	"sigmaos/path"
 	"sigmaos/perf"
 	proc "sigmaos/proc"
@@ -68,19 +65,6 @@ func RunFss3(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.Pr
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	kmgr := keys.NewKeyMgrWithBootstrappedKeys(
-		keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc),
-		masterPubKey,
-		nil,
-		sp.Tsigner(pe.GetPID()),
-		pubkey,
-		privkey,
-	)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DFatalf("Error NewAuthMgr %v", err)
-	}
-	sc.SetAuthMgr(amgr)
 	fss3 = &Fss3{
 		clients: make(map[sp.TprincipalID]*s3.Client),
 	}

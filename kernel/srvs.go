@@ -141,16 +141,12 @@ func (k *Kernel) KillOne(srv string) error {
 }
 
 func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
-	p, err := newKNamedProc(sp.ROOTREALM, init, k.Param.MasterPubKey, k.Param.MasterPrivKey)
+	p, err := newKNamedProc(sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}
 	p.GetProcEnv().SetRealm(sp.ROOTREALM, k.Param.Overlays)
 	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.amgr.MintAndSetProcToken(p.GetProcEnv()); err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return err
-	}
 	p.SetKernelID(k.Param.KernelID, false)
 	cmd, err := runKNamed(pe, p, sp.ROOTREALM, init)
 	if err != nil {
@@ -194,12 +190,8 @@ func (k *Kernel) bootProcq() (Subsystem, error) {
 }
 
 func (k *Kernel) bootKeyd() (Subsystem, error) {
-	ss, err := k.bootSubsystem("keyd", []string{k.Param.MasterPubKey.Marshal(), k.Param.MasterPrivKey.Marshal()}, sp.ROOTREALM, proc.HLINUX)
+	ss, err := k.bootSubsystem("keyd", []string{}, sp.ROOTREALM, proc.HLINUX)
 	if err == nil {
-		if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
-			db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
-			return nil, err
-		}
 	}
 	return ss, err
 }
@@ -222,10 +214,6 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
 	p.SetAllowedPaths(sp.ALL_PATHS)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
-	if err := k.amgr.MintAndSetProcToken(p.GetProcEnv()); err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return nil, err
-	}
 	p.SetHow(proc.HLINUX)
 	p.InheritParentProcEnv(k.ProcEnv())
 	return sigmaclntsrv.ExecSigmaClntSrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"), keys)
@@ -262,9 +250,6 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		// to uprocd.
 		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
 		ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{addr}, sp.ROOTREALM)
-		if err := k.amgr.MintAndSetEndpointToken(ep); err != nil {
-			return nil, err
-		}
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
 		if err := k.MkEndpointFile(pn, ep, sp.NoLeaseId); err != nil {
 			return nil, err

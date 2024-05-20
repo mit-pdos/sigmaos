@@ -90,10 +90,6 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.amgr.MintAndSetProcToken(p.GetProcEnv()); err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return nil, err
-	}
 	p.SetMcpu(mcpu)
 	var sck *sigmaclnt.SigmaClntKernel
 	var err error
@@ -115,13 +111,8 @@ func (k *Kernel) bootstrapKeys(pid sp.Tpid) ([]string, error) {
 		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
 		return nil, err
 	}
-	// Post the public key for the subsystem
-	if err := k.kc.SetKey(sp.Tsigner(pid), pubkey); err != nil {
-		db.DPrintf(db.ERROR, "Error post subsystem key: %v", err)
-		return nil, err
-	}
 	return []string{
-		k.Param.MasterPubKey.Marshal(),
+		pubkey.Marshal(),
 		pubkey.Marshal(),
 		privkey.Marshal(),
 	}, nil

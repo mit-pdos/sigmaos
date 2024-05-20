@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] [--pubkey PUB_KEY] [--privkey PRIV_KEY] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -19,8 +19,6 @@ KERNELID=""
 OVERLAYS="false"
 GVISOR="false"
 NETPROXY="false"
-PUB_KEY="NOT_SET"
-PRIV_KEY="NOT_SET"
 RMCPU="0"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
@@ -28,19 +26,19 @@ while [[ "$#" -gt 1 ]]; do
     shift
     case "$1" in
         "all")
-            BOOT="knamed;keyd;procq;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;procq;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
             ;;
         "node")
             BOOT="procq;schedd;ux;s3;db;chunkd;mongo"
             ;;
         "named")
-            BOOT="knamed;keyd"
+            BOOT="knamed"
             ;;
         "sigmaclntd")
             BOOT="sigmaclntd"
             ;;
         "realm")
-            BOOT="knamed;keyd;procq;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;procq;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
             ;;
         *)
             echo "unexpected argument $1 to boot"
@@ -70,16 +68,6 @@ while [[ "$#" -gt 1 ]]; do
   --usenetproxy)
     shift
     NETPROXY="true"
-    ;;
-  --pubkey)
-    shift
-    PUB_KEY=$1
-    shift
-    ;;
-  --privkey)
-    shift
-    PRIV_KEY=$1
-    shift
     ;;
   --named)
     shift
@@ -149,16 +137,6 @@ if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q sigmamongo; then
   MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
 fi
 
-if [ "$PRIV_KEY" == "NOT_SET" ]; then
-  openssl ecparam -name prime256v1 -genkey -noout -out /tmp/sigmaos/master-key.priv -outform DER
-  PRIV_KEY="$(cat /tmp/sigmaos/master-key.priv | base64 | awk '{$1=$1;print}')"
-  openssl ec -in /tmp/sigmaos/master-key.priv -pubout -out /tmp/sigmaos/master-key.pub -outform DER
-  PUB_KEY="$(cat /tmp/sigmaos/master-key.pub | base64 | awk '{$1=$1;print}')"
-fi
-
-echo -n "$PRIV_KEY" | awk '{$1=$1;print}' > /tmp/sigmaos/master-key.priv 
-echo -n "$PUB_KEY" | awk '{$1=$1;print}' > /tmp/sigmaos/master-key.pub
-
 # If running in local configuration, mount bin directory.
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
@@ -193,8 +171,6 @@ CID=$(docker run -dit \
              -e buildtag=${TAG} \
              -e gvisor=${GVISOR} \
              -e netproxy=${NETPROXY} \
-             -e pubkey="${PUB_KEY}" \
-             -e privkey="${PRIV_KEY}" \
              -e SIGMAPERF=${SIGMAPERF} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \

@@ -8,7 +8,6 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/auth"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/demux"
@@ -27,7 +26,6 @@ import (
 )
 
 type NetProxySrv struct {
-	auth             auth.AuthMgr
 	innerContainerIP sp.Tip
 	sc               *sigmaclnt.SigmaClnt
 	pe               *proc.ProcEnv
@@ -41,7 +39,6 @@ type NetProxySrvStubs struct {
 	trans            *netproxytrans.NetProxyTrans
 	conn             *net.UnixConn
 	innerContainerIP sp.Tip
-	auth             auth.AuthMgr
 	directDialFn     netproxy.DialFn
 	directListenFn   netproxy.ListenFn
 	rpcs             *rpcsrv.RPCSrv
@@ -51,7 +48,7 @@ type NetProxySrvStubs struct {
 	sc               *sigmaclnt.SigmaClnt
 }
 
-func NewNetProxySrv(pe *proc.ProcEnv, amgr auth.AuthMgr) (*NetProxySrv, error) {
+func NewNetProxySrv(pe *proc.ProcEnv) (*NetProxySrv, error) {
 	// Create the net proxy socket
 	socket, err := net.Listen("unix", sp.SIGMA_NETPROXY_SOCKET)
 	if err != nil {
@@ -62,7 +59,6 @@ func NewNetProxySrv(pe *proc.ProcEnv, amgr auth.AuthMgr) (*NetProxySrv, error) {
 	}
 	db.DPrintf(db.TEST, "runServer: netproxysrv listening on %v", sp.SIGMA_NETPROXY_SOCKET)
 	nps := &NetProxySrv{
-		auth:             amgr,
 		innerContainerIP: pe.GetInnerContainerIP(),
 		pe:               pe,
 	}
@@ -94,7 +90,6 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 	npss := &NetProxySrvStubs{
 		lm:               netproxy.NewListenerMap(),
 		trans:            netproxytrans.NewNetProxyTrans(conn, demux.NewIoVecMap()),
-		auth:             nps.auth,
 		conn:             conn,
 		innerContainerIP: nps.innerContainerIP,
 		directListenFn:   netproxy.ListenDirect,
@@ -165,7 +160,7 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 		res.Err = sp.NewRerrorErr(err)
 		return nil
 	}
-	ep, err := netproxy.NewEndpoint(sp.TTendpoint(req.EndpointType), true, nps.auth, nps.innerContainerIP, ctx.Principal().GetRealm(), l)
+	ep, err := netproxy.NewEndpoint(sp.TTendpoint(req.EndpointType), nps.innerContainerIP, ctx.Principal().GetRealm(), l)
 	if err != nil {
 		db.DFatalf("Error construct endpoint: %v", err)
 		return err

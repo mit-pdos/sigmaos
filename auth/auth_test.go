@@ -122,8 +122,6 @@ func TestMaliciousPrincipalKeydFail(t *testing.T) {
 		sp.TprincipalID("scoped-down-principal"),
 		pe.GetRealm(),
 	))
-	// Restrict paths to only allow reads of keyd, not writes
-	pe.SetAllowedPaths(RONLY_KEYD)
 	// Create a new, more restricted sigmaclnt
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "Err NewClnt: %v", err)
@@ -177,8 +175,6 @@ func TestDelegateNoAccessFail(t *testing.T) {
 	}
 
 	p1 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
-	// Wipe the list of allowed paths (except for schedd)
-	p1.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*")})
 
 	err := rootts.Spawn(p1)
 	assert.Nil(t, err, "Spawn")
@@ -205,8 +201,6 @@ func TestDelegatePartialAccess(t *testing.T) {
 	}
 
 	p1 := proc.NewProc("dirreader", []string{path.Join(sp.S3, "~any")})
-	// Only allow access to S3
-	p1.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*")})
 
 	err := rootts.Spawn(p1)
 	assert.Nil(t, err, "Spawn")
@@ -223,8 +217,6 @@ func TestDelegatePartialAccess(t *testing.T) {
 	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
 
 	p2 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
-	// Only allow access to UX
-	p2.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.UX, "*")})
 
 	err = rootts.Spawn(p2)
 	assert.Nil(t, err, "Spawn")

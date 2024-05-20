@@ -3,16 +3,13 @@ package auth_test
 import (
 	"path"
 	"testing"
-	"time"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/keyclnt"
-	"sigmaos/keys"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -24,106 +21,6 @@ const (
 )
 
 func TestCompile(t *testing.T) {
-}
-
-func TestSignHMACToken(t *testing.T) {
-	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
-	assert.Nil(t, err, "Err NewKey: %v", err)
-	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, key.B64())
-	assert.Nil(t, err, "Err NewPublicKey: %v", err)
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
-	kmgr.AddPrivateKey("test", key)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", sp.NOT_SET, kmgr)
-	assert.Nil(t, err, "Err make auth clnt: %v", err)
-	// Create the Claims
-	claims := &auth.ProcClaims{
-		PrincipalID:  "my-principal",
-		AllowedPaths: []string{"/*"},
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: 15000, // TODO: how to set these properly?
-			Issuer:    "test",
-		},
-	}
-	signedToken, err := amgr.MintProcToken(claims)
-	assert.Nil(t, err, "Err sign token: %v", err)
-	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
-}
-
-func TestVerifyHMACToken(t *testing.T) {
-	key, err := keys.NewSymmetricKey(sp.KEY_LEN)
-	assert.Nil(t, err, "Err NewKey: %v", err)
-	pubkey, err := auth.NewPublicKey[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, key.B64())
-	assert.Nil(t, err, "Err NewPublicKey: %v", err)
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
-	kmgr.AddPrivateKey("test", key)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodHMAC](jwt.SigningMethodHS256, "test", sp.NOT_SET, kmgr)
-	assert.Nil(t, err, "Err make auth clnt: %v", err)
-	// Create the Claims
-	claims := &auth.ProcClaims{
-		PrincipalID:  "my-principal",
-		AllowedPaths: []string{"/*"},
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
-			Issuer:    "test",
-		},
-	}
-	s := time.Now()
-	signedToken, err := amgr.MintProcToken(claims)
-	assert.Nil(t, err, "Err sign token: %v", err)
-	db.DPrintf(db.TEST, "Signed token in %v", time.Since(s))
-	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
-	s = time.Now()
-	claims2, err := amgr.VerifyProcTokenGetClaims("my-principal", signedToken)
-	assert.Nil(t, err, "Err verify token get claims: %v", err)
-	db.DPrintf(db.TEST, "Verified token in %v", time.Since(s))
-	db.DPrintf(db.TEST, "Verified token: %v", claims2)
-}
-
-func TestSignECDSAToken(t *testing.T) {
-	pubkey, privkey, err := keys.NewECDSAKey()
-	assert.Nil(t, err, "Err NewKey: %v", err)
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
-	kmgr.AddPrivateKey("test", privkey)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, "test", sp.NOT_SET, kmgr)
-	assert.Nil(t, err, "Err make auth clnt: %v", err)
-	// Create the Claims
-	claims := &auth.ProcClaims{
-		PrincipalID:  "my-principal",
-		AllowedPaths: []string{"/*"},
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: 15000, // TODO: how to set these properly?
-			Issuer:    "test",
-		},
-	}
-	signedToken, err := amgr.MintProcToken(claims)
-	assert.Nil(t, err, "Err sign token: %v", err)
-	db.DPrintf(db.TEST, "Signed token: %v", signedToken)
-}
-
-func TestVerifyECDSAToken(t *testing.T) {
-	pubkey, privkey, err := keys.NewECDSAKey()
-	assert.Nil(t, err, "Err NewKey: %v", err)
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(pubkey))
-	kmgr.AddPrivateKey("test", privkey)
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, "test", sp.NOT_SET, kmgr)
-	assert.Nil(t, err, "Err make auth clnt: %v", err)
-	// Create the Claims
-	claims := &auth.ProcClaims{
-		PrincipalID:  "my-principal",
-		AllowedPaths: []string{"/*"},
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
-			Issuer:    "test",
-		},
-	}
-	s := time.Now()
-	signedToken, err := amgr.MintProcToken(claims)
-	assert.Nil(t, err, "Err sign token: %v", err)
-	db.DPrintf(db.TEST, "Signed token in %v sec: %v", time.Since(s).Seconds(), signedToken)
-	s = time.Now()
-	claims2, err := amgr.VerifyProcTokenGetClaims("my-principal", signedToken)
-	assert.Nil(t, err, "Err verify token get claims: %v", err)
-	db.DPrintf(db.TEST, "Verified token: in %v sec: %v", time.Since(s).Seconds(), claims2)
 }
 
 func TestStartStop(t *testing.T) {
@@ -146,68 +43,6 @@ func TestStartMultiNodeStop(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestInspectNamespaceOK(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	sts, err := rootts.GetDir(sp.NAMED)
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "realm named root %v", sp.Names(sts))
-
-	assert.True(t, fslib.Present(sts, []string{sp.UXREL}), "initfs")
-
-	sts, err = rootts.GetDir(path.Join(sp.S3, "~local", "9ps3"))
-	assert.Nil(t, err, "Error getdir: %v", err)
-
-	db.DPrintf(db.TEST, "9ps3 root %v", sp.Names(sts))
-
-	sts, err = rootts.GetDir(sp.SCHEDD)
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "realm names sched %v", sp.Names(sts))
-
-	sts2, err := rootts.GetDir(path.Join(sp.SCHEDD, sts[0].Name) + "/")
-	assert.Nil(t, err, "Err getdir: %v", err)
-
-	db.DPrintf(db.TEST, "sched contents %v", sp.Names(sts2))
-
-	rootts.Shutdown()
-}
-
-// Test that a principal without a signed token can't access anything
-func TestMaliciousPrincipalFail(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	// Create a new sigma clnt, with an unexpected principal
-	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
-	pe.SetPrincipal(sp.NewPrincipal(
-		sp.TprincipalID("malicious-user"),
-		pe.GetRealm(),
-		sp.NoToken(),
-	))
-	sc1, err := sigmaclnt.NewSigmaClnt(pe)
-	assert.Nil(t, err, "Err NewClnt: %v", err)
-
-	_, err = sc1.GetDir(sp.NAMED)
-	assert.NotNil(t, err)
-
-	sts, err := rootts.GetDir(sp.SCHEDD)
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "realm names sched %v", sp.Names(sts))
-
-	_, err = sc1.GetDir(path.Join(sp.SCHEDD, sts[0].Name) + "/")
-	assert.NotNil(t, err)
-
-	rootts.Shutdown()
-}
-
 // Test that a principal without a signed token can't access anything
 func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
@@ -224,12 +59,9 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
 		pe.GetRealm(),
-		sp.NoToken(),
 	))
 	// Clear AWS secrets
-	pe.SetSecrets(map[string]*proc.ProcSecretProto{})
-	err = rootts.MintAndSetProcToken(pe)
-	assert.Nil(t, err)
+	pe.SetSecrets(map[string]*sp.SecretProto{})
 
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "Err NewClnt: %v", err)
@@ -289,12 +121,9 @@ func TestMaliciousPrincipalKeydFail(t *testing.T) {
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
 		pe.GetRealm(),
-		sp.NoToken(),
 	))
 	// Restrict paths to only allow reads of keyd, not writes
 	pe.SetAllowedPaths(RONLY_KEYD)
-	err = rootts.MintAndSetProcToken(pe)
-	assert.Nil(t, err)
 	// Create a new, more restricted sigmaclnt
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "Err NewClnt: %v", err)
@@ -415,60 +244,6 @@ func TestDelegatePartialAccess(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestTryDelegateNonSubsetToChildFail(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	// Create a new proc env to create a new client
-	pe := proc.NewAddedProcEnv(rootts.ProcEnv())
-	// Only let it talk to schedd and named
-	pe.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.PROCQ, "*")})
-	pc := auth.NewProcClaims(pe)
-	token, err := rootts.MintProcToken(pc)
-	assert.Nil(t, err)
-	// Set the token of the proc env to the newly authorized token
-	pe.SetToken(token)
-
-	// Create a new client with the proc env
-	sc1, err := sigmaclnt.NewSigmaClnt(pe)
-	assert.Nil(t, err, "Err NewClnt: %v", err)
-
-	// Spawn a proc which can read a subset of the parent's allowed paths
-	p1 := proc.NewProc("dirreader", []string{path.Join(sp.SCHEDD, "~any")})
-	// Wipe the list of allowed paths (except for schedd)
-	p1.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*")})
-	err = sc1.Spawn(p1)
-	assert.Nil(t, err, "Spawn")
-	db.DPrintf(db.TEST, "Spawned proc")
-	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := sc1.WaitExit(p1.GetPid())
-	db.DPrintf(db.TEST, "Post waitexit")
-	// Make sure that WaitExit didn't return an error
-	assert.Nil(t, err, "WaitExit error: %v", err)
-	// Ensure the proc succeeded
-	assert.True(t, status != nil && status.IsStatusOK(), "Exit status not OK: %v", status)
-	db.DPrintf(db.TEST, "Authorized child proc return status: %v", status)
-
-	// Spawn a proc which tries to access a superset of the parent's paths
-	p2 := proc.NewProc("dirreader", []string{path.Join(sp.UX, "~any")})
-	// Only allow access to UX
-	p2.SetAllowedPaths([]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.UX, "*")})
-	err = sc1.Spawn(p2)
-	assert.Nil(t, err, "Spawn")
-	db.DPrintf(db.TEST, "Spawned proc")
-	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err = sc1.WaitExit(p2.GetPid())
-	db.DPrintf(db.TEST, "Post waitexit")
-	// Make sure that WaitExit didn't return an error
-	assert.Nil(t, err, "WaitExit error: %v", err)
-	// Ensure the proc crashed
-	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
-	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
-	rootts.Shutdown()
-}
-
 func TestAWSRestrictedProfileS3BucketAccess(t *testing.T) {
 	// First, try to get restricted AWS secrets
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_S3_RESTRICTED_PROFILE)
@@ -494,13 +269,10 @@ func TestAWSRestrictedProfileS3BucketAccess(t *testing.T) {
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("scoped-down-principal"),
 		pe.GetRealm(),
-		sp.NoToken(),
 	))
 
 	// Load scoped-down AWS secrets
-	pe.SetSecrets(map[string]*proc.ProcSecretProto{"s3": s3secrets})
-	err = rootts.MintAndSetProcToken(pe)
-	assert.Nil(t, err)
+	pe.SetSecrets(map[string]*sp.SecretProto{"s3": s3secrets})
 
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "Err NewClnt: %v", err)

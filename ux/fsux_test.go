@@ -131,7 +131,7 @@ func TestFsPerfMulti(t *testing.T) {
 }
 
 func writer(t *testing.T, ch chan error, pe *proc.ProcEnv, idx int) {
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
+	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	assert.Nil(t, err)
 	fn := sp.UX + "~local/file-" + string(pe.GetPrincipal().GetID()) + "-" + strconv.Itoa(idx)
 	stop := false
@@ -180,8 +180,6 @@ func TestWriteCrash5x20(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		err := ts.MintAndSetProcToken(pe)
-		assert.Nil(t, err)
 		go writer(ts.T, ch, pe, i)
 	}
 

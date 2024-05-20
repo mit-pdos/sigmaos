@@ -38,8 +38,6 @@ func TestDial(t *testing.T) {
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	ep := sp.NewEndpoint(sp.EXTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
-	err := ts.MintAndSetEndpointToken(ep)
-	assert.Nil(t, err, "Err Mint EP token: %v", err)
 	npc := ts.GetNetProxyClnt()
 	c := make(chan bool)
 	// Create a listener directly
@@ -75,11 +73,9 @@ func TestFailedDial(t *testing.T) {
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
-	err := ts.MintAndSetEndpointToken(ep)
-	assert.Nil(t, err, "Err Mint EP token: %v", err)
 	npc := ts.GetNetProxyClnt()
 	// Dial an address with no corresponding listener
-	_, err = npc.Dial(ep)
+	_, err := npc.Dial(ep)
 	assert.NotNil(t, err, "Err Dial: %v", err)
 	ts.Shutdown()
 }

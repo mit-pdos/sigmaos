@@ -30,7 +30,7 @@ func TestSemClntSimple(t *testing.T) {
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl0, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
+	fsl0, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	assert.Nil(ts.T, err, "fsl0")
 
 	sem := semclnt.NewSemClnt(ts.FsLib, WAIT_PATH+"/x")
@@ -71,10 +71,10 @@ func TestSemClntConcur(t *testing.T) {
 	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe1 := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl0, err := sigmaclnt.NewFsLib(pe1, netproxyclnt.NewNetProxyClnt(pe1, nil))
+	fsl0, err := sigmaclnt.NewFsLib(pe1, netproxyclnt.NewNetProxyClnt(pe1))
 	assert.Nil(ts.T, err, "fsl0")
 	pe2 := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl1, err := sigmaclnt.NewFsLib(pe2, netproxyclnt.NewNetProxyClnt(pe2, nil))
+	fsl1, err := sigmaclnt.NewFsLib(pe2, netproxyclnt.NewNetProxyClnt(pe2))
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {

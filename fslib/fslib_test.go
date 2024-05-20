@@ -560,7 +560,7 @@ func TestPageDir(t *testing.T) {
 }
 
 func dirwriter(t *testing.T, pe *proc.ProcEnv, dn, name string, ch chan bool) {
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
+	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	assert.Nil(t, err)
 	stop := false
 	for !stop {
@@ -772,7 +772,7 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 
 	done := make(chan bool)
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
+	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
 		fn := gopath.Join(dn, strconv.Itoa(i))
@@ -823,7 +823,7 @@ func TestWaitCreateRemoveConcur(t *testing.T) {
 		assert.Equal(t, nil, err)
 		done := make(chan bool)
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 
 		go func() {
@@ -954,7 +954,7 @@ func TestConcurRename(t *testing.T) {
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 		go func(fsl *fslib.FsLib, t string) {
@@ -1021,7 +1021,7 @@ func TestConcurAssignedRename(t *testing.T) {
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err, "Err newfslib: %v", err)
 		fsls = append(fsls, fsl)
 		go func(fsl *fslib.FsLib, t string) {
@@ -1139,8 +1139,6 @@ func TestUnionDir(t *testing.T) {
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
-	err = ts.MintAndSetEndpointToken(newep)
-	assert.Nil(ts.T, err, "SignEP")
 	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself1"), newep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "EndpointService")
 
@@ -1179,8 +1177,6 @@ func TestUnionRoot(t *testing.T) {
 	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)}, sp.ROOTREALM)
-	err = ts.MintAndSetEndpointToken(newep)
-	assert.Nil(ts.T, err, "SignEP")
 	err = ts.MkEndpointFile(pn1, newep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
@@ -1345,8 +1341,6 @@ func TestEndpointUnion(t *testing.T) {
 	assert.Nil(ts.T, err, "dir")
 
 	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
-	err = ts.MintAndSetEndpointToken(newep)
-	assert.Nil(ts.T, err, "SignEP")
 	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), newep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
@@ -1411,7 +1405,7 @@ func TestFslibClose(t *testing.T) {
 	// Make a new fsl for this test, because we want to use ts.FsLib
 	// to shutdown the system.
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe, nil))
+	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	assert.Nil(t, err)
 
 	// connect

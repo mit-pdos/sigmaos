@@ -310,7 +310,7 @@ func (ts *Tstate) checkJob(app string) bool {
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux, maliciousMapper int, monitor bool) {
-	var s3secrets *proc.ProcSecretProto
+	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
 	// before starting the system
@@ -337,13 +337,10 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 		pe.SetPrincipal(sp.NewPrincipal(
 			sp.TprincipalID("mr-restricted-principal"),
 			pe.GetRealm(),
-			sp.NoToken(),
 		))
 
 		// Load restricted AWS secrets
-		pe.SetSecrets(map[string]*proc.ProcSecretProto{"s3": s3secrets})
-		err1 = t1.MintAndSetProcToken(pe)
-		assert.Nil(t, err1)
+		pe.SetSecrets(map[string]*sp.SecretProto{"s3": s3secrets})
 
 		// Create a SigmaClnt with the more restricted principal.
 		sc, err1 = sigmaclnt.NewSigmaClnt(pe)

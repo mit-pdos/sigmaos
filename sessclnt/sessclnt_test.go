@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/auth"
@@ -99,14 +98,14 @@ type TstateSrv struct {
 
 func newTstateClntAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := &TstateSrv{TstateMin: test.NewTstateMinAddr(t, addr), crash: crash}
-	ts.clnt = sessclnt.NewMgr(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE, nil))
+	ts.clnt = sessclnt.NewMgr(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE))
 	return ts
 }
 
 func newTstateSrvAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := newTstateClntAddr(t, addr, crash)
 	db.DPrintf(db.ALWAYS, "pe: %v", ts.PE)
-	ts.srv = netsrv.NewNetServer(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE, ts.AMgr), ts.Addr, ts)
+	ts.srv = netsrv.NewNetServer(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE), ts.Addr, ts)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.GetEndpoint())
 	return ts
 }
@@ -116,7 +115,7 @@ func newTstateSrv(t *testing.T, crash int) *TstateSrv {
 	return newTstateSrvAddr(t, addr, crash)
 }
 
-func (ts *TstateSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
+func (ts *TstateSrv) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
 	ss := &SessSrv{crash: ts.crash, conn: conn}
 	iovm := demux.NewIoVecMap()
 	return demux.NewDemuxSrv(ss, spcodec.NewTransport(conn, iovm))
@@ -127,7 +126,7 @@ func TestCompile(t *testing.T) {
 
 func TestConnectSessSrv(t *testing.T) {
 	ts := newTstateSrv(t, 0)
-	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
@@ -136,7 +135,7 @@ func TestConnectSessSrv(t *testing.T) {
 
 func TestDisconnectSessSrv(t *testing.T) {
 	ts := newTstateSrv(t, 0)
-	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Path{})
 	_, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 	assert.Nil(t, err)
 	ch := make(chan *serr.Err)
@@ -167,7 +166,7 @@ func testManyClients(t *testing.T, crash int) {
 					ch <- true
 					done = true
 				default:
-					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.PE.GetPrincipal(), sp.TclntId(i), path.Path{})
+					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.PE.GetSecrets(), sp.TclntId(i), path.Path{})
 					_, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 					if err != nil && crash > 0 && serr.IsErrCode(err, serr.TErrUnreachable) {
 						// wait for stop signal
@@ -466,13 +465,9 @@ func newTstateSp(t *testing.T) *TstateSp {
 	ts.privkey = privkey
 	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(ts.pubkey))
 	kmgr.AddPrivateKey(sp.Tsigner(ts.PE.GetPID()), ts.privkey)
-	as, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(ts.PE.GetPID()), "", kmgr)
-	assert.Nil(t, err, "Err NewAuthMgr: %v", err)
-	err = as.MintAndSetProcToken(ts.PE)
-	assert.Nil(t, err, "Err MintAndSetToken: %v", err)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE, as), root, as, ts.Addr, nil)
-	ts.clnt = sessclnt.NewMgr(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE, nil))
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE), root, ts.Addr, nil)
+	ts.clnt = sessclnt.NewMgr(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE))
 	return ts
 }
 
@@ -486,7 +481,7 @@ func (ts *TstateSp) shutdown() {
 
 func TestConnectSigmaPSrv(t *testing.T) {
 	ts := newTstateSp(t)
-	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
@@ -502,7 +497,7 @@ func TestConnectSigmaPSrv(t *testing.T) {
 
 func TestDisconnectSigmaPSrv(t *testing.T) {
 	ts := newTstateSp(t)
-	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetPrincipal(), 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Path{})
 	rep, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)

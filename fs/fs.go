@@ -2,12 +2,12 @@
 package fs
 
 import (
-	"sigmaos/auth"
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/npcodec"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -20,7 +20,7 @@ type MkDirF func(Inode, NewFsObjF) FsObj
 // Each request takes a Ctx with context for the request
 type CtxI interface {
 	Principal() *sp.Tprincipal
-	Claims() *auth.ProcClaims
+	Secrets() map[string]*proc.ProcSecretProto
 	SessionId() sessp.Tsession
 	ClntCondTable() *clntcond.ClntCondTable
 	ClntId() sp.TclntId

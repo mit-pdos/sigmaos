@@ -40,7 +40,7 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 	if clnt, ok = fss3.clients[ctx.Principal().GetID()]; ok {
 		return clnt, nil
 	}
-	s3secrets, ok := ctx.Claims().GetSecrets()["s3"]
+	s3secrets, ok := ctx.Secrets()["s3"]
 	// If this principal doesn't carry any s3 secrets, return EPERM
 	if !ok {
 		return nil, serr.NewErr(serr.TErrPerm, fmt.Errorf("Principal %v has no S3 secrets", ctx.Principal().GetID()))
@@ -86,7 +86,7 @@ func RunFss3(masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.Pr
 	}
 	root := newDir("", path.Path{}, sp.DMDIR)
 	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, pe.GetNet())
-	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, sp.S3, addr, sc)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, sp.S3, sc)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

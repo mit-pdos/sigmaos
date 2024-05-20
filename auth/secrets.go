@@ -62,6 +62,6 @@ func GetAWSSecrets(profile string) (*proc.ProcSecretProto, error) {
 	}, nil
 }
 
-func NewAWSCredentialsProvider(s *Secret) aws.CredentialsProvider {
-	return credentials.NewStaticCredentialsProvider(s.ID, s.Key, "")
+func NewAWSCredentialsProvider(s *proc.ProcSecretProto) aws.CredentialsProvider {
+	return credentials.NewStaticCredentialsProvider(s.GetID(), s.GetKey(), "")
 }

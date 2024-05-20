@@ -8,7 +8,6 @@ package sigmasrv
 import (
 	"runtime/debug"
 
-	"sigmaos/auth"
 	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -84,15 +83,6 @@ func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, e
 	return newSigmaSrvMemFs(mfs, svci)
 }
 
-func NewSigmaSrvClntKeyMgr(fn string, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr, svci any) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsPortClntFenceKeyMgr(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc, nil, kmgr)
-	if err != nil {
-		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v", fn, err)
-		return nil, err
-	}
-	return newSigmaSrvMemFs(mfs, svci)
-}
-
 // For an memfs server: memfs, lease srv, and fences
 func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
 	ffs := fencefs.NewRoot(ctx.NewCtxNull(), nil)
@@ -155,16 +145,12 @@ func newSigmaSrvRPC(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	return ssrv, ssrv.AddRPCSrv(rpc.RPC, svci)
 }
 
-func NewSigmaSrvRootClntKeyMgr(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, keymgr auth.KeyMgr) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsRootPortClntFenceKeyMgr(root, path, addr, sc, keymgr, nil)
+func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
+	mfs, err := memfssrv.NewMemFsRootPortClntFence(root, path, addr, sc, nil)
 	if err != nil {
 		return nil, err
 	}
 	return newSigmaSrv(mfs), nil
-}
-
-func NewSigmaSrvRootClnt(root fs.Dir, path string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	return NewSigmaSrvRootClntKeyMgr(root, addr, path, sc, nil)
 }
 
 func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv) (*SigmaSrv, error) {
@@ -172,7 +158,7 @@ func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv)
 	if err != nil {
 		return nil, err
 	}
-	return NewSigmaSrvRootClnt(root, path, addr, sc)
+	return NewSigmaSrvRootClnt(root, addr, path, sc)
 }
 
 // Mount the rpc directory in sessrv and create the RPC service in

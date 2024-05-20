@@ -1,14 +1,10 @@
 package memfssrv
 
 import (
-	"github.com/golang-jwt/jwt"
-
-	"sigmaos/auth"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/keys"
 	"sigmaos/memfs"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
@@ -44,30 +40,17 @@ func NewMemFsPortClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt) (*MemF
 }
 
 func NewMemFsPortClntFence(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
-	return NewMemFsPortClntFenceKeyMgr(pn, addr, sc, fencefs, nil)
-}
-
-func NewMemFsPortClntFenceKeyMgr(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, kmgr auth.KeyMgr) (*MemFs, error) {
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, fencefs)
 	root := dir.NewRootDir(ctx, memfs.NewInode, nil)
-	return NewMemFsRootPortClntFenceKeyMgr(root, pn, addr, sc, kmgr, fencefs)
+	return NewMemFsRootPortClntFence(root, pn, addr, sc, fencefs)
 }
 
-func NewMemFsRootPortClntFenceKeyMgr(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr, fencefs fs.Dir) (*MemFs, error) {
-	// If key mgr is not specified, create a new one
-	if kmgr == nil {
-		kmgr = keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
-	}
-	amgr, err := auth.NewAuthMgr[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), srvpath, kmgr)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error new auth srv %v err %v", srvpath, err)
-		return nil, err
-	}
-	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, amgr, addr, sc, fencefs)
+func NewMemFsRootPortClntFence(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*MemFs, error) {
+	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, addr, sc, fencefs)
 	if err != nil {
 		return nil, err
 	}
-	mfs := NewMemFsSrv(mpn, srv, sc, amgr, nil)
+	mfs := NewMemFsSrv(mpn, srv, sc, nil)
 	return mfs, nil
 }
 

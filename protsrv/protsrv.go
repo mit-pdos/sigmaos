@@ -1,16 +1,15 @@
 package protsrv
 
 import (
-	"fmt"
 	"time"
 
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fid"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"
@@ -18,7 +17,7 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 )
 
-type GetRootCtxF func(*sp.Tprincipal, *auth.ProcClaims, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI)
+type GetRootCtxF func(*sp.Tprincipal, map[string]*proc.ProcSecretProto, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI)
 
 // Each session has its own protsrv, but they share ProtSrvState
 type ProtSrv struct {
@@ -56,17 +55,11 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotSupported, "Auth"))
 }
 
-// TODO: auth using principal from net layer
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
 	db.DPrintf(db.PROTSRV, "Attach %v cid %v sid %v", args, args.TclntId(), ps.sid)
-	s := time.Now()
-	claims, ok, err := ps.auth.AttachIsAuthorized(args.Tprincipal(), args.Aname)
-	db.DPrintf(db.WALK_LAT, "Attach authorized cid %v %v path %v lat %v\n", args.TclntId(), args.Tprincipal(), args.Aname, time.Since(s))
-	if err != nil || !ok {
-		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErr(serr.TErrPerm, fmt.Errorf("Authorization check failed: ok %v err %v", ok, err)))
-	}
 	p := path.Split(args.Aname)
-	root, ctx := ps.getRootCtx(ps.p, claims, args.Aname, ps.sid, args.TclntId())
+	// TODO: get secrest from attach ctx
+	root, ctx := ps.getRootCtx(ps.p, nil, args.Aname, ps.sid, args.TclntId())
 	tree := root.(fs.FsObj)
 	qid := ps.newQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {

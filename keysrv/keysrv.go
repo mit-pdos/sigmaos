@@ -98,7 +98,7 @@ func RunKeySrv(masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) {
 		db.DFatalf("Error New authsrv: %v", err)
 	}
 	sc.SetAuthMgr(amgr)
-	ssrv, err := sigmasrv.NewSigmaSrvClntKeyMgr(sp.KEYD, sc, kmgr, ks)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.KEYD, sc, ks)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

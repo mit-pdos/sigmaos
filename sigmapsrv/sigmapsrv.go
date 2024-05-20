@@ -9,7 +9,6 @@
 package sigmapsrv
 
 import (
-	"sigmaos/auth"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/dir"
@@ -39,22 +38,22 @@ type SigmaPSrv struct {
 	stats    *stats.StatInfo
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, root fs.Dir, amgr auth.AuthMgr, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
 	psrv := &SigmaPSrv{
 		dirunder: root,
 		dirover:  overlay.MkDirOverlay(root),
 		fencefs:  fencefs,
 	}
 	psrv.stats = stats.NewStatsDev(psrv.dirover)
-	psrv.ProtSrvState = protsrv.NewProtSrvState(amgr, psrv.stats)
+	psrv.ProtSrvState = protsrv.NewProtSrvState(psrv.stats)
 	psrv.VersionTable().Insert(psrv.dirover.Path())
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
 	psrv.SessSrv = sesssrv.NewSessSrv(pe, npc, addr, psrv.stats, psrv)
 	return psrv
 }
 
-func NewSigmaPSrvPost(root fs.Dir, pn string, amgr auth.AuthMgr, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
-	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, amgr, addr, fencefs)
+func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
+	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, addr, fencefs)
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
 			return nil, "", err
@@ -85,8 +84,8 @@ func (psrv *SigmaPSrv) Mount(name string, dir *dir.DirImpl) {
 	psrv.dirover.Mount(name, dir)
 }
 
-func (psrv *SigmaPSrv) GetRootCtx(p *sp.Tprincipal, claims *auth.ProcClaims, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
-	return psrv.dirover, ctx.NewCtx(p, claims, sessid, clntid, psrv.CondTable(), psrv.fencefs)
+func (psrv *SigmaPSrv) GetRootCtx(p *sp.Tprincipal, secrets map[string]*proc.ProcSecretProto, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {
+	return psrv.dirover, ctx.NewCtx(p, secrets, sessid, clntid, psrv.CondTable(), psrv.fencefs)
 }
 
 func (psrv *SigmaPSrv) GetSigmaPSrvEndpoint() *sp.Tendpoint {

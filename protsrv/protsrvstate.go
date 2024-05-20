@@ -1,7 +1,6 @@
 package protsrv
 
 import (
-	"sigmaos/auth"
 	"sigmaos/clntcond"
 	"sigmaos/ephemeralmap"
 	"sigmaos/lockmap"
@@ -17,10 +16,9 @@ type ProtSrvState struct {
 	stats *stats.StatInfo
 	et    *ephemeralmap.EphemeralMap
 	cct   *clntcond.ClntCondTable
-	auth  auth.AuthMgr
 }
 
-func NewProtSrvState(amgr auth.AuthMgr, stats *stats.StatInfo) *ProtSrvState {
+func NewProtSrvState(stats *stats.StatInfo) *ProtSrvState {
 	cct := clntcond.NewClntCondTable()
 	pss := &ProtSrvState{
 		stats: stats,
@@ -29,7 +27,6 @@ func NewProtSrvState(amgr auth.AuthMgr, stats *stats.StatInfo) *ProtSrvState {
 		cct:   cct,
 		wt:    watch.NewWatchTable(cct),
 		vt:    version.NewVersionTable(),
-		auth:  amgr,
 	}
 	return pss
 }

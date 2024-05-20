@@ -1,26 +1,26 @@
 package ctx
 
 import (
-	"sigmaos/auth"
 	"sigmaos/clntcond"
 	"sigmaos/fs"
+	"sigmaos/proc"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
 type Ctx struct {
 	principal *sp.Tprincipal
-	claims    *auth.ProcClaims
+	secrets   map[string]*proc.ProcSecretProto
 	sessid    sessp.Tsession
 	clntid    sp.TclntId
 	sct       *clntcond.ClntCondTable
 	fencefs   fs.Dir
 }
 
-func NewCtx(principal *sp.Tprincipal, claims *auth.ProcClaims, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
+func NewCtx(principal *sp.Tprincipal, secrets map[string]*proc.ProcSecretProto, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
 	return &Ctx{
 		principal: principal,
-		claims:    claims,
+		secrets:   secrets,
 		sessid:    sessid,
 		clntid:    clntid,
 		sct:       sct,
@@ -36,12 +36,12 @@ func NewCtxNull() *Ctx {
 	return NewPrincipalOnlyCtx(sp.NoPrincipal())
 }
 
-func (ctx *Ctx) Principal() *sp.Tprincipal {
-	return ctx.principal
+func (ctx *Ctx) Secrets() map[string]*proc.ProcSecretProto {
+	return ctx.secrets
 }
 
-func (ctx *Ctx) Claims() *auth.ProcClaims {
-	return ctx.claims
+func (ctx *Ctx) Principal() *sp.Tprincipal {
+	return ctx.principal
 }
 
 func (ctx *Ctx) SessionId() sessp.Tsession {

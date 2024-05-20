@@ -213,7 +213,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		return nil, fmt.Errorf("NewAuthMgr err: %v", err)
 	}
 	nd.SigmaClnt.SetAuthMgr(amgr)
-	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}

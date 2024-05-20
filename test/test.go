@@ -81,7 +81,7 @@ type TstateMin struct {
 func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1, "Error load s3 secrets: %v", err1)
-	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
 	lip := sp.Tip("127.0.0.1")
 	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(EtcdIP))
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
@@ -188,7 +188,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil, err
 	}
-	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
 	useNetProxy := !noNetProxy
 	// Only verify mounts if running with netproxy
 	verifyMounts := false && useNetProxy
@@ -331,7 +331,7 @@ func (ts *Tstate) Shutdown() error {
 func Dump(t *testing.T) {
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1)
-	secrets := map[string]*proc.ProcSecretProto{"s3": s3secrets}
+	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
 	useNetProxy := !noNetProxy
 	// TODO: pass proper mount
 	// Only verify mounts if running with netproxy

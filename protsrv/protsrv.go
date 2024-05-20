@@ -58,7 +58,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 	db.DPrintf(db.PROTSRV, "Attach %v cid %v sid %v", args, args.TclntId(), ps.sid)
 	p := path.Split(args.Aname)
 	// TODO: get secrest from attach ctx
-	root, ctx := ps.getRootCtx(ps.p, nil, args.Aname, ps.sid, args.TclntId())
+	root, ctx := ps.getRootCtx(ps.p, args.GetSecrets(), args.Aname, ps.sid, args.TclntId())
 	tree := root.(fs.FsObj)
 	qid := ps.newQid(tree.Perm(), tree.Path())
 	if args.Aname != "" {

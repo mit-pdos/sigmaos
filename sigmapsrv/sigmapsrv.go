@@ -69,15 +69,15 @@ func (psrv *SigmaPSrv) NewSession(sessid sessp.Tsession) sps.Protsrv {
 	return protsrv.NewProtServer(psrv.ProtSrvState, sessid, psrv.GetRootCtx)
 }
 
-func (psrv *SigmaPSrv) Root(path path.Path) (fs.Dir, path.Path) {
+func (psrv *SigmaPSrv) Root(p path.Path) (fs.Dir, path.Path, path.Path) {
 	d := psrv.dirunder
-	if len(path) > 0 {
-		o, err := psrv.dirover.Lookup(ctx.NewCtxNull(), path[0])
+	if len(p) > 0 {
+		o, err := psrv.dirover.Lookup(ctx.NewCtxNull(), p[0])
 		if err == nil {
-			return o.(fs.Dir), path[1:]
+			return o.(fs.Dir), path.Path{p[0]}, p[1:]
 		}
 	}
-	return d, path
+	return d, path.Path{}, p
 }
 
 func (psrv *SigmaPSrv) Mount(name string, dir *dir.DirImpl) {

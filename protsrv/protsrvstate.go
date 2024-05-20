@@ -92,28 +92,27 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	}
 }
 
-func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, f *fid.Fid, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence) (*sp.Tqid, *fid.Fid, *serr.Err) {
-	db.DPrintf(db.PROTSRV, "%v: Create f %v", f.Pobj().Ctx().ClntId(), f)
-	o := f.Pobj().Obj()
-	fn := f.Pobj().Path().Append(name)
+func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Path, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence) (*sp.Tqid, *fid.Fid, *serr.Err) {
+	db.DPrintf(db.PROTSRV, "%v: Create %v %v", ctx.ClntId(), o, dir)
+	fn := dir.Append(name)
 	if !o.Perm().IsDir() {
-		return nil, nil, serr.NewErr(serr.TErrNotDir, f.Pobj().Path())
+		return nil, nil, serr.NewErr(serr.TErrNotDir, dir)
 	}
 	d := o.(fs.Dir)
-	dlk := pss.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Path(), lockmap.WLOCK)
-	defer pss.plt.Release(f.Pobj().Ctx(), dlk, lockmap.WLOCK)
+	dlk := pss.plt.Acquire(ctx, dir, lockmap.WLOCK)
+	defer pss.plt.Release(ctx, dlk, lockmap.WLOCK)
 
-	o1, flk, err := pss.createObj(f.Pobj().Ctx(), d, dlk, fn, perm, m, lid, fence)
+	o1, flk, err := pss.createObj(ctx, d, dlk, fn, perm, m, lid, fence)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer pss.plt.Release(f.Pobj().Ctx(), flk, lockmap.WLOCK)
-	pss.stats.IncPathString(f.Pobj().Path().String())
+	defer pss.plt.Release(ctx, flk, lockmap.WLOCK)
+	pss.stats.IncPathString(dir.String())
 	pss.vt.Insert(o1.Path())
 	pss.vt.IncVersion(o1.Path())
 	qid := pss.newQid(o1.Perm(), o1.Path())
-	nf := pss.newFid(f.Pobj().Ctx(), f.Pobj().Path(), name, o1, lid, qid)
-	pss.vt.IncVersion(f.Pobj().Obj().Path())
+	nf := pss.newFid(ctx, dir, name, o1, lid, qid)
+	pss.vt.IncVersion(o.Path())
 	nf.SetMode(m)
 	return qid, nf, nil
 }

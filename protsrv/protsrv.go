@@ -238,7 +238,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	qid, nf, err := ps.CreateObj(f.Pobj().Ctx(), f, args.Name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence())
+	qid, nf, err := ps.CreateObj(f.Pobj().Ctx(), f.Pobj().Obj(), f.Pobj().Path(), args.Name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}

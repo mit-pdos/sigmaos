@@ -106,7 +106,6 @@ func (ks *KernelSrv) AllocPort(ctx fs.CtxI, req proto.PortRequest, rep *proto.Po
 	if err != nil {
 		return err
 	}
-
 	rep.RealmPort = int32(pb.RealmPort)
 	rep.HostPort = int32(pb.HostPort)
 	rep.HostIp = ip.String()

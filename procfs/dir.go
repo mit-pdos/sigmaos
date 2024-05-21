@@ -16,7 +16,7 @@ type ProcDir struct {
 	sync.Mutex
 	*ProcInode
 	procs ProcFs
-	sd    *sorteddir.SortedDir
+	sd    *sorteddir.SortedDir[string, *sp.Tstat]
 }
 
 func NewProcDir(procs ProcFs) fs.FsObj {
@@ -25,7 +25,7 @@ func NewProcDir(procs ProcFs) fs.FsObj {
 
 func (pd *ProcDir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	ps := pd.procs.GetProcs()
-	pd.sd = sorteddir.NewSortedDir()
+	pd.sd = sorteddir.NewSortedDir[string, *sp.Tstat]()
 	for _, p := range ps {
 		n := string(p.GetPid())
 		pi := newProcInode(0444, n)
@@ -84,8 +84,8 @@ func (pd *ProcDir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj
 func (pd *ProcDir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.Err) {
 	db.DPrintf(db.PROCFS, "%v: ReadDir %v %v %v\n", ctx, pd, cursor, cnt)
 	dents := make([]*sp.Stat, 0, pd.sd.Len())
-	pd.sd.Iter(func(n string, e interface{}) bool {
-		dents = append(dents, e.(*sp.Stat))
+	pd.sd.Iter(func(n string, st *sp.Stat) bool {
+		dents = append(dents, st)
 		return true
 	})
 	if cursor > len(dents) {

@@ -133,7 +133,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test with a kernel with just named
     #
 
-    for T in reader writer stats netproxy fslib semclnt electclnt; do
+    for T in reader writer stats netproxy fslib electclnt; do
         go test $VERB -timeout 20m sigmaos/$T -start $SIGMACLNTD $NETPROXY $REUSEKERNEL
         cleanup
     done
@@ -150,7 +150,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in namesrv chunksrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt; do
+    for T in namesrv semclnt chunksrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt; do
         go test $VERB sigmaos/$T -start $GVISOR  $SIGMACLNTD $NETPROXY $REUSEKERNEL
         cleanup
     done

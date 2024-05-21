@@ -4,6 +4,7 @@ package fsetcd
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
@@ -73,7 +74,46 @@ func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, rea
 		realm:  realm,
 		dc:     dc,
 	}
+	if err := fs.watchEphemeral(); err != nil {
+		fs.Close()
+		return nil, err
+	}
 	return fs, nil
+}
+
+func (fs *FsEtcd) watchEphemeral() error {
+	wopts := make([]clientv3.OpOption, 0)
+	wopts = append(wopts, clientv3.WithPrefix())
+	wopts = append(wopts, clientv3.WithFilterPut())
+	wch := fs.Client.Watch(context.TODO(), EPHEMERAL, wopts...)
+	if wch == nil {
+		return fmt.Errorf("watchEphemeral: Watch failed")
+	}
+
+	go func() error {
+		for {
+			watchResp, ok := <-wch
+			if ok {
+				for _, e := range watchResp.Events {
+					key := string(e.Kv.Key)
+					db.DPrintf(db.FSETCD, "watchResp event %v\n", key)
+					dei, n, ok := fs.dc.find(key2path(key))
+					if ok {
+						if err := fs.Remove(dei, n, sp.NoFence(), false); err != nil {
+							db.DFatalf("event remove %v %v err %v\n", dei, n, err)
+						}
+					} else {
+						// XXX which non-cached directory contains key?
+						db.DPrintf(db.ERROR, "event not found %v\n", key)
+					}
+				}
+			} else {
+				db.DPrintf(db.FSETCD, "wch closed\n")
+				return nil
+			}
+		}
+	}()
+	return nil
 }
 
 func (fs *FsEtcd) Close() error {
@@ -103,11 +143,12 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 	if b, err := proto.Marshal(nf); err != nil {
 		return serr.NewErrError(err)
 	} else {
+		dei := newDirEntInfoP(sp.Tpath(BOOT), sp.DMDIR)
 		cmp := []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 		}
 		ops := []clientv3.Op{
-			clientv3.OpPut(fs.path2key(sp.ROOTREALM, BOOT), string(b)),
+			clientv3.OpPut(fs.path2key(sp.ROOTREALM, dei), string(b)),
 		}
 		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
 		if err != nil {
@@ -125,8 +166,8 @@ func GetRootNamed(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, 
 		return &sp.Tendpoint{}, serr.NewErrError(err)
 	}
 	defer fs.Close()
-
-	nf, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, sp.Tpath(BOOT)))
+	dei := newDirEntInfoP(sp.Tpath(BOOT), sp.DMDIR)
+	nf, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, dei))
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v etcdMnt %v realm %v", BOOT, nf, sr, etcdMnts, realm)
 		return &sp.Tendpoint{}, sr

@@ -22,6 +22,10 @@ func NewPobj(p path.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
 	return &Pobj{p, o, ctx}
 }
 
+func (po *Pobj) String() string {
+	return fmt.Sprintf("{%v %v %v}", po.path, po.obj, po.ctx)
+}
+
 func (po *Pobj) Path() path.Path {
 	return po.path
 }

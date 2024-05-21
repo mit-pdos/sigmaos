@@ -161,9 +161,9 @@ func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv)
 	return NewSigmaSrvRootClnt(root, addr, path, sc)
 }
 
-// Mount the rpc directory in sessrv and create the RPC service in
-// it. This function is useful for SigmaSrv that don't have an MemFs
-// (e.g., knamed/named).
+// Mount the rpc directory and create the RPC service in it. This
+// function is useful for sigmasrv whose root is for a non-memfs file
+// system (e.g., knamed/named, which uses fsetcd).
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
 	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
 	ssrv.MemFs.SigmaPSrv.Mount(rpc.RPC, d.(*dir.DirImpl))

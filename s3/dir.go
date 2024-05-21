@@ -35,7 +35,7 @@ func fromDot(pn string) string {
 type Dir struct {
 	*Obj
 	sync.Mutex
-	dents *sorteddir.SortedDir
+	dents *sorteddir.SortedDir[string, sp.Tperm]
 	sts   []*sp.Stat
 }
 
@@ -48,7 +48,7 @@ func newDir(bucket string, key path.Path, perm sp.Tperm) *Dir {
 	o := newObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
-	dir.dents = sorteddir.NewSortedDir()
+	dir.dents = sorteddir.NewSortedDir[string, sp.Tperm]()
 	return dir
 }
 
@@ -152,9 +152,9 @@ func (d *Dir) dirents() []*Obj {
 	d.Lock()
 	defer d.Unlock()
 	dents := make([]*Obj, 0, d.dents.Len())
-	d.dents.Iter(func(n string, e interface{}) bool {
+	d.dents.Iter(func(n string, e sp.Tperm) bool {
 		if n != "." {
-			dents = append(dents, newObj(d.bucket, d.key.Copy().Append(n), e.(sp.Tperm)))
+			dents = append(dents, newObj(d.bucket, d.key.Copy().Append(n), e))
 		}
 		return true
 	})
@@ -277,7 +277,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 }
 
 // Create a fake file in dir to materialize dir
-func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *serr.Err) {
+func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm, dev fs.FsObj) (fs.FsObj, *serr.Err) {
 	key := d.key.Copy().Append(name).Append(DOT).String()
 	db.DPrintf(db.S3, "CreateDir: %v\n", key)
 	input := &s3.PutObjectInput{
@@ -296,7 +296,7 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *ser
 	return o, nil
 }
 
-func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.S3, "Create %v name: %v\n", d, name)
 	if d.bucket == "" {
 		return nil, serr.NewErr(serr.TErrNocreate, d.bucket)
@@ -307,7 +307,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 		return nil, serr.NewErr(serr.TErrExists, name)
 	}
 	if perm.IsDir() {
-		obj, err := d.CreateDir(ctx, name, perm)
+		obj, err := d.CreateDir(ctx, name, perm, dev)
 		if err != nil {
 			return nil, err
 		}
@@ -337,12 +337,11 @@ func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 		return err
 	}
 	db.DPrintf(db.S3, "Delete %v key %v name %v\n", d, key, name)
-	e, ok := d.dents.Lookup(name)
+	perm, ok := d.dents.Lookup(name)
 	if !ok {
 		db.DPrintf(db.S3, "Delete %v err %v\n", key, name)
 		return serr.NewErr(serr.TErrNotfound, name)
 	}
-	perm := e.(sp.Tperm)
 	if perm.IsDir() {
 		d1 := newDir(d.bucket, d.key.Copy().Append(name), perm)
 		if err := d1.s3ReadDir(ctx, fss3); err != nil {

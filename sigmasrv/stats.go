@@ -22,7 +22,7 @@ type statsDev struct {
 // Create a StatsDev in mfs at pn
 func newStatsDev(mfs *memfssrv.MemFs, pn string) (*rpc.StatInfo, *serr.Err) {
 	std := &statsDev{mfs: mfs, Inode: mfs.NewDevInode()}
-	if err := mfs.NewDev(path.Join(pn, rpc.STATS), std); err != nil {
+	if err := mfs.MkNod(path.Join(pn, rpc.STATS), std); err != nil {
 		return nil, err
 	}
 	std.si = rpc.NewStatInfo()

@@ -46,7 +46,7 @@ func (et *EphemeralMap) Delete(pn string) {
 
 	lid, ok := et.pns[pn]
 	if !ok {
-		db.DPrintf(db.ALWAYS, "Delete %v doesn't exist %v\n", pn, et.pns)
+		db.DPrintf(db.ERROR, "Delete %v doesn't exist %v\n", pn, et.pns)
 	}
 	delete(et.pns, pn)
 	for i, v := range et.lids[lid] {
@@ -77,15 +77,10 @@ func (et *EphemeralMap) Rename(src, dst string) {
 	db.DPrintf(db.LEASESRV, "Rename %q %q %v\n", src, dst, et.lids)
 }
 
-func (et *EphemeralMap) Expire(lid sp.TleaseId) []string {
+func (et *EphemeralMap) Expired(lid sp.TleaseId) []string {
 	et.Lock()
 	defer et.Unlock()
-	pns, ok := et.lids[lid]
-	if ok {
-		for _, pn := range pns {
-			delete(et.pns, pn)
-		}
-	}
+	pns, _ := et.lids[lid]
 	delete(et.lids, lid)
 	return pns
 }

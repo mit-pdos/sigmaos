@@ -35,6 +35,17 @@ func (sm *SyncMap[K, T]) Alloc(k K, ne T) (T, bool) {
 	return ne, true
 }
 
+// Returns true if allocated a new entry for k
+func (sm *SyncMap[K, T]) AllocNew(k K, ne func(k K) T) (T, bool) {
+	sm.Lock()
+	defer sm.Unlock()
+	if e, ok := sm.tbl[k]; ok {
+		return e, false
+	}
+	sm.tbl[k] = ne(k)
+	return sm.tbl[k], true
+}
+
 func (sm *SyncMap[K, T]) Insert(k K, t T) bool {
 	sm.Lock()
 	defer sm.Unlock()

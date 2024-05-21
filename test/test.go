@@ -342,7 +342,7 @@ func Dump(t *testing.T) {
 	npc := netproxyclnt.NewNetProxyClnt(pe)
 	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
 	assert.Nil(t, err)
-	nd, err := fs.ReadDir(fsetcd.ROOT)
+	nd, err := fs.ReadDir(fsetcd.NewDirEntInfoDir(fsetcd.ROOT))
 	assert.Nil(t, err)
 	err = fs.Dump(0, nd, path.Path{}, fsetcd.ROOT)
 	assert.Nil(t, err)

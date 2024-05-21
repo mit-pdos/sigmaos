@@ -76,3 +76,12 @@ func NewMemFsPublic(pn string, pe *proc.ProcEnv) (*MemFs, error) {
 	}
 	return mfs, err
 }
+
+func (mfs *MemFs) MemFsExit(status *proc.Status) error {
+	if mfs.pn != "" {
+		if err := mfs.sc.Remove(mfs.pn); err != nil {
+			db.DPrintf(db.ALWAYS, "RemoveMount %v err %v", mfs.pn, err)
+		}
+	}
+	return mfs.sc.ClntExit(status)
+}

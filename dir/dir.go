@@ -18,14 +18,14 @@ type DirImpl struct {
 	fs.Inode
 	no    fs.NewFsObjF
 	mu    sync.Mutex
-	dents *sorteddir.SortedDir
+	dents *sorteddir.SortedDir[string, fs.FsObj]
 }
 
 func MkDir(i fs.Inode, no fs.NewFsObjF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
 	d.no = no
-	d.dents = sorteddir.NewSortedDir()
+	d.dents = sorteddir.NewSortedDir[string, fs.FsObj]()
 	d.dents.Insert(".", d)
 	return d
 }
@@ -36,13 +36,13 @@ func MkDirF(i fs.Inode, no fs.NewFsObjF) fs.FsObj {
 }
 
 func (dir *DirImpl) String() string {
-	str := fmt.Sprintf("dir %p i %p %T Dir{entries: ", dir, dir.Inode, dir.Inode)
+	str := fmt.Sprintf("{dir %p i %p %T Dir{entries: ", dir, dir.Inode, dir.Inode)
 
-	dir.dents.Iter(func(n string, e interface{}) bool {
+	dir.dents.Iter(func(n string, e fs.FsObj) bool {
 		str += fmt.Sprintf("[%v]", n)
 		return true
 	})
-	str += "}"
+	str += "}}"
 	return str
 }
 
@@ -147,7 +147,7 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 func (dir *DirImpl) lsL(cursor int) ([]*sp.Stat, *serr.Err) {
 	entries := []*sp.Stat{}
 	var r *serr.Err
-	dir.dents.Iter(func(n string, e interface{}) bool {
+	dir.dents.Iter(func(n string, e fs.FsObj) bool {
 		if n == "." {
 			return true
 		}
@@ -206,7 +206,7 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize) ([]*sp.Stat, *s
 	return dir.lsL(cursor)
 }
 
-func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
+func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -214,9 +214,15 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 		i := v.(fs.FsObj)
 		return i, serr.NewErr(serr.TErrExists, name)
 	}
-	newo, err := dir.no(ctx, perm, m, dir, MkDirF)
-	if err != nil {
-		return nil, err
+	newo := dev
+	if dev == nil {
+		no, err := dir.no(ctx, perm, m, dir, MkDirF)
+		if err != nil {
+			return nil, err
+		}
+		newo = no
+	} else {
+		dev.SetParent(dir)
 	}
 	db.DPrintf(db.MEMFS, "Create %v in %v -> %v\n", name, dir, newo)
 	dir.SetMtime(time.Now().Unix())

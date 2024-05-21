@@ -7,7 +7,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/inode"
-	"sigmaos/lockmap"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	"sigmaos/sessdev"
@@ -41,7 +40,7 @@ func newClone(mfs *memfssrv.MemFs, dir string, news NewSessionF, d sps.DetachSes
 	}
 	pn := dir + "/" + sessdev.CLONE
 	db.DPrintf(db.CLONEDEV, "newClone %q\n", dir)
-	err := mfs.NewDev(pn, cl) // put clone file into dir <dir>
+	err := mfs.MkNod(pn, cl) // put clone file into dir <dir>
 	if err != nil {
 		return err
 	}
@@ -74,7 +73,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	if err == nil {
 		s = &session{id: sid, wctl: c.wctl}
 		s.Inode = c.mfs.NewDevInode()
-		if err := c.mfs.NewDev(ctl, s); err != nil {
+		if err := c.mfs.MkNod(ctl, s); err != nil {
 			db.DPrintf(db.CLONEDEV, "NewDev %q err %v\n", ctl, err)
 			return nil, err
 		}
@@ -85,8 +84,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 			return nil, err
 		}
 	} else {
-		// XXX should this be read-only?
-		lo, err := c.mfs.Open(ctl, sp.OREAD, lockmap.WLOCK)
+		lo, err := c.mfs.Open(ctl, sp.OREAD)
 		if err != nil {
 			db.DPrintf(db.CLONEDEV, "open %q err %v\n", ctl, err)
 			return nil, err

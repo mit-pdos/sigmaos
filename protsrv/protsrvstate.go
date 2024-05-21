@@ -75,13 +75,13 @@ func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Path, name string, o fs.Fs
 }
 
 // Create name in dir and returns lock for it.
-func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
+func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Path, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
 	name := fn.Base()
 	if name == "." {
 		return nil, nil, serr.NewErr(serr.TErrInval, name)
 	}
 	flk := pss.plt.Acquire(ctx, fn, lockmap.WLOCK)
-	o1, err := d.Create(ctx, name, perm, mode, lid, f)
+	o1, err := d.Create(ctx, name, perm, mode, lid, f, dev)
 	db.DPrintf(db.PROTSRV, "%v: Create %q %v %v ephemeral %v lid %v", ctx.ClntId(), name, o1, err, perm.IsEphemeral(), lid)
 	if err == nil {
 		pss.wt.WakeupWatch(dlk)
@@ -92,7 +92,7 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	}
 }
 
-func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Path, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence) (*sp.Tqid, *fid.Fid, *serr.Err) {
+func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Path, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (*sp.Tqid, *fid.Fid, *serr.Err) {
 	db.DPrintf(db.PROTSRV, "%v: Create %v %v", ctx.ClntId(), o, dir)
 	fn := dir.Append(name)
 	if !o.Perm().IsDir() {
@@ -102,7 +102,7 @@ func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Path, name 
 	dlk := pss.plt.Acquire(ctx, dir, lockmap.WLOCK)
 	defer pss.plt.Release(ctx, dlk, lockmap.WLOCK)
 
-	o1, flk, err := pss.createObj(ctx, d, dlk, fn, perm, m, lid, fence)
+	o1, flk, err := pss.createObj(ctx, d, dlk, fn, perm, m, lid, fence, dev)
 	if err != nil {
 		return nil, nil, err
 	}

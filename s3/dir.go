@@ -277,7 +277,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 }
 
 // Create a fake file in dir to materialize dir
-func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *serr.Err) {
+func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm, dev fs.FsObj) (fs.FsObj, *serr.Err) {
 	key := d.key.Copy().Append(name).Append(DOT).String()
 	db.DPrintf(db.S3, "CreateDir: %v\n", key)
 	input := &s3.PutObjectInput{
@@ -296,7 +296,7 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm) (fs.FsObj, *ser
 	return o, nil
 }
 
-func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.S3, "Create %v name: %v\n", d, name)
 	if d.bucket == "" {
 		return nil, serr.NewErr(serr.TErrNocreate, d.bucket)
@@ -307,7 +307,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 		return nil, serr.NewErr(serr.TErrExists, name)
 	}
 	if perm.IsDir() {
-		obj, err := d.CreateDir(ctx, name, perm)
+		obj, err := d.CreateDir(ctx, name, perm, dev)
 		if err != nil {
 			return nil, err
 		}

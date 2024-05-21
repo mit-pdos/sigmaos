@@ -47,7 +47,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.
 	return nil, nil, pn, err
 }
 
-func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.NAMED, "Create %v name: %v perm %v lid %v\n", d, name, perm, lid)
 	cid := sp.NoClntId
 	if perm.IsEphemeral() {

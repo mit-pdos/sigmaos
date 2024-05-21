@@ -111,11 +111,11 @@ func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.F
 	}
 }
 
-func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
+func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, d fs.FsObj) (fs.FsObj, *serr.Err) {
 	if i := dir.lookupMount(name); i != nil {
 		return i, serr.NewErr(serr.TErrExists, name)
 	}
-	return dir.underlay.Create(ctx, name, perm, m, lid, f)
+	return dir.underlay.Create(ctx, name, perm, m, lid, f, nil)
 }
 
 func (dir *DirOverlay) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {

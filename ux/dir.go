@@ -128,7 +128,7 @@ func (d *Dir) newSym(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode) (fs.Fs
 }
 
 // XXX how to delete ephemeral files after crash
-func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.UX, "%v: Create %v n %v perm %v m %v\n", ctx, d, name, perm, m)
 	if perm.IsDir() {
 		return d.newDir(ctx, name, perm, m)

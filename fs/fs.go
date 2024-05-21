@@ -53,7 +53,7 @@ type Dir interface {
 	Inode
 	Stat(CtxI) (*sp.Stat, *serr.Err)
 	LookupPath(CtxI, path.Path) ([]FsObj, FsObj, path.Path, *serr.Err)
-	Create(CtxI, string, sp.Tperm, sp.Tmode, sp.TleaseId, sp.Tfence) (FsObj, *serr.Err)
+	Create(CtxI, string, sp.Tperm, sp.Tmode, sp.TleaseId, sp.Tfence, FsObj) (FsObj, *serr.Err)
 	ReadDir(CtxI, int, sp.Tsize) ([]*sp.Stat, *serr.Err)
 	Remove(CtxI, string, sp.Tfence) *serr.Err
 	Rename(CtxI, string, string, sp.Tfence) *serr.Err

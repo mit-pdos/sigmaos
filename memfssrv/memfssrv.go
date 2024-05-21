@@ -102,7 +102,7 @@ func (mfs *MemFs) lookupWalk(pn string) (fs.FsObj, path.Path, *serr.Err) {
 	if err != nil {
 		return nil, nil, err
 	}
-	db.DPrintf(db.MEMFSSRV, "Create %q %v path %v\n", pn, fid, path)
+	db.DPrintf(db.MEMFSSRV, "lookupWalk %q %v path %v\n", pn, fid, path)
 	_, _, lo, err := mfs.ps.LookupWalk(fid, path, false, lockmap.RLOCK)
 	if err != nil {
 		db.DPrintf(db.MEMFSSRV, "LookupWalk %v err %v\n", path.Dir(), err)
@@ -111,37 +111,26 @@ func (mfs *MemFs) lookupWalk(pn string) (fs.FsObj, path.Path, *serr.Err) {
 	return lo, path, err
 }
 
-func (mfs *MemFs) NewDev(pn string, dev fs.FsObj) *serr.Err {
-	lo, path, err := mfs.lookupWalk(filepath.Dir(pn))
-	db.DPrintf(db.MEMFSSRV, "NewDev %q dir %v base %q\n", pn, lo, path.Base())
-	if err != nil {
+func (mfs *MemFs) MkNod(pn string, i fs.FsObj) *serr.Err {
+	if _, err := mfs.CreateNod(pn, sp.DMDEVICE, sp.ORDWR, sp.NoLeaseId, i); err != nil {
 		return err
 	}
-	d := lo.(fs.Dir)
-	dir.MkNod(mfs.ctx, d, filepath.Base(pn), dev)
-	dev.SetParent(d)
 	return nil
 }
 
-func (mfs *MemFs) MkNod(pn string, i fs.FsObj) *serr.Err {
-	lo, path, err := mfs.lookupWalk(filepath.Dir(pn))
-	db.DPrintf(db.MEMFSSRV, "MkNod %q dir %v base %q\n", pn, lo, path.Base())
-	if err != nil {
-		return err
-	}
-	d := lo.(fs.Dir)
-	return dir.MkNod(mfs.ctx, d, filepath.Base(pn), i)
-}
-
-func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
+func (mfs *MemFs) CreateNod(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId, o fs.FsObj) (fs.FsObj, *serr.Err) {
 	lo, path, err := mfs.lookupWalk(filepath.Dir(pn))
 	db.DPrintf(db.MEMFSSRV, "Create %q dir %v base %q\n", pn, lo, path.Base())
-	_, nf, err := mfs.CreateObj(mfs.ctx, lo, path, filepath.Base(pn), p, m, lid, sp.NoFence())
+	_, nf, err := mfs.CreateObj(mfs.ctx, lo, path, filepath.Base(pn), p, m, lid, sp.NoFence(), o)
 	if err != nil {
-		db.DPrintf(db.MEMFSSRV, "CreateObj %q %v err %v\n", pn, nf, err)
+		db.DPrintf(db.MEMFSSRV, "Create: CreateObj %q %v err %v\n", pn, nf, err)
 		return nil, err
 	}
 	return nf.Pobj().Obj(), nil
+}
+
+func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
+	return mfs.CreateNod(pn, p, m, lid, nil)
 }
 
 func (mfs *MemFs) Remove(pn string) *serr.Err {

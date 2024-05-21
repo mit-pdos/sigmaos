@@ -206,7 +206,7 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize) ([]*sp.Stat, *s
 	return dir.lsL(cursor)
 }
 
-func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
+func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -214,9 +214,15 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 		i := v.(fs.FsObj)
 		return i, serr.NewErr(serr.TErrExists, name)
 	}
-	newo, err := dir.no(ctx, perm, m, dir, MkDirF)
-	if err != nil {
-		return nil, err
+	newo := dev
+	if dev == nil {
+		no, err := dir.no(ctx, perm, m, dir, MkDirF)
+		if err != nil {
+			return nil, err
+		}
+		newo = no
+	} else {
+		dev.SetParent(dir)
 	}
 	db.DPrintf(db.MEMFS, "Create %v in %v -> %v\n", name, dir, newo)
 	dir.SetMtime(time.Now().Unix())

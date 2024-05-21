@@ -39,7 +39,7 @@ func (sd *SessDev) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) *serr.Err
 	}
 	fn := path.Join(sd.dir, sid.String(), sessdev.DATA)
 	db.DPrintf(db.SESSDEV, "newSession %v\n", fn)
-	if err := mfs.NewDev(fn, sess); err != nil {
+	if err := mfs.MkNod(fn, sess); err != nil {
 		db.DPrintf(db.SESSDEV, "newSession %v err %v\n", fn, err)
 		return err
 	}

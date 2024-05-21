@@ -106,21 +106,22 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	}
 	ups.sc = sc
 	var ssrv *sigmasrv.SigmaSrv
-	if up == sp.NO_PORT.String() {
-		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
-		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
-	} else {
-		var port sp.Tport
-		port, err = sp.ParsePort(up)
-		if err != nil {
-			db.DFatalf("Error parse port: %v", err)
-		}
-		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port, pe.GetNet())
-
-		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
-	}
+	//	if up == sp.NO_PORT.String() {
+	pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
+	ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
+	//	} else {
+	//		var port sp.Tport
+	//		port, err = sp.ParsePort(up)
+	//		if err != nil {
+	//			db.DFatalf("Error parse port: %v", err)
+	//		}
+	//		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port, pe.GetNet())
+	//
+	//		// The kernel will advertise the server, so pass "" as pn.
+	//		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
+	//	}
 	if err != nil {
+		db.DFatalf("Error sigmasrvclnt: %v", err)
 		return err
 	}
 	if err := shrinkMountTable(); err != nil {
@@ -144,16 +145,16 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 
 	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
 
-	if !ups.pe.Overlays {
-		scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
-		scdp.InheritParentProcEnv(ups.pe)
-		scdp.SetHow(proc.HLINUX)
-		scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
-		if err != nil {
-			return err
-		}
-		ups.scsc = scsc
-	}
+	//	if !ups.pe.Overlays {
+	//		scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
+	//		scdp.InheritParentProcEnv(ups.pe)
+	//		scdp.SetHow(proc.HLINUX)
+	//		scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		ups.scsc = scsc
+	//	}
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
@@ -241,17 +242,17 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	// Note that the uprocsrv has been assigned.
 	ups.realm = realm
 
-	if ups.pe.Overlays {
-		// Now that the uprocd's innerIP has been established, spawn sigmaclntd
-		scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
-		scdp.InheritParentProcEnv(ups.pe)
-		scdp.SetHow(proc.HLINUX)
-		scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
-		if err != nil {
-			return err
-		}
-		ups.scsc = scsc
+	//	if ups.pe.Overlays {
+	// Now that the uprocd's innerIP has been established, spawn sigmaclntd
+	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
+	scdp.InheritParentProcEnv(ups.pe)
+	scdp.SetHow(proc.HLINUX)
+	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	if err != nil {
+		return err
 	}
+	ups.scsc = scsc
+	//	}
 
 	// Demote to reader lock
 	ups.mu.Unlock()

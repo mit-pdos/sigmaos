@@ -2,6 +2,7 @@ package fsetcd
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"go.etcd.io/etcd/client/v3"
@@ -187,7 +188,7 @@ func (fs *FsEtcd) create(ddei *DirEntInfo, dir *DirInfo, v sp.TQversion, dei *Di
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		return serr.NewErr(serr.TErrExists, dei.Path)
+		return serr.NewErr(serr.TErrExists, fmt.Sprintf("path exists %v", fs.path2key(fs.realm, dei)))
 	}
 	return nil
 }

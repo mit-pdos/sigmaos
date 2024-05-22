@@ -104,7 +104,7 @@ func (fs *FsEtcd) watchEphemeral() error {
 						}
 					} else {
 						// XXX which non-cached directory contains key?
-						db.DPrintf(db.ERROR, "event not found %v\n", key)
+						db.DPrintf(db.ALWAYS, "event not found %v\n", key)
 					}
 				}
 			} else {

@@ -36,7 +36,7 @@ func NewProtSrv(pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf Get
 		sid:          sid,
 		getRootCtx:   grf,
 	}
-	db.DPrintf(db.PROTSRV, "NewProtSrv -> %v", ps)
+	db.DPrintf(db.PROTSRV, "NewProtSrv[%v] -> %v", p, ps)
 	return ps
 }
 
@@ -514,6 +514,7 @@ func (ps *ProtSrv) lookupPathOpen(f *fid.Fid, dir fs.Dir, name string, mode sp.T
 
 // Create file or open file, and write data to it
 func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.Rerror {
+	db.DPrintf(db.PROTSRV, "%v: PutFile start args {%v}", ps.sid, args)
 	if sp.Tsize(len(data)) > sp.MAXGETSET {
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, "too large"))
 	}

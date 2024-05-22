@@ -40,6 +40,10 @@ func NewEndpointClaimsProto(t TTendpoint, addrs Taddrs, realm Trealm) *Tendpoint
 	}
 }
 
+func (ep *Tendpoint) SetType(t TTendpoint) {
+	ep.Claims.EndpointType = uint32(t)
+}
+
 func (ep *Tendpoint) Type() TTendpoint {
 	return TTendpoint(ep.Claims.EndpointType)
 }

@@ -218,11 +218,11 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 	//		pn := path.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
 
 	// container's first port is for uprocd
-	pm, err := s.GetContainer().AllocFirst()
-	if err != nil {
-		return nil, err
-	}
-	_ = pm
+	//	pm, err := s.GetContainer().AllocFirst()
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	_ = pm
 	// TODO: pass to container
 
 	//		// Use 127.0.0.1, because only the local schedd should be talking

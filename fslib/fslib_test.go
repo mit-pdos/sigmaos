@@ -2,7 +2,6 @@ package fslib_test
 
 import (
 	"flag"
-	gopath "path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -71,7 +70,7 @@ func TestRemoveBasic(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	d := []byte("hello")
 	db.DPrintf(db.TEST, "PutFile")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
@@ -96,7 +95,7 @@ func TestDirBasic(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	dn := gopath.Join(pathname, "d")
+	dn := filepath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 	b, err := ts.IsDir(dn)
@@ -104,7 +103,7 @@ func TestDirBasic(t *testing.T) {
 	assert.Equal(t, true, b)
 
 	d := []byte("hello")
-	_, err = ts.PutFile(gopath.Join(dn, "f"), 0777, sp.OWRITE, d)
+	_, err = ts.PutFile(filepath.Join(dn, "f"), 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	sts, err := ts.GetDir(dn)
@@ -127,7 +126,7 @@ func TestCreateTwice(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Nil(t, err)
@@ -147,7 +146,7 @@ func TestRemoveNonExistent(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	d := []byte("hello")
 
 	ts.Remove(fn) // remove from last test
@@ -155,7 +154,7 @@ func TestRemoveNonExistent(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	err = ts.Remove(gopath.Join(pathname, "this-file-does-not-exist"))
+	err = ts.Remove(filepath.Join(pathname, "this-file-does-not-exist"))
 	assert.NotNil(t, err)
 
 	err = ts.Remove(fn)
@@ -170,10 +169,10 @@ func TestRemovePath(t *testing.T) {
 		return
 	}
 
-	d1 := gopath.Join(pathname, "d1")
+	d1 := filepath.Join(pathname, "d1")
 	err := ts.MkDir(d1, 0777)
 	assert.Equal(t, nil, err)
-	fn := gopath.Join(d1, "f")
+	fn := filepath.Join(d1, "f")
 	d := []byte("hello")
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -196,16 +195,16 @@ func TestRenameInDir(t *testing.T) {
 		return
 	}
 
-	d1 := gopath.Join(pathname, "d1")
+	d1 := filepath.Join(pathname, "d1")
 	err := ts.MkDir(d1, 0777)
 	assert.Nil(t, err, "Mkdir %v", err)
-	from := gopath.Join(d1, "f")
+	from := filepath.Join(d1, "f")
 
 	d := []byte("hello")
 	_, err = ts.PutFile(from, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	to := gopath.Join(d1, "g")
+	to := filepath.Join(d1, "g")
 	err = ts.Rename(from, to)
 
 	sts, err := ts.GetDir(d1)
@@ -226,11 +225,11 @@ func TestRemoveSymlink(t *testing.T) {
 		return
 	}
 
-	d1 := gopath.Join(pathname, "d1")
+	d1 := filepath.Join(pathname, "d1")
 	db.DPrintf(db.TEST, "path %v", pathname)
 	err := ts.MkDir(d1, 0777)
 	assert.Nil(t, err, "Mkdir %v", err)
-	fn := gopath.Join(d1, "f")
+	fn := filepath.Join(d1, "f")
 
 	ep, err := ts.GetNamedEndpoint()
 	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
@@ -256,10 +255,10 @@ func TestRmDirWithSymlink(t *testing.T) {
 		return
 	}
 
-	d1 := gopath.Join(pathname, "d1")
+	d1 := filepath.Join(pathname, "d1")
 	err := ts.MkDir(d1, 0777)
 	assert.Nil(t, err, "Mkdir %v", err)
-	fn := gopath.Join(d1, "f")
+	fn := filepath.Join(d1, "f")
 
 	ep, err := ts.GetNamedEndpoint()
 	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
@@ -282,10 +281,10 @@ func TestReadSymlink(t *testing.T) {
 		return
 	}
 
-	d1 := gopath.Join(pathname, "d1")
+	d1 := filepath.Join(pathname, "d1")
 	err := ts.MkDir(d1, 0777)
 	assert.Nil(t, err, "Mkdir %v", err)
-	fn := gopath.Join(d1, "f")
+	fn := filepath.Join(d1, "f")
 
 	ep, err := ts.GetNamedEndpoint()
 	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
@@ -314,7 +313,7 @@ func TestReadOff(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -347,16 +346,16 @@ func TestRenameAcrossDir(t *testing.T) {
 		return
 	}
 
-	d1 := gopath.Join(pathname, "d1")
-	d2 := gopath.Join(pathname, "d2")
+	d1 := filepath.Join(pathname, "d1")
+	d2 := filepath.Join(pathname, "d2")
 
 	err := ts.MkDir(d1, 0777)
 	assert.Equal(t, nil, err)
 	err = ts.MkDir(d2, 0777)
 	assert.Equal(t, nil, err)
 
-	fn := gopath.Join(d1, "f")
-	fn1 := gopath.Join(d2, "g")
+	fn := filepath.Join(d1, "f")
+	fn1 := filepath.Join(d2, "g")
 	d := []byte("hello")
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -377,8 +376,8 @@ func TestRenameAcrossDir(t *testing.T) {
 }
 
 func TestRenameAndRemove(t *testing.T) {
-	d1 := gopath.Join(pathname, "d1")
-	d2 := gopath.Join(pathname, "d2")
+	d1 := filepath.Join(pathname, "d1")
+	d2 := filepath.Join(pathname, "d2")
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -388,8 +387,8 @@ func TestRenameAndRemove(t *testing.T) {
 	err = ts.MkDir(d2, 0777)
 	assert.Equal(t, nil, err)
 
-	fn := gopath.Join(d1, "f")
-	fn1 := gopath.Join(d2, "g")
+	fn := filepath.Join(d1, "f")
+	fn1 := filepath.Join(d2, "g")
 	d := []byte("hello")
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -417,8 +416,8 @@ func TestRenameAndRemove(t *testing.T) {
 }
 
 func TestNonEmpty(t *testing.T) {
-	d1 := gopath.Join(pathname, "d1")
-	d2 := gopath.Join(pathname, "d2")
+	d1 := filepath.Join(pathname, "d1")
+	d2 := filepath.Join(pathname, "d2")
 
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -429,7 +428,7 @@ func TestNonEmpty(t *testing.T) {
 	err = ts.MkDir(d2, 0777)
 	assert.Equal(t, nil, err)
 
-	fn := gopath.Join(d1, "f")
+	fn := filepath.Join(d1, "f")
 	d := []byte("hello")
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -455,7 +454,7 @@ func TestSetAppend(t *testing.T) {
 		return
 	}
 	d := []byte("1234")
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -478,8 +477,8 @@ func TestCopy(t *testing.T) {
 		return
 	}
 	d := []byte("hello")
-	src := gopath.Join(pathname, "f")
-	dst := gopath.Join(pathname, "g")
+	src := filepath.Join(pathname, "f")
+	dst := filepath.Join(pathname, "g")
 	_, err := ts.PutFile(src, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
@@ -503,7 +502,7 @@ func TestDirDot(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	dn := gopath.Join(pathname, "dir0")
+	dn := filepath.Join(pathname, "dir0")
 	dot := dn + "/."
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
@@ -526,7 +525,7 @@ func TestPageDir(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	dn := gopath.Join(pathname, "dir")
+	dn := filepath.Join(pathname, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 	// ts.SetChunkSz(sp.Tsize(512))
@@ -536,7 +535,7 @@ func TestPageDir(t *testing.T) {
 		db.DPrintf(db.TEST, "Putfile %v", i)
 		name := strconv.Itoa(i)
 		names = append(names, name)
-		_, err := ts.PutFile(gopath.Join(dn, name), 0777, sp.OWRITE, []byte(name))
+		_, err := ts.PutFile(filepath.Join(dn, name), 0777, sp.OWRITE, []byte(name))
 		assert.Equal(t, nil, err)
 	}
 	sort.SliceStable(names, func(i, j int) bool {
@@ -567,9 +566,9 @@ func dirwriter(t *testing.T, pe *proc.ProcEnv, dn, name string, ch chan bool) {
 		select {
 		case stop = <-ch:
 		default:
-			err := fsl.Remove(gopath.Join(dn, name))
+			err := fsl.Remove(filepath.Join(dn, name))
 			assert.Nil(t, err, "Remove: %v", err)
-			_, err = fsl.PutFile(gopath.Join(dn, name), 0777, sp.OWRITE|sp.OEXCL, []byte(name))
+			_, err = fsl.PutFile(filepath.Join(dn, name), 0777, sp.OWRITE|sp.OEXCL, []byte(name))
 			assert.Nil(t, err, "Put: %v", err)
 		}
 	}
@@ -588,13 +587,13 @@ func TestDirConcur(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	dn := gopath.Join(pathname, "dir")
+	dn := filepath.Join(pathname, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 
 	for i := 0; i < NFILE; i++ {
 		name := strconv.Itoa(i)
-		_, err := ts.PutFile(gopath.Join(dn, name), 0777, sp.OWRITE, []byte(name))
+		_, err := ts.PutFile(filepath.Join(dn, name), 0777, sp.OWRITE, []byte(name))
 		assert.Equal(t, nil, err)
 	}
 
@@ -647,7 +646,7 @@ func TestWaitCreate(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "w")
+	fn := filepath.Join(pathname, "w")
 	ch := make(chan bool)
 
 	go func() {
@@ -684,7 +683,7 @@ func TestWaitRemoveOne(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "w")
+	fn := filepath.Join(pathname, "w")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
@@ -719,7 +718,7 @@ func TestWaitDir(t *testing.T) {
 	}
 
 	f := "x"
-	pn := gopath.Join(pathname, "d1")
+	pn := filepath.Join(pathname, "d1")
 	err := ts.MkDir(pn, 0777)
 	assert.Equal(t, nil, err)
 	ch := make(chan bool)
@@ -742,7 +741,7 @@ func TestWaitDir(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Putfile")
 
-	pn1 := gopath.Join(pn, f)
+	pn1 := filepath.Join(pn, f)
 	_, err = ts.PutFile(pn1, 0777, sp.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
@@ -766,7 +765,7 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	dn := gopath.Join(pathname, "d1")
+	dn := filepath.Join(pathname, "d1")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 
@@ -775,12 +774,12 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
-		fn := gopath.Join(dn, strconv.Itoa(i))
+		fn := filepath.Join(dn, strconv.Itoa(i))
 		_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
 		assert.Nil(t, err, "Err putfile: %v", err)
 	}
 	for i := 0; i < N; i++ {
-		fn := gopath.Join(dn, strconv.Itoa(i))
+		fn := filepath.Join(dn, strconv.Itoa(i))
 		go func(fn string) {
 			err := ts.WaitRemove(fn)
 			assert.True(ts.T, err == nil, "Unexpected WaitRemove error: %v", err)
@@ -811,12 +810,12 @@ func TestWaitCreateRemoveConcur(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	dn := gopath.Join(pathname, "d1")
+	dn := filepath.Join(pathname, "d1")
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 
-	fn := gopath.Join(dn, "w")
-	fn1 := gopath.Join(dn, "x")
+	fn := filepath.Join(dn, "w")
+	fn1 := filepath.Join(dn, "x")
 
 	for i := 0; i < N; i++ {
 		_, err = ts.PutFile(fn, 0777, sp.OWRITE, nil)
@@ -866,7 +865,7 @@ func TestConcurFile(t *testing.T) {
 	for i := 0; i < I; i++ {
 		go func(i int) {
 			for j := 0; j < N; j++ {
-				fn := gopath.Join(pathname, "f"+strconv.Itoa(i))
+				fn := filepath.Join(pathname, "f"+strconv.Itoa(i))
 				data := []byte(fn)
 				_, err := ts.PutFile(fn, 0777, sp.OWRITE, data)
 				assert.Nil(t, err, "Err PutFile: %v", err)
@@ -906,7 +905,7 @@ func testRename(ts *test.Tstate, fsl *fslib.FsLib, t string, TODO, DONE string) 
 		sts, err := fsl.GetDir(TODO)
 		assert.Nil(ts.T, err, "GetDir")
 		for _, st := range sts {
-			err = fsl.Rename(gopath.Join(TODO, st.Name), gopath.Join(DONE, st.Name+"."+t))
+			err = fsl.Rename(filepath.Join(TODO, st.Name), filepath.Join(DONE, st.Name+"."+t))
 			if err == nil {
 				i = i + 1
 				ok = true
@@ -945,8 +944,8 @@ func TestConcurRename(t *testing.T) {
 	}
 	cont := make(chan bool)
 	done := make(chan int)
-	TODO := gopath.Join(pathname, "todo")
-	DONE := gopath.Join(pathname, "done")
+	TODO := filepath.Join(pathname, "todo")
+	DONE := filepath.Join(pathname, "done")
 	fsls := make([]*fslib.FsLib, 0, N)
 
 	initfs(ts, TODO, DONE)
@@ -972,7 +971,7 @@ func TestConcurRename(t *testing.T) {
 
 	// generate files in the todo dir
 	for i := 0; i < NFILE; i++ {
-		_, err := ts.PutFile(gopath.Join(TODO, "job"+strconv.Itoa(i)), 07000, sp.OWRITE|sp.OEXCL, []byte{})
+		_, err := ts.PutFile(filepath.Join(TODO, "job"+strconv.Itoa(i)), 07000, sp.OWRITE|sp.OEXCL, []byte{})
 		assert.Nil(ts.T, err, "Create job")
 	}
 
@@ -1005,8 +1004,8 @@ func TestConcurAssignedRename(t *testing.T) {
 	}
 	cont := make(chan string)
 	done := make(chan int)
-	TODO := gopath.Join(pathname, "todo")
-	DONE := gopath.Join(pathname, "done")
+	TODO := filepath.Join(pathname, "todo")
+	DONE := filepath.Join(pathname, "done")
 	fsls := make([]*fslib.FsLib, 0, N)
 	initfs(ts, TODO, DONE)
 
@@ -1014,7 +1013,7 @@ func TestConcurAssignedRename(t *testing.T) {
 	// generate files in the todo dir
 	for i := 0; i < NFILE; i++ {
 		fnames = append(fnames, "job"+strconv.Itoa(i))
-		_, err := ts.PutFile(gopath.Join(TODO, fnames[i]), 07000, sp.OWRITE, []byte{})
+		_, err := ts.PutFile(filepath.Join(TODO, fnames[i]), 07000, sp.OWRITE, []byte{})
 		assert.Nil(ts.T, err, "Create job")
 	}
 
@@ -1032,7 +1031,7 @@ func TestConcurAssignedRename(t *testing.T) {
 					done <- n
 					return
 				}
-				err := fsl.Rename(gopath.Join(TODO, fname), gopath.Join(DONE, fname))
+				err := fsl.Rename(filepath.Join(TODO, fname), filepath.Join(DONE, fname))
 				assert.Nil(ts.T, err, "Error rename: %v", err)
 				n++
 			}
@@ -1071,14 +1070,14 @@ func TestSymlinkPath(t *testing.T) {
 		return
 	}
 
-	dn := gopath.Join(pathname, "d")
+	dn := filepath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.Symlink([]byte(pathname), gopath.Join(pathname, "namedself"), 0777)
+	err = ts.Symlink([]byte(pathname), filepath.Join(pathname, "namedself"), 0777)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.GetDir(gopath.Join(pathname, "namedself") + "/")
+	sts, err := ts.GetDir(filepath.Join(pathname, "namedself") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself"}), "dir")
 
@@ -1106,11 +1105,11 @@ func TestEndpointSimple(t *testing.T) {
 		return
 	}
 
-	dn := gopath.Join(pathname, "d")
+	dn := filepath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	pn := gopath.Join(pathname, "namedself")
+	pn := filepath.Join(pathname, "namedself")
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 	sts, err := ts.GetDir(pn + "/")
@@ -1131,30 +1130,30 @@ func TestUnionDir(t *testing.T) {
 		return
 	}
 
-	dn := gopath.Join(pathname, "d")
+	dn := filepath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
-	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself1"), newep, sp.NoLeaseId)
+	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself1"), newep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "EndpointService")
 
-	sts, err := ts.GetDir(gopath.Join(pathname, "d/~any") + "/")
+	sts, err := ts.GetDir(filepath.Join(pathname, "d/~any") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
-	sts, err = ts.GetDir(gopath.Join(pathname, "d/~any/d") + "/")
+	sts, err = ts.GetDir(filepath.Join(pathname, "d/~any/d") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"namedself0", "namedself1"}), "dir")
 
-	sts, err = ts.GetDir(gopath.Join(pathname, "d/~local") + "/")
+	sts, err = ts.GetDir(filepath.Join(pathname, "d/~local") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
-	pn, err := ts.ResolveMounts(gopath.Join(pathname, "d/~local"))
+	pn, err := ts.ResolveMounts(filepath.Join(pathname, "d/~local"))
 	assert.Equal(t, nil, err)
 	sts, err = ts.GetDir(pn)
 	assert.Nil(t, err)
@@ -1172,8 +1171,8 @@ func TestUnionRoot(t *testing.T) {
 		return
 	}
 
-	pn0 := gopath.Join(pathname, "namedself0")
-	pn1 := gopath.Join(pathname, "namedself1")
+	pn0 := filepath.Join(pathname, "namedself0")
+	pn1 := filepath.Join(pathname, "namedself1")
 	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)}, sp.ROOTREALM)
@@ -1182,7 +1181,7 @@ func TestUnionRoot(t *testing.T) {
 
 	pn := pathname
 	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
-		pn = gopath.Join(pathname, "~any")
+		pn = filepath.Join(pathname, "~any")
 	}
 	sts, err := ts.GetDir(pn + "/")
 	assert.Equal(t, nil, err)
@@ -1202,27 +1201,27 @@ func TestUnionSymlinkRead(t *testing.T) {
 		return
 	}
 
-	pn0 := gopath.Join(pathname, "namedself0")
+	pn0 := filepath.Join(pathname, "namedself0")
 	ep := newEndpoint(t, ts, pathname)
 	err := ts.MkEndpointFile(pn0, ep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	dn := gopath.Join(pathname, "d")
+	dn := filepath.Join(pathname, "d")
 	err = ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself1"), ep, sp.NoLeaseId)
+	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself1"), ep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	basepn := pathname
 	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
-		basepn = gopath.Join(pathname, "~any")
+		basepn = filepath.Join(pathname, "~any")
 	}
-	sts, err := ts.GetDir(gopath.Join(basepn, "d/namedself1") + "/")
+	sts, err := ts.GetDir(filepath.Join(basepn, "d/namedself1") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d", "namedself0"}), "root wrong")
 
-	sts, err = ts.GetDir(gopath.Join(basepn, "d/namedself1/d") + "/")
+	sts, err = ts.GetDir(filepath.Join(basepn, "d/namedself1/d") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"namedself1"}), "d wrong")
 
@@ -1241,39 +1240,39 @@ func TestUnionSymlinkPut(t *testing.T) {
 		return
 	}
 
-	pn0 := gopath.Join(pathname, "namedself0")
+	pn0 := filepath.Join(pathname, "namedself0")
 	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	b := []byte("hello")
 	basepn := pathname
 	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
-		basepn = gopath.Join(pathname, "~any")
+		basepn = filepath.Join(pathname, "~any")
 	}
-	fn := gopath.Join(basepn, "namedself0/f")
+	fn := filepath.Join(basepn, "namedself0/f")
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, b)
 	assert.Equal(t, nil, err)
 
-	fn1 := gopath.Join(basepn, "namedself0/g")
+	fn1 := filepath.Join(basepn, "namedself0/g")
 	_, err = ts.PutFile(fn1, 0777, sp.OWRITE, b)
 	assert.Equal(t, nil, err)
 
-	sts, err := ts.GetDir(gopath.Join(basepn, "namedself0") + "/")
+	sts, err := ts.GetDir(filepath.Join(basepn, "namedself0") + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"f", "g"}), "root wrong")
 
-	d, err := ts.GetFile(gopath.Join(basepn, "namedself0/f"))
+	d, err := ts.GetFile(filepath.Join(basepn, "namedself0/f"))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, b, d, "GetFile")
 
-	d, err = ts.GetFile(gopath.Join(basepn, "namedself0/g"))
+	d, err = ts.GetFile(filepath.Join(basepn, "namedself0/g"))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, b, d, "GetFile")
 
 	err = ts.Remove(pn0)
 	assert.Nil(t, err)
 
-	err = ts.Remove(gopath.Join(pathname, "g"))
+	err = ts.Remove(filepath.Join(pathname, "g"))
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -1285,12 +1284,12 @@ func TestSetFileSymlink(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	err = ts.MkEndpointFile(gopath.Join(pathname, "namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	err = ts.MkEndpointFile(filepath.Join(pathname, "namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	st, err := ts.ReadStats(pathname)
@@ -1300,7 +1299,7 @@ func TestSetFileSymlink(t *testing.T) {
 	db.DPrintf(db.TEST, "st %v\n", st)
 
 	d = []byte("byebye")
-	n, err := ts.SetFile(gopath.Join(pathname, "namedself0/f"), d, sp.OWRITE, 0)
+	n, err := ts.SetFile(filepath.Join(pathname, "namedself0/f"), d, sp.OWRITE, 0)
 	assert.Nil(ts.T, err, "SetFile: %v", err)
 	assert.Equal(ts.T, sp.Tsize(len(d)), n, "SetFile")
 
@@ -1312,7 +1311,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.NotEqual(ts.T, nwalk, st.Counters["Nwalk"], "setfile")
 	nwalk = st.Counters["Nwalk"]
 
-	b, err := ts.GetFile(gopath.Join(pathname, "namedself0/f"))
+	b, err := ts.GetFile(filepath.Join(pathname, "namedself0/f"))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, d, b, "GetFile")
 
@@ -1324,7 +1323,7 @@ func TestSetFileSymlink(t *testing.T) {
 	err = ts.Remove(fn)
 	assert.Nil(t, err)
 
-	err = ts.Remove(gopath.Join(pathname, "namedself0"))
+	err = ts.Remove(filepath.Join(pathname, "namedself0"))
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -1336,24 +1335,24 @@ func TestEndpointUnion(t *testing.T) {
 		return
 	}
 
-	dn := gopath.Join(pathname, "d")
+	dn := filepath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
 	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
-	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), newep, sp.NoLeaseId)
+	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself0"), newep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	pn := gopath.Join(pathname, "mount")
+	pn := filepath.Join(pathname, "mount")
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, dn), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	eppn := "mount/"
 	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
-		eppn = gopath.Join(eppn, "~any")
+		eppn = filepath.Join(eppn, "~any")
 	}
 
-	sts, err := ts.GetDir(gopath.Join(pathname, eppn) + "/")
+	sts, err := ts.GetDir(filepath.Join(pathname, eppn) + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, path.Path{"d"}), "dir")
 
@@ -1371,7 +1370,7 @@ func TestOpenRemoveRead(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -1429,7 +1428,7 @@ func TestEphemeralFileOK(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
@@ -1458,11 +1457,11 @@ func TestEphemeralFileExpire(t *testing.T) {
 		return
 	}
 
-	dn := gopath.Join(pathname, "dir")
+	dn := filepath.Join(pathname, "dir")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	fn := gopath.Join(dn, "foobar")
+	fn := filepath.Join(dn, "foobar")
 
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
@@ -1499,7 +1498,7 @@ func TestDisconnect(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	d := []byte("hello")
 	fd, err := ts.Create(fn, 0777, sp.OWRITE)
 	assert.Equal(t, nil, err)

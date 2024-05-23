@@ -11,6 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
+	"sigmaos/kernel"
 	"sigmaos/perf"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
@@ -22,7 +23,7 @@ import (
 )
 
 const (
-	HOTEL_PORT sp.Tport = 3030
+	HOTEL_PORT sp.Tport = kernel.LPORT + 1
 )
 
 type Www struct {

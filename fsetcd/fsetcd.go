@@ -14,6 +14,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/netproxy"
+	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -52,7 +53,7 @@ func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, rea
 	for addr, _ := range etcdMnts {
 		endpoints = append(endpoints, addr)
 	}
-	db.DPrintf(db.FSETCD, "FsEtcd etcd endpoints: %v", endpoints)
+	db.DPrintf(db.FSETCD, "FsEtcd etcd endpoints: %v %v", endpoints)
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: DialTimeout,
@@ -74,14 +75,10 @@ func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, rea
 		realm:  realm,
 		dc:     dc,
 	}
-	if err := fs.watchEphemeral(); err != nil {
-		fs.Close()
-		return nil, err
-	}
 	return fs, nil
 }
 
-func (fs *FsEtcd) watchEphemeral() error {
+func (fs *FsEtcd) WatchEphemeral(ch chan path.Path) error {
 	wopts := make([]clientv3.OpOption, 0)
 	wopts = append(wopts, clientv3.WithPrefix())
 	wopts = append(wopts, clientv3.WithFilterPut())
@@ -96,12 +93,11 @@ func (fs *FsEtcd) watchEphemeral() error {
 			if ok {
 				for _, e := range watchResp.Events {
 					key := string(e.Kv.Key)
-					db.DPrintf(db.FSETCD, "watchResp event %v\n", key)
-					dei, n, ok := fs.dc.find(key2path(key))
+					pn, ok := fs.dc.find(key2path(key))
+					db.DPrintf(db.FSETCD, "watchResp event %v %v\n", key, pn)
 					if ok {
-						if err := fs.Remove(dei, n, sp.NoFence(), false); err != nil {
-							db.DFatalf("event remove %v %v err %v\n", dei, n, err)
-						}
+						db.DPrintf(db.FSETCD, "Notify ephemeral '%v'\n", pn)
+						ch <- pn
 					} else {
 						// XXX which non-cached directory contains key?
 						db.DPrintf(db.ALWAYS, "event not found %v\n", key)

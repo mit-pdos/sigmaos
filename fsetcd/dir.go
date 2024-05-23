@@ -26,18 +26,19 @@ type DirEntInfo struct {
 	Nf   *EtcdFile
 	Path sp.Tpath
 	Perm sp.Tperm
+	Pn   path.Path
 }
 
 func newDirEntInfo(nf *EtcdFile, p sp.Tpath, perm sp.Tperm) *DirEntInfo {
-	return &DirEntInfo{nf, p, perm}
+	return &DirEntInfo{Nf: nf, Path: p, Perm: perm}
 }
 
 func newDirEntInfoP(p sp.Tpath, perm sp.Tperm) *DirEntInfo {
-	return &DirEntInfo{nil, p, perm}
+	return &DirEntInfo{Path: p, Perm: perm}
 }
 
 func NewDirEntInfoDir(p sp.Tpath) *DirEntInfo {
-	return &DirEntInfo{nil, p, sp.DMDIR}
+	return &DirEntInfo{Path: p, Perm: sp.DMDIR}
 }
 
 func (di DirEntInfo) String() string {
@@ -53,17 +54,17 @@ type DirInfo struct {
 	Perm sp.Tperm
 }
 
-func (di *DirInfo) find(del sp.Tpath) (string, bool) {
+func (di *DirInfo) find(del sp.Tpath) (path.Path, bool) {
 	for _, n := range di.Ents.Slice(0) {
 		e, ok := di.Ents.Lookup(n)
 		if ok {
 			if e.Path == del {
 				db.DPrintf(db.FSETCD, "expire %q %v\n", n, del)
-				return n, true
+				return e.Pn, true
 			}
 		}
 	}
-	return "", false
+	return nil, false
 }
 
 func (fs *FsEtcd) isEmpty(dei *DirEntInfo) (bool, *serr.Err) {
@@ -115,7 +116,8 @@ func (fs *FsEtcd) Lookup(dei *DirEntInfo, name string) (*DirEntInfo, *serr.Err) 
 }
 
 // OEXCL: should only succeed if file doesn't exist
-func (fs *FsEtcd) Create(dei *DirEntInfo, name string, path sp.Tpath, nf *EtcdFile, f sp.Tfence) (*DirEntInfo, *serr.Err) {
+func (fs *FsEtcd) Create(dei *DirEntInfo, pn path.Path, path sp.Tpath, nf *EtcdFile, f sp.Tfence) (*DirEntInfo, *serr.Err) {
+	name := pn.Base()
 	dir, v, err := fs.readDir(dei, TSTAT_NONE)
 	if err != nil {
 		return nil, err
@@ -126,9 +128,12 @@ func (fs *FsEtcd) Create(dei *DirEntInfo, name string, path sp.Tpath, nf *EtcdFi
 	}
 	// Insert name into dir so that fs.create() will write the updated
 	// directory to etcd, but undo the Insert if create fails.
-	di := &DirEntInfo{Nf: nf, Path: path, Perm: nf.Tperm()}
+	di := newDirEntInfo(nf, path, nf.Tperm())
+	if nf.Tperm().IsEphemeral() {
+		di.Pn = pn
+	}
 	dir.Ents.Insert(name, di)
-	db.DPrintf(db.FSETCD, "Create %q dir %v (%v) nf %v\n", name, dir, dei.Path, nf)
+	db.DPrintf(db.FSETCD, "Create %q(%v) dir %v %v nf %v\n", name, pn, dir, dei.Path, nf)
 	if err := fs.create(dei, dir, v, di); err == nil {
 		fs.dc.update(dei.Path, dir)
 		return di, nil
@@ -150,7 +155,7 @@ func (fs *FsEtcd) ReadDir(dei *DirEntInfo) (*DirInfo, *serr.Err) {
 // Remove `name` and delete its directory entry.  To update only the
 // directory for a file that etcd already deleted (a leased file), set
 // del to false.
-func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del bool) *serr.Err {
+func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence) *serr.Err {
 	dir, v, err := fs.readDir(dei, TSTAT_NONE)
 	if err != nil {
 		return err
@@ -160,7 +165,7 @@ func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del bool) *s
 		return serr.NewErr(serr.TErrNotfound, name)
 	}
 
-	db.DPrintf(db.FSETCD, "Remove in %v entry %v %v v %v d %t\n", dir, name, di, v, del)
+	db.DPrintf(db.FSETCD, "Remove in %v entry %v %v v %v\n", dir, name, di, v)
 
 	empty, err := fs.isEmpty(di)
 	if err != nil {
@@ -172,7 +177,12 @@ func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del bool) *s
 
 	dir.Ents.Delete(name)
 
-	if del {
+	if di.Perm.IsEphemeral() {
+		if err := fs.updateDir(dei, dir, v); err != nil {
+			db.DPrintf(db.FSETCD, "Remove updateDir %v %q err %v\n", dir, name, err)
+			return err
+		}
+	} else {
 		if err := fs.remove(dei, dir, v, di); err != nil {
 			db.DPrintf(db.FSETCD, "Remove entry %v err %v\n", name, err)
 			if !err.IsErrNotfound() {
@@ -180,11 +190,6 @@ func (fs *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del bool) *s
 				return err
 			}
 			// fsetcd may have deleted di already because di is ephemeral
-		}
-	} else {
-		if err := fs.updateDir(dei, dir, v); err != nil {
-			db.DPrintf(db.FSETCD, "Remove updateDir %v %q err %v\n", dir, name, err)
-			return err
 		}
 	}
 

@@ -133,15 +133,15 @@ func TestSemClntFail(t *testing.T) {
 
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 
-	li, err := sc1.LeaseClnt.AskLease(pn+"/x", fsetcd.LeaseTTL)
+	li, err := sc1.LeaseClnt.AskLease(pn+"/sem", fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	sem := semclnt.NewSemClnt(sc1.FsLib, pn+"/x")
+	sem := semclnt.NewSemClnt(sc1.FsLib, pn+"/sem")
 	sem.InitLease(0777, li.Lease())
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		sem := semclnt.NewSemClnt(ts.FsLib, pn+"/x")
+		sem := semclnt.NewSemClnt(ts.FsLib, pn+"/sem")
 		sem.Down()
 		ch <- true
 	}(ch)

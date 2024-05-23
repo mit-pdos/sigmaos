@@ -148,6 +148,15 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	return no, nil
 }
 
+func (mfs *MemFs) Notify(pn path.Path) error {
+	db.DPrintf(db.MEMFSSRV, "Notify %v\n", pn)
+	lo, _, err := mfs.lookupWalk(pn.String())
+	if err != nil {
+		return err
+	}
+	return mfs.RemoveObj(mfs.ctx, lo, pn, sp.NoFence())
+}
+
 func (mfs *MemFs) Dump() error {
 	d, _, path := mfs.Root(rootP)
 	s, err := d.(*dir.DirImpl).Dump()
@@ -155,5 +164,6 @@ func (mfs *MemFs) Dump() error {
 		return err
 	}
 	db.DPrintf("MEMFSSRV", "Dump: %v %v", path, s)
+
 	return nil
 }

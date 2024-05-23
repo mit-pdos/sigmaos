@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/golang-lru/v2"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	sp "sigmaos/sigmap"
 )
 
@@ -17,7 +18,7 @@ type dcEntry struct {
 	stat Tstat
 }
 
-func (dce *dcEntry) find(del sp.Tpath) (string, bool) {
+func (dce *dcEntry) find(del sp.Tpath) (path.Path, bool) {
 	return dce.dir.find(del)
 }
 
@@ -68,8 +69,7 @@ func (dc *Dcache) remove(d sp.Tpath) {
 	}
 }
 
-// d might not be in the cache since it maybe uncacheable. update
-// assumes caller (protsrv) has write lock on dirctory d.
+// update assumes caller (protsrv) has write lock on dirctory d.
 func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 	de, ok := dc.c.Get(d)
 	if ok {
@@ -83,13 +83,13 @@ func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 }
 
 // XXX maintain reverse index; handle remove, rename, etc.
-func (dc *Dcache) find(del sp.Tpath) (*DirEntInfo, string, bool) {
+func (dc *Dcache) find(del sp.Tpath) (path.Path, bool) {
 	for _, d := range dc.c.Keys() {
 		if de, ok := dc.c.Get(d); ok {
-			if n, ok := de.find(del); ok {
-				return NewDirEntInfoDir(d), n, true
+			if p, ok := de.find(del); ok {
+				return p, true
 			}
 		}
 	}
-	return nil, "", false
+	return nil, false
 }

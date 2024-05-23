@@ -120,7 +120,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 	dents := sorteddir.NewSortedDir[string, *DirEntInfo]()
 	for _, e := range dir.Ents {
 		if e.Name == "." {
-			dents.Insert(e.Name, &DirEntInfo{nf, e.Tpath(), e.Tperm()})
+			dents.Insert(e.Name, newDirEntInfo(nf, e.Tpath(), e.Tperm()))
 		} else {
 			di := newDirEntInfoP(e.Tpath(), e.Tperm())
 			if stat == TSTAT_STAT { // if STAT, get file info

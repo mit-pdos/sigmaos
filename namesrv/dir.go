@@ -59,7 +59,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	di, err := d.fs.Create(&d.Obj.di, name, path, nf, f)
+	di, err := d.fs.Create(&d.Obj.di, pn, path, nf, f)
 	if err != nil {
 		db.DPrintf(db.NAMED, "Create %v %q err %v\n", d, name, err)
 		return nil, err
@@ -117,7 +117,7 @@ func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 
 func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.NAMED, "Remove %v name %v\n", d, name)
-	return d.fs.Remove(&d.Obj.di, name, f, true)
+	return d.fs.Remove(&d.Obj.di, name, f)
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {

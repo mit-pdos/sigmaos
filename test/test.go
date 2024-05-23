@@ -6,7 +6,7 @@ package test
 import (
 	"flag"
 	"fmt"
-	gopath "path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -124,7 +124,7 @@ func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "NewTstatePath: %v\n", err)
 		return nil, err
 	}
-	if path == gopath.Join(sp.MEMFS, "~local/")+"/" {
+	if path == filepath.Join(sp.MEMFS, "~local/")+"/" {
 		ts.memfs = proc.NewProc("memfsd", []string{})
 		err := ts.Spawn(ts.memfs)
 		assert.Nil(t, err)

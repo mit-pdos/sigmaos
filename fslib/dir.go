@@ -2,7 +2,7 @@ package fslib
 
 import (
 	"fmt"
-	gopath "path"
+	"path/filepath"
 	"time"
 
 	db "sigmaos/debug"
@@ -41,7 +41,7 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 func (fl *FsLib) MkDirPath(dir, pn string, perm sp.Tperm) error {
 	p := path.Split(pn)
 	for i, c := range p {
-		dir = gopath.Join(dir, c)
+		dir = filepath.Join(dir, c)
 		err := fl.MkDir(dir, perm)
 		if err == nil {
 			continue
@@ -181,7 +181,7 @@ func Present(sts []*sp.Stat, names []string) bool {
 	n := 0
 	m := make(map[string]bool)
 	for _, n := range names {
-		m[gopath.Base(n)] = true
+		m[filepath.Base(n)] = true
 	}
 	for _, st := range sts {
 		if _, ok := m[st.Name]; ok {
@@ -222,8 +222,8 @@ func (fsl *FsLib) ReadDirWait(dir string, wait Fwait) error {
 }
 
 func (fsl *FsLib) WaitRemove(pn string) error {
-	dir := gopath.Dir(pn) + "/"
-	f := gopath.Base(pn)
+	dir := filepath.Dir(pn) + "/"
+	f := filepath.Base(pn)
 	db.DPrintf(db.FSLIB, "WaitRemove: ReadDirWait dir %v\n", dir)
 	err := fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.FSLIB, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)

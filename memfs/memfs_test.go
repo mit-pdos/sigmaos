@@ -2,7 +2,7 @@ package memfs_test
 
 import (
 	"flag"
-	gopath "path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -44,7 +44,7 @@ func TestPipeBasic(t *testing.T) {
 		return
 	}
 
-	pipe := gopath.Join(pathname, "pipe")
+	pipe := filepath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
 
@@ -84,7 +84,7 @@ func TestPipeClose(t *testing.T) {
 		return
 	}
 
-	pipe := gopath.Join(pathname, "pipe")
+	pipe := filepath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
 
@@ -127,7 +127,7 @@ func TestPipeRemove(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	pipe := gopath.Join(pathname, "pipe")
+	pipe := filepath.Join(pathname, "pipe")
 
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
@@ -155,7 +155,7 @@ func TestPipeCrash0(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	pipe := gopath.Join(pathname, "pipe")
+	pipe := filepath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
 
@@ -184,7 +184,7 @@ func TestPipeCrash1(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	pipe := gopath.Join(pathname, "pipe")
+	pipe := filepath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
 

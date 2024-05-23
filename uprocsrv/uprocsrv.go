@@ -98,6 +98,13 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		procs:         syncmap.NewSyncMap[int, *procEntry](),
 	}
 
+	// Set inner container IP as soon as uprocsrv starts up
+	innerIP, err := netsigma.LocalIP()
+	if err != nil {
+		db.DFatalf("Error LocalIP: %v", err)
+	}
+	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
+
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
@@ -222,13 +229,13 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
 	}(start)
 
-	start = time.Now()
-	innerIP, err := netsigma.LocalIP()
-	if err != nil {
-		db.DFatalf("Error LocalIP: %v", err)
-	}
-	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
-	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.setLocalIP: %v", upid, time.Since(start))
+	//	start = time.Now()
+	//	innerIP, err := netsigma.LocalIP()
+	//	if err != nil {
+	//		db.DFatalf("Error LocalIP: %v", err)
+	//	}
+	//	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
+	//	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.setLocalIP: %v", upid, time.Since(start))
 
 	start = time.Now()
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v, new innerIP %v", realm, innerIP)

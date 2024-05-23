@@ -27,11 +27,15 @@ func NewPortClnt(fsl *fslib.FsLib, kernelId string) (*PortClnt, error) {
 }
 
 func NewPortClntPort(fsl *fslib.FsLib) (*PortClnt, PortInfo, error) {
+	return NewPortClntPortPort(fsl, sp.NO_PORT)
+}
+
+func NewPortClntPortPort(fsl *fslib.FsLib, p sp.Tport) (*PortClnt, PortInfo, error) {
 	pc, err := NewPortClnt(fsl, fsl.ProcEnv().KernelID)
 	if err != nil {
 		return nil, PortInfo{}, err
 	}
-	pi, err := pc.AllocPort(sp.NO_PORT)
+	pi, err := pc.AllocPort(p)
 	if err != nil {
 		return nil, PortInfo{}, err
 	}

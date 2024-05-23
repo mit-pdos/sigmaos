@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	HOTEL_PORT sp.Tport = kernel.LPORT + 1
+	HOTEL_PORT sp.Tport = kernel.FPORT + 1
 )
 
 type Www struct {
@@ -114,12 +114,13 @@ func RunWww(job string, public bool) error {
 	//	}
 
 	if public {
-		pc, pi, err := portclnt.NewPortClntPort(www.FsLib)
+		pc, pi, err := portclnt.NewPortClntPortPort(www.FsLib, HOTEL_PORT)
 		if err != nil {
 			db.DFatalf("AllocPort err %v", err)
 		}
 		www.pc = pc
-		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, www.ProcEnv().GetNet()))
+		db.DPrintf(db.ALWAYS, "Realm port: %v Host port: %v Hotel port: %v", pi.PBinding.RealmPort, pi.PBinding.HostPort, HOTEL_PORT)
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, HOTEL_PORT /*pi.PBinding.RealmPort*/, www.ProcEnv().GetNet()))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}

@@ -15,7 +15,6 @@ import (
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/test"
 )
 
 const (
@@ -124,13 +123,13 @@ type Srv struct {
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func NewHotelSvc(public bool) []Srv {
 	return []Srv{
-		Srv{"hotel-userd", public, 0},
-		Srv{"hotel-rated", public, 2000},
-		Srv{"hotel-geod", public, 2000},
-		Srv{"hotel-profd", public, 2000},
-		Srv{"hotel-searchd", public, 3000},
-		Srv{"hotel-reserved", public, 3000},
-		Srv{"hotel-recd", public, 0},
+		Srv{"hotel-userd", false, 0},
+		Srv{"hotel-rated", false, 2000},
+		Srv{"hotel-geod", false, 2000},
+		Srv{"hotel-profd", false, 2000},
+		Srv{"hotel-searchd", false, 3000},
+		Srv{"hotel-reserved", false, 3000},
+		Srv{"hotel-recd", false, 0},
 		Srv{"hotel-wwwd", public, 3000},
 	}
 }
@@ -173,7 +172,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cachedsvc.NewCacheMgr(sc, job, nsrv, cacheMcpu, gc, test.Overlays)
+			cm, err = cachedsvc.NewCacheMgr(sc, job, nsrv, cacheMcpu, gc, false)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err

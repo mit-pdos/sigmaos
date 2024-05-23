@@ -3,7 +3,7 @@ package container
 import (
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -91,5 +91,5 @@ func setSchedPolicy(pid int, policy linuxsched.SchedPolicy) error {
 }
 
 func jailPath(pid sp.Tpid) string {
-	return path.Join(sp.SIGMAHOME, "jail", pid.String())
+	return filepath.Join(sp.SIGMAHOME, "jail", pid.String())
 }

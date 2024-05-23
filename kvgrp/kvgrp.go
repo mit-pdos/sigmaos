@@ -8,7 +8,7 @@ package kvgrp
 //
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -32,11 +32,11 @@ const (
 )
 
 func JobDir(job string) string {
-	return path.Join(KVDIR, job)
+	return filepath.Join(KVDIR, job)
 }
 
 func GrpPath(jobdir string, grp string) string {
-	return path.Join(jobdir, grp)
+	return filepath.Join(jobdir, grp)
 }
 
 func grpConfPath(jobdir, grp string) string {

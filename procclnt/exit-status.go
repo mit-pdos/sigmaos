@@ -2,7 +2,7 @@ package procclnt
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -18,7 +18,7 @@ func (clnt *ProcClnt) getExitStatus(pid sp.Tpid, how proc.Thow) (*proc.Status, e
 		// Status must be read from kproc dir
 		kprocDir := proc.KProcDir(pid)
 		var b []byte
-		b, err := clnt.GetFile(path.Join(kprocDir, proc.EXIT_STATUS))
+		b, err := clnt.GetFile(filepath.Join(kprocDir, proc.EXIT_STATUS))
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Missing return status, schedd must have crashed: %v, %v", pid, err)
 			return nil, fmt.Errorf("Missing return status, schedd must have crashed: %v", err)
@@ -36,7 +36,7 @@ func (clnt *ProcClnt) writeExitStatus(pid sp.Tpid, kernelID string, status *proc
 		b := status.Marshal()
 		// May return an error if parent already exited.
 		kprocDir := proc.KProcDir(pid)
-		fn := path.Join(kprocDir, proc.EXIT_STATUS)
+		fn := filepath.Join(kprocDir, proc.EXIT_STATUS)
 		db.DPrintf(db.PROCCLNT, "writeExitStatus via named")
 		defer db.DPrintf(db.PROCCLNT, "writeExitStatus done via named")
 		if _, err := clnt.PutFile(fn, 0777, sp.OWRITE, b); err != nil {

@@ -2,7 +2,7 @@ package kernel
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 
 	db "sigmaos/debug"
@@ -216,7 +216,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		return nil, err
 	}
 	if k.Param.Overlays {
-		pn := path.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
+		pn := filepath.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
 
 		// container's first port is for uprocd
 		pm, err := s.GetContainer().AllocFirst()

@@ -2,7 +2,7 @@ package scheddclnt
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"sync/atomic"
 	"time"
 
@@ -59,7 +59,7 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 	// Only read the proc directory if absolutely necessary.
 	if db.WillBePrinted(db.SCHEDDCLNT) {
 		for _, st := range sts {
-			b, err := sdc.GetFile(path.Join(procdir, st.Name))
+			b, err := sdc.GetFile(filepath.Join(procdir, st.Name))
 			if err != nil { // the proc may not exist anymore
 				continue
 			}

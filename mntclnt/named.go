@@ -2,7 +2,7 @@ package mntclnt
 
 import (
 	"fmt"
-	gpath "path"
+	"path/filepath"
 	"time"
 
 	db "sigmaos/debug"
@@ -83,7 +83,7 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 		}
 		db.DPrintf(db.WALK_LAT, "getNamedEndpointDirect %v mount %v %v", mc.cid, sp.ROOTREALM, time.Since(s))
 		s = time.Now()
-		pn := gpath.Join("root", sp.REALMREL, sp.REALMDREL, sp.REALMSREL, realm.String())
+		pn := filepath.Join("root", sp.REALMREL, sp.REALMDREL, sp.REALMSREL, realm.String())
 		target, err := mc.pathc.GetFile(pn, mc.pe.GetPrincipal(), sp.OREAD, 0, sp.MAXGETSET, sp.NullFence())
 		if err != nil {
 			db.DPrintf(db.MOUNT_ERR, "getNamedEndpointDirect [%v] GetFile err %v", realm, err)

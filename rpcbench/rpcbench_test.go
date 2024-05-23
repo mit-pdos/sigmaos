@@ -1,7 +1,7 @@
 package rpcbench_test
 
 import (
-	"path"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -73,7 +73,7 @@ func TestCreateFilePerf(t *testing.T) {
 
 	start := time.Now()
 	for i := 0; i < N_TRIALS; i++ {
-		_, err = ts.Create(path.Join(PATH, strconv.Itoa(i)), 0777, 0)
+		_, err = ts.Create(filepath.Join(PATH, strconv.Itoa(i)), 0777, 0)
 		assert.Nil(t, err, "RPC: %v", err)
 	}
 	db.DPrintf(db.TEST, "Done RPCs")
@@ -104,7 +104,7 @@ func TestMkDirPerf(t *testing.T) {
 
 	start := time.Now()
 	for i := 0; i < N_TRIALS; i++ {
-		err = ts.MkDir(path.Join(PATH, strconv.Itoa(i)), 0777)
+		err = ts.MkDir(filepath.Join(PATH, strconv.Itoa(i)), 0777)
 		assert.Nil(t, err, "RPC: %v", err)
 	}
 	db.DPrintf(db.TEST, "Done RPCs")
@@ -131,14 +131,14 @@ func TestMkDir1DeepPerf(t *testing.T) {
 	err = ts.WaitStart(p.GetPid())
 	assert.Nil(t, err, "WaitStart")
 
-	err = ts.MkDir(path.Join(PATH, "dir"), 0777)
+	err = ts.MkDir(filepath.Join(PATH, "dir"), 0777)
 	assert.Nil(t, err, "RPC: %v", err)
 
 	db.DPrintf(db.TEST, "Start RPCs")
 
 	start := time.Now()
 	for i := 0; i < N_TRIALS; i++ {
-		err = ts.MkDir(path.Join(PATH, "dir", strconv.Itoa(i)), 0777)
+		err = ts.MkDir(filepath.Join(PATH, "dir", strconv.Itoa(i)), 0777)
 		assert.Nil(t, err, "RPC: %v", err)
 	}
 	db.DPrintf(db.TEST, "Done RPCs")
@@ -165,17 +165,17 @@ func TestMkDir2DeepPerf(t *testing.T) {
 	err = ts.WaitStart(p.GetPid())
 	assert.Nil(t, err, "WaitStart")
 
-	err = ts.MkDir(path.Join(PATH, "dir"), 0777)
+	err = ts.MkDir(filepath.Join(PATH, "dir"), 0777)
 	assert.Nil(t, err, "RPC: %v", err)
 
-	err = ts.MkDir(path.Join(PATH, "dir", "dir"), 0777)
+	err = ts.MkDir(filepath.Join(PATH, "dir", "dir"), 0777)
 	assert.Nil(t, err, "RPC: %v", err)
 
 	db.DPrintf(db.TEST, "Start RPCs")
 
 	start := time.Now()
 	for i := 0; i < N_TRIALS; i++ {
-		err = ts.MkDir(path.Join(PATH, "dir", "dir", strconv.Itoa(i)), 0777)
+		err = ts.MkDir(filepath.Join(PATH, "dir", "dir", strconv.Itoa(i)), 0777)
 		assert.Nil(t, err, "RPC: %v", err)
 	}
 	db.DPrintf(db.TEST, "Done RPCs")
@@ -202,20 +202,20 @@ func TestMkDir3DeepPerf(t *testing.T) {
 	err = ts.WaitStart(p.GetPid())
 	assert.Nil(t, err, "WaitStart")
 
-	err = ts.MkDir(path.Join(PATH, "dir"), 0777)
+	err = ts.MkDir(filepath.Join(PATH, "dir"), 0777)
 	assert.Nil(t, err, "RPC: %v", err)
 
-	err = ts.MkDir(path.Join(PATH, "dir", "dir"), 0777)
+	err = ts.MkDir(filepath.Join(PATH, "dir", "dir"), 0777)
 	assert.Nil(t, err, "RPC: %v", err)
 
-	err = ts.MkDir(path.Join(PATH, "dir", "dir", "dir"), 0777)
+	err = ts.MkDir(filepath.Join(PATH, "dir", "dir", "dir"), 0777)
 	assert.Nil(t, err, "RPC: %v", err)
 
 	db.DPrintf(db.TEST, "Start RPCs")
 
 	start := time.Now()
 	for i := 0; i < N_TRIALS; i++ {
-		err = ts.MkDir(path.Join(PATH, "dir", "dir", "dir", strconv.Itoa(i)), 0777)
+		err = ts.MkDir(filepath.Join(PATH, "dir", "dir", "dir", strconv.Itoa(i)), 0777)
 		assert.Nil(t, err, "RPC: %v", err)
 	}
 	db.DPrintf(db.TEST, "Done RPCs")

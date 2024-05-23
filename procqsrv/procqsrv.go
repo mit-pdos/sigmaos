@@ -1,7 +1,7 @@
 package procqsrv
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -297,7 +297,7 @@ func Run() {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	pq := NewProcQ(sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

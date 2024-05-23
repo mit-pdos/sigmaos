@@ -2,7 +2,7 @@ package uprocclnt
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -65,11 +65,11 @@ func NewUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 			}
 			break
 		}
-		kclnt, err := kernelclnt.NewKernelClnt(updm.fsl, path.Join(sp.BOOT, updm.kernelId)+"/")
+		kclnt, err := kernelclnt.NewKernelClnt(updm.fsl, filepath.Join(sp.BOOT, updm.kernelId)+"/")
 		if err != nil {
 			db.DFatalf("Err UprocdMgr Can't make kernelclnt: %v", err)
 		}
-		if err := updm.fsl.MkDir(path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL), 0777); err != nil {
+		if err := updm.fsl.MkDir(filepath.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL), 0777); err != nil {
 			db.DFatalf("Err mkdir for uprocds: %v", err)
 		}
 		updm.kclnt = kclnt
@@ -143,7 +143,7 @@ func (updm *UprocdMgr) startUprocd() (sp.Tpid, *UprocdClnt) {
 	if err != nil {
 		db.DFatalf("Error Boot Uprocd: %v", err)
 	}
-	pn := path.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL, pid.String())
+	pn := filepath.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL, pid.String())
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{updm.fsl}, pn)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Make RPCClnt Uprocd: %v", err)

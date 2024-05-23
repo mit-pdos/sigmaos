@@ -11,7 +11,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -102,7 +102,7 @@ func RunBinFS(kernelId, uprocdpid, smnt string) error {
 		return err
 	}
 
-	pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
+	pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
 	ch, err := sigmarpcchan.NewSigmaRPCChEndpoint([]*fslib.FsLib{sc.FsLib}, pn, mnt)
 	if err != nil {
 		db.DPrintf(db.ERROR, "rpcclnt err %v", err)

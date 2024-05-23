@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -264,7 +264,7 @@ func newTstate(t1 *test.Tstate, app string) *Tstate {
 	// previous runs of the tests), ux may be very slow and cause the test to
 	// hang during intialization. Using RmDir on ux is slow too, so just do this
 	// directly through the os for now.
-	os.RemoveAll(path.Join(sp.SIGMAHOME, "mr"))
+	os.RemoveAll(filepath.Join(sp.SIGMAHOME, "mr"))
 
 	tasks, err := mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
 	assert.Nil(t1.T, err, "Error InitCoordFS: %v", err)

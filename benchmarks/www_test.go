@@ -2,7 +2,7 @@ package benchmarks_test
 
 import (
 	"net"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -59,7 +59,7 @@ func NewWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype s
 		ji.k8ssrvaddr = ip + K8S_PORT
 	}
 
-	ji.sempath = path.Join(www.JobDir(ji.job), "kvclerk-sem")
+	ji.sempath = filepath.Join(www.JobDir(ji.job), "kvclerk-sem")
 	ji.sem = semclnt.NewSemClnt(ts.FsLib, ji.sempath)
 	err := ji.sem.Init(0)
 	assert.Nil(ji.Ts.T, err, "Sem init: %v", err)

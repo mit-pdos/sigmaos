@@ -4,7 +4,7 @@ import (
 	"io"
 	"net/rpc"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -210,7 +210,7 @@ func newNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interfac
 	ss := make([]*semclnt.SemClnt, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		spath := path.Join(OUT_DIR, rand.String(16))
+		spath := filepath.Join(OUT_DIR, rand.String(16))
 		s := semclnt.NewSemClnt(ts.FsLib, spath)
 		ss = append(ss, s)
 		is = append(is, s)
@@ -360,10 +360,10 @@ func newSocialNetworkJobs(
 
 // ========== Client Helpers ==========
 
-var clidir string = path.Join("name/", "clnts")
+var clidir string = filepath.Join("name/", "clnts")
 
 func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
-	sem := semclnt.NewSemClnt(rootts.FsLib, path.Join(clidir, "clisem"))
+	sem := semclnt.NewSemClnt(rootts.FsLib, filepath.Join(clidir, "clisem"))
 	err := sem.Init(0)
 	if !assert.True(rootts.T, err == nil || !serr.IsErrCode(err, serr.TErrExists), "Error sem init %v", err) {
 		return nil
@@ -398,7 +398,7 @@ func clientReady(rootts *test.Tstate) {
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 	// Register the client as ready.
 	cid := "clnt-" + rand.String(4)
-	_, err = rootts.PutFile(path.Join(clidir, cid), 0777, sp.OWRITE, nil)
+	_, err = rootts.PutFile(filepath.Join(clidir, cid), 0777, sp.OWRITE, nil)
 	assert.Nil(rootts.T, err, "Err PutFile: %v", err)
 	// Create a semaphore and wait for the leader to start the benchmark
 	sem := createClntWaitSem(rootts)
@@ -417,7 +417,7 @@ func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Tr
 	// Make the destination directory.
 	os.MkdirAll(dst, 0777)
 	_, err := ts.ProcessDir(src, func(st *sp.Stat) (bool, error) {
-		rdr, err := ts.OpenReader(path.Join(src, st.Name))
+		rdr, err := ts.OpenReader(filepath.Join(src, st.Name))
 		defer rdr.Close()
 		assert.Nil(ts.T, err, "Error open reader %v", err)
 		b, err := io.ReadAll(rdr.Reader)
@@ -426,7 +426,7 @@ func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Tr
 		if realm.String() != "" {
 			name += "-" + realm.String() + "-tpt.out"
 		}
-		err = os.WriteFile(path.Join(dst, name), b, 0777)
+		err = os.WriteFile(filepath.Join(dst, name), b, 0777)
 		assert.Nil(ts.T, err, "Error write file %v", err)
 		return false, nil
 	})

@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"path"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
@@ -125,7 +125,7 @@ func NewPerfMulti(pe *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 		db.DPrintf(db.ALWAYS, "NewPerfMulti: MkdirAll %s err %v", OUTPUT_PATH, err)
 		return nil, err
 	}
-	basePath := path.Join(OUTPUT_PATH, path.Base(pe.GetPID().String()))
+	basePath := filepath.Join(OUTPUT_PATH, filepath.Base(pe.GetPID().String()))
 	if s2 != "" {
 		basePath += "-" + s2
 	}
@@ -218,7 +218,7 @@ func (p *Perf) Done() {
 
 // Get the total cpu time usage for process with pid PID
 func GetCPUTimePid(pid string) (utime, stime uint64, err error) {
-	contents, err := ioutil.ReadFile(path.Join("/proc", pid, "stat"))
+	contents, err := ioutil.ReadFile(filepath.Join("/proc", pid, "stat"))
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Couldn't get CPU time: %v", err)
 		return

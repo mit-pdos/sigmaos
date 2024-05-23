@@ -2,7 +2,7 @@ package hotel
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 
 	"sigmaos/cachedsvc"
@@ -70,15 +70,15 @@ func setNHotel(nh int) {
 }
 
 func JobDir(job string) string {
-	return path.Join(HOTELDIR, job)
+	return filepath.Join(HOTELDIR, job)
 }
 
 func JobHTTPAddrsPath(job string) string {
-	return path.Join(JobDir(job), HTTP_ADDRS)
+	return filepath.Join(JobDir(job), HTTP_ADDRS)
 }
 
 func MemFsPath(job string) string {
-	return path.Join(JobDir(job), MEMFS)
+	return filepath.Join(JobDir(job), MEMFS)
 }
 
 func NewFsLibs(uname string, npc *netproxyclnt.NetProxyClnt) ([]*fslib.FsLib, error) {
@@ -119,7 +119,7 @@ type Srv struct {
 	Mcpu   proc.Tmcpu
 }
 
-//	,[]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}
+//	,[]string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.DB, "*")}
 
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func NewHotelSvc(public bool) []Srv {

@@ -1,7 +1,7 @@
 package procclnt
 
 import (
-	"path"
+	"path/filepath"
 	"time"
 
 	"runtime/debug"
@@ -22,7 +22,7 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 	}
 	// If a schedd IP was specified for this proc, mount the RPC file directly.
 	if ep, ok := fsl.ProcEnv().GetScheddEndpoint(); ok {
-		pn := path.Join(sp.SCHEDD, fsl.ProcEnv().GetKernelID(), rpc.RPC)
+		pn := filepath.Join(sp.SCHEDD, fsl.ProcEnv().GetKernelID(), rpc.RPC)
 		db.DPrintf(db.PROCCLNT, "Mount[%v] %v as %v", ep, rpc.RPC, pn)
 		start := time.Now()
 		err := fsl.MountTree(ep, rpc.RPC, pn)

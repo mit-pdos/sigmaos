@@ -4,7 +4,7 @@ package fttasks
 import (
 	"encoding/json"
 	"fmt"
-	"path"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -35,16 +35,16 @@ func MkFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
 	if err := fsl.MkDirPath(dir, job, 0777); err != nil {
 		return nil, err
 	}
-	if err := fsl.MkDir(path.Join(dir, job, "done"), 0777); err != nil {
+	if err := fsl.MkDir(filepath.Join(dir, job, "done"), 0777); err != nil {
 		return nil, err
 	}
-	if err := fsl.MkDir(path.Join(dir, job, "todo"), 0777); err != nil {
+	if err := fsl.MkDir(filepath.Join(dir, job, "todo"), 0777); err != nil {
 		return nil, err
 	}
-	if err := fsl.MkDir(path.Join(dir, job, "wip"), 0777); err != nil {
+	if err := fsl.MkDir(filepath.Join(dir, job, "wip"), 0777); err != nil {
 		return nil, err
 	}
-	if err := fsl.MkDir(path.Join(dir, job, "error"), 0777); err != nil {
+	if err := fsl.MkDir(filepath.Join(dir, job, "error"), 0777); err != nil {
 		return nil, err
 	}
 	return NewFtTasks(fsl, dir, job)
@@ -52,15 +52,15 @@ func MkFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
 
 func NewFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
 	ft := &FtTasks{FsLib: fsl, dir: dir, job: job}
-	ft.done = path.Join(dir, job, "done")
-	ft.todo = path.Join(dir, job, "todo")
-	ft.wip = path.Join(dir, job, "wip")
-	ft.error = path.Join(dir, job, "error")
+	ft.done = filepath.Join(dir, job, "done")
+	ft.todo = filepath.Join(dir, job, "todo")
+	ft.wip = filepath.Join(dir, job, "wip")
+	ft.error = filepath.Join(dir, job, "error")
 	return ft, nil
 }
 
 func (ft *FtTasks) Cleanup() error {
-	return ft.RmDir(path.Join(ft.dir, ft.job))
+	return ft.RmDir(filepath.Join(ft.dir, ft.job))
 }
 
 func (ft *FtTasks) Jobs() ([]*sp.Stat, error) {
@@ -78,14 +78,14 @@ func (ft *FtTasks) NTaskDone() (int, error) {
 // Causes the server to stop after processing remaining tasks
 func (ft *FtTasks) SubmitStop() error {
 	db.DPrintf(db.FTTASKS, "SubmitStop")
-	t := path.Join(ft.todo, STOP)
+	t := filepath.Join(ft.todo, STOP)
 	_, err := ft.PutFile(t, 0777, sp.OWRITE, []byte{})
 	return err
 }
 
 func (ft *FtTasks) SubmitTask(i interface{}) error {
 	db.DPrintf(db.FTTASKS, "SubmitTask %v", i)
-	t := path.Join(ft.todo, rd.String(4))
+	t := filepath.Join(ft.todo, rd.String(4))
 	return ft.PutFileJson(t, 0777, i)
 }
 
@@ -98,7 +98,7 @@ func (ft *FtTasks) SubmitTaskMulti(is []interface{}) error {
 		}
 		bs = append(bs, b...)
 	}
-	t := path.Join(ft.todo, rd.String(4))
+	t := filepath.Join(ft.todo, rd.String(4))
 	_, err := ft.PutFile(t, 0777, sp.OWRITE, bs)
 	return err
 }
@@ -185,7 +185,7 @@ func (ft *FtTasks) ReadTask(name string, i interface{}) error {
 
 // Read tasks using a reader
 func (ft *FtTasks) TaskReader(name string) (*fslib.FdReader, error) {
-	return ft.OpenReader(path.Join(ft.wip, name))
+	return ft.OpenReader(filepath.Join(ft.wip, name))
 }
 
 func (ft *FtTasks) TaskPathName(name string) string {

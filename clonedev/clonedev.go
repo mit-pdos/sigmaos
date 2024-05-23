@@ -1,7 +1,7 @@
 package clonedev
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
 
 	db "sigmaos/debug"
@@ -61,7 +61,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	defer c.mu.Unlock()
 
 	sid := ctx.SessionId()
-	pn := path.Join(c.dir, sid.String())
+	pn := filepath.Join(c.dir, sid.String())
 	db.DPrintf(db.CLONEDEV, "Clone create %q\n", pn)
 	_, err := c.mfs.Create(pn, sp.DMDIR, sp.ORDWR, sp.NoLeaseId)
 	if err != nil && err.Code() != serr.TErrExists {
@@ -102,8 +102,8 @@ func (c *Clone) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 
 func (c *Clone) Detach(session sessp.Tsession) {
 	db.DPrintf(db.CLONEDEV, "Detach %v\n", session)
-	dir := path.Join(c.dir, session.String())
-	ctl := path.Join(dir, sessdev.CTL)
+	dir := filepath.Join(c.dir, session.String())
+	ctl := filepath.Join(dir, sessdev.CTL)
 	if err := c.mfs.Remove(ctl); err != nil {
 		db.DPrintf(db.CLONEDEV, "Remove %v err %v\n", ctl, err)
 	}

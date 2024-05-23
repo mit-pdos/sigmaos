@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"hash/fnv"
 	"io"
-	"path"
+	"path/filepath"
 	"reflect"
 	"strconv"
 
@@ -265,7 +265,7 @@ func (cc *CacheClnt) StatsClnt() []map[string]*rpc.MethodStatSnapshot {
 }
 
 func (cc *CacheClnt) DumpSrv(srv string) (map[string]string, error) {
-	dir := path.Join(srv, cachesrv.DUMP)
+	dir := filepath.Join(srv, cachesrv.DUMP)
 	b, err := cc.fsl.GetFile(dir + "/" + sessdev.CLONE)
 	if err != nil {
 		return nil, err

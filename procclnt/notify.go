@@ -1,7 +1,7 @@
 package procclnt
 
 import (
-	"path"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -33,7 +33,7 @@ func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, s
 		// If the proc was not spawned via schedd, notify via sem.
 		kprocDir := proc.KProcDir(pid)
 		db.DPrintf(db.PROCCLNT, "%v sem %v dir %v", method, pid, kprocDir)
-		sem := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, semName))
+		sem := semclnt.NewSemClnt(clnt.FsLib, filepath.Join(kprocDir, semName))
 		err := sem.Up()
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Error %v: %v", method, err)

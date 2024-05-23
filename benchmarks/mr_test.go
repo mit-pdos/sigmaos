@@ -1,7 +1,7 @@
 package benchmarks_test
 
 import (
-	"path"
+	"path/filepath"
 
 	"github.com/stretchr/testify/assert"
 
@@ -40,7 +40,7 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobname string, m
 }
 
 func (ji *MRJobInstance) PrepareMRJob() {
-	jobf, err := mr.ReadJobConfig(path.Join("..", "mr", ji.app))
+	jobf, err := mr.ReadJobConfig(filepath.Join("..", "mr", ji.app))
 	assert.Nil(ji.Ts.T, err, "Error ReadJobConfig: %v", err)
 	ji.job = jobf
 	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)

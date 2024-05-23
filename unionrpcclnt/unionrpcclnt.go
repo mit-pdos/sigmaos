@@ -1,7 +1,7 @@
 package unionrpcclnt
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
 
 	db "sigmaos/debug"
@@ -63,7 +63,7 @@ func (urpcc *UnionRPCClnt) getClntL(srvID string) (*rpcclnt.RPCClnt, error) {
 	var rpcc *rpcclnt.RPCClnt
 	var ok bool
 	if rpcc, ok = urpcc.clnts[srvID]; !ok {
-		ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{urpcc.FsLib}, path.Join(urpcc.path, srvID))
+		ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{urpcc.FsLib}, filepath.Join(urpcc.path, srvID))
 		if err != nil {
 			db.DPrintf(urpcc.eSelector, "Error NewSigmaRPCChan[srvID:%v]: %v", srvID, err)
 			return nil, err

@@ -4,7 +4,7 @@ package procclnt
 import (
 	"fmt"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -127,7 +127,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, schedd will create the semaphore.
 		kprocDir := proc.KProcDir(p.GetPid())
-		semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.START_SEM))
+		semStart := semclnt.NewSemClnt(clnt.FsLib, filepath.Join(kprocDir, proc.START_SEM))
 		semStart.Init(0)
 	}
 	return nil
@@ -344,10 +344,10 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 		db.DPrintf(db.PROCCLNT_ERR, "exited %v err %v", pid, err)
 	}
 	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()
-	semPath := path.Join(parentdir, proc.START_SEM)
+	semPath := filepath.Join(parentdir, proc.START_SEM)
 	if how != proc.HSCHEDD {
 		kprocDir := proc.KProcDir(pid)
-		semPath = path.Join(kprocDir, proc.START_SEM)
+		semPath = filepath.Join(kprocDir, proc.START_SEM)
 	}
 	semStart := semclnt.NewSemClnt(clnt.FsLib, semPath)
 	semStart.Up()

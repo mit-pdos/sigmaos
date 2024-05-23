@@ -6,7 +6,7 @@ package uprocsrv
 import (
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -107,7 +107,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	ups.sc = sc
 	var ssrv *sigmasrv.SigmaSrv
 	if up == sp.NO_PORT.String() {
-		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
+		pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
 		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
 	} else {
 		var port sp.Tport

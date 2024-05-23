@@ -2,7 +2,7 @@ package semclnt_test
 
 import (
 	"flag"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -38,7 +38,7 @@ func TestSemClntSimple(t *testing.T) {
 		return
 	}
 
-	pn := path.Join(pathname, SEMDIR)
+	pn := filepath.Join(pathname, SEMDIR)
 
 	db.DPrintf(db.TEST, "pn %v\n", pn)
 
@@ -82,7 +82,7 @@ func TestSemClntConcur(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	pn := path.Join(pathname, SEMDIR)
+	pn := filepath.Join(pathname, SEMDIR)
 	err := ts.MkDir(pn, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe1 := proc.NewAddedProcEnv(ts.ProcEnv())
@@ -126,7 +126,7 @@ func TestSemClntFail(t *testing.T) {
 		return
 	}
 
-	pn := path.Join(pathname, SEMDIR)
+	pn := filepath.Join(pathname, SEMDIR)
 	err := ts.MkDir(pn, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())

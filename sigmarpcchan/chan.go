@@ -1,7 +1,7 @@
 package sigmarpcchan
 
 import (
-	"path"
+	"path/filepath"
 	"sync/atomic"
 
 	"sigmaos/fslib"
@@ -27,7 +27,7 @@ func SigmaRPCChanFactory(fsls []*fslib.FsLib) rpcclnt.NewRPCChFn {
 
 func NewSigmaRPCChEndpoint(fsls []*fslib.FsLib, pn string, mnt *sp.Tendpoint) (rpcclnt.RPCCh, error) {
 	for _, fsl := range fsls {
-		err := fsl.MountTree(mnt, rpc.RPC, path.Join(pn, rpc.RPC))
+		err := fsl.MountTree(mnt, rpc.RPC, filepath.Join(pn, rpc.RPC))
 		if err != nil {
 			return nil, err
 		}
@@ -41,7 +41,7 @@ func NewSigmaRPCCh(fsls []*fslib.FsLib, pn string) (rpcclnt.RPCCh, error) {
 		fds:  make([]int, 0, len(fsls)),
 		pn:   pn,
 	}
-	sdc, err := sessdevclnt.NewSessDevClnt(fsls[0], path.Join(pn, rpc.RPC))
+	sdc, err := sessdevclnt.NewSessDevClnt(fsls[0], filepath.Join(pn, rpc.RPC))
 	if err != nil {
 		return nil, err
 	}

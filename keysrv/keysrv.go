@@ -1,7 +1,7 @@
 package keysrv
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
 
 	"sigmaos/auth"
@@ -91,10 +91,10 @@ func RunKeySrv(masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) {
 	if _, err := ssrv.Create(sp.RONLY_REL, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		db.DFatalf("Error Create RONLY rpc dev dir: %v", err)
 	}
-	if err := ssrv.AddRPCSrv(path.Join(sp.RW_REL, rpc.RPC), ks.rwKeySrv); err != nil {
+	if err := ssrv.AddRPCSrv(filepath.Join(sp.RW_REL, rpc.RPC), ks.rwKeySrv); err != nil {
 		db.DFatalf("Error add RW rpc dev: %v", err)
 	}
-	if err := ssrv.AddRPCSrv(path.Join(sp.RONLY_REL, rpc.RPC), ks.rOnlyKeySrv); err != nil {
+	if err := ssrv.AddRPCSrv(filepath.Join(sp.RONLY_REL, rpc.RPC), ks.rOnlyKeySrv); err != nil {
 		db.DFatalf("Error add RONLY rpc dev: %v", err)
 	}
 	// Perf monitoring

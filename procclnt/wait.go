@@ -1,7 +1,7 @@
 package procclnt
 
 import (
-	"path"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -30,7 +30,7 @@ func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, sem
 		// If not spawned via schedd, wait via semaphore.
 		kprocDir := proc.KProcDir(pid)
 		db.DPrintf(db.PROCCLNT, "Wait%v sem %v dir %v", method, pid, kprocDir)
-		sem := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, semName))
+		sem := semclnt.NewSemClnt(clnt.FsLib, filepath.Join(kprocDir, semName))
 		err := sem.Down()
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Wait%v error %v", method, err)

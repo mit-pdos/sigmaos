@@ -2,7 +2,7 @@ package socialnetwork
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 
 	"sigmaos/cachedsvc"
 	"sigmaos/cachedsvcclnt"
@@ -38,7 +38,7 @@ type Srv struct {
 }
 
 func JobHTTPAddrsPath(job string) string {
-	return path.Join(JobDir(job), HTTP_ADDRS)
+	return filepath.Join(JobDir(job), HTTP_ADDRS)
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
@@ -72,7 +72,7 @@ type SocialNetworkConfig struct {
 }
 
 func JobDir(job string) string {
-	return path.Join(SOCIAL_NETWORK, job)
+	return filepath.Join(SOCIAL_NETWORK, job)
 }
 
 func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc, public bool) (*SocialNetworkConfig, error) {

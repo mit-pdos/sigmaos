@@ -1,7 +1,7 @@
 package www
 
 import (
-	"path"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -16,15 +16,15 @@ const (
 )
 
 func JobDir(job string) string {
-	return path.Join(WWWDIR, job)
+	return filepath.Join(WWWDIR, job)
 }
 
 func JobHTTPAddrsPath(job string) string {
-	return path.Join(JobDir(job), HTTP_ADDRS)
+	return filepath.Join(JobDir(job), HTTP_ADDRS)
 }
 
 func MemFsPath(job string) string {
-	return path.Join(JobDir(job), MEMFS)
+	return filepath.Join(JobDir(job), MEMFS)
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {

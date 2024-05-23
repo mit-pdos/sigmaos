@@ -2,7 +2,7 @@ package chunksrv_test
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -56,7 +56,7 @@ func newTstate(t *testing.T, n int) *Tstate {
 
 func (ts *Tstate) check(srv string, st *sp.Stat) {
 	pn := chunksrv.PathHostKernelRealm(srv, sp.ROOTREALM)
-	pn = path.Join(pn, PROG)
+	pn = filepath.Join(pn, PROG)
 	fi, err := os.Stat(pn)
 	assert.Nil(ts.T, err)
 	assert.Equal(ts.T, st.Tlength(), sp.Tlength(fi.Size()))

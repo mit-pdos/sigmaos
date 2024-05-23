@@ -21,7 +21,9 @@ func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
 	}
 	db.DPrintf(db.FSLIB, "MkDir Create [%v]: %v", path, time.Since(start))
 	start = time.Now()
-	fl.CloseFd(fd)
+	if err := fl.CloseFd(fd); err != nil {
+		return err
+	}
 	db.DPrintf(db.FSLIB, "MkDir Close [%v]: %v", path, time.Since(start))
 	return nil
 }

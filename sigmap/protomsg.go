@@ -52,6 +52,10 @@ func (a *Tattach) Tfid() Tfid {
 	return Tfid(a.Fid)
 }
 
+func (a *Tattach) Tafid() Tfid {
+	return Tfid(a.Afid)
+}
+
 func (a *Tattach) TclntId() TclntId {
 	return TclntId(a.ClntId)
 }

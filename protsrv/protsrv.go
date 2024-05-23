@@ -22,7 +22,7 @@ type GetRootCtxF func(*sp.Tprincipal, map[string]*sp.SecretProto, string, sessp.
 type ProtSrv struct {
 	*ProtSrvState
 	ssrv       *sesssrv.SessSrv
-	ft         *fidTable
+	fm         *fidMap
 	p          *sp.Tprincipal
 	sid        sessp.Tsession
 	getRootCtx GetRootCtxF
@@ -31,7 +31,7 @@ type ProtSrv struct {
 func NewProtSrv(pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF) *ProtSrv {
 	ps := &ProtSrv{
 		ProtSrvState: pss,
-		ft:           newFidTable(),
+		fm:           newFidMap(),
 		p:            p,
 		sid:          sid,
 		getRootCtx:   grf,
@@ -52,7 +52,9 @@ func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 
 func (ps *ProtSrv) NewRootFid(id sp.Tfid, ctx fs.CtxI, root fs.FsObj, pn path.Path) {
 	qid := ps.newQid(root.Perm(), root.Path())
-	ps.ft.Insert(id, fid.NewFidPath(fid.NewPobj(pn, root, ctx), 0, qid))
+	if err := ps.fm.Insert(id, fid.NewFidPath(fid.NewPobj(pn, root, ctx), 0, qid)); err != nil {
+		db.DFatalf("NewRootFid err %v\n", err)
+	}
 }
 
 func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
@@ -60,7 +62,7 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 }
 
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
-	db.DPrintf(db.PROTSRV, "Attach %v cid %v sid %v", args, args.TclntId(), ps.sid)
+	db.DPrintf(db.PROTSRV, "Attach %v %v %v cid %v sid %v", args.Tfid(), args.Tafid(), args.Secrets, args.TclntId(), ps.sid)
 	p := path.Split(args.Aname)
 	root, ctx := ps.getRootCtx(ps.p, args.GetSecrets(), args.Aname, ps.sid, args.TclntId())
 	tree := root.(fs.FsObj)
@@ -81,14 +83,16 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		// just the refcnt.
 		ps.vt.Insert(root.Path())
 	}
-	ps.ft.Insert(args.Tfid(), fid.NewFidPath(fid.NewPobj(p, tree, ctx), 0, qid))
+	if err := ps.fm.Insert(args.Tfid(), fid.NewFidPath(fid.NewPobj(p, tree, ctx), 0, qid)); err != nil {
+		return sp.NoClntId, sp.NewRerrorSerr(err)
+	}
 	rets.Qid = qid.Proto()
 	return args.TclntId(), nil
 }
 
 // Delete ephemeral files created by this client and delete this client
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
-	fids := ps.ft.ClientFids(args.TclntId())
+	fids := ps.fm.ClientFids(args.TclntId())
 	db.DPrintf(db.PROTSRV, "Detach clnt %v fes %v\n", args.TclntId(), fids)
 	for _, fid := range fids {
 		ps.clunk(fid)
@@ -125,7 +129,7 @@ func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names path.Path, resol
 // contains a special path element; in that, case the client must walk
 // args.Wnames.
 func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
-	f, err := ps.ft.Lookup(args.Tfid())
+	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
@@ -150,8 +154,10 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	p := append(f.Pobj().Path().Copy(), args.Wnames[:n]...)
 	rets.Qids = ps.newQidProtos(os)
 	qid := ps.newQid(lo.Perm(), lo.Path())
-	db.DPrintf(db.PROTSRV, "%v: Walk NewFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().ClntId(), p, lo, qid, os)
-	ps.ft.Insert(args.Tnewfid(), fid.NewFidPath(fid.NewPobj(p, lo, f.Pobj().Ctx()), 0, qid))
+	db.DPrintf(db.PROTSRV, "%v: Walk NewFidPath fid %v p %v lo %v qid %v os %v", f.Pobj().Ctx().ClntId(), args.NewFid, p, lo, qid, os)
+	if err := ps.fm.Insert(args.Tnewfid(), fid.NewFidPath(fid.NewPobj(p, lo, f.Pobj().Ctx()), 0, qid)); err != nil {
+		return sp.NewRerrorSerr(err)
+	}
 
 	ps.vt.Insert(qid.Tpath())
 
@@ -159,7 +165,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 }
 
 func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
-	f, err := ps.ft.LookupDel(fid)
+	f, err := ps.fm.LookupDel(fid)
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
@@ -179,7 +185,7 @@ func (ps *ProtSrv) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 }
 
 func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
-	f, err := ps.ft.Lookup(args.Tfid())
+	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
@@ -198,7 +204,7 @@ func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 }
 
 func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
-	f, err := ps.ft.Lookup(args.Tfid())
+	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
@@ -224,21 +230,25 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 }
 
 func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
-	f, err := ps.ft.Lookup(args.Tfid())
+	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
+	db.DPrintf(db.PROTSRV, "%v: Create %v v %v %v", f.Pobj().Ctx().ClntId(), args.Tfid(), f.Pobj().Path(), args.Name)
+
 	qid, nf, err := ps.CreateObj(f.Pobj().Ctx(), f.Pobj().Obj(), f.Pobj().Path(), args.Name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence(), nil)
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	ps.ft.Insert(args.Tfid(), nf)
+	if ps.fm.Update(args.Tfid(), nf); err != nil {
+		return sp.NewRerrorSerr(err)
+	}
 	rets.Qid = qid.Proto()
 	return nil
 }
 
 func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
-	f, err := ps.ft.Lookup(args.Tfid())
+	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
@@ -257,7 +267,7 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 }
 
 func (ps *ProtSrv) WriteRead(args *sp.Twriteread, iov sessp.IoVec, rets *sp.Rread) (sessp.IoVec, *sp.Rerror) {
-	f, err := ps.ft.Lookup(sp.Tfid(args.Fid))
+	f, err := ps.fm.Lookup(sp.Tfid(args.Fid))
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
@@ -271,7 +281,7 @@ func (ps *ProtSrv) WriteRead(args *sp.Twriteread, iov sessp.IoVec, rets *sp.Rrea
 }
 
 func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Rerror {
-	f, err := ps.ft.Lookup(args.Tfid())
+	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
@@ -290,7 +300,7 @@ func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 // Remove for backwards compatability; SigmaOS uses RemoveFile (see
 // below) instead of Remove, but proxy will use it.
 func (ps *ProtSrv) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
-	f, err := ps.ft.Lookup(args.Tfid())
+	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
@@ -302,7 +312,7 @@ func (ps *ProtSrv) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 }
 
 func (ps *ProtSrv) Stat(args *sp.Trstat, rets *sp.Rrstat) *sp.Rerror {
-	f, err := ps.ft.Lookup(args.Tfid())
+	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
@@ -322,7 +332,7 @@ func (ps *ProtSrv) Stat(args *sp.Trstat, rets *sp.Rrstat) *sp.Rerror {
 //
 
 func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
-	f, err := ps.ft.Lookup(args.Tfid())
+	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
@@ -369,11 +379,11 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 }
 
 func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
-	oldf, err := ps.ft.Lookup(args.Toldfid())
+	oldf, err := ps.fm.Lookup(args.Toldfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	newf, err := ps.ft.Lookup(args.Tnewfid())
+	newf, err := ps.fm.Lookup(args.Tnewfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
@@ -426,7 +436,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 }
 
 func (ps *ProtSrv) LookupWalk(fid sp.Tfid, wnames path.Path, resolve bool, ltype lockmap.Tlock) (*fid.Fid, path.Path, fs.FsObj, *serr.Err) {
-	f, err := ps.ft.Lookup(fid)
+	f, err := ps.fm.Lookup(fid)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -518,7 +528,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	if sp.Tsize(len(data)) > sp.MAXGETSET {
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, "too large"))
 	}
-	f, err := ps.ft.Lookup(args.Tfid())
+	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}

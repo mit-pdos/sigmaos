@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"fmt"
+	"path"
 	"strconv"
 
 	db "sigmaos/debug"
@@ -214,27 +215,25 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 	if err != nil {
 		return nil, err
 	}
-	//	if k.Param.Overlays {
-	//		pn := path.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
+	if k.Param.Overlays {
+		pn := path.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
 
-	// container's first port is for uprocd
-	//	pm, err := s.GetContainer().AllocFirst()
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	_ = pm
-	// TODO: pass to container
+		// container's first port is for uprocd
+		pm, err := s.GetContainer().AllocFirst()
+		if err != nil {
+			return nil, err
+		}
 
-	//		// Use 127.0.0.1, because only the local schedd should be talking
-	//		// to uprocd.
-	//		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
-	//		ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{addr}, sp.ROOTREALM)
-	//		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
-	//		if err := k.MkEndpointFile(pn, ep, sp.NoLeaseId); err != nil {
-	//			return nil, err
-	//		}
-	//		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s", pn, pm)
-	//	}
+		// Use 127.0.0.1, because only the local schedd should be talking
+		// to uprocd.
+		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
+		ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{addr}, sp.ROOTREALM)
+		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
+		if err := k.MkEndpointFile(pn, ep, sp.NoLeaseId); err != nil {
+			return nil, err
+		}
+		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s", pn, pm)
+	}
 
 	return s, nil
 }

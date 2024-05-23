@@ -24,7 +24,7 @@ func NewPublicAddrs(outerIP sp.Tip, pb PortBinding, netns string, laddr *sp.Tadd
 }
 
 func NewPublicEndpoint(outerIP sp.Tip, pb PortBinding, net string, lmnt *sp.Tendpoint) *sp.Tendpoint {
-	return sp.NewEndpoint(sp.EXTERNAL_EP, NewPublicAddrs(outerIP, pb, net, lmnt.Addrs()[0]), lmnt.GetRealm())
+	return sp.NewEndpoint(sp.INTERNAL_EP, NewPublicAddrs(outerIP, pb, net, lmnt.Addrs()[0]), lmnt.GetRealm())
 }
 
 type PortBinding struct {

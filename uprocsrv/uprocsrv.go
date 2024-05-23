@@ -112,21 +112,24 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	ups.sc = sc
+	var ep *sp.Tendpoint
 	var ssrv *sigmasrv.SigmaSrv
-	//	if up == sp.NO_PORT.String() {
-	pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
-	ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
-	//	} else {
-	//		var port sp.Tport
-	//		port, err = sp.ParsePort(up)
-	//		if err != nil {
-	//			db.DFatalf("Error parse port: %v", err)
-	//		}
-	//		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port, pe.GetNet())
-	//
-	//		// The kernel will advertise the server, so pass "" as pn.
-	//		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
-	//	}
+	if up == sp.NO_PORT.String() {
+		pn := path.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
+		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
+		ep = ssrv.GetSigmaPSrvEndpoint()
+	} else {
+		var port sp.Tport
+		port, err = sp.ParsePort(up)
+		if err != nil {
+			db.DFatalf("Error parse port: %v", err)
+		}
+		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port, pe.GetNet())
+
+		// The kernel will advertise the server, so pass "" as pn.
+		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
+		ep = sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port, pe.GetNet())}, sp.ROOTREALM)
+	}
 	if err != nil {
 		db.DFatalf("Error sigmasrvclnt: %v", err)
 		return err
@@ -144,7 +147,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	// Start binfsd now; when uprocds gets assigned to a realm, then
 	// uprocd mounts the realm's bin directory that binfs will serve
 	// from.
-	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ups.ssrv.GetSigmaPSrvEndpoint())
+	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ep)
 	if err != nil {
 		db.DPrintf(db.ERROR, "ExecBinSrv err %v\n", err)
 		return err
@@ -238,7 +241,7 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	//	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.setLocalIP: %v", upid, time.Since(start))
 
 	start = time.Now()
-	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v, new innerIP %v", realm, innerIP)
+	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v", realm)
 
 	if err := mountRealmBinDir(realm); err != nil {
 		db.DFatalf("Error mount realm bin dir: %v", err)

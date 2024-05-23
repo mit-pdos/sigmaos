@@ -64,7 +64,7 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	case sessp.TTwatch:
 		time.Sleep(1 * time.Second)
 		ss.conn.Close()
-		msg := &sp.Ropen{Qid: qid}
+		msg := &sp.Ropen{Qid: qid.Proto()}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 	case sessp.TTwrite:
 		msg := &sp.Rwrite{Count: uint32(len(fcm.Fcm.Iov[0]))}
@@ -78,7 +78,7 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 		rep.Iov = sessp.IoVec{fcm.Fcm.Iov[0][0:REPBUFSZ]}
 	default:
-		msg := &sp.Rattach{Qid: qid}
+		msg := &sp.Rattach{Qid: qid.Proto()}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 		r := rand.Int64(100)
 		if r < uint64(ss.crash) {

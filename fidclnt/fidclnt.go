@@ -143,7 +143,7 @@ func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, 
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}
-	fidc.fids.insert(fid, newChannel(pc, path.Split(pn), []*sp.Tqid{reply.Qid}))
+	fidc.fids.insert(fid, newChannel(pc, path.Split(pn), []*sp.Tqid{sp.NewTqid(reply.Qid)}))
 	return fid, nil
 }
 
@@ -220,7 +220,7 @@ func (fidc *FidClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Tqid, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	return reply.Qid, nil
+	return sp.NewTqid(reply.Qid), nil
 }
 
 func (fidc *FidClnt) Watch(fid sp.Tfid) *serr.Err {

@@ -69,7 +69,7 @@ func newObj(path path.Path) (*Obj, *serr.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, sp.DMSYMLINK}, err
 	} else {
-		return &Obj{path, st.Qid.Tpath(), st.Tmode()}, nil
+		return &Obj{path, st.Tqid().Tpath(), st.Tmode()}, nil
 	}
 }
 

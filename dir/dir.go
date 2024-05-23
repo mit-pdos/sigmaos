@@ -53,7 +53,7 @@ func (dir *DirImpl) Dump() (string, error) {
 	}
 	s := "{"
 	for _, st := range sts {
-		if st.Qid.Ttype()&sp.QTDIR == sp.QTDIR {
+		if st.Tqid().Ttype()&sp.QTDIR == sp.QTDIR {
 			i, err := dir.lookup(st.Name)
 			if err != nil {
 				s += fmt.Sprintf("[%v err %v]", st, err)

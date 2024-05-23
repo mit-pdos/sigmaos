@@ -111,7 +111,7 @@ func TestDirBasic(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 1, len(sts))
 	assert.Equal(t, "f", sts[0].Name)
-	qt := sts[0].Qid.Ttype()
+	qt := sts[0].Tqid().Ttype()
 	assert.Equal(t, sp.QTFILE, qt)
 
 	err = ts.RmDir(dn)

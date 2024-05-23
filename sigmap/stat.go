@@ -12,7 +12,7 @@ type Tstat struct {
 
 func NewStatNull() *Tstat {
 	st := &TstatProto{}
-	st.Qid = NewQid(0, 0, 0)
+	st.Qid = NewQid(0, 0, 0).Proto()
 	return &Tstat{
 		TstatProto: st,
 	}
@@ -25,7 +25,7 @@ func NewStatProto(st *TstatProto) *Tstat {
 func NewStat(qid *Tqid, perm Tperm, mtime uint32, name, owner string) *Tstat {
 	st := &TstatProto{
 		Type:   0, // XXX
-		Qid:    qid,
+		Qid:    qid.Proto(),
 		Mode:   uint32(perm),
 		Atime:  0,
 		Mtime:  mtime,
@@ -47,6 +47,10 @@ func (st *Tstat) StatProto() *TstatProto {
 func (st *Stat) String() string {
 	return fmt.Sprintf("{%v mode=%v atime=%v mtime=%v length=%v name=%v uid=%v gid=%v muid=%v}",
 		st.Qid, st.Tmode(), st.Atime, st.Mtime, st.Tlength(), st.Name, st.Uid, st.Gid, st.Muid)
+}
+
+func (st *Tstat) Tqid() *Tqid {
+	return &Tqid{st.Qid}
 }
 
 func (st *Tstat) Tlength() Tlength {
@@ -82,7 +86,7 @@ func (st *Tstat) SetMtime(t int64) {
 }
 
 func (st *Tstat) SetQid(qid *Tqid) {
-	st.TstatProto.Qid = qid
+	st.TstatProto.Qid = qid.Proto()
 }
 
 func Names(sts []*Tstat) []string {

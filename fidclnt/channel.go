@@ -46,13 +46,13 @@ func (c *Channel) Copy() *Channel {
 	return newChannel(c.pc, c.path.Copy(), qids)
 }
 
-func (c *Channel) add(name string, q *sp.Tqid) {
+func (c *Channel) add(name string, q *sp.TqidProto) {
 	c.path = append(c.path, name)
-	c.qids = append(c.qids, q)
+	c.qids = append(c.qids, sp.NewTqid(q))
 }
 
 // empty path = ""
-func (c *Channel) AddN(qs []*sp.Tqid, path path.Path) {
+func (c *Channel) AddN(qs []*sp.TqidProto, path path.Path) {
 	if len(path) == 0 {
 		path = append(path, "")
 	}

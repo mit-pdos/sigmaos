@@ -30,9 +30,9 @@ func newTest(t *testing.T) *TestState {
 
 func (ts *TestState) initfs() {
 	const N = 1000
-	_, err := ts.rooti.Create(ts.ctx, "done", sp.DMDIR|07000, 0, sp.NoLeaseId, sp.NoFence())
+	_, err := ts.rooti.Create(ts.ctx, "done", sp.DMDIR|07000, 0, sp.NoLeaseId, sp.NoFence(), nil)
 	assert.Nil(ts.t, err, "Create done")
-	_, err = ts.rooti.Create(ts.ctx, "todo", sp.DMDIR|07000, 0, sp.NoLeaseId, sp.NoFence())
+	_, err = ts.rooti.Create(ts.ctx, "todo", sp.DMDIR|07000, 0, sp.NoLeaseId, sp.NoFence(), nil)
 	assert.Nil(ts.t, err, "Create todo")
 	_, _, _, err = ts.rooti.LookupPath(ts.ctx, path.Path{"todo"})
 	assert.Nil(ts.t, err, "Walk todo")

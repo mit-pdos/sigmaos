@@ -82,7 +82,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		ps.vt.Insert(root.Path())
 	}
 	ps.ft.Insert(args.Tfid(), fid.NewFidPath(fid.NewPobj(p, tree, ctx), 0, qid))
-	rets.Qid = qid
+	rets.Qid = qid.Proto()
 	return args.TclntId(), nil
 }
 
@@ -99,10 +99,11 @@ func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) newQids(os []fs.FsObj) []*sp.Tqid {
-	var qids []*sp.Tqid
+func (ps *ProtSrv) newQidProtos(os []fs.FsObj) []*sp.TqidProto {
+	var qids []*sp.TqidProto
 	for _, o := range os {
-		qids = append(qids, ps.newQid(o.Perm(), o.Path()))
+		qid := ps.newQid(o.Perm(), o.Path())
+		qids = append(qids, qid.Proto())
 	}
 	return qids
 }
@@ -147,7 +148,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	// let the client decide what to do with rest (when there is a rest)
 	n := len(args.Wnames) - len(rest)
 	p := append(f.Pobj().Path().Copy(), args.Wnames[:n]...)
-	rets.Qids = ps.newQids(os)
+	rets.Qids = ps.newQidProtos(os)
 	qid := ps.newQid(lo.Perm(), lo.Path())
 	db.DPrintf(db.PROTSRV, "%v: Walk NewFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().ClntId(), p, lo, qid, os)
 	ps.ft.Insert(args.Tnewfid(), fid.NewFidPath(fid.NewPobj(p, lo, f.Pobj().Ctx()), 0, qid))
@@ -192,7 +193,7 @@ func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	if no != o {
 		f.Pobj().SetObj(no)
 	}
-	rets.Qid = qid
+	rets.Qid = qid.Proto()
 	return nil
 }
 
@@ -232,7 +233,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 	ps.ft.Insert(args.Tfid(), nf)
-	rets.Qid = qid
+	rets.Qid = qid.Proto()
 	return nil
 }
 

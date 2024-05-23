@@ -196,6 +196,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	if nd.realm != sp.ROOTREALM {
 		ep = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
 	}
+	ep.SetType(sp.INTERNAL_EP)
 	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }

@@ -136,7 +136,7 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 		return serr.NewErrError(err)
 	}
 	nf := NewEtcdFile(sp.DMSYMLINK, sp.NoClntId, sp.NoLeaseId, d)
-	if b, err := proto.Marshal(nf); err != nil {
+	if b, err := proto.Marshal(nf.EtcdFileProto); err != nil {
 		return serr.NewErrError(err)
 	} else {
 		dei := newDirEntInfoP(sp.Tpath(BOOT), sp.DMDIR)

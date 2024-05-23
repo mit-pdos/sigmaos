@@ -43,8 +43,8 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 	if len(resp.Kvs) != 1 {
 		return nil, 0, serr.NewErr(serr.TErrNotfound, key2path(key))
 	}
-	nf := &EtcdFile{}
-	if err := proto.Unmarshal(resp.Kvs[0].Value, nf); err != nil {
+	nf := newEtcdFile()
+	if err := proto.Unmarshal(resp.Kvs[0].Value, nf.EtcdFileProto); err != nil {
 		return nil, 0, serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "getFile %v %v\n", key, nf)
@@ -57,7 +57,7 @@ func (fs *FsEtcd) GetFile(dei *DirEntInfo) (*EtcdFile, sp.TQversion, *serr.Err) 
 
 func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) *serr.Err {
 	opts := nf.LeaseOpts()
-	if b, err := proto.Marshal(nf); err != nil {
+	if b, err := proto.Marshal(nf.EtcdFileProto); err != nil {
 		return serr.NewErrError(err)
 	} else {
 		var cmp []clientv3.Cmp
@@ -165,7 +165,7 @@ func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) *serr
 
 func (fs *FsEtcd) create(ddei *DirEntInfo, dir *DirInfo, v sp.TQversion, dei *DirEntInfo) *serr.Err {
 	opts := dei.Nf.LeaseOpts()
-	b, err := proto.Marshal(dei.Nf)
+	b, err := proto.Marshal(dei.Nf.EtcdFileProto)
 	if err != nil {
 		return serr.NewErrError(err)
 	}

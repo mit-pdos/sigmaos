@@ -54,11 +54,11 @@ func (pathc *PathClnt) Close() error {
 	db.DPrintf(db.PATHCLNT, "%v: Close", pathc.cid)
 	var err error
 	if r := pathc.detachAll(); r != nil {
-		db.DPrintf(db.TEST, "%v: detachall err %v", pathc.cid, r)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: detachall err %v", pathc.cid, r)
 		err = r
 	}
 	if r := pathc.FidClnt.Close(); r != nil {
-		db.DPrintf(db.TEST, "%v: close err %v", pathc.cid, r)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: close err %v", pathc.cid, r)
 	}
 	return err
 }
@@ -75,7 +75,7 @@ func (pathc *PathClnt) MntClnt() *mntclnt.MntClnt {
 func (pathc *PathClnt) detachAll() error {
 	var err error
 	eps := pathc.mntclnt.Mounts()
-	db.DPrintf(db.ALWAYS, "%v: Fslib.detachAll %v\n", pathc.cid, eps)
+	db.DPrintf(db.PATHCLNT, "%v: Fslib.detachAll %v\n", pathc.cid, eps)
 	for _, ep := range eps {
 		if r := pathc.mntclnt.Detach(ep); r != nil {
 			db.DPrintf(db.PATHCLNT_ERR, "%v: detachAll %v err %v\n", pathc.cid, ep, r)

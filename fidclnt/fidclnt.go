@@ -75,7 +75,7 @@ func (fidc *FidClnt) Close() error {
 		return nil // XXX maybe return error
 	}
 	fidc.refcnt--
-	db.DPrintf(db.ALWAYS, "FidClnt refcnt %d\n", fidc.refcnt)
+	db.DPrintf(db.FIDCLNT, "FidClnt refcnt %d\n", fidc.refcnt)
 	if fidc.refcnt == 0 {
 		fidc.closeSess()
 	}

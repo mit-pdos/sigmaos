@@ -186,7 +186,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string, f sp.Tfen
 	return nil
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
+func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	db.DPrintf(db.UX, "%v: Remove %v %v\n", ctx, d, name)
 	p := d.pathName.Copy().Append(name)
 	o, err := newObj(p)

@@ -128,7 +128,7 @@ func (pss *ProtSrvState) OpenObj(ctx fs.CtxI, o fs.FsObj, m sp.Tmode) (fs.FsObj,
 	}
 }
 
-func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Path, f sp.Tfence) *serr.Err {
+func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Path, f sp.Tfence, del fs.Tdel) *serr.Err {
 	name := path.Base()
 	if name == "." {
 		return serr.NewErr(serr.TErrInval, name)
@@ -146,7 +146,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Path, f sp
 	// Call before Remove(), because after remove o's underlying
 	// object may not exist anymore.
 	ephemeral := o.Perm().IsEphemeral()
-	if err := o.Parent().Remove(ctx, name, f); err != nil {
+	if err := o.Parent().Remove(ctx, name, f, del); err != nil {
 		return err
 	}
 

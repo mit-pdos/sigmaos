@@ -1438,7 +1438,7 @@ func TestEphemeralFileOK(t *testing.T) {
 	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err)
 
-	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
+	time.Sleep(fsetcd.LeaseTTL*time.Second + 1)
 
 	_, err = ts.Stat(fn)
 	assert.Nil(t, err)

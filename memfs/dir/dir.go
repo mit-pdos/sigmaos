@@ -332,7 +332,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, f s
 	return nil
 }
 
-func (dir *DirImpl) Remove(ctx fs.CtxI, n string, f sp.Tfence) *serr.Err {
+func (dir *DirImpl) Remove(ctx fs.CtxI, n string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	db.DPrintf(db.MEMFS, "Remove: %v %v\n", dir, n)
 
 	dir.mu.Lock()

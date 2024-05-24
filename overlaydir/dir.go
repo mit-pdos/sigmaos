@@ -160,9 +160,9 @@ func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, 
 	return dir.underlay.Renameat(ctx, old, nd, new, f)
 }
 
-func (dir *DirOverlay) Remove(ctx fs.CtxI, n string, f sp.Tfence) *serr.Err {
+func (dir *DirOverlay) Remove(ctx fs.CtxI, n string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	if dir.removeMount(n) {
 		return nil
 	}
-	return dir.underlay.Remove(ctx, n, f)
+	return dir.underlay.Remove(ctx, n, f, del)
 }

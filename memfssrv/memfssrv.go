@@ -136,7 +136,7 @@ func (mfs *MemFs) Remove(pn string) *serr.Err {
 		return err
 	}
 	db.DPrintf(db.MEMFSSRV, "Remove %q %v %v\n", pn, lo, path.Base())
-	return mfs.RemoveObj(mfs.ctx, lo, path, sp.NoFence())
+	return mfs.RemoveObj(mfs.ctx, lo, path, sp.NoFence(), fs.DEL_EXIST)
 }
 
 func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
@@ -148,13 +148,16 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	return no, nil
 }
 
+// For named. fsetcd notifies named when a an ephemeral file is
+// deleted it; delete the directory entry and possibly signal the
+// directory watch of the change.
 func (mfs *MemFs) Notify(pn path.Path) error {
 	db.DPrintf(db.MEMFSSRV, "Notify %v\n", pn)
 	lo, _, err := mfs.lookupWalk(pn.String())
 	if err != nil {
 		return err
 	}
-	return mfs.RemoveObj(mfs.ctx, lo, pn, sp.NoFence())
+	return mfs.RemoveObj(mfs.ctx, lo, pn, sp.NoFence(), fs.DEL_EPHEMERAL)
 }
 
 func (mfs *MemFs) Dump() error {

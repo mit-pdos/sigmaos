@@ -328,7 +328,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfen
 	return serr.NewErr(serr.TErrNotSupported, "Renameat")
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
+func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	if d.bucket == "" {
 		return serr.NewErr(serr.TErrNoremove, d.bucket)
 	}

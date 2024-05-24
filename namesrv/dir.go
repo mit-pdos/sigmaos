@@ -115,9 +115,9 @@ func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 	return nil
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
+func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	db.DPrintf(db.NAMED, "Remove %v name %v\n", d, name)
-	return d.fs.Remove(&d.Obj.di, name, f)
+	return d.fs.Remove(&d.Obj.di, name, f, del)
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {

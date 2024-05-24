@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/ctx"
-	"sigmaos/dir"
 	"sigmaos/fs"
+	"sigmaos/memfs/dir"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

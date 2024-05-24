@@ -6,10 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/namesrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/test"
 )
 
 func TestCompile(t *testing.T) {
@@ -26,8 +26,6 @@ func TestBootNamed(t *testing.T) {
 	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
 
 	assert.True(t, fslib.Present(sts, namesrv.InitRootDir), "initfs")
-
-	test.Dump(t)
 
 	ts.Shutdown()
 }

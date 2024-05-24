@@ -130,7 +130,6 @@ func TestWaitExitSimpleSingleBE(t *testing.T) {
 	}
 	spawnWaitSleeper(ts, nil)
 	ts.Shutdown()
-	// test.Dump(t)
 }
 
 func TestWaitExitSimpleSingleLC(t *testing.T) {

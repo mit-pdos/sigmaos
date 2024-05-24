@@ -549,7 +549,6 @@ func TestLookupDepthPerf(t *testing.T) {
 			n := newDir(t, ts.FsLib, dir, NFILE)
 			assert.Equal(t, NFILE, n)
 		}
-		//test.Dump(t)
 		label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
 		measuredir(label, NOP, func() int {
 			_, err := ts.Stat(dir)

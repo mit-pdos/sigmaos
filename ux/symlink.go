@@ -5,8 +5,8 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/file"
 	"sigmaos/fs"
+	"sigmaos/memfs/file"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

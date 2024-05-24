@@ -3,9 +3,9 @@ package memfssrv
 import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/memfs"
+	"sigmaos/memfs/dir"
 	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"

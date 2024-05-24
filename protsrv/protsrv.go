@@ -5,9 +5,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/lockmap"
-	"sigmaos/namei"
 	"sigmaos/path"
+	"sigmaos/protsrv/lockmap"
+	"sigmaos/protsrv/namei"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"

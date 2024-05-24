@@ -11,9 +11,9 @@ package sigmapsrv
 import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
+	"sigmaos/memfs/dir"
 	"sigmaos/netproxyclnt"
 	"sigmaos/overlaydir"
 	"sigmaos/path"

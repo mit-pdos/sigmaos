@@ -5,13 +5,13 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
-	"sigmaos/lockmap"
 	"sigmaos/path"
+	"sigmaos/protsrv/lockmap"
+	"sigmaos/protsrv/version"
+	"sigmaos/protsrv/watch"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
-	"sigmaos/version"
-	"sigmaos/watch"
 )
 
 type ProtSrvState struct {

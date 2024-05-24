@@ -2,9 +2,9 @@ package protsrv
 
 import (
 	"sigmaos/fs"
-	"sigmaos/lockmap"
-	"sigmaos/namei"
 	"sigmaos/path"
+	"sigmaos/protsrv/lockmap"
+	"sigmaos/protsrv/namei"
 	"sigmaos/serr"
 )
 

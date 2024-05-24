@@ -26,7 +26,7 @@ import (
 
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
-	"sigmaos/lockmap"
+	"sigmaos/protsrv/lockmap"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

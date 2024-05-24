@@ -1,10 +1,12 @@
+// Package memfs implements an in-memory file system. A typical
+// sigmaos server has one (e.g., to export its RPC interface).
 package memfs
 
 import (
 	//"time"
 
-	"sigmaos/file"
 	"sigmaos/fs"
+	"sigmaos/memfs/file"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

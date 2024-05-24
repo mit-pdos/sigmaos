@@ -3,8 +3,8 @@ package namei
 import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/lockmap"
 	"sigmaos/path"
+	"sigmaos/protsrv/lockmap"
 	"sigmaos/serr"
 )
 

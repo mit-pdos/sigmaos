@@ -10,7 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

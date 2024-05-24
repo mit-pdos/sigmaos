@@ -3,9 +3,9 @@ package protsrv
 import (
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
-	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
 	"sigmaos/path"
+	"sigmaos/protsrv/ephemeralmap"
 	"sigmaos/protsrv/lockmap"
 	"sigmaos/protsrv/version"
 	"sigmaos/protsrv/watch"

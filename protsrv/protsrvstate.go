@@ -4,7 +4,6 @@ import (
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/ephemeralmap"
-	"sigmaos/fid"
 	"sigmaos/fs"
 	"sigmaos/lockmap"
 	"sigmaos/path"
@@ -61,10 +60,10 @@ func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
 	return sp.NewQidPerm(perm, pss.vt.GetVersion(path), path)
 }
 
-func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *fid.Fid {
+func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Path, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *Fid {
 	pn := dir.Copy().Append(name)
-	po := fid.NewPobj(pn, o, ctx)
-	nf := fid.NewFidPath(po, 0, qid)
+	po := newPobj(pn, o, ctx)
+	nf := newFidPath(po, 0, qid)
 	if o.Perm().IsEphemeral() && pss.et != nil {
 		pss.et.Insert(pn.String(), lid)
 	}
@@ -89,7 +88,7 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	}
 }
 
-func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Path, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (*sp.Tqid, *fid.Fid, *serr.Err) {
+func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Path, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (*sp.Tqid, *Fid, *serr.Err) {
 	db.DPrintf(db.PROTSRV, "%v: Create %v %v", ctx.ClntId(), o, dir)
 	fn := dir.Append(name)
 	if !o.Perm().IsDir() {

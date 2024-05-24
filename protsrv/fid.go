@@ -1,4 +1,4 @@
-package fid
+package protsrv
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ type Pobj struct {
 	ctx      fs.CtxI
 }
 
-func NewPobj(pn path.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
+func newPobj(pn path.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
 	return &Pobj{pn, o, ctx}
 }
 
@@ -55,7 +55,7 @@ type Fid struct {
 	cursor int      // for directories
 }
 
-func NewFidPath(pobj *Pobj, m sp.Tmode, qid *sp.Tqid) *Fid {
+func newFidPath(pobj *Pobj, m sp.Tmode, qid *sp.Tqid) *Fid {
 	return &Fid{sync.Mutex{}, false, pobj, m, qid, 0}
 }
 

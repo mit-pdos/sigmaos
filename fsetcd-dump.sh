@@ -1,4 +1,4 @@
-#!/bin/bash
+
 
 usage() {
   echo "Usage: $0 [--realm realm] " 1>&2

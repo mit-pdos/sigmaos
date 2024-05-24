@@ -53,7 +53,7 @@ func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, rea
 	for addr, _ := range etcdMnts {
 		endpoints = append(endpoints, addr)
 	}
-	db.DPrintf(db.FSETCD, "FsEtcd etcd endpoints: %v %v", endpoints)
+	db.DPrintf(db.FSETCD, "FsEtcd etcd endpoints: %v", endpoints)
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: DialTimeout,

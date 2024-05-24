@@ -13,21 +13,21 @@ import (
 )
 
 type Pobj struct {
-	path path.Path
-	obj  fs.FsObj
-	ctx  fs.CtxI
+	pathname path.Path
+	obj      fs.FsObj
+	ctx      fs.CtxI
 }
 
-func NewPobj(p path.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
-	return &Pobj{p, o, ctx}
+func NewPobj(pn path.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
+	return &Pobj{pn, o, ctx}
 }
 
 func (po *Pobj) String() string {
-	return fmt.Sprintf("{%v %v %v}", po.path, po.obj, po.ctx)
+	return fmt.Sprintf("{%v %v %v}", po.pathname, po.obj, po.ctx)
 }
 
-func (po *Pobj) Path() path.Path {
-	return po.path
+func (po *Pobj) Pathname() path.Path {
+	return po.pathname
 }
 
 func (po *Pobj) Ctx() fs.CtxI {
@@ -35,7 +35,7 @@ func (po *Pobj) Ctx() fs.CtxI {
 }
 
 func (po *Pobj) SetPath(path path.Path) {
-	po.path = path
+	po.pathname = path
 }
 
 func (po *Pobj) Obj() fs.FsObj {

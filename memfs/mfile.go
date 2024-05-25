@@ -4,6 +4,7 @@ package memfs
 
 import (
 	//"time"
+	"fmt"
 
 	"sigmaos/fs"
 	"sigmaos/memfs/file"
@@ -23,7 +24,11 @@ func NewFile(i fs.Inode) *File {
 	return f
 }
 
-func (f *File) Size() (sp.Tlength, *serr.Err) {
+func (f *File) String() string {
+	return fmt.Sprintf("{%v len %d}", f.Inode, f.File.Size())
+}
+
+func (f *File) Size() sp.Tlength {
 	return f.File.Size()
 }
 
@@ -32,7 +37,7 @@ func (f *File) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	l, _ := f.Size()
+	l := f.Size()
 	st.SetLength(l)
 	return st, nil
 }

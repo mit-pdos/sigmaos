@@ -487,12 +487,12 @@ func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 	if args.Tcount() > sp.MAXGETSET {
 		return nil, sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, "too large"))
 	}
-	f, fname, lo, i, err := ps.lookupWalkOpen(args.Tfid(), args.Wnames, args.Resolve, args.Tmode(), lockmap.RLOCK)
+	f, pn, lo, i, err := ps.lookupWalkOpen(args.Tfid(), args.Wnames, args.Resolve, args.Tmode(), lockmap.RLOCK)
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
 	ps.stats.IncPathString(f.Pobj().Pathname().String())
-	db.DPrintf(db.PROTSRV, "GetFile f %v args {%v} %v", f.Pobj().Ctx().ClntId(), args, fname)
+	db.DPrintf(db.PROTSRV, "GetFile f %v args {%v} %v %v", f.Pobj().Ctx().ClntId(), args, pn, i)
 	data, err := i.Read(f.Pobj().Ctx(), args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
@@ -550,7 +550,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		defer ps.plt.Release(f.Pobj().Ctx(), dlk, lockmap.WLOCK)
 
 		db.DPrintf(db.PROTSRV, "%v: PutFile try to create %v", f.Pobj().Ctx().ClntId(), fn)
-		// try to create file, which will fail it exists
+		// try to create file, which will fail if it exists
 		dir := lo.(fs.Dir)
 		lo, flk, err = ps.createObj(f.Pobj().Ctx(), dir, dlk, fn, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence(), nil)
 		if err != nil {

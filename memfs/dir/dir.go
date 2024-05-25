@@ -224,7 +224,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 	} else {
 		dev.SetParent(dir)
 	}
-	db.DPrintf(db.MEMFS, "Create %v in %v -> %v\n", name, dir, newo)
+	db.DPrintf(db.MEMFS, "Create %v in %v obj %v\n", name, dir, newo)
 	dir.SetMtime(time.Now().Unix())
 	return newo, dir.createL(newo, name)
 }

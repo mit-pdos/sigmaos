@@ -22,7 +22,7 @@ func newEtcdFile() *EtcdFile {
 }
 
 func (ef *EtcdFile) String() string {
-	return fmt.Sprintf("{%v %v %v %d}", ef.Tperm(), ef.TleaseId(), ef.TclntId(), len(ef.Data))
+	return fmt.Sprintf("{%v lid %v clnt %v l %d}", ef.Tperm(), ef.TleaseId(), ef.TclntId(), len(ef.Data))
 }
 
 type EtcdDir struct {

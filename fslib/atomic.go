@@ -14,11 +14,11 @@ func (fsl *FsLib) PutFileAtomic(fname string, perm sp.Tperm, data []byte, lid sp
 	tmpName := fname + rand.String(16)
 	if _, err := fsl.PutFileEphemeral(tmpName, perm, sp.OWRITE|sp.OEXCL, lid, data); err != nil {
 		debug.PrintStack()
-		db.DPrintf(db.ERROR, "NewFileAtomic %v %v: %v", fname, tmpName, err)
+		db.DPrintf(db.ERROR, "PutFileAtomic %v %v err %v", fname, tmpName, err)
 		return err
 	}
 	if err := fsl.Rename(tmpName, fname); err != nil {
-		db.DPrintf(db.ERROR, "NewFileAtomic rename %v -> %v: err %v", tmpName, fname, err)
+		db.DPrintf(db.ERROR, "PutFileAtomic rename %v -> %v: err %v", tmpName, fname, err)
 		return err
 	}
 	return nil

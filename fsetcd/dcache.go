@@ -1,6 +1,7 @@
 package fsetcd
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/hashicorp/golang-lru/v2"
@@ -16,6 +17,10 @@ type dcEntry struct {
 	dir  *DirInfo
 	v    sp.TQversion
 	stat Tstat
+}
+
+func (dce *dcEntry) String() string {
+	return fmt.Sprintf("{dir %v v %v st %v}", dce.dir, dce.v, dce.stat)
 }
 
 func (dce *dcEntry) find(del sp.Tpath) (path.Path, bool) {
@@ -53,10 +58,10 @@ func (dc *Dcache) insert(d sp.Tpath, new *dcEntry) {
 
 	de, ok := dc.c.Get(d)
 	if ok && de.v >= new.v {
-		db.DPrintf(db.FSETCD, "insert: stale insert %v %v", d, new)
+		db.DPrintf(db.FSETCD, "insert: %v version mismatch insert %v %v", d, de, new)
 		return
 	}
-	db.DPrintf(db.FSETCD, "insert: insert dcache %v %v", d, new)
+	db.DPrintf(db.FSETCD, "insert: %v insert dcache %v %v", d, de, new)
 	if evict := dc.c.Add(d, new); evict {
 		db.DPrintf(db.FSETCD, "Eviction")
 	}

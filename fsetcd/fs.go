@@ -240,7 +240,9 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 		clientv3.OpDelete(fs.path2key(fs.realm, del)),
 		clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	ops1 := []clientv3.Op{
-		clientv3.OpGet(fs.path2key(fs.realm, del))}
+		clientv3.OpGet(fs.fencekey),
+		clientv3.OpGet(fs.path2key(fs.realm, del)),
+		clientv3.OpGet(fs.path2key(fs.realm, dei))}
 	resp, err := fs.Clnt().Txn(context.TODO()).
 		If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Remove dei %v %v %v %v err %v\n", dei, dir, del, resp, err)
@@ -248,10 +250,16 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
+		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
+			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+			db.DPrintf(db.FSETCD, "remove %v stale\n", fs.fencekey)
+			return serr.NewErr(serr.TErrStale, fs.fencekey)
+		}
+		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "remove from %v doesn't exist\n", del)
 			return serr.NewErr(serr.TErrNotfound, del.Path)
 		}
+		db.DPrintf(db.FSETCD, "remove %v version mismatch %v %v\n", dei, v, resp.Responses[2])
 		return serr.NewErr(serr.TErrVersion, dei.Path)
 	}
 	return nil
@@ -265,7 +273,10 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 	}
 	var cmp []clientv3.Cmp
 	var ops []clientv3.Op
-	var ops1 []clientv3.Op
+	ops1 := []clientv3.Op{
+		clientv3.OpGet(fs.fencekey),
+		clientv3.OpGet(fs.path2key(fs.realm, from)),
+		clientv3.OpGet(fs.path2key(fs.realm, dei))}
 	if del != nil {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
@@ -275,16 +286,12 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 		ops = []clientv3.Op{
 			clientv3.OpDelete(fs.path2key(fs.realm, del)),
 			clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
-		ops1 = []clientv3.Op{
-			clientv3.OpGet(fs.path2key(fs.realm, from))}
 	} else {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, from)), ">", 0),
 			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 		ops = []clientv3.Op{
 			clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
-		ops1 = []clientv3.Op{
-			clientv3.OpGet(fs.path2key(fs.realm, from))}
 	}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Rename dei %v dir %v from %v %v err %v\n", dei, dir, from, resp, err)
@@ -292,11 +299,21 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
+		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
+			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+			db.DPrintf(db.FSETCD, "rename %v stale\n", fs.fencekey)
+			return serr.NewErr(serr.TErrStale, fs.fencekey)
+		}
+		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "rename from %v doesn't exist\n", from)
 			return serr.NewErr(serr.TErrNotfound, from.Path)
 		}
-		return serr.NewErr(serr.TErrNotfound, dei.Path)
+		if len(resp.Responses[2].GetResponseRange().Kvs) == 1 &&
+			int64(v) != resp.Responses[2].GetResponseRange().Kvs[0].Version {
+			db.DPrintf(db.FSETCD, "rename %v version mismatch %v %v\n", dei, v, resp.Responses[2])
+			return serr.NewErr(serr.TErrVersion, dei.Path)
+		}
+		return serr.NewErr(serr.TErrNotfound, del.Path)
 	}
 	return nil
 }
@@ -313,7 +330,11 @@ func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, dei
 	}
 	var cmp []clientv3.Cmp
 	var ops []clientv3.Op
-	var ops1 []clientv3.Op
+	ops1 := []clientv3.Op{
+		clientv3.OpGet(fs.fencekey),
+		clientv3.OpGet(fs.path2key(fs.realm, from)),
+		clientv3.OpGet(fs.path2key(fs.realm, deif)),
+		clientv3.OpGet(fs.path2key(fs.realm, deit))}
 	if del != nil {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
@@ -327,8 +348,6 @@ func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, dei
 			clientv3.OpPut(fs.path2key(fs.realm, deif), string(bf)),
 			clientv3.OpPut(fs.path2key(fs.realm, deit), string(bt)),
 		}
-		ops1 = []clientv3.Op{
-			clientv3.OpGet(fs.path2key(fs.realm, from))}
 	} else {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
@@ -340,20 +359,33 @@ func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, dei
 			clientv3.OpPut(fs.path2key(fs.realm, deif), string(bf)),
 			clientv3.OpPut(fs.path2key(fs.realm, deit), string(bt)),
 		}
-		ops1 = []clientv3.Op{
-			clientv3.OpGet(fs.path2key(fs.realm, from))}
 	}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "RenameAt %v %v err %v\n", del, resp, err)
 	if err != nil {
-		if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
-			db.DPrintf(db.FSETCD, "renameat from %v doesn't exist\n", from)
-			return serr.NewErr(serr.TErrNotfound, from.Path)
-		}
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		return serr.NewErr(serr.TErrNotfound, del)
+		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
+			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+			db.DPrintf(db.FSETCD, "renameat %v stale\n", fs.fencekey)
+			return serr.NewErr(serr.TErrStale, fs.fencekey)
+		}
+		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
+			db.DPrintf(db.FSETCD, "renameat from %v doesn't exist\n", from)
+			return serr.NewErr(serr.TErrNotfound, from.Path)
+		}
+		if len(resp.Responses[2].GetResponseRange().Kvs) == 1 &&
+			int64(vf) != resp.Responses[2].GetResponseRange().Kvs[0].Version {
+			db.DPrintf(db.FSETCD, "renameat %v version mismatch %v %v\n", deif, vf, resp.Responses[2])
+			return serr.NewErr(serr.TErrVersion, deif.Path)
+		}
+		if len(resp.Responses[3].GetResponseRange().Kvs) == 1 &&
+			int64(vf) != resp.Responses[3].GetResponseRange().Kvs[0].Version {
+			db.DPrintf(db.FSETCD, "renameat %v version mismatch %v %v\n", deit, vt, resp.Responses[3])
+			return serr.NewErr(serr.TErrVersion, deit.Path)
+		}
+		return serr.NewErr(serr.TErrNotfound, del.Path)
 	}
 	return nil
 }

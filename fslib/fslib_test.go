@@ -195,25 +195,39 @@ func TestRenameInDir(t *testing.T) {
 		return
 	}
 
-	d1 := filepath.Join(pathname, "d1")
-	err := ts.MkDir(d1, 0777)
+	dn := filepath.Join(pathname, "d1")
+	err := ts.MkDir(dn, 0777)
 	assert.Nil(t, err, "Mkdir %v", err)
-	from := filepath.Join(d1, "f")
+	from := filepath.Join(dn, "from")
 
 	d := []byte("hello")
 	_, err = ts.PutFile(from, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	to := filepath.Join(d1, "g")
+	to := filepath.Join(dn, "to")
 	err = ts.Rename(from, to)
 
-	sts, err := ts.GetDir(d1)
+	sts, err := ts.GetDir(dn)
 	assert.Nil(t, err, "GetDir: %v", err)
-	assert.True(t, fslib.Present(sts, []string{"g"}))
-	b, err := ts.GetFile(to)
-	assert.Equal(t, b, d)
+	assert.True(t, fslib.Present(sts, []string{"to"}))
 
-	err = ts.RmDir(d1)
+	b, err := ts.GetFile(to)
+	assert.Equal(t, d, b)
+
+	_, err = ts.Stat(from)
+	assert.NotNil(t, err)
+
+	d1 := []byte("bye")
+	_, err = ts.PutFile(from, 0777, sp.OWRITE, d1)
+	assert.Nil(t, err)
+
+	b, err = ts.GetFile(from)
+	assert.Equal(t, d1, b)
+
+	b, err = ts.GetFile(to)
+	assert.Equal(t, d, b)
+
+	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
 
 	ts.Shutdown()

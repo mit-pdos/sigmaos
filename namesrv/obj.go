@@ -57,8 +57,7 @@ func (o *Obj) Parent() fs.Dir {
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.NAMED, "Stat: %v\n", o)
 
-	// Check that the object is still exists if emphemeral
-	if o.di.Perm.IsEphemeral() || o.di.Nf == nil {
+	if o.di.Nf == nil {
 		if nf, _, err := o.fs.GetFile(&o.di); err != nil {
 			db.DPrintf(db.NAMED, "Stat: GetFile %v err %v\n", o, err)
 			return nil, serr.NewErr(serr.TErrNotfound, o.pn.Base())

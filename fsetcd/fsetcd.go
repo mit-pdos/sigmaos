@@ -99,7 +99,12 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Path) error {
 						db.DPrintf(db.FSETCD, "Notify ephemeral '%v'\n", pn)
 						ch <- pn
 					} else {
-						// XXX which non-cached directory contains key?
+						// If not in cache, next readDirEtcd of the
+						// directory that contains the ephemeral file
+						// will remove it. If there is a sigmaos watch
+						// on the directory, then the directory is
+						// likely cached.  XXX don't evict directories
+						// with watches?
 						db.DPrintf(db.ALWAYS, "event not found %v\n", key)
 					}
 				}

@@ -124,7 +124,10 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 			dents.Insert(e.Name, newDirEntInfo(nf, e.Tpath(), e.Tperm()))
 		} else {
 			di := newDirEntInfoP(e.Tpath(), e.Tperm())
-			if stat == TSTAT_STAT { // if STAT, get file info
+			if e.Tperm().IsEphemeral() || stat == TSTAT_STAT {
+				// if file is emphemeral, etcd may have expired it
+				// when named didn't cache the directory, check if it
+				// still exists.
 				nf, _, err := fs.GetFile(di)
 				if err != nil {
 					db.DPrintf(db.FSETCD, "readDir: expired %v %v err %v\n", e.Name, e.Tperm(), err)

@@ -65,7 +65,7 @@ func TestKillNamed(t *testing.T) {
 	ts.Shutdown()
 }
 
-func reboot(t *testing.T, dn string, f func(*test.Tstate, string)) {
+func reboot(t *testing.T, dn string, f func(*test.Tstate, string), d time.Duration) {
 	ts, err1 := test.NewTstatePath(t, sp.NAMED)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -92,10 +92,11 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, string)) {
 		return
 	}
 
-	// Wait for ephemeral file to expire
-	time.Sleep(fsetcd.LeaseTTL*time.Second + 1)
+	time.Sleep(d)
 
 	f(ts, fn)
+
+	ts.Remove(fn)
 
 	ts.Shutdown()
 }
@@ -106,34 +107,51 @@ func TestEphemeralReboot(t *testing.T) {
 		return
 	}
 	dn := filepath.Join(sp.NAMED, "dir")
+	ts.RmDir(dn)
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
 	ts.Shutdown()
 
+	delay := 2 * fsetcd.LeaseTTL * time.Second
+
+	reboot(t, dn, func(ts *test.Tstate, fn string) {
+		fd, err := ts.Create(fn, 0777, sp.OREAD)
+		assert.Nil(ts.T, err)
+		db.DPrintf(db.TEST, "Create after expire err %v\n", err)
+		ts.CloseFd(fd)
+	}, delay)
+
+	reboot(t, dn, func(ts *test.Tstate, fn string) {
+		fd, err := ts.Create(fn, 0777, sp.OREAD)
+		assert.NotNil(ts.T, err)
+		db.DPrintf(db.TEST, "Create before expire err %v\n", err)
+		ts.CloseFd(fd)
+	}, (fsetcd.LeaseTTL-2)*time.Second)
+
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		err := ts.Remove(fn)
 		assert.NotNil(ts.T, err)
 		db.DPrintf(db.TEST, "Remove after expire err %v\n", err)
-	})
+	}, delay)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		err := ts.Rename(fn, fn+"x")
 		assert.NotNil(ts.T, err)
 		db.DPrintf(db.TEST, "Rename after expire err %v\n", err)
-	})
+	}, delay)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		_, err = ts.Open(fn, sp.OREAD)
 		assert.NotNil(ts.T, err)
 		db.DPrintf(db.TEST, "Open after expire err %v\n", err)
 		ts.Remove(fn)
-	})
+	}, delay)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		sts, err := ts.GetDir(dn)
 		assert.Nil(t, err)
 		assert.Equal(t, 0, len(sts))
 		db.DPrintf(db.TEST, "GetDir after expire err %v\n", err)
-	})
+	}, delay)
 }

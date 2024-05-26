@@ -2,7 +2,7 @@
 package sigmaos
 
 import (
-	path "sigmaos/path"
+	"sigmaos/path"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )

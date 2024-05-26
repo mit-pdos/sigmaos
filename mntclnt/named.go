@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	path "sigmaos/path"
+	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

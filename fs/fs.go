@@ -58,7 +58,7 @@ const (
 type Dir interface {
 	Inode
 	Stat(CtxI) (*sp.Stat, *serr.Err)
-	LookupPath(CtxI, path.Path) ([]FsObj, FsObj, path.Path, *serr.Err)
+	LookupPath(CtxI, path.Tpathname) ([]FsObj, FsObj, path.Tpathname, *serr.Err)
 	Create(CtxI, string, sp.Tperm, sp.Tmode, sp.TleaseId, sp.Tfence, FsObj) (FsObj, *serr.Err)
 	ReadDir(CtxI, int, sp.Tsize) ([]*sp.Stat, *serr.Err)
 	Remove(CtxI, string, sp.Tfence, Tdel) *serr.Err
@@ -84,7 +84,7 @@ type RPC interface {
 	WriteRead(CtxI, sessp.IoVec) (sessp.IoVec, *serr.Err)
 }
 
-func Obj2File(o FsObj, fname path.Path) (File, *serr.Err) {
+func Obj2File(o FsObj, fname path.Tpathname) (File, *serr.Err) {
 	switch i := o.(type) {
 	case Dir:
 		return nil, serr.NewErr(serr.TErrNotFile, fname)

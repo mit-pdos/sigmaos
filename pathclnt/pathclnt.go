@@ -299,11 +299,11 @@ func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid, f)
 	if serr.Retry(err) {
 		dir := p.Dir()
-		base := path.Path{p.Base()}
+		base := path.Tpathname{p.Base()}
 		resolve := true
 		if p.Base() == err.Obj { // was the final pn component a symlink?
 			dir = p
-			base = path.Path{}
+			base = path.Tpathname{}
 			resolve = path.EndSlash(pn)
 		}
 		fid, err = pathc.walk(dir, principal, resolve, nil)

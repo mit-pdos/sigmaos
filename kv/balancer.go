@@ -107,7 +107,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 		db.DFatalf("StartMemFs %v\n", err)
 	}
 	ctx := ctx.NewCtx(sp.NewPrincipal(sp.TprincipalID(KVBALANCER), bl.SigmaClnt.ProcEnv().GetRealm()), nil, 0, sp.NoClntId, nil, nil)
-	root, _, _ := ssrv.Root(path.Path{})
+	root, _, _ := ssrv.Root(path.Tpathname{})
 	err1 := dir.MkNod(ctx, root, "ctl", newCtl(ctx, root, bl))
 	if err1 != nil {
 		db.DFatalf("MkNod clone failed %v\n", err1)

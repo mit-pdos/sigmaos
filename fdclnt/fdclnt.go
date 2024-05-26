@@ -238,7 +238,7 @@ func (fdc *FdClient) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
 	ep.SetAddr([]*sp.Taddr{sp.NewTaddr(fdc.pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
 }
 
-func (fdc *FdClient) PathLastMount(pn string) (path.Path, path.Path, error) {
+func (fdc *FdClient) PathLastMount(pn string) (path.Tpathname, path.Tpathname, error) {
 	return fdc.pc.MntClnt().PathLastMount(pn, fdc.pe.GetPrincipal())
 }
 

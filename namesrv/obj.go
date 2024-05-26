@@ -13,7 +13,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func newTpath(pn path.Path) sp.Tpath {
+func newTpath(pn path.Tpathname) sp.Tpath {
 	h := fnv.New64a()
 	t := time.Now() // maybe use revision
 	h.Write([]byte(pn.String() + t.String()))
@@ -23,13 +23,13 @@ func newTpath(pn path.Path) sp.Tpath {
 // An obj is either a directory or file
 type Obj struct {
 	fs     *fsetcd.FsEtcd
-	pn     path.Path
+	pn     path.Tpathname
 	di     fsetcd.DirEntInfo
 	parent sp.Tpath
 	mtime  int64
 }
 
-func newObjDi(fs *fsetcd.FsEtcd, pn path.Path, di fsetcd.DirEntInfo, parent sp.Tpath) *Obj {
+func newObjDi(fs *fsetcd.FsEtcd, pn path.Tpathname, di fsetcd.DirEntInfo, parent sp.Tpath) *Obj {
 	o := &Obj{fs: fs, pn: pn, di: di, parent: parent}
 	return o
 }

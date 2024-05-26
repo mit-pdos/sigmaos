@@ -23,7 +23,7 @@ func (dce *dcEntry) String() string {
 	return fmt.Sprintf("{dir %v v %v st %v}", dce.dir, dce.v, dce.stat)
 }
 
-func (dce *dcEntry) find(del sp.Tpath) (path.Path, bool) {
+func (dce *dcEntry) find(del sp.Tpath) (path.Tpathname, bool) {
 	return dce.dir.find(del)
 }
 
@@ -88,7 +88,7 @@ func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 }
 
 // XXX maintain reverse index; handle remove, rename, etc.
-func (dc *Dcache) find(del sp.Tpath) (path.Path, bool) {
+func (dc *Dcache) find(del sp.Tpath) (path.Tpathname, bool) {
 	for _, d := range dc.c.Keys() {
 		if de, ok := dc.c.Get(d); ok {
 			if p, ok := de.find(del); ok {

@@ -12,11 +12,11 @@ import (
 // a server.
 type Channel struct {
 	pc   *protclnt.ProtClnt
-	path path.Path
+	path path.Tpathname
 	qids []*sp.Tqid
 }
 
-func newChannel(pc *protclnt.ProtClnt, path path.Path, qs []*sp.Tqid) *Channel {
+func newChannel(pc *protclnt.ProtClnt, path path.Tpathname, qs []*sp.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
 	c.path = path
@@ -28,11 +28,11 @@ func (c *Channel) String() string {
 	return fmt.Sprintf("{ Path %v Qids %v }", c.path, c.qids)
 }
 
-func (c *Channel) Path() path.Path {
+func (c *Channel) Path() path.Tpathname {
 	return c.path
 }
 
-func (c *Channel) SetPath(p path.Path) {
+func (c *Channel) SetPath(p path.Tpathname) {
 	c.path = p
 }
 
@@ -52,7 +52,7 @@ func (c *Channel) add(name string, q *sp.TqidProto) {
 }
 
 // empty path = ""
-func (c *Channel) AddN(qs []*sp.TqidProto, path path.Path) {
+func (c *Channel) AddN(qs []*sp.TqidProto, path path.Tpathname) {
 	if len(path) == 0 {
 		path = append(path, "")
 	}

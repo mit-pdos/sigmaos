@@ -22,7 +22,7 @@ func (d *Dir) String() string {
 	return fmt.Sprintf("o %v sd %v", d.Obj, d.sd)
 }
 
-func newDir(path path.Path) (*Dir, *serr.Err) {
+func newDir(path path.Tpathname) (*Dir, *serr.Err) {
 	d := &Dir{}
 	o, err := newObj(path)
 	if err != nil {
@@ -141,7 +141,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	}
 }
 
-func (d *Dir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+func (d *Dir) LookupPath(ctx fs.CtxI, path path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	name := path[0]
 	db.DPrintf(db.UX, "%v: Lookup %v %v\n", ctx, d, name)
 	st, err := ustat(d.pathName.Append(name))

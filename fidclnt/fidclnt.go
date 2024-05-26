@@ -114,7 +114,7 @@ func (fidc *FidClnt) Qids(fid sp.Tfid) []*sp.Tqid {
 	return fidc.Lookup(fid).qids
 }
 
-func (fidc *FidClnt) Path(fid sp.Tfid) path.Path {
+func (fidc *FidClnt) Path(fid sp.Tfid) path.Tpathname {
 	return fidc.Lookup(fid).Path()
 }
 
@@ -186,7 +186,7 @@ func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	if ch == nil {
 		return sp.NoFid, serr.NewErr(serr.TErrUnreachable, "Clone")
 	}
-	_, err := ch.pc.Walk(fid, nfid, path.Path{})
+	_, err := ch.pc.Walk(fid, nfid, path.Tpathname{})
 	if err != nil {
 		fidc.freeFid(nfid)
 		return fid, err

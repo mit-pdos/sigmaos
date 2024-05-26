@@ -42,19 +42,19 @@ func (mc *MntClnt) Mounts() []string {
 	return mc.mnt.mountedPaths()
 }
 
-func (mc *MntClnt) Resolve(p path.Path, principal *sp.Tprincipal, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
+func (mc *MntClnt) Resolve(p path.Tpathname, principal *sp.Tprincipal, resolve bool) (sp.Tfid, path.Tpathname, *serr.Err) {
 	if err, b := mc.resolveRoot(p); err != nil {
 		db.DPrintf(db.ALWAYS, "%v: resolveRoot %v err %v b %v\n", mc.cid, p, err, b)
 	}
 	return mc.mnt.resolveMnt(p, resolve)
 }
 
-func (mc *MntClnt) ResolveMnt(p path.Path, resolve bool) (sp.Tfid, path.Path, *serr.Err) {
+func (mc *MntClnt) ResolveMnt(p path.Tpathname, resolve bool) (sp.Tfid, path.Tpathname, *serr.Err) {
 	return mc.mnt.resolveMnt(p, resolve)
 }
 
 // XXX use MountedAt
-func (mc *MntClnt) LastMount(pn string, principal *sp.Tprincipal) (path.Path, path.Path, error) {
+func (mc *MntClnt) LastMount(pn string, principal *sp.Tprincipal) (path.Tpathname, path.Tpathname, error) {
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return nil, nil, err
@@ -68,7 +68,7 @@ func (mc *MntClnt) LastMount(pn string, principal *sp.Tprincipal) (path.Path, pa
 	return p, left, nil
 }
 
-func (mc *MntClnt) ResolveRoot(pn path.Path) (*serr.Err, bool) {
+func (mc *MntClnt) ResolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	s := time.Now()
 	err, ok := mc.resolveRoot(pn)
 	db.DPrintf(db.WALK_LAT, "ResolveRoot %v %v lat %v\n", mc.cid, pn, time.Since(s))
@@ -77,7 +77,7 @@ func (mc *MntClnt) ResolveRoot(pn path.Path) (*serr.Err, bool) {
 
 // Return path including the last mount file on this path and the rest
 // of the path on the server.
-func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Path, path.Path, error) {
+func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Tpathname, path.Tpathname, error) {
 	// Automount the longest prefix of pn; if pn exist, then the
 	// server holding the directory/file correspending to pn.
 	if _, err := mc.pathc.Stat(pn+"/", principal); err != nil {
@@ -86,7 +86,7 @@ func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Path
 	return mc.LastMount(pn, principal)
 }
 
-func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, path path.Path) *serr.Err {
+func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, path path.Tpathname) *serr.Err {
 	var fid sp.Tfid
 	var err *serr.Err
 

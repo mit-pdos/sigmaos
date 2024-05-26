@@ -41,7 +41,7 @@ func (ft *FenceTable) lookup(pn string) *sp.Tfence {
 	return ft.lookupPath(p)
 }
 
-func (ft *FenceTable) lookupPath(p path.Path) *sp.Tfence {
+func (ft *FenceTable) lookupPath(p path.Tpathname) *sp.Tfence {
 	ft.Lock()
 	defer ft.Unlock()
 

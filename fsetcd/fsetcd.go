@@ -78,7 +78,7 @@ func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, rea
 	return fs, nil
 }
 
-func (fs *FsEtcd) WatchEphemeral(ch chan path.Path) error {
+func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 	wopts := make([]clientv3.OpOption, 0)
 	wopts = append(wopts, clientv3.WithPrefix())
 	wopts = append(wopts, clientv3.WithFilterPut())

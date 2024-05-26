@@ -75,7 +75,7 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 	} else {
 		// Otherwise, walk through the root named to find this named's mount.
 		s := time.Now()
-		if _, rest, err := mc.mnt.resolveMnt(path.Path{"root"}, true); err != nil && len(rest) >= 1 {
+		if _, rest, err := mc.mnt.resolveMnt(path.Tpathname{"root"}, true); err != nil && len(rest) >= 1 {
 			if err := mc.mountNamed(sp.ROOTREALM, "root"); err != nil {
 				db.DPrintf(db.MOUNT_ERR, "getNamedEndpointDirect [%v] err mounting root named %v", realm, err)
 				return &sp.Tendpoint{}, err
@@ -113,7 +113,7 @@ func (mc *MntClnt) mountNamed(realm sp.Trealm, name string) *serr.Err {
 		db.DPrintf(db.MOUNT_ERR, "mountNamed [%v]: getNamedMount err %v", realm, err)
 		return err
 	}
-	if err := mc.AutoMount(mc.pe.GetSecrets(), ep, path.Path{name}); err != nil {
+	if err := mc.AutoMount(mc.pe.GetSecrets(), ep, path.Tpathname{name}); err != nil {
 		db.DPrintf(db.MOUNT_ERR, "mountNamed: automount err %v", err)
 		// If mounting failed, the named is unreachable. Invalidate the cache entry
 		// for this realm.

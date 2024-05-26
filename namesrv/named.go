@@ -36,11 +36,11 @@ type Named struct {
 	crash  int
 	sess   *fsetcd.Session
 	signer sp.Tsigner
-	ephch  chan path.Path
+	ephch  chan path.Tpathname
 }
 
 func newNamed(realm sp.Trealm) *Named {
-	nd := &Named{realm: realm, ephch: make(chan path.Path)}
+	nd := &Named{realm: realm, ephch: make(chan path.Tpathname)}
 	return nd
 }
 

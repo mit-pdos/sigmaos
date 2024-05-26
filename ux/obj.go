@@ -41,7 +41,7 @@ func umode2Perm(umode uint16) sp.Tperm {
 	return perm
 }
 
-func ustat(path path.Path) (*sp.Stat, *serr.Err) {
+func ustat(path path.Tpathname) (*sp.Stat, *serr.Err) {
 	var statx unix.Statx_t
 	db.DPrintf(db.UX, "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
@@ -56,7 +56,7 @@ func ustat(path path.Path) (*sp.Stat, *serr.Err) {
 }
 
 type Obj struct {
-	pathName path.Path
+	pathName path.Tpathname
 	path     sp.Tpath
 	perm     sp.Tperm // XXX kill, but requires changing Perm() API
 }
@@ -65,7 +65,7 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("pn %v p %v %v", o.pathName, o.path, o.perm)
 }
 
-func newObj(path path.Path) (*Obj, *serr.Err) {
+func newObj(path path.Tpathname) (*Obj, *serr.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, sp.DMSYMLINK}, err
 	} else {

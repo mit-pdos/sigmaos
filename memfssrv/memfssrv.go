@@ -23,7 +23,7 @@ import (
 	"sigmaos/syncmap"
 )
 
-var rootP = path.Path{""}
+var rootP = path.Tpathname{""}
 
 type MemFs struct {
 	*sigmapsrv.SigmaPSrv
@@ -78,7 +78,7 @@ func (mfs *MemFs) NewDevInode() *inode.Inode {
 }
 
 // Returns fid for root and remaining path from root
-func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Path, *serr.Err) {
+func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Tpathname, *serr.Err) {
 	path, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return sp.NoFid, path, err
@@ -94,7 +94,7 @@ func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Path, *serr.Err) {
 }
 
 // Returns FsObj for pn and the path from the root to FsObj
-func (mfs *MemFs) lookupWalk(pn string) (fs.FsObj, path.Path, *serr.Err) {
+func (mfs *MemFs) lookupWalk(pn string) (fs.FsObj, path.Tpathname, *serr.Err) {
 	fid, path, err := mfs.rootFid(pn)
 	if err != nil {
 		return nil, nil, err
@@ -151,7 +151,7 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 // For named. fsetcd notifies named when a an ephemeral file is
 // deleted it; delete the directory entry and possibly signal the
 // directory watch of the change.
-func (mfs *MemFs) Notify(pn path.Path) error {
+func (mfs *MemFs) Notify(pn path.Tpathname) error {
 	db.DPrintf(db.MEMFSSRV, "Notify %v\n", pn)
 	lo, _, err := mfs.lookupWalk(pn.String())
 	if err != nil {

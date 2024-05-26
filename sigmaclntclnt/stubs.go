@@ -268,7 +268,7 @@ func (scc *SigmaClntClnt) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
 	return rep.Local, nil
 }
 
-func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Path, path.Path, error) {
+func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Tpathname, path.Tpathname, error) {
 	req := scproto.SigmaPathRequest{Path: pn}
 	rep := scproto.SigmaLastMountReply{}
 	err := scc.rpcc.RPC("SigmaClntSrvAPI.PathLastMount", &req, &rep)

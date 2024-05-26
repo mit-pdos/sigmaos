@@ -27,7 +27,7 @@ type DirEntInfo struct {
 	Nf   *EtcdFile
 	Path sp.Tpath
 	Perm sp.Tperm
-	Pn   path.Path
+	Pn   path.Tpathname
 }
 
 func newDirEntInfo(nf *EtcdFile, p sp.Tpath, perm sp.Tperm) *DirEntInfo {
@@ -55,7 +55,7 @@ type DirInfo struct {
 	Perm sp.Tperm
 }
 
-func (di *DirInfo) find(del sp.Tpath) (path.Path, bool) {
+func (di *DirInfo) find(del sp.Tpath) (path.Tpathname, bool) {
 	for _, n := range di.Ents.Slice(0) {
 		e, ok := di.Ents.Lookup(n)
 		if ok {
@@ -117,7 +117,7 @@ func (fse *FsEtcd) Lookup(dei *DirEntInfo, name string) (*DirEntInfo, *serr.Err)
 }
 
 // OEXCL: should only succeed if file doesn't exist
-func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Path, path sp.Tpath, nf *EtcdFile, f sp.Tfence) (*DirEntInfo, *serr.Err) {
+func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf *EtcdFile, f sp.Tfence) (*DirEntInfo, *serr.Err) {
 	name := pn.Base()
 	dir, v, err := fse.readDir(dei, TSTAT_NONE)
 	if err != nil {
@@ -299,7 +299,7 @@ func (fse *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to 
 	}
 }
 
-func (fse *FsEtcd) Dump(l int, dir *DirInfo, pn path.Path, p sp.Tpath) error {
+func (fse *FsEtcd) Dump(l int, dir *DirInfo, pn path.Tpathname, p sp.Tpath) error {
 	s := ""
 	for i := 0; i < l*4; i++ {
 		s += " "

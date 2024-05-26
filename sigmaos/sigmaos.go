@@ -55,7 +55,7 @@ type FileAPI interface {
 	// Mounting
 	MountTree(ep *sp.Tendpoint, tree, mount string) error
 	IsLocalMount(ep *sp.Tendpoint) (bool, error)
-	PathLastMount(path string) (path.Path, path.Path, error)
+	PathLastMount(path string) (path.Tpathname, path.Tpathname, error)
 	GetNamedEndpoint() (*sp.Tendpoint, error)
 	GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error)
 	InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error

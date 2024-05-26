@@ -268,7 +268,7 @@ func IsErrCode(error error, code Terror) bool {
 	return false
 }
 
-func PathSplitErr(p string) (path.Path, *Err) {
+func PathSplitErr(p string) (path.Tpathname, *Err) {
 	if p == "" {
 		return nil, NewErr(TErrInval, p)
 	}

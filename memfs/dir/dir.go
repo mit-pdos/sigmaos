@@ -115,7 +115,7 @@ func (dir *DirImpl) lookup(name string) (fs.FsObj, *serr.Err) {
 	}
 }
 
-func (dir *DirImpl) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+func (dir *DirImpl) LookupPath(ctx fs.CtxI, path path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	o, err := dir.lookup(path[0])

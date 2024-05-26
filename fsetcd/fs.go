@@ -98,7 +98,7 @@ func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, 
 		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", de.dir)
 		return de.dir, de.v, nil
 	}
-	dir, v, err := fs.readDirEtcd(dei, stat)
+	dir, v, stat, err := fs.readDirEtcd(dei, stat)
 	if err != nil {
 		return nil, v, err
 	}
@@ -107,21 +107,23 @@ func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, 
 }
 
 // If stat is TSTAT_STAT, stat every entry in the directory.
-func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, *serr.Err) {
+func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, Tstat, *serr.Err) {
 	db.DPrintf(db.FSETCD, "readDirEtcd %v %v\n", dei.Path, stat)
 	nf, v, err := fs.GetFile(dei)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, stat, err
 	}
 	dir, err := UnmarshalDir(nf.Data)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, stat, err
 	}
 	dents := sorteddir.NewSortedDir[string, *DirEntInfo]()
 	update := false
+	nstat := 0
 	for _, e := range dir.Ents {
 		if e.Name == "." {
 			dents.Insert(e.Name, newDirEntInfo(nf, e.Tpath(), e.Tperm()))
+			nstat += 1
 		} else {
 			di := newDirEntInfoP(e.Tpath(), e.Tperm())
 			if e.Tperm().IsEphemeral() || stat == TSTAT_STAT {
@@ -134,6 +136,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 					update = true
 					continue
 				}
+				nstat += 1
 				di.Nf = nf
 				dents.Insert(e.Name, di)
 			} else {
@@ -141,18 +144,24 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 			}
 		}
 	}
+
+	// if we stat-ed all entries, return we did so
+	if nstat == dents.Len() {
+		stat = TSTAT_STAT
+	}
+
 	di := &DirInfo{dents, nf.Tperm()}
 	if update {
 		if err := fs.updateDir(dei, di, v); err != nil {
 			if err.IsErrVersion() {
 				// retry?
-				return di, v, nil
+				return di, v, stat, nil
 			}
-			return nil, 0, err
+			return nil, 0, stat, err
 		}
 		v = v + 1
 	}
-	return di, v, nil
+	return di, v, stat, nil
 }
 
 func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) *serr.Err {

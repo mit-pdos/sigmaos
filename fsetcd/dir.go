@@ -299,6 +299,7 @@ func (fse *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to 
 	}
 }
 
+// XXX if ran as test, it cannot fix dirs with expired ephemeral files
 func (fse *FsEtcd) Dump(l int, dir *DirInfo, pn path.Tpathname, p sp.Tpath) error {
 	s := ""
 	for i := 0; i < l*4; i++ {
@@ -312,7 +313,7 @@ func (fse *FsEtcd) Dump(l int, dir *DirInfo, pn path.Tpathname, p sp.Tpath) erro
 				if err == nil {
 					fse.Dump(l+1, nd, pn.Append(name), di.Path)
 				} else {
-					log.Printf("dumpDir: getObj %v %v\n", name, err)
+					log.Printf("dumpDir: getObj %q %v\n", name, err)
 				}
 			}
 		}

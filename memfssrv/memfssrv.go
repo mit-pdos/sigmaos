@@ -152,7 +152,7 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 // deleted it; delete the directory entry and possibly signal the
 // directory watch of the change.
 func (mfs *MemFs) Notify(pn path.Tpathname) error {
-	db.DPrintf(db.MEMFSSRV, "Notify %v\n", pn)
+	db.DPrintf(db.MEMFSSRV, "MemFs.Notify pn %v\n", pn)
 	lo, _, err := mfs.lookupWalk(pn.String())
 	if err != nil {
 		return err

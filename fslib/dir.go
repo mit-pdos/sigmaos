@@ -95,8 +95,8 @@ func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
 // XXX should use Reader
 func (fl *FsLib) CopyDir(src, dst string) error {
 	_, err := fl.ProcessDir(src, func(st *sp.Stat) (bool, error) {
-		s := src + "/" + st.Name
-		d := dst + "/" + st.Name
+		s := filepath.Join(src, st.Name)
+		d := filepath.Join(dst, st.Name)
 		db.DPrintf(db.FSLIB, "CopyFile: %v %v\n", s, d)
 		b, err := fl.GetFile(s)
 		if err != nil {
@@ -119,8 +119,8 @@ func (fl *FsLib) MoveFiles(src, dst string) (int, error) {
 	n := 0
 	for _, st := range sts {
 		db.DPrintf(db.FSLIB, "move %v to %v\n", st.Name, dst)
-		to := dst + "/" + st.Name
-		if fl.Rename(src+"/"+st.Name, to) != nil {
+		to := filepath.Join(dst, st.Name)
+		if fl.Rename(filepath.Join(src, st.Name), to) != nil {
 			return n, err
 		}
 		n += 1
@@ -142,11 +142,11 @@ func (fsl *FsLib) RmDirEntries(dir string) error {
 	}
 	for _, st := range sts {
 		if st.Tmode().IsDir() {
-			if err := fsl.RmDir(dir + "/" + st.Name); err != nil {
+			if err := fsl.RmDir(filepath.Join(dir, st.Name)); err != nil {
 				return err
 			}
 		} else {
-			if err := fsl.Remove(dir + "/" + st.Name); err != nil {
+			if err := fsl.Remove(filepath.Join(dir, st.Name)); err != nil {
 				return err
 			}
 		}

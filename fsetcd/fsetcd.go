@@ -94,9 +94,9 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 				for _, e := range watchResp.Events {
 					key := string(e.Kv.Key)
 					pn, ok := fs.dc.find(key2path(key))
-					db.DPrintf(db.FSETCD, "watchResp event %v %v\n", key, pn)
+					db.DPrintf(db.FSETCD, "WatchEphemeral: watchResp event %v %v\n", key, pn)
 					if ok {
-						db.DPrintf(db.FSETCD, "Notify ephemeral '%v'\n", pn)
+						db.DPrintf(db.TEST, "WatchEphemeral: Notify ephemeral '%v'\n", pn)
 						ch <- pn
 					} else {
 						// If not in cache, next readDirEtcd of the
@@ -104,11 +104,11 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 						// on the directory, then the directory is
 						// likely cached.  XXX don't evict directories
 						// with watches?
-						db.DPrintf(db.ALWAYS, "event not found %v\n", key)
+						db.DPrintf(db.ALWAYS, "WatchEphemeral: event not found %v\n", key)
 					}
 				}
 			} else {
-				db.DPrintf(db.FSETCD, "wch closed\n")
+				db.DPrintf(db.FSETCD, "WatchEphemeral: wch closed\n")
 				return nil
 			}
 		}

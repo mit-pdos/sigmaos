@@ -156,8 +156,6 @@ func Run(args []string) error {
 
 	db.DPrintf(db.ALWAYS, "%v: named done %v %v\n", pe.GetPID(), nd.realm, ep)
 
-	close(nd.ephch)
-
 	if err := nd.resign(); err != nil {
 		db.DPrintf(db.NAMED, "resign %v err %v\n", pe.GetPID(), err)
 	}
@@ -212,6 +210,9 @@ func (nd *Named) detach(cid sp.TclntId) {
 }
 
 func (nd *Named) resign() error {
+	if err := nd.fs.StopWatch(); err != nil {
+		return err
+	}
 	if err := nd.SigmaPSrv.StopServing(); err != nil {
 		return err
 	}

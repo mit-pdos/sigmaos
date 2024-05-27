@@ -100,7 +100,6 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 						ch <- pn
 					} else {
 						// If not in cache, next readDirEtcd of the
-						// directory that contains the ephemeral file
 						// will remove it. If there is a sigmaos watch
 						// on the directory, then the directory is
 						// likely cached.  XXX don't evict directories
@@ -115,6 +114,10 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 		}
 	}()
 	return nil
+}
+
+func (fs *FsEtcd) StopWatch() error {
+	return fs.Client.Watcher.Close()
 }
 
 func (fs *FsEtcd) Close() error {

@@ -173,7 +173,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 				// BE Non-kernel procs are enqueued via the procq.
 				spawnedKernelID, err = clnt.enqueueViaProcQ(p)
 				if err == nil {
-					db.DPrintf(db.TEST, "spawn: SetBinKernelId %v %v\n", p.GetProgram(), spawnedKernelID)
+					db.DPrintf(db.PROCCLNT, "spawn: SetBinKernelId %v %v\n", p.GetProgram(), spawnedKernelID)
 					clnt.bins.SetBinKernelID(p.GetProgram(), spawnedKernelID)
 					p.SetKernelID(spawnedKernelID, false)
 				} else if serr.IsErrorUnavailable(err) {

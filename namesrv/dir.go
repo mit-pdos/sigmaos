@@ -128,7 +128,9 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.NAMED, "Renameat %v: %v %v\n", d, from, to)
 	dt := od.(*Dir)
-	return d.fs.Renameat(&d.Obj.di, from, &dt.Obj.di, to, f)
+	old := d.pn.Append(from)
+	new := dt.pn.Append(to)
+	return d.fs.Renameat(&d.Obj.di, old, &dt.Obj.di, new, f)
 }
 
 // ===== The following functions are needed to make an named dir of type fs.Inode

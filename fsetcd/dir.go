@@ -60,7 +60,7 @@ func (di *DirInfo) find(del sp.Tpath) (path.Tpathname, bool) {
 		e, ok := di.Ents.Lookup(n)
 		if ok {
 			if e.Path == del {
-				db.DPrintf(db.FSETCD, "expire %q %v\n", n, del)
+				db.DPrintf(db.FSETCD, "find %q %v %v\n", n, e.Pn, del)
 				return e.Pn, true
 			}
 		}
@@ -190,7 +190,7 @@ func (fse *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del fs.Tdel
 	dir.Ents.Delete(name)
 
 	if err := fse.remove(dei, dir, v, di); err != nil {
-		db.DPrintf(db.FSETCD, "Remove entry %v err %v\n", name, err)
+		db.DPrintf(db.FSETCD, "Remove entry %v %v err %v\n", name, di, err)
 		if di.Perm.IsEphemeral() && err.IsErrNotfound() {
 			if r := fse.updateEphemeral(dei, dir, v); r == nil {
 				if del == fs.DEL_EXIST {
@@ -233,9 +233,13 @@ func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, f sp.Tfence) *serr.E
 	if ok {
 		dir.Ents.Delete(to)
 	}
+
 	dir.Ents.Delete(from)
 	dir.Ents.Insert(to, difrom)
 	if err := fse.rename(dei, dir, v, dito, difrom); err == nil {
+		if difrom.Pn != nil {
+			difrom.Pn = difrom.Pn.Dir().Append(to)
+		}
 		fse.dc.update(dei.Path, dir)
 		return nil
 	} else {
@@ -252,7 +256,7 @@ func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, f sp.Tfence) *serr.E
 	}
 }
 
-func (fse *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to string, f sp.Tfence) *serr.Err {
+func (fse *FsEtcd) Renameat(deif *DirEntInfo, from path.Tpathname, deit *DirEntInfo, to path.Tpathname, f sp.Tfence) *serr.Err {
 	dirf, vf, err := fse.readDir(deif, TSTAT_NONE)
 	if err != nil {
 		return err
@@ -262,11 +266,11 @@ func (fse *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to 
 		return err
 	}
 	db.DPrintf(db.FSETCD, "Renameat %v dir: %v %v %v %v\n", deif.Path, dirf, dirt, vt, vf)
-	difrom, ok := dirf.Ents.Lookup(from)
+	difrom, ok := dirf.Ents.Lookup(from.Base())
 	if !ok {
 		return serr.NewErr(serr.TErrNotfound, from)
 	}
-	dito, ok := dirt.Ents.Lookup(to)
+	dito, ok := dirt.Ents.Lookup(to.Base())
 	if ok {
 		empty, err := fse.isEmpty(dito)
 		if err != nil {
@@ -277,13 +281,17 @@ func (fse *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to 
 		}
 	}
 	if ok {
-		dirt.Ents.Delete(to)
+		dirt.Ents.Delete(to.Base())
 	}
-	dirf.Ents.Delete(from)
-	dirt.Ents.Insert(to, difrom)
+	dirf.Ents.Delete(from.Base())
+	dirt.Ents.Insert(to.Base(), difrom)
 	if err := fse.renameAt(deif, dirf, vf, deit, dirt, vt, dito, difrom); err == nil {
 		fse.dc.update(deif.Path, dirf)
 		fse.dc.update(deit.Path, dirt)
+		if difrom.Pn != nil {
+			difrom.Pn = to.Copy()
+		}
+
 		return nil
 	} else {
 		if difrom.Perm.IsEphemeral() && err.IsErrNotfound() {
@@ -293,8 +301,8 @@ func (fse *FsEtcd) Renameat(deif *DirEntInfo, from string, deit *DirEntInfo, to 
 				return r
 			}
 		}
-		dirf.Ents.Insert(from, difrom)
-		dirt.Ents.Delete(to)
+		dirf.Ents.Insert(from.Base(), difrom)
+		dirt.Ents.Delete(to.Base())
 		return err
 	}
 }

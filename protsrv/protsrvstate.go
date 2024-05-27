@@ -157,7 +157,11 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 	pss.wt.WakeupWatch(dlk)
 
 	if ephemeral && pss.et != nil {
-		pss.et.Delete(path.String())
+		if ok := pss.et.Delete(path.String()); !ok {
+			// leasesrv may already have removed path from ephemeral
+			// map and called RemoveObj to delete it.
+			db.DPrintf(db.PROTSRV, "Delete %v doesn't exist in et\n", path)
+		}
 	}
 	return nil
 }

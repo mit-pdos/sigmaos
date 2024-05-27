@@ -336,45 +336,14 @@ func (ps *ProtSrv) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Wstat %v %v", f.Pobj().Ctx().ClntId(), f, args)
-	o := f.Pobj().Obj()
 	if args.Stat.Name != "" {
 		// update Name atomically with rename
-
-		dst := f.Pobj().Pathname().Dir().Copy().AppendPath(path.Split(args.Stat.Name))
-
-		dlk, slk := ps.plt.AcquireLocks(f.Pobj().Ctx(), f.Pobj().Pathname().Dir(), f.Pobj().Pathname().Base(), lockmap.WLOCK)
-		defer ps.plt.ReleaseLocks(f.Pobj().Ctx(), dlk, slk, lockmap.WLOCK)
-		tlk := ps.plt.Acquire(f.Pobj().Ctx(), dst, lockmap.WLOCK)
-		defer ps.plt.Release(f.Pobj().Ctx(), tlk, lockmap.WLOCK)
-		ps.stats.IncPathString(f.Pobj().Pathname().String())
-		err := o.Parent().Rename(f.Pobj().Ctx(), f.Pobj().Pathname().Base(), args.Stat.Name, args.Tfence())
-		if err != nil {
+		if err := ps.RenameObj(f.Pobj(), args.Stat.Name, args.Tfence()); err != nil {
 			return sp.NewRerrorSerr(err)
 		}
-		ps.vt.IncVersion(f.Pobj().Obj().Path())
-		ps.vt.IncVersion(f.Pobj().Obj().Parent().Path())
-		ps.wt.WakeupWatch(tlk) // trigger create watch
-		ps.wt.WakeupWatch(slk) // trigger remove watch
-		ps.wt.WakeupWatch(dlk) // trigger dir watch
-		if f.Pobj().Obj().Perm().IsEphemeral() && ps.et != nil {
-			ps.et.Rename(f.Pobj().Pathname().String(), dst.String())
-		}
-		f.Pobj().SetPath(dst)
 	}
 	// XXX ignore other Wstat for now
 	return nil
-}
-
-// d1 first?
-func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
-	if d1.Path() < d2.Path() {
-		return true
-	} else if d1.Path() == d2.Path() { // would have used wstat instead of renameat
-		db.DFatalf("lockOrder")
-		return false
-	} else {
-		return false
-	}
 }
 
 func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
@@ -398,36 +367,10 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 		if oo.Path() == no.Path() {
 			return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, newf.Pobj().Pathname()))
 		}
-
-		var d1lk, d2lk, srclk, dstlk *lockmap.PathLock
-		if srcfirst := lockOrder(oo, no); srcfirst {
-			d1lk, srclk = ps.plt.AcquireLocks(oldf.Pobj().Ctx(), oldf.Pobj().Pathname(), args.OldName, lockmap.WLOCK)
-			d2lk, dstlk = ps.plt.AcquireLocks(newf.Pobj().Ctx(), newf.Pobj().Pathname(), args.NewName, lockmap.WLOCK)
-		} else {
-			d2lk, dstlk = ps.plt.AcquireLocks(newf.Pobj().Ctx(), newf.Pobj().Pathname(), args.NewName, lockmap.WLOCK)
-			d1lk, srclk = ps.plt.AcquireLocks(oldf.Pobj().Ctx(), oldf.Pobj().Pathname(), args.OldName, lockmap.WLOCK)
-		}
-		defer ps.plt.ReleaseLocks(oldf.Pobj().Ctx(), d1lk, srclk, lockmap.WLOCK)
-		defer ps.plt.ReleaseLocks(newf.Pobj().Ctx(), d2lk, dstlk, lockmap.WLOCK)
-
-		err := d1.Renameat(oldf.Pobj().Ctx(), args.OldName, d2, args.NewName, args.Tfence())
+		err := ps.RenameAtObj(oldf.Pobj(), newf.Pobj(), d1, d2, args.OldName, args.NewName, args.Tfence())
 		if err != nil {
 			return sp.NewRerrorSerr(err)
 		}
-		ps.vt.IncVersion(newf.Pobj().Obj().Path())
-		ps.vt.IncVersion(oldf.Pobj().Obj().Path())
-
-		ps.vt.IncVersion(oldf.Pobj().Obj().Parent().Path())
-		ps.vt.IncVersion(newf.Pobj().Obj().Parent().Path())
-
-		if oldf.Pobj().Obj().Perm().IsEphemeral() && ps.et != nil {
-			ps.et.Rename(oldf.Pobj().Pathname().String(), newf.Pobj().Pathname().String())
-		}
-
-		ps.wt.WakeupWatch(dstlk) // trigger create watch
-		ps.wt.WakeupWatch(srclk) // trigger remove watch
-		ps.wt.WakeupWatch(d1lk)  // trigger one dir watch
-		ps.wt.WakeupWatch(d2lk)  // trigger the other dir watch
 	default:
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, oldf.Pobj().Pathname()))
 	}

@@ -118,7 +118,7 @@ func RunWww(job string, public bool) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		if err = portclnt.AdvertisePublicHTTPPort(www.FsLib, JobHTTPAddrsPath(job), kernel.FPORT, www.ProcEnv().GetOuterContainerIP(), www.ProcEnv().GetNet(), ep); err != nil {
+		if err = portclnt.AdvertisePublicHTTPPort(www.FsLib, JobHTTPAddrsPath(job), kernel.FPORT, ep); err != nil {
 			db.DFatalf("AdvertisePort %v", err)
 		}
 	} else {

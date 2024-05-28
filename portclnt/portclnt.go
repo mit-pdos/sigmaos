@@ -62,7 +62,7 @@ func (pc *PortClnt) AdvertisePort(pn string, pi PortInfo, net string, lep *sp.Te
 	return nil
 }
 
-func AdvertisePublicHTTPPort(fsl *fslib.FsLib, pn string, uprocsrvPort sp.Tport, outerIP sp.Tip, net string, ep *sp.Tendpoint) error {
+func AdvertisePublicHTTPPort(fsl *fslib.FsLib, pn string, uprocsrvPort sp.Tport, ep *sp.Tendpoint) error {
 	// When running with overlays, uprocd's mount point is set up using
 	// 127.0.0.1 and the host port (since normally, only the local schedd talks
 	// to it). We need to fix up the mount point for the local proc to talk to

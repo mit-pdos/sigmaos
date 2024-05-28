@@ -207,17 +207,17 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	p := f.Pobj().Pathname()
-	ino := f.Pobj().Obj().Path()
+	pn := f.Pobj().Pathname()
+	p := f.Pobj().Obj().Path()
 
 	db.DPrintf(db.PROTSRV, "%v: Watch %v v %v %v", f.Pobj().Ctx().ClntId(), f.Pobj().Pathname(), f.Qid(), args)
 
 	// get path lock on for p, so that remove cannot remove file
 	// before watch is set.
-	pl := ps.plt.Acquire(f.Pobj().Ctx(), p, lockmap.WLOCK)
+	pl := ps.plt.Acquire(f.Pobj().Ctx(), pn, lockmap.WLOCK)
 	defer ps.plt.Release(f.Pobj().Ctx(), pl, lockmap.WLOCK)
 
-	v := ps.vt.GetVersion(ino)
+	v := ps.vt.GetVersion(p)
 	if !sp.VEq(f.Qid().Tversion(), v) {
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
 	}

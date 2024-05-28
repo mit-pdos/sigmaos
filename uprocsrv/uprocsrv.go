@@ -286,7 +286,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
-	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
+	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	cmd, err := container.StartUProc(uproc, ups.netproxy)

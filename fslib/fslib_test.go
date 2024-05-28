@@ -1087,13 +1087,13 @@ func TestSymlinkPath(t *testing.T) {
 	dn := filepath.Join(pathname, "d")
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
-
-	err = ts.Symlink([]byte(pathname), filepath.Join(pathname, "namedself"), 0777)
+	fn := filepath.Join(dn, "namedself")
+	err = ts.Symlink([]byte(pathname), fn, 0777)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.GetDir(filepath.Join(pathname, "namedself") + "/")
+	sts, err := ts.GetDir(fn + "/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, path.Tpathname{"d", "namedself"}), "dir")
+	assert.True(t, fslib.Present(sts, path.Tpathname{"d"}), "dir")
 
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -1123,17 +1123,15 @@ func TestEndpointSimple(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	pn := filepath.Join(pathname, "namedself")
+	pn := filepath.Join(dn, "namedself")
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 	sts, err := ts.GetDir(pn + "/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, path.Tpathname{"d", "namedself"}), "dir")
+	assert.True(t, fslib.Present(sts, path.Tpathname{"d"}), "dir")
 
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
-	err = ts.Remove(pn)
-	assert.Nil(t, err, "Remove: %v", err)
 
 	ts.Shutdown()
 }

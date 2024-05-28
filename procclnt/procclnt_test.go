@@ -15,6 +15,7 @@ import (
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -370,7 +371,8 @@ func TestCrashProcOne(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status != nil && status.IsStatusErr(), "Status not err")
-	assert.Equal(t, "Non-sigma error  Non-sigma error  exit status 2", status.Msg(), "WaitExit")
+	sr := serr.NewErrString(status.Msg())
+	assert.Equal(t, sr.Err.Error(), "exit status 2", "WaitExit")
 
 	ts.Shutdown()
 }
@@ -769,7 +771,8 @@ func TestProcCrashMany(t *testing.T) {
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
-	assert.True(t, status.IsStatusOK(), status)
+	sr := serr.NewErrString(status.Msg())
+	assert.Equal(t, sr.Err.Error(), "exit status 2", "WaitExit")
 	ts.Shutdown()
 }
 

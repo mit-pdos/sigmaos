@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"syscall"
 
@@ -171,6 +172,20 @@ func NewErr(err Terror, obj interface{}) *Err {
 
 func NewErrError(error error) *Err {
 	return &Err{TErrError, "", error}
+}
+
+func NewErrString(err string) *Err {
+	//re := regexp.MustCompile(`{Err: (\w)+ Obj: (\w)+ ((\w+))}`)
+	re := regexp.MustCompile(`{Err: "(.*)" Obj: "(.*)" \((.*)\)}`)
+	s := re.FindStringSubmatch(`"{Err: "Non-sigma error" Obj: "" (exit status 2)}"`)
+	if len(s) == 4 {
+		for c := TErrBadattach; c <= TErrError; c++ {
+			if c.String() == s[1] {
+				return &Err{ErrCode: c, Obj: s[2], Err: fmt.Errorf("%s", s[3])}
+			}
+		}
+	}
+	return &Err{}
 }
 
 func (err *Err) Code() Terror {

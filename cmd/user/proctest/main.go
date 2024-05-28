@@ -81,8 +81,9 @@ func main() {
 			ch <- nil
 		})
 
-		if err != nil && !(os.Args[2] == "crash" && err.Error() == "status error Non-sigma error  Non-sigma error  exit status 2") {
-			sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
+		sr := serr.NewErrString(err.Error())
+		if err != nil && !(os.Args[2] == "crash" && sr.Error() == "exit status 2") {
+			sc.ClntExit(proc.NewStatusErr(sr.Error(), nil))
 			os.Exit(1)
 		}
 	}

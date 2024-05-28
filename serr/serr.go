@@ -180,7 +180,7 @@ func (err *Err) Code() Terror {
 func (err *Err) Unwrap() error { return err.Err }
 
 func (err *Err) Error() string {
-	return fmt.Sprintf("%v %v %v", err.ErrCode, err.Obj, err.Err)
+	return fmt.Sprintf("{Err: %q Obj: %q (%v)}", err.ErrCode, err.Obj, err.Err)
 }
 
 func (err *Err) String() string {

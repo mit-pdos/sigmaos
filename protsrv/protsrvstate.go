@@ -156,7 +156,6 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 	pss.vt.IncVersion(o.Path())
 	pss.vt.IncVersion(o.Parent().Path())
 
-	pss.wt.WakeupWatch(flk)
 	pss.wt.WakeupWatch(dlk)
 
 	if ephemeral && pss.et != nil {
@@ -182,9 +181,7 @@ func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err
 	}
 	pss.vt.IncVersion(po.Obj().Path())
 	pss.vt.IncVersion(po.Obj().Parent().Path())
-	pss.wt.WakeupWatch(tlk) // trigger create watch
-	pss.wt.WakeupWatch(slk) // trigger remove watch
-	pss.wt.WakeupWatch(dlk) // trigger dir watch
+	pss.wt.WakeupWatch(dlk)
 	if po.Obj().Perm().IsEphemeral() && pss.et != nil {
 		pss.et.Rename(po.Pathname().String(), dst.String())
 	}
@@ -230,9 +227,7 @@ func (pss *ProtSrvState) RenameAtObj(old, new *Pobj, dold, dnew fs.Dir, oldname,
 		pss.et.Rename(old.Pathname().String(), new.Pathname().String())
 	}
 
-	pss.wt.WakeupWatch(dstlk) // trigger create watch
-	pss.wt.WakeupWatch(srclk) // trigger remove watch
-	pss.wt.WakeupWatch(d1lk)  // trigger one dir watch
-	pss.wt.WakeupWatch(d2lk)  // trigger the other dir watch
+	pss.wt.WakeupWatch(d1lk) // trigger one dir watch
+	pss.wt.WakeupWatch(d2lk) // trigger the other dir watch
 	return nil
 }

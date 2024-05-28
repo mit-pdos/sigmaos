@@ -216,8 +216,9 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, f.Pobj().Pathname().String()))
 	}
 
-	// get path lock on for p, so that remove cannot remove file
-	// before watch is set.
+	// Acquire path lock on the directory pn, so that no request can
+	// change the directory while setting a watch on it.  to the
+	// directory
 	pl := ps.plt.Acquire(f.Pobj().Ctx(), pn, lockmap.WLOCK)
 	defer ps.plt.Release(f.Pobj().Ctx(), pl, lockmap.WLOCK)
 

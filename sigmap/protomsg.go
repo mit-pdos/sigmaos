@@ -17,7 +17,11 @@ func NewErr(msg *Rerror) *serr.Err {
 }
 
 func NewRerrorSerr(err *serr.Err) *Rerror {
-	return &Rerror{ErrCode: uint32(err.ErrCode), Obj: err.Obj, Err: err.String()}
+	r := ""
+	if err.Err != nil {
+		r = err.Err.Error()
+	}
+	return &Rerror{ErrCode: uint32(err.ErrCode), Obj: err.Obj, Err: r}
 }
 
 func NewRerrorErr(err error) *Rerror {

@@ -22,10 +22,6 @@ import (
 	"sigmaos/tracing"
 )
 
-const (
-	HOTEL_PORT sp.Tport = kernel.FPORT + 1
-)
-
 type Www struct {
 	*sigmaclnt.SigmaClnt
 	p        *perf.Perf
@@ -38,7 +34,6 @@ type Www struct {
 	profc    *rpcclnt.RPCClnt
 	recc     *rpcclnt.RPCClnt
 	geoc     *rpcclnt.RPCClnt
-	pc       *portclnt.PortClnt
 }
 
 // Run starts the server
@@ -114,13 +109,7 @@ func RunWww(job string, public bool) error {
 	//	}
 
 	if public {
-		pc, pi, err := portclnt.NewPortClntPortPort(www.FsLib, HOTEL_PORT)
-		if err != nil {
-			db.DFatalf("AllocPort err %v", err)
-		}
-		www.pc = pc
-		db.DPrintf(db.ALWAYS, "Realm port: %v Host port: %v Hotel port: %v", pi.PBinding.RealmPort, pi.PBinding.HostPort, HOTEL_PORT)
-		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, HOTEL_PORT /*pi.PBinding.RealmPort*/, www.ProcEnv().GetNet()))
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, kernel.PUBLIC_PORT /*pi.PBinding.RealmPort*/, www.ProcEnv().GetNet()))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -129,13 +118,11 @@ func RunWww(job string, public bool) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		ep.Addrs()[0].IPStr = pi.HostIP.String()
-		ep.Addrs()[0].PortInt = uint32(pi.PBinding.HostPort)
-		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, www.ProcEnv().GetNet(), ep); err != nil {
+		if err = portclnt.AdvertisePublicHTTPPort(www.FsLib, JobHTTPAddrsPath(job), kernel.FPORT, www.ProcEnv().GetOuterContainerIP(), www.ProcEnv().GetNet(), ep); err != nil {
 			db.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
-		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, HOTEL_PORT, www.ProcEnv().GetNet()))
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, kernel.PUBLIC_PORT, www.ProcEnv().GetNet()))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}

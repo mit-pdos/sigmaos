@@ -211,12 +211,12 @@ func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {
 	return nil
 }
 
-func (fdc *FdClient) DirWait(fd int) error {
+func (fdc *FdClient) DirWatch(fd int) error {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.FDCLNT, "DirWait: watch fd %v\n", fd)
+	db.DPrintf(db.FDCLNT, "DirWatch: watch fd %v\n", fd)
 	ch := make(chan error)
 	if err := fdc.pc.SetDirWatch(fid, func(r error) {
 		db.DPrintf(db.FDCLNT, "SetDirWatch: watch returns %v\n", r)

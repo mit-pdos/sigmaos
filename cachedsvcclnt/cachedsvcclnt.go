@@ -63,7 +63,7 @@ func (csc *CachedSvcClnt) watchServers(ch chan error) {
 	started := false
 	for {
 		dir := csc.srvDir()
-		if err := csc.fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
+		if err := csc.fsl.ReadDirWatch(dir, func(sts []*sp.Stat) bool {
 			db.DPrintf(db.CACHEDSVCCLNT, "cachedsvcclnt watch %v %d", sp.Names(sts), len(csc.srvs))
 			if len(sts) > len(csc.srvs) {
 				csc.addServer(sts)

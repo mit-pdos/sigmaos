@@ -168,7 +168,7 @@ func (r *Reducer) readFiles(input string) (sp.Tlength, time.Duration, Tdata, []s
 	duration := time.Duration(0)
 	for len(files) < r.nmaptask {
 		var sts []*sp.Stat
-		err := r.ReadDirWait(input, func(sts0 []*sp.Stat) bool {
+		err := r.ReadDirWatch(input, func(sts0 []*sp.Stat) bool {
 			sts = sts0
 			return len(sts0) == len(files)
 		})

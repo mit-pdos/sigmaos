@@ -379,7 +379,7 @@ func waitForClnts(rootts *test.Tstate, n int) {
 	err := rootts.MkDir(clidir, 0777)
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 	// Wait for n - 1 clnts to register themselves.
-	err = rootts.ReadDirWait(clidir, func(sts []*sp.Stat) bool {
+	err = rootts.ReadDirWatch(clidir, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.TEST, "%v clients ready %v", len(sts), sp.Names(sts))
 		// N - 1 clnts + the semaphore
 		return len(sts) < n

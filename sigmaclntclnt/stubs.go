@@ -238,11 +238,11 @@ func (scc *SigmaClntClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVe
 	return err
 }
 
-func (scc *SigmaClntClnt) DirWait(fd int) error {
+func (scc *SigmaClntClnt) DirWatch(fd int) error {
 	req := scproto.SigmaReadRequest{Fd: uint32(fd)}
 	rep := scproto.SigmaErrReply{}
-	err := scc.rpcErr("SigmaClntSrvAPI.DirWait", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "DirWait %v %v %v", req, rep, err)
+	err := scc.rpcErr("SigmaClntSrvAPI.DirWatch", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "DirWatch %v %v %v", req, rep, err)
 	return err
 }
 

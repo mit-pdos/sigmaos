@@ -113,7 +113,7 @@ func (ft *FtTasks) RecoverTasks() error {
 func (ft *FtTasks) waitForTasks() ([]*sp.Stat, error) {
 	db.DPrintf(db.FTTASKS, "ReadDirWatch %v", ft.todo)
 	var sts []*sp.Stat
-	err := ft.ReadDirWait(ft.todo, func(sts0 []*sp.Stat) bool {
+	err := ft.ReadDirWatch(ft.todo, func(sts0 []*sp.Stat) bool {
 		sts = sts0
 		return len(sts0) == 0
 	})

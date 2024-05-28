@@ -725,7 +725,7 @@ func TestWaitRemoveOne(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestDirWait(t *testing.T) {
+func TestDirWatch(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -737,8 +737,8 @@ func TestDirWait(t *testing.T) {
 	assert.Equal(t, nil, err)
 	ch := make(chan bool)
 	go func() {
-		err := ts.ReadDirWait(pn, func(sts []*sp.Stat) bool {
-			db.DPrintf(db.TEST, "ReadDirWait %v\n", sp.Names(sts))
+		err := ts.ReadDirWatch(pn, func(sts []*sp.Stat) bool {
+			db.DPrintf(db.TEST, "ReadDirWatch %v\n", sp.Names(sts))
 			for _, st := range sts {
 				if st.Name == f {
 					ch <- true
@@ -763,7 +763,7 @@ func TestDirWait(t *testing.T) {
 
 	<-ch
 
-	db.DPrintf(db.TEST, "ReadDirWait returned")
+	db.DPrintf(db.TEST, "ReadDirWatch returned")
 
 	err = ts.RmDir(pn)
 	assert.Nil(t, err, "RmDir: %v", err)

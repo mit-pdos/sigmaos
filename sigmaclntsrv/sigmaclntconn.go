@@ -269,10 +269,10 @@ func (scs *SigmaClntSrvAPI) WriteFence(ctx fs.CtxI, req scproto.SigmaWriteReques
 	return nil
 }
 
-func (scs *SigmaClntSrvAPI) DirWait(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaErrReply) error {
-	err := scs.sc.DirWait(int(req.Fd))
+func (scs *SigmaClntSrvAPI) DirWatch(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.DirWatch(int(req.Fd))
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: DirWait %v %v", scs.sc.ClntId(), req, rep)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: DirWatch %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }
 

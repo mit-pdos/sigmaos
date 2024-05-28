@@ -191,11 +191,11 @@ func Present(sts []*sp.Stat, names []string) bool {
 	return n == len(names)
 }
 
-type Fwait func([]*sp.Stat) bool
+type Fwatch func([]*sp.Stat) bool
 
 // Keep reading dir until wait returns false (e.g., a new file has
 // been created in dir)
-func (fsl *FsLib) ReadDirWait(dir string, wait Fwait) error {
+func (fsl *FsLib) ReadDirWatch(dir string, wait Fwatch) error {
 	for {
 		sts, rdr, err := fsl.ReadDir(dir)
 		if err != nil {
@@ -203,7 +203,7 @@ func (fsl *FsLib) ReadDirWait(dir string, wait Fwait) error {
 		}
 		if wait(sts) { // keep waiting?
 			db.DPrintf(db.FSLIB, "ReadDirWatch wait %v\n", dir)
-			if err := fsl.DirWait(rdr.fd); err != nil {
+			if err := fsl.DirWatch(rdr.fd); err != nil {
 				rdr.Close()
 				if serr.IsErrCode(err, serr.TErrVersion) {
 					db.DPrintf(db.FSLIB, "SetDirWatch: Version mismatch %v", dir)
@@ -224,8 +224,8 @@ func (fsl *FsLib) ReadDirWait(dir string, wait Fwait) error {
 func (fsl *FsLib) WaitRemove(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
-	db.DPrintf(db.FSLIB, "WaitRemove: ReadDirWait dir %v\n", dir)
-	err := fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
+	db.DPrintf(db.FSLIB, "WaitRemove: ReadDirWatch dir %v\n", dir)
+	err := fsl.ReadDirWatch(dir, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.FSLIB, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {
 			if st.Name == f {

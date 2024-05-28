@@ -725,7 +725,7 @@ func TestWaitRemoveOne(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWaitDir(t *testing.T) {
+func TestDirWait(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

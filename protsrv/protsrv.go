@@ -514,7 +514,6 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 			// flk also ensures that two writes execute atomically
 			flk = ps.plt.Acquire(f.Pobj().Ctx(), fn, lockmap.WLOCK)
 		}
-
 	} else {
 		db.DPrintf(db.PROTSRV, "%v: PutFile open %v (%v)", f.Pobj().Ctx().ClntId(), fn, dname)
 		dlk = ps.plt.Acquire(f.Pobj().Ctx(), dname, lockmap.WLOCK)

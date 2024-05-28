@@ -76,12 +76,14 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	if name == "." {
 		return nil, nil, serr.NewErr(serr.TErrInval, name)
 	}
+	pss.stats.IncPathString(fn.Dir().String())
 	flk := pss.plt.Acquire(ctx, fn, lockmap.WLOCK)
 	o1, err := d.Create(ctx, name, perm, mode, lid, f, dev)
 	if perm.IsEphemeral() {
 		db.DPrintf(db.TEST, "%v: Create %q %v %v ephemeral %v lid %v", ctx.ClntId(), name, o1, err, perm.IsEphemeral(), lid)
 	}
 	if err == nil {
+		pss.vt.IncVersion(d.Path())
 		pss.wt.WakeupWatch(dlk)
 		return o1, flk, nil
 	} else {
@@ -105,13 +107,12 @@ func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, 
 		return nil, nil, err
 	}
 	defer pss.plt.Release(ctx, flk, lockmap.WLOCK)
-	pss.stats.IncPathString(dir.String())
+
 	pss.vt.Insert(o1.Path())
-	pss.vt.IncVersion(o1.Path())
 	qid := pss.newQid(o1.Perm(), o1.Path())
 	nf := pss.newFid(ctx, dir, name, o1, lid, qid)
-	pss.vt.IncVersion(o.Path())
 	nf.SetMode(m)
+
 	return qid, nf, nil
 }
 

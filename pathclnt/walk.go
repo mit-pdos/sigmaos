@@ -223,7 +223,7 @@ func (pathc *PathClnt) walkSymlink(fid sp.Tfid, path, left path.Tpathname, resol
 
 // Walk to parent directory, and check if name is there.  If it is,
 // return entry.  Otherwise, set watch based on directory's version
-// number If the directory is modified between Walk and Watch(), the
+// number. If the directory is modified between Walk and Watch(), the
 // versions numbers won't match and Watch will return an error.
 func (pathc *PathClnt) setWatch(fid sp.Tfid, p path.Tpathname, r path.Tpathname, w Watch) (sp.Tfid, *serr.Err) {
 	fid1, _, err := pathc.FidClnt.Walk(fid, r.Dir())

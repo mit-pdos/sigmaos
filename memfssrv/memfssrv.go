@@ -27,7 +27,6 @@ type MemFs struct {
 	ctx fs.CtxI // server context
 	plt *lockmap.PathLockTable
 	sc  *sigmaclnt.SigmaClnt
-	pc  *portclnt.PortClnt
 	pi  portclnt.PortInfo
 	pn  string
 }

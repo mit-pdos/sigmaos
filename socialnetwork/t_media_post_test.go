@@ -47,7 +47,7 @@ func TestMedia(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-media", test.Overlays, 1000}}, NCACHESRV)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-media", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -97,7 +97,7 @@ func TestPost(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-post", test.Overlays, 1000}}, NCACHESRV)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-post", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return

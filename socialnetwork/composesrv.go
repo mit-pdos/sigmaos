@@ -33,12 +33,12 @@ type ComposeSrv struct {
 	mu     sync.Mutex
 }
 
-func RunComposeSrv(public bool, jobname string) error {
+func RunComposeSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Creating compose service\n")
 	csrv := &ComposeSrv{}
 	csrv.sid = rand.Int31n(536870912) // 2^29
 
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_COMPOSE, csrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_COMPOSE, csrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

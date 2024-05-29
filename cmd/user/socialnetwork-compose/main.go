@@ -11,7 +11,7 @@ func main() {
 		dbg.DFatalf("Usage: %v jobname", os.Args[0])
 		return
 	}
-	if err := sn.RunComposeSrv(os.Args[2]); err != nil {
+	if err := sn.RunComposeSrv(os.Args[1]); err != nil {
 		dbg.DFatalf("RunComposeSrv %v err %v\n", os.Args[0], err)
 	}
 }

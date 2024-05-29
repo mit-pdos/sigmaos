@@ -7,11 +7,11 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 3 {
+	if len(os.Args) != 2 {
 		dbg.DFatalf("Usage: %v jobname", os.Args[0])
 		return
 	}
-	if err := sn.RunTimelineSrv(os.Args[2]); err != nil {
+	if err := sn.RunTimelineSrv(os.Args[1]); err != nil {
 		dbg.DFatalf("RunTimelineSrv %v err %v\n", os.Args[0], err)
 	}
 }

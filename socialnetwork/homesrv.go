@@ -31,10 +31,10 @@ type HomeSrv struct {
 	graphc *rpcclnt.RPCClnt
 }
 
-func RunHomeSrv(public bool, jobname string) error {
+func RunHomeSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Creating home service\n")
 	hsrv := &HomeSrv{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_HOME, hsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_HOME, hsrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

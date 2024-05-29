@@ -6,7 +6,6 @@ import (
 
 	"github.com/docker/go-connections/nat"
 
-	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 )
 
@@ -17,11 +16,6 @@ type PortBinding struct {
 
 func (pb *PortBinding) String() string {
 	return fmt.Sprintf("{R %s H %s}", pb.RealmPort, pb.HostPort)
-}
-
-func (pb *PortBinding) Mark(port sp.Tport) {
-	db.DPrintf(db.BOOT, "AllocPort: %v\n", port)
-	pb.RealmPort = port
 }
 
 type PortMap struct {

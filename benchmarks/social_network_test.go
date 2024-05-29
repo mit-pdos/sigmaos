@@ -37,15 +37,15 @@ var MONGO_URL string
 
 func getDefaultSrvs() []sn.Srv {
 	return []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-post", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-home", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-url", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-text", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-compose", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-frontend", test.Overlays, 2000}}
+		sn.Srv{"socialnetwork-user", nil, 2000},
+		sn.Srv{"socialnetwork-graph", nil, 2000},
+		sn.Srv{"socialnetwork-post", nil, 2000},
+		sn.Srv{"socialnetwork-timeline", nil, 2000},
+		sn.Srv{"socialnetwork-home", nil, 2000},
+		sn.Srv{"socialnetwork-url", nil, 2000},
+		sn.Srv{"socialnetwork-text", nil, 2000},
+		sn.Srv{"socialnetwork-compose", nil, 2000},
+		sn.Srv{"socialnetwork-frontend", []string{strconv.FormatBool(test.Overlays)}, 2000}}
 }
 
 func init() {

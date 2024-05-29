@@ -23,8 +23,6 @@ const (
 	FPORT sp.Tport = 1112
 	LPORT sp.Tport = 1132
 
-	KNAMED_PORT = ":1111"
-
 	MAX_EVICT_RETRIES = 10
 )
 

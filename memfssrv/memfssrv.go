@@ -12,7 +12,7 @@ import (
 	"sigmaos/lockmap"
 	"sigmaos/namei"
 	"sigmaos/path"
-	"sigmaos/portclnt"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -27,7 +27,7 @@ type MemFs struct {
 	ctx fs.CtxI // server context
 	plt *lockmap.PathLockTable
 	sc  *sigmaclnt.SigmaClnt
-	pi  portclnt.PortInfo
+	pi  port.PortInfo
 	pn  string
 }
 

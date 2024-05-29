@@ -14,7 +14,7 @@ import (
 
 // Make an MemFs and advertise it at pn
 func NewMemFs(pn string, pe *proc.ProcEnv) (*MemFs, error) {
-	return NewMemFsAddr(pn, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, pe.GetNet()), pe)
+	return NewMemFsAddr(pn, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT), pe)
 }
 
 func NewMemFsAddrClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt) (*MemFs, error) {

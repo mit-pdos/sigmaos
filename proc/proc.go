@@ -125,7 +125,6 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Perf = parentPE.Perf
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
-	p.ProcEnvProto.Net = parentPE.Net
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
 	// Don't override intentionally set net proxy settings
@@ -313,10 +312,6 @@ func (p *Proc) SetShared(target string) {
 
 func (p *Proc) GetShared() string {
 	return p.SharedTarget
-}
-
-func (p *Proc) GetNet() string {
-	return p.ProcEnvProto.GetNet()
 }
 
 func (p *Proc) SetHow(n Thow) {

@@ -112,7 +112,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 		LeaderStats: stats.NewLeaderStats(zap.NewExample(), strconv.Itoa(n.id)),
 		ErrorC:      make(chan error),
 		DialContextFunc: func(ctx context.Context, network, address string) (net.Conn, error) {
-			addr, err := sp.NewTaddrFromString(address, sp.INNER_CONTAINER_IP, n.pe.GetNet())
+			addr, err := sp.NewTaddrFromString(address, sp.INNER_CONTAINER_IP)
 			if err != nil {
 				db.DFatalf("Error parse addr: %v", err)
 			}

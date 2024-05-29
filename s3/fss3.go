@@ -69,7 +69,7 @@ func RunFss3() {
 		clients: make(map[sp.TprincipalID]*s3.Client),
 	}
 	root := newDir("", path.Path{}, sp.DMDIR)
-	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, pe.GetNet())
+	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP)
 	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, sp.S3, sc)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

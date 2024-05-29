@@ -110,7 +110,7 @@ func RunFrontendSrv(public bool, job string) error {
 	//	}
 	dbg.DPrintf(dbg.ALWAYS, "SN public? %v", public)
 	if public {
-		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, kernel.PUBLIC_PORT, sc.ProcEnv().GetNet()))
+		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, kernel.PUBLIC_PORT))
 		if err != nil {
 			dbg.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -125,7 +125,7 @@ func RunFrontendSrv(public bool, job string) error {
 			dbg.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
-		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, frontend.ProcEnv().GetNet()))
+		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
 		if err != nil {
 			dbg.DFatalf("Error %v Listen: %v", public, err)
 		}

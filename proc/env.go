@@ -87,7 +87,6 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			OuterContainerIPStr: sp.NOT_SET,
 			KernelID:            sp.NOT_SET,
 			BuildTag:            sp.NOT_SET,
-			Net:                 sp.NOT_SET,
 			Perf:                os.Getenv(SIGMAPERF),
 			Strace:              os.Getenv(SIGMASTRACE),
 			Debug:               os.Getenv(SIGMADEBUG),
@@ -250,15 +249,6 @@ func (pe *ProcEnvProto) GetRealm() sp.Trealm {
 func (pe *ProcEnvProto) SetRealm(realm sp.Trealm, overlays bool) {
 	pe.RealmStr = realm.String()
 	pe.Principal.RealmStr = realm.String()
-	// Changing the realm changes the overlay network name. Therefore, set the
-	// overlay network for the new realm.
-	pe.Net = sp.ROOTREALM.String()
-	if overlays {
-		pe.Net = "sigmanet-" + realm.String()
-		if realm == sp.ROOTREALM {
-			pe.Net = "sigmanet-testuser"
-		}
-	}
 }
 
 func (pe *ProcEnvProto) SetPrincipal(principal *sp.Tprincipal) {
@@ -340,5 +330,5 @@ func Unmarshal(pestr string) *ProcEnv {
 
 // TODO: cleanup
 func (pe *ProcEnv) String() string {
-	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v Net:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdMnt:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v UseSigmaclntd:%v UseNetProxy:%v VerifyEndpoints:%v SigmaPath:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal().String(), pe.KernelID, pe.UprocdPIDStr, pe.Net, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.GetEtcdEndpoints(), pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail, pe.UseSigmaclntd, pe.UseNetProxy, pe.VerifyEndpoints, pe.SigmaPath)
+	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdMnt:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v UseSigmaclntd:%v UseNetProxy:%v VerifyEndpoints:%v SigmaPath:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal().String(), pe.KernelID, pe.UprocdPIDStr, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.GetEtcdEndpoints(), pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail, pe.UseSigmaclntd, pe.UseNetProxy, pe.VerifyEndpoints, pe.SigmaPath)
 }

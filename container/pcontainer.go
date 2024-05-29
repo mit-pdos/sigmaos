@@ -46,6 +46,18 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 	cmd := append([]string{p.GetProgram()}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v r %v s %v\n", cmd, p.GetEnv(), r, score)
 
+	// ===== XXX OLD CODE TO SET UP NET WITH OVERLAYS IN PROC ENV:
+	//	// Changing the realm changes the overlay network name. Therefore, set the
+	//	// overlay network for the new realm.
+	//	pe.Net = sp.ROOTREALM.String()
+	//	if overlays {
+	//		pe.Net = "sigmanet-" + realm.String()
+	//		if realm == sp.ROOTREALM {
+	//			pe.Net = "sigmanet-testuser"
+	//		}
+	//	}
+	// ===== XXX OLD CODE TO SET UP NET WITH OVERLAYS IN PROC ENV:
+
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
 	netmode := "host"
@@ -61,7 +73,7 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 			pmap[p] = []nat.PortBinding{{}}
 		}
 		endpoints = make(map[string]*network.EndpointSettings, 1)
-		endpoints[p.GetNet()] = &network.EndpointSettings{}
+		endpoints["sigmanet-testuser"] = &network.EndpointSettings{}
 	}
 
 	runtime := "runc"

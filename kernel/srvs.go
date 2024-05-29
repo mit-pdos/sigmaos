@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	db "sigmaos/debug"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
@@ -228,7 +229,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 			return nil, err
 		}
 		// Get port binding for WWW srvs running on this uprocd
-		pm2, err := s.GetContainer().GetPortBinding(PUBLIC_PORT)
+		pm2, err := s.GetContainer().GetPortBinding(port.PUBLIC_PORT)
 		if err != nil {
 			return nil, err
 		}

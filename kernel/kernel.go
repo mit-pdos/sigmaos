@@ -20,9 +20,6 @@ import (
 )
 
 const (
-	SLEEP_S          = 2
-	REPL_PORT_OFFSET = 100
-
 	FPORT sp.Tport = 1112
 	LPORT sp.Tport = 1132
 

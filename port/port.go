@@ -15,18 +15,6 @@ const (
 	N = 20
 )
 
-// XXX type?
-func NewPublicAddrs(outerIP sp.Tip, pb PortBinding, netns string, laddr *sp.Taddr) sp.Taddrs {
-	addrs := make(sp.Taddrs, 2)
-	addrs[0] = laddr
-	addrs[1] = sp.NewTaddr(outerIP, sp.OUTER_CONTAINER_IP, pb.HostPort)
-	return addrs
-}
-
-func NewPublicEndpoint(outerIP sp.Tip, pb PortBinding, net string, lmnt *sp.Tendpoint) *sp.Tendpoint {
-	return sp.NewEndpoint(sp.INTERNAL_EP, NewPublicAddrs(outerIP, pb, net, lmnt.Addrs()[0]), lmnt.GetRealm())
-}
-
 type PortBinding struct {
 	RealmPort sp.Tport
 	HostPort  sp.Tport

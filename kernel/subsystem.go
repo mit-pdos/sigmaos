@@ -30,7 +30,7 @@ type Subsystem interface {
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
 	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
-	AllocPort(p sp.Tport) (*port.PortBinding, error)
+	GetPortBinding(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
 
@@ -155,12 +155,8 @@ func (ss *KernelSubsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
 }
 
-func (ss *KernelSubsystem) AllocPort(p sp.Tport) (*port.PortBinding, error) {
-	if p == sp.NO_PORT {
-		return ss.container.AllocPort()
-	} else {
-		return ss.container.AllocPortOne(p)
-	}
+func (ss *KernelSubsystem) GetPortBinding(p sp.Tport) (*port.PortBinding, error) {
+	return ss.container.GetPortBinding(p)
 }
 
 // Send SIGTERM to a system.

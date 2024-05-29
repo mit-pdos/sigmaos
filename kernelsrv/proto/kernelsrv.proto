@@ -56,16 +56,3 @@ message KillRequest {
 
 message KillResult {
 }
-
-message PortRequest {
-  string pidStr = 1;
-  int32 port = 2;
-}
-
-message PortResult {
-  int32 realmPort = 1;
-  string hostIp = 3;
-  int32 hostPort = 2;
-}
-
-

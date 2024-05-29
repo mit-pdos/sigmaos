@@ -3,16 +3,11 @@ package port
 import (
 	"fmt"
 	"net"
-	"sync"
 
 	"github.com/docker/go-connections/nat"
 
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
-)
-
-const (
-	N = 20
 )
 
 type PortBinding struct {
@@ -39,7 +34,6 @@ func (pr *Range) String() string {
 }
 
 type PortMap struct {
-	sync.Mutex
 	portmap map[sp.Tport]*PortBinding
 	fport   sp.Tport
 }
@@ -67,9 +61,6 @@ func NewPortMap(ports nat.PortMap, r *Range) *PortMap {
 }
 
 func (pm *PortMap) String() string {
-	pm.Lock()
-	defer pm.Unlock()
-
 	s := ""
 	for p, pb := range pm.portmap {
 		s += fmt.Sprintf("{%v: %v} ", p, pb)
@@ -77,48 +68,10 @@ func (pm *PortMap) String() string {
 	return s
 }
 
-func (pm *PortMap) AllocFirst() (*PortBinding, error) {
-	return pm.AllocPortOne(pm.fport)
-}
-
-func (pm *PortMap) GetBinding(port sp.Tport) (*PortBinding, error) {
-	pm.Lock()
-	defer pm.Unlock()
-
+func (pm *PortMap) GetPortBinding(port sp.Tport) (*PortBinding, error) {
 	pb, ok := pm.portmap[port]
 	if !ok {
 		return nil, fmt.Errorf("Unknown port %s", port)
 	}
 	return pb, nil
-}
-
-func (pm *PortMap) AllocPortOne(port sp.Tport) (*PortBinding, error) {
-	if pm == nil {
-		return nil, fmt.Errorf("No overlay network")
-	}
-	pm.Lock()
-	defer pm.Unlock()
-
-	pb := pm.portmap[port]
-	if pb.RealmPort == sp.NO_PORT {
-		pb.Mark(port)
-		return pb, nil
-	}
-	return nil, fmt.Errorf("Port %v already in use", port)
-}
-
-func (pm *PortMap) AllocPort() (*PortBinding, error) {
-	if pm == nil {
-		return nil, fmt.Errorf("No overlay network")
-	}
-	pm.Lock()
-	defer pm.Unlock()
-
-	for p, pb := range pm.portmap {
-		if pb.RealmPort == sp.NO_PORT {
-			pb.Mark(p)
-			return pb, nil
-		}
-	}
-	return nil, fmt.Errorf("Out of ports")
 }

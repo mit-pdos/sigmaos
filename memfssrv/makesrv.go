@@ -6,7 +6,6 @@ import (
 	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/memfs"
-	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -52,27 +51,4 @@ func NewMemFsRootPortClntFence(root fs.Dir, srvpath string, addr *sp.Taddr, sc *
 	}
 	mfs := NewMemFsSrv(mpn, srv, sc, nil)
 	return mfs, nil
-}
-
-// Allocate server with public port and advertise it
-func NewMemFsPublic(pn string, pe *proc.ProcEnv) (*MemFs, error) {
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-	if err != nil {
-		return nil, err
-	}
-	pc, pi, err := portclnt.NewPortClntPort(sc.FsLib)
-	if err != nil {
-		return nil, err
-	}
-	// Make server without advertising ep
-	mfs, err := NewMemFsPortClnt("", sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, pe.GetNet()), sc)
-	if err != nil {
-		return nil, err
-	}
-	mfs.pc = pc
-
-	if err = pc.AdvertisePort(pn, pi, pe.GetNet(), mfs.SigmaPSrv.GetEndpoint()); err != nil {
-		return nil, err
-	}
-	return mfs, err
 }

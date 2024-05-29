@@ -44,22 +44,6 @@ func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
 	return newSigmaSrvMemFs(mfs, svci)
 }
 
-//func NewSigmaSrvPublic(fn string, svci any, pe *proc.ProcEnv, public bool) (*SigmaSrv, error) {
-//	db.DPrintf(db.SIGMASRV, "NewSigmaSrvPublic %T", svci)
-//	defer db.DPrintf(db.SIGMASRV, "NewSigmaSrvPublic done %T", svci)
-//
-//	if public {
-//		mfs, error := memfssrv.NewMemFsPublic(fn, pe)
-//		if error != nil {
-//			db.DPrintf(db.ERROR, "NewMemFsPublic %v err %v", fn, error)
-//			return nil, error
-//		}
-//		return newSigmaSrvMemFs(mfs, svci)
-//	} else {
-//		return NewSigmaSrv(fn, svci, pe)
-//	}
-//}
-
 func NewSigmaSrvAddrClnt(fn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
 	mfs, error := memfssrv.NewMemFsAddrClnt(fn, addr, sc)
 	if error != nil {

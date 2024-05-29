@@ -24,15 +24,6 @@ func (pb *PortBinding) Mark(port sp.Tport) {
 	pb.RealmPort = port
 }
 
-type Range struct {
-	Fport sp.Tport
-	Lport sp.Tport
-}
-
-func (pr *Range) String() string {
-	return fmt.Sprintf("%d-%d", pr.Fport, pr.Lport)
-}
-
 type PortMap struct {
 	portmap map[sp.Tport]*PortBinding
 }

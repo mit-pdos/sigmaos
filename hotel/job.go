@@ -113,9 +113,9 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) error {
 }
 
 type Srv struct {
-	Name   string
-	Public bool
-	Mcpu   proc.Tmcpu
+	Name string
+	Args []string
+	Mcpu proc.Tmcpu
 }
 
 //	,[]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}
@@ -123,14 +123,14 @@ type Srv struct {
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func NewHotelSvc(public bool) []Srv {
 	return []Srv{
-		Srv{"hotel-userd", false, 0},
-		Srv{"hotel-rated", false, 2000},
-		Srv{"hotel-geod", false, 2000},
-		Srv{"hotel-profd", false, 2000},
-		Srv{"hotel-searchd", false, 3000},
-		Srv{"hotel-reserved", false, 3000},
-		Srv{"hotel-recd", false, 0},
-		Srv{"hotel-wwwd", public, 3000},
+		Srv{"hotel-userd", nil, 0},
+		Srv{"hotel-rated", nil, 2000},
+		Srv{"hotel-geod", nil, 2000},
+		Srv{"hotel-profd", nil, 2000},
+		Srv{"hotel-searchd", nil, 3000},
+		Srv{"hotel-reserved", nil, 3000},
+		Srv{"hotel-recd", nil, 0},
+		Srv{"hotel-wwwd", []string{strconv.FormatBool(public)}, 3000},
 	}
 }
 
@@ -172,7 +172,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cachedsvc.NewCacheMgr(sc, job, nsrv, cacheMcpu, gc, false)
+			cm, err = cachedsvc.NewCacheMgr(sc, job, nsrv, cacheMcpu, gc)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err
@@ -205,7 +205,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 
 	for _, srv := range srvs {
 		db.DPrintf(db.TEST, "Hotel spawn %v", srv.Name)
-		p := proc.NewProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
+		p := proc.NewProc(srv.Name, append([]string{job, cache}, srv.Args...))
 		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)

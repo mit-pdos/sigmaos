@@ -27,12 +27,11 @@ type CachedSvc struct {
 	mcpu    proc.Tmcpu
 	pn      string
 	gc      bool
-	public  bool
 }
 
 func (cs *CachedSvc) addServer(i int) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.NewProc(cs.bin, []string{cs.pn, strconv.FormatBool(cs.public), SVRDIR + strconv.Itoa(int(i))})
+	p := proc.NewProc(cs.bin, []string{cs.pn, SVRDIR + strconv.Itoa(int(i))})
 	//	p.AppendEnv("GODEBUG", "gctrace=1")
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
@@ -49,7 +48,7 @@ func (cs *CachedSvc) addServer(i int) error {
 	return nil
 }
 
-func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc, public bool) (*CachedSvc, error) {
+func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc bool) (*CachedSvc, error) {
 	sc.MkDir(pn, 0777)
 	if _, err := sc.Create(pn+SVRDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
@@ -64,7 +63,6 @@ func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, 
 		mcpu:      mcpu,
 		pn:        pn,
 		gc:        gc,
-		public:    public,
 	}
 	for i := 0; i < cs.nserver; i++ {
 		if err := cs.addServer(i); err != nil {

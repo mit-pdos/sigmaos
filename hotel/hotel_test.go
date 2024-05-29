@@ -107,7 +107,7 @@ func TestGeoSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: test.Overlays}}, 0)
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod"}}, 0)
 	defer ts.Shutdown()
 	defer ts.stop()
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
@@ -135,7 +135,7 @@ func TestRateSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-rated", Public: test.Overlays}}, NCACHESRV)
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-rated"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
@@ -166,7 +166,7 @@ func TestRecSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-recd", Public: test.Overlays}}, 0)
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-recd"}}, 0)
 	defer ts.Shutdown()
 	defer ts.stop()
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
@@ -195,7 +195,7 @@ func TestUserSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-userd", Public: test.Overlays}}, 0)
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-userd"}}, 0)
 	defer ts.Shutdown()
 	defer ts.stop()
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
@@ -222,7 +222,7 @@ func TestProfile(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-profd", Public: test.Overlays}}, NCACHESRV)
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-profd"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
@@ -254,7 +254,7 @@ func TestCheck(t *testing.T) {
 		return
 	}
 
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
@@ -288,7 +288,7 @@ func TestReserve(t *testing.T) {
 		return
 	}
 
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved", Public: test.Overlays}}, NCACHESRV)
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
@@ -345,7 +345,7 @@ func TestSingleSearch(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod", Public: false}, hotel.Srv{Name: "hotel-rated", Public: false}, hotel.Srv{Name: "hotel-searchd", Public: test.Overlays}}, NCACHESRV)
+	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod"}, hotel.Srv{Name: "hotel-rated"}, hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
 	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)

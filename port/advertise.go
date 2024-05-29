@@ -1,17 +1,16 @@
-package portclnt
+package port
 
 import (
 	"path"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/port"
 	sp "sigmaos/sigmap"
 )
 
 type PortInfo struct {
 	HostIP   sp.Tip
-	PBinding port.PortBinding
+	PBinding PortBinding
 }
 
 func AdvertisePublicHTTPPort(fsl *fslib.FsLib, pn string, uprocsrvPort sp.Tport, ep *sp.Tendpoint) error {
@@ -36,7 +35,7 @@ func AdvertisePublicHTTPPort(fsl *fslib.FsLib, pn string, uprocsrvPort sp.Tport,
 	}
 	portPN := path.Join(epPN, sp.PUBLIC_PORT)
 	// Read the port binding for this uprocd's open port
-	var pm port.PortBinding
+	var pm PortBinding
 	if err := fsl.GetFileJson(portPN, &pm); err != nil {
 		db.DFatalf("Error get port binding: %v", err)
 	}

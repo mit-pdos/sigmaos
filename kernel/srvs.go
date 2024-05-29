@@ -215,7 +215,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		pn := path.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
 
 		// container's first port is for uprocd
-		pm, err := s.GetContainer().GetPortBinding(FPORT)
+		pm, err := s.GetContainer().GetPortBinding(port.UPROCD_PORT)
 		if err != nil {
 			return nil, err
 		}

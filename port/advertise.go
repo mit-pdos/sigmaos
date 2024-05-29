@@ -13,7 +13,7 @@ type PortInfo struct {
 	PBinding PortBinding
 }
 
-func AdvertisePublicHTTPPort(fsl *fslib.FsLib, pn string, uprocsrvPort sp.Tport, ep *sp.Tendpoint) error {
+func AdvertisePublicHTTPPort(fsl *fslib.FsLib, pn string, ep *sp.Tendpoint) error {
 	// When running with overlays, uprocd's mount point is set up using
 	// 127.0.0.1 and the host port (since normally, only the local schedd talks
 	// to it). We need to fix up the mount point for the local proc to talk to
@@ -28,7 +28,7 @@ func AdvertisePublicHTTPPort(fsl *fslib.FsLib, pn string, uprocsrvPort sp.Tport,
 		db.DFatalf("Error unmarshal ep for uprocsrv: %v", err)
 	}
 	uprocsrvEP.Addrs()[0].IPStr = fsl.ProcEnv().GetInnerContainerIP().String()
-	uprocsrvEP.Addrs()[0].PortInt = uint32(uprocsrvPort)
+	uprocsrvEP.Addrs()[0].PortInt = uint32(UPROCD_PORT)
 	// Manually mount uprocd using the fixed-up endpoint
 	if err := fsl.MountTree(uprocsrvEP, "", epPN); err != nil {
 		db.DFatalf("Err MountTree: ep %v err %v", uprocsrvEP, err)

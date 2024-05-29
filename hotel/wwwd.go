@@ -11,7 +11,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
-	"sigmaos/kernel"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -118,7 +117,7 @@ func RunWww(job string, public bool) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		if err = port.AdvertisePublicHTTPPort(www.FsLib, JobHTTPAddrsPath(job), kernel.FPORT, ep); err != nil {
+		if err = port.AdvertisePublicHTTPPort(www.FsLib, JobHTTPAddrsPath(job), ep); err != nil {
 			db.DFatalf("AdvertisePort %v", err)
 		}
 	} else {

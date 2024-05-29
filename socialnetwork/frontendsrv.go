@@ -9,7 +9,6 @@ import (
 	"time"
 
 	dbg "sigmaos/debug"
-	"sigmaos/kernel"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -121,7 +120,7 @@ func RunFrontendSrv(public bool, job string) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		if err = port.AdvertisePublicHTTPPort(frontend.FsLib, JobHTTPAddrsPath(job), kernel.FPORT, ep); err != nil {
+		if err = port.AdvertisePublicHTTPPort(frontend.FsLib, JobHTTPAddrsPath(job), ep); err != nil {
 			dbg.DFatalf("AdvertisePort %v", err)
 		}
 	} else {

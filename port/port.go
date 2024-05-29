@@ -35,15 +35,11 @@ func (pr *Range) String() string {
 
 type PortMap struct {
 	portmap map[sp.Tport]*PortBinding
-	fport   sp.Tport
 }
 
-func NewPortMap(ports nat.PortMap, r *Range) *PortMap {
-	if r == nil {
-		return nil
-	}
-	pm := &PortMap{fport: r.Fport, portmap: make(map[sp.Tport]*PortBinding)}
-	for i := r.Fport; i < r.Lport; i++ {
+func NewPortMap(ports nat.PortMap, ctrports []sp.Tport) *PortMap {
+	pm := &PortMap{portmap: make(map[sp.Tport]*PortBinding)}
+	for _, i := range ctrports {
 		p, err := nat.NewPort("tcp", i.String())
 		if err != nil {
 			break

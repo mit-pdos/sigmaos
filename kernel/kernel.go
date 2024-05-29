@@ -20,9 +20,6 @@ import (
 )
 
 const (
-	FPORT sp.Tport = 1112
-	LPORT sp.Tport = 1132
-
 	MAX_EVICT_RETRIES = 10
 )
 

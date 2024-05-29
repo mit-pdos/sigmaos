@@ -300,7 +300,6 @@ func TestReadSymlink(t *testing.T) {
 
 	assert.Equal(t, ep.Addrs()[0].GetIP(), ep1.Addrs()[0].GetIP())
 	assert.Equal(t, ep.Addrs()[0].GetPort(), ep1.Addrs()[0].GetPort())
-	assert.Equal(t, ep.Addrs()[0].GetNetNS(), ep1.Addrs()[0].GetNetNS())
 
 	err = ts.RmDir(d1)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -1138,7 +1137,7 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222)}, sp.ROOTREALM)
 	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself1"), newep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "EndpointService")
 
@@ -1340,7 +1339,7 @@ func TestEndpointUnion(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111, ts.ProcEnv().GetNet())}, sp.ROOTREALM)
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111)}, sp.ROOTREALM)
 	err = ts.MkEndpointFile(gopath.Join(pathname, "d/namedself0"), newep, sp.NoLeaseId)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 

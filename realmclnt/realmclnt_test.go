@@ -488,7 +488,7 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	}
 
 	job := rd.String(16)
-	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
+	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
 	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
@@ -555,7 +555,7 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	}
 
 	job := rd.String(16)
-	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
+	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
 	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)

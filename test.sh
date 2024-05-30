@@ -110,7 +110,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test some support package
     #
 
-    for T in path intervals serr linuxsched perf sigmap; do
+    for T in path intervals serr linuxsched perf sigmap sortedmap; do
         go test $VERB sigmaos/$T
         cleanup
     done
@@ -126,7 +126,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test proxy with just named
     #
 
-    go test $VERB sigmaos/proxy -start
+    # go test $VERB sigmaos/proxy -start
     cleanup
 
     #

@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sortedmap"
 )
 
 type NewEntryF[E any] func(string) (E, error)
@@ -20,7 +20,7 @@ type NewEntryF[E any] func(string) (E, error)
 type DynDir[E any] struct {
 	*fslib.FsLib
 	sync.Mutex
-	dir       *sorteddir.SortedDir[string, E]
+	dir       *sortedmap.SortedMap[string, E]
 	watching  bool
 	done      uint32
 	Path      string
@@ -33,7 +33,7 @@ func NewDynDir[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[E], lSel
 	dd := &DynDir[E]{
 		FsLib:     fsl,
 		Path:      path,
-		dir:       sorteddir.NewSortedDir[string, E](),
+		dir:       sortedmap.NewSortedMap[string, E](),
 		LSelector: lSelector,
 		ESelector: ESelector,
 		newEntry:  newEntry,

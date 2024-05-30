@@ -10,12 +10,12 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sortedmap"
 )
 
 type Dir struct {
 	*Obj
-	sd *sorteddir.SortedDir[string, *sp.Tstat]
+	sd *sortedmap.SortedMap[string, *sp.Tstat]
 }
 
 func (d *Dir) String() string {
@@ -29,7 +29,7 @@ func newDir(path path.Tpathname) (*Dir, *serr.Err) {
 		return nil, err
 	}
 	d.Obj = o
-	d.sd = sorteddir.NewSortedDir[string, *sp.Tstat]()
+	d.sd = sortedmap.NewSortedMap[string, *sp.Tstat]()
 	return d, nil
 }
 
@@ -73,7 +73,7 @@ func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 }
 
 func (d *Dir) Close(ctx fs.CtxI, mode sp.Tmode) *serr.Err {
-	d.sd = sorteddir.NewSortedDir[string, *sp.Tstat]()
+	d.sd = sortedmap.NewSortedMap[string, *sp.Tstat]()
 	return nil
 }
 

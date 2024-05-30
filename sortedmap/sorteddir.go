@@ -1,4 +1,4 @@
-package sorteddir
+package sortedmap
 
 import (
 	"fmt"
@@ -10,34 +10,34 @@ import (
 	"sigmaos/rand"
 )
 
-type SortedDir[K constraints.Ordered, V any] struct {
+type SortedMap[K constraints.Ordered, V any] struct {
 	sync.Mutex
 	dents  map[K]V
 	sorted []K
 	rr     int
 }
 
-func NewSortedDir[K constraints.Ordered, V any]() *SortedDir[K, V] {
-	sd := &SortedDir[K, V]{}
+func NewSortedMap[K constraints.Ordered, V any]() *SortedMap[K, V] {
+	sd := &SortedMap[K, V]{}
 	sd.dents = make(map[K]V)
 	sd.sorted = make([]K, 0)
 	return sd
 }
 
-func (sd *SortedDir[K, V]) roundrobinIndex() int {
+func (sd *SortedMap[K, V]) roundrobinIndex() int {
 	if len(sd.sorted) == 0 {
 		return 0
 	}
 	return sd.rr % len(sd.sorted)
 }
 
-func (sd *SortedDir[K, V]) roundrobinNext() int {
+func (sd *SortedMap[K, V]) roundrobinNext() int {
 	i := sd.roundrobinIndex()
 	sd.rr += 1
 	return i
 }
 
-func (sd *SortedDir[K, V]) Iter(f func(key K, val V) bool) {
+func (sd *SortedMap[K, V]) Iter(f func(key K, val V) bool) {
 	sd.Lock()
 	defer sd.Unlock()
 
@@ -49,7 +49,7 @@ func (sd *SortedDir[K, V]) Iter(f func(key K, val V) bool) {
 	}
 }
 
-func (sd *SortedDir[K, V]) String() string {
+func (sd *SortedMap[K, V]) String() string {
 	s := "["
 	sd.Iter(func(k K, v V) bool {
 		s += fmt.Sprintf("%v , ", k)
@@ -58,20 +58,20 @@ func (sd *SortedDir[K, V]) String() string {
 	return s + "]"
 }
 
-func (sd *SortedDir[K, V]) Len() int {
+func (sd *SortedMap[K, V]) Len() int {
 	sd.Lock()
 	defer sd.Unlock()
 	return len(sd.dents)
 }
 
-func (sd *SortedDir[K, V]) Lookup(n K) (V, bool) {
+func (sd *SortedMap[K, V]) Lookup(n K) (V, bool) {
 	sd.Lock()
 	defer sd.Unlock()
 	e, ok := sd.dents[n]
 	return e, ok
 }
 
-func (sd *SortedDir[K, V]) Random() (K, bool) {
+func (sd *SortedMap[K, V]) Random() (K, bool) {
 	sd.Lock()
 	defer sd.Unlock()
 
@@ -83,7 +83,7 @@ func (sd *SortedDir[K, V]) Random() (K, bool) {
 	return k, true
 }
 
-func (sd *SortedDir[K, V]) RoundRobin() (K, bool) {
+func (sd *SortedMap[K, V]) RoundRobin() (K, bool) {
 	sd.Lock()
 	defer sd.Unlock()
 
@@ -95,11 +95,11 @@ func (sd *SortedDir[K, V]) RoundRobin() (K, bool) {
 	return k, true
 }
 
-func (sd *SortedDir[K, V]) Keys(s int) []K {
+func (sd *SortedMap[K, V]) Keys(s int) []K {
 	return sd.sorted[s:]
 }
 
-func (sd *SortedDir[K, V]) insertSort(name K) {
+func (sd *SortedMap[K, V]) insertSort(name K) {
 	i := sort.Search(len(sd.sorted), func(i int) bool { return sd.sorted[i] >= name })
 	new := make([]K, 1)
 	sd.sorted = append(sd.sorted, new...)
@@ -110,7 +110,7 @@ func (sd *SortedDir[K, V]) insertSort(name K) {
 	}
 }
 
-func (sd *SortedDir[K, V]) delSort(name K) {
+func (sd *SortedMap[K, V]) delSort(name K) {
 	i := sort.Search(len(sd.sorted), func(i int) bool { return sd.sorted[i] >= name })
 	sd.sorted = append(sd.sorted[:i], sd.sorted[i+1:]...)
 	if i < sd.roundrobinIndex() {
@@ -121,7 +121,7 @@ func (sd *SortedDir[K, V]) delSort(name K) {
 }
 
 // Return true if K was inserted
-func (sd *SortedDir[K, V]) Insert(name K, e V) bool {
+func (sd *SortedMap[K, V]) Insert(name K, e V) bool {
 	sd.Lock()
 	defer sd.Unlock()
 	if _, ok := sd.dents[name]; !ok {
@@ -132,7 +132,7 @@ func (sd *SortedDir[K, V]) Insert(name K, e V) bool {
 	return false
 }
 
-func (sd *SortedDir[K, V]) Delete(name K) bool {
+func (sd *SortedMap[K, V]) Delete(name K) bool {
 	sd.Lock()
 	defer sd.Unlock()
 

@@ -1,4 +1,4 @@
-package sorteddir
+package sortedmap
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 var NAMES = []string{"a", "b.txt", "gutenberg", "ls.PDF", "wiki"}
 
 func TestBasic(t *testing.T) {
-	sd := NewSortedDir[string, *bool]()
+	sd := NewSortedMap[string, *bool]()
 	for i, _ := range NAMES {
 		j := len(NAMES) - (i + 1)
 		sd.Insert(NAMES[j], new(bool))
@@ -35,7 +35,7 @@ func TestBasic(t *testing.T) {
 }
 
 func TestRR(t *testing.T) {
-	sd := NewSortedDir[string, *bool]()
+	sd := NewSortedMap[string, *bool]()
 
 	i, ok := sd.RoundRobin()
 	assert.False(t, ok)

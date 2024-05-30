@@ -9,14 +9,14 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sortedmap"
 )
 
 type ProcDir struct {
 	sync.Mutex
 	*ProcInode
 	procs ProcFs
-	sd    *sorteddir.SortedDir[string, *sp.Tstat]
+	sd    *sortedmap.SortedMap[string, *sp.Tstat]
 }
 
 func NewProcDir(procs ProcFs) fs.FsObj {
@@ -25,7 +25,7 @@ func NewProcDir(procs ProcFs) fs.FsObj {
 
 func (pd *ProcDir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	ps := pd.procs.GetProcs()
-	pd.sd = sorteddir.NewSortedDir[string, *sp.Tstat]()
+	pd.sd = sortedmap.NewSortedMap[string, *sp.Tstat]()
 	for _, p := range ps {
 		n := string(p.GetPid())
 		pi := newProcInode(0444, n)

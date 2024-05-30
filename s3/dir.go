@@ -14,7 +14,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sortedmap"
 	"sigmaos/spcodec"
 )
 
@@ -35,7 +35,7 @@ func fromDot(pn string) string {
 type Dir struct {
 	*Obj
 	sync.Mutex
-	dents *sorteddir.SortedDir[string, sp.Tperm]
+	dents *sortedmap.SortedMap[string, sp.Tperm]
 	sts   []*sp.Stat
 }
 
@@ -48,7 +48,7 @@ func newDir(bucket string, key path.Tpathname, perm sp.Tperm) *Dir {
 	o := newObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
-	dir.dents = sorteddir.NewSortedDir[string, sp.Tperm]()
+	dir.dents = sortedmap.NewSortedMap[string, sp.Tperm]()
 	return dir
 }
 

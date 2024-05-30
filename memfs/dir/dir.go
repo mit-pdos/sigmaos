@@ -10,7 +10,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sortedmap"
 	"sigmaos/spcodec"
 )
 
@@ -18,14 +18,14 @@ type DirImpl struct {
 	fs.Inode
 	no    fs.NewFsObjF
 	mu    sync.Mutex
-	dents *sorteddir.SortedDir[string, fs.FsObj]
+	dents *sortedmap.SortedMap[string, fs.FsObj]
 }
 
 func MkDir(i fs.Inode, no fs.NewFsObjF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
 	d.no = no
-	d.dents = sorteddir.NewSortedDir[string, fs.FsObj]()
+	d.dents = sortedmap.NewSortedMap[string, fs.FsObj]()
 	d.dents.Insert(".", d)
 	return d
 }

@@ -110,8 +110,7 @@ func (dd *DynDir[E]) UpdateEntries(force bool) error {
 		db.DPrintf(db.ALWAYS, "getEntries %v", err)
 		return err
 	}
-	dd.updateEntriesL(ents)
-	return nil
+	return dd.updateEntriesL(ents)
 }
 
 // Caller must hold dd mutex

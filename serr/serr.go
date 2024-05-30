@@ -275,6 +275,14 @@ func IsErrorUnavailable(error error) bool {
 	return false
 }
 
+func IsErrorUnreachable(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return err.IsErrUnreachable()
+	}
+	return false
+}
+
 func IsErrCode(error error, code Terror) bool {
 	var err *Err
 	if errors.As(error, &err) {

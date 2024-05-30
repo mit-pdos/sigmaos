@@ -378,13 +378,10 @@ func waitForClnts(rootts *test.Tstate, n int) {
 	// Make sure the clients directory has been created.
 	err := rootts.MkDir(clidir, 0777)
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
+
 	// Wait for n - 1 clnts to register themselves.
-	err = rootts.ReadDirWatch(clidir, func(sts []*sp.Stat) bool {
-		db.DPrintf(db.TEST, "%v clients ready %v", len(sts), sp.Names(sts))
-		// N - 1 clnts + the semaphore
-		return len(sts) < n
-	})
-	assert.Nil(rootts.T, err, "Err ReadDirWatch: %v", err)
+	err = rootts.WaitNEntries(clidir, n) // n - 1 + the semaphore
+	assert.Nil(rootts.T, err, "Err WaitNentries: %v", err)
 	sem := createClntWaitSem(rootts)
 	err = sem.Up()
 	assert.Nil(rootts.T, err, "Err sem.Up: %v", err)

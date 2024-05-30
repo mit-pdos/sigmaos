@@ -46,22 +46,14 @@ func NewUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 		// wait for the kernel to start up and advertise itself in a separate
 		// goroutine, and then fill the uprocd pool
 		for {
-			err := updm.fsl.ReadDirWatch(sp.BOOT, func(sts []*sp.Stat) bool {
-				for _, kid := range sp.Names(sts) {
-					// If the kernel ID is in the boot directory, stop waiting
-					if kid == updm.kernelId {
-						return false
-					}
-				}
-				return true
-			})
+			err := updm.fsl.WaitCreate(filepath.Join(sp.BOOT, updm.kernelId))
 			// Retry if unreachable
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
 				db.DPrintf(db.UPROCDMGR, "Boot dir unreachable")
 				continue
 			}
 			if err != nil {
-				db.DFatalf("Error ReadDirWatch for kernel: %v", err)
+				db.DFatalf("Error WaitCreate for kernel: %v", err)
 			}
 			break
 		}

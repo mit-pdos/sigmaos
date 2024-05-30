@@ -38,6 +38,7 @@ func (fsl *FsLib) ReadDirWatch(dir string, watch Fwatch) error {
 	return nil
 }
 
+// Wait until pn isn't present
 func (fsl *FsLib) WaitRemove(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
@@ -50,6 +51,23 @@ func (fsl *FsLib) WaitRemove(pn string) error {
 			}
 		}
 		return false
+	})
+	return err
+}
+
+// Wait until pn exists
+func (fsl *FsLib) WaitCreate(pn string) error {
+	dir := filepath.Dir(pn) + "/"
+	f := filepath.Base(pn)
+	db.DPrintf(db.FSLIB, "WaitCreate: ReadDirWatch dir %v\n", dir)
+	err := fsl.ReadDirWatch(dir, func(sts []*sp.Stat) bool {
+		db.DPrintf(db.FSLIB, "WaitCreate %v %v %v\n", dir, sp.Names(sts), f)
+		for _, st := range sts {
+			if st.Name == f {
+				return false
+			}
+		}
+		return true
 	})
 	return err
 }

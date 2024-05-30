@@ -56,7 +56,7 @@ type DirInfo struct {
 }
 
 func (di *DirInfo) find(del sp.Tpath) (path.Tpathname, bool) {
-	for _, n := range di.Ents.Slice(0) {
+	for _, n := range di.Ents.Keys(0) {
 		e, ok := di.Ents.Lookup(n)
 		if ok {
 			if e.Path == del {

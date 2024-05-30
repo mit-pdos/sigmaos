@@ -28,11 +28,7 @@ func NewScheddClnt(fsl *fslib.FsLib) *ScheddClnt {
 }
 
 func (sdc *ScheddClnt) Nschedd() (int, error) {
-	sds, err := sdc.GetSchedds()
-	if err != nil {
-		return 0, err
-	}
-	return len(sds), nil
+	return sdc.urpcc.Nentry()
 }
 
 func (sdc *ScheddClnt) GetSchedds() ([]string, error) {

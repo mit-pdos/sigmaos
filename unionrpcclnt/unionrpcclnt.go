@@ -33,11 +33,11 @@ func NewUnionRPCClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSel
 }
 
 func (urpcc *UnionRPCClnt) Nsrv() (int, error) {
-	ents, err := urpcc.GetEntries()
+	n, err := urpcc.Nentry()
 	if err != nil {
 		return 0, err
 	}
-	return len(ents), nil
+	return n, nil
 }
 
 func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {

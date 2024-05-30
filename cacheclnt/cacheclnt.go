@@ -38,7 +38,11 @@ type CacheClnt struct {
 }
 
 func NewCacheClnt(fsls []*fslib.FsLib, job string, nshard int) *CacheClnt {
-	cc := &CacheClnt{fsl: fsls[0], nshard: nshard, ClntCache: rpcclnt.NewRPCClntCache(sigmarpcchan.SigmaRPCChanFactory(fsls))}
+	cc := &CacheClnt{
+		fsl:       fsls[0],
+		nshard:    nshard,
+		ClntCache: rpcclnt.NewRPCClntCache(sigmarpcchan.SigmaRPCChanFactory(fsls)),
+	}
 	return cc
 }
 

@@ -42,11 +42,17 @@ func NewDynDir[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[E], lSel
 }
 
 func (dd *DynDir[E]) Nentry() (int, error) {
-	es, err := dd.GetEntries()
-	if err != nil {
+	if err := dd.UpdateEntries(false); err != nil {
 		return 0, err
 	}
-	return len(es), nil
+	return dd.dir.Len(), nil
+}
+
+func (dd *DynDir[E]) GetEntries() ([]string, error) {
+	if err := dd.UpdateEntries(false); err != nil {
+		return nil, err
+	}
+	return dd.dir.Keys(0), nil
 }
 
 func (dd *DynDir[E]) GetEntry(n string) (E, bool) {
@@ -79,9 +85,11 @@ func (dd *DynDir[E]) GetEntryAlloc(n string) (E, error) {
 	return e, nil
 }
 
-func (dd *DynDir[E]) UpdateEntries(force bool) {
-	db.DPrintf(dd.LSelector, "UpdateSrvs")
-	defer db.DPrintf(dd.LSelector, "Done UpdateSrvs")
+func (dd *DynDir[E]) UpdateEntries(force bool) error {
+	if force {
+		db.DPrintf(dd.LSelector, "UpdateSrvs")
+		defer db.DPrintf(dd.LSelector, "Done UpdateSrvs")
+	}
 
 	dd.Lock()
 	defer dd.Unlock()
@@ -94,16 +102,16 @@ func (dd *DynDir[E]) UpdateEntries(force bool) {
 	// If the caller is not forcing an update, and the list of ents
 	// has already been populated, do nothing and return.
 	if !force && dd.dir.Len() > 0 {
-		db.DPrintf(dd.LSelector, "No need to update srv list")
-		return
+		return nil
 	}
 
-	ents, err := dd.GetEntries()
+	ents, err := dd.getEntries()
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "GetEntries %v", err)
-		return
+		db.DPrintf(db.ALWAYS, "getEntries %v", err)
+		return err
 	}
 	dd.updateEntriesL(ents)
+	return nil
 }
 
 // Caller must hold dd mutex
@@ -159,7 +167,7 @@ func (dd *DynDir[E]) Remove(name string) bool {
 }
 
 // Read directory from server. The caller may hold the dd mutex
-func (dd *DynDir[E]) GetEntries() ([]string, error) {
+func (dd *DynDir[E]) getEntries() ([]string, error) {
 	sts, err := dd.GetDir(dd.Path)
 	if err != nil {
 		return nil, err

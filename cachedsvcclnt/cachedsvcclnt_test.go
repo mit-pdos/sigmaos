@@ -116,6 +116,7 @@ func TestCacheSingle(t *testing.T) {
 		assert.True(t, cache.IsMiss(err))
 	}
 
+	cc.Close()
 	ts.Shutdown()
 }
 
@@ -162,6 +163,7 @@ func testCacheSharded(t *testing.T, nsrv int) {
 		assert.True(t, cache.IsMiss(err))
 	}
 
+	cc.Close()
 	ts.stop()
 	ts.Shutdown()
 }
@@ -204,6 +206,7 @@ func TestCacheConcur(t *testing.T) {
 	}
 	wg.Wait()
 
+	cc.Close()
 	ts.stop()
 	ts.Shutdown()
 }
@@ -262,10 +265,12 @@ func TestElasticCache(t *testing.T) {
 		qlen := sts[0].StatsSnapshot.AvgQlen
 		db.DPrintf(db.ALWAYS, "Qlen %v %v\n", qlen, sts)
 		if qlen > 1.1 && i < 1 {
+			db.DPrintf(db.TEST, "Add server")
 			ts.cm.AddServer()
 		}
 	}
 
+	cc.Close()
 	ts.stop()
 	ts.Shutdown()
 }

@@ -1,3 +1,5 @@
+// The cachedsvc package manages a service of cachesrvs.  Server i
+// post itself with the pathname SRVDIR/i.
 package cachedsvc
 
 import (
@@ -9,10 +11,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
-
-//
-//  A package to manage a service of cached's
-//
 
 const (
 	SVRDIR = "servers/"
@@ -49,6 +47,7 @@ func (cs *CachedSvc) addServer(i int) error {
 	return nil
 }
 
+// XXX use job
 func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc, public bool) (*CachedSvc, error) {
 	sc.MkDir(pn, 0777)
 	if _, err := sc.Create(pn+SVRDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {

@@ -116,6 +116,9 @@ func run(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.
 		d := time.Since(start)
 		status = proc.NewStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
 	}
+	if csc != nil {
+		csc.Close()
+	}
 	sc.ClntExit(status)
 }
 

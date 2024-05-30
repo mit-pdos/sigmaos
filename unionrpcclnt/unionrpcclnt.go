@@ -33,11 +33,11 @@ func NewUnionRPCClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSel
 }
 
 func (urpcc *UnionRPCClnt) Nsrv() (int, error) {
-	n, err := urpcc.Nentry()
-	if err != nil {
-		return 0, err
-	}
-	return n, nil
+	return urpcc.Nentry()
+}
+
+func (urpcc *UnionRPCClnt) GetSrvs() ([]string, error) {
+	return urpcc.GetEntries()
 }
 
 func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
@@ -74,8 +74,4 @@ func (urpcc *UnionRPCClnt) RandomSrv() (string, error) {
 		return "", serr.NewErr(serr.TErrNotfound, "no random server")
 	}
 	return n, nil
-}
-
-func (urpcc *UnionRPCClnt) GetSrvs() ([]string, error) {
-	return urpcc.GetEntries()
 }

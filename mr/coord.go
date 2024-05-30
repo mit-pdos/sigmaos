@@ -257,7 +257,7 @@ func newStringSlice(data []interface{}) []string {
 
 func (c *Coord) startTasks(ft *fttasks.FtTasks, ch chan Tresult, f func(string) *proc.Proc) int {
 	start := time.Now()
-	tns, _, err := ft.GetTasks()
+	tns, err := ft.GetTasks()
 	if err != nil {
 		db.DFatalf("startTasks err %v\n", err)
 	}

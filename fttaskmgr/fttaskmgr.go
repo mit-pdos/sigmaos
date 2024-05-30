@@ -50,14 +50,15 @@ func (ftm *FtTaskMgr) ExecuteTasks(new Tnew, mkProc TmkProc) *proc.Status {
 	// unrecoverable error) or until a client stops ftm.
 	stop := false
 	for !stop {
-		ts, b, err := ftm.WaitForTasks()
+		ts, err := ftm.WaitForTasks()
 		if err != nil {
 			db.DFatalf("WaitForTasks err %v", err)
 		}
-		stop = b
-		if err := ftm.StartTasks(ts, ch, new, mkProc); err != nil {
+		b, err := ftm.StartTasks(ts, ch, new, mkProc)
+		if err != nil {
 			db.DFatalf("startTasks %v err %v", ts, err)
 		}
+		stop = b
 	}
 	// tell collector to finish up
 	finish <- true
@@ -67,10 +68,16 @@ func (ftm *FtTaskMgr) ExecuteTasks(new Tnew, mkProc TmkProc) *proc.Status {
 	return nil
 }
 
-func (ftm *FtTaskMgr) StartTasks(ts []string, ch chan Tresult, new Tnew, mkProc TmkProc) error {
+func (ftm *FtTaskMgr) StartTasks(ts []string, ch chan Tresult, new Tnew, mkProc TmkProc) (bool, error) {
 	ntask := 0
 	var r error
+	stop := false
 	for _, t := range ts {
+		if t == fttasks.STOP {
+			db.DPrintf(db.FTTASKMGR, "StartTasks stop %v", t)
+			stop = true
+			continue
+		}
 		rdr, err := ftm.TaskReader(t)
 		if err != nil {
 			db.DPrintf(db.FTTASKMGR, "TaskReader %s err %v", t, err)
@@ -87,8 +94,8 @@ func (ftm *FtTaskMgr) StartTasks(ts []string, ch chan Tresult, new Tnew, mkProc 
 			return nil
 		})
 	}
-	db.DPrintf(db.FTTASKMGR, "Started %v tasks ntask in progress %v", ntask, ftm.ntask.Load())
-	return r
+	db.DPrintf(db.FTTASKMGR, "Started %v tasks ntask in progress %v %v", ntask, ftm.ntask.Load(), stop)
+	return stop, r
 }
 
 func (ftm *FtTaskMgr) runTask(p *proc.Proc, t string, ch chan Tresult) {

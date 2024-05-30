@@ -137,7 +137,7 @@ func (ft *FtTasks) claimTask(name string) (string, error) {
 }
 
 // Return stop; if stop is true, stop after processing returned entries
-func (ft *FtTasks) claimTasks(sts []*sp.Stat) ([]string, bool, error) {
+func (ft *FtTasks) claimTasks(sts []*sp.Stat) ([]string, error) {
 	// Due to inconsistent views of the WIP directory (concurrent adds by
 	// clients and paging reads in the parent of this function), some
 	// entries may be duplicated.
@@ -146,34 +146,29 @@ func (ft *FtTasks) claimTasks(sts []*sp.Stat) ([]string, bool, error) {
 		entries[st.Name] = true
 	}
 	db.DPrintf(db.FTTASKS, "Removed %v duplicate entries", len(sts)-len(entries))
-	stop := false
 	tasks := make([]string, 0)
 	for entry, _ := range entries {
 		t, err := ft.claimTask(entry)
 		if err != nil || t == "" {
 			continue
 		}
-		if t == STOP {
-			stop = true
-			continue
-		}
 		tasks = append(tasks, t)
 	}
-	return tasks, stop, nil
+	return tasks, nil
 }
 
-func (ft *FtTasks) WaitForTasks() ([]string, bool, error) {
+func (ft *FtTasks) WaitForTasks() ([]string, error) {
 	sts, err := ft.waitForTasks()
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	return ft.claimTasks(sts)
 }
 
-func (ft *FtTasks) GetTasks() ([]string, bool, error) {
+func (ft *FtTasks) GetTasks() ([]string, error) {
 	sts, err := ft.GetDir(ft.todo)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	return ft.claimTasks(sts)
 }

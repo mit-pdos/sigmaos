@@ -80,7 +80,7 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	flk := pss.plt.Acquire(ctx, fn, lockmap.WLOCK)
 	o1, err := d.Create(ctx, name, perm, mode, lid, f, dev)
 	if perm.IsEphemeral() {
-		db.DPrintf(db.TEST, "%v: Create %q %v %v ephemeral %v lid %v", ctx.ClntId(), name, o1, err, perm.IsEphemeral(), lid)
+		db.DPrintf(db.PROTSRV, "%v: Create %q %v %v ephemeral %v lid %v", ctx.ClntId(), name, o1, err, perm.IsEphemeral(), lid)
 	}
 	if err == nil {
 		pss.vt.IncVersion(d.Path())

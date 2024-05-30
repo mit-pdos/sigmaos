@@ -106,7 +106,7 @@ func RunRealmSrv(netproxy bool) error {
 	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib)
 	go rs.enforceResourcePolicy()
 	err = ssrv.RunServer()
-	rs.mkc.StopMonitoring()
+	rs.mkc.StopWatching()
 	return nil
 }
 

@@ -26,7 +26,7 @@ func NewChunkClnt(fsl *fslib.FsLib) *ChunkClnt {
 }
 
 func (ckclnt *ChunkClnt) updateChunkds() {
-	ckclnt.UnionRPCClnt.UpdateSrvs(false)
+	ckclnt.UnionRPCClnt.UpdateEntries(false)
 }
 
 func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {

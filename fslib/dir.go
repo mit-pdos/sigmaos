@@ -195,18 +195,18 @@ type Fwatch func([]*sp.Stat) bool
 
 // Keep reading dir until wait returns false (e.g., a new file has
 // been created in dir)
-func (fsl *FsLib) ReadDirWatch(dir string, wait Fwatch) error {
+func (fsl *FsLib) ReadDirWatch(dir string, watch Fwatch) error {
 	for {
 		sts, rdr, err := fsl.ReadDir(dir)
 		if err != nil {
 			return err
 		}
-		if wait(sts) { // keep waiting?
-			db.DPrintf(db.FSLIB, "ReadDirWatch wait %v\n", dir)
+		if watch(sts) { // keep watching?
+			db.DPrintf(db.FSLIB, "ReadDirWatch watch %v\n", dir)
 			if err := fsl.DirWatch(rdr.fd); err != nil {
 				rdr.Close()
 				if serr.IsErrCode(err, serr.TErrVersion) {
-					db.DPrintf(db.FSLIB, "SetDirWatch: Version mismatch %v", dir)
+					db.DPrintf(db.FSLIB, "DirWatch: Version mismatch %v", dir)
 					continue // try again
 				}
 				return err

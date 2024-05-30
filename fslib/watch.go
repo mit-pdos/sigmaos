@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"path/filepath"
+	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
@@ -82,4 +83,43 @@ func (fsl *FsLib) WaitNEntries(pn string, n int) error {
 		return err
 	}
 	return nil
+}
+
+// Watch for new files. Procs be may removing/creating files
+// concurrently from the directory, which may create dups;
+// WatchNewFiles filters those.
+
+type FileWatcher struct {
+	*FsLib
+	sync.Mutex
+	pn    string
+	files map[string]bool
+}
+
+func NewFileWatcher(fslib *FsLib, pn string) *FileWatcher {
+	fw := &FileWatcher{
+		FsLib: fslib,
+		pn:    pn,
+		files: make(map[string]bool),
+	}
+	return fw
+}
+
+func (fw *FileWatcher) WatchNewFiles() ([]string, error) {
+	newfiles := make([]string, 0)
+	err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
+		for _, st := range sts {
+			if !fw.files[st.Name] {
+				newfiles = append(newfiles, st.Name)
+			}
+		}
+		if len(newfiles) > 0 {
+			return false
+		}
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	return newfiles, nil
 }

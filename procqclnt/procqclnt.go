@@ -31,7 +31,7 @@ func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
 
 func (pqc *ProcQClnt) ChooseProcQ(pid sp.Tpid) (string, error) {
 	s := time.Now()
-	pqc.urpcc.UpdateSrvs(false)
+	pqc.urpcc.UpdateEntries(false)
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt updateProcQs %v", pid, time.Since(s))
 	s = time.Now()
 	pqId, err := pqc.urpcc.RandomSrv()
@@ -74,7 +74,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 // Get a proc (passing in the kernelID of the caller). Will only return once
 // receives a response, or once there is an error.
 func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias bool) (proc.Tmem, uint32, bool, error) {
-	pqc.urpcc.UpdateSrvs(false)
+	pqc.urpcc.UpdateEntries(false)
 	// Retry until successful.
 	for {
 		var pqID string
@@ -85,7 +85,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			var err error
 			pqID, err = pqc.urpcc.RandomSrv()
 			if err != nil {
-				pqc.urpcc.UpdateSrvs(true)
+				pqc.urpcc.UpdateEntries(true)
 				db.DPrintf(db.PROCQCLNT_ERR, "No procQs available: %v", err)
 				continue
 			}
@@ -115,7 +115,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 }
 
 func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
-	pqc.urpcc.UpdateSrvs(true)
+	pqc.urpcc.UpdateEntries(true)
 	sampled := make(map[string]bool)
 	qstats := make(map[sp.Trealm]int)
 	for i := 0; i < nsample; i++ {
@@ -151,6 +151,6 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 	return qstats, nil
 }
 
-func (pqc *ProcQClnt) StopMonitoring() {
-	pqc.urpcc.StopMonitoring()
+func (pqc *ProcQClnt) StopWatching() {
+	pqc.urpcc.StopWatching()
 }

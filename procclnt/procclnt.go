@@ -316,7 +316,7 @@ func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, s
 func (clnt *ProcClnt) Exited(status *proc.Status) {
 	db.DPrintf(db.PROCCLNT, "Exited normally %v parent %v pid %v status %v", clnt.ProcEnv().ProcDir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetPID(), status)
 	db.DPrintf(db.PROCCLNT, "Done Exited normally")
-	clnt.StopMonitoringSrvs()
+	clnt.StopWatchingSrvs()
 	// will catch some unintended misuses: a proc calling exited
 	// twice or schedd calling exited twice.
 	if clnt.setExited(clnt.ProcEnv().GetPID()) == clnt.ProcEnv().GetPID() {
@@ -330,10 +330,10 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 }
 
 // Stop the schedd/procq/lcsched monitoring threads
-func (clnt *ProcClnt) StopMonitoringSrvs() {
-	clnt.procqclnt.StopMonitoring()
-	clnt.lcschedclnt.StopMonitoring()
-	clnt.scheddclnt.StopMonitoring()
+func (clnt *ProcClnt) StopWatchingSrvs() {
+	clnt.procqclnt.StopWatching()
+	clnt.lcschedclnt.StopWatching()
+	clnt.scheddclnt.StopWatching()
 }
 
 // Called on behalf of the proc by schedd when the proc crashes.

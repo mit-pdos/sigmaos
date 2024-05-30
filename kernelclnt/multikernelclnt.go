@@ -40,6 +40,6 @@ func (mkc *MultiKernelClnt) GetKernelSrvs() ([]string, error) {
 	return mkc.urpcc.GetSrvs()
 }
 
-func (mkc *MultiKernelClnt) StopMonitoring() {
-	mkc.urpcc.StopMonitoring()
+func (mkc *MultiKernelClnt) StopWatching() {
+	mkc.urpcc.StopWatching()
 }

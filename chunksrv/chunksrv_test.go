@@ -55,7 +55,7 @@ func newTstate(t *testing.T, n int) *Tstate {
 }
 
 func (ts *Tstate) shutdown() {
-	ts.ckclnt.StopMonitoring()
+	ts.ckclnt.StopWatching()
 	ts.Shutdown()
 }
 

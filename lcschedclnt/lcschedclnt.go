@@ -1,8 +1,6 @@
 package lcschedclnt
 
 import (
-	"errors"
-
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -31,10 +29,10 @@ func NewLCSchedClnt(fsl *fslib.FsLib) *LCSchedClnt {
 // Enqueue a proc on the lcsched. Returns the ID of the kernel that is running
 // the proc.
 func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
-	lcs.urpcc.UpdateSrvs(false)
+	lcs.urpcc.UpdateEntries(false)
 	pqID, err := lcs.urpcc.NextSrv()
 	if err != nil {
-		return NOT_ENQ, errors.New("No lcscheds available")
+		return NOT_ENQ, err
 	}
 	rpcc, err := lcs.urpcc.GetClnt(pqID)
 	if err != nil {
@@ -57,6 +55,6 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 	return res.KernelID, nil
 }
 
-func (lcs *LCSchedClnt) StopMonitoring() {
-	lcs.urpcc.StopMonitoring()
+func (lcs *LCSchedClnt) StopWatching() {
+	lcs.urpcc.StopWatching()
 }

@@ -345,7 +345,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 		// Create a SigmaClnt with the more restricted principal.
 		sc, err1 = sigmaclnt.NewSigmaClnt(pe)
 		if assert.Nil(t, err1, "Err NewSigmaClnt: %v", err1) {
-			defer sc.StopMonitoringSrvs()
+			defer sc.StopWatchingSrvs()
 		}
 	}
 	ts := newTstate(t1, runApp)

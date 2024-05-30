@@ -44,7 +44,7 @@ func (sdc *ScheddClnt) NextSchedd() (string, error) {
 }
 
 func (sdc *ScheddClnt) UpdateSchedds() {
-	sdc.urpcc.UpdateSrvs(false)
+	sdc.urpcc.UpdateEntries(false)
 }
 
 func (sdc *ScheddClnt) UnregisterSrv(scheddID string) {
@@ -162,7 +162,7 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 
 func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, error) {
 	// Make sure list of schedds has been initialized
-	sdc.urpcc.UpdateSrvs(true)
+	sdc.urpcc.UpdateEntries(true)
 	// map of realm -> proc
 	procs := make(map[sp.Trealm][]*proc.Proc, 0)
 	sampled := make(map[string]bool)
@@ -276,6 +276,6 @@ func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 	return total, nil
 }
 
-func (sdc *ScheddClnt) StopMonitoring() {
-	sdc.urpcc.StopMonitoring()
+func (sdc *ScheddClnt) StopWatching() {
+	sdc.urpcc.StopWatching()
 }

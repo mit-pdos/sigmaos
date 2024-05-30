@@ -135,8 +135,8 @@ func (k *Kernel) NewSigmaClnt(pe *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 
 func (k *Kernel) Shutdown() error {
 	db.DPrintf(db.KERNEL, "Shutdown kernel %s", k.kernelId)
-	k.SigmaClnt.StopMonitoringSrvs()
-	db.DPrintf(db.KERNEL, "Stopped monitoring srvs kernelclnt %v", k.kernelId)
+	k.SigmaClnt.StopWatchingSrvs()
+	db.DPrintf(db.KERNEL, "Stopped watching srvs kernelclnt %v", k.kernelId)
 	err := k.kclnt.Shutdown()
 	db.DPrintf(db.KERNEL, "Shutdown kernel %s err %v", k.kernelId, err)
 	if err != nil {

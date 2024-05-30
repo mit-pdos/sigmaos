@@ -33,3 +33,34 @@ func TestBasic(t *testing.T) {
 		return true
 	})
 }
+
+func TestRR(t *testing.T) {
+	sd := NewSortedDir[string, *bool]()
+
+	i, ok := sd.RoundRobin()
+	assert.False(t, ok)
+
+	for i, _ := range NAMES {
+		j := len(NAMES) - (i + 1)
+		sd.Insert(NAMES[j], new(bool))
+	}
+
+	i, ok = sd.RoundRobin()
+	assert.True(t, ok)
+	assert.Equal(t, "a", i)
+
+	db.DPrintf(db.TEST, "sd %v\n", sd.sorted)
+	ok = sd.Delete("a")
+	assert.True(t, ok)
+
+	i, ok = sd.RoundRobin()
+	assert.True(t, ok)
+	assert.Equal(t, "b.txt", i)
+
+	ok = sd.Insert("a", new(bool))
+	assert.True(t, ok)
+
+	i, ok = sd.RoundRobin()
+	assert.True(t, ok)
+	assert.Equal(t, "gutenberg", i)
+}

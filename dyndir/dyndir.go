@@ -8,9 +8,11 @@ package dyndir
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sortedmap"
 )
@@ -27,6 +29,7 @@ type DynDir[E any] struct {
 	LSelector db.Tselector
 	ESelector db.Tselector
 	newEntry  NewEntryF[E]
+	err       error
 }
 
 func NewDynDir[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[E], lSelector db.Tselector, ESelector db.Tselector) *DynDir[E] {
@@ -73,6 +76,10 @@ func (dd *DynDir[E]) GetEntryAlloc(n string) (E, error) {
 	dd.Lock()
 	defer dd.Unlock()
 
+	if dd.err != nil {
+		var e E
+		return e, dd.err
+	}
 	e, ok := dd.dir.Lookup(n)
 	if !ok {
 		e1, err := dd.newEntry(n)
@@ -87,12 +94,17 @@ func (dd *DynDir[E]) GetEntryAlloc(n string) (E, error) {
 
 func (dd *DynDir[E]) UpdateEntries(force bool) error {
 	if force {
-		db.DPrintf(dd.LSelector, "UpdateSrvs")
-		defer db.DPrintf(dd.LSelector, "Done UpdateSrvs")
+		db.DPrintf(dd.LSelector, "UpdateEntries")
+		defer db.DPrintf(dd.LSelector, "Done UpdateEntries")
 	}
 
 	dd.Lock()
 	defer dd.Unlock()
+
+	if dd.err != nil {
+		db.DPrintf(dd.LSelector, "UpdateEntries %v", dd.err)
+		return dd.err
+	}
 
 	if !dd.watching {
 		go dd.watchDir()
@@ -180,6 +192,7 @@ func (dd *DynDir[E]) StopWatching() {
 
 // Monitor for changes to the set of entries listed in the directory.
 func (dd *DynDir[E]) watchDir() {
+	retry := false
 	for atomic.LoadUint32(&dd.done) != 1 {
 		var ents []string
 		err := dd.ReadDirWatch(dd.Path, func(sts []*sp.Stat) bool {
@@ -202,8 +215,18 @@ func (dd *DynDir[E]) watchDir() {
 			}
 			return true
 		})
-		if err != nil {
+		if err == nil {
+			retry = false
+		} else {
 			db.DPrintf(dd.ESelector, "Error ReadDirWatch watchDir[%v]: %v", dd.Path, err)
+			if serr.IsErrorUnreachable(err) && !retry {
+				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
+				retry = true
+			} else {
+				dd.err = err
+				dd.watching = false
+				return
+			}
 		}
 		db.DPrintf(dd.LSelector, "watchDir new ents %v", ents)
 		dd.Lock()

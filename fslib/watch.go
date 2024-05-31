@@ -107,7 +107,22 @@ func NewFileWatcher(fslib *FsLib, pn string) *FileWatcher {
 	return fw
 }
 
-// Watch for unique files since last call
+// Read new unique files since last call
+func (fw *FileWatcher) GetUniqueFiles() ([]string, error) {
+	newfiles := make([]string, 0)
+	_, err := fw.ProcessDir(fw.pn, func(st *sp.Stat) (bool, error) {
+		if !fw.files[st.Name] {
+			newfiles = append(newfiles, st.Name)
+		}
+		return true, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return newfiles, nil
+}
+
+// Watch for new unique files since last call
 func (fw *FileWatcher) WatchNewUniqueFiles() ([]string, error) {
 	newfiles := make([]string, 0)
 	err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {

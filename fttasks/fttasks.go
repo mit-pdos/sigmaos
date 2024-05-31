@@ -110,17 +110,6 @@ func (ft *FtTasks) RecoverTasks() error {
 	return err
 }
 
-func (ft *FtTasks) waitForTasks() ([]*sp.Stat, error) {
-	db.DPrintf(db.FTTASKS, "ReadDirWatch %v", ft.todo)
-	var sts []*sp.Stat
-	err := ft.ReadDirWatch(ft.todo, func(sts0 []*sp.Stat) bool {
-		sts = sts0
-		return len(sts0) == 0
-	})
-	db.DPrintf(db.FTTASKS, "ReadDirWatch done %v, %v entries", ft.todo, len(sts))
-	return sts, err
-}
-
 func (ft *FtTasks) WaitForTasks() ([]string, error) {
 	fw := fslib.NewFileWatcher(ft.FsLib, ft.todo)
 	fns, err := fw.WatchNewFilesAndRename(ft.wip)

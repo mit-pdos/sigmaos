@@ -177,13 +177,15 @@ func (dd *DynDir[E]) Remove(name string) bool {
 	return dd.dir.Delete(name)
 }
 
-// Read directory from server. The caller may hold the dd mutex
+// Read directory from server and return unique files. The caller may
+// hold the dd mutex
 func (dd *DynDir[E]) getEntries() ([]string, error) {
-	sts, err := dd.GetDir(dd.Path)
+	fw := fslib.NewFileWatcher(dd.FsLib, dd.Path)
+	fns, err := fw.GetUniqueFiles()
 	if err != nil {
 		return nil, err
 	}
-	return sp.Names(sts), nil
+	return fns, nil
 }
 
 func (dd *DynDir[E]) StopWatching() {

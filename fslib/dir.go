@@ -78,7 +78,7 @@ func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
 	return st, err
 }
 
-// Also returns reader.Reader for ReadDirWatch
+// Also returns reader.Reader for readDirWatch
 func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {

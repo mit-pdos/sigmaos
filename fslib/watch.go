@@ -14,14 +14,14 @@ type Fwatch func([]*sp.Stat) bool
 // Keep reading dir until wait returns false (e.g., a new file has
 // been created in dir). Return whether the ReadDir succeeded or not, so
 // that caller can learn if the ReadDir failed or the watch failed.
-func (fsl *FsLib) ReadDirWatch(dir string, watch Fwatch) (bool, error) {
+func (fsl *FsLib) readDirWatch(dir string, watch Fwatch) (bool, error) {
 	for {
 		sts, rdr, err := fsl.ReadDir(dir)
 		if err != nil {
 			return false, err
 		}
 		if watch(sts) { // keep watching?
-			db.DPrintf(db.FSLIB, "ReadDirWatch watch %v\n", dir)
+			db.DPrintf(db.FSLIB, "readDirWatch watch %v\n", dir)
 			if err := fsl.DirWatch(rdr.fd); err != nil {
 				rdr.Close()
 				if serr.IsErrCode(err, serr.TErrVersion) {
@@ -44,8 +44,8 @@ func (fsl *FsLib) ReadDirWatch(dir string, watch Fwatch) (bool, error) {
 func (fsl *FsLib) WaitRemove(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
-	db.DPrintf(db.FSLIB, "WaitRemove: ReadDirWatch dir %v\n", dir)
-	_, err := fsl.ReadDirWatch(dir, func(sts []*sp.Stat) bool {
+	db.DPrintf(db.FSLIB, "WaitRemove: readDirWatch dir %v\n", dir)
+	_, err := fsl.readDirWatch(dir, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.FSLIB, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {
 			if st.Name == f {
@@ -61,8 +61,8 @@ func (fsl *FsLib) WaitRemove(pn string) error {
 func (fsl *FsLib) WaitCreate(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
-	db.DPrintf(db.FSLIB, "WaitCreate: ReadDirWatch dir %v\n", dir)
-	_, err := fsl.ReadDirWatch(dir, func(sts []*sp.Stat) bool {
+	db.DPrintf(db.FSLIB, "WaitCreate: readDirWatch dir %v\n", dir)
+	_, err := fsl.readDirWatch(dir, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.FSLIB, "WaitCreate %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {
 			if st.Name == f {
@@ -76,7 +76,7 @@ func (fsl *FsLib) WaitCreate(pn string) error {
 
 // Wait until n entries are in the directory
 func (fsl *FsLib) WaitNEntries(pn string, n int) error {
-	_, err := fsl.ReadDirWatch(pn, func(sts []*sp.Stat) bool {
+	_, err := fsl.readDirWatch(pn, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.FSLIB, "%v # entries %v", len(sts), sp.Names(sts))
 		return len(sts) < n
 	})
@@ -127,13 +127,13 @@ func (fw *FileWatcher) GetUniqueEntries() ([]string, error) {
 // all (unique) entries.  Both present and sts are sorted.
 func (fw *FileWatcher) WatchUniqueEntries(present []string) ([]string, bool, error) {
 	newents := make([]string, 0)
-	ok, err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
+	ok, err := fw.readDirWatch(fw.pn, func(sts []*sp.Stat) bool {
 		unchanged := true
 		for i, st := range sts {
 			if !fw.ents[st.Name] {
 				newents = append(newents, st.Name)
 				if i >= len(present) || present[i] != st.Name {
-					// st.Name is not present return out of ReadDirWatch
+					// st.Name is not present return out of readDirWatch
 					unchanged = false
 				}
 			}
@@ -150,7 +150,7 @@ func (fw *FileWatcher) WatchUniqueEntries(present []string) ([]string, bool, err
 // are present
 func (fw *FileWatcher) WatchNewUniqueEntries() ([]string, error) {
 	newents := make([]string, 0)
-	_, err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
+	_, err := fw.readDirWatch(fw.pn, func(sts []*sp.Stat) bool {
 		for _, st := range sts {
 			if !fw.ents[st.Name] {
 				newents = append(newents, st.Name)
@@ -184,8 +184,8 @@ func (fw *FileWatcher) GetEntriesRename(dst string) ([]string, error) {
 func (fw *FileWatcher) WatchNewEntriesAndRename(dst string) ([]string, error) {
 	var r error
 	var newents []string
-	_, err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
-		db.DPrintf(db.MR, "ReadDirWatch: %v\n", sts)
+	_, err := fw.readDirWatch(fw.pn, func(sts []*sp.Stat) bool {
+		db.DPrintf(db.MR, "readDirWatch: %v\n", sts)
 		newents, r = fw.rename(sts, dst)
 		if r != nil || len(newents) > 0 {
 			return false
@@ -198,7 +198,7 @@ func (fw *FileWatcher) WatchNewEntriesAndRename(dst string) ([]string, error) {
 	if r != nil {
 		return nil, r
 	}
-	db.DPrintf(db.MR, "ReadDirWatch: return %v\n", newents)
+	db.DPrintf(db.MR, "readDirWatch: return %v\n", newents)
 	return newents, nil
 }
 

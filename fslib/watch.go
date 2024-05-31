@@ -74,18 +74,6 @@ func (fsl *FsLib) WaitCreate(pn string) error {
 	return err
 }
 
-// Wait until n entries are in the directory
-func (fsl *FsLib) WaitNEntries(pn string, n int) error {
-	_, err := fsl.readDirWatch(pn, func(sts []*sp.Stat) bool {
-		db.DPrintf(db.FSLIB, "%v # entries %v", len(sts), sp.Names(sts))
-		return len(sts) < n
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // Watch for new entries in a directory. Procs be may
 // removing/creating files concurrently from the directory, which may
 // create dups; FileWatcher filters those across multiple invocations
@@ -108,11 +96,27 @@ func NewFileWatcher(fslib *FsLib, pn string) *FileWatcher {
 	return fw
 }
 
+// Wait until n entries are in the directory
+func (fw *FileWatcher) WaitNEntries(pn string, n int) error {
+	_, err := fw.ProcessDir(fw.pn, func(st *sp.Stat) (bool, error) {
+		if !fw.ents[st.Name] {
+			fw.ents[st.Name] = true
+		}
+		// stop when we have n entries
+		return len(fw.ents) >= n, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Return unique ents since last call
 func (fw *FileWatcher) GetUniqueEntries() ([]string, error) {
 	newents := make([]string, 0)
 	_, err := fw.ProcessDir(fw.pn, func(st *sp.Stat) (bool, error) {
 		if !fw.ents[st.Name] {
+			fw.ents[st.Name] = true
 			newents = append(newents, st.Name)
 		}
 		return false, nil
@@ -131,6 +135,7 @@ func (fw *FileWatcher) WatchUniqueEntries(present []string) ([]string, bool, err
 		unchanged := true
 		for i, st := range sts {
 			if !fw.ents[st.Name] {
+				fw.ents[st.Name] = true
 				newents = append(newents, st.Name)
 				if i >= len(present) || present[i] != st.Name {
 					// st.Name is not present return out of readDirWatch
@@ -153,6 +158,7 @@ func (fw *FileWatcher) WatchNewUniqueEntries() ([]string, error) {
 	_, err := fw.readDirWatch(fw.pn, func(sts []*sp.Stat) bool {
 		for _, st := range sts {
 			if !fw.ents[st.Name] {
+				fw.ents[st.Name] = true
 				newents = append(newents, st.Name)
 			}
 		}
@@ -215,7 +221,6 @@ func (fw *FileWatcher) rename(sts []*sp.Stat, dst string) ([]string, error) {
 				break
 			}
 			// another proc renamed the file before us
-
 			fw.ents[st.Name] = true // filter duplicates
 		}
 	}

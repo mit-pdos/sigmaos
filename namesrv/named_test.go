@@ -58,9 +58,16 @@ func TestKillNamed(t *testing.T) {
 
 	db.DPrintf(db.TEST, "GetDir..\n")
 
-	sts, err = ts.GetDir(sp.NAMED + "/")
+	n := 0
+	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
+		n = i
+		sts, err = ts.GetDir(sp.NAMED + "/")
+		if err == nil {
+			break
+		}
+	}
 	assert.Nil(t, err, "Err GetDir: %v", err)
-	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
+	db.DPrintf(db.TEST, "named tries %d %v\n", n, sp.Names(sts))
 
 	ts.Shutdown()
 }

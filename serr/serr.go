@@ -267,6 +267,14 @@ func IsErr(error error) (*Err, bool) {
 	return nil, false
 }
 
+func IsErrorNotfound(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return err.IsErrNotfound()
+	}
+	return false
+}
+
 func IsErrorUnavailable(error error) bool {
 	var err *Err
 	if errors.As(error, &err) {

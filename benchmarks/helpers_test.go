@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -380,7 +381,8 @@ func waitForClnts(rootts *test.Tstate, n int) {
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 
 	// Wait for n - 1 clnts to register themselves.
-	err = rootts.WaitNEntries(clidir, n) // n - 1 + the semaphore
+	fw := fslib.NewFileWatcher(rootts.FsLib, clidir)
+	err = fw.WaitNEntries(n) // n - 1 + the semaphore
 	assert.Nil(rootts.T, err, "Err WaitNentries: %v", err)
 	sem := createClntWaitSem(rootts)
 	err = sem.Up()

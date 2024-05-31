@@ -46,7 +46,7 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 		db.DPrintf(db.ALWAYS, "LCSched.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-			lcs.urpcc.UnregisterSrv(pqID)
+			lcs.urpcc.RemoveEntry(pqID)
 		}
 		return NOT_ENQ, err
 	}

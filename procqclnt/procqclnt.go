@@ -59,7 +59,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 		db.DPrintf(db.ALWAYS, "ProcQ.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-			pqc.urpcc.UnregisterSrv(pqID)
+			pqc.urpcc.RemoveEntry(pqID)
 		}
 		return NOT_ENQ, err
 	}
@@ -99,7 +99,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			db.DPrintf(db.ALWAYS, "ProcQ.GetProc %v err %v", callerKernelID, err)
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
 				db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-				pqc.urpcc.UnregisterSrv(pqID)
+				pqc.urpcc.RemoveEntry(pqID)
 				continue
 			}
 			return 0, 0, false, err

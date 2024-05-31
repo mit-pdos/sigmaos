@@ -1,5 +1,5 @@
 // The cachedsvclnt package is the client side of a [cachedsvc].  It
-// watches the directory of cached servers using [dyndir] and sends
+// watches the directory of cached servers using [dircache] and sends
 // the request to one of them using [cachedclnt].
 package cachedsvcclnt
 
@@ -15,7 +15,7 @@ import (
 	"sigmaos/cachedsvc"
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
-	"sigmaos/dyndir"
+	"sigmaos/dircache"
 	"sigmaos/fslib"
 	"sigmaos/rpc"
 	sp "sigmaos/sigmap"
@@ -34,7 +34,7 @@ type CachedSvcClnt struct {
 	fsl *fslib.FsLib
 	cc  *cacheclnt.CacheClnt
 	pn  string
-	dd  *dyndir.DynDir[struct{}]
+	dd  *dircache.DirCache[struct{}]
 }
 
 func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
@@ -44,7 +44,7 @@ func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
 		cc:  cacheclnt.NewCacheClnt(fsls, job, cachesrv.NSHARD),
 	}
 	dir := csc.pn + cachedsvc.SVRDIR
-	csc.dd = dyndir.NewDynDir[struct{}](fsls[0], dir, csc.newEntry, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
+	csc.dd = dircache.NewDirCache[struct{}](fsls[0], dir, csc.newEntry, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
 	return csc, nil
 }
 

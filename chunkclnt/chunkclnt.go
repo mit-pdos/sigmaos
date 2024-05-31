@@ -24,7 +24,7 @@ func NewChunkClnt(fsl *fslib.FsLib) *ChunkClnt {
 }
 
 func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {
-	ckclnt.UnionRPCClnt.UnregisterSrv(srv)
+	ckclnt.UnionRPCClnt.RemoveEntry(srv)
 }
 
 func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, paths []string) (*sp.Stat, string, error) {

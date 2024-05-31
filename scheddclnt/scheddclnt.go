@@ -32,7 +32,7 @@ func (sdc *ScheddClnt) Nschedd() (int, error) {
 }
 
 func (sdc *ScheddClnt) GetSchedds() ([]string, error) {
-	return sdc.urpcc.GetSrvs()
+	return sdc.urpcc.GetEntries()
 }
 
 func (sdc *ScheddClnt) NextSchedd() (string, error) {
@@ -40,7 +40,7 @@ func (sdc *ScheddClnt) NextSchedd() (string, error) {
 }
 
 func (sdc *ScheddClnt) UnregisterSrv(scheddID string) {
-	sdc.urpcc.UnregisterSrv(scheddID)
+	sdc.urpcc.RemoveEntry(scheddID)
 }
 
 func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
@@ -192,7 +192,7 @@ func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc,
 }
 
 func (sdc *ScheddClnt) ScheddStats() (int, []map[string]*proto.RealmStats, error) {
-	sds, err := sdc.urpcc.GetSrvs()
+	sds, err := sdc.urpcc.GetEntries()
 	if err != nil {
 		return 0, nil, err
 	}
@@ -241,7 +241,7 @@ func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 	// Total CPU utilization by this sceddclnt's realm.
 	var total float64 = 0
 	// Get list of schedds
-	sds, err := sdc.urpcc.GetSrvs()
+	sds, err := sdc.urpcc.GetEntries()
 	if err != nil {
 		db.DPrintf(db.SCHEDDCLNT_ERR, "Error getSchedds: %v", err)
 		return 0, err

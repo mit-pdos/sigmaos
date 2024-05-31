@@ -97,7 +97,7 @@ func NewFileWatcher(fslib *FsLib, pn string) *FileWatcher {
 }
 
 // Wait until n entries are in the directory
-func (fw *FileWatcher) WaitNEntries(pn string, n int) error {
+func (fw *FileWatcher) WaitNEntries(n int) error {
 	_, err := fw.ProcessDir(fw.pn, func(st *sp.Stat) (bool, error) {
 		if !fw.ents[st.Name] {
 			fw.ents[st.Name] = true

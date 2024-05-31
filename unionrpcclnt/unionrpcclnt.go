@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 
 	db "sigmaos/debug"
-	"sigmaos/dyndir"
+	"sigmaos/dircache"
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
 	"sigmaos/serr"
@@ -12,7 +12,7 @@ import (
 )
 
 type UnionRPCClnt struct {
-	*dyndir.DynDir[*rpcclnt.RPCClnt]
+	*dircache.DirCache[*rpcclnt.RPCClnt]
 }
 
 func (urpcc *UnionRPCClnt) newEntry(n string) (*rpcclnt.RPCClnt, error) {
@@ -28,16 +28,8 @@ func (urpcc *UnionRPCClnt) newEntry(n string) (*rpcclnt.RPCClnt, error) {
 
 func NewUnionRPCClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector) *UnionRPCClnt {
 	u := &UnionRPCClnt{}
-	u.DynDir = dyndir.NewDynDir[*rpcclnt.RPCClnt](fsl, path, u.newEntry, lSelector, eSelector)
+	u.DirCache = dircache.NewDirCache[*rpcclnt.RPCClnt](fsl, path, u.newEntry, lSelector, eSelector)
 	return u
-}
-
-func (urpcc *UnionRPCClnt) Nsrv() (int, error) {
-	return urpcc.Nentry()
-}
-
-func (urpcc *UnionRPCClnt) GetSrvs() ([]string, error) {
-	return urpcc.GetEntries()
 }
 
 func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
@@ -52,8 +44,4 @@ func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
 		return e1, nil
 	}
 	return e, err
-}
-
-func (urpcc *UnionRPCClnt) UnregisterSrv(srvID string) bool {
-	return urpcc.Remove(srvID)
 }

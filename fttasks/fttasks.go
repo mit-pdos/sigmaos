@@ -112,7 +112,7 @@ func (ft *FtTasks) RecoverTasks() error {
 
 func (ft *FtTasks) WaitForTasks() ([]string, error) {
 	fw := fslib.NewFileWatcher(ft.FsLib, ft.todo)
-	fns, err := fw.WatchNewFilesAndRename(ft.wip)
+	fns, err := fw.WatchNewEntriesAndRename(ft.wip)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (ft *FtTasks) WaitForTasks() ([]string, error) {
 
 func (ft *FtTasks) GetTasks() ([]string, error) {
 	fw := fslib.NewFileWatcher(ft.FsLib, ft.todo)
-	return fw.GetFilesRename(ft.wip)
+	return fw.GetEntriesRename(ft.wip)
 }
 
 // Read tasks by reading file in one shot

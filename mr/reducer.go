@@ -168,7 +168,7 @@ func (r *Reducer) readFiles(input string) (sp.Tlength, time.Duration, Tdata, []s
 	duration := time.Duration(0)
 	fw := fslib.NewFileWatcher(r.FsLib, input)
 	for nfile < r.nmaptask {
-		files, err := fw.WatchNewUniqueFiles()
+		files, err := fw.WatchNewUniqueEntries()
 		if err != nil {
 			return 0, 0, nil, nil, err
 		}

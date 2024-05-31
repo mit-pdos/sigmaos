@@ -12,12 +12,13 @@ import (
 type Fwatch func([]*sp.Stat) bool
 
 // Keep reading dir until wait returns false (e.g., a new file has
-// been created in dir)
-func (fsl *FsLib) ReadDirWatch(dir string, watch Fwatch) error {
+// been created in dir). Return whether the ReadDir succeeded or not, so
+// that caller can learn if the ReadDir failed or the watch failed.
+func (fsl *FsLib) ReadDirWatch(dir string, watch Fwatch) (bool, error) {
 	for {
 		sts, rdr, err := fsl.ReadDir(dir)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if watch(sts) { // keep watching?
 			db.DPrintf(db.FSLIB, "ReadDirWatch watch %v\n", dir)
@@ -27,16 +28,16 @@ func (fsl *FsLib) ReadDirWatch(dir string, watch Fwatch) error {
 					db.DPrintf(db.FSLIB, "DirWatch: Version mismatch %v", dir)
 					continue // try again
 				}
-				return err
+				return true, err
 			}
 			db.DPrintf(db.FSLIB, "DirWatch %v returned\n", dir)
 			// dir has changed; read again
 		} else {
 			rdr.Close()
-			return nil
+			return true, nil
 		}
 	}
-	return nil
+	return true, nil
 }
 
 // Wait until pn isn't present
@@ -44,7 +45,7 @@ func (fsl *FsLib) WaitRemove(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
 	db.DPrintf(db.FSLIB, "WaitRemove: ReadDirWatch dir %v\n", dir)
-	err := fsl.ReadDirWatch(dir, func(sts []*sp.Stat) bool {
+	_, err := fsl.ReadDirWatch(dir, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.FSLIB, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {
 			if st.Name == f {
@@ -61,7 +62,7 @@ func (fsl *FsLib) WaitCreate(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
 	db.DPrintf(db.FSLIB, "WaitCreate: ReadDirWatch dir %v\n", dir)
-	err := fsl.ReadDirWatch(dir, func(sts []*sp.Stat) bool {
+	_, err := fsl.ReadDirWatch(dir, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.FSLIB, "WaitCreate %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {
 			if st.Name == f {
@@ -75,7 +76,7 @@ func (fsl *FsLib) WaitCreate(pn string) error {
 
 // Wait until n entries are in the directory
 func (fsl *FsLib) WaitNEntries(pn string, n int) error {
-	err := fsl.ReadDirWatch(pn, func(sts []*sp.Stat) bool {
+	_, err := fsl.ReadDirWatch(pn, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.FSLIB, "%v # entries %v", len(sts), sp.Names(sts))
 		return len(sts) < n
 	})
@@ -85,53 +86,77 @@ func (fsl *FsLib) WaitNEntries(pn string, n int) error {
 	return nil
 }
 
-// Watch for new files in a directory. Procs be may removing/creating
-// files concurrently from the directory, which may create dups;
-// FileWatcher filters those across multiple invocations to its
-// methods.  (If caller creates a new FileWatcher for method
+// Watch for new entries in a directory. Procs be may
+// removing/creating files concurrently from the directory, which may
+// create dups; FileWatcher filters those across multiple invocations
+// to its methods.  (If caller creates a new FileWatcher for method
 // invocation, it can filter duplicates for only that invocation.)
 
 type FileWatcher struct {
 	*FsLib
 	sync.Mutex
-	pn    string
-	files map[string]bool
+	pn   string
+	ents map[string]bool
 }
 
 func NewFileWatcher(fslib *FsLib, pn string) *FileWatcher {
 	fw := &FileWatcher{
 		FsLib: fslib,
 		pn:    pn,
-		files: make(map[string]bool),
+		ents:  make(map[string]bool),
 	}
 	return fw
 }
 
-// Read new unique files since last call
-func (fw *FileWatcher) GetUniqueFiles() ([]string, error) {
-	newfiles := make([]string, 0)
+// Return unique ents since last call
+func (fw *FileWatcher) GetUniqueEntries() ([]string, error) {
+	newents := make([]string, 0)
 	_, err := fw.ProcessDir(fw.pn, func(st *sp.Stat) (bool, error) {
-		if !fw.files[st.Name] {
-			newfiles = append(newfiles, st.Name)
+		if !fw.ents[st.Name] {
+			newents = append(newents, st.Name)
 		}
 		return true, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return newfiles, nil
+	return newents, nil
 }
 
-// Watch for new unique files since last call
-func (fw *FileWatcher) WatchNewUniqueFiles() ([]string, error) {
-	newfiles := make([]string, 0)
-	err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
-		for _, st := range sts {
-			if !fw.files[st.Name] {
-				newfiles = append(newfiles, st.Name)
+// Watch for a directory change relative to present change and return
+// all (unique) entries.  Both present and sts are sorted.
+func (fw *FileWatcher) WatchUniqueEntries(present []string) ([]string, bool, error) {
+	newents := make([]string, 0)
+	ok, err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
+		unchanged := true
+		for i, st := range sts {
+			if !fw.ents[st.Name] {
+				newents = append(newents, st.Name)
+				if i >= len(present) || present[i] != st.Name {
+					// st.Name is not present return out of ReadDirWatch
+					unchanged = false
+				}
 			}
 		}
-		if len(newfiles) > 0 {
+		return unchanged
+	})
+	if err != nil {
+		return nil, ok, err
+	}
+	return newents, ok, nil
+}
+
+// Watch for a directory change and return only if new ents
+// are present
+func (fw *FileWatcher) WatchNewUniqueEntries() ([]string, error) {
+	newents := make([]string, 0)
+	_, err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
+		for _, st := range sts {
+			if !fw.ents[st.Name] {
+				newents = append(newents, st.Name)
+			}
+		}
+		if len(newents) > 0 {
 			return false
 		}
 		return true
@@ -139,31 +164,30 @@ func (fw *FileWatcher) WatchNewUniqueFiles() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newfiles, nil
+	return newents, nil
 }
 
-// GetFilesRename gets fw.pn's unique entries and renames them without blocking
-func (fw *FileWatcher) GetFilesRename(dst string) ([]string, error) {
+// GetEntsRename gets fw.pn's unique entries and renames them without blocking
+func (fw *FileWatcher) GetEntriesRename(dst string) ([]string, error) {
 	sts, err := fw.GetDir(fw.pn)
 	if err != nil {
 		return nil, err
 	}
-	newfiles, err := fw.rename(sts, dst)
+	newents, err := fw.rename(sts, dst)
 	if err != nil {
 		return nil, err
 	}
-	return newfiles, nil
+	return newents, nil
 }
 
-// Watch for new entries in fw.pn if none are present. It returns
-// unique renamed entries.
-func (fw *FileWatcher) WatchNewFilesAndRename(dst string) ([]string, error) {
+// Watch for new entries in fw.pn and return unique renamed entries.
+func (fw *FileWatcher) WatchNewEntriesAndRename(dst string) ([]string, error) {
 	var r error
-	var newfiles []string
-	err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
+	var newents []string
+	_, err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
 		db.DPrintf(db.MR, "ReadDirWatch: %v\n", sts)
-		newfiles, r = fw.rename(sts, dst)
-		if r != nil || len(newfiles) > 0 {
+		newents, r = fw.rename(sts, dst)
+		if r != nil || len(newents) > 0 {
 			return false
 		}
 		return true
@@ -174,26 +198,26 @@ func (fw *FileWatcher) WatchNewFilesAndRename(dst string) ([]string, error) {
 	if r != nil {
 		return nil, r
 	}
-	db.DPrintf(db.MR, "ReadDirWatch: return %v\n", newfiles)
-	return newfiles, nil
+	db.DPrintf(db.MR, "ReadDirWatch: return %v\n", newents)
+	return newents, nil
 }
 
 // Filter out duplicates and rename
 func (fw *FileWatcher) rename(sts []*sp.Stat, dst string) ([]string, error) {
 	var r error
-	newfiles := make([]string, 0)
+	newents := make([]string, 0)
 	for _, st := range sts {
-		if !fw.files[st.Name] {
+		if !fw.ents[st.Name] {
 			if err := fw.Rename(filepath.Join(fw.pn, st.Name), filepath.Join(dst, st.Name)); err == nil {
-				newfiles = append(newfiles, st.Name)
+				newents = append(newents, st.Name)
 			} else if serr.IsErrCode(err, serr.TErrUnreachable) { // partitioned?
 				r = err
 				break
 			}
 			// another proc renamed the file before us
 
-			fw.files[st.Name] = true // filter duplicates
+			fw.ents[st.Name] = true // filter duplicates
 		}
 	}
-	return newfiles, r
+	return newents, r
 }

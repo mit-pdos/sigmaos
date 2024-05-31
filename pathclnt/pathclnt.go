@@ -238,6 +238,7 @@ func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, 
 	}
 	_, err = pathc.FidClnt.Open(fid, mode)
 	if err != nil {
+		db.DPrintf(db.PATHCLNT_ERR, "%v: Open: open failed %v %v err %v\n", pathc.cid, fid, pn, err)
 		return sp.NoFid, err
 	}
 	return fid, nil

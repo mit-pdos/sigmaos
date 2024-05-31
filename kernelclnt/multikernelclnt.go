@@ -3,25 +3,25 @@ package kernelclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/rpcdirclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/unionrpcclnt"
 )
 
 type MultiKernelClnt struct {
 	*fslib.FsLib
-	urpcc *unionrpcclnt.UnionRPCClnt
+	rpcdc *rpcdirclnt.RPCDirClnt
 	done  int32
 }
 
 func NewMultiKernelClnt(fsl *fslib.FsLib) *MultiKernelClnt {
 	return &MultiKernelClnt{
 		FsLib: fsl,
-		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.BOOT, db.KERNELCLNT, db.KERNELCLNT_ERR),
+		rpcdc: rpcdirclnt.NewRPCDirClnt(fsl, sp.BOOT, db.KERNELCLNT, db.KERNELCLNT_ERR),
 	}
 }
 
 func (mkc *MultiKernelClnt) BootInRealm(kernelID string, realm sp.Trealm, s string, args []string) (sp.Tpid, error) {
-	rpcc, err := mkc.urpcc.GetClnt(kernelID)
+	rpcc, err := mkc.rpcdc.GetClnt(kernelID)
 	if err != nil {
 		return sp.NO_PID, err
 	}
@@ -29,7 +29,7 @@ func (mkc *MultiKernelClnt) BootInRealm(kernelID string, realm sp.Trealm, s stri
 }
 
 func (mkc *MultiKernelClnt) EvictKernelProc(kernelID string, pid sp.Tpid) error {
-	rpcc, err := mkc.urpcc.GetClnt(kernelID)
+	rpcc, err := mkc.rpcdc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -37,9 +37,9 @@ func (mkc *MultiKernelClnt) EvictKernelProc(kernelID string, pid sp.Tpid) error 
 }
 
 func (mkc *MultiKernelClnt) GetKernelSrvs() ([]string, error) {
-	return mkc.urpcc.GetEntries()
+	return mkc.rpcdc.GetEntries()
 }
 
 func (mkc *MultiKernelClnt) StopWatching() {
-	mkc.urpcc.StopWatching()
+	mkc.rpcdc.StopWatching()
 }

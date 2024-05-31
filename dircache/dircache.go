@@ -1,6 +1,6 @@
 // Package dircache watches a changing directory and keeps a local copy
 // with entries of type E chosen by the caller (e.g., rpcclnt's as in
-// [unionrpcclnt]).  dircache updates the entries as file as
+// [rpcdirclnt]).  dircache updates the entries as file as
 // created/removed in the watched directory.
 
 package dircache

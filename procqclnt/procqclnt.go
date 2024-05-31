@@ -8,9 +8,9 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procqsrv/proto"
+	"sigmaos/rpcdirclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/unionrpcclnt"
 )
 
 const (
@@ -19,19 +19,19 @@ const (
 
 type ProcQClnt struct {
 	*fslib.FsLib
-	urpcc *unionrpcclnt.UnionRPCClnt
+	rpcdc *rpcdirclnt.RPCDirClnt
 }
 
 func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
 	return &ProcQClnt{
 		FsLib: fsl,
-		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR),
+		rpcdc: rpcdirclnt.NewRPCDirClnt(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR),
 	}
 }
 
 func (pqc *ProcQClnt) chooseProcQ(pid sp.Tpid) (string, error) {
 	s := time.Now()
-	pqId, err := pqc.urpcc.Random()
+	pqId, err := pqc.rpcdc.Random()
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt get ProcQ[%v] latency: %v", pid, pqId, time.Since(s))
 	return pqId, err
 }
@@ -44,7 +44,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 		return NOT_ENQ, err
 	}
 	s := time.Now()
-	rpcc, err := pqc.urpcc.GetClnt(pqID)
+	rpcc, err := pqc.rpcdc.GetClnt(pqID)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error: Can't get procq clnt: %v", err)
 		return NOT_ENQ, err
@@ -59,7 +59,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 		db.DPrintf(db.ALWAYS, "ProcQ.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-			pqc.urpcc.RemoveEntry(pqID)
+			pqc.rpcdc.RemoveEntry(pqID)
 		}
 		return NOT_ENQ, err
 	}
@@ -79,13 +79,13 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			pqID = callerKernelID
 		} else {
 			var err error
-			pqID, err = pqc.urpcc.Random()
+			pqID, err = pqc.rpcdc.Random()
 			if err != nil {
 				db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get random: %v", err)
 				return 0, 0, false, err
 			}
 		}
-		rpcc, err := pqc.urpcc.GetClnt(pqID)
+		rpcc, err := pqc.rpcdc.GetClnt(pqID)
 		if err != nil {
 			db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get procq clnt: %v", err)
 			return 0, 0, false, err
@@ -99,7 +99,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			db.DPrintf(db.ALWAYS, "ProcQ.GetProc %v err %v", callerKernelID, err)
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
 				db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-				pqc.urpcc.RemoveEntry(pqID)
+				pqc.rpcdc.RemoveEntry(pqID)
 				continue
 			}
 			return 0, 0, false, err
@@ -113,7 +113,7 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 	sampled := make(map[string]bool)
 	qstats := make(map[sp.Trealm]int)
 	for i := 0; i < nsample; i++ {
-		pqID, err := pqc.urpcc.Random()
+		pqID, err := pqc.rpcdc.Random()
 		if err != nil {
 			db.DPrintf(db.ERROR, "Can't get random srv: %v", err)
 			return nil, err
@@ -123,7 +123,7 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 			continue
 		}
 		sampled[pqID] = true
-		rpcc, err := pqc.urpcc.GetClnt(pqID)
+		rpcc, err := pqc.rpcdc.GetClnt(pqID)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Can't get random srv clnt: %v", err)
 			return nil, err
@@ -146,5 +146,5 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 }
 
 func (pqc *ProcQClnt) StopWatching() {
-	pqc.urpcc.StopWatching()
+	pqc.rpcdc.StopWatching()
 }

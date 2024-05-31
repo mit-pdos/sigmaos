@@ -41,8 +41,8 @@ func (urpcc *UnionRPCClnt) GetSrvs() ([]string, error) {
 }
 
 func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
-	e, ok := urpcc.GetEntry(srvID)
-	if !ok {
+	e, err := urpcc.GetEntry(srvID)
+	if err != nil && serr.IsErrorNotfound(err) {
 		// In some cases the caller knows that srvID exists, so force
 		// an entry to be allocated.
 		e1, err := urpcc.GetEntryAlloc(srvID)
@@ -51,27 +51,9 @@ func (urpcc *UnionRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
 		}
 		return e1, nil
 	}
-	return e, nil
+	return e, err
 }
 
 func (urpcc *UnionRPCClnt) UnregisterSrv(srvID string) bool {
 	return urpcc.Remove(srvID)
-}
-
-// Get the next server, round-robin.
-func (urpcc *UnionRPCClnt) NextSrv() (string, error) {
-	n, ok := urpcc.RoundRobin()
-	if !ok {
-		return "", serr.NewErr(serr.TErrNotfound, "no next server")
-	}
-	return n, nil
-}
-
-// Get the next server, randomly.
-func (urpcc *UnionRPCClnt) RandomSrv() (string, error) {
-	n, ok := urpcc.Random()
-	if !ok {
-		return "", serr.NewErr(serr.TErrNotfound, "no random server")
-	}
-	return n, nil
 }

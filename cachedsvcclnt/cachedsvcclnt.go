@@ -45,7 +45,6 @@ func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
 	}
 	dir := csc.pn + cachedsvc.SVRDIR
 	csc.dd = dyndir.NewDynDir[struct{}](fsls[0], dir, csc.newEntry, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
-	csc.dd.UpdateEntries(true)
 	return csc, nil
 }
 

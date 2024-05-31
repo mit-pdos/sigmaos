@@ -29,12 +29,9 @@ func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
 	}
 }
 
-func (pqc *ProcQClnt) ChooseProcQ(pid sp.Tpid) (string, error) {
+func (pqc *ProcQClnt) chooseProcQ(pid sp.Tpid) (string, error) {
 	s := time.Now()
-	pqc.urpcc.UpdateEntries(false)
-	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt updateProcQs %v", pid, time.Since(s))
-	s = time.Now()
-	pqId, err := pqc.urpcc.RandomSrv()
+	pqId, err := pqc.urpcc.Random()
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt get ProcQ[%v] latency: %v", pid, pqId, time.Since(s))
 	return pqId, err
 }
@@ -42,7 +39,7 @@ func (pqc *ProcQClnt) ChooseProcQ(pid sp.Tpid) (string, error) {
 // Enqueue a proc on the procq. Returns the ID of the kernel that is running
 // the proc.
 func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
-	pqID, err := pqc.ChooseProcQ(p.GetPid())
+	pqID, err := pqc.chooseProcQ(p.GetPid())
 	if err != nil {
 		return NOT_ENQ, err
 	}
@@ -74,7 +71,6 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 // Get a proc (passing in the kernelID of the caller). Will only return once
 // receives a response, or once there is an error.
 func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias bool) (proc.Tmem, uint32, bool, error) {
-	pqc.urpcc.UpdateEntries(false)
 	// Retry until successful.
 	for {
 		var pqID string
@@ -83,11 +79,10 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			pqID = callerKernelID
 		} else {
 			var err error
-			pqID, err = pqc.urpcc.RandomSrv()
+			pqID, err = pqc.urpcc.Random()
 			if err != nil {
-				pqc.urpcc.UpdateEntries(true)
-				db.DPrintf(db.PROCQCLNT_ERR, "No procQs available: %v", err)
-				continue
+				db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get random: %v", err)
+				return 0, 0, false, err
 			}
 		}
 		rpcc, err := pqc.urpcc.GetClnt(pqID)
@@ -115,11 +110,10 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 }
 
 func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
-	pqc.urpcc.UpdateEntries(true)
 	sampled := make(map[string]bool)
 	qstats := make(map[sp.Trealm]int)
 	for i := 0; i < nsample; i++ {
-		pqID, err := pqc.urpcc.RandomSrv()
+		pqID, err := pqc.urpcc.Random()
 		if err != nil {
 			db.DPrintf(db.ERROR, "Can't get random srv: %v", err)
 			return nil, err

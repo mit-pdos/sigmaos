@@ -20,13 +20,7 @@ func NewChunkClnt(fsl *fslib.FsLib) *ChunkClnt {
 	ckclnt := &ChunkClnt{
 		UnionRPCClnt: unionrpcclnt.NewUnionRPCClnt(fsl, sp.CHUNKD, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
 	}
-	// Update chunkds, so that unionrpcclnt starts monitoring them
-	ckclnt.updateChunkds()
 	return ckclnt
-}
-
-func (ckclnt *ChunkClnt) updateChunkds() {
-	ckclnt.UnionRPCClnt.UpdateEntries(false)
 }
 
 func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {

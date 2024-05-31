@@ -217,6 +217,8 @@ func (sd *Schedd) getQueuedProcs() {
 			} else {
 				bias = true
 			}
+			// XXX for now
+			time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 			continue
 		}
 		sd.nProcGets.Add(1)

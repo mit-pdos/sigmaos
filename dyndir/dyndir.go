@@ -45,41 +45,47 @@ func NewDynDir[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[E], lSel
 }
 
 func (dd *DynDir[E]) Nentry() (int, error) {
-	if err := dd.UpdateEntries(false); err != nil {
+	if err := dd.watchEntries(false); err != nil {
 		return 0, err
 	}
 	return dd.dir.Len(), nil
 }
 
 func (dd *DynDir[E]) GetEntries() ([]string, error) {
-	if err := dd.UpdateEntries(false); err != nil {
+	if err := dd.watchEntries(false); err != nil {
 		return nil, err
 	}
 	return dd.dir.Keys(0), nil
 }
 
-func (dd *DynDir[E]) GetEntry(n string) (E, bool) {
+func (dd *DynDir[E]) GetEntry(n string) (E, error) {
 	var ok bool
 	var e E
 	db.DPrintf(dd.LSelector, "GetEntry for %v", n)
 	defer func(e *E, ok *bool) {
 		db.DPrintf(dd.LSelector, "Done GetEntry for %v e %v ok %t", n, *e, *ok)
 	}(&e, &ok)
+	if err := dd.watchEntries(false); err != nil {
+		return e, err
+	}
 	e, ok = dd.dir.Lookup(n)
-	return e, ok
+	if !ok {
+		return e, serr.NewErr(serr.TErrNotfound, n)
+	}
+	return e, nil
 }
 
 func (dd *DynDir[E]) GetEntryAlloc(n string) (E, error) {
 	db.DPrintf(dd.LSelector, "GetEntryAlloc for %v", n)
 	defer db.DPrintf(dd.LSelector, "Done GetEntryAlloc for %v", n)
 
+	if err := dd.watchEntries(false); err != nil {
+		var e E
+		return e, err
+	}
+
 	dd.Lock()
 	defer dd.Unlock()
-
-	if dd.err != nil {
-		var e E
-		return e, dd.err
-	}
 	e, ok := dd.dir.Lookup(n)
 	if !ok {
 		e1, err := dd.newEntry(n)
@@ -92,17 +98,17 @@ func (dd *DynDir[E]) GetEntryAlloc(n string) (E, error) {
 	return e, nil
 }
 
-func (dd *DynDir[E]) UpdateEntries(force bool) error {
+func (dd *DynDir[E]) watchEntries(force bool) error {
 	if force {
-		db.DPrintf(dd.LSelector, "UpdateEntries")
-		defer db.DPrintf(dd.LSelector, "Done UpdateEntries")
+		db.DPrintf(dd.LSelector, "watchEntries")
+		defer db.DPrintf(dd.LSelector, "Done watchEntries")
 	}
 
 	dd.Lock()
 	defer dd.Unlock()
 
 	if dd.err != nil {
-		db.DPrintf(dd.LSelector, "UpdateEntries %v", dd.err)
+		db.DPrintf(dd.LSelector, "watchEntries %v", dd.err)
 		return dd.err
 	}
 
@@ -148,27 +154,44 @@ func (dd *DynDir[E]) updateEntriesL(ents []string) error {
 	return nil
 }
 
-func (dd *DynDir[E]) Random() (string, bool) {
+func (dd *DynDir[E]) Random() (string, error) {
 	var n string
 	var ok bool
+
 	db.DPrintf(dd.LSelector, "Random")
+
+	if err := dd.watchEntries(false); err != nil {
+		return "", err
+	}
 	defer func(n *string) {
 		db.DPrintf(dd.LSelector, "Done Random %v %t", *n, ok)
 	}(&n)
 	n, ok = dd.dir.Random()
-	return n, ok
+	if !ok {
+		return "", serr.NewErr(serr.TErrNotfound, "no random entry")
+	}
+	return n, nil
 }
 
-func (dd *DynDir[E]) RoundRobin() (string, bool) {
+func (dd *DynDir[E]) RoundRobin() (string, error) {
 	var n string
 	var ok bool
+
 	db.DPrintf(dd.LSelector, "RoundRobin")
+
+	if err := dd.watchEntries(false); err != nil {
+		return "", err
+	}
+
 	defer func(n *string) {
 		db.DPrintf(dd.LSelector, "Done RoundRobin %v %t", *n, ok)
 	}(&n)
 
 	n, ok = dd.dir.RoundRobin()
-	return n, ok
+	if !ok {
+		return "", serr.NewErr(serr.TErrNotfound, "no next entry")
+	}
+	return n, nil
 }
 
 func (dd *DynDir[E]) Remove(name string) bool {
@@ -180,8 +203,11 @@ func (dd *DynDir[E]) Remove(name string) bool {
 // Read directory from server and return unique files. The caller may
 // hold the dd mutex
 func (dd *DynDir[E]) getEntries() ([]string, error) {
+	s := time.Now()
+	defer db.DPrintf(db.SPAWN_LAT, "[%v] getEntries %v", dd.LSelector, time.Since(s))
+
 	fw := fslib.NewFileWatcher(dd.FsLib, dd.Path)
-	fns, err := fw.GetUniqueFiles()
+	fns, err := fw.GetUniqueEntries()
 	if err != nil {
 		return nil, err
 	}
@@ -192,39 +218,26 @@ func (dd *DynDir[E]) StopWatching() {
 	atomic.StoreUint32(&dd.done, 1)
 }
 
-// Monitor for changes to the set of entries listed in the directory.
+// Monitor for changes to the directory and update the cached one
 func (dd *DynDir[E]) watchDir() {
 	retry := false
 	for atomic.LoadUint32(&dd.done) != 1 {
-		var ents []string
-		err := dd.ReadDirWatch(dd.Path, func(sts []*sp.Stat) bool {
-			ents = sp.Names(sts)
-
-			// If the lengths don't match, the dir has changed. Return
-			// false to stop watching the dir and return into watchDir.
-			if len(ents) != dd.dir.Len() {
-				return false
-			}
-
-			for _, n := range ents {
-				_, ok := dd.dir.Lookup(n)
-				if !ok {
-					// If a name is not present in dir, then there has
-					// been a change to the dir; stop watch.
-					db.DPrintf(dd.LSelector, "Lookup %v not present", n)
-					return false
-				}
-			}
-			return true
-		})
-		if err == nil {
+		fw := fslib.NewFileWatcher(dd.FsLib, dd.Path)
+		ents, ok, err := fw.WatchUniqueEntries(dd.dir.Keys(0))
+		if ok { // reset retry?
 			retry = false
-		} else {
-			db.DPrintf(dd.ESelector, "Error ReadDirWatch watchDir[%v]: %v", dd.Path, err)
+		}
+		if err != nil {
 			if serr.IsErrorUnreachable(err) && !retry {
 				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
-				retry = true
-			} else {
+				// try again but remember we are already tried reading ReadDir
+				if !ok {
+					retry = true
+				}
+				db.DPrintf(dd.ESelector, "watchDir[%v]: %t %v retry watching", dd.Path, ok, err)
+				continue
+			} else { // give up
+				db.DPrintf(dd.ESelector, "watchDir[%v]: %t %v stop watching", dd.Path, ok, err)
 				dd.err = err
 				dd.watching = false
 				return

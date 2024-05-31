@@ -150,10 +150,6 @@ func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, error) {
 	return clnt.procqclnt.Enqueue(p)
 }
 
-func (clnt *ProcClnt) chooseProcQ(pid sp.Tpid) (string, error) {
-	return clnt.procqclnt.ChooseProcQ(pid)
-}
-
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 	return clnt.lcschedclnt.Enqueue(p)
 }

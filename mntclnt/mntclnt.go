@@ -72,6 +72,9 @@ func (mc *MntClnt) ResolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	s := time.Now()
 	err, ok := mc.resolveRoot(pn)
 	db.DPrintf(db.WALK_LAT, "ResolveRoot %v %v lat %v\n", mc.cid, pn, time.Since(s))
+	if err != nil {
+		db.DPrintf(db.MOUNT_ERR, "ResolveRoot unreachable %v err %v\n", pn, err)
+	}
 	return err, ok
 }
 

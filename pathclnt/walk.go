@@ -32,11 +32,10 @@ func (pathc *PathClnt) walk(path path.Tpathname, principal *sp.Tprincipal, resol
 	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
 		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
 			if cont && err.IsErrUnreachable() {
-				db.DPrintf(db.MOUNT, "WalkPath: resolveRoot unreachable %v err %v\n", path, err)
 				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 				continue
 			}
-			db.DPrintf(db.MOUNT, "WalkPath: resolveRoot %v err %v\n", path, err)
+			db.DPrintf(db.PATHCLNT_ERR, "WalkPath: resolveRoot %v err %v\n", path, err)
 			return sp.NoFid, err
 		}
 		start := time.Now()

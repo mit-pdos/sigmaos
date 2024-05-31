@@ -121,56 +121,18 @@ func (ft *FtTasks) waitForTasks() ([]*sp.Stat, error) {
 	return sts, err
 }
 
-// Try to claim task <name>. If success, return <name>.  If
-// someone else has taken it, return "".
-func (ft *FtTasks) claimTask(name string) (string, error) {
-	if err := ft.Rename(ft.todo+"/"+name, ft.wip+"/"+name); err != nil {
-		if serr.IsErrCode(err, serr.TErrUnreachable) { // partitioned?
-			return "", err
-		}
-		// another thread claimed the task before us
-		db.DPrintf(db.FTTASKS, "Error claim entry %v: %v", name, err)
-		return "", nil
-	}
-	db.DPrintf(db.FTTASKS, "Claim %v success", name)
-	return name, nil
-}
-
-// Return stop; if stop is true, stop after processing returned entries
-func (ft *FtTasks) claimTasks(sts []*sp.Stat) ([]string, error) {
-	// Due to inconsistent views of the WIP directory (concurrent adds by
-	// clients and paging reads in the parent of this function), some
-	// entries may be duplicated.
-	entries := make(map[string]bool)
-	for _, st := range sts {
-		entries[st.Name] = true
-	}
-	db.DPrintf(db.FTTASKS, "Removed %v duplicate entries", len(sts)-len(entries))
-	tasks := make([]string, 0)
-	for entry, _ := range entries {
-		t, err := ft.claimTask(entry)
-		if err != nil || t == "" {
-			continue
-		}
-		tasks = append(tasks, t)
-	}
-	return tasks, nil
-}
-
 func (ft *FtTasks) WaitForTasks() ([]string, error) {
-	sts, err := ft.waitForTasks()
+	fw := fslib.NewFileWatcher(ft.FsLib, ft.todo)
+	fns, err := fw.WatchNewFilesAndRename(ft.wip)
 	if err != nil {
 		return nil, err
 	}
-	return ft.claimTasks(sts)
+	return fns, nil
 }
 
 func (ft *FtTasks) GetTasks() ([]string, error) {
-	sts, err := ft.GetDir(ft.todo)
-	if err != nil {
-		return nil, err
-	}
-	return ft.claimTasks(sts)
+	fw := fslib.NewFileWatcher(ft.FsLib, ft.todo)
+	return fw.GetFilesRename(ft.wip)
 }
 
 // Read tasks by reading file in one shot

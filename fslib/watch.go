@@ -85,9 +85,11 @@ func (fsl *FsLib) WaitNEntries(pn string, n int) error {
 	return nil
 }
 
-// Watch for new files. Procs be may removing/creating files
-// concurrently from the directory, which may create dups;
-// WatchNewFiles filters those.
+// Watch for new files in a directory. Procs be may removing/creating
+// files concurrently from the directory, which may create dups;
+// FileWatcher filters those across multiple invocations to its
+// methods.  (If caller creates a new FileWatcher for method
+// invocation, it can filter duplicates for only that invocation.)
 
 type FileWatcher struct {
 	*FsLib
@@ -105,7 +107,8 @@ func NewFileWatcher(fslib *FsLib, pn string) *FileWatcher {
 	return fw
 }
 
-func (fw *FileWatcher) WatchNewFiles() ([]string, error) {
+// Watch for unique files since last call
+func (fw *FileWatcher) WatchNewUniqueFiles() ([]string, error) {
 	newfiles := make([]string, 0)
 	err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
 		for _, st := range sts {
@@ -122,4 +125,60 @@ func (fw *FileWatcher) WatchNewFiles() ([]string, error) {
 		return nil, err
 	}
 	return newfiles, nil
+}
+
+// GetFilesRename gets fw.pn's unique entries and renames them without blocking
+func (fw *FileWatcher) GetFilesRename(dst string) ([]string, error) {
+	sts, err := fw.GetDir(fw.pn)
+	if err != nil {
+		return nil, err
+	}
+	newfiles, err := fw.rename(sts, dst)
+	if err != nil {
+		return nil, err
+	}
+	return newfiles, nil
+}
+
+// Watch for new entries in fw.pn if none are present. It returns
+// unique renamed entries.
+func (fw *FileWatcher) WatchNewFilesAndRename(dst string) ([]string, error) {
+	var r error
+	var newfiles []string
+	err := fw.ReadDirWatch(fw.pn, func(sts []*sp.Stat) bool {
+		db.DPrintf(db.MR, "ReadDirWatch: %v\n", sts)
+		newfiles, r = fw.rename(sts, dst)
+		if r != nil || len(newfiles) > 0 {
+			return false
+		}
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	if r != nil {
+		return nil, r
+	}
+	db.DPrintf(db.MR, "ReadDirWatch: return %v\n", newfiles)
+	return newfiles, nil
+}
+
+// Filter out duplicates and rename
+func (fw *FileWatcher) rename(sts []*sp.Stat, dst string) ([]string, error) {
+	var r error
+	newfiles := make([]string, 0)
+	for _, st := range sts {
+		if !fw.files[st.Name] {
+			if err := fw.Rename(filepath.Join(fw.pn, st.Name), filepath.Join(dst, st.Name)); err == nil {
+				newfiles = append(newfiles, st.Name)
+			} else if serr.IsErrCode(err, serr.TErrUnreachable) { // partitioned?
+				r = err
+				break
+			}
+			// another proc renamed the file before us
+
+			fw.files[st.Name] = true // filter duplicates
+		}
+	}
+	return newfiles, r
 }

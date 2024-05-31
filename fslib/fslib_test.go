@@ -737,7 +737,7 @@ func TestDirWatch(t *testing.T) {
 	assert.Equal(t, nil, err)
 	ch := make(chan bool)
 	go func() {
-		err := ts.ReadDirWatch(pn, func(sts []*sp.Stat) bool {
+		_, err := ts.ReadDirWatch(pn, func(sts []*sp.Stat) bool {
 			db.DPrintf(db.TEST, "ReadDirWatch %v\n", sp.Names(sts))
 			for _, st := range sts {
 				if st.Name == f {

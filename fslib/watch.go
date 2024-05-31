@@ -115,7 +115,7 @@ func (fw *FileWatcher) GetUniqueEntries() ([]string, error) {
 		if !fw.ents[st.Name] {
 			newents = append(newents, st.Name)
 		}
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return nil, err

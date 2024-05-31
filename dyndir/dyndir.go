@@ -211,6 +211,7 @@ func (dd *DynDir[E]) getEntries() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(dd.LSelector, "[%v] getEntries %v", dd.LSelector, fns)
 	return fns, nil
 }
 

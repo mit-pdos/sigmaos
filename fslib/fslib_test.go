@@ -735,19 +735,12 @@ func TestDirWatch(t *testing.T) {
 	pn := filepath.Join(pathname, "d1")
 	err := ts.MkDir(pn, 0777)
 	assert.Equal(t, nil, err)
+	pn1 := filepath.Join(pn, f)
 	ch := make(chan bool)
 	go func() {
-		_, err := ts.ReadDirWatch(pn, func(sts []*sp.Stat) bool {
-			db.DPrintf(db.TEST, "ReadDirWatch %v\n", sp.Names(sts))
-			for _, st := range sts {
-				if st.Name == f {
-					ch <- true
-					return false
-				}
-			}
-			return true
-		})
+		err := ts.WaitCreate(pn1)
 		assert.Nil(t, err)
+		ch <- true
 	}()
 
 	// give goroutine time to start
@@ -755,7 +748,6 @@ func TestDirWatch(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Putfile")
 
-	pn1 := filepath.Join(pn, f)
 	_, err = ts.PutFile(pn1, 0777, sp.OWRITE, nil)
 	assert.Equal(t, nil, err)
 

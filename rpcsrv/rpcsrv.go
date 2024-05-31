@@ -119,7 +119,7 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, iov sessp.IoVec) (pro
 		rv := function.Call([]reflect.Value{svc.svc, reflect.ValueOf(ctx), args.Elem(), replyv})
 
 		errI := rv[0].Interface()
-		if errI != nil { // The return value for the method is an error.
+		if errI != nil { // The return value for the method if it is an error.
 			err := errI.(error)
 			var sr *serr.Err
 			if errors.As(err, &sr) {

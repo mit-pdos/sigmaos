@@ -21,16 +21,16 @@ func (fsl *FsLib) readDirWatch(dir string, watch Fwatch) (bool, error) {
 			return false, err
 		}
 		if watch(sts) { // keep watching?
-			db.DPrintf(db.FSLIB, "readDirWatch watch %v\n", dir)
+			db.DPrintf(db.WATCH, "readDirWatch watch %v\n", dir)
 			if err := fsl.DirWatch(rdr.fd); err != nil {
 				rdr.Close()
 				if serr.IsErrCode(err, serr.TErrVersion) {
-					db.DPrintf(db.FSLIB, "DirWatch: Version mismatch %v", dir)
+					db.DPrintf(db.WATCH, "DirWatch: Version mismatch %v", dir)
 					continue // try again
 				}
 				return true, err
 			}
-			db.DPrintf(db.FSLIB, "DirWatch %v returned\n", dir)
+			db.DPrintf(db.WATCH, "DirWatch %v returned\n", dir)
 			// dir has changed; read again
 		} else {
 			rdr.Close()
@@ -44,9 +44,9 @@ func (fsl *FsLib) readDirWatch(dir string, watch Fwatch) (bool, error) {
 func (fsl *FsLib) WaitRemove(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
-	db.DPrintf(db.FSLIB, "WaitRemove: readDirWatch dir %v\n", dir)
+	db.DPrintf(db.WATCH, "WaitRemove: readDirWatch dir %v\n", dir)
 	_, err := fsl.readDirWatch(dir, func(sts []*sp.Stat) bool {
-		db.DPrintf(db.FSLIB, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
+		db.DPrintf(db.WATCH, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {
 			if st.Name == f {
 				return true
@@ -61,9 +61,9 @@ func (fsl *FsLib) WaitRemove(pn string) error {
 func (fsl *FsLib) WaitCreate(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
-	db.DPrintf(db.FSLIB, "WaitCreate: readDirWatch dir %v\n", dir)
+	db.DPrintf(db.WATCH, "WaitCreate: readDirWatch dir %v\n", dir)
 	_, err := fsl.readDirWatch(dir, func(sts []*sp.Stat) bool {
-		db.DPrintf(db.FSLIB, "WaitCreate %v %v %v\n", dir, sp.Names(sts), f)
+		db.DPrintf(db.WATCH, "WaitCreate %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {
 			if st.Name == f {
 				return false
@@ -113,8 +113,10 @@ func (fw *FileWatcher) WaitNEntries(n int) error {
 
 // Return unique ents since last call
 func (fw *FileWatcher) GetUniqueEntries() ([]string, error) {
+	db.DPrintf(db.WATCH, "GetUniqueEntries %v\n", fw.pn)
 	newents := make([]string, 0)
 	_, err := fw.ProcessDir(fw.pn, func(st *sp.Stat) (bool, error) {
+		db.DPrintf(db.WATCH, "GetUniqueEntries: process entry %v\n", st.Name)
 		if !fw.ents[st.Name] {
 			fw.ents[st.Name] = true
 			newents = append(newents, st.Name)

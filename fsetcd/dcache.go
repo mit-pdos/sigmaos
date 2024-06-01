@@ -58,10 +58,10 @@ func (dc *Dcache) insert(d sp.Tpath, new *dcEntry) {
 
 	de, ok := dc.c.Get(d)
 	if ok && de.v >= new.v {
-		db.DPrintf(db.FSETCD, "insert: %v version mismatch insert %v %v", d, de, new)
+		db.DPrintf(db.FSETCD, "insert: %v (%v) version mismatch %v", d, de, new)
 		return
 	}
-	db.DPrintf(db.FSETCD, "insert: %v insert dcache %v %v", d, de, new)
+	db.DPrintf(db.FSETCD, "insert: p %v (%v) new %v", d, de, new)
 	if evict := dc.c.Add(d, new); evict {
 		db.DPrintf(db.FSETCD, "Eviction")
 	}

@@ -60,10 +60,6 @@ func (nc *NetClnt) connect(ep *sp.Tendpoint) *serr.Err {
 	//	for _, addr := range addrs {
 	for i, addr := range ep.Addrs() {
 		if i > 0 {
-			if nc.pe.GetVerifyEndpoints() {
-				// TODO XXX: support multi-dialing
-				db.DFatalf("Do not support multi-dialing yet: %v", ep.Addrs())
-			}
 			ep.Claims.Addr = append(ep.Claims.Addr[1:], ep.Claims.Addr[0])
 		}
 		c, err := nc.npc.Dial(ep)

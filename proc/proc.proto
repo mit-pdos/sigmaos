@@ -31,10 +31,9 @@ message ProcEnvProto {
   TendpointProto namedEndpointProto = 24;
   bool useSigmaclntd = 25;
   bool useNetProxy = 26;
-  bool verifyEndpoints = 27;
-  map<string, SecretProto> secretsMap = 28;
-  repeated string sigmaPath = 29;
-  repeated string kernels = 30;
+  map<string, SecretProto> secretsMap = 27;
+  repeated string sigmaPath = 28;
+  repeated string kernels = 29;
 }
 
 message ProcProto {

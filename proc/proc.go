@@ -84,7 +84,6 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		false,
 		false,
 		false,
-		true,
 	).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
@@ -129,7 +128,6 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
 	// Don't override intentionally set net proxy settings
 	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
-	p.ProcEnvProto.VerifyEndpoints = p.ProcEnvProto.UseNetProxy && false
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
 	// If parent didn't specify secrets, inherit the parent's secrets
 	if p.ProcEnvProto.SecretsMap == nil {
@@ -183,7 +181,7 @@ func (p *Proc) IsPrivileged() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t SigmaPath:%v KernelId:%v UseSigmaclntd:%v UseNetProxy:%v VerifyEndpoints:%v Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
+	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t SigmaPath:%v KernelId:%v UseSigmaclntd:%v UseNetProxy:%v Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.GetPID(),
 		p.ProcEnvProto.GetBuildTag(),
@@ -192,7 +190,6 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.UseSigmaclntd,
 		p.ProcEnvProto.UseNetProxy,
-		p.ProcEnvProto.VerifyEndpoints,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.GetPerf(),
 		p.ProcEnvProto.GetInnerContainerIP(),

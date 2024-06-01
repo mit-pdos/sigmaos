@@ -87,7 +87,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil
 	}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false)
 	pe.Program = "srv"
 	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
@@ -190,9 +190,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
 	useNetProxy := !noNetProxy
-	// Only verify mounts if running with netproxy
-	verifyMounts := false && useNetProxy
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy, verifyMounts)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	var kernelid string
 	var k *bootkernelclnt.Kernel
@@ -332,11 +330,8 @@ func Dump(t *testing.T) {
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	assert.Nil(t, err1)
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
-	useNetProxy := !noNetProxy
 	// TODO: pass proper mount
-	// Only verify mounts if running with netproxy
-	verifyMounts := useNetProxy
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, nil, "", "", "", false, false, false, verifyMounts)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, nil, "", "", "", false, false, false)
 	assert.False(t, true, "Unimplemented")
 	return
 	npc := netproxyclnt.NewNetProxyClnt(pe)

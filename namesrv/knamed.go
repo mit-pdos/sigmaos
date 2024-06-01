@@ -19,8 +19,7 @@ func RunKNamed(args []string) error {
 	if len(args) != 3 {
 		db.DFatalf("%v: wrong number of arguments %v", args[0], args)
 	}
-	nd := &Named{}
-	nd.realm = sp.Trealm(args[1])
+	nd := newNamed(sp.Trealm(args[1]))
 
 	p, err := perf.NewPerf(pe, perf.KNAMED)
 	if err != nil {

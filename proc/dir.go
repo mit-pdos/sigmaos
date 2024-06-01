@@ -1,7 +1,7 @@
 package proc
 
 import (
-	"path"
+	"path/filepath"
 
 	sp "sigmaos/sigmap"
 )
@@ -62,9 +62,9 @@ const (
 )
 
 func GetChildProcDir(procdir string, cpid sp.Tpid) string {
-	return path.Join(procdir, CHILDREN, cpid.String(), PROCDIR)
+	return filepath.Join(procdir, CHILDREN, cpid.String(), PROCDIR)
 }
 
 func KProcDir(pid sp.Tpid) string {
-	return path.Join(sp.KPIDS, pid.String())
+	return filepath.Join(sp.KPIDS, pid.String())
 }

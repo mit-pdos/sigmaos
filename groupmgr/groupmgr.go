@@ -12,7 +12,7 @@ package groupmgr
 import (
 	"fmt"
 	"log"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -80,7 +80,7 @@ func (cfg *GroupMgrConfig) SetTest(crash, partition, netfail int) {
 
 func (cfg *GroupMgrConfig) Persist(fsl *fslib.FsLib) error {
 	fsl.MkDir(GRPMGRDIR, 0777)
-	pn := path.Join(GRPMGRDIR, cfg.Job)
+	pn := filepath.Join(GRPMGRDIR, cfg.Job)
 	if err := fsl.PutFileJsonAtomic(pn, 0777, cfg); err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (cfg *GroupMgrConfig) Persist(fsl *fslib.FsLib) error {
 func Recover(sc *sigmaclnt.SigmaClnt) ([]*GroupMgr, error) {
 	gms := make([]*GroupMgr, 0)
 	sc.ProcessDir(GRPMGRDIR, func(st *sp.Stat) (bool, error) {
-		pn := path.Join(GRPMGRDIR, st.Name)
+		pn := filepath.Join(GRPMGRDIR, st.Name)
 		cfg := &GroupMgrConfig{}
 		if err := sc.GetFileJson(pn, cfg); err != nil {
 			return true, err

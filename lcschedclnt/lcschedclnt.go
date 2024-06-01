@@ -1,15 +1,13 @@
 package lcschedclnt
 
 import (
-	"errors"
-
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	pqproto "sigmaos/procqsrv/proto"
+	"sigmaos/rpcdirclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/unionrpcclnt"
 )
 
 const (
@@ -18,25 +16,24 @@ const (
 
 type LCSchedClnt struct {
 	*fslib.FsLib
-	urpcc *unionrpcclnt.UnionRPCClnt
+	rpcdc *rpcdirclnt.RPCDirClnt
 }
 
 func NewLCSchedClnt(fsl *fslib.FsLib) *LCSchedClnt {
 	return &LCSchedClnt{
 		FsLib: fsl,
-		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.LCSCHED, db.LCSCHEDCLNT, db.LCSCHEDCLNT_ERR),
+		rpcdc: rpcdirclnt.NewRPCDirClnt(fsl, sp.LCSCHED, db.LCSCHEDCLNT, db.LCSCHEDCLNT_ERR),
 	}
 }
 
 // Enqueue a proc on the lcsched. Returns the ID of the kernel that is running
 // the proc.
 func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
-	lcs.urpcc.UpdateSrvs(false)
-	pqID, err := lcs.urpcc.NextSrv()
+	pqID, err := lcs.rpcdc.RoundRobin()
 	if err != nil {
-		return NOT_ENQ, errors.New("No lcscheds available")
+		return NOT_ENQ, err
 	}
-	rpcc, err := lcs.urpcc.GetClnt(pqID)
+	rpcc, err := lcs.rpcdc.GetClnt(pqID)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error: Can't get lcsched clnt: %v", err)
 		return NOT_ENQ, err
@@ -49,7 +46,7 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 		db.DPrintf(db.ALWAYS, "LCSched.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-			lcs.urpcc.UnregisterSrv(pqID)
+			lcs.rpcdc.RemoveEntry(pqID)
 		}
 		return NOT_ENQ, err
 	}
@@ -57,6 +54,6 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 	return res.KernelID, nil
 }
 
-func (lcs *LCSchedClnt) StopMonitoring() {
-	lcs.urpcc.StopMonitoring()
+func (lcs *LCSchedClnt) StopWatching() {
+	lcs.rpcdc.StopWatching()
 }

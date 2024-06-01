@@ -238,11 +238,11 @@ func (scc *SigmaClntClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVe
 	return err
 }
 
-func (scc *SigmaClntClnt) DirWait(fd int) error {
+func (scc *SigmaClntClnt) DirWatch(fd int) error {
 	req := scproto.SigmaReadRequest{Fd: uint32(fd)}
 	rep := scproto.SigmaErrReply{}
-	err := scc.rpcErr("SigmaClntSrvAPI.DirWait", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "DirWait %v %v %v", req, rep, err)
+	err := scc.rpcErr("SigmaClntSrvAPI.DirWatch", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "DirWatch %v %v %v", req, rep, err)
 	return err
 }
 
@@ -268,7 +268,7 @@ func (scc *SigmaClntClnt) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
 	return rep.Local, nil
 }
 
-func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Path, path.Path, error) {
+func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Tpathname, path.Tpathname, error) {
 	req := scproto.SigmaPathRequest{Path: pn}
 	rep := scproto.SigmaLastMountReply{}
 	err := scc.rpcc.RPC("SigmaClntSrvAPI.PathLastMount", &req, &rep)

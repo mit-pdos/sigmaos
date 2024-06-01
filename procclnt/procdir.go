@@ -1,7 +1,7 @@
 package procclnt
 
 import (
-	"path"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -19,11 +19,11 @@ func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool
 	// Only create exit/evict semaphores if not spawned on SCHEDD.
 	if how != proc.HSCHEDD {
 		// Create exit signal
-		semExit := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
+		semExit := semclnt.NewSemClnt(clnt.FsLib, filepath.Join(procdir, proc.EXIT_SEM))
 		semExit.Init(0)
 
 		// Create eviction signal
-		semEvict := semclnt.NewSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
+		semEvict := semclnt.NewSemClnt(clnt.FsLib, filepath.Join(procdir, proc.EVICT_SEM))
 		semEvict.Init(0)
 	}
 	return nil

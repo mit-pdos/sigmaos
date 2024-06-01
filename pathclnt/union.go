@@ -30,7 +30,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 	}
 	defer pathc.FidClnt.Clunk(fid1)
 
-	target, err := pathc.FidClnt.GetFile(fid1, path.Path{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
+	target, err := pathc.FidClnt.GetFile(fid1, path.Tpathname{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.WALK, "unionScan: Err readlink %v\n", err)
 		return sp.NoFid, err

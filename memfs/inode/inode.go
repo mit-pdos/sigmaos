@@ -40,7 +40,7 @@ func NewInode(ctx fs.CtxI, p sp.Tperm, parent fs.Dir) *Inode {
 func (inode *Inode) String() string {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
-	str := fmt.Sprintf("{ino %p %v %v}", inode, inode.inum, inode.perm)
+	str := fmt.Sprintf("{ino %p inum %v %v}", inode, inode.inum, inode.perm)
 	return str
 }
 

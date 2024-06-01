@@ -10,7 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -99,7 +99,7 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *serr.Err) {
 	return nil, serr.NewErr(serr.TErrNotfound, name)
 }
 
-func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	if i := dir.lookupMount(path[0]); i != nil {
 		return []fs.FsObj{i}, i, path[1:], nil
 	} else {
@@ -111,11 +111,11 @@ func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.F
 	}
 }
 
-func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
+func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, d fs.FsObj) (fs.FsObj, *serr.Err) {
 	if i := dir.lookupMount(name); i != nil {
 		return i, serr.NewErr(serr.TErrExists, name)
 	}
-	return dir.underlay.Create(ctx, name, perm, m, lid, f)
+	return dir.underlay.Create(ctx, name, perm, m, lid, f, nil)
 }
 
 func (dir *DirOverlay) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
@@ -160,9 +160,9 @@ func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, 
 	return dir.underlay.Renameat(ctx, old, nd, new, f)
 }
 
-func (dir *DirOverlay) Remove(ctx fs.CtxI, n string, f sp.Tfence) *serr.Err {
+func (dir *DirOverlay) Remove(ctx fs.CtxI, n string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	if dir.removeMount(n) {
 		return nil
 	}
-	return dir.underlay.Remove(ctx, n, f)
+	return dir.underlay.Remove(ctx, n, f, del)
 }

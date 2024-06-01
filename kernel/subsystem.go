@@ -192,7 +192,7 @@ func (s *KernelSubsystem) Wait() error {
 		// WaitExit twice leads to an error.
 		status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)
 		if err != nil || !status.IsStatusEvicted() {
-			db.DPrintf(db.ALWAYS, "shutdown susbystem [%v] exit with status %v err %v", s.p.GetPid(), status, err)
+			db.DPrintf(db.ALWAYS, "shutdown subsystem [%v] exit with status %v err %v", s.p.GetPid(), status, err)
 			return err
 		}
 	}

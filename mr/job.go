@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -30,43 +30,43 @@ const (
 )
 
 func JobOut(outDir, job string) string {
-	return path.Join(outDir, job)
+	return filepath.Join(outDir, job)
 }
 
 func JobOutLink(job string) string {
-	return path.Join(JobDir(job), OUTLINK)
+	return filepath.Join(JobDir(job), OUTLINK)
 }
 
 func JobIntOutLink(job string) string {
-	return path.Join(JobDir(job), INT_OUTLINK)
+	return filepath.Join(JobDir(job), INT_OUTLINK)
 }
 
 func LeaderElectDir(job string) string {
-	return path.Join(MRDIRELECT, job)
+	return filepath.Join(MRDIRELECT, job)
 }
 
 func JobDir(job string) string {
-	return path.Join(MRDIRTOP, job)
+	return filepath.Join(MRDIRTOP, job)
 }
 
 func JobSem(job string) string {
-	return path.Join(MRDIRTOP, job, JOBSEM)
+	return filepath.Join(MRDIRTOP, job, JOBSEM)
 }
 
 func MRstats(job string) string {
-	return path.Join(JobDir(job), "stats.txt")
+	return filepath.Join(JobDir(job), "stats.txt")
 }
 
 func MapTask(job string) string {
-	return path.Join(JobDir(job), "/m")
+	return filepath.Join(JobDir(job), "/m")
 }
 
 func MapIntermediateOutDir(job, intOutdir, mapname string) string {
-	return path.Join(intOutdir, job, "m-"+mapname)
+	return filepath.Join(intOutdir, job, "m-"+mapname)
 }
 
 func ReduceTask(job string) string {
-	return path.Join(JobDir(job), "/r")
+	return filepath.Join(JobDir(job), "/r")
 }
 
 func ReduceIn(job string) string {
@@ -74,11 +74,11 @@ func ReduceIn(job string) string {
 }
 
 func ReduceOut(job string) string {
-	return path.Join(JobDir(job), "mr-out-")
+	return filepath.Join(JobDir(job), "mr-out-")
 }
 
 func ReduceOutTarget(outDir string, job string) string {
-	return path.Join(JobOut(outDir, job), "mr-out-")
+	return filepath.Join(JobOut(outDir, job), "mr-out-")
 }
 
 func BinName(i int) string {
@@ -86,11 +86,11 @@ func BinName(i int) string {
 }
 
 func mshardfile(dir string, r int) string {
-	return path.Join(dir, "r-"+strconv.Itoa(r))
+	return filepath.Join(dir, "r-"+strconv.Itoa(r))
 }
 
 func symname(job, r, name string) string {
-	return path.Join(ReduceIn(job), r, "m-"+name)
+	return filepath.Join(ReduceIn(job), r, "m-"+name)
 }
 
 type Job struct {
@@ -137,12 +137,12 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, err
 	fsl.MkDir(MRDIRTOP, 0777)
 	fsl.MkDir(MRDIRELECT, 0777)
 
-	mft, err := fttasks.MkFtTasks(fsl, MRDIRTOP, path.Join(jobname, "/mtasks"))
+	mft, err := fttasks.MkFtTasks(fsl, MRDIRTOP, filepath.Join(jobname, "/mtasks"))
 	if err != nil {
 		db.DPrintf(db.ERROR, "MkFtTasks %v err %v\n", jobname, err)
 		return nil, err
 	}
-	rft, err := fttasks.MkFtTasks(fsl, MRDIRTOP, path.Join(jobname, "/rtasks"))
+	rft, err := fttasks.MkFtTasks(fsl, MRDIRTOP, filepath.Join(jobname, "/rtasks"))
 	if err != nil {
 		db.DPrintf(db.ERROR, "MkFtTasks %v err %v\n", jobname, err)
 		return nil, err

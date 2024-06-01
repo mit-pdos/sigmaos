@@ -3,9 +3,9 @@ package memfssrv
 import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/memfs"
+	"sigmaos/memfs/dir"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -51,4 +51,13 @@ func NewMemFsRootPortClntFence(root fs.Dir, srvpath string, addr *sp.Taddr, sc *
 	}
 	mfs := NewMemFsSrv(mpn, srv, sc, nil)
 	return mfs, nil
+}
+
+func (mfs *MemFs) MemFsExit(status *proc.Status) error {
+	if mfs.pn != "" {
+		if err := mfs.sc.Remove(mfs.pn); err != nil {
+			db.DPrintf(db.ALWAYS, "RemoveMount %v err %v", mfs.pn, err)
+		}
+	}
+	return mfs.sc.ClntExit(status)
 }

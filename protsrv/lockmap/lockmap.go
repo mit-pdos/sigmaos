@@ -77,7 +77,7 @@ func (plt *PathLockTable) allocLockStringL(pn string) *PathLock {
 	return lk
 }
 
-func (plt *PathLockTable) allocLock(p path.Path) *PathLock {
+func (plt *PathLockTable) allocLock(p path.Tpathname) *PathLock {
 	plt.Lock()
 	defer plt.Unlock()
 	return plt.allocLockStringL(p.String())
@@ -91,7 +91,7 @@ func (plt *PathLockTable) allocLockString(pn string) *PathLock {
 	return plt.allocLockStringL(pn)
 }
 
-func (plt *PathLockTable) Acquire(ctx fs.CtxI, path path.Path, ltype Tlock) *PathLock {
+func (plt *PathLockTable) Acquire(ctx fs.CtxI, path path.Tpathname, ltype Tlock) *PathLock {
 	lk := plt.allocLock(path)
 	if ltype == WLOCK {
 		lk.Lock()
@@ -135,7 +135,7 @@ func (plt *PathLockTable) HandOverLock(ctx fs.CtxI, dlk *PathLock, name string, 
 	return flk
 }
 
-func (plt *PathLockTable) AcquireLocks(ctx fs.CtxI, dir path.Path, file string, ltype Tlock) (*PathLock, *PathLock) {
+func (plt *PathLockTable) AcquireLocks(ctx fs.CtxI, dir path.Tpathname, file string, ltype Tlock) (*PathLock, *PathLock) {
 	dlk := plt.Acquire(ctx, dir, ltype)
 	flk := plt.Acquire(ctx, append(dir, file), ltype)
 	return dlk, flk

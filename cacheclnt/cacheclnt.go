@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"hash/fnv"
 	"io"
-	"path"
+	"path/filepath"
 	"reflect"
 	"strconv"
 
@@ -38,7 +38,11 @@ type CacheClnt struct {
 }
 
 func NewCacheClnt(fsls []*fslib.FsLib, job string, nshard int) *CacheClnt {
-	cc := &CacheClnt{fsl: fsls[0], nshard: nshard, ClntCache: rpcclnt.NewRPCClntCache(sigmarpcchan.SigmaRPCChanFactory(fsls))}
+	cc := &CacheClnt{
+		fsl:       fsls[0],
+		nshard:    nshard,
+		ClntCache: rpcclnt.NewRPCClntCache(sigmarpcchan.SigmaRPCChanFactory(fsls)),
+	}
 	return cc
 }
 
@@ -265,7 +269,7 @@ func (cc *CacheClnt) StatsClnt() []map[string]*rpc.MethodStatSnapshot {
 }
 
 func (cc *CacheClnt) DumpSrv(srv string) (map[string]string, error) {
-	dir := path.Join(srv, cachesrv.DUMP)
+	dir := filepath.Join(srv, cachesrv.DUMP)
 	b, err := cc.fsl.GetFile(dir + "/" + sessdev.CLONE)
 	if err != nil {
 		return nil, err

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime/debug"
 	"time"
 
@@ -119,7 +119,7 @@ func (p *Proc) LookupEnv(name string) (string, bool) {
 
 func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.SetRealm(parentPE.GetRealm(), parentPE.Overlays)
-	p.ProcEnvProto.ParentDir = path.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
+	p.ProcEnvProto.ParentDir = filepath.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
 	p.ProcEnvProto.EtcdEndpoints = parentPE.EtcdEndpoints
 	p.ProcEnvProto.Perf = parentPE.Perf
 	p.ProcEnvProto.Debug = parentPE.Debug
@@ -206,7 +206,7 @@ func (p *Proc) setProcDir(kernelId string) {
 	// Privileged procs have their ProcDir (sp.KPIDS) set at the time of creation
 	// of the proc struct.
 	if !p.IsPrivileged() {
-		p.ProcEnvProto.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
+		p.ProcEnvProto.ProcDir = filepath.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
 	}
 }
 

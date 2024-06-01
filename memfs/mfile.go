@@ -1,10 +1,13 @@
+// Package memfs implements an in-memory file system. A typical
+// sigmaos server has one (e.g., to export its RPC interface).
 package memfs
 
 import (
 	//"time"
+	"fmt"
 
-	"sigmaos/file"
 	"sigmaos/fs"
+	"sigmaos/memfs/file"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -21,7 +24,11 @@ func NewFile(i fs.Inode) *File {
 	return f
 }
 
-func (f *File) Size() (sp.Tlength, *serr.Err) {
+func (f *File) String() string {
+	return fmt.Sprintf("{%v len %d}", f.Inode, f.File.Size())
+}
+
+func (f *File) Size() sp.Tlength {
 	return f.File.Size()
 }
 
@@ -30,7 +37,7 @@ func (f *File) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	l, _ := f.Size()
+	l := f.Size()
 	st.SetLength(l)
 	return st, nil
 }

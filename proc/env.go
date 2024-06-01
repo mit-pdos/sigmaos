@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
@@ -121,7 +120,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto
 	pe.OuterContainerIPStr = outerIP.String()
 	pe.BuildTag = buildTag
 	pe.SetRealm(sp.ROOTREALM, overlays)
-	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
+	pe.ProcDir = filepath.Join(sp.KPIDS, pe.GetPID().String())
 	pe.Privileged = true
 	pe.SetSigmaPath(buildTag)
 	pe.HowInt = int32(BOOT)
@@ -139,7 +138,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnt
 	pe.OuterContainerIPStr = outerIP.String()
 	pe.BuildTag = buildTag
 	pe.Program = "test"
-	pe.ProcDir = path.Join(sp.KPIDS, pe.GetPID().String())
+	pe.ProcDir = filepath.Join(sp.KPIDS, pe.GetPID().String())
 	pe.HowInt = int32(TEST)
 	pe.UseSigmaclntd = useSigmaclntd
 	pe.SetSigmaPath(buildTag)

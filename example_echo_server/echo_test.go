@@ -2,7 +2,7 @@ package example_echo_server_test
 
 import (
 	"github.com/stretchr/testify/assert"
-	"path"
+	"path/filepath"
 	dbg "sigmaos/debug"
 	echo "sigmaos/example_echo_server"
 	"sigmaos/fslib"
@@ -22,7 +22,7 @@ type TstateEcho struct {
 
 func newTstateEcho(t *testing.T) (*TstateEcho, error) {
 	jobname := rand.String(8)
-	jobdir := path.Join(echo.DIR_ECHO_SERVER, jobname)
+	jobdir := filepath.Join(echo.DIR_ECHO_SERVER, jobname)
 	var err error
 	tse := &TstateEcho{}
 	tse.jobname = jobname

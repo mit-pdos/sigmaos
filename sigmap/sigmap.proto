@@ -5,7 +5,7 @@ option go_package = "sigmaos/sigmap";
 // A Qid is the server's unique identification for the file being
 // accessed: two files on the same server hierarchy are the same if
 // and only if their qids are the same.
-message Tqid {
+message TqidProto {
         uint32  type = 1;
         uint32  version = 2;
         uint64  path = 3;
@@ -24,7 +24,7 @@ message Tprincipal {
 message TstatProto {
         uint32 type = 1;
         uint32 dev = 2;
-        Tqid   qid = 3;
+        TqidProto qid = 3;
         uint32 mode = 4;
         uint32 atime = 5;   // last access time in seconds
         uint32 mtime = 6;   // last modified time in seconds
@@ -81,7 +81,7 @@ message Tauth {
 }
 
 message Rauth {
-       Tqid aqid = 1;
+       TqidProto aqid = 1;
 }
 
 message Tattach {
@@ -93,7 +93,7 @@ message Tattach {
 }
 
 message Rattach {
-        Tqid qid = 1;        
+        TqidProto qid = 1;        
 }
 
 message Rerror {
@@ -109,7 +109,7 @@ message Twalk {
 }
 
 message Rwalk {
-        repeated Tqid qids = 1;
+        repeated TqidProto qids = 1;
 }
 
 message Topen {
@@ -118,7 +118,7 @@ message Topen {
 }
 
 message Ropen {
-        Tqid qid = 1;
+        TqidProto qid = 1;
         uint32 iounit = 2;
 }
 
@@ -132,7 +132,7 @@ message Tcreate {
 }
 
 message Rcreate {
-        Tqid qid = 1;
+        TqidProto qid = 1;
         uint32 iounit = 2;
 }
 

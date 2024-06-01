@@ -8,7 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -259,7 +259,7 @@ func (n *RaftNode) postNodeId() error {
 			db.DFatalf("Error Marshal in RaftNode.postNodeID: %v", err)
 		}
 		db.DPrintf(db.REPLRAFT, "Invoke Post node ID %d %v\n", i, ep)
-		if _, err := http.Post("http://"+path.Join(ep.Addrs()[0].IPPort(), membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b)); err == nil {
+		if _, err := http.Post("http://"+filepath.Join(ep.Addrs()[0].IPPort(), membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b)); err == nil {
 			db.DPrintf(db.REPLRAFT, "Posted node ID %d %v\n", i, ep)
 			// Only post the node ID to one node
 			return nil

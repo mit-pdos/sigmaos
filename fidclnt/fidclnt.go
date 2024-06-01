@@ -75,7 +75,7 @@ func (fidc *FidClnt) Close() error {
 		return nil // XXX maybe return error
 	}
 	fidc.refcnt--
-	db.DPrintf(db.ALWAYS, "FidClnt refcnt %d\n", fidc.refcnt)
+	db.DPrintf(db.FIDCLNT, "FidClnt refcnt %d\n", fidc.refcnt)
 	if fidc.refcnt == 0 {
 		fidc.closeSess()
 	}
@@ -114,7 +114,7 @@ func (fidc *FidClnt) Qids(fid sp.Tfid) []*sp.Tqid {
 	return fidc.Lookup(fid).qids
 }
 
-func (fidc *FidClnt) Path(fid sp.Tfid) path.Path {
+func (fidc *FidClnt) Path(fid sp.Tfid) path.Tpathname {
 	return fidc.Lookup(fid).Path()
 }
 
@@ -143,7 +143,7 @@ func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, 
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}
-	fidc.fids.insert(fid, newChannel(pc, path.Split(pn), []*sp.Tqid{reply.Qid}))
+	fidc.fids.insert(fid, newChannel(pc, path.Split(pn), []*sp.Tqid{sp.NewTqid(reply.Qid)}))
 	return fid, nil
 }
 
@@ -186,7 +186,7 @@ func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	if ch == nil {
 		return sp.NoFid, serr.NewErr(serr.TErrUnreachable, "Clone")
 	}
-	_, err := ch.pc.Walk(fid, nfid, path.Path{})
+	_, err := ch.pc.Walk(fid, nfid, path.Tpathname{})
 	if err != nil {
 		fidc.freeFid(nfid)
 		return fid, err
@@ -220,7 +220,7 @@ func (fidc *FidClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Tqid, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	return reply.Qid, nil
+	return sp.NewTqid(reply.Qid), nil
 }
 
 func (fidc *FidClnt) Watch(fid sp.Tfid) *serr.Err {

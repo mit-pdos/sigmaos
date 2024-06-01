@@ -7,9 +7,9 @@ import (
 	leaseproto "sigmaos/lease/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
+	"sigmaos/protsrv/ephemeralmap"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
@@ -88,7 +88,7 @@ func (ls *LeaseSrv) allocLid() sp.TleaseId {
 
 // Delete files that are associated with lid
 func (ls *LeaseSrv) expire(lid sp.TleaseId) {
-	pns := ls.et.Expire(lid)
+	pns := ls.et.Expired(lid)
 	db.DPrintf(db.ALWAYS, "expire %v %v\n", lid, pns)
 	for _, pn := range pns {
 		ls.mfs.Remove(pn)

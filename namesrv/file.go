@@ -19,7 +19,7 @@ func newFile(o *Obj) *File {
 func (f *File) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.NAMED, "%v: FileOpen %v m 0x%x path %v\n", ctx, f, m, f.Obj.pn)
 	if f.Obj.di.Nf == nil {
-		nf, _, err := f.Obj.fs.GetFile(f.Obj.di.Path)
+		nf, _, err := f.Obj.fs.GetFile(&f.Obj.di)
 		if err != nil {
 			return nil, err
 		}

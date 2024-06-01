@@ -45,14 +45,14 @@ func (npc *NetProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
 	var err error
 	start := time.Now()
 	if npc.useProxy() {
-		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v", ep)
+		db.DPrintf(db.NETPROXYCLNT, "[%v] proxyDial %v", npc.pe.GetPrincipal(), ep)
 		c, err = npc.proxyDial(ep)
-		db.DPrintf(db.NETPROXYCLNT, "proxyDial %v done ok:%v", ep, err == nil)
+		db.DPrintf(db.NETPROXYCLNT, "[%v] proxyDial %v done ok:%v", npc.pe.GetPrincipal(), ep, err == nil)
 	} else {
 		// TODO: send PE (or just realm) here
-		db.DPrintf(db.NETPROXYCLNT, "directDial %v", ep)
+		db.DPrintf(db.NETPROXYCLNT, "[%v] directDial %v", npc.pe.GetPrincipal(), ep)
 		c, err = netproxy.DialDirect(npc.pe.GetPrincipal(), ep)
-		db.DPrintf(db.NETPROXYCLNT, "directDial %v done ok:%v", ep, err == nil)
+		db.DPrintf(db.NETPROXYCLNT, "[%v] directDial %v done ok:%v", npc.pe.GetPrincipal(), ep, err == nil)
 	}
 	if err == nil {
 		db.DPrintf(db.NETSIGMA_PERF, "Dial latency: %v", time.Since(start))
@@ -91,7 +91,7 @@ func (npc *NetProxyClnt) Accept(lid netproxy.Tlid, internalListener bool) (net.C
 	if npc.useProxy() {
 		db.DPrintf(db.NETPROXYCLNT, "proxyAccept %v", lid)
 		c, p, err = npc.proxyAccept(lid, internalListener)
-		db.DPrintf(db.NETPROXYCLNT, "proxyAccept %v done ok:%v", lid, err == nil)
+		db.DPrintf(db.NETPROXYCLNT, "[%v] proxyAccept %v done ok:%v", p, lid, err == nil)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error proxyAccept %v: %v", lid, err)
 			return nil, nil, err
@@ -99,6 +99,7 @@ func (npc *NetProxyClnt) Accept(lid netproxy.Tlid, internalListener bool) (net.C
 	} else {
 		db.DPrintf(db.NETPROXYCLNT, "directAccept %v", lid)
 		c, p, err = npc.directAccept(lid, internalListener)
+		db.DPrintf(db.NETPROXYCLNT, "[%v] directAccept %v done ok:%v", p, lid, err == nil)
 		if err != nil {
 			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directAccept %v: %v", lid, err)
 			return nil, nil, err
@@ -146,7 +147,8 @@ func (npc *NetProxyClnt) init() error {
 		return nil
 	}
 
-	db.DPrintf(db.NETPROXYCLNT, "Init netproxyclnt %p", npc)
+	db.DPrintf(db.NETPROXYCLNT, "[%v] Init netproxyclnt %p", npc.pe.GetPrincipal(), npc)
+	defer db.DPrintf(db.NETPROXYCLNT, "[%v] Init netproxyclnt %p done", npc.pe.GetPrincipal(), npc)
 	iovm := demux.NewIoVecMap()
 	conn, err := netproxytrans.GetNetproxydConn(npc.pe)
 	if err != nil {

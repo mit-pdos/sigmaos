@@ -1,7 +1,7 @@
 package bootkernelclnt_test
 
 import (
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -170,7 +170,7 @@ func TestEphemeral(t *testing.T) {
 		return
 	}
 
-	name := path.Join(sp.SCHEDD, "~any")
+	name := filepath.Join(sp.SCHEDD, "~any")
 
 	var err error
 

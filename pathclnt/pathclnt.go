@@ -54,11 +54,11 @@ func (pathc *PathClnt) Close() error {
 	db.DPrintf(db.PATHCLNT, "%v: Close", pathc.cid)
 	var err error
 	if r := pathc.detachAll(); r != nil {
-		db.DPrintf(db.TEST, "%v: detachall err %v", pathc.cid, r)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: detachall err %v", pathc.cid, r)
 		err = r
 	}
 	if r := pathc.FidClnt.Close(); r != nil {
-		db.DPrintf(db.TEST, "%v: close err %v", pathc.cid, r)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: close err %v", pathc.cid, r)
 	}
 	return err
 }
@@ -75,7 +75,7 @@ func (pathc *PathClnt) MntClnt() *mntclnt.MntClnt {
 func (pathc *PathClnt) detachAll() error {
 	var err error
 	eps := pathc.mntclnt.Mounts()
-	db.DPrintf(db.ALWAYS, "%v: Fslib.detachAll %v\n", pathc.cid, eps)
+	db.DPrintf(db.PATHCLNT, "%v: Fslib.detachAll %v\n", pathc.cid, eps)
 	for _, ep := range eps {
 		if r := pathc.mntclnt.Detach(ep); r != nil {
 			db.DPrintf(db.PATHCLNT_ERR, "%v: detachAll %v err %v\n", pathc.cid, ep, r)
@@ -238,6 +238,7 @@ func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, 
 	}
 	_, err = pathc.FidClnt.Open(fid, mode)
 	if err != nil {
+		db.DPrintf(db.PATHCLNT_ERR, "%v: Open: open failed %v %v err %v\n", pathc.cid, fid, pn, err)
 		return sp.NoFid, err
 	}
 	return fid, nil
@@ -253,33 +254,6 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w Watch) error {
 		} else {
 			w(err)
 		}
-	}()
-	return nil
-}
-
-func (pathc *PathClnt) SetRemoveWatch(pn string, principal *sp.Tprincipal, w Watch) error {
-	db.DPrintf(db.PATHCLNT, "%v: SetRemoveWatch %v", pathc.cid, pn)
-	p, err := serr.PathSplitErr(pn)
-	if err != nil {
-		return err
-	}
-	fid, err := pathc.walk(p, principal, path.EndSlash(pn), nil)
-	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: SetRemoveWatch: Walk %v err %v", pathc.cid, pn, err)
-		return err
-	}
-	if w == nil {
-		return serr.NewErr(serr.TErrInval, "watch")
-	}
-	go func() {
-		err := pathc.FidClnt.Watch(fid)
-		db.DPrintf(db.PATHCLNT, "%v: SetRemoveWatch: Watch %v %v err %v\n", pathc.cid, fid, pn, err)
-		if err == nil {
-			w(nil)
-		} else {
-			w(err)
-		}
-		pathc.Clunk(fid)
 	}()
 	return nil
 }
@@ -326,11 +300,11 @@ func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid, f)
 	if serr.Retry(err) {
 		dir := p.Dir()
-		base := path.Path{p.Base()}
+		base := path.Tpathname{p.Base()}
 		resolve := true
 		if p.Base() == err.Obj { // was the final pn component a symlink?
 			dir = p
-			base = path.Path{}
+			base = path.Tpathname{}
 			resolve = path.EndSlash(pn)
 		}
 		fid, err = pathc.walk(dir, principal, resolve, nil)

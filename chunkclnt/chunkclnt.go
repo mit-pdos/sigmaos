@@ -6,35 +6,29 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	rpcproto "sigmaos/rpc/proto"
+	"sigmaos/rpcdirclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/unionrpcclnt"
 )
 
 type ChunkClnt struct {
-	*unionrpcclnt.UnionRPCClnt
+	*rpcdirclnt.RPCDirClnt
 	done int32
 }
 
 func NewChunkClnt(fsl *fslib.FsLib) *ChunkClnt {
 	db.DPrintf(db.CHUNKCLNT, "NewChunkClnt")
 	ckclnt := &ChunkClnt{
-		UnionRPCClnt: unionrpcclnt.NewUnionRPCClnt(fsl, sp.CHUNKD, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
+		RPCDirClnt: rpcdirclnt.NewRPCDirClnt(fsl, sp.CHUNKD, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
 	}
-	// Update chunkds, so that unionrpcclnt starts monitoring them
-	ckclnt.updateChunkds()
 	return ckclnt
 }
 
-func (ckclnt *ChunkClnt) updateChunkds() {
-	ckclnt.UnionRPCClnt.UpdateSrvs(false)
-}
-
 func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {
-	ckclnt.UnionRPCClnt.UnregisterSrv(srv)
+	ckclnt.RPCDirClnt.RemoveEntry(srv)
 }
 
 func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, paths []string) (*sp.Stat, string, error) {
-	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
+	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
 	if err != nil {
 		return nil, "", err
 	}
@@ -54,7 +48,7 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 
 // For chunksrv to fetch chunk from another chunksrv and return data in b
 func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, string, error) {
-	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
+	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
 	if err != nil {
 		return 0, "", err
 	}
@@ -78,7 +72,7 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 
 // For uprocsrv to ask chunksrv to fetch ck, but not return data to uprocsrv
 func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string) (sp.Tsize, string, error) {
-	rpcc, err := ckclnt.UnionRPCClnt.GetClnt(srvid)
+	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
 	if err != nil {
 		return 0, "", err
 	}

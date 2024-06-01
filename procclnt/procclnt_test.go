@@ -2,7 +2,7 @@ package procclnt_test
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"testing"
@@ -15,6 +15,7 @@ import (
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -130,7 +131,6 @@ func TestWaitExitSimpleSingleBE(t *testing.T) {
 	}
 	spawnWaitSleeper(ts, nil)
 	ts.Shutdown()
-	// test.Dump(t)
 }
 
 func TestWaitExitSimpleSingleLC(t *testing.T) {
@@ -171,8 +171,8 @@ func TestWaitExitOne(t *testing.T) {
 
 	// cleaned up (may take a bit)
 	time.Sleep(500 * time.Millisecond)
-	_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
-	assert.NotNil(t, err, "Stat %v", path.Join(sp.PIDS, pid.String()))
+	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 
 	end := time.Now()
 
@@ -204,8 +204,8 @@ func TestWaitExitN(t *testing.T) {
 
 			// cleaned up (may take a bit)
 			time.Sleep(500 * time.Millisecond)
-			_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
-			assert.NotNil(t, err, "Stat %v", path.Join(sp.PIDS, pid.String()))
+			_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+			assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 
 			checkSleeperResult(t, ts, pid)
 			cleanSleeperResult(t, ts, pid)
@@ -233,14 +233,14 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	// cleaned up
 	for {
-		_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+		_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
 		if err != nil {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 		db.DPrintf(db.TEST, "PID dir not deleted yet.")
 	}
-	assert.NotNil(t, err, "Stat %v", path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	assert.NotNil(t, err, "Stat %v", filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
@@ -270,7 +270,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -299,7 +299,7 @@ func TestWaitExitParentCrash(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -371,7 +371,8 @@ func TestCrashProcOne(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status != nil && status.IsStatusErr(), "Status not err")
-	assert.Equal(t, "Non-sigma error  Non-sigma error  exit status 2", status.Msg(), "WaitExit")
+	sr := serr.NewErrString(status.Msg())
+	assert.Equal(t, sr.Err.Error(), "exit status 2", "WaitExit")
 
 	ts.Shutdown()
 }
@@ -403,7 +404,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Equal(t, "hello", string(b), "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
+	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
 	assert.NotNil(t, err, "Stat")
 
 	cleanSleeperResult(t, ts, pid1)
@@ -449,7 +450,7 @@ func TestEarlyExitN(t *testing.T) {
 			assert.True(t, contentsCorrect, "Incorrect file contents: %v", string(b))
 
 			// .. and cleaned up
-			_, err = ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
+			_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
 			assert.NotNil(t, err, "Stat")
 
 			cleanSleeperResult(t, ts, pid1)
@@ -506,8 +507,8 @@ func TestConcurrentProcs(t *testing.T) {
 			checkSleeperResult(t, ts, pid)
 			cleanSleeperResult(t, ts, pid)
 			time.Sleep(100 * time.Millisecond)
-			_, err := ts.Stat(path.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
-			assert.NotNil(t, err, "Stat %v", path.Join(sp.PIDS, pid.String()))
+			_, err := ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+			assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 		}(pid, &done, i)
 	}
 
@@ -758,7 +759,7 @@ func TestProcManyOK(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestProcCrashMany(t *testing.T) {
+func TestProcManyCrash(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -770,11 +771,12 @@ func TestProcCrashMany(t *testing.T) {
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
-	assert.True(t, status.IsStatusOK(), status)
+	sr := serr.NewErrString(status.Msg())
+	assert.Equal(t, sr.Err.Error(), "exit status 2", "WaitExit")
 	ts.Shutdown()
 }
 
-func TestProcPartitionMany(t *testing.T) {
+func TestProcManyPartition(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -787,7 +789,8 @@ func TestProcPartitionMany(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	if assert.NotNil(t, status, "nil status") {
-		assert.True(t, status.IsStatusOK(), status)
+		sr := serr.NewErrString(status.Msg())
+		assert.Equal(t, sr.Err.Error(), "exit status 2", "WaitExit")
 	}
 	ts.Shutdown()
 }
@@ -872,7 +875,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2", sp.Names(st))
 	db.DPrintf(db.TEST, "Got out dir again")
 
 	err = ts.KillOne(sp.SCHEDDREL)
@@ -891,9 +894,9 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	sm.StopGroup()
 	db.DPrintf(db.TEST, "Stopped GroupMgr")
 
-	err = ts.RmDir(OUTDIR)
-	assert.Nil(t, err, "RmDir: %v", err)
-	db.DPrintf(db.TEST, "Get out dir 4")
+	// don't check for errors because between seeing the spinner file
+	// exists and deleting it, the lease may have expired.
+	ts.RmDir(OUTDIR)
 
 	ts.Shutdown()
 }

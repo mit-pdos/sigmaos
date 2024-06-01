@@ -1,7 +1,7 @@
 package schedsrv
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -217,6 +217,8 @@ func (sd *Schedd) getQueuedProcs() {
 			} else {
 				bias = true
 			}
+			// XXX for now
+			time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 			continue
 		}
 		sd.nProcGets.Add(1)
@@ -276,7 +278,7 @@ func (sd *Schedd) shouldGetBEProc() (proc.Tmem, bool) {
 }
 
 func (sd *Schedd) register() {
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sd.sc.FsLib}, path.Join(sp.LCSCHED, "~any"))
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sd.sc.FsLib}, filepath.Join(sp.LCSCHED, "~any"))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
@@ -308,7 +310,7 @@ func RunSchedd(kernelId string, reserveMcpu uint) error {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	sd := NewSchedd(sc, kernelId, reserveMcpu)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

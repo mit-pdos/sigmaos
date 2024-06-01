@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"math/bits"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -134,7 +134,7 @@ func SchedSetPriority(pid int, prio int) error {
 // SchedSetAffinityAllTasks pins all of a process's tasks to a mask of cores.
 func SchedSetAffinityAllTasks(procPid int, m *CPUMask) error {
 	pids := []int{}
-	taskDirPath := path.Join("/proc", strconv.Itoa(procPid), "task")
+	taskDirPath := filepath.Join("/proc", strconv.Itoa(procPid), "task")
 	ps, err := ioutil.ReadDir(taskDirPath)
 	if err != nil {
 		return fmt.Errorf("Error getting task pids: %v, %v", taskDirPath, err)
@@ -407,7 +407,7 @@ func coreIsOnline(cpu string) (bool, error) {
 	if cpu == "cpu0" {
 		return true, nil
 	}
-	if i, err := fsReadInt(path.Join("/sys/devices/system/cpu", cpu, "online")); err != nil {
+	if i, err := fsReadInt(filepath.Join("/sys/devices/system/cpu", cpu, "online")); err != nil {
 		return false, err
 	} else {
 		return i == 1, nil

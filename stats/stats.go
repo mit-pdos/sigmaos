@@ -11,7 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/serr"
@@ -208,7 +208,7 @@ func (sti *StatInfo) EnablePathCnts() {
 	sti.st.Paths = make(map[string]int)
 }
 
-func (sti *StatInfo) IncPath(path path.Path) {
+func (sti *StatInfo) IncPath(path path.Tpathname) {
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
 

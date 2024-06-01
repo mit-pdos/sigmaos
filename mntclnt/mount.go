@@ -11,7 +11,7 @@ import (
 )
 
 type Point struct {
-	path   path.Path
+	path   path.Tpathname
 	fid    sp.Tfid
 	closed bool
 }
@@ -33,7 +33,7 @@ func newMntTable() *MntTable {
 
 // add path, in order of longest path first. if the path
 // already exits, return error
-func (mnt *MntTable) add(path path.Path, fid sp.Tfid) *serr.Err {
+func (mnt *MntTable) add(path path.Tpathname, fid sp.Tfid) *serr.Err {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -59,7 +59,7 @@ func (mnt *MntTable) add(path path.Path, fid sp.Tfid) *serr.Err {
 }
 
 // prefix match and return postfix
-func match(mp path.Path, path path.Path) (bool, path.Path) {
+func match(mp path.Tpathname, path path.Tpathname) (bool, path.Tpathname) {
 	for i, s := range mp {
 		if i >= len(path) {
 			return false, nil
@@ -71,7 +71,7 @@ func match(mp path.Path, path path.Path) (bool, path.Path) {
 	return true, path[len(mp):]
 }
 
-func (mnt *MntTable) resolveMnt(path path.Path, allowResolve bool) (sp.Tfid, path.Path, *serr.Err) {
+func (mnt *MntTable) resolveMnt(path path.Tpathname, allowResolve bool) (sp.Tfid, path.Tpathname, *serr.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -96,7 +96,7 @@ func (mnt *MntTable) resolveMnt(path path.Path, allowResolve bool) (sp.Tfid, pat
 
 // Umount matches mnt point that is the longest prefix of path, if exact is
 // false, or matches path exact, if exact if true.
-func (mnt *MntTable) umount(path path.Path, exact bool) (sp.Tfid, path.Path, *serr.Err) {
+func (mnt *MntTable) umount(path path.Tpathname, exact bool) (sp.Tfid, path.Tpathname, *serr.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -125,7 +125,7 @@ func (mnt *MntTable) umount(path path.Path, exact bool) (sp.Tfid, path.Path, *se
 
 // For testing, mark mount point as closed so that client cannot
 // communicate and remount server.
-func (mnt *MntTable) disconnect(path path.Path) (sp.Tfid, *serr.Err) {
+func (mnt *MntTable) disconnect(path path.Tpathname) (sp.Tfid, *serr.Err) {
 	for _, p := range mnt.mounts {
 		ok, left := match(p.path, path)
 		if ok && len(left) == 0 {
@@ -138,7 +138,7 @@ func (mnt *MntTable) disconnect(path path.Path) (sp.Tfid, *serr.Err) {
 }
 
 // Where is path mounted at?  For Disconnect; it ignores closed.
-func (mnt *MntTable) mountedAt(path path.Path) path.Path {
+func (mnt *MntTable) mountedAt(path path.Tpathname) path.Tpathname {
 	for _, p := range mnt.mounts {
 		ok, _ := match(p.path, path)
 		if ok {

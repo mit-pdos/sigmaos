@@ -2,7 +2,7 @@
 package sigmaos
 
 import (
-	path "sigmaos/path"
+	"sigmaos/path"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -49,13 +49,13 @@ type FileAPI interface {
 	// RPC
 	WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error
 
-	// Wait unil directory changes
-	DirWait(fd int) error
+	// Watch for directory changes
+	DirWatch(fd int) error
 
 	// Mounting
 	MountTree(ep *sp.Tendpoint, tree, mount string) error
 	IsLocalMount(ep *sp.Tendpoint) (bool, error)
-	PathLastMount(path string) (path.Path, path.Path, error)
+	PathLastMount(path string) (path.Tpathname, path.Tpathname, error)
 	GetNamedEndpoint() (*sp.Tendpoint, error)
 	GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error)
 	InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error

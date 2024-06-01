@@ -4,7 +4,7 @@ package bootkernelclnt
 import (
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
@@ -40,14 +40,14 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 	args = append(args, kernelId)
 	// Ensure the kernel output directory has been created
 	os.Mkdir(K_OUT_DIR, 0777)
-	ofilePath := path.Join(K_OUT_DIR, kernelId+".stdout")
+	ofilePath := filepath.Join(K_OUT_DIR, kernelId+".stdout")
 	ofile, err := os.Create(ofilePath)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Create out file %v", ofilePath)
 		return "", err
 	}
 	defer ofile.Close()
-	efilePath := path.Join(K_OUT_DIR, kernelId+".stderr")
+	efilePath := filepath.Join(K_OUT_DIR, kernelId+".stderr")
 	efile, err := os.Create(efilePath)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Create out file %v", ofilePath)
@@ -117,7 +117,7 @@ func NewKernelClnt(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv) (*Kernel, e
 			return nil, err
 		}
 		pn = pn1
-		kernelId = path.Base(pn)
+		kernelId = filepath.Base(pn)
 	}
 
 	db.DPrintf(db.KERNEL, "NewKernelClnt %s %s\n", pn, kernelId)
@@ -135,8 +135,8 @@ func (k *Kernel) NewSigmaClnt(pe *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 
 func (k *Kernel) Shutdown() error {
 	db.DPrintf(db.KERNEL, "Shutdown kernel %s", k.kernelId)
-	k.SigmaClnt.StopMonitoringSrvs()
-	db.DPrintf(db.KERNEL, "Stopped monitoring srvs kernelclnt %v", k.kernelId)
+	k.SigmaClnt.StopWatchingSrvs()
+	db.DPrintf(db.KERNEL, "Stopped watching srvs kernelclnt %v", k.kernelId)
 	err := k.kclnt.Shutdown()
 	db.DPrintf(db.KERNEL, "Shutdown kernel %s err %v", k.kernelId, err)
 	if err != nil {

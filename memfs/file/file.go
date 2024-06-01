@@ -22,10 +22,10 @@ func NewFile() *File {
 	return f
 }
 
-func (f *File) Size() (sp.Tlength, *serr.Err) {
+func (f *File) Size() sp.Tlength {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return sp.Tlength(len(f.data)), nil
+	return sp.Tlength(len(f.data))
 }
 
 func (f *File) LenOff() sp.Toffset {

@@ -48,13 +48,20 @@ type File interface {
 	Write(CtxI, sp.Toffset, []byte, sp.Tfence) (sp.Tsize, *serr.Err)
 }
 
+type Tdel int
+
+const (
+	DEL_EXIST Tdel = iota + 1
+	DEL_EPHEMERAL
+)
+
 type Dir interface {
 	Inode
 	Stat(CtxI) (*sp.Stat, *serr.Err)
-	LookupPath(CtxI, path.Path) ([]FsObj, FsObj, path.Path, *serr.Err)
-	Create(CtxI, string, sp.Tperm, sp.Tmode, sp.TleaseId, sp.Tfence) (FsObj, *serr.Err)
+	LookupPath(CtxI, path.Tpathname) ([]FsObj, FsObj, path.Tpathname, *serr.Err)
+	Create(CtxI, string, sp.Tperm, sp.Tmode, sp.TleaseId, sp.Tfence, FsObj) (FsObj, *serr.Err)
 	ReadDir(CtxI, int, sp.Tsize) ([]*sp.Stat, *serr.Err)
-	Remove(CtxI, string, sp.Tfence) *serr.Err
+	Remove(CtxI, string, sp.Tfence, Tdel) *serr.Err
 	Rename(CtxI, string, string, sp.Tfence) *serr.Err
 	Renameat(CtxI, string, Dir, string, sp.Tfence) *serr.Err
 }
@@ -77,7 +84,7 @@ type RPC interface {
 	WriteRead(CtxI, sessp.IoVec) (sessp.IoVec, *serr.Err)
 }
 
-func Obj2File(o FsObj, fname path.Path) (File, *serr.Err) {
+func Obj2File(o FsObj, fname path.Tpathname) (File, *serr.Err) {
 	switch i := o.(type) {
 	case Dir:
 		return nil, serr.NewErr(serr.TErrNotFile, fname)

@@ -10,8 +10,7 @@ func (fl *FsLib) Symlink(target []byte, link string, lperm sp.Tperm) error {
 	if err != nil {
 		return err
 	}
-	_, err = fl.Write(fd, target)
-	if err != nil {
+	if _, err := fl.Write(fd, target); err != nil {
 		return err
 	}
 	return fl.CloseFd(fd)

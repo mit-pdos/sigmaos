@@ -18,12 +18,12 @@ type ListenFn func(addr *sp.Taddr) (net.Listener, error)
 func DialDirect(p *sp.Tprincipal, ep *sp.Tendpoint) (net.Conn, error) {
 	c, err := net.DialTimeout("tcp", ep.Addrs()[0].IPPort(), sp.Conf.Session.TIMEOUT/10)
 	if err != nil {
-		db.DPrintf(db.NETSIGMA_ERR, "Dial direct addr err %v: err %v", ep.Addrs()[0], err)
+		db.DPrintf(db.NETSIGMA_ERR, "[%v] Dial direct addr err %v: err %v", p, ep.Addrs()[0], err)
 	} else {
-		db.DPrintf(db.NETSIGMA, "Dial direct addr ok %v", ep.Addrs()[0])
+		db.DPrintf(db.NETSIGMA, "[%v] Dial direct addr ok %v", p, ep.Addrs()[0])
 		if ep.Type() == sp.INTERNAL_EP {
 			if err := writeConnPreamble(c, p); err != nil {
-				db.DPrintf(db.NETSIGMA_ERR, "Write preamble err: %v", err)
+				db.DPrintf(db.NETSIGMA_ERR, "[%v] Write preamble err: %v", p, err)
 				return nil, err
 			}
 		}
@@ -51,11 +51,11 @@ func AcceptDirect(l net.Listener, getPrincipal bool) (net.Conn, *sp.Tprincipal, 
 			var err error
 			p, err = readConnPreamble(c)
 			if err != nil {
-				db.DPrintf(db.NETSIGMA_ERR, "Write preamble err: %v", err)
+				db.DPrintf(db.NETSIGMA_ERR, "Read preamble err: %v", err)
 				return nil, nil, err
 			}
 		}
-		db.DPrintf(db.NETSIGMA, "Accept on %v ok p %v local addr: %v", l.Addr(), p, c.LocalAddr())
+		db.DPrintf(db.NETSIGMA, "[%v] Accept on %v ok local addr: %v", p, l.Addr(), c.LocalAddr())
 	}
 	return c, p, err
 }

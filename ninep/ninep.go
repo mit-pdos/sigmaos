@@ -1,9 +1,8 @@
+// The ninep package has Go structures for 9P based on the wire format
+// in Linux's 9p net/9p, include/net/9p, and various Go 9p
+// implementations, as well as the this 9P paper:
+// https://www.usenix.org/legacy/events/usenix05/tech/freenix/hensbergen.html
 package ninep
-
-//
-// Go structures for 9P based on the wire format in Linux's 9p net/9p,
-// include/net/9p, and various Go 9p implementations.
-//
 
 import (
 	"fmt"

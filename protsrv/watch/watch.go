@@ -26,7 +26,7 @@ import (
 
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
-	"sigmaos/lockmap"
+	"sigmaos/protsrv/lockmap"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -46,10 +46,10 @@ func newWatch(sct *clntcond.ClntCondTable, pl *lockmap.PathLock) *Watch {
 
 // Caller should hold path lock. On return caller has path lock again
 func (ws *Watch) Watch(cid sp.TclntId) *serr.Err {
-	db.DPrintf(db.WATCH, "Watch '%s'\n", ws.pl.Path())
+	db.DPrintf(db.WATCH, "%v: Watch '%s'\n", cid, ws.pl.Path())
 	err := ws.sc.Wait(cid)
 	if err != nil {
-		db.DPrintf(db.WATCH_ERR, "Watch done waiting '%v' err %v\n", ws.pl.Path(), err)
+		db.DPrintf(db.WATCH_ERR, "%v: Watch done waiting '%v' err %v\n", cid, ws.pl.Path(), err)
 	}
 	return err
 }

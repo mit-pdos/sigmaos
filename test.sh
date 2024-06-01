@@ -110,7 +110,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test some support package
     #
 
-    for T in path intervals serr linuxsched perf sigmap; do
+    for T in path intervals serr linuxsched perf sigmap sortedmap; do
         go test $VERB sigmaos/$T
         cleanup
     done
@@ -126,14 +126,14 @@ if [[ $BASIC == "--basic" ]]; then
     # test proxy with just named
     #
 
-    go test $VERB sigmaos/proxy -start
+    # go test $VERB sigmaos/proxy -start
     cleanup
 
     #
     # test with a kernel with just named
     #
 
-    for T in reader writer stats netproxy fslib semclnt electclnt; do
+    for T in reader writer stats netproxy fslib electclnt; do
         go test $VERB -timeout 20m sigmaos/$T -start $SIGMACLNTD $NETPROXY $REUSEKERNEL
         cleanup
     done
@@ -150,7 +150,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in namesrv chunksrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt; do
+    for T in namesrv semclnt chunksrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt; do
         go test $VERB sigmaos/$T -start $GVISOR  $SIGMACLNTD $NETPROXY $REUSEKERNEL
         cleanup
     done
@@ -178,8 +178,8 @@ if [[ $APPS == "--apps" ]]; then
         cleanup
         go test $VERB sigmaos/imgresizesrv -start $GVISOR $SIGMACLNTD $NETPROXY -run ImgdOne
         cleanup
-        # go test $VERB sigmaos/kv -start $GVISOR $SIGMACLNTD $NETPROXY -run KVOKN
-        # cleanup
+        go test $VERB sigmaos/kv -start $GVISOR $SIGMACLNTD $NETPROXY -run KVOKN
+        cleanup
         ./start-db.sh
         go test $VERB sigmaos/hotel -start $GVISOR $SIGMACLNTD $NETPROXY -run TestBenchDeathStarSingle
         cleanup

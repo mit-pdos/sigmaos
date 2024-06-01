@@ -2,7 +2,7 @@ package kernel
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 
 	db "sigmaos/debug"
@@ -212,7 +212,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		return nil, err
 	}
 	if k.Param.Overlays {
-		pn := path.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
+		pn := filepath.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
 
 		// container's first port is for uprocd
 		pm, err := s.GetContainer().GetPortBinding(port.UPROCD_PORT)
@@ -233,7 +233,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		if err != nil {
 			return nil, err
 		}
-		portFN := path.Join(pn, sp.PUBLIC_PORT)
+		portFN := filepath.Join(pn, sp.PUBLIC_PORT)
 		if err := k.PutFileJson(portFN, 0777, pm2); err != nil {
 			db.DPrintf(db.ERROR, "Error put public port file: %v", err)
 			return nil, err

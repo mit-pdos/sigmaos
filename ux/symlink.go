@@ -5,8 +5,8 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/file"
 	"sigmaos/fs"
+	"sigmaos/memfs/file"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -17,7 +17,7 @@ type Symlink struct {
 	*file.File
 }
 
-func newSymlink(path path.Path, iscreate bool) (*Symlink, *serr.Err) {
+func newSymlink(path path.Tpathname, iscreate bool) (*Symlink, *serr.Err) {
 	s := &Symlink{}
 	o, err := newObj(path)
 	if err == nil && iscreate {

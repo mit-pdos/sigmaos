@@ -2,7 +2,7 @@ package writer_test
 
 import (
 	"flag"
-	gopath "path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,7 +26,7 @@ func TestWriter1(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	d := []byte("abcdefg")
 	wrt, err := ts.CreateWriter(fn, 0777, sp.OWRITE)
 	assert.Nil(ts.T, err)

@@ -114,7 +114,7 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		db.DPrintf(db.PROXY, "Attach args %v mount err %v\n", args, err)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(err))
 	}
-	rets.Qid = npc.fidc.Qid(fid)
+	rets.Qid = npc.fidc.Qid(fid).Proto()
 	npc.fm.mapTo(args.Tfid(), fid)
 	npc.fidc.Lookup(fid).SetPath(path.Split(sp.NAMED))
 	db.DPrintf(db.PROXY, "Attach args %v rets %v fid %v\n", args, rets, fid)
@@ -140,7 +140,7 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 	qids := npc.pc.Qids(fid1)
-	rets.Qids = qids[len(qids)-len(args.Wnames):]
+	rets.Qids = sp.NewSliceProto(qids[len(qids)-len(args.Wnames):])
 	npc.fm.mapTo(args.Tnewfid(), fid1)
 	return nil
 }
@@ -155,7 +155,7 @@ func (npc *NpSess) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 		db.DPrintf(db.PROXY, "Open args %v err: %v\n", args, err)
 		return sp.NewRerrorSerr(err)
 	}
-	rets.Qid = qid
+	rets.Qid = qid.Proto()
 	db.DPrintf(db.PROXY, "Open args %v rets: %v\n", args, rets)
 	return nil
 }
@@ -177,7 +177,7 @@ func (npc *NpSess) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if fid != fid1 {
 		db.DPrintf(db.ALWAYS, "Create fid %v fid1 %v\n", fid, fid1)
 	}
-	rets.Qid = npc.pc.Qid(fid1)
+	rets.Qid = npc.pc.Qid(fid1).Proto()
 	db.DPrintf(db.PROXY, "Create args %v rets: %v\n", args, rets)
 	return nil
 }

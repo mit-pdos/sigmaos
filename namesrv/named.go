@@ -2,7 +2,7 @@ package namesrv
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -11,6 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/leaderetcd"
+	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
@@ -33,6 +34,12 @@ type Named struct {
 	crash  int
 	sess   *fsetcd.Session
 	signer sp.Tsigner
+	ephch  chan path.Tpathname
+}
+
+func newNamed(realm sp.Trealm) *Named {
+	nd := &Named{realm: realm, ephch: make(chan path.Tpathname)}
+	return nd
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -55,9 +62,8 @@ func Run(args []string) error {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 
-	nd := &Named{}
+	nd := newNamed(sp.Trealm(args[1]))
 	nd.signer = sp.Tsigner(pe.GetPID())
-	nd.realm = sp.Trealm(args[1])
 	crashing, err := strconv.Atoi(args[2])
 	if err != nil {
 		return fmt.Errorf("%v: crash %v isn't int", args[0], args[1])
@@ -76,7 +82,7 @@ func Run(args []string) error {
 	}
 	nd.SigmaClnt = sc
 
-	pn := path.Join(sp.REALMS, nd.realm.String()) + ".sem"
+	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"
 	sem := semclnt.NewSemClnt(nd.FsLib, pn)
 	if nd.realm != sp.ROOTREALM {
 		// create semaphore to signal realmd when we are the leader
@@ -118,7 +124,7 @@ func Run(args []string) error {
 		}
 	} else {
 		// note: the named proc runs in rootrealm; maybe change it XXX
-		pn = path.Join(sp.REALMS, nd.realm.String())
+		pn = filepath.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
 		if err := nd.MkEndpointFile(pn, ep, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v\n", nd.realm, pn, err)
@@ -134,7 +140,7 @@ func Run(args []string) error {
 
 	nd.getRoot(pn + "/")
 
-	if err := nd.CreateLeaderFile(path.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
+	if err := nd.CreateLeaderFile(filepath.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
 		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v\n", nd.elect.Key(), err)
 	}
 
@@ -188,6 +194,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	//	if nd.realm != sp.ROOTREALM {
 	//		ep = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
 	//	}
+	// ep.SetType(sp.INTERNAL_EP)
 	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }
@@ -203,6 +210,9 @@ func (nd *Named) detach(cid sp.TclntId) {
 }
 
 func (nd *Named) resign() error {
+	if err := nd.fs.StopWatch(); err != nil {
+		return err
+	}
 	if err := nd.SigmaPSrv.StopServing(); err != nil {
 		return err
 	}
@@ -230,5 +240,11 @@ func (nd *Named) waitExit(ch chan struct{}) {
 		db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
 		time.Sleep(time.Second)
 		continue
+	}
+}
+
+func (nd *Named) watchEphemeral() {
+	for pn := range nd.ephch {
+		nd.SigmaSrv.Notify(pn)
 	}
 }

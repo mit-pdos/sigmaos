@@ -8,9 +8,9 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/dir"
+	"sigmaos/memfs/inode"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -58,7 +58,7 @@ func NewRoot(ctx fs.CtxI, parent fs.Dir) fs.Dir {
 
 // XXX check that clnt is allowed to update fence, perhaps using ctx
 func allocFence(root fs.Dir, name string) (*Fence, *serr.Err) {
-	i, err := root.Create(ctx.NewCtxNull(), name, 0777, sp.OWRITE, sp.NoLeaseId, sp.NoFence())
+	i, err := root.Create(ctx.NewCtxNull(), name, 0777, sp.OWRITE, sp.NoLeaseId, sp.NoFence(), nil)
 	if err == nil {
 		f := i.(*Fence)
 		f.RLock()

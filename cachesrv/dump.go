@@ -6,7 +6,7 @@ import (
 	cacheproto "sigmaos/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	"sigmaos/sessp"

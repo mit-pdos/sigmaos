@@ -2,7 +2,7 @@ package sigmasrv
 
 import (
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/rpcsrv"
 	"sigmaos/serr"

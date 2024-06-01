@@ -155,6 +155,6 @@ func (sc *SigmaClnt) ClntExitOK() {
 	sc.ClntExit(proc.NewStatus(proc.StatusOK))
 }
 
-func (sc *SigmaClnt) StopMonitoringSrvs() {
-	sc.ProcAPI.(*procclnt.ProcClnt).StopMonitoringSrvs()
+func (sc *SigmaClnt) StopWatchingSrvs() {
+	sc.ProcAPI.(*procclnt.ProcClnt).StopWatchingSrvs()
 }

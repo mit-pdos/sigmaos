@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"syscall"
 
@@ -173,6 +174,20 @@ func NewErrError(error error) *Err {
 	return &Err{TErrError, "", error}
 }
 
+func NewErrString(err string) *Err {
+	//re := regexp.MustCompile(`{Err: (\w)+ Obj: (\w)+ ((\w+))}`)
+	re := regexp.MustCompile(`{Err: "(.*)" Obj: "(.*)" \((.*)\)}`)
+	s := re.FindStringSubmatch(`"{Err: "Non-sigma error" Obj: "" (exit status 2)}"`)
+	if len(s) == 4 {
+		for c := TErrBadattach; c <= TErrError; c++ {
+			if c.String() == s[1] {
+				return &Err{ErrCode: c, Obj: s[2], Err: fmt.Errorf("%s", s[3])}
+			}
+		}
+	}
+	return &Err{}
+}
+
 func (err *Err) Code() Terror {
 	return err.ErrCode
 }
@@ -180,7 +195,7 @@ func (err *Err) Code() Terror {
 func (err *Err) Unwrap() error { return err.Err }
 
 func (err *Err) Error() string {
-	return fmt.Sprintf("%v %v %v", err.ErrCode, err.Obj, err.Err)
+	return fmt.Sprintf("{Err: %q Obj: %q (%v)}", err.ErrCode, err.Obj, err.Err)
 }
 
 func (err *Err) String() string {
@@ -252,10 +267,26 @@ func IsErr(error error) (*Err, bool) {
 	return nil, false
 }
 
+func IsErrorNotfound(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return err.IsErrNotfound()
+	}
+	return false
+}
+
 func IsErrorUnavailable(error error) bool {
 	var err *Err
 	if errors.As(error, &err) {
 		return err.IsErrUnavailable()
+	}
+	return false
+}
+
+func IsErrorUnreachable(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return err.IsErrUnreachable()
 	}
 	return false
 }
@@ -268,7 +299,7 @@ func IsErrCode(error error, code Terror) bool {
 	return false
 }
 
-func PathSplitErr(p string) (path.Path, *Err) {
+func PathSplitErr(p string) (path.Tpathname, *Err) {
 	if p == "" {
 		return nil, NewErr(TErrInval, p)
 	}

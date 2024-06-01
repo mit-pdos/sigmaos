@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	// "sort"
 	"strconv"
 	"strings"
@@ -74,7 +74,7 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 	}
 	r.nmaptask = m
 
-	sc.MkDir(path.Dir(r.tmp), 0777)
+	sc.MkDir(filepath.Dir(r.tmp), 0777)
 	if r.asyncrw {
 		w, err := r.CreateAsyncWriter(r.tmp, 0777, sp.OWRITE)
 		if err != nil {
@@ -163,15 +163,12 @@ type Tdata map[string][]string
 func (r *Reducer) readFiles(input string) (sp.Tlength, time.Duration, Tdata, []string, error) {
 	data := make(map[string][]string, 0)
 	lostMaps := []string{}
-	files := make(map[string]bool)
+	nfile := 0
 	nbytes := sp.Tlength(0)
 	duration := time.Duration(0)
-	for len(files) < r.nmaptask {
-		var sts []*sp.Stat
-		err := r.ReadDirWait(input, func(sts0 []*sp.Stat) bool {
-			sts = sts0
-			return len(sts0) == len(files)
-		})
+	fw := fslib.NewFileWatcher(r.FsLib, input)
+	for nfile < r.nmaptask {
+		files, err := fw.WatchNewUniqueEntries()
 		if err != nil {
 			return 0, 0, nil, nil, err
 		}
@@ -179,28 +176,18 @@ func (r *Reducer) readFiles(input string) (sp.Tlength, time.Duration, Tdata, []s
 		if randOffset < 0 {
 			randOffset *= -1
 		}
-		n := 0
-		for i := range sts {
+		for i, _ := range files {
 			// Random offset to stop reducers from all banging on the same ux.
-			st := sts[(i+randOffset)%len(sts)]
-			if _, ok := files[st.Name]; !ok {
-				// Make sure we read an input file
-				// only once.  Since mappers are
-				// removing/creating files
-				// concurrently from the directory we
-				// also may have dup entries, so
-				// filter here.
-				files[st.Name] = true
-				n += 1
-				m, d, ok := r.readFile(st.Name, data)
-				if !ok {
-					lostMaps = append(lostMaps, strings.TrimPrefix(st.Name, "m-"))
-				}
-				//				runtime.GC()
-				//				debug.FreeOSMemory()
-				nbytes += m
-				duration += d
+			f := files[(i+randOffset)%len(files)]
+			m, d, ok := r.readFile(f, data)
+			if !ok {
+				lostMaps = append(lostMaps, strings.TrimPrefix(f, "m-"))
 			}
+			//				runtime.GC()
+			//				debug.FreeOSMemory()
+			nbytes += m
+			duration += d
+			nfile += 1
 		}
 	}
 	return nbytes, duration, data, lostMaps, nil
@@ -254,7 +241,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	duration += time.Since(start)
 
 	// Create symlink atomically.
-	if err := r.PutFileAtomic(r.outlink, 0777|sp.DMSYMLINK, []byte(r.tmp), sp.NoLeaseId); err != nil {
+	if err := r.PutFileAtomic(r.outlink, 0777|sp.DMSYMLINK, []byte(r.tmp)); err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
 	}
 	//	err = r.Rename(r.tmp, r.output)

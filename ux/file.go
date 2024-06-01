@@ -15,7 +15,7 @@ type File struct {
 	fd int
 }
 
-func newFile(path path.Path) (*File, *serr.Err) {
+func newFile(path path.Tpathname) (*File, *serr.Err) {
 	f := &File{}
 	o, err := newObj(path)
 	if err != nil {

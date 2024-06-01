@@ -2,7 +2,7 @@ package memfs
 
 import (
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

@@ -2,7 +2,7 @@ package container
 
 import (
 	"context"
-	"path"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -102,8 +102,8 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 		mnts = append(mnts,
 			mount.Mount{
 				Type:     mount.TypeBind,
-				Source:   path.Join("/tmp/sigmaos-uprocd-bin"),
-				Target:   path.Join(sp.SIGMAHOME, "bin/kernel"),
+				Source:   filepath.Join("/tmp/sigmaos-uprocd-bin"),
+				Target:   filepath.Join(sp.SIGMAHOME, "bin/kernel"),
 				ReadOnly: true,
 			},
 		)
@@ -148,7 +148,7 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 	}
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v portmap %v", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks, pm)
-	cgroupPath := path.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
+	cgroupPath := filepath.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
 	c := &Container{
 		overlays:   p.GetProcEnv().GetOverlays(),
 		PortMap:    pm,

@@ -13,7 +13,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func newTpath(pn path.Path) sp.Tpath {
+func newTpath(pn path.Tpathname) sp.Tpath {
 	h := fnv.New64a()
 	t := time.Now() // maybe use revision
 	h.Write([]byte(pn.String() + t.String()))
@@ -23,13 +23,13 @@ func newTpath(pn path.Path) sp.Tpath {
 // An obj is either a directory or file
 type Obj struct {
 	fs     *fsetcd.FsEtcd
-	pn     path.Path
+	pn     path.Tpathname
 	di     fsetcd.DirEntInfo
 	parent sp.Tpath
 	mtime  int64
 }
 
-func newObjDi(fs *fsetcd.FsEtcd, pn path.Path, di fsetcd.DirEntInfo, parent sp.Tpath) *Obj {
+func newObjDi(fs *fsetcd.FsEtcd, pn path.Tpathname, di fsetcd.DirEntInfo, parent sp.Tpath) *Obj {
 	o := &Obj{fs: fs, pn: pn, di: di, parent: parent}
 	return o
 }
@@ -57,9 +57,8 @@ func (o *Obj) Parent() fs.Dir {
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.NAMED, "Stat: %v\n", o)
 
-	// Check that the object is still exists if emphemeral
-	if o.di.Perm.IsEphemeral() || o.di.Nf == nil {
-		if nf, _, err := o.fs.GetFile(o.di.Path); err != nil {
+	if o.di.Nf == nil {
+		if nf, _, err := o.fs.GetFile(&o.di); err != nil {
 			db.DPrintf(db.NAMED, "Stat: GetFile %v err %v\n", o, err)
 			return nil, serr.NewErr(serr.TErrNotfound, o.pn.Base())
 		} else {
@@ -84,5 +83,5 @@ func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
 
 func (o *Obj) putObj(f sp.Tfence, data []byte) *serr.Err {
 	nf := fsetcd.NewEtcdFile(o.di.Perm|0777, o.di.Nf.TclntId(), o.di.Nf.TleaseId(), data)
-	return o.fs.PutFile(o.di.Path, nf, f)
+	return o.fs.PutFile(&o.di, nf, f)
 }

@@ -8,6 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 )
 
@@ -81,9 +82,12 @@ func main() {
 			ch <- nil
 		})
 
-		if err != nil && !(os.Args[2] == "crash" && err.Error() == "status error Non-sigma error  Non-sigma error  exit status 2") {
-			sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
-			os.Exit(1)
+		if err != nil {
+			sr := serr.NewErrString(err.Error())
+			if !(os.Args[2] == "crash" && sr.Error() != "exit status 2") {
+				sc.ClntExit(proc.NewStatusErr(sr.Error(), nil))
+				os.Exit(1)
+			}
 		}
 	}
 	sc.ClntExitOK()

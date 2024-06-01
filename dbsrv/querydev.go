@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	"sigmaos/sessp"

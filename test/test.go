@@ -6,7 +6,7 @@ package test
 import (
 	"flag"
 	"fmt"
-	gopath "path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,9 +15,7 @@ import (
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	"sigmaos/netproxyclnt"
 	"sigmaos/netsigma"
-	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/realmclnt"
 	"sigmaos/sigmaclnt"
@@ -124,7 +122,7 @@ func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "NewTstatePath: %v\n", err)
 		return nil, err
 	}
-	if path == gopath.Join(sp.MEMFS, "~local/")+"/" {
+	if path == filepath.Join(sp.MEMFS, "~local/")+"/" {
 		ts.memfs = proc.NewProc("memfsd", []string{})
 		err := ts.Spawn(ts.memfs)
 		assert.Nil(t, err)
@@ -324,21 +322,4 @@ func (ts *Tstate) Shutdown() error {
 		}
 	}
 	return nil
-}
-
-func Dump(t *testing.T) {
-	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
-	assert.Nil(t, err1)
-	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
-	// TODO: pass proper mount
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, nil, "", "", "", false, false, false)
-	assert.False(t, true, "Unimplemented")
-	return
-	npc := netproxyclnt.NewNetProxyClnt(pe)
-	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
-	assert.Nil(t, err)
-	nd, err := fs.ReadDir(fsetcd.ROOT)
-	assert.Nil(t, err)
-	err = fs.Dump(0, nd, path.Path{}, fsetcd.ROOT)
-	assert.Nil(t, err)
 }

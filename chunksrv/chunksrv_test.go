@@ -2,7 +2,7 @@ package chunksrv_test
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,7 +39,7 @@ func newTstate(t *testing.T, n int) *Tstate {
 	assert.Nil(t, err, "Boot node: %v", err)
 
 	ckclnt := chunkclnt.NewChunkClnt(ts.FsLib)
-	srvs, err := ckclnt.GetSrvs()
+	srvs, err := ckclnt.GetEntries()
 	assert.Nil(t, err)
 
 	ts.srvs = srvs
@@ -54,9 +54,14 @@ func newTstate(t *testing.T, n int) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) shutdown() {
+	ts.ckclnt.StopWatching()
+	ts.Shutdown()
+}
+
 func (ts *Tstate) check(srv string, st *sp.Stat) {
 	pn := chunksrv.PathHostKernelRealm(srv, sp.ROOTREALM)
-	pn = path.Join(pn, PROG)
+	pn = filepath.Join(pn, PROG)
 	fi, err := os.Stat(pn)
 	assert.Nil(ts.T, err)
 	assert.Equal(ts.T, st.Tlength(), sp.Tlength(fi.Size()))
@@ -105,7 +110,7 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 func TestFetchOrigin(t *testing.T) {
 	ts := newTstate(t, 0)
 	ts.fetch(ts.srvs[0], []string{PATH}, []string{PATH})
-	ts.Shutdown()
+	ts.shutdown()
 }
 
 func TestFetchCache(t *testing.T) {
@@ -114,7 +119,7 @@ func TestFetchCache(t *testing.T) {
 	ts.fetch(ts.srvs[0], []string{PATH}, []string{PATH})
 	ts.fetch(ts.srvs[0], []string{PATH}, []string{chunk.ChunkdPath(ts.srvs[0])})
 
-	ts.Shutdown()
+	ts.shutdown()
 }
 
 func TestFetchChunkd(t *testing.T) {
@@ -128,7 +133,7 @@ func TestFetchChunkd(t *testing.T) {
 	pn := chunk.ChunkdPath(kid)
 	ts.fetch(ts.srvs[0], []string{pn}, []string{pn})
 
-	ts.Shutdown()
+	ts.shutdown()
 }
 
 func TestFetchPath(t *testing.T) {
@@ -141,7 +146,7 @@ func TestFetchPath(t *testing.T) {
 	// fetch through chunkd 0 with chunkd1 in search path,
 	// so data should come from chunkd1
 	ts.fetch(ts.srvs[0], []string{pn1, PATH}, []string{pn1})
-	ts.Shutdown()
+	ts.shutdown()
 }
 
 func TestFetchConcur(t *testing.T) {
@@ -164,5 +169,5 @@ func TestFetchConcur(t *testing.T) {
 	for i := 0; i < N; i++ {
 		<-ch
 	}
-	ts.Shutdown()
+	ts.shutdown()
 }

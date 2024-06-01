@@ -96,7 +96,7 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 					pn, ok := fs.dc.find(key2path(key))
 					db.DPrintf(db.FSETCD, "WatchEphemeral: watchResp event %v %v\n", key, pn)
 					if ok {
-						db.DPrintf(db.TEST, "WatchEphemeral: Notify ephemeral '%v'\n", pn)
+						db.DPrintf(db.WATCH, "WatchEphemeral: Notify ephemeral '%v'\n", pn)
 						ch <- pn
 					} else {
 						// If not in cache, next readDirEtcd of the

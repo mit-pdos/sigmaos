@@ -25,12 +25,12 @@ func (li *LeaseInfo) Lease() sp.TleaseId {
 }
 
 func (li *LeaseInfo) String() string {
-	return fmt.Sprintf("{%q %v}", li.srv, li.lid)
+	return fmt.Sprintf("{srv %q lid %v}", li.srv, li.lid)
 }
 
 func (li *LeaseInfo) extendLease() error {
 	var res leaseproto.ExtendResult
-	db.DPrintf(db.LEASECLNT, "extend lease %v %v\n", li.srv, li.lid)
+	db.DPrintf(db.LEASECLNT, "extend lease %v\n", li)
 	return li.lmc.cc.RPC(li.srv, "LeaseSrv.Extend", &leaseproto.ExtendRequest{LeaseId: uint64(li.lid)}, &res)
 }
 

@@ -47,6 +47,7 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 	var endpoints map[string]*network.EndpointSettings
 	ports := []sp.Tport{port.UPROCD_PORT, port.PUBLIC_PORT}
 	if overlays {
+		db.DPrintf(db.CONTAINER, "Running with overlay ports: %v", ports)
 		up = port.UPROCD_PORT
 		netmode = "bridge"
 		netname := "sigmanet-testuser"
@@ -143,7 +144,7 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 
 	var pm *port.PortMap
 	if overlays {
-		pm = port.NewPortMap(json.NetworkSettings.NetworkSettingsBase.Ports, []sp.Tport{})
+		pm = port.NewPortMap(json.NetworkSettings.NetworkSettingsBase.Ports, ports)
 	}
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v portmap %v", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks, pm)

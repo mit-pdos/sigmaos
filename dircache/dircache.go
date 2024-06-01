@@ -195,23 +195,25 @@ func (dc *DirCache[E]) RoundRobin() (string, error) {
 }
 
 func (dc *DirCache[E]) RemoveEntry(name string) bool {
-	db.DPrintf(dc.LSelector, "UnregisterSrv %v", name)
-	defer db.DPrintf(dc.LSelector, "Done UnregisterSrv")
-	return dc.dir.Delete(name)
+	db.DPrintf(dc.LSelector, "RemoveEntry %v", name)
+	ok := dc.dir.Delete(name)
+	db.DPrintf(dc.LSelector, "Done Remove entry %v %v", ok, dc.dir)
+	return ok
 }
 
 // Read directory from server and return unique files. The caller may
 // hold the dd mutex
 func (dc *DirCache[E]) getEntries() ([]string, error) {
 	s := time.Now()
-	defer db.DPrintf(db.SPAWN_LAT, "[%v] getEntries %v", dc.LSelector, time.Since(s))
+	defer db.DPrintf(db.SPAWN_LAT, "getEntries %v", time.Since(s))
 
 	fw := fslib.NewFileWatcher(dc.FsLib, dc.Path)
 	fns, err := fw.GetUniqueEntries()
 	if err != nil {
+		db.DPrintf(dc.ESelector, "getEntries %v err", err)
 		return nil, err
 	}
-	db.DPrintf(dc.LSelector, "[%v] getEntries %v", dc.LSelector, fns)
+	db.DPrintf(dc.LSelector, "getEntries %v", fns)
 	return fns, nil
 }
 

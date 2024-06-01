@@ -1,6 +1,9 @@
+// Package ctx provices the context for a request
 package ctx
 
 import (
+	"fmt"
+
 	"sigmaos/clntcond"
 	"sigmaos/fs"
 	"sigmaos/sessp"
@@ -25,6 +28,10 @@ func NewCtx(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto, sessid
 		sct:       sct,
 		fencefs:   fencefs,
 	}
+}
+
+func (ctx *Ctx) String() string {
+	return fmt.Sprintf("{pr %v sid %v clnt %v}", ctx.principal, ctx.sessid, ctx.clntid)
 }
 
 func NewPrincipalOnlyCtx(principal *sp.Tprincipal) *Ctx {

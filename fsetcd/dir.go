@@ -60,7 +60,7 @@ func (di *DirInfo) find(del sp.Tpath) (path.Tpathname, bool) {
 		e, ok := di.Ents.Lookup(n)
 		if ok {
 			if e.Path == del {
-				db.DPrintf(db.FSETCD, "find %q %v %v\n", n, e.Pn, del)
+				db.DPrintf(db.FSETCD, "find %q Pn %v del %v\n", n, e.Pn, del)
 				return e.Pn, true
 			}
 		}
@@ -103,7 +103,8 @@ func (fse *FsEtcd) ReadRootDir() (*DirInfo, *serr.Err) {
 	return fse.ReadDir(newDirEntInfoP(ROOT, sp.DMDIR))
 }
 
-func (fse *FsEtcd) Lookup(dei *DirEntInfo, name string) (*DirEntInfo, *serr.Err) {
+func (fse *FsEtcd) Lookup(dei *DirEntInfo, pn path.Tpathname) (*DirEntInfo, *serr.Err) {
+	name := pn.Base()
 	dir, _, err := fse.readDir(dei, TSTAT_NONE)
 	if err != nil {
 		return nil, err
@@ -111,6 +112,9 @@ func (fse *FsEtcd) Lookup(dei *DirEntInfo, name string) (*DirEntInfo, *serr.Err)
 	db.DPrintf(db.FSETCD, "Lookup %q %v %v\n", name, dei.Path, dir)
 	e, ok := dir.Ents.Lookup(name)
 	if ok {
+		if e.Perm.IsEphemeral() && e.Pn == nil {
+			e.Pn = pn.Copy()
+		}
 		return e, nil
 	}
 	return nil, serr.NewErr(serr.TErrNotfound, name)

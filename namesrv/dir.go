@@ -28,9 +28,9 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 	s := time.Now()
 	db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx.ClntId(), pn, d)
 	name := pn[0]
-	di, err := d.fs.Lookup(&d.Obj.di, name)
+	pn1 := d.pn.Copy().Append(name)
+	di, err := d.fs.Lookup(&d.Obj.di, pn1)
 	if err == nil {
-		pn1 := d.pn.Copy().Append(name)
 		obj := newObjDi(d.fs, pn1, *di, d.Obj.di.Path)
 		var o fs.FsObj
 		if obj.di.Perm.IsDir() {

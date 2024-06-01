@@ -26,7 +26,7 @@ func newDir(o *Obj) *Dir {
 
 func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	s := time.Now()
-	db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx, pn, d)
+	db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx.ClntId(), pn, d)
 	name := pn[0]
 	di, err := d.fs.Lookup(&d.Obj.di, name)
 	if err == nil {
@@ -48,7 +48,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 }
 
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
-	db.DPrintf(db.NAMED, "Create %v name: %v perm %v lid %v\n", d, name, perm, lid)
+	db.DPrintf(db.NAMED, "%v: Create %v name: %v perm %v lid %v\n", ctx.ClntId(), name, perm, lid)
 	cid := sp.NoClntId
 	if perm.IsEphemeral() {
 		cid = ctx.ClntId()
@@ -79,7 +79,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.NAMED, "fsetcd.ReadDir %d %v\n", cursor, dir)
+	db.DPrintf(db.NAMED, "%v: fsetcd.ReadDir %d %v\n", ctx.ClntId(), cursor, dir)
 	len := dir.Ents.Len() - 1 // ignore "."
 	if cursor > len {
 		return nil, nil
@@ -116,17 +116,17 @@ func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.Err {
-	db.DPrintf(db.NAMED, "Remove %v name %v\n", d, name)
+	db.DPrintf(db.NAMED, "%v: Remove %v name %v\n", ctx.ClntId(), d, name)
 	return d.fs.Remove(&d.Obj.di, name, f, del)
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
-	db.DPrintf(db.NAMED, "Rename %v: %v %v\n", d, from, to)
+	db.DPrintf(db.NAMED, "%v: Rename %v: %v %v\n", ctx.ClntId(), d, from, to)
 	return d.fs.Rename(&d.Obj.di, from, to, f)
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfence) *serr.Err {
-	db.DPrintf(db.NAMED, "Renameat %v: %v %v\n", d, from, to)
+	db.DPrintf(db.NAMED, "%v: Renameat %v: %v %v\n", ctx.ClntId(), d, from, to)
 	dt := od.(*Dir)
 	old := d.pn.Append(from)
 	new := dt.pn.Append(to)

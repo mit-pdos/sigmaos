@@ -37,6 +37,10 @@ type EtcdDirEnt struct {
 	*EtcdDirEntProto
 }
 
+func prefixEphemeral(realm sp.Trealm) string {
+	return EPHEMERAL + string(realm)
+}
+
 func key2path(key string) sp.Tpath {
 	key = strings.TrimPrefix(key, EPHEMERAL)
 	parts := strings.Split(key, ":")

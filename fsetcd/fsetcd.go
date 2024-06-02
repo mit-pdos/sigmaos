@@ -82,7 +82,7 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 	wopts := make([]clientv3.OpOption, 0)
 	wopts = append(wopts, clientv3.WithPrefix())
 	wopts = append(wopts, clientv3.WithFilterPut())
-	wch := fs.Client.Watch(context.TODO(), EPHEMERAL, wopts...)
+	wch := fs.Client.Watch(context.TODO(), prefixEphemeral(fs.realm), wopts...)
 	if wch == nil {
 		return fmt.Errorf("watchEphemeral: Watch failed")
 	}
@@ -93,10 +93,11 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 			if ok {
 				for _, e := range watchResp.Events {
 					key := string(e.Kv.Key)
-					pn, ok := fs.dc.find(key2path(key))
-					db.DPrintf(db.FSETCD, "WatchEphemeral: watchResp event %v %v\n", key, pn)
+					path := key2path(key)
+					pn, ok := fs.dc.find(path)
+					db.DPrintf(db.FSETCD, "WatchEphemeral: %v watchResp event %v %v", fs.realm, key, pn)
 					if ok {
-						db.DPrintf(db.WATCH, "WatchEphemeral: Notify ephemeral '%v'\n", pn)
+						db.DPrintf(db.WATCH, "WatchEphemeral: %v Notify ephemeral '%v'", fs.realm, pn)
 						ch <- pn
 					} else {
 						// If not in cache, next readDirEtcd of the
@@ -104,7 +105,7 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 						// on the directory, then the directory is
 						// likely cached.  XXX don't evict directories
 						// with watches?
-						db.DPrintf(db.ALWAYS, "WatchEphemeral: event not found %v\n", key)
+						db.DPrintf(db.ALWAYS, "WatchEphemeral: %v event not found %v", fs.realm, key)
 					}
 				}
 			} else {

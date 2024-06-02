@@ -2,7 +2,7 @@
 
 # Note: order is important.
 
-for P in sigmap sessp proc ; do
+for P in sigmap sessp proc fsetcd ; do
   echo "protoc $P"
   protoc -I=. --go_out=../ $P/$P.proto
 done

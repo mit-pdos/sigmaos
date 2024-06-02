@@ -24,7 +24,7 @@ type DirCache[E any] struct {
 	sync.Mutex
 	dir       *sortedmap.SortedMap[string, E]
 	watching  bool
-	done      uint32
+	done      atomic.Uint64
 	Path      string
 	LSelector db.Tselector
 	ESelector db.Tselector
@@ -218,13 +218,13 @@ func (dc *DirCache[E]) getEntries() ([]string, error) {
 }
 
 func (dc *DirCache[E]) StopWatching() {
-	atomic.StoreUint32(&dc.done, 1)
+	dc.done.Add(1)
 }
 
 // Monitor for changes to the directory and update the cached one
 func (dc *DirCache[E]) watchDir() {
 	retry := false
-	for atomic.LoadUint32(&dc.done) != 1 {
+	for dc.done.Load() == 0 {
 		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
 		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0))
 		if ok { // reset retry?

@@ -381,8 +381,8 @@ func waitForClnts(rootts *test.Tstate, n int) {
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 
 	// Wait for n - 1 clnts to register themselves.
-	fw := fslib.NewFileWatcher(rootts.FsLib, clidir)
-	err = fw.WaitNEntries(n) // n - 1 + the semaphore
+	dr := fslib.NewDirReader(rootts.FsLib, clidir)
+	err = dr.WaitNEntries(n) // n - 1 + the semaphore
 	assert.Nil(rootts.T, err, "Err WaitNentries: %v", err)
 	sem := createClntWaitSem(rootts)
 	err = sem.Up()

@@ -207,8 +207,8 @@ func (dc *DirCache[E]) getEntries() ([]string, error) {
 	s := time.Now()
 	defer db.DPrintf(db.SPAWN_LAT, "getEntries %v", time.Since(s))
 
-	fw := fslib.NewFileWatcher(dc.FsLib, dc.Path)
-	fns, err := fw.GetUniqueEntries()
+	dr := fslib.NewDirReader(dc.FsLib, dc.Path)
+	fns, err := dr.GetUniqueEntries()
 	if err != nil {
 		db.DPrintf(dc.ESelector, "getEntries %v err", err)
 		return nil, err
@@ -225,8 +225,8 @@ func (dc *DirCache[E]) StopWatching() {
 func (dc *DirCache[E]) watchDir() {
 	retry := false
 	for atomic.LoadUint32(&dc.done) != 1 {
-		fw := fslib.NewFileWatcher(dc.FsLib, dc.Path)
-		ents, ok, err := fw.WatchUniqueEntries(dc.dir.Keys(0))
+		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
+		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0))
 		if ok { // reset retry?
 			retry = false
 		}

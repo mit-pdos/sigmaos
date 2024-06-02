@@ -27,12 +27,33 @@ const (
 	EPHEMERAL = "t-"
 )
 
+type EphemeralKey struct {
+	Path sp.Tpath
+	Pn   path.Tpathname
+}
+
 func (fs *FsEtcd) path2key(realm sp.Trealm, dei *DirEntInfo) string {
 	return string(realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
 func (fs *FsEtcd) ephemkey(realm sp.Trealm, dei *DirEntInfo) string {
 	return EPHEMERAL + string(realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
+}
+
+func (fs *FsEtcd) EphemeralPaths() ([]EphemeralKey, error) {
+	resp, err := fs.Clnt().Get(context.TODO(), EPHEMERAL, clientv3.WithFromKey())
+	db.DPrintf(db.FSETCD, "EphemeralKeys %v err %v\n", resp, err)
+	if err != nil {
+		return nil, serr.NewErrError(err)
+	}
+	ekeys := make([]EphemeralKey, 0)
+	for _, kv := range resp.Kvs {
+		ekeys = append(ekeys, EphemeralKey{
+			Path: key2path(string(kv.Key)),
+			Pn:   path.Split(string(kv.Value)),
+		})
+	}
+	return ekeys, nil
 }
 
 func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {

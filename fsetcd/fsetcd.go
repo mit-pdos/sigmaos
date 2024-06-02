@@ -95,7 +95,7 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 				for _, e := range watchResp.Events {
 					key := string(e.Kv.Key)
 					pn := string(e.PrevKv.Value)
-					db.DPrintf(db.FSETCD, "WatchEphemeral: %v watchResp event %e", fs.realm, key)
+					db.DPrintf(db.FSETCD, "WatchEphemeral: %v watchResp event %v", fs.realm, key)
 					db.DPrintf(db.WATCH, "WatchEphemeral: %v Notify ephemeral '%v'", fs.realm, pn)
 					ch <- path.Split(pn)
 				}

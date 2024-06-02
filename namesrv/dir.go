@@ -59,7 +59,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	di, err := d.fs.Create(&d.Obj.di, pn, path, nf, f)
+	di, err := d.fs.Create(&d.Obj.di, pn, path, nf, f, cid, lid)
 	if err != nil {
 		db.DPrintf(db.NAMED, "Create %v %q err %v\n", d, name, err)
 		return nil, err
@@ -122,7 +122,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.E
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.NAMED, "%v: Rename %v: %v %v\n", ctx.ClntId(), d, from, to)
-	return d.fs.Rename(&d.Obj.di, from, to, f)
+	return d.fs.Rename(&d.Obj.di, from, to, d.pn.Append(to), f)
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfence) *serr.Err {
@@ -171,6 +171,6 @@ func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
 	return newDir(newObjDi(fs, path.Tpathname{},
-		fsetcd.DirEntInfo{Perm: sp.DMDIR | 0777, Path: fsetcd.ROOT},
+		*fsetcd.NewDirEntInfoP(fsetcd.ROOT, sp.DMDIR|0777),
 		fsetcd.ROOT))
 }

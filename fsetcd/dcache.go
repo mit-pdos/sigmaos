@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/golang-lru/v2"
 
 	db "sigmaos/debug"
-	"sigmaos/path"
 	sp "sigmaos/sigmap"
 )
 
@@ -21,10 +20,6 @@ type dcEntry struct {
 
 func (dce *dcEntry) String() string {
 	return fmt.Sprintf("{dir %v v %v st %v}", dce.dir, dce.v, dce.stat)
-}
-
-func (dce *dcEntry) find(del sp.Tpath) (path.Tpathname, bool) {
-	return dce.dir.find(del)
 }
 
 type Dcache struct {
@@ -85,16 +80,4 @@ func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 	}
 	db.DPrintf(db.FSETCD, "Update dcache no entry %v %v", d, dir)
 	return false
-}
-
-// XXX maintain reverse index; handle remove, rename, etc.
-func (dc *Dcache) find(del sp.Tpath) (path.Tpathname, bool) {
-	for _, d := range dc.c.Keys() {
-		if de, ok := dc.c.Get(d); ok {
-			if p, ok := de.find(del); ok {
-				return p, true
-			}
-		}
-	}
-	return nil, false
 }

@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sortedmap"
@@ -27,10 +28,11 @@ const (
 )
 
 func (fs *FsEtcd) path2key(realm sp.Trealm, dei *DirEntInfo) string {
-	if dei.Perm.IsEphemeral() {
-		return EPHEMERAL + string(realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
-	}
 	return string(realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
+}
+
+func (fs *FsEtcd) ephemkey(realm sp.Trealm, dei *DirEntInfo) string {
+	return EPHEMERAL + string(realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
 func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
@@ -56,7 +58,7 @@ func (fs *FsEtcd) GetFile(dei *DirEntInfo) (*EtcdFile, sp.TQversion, *serr.Err) 
 }
 
 func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) *serr.Err {
-	opts := nf.LeaseOpts()
+	opts := dei.LeaseOpts()
 	if b, err := proto.Marshal(nf.EtcdFileProto); err != nil {
 		return serr.NewErrError(err)
 	} else {
@@ -71,7 +73,7 @@ func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) *serr.Err 
 			}
 		}
 		opst := []clientv3.Op{
-			clientv3.OpPut(fs.path2key(fs.realm, dei), string(b), opts...),
+			clientv3.OpPut(fs.path2key(fs.realm, dei), string(b)),
 		}
 		opsf := []clientv3.Op{
 			clientv3.OpGet(f.Prefix(), opts...),
@@ -122,10 +124,10 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 	nstat := 0
 	for _, e := range dir.Ents {
 		if e.Name == "." {
-			dents.Insert(e.Name, newDirEntInfo(nf, e.Tpath(), e.Tperm()))
+			dents.Insert(e.Name, NewDirEntInfo(nf, e.Tpath(), e.Tperm(), e.TclntId(), e.TleaseId()))
 			nstat += 1
 		} else {
-			di := newDirEntInfoP(e.Tpath(), e.Tperm())
+			di := NewDirEntInfoP(e.Tpath(), e.Tperm())
 			if e.Tperm().IsEphemeral() || stat == TSTAT_STAT {
 				// if file is emphemeral, etcd may have expired it
 				// when named didn't cache the directory, check if it
@@ -140,7 +142,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 				di.Nf = nf
 				dents.Insert(e.Name, di)
 			} else {
-				dents.Insert(e.Name, newDirEntInfoP(e.Tpath(), e.Tperm()))
+				dents.Insert(e.Name, NewDirEntInfoP(e.Tpath(), e.Tperm()))
 			}
 		}
 	}
@@ -195,8 +197,8 @@ func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) *serr
 	return nil
 }
 
-func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *DirEntInfo) *serr.Err {
-	opts := new.Nf.LeaseOpts()
+func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *DirEntInfo, npn path.Tpathname) *serr.Err {
+	opts := new.LeaseOpts()
 	b, err := proto.Marshal(new.Nf.EtcdFileProto)
 	if err != nil {
 		return serr.NewErrError(err)
@@ -212,12 +214,17 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, new)), "=", 0),
 		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 	ops := []clientv3.Op{
-		clientv3.OpPut(fs.path2key(fs.realm, new), string(b), opts...),
+		clientv3.OpPut(fs.path2key(fs.realm, new), string(b)),
 		clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	ops1 := []clientv3.Op{
 		clientv3.OpGet(fs.fencekey),
 		clientv3.OpGet(fs.path2key(fs.realm, new)),
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
+
+	if new.Perm.IsEphemeral() {
+		ops = append(ops, clientv3.OpPut(fs.ephemkey(fs.realm, new), npn.String(), opts...))
+
+	}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Create new %v dei %v v %v %v err %v\n", new, dei, v, resp, err)
 	if err != nil {
@@ -255,6 +262,11 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 		clientv3.OpGet(fs.fencekey),
 		clientv3.OpGet(fs.path2key(fs.realm, del)),
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
+
+	if del.Perm.IsEphemeral() {
+		ops = append(ops, clientv3.OpDelete(fs.ephemkey(fs.realm, del)))
+	}
+
 	resp, err := fs.Clnt().Txn(context.TODO()).
 		If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Remove dei %v %v %v %v err %v\n", dei, dir, del, resp, err)
@@ -278,7 +290,8 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 }
 
 // XXX retry
-func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, from *DirEntInfo) *serr.Err {
+func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) *serr.Err {
+	opts := from.LeaseOpts()
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
@@ -305,6 +318,11 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 		ops = []clientv3.Op{
 			clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	}
+
+	if from.Perm.IsEphemeral() {
+		ops = append(ops, clientv3.OpPut(fs.ephemkey(fs.realm, from), npn.String(), opts...))
+	}
+
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Rename dei %v dir %v from %v %v err %v\n", dei, dir, from, resp, err)
 	if err != nil {
@@ -331,7 +349,8 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 }
 
 // XXX retry
-func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, deit *DirEntInfo, dirt *DirInfo, vt sp.TQversion, del, from *DirEntInfo) *serr.Err {
+func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, deit *DirEntInfo, dirt *DirInfo, vt sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) *serr.Err {
+	opts := from.LeaseOpts()
 	bf, r := marshalDirInfo(dirf)
 	if r != nil {
 		return r
@@ -372,6 +391,11 @@ func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, dei
 			clientv3.OpPut(fs.path2key(fs.realm, deit), string(bt)),
 		}
 	}
+
+	if from.Perm.IsEphemeral() {
+		ops = append(ops, clientv3.OpPut(fs.ephemkey(fs.realm, from), npn.String(), opts...))
+	}
+
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "RenameAt %v %v err %v\n", del, resp, err)
 	if err != nil {

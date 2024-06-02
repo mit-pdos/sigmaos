@@ -49,7 +49,7 @@ func (o *Obj) Perm() sp.Tperm {
 // XXX 0 should be o.parent.parent
 func (o *Obj) Parent() fs.Dir {
 	dir := o.pn.Dir()
-	return newDir(newObjDi(o.fs, dir, fsetcd.DirEntInfo{Perm: sp.DMDIR | 0777, Path: o.parent}, 0))
+	return newDir(newObjDi(o.fs, dir, *fsetcd.NewDirEntInfoP(o.parent, sp.DMDIR|0777), 0))
 }
 
 // XXX SetParent
@@ -82,6 +82,6 @@ func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
 }
 
 func (o *Obj) putObj(f sp.Tfence, data []byte) *serr.Err {
-	nf := fsetcd.NewEtcdFile(o.di.Perm|0777, o.di.Nf.TclntId(), o.di.Nf.TleaseId(), data)
+	nf := fsetcd.NewEtcdFile(o.di.Perm|0777, data)
 	return o.fs.PutFile(&o.di, nf, f)
 }

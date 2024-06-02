@@ -48,7 +48,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 }
 
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
-	db.DPrintf(db.NAMED, "%v: Create %v name: %v perm %v lid %v\n", ctx.ClntId(), name, perm, lid)
+	db.DPrintf(db.NAMED, "%v: Create name: %q perm %v lid %v\n", ctx.ClntId(), name, perm, lid)
 	cid := sp.NoClntId
 	if perm.IsEphemeral() {
 		cid = ctx.ClntId()

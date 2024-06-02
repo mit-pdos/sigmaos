@@ -3,7 +3,6 @@ package kernelclnt
 import (
 	"sigmaos/fslib"
 	"sigmaos/kernelsrv/proto"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
@@ -68,15 +67,6 @@ func (kc *KernelClnt) Shutdown() error {
 	var res proto.ShutdownResult
 	req := &proto.ShutdownRequest{}
 	return kc.rpcc.RPC("KernelSrv.Shutdown", req, &res)
-}
-
-func (kc *KernelClnt) Port(pid sp.Tpid, p sp.Tport) (sp.Tip, port.PortBinding, error) {
-	var res proto.PortResult
-	req := &proto.PortRequest{PidStr: pid.String(), Port: int32(p)}
-	if err := kc.rpcc.RPC("KernelSrv.AllocPort", req, &res); err != nil {
-		return "", port.PortBinding{}, err
-	}
-	return sp.Tip(res.HostIp), port.PortBinding{sp.Tport(res.RealmPort), sp.Tport(res.HostPort)}, nil
 }
 
 func evictKernelProc(rpcc *rpcclnt.RPCClnt, pid sp.Tpid) error {

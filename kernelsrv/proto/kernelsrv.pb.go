@@ -664,124 +664,6 @@ func (*KillResult) Descriptor() ([]byte, []int) {
 	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{13}
 }
 
-type PortRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	PidStr string `protobuf:"bytes,1,opt,name=pidStr,proto3" json:"pidStr,omitempty"`
-	Port   int32  `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
-}
-
-func (x *PortRequest) Reset() {
-	*x = PortRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[14]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *PortRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PortRequest) ProtoMessage() {}
-
-func (x *PortRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[14]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PortRequest.ProtoReflect.Descriptor instead.
-func (*PortRequest) Descriptor() ([]byte, []int) {
-	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *PortRequest) GetPidStr() string {
-	if x != nil {
-		return x.PidStr
-	}
-	return ""
-}
-
-func (x *PortRequest) GetPort() int32 {
-	if x != nil {
-		return x.Port
-	}
-	return 0
-}
-
-type PortResult struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	RealmPort int32  `protobuf:"varint,1,opt,name=realmPort,proto3" json:"realmPort,omitempty"`
-	HostIp    string `protobuf:"bytes,3,opt,name=hostIp,proto3" json:"hostIp,omitempty"`
-	HostPort  int32  `protobuf:"varint,2,opt,name=hostPort,proto3" json:"hostPort,omitempty"`
-}
-
-func (x *PortResult) Reset() {
-	*x = PortResult{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[15]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *PortResult) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PortResult) ProtoMessage() {}
-
-func (x *PortResult) ProtoReflect() protoreflect.Message {
-	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[15]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PortResult.ProtoReflect.Descriptor instead.
-func (*PortResult) Descriptor() ([]byte, []int) {
-	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{15}
-}
-
-func (x *PortResult) GetRealmPort() int32 {
-	if x != nil {
-		return x.RealmPort
-	}
-	return 0
-}
-
-func (x *PortResult) GetHostIp() string {
-	if x != nil {
-		return x.HostIp
-	}
-	return ""
-}
-
-func (x *PortResult) GetHostPort() int32 {
-	if x != nil {
-		return x.HostPort
-	}
-	return 0
-}
-
 var File_kernelsrv_proto_kernelsrv_proto protoreflect.FileDescriptor
 
 var file_kernelsrv_proto_kernelsrv_proto_rawDesc = []byte{
@@ -826,19 +708,9 @@ var file_kernelsrv_proto_kernelsrv_proto_rawDesc = []byte{
 	0x6e, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x21, 0x0a, 0x0b, 0x4b, 0x69, 0x6c, 0x6c, 0x52,
 	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x0c, 0x0a, 0x0a, 0x4b, 0x69,
-	0x6c, 0x6c, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x39, 0x0a, 0x0b, 0x50, 0x6f, 0x72, 0x74,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x70, 0x69, 0x64, 0x53, 0x74,
-	0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x70, 0x69, 0x64, 0x53, 0x74, 0x72, 0x12,
-	0x12, 0x0a, 0x04, 0x70, 0x6f, 0x72, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x70,
-	0x6f, 0x72, 0x74, 0x22, 0x5e, 0x0a, 0x0a, 0x50, 0x6f, 0x72, 0x74, 0x52, 0x65, 0x73, 0x75, 0x6c,
-	0x74, 0x12, 0x1c, 0x0a, 0x09, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x50, 0x6f, 0x72, 0x74, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x05, 0x52, 0x09, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x50, 0x6f, 0x72, 0x74, 0x12,
-	0x16, 0x0a, 0x06, 0x68, 0x6f, 0x73, 0x74, 0x49, 0x70, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x06, 0x68, 0x6f, 0x73, 0x74, 0x49, 0x70, 0x12, 0x1a, 0x0a, 0x08, 0x68, 0x6f, 0x73, 0x74, 0x50,
-	0x6f, 0x72, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x68, 0x6f, 0x73, 0x74, 0x50,
-	0x6f, 0x72, 0x74, 0x42, 0x19, 0x5a, 0x17, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x6b,
-	0x65, 0x72, 0x6e, 0x65, 0x6c, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6c, 0x6c, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x42, 0x19, 0x5a, 0x17, 0x73, 0x69, 0x67, 0x6d,
+	0x61, 0x6f, 0x73, 0x2f, 0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -853,7 +725,7 @@ func file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP() []byte {
 	return file_kernelsrv_proto_kernelsrv_proto_rawDescData
 }
 
-var file_kernelsrv_proto_kernelsrv_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_kernelsrv_proto_kernelsrv_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_kernelsrv_proto_kernelsrv_proto_goTypes = []interface{}{
 	(*BootRequest)(nil),                 // 0: BootRequest
 	(*BootResult)(nil),                  // 1: BootResult
@@ -869,8 +741,6 @@ var file_kernelsrv_proto_kernelsrv_proto_goTypes = []interface{}{
 	(*ShutdownResult)(nil),              // 11: ShutdownResult
 	(*KillRequest)(nil),                 // 12: KillRequest
 	(*KillResult)(nil),                  // 13: KillResult
-	(*PortRequest)(nil),                 // 14: PortRequest
-	(*PortResult)(nil),                  // 15: PortResult
 }
 var file_kernelsrv_proto_kernelsrv_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -1054,30 +924,6 @@ func file_kernelsrv_proto_kernelsrv_proto_init() {
 				return nil
 			}
 		}
-		file_kernelsrv_proto_kernelsrv_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PortRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_kernelsrv_proto_kernelsrv_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PortResult); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1085,7 +931,7 @@ func file_kernelsrv_proto_kernelsrv_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_kernelsrv_proto_kernelsrv_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

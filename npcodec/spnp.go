@@ -14,7 +14,7 @@ type Fcall9P struct {
 	Msg  sessp.Tmsg
 }
 
-func sp2NpQid(spqid sp.Tqid) np.Tqid9P {
+func sp2NpQid(spqid sp.TqidProto) np.Tqid9P {
 	npqid := np.Tqid9P{}
 	npqid.Type = np.Qtype9P(spqid.Type)
 	npqid.Version = np.TQversion(spqid.Version)
@@ -22,8 +22,8 @@ func sp2NpQid(spqid sp.Tqid) np.Tqid9P {
 	return npqid
 }
 
-func np2SpQid(npqid np.Tqid9P) *sp.Tqid {
-	spqid := &sp.Tqid{}
+func np2SpQid(npqid np.Tqid9P) *sp.TqidProto {
+	spqid := &sp.TqidProto{}
 	spqid.Type = uint32(npqid.Type)
 	spqid.Version = uint32(npqid.Version)
 	spqid.Path = uint64(npqid.Path)

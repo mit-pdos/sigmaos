@@ -14,7 +14,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sortedmap"
 	"sigmaos/spcodec"
 )
 
@@ -35,7 +35,7 @@ func fromDot(pn string) string {
 type Dir struct {
 	*Obj
 	sync.Mutex
-	dents *sorteddir.SortedDir[string, sp.Tperm]
+	dents *sortedmap.SortedMap[string, sp.Tperm]
 	sts   []*sp.Stat
 }
 
@@ -44,11 +44,11 @@ func (d *Dir) String() string {
 	return s + fmt.Sprintf(" dents %v", d.dents)
 }
 
-func newDir(bucket string, key path.Path, perm sp.Tperm) *Dir {
+func newDir(bucket string, key path.Tpathname, perm sp.Tperm) *Dir {
 	o := newObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
-	dir.dents = sorteddir.NewSortedDir[string, sp.Tperm]()
+	dir.dents = sortedmap.NewSortedMap[string, sp.Tperm]()
 	return dir
 }
 
@@ -187,7 +187,7 @@ func newObjs(base *Obj) []fs.FsObj {
 	return os
 }
 
-func (d *Dir) lookupPath(ctx fs.CtxI, p path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+func (d *Dir) lookupPath(ctx fs.CtxI, p path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	db.DPrintf(db.S3, "%v: lookupPath d %v p %v\n", ctx, d, p)
 	// maybe p is f a file
 	o := newObj(d.bucket, d.key.Copy().AppendPath(p), sp.Tperm(0777))
@@ -213,7 +213,7 @@ func (d *Dir) lookupPath(ctx fs.CtxI, p path.Path) ([]fs.FsObj, fs.FsObj, path.P
 	return append(newObjs(d1.Obj), d1), d1, nil, nil
 }
 
-func (d *Dir) LookupPath(ctx fs.CtxI, p path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+func (d *Dir) LookupPath(ctx fs.CtxI, p path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	db.DPrintf(db.S3, "%v: LookupPath d %v %v\n", ctx, d, p)
 	// if d is the root directory, then the first pathname component
 	// is a bucket name, resolve it first.
@@ -221,7 +221,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, p path.Path) ([]fs.FsObj, fs.FsObj, path.P
 		if err := d.lookupBucket(ctx, p[0]); err != nil {
 			return nil, nil, p, err
 		}
-		d1 := newDir(p[0], path.Path{}, sp.DMDIR|sp.Tperm(0777))
+		d1 := newDir(p[0], path.Tpathname{}, sp.DMDIR|sp.Tperm(0777))
 		return []fs.FsObj{d1.Obj}, d1, p[1:], nil
 	}
 	return d.lookupPath(ctx, p)
@@ -328,7 +328,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfen
 	return serr.NewErr(serr.TErrNotSupported, "Renameat")
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
+func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	if d.bucket == "" {
 		return serr.NewErr(serr.TErrNoremove, d.bucket)
 	}

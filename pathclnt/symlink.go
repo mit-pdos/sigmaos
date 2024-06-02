@@ -9,14 +9,14 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path.Path, *serr.Err) {
+func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Tpathname) (path.Tpathname, *serr.Err) {
 	s := time.Now()
-	target, err := pathc.FidClnt.GetFile(fid, path.Path{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
+	target, err := pathc.FidClnt.GetFile(fid, path.Tpathname{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.WALK, "walksymlink1 %v err %v\n", fid, err)
 		return left, err
 	}
-	var p path.Path
+	var p path.Tpathname
 	ep, error := sp.NewEndpointFromBytes(target)
 	if error == nil {
 		db.DPrintf(db.WALK_LAT, "walksymlink1 %v %v %v ep %v lat %v\n", pathc.cid, fid, resolved, ep, time.Since(s))

@@ -83,15 +83,15 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 
 func setupSigmaState(t1 *test.Tstate) (*TstateSN, error) {
 	tssn, err := newTstateSN(t1, []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-home", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-compose", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-frontend", test.Overlays, 1000}}, NCACHESRV)
+		sn.Srv{"socialnetwork-user", nil, 1000},
+		sn.Srv{"socialnetwork-graph", nil, 1000},
+		sn.Srv{"socialnetwork-post", nil, 1000},
+		sn.Srv{"socialnetwork-timeline", nil, 1000},
+		sn.Srv{"socialnetwork-home", nil, 1000},
+		sn.Srv{"socialnetwork-url", nil, 1000},
+		sn.Srv{"socialnetwork-text", nil, 1000},
+		sn.Srv{"socialnetwork-compose", nil, 1000},
+		sn.Srv{"socialnetwork-frontend", []string{strconv.FormatBool(test.Overlays)}, 1000}}, NCACHESRV)
 	if err != nil {
 		return tssn, err
 	}
@@ -110,7 +110,7 @@ func setupK8sState(t1 *test.Tstate) (*TstateSN, error) {
 	assert.Nil(tssn.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 	port, err := strconv.Atoi(p)
 	assert.Nil(tssn.T, err, "Err parse port %v: %v", p, err)
-	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port), tssn.ProcEnv().GetNet())
+	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
 	mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr}, t1.ProcEnv().GetRealm())
 	assert.Nil(t1.T, tssn.MkEndpointFile(p, mnt, sp.NoLeaseId))
 	// forward mongo port and init users and graphs.
@@ -135,7 +135,9 @@ func testTemplate(t1 *test.Tstate, isBenchTest bool, testFunc func(*testing.T, *
 		dbg.DPrintf(dbg.ALWAYS, "Running K8s at %v", K8S_ADDR)
 		tssn, err = setupK8sState(t1)
 	}
-	defer assert.Nil(t1.T, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t1.T, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}

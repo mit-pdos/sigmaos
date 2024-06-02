@@ -24,7 +24,7 @@ func newDir(o *Obj) *Dir {
 	return dir
 }
 
-func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	s := time.Now()
 	db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx, pn, d)
 	name := pn[0]
@@ -59,7 +59,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	di, err := d.fs.Create(&d.Obj.di, name, path, nf, f)
+	di, err := d.fs.Create(&d.Obj.di, pn, path, nf, f)
 	if err != nil {
 		db.DPrintf(db.NAMED, "Create %v %q err %v\n", d, name, err)
 		return nil, err
@@ -115,9 +115,9 @@ func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 	return nil
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence) *serr.Err {
+func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	db.DPrintf(db.NAMED, "Remove %v name %v\n", d, name)
-	return d.fs.Remove(&d.Obj.di, name, f, true)
+	return d.fs.Remove(&d.Obj.di, name, f, del)
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
@@ -128,7 +128,9 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.NAMED, "Renameat %v: %v %v\n", d, from, to)
 	dt := od.(*Dir)
-	return d.fs.Renameat(&d.Obj.di, from, &dt.Obj.di, to, f)
+	old := d.pn.Append(from)
+	new := dt.pn.Append(to)
+	return d.fs.Renameat(&d.Obj.di, old, &dt.Obj.di, new, f)
 }
 
 // ===== The following functions are needed to make an named dir of type fs.Inode
@@ -168,7 +170,7 @@ func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
 	} else if err != nil {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
-	return newDir(newObjDi(fs, path.Path{},
+	return newDir(newObjDi(fs, path.Tpathname{},
 		fsetcd.DirEntInfo{Perm: sp.DMDIR | 0777, Path: fsetcd.ROOT},
 		fsetcd.ROOT))
 }

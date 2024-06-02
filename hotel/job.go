@@ -2,7 +2,7 @@ package hotel
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 
 	"sigmaos/cachedsvc"
@@ -15,7 +15,6 @@ import (
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/test"
 )
 
 const (
@@ -70,15 +69,15 @@ func setNHotel(nh int) {
 }
 
 func JobDir(job string) string {
-	return path.Join(HOTELDIR, job)
+	return filepath.Join(HOTELDIR, job)
 }
 
 func JobHTTPAddrsPath(job string) string {
-	return path.Join(JobDir(job), HTTP_ADDRS)
+	return filepath.Join(JobDir(job), HTTP_ADDRS)
 }
 
 func MemFsPath(job string) string {
-	return path.Join(JobDir(job), MEMFS)
+	return filepath.Join(JobDir(job), MEMFS)
 }
 
 func NewFsLibs(uname string, npc *netproxyclnt.NetProxyClnt) ([]*fslib.FsLib, error) {
@@ -114,24 +113,24 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) error {
 }
 
 type Srv struct {
-	Name   string
-	Public bool
-	Mcpu   proc.Tmcpu
+	Name string
+	Args []string
+	Mcpu proc.Tmcpu
 }
 
-//	,[]string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.DB, "*")}
+//	,[]string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.DB, "*")}
 
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func NewHotelSvc(public bool) []Srv {
 	return []Srv{
-		Srv{"hotel-userd", public, 0},
-		Srv{"hotel-rated", public, 2000},
-		Srv{"hotel-geod", public, 2000},
-		Srv{"hotel-profd", public, 2000},
-		Srv{"hotel-searchd", public, 3000},
-		Srv{"hotel-reserved", public, 3000},
-		Srv{"hotel-recd", public, 0},
-		Srv{"hotel-wwwd", public, 3000},
+		Srv{"hotel-userd", nil, 0},
+		Srv{"hotel-rated", nil, 2000},
+		Srv{"hotel-geod", nil, 2000},
+		Srv{"hotel-profd", nil, 2000},
+		Srv{"hotel-searchd", nil, 3000},
+		Srv{"hotel-reserved", nil, 3000},
+		Srv{"hotel-recd", nil, 0},
+		Srv{"hotel-wwwd", []string{strconv.FormatBool(public)}, 3000},
 	}
 }
 
@@ -173,7 +172,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cachedsvc.NewCacheMgr(sc, job, nsrv, cacheMcpu, gc, test.Overlays)
+			cm, err = cachedsvc.NewCacheMgr(sc, job, nsrv, cacheMcpu, gc)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err
@@ -206,7 +205,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 
 	for _, srv := range srvs {
 		db.DPrintf(db.TEST, "Hotel spawn %v", srv.Name)
-		p := proc.NewProc(srv.Name, []string{job, strconv.FormatBool(srv.Public), cache})
+		p := proc.NewProc(srv.Name, append([]string{job, cache}, srv.Args...))
 		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)

@@ -6,7 +6,7 @@ package test
 import (
 	"flag"
 	"fmt"
-	gopath "path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,9 +15,7 @@ import (
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	"sigmaos/netproxyclnt"
 	"sigmaos/netsigma"
-	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/realmclnt"
 	"sigmaos/sigmaclnt"
@@ -87,7 +85,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil
 	}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false)
 	pe.Program = "srv"
 	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
@@ -124,7 +122,7 @@ func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
 		db.DPrintf(db.ERROR, "NewTstatePath: %v\n", err)
 		return nil, err
 	}
-	if path == gopath.Join(sp.MEMFS, "~local/")+"/" {
+	if path == filepath.Join(sp.MEMFS, "~local/")+"/" {
 		ts.memfs = proc.NewProc("memfsd", []string{})
 		err := ts.Spawn(ts.memfs)
 		assert.Nil(t, err)
@@ -190,9 +188,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
 	useNetProxy := !noNetProxy
-	// Only verify mounts if running with netproxy
-	verifyMounts := false && useNetProxy
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy, verifyMounts)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	var kernelid string
 	var k *bootkernelclnt.Kernel
@@ -326,24 +322,4 @@ func (ts *Tstate) Shutdown() error {
 		}
 	}
 	return nil
-}
-
-func Dump(t *testing.T) {
-	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
-	assert.Nil(t, err1)
-	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
-	useNetProxy := !noNetProxy
-	// TODO: pass proper mount
-	// Only verify mounts if running with netproxy
-	verifyMounts := useNetProxy
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, nil, "", "", "", false, false, false, verifyMounts)
-	assert.False(t, true, "Unimplemented")
-	return
-	npc := netproxyclnt.NewNetProxyClnt(pe)
-	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
-	assert.Nil(t, err)
-	nd, err := fs.ReadDir(fsetcd.NewDirEntInfoDir(fsetcd.ROOT))
-	assert.Nil(t, err)
-	err = fs.Dump(0, nd, path.Path{}, fsetcd.ROOT)
-	assert.Nil(t, err)
 }

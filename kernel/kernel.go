@@ -20,14 +20,6 @@ import (
 )
 
 const (
-	SLEEP_S          = 2
-	REPL_PORT_OFFSET = 100
-
-	FPORT sp.Tport = 1112
-	LPORT sp.Tport = 1132
-
-	KNAMED_PORT = ":1111"
-
 	MAX_EVICT_RETRIES = 10
 )
 
@@ -170,7 +162,7 @@ func (k *Kernel) shutdown() {
 		for pid, _ := range k.svcs.svcMap {
 			cpids = append(cpids, pid)
 		}
-		// Sort schedds to the end, to avoid havingas many eviction errors.
+		// Sort schedds to the end, to avoid having as many eviction errors.
 		sort.Slice(cpids, func(i, j int) bool {
 			if strings.HasPrefix(cpids[i].String(), "schedd-") {
 				if strings.HasPrefix(cpids[j].String(), "schedd-") {

@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"net/rpc"
 	"os/exec"
-	"path"
+	"path/filepath"
 
 	"github.com/stretchr/testify/assert"
 
@@ -1202,7 +1202,7 @@ func TestHotelK8sSearch(t *testing.T) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
 func TestHotelK8sSearchCli(t *testing.T) {
@@ -1260,7 +1260,7 @@ func TestMRK8s(t *testing.T) {
 	}
 	c := startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
 	waitK8sMR(rootts, c)
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
 }
 
 func TestK8sMRMulti(t *testing.T) {
@@ -1319,7 +1319,7 @@ func TestK8sMRMulti(t *testing.T) {
 	for i := 0; i < N_REALM; i++ {
 		downloadS3ResultsRealm(
 			rootts,
-			path.Join("name/s3/~any/9ps3/", S3_RES_DIR+"-"+strconv.Itoa(i+1)),
+			filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR+"-"+strconv.Itoa(i+1)),
 			HOSTTMP+"sigmaos-perf",
 			sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)),
 		)
@@ -1369,8 +1369,8 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 	waitK8sMR(rootts, c)
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
 func TestImgResize(t *testing.T) {
@@ -1648,7 +1648,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	// Wait for both jobs to finish.
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "social-network-perf/k8s"), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "social-network-perf/k8s"), HOSTTMP+"sigmaos-perf")
 	for !(k8sJobHasCompleted("thumbnail1-benchrealm1") && k8sJobHasCompleted("thumbnail2-benchrealm1") &&
 		k8sJobHasCompleted("thumbnail3-benchrealm1") && k8sJobHasCompleted("thumbnail4-benchrealm1")) {
 		time.Sleep(500 * time.Millisecond)

@@ -10,7 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -99,7 +99,7 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *serr.Err) {
 	return nil, serr.NewErr(serr.TErrNotfound, name)
 }
 
-func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	if i := dir.lookupMount(path[0]); i != nil {
 		return []fs.FsObj{i}, i, path[1:], nil
 	} else {
@@ -160,9 +160,9 @@ func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, 
 	return dir.underlay.Renameat(ctx, old, nd, new, f)
 }
 
-func (dir *DirOverlay) Remove(ctx fs.CtxI, n string, f sp.Tfence) *serr.Err {
+func (dir *DirOverlay) Remove(ctx fs.CtxI, n string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	if dir.removeMount(n) {
 		return nil
 	}
-	return dir.underlay.Remove(ctx, n, f)
+	return dir.underlay.Remove(ctx, n, f, del)
 }

@@ -79,13 +79,14 @@ func (fdc *FdClient) openWait(path string, mode sp.Tmode) (int, error) {
 		fid, err := fdc.pc.Open(path, fdc.pe.GetPrincipal(), mode, func(err error) {
 			ch <- err
 		})
-		db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", path, err)
 		if serr.IsErrCode(err, serr.TErrNotfound) {
+			db.DPrintf(db.FDCLNT, "openWatch wait %v\n", path)
 			r := <-ch
 			if r != nil {
-				db.DPrintf(db.FDCLNT, "Open watch %v err %v\n", path, err)
+				db.DPrintf(db.FDCLNT, "Open watch wait %v err %v\n", path, err)
 			}
 		} else if err != nil {
+			db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", path, err)
 			return -1, err
 		} else { // success; file is opened
 			fd = fdc.fds.allocFd(fid, mode)
@@ -210,12 +211,12 @@ func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {
 	return nil
 }
 
-func (fdc *FdClient) DirWait(fd int) error {
+func (fdc *FdClient) DirWatch(fd int) error {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.FDCLNT, "DirWait: watch fd %v\n", fd)
+	db.DPrintf(db.FDCLNT, "DirWatch: watch fd %v\n", fd)
 	ch := make(chan error)
 	if err := fdc.pc.SetDirWatch(fid, func(r error) {
 		db.DPrintf(db.FDCLNT, "SetDirWatch: watch returns %v\n", r)
@@ -238,7 +239,7 @@ func (fdc *FdClient) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
 	ep.SetAddr([]*sp.Taddr{sp.NewTaddr(fdc.pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
 }
 
-func (fdc *FdClient) PathLastMount(pn string) (path.Path, path.Path, error) {
+func (fdc *FdClient) PathLastMount(pn string) (path.Tpathname, path.Tpathname, error) {
 	return fdc.pc.MntClnt().PathLastMount(pn, fdc.pe.GetPrincipal())
 }
 

@@ -2,7 +2,7 @@ package namesrv
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -11,9 +11,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/leaderetcd"
+	"sigmaos/path"
 	"sigmaos/perf"
-	"sigmaos/port"
-	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
@@ -35,6 +34,12 @@ type Named struct {
 	crash  int
 	sess   *fsetcd.Session
 	signer sp.Tsigner
+	ephch  chan path.Tpathname
+}
+
+func newNamed(realm sp.Trealm) *Named {
+	nd := &Named{realm: realm, ephch: make(chan path.Tpathname)}
+	return nd
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -57,9 +62,8 @@ func Run(args []string) error {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 
-	nd := &Named{}
+	nd := newNamed(sp.Trealm(args[1]))
 	nd.signer = sp.Tsigner(pe.GetPID())
-	nd.realm = sp.Trealm(args[1])
 	crashing, err := strconv.Atoi(args[2])
 	if err != nil {
 		return fmt.Errorf("%v: crash %v isn't int", args[0], args[1])
@@ -78,7 +82,7 @@ func Run(args []string) error {
 	}
 	nd.SigmaClnt = sc
 
-	pn := path.Join(sp.REALMS, nd.realm.String()) + ".sem"
+	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"
 	sem := semclnt.NewSemClnt(nd.FsLib, pn)
 	if nd.realm != sp.ROOTREALM {
 		// create semaphore to signal realmd when we are the leader
@@ -120,7 +124,7 @@ func Run(args []string) error {
 		}
 	} else {
 		// note: the named proc runs in rootrealm; maybe change it XXX
-		pn = path.Join(sp.REALMS, nd.realm.String())
+		pn = filepath.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
 		if err := nd.MkEndpointFile(pn, ep, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v\n", nd.realm, pn, err)
@@ -136,7 +140,7 @@ func Run(args []string) error {
 
 	nd.getRoot(pn + "/")
 
-	if err := nd.CreateLeaderFile(path.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
+	if err := nd.CreateLeaderFile(filepath.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
 		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v\n", nd.elect.Key(), err)
 	}
 
@@ -163,17 +167,18 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
-	var pi portclnt.PortInfo
-	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
-	} else {
-		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
-		if err != nil {
-			return nil, err
-		}
-		pi = pi0
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
-	}
+	// XXX need special handling with overlays?
+	//	var pi portclnt.PortInfo
+	//	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
+	addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
+	//	} else {
+	//		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		pi = pi0
+	//		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
+	//	}
 	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
@@ -185,10 +190,11 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	nd.SigmaSrv = ssrv
 
 	ep := nd.GetEndpoint()
-	if nd.realm != sp.ROOTREALM {
-		ep = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
-	}
-	ep.SetType(sp.INTERNAL_EP)
+	// XXX need public endpoint?
+	//	if nd.realm != sp.ROOTREALM {
+	//		ep = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
+	//	}
+	// ep.SetType(sp.INTERNAL_EP)
 	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }
@@ -204,6 +210,9 @@ func (nd *Named) detach(cid sp.TclntId) {
 }
 
 func (nd *Named) resign() error {
+	if err := nd.fs.StopWatch(); err != nil {
+		return err
+	}
 	if err := nd.SigmaPSrv.StopServing(); err != nil {
 		return err
 	}
@@ -231,5 +240,11 @@ func (nd *Named) waitExit(ch chan struct{}) {
 		db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
 		time.Sleep(time.Second)
 		continue
+	}
+}
+
+func (nd *Named) watchEphemeral() {
+	for pn := range nd.ephch {
+		nd.SigmaSrv.Notify(pn)
 	}
 }

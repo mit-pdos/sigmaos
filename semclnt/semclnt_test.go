@@ -2,7 +2,7 @@ package semclnt_test
 
 import (
 	"flag"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -38,7 +38,7 @@ func TestSemClntSimple(t *testing.T) {
 		return
 	}
 
-	pn := path.Join(pathname, SEMDIR)
+	pn := filepath.Join(pathname, SEMDIR)
 
 	db.DPrintf(db.TEST, "pn %v\n", pn)
 
@@ -82,7 +82,7 @@ func TestSemClntConcur(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	pn := path.Join(pathname, SEMDIR)
+	pn := filepath.Join(pathname, SEMDIR)
 	err := ts.MkDir(pn, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe1 := proc.NewAddedProcEnv(ts.ProcEnv())
@@ -126,22 +126,22 @@ func TestSemClntFail(t *testing.T) {
 		return
 	}
 
-	pn := path.Join(pathname, SEMDIR)
+	pn := filepath.Join(pathname, SEMDIR)
 	err := ts.MkDir(pn, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 
-	li, err := sc1.LeaseClnt.AskLease(pn+"/x", fsetcd.LeaseTTL)
+	li, err := sc1.LeaseClnt.AskLease(pn+"/sem", fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	sem := semclnt.NewSemClnt(sc1.FsLib, pn+"/x")
+	sem := semclnt.NewSemClnt(sc1.FsLib, pn+"/sem")
 	sem.InitLease(0777, li.Lease())
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		sem := semclnt.NewSemClnt(ts.FsLib, pn+"/x")
+		sem := semclnt.NewSemClnt(ts.FsLib, pn+"/sem")
 		sem.Down()
 		ch <- true
 	}(ch)

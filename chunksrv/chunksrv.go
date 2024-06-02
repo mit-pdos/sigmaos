@@ -8,7 +8,7 @@ package chunksrv
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -58,24 +58,24 @@ func IsChunkSrvPath(path string) bool {
 
 // The path on the host where a kernel caches its binaries
 func PathHostKernel(kernelId string) string {
-	return path.Join(ROOTHOSTCACHE, kernelId)
+	return filepath.Join(ROOTHOSTCACHE, kernelId)
 }
 
 // For testing: the path on the host where a kernel caches its
 // binaries for a realm.
 func PathHostKernelRealm(kernelId string, realm sp.Trealm) string {
-	return path.Join(PathHostKernel(kernelId), realm.String())
+	return filepath.Join(PathHostKernel(kernelId), realm.String())
 }
 
 // The path where chunksrv caches binaries in the local file system.
 func pathBinCache(realm sp.Trealm, prog string) string {
-	return path.Join(ROOTBINCACHE, realm.String(), prog)
+	return filepath.Join(ROOTBINCACHE, realm.String(), prog)
 }
 
 // The pathname that uprocsrv uses for the directory with cached
 // binaries.
 func pathBinRealm(realm sp.Trealm) string {
-	return path.Join(ROOTBINCONTAINER, realm.String())
+	return filepath.Join(ROOTBINCONTAINER, realm.String())
 }
 
 // Uprocsrv mounts PathBinRealm at PathBinProc() providing a proc
@@ -187,7 +187,7 @@ func (cksrv *ChunkSrv) fetchChunk(req proto.FetchChunkRequest, res *proto.FetchC
 	srvpath := ""
 	for IsChunkSrvPath(paths[0]) {
 		srvpath = paths[0]
-		srv := path.Base(srvpath)
+		srv := filepath.Base(srvpath)
 		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: %v ckid %d %v", cksrv.kernelId, req.Prog, ck, []string{srvpath})
 		sz, _, err = cksrv.ckclnt.FetchChunk(srv, req.Prog, sp.Tpid(req.Pid), r, ck, sp.Tsize(req.Size), []string{srvpath}, b)
 		if err == nil {
@@ -266,7 +266,7 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 	var err error
 	srv := ""
 	for IsChunkSrvPath(paths[0]) {
-		s := path.Base(paths[0])
+		s := filepath.Base(paths[0])
 		srv = paths[0]
 		st, _, err = cksrv.ckclnt.GetFileStat(s, req.Prog, sp.Tpid(req.Pid), r, []string{srv})
 		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: chunkd %v st %v err %v", cksrv.kernelId, paths[0], st, err)
@@ -429,7 +429,7 @@ func Run(kernelId string) {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	cksrv := newChunkSrv(kernelId, sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.CHUNKD, sc.ProcEnv().GetKernelID()), sc, cksrv)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.CHUNKD, sc.ProcEnv().GetKernelID()), sc, cksrv)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

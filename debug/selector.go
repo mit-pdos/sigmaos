@@ -103,7 +103,6 @@ const (
 	BOOT                       = "BOOT"
 	CONTAINER                  = "CONTAINER"
 	NAMED                      = "NAMED"
-	NAMED_ERR                  = NAMED + ERR
 	FSETCD                     = "FSETCD"
 	PROCMGR                    = "PROCMGR"
 	UPROCDMGR                  = "UPROCDMGR"

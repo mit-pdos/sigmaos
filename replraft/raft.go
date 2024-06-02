@@ -8,7 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -112,7 +112,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 		LeaderStats: stats.NewLeaderStats(zap.NewExample(), strconv.Itoa(n.id)),
 		ErrorC:      make(chan error),
 		DialContextFunc: func(ctx context.Context, network, address string) (net.Conn, error) {
-			addr, err := sp.NewTaddrFromString(address, sp.INNER_CONTAINER_IP, n.pe.GetNet())
+			addr, err := sp.NewTaddrFromString(address, sp.INNER_CONTAINER_IP)
 			if err != nil {
 				db.DFatalf("Error parse addr: %v", err)
 			}
@@ -259,7 +259,7 @@ func (n *RaftNode) postNodeId() error {
 			db.DFatalf("Error Marshal in RaftNode.postNodeID: %v", err)
 		}
 		db.DPrintf(db.REPLRAFT, "Invoke Post node ID %d %v\n", i, ep)
-		if _, err := http.Post("http://"+path.Join(ep.Addrs()[0].IPPort(), membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b)); err == nil {
+		if _, err := http.Post("http://"+filepath.Join(ep.Addrs()[0].IPPort(), membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b)); err == nil {
 			db.DPrintf(db.REPLRAFT, "Posted node ID %d %v\n", i, ep)
 			// Only post the node ID to one node
 			return nil

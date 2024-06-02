@@ -2,7 +2,7 @@ package cgroup
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"sync"
 
 	db "sigmaos/debug"
@@ -77,7 +77,7 @@ func (cmon *CgroupMonitor) GetPIDs(cgroupPath string) ([]int, error) {
 	cmon.Lock()
 	defer cmon.Unlock()
 
-	pids, err := cmon.cfs.readFileMulti(path.Join(cgroupPath, "cgroup.procs"), parseInts)
+	pids, err := cmon.cfs.readFileMulti(filepath.Join(cgroupPath, "cgroup.procs"), parseInts)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error readFile: %v", err)
 		return nil, fmt.Errorf("Error readFile: %v", err)
@@ -87,7 +87,7 @@ func (cmon *CgroupMonitor) GetPIDs(cgroupPath string) ([]int, error) {
 
 func (cmon *CgroupMonitor) getCPUShares(cgroupPath string) (int64, error) {
 
-	n, err := cmon.cfs.readFile(path.Join(cgroupPath, "cpu.weight"), parseUint64)
+	n, err := cmon.cfs.readFile(filepath.Join(cgroupPath, "cpu.weight"), parseUint64)
 	if err != nil {
 		db.DPrintf(db.CGROUP_ERR, "Error readFile: %v", err)
 		return 0, err
@@ -96,7 +96,7 @@ func (cmon *CgroupMonitor) getCPUShares(cgroupPath string) (int64, error) {
 }
 
 func (cmon *CgroupMonitor) getCPUUsecs(cgroupPath string) (uint64, error) {
-	n, err := cmon.cfs.readFile(path.Join(cgroupPath, "cpu.stat"), parseCgroupCpuStat)
+	n, err := cmon.cfs.readFile(filepath.Join(cgroupPath, "cpu.stat"), parseCgroupCpuStat)
 	if err != nil {
 		db.DPrintf(db.CGROUP_ERR, "Error readFile: %v", err)
 		return 0, err

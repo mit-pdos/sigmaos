@@ -50,9 +50,9 @@ type Rate struct {
 }
 
 // Run starts the server
-func RunRateSrv(job string, public bool, cache string) error {
+func RunRateSrv(job string, cache string) error {
 	r := &Rate{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELRATE, r, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(HOTELRATE, r, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

@@ -32,10 +32,10 @@ type TimelineSrv struct {
 	postc  *rpcclnt.RPCClnt
 }
 
-func RunTimelineSrv(public bool, jobname string) error {
+func RunTimelineSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Creating timeline service\n")
 	tlsrv := &TimelineSrv{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_TIMELINE, tlsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_TIMELINE, tlsrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

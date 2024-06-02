@@ -1,7 +1,7 @@
 package benchmarks_test
 
 import (
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -98,7 +98,7 @@ func (ji *ImgResizeJobInstance) Wait() {
 }
 
 func (ji *ImgResizeJobInstance) Cleanup() {
-	dir := path.Join(sp.UX, "~local", path.Dir(ji.input))
+	dir := filepath.Join(sp.UX, "~local", filepath.Dir(ji.input))
 	db.DPrintf(db.TEST, "[%v] Cleaning up dir %v", ji.GetRealm(), dir)
 	imgresizesrv.Cleanup(ji.FsLib, dir)
 }

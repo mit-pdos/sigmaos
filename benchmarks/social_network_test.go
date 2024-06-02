@@ -37,15 +37,15 @@ var MONGO_URL string
 
 func getDefaultSrvs() []sn.Srv {
 	return []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-post", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-home", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-url", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-text", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-compose", test.Overlays, 2000},
-		sn.Srv{"socialnetwork-frontend", test.Overlays, 2000}}
+		sn.Srv{"socialnetwork-user", nil, 2000},
+		sn.Srv{"socialnetwork-graph", nil, 2000},
+		sn.Srv{"socialnetwork-post", nil, 2000},
+		sn.Srv{"socialnetwork-timeline", nil, 2000},
+		sn.Srv{"socialnetwork-home", nil, 2000},
+		sn.Srv{"socialnetwork-url", nil, 2000},
+		sn.Srv{"socialnetwork-text", nil, 2000},
+		sn.Srv{"socialnetwork-compose", nil, 2000},
+		sn.Srv{"socialnetwork-frontend", []string{strconv.FormatBool(test.Overlays)}, 2000}}
 }
 
 func init() {
@@ -110,7 +110,7 @@ func NewSocialNetworkJob(
 		assert.Nil(ts.Ts.T, err, "Err split host port %v: %v", ji.k8ssrvaddr, err)
 		port, err := strconv.Atoi(po)
 		assert.Nil(ts.Ts.T, err, "Err parse port %v: %v", po, err)
-		addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port), ts.ProcEnv().GetNet())
+		addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
 		mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr}, ts.ProcEnv().GetRealm())
 		assert.Nil(ts.Ts.T, ts.MkEndpointFile(p, mnt, sp.NoLeaseId))
 		// forward mongo port and init users and graphs.

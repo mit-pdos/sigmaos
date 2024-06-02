@@ -14,7 +14,7 @@ type Pipe struct {
 	*Obj
 }
 
-func newPipe(ctx fs.CtxI, pathName path.Path) (*Pipe, *serr.Err) {
+func newPipe(ctx fs.CtxI, pathName path.Tpathname) (*Pipe, *serr.Err) {
 	p := &Pipe{}
 	o, err := newObj(pathName)
 	if err != nil {

@@ -1,7 +1,7 @@
 package k8sutil
 
 import (
-	"path"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -32,7 +32,7 @@ func (clnt *StatScraperClnt) GetStatScrapers() []string {
 	scrapers := sp.Names(st)
 	for _, s := range scrapers {
 		if _, ok := clnt.rpccs[s]; !ok {
-			ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{clnt.FsLib}, path.Join(sp.K8S_SCRAPER, s))
+			ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{clnt.FsLib}, filepath.Join(sp.K8S_SCRAPER, s))
 			if err != nil {
 				db.DFatalf("Error NewRPCClnt: %v", err)
 			}

@@ -9,13 +9,13 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/inode"
-	"sigmaos/lockmap"
+	"sigmaos/memfs/dir"
+	"sigmaos/memfs/inode"
 	"sigmaos/path"
-	"sigmaos/portclnt"
+	"sigmaos/port"
 	"sigmaos/protsrv"
+	"sigmaos/protsrv/lockmap"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -23,7 +23,7 @@ import (
 	"sigmaos/syncmap"
 )
 
-var rootP = path.Path{""}
+var rootP = path.Tpathname{""}
 
 type MemFs struct {
 	*sigmapsrv.SigmaPSrv
@@ -31,8 +31,7 @@ type MemFs struct {
 	ps    *protsrv.ProtSrv
 	roots *roots
 	sc    *sigmaclnt.SigmaClnt
-	pc    *portclnt.PortClnt
-	pi    portclnt.PortInfo
+	pi    port.PortInfo
 	pn    string
 }
 
@@ -78,7 +77,7 @@ func (mfs *MemFs) NewDevInode() *inode.Inode {
 }
 
 // Returns fid for root and remaining path from root
-func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Path, *serr.Err) {
+func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Tpathname, *serr.Err) {
 	path, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return sp.NoFid, path, err
@@ -94,7 +93,7 @@ func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Path, *serr.Err) {
 }
 
 // Returns FsObj for pn and the path from the root to FsObj
-func (mfs *MemFs) lookupWalk(pn string) (fs.FsObj, path.Path, *serr.Err) {
+func (mfs *MemFs) lookupWalk(pn string) (fs.FsObj, path.Tpathname, *serr.Err) {
 	fid, path, err := mfs.rootFid(pn)
 	if err != nil {
 		return nil, nil, err
@@ -136,7 +135,7 @@ func (mfs *MemFs) Remove(pn string) *serr.Err {
 		return err
 	}
 	db.DPrintf(db.MEMFSSRV, "Remove %q %v %v\n", pn, lo, path.Base())
-	return mfs.RemoveObj(mfs.ctx, lo, path, sp.NoFence())
+	return mfs.RemoveObj(mfs.ctx, lo, path, sp.NoFence(), fs.DEL_EXIST)
 }
 
 func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
@@ -148,6 +147,18 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	return no, nil
 }
 
+// For named. fsetcd notifies named when a an ephemeral file is
+// deleted it; delete the directory entry and possibly signal the
+// directory watch of the change.
+func (mfs *MemFs) Notify(pn path.Tpathname) error {
+	db.DPrintf(db.MEMFSSRV, "MemFs.Notify pn %v\n", pn)
+	lo, _, err := mfs.lookupWalk(pn.String())
+	if err != nil {
+		return err
+	}
+	return mfs.RemoveObj(mfs.ctx, lo, pn, sp.NoFence(), fs.DEL_EPHEMERAL)
+}
+
 func (mfs *MemFs) Dump() error {
 	d, _, path := mfs.Root(rootP)
 	s, err := d.(*dir.DirImpl).Dump()
@@ -155,5 +166,6 @@ func (mfs *MemFs) Dump() error {
 		return err
 	}
 	db.DPrintf("MEMFSSRV", "Dump: %v %v", path, s)
+
 	return nil
 }

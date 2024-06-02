@@ -29,7 +29,7 @@ func main() {
 		db.DFatalf("Error new fsetcd moutn: %v", err)
 	}
 	// By default, proxy doesn't use overlays.
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false)
 	pe.SetPID("proxy")
 	pe.Program = "proxy"
 	pe.SetPrincipal(sp.NewPrincipal(

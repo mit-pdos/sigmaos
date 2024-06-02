@@ -35,7 +35,8 @@ func (sm *SyncMap[K, T]) Alloc(k K, ne T) (T, bool) {
 	return ne, true
 }
 
-// Returns true if allocated a new entry for k
+// If k doesn't exist, call ne while holding syncmap's lock. It
+// returns true if allocated a new entry for k
 func (sm *SyncMap[K, T]) AllocNew(k K, ne func(k K) T) (T, bool) {
 	sm.Lock()
 	defer sm.Unlock()
@@ -57,12 +58,35 @@ func (sm *SyncMap[K, T]) Insert(k K, t T) bool {
 	return true
 }
 
+func (sm *SyncMap[K, T]) Update(k K, t T) bool {
+	sm.Lock()
+	defer sm.Unlock()
+
+	if _, ok := sm.tbl[k]; !ok {
+		return false
+	}
+	sm.tbl[k] = t
+	return true
+}
+
 func (sm *SyncMap[K, T]) Delete(k K) {
 	sm.Lock()
 	defer sm.Unlock()
 
 	if _, ok := sm.tbl[k]; ok {
 		delete(sm.tbl, k)
+	}
+}
+
+func (sm *SyncMap[K, T]) LookupDelete(k K) (T, bool) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	if v, ok := sm.tbl[k]; ok {
+		delete(sm.tbl, k)
+		return v, true
+	} else {
+		return v, false
 	}
 }
 
@@ -87,4 +111,13 @@ func (sm *SyncMap[K, T]) Values() []T {
 		i += 1
 	}
 	return vals
+}
+
+func (sm *SyncMap[K, V]) Iter(f func(key K, val V)) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	for k, v := range sm.tbl {
+		f(k, v)
+	}
 }

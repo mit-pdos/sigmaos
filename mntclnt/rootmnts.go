@@ -13,8 +13,8 @@ import (
 )
 
 type RootMount struct {
-	svcpn     path.Path
-	tree      path.Path
+	svcpn     path.Tpathname
+	tree      path.Tpathname
 	principal *sp.Tprincipal
 	closed    bool
 }
@@ -54,7 +54,7 @@ func (rootmt *RootMountTable) disconnect(name string) error {
 	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
 }
 
-func (rootmt *RootMountTable) add(principal *sp.Tprincipal, svcpn, tree path.Path, mntname string) *serr.Err {
+func (rootmt *RootMountTable) add(principal *sp.Tprincipal, svcpn, tree path.Tpathname, mntname string) *serr.Err {
 	rootmt.Lock()
 	defer rootmt.Unlock()
 
@@ -75,7 +75,7 @@ func (rootmt *RootMountTable) isRootMount(mntname string) bool {
 }
 
 // Resolve pn that names a server's root (e.g., name/ux, name)
-func (mc *MntClnt) resolveRoot(pn path.Path) (*serr.Err, bool) {
+func (mc *MntClnt) resolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	db.DPrintf(db.MOUNT, "resolveRoot %v", pn)
 	if len(pn) == 0 {
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("empty path '%v' ", pn)), false
@@ -131,7 +131,7 @@ func (mc *MntClnt) NewRootMount(principal *sp.Tprincipal, pn, mntname string) er
 	return nil
 }
 
-func (mc *MntClnt) mountRoot(svc, rest path.Path, mntname string) *serr.Err {
+func (mc *MntClnt) mountRoot(svc, rest path.Tpathname, mntname string) *serr.Err {
 	db.DPrintf(db.MOUNT, "mountRoot: %v %v %v\n", svc, rest, mntname)
 	fid, _, err := mc.mnt.resolveMnt(svc, true)
 	if err != nil {

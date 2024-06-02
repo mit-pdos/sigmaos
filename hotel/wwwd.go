@@ -12,17 +12,13 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
-	"sigmaos/portclnt"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/tracing"
-)
-
-const (
-	HOTEL_PORT sp.Tport = 3030
 )
 
 type Www struct {
@@ -37,7 +33,6 @@ type Www struct {
 	profc    *rpcclnt.RPCClnt
 	recc     *rpcclnt.RPCClnt
 	geoc     *rpcclnt.RPCClnt
-	pc       *portclnt.PortClnt
 }
 
 // Run starts the server
@@ -113,12 +108,7 @@ func RunWww(job string, public bool) error {
 	//	}
 
 	if public {
-		pc, pi, err := portclnt.NewPortClntPort(www.FsLib)
-		if err != nil {
-			db.DFatalf("AllocPort err %v", err)
-		}
-		www.pc = pc
-		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, www.ProcEnv().GetNet()))
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_PORT))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -127,13 +117,11 @@ func RunWww(job string, public bool) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		ep.Addrs()[0].IPStr = pi.HostIP.String()
-		ep.Addrs()[0].PortInt = uint32(pi.PBinding.HostPort)
-		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, www.ProcEnv().GetNet(), ep); err != nil {
+		if err = port.AdvertisePublicHTTPPort(www.FsLib, JobHTTPAddrsPath(job), ep); err != nil {
 			db.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
-		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, HOTEL_PORT, www.ProcEnv().GetNet()))
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_PORT))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}

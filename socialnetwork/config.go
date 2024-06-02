@@ -2,7 +2,7 @@ package socialnetwork
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 
 	"sigmaos/cachedsvc"
 	"sigmaos/cachedsvcclnt"
@@ -12,7 +12,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"strconv"
 )
 
 const (
@@ -32,13 +31,13 @@ const (
 )
 
 type Srv struct {
-	Name   string
-	Public bool
-	Mcpu   proc.Tmcpu
+	Name string
+	Args []string
+	Mcpu proc.Tmcpu
 }
 
 func JobHTTPAddrsPath(job string) string {
-	return path.Join(JobDir(job), HTTP_ADDRS)
+	return filepath.Join(JobDir(job), HTTP_ADDRS)
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
@@ -72,7 +71,7 @@ type SocialNetworkConfig struct {
 }
 
 func JobDir(job string) string {
-	return path.Join(SOCIAL_NETWORK, job)
+	return filepath.Join(SOCIAL_NETWORK, job)
 }
 
 func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc, public bool) (*SocialNetworkConfig, error) {
@@ -88,7 +87,7 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 	var cm *cachedsvc.CacheMgr
 	if nsrv > 0 {
 		db.DPrintf(db.SOCIAL_NETWORK, "social network running with cached: %v caches", nsrv)
-		cm, err = cachedsvc.NewCacheMgr(sc, jobname, nsrv, proc.Tmcpu(cacheMcpu), gc, public)
+		cm, err = cachedsvc.NewCacheMgr(sc, jobname, nsrv, proc.Tmcpu(cacheMcpu), gc)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 			return nil, err
@@ -104,7 +103,7 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 	pids := make([]sp.Tpid, 0, len(srvs))
 	for _, srv := range srvs {
 		db.DPrintf(db.TEST, "Start %v", srv.Name)
-		p := proc.NewProc(srv.Name, []string{strconv.FormatBool(srv.Public), jobname})
+		p := proc.NewProc(srv.Name, append([]string{jobname}, srv.Args...))
 		p.SetMcpu(srv.Mcpu)
 		if err := sc.Spawn(p); err != nil {
 			db.DPrintf(db.ERROR, "Error burst-spawnn proc %v: %v", p, err)

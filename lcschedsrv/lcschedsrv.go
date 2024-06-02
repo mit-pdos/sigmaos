@@ -2,7 +2,7 @@ package lcschedsrv
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"sync"
 
 	db "sigmaos/debug"
@@ -198,7 +198,7 @@ func Run() {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	lcs := NewLCSched(sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

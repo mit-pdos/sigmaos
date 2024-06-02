@@ -25,9 +25,9 @@ type Search struct {
 }
 
 // Run starts the server
-func RunSearchSrv(n string, public bool) error {
+func RunSearchSrv(n string) error {
 	s := &Search{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELSEARCH, s, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(HOTELSEARCH, s, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

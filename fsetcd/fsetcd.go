@@ -14,6 +14,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/netproxy"
+	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -74,14 +75,10 @@ func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, rea
 		realm:  realm,
 		dc:     dc,
 	}
-	if err := fs.watchEphemeral(); err != nil {
-		fs.Close()
-		return nil, err
-	}
 	return fs, nil
 }
 
-func (fs *FsEtcd) watchEphemeral() error {
+func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 	wopts := make([]clientv3.OpOption, 0)
 	wopts = append(wopts, clientv3.WithPrefix())
 	wopts = append(wopts, clientv3.WithFilterPut())
@@ -96,24 +93,31 @@ func (fs *FsEtcd) watchEphemeral() error {
 			if ok {
 				for _, e := range watchResp.Events {
 					key := string(e.Kv.Key)
-					db.DPrintf(db.FSETCD, "watchResp event %v\n", key)
-					dei, n, ok := fs.dc.find(key2path(key))
+					pn, ok := fs.dc.find(key2path(key))
+					db.DPrintf(db.FSETCD, "WatchEphemeral: watchResp event %v %v\n", key, pn)
 					if ok {
-						if err := fs.Remove(dei, n, sp.NoFence(), false); err != nil {
-							db.DFatalf("event remove %v %v err %v\n", dei, n, err)
-						}
+						db.DPrintf(db.TEST, "WatchEphemeral: Notify ephemeral '%v'\n", pn)
+						ch <- pn
 					} else {
-						// XXX which non-cached directory contains key?
-						db.DPrintf(db.ERROR, "event not found %v\n", key)
+						// If not in cache, next readDirEtcd of the
+						// will remove it. If there is a sigmaos watch
+						// on the directory, then the directory is
+						// likely cached.  XXX don't evict directories
+						// with watches?
+						db.DPrintf(db.ALWAYS, "WatchEphemeral: event not found %v\n", key)
 					}
 				}
 			} else {
-				db.DPrintf(db.FSETCD, "wch closed\n")
+				db.DPrintf(db.FSETCD, "WatchEphemeral: wch closed\n")
 				return nil
 			}
 		}
 	}()
 	return nil
+}
+
+func (fs *FsEtcd) StopWatch() error {
+	return fs.Client.Watcher.Close()
 }
 
 func (fs *FsEtcd) Close() error {
@@ -140,7 +144,7 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 		return serr.NewErrError(err)
 	}
 	nf := NewEtcdFile(sp.DMSYMLINK, sp.NoClntId, sp.NoLeaseId, d)
-	if b, err := proto.Marshal(nf); err != nil {
+	if b, err := proto.Marshal(nf.EtcdFileProto); err != nil {
 		return serr.NewErrError(err)
 	} else {
 		dei := newDirEntInfoP(sp.Tpath(BOOT), sp.DMDIR)

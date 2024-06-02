@@ -14,9 +14,9 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/dir"
 	"sigmaos/keys"
 	"sigmaos/memfs"
+	"sigmaos/memfs/dir"
 	"sigmaos/netproxyclnt"
 	"sigmaos/netsrv"
 	"sigmaos/path"
@@ -64,7 +64,7 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	case sessp.TTwatch:
 		time.Sleep(1 * time.Second)
 		ss.conn.Close()
-		msg := &sp.Ropen{Qid: qid}
+		msg := &sp.Ropen{Qid: qid.Proto()}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 	case sessp.TTwrite:
 		msg := &sp.Rwrite{Count: uint32(len(fcm.Fcm.Iov[0]))}
@@ -78,7 +78,7 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 		rep.Iov = sessp.IoVec{fcm.Fcm.Iov[0][0:REPBUFSZ]}
 	default:
-		msg := &sp.Rattach{Qid: qid}
+		msg := &sp.Rattach{Qid: qid.Proto()}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 		r := rand.Int64(100)
 		if r < uint64(ss.crash) {
@@ -126,7 +126,7 @@ func TestCompile(t *testing.T) {
 
 func TestConnectSessSrv(t *testing.T) {
 	ts := newTstateSrv(t, 0)
-	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Tpathname{})
 	rep, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
@@ -135,7 +135,7 @@ func TestConnectSessSrv(t *testing.T) {
 
 func TestDisconnectSessSrv(t *testing.T) {
 	ts := newTstateSrv(t, 0)
-	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Tpathname{})
 	_, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 	assert.Nil(t, err)
 	ch := make(chan *serr.Err)
@@ -166,7 +166,7 @@ func testManyClients(t *testing.T, crash int) {
 					ch <- true
 					done = true
 				default:
-					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.PE.GetSecrets(), sp.TclntId(i), path.Path{})
+					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.PE.GetSecrets(), sp.TclntId(i), path.Tpathname{})
 					_, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 					if err != nil && crash > 0 && serr.IsErrCode(err, serr.TErrUnreachable) {
 						// wait for stop signal
@@ -481,7 +481,7 @@ func (ts *TstateSp) shutdown() {
 
 func TestConnectSigmaPSrv(t *testing.T) {
 	ts := newTstateSp(t)
-	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Tpathname{})
 	rep, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
@@ -497,7 +497,7 @@ func TestConnectSigmaPSrv(t *testing.T) {
 
 func TestDisconnectSigmaPSrv(t *testing.T) {
 	ts := newTstateSp(t)
-	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Path{})
+	req := sp.NewTattach(0, sp.NoFid, ts.PE.GetSecrets(), 0, path.Tpathname{})
 	rep, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)

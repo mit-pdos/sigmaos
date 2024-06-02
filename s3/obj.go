@@ -17,7 +17,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func newTpath(key path.Path) sp.Tpath {
+func newTpath(key path.Tpathname) sp.Tpath {
 	h := fnv.New64a()
 	h.Write([]byte(key.String()))
 	return sp.Tpath(h.Sum64())
@@ -26,7 +26,7 @@ func newTpath(key path.Path) sp.Tpath {
 type Obj struct {
 	bucket string
 	perm   sp.Tperm
-	key    path.Path
+	key    path.Tpathname
 
 	// set by fill()
 	sz    sp.Tlength
@@ -39,7 +39,7 @@ type Obj struct {
 	off sp.Toffset
 }
 
-func newObj(bucket string, key path.Path, perm sp.Tperm) *Obj {
+func newObj(bucket string, key path.Tpathname, perm sp.Tperm) *Obj {
 	o := &Obj{}
 	o.bucket = bucket
 	o.key = key
@@ -79,7 +79,7 @@ func (o *Obj) readHead(ctx fs.CtxI, fss3 *Fss3) *serr.Err {
 	return nil
 }
 
-func newFsObj(bucket string, perm sp.Tperm, key path.Path) fs.FsObj {
+func newFsObj(bucket string, perm sp.Tperm, key path.Tpathname) fs.FsObj {
 	if perm.IsDir() {
 		return newDir(bucket, key.Copy(), perm)
 	} else {
@@ -105,7 +105,7 @@ func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
 }
 
 func (o *Obj) Path() sp.Tpath {
-	p := path.Path{o.bucket}
+	p := path.Tpathname{o.bucket}
 	return newTpath(p.AppendPath(o.key))
 }
 

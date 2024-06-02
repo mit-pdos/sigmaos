@@ -52,6 +52,9 @@ const (
 	RUNNING = "running"
 	PIDS    = "pids"
 
+	// Uprocd
+	PUBLIC_PORT = "public-port"
+
 	// Auth
 	KEYDREL    = "keyd"
 	KEYD       = NAME + "/" + KEYDREL

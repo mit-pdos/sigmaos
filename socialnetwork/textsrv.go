@@ -29,10 +29,10 @@ type TextSrv struct {
 	urlc  *rpcclnt.RPCClnt
 }
 
-func RunTextSrv(public bool, jobname string) error {
+func RunTextSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Creating text service\n")
 	tsrv := &TextSrv{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_TEXT, tsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_TEXT, tsrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

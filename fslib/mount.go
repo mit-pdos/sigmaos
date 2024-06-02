@@ -12,8 +12,8 @@ func (fsl *FsLib) MkEndpointFile(pn string, ep *sp.Tendpoint, lid sp.TleaseId) e
 	if err != nil {
 		return err
 	}
-	if err := fsl.PutFileAtomic(pn, 0777|sp.DMSYMLINK, b, lid); err != nil {
-		db.DPrintf(db.ALWAYS, "PutFileAtomic %v err %v\n", pn, err)
+	if _, err := fsl.PutFileEphemeral(pn, 0777|sp.DMSYMLINK, sp.OWRITE|sp.OEXCL, lid, b); err != nil {
+		db.DPrintf(db.ALWAYS, "MkEndpointFile: PutFileEphemeral %v err %v\n", pn, err)
 		return err
 	}
 	return nil

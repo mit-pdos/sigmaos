@@ -11,9 +11,9 @@ type CacheMgr struct {
 	job string
 }
 
-func NewCacheMgr(sc *sigmaclnt.SigmaClnt, job string, nsrv int, mcpu proc.Tmcpu, gc, public bool) (*CacheMgr, error) {
+func NewCacheMgr(sc *sigmaclnt.SigmaClnt, job string, nsrv int, mcpu proc.Tmcpu, gc bool) (*CacheMgr, error) {
 	cm := &CacheMgr{}
-	sm, err := NewCachedSvc(sc, nsrv, mcpu, job, "cached", cache.CACHE, gc, public)
+	sm, err := NewCachedSvc(sc, nsrv, mcpu, job, "cached", cache.CACHE, gc)
 	if err != nil {
 		return nil, err
 	}

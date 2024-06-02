@@ -25,7 +25,7 @@ func TestUser(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, 1000}}, NCACHESRV)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -105,8 +105,8 @@ func TestGraph(t *testing.T) {
 		return
 	}
 	tssn, err := newTstateSN(t1, []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 1000}}, NCACHESRV)
+		sn.Srv{"socialnetwork-user", nil, 1000},
+		sn.Srv{"socialnetwork-graph", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -191,8 +191,8 @@ func TestUserAndGraph(t *testing.T) {
 		return
 	}
 	tssn, err := newTstateSN(t1, []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 1000}}, NCACHESRV)
+		sn.Srv{"socialnetwork-user", nil, 1000},
+		sn.Srv{"socialnetwork-graph", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -204,7 +204,7 @@ func TestUserAndGraph(t *testing.T) {
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	urpcc := rpcclnt.NewRPCClnt(ch)
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	grch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
@@ -217,11 +217,11 @@ func TestUserAndGraph(t *testing.T) {
 	arg_reg2 := proto.RegisterUserRequest{
 		Firstname: "Bob", Lastname: "Test", Username: "btest", Password: "zyx"}
 	res_reg := proto.UserResponse{}
-	err = urpcc.RPC("UserSrv.RegisterUser", &arg_reg1, &res_reg)
+	err = rpcc.RPC("UserSrv.RegisterUser", &arg_reg1, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_reg.Ok)
 	auserid := res_reg.Userid
-	err = urpcc.RPC("UserSrv.RegisterUser", &arg_reg2, &res_reg)
+	err = rpcc.RPC("UserSrv.RegisterUser", &arg_reg2, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_reg.Ok)
 	buserid := res_reg.Userid
@@ -277,7 +277,7 @@ func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", test.Overlays, mcpu}}, 1)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", nil, mcpu}}, 1)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -290,13 +290,13 @@ func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	urpcc := rpcclnt.NewRPCClnt(ch)
+	rpcc := rpcclnt.NewRPCClnt(ch)
 
 	// check user
 	arg_check := proto.CheckUserRequest{Usernames: []string{"user_1"}}
 	res_check := proto.CheckUserResponse{}
 	for i := 1; i < 5001; i++ {
-		assert.Nil(t, urpcc.RPC("UserSrv.CheckUser", &arg_check, &res_check))
+		assert.Nil(t, rpcc.RPC("UserSrv.CheckUser", &arg_check, &res_check))
 		assert.Equal(t, "OK", res_check.Ok)
 		assert.Equal(t, int64(1), res_check.Userids[0])
 	}

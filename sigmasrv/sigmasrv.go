@@ -11,10 +11,10 @@ import (
 	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/memfs"
+	"sigmaos/memfs/dir"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/rpc"
@@ -33,28 +33,15 @@ type SigmaSrv struct {
 
 // Make a sigmasrv with an memfs, and publish server at fn.
 func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
+	db.DPrintf(db.SIGMASRV, "NewSigmaSrv %T", svci)
+	defer db.DPrintf(db.SIGMASRV, "NewSigmaSrv done %T", svci)
+
 	mfs, error := memfssrv.NewMemFs(fn, pe)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrv %v err %v", fn, error)
 		return nil, error
 	}
 	return newSigmaSrvMemFs(mfs, svci)
-}
-
-func NewSigmaSrvPublic(fn string, svci any, pe *proc.ProcEnv, public bool) (*SigmaSrv, error) {
-	db.DPrintf(db.SIGMASRV, "NewSigmaSrvPublic %T", svci)
-	defer db.DPrintf(db.SIGMASRV, "NewSigmaSrvPublic done %T", svci)
-
-	if public {
-		mfs, error := memfssrv.NewMemFsPublic(fn, pe)
-		if error != nil {
-			db.DPrintf(db.ERROR, "NewMemFsPublic %v err %v", fn, error)
-			return nil, error
-		}
-		return newSigmaSrvMemFs(mfs, svci)
-	} else {
-		return NewSigmaSrv(fn, svci, pe)
-	}
 }
 
 func NewSigmaSrvAddrClnt(fn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
@@ -75,7 +62,7 @@ func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pe *proc.ProcEnv, svci any) (*Si
 }
 
 func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc)
+	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP), sc)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v", fn, error)
 		return nil, error
@@ -86,7 +73,7 @@ func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, e
 // For an memfs server: memfs, lease srv, and fences
 func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
 	ffs := fencefs.NewRoot(ctx.NewCtxNull(), nil)
-	mfs, error := memfssrv.NewMemFsPortClntFence(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc, ffs)
+	mfs, error := memfssrv.NewMemFsPortClntFence(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP), sc, ffs)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrvClntFence %v err %v", fn, error)
 		return nil, error
@@ -102,7 +89,7 @@ func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error)
 }
 
 func NewSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc)
+	mfs, err := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP), sc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewMemFsPortClnt %v err %v", fn, err)
 		return nil, err

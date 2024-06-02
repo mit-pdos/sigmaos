@@ -86,9 +86,9 @@ func (s *Reserve) initDb() error {
 	return nil
 }
 
-func RunReserveSrv(job string, public bool, cache string) error {
+func RunReserveSrv(job string, cache string) error {
 	r := &Reserve{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELRESERVE, r, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(HOTELRESERVE, r, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

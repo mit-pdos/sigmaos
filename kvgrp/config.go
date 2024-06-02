@@ -107,7 +107,7 @@ func (g *Group) newRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *re
 	initial := false
 	if ep == nil {
 		initial = true
-		addr = sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, g.ProcEnv().GetNet())
+		addr = sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 	} else {
 		addr = ep.Addrs()[0]
 	}

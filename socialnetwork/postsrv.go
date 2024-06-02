@@ -29,10 +29,10 @@ type PostSrv struct {
 	cachec *cachedsvcclnt.CachedSvcClnt
 }
 
-func RunPostSrv(public bool, jobname string) error {
+func RunPostSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Creating post service\n")
 	psrv := &PostSrv{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_POST, psrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_POST, psrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

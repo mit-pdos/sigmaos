@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -106,7 +106,7 @@ func RunRealmSrv(netproxy bool) error {
 	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib)
 	go rs.enforceResourcePolicy()
 	err = ssrv.RunServer()
-	rs.mkc.StopMonitoring()
+	rs.mkc.StopWatching()
 	return nil
 }
 
@@ -159,7 +159,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v named started", req.Realm)
 
 	// wait until realm's named is ready to serve
-	sem := semclnt.NewSemClnt(rm.sc.FsLib, path.Join(sp.REALMS, req.Realm)+".sem")
+	sem := semclnt.NewSemClnt(rm.sc.FsLib, filepath.Join(sp.REALMS, req.Realm)+".sem")
 	if err := sem.Down(); err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 	// Endpoint some service union dirs from the root realm
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
-		pn := path.Join(sp.NAMED, s)
+		pn := filepath.Join(sp.NAMED, s)
 		ep := sp.NewEndpoint(sp.INTERNAL_EP, namedEndpoint.Addrs(), rid)
 		ep.SetTree(s)
 		db.DPrintf(db.REALMD, "Link %v at %s\n", ep, pn)
@@ -191,7 +191,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 	// Make some realm dirs
 	for _, s := range []string{sp.KPIDSREL, sp.S3REL, sp.UXREL} {
-		pn := path.Join(sp.NAMED, s)
+		pn := filepath.Join(sp.NAMED, s)
 		db.DPrintf(db.REALMD, "Mkdir %v", pn)
 		if err := sc.MkDir(pn, 0777); err != nil {
 			db.DPrintf(db.REALMD, "EndpointService %v err %v\n", pn, err)

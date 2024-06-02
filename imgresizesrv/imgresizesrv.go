@@ -3,7 +3,7 @@ package imgresizesrv
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -48,7 +48,7 @@ type ImgSrv struct {
 func Cleanup(fsl *fslib.FsLib, dir string) error {
 	_, err := fsl.ProcessDir(dir, func(st *sp.Stat) (bool, error) {
 		if IsThumbNail(st.Name) {
-			err := fsl.Remove(path.Join(dir, st.Name))
+			err := fsl.Remove(filepath.Join(dir, st.Name))
 			if err != nil {
 				return true, err
 			}
@@ -98,7 +98,7 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 
 	imgd.Started()
 
-	imgd.leaderclnt, err = leaderclnt.NewLeaderClnt(imgd.FsLib, path.Join(IMG, imgd.job, "imgd-leader"), 0777)
+	imgd.leaderclnt, err = leaderclnt.NewLeaderClnt(imgd.FsLib, filepath.Join(IMG, imgd.job, "imgd-leader"), 0777)
 	if err != nil {
 		return nil, fmt.Errorf("NewLeaderclnt err %v", err)
 	}
@@ -117,8 +117,8 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 }
 
 func ThumbName(fn string) string {
-	ext := path.Ext(fn)
-	fn1 := strings.TrimSuffix(fn, ext) + "-" + rd.String(4) + "-thumb" + path.Ext(fn)
+	ext := filepath.Ext(fn)
+	fn1 := strings.TrimSuffix(fn, ext) + "-" + rd.String(4) + "-thumb" + filepath.Ext(fn)
 	return fn1
 }
 
@@ -143,7 +143,7 @@ func (imgd *ImgSrv) Work() {
 	db.DPrintf(db.IMGD, "Try acquire leadership coord %v job %v", imgd.ProcEnv().GetPID(), imgd.job)
 
 	// Try to become the leading coordinator.
-	if err := imgd.leaderclnt.LeadAndFence(nil, []string{path.Join(IMG, imgd.job)}); err != nil {
+	if err := imgd.leaderclnt.LeadAndFence(nil, []string{filepath.Join(IMG, imgd.job)}); err != nil {
 		sts, err2 := imgd.ft.Jobs()
 		db.DFatalf("LeadAndFence err %v sts %v err2 %v", err, sp.Names(sts), err2)
 	}

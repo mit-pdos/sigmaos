@@ -2,7 +2,7 @@ package leadertest
 
 import (
 	"encoding/json"
-	"path"
+	"path/filepath"
 	"time"
 
 	db "sigmaos/debug"
@@ -29,7 +29,7 @@ func RunLeader(dir, last, child string) {
 
 	sc.Started()
 
-	fn := path.Join(dir, OUT)
+	fn := filepath.Join(dir, OUT)
 	l, err := leaderclnt.NewLeaderClnt(sc.FsLib, LEADERFN, 0777)
 	if err != nil {
 		db.DFatalf("NewLeaderClnt %v failed %v\n", LEADERFN, err)

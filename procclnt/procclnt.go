@@ -4,7 +4,7 @@ package procclnt
 import (
 	"fmt"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -127,7 +127,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, schedd will create the semaphore.
 		kprocDir := proc.KProcDir(p.GetPid())
-		semStart := semclnt.NewSemClnt(clnt.FsLib, path.Join(kprocDir, proc.START_SEM))
+		semStart := semclnt.NewSemClnt(clnt.FsLib, filepath.Join(kprocDir, proc.START_SEM))
 		semStart.Init(0)
 	}
 	return nil
@@ -150,10 +150,6 @@ func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, error) {
 	return clnt.procqclnt.Enqueue(p)
 }
 
-func (clnt *ProcClnt) chooseProcQ(pid sp.Tpid) (string, error) {
-	return clnt.procqclnt.ChooseProcQ(pid)
-}
-
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 	return clnt.lcschedclnt.Enqueue(p)
 }
@@ -173,7 +169,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 				// BE Non-kernel procs are enqueued via the procq.
 				spawnedKernelID, err = clnt.enqueueViaProcQ(p)
 				if err == nil {
-					db.DPrintf(db.TEST, "spawn: SetBinKernelId %v %v\n", p.GetProgram(), spawnedKernelID)
+					db.DPrintf(db.PROCCLNT, "spawn: SetBinKernelId %v %v\n", p.GetProgram(), spawnedKernelID)
 					clnt.bins.SetBinKernelID(p.GetProgram(), spawnedKernelID)
 					p.SetKernelID(spawnedKernelID, false)
 				} else if serr.IsErrorUnavailable(err) {
@@ -316,7 +312,7 @@ func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, s
 func (clnt *ProcClnt) Exited(status *proc.Status) {
 	db.DPrintf(db.PROCCLNT, "Exited normally %v parent %v pid %v status %v", clnt.ProcEnv().ProcDir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetPID(), status)
 	db.DPrintf(db.PROCCLNT, "Done Exited normally")
-	clnt.StopMonitoringSrvs()
+	clnt.StopWatchingSrvs()
 	// will catch some unintended misuses: a proc calling exited
 	// twice or schedd calling exited twice.
 	if clnt.setExited(clnt.ProcEnv().GetPID()) == clnt.ProcEnv().GetPID() {
@@ -330,10 +326,10 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 }
 
 // Stop the schedd/procq/lcsched monitoring threads
-func (clnt *ProcClnt) StopMonitoringSrvs() {
-	clnt.procqclnt.StopMonitoring()
-	clnt.lcschedclnt.StopMonitoring()
-	clnt.scheddclnt.StopMonitoring()
+func (clnt *ProcClnt) StopWatchingSrvs() {
+	clnt.procqclnt.StopWatching()
+	clnt.lcschedclnt.StopWatching()
+	clnt.scheddclnt.StopWatching()
 }
 
 // Called on behalf of the proc by schedd when the proc crashes.
@@ -344,10 +340,10 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 		db.DPrintf(db.PROCCLNT_ERR, "exited %v err %v", pid, err)
 	}
 	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()
-	semPath := path.Join(parentdir, proc.START_SEM)
+	semPath := filepath.Join(parentdir, proc.START_SEM)
 	if how != proc.HSCHEDD {
 		kprocDir := proc.KProcDir(pid)
-		semPath = path.Join(kprocDir, proc.START_SEM)
+		semPath = filepath.Join(kprocDir, proc.START_SEM)
 	}
 	semStart := semclnt.NewSemClnt(clnt.FsLib, semPath)
 	semStart.Up()

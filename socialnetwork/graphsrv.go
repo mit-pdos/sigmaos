@@ -34,10 +34,10 @@ type GraphSrv struct {
 	userc  *rpcclnt.RPCClnt
 }
 
-func RunGraphSrv(public bool, jobname string) error {
+func RunGraphSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_GRAPH, "Creating graph service\n")
 	gsrv := &GraphSrv{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_GRAPH, gsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_GRAPH, gsrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

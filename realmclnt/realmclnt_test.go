@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -296,9 +296,9 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 		for _, st := range sts1 {
 			// If there is a name in common in the directory, check that they are for different endpoints
 			if fslib.Present(sts, []string{st.Name}) {
-				ep, err := ts1.ReadEndpoint(path.Join(d, st.Name))
+				ep, err := ts1.ReadEndpoint(filepath.Join(d, st.Name))
 				assert.Nil(t, err, "ReadEndpoint: %v", err)
-				ep1, err := rootts.ReadEndpoint(path.Join(d, st.Name))
+				ep1, err := rootts.ReadEndpoint(filepath.Join(d, st.Name))
 				assert.Nil(t, err, "ReadEndpoint: %v", err)
 				assert.False(t, ep.Addrs()[0] == ep1.Addrs()[0], "%v cross-over", d)
 			}
@@ -353,9 +353,9 @@ func TestWaitExitMultiNode(t *testing.T) {
 		for _, st := range sts1 {
 			// If there is a name in common in the directory, check that they are for different endpoints
 			if fslib.Present(sts, []string{st.Name}) {
-				ep, err := ts1.ReadEndpoint(path.Join(d, st.Name))
+				ep, err := ts1.ReadEndpoint(filepath.Join(d, st.Name))
 				assert.Nil(t, err, "ReadEndpoint: %v", err)
-				ep1, err := rootts.ReadEndpoint(path.Join(d, st.Name))
+				ep1, err := rootts.ReadEndpoint(filepath.Join(d, st.Name))
 				assert.Nil(t, err, "ReadEndpoint: %v", err)
 				assert.False(t, ep.Addrs()[0] == ep1.Addrs()[0], "%v cross-over", d)
 			}
@@ -488,7 +488,7 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	}
 
 	job := rd.String(16)
-	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
+	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
 	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
@@ -522,7 +522,7 @@ func TestRealmNetIsolationOK(t *testing.T) {
 		ep.SetAddr(ep.Addrs()[:1])
 	}
 
-	pn := path.Join(sp.NAMED, "srv")
+	pn := filepath.Join(sp.NAMED, "srv")
 	err = ts1.MkEndpointFile(pn, ep, sp.NoLeaseId)
 	assert.Nil(t, err)
 
@@ -555,7 +555,7 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	}
 
 	job := rd.String(16)
-	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true, test.Overlays)
+	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
 	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
@@ -577,7 +577,7 @@ func TestRealmNetIsolationFail(t *testing.T) {
 		ep.SetAddr(ep.Addrs()[:1])
 	}
 
-	pn := path.Join(sp.NAMED, "srv")
+	pn := filepath.Join(sp.NAMED, "srv")
 	err = ts2.MkEndpointFile(pn, ep, sp.NoLeaseId)
 	assert.Nil(t, err)
 

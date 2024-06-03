@@ -3,6 +3,7 @@ package fsetcd_test
 import (
 	"context"
 	"flag"
+	"fmt"
 	"testing"
 	"time"
 
@@ -35,7 +36,9 @@ func TestDump(t *testing.T) {
 	nd, err := fs.ReadDir(fsetcd.NewDirEntInfoDir(fsetcd.ROOT))
 	assert.Nil(t, err)
 	err = fs.Dump(0, nd, path.Tpathname{}, fsetcd.ROOT)
+	eks, err := fs.EphemeralPaths()
 	assert.Nil(t, err)
+	fmt.Printf("Ephemeral keys: %v\n", eks)
 }
 
 func TestLease(t *testing.T) {

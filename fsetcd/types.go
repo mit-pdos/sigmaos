@@ -22,7 +22,7 @@ func newEtcdFile() *EtcdFile {
 }
 
 func (ef *EtcdFile) String() string {
-	return fmt.Sprintf("{%v lid %v clnt %v l %d}", ef.Tperm(), ef.TleaseId(), ef.TclntId(), len(ef.Data))
+	return fmt.Sprintf("{%v l %d}", ef.Tperm(), len(ef.Data))
 }
 
 type EtcdDir struct {
@@ -35,6 +35,10 @@ func newEtcdDir() *EtcdDir {
 
 type EtcdDirEnt struct {
 	*EtcdDirEntProto
+}
+
+func prefixEphemeral(realm sp.Trealm) string {
+	return EPHEMERAL + string(realm)
 }
 
 func key2path(key string) sp.Tpath {
@@ -51,7 +55,13 @@ func marshalDirInfo(dir *DirInfo) ([]byte, *serr.Err) {
 	d := &EtcdDirProto{Ents: make([]*EtcdDirEntProto, dir.Ents.Len())}
 	idx := 0
 	dir.Ents.Iter(func(name string, di *DirEntInfo) bool {
-		d.Ents[idx] = &EtcdDirEntProto{Name: name, Path: uint64(di.Path), Perm: uint32(di.Perm)}
+		d.Ents[idx] = &EtcdDirEntProto{
+			Name:     name,
+			Path:     uint64(di.Path),
+			Perm:     uint32(di.Perm),
+			ClientId: uint64(di.ClntId),
+			LeaseId:  int64(di.LeaseId),
+		}
 		idx += 1
 		return true
 	})
@@ -63,7 +73,7 @@ func marshalDir(dir *EtcdDirProto, dperm sp.Tperm) ([]byte, *serr.Err) {
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
-	nfd := &EtcdFileProto{Perm: uint32(dperm), Data: d, ClientId: uint64(sp.NoClntId)}
+	nfd := &EtcdFileProto{Perm: uint32(dperm), Data: d}
 	b, err := proto.Marshal(nfd)
 	if err != nil {
 		return nil, serr.NewErrError(err)
@@ -88,13 +98,11 @@ func (dir *EtcdDir) lookup(name string) (*EtcdDirEnt, bool) {
 	return nil, false
 }
 
-func NewEtcdFile(perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId, data []byte) *EtcdFile {
+func NewEtcdFile(perm sp.Tperm, data []byte) *EtcdFile {
 	return &EtcdFile{
 		&EtcdFileProto{
-			Perm:     uint32(perm),
-			Data:     data,
-			ClientId: uint64(cid),
-			LeaseId:  int64(lid),
+			Perm: uint32(perm),
+			Data: data,
 		},
 	}
 }
@@ -106,9 +114,11 @@ func NewEtcdFileDir(perm sp.Tperm, path sp.Tpath, cid sp.TclntId, lid sp.TleaseI
 	if perm.IsDir() {
 		nd := &EtcdDir{&EtcdDirProto{}}
 		nd.Ents = append(nd.Ents, &EtcdDirEntProto{
-			Name: ".",
-			Path: uint64(path),
-			Perm: uint32(perm),
+			Name:     ".",
+			Path:     uint64(path),
+			Perm:     uint32(perm),
+			ClientId: uint64(cid),
+			LeaseId:  int64(lid),
 		})
 		d, err := proto.Marshal(nd.EtcdDirProto)
 		if err != nil {
@@ -116,28 +126,20 @@ func NewEtcdFileDir(perm sp.Tperm, path sp.Tpath, cid sp.TclntId, lid sp.TleaseI
 		}
 		fdata = d
 	}
-	return NewEtcdFile(perm, cid, lid, fdata), nil
-}
-
-func (nf *EtcdFile) LeaseOpts() []clientv3.OpOption {
-	opts := make([]clientv3.OpOption, 0)
-	if nf.TleaseId() != sp.NoLeaseId {
-		opts = append(opts, clientv3.WithLease(clientv3.LeaseID(nf.LeaseId)))
-	}
-	return opts
-
+	return NewEtcdFile(perm, fdata), nil
 }
 
 func (nf *EtcdFileProto) Tperm() sp.Tperm {
 	return sp.Tperm(nf.Perm)
 }
 
-func (nf *EtcdFileProto) TclntId() sp.TclntId {
-	return sp.TclntId(nf.ClientId)
-}
+func (e *DirEntInfo) LeaseOpts() []clientv3.OpOption {
+	opts := make([]clientv3.OpOption, 0)
+	if e.LeaseId != sp.NoLeaseId {
+		opts = append(opts, clientv3.WithLease(clientv3.LeaseID(e.LeaseId)))
+	}
+	return opts
 
-func (nf *EtcdFileProto) TleaseId() sp.TleaseId {
-	return sp.TleaseId(nf.LeaseId)
 }
 
 func (e *EtcdDirEntProto) Tpath() sp.Tpath {
@@ -146,4 +148,12 @@ func (e *EtcdDirEntProto) Tpath() sp.Tpath {
 
 func (e *EtcdDirEntProto) Tperm() sp.Tperm {
 	return sp.Tperm(e.Perm)
+}
+
+func (nf *EtcdDirEntProto) TclntId() sp.TclntId {
+	return sp.TclntId(nf.ClientId)
+}
+
+func (nf *EtcdDirEntProto) TleaseId() sp.TleaseId {
+	return sp.TleaseId(nf.LeaseId)
 }

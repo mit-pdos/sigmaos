@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	// db "sigmaos/debug"
 	"sigmaos/electclnt"
 	"sigmaos/test"
 )
@@ -45,7 +46,8 @@ func TestAcquireRelease(t *testing.T) {
 	ts.Shutdown()
 }
 
-// n thread become try to become a leader and on success add 1 to shared file
+// n thread become try to become a leader and on success keep adding
+// a shared counter until N
 func TestLeaderConcur(t *testing.T) {
 	ts, err1 := test.NewTstate(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -53,20 +55,21 @@ func TestLeaderConcur(t *testing.T) {
 	}
 
 	N := 3000
-	n_threads := 20
+	ntreads := 20
 	cnt := 0
 
 	var done sync.WaitGroup
-	done.Add(n_threads)
+	done.Add(ntreads)
 
-	for i := 0; i < n_threads; i++ {
-		go func(done *sync.WaitGroup, N *int, cnt *int) {
+	for i := 0; i < ntreads; i++ {
+		go func(done *sync.WaitGroup, N *int, cnt *int, i int) {
 			defer done.Done()
 			for {
 				leader, err := electclnt.NewElectClnt(ts.FsLib, LEADERNAME, 0)
 				assert.Nil(t, err)
 				err = leader.AcquireLeadership([]byte{})
 				assert.Nil(ts.T, err, "AcquireLeader")
+				// db.DPrintf(db.TEST, " %d leader", i)
 				if *cnt < *N {
 					*cnt += 1
 				} else {
@@ -77,7 +80,7 @@ func TestLeaderConcur(t *testing.T) {
 				err = leader.ReleaseLeadership()
 				assert.Nil(ts.T, err, "ReleaseLeadership")
 			}
-		}(&done, &N, &cnt)
+		}(&done, &N, &cnt, i)
 	}
 
 	done.Wait()

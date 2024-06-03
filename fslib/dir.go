@@ -60,14 +60,14 @@ func (fl *FsLib) MkDirPath(dir, pn string, perm sp.Tperm) error {
 // one them. Too stop early, f must return true.  ProcessDir returns
 // true if stopped early.  Note that as ProcessDir pages through dir
 // other procs may add/delete entries, which may cause ProcessDir to
-// see the same file twice.  Use FileWatcher to avoid this behavior.
+// see the same file twice.  Use DirReader to filter duplicates.
 func (fl *FsLib) ProcessDir(dir string, f func(*sp.Stat) (bool, error)) (bool, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		return false, err
 	}
 	defer rdr.Close()
-	return reader.ReadDir(reader.MkDirReader(rdr.Reader), f)
+	return reader.ReadDirEnts(reader.MkDirEntsReader(rdr.Reader), f)
 }
 
 func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
@@ -86,7 +86,7 @@ func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
 		return nil, nil, err
 	}
 	dirents := []*sp.Stat{}
-	_, error := reader.ReadDir(reader.MkDirReader(rdr.Reader), func(st *sp.Stat) (bool, error) {
+	_, error := reader.ReadDirEnts(reader.MkDirEntsReader(rdr.Reader), func(st *sp.Stat) (bool, error) {
 		dirents = append(dirents, st)
 		return false, nil
 	})

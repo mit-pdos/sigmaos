@@ -24,7 +24,7 @@ type DirCache[E any] struct {
 	sync.Mutex
 	dir       *sortedmap.SortedMap[string, E]
 	watching  bool
-	done      uint32
+	done      atomic.Uint64
 	Path      string
 	LSelector db.Tselector
 	ESelector db.Tselector
@@ -195,36 +195,38 @@ func (dc *DirCache[E]) RoundRobin() (string, error) {
 }
 
 func (dc *DirCache[E]) RemoveEntry(name string) bool {
-	db.DPrintf(dc.LSelector, "UnregisterSrv %v", name)
-	defer db.DPrintf(dc.LSelector, "Done UnregisterSrv")
-	return dc.dir.Delete(name)
+	db.DPrintf(dc.LSelector, "RemoveEntry %v", name)
+	ok := dc.dir.Delete(name)
+	db.DPrintf(dc.LSelector, "Done Remove entry %v %v", ok, dc.dir)
+	return ok
 }
 
 // Read directory from server and return unique files. The caller may
 // hold the dd mutex
 func (dc *DirCache[E]) getEntries() ([]string, error) {
 	s := time.Now()
-	defer db.DPrintf(db.SPAWN_LAT, "[%v] getEntries %v", dc.LSelector, time.Since(s))
+	defer db.DPrintf(db.SPAWN_LAT, "getEntries %v", time.Since(s))
 
-	fw := fslib.NewFileWatcher(dc.FsLib, dc.Path)
-	fns, err := fw.GetUniqueEntries()
+	dr := fslib.NewDirReader(dc.FsLib, dc.Path)
+	fns, err := dr.GetUniqueEntries()
 	if err != nil {
+		db.DPrintf(dc.ESelector, "getEntries %v err", err)
 		return nil, err
 	}
-	db.DPrintf(dc.LSelector, "[%v] getEntries %v", dc.LSelector, fns)
+	db.DPrintf(dc.LSelector, "getEntries %v", fns)
 	return fns, nil
 }
 
 func (dc *DirCache[E]) StopWatching() {
-	atomic.StoreUint32(&dc.done, 1)
+	dc.done.Add(1)
 }
 
 // Monitor for changes to the directory and update the cached one
 func (dc *DirCache[E]) watchDir() {
 	retry := false
-	for atomic.LoadUint32(&dc.done) != 1 {
-		fw := fslib.NewFileWatcher(dc.FsLib, dc.Path)
-		ents, ok, err := fw.WatchUniqueEntries(dc.dir.Keys(0))
+	for dc.done.Load() == 0 {
+		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
+		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0))
 		if ok { // reset retry?
 			retry = false
 		}

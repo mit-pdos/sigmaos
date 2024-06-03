@@ -573,14 +573,18 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
 	assert.Nil(t, err)
 
+	// Err is always nil
+	cc2, _ := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts2.FsLib}, job)
+
+	// Check that the servers are unreachable
+	_, err = cc2.StatsSrvs()
+	assert.NotNil(t, err)
+
 	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
-	_, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
-	assert.NotNil(t, err)
-
 	ep, err := ts1.ReadEndpoint(cc.Server(0))
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err %v", err)
 
 	db.DPrintf(db.TEST, "ep %v", ep)
 

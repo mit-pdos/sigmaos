@@ -87,6 +87,7 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 	if wch == nil {
 		return fmt.Errorf("watchEphemeral: Watch failed")
 	}
+	db.DPrintf(db.WATCH, "WatchEphemeral: %v Set up etcd watch for %v", fs.realm, prefixEphemeral(fs.realm))
 
 	go func() error {
 		for {

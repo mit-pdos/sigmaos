@@ -486,6 +486,11 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	// Make a third realm
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
 	job := rd.String(16)
 	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true)
@@ -504,10 +509,14 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	sts, _ := ts1.GetDir("name/cache")
 	db.DPrintf(db.TEST, "readdir %v\n", sp.Names(sts))
 
-	sts, _ = rootts.GetDir("name/cache")
+	sts, _ = ts2.GetDir("name/cache")
 	db.DPrintf(db.TEST, "readdir %v\n", sp.Names(sts))
 
-	_, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{rootts.FsLib}, job)
+	// Err is always nil
+	csc, _ := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts2.FsLib}, job)
+
+	// Check that the servers are unreachable
+	_, err = csc.StatsSrvs()
 	assert.NotNil(t, err)
 
 	db.DPrintf(db.TEST, "readendpoint\n")
@@ -534,6 +543,9 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	cm.Stop()
 
 	err = ts1.Remove()
+	assert.Nil(t, err)
+
+	err = ts2.Remove()
 	assert.Nil(t, err)
 
 	rootts.Shutdown()

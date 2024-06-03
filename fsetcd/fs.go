@@ -28,8 +28,9 @@ const (
 )
 
 type EphemeralKey struct {
-	Path sp.Tpath
-	Pn   path.Tpathname
+	Realm sp.Trealm
+	Path  sp.Tpath
+	Pn    path.Tpathname
 }
 
 func (fs *FsEtcd) path2key(realm sp.Trealm, dei *DirEntInfo) string {
@@ -40,17 +41,19 @@ func (fs *FsEtcd) ephemkey(dei *DirEntInfo) string {
 	return EPHEMERAL + string(fs.realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
-func (fs *FsEtcd) EphemeralPaths() ([]EphemeralKey, error) {
-	resp, err := fs.Clnt().Get(context.TODO(), EPHEMERAL, clientv3.WithPrefix())
+func (fs *FsEtcd) EphemeralPaths(realm sp.Trealm) ([]EphemeralKey, error) {
+	resp, err := fs.Clnt().Get(context.TODO(), prefixEphemeral(fs.realm), clientv3.WithPrefix())
 	db.DPrintf(db.FSETCD, "EphemeralPaths %v err %v\n", resp, err)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
 	ekeys := make([]EphemeralKey, 0)
 	for _, kv := range resp.Kvs {
+		r, p := key2path(string(kv.Key))
 		ekeys = append(ekeys, EphemeralKey{
-			Path: key2path(string(kv.Key)),
-			Pn:   path.Split(string(kv.Value)),
+			Realm: r,
+			Path:  p,
+			Pn:    path.Split(string(kv.Value)),
 		})
 	}
 	return ekeys, nil
@@ -63,7 +66,8 @@ func (fs *FsEtcd) GetEphemPathName(key string) (path.Tpathname, error) {
 		return nil, serr.NewErrError(err)
 	}
 	if len(resp.Kvs) != 1 {
-		return nil, serr.NewErr(serr.TErrNotfound, key2path(key))
+		rp := key2realmpath(key)
+		return nil, serr.NewErr(serr.TErrNotfound, rp)
 	}
 	return path.Split(string(resp.Kvs[0].Value)), nil
 }
@@ -76,7 +80,7 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 		return nil, 0, serr.NewErrError(err)
 	}
 	if len(resp.Kvs) != 1 {
-		return nil, 0, serr.NewErr(serr.TErrNotfound, key2path(key))
+		return nil, 0, serr.NewErr(serr.TErrNotfound, key2realmpath(key))
 	}
 	nf := newEtcdFile()
 	if err := proto.Unmarshal(resp.Kvs[0].Value, nf.EtcdFileProto); err != nil {

@@ -29,14 +29,14 @@ func init() {
 func TestDump(t *testing.T) {
 	lip := sp.Tip("127.0.0.1")
 	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(test.EtcdIP))
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, etcdMnt, lip, lip, "", false, false, false)
+	pe := proc.NewTestProcEnv(sp.Trealm(realm), nil, etcdMnt, lip, lip, "", false, false, false)
 	npc := netproxyclnt.NewNetProxyClnt(pe)
 	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
 	assert.Nil(t, err)
 	nd, err := fs.ReadDir(fsetcd.NewDirEntInfoDir(fsetcd.ROOT))
 	assert.Nil(t, err)
 	err = fs.Dump(0, nd, path.Tpathname{}, fsetcd.ROOT)
-	eks, err := fs.EphemeralPaths()
+	eks, err := fs.EphemeralPaths(sp.Trealm(realm))
 	assert.Nil(t, err)
 	fmt.Printf("Ephemeral keys: %v\n", eks)
 }

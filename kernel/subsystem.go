@@ -30,7 +30,7 @@ type Subsystem interface {
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
 	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
-	AllocPort(p sp.Tport) (*port.PortBinding, error)
+	GetPortBinding(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
 
@@ -127,13 +127,7 @@ func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) er
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.FinalizeEnv(localIP, localIP, sp.Tpid(sp.NOT_SET))
-		var r *port.Range
-		up := sp.NO_PORT
-		if s.k.Param.Overlays {
-			r = &port.Range{FPORT, LPORT}
-			up = r.Fport
-		}
-		c, err := container.StartPContainer(s.p, kernelId, r, up, s.k.Param.GVisor)
+		c, err := container.StartPContainer(s.p, kernelId, s.k.Param.Overlays, s.k.Param.GVisor)
 		if err != nil {
 			return err
 		}
@@ -155,12 +149,8 @@ func (ss *KernelSubsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
 }
 
-func (ss *KernelSubsystem) AllocPort(p sp.Tport) (*port.PortBinding, error) {
-	if p == sp.NO_PORT {
-		return ss.container.AllocPort()
-	} else {
-		return ss.container.AllocPortOne(p)
-	}
+func (ss *KernelSubsystem) GetPortBinding(p sp.Tport) (*port.PortBinding, error) {
+	return ss.container.GetPortBinding(p)
 }
 
 // Send SIGTERM to a system.

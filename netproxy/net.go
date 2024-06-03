@@ -67,5 +67,5 @@ func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, realm sp.Trealm, l net.Listener) 
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		return nil, err
 	}
-	return sp.NewEndpoint(ept, sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, realm.String())}, realm), nil
+	return sp.NewEndpoint(ept, sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port)}, realm), nil
 }

@@ -16,26 +16,24 @@ message ProcEnvProto {
   string innerContainerIPStr = 9;
   string kernelID = 10;
   string buildTag = 11;
-  string net = 12;
-  string perf = 13;
-  string debug = 14;
-  string uprocdPIDStr = 15;
-  bool privileged = 16;
-  bool overlays = 17;
-  int64 netFail = 18;
-  int64 crash = 19;
-  int64 partition = 20;
-  int32 howInt = 21;
-  google.protobuf.Timestamp spawnTimePB = 22;
-  string strace = 23;
-  TendpointProto scheddEndpointProto = 24;
-  TendpointProto namedEndpointProto = 25;
-  bool useSigmaclntd = 26;
-  bool useNetProxy = 27;
-  bool verifyEndpoints = 28;
-  map<string, SecretProto> secretsMap = 29;
-  repeated string sigmaPath = 30;
-  repeated string kernels = 31;
+  string perf = 12;
+  string debug = 13;
+  string uprocdPIDStr = 14;
+  bool privileged = 15;
+  bool overlays = 16;
+  int64 netFail = 17;
+  int64 crash = 18;
+  int64 partition = 19;
+  int32 howInt = 20;
+  google.protobuf.Timestamp spawnTimePB = 21;
+  string strace = 22;
+  TendpointProto scheddEndpointProto = 23;
+  TendpointProto namedEndpointProto = 24;
+  bool useSigmaclntd = 25;
+  bool useNetProxy = 26;
+  map<string, SecretProto> secretsMap = 27;
+  repeated string sigmaPath = 28;
+  repeated string kernels = 29;
 }
 
 message ProcProto {

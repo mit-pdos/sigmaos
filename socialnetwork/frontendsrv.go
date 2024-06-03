@@ -10,7 +10,7 @@ import (
 
 	dbg "sigmaos/debug"
 	"sigmaos/perf"
-	"sigmaos/portclnt"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
@@ -31,7 +31,6 @@ type FrontEnd struct {
 	tlc      *rpcclnt.RPCClnt
 	homec    *rpcclnt.RPCClnt
 	composec *rpcclnt.RPCClnt
-	pc       *portclnt.PortClnt
 }
 
 const SERVER_NAME = "socialnetwork-frontend"
@@ -110,29 +109,22 @@ func RunFrontendSrv(public bool, job string) error {
 	//	}
 	dbg.DPrintf(dbg.ALWAYS, "SN public? %v", public)
 	if public {
-		pc, pi, err := portclnt.NewPortClntPort(frontend.FsLib)
-		if err != nil {
-			dbg.DFatalf("AllocPort err %v", err)
-		}
-		frontend.pc = pc
-		mnt, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort, sc.ProcEnv().GetNet()))
+		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_PORT))
 		if err != nil {
 			dbg.DFatalf("Error %v Listen: %v", public, err)
 		}
-		dbg.DPrintf(dbg.ALWAYS, "SN Got mnt %v pi %v", mnt, pi)
+		dbg.DPrintf(dbg.ALWAYS, "SN Got ep %v", ep)
 
 		//		if TRACING {
 		//			go tmux.Serve(l)
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		mnt.Addrs()[0].IPStr = pi.HostIP.String()
-		mnt.Addrs()[0].PortInt = uint32(pi.PBinding.HostPort)
-		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, sc.ProcEnv().GetNet(), mnt); err != nil {
+		if err = port.AdvertisePublicHTTPPort(frontend.FsLib, JobHTTPAddrsPath(job), ep); err != nil {
 			dbg.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
-		mnt, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT, frontend.ProcEnv().GetNet()))
+		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
 		if err != nil {
 			dbg.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -140,11 +132,10 @@ func RunFrontendSrv(public bool, job string) error {
 		//			go tmux.Serve(l)
 		//		} else {
 		go http.Serve(l, mux)
-		dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", mnt)
-		if err = sc.MkEndpointFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
+		dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", ep)
+		if err = sc.MkEndpointFile(JobHTTPAddrsPath(job), ep, sp.NoLeaseId); err != nil {
 			dbg.DFatalf("MkEndpointFile %v", err)
 		}
-
 	}
 
 	perf, err := perf.NewPerf(frontend.ProcEnv(), perf.SOCIAL_NETWORK_FRONTEND)

@@ -85,7 +85,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil
 	}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false)
 	pe.Program = "srv"
 	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
@@ -188,9 +188,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
 	useNetProxy := !noNetProxy
-	// Only verify mounts if running with netproxy
-	verifyMounts := false && useNetProxy
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy, verifyMounts)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	var kernelid string
 	var k *bootkernelclnt.Kernel

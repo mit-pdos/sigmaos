@@ -43,10 +43,10 @@ type Rec struct {
 }
 
 // Run starts the server
-func RunRecSrv(n string, public bool) error {
+func RunRecSrv(n string) error {
 	r := &Rec{}
 	r.hotels = loadRecTable("data/hotels.json")
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELREC, r, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(HOTELREC, r, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

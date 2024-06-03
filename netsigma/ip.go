@@ -10,34 +10,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Rearrange addrs so that first addr is in the realm as clnt.
-func Rearrange(clntnet string, addrs sp.Taddrs) sp.Taddrs {
-	if len(addrs) == 1 {
-		return addrs
-	}
-	raddrs := make(sp.Taddrs, len(addrs))
-	for i := 0; i < len(addrs); i++ {
-		raddrs[i] = addrs[i]
-	}
-	p := -1
-	l := -1
-	for i, a := range raddrs {
-		if a.NetNS == clntnet {
-			l = i
-			break
-		}
-		if a.NetNS == sp.ROOTREALM.String() && p < 0 {
-			p = i
-		}
-	}
-	if l >= 0 {
-		swap(raddrs, l)
-	} else if p >= 0 {
-		swap(raddrs, p)
-	}
-	return raddrs
-}
-
 func swap(addrs sp.Taddrs, i int) sp.Taddrs {
 	v := addrs[0]
 	addrs[0] = addrs[i]

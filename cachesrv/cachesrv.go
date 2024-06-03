@@ -2,7 +2,6 @@ package cachesrv
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -54,12 +53,8 @@ type CacheSrv struct {
 
 func RunCacheSrv(args []string, nshard int) error {
 	pn := ""
-	if len(args) > 3 {
-		pn = args[3]
-	}
-	public, err := strconv.ParseBool(args[2])
-	if err != nil {
-		return err
+	if len(args) > 2 {
+		pn = args[2]
 	}
 
 	pe := proc.GetProcEnv()
@@ -72,7 +67,7 @@ func RunCacheSrv(args []string, nshard int) error {
 	}
 
 	db.DPrintf(db.CACHESRV, "Run %v\n", s.shrd)
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(args[1]+s.shrd, s, pe, public)
+	ssrv, err := sigmasrv.NewSigmaSrv(args[1]+s.shrd, s, pe)
 	if err != nil {
 		return err
 	}

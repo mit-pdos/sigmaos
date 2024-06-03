@@ -44,11 +44,11 @@ func (a *Taddr) GetPort() Tport {
 	return Tport(a.PortInt)
 }
 
-func NewTaddrAnyPort(iptype Tiptype, netns string) *Taddr {
-	return NewTaddrRealm(NO_IP, iptype, NO_PORT, netns)
+func NewTaddrAnyPort(iptype Tiptype) *Taddr {
+	return NewTaddrRealm(NO_IP, iptype, NO_PORT)
 }
 
-func NewTaddrFromString(address string, iptype Tiptype, netns string) (*Taddr, error) {
+func NewTaddrFromString(address string, iptype Tiptype) (*Taddr, error) {
 	h, po, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func NewTaddrFromString(address string, iptype Tiptype, netns string) (*Taddr, e
 	if err != nil {
 		return nil, err
 	}
-	return NewTaddrRealm(Tip(h), iptype, Tport(port), netns), nil
+	return NewTaddrRealm(Tip(h), iptype, Tport(port)), nil
 }
 
 func NewTaddr(ip Tip, iptype Tiptype, port Tport) *Taddr {
@@ -65,16 +65,14 @@ func NewTaddr(ip Tip, iptype Tiptype, port Tport) *Taddr {
 		IPStr:     string(ip),
 		IPTypeInt: uint32(iptype),
 		PortInt:   uint32(port),
-		NetNS:     ROOTREALM.String(),
 	}
 }
 
-func NewTaddrRealm(ip Tip, iptype Tiptype, port Tport, netns string) *Taddr {
+func NewTaddrRealm(ip Tip, iptype Tiptype, port Tport) *Taddr {
 	return &Taddr{
 		IPStr:     string(ip),
 		IPTypeInt: uint32(iptype),
 		PortInt:   uint32(port),
-		NetNS:     netns,
 	}
 }
 

@@ -11,7 +11,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/netsigma"
 	sp "sigmaos/sigmap"
 )
 
@@ -40,7 +39,6 @@ func NewWebClnt(fsl *fslib.FsLib, job string) (*WebClnt, error) {
 	}
 	// XXX This is sort of arbitrary, perhaps change or remove?.
 	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 10000
-	addrs = netsigma.Rearrange(sp.ROOTREALM.String(), addrs)
 	db.DPrintf(db.ALWAYS, "Advertised addr %v", addrs[0])
 	return &WebClnt{job, addrs, "http://" + addrs[0].IPPort(), clnt, fsl}, nil
 }

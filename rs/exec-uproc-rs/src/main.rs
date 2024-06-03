@@ -59,8 +59,17 @@ fn main() {
     setcap_proc().expect("set caps failed");
     print_elapsed_time("trampoline.setcap_proc", now, false);
     now = SystemTime::now();
+    // Get principal ID from env
+    let principal_id = env::var("SIGMAPRINCIPAL").unwrap_or("NO_PRINCIPAL_IN_ENV".to_string());
+    let principal_id_frame_nbytes = (principal_id.len() + 4) as i32;
     // Connect to the netproxy socket
-    let netproxy_conn = UnixStream::connect("/tmp/sigmaclntd/sigmaclntd-netproxy.sock").unwrap();
+    let mut netproxy_conn =
+        UnixStream::connect("/tmp/sigmaclntd/sigmaclntd-netproxy.sock").unwrap();
+    // Write frame containing principal ID to socket
+    netproxy_conn
+        .write_all(&i32::to_le_bytes(principal_id_frame_nbytes))
+        .unwrap();
+    netproxy_conn.write_all(principal_id.as_bytes()).unwrap();
     // Remove O_CLOEXEC flag so that the connection remains open when the
     // trampoline execs the proc.
     let netproxy_conn_fd = netproxy_conn.into_raw_fd();

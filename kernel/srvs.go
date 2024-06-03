@@ -94,10 +94,6 @@ func (k *Kernel) GetCPUUtil(pid sp.Tpid) (float64, error) {
 	return k.svcs.svcMap[pid].GetCPUUtil()
 }
 
-func (k *Kernel) AllocPort(pid sp.Tpid, port sp.Tport) (*port.PortBinding, error) {
-	return k.svcs.svcMap[pid].AllocPort(port)
-}
-
 func (k *Kernel) EvictKernelProc(pid sp.Tpid) error {
 	k.Lock()
 	defer k.Unlock()
@@ -219,7 +215,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		pn := filepath.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
 
 		// container's first port is for uprocd
-		pm, err := s.GetContainer().AllocFirst()
+		pm, err := s.GetContainer().GetPortBinding(port.UPROCD_PORT)
 		if err != nil {
 			return nil, err
 		}
@@ -232,8 +228,17 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		if err := k.MkEndpointFile(pn, ep, sp.NoLeaseId); err != nil {
 			return nil, err
 		}
-		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s", pn, pm)
+		// Get port binding for WWW srvs running on this uprocd
+		pm2, err := s.GetContainer().GetPortBinding(port.PUBLIC_PORT)
+		if err != nil {
+			return nil, err
+		}
+		portFN := filepath.Join(pn, sp.PUBLIC_PORT)
+		if err := k.PutFileJson(portFN, 0777, pm2); err != nil {
+			db.DPrintf(db.ERROR, "Error put public port file: %v", err)
+			return nil, err
+		}
+		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s pfn %v", pn, pm, portFN)
 	}
-
 	return s, nil
 }

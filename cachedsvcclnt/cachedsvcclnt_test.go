@@ -39,7 +39,7 @@ func newTstate(t *test.Tstate, nsrv int) *Tstate {
 	ts.Tstate = t
 	ts.job = rd.String(16)
 	ts.Remove(cache.CACHE)
-	cm, err := cachedsvc.NewCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
+	cm, err := cachedsvc.NewCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true)
 	assert.Nil(t.T, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"

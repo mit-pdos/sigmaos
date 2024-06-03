@@ -4,6 +4,7 @@
 package cachedsvcclnt
 
 import (
+	"fmt"
 	"hash/fnv"
 	"strconv"
 	"sync"
@@ -89,6 +90,9 @@ func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, 
 	if err != nil {
 		return err
 	}
+	if n == 0 {
+		return fmt.Errorf("No cached servers found")
+	}
 	srv := csc.Server(key2server(key, n))
 	return csc.cc.GetTracedFenced(sctx, srv, key, val, sp.NullFence())
 }
@@ -97,6 +101,9 @@ func (csc *CachedSvcClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, 
 	n, err := csc.dd.Nentry()
 	if err != nil {
 		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("No cached servers found")
 	}
 	srv := csc.Server(key2server(key, n))
 	return csc.cc.PutTracedFenced(sctx, srv, key, val, sp.NullFence())

@@ -98,6 +98,13 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		procs:         syncmap.NewSyncMap[int, *procEntry](),
 	}
 
+	// Set inner container IP as soon as uprocsrv starts up
+	innerIP, err := netsigma.LocalIP()
+	if err != nil {
+		db.DFatalf("Error LocalIP: %v", err)
+	}
+	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
+
 	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
@@ -105,22 +112,26 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	ups.sc = sc
+	var ep *sp.Tendpoint
 	var ssrv *sigmasrv.SigmaSrv
 	if up == sp.NO_PORT.String() {
 		pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
 		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
+		ep = ssrv.GetSigmaPSrvEndpoint()
 	} else {
 		var port sp.Tport
 		port, err = sp.ParsePort(up)
 		if err != nil {
 			db.DFatalf("Error parse port: %v", err)
 		}
-		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port, pe.GetNet())
+		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port)
 
 		// The kernel will advertise the server, so pass "" as pn.
 		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
+		ep = sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)}, sp.ROOTREALM)
 	}
 	if err != nil {
+		db.DFatalf("Error sigmasrvclnt: %v", err)
 		return err
 	}
 	if err := shrinkMountTable(); err != nil {
@@ -136,7 +147,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	// Start binfsd now; when uprocds gets assigned to a realm, then
 	// uprocd mounts the realm's bin directory that binfs will serve
 	// from.
-	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ups.ssrv.GetSigmaPSrvEndpoint())
+	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ep)
 	if err != nil {
 		db.DPrintf(db.ERROR, "ExecBinSrv err %v\n", err)
 		return err
@@ -144,16 +155,16 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 
 	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
 
-	if !ups.pe.Overlays {
-		scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
-		scdp.InheritParentProcEnv(ups.pe)
-		scdp.SetHow(proc.HLINUX)
-		scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
-		if err != nil {
-			return err
-		}
-		ups.scsc = scsc
-	}
+	//	if !ups.pe.Overlays {
+	//		scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
+	//		scdp.InheritParentProcEnv(ups.pe)
+	//		scdp.SetHow(proc.HLINUX)
+	//		scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		ups.scsc = scsc
+	//	}
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
@@ -221,16 +232,16 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
 	}(start)
 
-	start = time.Now()
-	innerIP, err := netsigma.LocalIP()
-	if err != nil {
-		db.DFatalf("Error LocalIP: %v", err)
-	}
-	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
-	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.setLocalIP: %v", upid, time.Since(start))
+	//	start = time.Now()
+	//	innerIP, err := netsigma.LocalIP()
+	//	if err != nil {
+	//		db.DFatalf("Error LocalIP: %v", err)
+	//	}
+	//	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
+	//	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.setLocalIP: %v", upid, time.Since(start))
 
 	start = time.Now()
-	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v, new innerIP %v", realm, innerIP)
+	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v", realm)
 
 	if err := mountRealmBinDir(realm); err != nil {
 		db.DFatalf("Error mount realm bin dir: %v", err)
@@ -241,17 +252,17 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	// Note that the uprocsrv has been assigned.
 	ups.realm = realm
 
-	if ups.pe.Overlays {
-		// Now that the uprocd's innerIP has been established, spawn sigmaclntd
-		scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
-		scdp.InheritParentProcEnv(ups.pe)
-		scdp.SetHow(proc.HLINUX)
-		scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
-		if err != nil {
-			return err
-		}
-		ups.scsc = scsc
+	//	if ups.pe.Overlays {
+	// Now that the uprocd's innerIP has been established, spawn sigmaclntd
+	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
+	scdp.InheritParentProcEnv(ups.pe)
+	scdp.SetHow(proc.HLINUX)
+	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	if err != nil {
+		return err
 	}
+	ups.scsc = scsc
+	//	}
 
 	// Demote to reader lock
 	ups.mu.Unlock()
@@ -275,7 +286,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
-	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetInnerContainerIP(), ups.pe.GetPID())
+	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	cmd, err := container.StartUProc(uproc, ups.netproxy)

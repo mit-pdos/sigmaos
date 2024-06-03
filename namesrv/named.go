@@ -13,8 +13,6 @@ import (
 	"sigmaos/leaderetcd"
 	"sigmaos/path"
 	"sigmaos/perf"
-	"sigmaos/port"
-	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
@@ -169,17 +167,18 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
-	var pi portclnt.PortInfo
-	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
-	} else {
-		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
-		if err != nil {
-			return nil, err
-		}
-		pi = pi0
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
-	}
+	// XXX need special handling with overlays?
+	//	var pi portclnt.PortInfo
+	//	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
+	addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
+	//	} else {
+	//		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		pi = pi0
+	//		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
+	//	}
 	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
@@ -191,10 +190,11 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	nd.SigmaSrv = ssrv
 
 	ep := nd.GetEndpoint()
-	if nd.realm != sp.ROOTREALM {
-		ep = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
-	}
-	ep.SetType(sp.INTERNAL_EP)
+	// XXX need public endpoint?
+	//	if nd.realm != sp.ROOTREALM {
+	//		ep = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
+	//	}
+	// ep.SetType(sp.INTERNAL_EP)
 	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }

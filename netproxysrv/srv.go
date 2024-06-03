@@ -1,12 +1,11 @@
 package netproxysrv
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"sync"
-
-	"google.golang.org/protobuf/proto"
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -44,7 +43,7 @@ type NetProxySrvStubs struct {
 	rpcs             *rpcsrv.RPCSrv
 	dmx              *demux.DemuxSrv
 	baseCtx          *ctx.Ctx
-	pe               *proc.ProcEnv
+	p                *sp.Tprincipal
 	sc               *sigmaclnt.SigmaClnt
 }
 
@@ -81,7 +80,7 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 		return
 	}
 	p := sp.NoPrincipal()
-	if err := proto.Unmarshal(b, p); err != nil {
+	if err := json.Unmarshal(b, p); err != nil {
 		db.DPrintf(db.ERROR, "Error Unmarshal PrincipalID: %v", err)
 		return
 	}
@@ -95,7 +94,7 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 		directListenFn:   netproxy.ListenDirect,
 		baseCtx:          ctx.NewPrincipalOnlyCtx(p),
 		sc:               nps.sc,
-		pe:               nps.pe,
+		p:                p,
 	}
 	npss.rpcs = rpcsrv.NewRPCSrv(npss, rpc.NewStatInfo())
 	// Start a demux server to handle requests & concurrency
@@ -181,6 +180,29 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 	return nil
 }
 
+func (nps *NetProxySrvStubs) acceptFromAuthorizedPrincipal(l net.Listener, internal bool) (net.Conn, *sp.Tprincipal, error) {
+	for {
+		proxyConn, p, err := netproxy.AcceptDirect(l, internal)
+		if err != nil {
+			// Report unexpected errors
+			db.DPrintf(db.NETPROXYSRV_ERR, "Error accept direct: %v", err)
+			return nil, nil, err
+		}
+		// For now, connections from the outside world are always allowed
+		if internal {
+			// If client & server's realms don't match, and neither belongs to the root
+			// realm (which can connect to anything, and can be connected to by
+			// anything), close the connection, and retry the accept.
+			if nps.p.GetRealm() != p.GetRealm() && nps.p.GetRealm() != sp.ROOTREALM && p.GetRealm() != sp.ROOTREALM {
+				db.DPrintf(db.NETPROXYSRV_ERR, "Error attempted connection from unauthorized principal %v -> %v", p, nps.p)
+				proxyConn.Close()
+				continue
+			}
+		}
+		return proxyConn, p, err
+	}
+}
+
 func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *netproto.AcceptResponse) error {
 	// Set socket control message in output blob. Do this immediately to make
 	// sure it is set, even if we return early
@@ -196,10 +218,10 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Unknown listener: %v", lid))
 		return nil
 	}
-	// TODO: optionally, accept without preamble
-	proxyConn, p, err := netproxy.AcceptDirect(l, req.GetInternalListener())
+	// Accept the next connection from a principal authorized to establish a
+	// connection to this listener
+	proxyConn, p, err := nps.acceptFromAuthorizedPrincipal(l, req.GetInternalListener())
 	if err != nil {
-		db.DPrintf(db.NETPROXYSRV_ERR, "Error accept direct: %v", err)
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Error accept: %v", err))
 		return nil
 	}
@@ -270,7 +292,7 @@ func (nps *NetProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpo
 }
 
 func (nps *NetProxySrvStubs) closeListeners() error {
-	db.DPrintf(db.NETPROXYSRV, "Close listeners for %v", nps.pe.GetPID())
+	db.DPrintf(db.NETPROXYSRV, "Close listeners for %v", nps.p)
 	return nps.lm.CloseListeners()
 }
 

@@ -9,7 +9,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/netproxyclnt"
-	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -57,17 +56,10 @@ func (nc *NetClnt) Close() error {
 }
 
 func (nc *NetClnt) connect(ep *sp.Tendpoint) *serr.Err {
-	if !nc.pe.GetVerifyEndpoints() && len(ep.Claims.Addr) > 0 {
-		ep.Claims.Addr = netsigma.Rearrange(nc.pe.GetNet(), ep.Claims.Addr)
-	}
-	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", nc.pe.GetNet(), ep, ep.Addrs()[0])
+	db.DPrintf(db.PORT, "NetClnt connect to any of %v, starting w. %v\n", ep, ep.Addrs()[0])
 	//	for _, addr := range addrs {
 	for i, addr := range ep.Addrs() {
 		if i > 0 {
-			if nc.pe.GetVerifyEndpoints() {
-				// TODO XXX: support multi-dialing
-				db.DFatalf("Do not support multi-dialing yet: %v", ep.Addrs())
-			}
 			ep.Claims.Addr = append(ep.Claims.Addr[1:], ep.Claims.Addr[0])
 		}
 		c, err := nc.npc.Dial(ep)

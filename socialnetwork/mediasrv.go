@@ -32,11 +32,11 @@ type MediaSrv struct {
 	mu     sync.Mutex
 }
 
-func RunMediaSrv(public bool, jobname string) error {
+func RunMediaSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Creating media service\n")
 	msrv := &MediaSrv{}
 	msrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_MEDIA, msrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_MEDIA, msrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

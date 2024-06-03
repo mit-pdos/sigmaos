@@ -63,9 +63,7 @@ func main() {
 		db.DFatalf("Error NewFsEtcdEndpoint: %v", err)
 	}
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
-	// Only verify mounts if using netproxy
-	verifyEndpoints := param.NetProxy
-	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.ROOTREALM), secrets, etcdMnt, localIP, localIP, param.BuildTag, param.Overlays, verifyEndpoints)
+	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.ROOTREALM), secrets, etcdMnt, localIP, localIP, param.BuildTag, param.Overlays)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	if err := boot.BootUp(&param, pe); err != nil {
 		db.DFatalf("%v: boot %v err %v", os.Args[0], os.Args[1:], err)

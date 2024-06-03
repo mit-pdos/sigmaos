@@ -163,8 +163,8 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 			di := NewDirEntInfoP(e.Tpath(), e.Tperm())
 			if e.Tperm().IsEphemeral() {
 				// if file is emphemeral, etcd may have expired it
-				// when named didn't cache the directory, check if its ephem key
-				// still exists.
+				// when named didn't cache the directory, check if its
+				// ephem key still exists.
 				_, err := fs.GetEphemPath(fs.ephemkey(di))
 				if err != nil {
 					db.DPrintf(db.FSETCD, "readDir: expired %q %v err %v\n", e.Name, e.Tperm(), err)
@@ -175,7 +175,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 			if stat == TSTAT_STAT {
 				nf, _, err := fs.GetFile(di)
 				if err != nil {
-					db.DPrintf(db.ERROR, "readDir: entry %v %v err %v\n", e.Name, e.Tperm(), err)
+					db.DPrintf(db.ERROR, "readDir: stat entry %v %v err %v\n", e.Name, e.Tperm(), err)
 					continue
 				}
 				nstat += 1

@@ -169,7 +169,7 @@ func (fsl *FsLib) sprintfDirIndent(d string, indent string) (string, error) {
 		return "", err
 	}
 	for _, st := range sts {
-		s += fmt.Sprintf("%v %v %v\n", indent, st.Name, st.Qid.Type)
+		s += fmt.Sprintf("%v %v %v\n", indent, st.Name, st.Tqid())
 		if st.Tmode().IsDir() {
 			s1, err := fsl.sprintfDirIndent(d+"/"+st.Name, indent+" ")
 			if err != nil {

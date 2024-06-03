@@ -41,8 +41,8 @@ func (fs *FsEtcd) ephemkey(dei *DirEntInfo) string {
 }
 
 func (fs *FsEtcd) EphemeralPaths() ([]EphemeralKey, error) {
-	resp, err := fs.Clnt().Get(context.TODO(), EPHEMERAL, clientv3.WithFromKey())
-	db.DPrintf(db.FSETCD, "EphemeralKeys %v err %v\n", resp, err)
+	resp, err := fs.Clnt().Get(context.TODO(), EPHEMERAL, clientv3.WithPrefix())
+	db.DPrintf(db.FSETCD, "EphemeralPaths %v err %v\n", resp, err)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
@@ -56,7 +56,7 @@ func (fs *FsEtcd) EphemeralPaths() ([]EphemeralKey, error) {
 	return ekeys, nil
 }
 
-func (fs *FsEtcd) GetEphemPath(key string) (path.Tpathname, error) {
+func (fs *FsEtcd) GetEphemPathName(key string) (path.Tpathname, error) {
 	resp, err := fs.Clnt().Get(context.TODO(), key)
 	db.DPrintf(db.FSETCD, "GetEphemPath %v err %v\n", resp, err)
 	if err != nil {
@@ -165,7 +165,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 				// if file is emphemeral, etcd may have expired it
 				// when named didn't cache the directory, check if its
 				// ephem key still exists.
-				_, err := fs.GetEphemPath(fs.ephemkey(di))
+				_, err := fs.GetEphemPathName(fs.ephemkey(di))
 				if err != nil {
 					db.DPrintf(db.FSETCD, "readDir: expired %q %v err %v\n", e.Name, e.Tperm(), err)
 					update = true

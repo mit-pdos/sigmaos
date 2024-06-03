@@ -174,6 +174,13 @@ func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
 	p.ProcEnvProto.SetUprocdPID(uprocdPid)
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
+	// Marshal and b64-encode the principal ID
+	b, err := json.Marshal(p.GetPrincipal())
+	if err != nil {
+		log.Fatalf("FATAL Error marshal principal: %v", err)
+	}
+	// Add marshaled principal ID to env
+	p.AppendEnv(SIGMAPRINCIPAL, string(b))
 }
 
 func (p *Proc) IsPrivileged() bool {

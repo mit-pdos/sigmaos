@@ -1,12 +1,11 @@
 package netproxysrv
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"sync"
-
-	"google.golang.org/protobuf/proto"
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -81,7 +80,7 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 		return
 	}
 	p := sp.NoPrincipal()
-	if err := proto.Unmarshal(b, p); err != nil {
+	if err := json.Unmarshal(b, p); err != nil {
 		db.DPrintf(db.ERROR, "Error Unmarshal PrincipalID: %v", err)
 		return
 	}

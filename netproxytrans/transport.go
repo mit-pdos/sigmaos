@@ -1,6 +1,7 @@
 package netproxytrans
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"sync"
 
 	"golang.org/x/sys/unix"
-	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
@@ -53,6 +53,18 @@ func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 			return nil, err
 		}
 		conn = uconn.(*net.UnixConn)
+		b, err := json.Marshal(pe.GetPrincipal())
+		if err != nil {
+			db.DFatalf("Error marshal principal: %v", err)
+			return nil, err
+		}
+		// Write the principal ID to the server, so that the server
+		// knows the principal associated with this connection. For non-test
+		// programs, this will be done by the trampoline.
+		if err := frame.WriteFrame(conn, b); err != nil {
+			db.DPrintf(db.ERROR, "Error WriteFrame principal: %v", err)
+			return nil, err
+		}
 	} else {
 		// Sanity check that a proc only has one NetProxyClnt, since using the fd
 		// set up by the trampoline consumes it destructively.
@@ -73,17 +85,6 @@ func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 			db.DPrintf(db.ERROR, "Error connect netproxy srv")
 			return nil, err
 		}
-	}
-	b, err := proto.Marshal(pe.GetPrincipal())
-	if err != nil {
-		db.DFatalf("Error marshal principal: %v", err)
-		return nil, err
-	}
-	// Write the authenticated principal ID to the server, so that the server
-	// knows the principal associated with this connection
-	if err := frame.WriteFrame(conn, b); err != nil {
-		db.DPrintf(db.ERROR, "Error WriteFrame principal: %v", err)
-		return nil, err
 	}
 	return conn, nil
 }

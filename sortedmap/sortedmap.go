@@ -24,15 +24,15 @@ func NewSortedMap[K constraints.Ordered, V any]() *SortedMap[K, V] {
 	return sd
 }
 
-func (sd *SortedMap[K, V]) roundrobinIndex() int {
+func (sd *SortedMap[K, V]) roundrobinIndexL() int {
 	if len(sd.sorted) == 0 {
 		return 0
 	}
 	return sd.rr % len(sd.sorted)
 }
 
-func (sd *SortedMap[K, V]) roundrobinNext() int {
-	i := sd.roundrobinIndex()
+func (sd *SortedMap[K, V]) roundrobinNextL() int {
+	i := sd.roundrobinIndexL()
 	sd.rr += 1
 	return i
 }
@@ -61,12 +61,14 @@ func (sd *SortedMap[K, V]) String() string {
 func (sd *SortedMap[K, V]) Len() int {
 	sd.Lock()
 	defer sd.Unlock()
+
 	return len(sd.dents)
 }
 
 func (sd *SortedMap[K, V]) Lookup(n K) (V, bool) {
 	sd.Lock()
 	defer sd.Unlock()
+
 	e, ok := sd.dents[n]
 	return e, ok
 }
@@ -91,29 +93,34 @@ func (sd *SortedMap[K, V]) RoundRobin() (K, bool) {
 		var k K
 		return k, false
 	}
-	k := sd.sorted[sd.roundrobinNext()]
+	k := sd.sorted[sd.roundrobinNextL()]
 	return k, true
 }
 
 func (sd *SortedMap[K, V]) Keys(s int) []K {
-	return sd.sorted[s:]
+	sd.Lock()
+	defer sd.Unlock()
+
+	keys := make([]K, len(sd.sorted[s:]))
+	copy(keys, sd.sorted[s:])
+	return keys
 }
 
-func (sd *SortedMap[K, V]) insertSort(name K) {
+func (sd *SortedMap[K, V]) insertSortL(name K) {
 	i := sort.Search(len(sd.sorted), func(i int) bool { return sd.sorted[i] >= name })
 	new := make([]K, 1)
 	sd.sorted = append(sd.sorted, new...)
 	copy(sd.sorted[i+1:], sd.sorted[i:])
 	sd.sorted[i] = name
-	if i < sd.roundrobinIndex() {
+	if i < sd.roundrobinIndexL() {
 		sd.rr += 1
 	}
 }
 
-func (sd *SortedMap[K, V]) delSort(name K) {
+func (sd *SortedMap[K, V]) delSortL(name K) {
 	i := sort.Search(len(sd.sorted), func(i int) bool { return sd.sorted[i] >= name })
 	sd.sorted = append(sd.sorted[:i], sd.sorted[i+1:]...)
-	if i < sd.roundrobinIndex() {
+	if i < sd.roundrobinIndexL() {
 		if sd.rr > 0 {
 			sd.rr -= 1
 		}
@@ -126,7 +133,7 @@ func (sd *SortedMap[K, V]) Insert(name K, e V) bool {
 	defer sd.Unlock()
 	if _, ok := sd.dents[name]; !ok {
 		sd.dents[name] = e
-		sd.insertSort(name)
+		sd.insertSortL(name)
 		return true
 	}
 	return false
@@ -140,6 +147,6 @@ func (sd *SortedMap[K, V]) Delete(name K) bool {
 		return false
 	}
 	delete(sd.dents, name)
-	sd.delSort(name)
+	sd.delSortL(name)
 	return true
 }

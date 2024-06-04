@@ -11,7 +11,7 @@ func (fsl *FsLib) CreateLeaderFile(pn string, b []byte, lid sp.TleaseId, f sp.Tf
 	if err := fsl.MkDir(filepath.Dir(pn), 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		return err
 	}
-	fd, err := fsl.FileAPI.CreateEphemeral(pn, 0777|sp.DMDEVICE, sp.OWRITE, lid, f)
+	fd, err := fsl.FileAPI.CreateLeased(pn, 0777|sp.DMDEVICE, sp.OWRITE, lid, f)
 	if err != nil {
 		return err
 	}

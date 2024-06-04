@@ -185,11 +185,11 @@ func (scc *SigmaClntClnt) Seek(fd int, off sp.Toffset) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) CreateEphemeral(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error) {
+func (scc *SigmaClntClnt) CreateLeased(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error) {
 	req := scproto.SigmaCreateRequest{Path: path, Perm: uint32(p), Mode: uint32(m), LeaseId: uint64(l), Fence: f.FenceProto()}
 	rep := scproto.SigmaFdReply{}
-	fd, err := scc.rpcFd("SigmaClntSrvAPI.CreateEphemeral", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "CreateEphemeral %v %v %v", req, rep, err)
+	fd, err := scc.rpcFd("SigmaClntSrvAPI.CreateLeased", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "CreateLeased %v %v %v", req, rep, err)
 	return fd, err
 }
 

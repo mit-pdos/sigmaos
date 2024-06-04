@@ -84,8 +84,8 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, string), d time.Durati
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
-	assert.Nil(t, err, "Err PutEphemeral: %v", err)
+	_, err = ts.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	assert.Nil(t, err, "Err PutLeasedFile: %v", err)
 
 	sts, err := ts.GetDir(dn)
 	assert.Nil(t, err)
@@ -117,7 +117,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, string), d time.Durati
 }
 
 // In these tests named will receive notification from etcd
-func TestEphemeralQuickReboot(t *testing.T) {
+func TestLeaseQuickReboot(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, sp.NAMED)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -174,7 +174,7 @@ func TestEphemeralQuickReboot(t *testing.T) {
 
 // In these tests named will not receive notification from etcd, but
 // discover when reading from etcd and call updateDir.
-func TestEphemeralDelayReboot(t *testing.T) {
+func TestLeaseDelayReboot(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, sp.NAMED)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

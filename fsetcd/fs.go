@@ -41,9 +41,9 @@ func (fs *FsEtcd) ephemkey(dei *DirEntInfo) string {
 	return EPHEMERAL + string(fs.realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
-func (fs *FsEtcd) EphemeralPaths(realm sp.Trealm) ([]EphemeralKey, error) {
+func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]EphemeralKey, error) {
 	resp, err := fs.Clnt().Get(context.TODO(), prefixEphemeral(fs.realm), clientv3.WithPrefix())
-	db.DPrintf(db.FSETCD, "EphemeralPaths %v err %v\n", resp, err)
+	db.DPrintf(db.FSETCD, "LeasedPaths %v err %v\n", resp, err)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}

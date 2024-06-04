@@ -12,8 +12,8 @@ func (fsl *FsLib) MkLeasedEndpoint(pn string, ep *sp.Tendpoint, lid sp.TleaseId)
 	if err != nil {
 		return err
 	}
-	if _, err := fsl.PutFileEphemeral(pn, 0777|sp.DMSYMLINK, sp.OWRITE|sp.OEXCL, lid, b); err != nil {
-		db.DPrintf(db.ALWAYS, "MkEndpointFile: PutFileEphemeral %v err %v\n", pn, err)
+	if _, err := fsl.PutLeasedFile(pn, 0777|sp.DMSYMLINK, sp.OWRITE|sp.OEXCL, lid, b); err != nil {
+		db.DPrintf(db.ALWAYS, "MkEndpointFile: PutLeasedFile %v err %v\n", pn, err)
 		return err
 	}
 	return nil
@@ -133,5 +133,5 @@ func (fsl *FsLib) NewMount9P(pn string, ep *sp.Tendpoint) error {
 	if err != nil {
 		return err
 	}
-	return fsl.Symlink(b, pn, 0777|sp.DMTMP)
+	return fsl.Symlink(b, pn, 0777)
 }

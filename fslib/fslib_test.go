@@ -1425,7 +1425,7 @@ func TestFslibClose(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestEphemeralFile(t *testing.T) {
+func TestLeasedFile(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1438,7 +1438,7 @@ func TestEphemeralFile(t *testing.T) {
 
 	li.KeepExtending()
 
-	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	_, err = ts.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err)
 
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
@@ -1454,7 +1454,7 @@ func TestEphemeralFile(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestEphemeralExpire(t *testing.T) {
+func TestLeasedExpire(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1465,7 +1465,7 @@ func TestEphemeralExpire(t *testing.T) {
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	_, err = ts.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err)
 
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
@@ -1476,7 +1476,7 @@ func TestEphemeralExpire(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestEphemeralRename(t *testing.T) {
+func TestLeasedRename(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1488,7 +1488,7 @@ func TestEphemeralRename(t *testing.T) {
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	_, err = ts.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err)
 
 	err = ts.Rename(fn, fn1)
@@ -1517,7 +1517,7 @@ func TestEphemeralRename(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestEphemeralRemove(t *testing.T) {
+func TestLeasedRemove(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1532,8 +1532,8 @@ func TestEphemeralRemove(t *testing.T) {
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
-	assert.Nil(t, err, "Err PutEphemeral: %v", err)
+	_, err = ts.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	assert.Nil(t, err, "Err PutLeasedFile: %v", err)
 
 	_, err = ts.Stat(fn)
 	assert.Nil(t, err, fn)

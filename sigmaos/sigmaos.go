@@ -61,9 +61,8 @@ type FileAPI interface {
 	InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error
 	NewRootMount(path string, epname string) error
 
-	// Done using SigmaOS, which detaches from any endpointed servers
-	// (which removes ephemeral files) and may close the session with
-	// those servers.
+	// Done using SigmaOS, which detaches from any mounted servers and
+	// may close the session with those servers.
 	Close() error
 
 	// Debugging

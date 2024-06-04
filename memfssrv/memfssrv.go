@@ -147,9 +147,9 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	return no, nil
 }
 
-// For named. fsetcd notifies named when a an ephemeral file is
-// deleted it; delete the directory entry and possibly signal the
-// directory watch of the change.
+// For named. fsetcd notifies named when a leased file has expired;
+// delete the directory entry and possibly signal the directory watch
+// of the change.
 func (mfs *MemFs) Notify(pn path.Tpathname) error {
 	db.DPrintf(db.WATCH, "MemFs.Notify pn %v\n", pn)
 	lo, _, err := mfs.lookupWalk(pn.String())

@@ -97,7 +97,7 @@ func (fs *FsEtcd) WatchLeased(ch chan path.Tpathname) error {
 					key := string(e.Kv.Key)
 					pn := string(e.PrevKv.Value)
 					db.DPrintf(db.FSETCD, "WatchLeased: %v watchResp event %v", fs.realm, key)
-					db.DPrintf(db.WATCH, "WatchLeased: %v Notify ephemeral '%v'", fs.realm, pn)
+					db.DPrintf(db.WATCH, "WatchLeased: %v expired leased file '%v'", fs.realm, pn)
 					ch <- path.Split(pn)
 				}
 			} else {

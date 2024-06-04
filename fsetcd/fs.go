@@ -166,9 +166,9 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 		} else {
 			di := NewDirEntInfo(e.Tpath(), e.Tperm(), e.TclntId(), e.TleaseId())
 			if di.LeaseId.IsLeased() {
-				// if file is leased, etcd may have expired it
-				// when named didn't cache the directory, check if its
-				// ephem key still exists.
+				// if file is leased, etcd may have expired it when
+				// named didn't cache the directory, check if its
+				// leased key still exists.
 				_, err := fs.getLeasedPathName(fs.leasedkey(di))
 				if err != nil {
 					db.DPrintf(db.FSETCD, "readDir: expired %q %v err %v\n", e.Name, e.Tperm(), err)

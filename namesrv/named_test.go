@@ -72,14 +72,14 @@ func TestKillNamed(t *testing.T) {
 	ts.Shutdown()
 }
 
-// Create ephemeral file and then reboot
+// Create a leased file and then reboot
 func reboot(t *testing.T, dn string, f func(*test.Tstate, string), d time.Duration, quick bool) {
 	ts, err1 := test.NewTstatePath(t, sp.NAMED)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
-	fn := filepath.Join(dn, "ephem")
+	fn := filepath.Join(dn, "leasedf")
 
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)

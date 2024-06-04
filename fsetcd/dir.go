@@ -286,7 +286,7 @@ func (fse *FsEtcd) Renameat(deif *DirEntInfo, from path.Tpathname, deit *DirEntI
 	}
 }
 
-// XXX if ran as test, it cannot fix dirs with expired ephemeral files
+// If run from test, it will not fix dirs with expired leased files
 func (fse *FsEtcd) Dump(l int, dir *DirInfo, pn path.Tpathname, p sp.Tpath) error {
 	s := ""
 	for i := 0; i < l*4; i++ {

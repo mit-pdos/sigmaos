@@ -36,6 +36,7 @@ func main() {
 		sp.TprincipalID("proxy"),
 		sp.ROOTREALM,
 	))
+	db.DPrintf(db.PROXY, "Proxy env: %v", pe)
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	npc := netproxyclnt.NewNetProxyClnt(pe)
 	npd := proxy.NewNpd(pe, npc, lip)

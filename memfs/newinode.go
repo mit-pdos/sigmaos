@@ -15,7 +15,7 @@ func NewInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, m sp.Tmode, parent fs.Di
 		return NewFile(i), nil
 	} else if p.IsPipe() {
 		return NewPipe(ctx, i), nil
-	} else if p.IsFile() || p.IsEphemeral() {
+	} else if p.IsFile() {
 		return NewFile(i), nil
 	} else {
 		return nil, serr.NewErr(serr.TErrInval, p)

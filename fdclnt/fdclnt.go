@@ -64,7 +64,7 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 }
 
 func (fdc *FdClient) CreateLeased(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
-	fid, err := fdc.pc.Create(path, fdc.pe.GetPrincipal(), perm|sp.DMTMP, mode, lid, f)
+	fid, err := fdc.pc.Create(path, fdc.pe.GetPrincipal(), perm, mode, lid, f)
 	if err != nil {
 		return -1, err
 	}

@@ -16,7 +16,7 @@ import (
 )
 
 //
-// Tests automounting and ephemeral files with a kernel with all services
+// Tests automounting and leased files with a kernel with all services
 //
 
 func TestCompile(t *testing.T) {

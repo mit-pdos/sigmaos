@@ -67,9 +67,7 @@ const (
 	DMEXCL   Tperm = 0x20000000 // exclusive use file
 	DMMOUNT  Tperm = 0x10000000 // mounted channel
 	DMAUTH   Tperm = 0x08000000 // authentication file
-
-	// DMTMP is ephemeral in sigmaP
-	DMTMP Tperm = 0x04000000 // non-backed-up file
+	DMTMP    Tperm = 0x04000000 // non-backed-up file
 
 	DMREAD  = 0x4 // mode bit for read permission
 	DMWRITE = 0x2 // mode bit for write permission

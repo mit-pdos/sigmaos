@@ -84,6 +84,10 @@ func (o *Obj) Perm() sp.Tperm {
 	//return st.Mode, nil
 }
 
+func (o *Obj) IsLeased() bool {
+	return false
+}
+
 func (o *Obj) Path() sp.Tpath {
 	return o.path
 }

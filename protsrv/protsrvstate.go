@@ -64,7 +64,7 @@ func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Tpathname, name string, o 
 	pn := dir.Copy().Append(name)
 	po := newPobj(pn, o, ctx)
 	nf := newFidPath(po, 0, qid)
-	if o.Perm().IsEphemeral() && pss.et != nil {
+	if o.IsLeased() && pss.et != nil {
 		pss.et.Insert(pn.String(), lid)
 	}
 	return nf
@@ -79,9 +79,6 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	pss.stats.IncPathString(fn.Dir().String())
 	flk := pss.plt.Acquire(ctx, fn, lockmap.WLOCK)
 	o1, err := d.Create(ctx, name, perm, mode, lid, f, dev)
-	if perm.IsEphemeral() {
-		db.DPrintf(db.PROTSRV, "%v: Create %q %v %v ephemeral %v lid %v", ctx.ClntId(), name, o1, err, perm.IsEphemeral(), lid)
-	}
 	if err == nil {
 		pss.vt.IncVersion(d.Path())
 		pss.wt.WakeupWatch(dlk)
@@ -103,6 +100,9 @@ func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, 
 	defer pss.plt.Release(ctx, dlk, lockmap.WLOCK)
 
 	o1, flk, err := pss.createObj(ctx, d, dlk, fn, perm, m, lid, fence, dev)
+	if lid.IsLeased() {
+		db.DPrintf(db.PROTSRV, "%v: createObj Leased %q %v %v lid %v", ctx.ClntId(), name, o1, err, lid)
+	}
 	if err != nil {
 		return nil, nil, err
 	}
@@ -148,7 +148,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 
 	// Call before Remove(), because after remove o's underlying
 	// object may not exist anymore.
-	ephemeral := o.Perm().IsEphemeral()
+	ephemeral := o.IsLeased()
 	if err := o.Parent().Remove(ctx, name, f, del); err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err
 	pss.vt.IncVersion(po.Obj().Path())
 	pss.vt.IncVersion(po.Obj().Parent().Path())
 	pss.wt.WakeupWatch(dlk)
-	if po.Obj().Perm().IsEphemeral() && pss.et != nil {
+	if po.Obj().IsLeased() && pss.et != nil {
 		pss.et.Rename(po.Pathname().String(), dst.String())
 	}
 	po.SetPath(dst)
@@ -223,7 +223,7 @@ func (pss *ProtSrvState) RenameAtObj(old, new *Pobj, dold, dnew fs.Dir, oldname,
 	pss.vt.IncVersion(old.Obj().Parent().Path())
 	pss.vt.IncVersion(new.Obj().Parent().Path())
 
-	if old.Obj().Perm().IsEphemeral() && pss.et != nil {
+	if old.Obj().IsLeased() && pss.et != nil {
 		pss.et.Rename(old.Pathname().String(), new.Pathname().String())
 	}
 

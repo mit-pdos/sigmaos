@@ -154,7 +154,7 @@ type StatInfo struct {
 
 func NewStatsDev(parent fs.Dir) *StatInfo {
 	sti := &StatInfo{}
-	sti.Inode = inode.NewInode(nil, sp.DMDEVICE, parent)
+	sti.Inode = inode.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId, parent)
 	sti.st = NewStats()
 	sti.pathCnts = false
 	return sti

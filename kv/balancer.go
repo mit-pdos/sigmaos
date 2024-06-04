@@ -203,7 +203,7 @@ type Ctl struct {
 }
 
 func newCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.FsObj {
-	i := inode.NewInode(ctx, sp.DMDEVICE, parent)
+	i := inode.NewInode(ctx, sp.DMDEVICE, sp.NoLeaseId, parent)
 	return &Ctl{i, bl}
 }
 

@@ -109,9 +109,12 @@ func (o *Obj) Path() sp.Tpath {
 	return newTpath(p.AppendPath(o.key))
 }
 
-// convert ux perms into np perm; maybe symlink?
 func (o *Obj) Perm() sp.Tperm {
 	return o.perm
+}
+
+func (o *Obj) IsLeased() bool {
+	return false
 }
 
 func (o *Obj) Parent() fs.Dir {

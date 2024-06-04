@@ -13,7 +13,7 @@ import (
 	"sigmaos/spcodec"
 )
 
-type NewFsObjF func(CtxI, sp.Tperm, sp.Tmode, Dir, MkDirF) (FsObj, *serr.Err)
+type NewFsObjF func(CtxI, sp.Tperm, sp.TleaseId, sp.Tmode, Dir, MkDirF) (FsObj, *serr.Err)
 type MkDirF func(Inode, NewFsObjF) FsObj
 
 // Each request takes a Ctx with context for the request
@@ -38,6 +38,7 @@ type FsObj interface {
 	Unlink()
 	String() string
 	Parent() Dir
+	IsLeased() bool
 }
 
 // Two common FsObjs are File and Dir, both which embed an inode
@@ -70,6 +71,7 @@ type Inode interface {
 	Parent() Dir
 	Path() sp.Tpath
 	Perm() sp.Tperm
+	IsLeased() bool
 	SetMtime(int64)
 	Mtime() int64
 	SetParent(Dir)

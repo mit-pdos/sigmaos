@@ -39,9 +39,9 @@ func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, fence sp.Tfence) 
 	return nil, serr.NewErr(serr.TErrNotSupported, "Read")
 }
 
-func newInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.FsObj, *serr.Err) {
+func newInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, mode sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.FENCEFS, "newInode %v dir %v\n", p, parent)
-	i := inode.NewInode(ctx, p, parent)
+	i := inode.NewInode(ctx, p, lid, parent)
 	if p.IsDir() {
 		return dir.MkDir(i, newInode), nil
 	} else if p.IsFile() {

@@ -37,6 +37,10 @@ func (pi *ProcInode) Perm() sp.Tperm {
 	return pi.perm
 }
 
+func (pi *ProcInode) IsLeased() bool {
+	return false
+}
+
 func (pi *ProcInode) Path() sp.Tpath {
 	return pi.path
 }

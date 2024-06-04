@@ -77,7 +77,7 @@ func (dir *DirImpl) Dump() (string, error) {
 }
 
 func NewRootDir(ctx fs.CtxI, no fs.NewFsObjF, parent fs.Dir) fs.Dir {
-	i, _ := no(ctx, sp.DMDIR, 0, parent, MkDirF)
+	i, _ := no(ctx, sp.DMDIR, sp.NoLeaseId, 0, parent, MkDirF)
 	return i.(fs.Dir)
 }
 
@@ -216,7 +216,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 	}
 	newo := dev
 	if dev == nil {
-		no, err := dir.no(ctx, perm, m, dir, MkDirF)
+		no, err := dir.no(ctx, perm, lid, m, dir, MkDirF)
 		if err != nil {
 			return nil, err
 		}

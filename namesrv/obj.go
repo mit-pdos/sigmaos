@@ -46,6 +46,10 @@ func (o *Obj) Perm() sp.Tperm {
 	return o.di.Perm
 }
 
+func (o *Obj) IsLeased() bool {
+	return o.di.LeaseId.IsLeased()
+}
+
 // XXX 0 should be o.parent.parent
 func (o *Obj) Parent() fs.Dir {
 	dir := o.pn.Dir()

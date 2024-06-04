@@ -73,7 +73,7 @@ func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 
 // Note: NewDev() sets parent
 func (mfs *MemFs) NewDevInode() *inode.Inode {
-	return inode.NewInode(mfs.ctx, sp.DMDEVICE, nil)
+	return inode.NewInode(mfs.ctx, sp.DMDEVICE, sp.NoLeaseId, nil)
 }
 
 // Returns fid for root and remaining path from root

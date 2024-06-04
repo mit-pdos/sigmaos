@@ -32,7 +32,7 @@ and libraries which may be useful for future projects based on SigmaOS.
     represent, track, and manage the lifecycle of sessions.
   - `protsrv`: This library implements a generic SigmaOS protocol server. It
     has handlers for each of the `sigmap` messages, and deals with SigmaOS
-    features like versions, leased files, and watches.
+    features like leased files, and watches.
 
 ### Exercise 1: Describe SigmaOS librarly layers
 

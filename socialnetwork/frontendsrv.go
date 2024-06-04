@@ -133,7 +133,7 @@ func RunFrontendSrv(public bool, job string) error {
 		//		} else {
 		go http.Serve(l, mux)
 		dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", ep)
-		if err = sc.MkEndpointFile(JobHTTPAddrsPath(job), ep, sp.NoLeaseId); err != nil {
+		if err = sc.MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
 			dbg.DFatalf("MkEndpointFile %v", err)
 		}
 	}

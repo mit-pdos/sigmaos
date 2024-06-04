@@ -532,7 +532,7 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	}
 
 	pn := filepath.Join(sp.NAMED, "srv")
-	err = ts1.MkEndpointFile(pn, ep, sp.NoLeaseId)
+	err = ts1.MkEndpointFile(pn, ep)
 	assert.Nil(t, err)
 
 	pn = pn + "/"
@@ -594,7 +594,7 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	}
 
 	pn := filepath.Join(sp.NAMED, "srv")
-	err = ts2.MkEndpointFile(pn, ep, sp.NoLeaseId)
+	err = ts2.MkEndpointFile(pn, ep)
 	assert.Nil(t, err)
 
 	pn = pn + "/"

@@ -178,13 +178,14 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
 		return err
 	}
-	// Endpoint some service union dirs from the root realm
+	// Export some service dirs from root realm to the new realm by
+	// making endpoints for them in this realm.
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := filepath.Join(sp.NAMED, s)
 		ep := sp.NewEndpoint(sp.INTERNAL_EP, namedEndpoint.Addrs(), rid)
 		ep.SetTree(s)
 		db.DPrintf(db.REALMD, "Link %v at %s\n", ep, pn)
-		if err := sc.MkEndpointFile(pn, ep, sp.NoLeaseId); err != nil {
+		if err := sc.MkEndpointFile(pn, ep); err != nil {
 			db.DPrintf(db.ERROR, "EndpointService %v err %v\n", pn, err)
 			return err
 		}
@@ -198,6 +199,10 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 			return err
 		}
 	}
+
+	s, err := sc.SprintfDir(sp.NAMED)
+	db.DPrintf(db.TEST, "realmdir %s err %v", s, err)
+
 	errC := make(chan error)
 	// Spawn per-realm kernel procs
 	go func() {

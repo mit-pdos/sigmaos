@@ -132,7 +132,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 
 	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.ProcEnv().GetPID(), bl.lc.Fence())
 
-	if err := bl.MkEndpointFile(KVBalancer(bl.job), ep, bl.lc.Lease()); err != nil {
+	if err := bl.MkLeasedEndpoint(KVBalancer(bl.job), ep, bl.lc.Lease()); err != nil {
 		db.DFatalf("MkEndpointFile %v at %v err %v\n", ep, KVBalancer(bl.job), err)
 	}
 

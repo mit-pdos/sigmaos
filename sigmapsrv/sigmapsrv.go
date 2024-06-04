@@ -113,7 +113,7 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 	}
 	li.KeepExtending()
 
-	if err := sc.MkEndpointFile(pn, ep, li.Lease()); err != nil {
+	if err := sc.MkLeasedEndpoint(pn, ep, li.Lease()); err != nil {
 		return "", err
 	}
 	return pn, nil

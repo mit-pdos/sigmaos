@@ -7,13 +7,25 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fsl *FsLib) MkEndpointFile(pn string, ep *sp.Tendpoint, lid sp.TleaseId) error {
+func (fsl *FsLib) MkLeasedEndpoint(pn string, ep *sp.Tendpoint, lid sp.TleaseId) error {
 	b, err := ep.Marshal()
 	if err != nil {
 		return err
 	}
 	if _, err := fsl.PutFileEphemeral(pn, 0777|sp.DMSYMLINK, sp.OWRITE|sp.OEXCL, lid, b); err != nil {
 		db.DPrintf(db.ALWAYS, "MkEndpointFile: PutFileEphemeral %v err %v\n", pn, err)
+		return err
+	}
+	return nil
+}
+
+func (fsl *FsLib) MkEndpointFile(pn string, ep *sp.Tendpoint) error {
+	b, err := ep.Marshal()
+	if err != nil {
+		return err
+	}
+	if _, err := fsl.PutFile(pn, 0777|sp.DMSYMLINK, sp.OWRITE|sp.OEXCL, b); err != nil {
+		db.DPrintf(db.ALWAYS, "MkEndpointFile: PutFile %v err %v\n", pn, err)
 		return err
 	}
 	return nil
@@ -115,7 +127,7 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error
 	return rname, rep, serr.NewErr(serr.TErrNotfound, d)
 }
 
-// For code running using /ep/9p, which doesn't support PutFile.
+// For code running using /mnt/9p, which doesn't support PutFile.
 func (fsl *FsLib) NewMount9P(pn string, ep *sp.Tendpoint) error {
 	b, err := ep.Marshal()
 	if err != nil {

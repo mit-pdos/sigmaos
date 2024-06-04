@@ -13,10 +13,10 @@ type MultiKernelClnt struct {
 	done  int32
 }
 
-func NewMultiKernelClnt(fsl *fslib.FsLib) *MultiKernelClnt {
+func NewMultiKernelClnt(fsl *fslib.FsLib, lsel, esel db.Tselector) *MultiKernelClnt {
 	return &MultiKernelClnt{
 		FsLib: fsl,
-		rpcdc: rpcdirclnt.NewRPCDirClnt(fsl, sp.BOOT, db.KERNELCLNT, db.KERNELCLNT_ERR),
+		rpcdc: rpcdirclnt.NewRPCDirClnt(fsl, sp.BOOT, lsel, esel),
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/path"
-	"sigmaos/protsrv/ephemeralmap"
+	"sigmaos/protsrv/leasedmap"
 	"sigmaos/protsrv/lockmap"
 	"sigmaos/protsrv/version"
 	"sigmaos/protsrv/watch"
@@ -19,7 +19,7 @@ type ProtSrvState struct {
 	wt    *watch.WatchTable
 	vt    *version.VersionTable
 	stats *stats.StatInfo
-	et    *ephemeralmap.EphemeralMap
+	lm    *leasedmap.LeasedMap
 	cct   *clntcond.ClntCondTable
 }
 
@@ -27,7 +27,7 @@ func NewProtSrvState(stats *stats.StatInfo) *ProtSrvState {
 	cct := clntcond.NewClntCondTable()
 	pss := &ProtSrvState{
 		stats: stats,
-		et:    ephemeralmap.NewEphemeralMap(),
+		lm:    leasedmap.NewLeasedMap(),
 		plt:   lockmap.NewPathLockTable(),
 		cct:   cct,
 		wt:    watch.NewWatchTable(cct),
@@ -48,8 +48,8 @@ func (pss *ProtSrvState) PathLockTable() *lockmap.PathLockTable {
 	return pss.plt
 }
 
-func (pss *ProtSrvState) EphemeralMap() *ephemeralmap.EphemeralMap {
-	return pss.et
+func (pss *ProtSrvState) Leasedmap() *leasedmap.LeasedMap {
+	return pss.lm
 }
 
 func (pss *ProtSrvState) Stats() *stats.StatInfo {
@@ -64,8 +64,8 @@ func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Tpathname, name string, o 
 	pn := dir.Copy().Append(name)
 	po := newPobj(pn, o, ctx)
 	nf := newFidPath(po, 0, qid)
-	if o.IsLeased() && pss.et != nil {
-		pss.et.Insert(pn.String(), lid)
+	if o.IsLeased() && pss.lm != nil {
+		pss.lm.Insert(pn.String(), lid)
 	}
 	return nf
 }
@@ -148,7 +148,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 
 	// Call before Remove(), because after remove o's underlying
 	// object may not exist anymore.
-	ephemeral := o.IsLeased()
+	leased := o.IsLeased()
 	if err := o.Parent().Remove(ctx, name, f, del); err != nil {
 		return err
 	}
@@ -158,9 +158,9 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 
 	pss.wt.WakeupWatch(dlk)
 
-	if ephemeral && pss.et != nil {
-		if ok := pss.et.Delete(path.String()); !ok {
-			// leasesrv may already have removed path from ephemeral
+	if leased && pss.lm != nil {
+		if ok := pss.lm.Delete(path.String()); !ok {
+			// leasesrv may already have removed path from leased
 			// map and called RemoveObj to delete it.
 			db.DPrintf(db.PROTSRV, "Delete %v doesn't exist in et\n", path)
 		}
@@ -182,8 +182,8 @@ func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err
 	pss.vt.IncVersion(po.Obj().Path())
 	pss.vt.IncVersion(po.Obj().Parent().Path())
 	pss.wt.WakeupWatch(dlk)
-	if po.Obj().IsLeased() && pss.et != nil {
-		pss.et.Rename(po.Pathname().String(), dst.String())
+	if po.Obj().IsLeased() && pss.lm != nil {
+		pss.lm.Rename(po.Pathname().String(), dst.String())
 	}
 	po.SetPath(dst)
 	return nil
@@ -223,8 +223,8 @@ func (pss *ProtSrvState) RenameAtObj(old, new *Pobj, dold, dnew fs.Dir, oldname,
 	pss.vt.IncVersion(old.Obj().Parent().Path())
 	pss.vt.IncVersion(new.Obj().Parent().Path())
 
-	if old.Obj().IsLeased() && pss.et != nil {
-		pss.et.Rename(old.Pathname().String(), new.Pathname().String())
+	if old.Obj().IsLeased() && pss.lm != nil {
+		pss.lm.Rename(old.Pathname().String(), new.Pathname().String())
 	}
 
 	pss.wt.WakeupWatch(d1lk) // trigger one dir watch

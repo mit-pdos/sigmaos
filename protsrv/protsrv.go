@@ -89,7 +89,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 	return args.TclntId(), nil
 }
 
-// Delete ephemeral files created by this client and delete this client
+// Close open files from this client and delete this client
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
 	fids := ps.fm.ClientFids(args.TclntId())
 	db.DPrintf(db.PROTSRV, "Detach clnt %v fes %v\n", args.TclntId(), fids)

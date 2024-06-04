@@ -78,16 +78,16 @@ func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, rea
 	return fs, nil
 }
 
-func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
+func (fs *FsEtcd) WatchLeased(ch chan path.Tpathname) error {
 	wopts := make([]clientv3.OpOption, 0)
 	wopts = append(wopts, clientv3.WithPrefix())
 	wopts = append(wopts, clientv3.WithFilterPut())
 	wopts = append(wopts, clientv3.WithPrevKV())
-	wch := fs.Client.Watch(context.TODO(), prefixEphemeral(fs.realm), wopts...)
+	wch := fs.Client.Watch(context.TODO(), prefixLease(fs.realm), wopts...)
 	if wch == nil {
 		return fmt.Errorf("watchEphemeral: Watch failed")
 	}
-	db.DPrintf(db.WATCH, "WatchEphemeral: %v Set up etcd watch for %v", fs.realm, prefixEphemeral(fs.realm))
+	db.DPrintf(db.WATCH, "WatchLeased: %v Set up etcd watch for %v", fs.realm, prefixLease(fs.realm))
 
 	go func() error {
 		for {
@@ -96,12 +96,12 @@ func (fs *FsEtcd) WatchEphemeral(ch chan path.Tpathname) error {
 				for _, e := range watchResp.Events {
 					key := string(e.Kv.Key)
 					pn := string(e.PrevKv.Value)
-					db.DPrintf(db.FSETCD, "WatchEphemeral: %v watchResp event %v", fs.realm, key)
-					db.DPrintf(db.WATCH, "WatchEphemeral: %v Notify ephemeral '%v'", fs.realm, pn)
+					db.DPrintf(db.FSETCD, "WatchLeased: %v watchResp event %v", fs.realm, key)
+					db.DPrintf(db.WATCH, "WatchLeased: %v Notify ephemeral '%v'", fs.realm, pn)
 					ch <- path.Split(pn)
 				}
 			} else {
-				db.DPrintf(db.FSETCD, "WatchEphemeral: wch closed\n")
+				db.DPrintf(db.FSETCD, "WatchLeased: wch closed\n")
 				return nil
 			}
 		}

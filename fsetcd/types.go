@@ -37,12 +37,12 @@ type EtcdDirEnt struct {
 	*EtcdDirEntProto
 }
 
-func prefixEphemeral(realm sp.Trealm) string {
-	return EPHEMERAL + string(realm)
+func prefixLease(realm sp.Trealm) string {
+	return LEASEPREFIX + string(realm)
 }
 
 func key2path(key string) (sp.Trealm, sp.Tpath) {
-	key = strings.TrimPrefix(key, EPHEMERAL)
+	key = strings.TrimPrefix(key, LEASEPREFIX)
 	parts := strings.Split(key, ":")
 	p, err := strconv.ParseUint(parts[1], 16, 64)
 	if err != nil {

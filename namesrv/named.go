@@ -243,7 +243,7 @@ func (nd *Named) waitExit(ch chan struct{}) {
 	}
 }
 
-func (nd *Named) watchEphemeral() {
+func (nd *Named) watchLeased() {
 	for pn := range nd.ephch {
 		nd.SigmaSrv.Notify(pn)
 	}

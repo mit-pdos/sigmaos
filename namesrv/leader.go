@@ -37,11 +37,11 @@ func (nd *Named) startLeader() error {
 
 	db.DPrintf(db.NAMED, "succeeded leaderetcd election")
 
-	if err := nd.fs.WatchEphemeral(nd.ephch); err != nil {
+	if err := nd.fs.WatchLeased(nd.ephch); err != nil {
 		return err
 	}
 
-	go nd.watchEphemeral()
+	go nd.watchLeased()
 
 	fs.Fence(nd.elect.Key(), nd.elect.Rev())
 

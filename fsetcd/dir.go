@@ -139,11 +139,11 @@ func (fse *FsEtcd) ReadDir(dei *DirEntInfo) (*DirInfo, *serr.Err) {
 	return dir, nil
 }
 
-// If fsetcd already deleted di because di is a leased ephemeral file;
-// update the on-disk directory to remove the file's entry.
-func (fse *FsEtcd) updateEphemeral(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) *serr.Err {
+// If fsetcd already deleted di because di is a leased file; update
+// the on-disk directory to remove the file's entry.
+func (fse *FsEtcd) updateLeased(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) *serr.Err {
 	if err := fse.updateDir(dei, dir, v); err != nil {
-		db.DPrintf(db.FSETCD, "updateEphemeral %v %v err %v\n", dei, dir, err)
+		db.DPrintf(db.FSETCD, "updateLeased %v %v err %v\n", dei, dir, err)
 		return err
 	}
 	fse.dc.update(dei.Path, dir)
@@ -177,8 +177,8 @@ func (fse *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del fs.Tdel
 
 	if err := fse.remove(dei, dir, v, di); err != nil {
 		db.DPrintf(db.FSETCD, "Remove entry %v %v err %v\n", name, di, err)
-		if di.Perm.IsEphemeral() && err.IsErrNotfound() {
-			if r := fse.updateEphemeral(dei, dir, v); r == nil {
+		if di.LeaseId.IsLeased() && err.IsErrNotfound() {
+			if r := fse.updateLeased(dei, dir, v); r == nil {
 				if del == fs.DEL_EXIST {
 					return err // return original err
 				} else {
@@ -226,8 +226,8 @@ func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, new path.Tpathname, 
 		fse.dc.update(dei.Path, dir)
 		return nil
 	} else {
-		if difrom.Perm.IsEphemeral() && err.IsErrNotfound() {
-			if r := fse.updateEphemeral(dei, dir, v); r == nil {
+		if difrom.LeaseId.IsLeased() && err.IsErrNotfound() {
+			if r := fse.updateLeased(dei, dir, v); r == nil {
 				return err // return original err
 			} else {
 				return r
@@ -273,8 +273,8 @@ func (fse *FsEtcd) Renameat(deif *DirEntInfo, from path.Tpathname, deit *DirEntI
 		fse.dc.update(deit.Path, dirt)
 		return nil
 	} else {
-		if difrom.Perm.IsEphemeral() && err.IsErrNotfound() {
-			if r := fse.updateEphemeral(deif, dirf, vf); r == nil {
+		if difrom.LeaseId.IsLeased() && err.IsErrNotfound() {
+			if r := fse.updateLeased(deif, dirf, vf); r == nil {
 				return err // return original err
 			} else {
 				return r

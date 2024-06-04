@@ -24,10 +24,10 @@ const (
 	TSTAT_NONE Tstat = iota
 	TSTAT_STAT
 
-	EPHEMERAL = "t-"
+	LEASEPREFIX = "_l-"
 )
 
-type EphemeralKey struct {
+type LeasedKey struct {
 	Realm sp.Trealm
 	Path  sp.Tpath
 	Pn    path.Tpathname
@@ -37,20 +37,20 @@ func (fs *FsEtcd) path2key(realm sp.Trealm, dei *DirEntInfo) string {
 	return string(realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
-func (fs *FsEtcd) ephemkey(dei *DirEntInfo) string {
-	return EPHEMERAL + string(fs.realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
+func (fs *FsEtcd) leasedkey(dei *DirEntInfo) string {
+	return LEASEPREFIX + string(fs.realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
-func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]EphemeralKey, error) {
-	resp, err := fs.Clnt().Get(context.TODO(), prefixEphemeral(fs.realm), clientv3.WithPrefix())
+func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]LeasedKey, error) {
+	resp, err := fs.Clnt().Get(context.TODO(), prefixLease(fs.realm), clientv3.WithPrefix())
 	db.DPrintf(db.FSETCD, "LeasedPaths %v err %v\n", resp, err)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
-	ekeys := make([]EphemeralKey, 0)
+	ekeys := make([]LeasedKey, 0)
 	for _, kv := range resp.Kvs {
 		r, p := key2path(string(kv.Key))
-		ekeys = append(ekeys, EphemeralKey{
+		ekeys = append(ekeys, LeasedKey{
 			Realm: r,
 			Path:  p,
 			Pn:    path.Split(string(kv.Value)),
@@ -59,9 +59,9 @@ func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]EphemeralKey, error) {
 	return ekeys, nil
 }
 
-func (fs *FsEtcd) GetEphemPathName(key string) (path.Tpathname, error) {
+func (fs *FsEtcd) GetLeasedPathName(key string) (path.Tpathname, error) {
 	resp, err := fs.Clnt().Get(context.TODO(), key)
-	db.DPrintf(db.FSETCD, "GetEphemPath %v err %v\n", resp, err)
+	db.DPrintf(db.FSETCD, "GetLeasedPath %v err %v\n", resp, err)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
@@ -166,10 +166,10 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 		} else {
 			di := NewDirEntInfoP(e.Tpath(), e.Tperm())
 			if e.Tperm().IsEphemeral() {
-				// if file is emphemeral, etcd may have expired it
+				// if file is leased, etcd may have expired it
 				// when named didn't cache the directory, check if its
 				// ephem key still exists.
-				_, err := fs.GetEphemPathName(fs.ephemkey(di))
+				_, err := fs.GetLeasedPathName(fs.leasedkey(di))
 				if err != nil {
 					db.DPrintf(db.FSETCD, "readDir: expired %q %v err %v\n", e.Name, e.Tperm(), err)
 					update = true
@@ -266,7 +266,7 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
 
 	if new.Perm.IsEphemeral() {
-		ops = append(ops, clientv3.OpPut(fs.ephemkey(new), npn.String(), opts...))
+		ops = append(ops, clientv3.OpPut(fs.leasedkey(new), npn.String(), opts...))
 
 	}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
@@ -308,7 +308,7 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
 
 	if del.Perm.IsEphemeral() {
-		ops = append(ops, clientv3.OpDelete(fs.ephemkey(del)))
+		ops = append(ops, clientv3.OpDelete(fs.leasedkey(del)))
 	}
 
 	resp, err := fs.Clnt().Txn(context.TODO()).
@@ -364,7 +364,7 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 	}
 
 	if from.Perm.IsEphemeral() {
-		ops = append(ops, clientv3.OpPut(fs.ephemkey(from), npn.String(), opts...))
+		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
 	}
 
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
@@ -437,7 +437,7 @@ func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, dei
 	}
 
 	if from.Perm.IsEphemeral() {
-		ops = append(ops, clientv3.OpPut(fs.ephemkey(from), npn.String(), opts...))
+		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
 	}
 
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()

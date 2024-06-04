@@ -39,7 +39,7 @@ func main() {
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	npc := netproxyclnt.NewNetProxyClnt(pe)
 	npd := proxy.NewNpd(pe, npc, lip)
-	netsrv.NewNetServer(pe, npc, addr, npd)
+	netsrv.NewNetServerEPType(pe, npc, addr, sp.EXTERNAL_EP, npd)
 	ch := make(chan struct{})
 	<-ch
 }

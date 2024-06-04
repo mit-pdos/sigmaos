@@ -140,7 +140,7 @@ func (nf *EtcdFileProto) Tperm() sp.Tperm {
 
 func (e *DirEntInfo) LeaseOpts() []clientv3.OpOption {
 	opts := make([]clientv3.OpOption, 0)
-	if e.LeaseId != sp.NoLeaseId {
+	if e.LeaseId.IsLeased() {
 		opts = append(opts, clientv3.WithLease(clientv3.LeaseID(e.LeaseId)))
 	}
 	return opts

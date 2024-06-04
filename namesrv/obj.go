@@ -49,7 +49,7 @@ func (o *Obj) Perm() sp.Tperm {
 // XXX 0 should be o.parent.parent
 func (o *Obj) Parent() fs.Dir {
 	dir := o.pn.Dir()
-	return newDir(newObjDi(o.fs, dir, *fsetcd.NewDirEntInfoP(o.parent, sp.DMDIR|0777), 0))
+	return newDir(newObjDi(o.fs, dir, *fsetcd.NewDirEntInfoDir(o.parent), 0))
 }
 
 // XXX SetParent

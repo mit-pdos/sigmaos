@@ -85,7 +85,7 @@ func (fs *FsEtcd) WatchLeased(ch chan path.Tpathname) error {
 	wopts = append(wopts, clientv3.WithPrevKV())
 	wch := fs.Client.Watch(context.TODO(), prefixLease(fs.realm), wopts...)
 	if wch == nil {
-		return fmt.Errorf("watchEphemeral: Watch failed")
+		return fmt.Errorf("watchLeased: Watch failed")
 	}
 	db.DPrintf(db.WATCH, "WatchLeased: %v Set up etcd watch for %v", fs.realm, prefixLease(fs.realm))
 
@@ -140,7 +140,7 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 	if b, err := proto.Marshal(nf.EtcdFileProto); err != nil {
 		return serr.NewErrError(err)
 	} else {
-		dei := NewDirEntInfoP(sp.Tpath(BOOT), sp.DMDIR)
+		dei := NewDirEntInfoDir(sp.Tpath(BOOT))
 		cmp := []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 		}
@@ -163,7 +163,7 @@ func GetRootNamed(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, 
 		return &sp.Tendpoint{}, serr.NewErrError(err)
 	}
 	defer fs.Close()
-	dei := NewDirEntInfoP(sp.Tpath(BOOT), sp.DMDIR)
+	dei := NewDirEntInfoDir(sp.Tpath(BOOT))
 	nf, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, dei))
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v etcdMnt %v realm %v", BOOT, nf, sr, etcdMnts, realm)

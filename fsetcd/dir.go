@@ -31,16 +31,16 @@ type DirEntInfo struct {
 	LeaseId sp.TleaseId
 }
 
-func NewDirEntInfo(nf *EtcdFile, p sp.Tpath, perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId) *DirEntInfo {
+func NewDirEntInfoNf(nf *EtcdFile, p sp.Tpath, perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId) *DirEntInfo {
 	return &DirEntInfo{Nf: nf, Path: p, Perm: perm, ClntId: cid, LeaseId: lid}
 }
 
-func NewDirEntInfoP(p sp.Tpath, perm sp.Tperm) *DirEntInfo {
-	return NewDirEntInfo(nil, p, perm, sp.NoClntId, sp.NoLeaseId)
+func NewDirEntInfo(p sp.Tpath, perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId) *DirEntInfo {
+	return NewDirEntInfoNf(nil, p, perm, cid, lid)
 }
 
 func NewDirEntInfoDir(p sp.Tpath) *DirEntInfo {
-	return NewDirEntInfoP(p, sp.DMDIR)
+	return NewDirEntInfo(p, sp.DMDIR|0777, sp.NoClntId, sp.NoLeaseId)
 }
 
 func (di DirEntInfo) String() string {
@@ -78,7 +78,7 @@ func (fse *FsEtcd) NewRootDir() *serr.Err {
 		db.DPrintf(db.FSETCD, "NewEtcdFileDir err %v", r)
 		return serr.NewErrError(r)
 	}
-	dei := NewDirEntInfo(nf, ROOT, nf.Tperm(), sp.NoClntId, sp.NoLeaseId)
+	dei := NewDirEntInfoNf(nf, ROOT, nf.Tperm(), sp.NoClntId, sp.NoLeaseId)
 	if err := fse.PutFile(dei, nf, sp.NoFence()); err != nil {
 		db.DPrintf(db.FSETCD, "NewRootDir PutFile err %v", err)
 		return err
@@ -88,7 +88,7 @@ func (fse *FsEtcd) NewRootDir() *serr.Err {
 }
 
 func (fse *FsEtcd) ReadRootDir() (*DirInfo, *serr.Err) {
-	return fse.ReadDir(NewDirEntInfoP(ROOT, sp.DMDIR))
+	return fse.ReadDir(NewDirEntInfoDir(ROOT))
 }
 
 func (fse *FsEtcd) Lookup(dei *DirEntInfo, pn path.Tpathname) (*DirEntInfo, *serr.Err) {
@@ -118,14 +118,14 @@ func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf 
 	}
 	// Insert name into dir so that fse.create() will write the updated
 	// directory to etcd, but undo the Insert if create fails.
-	di := NewDirEntInfo(nf, path, nf.Tperm(), cid, lid)
+	di := NewDirEntInfoNf(nf, path, nf.Tperm(), cid, lid)
 	dir.Ents.Insert(name, di)
-	db.DPrintf(db.FSETCD, "Create %q(%v) dir %v %v nf %v\n", name, pn, dir, dei.Path, nf)
+	db.DPrintf(db.FSETCD, "Create %q(%v) di %v\n", name, pn, di)
 	if err := fse.create(dei, dir, v, di, pn); err == nil {
 		fse.dc.update(dei.Path, dir)
 		return di, nil
 	} else {
-		db.DPrintf(db.FSETCD, "Create %q dir %v nf %v err %v", name, dir, nf, err)
+		db.DPrintf(db.FSETCD, "Create %q di %v err %v", name, di, err)
 		dir.Ents.Delete(name)
 		return nil, err
 	}

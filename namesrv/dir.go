@@ -171,6 +171,6 @@ func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
 	return newDir(newObjDi(fs, path.Tpathname{},
-		*fsetcd.NewDirEntInfoP(fsetcd.ROOT, sp.DMDIR|0777),
+		*fsetcd.NewDirEntInfoDir(fsetcd.ROOT),
 		fsetcd.ROOT))
 }

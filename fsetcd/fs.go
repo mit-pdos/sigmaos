@@ -59,9 +59,9 @@ func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]LeasedKey, error) {
 	return ekeys, nil
 }
 
-func (fs *FsEtcd) GetLeasedPathName(key string) (path.Tpathname, error) {
+func (fs *FsEtcd) getLeasedPathName(key string) (path.Tpathname, error) {
 	resp, err := fs.Clnt().Get(context.TODO(), key)
-	db.DPrintf(db.FSETCD, "GetLeasedPath %v err %v\n", resp, err)
+	db.DPrintf(db.FSETCD, "getLeasedPathName %v err %v\n", resp, err)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
@@ -161,15 +161,15 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 	nstat := 0
 	for _, e := range dir.Ents {
 		if e.Name == "." {
-			dents.Insert(e.Name, NewDirEntInfo(nf, e.Tpath(), e.Tperm(), e.TclntId(), e.TleaseId()))
+			dents.Insert(e.Name, NewDirEntInfoNf(nf, e.Tpath(), e.Tperm(), e.TclntId(), e.TleaseId()))
 			nstat += 1
 		} else {
-			di := NewDirEntInfoP(e.Tpath(), e.Tperm())
-			if e.Tperm().IsEphemeral() {
+			di := NewDirEntInfo(e.Tpath(), e.Tperm(), e.TclntId(), e.TleaseId())
+			if di.LeaseId.IsLeased() {
 				// if file is leased, etcd may have expired it
 				// when named didn't cache the directory, check if its
 				// ephem key still exists.
-				_, err := fs.GetLeasedPathName(fs.leasedkey(di))
+				_, err := fs.getLeasedPathName(fs.leasedkey(di))
 				if err != nil {
 					db.DPrintf(db.FSETCD, "readDir: expired %q %v err %v\n", e.Name, e.Tperm(), err)
 					update = true
@@ -184,10 +184,8 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 				}
 				nstat += 1
 				di.Nf = nf
-				dents.Insert(e.Name, di)
-			} else {
-				dents.Insert(e.Name, NewDirEntInfoP(e.Tpath(), e.Tperm()))
 			}
+			dents.Insert(e.Name, di)
 		}
 	}
 
@@ -265,7 +263,7 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 		clientv3.OpGet(fs.path2key(fs.realm, new)),
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
 
-	if new.Perm.IsEphemeral() {
+	if new.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(new), npn.String(), opts...))
 
 	}
@@ -307,7 +305,7 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 		clientv3.OpGet(fs.path2key(fs.realm, del)),
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
 
-	if del.Perm.IsEphemeral() {
+	if del.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpDelete(fs.leasedkey(del)))
 	}
 
@@ -363,7 +361,7 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 			clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	}
 
-	if from.Perm.IsEphemeral() {
+	if from.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
 	}
 
@@ -436,7 +434,7 @@ func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, dei
 		}
 	}
 
-	if from.Perm.IsEphemeral() {
+	if from.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
 	}
 

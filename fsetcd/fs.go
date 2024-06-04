@@ -28,32 +28,48 @@ const (
 )
 
 type EphemeralKey struct {
-	Path sp.Tpath
-	Pn   path.Tpathname
+	Realm sp.Trealm
+	Path  sp.Tpath
+	Pn    path.Tpathname
 }
 
 func (fs *FsEtcd) path2key(realm sp.Trealm, dei *DirEntInfo) string {
 	return string(realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
-func (fs *FsEtcd) ephemkey(realm sp.Trealm, dei *DirEntInfo) string {
-	return EPHEMERAL + string(realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
+func (fs *FsEtcd) ephemkey(dei *DirEntInfo) string {
+	return EPHEMERAL + string(fs.realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
-func (fs *FsEtcd) EphemeralPaths() ([]EphemeralKey, error) {
-	resp, err := fs.Clnt().Get(context.TODO(), EPHEMERAL, clientv3.WithFromKey())
-	db.DPrintf(db.FSETCD, "EphemeralKeys %v err %v\n", resp, err)
+func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]EphemeralKey, error) {
+	resp, err := fs.Clnt().Get(context.TODO(), prefixEphemeral(fs.realm), clientv3.WithPrefix())
+	db.DPrintf(db.FSETCD, "LeasedPaths %v err %v\n", resp, err)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
 	ekeys := make([]EphemeralKey, 0)
 	for _, kv := range resp.Kvs {
+		r, p := key2path(string(kv.Key))
 		ekeys = append(ekeys, EphemeralKey{
-			Path: key2path(string(kv.Key)),
-			Pn:   path.Split(string(kv.Value)),
+			Realm: r,
+			Path:  p,
+			Pn:    path.Split(string(kv.Value)),
 		})
 	}
 	return ekeys, nil
+}
+
+func (fs *FsEtcd) GetEphemPathName(key string) (path.Tpathname, error) {
+	resp, err := fs.Clnt().Get(context.TODO(), key)
+	db.DPrintf(db.FSETCD, "GetEphemPath %v err %v\n", resp, err)
+	if err != nil {
+		return nil, serr.NewErrError(err)
+	}
+	if len(resp.Kvs) != 1 {
+		rp := key2realmpath(key)
+		return nil, serr.NewErr(serr.TErrNotfound, rp)
+	}
+	return path.Split(string(resp.Kvs[0].Value)), nil
 }
 
 func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
@@ -64,7 +80,7 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 		return nil, 0, serr.NewErrError(err)
 	}
 	if len(resp.Kvs) != 1 {
-		return nil, 0, serr.NewErr(serr.TErrNotfound, key2path(key))
+		return nil, 0, serr.NewErr(serr.TErrNotfound, key2realmpath(key))
 	}
 	nf := newEtcdFile()
 	if err := proto.Unmarshal(resp.Kvs[0].Value, nf.EtcdFileProto); err != nil {
@@ -149,14 +165,21 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 			nstat += 1
 		} else {
 			di := NewDirEntInfoP(e.Tpath(), e.Tperm())
-			if e.Tperm().IsEphemeral() || stat == TSTAT_STAT {
+			if e.Tperm().IsEphemeral() {
 				// if file is emphemeral, etcd may have expired it
-				// when named didn't cache the directory, check if it
-				// still exists.
+				// when named didn't cache the directory, check if its
+				// ephem key still exists.
+				_, err := fs.GetEphemPathName(fs.ephemkey(di))
+				if err != nil {
+					db.DPrintf(db.FSETCD, "readDir: expired %q %v err %v\n", e.Name, e.Tperm(), err)
+					update = true
+					continue
+				}
+			}
+			if stat == TSTAT_STAT {
 				nf, _, err := fs.GetFile(di)
 				if err != nil {
-					db.DPrintf(db.FSETCD, "readDir: expired %v %v err %v\n", e.Name, e.Tperm(), err)
-					update = true
+					db.DPrintf(db.ERROR, "readDir: stat entry %v %v err %v\n", e.Name, e.Tperm(), err)
 					continue
 				}
 				nstat += 1
@@ -243,7 +266,7 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
 
 	if new.Perm.IsEphemeral() {
-		ops = append(ops, clientv3.OpPut(fs.ephemkey(fs.realm, new), npn.String(), opts...))
+		ops = append(ops, clientv3.OpPut(fs.ephemkey(new), npn.String(), opts...))
 
 	}
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
@@ -285,7 +308,7 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
 
 	if del.Perm.IsEphemeral() {
-		ops = append(ops, clientv3.OpDelete(fs.ephemkey(fs.realm, del)))
+		ops = append(ops, clientv3.OpDelete(fs.ephemkey(del)))
 	}
 
 	resp, err := fs.Clnt().Txn(context.TODO()).
@@ -341,7 +364,7 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 	}
 
 	if from.Perm.IsEphemeral() {
-		ops = append(ops, clientv3.OpPut(fs.ephemkey(fs.realm, from), npn.String(), opts...))
+		ops = append(ops, clientv3.OpPut(fs.ephemkey(from), npn.String(), opts...))
 	}
 
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
@@ -414,7 +437,7 @@ func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, dei
 	}
 
 	if from.Perm.IsEphemeral() {
-		ops = append(ops, clientv3.OpPut(fs.ephemkey(fs.realm, from), npn.String(), opts...))
+		ops = append(ops, clientv3.OpPut(fs.ephemkey(from), npn.String(), opts...))
 	}
 
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()

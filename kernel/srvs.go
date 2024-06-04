@@ -225,7 +225,7 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
 		ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{addr}, sp.ROOTREALM)
 		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
-		if err := k.MkEndpointFile(pn, ep, sp.NoLeaseId); err != nil {
+		if err := k.MkEndpointFile(pn, ep); err != nil {
 			return nil, err
 		}
 		// Get port binding for WWW srvs running on this uprocd

@@ -126,7 +126,7 @@ func Run(args []string) error {
 		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = filepath.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
-		if err := nd.MkEndpointFile(pn, ep, nd.sess.Lease()); err != nil {
+		if err := nd.MkLeasedEndpoint(pn, ep, nd.sess.Lease()); err != nil {
 			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v\n", nd.realm, pn, err)
 			return err
 		}

@@ -238,9 +238,9 @@ func (scs *SigmaClntSrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest
 	return nil
 }
 
-func (scs *SigmaClntSrvAPI) CreateEphemeral(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
-	fd, err := scs.sc.CreateEphemeral(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), sp.TleaseId(req.LeaseId), req.Fence.Tfence())
-	db.DPrintf(db.SIGMACLNTSRV, "%v: CreateEphemeral %v %v %v", scs.sc.ClntId(), req, fd, err)
+func (scs *SigmaClntSrvAPI) CreateLeased(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
+	fd, err := scs.sc.CreateLeased(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), sp.TleaseId(req.LeaseId), req.Fence.Tfence())
+	db.DPrintf(db.SIGMACLNTSRV, "%v: CreateLeased %v %v %v", scs.sc.ClntId(), req, fd, err)
 	rep.Fd = uint32(fd)
 	rep.Err = scs.setErr(err)
 	return nil

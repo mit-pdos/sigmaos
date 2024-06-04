@@ -57,7 +57,7 @@ func RunWwwd(job, tree string) {
 	}
 
 	// Write a file for clients to discover the server's address.
-	if err = www.ssrv.SigmaClnt().MkEndpointFile(JobHTTPAddrsPath(job), ep, sp.NoLeaseId); err != nil {
+	if err = www.ssrv.SigmaClnt().MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
 		db.DFatalf("MkEndpointFile %v", err)
 	}
 

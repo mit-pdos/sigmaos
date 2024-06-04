@@ -63,7 +63,7 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 	return fd, nil
 }
 
-func (fdc *FdClient) CreateEphemeral(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
+func (fdc *FdClient) CreateLeased(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
 	fid, err := fdc.pc.Create(path, fdc.pe.GetPrincipal(), perm|sp.DMTMP, mode, lid, f)
 	if err != nil {
 		return -1, err

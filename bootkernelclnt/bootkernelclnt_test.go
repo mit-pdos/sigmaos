@@ -164,7 +164,7 @@ func TestSymlink3(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestEphemeral(t *testing.T) {
+func TestLeased(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

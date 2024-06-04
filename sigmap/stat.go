@@ -46,7 +46,7 @@ func (st *Tstat) StatProto() *TstatProto {
 
 func (st *Stat) String() string {
 	return fmt.Sprintf("{%v mode=%v atime=%v mtime=%v length=%v name=%v uid=%v gid=%v muid=%v}",
-		st.Qid, st.Tmode(), st.Atime, st.Mtime, st.Tlength(), st.Name, st.Uid, st.Gid, st.Muid)
+		st.Tqid(), st.Tmode(), st.Atime, st.Mtime, st.Tlength(), st.Name, st.Uid, st.Gid, st.Muid)
 }
 
 func (st *Tstat) Tqid() *Tqid {

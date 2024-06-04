@@ -42,5 +42,5 @@ func AdvertisePublicHTTPPort(fsl *fslib.FsLib, pn string, ep *sp.Tendpoint) erro
 	ep.Addrs()[0].IPStr = fsl.ProcEnv().GetOuterContainerIP().String()
 	ep.Addrs()[0].PortInt = uint32(pm.HostPort)
 	db.DPrintf(db.PORT, "AdvertisePortNew %v %v\n", pn, ep)
-	return fsl.MkEndpointFile(pn, ep, sp.NoLeaseId)
+	return fsl.MkEndpointFile(pn, ep)
 }

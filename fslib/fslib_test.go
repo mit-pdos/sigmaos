@@ -247,7 +247,7 @@ func TestRemoveSymlink(t *testing.T) {
 
 	ep, err := ts.GetNamedEndpoint()
 	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
-	err = ts.MkEndpointFile(fn, ep, sp.NoLeaseId)
+	err = ts.MkEndpointFile(fn, ep)
 	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
 	sts, err := ts.GetDir(fn + "/")
@@ -276,7 +276,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 
 	ep, err := ts.GetNamedEndpoint()
 	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
-	err = ts.MkEndpointFile(fn, ep, sp.NoLeaseId)
+	err = ts.MkEndpointFile(fn, ep)
 	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
 	sts, err := ts.GetDir(fn + "/")
@@ -302,7 +302,7 @@ func TestReadSymlink(t *testing.T) {
 
 	ep, err := ts.GetNamedEndpoint()
 	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
-	err = ts.MkEndpointFile(fn, ep, sp.NoLeaseId)
+	err = ts.MkEndpointFile(fn, ep)
 	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
 	_, err = ts.GetDir(fn + "/")
@@ -1115,7 +1115,7 @@ func TestEndpointSimple(t *testing.T) {
 	assert.Nil(ts.T, err, "dir")
 
 	pn := filepath.Join(dn, "namedself")
-	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 	sts, err := ts.GetDir(pn + "/")
 	assert.Equal(t, nil, err)
@@ -1137,11 +1137,11 @@ func TestUnionDir(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself0"), newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222)}, sp.ROOTREALM)
-	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself1"), newep, sp.NoLeaseId)
+	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself1"), newep)
 	assert.Nil(ts.T, err, "EndpointService")
 
 	sts, err := ts.GetDir(filepath.Join(pathname, "d/~any") + "/")
@@ -1176,10 +1176,10 @@ func TestUnionRoot(t *testing.T) {
 
 	pn0 := filepath.Join(pathname, "namedself0")
 	pn1 := filepath.Join(pathname, "namedself1")
-	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)}, sp.ROOTREALM)
-	err = ts.MkEndpointFile(pn1, newep, sp.NoLeaseId)
+	err = ts.MkEndpointFile(pn1, newep)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	pn := pathname
@@ -1206,14 +1206,14 @@ func TestUnionSymlinkRead(t *testing.T) {
 
 	pn0 := filepath.Join(pathname, "namedself0")
 	ep := newEndpoint(t, ts, pathname)
-	err := ts.MkEndpointFile(pn0, ep, sp.NoLeaseId)
+	err := ts.MkEndpointFile(pn0, ep)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	dn := filepath.Join(pathname, "d")
 	err = ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself1"), ep, sp.NoLeaseId)
+	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself1"), ep)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	basepn := pathname
@@ -1244,7 +1244,7 @@ func TestUnionSymlinkPut(t *testing.T) {
 	}
 
 	pn0 := filepath.Join(pathname, "namedself0")
-	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	b := []byte("hello")
@@ -1292,7 +1292,7 @@ func TestSetFileSymlink(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	err = ts.MkEndpointFile(filepath.Join(pathname, "namedself0"), newEndpoint(t, ts, pathname), sp.NoLeaseId)
+	err = ts.MkEndpointFile(filepath.Join(pathname, "namedself0"), newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	st, err := ts.ReadStats(pathname)
@@ -1343,11 +1343,11 @@ func TestEndpointUnion(t *testing.T) {
 	assert.Nil(ts.T, err, "dir")
 
 	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111)}, sp.ROOTREALM)
-	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself0"), newep, sp.NoLeaseId)
+	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself0"), newep)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	pn := filepath.Join(pathname, "mount")
-	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, dn), sp.NoLeaseId)
+	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, dn))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	eppn := "mount/"
@@ -1425,7 +1425,7 @@ func TestFslibClose(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestEphemeralFile(t *testing.T) {
+func TestLeasedFile(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1438,7 +1438,7 @@ func TestEphemeralFile(t *testing.T) {
 
 	li.KeepExtending()
 
-	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	_, err = ts.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err)
 
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
@@ -1454,7 +1454,7 @@ func TestEphemeralFile(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestEphemeralExpire(t *testing.T) {
+func TestLeasedExpire(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1465,7 +1465,7 @@ func TestEphemeralExpire(t *testing.T) {
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	_, err = ts.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err)
 
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
@@ -1476,7 +1476,7 @@ func TestEphemeralExpire(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestEphemeralRename(t *testing.T) {
+func TestLeasedRename(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1488,7 +1488,7 @@ func TestEphemeralRename(t *testing.T) {
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	_, err = ts.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err)
 
 	err = ts.Rename(fn, fn1)
@@ -1517,7 +1517,7 @@ func TestEphemeralRename(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestEphemeralRemove(t *testing.T) {
+func TestLeasedRemove(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1532,8 +1532,8 @@ func TestEphemeralRemove(t *testing.T) {
 	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	_, err = ts.PutFileEphemeral(fn, 0777, sp.OWRITE, li.Lease(), nil)
-	assert.Nil(t, err, "Err PutEphemeral: %v", err)
+	_, err = ts.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	assert.Nil(t, err, "Err PutLeasedFile: %v", err)
 
 	_, err = ts.Stat(fn)
 	assert.Nil(t, err, fn)

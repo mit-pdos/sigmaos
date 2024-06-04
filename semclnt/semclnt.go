@@ -36,7 +36,7 @@ func (c *SemClnt) Init(perm sp.Tperm) error {
 
 func (c *SemClnt) InitLease(perm sp.Tperm, lid sp.TleaseId) error {
 	db.DPrintf(db.SEMCLNT, "Semaphore init %v lease %v\n", c.path, lid)
-	_, err := c.PutFileEphemeral(c.path, 0777|perm, sp.OWRITE, lid, []byte{})
+	_, err := c.PutLeasedFile(c.path, 0777|perm, sp.OWRITE, lid, []byte{})
 	return err
 }
 

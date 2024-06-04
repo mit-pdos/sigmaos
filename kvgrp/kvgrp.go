@@ -117,7 +117,7 @@ func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
 	}
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, srvAddrs, g.ProcEnv().GetRealm())
 	db.DPrintf(db.KVGRP, "Advertise %v at %v", srvAddrs, GrpPath(g.jobdir, g.grp))
-	if err := g.MkEndpointFile(GrpPath(g.jobdir, g.grp), ep, g.lc.Lease()); err != nil {
+	if err := g.MkLeasedEndpoint(GrpPath(g.jobdir, g.grp), ep, g.lc.Lease()); err != nil {
 		db.DFatalf("couldn't make replica addrs file %v err %v", g.grp, err)
 	}
 }

@@ -41,14 +41,19 @@ func prefixEphemeral(realm sp.Trealm) string {
 	return EPHEMERAL + string(realm)
 }
 
-func key2path(key string) sp.Tpath {
+func key2path(key string) (sp.Trealm, sp.Tpath) {
 	key = strings.TrimPrefix(key, EPHEMERAL)
 	parts := strings.Split(key, ":")
 	p, err := strconv.ParseUint(parts[1], 16, 64)
 	if err != nil {
 		db.DFatalf("ParseUint %v err %v\n", key, err)
 	}
-	return sp.Tpath(p)
+	return sp.Trealm(parts[0]), sp.Tpath(p)
+}
+
+func key2realmpath(key string) string {
+	r, p := key2path(key)
+	return r.String() + ":" + p.String()
 }
 
 func marshalDirInfo(dir *DirInfo) ([]byte, *serr.Err) {

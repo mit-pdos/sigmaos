@@ -512,7 +512,7 @@ func setupK8sState(ts *Tstate) error {
 	assert.Nil(ts.T, err, "Err parse port %v: %v", po, err)
 	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
 	mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr}, sp.ROOTREALM)
-	err = ts.MkEndpointFile(p, mnt, sp.NoLeaseId)
+	err = ts.MkEndpointFile(p, mnt)
 	if !assert.Nil(ts.T, err) {
 		db.DPrintf(db.ERROR, "MkEndpointFile %v", err)
 		return err

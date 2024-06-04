@@ -38,8 +38,8 @@ type FileAPI interface {
 	Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error)
 	Seek(fd int, o sp.Toffset) error
 
-	// Ephemeral
-	CreateEphemeral(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error)
+	// Leased
+	CreateLeased(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error)
 	ClntId() sp.TclntId
 
 	// Fences

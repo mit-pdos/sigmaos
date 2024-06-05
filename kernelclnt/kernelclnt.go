@@ -15,11 +15,10 @@ type KernelClnt struct {
 }
 
 func NewKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{fsl}, pn)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{fsl}, pn)
 	if err != nil {
 		return nil, err
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	return &KernelClnt{fsl, rpcc}, nil
 }
 

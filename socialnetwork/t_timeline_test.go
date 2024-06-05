@@ -74,16 +74,14 @@ func TestTimeline(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients for posts and timelines
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
+	trpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	trpcc := rpcclnt.NewRPCClnt(ch)
-	prpch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
+	prpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	prpcc := rpcclnt.NewRPCClnt(prpch)
 
 	// create and store N posts
 	NPOST, userid := 4, int64(200)
@@ -140,16 +138,14 @@ func TestHome(t *testing.T) {
 	tssn.dbu.InitGraph()
 
 	// create RPC clients for posts and timelines
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
+	hrpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	hrpcc := rpcclnt.NewRPCClnt(ch)
-	prpch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
+	prpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	prpcc := rpcclnt.NewRPCClnt(prpch)
 
 	// create and store N posts
 	NPOST, userid := 3, int64(1)

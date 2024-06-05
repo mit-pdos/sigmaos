@@ -35,19 +35,17 @@ func RunSearchSrv(n string) error {
 	if err != nil {
 		return err
 	}
-	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, HOTELRATE)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELRATE)
 	if err != nil {
 		db.DFatalf("Err new rpcclnt rate: %v", err)
 		return err
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	s.ratec = rpcc
-	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELGEO)
+	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELGEO)
 	if err != nil {
 		db.DFatalf("Err new rpcclnt geo: %v", err)
 		return err
 	}
-	rpcc = rpcclnt.NewRPCClnt(ch)
 	s.geoc = rpcc
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_SEARCH)

@@ -58,35 +58,30 @@ func RunFrontendSrv(public bool, job string) error {
 	if err != nil {
 		return err
 	}
-	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_USER)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	frontend.userc = rpcc
-	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_GRAPH)
+	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
-	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.graphc = rpcc
-	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_TIMELINE)
+	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
-	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.tlc = rpcc
-	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_HOME)
+	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
-	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.homec = rpcc
-	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_COMPOSE)
+	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
 		return err
 	}
-	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.composec = rpcc
 	//	frontend.tracer = tracing.Init("frontend", proc.GetSigmaJaegerIP())
 

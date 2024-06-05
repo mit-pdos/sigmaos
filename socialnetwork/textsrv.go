@@ -40,17 +40,15 @@ func RunTextSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_USER)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	tsrv.userc = rpcc
-	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_URL)
+	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_URL)
 	if err != nil {
 		return err
 	}
-	rpcc = rpcclnt.NewRPCClnt(ch)
 	tsrv.urlc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Starting text service\n")
 	return ssrv.RunServer()

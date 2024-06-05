@@ -15,11 +15,10 @@ type RealmClnt struct {
 
 func NewRealmClnt(fsl *fslib.FsLib) (*RealmClnt, error) {
 	rc := &RealmClnt{FsLib: fsl}
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{rc.FsLib}, sp.REALMD)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{rc.FsLib}, sp.REALMD)
 	if err != nil {
 		return nil, err
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	rc.rpcc = rpcc
 	return rc, nil
 }

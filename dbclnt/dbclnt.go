@@ -15,11 +15,10 @@ type DbClnt struct {
 
 func NewDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
 	dc := &DbClnt{}
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{fsl}, fn)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{fsl}, fn)
 	if err != nil {
 		return nil, err
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	dc.rpcc = rpcc
 	return dc, nil
 }

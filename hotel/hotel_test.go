@@ -21,7 +21,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
-	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
@@ -110,11 +109,10 @@ func TestGeoSingle(t *testing.T) {
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod"}}, 0)
 	defer ts.Shutdown()
 	defer ts.stop()
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	arg := proto.GeoRequest{
 		Lat: 37.7749,
 		Lon: -122.4194,
@@ -138,11 +136,10 @@ func TestRateSingle(t *testing.T) {
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-rated"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	arg := &proto.RateRequest{
 		HotelIds: []string{"5", "3", "1", "6", "2"}, // from TestGeo
 		InDate:   "2015-04-09",
@@ -169,11 +166,10 @@ func TestRecSingle(t *testing.T) {
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-recd"}}, 0)
 	defer ts.Shutdown()
 	defer ts.stop()
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	arg := &proto.RecRequest{
 		Require: "dis",
 		Lat:     38.0235,
@@ -198,11 +194,10 @@ func TestUserSingle(t *testing.T) {
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-userd"}}, 0)
 	defer ts.Shutdown()
 	defer ts.stop()
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	arg := &proto.UserRequest{
 		Name:     "Cornell_0",
 		Password: hotel.NewPassword("0"),
@@ -225,11 +220,10 @@ func TestProfile(t *testing.T) {
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-profd"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	arg := &proto.ProfRequest{
 		HotelIds: []string{"1", "2"},
 	}
@@ -257,11 +251,10 @@ func TestCheck(t *testing.T) {
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
 		CustomerName: "Cornell_0",
@@ -291,11 +284,10 @@ func TestReserve(t *testing.T) {
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	arg := &proto.ReserveRequest{
 		HotelId:      []string{"4"},
 		CustomerName: "Cornell_0",
@@ -348,11 +340,10 @@ func TestSingleSearch(t *testing.T) {
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod"}, hotel.Srv{Name: "hotel-rated"}, hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	arg := &proto.SearchRequest{
 		Lat:     37.7749,
 		Lon:     -122.4194,

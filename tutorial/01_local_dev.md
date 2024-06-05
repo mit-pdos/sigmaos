@@ -6,9 +6,9 @@ commands are intended to be run from the root of the repo.
 
 ## Dependencies
 
-You will need to have `golang`, `docker`, `docker buildx`, `mysql`, `parallel`,
-and `libseccomp-dev` installed in order to build and run SigmaOS and its
-benchmarks. 
+You will need to have `docker`, `docker buildx`, `mysql`, `parallel`,
+`libseccomp-dev`, and `golang` v1.21 installed in order to build
+and run SigmaOS and its benchmarks. 
 
 In order to download Docker Desktop (which includes buildx, a plugin required
 by the SigmaOS build sequence), follow the following guide:
@@ -17,10 +17,16 @@ by the SigmaOS build sequence), follow the following guide:
 https://docs.docker.com/desktop/install/ubuntu/
 ```
 
+Follow the instructions from the following guide to install Go 1.21:
+
+```
+https://go.dev/doc/install
+```
+
 On a Ubuntu system, you can install the remaining packages by running:
 
 ```
-$ sudo apt install golang-go libseccomp-dev mysql-client parallel
+$ sudo apt install libseccomp-dev mysql-client parallel
 ```
 
 On a Ubuntu system, you may also have to install the SigmaOS AppArmor

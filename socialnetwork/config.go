@@ -92,11 +92,7 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 			db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 			return nil, err
 		}
-		cc, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, jobname)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error cacheclnt %v", err)
-			return nil, err
-		}
+		cc = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, jobname)
 	}
 
 	// Start procs

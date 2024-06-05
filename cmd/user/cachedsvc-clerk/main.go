@@ -60,11 +60,7 @@ func main() {
 			DB:       0,
 		})
 	} else {
-		var err error
-		csc, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1])
-		if err != nil {
-			db.DFatalf("NewCachedSvcClnt err %v\n", err)
-		}
+		csc = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1])
 	}
 
 	// Record performance.

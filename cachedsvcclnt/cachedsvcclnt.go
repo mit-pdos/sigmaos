@@ -38,15 +38,15 @@ type CachedSvcClnt struct {
 	dd  *dircache.DirCache[struct{}]
 }
 
-func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
+func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) *CachedSvcClnt {
 	csc := &CachedSvcClnt{
 		fsl: fsls[0],
 		pn:  cache.CACHE,
 		cc:  cacheclnt.NewCacheClnt(fsls, job, cachesrv.NSHARD),
 	}
-	dir := csc.pn + cachedsvc.SVRDIR
+	dir := csc.pn + cachedsvc.SRVDIR
 	csc.dd = dircache.NewDirCache[struct{}](fsls[0], dir, csc.newEntry, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
-	return csc, nil
+	return csc
 }
 
 func (csc *CachedSvcClnt) newEntry(n string) (struct{}, error) {

@@ -14,10 +14,7 @@ import (
 func NewCacheClnt(cache string, fsls []*fslib.FsLib, job string) (cache.CacheClnt, error) {
 	switch cache {
 	case "cached":
-		cc, err := cachedsvcclnt.NewCachedSvcClnt(fsls, job)
-		if err != nil {
-			return nil, err
-		}
+		cc := cachedsvcclnt.NewCachedSvcClnt(fsls, job)
 		return cc, nil
 	case "kvd":
 		db.DPrintf(db.ALWAYS, "cache %v\n", cache)

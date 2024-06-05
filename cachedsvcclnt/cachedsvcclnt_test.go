@@ -78,19 +78,18 @@ func TestCacheSingle(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, NSRV)
-	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
-	assert.Nil(t, err)
+	cc := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
-		err = cc.Put(key, &proto.CacheString{Val: key})
+		err := cc.Put(key, &proto.CacheString{Val: key})
 		assert.Nil(t, err)
 	}
 	t0 := time.Now()
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
 		res := &proto.CacheString{}
-		err = cc.Get(key, res)
+		err := cc.Get(key, res)
 		s := res.Val
 		assert.Nil(t, err)
 		assert.Equal(t, key, s)
@@ -129,19 +128,18 @@ func testCacheSharded(t *testing.T, nsrv int) {
 		return
 	}
 	ts := newTstate(t1, nsrv)
-	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
-	assert.Nil(t, err)
+	cc := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
-		err = cc.Put(key, &proto.CacheString{Val: key})
+		err := cc.Put(key, &proto.CacheString{Val: key})
 		assert.Nil(t, err)
 	}
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
 		res := &proto.CacheString{}
-		err = cc.Get(key, res)
+		err := cc.Get(key, res)
 		s := res.Val
 		assert.Nil(t, err)
 		assert.Equal(t, key, s)
@@ -157,7 +155,7 @@ func testCacheSharded(t *testing.T, nsrv int) {
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
 		res := &proto.CacheString{}
-		err = cc.Delete(key)
+		err := cc.Delete(key)
 		assert.Nil(t, err)
 		err = cc.Get(key, res)
 		assert.True(t, cache.IsMiss(err))
@@ -187,9 +185,8 @@ func TestCacheConcur(t *testing.T) {
 	}
 	ts := newTstate(t1, NSRV)
 	v := "hello"
-	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
-	assert.Nil(t, err)
-	err = cc.Put("x", &proto.CacheString{Val: v})
+	cc := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	err := cc.Put("x", &proto.CacheString{Val: v})
 	assert.Nil(t, err)
 
 	wg := &sync.WaitGroup{}
@@ -255,8 +252,7 @@ func TestElasticCache(t *testing.T) {
 
 	ts.sem.Up()
 
-	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
-	assert.Nil(t, err)
+	cc := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 
 	for i := 0; i < 5; i++ {
 		time.Sleep(5 * time.Second)

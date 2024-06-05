@@ -496,12 +496,11 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
-	assert.Nil(t, err)
+	cc1 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
 
 	db.DPrintf(db.TEST, "hello\n")
 
-	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
+	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "newcacheclnt")
@@ -512,16 +511,15 @@ func TestRealmNetIsolationOK(t *testing.T) {
 	sts, _ = ts2.GetDir("name/cache")
 	db.DPrintf(db.TEST, "readdir %v\n", sp.Names(sts))
 
-	// Err is always nil
-	csc, _ := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts2.FsLib}, job)
+	cc2 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts2.FsLib}, job)
 
 	// Check that the servers are unreachable
-	_, err = csc.StatsSrvs()
+	_, err = cc2.StatsSrvs()
 	assert.NotNil(t, err)
 
 	db.DPrintf(db.TEST, "readendpoint\n")
 
-	ep, err := ts1.ReadEndpoint(cc.Server(0))
+	ep, err := ts1.ReadEndpoint(cc1.Server(0))
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "ep %v", ep)
@@ -566,24 +564,24 @@ func TestRealmNetIsolationFail(t *testing.T) {
 		return
 	}
 
+	// start cachedsvc in realm1
 	job := rd.String(16)
 	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
+	// start client in realm1 monitoring its cached
+	cc1 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
+
+	// start client in realm2 monitoring its cached
+	cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts2.FsLib}, job)
 	assert.Nil(t, err)
 
-	// Err is always nil
-	cc2, _ := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts2.FsLib}, job)
+	time.Sleep(1000 * time.Millisecond)
 
-	// Check that the servers are unreachable
-	_, err = cc2.StatsSrvs()
-	assert.NotNil(t, err)
-
-	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
+	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
-	ep, err := ts1.ReadEndpoint(cc.Server(0))
+	ep, err := ts1.ReadEndpoint(cc1.Server(0))
 	assert.Nil(t, err, "Err %v", err)
 
 	db.DPrintf(db.TEST, "ep %v", ep)

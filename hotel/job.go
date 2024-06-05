@@ -177,11 +177,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err
 			}
-			cc, err = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, job)
-			if err != nil {
-				db.DPrintf(db.ERROR, "Error NewCachedSvcClnt %v", err)
-				return nil, err
-			}
+			cc = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, job)
 			ca = cachedsvcclnt.NewAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")

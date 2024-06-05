@@ -57,11 +57,7 @@ func RunUserSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
-	if err != nil {
-		return err
-	}
-	usrv.cachec = cachec
+	usrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Starting user service %v\n", usrv.sid)
 	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_USER)
 	if err != nil {

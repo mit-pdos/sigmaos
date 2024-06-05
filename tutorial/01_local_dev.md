@@ -277,10 +277,21 @@ set of tests to ensure that SigmaOS starts from a clean state.
 
 ## Exercise: Access S3 through SigmaOS
 
-Through SigmaOS you can access other services, such as AWS S3.  For
-this exercise you must have an AWS credential file in your home
-directory `~/.aws/credentials`, which has the secret access key for
-AWS.  The entry in `~/aws/credentials` looks like this:
+Through SigmaOS you can access other services, such as AWS S3.  For this
+exercise you must have AWS `credentials` and `config` files set up in your user
+account's AWS config directory, `~/.aws`. The `credentials` and `config` files
+contain the AWS configuration and secret access keys required for SigmaOS to
+access your AWS resources. The AWS CLI docs contain information on how to
+set up your `config` and `credentials` files:
+
+```
+https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-files.html
+https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-configure.html
+```
+
+SigmaOS expects there to be a `sigmaos` entry in your AWS `credentials` and
+`config` files. The entry in `~/aws/credentials` looks like this:
+
 ```
 [sigmaos]
 aws_access_key_id = KEYID
@@ -291,18 +302,25 @@ region=us-east-1
 If you have an AWS account, you can replace `KEYID` and `SECRETKEY`
 with your account's key.  If you don't have an account, you can create
 one (google create an AWS account) or use the account key provided by
-us (which we will post on Piazza).
+us.
 
-Now you should be able to access files in S3 by running:
+Now, if you retboot and mount SigmaOS, you should be able to access files in S3
+by running:
 
 ```
-ls /mnt/9p/s3/IP:PORT/
+ls /mnt/9p/s3/SERVER_ID/
 ```
-where IP:PORT is the IP address and port from `ls /mnt/9p/s3`.
+
+where `SERVER_ID` is the SigmaOS-generated ID for the S3 server. You can find
+this by running:
+
+```
+ls /mnt/9p/s3
+```
 
 You can copy files into s3. For example,
 ```
-cp tutorial/01_local_dev.md /mnt/9p/s3/192.168.0.10\:46043/<YOUR_BUCKET_NAME>/x
+cp tutorial/01_local_dev.md /mnt/9p/s3/SERVER_ID/<YOUR_BUCKET_NAME>/x
 ```
 copies this tutorial file into the s3 object `x`.
 

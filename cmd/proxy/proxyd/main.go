@@ -29,17 +29,18 @@ func main() {
 		db.DFatalf("Error new fsetcd moutn: %v", err)
 	}
 	// By default, proxy doesn't use overlays.
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, true)
 	pe.SetPID("proxy")
 	pe.Program = "proxy"
 	pe.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
 		sp.ROOTREALM,
 	))
+	db.DPrintf(db.PROXY, "Proxy env: %v", pe)
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	npc := netproxyclnt.NewNetProxyClnt(pe)
 	npd := proxy.NewNpd(pe, npc, lip)
-	netsrv.NewNetServer(pe, npc, addr, npd)
+	netsrv.NewNetServerEPType(pe, npc, addr, sp.EXTERNAL_EP, npd)
 	ch := make(chan struct{})
 	<-ch
 }

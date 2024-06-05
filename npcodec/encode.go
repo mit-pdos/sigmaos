@@ -106,12 +106,36 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(t, v.Version, v.Path); err != nil {
 				return err
 			}
+		case *sp.TqidProto:
+			qid := sp2NpQid(*v)
+			if err := e.encode(qid); err != nil {
+				return err
+			}
+		case **sp.TqidProto:
+			qid := sp2NpQid(**v)
+			if err := e.encode(qid); err != nil {
+				return err
+			}
 		case *sp.Tqid:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
 		case **sp.Tqid:
 			if err := e.encode(**v); err != nil {
+				return err
+			}
+		case []*sp.TqidProto:
+			if err := e.encode(uint16(len(v))); err != nil {
+				return err
+			}
+
+			for _, m := range v {
+				if err := e.encode(m); err != nil {
+					return err
+				}
+			}
+		case *[]*sp.TqidProto:
+			if err := e.encode(*v); err != nil {
 				return err
 			}
 		case []*sp.Tqid:
@@ -167,6 +191,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		default:
+			db.DPrintf(db.ERROR, "Encode unknown type: %T", v)
 			return errors.New(fmt.Sprintf("Encode unknown type: %T", v))
 		}
 	}

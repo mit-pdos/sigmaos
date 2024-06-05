@@ -124,5 +124,4 @@ func sp2NpMsg(fcm *sessp.FcallMsg) {
 		m := fcm.Msg.(*sp.Rerror)
 		fcm.Msg = np.Rerror9P{Ename: serr.Terror(m.ErrCode).String()}
 	}
-
 }

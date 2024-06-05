@@ -24,6 +24,11 @@ type NetServer struct {
 }
 
 func NewNetServer(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, newConn NewConnI) *NetServer {
+	return NewNetServerEPType(pe, npc, addr, sp.INTERNAL_EP, newConn)
+}
+
+// Special-case used just for proxy
+func NewNetServerEPType(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, eptype sp.TTendpoint, newConn NewConnI) *NetServer {
 	srv := &NetServer{
 		pe:      pe,
 		newConn: newConn,
@@ -31,7 +36,7 @@ func NewNetServer(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Tad
 	}
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
-	ep, l, err := npc.Listen(sp.INTERNAL_EP, addr)
+	ep, l, err := npc.Listen(eptype, addr)
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}

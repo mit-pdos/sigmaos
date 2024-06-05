@@ -90,7 +90,7 @@ Warning: the parallel build uses much memory and all but one core on the
 machine you are building on.
 
 There are many user procs in the repo, and building them all can take a long
-time. If you only wish to build only a subset of the user procs (e.g. `sleeper`
+time. If you wish to build only a subset of the user procs (e.g. `sleeper`
 and `spinner`), you can specify which user procs to build in a comma-separated
 list like so:
 
@@ -150,11 +150,13 @@ The output should look something like:
 
 SigmaOS leverages Golang's testing infrastructure for its benchmarks and
 correctness tests. We have tests for many of the SigmaOS packages. We expect
-all of the tests to pass, but we have not tested extensively on different
-hardware setups or OS versions, and we are sure there must be bugs. If you find
-a bug, please add a minimal test that exposes it to the appropriate package
-before fixing it. This way, we can ensure that the software doesn't regress to
-incorporate old bugs as we continue to develop it.
+all of the tests to pas, though some tests require access to our private S3
+buckets and will only pass once we have given you access to them. We have
+not tested extensively on different hardware setups or OS versions, and we are
+sure there must be bugs. If you find a bug, please add a minimal test that
+exposes it to the appropriate package before fixing it. This way, we can ensure
+that the software doesn't regress to incorporate old bugs as we continue to
+develop it.
 
 Occasionally, we run the full-slew of SigmaOS tests. In order to do so, run:
 
@@ -168,6 +170,16 @@ To run a few key tests for the main apps, run:
 
 ```
 $ ./test.sh --apps-fast 2>&1 | tee /tmp/out
+```
+
+We try to do a good job of cleaning up state between tests, even if the tests
+fail. However, if a package's test(s) fail while running `./test.sh`, there is
+a chance that some SigmaOS state will be left hanging around, causing
+subsequent packages' tests to fail. In order to ensure that all SigmaOS state
+is fully cleaned up between running different packages' tests, run:
+
+```
+$ ./test.sh --cleanup 2>&1 | tee /tmp/out
 ```
 
 Generally, we run only tests related to packages we are actively

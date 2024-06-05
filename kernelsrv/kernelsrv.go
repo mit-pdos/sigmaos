@@ -72,7 +72,7 @@ func (ks *KernelSrv) EvictKernelProc(ctx fs.CtxI, req proto.EvictKernelProcReque
 }
 
 func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
-	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown %v %v", ks.k.Param.KernelID, ks.k.IsPurelySigmaclntdKernel())
+	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown (sigmaclntd %t)", ks.k.Param.KernelID, ks.k.IsPurelySigmaclntdKernel())
 	if ks.k.IsPurelySigmaclntdKernel() {
 		// This is the last container to shut down, so no named isn't up anymore.
 		// Normal shutdown would involve ending leases, etc., which takes a long

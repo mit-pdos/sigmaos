@@ -101,7 +101,7 @@ func RunRealmSrv(netproxy bool) error {
 	}
 	db.DPrintf(db.REALMD, "newsrv ok")
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
-	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib)
+	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib, db.REALMD, db.REALMD_ERR)
 	rs.pq = procqclnt.NewProcQClnt(rs.sc.FsLib)
 	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib)
 	go rs.enforceResourcePolicy()
@@ -200,9 +200,6 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		}
 	}
 
-	s, err := sc.SprintfDir(sp.NAMED)
-	db.DPrintf(db.TEST, "realmdir %s err %v", s, err)
-
 	errC := make(chan error)
 	// Spawn per-realm kernel procs
 	go func() {
@@ -272,12 +269,13 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(r *Realm, realm sp.Trealm, ss s
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems [%v] n %v", realm, ss, n)
 	defer db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems done [%v] n %v", realm, ss, n)
 	kernels, err := rm.mkc.GetKernelSrvs()
+	db.DPrintf(db.REALMD, "%v: [%v] kernels %v %v\n", realm, ss, kernels, err)
 	if err != nil {
 		return err
 	}
 	for i := 0; i < len(kernels); i++ {
 		// Don't try to boot per-realm kernel subsystems on sigmaclntd-only kernels
-		if strings.HasSuffix(kernels[i], "-sigmaclntd-kernel") {
+		if strings.HasPrefix(kernels[i], sp.SIGMACLNTKERNEL) {
 			kernels = append(kernels[:i], kernels[i+1:]...)
 			i--
 		}

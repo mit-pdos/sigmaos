@@ -75,3 +75,12 @@ const (
 	SIGMASOCKET           = "/tmp/sigmaclntd/sigmaclntd.sock"
 	SIGMA_NETPROXY_SOCKET = "/tmp/sigmaclntd/sigmaclntd-netproxy.sock"
 )
+
+// sigmaclntd kernel
+const (
+	SIGMACLNTKERNEL = "kernel-" + SIGMACLNTDREL + "-"
+)
+
+func SigmaClntdKernel(kid string) string {
+	return SIGMACLNTKERNEL + kid
+}

@@ -204,7 +204,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var sckid string
 	if useSigmaclntd || useNetProxy {
 		db.DPrintf(db.BOOT, "Booting sigmaclntd: usesigmaclntd %v usenetproxy %v", useSigmaclntd, useNetProxy)
-		sckid = bootkernelclnt.GenKernelId() + "-sigmaclntd-kernel"
+		sckid = sp.SigmaClntdKernel(bootkernelclnt.GenKernelId())
 		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SIGMACLNTDREL, Overlays, GVisor, useNetProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for sigmaclntd")

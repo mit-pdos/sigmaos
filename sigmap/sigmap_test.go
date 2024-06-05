@@ -2,6 +2,7 @@ package sigmap_test
 
 import (
 	"log"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,4 +30,9 @@ func TestNamedAddrs(t *testing.T) {
 	as, err := sp.String2Taddrs(s)
 	assert.Nil(t, err)
 	log.Printf("s %v -> %v %v\n", s, as[0], as[1])
+}
+
+func TestIsSigmaClntdKernel(t *testing.T) {
+	sckid := sp.SigmaClntdKernel("sigma-1c80")
+	assert.True(t, strings.HasPrefix(sckid, sp.SIGMACLNTKERNEL))
 }

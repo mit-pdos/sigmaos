@@ -266,8 +266,6 @@ and `sigmasrv` by running a simple RPC server that echo its input:
 
 Extend the client and server to support addition: the client sends two numbers
 to the server and server responds with the sum:
- - [ ] Add the request and response struct to echo.proto and compile them using
-   compile-proto.sh.
  - [ ] Add the handler to echosrv.go and run `build.sh` to build server
  - [ ] Write a new test function that tests the new RPC
 

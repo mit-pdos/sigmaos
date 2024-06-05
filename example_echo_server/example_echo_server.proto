@@ -8,8 +8,11 @@ service EchoService {
 
 message EchoRequest {
   string text = 1;
+  int32 num1 = 2;
+  int32 num2 = 3;
 }
 
 message EchoResult {
   string text = 1;
+  int32 res = 2;
 }

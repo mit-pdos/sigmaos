@@ -29,10 +29,10 @@ type PostSrv struct {
 	cachec *cachedsvcclnt.CachedSvcClnt
 }
 
-func RunPostSrv(public bool, jobname string) error {
+func RunPostSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Creating post service\n")
 	psrv := &PostSrv{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_POST, psrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_POST, psrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func RunPostSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, POST_COL, []string{"postid"})
 	psrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_POST)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_POST, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

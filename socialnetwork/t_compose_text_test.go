@@ -6,6 +6,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/rpcclnt"
+	"sigmaos/sigmarpcchan"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/test"
@@ -23,7 +24,7 @@ func TestUrl(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-url", test.Overlays, 1000}}, NCACHESRV)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-url", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -31,10 +32,11 @@ func TestUrl(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_URL)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_URL)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 
 	// compose urls
 	url1 := "http://www.google.com/q=apple"
@@ -68,9 +70,9 @@ func TestText(t *testing.T) {
 		return
 	}
 	tssn, err := newTstateSN(t1, []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-text", test.Overlays, 1000}}, NCACHESRV)
+		sn.Srv{"socialnetwork-user", nil, 1000},
+		sn.Srv{"socialnetwork-url", nil, 1000},
+		sn.Srv{"socialnetwork-text", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -79,10 +81,11 @@ func TestText(t *testing.T) {
 
 	// create RPC clients text
 	tssn.dbu.InitUser()
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TEXT)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TEXT)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 
 	// process text
 	arg_text := proto.ProcessTextRequest{}
@@ -123,14 +126,14 @@ func TestCompose(t *testing.T) {
 		return
 	}
 	tssn, err := newTstateSN(t1, []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-home", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-url", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-text", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-compose", test.Overlays, 1000}}, NCACHESRV)
+		sn.Srv{"socialnetwork-user", nil, 1000},
+		sn.Srv{"socialnetwork-graph", nil, 1000},
+		sn.Srv{"socialnetwork-post", nil, 1000},
+		sn.Srv{"socialnetwork-timeline", nil, 1000},
+		sn.Srv{"socialnetwork-home", nil, 1000},
+		sn.Srv{"socialnetwork-url", nil, 1000},
+		sn.Srv{"socialnetwork-text", nil, 1000},
+		sn.Srv{"socialnetwork-compose", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -140,18 +143,21 @@ func TestCompose(t *testing.T) {
 	// create RPC clients text
 	tssn.dbu.InitUser()
 	tssn.dbu.InitGraph()
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_COMPOSE)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_COMPOSE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	trpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
+	rpcc := rpcclnt.NewRPCClnt(ch)
+	trch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	hrpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
+	trpcc := rpcclnt.NewRPCClnt(trch)
+	hch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	hrpcc := rpcclnt.NewRPCClnt(hch)
 
 	// compose empty post not allowed
 	arg_compose := proto.ComposePostRequest{}

@@ -7,7 +7,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv/proto"
-	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -68,9 +67,13 @@ func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilReques
 	return nil
 }
 
+func (ks *KernelSrv) EvictKernelProc(ctx fs.CtxI, req proto.EvictKernelProcRequest, rep *proto.EvictKernelProcResponse) error {
+	return ks.k.EvictKernelProc(sp.Tpid(req.PidStr))
+}
+
 func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
-	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown", ks.k.Param.KernelID)
-	if ks.k.IsSigmaclntdKernel() {
+	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown (sigmaclntd %t)", ks.k.Param.KernelID, ks.k.IsPurelySigmaclntdKernel())
+	if ks.k.IsPurelySigmaclntdKernel() {
 		// This is the last container to shut down, so no named isn't up anymore.
 		// Normal shutdown would involve ending leases, etc., which takes a long
 		// time. Instead, shortcut this by killing sigmaclntd and just exiting.
@@ -90,21 +93,4 @@ func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto
 
 func (ks *KernelSrv) Kill(ctx fs.CtxI, req proto.KillRequest, rep *proto.KillResult) error {
 	return ks.k.KillOne(req.Name)
-}
-
-func (ks *KernelSrv) AllocPort(ctx fs.CtxI, req proto.PortRequest, rep *proto.PortResult) error {
-	db.DPrintf(db.KERNEL, "%v: AllocPort %v\n", ks.k.Param.KernelID, req)
-	pb, err := ks.k.AllocPort(sp.Tpid(req.PidStr), sp.Tport(req.Port))
-	if err != nil {
-		return err
-	}
-	ip, err := netsigma.LocalIP()
-	if err != nil {
-		return err
-	}
-
-	rep.RealmPort = int32(pb.RealmPort)
-	rep.HostPort = int32(pb.HostPort)
-	rep.HostIp = ip.String()
-	return nil
 }

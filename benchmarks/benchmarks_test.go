@@ -2,11 +2,14 @@ package benchmarks_test
 
 import (
 	"flag"
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"math/rand"
 	"net/rpc"
 	"os/exec"
-	"path"
+	"path/filepath"
+
+	"github.com/stretchr/testify/assert"
+
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/hotel"
@@ -49,6 +52,7 @@ var CLERK_MCPU int
 var N_NODE_PER_MACHINE int
 var N_CLNT int
 var USE_RUST_PROC bool
+var WITH_KERNEL_PREF bool
 var DOWNLOAD_FROM_UX bool
 var SCHEDD_DURS string
 var SCHEDD_MAX_RPS string
@@ -111,6 +115,7 @@ func init() {
 	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of clients.")
 	flag.IntVar(&N_NODE_PER_MACHINE, "n_node_per_machine", 1, "Number of nodes per machine. Likely should always be 1, unless developing locally.")
 	flag.BoolVar(&USE_RUST_PROC, "use_rust_proc", false, "Use rust spawn bench proc")
+	flag.BoolVar(&WITH_KERNEL_PREF, "with_kernel_pref", false, "Set proc kernel preferences when spawning (e.g., to force & measure cold start)")
 	flag.BoolVar(&DOWNLOAD_FROM_UX, "download_from_ux", false, "Download the proc from ux, instead of S3. !!! WARNING: this only works for the spawn-latency proc !!!")
 	flag.StringVar(&SCHEDD_DURS, "schedd_dur", "10s", "Schedd benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&SCHEDD_MAX_RPS, "schedd_max_rps", "1000", "Max requests/second for schedd bench (comma-separated for multiple phases).")
@@ -232,8 +237,41 @@ func TestMicroDownSemaphore(t *testing.T) {
 	rootts.Shutdown()
 }
 
-// Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
-func TestMicroSpawnWaitStart(t *testing.T) {
+// Test how long it takes to cold Spawn and run the first instruction of
+// hello-world proc
+func TestMicroSpawnWaitStartRealm(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	if PREWARM_REALM {
+		rs0 := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
+		ps, is := newNProcs(N_TRIALS, "sleeper", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(0))
+		runOps(ts1, is, spawnWaitStartProc, rs0)
+		waitExitProcs(ts1, ps)
+	}
+
+	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
+	newOutDir(ts1)
+	ps, is := newNProcs(N_TRIALS, "spawn-latency", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(0))
+	runOps(ts1, is, spawnWaitStartProc, rs)
+	waitExitProcs(ts1, ps)
+	db.DPrintf(db.BENCH, "Results:\n%v", rs)
+	printResultSummary(rs)
+	rmOutDir(ts1)
+	rootts.Shutdown()
+}
+
+// Test how long it takes to cold Spawn, run, and WaitExit the rust
+// hello-world proc on a node that hasn't run any proc.
+func TestMicroSpawnWaitStartNode(t *testing.T) {
+	const N = 1
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -242,17 +280,34 @@ func TestMicroSpawnWaitStart(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	err := rootts.BootNode(N)
+	assert.Nil(t, err, "Boot node: %v", err)
+	db.DPrintf(db.TEST, "Done boot node %d", N)
+
+	sts, err := rootts.GetDir(sp.SCHEDD)
+	kernels := sp.Names(sts)
+	db.DPrintf(db.TEST, "Kernels %v", kernels)
+
 	if PREWARM_REALM {
-		warmupRealm(ts1, []string{"sleeper"})
+		p := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 0), "name/"})
+		p.SetKernels([]string{kernels[0]})
+		err := ts1.Spawn(p)
+		assert.Nil(t, err, "Spawn")
+		_, err = ts1.WaitExit(p.GetPid())
+		assert.Nil(t, err, "WaitExit")
 	}
-	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
-	newOutDir(ts1)
-	ps, is := newNProcs(N_TRIALS, "sleeper", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(MCPU))
-	runOps(ts1, is, spawnWaitStartProc, rs)
-	waitExitProcs(ts1, ps)
-	db.DPrintf(db.BENCH, "Results:\n%v", rs)
-	printResultSummary(rs)
-	rmOutDir(ts1)
+
+	time.Sleep(2 * time.Second)
+
+	s := time.Now()
+	p := proc.NewProc("spawn-latency", []string{"1us", OUT_DIR})
+	p.SetKernels([]string{kernels[1]})
+	err = ts1.Spawn(p)
+	assert.Nil(t, err, "Spawn")
+	_, err = ts1.WaitExit(p.GetPid())
+	assert.Nil(t, err, "WaitExit")
+	db.DPrintf(db.BENCH, "Results: %v Cold start %v", kernels[1], time.Since(s))
+
 	rootts.Shutdown()
 }
 
@@ -312,6 +367,7 @@ func TestMicroWarmupRealm(t *testing.T) {
 	rootts.Shutdown()
 }
 
+// TODO: update SigmaPath for "spawn-latency-ux"
 func TestMicroScheddSpawn(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -323,7 +379,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 	}
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
-	db.DPrintf(db.BENCH, "rust %v ux %v nclnt %v durs %v rps %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS)
+	db.DPrintf(db.BENCH, "rust %v ux %v kpref %v nclnt %v durs %v rps %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS)
 
 	prog := "XXXX"
 	if USE_RUST_PROC {
@@ -337,6 +393,29 @@ func TestMicroScheddSpawn(t *testing.T) {
 		prog = "spawn-bench"
 	}
 
+	sts, err := rootts.GetDir(sp.SCHEDD)
+	assert.Nil(rootts.T, err, "Err GetDir schedd: %v", err)
+	kernels := sp.Names(sts)
+	db.DPrintf(db.TEST, "Kernels %v", kernels)
+
+	// XXX clean up
+	// Prep the sleeper bin cache
+	db.DPrintf(db.TEST, "Warm up sleeper bin cache on kernel %v", kernels[0])
+	p1 := proc.NewProc("sleeper", []string{"1ms", "name/"})
+	p1.SetKernels([]string{kernels[0]})
+	p1s := []*proc.Proc{p1}
+	spawnProcs(ts1, p1s)
+	waitStartProcs(ts1, p1s)
+	waitExitProcs(ts1, p1s)
+	db.DPrintf(db.TEST, "Warm up remainder of the realm for sleeper")
+	warmupRealm(ts1, []string{"sleeper"})
+	db.DPrintf(db.TEST, "Warm up %v bin cache on kernel %v", prog, kernels[0])
+	p2 := proc.NewProc(prog, nil)
+	p2.SetKernels([]string{kernels[0]})
+	p2s := []*proc.Proc{p2}
+	spawnProcs(ts1, p2s)
+	waitStartProcs(ts1, p2s)
+
 	if PREWARM_REALM {
 		warmupRealm(ts1, []string{prog})
 	}
@@ -346,13 +425,13 @@ func TestMicroScheddSpawn(t *testing.T) {
 
 	done := make(chan bool)
 	// Prep Schedd job
-	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt) time.Duration {
+	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration {
 		if USE_RUST_PROC {
-			return runRustSpawnBenchProc(ts1, sc, prog)
+			return runRustSpawnBenchProc(ts1, sc, prog, kernelpref)
 		} else {
-			return runSpawnBenchProc(ts1, sc)
+			return runSpawnBenchProc(ts1, sc, kernelpref)
 		}
-	})
+	}, kernels, WITH_KERNEL_PREF)
 	// Run Schedd job
 	go func() {
 		runOps(ts1, ji, runSchedd, rs)
@@ -1123,7 +1202,7 @@ func TestHotelK8sSearch(t *testing.T) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
 func TestHotelK8sSearchCli(t *testing.T) {
@@ -1181,7 +1260,7 @@ func TestMRK8s(t *testing.T) {
 	}
 	c := startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
 	waitK8sMR(rootts, c)
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
 }
 
 func TestK8sMRMulti(t *testing.T) {
@@ -1240,7 +1319,7 @@ func TestK8sMRMulti(t *testing.T) {
 	for i := 0; i < N_REALM; i++ {
 		downloadS3ResultsRealm(
 			rootts,
-			path.Join("name/s3/~any/9ps3/", S3_RES_DIR+"-"+strconv.Itoa(i+1)),
+			filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR+"-"+strconv.Itoa(i+1)),
 			HOSTTMP+"sigmaos-perf",
 			sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)),
 		)
@@ -1290,8 +1369,8 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 	waitK8sMR(rootts, c)
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
 func TestImgResize(t *testing.T) {
@@ -1569,7 +1648,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	// Wait for both jobs to finish.
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
-	downloadS3Results(rootts, path.Join("name/s3/~any/9ps3/", "social-network-perf/k8s"), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "social-network-perf/k8s"), HOSTTMP+"sigmaos-perf")
 	for !(k8sJobHasCompleted("thumbnail1-benchrealm1") && k8sJobHasCompleted("thumbnail2-benchrealm1") &&
 		k8sJobHasCompleted("thumbnail3-benchrealm1") && k8sJobHasCompleted("thumbnail4-benchrealm1")) {
 		time.Sleep(500 * time.Millisecond)

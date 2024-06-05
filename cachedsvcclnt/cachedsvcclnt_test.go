@@ -39,7 +39,7 @@ func newTstate(t *test.Tstate, nsrv int) *Tstate {
 	ts.Tstate = t
 	ts.job = rd.String(16)
 	ts.Remove(cache.CACHE)
-	cm, err := cachedsvc.NewCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true, test.Overlays)
+	cm, err := cachedsvc.NewCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true)
 	assert.Nil(t.T, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
@@ -116,6 +116,7 @@ func TestCacheSingle(t *testing.T) {
 		assert.True(t, cache.IsMiss(err))
 	}
 
+	cc.Close()
 	ts.Shutdown()
 }
 
@@ -162,6 +163,7 @@ func testCacheSharded(t *testing.T, nsrv int) {
 		assert.True(t, cache.IsMiss(err))
 	}
 
+	cc.Close()
 	ts.stop()
 	ts.Shutdown()
 }
@@ -204,6 +206,7 @@ func TestCacheConcur(t *testing.T) {
 	}
 	wg.Wait()
 
+	cc.Close()
 	ts.stop()
 	ts.Shutdown()
 }
@@ -262,10 +265,12 @@ func TestElasticCache(t *testing.T) {
 		qlen := sts[0].StatsSnapshot.AvgQlen
 		db.DPrintf(db.ALWAYS, "Qlen %v %v\n", qlen, sts)
 		if qlen > 1.1 && i < 1 {
+			db.DPrintf(db.TEST, "Add server")
 			ts.cm.AddServer()
 		}
 	}
 
+	cc.Close()
 	ts.stop()
 	ts.Shutdown()
 }

@@ -8,24 +8,32 @@ import (
 	// "time"
 
 	db "sigmaos/debug"
-	"sigmaos/netsigma"
+	"sigmaos/netproxyclnt"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
 type NetClnt struct {
 	mu     sync.Mutex
+	pe     *proc.ProcEnv
+	npc    *netproxyclnt.NetProxyClnt
 	conn   net.Conn
+	ep     *sp.Tendpoint
 	addr   *sp.Taddr
 	closed bool
 	realm  sp.Trealm
 }
 
-func NewNetClnt(clntnet string, addrs sp.Taddrs) (*NetClnt, *serr.Err) {
-	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", addrs)
-	nc := &NetClnt{}
-	if err := nc.connect(clntnet, addrs); err != nil {
-		db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", addrs, err)
+func NewNetClnt(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, ep *sp.Tendpoint) (*NetClnt, *serr.Err) {
+	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", ep)
+	nc := &NetClnt{
+		pe:  pe,
+		npc: npc,
+		ep:  ep,
+	}
+	if err := nc.connect(ep); err != nil {
+		db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", ep, err)
 		return nil, err
 	}
 	return nc, nil
@@ -47,11 +55,14 @@ func (nc *NetClnt) Close() error {
 	return nc.conn.Close()
 }
 
-func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
-	addrs = netsigma.Rearrange(clntnet, addrs)
-	db.DPrintf(db.PORT, "NetClnt %v connect to any of %v, starting w. %v\n", clntnet, addrs, addrs[0])
-	for _, addr := range addrs {
-		c, err := net.DialTimeout("tcp", addr.IPPort(), sp.Conf.Session.TIMEOUT/10)
+func (nc *NetClnt) connect(ep *sp.Tendpoint) *serr.Err {
+	db.DPrintf(db.PORT, "NetClnt connect to any of %v, starting w. %v\n", ep, ep.Addrs()[0])
+	//	for _, addr := range addrs {
+	for i, addr := range ep.Addrs() {
+		if i > 0 {
+			ep.Claims.Addr = append(ep.Claims.Addr[1:], ep.Claims.Addr[0])
+		}
+		c, err := nc.npc.Dial(ep)
 		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
 		if err != nil {
 			continue
@@ -61,6 +72,6 @@ func (nc *NetClnt) connect(clntnet string, addrs sp.Taddrs) *serr.Err {
 		db.DPrintf(db.PORT, "NetClnt connected %v -> %v\n", c.LocalAddr(), nc.addr)
 		return nil
 	}
-	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", addrs)
+	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", ep)
 	return serr.NewErr(serr.TErrUnreachable, "no connection")
 }

@@ -1,7 +1,7 @@
 package benchmarks_test
 
 import (
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -63,7 +63,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 	db.DPrintf(db.ALWAYS, "Submit ImgResizeJob tasks")
 	for i := 0; i < ji.ntasks; i++ {
-		ts := make([]interface{}, len(fns))
+		ts := make([]interface{}, 0, len(fns))
 		for _, fn := range fns {
 			ts = append(ts, imgresizesrv.NewTask(fn))
 		}
@@ -86,19 +86,19 @@ func (ji *ImgResizeJobInstance) Wait() {
 	for {
 		n, err := ji.ft.NTaskDone()
 		assert.Nil(ji.Ts.T, err, "Error NTaskDone: %v", err)
-		db.DPrintf(db.TEST, "ImgResizeJob NTaskDone: %v", n)
+		db.DPrintf(db.TEST, "[%v] ImgResizeJob NTaskDone: %v", ji.GetRealm(), n)
 		if n == ji.ntasks {
 			break
 		}
 		time.Sleep(1 * time.Second)
 	}
-	db.DPrintf(db.TEST, "Done waiting for ImgResizeJob to finish")
+	db.DPrintf(db.TEST, "[%v] Done waiting for ImgResizeJob to finish", ji.GetRealm())
 	ji.imgd.StopGroup()
-	db.DPrintf(db.TEST, "Imgd shutdown")
+	db.DPrintf(db.TEST, "[%v] Imgd shutdown", ji.GetRealm())
 }
 
 func (ji *ImgResizeJobInstance) Cleanup() {
-	dir := path.Join(sp.UX, "~local", path.Dir(ji.input))
-	db.DPrintf(db.TEST, "Cleaning up dir %v", dir)
+	dir := filepath.Join(sp.UX, "~local", filepath.Dir(ji.input))
+	db.DPrintf(db.TEST, "[%v] Cleaning up dir %v", ji.GetRealm(), dir)
 	imgresizesrv.Cleanup(ji.FsLib, dir)
 }

@@ -9,23 +9,23 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sortedmap"
 )
 
 type ProcDir struct {
 	sync.Mutex
 	*ProcInode
 	procs ProcFs
-	sd    *sorteddir.SortedDir
+	sd    *sortedmap.SortedMap[string, *sp.Tstat]
 }
 
-func NewProcDir(procs ProcFs) fs.Inode {
+func NewProcDir(procs ProcFs) fs.FsObj {
 	return &ProcDir{ProcInode: newProcInode(sp.DMDIR|0555, "pids"), procs: procs}
 }
 
 func (pd *ProcDir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	ps := pd.procs.GetProcs()
-	pd.sd = sorteddir.NewSortedDir()
+	pd.sd = sortedmap.NewSortedMap[string, *sp.Tstat]()
 	for _, p := range ps {
 		n := string(p.GetPid())
 		pi := newProcInode(0444, n)
@@ -57,13 +57,17 @@ func (pd *ProcDir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string, f sp
 }
 
 func (pd *ProcDir) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	return pd.NewStat()
+}
+
+func (pd *ProcDir) NewStat() (*sp.Stat, *serr.Err) {
 	st := sp.NewStat(sp.NewQid(sp.QTDIR, 0, pd.path), pd.perm, 0, pd.name, "schedd")
-	st.Length = uint64(pd.procs.Len())
-	st.Mtime = uint32(time.Now().Unix())
+	st.SetLengthInt(pd.procs.Len())
+	st.SetMtime(time.Now().Unix())
 	return st, nil
 }
 
-func (pd *ProcDir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+func (pd *ProcDir) LookupPath(ctx fs.CtxI, path path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	name := path[0]
 	db.DPrintf(db.PROCFS, "%v: Lookup %v %v\n", ctx, pd, name)
 	if p, ok := pd.procs.Lookup(name); ok {
@@ -80,8 +84,8 @@ func (pd *ProcDir) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj
 func (pd *ProcDir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.Err) {
 	db.DPrintf(db.PROCFS, "%v: ReadDir %v %v %v\n", ctx, pd, cursor, cnt)
 	dents := make([]*sp.Stat, 0, pd.sd.Len())
-	pd.sd.Iter(func(n string, e interface{}) bool {
-		dents = append(dents, e.(*sp.Stat))
+	pd.sd.Iter(func(n string, st *sp.Stat) bool {
+		dents = append(dents, st)
 		return true
 	})
 	if cursor > len(dents) {

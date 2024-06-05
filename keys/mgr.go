@@ -81,6 +81,23 @@ func NewKeyMgr(fn GetKeyFn) *KeyMgr {
 	}
 }
 
+func NewKeyMgrWithBootstrappedKeys(fn GetKeyFn, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey, signer sp.Tsigner, pubkey auth.PublicKey, privkey auth.PrivateKey) *KeyMgr {
+	kmgr := NewKeyMgr(fn)
+	if masterPubKey != nil {
+		kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
+	}
+	if masterPrivKey != nil {
+		kmgr.AddPrivateKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPrivKey)
+	}
+	if pubkey != nil {
+		kmgr.AddPublicKey(signer, pubkey)
+	}
+	if privkey != nil {
+		kmgr.AddPrivateKey(signer, privkey)
+	}
+	return kmgr
+}
+
 func (mgr *KeyMgr) GetPublicKey(s sp.Tsigner) (auth.PublicKey, error) {
 	db.DPrintf(db.AUTH, "GetPublicKey for signer %v", s)
 	defer db.DPrintf(db.AUTH, "GetPublicKey for signer %v done", s)
@@ -115,7 +132,7 @@ func (mgr *KeyMgr) GetPrivateKey(s sp.Tsigner) (auth.PrivateKey, error) {
 	defer mgr.mu.Unlock()
 
 	if key, ok := mgr.privkeys[s]; !ok {
-		return nil, fmt.Errorf("Error GetPrivateKey no key for signer %v: %v", s)
+		return nil, fmt.Errorf("Error GetPrivateKey no key for signer %v", s)
 	} else {
 		db.DPrintf(db.AUTH, "GetPrivateKey cached for signer %v", s)
 		return key, nil

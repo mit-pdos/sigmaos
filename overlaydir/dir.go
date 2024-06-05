@@ -1,3 +1,8 @@
+// The overlay package overlays a directory on top of another
+// directory, the underlay, transparently.  Servers can mount other
+// file systems in the overlay directory (e.g., statsd, fsfence,
+// etc.).  This allows a server to export information to clients
+// through sigmaP.
 package overlay
 
 import (
@@ -5,35 +10,38 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
-//
-// Overlay a directory with another directory transparently.  Servers
-// can mount other file systems in the overlay directory (e.g.,
-// statsd, fsfence, etc.).  This allows a server to export information
-// to clients through sigmaP.
-//
-
 type DirOverlay struct {
 	fs.Inode
 	underlay fs.Dir
 	mu       sync.Mutex
-	entries  map[string]fs.Inode // XXX use sortedmap?
+	entries  map[string]fs.FsObj // XXX use sortedmap?
 }
 
 func MkDirOverlay(dir fs.Dir) *DirOverlay {
 	d := &DirOverlay{}
-	d.Inode = inode.NewInode(nil, sp.DMDIR, nil)
+	d.Inode = inode.NewInode(nil, sp.DMDIR, sp.NoLeaseId, nil)
 	d.underlay = dir
-	d.entries = make(map[string]fs.Inode)
+	d.entries = make(map[string]fs.FsObj)
 	return d
 }
 
-func (dir *DirOverlay) Mount(name string, i fs.Inode) {
+// XXX merge underlay Stat with overlay?
+func (dir *DirOverlay) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := dir.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	st.SetLengthInt(len(dir.entries))
+	return st, nil
+}
+
+func (dir *DirOverlay) Mount(name string, i fs.FsObj) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -67,17 +75,20 @@ func (dir *DirOverlay) removeMount(name string) bool {
 	return false
 }
 
-func (dir *DirOverlay) ls() []*sp.Stat {
+func (dir *DirOverlay) ls(ctx fs.CtxI) ([]*sp.Stat, error) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
 	entries := make([]*sp.Stat, 0, len(dir.entries))
 	for k, i := range dir.entries {
-		st, _ := i.Stat(nil)
+		st, err := i.Stat(ctx)
+		if err != nil {
+			return nil, err
+		}
 		st.Name = k
 		entries = append(entries, st)
 	}
-	return entries
+	return entries, nil
 }
 
 // lookup in overlay
@@ -88,7 +99,7 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, name string) (fs.FsObj, *serr.Err) {
 	return nil, serr.NewErr(serr.TErrNotfound, name)
 }
 
-func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.FsObj, path.Path, *serr.Err) {
+func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	if i := dir.lookupMount(path[0]); i != nil {
 		return []fs.FsObj{i}, i, path[1:], nil
 	} else {
@@ -100,11 +111,19 @@ func (dir *DirOverlay) LookupPath(ctx fs.CtxI, path path.Path) ([]fs.FsObj, fs.F
 	}
 }
 
-func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence) (fs.FsObj, *serr.Err) {
+func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, d fs.FsObj) (fs.FsObj, *serr.Err) {
 	if i := dir.lookupMount(name); i != nil {
 		return i, serr.NewErr(serr.TErrExists, name)
 	}
-	return dir.underlay.Create(ctx, name, perm, m, lid, f)
+	return dir.underlay.Create(ctx, name, perm, m, lid, f, nil)
+}
+
+func (dir *DirOverlay) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
+	return dir.underlay.Open(ctx, m)
+}
+
+func (dir *DirOverlay) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
+	return dir.underlay.Close(ctx, m)
 }
 
 // XXX account for extra entries in cursor, and sort
@@ -119,7 +138,11 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize) ([]*sp.Stat,
 		return sts, err
 	}
 	// prepend the extra ones
-	sts = append(dir.ls(), sts...)
+	stso, r := dir.ls(ctx)
+	if r != nil {
+		return nil, err
+	}
+	sts = append(stso, sts...)
 	return sts, nil
 }
 
@@ -137,9 +160,9 @@ func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, 
 	return dir.underlay.Renameat(ctx, old, nd, new, f)
 }
 
-func (dir *DirOverlay) Remove(ctx fs.CtxI, n string, f sp.Tfence) *serr.Err {
+func (dir *DirOverlay) Remove(ctx fs.CtxI, n string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	if dir.removeMount(n) {
 		return nil
 	}
-	return dir.underlay.Remove(ctx, n, f)
+	return dir.underlay.Remove(ctx, n, f, del)
 }

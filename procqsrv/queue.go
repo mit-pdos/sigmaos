@@ -49,12 +49,22 @@ func (q *Queue) Enqueue(p *proc.Proc, kidch chan string) {
 	q.procs = append(q.procs, qi)
 }
 
-func (q *Queue) Dequeue(mem proc.Tmem) (*proc.Proc, chan string, time.Time, bool) {
+func isEligible(p *proc.Proc, mem proc.Tmem, kernelID string) bool {
+	if p.GetMem() > mem {
+		return false
+	}
+	if p.HasNoKernelPref() {
+		return true
+	}
+	return p.HasKernelPref(kernelID)
+}
+
+func (q *Queue) Dequeue(mem proc.Tmem, kernelID string) (*proc.Proc, chan string, time.Time, bool) {
 	q.Lock()
 	defer q.Unlock()
 
 	for i := 0; i < len(q.procs); i++ {
-		if q.procs[i].p.GetMem() <= mem {
+		if isEligible(q.procs[i].p, mem, kernelID) {
 			// Save the proc we want to return
 			qi := q.procs[i]
 			// Delete the i-th proc from the queue

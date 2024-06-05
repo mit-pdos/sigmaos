@@ -5,10 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/golang-jwt/jwt"
-
-	"sigmaos/auth"
 	db "sigmaos/debug"
+	"sigmaos/netproxyclnt"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -17,22 +15,11 @@ import (
 
 func RunKNamed(args []string) error {
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.NAMED, "%v: knamed %v\n", pe.GetPID(), args)
-	if len(args) != 4 {
-		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
+	db.DPrintf(db.NAMED, "%v: knamed %v", pe.GetPID(), args)
+	if len(args) != 3 {
+		db.DFatalf("%v: wrong number of arguments %v", args[0], args)
 	}
-	// Since knamed is the first "host" of the realm namespace to start up, no
-	// one (even the kernel it is started by) can bootstrap keys for it. So,
-	// just have it use the kernel's master keys. This should be ok, in theory,
-	// because knamed is short-lived anyway, and is only really used to start up
-	// the other services.
-	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[3]))
-	if err != nil {
-		db.DFatalf("Error NewPublicKey: %v", err)
-	}
-	// Self-sign token for bootstrapping purposes
-	nd := &Named{}
-	nd.realm = sp.Trealm(args[1])
+	nd := newNamed(sp.Trealm(args[1]))
 
 	p, err := perf.NewPerf(pe, perf.KNAMED)
 	if err != nil {
@@ -40,7 +27,7 @@ func RunKNamed(args []string) error {
 	}
 	defer p.Done()
 
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	if err != nil {
 		db.DFatalf("NewSigmaClntFsLib: err %v", err)
 	}
@@ -48,7 +35,7 @@ func RunKNamed(args []string) error {
 
 	init := args[2]
 
-	nd.masterPublicKey = masterPubKey
+	nd.signer = sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID())
 
 	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
 
@@ -67,14 +54,14 @@ func RunKNamed(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	mnt, err := nd.newSrv()
+	ep, err := nd.newSrv()
 	if err != nil {
 		db.DFatalf("Error newSrv %v\n", err)
 	}
 
-	db.DPrintf(db.NAMED, "newSrv %v mnt %v", nd.realm, mnt)
+	db.DPrintf(db.NAMED, "newSrv %v ep %v", nd.realm, ep)
 
-	if err := nd.fs.SetRootNamed(mnt); err != nil {
+	if err := nd.fs.SetRootNamed(ep); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}
 
@@ -91,14 +78,14 @@ func RunKNamed(args []string) error {
 	}
 	r.Close()
 
-	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", pe.GetPID(), nd.realm, mnt, string(data))
+	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", pe.GetPID(), nd.realm, ep, string(data))
 
 	nd.resign()
 
 	return nil
 }
 
-var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.PROCQ, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.KEYD}
+var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.PROCQ, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
 
 // If initial root dir doesn't exist, create it.
 func (nd *Named) initfs() error {

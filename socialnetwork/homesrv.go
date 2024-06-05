@@ -10,6 +10,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"strconv"
@@ -30,14 +31,14 @@ type HomeSrv struct {
 	graphc *rpcclnt.RPCClnt
 }
 
-func RunHomeSrv(public bool, jobname string) error {
+func RunHomeSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Creating home service\n")
 	hsrv := &HomeSrv{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_HOME, hsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_HOME, hsrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_HOME)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_HOME, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}
@@ -46,15 +47,17 @@ func RunHomeSrv(public bool, jobname string) error {
 		return err
 	}
 	hsrv.cachec = cachec
-	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
+	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	hsrv.graphc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_POST)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	hsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Starting home service\n")
 	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_HOME)

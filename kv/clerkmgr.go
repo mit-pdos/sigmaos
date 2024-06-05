@@ -2,7 +2,7 @@ package kv
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 
 	proto "sigmaos/cache/proto"
@@ -31,7 +31,7 @@ func NewClerkMgr(sc *sigmaclnt.SigmaClnt, job string, mcpu proc.Tmcpu, repl bool
 	cm := &ClerkMgr{SigmaClnt: sc, job: job, ckmcpu: mcpu, repl: repl}
 	clrk := NewClerkFsLib(cm.SigmaClnt.FsLib, cm.job, repl)
 	cm.KvClerk = clrk
-	cm.sempath = path.Join(kvgrp.JobDir(job), "kvclerk-sem")
+	cm.sempath = filepath.Join(kvgrp.JobDir(job), "kvclerk-sem")
 	cm.sem = semclnt.NewSemClnt(sc.FsLib, cm.sempath)
 	if err := cm.sem.Init(0); err != nil {
 		return nil, err

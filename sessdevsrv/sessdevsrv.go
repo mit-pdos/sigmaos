@@ -1,7 +1,7 @@
 package sessdevsrv
 
 import (
-	"path"
+	"path/filepath"
 
 	"sigmaos/clonedev"
 	db "sigmaos/debug"
@@ -13,7 +13,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type NewSessionF func(*memfssrv.MemFs, sessp.Tsession) (fs.Inode, *serr.Err)
+type NewSessionF func(*memfssrv.MemFs, sessp.Tsession) (fs.FsObj, *serr.Err)
 
 type SessDev struct {
 	mfs  *memfssrv.MemFs
@@ -37,9 +37,9 @@ func (sd *SessDev) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) *serr.Err
 	if err != nil {
 		return err
 	}
-	fn := path.Join(sd.dir, sid.String(), sessdev.DATA)
+	fn := filepath.Join(sd.dir, sid.String(), sessdev.DATA)
 	db.DPrintf(db.SESSDEV, "newSession %v\n", fn)
-	if err := mfs.NewDev(fn, sess); err != nil {
+	if err := mfs.MkNod(fn, sess); err != nil {
 		db.DPrintf(db.SESSDEV, "newSession %v err %v\n", fn, err)
 		return err
 	}
@@ -47,14 +47,14 @@ func (sd *SessDev) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) *serr.Err
 }
 
 func (sd *SessDev) detachSession(sid sessp.Tsession) {
-	fn := path.Join(sd.dir, sid.String(), sessdev.DATA)
+	fn := filepath.Join(sd.dir, sid.String(), sessdev.DATA)
 	if err := sd.mfs.Remove(fn); err != nil {
 		db.DPrintf(db.SESSDEV, "detachSession %v err %v\n", fn, err)
 	}
 }
 
 func (sd *SessDev) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
-	fn := path.Join(sd.dir, ctx.SessionId().String(), sessdev.DATA)
+	fn := filepath.Join(sd.dir, ctx.SessionId().String(), sessdev.DATA)
 	db.DPrintf(db.SESSDEV, "Close %v\n", fn)
 	return nil
 }

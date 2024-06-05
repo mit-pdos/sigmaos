@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	gopath "path"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -14,8 +14,10 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/netproxyclnt"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -120,7 +122,7 @@ func TestWriteFilePerfSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	buf := test.NewBuf(WRITESZ)
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
@@ -168,9 +170,9 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	fns := make([]string, 0, N_CLI)
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
-		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
+		fns = append(fns, filepath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -256,7 +258,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	buf := test.NewBuf(WRITESZ)
 
 	// Remove just in case it was left over from a previous run.
@@ -331,9 +333,9 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	fns := make([]string, 0, N_CLI)
 	fsls := make([]*fslib.FsLib, 0, N_CLI)
 	for i := 0; i < N_CLI; i++ {
-		fns = append(fns, gopath.Join(pathname, "f"+strconv.Itoa(i)))
+		fns = append(fns, filepath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -441,7 +443,7 @@ func newDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
 	assert.Equal(t, nil, err)
 	for i := 0; i < n; i++ {
 		b := []byte("hello")
-		_, err := fsl.PutFile(gopath.Join(dir, "f"+strconv.Itoa(i)), 0777, sp.OWRITE, b)
+		_, err := fsl.PutFile(filepath.Join(dir, "f"+strconv.Itoa(i)), 0777, sp.OWRITE, b)
 		assert.Nil(t, err)
 	}
 	return n
@@ -453,7 +455,7 @@ func TestDirCreatePerf(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	dir := gopath.Join(pathname, "d")
+	dir := filepath.Join(pathname, "d")
 	measuredir("create dir", 1, func() int {
 		n := newDir(t, ts.FsLib, dir, N)
 		return n
@@ -469,11 +471,11 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 	for c := 0; c < nclerk; c++ {
 		go func(c int) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			fsl, err := sigmaclnt.NewFsLib(pe)
+			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 			assert.Nil(ts.T, err)
 			measuredir("lookup dir entry", NITER, func() int {
 				for f := 0; f < nfile; f++ {
-					_, err := fsl.Stat(gopath.Join(dir, "f"+strconv.Itoa(f)))
+					_, err := fsl.Stat(filepath.Join(dir, "f"+strconv.Itoa(f)))
 					assert.Nil(ts.T, err)
 				}
 				return nfile
@@ -518,7 +520,7 @@ func TestRmDirPerf(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	dir := gopath.Join(pathname, "d")
+	dir := filepath.Join(pathname, "d")
 	n := newDir(t, ts.FsLib, dir, N)
 	assert.Equal(t, N, n)
 	measuredir("rm dir", 1, func() int {
@@ -538,23 +540,22 @@ func TestLookupDepthPerf(t *testing.T) {
 		return
 	}
 
-	ts.RmDir(gopath.Join(pathname, "d0"))
+	ts.RmDir(filepath.Join(pathname, "d0"))
 
 	for d := 1; d < N; d++ {
 		dir := pathname
 		for i := 0; i < d; i++ {
-			dir = gopath.Join(dir, "d"+strconv.Itoa(i))
+			dir = filepath.Join(dir, "d"+strconv.Itoa(i))
 			n := newDir(t, ts.FsLib, dir, NFILE)
 			assert.Equal(t, NFILE, n)
 		}
-		//test.Dump(t)
 		label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
 		measuredir(label, NOP, func() int {
 			_, err := ts.Stat(dir)
 			assert.Nil(t, err)
 			return 1
 		})
-		err := ts.RmDir(gopath.Join(pathname, "d0"))
+		err := ts.RmDir(filepath.Join(pathname, "d0"))
 		assert.Nil(t, err)
 	}
 	ts.Shutdown()
@@ -570,16 +571,16 @@ func TestLookupConcurPerf(t *testing.T) {
 		return
 	}
 
-	ts.RmDir(gopath.Join(pathname, "d0"))
+	ts.RmDir(filepath.Join(pathname, "d0"))
 
 	dir := pathname
 	for d := 0; d < N; d++ {
-		dir = gopath.Join(dir, "d"+strconv.Itoa(d))
+		dir = filepath.Join(dir, "d"+strconv.Itoa(d))
 		n := newDir(t, ts.FsLib, dir, NFILE)
 		assert.Equal(t, NFILE, n)
 	}
-	ndMnt, err := ts.GetNamedMount()
-	assert.Nil(t, err, "GetNamedMount: %v", err)
+	ndMnt, err := ts.GetNamedEndpoint()
+	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
 	// dump(t)
 	done := make(chan int)
 	fsls := make([][]*fslib.FsLib, 0, NGO)
@@ -587,8 +588,8 @@ func TestLookupConcurPerf(t *testing.T) {
 		fsl2 := make([]*fslib.FsLib, 0, NTRIAL)
 		for j := 0; j < NTRIAL; j++ {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			pe.NamedMountProto = ndMnt.TmountProto
-			fsl, err := sigmaclnt.NewFsLib(pe)
+			pe.NamedEndpointProto = ndMnt.TendpointProto
+			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)
 		}
@@ -613,8 +614,48 @@ func TestLookupConcurPerf(t *testing.T) {
 		<-done
 	}
 
-	err = ts.RmDir(gopath.Join(pathname, "d0"))
+	err = ts.RmDir(filepath.Join(pathname, "d0"))
 	assert.Nil(t, err)
 
+	ts.Shutdown()
+}
+
+func TestLookupMultiMount(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	// Running a proc forces sigmaos to create uprocds and rpc special file
+	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 0), "name/"})
+	err = ts.Spawn(a)
+	assert.Nil(ts.T, err, "Spawn")
+	_, err = ts.WaitExit(a.GetPid())
+	assert.Nil(ts.T, err, "WaitExit error")
+
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	//mnt, err := ts.GetNamedEndpoint()
+	//assert.Nil(ts.T, err)
+	//pe.NamedEndpointProto = mnt.GetProto()
+	sts, err := ts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+	kernelId := sts[0].Name
+
+	sts, err = ts.GetDir(filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL))
+	assert.Nil(t, err)
+	uprocdpid := sts[0].Name
+
+	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, uprocdpid)
+
+	pe.NamedEndpointProto = nil
+	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	assert.Nil(t, err)
+
+	s := time.Now()
+	pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid, rpc.RPC)
+	db.DPrintf(db.TEST, "Stat start %v\n", pn)
+	_, err = fsl.Stat(pn)
+	db.DPrintf(db.TEST, "Stat done %v took %v\n", pn, time.Since(s))
+	assert.Nil(t, err)
 	ts.Shutdown()
 }

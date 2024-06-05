@@ -11,18 +11,16 @@ import (
 // The channel associated with an fid, which connects to an object at
 // a server.
 type Channel struct {
-	pc        *protclnt.ProtClnt
-	path      path.Path
-	qids      []*sp.Tqid
-	principal *sp.Tprincipal
+	pc   *protclnt.ProtClnt
+	path path.Tpathname
+	qids []*sp.Tqid
 }
 
-func newChannel(pc *protclnt.ProtClnt, principal *sp.Tprincipal, path path.Path, qs []*sp.Tqid) *Channel {
+func newChannel(pc *protclnt.ProtClnt, path path.Tpathname, qs []*sp.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
 	c.path = path
 	c.qids = qs
-	c.principal = principal
 	return c
 }
 
@@ -30,15 +28,11 @@ func (c *Channel) String() string {
 	return fmt.Sprintf("{ Path %v Qids %v }", c.path, c.qids)
 }
 
-func (c *Channel) Principal() *sp.Tprincipal {
-	return c.principal
-}
-
-func (c *Channel) Path() path.Path {
+func (c *Channel) Path() path.Tpathname {
 	return c.path
 }
 
-func (c *Channel) SetPath(p path.Path) {
+func (c *Channel) SetPath(p path.Tpathname) {
 	c.path = p
 }
 
@@ -49,16 +43,16 @@ func (c *Channel) Version() sp.TQversion {
 func (c *Channel) Copy() *Channel {
 	qids := make([]*sp.Tqid, len(c.qids))
 	copy(qids, c.qids)
-	return newChannel(c.pc, c.principal, c.path.Copy(), qids)
+	return newChannel(c.pc, c.path.Copy(), qids)
 }
 
-func (c *Channel) add(name string, q *sp.Tqid) {
+func (c *Channel) add(name string, q *sp.TqidProto) {
 	c.path = append(c.path, name)
-	c.qids = append(c.qids, q)
+	c.qids = append(c.qids, sp.NewTqid(q))
 }
 
 // empty path = ""
-func (c *Channel) AddN(qs []*sp.Tqid, path path.Path) {
+func (c *Channel) AddN(qs []*sp.TqidProto, path path.Tpathname) {
 	if len(path) == 0 {
 		path = append(path, "")
 	}
@@ -71,6 +65,6 @@ func (c *Channel) Lastqid() *sp.Tqid {
 	return c.qids[len(c.qids)-1]
 }
 
-func (c *Channel) Servers() sp.Taddrs {
+func (c *Channel) Servers() *sp.Tendpoint {
 	return c.pc.Servers()
 }

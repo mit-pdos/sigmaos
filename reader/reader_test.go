@@ -3,7 +3,7 @@ package reader_test
 import (
 	"flag"
 	"io"
-	gopath "path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +27,7 @@ func TestReader1(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	d := []byte("abcdefg")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -58,7 +58,7 @@ func TestReader2(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	d := []byte("a")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
@@ -87,7 +87,7 @@ func TestReaderLarge(t *testing.T) {
 		return
 	}
 
-	fn := gopath.Join(pathname, "f")
+	fn := filepath.Join(pathname, "f")
 	// ts.SetChunkSz(4096)
 	sz := 4096 // int(2*ts.GetChunkSz()) + 1
 	d := make([]byte, sz)

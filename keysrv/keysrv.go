@@ -1,15 +1,12 @@
 package keysrv
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
-
-	"github.com/golang-jwt/jwt"
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/keys"
 	"sigmaos/keysrv/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -77,18 +74,13 @@ func (ks rwKeySrv) SetKey(ctx fs.CtxI, req proto.SetKeyRequest, res *proto.SetKe
 	return nil
 }
 
-func RunKeySrv(masterPubKey auth.PublicKey) {
+func RunKeySrv(masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	ks := NewKeySrv(masterPubKey)
-	kmgr := keys.NewKeyMgr(keys.WithLocalMapGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, &ks.mu, ks.keys))
-	// Add the master deployment key, to allow connections from kernel to this
-	// named.
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubKey)
-	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetKernelID()), masterPubKey)
-	ssrv, err := sigmasrv.NewSigmaSrvClntKeyMgr(sp.KEYD, sc, kmgr, ks)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.KEYD, sc, ks)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
@@ -99,10 +91,10 @@ func RunKeySrv(masterPubKey auth.PublicKey) {
 	if _, err := ssrv.Create(sp.RONLY_REL, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		db.DFatalf("Error Create RONLY rpc dev dir: %v", err)
 	}
-	if err := ssrv.AddRPCSrv(path.Join(sp.RW_REL, rpc.RPC), ks.rwKeySrv); err != nil {
+	if err := ssrv.AddRPCSrv(filepath.Join(sp.RW_REL, rpc.RPC), ks.rwKeySrv); err != nil {
 		db.DFatalf("Error add RW rpc dev: %v", err)
 	}
-	if err := ssrv.AddRPCSrv(path.Join(sp.RONLY_REL, rpc.RPC), ks.rOnlyKeySrv); err != nil {
+	if err := ssrv.AddRPCSrv(filepath.Join(sp.RONLY_REL, rpc.RPC), ks.rOnlyKeySrv); err != nil {
 		db.DFatalf("Error add RONLY rpc dev: %v", err)
 	}
 	// Perf monitoring

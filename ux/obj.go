@@ -41,7 +41,7 @@ func umode2Perm(umode uint16) sp.Tperm {
 	return perm
 }
 
-func ustat(path path.Path) (*sp.Stat, *serr.Err) {
+func ustat(path path.Tpathname) (*sp.Stat, *serr.Err) {
 	var statx unix.Statx_t
 	db.DPrintf(db.UX, "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
@@ -51,12 +51,12 @@ func ustat(path path.Path) (*sp.Stat, *serr.Err) {
 	t := statxTimestampToTime(statx.Mtime)
 	st := sp.NewStat(sp.NewQidPerm(umode2Perm(statx.Mode), 0, sp.Tpath(statx.Ino)),
 		umode2Perm(statx.Mode), uint32(t.Unix()), path.Base(), "")
-	st.Length = statx.Size
+	st.SetLength(sp.Tlength(statx.Size))
 	return st, nil
 }
 
 type Obj struct {
-	pathName path.Path
+	pathName path.Tpathname
 	path     sp.Tpath
 	perm     sp.Tperm // XXX kill, but requires changing Perm() API
 }
@@ -65,11 +65,11 @@ func (o *Obj) String() string {
 	return fmt.Sprintf("pn %v p %v %v", o.pathName, o.path, o.perm)
 }
 
-func newObj(path path.Path) (*Obj, *serr.Err) {
+func newObj(path path.Tpathname) (*Obj, *serr.Err) {
 	if st, err := ustat(path); err != nil {
 		return &Obj{path, 0, sp.DMSYMLINK}, err
 	} else {
-		return &Obj{path, st.Qid.Tpath(), st.Tmode()}, nil
+		return &Obj{path, st.Tqid().Tpath(), st.Tmode()}, nil
 	}
 }
 
@@ -84,6 +84,10 @@ func (o *Obj) Perm() sp.Tperm {
 	//return st.Mode, nil
 }
 
+func (o *Obj) IsLeased() bool {
+	return false
+}
+
 func (o *Obj) Path() sp.Tpath {
 	return o.path
 }
@@ -96,9 +100,18 @@ func (o *Obj) PathName() string {
 	return p
 }
 
+func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
+	db.DPrintf(db.UX, "%v: NewStat\n", o)
+	st, err := ustat(o.pathName)
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
+}
+
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.UX, "%v: Stat %v\n", ctx, o)
-	st, err := ustat(o.pathName)
+	st, err := o.NewStat()
 	if err != nil {
 		return nil, err
 	}
@@ -151,12 +164,4 @@ func (o *Obj) SetParent(p fs.Dir) {
 }
 
 func (o *Obj) Unlink() {
-}
-
-func (o *Obj) Size() (sp.Tlength, *serr.Err) {
-	st, err := ustat(o.pathName)
-	if err != nil {
-		return 0, err
-	}
-	return st.Tlength(), nil
 }

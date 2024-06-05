@@ -3,7 +3,7 @@ package clonedev
 import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -13,6 +13,14 @@ type session struct {
 	*inode.Inode
 	id   sessp.Tsession
 	wctl WriteCtlF
+}
+
+func (s *session) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := s.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 func (s *session) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {

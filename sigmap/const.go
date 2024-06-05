@@ -67,9 +67,7 @@ const (
 	DMEXCL   Tperm = 0x20000000 // exclusive use file
 	DMMOUNT  Tperm = 0x10000000 // mounted channel
 	DMAUTH   Tperm = 0x08000000 // authentication file
-
-	// DMTMP is ephemeral in sigmaP
-	DMTMP Tperm = 0x04000000 // non-backed-up file
+	DMTMP    Tperm = 0x04000000 // non-backed-up file
 
 	DMREAD  = 0x4 // mode bit for read permission
 	DMWRITE = 0x2 // mode bit for write permission
@@ -94,9 +92,21 @@ const (
 	NOT_SET = "NOT_SET"
 )
 
+// FSETCD consts
+const (
+	EtcdSessionTTL = 5
+)
+
+// Path lookup consts
+const (
+	PATHCLNT_TIMEOUT  = 200 // ms  (XXX belongs in hyperparam?)
+	PATHCLNT_MAXRETRY = (EtcdSessionTTL + 1) * (1000 / PATHCLNT_TIMEOUT)
+)
+
 // Realm consts
 const (
 	ROOTREALM Trealm = "rootrealm"
+	NOREALM   Trealm = "no-realm"
 )
 
 // PID consts
@@ -119,9 +129,16 @@ const (
 	NO_PORT            Tport   = 0
 )
 
+// Endpoint consts
+const (
+	INTERNAL_EP TTendpoint = iota + 1
+	EXTERNAL_EP
+)
+
 // Auth consts
 const (
 	NO_PRINCIPAL_ID    TprincipalID = "NO_PRINCIPAL_ID"
+	NO_REALM           Trealm       = "NO_REALM"
 	KEY_LEN            int          = 256
 	HOST_PRIV_KEY_FILE string       = "/tmp/sigmaos/master-key.priv"
 	HOST_PUB_KEY_FILE  string       = "/tmp/sigmaos/master-key.pub"
@@ -140,7 +157,7 @@ func NoToken() *Ttoken {
 
 func NoPrincipal() *Tprincipal {
 	return &Tprincipal{
-		IDStr: NO_PRINCIPAL_ID.String(),
-		Token: NoToken(),
+		IDStr:    NO_PRINCIPAL_ID.String(),
+		RealmStr: NO_REALM.String(),
 	}
 }

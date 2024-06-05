@@ -12,6 +12,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 )
@@ -24,27 +25,29 @@ type Search struct {
 }
 
 // Run starts the server
-func RunSearchSrv(n string, public bool) error {
+func RunSearchSrv(n string) error {
 	s := &Search{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELSEARCH, s, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(HOTELSEARCH, s, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(HOTELSEARCH)
+	fsls, err := NewFsLibs(HOTELSEARCH, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := rpcclnt.NewRPCClnt(fsls, HOTELRATE)
+	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, HOTELRATE)
 	if err != nil {
 		db.DFatalf("Err new rpcclnt rate: %v", err)
 		return err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	s.ratec = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELGEO)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELGEO)
 	if err != nil {
 		db.DFatalf("Err new rpcclnt geo: %v", err)
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	s.geoc = rpcc
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_SEARCH)

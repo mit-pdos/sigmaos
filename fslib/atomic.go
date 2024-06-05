@@ -10,15 +10,15 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fsl *FsLib) PutFileAtomic(fname string, perm sp.Tperm, data []byte, lid sp.TleaseId) error {
+func (fsl *FsLib) PutFileAtomic(fname string, perm sp.Tperm, data []byte) error {
 	tmpName := fname + rand.String(16)
-	if _, err := fsl.PutFileEphemeral(tmpName, perm, sp.OWRITE|sp.OEXCL, lid, data); err != nil {
+	if _, err := fsl.PutFile(tmpName, perm, sp.OWRITE|sp.OEXCL, data); err != nil {
 		debug.PrintStack()
-		db.DPrintf(db.ERROR, "NewFileAtomic %v %v: %v", fname, tmpName, err)
+		db.DPrintf(db.ERROR, "PutFileAtomic %v %v err %v", fname, tmpName, err)
 		return err
 	}
 	if err := fsl.Rename(tmpName, fname); err != nil {
-		db.DPrintf(db.ERROR, "NewFileAtomic rename %v -> %v: err %v", tmpName, fname, err)
+		db.DPrintf(db.ERROR, "PutFileAtomic rename %v -> %v: err %v", tmpName, fname, err)
 		return err
 	}
 	return nil
@@ -29,5 +29,5 @@ func (fsl *FsLib) PutFileJsonAtomic(fname string, perm sp.Tperm, i interface{}) 
 	if err != nil {
 		return fmt.Errorf("PutFileJsonAtomic marshal err %v", err)
 	}
-	return fsl.PutFileAtomic(fname, perm, data, sp.NoLeaseId)
+	return fsl.PutFileAtomic(fname, perm, data)
 }

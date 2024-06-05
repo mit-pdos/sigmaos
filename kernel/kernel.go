@@ -10,12 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-
-	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/keyclnt"
-	"sigmaos/keys"
 	"sigmaos/kproc"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
@@ -25,53 +20,41 @@ import (
 )
 
 const (
-	SLEEP_S          = 2
-	REPL_PORT_OFFSET = 100
-
-	FPORT sp.Tport = 1112
-	LPORT sp.Tport = 1132
-
-	KNAMED_PORT = ":1111"
-
 	MAX_EVICT_RETRIES = 10
 )
 
 type Param struct {
-	KernelID      string
-	Services      []string
-	Dbip          string
-	Mongoip       string
-	Overlays      bool
-	BuildTag      string
-	GVisor        bool
-	ReserveMcpu   string
-	MasterPubKey  auth.PublicKey
-	MasterPrivKey auth.PrivateKey
+	KernelID    string
+	Services    []string
+	Dbip        string
+	Mongoip     string
+	Overlays    bool
+	NetProxy    bool
+	BuildTag    string
+	GVisor      bool
+	ReserveMcpu string
 }
 
 type Kernel struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClntKernel
-	kc           *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
 	Param        *Param
 	realms       map[sp.Trealm]*sigmaclnt.SigmaClntKernel
 	svcs         *Services
 	ip           sp.Tip
-	as           auth.AuthSrv
 	shuttingDown bool
 }
 
-func newKernel(param *Param, bootstrapAS auth.AuthSrv) *Kernel {
+func newKernel(param *Param) *Kernel {
 	return &Kernel{
 		realms: make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
 		Param:  param,
-		as:     bootstrapAS,
 		svcs:   newServices(),
 	}
 }
 
-func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, error) {
-	k := newKernel(p, bootstrapAS)
+func NewKernel(p *Param, pe *proc.ProcEnv) (*Kernel, error) {
+	k := newKernel(p)
 	ip, err := netsigma.LocalIP()
 	if err != nil {
 		return nil, err
@@ -80,9 +63,7 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 	k.ip = ip
 	pe.SetInnerContainerIP(ip)
 	pe.SetOuterContainerIP(ip)
-	isFirstKernel := false
 	if p.Services[0] == sp.KNAMED {
-		isFirstKernel = true
 		if err := k.bootKNamed(pe, true); err != nil {
 			return nil, err
 		}
@@ -93,41 +74,12 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 		db.DPrintf(db.ALWAYS, "Error NewSigmaClntProc: %v", err)
 		return nil, err
 	}
-	k.kc = keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](sc)
 	k.SigmaClntKernel = sigmaclnt.NewSigmaClntKernel(sc)
-	if !isFirstKernel {
-		// Post kernel key before booting any services, if this is a node added to
-		// the cluster (not the initial kernel/node in the cluster). If it is the
-		// first kernel, we have to boot keyd before we can post the kernel key.
-		if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
-			db.DPrintf(db.ERROR, "Error post kernel key after boot: %v", err)
-			return nil, err
-		}
-	}
-	// Create an AuthServer which dynamically pulls keys from the namespace, now
-	// that knamed has booted.
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
-	kmgr.AddPublicKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPubKey)
-	kmgr.AddPrivateKey(sp.Tsigner(k.ProcEnv().GetPID()), k.Param.MasterPrivKey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(k.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewAuthSrv %v", err)
-		return nil, err
-	}
-	k.as = as
 	db.DPrintf(db.KERNEL, "Kernel start srvs %v", k.Param.Services)
 	err = startSrvs(k)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
 		return nil, err
-	}
-	if isFirstKernel {
-		// Post kernel key, if this was the first kernel, since we have now booted
-		// keyd
-		if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
-			db.DPrintf(db.ERROR, "Error post kernel key after boot: %v", err)
-			return nil, err
-		}
 	}
 	if len(k.svcs.svcs[sp.KNAMED]) > 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
 		// a kernel with knamed and named; stop knamed
@@ -137,6 +89,13 @@ func NewKernel(p *Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) (*Kernel, e
 		}
 		db.DPrintf(db.KERNEL, "NewKernel: switch to named\n")
 	}
+	// Eagerly remove kernel's proc dir if this is just a sigmaclntd kernel
+	// since it isn't needed (and otherwise will slow down shutdown)
+	if k.IsPurelySigmaclntdKernel() {
+		if err := k.RmDir(k.ProcEnv().ProcDir); err != nil {
+			db.DPrintf(db.KERNEL, "Failed to clean up sigmaclntkernel procdir %v err %v", k.ProcEnv().ProcDir, err)
+		}
+	}
 	return k, err
 }
 
@@ -144,7 +103,7 @@ func (k *Kernel) Ip() sp.Tip {
 	return k.ip
 }
 
-func (k *Kernel) IsSigmaclntdKernel() bool {
+func (k *Kernel) IsPurelySigmaclntdKernel() bool {
 	db.DPrintf(db.KERNEL, "Check is sigmaclntd kernel: %v", k.Param.Services)
 	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.SIGMACLNTDREL
 }
@@ -167,11 +126,6 @@ func (k *Kernel) getRealmSigmaClnt(realm sp.Trealm) (*sigmaclnt.SigmaClntKernel,
 		return sck, nil
 	}
 	pe := proc.NewDifferentRealmProcEnv(k.ProcEnv(), realm)
-	pe.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.as.MintAndSetToken(pe); err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return nil, err
-	}
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewSigmaClnt: %v", err)
@@ -208,7 +162,7 @@ func (k *Kernel) shutdown() {
 		for pid, _ := range k.svcs.svcMap {
 			cpids = append(cpids, pid)
 		}
-		// Sort schedds to the end, to avoid havingas many eviction errors.
+		// Sort schedds to the end, to avoid having as many eviction errors.
 		sort.Slice(cpids, func(i, j int) bool {
 			if strings.HasPrefix(cpids[i].String(), "schedd-") {
 				if strings.HasPrefix(cpids[j].String(), "schedd-") {
@@ -236,8 +190,11 @@ func (k *Kernel) shutdown() {
 			db.DPrintf(db.KERNEL, "Evicted %v", pid)
 		}
 	}
-	if err := k.RmDir(k.ProcEnv().ProcDir); err != nil {
-		db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", k.ProcEnv().ProcDir, err)
+	// A purely sigmaclntd kernel won't have a procdir
+	if !k.IsPurelySigmaclntdKernel() {
+		if err := k.RmDir(k.ProcEnv().ProcDir); err != nil {
+			db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", k.ProcEnv().ProcDir, err)
+		}
 	}
 	db.DPrintf(db.KERNEL, "Shutdown nameds %d\n", len(k.svcs.svcs[sp.KNAMED]))
 	for _, ss := range k.svcs.svcs[sp.KNAMED] {
@@ -249,12 +206,12 @@ func (k *Kernel) shutdown() {
 	db.DPrintf(db.KERNEL, "Shutdown nameds done %d\n", len(k.svcs.svcs[sp.KNAMED]))
 }
 
-func newKNamedProc(realmId sp.Trealm, init bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*proc.Proc, error) {
+func newKNamedProc(realmId sp.Trealm, init bool) (*proc.Proc, error) {
 	i := "start"
 	if init {
 		i = "init"
 	}
-	args := []string{realmId.String(), i, masterPubKey.Marshal()}
+	args := []string{realmId.String(), i}
 	p := proc.NewPrivProcPid(sp.GenPid("knamed"), "knamed", args, true)
 	return p, nil
 }

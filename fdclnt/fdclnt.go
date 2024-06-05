@@ -24,7 +24,7 @@ type FdClient struct {
 	disconnected bool
 }
 
-func NewFdClient(pe *proc.ProcEnv, fsc *fidclnt.FidClnt) sos.SigmaOS {
+func NewFdClient(pe *proc.ProcEnv, fsc *fidclnt.FidClnt) sos.FileAPI {
 	fdc := &FdClient{pe: pe}
 	fdc.pc = pathclnt.NewPathClnt(pe, fsc)
 	fdc.fds = newFdTable()
@@ -63,8 +63,8 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 	return fd, nil
 }
 
-func (fdc *FdClient) CreateEphemeral(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
-	fid, err := fdc.pc.Create(path, fdc.pe.GetPrincipal(), perm|sp.DMTMP, mode, lid, f)
+func (fdc *FdClient) CreateLeased(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
+	fid, err := fdc.pc.Create(path, fdc.pe.GetPrincipal(), perm, mode, lid, f)
 	if err != nil {
 		return -1, err
 	}
@@ -79,13 +79,14 @@ func (fdc *FdClient) openWait(path string, mode sp.Tmode) (int, error) {
 		fid, err := fdc.pc.Open(path, fdc.pe.GetPrincipal(), mode, func(err error) {
 			ch <- err
 		})
-		db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", path, err)
 		if serr.IsErrCode(err, serr.TErrNotfound) {
+			db.DPrintf(db.FDCLNT, "openWatch wait %v\n", path)
 			r := <-ch
 			if r != nil {
-				db.DPrintf(db.FDCLNT, "Open watch %v err %v\n", path, err)
+				db.DPrintf(db.FDCLNT, "Open watch wait %v err %v\n", path, err)
 			}
 		} else if err != nil {
+			db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", path, err)
 			return -1, err
 		} else { // success; file is opened
 			fd = fdc.fds.allocFd(fid, mode)
@@ -133,16 +134,28 @@ func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, b []byte) (sp.
 	if err != nil {
 		return 0, err
 	}
-	fdc.fds.incOff(fd, sp.Toffset(cnt))
 	return cnt, nil
 }
 
 func (fdc *FdClient) Read(fd int, b []byte) (sp.Tsize, error) {
-	fid, off, error := fdc.fds.lookupOff(fd)
-	if error != nil {
-		return 0, error
+	fid, off, sr := fdc.fds.lookupOff(fd)
+	if sr != nil {
+		return 0, sr
 	}
-	return fdc.readFid(fd, fid, off, b)
+	cnt, err := fdc.readFid(fd, fid, off, b)
+	if err != nil {
+		return 0, err
+	}
+	fdc.fds.incOff(fd, sp.Toffset(cnt))
+	return cnt, nil
+}
+
+func (fdc *FdClient) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
+	fid, _, sr := fdc.fds.lookupOff(fd)
+	if sr != nil {
+		return 0, sr
+	}
+	return fdc.readFid(fd, fid, o, b)
 }
 
 func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, error) {
@@ -198,12 +211,12 @@ func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {
 	return nil
 }
 
-func (fdc *FdClient) DirWait(fd int) error {
+func (fdc *FdClient) DirWatch(fd int) error {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.FDCLNT, "DirWait: watch fd %v\n", fd)
+	db.DPrintf(db.FDCLNT, "DirWatch: watch fd %v\n", fd)
 	ch := make(chan error)
 	if err := fdc.pc.SetDirWatch(fid, func(r error) {
 		db.DPrintf(db.FDCLNT, "SetDirWatch: watch returns %v\n", r)
@@ -218,32 +231,40 @@ func (fdc *FdClient) DirWait(fd int) error {
 	return nil
 }
 
-func (fdc *FdClient) IsLocalMount(mnt sp.Tmount) (bool, error) {
-	return fdc.pc.IsLocalMount(mnt)
+func (fdc *FdClient) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
+	return fdc.pc.IsLocalMount(ep)
 }
 
-func (fdc *FdClient) SetLocalMount(mnt *sp.Tmount, port sp.Tport) {
-	mnt.SetAddr([]*sp.Taddr{sp.NewTaddr(fdc.pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
+func (fdc *FdClient) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
+	ep.SetAddr([]*sp.Taddr{sp.NewTaddr(fdc.pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
 }
 
-func (fdc *FdClient) PathLastMount(pn string) (path.Path, path.Path, error) {
-	return fdc.pc.PathLastMount(pn, fdc.pe.GetPrincipal())
+func (fdc *FdClient) PathLastMount(pn string) (path.Tpathname, path.Tpathname, error) {
+	return fdc.pc.MntClnt().PathLastMount(pn, fdc.pe.GetPrincipal())
 }
 
-func (fdc *FdClient) MountTree(addrs sp.Taddrs, tree, mount string) error {
-	return fdc.pc.MountTree(fdc.pe.GetPrincipal(), addrs, tree, mount)
+func (fdc *FdClient) MountTree(ep *sp.Tendpoint, tree, mount string) error {
+	return fdc.pc.MntClnt().MountTree(fdc.pe.GetSecrets(), ep, tree, mount)
 }
 
-func (fdc *FdClient) GetNamedMount() (sp.Tmount, error) {
-	return fdc.pc.GetNamedMount()
+func (fdc *FdClient) GetNamedEndpoint() (*sp.Tendpoint, error) {
+	return fdc.GetNamedEndpointRealm(fdc.pe.GetRealm())
 }
 
-func (fdc *FdClient) NewRootMount(pn, mntname string) error {
-	return fdc.pc.NewRootMount(fdc.pe.GetPrincipal(), pn, mntname)
+func (fdc *FdClient) InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error {
+	return fdc.pc.MntClnt().InvalidateNamedEndpointCacheEntryRealm(realm)
+}
+
+func (fdc *FdClient) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
+	return fdc.pc.MntClnt().GetNamedEndpointRealm(realm)
+}
+
+func (fdc *FdClient) NewRootMount(pn, epname string) error {
+	return fdc.pc.MntClnt().NewRootMount(fdc.pe.GetPrincipal(), pn, epname)
 }
 
 func (fdc *FdClient) Mounts() []string {
-	return fdc.pc.Mounts()
+	return fdc.pc.MntClnt().Mounts()
 }
 
 func (fdc *FdClient) ClntId() sp.TclntId {
@@ -265,7 +286,7 @@ func (fdc *FdClient) Disconnect(pn string) error {
 }
 
 func (fdc *FdClient) Detach(pn string) error {
-	return fdc.pc.Detach(pn)
+	return fdc.pc.MntClnt().Detach(pn)
 }
 
 func (fdc *FdClient) Close() error {

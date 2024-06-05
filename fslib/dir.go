@@ -2,7 +2,7 @@ package fslib
 
 import (
 	"fmt"
-	gopath "path"
+	"path/filepath"
 	"time"
 
 	db "sigmaos/debug"
@@ -21,13 +21,15 @@ func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
 	}
 	db.DPrintf(db.FSLIB, "MkDir Create [%v]: %v", path, time.Since(start))
 	start = time.Now()
-	fl.CloseFd(fd)
+	if err := fl.CloseFd(fd); err != nil {
+		return err
+	}
 	db.DPrintf(db.FSLIB, "MkDir Close [%v]: %v", path, time.Since(start))
 	return nil
 }
 
 func (fl *FsLib) IsDir(name string) (bool, error) {
-	st, err := fl.SigmaOS.Stat(name)
+	st, err := fl.FileAPI.Stat(name)
 	if err != nil {
 		return false, err
 	}
@@ -39,7 +41,7 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 func (fl *FsLib) MkDirPath(dir, pn string, perm sp.Tperm) error {
 	p := path.Split(pn)
 	for i, c := range p {
-		dir = gopath.Join(dir, c)
+		dir = filepath.Join(dir, c)
 		err := fl.MkDir(dir, perm)
 		if err == nil {
 			continue
@@ -54,14 +56,18 @@ func (fl *FsLib) MkDirPath(dir, pn string, perm sp.Tperm) error {
 	return nil
 }
 
-// Too stop early, f must return true.  Returns true if stopped early.
+// ProcessDir pages through directories entries, calling f for each
+// one them. Too stop early, f must return true.  ProcessDir returns
+// true if stopped early.  Note that as ProcessDir pages through dir
+// other procs may add/delete entries, which may cause ProcessDir to
+// see the same file twice.  Use DirReader to filter duplicates.
 func (fl *FsLib) ProcessDir(dir string, f func(*sp.Stat) (bool, error)) (bool, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		return false, err
 	}
 	defer rdr.Close()
-	return reader.ReadDir(reader.MkDirReader(rdr.Reader), f)
+	return reader.ReadDirEnts(reader.MkDirEntsReader(rdr.Reader), f)
 }
 
 func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
@@ -72,7 +78,7 @@ func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
 	return st, err
 }
 
-// Also returns reader.Reader for ReadDirWatch
+// Also returns reader.Reader for readDirWatch
 func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
@@ -80,7 +86,7 @@ func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
 		return nil, nil, err
 	}
 	dirents := []*sp.Stat{}
-	_, error := reader.ReadDir(reader.MkDirReader(rdr.Reader), func(st *sp.Stat) (bool, error) {
+	_, error := reader.ReadDirEnts(reader.MkDirEntsReader(rdr.Reader), func(st *sp.Stat) (bool, error) {
 		dirents = append(dirents, st)
 		return false, nil
 	})
@@ -93,8 +99,8 @@ func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
 // XXX should use Reader
 func (fl *FsLib) CopyDir(src, dst string) error {
 	_, err := fl.ProcessDir(src, func(st *sp.Stat) (bool, error) {
-		s := src + "/" + st.Name
-		d := dst + "/" + st.Name
+		s := filepath.Join(src, st.Name)
+		d := filepath.Join(dst, st.Name)
 		db.DPrintf(db.FSLIB, "CopyFile: %v %v\n", s, d)
 		b, err := fl.GetFile(s)
 		if err != nil {
@@ -117,8 +123,8 @@ func (fl *FsLib) MoveFiles(src, dst string) (int, error) {
 	n := 0
 	for _, st := range sts {
 		db.DPrintf(db.FSLIB, "move %v to %v\n", st.Name, dst)
-		to := dst + "/" + st.Name
-		if fl.Rename(src+"/"+st.Name, to) != nil {
+		to := filepath.Join(dst, st.Name)
+		if fl.Rename(filepath.Join(src, st.Name), to) != nil {
 			return n, err
 		}
 		n += 1
@@ -140,11 +146,11 @@ func (fsl *FsLib) RmDirEntries(dir string) error {
 	}
 	for _, st := range sts {
 		if st.Tmode().IsDir() {
-			if err := fsl.RmDir(dir + "/" + st.Name); err != nil {
+			if err := fsl.RmDir(filepath.Join(dir, st.Name)); err != nil {
 				return err
 			}
 		} else {
-			if err := fsl.Remove(dir + "/" + st.Name); err != nil {
+			if err := fsl.Remove(filepath.Join(dir, st.Name)); err != nil {
 				return err
 			}
 		}
@@ -163,7 +169,7 @@ func (fsl *FsLib) sprintfDirIndent(d string, indent string) (string, error) {
 		return "", err
 	}
 	for _, st := range sts {
-		s += fmt.Sprintf("%v %v %v\n", indent, st.Name, st.Qid.Type)
+		s += fmt.Sprintf("%v %v %v\n", indent, st.Name, st.Tqid())
 		if st.Tmode().IsDir() {
 			s1, err := fsl.sprintfDirIndent(d+"/"+st.Name, indent+" ")
 			if err != nil {
@@ -179,7 +185,7 @@ func Present(sts []*sp.Stat, names []string) bool {
 	n := 0
 	m := make(map[string]bool)
 	for _, n := range names {
-		m[gopath.Base(n)] = true
+		m[filepath.Base(n)] = true
 	}
 	for _, st := range sts {
 		if _, ok := m[st.Name]; ok {
@@ -187,50 +193,4 @@ func Present(sts []*sp.Stat, names []string) bool {
 		}
 	}
 	return n == len(names)
-}
-
-type Fwait func([]*sp.Stat) bool
-
-// Keep reading dir until wait returns false (e.g., a new file has
-// been created in dir)
-func (fsl *FsLib) ReadDirWait(dir string, wait Fwait) error {
-	for {
-		sts, rdr, err := fsl.ReadDir(dir)
-		if err != nil {
-			return err
-		}
-		if wait(sts) { // keep waiting?
-			db.DPrintf(db.FSLIB, "ReadDirWatch wait %v\n", dir)
-			if err := fsl.DirWait(rdr.fd); err != nil {
-				rdr.Close()
-				if serr.IsErrCode(err, serr.TErrVersion) {
-					db.DPrintf(db.FSLIB, "SetDirWatch: Version mismatch %v", dir)
-					continue // try again
-				}
-				return err
-			}
-			db.DPrintf(db.FSLIB, "DirWatch %v returned\n", dir)
-			// dir has changed; read again
-		} else {
-			rdr.Close()
-			return nil
-		}
-	}
-	return nil
-}
-
-func (fsl *FsLib) WaitRemove(pn string) error {
-	dir := gopath.Dir(pn) + "/"
-	f := gopath.Base(pn)
-	db.DPrintf(db.FSLIB, "WaitRemove: ReadDirWait dir %v\n", dir)
-	err := fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
-		db.DPrintf(db.FSLIB, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
-		for _, st := range sts {
-			if st.Name == f {
-				return true
-			}
-		}
-		return false
-	})
-	return err
 }

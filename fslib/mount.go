@@ -7,24 +7,31 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fsl *FsLib) MkMountFile(pn string, mnt sp.Tmount, lid sp.TleaseId) error {
-	b, err := mnt.Marshal()
+func (fsl *FsLib) MkLeasedEndpoint(pn string, ep *sp.Tendpoint, lid sp.TleaseId) error {
+	b, err := ep.Marshal()
 	if err != nil {
 		return err
 	}
-	if err := fsl.PutFileAtomic(pn, 0777|sp.DMSYMLINK, b, lid); err != nil {
-		db.DPrintf(db.ALWAYS, "PutFileAtomic %v err %v\n", pn, err)
+	if _, err := fsl.PutLeasedFile(pn, 0777|sp.DMSYMLINK, sp.OWRITE|sp.OEXCL, lid, b); err != nil {
+		db.DPrintf(db.ALWAYS, "MkEndpointFile: PutLeasedFile %v err %v\n", pn, err)
 		return err
 	}
 	return nil
 }
 
-func (fsl *FsLib) RemoveMount(pn string) error {
-	db.DPrintf(db.ALWAYS, "RemoveMount %v\n", pn)
-	return fsl.Remove(pn)
+func (fsl *FsLib) MkEndpointFile(pn string, ep *sp.Tendpoint) error {
+	b, err := ep.Marshal()
+	if err != nil {
+		return err
+	}
+	if _, err := fsl.PutFile(pn, 0777|sp.DMSYMLINK, sp.OWRITE|sp.OEXCL, b); err != nil {
+		db.DPrintf(db.ALWAYS, "MkEndpointFile: PutFile %v err %v\n", pn, err)
+		return err
+	}
+	return nil
 }
 
-// Return pn, replacing first ~local/~any with a mount point for a specific
+// Return pn, replacing first ~local/~any with a endpoint point for a specific
 // server.
 func (fsl *FsLib) ResolveMount(pn string) (string, bool, error) {
 	p := path.Split(pn)
@@ -40,7 +47,7 @@ func (fsl *FsLib) ResolveMount(pn string) (string, bool, error) {
 	return "", ok, nil
 }
 
-// Return pn but with all ~local and ~any's replaced with mount points for a
+// Return pn but with all ~local and ~any's replaced with endpoint points for a
 // specific server.
 func (fsl *FsLib) ResolveMounts(pn string) (string, error) {
 	for {
@@ -55,76 +62,76 @@ func (fsl *FsLib) ResolveMounts(pn string) (string, error) {
 	}
 }
 
-func (fsl *FsLib) ReadMount(pn string) (sp.Tmount, error) {
+func (fsl *FsLib) ReadEndpoint(pn string) (*sp.Tendpoint, error) {
 	target, err := fsl.GetFile(pn)
 	if err != nil {
-		return sp.Tmount{}, err
+		return &sp.Tendpoint{}, err
 	}
-	mnt, error := sp.NewMount(target)
+	ep, error := sp.NewEndpointFromBytes(target)
 	if error != nil {
-		return sp.Tmount{}, err
+		return &sp.Tendpoint{}, err
 	}
-	return mnt, err
+	return ep, err
 }
 
-// Make copy of root mount or first mount in pn. Return the
-// content of mount and the mount file's name.
-func (fsl *FsLib) CopyMount(pn string) (sp.Tmount, string, error) {
+// Make copy of root endpoint or first endpoint in pn. Return the
+// content of endpoint and the endpoint file's name.
+func (fsl *FsLib) CopyEndpoint(pn string) (*sp.Tendpoint, string, error) {
 	if pn == sp.NAMED {
-		mnt, err := fsl.SigmaOS.GetNamedMount()
-		return mnt, "", err
+		ep, err := fsl.FileAPI.GetNamedEndpoint()
+		return ep, "", err
 	}
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()
 	if ok {
-		_, mnt, err := fsl.resolveMount(d, left[0])
+		_, ep, err := fsl.resolveMount(d, left[0])
 		if err != nil {
-			return sp.NullMount(), "", err
+			return nil, "", err
 		}
-		return mnt, left[1:].String(), nil
-	} else if s, p, err := fsl.SigmaOS.PathLastMount(pn); err == nil {
-		if mnt, err := fsl.ReadMount(s.String()); err == nil {
-			return mnt, p.String(), nil
+		return ep, left[1:].String(), nil
+	} else if s, p, err := fsl.FileAPI.PathLastMount(pn); err == nil {
+		if ep, err := fsl.ReadEndpoint(s.String()); err == nil {
+			return ep, p.String(), nil
 		}
 	}
-	return sp.NullMount(), "", serr.NewErr(serr.TErrInval, pn)
+	return nil, "", serr.NewErr(serr.TErrInval, pn)
 }
 
-func (fsl *FsLib) resolveMount(d string, q string) (string, sp.Tmount, error) {
-	rmnt := sp.NullMount()
+func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error) {
+	var rep *sp.Tendpoint
 	rname := ""
-	// Make sure to resolve d in case it is a symlink or mount point.
+	// Make sure to resolve d in case it is a symlink or endpoint point.
 	_, err := fsl.ProcessDir(d+"/", func(st *sp.Stat) (bool, error) {
 		b, err := fsl.GetFile(d + "/" + st.Name)
 		if err != nil {
 			return false, nil
 		}
-		mnt, error := sp.NewMount(b)
+		ep, error := sp.NewEndpointFromBytes(b)
 		if error != nil {
 			return false, nil
 		}
-		ok, err := fsl.SigmaOS.IsLocalMount(mnt)
+		ok, err := fsl.FileAPI.IsLocalMount(ep)
 		if err != nil {
 			return false, err
 		}
 		if q == "~any" || ok {
 			rname = st.Name
-			rmnt = mnt
+			rep = ep
 			return true, nil
 		}
 		return false, nil
 	})
 	if err == nil && rname != "" {
-		return rname, rmnt, nil
+		return rname, rep, nil
 	}
-	return rname, rmnt, serr.NewErr(serr.TErrNotfound, d)
+	return rname, rep, serr.NewErr(serr.TErrNotfound, d)
 }
 
 // For code running using /mnt/9p, which doesn't support PutFile.
-func (fsl *FsLib) NewMount9P(pn string, mnt sp.Tmount) error {
-	b, err := mnt.Marshal()
+func (fsl *FsLib) NewMount9P(pn string, ep *sp.Tendpoint) error {
+	b, err := ep.Marshal()
 	if err != nil {
 		return err
 	}
-	return fsl.Symlink(b, pn, 0777|sp.DMTMP)
+	return fsl.Symlink(b, pn, 0777)
 }

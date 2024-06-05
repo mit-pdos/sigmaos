@@ -4,7 +4,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
@@ -26,22 +25,20 @@ type ProcMgr struct {
 	rootsc         *sigmaclnt.SigmaClntKernel
 	updm           *uprocclnt.UprocdMgr
 	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClntKernel
-	namedMnts      map[sp.Trealm]sp.Tmount
+	namedMnts      map[sp.Trealm]*sp.Tendpoint
 	cachedProcBins map[sp.Trealm]map[string]bool
-	as             auth.AuthSrv
 	pstate         *ProcState
 }
 
 // Manages the state and lifecycle of a proc.
-func NewProcMgr(as auth.AuthSrv, sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
+func NewProcMgr(sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
 	mgr := &ProcMgr{
 		kernelId:       kernelId,
 		rootsc:         sigmaclnt.NewSigmaClntKernel(sc),
 		updm:           uprocclnt.NewUprocdMgr(sc.FsLib, kernelId),
 		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
-		namedMnts:      make(map[sp.Trealm]sp.Tmount),
+		namedMnts:      make(map[sp.Trealm]*sp.Tendpoint),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
-		as:             as,
 		pstate:         NewProcState(),
 	}
 	return mgr
@@ -49,7 +46,7 @@ func NewProcMgr(as auth.AuthSrv, sc *sigmaclnt.SigmaClnt, kernelId string) *Proc
 
 // Proc has been spawned.
 func (mgr *ProcMgr) Spawn(p *proc.Proc) {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Schedd proc spawn time %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Schedd proc time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	mgr.pstate.spawn(p)
 }
 
@@ -67,25 +64,24 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	// Set the proc's kernel ID, now that a kernel has been selected to run the
 	// proc.
 	p.SetKernelID(mgr.kernelId, true)
-	// Set the schedd IP for the proc, so it can mount this schedd in one RPC
+	// Set the schedd mount for the proc, so it can mount this schedd in one RPC
 	// (without walking down to it).
-	p.SetScheddAddr(mgr.mfs.MyAddr())
+	p.SetScheddEndpoint(mgr.mfs.GetSigmaPSrvEndpoint())
 	// Set the named mount point if this isn't a privileged proc. If we were to
 	// do this for a privileged proc, it could cause issues as it may save the
 	// knamed address.
 	if !p.IsPrivileged() {
-		p.SetNamedMount(mgr.getNamedMount(p.GetRealm()))
+		s := time.Now()
+		ep, err := mgr.rootsc.GetNamedEndpointRealm(p.GetRealm())
+		if err != nil {
+			mgr.procCrashed(p, err)
+		}
+		p.SetNamedEndpoint(ep)
+		db.DPrintf(db.SPAWN_LAT, "[%v] SetNamedEndPoint %v %v", p.GetPid(), p.GetRealm(), time.Since(s))
 	}
 	s := time.Now()
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
-	s = time.Now()
-	if err := mgr.downloadProc(p); err != nil {
-		// If unable to download the proc, mark it as crashed & return
-		mgr.procCrashed(p, err)
-		return
-	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Binary download time %v", p.GetPid(), time.Since(s))
 	err := mgr.runProc(p)
 	if err != nil {
 		mgr.procCrashed(p, err)
@@ -128,22 +124,25 @@ func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
 	return mgr.pstate.GetProcs()
 }
 
-func (mgr *ProcMgr) DownloadProcBin(realm sp.Trealm, prog, buildTag string, ptype proc.Ttype) error {
+func (mgr *ProcMgr) WarmUprocd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] DownloadProcBin latency: %v", realm, prog, time.Since(start))
+		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] WarmUprocd latency: %v", realm, prog, time.Since(start))
 	}(start)
-	db.DPrintf(db.PROCMGR, "Download proc bin for realm %v proc %v", realm, prog)
-	// Make sure the OS-level directory which holds proc bins exists. This must
-	// be done before starting the Uprocd, because the Uprocd mounts it.
-	if err := mgr.setupUserBinCacheL(realm); err != nil {
-		return err
-	}
+	// Warm up sigmaclnt
+	mgr.getSigmaClnt(realm)
 	if err := mgr.updm.WarmStartUprocd(realm, ptype); err != nil {
-		db.DPrintf(db.ERROR, "Error start uprocd: %v", err)
+		db.DPrintf(db.ERROR, "WarmStartUprocd %v err %v", realm, err)
 		return err
 	}
-	return mgr.downloadProcBin(realm, prog, buildTag)
+	if uprocErr, childErr := mgr.updm.WarmProc(pid, realm, prog, path, ptype); childErr != nil {
+		return childErr
+	} else if uprocErr != nil {
+		// Unexpected error with uproc server.
+		db.DPrintf(db.PROCMGR, "WarmUproc err %v", uprocErr)
+		return uprocErr
+	}
+	return nil
 }
 
 // Set up state to notify parent that a proc crashed.
@@ -154,7 +153,7 @@ func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }
 
-func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) sp.Tmount {
+func (mgr *ProcMgr) getNamedEndpoint(realm sp.Trealm) *sp.Tendpoint {
 	mgr.Lock()
 	defer mgr.Unlock()
 
@@ -162,9 +161,9 @@ func (mgr *ProcMgr) getNamedMount(realm sp.Trealm) sp.Tmount {
 	if !ok {
 		sc := mgr.getSigmaClntL(realm)
 		var err error
-		mnt, err = sc.GetNamedMount()
+		mnt, err = sc.GetNamedEndpoint()
 		if err != nil {
-			db.DFatalf("GetNamedMount: %v", err)
+			db.DFatalf("GetNamedEndpoint: %v", err)
 		}
 		mgr.namedMnts[realm] = mnt
 	}
@@ -187,13 +186,10 @@ func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 			clnt = mgr.rootsc
 		} else {
 			pe := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
-			if err := mgr.as.MintAndSetToken(pe); err != nil {
-				db.DFatalf("Err MintAndSetToken: %v", err)
-			}
 			if sc, err := sigmaclnt.NewSigmaClnt(pe); err != nil {
 				db.DFatalf("Err NewSigmaClntRealm: %v", err)
 			} else {
-				// Mount KPIDS.
+				// Endpoint KPIDS.
 				clnt = sigmaclnt.NewSigmaClntKernel(sc)
 				if err := procclnt.MountPids(clnt.FsLib); err != nil {
 					db.DFatalf("Error MountPids: %v", err)

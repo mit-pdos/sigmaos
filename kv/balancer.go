@@ -26,12 +26,12 @@ import (
 	"sigmaos/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	"sigmaos/inode"
 	"sigmaos/kvgrp"
 	"sigmaos/leaderclnt"
+	"sigmaos/memfs/dir"
+	"sigmaos/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -106,8 +106,8 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 	if err != nil {
 		db.DFatalf("StartMemFs %v\n", err)
 	}
-	ctx := ctx.NewCtx(sp.NewPrincipal(sp.TprincipalID(KVBALANCER), sp.NoToken()), nil, 0, sp.NoClntId, nil, nil)
-	root, _ := ssrv.Root(path.Path{})
+	ctx := ctx.NewCtx(sp.NewPrincipal(sp.TprincipalID(KVBALANCER), bl.SigmaClnt.ProcEnv().GetRealm()), nil, 0, sp.NoClntId, nil, nil)
+	root, _, _ := ssrv.Root(path.Tpathname{})
 	err1 := dir.MkNod(ctx, root, "ctl", newCtl(ctx, root, bl))
 	if err1 != nil {
 		db.DFatalf("MkNod clone failed %v\n", err1)
@@ -120,8 +120,8 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 		ch <- true
 	}()
 
-	mnt := sp.NewMountServer(ssrv.MyAddr())
-	b, error := mnt.Marshal()
+	ep := ssrv.GetEndpoint()
+	b, error := ep.Marshal()
 	if error != nil {
 		db.DFatalf("Marshal failed %v\n", error)
 	}
@@ -132,8 +132,8 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 
 	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.ProcEnv().GetPID(), bl.lc.Fence())
 
-	if err := bl.MkMountFile(KVBalancer(bl.job), mnt, bl.lc.Lease()); err != nil {
-		db.DFatalf("MkMountFile %v at %v err %v\n", mnt, KVBalancer(bl.job), err)
+	if err := bl.MkLeasedEndpoint(KVBalancer(bl.job), ep, bl.lc.Lease()); err != nil {
+		db.DFatalf("MkEndpointFile %v at %v err %v\n", ep, KVBalancer(bl.job), err)
 	}
 
 	// first epoch is used to create a functional system (e.g.,
@@ -202,9 +202,17 @@ type Ctl struct {
 	bl *Balancer
 }
 
-func newCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
-	i := inode.NewInode(ctx, sp.DMDEVICE, parent)
+func newCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.FsObj {
+	i := inode.NewInode(ctx, sp.DMDEVICE, sp.NoLeaseId, parent)
 	return &Ctl{i, bl}
+}
+
+func (c *Ctl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := c.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 // XXX call balance() repeatedly for each server passed in to write

@@ -74,14 +74,14 @@ type Geo struct {
 }
 
 // Run starts the server
-func RunGeoSrv(job string, public bool) error {
+func RunGeoSrv(job string) error {
 	rand.Seed(RAND_SEED)
 	geo := &Geo{}
 	geo.indexes = make([]*safeIndex, 0, N_INDEX)
 	for i := 0; i < N_INDEX; i++ {
 		geo.indexes = append(geo.indexes, newSafeIndex("data/geo.json"))
 	}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELGEO, geo, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(HOTELGEO, geo, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -21,6 +21,15 @@ type fileSession struct {
 	id     sessp.Tsession
 	dbaddr string
 	res    []byte
+}
+
+func (fs *fileSession) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := fs.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	st.SetLengthInt(len(fs.res))
+	return st, nil
 }
 
 // XXX wait on close before processing data?
@@ -52,7 +61,7 @@ func (fs *fileSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfen
 }
 
 // XXX clean up in case of error
-func (qd *queryDev) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
+func (qd *queryDev) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.FsObj, *serr.Err) {
 	fs := &fileSession{}
 	fs.Inode = mfs.NewDevInode()
 	fs.id = sid

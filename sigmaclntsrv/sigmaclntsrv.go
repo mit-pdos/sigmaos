@@ -12,6 +12,8 @@ import (
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/netproxyclnt"
+	"sigmaos/netproxysrv"
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -22,14 +24,21 @@ import (
 // SigmaSrvClnt's share one fid table
 type SigmaClntSrv struct {
 	pe   *proc.ProcEnv
+	nps  *netproxysrv.NetProxySrv
 	fidc *fidclnt.FidClnt
 }
 
 func newSigmaClntSrv() (*SigmaClntSrv, error) {
 	pe := proc.GetProcEnv()
+	nps, err := netproxysrv.NewNetProxySrv(pe)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewNetProxySrv: %v", err)
+		return nil, err
+	}
 	scs := &SigmaClntSrv{
-		pe,
-		fidclnt.NewFidClnt(pe.Net),
+		pe:   pe,
+		nps:  nps,
+		fidc: fidclnt.NewFidClnt(pe, netproxyclnt.NewNetProxyClnt(pe)),
 	}
 	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)
 	return scs, nil
@@ -51,11 +60,12 @@ func (scs *SigmaClntSrv) runServer() error {
 	go func() {
 		buf := make([]byte, 1)
 		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
-			db.DFatalf("read pipe err %v\n", err)
+			db.DPrintf(db.SIGMACLNTSRV_ERR, "read pipe err %v\n", err)
 		}
 		db.DPrintf(db.SIGMACLNTSRV, "exiting")
 		os.Remove(sp.SIGMASOCKET)
 		scs.fidc.Close()
+		scs.nps.Shutdown()
 		os.Exit(0)
 	}()
 
@@ -69,7 +79,7 @@ func (scs *SigmaClntSrv) runServer() error {
 }
 
 // The sigmaclntd process enter here
-func RunSigmaClntSrv(args []string) error {
+func RunSigmaClntSrv() error {
 	scs, err := newSigmaClntSrv()
 	if err != nil {
 		db.DPrintf(db.SIGMACLNTSRV, "runServer err %v\n", err)
@@ -108,7 +118,7 @@ type Subsystem interface {
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
 	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
-	AllocPort(p sp.Tport) (*port.PortBinding, error)
+	GetPortBinding(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
 
@@ -166,7 +176,7 @@ func (scsc *SigmaClntSrvCmd) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) er
 	return nil
 }
 
-func (scsc *SigmaClntSrvCmd) AllocPort(p sp.Tport) (*port.PortBinding, error) {
+func (scsc *SigmaClntSrvCmd) GetPortBinding(p sp.Tport) (*port.PortBinding, error) {
 	db.DFatalf("Unimplemented")
 	return nil, nil
 }
@@ -180,7 +190,7 @@ func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip)
 func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) (*SigmaClntSrvCmd, error) {
 	p.FinalizeEnv(innerIP, outerIP, uprocdPid)
 	db.DPrintf(db.SIGMACLNTSRV, "ExecSigmaclntsrv: %v", p)
-	cmd := exec.Command("sigmaclntd", []string{}...)
+	cmd := exec.Command("sigmaclntd")
 	cmd.Env = p.GetEnv()
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

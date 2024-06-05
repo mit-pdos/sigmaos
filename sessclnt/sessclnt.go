@@ -7,13 +7,15 @@ package sessclnt
 
 import (
 	"sync"
-	//"time"
+	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/netclnt"
+	"sigmaos/netproxyclnt"
+	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -26,20 +28,22 @@ type SessClnt struct {
 	sid     sessp.Tsession
 	seqcntr *sessp.Tseqcntr
 	closed  bool
-	addrs   sp.Taddrs
+	mnt     *sp.Tendpoint
+	npc     *netproxyclnt.NetProxyClnt
 	nc      *netclnt.NetClnt
-	clntnet string
+	pe      *proc.ProcEnv
 	dmx     *demux.DemuxClnt
 }
 
-func newSessClnt(clntnet string, addrs sp.Taddrs) (*SessClnt, *serr.Err) {
+func newSessClnt(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, mnt *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	c := &SessClnt{
 		sid:     sessp.Tsession(rand.Uint64()),
-		clntnet: clntnet,
-		addrs:   addrs,
+		npc:     npc,
+		pe:      pe,
+		mnt:     mnt,
 		seqcntr: new(sessp.Tseqcntr),
 	}
-	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, addrs)
+	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, mnt)
 	if err := c.getConn(); err != nil {
 		return nil, err
 	}
@@ -72,11 +76,12 @@ func (c *SessClnt) IsConnected() bool {
 }
 
 func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	s := time.Now()
 	fc := sessp.NewFcallMsg(req, iniov, c.sid, c.seqcntr)
 	pmfc := spcodec.NewPartMarshaledMsg(fc)
 	nc := c.netClnt()
 	if nc == nil {
-		return nil, serr.NewErr(serr.TErrUnreachable, c.addrs)
+		return nil, serr.NewErr(serr.TErrUnreachable, c.mnt)
 	}
 	db.DPrintf(db.SESSCLNT, "sess %v RPC req %v", c.sid, fc)
 	rep, err := c.dmx.SendReceive(pmfc, outiov)
@@ -90,7 +95,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	if err := spcodec.UnmarshalMsg(r); err != nil {
 		return nil, err
 	}
-
+	db.DPrintf(db.NET_LAT, "RPC req %v fm %v lat %v\n", fc, r.Fcm, time.Since(s))
 	return r.Fcm, nil
 }
 
@@ -98,7 +103,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 func (c *SessClnt) sendHeartbeat() {
 	_, err := c.RPC(sp.NewTheartbeat(map[uint64]bool{uint64(c.sid): true}), nil, nil)
 	if err != nil {
-		db.DPrintf(db.SESSCLNT_ERR, "%v heartbeat %v err %v", c.sid, c.addrs, err)
+		db.DPrintf(db.SESSCLNT_ERR, "%v heartbeat %v err %v", c.sid, c.mnt, err)
 	}
 }
 
@@ -108,17 +113,17 @@ func (c *SessClnt) getConn() *serr.Err {
 	defer c.Unlock()
 
 	if c.closed {
-		return serr.NewErr(serr.TErrUnreachable, c.addrs)
+		return serr.NewErr(serr.TErrUnreachable, c.mnt)
 	}
 
 	if c.nc == nil {
-		db.DPrintf(db.SESSCLNT, "%v Connect to %v %v\n", c.sid, c.addrs, c.closed)
-		nc, err := netclnt.NewNetClnt(c.clntnet, c.addrs)
+		db.DPrintf(db.SESSCLNT, "%v Connect to %v %v\n", c.sid, c.mnt, c.closed)
+		nc, err := netclnt.NewNetClnt(c.pe, c.npc, c.mnt)
 		if err != nil {
-			db.DPrintf(db.SESSCLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
+			db.DPrintf(db.SESSCLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.mnt)
 			return err
 		}
-		db.DPrintf(db.SESSCLNT, "%v connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
+		db.DPrintf(db.SESSCLNT, "%v connection to %v out of %v\n", c.sid, nc.Dst(), c.mnt)
 		c.nc = nc
 		iovm := demux.NewIoVecMap()
 		c.dmx = demux.NewDemuxClnt(spcodec.NewTransport(nc.Conn(), iovm), iovm)
@@ -139,7 +144,7 @@ func (c *SessClnt) ownClosed() bool {
 
 // Close the session permanently
 func (c *SessClnt) Close() error {
-	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
+	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v\n", c.sid, c.mnt, c.closed)
 	if !c.ownClosed() {
 		return nil
 	}

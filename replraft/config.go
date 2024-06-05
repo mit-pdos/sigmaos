@@ -5,53 +5,60 @@ import (
 	"net"
 
 	db "sigmaos/debug"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/repl"
+	sp "sigmaos/sigmap"
 )
 
 type RaftConfig struct {
-	id        int
-	peerAddrs []string
-	l         net.Listener
-	init      bool // Is this node part of the initial cluster? Or is it being added to an existing cluster?
-	pe        *proc.ProcEnv
+	npc     *netproxyclnt.NetProxyClnt
+	id      int
+	peerEPs []*sp.Tendpoint
+	l       net.Listener
+	ep      *sp.Tendpoint
+	init    bool // Is this node part of the initial cluster? Or is it being added to an existing cluster?
+	pe      *proc.ProcEnv
 }
 
-func NewRaftConfig(pe *proc.ProcEnv, id int, addr string, init bool) *RaftConfig {
-	rc := &RaftConfig{}
-	rc.id = id
-	rc.init = init
-	rc.pe = pe
-	l, err := net.Listen("tcp", addr)
+func NewRaftConfig(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, id int, addr *sp.Taddr, init bool) *RaftConfig {
+	rc := &RaftConfig{
+		pe:   pe,
+		npc:  npc,
+		id:   id,
+		init: init,
+	}
+	ep, l, err := rc.npc.Listen(sp.INTERNAL_EP, addr)
 	if err != nil {
 		db.DFatalf("Error listen: %v", err)
 	}
 	rc.l = l
+	rc.ep = ep
 	return rc
 }
 
-func NValidAddr(peerAddrs []string) int {
+func NValidEPs(eps []*sp.Tendpoint) int {
 	n := 0
-	for _, a := range peerAddrs {
-		if a != "" {
+	for _, ep := range eps {
+		if ep != nil {
 			n += 1
 		}
 	}
 	return n
 }
 
-func (rc *RaftConfig) SetPeerAddrs(new []string) {
-	rc.peerAddrs = new
+func (rc *RaftConfig) SetPeerEPs(eps []*sp.Tendpoint) {
+	rc.peerEPs = eps
 }
 
 func (rc *RaftConfig) NewServer(applyf repl.Tapplyf) (repl.Server, error) {
-	return NewRaftReplServer(rc.pe, rc.id, rc.peerAddrs, rc.l, rc.init, applyf)
+	return NewRaftReplServer(rc.npc, rc.pe, rc.id, rc.peerEPs, rc.l, rc.init, applyf)
 }
 
-func (rc *RaftConfig) ReplAddr() string {
-	return rc.l.Addr().String()
+func (rc *RaftConfig) ReplEP() *sp.Tendpoint {
+	return rc.ep
 }
 
 func (rc *RaftConfig) String() string {
-	return fmt.Sprintf("&{ id:%v peerAddrs:%v init:%v }", rc.id, rc.peerAddrs, rc.init)
+	return fmt.Sprintf("&{ id:%v peerEPs:%v init:%v }", rc.id, rc.peerEPs, rc.init)
 }

@@ -43,12 +43,6 @@ func newRealmTstateClnt(ts *Tstate, realm sp.Trealm, newrealm bool, numS3 int64,
 		db.DPrintf(db.TEST, "Done making realm %v", realm)
 	}
 	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
-	pe.SetAllowedPaths(sp.ALL_PATHS)
-	err := ts.MintAndSetToken(pe)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return nil, err
-	}
 	db.DPrintf(db.TEST, "ProcEnv for new realm %v", pe)
 	if sc, err := sigmaclnt.NewSigmaClntRootInit(pe); err != nil {
 		db.DPrintf(db.ERROR, "Error NewRealmTstate NewSigmaClnt: %v", err)

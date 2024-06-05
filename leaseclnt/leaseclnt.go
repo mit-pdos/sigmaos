@@ -1,3 +1,6 @@
+// The leaseclnt package allows clients to obtain leases, which can
+// then be attached to files.  If a lease isn't refreshed, the lease
+// will expire, and the leased file will be deleted.
 package leaseclnt
 
 import (
@@ -7,12 +10,13 @@ import (
 	leaseproto "sigmaos/lease/proto"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/syncmap"
 )
 
 type LeaseClnt struct {
 	*fslib.FsLib
-	lm            *syncmap.SyncMap[string, *LeaseInfo]
+	lm            *syncmap.SyncMap[string, *Lease]
 	cc            *rpcclnt.ClntCache
 	askedForLease bool // Used by test harness
 }
@@ -20,14 +24,14 @@ type LeaseClnt struct {
 func NewLeaseClnt(fsl *fslib.FsLib) (*LeaseClnt, error) {
 	return &LeaseClnt{
 		FsLib: fsl,
-		lm:    syncmap.NewSyncMap[string, *LeaseInfo](),
-		cc:    rpcclnt.NewRPCClntCache([]*fslib.FsLib{fsl}),
+		lm:    syncmap.NewSyncMap[string, *Lease](),
+		cc:    rpcclnt.NewRPCClntCache(sigmarpcchan.SigmaRPCChanFactory([]*fslib.FsLib{fsl})),
 	}, nil
 }
 
 // Ask for lease; if caller already has a lease at that server, return
 // it.
-func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
+func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*Lease, error) {
 	lmc.askedForLease = true
 	srv, rest, err := lmc.PathLastMount(pn)
 	db.DPrintf(db.LEASECLNT, "AskLease %v: %v %v err %v\n", pn, srv, rest, err)
@@ -38,7 +42,7 @@ func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*LeaseInfo, error) {
 	if err := lmc.cc.RPC(srv.String(), "LeaseSrv.AskLease", &leaseproto.AskRequest{
 		ClntId: uint64(lmc.ClntId()),
 		TTL:    fsetcd.LeaseTTL}, &res); err == nil {
-		li := &LeaseInfo{
+		li := &Lease{
 			ch:  make(chan struct{}),
 			srv: srv.String(),
 			lid: sp.TleaseId(res.LeaseId),

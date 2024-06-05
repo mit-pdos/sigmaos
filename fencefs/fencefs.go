@@ -1,3 +1,6 @@
+// Package fencefs provides an in-memory fs for fences, which is used
+// by sigmasrv to keep track of the most recent fence seen. A fence is
+// named by pathname of its epoch file.
 package fencefs
 
 import (
@@ -5,18 +8,12 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/dir"
+	"sigmaos/memfs/inode"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
-
-//
-// An in-memory fs for fences, which is used by sesssrv to keep track
-// of the most recent fence seen. A fence is named by pathname of its
-// epoch file.
-//
 
 type Fence struct {
 	sync.RWMutex
@@ -25,9 +22,13 @@ type Fence struct {
 }
 
 func newFence(i fs.Inode) *Fence {
-	e := &Fence{}
-	e.Inode = i
-	return e
+	f := &Fence{}
+	f.Inode = i
+	return f
+}
+
+func (f *Fence) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	return nil, serr.NewErr(serr.TErrNotSupported, "Stat")
 }
 
 func (f *Fence) Write(ctx fs.CtxI, off sp.Toffset, b []byte, fence sp.Tfence) (sp.Tsize, *serr.Err) {
@@ -38,9 +39,9 @@ func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, fence sp.Tfence) 
 	return nil, serr.NewErr(serr.TErrNotSupported, "Read")
 }
 
-func newInode(ctx fs.CtxI, p sp.Tperm, mode sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.Inode, *serr.Err) {
+func newInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, mode sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.FENCEFS, "newInode %v dir %v\n", p, parent)
-	i := inode.NewInode(ctx, p, parent)
+	i := inode.NewInode(ctx, p, lid, parent)
 	if p.IsDir() {
 		return dir.MkDir(i, newInode), nil
 	} else if p.IsFile() {
@@ -57,7 +58,7 @@ func NewRoot(ctx fs.CtxI, parent fs.Dir) fs.Dir {
 
 // XXX check that clnt is allowed to update fence, perhaps using ctx
 func allocFence(root fs.Dir, name string) (*Fence, *serr.Err) {
-	i, err := root.Create(ctx.NewCtxNull(), name, 0777, sp.OWRITE, sp.NoLeaseId, sp.NoFence())
+	i, err := root.Create(ctx.NewCtxNull(), name, 0777, sp.OWRITE, sp.NoLeaseId, sp.NoFence(), nil)
 	if err == nil {
 		f := i.(*Fence)
 		f.RLock()

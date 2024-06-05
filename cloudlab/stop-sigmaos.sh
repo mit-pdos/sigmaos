@@ -62,7 +62,7 @@ do
         rm /tmp/machine.out > /dev/null 2>&1
         yes | docker system prune
         yes | docker volume prune
-        docker swarm leave --force
+#        docker swarm leave --force
 ENDSSH"
   if [ -z "$PARALLEL" ]; then
     eval "$stop"

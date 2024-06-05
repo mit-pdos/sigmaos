@@ -9,7 +9,7 @@ import (
 )
 
 func (nd *Named) startLeader() error {
-	fs, err := fsetcd.NewFsEtcd(nd.realm, nd.ProcEnv().EtcdIP)
+	fs, err := fsetcd.NewFsEtcd(nd.GetNetProxyClnt().Dial, nd.ProcEnv().GetEtcdEndpoints(), nd.realm)
 	if err != nil {
 		return err
 	}
@@ -36,6 +36,12 @@ func (nd *Named) startLeader() error {
 	}
 
 	db.DPrintf(db.NAMED, "succeeded leaderetcd election")
+
+	if err := nd.fs.WatchLeased(nd.ephch); err != nil {
+		return err
+	}
+
+	go nd.watchLeased()
 
 	fs.Fence(nd.elect.Key(), nd.elect.Rev())
 

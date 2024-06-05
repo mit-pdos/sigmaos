@@ -12,7 +12,9 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/netproxyclnt"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/protclnt"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
@@ -25,19 +27,25 @@ type FidClnt struct {
 	fids   *FidMap
 	refcnt int
 	sm     *sessclnt.Mgr
+	npc    *netproxyclnt.NetProxyClnt
 }
 
-func NewFidClnt(clntnet string) *FidClnt {
-	fidc := &FidClnt{}
-	fidc.fids = newFidMap()
-	fidc.refcnt = 1
-	fidc.sm = sessclnt.NewMgr(clntnet)
-	return fidc
+func NewFidClnt(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) *FidClnt {
+	return &FidClnt{
+		fids:   newFidMap(),
+		refcnt: 1,
+		sm:     sessclnt.NewMgr(pe, npc),
+		npc:    npc,
+	}
 }
 
 func (fidc *FidClnt) String() string {
 	str := fmt.Sprintf("Fsclnt fid table %p:\n%v", fidc, fidc.fids)
 	return str
+}
+
+func (fidc *FidClnt) GetNetProxyClnt() *netproxyclnt.NetProxyClnt {
+	return fidc.npc
 }
 
 func (fidc *FidClnt) NewClnt() {
@@ -67,7 +75,7 @@ func (fidc *FidClnt) Close() error {
 		return nil // XXX maybe return error
 	}
 	fidc.refcnt--
-	db.DPrintf(db.ALWAYS, "FidClnt refcnt %d\n", fidc.refcnt)
+	db.DPrintf(db.FIDCLNT, "FidClnt refcnt %d\n", fidc.refcnt)
 	if fidc.refcnt == 0 {
 		fidc.closeSess()
 	}
@@ -106,7 +114,7 @@ func (fidc *FidClnt) Qids(fid sp.Tfid) []*sp.Tqid {
 	return fidc.Lookup(fid).qids
 }
 
-func (fidc *FidClnt) Path(fid sp.Tfid) path.Path {
+func (fidc *FidClnt) Path(fid sp.Tfid) path.Tpathname {
 	return fidc.Lookup(fid).Path()
 }
 
@@ -126,16 +134,16 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(principal *sp.Tprincipal, cid sp.TclntId, addrs sp.Taddrs, pn, tree string) (sp.Tfid, *serr.Err) {
+func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, ep *sp.Tendpoint, pn, tree string) (sp.Tfid, *serr.Err) {
 	fid := fidc.allocFid()
-	pc := protclnt.NewProtClnt(addrs, fidc.sm)
-	reply, err := pc.Attach(principal, cid, fid, path.Split(tree))
+	pc := protclnt.NewProtClnt(ep, fidc.sm)
+	reply, err := pc.Attach(secrets, cid, fid, path.Split(tree))
 	if err != nil {
-		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", addrs, err)
+		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", ep, err)
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}
-	fidc.fids.insert(fid, newChannel(pc, principal, path.Split(pn), []*sp.Tqid{reply.Qid}))
+	fidc.fids.insert(fid, newChannel(pc, path.Split(pn), []*sp.Tqid{sp.NewTqid(reply.Qid)}))
 	return fid, nil
 }
 
@@ -170,7 +178,7 @@ func (fidc *FidClnt) Walk(fid sp.Tfid, path []string) (sp.Tfid, []string, *serr.
 }
 
 // A defensive version of walk because fid is shared among several
-// threads (it comes out the mount table) and one thread may free the
+// threads (it comes out the endpoint table) and one thread may free the
 // fid while another thread is using it.
 func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	nfid := fidc.allocFid()
@@ -178,7 +186,7 @@ func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	if ch == nil {
 		return sp.NoFid, serr.NewErr(serr.TErrUnreachable, "Clone")
 	}
-	_, err := ch.pc.Walk(fid, nfid, path.Path{})
+	_, err := ch.pc.Walk(fid, nfid, path.Tpathname{})
 	if err != nil {
 		fidc.freeFid(nfid)
 		return fid, err
@@ -212,7 +220,7 @@ func (fidc *FidClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Tqid, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	return reply.Qid, nil
+	return sp.NewTqid(reply.Qid), nil
 }
 
 func (fidc *FidClnt) Watch(fid sp.Tfid) *serr.Err {
@@ -273,7 +281,7 @@ func (fidc *FidClnt) Stat(fid sp.Tfid) (*sp.Stat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	return reply.Stat, nil
+	return sp.NewStatProto(reply.Stat), nil
 }
 
 func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {

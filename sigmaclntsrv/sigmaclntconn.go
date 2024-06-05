@@ -123,6 +123,7 @@ func (scs *SigmaClntSrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitRequest, rep 
 	}
 	pe := proc.NewProcEnvFromProto(req.ProcEnvProto)
 	pe.UseSigmaclntd = false
+	pe.UseNetProxy = false
 	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pe, scs.fidc)
 	if err != nil {
 		rep.Err = scs.setErr(fmt.Errorf("Error init SigmaClntSrvAPI: %v pe %v", err, pe))
@@ -144,7 +145,7 @@ func (scs *SigmaClntSrvAPI) CloseFd(ctx fs.CtxI, req scproto.SigmaCloseRequest, 
 func (scs *SigmaClntSrvAPI) Stat(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaStatReply) error {
 	st, err := scs.sc.Stat(req.Path)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: Stat %v st %v err %v", scs.sc.ClntId(), req, st, err)
-	rep.Stat = st
+	rep.Stat = st.StatProto()
 	rep.Err = scs.setErr(err)
 	return nil
 }
@@ -158,7 +159,7 @@ func (scs *SigmaClntSrvAPI) Create(ctx fs.CtxI, req scproto.SigmaCreateRequest, 
 }
 
 func (scs *SigmaClntSrvAPI) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
-	fd, err := scs.sc.SigmaOS.Open(req.Path, sp.Tmode(req.Mode), sos.Twait(req.Wait))
+	fd, err := scs.sc.FileAPI.Open(req.Path, sp.Tmode(req.Mode), sos.Twait(req.Wait))
 	db.DPrintf(db.SIGMACLNTSRV, "%v: Open %v fd %v err %v", scs.sc.ClntId(), req, fd, err)
 	rep.Fd = uint32(fd)
 	rep.Err = scs.setErr(err)
@@ -188,7 +189,7 @@ func (scs *SigmaClntSrvAPI) GetFile(ctx fs.CtxI, req scproto.SigmaPathRequest, r
 }
 
 func (scs *SigmaClntSrvAPI) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest, rep *scproto.SigmaSizeReply) error {
-	sz, err := scs.sc.SigmaOS.PutFile(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), req.Blob.Iov[0], sp.Toffset(req.Offset), sp.TleaseId(req.LeaseId))
+	sz, err := scs.sc.FileAPI.PutFile(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), req.Blob.Iov[0], sp.Toffset(req.Offset), sp.TleaseId(req.LeaseId))
 	rep.Size = uint64(sz)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: PutFile %q %v %v", scs.sc.ClntId(), req.Path, len(req.Blob.Iov), rep)
@@ -197,7 +198,14 @@ func (scs *SigmaClntSrvAPI) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest
 
 func (scs *SigmaClntSrvAPI) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaDataReply) error {
 	b := make([]byte, req.Size)
-	cnt, err := scs.sc.Read(int(req.Fd), b)
+	o := sp.Toffset(req.Off)
+	var cnt sp.Tsize
+	var err error
+	if o == sp.NoOffset {
+		cnt, err = scs.sc.Read(int(req.Fd), b)
+	} else {
+		cnt, err = scs.sc.Pread(int(req.Fd), b, o)
+	}
 	b = b[:cnt]
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	rep.Err = scs.setErr(err)
@@ -230,9 +238,9 @@ func (scs *SigmaClntSrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest
 	return nil
 }
 
-func (scs *SigmaClntSrvAPI) CreateEphemeral(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
-	fd, err := scs.sc.CreateEphemeral(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), sp.TleaseId(req.LeaseId), req.Fence.Tfence())
-	db.DPrintf(db.SIGMACLNTSRV, "%v: CreateEphemeral %v %v %v", scs.sc.ClntId(), req, fd, err)
+func (scs *SigmaClntSrvAPI) CreateLeased(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
+	fd, err := scs.sc.CreateLeased(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), sp.TleaseId(req.LeaseId), req.Fence.Tfence())
+	db.DPrintf(db.SIGMACLNTSRV, "%v: CreateLeased %v %v %v", scs.sc.ClntId(), req, fd, err)
 	rep.Fd = uint32(fd)
 	rep.Err = scs.setErr(err)
 	return nil
@@ -261,15 +269,15 @@ func (scs *SigmaClntSrvAPI) WriteFence(ctx fs.CtxI, req scproto.SigmaWriteReques
 	return nil
 }
 
-func (scs *SigmaClntSrvAPI) DirWait(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaErrReply) error {
-	err := scs.sc.DirWait(int(req.Fd))
+func (scs *SigmaClntSrvAPI) DirWatch(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaErrReply) error {
+	err := scs.sc.DirWatch(int(req.Fd))
 	rep.Err = scs.setErr(err)
-	db.DPrintf(db.SIGMACLNTSRV, "%v: DirWait %v %v", scs.sc.ClntId(), req, rep)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: DirWatch %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }
 
 func (scs *SigmaClntSrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountRequest, rep *scproto.SigmaMountReply) error {
-	ok, err := scs.sc.IsLocalMount(sp.Tmount{req.Mount})
+	ok, err := scs.sc.IsLocalMount(sp.NewEndpointFromProto(req.Endpoint))
 	rep.Local = ok
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: IsLocalMount %v %v", scs.sc.ClntId(), req, rep)
@@ -277,7 +285,7 @@ func (scs *SigmaClntSrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountRequ
 }
 
 func (scs *SigmaClntSrvAPI) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
-	err := scs.sc.MountTree(req.Addr, req.Tree, req.Mount)
+	err := scs.sc.MountTree(sp.NewEndpointFromProto(req.Endpoint), req.Tree, req.MountName)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: MountTree %v %v", scs.sc.ClntId(), req, rep)
 	return nil
@@ -292,13 +300,24 @@ func (scs *SigmaClntSrvAPI) PathLastMount(ctx fs.CtxI, req scproto.SigmaPathRequ
 	return nil
 }
 
-func (scs *SigmaClntSrvAPI) GetNamedMount(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaMountReply) error {
-	mnt, err := scs.sc.GetNamedMount()
+func (scs *SigmaClntSrvAPI) InvalidateNamedEndpointCacheEntryRealm(ctx fs.CtxI, req scproto.SigmaRealmRequest, rep *scproto.SigmaMountReply) error {
+	err := scs.sc.InvalidateNamedEndpointCacheEntryRealm(sp.Trealm(req.RealmStr))
 	if err != nil {
-		db.DPrintf(db.ERROR, "Err GetNamedMount: %v", err)
+		db.DPrintf(db.ERROR, "Err GetNamedEndpoint: %v", err)
 		return err
 	}
-	rep.Mount = mnt.TmountProto
+	rep.Err = scs.setErr(nil)
+	db.DPrintf(db.SIGMACLNTSRV, "%v: PastLastMount %v %v", scs.sc.ClntId(), req, rep)
+	return nil
+}
+
+func (scs *SigmaClntSrvAPI) GetNamedEndpoint(ctx fs.CtxI, req scproto.SigmaRealmRequest, rep *scproto.SigmaMountReply) error {
+	ep, err := scs.sc.GetNamedEndpointRealm(sp.Trealm(req.RealmStr))
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err GetNamedEndpoint: %v", err)
+		return err
+	}
+	rep.Endpoint = ep.TendpointProto
 	rep.Err = scs.setErr(nil)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: PastLastMount %v %v", scs.sc.ClntId(), req, rep)
 	return nil
@@ -306,7 +325,7 @@ func (scs *SigmaClntSrvAPI) GetNamedMount(ctx fs.CtxI, req scproto.SigmaPathRequ
 
 // XXX need a few fslib instead of reusing bootkernel one?
 func (scs *SigmaClntSrvAPI) NewRootMount(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
-	err := scs.sc.NewRootMount(req.Tree, req.Mount)
+	err := scs.sc.NewRootMount(req.Tree, req.MountName)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: NewRootMount %v %v", scs.sc.ClntId(), req, rep)
 	return nil
@@ -314,7 +333,7 @@ func (scs *SigmaClntSrvAPI) NewRootMount(ctx fs.CtxI, req scproto.SigmaMountTree
 
 func (scs *SigmaClntSrvAPI) Mounts(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaMountsReply) error {
 	mnts := scs.sc.Mounts()
-	rep.Mounts = mnts
+	rep.Endpoints = mnts
 	rep.Err = scs.setErr(nil)
 	db.DPrintf(db.SIGMACLNTSRV, "%v: Mounts %v %v", scs.sc.ClntId(), req, rep)
 	return nil

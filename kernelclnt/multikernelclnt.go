@@ -3,36 +3,43 @@ package kernelclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/rpcdirclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/unionrpcclnt"
 )
 
 type MultiKernelClnt struct {
 	*fslib.FsLib
-	urpcc *unionrpcclnt.UnionRPCClnt
+	rpcdc *rpcdirclnt.RPCDirClnt
 	done  int32
 }
 
-func NewMultiKernelClnt(fsl *fslib.FsLib) *MultiKernelClnt {
+func NewMultiKernelClnt(fsl *fslib.FsLib, lsel, esel db.Tselector) *MultiKernelClnt {
 	return &MultiKernelClnt{
 		FsLib: fsl,
-		urpcc: unionrpcclnt.NewUnionRPCClnt(fsl, sp.BOOT, db.KERNELCLNT, db.KERNELCLNT_ERR),
+		rpcdc: rpcdirclnt.NewRPCDirClntFilter(fsl, sp.BOOT, lsel, esel, sp.SIGMACLNTDKERNEL),
 	}
 }
 
-func (mkc *MultiKernelClnt) BootInRealm(kernelID string, realm sp.Trealm, s string, args []string) error {
-	rpcc, err := mkc.urpcc.GetClnt(kernelID)
+func (mkc *MultiKernelClnt) BootInRealm(kernelID string, realm sp.Trealm, s string, args []string) (sp.Tpid, error) {
+	rpcc, err := mkc.rpcdc.GetClnt(kernelID)
+	if err != nil {
+		return sp.NO_PID, err
+	}
+	return bootInRealm(rpcc, realm, s, args)
+}
+
+func (mkc *MultiKernelClnt) EvictKernelProc(kernelID string, pid sp.Tpid) error {
+	rpcc, err := mkc.rpcdc.GetClnt(kernelID)
 	if err != nil {
 		return err
 	}
-	_, err = bootInRealm(rpcc, realm, s, args)
-	return err
+	return evictKernelProc(rpcc, pid)
 }
 
-func (mkc *MultiKernelClnt) GetKernelSrvs() ([]string, error) {
-	return mkc.urpcc.GetSrvs()
+func (mkc *MultiKernelClnt) GetGeneralKernels() ([]string, error) {
+	return mkc.rpcdc.GetEntries()
 }
 
-func (mkc *MultiKernelClnt) StopMonitoring() {
-	mkc.urpcc.StopMonitoring()
+func (mkc *MultiKernelClnt) StopWatching() {
+	mkc.rpcdc.StopWatching()
 }

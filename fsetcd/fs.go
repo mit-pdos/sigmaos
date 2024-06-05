@@ -2,15 +2,17 @@ package fsetcd
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sorteddir"
+	"sigmaos/sortedmap"
 )
 
 type Tstat int
@@ -22,12 +24,52 @@ const (
 	TSTAT_NONE Tstat = iota
 	TSTAT_STAT
 
-	TCACHEABLE_NO Tcacheable = iota
-	TCACHEABLE_YES
+	LEASEPREFIX = "_l-"
 )
 
-func (fs *FsEtcd) path2key(realm sp.Trealm, path sp.Tpath) string {
-	return string(realm) + ":" + strconv.FormatUint(uint64(path), 16)
+type LeasedKey struct {
+	Realm sp.Trealm
+	Path  sp.Tpath
+	Pn    path.Tpathname
+}
+
+func (fs *FsEtcd) path2key(realm sp.Trealm, dei *DirEntInfo) string {
+	return string(realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
+}
+
+func (fs *FsEtcd) leasedkey(dei *DirEntInfo) string {
+	return LEASEPREFIX + string(fs.realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
+}
+
+func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]LeasedKey, error) {
+	resp, err := fs.Clnt().Get(context.TODO(), prefixLease(fs.realm), clientv3.WithPrefix())
+	db.DPrintf(db.FSETCD, "LeasedPaths %v err %v\n", resp, err)
+	if err != nil {
+		return nil, serr.NewErrError(err)
+	}
+	ekeys := make([]LeasedKey, 0)
+	for _, kv := range resp.Kvs {
+		r, p := key2path(string(kv.Key))
+		ekeys = append(ekeys, LeasedKey{
+			Realm: r,
+			Path:  p,
+			Pn:    path.Split(string(kv.Value)),
+		})
+	}
+	return ekeys, nil
+}
+
+func (fs *FsEtcd) getLeasedPathName(key string) (path.Tpathname, error) {
+	resp, err := fs.Clnt().Get(context.TODO(), key)
+	db.DPrintf(db.FSETCD, "getLeasedPathName %v err %v\n", resp, err)
+	if err != nil {
+		return nil, serr.NewErrError(err)
+	}
+	if len(resp.Kvs) != 1 {
+		rp := key2realmpath(key)
+		return nil, serr.NewErr(serr.TErrNotfound, rp)
+	}
+	return path.Split(string(resp.Kvs[0].Value)), nil
 }
 
 func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
@@ -38,23 +80,23 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
 		return nil, 0, serr.NewErrError(err)
 	}
 	if len(resp.Kvs) != 1 {
-		return nil, 0, serr.NewErr(serr.TErrNotfound, key2path(key))
+		return nil, 0, serr.NewErr(serr.TErrNotfound, key2realmpath(key))
 	}
-	nf := &EtcdFile{}
-	if err := proto.Unmarshal(resp.Kvs[0].Value, nf); err != nil {
+	nf := newEtcdFile()
+	if err := proto.Unmarshal(resp.Kvs[0].Value, nf.EtcdFileProto); err != nil {
 		return nil, 0, serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "getFile %v %v\n", key, nf)
 	return nf, sp.TQversion(resp.Kvs[0].Version), nil
 }
 
-func (fs *FsEtcd) GetFile(p sp.Tpath) (*EtcdFile, sp.TQversion, *serr.Err) {
-	return fs.getFile(fs.path2key(fs.realm, p))
+func (fs *FsEtcd) GetFile(dei *DirEntInfo) (*EtcdFile, sp.TQversion, *serr.Err) {
+	return fs.getFile(fs.path2key(fs.realm, dei))
 }
 
-func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
-	opts := nf.LeaseOpts()
-	if b, err := proto.Marshal(nf); err != nil {
+func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) *serr.Err {
+	opts := dei.LeaseOpts()
+	if b, err := proto.Marshal(nf.EtcdFileProto); err != nil {
 		return serr.NewErrError(err)
 	} else {
 		var cmp []clientv3.Cmp
@@ -68,99 +110,105 @@ func (fs *FsEtcd) PutFile(p sp.Tpath, nf *EtcdFile, f sp.Tfence) *serr.Err {
 			}
 		}
 		opst := []clientv3.Op{
-			clientv3.OpPut(fs.path2key(fs.realm, p), string(b), opts...),
+			clientv3.OpPut(fs.path2key(fs.realm, dei), string(b)),
 		}
 		opsf := []clientv3.Op{
 			clientv3.OpGet(f.Prefix(), opts...),
 		}
 		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
-		db.DPrintf(db.FSETCD, "PutFile p %v nf %v f %v resp %v err %v\n", p, nf, f, resp, err)
+		db.DPrintf(db.FSETCD, "PutFile dei %v f %v resp %v err %v\n", dei, f, resp, err)
 		if err != nil {
 			return serr.NewErrError(err)
 		}
 		if !resp.Succeeded {
 			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
-				db.DPrintf(db.FENCEFS, "PutFile p %v nf %v f %v resp %v stale\n", p, nf, f, resp)
+				db.DPrintf(db.FENCEFS, "PutFile dei %v f %v resp %v stale\n", dei, f, resp)
 				return serr.NewErr(serr.TErrStale, f)
 			}
-			db.DPrintf(db.ERROR, "PutFile failed %v %v %v\n", p, nf, resp.Responses[0])
+			db.DPrintf(db.ERROR, "PutFile failed dei %v %v\n", dei, resp.Responses[0])
 		}
 
 		return nil
 	}
 }
 
-func (fs *FsEtcd) readDir(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, *serr.Err) {
-	if de, ok := fs.dc.lookup(p); ok && (stat == TSTAT_NONE || de.stat == TSTAT_STAT) {
+func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, *serr.Err) {
+	if de, ok := fs.dc.lookup(dei.Path); ok && (stat == TSTAT_NONE || de.stat == TSTAT_STAT) {
 		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", de.dir)
 		return de.dir, de.v, nil
 	}
-	dir, v, c, err := fs.readDirEtcd(p, stat)
+	dir, v, stat, err := fs.readDirEtcd(dei, stat)
 	if err != nil {
 		return nil, v, err
 	}
-	if c == TCACHEABLE_YES {
-		fs.dc.insert(p, &dcEntry{dir, v, stat})
-	}
+	fs.dc.insert(dei.Path, &dcEntry{dir, v, stat})
 	return dir, v, nil
 }
 
-// If stat is TSTAT_STAT, stat every entry in the directory.  If entry
-// is ephemeral, stat entry and filter it out if expired.  If
-// directory contains ephemeral entries, return TCACHEABLE_NO.
-func (fs *FsEtcd) readDirEtcd(p sp.Tpath, stat Tstat) (*DirInfo, sp.TQversion, Tcacheable, *serr.Err) {
-	db.DPrintf(db.FSETCD, "readDirEtcd %v\n", p)
-	nf, v, err := fs.GetFile(p)
+// If stat is TSTAT_STAT, stat every entry in the directory.
+func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, Tstat, *serr.Err) {
+	db.DPrintf(db.FSETCD, "readDirEtcd %v %v\n", dei.Path, stat)
+	nf, v, err := fs.GetFile(dei)
 	if err != nil {
-		return nil, 0, TCACHEABLE_NO, err
+		return nil, 0, stat, err
 	}
 	dir, err := UnmarshalDir(nf.Data)
 	if err != nil {
-		return nil, 0, TCACHEABLE_NO, err
+		return nil, 0, stat, err
 	}
-	dents := sorteddir.NewSortedDir()
-	cacheable := TCACHEABLE_YES
+	dents := sortedmap.NewSortedMap[string, *DirEntInfo]()
 	update := false
+	nstat := 0
 	for _, e := range dir.Ents {
 		if e.Name == "." {
-			dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
+			dents.Insert(e.Name, NewDirEntInfoNf(nf, e.Tpath(), e.Tperm(), e.TclntId(), e.TleaseId()))
+			nstat += 1
 		} else {
-			if e.Tperm().IsEphemeral() || stat == TSTAT_STAT {
-				// if file is emphemeral, etcd may have expired it, so
-				// check if it still exists; if not, don't return the
-				// entry.
-				nf, _, err := fs.GetFile(e.Tpath())
+			di := NewDirEntInfo(e.Tpath(), e.Tperm(), e.TclntId(), e.TleaseId())
+			if di.LeaseId.IsLeased() {
+				// if file is leased, etcd may have expired it when
+				// named didn't cache the directory, check if its
+				// leased key still exists.
+				_, err := fs.getLeasedPathName(fs.leasedkey(di))
 				if err != nil {
-					db.DPrintf(db.FSETCD, "readDir: expired %v err %v\n", e.Name, err)
+					db.DPrintf(db.FSETCD, "readDir: expired %q %v err %v\n", e.Name, e.Tperm(), err)
 					update = true
 					continue
 				}
-				if e.Tperm().IsEphemeral() {
-					db.DPrintf(db.FSETCD, "readDir: %v ephemeral; not cacheable %v\n", e.Name, e.Tperm())
-					cacheable = TCACHEABLE_NO
-				}
-				dents.Insert(e.Name, DirEntInfo{nf, e.Tpath(), e.Tperm()})
-			} else {
-				dents.Insert(e.Name, DirEntInfo{nil, e.Tpath(), e.Tperm()})
 			}
+			if stat == TSTAT_STAT {
+				nf, _, err := fs.GetFile(di)
+				if err != nil {
+					db.DPrintf(db.ERROR, "readDir: stat entry %v %v err %v\n", e.Name, e.Tperm(), err)
+					continue
+				}
+				nstat += 1
+				di.Nf = nf
+			}
+			dents.Insert(e.Name, di)
 		}
 	}
+
+	// if we stat-ed all entries, return we did so
+	if nstat == dents.Len() {
+		stat = TSTAT_STAT
+	}
+
 	di := &DirInfo{dents, nf.Tperm()}
 	if update {
-		// updateDir will succeed if the on-disk version is equal to v
-		if err := fs.updateDir(p, di, v); err != nil {
-			if err.IsErrStale() {
-				return di, v, TCACHEABLE_NO, nil
-			} else {
-				return nil, 0, TCACHEABLE_NO, err
+		if err := fs.updateDir(dei, di, v); err != nil {
+			if err.IsErrVersion() {
+				// retry?
+				return di, v, stat, nil
 			}
+			return nil, 0, stat, err
 		}
 		v = v + 1
 	}
-	return di, v, cacheable, nil
+	return di, v, stat, nil
 }
 
-func (fs *FsEtcd) updateDir(dp sp.Tpath, dir *DirInfo, v sp.TQversion) *serr.Err {
+func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) *serr.Err {
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
@@ -168,24 +216,32 @@ func (fs *FsEtcd) updateDir(dp sp.Tpath, dir *DirInfo, v sp.TQversion) *serr.Err
 	// Update directory if directory hasn't changed.
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dp)), "=", int64(v))}
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 	ops := []clientv3.Op{
-		clientv3.OpPut(fs.path2key(fs.realm, dp), string(d1))}
-	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
-	db.DPrintf(db.FSETCD, "updateDir %v %v %v %v err %v\n", dp, dir, v, resp, err)
+		clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
+	ops1 := []clientv3.Op{
+		clientv3.OpGet(fs.fencekey),
+		clientv3.OpGet(fs.path2key(fs.realm, dei))}
+	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
+	db.DPrintf(db.FSETCD, "updateDir %v %v %v %v err %v\n", dei.Path, dir, v, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		db.DPrintf(db.FSETCD, "updateDir %v %v %v %v stale\n", dp, dir, v, resp)
-		return serr.NewErr(serr.TErrStale, dp)
+		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
+			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+			db.DPrintf(db.FSETCD, "updateDir %v stale\n", fs.fencekey)
+			return serr.NewErr(serr.TErrStale, fs.fencekey)
+		}
+		db.DPrintf(db.FSETCD, "updateDir %v version mismatch %v %v\n", dei.Path, v, resp.Responses[1])
+		return serr.NewErr(serr.TErrVersion, dei.Path)
 	}
 	return nil
 }
 
-func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, nf *EtcdFile) *serr.Err {
-	opts := nf.LeaseOpts()
-	b, err := proto.Marshal(nf)
+func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *DirEntInfo, npn path.Tpathname) *serr.Err {
+	opts := new.LeaseOpts()
+	b, err := proto.Marshal(new.Nf.EtcdFileProto)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
@@ -197,23 +253,42 @@ func (fs *FsEtcd) create(dp sp.Tpath, dir *DirInfo, v sp.TQversion, p sp.Tpath, 
 	// hasn't changed.
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, p)), "=", 0),
-		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dp)), "=", int64(v))}
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, new)), "=", 0),
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 	ops := []clientv3.Op{
-		clientv3.OpPut(fs.path2key(fs.realm, p), string(b), opts...),
-		clientv3.OpPut(fs.path2key(fs.realm, dp), string(d1))}
-	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
-	db.DPrintf(db.FSETCD, "Create %v %v %v with lease %x err %v\n", p, dir, resp, nf.LeaseId, err)
+		clientv3.OpPut(fs.path2key(fs.realm, new), string(b)),
+		clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
+	ops1 := []clientv3.Op{
+		clientv3.OpGet(fs.fencekey),
+		clientv3.OpGet(fs.path2key(fs.realm, new)),
+		clientv3.OpGet(fs.path2key(fs.realm, dei))}
+
+	if new.LeaseId.IsLeased() {
+		ops = append(ops, clientv3.OpPut(fs.leasedkey(new), npn.String(), opts...))
+
+	}
+	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
+	db.DPrintf(db.FSETCD, "Create new %v dei %v v %v %v err %v\n", new, dei, v, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		return serr.NewErr(serr.TErrExists, p)
+		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
+			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+			db.DPrintf(db.FSETCD, "create %v stale\n", fs.fencekey)
+			return serr.NewErr(serr.TErrStale, fs.fencekey)
+		}
+		if len(resp.Responses[1].GetResponseRange().Kvs) == 1 {
+			db.DPrintf(db.FSETCD, "create %v exists %v\n", dir, new)
+			return serr.NewErr(serr.TErrExists, fmt.Sprintf("path exists %v", fs.path2key(fs.realm, new)))
+		}
+		db.DPrintf(db.FSETCD, "create %v version mismatch %v %v\n", dei, v, resp.Responses[2])
+		return serr.NewErr(serr.TErrVersion, dei.Path)
 	}
 	return nil
 }
 
-func (fs *FsEtcd) remove(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath) *serr.Err {
+func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *DirEntInfo) *serr.Err {
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
@@ -221,57 +296,103 @@ func (fs *FsEtcd) remove(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath)
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, del)), ">", 0),
-		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, d)), "=", int64(v))}
+		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 	ops := []clientv3.Op{
 		clientv3.OpDelete(fs.path2key(fs.realm, del)),
-		clientv3.OpPut(fs.path2key(fs.realm, d), string(d1))}
+		clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
+	ops1 := []clientv3.Op{
+		clientv3.OpGet(fs.fencekey),
+		clientv3.OpGet(fs.path2key(fs.realm, del)),
+		clientv3.OpGet(fs.path2key(fs.realm, dei))}
+
+	if del.LeaseId.IsLeased() {
+		ops = append(ops, clientv3.OpDelete(fs.leasedkey(del)))
+	}
+
 	resp, err := fs.Clnt().Txn(context.TODO()).
-		If(cmp...).Then(ops...).Commit()
-	db.DPrintf(db.FSETCD, "Remove %v %v %v %v err %v\n", d, dir, del, resp, err)
+		If(cmp...).Then(ops...).Else(ops1...).Commit()
+	db.DPrintf(db.FSETCD, "Remove dei %v %v %v %v err %v\n", dei, dir, del, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		return serr.NewErr(serr.TErrNotfound, del)
+		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
+			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+			db.DPrintf(db.FSETCD, "remove %v stale\n", fs.fencekey)
+			return serr.NewErr(serr.TErrStale, fs.fencekey)
+		}
+		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
+			db.DPrintf(db.FSETCD, "remove from %v doesn't exist\n", del)
+			return serr.NewErr(serr.TErrNotfound, del.Path)
+		}
+		db.DPrintf(db.FSETCD, "remove %v version mismatch %v %v\n", dei, v, resp.Responses[2])
+		return serr.NewErr(serr.TErrVersion, dei.Path)
 	}
 	return nil
 }
 
 // XXX retry
-func (fs *FsEtcd) rename(d sp.Tpath, dir *DirInfo, v sp.TQversion, del sp.Tpath) *serr.Err {
+func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) *serr.Err {
+	opts := from.LeaseOpts()
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return r
 	}
 	var cmp []clientv3.Cmp
 	var ops []clientv3.Op
-	if del != 0 {
+	ops1 := []clientv3.Op{
+		clientv3.OpGet(fs.fencekey),
+		clientv3.OpGet(fs.path2key(fs.realm, from)),
+		clientv3.OpGet(fs.path2key(fs.realm, dei))}
+	if del != nil {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, from)), ">", 0),
 			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, del)), ">", 0),
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, d)), "=", int64(v))}
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 		ops = []clientv3.Op{
 			clientv3.OpDelete(fs.path2key(fs.realm, del)),
-			clientv3.OpPut(fs.path2key(fs.realm, d), string(d1))}
+			clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	} else {
 		cmp = []clientv3.Cmp{
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, d)), "=", int64(v))}
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, from)), ">", 0),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
 		ops = []clientv3.Op{
-			clientv3.OpPut(fs.path2key(fs.realm, d), string(d1))}
+			clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	}
-	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
-	db.DPrintf(db.FSETCD, "Rename %v %v %v err %v\n", d, dir, resp, err)
+
+	if from.LeaseId.IsLeased() {
+		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
+	}
+
+	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
+	db.DPrintf(db.FSETCD, "Rename dei %v dir %v from %v %v err %v\n", dei, dir, from, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		return serr.NewErr(serr.TErrNotfound, d)
+		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
+			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+			db.DPrintf(db.FSETCD, "rename %v stale\n", fs.fencekey)
+			return serr.NewErr(serr.TErrStale, fs.fencekey)
+		}
+		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
+			db.DPrintf(db.FSETCD, "rename from %v doesn't exist\n", from)
+			return serr.NewErr(serr.TErrNotfound, from.Path)
+		}
+		if len(resp.Responses[2].GetResponseRange().Kvs) == 1 &&
+			int64(v) != resp.Responses[2].GetResponseRange().Kvs[0].Version {
+			db.DPrintf(db.FSETCD, "rename %v version mismatch %v %v\n", dei, v, resp.Responses[2])
+			return serr.NewErr(serr.TErrVersion, dei.Path)
+		}
+		return serr.NewErr(serr.TErrNotfound, del.Path)
 	}
 	return nil
 }
 
 // XXX retry
-func (fs *FsEtcd) renameAt(df sp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sp.Tpath, dirt *DirInfo, vt sp.TQversion, del sp.Tpath) *serr.Err {
+func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, deit *DirEntInfo, dirt *DirInfo, vt sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) *serr.Err {
+	opts := from.LeaseOpts()
 	bf, r := marshalDirInfo(dirf)
 	if r != nil {
 		return r
@@ -282,36 +403,67 @@ func (fs *FsEtcd) renameAt(df sp.Tpath, dirf *DirInfo, vf sp.TQversion, dt sp.Tp
 	}
 	var cmp []clientv3.Cmp
 	var ops []clientv3.Op
-	if del != 0 {
+	ops1 := []clientv3.Op{
+		clientv3.OpGet(fs.fencekey),
+		clientv3.OpGet(fs.path2key(fs.realm, from)),
+		clientv3.OpGet(fs.path2key(fs.realm, deif)),
+		clientv3.OpGet(fs.path2key(fs.realm, deit))}
+	if del != nil {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, from)), ">", 0),
 			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, del)), ">", 0),
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, df)), "=", int64(vf)),
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dt)), "=", int64(vt)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, deif)), "=", int64(vf)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, deit)), "=", int64(vt)),
 		}
 		ops = []clientv3.Op{
 			clientv3.OpDelete(fs.path2key(fs.realm, del)),
-			clientv3.OpPut(fs.path2key(fs.realm, df), string(bf)),
-			clientv3.OpPut(fs.path2key(fs.realm, dt), string(bt)),
+			clientv3.OpPut(fs.path2key(fs.realm, deif), string(bf)),
+			clientv3.OpPut(fs.path2key(fs.realm, deit), string(bt)),
 		}
 	} else {
 		cmp = []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, df)), "=", int64(vf)),
-			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dt)), "=", int64(vt)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, from)), ">", 0),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, deif)), "=", int64(vf)),
+			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, deit)), "=", int64(vt)),
 		}
 		ops = []clientv3.Op{
-			clientv3.OpPut(fs.path2key(fs.realm, df), string(bf)),
-			clientv3.OpPut(fs.path2key(fs.realm, dt), string(bt)),
+			clientv3.OpPut(fs.path2key(fs.realm, deif), string(bf)),
+			clientv3.OpPut(fs.path2key(fs.realm, deit), string(bt)),
 		}
 	}
-	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Commit()
+
+	if from.LeaseId.IsLeased() {
+		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
+	}
+
+	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "RenameAt %v %v err %v\n", del, resp, err)
 	if err != nil {
 		return serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		return serr.NewErr(serr.TErrNotfound, del)
+		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
+			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+			db.DPrintf(db.FSETCD, "renameat %v stale\n", fs.fencekey)
+			return serr.NewErr(serr.TErrStale, fs.fencekey)
+		}
+		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
+			db.DPrintf(db.FSETCD, "renameat from %v doesn't exist\n", from)
+			return serr.NewErr(serr.TErrNotfound, from.Path)
+		}
+		if len(resp.Responses[2].GetResponseRange().Kvs) == 1 &&
+			int64(vf) != resp.Responses[2].GetResponseRange().Kvs[0].Version {
+			db.DPrintf(db.FSETCD, "renameat %v version mismatch %v %v\n", deif, vf, resp.Responses[2])
+			return serr.NewErr(serr.TErrVersion, deif.Path)
+		}
+		if len(resp.Responses[3].GetResponseRange().Kvs) == 1 &&
+			int64(vf) != resp.Responses[3].GetResponseRange().Kvs[0].Version {
+			db.DPrintf(db.FSETCD, "renameat %v version mismatch %v %v\n", deit, vt, resp.Responses[3])
+			return serr.NewErr(serr.TErrVersion, deit.Path)
+		}
+		return serr.NewErr(serr.TErrNotfound, del.Path)
 	}
 	return nil
 }

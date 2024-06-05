@@ -4,7 +4,7 @@ package mr
 import (
 	"errors"
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -123,11 +123,11 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.intOutdir = string(b)
 
-	c.mft, err = fttasks.NewFtTasks(c.FsLib, MRDIRTOP, path.Join(c.job, "/mtasks"))
+	c.mft, err = fttasks.NewFtTasks(c.FsLib, MRDIRTOP, filepath.Join(c.job, "/mtasks"))
 	if err != nil {
 		db.DFatalf("NewFtTasks mtasks %v", err)
 	}
-	c.rft, err = fttasks.NewFtTasks(c.FsLib, MRDIRTOP, path.Join(c.job, "/rtasks"))
+	c.rft, err = fttasks.NewFtTasks(c.FsLib, MRDIRTOP, filepath.Join(c.job, "/rtasks"))
 	if err != nil {
 		db.DFatalf("NewFtTasks rtasks %v", err)
 	}
@@ -147,7 +147,6 @@ func NewCoord(args []string) (*Coord, error) {
 func (c *Coord) newTask(bin string, args []string, mb proc.Tmem, allowedPaths []string) *proc.Proc {
 	pid := sp.GenPid(bin + "-" + c.job)
 	p := proc.NewProcPid(pid, bin, args)
-	p.SetAllowedPaths(allowedPaths)
 	//	if mb > 0 {
 	//		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
 	//	}
@@ -160,7 +159,7 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem, allowedPaths []
 
 func (c *Coord) mapperProc(task string) *proc.Proc {
 	input := c.mft.TaskPathName(task)
-	allowedPaths := []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.S3, "*"), path.Join(sp.UX, "*")}
+	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
 	mapperbin := c.mapperbin
 	// If running with malicious mappers, roll the dice and see if we should
 	// spawn a benign mapper or a malicious one.
@@ -186,7 +185,7 @@ func (c *Coord) reducerProc(tn string) *proc.Proc {
 	in := ReduceIn(c.job) + "/" + t.Task
 	outlink := ReduceOut(c.job) + t.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
-	allowedPaths := []string{sp.NAMED, path.Join(sp.SCHEDD, "*"), path.Join(sp.S3, "*"), path.Join(sp.UX, "*")}
+	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
 	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
 }
 
@@ -258,7 +257,7 @@ func newStringSlice(data []interface{}) []string {
 
 func (c *Coord) startTasks(ft *fttasks.FtTasks, ch chan Tresult, f func(string) *proc.Proc) int {
 	start := time.Now()
-	tns, _, err := ft.GetTasks()
+	tns, err := ft.GetTasks()
 	if err != nil {
 		db.DFatalf("startTasks err %v\n", err)
 	}

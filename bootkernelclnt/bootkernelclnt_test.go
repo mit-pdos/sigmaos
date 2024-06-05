@@ -1,7 +1,7 @@
 package bootkernelclnt_test
 
 import (
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -16,7 +16,7 @@ import (
 )
 
 //
-// Tests automounting and ephemeral files with a kernel with all services
+// Tests automounting and leased files with a kernel with all services
 //
 
 func TestCompile(t *testing.T) {
@@ -164,13 +164,13 @@ func TestSymlink3(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestEphemeral(t *testing.T) {
+func TestLeased(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
-	name := path.Join(sp.SCHEDD, "~any")
+	name := filepath.Join(sp.SCHEDD, "~any")
 
 	var err error
 
@@ -178,15 +178,16 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name)
 
 	// check if b is indeed reasonable mounting file
-	_, error := sp.NewMount(b)
-	assert.Nil(t, error, "NewMount")
+	_, error := sp.NewEndpointFromBytes(b)
+	assert.Nil(t, error, "NewEndpoint")
 
+	db.DPrintf(db.TEST, "Try GetDir on %v", name+"/")
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")
 
 	// 5: .statsd, pids, rpc, and running
 	db.DPrintf(db.TEST, "entries %v\n", sp.Names(sts))
-	assert.Equal(t, 4, len(sts), "Unexpected len(sts) != %v:", 4, sp.Names(sts))
+	assert.Equal(t, 4, len(sts), "Unexpected len(sts) %v != %v:", sp.Names(sts), 4)
 
 	ts.KillOne(sp.SCHEDDREL)
 

@@ -1,7 +1,7 @@
 package leadertest
 
 import (
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +24,7 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []sp.Tpid) {
 	pids := []sp.Tpid{}
 
 	ts.RmDir(DIR)
-	fn := path.Join(DIR, OUT)
+	fn := filepath.Join(DIR, OUT)
 
 	ts.Remove(LEADERFN)
 	err := ts.MkDir(DIR, 0777)

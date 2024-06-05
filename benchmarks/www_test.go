@@ -2,7 +2,7 @@ package benchmarks_test
 
 import (
 	"net"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -59,7 +59,7 @@ func NewWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype s
 		ji.k8ssrvaddr = ip + K8S_PORT
 	}
 
-	ji.sempath = path.Join(www.JobDir(ji.job), "kvclerk-sem")
+	ji.sempath = filepath.Join(www.JobDir(ji.job), "kvclerk-sem")
 	ji.sem = semclnt.NewSemClnt(ts.FsLib, ji.sempath)
 	err := ji.sem.Init(0)
 	assert.Nil(ji.Ts.T, err, "Sem init: %v", err)
@@ -78,7 +78,7 @@ func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 		assert.Nil(ji.Ts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 		port, err := strconv.Atoi(po)
 		assert.Nil(ji.Ts.T, err, "Err parse port %v: %v", po, err)
-		addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port), ji.ProcEnv().GetNet())
+		addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
 		clnt = www.NewWWWClntAddr([]*sp.Taddr{addr})
 	}
 	var latency time.Duration

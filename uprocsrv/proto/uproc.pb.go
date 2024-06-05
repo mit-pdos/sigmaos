@@ -11,6 +11,7 @@ import (
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	proc "sigmaos/proc"
+	sigmap "sigmaos/sigmap"
 	sync "sync"
 )
 
@@ -200,24 +201,388 @@ func (x *AssignResult) GetOK() bool {
 	return false
 }
 
+type WarmBinRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	RealmStr  string   `protobuf:"bytes,1,opt,name=realmStr,proto3" json:"realmStr,omitempty"`
+	Program   string   `protobuf:"bytes,2,opt,name=program,proto3" json:"program,omitempty"`
+	PidStr    string   `protobuf:"bytes,3,opt,name=pidStr,proto3" json:"pidStr,omitempty"`
+	SigmaPath []string `protobuf:"bytes,4,rep,name=sigmaPath,proto3" json:"sigmaPath,omitempty"`
+}
+
+func (x *WarmBinRequest) Reset() {
+	*x = WarmBinRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_uprocsrv_proto_uproc_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WarmBinRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WarmBinRequest) ProtoMessage() {}
+
+func (x *WarmBinRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_uprocsrv_proto_uproc_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WarmBinRequest.ProtoReflect.Descriptor instead.
+func (*WarmBinRequest) Descriptor() ([]byte, []int) {
+	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *WarmBinRequest) GetRealmStr() string {
+	if x != nil {
+		return x.RealmStr
+	}
+	return ""
+}
+
+func (x *WarmBinRequest) GetProgram() string {
+	if x != nil {
+		return x.Program
+	}
+	return ""
+}
+
+func (x *WarmBinRequest) GetPidStr() string {
+	if x != nil {
+		return x.PidStr
+	}
+	return ""
+}
+
+func (x *WarmBinRequest) GetSigmaPath() []string {
+	if x != nil {
+		return x.SigmaPath
+	}
+	return nil
+}
+
+type WarmBinResult struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	OK bool `protobuf:"varint,1,opt,name=oK,proto3" json:"oK,omitempty"`
+}
+
+func (x *WarmBinResult) Reset() {
+	*x = WarmBinResult{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_uprocsrv_proto_uproc_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WarmBinResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WarmBinResult) ProtoMessage() {}
+
+func (x *WarmBinResult) ProtoReflect() protoreflect.Message {
+	mi := &file_uprocsrv_proto_uproc_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WarmBinResult.ProtoReflect.Descriptor instead.
+func (*WarmBinResult) Descriptor() ([]byte, []int) {
+	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *WarmBinResult) GetOK() bool {
+	if x != nil {
+		return x.OK
+	}
+	return false
+}
+
+type FetchRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Prog    string `protobuf:"bytes,1,opt,name=prog,proto3" json:"prog,omitempty"`
+	ChunkId int32  `protobuf:"varint,2,opt,name=chunkId,proto3" json:"chunkId,omitempty"`
+	Size    uint64 `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`
+	Pid     uint32 `protobuf:"varint,4,opt,name=pid,proto3" json:"pid,omitempty"`
+}
+
+func (x *FetchRequest) Reset() {
+	*x = FetchRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_uprocsrv_proto_uproc_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *FetchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FetchRequest) ProtoMessage() {}
+
+func (x *FetchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_uprocsrv_proto_uproc_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FetchRequest.ProtoReflect.Descriptor instead.
+func (*FetchRequest) Descriptor() ([]byte, []int) {
+	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *FetchRequest) GetProg() string {
+	if x != nil {
+		return x.Prog
+	}
+	return ""
+}
+
+func (x *FetchRequest) GetChunkId() int32 {
+	if x != nil {
+		return x.ChunkId
+	}
+	return 0
+}
+
+func (x *FetchRequest) GetSize() uint64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *FetchRequest) GetPid() uint32 {
+	if x != nil {
+		return x.Pid
+	}
+	return 0
+}
+
+type FetchResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Size uint64 `protobuf:"varint,1,opt,name=size,proto3" json:"size,omitempty"`
+}
+
+func (x *FetchResponse) Reset() {
+	*x = FetchResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_uprocsrv_proto_uproc_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *FetchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FetchResponse) ProtoMessage() {}
+
+func (x *FetchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_uprocsrv_proto_uproc_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FetchResponse.ProtoReflect.Descriptor instead.
+func (*FetchResponse) Descriptor() ([]byte, []int) {
+	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *FetchResponse) GetSize() uint64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+type LookupRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Prog string `protobuf:"bytes,1,opt,name=prog,proto3" json:"prog,omitempty"`
+	Pid  uint32 `protobuf:"varint,2,opt,name=pid,proto3" json:"pid,omitempty"`
+}
+
+func (x *LookupRequest) Reset() {
+	*x = LookupRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_uprocsrv_proto_uproc_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *LookupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LookupRequest) ProtoMessage() {}
+
+func (x *LookupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_uprocsrv_proto_uproc_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LookupRequest.ProtoReflect.Descriptor instead.
+func (*LookupRequest) Descriptor() ([]byte, []int) {
+	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *LookupRequest) GetProg() string {
+	if x != nil {
+		return x.Prog
+	}
+	return ""
+}
+
+func (x *LookupRequest) GetPid() uint32 {
+	if x != nil {
+		return x.Pid
+	}
+	return 0
+}
+
+type LookupResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Stat *sigmap.TstatProto `protobuf:"bytes,1,opt,name=stat,proto3" json:"stat,omitempty"`
+}
+
+func (x *LookupResponse) Reset() {
+	*x = LookupResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_uprocsrv_proto_uproc_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *LookupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LookupResponse) ProtoMessage() {}
+
+func (x *LookupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_uprocsrv_proto_uproc_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LookupResponse.ProtoReflect.Descriptor instead.
+func (*LookupResponse) Descriptor() ([]byte, []int) {
+	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *LookupResponse) GetStat() *sigmap.TstatProto {
+	if x != nil {
+		return x.Stat
+	}
+	return nil
+}
+
 var File_uprocsrv_proto_uproc_proto protoreflect.FileDescriptor
 
 var file_uprocsrv_proto_uproc_proto_rawDesc = []byte{
 	0x0a, 0x1a, 0x75, 0x70, 0x72, 0x6f, 0x63, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
 	0x2f, 0x75, 0x70, 0x72, 0x6f, 0x63, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x0f, 0x70, 0x72,
-	0x6f, 0x63, 0x2f, 0x70, 0x72, 0x6f, 0x63, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x36, 0x0a,
-	0x0a, 0x52, 0x75, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x28, 0x0a, 0x09, 0x70,
-	0x72, 0x6f, 0x63, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0a,
-	0x2e, 0x50, 0x72, 0x6f, 0x63, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x63,
-	0x50, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x0b, 0x0a, 0x09, 0x52, 0x75, 0x6e, 0x52, 0x65, 0x73, 0x75,
-	0x6c, 0x74, 0x22, 0x2b, 0x0a, 0x0d, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x53, 0x74, 0x72, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x53, 0x74, 0x72, 0x22,
-	0x1e, 0x0a, 0x0c, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12,
-	0x0e, 0x0a, 0x02, 0x6f, 0x4b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x4b, 0x42,
-	0x18, 0x5a, 0x16, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x75, 0x70, 0x72, 0x6f, 0x63,
-	0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x6f, 0x63, 0x2f, 0x70, 0x72, 0x6f, 0x63, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x13, 0x73,
+	0x69, 0x67, 0x6d, 0x61, 0x70, 0x2f, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x70, 0x2e, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x22, 0x36, 0x0a, 0x0a, 0x52, 0x75, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x28, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x63, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x50, 0x72, 0x6f, 0x63, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52,
+	0x09, 0x70, 0x72, 0x6f, 0x63, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x0b, 0x0a, 0x09, 0x52, 0x75,
+	0x6e, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x2b, 0x0a, 0x0d, 0x41, 0x73, 0x73, 0x69, 0x67,
+	0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x61, 0x6c,
+	0x6d, 0x53, 0x74, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x61, 0x6c,
+	0x6d, 0x53, 0x74, 0x72, 0x22, 0x1e, 0x0a, 0x0c, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x52, 0x65,
+	0x73, 0x75, 0x6c, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x4b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08,
+	0x52, 0x02, 0x6f, 0x4b, 0x22, 0x7c, 0x0a, 0x0e, 0x57, 0x61, 0x72, 0x6d, 0x42, 0x69, 0x6e, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x53,
+	0x74, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x53,
+	0x74, 0x72, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x12, 0x16, 0x0a, 0x06,
+	0x70, 0x69, 0x64, 0x53, 0x74, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x70, 0x69,
+	0x64, 0x53, 0x74, 0x72, 0x12, 0x1c, 0x0a, 0x09, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x50, 0x61, 0x74,
+	0x68, 0x18, 0x04, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x50, 0x61,
+	0x74, 0x68, 0x22, 0x1f, 0x0a, 0x0d, 0x57, 0x61, 0x72, 0x6d, 0x42, 0x69, 0x6e, 0x52, 0x65, 0x73,
+	0x75, 0x6c, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x4b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52,
+	0x02, 0x6f, 0x4b, 0x22, 0x62, 0x0a, 0x0c, 0x46, 0x65, 0x74, 0x63, 0x68, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x72, 0x6f, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x04, 0x70, 0x72, 0x6f, 0x67, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x68, 0x75, 0x6e, 0x6b,
+	0x49, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x63, 0x68, 0x75, 0x6e, 0x6b, 0x49,
+	0x64, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x04, 0x52,
+	0x04, 0x73, 0x69, 0x7a, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x70, 0x69, 0x64, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x0d, 0x52, 0x03, 0x70, 0x69, 0x64, 0x22, 0x23, 0x0a, 0x0d, 0x46, 0x65, 0x74, 0x63, 0x68,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a, 0x65,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x22, 0x35, 0x0a, 0x0d,
+	0x4c, 0x6f, 0x6f, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a,
+	0x04, 0x70, 0x72, 0x6f, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x72, 0x6f,
+	0x67, 0x12, 0x10, 0x0a, 0x03, 0x70, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x03,
+	0x70, 0x69, 0x64, 0x22, 0x31, 0x0a, 0x0e, 0x4c, 0x6f, 0x6f, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1f, 0x0a, 0x04, 0x73, 0x74, 0x61, 0x74, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x54, 0x73, 0x74, 0x61, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f,
+	0x52, 0x04, 0x73, 0x74, 0x61, 0x74, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f,
+	0x73, 0x2f, 0x75, 0x70, 0x72, 0x6f, 0x63, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -232,21 +597,29 @@ func file_uprocsrv_proto_uproc_proto_rawDescGZIP() []byte {
 	return file_uprocsrv_proto_uproc_proto_rawDescData
 }
 
-var file_uprocsrv_proto_uproc_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_uprocsrv_proto_uproc_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_uprocsrv_proto_uproc_proto_goTypes = []interface{}{
-	(*RunRequest)(nil),     // 0: RunRequest
-	(*RunResult)(nil),      // 1: RunResult
-	(*AssignRequest)(nil),  // 2: AssignRequest
-	(*AssignResult)(nil),   // 3: AssignResult
-	(*proc.ProcProto)(nil), // 4: ProcProto
+	(*RunRequest)(nil),        // 0: RunRequest
+	(*RunResult)(nil),         // 1: RunResult
+	(*AssignRequest)(nil),     // 2: AssignRequest
+	(*AssignResult)(nil),      // 3: AssignResult
+	(*WarmBinRequest)(nil),    // 4: WarmBinRequest
+	(*WarmBinResult)(nil),     // 5: WarmBinResult
+	(*FetchRequest)(nil),      // 6: FetchRequest
+	(*FetchResponse)(nil),     // 7: FetchResponse
+	(*LookupRequest)(nil),     // 8: LookupRequest
+	(*LookupResponse)(nil),    // 9: LookupResponse
+	(*proc.ProcProto)(nil),    // 10: ProcProto
+	(*sigmap.TstatProto)(nil), // 11: TstatProto
 }
 var file_uprocsrv_proto_uproc_proto_depIdxs = []int32{
-	4, // 0: RunRequest.procProto:type_name -> ProcProto
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	10, // 0: RunRequest.procProto:type_name -> ProcProto
+	11, // 1: LookupResponse.stat:type_name -> TstatProto
+	2,  // [2:2] is the sub-list for method output_type
+	2,  // [2:2] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_uprocsrv_proto_uproc_proto_init() }
@@ -303,6 +676,78 @@ func file_uprocsrv_proto_uproc_proto_init() {
 				return nil
 			}
 		}
+		file_uprocsrv_proto_uproc_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*WarmBinRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_uprocsrv_proto_uproc_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*WarmBinResult); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_uprocsrv_proto_uproc_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*FetchRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_uprocsrv_proto_uproc_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*FetchResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_uprocsrv_proto_uproc_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*LookupRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_uprocsrv_proto_uproc_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*LookupResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -310,7 +755,7 @@ func file_uprocsrv_proto_uproc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_uprocsrv_proto_uproc_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -2,11 +2,12 @@ package sigmasrv
 
 import (
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/rpcsrv"
 	"sigmaos/serr"
 	"sigmaos/sessp"
+	sp "sigmaos/sigmap"
 )
 
 //
@@ -26,9 +27,17 @@ type rpcSession struct {
 	rpcs *rpcsrv.RPCSrv
 }
 
-func (rd *rpcDev) newRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.Inode, *serr.Err) {
+func (rd *rpcDev) newRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.FsObj, *serr.Err) {
 	rpc := &rpcSession{rpcs: rd.rpcs, Inode: mfs.NewDevInode()}
 	return rpc, nil
+}
+
+func (rpc *rpcSession) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := rpc.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 func (rpc *rpcSession) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {

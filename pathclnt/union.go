@@ -2,14 +2,16 @@ package pathclnt
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/fidclnt"
+	"sigmaos/path"
 	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) IsLocalMount(mnt sp.Tmount) (bool, error) {
+func (pathc *PathClnt) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
 	outerIP := pathc.pe.GetOuterContainerIP()
-	tip, _ := mnt.TargetIPPort(0)
+	tip, _ := ep.TargetIPPort(0)
 	if tip == "" {
 		tip = outerIP
 	}
@@ -28,19 +30,19 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 	}
 	defer pathc.FidClnt.Clunk(fid1)
 
-	target, err := pathc.readlink(fid1)
+	target, err := pathc.FidClnt.GetFile(fid1, path.Tpathname{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.WALK, "unionScan: Err readlink %v\n", err)
 		return sp.NoFid, err
 	}
-	db.DPrintf(db.WALK, "unionScan: %v target: %v\n", name, string(target))
-	mnt, err := sp.NewMount(target)
-	if err != nil {
+	db.DPrintf(db.WALK, "unionScan: %v", name)
+	ep, r := sp.NewEndpointFromBytes(target)
+	if r != nil {
 		db.DPrintf(db.WALK, "unionScan NewMount err %v", err)
-		return sp.NoFid, nil
+		return sp.NoFid, serr.NewErrError(r)
 	}
-	db.DPrintf(db.WALK, "unionScan: %v mnt: %v\n", name, mnt)
-	ok, _ := pathc.IsLocalMount(mnt)
+	db.DPrintf(db.WALK, "unionScan: %v ep: %v", name, ep)
+	ok, _ := pathc.IsLocalMount(ep)
 	if q == "~any" || ok {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {
@@ -61,10 +63,10 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *serr.Err) {
 		return sp.NoFid, err
 	}
 	rdr := reader.NewReader(newRdr(pathc.FidClnt, fid, sp.NullFence()), "")
-	drdr := reader.MkDirReader(rdr)
+	drdr := reader.MkDirEntsReader(rdr)
 	rfid := sp.NoFid
 	db.DPrintf(db.WALK, "unionLookup ReadDir %v search %v fid %v", fid, q, fid)
-	_, error := reader.ReadDir(drdr, func(st *sp.Stat) (bool, error) {
+	_, error := reader.ReadDirEnts(drdr, func(st *sp.Stat) (bool, error) {
 		db.DPrintf(db.WALK, "unionScan %v check %v", q, st.Name)
 		fid1, err := pathc.unionScan(fid, st.Name, q)
 		if err != nil {
@@ -83,4 +85,26 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *serr.Err) {
 	}
 	db.DPrintf(db.WALK, "unionLookup error ReadDir fid %v rfid %v err %v", fid, rfid, error)
 	return rfid, serr.NewErr(serr.TErrNotfound, q)
+}
+
+type rdr struct {
+	*fidclnt.FidClnt
+	fid sp.Tfid
+	f   *sp.Tfence
+}
+
+func newRdr(fdc *fidclnt.FidClnt, fid sp.Tfid, f *sp.Tfence) *rdr {
+	return &rdr{fdc, fid, f}
+}
+
+func (rd *rdr) Close() error {
+	return rd.FidClnt.Clunk(rd.fid)
+}
+
+func (rd *rdr) Read(o sp.Toffset, b []byte) (int, error) {
+	n, err := rd.ReadF(rd.fid, o, b, rd.f)
+	if err != nil {
+		return int(n), err
+	}
+	return int(n), nil
 }

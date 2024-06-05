@@ -4,9 +4,8 @@ package bootkernelclnt
 import (
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
@@ -22,13 +21,11 @@ const (
 	K_OUT_DIR = "/tmp/sigmaos-kernel-start-logs"
 )
 
-func Start(kernelId string, pe *proc.ProcEnv, srvs string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (string, error) {
+func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overlays, gvisor, netproxy bool) (string, error) {
 	args := []string{
 		"--pull", pe.BuildTag,
 		"--boot", srvs,
-		"--named", pe.EtcdIP,
-		"--pubkey", masterPubKey.Marshal(),
-		"--privkey", masterPrivKey.Marshal(),
+		"--named", etcdIP.String(),
 		"--host",
 	}
 	if overlays {
@@ -37,17 +34,20 @@ func Start(kernelId string, pe *proc.ProcEnv, srvs string, overlays, gvisor bool
 	if gvisor {
 		args = append(args, "--gvisor")
 	}
+	if netproxy {
+		args = append(args, "--usenetproxy")
+	}
 	args = append(args, kernelId)
 	// Ensure the kernel output directory has been created
 	os.Mkdir(K_OUT_DIR, 0777)
-	ofilePath := path.Join(K_OUT_DIR, kernelId+".stdout")
+	ofilePath := filepath.Join(K_OUT_DIR, kernelId+".stdout")
 	ofile, err := os.Create(ofilePath)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Create out file %v", ofilePath)
 		return "", err
 	}
 	defer ofile.Close()
-	efilePath := path.Join(K_OUT_DIR, kernelId+".stderr")
+	efilePath := filepath.Join(K_OUT_DIR, kernelId+".stderr")
 	efile, err := os.Create(efilePath)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Create out file %v", ofilePath)
@@ -72,7 +72,7 @@ func Start(kernelId string, pe *proc.ProcEnv, srvs string, overlays, gvisor bool
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v", kernelId, srvs, ip, overlays, gvisor)
+	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v netproxy %v", kernelId, srvs, ip, overlays, gvisor, netproxy)
 	return ip, nil
 }
 
@@ -86,17 +86,17 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(pe *proc.ProcEnv, conf string, overlays, gvisor bool, masterPubKey auth.PublicKey, masterPrivKey auth.PrivateKey) (*Kernel, error) {
+func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, overlays, gvisor, netproxy bool) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, pe, conf, overlays, gvisor, masterPubKey, masterPrivKey)
+	_, err := Start(kernelId, etcdIP, pe, conf, overlays, gvisor, netproxy)
 	if err != nil {
 		return nil, err
 	}
-	return NewKernelClnt(kernelId, pe)
+	return NewKernelClnt(kernelId, etcdIP, pe)
 }
 
-func NewKernelClnt(kernelId string, pe *proc.ProcEnv) (*Kernel, error) {
-	db.DPrintf(db.SYSTEM, "NewKernelClnt %s\n", kernelId)
+func NewKernelClnt(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv) (*Kernel, error) {
+	db.DPrintf(db.KERNEL, "NewKernelClnt %s\n", kernelId)
 	sc, err := sigmaclnt.NewSigmaClntRootInit(pe)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "NewKernelClnt sigmaclnt err %v", err)
@@ -106,7 +106,7 @@ func NewKernelClnt(kernelId string, pe *proc.ProcEnv) (*Kernel, error) {
 	if kernelId == "" {
 		var pn1 string
 		var err error
-		if pe.EtcdIP != pe.GetOuterContainerIP().String() {
+		if etcdIP != pe.GetOuterContainerIP() {
 			// If running in a distributed setting, bootkernel clnt can be ~any
 			pn1, _, err = sc.ResolveMount(sp.BOOT + "~any")
 		} else {
@@ -117,10 +117,10 @@ func NewKernelClnt(kernelId string, pe *proc.ProcEnv) (*Kernel, error) {
 			return nil, err
 		}
 		pn = pn1
-		kernelId = path.Base(pn)
+		kernelId = filepath.Base(pn)
 	}
 
-	db.DPrintf(db.SYSTEM, "NewKernelClnt %s %s\n", pn, kernelId)
+	db.DPrintf(db.KERNEL, "NewKernelClnt %s %s\n", pn, kernelId)
 	kclnt, err := kernelclnt.NewKernelClnt(sc.FsLib, pn)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error NewKernelClnt %v", err)
@@ -134,11 +134,11 @@ func (k *Kernel) NewSigmaClnt(pe *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 }
 
 func (k *Kernel) Shutdown() error {
-	db.DPrintf(db.SYSTEM, "Shutdown kernel %s", k.kernelId)
-	k.SigmaClnt.StopMonitoringSrvs()
-	db.DPrintf(db.SYSTEM, "Stopped monitoring srvs kernelclnt %v", k.kernelId)
+	db.DPrintf(db.KERNEL, "Shutdown kernel %s", k.kernelId)
+	k.SigmaClnt.StopWatchingSrvs()
+	db.DPrintf(db.KERNEL, "Stopped watching srvs kernelclnt %v", k.kernelId)
 	err := k.kclnt.Shutdown()
-	db.DPrintf(db.SYSTEM, "Shutdown kernel %s err %v", k.kernelId, err)
+	db.DPrintf(db.KERNEL, "Shutdown kernel %s err %v", k.kernelId, err)
 	if err != nil {
 		return err
 	}

@@ -275,7 +275,7 @@ func (fct Tfcall) String() string {
 	case TRerror:
 		return "Rerror"
 	case TTopen:
-		return "Ropen"
+		return "Topen"
 	case TTcreate:
 		return "Tcreate"
 	case TTreadF:

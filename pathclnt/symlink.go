@@ -1,26 +1,28 @@
 package pathclnt
 
 import (
+	"time"
+
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
-func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path.Path, *serr.Err) {
-	// XXX change how we readlink; getfile?
-	target, err := pathc.readlink(fid)
+func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Tpathname) (path.Tpathname, *serr.Err) {
+	s := time.Now()
+	target, err := pathc.FidClnt.GetFile(fid, path.Tpathname{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.WALK, "walksymlink1 %v err %v\n", fid, err)
 		return left, err
 	}
-	var p path.Path
-	mnt, error := sp.NewMount(target)
+	var p path.Tpathname
+	ep, error := sp.NewEndpointFromBytes(target)
 	if error == nil {
-		db.DPrintf(db.WALK, "walksymlink1 %v mnt %v err %v\n", fid, mnt, err)
-		err := pathc.autoMount(pathc.FidClnt.Lookup(fid).Principal(), mnt, resolved)
+		db.DPrintf(db.WALK_LAT, "walksymlink1 %v %v %v ep %v lat %v\n", pathc.cid, fid, resolved, ep, time.Since(s))
+		err := pathc.mntclnt.AutoMount(pathc.pe.GetSecrets(), ep, resolved)
 		if err != nil {
-			db.DPrintf(db.WALK, "automount %v %v err %v\n", resolved, mnt, err)
+			db.DPrintf(db.WALK, "automount %v %v err %v\n", resolved, ep, err)
 			return left, err
 		}
 		p = append(resolved, left...)
@@ -29,21 +31,4 @@ func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Path) (path
 		p = append(path.Split(string(target)), left...)
 	}
 	return p, nil
-}
-
-func (pathc *PathClnt) autoMount(principal *sp.Tprincipal, mnt sp.Tmount, path path.Path) *serr.Err {
-	var fid sp.Tfid
-	var err *serr.Err
-
-	db.DPrintf(db.PATHCLNT, "automount %v to %v\n", mnt, path)
-	fid, err = pathc.Attach(principal, pathc.cid, mnt.Addr, path.String(), mnt.Root)
-	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "Attach error: %v", err)
-		return err
-	}
-	err = pathc.mount(fid, path.String())
-	if err != nil {
-		return err
-	}
-	return nil
 }

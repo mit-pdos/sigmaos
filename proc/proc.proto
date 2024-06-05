@@ -4,17 +4,6 @@ option go_package = "sigmaos/proc";
 import "google/protobuf/timestamp.proto";
 import "sigmap/sigmap.proto";
 
-message ProcSecretProto {
-  string iD = 1;
-  string key = 2;
-}
-
-message ProcClaimsProto {
-  string principalIDStr = 1;
-  repeated string allowedPaths = 2;
-  map<string, ProcSecretProto> secrets = 3;
-}
-
 message ProcEnvProto {
   string pidStr = 1;
   string program = 2;
@@ -22,28 +11,29 @@ message ProcEnvProto {
   Tprincipal principal = 4;
   string procDir = 5;
   string parentDir = 6;
-  string etcdIP = 7;
+  map<string, TendpointProto> etcdEndpoints = 7;
   string outerContainerIPStr = 8;
   string innerContainerIPStr = 9;
   string kernelID = 10;
   string buildTag = 11;
-  string net = 12;
-  string perf = 13;
-  string debug = 14;
-  string uprocdPIDStr = 15;
-  bool privileged = 16;
-  bool overlays = 17;
-  int64 netFail = 18;
-  int64 crash = 19;
-  int64 partition = 20;
-  int32 howInt = 21;
-  google.protobuf.Timestamp spawnTimePB = 22;
-  string strace = 23;
-  Taddr scheddAddr = 24;
-  TmountProto namedMountProto = 25;
-  bool useSigmaclntd = 26;
-  Ttoken parentToken = 27;
-  ProcClaimsProto claims = 28;
+  string perf = 12;
+  string debug = 13;
+  string uprocdPIDStr = 14;
+  bool privileged = 15;
+  bool overlays = 16;
+  int64 netFail = 17;
+  int64 crash = 18;
+  int64 partition = 19;
+  int32 howInt = 20;
+  google.protobuf.Timestamp spawnTimePB = 21;
+  string strace = 22;
+  TendpointProto scheddEndpointProto = 23;
+  TendpointProto namedEndpointProto = 24;
+  bool useSigmaclntd = 25;
+  bool useNetProxy = 26;
+  map<string, SecretProto> secretsMap = 27;
+  repeated string sigmaPath = 28;
+  repeated string kernels = 29;
 }
 
 message ProcProto {

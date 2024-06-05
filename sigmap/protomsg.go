@@ -17,7 +17,11 @@ func NewErr(msg *Rerror) *serr.Err {
 }
 
 func NewRerrorSerr(err *serr.Err) *Rerror {
-	return &Rerror{ErrCode: uint32(err.ErrCode), Obj: err.Obj, Err: err.String()}
+	r := ""
+	if err.Err != nil {
+		r = err.Err.Error()
+	}
+	return &Rerror{ErrCode: uint32(err.ErrCode), Obj: err.Obj, Err: r}
 }
 
 func NewRerrorErr(err error) *Rerror {
@@ -32,7 +36,7 @@ func NewRerrorCode(ec serr.Terror) *Rerror {
 	return &Rerror{ErrCode: uint32(ec)}
 }
 
-func NewTwalk(fid, nfid Tfid, p path.Path) *Twalk {
+func NewTwalk(fid, nfid Tfid, p path.Tpathname) *Twalk {
 	return &Twalk{Fid: uint32(fid), NewFid: uint32(nfid), Wnames: p}
 }
 
@@ -44,16 +48,16 @@ func (w *Twalk) Tnewfid() Tfid {
 	return Tfid(w.NewFid)
 }
 
-func NewTattach(fid, afid Tfid, principal *Tprincipal, cid TclntId, path path.Path) *Tattach {
-	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Principal: principal, Aname: path.String(), ClntId: uint64(cid)}
+func NewTattach(fid, afid Tfid, secrets map[string]*SecretProto, cid TclntId, path path.Tpathname) *Tattach {
+	return &Tattach{Fid: uint32(fid), Afid: uint32(afid), Secrets: secrets, Aname: path.String(), ClntId: uint64(cid)}
 }
 
 func (a *Tattach) Tfid() Tfid {
 	return Tfid(a.Fid)
 }
 
-func (a *Tattach) Tprincipal() *Tprincipal {
-	return a.Principal
+func (a *Tattach) Tafid() Tfid {
+	return Tfid(a.Afid)
 }
 
 func (a *Tattach) TclntId() TclntId {
@@ -168,55 +172,16 @@ func (r *Tremove) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func NewTstat(fid Tfid) *Tstat {
-	return &Tstat{Fid: uint32(fid)}
+func NewTrstat(fid Tfid) *Trstat {
+	return &Trstat{Fid: uint32(fid)}
 }
 
-func (s *Tstat) Tfid() Tfid {
+func (s *Trstat) Tfid() Tfid {
 	return Tfid(s.Fid)
 }
 
-func NewStatNull() *Stat {
-	st := &Stat{}
-	st.Qid = NewQid(0, 0, 0)
-	return st
-}
-
-func NewStat(qid *Tqid, perm Tperm, mtime uint32, name, owner string) *Stat {
-	st := &Stat{
-		Type:   0, // XXX
-		Qid:    qid,
-		Mode:   uint32(perm),
-		Atime:  0,
-		Mtime:  mtime,
-		Name:   name,
-		Length: 0,
-		Uid:    owner,
-		Gid:    owner,
-		Muid:   "",
-	}
-	return st
-
-}
-
-func (st *Stat) Tlength() Tlength {
-	return Tlength(st.Length)
-}
-
-func (st *Stat) Tmode() Tperm {
-	return Tperm(st.Mode)
-}
-
-func Names(sts []*Stat) []string {
-	r := []string{}
-	for _, st := range sts {
-		r = append(r, st.Name)
-	}
-	return r
-}
-
-func NewTwstat(fid Tfid, st *Stat, f *Tfence) *Twstat {
-	return &Twstat{Fid: uint32(fid), Stat: st, Fence: f.FenceProto()}
+func NewTwstat(fid Tfid, st *Tstat, f *Tfence) *Twstat {
+	return &Twstat{Fid: uint32(fid), Stat: st.StatProto(), Fence: f.FenceProto()}
 }
 
 func (w *Twstat) Tfid() Tfid {
@@ -243,7 +208,7 @@ func (r *Trenameat) Tfence() Tfence {
 	return r.Fence.Tfence()
 }
 
-func NewTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt Tsize, path path.Path, resolve bool, f *Tfence) *Tgetfile {
+func NewTgetfile(fid Tfid, mode Tmode, offset Toffset, cnt Tsize, path path.Tpathname, resolve bool, f *Tfence) *Tgetfile {
 	return &Tgetfile{Fid: uint32(fid), Mode: uint32(mode), Offset: uint64(offset), Count: uint32(cnt), Wnames: path, Resolve: resolve, Fence: f.FenceProto()}
 }
 
@@ -267,7 +232,7 @@ func (g *Tgetfile) Tfence() Tfence {
 	return g.Fence.Tfence()
 }
 
-func NewTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Path, resolve bool, lid TleaseId, f *Tfence) *Tputfile {
+func NewTputfile(fid Tfid, mode Tmode, perm Tperm, offset Toffset, path path.Tpathname, resolve bool, lid TleaseId, f *Tfence) *Tputfile {
 	return &Tputfile{Fid: uint32(fid), Mode: uint32(mode), Perm: uint32(perm), Offset: uint64(offset), Wnames: path, Resolve: resolve, Lease: uint64(lid), Fence: f.FenceProto()}
 }
 
@@ -295,7 +260,7 @@ func (p *Tputfile) Tfence() Tfence {
 	return p.Fence.Tfence()
 }
 
-func NewTremovefile(fid Tfid, path path.Path, r bool, f *Tfence) *Tremovefile {
+func NewTremovefile(fid Tfid, path path.Tpathname, r bool, f *Tfence) *Tremovefile {
 	return &Tremovefile{Fid: uint32(fid), Wnames: path, Resolve: r, Fence: f.FenceProto()}
 }
 
@@ -347,12 +312,12 @@ func (Tclunk) Type() sessp.Tfcall   { return sessp.TTclunk }
 func (Rclunk) Type() sessp.Tfcall   { return sessp.TRclunk }
 func (Tremove) Type() sessp.Tfcall  { return sessp.TTremove }
 func (Rremove) Type() sessp.Tfcall  { return sessp.TRremove }
-func (Tstat) Type() sessp.Tfcall    { return sessp.TTstat }
+func (Trstat) Type() sessp.Tfcall   { return sessp.TTstat }
 func (Twstat) Type() sessp.Tfcall   { return sessp.TTwstat }
 func (Rwstat) Type() sessp.Tfcall   { return sessp.TRwstat }
 
 // sigmaP
-func (Rstat) Type() sessp.Tfcall       { return sessp.TRstat }
+func (Rrstat) Type() sessp.Tfcall      { return sessp.TRstat }
 func (TreadF) Type() sessp.Tfcall      { return sessp.TTreadF }
 func (TwriteF) Type() sessp.Tfcall     { return sessp.TTwriteF }
 func (Trenameat) Type() sessp.Tfcall   { return sessp.TTrenameat }

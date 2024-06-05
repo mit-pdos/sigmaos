@@ -26,3 +26,5 @@ type Taddrs []*Taddr
 
 type TprincipalID string
 type Tsigner string
+
+type TTendpoint uint32

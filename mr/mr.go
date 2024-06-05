@@ -107,8 +107,8 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 	for _, st := range sts {
 		for i := uint64(0); ; {
 			n := uint64(splitsz)
-			if i+n > st.Length {
-				n = st.Length - i
+			if i+n > st.LengthUint64() {
+				n = st.LengthUint64() - i
 			}
 			split := Split{dir + "/" + st.Name, sp.Toffset(i), sp.Tlength(n)}
 			bin = append(bin, split)

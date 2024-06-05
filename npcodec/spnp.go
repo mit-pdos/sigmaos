@@ -14,7 +14,7 @@ type Fcall9P struct {
 	Msg  sessp.Tmsg
 }
 
-func sp2NpQid(spqid sp.Tqid) np.Tqid9P {
+func sp2NpQid(spqid sp.TqidProto) np.Tqid9P {
 	npqid := np.Tqid9P{}
 	npqid.Type = np.Qtype9P(spqid.Type)
 	npqid.Version = np.TQversion(spqid.Version)
@@ -22,15 +22,15 @@ func sp2NpQid(spqid sp.Tqid) np.Tqid9P {
 	return npqid
 }
 
-func np2SpQid(npqid np.Tqid9P) *sp.Tqid {
-	spqid := &sp.Tqid{}
+func np2SpQid(npqid np.Tqid9P) *sp.TqidProto {
+	spqid := &sp.TqidProto{}
 	spqid.Type = uint32(npqid.Type)
 	spqid.Version = uint32(npqid.Version)
 	spqid.Path = uint64(npqid.Path)
 	return spqid
 }
 
-func Sp2NpStat(spst *sp.Stat) *np.Stat9P {
+func Sp2NpStat(spst *sp.TstatProto) *np.Stat9P {
 	npst := &np.Stat9P{}
 	npst.Type = uint16(spst.Type)
 	npst.Dev = spst.Dev
@@ -47,7 +47,7 @@ func Sp2NpStat(spst *sp.Stat) *np.Stat9P {
 }
 
 func Np2SpStat(npst np.Stat9P) *sp.Stat {
-	spst := &sp.Stat{}
+	spst := sp.NewStatNull()
 	spst.Type = uint32(npst.Type)
 	spst.Dev = npst.Dev
 	spst.Qid = np2SpQid(npst.Qid)
@@ -83,7 +83,7 @@ func np2SpMsg(fcm *sessp.FcallMsg) {
 	switch fcm.Type() {
 	case sessp.TTattach9P:
 		m := fcm.Msg.(*np.Tattach9P)
-		r := sp.NewTattach(sp.Tfid(m.Fid), sp.Tfid(m.Afid), sp.NewPrincipal(sp.TprincipalID(m.Uname), sp.NoToken()), 0, path.Split(m.Aname))
+		r := sp.NewTattach(sp.Tfid(m.Fid), sp.Tfid(m.Afid), nil, 0, path.Split(m.Aname))
 		fcm.Msg = r
 	case sessp.TTread:
 		m := fcm.Msg.(*np.Tread)
@@ -124,5 +124,4 @@ func sp2NpMsg(fcm *sessp.FcallMsg) {
 		m := fcm.Msg.(*sp.Rerror)
 		fcm.Msg = np.Rerror9P{Ename: serr.Terror(m.ErrCode).String()}
 	}
-
 }

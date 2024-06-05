@@ -22,23 +22,23 @@ import (
 //
 
 func (fsl *FsLib) Open(path string, m sp.Tmode) (int, error) {
-	return fsl.SigmaOS.Open(path, m, sos.O_NOW)
+	return fsl.FileAPI.Open(path, m, sos.O_NOW)
 }
 
 func (fsl *FsLib) OpenWait(path string, m sp.Tmode) (int, error) {
-	return fsl.SigmaOS.Open(path, m, sos.O_WAIT)
+	return fsl.FileAPI.Open(path, m, sos.O_WAIT)
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sp.Tsize, error) {
-	return fl.SigmaOS.PutFile(fname, 0777, m, data, off, sp.NoLeaseId)
+	return fl.FileAPI.PutFile(fname, 0777, m, data, off, sp.NoLeaseId)
 }
 
 func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sp.Tsize, error) {
-	return fl.SigmaOS.PutFile(fname, perm, mode, data, 0, sp.NoLeaseId)
+	return fl.FileAPI.PutFile(fname, perm, mode, data, 0, sp.NoLeaseId)
 }
 
-func (fl *FsLib) PutFileEphemeral(fname string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, data []byte) (sp.Tsize, error) {
-	return fl.SigmaOS.PutFile(fname, perm|sp.DMTMP, mode, data, 0, lid)
+func (fl *FsLib) PutLeasedFile(fname string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, data []byte) (sp.Tsize, error) {
+	return fl.FileAPI.PutFile(fname, perm, mode, data, 0, lid)
 }
 
 //
@@ -47,16 +47,16 @@ func (fl *FsLib) PutFileEphemeral(fname string, perm sp.Tperm, mode sp.Tmode, li
 
 type FdReader struct {
 	*reader.Reader
-	sos sos.SigmaOS
+	sof sos.FileAPI
 	fd  int
 }
 
 func (rd *FdReader) Close() error {
-	return rd.sos.CloseFd(rd.fd)
+	return rd.sof.CloseFd(rd.fd)
 }
 
 func (rd *FdReader) Read(o sp.Toffset, b []byte) (int, error) {
-	sz, err := rd.sos.Read(rd.fd, b)
+	sz, err := rd.sof.Read(rd.fd, b)
 	return int(sz), err
 }
 
@@ -65,21 +65,21 @@ func (rd *FdReader) Fd() int {
 }
 
 func (rd *FdReader) Lseek(off sp.Toffset) error {
-	return rd.sos.Seek(rd.fd, off)
+	return rd.sof.Seek(rd.fd, off)
 }
 
-func newFdReader(sos sos.SigmaOS, fd int) *FdReader {
+func newFdReader(sos sos.FileAPI, fd int) *FdReader {
 	return &FdReader{nil, sos, fd}
 }
 
 func (fl *FsLib) NewReader(fd int, path string) *FdReader {
-	fdrdr := newFdReader(fl.SigmaOS, fd)
+	fdrdr := newFdReader(fl.FileAPI, fd)
 	fdrdr.Reader = reader.NewReader(fdrdr, path)
 	return fdrdr
 }
 
 func (fl *FsLib) NewWriter(fd int) *writer.Writer {
-	return writer.NewWriter(fl.SigmaOS, fd)
+	return writer.NewWriter(fl.FileAPI, fd)
 }
 
 func (fl *FsLib) OpenReader(path string) (*FdReader, error) {
@@ -133,7 +133,7 @@ func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
 }
 
 func (fl *FsLib) OpenWaitReader(path string) (*FdReader, error) {
-	fd, err := fl.SigmaOS.Open(path, sp.OREAD, sos.O_WAIT)
+	fd, err := fl.FileAPI.Open(path, sp.OREAD, sos.O_WAIT)
 	db.DPrintf(db.FSLIB, "OpenWaitReader %v err %v\n", path, err)
 	if err != nil {
 		return nil, err

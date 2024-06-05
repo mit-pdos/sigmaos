@@ -39,11 +39,11 @@ type UserSrv struct {
 	loginCounter *Counter
 }
 
-func RunUserSrv(public bool, jobname string) error {
+func RunUserSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Creating user service\n")
 	usrv := &UserSrv{}
 	usrv.sid = rand.Int31n(536870912) // 2^29
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_USER, usrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_USER, usrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func RunUserSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"username"})
 	usrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_USER)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_USER, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

@@ -1,13 +1,12 @@
 package clonedev
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
-	"sigmaos/lockmap"
+	"sigmaos/memfs/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	"sigmaos/sessdev"
@@ -41,11 +40,19 @@ func newClone(mfs *memfssrv.MemFs, dir string, news NewSessionF, d sps.DetachSes
 	}
 	pn := dir + "/" + sessdev.CLONE
 	db.DPrintf(db.CLONEDEV, "newClone %q\n", dir)
-	err := mfs.NewDev(pn, cl) // put clone file into dir <dir>
+	err := mfs.MkNod(pn, cl) // put clone file into dir <dir>
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c *Clone) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := c.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 // XXX clean up in case of error
@@ -54,7 +61,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	defer c.mu.Unlock()
 
 	sid := ctx.SessionId()
-	pn := path.Join(c.dir, sid.String())
+	pn := filepath.Join(c.dir, sid.String())
 	db.DPrintf(db.CLONEDEV, "Clone create %q\n", pn)
 	_, err := c.mfs.Create(pn, sp.DMDIR, sp.ORDWR, sp.NoLeaseId)
 	if err != nil && err.Code() != serr.TErrExists {
@@ -66,7 +73,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	if err == nil {
 		s = &session{id: sid, wctl: c.wctl}
 		s.Inode = c.mfs.NewDevInode()
-		if err := c.mfs.NewDev(ctl, s); err != nil {
+		if err := c.mfs.MkNod(ctl, s); err != nil {
 			db.DPrintf(db.CLONEDEV, "NewDev %q err %v\n", ctl, err)
 			return nil, err
 		}
@@ -77,8 +84,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 			return nil, err
 		}
 	} else {
-		// XXX should this be read-only?
-		lo, err := c.mfs.Open(ctl, sp.OREAD, lockmap.WLOCK)
+		lo, err := c.mfs.Open(ctl, sp.OREAD)
 		if err != nil {
 			db.DPrintf(db.CLONEDEV, "open %q err %v\n", ctl, err)
 			return nil, err
@@ -96,8 +102,8 @@ func (c *Clone) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 
 func (c *Clone) Detach(session sessp.Tsession) {
 	db.DPrintf(db.CLONEDEV, "Detach %v\n", session)
-	dir := path.Join(c.dir, session.String())
-	ctl := path.Join(dir, sessdev.CTL)
+	dir := filepath.Join(c.dir, session.String())
+	ctl := filepath.Join(dir, sessdev.CTL)
 	if err := c.mfs.Remove(ctl); err != nil {
 		db.DPrintf(db.CLONEDEV, "Remove %v err %v\n", ctl, err)
 	}

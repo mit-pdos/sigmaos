@@ -1,3 +1,5 @@
+// Package path manipulates pathnames and provides Tpathname to represent
+// pathnames as a slice of pathname components.
 package path
 
 import (
@@ -5,7 +7,7 @@ import (
 	"strings"
 )
 
-type Path []string
+type Tpathname []string
 
 var slash *regexp.Regexp
 
@@ -13,9 +15,9 @@ func init() {
 	slash = regexp.MustCompile(`//+`)
 }
 
-func Split(p string) Path {
+func Split(p string) Tpathname {
 	if p == "" {
-		return Path{}
+		return Tpathname{}
 	}
 	p = strings.TrimRight(p, "/")
 	p = slash.ReplaceAllString(p, "/")
@@ -23,21 +25,21 @@ func Split(p string) Path {
 	return path
 }
 
-func (path Path) String() string {
+func (path Tpathname) String() string {
 	s := strings.Join(path, "/")
 	return s
 }
 
-func (path Path) Append(e string) Path {
+func (path Tpathname) Append(e string) Tpathname {
 	return append(path, e)
 }
 
-func (path Path) AppendPath(p Path) Path {
+func (path Tpathname) AppendPath(p Tpathname) Tpathname {
 	return append(path, p...)
 }
 
-func (path Path) Copy() Path {
-	p := make(Path, len(path))
+func (path Tpathname) Copy() Tpathname {
+	p := make(Tpathname, len(path))
 	copy(p, path)
 	return p
 }
@@ -46,7 +48,7 @@ func EndSlash(p string) bool {
 	return p[len(p)-1] == '/'
 }
 
-func (path1 Path) Equal(path2 Path) bool {
+func (path1 Tpathname) Equal(path2 Tpathname) bool {
 	if len(path1) != len(path2) {
 		return false
 	}
@@ -59,7 +61,7 @@ func (path1 Path) Equal(path2 Path) bool {
 }
 
 // is c a child of parent?
-func (c Path) IsParent(parent Path) bool {
+func (c Tpathname) IsParent(parent Tpathname) bool {
 	if len(parent) == 0 { // p is root directory
 		return true
 	}
@@ -74,14 +76,14 @@ func (c Path) IsParent(parent Path) bool {
 	return true
 }
 
-func (path Path) Dir() Path {
+func (path Tpathname) Dir() Tpathname {
 	if len(path) < 1 {
-		return Path{}
+		return Tpathname{}
 	}
 	return path[0 : len(path)-1]
 }
 
-func (path Path) Base() string {
+func (path Tpathname) Base() string {
 	if len(path) == 0 {
 		return "."
 	}
@@ -92,7 +94,7 @@ func IsUnionElem(elem string) bool {
 	return strings.HasPrefix(elem, "~")
 }
 
-func (path Path) IsUnion() (string, Path, bool) {
+func (path Tpathname) IsUnion() (string, Tpathname, bool) {
 	for i, c := range path {
 		if IsUnionElem(c) {
 			return path[:i].String(), path[i:], true

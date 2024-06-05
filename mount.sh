@@ -31,7 +31,8 @@ while [ $# -ne 1 ]; do
 done
 
 if [[ "$BOOT" == "--boot" ]] ; then
-    (cd proxy; ../start-kernel.sh --pull local-build --boot all sigma-named )
+    (cd proxy; ../start-kernel.sh --pull local-build --boot all --usenetproxy sigma-named )
+    (cd proxy; ../start-kernel.sh --pull local-build --boot sigmaclntd --usenetproxy sigma-scd )
 fi
 
 ./bin/proxy/proxyd $1 &

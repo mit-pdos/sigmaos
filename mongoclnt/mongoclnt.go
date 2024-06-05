@@ -7,6 +7,7 @@ import (
 	"sigmaos/mongosrv/proto"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 )
 
 type MongoClnt struct {
@@ -15,16 +16,17 @@ type MongoClnt struct {
 
 func NewMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
 	mongoc := &MongoClnt{}
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{fsl}, name)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{fsl}, name)
 	if err != nil {
 		return nil, err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	mongoc.rpcc = rpcc
 	return mongoc, nil
 }
 
 func NewMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
-	return NewMongoClntWithName(fsl, sp.MONGO+"~local/")
+	return NewMongoClntWithName(fsl, sp.MONGO+"~any/")
 }
 
 func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {

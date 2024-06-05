@@ -1,10 +1,9 @@
 package www
 
 import (
-	"net"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 
@@ -12,7 +11,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/microbenchmarks"
-	"sigmaos/netsigma"
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -48,22 +46,19 @@ func RunWwwd(job, tree string) {
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
-	ip, err := netsigma.LocalIP()
-	if err != nil {
-		db.DFatalf("Error LocalIP: %v", err)
-	}
+	//	ip, err := netsigma.LocalIP()
+	//	if err != nil {
+	//		db.DFatalf("Error LocalIP: %v", err)
+	//	}
 
-	l, err := net.Listen("tcp", ip.String()+":0")
+	ep, l, err := www.ssrv.SigmaClnt().GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrAnyPort(sp.OUTER_CONTAINER_IP))
 	if err != nil {
 		db.DFatalf("Error Listen: %v", err)
 	}
 
 	// Write a file for clients to discover the server's address.
-	//	mnt := sp.NewMountService(sp.NewTaddrs([]*sp.Taddr{sp.NewTaddrRealm(l.Addr().String())}))
-	db.DFatalf("TODO: split host port")
-	mnt := sp.NewMountService(nil)
-	if err = www.ssrv.SigmaClnt().MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
-		db.DFatalf("MkMountFile %v", err)
+	if err = www.ssrv.SigmaClnt().MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
+		db.DFatalf("MkEndpointFile %v", err)
 	}
 
 	go func() {
@@ -92,12 +87,12 @@ func NewWwwd(job, tree string) *Wwwd {
 	//	www.FsLib = fslib.NewFsLibBase("www") // don't mount Named()
 
 	db.DPrintf(db.ALWAYS, "pid %v ", pe.GetPID())
-	if _, err := www.ssrv.SigmaClnt().PutFile(path.Join(TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
+	if _, err := www.ssrv.SigmaClnt().PutFile(filepath.Join(TMP, "hello.html"), 0777, sp.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		db.DFatalf("wwwd NewFile %v", err)
 	}
 
-	www.localSrvpath = path.Join(proc.PROCDIR, WWWD)
-	www.globalSrvpath = path.Join(pe.ProcDir, WWWD)
+	www.localSrvpath = filepath.Join(proc.PROCDIR, WWWD)
+	www.globalSrvpath = filepath.Join(pe.ProcDir, WWWD)
 
 	err = www.ssrv.SigmaClnt().Symlink([]byte(MemFsPath(job)), www.localSrvpath, 0777)
 	if err != nil {
@@ -132,7 +127,7 @@ func (www *Wwwd) newHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, s
 func (www *Wwwd) newPipe() string {
 	// Make the pipe in the server.
 	pipeName := rand.String(16)
-	pipePath := path.Join(www.localSrvpath, pipeName)
+	pipePath := filepath.Join(www.localSrvpath, pipeName)
 	if err := www.ssrv.SigmaClnt().NewPipe(pipePath, 0777); err != nil {
 		db.DFatalf("Error NewPipe %v", err)
 	}
@@ -140,14 +135,14 @@ func (www *Wwwd) newPipe() string {
 }
 
 func (www *Wwwd) removePipe(pipeName string) {
-	pipePath := path.Join(www.localSrvpath, pipeName)
+	pipePath := filepath.Join(www.localSrvpath, pipeName)
 	if err := www.ssrv.SigmaClnt().Remove(pipePath); err != nil {
 		db.DFatalf("Error Remove pipe %v", err)
 	}
 }
 
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
-	pipePath := path.Join(www.globalSrvpath, pipeName)
+	pipePath := filepath.Join(www.globalSrvpath, pipeName)
 	db.DPrintf(db.WWW, "rwResponse: %v\n", pipePath)
 	// Read from the pipe.
 	fd, err := www.ssrv.SigmaClnt().Open(pipePath, sp.OREAD)
@@ -181,7 +176,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 	if pipe {
 		pipeName = www.newPipe()
 		// Set the shared link to point to the pipe
-		a.SetShared(path.Join(www.globalSrvpath, pipeName))
+		a.SetShared(filepath.Join(www.globalSrvpath, pipeName))
 	}
 	db.DPrintf(db.WWW, "About to spawn %v", a)
 
@@ -215,7 +210,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	db.DPrintf(db.ALWAYS, "getstatic: %v\n", args)
-	file := path.Join(TMP, args)
+	file := filepath.Join(TMP, args)
 	return www.spawnApp("fsreader", w, r, true, []string{file}, nil, 0)
 }
 

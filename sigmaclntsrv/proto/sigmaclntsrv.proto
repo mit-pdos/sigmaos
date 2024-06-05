@@ -13,6 +13,10 @@ message SigmaInitRequest {
 message SigmaNullRequest {
 }
 
+message SigmaRealmRequest {
+        string realmStr = 1;
+}
+
 message SigmaCloseRequest {
         uint32 fd = 1;
 }
@@ -26,7 +30,7 @@ message SigmaPathRequest {
 }
 
 message SigmaStatReply {
-        Stat stat = 1;
+        TstatProto stat = 1;
         Rerror err = 2;
 }
 
@@ -71,6 +75,7 @@ message SigmaSizeReply {
 message SigmaReadRequest {
         uint32 fd = 1;
         uint64 size = 2;
+        uint64 off = 3;
 }
 
 message SigmaWriteRequest {
@@ -96,9 +101,9 @@ message SigmaFenceRequest {
 }
 
 message SigmaMountTreeRequest {
-        repeated Taddr addr = 1;
+        TendpointProto Endpoint = 1;
         string tree = 2;
-        string mount = 3;
+        string mountName = 3;
 }
 
 message SigmaLastMountReply {
@@ -108,17 +113,17 @@ message SigmaLastMountReply {
 }
 
 message SigmaMountRequest {
-        TmountProto mount = 1;
+        TendpointProto endpoint = 1;
         string port = 2;
 }
 
 message SigmaMountReply {
-        TmountProto mount = 1;
+        TendpointProto endpoint = 1;
         bool local = 2;
         Rerror err = 3;
 }
 
 message SigmaMountsReply {
-        repeated string mounts = 1;
+        repeated string endpoints = 1;
         Rerror err = 2;
 }

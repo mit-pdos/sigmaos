@@ -1,13 +1,14 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --branch BRANCH --version VERSION [--overlays] [--cloudlab]" 1>&2
+  echo "Usage: $0 --vpc VPC --kvpc KVPC --tag TAG --branch BRANCH --version VERSION [--nonetproxy] [--overlays] [--cloudlab]" 1>&2
 }
 
 VPC=""
 KVPC=""
 OVERLAYS=""
 CLOUDLAB=""
+NETPROXY=""
 BRANCH="master"
 VERSION=""
 while [[ "$#" -gt 0 ]]; do
@@ -40,6 +41,10 @@ while [[ "$#" -gt 0 ]]; do
   --overlays)
     shift
     OVERLAYS="--overlays"
+    ;;
+  --nonetproxy)
+    shift
+    NETPROXY="--nonetproxy"
     ;;
   --cloudlab)
     shift
@@ -139,7 +144,7 @@ start_sigmaos_cluster() {
 #  stop_k8s_cluster $vpc
   stop_sigmaos_cluster $vpc
   cd $SCRIPT_DIR
-  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG --branch $BRANCH $OVERLAYS $turbo >> $INIT_OUT 2>&1
+  ./start-sigmaos.sh --vpc $vpc --ncores $n_cores --n $n_vm --pull $TAG --branch $BRANCH $OVERLAYS $NETPROXY $turbo >> $INIT_OUT 2>&1
   cd $ROOT_DIR
 }
 
@@ -255,7 +260,7 @@ run_mr() {
     export SIGMADEBUG=\"TEST;BENCH;MR;\"; \
     $set_perf; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp --mr_mem_req $mem_req --load-master-key --mr_asyncrw > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run AppMR $prewarm --mrapp $mrapp --mr_mem_req $mem_req --load-master-key --mr_asyncrw $NETPROXY > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores "" $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
@@ -285,10 +290,10 @@ run_hotel() {
   fi
   cmd="
     aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; \
-    export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;\"; \
+    export SIGMADEBUG=\"TEST;THROUGHPUT;CPU_UTIL;NETSIGMA_PERF;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_mcpu $hotel_cache_mcpu $as_cache --hotel_dur $dur --hotel_max_rps $rps --sleep $slp --prewarm_realm --memcached '10.0.169.210:11211,10.0.57.124:11211,10.0.91.157:11211' --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_mcpu $hotel_cache_mcpu $as_cache --hotel_dur $dur --hotel_max_rps $rps --sleep $slp --prewarm_realm --memcached '10.0.169.210:11211,10.0.57.124:11211,10.0.91.157:11211' --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
 #    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --nclnt $nclnt --hotel_ncache $hotel_ncache --cache_type $cache_type --hotel_cache_mcpu $hotel_cache_mcpu --hotel_dur 60s --hotel_max_rps $rps --prewarm_realm --load-master-key > /tmp/bench.out 2>&1
   if [ "$sys" = "Sigmaos" ]; then
@@ -319,7 +324,7 @@ run_socialnet() {
     export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
     go clean -testcache; \
     ulimit -n 100000; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --prewarm_realm --sn_dur $dur --sn_max_rps $rps --sn_read_only --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run $testname --k8saddr $k8saddr --prewarm_realm --sn_dur $dur --sn_max_rps $rps --sn_read_only --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   if [ "$sys" = "Sigmaos" ]; then
     vpc=$VPC
@@ -346,7 +351,7 @@ run_kv() {
   perf_dir=$8
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS -run AppKVUnrepl --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS -run AppKVUnrepl --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores "" $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
@@ -364,7 +369,7 @@ run_cached() {
   perf_dir=$6
   cmd="
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS -run AppCached --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS -run AppCached --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $n_cores "" $n_vm $perf_dir "$cmd" 0 true false "swapoff"
 }
@@ -549,7 +554,7 @@ hotel_tail_multi() {
     run_hotel $testname $rps $cli_vm $n_clnt_vms $cache_type $k8saddr $dur "0s" "$scale_cache" $perf_dir $driver true
     if [[ $cli_vm == $driver_vm ]]; then
       # Give the driver time to start up the realm.
-      sleep 30s
+      sleep 45s
     fi
   done
   # Wait for all clients to terminate.
@@ -656,7 +661,7 @@ socialnet_tail_multi() {
     run_socialnet $testname $rps $cli_vm $k8saddr $dur $perf_dir $driver false
     if [[ $cli_vm == $driver_vm ]]; then
       # Give the driver time to start up the realm.
-      sleep 30s
+      sleep 45s
     fi
   done
   # Wait for all clients to terminate.
@@ -712,7 +717,7 @@ realm_balance_be() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;MR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --nrealm $n_realm --mr_mem_req $mem_req --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRMR --sleep $sl --mrapp $mrapp --nrealm $n_realm --mr_mem_req $mem_req --load-master-key $NETPROXY > /tmp/bench.out 2>&1
 #  "
   run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -721,17 +726,20 @@ realm_balance_be_img() {
 #  imgpath="name/s3/~local/9ps3/img/7.jpg"
   imgpath="name/ux/~local/8.jpg"
   ncores=4
-  n_imgresize=10
-  n_imgresize_per=100
+  # 20
+  # 50
+  n_imgresize=40
+  n_imgresize_per=25
 #  n_imgresize_per=100
-  imgresize_nrounds=50
-#  imgresize_nrounds=120
-#  imgresize_nrounds=8
+#  imgresize_nrounds=100
+  imgresize_nrounds=300
+#  imgresize_nrounds=50
   imgresize_mcpu=0
+#  imgresize_mem=3000
   imgresize_mem=1500
 
-  sl="20s"
-  n_vm=8
+  sl="60s"
+  n_vm=24
   n_realm=4
   driver_vm=0
   run=${FUNCNAME[0]}
@@ -740,7 +748,7 @@ realm_balance_be_img() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --n_imgresize_per $n_imgresize_per --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --nrealm $n_realm --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceImgResizeImgResize --sleep $sl --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --n_imgresize_per $n_imgresize_per --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --nrealm $n_realm --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC $ncores "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -785,7 +793,7 @@ k8s_balance_be() {
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sMRMulti --k8sleaderip $k8sleaderip --s3resdir $s3dir --sleep $sl --nrealm $n_realm --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sMRMulti --k8sleaderip $k8sleaderip --s3resdir $s3dir --sleep $sl --nrealm $n_realm --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -806,7 +814,7 @@ realm_balance() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -852,7 +860,7 @@ realm_balance_multi() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;UPROCDMGR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp $bmem --nclnt $n_clnt_vms --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceMRHotel --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --mrapp $mrapp $bmem --nclnt $n_clnt_vms --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
   run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true true $swap
@@ -925,7 +933,7 @@ realm_balance_multi_img() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceHotelImgResize --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --n_imgresize_per $n_imgresize_per --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --imgresize_nround $imgresize_nrounds $bmem --nclnt $n_clnt_vms --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run RealmBalanceHotelImgResize --sleep $sl --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --hotel_ncache $hotel_ncache --n_imgresize $n_imgresize --n_imgresize_per $n_imgresize_per --imgresize_path $imgpath --imgresize_mcpu $imgresize_mcpu --imgresize_mem $imgresize_mem --imgresize_nround $imgresize_nrounds $bmem --nclnt $n_clnt_vms --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   # Start driver VM asynchronously.
   run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true true $swap
@@ -986,7 +994,7 @@ k8s_balance() {
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
   cd $SCRIPT_DIR
@@ -1053,7 +1061,7 @@ k8s_balance_multi() {
     echo done removing ; \
     go clean -testcache; \
     echo get ready to run ; \
-    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir --nclnt $n_clnt_vms --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run K8sBalanceHotelMR --hotel_dur $hotel_dur --hotel_max_rps $hotel_max_rps --k8sleaderip $k8sleaderip --k8saddr $k8saddr --s3resdir $s3dir --nclnt $n_clnt_vms --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true true "swapoff"
   sleep $sl2
@@ -1095,7 +1103,7 @@ mr_k8s() {
     aws s3 rm --recursive s3://9ps3/$s3dir > /dev/null; \
     aws s3 rm --recursive s3://9ps3/ouptut > /dev/null; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run MRK8s --k8sleaderip $k8saddr --s3resdir $s3dir --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   run_benchmark $KVPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -1123,7 +1131,7 @@ img_resize() {
   cmd="
     export SIGMADEBUG=\"TEST;BENCH;IMGD;\"; \
     go clean -testcache; \
-    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestImgResize --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $mcpu --imgresize_mem $imgresize_mem --load-master-key > /tmp/bench.out 2>&1
+    go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestImgResize --n_imgresize $n_imgresize --imgresize_nround $imgresize_nrounds --imgresize_path $imgpath --imgresize_mcpu $mcpu --imgresize_mem $imgresize_mem --load-master-key $NETPROXY > /tmp/bench.out 2>&1
   "
   run_benchmark $VPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
 }
@@ -1155,7 +1163,7 @@ k8s_img_resize() {
       export SIGMADEBUG=\"TEST;BENCH;\"; \
       go clean -testcache; \
       kubectl apply -Rf /tmp/thumbnail.yaml; \
-      go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestK8sImgResize --load-master-key > /tmp/bench.out 2>&1
+      go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --tag $TAG --etcdIP $LEADER_IP_SIGMA --run TestK8sImgResize --load-master-key $NETPROXY > /tmp/bench.out 2>&1
     "
     run_benchmark $KVPC 4 "" $n_vm $perf_dir "$cmd" $driver_vm true false "swapoff"
   done
@@ -1180,7 +1188,7 @@ schedd_scalability() {
       export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
       ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
       go clean -testcache; \
-      go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown $prewarm --load-master-key > /tmp/bench.out 2>&1
+      go test -v sigmaos/benchmarks $OVERLAYS -timeout 0 --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --etcdIP $LEADER_IP_SIGMA --no-shutdown $prewarm --load-master-key $NETPROXY > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
     run_benchmark $VPC 20 "" $n_vm $perf_dir "$cmd" $driver_vm true true false
@@ -1214,10 +1222,10 @@ schedd_scalability_rs_single_machine() {
       export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
       ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
       go clean -testcache; \
-      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key > /tmp/bench.out 2>&1
+      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key $NETPROXY > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 40 $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC $ncore $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -1248,13 +1256,89 @@ schedd_scalability_rs() {
     fi
     stop_k8s_cluster $KVPC
     cmd="
-      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;\"; \
+      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;NETSIGMA_PERF;\"; \
       ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
       go clean -testcache; \
-      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key > /tmp/bench.out 2>&1
+      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key $NETPROXY > /tmp/bench.out 2>&1
     "
     # Start driver VM asynchronously.
-    run_benchmark $VPC 40 $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
+    run_benchmark $VPC $ncore $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
+    # Wait for test to terminate.
+    wait
+    end_benchmark $vpc $perf_dir
+    # Copy log files to perf dir.
+    cp /tmp/*.out $perf_dir
+  done
+}
+
+schedd_scalability_rs_with_kernel_pref() {
+  driver_vm=23
+#  qps_per_machine=1100
+#  qps_per_machine=1800
+  dur="5s"
+  ncore=40
+  turbo="--turbo"
+  prewarm=""
+#  prewarm="--prewarm_realm"
+#  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
+#  for qps_per_machine in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400; do
+  for qps_per_machine in 1 ; do
+    n_vm=8
+    rps=$((n_vm * $qps_per_machine))
+    run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      continue
+    fi
+    stop_k8s_cluster $KVPC
+    cmd="
+      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;SPAWN_LAT;CHUNKSRV;CHUNKCLNT;\"; \
+      ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
+      go clean -testcache; \
+      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key $NETPROXY --with_kernel_pref > /tmp/bench.out 2>&1
+    "
+    # Start driver VM asynchronously.
+    run_benchmark $VPC $ncore $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
+    # Wait for test to terminate.
+    wait
+    end_benchmark $vpc $perf_dir
+    # Copy log files to perf dir.
+    cp /tmp/*.out $perf_dir
+  done
+}
+
+schedd_scalability_rs_without_kernel_pref() {
+  driver_vm=7
+#  qps_per_machine=1100
+#  qps_per_machine=1800
+  dur="5s"
+  ncore=16
+  turbo="--turbo"
+  prewarm=""
+#  prewarm="--prewarm_realm"
+#  for n_vm in 1 2 3 4 5 6 7 8 9 10; do
+#  for qps_per_machine in 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400; do
+  for qps_per_machine in 1 ; do
+    n_vm=8
+    rps=$((n_vm * $qps_per_machine))
+    run=${FUNCNAME[0]}/$n_vm-vm-rps-$rps
+    echo "========== Running $run =========="
+    perf_dir=$OUT_DIR/$run
+    # Avoid doing duplicate work.
+    if ! should_skip $perf_dir false ; then
+      continue
+    fi
+    stop_k8s_cluster $KVPC
+    cmd="
+      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;SPAWN_LAT;CHUNKSRV;CHUNKCLNT;\"; \
+      ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
+      go clean -testcache; \
+      go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown --load-master-key $NETPROXY > /tmp/bench.out 2>&1
+    "
+    # Start driver VM asynchronously.
+    run_benchmark $VPC $ncore $turbo $n_vm $perf_dir "$cmd" $driver_vm true true false
     # Wait for test to terminate.
     wait
     end_benchmark $vpc $perf_dir
@@ -1462,7 +1546,7 @@ graph_realm_balance_be_img() {
   graph="${fname##graph_}"
   echo "========== Graphing $graph =========="
   nrealm=4
-  ncores=32
+  ncores=96
   $GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $OUT_DIR/$graph --out $GRAPH_OUT_DIR/$graph.pdf --nrealm $nrealm --units "MB/sec" --title "Aggregate Throughput Balancing $nrealm Realms' BE Applications" --total_ncore $ncores --prefix "imgresize-"
 }
 
@@ -1533,6 +1617,20 @@ graph_start_latency() {
   $GRAPH_SCRIPTS_DIR/start-latency.py --out $GRAPH_OUT_DIR/$graph.pdf
 }
 
+graph_net_microbench() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/net-microbench.py --out $GRAPH_OUT_DIR/$graph.pdf
+}
+
+graph_microservices_perf_bar_graph() {
+  fname=${FUNCNAME[0]}
+  graph="${fname##graph_}"
+  echo "========== Graphing $graph =========="
+  $GRAPH_SCRIPTS_DIR/microservices-perf-bar-graph.py --out $GRAPH_OUT_DIR/$graph.pdf
+}
+
 graph_start_latency_breakdown() {
   fname=${FUNCNAME[0]}
   graph="${fname##graph_}"
@@ -1575,6 +1673,9 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo "Running benchmarks with version: $VERSION"
 
 # ========== Run benchmarks ==========
+#realm_balance_be_img
+#schedd_scalability_rs_without_kernel_pref
+#schedd_scalability_rs_with_kernel_pref
 #schedd_scalability_rs
 #socialnet_tail_multi
 hotel_tail_multi
@@ -1613,15 +1714,17 @@ hotel_tail_multi
 
 # ========== Produce graphs ==========
 source ~/env/3.10/bin/activate
+#graph_net_microbench
+#graph_start_latency_breakdown
+#graph_start_latency
+#graph_microservices_perf_bar_graph
+#graph_mr_vs_corral
+#graph_realm_balance_be_img
 #graph_schedd_scalability_rs
 #graph_schedd_scalability_rs_hockey
 #graph_schedd_scalability_rs_single_machine
 #graph_realm_balance_be
-#graph_realm_balance_be_img
-#graph_start_latency_breakdown
-#graph_start_latency
 
-#graph_mr_vs_corral
 #graph_realm_balance_multi_img
 
 #graph_realm_balance_multi

@@ -19,7 +19,7 @@ func newDev(o *Obj) fs.FsObj {
 func (d *Dev) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.NAMED, "%v: DevOpen %v m 0x%x path %v\n", ctx, d, m, d.Obj.pn)
 	if d.Obj.di.Nf == nil {
-		nf, _, err := d.Obj.fs.GetFile(d.Obj.di.Path)
+		nf, _, err := d.Obj.fs.GetFile(&d.Obj.di)
 		if err != nil {
 			return nil, err
 		}
@@ -48,4 +48,28 @@ func (d *Dev) Write(ctx fs.CtxI, offset sp.Toffset, b []byte, f sp.Tfence) (sp.T
 	}
 	d.Obj.di.Nf.Data = b
 	return sp.Tsize(len(b)), nil
+}
+
+// Methods for Inode interface
+
+func (o *Obj) Mtime() int64 {
+	return 0
+}
+
+func (o *Obj) SetMtime(m int64) {
+}
+
+// func (o *Obj) Parent() fs.Dir {
+// 	dir := o.pathName.Dir()
+// 	d, err := newDir(dir)
+// 	if err != nil {
+// 		db.DFatalf("Parent %v err %v\n", dir, err)
+// 	}
+// 	return d
+// }
+
+func (o *Obj) SetParent(p fs.Dir) {
+}
+
+func (o *Obj) Unlink() {
 }

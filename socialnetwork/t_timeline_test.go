@@ -6,6 +6,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/rpcclnt"
+	"sigmaos/sigmarpcchan"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/test"
@@ -64,8 +65,8 @@ func TestTimeline(t *testing.T) {
 		return
 	}
 	tssn, err := newTstateSN(t1, []sn.Srv{
-		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-timeline", test.Overlays, 1000}}, NCACHESRV)
+		sn.Srv{"socialnetwork-post", nil, 1000},
+		sn.Srv{"socialnetwork-timeline", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -73,14 +74,16 @@ func TestTimeline(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients for posts and timelines
-	trpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	prpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
+	trpcc := rpcclnt.NewRPCClnt(ch)
+	prpch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	prpcc := rpcclnt.NewRPCClnt(prpch)
 
 	// create and store N posts
 	NPOST, userid := 4, int64(200)
@@ -125,10 +128,10 @@ func TestHome(t *testing.T) {
 		return
 	}
 	tssn, err := newTstateSN(t1, []sn.Srv{
-		sn.Srv{"socialnetwork-user", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-graph", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-post", test.Overlays, 1000},
-		sn.Srv{"socialnetwork-home", test.Overlays, 1000}}, NCACHESRV)
+		sn.Srv{"socialnetwork-user", nil, 1000},
+		sn.Srv{"socialnetwork-graph", nil, 1000},
+		sn.Srv{"socialnetwork-post", nil, 1000},
+		sn.Srv{"socialnetwork-home", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -137,14 +140,16 @@ func TestHome(t *testing.T) {
 	tssn.dbu.InitGraph()
 
 	// create RPC clients for posts and timelines
-	hrpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	prpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
+	hrpcc := rpcclnt.NewRPCClnt(ch)
+	prpch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	prpcc := rpcclnt.NewRPCClnt(prpch)
 
 	// create and store N posts
 	NPOST, userid := 3, int64(1)

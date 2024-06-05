@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	// "runtime/debug"
 	"strconv"
 	"strings"
@@ -53,7 +53,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr,
 	m.rand = rand.String(16)
 	m.input = input
 	m.intOutput = intOutput
-	m.bin = path.Base(m.input)
+	m.bin = filepath.Base(m.input)
 	m.asyncwrts = make([]*fslib.Wrt, m.nreducetask)
 	m.syncwrts = make([]*writer.Writer, m.nreducetask)
 	m.pwrts = make([]*perf.PerfWriter, m.nreducetask)
@@ -128,7 +128,7 @@ func (m *Mapper) initMapper() error {
 	// error in case it already exits.  XXX who cleans up?
 	m.MkDir(m.intOutput, 0777)
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
-	m.MkDir(path.Dir(outDirPath), 0777) // job dir
+	m.MkDir(filepath.Dir(outDirPath), 0777) // job dir
 	m.MkDir(outDirPath, 0777)           // mapper dir
 
 	// Create the output files
@@ -307,7 +307,7 @@ func RunMapper(mapf MapT, args []string) {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
-	db.DPrintf(db.BENCH, "Mapper [%v] spawn latency: %v", args[2], time.Since(pe.GetSpawnTime()))
+	db.DPrintf(db.BENCH, "Mapper [%v] time since spawn %v", args[2], time.Since(pe.GetSpawnTime()))
 	m, err := newMapper(mapf, args, p)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)

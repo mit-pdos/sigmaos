@@ -191,7 +191,7 @@ def setup_graph(nplots, units, total_ncore):
     tptax[idx].set_ylabel(ylabels[idx])
   for ax in coresax:
     ax.set_ylim((0, total_ncore + 5))
-    ax.set_yticks([0, 16, 32])
+    ax.set_yticks([0, 16, 32, 48, 64, 80, 96])
     ax.set_ylabel("Cores Utilized")
   return fig, tptax, coresax
 

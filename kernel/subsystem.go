@@ -7,7 +7,6 @@ import (
 
 	"sigmaos/container"
 	db "sigmaos/debug"
-	"sigmaos/keys"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
@@ -31,7 +30,7 @@ type Subsystem interface {
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
 	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
-	AllocPort(p sp.Tport) (*port.PortBinding, error)
+	GetPortBinding(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
 
@@ -89,11 +88,6 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
-	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return nil, err
-	}
 	p.SetMcpu(mcpu)
 	var sck *sigmaclnt.SigmaClntKernel
 	var err error
@@ -109,38 +103,9 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	return ss, ss.Run(how, k.Param.KernelID, k.ip)
 }
 
-func (k *Kernel) bootstrapKeys(pid sp.Tpid) ([]string, error) {
-	pubkey, privkey, err := keys.NewECDSAKey()
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
-		return nil, err
-	}
-	// Post the public key for the subsystem
-	if err := k.kc.SetKey(sp.Tsigner(pid), pubkey); err != nil {
-		db.DPrintf(db.ERROR, "Error post subsystem key: %v", err)
-		return nil, err
-	}
-	return []string{
-		k.Param.MasterPubKey.Marshal(),
-		pubkey.Marshal(),
-		privkey.Marshal(),
-	}, nil
-}
-
-func (k *Kernel) bootSubsystemBootstrapKeys(program string, args []string, realm sp.Trealm, how proc.Thow) (Subsystem, error) {
+func (k *Kernel) bootSubsystem(program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	pid := sp.GenPid(program)
-	// bootstrap keys for the subsystem
-	keys, err := k.bootstrapKeys(pid)
-	if err != nil {
-		return nil, err
-	}
-	argsWithKeys := append(args, keys...)
-	return k.bootSubsystemPIDWithMcpu(pid, program, argsWithKeys, realm, how, 0)
-}
-
-func (k *Kernel) bootSubsystem(program string, args []string, realm sp.Trealm, how proc.Thow) (Subsystem, error) {
-	pid := sp.GenPid(program)
-	return k.bootSubsystemPIDWithMcpu(pid, program, args, realm, how, 0)
+	return k.bootSubsystemPIDWithMcpu(pid, program, args, realm, how, mcpu)
 }
 
 func (s *KernelSubsystem) Evict() error {
@@ -162,13 +127,7 @@ func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) er
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.FinalizeEnv(localIP, localIP, sp.Tpid(sp.NOT_SET))
-		var r *port.Range
-		up := sp.NO_PORT
-		if s.k.Param.Overlays {
-			r = &port.Range{FPORT, LPORT}
-			up = r.Fport
-		}
-		c, err := container.StartPContainer(s.p, kernelId, r, up, s.k.Param.GVisor)
+		c, err := container.StartPContainer(s.p, kernelId, s.k.Param.Overlays, s.k.Param.GVisor)
 		if err != nil {
 			return err
 		}
@@ -190,12 +149,8 @@ func (ss *KernelSubsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
 }
 
-func (ss *KernelSubsystem) AllocPort(p sp.Tport) (*port.PortBinding, error) {
-	if p == sp.NO_PORT {
-		return ss.container.AllocPort()
-	} else {
-		return ss.container.AllocPortOne(p)
-	}
+func (ss *KernelSubsystem) GetPortBinding(p sp.Tport) (*port.PortBinding, error) {
+	return ss.container.GetPortBinding(p)
 }
 
 // Send SIGTERM to a system.
@@ -237,7 +192,7 @@ func (s *KernelSubsystem) Wait() error {
 		// WaitExit twice leads to an error.
 		status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)
 		if err != nil || !status.IsStatusEvicted() {
-			db.DPrintf(db.ALWAYS, "shutdown susbystem [%v] exit with status %v err %v", s.p.GetPid(), status, err)
+			db.DPrintf(db.ALWAYS, "shutdown subsystem [%v] exit with status %v err %v", s.p.GetPid(), status, err)
 			return err
 		}
 	}

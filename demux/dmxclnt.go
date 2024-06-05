@@ -37,7 +37,7 @@ func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
 	if ch, ok := dmx.callmap.remove(tag); ok {
 		ch <- reply{rep, err}
 	} else {
-		db.DFatalf("reply %v no matching req %v\n", rep, tag)
+		db.DFatalf("reply %v no matching req %v", rep, tag)
 	}
 }
 
@@ -45,36 +45,36 @@ func (dmx *DemuxClnt) reader() {
 	for {
 		c, err := dmx.trans.ReadCall()
 		if err != nil {
-			db.DPrintf(db.DEMUXCLNT, "reader rf err %v\n", err)
+			db.DPrintf(db.DEMUXCLNT_ERR, "reader rf err %v", err)
 			dmx.callmap.close()
 			break
 		}
 		dmx.reply(c.Tag(), c, nil)
 	}
 	outstanding := dmx.callmap.outstanding()
-	db.DPrintf(db.DEMUXCLNT, "reader fail %v oustanding %v", outstanding)
+	db.DPrintf(db.DEMUXCLNT_ERR, "reader fail oustanding %v", outstanding)
 	for _, t := range outstanding {
-		db.DPrintf(db.DEMUXCLNT, "reader reply fail %v", t)
+		db.DPrintf(db.DEMUXCLNT_ERR, "reader reply fail %v", t)
 		dmx.reply(t, nil, serr.NewErr(serr.TErrUnreachable, "reader"))
-		db.DPrintf(db.DEMUXCLNT, "reader reply fail done %v", t)
+		db.DPrintf(db.DEMUXCLNT_ERR, "reader reply fail done %v", t)
 	}
 }
 
 func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.Err) {
 	ch := make(chan reply)
 	if err := dmx.callmap.put(req.Tag(), ch); err != nil {
-		db.DPrintf(db.DEMUXCLNT, "SendReceive: enqueue req %v err %v\n", req, err)
+		db.DPrintf(db.DEMUXCLNT_ERR, "SendReceive: enqueue req %v err %v", req, err)
 		return nil, err
 	}
 	if err := dmx.iovm.Put(req.Tag(), outiov); err != nil {
-		db.DPrintf(db.DEMUXCLNT, "SendReceive: iovm enqueue req %v err %v\n", req, err)
+		db.DPrintf(db.DEMUXCLNT_ERR, "SendReceive: iovm enqueue req %v err %v", req, err)
 		return nil, err
 	}
 	dmx.mu.Lock()
 	err := dmx.trans.WriteCall(req)
 	dmx.mu.Unlock()
 	if err != nil {
-		db.DPrintf(db.DEMUXCLNT, "wf req %v error %v\n", req, err)
+		db.DPrintf(db.DEMUXCLNT_ERR, "WriteCall req %v error %v", req, err)
 	}
 	// Listen to the reply channel regardless of error status, so the reader
 	// thread doesn't block indefinitely trying to deliver the "TErrUnreachable"

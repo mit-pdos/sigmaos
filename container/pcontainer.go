@@ -2,8 +2,7 @@ package container
 
 import (
 	"context"
-	"path"
-	"syscall"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -13,6 +12,7 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	"sigmaos/cgroup"
+	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/mem"
 	"sigmaos/perf"
@@ -21,9 +21,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Start container for uprocd. If r is nil, don't use overlays.
-// func StartPContainer(p *proc.Proc, kernelId string, realm sp.Trealm, r *port.Range, up port.Tport, ptype proc.Ttype) (*Container, error) {
-func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, gvisor bool) (*Container, error) {
+// Start outer container for uprocd. If r is nil, don't use overlays.
+func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) (*Container, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -41,19 +40,18 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 	//		memswap = membytes
 	//	}
 
-	// append uprocd's port
-	p.Args = append(p.Args, up.String())
-
-	cmd := append([]string{p.GetProgram()}, p.Args...)
-	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v r %v s %v\n", cmd, p.GetEnv(), r, score)
-
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
+	up := sp.NO_PORT
 	netmode := "host"
 	var endpoints map[string]*network.EndpointSettings
-	if r != nil {
+	ports := []sp.Tport{port.UPROCD_PORT, port.PUBLIC_PORT}
+	if overlays {
+		db.DPrintf(db.CONTAINER, "Running with overlay ports: %v", ports)
+		up = port.UPROCD_PORT
 		netmode = "bridge"
-		for i := r.Fport; i < r.Lport; i++ {
+		netname := "sigmanet-testuser"
+		for _, i := range ports {
 			p, err := nat.NewPort("tcp", i.String())
 			if err != nil {
 				return nil, err
@@ -62,8 +60,13 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 			pmap[p] = []nat.PortBinding{{}}
 		}
 		endpoints = make(map[string]*network.EndpointSettings, 1)
-		endpoints[p.GetNet()] = &network.EndpointSettings{}
+		endpoints[netname] = &network.EndpointSettings{}
 	}
+
+	// append uprocd's port
+	p.Args = append(p.Args, up.String())
+	cmd := append([]string{p.GetProgram()}, p.Args...)
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v overlays %v s %v\n", cmd, p.GetEnv(), overlays, score)
 
 	runtime := "runc"
 	if gvisor {
@@ -77,12 +80,10 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 	mnts := []mount.Mount{
 		// user bin dir.
 		mount.Mount{
-			Type:   mount.TypeBind,
-			Source: path.Join("/tmp/sigmaos-bin", kernelId),
-			Target: path.Join(sp.SIGMAHOME, "all-realm-bin"),
-			//					Source:   path.Join("/tmp/sigmaos-bin", realm.String()),
-			//					Target:   path.Join(sp.SIGMAHOME, "bin", "user"),
-			ReadOnly: true,
+			Type:     mount.TypeBind,
+			Source:   chunksrv.PathHostKernel(kernelId),
+			Target:   chunksrv.ROOTBINCONTAINER,
+			ReadOnly: false,
 		},
 		// perf output dir
 		mount.Mount{
@@ -101,8 +102,8 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 		mnts = append(mnts,
 			mount.Mount{
 				Type:     mount.TypeBind,
-				Source:   path.Join("/tmp/sigmaos-uprocd-bin"),
-				Target:   path.Join(sp.SIGMAHOME, "bin/kernel"),
+				Source:   filepath.Join("/tmp/sigmaos-uprocd-bin"),
+				Target:   filepath.Join(sp.SIGMAHOME, "bin/kernel"),
 				ReadOnly: true,
 			},
 		)
@@ -141,10 +142,13 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 	ip := json.NetworkSettings.IPAddress
 	db.DPrintf(db.CONTAINER, "Container ID %v", json.ID)
 
-	pm := port.NewPortMap(json.NetworkSettings.NetworkSettingsBase.Ports, r)
+	var pm *port.PortMap
+	if overlays {
+		pm = port.NewPortMap(json.NetworkSettings.NetworkSettingsBase.Ports, ports)
+	}
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v portmap %v", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks, pm)
-	cgroupPath := path.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
+	cgroupPath := filepath.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
 	c := &Container{
 		overlays:   p.GetProcEnv().GetOverlays(),
 		PortMap:    pm,
@@ -160,13 +164,4 @@ func StartPContainer(p *proc.Proc, kernelId string, r *port.Range, up sp.Tport, 
 		return nil, err
 	}
 	return c, nil
-}
-
-func MountRealmBinDir(realm sp.Trealm) error {
-	// Mount realm bin directory
-	if err := syscall.Mount(path.Join(sp.SIGMAHOME, "all-realm-bin", realm.String()), path.Join(sp.SIGMAHOME, "bin", "user"), "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /realm bin dir: %v", err)
-		return err
-	}
-	return nil
 }

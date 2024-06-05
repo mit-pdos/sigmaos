@@ -2,7 +2,8 @@ package kernel
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
+	"strconv"
 
 	db "sigmaos/debug"
 	"sigmaos/port"
@@ -48,6 +49,8 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp
 		ss, err = k.bootSigmaclntd()
 	case sp.S3REL:
 		ss, err = k.bootS3d(realm)
+	case sp.CHUNKDREL:
+		ss, err = k.bootChunkd(realm)
 	case sp.UXREL:
 		ss, err = k.bootUxd(realm)
 	case sp.DBREL:
@@ -58,8 +61,6 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp
 		ss, err = k.bootLCSched()
 	case sp.PROCQREL:
 		ss, err = k.bootProcq()
-	case sp.KEYDREL:
-		ss, err = k.bootKeyd()
 	case sp.SCHEDDREL:
 		ss, err = k.bootSchedd()
 	case sp.REALMDREL:
@@ -93,8 +94,18 @@ func (k *Kernel) GetCPUUtil(pid sp.Tpid) (float64, error) {
 	return k.svcs.svcMap[pid].GetCPUUtil()
 }
 
-func (k *Kernel) AllocPort(pid sp.Tpid, port sp.Tport) (*port.PortBinding, error) {
-	return k.svcs.svcMap[pid].AllocPort(port)
+func (k *Kernel) EvictKernelProc(pid sp.Tpid) error {
+	k.Lock()
+	defer k.Unlock()
+
+	db.DPrintf(db.KERNEL, "Evict kernel proc %v", pid)
+	// Evict the kernel proc
+	if err := k.svcs.svcMap[pid].Evict(); err != nil {
+		return err
+	}
+	db.DPrintf(db.KERNEL, "Wait for evicted kernel proc %v", pid)
+	// Wait for it to exit
+	return k.svcs.svcMap[pid].Wait()
 }
 
 func (k *Kernel) KillOne(srv string) error {
@@ -124,15 +135,11 @@ func (k *Kernel) KillOne(srv string) error {
 }
 
 func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
-	p, err := newKNamedProc(sp.ROOTREALM, init, k.Param.MasterPubKey, k.Param.MasterPrivKey)
+	p, err := newKNamedProc(sp.ROOTREALM, init)
 	if err != nil {
 		return err
 	}
-	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return err
-	}
+	p.GetProcEnv().SetRealm(sp.ROOTREALM, k.Param.Overlays)
 	p.SetKernelID(k.Param.KernelID, false)
 	cmd, err := runKNamed(pe, p, sp.ROOTREALM, init)
 	if err != nil {
@@ -144,62 +151,48 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 }
 
 func (k *Kernel) bootRealmd() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("realmd", []string{}, sp.ROOTREALM, proc.HSCHEDD)
+	return k.bootSubsystem("realmd", []string{strconv.FormatBool(k.Param.NetProxy)}, sp.ROOTREALM, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, realm, proc.HSCHEDD)
+	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, realm, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{}, realm, proc.HSCHEDD)
+	return k.bootSubsystem("fss3d", []string{}, realm, proc.HSCHEDD, 0)
+}
+
+func (k *Kernel) bootChunkd(realm sp.Trealm) (Subsystem, error) {
+	return k.bootSubsystem("chunkd", []string{k.Param.KernelID}, realm, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {
-	return k.bootSubsystem("dbd", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD)
+	return k.bootSubsystem("dbd", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootMongod(hostip string) (Subsystem, error) {
-	pid := sp.GenPid("mongod")
-	return k.bootSubsystemPIDWithMcpu(pid, "mongod", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD, 1000)
+	return k.bootSubsystem("mongod", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD, 1000)
 }
 
 func (k *Kernel) bootLCSched() (Subsystem, error) {
-	return k.bootSubsystem("lcsched", []string{}, sp.ROOTREALM, proc.HLINUX)
+	return k.bootSubsystem("lcsched", []string{}, sp.ROOTREALM, proc.HLINUX, 0)
 }
 
 func (k *Kernel) bootProcq() (Subsystem, error) {
-	return k.bootSubsystem("procq", []string{}, sp.ROOTREALM, proc.HLINUX)
+	return k.bootSubsystem("procq", []string{}, sp.ROOTREALM, proc.HLINUX, 0)
 }
-
-func (k *Kernel) bootKeyd() (Subsystem, error) {
-	ss, err := k.bootSubsystem("keyd", []string{k.Param.MasterPubKey.Marshal()}, sp.ROOTREALM, proc.HLINUX)
-	if err == nil {
-		if err := k.kc.SetKey(sp.Tsigner(k.Param.KernelID), k.Param.MasterPubKey); err != nil {
-			db.DPrintf(db.ERROR, "Error post kernel key: %v", err)
-			return nil, err
-		}
-	}
-	return ss, err
-}
-
 func (k *Kernel) bootSchedd() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu}, sp.ROOTREALM, proc.HLINUX)
+	return k.bootSubsystem("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu}, sp.ROOTREALM, proc.HLINUX, 0)
 }
 
 func (k *Kernel) bootNamed() (Subsystem, error) {
-	return k.bootSubsystemBootstrapKeys("named", []string{sp.ROOTREALM.String(), "0"}, sp.ROOTREALM, proc.HSCHEDD)
+	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0"}, sp.ROOTREALM, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 	pid := sp.GenPid("sigmaclntd")
 	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
-	p.SetAllowedPaths(sp.ALL_PATHS)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
-	if err := k.as.MintAndSetToken(p.GetProcEnv()); err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return nil, err
-	}
 	p.SetHow(proc.HLINUX)
 	p.InheritParentProcEnv(k.ProcEnv())
 	return sigmaclntsrv.ExecSigmaClntSrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"))
@@ -209,15 +202,20 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
-	s, err := k.bootSubsystem("uprocd", args, sp.ROOTREALM, proc.HDOCKER)
+	// Append netproxy bool to args
+	args = append(args, strconv.FormatBool(k.Param.NetProxy))
+	sigmaclntdPID := sp.GenPid("sigmaclntd")
+	sigmaclntdArgs := append([]string{sigmaclntdPID.String()})
+	db.DPrintf(db.ALWAYS, "Uprocd args %v", args)
+	s, err := k.bootSubsystem("uprocd", append(args, sigmaclntdArgs...), sp.ROOTREALM, proc.HDOCKER, 0)
 	if err != nil {
 		return nil, err
 	}
 	if k.Param.Overlays {
-		pn := path.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
+		pn := filepath.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
 
 		// container's first port is for uprocd
-		pm, err := s.GetContainer().AllocFirst()
+		pm, err := s.GetContainer().GetPortBinding(port.UPROCD_PORT)
 		if err != nil {
 			return nil, err
 		}
@@ -225,13 +223,22 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 		// Use 127.0.0.1, because only the local schedd should be talking
 		// to uprocd.
 		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
-		mnt := sp.NewMountServer(addr)
-		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, mnt)
-		if err := k.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
+		ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{addr}, sp.ROOTREALM)
+		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
+		if err := k.MkEndpointFile(pn, ep); err != nil {
 			return nil, err
 		}
-		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s", pn, pm)
+		// Get port binding for WWW srvs running on this uprocd
+		pm2, err := s.GetContainer().GetPortBinding(port.PUBLIC_PORT)
+		if err != nil {
+			return nil, err
+		}
+		portFN := filepath.Join(pn, sp.PUBLIC_PORT)
+		if err := k.PutFileJson(portFN, 0777, pm2); err != nil {
+			db.DPrintf(db.ERROR, "Error put public port file: %v", err)
+			return nil, err
+		}
+		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s pfn %v", pn, pm, portFN)
 	}
-
 	return s, nil
 }

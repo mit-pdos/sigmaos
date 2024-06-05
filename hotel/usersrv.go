@@ -40,9 +40,9 @@ type Users struct {
 	tracer *tracing.Tracer
 }
 
-func RunUserSrv(n string, public bool) error {
+func RunUserSrv(n string) error {
 	u := &Users{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELUSER, u, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(HOTELUSER, u, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}

@@ -1,9 +1,8 @@
+// The ninep package has Go structures for 9P based on the wire format
+// in Linux's 9p net/9p, include/net/9p, and various Go 9p
+// implementations, as well as the this 9P paper:
+// https://www.usenix.org/legacy/events/usenix05/tech/freenix/hensbergen.html
 package ninep
-
-//
-// Go structures for 9P based on the wire format in Linux's 9p net/9p,
-// include/net/9p, and various Go 9p implementations.
-//
 
 import (
 	"fmt"
@@ -154,9 +153,7 @@ const (
 	DMEXCL   Tperm = 0x20000000 // exclusive use file
 	DMMOUNT  Tperm = 0x10000000 // mounted channel
 	DMAUTH   Tperm = 0x08000000 // authentication file
-
-	// DMTMP is ephemeral in sigmaP
-	DMTMP Tperm = 0x04000000 // non-backed-up file
+	DMTMP    Tperm = 0x04000000 // non-backed-up file
 
 	DMREAD  = 0x4 // mode bit for read permission
 	DMWRITE = 0x2 // mode bit for write permission
@@ -187,7 +184,6 @@ func (p Tperm) IsSymlink() bool    { return p&DMSYMLINK == DMSYMLINK }
 func (p Tperm) IsReplicated() bool { return p&DMREPL == DMREPL }
 func (p Tperm) IsDevice() bool     { return p&DMDEVICE == DMDEVICE }
 func (p Tperm) IsPipe() bool       { return p&DMNAMEDPIPE == DMNAMEDPIPE }
-func (p Tperm) IsEphemeral() bool  { return p&DMTMP == DMTMP }
 func (p Tperm) IsFile() bool       { return (p>>QTYPESHIFT)&0xFF == 0 }
 
 func (p Tperm) String() string {

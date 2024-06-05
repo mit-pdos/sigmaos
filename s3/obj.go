@@ -17,7 +17,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func newTpath(key path.Path) sp.Tpath {
+func newTpath(key path.Tpathname) sp.Tpath {
 	h := fnv.New64a()
 	h.Write([]byte(key.String()))
 	return sp.Tpath(h.Sum64())
@@ -26,7 +26,7 @@ func newTpath(key path.Path) sp.Tpath {
 type Obj struct {
 	bucket string
 	perm   sp.Tperm
-	key    path.Path
+	key    path.Tpathname
 
 	// set by fill()
 	sz    sp.Tlength
@@ -39,7 +39,7 @@ type Obj struct {
 	off sp.Toffset
 }
 
-func newObj(bucket string, key path.Path, perm sp.Tperm) *Obj {
+func newObj(bucket string, key path.Tpathname, perm sp.Tperm) *Obj {
 	o := &Obj{}
 	o.bucket = bucket
 	o.key = key
@@ -53,14 +53,6 @@ func newObj(bucket string, key path.Path, perm sp.Tperm) *Obj {
 
 func (o *Obj) String() string {
 	return fmt.Sprintf("bucket %q key %q perm %v", o.bucket, o.key, o.perm)
-}
-
-func (o *Obj) Size() (sp.Tlength, *serr.Err) {
-	return o.sz, nil
-}
-
-func (o *Obj) SetSize(sz sp.Tlength) {
-	o.sz = sz
 }
 
 func (o *Obj) readHead(ctx fs.CtxI, fss3 *Fss3) *serr.Err {
@@ -80,14 +72,14 @@ func (o *Obj) readHead(ctx fs.CtxI, fss3 *Fss3) *serr.Err {
 		return serr.NewErrError(err)
 	}
 	db.DPrintf(db.S3, "readHead: %v %v %v\n", key, result.ContentLength, err)
-	o.sz = sp.Tlength(result.ContentLength)
+	o.sz = sp.Tlength(*result.ContentLength)
 	if result.LastModified != nil {
 		o.mtime = (*result.LastModified).Unix()
 	}
 	return nil
 }
 
-func newFsObj(bucket string, perm sp.Tperm, key path.Path) fs.FsObj {
+func newFsObj(bucket string, perm sp.Tperm, key path.Tpathname) fs.FsObj {
 	if perm.IsDir() {
 		return newDir(bucket, key.Copy(), perm)
 	} else {
@@ -103,23 +95,26 @@ func (o *Obj) fill(ctx fs.CtxI) *serr.Err {
 }
 
 // stat without filling
-func (o *Obj) stat() *sp.Stat {
-	db.DPrintf(db.S3, "stat: %v\n", o)
+func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
+	db.DPrintf(db.S3, "NewStat: %v\n", o)
 	name := ""
 	if len(o.key) > 0 {
 		name = o.key.Base()
 	}
-	return sp.NewStat(sp.NewQidPerm(o.perm, 0, o.Path()), o.perm|sp.Tperm(0777), uint32(o.mtime), name, "")
+	return sp.NewStat(sp.NewQidPerm(o.perm, 0, o.Path()), o.perm|sp.Tperm(0777), uint32(o.mtime), name, ""), nil
 }
 
 func (o *Obj) Path() sp.Tpath {
-	p := path.Path{o.bucket}
+	p := path.Tpathname{o.bucket}
 	return newTpath(p.AppendPath(o.key))
 }
 
-// convert ux perms into np perm; maybe symlink?
 func (o *Obj) Perm() sp.Tperm {
 	return o.perm
+}
+
+func (o *Obj) IsLeased() bool {
+	return false
 }
 
 func (o *Obj) Parent() fs.Dir {
@@ -133,8 +128,11 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 		db.DPrintf(db.S3, "Stat: %v err %v\n", o, err)
 		return nil, err
 	}
-	st := o.stat()
-	st.Length = uint64(o.sz)
+	st, err := o.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	st.SetLength(o.sz)
 	return st, nil
 }
 
@@ -188,7 +186,7 @@ func (o *Obj) s3Read(ctx fs.CtxI, off, cnt int) (io.ReadCloser, sp.Tlength, *ser
 		region1 = *result.ContentRange
 	}
 	db.DPrintf(db.S3, "s3Read: %v region %v res %v %v\n", o.key, region, region1, result.ContentLength)
-	return result.Body, sp.Tlength(result.ContentLength), nil
+	return result.Body, sp.Tlength(*result.ContentLength), nil
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
@@ -267,7 +265,26 @@ func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsiz
 		return 0, serr.NewErrError(err)
 	} else {
 		o.off += sp.Toffset(n)
-		o.SetSize(sp.Tlength(o.off))
+		o.sz = sp.Tlength(o.off)
 		return sp.Tsize(n), nil
 	}
+}
+
+// ===== The following functions are needed to make an s3 obj support fs.Inode
+
+func (o *Obj) SetParent(di fs.Dir) {
+	db.DFatalf("Unimplemented")
+}
+
+func (o *Obj) Unlink() {
+	db.DFatalf("Unimplemented")
+}
+
+func (o *Obj) SetMtime(mtime int64) {
+	db.DFatalf("Unimplemented")
+}
+
+func (o *Obj) Mtime() int64 {
+	db.DFatalf("Unimplemented")
+	return 0
 }

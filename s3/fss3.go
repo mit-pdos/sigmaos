@@ -15,6 +15,7 @@ import (
 	"sigmaos/perf"
 	proc "sigmaos/proc"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -36,7 +37,7 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 	if clnt, ok = fss3.clients[ctx.Principal().GetID()]; ok {
 		return clnt, nil
 	}
-	s3secrets, ok := ctx.Claims().GetSecrets()["s3"]
+	s3secrets, ok := ctx.Secrets()["s3"]
 	// If this principal doesn't carry any s3 secrets, return EPERM
 	if !ok {
 		return nil, serr.NewErr(serr.TErrPerm, fmt.Errorf("Principal %v has no S3 secrets", ctx.Principal().GetID()))
@@ -46,6 +47,7 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 		config.WithCredentialsProvider(
 			auth.NewAWSCredentialsProvider(s3secrets),
 		),
+		config.WithRegion(`us-east-1`),
 	)
 	if err != nil {
 		db.DFatalf("Failed to load SDK configuration %v", err)
@@ -57,14 +59,18 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 	return clnt, nil
 }
 
-func RunFss3(buckets []string) {
+func RunFss3() {
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
 	fss3 = &Fss3{
 		clients: make(map[sp.TprincipalID]*s3.Client),
 	}
-	root := newDir("", path.Path{}, sp.DMDIR)
-	pe := proc.GetProcEnv()
-	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, pe.GetNet())
-	ssrv, err := sigmasrv.NewSigmaSrvRoot(root, sp.S3, addr, pe)
+	root := newDir("", path.Tpathname{}, sp.DMDIR)
+	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, sp.S3, sc)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

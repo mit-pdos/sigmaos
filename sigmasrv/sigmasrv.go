@@ -1,16 +1,20 @@
+// Many SigmaOS servers use package sigmasrv to create and run
+// servers.  A server typically consists of a MemFS (an in-memory file
+// system accessed through sigmap), one or more RPC services,
+// including one for leases. Sigmasrv creates the RPC device in the
+// memfs.
 package sigmasrv
 
 import (
 	"runtime/debug"
 
-	"sigmaos/auth"
 	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/dir"
 	"sigmaos/fencefs"
 	"sigmaos/fs"
 	"sigmaos/memfs"
+	"sigmaos/memfs/dir"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/rpc"
@@ -19,13 +23,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
-
-//
-// Many SigmaOS servers use SigmaSrv to create and run servers.  A
-// server typically consists of a MemFS (an in-memory file system
-// accessed through sigmap), one or more RPC services, including one
-// for leases. Sigmasrv creates the RPC device in the memfs.
-//
 
 type SigmaSrv struct {
 	*memfssrv.MemFs
@@ -36,6 +33,9 @@ type SigmaSrv struct {
 
 // Make a sigmasrv with an memfs, and publish server at fn.
 func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
+	db.DPrintf(db.SIGMASRV, "NewSigmaSrv %T", svci)
+	defer db.DPrintf(db.SIGMASRV, "NewSigmaSrv done %T", svci)
+
 	mfs, error := memfssrv.NewMemFs(fn, pe)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrv %v err %v", fn, error)
@@ -44,22 +44,8 @@ func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
 	return newSigmaSrvMemFs(mfs, svci)
 }
 
-func NewSigmaSrvPublic(fn string, svci any, pe *proc.ProcEnv, public bool) (*SigmaSrv, error) {
-	db.DPrintf(db.ALWAYS, "NewSigmaSrvPublic %T", svci)
-	if public {
-		mfs, error := memfssrv.NewMemFsPublic(fn, pe)
-		if error != nil {
-			db.DPrintf(db.ERROR, "NewMemFsPublic %v err %v", fn, error)
-			return nil, error
-		}
-		return newSigmaSrvMemFs(mfs, svci)
-	} else {
-		return NewSigmaSrv(fn, svci, pe)
-	}
-}
-
-func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pe *proc.ProcEnv, svci any) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsAddr(fn, addr, pe)
+func NewSigmaSrvAddrClnt(fn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
+	mfs, error := memfssrv.NewMemFsAddrClnt(fn, addr, sc)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrvPort %v err %v", fn, error)
 		return nil, error
@@ -67,8 +53,16 @@ func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pe *proc.ProcEnv, svci any) (*Si
 	return newSigmaSrvMemFs(mfs, svci)
 }
 
+func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pe *proc.ProcEnv, svci any) (*SigmaSrv, error) {
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		return nil, err
+	}
+	return NewSigmaSrvAddrClnt(fn, addr, sc, svci)
+}
+
 func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc)
+	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP), sc)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v", fn, error)
 		return nil, error
@@ -76,19 +70,10 @@ func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, e
 	return newSigmaSrvMemFs(mfs, svci)
 }
 
-func NewSigmaSrvClntKeyMgr(fn string, sc *sigmaclnt.SigmaClnt, kmgr auth.KeyMgr, svci any) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsPortClntFenceKeyMgr(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc, nil, kmgr)
-	if err != nil {
-		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v", fn, err)
-		return nil, err
-	}
-	return newSigmaSrvMemFs(mfs, svci)
-}
-
 // For an memfs server: memfs, lease srv, and fences
 func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
 	ffs := fencefs.NewRoot(ctx.NewCtxNull(), nil)
-	mfs, error := memfssrv.NewMemFsPortClntFence(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc, ffs)
+	mfs, error := memfssrv.NewMemFsPortClntFence(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP), sc, ffs)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrvClntFence %v err %v", fn, error)
 		return nil, error
@@ -104,7 +89,7 @@ func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error)
 }
 
 func NewSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP, sc.ProcEnv().GetNet()), sc)
+	mfs, err := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP), sc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewMemFsPortClnt %v err %v", fn, err)
 		return nil, err
@@ -147,16 +132,12 @@ func newSigmaSrvRPC(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 	return ssrv, ssrv.AddRPCSrv(rpc.RPC, svci)
 }
 
-func NewSigmaSrvRootClntKeyMgr(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, keymgr auth.KeyMgr) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsRootPortClntFenceKeyMgr(root, path, addr, sc, keymgr, nil)
+func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
+	mfs, err := memfssrv.NewMemFsRootPortClntFence(root, path, addr, sc, nil)
 	if err != nil {
 		return nil, err
 	}
 	return newSigmaSrv(mfs), nil
-}
-
-func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	return NewSigmaSrvRootClntKeyMgr(root, addr, path, sc, nil)
 }
 
 func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv) (*SigmaSrv, error) {
@@ -167,9 +148,9 @@ func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv)
 	return NewSigmaSrvRootClnt(root, addr, path, sc)
 }
 
-// Mount the rpc directory in sessrv and create the RPC service in
-// it. This function is useful for SigmaSrv that don't have an MemFs
-// (e.g., knamed/named).
+// Mount the rpc directory and create the RPC service in it. This
+// function is useful for sigmasrv whose root is for a non-memfs file
+// system (e.g., knamed/named, which uses fsetcd).
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
 	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
 	ssrv.MemFs.SigmaPSrv.Mount(rpc.RPC, d.(*dir.DirImpl))

@@ -1,11 +1,14 @@
 package procqsrv
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"sigmaos/chunk"
+	"sigmaos/chunkclnt"
+	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"
@@ -14,6 +17,7 @@ import (
 	proto "sigmaos/procqsrv/proto"
 	"sigmaos/rand"
 	"sigmaos/scheddclnt"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -33,6 +37,7 @@ type ProcQ struct {
 	realms     []sp.Trealm
 	qlen       int // Aggregate queue length, across all queues
 	tot        atomic.Int64
+	realmbins  *chunkclnt.RealmBinPaths
 }
 
 type QDir struct {
@@ -46,6 +51,7 @@ func NewProcQ(sc *sigmaclnt.SigmaClnt) *ProcQ {
 		qs:         make(map[sp.Trealm]*Queue),
 		realms:     make([]sp.Trealm, 0),
 		qlen:       0,
+		realmbins:  chunkclnt.NewRealmBinPaths(),
 	}
 	pq.cond = sync.NewCond(&pq.mu)
 	return pq
@@ -97,7 +103,7 @@ func (qd *QDir) Len() int {
 func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCQ, "[%v] Enqueue %v", p.GetRealm(), p)
-	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv time %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv; time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	ch := make(chan string)
 	pq.addProc(p, ch)
 	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
@@ -132,6 +138,9 @@ func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS ti
 	if err := pq.scheddclnt.ForceRun(kernelID, true, p); err != nil {
 		db.DPrintf(db.PROCQ_ERR, "Error ForceRun proc on kid %v: %v", kernelID, err)
 		pq.addProc(p, ch)
+		if serr.IsErrorUnavailable(err) {
+			pq.realmbins.DelBinKernelID(p.GetRealm(), p.GetProgram(), kernelID)
+		}
 		return
 	}
 	db.DPrintf(db.PROCQ, "Done runProc on kid %v", kernelID)
@@ -192,12 +201,19 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				db.DPrintf(db.PROCQ, "First try to dequeue from %v", r)
 			}
 			db.DPrintf(db.PROCQ, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
-			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem))
+			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem), req.KernelID)
 			db.DPrintf(db.PROCQ, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)
 			if ok {
 				// Decrease aggregate queue length.
 				pq.qlen--
 				db.DPrintf(db.PROCQ, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
+				if !chunksrv.IsChunkSrvPath(p.GetSigmaPath()[0]) {
+					if kid, ok := pq.realmbins.GetBinKernelID(p.GetRealm(), p.GetProgram()); ok {
+						p.PrependSigmaPath(chunk.ChunkdPath(kid))
+					}
+				}
+				pq.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), req.KernelID)
+
 				// Push proc to schedd. Do this asynchronously so we don't hold locks
 				// across RPCs.
 				go pq.runProc(req.KernelID, p, ch, ts)
@@ -207,6 +223,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// requests.
 				res.Mem = uint32(p.GetMem())
 				res.QLen = uint32(pq.qlen)
+				db.DPrintf(db.TEST, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
 				pq.mu.Unlock()
 				return nil
 			}
@@ -274,12 +291,13 @@ func (pq *ProcQ) stats() {
 
 // Run a ProcQ
 func Run() {
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	pq := NewProcQ(sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
@@ -288,7 +306,6 @@ func Run() {
 	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
 		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}
-
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.PROCQ)
 	if err != nil {

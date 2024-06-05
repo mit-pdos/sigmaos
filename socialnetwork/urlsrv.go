@@ -34,10 +34,10 @@ type UrlSrv struct {
 	random *rand.Rand
 }
 
-func RunUrlSrv(public bool, jobname string) error {
+func RunUrlSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Creating url service\n")
 	urlsrv := &UrlSrv{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_URL, urlsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_URL, urlsrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func RunUrlSrv(public bool, jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, URL_COL, []string{"shorturl"})
 	urlsrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_URL)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_URL, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

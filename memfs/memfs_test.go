@@ -2,7 +2,7 @@ package memfs_test
 
 import (
 	"flag"
-	gopath "path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -10,6 +10,7 @@ import (
 
 	// db "sigmaos/debug"
 	db "sigmaos/debug"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -43,21 +44,22 @@ func TestPipeBasic(t *testing.T) {
 		return
 	}
 
-	pipe := gopath.Join(pathname, "pipe")
+	pipe := filepath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
 
 	ch := make(chan bool)
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
 		b := make([]byte, 100)
-		_, err = fsl.Read(fd, b)
+		n, err := fsl.Read(fd, b)
 		assert.Nil(ts.T, err, "Read")
-		assert.Equal(ts.T, "hello", string(b))
+		assert.Equal(ts.T, sp.Tsize(len("hello")), n)
+		assert.Equal(ts.T, "hello", string(b[:n]))
 		err = fsl.CloseFd(fd)
 		assert.Nil(ts.T, err, "Close")
 		ch <- true
@@ -82,25 +84,25 @@ func TestPipeClose(t *testing.T) {
 		return
 	}
 
-	pipe := gopath.Join(pathname, "pipe")
+	pipe := filepath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
 		for true {
 			b := make([]byte, 100)
-			_, err := fsl.Read(fd, b)
+			n, err := fsl.Read(fd, b)
 			if err != nil { // writer closed pipe
 				break
 			}
 			assert.Nil(ts.T, err, "Read")
-			assert.Equal(ts.T, "hello", string(b))
+			assert.Equal(ts.T, "hello", string(b[:n]))
 		}
 		err = fsl.CloseFd(fd)
 		assert.Nil(ts.T, err, "Close: %v", err)
@@ -125,7 +127,7 @@ func TestPipeRemove(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	pipe := gopath.Join(pathname, "pipe")
+	pipe := filepath.Join(pathname, "pipe")
 
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
@@ -133,7 +135,7 @@ func TestPipeRemove(t *testing.T) {
 	ch := make(chan bool)
 	go func(ch chan bool) {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OREAD)
 		assert.NotNil(ts.T, err, "Open")
@@ -153,13 +155,13 @@ func TestPipeCrash0(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	pipe := gopath.Join(pathname, "pipe")
+	pipe := filepath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
 
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OWRITE)
 		assert.Nil(ts.T, err, "Open")
@@ -182,12 +184,12 @@ func TestPipeCrash1(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	pipe := gopath.Join(pathname, "pipe")
+	pipe := filepath.Join(pathname, "pipe")
 	err := ts.NewPipe(pipe, 0777)
 	assert.Nil(ts.T, err, "NewPipe")
 
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl1, err := sigmaclnt.NewFsLib(pe)
+	fsl1, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 
 	assert.Nil(t, err)
 	go func() {
@@ -206,7 +208,7 @@ func TestPipeCrash1(t *testing.T) {
 	// start up second write to pipe
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl2, err := sigmaclnt.NewFsLib(pe)
+		fsl2, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 		// the pipe has been closed for writing due to crash;
 		// this open should fail.

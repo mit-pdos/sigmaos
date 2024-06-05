@@ -3,7 +3,6 @@ package boot
 import (
 	"os"
 
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv"
@@ -15,9 +14,9 @@ type Boot struct {
 }
 
 // The boot processes enters here
-func BootUp(param *kernel.Param, pe *proc.ProcEnv, bootstrapAS auth.AuthSrv) error {
+func BootUp(param *kernel.Param, pe *proc.ProcEnv) error {
 	db.DPrintf(db.KERNEL, "Boot param %v ProcEnv %v env %v", param, pe, os.Environ())
-	k, err := kernel.NewKernel(param, pe, bootstrapAS)
+	k, err := kernel.NewKernel(param, pe)
 	if err != nil {
 		return err
 	}

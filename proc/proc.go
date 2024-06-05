@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime/debug"
 	"time"
 
@@ -76,11 +76,12 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		sp.Trealm(sp.NOT_SET),
 		sp.NewPrincipal(
 			sp.TprincipalID(pid.String()),
-			sp.NoToken(),
+			sp.Trealm(sp.NOT_SET),
 		),
 		procdir,
 		sp.NOT_SET,
 		priv,
+		false,
 		false,
 		false,
 	).GetProto()
@@ -118,39 +119,24 @@ func (p *Proc) LookupEnv(name string) (string, bool) {
 
 func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.SetRealm(parentPE.GetRealm(), parentPE.Overlays)
-	p.ProcEnvProto.ParentDir = path.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
-	p.ProcEnvProto.EtcdIP = parentPE.EtcdIP
+	p.ProcEnvProto.ParentDir = filepath.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
+	p.ProcEnvProto.EtcdEndpoints = parentPE.EtcdEndpoints
 	p.ProcEnvProto.Perf = parentPE.Perf
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
-	p.ProcEnvProto.Net = parentPE.Net
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
-	p.ProcEnvProto.ParentToken = parentPE.Principal.GetToken()
-	// If parent didn't specify allowed paths, inherit the parent's allowed paths
-	if p.ProcEnvProto.Claims.AllowedPaths == nil {
-		p.ProcEnvProto.Claims.AllowedPaths = parentPE.Claims.AllowedPaths
-	}
+	// Don't override intentionally set net proxy settings
+	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
+	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
 	// If parent didn't specify secrets, inherit the parent's secrets
-	if p.ProcEnvProto.Claims.Secrets == nil {
-		p.ProcEnvProto.Claims.Secrets = parentPE.Claims.Secrets
+	if p.ProcEnvProto.SecretsMap == nil {
+		p.ProcEnvProto.SecretsMap = parentPE.SecretsMap
 	}
-}
-
-func (p *Proc) SetAllowedPaths(paths []string) {
-	p.ProcEnvProto.SetAllowedPaths(paths)
-}
-
-func (p *Proc) SetToken(token *sp.Ttoken) {
-	p.ProcEnvProto.SetToken(token)
 }
 
 func (p *Proc) GetPrincipal() *sp.Tprincipal {
 	return p.ProcEnvProto.GetPrincipal()
-}
-
-func (p *Proc) GetParentToken() *sp.Ttoken {
-	return p.ProcEnvProto.ParentToken
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
@@ -160,15 +146,41 @@ func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 	}
 }
 
+func (p *Proc) SetKernels(kernels []string) {
+	p.ProcEnvProto.Kernels = kernels
+}
+
+func (p *Proc) HasNoKernelPref() bool {
+	return len(p.ProcEnvProto.Kernels) == 0
+}
+
+func (p *Proc) HasKernelPref(kernelID string) bool {
+	for _, k := range p.ProcEnvProto.Kernels {
+		if k == kernelID {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *Proc) PrependSigmaPath(pn string) {
+	p.ProcEnvProto.PrependSigmaPath(pn)
+}
+
 // Finalize env details which can only be set once a physical machine and
 // uprocd container have been chosen.
 func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
-	// Clear parent token string
-	p.ProcEnvProto.ParentToken = sp.NoToken()
 	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
 	p.ProcEnvProto.SetUprocdPID(uprocdPid)
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
+	// Marshal and b64-encode the principal ID
+	b, err := json.Marshal(p.GetPrincipal())
+	if err != nil {
+		log.Fatalf("FATAL Error marshal principal: %v", err)
+	}
+	// Add marshaled principal ID to env
+	p.AppendEnv(SIGMAPRINCIPAL, string(b))
 }
 
 func (p *Proc) IsPrivileged() bool {
@@ -176,13 +188,15 @@ func (p *Proc) IsPrivileged() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t KernelId:%v UseSigmaclntd %t Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
+	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t SigmaPath:%v KernelId:%v UseSigmaclntd:%v UseNetProxy:%v Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.GetPID(),
 		p.ProcEnvProto.GetBuildTag(),
 		p.ProcEnvProto.Privileged,
+		p.ProcEnvProto.GetSigmaPath(),
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.UseSigmaclntd,
+		p.ProcEnvProto.UseNetProxy,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.GetPerf(),
 		p.ProcEnvProto.GetInnerContainerIP(),
@@ -199,7 +213,7 @@ func (p *Proc) setProcDir(kernelId string) {
 	// Privileged procs have their ProcDir (sp.KPIDS) set at the time of creation
 	// of the proc struct.
 	if !p.IsPrivileged() {
-		p.ProcEnvProto.ProcDir = path.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
+		p.ProcEnvProto.ProcDir = filepath.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
 	}
 }
 
@@ -222,6 +236,10 @@ func (p *Proc) GetProcEnv() *ProcEnv {
 
 func (p *Proc) GetProgram() string {
 	return p.ProcEnvProto.Program
+}
+
+func (p *Proc) GetSigmaPath() []string {
+	return p.ProcEnvProto.SigmaPath
 }
 
 func (p *Proc) GetProcDir() string {
@@ -300,10 +318,6 @@ func (p *Proc) GetShared() string {
 	return p.SharedTarget
 }
 
-func (p *Proc) GetNet() string {
-	return p.ProcEnvProto.GetNet()
-}
-
 func (p *Proc) SetHow(n Thow) {
 	p.ProcEnvProto.SetHow(n)
 }
@@ -312,12 +326,12 @@ func (p *Proc) GetHow() Thow {
 	return p.ProcEnvProto.GetHow()
 }
 
-func (p *Proc) SetScheddAddr(addr *sp.Taddr) {
-	p.ProcEnvProto.ScheddAddr = addr
+func (p *Proc) SetScheddEndpoint(ep *sp.Tendpoint) {
+	p.ProcEnvProto.ScheddEndpointProto = ep.GetProto()
 }
 
-func (p *Proc) SetNamedMount(mnt sp.Tmount) {
-	p.ProcEnvProto.NamedMountProto = mnt.TmountProto
+func (p *Proc) SetNamedEndpoint(ep *sp.Tendpoint) {
+	p.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
 }
 
 // Return Env map as a []string
@@ -341,7 +355,7 @@ func (p *Proc) SetMcpu(mcpu Tmcpu) {
 	}
 }
 
-// Set the amount of memory (in MB) required to run this proc.
+// Set the aendpoint of memory (in MB) required to run this proc.
 func (p *Proc) SetMem(mb Tmem) {
 	p.MemInt = uint32(mb)
 }

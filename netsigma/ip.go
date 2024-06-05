@@ -10,34 +10,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Rearrange addrs so that first addr is in the realm as clnt.
-func Rearrange(clntnet string, addrs sp.Taddrs) sp.Taddrs {
-	if len(addrs) == 1 {
-		return addrs
-	}
-	raddrs := make(sp.Taddrs, len(addrs))
-	for i := 0; i < len(addrs); i++ {
-		raddrs[i] = addrs[i]
-	}
-	p := -1
-	l := -1
-	for i, a := range raddrs {
-		if a.NetNS == clntnet {
-			l = i
-			break
-		}
-		if a.NetNS == sp.ROOTREALM.String() && p < 0 {
-			p = i
-		}
-	}
-	if l >= 0 {
-		swap(raddrs, l)
-	} else if p >= 0 {
-		swap(raddrs, p)
-	}
-	return raddrs
-}
-
 func swap(addrs sp.Taddrs, i int) sp.Taddrs {
 	v := addrs[0]
 	addrs[0] = addrs[i]
@@ -144,12 +116,23 @@ func LocalIP() (sp.Tip, error) {
 	if err != nil {
 		return "", err
 	}
+	db.DPrintf(db.PORT, "Local ips: %v", ips)
 
 	// if we have a local ip in 10.10.x.x (for Cloudlab), prioritize that first
 	for _, i := range ips {
 		if strings.HasPrefix(i.String(), "10.10.") {
 			return sp.Tip(i.String()), nil
 		}
+	}
+	// if we have a local ip in 10.0.x.x (for Docker), prioritize that next
+	for _, i := range ips {
+		if strings.HasPrefix(i.String(), "10.0.") {
+			return sp.Tip(i.String()), nil
+		}
+	}
+	// XXX Should do this in a more principled way
+	// Next, prioritize non-localhost IPs
+	for _, i := range ips {
 		if !strings.HasPrefix(i.String(), "127.") {
 			return sp.Tip(i.String()), nil
 		}

@@ -1,7 +1,7 @@
 package sessdevclnt
 
 import (
-	"path"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -26,8 +26,8 @@ func NewSessDevClnt(fsl *fslib.FsLib, pn string) (*SessDevClnt, error) {
 		return nil, err
 	}
 	sdc.sid = string(b)
-	sdc.ctl = path.Join(sdc.pn, sdc.sid, sessdev.CTL)
-	sdc.data = path.Join(sdc.pn, sdc.sid, sessdev.DATA)
+	sdc.ctl = filepath.Join(sdc.pn, sdc.sid, sessdev.CTL)
+	sdc.data = filepath.Join(sdc.pn, sdc.sid, sessdev.DATA)
 	return sdc, nil
 }
 

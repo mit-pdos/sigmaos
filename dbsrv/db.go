@@ -1,9 +1,10 @@
 package dbsrv
 
 import (
-	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sessdevsrv"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -19,12 +20,17 @@ const (
 )
 
 func RunDbd(dbdaddr string) error {
-	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
 	s, err := newServer(dbdaddr)
 	if err != nil {
 		return err
 	}
-	ssrv, err := sigmasrv.NewSigmaSrv(sp.DB, s, proc.GetProcEnv())
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+		return err
+	}
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.DB, sc, s)
 	if err != nil {
 		return err
 	}

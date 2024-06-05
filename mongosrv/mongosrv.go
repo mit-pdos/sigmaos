@@ -10,6 +10,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/mongosrv/proto"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"time"
@@ -45,14 +46,18 @@ func newServer(mongodUrl string) (*MongoSrv, error) {
 }
 
 func RunMongod(mongodUrl string) error {
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		dbg.DFatalf("Error NewSigmaClnt: %v", err)
+	}
 	dbg.DPrintf(dbg.MONGO, "Making mongo proxy server at %v", mongodUrl)
 	s, err := newServer(mongodUrl)
 	if err != nil {
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Starting mongo proxy server")
-	pe := proc.GetProcEnv()
-	ssrv, err := sigmasrv.NewSigmaSrv(sp.MONGO, s, pe)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.MONGO, sc, s)
 	if err != nil {
 		return err
 	}

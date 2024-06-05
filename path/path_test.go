@@ -24,9 +24,9 @@ func TestSplit(t *testing.T) {
 }
 
 func TestIsParent(t *testing.T) {
-	assert.True(t, Path{"a"}.IsParent(Path{}))
-	assert.False(t, Path{"b"}.IsParent(Path{"a"}))
-	assert.True(t, Path{"a", "b"}.IsParent(Path{"a"}))
-	assert.False(t, Path{"a", "b"}.IsParent(Path{"a", "c"}))
-	assert.False(t, Path{"a"}.IsParent(Path{"a", "c"}))
+	assert.True(t, Tpathname{"a"}.IsParent(Tpathname{}))
+	assert.False(t, Tpathname{"b"}.IsParent(Tpathname{"a"}))
+	assert.True(t, Tpathname{"a", "b"}.IsParent(Tpathname{"a"}))
+	assert.False(t, Tpathname{"a", "b"}.IsParent(Tpathname{"a", "c"}))
+	assert.False(t, Tpathname{"a"}.IsParent(Tpathname{"a", "c"}))
 }

@@ -1,7 +1,9 @@
+// Package ctx provices the context for a request
 package ctx
 
 import (
-	"sigmaos/auth"
+	"fmt"
+
 	"sigmaos/clntcond"
 	"sigmaos/fs"
 	"sigmaos/sessp"
@@ -10,17 +12,17 @@ import (
 
 type Ctx struct {
 	principal *sp.Tprincipal
-	claims    *auth.ProcClaims
+	secrets   map[string]*sp.SecretProto
 	sessid    sessp.Tsession
 	clntid    sp.TclntId
 	sct       *clntcond.ClntCondTable
 	fencefs   fs.Dir
 }
 
-func NewCtx(principal *sp.Tprincipal, claims *auth.ProcClaims, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
+func NewCtx(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto, sessid sessp.Tsession, clntid sp.TclntId, sct *clntcond.ClntCondTable, fencefs fs.Dir) *Ctx {
 	return &Ctx{
 		principal: principal,
-		claims:    claims,
+		secrets:   secrets,
 		sessid:    sessid,
 		clntid:    clntid,
 		sct:       sct,
@@ -28,16 +30,24 @@ func NewCtx(principal *sp.Tprincipal, claims *auth.ProcClaims, sessid sessp.Tses
 	}
 }
 
+func (ctx *Ctx) String() string {
+	return fmt.Sprintf("{pr %v sid %v clnt %v}", ctx.principal, ctx.sessid, ctx.clntid)
+}
+
+func NewPrincipalOnlyCtx(principal *sp.Tprincipal) *Ctx {
+	return NewCtx(principal, nil, 0, sp.NoClntId, nil, nil)
+}
+
 func NewCtxNull() *Ctx {
-	return NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, nil)
+	return NewPrincipalOnlyCtx(sp.NoPrincipal())
+}
+
+func (ctx *Ctx) Secrets() map[string]*sp.SecretProto {
+	return ctx.secrets
 }
 
 func (ctx *Ctx) Principal() *sp.Tprincipal {
 	return ctx.principal
-}
-
-func (ctx *Ctx) Claims() *auth.ProcClaims {
-	return ctx.claims
 }
 
 func (ctx *Ctx) SessionId() sessp.Tsession {

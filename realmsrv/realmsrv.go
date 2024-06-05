@@ -5,18 +5,15 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
-	"sigmaos/keyclnt"
-	"sigmaos/keys"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
 	"sigmaos/realmsrv/proto"
@@ -41,39 +38,60 @@ const (
 	STARVATION_RATIO      = 0.1
 )
 
+type Subsystem struct {
+	kernelID string
+	pid      sp.Tpid
+}
+
 type Realm struct {
-	named *proc.Proc // XXX groupmgr for fault tolerance
-	sc    *sigmaclnt.SigmaClnt
+	sync.Mutex
+	named                    *proc.Proc // XXX groupmgr for fault tolerance
+	perRealmKernelSubsystems []*Subsystem
+	sc                       *sigmaclnt.SigmaClnt
+}
+
+func newRealm() *Realm {
+	return &Realm{
+		perRealmKernelSubsystems: []*Subsystem{},
+	}
+}
+
+func (r *Realm) addSubsystem(kernelID string, pid sp.Tpid) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.perRealmKernelSubsystems = append(r.perRealmKernelSubsystems, &Subsystem{
+		kernelID: kernelID,
+		pid:      pid,
+	})
 }
 
 type RealmSrv struct {
-	mu              sync.Mutex
-	realms          map[sp.Trealm]*Realm
-	sc              *sigmaclnt.SigmaClntKernel
-	pq              *procqclnt.ProcQClnt
-	sd              *scheddclnt.ScheddClnt
-	mkc             *kernelclnt.MultiKernelClnt
-	kc              *keyclnt.KeyClnt[*jwt.SigningMethodECDSA]
-	as              auth.AuthSrv
-	masterPublicKey auth.PublicKey
-	pubkey          auth.PublicKey
-	privkey         auth.PrivateKey
-	lastNDPort      int
-	ch              chan struct{}
+	mu         sync.Mutex
+	netproxy   bool
+	realms     map[sp.Trealm]*Realm
+	sc         *sigmaclnt.SigmaClntKernel
+	pq         *procqclnt.ProcQClnt
+	sd         *scheddclnt.ScheddClnt
+	mkc        *kernelclnt.MultiKernelClnt
+	lastNDPort int
+	ch         chan struct{}
 }
 
-func RunRealmSrv(masterPublicKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunRealmSrv(netproxy bool) error {
 	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
 	rs := &RealmSrv{
-		lastNDPort:      MIN_PORT,
-		realms:          make(map[sp.Trealm]*Realm),
-		masterPublicKey: masterPublicKey,
-		pubkey:          pubkey,
-		privkey:         privkey,
+		netproxy:   netproxy,
+		lastNDPort: MIN_PORT,
+		realms:     make(map[sp.Trealm]*Realm),
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
-	ssrv, err := sigmasrv.NewSigmaSrv(sp.REALMD, rs, pe)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.REALMD, sc, rs)
 	if err != nil {
 		return err
 	}
@@ -82,23 +100,13 @@ func RunRealmSrv(masterPublicKey auth.PublicKey, pubkey auth.PublicKey, privkey 
 		return serr
 	}
 	db.DPrintf(db.REALMD, "newsrv ok")
-	rs.kc = keyclnt.NewKeyClnt[*jwt.SigningMethodECDSA](ssrv.MemFs.SigmaClnt())
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
-	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib)
+	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib, db.REALMD, db.REALMD_ERR)
 	rs.pq = procqclnt.NewProcQClnt(rs.sc.FsLib)
 	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib)
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, ssrv.MemFs.SigmaClnt()))
-	kmgr.AddPublicKey(sp.Tsigner(pe.GetPID()), pubkey)
-	kmgr.AddPrivateKey(sp.Tsigner(pe.GetPID()), privkey)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(pe.GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NeHMACAUthServer %v", err)
-		return err
-	}
-	rs.as = as
 	go rs.enforceResourcePolicy()
 	err = ssrv.RunServer()
-	rs.mkc.StopMonitoring()
+	rs.mkc.StopWatching()
 	return nil
 }
 
@@ -116,38 +124,13 @@ func NewNet(net string) error {
 	return nil
 }
 
-func (rm *RealmSrv) bootstrapNamedKeys(p *proc.Proc) error {
-	pubkey, privkey, err := keys.NewECDSAKey()
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewECDSAKey: %v", err)
-		return err
-	}
-	// Post the public key for the subsystem
-	if err := rm.kc.SetKey(sp.Tsigner(p.GetPid()), pubkey); err != nil {
-		db.DPrintf(db.ERROR, "Error post subsystem key: %v", err)
-		return err
-	}
-	p.Args = append(p.Args,
-		[]string{
-			rm.masterPublicKey.Marshal(),
-			pubkey.Marshal(),
-			privkey.Marshal(),
-		}...,
-	)
-	p.SetAllowedPaths(sp.ALL_PATHS)
-	if err := rm.as.MintAndSetToken(p.GetProcEnv()); err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return err
-	}
-	return nil
-}
-
 // XXX clean up if fail during Make
 func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResult) error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v %v", req.Realm, req.Network)
+	defer db.DPrintf(db.REALMD, "RealmSrv.Make done %v %v", req.Realm, req.Network)
 	rid := sp.Trealm(req.Realm)
 	// If realm already exists
 	if _, ok := rm.realms[rid]; ok {
@@ -156,9 +139,13 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	if err := NewNet(req.Network); err != nil {
 		return err
 	}
+	r := newRealm()
 	p := proc.NewProc("named", []string{req.Realm, "0"})
+	p.GetProcEnv().SetRealm(sp.ROOTREALM, p.GetProcEnv().Overlays)
+	// Make sure named uses netproxy
+	p.GetProcEnv().UseNetProxy = rm.netproxy
 	p.SetMcpu(NAMED_MCPU)
-	rm.bootstrapNamedKeys(p)
+	r.named = p
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named", req.Realm)
 	if err := rm.sc.Spawn(p); err != nil {
@@ -172,70 +159,71 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v named started", req.Realm)
 
 	// wait until realm's named is ready to serve
-	sem := semclnt.NewSemClnt(rm.sc.FsLib, path.Join(sp.REALMS, req.Realm)+".sem")
+	sem := semclnt.NewSemClnt(rm.sc.FsLib, filepath.Join(sp.REALMS, req.Realm)+".sem")
 	if err := sem.Down(); err != nil {
 		return err
 	}
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make named ready to serve for %v", rid)
 	pe := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
-	pe.SetAllowedPaths(sp.ALL_PATHS)
-	if err := rm.as.MintAndSetToken(pe); err != nil {
-		db.DPrintf(db.ERROR, "Error MintToken: %v", err)
-		return err
-	}
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	if err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error NewSigmaClntRealm: %v", err)
 		return err
 	}
+	r.sc = sc
 	// Make some rootrealm services available in new realm
-	namedMount, err := rm.sc.GetNamedMount()
+	namedEndpoint, err := rm.sc.GetNamedEndpoint()
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error GetNamedMount: %v", err)
+		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
 		return err
 	}
-	// Mount some service union dirs from the root realm
+	// Export some service dirs from root realm to the new realm by
+	// making endpoints for them in this realm.
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
-		pn := path.Join(sp.NAMED, s)
-		mnt := sp.NewMountService(namedMount.Addr)
-		mnt.SetTree(s)
-		db.DPrintf(db.REALMD, "Link %v at %s\n", mnt, pn)
-		if err := sc.MkMountFile(pn, mnt, sp.NoLeaseId); err != nil {
-			db.DPrintf(db.ERROR, "MountService %v err %v\n", pn, err)
+		pn := filepath.Join(sp.NAMED, s)
+		ep := sp.NewEndpoint(sp.INTERNAL_EP, namedEndpoint.Addrs(), rid)
+		ep.SetTree(s)
+		db.DPrintf(db.REALMD, "Link %v at %s\n", ep, pn)
+		if err := sc.MkEndpointFile(pn, ep); err != nil {
+			db.DPrintf(db.ERROR, "EndpointService %v err %v\n", pn, err)
 			return err
 		}
-	}
-	// Mount keyd into the user realm
-	keydMnt, err := rm.sc.ReadMount(sp.KEYD)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error ReadMount %v: %v", sp.KEYD, err)
-		return err
-	}
-	db.DPrintf(db.REALMD, "Link %v at %s", keydMnt, sp.KEYD)
-	if err := sc.MkMountFile(sp.KEYD, keydMnt, sp.NoLeaseId); err != nil {
-		db.DPrintf(db.ERROR, "MountService %v err %v\n", sp.KEYD, err)
-		return err
 	}
 	// Make some realm dirs
 	for _, s := range []string{sp.KPIDSREL, sp.S3REL, sp.UXREL} {
-		pn := path.Join(sp.NAMED, s)
+		pn := filepath.Join(sp.NAMED, s)
 		db.DPrintf(db.REALMD, "Mkdir %v", pn)
 		if err := sc.MkDir(pn, 0777); err != nil {
-			db.DPrintf(db.REALMD, "MountService %v err %v\n", pn, err)
+			db.DPrintf(db.REALMD, "EndpointService %v err %v\n", pn, err)
 			return err
 		}
 	}
+
+	errC := make(chan error)
 	// Spawn per-realm kernel procs
-	if err := rm.bootPerRealmKernelSubsystems(sp.Trealm(req.Realm), sp.S3REL, req.GetNumS3()); err != nil {
-		db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.S3REL, err)
-		return err
+	go func() {
+		if err := rm.bootPerRealmKernelSubsystems(r, sp.Trealm(req.Realm), sp.S3REL, req.GetNumS3()); err != nil {
+			db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.S3REL, err)
+			errC <- err
+			return
+		}
+		errC <- nil
+	}()
+	go func() {
+		if err := rm.bootPerRealmKernelSubsystems(r, sp.Trealm(req.Realm), sp.UXREL, req.GetNumUX()); err != nil {
+			db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.UXREL, err)
+			errC <- err
+			return
+		}
+		errC <- nil
+	}()
+	for i := 0; i < 2; i++ {
+		if err := <-errC; err != nil {
+			return err
+		}
 	}
-	if err := rm.bootPerRealmKernelSubsystems(sp.Trealm(req.Realm), sp.UXREL, req.GetNumUX()); err != nil {
-		db.DPrintf(db.ERROR, "Error boot per realm [%v] subsystems: %v", sp.UXREL, err)
-		return err
-	}
-	rm.realms[rid] = &Realm{named: p, sc: sc}
+	rm.realms[rid] = r
 	return nil
 }
 
@@ -254,20 +242,43 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveRequest, res *proto.Remo
 		return err
 	}
 
+	db.DPrintf(db.REALMD, "[%v] Remove realm, subsystems %v", rid, r.perRealmKernelSubsystems)
+
+	for _, ss := range r.perRealmKernelSubsystems {
+		if err := rm.mkc.EvictKernelProc(ss.kernelID, ss.pid); err != nil {
+			db.DPrintf(db.ERROR, "Error Evict per-realm kernel subsystem: %v", err)
+			return err
+		}
+	}
+
 	// XXX remove root dir
 
 	if err := rm.sc.Evict(r.named.GetPid()); err != nil {
+		db.DPrintf(db.ERROR, "Error Evict realm named: %v", err)
+		return err
+	}
+	if _, err := rm.sc.WaitExit(r.named.GetPid()); err != nil {
+		db.DPrintf(db.ERROR, "Error WaitExit realm named: %v", err)
 		return err
 	}
 	delete(rm.realms, rid)
 	return nil
 }
 
-func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n int64) error {
+func (rm *RealmSrv) bootPerRealmKernelSubsystems(r *Realm, realm sp.Trealm, ss string, n int64) error {
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems [%v] n %v", realm, ss, n)
-	kernels, err := rm.mkc.GetKernelSrvs()
+	defer db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems done [%v] n %v", realm, ss, n)
+	kernels, err := rm.mkc.GetGeneralKernels()
+	db.DPrintf(db.REALMD, "%v: [%v] kernels %v %v\n", realm, ss, kernels, err)
 	if err != nil {
 		return err
+	}
+	for i := 0; i < len(kernels); i++ {
+		// Don't try to boot per-realm kernel subsystems on sigmaclntd-only kernels
+		if strings.HasPrefix(kernels[i], sp.SIGMACLNTDKERNEL) {
+			kernels = append(kernels[:i], kernels[i+1:]...)
+			i--
+		}
 	}
 	if int64(len(kernels)) < n {
 		db.DPrintf(db.ERROR, "Tried to boot more than one kernel subsystem per kernel")
@@ -286,8 +297,20 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(realm sp.Trealm, ss string, n i
 		kernels = kernels[:n]
 	}
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems selected kernels: %v", realm, kernels)
+	done := make(chan bool)
 	for _, kid := range kernels {
-		rm.mkc.BootInRealm(kid, realm, ss, nil)
+		go func(kid string) {
+			pid, err := rm.mkc.BootInRealm(kid, realm, ss, nil)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Error boot subsystem %v in realm %v on kid %v: %v", ss, realm, kid, err)
+			} else {
+				r.addSubsystem(kid, pid)
+			}
+			done <- true
+		}(kid)
+	}
+	for _ = range kernels {
+		<-done
 	}
 	return nil
 }

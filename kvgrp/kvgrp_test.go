@@ -11,6 +11,7 @@ import (
 	"sigmaos/fsetcd"
 	"sigmaos/groupmgr"
 	"sigmaos/kvgrp"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
@@ -149,7 +150,7 @@ func TestServerCrash(t *testing.T) {
 	ch := make(chan error)
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 		sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 		err = sem.Down()
@@ -175,7 +176,7 @@ func TestReconnectSimple(t *testing.T) {
 	ch := make(chan error)
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe)
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
 			_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
@@ -197,7 +198,7 @@ func TestReconnectSimple(t *testing.T) {
 
 func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pe)
+	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	assert.Nil(t, err)
 	for true {
 		_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
@@ -264,7 +265,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 		ch := make(chan error)
 		go func(i int) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			fsl, err := sigmaclnt.NewFsLib(pe)
+			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 			assert.Nil(t, err)
 			sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 			sem.Init(0)

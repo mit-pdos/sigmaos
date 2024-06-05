@@ -5,7 +5,7 @@ option go_package = "sigmaos/sigmap";
 // A Qid is the server's unique identification for the file being
 // accessed: two files on the same server hierarchy are the same if
 // and only if their qids are the same.
-message Tqid {
+message TqidProto {
         uint32  type = 1;
         uint32  version = 2;
         uint64  path = 3;
@@ -18,13 +18,13 @@ message Ttoken {
 
 message Tprincipal {
         string iDStr = 1;
-        Ttoken token = 2;
+        string realmStr = 2;
 }
 
-message Stat {
+message TstatProto {
         uint32 type = 1;
         uint32 dev = 2;
-        Tqid   qid = 3;
+        TqidProto qid = 3;
         uint32 mode = 4;
         uint32 atime = 5;   // last access time in seconds
         uint32 mtime = 6;   // last modified time in seconds
@@ -39,11 +39,21 @@ message Taddr {
         string iPStr = 1;
         uint32 iPTypeInt = 2; // inner container or outer container
         uint32 portInt = 3;
-        string netNS = 4;
 }
 
-message TmountProto {
-        repeated Taddr addr = 1;
+message SecretProto {
+  string iD = 1;
+  string key = 2;
+}
+
+message TendpointClaimsProto {
+        string   realmStr = 1;
+        uint32   endpointType = 2; // Type of endpoint (e.g. internal vs external)
+        repeated Taddr addr = 3;
+}
+
+message TendpointProto {
+        TendpointClaimsProto claims = 1;
         string root = 2;
         bytes pubKey = 3;
 }
@@ -71,19 +81,19 @@ message Tauth {
 }
 
 message Rauth {
-       Tqid aqid = 1;
+       TqidProto aqid = 1;
 }
 
 message Tattach {
         uint32 fid = 1;
         uint32 afid = 2;
-        Tprincipal principal = 3;
+        map<string, SecretProto> secrets = 3;
         string aname = 4;
         uint64 clntId = 5;
 }
 
 message Rattach {
-        Tqid qid = 1;        
+        TqidProto qid = 1;        
 }
 
 message Rerror {
@@ -99,7 +109,7 @@ message Twalk {
 }
 
 message Rwalk {
-        repeated Tqid qids = 1;
+        repeated TqidProto qids = 1;
 }
 
 message Topen {
@@ -108,7 +118,7 @@ message Topen {
 }
 
 message Ropen {
-        Tqid qid = 1;
+        TqidProto qid = 1;
         uint32 iounit = 2;
 }
 
@@ -122,7 +132,7 @@ message Tcreate {
 }
 
 message Rcreate {
-        Tqid qid = 1;
+        TqidProto qid = 1;
         uint32 iounit = 2;
 }
 
@@ -162,17 +172,17 @@ message Tremove {
 message Rremove {
 }
 
-message Tstat {
+message Trstat {
         uint32 fid = 1;
 }
 
-message Rstat {
-        Stat stat = 1;
+message Rrstat {
+        TstatProto stat = 1;
 }
 
 message Twstat {
         uint32 fid = 1;
-        Stat stat = 2;
+        TstatProto stat = 2;
         TfenceProto fence = 3;
 }
 

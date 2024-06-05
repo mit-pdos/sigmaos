@@ -4,67 +4,72 @@ import (
 	"fmt"
 	"net"
 
-	"runtime/debug"
-
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/netsigma"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
 type NewConnI interface {
-	NewConn(net.Conn) *demux.DemuxSrv
+	NewConn(*sp.Tprincipal, net.Conn) *demux.DemuxSrv
 }
 
 type NetServer struct {
 	pe      *proc.ProcEnv
-	addr    *sp.Taddr
-	l       net.Listener
+	npc     *netproxyclnt.NetProxyClnt
+	ep      *sp.Tendpoint
+	l       *netproxyclnt.Listener
 	newConn NewConnI
 }
 
-func NewNetServer(pe *proc.ProcEnv, addr *sp.Taddr, newConn NewConnI) *NetServer {
-	srv := &NetServer{pe: pe, newConn: newConn}
+func NewNetServer(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, newConn NewConnI) *NetServer {
+	return NewNetServerEPType(pe, npc, addr, sp.INTERNAL_EP, newConn)
+}
+
+// Special-case used just for proxy
+func NewNetServerEPType(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, eptype sp.TTendpoint, newConn NewConnI) *NetServer {
+	srv := &NetServer{
+		pe:      pe,
+		newConn: newConn,
+		npc:     npc,
+	}
 	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
-	var l net.Listener
-	l, err := net.Listen("tcp", addr.IPPort())
+	ep, l, err := npc.Listen(eptype, addr)
 	if err != nil {
 		db.DFatalf("Listen error: %v", err)
 	}
-	h, p, err := netsigma.QualifyAddrLocalIP(pe.GetInnerContainerIP(), l.Addr().String())
-	if err != nil {
-		db.DFatalf("QualifyAddr \"%v\" -> \"%v:%v\" error: %v\n%s", l.Addr().String(), h, p, err, debug.Stack())
-	}
-	srv.addr = sp.NewTaddrRealm(h, sp.INNER_CONTAINER_IP, p, pe.GetNet())
+	srv.ep = ep
+	srv.ep = ep
 	srv.l = l
-	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.addr)
+	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.ep)
 	go srv.runsrv(l)
 	return srv
 }
 
-func (srv *NetServer) MyAddr() *sp.Taddr {
-	return srv.addr
+func (srv *NetServer) GetEndpoint() *sp.Tendpoint {
+	return srv.ep
 }
 
 func (srv *NetServer) CloseListener() error {
-	db.DPrintf(db.NETSRV, "Close %v\n", srv.addr)
+	db.DPrintf(db.NETSRV, "Close %v\n", srv.ep)
 	return srv.l.Close()
 }
 
-func (srv *NetServer) runsrv(l net.Listener) {
+func (srv *NetServer) runsrv(l *netproxyclnt.Listener) {
 	for {
-		conn, err := l.Accept()
+		conn, p, err := l.AcceptGetPrincipal()
+		db.DPrintf(db.NETSRV, "Accept conn from principal %v", p)
 		if err != nil {
 			db.DPrintf(db.NETSRV, "%v: Accept err %v", srv.pe.GetPID(), err)
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)
-		srv.newConn.NewConn(conn)
+		srv.newConn.NewConn(p, conn)
 	}
 }
 
 func (srv *NetServer) String() string {
-	return fmt.Sprintf("{ addr: %v }", srv.addr)
+	return fmt.Sprintf("{ ep: %v }", srv.ep)
 }

@@ -7,9 +7,9 @@ import (
 	leaseproto "sigmaos/lease/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/ephemeralmap"
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
+	"sigmaos/protsrv/leasedmap"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
@@ -17,14 +17,14 @@ import (
 
 type LeaseSrv struct {
 	mfs     *memfssrv.MemFs
-	lt      *syncmap.SyncMap[sp.TleaseId, *leaseInfo]
-	et      *ephemeralmap.EphemeralMap
+	lt      *syncmap.SyncMap[sp.TleaseId, *lease]
+	lm      *leasedmap.LeasedMap
 	mu      sync.Mutex
 	nextLid sp.TleaseId
 	ch      chan struct{}
 }
 
-type leaseInfo struct {
+type lease struct {
 	sync.Mutex
 	ttl  uint64
 	time uint64
@@ -34,8 +34,8 @@ type leaseInfo struct {
 func newLeaseSrv(mfs *memfssrv.MemFs) *LeaseSrv {
 	ls := &LeaseSrv{
 		mfs:     mfs,
-		lt:      syncmap.NewSyncMap[sp.TleaseId, *leaseInfo](),
-		et:      mfs.EphemeralMap(),
+		lt:      syncmap.NewSyncMap[sp.TleaseId, *lease](),
+		lm:      mfs.Leasedmap(),
 		nextLid: 1,
 		ch:      make(chan struct{}),
 	}
@@ -45,7 +45,7 @@ func newLeaseSrv(mfs *memfssrv.MemFs) *LeaseSrv {
 
 func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leaseproto.AskResult) error {
 	lid := ls.allocLid()
-	ls.lt.Insert(lid, &leaseInfo{ttl: req.TTL, time: req.TTL, lid: lid})
+	ls.lt.Insert(lid, &lease{ttl: req.TTL, time: req.TTL, lid: lid})
 	rep.LeaseId = uint64(lid)
 	db.DPrintf(db.LEASESRV, "%v: AskLease req %v %v: lid %v\n", ctx, req.ClntId, req.TTL, lid)
 	return nil
@@ -88,7 +88,7 @@ func (ls *LeaseSrv) allocLid() sp.TleaseId {
 
 // Delete files that are associated with lid
 func (ls *LeaseSrv) expire(lid sp.TleaseId) {
-	pns := ls.et.Expire(lid)
+	pns := ls.lm.Expired(lid)
 	db.DPrintf(db.ALWAYS, "expire %v %v\n", lid, pns)
 	for _, pn := range pns {
 		ls.mfs.Remove(pn)
@@ -113,18 +113,18 @@ func (ls *LeaseSrv) expirer() {
 	db.DPrintf(db.LEASESRV, "expirer done")
 }
 
-func (li *leaseInfo) resetTTL() {
-	li.Lock()
-	defer li.Unlock()
-	li.time = li.ttl
+func (l *lease) resetTTL() {
+	l.Lock()
+	defer l.Unlock()
+	l.time = l.ttl
 }
 
-func (li *leaseInfo) decTime() bool {
-	li.Lock()
-	defer li.Unlock()
+func (l *lease) decTime() bool {
+	l.Lock()
+	defer l.Unlock()
 
-	li.time -= 1
-	if li.time <= 0 {
+	l.time -= 1
+	if l.time <= 0 {
 		return true
 	}
 	return false

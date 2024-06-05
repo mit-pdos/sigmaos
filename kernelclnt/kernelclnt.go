@@ -3,10 +3,10 @@ package kernelclnt
 import (
 	"sigmaos/fslib"
 	"sigmaos/kernelsrv/proto"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 )
 
 type KernelClnt struct {
@@ -15,10 +15,11 @@ type KernelClnt struct {
 }
 
 func NewKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{fsl}, pn)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{fsl}, pn)
 	if err != nil {
 		return nil, err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	return &KernelClnt{fsl, rpcc}, nil
 }
 
@@ -68,13 +69,14 @@ func (kc *KernelClnt) Shutdown() error {
 	return kc.rpcc.RPC("KernelSrv.Shutdown", req, &res)
 }
 
-func (kc *KernelClnt) Port(pid sp.Tpid, p sp.Tport) (sp.Tip, port.PortBinding, error) {
-	var res proto.PortResult
-	req := &proto.PortRequest{PidStr: pid.String(), Port: int32(p)}
-	if err := kc.rpcc.RPC("KernelSrv.AllocPort", req, &res); err != nil {
-		return "", port.PortBinding{}, err
+func evictKernelProc(rpcc *rpcclnt.RPCClnt, pid sp.Tpid) error {
+	var res proto.EvictKernelProcResponse
+	req := &proto.EvictKernelProcRequest{PidStr: pid.String()}
+	err := rpcc.RPC("KernelSrv.EvictKernelProc", req, &res)
+	if err != nil {
+		return err
 	}
-	return sp.Tip(res.HostIp), port.PortBinding{sp.Tport(res.RealmPort), sp.Tport(res.HostPort)}, nil
+	return nil
 }
 
 func bootInRealm(rpcc *rpcclnt.RPCClnt, realm sp.Trealm, s string, args []string) (sp.Tpid, error) {

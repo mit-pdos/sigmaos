@@ -21,6 +21,8 @@ const (
 	S3            = NAMED + S3REL + "/"
 	UXREL         = "ux"
 	UX            = NAMED + UXREL + "/"
+	CHUNKDREL     = "chunkd"
+	CHUNKD        = NAMED + CHUNKDREL + "/"
 	SCHEDDREL     = "schedd"
 	SCHEDD        = NAMED + SCHEDDREL + "/"
 	LCSCHEDREL    = "lcsched"
@@ -50,6 +52,9 @@ const (
 	RUNNING = "running"
 	PIDS    = "pids"
 
+	// Uprocd
+	PUBLIC_PORT = "public-port"
+
 	// Auth
 	KEYDREL    = "keyd"
 	KEYD       = NAME + "/" + KEYDREL
@@ -66,6 +71,16 @@ const (
 
 // Linux path
 const (
-	SIGMAHOME   = "/home/sigmaos"
-	SIGMASOCKET = "/tmp/sigmaclntd/sigmaclntd.sock"
+	SIGMAHOME             = "/home/sigmaos"
+	SIGMASOCKET           = "/tmp/sigmaclntd/sigmaclntd.sock"
+	SIGMA_NETPROXY_SOCKET = "/tmp/sigmaclntd/sigmaclntd-netproxy.sock"
 )
+
+// sigmaclntd kernel
+const (
+	SIGMACLNTDKERNEL = "kernel-" + SIGMACLNTDREL + "-"
+)
+
+func SigmaClntdKernel(kid string) string {
+	return SIGMACLNTDKERNEL + kid
+}

@@ -1,7 +1,7 @@
 package kv
 
 import (
-	"path"
+	"path/filepath"
 	"strconv"
 
 	"sigmaos/cache"
@@ -26,27 +26,27 @@ const (
 )
 
 func KVConfig(job string) string {
-	return path.Join(kvgrp.JobDir(job), KVCONF)
+	return filepath.Join(kvgrp.JobDir(job), KVCONF)
 }
 
 func KVBalancer(job string) string {
-	return path.Join(kvgrp.JobDir(job), KVBALANCER)
+	return filepath.Join(kvgrp.JobDir(job), KVBALANCER)
 }
 
 func KVBalancerElect(job string) string {
-	return path.Join(kvgrp.JobDir(job), KVBALANCERELECT)
+	return filepath.Join(kvgrp.JobDir(job), KVBALANCERELECT)
 }
 
 func KVBalancerCtl(job string) string {
-	return path.Join(KVBalancer(job), KVBALANCERCTL)
+	return filepath.Join(KVBalancer(job), KVBALANCERCTL)
 }
 
 func kvGrpPath(job, kvd string) string {
-	return path.Join(kvgrp.JobDir(job), kvd)
+	return filepath.Join(kvgrp.JobDir(job), kvd)
 }
 
 func kvShardPath(job, kvd string, shard cache.Tshard) string {
-	return path.Join(kvGrpPath(job, kvd), "shard"+shard.String())
+	return filepath.Join(kvGrpPath(job, kvd), "shard"+shard.String())
 }
 
 type KVFleet struct {

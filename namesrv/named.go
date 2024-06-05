@@ -2,22 +2,17 @@ package namesrv
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-
-	"sigmaos/auth"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	"sigmaos/keys"
 	"sigmaos/leaderetcd"
+	"sigmaos/path"
 	"sigmaos/perf"
-	"sigmaos/port"
-	"sigmaos/portclnt"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
@@ -31,14 +26,20 @@ import (
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sigmasrv.SigmaSrv
-	mu              sync.Mutex
-	fs              *fsetcd.FsEtcd
-	elect           *leaderetcd.Election
-	job             string
-	realm           sp.Trealm
-	crash           int
-	sess            *fsetcd.Session
-	masterPublicKey auth.PublicKey
+	mu     sync.Mutex
+	fs     *fsetcd.FsEtcd
+	elect  *leaderetcd.Election
+	job    string
+	realm  sp.Trealm
+	crash  int
+	sess   *fsetcd.Session
+	signer sp.Tsigner
+	ephch  chan path.Tpathname
+}
+
+func newNamed(realm sp.Trealm) *Named {
+	nd := &Named{realm: realm, ephch: make(chan path.Tpathname)}
+	return nd
 }
 
 func toGiB(nbyte uint64) float64 {
@@ -57,19 +58,15 @@ func Run(args []string) error {
 
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pe)
-	if len(args) != 6 {
+	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
-	masterPubKey, err := auth.NewPublicKey[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, []byte(args[3]))
-	if err != nil {
-		db.DFatalf("Error NewPublicKey: %v", err)
-	}
-	nd := &Named{}
-	nd.masterPublicKey = masterPubKey
-	nd.realm = sp.Trealm(args[1])
+
+	nd := newNamed(sp.Trealm(args[1]))
+	nd.signer = sp.Tsigner(pe.GetPID())
 	crashing, err := strconv.Atoi(args[2])
 	if err != nil {
-		return fmt.Errorf("%v: crash %v isn't int", args[0], args[2])
+		return fmt.Errorf("%v: crash %v isn't int", args[0], args[1])
 	}
 	nd.crash = crashing
 
@@ -85,7 +82,7 @@ func Run(args []string) error {
 	}
 	nd.SigmaClnt = sc
 
-	pn := path.Join(sp.REALMS, nd.realm.String()) + ".sem"
+	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"
 	sem := semclnt.NewSemClnt(nd.FsLib, pn)
 	if nd.realm != sp.ROOTREALM {
 		// create semaphore to signal realmd when we are the leader
@@ -112,25 +109,25 @@ func Run(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	mnt, err := nd.newSrv()
+	ep, err := nd.newSrv()
 	if err != nil {
 		db.DFatalf("Error newSrv %v\n", err)
 	}
 
-	db.DPrintf(db.NAMED, "newSrv %v mnt %v", nd.realm, mnt)
+	db.DPrintf(db.NAMED, "newSrv %v ep %v", nd.realm, ep)
 
 	pn = sp.NAMED
 	if nd.realm == sp.ROOTREALM {
-		db.DPrintf(db.ALWAYS, "SetRootNamed %v mnt %v\n", nd.realm, mnt)
-		if err := nd.fs.SetRootNamed(mnt); err != nil {
+		db.DPrintf(db.ALWAYS, "SetRootNamed %v ep %v\n", nd.realm, ep)
+		if err := nd.fs.SetRootNamed(ep); err != nil {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
 		// note: the named proc runs in rootrealm; maybe change it XXX
-		pn = path.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.ALWAYS, "NewMountSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
-		if err := nd.MkMountFile(pn, mnt, nd.sess.Lease()); err != nil {
-			db.DPrintf(db.NAMED, "MkMountFile %v at %v err %v\n", nd.realm, pn, err)
+		pn = filepath.Join(sp.REALMS, nd.realm.String())
+		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
+		if err := nd.MkLeasedEndpoint(pn, ep, nd.sess.Lease()); err != nil {
+			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v\n", nd.realm, pn, err)
 			return err
 		}
 
@@ -143,7 +140,7 @@ func Run(args []string) error {
 
 	nd.getRoot(pn + "/")
 
-	if err := nd.CreateLeaderFile(path.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
+	if err := nd.CreateLeaderFile(filepath.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
 		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v\n", nd.elect.Key(), err)
 	}
 
@@ -155,7 +152,7 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.ALWAYS, "%v: named done %v %v\n", pe.GetPID(), nd.realm, mnt)
+	db.DPrintf(db.ALWAYS, "%v: named done %v %v\n", pe.GetPID(), nd.realm, ep)
 
 	if err := nd.resign(); err != nil {
 		db.DPrintf(db.NAMED, "resign %v err %v\n", pe.GetPID(), err)
@@ -166,47 +163,40 @@ func Run(args []string) error {
 	return nil
 }
 
-func (nd *Named) newSrv() (sp.Tmount, error) {
+func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
-	var pi portclnt.PortInfo
-	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
-	} else {
-		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
-		if err != nil {
-			return sp.NullMount(), err
-		}
-		pi = pi0
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
-	}
-
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, nd.SigmaClnt))
-	// Add the master deployment key, to allow connections from kernel to this
-	// named.
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, nd.masterPublicKey)
-	kmgr.AddPublicKey(sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID()), nd.masterPublicKey)
-	// Add this named's keypair to the keymgr
-	kmgr.AddPublicKey(sp.Tsigner(nd.ProcEnv().GetPID()), nd.masterPublicKey)
-	ssrv, err := sigmasrv.NewSigmaSrvRootClntKeyMgr(root, addr, "", nd.SigmaClnt, kmgr)
+	// XXX need special handling with overlays?
+	//	var pi portclnt.PortInfo
+	//	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
+	addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
+	//	} else {
+	//		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		pi = pi0
+	//		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
+	//	}
+	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)
 	if err != nil {
-		return sp.NullMount(), fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
+		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}
 
 	if err := ssrv.MountRPCSrv(newLeaseSrv(nd.fs)); err != nil {
-		return sp.NullMount(), err
+		return nil, err
 	}
 	nd.SigmaSrv = ssrv
 
-	mnt := sp.NewMountServer(nd.MyAddr())
-	if nd.realm != sp.ROOTREALM {
-		mnt = port.NewPublicMount(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.MyAddr())
-	}
-
-	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.MyAddr(), nd.elect.Key(), mnt)
-
-	return mnt, nil
+	ep := nd.GetEndpoint()
+	// XXX need public endpoint?
+	//	if nd.realm != sp.ROOTREALM {
+	//		ep = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
+	//	}
+	// ep.SetType(sp.INTERNAL_EP)
+	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
+	return ep, nil
 }
 
 func (nd *Named) attach(cid sp.TclntId) {
@@ -220,6 +210,9 @@ func (nd *Named) detach(cid sp.TclntId) {
 }
 
 func (nd *Named) resign() error {
+	if err := nd.fs.StopWatch(); err != nil {
+		return err
+	}
 	if err := nd.SigmaPSrv.StopServing(); err != nil {
 		return err
 	}
@@ -247,5 +240,11 @@ func (nd *Named) waitExit(ch chan struct{}) {
 		db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
 		time.Sleep(time.Second)
 		continue
+	}
+}
+
+func (nd *Named) watchLeased() {
+	for pn := range nd.ephch {
+		nd.SigmaSrv.Notify(pn)
 	}
 }

@@ -1,18 +1,14 @@
 package schedsrv
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-
-	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	"sigmaos/keys"
 	lcproto "sigmaos/lcschedsrv/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
@@ -25,6 +21,7 @@ import (
 	"sigmaos/schedsrv/proto"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 )
 
@@ -35,7 +32,6 @@ type Schedd struct {
 	pmgr                *procmgr.ProcMgr
 	scheddclnt          *scheddclnt.ScheddClnt
 	procqclnt           *procqclnt.ProcQClnt
-	as                  auth.AuthSrv
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
 	kernelId            string
@@ -46,34 +42,17 @@ type Schedd struct {
 	nProcsRun           atomic.Uint64
 	nProcGets           atomic.Uint64
 	nProcGetsSuccessful atomic.Uint64
-	pubkey              auth.PublicKey
-	privkey             auth.PrivateKey
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, masterPubkey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) *Schedd {
-	kmgr := keys.NewKeyMgr(keys.WithSigmaClntGetKeyFn[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sc))
-	// Add the master deployment key, to allow connections from kernel to this
-	// schedd.
-	kmgr.AddPublicKey(auth.SIGMA_DEPLOYMENT_MASTER_SIGNER, masterPubkey)
-	// Add this schedd's keypair to the keymgr
-	kmgr.AddPublicKey(sp.Tsigner(sc.ProcEnv().GetPID()), pubkey)
-	kmgr.AddPrivateKey(sp.Tsigner(sc.ProcEnv().GetPID()), privkey)
-	db.DPrintf(db.ALWAYS, "kmgr %v", kmgr)
-	as, err := auth.NewAuthSrv[*jwt.SigningMethodECDSA](jwt.SigningMethodES256, sp.Tsigner(sc.ProcEnv().GetPID()), sp.NOT_SET, kmgr)
-	if err != nil {
-		db.DFatalf("Error NewAuthSrv: %v", err)
-	}
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
-		pmgr:        procmgr.NewProcMgr(as, sc, kernelId),
+		pmgr:        procmgr.NewProcMgr(sc, kernelId),
 		scheddStats: make(map[sp.Trealm]*realmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
 		kernelId:    kernelId,
 		sc:          sc,
-		as:          as,
 		cpuStats:    &cpuStats{},
-		pubkey:      pubkey,
-		privkey:     privkey,
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.scheddclnt = scheddclnt.NewScheddClnt(sc.FsLib)
@@ -81,10 +60,10 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint, maste
 	return sd
 }
 
-// Warm the cache of proc binaries.
-func (sd *Schedd) WarmCacheBin(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
-	if err := sd.pmgr.DownloadProcBin(sp.Trealm(req.RealmStr), req.Program, req.BuildTag, proc.Ttype(req.ProcType)); err != nil {
-		db.DPrintf(db.ERROR, "Error Download Proc Bin: %v", err)
+// Start uprocd and warm cache of binaries
+func (sd *Schedd) WarmUprocd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
+	if err := sd.pmgr.WarmUprocd(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.Program, req.SigmaPath, proc.Ttype(req.ProcType)); err != nil {
+		db.DPrintf(db.ERROR, "WarmUprocd %v err %v", req, err)
 		res.OK = false
 		return err
 	}
@@ -238,6 +217,8 @@ func (sd *Schedd) getQueuedProcs() {
 			} else {
 				bias = true
 			}
+			// XXX for now
+			time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 			continue
 		}
 		sd.nProcGets.Add(1)
@@ -275,10 +256,6 @@ func (sd *Schedd) procDone(p *proc.Proc) {
 
 func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
 	p.SetKernelID(sd.kernelId, false)
-	// Set the new proc's token
-	if err := sd.as.SetDelegatedProcToken(p); err != nil {
-		db.DPrintf(db.ERROR, "Error SetToken: %v", err)
-	}
 	sd.pmgr.Spawn(p)
 	// Run the proc
 	go sd.runProc(p)
@@ -301,10 +278,11 @@ func (sd *Schedd) shouldGetBEProc() (proc.Tmem, bool) {
 }
 
 func (sd *Schedd) register() {
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{sd.sc.FsLib}, path.Join(sp.LCSCHED, "~any"))
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{sd.sc.FsLib}, filepath.Join(sp.LCSCHED, "~any"))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	req := &lcproto.RegisterScheddRequest{
 		KernelID: sd.kernelId,
 		McpuInt:  uint32(sd.mcpufree),
@@ -326,13 +304,13 @@ func (sd *Schedd) stats() {
 	}
 }
 
-func RunSchedd(kernelId string, reserveMcpu uint, masterPubKey auth.PublicKey, pubkey auth.PublicKey, privkey auth.PrivateKey) error {
+func RunSchedd(kernelId string, reserveMcpu uint) error {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	sd := NewSchedd(sc, kernelId, reserveMcpu, masterPubKey, pubkey, privkey)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.SCHEDD, kernelId), sc, sd)
+	sd := NewSchedd(sc, kernelId, reserveMcpu)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.SCHEDD, kernelId), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

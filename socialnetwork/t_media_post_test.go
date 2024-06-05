@@ -5,6 +5,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/rpcclnt"
+	"sigmaos/sigmarpcchan"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/test"
@@ -46,7 +47,7 @@ func TestMedia(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-media", test.Overlays, 1000}}, NCACHESRV)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-media", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -54,10 +55,11 @@ func TestMedia(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_MEDIA)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_MEDIA)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 
 	// store two media
 	mdata1 := []byte{1, 3, 5, 7, 9, 11, 13, 15}
@@ -95,7 +97,7 @@ func TestPost(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-post", test.Overlays, 1000}}, NCACHESRV)
+	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-post", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -103,10 +105,11 @@ func TestPost(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
+	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 
 	// create two posts
 	post1 := proto.Post{

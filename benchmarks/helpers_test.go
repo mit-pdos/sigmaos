@@ -4,13 +4,14 @@ import (
 	"io"
 	"net/rpc"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -86,8 +87,9 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	}
 }
 
-func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, prog string) time.Duration {
+func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, prog string, kernelpref []string) time.Duration {
 	p := proc.NewProc(prog, nil)
+	p.SetKernels(kernelpref)
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
@@ -96,8 +98,9 @@ func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, pro
 	return 99 * time.Second
 }
 
-func runSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) time.Duration {
+func runSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration {
 	p := proc.NewProc("spawn-bench", nil)
+	p.SetKernels(kernelpref)
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
@@ -169,20 +172,20 @@ func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
 
 // Warm up a realm, by starting uprocds for it on all machines in the cluster.
 func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
-	db.DPrintf(db.TEST, "Warm up realm %v for progs %v", ts.GetRealm(), progs)
 	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
 	// Get the list of schedds.
 	sds, err := sdc.GetSchedds()
 	assert.Nil(ts.Ts.T, err, "Get Schedds: %v", err)
+	db.DPrintf(db.TEST, "Warm up realm %v for progs %v schedds %v", ts.GetRealm(), progs, sds)
 	start := time.Now()
 	nDL := 0
 	for _, kid := range sds {
 		// Warm the cache for a binary
 		for _, ptype := range []proc.Ttype{proc.T_LC, proc.T_BE} {
 			for _, prog := range progs {
-				err := sdc.WarmCacheBin(kid, ts.GetRealm(), prog, ts.Ts.ProcEnv().GetBuildTag(), ptype)
+				err := sdc.WarmUprocd(kid, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), prog, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
 				nDL++
-				assert.Nil(ts.Ts.T, err, "WarmCacheBin: %v", err)
+				assert.Nil(ts.Ts.T, err, "WarmUprocd: %v", err)
 			}
 		}
 	}
@@ -208,7 +211,7 @@ func newNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interfac
 	ss := make([]*semclnt.SemClnt, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		spath := path.Join(OUT_DIR, rand.String(16))
+		spath := filepath.Join(OUT_DIR, rand.String(16))
 		s := semclnt.NewSemClnt(ts.FsLib, spath)
 		ss = append(ss, s)
 		is = append(is, s)
@@ -271,13 +274,13 @@ func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr 
 
 // ========== Schedd Helpers ==========
 
-func newScheddJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, fn scheddFn) ([]*ScheddJobInstance, []interface{}) {
+func newScheddJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, sfn scheddFn, kernels []string, withKernelPref bool) ([]*ScheddJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*ScheddJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewScheddJob(ts, nclnt, dur, maxrps, fn)
+		i := NewScheddJob(ts, nclnt, dur, maxrps, sfn, kernels, withKernelPref)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -358,10 +361,10 @@ func newSocialNetworkJobs(
 
 // ========== Client Helpers ==========
 
-var clidir string = path.Join("name/", "clnts")
+var clidir string = filepath.Join("name/", "clnts")
 
 func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
-	sem := semclnt.NewSemClnt(rootts.FsLib, path.Join(clidir, "clisem"))
+	sem := semclnt.NewSemClnt(rootts.FsLib, filepath.Join(clidir, "clisem"))
 	err := sem.Init(0)
 	if !assert.True(rootts.T, err == nil || !serr.IsErrCode(err, serr.TErrExists), "Error sem init %v", err) {
 		return nil
@@ -376,13 +379,11 @@ func waitForClnts(rootts *test.Tstate, n int) {
 	// Make sure the clients directory has been created.
 	err := rootts.MkDir(clidir, 0777)
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
+
 	// Wait for n - 1 clnts to register themselves.
-	err = rootts.ReadDirWait(clidir, func(sts []*sp.Stat) bool {
-		db.DPrintf(db.TEST, "%v clients ready %v", len(sts), sp.Names(sts))
-		// N - 1 clnts + the semaphore
-		return len(sts) < n
-	})
-	assert.Nil(rootts.T, err, "Err ReadDirWatch: %v", err)
+	dr := fslib.NewDirReader(rootts.FsLib, clidir)
+	err = dr.WaitNEntries(n) // n - 1 + the semaphore
+	assert.Nil(rootts.T, err, "Err WaitNentries: %v", err)
 	sem := createClntWaitSem(rootts)
 	err = sem.Up()
 	assert.Nil(rootts.T, err, "Err sem.Up: %v", err)
@@ -396,7 +397,7 @@ func clientReady(rootts *test.Tstate) {
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 	// Register the client as ready.
 	cid := "clnt-" + rand.String(4)
-	_, err = rootts.PutFile(path.Join(clidir, cid), 0777, sp.OWRITE, nil)
+	_, err = rootts.PutFile(filepath.Join(clidir, cid), 0777, sp.OWRITE, nil)
 	assert.Nil(rootts.T, err, "Err PutFile: %v", err)
 	// Create a semaphore and wait for the leader to start the benchmark
 	sem := createClntWaitSem(rootts)
@@ -415,7 +416,7 @@ func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Tr
 	// Make the destination directory.
 	os.MkdirAll(dst, 0777)
 	_, err := ts.ProcessDir(src, func(st *sp.Stat) (bool, error) {
-		rdr, err := ts.OpenReader(path.Join(src, st.Name))
+		rdr, err := ts.OpenReader(filepath.Join(src, st.Name))
 		defer rdr.Close()
 		assert.Nil(ts.T, err, "Error open reader %v", err)
 		b, err := io.ReadAll(rdr.Reader)
@@ -424,7 +425,7 @@ func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Tr
 		if realm.String() != "" {
 			name += "-" + realm.String() + "-tpt.out"
 		}
-		err = os.WriteFile(path.Join(dst, name), b, 0777)
+		err = os.WriteFile(filepath.Join(dst, name), b, 0777)
 		assert.Nil(ts.T, err, "Error write file %v", err)
 		return false, nil
 	})

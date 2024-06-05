@@ -2,7 +2,7 @@ package lcschedsrv
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"sync"
 
 	db "sigmaos/debug"
@@ -192,12 +192,13 @@ func (lcs *LCSched) addRealmQueueL(realm sp.Trealm) *Queue {
 
 // Run an LCSched
 func Run() {
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	lcs := NewLCSched(sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(path.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

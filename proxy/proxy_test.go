@@ -134,9 +134,9 @@ func TestProxyMountPath(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	m1, err := ts.GetNamedMount()
-	assert.Nil(ts.T, err, "MountService: %v", err)
-	mnt := sp.NewMountService(m1.Addr)
+	m1, err := ts.GetNamedEndpoint()
+	assert.Nil(ts.T, err, "EndpointService: %v", err)
+	mnt := sp.NewEndpoint(sp.INTERNAL_EP, m1.Addrs(), t1.ProcEnv().GetRealm())
 	err = ts.NewMount9P("name/namedself", mnt)
 	assert.Nil(ts.T, err, "NewMount9P")
 

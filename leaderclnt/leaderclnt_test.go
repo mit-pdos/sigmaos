@@ -1,7 +1,7 @@
 package leaderclnt_test
 
 import (
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,7 +50,7 @@ func TestOldLeaderCrash(t *testing.T) {
 
 func TestMemfs(t *testing.T) {
 	dir := sp.MEMFS + "~local/"
-	fencedir := path.Join(dir, sp.FENCEDIR)
+	fencedir := filepath.Join(dir, sp.FENCEDIR)
 
 	ts, err1 := test.NewTstatePath(t, dir)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

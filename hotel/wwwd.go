@@ -2,7 +2,6 @@ package hotel
 
 import (
 	"encoding/json"
-	"net"
 	"net/http"
 	"strconv"
 
@@ -12,13 +11,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/hotel/proto"
-	"sigmaos/netsigma"
 	"sigmaos/perf"
-	"sigmaos/portclnt"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/tracing"
 )
 
@@ -34,7 +33,6 @@ type Www struct {
 	profc    *rpcclnt.RPCClnt
 	recc     *rpcclnt.RPCClnt
 	geoc     *rpcclnt.RPCClnt
-	pc       *portclnt.PortClnt
 }
 
 // Run starts the server
@@ -48,39 +46,45 @@ func RunWww(job string, public bool) error {
 	}
 	www.SigmaClnt = sc
 
-	fsls, err := NewFsLibs("hotel-wwwd")
+	fsls, err := NewFsLibs("hotel-wwwd", www.GetNetProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := rpcclnt.NewRPCClnt(fsls, HOTELUSER)
+	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, HOTELUSER)
 	if err != nil {
 		return err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	www.userc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELSEARCH)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELSEARCH)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	www.searchc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELPROF)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELPROF)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	www.profc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELRESERVE)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELRESERVE)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	www.reservec = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELREC)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELREC)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	www.recc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, HOTELGEO)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, HOTELGEO)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	www.geoc = rpcc
 
 	//	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
@@ -104,12 +108,7 @@ func RunWww(job string, public bool) error {
 	//	}
 
 	if public {
-		pc, pi, err := portclnt.NewPortClntPort(www.FsLib)
-		if err != nil {
-			db.DFatalf("AllocPort err %v", err)
-		}
-		www.pc = pc
-		l, err := net.Listen("tcp", ":"+pi.PBinding.RealmPort.String())
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_PORT))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -118,15 +117,11 @@ func RunWww(job string, public bool) error {
 		//		} else {
 		go http.Serve(l, mux)
 		//		}
-		host, port, err := netsigma.QualifyAddrLocalIP(www.ProcEnv().GetInnerContainerIP(), l.Addr().String())
-		if err != nil {
-			db.DFatalf("QualifyAddr %v %v err %v", host, port, err)
-		}
-		if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, www.ProcEnv().GetNet(), sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, www.ProcEnv().GetNet())); err != nil {
+		if err = port.AdvertisePublicHTTPPort(www.FsLib, JobHTTPAddrsPath(job), ep); err != nil {
 			db.DFatalf("AdvertisePort %v", err)
 		}
 	} else {
-		l, err := net.Listen("tcp", ":0")
+		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_PORT))
 		if err != nil {
 			db.DFatalf("Error %v Listen: %v", public, err)
 		}
@@ -136,14 +131,9 @@ func RunWww(job string, public bool) error {
 		go http.Serve(l, mux)
 		//		}
 
-		host, port, err := netsigma.QualifyAddrLocalIP(www.ProcEnv().GetInnerContainerIP(), l.Addr().String())
-		if err != nil {
-			db.DFatalf("QualifyAddr %v %v err %v", host, port, err)
-		}
-		db.DPrintf(db.ALWAYS, "Hotel advertise %v:%v", host, port)
-		mnt := sp.NewMountService([]*sp.Taddr{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, www.ProcEnv().GetNet())})
-		if err = www.MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
-			db.DFatalf("MkMountFile %v", err)
+		db.DPrintf(db.ALWAYS, "Hotel advertise %v", ep)
+		if err = www.MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
+			db.DFatalf("MkEndpointFile %v", err)
 		}
 	}
 

@@ -27,9 +27,9 @@ type ProfSrv struct {
 	tracer *tracing.Tracer
 }
 
-func RunProfSrv(job string, public bool, cache string) error {
+func RunProfSrv(job string, cache string) error {
 	ps := &ProfSrv{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(HOTELPROF, ps, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(HOTELPROF, ps, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func RunProfSrv(job string, public bool, cache string) error {
 		return err
 	}
 	ps.dbc = dbc
-	fsls, err := NewFsLibs(HOTELPROF)
+	fsls, err := NewFsLibs(HOTELPROF, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}

@@ -1,8 +1,8 @@
-// Package sigmaos defines the core API of SigmaOS
+// Package sigmaos defines the file API of SigmaOS
 package sigmaos
 
 import (
-	path "sigmaos/path"
+	"sigmaos/path"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -14,7 +14,12 @@ const (
 	O_WAIT Twait = true
 )
 
-type SigmaOS interface {
+type PathClntAPI interface {
+	GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
+	Stat(name string, principal *sp.Tprincipal) (*sp.Stat, error)
+}
+
+type FileAPI interface {
 	// Core interface
 
 	CloseFd(fd int) error
@@ -30,10 +35,11 @@ type SigmaOS interface {
 	PutFile(path string, p sp.Tperm, m sp.Tmode, d []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error)
 	Read(fd int, b []byte) (sp.Tsize, error)
 	Write(fd int, d []byte) (sp.Tsize, error)
+	Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error)
 	Seek(fd int, o sp.Toffset) error
 
-	// Ephemeral
-	CreateEphemeral(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error)
+	// Leased
+	CreateLeased(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error)
 	ClntId() sp.TclntId
 
 	// Fences
@@ -43,23 +49,24 @@ type SigmaOS interface {
 	// RPC
 	WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error
 
-	// Wait unil directory changes
-	DirWait(fd int) error
+	// Watch for directory changes
+	DirWatch(fd int) error
 
 	// Mounting
-	MountTree(addrs sp.Taddrs, tree, mount string) error
-	IsLocalMount(mnt sp.Tmount) (bool, error)
-	PathLastMount(path string) (path.Path, path.Path, error)
-	GetNamedMount() (sp.Tmount, error)
-	NewRootMount(path string, mntname string) error
+	MountTree(ep *sp.Tendpoint, tree, mount string) error
+	IsLocalMount(ep *sp.Tendpoint) (bool, error)
+	PathLastMount(path string) (path.Tpathname, path.Tpathname, error)
+	GetNamedEndpoint() (*sp.Tendpoint, error)
+	GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error)
+	InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error
+	NewRootMount(path string, epname string) error
 
-	// Done using SigmaOS, which detaches from any mounted servers
-	// (which removes ephemeral files) and may close the session with
-	// those servers.
+	// Done using SigmaOS, which detaches from any mounted servers and
+	// may close the session with those servers.
 	Close() error
 
 	// Debugging
-	SetLocalMount(mnt *sp.Tmount, port sp.Tport)
+	SetLocalMount(ep *sp.Tendpoint, port sp.Tport)
 	Mounts() []string
 	Detach(path string) error
 	Disconnect(path string) error

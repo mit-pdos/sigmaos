@@ -3,7 +3,7 @@ package sigmap
 import (
 	"encoding/json"
 	"log"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -64,7 +64,7 @@ func (f *Tfence) IsInitialized() bool {
 }
 
 func (f *Tfence) Prefix() string {
-	return path.Dir(f.PathName)
+	return filepath.Dir(f.PathName)
 }
 
 func (f1 *Tfence) Upgrade(f2 *Tfence) {

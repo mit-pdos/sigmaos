@@ -1,6 +1,10 @@
+// The cachedsvclnt package is the client side of a [cachedsvc].  It
+// watches the directory of cached servers using [dircache] and sends
+// the request to one of them using [cachedclnt].
 package cachedsvcclnt
 
 import (
+	"fmt"
 	"hash/fnv"
 	"strconv"
 	"sync"
@@ -12,6 +16,7 @@ import (
 	"sigmaos/cachedsvc"
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
+	"sigmaos/dircache"
 	"sigmaos/fslib"
 	"sigmaos/rpc"
 	sp "sigmaos/sigmap"
@@ -27,84 +32,36 @@ func key2server(key string, nserver int) int {
 
 type CachedSvcClnt struct {
 	sync.Mutex
-	fsl  *fslib.FsLib
-	cc   *cacheclnt.CacheClnt
-	pn   string
-	srvs map[string]struct{}
-	rdr  *fslib.FdReader
+	fsl *fslib.FsLib
+	cc  *cacheclnt.CacheClnt
+	pn  string
+	dd  *dircache.DirCache[struct{}]
 }
 
-// XXX clean up watchServers goroutine?
 func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) (*CachedSvcClnt, error) {
 	csc := &CachedSvcClnt{
-		fsl:  fsls[0],
-		pn:   cache.CACHE,
-		cc:   cacheclnt.NewCacheClnt(fsls, job, cachesrv.NSHARD),
-		srvs: make(map[string]struct{}),
+		fsl: fsls[0],
+		pn:  cache.CACHE,
+		cc:  cacheclnt.NewCacheClnt(fsls, job, cachesrv.NSHARD),
 	}
-	ch := make(chan error)
-	go func() {
-		csc.watchServers(ch)
-	}()
-	if err := <-ch; err != nil {
-		db.DPrintf(db.ALWAYS, "watchServers err %v\n", err)
-		return nil, err
-	}
+	dir := csc.pn + cachedsvc.SVRDIR
+	csc.dd = dircache.NewDirCache[struct{}](fsls[0], dir, csc.newEntry, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
 	return csc, nil
 }
 
-func (csc *CachedSvcClnt) srvDir() string {
-	return csc.pn + cachedsvc.SVRDIR
-}
-
-// XXX delete servers
-func (csc *CachedSvcClnt) watchServers(ch chan error) {
-	db.DPrintf(db.CACHEDSVCCLNT, "watchServers")
-	started := false
-	for {
-		dir := csc.srvDir()
-		if err := csc.fsl.ReadDirWait(dir, func(sts []*sp.Stat) bool {
-			db.DPrintf(db.CACHEDSVCCLNT, "cachedsvcclnt watch %v %d", sp.Names(sts), len(csc.srvs))
-			if len(sts) > len(csc.srvs) {
-				csc.addServer(sts)
-				return false
-			} else {
-				return true
-			}
-		}); err != nil {
-			ch <- err
-			return
-		}
-		if !started {
-			started = true
-			ch <- nil
-		}
-	}
-}
-
-func (csc *CachedSvcClnt) addServer(sts []*sp.Stat) {
-	csc.Lock()
-	defer csc.Unlock()
-
-	for _, st := range sts {
-		if _, ok := csc.srvs[st.Name]; !ok {
-			csc.srvs[st.Name] = struct{}{}
-		}
-	}
+func (csc *CachedSvcClnt) newEntry(n string) (struct{}, error) {
+	return struct{}{}, nil
 }
 
 func (csc *CachedSvcClnt) Server(i int) string {
 	return csc.pn + cachedsvc.Server(strconv.Itoa(i))
 }
 
-func (csc *CachedSvcClnt) nServer() int {
-	csc.Lock()
-	defer csc.Unlock()
-	return len(csc.srvs)
-}
-
 func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.RPCStatsSnapshot, error) {
-	n := csc.nServer()
+	n, err := csc.dd.Nentry()
+	if err != nil {
+		return nil, err
+	}
 	stats := make([]*rpc.RPCStatsSnapshot, 0, n)
 	for i := 0; i < n; i++ {
 		st, err := csc.cc.StatsSrv(csc.Server(i))
@@ -129,17 +86,35 @@ func (csc *CachedSvcClnt) Delete(key string) error {
 }
 
 func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
-	srv := csc.Server(key2server(key, csc.nServer()))
+	n, err := csc.dd.Nentry()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("No cached servers found")
+	}
+	srv := csc.Server(key2server(key, n))
 	return csc.cc.GetTracedFenced(sctx, srv, key, val, sp.NullFence())
 }
 
 func (csc *CachedSvcClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
-	srv := csc.Server(key2server(key, csc.nServer()))
+	n, err := csc.dd.Nentry()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("No cached servers found")
+	}
+	srv := csc.Server(key2server(key, n))
 	return csc.cc.PutTracedFenced(sctx, srv, key, val, sp.NullFence())
 }
 
 func (csc *CachedSvcClnt) DeleteTraced(sctx *tproto.SpanContextConfig, key string) error {
-	srv := csc.Server(key2server(key, csc.nServer()))
+	n, err := csc.dd.Nentry()
+	if err != nil {
+		return err
+	}
+	srv := csc.Server(key2server(key, n))
 	return csc.cc.DeleteTracedFenced(sctx, srv, key, sp.NullFence())
 }
 
@@ -150,4 +125,8 @@ func (csc *CachedSvcClnt) StatsClnt() []map[string]*rpc.MethodStat {
 func (csc *CachedSvcClnt) Dump(g int) (map[string]string, error) {
 	srv := csc.Server(g)
 	return csc.cc.DumpSrv(srv)
+}
+
+func (csc *CachedSvcClnt) Close() {
+	csc.dd.StopWatching()
 }

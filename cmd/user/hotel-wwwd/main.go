@@ -10,9 +10,9 @@ import (
 
 func main() {
 	if len(os.Args) != 4 {
-		db.DFatalf("Usage: %v jobname public cache", os.Args[0])
+		db.DFatalf("Usage: %v jobname cache public", os.Args[0])
 	}
-	public, err := strconv.ParseBool(os.Args[2])
+	public, err := strconv.ParseBool(os.Args[3])
 	if err != nil {
 		db.DFatalf("ParseBool %v err %v\n", os.Args[0], err)
 	}

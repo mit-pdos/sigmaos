@@ -1,3 +1,5 @@
+// Package sigmaclnt implements the client interface of SigmaOS: the
+// proc API, the file API, and lease client.
 package sigmaclnt
 
 import (
@@ -9,6 +11,7 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/leaseclnt"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclntclnt"
@@ -40,12 +43,12 @@ type SigmaClntKernel struct {
 	sc *SigmaClnt
 }
 
-// Create FsLib using either sigmalcntd or fdclnt
+// Create FsLib using either sigmacntclnt or fdclnt
 func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
-	var s sos.SigmaOS
+	var s sos.FileAPI
 	if pe.UseSigmaclntd {
-		s, err = sigmaclntclnt.NewSigmaClntClnt(pe)
+		s, err = sigmaclntclnt.NewSigmaClntClnt(pe, fidc.GetNetProxyClnt())
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
 			return nil, err
@@ -53,11 +56,11 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 	} else {
 		s = fdclnt.NewFdClient(pe, fidc)
 	}
-	return fslib.NewFsLibAPI(pe, s)
+	return fslib.NewFsLibAPI(pe, fidc.GetNetProxyClnt(), s)
 }
 
-func NewFsLib(pe *proc.ProcEnv) (*fslib.FsLib, error) {
-	return newFsLibFidClnt(pe, nil)
+func NewFsLib(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) (*fslib.FsLib, error) {
+	return newFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
 }
 
 // Convert to SigmaClntKernel from SigmaClnt
@@ -72,12 +75,17 @@ func (sck *SigmaClntKernel) SigmaClnt() *SigmaClnt {
 
 // Convert to SigmaClnt from SigmaClntKernel
 func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
-	sc := &SigmaClnt{sck.FsLib, sck.ProcClnt, sck.LeaseClnt}
+	sc := &SigmaClnt{
+		FsLib:     sck.FsLib,
+		ProcAPI:   sck.ProcClnt,
+		LeaseClnt: sck.LeaseClnt,
+	}
 	return sc
 }
 
 // Create a SigmaClnt (using sigmaclntd or fdclient), as a proc, without ProcAPI.
 func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
+	fidc.NewClnt()
 	fsl, err := newFsLibFidClnt(pe, fidc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
@@ -87,16 +95,20 @@ func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaCl
 	if err != nil {
 		return nil, err
 	}
-	return &SigmaClnt{fsl, nil, lmc}, nil
+	return &SigmaClnt{
+		FsLib:     fsl,
+		ProcAPI:   nil,
+		LeaseClnt: lmc,
+	}, nil
 }
 
-func NewSigmaClntFsLib(pe *proc.ProcEnv) (*SigmaClnt, error) {
-	return NewSigmaClntFsLibFidClnt(pe, nil)
+func NewSigmaClntFsLib(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) (*SigmaClnt, error) {
+	return NewSigmaClntFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
 }
 
 func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
-	sc, err := NewSigmaClntFsLib(pe)
+	sc, err := NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
@@ -116,7 +128,7 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
 func NewSigmaClntRootInit(pe *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := NewSigmaClntFsLib(pe)
+	sc, err := NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	if err != nil {
 		return nil, err
 	}
@@ -143,6 +155,6 @@ func (sc *SigmaClnt) ClntExitOK() {
 	sc.ClntExit(proc.NewStatus(proc.StatusOK))
 }
 
-func (sc *SigmaClnt) StopMonitoringSrvs() {
-	sc.ProcAPI.(*procclnt.ProcClnt).StopMonitoringSrvs()
+func (sc *SigmaClnt) StopWatchingSrvs() {
+	sc.ProcAPI.(*procclnt.ProcClnt).StopWatchingSrvs()
 }

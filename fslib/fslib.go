@@ -2,21 +2,24 @@ package fslib
 
 import (
 	db "sigmaos/debug"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
 
 type FsLib struct {
-	pe *proc.ProcEnv
-	sos.SigmaOS
+	pe  *proc.ProcEnv
+	npc *netproxyclnt.NetProxyClnt
+	sos.FileAPI
 }
 
-func NewFsLibAPI(pe *proc.ProcEnv, sos sos.SigmaOS) (*FsLib, error) {
-	db.DPrintf(db.FSLIB, "NewFsLib: principal %s innerip %s addrs %v\n", pe.GetPrincipal(), pe.GetInnerContainerIP(), pe.EtcdIP)
+func NewFsLibAPI(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, sos sos.FileAPI) (*FsLib, error) {
+	db.DPrintf(db.FSLIB, "NewFsLib: principal %s innerip %s addrs %v\n", pe.GetPrincipal(), pe.GetInnerContainerIP(), pe.GetEtcdEndpoints())
 	fl := &FsLib{
 		pe:      pe,
-		SigmaOS: sos,
+		npc:     npc,
+		FileAPI: sos,
 	}
 	return fl, nil
 }
@@ -29,14 +32,19 @@ func (fl *FsLib) ProcEnv() *proc.ProcEnv {
 	return fl.pe
 }
 
-func (fl *FsLib) MountTree(addrs sp.Taddrs, tree, mount string) error {
-	return fl.SigmaOS.MountTree(addrs, tree, mount)
+// TODO: should probably remove, and replace by a high-level SigmaOS API call.
+func (fl *FsLib) GetNetProxyClnt() *netproxyclnt.NetProxyClnt {
+	return fl.npc
+}
+
+func (fl *FsLib) MountTree(ep *sp.Tendpoint, tree, mount string) error {
+	return fl.FileAPI.MountTree(ep, tree, mount)
 }
 
 func (fl *FsLib) Close() error {
-	return fl.SigmaOS.Close()
+	return fl.FileAPI.Close()
 }
 
-func (fl *FsLib) GetSigmaOS() sos.SigmaOS {
-	return fl.SigmaOS
+func (fl *FsLib) GetSigmaOS() sos.FileAPI {
+	return fl.FileAPI
 }

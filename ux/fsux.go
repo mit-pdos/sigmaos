@@ -1,10 +1,11 @@
 package fsux
 
 import (
-	"path"
+	"path/filepath"
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fs"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -26,20 +27,20 @@ type FsUx struct {
 }
 
 func RunFsUx(rootux string) {
+	pe := proc.GetProcEnv()
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
 	ip, err := netsigma.LocalIP()
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
-	fsux := newUx(rootux)
-	root, sr := newDir([]string{rootux})
-	if sr != nil {
-		db.DFatalf("newDir %v\n", sr)
-	}
-	pe := proc.GetProcEnv()
+	fsux, root := NewUx(rootux)
 	addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
-	srv, err := sigmasrv.NewSigmaSrvRoot(root, path.Join(sp.UX, pe.GetKernelID()), addr, pe)
+	srv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, filepath.Join(sp.UX, pe.GetKernelID()), sc)
 	if err != nil {
-		db.DFatalf("BootSrvAndPost %v\n", err)
+		db.DFatalf("NewSigmaSrvRootClnt %v\n", err)
 	}
 	fsux.SigmaSrv = srv
 
@@ -53,8 +54,12 @@ func RunFsUx(rootux string) {
 	fsux.RunServer()
 }
 
-func newUx(rootux string) *FsUx {
+func NewUx(rootux string) (*FsUx, fs.Dir) {
 	fsux = &FsUx{}
 	fsux.ot = NewObjTable()
-	return fsux
+	root, sr := newDir([]string{rootux})
+	if sr != nil {
+		db.DFatalf("newDir %v\n", sr)
+	}
+	return fsux, root
 }

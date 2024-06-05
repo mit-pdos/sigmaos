@@ -31,8 +31,8 @@ and libraries which may be useful for future projects based on SigmaOS.
   - `sessstatesrv`: This library contains server-side data structures needed to
     represent, track, and manage the lifecycle of sessions.
   - `protsrv`: This library implements a generic SigmaOS protocol server. It
-    has handlers for each of teh `sigmap` messages, and deals with SigmaOS
-    features like versions, ephemeral files, and watches.
+    has handlers for each of the `sigmap` messages, and deals with SigmaOS
+    features like leased files, and watches.
 
 ### Exercise 1: Describe SigmaOS librarly layers
 

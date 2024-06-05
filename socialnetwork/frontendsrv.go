@@ -2,7 +2,6 @@ package socialnetwork
 
 import (
 	"encoding/json"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -10,13 +9,13 @@ import (
 	"time"
 
 	dbg "sigmaos/debug"
-	"sigmaos/netsigma"
 	"sigmaos/perf"
-	"sigmaos/portclnt"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/socialnetwork/proto"
 	"sigmaos/tracing"
 )
@@ -32,7 +31,6 @@ type FrontEnd struct {
 	tlc      *rpcclnt.RPCClnt
 	homec    *rpcclnt.RPCClnt
 	composec *rpcclnt.RPCClnt
-	pc       *portclnt.PortClnt
 }
 
 const SERVER_NAME = "socialnetwork-frontend"
@@ -56,34 +54,39 @@ func RunFrontendSrv(public bool, job string) error {
 		return err
 	}
 	frontend.SigmaClnt = sc
-	fsls, err := NewFsLibs(SERVER_NAME)
+	fsls, err := NewFsLibs(SERVER_NAME, sc.GetNetProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	frontend.userc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.graphc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.tlc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_HOME)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.homec = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_COMPOSE)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	frontend.composec = rpcc
 	//	frontend.tracer = tracing.Init("frontend", proc.GetSigmaJaegerIP())
 
@@ -104,49 +107,35 @@ func RunFrontendSrv(public bool, job string) error {
 	mux.HandleFunc("/home", frontend.homeHandler)
 	mux.HandleFunc("/startrecording", frontend.startRecordingHandler)
 	//	}
-	/*
-		if public {
-			pc, pi, err := portclnt.NewPortClntPort(frontend.FsLib)
-			if err != nil {
-				dbg.DFatalf("AllocPort err %v", err)
-			}
-			frontend.pc = pc
-			l, err := net.Listen("tcp", ":"+pi.Pb.RealmPort.String())
-			if err != nil {
-				dbg.DFatalf("Error %v Listen: %v", public, err)
-			}
-			//		if TRACING {
-			//			go tmux.Serve(l)
-			//		} else {
-			go http.Serve(l, mux)
-			//		}
-			a, err := container.QualifyAddr(l.Addr().String())
-			if err != nil {
-				dbg.DFatalf("QualifyAddr %v err %v", a, err)
-			}
-			if err = pc.AdvertisePort(JobHTTPAddrsPath(job), pi, frontend.ProcEnv().GetNet(), a); err != nil {
-				dbg.DFatalf("AdvertisePort %v", err)
-			}
-		} else {
-	*/
-	l, err := net.Listen("tcp", ":0")
-	if err != nil {
-		dbg.DFatalf("Error %v Listen: %v", public, err)
-	}
-	//		if TRACING {
-	//			go tmux.Serve(l)
-	//		} else {
-	go http.Serve(l, mux)
-	//		}
+	dbg.DPrintf(dbg.ALWAYS, "SN public? %v", public)
+	if public {
+		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_PORT))
+		if err != nil {
+			dbg.DFatalf("Error %v Listen: %v", public, err)
+		}
+		dbg.DPrintf(dbg.ALWAYS, "SN Got ep %v", ep)
 
-	host, port, err := netsigma.QualifyAddrLocalIP(frontend.ProcEnv().GetInnerContainerIP(), l.Addr().String())
-	if err != nil {
-		dbg.DFatalf("QualifyAddr %v %v err %v", host, port, err)
-	}
-	dbg.DPrintf(dbg.ALWAYS, "SN advertise %v:%v", host, port)
-	mnt := sp.NewMountService([]*sp.Taddr{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port, frontend.ProcEnv().GetNet())})
-	if err = frontend.MkMountFile(JobHTTPAddrsPath(job), mnt, sp.NoLeaseId); err != nil {
-		dbg.DFatalf("MkMountFile %v", err)
+		//		if TRACING {
+		//			go tmux.Serve(l)
+		//		} else {
+		go http.Serve(l, mux)
+		//		}
+		if err = port.AdvertisePublicHTTPPort(frontend.FsLib, JobHTTPAddrsPath(job), ep); err != nil {
+			dbg.DFatalf("AdvertisePort %v", err)
+		}
+	} else {
+		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
+		if err != nil {
+			dbg.DFatalf("Error %v Listen: %v", public, err)
+		}
+		//		if TRACING {
+		//			go tmux.Serve(l)
+		//		} else {
+		go http.Serve(l, mux)
+		dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", ep)
+		if err = sc.MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
+			dbg.DFatalf("MkEndpointFile %v", err)
+		}
 	}
 
 	perf, err := perf.NewPerf(frontend.ProcEnv(), perf.SOCIAL_NETWORK_FRONTEND)

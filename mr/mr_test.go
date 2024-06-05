@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -78,7 +78,7 @@ func TestNewWordCount(t *testing.T) {
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
 	data := make(seqwc.Tdata, 0)
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, sp.NO_IP, sp.NO_IP, sp.NO_IP, "", false, false), perf.SEQWC)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.SEQWC)
 	assert.Nil(t, err)
 	sbc := mr.NewScanByteCounter(p)
 	for scanner.Scan() {
@@ -133,7 +133,7 @@ func TestMapper(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, sp.NO_IP, sp.NO_IP, sp.NO_IP, "", false, false), perf.MRMAPPER)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
 	ts.Remove(REDUCEIN)
@@ -264,7 +264,7 @@ func newTstate(t1 *test.Tstate, app string) *Tstate {
 	// previous runs of the tests), ux may be very slow and cause the test to
 	// hang during intialization. Using RmDir on ux is slow too, so just do this
 	// directly through the os for now.
-	os.RemoveAll(path.Join(sp.SIGMAHOME, "mr"))
+	os.RemoveAll(filepath.Join(sp.SIGMAHOME, "mr"))
 
 	tasks, err := mr.InitCoordFS(ts.FsLib, ts.job, ts.nreducetask)
 	assert.Nil(t1.T, err, "Error InitCoordFS: %v", err)
@@ -310,7 +310,7 @@ func (ts *Tstate) checkJob(app string) bool {
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux, maliciousMapper int, monitor bool) {
-	var s3secrets *proc.ProcSecretProto
+	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
 	// before starting the system
@@ -336,21 +336,25 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 		pe := proc.NewAddedProcEnv(t1.ProcEnv())
 		pe.SetPrincipal(sp.NewPrincipal(
 			sp.TprincipalID("mr-restricted-principal"),
-			sp.NoToken(),
+			pe.GetRealm(),
 		))
 
 		// Load restricted AWS secrets
-		pe.SetSecrets(map[string]*proc.ProcSecretProto{"s3": s3secrets})
-		err1 = t1.MintAndSetToken(pe)
-		assert.Nil(t, err1)
+		pe.SetSecrets(map[string]*sp.SecretProto{"s3": s3secrets})
 
 		// Create a SigmaClnt with the more restricted principal.
 		sc, err1 = sigmaclnt.NewSigmaClnt(pe)
 		if assert.Nil(t, err1, "Err NewSigmaClnt: %v", err1) {
-			defer sc.StopMonitoringSrvs()
+			defer sc.StopWatchingSrvs()
 		}
 	}
 	ts := newTstate(t1, runApp)
+
+	err := ts.BootNode(1)
+	assert.Nil(t, err, "BootProcd 1")
+
+	err = ts.BootNode(1)
+	assert.Nil(t, err, "BootProcd 2")
 
 	sdc := scheddclnt.NewScheddClnt(sc.FsLib)
 	if monitor {

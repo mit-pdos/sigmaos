@@ -2,7 +2,7 @@ package cgroup
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"sync"
 
 	db "sigmaos/debug"
@@ -26,7 +26,7 @@ func (cmgr *CgroupMgr) SetCPUShares(cgroupPath string, n int64) error {
 	cmgr.Lock()
 	defer cmgr.Unlock()
 
-	if err := cmgr.cfs.writeFile(path.Join(cgroupPath, "cpu.weight"), uint64(n)); err != nil {
+	if err := cmgr.cfs.writeFile(filepath.Join(cgroupPath, "cpu.weight"), uint64(n)); err != nil {
 		db.DPrintf(db.ERROR, "Error writeFile: %v", err)
 		return fmt.Errorf("Error writeFile: %v", err)
 	}
@@ -38,8 +38,8 @@ func (cmgr *CgroupMgr) SetMemoryLimit(cgroupPath string, membytes int64, memswap
 	defer cmgr.Unlock()
 
 	ps := []string{
-		path.Join(cgroupPath, "memory.max"),
-		path.Join(cgroupPath, "memory.swap.max"),
+		filepath.Join(cgroupPath, "memory.max"),
+		filepath.Join(cgroupPath, "memory.swap.max"),
 	}
 	vals := []int64{
 		membytes,

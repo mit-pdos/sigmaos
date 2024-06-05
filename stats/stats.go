@@ -11,7 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/inode"
+	"sigmaos/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/serr"
@@ -154,7 +154,7 @@ type StatInfo struct {
 
 func NewStatsDev(parent fs.Dir) *StatInfo {
 	sti := &StatInfo{}
-	sti.Inode = inode.NewInode(nil, sp.DMDEVICE, parent)
+	sti.Inode = inode.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId, parent)
 	sti.st = NewStats()
 	sti.pathCnts = false
 	return sti
@@ -174,11 +174,22 @@ func (sti *StatInfo) Stats() *Stats {
 	return sti.st
 }
 
+func (sti *StatInfo) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+	st, err := sti.Inode.NewStat()
+	if err != nil {
+		return nil, err
+	}
+	b := sti.stats()
+	st.SetLengthInt(len(b))
+	return st, nil
+}
+
 func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	return 0, nil
 }
 
 func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
+	db.DPrintf(db.TEST, "Read statinfo %v\n", st)
 	if st == nil {
 		return nil, nil
 	}
@@ -197,7 +208,7 @@ func (sti *StatInfo) EnablePathCnts() {
 	sti.st.Paths = make(map[string]int)
 }
 
-func (sti *StatInfo) IncPath(path path.Path) {
+func (sti *StatInfo) IncPath(path path.Tpathname) {
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
 
@@ -249,7 +260,6 @@ func (st *Stats) statsSnapshot() *StatsSnapshot {
 	for i := 0; i < v.NumField(); i++ {
 		t := v.Field(i).Type().String()
 		n := v.Type().Field(i).Name
-		db.DPrintf(db.TEST, "%v %v\n", t, n)
 		if strings.HasSuffix(t, "atomic.Int64") {
 			p := v.Field(i).Addr().Interface().(*atomic.Int64)
 			stro.Counters[n] = p.Load()
@@ -273,6 +283,7 @@ func (sti *StatInfo) StatsSnapshot() *StatsSnapshot {
 
 func (sti *StatInfo) stats() []byte {
 	st := sti.StatsSnapshot()
+	db.DPrintf(db.TEST, "stat %v\n", st)
 	data, err := json.Marshal(st)
 	if err != nil {
 		db.DFatalf("stats: json marshaling failed %v", err)

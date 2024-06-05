@@ -8,6 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
+	"sigmaos/netproxyclnt"
 	"sigmaos/netsrv"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -19,7 +20,7 @@ import (
 )
 
 type NewSessionI interface {
-	NewSession(sessp.Tsession) sps.Protsrv
+	NewSession(*sp.Tprincipal, sessp.Tsession) sps.Protsrv
 }
 
 //
@@ -37,15 +38,15 @@ type SessSrv struct {
 	qlen  stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, addr *sp.Taddr, stats *stats.StatInfo, newSess NewSessionI) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, stats *stats.StatInfo, newSess NewSessionI) *SessSrv {
 	ssrv := &SessSrv{
 		pe:    pe,
 		stats: stats,
 		st:    newSessionTable(newSess),
 	}
-	ssrv.srv = netsrv.NewNetServer(pe, addr, ssrv)
+	ssrv.srv = netsrv.NewNetServer(pe, npc, addr, ssrv)
 	ssrv.sm = newSessionMgr(ssrv.st, ssrv.srvFcall)
-	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.MyAddr())
+	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.GetEndpoint())
 	return ssrv
 }
 
@@ -62,8 +63,8 @@ func (sssrv *SessSrv) RegisterDetachSess(f sps.DetachSessF, sid sessp.Tsession) 
 	return nil
 }
 
-func (ssrv *SessSrv) MyAddr() *sp.Taddr {
-	return ssrv.srv.MyAddr()
+func (ssrv *SessSrv) GetEndpoint() *sp.Tendpoint {
+	return ssrv.srv.GetEndpoint()
 }
 
 func (ssrv *SessSrv) StopServing() error {
@@ -85,8 +86,13 @@ func (ssrv *SessSrv) GetSessionTable() *sessionTable {
 	return ssrv.st
 }
 
-func (ssrv *SessSrv) NewConn(conn net.Conn) *demux.DemuxSrv {
-	nc := &netConn{conn: conn, ssrv: ssrv, sessid: sessp.NoSession}
+func (ssrv *SessSrv) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
+	nc := &netConn{
+		p:      p,
+		conn:   conn,
+		ssrv:   ssrv,
+		sessid: sessp.NoSession,
+	}
 	iovm := demux.NewIoVecMap()
 	nc.dmx = demux.NewDemuxSrv(nc, spcodec.NewTransport(conn, iovm))
 	return nc.dmx

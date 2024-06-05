@@ -7,6 +7,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sigmaos/socialnetwork/proto"
 	"sync"
@@ -28,26 +29,28 @@ type TextSrv struct {
 	urlc  *rpcclnt.RPCClnt
 }
 
-func RunTextSrv(public bool, jobname string) error {
+func RunTextSrv(jobname string) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Creating text service\n")
 	tsrv := &TextSrv{}
-	ssrv, err := sigmasrv.NewSigmaSrvPublic(SOCIAL_NETWORK_TEXT, tsrv, proc.GetProcEnv(), public)
+	ssrv, err := sigmasrv.NewSigmaSrv(SOCIAL_NETWORK_TEXT, tsrv, proc.GetProcEnv())
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_TEXT)
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_TEXT, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
+	rpcc := rpcclnt.NewRPCClnt(ch)
 	tsrv.userc = rpcc
-	rpcc, err = rpcclnt.NewRPCClnt(fsls, SOCIAL_NETWORK_URL)
+	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_URL)
 	if err != nil {
 		return err
 	}
+	rpcc = rpcclnt.NewRPCClnt(ch)
 	tsrv.urlc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TEXT, "Starting text service\n")
 	return ssrv.RunServer()

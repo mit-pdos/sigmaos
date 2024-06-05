@@ -5,7 +5,7 @@ import (
 	"context"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"testing"
@@ -17,6 +17,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -36,7 +37,13 @@ func TestOne(t *testing.T) {
 	dirents, err := ts.GetDir(sp.S3)
 	assert.Nil(t, err, "GetDir")
 
-	assert.Equal(t, 1, len(dirents))
+	db.DPrintf(db.TEST, "TestOne %v %v\n", sp.S3, sp.Names(dirents))
+
+	d := sp.S3 + "~local/"
+	dirents, err = ts.GetDir(d)
+	assert.Nil(t, err, "GetDir")
+
+	db.DPrintf(db.TEST, "TestOne %v %v\n", d, sp.Names(dirents))
 
 	ts.Shutdown()
 }
@@ -47,7 +54,7 @@ func TestReadOff(t *testing.T) {
 		return
 	}
 
-	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt"))
+	rdr, err := ts.OpenReader(filepath.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt"))
 	assert.Nil(t, err, "Error ReadOff %v", err)
 	rdr.Lseek(1 << 10)
 	brdr := bufio.NewReaderSize(rdr.Reader, 1<<16)
@@ -70,7 +77,7 @@ func s3Name(ts *test.Tstate) string {
 	sts, err := ts.GetDir(sp.S3)
 	assert.Nil(ts.T, err, sp.S3)
 	assert.Equal(ts.T, 1, len(sts))
-	name := path.Join(sp.S3, sts[0].Name)
+	name := filepath.Join(sp.S3, sts[0].Name)
 	return name
 }
 
@@ -81,7 +88,7 @@ func TestSymlinkFile(t *testing.T) {
 	}
 
 	dn := s3Name(ts)
-	fn := path.Join(dn, "9ps3", "gutenberg/pg-being_ernest.txt")
+	fn := filepath.Join(dn, "9ps3", "gutenberg/pg-being_ernest.txt")
 
 	_, err := ts.GetFile(fn)
 	assert.Nil(t, err, "GetFile")
@@ -120,7 +127,7 @@ func TestReadSplit(t *testing.T) {
 		return
 	}
 
-	rdr, err := ts.OpenReader(path.Join(sp.S3, "~local/9ps3/wiki/enwiki-latest-pages-articles-multistream.xml"))
+	rdr, err := ts.OpenReader(filepath.Join(sp.S3, "~local/9ps3/wiki/enwiki-latest-pages-articles-multistream.xml"))
 	assert.Nil(t, err)
 	err = rdr.Lseek(SPLITSZ)
 	assert.Nil(t, err)
@@ -249,7 +256,7 @@ func TestUnionSimple(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	dirents, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/"))
+	dirents, err := ts.GetDir(filepath.Join(sp.S3, "~local/9ps3/"))
 	assert.Nil(t, err, "GetDir: %v", err)
 
 	assert.True(t, fslib.Present(dirents, ROOT), "%v not in %v", ROOT, dirents)
@@ -266,7 +273,7 @@ func TestUnionDir(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	dirents, err := ts.GetDir(path.Join(sp.S3, "~local/9ps3/gutenberg"))
+	dirents, err := ts.GetDir(filepath.Join(sp.S3, "~local/9ps3/gutenberg"))
 	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 8, len(dirents))
@@ -286,7 +293,7 @@ func TestUnionFile(t *testing.T) {
 	file, err := os.ReadFile("../input/pg-being_ernest.txt")
 	assert.Nil(t, err, "ReadFile")
 
-	name := path.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt")
+	name := filepath.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt")
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
 
@@ -308,7 +315,7 @@ func TestUnionFile(t *testing.T) {
 			}
 			file = file[len(b):]
 		}
-		assert.Equal(ts.T, int(st.Length), n)
+		assert.Equal(ts.T, int(st.Tlength()), n)
 	}
 
 	ts.Shutdown()

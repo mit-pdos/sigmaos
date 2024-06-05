@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -12,11 +11,6 @@ type KeyMgr interface {
 	AddPrivateKey(s sp.Tsigner, key PrivateKey)
 }
 
-type AuthSrv interface {
-	SetDelegatedProcToken(p *proc.Proc) error
-	MintToken(pc *ProcClaims) (*sp.Ttoken, error)
-	MintAndSetToken(pe *proc.ProcEnv) error
-	VerifyTokenGetClaims(principalID sp.TprincipalID, signedToken *sp.Ttoken) (*ProcClaims, error)
-	IsAuthorized(principal *sp.Tprincipal, attachPath string) (*ProcClaims, bool, error)
+type AuthMgr interface {
 	KeyMgr
 }

@@ -13,7 +13,7 @@ FROM alpine AS base
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apk add --no-cache libseccomp gcompat musl-dev strace
+RUN apk add --no-cache libseccomp gcompat musl-dev strace fuse
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
@@ -35,6 +35,8 @@ COPY bin/kernel/uprocd bin/kernel/
 COPY bin/kernel/sigmaclntd bin/kernel/
 ## Copy rust trampoline to the user image.
 COPY bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/
+## Copy binfsd to the user image.
+COPY bin/kernel/binfsd bin/kernel/
 
 # ========== local kernel image ==========
 FROM base AS sigmaos-local
@@ -46,15 +48,14 @@ ENV mongoip x.x.x.x
 ENV overlays "false"
 ENV buildtag "local-build"
 ENV gvisor "false"
-ENV pubkey "no-key"
-ENV privkey "no-key"
+ENV netproxy "false"
 # Install docker-cli
 RUN apk add --update docker openrc
 ENV reserveMcpu "0"
 
 # Make a directory for binaries shared between realms.
 RUN mkdir -p /home/sigmaos/bin/user/common
-CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${buildtag} ${gvisor} \"${pubkey}\" \"${privkey}\""]
+CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${buildtag} ${gvisor} ${netproxy}"]
 
 # ========== remote kernel image ==========
 FROM sigmaos-local as sigmaos-remote
@@ -67,4 +68,4 @@ COPY bin/kernel /home/sigmaos/bin/kernel/
 COPY create-net.sh /home/sigmaos/bin/kernel/create-net.sh
 # Copy named
 RUN cp /home/sigmaos/bin/kernel/named /home/sigmaos/bin/user/common/named
-CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${buildtag} ${gvisor} \"${pubkey}\" \"${privkey}\""]
+CMD ["/bin/sh", "-c", "bin/linux/bootkernel ${kernelid} ${named} ${boot} ${dbip} ${mongoip} ${overlays} ${reserveMcpu} ${buildtag} ${gvisor} ${netproxy}"]

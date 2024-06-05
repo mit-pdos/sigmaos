@@ -32,6 +32,12 @@ func NewRPCDirClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelec
 	return u
 }
 
+func NewRPCDirClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, filter string) *RPCDirClnt {
+	u := &RPCDirClnt{}
+	u.DirCache = dircache.NewDirCacheFilter[*rpcclnt.RPCClnt](fsl, path, u.newEntry, lSelector, eSelector, filter)
+	return u
+}
+
 func (rpcdc *RPCDirClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
 	e, err := rpcdc.GetEntry(srvID)
 	if err != nil && serr.IsErrorNotfound(err) {

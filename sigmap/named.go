@@ -78,9 +78,9 @@ const (
 
 // sigmaclntd kernel
 const (
-	SIGMACLNTKERNEL = "kernel-" + SIGMACLNTDREL + "-"
+	SIGMACLNTDKERNEL = "kernel-" + SIGMACLNTDREL + "-"
 )
 
 func SigmaClntdKernel(kid string) string {
-	return SIGMACLNTKERNEL + kid
+	return SIGMACLNTDKERNEL + kid
 }

@@ -6,6 +6,7 @@
 package dircache
 
 import (
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -22,24 +23,31 @@ type NewEntryF[E any] func(string) (E, error)
 type DirCache[E any] struct {
 	*fslib.FsLib
 	sync.Mutex
-	dir       *sortedmap.SortedMap[string, E]
-	watching  bool
-	done      atomic.Uint64
-	Path      string
-	LSelector db.Tselector
-	ESelector db.Tselector
-	newEntry  NewEntryF[E]
-	err       error
+	dir          *sortedmap.SortedMap[string, E]
+	watching     bool
+	done         atomic.Uint64
+	Path         string
+	LSelector    db.Tselector
+	ESelector    db.Tselector
+	newEntry     NewEntryF[E]
+	prefixFilter string
+	err          error
 }
 
 func NewDirCache[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[E], lSelector db.Tselector, ESelector db.Tselector) *DirCache[E] {
+	return NewDirCacheFilter(fsl, path, newEntry, lSelector, ESelector, "")
+}
+
+// filter entries starting with prefix
+func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[E], lSelector db.Tselector, ESelector db.Tselector, prefix string) *DirCache[E] {
 	dd := &DirCache[E]{
-		FsLib:     fsl,
-		Path:      path,
-		dir:       sortedmap.NewSortedMap[string, E](),
-		LSelector: lSelector,
-		ESelector: ESelector,
-		newEntry:  newEntry,
+		FsLib:        fsl,
+		Path:         path,
+		dir:          sortedmap.NewSortedMap[string, E](),
+		LSelector:    lSelector,
+		ESelector:    ESelector,
+		newEntry:     newEntry,
+		prefixFilter: prefix,
 	}
 	return dd
 }
@@ -136,6 +144,10 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 	db.DPrintf(dc.LSelector, "Update ents %v in %v", ents, dc.dir)
 	entsMap := map[string]bool{}
 	for _, n := range ents {
+		// filter entries starting with prefixFilter
+		if dc.prefixFilter != "" && strings.HasPrefix(n, dc.prefixFilter) {
+			continue
+		}
 		entsMap[n] = true
 		if _, ok := dc.dir.Lookup(n); !ok {
 			e, err := dc.newEntry(n)

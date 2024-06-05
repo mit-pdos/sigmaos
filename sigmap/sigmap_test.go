@@ -34,5 +34,5 @@ func TestNamedAddrs(t *testing.T) {
 
 func TestIsSigmaClntdKernel(t *testing.T) {
 	sckid := sp.SigmaClntdKernel("sigma-1c80")
-	assert.True(t, strings.HasPrefix(sckid, sp.SIGMACLNTKERNEL))
+	assert.True(t, strings.HasPrefix(sckid, sp.SIGMACLNTDKERNEL))
 }

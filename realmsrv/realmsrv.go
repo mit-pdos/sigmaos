@@ -268,14 +268,14 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveRequest, res *proto.Remo
 func (rm *RealmSrv) bootPerRealmKernelSubsystems(r *Realm, realm sp.Trealm, ss string, n int64) error {
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems [%v] n %v", realm, ss, n)
 	defer db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems done [%v] n %v", realm, ss, n)
-	kernels, err := rm.mkc.GetKernelSrvs()
+	kernels, err := rm.mkc.GetGeneralKernels()
 	db.DPrintf(db.REALMD, "%v: [%v] kernels %v %v\n", realm, ss, kernels, err)
 	if err != nil {
 		return err
 	}
 	for i := 0; i < len(kernels); i++ {
 		// Don't try to boot per-realm kernel subsystems on sigmaclntd-only kernels
-		if strings.HasPrefix(kernels[i], sp.SIGMACLNTKERNEL) {
+		if strings.HasPrefix(kernels[i], sp.SIGMACLNTDKERNEL) {
 			kernels = append(kernels[:i], kernels[i+1:]...)
 			i--
 		}

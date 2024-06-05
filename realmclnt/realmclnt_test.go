@@ -498,8 +498,6 @@ func TestRealmNetIsolationOK(t *testing.T) {
 
 	cc1 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
 
-	db.DPrintf(db.TEST, "hello\n")
-
 	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
@@ -554,29 +552,25 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	// Make a second realm
-	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+
 	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
-	// start cachedsvc in realm1
+	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
 	job := rd.String(16)
 	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	// start client in realm1 monitoring its cached
 	cc1 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
 
 	// start client in realm2 monitoring its cached
 	cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts2.FsLib}, job)
-	assert.Nil(t, err)
-
-	time.Sleep(1000 * time.Millisecond)
 
 	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
@@ -598,12 +592,8 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	pn = pn + "/"
 
 	status := spawnDirreader(ts2, pn)
-	if test.Overlays {
-		assert.True(t, status.IsStatusErr(), "Status is: %v", status)
-	} else {
-		assert.True(t, status.IsStatusOK())
-		db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
-	}
+	assert.True(t, status.IsStatusErr(), "Status is: %v", status)
+	db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
 
 	cm.Stop()
 

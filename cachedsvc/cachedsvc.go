@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"sync"
 
-	db "sigmaos/debug"
+	// db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"

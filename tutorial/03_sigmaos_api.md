@@ -81,7 +81,7 @@ $ go test -v sigmaos/example --start --run Named
 and it will produce output like this:
 ```
 === RUN   TestExerciseNamed
-13:17:06.365645 name/: [.statsd rpc boot db kpids named-election-rootrealm s3 schedd ux]
+10:50:56.668788 name/: [.statsd rpc boot chunkd db kpids lcsched memfs mongo procq realm s3 schedd ux]
 --- PASS: TestExerciseNamed (0.61s)
 ```
 
@@ -97,7 +97,7 @@ $ ./stop.sh; go test -v sigmaos/example --start --run Named
 
 Now extend `TestExerciseNamed` to implement the exercise.
 `fslib/fslib_test.go` and `fslib/file.go` may provide inspiration.
-(If you are unfamiliar with Golang, check out [go
+(If you are unfamiliar with Golang, check the out [Go
 tutorial](https://go.dev/doc/tutorial/getting-started).
 
 Note that the state stored in the `named` root directory is persistent; `named`
@@ -118,10 +118,9 @@ other storage systems, including AWS S3.  Each machine in SigmaOS runs an `s3`
 proxy and you can read/write files in S3 using the pathname `name/s3/~any/`
 (`any` tells SigmaOS to use any of the available S3 proxies in `name/s3`).
 
-For this exercise you need an AWS credential file in your home directory
-`~/.aws/credentials` [local](01_local_dev.md). You may also have to copy the
-files in `input` into an S3 bucket of your creation, at the path
-`<YOUR_BUCKET_NAME>/gutenberg`.
+For this exercise you need to have your AWS credential files set up, according
+to [local](01_local_dev.md). You may also have to copy the files in `input`
+into an S3 bucket of your creation, at the path `<YOUR_BUCKET_NAME>/gutenberg`.
 
 Using the same FsLib interface as in the previous exercise, extend
 `TestExerciseS3` to:
@@ -140,9 +139,8 @@ and `scanner.Split(bufio.ScanWords)` may be helpful.
 In this exercise, you will familiarize yourself with the `procclnt` API.  The
 function `TestExerciseProc` spawns the example proc from `cmd/user/example/`.
 The test function runs this proc using `Spawn`, which queues the proc for
-execution. The test function wait until the proc starts (if many procs are
-spawned, SigmaOS may not start the proc for a while), and then wait until it
-exits. 
+execution. The test function waits until the proc starts, and then waits until
+it exits. 
 
 The proc in `cmd/user/example/` makes an `SigmaClnt` object, tells SigmaOS it
 started using `Started`, prints "Hello World", and then exits using
@@ -153,8 +151,8 @@ output like this:
 
 ```
 === RUN   TestExerciseProc
-    example_test.go:70: 
-                Error Trace:    /home/kaashoek/hack/sigmaos/example/example_test.go:70
+    example_test.go:62: 
+                Error Trace:    /home/kaashoek/hack/sigmaos/example/example_test.go:62
                 Error:          Not equal: 
                                 expected: "Hello world"
                                 actual  : ""
@@ -185,15 +183,21 @@ Modify the example proc to return `hello world` its exit status:
     `ClntExitOK` with `ClntExit`, passing in the appropriate `proc.Status`
     using `MakeStatusInfo`.
   - [ ] Recompile and build SigmaOS: ```$./build.sh --parallel```. It is
-    sometimes convenient to just the compile the SigmaOS programs to see if
-    they compile correctly: ```$./make.sh --norace user``` compiles the user
-    programs.   Or compile an individual user program:
-```
-    go build -ldflags="-X sigmaos/sigmap.Target=local" -o bin/user/example cmd/user/example/main.go
-```
+    sometimes convenient to just the compile the SigmaOS programs on the local
+    machine before running the full `build.sh` sequence, to see if
+    there are any compilation errors. This can be done by running:
+    ```
+    $./make.sh --norace user
+    ``` 
+    Or compile an individual user program:
+    ```
+        go build -ldflags="-X sigmaos/sigmap.Target=local" -o bin/user/example cmd/user/example/main.go
+    ```
     Once they compile correctly, run build.sh.
+    Note that the full `build.sh` sequence must be run before
+    rerunning the test, for local changes to be reflected in the SigmaOS
+    container images.
   - [ ] Rerun the test to see if your implementation now passes the test.
-
 
 ### Exercise 4: Process data in parallel
 

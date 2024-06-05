@@ -220,23 +220,22 @@ machine's local IP by running:
 $ hostname -I
 ```
 
-Create the directory `/mnt/9p` and then, run:
+Make sure the directory `/mnt/9p` exists and then run:
 
 ```
 $ ./mount.sh --boot LOCAL_IP
 ```
 
-This mount the root realm's `named` at `/mnt/9p`. 
-You should see output like this:
+This starts up a fresh SigmaOS instance, and mounts the root
+realm's `named` at `/mnt/9p`. You should see output like this:
 ```
 $ ./mount.sh --boot 127.0.0.1
 ..........................192.168.0.10 container 20a7be3eb7 dbIP x.x.x.x mongoIP x.x.x.x
-08:03:08.702140 - ALWAYS Etcd addr 127.0.0.1
 
 ```
 
-The `--boot` tells `mount.sh` to start SigmaOS; without the flag you
-can mount an already-running SigmaOS. 
+The `--boot` tells `mount.sh` to start SigmaOS. In order to introspect an
+already-running SigmaOS instance, run `mount.sh` without this flag. 
 
 You can `ls` the root directory of `named` as follows:
 ```
@@ -249,6 +248,11 @@ boot  db  kpids  named-election-rootrealm  rpc  s3  schedd  ux  ws
 $ 
 ```
 
+Make sure to stop the SigmaOS instance, as described below,
+before re-running `./mount.sh` or running any tests. Running two
+instances of SigmaOS on the same machine is likely to result in
+unexpected errors and/or hangs.
+
 ## Stopping SigmaOS
 
 In order to stop SigmaOS and clean up any running containers, run:
@@ -260,12 +264,16 @@ $ ./stop.sh --parallel
 Note: this will try to purge your machine of any traces of the running
 containers, including logs and cached build images. We do this to avoid filling
 your disk up, but you may want to refrain from running `stop.sh` if you want to
-inspect the containers' logs. If you wish to preserve the docker build cache
-(but still delete the logs), you can run:
+inspect the containers' logs. Additionally, you may wish to preserve the Docker
+build cache to speed up your builds (but still delete the logs). In order to do
+so, you can run:
 
 ```
 $ ./stop.sh --parallel --nopurge
 ```
+
+In general, we run `./stop.sh` with the `--nopurge` flag before running any new
+set of tests to ensure that SigmaOS starts from a clean state.
 
 ## Exercise: Access S3 through SigmaOS
 

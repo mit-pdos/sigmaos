@@ -40,7 +40,7 @@ func NewFidClnt(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) *FidClnt {
 }
 
 func (fidc *FidClnt) String() string {
-	str := fmt.Sprintf("Fsclnt fid table %p:\n%v", fidc, fidc.fids)
+	str := fmt.Sprintf("{fids %v}", fidc.fids)
 	return str
 }
 

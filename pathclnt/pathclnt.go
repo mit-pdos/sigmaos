@@ -43,7 +43,7 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 }
 
 func (pathc *PathClnt) String() string {
-	return fmt.Sprintf("{Pathclnt: cid %v mount table %v}", pathc.cid, pathc.mntclnt)
+	return fmt.Sprintf("{Pathclnt: cid %v mount table %v fidclnt %v}", pathc.cid, pathc.mntclnt, pathc.FidClnt)
 }
 
 func (pathc *PathClnt) Close() error {
@@ -206,7 +206,7 @@ func (pathc *PathClnt) Stat(name string, principal *sp.Tprincipal) (*sp.Stat, er
 	db.DPrintf(db.PATHCLNT, "%v: Stat resolve %v target %v rest %v\n", pathc.cid, pn, target, rest)
 	if len(rest) == 0 && !path.EndSlash(name) {
 		st := sp.NewStatNull()
-		st.Name = pathc.FidClnt.Lookup(target).Servers().String()
+		st.Name = pathc.FidClnt.Lookup(target).Endpoint().String()
 		return st, nil
 	} else {
 		fid, err := pathc.walk(pn, principal, path.EndSlash(name), nil)

@@ -1,6 +1,6 @@
 // Package protclnt implements stubs for the sigmap messages for a
-// particular server at addrs. It relies on [sessclnt] for maintaining
-// a session with that server.
+// server at an endpoint. It relies on [sessclnt] for maintaining a
+// session with that server.
 package protclnt
 
 import (
@@ -26,7 +26,7 @@ func NewProtClnt(ep *sp.Tendpoint, sm *sessclnt.Mgr) *ProtClnt {
 	}
 }
 
-func (pclnt *ProtClnt) Servers() *sp.Tendpoint {
+func (pclnt *ProtClnt) Endpoints() *sp.Tendpoint {
 	return pclnt.ep
 }
 

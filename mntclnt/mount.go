@@ -31,6 +31,10 @@ func newMntTable() *MntTable {
 	return mnt
 }
 
+func (mnt *MntTable) String() string {
+	return fmt.Sprintf("{mounts %v}", mnt.mounts)
+}
+
 // add path, in order of longest path first. if the path
 // already exits, return error
 func (mnt *MntTable) add(path path.Tpathname, fid sp.Tfid) *serr.Err {

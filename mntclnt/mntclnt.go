@@ -1,6 +1,7 @@
 package mntclnt
 
 import (
+	"fmt"
 	"time"
 
 	db "sigmaos/debug"
@@ -36,6 +37,10 @@ func NewMntClnt(pathc sigmaos.PathClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId
 		pathc:      pathc,
 	}
 	return mc
+}
+
+func (mc *MntClnt) String() string {
+	return fmt.Sprintf("{mnt %v ndMntCache %v rootmt %v}", mc.mnt, mc.ndMntCache, mc.rootmt)
 }
 
 func (mc *MntClnt) Mounts() []string {

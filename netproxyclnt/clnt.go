@@ -40,6 +40,10 @@ func NewNetProxyClnt(pe *proc.ProcEnv) *NetProxyClnt {
 	}
 }
 
+func (npc *NetProxyClnt) String() string {
+	return fmt.Sprintf("{npc useProxy %v}", npc.useProxy())
+}
+
 func (npc *NetProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
 	var c net.Conn
 	var err error

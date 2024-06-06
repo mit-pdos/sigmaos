@@ -6,7 +6,6 @@
 package dircache
 
 import (
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -144,10 +143,6 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 	db.DPrintf(dc.LSelector, "Update ents %v in %v", ents, dc.dir)
 	entsMap := map[string]bool{}
 	for _, n := range ents {
-		// filter entries starting with prefixFilter
-		if dc.prefixFilter != "" && strings.HasPrefix(n, dc.prefixFilter) {
-			continue
-		}
 		entsMap[n] = true
 		if _, ok := dc.dir.Lookup(n); !ok {
 			e, err := dc.newEntry(n)
@@ -220,7 +215,7 @@ func (dc *DirCache[E]) getEntries() ([]string, error) {
 	defer db.DPrintf(db.SPAWN_LAT, "getEntries %v", time.Since(s))
 
 	dr := fslib.NewDirReader(dc.FsLib, dc.Path)
-	fns, err := dr.GetUniqueEntries()
+	fns, err := dr.GetUniqueEntriesFilter(dc.prefixFilter)
 	if err != nil {
 		db.DPrintf(dc.ESelector, "getEntries %v err", err)
 		return nil, err
@@ -238,7 +233,7 @@ func (dc *DirCache[E]) watchDir() {
 	retry := false
 	for dc.done.Load() == 0 {
 		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
-		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0))
+		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilter)
 		if ok { // reset retry?
 			retry = false
 		}

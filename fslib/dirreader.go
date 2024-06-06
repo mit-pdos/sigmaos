@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"path/filepath"
+	"strings"
 	"sync"
 
 	db "sigmaos/debug"
@@ -111,12 +112,20 @@ func (dr *DirReader) WaitNEntries(n int) error {
 	return nil
 }
 
-// Return unique ents since last call
 func (dr *DirReader) GetUniqueEntries() ([]string, error) {
+	return dr.GetUniqueEntriesFilter("")
+}
+
+// Return unique ents since last call, filtering names that start with
+// prefixFilter.
+func (dr *DirReader) GetUniqueEntriesFilter(prefixFilter string) ([]string, error) {
 	db.DPrintf(db.WATCH, "GetUniqueEntries %v\n", dr.pn)
 	newents := make([]string, 0)
 	_, err := dr.ProcessDir(dr.pn, func(st *sp.Stat) (bool, error) {
 		db.DPrintf(db.WATCH, "GetUniqueEntries: process entry %v\n", st.Name)
+		if prefixFilter != "" && strings.HasPrefix(st.Name, prefixFilter) {
+			return false, nil
+		}
 		if !dr.ents[st.Name] {
 			dr.ents[st.Name] = true
 			newents = append(newents, st.Name)
@@ -131,7 +140,7 @@ func (dr *DirReader) GetUniqueEntries() ([]string, error) {
 
 // Watch for a directory change relative to present change and return
 // all (unique) entries.  Both present and sts are sorted.
-func (dr *DirReader) WatchUniqueEntries(present []string) ([]string, bool, error) {
+func (dr *DirReader) WatchUniqueEntries(present []string, prefixFilter string) ([]string, bool, error) {
 	newents := make([]string, 0)
 	ok, err := dr.readDirWatch(dr.pn, func(sts []*sp.Stat) bool {
 		unchanged := true

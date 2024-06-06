@@ -180,17 +180,3 @@ func (fsl *FsLib) sprintfDirIndent(d string, indent string) (string, error) {
 	}
 	return s, nil
 }
-
-func Present(sts []*sp.Stat, names []string) bool {
-	n := 0
-	m := make(map[string]bool)
-	for _, n := range names {
-		m[filepath.Base(n)] = true
-	}
-	for _, st := range sts {
-		if _, ok := m[st.Name]; ok {
-			n += 1
-		}
-	}
-	return n == len(names)
-}

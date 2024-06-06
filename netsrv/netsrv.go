@@ -41,7 +41,6 @@ func NewNetServerEPType(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *
 		db.DFatalf("Listen error: %v", err)
 	}
 	srv.ep = ep
-	srv.ep = ep
 	srv.l = l
 	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.ep)
 	go srv.runsrv(l)

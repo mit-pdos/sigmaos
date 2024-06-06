@@ -104,7 +104,7 @@ func RunFrontendSrv(public bool, job string) error {
 	//	}
 	dbg.DPrintf(dbg.ALWAYS, "SN public? %v", public)
 	if public {
-		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_PORT))
+		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_HTTP_PORT))
 		if err != nil {
 			dbg.DFatalf("Error %v Listen: %v", public, err)
 		}

@@ -229,16 +229,20 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 			return nil, err
 		}
 		// Get port binding for WWW srvs running on this uprocd
-		pm2, err := s.GetContainer().GetPortBinding(port.PUBLIC_PORT)
-		if err != nil {
-			return nil, err
+		ports := []sp.Tport{port.PUBLIC_HTTP_PORT, port.PUBLIC_NAMED_PORT}
+		portFNs := []string{sp.PUBLIC_HTTP_PORT, sp.PUBLIC_NAMED_PORT}
+		for i := range ports {
+			pm, err := s.GetContainer().GetPortBinding(ports[i])
+			if err != nil {
+				return nil, err
+			}
+			portFN := filepath.Join(pn, portFNs[i])
+			if err := k.PutFileJson(portFN, 0777, pm); err != nil {
+				db.DPrintf(db.ERROR, "Error put public port file: %v", err)
+				return nil, err
+			}
 		}
-		portFN := filepath.Join(pn, sp.PUBLIC_PORT)
-		if err := k.PutFileJson(portFN, 0777, pm2); err != nil {
-			db.DPrintf(db.ERROR, "Error put public port file: %v", err)
-			return nil, err
-		}
-		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s pfn %v", pn, pm, portFN)
+		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s pfn %v", pn, pm, portFNs)
 	}
 	return s, nil
 }

@@ -155,16 +155,14 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 
 	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
 
-	//	if !ups.pe.Overlays {
-	//		scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
-	//		scdp.InheritParentProcEnv(ups.pe)
-	//		scdp.SetHow(proc.HLINUX)
-	//		scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
-	//		if err != nil {
-	//			return err
-	//		}
-	//		ups.scsc = scsc
-	//	}
+	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
+	scdp.InheritParentProcEnv(ups.pe)
+	scdp.SetHow(proc.HLINUX)
+	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	if err != nil {
+		return err
+	}
+	ups.scsc = scsc
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
@@ -232,14 +230,6 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
 	}(start)
 
-	//	start = time.Now()
-	//	innerIP, err := netsigma.LocalIP()
-	//	if err != nil {
-	//		db.DFatalf("Error LocalIP: %v", err)
-	//	}
-	//	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
-	//	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.setLocalIP: %v", upid, time.Since(start))
-
 	start = time.Now()
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v", realm)
 
@@ -252,23 +242,11 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	// Note that the uprocsrv has been assigned.
 	ups.realm = realm
 
-	//	if ups.pe.Overlays {
-	// Now that the uprocd's innerIP has been established, spawn sigmaclntd
-	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
-	scdp.InheritParentProcEnv(ups.pe)
-	scdp.SetHow(proc.HLINUX)
-	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
-	if err != nil {
-		return err
-	}
-	ups.scsc = scsc
-	//	}
-
 	// Demote to reader lock
 	ups.mu.Unlock()
 	ups.mu.RLock()
 
-	return err
+	return nil
 }
 
 func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.AssignResult) error {

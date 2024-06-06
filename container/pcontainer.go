@@ -45,7 +45,7 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 	up := sp.NO_PORT
 	netmode := "host"
 	var endpoints map[string]*network.EndpointSettings
-	ports := []sp.Tport{port.UPROCD_PORT, port.PUBLIC_PORT}
+	ports := []sp.Tport{port.UPROCD_PORT, port.PUBLIC_HTTP_PORT, port.PUBLIC_NAMED_PORT}
 	if overlays {
 		db.DPrintf(db.CONTAINER, "Running with overlay ports: %v", ports)
 		up = port.UPROCD_PORT

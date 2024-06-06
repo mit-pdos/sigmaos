@@ -53,7 +53,8 @@ const (
 	PIDS    = "pids"
 
 	// Uprocd
-	PUBLIC_PORT = "public-port"
+	PUBLIC_HTTP_PORT  = "public-http-port"
+	PUBLIC_NAMED_PORT = "public-named-port"
 
 	// Auth
 	KEYDREL    = "keyd"

@@ -51,6 +51,10 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[
 	return dd
 }
 
+func (dc *DirCache[E]) StopWatching() {
+	dc.done.Add(1)
+}
+
 func (dc *DirCache[E]) Nentry() (int, error) {
 	if err := dc.watchEntries(); err != nil {
 		return 0, err
@@ -105,6 +109,53 @@ func (dc *DirCache[E]) GetEntryAlloc(n string) (E, error) {
 	return e, nil
 }
 
+func (dc *DirCache[E]) Random() (string, error) {
+	var n string
+	var ok bool
+
+	db.DPrintf(dc.LSelector, "Random")
+
+	if err := dc.watchEntries(); err != nil {
+		return "", err
+	}
+	defer func(n *string) {
+		db.DPrintf(dc.LSelector, "Done Random %v %t", *n, ok)
+	}(&n)
+	n, ok = dc.dir.Random()
+	if !ok {
+		return "", serr.NewErr(serr.TErrNotfound, "no random entry")
+	}
+	return n, nil
+}
+
+func (dc *DirCache[E]) RoundRobin() (string, error) {
+	var n string
+	var ok bool
+
+	db.DPrintf(dc.LSelector, "RoundRobin")
+
+	if err := dc.watchEntries(); err != nil {
+		return "", err
+	}
+
+	defer func(n *string) {
+		db.DPrintf(dc.LSelector, "Done RoundRobin %v %t", *n, ok)
+	}(&n)
+
+	n, ok = dc.dir.RoundRobin()
+	if !ok {
+		return "", serr.NewErr(serr.TErrNotfound, "no next entry")
+	}
+	return n, nil
+}
+
+func (dc *DirCache[E]) RemoveEntry(name string) bool {
+	db.DPrintf(dc.LSelector, "RemoveEntry %v", name)
+	ok := dc.dir.Delete(name)
+	db.DPrintf(dc.LSelector, "Done Remove entry %v %v", ok, dc.dir)
+	return ok
+}
+
 func (dc *DirCache[E]) watchEntries() error {
 	dc.Lock()
 	defer dc.Unlock()
@@ -156,53 +207,6 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 	return nil
 }
 
-func (dc *DirCache[E]) Random() (string, error) {
-	var n string
-	var ok bool
-
-	db.DPrintf(dc.LSelector, "Random")
-
-	if err := dc.watchEntries(); err != nil {
-		return "", err
-	}
-	defer func(n *string) {
-		db.DPrintf(dc.LSelector, "Done Random %v %t", *n, ok)
-	}(&n)
-	n, ok = dc.dir.Random()
-	if !ok {
-		return "", serr.NewErr(serr.TErrNotfound, "no random entry")
-	}
-	return n, nil
-}
-
-func (dc *DirCache[E]) RoundRobin() (string, error) {
-	var n string
-	var ok bool
-
-	db.DPrintf(dc.LSelector, "RoundRobin")
-
-	if err := dc.watchEntries(); err != nil {
-		return "", err
-	}
-
-	defer func(n *string) {
-		db.DPrintf(dc.LSelector, "Done RoundRobin %v %t", *n, ok)
-	}(&n)
-
-	n, ok = dc.dir.RoundRobin()
-	if !ok {
-		return "", serr.NewErr(serr.TErrNotfound, "no next entry")
-	}
-	return n, nil
-}
-
-func (dc *DirCache[E]) RemoveEntry(name string) bool {
-	db.DPrintf(dc.LSelector, "RemoveEntry %v", name)
-	ok := dc.dir.Delete(name)
-	db.DPrintf(dc.LSelector, "Done Remove entry %v %v", ok, dc.dir)
-	return ok
-}
-
 // Read directory from server and return unique files. The caller may
 // hold the dd mutex
 func (dc *DirCache[E]) getEntries() ([]string, error) {
@@ -217,10 +221,6 @@ func (dc *DirCache[E]) getEntries() ([]string, error) {
 	}
 	db.DPrintf(dc.LSelector, "getEntries %v", fns)
 	return fns, nil
-}
-
-func (dc *DirCache[E]) StopWatching() {
-	dc.done.Add(1)
 }
 
 // Monitor for changes to the directory and update the cached one

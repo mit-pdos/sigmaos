@@ -141,13 +141,12 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 	r := newRealm()
 	p := proc.NewProc("named", []string{req.Realm, "0"})
-	p.GetProcEnv().SetRealm(sp.ROOTREALM, p.GetProcEnv().Overlays)
 	// Make sure named uses netproxy
 	p.GetProcEnv().UseNetProxy = rm.netproxy
 	p.SetMcpu(NAMED_MCPU)
 	r.named = p
 
-	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named", req.Realm)
+	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named %v", req.Realm, p)
 	if err := rm.sc.Spawn(p); err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error SpawnBurst: %v", err)
 		return err

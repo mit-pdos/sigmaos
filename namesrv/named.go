@@ -173,6 +173,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	if nd.realm == sp.ROOTREALM || !nd.ProcEnv().GetOverlays() {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 	} else {
+		db.DPrintf(db.NAMED, "[%v] Listeing on overlay public port: %v:%v", nd.realm, nd.ProcEnv().GetOuterContainerIP(), port.PUBLIC_NAMED_PORT)
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, port.PUBLIC_NAMED_PORT)
 	}
 	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)

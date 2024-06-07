@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"sync"
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -31,7 +30,6 @@ type NetProxySrv struct {
 }
 
 type NetProxySrvStubs struct {
-	sync.Mutex
 	closed           bool
 	lidctr           netproxy.Tlidctr
 	lm               *netproxy.ListenerMap

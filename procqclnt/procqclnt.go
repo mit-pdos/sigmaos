@@ -79,7 +79,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			pqID = callerKernelID
 		} else {
 			var err error
-			pqID, err = pqc.rpcdc.Random()
+			pqID, err = pqc.rpcdc.WaitRandom()
 			if err != nil {
 				db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get random: %v", err)
 				return 0, 0, false, err

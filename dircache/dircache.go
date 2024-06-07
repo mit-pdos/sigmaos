@@ -22,6 +22,7 @@ type NewEntryF[E any] func(string) (E, error)
 type DirCache[E any] struct {
 	*fslib.FsLib
 	sync.Mutex
+	hasEntries   *sync.Cond
 	dir          *sortedmap.SortedMap[string, E]
 	watching     bool
 	done         atomic.Uint64
@@ -48,6 +49,7 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[
 		newEntry:     newEntry,
 		prefixFilter: prefix,
 	}
+	dd.hasEntries = sync.NewCond(&dd.Mutex)
 	return dd
 }
 
@@ -128,6 +130,21 @@ func (dc *DirCache[E]) Random() (string, error) {
 	return n, nil
 }
 
+func (dc *DirCache[E]) WaitRandom() (string, error) {
+	db.DPrintf(dc.LSelector, "WaitRandom")
+	for {
+		n, err := dc.Random()
+		if serr.IsErrorNotfound(err) {
+			dc.waitEntries()
+		}
+		db.DPrintf(dc.LSelector, "Done WaitRandom %v %v", n, err)
+		if err != nil {
+			return "", err
+		}
+		return n, nil
+	}
+}
+
 func (dc *DirCache[E]) RoundRobin() (string, error) {
 	var n string
 	var ok bool
@@ -154,6 +171,15 @@ func (dc *DirCache[E]) RemoveEntry(name string) bool {
 	ok := dc.dir.Delete(name)
 	db.DPrintf(dc.LSelector, "Done Remove entry %v %v", ok, dc.dir)
 	return ok
+}
+
+func (dc *DirCache[E]) waitEntries() {
+	dc.Lock()
+	defer dc.Unlock()
+
+	for dc.dir.Len() == 0 && dc.err == nil {
+		dc.hasEntries.Wait()
+	}
 }
 
 func (dc *DirCache[E]) watchEntries() error {
@@ -202,6 +228,9 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 		if !entsMap[n] {
 			dc.dir.Delete(n)
 		}
+	}
+	if dc.dir.Len() > 0 {
+		dc.hasEntries.Broadcast()
 	}
 	db.DPrintf(dc.LSelector, "Update ents %v done %v", ents, dc.dir)
 	return nil

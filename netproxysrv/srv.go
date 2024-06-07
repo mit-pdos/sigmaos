@@ -184,6 +184,24 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 	return nil
 }
 
+// Returns true if the client principal, cliP, is authorized to connect to the server principal, srvP
+func connectionIsAuthorized(srvP *sp.Tprincipal, cliP *sp.Tprincipal) bool {
+	// If server and client realms match, authorized
+	if srvP.GetRealm() == cliP.GetRealm() {
+		return true
+	}
+	// If the client belongs to the root realm, authorized
+	if cliP.GetRealm() == sp.ROOTREALM {
+		return true
+	}
+	// If the server belongs to the root realm, authorized
+	if srvP.GetRealm() == sp.ROOTREALM {
+		return true
+	}
+	// Unauthorized
+	return false
+}
+
 func (nps *NetProxySrvStubs) acceptFromAuthorizedPrincipal(l net.Listener, internal bool) (net.Conn, *sp.Tprincipal, error) {
 	for {
 		proxyConn, p, err := netproxy.AcceptDirect(l, internal)
@@ -194,10 +212,9 @@ func (nps *NetProxySrvStubs) acceptFromAuthorizedPrincipal(l net.Listener, inter
 		}
 		// For now, connections from the outside world are always allowed
 		if internal {
-			// If client & server's realms don't match, and neither belongs to the root
-			// realm (which can connect to anything, and can be connected to by
-			// anything), close the connection, and retry the accept.
-			if nps.p.GetRealm() != p.GetRealm() && nps.p.GetRealm() != sp.ROOTREALM && p.GetRealm() != sp.ROOTREALM {
+			// If the client is not authorized to talk to the server,
+			// close the connection, and retry the accept.
+			if !connectionIsAuthorized(nps.p, p) {
 				db.DPrintf(db.NETPROXYSRV_ERR, "Error attempted connection from unauthorized principal %v -> %v", p, nps.p)
 				proxyConn.Close()
 				continue

@@ -33,20 +33,20 @@ type NetProxySrvStubs struct {
 	closed           bool
 	lidctr           netproxy.Tlidctr
 	lm               *netproxy.ListenerMap
-	trans            *netproxytrans.NetProxyTrans
-	conn             *net.UnixConn
 	innerContainerIP sp.Tip
 	directDialFn     netproxy.DialFn
 	directListenFn   netproxy.ListenFn
-	baseCtx          *ctx.Ctx
 	p                *sp.Tprincipal
 	sc               *sigmaclnt.SigmaClnt
 }
 
 type NetProxySrvConn struct {
-	npss *NetProxySrvStubs
-	rpcs *rpcsrv.RPCSrv
-	dmx  *demux.DemuxSrv
+	npss    *NetProxySrvStubs
+	baseCtx *ctx.Ctx
+	conn    *net.UnixConn
+	trans   *netproxytrans.NetProxyTrans
+	rpcs    *rpcsrv.RPCSrv
+	dmx     *demux.DemuxSrv
 }
 
 func NewNetProxySrv(pe *proc.ProcEnv) (*NetProxySrv, error) {
@@ -89,31 +89,31 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 	db.DPrintf(db.NETPROXYSRV, "Handle connection [%p] from principal %v", conn, p)
 
 	npsc := &NetProxySrvConn{
+		trans:   netproxytrans.NewNetProxyTrans(conn, demux.NewIoVecMap()),
+		conn:    conn,
+		baseCtx: ctx.NewPrincipalOnlyCtx(p),
 		npss: &NetProxySrvStubs{
 			lm:               netproxy.NewListenerMap(),
-			trans:            netproxytrans.NewNetProxyTrans(conn, demux.NewIoVecMap()),
-			conn:             conn,
 			innerContainerIP: nps.innerContainerIP,
 			directListenFn:   netproxy.ListenDirect,
-			baseCtx:          ctx.NewPrincipalOnlyCtx(p),
 			sc:               nps.sc,
 			p:                p,
 		},
 	}
 	npsc.rpcs = rpcsrv.NewRPCSrv(npsc.npss, rpc.NewStatInfo())
 	// Start a demux server to handle requests & concurrency
-	npsc.dmx = demux.NewDemuxSrv(npsc, npsc.npss.trans)
+	npsc.dmx = demux.NewDemuxSrv(npsc, npsc.trans)
 }
 
 func (npsc *NetProxySrvConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
 	db.DPrintf(db.NETPROXYSRV, "ServeRequest: %v", c)
 	req := c.(*netproxytrans.ProxyCall)
-	ctx := netproxy.NewCtx(npsc.npss.baseCtx)
+	ctx := netproxy.NewCtx(npsc.baseCtx)
 	rep, err := npsc.rpcs.WriteRead(ctx, req.Iov)
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV, "ServeRequest: writeRead err %v", err)
 	}
-	npsc.npss.trans.AddConn(req.Seqno, ctx.GetConn())
+	npsc.trans.AddConn(req.Seqno, ctx.GetConn())
 	return netproxytrans.NewProxyCall(req.Seqno, rep), nil
 }
 
@@ -305,8 +305,8 @@ func (npsc *NetProxySrvConn) ReportError(err error) {
 	if err := npsc.npss.closeListeners(); err != nil {
 		db.DPrintf(db.ERROR, "Err closeListeners: %v", err)
 	}
-	db.DPrintf(db.NETPROXYSRV, "Close conn principal %v", npsc.npss.baseCtx.Principal())
-	npsc.npss.conn.Close()
+	db.DPrintf(db.NETPROXYSRV, "Close conn principal %v", npsc.baseCtx.Principal())
+	npsc.conn.Close()
 }
 
 func (nps *NetProxySrv) Shutdown() {

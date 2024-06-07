@@ -196,42 +196,59 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	ts.shutdown()
 }
 
-func TestBasicMultiRealmFairness(t *testing.T) {
-	ts := newMultiRealmTstate(t)
+func TestWaitExitSimpleSingle(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
 
-	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
+	sts1, err := rootts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
 
-	p1 := proc.NewProc("sleeper", []string{"100000s", "name/"})
-	p1.SetMem(mem.GetTotalMem()/2 + 1)
+	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
-	db.DPrintf(db.TEST, "Spawn big realm's proc")
-	err := ts.ts1.Spawn(p1)
-	assert.Nil(ts.rootts.T, err, "Err spawn: %v", err)
-	err = ts.ts1.WaitStart(p1.GetPid())
-	assert.Nil(ts.rootts.T, err, "Err WaitStart: %v", err)
-	db.DPrintf(db.TEST, "Big realm's proc started")
+	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetInnerContainerIP())
 
-	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
+	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	db.DPrintf(db.TEST, "Pre spawn")
+	err = ts1.Spawn(a)
+	assert.Nil(t, err, "Error spawn: %v", err)
+	db.DPrintf(db.TEST, "Post spawn")
 
-	p2 := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
-	p2.SetMem(mem.GetTotalMem())
+	db.DPrintf(db.TEST, "Pre waitexit")
+	status, err := ts1.WaitExit(a.GetPid())
+	db.DPrintf(db.TEST, "Post waitexit")
+	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
 
-	db.DPrintf(db.TEST, "Spawn small realm's proc")
-	err = ts.ts2.Spawn(p2)
-	assert.Nil(ts.rootts.T, err, "Err spawn: %v", err)
-	err = ts.ts2.WaitStart(p2.GetPid())
-	assert.Nil(ts.rootts.T, err, "Err WaitStart: %v", err)
-	db.DPrintf(db.TEST, "Small realm's proc started")
+	for _, d := range []string{sp.S3, sp.UX} {
+		sts1, err := rootts.GetDir(d)
+		assert.Nil(t, err)
+		assert.True(t, len(sts1) == 1, "No %vs in root realm", d)
+		sts, err := ts1.GetDir(d)
+		db.DPrintf(db.TEST, "realm names %v %v\n", d, sp.Names(sts))
+		assert.Nil(t, err)
+		assert.True(t, len(sts) == 1, "No %vs in user realm", d)
+		for _, st := range sts1 {
+			// If there is a name in common in the directory, check that they are for different endpoints
+			if sp.Present(sts, []string{st.Name}) {
+				ep, err := ts1.ReadEndpoint(filepath.Join(d, st.Name))
+				assert.Nil(t, err, "ReadEndpoint: %v", err)
+				ep1, err := rootts.ReadEndpoint(filepath.Join(d, st.Name))
+				assert.Nil(t, err, "ReadEndpoint: %v", err)
+				assert.False(t, ep.Addrs()[0] == ep1.Addrs()[0], "%v cross-over", d)
+			}
+		}
+	}
 
-	status, err := ts.ts1.WaitExit(p1.GetPid())
-	assert.Nil(ts.rootts.T, err, "Err WaitExit: %v", err)
-	assert.True(ts.rootts.T, status.IsStatusEvicted(), "Wrong status: %v", status)
+	err = ts1.Remove()
+	assert.Nil(t, err)
 
-	status, err = ts.ts2.WaitExit(p2.GetPid())
-	assert.Nil(ts.rootts.T, err, "Err WaitExit: %v", err)
-	assert.True(ts.rootts.T, status.IsStatusOK(), "Wrong status: %v", status)
-
-	ts.shutdown()
+	rootts.Shutdown()
 }
 
 func TestBasicFairness(t *testing.T) {

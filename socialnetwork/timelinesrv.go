@@ -50,7 +50,7 @@ func RunTimelineSrv(jobname string) error {
 		return err
 	}
 	tlsrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
-	rpcc, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_POST)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}

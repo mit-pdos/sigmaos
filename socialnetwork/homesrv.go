@@ -43,7 +43,7 @@ func RunHomeSrv(jobname string) error {
 		return err
 	}
 	hsrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
-	rpcc, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_GRAPH)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}

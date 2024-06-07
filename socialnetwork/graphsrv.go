@@ -54,7 +54,7 @@ func RunGraphSrv(jobname string) error {
 		return err
 	}
 	gsrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
-	rpcc, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_USER)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}

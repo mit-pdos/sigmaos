@@ -10,11 +10,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/auth"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/keys"
 	"sigmaos/memfs"
 	"sigmaos/memfs/dir"
 	"sigmaos/netproxyclnt"
@@ -450,21 +448,13 @@ func TestPerfSessSrvSyncClnt(t *testing.T) {
 
 type TstateSp struct {
 	*test.TstateMin
-	srv     *sigmapsrv.SigmaPSrv
-	clnt    *sessclnt.Mgr
-	pubkey  auth.PublicKey
-	privkey auth.PrivateKey
+	srv  *sigmapsrv.SigmaPSrv
+	clnt *sessclnt.Mgr
 }
 
 func newTstateSp(t *testing.T) *TstateSp {
 	ts := &TstateSp{}
 	ts.TstateMin = test.NewTstateMin(t)
-	pubkey, privkey, err := keys.NewECDSAKey()
-	assert.Nil(t, err, "Err NewKey: %v", err)
-	ts.pubkey = pubkey
-	ts.privkey = privkey
-	kmgr := keys.NewKeyMgr(keys.WithConstGetKeyFn(ts.pubkey))
-	kmgr.AddPrivateKey(sp.Tsigner(ts.PE.GetPID()), ts.privkey)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
 	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE), root, ts.Addr, nil)
 	ts.clnt = sessclnt.NewMgr(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE))

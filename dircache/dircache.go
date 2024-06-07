@@ -17,7 +17,7 @@ import (
 	"sigmaos/sortedmap"
 )
 
-type NewEntryF[E any] func(string) (E, error)
+type NewValF[E any] func(string) (E, error)
 
 type DirCache[E any] struct {
 	*fslib.FsLib
@@ -29,24 +29,24 @@ type DirCache[E any] struct {
 	Path         string
 	LSelector    db.Tselector
 	ESelector    db.Tselector
-	newEntry     NewEntryF[E]
+	newVal       NewValF[E]
 	prefixFilter string
 	err          error
 }
 
-func NewDirCache[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[E], lSelector db.Tselector, ESelector db.Tselector) *DirCache[E] {
-	return NewDirCacheFilter(fsl, path, newEntry, lSelector, ESelector, "")
+func NewDirCache[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], lSelector db.Tselector, ESelector db.Tselector) *DirCache[E] {
+	return NewDirCacheFilter(fsl, path, newVal, lSelector, ESelector, "")
 }
 
 // filter entries starting with prefix
-func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[E], lSelector db.Tselector, ESelector db.Tselector, prefix string) *DirCache[E] {
+func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], lSelector db.Tselector, ESelector db.Tselector, prefix string) *DirCache[E] {
 	dd := &DirCache[E]{
 		FsLib:        fsl,
 		Path:         path,
 		dir:          sortedmap.NewSortedMap[string, E](),
 		LSelector:    lSelector,
 		ESelector:    ESelector,
-		newEntry:     newEntry,
+		newVal:       newVal,
 		prefixFilter: prefix,
 	}
 	dd.hasEntries = sync.NewCond(&dd.Mutex)
@@ -71,47 +71,39 @@ func (dc *DirCache[E]) GetEntries() ([]string, error) {
 	return dc.dir.Keys(0), nil
 }
 
-func (dc *DirCache[E]) GetEntry(n string) (E, error) {
-	var ok bool
-	var e E
-	db.DPrintf(dc.LSelector, "GetEntry for %v", n)
-	defer func(e *E, ok *bool) {
-		db.DPrintf(dc.LSelector, "Done GetEntry for %v e %v ok %t", n, *e, *ok)
-	}(&e, &ok)
+func (dc *DirCache[E]) WaitGetEntriesN(n int) ([]string, error) {
 	if err := dc.watchEntries(); err != nil {
-		return e, err
+		return nil, err
 	}
-	e, ok = dc.dir.Lookup(n)
-	if !ok {
-		return e, serr.NewErr(serr.TErrNotfound, n)
+	dc.waitEntriesN(n)
+	if dc.err != nil {
+		return nil, dc.err
 	}
-	return e, nil
+	return dc.dir.Keys(0), nil
 }
 
-func (dc *DirCache[E]) GetEntryAlloc(n string) (E, error) {
-	db.DPrintf(dc.LSelector, "GetEntryAlloc for %v", n)
-	defer db.DPrintf(dc.LSelector, "Done GetEntryAlloc for %v", n)
+func (dc *DirCache[E]) GetEntry(n string) (E, error) {
+	db.DPrintf(dc.LSelector, "GetEntry for %v", n)
 
 	if err := dc.watchEntries(); err != nil {
 		var e E
+		db.DPrintf(dc.LSelector, "Done GetEntry for %v err %v", n, err)
 		return e, err
 	}
-
-	dc.Lock()
-	defer dc.Unlock()
-	e, ok := dc.dir.Lookup(n)
-	if !ok {
-		e1, err := dc.newEntry(n)
-		if err != nil {
-			return e1, err
-		}
-		e = e1
-		dc.dir.Insert(n, e)
+	var err error
+	kok, e, vok := dc.dir.LookupKeyVal(n)
+	if !kok {
+		db.DPrintf(dc.LSelector, "Done GetEntry for %v ok %t", n, kok)
+		serr.NewErr(serr.TErrNotfound, n)
 	}
-	return e, nil
+	if !vok {
+		e, err = dc.allocVal(n)
+	}
+	db.DPrintf(dc.LSelector, "Done GetEntry for %v e %v err %t", n, e, err)
+	return e, err
 }
 
-func (dc *DirCache[E]) Random() (string, error) {
+func (dc *DirCache[E]) RandomEntry() (string, error) {
 	var n string
 	var ok bool
 
@@ -130,19 +122,8 @@ func (dc *DirCache[E]) Random() (string, error) {
 	return n, nil
 }
 
-func (dc *DirCache[E]) WaitRandom() (string, error) {
-	db.DPrintf(dc.LSelector, "WaitRandom")
-	for {
-		n, err := dc.Random()
-		if serr.IsErrorNotfound(err) {
-			dc.waitEntries()
-		}
-		db.DPrintf(dc.LSelector, "Done WaitRandom %v %v", n, err)
-		if err != nil {
-			return "", err
-		}
-		return n, nil
-	}
+func (dc *DirCache[E]) WaitRandomEntry() (string, error) {
+	return dc.waitEntry(dc.RandomEntry)
 }
 
 func (dc *DirCache[E]) RoundRobin() (string, error) {
@@ -166,6 +147,10 @@ func (dc *DirCache[E]) RoundRobin() (string, error) {
 	return n, nil
 }
 
+func (dc *DirCache[E]) WaitRoundRobin() (string, error) {
+	return dc.waitEntry(dc.RoundRobin)
+}
+
 func (dc *DirCache[E]) RemoveEntry(name string) bool {
 	db.DPrintf(dc.LSelector, "RemoveEntry %v", name)
 	ok := dc.dir.Delete(name)
@@ -173,11 +158,46 @@ func (dc *DirCache[E]) RemoveEntry(name string) bool {
 	return ok
 }
 
-func (dc *DirCache[E]) waitEntries() {
+func (dc *DirCache[E]) allocVal(n string) (E, error) {
 	dc.Lock()
 	defer dc.Unlock()
 
-	for dc.dir.Len() == 0 && dc.err == nil {
+	db.DPrintf(dc.LSelector, "GetEntryAlloc for %v", n)
+	defer db.DPrintf(dc.LSelector, "Done GetEntryAlloc for %v", n)
+
+	_, e, vok := dc.dir.LookupKeyVal(n)
+	if !vok {
+		e1, err := dc.newVal(n)
+		if err != nil {
+			return e1, err
+		}
+		e = e1
+		dc.dir.Insert(n, e)
+	}
+	return e, nil
+}
+
+func (dc *DirCache[E]) waitEntry(selectF func() (string, error)) (string, error) {
+	db.DPrintf(dc.LSelector, "waitEntry")
+	for {
+		n, err := selectF()
+		if serr.IsErrorNotfound(err) {
+			dc.waitEntriesN(1)
+			continue
+		}
+		db.DPrintf(dc.LSelector, "Done waitEntry %v %v", n, err)
+		if err != nil {
+			return "", err
+		}
+		return n, nil
+	}
+}
+
+func (dc *DirCache[E]) waitEntriesN(n int) {
+	dc.Lock()
+	defer dc.Unlock()
+
+	for dc.dir.Len() < n && dc.err == nil {
 		dc.hasEntries.Wait()
 	}
 }
@@ -195,19 +215,7 @@ func (dc *DirCache[E]) watchEntries() error {
 		go dc.watchDir()
 		dc.watching = true
 	}
-
-	// If the list of ents has already been populated, do nothing and
-	// return.
-	if dc.dir.Len() > 0 {
-		return nil
-	}
-
-	ents, err := dc.getEntries()
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "getEntries %v", err)
-		return err
-	}
-	return dc.updateEntriesL(ents)
+	return nil
 }
 
 // Caller must hold dd mutex
@@ -217,11 +225,7 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 	for _, n := range ents {
 		entsMap[n] = true
 		if _, ok := dc.dir.Lookup(n); !ok {
-			e, err := dc.newEntry(n)
-			if err != nil {
-				return err
-			}
-			dc.dir.Insert(n, e)
+			dc.dir.InsertKey(n)
 		}
 	}
 	for _, n := range dc.dir.Keys(0) {

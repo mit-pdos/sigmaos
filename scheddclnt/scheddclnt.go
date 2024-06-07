@@ -32,11 +32,7 @@ func (sdc *ScheddClnt) Nschedd() (int, error) {
 }
 
 func (sdc *ScheddClnt) GetSchedds() ([]string, error) {
-	return sdc.rpcdc.GetEntries()
-}
-
-func (sdc *ScheddClnt) NextSchedd() (string, error) {
-	return sdc.rpcdc.RoundRobin()
+	return sdc.rpcdc.WaitGetEntriesN(1)
 }
 
 func (sdc *ScheddClnt) UnregisterSrv(scheddID string) {
@@ -157,7 +153,7 @@ func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc,
 	procs := make(map[sp.Trealm][]*proc.Proc, 0)
 	sampled := make(map[string]bool)
 	for i := 0; i < nsample; i++ {
-		kernelID, err := sdc.rpcdc.Random()
+		kernelID, err := sdc.rpcdc.WaitRandomEntry()
 		if err != nil {
 			db.DPrintf(db.ERROR, "Can't get random srv: %v", err)
 			return nil, err

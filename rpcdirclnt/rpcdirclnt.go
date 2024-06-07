@@ -7,7 +7,6 @@ import (
 	"sigmaos/dircache"
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
-	"sigmaos/serr"
 	"sigmaos/sigmarpcchan"
 )
 
@@ -38,15 +37,5 @@ func NewRPCDirClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, 
 }
 
 func (rpcdc *RPCDirClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
-	e, err := rpcdc.GetEntry(srvID)
-	if err != nil && serr.IsErrorNotfound(err) {
-		// In some cases the caller knows that srvID exists, so force
-		// an entry to be allocated.
-		e1, err := rpcdc.GetEntryAlloc(srvID)
-		if err != nil {
-			return nil, err
-		}
-		return e1, nil
-	}
-	return e, err
+	return rpcdc.GetEntry(srvID)
 }

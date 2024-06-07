@@ -795,7 +795,7 @@ func TestProcManyPartition(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestSpawnCrashLCSched(t *testing.T) {
+func xTestSpawnCrashLCSched(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

@@ -201,7 +201,7 @@ func (updm *UprocdMgr) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, path 
 	if err != nil {
 		return err, nil
 	}
-	return rpcc.WarmProc(pid, realm, prog, path)
+	return rpcc.WarmProc(pid, realm, prog, updm.fsl.ProcEnv().GetSecrets()["s3"], path)
 }
 
 func (updm *UprocdMgr) String() string {

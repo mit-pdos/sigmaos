@@ -25,6 +25,7 @@ message WarmBinRequest {
   string program = 2;
   string pidStr = 3;
   repeated string sigmaPath = 4;
+  SecretProto s3Secret = 5;
 }
 
 message WarmBinResult {

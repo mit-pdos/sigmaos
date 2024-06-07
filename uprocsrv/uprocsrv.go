@@ -4,6 +4,7 @@
 package uprocsrv
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -294,11 +295,11 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	}
 	pid := sp.Tpid(req.PidStr)
 	r := sp.Trealm(req.RealmStr)
-	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.SigmaPath)
+	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), req.SigmaPath)
 	if err != nil {
 		return err
 	}
-	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, st.Tsize(), req.SigmaPath); err != nil {
+	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), st.Tsize(), req.SigmaPath); err != nil {
 		return err
 	}
 	res.OK = true
@@ -329,8 +330,13 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch start: %q ck %d path %v time since spawn %v", pe.proc.GetPid(), ups.kernelId, req.ChunkId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
+	s3secret, ok := pe.proc.GetSecrets()["s3"]
+	if !ok {
+		return fmt.Errorf("No s3 secrets in proc")
+	}
+
 	start := time.Now()
-	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
+	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, s3secret, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
@@ -353,8 +359,12 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup start %v paths %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
 	paths := pe.proc.GetSigmaPath()
+	s3secret, ok := pe.proc.GetSecrets()["s3"]
+	if !ok {
+		return fmt.Errorf("No s3 secrets in proc")
+	}
 	start := time.Now()
-	st, path, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), paths)
+	st, path, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), s3secret, paths)
 	if err != nil {
 		return err
 	}

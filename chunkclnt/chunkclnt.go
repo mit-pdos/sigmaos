@@ -27,7 +27,7 @@ func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {
 	ckclnt.RPCDirClnt.RemoveEntry(srv)
 }
 
-func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, paths []string) (*sp.Stat, string, error) {
+func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, paths []string) (*sp.Stat, string, error) {
 	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
 	if err != nil {
 		return nil, "", err
@@ -37,6 +37,7 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 		RealmStr:  string(realm),
 		Pid:       pid.String(),
 		SigmaPath: paths,
+		S3Secret:  s3secret,
 	}
 	res := &proto.GetFileStatResponse{}
 	if err := rpcc.RPC("ChunkSrv.GetFileStat", req, res); err != nil {
@@ -47,7 +48,7 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 }
 
 // For chunksrv to fetch chunk from another chunksrv and return data in b
-func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, string, error) {
+func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, string, error) {
 	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
 	if err != nil {
 		return 0, "", err
@@ -60,6 +61,7 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 		SigmaPath: path,
 		Pid:       pid.String(),
 		Data:      true,
+		S3Secret:  s3secret,
 	}
 	res := &proto.FetchChunkResponse{}
 	res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
@@ -71,7 +73,7 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 }
 
 // For uprocsrv to ask chunksrv to fetch ck, but not return data to uprocsrv
-func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm, ck int, sz sp.Tsize, path []string) (sp.Tsize, string, error) {
+func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, ck int, sz sp.Tsize, path []string) (sp.Tsize, string, error) {
 	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
 	if err != nil {
 		return 0, "", err
@@ -84,6 +86,7 @@ func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm,
 		SigmaPath: path,
 		Pid:       pid.String(),
 		Data:      false,
+		S3Secret:  s3secret,
 	}
 	res := &proto.FetchChunkResponse{}
 	if err := rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
@@ -93,12 +96,12 @@ func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm,
 	return sp.Tsize(res.Size), res.Path, nil
 }
 
-func (ckclnt *ChunkClnt) FetchBinary(srvid, prog string, pid sp.Tpid, realm sp.Trealm, reqsz sp.Tsize, path []string) (string, error) {
+func (ckclnt *ChunkClnt) FetchBinary(srvid, prog string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, reqsz sp.Tsize, path []string) (string, error) {
 	n := (reqsz / chunk.CHUNKSZ) + 1
 	db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %v %d", prog, reqsz, n)
 	last := ""
 	for ck := 0; ck < int(n); ck++ {
-		if sz, path, err := ckclnt.Fetch(srvid, prog, pid, realm, ck, reqsz, path); err != nil {
+		if sz, path, err := ckclnt.Fetch(srvid, prog, pid, realm, s3secret, ck, reqsz, path); err != nil {
 			return "", err
 		} else {
 			db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %d %v %q", prog, ck, sz, path)

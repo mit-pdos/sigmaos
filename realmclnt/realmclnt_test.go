@@ -99,7 +99,7 @@ func TestBasicSimple(t *testing.T) {
 
 	db.DPrintf(db.TEST, "realm named root %v\n", sp.Names(sts))
 
-	assert.True(t, fslib.Present(sts, []string{sp.UXREL}), "initfs")
+	assert.True(t, sp.Present(sts, []string{sp.UXREL}), "initfs")
 
 	sts, err = ts1.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
@@ -114,147 +114,124 @@ func TestBasicSimple(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestBasicMultiRealmSingleNode(t *testing.T) {
+type realmTstate struct {
+	rootts *test.Tstate
+	ts1    *test.RealmTstate
+	ts2    *test.RealmTstate
+}
+
+func newMultiRealmTstate(t *testing.T) *realmTstate {
+	ts := &realmTstate{}
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
+		return nil
 	}
+	ts.rootts = rootts
 	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
+		return nil
 	}
+	ts.ts1 = ts1
 	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
+		return nil
 	}
-
+	ts.ts2 = ts2
 	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM1, ts1.ProcEnv().GetInnerContainerIP())
 	db.DPrintf(db.TEST, "[%v] Local ip: %v", REALM2, ts2.ProcEnv().GetInnerContainerIP())
+	return ts
+}
 
-	schedds1, err := ts1.GetDir(sp.SCHEDD)
+func (ts *realmTstate) shutdown() {
+	err := ts.ts1.Remove()
+	assert.Nil(ts.rootts.T, err)
+	err = ts.ts2.Remove()
+	assert.Nil(ts.rootts.T, err)
+	ts.rootts.Shutdown()
+}
+
+func TestBasicMultiRealmSingleNode(t *testing.T) {
+	ts := newMultiRealmTstate(t)
+	schedds1, err := ts.ts1.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 	// Only one schedd so far.
-	assert.True(rootts.T, len(schedds1) == 1, "Wrong number schedds %v", schedds1)
+	assert.True(ts.rootts.T, len(schedds1) == 1, "Wrong number schedds %v", schedds1)
 
-	schedds2, err := ts2.GetDir(sp.SCHEDD)
+	schedds2, err := ts.ts2.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 	// Only one schedd so far.
-	assert.True(rootts.T, len(schedds2) == 1, "Wrong number schedds %v", schedds2)
+	assert.True(ts.rootts.T, len(schedds2) == 1, "Wrong number schedds %v", schedds2)
 
 	for i := range schedds1 {
 		assert.Equal(t, schedds1[i].Name, schedds2[i].Name)
 	}
-
-	err = ts1.Remove()
-	assert.Nil(t, err)
-	err = ts2.Remove()
-	assert.Nil(t, err)
-
-	rootts.Shutdown()
+	ts.shutdown()
 }
 
 func TestBasicMultiRealmMultiNode(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	rootts.BootNode(1)
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
-	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	ts := newMultiRealmTstate(t)
+	ts.rootts.BootNode(1)
 
-	m1, err3 := ts1.GetNamedEndpoint()
+	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
+
+	m1, err3 := ts.ts1.GetNamedEndpoint()
 	assert.Nil(t, err3, "GetNamedEndpoint: %v", err3)
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM1, m1)
-	m2, err3 := ts2.GetNamedEndpoint()
+	m2, err3 := ts.ts2.GetNamedEndpoint()
 	assert.Nil(t, err3, "GetNamedEndpoint: %v", err3)
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, m2)
 
-	// Should have a public and private address
-	if test.Overlays {
-		assert.Equal(rootts.T, 2, len(m1.Addrs()))
-		assert.Equal(rootts.T, 2, len(m1.Addrs()))
-	}
-
-	schedds1, err := ts1.GetDir(sp.SCHEDD)
+	schedds1, err := ts.ts1.GetDir(sp.SCHEDD)
 	assert.Nil(t, err, "ErrGetDir SCHEDD: %v", err)
-	assert.True(rootts.T, len(schedds1) == 2, "Wrong number schedds %v", schedds1)
+	assert.True(ts.rootts.T, len(schedds1) == 2, "Wrong number schedds %v", schedds1)
 
-	schedds2, err := ts2.GetDir(sp.SCHEDD)
+	schedds2, err := ts.ts2.GetDir(sp.SCHEDD)
 	assert.Nil(t, err, "ErrGetDir SCHEDD: %v", err)
-	assert.True(rootts.T, len(schedds2) == 2, "Wrong number schedds %v", schedds2)
+	assert.True(ts.rootts.T, len(schedds2) == 2, "Wrong number schedds %v", schedds2)
 
 	for i := range schedds1 {
 		assert.Equal(t, schedds1[i].Name, schedds2[i].Name)
 	}
 
-	err = ts1.Remove()
-	assert.Nil(t, err)
-	err = ts2.Remove()
-	assert.Nil(t, err)
-
-	rootts.Shutdown()
+	ts.shutdown()
 }
 
-func TestWaitExitSimpleSingle(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+func TestBasicMultiRealmFairness(t *testing.T) {
+	ts := newMultiRealmTstate(t)
 
-	sts1, err := rootts.GetDir(sp.SCHEDD)
-	assert.Nil(t, err)
+	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
 
-	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
+	p1 := proc.NewProc("sleeper", []string{"100000s", "name/"})
+	p1.SetMem(mem.GetTotalMem()/2 + 1)
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetInnerContainerIP())
+	db.DPrintf(db.TEST, "Spawn big realm's proc")
+	err := ts.ts1.Spawn(p1)
+	assert.Nil(ts.rootts.T, err, "Err spawn: %v", err)
+	err = ts.ts1.WaitStart(p1.GetPid())
+	assert.Nil(ts.rootts.T, err, "Err WaitStart: %v", err)
+	db.DPrintf(db.TEST, "Big realm's proc started")
 
-	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
-	db.DPrintf(db.TEST, "Pre spawn")
-	err = ts1.Spawn(a)
-	assert.Nil(t, err, "Error spawn: %v", err)
-	db.DPrintf(db.TEST, "Post spawn")
+	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
 
-	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := ts1.WaitExit(a.GetPid())
-	db.DPrintf(db.TEST, "Post waitexit")
-	assert.Nil(t, err, "WaitExit error")
-	assert.True(t, status.IsStatusOK(), "Exit status wrong: %v", status)
+	p2 := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
+	p2.SetMem(mem.GetTotalMem())
 
-	for _, d := range []string{sp.S3, sp.UX} {
-		sts1, err := rootts.GetDir(d)
-		assert.Nil(t, err)
-		assert.True(t, len(sts1) == 1, "No %vs in root realm", d)
-		sts, err := ts1.GetDir(d)
-		db.DPrintf(db.TEST, "realm names %v %v\n", d, sp.Names(sts))
-		assert.Nil(t, err)
-		assert.True(t, len(sts) == 1, "No %vs in user realm", d)
-		for _, st := range sts1 {
-			// If there is a name in common in the directory, check that they are for different endpoints
-			if fslib.Present(sts, []string{st.Name}) {
-				ep, err := ts1.ReadEndpoint(filepath.Join(d, st.Name))
-				assert.Nil(t, err, "ReadEndpoint: %v", err)
-				ep1, err := rootts.ReadEndpoint(filepath.Join(d, st.Name))
-				assert.Nil(t, err, "ReadEndpoint: %v", err)
-				assert.False(t, ep.Addrs()[0] == ep1.Addrs()[0], "%v cross-over", d)
-			}
-		}
-	}
+	db.DPrintf(db.TEST, "Spawn small realm's proc")
+	err = ts.ts2.Spawn(p2)
+	assert.Nil(ts.rootts.T, err, "Err spawn: %v", err)
+	err = ts.ts2.WaitStart(p2.GetPid())
+	assert.Nil(ts.rootts.T, err, "Err WaitStart: %v", err)
+	db.DPrintf(db.TEST, "Small realm's proc started")
 
-	err = ts1.Remove()
-	assert.Nil(t, err)
+	status, err := ts.ts1.WaitExit(p1.GetPid())
+	assert.Nil(ts.rootts.T, err, "Err WaitExit: %v", err)
+	assert.True(ts.rootts.T, status.IsStatusEvicted(), "Wrong status: %v", status)
 
-	rootts.Shutdown()
+	status, err = ts.ts2.WaitExit(p2.GetPid())
+	assert.Nil(ts.rootts.T, err, "Err WaitExit: %v", err)
+	assert.True(ts.rootts.T, status.IsStatusOK(), "Wrong status: %v", status)
+
+	ts.shutdown()
 }
 
 func TestBasicFairness(t *testing.T) {
@@ -352,7 +329,7 @@ func TestWaitExitMultiNode(t *testing.T) {
 		assert.True(t, int64(len(sts)) == subsysCnts[i], "Wrong number of %vs in user realm: %v != %v", d, len(sts), subsysCnts[i])
 		for _, st := range sts1 {
 			// If there is a name in common in the directory, check that they are for different endpoints
-			if fslib.Present(sts, []string{st.Name}) {
+			if sp.Present(sts, []string{st.Name}) {
 				ep, err := ts1.ReadEndpoint(filepath.Join(d, st.Name))
 				assert.Nil(t, err, "ReadEndpoint: %v", err)
 				ep1, err := rootts.ReadEndpoint(filepath.Join(d, st.Name))
@@ -414,55 +391,37 @@ func TestEvictSingle(t *testing.T) {
 }
 
 func TestEvictMultiRealm(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	// Make a second realm
-	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	sts1, err := rootts.GetDir(sp.SCHEDD)
+	ts := newMultiRealmTstate(t)
+	sts1, err := ts.rootts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
 
-	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetInnerContainerIP())
+	db.DPrintf(db.TEST, "Local ip: %v", ts.ts1.ProcEnv().GetInnerContainerIP())
 
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 60000), "name/"})
 	db.DPrintf(db.TEST, "Pre spawn")
-	err = ts1.Spawn(a)
+	err = ts.ts1.Spawn(a)
 	assert.Nil(t, err, "Error spawn: %v", err)
 	db.DPrintf(db.TEST, "Post spawn")
 
 	db.DPrintf(db.TEST, "Pre waitstart")
-	err = ts1.WaitStart(a.GetPid())
+	err = ts.ts1.WaitStart(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitstart")
 	assert.Nil(t, err, "waitstart error")
 
 	db.DPrintf(db.TEST, "Pre evict")
-	err = ts1.Evict(a.GetPid())
+	err = ts.ts1.Evict(a.GetPid())
 	db.DPrintf(db.TEST, "Post evict")
 	assert.Nil(t, err, "evict error")
 
 	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := ts1.WaitExit(a.GetPid())
+	status, err := ts.ts1.WaitExit(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status.IsStatusEvicted(), "Exit status wrong: %v", status)
 
-	err = ts1.Remove()
-	assert.Nil(t, err)
-	err = ts2.Remove()
-	assert.Nil(t, err)
-
-	rootts.Shutdown()
+	ts.shutdown()
 }
 
 func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
@@ -476,114 +435,46 @@ func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
 	return status
 }
 
-func TestRealmNetIsolationOK(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	// Make a second realm
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	// Make a third realm
-	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
+// Test basic realm isolation: start a cached in realm1 and check that
+// it isn't visible in realm2.
+func TestMultiRealmIsolationBasic(t *testing.T) {
+	ts := newMultiRealmTstate(t)
 	job := rd.String(16)
-	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true)
+	cm, err := cachedsvc.NewCacheMgr(ts.ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
+	cc1 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
+
+	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "hello\n")
+	db.DPrintf(db.TEST, "newcacheclnt %v", ts.ts2.FsLib)
 
-	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
-	assert.Nil(t, err)
+	cc2 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts2.FsLib}, job)
 
-	db.DPrintf(db.TEST, "newcacheclnt")
-
-	sts, _ := ts1.GetDir("name/cache")
-	db.DPrintf(db.TEST, "readdir %v\n", sp.Names(sts))
-
-	sts, _ = ts2.GetDir("name/cache")
-	db.DPrintf(db.TEST, "readdir %v\n", sp.Names(sts))
-
-	// Err is always nil
-	csc, _ := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts2.FsLib}, job)
-
-	// Check that the servers are unreachable
-	_, err = csc.StatsSrvs()
-	assert.NotNil(t, err)
-
-	db.DPrintf(db.TEST, "readendpoint\n")
-
-	ep, err := ts1.ReadEndpoint(cc.Server(0))
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "ep %v", ep)
-
-	// Remove public port
-	if len(ep.Addrs()) > 1 {
-		ep.SetAddr(ep.Addrs()[:1])
-	}
-
-	pn := filepath.Join(sp.NAMED, "srv")
-	err = ts1.MkEndpointFile(pn, ep)
-	assert.Nil(t, err)
-
-	pn = pn + "/"
-
-	status := spawnDirreader(ts1, pn)
-	assert.True(t, status.IsStatusOK(), "Wrong status (not OK): %v", status)
-
-	cm.Stop()
-
-	err = ts1.Remove()
-	assert.Nil(t, err)
-
-	err = ts2.Remove()
-	assert.Nil(t, err)
-
-	rootts.Shutdown()
-}
-
-func TestRealmNetIsolationFail(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	// Make a second realm
-	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	job := rd.String(16)
-	cm, err := cachedsvc.NewCacheMgr(ts1.SigmaClnt, job, 1, 0, true)
-	assert.Nil(t, err)
-
-	cc, err := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts1.FsLib}, job)
-	assert.Nil(t, err)
-
-	// Err is always nil
-	cc2, _ := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts2.FsLib}, job)
-
-	// Check that the servers are unreachable
+	// Check that there is no cached in ts2
 	_, err = cc2.StatsSrvs()
 	assert.NotNil(t, err)
 
-	err = cc.Put("hello", &proto.CacheString{Val: "hello"})
+	cm.Stop()
+
+	ts.shutdown()
+}
+
+// Take endpoint from realm1 and make an enpoint file for it in realm2
+// and access the endpoint from realm2.
+func TestMultiRealmIsolationEndpoint(t *testing.T) {
+	ts := newMultiRealmTstate(t)
+	job := rd.String(16)
+	cm, err := cachedsvc.NewCacheMgr(ts.ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	ep, err := ts1.ReadEndpoint(cc.Server(0))
+	cc1 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
+
+	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
+	assert.Nil(t, err)
+
+	ep, err := ts.ts1.ReadEndpoint(cc1.Server(0))
 	assert.Nil(t, err, "Err %v", err)
 
 	db.DPrintf(db.TEST, "ep %v", ep)
@@ -594,27 +485,61 @@ func TestRealmNetIsolationFail(t *testing.T) {
 	}
 
 	pn := filepath.Join(sp.NAMED, "srv")
-	err = ts2.MkEndpointFile(pn, ep)
+	err = ts.ts2.MkEndpointFile(pn, ep)
 	assert.Nil(t, err)
-
 	pn = pn + "/"
 
-	status := spawnDirreader(ts2, pn)
-	if test.Overlays {
-		assert.True(t, status.IsStatusErr(), "Status is: %v", status)
-	} else {
-		assert.True(t, status.IsStatusOK())
-		db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
-	}
+	status := spawnDirreader(ts.ts2, pn)
+	assert.True(t, status.IsStatusErr(), "Status is: %v", status)
+	db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
 
 	cm.Stop()
+	ts.shutdown()
+}
 
-	err = ts1.Remove()
-	assert.Nil(t, err)
-	err = ts2.Remove()
+func TestMultiRealmIsolationNamed(t *testing.T) {
+	ts := newMultiRealmTstate(t)
+
+	eproot, err := ts.rootts.GetNamedEndpoint()
+	assert.Nil(t, err, "Err %v", err)
+
+	db.DPrintf(db.TEST, "rootep %v", eproot)
+
+	ep1, err := ts.ts1.GetNamedEndpoint()
+	assert.Nil(t, err, "Err %v", err)
+
+	db.DPrintf(db.TEST, "rootep %v", ep1)
+
+	pn := filepath.Join(sp.NAMED, "rootnamed")
+	err = ts.ts2.MkEndpointFile(pn, ep1)
 	assert.Nil(t, err)
 
-	rootts.Shutdown()
+	pn = filepath.Join(sp.NAMED, "named1")
+	err = ts.ts1.MkEndpointFile(pn, ep1)
+	assert.Nil(t, err)
+
+	sts, err := ts.ts2.GetDir(sp.NAMED)
+	assert.Nil(t, err, "GetDir %v %v\n", sp.NAMED, sp.Names(sts))
+
+	db.DPrintf(db.TEST, "ts2 %v", sp.Names(sts))
+
+	err = ts.ts2.MkEndpointFile(pn, ep1)
+	assert.Nil(t, err)
+
+	pn = filepath.Join(sp.NAMED, "named1"+"/")
+	status := spawnDirreader(ts.ts1, pn)
+	assert.True(t, status.IsStatusOK(), "%v: Status is: %v", pn, status)
+	db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
+
+	for _, f := range []string{"rootnamed", "named1"} {
+		pn := filepath.Join(sp.NAMED, f) + "/"
+		status := spawnDirreader(ts.ts2, pn)
+		assert.True(t, status.IsStatusErr(), "%v: Status is: %v", pn, status)
+		db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
+		sts, err := ts.ts2.GetDir(pn)
+		assert.NotNil(t, err, "GetDir %v %v\n", pn, sp.Names(sts))
+	}
+	ts.shutdown()
 }
 
 func TestSpinPerfCalibrate(t *testing.T) {
@@ -747,29 +672,18 @@ func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	ts := newMultiRealmTstate(t)
 
 	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
 	// - 2 to account for NAMED reserved cores
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.GetNCores()-2, N_ITER)
+	ctimeS := calibrateCTimeSigma(ts.ts1, linuxsched.GetNCores()-2, N_ITER)
 	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
 
 	beC := make(chan time.Duration)
 	lcC := make(chan time.Duration)
 	// - 2 to account for NAMED reserved cores
-	go runSpinPerf(ts1, lcC, proc.Tmcpu(1000*(linuxsched.GetNCores()-2)), linuxsched.GetNCores()-2, N_ITER, "lcspin")
-	go runSpinPerf(ts2, beC, 0, linuxsched.GetNCores()-2, N_ITER, "bespin")
+	go runSpinPerf(ts.ts1, lcC, proc.Tmcpu(1000*(linuxsched.GetNCores()-2)), linuxsched.GetNCores()-2, N_ITER, "lcspin")
+	go runSpinPerf(ts.ts2, beC, 0, linuxsched.GetNCores()-2, N_ITER, "bespin")
 
 	durBE := <-beC
 	durLC := <-lcC
@@ -784,12 +698,9 @@ func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
 	lcMaxSD := 1.1
 
 	// Check that execution time matches target time.
-	assert.True(rootts.T, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
-	assert.True(rootts.T, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
-	assert.True(rootts.T, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
+	assert.True(t, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
+	assert.True(t, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
+	assert.True(t, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
 
-	err := ts1.Remove()
-	assert.Nil(t, err)
-
-	rootts.Shutdown()
+	ts.shutdown()
 }

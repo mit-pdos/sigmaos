@@ -1,6 +1,7 @@
 package mntclnt
 
 import (
+	"fmt"
 	"sync"
 
 	"sigmaos/proc"
@@ -29,6 +30,10 @@ func NewNamedMountCache(pe *proc.ProcEnv) *NamedMountCache {
 		root:  rootMnt,
 		realm: realmMnt,
 	}
+}
+
+func (nmc *NamedMountCache) String() string {
+	return fmt.Sprintf("{root %v realm %v}", nmc.root, nmc.realm)
 }
 
 func (nmc *NamedMountCache) Get(realm sp.Trealm) (*sp.Tendpoint, bool) {

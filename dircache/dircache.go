@@ -6,7 +6,6 @@
 package dircache
 
 import (
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -53,14 +52,14 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newEntry NewEntryF[
 }
 
 func (dc *DirCache[E]) Nentry() (int, error) {
-	if err := dc.watchEntries(false); err != nil {
+	if err := dc.watchEntries(); err != nil {
 		return 0, err
 	}
 	return dc.dir.Len(), nil
 }
 
 func (dc *DirCache[E]) GetEntries() ([]string, error) {
-	if err := dc.watchEntries(false); err != nil {
+	if err := dc.watchEntries(); err != nil {
 		return nil, err
 	}
 	return dc.dir.Keys(0), nil
@@ -73,7 +72,7 @@ func (dc *DirCache[E]) GetEntry(n string) (E, error) {
 	defer func(e *E, ok *bool) {
 		db.DPrintf(dc.LSelector, "Done GetEntry for %v e %v ok %t", n, *e, *ok)
 	}(&e, &ok)
-	if err := dc.watchEntries(false); err != nil {
+	if err := dc.watchEntries(); err != nil {
 		return e, err
 	}
 	e, ok = dc.dir.Lookup(n)
@@ -87,7 +86,7 @@ func (dc *DirCache[E]) GetEntryAlloc(n string) (E, error) {
 	db.DPrintf(dc.LSelector, "GetEntryAlloc for %v", n)
 	defer db.DPrintf(dc.LSelector, "Done GetEntryAlloc for %v", n)
 
-	if err := dc.watchEntries(false); err != nil {
+	if err := dc.watchEntries(); err != nil {
 		var e E
 		return e, err
 	}
@@ -106,12 +105,7 @@ func (dc *DirCache[E]) GetEntryAlloc(n string) (E, error) {
 	return e, nil
 }
 
-func (dc *DirCache[E]) watchEntries(force bool) error {
-	if force {
-		db.DPrintf(dc.LSelector, "watchEntries")
-		defer db.DPrintf(dc.LSelector, "Done watchEntries")
-	}
-
+func (dc *DirCache[E]) watchEntries() error {
 	dc.Lock()
 	defer dc.Unlock()
 
@@ -125,9 +119,9 @@ func (dc *DirCache[E]) watchEntries(force bool) error {
 		dc.watching = true
 	}
 
-	// If the caller is not forcing an update, and the list of ents
-	// has already been populated, do nothing and return.
-	if !force && dc.dir.Len() > 0 {
+	// If the list of ents has already been populated, do nothing and
+	// return.
+	if dc.dir.Len() > 0 {
 		return nil
 	}
 
@@ -144,10 +138,6 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 	db.DPrintf(dc.LSelector, "Update ents %v in %v", ents, dc.dir)
 	entsMap := map[string]bool{}
 	for _, n := range ents {
-		// filter entries starting with prefixFilter
-		if dc.prefixFilter != "" && strings.HasPrefix(n, dc.prefixFilter) {
-			continue
-		}
 		entsMap[n] = true
 		if _, ok := dc.dir.Lookup(n); !ok {
 			e, err := dc.newEntry(n)
@@ -172,7 +162,7 @@ func (dc *DirCache[E]) Random() (string, error) {
 
 	db.DPrintf(dc.LSelector, "Random")
 
-	if err := dc.watchEntries(false); err != nil {
+	if err := dc.watchEntries(); err != nil {
 		return "", err
 	}
 	defer func(n *string) {
@@ -191,7 +181,7 @@ func (dc *DirCache[E]) RoundRobin() (string, error) {
 
 	db.DPrintf(dc.LSelector, "RoundRobin")
 
-	if err := dc.watchEntries(false); err != nil {
+	if err := dc.watchEntries(); err != nil {
 		return "", err
 	}
 
@@ -220,7 +210,7 @@ func (dc *DirCache[E]) getEntries() ([]string, error) {
 	defer db.DPrintf(db.SPAWN_LAT, "getEntries %v", time.Since(s))
 
 	dr := fslib.NewDirReader(dc.FsLib, dc.Path)
-	fns, err := dr.GetUniqueEntries()
+	fns, err := dr.GetUniqueEntriesFilter(dc.prefixFilter)
 	if err != nil {
 		db.DPrintf(dc.ESelector, "getEntries %v err", err)
 		return nil, err
@@ -238,7 +228,7 @@ func (dc *DirCache[E]) watchDir() {
 	retry := false
 	for dc.done.Load() == 0 {
 		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
-		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0))
+		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilter)
 		if ok { // reset retry?
 			retry = false
 		}

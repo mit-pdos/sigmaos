@@ -52,7 +52,7 @@ func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.
 	// Cache the newly resolved mount
 	mc.ndMntCache.Put(realm, ep)
 	db.DPrintf(db.MOUNT, "getNamedEndpointRealm [%v] %v", realm, ep)
-	db.DPrintf(db.WALK_LAT, "getNamedEndpointRealm %v %v %v", mc.cid, realm, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "getNamedEndpointRealm %v %v %v", mc.cid, ep, time.Since(s))
 	return ep, nil
 
 }
@@ -93,7 +93,7 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 		if err != nil {
 			return &sp.Tendpoint{}, serr.NewErrError(err)
 		}
-		db.DPrintf(db.WALK_LAT, "getNamedEndpointDirect %v getfile %v %v", mc.cid, realm, time.Since(s))
+		db.DPrintf(db.WALK_LAT, "getNamedEndpointDirect %v getfile %v %v", mc.cid, ep, time.Since(s))
 		return ep, nil
 	}
 }

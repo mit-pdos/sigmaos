@@ -50,11 +50,7 @@ func RunMediaSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
-	if err != nil {
-		return err
-	}
-	msrv.cachec = cachec
+	msrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Starting media service\n")
 	return ssrv.RunServer()
 }

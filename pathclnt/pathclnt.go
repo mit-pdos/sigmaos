@@ -27,27 +27,23 @@ type PathClnt struct {
 	*fidclnt.FidClnt
 	mntclnt      *mntclnt.MntClnt
 	pe           *proc.ProcEnv
-	realm        sp.Trealm
-	lip          string
 	cid          sp.TclntId
 	disconnected bool // Used by test harness
 }
 
 func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 	pathc := &PathClnt{
-		pe: pe,
+		pe:      pe,
+		FidClnt: fidc,
+		cid:     sp.TclntId(rand.Uint64()),
 	}
-	pathc.FidClnt = fidc
-	pathc.cid = sp.TclntId(rand.Uint64())
 	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, fidc.GetNetProxyClnt())
 	db.DPrintf(db.TEST, "New cid %v\n", pathc.cid)
 	return pathc
 }
 
 func (pathc *PathClnt) String() string {
-	str := fmt.Sprintf("Pathclnt cid %v mount table:\n", pathc.cid)
-	str += fmt.Sprintf("%v\n", pathc.mntclnt)
-	return str
+	return fmt.Sprintf("{Pathclnt: cid %v mount table %v fidclnt %v}", pathc.cid, pathc.mntclnt, pathc.FidClnt)
 }
 
 func (pathc *PathClnt) Close() error {
@@ -210,7 +206,7 @@ func (pathc *PathClnt) Stat(name string, principal *sp.Tprincipal) (*sp.Stat, er
 	db.DPrintf(db.PATHCLNT, "%v: Stat resolve %v target %v rest %v\n", pathc.cid, pn, target, rest)
 	if len(rest) == 0 && !path.EndSlash(name) {
 		st := sp.NewStatNull()
-		st.Name = pathc.FidClnt.Lookup(target).Servers().String()
+		st.Name = pathc.FidClnt.Lookup(target).Endpoint().String()
 		return st, nil
 	} else {
 		fid, err := pathc.walk(pn, principal, path.EndSlash(name), nil)

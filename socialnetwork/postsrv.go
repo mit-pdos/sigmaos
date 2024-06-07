@@ -46,11 +46,7 @@ func RunPostSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
-	if err != nil {
-		return err
-	}
-	psrv.cachec = cachec
+	psrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting post service\n")
 	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_POST)
 	if err != nil {

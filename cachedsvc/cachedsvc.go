@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"sync"
 
+	// db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	SVRDIR = "servers/"
+	SRVDIR = "servers/"
 )
 
 type CachedSvc struct {
@@ -29,7 +30,7 @@ type CachedSvc struct {
 
 func (cs *CachedSvc) addServer(i int) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.NewProc(cs.bin, []string{cs.pn, SVRDIR + strconv.Itoa(int(i))})
+	p := proc.NewProc(cs.bin, []string{cs.pn, SRVDIR + strconv.Itoa(int(i))})
 	//	p.AppendEnv("GODEBUG", "gctrace=1")
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
@@ -49,7 +50,7 @@ func (cs *CachedSvc) addServer(i int) error {
 // XXX use job
 func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc bool) (*CachedSvc, error) {
 	sc.MkDir(pn, 0777)
-	if _, err := sc.Create(pn+SVRDIR, 0777|sp.DMDIR, sp.OREAD); err != nil {
+	if err := sc.MkDir(pn+SRVDIR, 0777); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
 			return nil, err
 		}
@@ -80,7 +81,7 @@ func (cs *CachedSvc) AddServer() error {
 }
 
 func Server(n string) string {
-	return SVRDIR + n
+	return SRVDIR + n
 }
 
 func (cs *CachedSvc) Nserver() int {
@@ -104,6 +105,6 @@ func (cs *CachedSvc) Stop() error {
 			return err
 		}
 	}
-	cs.RmDir(cs.pn + SVRDIR)
+	cs.RmDir(cs.pn + SRVDIR)
 	return nil
 }

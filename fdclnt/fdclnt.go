@@ -25,18 +25,17 @@ type FdClient struct {
 }
 
 func NewFdClient(pe *proc.ProcEnv, fsc *fidclnt.FidClnt) sos.FileAPI {
-	fdc := &FdClient{pe: pe}
-	fdc.pc = pathclnt.NewPathClnt(pe, fsc)
-	fdc.fds = newFdTable()
-	fdc.ft = newFenceTable()
+	fdc := &FdClient{
+		pe:  pe,
+		pc:  pathclnt.NewPathClnt(pe, fsc),
+		fds: newFdTable(),
+		ft:  newFenceTable(),
+	}
 	return fdc
 }
 
 func (fdc *FdClient) String() string {
-	str := fmt.Sprintf("Table:\n")
-	str += fmt.Sprintf("fds %v\n", fdc.fds)
-	str += fmt.Sprintf("fsc %v\n", fdc.pc)
-	return str
+	return fmt.Sprintf("{fdc: realm %v principal %v pathc %v fds %v}", fdc.pe.GetRealm(), fdc.pe.GetPrincipal(), fdc.pc, fdc.fds)
 }
 
 func (fdc *FdClient) CloseFd(fd int) error {

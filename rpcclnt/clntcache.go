@@ -1,3 +1,4 @@
+// The rpcclnt package caches RPC clnts to avoid repeated lookups
 package rpcclnt
 
 import (
@@ -12,10 +13,6 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
-
-//
-//  Cache of RPC clnts to avoid repeated lookups
-//
 
 type ClntCache struct {
 	sync.Mutex

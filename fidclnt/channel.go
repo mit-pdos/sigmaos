@@ -1,3 +1,6 @@
+// The channel package has a channel for each fid.  The channel allows
+// client to read/write data to the file corresponding to the fid on
+// the server, clone the fid, etc.
 package fidclnt
 
 import (
@@ -8,32 +11,30 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// The channel associated with an fid, which connects to an object at
-// a server.
 type Channel struct {
 	pc   *protclnt.ProtClnt
-	path path.Tpathname
+	pn   path.Tpathname
 	qids []*sp.Tqid
 }
 
-func newChannel(pc *protclnt.ProtClnt, path path.Tpathname, qs []*sp.Tqid) *Channel {
+func newChannel(pc *protclnt.ProtClnt, pn path.Tpathname, qs []*sp.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
-	c.path = path
+	c.pn = pn
 	c.qids = qs
 	return c
 }
 
 func (c *Channel) String() string {
-	return fmt.Sprintf("{ Path %v Qids %v }", c.path, c.qids)
+	return fmt.Sprintf("{ep %v pn %v Qids %v}", c.Endpoint(), c.pn, c.qids)
 }
 
 func (c *Channel) Path() path.Tpathname {
-	return c.path
+	return c.pn
 }
 
 func (c *Channel) SetPath(p path.Tpathname) {
-	c.path = p
+	c.pn = p
 }
 
 func (c *Channel) Version() sp.TQversion {
@@ -43,11 +44,11 @@ func (c *Channel) Version() sp.TQversion {
 func (c *Channel) Copy() *Channel {
 	qids := make([]*sp.Tqid, len(c.qids))
 	copy(qids, c.qids)
-	return newChannel(c.pc, c.path.Copy(), qids)
+	return newChannel(c.pc, c.pn.Copy(), qids)
 }
 
 func (c *Channel) add(name string, q *sp.TqidProto) {
-	c.path = append(c.path, name)
+	c.pn = append(c.pn, name)
 	c.qids = append(c.qids, sp.NewTqid(q))
 }
 
@@ -65,6 +66,6 @@ func (c *Channel) Lastqid() *sp.Tqid {
 	return c.qids[len(c.qids)-1]
 }
 
-func (c *Channel) Servers() *sp.Tendpoint {
-	return c.pc.Servers()
+func (c *Channel) Endpoint() *sp.Tendpoint {
+	return c.pc.Endpoints()
 }

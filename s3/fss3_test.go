@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -114,7 +113,7 @@ func TestSymlinkDir(t *testing.T) {
 	dirents, err := ts.GetDir(dn + "/" + "9ps3")
 	assert.Nil(t, err, "GetDir")
 
-	assert.True(t, fslib.Present(dirents, ROOT))
+	assert.True(t, sp.Present(dirents, ROOT))
 
 	ts.Shutdown()
 }
@@ -259,7 +258,7 @@ func TestUnionSimple(t *testing.T) {
 	dirents, err := ts.GetDir(filepath.Join(sp.S3, "~local/9ps3/"))
 	assert.Nil(t, err, "GetDir: %v", err)
 
-	assert.True(t, fslib.Present(dirents, ROOT), "%v not in %v", ROOT, dirents)
+	assert.True(t, sp.Present(dirents, ROOT), "%v not in %v", ROOT, dirents)
 
 	ts.Shutdown()
 }

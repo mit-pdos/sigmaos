@@ -49,11 +49,7 @@ func RunTimelineSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
-	if err != nil {
-		return err
-	}
-	tlsrv.cachec = cachec
+	tlsrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err

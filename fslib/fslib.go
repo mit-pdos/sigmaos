@@ -1,6 +1,8 @@
 package fslib
 
 import (
+	"fmt"
+
 	db "sigmaos/debug"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
@@ -22,6 +24,10 @@ func NewFsLibAPI(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, sos sos.FileA
 		FileAPI: sos,
 	}
 	return fl, nil
+}
+
+func (fs *FsLib) String() string {
+	return fmt.Sprintf("{Fslib npc %v FileAPI %v}", fs.npc, fs.FileAPI)
 }
 
 func (fl *FsLib) GetInnerContainerIP() sp.Tip {

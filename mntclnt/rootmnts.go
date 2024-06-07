@@ -19,6 +19,10 @@ type RootMount struct {
 	closed    bool
 }
 
+func (rm *RootMount) String() string {
+	return fmt.Sprintf("{pn %q tree %q p %v}", rm.svcpn, rm.tree, rm.principal)
+}
+
 type RootMountTable struct {
 	sync.Mutex
 	mounts map[string]*RootMount
@@ -29,6 +33,10 @@ func newRootMountTable() *RootMountTable {
 	mt.mounts = make(map[string]*RootMount)
 	mt.add(sp.NoPrincipal(), nil, nil, sp.NAME)
 	return mt
+}
+
+func (rootmt *RootMountTable) String() string {
+	return fmt.Sprintf("{mnts %v}", rootmt.mounts)
 }
 
 // XXX lookup should involve principal
@@ -142,10 +150,10 @@ func (mc *MntClnt) mountRoot(svc, rest path.Tpathname, mntname string) *serr.Err
 	if ch == nil {
 		db.DPrintf(db.MOUNT, "mountRoot: lookup %v %v err nil\n", svc, fid)
 	}
-	addr := ch.Servers()
-	if err := mc.MountTree(mc.pe.GetSecrets(), addr, rest.String(), mntname); err != nil {
+	ep := ch.Endpoint()
+	if err := mc.MountTree(mc.pe.GetSecrets(), ep, rest.String(), mntname); err != nil {
 		db.DPrintf(db.MOUNT, "mountRoot: MountTree %v err %v\n", svc, err)
 	}
-	db.DPrintf(db.MOUNT, "mountRoot: attached %v(%v):%v at %v\n", svc, addr, rest, mntname)
+	db.DPrintf(db.MOUNT, "mountRoot: attached %v(%v):%v at %v\n", svc, ep, rest, mntname)
 	return nil
 }

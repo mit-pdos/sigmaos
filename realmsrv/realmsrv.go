@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -271,13 +270,6 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(r *Realm, realm sp.Trealm, ss s
 	db.DPrintf(db.REALMD, "%v: [%v] kernels %v %v\n", realm, ss, kernels, err)
 	if err != nil {
 		return err
-	}
-	for i := 0; i < len(kernels); i++ {
-		// Don't try to boot per-realm kernel subsystems on sigmaclntd-only kernels
-		if strings.HasPrefix(kernels[i], sp.SIGMACLNTDKERNEL) {
-			kernels = append(kernels[:i], kernels[i+1:]...)
-			i--
-		}
 	}
 	if int64(len(kernels)) < n {
 		db.DPrintf(db.ERROR, "Tried to boot more than one kernel subsystem per kernel")

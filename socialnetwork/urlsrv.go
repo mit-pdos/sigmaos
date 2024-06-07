@@ -51,11 +51,7 @@ func RunUrlSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	cachec, err := cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
-	if err != nil {
-		return err
-	}
-	urlsrv.cachec = cachec
+	urlsrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
 	urlsrv.random = rand.New(rand.NewSource(time.Now().UnixNano()))
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Starting url service\n")
 	return ssrv.RunServer()

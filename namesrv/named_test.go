@@ -9,7 +9,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
-	"sigmaos/fslib"
 	"sigmaos/namesrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -28,7 +27,7 @@ func TestBootNamed(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
 
-	assert.True(t, fslib.Present(sts, namesrv.InitRootDir), "initfs")
+	assert.True(t, sp.Present(sts, namesrv.InitRootDir), "initfs")
 
 	ts.Shutdown()
 }

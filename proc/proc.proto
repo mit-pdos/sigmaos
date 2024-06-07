@@ -34,6 +34,7 @@ message ProcEnvProto {
   map<string, SecretProto> secretsMap = 27;
   repeated string sigmaPath = 28;
   repeated string kernels = 29;
+  string realmSwitchStr = 30;
 }
 
 message ProcProto {

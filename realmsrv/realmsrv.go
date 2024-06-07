@@ -140,6 +140,9 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 	r := newRealm()
 	p := proc.NewProc("named", []string{req.Realm, "0"})
+	// Set up a realm switch: when named runs, it should start as a member of the
+	// new realm.
+	p.SetRealmSwitch(rid)
 	// Make sure named uses netproxy
 	p.GetProcEnv().UseNetProxy = rm.netproxy
 	p.SetMcpu(NAMED_MCPU)

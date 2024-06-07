@@ -139,7 +139,7 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 	if err != nil {
 		return err
 	}
-	p.GetProcEnv().SetRealm(sp.ROOTREALM, k.Param.Overlays)
+	p.SetRealm(sp.ROOTREALM)
 	p.SetKernelID(k.Param.KernelID, false)
 	cmd, err := runKNamed(pe, p, sp.ROOTREALM, init)
 	if err != nil {

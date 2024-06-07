@@ -122,7 +122,7 @@ func (p *Proc) GetSecrets() map[string]*sp.SecretProto {
 }
 
 func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
-	p.ProcEnvProto.SetRealm(parentPE.GetRealm(), parentPE.Overlays)
+	p.ProcEnvProto.SetRealm(parentPE.GetRealm())
 	p.ProcEnvProto.ParentDir = filepath.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
 	p.ProcEnvProto.EtcdEndpoints = parentPE.EtcdEndpoints
 	p.ProcEnvProto.Perf = parentPE.Perf
@@ -148,6 +148,14 @@ func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
 	if setProcDir {
 		p.setProcDir(kernelID)
 	}
+}
+
+func (p *Proc) SetRealm(realm sp.Trealm) {
+	p.ProcEnvProto.SetRealm(realm)
+}
+
+func (p *Proc) SetRealmSwitch(realm sp.Trealm) {
+	p.ProcEnvProto.SetRealmSwitch(realm)
 }
 
 func (p *Proc) SetKernels(kernels []string) {
@@ -177,14 +185,25 @@ func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
 	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
 	p.ProcEnvProto.SetUprocdPID(uprocdPid)
+	oldr := p.GetRealm()
+	// If a realm switch was requested, perform the realm switch before
+	// marshaling the proc's ProcEnv. A realm switch is only possible if the
+	// original realm is the root realm, and assumes that authorization checks
+	// have already taken place (a proc cannot fake being part of the root realm,
+	// originally)
+	if newr, ok := p.ProcEnvProto.GetRealmSwitch(); ok {
+		p.SetRealm(newr)
+	}
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
-	// Marshal and b64-encode the principal ID
+	// Marshal the principal ID
 	b, err := json.Marshal(p.GetPrincipal())
 	if err != nil {
 		log.Fatalf("FATAL Error marshal principal: %v", err)
 	}
 	// Add marshaled principal ID to env
 	p.AppendEnv(SIGMAPRINCIPAL, string(b))
+	// Restore old realm
+	p.SetRealm(oldr)
 }
 
 func (p *Proc) IsPrivileged() bool {

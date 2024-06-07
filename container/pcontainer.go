@@ -165,11 +165,5 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 		return nil, err
 	}
 
-	//	if overlays {
-	//		if err := cli.NetworkConnect(ctx, "ingress", resp.ID, &network.EndpointSettings{}); err != nil {
-	//			db.DFatalf("Error NetworkConnect: %v", err)
-	//		}
-	//	}
-
 	return c, nil
 }

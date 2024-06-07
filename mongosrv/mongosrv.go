@@ -3,9 +3,13 @@ package mongosrv
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/mongosrv/proto"
@@ -13,7 +17,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"time"
 )
 
 const (
@@ -57,7 +60,7 @@ func RunMongod(mongodUrl string) error {
 		return err
 	}
 	dbg.DPrintf(dbg.MONGO, "Starting mongo proxy server")
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.MONGO, sc, s)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.MONGO, pe.GetKernelID()), sc, s)
 	if err != nil {
 		return err
 	}

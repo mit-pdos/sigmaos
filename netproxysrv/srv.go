@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"sync"
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -31,20 +30,23 @@ type NetProxySrv struct {
 }
 
 type NetProxySrvStubs struct {
-	sync.Mutex
 	closed           bool
 	lidctr           netproxy.Tlidctr
 	lm               *netproxy.ListenerMap
-	trans            *netproxytrans.NetProxyTrans
-	conn             *net.UnixConn
 	innerContainerIP sp.Tip
 	directDialFn     netproxy.DialFn
 	directListenFn   netproxy.ListenFn
-	rpcs             *rpcsrv.RPCSrv
-	dmx              *demux.DemuxSrv
-	baseCtx          *ctx.Ctx
 	p                *sp.Tprincipal
 	sc               *sigmaclnt.SigmaClnt
+}
+
+type NetProxySrvConn struct {
+	npss    *NetProxySrvStubs
+	baseCtx *ctx.Ctx
+	conn    *net.UnixConn
+	trans   *netproxytrans.NetProxyTrans
+	rpcs    *rpcsrv.RPCSrv
+	dmx     *demux.DemuxSrv
 }
 
 func NewNetProxySrv(pe *proc.ProcEnv) (*NetProxySrv, error) {
@@ -86,30 +88,32 @@ func (nps *NetProxySrv) handleNewConn(conn *net.UnixConn) {
 	}
 	db.DPrintf(db.NETPROXYSRV, "Handle connection [%p] from principal %v", conn, p)
 
-	npss := &NetProxySrvStubs{
-		lm:               netproxy.NewListenerMap(),
-		trans:            netproxytrans.NewNetProxyTrans(conn, demux.NewIoVecMap()),
-		conn:             conn,
-		innerContainerIP: nps.innerContainerIP,
-		directListenFn:   netproxy.ListenDirect,
-		baseCtx:          ctx.NewPrincipalOnlyCtx(p),
-		sc:               nps.sc,
-		p:                p,
+	npsc := &NetProxySrvConn{
+		trans:   netproxytrans.NewNetProxyTrans(conn, demux.NewIoVecMap()),
+		conn:    conn,
+		baseCtx: ctx.NewPrincipalOnlyCtx(p),
+		npss: &NetProxySrvStubs{
+			lm:               netproxy.NewListenerMap(),
+			innerContainerIP: nps.innerContainerIP,
+			directListenFn:   netproxy.ListenDirect,
+			sc:               nps.sc,
+			p:                p,
+		},
 	}
-	npss.rpcs = rpcsrv.NewRPCSrv(npss, rpc.NewStatInfo())
+	npsc.rpcs = rpcsrv.NewRPCSrv(npsc.npss, rpc.NewStatInfo())
 	// Start a demux server to handle requests & concurrency
-	npss.dmx = demux.NewDemuxSrv(npss, npss.trans)
+	npsc.dmx = demux.NewDemuxSrv(npsc, npsc.trans)
 }
 
-func (npss *NetProxySrvStubs) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
+func (npsc *NetProxySrvConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
 	db.DPrintf(db.NETPROXYSRV, "ServeRequest: %v", c)
 	req := c.(*netproxytrans.ProxyCall)
-	ctx := netproxy.NewCtx(npss.baseCtx)
-	rep, err := npss.rpcs.WriteRead(ctx, req.Iov)
+	ctx := netproxy.NewCtx(npsc.baseCtx)
+	rep, err := npsc.rpcs.WriteRead(ctx, req.Iov)
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV, "ServeRequest: writeRead err %v", err)
 	}
-	npss.trans.AddConn(req.Seqno, ctx.GetConn())
+	npsc.trans.AddConn(req.Seqno, ctx.GetConn())
 	return netproxytrans.NewProxyCall(req.Seqno, rep), nil
 }
 
@@ -159,7 +163,7 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 		res.Err = sp.NewRerrorErr(err)
 		return nil
 	}
-	ep, err := netproxy.NewEndpoint(sp.TTendpoint(req.EndpointType), nps.innerContainerIP, ctx.Principal().GetRealm(), l)
+	ep, err := netproxy.NewEndpoint(sp.TTendpoint(req.EndpointType), nps.innerContainerIP, l)
 	if err != nil {
 		db.DFatalf("Error construct endpoint: %v", err)
 		return err
@@ -296,13 +300,13 @@ func (nps *NetProxySrvStubs) closeListeners() error {
 	return nps.lm.CloseListeners()
 }
 
-func (npss *NetProxySrvStubs) ReportError(err error) {
+func (npsc *NetProxySrvConn) ReportError(err error) {
 	db.DPrintf(db.NETPROXYSRV_ERR, "ReportError err %v", err)
-	if err := npss.closeListeners(); err != nil {
+	if err := npsc.npss.closeListeners(); err != nil {
 		db.DPrintf(db.ERROR, "Err closeListeners: %v", err)
 	}
-	db.DPrintf(db.NETPROXYSRV, "Close conn principal %v", npss.baseCtx.Principal())
-	npss.conn.Close()
+	db.DPrintf(db.NETPROXYSRV, "Close conn principal %v", npsc.baseCtx.Principal())
+	npsc.conn.Close()
 }
 
 func (nps *NetProxySrv) Shutdown() {

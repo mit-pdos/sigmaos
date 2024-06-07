@@ -16,11 +16,10 @@ type MongoClnt struct {
 
 func NewMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
 	mongoc := &MongoClnt{}
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{fsl}, name)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{fsl}, name)
 	if err != nil {
 		return nil, err
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	mongoc.rpcc = rpcc
 	return mongoc, nil
 }

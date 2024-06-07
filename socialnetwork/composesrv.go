@@ -46,29 +46,25 @@ func RunComposeSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_TEXT)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	csrv.textc = rpcc
-	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_POST)
+	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
-	rpcc = rpcclnt.NewRPCClnt(ch)
 	csrv.postc = rpcc
-	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_TIMELINE)
+	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
-	rpcc = rpcclnt.NewRPCClnt(ch)
 	csrv.tlc = rpcc
-	ch, err = sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_HOME)
+	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
-	rpcc = rpcclnt.NewRPCClnt(ch)
 	csrv.homec = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Starting compose service %v\n", csrv.sid)
 	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_COMPOSE)

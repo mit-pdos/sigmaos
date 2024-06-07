@@ -47,9 +47,8 @@ message SecretProto {
 }
 
 message TendpointClaimsProto {
-        string   realmStr = 1;
-        uint32   endpointType = 2; // Type of endpoint (e.g. internal vs external)
-        repeated Taddr addr = 3;
+        uint32   endpointType = 1; // Type of endpoint (e.g. internal vs external)
+        repeated Taddr addr = 2;
 }
 
 message TendpointProto {

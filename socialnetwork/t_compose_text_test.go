@@ -5,7 +5,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	"sigmaos/rpcclnt"
 	"sigmaos/sigmarpcchan"
 	sn "sigmaos/socialnetwork"
 	"sigmaos/socialnetwork/proto"
@@ -32,11 +31,10 @@ func TestUrl(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_URL)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_URL)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 
 	// compose urls
 	url1 := "http://www.google.com/q=apple"
@@ -81,11 +79,10 @@ func TestText(t *testing.T) {
 
 	// create RPC clients text
 	tssn.dbu.InitUser()
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TEXT)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TEXT)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 
 	// process text
 	arg_text := proto.ProcessTextRequest{}
@@ -143,21 +140,18 @@ func TestCompose(t *testing.T) {
 	// create RPC clients text
 	tssn.dbu.InitUser()
 	tssn.dbu.InitGraph()
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_COMPOSE)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_COMPOSE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
-	trch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
+	trpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	trpcc := rpcclnt.NewRPCClnt(trch)
-	hch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
+	hrpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	hrpcc := rpcclnt.NewRPCClnt(hch)
 
 	// compose empty post not allowed
 	arg_compose := proto.ComposePostRequest{}

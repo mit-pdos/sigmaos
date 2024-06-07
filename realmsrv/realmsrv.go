@@ -140,13 +140,12 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 	r := newRealm()
 	p := proc.NewProc("named", []string{req.Realm, "0"})
-	p.GetProcEnv().SetRealm(sp.ROOTREALM, p.GetProcEnv().Overlays)
 	// Make sure named uses netproxy
 	p.GetProcEnv().UseNetProxy = rm.netproxy
 	p.SetMcpu(NAMED_MCPU)
 	r.named = p
 
-	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named", req.Realm)
+	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named %v", req.Realm, p)
 	if err := rm.sc.Spawn(p); err != nil {
 		db.DPrintf(db.REALMD_ERR, "Error SpawnBurst: %v", err)
 		return err
@@ -181,7 +180,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	// making endpoints for them in this realm.
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := filepath.Join(sp.NAMED, s)
-		ep := sp.NewEndpoint(sp.INTERNAL_EP, namedEndpoint.Addrs(), rid)
+		ep := sp.NewEndpoint(sp.INTERNAL_EP, namedEndpoint.Addrs())
 		ep.SetTree(s)
 		db.DPrintf(db.REALMD, "Link %v at %s\n", ep, pn)
 		if err := sc.MkEndpointFile(pn, ep); err != nil {

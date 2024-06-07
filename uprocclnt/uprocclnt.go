@@ -59,12 +59,13 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 }
 
-func (clnt *UprocdClnt) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, path []string) (uprocErr error, childErr error) {
+func (clnt *UprocdClnt) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, s3secret *sp.SecretProto, path []string) (uprocErr error, childErr error) {
 	req := &proto.WarmBinRequest{
 		RealmStr:  realm.String(),
 		Program:   prog,
 		SigmaPath: path,
 		PidStr:    pid.String(),
+		S3Secret:  s3secret,
 	}
 	res := &proto.RunResult{}
 	if err := clnt.RPC("UprocSrv.WarmProc", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {

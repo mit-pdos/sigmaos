@@ -1,6 +1,8 @@
 package dbsrv
 
 import (
+	"path/filepath"
+
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sessdevsrv"
@@ -30,7 +32,7 @@ func RunDbd(dbdaddr string) error {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 		return err
 	}
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.DB, sc, s)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.DB, pe.GetKernelID()), sc, s)
 	if err != nil {
 		return err
 	}

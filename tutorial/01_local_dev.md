@@ -6,9 +6,9 @@ commands are intended to be run from the root of the repo.
 
 ## Dependencies
 
-You will need to have `golang`, `docker`, `docker buildx`, `mysql`, `parallel`,
-and `libseccomp-dev` installed in order to build and run SigmaOS and its
-benchmarks. 
+You will need to have `docker`, `docker buildx`, `mysql`, `parallel`,
+`libseccomp-dev`, and `golang` v1.21 installed in order to build
+and run SigmaOS and its benchmarks. 
 
 In order to download Docker Desktop (which includes buildx, a plugin required
 by the SigmaOS build sequence), follow the following guide:
@@ -17,10 +17,16 @@ by the SigmaOS build sequence), follow the following guide:
 https://docs.docker.com/desktop/install/ubuntu/
 ```
 
+Follow the instructions from the following guide to install Go 1.21:
+
+```
+https://go.dev/doc/install
+```
+
 On a Ubuntu system, you can install the remaining packages by running:
 
 ```
-$ sudo apt install golang-go libseccomp-dev mysql-client parallel
+$ sudo apt install libseccomp-dev mysql-client parallel
 ```
 
 On a Ubuntu system, you may also have to install the SigmaOS AppArmor
@@ -84,7 +90,7 @@ Warning: the parallel build uses much memory and all but one core on the
 machine you are building on.
 
 There are many user procs in the repo, and building them all can take a long
-time. If you only wish to build only a subset of the user procs (e.g. `sleeper`
+time. If you wish to build only a subset of the user procs (e.g. `sleeper`
 and `spinner`), you can specify which user procs to build in a comma-separated
 list like so:
 
@@ -144,11 +150,13 @@ The output should look something like:
 
 SigmaOS leverages Golang's testing infrastructure for its benchmarks and
 correctness tests. We have tests for many of the SigmaOS packages. We expect
-all of the tests to pass, but we have not tested extensively on different
-hardware setups or OS versions, and we are sure there must be bugs. If you find
-a bug, please add a minimal test that exposes it to the appropriate package
-before fixing it. This way, we can ensure that the software doesn't regress to
-incorporate old bugs as we continue to develop it.
+all of the tests to pas, though some tests require access to our private S3
+buckets and will only pass once we have given you access to them. We have
+not tested extensively on different hardware setups or OS versions, and we are
+sure there must be bugs. If you find a bug, please add a minimal test that
+exposes it to the appropriate package before fixing it. This way, we can ensure
+that the software doesn't regress to incorporate old bugs as we continue to
+develop it.
 
 Occasionally, we run the full-slew of SigmaOS tests. In order to do so, run:
 
@@ -162,6 +170,16 @@ To run a few key tests for the main apps, run:
 
 ```
 $ ./test.sh --apps-fast 2>&1 | tee /tmp/out
+```
+
+We try to do a good job of cleaning up state between tests, even if the tests
+fail. However, if a package's test(s) fail while running `./test.sh`, there is
+a chance that some SigmaOS state will be left hanging around, causing
+subsequent packages' tests to fail. In order to ensure that all SigmaOS state
+is fully cleaned up between running different packages' tests, run:
+
+```
+$ ./test.sh --cleanup 2>&1 | tee /tmp/out
 ```
 
 Generally, we run only tests related to packages we are actively
@@ -202,23 +220,22 @@ machine's local IP by running:
 $ hostname -I
 ```
 
-Create the directory `/mnt/9p` and then, run:
+Make sure the directory `/mnt/9p` exists and then run:
 
 ```
 $ ./mount.sh --boot LOCAL_IP
 ```
 
-This mount the root realm's `named` at `/mnt/9p`. 
-You should see output like this:
+This starts up a fresh SigmaOS instance, and mounts the root
+realm's `named` at `/mnt/9p`. You should see output like this:
 ```
 $ ./mount.sh --boot 127.0.0.1
 ..........................192.168.0.10 container 20a7be3eb7 dbIP x.x.x.x mongoIP x.x.x.x
-08:03:08.702140 - ALWAYS Etcd addr 127.0.0.1
 
 ```
 
-The `--boot` tells `mount.sh` to start SigmaOS; without the flag you
-can mount an already-running SigmaOS. 
+The `--boot` tells `mount.sh` to start SigmaOS. In order to introspect an
+already-running SigmaOS instance, run `mount.sh` without this flag. 
 
 You can `ls` the root directory of `named` as follows:
 ```
@@ -231,6 +248,11 @@ boot  db  kpids  named-election-rootrealm  rpc  s3  schedd  ux  ws
 $ 
 ```
 
+Make sure to stop the SigmaOS instance, as described below,
+before re-running `./mount.sh` or running any tests. Running two
+instances of SigmaOS on the same machine is likely to result in
+unexpected errors and/or hangs.
+
 ## Stopping SigmaOS
 
 In order to stop SigmaOS and clean up any running containers, run:
@@ -242,19 +264,34 @@ $ ./stop.sh --parallel
 Note: this will try to purge your machine of any traces of the running
 containers, including logs and cached build images. We do this to avoid filling
 your disk up, but you may want to refrain from running `stop.sh` if you want to
-inspect the containers' logs. If you wish to preserve the docker build cache
-(but still delete the logs), you can run:
+inspect the containers' logs. Additionally, you may wish to preserve the Docker
+build cache to speed up your builds (but still delete the logs). In order to do
+so, you can run:
 
 ```
 $ ./stop.sh --parallel --nopurge
 ```
 
+In general, we run `./stop.sh` with the `--nopurge` flag before running any new
+set of tests to ensure that SigmaOS starts from a clean state.
+
 ## Exercise: Access S3 through SigmaOS
 
-Through SigmaOS you can access other services, such as AWS S3.  For
-this exercise you must have an AWS credential file in your home
-directory `~/.aws/credentials`, which has the secret access key for
-AWS.  The entry in `~/aws/credentials` looks like this:
+Through SigmaOS you can access other services, such as AWS S3.  For this
+exercise you must have AWS `credentials` and `config` files set up in your user
+account's AWS config directory, `~/.aws`. The `credentials` and `config` files
+contain the AWS configuration and secret access keys required for SigmaOS to
+access your AWS resources. The AWS CLI docs contain information on how to
+set up your `config` and `credentials` files:
+
+```
+https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-files.html
+https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-configure.html
+```
+
+SigmaOS expects there to be a `sigmaos` entry in your AWS `credentials` and
+`config` files. The entry in `~/aws/credentials` looks like this:
+
 ```
 [sigmaos]
 aws_access_key_id = KEYID
@@ -265,18 +302,25 @@ region=us-east-1
 If you have an AWS account, you can replace `KEYID` and `SECRETKEY`
 with your account's key.  If you don't have an account, you can create
 one (google create an AWS account) or use the account key provided by
-us (which we will post on Piazza).
+us.
 
-Now you should be able to access files in S3 by running:
+Now, if you retboot and mount SigmaOS, you should be able to access files in S3
+by running:
 
 ```
-ls /mnt/9p/s3/IP:PORT/
+ls /mnt/9p/s3/SERVER_ID/
 ```
-where IP:PORT is the IP address and port from `ls /mnt/9p/s3`.
+
+where `SERVER_ID` is the SigmaOS-generated ID for the S3 server. You can find
+this by running:
+
+```
+ls /mnt/9p/s3
+```
 
 You can copy files into s3. For example,
 ```
-cp tutorial/01_local_dev.md /mnt/9p/s3/192.168.0.10\:46043/<YOUR_BUCKET_NAME>/x
+cp tutorial/01_local_dev.md /mnt/9p/s3/SERVER_ID/<YOUR_BUCKET_NAME>/x
 ```
 copies this tutorial file into the s3 object `x`.
 

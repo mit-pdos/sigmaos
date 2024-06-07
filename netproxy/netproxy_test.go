@@ -37,7 +37,7 @@ func TestDial(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	ep := sp.NewEndpoint(sp.EXTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
+	ep := sp.NewEndpoint(sp.EXTERNAL_EP, sp.Taddrs{addr})
 	npc := ts.GetNetProxyClnt()
 	c := make(chan bool)
 	// Create a listener directly
@@ -72,7 +72,7 @@ func TestFailedDial(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
+	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
 	npc := ts.GetNetProxyClnt()
 	// Dial an address with no corresponding listener
 	_, err := npc.Dial(ep)
@@ -134,7 +134,7 @@ func TestFailedClose(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
+	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
 	npc := ts.GetNetProxyClnt()
 	l := netproxyclnt.NewListener(npc, 1000, ep)
 	err := l.Close()
@@ -183,7 +183,7 @@ func TestFailedAccept(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr}, sp.ROOTREALM)
+	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
 	npc := ts.GetNetProxyClnt()
 	l := netproxyclnt.NewListener(npc, 1000, ep)
 	_, err := l.Accept()

@@ -45,7 +45,7 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 	up := sp.NO_PORT
 	netmode := "host"
 	var endpoints map[string]*network.EndpointSettings
-	ports := []sp.Tport{port.UPROCD_PORT, port.PUBLIC_PORT}
+	ports := []sp.Tport{port.UPROCD_PORT, port.PUBLIC_HTTP_PORT, port.PUBLIC_NAMED_PORT}
 	if overlays {
 		db.DPrintf(db.CONTAINER, "Running with overlay ports: %v", ports)
 		up = port.UPROCD_PORT
@@ -134,6 +134,7 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 		db.DPrintf(db.CONTAINER, "ContainerStart err %v\n", err)
 		return nil, err
 	}
+
 	json, err1 := cli.ContainerInspect(ctx, resp.ID)
 	if err1 != nil {
 		db.DPrintf(db.CONTAINER, "ContainerInspect err %v\n", err)
@@ -163,5 +164,12 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 	if err := c.cmgr.SetMemoryLimit(c.cgroupPath, membytes, memswap); err != nil {
 		return nil, err
 	}
+
+	//	if overlays {
+	//		if err := cli.NetworkConnect(ctx, "ingress", resp.ID, &network.EndpointSettings{}); err != nil {
+	//			db.DFatalf("Error NetworkConnect: %v", err)
+	//		}
+	//	}
+
 	return c, nil
 }

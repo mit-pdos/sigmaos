@@ -117,6 +117,10 @@ func (p *Proc) LookupEnv(name string) (string, bool) {
 	return s, ok
 }
 
+func (p *Proc) GetSecrets() map[string]*sp.SecretProto {
+	return p.ProcEnvProto.GetSecrets()
+}
+
 func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.SetRealm(parentPE.GetRealm(), parentPE.Overlays)
 	p.ProcEnvProto.ParentDir = filepath.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())

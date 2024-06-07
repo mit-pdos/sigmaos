@@ -4,6 +4,7 @@
 package uprocsrv
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -128,7 +129,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 
 		// The kernel will advertise the server, so pass "" as pn.
 		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
-		ep = sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)}, sp.ROOTREALM)
+		ep = sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
 	}
 	if err != nil {
 		db.DFatalf("Error sigmasrvclnt: %v", err)
@@ -155,16 +156,14 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 
 	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
 
-	//	if !ups.pe.Overlays {
-	//		scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
-	//		scdp.InheritParentProcEnv(ups.pe)
-	//		scdp.SetHow(proc.HLINUX)
-	//		scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
-	//		if err != nil {
-	//			return err
-	//		}
-	//		ups.scsc = scsc
-	//	}
+	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
+	scdp.InheritParentProcEnv(ups.pe)
+	scdp.SetHow(proc.HLINUX)
+	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	if err != nil {
+		return err
+	}
+	ups.scsc = scsc
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
@@ -232,14 +231,6 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
 	}(start)
 
-	//	start = time.Now()
-	//	innerIP, err := netsigma.LocalIP()
-	//	if err != nil {
-	//		db.DFatalf("Error LocalIP: %v", err)
-	//	}
-	//	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
-	//	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.setLocalIP: %v", upid, time.Since(start))
-
 	start = time.Now()
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v", realm)
 
@@ -252,23 +243,11 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 	// Note that the uprocsrv has been assigned.
 	ups.realm = realm
 
-	//	if ups.pe.Overlays {
-	// Now that the uprocd's innerIP has been established, spawn sigmaclntd
-	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
-	scdp.InheritParentProcEnv(ups.pe)
-	scdp.SetHow(proc.HLINUX)
-	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
-	if err != nil {
-		return err
-	}
-	ups.scsc = scsc
-	//	}
-
 	// Demote to reader lock
 	ups.mu.Unlock()
 	ups.mu.RLock()
 
-	return err
+	return nil
 }
 
 func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.AssignResult) error {
@@ -316,11 +295,11 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	}
 	pid := sp.Tpid(req.PidStr)
 	r := sp.Trealm(req.RealmStr)
-	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.SigmaPath)
+	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), req.SigmaPath)
 	if err != nil {
 		return err
 	}
-	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, st.Tsize(), req.SigmaPath); err != nil {
+	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), st.Tsize(), req.SigmaPath); err != nil {
 		return err
 	}
 	res.OK = true
@@ -351,8 +330,13 @@ func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fetch
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch start: %q ck %d path %v time since spawn %v", pe.proc.GetPid(), ups.kernelId, req.ChunkId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
+	s3secret, ok := pe.proc.GetSecrets()["s3"]
+	if !ok {
+		return fmt.Errorf("No s3 secrets in proc")
+	}
+
 	start := time.Now()
-	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
+	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, s3secret, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
 	if err != nil {
 		return err
 	}
@@ -375,8 +359,12 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup start %v paths %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
 	paths := pe.proc.GetSigmaPath()
+	s3secret, ok := pe.proc.GetSecrets()["s3"]
+	if !ok {
+		return fmt.Errorf("No s3 secrets in proc")
+	}
 	start := time.Now()
-	st, path, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), paths)
+	st, path, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), s3secret, paths)
 	if err != nil {
 		return err
 	}

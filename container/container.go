@@ -12,7 +12,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 
@@ -80,22 +79,22 @@ func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
 		}
 		db.DPrintf(db.SPAWN_LAT, "Get/Set sched attr %v", time.Since(s))
 	}
-	if c.overlays && realm != sp.ROOTREALM {
-		s := time.Now()
-		netns := "sigmanet-" + realm.String()
-		db.DPrintf(db.CONTAINER, "Add container %v to net %v", c.container, netns)
-		if err := c.cli.NetworkConnect(c.ctx, netns, c.container, &network.EndpointSettings{}); err != nil {
-			db.DFatalf("Error NetworkConnect: %v", err)
-		}
-		db.DPrintf(db.SPAWN_LAT, "Add to overlay network %v", time.Since(s))
-		s = time.Now()
-		rootnetns := "sigmanet-testuser"
-		db.DPrintf(db.CONTAINER, "Remove container %v from net %v", c.container, netns)
-		if err := c.cli.NetworkDisconnect(c.ctx, rootnetns, c.container, true); err != nil {
-			db.DFatalf("Error NetworkConnect: %v", err)
-		}
-		db.DPrintf(db.SPAWN_LAT, "Remove from overlay network %v", time.Since(s))
-	}
+	//	if c.overlays && realm != sp.ROOTREALM {
+	//		s := time.Now()
+	//		netns := "sigmanet-" + realm.String()
+	//		db.DPrintf(db.CONTAINER, "Add container %v to net %v", c.container, netns)
+	//		if err := c.cli.NetworkConnect(c.ctx, netns, c.container, &network.EndpointSettings{}); err != nil {
+	//			db.DFatalf("Error NetworkConnect: %v", err)
+	//		}
+	//		db.DPrintf(db.SPAWN_LAT, "Add to overlay network %v", time.Since(s))
+	//		s = time.Now()
+	//		rootnetns := "sigmanet-testuser"
+	//		db.DPrintf(db.CONTAINER, "Remove container %v from net %v", c.container, netns)
+	//		if err := c.cli.NetworkDisconnect(c.ctx, rootnetns, c.container, true); err != nil {
+	//			db.DFatalf("Error NetworkConnect: %v", err)
+	//		}
+	//		db.DPrintf(db.SPAWN_LAT, "Remove from overlay network %v", time.Since(s))
+	//	}
 	return nil
 }
 

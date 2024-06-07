@@ -14,6 +14,9 @@ import (
 	"sigmaos/test"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func TestExerciseNamed(t *testing.T) {
 	dir := sp.NAMED
 	ts, err1 := test.NewTstatePath(t, dir)

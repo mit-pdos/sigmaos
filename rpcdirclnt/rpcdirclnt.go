@@ -16,13 +16,12 @@ type RPCDirClnt struct {
 }
 
 func (rpcdc *RPCDirClnt) newEntry(n string) (*rpcclnt.RPCClnt, error) {
-	ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{rpcdc.FsLib}, filepath.Join(rpcdc.Path, n))
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{rpcdc.FsLib}, filepath.Join(rpcdc.Path, n))
 	if err != nil {
-		db.DPrintf(rpcdc.ESelector, "Error NewSigmaRPCChan[srvID:%v]: %v", n, err)
+		db.DPrintf(rpcdc.ESelector, "Error NewSigmaRPCClnt[srvID:%v]: %v", n, err)
 		return nil, err
 	}
-	db.DPrintf(rpcdc.LSelector, "newEntry NewSigmaRPCChan[srvID:%v]: %v", n, ch)
-	rpcc := rpcclnt.NewRPCClnt(ch)
+	db.DPrintf(rpcdc.LSelector, "newEntry NewSigmaRPCClnt[srvID:%v]: %v", n, rpcc)
 	return rpcc, nil
 }
 

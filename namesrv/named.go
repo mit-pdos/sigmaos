@@ -13,6 +13,7 @@ import (
 	"sigmaos/leaderetcd"
 	"sigmaos/path"
 	"sigmaos/perf"
+	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
@@ -167,18 +168,14 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
-	// XXX need special handling with overlays?
-	//	var pi portclnt.PortInfo
-	//	if nd.realm == sp.ROOTREALM || nd.ProcEnv().GetNet() == sp.ROOTREALM.String() {
-	addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
-	//	} else {
-	//		_, pi0, err := portclnt.NewPortClntPort(nd.SigmaClnt.FsLib)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		pi = pi0
-	//		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, pi.PBinding.RealmPort)
-	//	}
+	// If this is a root named, or we are running without overlays, don't do
+	// anything special.
+	if nd.realm == sp.ROOTREALM || !nd.ProcEnv().GetOverlays() {
+		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
+	} else {
+		db.DPrintf(db.NAMED, "[%v] Listeing on overlay public port: %v:%v", nd.realm, nd.ProcEnv().GetOuterContainerIP(), port.PUBLIC_NAMED_PORT)
+		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, port.PUBLIC_NAMED_PORT)
+	}
 	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
@@ -190,11 +187,17 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	nd.SigmaSrv = ssrv
 
 	ep := nd.GetEndpoint()
-	// XXX need public endpoint?
-	//	if nd.realm != sp.ROOTREALM {
-	//		ep = port.NewPublicEndpoint(pi.HostIP, pi.PBinding, nd.ProcEnv().GetNet(), nd.GetEndpoint())
-	//	}
-	// ep.SetType(sp.INTERNAL_EP)
+	// If running with overlays, and this isn't the root named, fix up the
+	// endpoint.
+	if nd.realm != sp.ROOTREALM && nd.ProcEnv().GetOverlays() {
+		pm, err := port.GetPublicPortBinding(nd.FsLib, sp.PUBLIC_NAMED_PORT)
+		if err != nil {
+			db.DFatalf("Error get port binding: %v", err)
+		}
+		// Fix up the endpoint to use the public port and IP address
+		ep.Addrs()[0].IPStr = nd.ProcEnv().GetOuterContainerIP().String()
+		ep.Addrs()[0].PortInt = uint32(pm.HostPort)
+	}
 	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }

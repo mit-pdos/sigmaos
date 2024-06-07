@@ -18,7 +18,7 @@ type EndpointClaims struct {
 // Construct endpoint claims from a endpoint
 func NewEndpointClaims(ep *sp.Tendpoint) *EndpointClaims {
 	return &EndpointClaims{
-		Realm: ep.GetRealm(),
+		Realm: sp.NOT_SET,
 		Addr:  ep.Addrs(),
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 999).Unix(), // TODO: set expiry properly

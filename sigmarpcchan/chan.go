@@ -19,6 +19,14 @@ type SigmaRPCCh struct {
 	idx  atomic.Int32
 }
 
+func NewSigmaRPCClnt(fsls []*fslib.FsLib, pn string) (*rpcclnt.RPCClnt, error) {
+	ch, err := NewSigmaRPCCh(fsls, pn)
+	if err != nil {
+		return nil, err
+	}
+	return rpcclnt.NewRPCClnt(ch), nil
+}
+
 func SigmaRPCChanFactory(fsls []*fslib.FsLib) rpcclnt.NewRPCChFn {
 	return func(pn string) (rpcclnt.RPCCh, error) {
 		return NewSigmaRPCCh(fsls, pn)

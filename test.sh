@@ -99,7 +99,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt proxy reader writer stats fslib semclnt electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt auth mr imgresizesrv kv hotel socialnetwork benchmarks; do
+    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt proxy reader writer stats fslib semclnt electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt auth mr imgresizesrv kv hotel socialnetwork benchmarks example example_echo_server; do
         go test $VERB sigmaos/$T --run TestCompile
     done
 fi

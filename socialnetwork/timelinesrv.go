@@ -50,11 +50,10 @@ func RunTimelineSrv(jobname string) error {
 		return err
 	}
 	tlsrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
-	ch, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_POST)
+	rpcc, err := sigmarpcchan.NewSigmaRPCCh(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
-	rpcc := rpcclnt.NewRPCClnt(ch)
 	tlsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Starting timeline service\n")
 	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_TIMELINE)

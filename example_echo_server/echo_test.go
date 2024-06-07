@@ -1,17 +1,22 @@
 package example_echo_server_test
 
 import (
-	"github.com/stretchr/testify/assert"
+	"math"
 	"path/filepath"
-	dbg "sigmaos/debug"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	db "sigmaos/debug"
 	echo "sigmaos/example_echo_server"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/rand"
-	"sigmaos/rpcclnt"
+	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
-	"strconv"
-	"testing"
 )
 
 type TstateEcho struct {
@@ -26,20 +31,27 @@ func newTstateEcho(t *testing.T) (*TstateEcho, error) {
 	var err error
 	tse := &TstateEcho{}
 	tse.jobname = jobname
-	tse.Tstate = test.NewTstateAll(t)
+	ts, err := test.NewTstateAll(t)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error New Tstate: %v", err)
+		return nil, err
+	}
+	tse.Tstate = ts
 	tse.MkDir(echo.DIR_ECHO_SERVER, 0777)
-	if err = tse.MkDir(jobdir, 0777); err != nil {
+	if err := tse.MkDir(jobdir, 0777); err != nil {
+		db.DPrintf(db.ERROR, "Error mkdir: %v", err)
+		tse.Shutdown()
 		return nil, err
 	}
 	// Start proc
-	p := proc.NewProc("example-echo", []string{strconv.FormatBool(test.Overlays)})
+	p := proc.NewProc("example-echo", []string{})
 	p.SetMcpu(proc.Tmcpu(1000))
-	if _, errs := tse.SpawnBurst([]*proc.Proc{p}, 2); !assert.True(t, len(errs) > 0, "Errors spawnBurst: %v", errs) {
-		dbg.DPrintf(dbg.ERROR, "Error burst-spawnn proc %v: %v", p, errs)
+	if err := tse.Spawn(p); !assert.Nil(t, err, "Err spawn: %v", err) {
+		tse.Shutdown()
 		return nil, err
 	}
 	if err = tse.WaitStart(p.GetPid()); !assert.Nil(t, err, "Error spawn proc: %v", nil) {
-		dbg.DPrintf(dbg.ERROR, "Error spawn proc %v: %v", p, err)
+		tse.Shutdown()
 		return nil, err
 	}
 	tse.pid = p.GetPid()
@@ -56,13 +68,18 @@ func (tse *TstateEcho) Stop() error {
 	return tse.Shutdown()
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestEcho(t *testing.T) {
 	// start server
 	tse, err := newTstateEcho(t)
-	assert.Nil(t, err, "Test server should start properly %v", err)
+	if !assert.Nil(t, err, "Test server should start properly %v", err) {
+		return
+	}
 
 	// create a RPC client and query server
-	rpcc, err := rpcclnt.NewRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}
@@ -77,41 +94,50 @@ func TestEcho(t *testing.T) {
 func TestEchoTime(t *testing.T) {
 	// start server
 	tse, err := newTstateEcho(t)
-	assert.Nil(t, err, "Test server should start properly")
+	if !assert.Nil(t, err, "Test server should start properly %v", err) {
+		return
+	}
 
 	// create a RPC client and query server
-	pdc, err := protdevclnt.NewProtDevClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}
 	N_REQ := 10000
 	t0 := time.Now()
 	for i := 0; i < N_REQ; i++ {
-		pdc.RPC("Echo.Echo", &arg, &res)
+		rpcc.RPC("Echo.Echo", &arg, &res)
 	}
 	totalTime := time.Since(t0).Microseconds()
-	dbg.DPrintf(dbg.ALWAYS, "Total time: %v ms; avg time %v ms", totalTime, totalTime/int64(N_REQ))
+	db.DPrintf(db.ALWAYS, "Total time: %v ms; avg time %v ms", totalTime, totalTime/int64(N_REQ))
 
 	// Stop server
 	assert.Nil(t, tse.Stop())
-
 }
 
 func TestEchoLoad(t *testing.T) {
+	const (
+		N              = 3
+		N_RPC_SESSIONS = 1
+	)
 	// start server
 	tse, err := newTstateEcho(t)
-	assert.Nil(t, err, "Test server should start properly")
+	if !assert.Nil(t, err, "Test server should start properly %v", err) {
+		return
+	}
 
 	// create a RPC client and query server
 	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
 	for i := 0; i < N_RPC_SESSIONS; i++ {
-		fsl, err := fslib.NewFsLib(tse.jobname + "-" + strconv.Itoa(i))
+		pe := proc.NewAddedProcEnv(tse.ProcEnv())
+		sc, err := tse.NewClnt(0, pe)
+		fsl := sc.FsLib
 		if !assert.Nil(t, err, "Error newfsl: %v", nil) {
-			dbg.DPrintf(dbg.ERROR, "Error newfsl: %v", err)
+			db.DPrintf(db.ERROR, "Error newfsl: %v", err)
 		}
 		fsls = append(fsls, fsl)
 	}
-	pdc, err := protdevclnt.NewProtDevClnt(fsls, echo.NAMED_ECHO_SERVER)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	var wg sync.WaitGroup
 	for n := 1; n <= N; n++ {
@@ -125,7 +151,7 @@ func TestEchoLoad(t *testing.T) {
 				arg := echo.EchoRequest{Text: "Hello!"}
 				res := echo.EchoResult{}
 				t1 := time.Now()
-				err = pdc.RPC("Echo.Echo", &arg, &res)
+				err = rpcc.RPC("Echo.Echo", &arg, &res)
 				tArr[i] = time.Since(t1).Microseconds()
 				assert.Equal(t, "Hello!", res.Text)
 				assert.Nil(t, err, "RPC call should succeed")
@@ -137,7 +163,7 @@ func TestEchoLoad(t *testing.T) {
 		for _, t := range tArr {
 			sum += t
 		}
-		dbg.DPrintf(dbg.TEST, "Request Number: %v; Total time: %v; Avg Lat: %v", nn, totalTime, sum/int64(nn))
+		db.DPrintf(db.TEST, "Request Number: %v; Total time: %v; Avg Lat: %v", nn, totalTime, sum/int64(nn))
 	}
 
 	// Stop server

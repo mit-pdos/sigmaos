@@ -49,7 +49,6 @@ func (npc *NetProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
 		c, err = npc.proxyDial(ep)
 		db.DPrintf(db.NETPROXYCLNT, "[%v] proxyDial %v done ok:%v", npc.pe.GetPrincipal(), ep, err == nil)
 	} else {
-		// TODO: send PE (or just realm) here
 		db.DPrintf(db.NETPROXYCLNT, "[%v] directDial %v", npc.pe.GetPrincipal(), ep)
 		c, err = netproxy.DialDirect(npc.pe.GetPrincipal(), ep)
 		db.DPrintf(db.NETPROXYCLNT, "[%v] directDial %v done ok:%v", npc.pe.GetPrincipal(), ep, err == nil)
@@ -60,7 +59,6 @@ func (npc *NetProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
 	return c, err
 }
 
-// TODO: return *netproxy.Listener, not net.Listener
 func (npc *NetProxyClnt) Listen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Tendpoint, *Listener, error) {
 	var ep *sp.Tendpoint
 	var l *Listener
@@ -169,11 +167,6 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 		return nil, err
 	}
 	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request ep %v", npc.trans.Conn(), ep)
-	// Endpoints should always have realms specified
-	if ep.GetRealm() == sp.NOT_SET {
-		db.DPrintf(db.ERROR, "Dial endpoint without realm set: %v", ep)
-		return nil, fmt.Errorf("Realm not set")
-	}
 	req := &proto.DialRequest{
 		Endpoint: ep.GetProto(),
 		// Requests must have blob too, so that unix sendmsg works
@@ -245,7 +238,7 @@ func (npc *NetProxyClnt) directListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Te
 		db.DPrintf(db.ERROR, "Error ListenDirect: %v", err)
 		return nil, nil, err
 	}
-	ep, err := netproxy.NewEndpoint(ept, npc.pe.GetInnerContainerIP(), npc.pe.GetRealm(), l)
+	ep, err := netproxy.NewEndpoint(ept, npc.pe.GetInnerContainerIP(), l)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error construct endpoint: %v", err)
 		return nil, nil, err

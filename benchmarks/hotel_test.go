@@ -134,7 +134,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 			port, err := strconv.Atoi(p)
 			assert.Nil(ts.Ts.T, err, "Err parse port %v: %v", p, err)
 			addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
-			mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr}, ts.ProcEnv().GetRealm())
+			mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
 			if err = ts.MkEndpointFile(p, mnt); err != nil {
 				db.DFatalf("MkEndpointFile %v", err)
 			}

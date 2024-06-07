@@ -60,12 +60,12 @@ func AcceptDirect(l net.Listener, getPrincipal bool) (net.Conn, *sp.Tprincipal, 
 	return c, p, err
 }
 
-func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, realm sp.Trealm, l net.Listener) (*sp.Tendpoint, error) {
+func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, l net.Listener) (*sp.Tendpoint, error) {
 	host, port, err := netsigma.QualifyAddrLocalIP(ip, l.Addr().String())
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		return nil, err
 	}
-	return sp.NewEndpoint(ept, sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port)}, realm), nil
+	return sp.NewEndpoint(ept, sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port)}), nil
 }

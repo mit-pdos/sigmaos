@@ -181,7 +181,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	// making endpoints for them in this realm.
 	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
 		pn := filepath.Join(sp.NAMED, s)
-		ep := sp.NewEndpoint(sp.INTERNAL_EP, namedEndpoint.Addrs(), rid)
+		ep := sp.NewEndpoint(sp.INTERNAL_EP, namedEndpoint.Addrs())
 		ep.SetTree(s)
 		db.DPrintf(db.REALMD, "Link %v at %s\n", ep, pn)
 		if err := sc.MkEndpointFile(pn, ep); err != nil {

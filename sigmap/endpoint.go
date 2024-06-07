@@ -10,16 +10,16 @@ type Tendpoint struct {
 	*TendpointProto
 }
 
-func NewEndpoint(t TTendpoint, srvaddrs Taddrs, realm Trealm) *Tendpoint {
+func NewEndpoint(t TTendpoint, srvaddrs Taddrs) *Tendpoint {
 	return &Tendpoint{
 		&TendpointProto{
-			Claims: NewEndpointClaimsProto(t, srvaddrs, realm),
+			Claims: NewEndpointClaimsProto(t, srvaddrs),
 		},
 	}
 }
 
 func NewEndpointFromBytes(b []byte) (*Tendpoint, error) {
-	ep := NewEndpoint(0, nil, NOT_SET)
+	ep := NewEndpoint(0, nil)
 	if err := proto.Unmarshal(b, ep); err != nil {
 		return ep, err
 	}
@@ -30,11 +30,10 @@ func NewEndpointFromProto(p *TendpointProto) *Tendpoint {
 	return &Tendpoint{p}
 }
 
-// XXX Currently, endpitn type is a hint. In reality, it should be verified
+// XXX Currently, endpoint type is a hint. In reality, it should be verified
 // somehow by netproxy (e.g., by inspecting the IP addrs)
-func NewEndpointClaimsProto(t TTendpoint, addrs Taddrs, realm Trealm) *TendpointClaimsProto {
+func NewEndpointClaimsProto(t TTendpoint, addrs Taddrs) *TendpointClaimsProto {
 	return &TendpointClaimsProto{
-		RealmStr:     realm.String(),
 		EndpointType: uint32(t),
 		Addr:         addrs,
 	}
@@ -64,10 +63,6 @@ func (ep *Tendpoint) Marshal() ([]byte, error) {
 	return proto.Marshal(ep)
 }
 
-func (ep *Tendpoint) GetRealm() Trealm {
-	return Trealm(ep.Claims.GetRealmStr())
-}
-
 func (ep *Tendpoint) Addrs() Taddrs {
 	return ep.Claims.Addr
 }
@@ -78,7 +73,7 @@ func (ep *Tendpoint) TargetIPPort(idx int) (Tip, Tport) {
 }
 
 func (ep *Tendpoint) String() string {
-	return fmt.Sprintf("{ type:%v addr:%v realm:%v root:%v }", ep.Type(), ep.Claims.Addr, Trealm(ep.Claims.RealmStr), ep.Root)
+	return fmt.Sprintf("{ type:%v addr:%v root:%v }", ep.Type(), ep.Claims.Addr, ep.Root)
 }
 
 func (t TTendpoint) String() string {

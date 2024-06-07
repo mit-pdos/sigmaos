@@ -116,7 +116,7 @@ func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) error {
 			if err != nil {
 				db.DFatalf("Error parse addr: %v", err)
 			}
-			ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{addr}, sp.ROOTREALM)
+			ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{addr})
 			c, err := n.npc.Dial(ep)
 			if err != nil {
 				db.DPrintf(db.REPLRAFT, "Error netproxyclnt Dial raft: %v", err)

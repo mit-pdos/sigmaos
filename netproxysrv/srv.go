@@ -159,7 +159,7 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 		res.Err = sp.NewRerrorErr(err)
 		return nil
 	}
-	ep, err := netproxy.NewEndpoint(sp.TTendpoint(req.EndpointType), nps.innerContainerIP, ctx.Principal().GetRealm(), l)
+	ep, err := netproxy.NewEndpoint(sp.TTendpoint(req.EndpointType), nps.innerContainerIP, l)
 	if err != nil {
 		db.DFatalf("Error construct endpoint: %v", err)
 		return err

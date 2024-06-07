@@ -111,7 +111,7 @@ func setupK8sState(t1 *test.Tstate) (*TstateSN, error) {
 	port, err := strconv.Atoi(p)
 	assert.Nil(tssn.T, err, "Err parse port %v: %v", p, err)
 	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
-	mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr}, t1.ProcEnv().GetRealm())
+	mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
 	assert.Nil(t1.T, tssn.MkEndpointFile(p, mnt))
 	// forward mongo port and init users and graphs.
 	cmd := exec.Command("kubectl", "port-forward", "svc/mongodb-sn", K8S_MONGO_FWD_PORT+":27017")

@@ -128,7 +128,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 
 		// The kernel will advertise the server, so pass "" as pn.
 		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
-		ep = sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)}, sp.ROOTREALM)
+		ep = sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
 	}
 	if err != nil {
 		db.DFatalf("Error sigmasrvclnt: %v", err)

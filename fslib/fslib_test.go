@@ -1140,7 +1140,7 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself0"), newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222)}, sp.ROOTREALM)
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222)})
 	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself1"), newep)
 	assert.Nil(ts.T, err, "EndpointService")
 
@@ -1178,7 +1178,7 @@ func TestUnionRoot(t *testing.T) {
 	pn1 := filepath.Join(pathname, "namedself1")
 	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)}, sp.ROOTREALM)
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)})
 	err = ts.MkEndpointFile(pn1, newep)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
@@ -1342,7 +1342,7 @@ func TestEndpointUnion(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111)}, sp.ROOTREALM)
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111)})
 	err = ts.MkEndpointFile(filepath.Join(pathname, "d/namedself0"), newep)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 

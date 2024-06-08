@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/netproxyclnt"
 	"sigmaos/perf"
@@ -57,7 +58,7 @@ func measure(p *perf.Perf, msg string, f func() sp.Tlength) sp.Tlength {
 	return tot
 }
 
-func measuredir(msg string, nruns int, f func() int) {
+func measuredir(msg string, nruns int, dir string, f func() int) {
 	tot := float64(0)
 	n := 0
 	for i := 0; i < nruns; i++ {
@@ -67,7 +68,7 @@ func measuredir(msg string, nruns int, f func() int) {
 		tot += float64(ms)
 	}
 	s := tot / 1000
-	db.DPrintf(db.TEST, "%v: %d entries took %vms (%.1f file/s)", msg, n, tot, float64(n)/s)
+	db.DPrintf(db.TEST, "%v: %v nruns %d took %vms (%.1f op/s)", msg, dir, n, tot, float64(n)/s)
 }
 
 type Thow uint8
@@ -449,6 +450,21 @@ func newDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
 	return n
 }
 
+func newDirLeased(ts *test.Tstate, dir string, n int) int {
+	err := ts.MkDir(dir, 0777)
+	assert.Nil(ts.T, err)
+
+	li, err := ts.LeaseClnt.AskLease(dir, fsetcd.LeaseTTL)
+	assert.Nil(ts.T, err, "Error AskLease: %v", err)
+
+	for i := 0; i < n; i++ {
+		b := []byte("hello")
+		_, err := ts.PutLeasedFile(filepath.Join(dir, "f"+strconv.Itoa(i)), 0777, sp.OWRITE, li.Lease(), b)
+		assert.Nil(ts.T, err)
+	}
+	return n
+}
+
 func TestDirCreatePerf(t *testing.T) {
 	const N = 1000
 	ts, err1 := test.NewTstatePath(t, pathname)
@@ -456,7 +472,7 @@ func TestDirCreatePerf(t *testing.T) {
 		return
 	}
 	dir := filepath.Join(pathname, "d")
-	measuredir("create dir", 1, func() int {
+	measuredir("create dir", 1, dir, func() int {
 		n := newDir(t, ts.FsLib, dir, N)
 		return n
 	})
@@ -473,7 +489,7 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 			assert.Nil(ts.T, err)
-			measuredir("lookup dir entry", NITER, func() int {
+			measuredir("lookup dir entry", NITER, dir, func() int {
 				for f := 0; f < nfile; f++ {
 					_, err := fsl.Stat(filepath.Join(dir, "f"+strconv.Itoa(f)))
 					assert.Nil(ts.T, err)
@@ -499,7 +515,7 @@ func TestDirReadPerf(t *testing.T) {
 	dir := pathname + "d"
 	n := newDir(t, ts.FsLib, dir, NFILE)
 	assert.Equal(t, NFILE, n)
-	measuredir("read dir", 1, func() int {
+	measuredir("read dir", 1, dir, func() int {
 		n := 0
 		ts.ProcessDir(dir, func(st *sp.Stat) (bool, error) {
 			n += 1
@@ -514,6 +530,45 @@ func TestDirReadPerf(t *testing.T) {
 	ts.Shutdown()
 }
 
+func getDirPerf(t *testing.T, leased bool) {
+	const (
+		NFILE = 100
+		N     = 1000
+	)
+
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	dir := filepath.Join(pathname, "d")
+	if leased {
+		n := newDirLeased(ts, dir, NFILE)
+		assert.Equal(t, NFILE, n)
+	} else {
+		n := newDir(ts.T, ts.FsLib, dir, NFILE)
+		assert.Equal(t, NFILE, n)
+	}
+
+	measuredir("GetDir", N, dir, func() int {
+		sts, err := ts.GetDir(dir)
+		assert.Nil(t, err)
+		assert.Equal(t, NFILE, len(sts))
+		return N
+	})
+	err = ts.RmDir(dir)
+	assert.Nil(t, err)
+	ts.Shutdown()
+}
+
+func TestGetDirPerfLeasedFile(t *testing.T) {
+	getDirPerf(t, true)
+}
+
+func TestGetDirPerfFile(t *testing.T) {
+	getDirPerf(t, false)
+}
+
 func TestRmDirPerf(t *testing.T) {
 	const N = 5000
 	ts, err1 := test.NewTstatePath(t, pathname)
@@ -523,7 +578,7 @@ func TestRmDirPerf(t *testing.T) {
 	dir := filepath.Join(pathname, "d")
 	n := newDir(t, ts.FsLib, dir, N)
 	assert.Equal(t, N, n)
-	measuredir("rm dir", 1, func() int {
+	measuredir("rm dir", 1, dir, func() int {
 		err := ts.RmDir(dir)
 		assert.Nil(t, err)
 		return N
@@ -550,7 +605,7 @@ func TestLookupDepthPerf(t *testing.T) {
 			assert.Equal(t, NFILE, n)
 		}
 		label := fmt.Sprintf("stat dir %v nfile %v", dir, NFILE)
-		measuredir(label, NOP, func() int {
+		measuredir(label, NOP, dir, func() int {
 			_, err := ts.Stat(dir)
 			assert.Nil(t, err)
 			return 1
@@ -599,7 +654,7 @@ func TestLookupConcurPerf(t *testing.T) {
 	for i := 0; i < NGO; i++ {
 		go func(i int) {
 			label := fmt.Sprintf("stat dir %v nfile %v ntrial %v", dir, NFILE, NTRIAL)
-			measuredir(label, 1, func() int {
+			measuredir(label, 1, dir, func() int {
 				for j := 0; j < NTRIAL; j++ {
 					_, err := fsls[i][j].Stat(dir)
 					assert.Nil(t, err, "stat err %v", err)

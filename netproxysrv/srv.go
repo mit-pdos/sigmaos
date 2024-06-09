@@ -201,8 +201,8 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 	}
 	// Accept the next connection from a principal authorized to establish a
 	// connection to this listener
-	proxyConn, p, err := netproxy.AcceptFromAuthorizedPrincipal(l, req.GetInternalListener(), func(cliP *sp.Tprincipal) bool {
-		return netproxy.ConnectionIsAuthorized(nps.p, cliP)
+	proxyConn, p, err := netproxy.AcceptFromAuthorizedPrincipal(l, req.GetInternalListener(), func(override bool, cliP *sp.Tprincipal) bool {
+		return netproxy.ConnectionIsAuthorized(false, nps.p, cliP)
 	})
 	if err != nil {
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Error accept: %v", err))

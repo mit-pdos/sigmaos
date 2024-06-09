@@ -95,17 +95,17 @@ func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, l net.Listener) (*sp.Tendpoint, e
 }
 
 // Returns true if the client principal, cliP, is authorized to connect to the server principal, srvP
-func ConnectionIsAuthorized(srvP *sp.Tprincipal, cliP *sp.Tprincipal) bool {
+func ConnectionIsAuthorized(override bool, srvP *sp.Tprincipal, cliP *sp.Tprincipal) bool {
+	// If accepting all realms' connections (overriding auth checks), authorized
+	if override {
+		return true
+	}
 	// If server and client realms match, authorized
 	if srvP.GetRealm() == cliP.GetRealm() {
 		return true
 	}
 	// If the client belongs to the root realm, authorized
 	if cliP.GetRealm() == sp.ROOTREALM {
-		return true
-	}
-	// If the server belongs to the root realm, authorized
-	if srvP.GetRealm() == sp.ROOTREALM {
 		return true
 	}
 	// Unauthorized

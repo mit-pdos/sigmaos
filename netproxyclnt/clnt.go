@@ -268,19 +268,7 @@ func (npc *NetProxyClnt) directAccept(lid netproxy.Tlid, internalListener bool) 
 	// Accept the next connection from a principal authorized to establish a
 	// connection to this listener
 	return netproxy.AcceptFromAuthorizedPrincipal(l, internalListener, func(cliP *sp.Tprincipal) bool {
-		// If accepting all realms' connections, authorized
-		if npc.acceptAllRealms {
-			return true
-		}
-		// If the client belongs to the root realm, authorized
-		if cliP.GetRealm() == sp.ROOTREALM {
-			return true
-		}
-		// If the client belongs to the same realm as the server, authorized
-		if cliP.GetRealm() == npc.pe.GetRealm() {
-			return true
-		}
-		return false
+		return netproxy.ConnectionIsAuthorized(npc.acceptAllRealms, npc.pe.GetPrincipal(), cliP)
 	})
 }
 

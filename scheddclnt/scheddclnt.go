@@ -36,7 +36,7 @@ func (sdc *ScheddClnt) GetSchedds() ([]string, error) {
 }
 
 func (sdc *ScheddClnt) UnregisterSrv(scheddID string) {
-	sdc.rpcdc.RemoveEntry(scheddID)
+	sdc.rpcdc.InvalidateEntry(scheddID)
 }
 
 func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {

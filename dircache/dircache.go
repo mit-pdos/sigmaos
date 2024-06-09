@@ -151,10 +151,10 @@ func (dc *DirCache[E]) WaitRoundRobin() (string, error) {
 	return dc.waitEntry(dc.RoundRobin)
 }
 
-func (dc *DirCache[E]) RemoveEntry(name string) bool {
-	db.DPrintf(dc.LSelector, "RemoveEntry %v", name)
+func (dc *DirCache[E]) InvalidateEntry(name string) bool {
+	db.DPrintf(dc.LSelector, "InvalidateEntry %v", name)
 	ok := dc.dir.Delete(name)
-	db.DPrintf(dc.LSelector, "Done Remove entry %v %v", ok, dc.dir)
+	db.DPrintf(dc.LSelector, "Done invalidate entry %v %v", ok, dc.dir)
 	return ok
 }
 

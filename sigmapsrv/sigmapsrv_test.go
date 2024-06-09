@@ -543,6 +543,13 @@ func getDirPerf(t *testing.T, leased bool) {
 		return
 	}
 
+	var st0 *fsetcd.PstatsSnapshot
+	if pathname == sp.NAMED {
+		st, err := ts.ReadPstats()
+		assert.Nil(t, err)
+		st0 = st
+	}
+
 	dir := filepath.Join(pathname, "d")
 	if leased {
 		n := newDirLeased(ts, dir, NFILE)
@@ -552,9 +559,9 @@ func getDirPerf(t *testing.T, leased bool) {
 		assert.Equal(t, NFILE, n)
 	}
 
-	var st0 *fsetcd.PstatsSnapshot
-	if pathname == sp.NAMED {
+	if st0 != nil {
 		st, err := ts.ReadPstats()
+		db.DPrintf(db.TEST, "pstats: %v", st.Counters[DIRNAME]-st0.Counters[DIRNAME])
 		assert.Nil(t, err)
 		st0 = st
 	}

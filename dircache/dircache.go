@@ -218,7 +218,7 @@ func (dc *DirCache[E]) watchEntries() error {
 	return nil
 }
 
-// Caller must hold dd mutex
+// Caller must hold mutex
 func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 	db.DPrintf(dc.LSelector, "Update ents %v in %v", ents, dc.dir)
 	entsMap := map[string]bool{}

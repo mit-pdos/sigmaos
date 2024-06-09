@@ -534,6 +534,8 @@ func getDirPerf(t *testing.T, leased bool) {
 	const (
 		NFILE = 100
 		N     = 1000
+
+		DIRNAME = "d"
 	)
 
 	ts, err := test.NewTstateAll(t)
@@ -550,12 +552,26 @@ func getDirPerf(t *testing.T, leased bool) {
 		assert.Equal(t, NFILE, n)
 	}
 
+	var st0 *fsetcd.PstatsSnapshot
+	if pathname == sp.NAMED {
+		st, err := ts.ReadPstats()
+		assert.Nil(t, err)
+		st0 = st
+	}
+
 	measuredir(fmt.Sprintf("GetDir %t", leased), N, dir, func() int {
 		sts, err := ts.GetDir(dir)
 		assert.Nil(t, err)
 		assert.Equal(t, NFILE, len(sts))
 		return N
 	})
+
+	if st0 != nil {
+		st, err := ts.ReadPstats()
+		db.DPrintf(db.TEST, "pstats: %v", st.Counters[DIRNAME]-st0.Counters[DIRNAME])
+		assert.Nil(t, err)
+	}
+
 	err = ts.RmDir(dir)
 	assert.Nil(t, err)
 	ts.Shutdown()

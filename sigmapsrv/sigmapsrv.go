@@ -34,7 +34,7 @@ type SigmaPSrv struct {
 	dirunder fs.Dir
 	dirover  *overlay.DirOverlay
 	fencefs  fs.Dir
-	stats    *stats.StatInfo
+	stats    *stats.StatInode
 }
 
 func NewSigmaPSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {

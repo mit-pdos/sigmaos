@@ -18,12 +18,12 @@ type ProtSrvState struct {
 	plt   *lockmap.PathLockTable
 	wt    *watch.WatchTable
 	vt    *version.VersionTable
-	stats *stats.StatInfo
+	stats *stats.StatInode
 	lm    *leasedmap.LeasedMap
 	cct   *clntcond.ClntCondTable
 }
 
-func NewProtSrvState(stats *stats.StatInfo) *ProtSrvState {
+func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 	cct := clntcond.NewClntCondTable()
 	pss := &ProtSrvState{
 		stats: stats,
@@ -52,7 +52,7 @@ func (pss *ProtSrvState) Leasedmap() *leasedmap.LeasedMap {
 	return pss.lm
 }
 
-func (pss *ProtSrvState) Stats() *stats.StatInfo {
+func (pss *ProtSrvState) Stats() *stats.StatInode {
 	return pss.stats
 }
 

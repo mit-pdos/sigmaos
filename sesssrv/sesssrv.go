@@ -34,11 +34,11 @@ type SessSrv struct {
 	st    *sessionTable
 	sm    *sessionMgr
 	srv   *netsrv.NetServer
-	stats *stats.StatInfo
+	stats *stats.StatInode
 	qlen  stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, stats *stats.StatInfo, newSess NewSessionI) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, stats *stats.StatInode, newSess NewSessionI) *SessSrv {
 	ssrv := &SessSrv{
 		pe:    pe,
 		stats: stats,

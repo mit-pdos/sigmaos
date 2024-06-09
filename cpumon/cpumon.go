@@ -17,7 +17,7 @@ type CpuMon struct {
 	done          uint32
 	cores         map[string]bool
 	hz            int
-	st            *stats.StatInfo
+	st            *stats.StatInode
 
 	util float64
 
@@ -25,7 +25,7 @@ type CpuMon struct {
 	customLoad perf.Tload
 }
 
-func NewCpuMon(st *stats.StatInfo, ufn UtilFn) *CpuMon {
+func NewCpuMon(st *stats.StatInode, ufn UtilFn) *CpuMon {
 	cm := &CpuMon{}
 	cm.st = st
 	cm.hz = perf.Hz()

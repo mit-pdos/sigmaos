@@ -68,7 +68,7 @@ func measuredir(msg string, nruns int, dir string, f func() int) {
 		tot += float64(ms)
 	}
 	s := tot / 1000
-	db.DPrintf(db.TEST, "%v: %v nruns %d took %vms (%.1f op/s)", msg, dir, n, tot, float64(n)/s)
+	db.DPrintf(db.TEST, "%v: %v nops %d took %vms (%.1f op/s)", msg, dir, n, tot, float64(n)/s)
 }
 
 type Thow uint8
@@ -550,7 +550,7 @@ func getDirPerf(t *testing.T, leased bool) {
 		assert.Equal(t, NFILE, n)
 	}
 
-	measuredir("GetDir", N, dir, func() int {
+	measuredir(fmt.Sprintf("GetDir %t", leased), N, dir, func() int {
 		sts, err := ts.GetDir(dir)
 		assert.Nil(t, err)
 		assert.Equal(t, NFILE, len(sts))

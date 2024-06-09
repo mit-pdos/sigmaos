@@ -29,7 +29,8 @@ const (
 	REALM_GROW_LAT           = "REALM_GROW_LAT"
 	SESS_LAT                 = "SESS_LAT"
 	CACHE_LAT                = "CACHE_LAT"
-	WALK_LAT       Tselector = "WALK_LAT"
+	WALK_LAT                 = "WALK_LAT"
+	FSETCD_LAT               = "FSETCD_LAT"
 )
 
 // Tests

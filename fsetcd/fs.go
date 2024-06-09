@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
@@ -137,7 +138,9 @@ func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, 
 		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", de.dir)
 		return de.dir, de.v, nil
 	}
+	s := time.Now()
 	dir, v, stat, err := fs.readDirEtcd(dei, stat)
+	db.DPrintf(db.FSETCD_LAT, "readDirEtcd %v %v lat %v", dei.Path, stat, time.Since(s))
 	if err != nil {
 		return nil, v, err
 	}
@@ -166,6 +169,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 		} else {
 			di := NewDirEntInfo(e.Tpath(), e.Tperm(), e.TclntId(), e.TleaseId())
 			if di.LeaseId.IsLeased() {
+				s := time.Now()
 				// if file is leased, etcd may have expired it when
 				// named didn't cache the directory, check if its
 				// leased key still exists.
@@ -175,9 +179,12 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 					update = true
 					continue
 				}
+				db.DPrintf(db.FSETCD_LAT, "%v: check lease %v %v", dei.Path, e.Tpath(), time.Since(s))
 			}
 			if stat == TSTAT_STAT {
+				s := time.Now()
 				nf, _, err := fs.GetFile(di)
+				db.DPrintf(db.FSETCD_LAT, "%v: check stat %v %v", dei.Path, e.Tpath(), time.Since(s))
 				if err != nil {
 					db.DPrintf(db.ERROR, "readDir: stat entry %v %v err %v\n", e.Name, e.Tperm(), err)
 					continue

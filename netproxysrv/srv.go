@@ -184,46 +184,6 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 	return nil
 }
 
-// Returns true if the client principal, cliP, is authorized to connect to the server principal, srvP
-func connectionIsAuthorized(srvP *sp.Tprincipal, cliP *sp.Tprincipal) bool {
-	// If server and client realms match, authorized
-	if srvP.GetRealm() == cliP.GetRealm() {
-		return true
-	}
-	// If the client belongs to the root realm, authorized
-	if cliP.GetRealm() == sp.ROOTREALM {
-		return true
-	}
-	// If the server belongs to the root realm, authorized
-	if srvP.GetRealm() == sp.ROOTREALM {
-		return true
-	}
-	// Unauthorized
-	return false
-}
-
-func (nps *NetProxySrvStubs) acceptFromAuthorizedPrincipal(l net.Listener, internal bool) (net.Conn, *sp.Tprincipal, error) {
-	for {
-		proxyConn, p, err := netproxy.AcceptDirect(l, internal)
-		if err != nil {
-			// Report unexpected errors
-			db.DPrintf(db.NETPROXYSRV_ERR, "Error accept direct: %v", err)
-			return nil, nil, err
-		}
-		// For now, connections from the outside world are always allowed
-		if internal {
-			// If the client is not authorized to talk to the server,
-			// close the connection, and retry the accept.
-			if !connectionIsAuthorized(nps.p, p) {
-				db.DPrintf(db.NETPROXYSRV_ERR, "Error attempted connection from unauthorized principal %v -> %v", p, nps.p)
-				proxyConn.Close()
-				continue
-			}
-		}
-		return proxyConn, p, err
-	}
-}
-
 func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *netproto.AcceptResponse) error {
 	// Set socket control message in output blob. Do this immediately to make
 	// sure it is set, even if we return early
@@ -241,7 +201,9 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 	}
 	// Accept the next connection from a principal authorized to establish a
 	// connection to this listener
-	proxyConn, p, err := nps.acceptFromAuthorizedPrincipal(l, req.GetInternalListener())
+	proxyConn, p, err := netproxy.AcceptFromAuthorizedPrincipal(l, req.GetInternalListener(), func(cliP *sp.Tprincipal) bool {
+		return netproxy.ConnectionIsAuthorized(nps.p, cliP)
+	})
 	if err != nil {
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Error accept: %v", err))
 		return nil

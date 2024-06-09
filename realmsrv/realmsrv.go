@@ -83,6 +83,7 @@ func RunRealmSrv(netproxy bool) error {
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
+	sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
 	rs := &RealmSrv{
 		netproxy:   netproxy,
 		lastNDPort: MIN_PORT,

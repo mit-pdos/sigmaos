@@ -452,6 +452,24 @@ func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
 	return status
 }
 
+// Test that realms can't access kernel services they shouldn't be able to
+// access.
+func TestRootRealmIsolationBasic(t *testing.T) {
+	ts := newMultiRealmTstate(t)
+
+	// Get the ID of the kernel clnt
+	kid := ts.rootts.GetKernelClnt(0).KernelId()
+	// Read the kernelsrv endpoint endpoint
+	ksrvEP, err := ts.rootts.ReadEndpoint(filepath.Join(sp.BOOT, kid))
+	assert.Nil(t, err, "Err %v", err)
+	db.DPrintf(db.TEST, "KernelSrv EP: %v", ksrvEP)
+
+	err = ts.ts1.MountTree(ksrvEP, "", "name/kernelsrv")
+	assert.NotNil(t, err, "Able to mount kernelsrv")
+
+	ts.shutdown()
+}
+
 // Test basic realm isolation: start a cached in realm1 and check that
 // it isn't visible in realm2.
 func TestMultiRealmIsolationBasic(t *testing.T) {

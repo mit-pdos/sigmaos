@@ -23,21 +23,27 @@ import (
 
 type NetProxyClnt struct {
 	sync.Mutex
-	lidctr  netproxy.Tlidctr
-	pe      *proc.ProcEnv
-	lm      *netproxy.ListenerMap
-	seqcntr *sessp.Tseqcntr
-	trans   *netproxytrans.NetProxyTrans
-	dmx     *demux.DemuxClnt
-	rpcc    *rpcclnt.RPCClnt
+	lidctr          netproxy.Tlidctr
+	pe              *proc.ProcEnv
+	lm              *netproxy.ListenerMap
+	seqcntr         *sessp.Tseqcntr
+	trans           *netproxytrans.NetProxyTrans
+	dmx             *demux.DemuxClnt
+	rpcc            *rpcclnt.RPCClnt
+	acceptAllRealms bool // If true, and this netproxyclnt belongs to a kernel proc, accept all realms' connections
 }
 
 func NewNetProxyClnt(pe *proc.ProcEnv) *NetProxyClnt {
 	return &NetProxyClnt{
-		pe:      pe,
-		seqcntr: new(sessp.Tseqcntr),
-		lm:      netproxy.NewListenerMap(),
+		pe:              pe,
+		seqcntr:         new(sessp.Tseqcntr),
+		lm:              netproxy.NewListenerMap(),
+		acceptAllRealms: false,
 	}
+}
+
+func (npc *NetProxyClnt) AllowConnectionsFromAllRealms() {
+	npc.acceptAllRealms = true
 }
 
 func (npc *NetProxyClnt) String() string {
@@ -259,11 +265,23 @@ func (npc *NetProxyClnt) directAccept(lid netproxy.Tlid, internalListener bool) 
 	if !ok {
 		return nil, nil, fmt.Errorf("Unkown direct listener: %v", lid)
 	}
-	c, p, err := netproxy.AcceptDirect(l, internalListener)
-	if err != nil {
-		return nil, nil, err
-	}
-	return c, p, err
+	// Accept the next connection from a principal authorized to establish a
+	// connection to this listener
+	return netproxy.AcceptFromAuthorizedPrincipal(l, internalListener, func(cliP *sp.Tprincipal) bool {
+		// If accepting all realms' connections, authorized
+		if npc.acceptAllRealms {
+			return true
+		}
+		// If the client belongs to the root realm, authorized
+		if cliP.GetRealm() == sp.ROOTREALM {
+			return true
+		}
+		// If the client belongs to the same realm as the server, authorized
+		if cliP.GetRealm() == npc.pe.GetRealm() {
+			return true
+		}
+		return false
+	})
 }
 
 func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid, internalListener bool) (net.Conn, *sp.Tprincipal, error) {

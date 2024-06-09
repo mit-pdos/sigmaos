@@ -60,6 +60,30 @@ func AcceptDirect(l net.Listener, getPrincipal bool) (net.Conn, *sp.Tprincipal, 
 	return c, p, err
 }
 
+// Returns once a connection has been accepted from an authorized principal, or
+// there is an unexpected error
+func AcceptFromAuthorizedPrincipal(l net.Listener, getPrincipal bool, isAuthorized func(*sp.Tprincipal) bool) (net.Conn, *sp.Tprincipal, error) {
+	for {
+		proxyConn, p, err := AcceptDirect(l, getPrincipal)
+		if err != nil {
+			// Report unexpected errors
+			db.DPrintf(db.NETSIGMA_ERR, "Error accept direct: %v", err)
+			return nil, nil, err
+		}
+		// For now, connections from the outside world are always allowed
+		if getPrincipal {
+			// If the client is not authorized to connect to the server,
+			// close the connection, and retry the accept.
+			if !isAuthorized(p) {
+				db.DPrintf(db.NETSIGMA_ERR, "Attempted connection from unauthorized principal %v", p)
+				proxyConn.Close()
+				continue
+			}
+		}
+		return proxyConn, p, err
+	}
+}
+
 func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, l net.Listener) (*sp.Tendpoint, error) {
 	host, port, err := netsigma.QualifyAddrLocalIP(ip, l.Addr().String())
 	if err != nil {
@@ -68,4 +92,22 @@ func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, l net.Listener) (*sp.Tendpoint, e
 		return nil, err
 	}
 	return sp.NewEndpoint(ept, sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port)}), nil
+}
+
+// Returns true if the client principal, cliP, is authorized to connect to the server principal, srvP
+func ConnectionIsAuthorized(srvP *sp.Tprincipal, cliP *sp.Tprincipal) bool {
+	// If server and client realms match, authorized
+	if srvP.GetRealm() == cliP.GetRealm() {
+		return true
+	}
+	// If the client belongs to the root realm, authorized
+	if cliP.GetRealm() == sp.ROOTREALM {
+		return true
+	}
+	// If the server belongs to the root realm, authorized
+	if srvP.GetRealm() == sp.ROOTREALM {
+		return true
+	}
+	// Unauthorized
+	return false
 }

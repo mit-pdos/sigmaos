@@ -68,6 +68,9 @@ const (
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
 	SNAPDEV  = "snapdev"
+
+	// stats exported by named
+	PSTATSD = ".pstatsd"
 )
 
 // Linux path

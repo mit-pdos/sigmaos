@@ -14,6 +14,7 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sortedmap"
+	"sigmaos/stats"
 )
 
 type Tstat int
@@ -42,11 +43,12 @@ func (fs *FsEtcd) leasedkey(dei *DirEntInfo) string {
 	return LEASEPREFIX + string(fs.realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
-func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]LeasedKey, error) {
+func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]LeasedKey, stats.Tcounter, error) {
+	c := stats.NewCounter(1)
 	resp, err := fs.Clnt().Get(context.TODO(), prefixLease(fs.realm), clientv3.WithPrefix())
 	db.DPrintf(db.FSETCD, "LeasedPaths %v err %v\n", resp, err)
 	if err != nil {
-		return nil, serr.NewErrError(err)
+		return nil, c, serr.NewErrError(err)
 	}
 	ekeys := make([]LeasedKey, 0)
 	for _, kv := range resp.Kvs {
@@ -57,48 +59,51 @@ func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]LeasedKey, error) {
 			Pn:    path.Split(string(kv.Value)),
 		})
 	}
-	return ekeys, nil
+	return ekeys, c, nil
 }
 
-func (fs *FsEtcd) getLeasedPathName(key string) (path.Tpathname, error) {
+func (fs *FsEtcd) getLeasedPathName(key string) (path.Tpathname, stats.Tcounter, error) {
+	c := stats.NewCounter(1)
 	resp, err := fs.Clnt().Get(context.TODO(), key)
 	db.DPrintf(db.FSETCD, "getLeasedPathName %v err %v\n", resp, err)
 	if err != nil {
-		return nil, serr.NewErrError(err)
+		return nil, c, serr.NewErrError(err)
 	}
 	if len(resp.Kvs) != 1 {
 		rp := key2realmpath(key)
-		return nil, serr.NewErr(serr.TErrNotfound, rp)
+		return nil, c, serr.NewErr(serr.TErrNotfound, rp)
 	}
-	return path.Split(string(resp.Kvs[0].Value)), nil
+	return path.Split(string(resp.Kvs[0].Value)), c, nil
 }
 
-func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, *serr.Err) {
+func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, stats.Tcounter, *serr.Err) {
+	c := stats.NewCounter(1)
 	db.DPrintf(db.FSETCD, "getFile %v\n", key)
 	resp, err := fs.Clnt().Get(context.TODO(), key)
 	db.DPrintf(db.FSETCD, "getFile %v %v err %v\n", key, resp, err)
 	if err != nil {
-		return nil, 0, serr.NewErrError(err)
+		return nil, 0, c, serr.NewErrError(err)
 	}
 	if len(resp.Kvs) != 1 {
-		return nil, 0, serr.NewErr(serr.TErrNotfound, key2realmpath(key))
+		return nil, 0, c, serr.NewErr(serr.TErrNotfound, key2realmpath(key))
 	}
 	nf := newEtcdFile()
 	if err := proto.Unmarshal(resp.Kvs[0].Value, nf.EtcdFileProto); err != nil {
-		return nil, 0, serr.NewErrError(err)
+		return nil, 0, c, serr.NewErrError(err)
 	}
 	db.DPrintf(db.FSETCD, "getFile %v %v\n", key, nf)
-	return nf, sp.TQversion(resp.Kvs[0].Version), nil
+	return nf, sp.TQversion(resp.Kvs[0].Version), c, nil
 }
 
-func (fs *FsEtcd) GetFile(dei *DirEntInfo) (*EtcdFile, sp.TQversion, *serr.Err) {
+func (fs *FsEtcd) GetFile(dei *DirEntInfo) (*EtcdFile, sp.TQversion, stats.Tcounter, *serr.Err) {
 	return fs.getFile(fs.path2key(fs.realm, dei))
 }
 
-func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) *serr.Err {
+func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) (stats.Tcounter, *serr.Err) {
+	c := stats.NewCounter(1)
 	opts := dei.LeaseOpts()
 	if b, err := proto.Marshal(nf.EtcdFileProto); err != nil {
-		return serr.NewErrError(err)
+		return c, serr.NewErrError(err)
 	} else {
 		var cmp []clientv3.Cmp
 		if f.PathName == "" {
@@ -119,45 +124,46 @@ func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) *serr.Err 
 		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
 		db.DPrintf(db.FSETCD, "PutFile dei %v f %v resp %v err %v\n", dei, f, resp, err)
 		if err != nil {
-			return serr.NewErrError(err)
+			return c, serr.NewErrError(err)
 		}
 		if !resp.Succeeded {
 			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
 				db.DPrintf(db.FENCEFS, "PutFile dei %v f %v resp %v stale\n", dei, f, resp)
-				return serr.NewErr(serr.TErrStale, f)
+				return c, serr.NewErr(serr.TErrStale, f)
 			}
 			db.DPrintf(db.ERROR, "PutFile failed dei %v %v\n", dei, resp.Responses[0])
 		}
 
-		return nil
+		return c, nil
 	}
 }
 
-func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, *serr.Err) {
+func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, stats.Tcounter, *serr.Err) {
 	if de, ok := fs.dc.lookup(dei.Path); ok && (stat == TSTAT_NONE || de.stat == TSTAT_STAT) {
 		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", de.dir)
-		return de.dir, de.v, nil
+		return de.dir, de.v, stats.NewCounter(0), nil
 	}
 	s := time.Now()
-	dir, v, stat, err := fs.readDirEtcd(dei, stat)
+	dir, v, stat, nops, err := fs.readDirEtcd(dei, stat)
 	db.DPrintf(db.FSETCD_LAT, "readDirEtcd %v %v lat %v", dei.Path, stat, time.Since(s))
 	if err != nil {
-		return nil, v, err
+		return nil, v, nops, err
 	}
 	fs.dc.insert(dei.Path, &dcEntry{dir, v, stat})
-	return dir, v, nil
+	return dir, v, nops, nil
 }
 
 // If stat is TSTAT_STAT, stat every entry in the directory.
-func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, Tstat, *serr.Err) {
+func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, Tstat, stats.Tcounter, *serr.Err) {
 	db.DPrintf(db.FSETCD, "readDirEtcd %v %v\n", dei.Path, stat)
-	nf, v, err := fs.GetFile(dei)
+	nops := stats.NewCounter(1)
+	nf, v, nops, err := fs.GetFile(dei)
 	if err != nil {
-		return nil, 0, stat, err
+		return nil, 0, stat, nops, err
 	}
 	dir, err := UnmarshalDir(nf.Data)
 	if err != nil {
-		return nil, 0, stat, err
+		return nil, 0, stat, nops, err
 	}
 	dents := sortedmap.NewSortedMap[string, *DirEntInfo]()
 	update := false
@@ -173,7 +179,8 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 				// if file is leased, etcd may have expired it when
 				// named didn't cache the directory, check if its
 				// leased key still exists.
-				_, err := fs.getLeasedPathName(fs.leasedkey(di))
+				_, nops1, err := fs.getLeasedPathName(fs.leasedkey(di))
+				stats.Add(&nops, nops1)
 				if err != nil {
 					db.DPrintf(db.FSETCD, "readDir: expired %q %v err %v\n", e.Name, e.Tperm(), err)
 					update = true
@@ -183,7 +190,8 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 			}
 			if stat == TSTAT_STAT {
 				s := time.Now()
-				nf, _, err := fs.GetFile(di)
+				nf, _, nops1, err := fs.GetFile(di)
+				stats.Add(&nops, nops1)
 				db.DPrintf(db.FSETCD_LAT, "%v: check stat %v %v", dei.Path, e.Tpath(), time.Since(s))
 				if err != nil {
 					db.DPrintf(db.ERROR, "readDir: stat entry %v %v err %v\n", e.Name, e.Tperm(), err)
@@ -203,22 +211,24 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 
 	di := &DirInfo{dents, nf.Tperm()}
 	if update {
-		if err := fs.updateDir(dei, di, v); err != nil {
+		nops1, err := fs.updateDir(dei, di, v)
+		stats.Add(&nops, nops1)
+		if err != nil {
 			if err.IsErrVersion() {
 				// retry?
-				return di, v, stat, nil
+				return di, v, stat, nops, nil
 			}
-			return nil, 0, stat, err
+			return nil, 0, stat, nops, err
 		}
 		v = v + 1
 	}
-	return di, v, stat, nil
+	return di, v, stat, nops, nil
 }
 
-func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) *serr.Err {
+func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) (stats.Tcounter, *serr.Err) {
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
-		return r
+		return stats.NewCounter(0), r
 	}
 	// Update directory if directory hasn't changed.
 	cmp := []clientv3.Cmp{
@@ -229,32 +239,34 @@ func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) *serr
 	ops1 := []clientv3.Op{
 		clientv3.OpGet(fs.fencekey),
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
+	c := stats.NewCounter(1)
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "updateDir %v %v %v %v err %v\n", dei.Path, dir, v, resp, err)
 	if err != nil {
-		return serr.NewErrError(err)
+		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
 		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
 			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
 			db.DPrintf(db.FSETCD, "updateDir %v stale\n", fs.fencekey)
-			return serr.NewErr(serr.TErrStale, fs.fencekey)
+			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
 		}
 		db.DPrintf(db.FSETCD, "updateDir %v version mismatch %v %v\n", dei.Path, v, resp.Responses[1])
-		return serr.NewErr(serr.TErrVersion, dei.Path)
+		return c, serr.NewErr(serr.TErrVersion, dei.Path)
 	}
-	return nil
+	return c, nil
 }
 
-func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *DirEntInfo, npn path.Tpathname) *serr.Err {
+func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *DirEntInfo, npn path.Tpathname) (stats.Tcounter, *serr.Err) {
+	c := stats.NewCounter(0)
 	opts := new.LeaseOpts()
 	b, err := proto.Marshal(new.Nf.EtcdFileProto)
 	if err != nil {
-		return serr.NewErrError(err)
+		return c, serr.NewErrError(err)
 	}
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
-		return r
+		return c, r
 	}
 	// Update directory if new file/dir doesn't exist and directory
 	// hasn't changed.
@@ -274,31 +286,33 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(new), npn.String(), opts...))
 
 	}
+	stats.Inc(&c, 1)
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Create new %v dei %v v %v %v err %v\n", new, dei, v, resp, err)
 	if err != nil {
-		return serr.NewErrError(err)
+		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
 		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
 			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
 			db.DPrintf(db.FSETCD, "create %v stale\n", fs.fencekey)
-			return serr.NewErr(serr.TErrStale, fs.fencekey)
+			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
 		}
 		if len(resp.Responses[1].GetResponseRange().Kvs) == 1 {
 			db.DPrintf(db.FSETCD, "create %v exists %v\n", dir, new)
-			return serr.NewErr(serr.TErrExists, fmt.Sprintf("path exists %v", fs.path2key(fs.realm, new)))
+			return c, serr.NewErr(serr.TErrExists, fmt.Sprintf("path exists %v", fs.path2key(fs.realm, new)))
 		}
 		db.DPrintf(db.FSETCD, "create %v version mismatch %v %v\n", dei, v, resp.Responses[2])
-		return serr.NewErr(serr.TErrVersion, dei.Path)
+		return c, serr.NewErr(serr.TErrVersion, dei.Path)
 	}
-	return nil
+	return c, nil
 }
 
-func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *DirEntInfo) *serr.Err {
+func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *DirEntInfo) (stats.Tcounter, *serr.Err) {
+	c := stats.NewCounter(0)
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
-		return r
+		return c, r
 	}
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
@@ -315,35 +329,36 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 	if del.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpDelete(fs.leasedkey(del)))
 	}
-
+	stats.Inc(&c, 1)
 	resp, err := fs.Clnt().Txn(context.TODO()).
 		If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Remove dei %v %v %v %v err %v\n", dei, dir, del, resp, err)
 	if err != nil {
-		return serr.NewErrError(err)
+		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
 		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
 			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
 			db.DPrintf(db.FSETCD, "remove %v stale\n", fs.fencekey)
-			return serr.NewErr(serr.TErrStale, fs.fencekey)
+			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
 		}
 		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "remove from %v doesn't exist\n", del)
-			return serr.NewErr(serr.TErrNotfound, del.Path)
+			return c, serr.NewErr(serr.TErrNotfound, del.Path)
 		}
 		db.DPrintf(db.FSETCD, "remove %v version mismatch %v %v\n", dei, v, resp.Responses[2])
-		return serr.NewErr(serr.TErrVersion, dei.Path)
+		return c, serr.NewErr(serr.TErrVersion, dei.Path)
 	}
-	return nil
+	return c, nil
 }
 
 // XXX retry
-func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) *serr.Err {
+func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) (stats.Tcounter, *serr.Err) {
+	c := stats.NewCounter(0)
 	opts := from.LeaseOpts()
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
-		return r
+		return c, r
 	}
 	var cmp []clientv3.Cmp
 	var ops []clientv3.Op
@@ -371,42 +386,43 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 	if from.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
 	}
-
+	stats.Inc(&c, 1)
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Rename dei %v dir %v from %v %v err %v\n", dei, dir, from, resp, err)
 	if err != nil {
-		return serr.NewErrError(err)
+		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
 		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
 			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
 			db.DPrintf(db.FSETCD, "rename %v stale\n", fs.fencekey)
-			return serr.NewErr(serr.TErrStale, fs.fencekey)
+			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
 		}
 		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "rename from %v doesn't exist\n", from)
-			return serr.NewErr(serr.TErrNotfound, from.Path)
+			return c, serr.NewErr(serr.TErrNotfound, from.Path)
 		}
 		if len(resp.Responses[2].GetResponseRange().Kvs) == 1 &&
 			int64(v) != resp.Responses[2].GetResponseRange().Kvs[0].Version {
 			db.DPrintf(db.FSETCD, "rename %v version mismatch %v %v\n", dei, v, resp.Responses[2])
-			return serr.NewErr(serr.TErrVersion, dei.Path)
+			return c, serr.NewErr(serr.TErrVersion, dei.Path)
 		}
-		return serr.NewErr(serr.TErrNotfound, del.Path)
+		return c, serr.NewErr(serr.TErrNotfound, del.Path)
 	}
-	return nil
+	return c, nil
 }
 
 // XXX retry
-func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, deit *DirEntInfo, dirt *DirInfo, vt sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) *serr.Err {
+func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, deit *DirEntInfo, dirt *DirInfo, vt sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) (stats.Tcounter, *serr.Err) {
+	c := stats.NewCounter(0)
 	opts := from.LeaseOpts()
 	bf, r := marshalDirInfo(dirf)
 	if r != nil {
-		return r
+		return c, r
 	}
 	bt, r := marshalDirInfo(dirt)
 	if r != nil {
-		return r
+		return c, r
 	}
 	var cmp []clientv3.Cmp
 	var ops []clientv3.Op
@@ -445,32 +461,33 @@ func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, dei
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
 	}
 
+	stats.Inc(&c, 1)
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "RenameAt %v %v err %v\n", del, resp, err)
 	if err != nil {
-		return serr.NewErrError(err)
+		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
 		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
 			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
 			db.DPrintf(db.FSETCD, "renameat %v stale\n", fs.fencekey)
-			return serr.NewErr(serr.TErrStale, fs.fencekey)
+			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
 		}
 		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "renameat from %v doesn't exist\n", from)
-			return serr.NewErr(serr.TErrNotfound, from.Path)
+			return c, serr.NewErr(serr.TErrNotfound, from.Path)
 		}
 		if len(resp.Responses[2].GetResponseRange().Kvs) == 1 &&
 			int64(vf) != resp.Responses[2].GetResponseRange().Kvs[0].Version {
 			db.DPrintf(db.FSETCD, "renameat %v version mismatch %v %v\n", deif, vf, resp.Responses[2])
-			return serr.NewErr(serr.TErrVersion, deif.Path)
+			return c, serr.NewErr(serr.TErrVersion, deif.Path)
 		}
 		if len(resp.Responses[3].GetResponseRange().Kvs) == 1 &&
 			int64(vf) != resp.Responses[3].GetResponseRange().Kvs[0].Version {
 			db.DPrintf(db.FSETCD, "renameat %v version mismatch %v %v\n", deit, vt, resp.Responses[3])
-			return serr.NewErr(serr.TErrVersion, deit.Path)
+			return c, serr.NewErr(serr.TErrVersion, deit.Path)
 		}
-		return serr.NewErr(serr.TErrNotfound, del.Path)
+		return c, serr.NewErr(serr.TErrNotfound, del.Path)
 	}
-	return nil
+	return c, nil
 }

@@ -17,6 +17,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/stats"
 )
 
 const (
@@ -36,6 +37,7 @@ type FsEtcd struct {
 	fencerev int64
 	realm    sp.Trealm
 	dc       *Dcache
+	pstats   *pstats
 }
 
 func NewFsEtcdEndpoint(ip sp.Tip) (TetcdEndpoints, error) {
@@ -48,7 +50,7 @@ func NewFsEtcdEndpoint(ip sp.Tip) (TetcdEndpoints, error) {
 	return eps, nil
 }
 
-func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*FsEtcd, error) {
+func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm, psi *PstatInode) (*FsEtcd, error) {
 	endpoints := []string{}
 	for addr, _ := range etcdMnts {
 		endpoints = append(endpoints, addr)
@@ -74,6 +76,9 @@ func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, rea
 		Client: cli,
 		realm:  realm,
 		dc:     dc,
+	}
+	if psi != nil {
+		fs.pstats = psi.pstats
 	}
 	return fs, nil
 }
@@ -130,6 +135,13 @@ func (fs *FsEtcd) Fence(key string, rev int64) {
 func (fs *FsEtcd) Detach(cid sp.TclntId) {
 }
 
+func (fs *FsEtcd) PstatUpdate(pn path.Tpathname, c stats.Tcounter) {
+	if fs.pstats == nil {
+		return
+	}
+	fs.pstats.Update(pn, c)
+}
+
 func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 	db.DPrintf(db.FSETCD, "SetRootNamed %v", ep)
 	d, err := ep.Marshal()
@@ -158,13 +170,13 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 }
 
 func GetRootNamed(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
-	fs, err := NewFsEtcd(dial, etcdMnts, realm)
+	fs, err := NewFsEtcd(dial, etcdMnts, realm, nil)
 	if err != nil {
 		return &sp.Tendpoint{}, serr.NewErrError(err)
 	}
 	defer fs.Close()
 	dei := NewDirEntInfoDir(sp.Tpath(BOOT))
-	nf, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, dei))
+	nf, _, _, sr := fs.getFile(fs.path2key(sp.ROOTREALM, dei))
 	if sr != nil {
 		db.DPrintf(db.FSETCD, "GetFile %v nf %v err %v etcdMnt %v realm %v", BOOT, nf, sr, etcdMnts, realm)
 		return &sp.Tendpoint{}, sr

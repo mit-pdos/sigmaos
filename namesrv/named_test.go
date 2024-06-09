@@ -32,6 +32,18 @@ func TestBootNamed(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestPstats(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	st, err := ts.ReadPstats()
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "pstats %v\n", st)
+
+	ts.Shutdown()
+}
+
 func TestKillNamed(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

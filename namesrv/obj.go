@@ -62,7 +62,9 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	db.DPrintf(db.NAMED, "Stat: %v\n", o)
 
 	if o.di.Nf == nil {
-		if nf, _, err := o.fs.GetFile(&o.di); err != nil {
+		nf, _, c, err := o.fs.GetFile(&o.di)
+		o.fs.PstatUpdate(o.pn, c)
+		if err != nil {
 			db.DPrintf(db.NAMED, "Stat: GetFile %v err %v\n", o, err)
 			return nil, serr.NewErr(serr.TErrNotfound, o.pn.Base())
 		} else {
@@ -87,5 +89,7 @@ func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
 
 func (o *Obj) putObj(f sp.Tfence, data []byte) *serr.Err {
 	nf := fsetcd.NewEtcdFile(o.di.Perm|0777, data)
-	return o.fs.PutFile(&o.di, nf, f)
+	c, err := o.fs.PutFile(&o.di, nf, f)
+	o.fs.PstatUpdate(o.pn, c)
+	return err
 }

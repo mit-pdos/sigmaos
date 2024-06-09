@@ -88,7 +88,7 @@ func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, l net.Listener) (*sp.Tendpoint, e
 	host, port, err := netsigma.QualifyAddrLocalIP(ip, l.Addr().String())
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
-		db.DPrintf(db.NETPROXYSRV_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
+		db.DPrintf(db.NETSIGMA_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		return nil, err
 	}
 	return sp.NewEndpoint(ept, sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port)}), nil
@@ -96,6 +96,7 @@ func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, l net.Listener) (*sp.Tendpoint, e
 
 // Returns true if the client principal, cliP, is authorized to connect to the server principal, srvP
 func ConnectionIsAuthorized(override bool, srvP *sp.Tprincipal, cliP *sp.Tprincipal) bool {
+	db.DPrintf(db.NETSIGMA, "Conection authorized? o %v s %v c %v", override, srvP, cliP)
 	// If accepting all realms' connections (overriding auth checks), authorized
 	if override {
 		return true

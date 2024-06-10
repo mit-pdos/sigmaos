@@ -270,22 +270,6 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 	return nil
 }
 
-// Read directory from server and return unique files. The caller may
-// hold the dd mutex
-func (dc *DirCache[E]) getEntries() ([]string, error) {
-	s := time.Now()
-	defer db.DPrintf(db.SPAWN_LAT, "getEntries %v", time.Since(s))
-
-	dr := fslib.NewDirReader(dc.FsLib, dc.Path)
-	fns, err := dr.GetUniqueEntriesFilter(dc.prefixFilter)
-	if err != nil {
-		db.DPrintf(dc.ESelector, "getEntries %v err", err)
-		return nil, err
-	}
-	db.DPrintf(dc.LSelector, "getEntries %v", fns)
-	return fns, nil
-}
-
 // Monitor for changes to the directory and update the cached one
 func (dc *DirCache[E]) watchDir() {
 	retry := false

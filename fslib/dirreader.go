@@ -145,6 +145,9 @@ func (dr *DirReader) WatchUniqueEntries(present []string, prefixFilter string) (
 	ok, err := dr.readDirWatch(dr.pn, func(sts []*sp.Stat) bool {
 		unchanged := true
 		for i, st := range sts {
+			if prefixFilter != "" && strings.HasPrefix(st.Name, prefixFilter) {
+				continue
+			}
 			if !dr.ents[st.Name] {
 				dr.ents[st.Name] = true
 				newents = append(newents, st.Name)

@@ -166,7 +166,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	ups.scsc = scsc
 
 	if err = ssrv.RunServer(); err != nil {
-		db.DPrintf(db.ERROR, "RunServer err %v\n", err)
+		db.DPrintf(db.UPROCD_ERR, "RunServer err %v\n", err)
 		return err
 	}
 	db.DPrintf(db.UPROCD, "RunServer done\n")

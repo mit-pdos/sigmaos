@@ -11,6 +11,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -39,18 +40,28 @@ func NewDirCache[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], lSelec
 }
 
 // filter entries starting with prefix
-func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], lSelector db.Tselector, ESelector db.Tselector, prefix string) *DirCache[E] {
-	dd := &DirCache[E]{
+func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], LSelector db.Tselector, ESelector db.Tselector, prefix string) *DirCache[E] {
+	dc := &DirCache[E]{
 		FsLib:        fsl,
 		Path:         path,
 		dir:          sortedmap.NewSortedMap[string, E](),
-		LSelector:    lSelector,
+		LSelector:    LSelector,
 		ESelector:    ESelector,
 		newVal:       newVal,
 		prefixFilter: prefix,
 	}
-	dd.hasEntries = sync.NewCond(&dd.Mutex)
-	return dd
+	dc.hasEntries = sync.NewCond(&dc.Mutex)
+	go dc.watchdog()
+	return dc
+}
+
+// watchdog thread that wakes up waiters periodically
+func (dc *DirCache[E]) watchdog() {
+	for dc.done.Load() == 0 {
+		time.Sleep(fsetcd.LeaseTTL * time.Second)
+		db.DPrintf(dc.LSelector, "watchdog: broadcast")
+		dc.hasEntries.Broadcast()
+	}
 }
 
 func (dc *DirCache[E]) StopWatching() {
@@ -75,7 +86,9 @@ func (dc *DirCache[E]) WaitGetEntriesN(n int) ([]string, error) {
 	if err := dc.watchEntries(); err != nil {
 		return nil, err
 	}
-	dc.waitEntriesN(n)
+	if err := dc.waitEntriesN(n); err != nil {
+		return nil, err
+	}
 	if dc.err != nil {
 		return nil, dc.err
 	}
@@ -182,8 +195,11 @@ func (dc *DirCache[E]) waitEntry(selectF func() (string, error)) (string, error)
 	for {
 		n, err := selectF()
 		if serr.IsErrorNotfound(err) {
-			dc.waitEntriesN(1)
-			continue
+			if sr := dc.waitEntriesN(1); sr == nil {
+				continue
+			} else {
+				err = sr
+			}
 		}
 		db.DPrintf(dc.LSelector, "Done waitEntry %v %v", n, err)
 		if err != nil {
@@ -193,13 +209,27 @@ func (dc *DirCache[E]) waitEntry(selectF func() (string, error)) (string, error)
 	}
 }
 
-func (dc *DirCache[E]) waitEntriesN(n int) {
+func (dc *DirCache[E]) waitEntriesN(n int) error {
+	const N = 2
+
 	dc.Lock()
 	defer dc.Unlock()
 
-	for dc.dir.Len() < n && dc.err == nil {
+	nretry := 0
+	l := dc.dir.Len()
+	for dc.dir.Len() < n && dc.err == nil && nretry < N {
 		dc.hasEntries.Wait()
+		if dc.dir.Len() == l { // nothing changed; watchdog timeout
+			nretry += 1
+			continue
+		}
+		l = dc.dir.Len()
+		nretry = 0
 	}
+	if nretry >= N {
+		return serr.NewErr(serr.TErrNotfound, "no entries")
+	}
+	return nil
 }
 
 func (dc *DirCache[E]) watchEntries() error {

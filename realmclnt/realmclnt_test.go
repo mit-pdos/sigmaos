@@ -454,18 +454,43 @@ func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
 
 // Test that realms can't access kernel services they shouldn't be able to
 // access.
-func TestRootRealmIsolationBasic(t *testing.T) {
+func TestKernelIsolationBasic(t *testing.T) {
 	ts := newMultiRealmTstate(t)
 
 	// Get the ID of the kernel clnt
 	kid := ts.rootts.GetKernelClnt(0).KernelId()
-	// Read the kernelsrv endpoint endpoint
+	// Read the kernelsrv endpoint
 	ksrvEP, err := ts.rootts.ReadEndpoint(filepath.Join(sp.BOOT, kid))
 	assert.Nil(t, err, "Err %v", err)
 	db.DPrintf(db.TEST, "KernelSrv EP: %v", ksrvEP)
 
+	// No realm should be able to access kernelsrvs
 	err = ts.ts1.MountTree(ksrvEP, "", "name/kernelsrv")
 	assert.NotNil(t, err, "Able to mount kernelsrv")
+	err = ts.ts2.MountTree(ksrvEP, "", "name/kernelsrv")
+	assert.NotNil(t, err, "Able to mount kernelsrv")
+
+	// Read an s3 endpoint from realm 1
+	s3r1EP, err := ts.ts1.ReadEndpoint(filepath.Join(sp.S3, "~any"))
+	assert.Nil(t, err, "Err %v", err)
+	db.DPrintf(db.TEST, "S3 Realm1 EP: %v", s3r1EP)
+	// Make sure ts1 can mount its realm's S3 server
+	err = ts.ts1.MountTree(s3r1EP, "", "name/s3r1")
+	assert.Nil(t, err, "Unable to mount s3r1")
+	// Make sure ts2 can't connect to realm1's S3 server
+	err = ts.ts2.MountTree(s3r1EP, "", "name/s3r1")
+	assert.NotNil(t, err, "Able to mount s3r1")
+
+	// Read a ux endpoint from realm 2
+	uxr2EP, err := ts.ts2.ReadEndpoint(filepath.Join(sp.UX, "~any"))
+	assert.Nil(t, err, "Err %v", err)
+	db.DPrintf(db.TEST, "UX Realm2 EP: %v", uxr2EP)
+	// Make sure ts2 can mount its realm's UX server
+	err = ts.ts2.MountTree(uxr2EP, "", "name/uxr2")
+	assert.Nil(t, err, "Unable to mount uxr2")
+	// Make sure ts1 can't connect to realm2's UX server
+	err = ts.ts1.MountTree(uxr2EP, "", "name/uxr2")
+	assert.NotNil(t, err, "Able to mount uxr2")
 
 	ts.shutdown()
 }

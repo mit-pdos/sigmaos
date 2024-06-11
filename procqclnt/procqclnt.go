@@ -58,7 +58,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 	if err := rpcc.RPC("ProcQ.Enqueue", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "ProcQ.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
+			db.DPrintf(db.ALWAYS, "Invalidate entry %v", pqID)
 			pqc.rpcdc.InvalidateEntry(pqID)
 		}
 		return NOT_ENQ, err
@@ -98,7 +98,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 		if err := rpcc.RPC("ProcQ.GetProc", req, res); err != nil {
 			db.DPrintf(db.ALWAYS, "ProcQ.GetProc %v err %v", callerKernelID, err)
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
-				db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
+				db.DPrintf(db.ALWAYS, "Invalidate entry %v", pqID)
 				pqc.rpcdc.InvalidateEntry(pqID)
 				continue
 			}

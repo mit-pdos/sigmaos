@@ -45,7 +45,7 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 	if err := rpcc.RPC("LCSched.Enqueue", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "LCSched.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
+			db.DPrintf(db.ALWAYS, "Invalidate entry %v", pqID)
 			lcs.rpcdc.InvalidateEntry(pqID)
 		}
 		return NOT_ENQ, err

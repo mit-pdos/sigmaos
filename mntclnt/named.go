@@ -87,6 +87,9 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 		target, err := mc.pathc.GetFile(pn, mc.pe.GetPrincipal(), sp.OREAD, 0, sp.MAXGETSET, sp.NullFence())
 		if err != nil {
 			db.DPrintf(db.MOUNT_ERR, "getNamedEndpointDirect [%v] GetFile err %v", realm, err)
+			if sr, ok := serr.IsErr(err); ok {
+				return &sp.Tendpoint{}, sr
+			}
 			return &sp.Tendpoint{}, serr.NewErrError(err)
 		}
 		ep, err := sp.NewEndpointFromBytes(target)

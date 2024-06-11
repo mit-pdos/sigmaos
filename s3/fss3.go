@@ -67,6 +67,7 @@ func RunFss3() {
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
+	db.DPrintf(db.S3, "Start s3 %v", pe)
 	fss3 = &Fss3{
 		clients: make(map[sp.TprincipalID]*s3.Client),
 	}

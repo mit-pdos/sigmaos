@@ -247,6 +247,10 @@ func (ts *Tstate) BootNode(n int) error {
 	return nil
 }
 
+func (ts *Tstate) GetKernelClnt(n int) *bootkernelclnt.Kernel {
+	return ts.kclnts[n]
+}
+
 func (ts *Tstate) Boot(s string) error {
 	// Clear the saved kernel, since the next test may not need an additional
 	// node

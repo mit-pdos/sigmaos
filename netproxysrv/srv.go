@@ -184,29 +184,6 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 	return nil
 }
 
-func (nps *NetProxySrvStubs) acceptFromAuthorizedPrincipal(l net.Listener, internal bool) (net.Conn, *sp.Tprincipal, error) {
-	for {
-		proxyConn, p, err := netproxy.AcceptDirect(l, internal)
-		if err != nil {
-			// Report unexpected errors
-			db.DPrintf(db.NETPROXYSRV_ERR, "Error accept direct: %v", err)
-			return nil, nil, err
-		}
-		// For now, connections from the outside world are always allowed
-		if internal {
-			// If client & server's realms don't match, and neither belongs to the root
-			// realm (which can connect to anything, and can be connected to by
-			// anything), close the connection, and retry the accept.
-			if nps.p.GetRealm() != p.GetRealm() && nps.p.GetRealm() != sp.ROOTREALM && p.GetRealm() != sp.ROOTREALM {
-				db.DPrintf(db.NETPROXYSRV_ERR, "Error attempted connection from unauthorized principal %v -> %v", p, nps.p)
-				proxyConn.Close()
-				continue
-			}
-		}
-		return proxyConn, p, err
-	}
-}
-
 func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *netproto.AcceptResponse) error {
 	// Set socket control message in output blob. Do this immediately to make
 	// sure it is set, even if we return early
@@ -224,7 +201,9 @@ func (nps *NetProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *
 	}
 	// Accept the next connection from a principal authorized to establish a
 	// connection to this listener
-	proxyConn, p, err := nps.acceptFromAuthorizedPrincipal(l, req.GetInternalListener())
+	proxyConn, p, err := netproxy.AcceptFromAuthorizedPrincipal(l, req.GetInternalListener(), func(cliP *sp.Tprincipal) bool {
+		return netproxy.ConnectionIsAuthorized(false, nps.p, cliP)
+	})
 	if err != nil {
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Error accept: %v", err))
 		return nil

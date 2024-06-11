@@ -97,6 +97,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			UseNetProxy:         useNetProxy,
 			SecretsMap:          nil,
 			SigmaPath:           []string{},
+			RealmSwitchStr:      sp.NOT_SET,
 		},
 	}
 }
@@ -120,7 +121,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto
 	pe.InnerContainerIPStr = innerIP.String()
 	pe.OuterContainerIPStr = outerIP.String()
 	pe.BuildTag = buildTag
-	pe.SetRealm(sp.ROOTREALM, overlays)
+	pe.SetRealm(sp.ROOTREALM)
 	pe.ProcDir = filepath.Join(sp.KPIDS, pe.GetPID().String())
 	pe.Privileged = true
 	pe.SetSigmaPath(buildTag)
@@ -133,7 +134,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnt
 	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), realm))
 	pe.SetSecrets(secrets)
 	pe.SetPID(sp.GenPid("test"))
-	pe.SetRealm(realm, overlays)
+	pe.SetRealm(realm)
 	pe.EtcdEndpoints = etcdMnts
 	pe.InnerContainerIPStr = innerIP.String()
 	pe.OuterContainerIPStr = outerIP.String()
@@ -171,7 +172,7 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 		realm,
 	))
 	pe2.SecretsMap = make(map[string]*sp.SecretProto)
-	pe2.SetRealm(realm, pe.Overlays)
+	pe2.SetRealm(realm)
 	// Deep copy secrets
 	for k, v := range pe.GetSecrets() {
 		pe2.SecretsMap[k] = &sp.SecretProto{
@@ -235,7 +236,7 @@ func (pe *ProcEnvProto) GetRealm() sp.Trealm {
 	return sp.Trealm(pe.RealmStr)
 }
 
-func (pe *ProcEnvProto) SetRealm(realm sp.Trealm, overlays bool) {
+func (pe *ProcEnvProto) SetRealm(realm sp.Trealm) {
 	pe.RealmStr = realm.String()
 	pe.Principal.RealmStr = realm.String()
 }
@@ -254,6 +255,20 @@ func (pe *ProcEnvProto) GetUprocdPID() sp.Tpid {
 
 func (pe *ProcEnv) GetProto() *ProcEnvProto {
 	return pe.ProcEnvProto
+}
+
+// Returns true if a realm switch was specified
+func (pe *ProcEnvProto) GetRealmSwitch() (sp.Trealm, bool) {
+	// Realm switch only takes place if a realm switch was specified, and if the
+	// proc was originally part of the root realm.
+	if pe.RealmSwitchStr == sp.NOT_SET || pe.GetRealm() != sp.ROOTREALM {
+		return sp.NOT_SET, false
+	}
+	return sp.Trealm(pe.RealmSwitchStr), true
+}
+
+func (pe *ProcEnvProto) SetRealmSwitch(realm sp.Trealm) {
+	pe.RealmSwitchStr = realm.String()
 }
 
 func (pe *ProcEnvProto) SetNetFail(nf int64) {
@@ -319,5 +334,55 @@ func Unmarshal(pestr string) *ProcEnv {
 
 // TODO: cleanup
 func (pe *ProcEnv) String() string {
-	return fmt.Sprintf("&{ Program: %v Pid:%v Realm:%v Principal:%v KernelID:%v UprocdPID:%v ProcDir:%v ParentDir:%v How:%v Perf:%v Debug:%v EtcdMnt:%v InnerIP:%v OuterIP:%v BuildTag:%v Privileged:%v Overlays:%v Crash:%v Partition:%v NetFail:%v UseSigmaclntd:%v UseNetProxy:%v SigmaPath:%v }", pe.Program, pe.GetPID(), pe.GetRealm(), pe.GetPrincipal().String(), pe.KernelID, pe.UprocdPIDStr, pe.ProcDir, pe.ParentDir, Thow(pe.HowInt), pe.Perf, pe.Debug, pe.GetEtcdEndpoints(), pe.InnerContainerIPStr, pe.OuterContainerIPStr, pe.BuildTag, pe.Privileged, pe.Overlays, pe.Crash, pe.Partition, pe.NetFail, pe.UseSigmaclntd, pe.UseNetProxy, pe.SigmaPath)
+	return fmt.Sprintf("&{ "+
+		"Program:%v "+
+		"Pid:%v "+
+		"Realm:%v "+
+		"Principal:{%v} "+
+		"KernelID:%v "+
+		"UprocdPID:%v "+
+		"ProcDir:%v "+
+		"ParentDir:%v "+
+		"How:%v "+
+		"Perf:%v "+
+		"Debug:%v "+
+		"EtcdMnt:%v "+
+		"InnerIP:%v "+
+		"OuterIP:%v "+
+		"BuildTag:%v "+
+		"Privileged:%v "+
+		"Overlays:%v "+
+		"Crash:%v "+
+		"Partition:%v "+
+		"NetFail:%v "+
+		"UseSigmaclntd:%v "+
+		"UseNetProxy:%v "+
+		"SigmaPath:%v "+
+		"RealmSwitch:%v"+
+		"}",
+		pe.Program,
+		pe.GetPID(),
+		pe.GetRealm(),
+		pe.GetPrincipal().String(),
+		pe.KernelID,
+		pe.UprocdPIDStr,
+		pe.ProcDir,
+		pe.ParentDir,
+		Thow(pe.HowInt),
+		pe.Perf,
+		pe.Debug,
+		pe.GetEtcdEndpoints(),
+		pe.InnerContainerIPStr,
+		pe.OuterContainerIPStr,
+		pe.BuildTag,
+		pe.Privileged,
+		pe.Overlays,
+		pe.Crash,
+		pe.Partition,
+		pe.NetFail,
+		pe.UseSigmaclntd,
+		pe.UseNetProxy,
+		pe.SigmaPath,
+		pe.RealmSwitchStr,
+	)
 }

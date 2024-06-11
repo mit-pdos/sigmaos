@@ -83,6 +83,7 @@ func Run(args []string) error {
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
 		return err
 	}
 	nd.SigmaClnt = sc
@@ -94,10 +95,12 @@ func Run(args []string) error {
 		// and ready to serve requests.  realmd downs this semaphore.
 		li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
 		if err != nil {
+			db.DFatalf("Error AskLease: %v", err)
 			return err
 		}
 		li.KeepExtending()
 		if err := sem.InitLease(0777, li.Lease()); err != nil {
+			db.DFatalf("Error InitLease: %v", err)
 			return err
 		}
 	}
@@ -125,12 +128,14 @@ func Run(args []string) error {
 
 	pn = sp.NAMED
 	if nd.realm == sp.ROOTREALM {
+		// Allow connections from all realms, so that realms can mount the kernel
+		// service union directories
+		nd.GetNetProxyClnt().AllowConnectionsFromAllRealms()
 		db.DPrintf(db.ALWAYS, "SetRootNamed %v ep %v\n", nd.realm, ep)
 		if err := nd.fs.SetRootNamed(ep); err != nil {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
-		// note: the named proc runs in rootrealm; maybe change it XXX
 		pn = filepath.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
 		if err := nd.MkLeasedEndpoint(pn, ep, nd.sess.Lease()); err != nil {

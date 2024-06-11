@@ -84,7 +84,7 @@ func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Th
 
 func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	p := proc.NewPrivProcPid(pid, program, args, true)
-	p.GetProcEnv().SetRealm(realm, k.Param.Overlays)
+	p.SetRealm(realm)
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())

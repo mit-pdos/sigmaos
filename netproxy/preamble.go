@@ -30,7 +30,7 @@ func readConnPreamble(c net.Conn) (*sp.Tprincipal, error) {
 	// Get the principal from the newly established connection
 	b, err := frame.ReadFrame(c)
 	if err != nil {
-		db.DPrintf(db.NETSIGMA_ERR, "Error Read PrincipalID preamble frame: %v", err)
+		db.DPrintf(db.NETPROXY_ERR, "Error Read PrincipalID preamble frame: %v", err)
 		return nil, err
 	}
 	p := sp.NoPrincipal()

@@ -202,11 +202,10 @@ const (
 	SESSDEV                   = "SESSDEV"
 	SIGMASRV                  = "SIGMASRV"
 	NETPROXY                  = "NETPROXY"
+	NETPROXY_ERR              = "NETPROXY_ERR"
+	NETPROXY_PERF             = "NETPROXY_PERF"
 	NETPROXYSRV               = "NETPROXYSRV"
 	NETPROXYSRV_ERR           = "NETPROXYSRV" + ERR
-	NETSIGMA                  = "NETSIGMA"
-	NETSIGMA_ERR              = "NETSIGMA_ERR"
-	NETSIGMA_PERF             = "NETSIGMA_PERF"
 )
 
 // Client-side Infrastructure

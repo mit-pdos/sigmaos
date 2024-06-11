@@ -36,6 +36,7 @@ func RunFsUx(rootux string) {
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}
+	db.DPrintf(db.UX, "Start ux %v", pe)
 	fsux, root := NewUx(rootux)
 	addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 	srv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, filepath.Join(sp.UX, pe.GetKernelID()), sc)

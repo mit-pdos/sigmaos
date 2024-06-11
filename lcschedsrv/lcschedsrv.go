@@ -84,6 +84,9 @@ func (qd *QDir) Len() int {
 
 func (lcs *LCSched) Enqueue(ctx fs.CtxI, req pqproto.EnqueueRequest, res *pqproto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
+	if p.GetRealm() != ctx.Principal().GetRealm() {
+		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
+	}
 	db.DPrintf(db.LCSCHED, "[%v] Enqueued %v", p.GetRealm(), p)
 
 	ch := make(chan string)
@@ -197,6 +200,7 @@ func Run() {
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
+	sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
 	lcs := NewLCSched(sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {

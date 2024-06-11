@@ -84,6 +84,9 @@ func (qd *QDir) Len() int {
 
 func (lcs *LCSched) Enqueue(ctx fs.CtxI, req pqproto.EnqueueRequest, res *pqproto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
+	if p.GetRealm() != ctx.Principal().GetRealm() {
+		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
+	}
 	db.DPrintf(db.LCSCHED, "[%v] Enqueued %v", p.GetRealm(), p)
 
 	ch := make(chan string)

@@ -102,6 +102,9 @@ func (qd *QDir) Len() int {
 
 func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
+	if p.GetRealm() != ctx.Principal().GetRealm() {
+		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
+	}
 	db.DPrintf(db.PROCQ, "[%v] Enqueue %v", p.GetRealm(), p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv; time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	ch := make(chan string)

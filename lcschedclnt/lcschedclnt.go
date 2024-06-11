@@ -29,7 +29,7 @@ func NewLCSchedClnt(fsl *fslib.FsLib) *LCSchedClnt {
 // Enqueue a proc on the lcsched. Returns the ID of the kernel that is running
 // the proc.
 func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
-	pqID, err := lcs.rpcdc.WaitRoundRobin()
+	pqID, err := lcs.rpcdc.WaitTimedRoundRobin()
 	if err != nil {
 		return NOT_ENQ, err
 	}

@@ -82,7 +82,7 @@ func (dc *DirCache[E]) GetEntries() ([]string, error) {
 	return dc.dir.Keys(0), nil
 }
 
-func (dc *DirCache[E]) WaitGetEntriesN(n int) ([]string, error) {
+func (dc *DirCache[E]) WaitTimedGetEntriesN(n int) ([]string, error) {
 	if err := dc.watchEntries(); err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (dc *DirCache[E]) RandomEntry() (string, error) {
 	return n, nil
 }
 
-func (dc *DirCache[E]) WaitRandomEntry() (string, error) {
+func (dc *DirCache[E]) WaitTimedRandomEntry() (string, error) {
 	return dc.waitEntry(dc.RandomEntry)
 }
 
@@ -160,7 +160,7 @@ func (dc *DirCache[E]) RoundRobin() (string, error) {
 	return n, nil
 }
 
-func (dc *DirCache[E]) WaitRoundRobin() (string, error) {
+func (dc *DirCache[E]) WaitTimedRoundRobin() (string, error) {
 	return dc.waitEntry(dc.RoundRobin)
 }
 
@@ -227,6 +227,7 @@ func (dc *DirCache[E]) waitEntriesN(n int) error {
 		nretry = 0
 	}
 	if nretry >= N {
+		db.DPrintf(db.TEST, "waitEntriesN: stop waiting %v", dc.LSelector)
 		return serr.NewErr(serr.TErrNotfound, "no entries")
 	}
 	return nil

@@ -39,7 +39,7 @@ func newTstate(t *testing.T, n int) *Tstate {
 	assert.Nil(t, err, "Boot node: %v", err)
 
 	ckclnt := chunkclnt.NewChunkClnt(ts.FsLib)
-	srvs, err := ckclnt.WaitGetEntriesN(n + 1)
+	srvs, err := ckclnt.WaitTimedGetEntriesN(n + 1)
 	assert.Nil(t, err)
 
 	ts.srvs = srvs

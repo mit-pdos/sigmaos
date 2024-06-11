@@ -31,7 +31,7 @@ func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
 
 func (pqc *ProcQClnt) chooseProcQ(pid sp.Tpid) (string, error) {
 	s := time.Now()
-	pqId, err := pqc.rpcdc.WaitRandomEntry()
+	pqId, err := pqc.rpcdc.WaitTimedRandomEntry()
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt get ProcQ[%v] latency: %v", pid, pqId, time.Since(s))
 	return pqId, err
 }
@@ -79,7 +79,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			pqID = callerKernelID
 		} else {
 			var err error
-			pqID, err = pqc.rpcdc.WaitRandomEntry()
+			pqID, err = pqc.rpcdc.WaitTimedRandomEntry()
 			if err != nil {
 				db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get random: %v", err)
 				return 0, 0, false, err
@@ -113,7 +113,7 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 	sampled := make(map[string]bool)
 	qstats := make(map[sp.Trealm]int)
 	for i := 0; i < nsample; i++ {
-		pqID, err := pqc.rpcdc.RandomEntry()
+		pqID, err := pqc.rpcdc.WaitTimedRandomEntry()
 		if err != nil {
 			db.DPrintf(db.ERROR, "Can't get random srv: %v", err)
 			return nil, err

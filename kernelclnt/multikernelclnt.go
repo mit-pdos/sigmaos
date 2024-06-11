@@ -37,7 +37,7 @@ func (mkc *MultiKernelClnt) EvictKernelProc(kernelID string, pid sp.Tpid) error 
 }
 
 func (mkc *MultiKernelClnt) GetGeneralKernels() ([]string, error) {
-	return mkc.rpcdc.WaitGetEntriesN(1)
+	return mkc.rpcdc.WaitTimedGetEntriesN(1)
 }
 
 func (mkc *MultiKernelClnt) StopWatching() {

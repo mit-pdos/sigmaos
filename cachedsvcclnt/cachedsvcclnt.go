@@ -4,7 +4,6 @@
 package cachedsvcclnt
 
 import (
-	"fmt"
 	"hash/fnv"
 	"strconv"
 	"sync"
@@ -58,7 +57,7 @@ func (csc *CachedSvcClnt) Server(i int) string {
 }
 
 func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.RPCStatsSnapshot, error) {
-	n, err := csc.dd.Nentry()
+	n, err := csc.dd.WaitTimedEntriesN(1)
 	if err != nil {
 		return nil, err
 	}
@@ -86,24 +85,18 @@ func (csc *CachedSvcClnt) Delete(key string) error {
 }
 
 func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
-	n, err := csc.dd.Nentry()
+	n, err := csc.dd.WaitTimedEntriesN(1)
 	if err != nil {
 		return err
-	}
-	if n == 0 {
-		return fmt.Errorf("No cached servers found")
 	}
 	srv := csc.Server(key2server(key, n))
 	return csc.cc.GetTracedFenced(sctx, srv, key, val, sp.NullFence())
 }
 
 func (csc *CachedSvcClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
-	n, err := csc.dd.Nentry()
+	n, err := csc.dd.WaitTimedEntriesN(1)
 	if err != nil {
 		return err
-	}
-	if n == 0 {
-		return fmt.Errorf("No cached servers found")
 	}
 	srv := csc.Server(key2server(key, n))
 	return csc.cc.PutTracedFenced(sctx, srv, key, val, sp.NullFence())

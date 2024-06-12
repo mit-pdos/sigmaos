@@ -82,15 +82,22 @@ func (dc *DirCache[E]) GetEntries() ([]string, error) {
 	return dc.dir.Keys(0), nil
 }
 
-func (dc *DirCache[E]) WaitTimedGetEntriesN(n int) ([]string, error) {
+func (dc *DirCache[E]) WaitTimedEntriesN(n int) (int, error) {
 	if err := dc.watchEntries(); err != nil {
-		return nil, err
+		return 0, err
 	}
-	if err := dc.waitEntriesN(n); err != nil {
-		return nil, err
+	if err := dc.waitTimedEntriesN(n); err != nil {
+		return 0, err
 	}
 	if dc.err != nil {
-		return nil, dc.err
+		return 0, dc.err
+	}
+	return dc.dir.Len(), nil
+}
+
+func (dc *DirCache[E]) WaitTimedGetEntriesN(n int) ([]string, error) {
+	if _, err := dc.WaitTimedEntriesN(n); err != nil {
+		return nil, err
 	}
 	return dc.dir.Keys(0), nil
 }
@@ -195,7 +202,7 @@ func (dc *DirCache[E]) waitEntry(selectF func() (string, error)) (string, error)
 	for {
 		n, err := selectF()
 		if serr.IsErrorNotfound(err) {
-			if sr := dc.waitEntriesN(1); sr == nil {
+			if sr := dc.waitTimedEntriesN(1); sr == nil {
 				continue
 			} else {
 				err = sr
@@ -209,7 +216,7 @@ func (dc *DirCache[E]) waitEntry(selectF func() (string, error)) (string, error)
 	}
 }
 
-func (dc *DirCache[E]) waitEntriesN(n int) error {
+func (dc *DirCache[E]) waitTimedEntriesN(n int) error {
 	const N = 2
 
 	dc.Lock()
@@ -227,7 +234,7 @@ func (dc *DirCache[E]) waitEntriesN(n int) error {
 		nretry = 0
 	}
 	if nretry >= N {
-		db.DPrintf(db.TEST, "waitEntriesN: stop waiting %v", dc.LSelector)
+		db.DPrintf(db.TEST, "waitTimedEntriesN: stop waiting %v", dc.LSelector)
 		return serr.NewErr(serr.TErrNotfound, "no entries")
 	}
 	return nil

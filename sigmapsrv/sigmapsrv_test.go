@@ -729,11 +729,16 @@ func TestLookupMultiMount(t *testing.T) {
 	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	assert.Nil(t, err)
 
+	// cache named, which is typically the case
+	_, err = fsl.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
 	s := time.Now()
-	pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid, rpc.RPC)
-	db.DPrintf(db.TEST, "Stat start %v\n", pn)
+	pn := filepath.Join(sp.SCHEDD, kernelId, rpc.RPC)
+	// pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid, rpc.RPC)
+	db.DPrintf(db.TEST, "Stat %v start %v\n", fsl.ClntId(), pn)
 	_, err = fsl.Stat(pn)
-	db.DPrintf(db.TEST, "Stat done %v took %v\n", pn, time.Since(s))
+	db.DPrintf(db.TEST, "Stat %v done %v took %v\n", fsl.ClntId(), pn, time.Since(s))
 	assert.Nil(t, err)
 	ts.Shutdown()
 }

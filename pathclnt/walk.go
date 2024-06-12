@@ -138,13 +138,14 @@ func (pathc *PathClnt) walkMount(path path.Tpathname, resolve bool) (sp.Tfid, pa
 	if err != nil {
 		return sp.NoFid, left, err
 	}
+	s1 := time.Now()
 	db.DPrintf(db.WALK, "walkMount: resolve %v %v %v\n", fid, left, err)
 	// Obtain a private copy of fid that this thread walks
 	fid1, err := pathc.FidClnt.Clone(fid)
 	if err != nil {
 		return sp.NoFid, left, err
 	}
-	db.DPrintf(db.WALK_LAT, "walkMount: %v %v %v lat %v\n", pathc.cid, fid, left, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "walkMount: %v %v %v lat %v (clone lat %v)\n", pathc.cid, fid, left, time.Since(s), time.Since(s1))
 	return fid1, left, nil
 }
 
@@ -178,8 +179,9 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w Watch) (sp.Tf
 		db.DFatalf("walkOne %v\n", fid)
 	}
 	db.DPrintf(db.WALK, "walkOne -> %v %v\n", fid1, left)
+	s1 := time.Now()
 	err = pathc.FidClnt.Clunk(fid)
-	db.DPrintf(db.WALK_LAT, "walkOne %v %v %v -> %v %v lat %v\n", pathc.cid, fid, path, fid1, left, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "walkOne %v %v %v -> %v %v lat %v (clunk lat %v)\n", pathc.cid, fid, path, fid1, left, time.Since(s), time.Since(s1))
 	return fid1, left, nil
 }
 

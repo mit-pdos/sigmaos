@@ -153,23 +153,6 @@ func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }
 
-func (mgr *ProcMgr) getNamedEndpoint(realm sp.Trealm) *sp.Tendpoint {
-	mgr.Lock()
-	defer mgr.Unlock()
-
-	mnt, ok := mgr.namedMnts[realm]
-	if !ok {
-		sc := mgr.getSigmaClntL(realm)
-		var err error
-		mnt, err = sc.GetNamedEndpoint()
-		if err != nil {
-			db.DFatalf("GetNamedEndpoint: %v", err)
-		}
-		mgr.namedMnts[realm] = mnt
-	}
-	return mnt
-}
-
 func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 	mgr.Lock()
 	defer mgr.Unlock()

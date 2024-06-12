@@ -15,7 +15,7 @@ import (
 )
 
 type MntClnt struct {
-	ndMntCache *NamedMountCache
+	ndMntCache *NamedEndpointCache
 	mnt        *MntTable
 	rootmt     *RootMountTable
 	pe         *proc.ProcEnv
@@ -29,7 +29,7 @@ func NewMntClnt(pathc sigmaos.PathClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId
 	mc := &MntClnt{
 		cid:        cid,
 		mnt:        newMntTable(),
-		ndMntCache: NewNamedMountCache(pe),
+		ndMntCache: newNamedEndpointCache(pe),
 		rootmt:     newRootMountTable(),
 		pe:         pe,
 		npc:        npc,

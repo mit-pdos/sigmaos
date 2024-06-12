@@ -357,6 +357,10 @@ func (p *Proc) SetNamedEndpoint(ep *sp.Tendpoint) {
 	p.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
 }
 
+func (p *Proc) GetNamedEndpoint() *sp.TendpointProto {
+	return p.ProcEnvProto.NamedEndpointProto
+}
+
 // Return Env map as a []string
 func (p *Proc) GetEnv() []string {
 	env := []string{}

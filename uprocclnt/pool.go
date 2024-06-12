@@ -59,6 +59,7 @@ func (p *pool) get() (sp.Tpid, *UprocdClnt) {
 	// Wait for there to be available uprocds in the pool.
 	for len(p.clnts) == 0 {
 		db.DPrintf(db.UPROCDMGR, "Wait for uprocd pool to be filled len %v", len(p.clnts))
+		db.DPrintf(db.SPAWN_LAT, "Wait for uprocd pool to be filled len %v", len(p.clnts))
 		p.cond.Wait()
 	}
 	db.DPrintf(db.UPROCDMGR, "Pop from uprocd pool")

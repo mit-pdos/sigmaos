@@ -65,18 +65,6 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	// Set the schedd mount for the proc, so it can mount this schedd in one RPC
 	// (without walking down to it).
 	p.SetScheddEndpoint(mgr.mfs.GetSigmaPSrvEndpoint())
-	// Set the named mount point if this isn't a privileged proc. If we were to
-	// do this for a privileged proc, it could cause issues as it may save the
-	// knamed address.
-	if !p.IsPrivileged() {
-		s := time.Now()
-		ep, err := mgr.rootsc.GetNamedEndpointRealm(p.GetRealm())
-		if err != nil {
-			mgr.procCrashed(p, err)
-		}
-		p.SetNamedEndpoint(ep)
-		db.DPrintf(db.SPAWN_LAT, "[%v] SetNamedEndPoint %v %v", p.GetPid(), p.GetRealm(), time.Since(s))
-	}
 	s := time.Now()
 	mgr.setupProcState(p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))

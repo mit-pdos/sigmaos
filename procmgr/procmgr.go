@@ -25,7 +25,6 @@ type ProcMgr struct {
 	rootsc         *sigmaclnt.SigmaClntKernel
 	updm           *uprocclnt.UprocdMgr
 	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClntKernel
-	namedMnts      map[sp.Trealm]*sp.Tendpoint
 	cachedProcBins map[sp.Trealm]map[string]bool
 	pstate         *ProcState
 }
@@ -37,7 +36,6 @@ func NewProcMgr(sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
 		rootsc:         sigmaclnt.NewSigmaClntKernel(sc),
 		updm:           uprocclnt.NewUprocdMgr(sc.FsLib, kernelId),
 		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
-		namedMnts:      make(map[sp.Trealm]*sp.Tendpoint),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
 		pstate:         NewProcState(),
 	}

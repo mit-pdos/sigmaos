@@ -457,6 +457,25 @@ func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
 func TestKernelIsolationBasic(t *testing.T) {
 	ts := newMultiRealmTstate(t)
 
+	// Get the root named endpoint
+	rootNamedEP, err := ts.rootts.GetNamedEndpoint()
+	assert.Nil(t, err, "Err %v", err)
+	db.DPrintf(db.TEST, "rootNamed EP: %v", rootNamedEP)
+	var anyDir string
+	for d, _ := range sp.RootNamedMountedDirs {
+		anyDir = d
+		break
+	}
+	// Ensure that tenant realms can access union dirs which get mounted into their realm from the root realm's named
+	err = ts.ts1.MountTree(rootNamedEP, anyDir, "name/rnmd")
+	assert.Nil(t, err, "Unable to mount root name/%v", anyDir)
+	// Ensure that tenant realms can't access the root named's root directory
+	err = ts.ts1.MountTree(rootNamedEP, "", "name/rootnamed")
+	assert.NotNil(t, err, "Able to mount name/ from root named")
+	// Ensure that tenant realms can't access union dirs which aren't mounted into their realms
+	err = ts.ts1.MountTree(rootNamedEP, "s3", "name/kernelsrv")
+	assert.NotNil(t, err, "Able to mount name/s3 from root named")
+
 	// Get the ID of the kernel clnt
 	kid := ts.rootts.GetKernelClnt(0).KernelId()
 	// Read the kernelsrv endpoint
@@ -466,8 +485,10 @@ func TestKernelIsolationBasic(t *testing.T) {
 
 	// No realm should be able to access kernelsrvs
 	err = ts.ts1.MountTree(ksrvEP, "", "name/kernelsrv")
+	db.DPrintf(db.TEST, "MountTree kernelsrv err %v", err)
 	assert.NotNil(t, err, "Able to mount kernelsrv")
 	err = ts.ts2.MountTree(ksrvEP, "", "name/kernelsrv")
+	db.DPrintf(db.TEST, "MountTree kernelsrv err %v", err)
 	assert.NotNil(t, err, "Able to mount kernelsrv")
 
 	// Read an s3 endpoint from realm 1

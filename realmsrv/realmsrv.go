@@ -15,7 +15,9 @@ import (
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
+	"sigmaos/protsrv"
 	"sigmaos/realmsrv/proto"
+	"sigmaos/rpc"
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
@@ -91,7 +93,8 @@ func RunRealmSrv(netproxy bool) error {
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.REALMD, sc, rs)
+	allowedPaths := []string{sp.REALMSREL, rpc.RPC}
+	ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, protsrv.AttachAllowAllPrincipalsSelectPaths(allowedPaths))
 	if err != nil {
 		return err
 	}
@@ -175,16 +178,29 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 	r.sc = sc
 	// Make some rootrealm services available in new realm
-	namedEndpoint, err := rm.sc.GetNamedEndpoint()
+	rootNamedEP, err := rm.sc.GetNamedEndpoint()
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
 		return err
 	}
+	realmNamedEP, err := rm.sc.GetNamedEndpointRealm(rid)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
+		return err
+	}
+	// Mount "name/" for the child realm
+	// XXX we currently have to do this because the child realm sigmaclnts can't
+	// mount the root named to discover the EP of their realm Named. This seems
+	// broken.
+	if err := sc.MountTree(realmNamedEP, "", sp.NAME); err != nil {
+		db.DPrintf(db.ERROR, "Err MountTree realm: ep %v err %v", rootNamedEP, err)
+		return err
+	}
 	// Export some service dirs from root realm to the new realm by
 	// making endpoints for them in this realm.
-	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
+	for s, _ := range sp.RootNamedMountedDirs {
 		pn := filepath.Join(sp.NAMED, s)
-		ep := sp.NewEndpoint(sp.INTERNAL_EP, namedEndpoint.Addrs())
+		ep := sp.NewEndpoint(sp.INTERNAL_EP, rootNamedEP.Addrs())
 		ep.SetTree(s)
 		db.DPrintf(db.REALMD, "Link %v at %s\n", ep, pn)
 		if err := sc.MkEndpointFile(pn, ep); err != nil {

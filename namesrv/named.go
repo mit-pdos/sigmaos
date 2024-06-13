@@ -15,6 +15,8 @@ import (
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
+	"sigmaos/protsrv"
+	"sigmaos/rpc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -84,6 +86,42 @@ func Run(args []string) error {
 	}
 	nd.SigmaClnt = sc
 
+	// Manually mount some directories from the root named, to which the root
+	// named explicitly allows attaches
+	rootEP, err := sc.GetNamedEndpoint()
+	if err != nil {
+		db.DFatalf("Error get named EP: %v", err)
+	}
+	if err := sc.MountTree(rootEP, rpc.RPC, rpc.RPC); err != nil {
+		db.DFatalf("Err MountTree: ep %v err %v", rootEP, err)
+	}
+	if nd.realm != sp.ROOTREALM {
+		// If running with realms, manually mount realmd and realms directories to
+		// pass attach authorization checks.
+		//		if err := sc.MountTree(rootEP, sp.REALMREL, sp.REALM); err != nil {
+		//			db.DFatalf("Err MountTree: ep %v err %v", rootEP, err)
+		//		}
+		if err := sc.MountTree(rootEP, sp.SCHEDDREL, sp.SCHEDD); err != nil {
+			db.DFatalf("Err MountTree: ep %v err %v", rootEP, err)
+		}
+		//		if err := sc.MountTree(rootEP, sp.REALMREL, filepath.Join(sp.ROOT, sp.REALMREL)); err != nil {
+		//			db.DFatalf("Err MountTree: ep %v err %v", rootEP, err)
+		//		}
+		realmdEP, err := sc.ReadEndpoint(sp.REALMD)
+		if err != nil {
+			db.DFatalf("Err read realmd EP err %v", err)
+		}
+		if err := sc.MountTree(realmdEP, sp.REALMSREL, sp.REALMS); err != nil {
+			db.DFatalf("Err MountTree: ep %v err %v", realmdEP, err)
+		}
+		//		if err := sc.MountTree(realmdEP, sp.REALMSREL, filepath.Join(sp.ROOT, sp.REALMREL, sp.REALMDREL, sp.REALMSREL)); err != nil {
+		//			db.DFatalf("Err MountTree: ep %v err %v", realmdEP, err)
+		//		}
+		if err := sc.MountTree(realmdEP, rpc.RPC, filepath.Join(sp.REALMS, rpc.RPC)); err != nil {
+			db.DFatalf("Err MountTree: ep %v err %v", realmdEP, err)
+		}
+	}
+
 	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"
 	sem := semclnt.NewSemClnt(nd.FsLib, pn)
 	if nd.realm != sp.ROOTREALM {
@@ -101,7 +139,10 @@ func Run(args []string) error {
 		}
 	}
 
-	nd.Started()
+	if err := nd.Started(); err != nil {
+		db.DFatalf("Error Started: %v", err)
+	}
+
 	ch := make(chan struct{})
 	go nd.waitExit(ch)
 
@@ -173,15 +214,23 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
+	var aaf protsrv.AttachAuthF
 	// If this is a root named, or we are running without overlays, don't do
 	// anything special.
 	if nd.realm == sp.ROOTREALM || !nd.ProcEnv().GetOverlays() {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
+		// Allow all realms to attach to dirs mounted from the root named, as well as RPC dir, since it is needed to take out leases
+		allowedDirs := []string{rpc.RPC}
+		for s, _ := range sp.RootNamedMountedDirs {
+			allowedDirs = append(allowedDirs, s)
+		}
+		aaf = protsrv.AttachAllowAllPrincipalsSelectPaths(allowedDirs)
 	} else {
 		db.DPrintf(db.NAMED, "[%v] Listeing on overlay public port: %v:%v", nd.realm, nd.ProcEnv().GetOuterContainerIP(), port.PUBLIC_NAMED_PORT)
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, port.PUBLIC_NAMED_PORT)
+		aaf = protsrv.AttachAllowAllToAll
 	}
-	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, "", nd.SigmaClnt)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthFn(root, addr, "", nd.SigmaClnt, aaf)
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}

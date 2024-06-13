@@ -61,7 +61,7 @@ func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, f
 		ctx:       ctx.NewCtx(sc.ProcEnv().GetPrincipal(), nil, 0, sp.NoClntId, nil, fencefs),
 		sc:        sc,
 		pn:        pn,
-		ps:        protsrv.NewProtSrv(srv.ProtSrvState, nil, 0, srv.GetRootCtx),
+		ps:        protsrv.NewProtSrv(sc.ProcEnv(), srv.ProtSrvState, nil, 0, srv.GetRootCtx, protsrv.AttachAllowAllToAll),
 		roots:     newRoots(),
 	}
 	return mfs

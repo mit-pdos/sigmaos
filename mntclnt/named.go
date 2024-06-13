@@ -75,15 +75,15 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 	} else {
 		// Otherwise, walk through the root named to find this named's mount.
 		s := time.Now()
-		if _, rest, err := mc.mnt.resolveMnt(path.Tpathname{"root"}, true); err != nil && len(rest) >= 1 {
-			if err := mc.mountNamed(sp.ROOTREALM, "root"); err != nil {
+		if _, rest, err := mc.mnt.resolveMnt(path.Tpathname{sp.ROOT}, true); err != nil && len(rest) >= 1 {
+			if err := mc.mountNamed(sp.ROOTREALM, sp.ROOT); err != nil {
 				db.DPrintf(db.MOUNT_ERR, "getNamedEndpointDirect [%v] err mounting root named %v", realm, err)
 				return &sp.Tendpoint{}, err
 			}
 		}
 		db.DPrintf(db.WALK_LAT, "getNamedEndpointDirect %v mount %v %v", mc.cid, sp.ROOTREALM, time.Since(s))
 		s = time.Now()
-		pn := filepath.Join("root", sp.REALMREL, sp.REALMDREL, sp.REALMSREL, realm.String())
+		pn := filepath.Join(sp.ROOT, sp.REALMREL, sp.REALMDREL, sp.REALMSREL, realm.String())
 		target, err := mc.pathc.GetFile(pn, mc.pe.GetPrincipal(), sp.OREAD, 0, sp.MAXGETSET, sp.NullFence())
 		if err != nil {
 			db.DPrintf(db.MOUNT_ERR, "getNamedEndpointDirect [%v] GetFile err %v", realm, err)

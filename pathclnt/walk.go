@@ -189,6 +189,7 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w Watch) (sp.Tf
 // and return fid for result.
 func (pathc *PathClnt) walkUnion(fid sp.Tfid, p path.Tpathname) (sp.Tfid, path.Tpathname, *serr.Err) {
 	if len(p) > 0 && path.IsUnionElem(p[0]) {
+		s := time.Now()
 		db.DPrintf(db.WALK, "walkUnion %v path %v\n", fid, p)
 		fid1, err := pathc.unionLookup(fid, p[0])
 		if err != nil {
@@ -196,6 +197,7 @@ func (pathc *PathClnt) walkUnion(fid sp.Tfid, p path.Tpathname) (sp.Tfid, path.T
 		}
 		db.DPrintf(db.WALK, "walkUnion -> (%v, %v)\n", fid, p[1:])
 		pathc.FidClnt.Clunk(fid)
+		db.DPrintf(db.WALK_LAT, "walkUnion %v lat %v", p, time.Since(s))
 		return fid1, p[1:], nil
 	}
 	return fid, p, nil

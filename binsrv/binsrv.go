@@ -159,8 +159,8 @@ type BinSrvCmd struct {
 	out io.WriteCloser
 }
 
-func ExecBinSrv(kernelId, uprocdpid string, mnt *sp.Tendpoint) (*BinSrvCmd, error) {
-	d, err := mnt.Marshal()
+func ExecBinSrv(kernelId, uprocdpid string, ep *sp.Tendpoint) (*BinSrvCmd, error) {
+	d, err := ep.Marshal()
 	if err != nil {
 		return nil, err
 	}

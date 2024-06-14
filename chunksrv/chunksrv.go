@@ -183,6 +183,7 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, s3secret *sp.SecretProto, paths []string, ck int, b []byte) (sp.Tsize, string, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: %v ckid %d %v", cksrv.kernelId, prog, ck, paths)
 	be := cksrv.getBin(r, prog, s3secret)
+	paths = replaceLocal(paths, cksrv.kernelId)
 	sc, fd, path, err := be.getFd(paths)
 	if err != nil {
 		return 0, "", err
@@ -309,6 +310,7 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 	}
 	if !ok {
 		s := time.Now()
+		paths = replaceLocal(paths, cksrv.kernelId)
 		st, srv, err = cksrv.getOrigin(r, req.Prog, paths)
 		db.DPrintf(db.SPAWN_LAT, "[%v] getFileStat lat %v: origin %v err %v", req.Prog, time.Since(s), paths, err)
 		if err != nil {
@@ -337,8 +339,9 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	return cksrv.getFileStat(req, res)
 }
 
-// XXX hack; how to handle ~local?
-func downloadPaths(paths []string, kernelId string) []string {
+// lookup of ~local is expensive because involves reading a
+// directory. chunksrv knows what ~local is, namely its kernelId.
+func replaceLocal(paths []string, kernelId string) []string {
 	for i, p := range paths {
 		if strings.HasPrefix(p, sp.UX) {
 			paths[i] = strings.Replace(p, "~local", kernelId, 1)
@@ -353,8 +356,10 @@ func lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, str
 	var st *sp.Stat
 	path := ""
 	err := fslib.RetryPaths(paths, func(i int, pn string) error {
-		db.DPrintf(db.CHUNKSRV, "Stat %q/%q", pn, prog)
+		db.DPrintf(db.CHUNKSRV, "Stat '%v/%v'", pn, prog)
+		s := time.Now()
 		sst, err := sc.Stat(pn + "/" + prog)
+		db.DPrintf(db.SPAWN_LAT, "Stat '%v/%v' lat %v", pn, prog, time.Since(s))
 		if err == nil {
 			sst.Dev = uint32(i)
 			st = sst

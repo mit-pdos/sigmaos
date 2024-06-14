@@ -95,10 +95,9 @@ func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Tpat
 }
 
 func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, path path.Tpathname) *serr.Err {
+	db.DPrintf(db.MOUNT, "automount %v to %v\n", ep, path)
 	var fid sp.Tfid
 	var err *serr.Err
-
-	db.DPrintf(db.MOUNT, "automount %v to %v\n", ep, path)
 	s := time.Now()
 	fid, err = mc.fidc.Attach(secrets, mc.cid, ep, path.String(), ep.Root)
 	if err != nil {
@@ -106,8 +105,7 @@ func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 		return err
 	}
 	db.DPrintf(db.WALK_LAT, "AutoMount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
-	err = mc.mount(fid, path.String())
-	if err != nil {
+	if err := mc.mount(fid, path.String()); err != nil {
 		return err
 	}
 	return nil
@@ -199,6 +197,7 @@ func (mc *MntClnt) mount(fid sp.Tfid, pn string) *serr.Err {
 			// path; clunk the fid and don't return an
 			// error.
 			mc.fidc.Clunk(fid)
+			db.DPrintf(db.ALWAYS, "YYY Mount already there pn %v", pn)
 			return nil
 		} else {
 			return err

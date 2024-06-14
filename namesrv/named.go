@@ -88,7 +88,7 @@ func Run(args []string) error {
 
 	// Manually mount some directories from the root named, to which the root
 	// named explicitly allows attaches
-	rootEP, err := sc.GetNamedEndpoint()
+	rootEP, err := sc.GetNamedEndpointRealm(sp.ROOTREALM)
 	if err != nil {
 		db.DFatalf("Error get named EP: %v", err)
 	}
@@ -96,30 +96,22 @@ func Run(args []string) error {
 		db.DFatalf("Err MountTree: ep %v err %v", rootEP, err)
 	}
 	if nd.realm != sp.ROOTREALM {
-		// If running with realms, manually mount realmd and realms directories to
-		// pass attach authorization checks.
-		//		if err := sc.MountTree(rootEP, sp.REALMREL, sp.REALM); err != nil {
-		//			db.DFatalf("Err MountTree: ep %v err %v", rootEP, err)
-		//		}
+		if err := sc.MountTree(rootEP, sp.REALMREL, sp.REALM); err != nil {
+			db.DFatalf("Err MountTree schedd: ep %v err %v", rootEP, err)
+		}
 		if err := sc.MountTree(rootEP, sp.SCHEDDREL, sp.SCHEDD); err != nil {
-			db.DFatalf("Err MountTree: ep %v err %v", rootEP, err)
+			db.DFatalf("Err MountTree schedd: ep %v err %v", rootEP, err)
 		}
-		//		if err := sc.MountTree(rootEP, sp.REALMREL, filepath.Join(sp.ROOT, sp.REALMREL)); err != nil {
-		//			db.DFatalf("Err MountTree: ep %v err %v", rootEP, err)
+		//		realmdEP, err := sc.ReadEndpoint(filepath.Join(sp.ROOT, sp.REALM, sp.REALMD))
+		//		if err != nil {
+		//			db.DFatalf("Err read realmd EP err %v", err)
 		//		}
-		realmdEP, err := sc.ReadEndpoint(sp.REALMD)
-		if err != nil {
-			db.DFatalf("Err read realmd EP err %v", err)
-		}
-		if err := sc.MountTree(realmdEP, sp.REALMSREL, sp.REALMS); err != nil {
-			db.DFatalf("Err MountTree: ep %v err %v", realmdEP, err)
-		}
-		//		if err := sc.MountTree(realmdEP, sp.REALMSREL, filepath.Join(sp.ROOT, sp.REALMREL, sp.REALMDREL, sp.REALMSREL)); err != nil {
+		//		if err := sc.MountTree(realmdEP, sp.REALMSREL, sp.REALMS); err != nil {
 		//			db.DFatalf("Err MountTree: ep %v err %v", realmdEP, err)
 		//		}
-		if err := sc.MountTree(realmdEP, rpc.RPC, filepath.Join(sp.REALMS, rpc.RPC)); err != nil {
-			db.DFatalf("Err MountTree: ep %v err %v", realmdEP, err)
-		}
+		//		if err := sc.MountTree(realmdEP, rpc.RPC, filepath.Join(sp.REALMS, rpc.RPC)); err != nil {
+		//			db.DFatalf("Err MountTree: ep %v err %v", realmdEP, err)
+		//		}
 	}
 
 	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"

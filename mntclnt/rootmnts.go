@@ -1,7 +1,6 @@
 package mntclnt
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -100,14 +99,13 @@ func (mc *MntClnt) resolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 			return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed root)", pn[0])), false
 		}
 		if pn[0] == sp.NAME {
-			return mc.mountNamed(mc.pe.GetRealm(), sp.NAME), true
+			return mc.mountNamed(mc.pe.GetRealm(), sp.NAME, ""), true
 		} else {
 			db.DPrintf(db.MOUNT, "resolveRoot: remount %v at %v\n", sm, pn[0])
 			// this may remount the service that this root is relying on
 			// and repair this root mount
 			if _, err := mc.pathc.Stat(sm.svcpn.String()+"/", mc.pe.GetPrincipal()); err != nil {
-				var sr *serr.Err
-				if errors.As(err, &sr) {
+				if sr, ok := serr.IsErr(err); ok {
 					return sr, false
 				} else {
 					return serr.NewErrError(err), false

@@ -93,8 +93,13 @@ func RunRealmSrv(netproxy bool) error {
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
-	allowedPaths := []string{sp.REALMSREL, rpc.RPC}
-	ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, protsrv.AttachAllowAllPrincipalsSelectPaths(allowedPaths))
+	if false {
+		allowedPaths := []string{sp.REALMSREL, rpc.RPC}
+		ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, protsrv.AttachAllowAllPrincipalsSelectPaths(allowedPaths))
+		_ = ssrv
+		_ = err
+	}
+	ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, protsrv.AttachAllowAllToAll)
 	if err != nil {
 		return err
 	}
@@ -181,19 +186,6 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	rootNamedEP, err := rm.sc.GetNamedEndpoint()
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
-		return err
-	}
-	realmNamedEP, err := rm.sc.GetNamedEndpointRealm(rid)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
-		return err
-	}
-	// Mount "name/" for the child realm
-	// XXX we currently have to do this because the child realm sigmaclnts can't
-	// mount the root named to discover the EP of their realm Named. This seems
-	// broken.
-	if err := sc.MountTree(realmNamedEP, "", sp.NAME); err != nil {
-		db.DPrintf(db.ERROR, "Err MountTree realm: ep %v err %v", rootNamedEP, err)
 		return err
 	}
 	// Export some service dirs from root realm to the new realm by

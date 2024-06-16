@@ -98,15 +98,15 @@ func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 	var fid sp.Tfid
 	var err *serr.Err
 
-	db.DPrintf(db.MOUNT, "automount %v to %v\n", ep, path)
+	db.DPrintf(db.MOUNT, "%v: automount %v to %v\n", mc.cid, ep, path)
 	s := time.Now()
 	fid, err = mc.fidc.Attach(secrets, mc.cid, ep, path.String(), ep.Root)
 	if err != nil {
 		db.DPrintf(db.MOUNT_ERR, "Attach error: %v", err)
 		return err
 	}
-	db.DPrintf(db.WALK_LAT, "AutoMount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
-	db.DPrintf(db.SPAWN_LAT, "AutoMount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "%v: automount: pn '%v' Attach lat %v\n", mc.cid, path, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "%v: automount: pn '%v' Attach lat %v\n", mc.cid, path, time.Since(s))
 	err = mc.mount(fid, path.String())
 	if err != nil {
 		return err

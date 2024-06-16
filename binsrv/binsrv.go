@@ -84,7 +84,7 @@ func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.Uprocd
 
 func RunBinFS(kernelId, uprocdpid, smnt string) error {
 	pe := proc.GetProcEnv()
-	mnt, err := sp.NewEndpointFromBytes([]byte(smnt))
+	ep, err := sp.NewEndpointFromBytes([]byte(smnt))
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func RunBinFS(kernelId, uprocdpid, smnt string) error {
 		return err
 	}
 
-	db.DPrintf(db.BINSRV, "%s mnt %v", db.LsDir(chunksrv.BINPROC), mnt)
+	db.DPrintf(db.BINSRV, "%s ep %v", db.LsDir(chunksrv.BINPROC), ep)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -103,7 +103,7 @@ func RunBinFS(kernelId, uprocdpid, smnt string) error {
 	}
 
 	pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
-	ch, err := sigmarpcchan.NewSigmaRPCChEndpoint([]*fslib.FsLib{sc.FsLib}, pn, mnt)
+	ch, err := sigmarpcchan.NewSigmaRPCChEndpoint([]*fslib.FsLib{sc.FsLib}, pn, ep)
 	if err != nil {
 		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
 		return err

@@ -156,6 +156,13 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 
 	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
 
+	// Lookup the ckclnt for uprocd's local chunkd now since we will
+	// need it later quickly.
+	if err := ups.ckclnt.LookupEntry(ups.kernelId); err != nil {
+		db.DPrintf(db.UPROCD, "LookupClnt %v %v", ups.kernelId, err)
+		return err
+	}
+
 	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
 	scdp.InheritParentProcEnv(ups.pe)
 	scdp.SetHow(proc.HLINUX)
@@ -363,12 +370,12 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 	if !ok {
 		return fmt.Errorf("No s3 secrets in proc")
 	}
-	start := time.Now()
+	s := time.Now()
 	st, path, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), s3secret, paths)
 	if err != nil {
 		return err
 	}
 	res.Stat = st.StatProto()
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done %v path %q GetFileStat lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done %v path %q GetFileStat lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, path, time.Since(s), time.Since(pe.proc.GetSpawnTime()))
 	return nil
 }

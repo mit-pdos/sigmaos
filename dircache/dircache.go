@@ -123,6 +123,11 @@ func (dc *DirCache[E]) GetEntry(n string) (E, error) {
 	return e, err
 }
 
+func (dc *DirCache[E]) LookupEntry(n string) error {
+	_, err := dc.GetEntry(n)
+	return err
+}
+
 func (dc *DirCache[E]) RandomEntry() (string, error) {
 	var n string
 	var ok bool

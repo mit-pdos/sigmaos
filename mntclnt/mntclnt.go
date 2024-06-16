@@ -106,6 +106,7 @@ func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 		return err
 	}
 	db.DPrintf(db.WALK_LAT, "AutoMount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "AutoMount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
 	err = mc.mount(fid, path.String())
 	if err != nil {
 		return err

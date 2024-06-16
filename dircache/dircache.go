@@ -25,7 +25,6 @@ type DirCache[E any] struct {
 	sync.Mutex
 	hasEntries   *sync.Cond
 	dir          *sortedmap.SortedMap[string, E]
-	watching     bool
 	done         atomic.Uint64
 	Path         string
 	LSelector    db.Tselector
@@ -51,6 +50,7 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 		prefixFilter: prefix,
 	}
 	dc.hasEntries = sync.NewCond(&dc.Mutex)
+	go dc.watchDir()
 	go dc.watchdog()
 	return dc
 }
@@ -69,21 +69,21 @@ func (dc *DirCache[E]) StopWatching() {
 }
 
 func (dc *DirCache[E]) Nentry() (int, error) {
-	if err := dc.watchEntries(); err != nil {
+	if err := dc.checkErr(); err != nil {
 		return 0, err
 	}
 	return dc.dir.Len(), nil
 }
 
 func (dc *DirCache[E]) GetEntries() ([]string, error) {
-	if err := dc.watchEntries(); err != nil {
+	if err := dc.checkErr(); err != nil {
 		return nil, err
 	}
 	return dc.dir.Keys(0), nil
 }
 
 func (dc *DirCache[E]) WaitTimedEntriesN(n int) (int, error) {
-	if err := dc.watchEntries(); err != nil {
+	if err := dc.checkErr(); err != nil {
 		return 0, err
 	}
 	if err := dc.waitTimedEntriesN(n); err != nil {
@@ -105,7 +105,7 @@ func (dc *DirCache[E]) WaitTimedGetEntriesN(n int) ([]string, error) {
 func (dc *DirCache[E]) GetEntry(n string) (E, error) {
 	db.DPrintf(dc.LSelector, "GetEntry for %v", n)
 
-	if err := dc.watchEntries(); err != nil {
+	if err := dc.checkErr(); err != nil {
 		var e E
 		db.DPrintf(dc.LSelector, "Done GetEntry for %v err %v", n, err)
 		return e, err
@@ -129,7 +129,7 @@ func (dc *DirCache[E]) RandomEntry() (string, error) {
 
 	db.DPrintf(dc.LSelector, "Random")
 
-	if err := dc.watchEntries(); err != nil {
+	if err := dc.checkErr(); err != nil {
 		return "", err
 	}
 	defer func(n *string) {
@@ -152,7 +152,7 @@ func (dc *DirCache[E]) RoundRobin() (string, error) {
 
 	db.DPrintf(dc.LSelector, "RoundRobin")
 
-	if err := dc.watchEntries(); err != nil {
+	if err := dc.checkErr(); err != nil {
 		return "", err
 	}
 
@@ -240,18 +240,13 @@ func (dc *DirCache[E]) waitTimedEntriesN(n int) error {
 	return nil
 }
 
-func (dc *DirCache[E]) watchEntries() error {
+func (dc *DirCache[E]) checkErr() error {
 	dc.Lock()
 	defer dc.Unlock()
 
 	if dc.err != nil {
-		db.DPrintf(dc.LSelector, "watchEntries %v", dc.err)
+		db.DPrintf(dc.LSelector, "checkErr %v", dc.err)
 		return dc.err
-	}
-
-	if !dc.watching {
-		go dc.watchDir()
-		dc.watching = true
 	}
 	return nil
 }
@@ -299,7 +294,6 @@ func (dc *DirCache[E]) watchDir() {
 			} else { // give up
 				db.DPrintf(dc.ESelector, "watchDir[%v]: %t %v stop watching", dc.Path, ok, err)
 				dc.err = err
-				dc.watching = false
 				return
 			}
 		}

@@ -90,7 +90,7 @@ func (mnt *MntTable) resolveMnt(path path.Tpathname, allowResolve bool) (sp.Tfid
 			if len(left) == 0 && !allowResolve {
 				continue
 			}
-			//db.DPrintf(db.MOUNT, "resolveMnt succeeded: p %v path %v l %v", p.path, path, left)
+			db.DPrintf(db.MOUNT, "resolveMnt succeeded: path %v left %v", path, left)
 			return p.fid, left, nil
 		}
 	}

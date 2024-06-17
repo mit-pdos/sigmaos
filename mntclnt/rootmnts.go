@@ -7,6 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -27,10 +28,11 @@ type RootMountTable struct {
 	mounts map[string]*RootMount
 }
 
-func newRootMountTable() *RootMountTable {
+func newRootMountTable(pe *proc.ProcEnv) *RootMountTable {
 	mt := &RootMountTable{}
 	mt.mounts = make(map[string]*RootMount)
 	mt.add(sp.NoPrincipal(), nil, nil, sp.NAME)
+	db.DPrintf(db.MOUNT, "Initial RootMntTable: %v", mt.mounts)
 	return mt
 }
 
@@ -39,14 +41,17 @@ func (rootmt *RootMountTable) String() string {
 }
 
 // XXX lookup should involve principal
-func (rootmt *RootMountTable) lookup(name string) (*RootMount, *serr.Err) {
+func (rootmt *RootMountTable) lookup(mntName string) (*RootMount, *serr.Err) {
 	rootmt.Lock()
 	defer rootmt.Unlock()
-	sm, ok := rootmt.mounts[name]
-	if ok {
+
+	db.DPrintf(db.MOUNT, "RootMountTable.lookup mntName %v", mntName)
+	if sm, ok := rootmt.mounts[mntName]; ok {
+		db.DPrintf(db.MOUNT, "RootMountTable.lookup mntName %v found %v", mntName, sm)
 		return sm, nil
 	}
-	return nil, serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
+	db.DPrintf(db.MOUNT, "RootMountTable.lookup mntName %v no root mount", mntName)
+	return nil, serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", mntName))
 }
 
 func (rootmt *RootMountTable) disconnect(name string) error {
@@ -69,16 +74,23 @@ func (rootmt *RootMountTable) add(principal *sp.Tprincipal, svcpn, tree path.Tpa
 	if ok {
 		return serr.NewErr(serr.TErrExists, mntname)
 	}
-	rootmt.mounts[mntname] = &RootMount{svcpn: svcpn, tree: tree}
+	rootmt.mounts[mntname] = &RootMount{
+		svcpn: svcpn,
+		tree:  tree,
+	}
 	return nil
 }
 
-func (rootmt *RootMountTable) isRootMount(mntname string) bool {
+func (rootmt *RootMountTable) isRootMount(mntName string) bool {
 	rootmt.Lock()
 	defer rootmt.Unlock()
 
-	_, ok := rootmt.mounts[mntname]
-	return ok
+	if _, ok := rootmt.mounts[mntName]; ok {
+		db.DPrintf(db.MOUNT, "isRootMount mntName %v true", mntName)
+		return true
+	}
+	db.DPrintf(db.MOUNT, "isRootMount mntName %v false", mntName)
+	return false
 }
 
 // Resolve pn that names a server's root (e.g., name/ux, name)

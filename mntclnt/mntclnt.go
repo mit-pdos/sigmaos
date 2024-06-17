@@ -30,7 +30,7 @@ func NewMntClnt(pathc sigmaos.PathClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId
 		cid:        cid,
 		mnt:        newMntTable(),
 		ndMntCache: NewNamedMountCache(pe),
-		rootmt:     newRootMountTable(),
+		rootmt:     newRootMountTable(pe),
 		pe:         pe,
 		npc:        npc,
 		fidc:       fidc,

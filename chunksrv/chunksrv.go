@@ -272,9 +272,14 @@ func (cksrv *ChunkSrv) getCache(req proto.GetFileStatRequest, res *proto.GetFile
 	return be.st, cksrv.path, true
 }
 
-func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string) (*sp.Stat, string, error) {
+func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3secret *sp.SecretProto) (*sp.Stat, string, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: getOrigin %v %v", cksrv.kernelId, prog, paths)
-	st, path, err := lookup(cksrv.sc, prog, paths)
+	sc, err := cksrv.getRealmSigmaClnt(r, s3secret)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error get realm (%v) sigma clnt: %v", r, err)
+		return nil, "", err
+	}
+	st, path, err := lookup(sc, prog, paths)
 	if err != nil {
 		return nil, "", err
 	}
@@ -290,7 +295,7 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 	}
 
 	if len(paths) == 0 {
-		return serr.NewErr(serr.TErrNotfound, req.Prog)
+		return serr.NewErr(serr.TErrNotfound, req.GetProg())
 	}
 
 	ok := false
@@ -311,7 +316,7 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 	if !ok {
 		s := time.Now()
 		paths = replaceLocal(paths, cksrv.kernelId)
-		st, srv, err = cksrv.getOrigin(r, req.Prog, paths)
+		st, srv, err = cksrv.getOrigin(r, req.GetProg(), paths, req.GetS3Secret())
 		db.DPrintf(db.SPAWN_LAT, "[%v] getFileStat lat %v: origin %v err %v", req.Prog, time.Since(s), paths, err)
 		if err != nil {
 			return err

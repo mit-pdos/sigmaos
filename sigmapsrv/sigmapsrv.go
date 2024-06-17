@@ -30,18 +30,22 @@ import (
 type SigmaPSrv struct {
 	*protsrv.ProtSrvState
 	*sesssrv.SessSrv
-	srvep    *sp.Tendpoint
-	dirunder fs.Dir
-	dirover  *overlay.DirOverlay
-	fencefs  fs.Dir
-	stats    *stats.StatInode
+	pe          *proc.ProcEnv
+	srvep       *sp.Tendpoint
+	dirunder    fs.Dir
+	dirover     *overlay.DirOverlay
+	fencefs     fs.Dir
+	stats       *stats.StatInode
+	attachAuthF protsrv.AttachAuthF
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf protsrv.AttachAuthF) *SigmaPSrv {
 	psrv := &SigmaPSrv{
-		dirunder: root,
-		dirover:  overlay.MkDirOverlay(root),
-		fencefs:  fencefs,
+		pe:          pe,
+		dirunder:    root,
+		dirover:     overlay.MkDirOverlay(root),
+		fencefs:     fencefs,
+		attachAuthF: aaf,
 	}
 	psrv.stats = stats.NewStatsDev(psrv.dirover)
 	psrv.ProtSrvState = protsrv.NewProtSrvState(psrv.stats)
@@ -51,8 +55,8 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, root fs.Dir,
 	return psrv
 }
 
-func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) (*SigmaPSrv, string, error) {
-	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, addr, fencefs)
+func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf protsrv.AttachAuthF) (*SigmaPSrv, string, error) {
+	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, addr, fencefs, aaf)
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
 			return nil, "", err
@@ -64,7 +68,7 @@ func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.Sigm
 }
 
 func (psrv *SigmaPSrv) NewSession(p *sp.Tprincipal, sessid sessp.Tsession) sps.Protsrv {
-	return protsrv.NewProtServer(psrv.ProtSrvState, p, sessid, psrv.GetRootCtx)
+	return protsrv.NewProtServer(psrv.pe, psrv.ProtSrvState, p, sessid, psrv.GetRootCtx, psrv.attachAuthF)
 }
 
 func (psrv *SigmaPSrv) Root(p path.Tpathname) (fs.Dir, path.Tpathname, path.Tpathname) {

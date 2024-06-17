@@ -30,7 +30,7 @@ func NewMntClnt(pathc sigmaos.PathClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId
 		cid:        cid,
 		mnt:        newMntTable(),
 		ndMntCache: newNamedEndpointCache(pe),
-		rootmt:     newRootMountTable(),
+		rootmt:     newRootMountTable(pe),
 		pe:         pe,
 		npc:        npc,
 		fidc:       fidc,
@@ -95,10 +95,9 @@ func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Tpat
 }
 
 func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, path path.Tpathname) *serr.Err {
+	db.DPrintf(db.MOUNT, "%v: automount %v to %v\n", mc.cid, ep, path)
 	var fid sp.Tfid
 	var err *serr.Err
-
-	db.DPrintf(db.MOUNT, "%v: automount %v to %v\n", mc.cid, ep, path)
 	s := time.Now()
 	fid, err = mc.fidc.Attach(secrets, mc.cid, ep, path.String(), ep.Root)
 	if err != nil {

@@ -4,6 +4,7 @@ package sigmap
 const (
 	KNAMED        = "knamed"
 	NAME          = "name"
+	ROOT          = "root"
 	NAMED         = NAME + "/"
 	NAMEDREL      = "named"
 	MEMFSREL      = "memfs"
@@ -72,6 +73,17 @@ const (
 	// stats exported by named
 	PSTATSD = ".pstatsd"
 )
+
+// Dirs mounted from the root named into tenants' realms
+var RootNamedMountedDirs map[string]bool = map[string]bool{
+	REALMREL:   true,
+	LCSCHEDREL: true,
+	PROCQREL:   true,
+	SCHEDDREL:  true,
+	BOOTREL:    true,
+	DBREL:      true,
+	MONGOREL:   true,
+}
 
 // Linux path
 const (

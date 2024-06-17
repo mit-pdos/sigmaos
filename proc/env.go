@@ -180,6 +180,9 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 			Key: v.Key,
 		}
 	}
+	// Clear the named endpoint, so the new realm doesn't try to access the old
+	// one's named
+	pe2.ClearNamedEndpoint()
 	return pe2
 }
 
@@ -269,6 +272,10 @@ func (pe *ProcEnvProto) GetRealmSwitch() (sp.Trealm, bool) {
 
 func (pe *ProcEnvProto) SetRealmSwitch(realm sp.Trealm) {
 	pe.RealmSwitchStr = realm.String()
+}
+
+func (pe *ProcEnvProto) ClearNamedEndpoint() {
+	pe.NamedEndpointProto = nil
 }
 
 func (pe *ProcEnvProto) SetNetFail(nf int64) {

@@ -1,6 +1,8 @@
 package kernelclnt
 
 import (
+	"strings"
+
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/rpcdirclnt"
@@ -37,7 +39,17 @@ func (mkc *MultiKernelClnt) EvictKernelProc(kernelID string, pid sp.Tpid) error 
 }
 
 func (mkc *MultiKernelClnt) GetGeneralKernels() ([]string, error) {
-	return mkc.rpcdc.WaitTimedGetEntriesN(1)
+	es, err := mkc.rpcdc.WaitTimedGetEntriesN(1)
+	if err != nil {
+		return nil, err
+	}
+	kids := make([]string, 0, len(es))
+	for _, e := range es {
+		if !strings.HasPrefix(e, sp.SIGMACLNTDKERNEL) {
+			kids = append(kids, e)
+		}
+	}
+	return kids, nil
 }
 
 func (mkc *MultiKernelClnt) StopWatching() {

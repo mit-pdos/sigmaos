@@ -11,6 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fsetcd"
 	"sigmaos/leaderetcd"
+	"sigmaos/netproxyclnt"
 	"sigmaos/path"
 	"sigmaos/perf"
 	"sigmaos/port"
@@ -83,7 +84,7 @@ func Run(args []string) error {
 	}
 	defer p.Done()
 
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 		return err
@@ -101,11 +102,22 @@ func Run(args []string) error {
 	}
 	if nd.realm != sp.ROOTREALM {
 		if err := sc.MountTree(rootEP, sp.REALMREL, sp.REALM); err != nil {
-			db.DFatalf("Err MountTree schedd: ep %v err %v", rootEP, err)
+			db.DFatalf("Err MountTree realm: ep %v err %v", rootEP, err)
 		}
 		if err := sc.MountTree(rootEP, sp.SCHEDDREL, sp.SCHEDD); err != nil {
 			db.DFatalf("Err MountTree schedd: ep %v err %v", rootEP, err)
 		}
+		if err := sc.MountTree(rootEP, sp.PROCQREL, sp.PROCQ); err != nil {
+			db.DFatalf("Err MountTree procq: ep %v err %v", rootEP, err)
+		}
+		if err := sc.MountTree(rootEP, sp.LCSCHEDREL, sp.LCSCHED); err != nil {
+			db.DFatalf("Err MountTree lcsched: ep %v err %v", rootEP, err)
+		}
+	}
+
+	// Now that the scheduler dirs are mounted, create a procclnt
+	if err := nd.SigmaClnt.NewProcClnt(); err != nil {
+		db.DFatalf("Error make procclnt: %v", err)
 	}
 
 	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"
@@ -188,7 +200,7 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.ALWAYS, "%v: named done %v %v", pe.GetPID(), nd.realm, ep)
+	db.DPrintf(db.ALWAYS, "named done %v %v", nd.realm, ep)
 
 	if err := nd.resign(); err != nil {
 		db.DPrintf(db.NAMED, "resign %v err %v", pe.GetPID(), err)

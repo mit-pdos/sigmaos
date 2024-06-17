@@ -114,14 +114,9 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 		return nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Make FsLib: %v", pe.GetPID(), time.Since(start))
-	start = time.Now()
-	papi, err := procclnt.NewProcClnt(sc.FsLib)
-	if err != nil {
-		db.DPrintf(db.ERROR, "NewProcClnt: %v", err)
+	if err := sc.NewProcClnt(); err != nil {
 		return nil, err
 	}
-	sc.ProcAPI = papi
-	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", pe.GetPID(), time.Since(start))
 	return sc, nil
 }
 
@@ -138,6 +133,18 @@ func NewSigmaClntRootInit(pe *proc.ProcEnv) (*SigmaClnt, error) {
 	}
 	sc.ProcAPI = papi
 	return sc, nil
+}
+
+func (sc *SigmaClnt) NewProcClnt() error {
+	start := time.Now()
+	papi, err := procclnt.NewProcClnt(sc.FsLib)
+	if err != nil {
+		db.DPrintf(db.ERROR, "NewProcClnt: %v", err)
+		return err
+	}
+	sc.ProcAPI = papi
+	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", sc.ProcEnv().GetPID(), time.Since(start))
+	return nil
 }
 
 func (sc *SigmaClnt) ClntExit(status *proc.Status) error {

@@ -102,16 +102,6 @@ func Run(args []string) error {
 		if err := sc.MountTree(rootEP, sp.SCHEDDREL, sp.SCHEDD); err != nil {
 			db.DFatalf("Err MountTree schedd: ep %v err %v", rootEP, err)
 		}
-		//		realmdEP, err := sc.ReadEndpoint(filepath.Join(sp.ROOT, sp.REALM, sp.REALMD))
-		//		if err != nil {
-		//			db.DFatalf("Err read realmd EP err %v", err)
-		//		}
-		//		if err := sc.MountTree(realmdEP, sp.REALMSREL, sp.REALMS); err != nil {
-		//			db.DFatalf("Err MountTree: ep %v err %v", realmdEP, err)
-		//		}
-		//		if err := sc.MountTree(realmdEP, rpc.RPC, filepath.Join(sp.REALMS, rpc.RPC)); err != nil {
-		//			db.DFatalf("Err MountTree: ep %v err %v", realmdEP, err)
-		//		}
 	}
 
 	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"
@@ -141,14 +131,14 @@ func Run(args []string) error {
 	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
 
 	if err := nd.startLeader(); err != nil {
-		db.DPrintf(db.NAMED, "%v: startLeader %v err %v\n", pe.GetPID(), nd.realm, err)
+		db.DPrintf(db.NAMED, "%v: startLeader %v err %v", pe.GetPID(), nd.realm, err)
 		return err
 	}
 	defer nd.fs.Close()
 
 	ep, err := nd.newSrv()
 	if err != nil {
-		db.DFatalf("Error newSrv %v\n", err)
+		db.DFatalf("Error newSrv %v", err)
 	}
 
 	db.DPrintf(db.NAMED, "newSrv %v ep %v", nd.realm, ep)
@@ -158,21 +148,22 @@ func Run(args []string) error {
 		// Allow connections from all realms, so that realms can mount the kernel
 		// service union directories
 		nd.GetNetProxyClnt().AllowConnectionsFromAllRealms()
-		db.DPrintf(db.ALWAYS, "SetRootNamed %v ep %v\n", nd.realm, ep)
+		db.DPrintf(db.ALWAYS, "SetRootNamed %v ep %v", nd.realm, ep)
 		if err := nd.fs.SetRootNamed(ep); err != nil {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
 		pn = filepath.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v\n", nd.realm, pn, nd.sess.Lease())
+		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v", nd.realm, pn, nd.sess.Lease())
 		if err := nd.MkLeasedEndpoint(pn, ep, nd.sess.Lease()); err != nil {
-			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v\n", nd.realm, pn, err)
+			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			return err
 		}
+		db.DPrintf(db.NAMED, "[%v] named endpoint %v", nd.realm, ep)
 
 		// Signal realmd we are ready
 		if err := sem.Up(); err != nil {
-			db.DPrintf(db.NAMED, "%v sem up %v err %v\n", nd.realm, sem.String(), err)
+			db.DPrintf(db.NAMED, "%v sem up %v err %v", nd.realm, sem.String(), err)
 			return err
 		}
 	}
@@ -180,7 +171,7 @@ func Run(args []string) error {
 	nd.getRoot(pn + "/")
 
 	if err := nd.CreateLeaderFile(filepath.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
-		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v\n", nd.elect.Key(), err)
+		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v", nd.elect.Key(), err)
 	}
 
 	db.DPrintf(db.NAMED, "Created Leader file %v ", nd.elect.Key())
@@ -191,10 +182,10 @@ func Run(args []string) error {
 
 	<-ch
 
-	db.DPrintf(db.ALWAYS, "%v: named done %v %v\n", pe.GetPID(), nd.realm, ep)
+	db.DPrintf(db.ALWAYS, "%v: named done %v %v", pe.GetPID(), nd.realm, ep)
 
 	if err := nd.resign(); err != nil {
-		db.DPrintf(db.NAMED, "resign %v err %v\n", pe.GetPID(), err)
+		db.DPrintf(db.NAMED, "resign %v err %v", pe.GetPID(), err)
 	}
 
 	nd.SigmaSrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
@@ -244,17 +235,17 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		ep.Addrs()[0].IPStr = nd.ProcEnv().GetOuterContainerIP().String()
 		ep.Addrs()[0].PortInt = uint32(pm.HostPort)
 	}
-	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v\n", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
+	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }
 
 func (nd *Named) attach(cid sp.TclntId) {
-	db.DPrintf(db.NAMED, "named: attach %v\n", cid)
+	db.DPrintf(db.NAMED, "named: attach %v", cid)
 	// nd.fs.Recover(cid)
 }
 
 func (nd *Named) detach(cid sp.TclntId) {
-	db.DPrintf(db.NAMED, "named: detach %v\n", cid)
+	db.DPrintf(db.NAMED, "named: detach %v", cid)
 	// nd.fs.Detach(cid)
 }
 
@@ -271,10 +262,10 @@ func (nd *Named) resign() error {
 func (nd *Named) getRoot(pn string) error {
 	sts, err := nd.GetDir(pn)
 	if err != nil {
-		db.DPrintf(db.NAMED, "getdir %v err %v\n", pn, err)
+		db.DPrintf(db.NAMED, "getdir %v err %v", pn, err)
 		return err
 	}
-	db.DPrintf(db.NAMED, "getdir %v sts %v\n", pn, sp.Names(sts))
+	db.DPrintf(db.NAMED, "getdir %v sts %v", pn, sp.Names(sts))
 	return nil
 }
 
@@ -282,7 +273,7 @@ func (nd *Named) waitExit(ch chan struct{}) {
 	for {
 		err := nd.WaitEvict(nd.ProcEnv().GetPID())
 		if err == nil {
-			db.DPrintf(db.ALWAYS, "candidate %v %v evicted\n", nd.realm, nd.ProcEnv().GetPID().String())
+			db.DPrintf(db.ALWAYS, "candidate %v %v evicted", nd.realm, nd.ProcEnv().GetPID().String())
 			ch <- struct{}{}
 			break
 		}

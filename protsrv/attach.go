@@ -31,7 +31,6 @@ func AttachAllowAllPrincipalsSelectPaths(pns []string) AttachAuthF {
 		}
 		// If path isn't in specified allowed paths, reject connection attempt
 		db.DPrintf(db.PROTSRV, "Unauthorized attach from %v to \"%v\"", p, pn)
-		db.DPrintf(db.ALWAYS, "XXX Unauthorized attach from %v to \"%v\"", p, pn)
 		return fmt.Errorf("Unauthorized attach from %v to %v", p, pn)
 	}
 }

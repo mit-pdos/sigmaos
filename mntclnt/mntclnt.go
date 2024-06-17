@@ -197,7 +197,6 @@ func (mc *MntClnt) mount(fid sp.Tfid, pn string) *serr.Err {
 			// path; clunk the fid and don't return an
 			// error.
 			mc.fidc.Clunk(fid)
-			db.DPrintf(db.ALWAYS, "YYY Mount already there pn %v", pn)
 			return nil
 		} else {
 			return err

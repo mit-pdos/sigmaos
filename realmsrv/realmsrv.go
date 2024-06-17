@@ -230,6 +230,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}()
 	for i := 0; i < 2; i++ {
 		if err := <-errC; err != nil {
+			db.DPrintf(db.ERROR, "Error MakeRealm [%v] when booting subsystems", sp.Trealm(req.Realm))
 			return err
 		}
 	}
@@ -300,22 +301,26 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(r *Realm, realm sp.Trealm, ss s
 		kernels = kernels[:n]
 	}
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems selected kernels: %v", realm, kernels)
-	done := make(chan bool)
+	done := make(chan error)
 	for _, kid := range kernels {
 		go func(kid string) {
 			pid, err := rm.mkc.BootInRealm(kid, realm, ss, nil)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error boot subsystem %v in realm %v on kid %v: %v", ss, realm, kid, err)
+				done <- err
 			} else {
 				r.addSubsystem(kid, pid)
 			}
-			done <- true
+			done <- nil
 		}(kid)
 	}
+	var bootErr error
 	for _ = range kernels {
-		<-done
+		if e := <-done; e != nil {
+			bootErr = e
+		}
 	}
-	return nil
+	return bootErr
 }
 
 func (rm *RealmSrv) realmResourceUsage(running map[sp.Trealm][]*proc.Proc) map[sp.Trealm]proc.Tmem {

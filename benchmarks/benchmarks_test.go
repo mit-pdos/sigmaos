@@ -289,6 +289,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 	db.DPrintf(db.TEST, "Kernels %v", kernels)
 
 	if PREWARM_REALM {
+		db.DPrintf(db.TEST, "prewarm: spawn on %v\n", kernels[0])
 		p := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 0), "name/"})
 		p.SetKernels([]string{kernels[0]})
 		err := ts1.Spawn(p)
@@ -299,6 +300,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
+	db.DPrintf(db.TEST, "spawn on %v\n", kernels[1])
 	s := time.Now()
 	p := proc.NewProc("spawn-latency", []string{"1us", OUT_DIR})
 	p.SetKernels([]string{kernels[1]})

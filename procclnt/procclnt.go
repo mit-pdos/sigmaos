@@ -72,6 +72,16 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, how proc.Thow, kernelId stri
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
+	// Set the named mount point if this isn't a privileged proc. If we were to
+	// do this for a privileged proc, it could cause issues as it may save the
+	// knamed address.
+	if !p.IsPrivileged() {
+		ep, err := clnt.GetNamedEndpoint()
+		if err != nil {
+			return err
+		}
+		p.SetNamedEndpoint(ep)
+	}
 	return clnt.spawn("~local", proc.HSCHEDD, p)
 }
 

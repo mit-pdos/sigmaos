@@ -61,6 +61,8 @@ func RunKNamed(args []string) error {
 
 	db.DPrintf(db.NAMED, "newSrv %v ep %v", nd.realm, ep)
 
+	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
+
 	if err := nd.fs.SetRootNamed(ep); err != nil {
 		db.DFatalf("SetNamed: %v", err)
 	}

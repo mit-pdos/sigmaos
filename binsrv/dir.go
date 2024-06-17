@@ -40,7 +40,7 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 
 	pn := filepath.Join(n.path(), name)
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup", pn)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup pid %v", pn, c.Pid)
 
 	sst, err := n.RootData.bincache.lookup(pn, c.Pid)
 	if err != nil {

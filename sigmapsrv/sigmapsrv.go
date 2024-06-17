@@ -13,7 +13,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fsetcd"
-	"sigmaos/memfs/dir"
 	"sigmaos/netproxyclnt"
 	"sigmaos/overlaydir"
 	"sigmaos/path"
@@ -36,7 +35,7 @@ type SigmaPSrv struct {
 	dirunder    fs.Dir
 	dirover     *overlay.DirOverlay
 	fencefs     fs.Dir
-	stats       *stats.StatInfo
+	stats       *stats.StatInode
 	attachAuthF protsrv.AttachAuthF
 }
 
@@ -83,9 +82,9 @@ func (psrv *SigmaPSrv) Root(p path.Tpathname) (fs.Dir, path.Tpathname, path.Tpat
 	return d, path.Tpathname{}, p
 }
 
-func (psrv *SigmaPSrv) Mount(name string, dir *dir.DirImpl) {
-	dir.SetParent(psrv.dirover)
-	psrv.dirover.Mount(name, dir)
+func (psrv *SigmaPSrv) Mount(name string, i fs.FsObj) {
+	i.SetParent(psrv.dirover)
+	psrv.dirover.Mount(name, i)
 }
 
 func (psrv *SigmaPSrv) GetRootCtx(p *sp.Tprincipal, secrets map[string]*sp.SecretProto, aname string, sessid sessp.Tsession, clntid sp.TclntId) (fs.Dir, fs.CtxI) {

@@ -37,11 +37,15 @@ type Named struct {
 	crash  int
 	sess   *fsetcd.Session
 	signer sp.Tsigner
+	pstats *fsetcd.PstatInode
 	ephch  chan path.Tpathname
 }
 
 func newNamed(realm sp.Trealm) *Named {
-	nd := &Named{realm: realm, ephch: make(chan path.Tpathname)}
+	nd := &Named{
+		realm: realm,
+		ephch: make(chan path.Tpathname),
+	}
 	return nd
 }
 
@@ -140,6 +144,8 @@ func Run(args []string) error {
 	if err != nil {
 		db.DFatalf("Error newSrv %v", err)
 	}
+
+	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
 	db.DPrintf(db.NAMED, "newSrv %v ep %v", nd.realm, ep)
 

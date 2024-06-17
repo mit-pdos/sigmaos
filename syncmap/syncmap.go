@@ -69,7 +69,7 @@ func (sm *SyncMap[K, T]) Update(k K, t T) bool {
 	return true
 }
 
-func (sm *SyncMap[K, T]) Delete(k K) {
+func (sm *SyncMap[K, _]) Delete(k K) {
 	sm.Lock()
 	defer sm.Unlock()
 

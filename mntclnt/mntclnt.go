@@ -15,7 +15,7 @@ import (
 )
 
 type MntClnt struct {
-	ndMntCache *NamedMountCache
+	ndMntCache *NamedEndpointCache
 	mnt        *MntTable
 	rootmt     *RootMountTable
 	pe         *proc.ProcEnv
@@ -29,7 +29,7 @@ func NewMntClnt(pathc sigmaos.PathClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId
 	mc := &MntClnt{
 		cid:        cid,
 		mnt:        newMntTable(),
-		ndMntCache: NewNamedMountCache(pe),
+		ndMntCache: newNamedEndpointCache(pe),
 		rootmt:     newRootMountTable(pe),
 		pe:         pe,
 		npc:        npc,
@@ -95,7 +95,7 @@ func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Tpat
 }
 
 func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, path path.Tpathname) *serr.Err {
-	db.DPrintf(db.MOUNT, "automount %v to %v\n", ep, path)
+	db.DPrintf(db.MOUNT, "%v: automount %v to %v\n", mc.cid, ep, path)
 	var fid sp.Tfid
 	var err *serr.Err
 	s := time.Now()
@@ -104,7 +104,7 @@ func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 		db.DPrintf(db.MOUNT_ERR, "Attach error: %v", err)
 		return err
 	}
-	db.DPrintf(db.WALK_LAT, "AutoMount: %v %v Attach lat %v\n", mc.cid, path, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "%v: automount: pn '%v' Attach lat %v", mc.cid, path, time.Since(s))
 	if err := mc.mount(fid, path.String()); err != nil {
 		return err
 	}

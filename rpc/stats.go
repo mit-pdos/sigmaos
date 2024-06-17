@@ -53,8 +53,9 @@ type StatInfo struct {
 }
 
 func NewStatInfo() *StatInfo {
-	si := &StatInfo{}
-	si.st = newStats()
+	si := &StatInfo{
+		st: newStats(),
+	}
 	return si
 }
 

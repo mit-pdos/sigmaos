@@ -69,6 +69,9 @@ const (
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
 	SNAPDEV  = "snapdev"
+
+	// stats exported by named
+	PSTATSD = ".pstatsd"
 )
 
 // Dirs mounted from the root named into tenants' realms

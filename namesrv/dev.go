@@ -19,7 +19,8 @@ func newDev(o *Obj) fs.FsObj {
 func (d *Dev) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.NAMED, "%v: DevOpen %v m 0x%x path %v\n", ctx, d, m, d.Obj.pn)
 	if d.Obj.di.Nf == nil {
-		nf, _, err := d.Obj.fs.GetFile(&d.Obj.di)
+		nf, _, c, err := d.Obj.fs.GetFile(&d.Obj.di)
+		d.Obj.fs.PstatUpdate(d.Obj.pn, c)
 		if err != nil {
 			return nil, err
 		}

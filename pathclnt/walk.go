@@ -138,12 +138,13 @@ func (pathc *PathClnt) walkMount(path path.Tpathname, resolve bool) (sp.Tfid, pa
 		return sp.NoFid, left, err
 	}
 	db.DPrintf(db.WALK, "walkMount: resolve %v %v %v", fid, left, err)
+	s1 := time.Now()
 	// Obtain a private copy of fid that this thread walks
 	fid1, err := pathc.FidClnt.Clone(fid)
 	if err != nil {
 		return sp.NoFid, left, err
 	}
-	db.DPrintf(db.WALK_LAT, "walkMount: %v %v %v lat %v", pathc.cid, fid, left, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "walkMount: %v %v %v lat %v (clone lat %v)", pathc.cid, fid, left, time.Since(s), time.Since(s1))
 	return fid1, left, nil
 }
 
@@ -180,8 +181,9 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w Watch) (sp.Tf
 		db.DFatalf("walkOne %v", fid)
 	}
 	db.DPrintf(db.WALK, "walkOne -> %v %v", fid1, left)
+	s1 := time.Now()
 	err = pathc.FidClnt.Clunk(fid)
-	db.DPrintf(db.WALK_LAT, "walkOne %v %v %v -> %v %v lat %v", pathc.cid, fid, path, fid1, left, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "walkOne %v %v %v -> %v %v lat %v (clunk lat %v)", pathc.cid, fid, path, fid1, left, time.Since(s), time.Since(s1))
 	return fid1, left, nil
 }
 
@@ -189,6 +191,7 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w Watch) (sp.Tf
 // and return fid for result.
 func (pathc *PathClnt) walkUnion(fid sp.Tfid, p path.Tpathname) (sp.Tfid, path.Tpathname, *serr.Err) {
 	if len(p) > 0 && path.IsUnionElem(p[0]) {
+		s := time.Now()
 		db.DPrintf(db.WALK, "walkUnion %v path %v", fid, p)
 		fid1, err := pathc.unionLookup(fid, p[0])
 		if err != nil {
@@ -196,6 +199,7 @@ func (pathc *PathClnt) walkUnion(fid sp.Tfid, p path.Tpathname) (sp.Tfid, path.T
 		}
 		db.DPrintf(db.WALK, "walkUnion -> (%v, %v)", fid, p[1:])
 		pathc.FidClnt.Clunk(fid)
+		db.DPrintf(db.WALK_LAT, "walkUnion %v lat %v", p, time.Since(s))
 		return fid1, p[1:], nil
 	}
 	return fid, p, nil

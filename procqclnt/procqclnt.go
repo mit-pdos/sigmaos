@@ -31,7 +31,7 @@ func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
 
 func (pqc *ProcQClnt) chooseProcQ(pid sp.Tpid) (string, error) {
 	s := time.Now()
-	pqId, err := pqc.rpcdc.Random()
+	pqId, err := pqc.rpcdc.WaitTimedRandomEntry()
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt get ProcQ[%v] latency: %v", pid, pqId, time.Since(s))
 	return pqId, err
 }
@@ -58,8 +58,8 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 	if err := rpcc.RPC("ProcQ.Enqueue", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "ProcQ.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-			pqc.rpcdc.RemoveEntry(pqID)
+			db.DPrintf(db.ALWAYS, "Invalidate entry %v", pqID)
+			pqc.rpcdc.InvalidateEntry(pqID)
 		}
 		return NOT_ENQ, err
 	}
@@ -79,7 +79,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			pqID = callerKernelID
 		} else {
 			var err error
-			pqID, err = pqc.rpcdc.WaitRandom()
+			pqID, err = pqc.rpcdc.WaitTimedRandomEntry()
 			if err != nil {
 				db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get random: %v", err)
 				return 0, 0, false, err
@@ -98,8 +98,8 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 		if err := rpcc.RPC("ProcQ.GetProc", req, res); err != nil {
 			db.DPrintf(db.ALWAYS, "ProcQ.GetProc %v err %v", callerKernelID, err)
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
-				db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-				pqc.rpcdc.RemoveEntry(pqID)
+				db.DPrintf(db.ALWAYS, "Invalidate entry %v", pqID)
+				pqc.rpcdc.InvalidateEntry(pqID)
 				continue
 			}
 			return 0, 0, false, err
@@ -113,7 +113,7 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 	sampled := make(map[string]bool)
 	qstats := make(map[sp.Trealm]int)
 	for i := 0; i < nsample; i++ {
-		pqID, err := pqc.rpcdc.Random()
+		pqID, err := pqc.rpcdc.WaitTimedRandomEntry()
 		if err != nil {
 			db.DPrintf(db.ERROR, "Can't get random srv: %v", err)
 			return nil, err

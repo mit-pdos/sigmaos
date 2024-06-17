@@ -123,7 +123,7 @@ func (mc *MntClnt) mountNamed(realm sp.Trealm, mntName, tree string) *serr.Err {
 		// If mounting failed, the named is unreachable. Invalidate the cache entry
 		// for this realm.
 		if err := mc.invalidateNamedMountCacheEntry(realm); err != nil {
-			db.DPrintf(db.ERROR, "Error invalidating named mount cache entry: %v", err)
+			db.DPrintf(db.MOUNT, "Error invalidating named mount cache entry: %v", err)
 		}
 		return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v realm failure", realm))
 	}

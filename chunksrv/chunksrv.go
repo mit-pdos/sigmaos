@@ -19,6 +19,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
@@ -138,7 +139,7 @@ func (cksrv *ChunkSrv) getRealmSigmaClnt(r sp.Trealm, s3secret *sp.SecretProto) 
 		// Set the secrets to match those passed in by the user
 		pe.SetSecrets(map[string]*sp.SecretProto{"s3": s3secret})
 		// Create a sigmaclnt
-		sc, err = sigmaclnt.NewSigmaClnt(pe)
+		sc, err = sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error create SigmaClnt: %v", err)
 			return nil, err

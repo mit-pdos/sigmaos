@@ -1,3 +1,6 @@
+// Package sessdevsrv allows a server to make a directory using
+// [clonedev] when a clients open [clonedev]. sessdevsrv populates the
+// directory with DATA special file.
 package sessdevsrv
 
 import (

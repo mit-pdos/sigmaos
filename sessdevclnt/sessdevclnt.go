@@ -1,3 +1,8 @@
+// Package sessdevclnt creates a session with a server that exports a
+// session device file; see [sessdevsrv] and [clonedev]. The client
+// can then read/write the DATA device file in the session's directory
+// at the server. [sigmarpcchan] uses it to send/receive RPCs to a
+// server.
 package sessdevclnt
 
 import (

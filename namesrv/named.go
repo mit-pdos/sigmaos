@@ -104,6 +104,10 @@ func Run(args []string) error {
 		if err := sc.MountTree(rootEP, sp.REALMREL, sp.REALM); err != nil {
 			db.DFatalf("Err MountTree realm: ep %v err %v", rootEP, err)
 		}
+		// Must manually mount scheduler dirs, since they will be automatically
+		// scanned by schedd-/procq-/lcsched- clnts as soon as the procclnt is
+		// created, but this named won't have posted its endpoint in the namespace
+		// yet, so root named resolution will fail.
 		if err := sc.MountTree(rootEP, sp.SCHEDDREL, sp.SCHEDD); err != nil {
 			db.DFatalf("Err MountTree schedd: ep %v err %v", rootEP, err)
 		}

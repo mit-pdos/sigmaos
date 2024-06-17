@@ -461,19 +461,22 @@ func TestKernelIsolationBasic(t *testing.T) {
 	rootNamedEP, err := ts.rootts.GetNamedEndpoint()
 	assert.Nil(t, err, "Err %v", err)
 	db.DPrintf(db.TEST, "rootNamed EP: %v", rootNamedEP)
-	var anyDir string
-	for d, _ := range sp.RootNamedMountedDirs {
-		anyDir = d
-		break
-	}
-	// Ensure that tenant realms can access union dirs which get mounted into their realm from the root realm's named
-	err = ts.ts1.MountTree(rootNamedEP, anyDir, "name/rnmd")
-	assert.Nil(t, err, "Unable to mount root name/%v", anyDir)
+	pn := filepath.Join(sp.NAME, sp.PROCQREL) + "/"
+	db.DPrintf(db.TEST, "Try to get dir %v", pn)
+	// Ensure that tenant realms can perform GetDir on union directories which
+	// live in the root named (and are mounted into the tenant's named)
+	sts, err := ts.ts1.GetDir(pn)
+	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
+	assert.True(t, len(sts) == 1, "Wrong list of schedds: %v", sp.Names(sts))
+	sts1, err := ts.ts1.GetDir(filepath.Join(pn, sts[0].Name) + "/")
+	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
+	assert.True(t, len(sts1) == 3, "Wrong procq contents: %v", sp.Names(sts1))
+	db.DPrintf(db.TEST, "Got contents of %v%v: %v", pn, sts[0].Name, sp.Names(sts1))
 	// Ensure that tenant realms can't access the root named's root directory
 	err = ts.ts1.MountTree(rootNamedEP, "", "name/rootnamed")
 	assert.NotNil(t, err, "Able to mount name/ from root named")
 	// Ensure that tenant realms can't access union dirs which aren't mounted into their realms
-	err = ts.ts1.MountTree(rootNamedEP, "s3", "name/kernelsrv")
+	err = ts.ts1.MountTree(rootNamedEP, "s3", "name/roots3")
 	assert.NotNil(t, err, "Able to mount name/s3 from root named")
 
 	// Get the ID of the kernel clnt

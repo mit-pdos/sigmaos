@@ -195,7 +195,7 @@ func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
 		p.SetRealm(newr)
 		// Clear the cached named endpoint, since it corresponds to the named
 		// endpoint for the realm the proc *used* to belong to
-		p.SetNamedEndpoint(&sp.Tendpoint{nil})
+		p.ProcEnvProto.ClearNamedEndpoint()
 	}
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
 	// Marshal the principal ID

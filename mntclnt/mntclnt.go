@@ -83,8 +83,8 @@ func (mc *MntClnt) ResolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	return err, ok
 }
 
-// Return path including the last mount file on this path and the rest
-// of the path on the server.
+// Return path through the last mounted server and the rest of the
+// path on the server.
 func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Tpathname, path.Tpathname, error) {
 	// Automount the longest prefix of pn; if pn exist, then the
 	// server holding the directory/file correspending to pn.
@@ -114,8 +114,18 @@ func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 }
 
 func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname string) error {
-	db.DPrintf(db.MOUNT, "MountTree [%v]/%v mnt %v", ep, tree, mntname)
+	db.DPrintf(db.MOUNT, "MountTree [%v]:%q mnt %v", ep, tree, mntname)
+	ok, err := mc.isMountedAt(mntname)
+	db.DPrintf(db.MOUNT, "isMounted [%v] %t %v", mntname, ok, err)
+	if err != nil {
+		return nil
+	}
+	if ok {
+		return nil
+	}
+	s := time.Now()
 	if fid, err := mc.fidc.Attach(secrets, mc.cid, ep, "", tree); err == nil {
+		db.DPrintf(db.SPAWN_LAT, "Attach %v lat %v", mntname, time.Since(s))
 		return mc.Mount(fid, mntname)
 	} else {
 		db.DPrintf(db.MOUNT_ERR, "%v: MountTree Attach [%v]/%v err %v", mc.cid, ep, tree, err)
@@ -169,7 +179,7 @@ func (mc *MntClnt) Disconnect(pn string, fids []sp.Tfid) error {
 	if err != nil {
 		return err
 	}
-	mntp := mc.mnt.mountedAt(p)
+	_, mntp := mc.mnt.isMountedAt(p)
 	for _, fid := range fids {
 		ch := mc.fidc.Lookup(fid)
 		if ch != nil {
@@ -186,6 +196,18 @@ func (mc *MntClnt) Disconnect(pn string, fids []sp.Tfid) error {
 	}
 	mc.fidc.Disconnect(fid)
 	return nil
+}
+
+func (mc *MntClnt) isMountedAt(pn string) (bool, error) {
+	p, err := serr.PathSplitErr(pn)
+	if err != nil {
+		return false, err
+	}
+	ok, pn0 := mc.mnt.isMountedAt(p)
+	if ok && pn0 == nil {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (mc *MntClnt) mount(fid sp.Tfid, pn string) *serr.Err {

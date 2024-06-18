@@ -138,10 +138,19 @@ func (cksrv *ChunkSrv) getRealmSigmaClnt(r sp.Trealm, s3secret *sp.SecretProto) 
 		pe.GetPrincipal().SetID(sp.TprincipalID(cksrv.sc.ProcEnv().GetPrincipal().GetID().String() + "-clnt-" + r.String()))
 		// Set the secrets to match those passed in by the user
 		pe.SetSecrets(map[string]*sp.SecretProto{"s3": s3secret})
-		// Create a sigmaclnt
+		// Create a sigmaclnt but only with an FsLib
 		sc, err = sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error create SigmaClnt: %v", err)
+			return nil, err
+		}
+		ep, err := cksrv.sc.GetNamedEndpoint()
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
+			return nil, err
+		}
+		if err := sc.MountTree(ep, "", sp.NAMED); err != nil {
+			db.DPrintf(db.ERROR, "Error MountTree: %v", err)
 			return nil, err
 		}
 		cksrv.scs[r] = sc

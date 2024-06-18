@@ -100,7 +100,7 @@ type ckclntEntry struct {
 }
 
 type ChunkSrv struct {
-	sync.Mutex
+	mu        sync.Mutex
 	sc        *sigmaclnt.SigmaClnt
 	scs       map[sp.Trealm]*sigmaclnt.SigmaClnt
 	kernelId  string
@@ -124,8 +124,8 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 
 // Get or create a new sigmaclnt for a realm, with given s3 secrets
 func (cksrv *ChunkSrv) getRealmSigmaClnt(r sp.Trealm, s3secret *sp.SecretProto) (*sigmaclnt.SigmaClnt, error) {
-	cksrv.Lock()
-	defer cksrv.Unlock()
+	cksrv.mu.Lock()
+	defer cksrv.mu.Unlock()
 
 	sc, ok := cksrv.scs[r]
 	if !ok {

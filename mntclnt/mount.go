@@ -141,15 +141,17 @@ func (mnt *MntTable) disconnect(path path.Tpathname) (sp.Tfid, *serr.Err) {
 	return sp.NoFid, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
-// Where is path mounted at?  For Disconnect; it ignores closed.
-func (mnt *MntTable) mountedAt(path path.Tpathname) path.Tpathname {
+// Where is path mounted at?
+func (mnt *MntTable) isMountedAt(path path.Tpathname) (bool, path.Tpathname) {
+	mnt.Lock()
+	defer mnt.Unlock()
 	for _, p := range mnt.mounts {
 		ok, _ := match(p.path, path)
 		if ok {
-			return p.path
+			return true, p.path
 		}
 	}
-	return nil
+	return false, nil
 }
 
 func (mnt *MntTable) mountedPaths() []string {

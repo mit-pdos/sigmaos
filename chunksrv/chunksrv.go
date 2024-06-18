@@ -107,6 +107,7 @@ type ChunkSrv struct {
 	path      string
 	ckclnt    *chunkclnt.ChunkClnt
 	realmbins *realmBinEntry
+	localEps  map[string]*sp.Tendpoint
 }
 
 func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
@@ -116,6 +117,7 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 		kernelId: kernelId,
 		path:     chunk.ChunkdPath(kernelId),
 		ckclnt:   chunkclnt.NewChunkClnt(sc.FsLib),
+		localEps: make(map[string]*sp.Tendpoint),
 	}
 	cksrv.realmbins = newRealmBinEntry(cksrv.getRealmSigmaClnt)
 	cksrv.scs[sp.ROOTREALM] = sc
@@ -164,7 +166,7 @@ func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, s3secret *sp.SecretProto
 }
 
 //
-// Handling a FetchChunkRequest
+// Handle a FetchChunkRequest
 //
 
 func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchChunkResponse) (bool, error) {
@@ -268,7 +270,7 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *prot
 }
 
 //
-// Handling a GetFileStatRequest
+// Handle a GetFileStatRequest
 //
 
 func (cksrv *ChunkSrv) getCache(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) (*sp.Stat, string, bool) {
@@ -289,7 +291,7 @@ func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3sec
 		db.DPrintf(db.ERROR, "Error get realm (%v) sigma clnt: %v", r, err)
 		return nil, "", err
 	}
-	st, path, err := lookup(sc, prog, paths)
+	st, path, err := cksrv.lookup(sc, prog, paths)
 	if err != nil {
 		return nil, "", err
 	}
@@ -354,18 +356,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	return cksrv.getFileStat(req, res)
 }
 
-// lookup of ~local is expensive because involves reading a
-// directory. chunksrv knows what ~local is, namely its kernelId.
-func replaceLocal(paths []string, kernelId string) []string {
-	for i, p := range paths {
-		if strings.HasPrefix(p, sp.UX) {
-			paths[i] = strings.Replace(p, "~local", kernelId, 1)
-		}
-	}
-	return paths
-}
-
-func lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, string, error) {
+func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, string, error) {
 	db.DPrintf(db.CHUNKSRV, "lookup %q %v", prog, paths)
 
 	var st *sp.Stat
@@ -373,6 +364,7 @@ func lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, str
 	err := fslib.RetryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.CHUNKSRV, "Stat '%v/%v'", pn, prog)
 		s := time.Now()
+		cksrv.useLocalEp(sc, pn)
 		sst, err := sc.Stat(pn + "/" + prog)
 		db.DPrintf(db.SPAWN_LAT, "Stat '%v/%v' lat %v", pn, prog, time.Since(s))
 		if err == nil {
@@ -385,6 +377,27 @@ func lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, str
 	})
 	db.DPrintf(db.CHUNKSRV, "lookup done %q %v st %v err %v", prog, paths, st, err)
 	return st, path, err
+}
+
+func (cksrv *ChunkSrv) useLocalEp(sc *sigmaclnt.SigmaClnt, pn string) {
+	cksrv.mu.Lock()
+	defer cksrv.mu.Unlock()
+
+	for pn0, ep := range cksrv.localEps {
+		if strings.HasPrefix(pn, pn0) {
+			cksrv.mu.Unlock()
+			err := sc.MountTree(ep, "", pn0)
+			cksrv.mu.Lock()
+			if ok := serr.IsErrorExists(err); ok {
+				return
+			}
+			if err != nil {
+				db.DPrintf(db.CHUNKSRV, "useLocalEp: invalidate %q %v", pn)
+				delete(cksrv.localEps, pn0)
+			}
+			return
+		}
+	}
 }
 
 func open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, string, error) {
@@ -403,6 +416,17 @@ func open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, string, er
 		return sfd, "", err
 	}
 	return sfd, path, nil
+}
+
+// lookup of ~local is expensive because involves reading a
+// directory. chunksrv knows what ~local is, namely its kernelId.
+func replaceLocal(paths []string, kernelId string) []string {
+	for i, p := range paths {
+		if strings.HasPrefix(p, sp.UX) {
+			paths[i] = strings.Replace(p, "~local", kernelId, 1)
+		}
+	}
+	return paths
 }
 
 func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
@@ -483,6 +507,16 @@ func Run(kernelId string) {
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.CHUNKD, sc.ProcEnv().GetKernelID()), sc, cksrv)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
+	}
+	// Read endpoints of local proxies and remember them
+	for _, srv := range []string{sp.UX, sp.S3} {
+		pn := filepath.Join(srv, kernelId)
+		ep, err := sc.ReadEndpoint(pn)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error ReadEndpoint %v: %v", pn, err)
+			continue
+		}
+		cksrv.localEps[pn] = ep
 	}
 	ssrv.RunServer()
 }

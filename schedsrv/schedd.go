@@ -73,6 +73,9 @@ func (sd *Schedd) WarmUprocd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *pr
 func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
 	sd.nProcsRun.Add(1)
 	p := proc.NewProcFromProto(req.ProcProto)
+	if ctx.Principal().GetRealm() != sp.ROOTREALM && p.GetRealm() != ctx.Principal().GetRealm() {
+		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
+	}
 	// If this proc's memory has not been accounted for (it was not spawned via
 	// the ProcQ), account for it.
 	if !req.MemAccountedFor {

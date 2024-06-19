@@ -510,7 +510,12 @@ func Run(kernelId string) {
 	}
 	// Read endpoints of local proxies and remember them
 	for _, srv := range []string{sp.UX, sp.S3} {
-		pn := filepath.Join(srv, kernelId)
+		_, err := sc.GetDir(srv)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error GetDir %v: %v", srv, err)
+			continue
+		}
+		pn := sp.ProxyPathname(srv, kernelId)
 		ep, err := sc.ReadEndpoint(pn)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error ReadEndpoint %v: %v", pn, err)

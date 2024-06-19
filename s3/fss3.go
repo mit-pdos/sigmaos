@@ -3,7 +3,6 @@ package fss3
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -72,7 +71,7 @@ func RunFss3() {
 	}
 	root := newDir("", path.Tpathname{}, sp.DMDIR)
 	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP)
-	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, filepath.Join(sp.S3, pe.GetKernelID()), sc)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, sp.ProxyPathname(sp.S3, pe.GetKernelID()), sc)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

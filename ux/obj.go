@@ -21,10 +21,6 @@ func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
 	return time.Unix(sts.Sec, int64(sts.Nsec))
 }
 
-func newQid(mode sp.Tperm, v sp.TQversion, path sp.Tpath) *sp.Tqid {
-	return sp.NewQid(sp.Qtype(mode>>sp.QTYPESHIFT), v, path)
-}
-
 func umode2Perm(umode uint16) sp.Tperm {
 	perm := sp.Tperm(umode & 0777)
 	switch umode & syscall.S_IFMT {

@@ -8,7 +8,7 @@ def get_blocks(fpath, bsz):
   with open(fpath, "rb") as f:
     b = f.read()
   s = base64.b64encode(b)
-  chunks = [ s[ i * bsz : (i+1) * bsz ] for i in range(0, len(s), bsz) ]
+  chunks = [ s[ i : i + bsz ] for i in range(0, len(s), bsz) ]
   return chunks
 
 def count_unique_blocks(dpath, bsz, verbose):

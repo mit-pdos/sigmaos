@@ -146,8 +146,6 @@ const (
 	NO_SIGNED_TOKEN    string       = "NO_SIGNED_TOKEN"
 )
 
-var ALL_PATHS []string = []string{"*"}
-
 func NoToken() *Ttoken {
 	return &Ttoken{
 		SignerStr:   NO_SIGNER,

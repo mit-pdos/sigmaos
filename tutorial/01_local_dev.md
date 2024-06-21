@@ -80,6 +80,9 @@ In order to build SigmaOS for local development, run the following command:
 $ ./build.sh
 ```
 
+*** NOTE: YOU SHOULD NOT NEED TO USE SUDO TO RUN `build.sh` . IF YOU ARE
+TEMPTED TO... DON'T (ask for help debugging your config) ***
+
 If you wish to speed up your build by building the binaries in parallel, run:
 
 ```

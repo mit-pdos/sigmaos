@@ -134,6 +134,31 @@ mkdir /mnt/9p
 sudo chown $USER /mnt/9p
 ```
 
+SigmaOS also expects to find valid AWS `credentials` and `config` set up in
+your user account's AWS config directory, `~/.aws`. The `credentials` and
+`config` files contain the AWS configuration and secret access keys required
+for SigmaOS to access your AWS resources. The AWS CLI docs contain information
+on how to set up your `config` and `credentials` files:
+
+```
+https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-files.html
+https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-configure.html
+```
+
+SigmaOS expects there to be a `sigmaos` entry in your AWS `credentials` and
+`config` files. The entry in `~/aws/credentials` looks like this:
+
+```
+[sigmaos]
+aws_access_key_id = KEYID
+aws_secret_access_key = SECRETKEY
+region=us-east-1
+```
+
+If you have an AWS account, you can replace `KEYID` and `SECRETKEY`
+with your account's key.  If you don't have an account, you will need to create
+one (google create an AWS account).
+
 In order to make sure the build succeeded, run a simple test which starts
 SigmaOS up and exits immediately:
 
@@ -280,35 +305,8 @@ set of tests to ensure that SigmaOS starts from a clean state.
 
 ## Exercise: Access S3 through SigmaOS
 
-Through SigmaOS you can access other services, such as AWS S3.  For this
-exercise you must have AWS `credentials` and `config` files set up in your user
-account's AWS config directory, `~/.aws`. The `credentials` and `config` files
-contain the AWS configuration and secret access keys required for SigmaOS to
-access your AWS resources. The AWS CLI docs contain information on how to
-set up your `config` and `credentials` files:
-
-```
-https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-files.html
-https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-configure.html
-```
-
-SigmaOS expects there to be a `sigmaos` entry in your AWS `credentials` and
-`config` files. The entry in `~/aws/credentials` looks like this:
-
-```
-[sigmaos]
-aws_access_key_id = KEYID
-aws_secret_access_key = SECRETKEY
-region=us-east-1
-```
-
-If you have an AWS account, you can replace `KEYID` and `SECRETKEY`
-with your account's key.  If you don't have an account, you can create
-one (google create an AWS account) or use the account key provided by
-us.
-
-Now, if you retboot and mount SigmaOS, you should be able to access files in S3
-by running:
+Through SigmaOS you can access other services, such as AWS S3. Ff you boot and
+mount SigmaOS, you should be able to access files in S3 by running:
 
 ```
 ls /mnt/9p/s3/SERVER_ID/

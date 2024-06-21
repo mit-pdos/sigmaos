@@ -1,18 +1,18 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--realm REALM] [--profile PROFILE] [--parallel]" 1>&2
+  echo "Usage: $0 --tag TAG [--profile PROFILE] [--parallel]" 1>&2
 }
 
-REALM="testrealm"
+TAG=""
 PROFILE=""
 PARALLEL=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
-  --realm)
+  --tag)
     shift
-    REALM=$1
+    TAG=$1
     shift
     ;;
   --profile)
@@ -36,25 +36,31 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ $# -gt 0 ]; then
+if [ -z "$TAG" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi
 
 DIR=$(dirname $0)
-. $DIR/.env
+. $DIR/env/env.sh
 
-VERSION=$(cat "${VERSION_FILE}")
-oldbins=$(aws s3 ls --recursive s3://$REALM/bin/user $PROFILE | awk '{print $NF}')
+# Get names of old bins
+oldbins=$(aws s3 ls --recursive s3://$TAG/bin $PROFILE | awk '{print $NF}')
 
-for bin in $oldbins; do
-  if ! [[ $bin == *$VERSION* ]]; then
-    cmd="aws s3 rm s3://$REALM/$bin"
-    if [ -z "$PARALLEL" ]; then
-      eval "$cmd"
-    else
-      eval "$cmd" &
-    fi
-  fi
-done
-wait
+if [ "$oldbins" == "" ]; then
+  echo "Nothing to remove"
+  exit 0
+fi
+
+if [ -z "$PARALLEL" ]; then
+  # If not removing in parallel, remove with 1 thread
+  njobs=1
+else
+  # If removing up in parallel, remove with (n - 1) threads.
+  njobs=$(nproc)
+  njobs="$(($njobs-1))"
+fi
+
+rmbins="parallel -j$njobs aws \"s3 rm s3://$TAG/{}\" ::: $oldbins"
+echo $rmbins
+eval $rmbins

@@ -43,6 +43,7 @@ var loadMasterKey bool
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
 	flag.StringVar(&tag, "tag", sp.LOCAL_BUILD, "Docker image tag")
+	flag.StringVar(&sp.Version, "version", sp.DEFAULT_VERSION, "Build version")
 	flag.BoolVar(&loadMasterKey, "load-master-key", false, "Load master deployment key from the host FS instead of generating a new one")
 	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&reuseKernel, "reuse-kernel", false, "Reuse system, avoid restarting when possible")

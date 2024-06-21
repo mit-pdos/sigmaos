@@ -87,6 +87,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			OuterContainerIPStr: sp.NOT_SET,
 			KernelID:            sp.NOT_SET,
 			BuildTag:            sp.NOT_SET,
+			Version:             sp.Version,
 			Perf:                os.Getenv(SIGMAPERF),
 			Strace:              os.Getenv(SIGMASTRACE),
 			Debug:               os.Getenv(SIGMADEBUG),
@@ -282,6 +283,10 @@ func (pe *ProcEnvProto) SetNetFail(nf int64) {
 	pe.NetFail = nf
 }
 
+func (pe *ProcEnvProto) SetVersion(v string) {
+	pe.Version = v
+}
+
 func (pe *ProcEnvProto) SetCrash(nf int64) {
 	pe.Crash = nf
 }
@@ -343,6 +348,7 @@ func Unmarshal(pestr string) *ProcEnv {
 func (pe *ProcEnv) String() string {
 	return fmt.Sprintf("&{ "+
 		"Program:%v "+
+		"Version:%v "+
 		"Pid:%v "+
 		"Realm:%v "+
 		"Principal:{%v} "+
@@ -368,6 +374,7 @@ func (pe *ProcEnv) String() string {
 		"RealmSwitch:%v"+
 		"}",
 		pe.Program,
+		pe.Version,
 		pe.GetPID(),
 		pe.GetRealm(),
 		pe.GetPrincipal().String(),

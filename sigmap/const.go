@@ -11,7 +11,8 @@ const (
 
 // Build constants
 const (
-	LOCAL_BUILD = "local-build"
+	LOCAL_BUILD     = "local-build"
+	DEFAULT_VERSION = "1.0"
 )
 
 // Protocol-level consts

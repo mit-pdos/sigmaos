@@ -1,13 +1,14 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--push TAG] [--target TARGET] [--userbin USERBIN] [--parallel] [--rebuildbuilder]" 1>&2
+  echo "Usage: $0 [--push TAG] [--target TARGET] [--version VERSION] [--userbin USERBIN] [--parallel] [--rebuildbuilder]" 1>&2
 }
 
 PARALLEL=""
 REBUILD_BUILDER="false"
 TAG=""
 TARGET="local"
+VERSION="1.0"
 USERBIN="all"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -27,6 +28,11 @@ while [[ "$#" -gt 0 ]]; do
   --target)
     shift
     TARGET="$1"
+    shift
+    ;;
+  --version)
+    shift
+    VERSION="$1"
     shift
     ;;
   --userbin)

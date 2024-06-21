@@ -117,21 +117,21 @@ SigmaOS uses `etcd` for fault-tolerant storage and you may have to (re)start
 etcd:
 
 ```
-./start-etcd.sh
+$ ./start-etcd.sh
 ```
 
 You can check if `etcd` is running and accessible as follows:
 ```
-docker exec etcd-server etcdctl version
+$ docker exec etcd-server etcdctl version
 ```
 
 Also, sigmaos expects the directories `~/.aws` and `/mnt/9p` to exist when it
 runs. To create them, run:
 
 ```
-mkdir ~/.aws
-mkdir /mnt/9p
-sudo chown $USER /mnt/9p
+$ mkdir ~/.aws
+$ mkdir /mnt/9p
+$ sudo chown $USER /mnt/9p
 ```
 
 SigmaOS also expects to find valid AWS `credentials` and `config` set up in
@@ -159,11 +159,18 @@ If you have an AWS account, you can replace `KEYID` and `SECRETKEY`
 with your account's key.  If you don't have an account, you will need to create
 one (google create an AWS account).
 
+You can check whether you set up your AWS credentials correctly by installing
+the AWS CLI (`sudo apt install awscli`) and running:
+
+```
+$ aws s3 ls --profile sigmaos
+```
+
 In order to make sure the build succeeded, run a simple test which starts
 SigmaOS up and exits immediately:
 
 ```
-go test -v sigmaos/fslib --run InitFs --start
+$ go test -v sigmaos/fslib --run InitFs --start
 ```
 
 The output should look something like:

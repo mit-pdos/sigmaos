@@ -3,7 +3,7 @@ package fslib
 import (
 	"path/filepath"
 
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/rpc"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"

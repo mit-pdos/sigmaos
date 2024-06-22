@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/netproxyclnt"
 	"sigmaos/perf"

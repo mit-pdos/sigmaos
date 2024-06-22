@@ -14,7 +14,7 @@ import (
 	"sigmaos/auth"
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/realmclnt"

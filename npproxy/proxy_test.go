@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "sigmaos/debug"
 	"sigmaos/namesrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -55,6 +56,7 @@ func (ts *Tstate) cleanup() {
 }
 
 func run(cmd string) ([]byte, error) {
+	db.DPrintf(db.TEST, "cmd %v", cmd)
 	out, err := exec.Command("bash", "-c", cmd).CombinedOutput()
 	if err != nil {
 		log.Printf("stderr: %v", string(out))

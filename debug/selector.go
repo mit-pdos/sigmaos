@@ -276,3 +276,10 @@ const (
 const (
 	FRAME Tselector = "FRAME"
 )
+
+// Simulator
+const (
+	SIM_CLNT Tselector = "SIM_CLNT"
+	SIM_TEST           = "SIM_TEST"
+	SIM_SVC            = "SIM_SVC"
+)

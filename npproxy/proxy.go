@@ -12,7 +12,7 @@ import (
 	"sigmaos/demux"
 	"sigmaos/fidclnt"
 	"sigmaos/netproxyclnt"
-	"sigmaos/npcodec"
+	"sigmaos/npproxy/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"

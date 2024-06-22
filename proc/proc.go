@@ -121,6 +121,10 @@ func (p *Proc) GetSecrets() map[string]*sp.SecretProto {
 	return p.ProcEnvProto.GetSecrets()
 }
 
+func (p *Proc) GetVersion() string {
+	return p.ProcEnvProto.GetVersion()
+}
+
 func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.SetRealm(parentPE.GetRealm())
 	p.ProcEnvProto.ParentDir = filepath.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
@@ -128,6 +132,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Perf = parentPE.Perf
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
+	p.ProcEnvProto.Version = parentPE.Version
 	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
 	// Don't override intentionally set net proxy settings
@@ -214,8 +219,27 @@ func (p *Proc) IsPrivileged() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t SigmaPath:%v KernelId:%v UseSigmaclntd:%v UseNetProxy:%v Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
+	return fmt.Sprintf("&{ "+
+		"Program:%v "+
+		"Version:%v "+
+		"Pid:%v "+
+		"Tag: %v "+
+		"Priv:%t "+
+		"SigmaPath:%v "+
+		"KernelId:%v "+
+		"UseSigmaclntd:%v "+
+		"UseNetProxy:%v "+
+		"Realm:%v "+
+		"Perf:%v "+
+		"InnerIP:%v "+
+		"OuterIP:%v "+
+		"Args:%v "+
+		"Type:%v "+
+		"Mcpu:%v "+
+		"Mem:%v "+
+		"}",
 		p.ProcEnvProto.Program,
+		p.ProcEnvProto.Version,
 		p.ProcEnvProto.GetPID(),
 		p.ProcEnvProto.GetBuildTag(),
 		p.ProcEnvProto.Privileged,
@@ -262,6 +286,14 @@ func (p *Proc) GetProcEnv() *ProcEnv {
 
 func (p *Proc) GetProgram() string {
 	return p.ProcEnvProto.Program
+}
+
+func (p *Proc) GetVersionedProgram() string {
+	// Kernel procs, including named, are not versioned
+	if p.IsPrivileged() || p.GetProgram() == "named" {
+		return p.GetProgram()
+	}
+	return p.GetProgram() + "-v" + p.GetVersion()
 }
 
 func (p *Proc) GetSigmaPath() []string {

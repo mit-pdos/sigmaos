@@ -11,7 +11,8 @@ const (
 
 // Build constants
 const (
-	LOCAL_BUILD = "local-build"
+	LOCAL_BUILD     = "local-build"
+	DEFAULT_VERSION = "1.0"
 )
 
 // Protocol-level consts
@@ -145,8 +146,6 @@ const (
 	NO_SIGNER          string       = "NO_SIGNER"
 	NO_SIGNED_TOKEN    string       = "NO_SIGNED_TOKEN"
 )
-
-var ALL_PATHS []string = []string{"*"}
 
 func NoToken() *Ttoken {
 	return &Ttoken{

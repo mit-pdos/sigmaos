@@ -9,6 +9,7 @@ import (
 )
 
 var Target = "local"
+var Version = "1.0"
 
 // Local params
 var local = `

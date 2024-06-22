@@ -35,6 +35,7 @@ message ProcEnvProto {
   repeated string sigmaPath = 28;
   repeated string kernels = 29;
   string realmSwitchStr = 30;
+  string version = 31;
 }
 
 message ProcProto {

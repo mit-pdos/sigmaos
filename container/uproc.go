@@ -33,7 +33,7 @@ func StartUProc(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
 
-	pn := binsrv.BinPath(uproc.GetProgram())
+	pn := binsrv.BinPath(uproc.GetVersionedProgram())
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
 		cmd = exec.Command("strace", append([]string{"-D", "-f", "exec-uproc-rs", uproc.GetPid().String(), pn, strconv.FormatBool(netproxy)}, uproc.Args...)...)

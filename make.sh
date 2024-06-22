@@ -1,12 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] [--userbin USERBIN] kernel|user|proxy" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] [--version VERSION] [--userbin USERBIN] kernel|user|proxy" 1>&2
 }
 
 RACE="-race"
 CMD="build"
 TARGET="local"
+VERSION="1.0"
 USERBIN="all"
 GO="go"
 PARALLEL=""
@@ -30,6 +31,11 @@ while [[ "$#" -gt 0 ]]; do
   --target)
     shift
     TARGET="$1"
+    shift
+    ;;
+  --version)
+    shift
+    VERSION="$1"
     shift
     ;;
   --userbin)
@@ -69,23 +75,31 @@ echo $WHAT
 
 OUTPATH=bin
 
+LDF="-X sigmaos/sigmap.Target=$TARGET -X sigmaos/sigmap.Version=$VERSION -s -w"
+
 if [[ $WHAT == "kernel" ]]; then
     mkdir -p $OUTPATH/kernel
     mkdir -p $OUTPATH/linux
     WHAT="kernel linux"
+    # Clear version string, which only applies to user procs
+    VERSION=""
 elif [[ $WHAT == "user" ]]; then
     mkdir -p $OUTPATH/user
+    # Prepend version string prefix "-v" for user procs
+    VERSION="-v$VERSION"
 elif [[ $WHAT == "proxy" ]]; then
     mkdir -p $OUTPATH/proxy
+    # Clear version string, which only applies to user procs
+    VERSION=""
 else
     mkdir -p $OUTPATH/linux
     WHAT="linux"
+    # Clear version string, which only applies to user procs
+    VERSION=""
 fi
 
-LDF="-X sigmaos/sigmap.Target=$TARGET -s -w"
-
 for k in $WHAT; do
-  echo "Building $k components"
+  echo "Building $k components $VERSION"
   FILES=`ls cmd/$k`
    if [[ "$k" == "user" ]] && ! [[ "$USERBIN" == "all" ]] ; then
      FILES="$(echo "$USERBIN" | tr "," " ")"
@@ -97,7 +111,7 @@ for k in $WHAT; do
         echo "$GO vet cmd/$k/$f/main.go"
         $GO vet cmd/$k/$f/main.go
       else
-        build="$GO build -ldflags=\"$LDF\" $RACE -o $OUTPATH/$k/$f cmd/$k/$f/main.go"
+        build="$GO build -ldflags=\"$LDF\" $RACE -o $OUTPATH/$k/$f$VERSION cmd/$k/$f/main.go"
         echo $build
         eval "$build"
       fi
@@ -106,7 +120,7 @@ for k in $WHAT; do
     # If building in parallel, build with (n - 1) threads.
     njobs=$(nproc)
     njobs="$(($njobs-1))"
-    build="parallel -j$njobs $GO \"build -ldflags='$LDF' $RACE -o $OUTPATH/$k/{} cmd/$k/{}/main.go\" ::: $FILES"
+    build="parallel -j$njobs $GO \"build -ldflags='$LDF' $RACE -o $OUTPATH/$k/{}$VERSION cmd/$k/{}/main.go\" ::: $FILES"
     echo $build
     eval $build
   fi

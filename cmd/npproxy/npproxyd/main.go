@@ -17,7 +17,7 @@ func main() {
 	if len(os.Args) < 2 {
 		db.DFatalf("%s: Usage <lip>\n", os.Args[0])
 	}
-	proc.SetSigmaDebugPid("proxy")
+	proc.SetSigmaDebugPid("npproxyd")
 	lip := sp.Tip(os.Args[1])
 	s3secrets, err1 := auth.GetAWSSecrets(sp.AWS_PROFILE)
 	if err1 != nil {
@@ -36,7 +36,7 @@ func main() {
 		sp.TprincipalID("proxy"),
 		sp.ROOTREALM,
 	))
-	db.DPrintf(db.PROXY, "Proxy env: %v", pe)
+	db.DPrintf(db.NPPROXY, "Proxy env: %v", pe)
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	npc := netproxyclnt.NewNetProxyClnt(pe)
 	npd := npproxy.NewNpd(pe, npc, lip)

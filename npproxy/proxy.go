@@ -1,6 +1,7 @@
-// Package npproxy provides access to sigmaos from the linux command
-// line and by mounting root realm's named at /mnt/9p as an 9P file
-// system (see mount.sh), and translating 9P into sigmaP (and back).
+// Package npproxy (9P proxy) provides access to sigmaos from the
+// linux command line and by mounting root realm's named at /mnt/9p as
+// an 9P file system (see mount.sh), and translating 9P into sigmaP
+// (and back).
 package npproxy
 
 import (

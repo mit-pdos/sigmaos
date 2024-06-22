@@ -32,7 +32,7 @@ func initTest(t1 *test.Tstate) (*Tstate, bool) {
 	assert.True(t1.T, sp.Present(sts, namesrv.InitRootDir))
 
 	// start proxy
-	ts.cmd = exec.Command("../bin/proxy/proxyd", append([]string{ts.ProcEnv().GetInnerContainerIP().String()})...)
+	ts.cmd = exec.Command("../bin/npproxy/npproxyd", append([]string{ts.ProcEnv().GetInnerContainerIP().String()})...)
 	ts.cmd.Stdout = os.Stdout
 	ts.cmd.Stderr = os.Stderr
 	err = ts.cmd.Start()

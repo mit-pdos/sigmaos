@@ -77,7 +77,7 @@ func TestProxyBasic(t *testing.T) {
 	if !assert.Nil(t, err, "Err run ls: %v", err) {
 		return
 	}
-	assert.Equal(t, ".statsd\n", string(out))
+	assert.Equal(t, ".pstatsd\n.statsd\n", string(out))
 
 	out, err = run("cat /mnt/9p/.statsd | grep Nwalk")
 	assert.Nil(t, err)

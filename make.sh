@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] [--version VERSION] [--userbin USERBIN] kernel|user|proxy" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] [--version VERSION] [--userbin USERBIN] kernel|user|npproxy" 1>&2
 }
 
 RACE="-race"
@@ -56,7 +56,7 @@ while [[ "$#" -gt 0 ]]; do
     usage
     exit 0
     ;;
-  kernel|user|linux|proxy)
+  kernel|user|linux|npproxy)
     WHAT=$1
     shift
     ;;
@@ -87,8 +87,8 @@ elif [[ $WHAT == "user" ]]; then
     mkdir -p $OUTPATH/user
     # Prepend version string prefix "-v" for user procs
     VERSION="-v$VERSION"
-elif [[ $WHAT == "proxy" ]]; then
-    mkdir -p $OUTPATH/proxy
+elif [[ $WHAT == "npproxy" ]]; then
+    mkdir -p $OUTPATH/npproxy
     # Clear version string, which only applies to user procs
     VERSION=""
 else

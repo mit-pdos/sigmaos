@@ -1,4 +1,4 @@
-package proxy_test
+package npproxy_test
 
 import (
 	"log"

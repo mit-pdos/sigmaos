@@ -39,7 +39,7 @@ if mount | grep -q 9p; then
     ./umount.sh
 fi
 
-pgrep -x proxyd > /dev/null && killall -9 proxyd
+pgrep -x npproxyd > /dev/null && killall -9 npproxyd
 pgrep -x sigmaclntd > /dev/null && killall -9 sigmaclntd
 
 sudo rm -f /tmp/sigmaclntd/sigmaclntd.sock

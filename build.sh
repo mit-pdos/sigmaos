@@ -216,9 +216,9 @@ else
   echo "========== Done pushing user bins to aws =========="
 fi
 
-# Build proxy for host
+# Build npproxy for host
 echo "========== Building proxy =========="
-/usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL proxy 
+/usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL npproxy 
 echo "========== Done building proxy =========="
 
 if ! [ -z "$TAG" ]; then

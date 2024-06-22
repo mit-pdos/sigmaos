@@ -247,7 +247,7 @@ func (fct Tfcall) String() string {
 		return "Rcreate"
 	case TTread:
 		return "Tread9P"
-	case TRread:
+	case TRread9P:
 		return "Rread9P"
 	case TTwrite:
 		return "Twrite9P"

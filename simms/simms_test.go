@@ -28,7 +28,7 @@ func TestClients(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestServiceNoQueueBuildup(t *testing.T) {
+func TestServiceInstanceNoQueueBuildup(t *testing.T) {
 	const (
 		N_TICKS        uint64 = 1000
 		N_SLOTS        int    = 1
@@ -40,7 +40,7 @@ func TestServiceNoQueueBuildup(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, STATEFUL)
-	svc := simms.NewService(&time, p)
+	svc := simms.NewServiceInstance(&time, p, 0)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -63,7 +63,7 @@ func TestServiceNoQueueBuildup(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestServiceNoQueueBuildup10ReqPerTick(t *testing.T) {
+func TestServiceInstanceNoQueueBuildup10ReqPerTick(t *testing.T) {
 	const (
 		N_TICKS        uint64 = 1000
 		N_SLOTS        int    = 10
@@ -75,7 +75,7 @@ func TestServiceNoQueueBuildup10ReqPerTick(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, STATEFUL)
-	svc := simms.NewService(&time, p)
+	svc := simms.NewServiceInstance(&time, p, 0)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -98,7 +98,7 @@ func TestServiceNoQueueBuildup10ReqPerTick(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestServiceQueueBuildup10ReqPerTick(t *testing.T) {
+func TestServiceInstanceQueueBuildup10ReqPerTick(t *testing.T) {
 	const (
 		N_TICKS        uint64 = 10
 		N_SLOTS        int    = 1
@@ -110,7 +110,7 @@ func TestServiceQueueBuildup10ReqPerTick(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, STATEFUL)
-	svc := simms.NewService(&time, p)
+	svc := simms.NewServiceInstance(&time, p, 0)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -133,7 +133,7 @@ func TestServiceQueueBuildup10ReqPerTick(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestServiceNoQueueBuildupPTime2(t *testing.T) {
+func TestServiceInstanceNoQueueBuildupPTime2(t *testing.T) {
 	const (
 		N_TICKS        uint64 = 1000
 		N_SLOTS        int    = 4
@@ -145,7 +145,7 @@ func TestServiceNoQueueBuildupPTime2(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, STATEFUL)
-	svc := simms.NewService(&time, p)
+	svc := simms.NewServiceInstance(&time, p, 0)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -168,7 +168,7 @@ func TestServiceNoQueueBuildupPTime2(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestServiceQueueBuildupPTime2(t *testing.T) {
+func TestServiceInstanceQueueBuildupPTime2(t *testing.T) {
 	const (
 		N_TICKS        uint64 = 10
 		N_SLOTS        int    = 1
@@ -180,7 +180,7 @@ func TestServiceQueueBuildupPTime2(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, STATEFUL)
-	svc := simms.NewService(&time, p)
+	svc := simms.NewServiceInstance(&time, p, 0)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -219,8 +219,8 @@ func TestAppNoQueueBuildup(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, nil, nil)
-	app := simms.NewApp(svc)
+	svc := simms.NewMicroservice(&time, p)
+	app := simms.NewSingleTierApp(svc)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -243,7 +243,7 @@ func TestAppNoQueueBuildup(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestDatacenterNoQueueBuildup(t *testing.T) {
+func TestWorkloadNoQueueBuildup(t *testing.T) {
 	const (
 		N_TICKS uint64 = 1000
 		// Clnt params
@@ -259,9 +259,9 @@ func TestDatacenterNoQueueBuildup(t *testing.T) {
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, nil, nil)
-	app := simms.NewApp(svc)
-	dc := simms.NewDatacenter(&time, app, c)
+	svc := simms.NewMicroservice(&time, p)
+	app := simms.NewSingleTierApp(svc)
+	dc := simms.NewWorkload(&time, app, c)
 	for ; time < N_TICKS; time++ {
 		// Run the simulation
 		dc.Tick()
@@ -269,5 +269,81 @@ func TestDatacenterNoQueueBuildup(t *testing.T) {
 	stats := dc.Stats()
 	assert.Equal(t, int(N_TICKS)-1, stats.TotalRequests(), "Produced wrong number of replies")
 	assert.Equal(t, float64(P_TIME), stats.AvgLatency(), "Produced wrong number of replies")
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+func TestWorkloadClntBurst(t *testing.T) {
+	const (
+		N_TICKS uint64 = 1000
+		// Clnt params
+		CLNT_REQ_MEAN    float64 = 1
+		CLNT_REQ_STD     float64 = 0
+		BURST_START      uint64  = 500
+		BURST_END        uint64  = 1000
+		BURST_MULTIPLIER float64 = 2.0
+		// App params
+		N_SLOTS  int    = 1
+		P_TIME   uint64 = 1
+		SVC_ID   string = "wfe"
+		STATEFUL bool   = false
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, STATEFUL)
+	svc := simms.NewMicroservice(&time, p)
+	app := simms.NewSingleTierApp(svc)
+	dc := simms.NewWorkload(&time, app, c)
+	for ; time < N_TICKS; time++ {
+		if time == BURST_START {
+			c.StartBurst(BURST_MULTIPLIER)
+		}
+		if time == BURST_END {
+			c.EndBurst()
+		}
+		// Run the simulation
+		dc.Tick()
+	}
+	stats := dc.Stats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+func TestWorkloadClntBurstAddReplica(t *testing.T) {
+	const (
+		N_TICKS uint64 = 1000
+		// Clnt params
+		CLNT_REQ_MEAN    float64 = 1
+		CLNT_REQ_STD     float64 = 0
+		BURST_START      uint64  = 500
+		BURST_END        uint64  = 1000
+		BURST_MULTIPLIER float64 = 2.0
+		// App params
+		N_SLOTS  int    = 1
+		P_TIME   uint64 = 1
+		SVC_ID   string = "wfe"
+		STATEFUL bool   = false
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, STATEFUL)
+	svc := simms.NewMicroservice(&time, p)
+	app := simms.NewSingleTierApp(svc)
+	dc := simms.NewWorkload(&time, app, c)
+	for ; time < N_TICKS; time++ {
+		if time == BURST_START {
+			c.StartBurst(BURST_MULTIPLIER)
+			svc.AddReplica()
+		}
+		if time == BURST_END {
+			c.EndBurst()
+		}
+		// Run the simulation
+		dc.Tick()
+	}
+	stats := dc.Stats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	assert.Equal(t, float64(1.0), stats.AvgLatency())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }

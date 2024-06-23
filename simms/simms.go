@@ -1,14 +1,14 @@
 package simms
 
-type Datacenter struct {
+type Workload struct {
 	t       *uint64
 	app     *App
 	clients *Clients
 	stats   *Stats
 }
 
-func NewDatacenter(t *uint64, app *App, clients *Clients) *Datacenter {
-	return &Datacenter{
+func NewWorkload(t *uint64, app *App, clients *Clients) *Workload {
+	return &Workload{
 		t:       t,
 		app:     app,
 		clients: clients,
@@ -16,12 +16,12 @@ func NewDatacenter(t *uint64, app *App, clients *Clients) *Datacenter {
 	}
 }
 
-func (d *Datacenter) Tick() {
+func (d *Workload) Tick() {
 	reqs := d.clients.Tick(*d.t)
 	reps := d.app.Tick(reqs)
 	d.stats.Update(reps)
 }
 
-func (d *Datacenter) Stats() *Stats {
+func (d *Workload) Stats() *Stats {
 	return d.stats
 }

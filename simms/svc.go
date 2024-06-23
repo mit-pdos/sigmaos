@@ -1,5 +1,9 @@
 package simms
 
+import (
+	"strconv"
+)
+
 type Params struct {
 	ID       string
 	NSlots   int
@@ -16,7 +20,7 @@ func NewParams(id string, nslots int, ptime uint64, stateful bool) *Params {
 	}
 }
 
-type Service struct {
+type ServiceInstance struct {
 	id              string     // ID of this service
 	t               *uint64    // Number of ticks that have passed since the beginning of the simulation
 	nslots          int        // Concurrent processing slots
@@ -27,9 +31,9 @@ type Service struct {
 	stateful        bool       // Indicates whether or not the service is stateful
 }
 
-func NewService(t *uint64, p *Params) *Service {
-	return &Service{
-		id:              p.ID,
+func NewServiceInstance(t *uint64, p *Params, replicaID int) *ServiceInstance {
+	return &ServiceInstance{
+		id:              p.ID + "-" + strconv.Itoa(replicaID),
 		t:               t,
 		nslots:          p.NSlots,
 		pTime:           p.PTime,
@@ -40,7 +44,7 @@ func NewService(t *uint64, p *Params) *Service {
 	}
 }
 
-func (s *Service) Tick(reqs []*Request) []*Reply {
+func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
 	// Enqueue new requests
 	s.q.Enqueue(reqs)
 	done := []int{}

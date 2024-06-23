@@ -37,3 +37,7 @@ func (st *Stats) AvgLatency() float64 {
 	}
 	return l
 }
+
+func (st *Stats) GetLatencies() []uint64 {
+	return st.lat
+}

@@ -22,6 +22,9 @@ func NewMicroservice(t *uint64, msp *Params) *Microservice {
 	}
 	// Start off with 1 replica
 	m.AddReplica()
+	for _, r := range m.replicas {
+		r.MarkReady()
+	}
 	return m
 }
 
@@ -31,25 +34,23 @@ func (m *Microservice) AddReplica() {
 }
 
 func (m *Microservice) RemoveReplica() {
+	// Mark the replica "not ready"
+	m.replicas[m.removedReplicas].MarkNotReady()
 	m.removedReplicas++
 }
 
 func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	replies := []*Reply{}
 	// Steer requests only to replicas which haven't been removed
-	steeredReqs := m.lb.SteerRequests(reqs, m.replicas[m.removedReplicas:])
+	steeredReqs := m.lb.SteerRequests(reqs, m.replicas)
 	steeredReqsCnt := make([]int, len(steeredReqs))
 	for i, r := range steeredReqs {
 		steeredReqsCnt[i] = len(r)
 	}
 	db.DPrintf(db.SIM_LB, "[t=%v] Steering requests to %v", *m.t, steeredReqsCnt)
-	// Drain any requests from replicas which have been removed
-	for i := 0; i < m.removedReplicas; i++ {
-		replies = append(replies, m.replicas[i].Tick(nil)...)
-	}
 	// Forward requests to replicas to which they have been steered
 	for i, rs := range steeredReqs {
-		replies = append(replies, m.replicas[i+m.removedReplicas].Tick(rs)...)
+		replies = append(replies, m.replicas[i].Tick(rs)...)
 	}
 	return replies
 }
@@ -66,6 +67,18 @@ func NewMicroserviceInstance(t *uint64, msp *Params, replicaID int, memcache *Mi
 		memcache: memcache,
 		db:       db,
 	}
+}
+
+func (m *MicroserviceInstance) IsReady() bool {
+	return m.svc.IsReady()
+}
+
+func (m *MicroserviceInstance) MarkReady() {
+	m.svc.MarkReady()
+}
+
+func (m *MicroserviceInstance) MarkNotReady() {
+	m.svc.MarkNotReady()
 }
 
 func (m *MicroserviceInstance) Tick(reqs []*Request) []*Reply {

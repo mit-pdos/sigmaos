@@ -17,9 +17,19 @@ func (rr *RoundRobinLB) SteerRequests(reqs []*Request, replicas []*MicroserviceI
 	for i := range steeredReqs {
 		steeredReqs[i] = []*Request{}
 	}
-	for i, r := range reqs {
-		idx := i % len(steeredReqs)
-		steeredReqs[idx] = append(steeredReqs[idx], r)
+	lastIdx := 0
+	// For each request
+	for _, r := range reqs {
+		// Find a ready replica to process that request
+		for replicaIdx := range replicas {
+			idx := (lastIdx + 1 + replicaIdx) % len(replicas)
+			if replicas[idx].IsReady() {
+				// For the next request, start at the following replica
+				lastIdx = idx
+				steeredReqs[idx] = append(steeredReqs[idx], r)
+				break
+			}
+		}
 	}
 	return steeredReqs
 }

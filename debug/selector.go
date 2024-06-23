@@ -279,7 +279,9 @@ const (
 
 // Simulator
 const (
-	SIM_CLNT Tselector = "SIM_CLNT"
-	SIM_TEST           = "SIM_TEST"
-	SIM_SVC            = "SIM_SVC"
+	SIM_CLNT    Tselector = "SIM_CLNT"
+	SIM_TEST              = "SIM_TEST"
+	SIM_SVC               = "SIM_SVC"
+	SIM_LB                = "SIM_LB"
+	SIM_RAW_LAT           = "SIM_RAW_LAT"
 )

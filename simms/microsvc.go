@@ -5,11 +5,12 @@ import (
 )
 
 type Microservice struct {
-	t           *uint64
-	msp         *Params
-	replicas    []*MicroserviceInstance
-	replicaCntr int
-	lb          LoadBalancer
+	t               *uint64
+	msp             *Params
+	replicas        []*MicroserviceInstance
+	addedReplicas   int
+	removedReplicas int
+	lb              LoadBalancer
 }
 
 func NewMicroservice(t *uint64, msp *Params) *Microservice {
@@ -25,15 +26,30 @@ func NewMicroservice(t *uint64, msp *Params) *Microservice {
 }
 
 func (m *Microservice) AddReplica() {
-	m.replicas = append(m.replicas, NewMicroserviceInstance(m.t, m.msp, m.replicaCntr, nil, nil))
-	m.replicaCntr++
+	m.replicas = append(m.replicas, NewMicroserviceInstance(m.t, m.msp, m.addedReplicas, nil, nil))
+	m.addedReplicas++
+}
+
+func (m *Microservice) RemoveReplica() {
+	m.removedReplicas++
 }
 
 func (m *Microservice) Tick(reqs []*Request) []*Reply {
-	steeredReqs := m.lb.SteerRequests(reqs, m.replicas)
 	replies := []*Reply{}
+	// Steer requests only to replicas which haven't been removed
+	steeredReqs := m.lb.SteerRequests(reqs, m.replicas[m.removedReplicas:])
+	steeredReqsCnt := make([]int, len(steeredReqs))
+	for i, r := range steeredReqs {
+		steeredReqsCnt[i] = len(r)
+	}
+	db.DPrintf(db.SIM_LB, "[t=%v] Steering requests to %v", *m.t, steeredReqsCnt)
+	// Drain any requests from replicas which have been removed
+	for i := 0; i < m.removedReplicas; i++ {
+		replies = append(replies, m.replicas[i].Tick(nil)...)
+	}
+	// Forward requests to replicas to which they have been steered
 	for i, rs := range steeredReqs {
-		replies = append(replies, m.replicas[i].Tick(rs)...)
+		replies = append(replies, m.replicas[i+m.removedReplicas].Tick(rs)...)
 	}
 	return replies
 }

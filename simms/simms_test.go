@@ -306,6 +306,7 @@ func TestWorkloadClntBurst(t *testing.T) {
 	}
 	stats := dc.Stats()
 	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
@@ -345,5 +346,53 @@ func TestWorkloadClntBurstAddReplica(t *testing.T) {
 	stats := dc.Stats()
 	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
 	assert.Equal(t, float64(1.0), stats.AvgLatency())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+func TestWorkloadClntBurstRemoveReplica(t *testing.T) {
+	const (
+		N_TICKS uint64 = 1000
+		// Clnt params
+		CLNT_REQ_MEAN    float64 = 1
+		CLNT_REQ_STD     float64 = 0
+		BURST_START      uint64  = 0
+		BURST_END        uint64  = 1000
+		BURST_MULTIPLIER float64 = 2.0
+		// App params
+		N_SLOTS        int    = 1
+		P_TIME         uint64 = 1
+		SVC_ID         string = "wfe"
+		STATEFUL       bool   = false
+		SIZE_UP_TIME   uint64 = 0
+		SIZE_DOWN_TIME uint64 = 500
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, STATEFUL)
+	svc := simms.NewMicroservice(&time, p)
+	app := simms.NewSingleTierApp(svc)
+	dc := simms.NewWorkload(&time, app, c)
+	for ; time < N_TICKS; time++ {
+		if time == BURST_START {
+			db.DPrintf(db.SIM_TEST, "StartBurst [t=%v]", time)
+			c.StartBurst(BURST_MULTIPLIER)
+		}
+		if time == BURST_END {
+			db.DPrintf(db.SIM_TEST, "EndBurst [t=%v]", time)
+			c.EndBurst()
+		}
+		if time == SIZE_UP_TIME {
+			svc.AddReplica()
+		}
+		if time == SIZE_DOWN_TIME {
+			svc.RemoveReplica()
+		}
+		// Run the simulation
+		dc.Tick()
+	}
+	stats := dc.Stats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }

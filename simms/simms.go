@@ -4,7 +4,7 @@ type Workload struct {
 	t       *uint64
 	app     *App
 	clients *Clients
-	stats   *Stats
+	stats   *WorkloadStats
 }
 
 func NewWorkload(t *uint64, app *App, clients *Clients) *Workload {
@@ -12,16 +12,16 @@ func NewWorkload(t *uint64, app *App, clients *Clients) *Workload {
 		t:       t,
 		app:     app,
 		clients: clients,
-		stats:   NewStats(),
+		stats:   NewWorkloadStats(),
 	}
 }
 
 func (d *Workload) Tick() {
 	reqs := d.clients.Tick(*d.t)
 	reps := d.app.Tick(reqs)
-	d.stats.Update(reps)
+	d.stats.Tick(reps)
 }
 
-func (d *Workload) Stats() *Stats {
+func (d *Workload) Stats() *WorkloadStats {
 	return d.stats
 }

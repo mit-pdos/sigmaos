@@ -22,35 +22,6 @@ func NewParams(id string, nslots int, ptime uint64, initTime uint64, stateful bo
 	}
 }
 
-type ServiceInstanceStats struct {
-	t                *uint64
-	time             []uint64
-	requestsInFlight []uint64
-	util             []float64
-	latency          [][]uint64
-}
-
-func NewServiceInstanceStats(t *uint64) *ServiceInstanceStats {
-	return &ServiceInstanceStats{
-		t:                t,
-		time:             []uint64{},
-		requestsInFlight: []uint64{},
-		util:             []float64{},
-		latency:          [][]uint64{},
-	}
-}
-
-func (sis *ServiceInstanceStats) Tick(processing []*Request, nslots int, replies []*Reply) {
-	sis.time = append(sis.time, *sis.t)
-	sis.requestsInFlight = append(sis.requestsInFlight, uint64(len(processing)))
-	sis.util = append(sis.util, float64(len(processing))/float64(nslots))
-	lats := make([]uint64, 0, len(replies))
-	for _, r := range replies {
-		lats = append(lats, r.GetLatency())
-	}
-	sis.latency = append(sis.latency, lats)
-}
-
 type ServiceInstance struct {
 	id              string                // ID of this service
 	t               *uint64               // Number of ticks that have passed since the beginning of the simulation

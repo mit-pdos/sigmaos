@@ -22,18 +22,48 @@ func NewParams(id string, nslots int, ptime uint64, initTime uint64, stateful bo
 	}
 }
 
+type ServiceInstanceStats struct {
+	t                *uint64
+	time             []uint64
+	requestsInFlight []uint64
+	util             []float64
+	latency          [][]uint64
+}
+
+func NewServiceInstanceStats(t *uint64) *ServiceInstanceStats {
+	return &ServiceInstanceStats{
+		t:                t,
+		time:             []uint64{},
+		requestsInFlight: []uint64{},
+		util:             []float64{},
+		latency:          [][]uint64{},
+	}
+}
+
+func (sis *ServiceInstanceStats) Tick(processing []*Request, nslots int, replies []*Reply) {
+	sis.time = append(sis.time, *sis.t)
+	sis.requestsInFlight = append(sis.requestsInFlight, uint64(len(processing)))
+	sis.util = append(sis.util, float64(len(processing))/float64(nslots))
+	lats := make([]uint64, 0, len(replies))
+	for _, r := range replies {
+		lats = append(lats, r.GetLatency())
+	}
+	sis.latency = append(sis.latency, lats)
+}
+
 type ServiceInstance struct {
-	id              string     // ID of this service
-	t               *uint64    // Number of ticks that have passed since the beginning of the simulation
-	startTime       uint64     // Time at which this service instance started to initialize
-	initTime        uint64     // Time required to initialize this service instance
-	nslots          int        // Concurrent processing slots
-	pTime           uint64     // Request processing time
-	q               *Queue     // Queue of unfulfilled requests
-	processing      []*Request // Slice of requests currently being processed
-	processingSince []uint64   // Slice of start times at which requests began to be processed
-	stateful        bool       // Indicates whether or not the service is stateful
-	ready           bool       // Indicates whether or not the service is ready to accept requests
+	id              string                // ID of this service
+	t               *uint64               // Number of ticks that have passed since the beginning of the simulation
+	startTime       uint64                // Time at which this service instance started to initialize
+	initTime        uint64                // Time required to initialize this service instance
+	nslots          int                   // Concurrent processing slots
+	pTime           uint64                // Request processing time
+	q               *Queue                // Queue of unfulfilled requests
+	processing      []*Request            // Slice of requests currently being processed
+	processingSince []uint64              // Slice of start times at which requests began to be processed
+	stateful        bool                  // Indicates whether or not the service is stateful
+	ready           bool                  // Indicates whether or not the service is ready to accept requests
+	srvStats        *ServiceInstanceStats // Stats of the current service instance
 }
 
 func NewServiceInstance(t *uint64, p *Params, replicaID int) *ServiceInstance {
@@ -49,6 +79,7 @@ func NewServiceInstance(t *uint64, p *Params, replicaID int) *ServiceInstance {
 		processingSince: []uint64{},
 		stateful:        p.Stateful,
 		ready:           p.InitTime == 0,
+		srvStats:        NewServiceInstanceStats(t),
 	}
 }
 
@@ -62,6 +93,10 @@ func (s *ServiceInstance) MarkNotReady() {
 
 func (s *ServiceInstance) IsReady() bool {
 	return s.ready
+}
+
+func (s *ServiceInstance) GetStats() *ServiceInstanceStats {
+	return s.srvStats
 }
 
 func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
@@ -102,5 +137,6 @@ func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
 		s.processing = append(s.processing, req)
 		s.processingSince = append(s.processingSince, *s.t)
 	}
+	s.srvStats.Tick(s.processing, s.nslots, reps)
 	return reps
 }

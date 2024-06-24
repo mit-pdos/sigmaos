@@ -55,6 +55,14 @@ func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	return replies
 }
 
+func (m *Microservice) GetStats() []*ServiceInstanceStats {
+	stats := make([]*ServiceInstanceStats, 0, len(m.replicas))
+	for _, r := range m.replicas {
+		stats = append(stats, r.GetStats())
+	}
+	return stats
+}
+
 type MicroserviceInstance struct {
 	svc      *ServiceInstance
 	memcache *Microservice
@@ -67,6 +75,10 @@ func NewMicroserviceInstance(t *uint64, msp *Params, replicaID int, memcache *Mi
 		memcache: memcache,
 		db:       db,
 	}
+}
+
+func (m *MicroserviceInstance) GetStats() *ServiceInstanceStats {
+	return m.svc.GetStats()
 }
 
 func (m *MicroserviceInstance) IsReady() bool {

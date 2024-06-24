@@ -190,7 +190,7 @@ func (st *StatInode) Write(ctx fs.CtxI, off sp.Toffset, data []byte, f sp.Tfence
 }
 
 func (st *StatInode) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
-	db.DPrintf(db.TEST, "Read statinfo %v\n", st)
+	db.DPrintf(db.TEST, "Read statinfo %v off %d %d", st, off, n)
 	if st == nil {
 		return nil, nil
 	}

@@ -181,6 +181,12 @@ func (pqc *ProcQClnt) GotProc(procSeqno *proc.ProcSeqno) {
 
 // Wait to hear about a proc from procq pqID.
 func (pqc *ProcQClnt) WaitUntilGotProc(pseqno *proc.ProcSeqno) error {
+	// Kernel procs, spawned directly to schedd, will have an epoch of 0. Pass
+	// them through (since the proc is guaranteed to have been pushed to schedd
+	// by the kernel srv before calling WaitStart)
+	if pseqno.GetEpoch() == 0 {
+		return nil
+	}
 	pqsess, _ := pqc.pqsess.AllocNew(pseqno.GetProcqID(), func(string) *ProcqSession {
 		return NewProcqSession()
 	})

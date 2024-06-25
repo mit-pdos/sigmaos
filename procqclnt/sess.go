@@ -81,7 +81,7 @@ func (pc *ProcqSession) WaitUntilGot(pseqno *proc.ProcSeqno) error {
 	// have happened (the proc may have been lost, or it may have run
 	// successfully). Return an error to the caller
 	if pseqno.GetEpoch() < pc.epoch {
-		return fmt.Errorf("Error WaitUntilGot: old epoch (%v < %v)", pseqno.GetEpoch())
+		return fmt.Errorf("Error WaitUntilGot: old epoch (%v < %v)", pseqno.GetEpoch(), pc.epoch)
 	}
 	return nil
 }

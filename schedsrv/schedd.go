@@ -96,7 +96,10 @@ func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitR
 	db.DPrintf(db.SCHEDD, "WaitStart %v seqno %v", req.PidStr, req.GetProcSeqno())
 	// Wait until this schedd has heard about the proc, and has created the state
 	// for it.
-	sd.procqclnt.WaitUntilGotProc(req.GetProcSeqno())
+	if err := sd.procqclnt.WaitUntilGotProc(req.GetProcSeqno()); err != nil {
+		// XXX return in res?
+		return err
+	}
 	sd.pmgr.WaitStart(sp.Tpid(req.PidStr))
 	db.DPrintf(db.SCHEDD, "WaitStart done %v", req.PidStr)
 	return nil

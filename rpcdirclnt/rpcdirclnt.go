@@ -11,8 +11,11 @@ import (
 	"sigmaos/sigmarpcchan"
 )
 
+type allocFn func(string)
+
 type RPCDirClnt struct {
 	*dircache.DirCache[*rpcclnt.RPCClnt]
+	allocFn allocFn // Callback to be invoked when a new client is created
 }
 
 func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
@@ -25,13 +28,22 @@ func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
 	}
 	db.DPrintf(rpcdc.LSelector, "newClnt NewSigmaRPCClnt[srvID:%v]: %v", pn, rpcc)
 	db.DPrintf(db.SPAWN_LAT, "newClnt %v lat %v", pn, time.Since(s))
+	if rpcdc.allocFn != nil {
+		rpcdc.allocFn(n)
+	}
 	return rpcc, nil
 }
 
-func NewRPCDirClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector) *RPCDirClnt {
-	u := &RPCDirClnt{}
+func NewRPCDirClntAllocFn(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, fn allocFn) *RPCDirClnt {
+	u := &RPCDirClnt{
+		allocFn: fn,
+	}
 	u.DirCache = dircache.NewDirCache[*rpcclnt.RPCClnt](fsl, path, u.newClnt, lSelector, eSelector)
 	return u
+}
+
+func NewRPCDirClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector) *RPCDirClnt {
+	return NewRPCDirClntAllocFn(fsl, path, lSelector, eSelector, nil)
 }
 
 func NewRPCDirClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, filter string) *RPCDirClnt {

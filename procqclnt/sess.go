@@ -1,6 +1,7 @@
 package procqclnt
 
 import (
+	"fmt"
 	"sync"
 
 	db "sigmaos/debug"
@@ -51,7 +52,14 @@ func (pc *ProcqSession) Got(pseqno *proc.ProcSeqno) {
 	pc.Lock()
 	defer pc.Unlock()
 
-	// Sanity check. Got should be monotonically increasing
+	// Check if there was a change of epoch
+	if pseqno.GetEpoch() > pc.epoch {
+		pc.epoch = pseqno.GetEpoch()
+		// On epoch change, reset "got" counter
+		pc.got = 0
+	}
+	// Sanity check. Got should be monotonically increasing (unless epoch
+	// changed, a case which should be handled above)
 	if pseqno.GetSeqno() <= pc.got {
 		db.DFatalf("Error, got (%v) not monotonically increasing (%v)", pc.got, pseqno)
 	}
@@ -60,11 +68,20 @@ func (pc *ProcqSession) Got(pseqno *proc.ProcSeqno) {
 }
 
 // Wait until the "got proc" seqno reaches a threshold
-func (pc *ProcqSession) WaitUntilGot(pseqno *proc.ProcSeqno) {
+func (pc *ProcqSession) WaitUntilGot(pseqno *proc.ProcSeqno) error {
 	pc.Lock()
 	defer pc.Unlock()
 
-	for pseqno.GetSeqno() > pc.got {
+	// Wait while the epoch has not changed, and the awaited sequence number has
+	// not been received
+	for pseqno.GetEpoch() == pc.epoch && pseqno.GetSeqno() > pc.got {
 		pc.Wait()
 	}
+	// If this proc was sent during a prior epoch of this session, anything might
+	// have happened (the proc may have been lost, or it may have run
+	// successfully). Return an error to the caller
+	if pseqno.GetEpoch() < pc.epoch {
+		return fmt.Errorf("Error WaitUntilGot: old epoch (%v < %v)", pseqno.GetEpoch())
+	}
+	return nil
 }

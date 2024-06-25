@@ -25,11 +25,19 @@ type ProcQClnt struct {
 }
 
 func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
-	return &ProcQClnt{
+	pqc := &ProcQClnt{
 		FsLib:  fsl,
-		rpcdc:  rpcdirclnt.NewRPCDirClnt(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR),
 		pqsess: syncmap.NewSyncMap[string, *ProcqSession](),
 	}
+	pqc.rpcdc = rpcdirclnt.NewRPCDirClntAllocFn(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR, func(pqID string) {
+		// When a new procq client is created, advance the epoch for the
+		// corresponding procq
+		pqsess, _ := pqc.pqsess.AllocNew(pqID, func(string) *ProcqSession {
+			return NewProcqSession()
+		})
+		pqsess.AdvanceEpoch()
+	})
+	return pqc
 }
 
 func (pqc *ProcQClnt) chooseProcQ(pid sp.Tpid) (string, error) {
@@ -172,11 +180,11 @@ func (pqc *ProcQClnt) GotProc(procSeqno *proc.ProcSeqno) {
 }
 
 // Wait to hear about a proc from procq pqID.
-func (pqc *ProcQClnt) WaitUntilGotProc(pseqno *proc.ProcSeqno) {
+func (pqc *ProcQClnt) WaitUntilGotProc(pseqno *proc.ProcSeqno) error {
 	pqsess, _ := pqc.pqsess.AllocNew(pseqno.GetProcqID(), func(string) *ProcqSession {
 		return NewProcqSession()
 	})
-	pqsess.WaitUntilGot(pseqno)
+	return pqsess.WaitUntilGot(pseqno)
 }
 
 func (pqc *ProcQClnt) StopWatching() {

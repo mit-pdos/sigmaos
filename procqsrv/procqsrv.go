@@ -17,7 +17,6 @@ import (
 	"sigmaos/procfs"
 	proto "sigmaos/procqsrv/proto"
 	"sigmaos/rand"
-	"sigmaos/scheddclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -28,16 +27,15 @@ const (
 )
 
 type ProcQ struct {
-	mu         sync.Mutex
-	realmMu    sync.RWMutex
-	cond       *sync.Cond
-	sc         *sigmaclnt.SigmaClnt
-	scheddclnt *scheddclnt.ScheddClnt
-	qs         map[sp.Trealm]*Queue
-	realms     []sp.Trealm
-	qlen       int // Aggregate queue length, across all queues
-	tot        atomic.Int64
-	realmbins  *chunkclnt.RealmBinPaths
+	mu        sync.Mutex
+	realmMu   sync.RWMutex
+	cond      *sync.Cond
+	sc        *sigmaclnt.SigmaClnt
+	qs        map[sp.Trealm]*Queue
+	realms    []sp.Trealm
+	qlen      int // Aggregate queue length, across all queues
+	tot       atomic.Int64
+	realmbins *chunkclnt.RealmBinPaths
 }
 
 type QDir struct {
@@ -46,12 +44,11 @@ type QDir struct {
 
 func NewProcQ(sc *sigmaclnt.SigmaClnt) *ProcQ {
 	pq := &ProcQ{
-		sc:         sc,
-		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib),
-		qs:         make(map[sp.Trealm]*Queue),
-		realms:     make([]sp.Trealm, 0),
-		qlen:       0,
-		realmbins:  chunkclnt.NewRealmBinPaths(),
+		sc:        sc,
+		qs:        make(map[sp.Trealm]*Queue),
+		realms:    make([]sp.Trealm, 0),
+		qlen:      0,
+		realmbins: chunkclnt.NewRealmBinPaths(),
 	}
 	pq.cond = sync.NewCond(&pq.mu)
 	return pq

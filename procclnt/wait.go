@@ -11,9 +11,9 @@ import (
 )
 
 // Wait for an event. Method must be one of "Exit", "Evict", or "Start"
-func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow) (*proc.Status, error) {
-	db.DPrintf(db.PROCCLNT, "Wait%v %v how %v kid %v", method, pid, how, kernelID)
-	defer db.DPrintf(db.PROCCLNT, "Wait%v done %v, kid %v", method, pid, kernelID)
+func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, procqID, scheddID string, nextToStart uint64, semName string, how proc.Thow) (*proc.Status, error) {
+	db.DPrintf(db.PROCCLNT, "Wait%v %v how %v pq %v sd %v nts %v", method, pid, how, procqID, scheddID, nextToStart)
+	defer db.DPrintf(db.PROCCLNT, "Wait%v done %v, pq %v sd %v nts %v", method, pid, procqID, scheddID, nextToStart)
 
 	var status *proc.Status
 	// If spawned via schedd, wait via RPC.
@@ -21,7 +21,7 @@ func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, sem
 		// RPC the schedd this proc was spawned on to wait.
 		db.DPrintf(db.PROCCLNT, "Wait%v %v RPC", method, pid)
 		var err error
-		status, err = clnt.scheddclnt.Wait(method, kernelID, pid)
+		status, err = clnt.scheddclnt.Wait(method, procqID, scheddID, nextToStart, pid)
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Error Schedd Wait%v: %v", method, err)
 			return nil, err

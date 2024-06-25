@@ -82,7 +82,6 @@ func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.Fo
 	if !req.MemAccountedFor {
 		sd.allocMem(p.GetMem())
 	}
-	sd.incRealmStats(p)
 	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p.GetPid())
 	start := time.Now()
 	// Run the proc
@@ -94,7 +93,10 @@ func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.Fo
 
 // Wait for a proc to mark itself as started.
 func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
-	db.DPrintf(db.SCHEDD, "WaitStart %v", req.PidStr)
+	db.DPrintf(db.SCHEDD, "WaitStart %v pqID %v seqno %v", req.PidStr, req.GetProcqID(), req.GetProcSeqno())
+	// Wait until this schedd has heard about the proc, and has created the state
+	// for it.
+	sd.procqclnt.WaitUntilGotProc(req.GetProcqID(), req.GetProcSeqno())
 	sd.pmgr.WaitStart(sp.Tpid(req.PidStr))
 	db.DPrintf(db.SCHEDD, "WaitStart done %v", req.PidStr)
 	return nil
@@ -201,8 +203,12 @@ func (sd *Schedd) getQueuedProcs() {
 		db.DPrintf(db.SCHEDD, "[%v] Try GetProc mem=%v bias=%v", sd.kernelId, memFree, bias)
 		start := time.Now()
 		// Try to get a proc from the proc queue.
-		procMem, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, memFree, bias)
-		db.DPrintf(db.SCHEDD, "[%v] GetProc result procMem %v qlen %v ok %v", sd.kernelId, procMem, qlen, ok)
+		p, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, memFree, bias)
+		var pmem proc.Tmem
+		if ok {
+			pmem = p.GetMem()
+		}
+		db.DPrintf(db.SCHEDD, "[%v] GetProc result procMem %v qlen %v ok %v", sd.kernelId, pmem, qlen, ok)
 		if ok {
 			db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
 		} else {
@@ -244,8 +250,10 @@ func (sd *Schedd) getQueuedProcs() {
 		// Allocate memory for the proc before this loop runs again so that
 		// subsequent getProc requests carry the updated memory accounting
 		// information.
-		sd.allocMem(procMem)
+		sd.allocMem(p.GetMem())
 		db.DPrintf(db.SCHEDD, "[%v] Got proc from procq, bias=%v", sd.kernelId, bias)
+		// Run the proc
+		sd.spawnAndRunProc(p)
 	}
 }
 
@@ -256,6 +264,7 @@ func (sd *Schedd) procDone(p *proc.Proc) {
 }
 
 func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
+	sd.incRealmStats(p)
 	p.SetKernelID(sd.kernelId, false)
 	sd.pmgr.Spawn(p)
 	// Run the proc

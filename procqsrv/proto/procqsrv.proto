@@ -15,18 +15,22 @@ message EnqueueRequest {
 }
 
 message EnqueueResponse {
-  string kernelID = 1;
+  string scheddID = 1;
+  uint64 procSeqno = 2;
 }
 
 message GetProcRequest {
   string kernelID = 1;
   uint32 mem = 2;
+  uint64 nextProcSeqno = 3;
 }
 
 message GetProcResponse {
   bool oK = 1;
   uint32 mem = 2;
   uint32 qLen = 3;
+  ProcProto procProto = 4;
+  string procqID = 5;
 }
 
 message GetStatsRequest {

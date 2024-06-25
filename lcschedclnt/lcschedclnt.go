@@ -51,7 +51,7 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 		return NOT_ENQ, err
 	}
 	db.DPrintf(db.LCSCHEDCLNT, "[%v] Got Proc %v", p.GetRealm(), p)
-	return res.KernelID, nil
+	return res.ScheddID, nil
 }
 
 func (lcs *LCSchedClnt) StopWatching() {

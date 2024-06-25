@@ -117,16 +117,16 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 		// Transparently spawn in a background thread.
 		go func() {
 			db.DPrintf(db.PROCCLNT, "pre spawnRetry %v %v", kernelId, p)
-			spawnedKernelID, err := clnt.spawnRetry(kernelId, p)
-			db.DPrintf(db.PROCCLNT, "spawned on kernelID %v err %v proc %v", spawnedKernelID, err, p)
-			clnt.cs.Started(p.GetPid(), spawnedKernelID, err)
+			enqueuedProcqID, spawnedScheddID, nextToStart, err := clnt.spawnRetry(kernelId, p)
+			db.DPrintf(db.PROCCLNT, "enqueued on procq %v and spawned on schedd %v err %v proc %v", enqueuedProcqID, spawnedScheddID, err, p)
+			clnt.cs.Started(p.GetPid(), enqueuedProcqID, spawnedScheddID, nextToStart, err)
 			if err != nil {
 				clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
 			}
 		}()
 	} else {
 		clnt.cs.Spawned(p.GetPid())
-		clnt.cs.Started(p.GetPid(), kernelId, nil)
+		clnt.cs.Started(p.GetPid(), sp.NOT_SET, kernelId, 0, nil)
 		// Make the proc's procdir
 		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), how)
 		if err != nil {
@@ -156,7 +156,7 @@ func (clnt *ProcClnt) forceRunViaSchedd(kernelID string, p *proc.Proc) error {
 	return nil
 }
 
-func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, error) {
+func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, string, uint64, error) {
 	return clnt.procqclnt.Enqueue(p)
 }
 
@@ -164,30 +164,32 @@ func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 	return clnt.lcschedclnt.Enqueue(p)
 }
 
-func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) {
+func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, string, uint64, error) {
 	s := time.Now()
-	spawnedKernelID := procqclnt.NOT_ENQ
+	enqueuedProcqID := procqclnt.NOT_ENQ
+	spawnedScheddID := procqclnt.NOT_ENQ
+	nextToStart := uint64(0)
 	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
 		var err error
 		if p.IsPrivileged() {
 			// Privileged procs are force-run on the schedd specified by kernelID in
 			// order to make sure they end up on the correct scheddd
 			err = clnt.forceRunViaSchedd(kernelId, p)
-			spawnedKernelID = kernelId
+			spawnedScheddID = kernelId
 		} else {
 			if p.GetType() == proc.T_BE {
 				// BE Non-kernel procs are enqueued via the procq.
-				spawnedKernelID, err = clnt.enqueueViaProcQ(p)
+				enqueuedProcqID, spawnedScheddID, nextToStart, err = clnt.enqueueViaProcQ(p)
 				if err == nil {
-					db.DPrintf(db.PROCCLNT, "spawn: SetBinKernelId %v %v\n", p.GetProgram(), spawnedKernelID)
-					clnt.bins.SetBinKernelID(p.GetProgram(), spawnedKernelID)
-					p.SetKernelID(spawnedKernelID, false)
+					db.DPrintf(db.PROCCLNT, "spawn: SetBinKernelId procg %v pq %v sd %v", p.GetProgram(), enqueuedProcqID, spawnedScheddID)
+					clnt.bins.SetBinKernelID(p.GetProgram(), spawnedScheddID)
+					p.SetKernelID(spawnedScheddID, false)
 				} else if serr.IsErrorUnavailable(err) {
-					clnt.bins.DelBinKernelID(p.GetProgram(), spawnedKernelID)
+					clnt.bins.DelBinKernelID(p.GetProgram(), spawnedScheddID)
 				}
 			} else {
 				// LC Non-kernel procs are enqueued via the procq.
-				spawnedKernelID, err = clnt.enqueueViaLCSched(p)
+				spawnedScheddID, err = clnt.enqueueViaLCSched(p)
 			}
 		}
 		// If spawn attempt resulted in an error, check if it was due to the
@@ -199,13 +201,13 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (string, error) 
 				continue
 			}
 			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
-			return spawnedKernelID, err
+			return enqueuedProcqID, spawnedScheddID, nextToStart, err
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
-		return spawnedKernelID, nil
+		return enqueuedProcqID, spawnedScheddID, nextToStart, nil
 	}
 	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", sp.PATHCLNT_MAXRETRY, p)
-	return spawnedKernelID, serr.NewErr(serr.TErrUnreachable, kernelId)
+	return enqueuedProcqID, spawnedScheddID, nextToStart, serr.NewErr(serr.TErrUnreachable, kernelId)
 }
 
 // ========== WAIT ==========
@@ -214,12 +216,12 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 	s := time.Now()
 	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E WaitStart %v", pid, time.Since(s))
 
-	kernelID, err := clnt.cs.GetKernelID(pid)
+	procqID, scheddID, nextToStart, err := clnt.cs.GetProcqAndScheddIDs(pid)
 	if err != nil {
 		return fmt.Errorf("Unknown kernel ID %v", err)
 	}
-	db.DPrintf(db.PROCCLNT, "WaitStart %v got kid %v", pid, kernelID)
-	_, err = clnt.wait(scheddclnt.START, pid, kernelID, proc.START_SEM, how)
+	db.DPrintf(db.PROCCLNT, "WaitStart %v got kid %v", pid, scheddID)
+	_, err = clnt.wait(scheddclnt.START, pid, procqID, scheddID, nextToStart, proc.START_SEM, how)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Err WaitStart %v %v", pid, err)
 		return fmt.Errorf("WaitStart error %v", err)
@@ -245,13 +247,13 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 		db.DPrintf(db.PROCCLNT, "waitStart err %v", err)
 		return nil, err
 	}
-	kernelID, err := clnt.cs.GetKernelID(pid)
+	procqID, scheddID, _, err := clnt.cs.GetProcqAndScheddIDs(pid)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Unknown kernel ID %v", err)
 		return nil, err
 	}
 	// Wait for proc to exit
-	st, err := clnt.wait(scheddclnt.EXIT, pid, kernelID, proc.EXIT_SEM, how)
+	st, err := clnt.wait(scheddclnt.EXIT, pid, procqID, scheddID, 0, proc.EXIT_SEM, how)
 	// Mark proc as exited in local state
 	clnt.cs.Exited(pid, st)
 	if err != nil {
@@ -278,7 +280,7 @@ func (clnt *ProcClnt) WaitExitKernelProc(pid sp.Tpid, how proc.Thow) (*proc.Stat
 
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
-	_, err := clnt.wait(scheddclnt.EVICT, pid, clnt.ProcEnv().GetKernelID(), proc.EVICT_SEM, clnt.ProcEnv().GetHow())
+	_, err := clnt.wait(scheddclnt.EVICT, pid, sp.NOT_SET, clnt.ProcEnv().GetKernelID(), 0, proc.EVICT_SEM, clnt.ProcEnv().GetHow())
 	return err
 }
 
@@ -299,7 +301,6 @@ func (clnt *ProcClnt) Started() error {
 //
 // exited() should be called *once* per proc, but schedd's procclnt may
 // call exited() for other (crashed) procs.
-
 func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, status *proc.Status, how proc.Thow, crashed bool) error {
 	// Write the exit status
 	if err := clnt.writeExitStatus(pid, parentdir, status, how); err != nil {
@@ -361,17 +362,17 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 
 // ========== EVICT ==========
 
-func (clnt *ProcClnt) evictAt(pid sp.Tpid, kernelID string, how proc.Thow) error {
-	return clnt.notify(scheddclnt.EVICT, pid, kernelID, proc.EVICT_SEM, how, nil, false)
+func (clnt *ProcClnt) evictAt(pid sp.Tpid, scheddID string, how proc.Thow) error {
+	return clnt.notify(scheddclnt.EVICT, pid, scheddID, proc.EVICT_SEM, how, nil, false)
 }
 
 func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
-	kernelID, err := clnt.cs.GetKernelID(pid)
+	_, scheddID, _, err := clnt.cs.GetProcqAndScheddIDs(pid)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error Evict can't get kernel ID for proc: %v", err)
 		return err
 	}
-	return clnt.evictAt(pid, kernelID, how)
+	return clnt.evictAt(pid, scheddID, how)
 }
 
 // Notifies a proc that it will be evicted using Evict. Called by parent.
@@ -380,8 +381,8 @@ func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
 }
 
 // For use by realmd when evicting procs for fairness
-func (clnt *ProcClnt) EvictRealmProc(pid sp.Tpid, kernelID string) error {
-	return clnt.evictAt(pid, kernelID, proc.HSCHEDD)
+func (clnt *ProcClnt) EvictRealmProc(pid sp.Tpid, scheddID string) error {
+	return clnt.evictAt(pid, scheddID, proc.HSCHEDD)
 }
 
 func (clnt *ProcClnt) EvictKernelProc(pid sp.Tpid, how proc.Thow) error {

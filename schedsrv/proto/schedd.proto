@@ -29,6 +29,8 @@ message ForceRunResponse {
 
 message WaitRequest {
   string pidStr = 1;
+  string procqID = 2;
+  uint64 procSeqno = 3;
 }
 
 message WaitResponse {

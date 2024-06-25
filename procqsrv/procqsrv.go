@@ -18,7 +18,6 @@ import (
 	proto "sigmaos/procqsrv/proto"
 	"sigmaos/rand"
 	"sigmaos/scheddclnt"
-	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -108,14 +107,16 @@ func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.Enque
 	}
 	db.DPrintf(db.PROCQ, "[%v] Enqueue %v", p.GetRealm(), p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv; time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
-	ch := make(chan string)
+	ch := make(chan enqueueResult)
 	pq.addProc(p, ch)
 	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
-	res.KernelID = <-ch
+	r := <-ch
+	res.ScheddID = r.scheddID
+	res.ProcSeqno = r.procSeqno
 	return nil
 }
 
-func (pq *ProcQ) addProc(p *proc.Proc, kidch chan string) {
+func (pq *ProcQ) addProc(p *proc.Proc, ch chan enqueueResult) {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 
@@ -126,29 +127,18 @@ func (pq *ProcQ) addProc(p *proc.Proc, kidch chan string) {
 	// Get the queue for the realm.
 	q := pq.getRealmQueue(p.GetRealm())
 	// Enqueue the proc according to its realm.
-	q.Enqueue(p, kidch)
+	q.Enqueue(p, ch)
 	// Broadcast that a new proc may be runnable.
 	pq.cond.Broadcast()
 }
 
-func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS time.Time) {
+func (pq *ProcQ) replyToParent(scheddID string, procSeqno uint64, p *proc.Proc, ch chan enqueueResult, enqTS time.Time) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Internal procqsrv Proc queueing time %v", p.GetPid(), time.Since(enqTS))
-	db.DPrintf(db.PROCQ, "runProc on kid %v", kernelID)
-	// Must push the proc to the schedd before responding to the parent because
-	// we must guarantee that the schedd knows about it before talking to the
-	// parent. Otherwise, the response to the parent could arrive first and the
-	// parent could ask schedd about the proc before the schedd learns about the
-	// proc.
-	if err := pq.scheddclnt.ForceRun(kernelID, true, p); err != nil {
-		db.DPrintf(db.PROCQ_ERR, "Error ForceRun proc on kid %v: %v", kernelID, err)
-		pq.addProc(p, ch)
-		if serr.IsErrorUnavailable(err) {
-			pq.realmbins.DelBinKernelID(p.GetRealm(), p.GetProgram(), kernelID)
-		}
-		return
+	db.DPrintf(db.PROCQ, "replyToParent child is on kid %v", scheddID)
+	ch <- enqueueResult{
+		scheddID:  scheddID,
+		procSeqno: procSeqno,
 	}
-	db.DPrintf(db.PROCQ, "Done runProc on kid %v", kernelID)
-	ch <- kernelID
 }
 
 func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.GetStatsResponse) error {
@@ -218,9 +208,10 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				}
 				pq.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), req.KernelID)
 
-				// Push proc to schedd. Do this asynchronously so we don't hold locks
-				// across RPCs.
-				go pq.runProc(req.KernelID, p, ch, ts)
+				// Tell client about schedd chosen to run this proc. Do this
+				// asynchronously so that schedd can proceed with the proc immediately.
+				go pq.replyToParent(req.GetKernelID(), req.GetNextProcSeqno(), p, ch, ts)
+				res.ProcProto = p.GetProto()
 				res.OK = true
 				// Note the amount of memory required by the proc, so that schedd can
 				// do resource accounting and (potentially) temper future GetProc

@@ -93,10 +93,10 @@ func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.Fo
 
 // Wait for a proc to mark itself as started.
 func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
-	db.DPrintf(db.SCHEDD, "WaitStart %v pqID %v seqno %v", req.PidStr, req.GetProcqID(), req.GetProcSeqno())
+	db.DPrintf(db.SCHEDD, "WaitStart %v seqno %v", req.PidStr, req.GetProcSeqno())
 	// Wait until this schedd has heard about the proc, and has created the state
 	// for it.
-	sd.procqclnt.WaitUntilGotProc(req.GetProcqID(), req.GetProcSeqno())
+	sd.procqclnt.WaitUntilGotProc(req.GetProcSeqno())
 	sd.pmgr.WaitStart(sp.Tpid(req.PidStr))
 	db.DPrintf(db.SCHEDD, "WaitStart done %v", req.PidStr)
 	return nil

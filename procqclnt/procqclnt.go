@@ -21,14 +21,14 @@ const (
 type ProcQClnt struct {
 	*fslib.FsLib
 	rpcdc  *rpcdirclnt.RPCDirClnt
-	pseqno *syncmap.SyncMap[string, *ProcSeqno]
+	pqsess *syncmap.SyncMap[string, *ProcqSession]
 }
 
 func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
 	return &ProcQClnt{
 		FsLib:  fsl,
 		rpcdc:  rpcdirclnt.NewRPCDirClnt(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR),
-		pseqno: syncmap.NewSyncMap[string, *ProcSeqno](),
+		pqsess: syncmap.NewSyncMap[string, *ProcqSession](),
 	}
 }
 
@@ -41,16 +41,16 @@ func (pqc *ProcQClnt) chooseProcQ(pid sp.Tpid) (string, error) {
 
 // Enqueue a proc on the procq. Returns the ID of the kernel that is running
 // the proc.
-func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, string, uint64, error) {
+func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, *proc.ProcSeqno, error) {
 	pqID, err := pqc.chooseProcQ(p.GetPid())
 	if err != nil {
-		return NOT_ENQ, NOT_ENQ, 0, err
+		return NOT_ENQ, nil, err
 	}
 	s := time.Now()
 	rpcc, err := pqc.rpcdc.GetClnt(pqID)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error: Can't get procq clnt: %v", err)
-		return NOT_ENQ, NOT_ENQ, 0, err
+		return NOT_ENQ, nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt make clnt %v %v", p.GetPid(), pqID, time.Since(s))
 	req := &proto.EnqueueRequest{
@@ -64,11 +64,11 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, string, uint64, error) {
 			db.DPrintf(db.ALWAYS, "Invalidate entry %v", pqID)
 			pqc.rpcdc.InvalidateEntry(pqID)
 		}
-		return NOT_ENQ, NOT_ENQ, 0, err
+		return NOT_ENQ, nil, err
 	}
 	db.DPrintf(db.PROCQCLNT, "[%v] Enqueued Proc %v", p.GetRealm(), p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt client-side RPC latency %v", p.GetPid(), time.Since(s))
-	return pqID, res.ScheddID, res.ProcSeqno, nil
+	return res.ScheddID, res.ProcSeqno, nil
 }
 
 // Get a proc (passing in the kernelID of the caller). Will only return once
@@ -88,19 +88,19 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 				return nil, 0, false, err
 			}
 		}
-		pseqno, _ := pqc.pseqno.AllocNew(pqID, func(string) *ProcSeqno {
-			return NewProcSeqno()
+		pqsess, _ := pqc.pqsess.AllocNew(pqID, func(string) *ProcqSession {
+			return NewProcqSession()
 		})
 		rpcc, err := pqc.rpcdc.GetClnt(pqID)
 		if err != nil {
 			db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get procq clnt: %v", err)
 			return nil, 0, false, err
 		}
-		procSeqno := pseqno.GetNext()
+		procSeqno := pqsess.NextSeqno(pqID, callerKernelID)
 		req := &proto.GetProcRequest{
-			KernelID:      callerKernelID,
-			Mem:           uint32(freeMem),
-			NextProcSeqno: procSeqno,
+			KernelID:  callerKernelID,
+			Mem:       uint32(freeMem),
+			ProcSeqno: procSeqno,
 		}
 		res := &proto.GetProcResponse{}
 		if err := rpcc.RPC("ProcQ.GetProc", req, res); err != nil {
@@ -116,7 +116,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 		var p *proc.Proc
 		if res.OK {
 			p = proc.NewProcFromProto(res.GetProcProto())
-			pqc.GotProc(pqID, procSeqno)
+			pqc.GotProc(procSeqno)
 		}
 		return p, res.QLen, res.OK, nil
 	}
@@ -160,23 +160,23 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 
 // Note that a proc has been received, so the sequence number can be
 // incremented
-func (pqc *ProcQClnt) GotProc(pqID string, seqno uint64) {
+func (pqc *ProcQClnt) GotProc(procSeqno *proc.ProcSeqno) {
 	// schedd has successfully received a proc from procq pqID. Any clients which
 	// want to wait on that proc can now expect the state for that proc to exist
 	// at schedd. Set the seqno (which should be monotonically increasing) to
 	// release the clients, and allow schedd to handle the wait.
-	pseqno, _ := pqc.pseqno.AllocNew(pqID, func(string) *ProcSeqno {
-		return NewProcSeqno()
+	pqsess, _ := pqc.pqsess.AllocNew(procSeqno.GetProcqID(), func(string) *ProcqSession {
+		return NewProcqSession()
 	})
-	pseqno.Got(seqno)
+	pqsess.Got(procSeqno)
 }
 
 // Wait to hear about a proc from procq pqID.
-func (pqc *ProcQClnt) WaitUntilGotProc(pqID string, seqno uint64) {
-	pseqno, _ := pqc.pseqno.AllocNew(pqID, func(string) *ProcSeqno {
-		return NewProcSeqno()
+func (pqc *ProcQClnt) WaitUntilGotProc(pseqno *proc.ProcSeqno) {
+	pqsess, _ := pqc.pqsess.AllocNew(pseqno.GetProcqID(), func(string) *ProcqSession {
+		return NewProcqSession()
 	})
-	pseqno.WaitUntilGot(seqno)
+	pqsess.WaitUntilGot(pseqno)
 }
 
 func (pqc *ProcQClnt) StopWatching() {

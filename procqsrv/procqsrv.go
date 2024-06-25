@@ -104,16 +104,15 @@ func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.Enque
 	}
 	db.DPrintf(db.PROCQ, "[%v] Enqueue %v", p.GetRealm(), p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv; time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
-	ch := make(chan enqueueResult)
+	ch := make(chan *proc.ProcSeqno)
 	pq.addProc(p, ch)
 	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
-	r := <-ch
-	res.ScheddID = r.scheddID
-	res.ProcSeqno = r.procSeqno
+	seqno := <-ch
+	res.ProcSeqno = seqno
 	return nil
 }
 
-func (pq *ProcQ) addProc(p *proc.Proc, ch chan enqueueResult) {
+func (pq *ProcQ) addProc(p *proc.Proc, ch chan *proc.ProcSeqno) {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 
@@ -129,13 +128,10 @@ func (pq *ProcQ) addProc(p *proc.Proc, ch chan enqueueResult) {
 	pq.cond.Broadcast()
 }
 
-func (pq *ProcQ) replyToParent(scheddID string, procSeqno uint64, p *proc.Proc, ch chan enqueueResult, enqTS time.Time) {
+func (pq *ProcQ) replyToParent(pseqno *proc.ProcSeqno, p *proc.Proc, ch chan *proc.ProcSeqno, enqTS time.Time) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Internal procqsrv Proc queueing time %v", p.GetPid(), time.Since(enqTS))
-	db.DPrintf(db.PROCQ, "replyToParent child is on kid %v", scheddID)
-	ch <- enqueueResult{
-		scheddID:  scheddID,
-		procSeqno: procSeqno,
-	}
+	db.DPrintf(db.PROCQ, "replyToParent child is on kid %v", pseqno.GetScheddID())
+	ch <- pseqno
 }
 
 func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.GetStatsResponse) error {
@@ -207,7 +203,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 
 				// Tell client about schedd chosen to run this proc. Do this
 				// asynchronously so that schedd can proceed with the proc immediately.
-				go pq.replyToParent(req.GetKernelID(), req.GetNextProcSeqno(), p, ch, ts)
+				go pq.replyToParent(req.GetProcSeqno(), p, ch, ts)
 				res.ProcProto = p.GetProto()
 				res.OK = true
 				// Note the amount of memory required by the proc, so that schedd can

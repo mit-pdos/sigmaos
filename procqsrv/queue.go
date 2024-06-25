@@ -13,18 +13,13 @@ const (
 	DEF_Q_SZ = 10
 )
 
-type enqueueResult struct {
-	scheddID  string
-	procSeqno uint64
-}
-
 type Qitem struct {
 	p     *proc.Proc
-	ch    chan enqueueResult
+	ch    chan *proc.ProcSeqno
 	enqTS time.Time
 }
 
-func newQitem(p *proc.Proc, ch chan enqueueResult) *Qitem {
+func newQitem(p *proc.Proc, ch chan *proc.ProcSeqno) *Qitem {
 	return &Qitem{
 		p:     p,
 		ch:    ch,
@@ -45,7 +40,7 @@ func newQueue() *Queue {
 	}
 }
 
-func (q *Queue) Enqueue(p *proc.Proc, ch chan enqueueResult) {
+func (q *Queue) Enqueue(p *proc.Proc, ch chan *proc.ProcSeqno) {
 	q.Lock()
 	defer q.Unlock()
 
@@ -64,7 +59,7 @@ func isEligible(p *proc.Proc, mem proc.Tmem, scheddID string) bool {
 	return p.HasKernelPref(scheddID)
 }
 
-func (q *Queue) Dequeue(mem proc.Tmem, scheddID string) (*proc.Proc, chan enqueueResult, time.Time, bool) {
+func (q *Queue) Dequeue(mem proc.Tmem, scheddID string) (*proc.Proc, chan *proc.ProcSeqno, time.Time, bool) {
 	q.Lock()
 	defer q.Unlock()
 

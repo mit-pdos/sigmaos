@@ -24,12 +24,10 @@ func newChildState() *ChildState {
 }
 
 type SpawnFuture struct {
-	procqID     string
-	scheddID    string
-	nextToStart uint64
-	err         error
-	cond        *sync.Cond
-	done        bool
+	seqno *proc.ProcSeqno
+	err   error
+	cond  *sync.Cond
+	done  bool
 }
 
 func newSpawnFuture(mu sync.Locker) *SpawnFuture {
@@ -40,7 +38,7 @@ func newSpawnFuture(mu sync.Locker) *SpawnFuture {
 }
 
 // Caller holds lock
-func (sf *SpawnFuture) Get() (string, string, uint64, error) {
+func (sf *SpawnFuture) Get() (*proc.ProcSeqno, error) {
 	if !sf.done {
 		sf.cond.Wait()
 		// Sanity check that the value has materalized.
@@ -48,18 +46,16 @@ func (sf *SpawnFuture) Get() (string, string, uint64, error) {
 			db.DFatalf("Err wait condition false")
 		}
 	}
-	return sf.procqID, sf.scheddID, sf.nextToStart, sf.err
+	return sf.seqno, sf.err
 }
 
 // Caller holds lock.
-func (sf *SpawnFuture) Complete(procqID, scheddID string, nextToStart uint64, err error) {
+func (sf *SpawnFuture) Complete(seqno *proc.ProcSeqno, err error) {
 	// Sanity check that completions only happen once.
 	if sf.done {
 		db.DFatalf("Double-completed spawn future")
 	}
-	sf.procqID = procqID
-	sf.scheddID = scheddID
-	sf.nextToStart = nextToStart
+	sf.seqno = seqno
 	sf.err = err
 	sf.done = true
 	sf.cond.Broadcast()
@@ -73,12 +69,12 @@ func (cs *ChildState) Spawned(pid sp.Tpid) {
 	cs.ranOn[pid] = newSpawnFuture(&cs.Mutex)
 }
 
-func (cs *ChildState) Started(pid sp.Tpid, procqID, scheddID string, nextToStart uint64, err error) {
+func (cs *ChildState) Started(pid sp.Tpid, seqno *proc.ProcSeqno, err error) {
 	cs.Lock()
 	defer cs.Unlock()
 
 	// Record ID of schedd this proc was spawned on
-	cs.ranOn[pid].Complete(procqID, scheddID, nextToStart, err)
+	cs.ranOn[pid].Complete(seqno, err)
 }
 
 func (cs *ChildState) Exited(pid sp.Tpid, status *proc.Status) {
@@ -106,7 +102,7 @@ func (cs *ChildState) GetExitStatus(pid sp.Tpid) *proc.Status {
 	return status
 }
 
-func (cs *ChildState) GetProcqAndScheddIDs(pid sp.Tpid) (string, string, uint64, error) {
+func (cs *ChildState) GetProcSeqno(pid sp.Tpid) (*proc.ProcSeqno, error) {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -114,5 +110,5 @@ func (cs *ChildState) GetProcqAndScheddIDs(pid sp.Tpid) (string, string, uint64,
 	if fut, ok := cs.ranOn[pid]; ok {
 		return fut.Get()
 	}
-	return "NO_PROCQ", "NO_SCHEDD", 0, fmt.Errorf("Proc %v child state not found", pid)
+	return nil, fmt.Errorf("Proc %v child state not found", pid)
 }

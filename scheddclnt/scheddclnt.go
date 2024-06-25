@@ -103,7 +103,7 @@ func (sdc *ScheddClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.P
 	return nil
 }
 
-func (sdc *ScheddClnt) Wait(method Tmethod, procqID, scheddID string, procSeqno uint64, pid sp.Tpid) (*proc.Status, error) {
+func (sdc *ScheddClnt) Wait(method Tmethod, scheddID string, seqno *proc.ProcSeqno, pid sp.Tpid) (*proc.Status, error) {
 	// RPC a schedd to wait.
 	rpcc, err := sdc.rpcdc.GetClnt(scheddID)
 	if err != nil {
@@ -111,8 +111,7 @@ func (sdc *ScheddClnt) Wait(method Tmethod, procqID, scheddID string, procSeqno 
 	}
 	req := &proto.WaitRequest{
 		PidStr:    pid.String(),
-		ProcqID:   procqID,
-		ProcSeqno: procSeqno,
+		ProcSeqno: seqno,
 	}
 	res := &proto.WaitResponse{}
 	if err := rpcc.RPC("Schedd.Wait"+method.String(), req, res); err != nil {

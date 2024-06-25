@@ -16,13 +16,13 @@ message EnqueueRequest {
 
 message EnqueueResponse {
   string scheddID = 1;
-  uint64 procSeqno = 2;
+  ProcSeqno procSeqno = 2;
 }
 
 message GetProcRequest {
   string kernelID = 1;
   uint32 mem = 2;
-  uint64 nextProcSeqno = 3;
+  ProcSeqno procSeqno = 3;
 }
 
 message GetProcResponse {

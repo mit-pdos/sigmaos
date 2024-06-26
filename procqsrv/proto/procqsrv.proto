@@ -27,10 +27,8 @@ message GetProcRequest {
 
 message GetProcResponse {
   bool oK = 1;
-  uint32 mem = 2;
-  uint32 qLen = 3;
-  ProcProto procProto = 4;
-  string procqID = 5;
+  uint32 qLen = 2;
+  ProcProto procProto = 3;
 }
 
 message GetStatsRequest {

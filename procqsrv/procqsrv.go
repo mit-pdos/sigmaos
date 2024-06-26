@@ -206,10 +206,6 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				go pq.replyToParent(req.GetProcSeqno(), p, ch, ts)
 				res.ProcProto = p.GetProto()
 				res.OK = true
-				// Note the amount of memory required by the proc, so that schedd can
-				// do resource accounting and (potentially) temper future GetProc
-				// requests.
-				res.Mem = uint32(p.GetMem())
 				res.QLen = uint32(pq.qlen)
 				db.DPrintf(db.TEST, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
 				pq.mu.Unlock()

@@ -64,14 +64,14 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *Sche
 			// When a new procq client is created, advance the epoch for the
 			// corresponding procq
 			pqsess, _ := sd.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
-				return NewProcqSession(sd.kernelID, pqID)
+				return NewProcqSession(pqID, sd.kernelID)
 			})
 			pqsess.AdvanceEpoch()
 		},
 		func(pqID string) *proc.ProcSeqno {
 			// Get the next proc seqno for a given procq
 			pqsess, _ := sd.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
-				return NewProcqSession(sd.kernelID, pqID)
+				return NewProcqSession(pqID, sd.kernelID)
 			})
 			return pqsess.NextSeqno()
 		},
@@ -216,7 +216,7 @@ func (sd *Schedd) gotProc(procSeqno *proc.ProcSeqno) {
 	// at schedd. Set the seqno (which should be monotonically increasing) to
 	// release the clients, and allow schedd to handle the wait.
 	pqsess, _ := sd.pqsess.AllocNew(procSeqno.GetProcqID(), func(pqID string) *ProcqSession {
-		return NewProcqSession(sd.kernelID, pqID)
+		return NewProcqSession(pqID, sd.kernelID)
 	})
 	pqsess.Got(procSeqno)
 }
@@ -230,7 +230,7 @@ func (sd *Schedd) waitUntilGotProc(pseqno *proc.ProcSeqno) error {
 		return nil
 	}
 	pqsess, _ := sd.pqsess.AllocNew(pseqno.GetProcqID(), func(pqID string) *ProcqSession {
-		return NewProcqSession(sd.kernelID, pqID)
+		return NewProcqSession(pqID, sd.kernelID)
 	})
 	return pqsess.WaitUntilGot(pseqno)
 }

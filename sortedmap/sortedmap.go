@@ -171,10 +171,15 @@ func (sd *SortedMap[K, V]) InsertKey(name K) bool {
 func (sd *SortedMap[K, V]) Insert(name K, e V) bool {
 	sd.Lock()
 	defer sd.Unlock()
-	if _, ok := sd.dents[name]; !ok {
+	if v, ok := sd.dents[name]; !ok {
 		sd.dents[name] = val[V]{true, e}
 		sd.insertSortL(name)
 		return true
+	} else {
+		// If key was present, but val was not, set the val and mark it as present
+		if !v.present {
+			sd.dents[name] = val[V]{true, e}
+		}
 	}
 	return false
 }

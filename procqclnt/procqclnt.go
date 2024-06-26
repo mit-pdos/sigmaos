@@ -81,7 +81,7 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, *proc.ProcSeqno, error) {
 
 // Get a proc (passing in the kernelID of the caller). Will only return once
 // receives a response, or once there is an error.
-func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias bool) (*proc.Proc, uint32, bool, error) {
+func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias bool) (*proc.Proc, *proc.ProcSeqno, uint32, bool, error) {
 	// Retry until successful.
 	for {
 		var pqID string
@@ -93,7 +93,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			pqID, err = pqc.rpcdc.WaitTimedRandomEntry()
 			if err != nil {
 				db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get random: %v", err)
-				return nil, 0, false, err
+				return nil, nil, 0, false, err
 			}
 		}
 		pqsess, _ := pqc.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
@@ -102,7 +102,7 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 		rpcc, err := pqc.rpcdc.GetClnt(pqID)
 		if err != nil {
 			db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get procq clnt: %v", err)
-			return nil, 0, false, err
+			return nil, nil, 0, false, err
 		}
 		procSeqno := pqsess.NextSeqno(callerKernelID)
 		req := &proto.GetProcRequest{
@@ -118,15 +118,14 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 				pqc.rpcdc.InvalidateEntry(pqID)
 				continue
 			}
-			return nil, 0, false, err
+			return nil, nil, 0, false, err
 		}
 		db.DPrintf(db.PROCQCLNT, "GetProc success? %v", res.OK)
 		var p *proc.Proc
 		if res.OK {
 			p = proc.NewProcFromProto(res.GetProcProto())
-			pqc.GotProc(procSeqno)
 		}
-		return p, res.QLen, res.OK, nil
+		return p, procSeqno, res.QLen, res.OK, nil
 	}
 }
 

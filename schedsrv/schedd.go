@@ -85,7 +85,7 @@ func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.Fo
 	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p.GetPid())
 	start := time.Now()
 	// Run the proc
-	sd.spawnAndRunProc(p)
+	sd.spawnAndRunProc(p, nil)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Schedd.ForceRun internal latency: %v", p.GetPid(), time.Since(start))
 	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun done %v", p.GetRealm(), sd.kernelId, p.GetPid())
 	return nil
@@ -206,12 +206,12 @@ func (sd *Schedd) getQueuedProcs() {
 		db.DPrintf(db.SCHEDD, "[%v] Try GetProc mem=%v bias=%v", sd.kernelId, memFree, bias)
 		start := time.Now()
 		// Try to get a proc from the proc queue.
-		p, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, memFree, bias)
+		p, pseqno, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, memFree, bias)
 		var pmem proc.Tmem
 		if ok {
 			pmem = p.GetMem()
 		}
-		db.DPrintf(db.SCHEDD, "[%v] GetProc result procMem %v qlen %v ok %v", sd.kernelId, pmem, qlen, ok)
+		db.DPrintf(db.SCHEDD, "[%v] GetProc result pseqno %v procMem %v qlen %v ok %v", sd.kernelId, pseqno, pmem, qlen, ok)
 		if ok {
 			db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
 		} else {
@@ -254,9 +254,9 @@ func (sd *Schedd) getQueuedProcs() {
 		// subsequent getProc requests carry the updated memory accounting
 		// information.
 		sd.allocMem(p.GetMem())
-		db.DPrintf(db.SCHEDD, "[%v] Got proc from procq, bias=%v", sd.kernelId, bias)
+		db.DPrintf(db.SCHEDD, "[%v] Got proc [%v] from procq, bias=%v", sd.kernelId, p.GetPid(), bias)
 		// Run the proc
-		sd.spawnAndRunProc(p)
+		sd.spawnAndRunProc(p, pseqno)
 	}
 }
 
@@ -266,10 +266,18 @@ func (sd *Schedd) procDone(p *proc.Proc) {
 	sd.freeMem(p.GetMem())
 }
 
-func (sd *Schedd) spawnAndRunProc(p *proc.Proc) {
+func (sd *Schedd) spawnAndRunProc(p *proc.Proc, pseqno *proc.ProcSeqno) {
+	db.DPrintf(db.SCHEDD, "spawnAndRunProc %v", p)
+	// Free any mem the proc was using.
 	sd.incRealmStats(p)
 	p.SetKernelID(sd.kernelId, false)
 	sd.pmgr.Spawn(p)
+	// If this proc was spawned via procq, handle the sequence number
+	if pseqno != nil {
+		// Proc state now exists. Mark it as such to release any clients which may
+		// be waiting in WaitStart for schedd to receive this proc
+		sd.procqclnt.GotProc(pseqno)
+	}
 	// Run the proc
 	go sd.runProc(p)
 }

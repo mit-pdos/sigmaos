@@ -11,11 +11,11 @@ import (
 	"sigmaos/sigmarpcchan"
 )
 
-type allocFn func(string)
+type AllocFn func(string)
 
 type RPCDirClnt struct {
 	*dircache.DirCache[*rpcclnt.RPCClnt]
-	allocFn allocFn // Callback to be invoked when a new client is created
+	allocFn AllocFn // Callback to be invoked when a new client is created
 }
 
 func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
@@ -34,7 +34,7 @@ func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
 	return rpcc, nil
 }
 
-func NewRPCDirClntAllocFn(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, fn allocFn) *RPCDirClnt {
+func NewRPCDirClntAllocFn(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, fn AllocFn) *RPCDirClnt {
 	u := &RPCDirClnt{
 		allocFn: fn,
 	}

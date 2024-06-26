@@ -1,4 +1,4 @@
-package procqclnt
+package schedsrv
 
 import (
 	"fmt"
@@ -11,30 +11,32 @@ import (
 type ProcqSession struct {
 	sync.Mutex
 	*sync.Cond
-	procqID string
-	epoch   uint64
-	next    uint64
-	got     uint64
+	procqID  string
+	scheddID string
+	epoch    uint64
+	next     uint64
+	got      uint64
 }
 
-func NewProcqSession(procqID string) *ProcqSession {
+func NewProcqSession(procqID, scheddID string) *ProcqSession {
 	pseqno := &ProcqSession{
-		procqID: procqID,
-		epoch:   1,
-		next:    1,
-		got:     1,
+		procqID:  procqID,
+		scheddID: scheddID,
+		epoch:    1,
+		next:     1,
+		got:      1,
 	}
 	pseqno.Cond = sync.NewCond(&pseqno.Mutex)
 	return pseqno
 }
 
 // Get the current seqno
-func (pc *ProcqSession) NextSeqno(scheddID string) *proc.ProcSeqno {
+func (pc *ProcqSession) NextSeqno() *proc.ProcSeqno {
 	pc.Lock()
 	defer pc.Unlock()
 
 	pc.next++
-	return proc.NewProcSeqno(pc.procqID, scheddID, pc.epoch, pc.next)
+	return proc.NewProcSeqno(pc.procqID, pc.scheddID, pc.epoch, pc.next)
 }
 
 func (pc *ProcqSession) AdvanceEpoch() {

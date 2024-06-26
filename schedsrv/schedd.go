@@ -23,6 +23,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
+	"sigmaos/syncmap"
 )
 
 type Schedd struct {
@@ -32,9 +33,10 @@ type Schedd struct {
 	pmgr                *procmgr.ProcMgr
 	scheddclnt          *scheddclnt.ScheddClnt
 	procqclnt           *procqclnt.ProcQClnt
+	pqsess              *syncmap.SyncMap[string, *ProcqSession]
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
-	kernelId            string
+	kernelID            string
 	scheddStats         map[sp.Trealm]*realmStats
 	sc                  *sigmaclnt.SigmaClnt
 	cpuStats            *cpuStats
@@ -44,19 +46,36 @@ type Schedd struct {
 	nProcGetsSuccessful atomic.Uint64
 }
 
-func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelId string, reserveMcpu uint) *Schedd {
+func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *Schedd {
 	sd := &Schedd{
-		pmgr:        procmgr.NewProcMgr(sc, kernelId),
+		pmgr:        procmgr.NewProcMgr(sc, kernelID),
+		pqsess:      syncmap.NewSyncMap[string, *ProcqSession](),
 		scheddStats: make(map[sp.Trealm]*realmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
-		kernelId:    kernelId,
+		kernelID:    kernelID,
 		sc:          sc,
 		cpuStats:    &cpuStats{},
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.scheddclnt = scheddclnt.NewScheddClnt(sc.FsLib)
-	sd.procqclnt = procqclnt.NewProcQClnt(sc.FsLib)
+	sd.procqclnt = procqclnt.NewProcQClntSchedd(sc.FsLib,
+		func(pqID string) {
+			// When a new procq client is created, advance the epoch for the
+			// corresponding procq
+			pqsess, _ := sd.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
+				return NewProcqSession(sd.kernelID, pqID)
+			})
+			pqsess.AdvanceEpoch()
+		},
+		func(pqID string) *proc.ProcSeqno {
+			// Get the next proc seqno for a given procq
+			pqsess, _ := sd.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
+				return NewProcqSession(sd.kernelID, pqID)
+			})
+			return pqsess.NextSeqno()
+		},
+	)
 	return sd
 }
 
@@ -82,12 +101,12 @@ func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.Fo
 	if !req.MemAccountedFor {
 		sd.allocMem(p.GetMem())
 	}
-	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelId, p.GetPid())
+	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun %v", p.GetRealm(), sd.kernelID, p.GetPid())
 	start := time.Now()
 	// Run the proc
 	sd.spawnAndRunProc(p, nil)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Schedd.ForceRun internal latency: %v", p.GetPid(), time.Since(start))
-	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun done %v", p.GetRealm(), sd.kernelId, p.GetPid())
+	db.DPrintf(db.SCHEDD, "[%v] %v ForceRun done %v", p.GetRealm(), sd.kernelID, p.GetPid())
 	return nil
 }
 
@@ -96,7 +115,7 @@ func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitR
 	db.DPrintf(db.SCHEDD, "WaitStart %v seqno %v", req.PidStr, req.GetProcSeqno())
 	// Wait until this schedd has heard about the proc, and has created the state
 	// for it.
-	if err := sd.procqclnt.WaitUntilGotProc(req.GetProcSeqno()); err != nil {
+	if err := sd.WaitUntilGotProc(req.GetProcSeqno()); err != nil {
 		// XXX return in res?
 		return err
 	}
@@ -189,6 +208,33 @@ func (sd *Schedd) GetScheddStats(ctx fs.CtxI, req proto.GetScheddStatsRequest, r
 	return nil
 }
 
+// Note that a proc has been received and its corresponding state has been
+// created, so the sequence number can be incremented
+func (sd *Schedd) GotProc(procSeqno *proc.ProcSeqno) {
+	// schedd has successfully received a proc from procq pqID. Any clients which
+	// want to wait on that proc can now expect the state for that proc to exist
+	// at schedd. Set the seqno (which should be monotonically increasing) to
+	// release the clients, and allow schedd to handle the wait.
+	pqsess, _ := sd.pqsess.AllocNew(procSeqno.GetProcqID(), func(pqID string) *ProcqSession {
+		return NewProcqSession(sd.kernelID, pqID)
+	})
+	pqsess.Got(procSeqno)
+}
+
+// Wait to hear about a proc from procq pqID.
+func (sd *Schedd) WaitUntilGotProc(pseqno *proc.ProcSeqno) error {
+	// Kernel procs, spawned directly to schedd, will have an epoch of 0. Pass
+	// them through (since the proc is guaranteed to have been pushed to schedd
+	// by the kernel srv before calling WaitStart)
+	if pseqno.GetEpoch() == 0 {
+		return nil
+	}
+	pqsess, _ := sd.pqsess.AllocNew(pseqno.GetProcqID(), func(pqID string) *ProcqSession {
+		return NewProcqSession(sd.kernelID, pqID)
+	})
+	return pqsess.WaitUntilGot(pseqno)
+}
+
 // For resource accounting purposes, it is assumed that only one getQueuedProcs
 // thread runs per schedd.
 func (sd *Schedd) getQueuedProcs() {
@@ -197,21 +243,21 @@ func (sd *Schedd) getQueuedProcs() {
 	for {
 		memFree, ok := sd.shouldGetBEProc()
 		if !ok {
-			db.DPrintf(db.SCHEDD, "[%v] Waiting for more mem", sd.kernelId, bias)
+			db.DPrintf(db.SCHEDD, "[%v] Waiting for more mem", sd.kernelID, bias)
 			// If no memory is available, wait for some more.
 			sd.waitForMoreMem()
-			db.DPrintf(db.SCHEDD, "[%v] Waiting for mem done", sd.kernelId, bias)
+			db.DPrintf(db.SCHEDD, "[%v] Waiting for mem done", sd.kernelID, bias)
 			continue
 		}
-		db.DPrintf(db.SCHEDD, "[%v] Try GetProc mem=%v bias=%v", sd.kernelId, memFree, bias)
+		db.DPrintf(db.SCHEDD, "[%v] Try GetProc mem=%v bias=%v", sd.kernelID, memFree, bias)
 		start := time.Now()
 		// Try to get a proc from the proc queue.
-		p, pseqno, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelId, memFree, bias)
+		p, pseqno, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelID, memFree, bias)
 		var pmem proc.Tmem
 		if ok {
 			pmem = p.GetMem()
 		}
-		db.DPrintf(db.SCHEDD, "[%v] GetProc result pseqno %v procMem %v qlen %v ok %v", sd.kernelId, pseqno, pmem, qlen, ok)
+		db.DPrintf(db.SCHEDD, "[%v] GetProc result pseqno %v procMem %v qlen %v ok %v", sd.kernelID, pseqno, pmem, qlen, ok)
 		if ok {
 			db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
 		} else {
@@ -233,7 +279,7 @@ func (sd *Schedd) getQueuedProcs() {
 		}
 		sd.nProcGets.Add(1)
 		if !ok {
-			db.DPrintf(db.SCHEDD, "[%v] No proc on procq, try another, bias=%v qlen=%v", sd.kernelId, bias, qlen)
+			db.DPrintf(db.SCHEDD, "[%v] No proc on procq, try another, bias=%v qlen=%v", sd.kernelID, bias, qlen)
 			// If already biased to this schedd's kernel, and no proc was available,
 			// try another.
 			//
@@ -254,7 +300,7 @@ func (sd *Schedd) getQueuedProcs() {
 		// subsequent getProc requests carry the updated memory accounting
 		// information.
 		sd.allocMem(p.GetMem())
-		db.DPrintf(db.SCHEDD, "[%v] Got proc [%v] from procq, bias=%v", sd.kernelId, p.GetPid(), bias)
+		db.DPrintf(db.SCHEDD, "[%v] Got proc [%v] from procq, bias=%v", sd.kernelID, p.GetPid(), bias)
 		// Run the proc
 		sd.spawnAndRunProc(p, pseqno)
 	}
@@ -270,13 +316,13 @@ func (sd *Schedd) spawnAndRunProc(p *proc.Proc, pseqno *proc.ProcSeqno) {
 	db.DPrintf(db.SCHEDD, "spawnAndRunProc %v", p)
 	// Free any mem the proc was using.
 	sd.incRealmStats(p)
-	p.SetKernelID(sd.kernelId, false)
+	p.SetKernelID(sd.kernelID, false)
 	sd.pmgr.Spawn(p)
 	// If this proc was spawned via procq, handle the sequence number
 	if pseqno != nil {
 		// Proc state now exists. Mark it as such to release any clients which may
 		// be waiting in WaitStart for schedd to receive this proc
-		sd.procqclnt.GotProc(pseqno)
+		sd.GotProc(pseqno)
 	}
 	// Run the proc
 	go sd.runProc(p)
@@ -285,7 +331,7 @@ func (sd *Schedd) spawnAndRunProc(p *proc.Proc, pseqno *proc.ProcSeqno) {
 // Run a proc via the local schedd. Caller holds lock.
 func (sd *Schedd) runProc(p *proc.Proc) {
 	defer sd.decRealmStats(p)
-	db.DPrintf(db.SCHEDD, "[%v] %v runProc %v", p.GetRealm(), sd.kernelId, p)
+	db.DPrintf(db.SCHEDD, "[%v] %v runProc %v", p.GetRealm(), sd.kernelID, p)
 	sd.pmgr.RunProc(p)
 	sd.procDone(p)
 }
@@ -304,7 +350,7 @@ func (sd *Schedd) register() {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
 	req := &lcproto.RegisterScheddRequest{
-		KernelID: sd.kernelId,
+		KernelID: sd.kernelID,
 		McpuInt:  uint32(sd.mcpufree),
 		MemInt:   uint32(sd.memfree),
 	}
@@ -324,14 +370,14 @@ func (sd *Schedd) stats() {
 	}
 }
 
-func RunSchedd(kernelId string, reserveMcpu uint) error {
+func RunSchedd(kernelID string, reserveMcpu uint) error {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
-	sd := NewSchedd(sc, kernelId, reserveMcpu)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.SCHEDD, kernelId), sc, sd)
+	sd := NewSchedd(sc, kernelID, reserveMcpu)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.SCHEDD, kernelID), sc, sd)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}

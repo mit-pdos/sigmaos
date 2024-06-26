@@ -11,33 +11,30 @@ import (
 	"sigmaos/rpcdirclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
 )
 
 const (
 	NOT_ENQ = "NOT_ENQUEUED"
 )
 
+type nextSeqnoFn func(string) *proc.ProcSeqno
+
 type ProcQClnt struct {
 	*fslib.FsLib
-	rpcdc  *rpcdirclnt.RPCDirClnt
-	pqsess *syncmap.SyncMap[string, *ProcqSession]
+	rpcdc     *rpcdirclnt.RPCDirClnt
+	nextSeqno nextSeqnoFn
 }
 
 func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
-	pqc := &ProcQClnt{
-		FsLib:  fsl,
-		pqsess: syncmap.NewSyncMap[string, *ProcqSession](),
+	return NewProcQClntSchedd(fsl, nil, nil)
+}
+
+func NewProcQClntSchedd(fsl *fslib.FsLib, nextEpoch rpcdirclnt.AllocFn, nextSeqno nextSeqnoFn) *ProcQClnt {
+	return &ProcQClnt{
+		FsLib:     fsl,
+		rpcdc:     rpcdirclnt.NewRPCDirClntAllocFn(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR, nextEpoch),
+		nextSeqno: nextSeqno,
 	}
-	pqc.rpcdc = rpcdirclnt.NewRPCDirClntAllocFn(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR, func(pqID string) {
-		// When a new procq client is created, advance the epoch for the
-		// corresponding procq
-		pqsess, _ := pqc.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
-			return NewProcqSession(pqID)
-		})
-		pqsess.AdvanceEpoch()
-	})
-	return pqc
 }
 
 func (pqc *ProcQClnt) chooseProcQ(pid sp.Tpid) (string, error) {
@@ -96,15 +93,12 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 				return nil, nil, 0, false, err
 			}
 		}
-		pqsess, _ := pqc.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
-			return NewProcqSession(pqID)
-		})
 		rpcc, err := pqc.rpcdc.GetClnt(pqID)
 		if err != nil {
 			db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get procq clnt: %v", err)
 			return nil, nil, 0, false, err
 		}
-		procSeqno := pqsess.NextSeqno(callerKernelID)
+		procSeqno := pqc.nextSeqno(pqID)
 		req := &proto.GetProcRequest{
 			KernelID:  callerKernelID,
 			Mem:       uint32(freeMem),
@@ -163,33 +157,6 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 		}
 	}
 	return qstats, nil
-}
-
-// Note that a proc has been received, so the sequence number can be
-// incremented
-func (pqc *ProcQClnt) GotProc(procSeqno *proc.ProcSeqno) {
-	// schedd has successfully received a proc from procq pqID. Any clients which
-	// want to wait on that proc can now expect the state for that proc to exist
-	// at schedd. Set the seqno (which should be monotonically increasing) to
-	// release the clients, and allow schedd to handle the wait.
-	pqsess, _ := pqc.pqsess.AllocNew(procSeqno.GetProcqID(), func(pqID string) *ProcqSession {
-		return NewProcqSession(pqID)
-	})
-	pqsess.Got(procSeqno)
-}
-
-// Wait to hear about a proc from procq pqID.
-func (pqc *ProcQClnt) WaitUntilGotProc(pseqno *proc.ProcSeqno) error {
-	// Kernel procs, spawned directly to schedd, will have an epoch of 0. Pass
-	// them through (since the proc is guaranteed to have been pushed to schedd
-	// by the kernel srv before calling WaitStart)
-	if pseqno.GetEpoch() == 0 {
-		return nil
-	}
-	pqsess, _ := pqc.pqsess.AllocNew(pseqno.GetProcqID(), func(pqID string) *ProcqSession {
-		return NewProcqSession(pqID)
-	})
-	return pqsess.WaitUntilGot(pseqno)
 }
 
 func (pqc *ProcQClnt) StopWatching() {

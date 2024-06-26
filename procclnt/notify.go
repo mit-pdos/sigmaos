@@ -10,7 +10,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID, semName string, how proc.Thow, status *proc.Status, skipSchedd bool) error {
+func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID string, semName string, how proc.Thow, status *proc.Status, skipSchedd bool) error {
 	db.DPrintf(db.PROCCLNT, "%v %v", method, pid)
 	defer db.DPrintf(db.PROCCLNT, "%v done %v", method, pid)
 

@@ -17,15 +17,23 @@ const (
 	NOT_ENQ = "NOT_ENQUEUED"
 )
 
+type nextSeqnoFn func(string) *proc.ProcSeqno
+
 type ProcQClnt struct {
 	*fslib.FsLib
-	rpcdc *rpcdirclnt.RPCDirClnt
+	rpcdc     *rpcdirclnt.RPCDirClnt
+	nextSeqno nextSeqnoFn
 }
 
 func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
+	return NewProcQClntSchedd(fsl, nil, nil)
+}
+
+func NewProcQClntSchedd(fsl *fslib.FsLib, nextEpoch rpcdirclnt.AllocFn, nextSeqno nextSeqnoFn) *ProcQClnt {
 	return &ProcQClnt{
-		FsLib: fsl,
-		rpcdc: rpcdirclnt.NewRPCDirClnt(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR),
+		FsLib:     fsl,
+		rpcdc:     rpcdirclnt.NewRPCDirClntAllocFn(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR, nextEpoch),
+		nextSeqno: nextSeqno,
 	}
 }
 
@@ -38,16 +46,16 @@ func (pqc *ProcQClnt) chooseProcQ(pid sp.Tpid) (string, error) {
 
 // Enqueue a proc on the procq. Returns the ID of the kernel that is running
 // the proc.
-func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
+func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, *proc.ProcSeqno, error) {
 	pqID, err := pqc.chooseProcQ(p.GetPid())
 	if err != nil {
-		return NOT_ENQ, err
+		return NOT_ENQ, nil, err
 	}
 	s := time.Now()
 	rpcc, err := pqc.rpcdc.GetClnt(pqID)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error: Can't get procq clnt: %v", err)
-		return NOT_ENQ, err
+		return NOT_ENQ, nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt make clnt %v %v", p.GetPid(), pqID, time.Since(s))
 	req := &proto.EnqueueRequest{
@@ -61,16 +69,16 @@ func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, error) {
 			db.DPrintf(db.ALWAYS, "Invalidate entry %v", pqID)
 			pqc.rpcdc.InvalidateEntry(pqID)
 		}
-		return NOT_ENQ, err
+		return NOT_ENQ, nil, err
 	}
 	db.DPrintf(db.PROCQCLNT, "[%v] Enqueued Proc %v", p.GetRealm(), p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcQClnt client-side RPC latency %v", p.GetPid(), time.Since(s))
-	return res.KernelID, nil
+	return res.ScheddID, res.ProcSeqno, nil
 }
 
 // Get a proc (passing in the kernelID of the caller). Will only return once
 // receives a response, or once there is an error.
-func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias bool) (proc.Tmem, uint32, bool, error) {
+func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias bool) (*proc.Proc, *proc.ProcSeqno, uint32, bool, error) {
 	// Retry until successful.
 	for {
 		var pqID string
@@ -82,17 +90,19 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 			pqID, err = pqc.rpcdc.WaitTimedRandomEntry()
 			if err != nil {
 				db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get random: %v", err)
-				return 0, 0, false, err
+				return nil, nil, 0, false, err
 			}
 		}
 		rpcc, err := pqc.rpcdc.GetClnt(pqID)
 		if err != nil {
 			db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get procq clnt: %v", err)
-			return 0, 0, false, err
+			return nil, nil, 0, false, err
 		}
+		procSeqno := pqc.nextSeqno(pqID)
 		req := &proto.GetProcRequest{
-			KernelID: callerKernelID,
-			Mem:      uint32(freeMem),
+			KernelID:  callerKernelID,
+			Mem:       uint32(freeMem),
+			ProcSeqno: procSeqno,
 		}
 		res := &proto.GetProcResponse{}
 		if err := rpcc.RPC("ProcQ.GetProc", req, res); err != nil {
@@ -102,10 +112,14 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 				pqc.rpcdc.InvalidateEntry(pqID)
 				continue
 			}
-			return 0, 0, false, err
+			return nil, nil, 0, false, err
 		}
 		db.DPrintf(db.PROCQCLNT, "GetProc success? %v", res.OK)
-		return proc.Tmem(res.Mem), res.QLen, res.OK, nil
+		var p *proc.Proc
+		if res.OK {
+			p = proc.NewProcFromProto(res.GetProcProto())
+		}
+		return p, procSeqno, res.QLen, res.OK, nil
 	}
 }
 

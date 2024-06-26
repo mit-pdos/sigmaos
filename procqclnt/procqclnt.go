@@ -32,8 +32,8 @@ func NewProcQClnt(fsl *fslib.FsLib) *ProcQClnt {
 	pqc.rpcdc = rpcdirclnt.NewRPCDirClntAllocFn(fsl, sp.PROCQ, db.PROCQCLNT, db.PROCQCLNT_ERR, func(pqID string) {
 		// When a new procq client is created, advance the epoch for the
 		// corresponding procq
-		pqsess, _ := pqc.pqsess.AllocNew(pqID, func(string) *ProcqSession {
-			return NewProcqSession()
+		pqsess, _ := pqc.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
+			return NewProcqSession(pqID)
 		})
 		pqsess.AdvanceEpoch()
 	})
@@ -96,15 +96,15 @@ func (pqc *ProcQClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias boo
 				return nil, 0, false, err
 			}
 		}
-		pqsess, _ := pqc.pqsess.AllocNew(pqID, func(string) *ProcqSession {
-			return NewProcqSession()
+		pqsess, _ := pqc.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
+			return NewProcqSession(pqID)
 		})
 		rpcc, err := pqc.rpcdc.GetClnt(pqID)
 		if err != nil {
 			db.DPrintf(db.PROCQCLNT_ERR, "Error: Can't get procq clnt: %v", err)
 			return nil, 0, false, err
 		}
-		procSeqno := pqsess.NextSeqno(pqID, callerKernelID)
+		procSeqno := pqsess.NextSeqno(callerKernelID)
 		req := &proto.GetProcRequest{
 			KernelID:  callerKernelID,
 			Mem:       uint32(freeMem),
@@ -173,8 +173,8 @@ func (pqc *ProcQClnt) GotProc(procSeqno *proc.ProcSeqno) {
 	// want to wait on that proc can now expect the state for that proc to exist
 	// at schedd. Set the seqno (which should be monotonically increasing) to
 	// release the clients, and allow schedd to handle the wait.
-	pqsess, _ := pqc.pqsess.AllocNew(procSeqno.GetProcqID(), func(string) *ProcqSession {
-		return NewProcqSession()
+	pqsess, _ := pqc.pqsess.AllocNew(procSeqno.GetProcqID(), func(pqID string) *ProcqSession {
+		return NewProcqSession(pqID)
 	})
 	pqsess.Got(procSeqno)
 }
@@ -187,8 +187,8 @@ func (pqc *ProcQClnt) WaitUntilGotProc(pseqno *proc.ProcSeqno) error {
 	if pseqno.GetEpoch() == 0 {
 		return nil
 	}
-	pqsess, _ := pqc.pqsess.AllocNew(pseqno.GetProcqID(), func(string) *ProcqSession {
-		return NewProcqSession()
+	pqsess, _ := pqc.pqsess.AllocNew(pseqno.GetProcqID(), func(pqID string) *ProcqSession {
+		return NewProcqSession(pqID)
 	})
 	return pqsess.WaitUntilGot(pseqno)
 }

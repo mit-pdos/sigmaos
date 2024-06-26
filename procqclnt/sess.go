@@ -11,28 +11,30 @@ import (
 type ProcqSession struct {
 	sync.Mutex
 	*sync.Cond
-	epoch uint64
-	next  uint64
-	got   uint64
+	procqID string
+	epoch   uint64
+	next    uint64
+	got     uint64
 }
 
-func NewProcqSession() *ProcqSession {
+func NewProcqSession(procqID string) *ProcqSession {
 	pseqno := &ProcqSession{
-		epoch: 1,
-		next:  1,
-		got:   1,
+		procqID: procqID,
+		epoch:   1,
+		next:    1,
+		got:     1,
 	}
 	pseqno.Cond = sync.NewCond(&pseqno.Mutex)
 	return pseqno
 }
 
 // Get the current seqno
-func (pc *ProcqSession) NextSeqno(procqID string, scheddID string) *proc.ProcSeqno {
+func (pc *ProcqSession) NextSeqno(scheddID string) *proc.ProcSeqno {
 	pc.Lock()
 	defer pc.Unlock()
 
 	pc.next++
-	return proc.NewProcSeqno(procqID, scheddID, pc.epoch, pc.next)
+	return proc.NewProcSeqno(pc.procqID, scheddID, pc.epoch, pc.next)
 }
 
 func (pc *ProcqSession) AdvanceEpoch() {
@@ -41,6 +43,7 @@ func (pc *ProcqSession) AdvanceEpoch() {
 
 	// Advance epoch
 	pc.epoch++
+	db.DPrintf(db.PROCQCLNT, "AdvanceEpoch(%v) sess with procq %v", pc.epoch, pc.procqID)
 	// Reset seqnos
 	pc.next = 0
 	pc.got = 0

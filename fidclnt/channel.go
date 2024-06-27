@@ -66,6 +66,10 @@ func (c *Channel) Lastqid() *sp.Tqid {
 	return c.qids[len(c.qids)-1]
 }
 
+func (c *Channel) Qids() []*sp.Tqid {
+	return c.qids
+}
+
 func (c *Channel) Endpoint() *sp.Tendpoint {
 	return c.pc.Endpoints()
 }

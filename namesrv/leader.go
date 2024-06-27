@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/leaderetcd"
 )
 

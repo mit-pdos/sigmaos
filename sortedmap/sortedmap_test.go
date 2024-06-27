@@ -34,6 +34,23 @@ func TestBasic(t *testing.T) {
 	})
 }
 
+func TestPresent(t *testing.T) {
+	k := "k"
+	sd := NewSortedMap[string, *bool]()
+	ok := sd.InsertKey(k)
+	assert.True(t, ok)
+	ok, _, vok := sd.LookupKeyVal(k)
+	assert.True(t, ok)
+	assert.False(t, vok)
+	b := new(bool)
+	*b = true
+	sd.Insert(k, b)
+	ok, v, vok := sd.LookupKeyVal(k)
+	assert.True(t, ok)
+	assert.True(t, vok)
+	assert.True(t, *v)
+}
+
 func TestRR(t *testing.T) {
 	sd := NewSortedMap[string, *bool]()
 

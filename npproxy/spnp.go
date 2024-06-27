@@ -1,4 +1,4 @@
-package proxy
+package npproxy
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/ninep"
-	"sigmaos/npcodec"
+	"sigmaos/npproxy/npcodec"
 	"sigmaos/reader"
 	sp "sigmaos/sigmap"
 )
@@ -20,7 +20,7 @@ func Sp2NpDir(d []byte, cnt sp.Tsize) ([]byte, error) {
 		return false, nil
 	})
 	if error != nil {
-		db.DPrintf(db.PROXY, "Sp2NpDir: %d errror %v\n", len(npsts), error)
+		db.DPrintf(db.NPPROXY, "Sp2NpDir: %d errror %v\n", len(npsts), error)
 		return nil, error
 	}
 	d1, _, err := fs.MarshalDir(cnt, npsts)

@@ -50,8 +50,9 @@ const (
 	BINPROC = sp.SIGMAHOME + "/bin/user/"
 )
 
-func Index(o int64) int { return int(o / chunk.CHUNKSZ) }
-func Ckoff(i int) int64 { return int64(i * chunk.CHUNKSZ) }
+func Index(o int64) int     { return int(o / chunk.CHUNKSZ) }
+func Ckoff(i int) int64     { return int64(i * chunk.CHUNKSZ) }
+func CkRound(o int64) int64 { return (o + chunk.CHUNKSZ - 1) &^ (chunk.CHUNKSZ - 1) }
 
 func IsChunkSrvPath(path string) bool {
 	return strings.Contains(path, sp.CHUNKD)
@@ -392,7 +393,7 @@ func (cksrv *ChunkSrv) useLocalEp(sc *sigmaclnt.SigmaClnt, pn string) {
 				return
 			}
 			if err != nil {
-				db.DPrintf(db.CHUNKSRV, "useLocalEp: invalidate %q %v", pn)
+				db.DPrintf(db.CHUNKSRV, "useLocalEp: invalidate %q", pn)
 				delete(cksrv.localEps, pn0)
 			}
 			return
@@ -446,10 +447,8 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 		if err != nil {
 			db.DFatalf("Seek hole %q %d err %v", pn, o2, err)
 		}
+		o1 = CkRound(o1)
 		for o := o1; o < o2; o += chunk.CHUNKSZ {
-			if o%chunk.CHUNKSZ != 0 {
-				db.DFatalf("offset %d", o)
-			}
 			if o+chunk.CHUNKSZ <= o2 || o2 >= int64(totsz) { // a complete chunk?
 				i := Index(o)
 				if i == ck {
@@ -510,7 +509,12 @@ func Run(kernelId string) {
 	}
 	// Read endpoints of local proxies and remember them
 	for _, srv := range []string{sp.UX, sp.S3} {
-		pn := filepath.Join(srv, kernelId)
+		_, err := sc.GetDir(srv)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error GetDir %v: %v", srv, err)
+			continue
+		}
+		pn := sp.ProxyPathname(srv, kernelId)
 		ep, err := sc.ReadEndpoint(pn)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error ReadEndpoint %v: %v", pn, err)

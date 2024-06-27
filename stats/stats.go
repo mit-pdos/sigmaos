@@ -190,15 +190,16 @@ func (st *StatInode) Write(ctx fs.CtxI, off sp.Toffset, data []byte, f sp.Tfence
 }
 
 func (st *StatInode) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
-	db.DPrintf(db.TEST, "Read statinfo %v\n", st)
+	b := st.stats()
+	db.DPrintf(db.TEST, "Read statinfo %v off %d %d sz %d", st, off, n, len(b))
 	if st == nil {
 		return nil, nil
 	}
 	if off > 0 {
 		return nil, nil
 	}
-	b := st.stats()
-	return b, nil
+	// return no more data than asked for
+	return b[:n], nil
 }
 
 func (sti *StatInode) EnablePathCnts() {

@@ -12,7 +12,7 @@ import (
 	"go.etcd.io/etcd/client/v3"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/path"
 	"sigmaos/proc"

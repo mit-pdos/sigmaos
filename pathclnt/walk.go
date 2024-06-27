@@ -13,16 +13,6 @@ const (
 	MAXSYMLINK = 8
 )
 
-func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Tpathname, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
-	ch := pathc.FidClnt.Lookup(fid)
-	if ch == nil {
-		return sp.NoFid, serr.NewErr(serr.TErrNotfound, fid)
-	}
-	p := ch.Path().AppendPath(path)
-	db.DPrintf(db.WALK, "Walk %v (ch %v)", p, ch.Path())
-	return pathc.walk(p, principal, true, nil)
-}
-
 // WalkPath walks path and, on success, returns the fd walked to; it
 // is the caller's responsibility to clunk the fd.  If a server is
 // unreachable, it umounts the path it walked to, and starts over

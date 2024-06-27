@@ -31,6 +31,9 @@ while [[ "$#" -gt 1 ]]; do
         "node")
             BOOT="procq;schedd;ux;s3;db;chunkd;mongo"
             ;;
+        "minnode")
+            BOOT="schedd;ux;s3;chunkd"
+            ;;
         "named")
             BOOT="knamed"
             ;;

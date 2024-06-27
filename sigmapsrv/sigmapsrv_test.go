@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/netproxyclnt"
 	"sigmaos/perf"
@@ -740,5 +740,22 @@ func TestLookupMultiMount(t *testing.T) {
 	_, err = fsl.Stat(pn)
 	db.DPrintf(db.TEST, "Stat %v done %v took %v\n", fsl.ClntId(), pn, time.Since(s))
 	assert.Nil(t, err)
+	ts.Shutdown()
+}
+
+func TestStatUx(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	assert.Nil(t, err)
+	s := time.Now()
+	pn := filepath.Join(sp.UX, "sigma-named", "bin/user/common/spawn-latency")
+	//pn := filepath.Join(sp.UX, "~local", "bin/user/common/spawn-latency")
+	db.DPrintf(db.TEST, "Stat %v start %v\n", fsl.ClntId(), pn)
+	_, err = fsl.Stat(pn)
+	db.DPrintf(db.TEST, "Stat %v done %v took %v\n", fsl.ClntId(), pn, time.Since(s))
 	ts.Shutdown()
 }

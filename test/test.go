@@ -14,7 +14,7 @@ import (
 	"sigmaos/auth"
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
 	"sigmaos/realmclnt"
@@ -23,10 +23,11 @@ import (
 )
 
 const (
-	BOOT_REALM = "realm"
-	BOOT_ALL   = "all"
-	BOOT_NAMED = "named"
-	BOOT_NODE  = "node"
+	BOOT_REALM   = "realm"
+	BOOT_ALL     = "all"
+	BOOT_NAMED   = "named"
+	BOOT_NODE    = "node"
+	BOOT_MINNODE = "minnode"
 )
 
 var Start bool
@@ -233,13 +234,21 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	return savedTstate, nil
 }
 
+func (ts *Tstate) BootMinNode(n int) error {
+	return ts.bootNode(n, BOOT_MINNODE)
+}
+
 func (ts *Tstate) BootNode(n int) error {
+	return ts.bootNode(n, BOOT_NODE)
+}
+
+func (ts *Tstate) bootNode(n int, nodetype string) error {
 	useNetProxy := !noNetProxy
 	// Clear the saved kernel, since the next test may not need an additional
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), BOOT_NODE, Overlays, GVisor, useNetProxy)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), nodetype, Overlays, GVisor, useNetProxy)
 		if err != nil {
 			return err
 		}

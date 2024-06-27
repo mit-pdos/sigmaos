@@ -17,8 +17,6 @@ import (
 	"sigmaos/procfs"
 	proto "sigmaos/procqsrv/proto"
 	"sigmaos/rand"
-	"sigmaos/scheddclnt"
-	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -29,16 +27,15 @@ const (
 )
 
 type ProcQ struct {
-	mu         sync.Mutex
-	realmMu    sync.RWMutex
-	cond       *sync.Cond
-	sc         *sigmaclnt.SigmaClnt
-	scheddclnt *scheddclnt.ScheddClnt
-	qs         map[sp.Trealm]*Queue
-	realms     []sp.Trealm
-	qlen       int // Aggregate queue length, across all queues
-	tot        atomic.Int64
-	realmbins  *chunkclnt.RealmBinPaths
+	mu        sync.Mutex
+	realmMu   sync.RWMutex
+	cond      *sync.Cond
+	sc        *sigmaclnt.SigmaClnt
+	qs        map[sp.Trealm]*Queue
+	realms    []sp.Trealm
+	qlen      int // Aggregate queue length, across all queues
+	tot       atomic.Int64
+	realmbins *chunkclnt.RealmBinPaths
 }
 
 type QDir struct {
@@ -47,12 +44,11 @@ type QDir struct {
 
 func NewProcQ(sc *sigmaclnt.SigmaClnt) *ProcQ {
 	pq := &ProcQ{
-		sc:         sc,
-		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib),
-		qs:         make(map[sp.Trealm]*Queue),
-		realms:     make([]sp.Trealm, 0),
-		qlen:       0,
-		realmbins:  chunkclnt.NewRealmBinPaths(),
+		sc:        sc,
+		qs:        make(map[sp.Trealm]*Queue),
+		realms:    make([]sp.Trealm, 0),
+		qlen:      0,
+		realmbins: chunkclnt.NewRealmBinPaths(),
 	}
 	pq.cond = sync.NewCond(&pq.mu)
 	return pq
@@ -108,14 +104,15 @@ func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.Enque
 	}
 	db.DPrintf(db.PROCQ, "[%v] Enqueue %v", p.GetRealm(), p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv; time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
-	ch := make(chan string)
+	ch := make(chan *proc.ProcSeqno)
 	pq.addProc(p, ch)
 	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
-	res.KernelID = <-ch
+	seqno := <-ch
+	res.ProcSeqno = seqno
 	return nil
 }
 
-func (pq *ProcQ) addProc(p *proc.Proc, kidch chan string) {
+func (pq *ProcQ) addProc(p *proc.Proc, ch chan *proc.ProcSeqno) {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 
@@ -126,29 +123,15 @@ func (pq *ProcQ) addProc(p *proc.Proc, kidch chan string) {
 	// Get the queue for the realm.
 	q := pq.getRealmQueue(p.GetRealm())
 	// Enqueue the proc according to its realm.
-	q.Enqueue(p, kidch)
+	q.Enqueue(p, ch)
 	// Broadcast that a new proc may be runnable.
 	pq.cond.Broadcast()
 }
 
-func (pq *ProcQ) runProc(kernelID string, p *proc.Proc, ch chan string, enqTS time.Time) {
+func (pq *ProcQ) replyToParent(pseqno *proc.ProcSeqno, p *proc.Proc, ch chan *proc.ProcSeqno, enqTS time.Time) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Internal procqsrv Proc queueing time %v", p.GetPid(), time.Since(enqTS))
-	db.DPrintf(db.PROCQ, "runProc on kid %v", kernelID)
-	// Must push the proc to the schedd before responding to the parent because
-	// we must guarantee that the schedd knows about it before talking to the
-	// parent. Otherwise, the response to the parent could arrive first and the
-	// parent could ask schedd about the proc before the schedd learns about the
-	// proc.
-	if err := pq.scheddclnt.ForceRun(kernelID, true, p); err != nil {
-		db.DPrintf(db.PROCQ_ERR, "Error ForceRun proc on kid %v: %v", kernelID, err)
-		pq.addProc(p, ch)
-		if serr.IsErrorUnavailable(err) {
-			pq.realmbins.DelBinKernelID(p.GetRealm(), p.GetProgram(), kernelID)
-		}
-		return
-	}
-	db.DPrintf(db.PROCQ, "Done runProc on kid %v", kernelID)
-	ch <- kernelID
+	db.DPrintf(db.PROCQ, "replyToParent child is on kid %v", pseqno.GetScheddID())
+	ch <- pseqno
 }
 
 func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.GetStatsResponse) error {
@@ -218,14 +201,11 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				}
 				pq.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), req.KernelID)
 
-				// Push proc to schedd. Do this asynchronously so we don't hold locks
-				// across RPCs.
-				go pq.runProc(req.KernelID, p, ch, ts)
+				// Tell client about schedd chosen to run this proc. Do this
+				// asynchronously so that schedd can proceed with the proc immediately.
+				go pq.replyToParent(req.GetProcSeqno(), p, ch, ts)
+				res.ProcProto = p.GetProto()
 				res.OK = true
-				// Note the amount of memory required by the proc, so that schedd can
-				// do resource accounting and (potentially) temper future GetProc
-				// requests.
-				res.Mem = uint32(p.GetMem())
 				res.QLen = uint32(pq.qlen)
 				db.DPrintf(db.TEST, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
 				pq.mu.Unlock()

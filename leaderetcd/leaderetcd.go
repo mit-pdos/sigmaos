@@ -5,7 +5,7 @@ import (
 
 	"go.etcd.io/etcd/client/v3/concurrency"
 
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"

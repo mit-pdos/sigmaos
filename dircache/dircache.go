@@ -11,7 +11,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

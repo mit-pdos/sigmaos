@@ -1,5 +1,9 @@
 package sigmap
 
+import (
+	"path/filepath"
+)
+
 // if name ends in "/", it is a directory with mount files for that service
 const (
 	KNAMED        = "knamed"
@@ -99,4 +103,8 @@ const (
 
 func SigmaClntdKernel(kid string) string {
 	return SIGMACLNTDKERNEL + kid
+}
+
+func ProxyPathname(srv, kid string) string {
+	return filepath.Join(srv, kid)
 }

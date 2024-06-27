@@ -3,6 +3,7 @@ package procmgr
 import (
 	"sync"
 
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -126,7 +127,11 @@ func (ps *ProcState) waitExit(pid sp.Tpid) []byte {
 	if w, ok := ps.exitWaiter[pid]; ok {
 		w.wait()
 	}
-	status, del := ps.exitStatus[pid].GetStatus()
+	w, ok := ps.exitStatus[pid]
+	if !ok {
+		db.DFatalf("Error: exit status missing (either WaitExited twice, or client called WaitExit before proc state was created)")
+	}
+	status, del := w.GetStatus()
 	if del {
 		delete(ps.exitStatus, pid)
 	}

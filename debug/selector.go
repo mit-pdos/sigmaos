@@ -135,7 +135,7 @@ const (
 	DB                         = "DB"
 	MONGO                      = "MONGO"
 	MONGO_ERR                  = "MONGO" + ERR
-	PROXY                      = "PROXY"
+	NPPROXY                    = "NPPROXY"
 	SIGMACLNTSRV               = "SIGMACLNTSRV"
 	SIGMACLNTSRV_ERR           = "SIGMACLNTSRV" + ERR
 	BINSRV                     = "BINSRV"

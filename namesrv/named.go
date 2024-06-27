@@ -9,7 +9,7 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/leaderetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/path"

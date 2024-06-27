@@ -8,7 +8,7 @@ import (
 	"sigmaos/auth"
 	"sigmaos/boot"
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/kernel"
 	"sigmaos/netsigma"
 	"sigmaos/proc"

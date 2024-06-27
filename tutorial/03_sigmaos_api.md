@@ -69,7 +69,7 @@ following steps:
     
 To get started, open `example_test.go` in the folder `example`, which
 contains the `TestExerciseNamed` function, a Golang test function, to
-read the root directory of `named`.  The call to `test.MakeTstatePath`
+read the root directory of `named`.  The call to `test.NewTstatePath`
 starts a test instance of SigmaOS with only named. The `ts` instance
 embeds an `SigmaClnt` object, which in turn embeds an `FsLib` object.
 You can run the test as follows:
@@ -128,7 +128,7 @@ Using the same FsLib interface as in the previous exercise, extend
   `name/s3/~any/<YOUR_BUCKET_NAME>/gutenberg/pg-tom_sawyer.txt`
   - [ ] Count the number of occurrences of the word `the` in this file
     
-Note that `test.MakeTstateAll` creates an instance of SigmaOS with `named` and
+Note that `test.NewTstateAll` creates an instance of SigmaOS with `named` and
 other kernel services (such as `s3` proxies).
 
 Hint: The function `OpenReader` from `FsLib` along with Golang's `NewScanner`
@@ -181,7 +181,7 @@ statement from the example proc.
 Modify the example proc to return `hello world` its exit status:
   - [ ] Edit the `main` function in `cmd/user/example/main.go` and replace
     `ClntExitOK` with `ClntExit`, passing in the appropriate `proc.Status`
-    using `MakeStatusInfo`.
+    using `NewStatusInfo`.
   - [ ] Recompile and build SigmaOS: ```$./build.sh --parallel```. It is
     sometimes convenient to just the compile the SigmaOS programs on the local
     machine before running the full `build.sh` sequence, to see if

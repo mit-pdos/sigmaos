@@ -123,13 +123,6 @@ if [[ $BASIC == "--basic" ]]; then
     cleanup
 
     #
-    # test npproxy with just named
-    #
-
-    go test $VERB sigmaos/npproxy -start
-    cleanup
-
-    #
     # test with a kernel with just named
     #
 
@@ -154,6 +147,14 @@ if [[ $BASIC == "--basic" ]]; then
         go test $VERB sigmaos/$T -start $GVISOR  $SIGMACLNTD $NETPROXY $REUSEKERNEL
         cleanup
     done
+
+    #
+    # test npproxy with just named and full kernel
+    #
+
+    go test $VERB sigmaos/npproxy -start
+    cleanup
+
 
     go test $VERB sigmaos/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf
     cleanup

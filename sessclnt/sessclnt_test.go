@@ -18,6 +18,7 @@ import (
 	"sigmaos/netproxyclnt"
 	"sigmaos/netsrv"
 	"sigmaos/path"
+	"sigmaos/protsrv"
 	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
@@ -456,7 +457,7 @@ func newTstateSp(t *testing.T) *TstateSp {
 	ts := &TstateSp{}
 	ts.TstateMin = test.NewTstateMin(t)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE), root, ts.Addr, nil)
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE), root, ts.Addr, nil, protsrv.AttachAllowAllToAll)
 	ts.clnt = sessclnt.NewMgr(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE))
 	return ts
 }

@@ -111,7 +111,7 @@ func (fidc *FidClnt) Qid(fid sp.Tfid) *sp.Tqid {
 }
 
 func (fidc *FidClnt) Qids(fid sp.Tfid) []*sp.Tqid {
-	return fidc.Lookup(fid).qids
+	return fidc.Lookup(fid).Qids()
 }
 
 func (fidc *FidClnt) Path(fid sp.Tfid) path.Tpathname {

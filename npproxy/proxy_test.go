@@ -160,8 +160,10 @@ func TestBoot(t *testing.T) {
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "boot srv: %v\n", string(out))
+	e := strings.Fields(string(out))
 
-	dn := filepath.Join(boot, string(out))
+	dn := filepath.Join(boot, e[1])
+	db.DPrintf(db.TEST, "boot srv dn: %v\n", dn)
 	out, err = run("ls " + dn)
 	assert.Nil(t, err)
 
@@ -182,6 +184,8 @@ func TestSelf(t *testing.T) {
 	dn := "name/d"
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
+	_, err = ts.PutFile(filepath.Join(dn, "myfile"), 0777, sp.OWRITE, nil)
+	assert.Equal(t, nil, err)
 
 	m1, err := ts.GetNamedEndpoint()
 	assert.Nil(ts.T, err, "EndpointService: %v", err)
@@ -193,11 +197,7 @@ func TestSelf(t *testing.T) {
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "Out: %v\n", string(out))
-
-	out, err = run("ls -l /mnt/9p/namedself/d")
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "Out: %v\n", string(out))
+	assert.True(t, strings.Contains(string(out), "myfile"))
 
 	ts.Remove("name/namedself")
 	ts.RmDir(dn)

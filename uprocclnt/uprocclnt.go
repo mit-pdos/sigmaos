@@ -100,7 +100,7 @@ func (clnt *UprocdClnt) Lookup(pn string, pid uint32) (*sp.Stat, error) {
 	}
 	res := &proto.LookupResponse{}
 	if err := clnt.RPC("UprocSrv.Lookup", req, res); err != nil {
-		db.DPrintf(db.ERROR, "UprocSrv.Looup %v err %v", req, err)
+		db.DPrintf(db.ERROR, "UprocSrv.Lookup %v err %v", req, err)
 		return nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] uprocdclnt.Lookup pid %d %v", pn, pid, time.Since(s))

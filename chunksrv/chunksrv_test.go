@@ -107,6 +107,9 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 	ts.check(srv, st)
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestFetchOrigin(t *testing.T) {
 	ts := newTstate(t, 0)
 	ts.fetch(ts.srvs[0], []string{PATH}, []string{PATH})

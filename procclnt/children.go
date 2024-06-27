@@ -24,10 +24,10 @@ func newChildState() *ChildState {
 }
 
 type SpawnFuture struct {
-	kernelID string
-	err      error
-	cond     *sync.Cond
-	done     bool
+	seqno *proc.ProcSeqno
+	err   error
+	cond  *sync.Cond
+	done  bool
 }
 
 func newSpawnFuture(mu sync.Locker) *SpawnFuture {
@@ -38,7 +38,7 @@ func newSpawnFuture(mu sync.Locker) *SpawnFuture {
 }
 
 // Caller holds lock
-func (sf *SpawnFuture) Get() (string, error) {
+func (sf *SpawnFuture) Get() (*proc.ProcSeqno, error) {
 	if !sf.done {
 		sf.cond.Wait()
 		// Sanity check that the value has materalized.
@@ -46,16 +46,16 @@ func (sf *SpawnFuture) Get() (string, error) {
 			db.DFatalf("Err wait condition false")
 		}
 	}
-	return sf.kernelID, sf.err
+	return sf.seqno, sf.err
 }
 
 // Caller holds lock.
-func (sf *SpawnFuture) Complete(kernelID string, err error) {
+func (sf *SpawnFuture) Complete(seqno *proc.ProcSeqno, err error) {
 	// Sanity check that completions only happen once.
 	if sf.done {
 		db.DFatalf("Double-completed spawn future")
 	}
-	sf.kernelID = kernelID
+	sf.seqno = seqno
 	sf.err = err
 	sf.done = true
 	sf.cond.Broadcast()
@@ -69,12 +69,12 @@ func (cs *ChildState) Spawned(pid sp.Tpid) {
 	cs.ranOn[pid] = newSpawnFuture(&cs.Mutex)
 }
 
-func (cs *ChildState) Started(pid sp.Tpid, kernelID string, err error) {
+func (cs *ChildState) Started(pid sp.Tpid, seqno *proc.ProcSeqno, err error) {
 	cs.Lock()
 	defer cs.Unlock()
 
 	// Record ID of schedd this proc was spawned on
-	cs.ranOn[pid].Complete(kernelID, err)
+	cs.ranOn[pid].Complete(seqno, err)
 }
 
 func (cs *ChildState) Exited(pid sp.Tpid, status *proc.Status) {
@@ -102,7 +102,7 @@ func (cs *ChildState) GetExitStatus(pid sp.Tpid) *proc.Status {
 	return status
 }
 
-func (cs *ChildState) GetKernelID(pid sp.Tpid) (string, error) {
+func (cs *ChildState) GetProcSeqno(pid sp.Tpid) (*proc.ProcSeqno, error) {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -110,5 +110,5 @@ func (cs *ChildState) GetKernelID(pid sp.Tpid) (string, error) {
 	if fut, ok := cs.ranOn[pid]; ok {
 		return fut.Get()
 	}
-	return "NO_SCHEDD", fmt.Errorf("Proc %v child state not found", pid)
+	return nil, fmt.Errorf("Proc %v child state not found", pid)
 }

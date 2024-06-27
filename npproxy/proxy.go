@@ -79,6 +79,7 @@ type NpSess struct {
 	pc        *pathclnt.PathClnt
 	pe        *proc.ProcEnv
 	fm        *fidMap
+	qm        *qidMap
 	cid       sp.TclntId
 }
 
@@ -89,6 +90,7 @@ func newNpSess(pe *proc.ProcEnv, npcs *netproxyclnt.NetProxyClnt, lip string) *N
 	npc.principal = pe.GetPrincipal()
 	npc.pc = pathclnt.NewPathClnt(pe, npc.fidc)
 	npc.fm = newFidMap()
+	npc.qm = newQidMap()
 	npc.cid = sp.TclntId(rand.Uint64())
 	return npc
 }
@@ -118,7 +120,7 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		db.DPrintf(db.NPPROXY, "Attach args %v mount err %v\n", args, err)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(err))
 	}
-	rets.Qid = npc.fidc.Qid(fid).Proto()
+	rets.Qid = npc.qm.Insert(path.Tpathname{sp.NAMED}, []*sp.Tqid{npc.fidc.Qid(fid)})[0]
 	npc.fm.mapTo(args.Tfid(), fid)
 	npc.fidc.Lookup(fid).SetPath(path.Split(sp.NAMED))
 	db.DPrintf(db.NPPROXY, "Attach args %v rets %v fid %v\n", args, rets, fid)
@@ -143,8 +145,12 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 		db.DPrintf(db.NPPROXY, "Walk args %v err: %v\n", args, err)
 		return sp.NewRerrorSerr(err)
 	}
-	qids := npc.pc.Qids(fid1)
-	rets.Qids = sp.NewSliceProto(qids[len(qids)-len(args.Wnames):])
+
+	ch := npc.fidc.Lookup(fid1)
+	qids := ch.Qids()
+	qids = qids[len(qids)-len(args.Wnames):]
+
+	rets.Qids = npc.qm.Insert(ch.Path(), qids)
 	npc.fm.mapTo(args.Tnewfid(), fid1)
 	return nil
 }
@@ -191,6 +197,8 @@ func (npc *NpSess) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
+	ch := npc.fidc.Lookup(fid)
+	npc.qm.Clunk(ch.Path(), ch.Lastqid())
 	err := npc.fidc.Clunk(fid)
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Clunk: args %v err %v\n", args, err)

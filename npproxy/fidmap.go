@@ -3,28 +3,28 @@ package npproxy
 import (
 	"sync"
 
-	np "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 )
 
 type fidMap struct {
 	sync.Mutex
-	fidmap map[np.Tfid]np.Tfid
+	fidmap map[sp.Tfid]sp.Tfid
 }
 
 func newFidMap() *fidMap {
 	fm := &fidMap{}
-	fm.fidmap = make(map[np.Tfid]np.Tfid)
+	fm.fidmap = make(map[sp.Tfid]sp.Tfid)
 	return fm
 }
 
-func (fm *fidMap) mapTo(fid1, fid2 np.Tfid) {
+func (fm *fidMap) mapTo(fid1, fid2 sp.Tfid) {
 	fm.Lock()
 	defer fm.Unlock()
 
 	fm.fidmap[fid1] = fid2
 }
 
-func (fm *fidMap) lookup(fid1 np.Tfid) (np.Tfid, bool) {
+func (fm *fidMap) lookup(fid1 sp.Tfid) (sp.Tfid, bool) {
 	fm.Lock()
 	defer fm.Unlock()
 
@@ -32,7 +32,7 @@ func (fm *fidMap) lookup(fid1 np.Tfid) (np.Tfid, bool) {
 	return fid2, ok
 }
 
-func (fm *fidMap) delete(fid np.Tfid) {
+func (fm *fidMap) delete(fid sp.Tfid) {
 	fm.Lock()
 	defer fm.Unlock()
 

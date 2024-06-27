@@ -204,6 +204,7 @@ func (npc *NpSess) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 		db.DPrintf(db.NPPROXY, "Clunk: args %v err %v\n", args, err)
 		return sp.NewRerrorSerr(err)
 	}
+	npc.fm.delete(args.Tfid())
 	db.DPrintf(db.NPPROXY, "Clunk: args %v rets %v\n", args, rets)
 	return nil
 }
@@ -218,6 +219,7 @@ func (npc *NpSess) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 		db.DPrintf(db.NPPROXY, "Remove: args %v err %v\n", args, err)
 		return sp.NewRerrorSerr(err)
 	}
+	npc.fm.delete(args.Tfid())
 	db.DPrintf(db.NPPROXY, "Remove: args %v rets %v\n", args, rets)
 	return nil
 }

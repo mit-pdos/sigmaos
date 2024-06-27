@@ -64,7 +64,7 @@ func run(cmd string) ([]byte, error) {
 	return out, err
 }
 
-func TestProxyBasic(t *testing.T) {
+func TestProxy(t *testing.T) {
 	t1, err1 := test.NewTstatePath(t, sp.NAMED)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -81,7 +81,7 @@ func TestProxyBasic(t *testing.T) {
 	}
 	assert.Equal(t, ".pstatsd\n.statsd\n", string(out))
 
-	out, err = run("cat /mnt/9p/.statsd | grep Nwalk")
+	out, err = run("cat /mnt/9p/.statsd")
 	assert.Nil(t, err)
 	assert.True(t, strings.Contains(string(out), "Nwalk"))
 
@@ -118,6 +118,25 @@ func TestProxyBasic(t *testing.T) {
 
 	out, err = run("ls /mnt/9p/xxx")
 	assert.NotNil(t, err)
+}
+
+func TestStats(t *testing.T) {
+	t1, err1 := test.NewTstatePath(t, sp.NAMED)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts, ok := initTest(t1)
+	defer ts.cleanup()
+	if !ok {
+		return
+	}
+
+	for i := 0; i < 10; i++ {
+		out, err := run("cat /mnt/9p/.statsd")
+		assert.Nil(t, err)
+		db.DPrintf(db.TEST, "out: %s", string(out))
+		assert.True(t, strings.Contains(string(out), "Nwalk"))
+	}
 }
 
 func TestUx(t *testing.T) {

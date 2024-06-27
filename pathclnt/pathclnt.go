@@ -326,7 +326,7 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Tpathname, principal *sp.Tpri
 	}
 	p := ch.Path().AppendPath(path)
 	db.DPrintf(db.PATHCLNT, "Walk %v (ch %v)", p, ch.Path())
-	return pathc.walk(p, principal, false, nil)
+	return pathc.walk(p, principal, true, nil)
 }
 
 func (pathc *PathClnt) Disconnected() bool {

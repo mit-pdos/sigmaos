@@ -17,6 +17,12 @@ func NewSyncMap[K comparable, T any]() *SyncMap[K, T] {
 	return &SyncMap[K, T]{tbl: make(map[K]T)}
 }
 
+func (sm *SyncMap[_, _]) Len() int {
+	sm.Lock()
+	defer sm.Unlock()
+	return len(sm.tbl)
+}
+
 func (sm *SyncMap[K, T]) Lookup(k K) (T, bool) {
 	sm.Lock()
 	defer sm.Unlock()

@@ -315,6 +315,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 	db.DPrintf(db.TEST, "cold spawn on %v\n", kernel1)
 	s := time.Now()
 	p := proc.NewProc("spawn-latency", []string{"1us", OUT_DIR})
+	//p := proc.NewProc("matmul", []string{"1000"})
 	p.SetKernels([]string{kernel1})
 	err = ts1.Spawn(p)
 	assert.Nil(t, err, "Spawn")

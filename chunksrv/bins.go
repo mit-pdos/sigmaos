@@ -10,7 +10,7 @@ import (
 	"sigmaos/syncmap"
 )
 
-type binEntry struct {
+type bin struct {
 	mu       sync.Mutex
 	cond     *sync.Cond
 	getSC    func(sp.Trealm, *sp.SecretProto) (*sigmaclnt.SigmaClnt, error)
@@ -22,8 +22,8 @@ type binEntry struct {
 	path     string
 }
 
-func newBinEntry(prog string, realm sp.Trealm, s3secret *sp.SecretProto, getSC func(sp.Trealm, *sp.SecretProto) (*sigmaclnt.SigmaClnt, error)) *binEntry {
-	return &binEntry{
+func newBin(prog string, realm sp.Trealm, s3secret *sp.SecretProto, getSC func(sp.Trealm, *sp.SecretProto) (*sigmaclnt.SigmaClnt, error)) *bin {
+	return &bin{
 		prog:     prog,
 		realm:    realm,
 		s3secret: s3secret,
@@ -32,7 +32,7 @@ func newBinEntry(prog string, realm sp.Trealm, s3secret *sp.SecretProto, getSC f
 	}
 }
 
-func (be *binEntry) signal() {
+func (be *bin) signal() {
 	be.mu.Lock()
 	defer be.mu.Unlock()
 
@@ -40,7 +40,7 @@ func (be *binEntry) signal() {
 		be.cond.Broadcast()
 	}
 }
-func (be *binEntry) getFd(paths []string) (*sigmaclnt.SigmaClnt, int, string, error) {
+func (be *bin) getFd(paths []string) (*sigmaclnt.SigmaClnt, int, string, error) {
 	// Get or create SigmaClnt using client's s3 secrets
 	sc, err := be.getSC(be.realm, be.s3secret)
 	if err != nil {
@@ -65,36 +65,32 @@ func (be *binEntry) getFd(paths []string) (*sigmaclnt.SigmaClnt, int, string, er
 }
 
 type progBins struct {
-	bins *syncmap.SyncMap[string, *binEntry]
+	bins *syncmap.SyncMap[string, *bin]
 }
 
-func newProgBins() *progBins {
+func newProgBins(r sp.Trealm) *progBins {
 	return &progBins{
-		bins: syncmap.NewSyncMap[string, *binEntry](),
+		bins: syncmap.NewSyncMap[string, *bin](),
 	}
 }
 
-type realmBinEntry struct {
+type realmBins struct {
 	getSC     func(sp.Trealm, *sp.SecretProto) (*sigmaclnt.SigmaClnt, error)
 	realmbins *syncmap.SyncMap[sp.Trealm, *progBins]
 }
 
-func newRealmBinEntry(getSC func(sp.Trealm, *sp.SecretProto) (*sigmaclnt.SigmaClnt, error)) *realmBinEntry {
-	return &realmBinEntry{
+func newRealmBins(getSC func(sp.Trealm, *sp.SecretProto) (*sigmaclnt.SigmaClnt, error)) *realmBins {
+	return &realmBins{
 		getSC:     getSC,
 		realmbins: syncmap.NewSyncMap[sp.Trealm, *progBins](),
 	}
 }
 
-func (rb *realmBinEntry) getBin(r sp.Trealm, prog string, s3secret *sp.SecretProto) *binEntry {
-	re, ok := rb.realmbins.Lookup(r)
-	if !ok {
-		re, _ = rb.realmbins.Alloc(r, newProgBins())
-	}
+func (rb *realmBins) getBin(r sp.Trealm, prog string, s3secret *sp.SecretProto) *bin {
+	re, ok := rb.realmbins.AllocNew(r, newProgBins)
 	be, ok := re.bins.Lookup(prog)
 	if !ok {
-		db.DPrintf(db.CHUNKSRV, "getBin: bin state not present r %v prog %v", r, prog)
-		be, _ = re.bins.Alloc(prog, newBinEntry(prog, r, s3secret, rb.getSC))
+		be, _ = re.bins.Alloc(prog, newBin(prog, r, s3secret, rb.getSC))
 	}
 	return be
 }

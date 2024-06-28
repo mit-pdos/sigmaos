@@ -107,7 +107,7 @@ type ChunkSrv struct {
 	kernelId  string
 	path      string
 	ckclnt    *chunkclnt.ChunkClnt
-	realmbins *realmBinEntry
+	realmbins *realmBins
 }
 
 func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
@@ -118,12 +118,13 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 		path:     chunk.ChunkdPath(kernelId),
 		ckclnt:   chunkclnt.NewChunkClnt(sc.FsLib),
 	}
-	cksrv.realmbins = newRealmBinEntry(cksrv.getRealmSigmaClnt)
+	cksrv.realmbins = newRealmBins(cksrv.getRealmSigmaClnt)
 	cksrv.scs[sp.ROOTREALM] = sc
 	return cksrv
 }
 
 // Get or create a new sigmaclnt for a realm, with given s3 secrets
+// XXX sigmaclnt is overkill; we only need fslib
 func (cksrv *ChunkSrv) getRealmSigmaClnt(r sp.Trealm, s3secret *sp.SecretProto) (*sigmaclnt.SigmaClnt, error) {
 	cksrv.mu.Lock()
 	defer cksrv.mu.Unlock()
@@ -143,23 +144,56 @@ func (cksrv *ChunkSrv) getRealmSigmaClnt(r sp.Trealm, s3secret *sp.SecretProto) 
 			db.DPrintf(db.ERROR, "Error create SigmaClnt: %v", err)
 			return nil, err
 		}
-		// ep, err := cksrv.sc.GetNamedEndpoint()
-		// if err != nil {
-		// 	db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
-		// 	return nil, err
-		// }
-		// if err := sc.MountTree(ep, "", sp.NAMED); err != nil {
-		// 	db.DPrintf(db.ERROR, "Error MountTree: %v", err)
-		// 	return nil, err
-		// }
 		cksrv.scs[r] = sc
 	}
 	return sc, nil
 }
 
-func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, s3secret *sp.SecretProto) *binEntry {
-	be := cksrv.realmbins.getBin(r, prog, s3secret)
-	return be
+func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, s3secret *sp.SecretProto) *bin {
+	return cksrv.realmbins.getBin(r, prog, s3secret)
+}
+
+//
+// Handle Pretch request
+//
+
+func (cksrv *ChunkSrv) Prefetch(ctx fs.CtxI, req proto.PrefetchRequest, res *proto.PrefetchResponse) error {
+	r := sp.Trealm(req.RealmStr)
+	db.DPrintf(db.CHUNKSRV, "%v: Prefetch %v %v %v", cksrv.kernelId, r, req.Prog, req.SigmaPath)
+
+	// getBin also allocates sigmaclnt for the realm
+	s := time.Now()
+	be := cksrv.getBin(r, req.Prog, req.GetS3Secret())
+
+	be.mu.Lock()
+	defer be.mu.Unlock()
+
+	if be.st != nil {
+		return nil
+	}
+
+	// lookup sigmaclnt
+	sc, err := cksrv.getRealmSigmaClnt(r, req.GetS3Secret())
+	if err != nil {
+		return err
+	}
+	ep := sp.NewEndpointFromProto(req.GetNamedEndpointProto())
+	if ep.IsValidEP() {
+		if err := sc.MountTree(ep, "", sp.NAMED); err != nil {
+			db.DPrintf(db.CHUNKSRV, "MountTree %v err %v", ep, err)
+			return err
+		}
+	} else {
+		db.DFatalf(db.ERROR, "no valid endpoint %v", ep)
+	}
+	db.DPrintf(db.SPAWN_LAT, "%v: get SigmaClnt %v %v lat %v", req.Prog, r, ep, time.Since(s))
+	st, _, err := cksrv.lookup(sc, req.Prog, req.SigmaPath)
+	if err != nil {
+		return err
+	}
+
+	be.st = st
+	return nil
 }
 
 //

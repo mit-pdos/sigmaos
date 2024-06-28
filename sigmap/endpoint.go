@@ -67,6 +67,11 @@ func (ep *Tendpoint) Addrs() Taddrs {
 	return ep.Claims.Addr
 }
 
+func (ep *Tendpoint) IsValidEP() bool {
+	t := ep.Type()
+	return t == EXTERNAL_EP || t == INTERNAL_EP
+}
+
 func (ep *Tendpoint) TargetIPPort(idx int) (Tip, Tport) {
 	a := ep.Claims.Addr[idx]
 	return a.GetIP(), a.GetPort()

@@ -215,7 +215,7 @@ func shrinkMountTable() error {
 }
 
 // Set up uprocd for use for a specific realm
-func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
+func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, path []string, s3secret *sp.SecretProto, ep *sp.TendpointProto) error {
 	ups.mu.RLock()
 	defer ups.mu.RUnlock()
 
@@ -233,11 +233,17 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid) error {
 		ups.mu.RLock()
 		return nil
 	}
+
 	start := time.Now()
 	defer func(start time.Time) {
 		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
 	}(start)
 
+	go func() {
+		if err := ups.ckclnt.Prefetch(ups.kernelId, prog, upid, realm, path, s3secret, ep); err != nil {
+			db.DPrintf(db.UPROCD, "Prefetch %v %v err %v", ups.kernelId, realm, err)
+		}
+	}()
 	start = time.Now()
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v", realm)
 
@@ -269,7 +275,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
 	db.DPrintf(db.SPAWN_LAT, "[%v] UprocSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	// Assign this uprocsrv to the realm, if not already assigned.
-	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid()); err != nil {
+	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
@@ -297,11 +303,11 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 // Warm uprocd to run a program for experiments with warm start.
 func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
 	db.DPrintf(db.UPROCD, "WarmProc %v pid %v", req, os.Getpid())
-	if err := ups.assignToRealm(sp.Trealm(req.RealmStr), sp.NO_PID); err != nil {
-		db.DFatalf("Err assign to realm: %v", err)
-	}
 	pid := sp.Tpid(req.PidStr)
 	r := sp.Trealm(req.RealmStr)
+	if err := ups.assignToRealm(r, pid, req.Program, req.SigmaPath, req.GetS3Secret(), nil); err != nil {
+		db.DFatalf("Err assign to realm: %v", err)
+	}
 	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), req.SigmaPath)
 	if err != nil {
 		return err

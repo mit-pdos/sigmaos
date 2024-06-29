@@ -149,7 +149,7 @@ func (cksrv *ChunkSrv) getBin(realm sp.Trealm, prog string, s3secret *sp.SecretP
 		}
 		r.sc = sc
 	}
-	b, _ := r.bins.Alloc(prog, newBin(prog))
+	b, _ := r.bins.AllocNew(prog, newBin)
 	return b, nil
 }
 

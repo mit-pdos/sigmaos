@@ -31,6 +31,7 @@ const (
 	CACHE_LAT                = "CACHE_LAT"
 	WALK_LAT                 = "WALK_LAT"
 	FSETCD_LAT               = "FSETCD_LAT"
+	ATTACH_LAT               = "ATTACH_LAT"
 )
 
 // Tests

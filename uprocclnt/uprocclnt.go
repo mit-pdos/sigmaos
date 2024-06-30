@@ -20,6 +20,11 @@ type UprocdClnt struct {
 	share Tshare
 }
 
+type UprocSrv interface {
+	Lookup(pid int, prog string) (*sp.Tstat, error)
+	Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, error)
+}
+
 func NewUprocdClnt(pid sp.Tpid, rpcc *rpcclnt.RPCClnt) *UprocdClnt {
 	return &UprocdClnt{
 		pid:     pid,
@@ -84,7 +89,7 @@ func (clnt *UprocdClnt) Fetch(pn string, ck int, sz sp.Tsize, pid uint32) (sp.Ts
 		Pid:     pid,
 	}
 	res := &proto.FetchResponse{}
-	if err := clnt.RPC("UprocSrv.Fetch", req, res); err != nil {
+	if err := clnt.RPC("UprocSrv.FetchRPC", req, res); err != nil {
 		db.DPrintf(db.ERROR, "UprocSrv.Fetch %v err %v", req, err)
 		return 0, err
 	}
@@ -99,7 +104,7 @@ func (clnt *UprocdClnt) Lookup(pn string, pid uint32) (*sp.Stat, error) {
 		Pid:  pid,
 	}
 	res := &proto.LookupResponse{}
-	if err := clnt.RPC("UprocSrv.Lookup", req, res); err != nil {
+	if err := clnt.RPC("UprocSrv.LookupRPC", req, res); err != nil {
 		db.DPrintf(db.ERROR, "UprocSrv.Lookup %v err %v", req, err)
 		return nil, err
 	}

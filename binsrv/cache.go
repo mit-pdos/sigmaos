@@ -48,14 +48,16 @@ type bincache struct {
 	kernelId string
 	cache    *syncmap.SyncMap[string, *entry]
 	updc     *uprocclnt.UprocdClnt
+	upds     uprocclnt.UprocSrv
 }
 
-func newBinCache(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) *bincache {
+func newBinCache(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, upds uprocclnt.UprocSrv) *bincache {
 	bc := &bincache{
 		cache:    syncmap.NewSyncMap[string, *entry](),
 		sc:       sc,
 		kernelId: kernelId,
 		updc:     updc,
+		upds:     upds,
 	}
 	return bc
 }
@@ -71,10 +73,21 @@ func (bc *bincache) lookup(pn string, pid uint32) (*sp.Stat, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.st == nil {
-		st, err := bc.updc.Lookup(pn, pid)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error lookup bin: %v", err)
-			return nil, err
+		var err error
+		var st *sp.Tstat
+		if bc.upds != nil {
+			db.DPrintf(db.BINSRV, "Lookup direct %q\n", pn)
+			st, err = bc.upds.Lookup(int(pid), pn)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Error upds lookup bin: %v", err)
+				return nil, err
+			}
+		} else {
+			st, err = bc.updc.Lookup(pn, pid)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Error updc lookup bin: %v", err)
+				return nil, err
+			}
 		}
 		if st == nil {
 			db.DFatalf("Error st is nil from lookup pn %v pid %v", pn, pid)
@@ -85,5 +98,5 @@ func (bc *bincache) lookup(pn string, pid uint32) (*sp.Stat, error) {
 }
 
 func (bc *bincache) getDownload(pn string, sz sp.Tsize, pid uint32) *downloader {
-	return newDownloader(pn, bc.sc, bc.updc, bc.kernelId, sz, pid)
+	return newDownloader(pn, bc.sc, bc.updc, bc.upds, bc.kernelId, sz, pid)
 }

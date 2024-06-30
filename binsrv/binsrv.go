@@ -69,20 +69,20 @@ func (n *binFsNode) String() string {
 	return fmt.Sprintf("{N %q}", n.path())
 }
 
-func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) (fs.InodeEmbedder, error) {
+func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, upds uprocclnt.UprocSrv) (fs.InodeEmbedder, error) {
 	var st syscall.Stat_t
 	err := syscall.Stat(chunksrv.BINPROC, &st)
 	if err != nil {
 		return nil, err
 	}
 	root := &binFsRoot{
-		bincache: newBinCache(kernelId, sc, updc),
+		bincache: newBinCache(kernelId, sc, updc, upds),
 	}
 	return root.newNode(nil, "", 0), nil
 }
 
-func mountBinFs(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) (*fuse.Server, error) {
-	loopbackRoot, err := newBinRoot(kernelId, sc, updc)
+func mountBinFs(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, upds uprocclnt.UprocSrv) (*fuse.Server, error) {
+	loopbackRoot, err := newBinRoot(kernelId, sc, updc, upds)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func mountBinFs(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.Uprocd
 }
 
 // Start directly
-func StartBinFs(kernelId, uprocdpid string, sc *sigmaclnt.SigmaClnt, ep *sp.Tendpoint) error {
+func StartBinFs(upds uprocclnt.UprocSrv, kernelId, uprocdpid string, sc *sigmaclnt.SigmaClnt, ep *sp.Tendpoint) error {
 	// XXX for now
 	if err := os.MkdirAll(BINFSMNT, 0750); err != nil {
 		return err
@@ -121,7 +121,7 @@ func StartBinFs(kernelId, uprocdpid string, sc *sigmaclnt.SigmaClnt, ep *sp.Tend
 		return err
 	}
 	updc := uprocclnt.NewUprocdClnt(sp.Tpid(uprocdpid), rc)
-	server, err := mountBinFs(kernelId, sc, updc)
+	server, err := mountBinFs(kernelId, sc, updc, upds)
 	server.Wait()
 	return nil
 }
@@ -155,7 +155,7 @@ func RunBinFS(kernelId, uprocdpid, smnt string) error {
 	}
 	updc := uprocclnt.NewUprocdClnt(sp.Tpid(uprocdpid), rc)
 
-	server, err := mountBinFs(kernelId, sc, updc)
+	server, err := mountBinFs(kernelId, sc, updc, nil)
 
 	// Tell ExecBinSrv we are running
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {

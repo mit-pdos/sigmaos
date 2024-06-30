@@ -15,7 +15,6 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"sigmaos/binsrv"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	"sigmaos/container"
@@ -30,6 +29,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/syncmap"
+	"sigmaos/uprocsrv/binsrv"
 	"sigmaos/uprocsrv/proto"
 )
 

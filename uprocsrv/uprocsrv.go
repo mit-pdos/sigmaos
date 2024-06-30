@@ -150,7 +150,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	var bind *binsrv.BinSrvCmd
 	if DIRECT {
 		go func() {
-			binsrv.StartBinFs(ups.kernelId, ups.pe.GetPID().String(), ups.sc, ep)
+			binsrv.StartBinFs(ups, ups.kernelId, ups.pe.GetPID().String(), ups.sc, ep)
 		}()
 	} else {
 		// Start binfsd now; when uprocds gets assigned to a realm, then
@@ -345,39 +345,40 @@ func mountRealmBinDir(realm sp.Trealm) error {
 	return nil
 }
 
-func (ups *UprocSrv) Fetch(ctx fs.CtxI, req proto.FetchRequest, res *proto.FetchResponse) error {
-	db.DPrintf(db.UPROCD, "Uprocd %v Fetch %v", ups.kernelId, req)
-
-	pe, ok := ups.procs.Lookup(int(req.Pid))
+func (ups *UprocSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, error) {
+	pe, ok := ups.procs.Lookup(pid)
 	if !ok || pe.proc == nil {
-		db.DFatalf("Fetch: procs.Lookup %v\n", req)
+		db.DFatalf("Fetch: procs.Lookup %v %v\n", pid, prog)
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch start: %q ck %d path %v time since spawn %v", pe.proc.GetPid(), ups.kernelId, req.ChunkId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch start: %q ck %d path %v time since spawn %v", pe.proc.GetPid(), ups.kernelId, cid, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
 
 	s3secret, ok := pe.proc.GetSecrets()["s3"]
 	if !ok {
-		return fmt.Errorf("No s3 secrets in proc")
+		return 0, fmt.Errorf("No s3 secrets in proc")
 	}
 
 	start := time.Now()
-	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, req.Prog, pe.proc.GetPid(), ups.realm, s3secret, int(req.ChunkId), sp.Tsize(req.Size), pe.proc.GetSigmaPath())
+	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, prog, pe.proc.GetPid(), ups.realm, s3secret, cid, sz, pe.proc.GetSigmaPath())
+
+	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch done: %q ck %d sz %d path %q fetch lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, cid, sz, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
+	return sz, err
+}
+
+func (ups *UprocSrv) FetchRPC(ctx fs.CtxI, req proto.FetchRequest, res *proto.FetchResponse) error {
+	db.DPrintf(db.UPROCD, "Uprocd %v Fetch %v", ups.kernelId, req)
+	sz, err := ups.Fetch(int(req.Pid), int(req.ChunkId), req.Prog, sp.Tsize(req.Size))
 	if err != nil {
 		return err
 	}
 	res.Size = uint64(sz)
-
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch done: %q ck %d sz %d path %q fetch lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, req.ChunkId, sz, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
-
 	return nil
 }
 
-func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.LookupResponse) error {
-	db.DPrintf(db.UPROCD, "Uprocd Lookup %v", req)
-
-	pe, alloc := ups.procs.Alloc(int(req.Pid), newProcEntry(nil))
+func (ups *UprocSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
+	pe, alloc := ups.procs.Alloc(pid, newProcEntry(nil))
 	if alloc {
-		db.DPrintf(db.UPROCD, "Lookup wait for pid %v proc %v\n", req.Pid, pe)
+		db.DPrintf(db.UPROCD, "Lookup wait for pid %v proc %v\n", pid, pe)
 		pe.procWait()
 	}
 
@@ -386,14 +387,25 @@ func (ups *UprocSrv) Lookup(ctx fs.CtxI, req proto.LookupRequest, res *proto.Loo
 	paths := pe.proc.GetSigmaPath()
 	s3secret, ok := pe.proc.GetSecrets()["s3"]
 	if !ok {
-		return fmt.Errorf("No s3 secrets in proc")
+		return nil, fmt.Errorf("No s3 secrets in proc")
 	}
+
 	s := time.Now()
-	st, path, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Prog, pe.proc.GetPid(), pe.proc.GetRealm(), s3secret, paths)
+	st, path, err := ups.ckclnt.GetFileStat(ups.kernelId, prog, pe.proc.GetPid(), pe.proc.GetRealm(), s3secret, paths)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done %v path %q GetFileStat lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, path, time.Since(s), time.Since(pe.proc.GetSpawnTime()))
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
+}
+
+func (ups *UprocSrv) LookupRPC(ctx fs.CtxI, req proto.LookupRequest, res *proto.LookupResponse) error {
+	db.DPrintf(db.UPROCD, "Uprocd Lookup %v", req)
+
+	st, err := ups.Lookup(int(req.Pid), req.Prog)
 	if err != nil {
 		return err
 	}
 	res.Stat = st.StatProto()
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done %v path %q GetFileStat lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, path, time.Since(s), time.Since(pe.proc.GetSpawnTime()))
 	return nil
 }

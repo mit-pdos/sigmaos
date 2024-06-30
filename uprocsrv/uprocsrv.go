@@ -33,6 +33,8 @@ import (
 	"sigmaos/uprocsrv/proto"
 )
 
+const DIRECT = true
+
 // Lookup may try to read proc in a proc's procEntry before uprocsrv
 // has set it.  To handle this case, procEntry has a condition
 // varialble on which Lookup sleeps until uprocsrv sets proc.
@@ -145,13 +147,21 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 	}
 	defer p.Done()
 
-	// Start binfsd now; when uprocds gets assigned to a realm, then
-	// uprocd mounts the realm's bin directory that binfs will serve
-	// from.
-	binsrv, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ep)
-	if err != nil {
-		db.DPrintf(db.ERROR, "ExecBinSrv err %v\n", err)
-		return err
+	var bind *binsrv.BinSrvCmd
+	if DIRECT {
+		go func() {
+			binsrv.StartBinFs(ups.kernelId, ups.pe.GetPID().String(), ups.sc, ep)
+		}()
+	} else {
+		// Start binfsd now; when uprocds gets assigned to a realm, then
+		// uprocd mounts the realm's bin directory that binfs will serve
+		// from.
+		bd, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ep)
+		if err != nil {
+			db.DPrintf(db.ERROR, "ExecBinSrv err %v\n", err)
+			return err
+		}
+		bind = bd
 	}
 
 	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
@@ -177,7 +187,9 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		return err
 	}
 	db.DPrintf(db.UPROCD, "RunServer done\n")
-	binsrv.Shutdown()
+	if !DIRECT {
+		bind.Shutdown()
+	}
 	return nil
 }
 

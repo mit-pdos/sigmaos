@@ -13,8 +13,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	"sigmaos/mntclnt"
 	"sigmaos/path"
+	"sigmaos/pathclnt/mntclnt"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"

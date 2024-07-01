@@ -101,69 +101,100 @@ type ckclntEntry struct {
 }
 
 type ChunkSrv struct {
-	mu        sync.Mutex
-	sc        *sigmaclnt.SigmaClnt
-	scs       map[sp.Trealm]*sigmaclnt.SigmaClnt
-	kernelId  string
-	path      string
-	ckclnt    *chunkclnt.ChunkClnt
-	realmbins *realmBinEntry
-	localEps  map[string]*sp.Tendpoint
+	mu       sync.Mutex
+	sc       *sigmaclnt.SigmaClnt
+	kernelId string
+	path     string
+	ckclnt   *chunkclnt.ChunkClnt
+	realms   *realms
 }
 
 func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 	cksrv := &ChunkSrv{
 		sc:       sc,
-		scs:      make(map[sp.Trealm]*sigmaclnt.SigmaClnt),
 		kernelId: kernelId,
 		path:     chunk.ChunkdPath(kernelId),
 		ckclnt:   chunkclnt.NewChunkClnt(sc.FsLib),
-		localEps: make(map[string]*sp.Tendpoint),
 	}
-	cksrv.realmbins = newRealmBinEntry(cksrv.getRealmSigmaClnt)
-	cksrv.scs[sp.ROOTREALM] = sc
+	cksrv.realms = newRealms()
+	cksrv.realms.InitRoot(sc)
 	return cksrv
 }
 
-// Get or create a new sigmaclnt for a realm, with given s3 secrets
+// Create a new sigmaclnt for a realm, with given s3 secrets
+// XXX sigmaclnt is overkill; we only need fslib
 func (cksrv *ChunkSrv) getRealmSigmaClnt(r sp.Trealm, s3secret *sp.SecretProto) (*sigmaclnt.SigmaClnt, error) {
-	cksrv.mu.Lock()
-	defer cksrv.mu.Unlock()
+	db.DPrintf(db.CHUNKSRV, "%v: Create SigmaClnt for realm %v", cksrv.kernelId, r)
+	// Create a new proc env for the client
+	pe := proc.NewDifferentRealmProcEnv(cksrv.sc.ProcEnv(), r)
 
-	sc, ok := cksrv.scs[r]
-	if !ok {
-		db.DPrintf(db.CHUNKSRV, "%v: Create SigmaClnt for realm %v", cksrv.kernelId, r)
-		var err error
-		// Create a new proc env for the client
-		pe := proc.NewAddedProcEnv(cksrv.sc.ProcEnv())
-		// Change the principal ID, since this is how the S3 proxy differentiates
-		// between different clients with different credentials
-		pe.GetPrincipal().SetID(sp.TprincipalID(cksrv.sc.ProcEnv().GetPrincipal().GetID().String() + "-clnt-" + r.String()))
-		// Set the secrets to match those passed in by the user
-		pe.SetSecrets(map[string]*sp.SecretProto{"s3": s3secret})
-		// Create a sigmaclnt but only with an FsLib
-		sc, err = sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error create SigmaClnt: %v", err)
-			return nil, err
-		}
-		ep, err := cksrv.sc.GetNamedEndpoint()
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
-			return nil, err
-		}
-		if err := sc.MountTree(ep, "", sp.NAMED); err != nil {
-			db.DPrintf(db.ERROR, "Error MountTree: %v", err)
-			return nil, err
-		}
-		cksrv.scs[r] = sc
+	// Set the secrets to match those passed in by the user
+	pe.SetSecrets(map[string]*sp.SecretProto{"s3": s3secret})
+	// Create a sigmaclnt but only with an FsLib
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error create SigmaClnt: %v", err)
+		return nil, err
 	}
 	return sc, nil
 }
 
-func (cksrv *ChunkSrv) getBin(r sp.Trealm, prog string, s3secret *sp.SecretProto) *binEntry {
-	be := cksrv.realmbins.getBin(r, prog, s3secret)
-	return be
+// Get binary info of prog in realm. Creates a SigmaClnt for realm, if unknown realm.
+func (cksrv *ChunkSrv) getBin(realm sp.Trealm, prog string, s3secret *sp.SecretProto) (*bin, error) {
+	r, ok := cksrv.realms.AllocNew(realm, newRealm)
+	if ok {
+		sc, err := cksrv.getRealmSigmaClnt(realm, s3secret)
+		if err != nil {
+			return nil, err
+		}
+		r.sc = sc
+	}
+	b, _ := r.bins.AllocNew(prog, newBin)
+	return b, nil
+}
+
+//
+// Handle Pretch request
+//
+
+func (cksrv *ChunkSrv) Prefetch(ctx fs.CtxI, req proto.PrefetchRequest, res *proto.PrefetchResponse) error {
+	r := sp.Trealm(req.RealmStr)
+	db.DPrintf(db.CHUNKSRV, "%v: Prefetch %v %v %v", cksrv.kernelId, r, req.Prog, req.SigmaPath)
+
+	s := time.Now()
+	be, err := cksrv.getBin(r, req.Prog, req.GetS3Secret())
+	if err != nil {
+		return err
+	}
+
+	be.mu.Lock()
+	defer be.mu.Unlock()
+
+	if be.st != nil {
+		return nil
+	}
+
+	sc, err := cksrv.realms.getSc(r)
+	if err != nil {
+		return err
+	}
+	ep := sp.NewEndpointFromProto(req.GetNamedEndpointProto())
+	if ep.IsValidEP() {
+		if err := sc.MountTree(ep, "", sp.NAMED); err != nil {
+			db.DPrintf(db.CHUNKSRV, "MountTree %v err %v", ep, err)
+			return err
+		}
+	} else {
+		db.DFatalf(db.ERROR, "no valid endpoint %v", ep)
+	}
+	db.DPrintf(db.SPAWN_LAT, "%v: get SigmaClnt %v %v lat %v", req.Prog, r, ep, time.Since(s))
+	st, _, err := cksrv.lookup(sc, req.Prog, req.SigmaPath)
+	if err != nil {
+		return err
+	}
+
+	be.st = st
+	return nil
 }
 
 //
@@ -195,9 +226,16 @@ func (cksrv *ChunkSrv) fetchCache(req proto.FetchChunkRequest, res *proto.FetchC
 
 func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, s3secret *sp.SecretProto, paths []string, ck int, b []byte) (sp.Tsize, string, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: %v ckid %d %v", cksrv.kernelId, prog, ck, paths)
-	be := cksrv.getBin(r, prog, s3secret)
-	paths = replaceLocal(paths, cksrv.kernelId)
-	sc, fd, path, err := be.getFd(paths)
+	be, err := cksrv.getBin(r, prog, s3secret)
+	if err != nil {
+		return 0, "", err
+	}
+	sc, err := cksrv.realms.getSc(r)
+	if err != nil {
+		return 0, "", err
+	}
+	// paths = replaceLocal(paths, cksrv.kernelId)
+	fd, path, err := be.getFd(sc, paths)
 	if err != nil {
 		return 0, "", err
 	}
@@ -275,7 +313,10 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *prot
 //
 
 func (cksrv *ChunkSrv) getCache(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) (*sp.Stat, string, bool) {
-	be := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg(), req.GetS3Secret())
+	be, err := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg(), req.GetS3Secret())
+	if err != nil {
+		return nil, "", false
+	}
 	be.mu.Lock()
 	defer be.mu.Unlock()
 	if be.st == nil {
@@ -287,7 +328,7 @@ func (cksrv *ChunkSrv) getCache(req proto.GetFileStatRequest, res *proto.GetFile
 
 func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3secret *sp.SecretProto) (*sp.Stat, string, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: getOrigin %v %v", cksrv.kernelId, prog, paths)
-	sc, err := cksrv.getRealmSigmaClnt(r, s3secret)
+	sc, err := cksrv.realms.getSc(r)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error get realm (%v) sigma clnt: %v", r, err)
 		return nil, "", err
@@ -328,7 +369,7 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 	}
 	if !ok {
 		s := time.Now()
-		paths = replaceLocal(paths, cksrv.kernelId)
+		// paths = replaceLocal(paths, cksrv.kernelId)
 		st, srv, err = cksrv.getOrigin(r, req.GetProg(), paths, req.GetS3Secret())
 		db.DPrintf(db.SPAWN_LAT, "[%v] getFileStat lat %v: origin %v err %v", req.Prog, time.Since(s), paths, err)
 		if err != nil {
@@ -336,7 +377,10 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 		}
 	}
 	db.DPrintf(db.CHUNKSRV, "%v: getFileStat pid %v st %v", cksrv.kernelId, req.Pid, st)
-	be := cksrv.getBin(r, req.GetProg(), req.GetS3Secret())
+	be, err := cksrv.getBin(r, req.GetProg(), req.GetS3Secret())
+	if err != nil {
+		return err
+	}
 	be.mu.Lock()
 	defer be.mu.Unlock()
 	be.st = st
@@ -347,7 +391,10 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 
 func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
 	db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: %v", cksrv.kernelId, req)
-	defer db.DPrintf(db.CHUNKSRV, "%v: GetFileStat done: %v", cksrv.kernelId, req)
+	s := time.Now()
+	defer func() {
+		db.DPrintf(db.SPAWN_LAT, "%v: GetFileStat done: %v lat %v", cksrv.kernelId, req, time.Since(s))
+	}()
 	st, path, ok := cksrv.getCache(req, res)
 	if ok {
 		res.Stat = st.StatProto()
@@ -365,7 +412,6 @@ func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []stri
 	err := fslib.RetryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.CHUNKSRV, "Stat '%v/%v'", pn, prog)
 		s := time.Now()
-		cksrv.useLocalEp(sc, pn)
 		sst, err := sc.Stat(pn + "/" + prog)
 		db.DPrintf(db.SPAWN_LAT, "Stat '%v/%v' lat %v", pn, prog, time.Since(s))
 		if err == nil {
@@ -378,27 +424,6 @@ func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []stri
 	})
 	db.DPrintf(db.CHUNKSRV, "lookup done %q %v st %v err %v", prog, paths, st, err)
 	return st, path, err
-}
-
-func (cksrv *ChunkSrv) useLocalEp(sc *sigmaclnt.SigmaClnt, pn string) {
-	cksrv.mu.Lock()
-	defer cksrv.mu.Unlock()
-
-	for pn0, ep := range cksrv.localEps {
-		if strings.HasPrefix(pn, pn0) {
-			cksrv.mu.Unlock()
-			err := sc.MountTree(ep, "", pn0)
-			cksrv.mu.Lock()
-			if ok := serr.IsErrorExists(err); ok {
-				return
-			}
-			if err != nil {
-				db.DPrintf(db.CHUNKSRV, "useLocalEp: invalidate %q", pn)
-				delete(cksrv.localEps, pn0)
-			}
-			return
-		}
-	}
 }
 
 func open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, string, error) {
@@ -506,21 +531,6 @@ func Run(kernelId string) {
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.CHUNKD, sc.ProcEnv().GetKernelID()), sc, cksrv)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
-	}
-	// Read endpoints of local proxies and remember them
-	for _, srv := range []string{sp.UX, sp.S3} {
-		_, err := sc.GetDir(srv)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error GetDir %v: %v", srv, err)
-			continue
-		}
-		pn := sp.ProxyPathname(srv, kernelId)
-		ep, err := sc.ReadEndpoint(pn)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error ReadEndpoint %v: %v", pn, err)
-			continue
-		}
-		cksrv.localEps[pn] = ep
 	}
 	ssrv.RunServer()
 }

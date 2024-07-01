@@ -69,18 +69,64 @@ func (n *binFsNode) String() string {
 	return fmt.Sprintf("{N %q}", n.path())
 }
 
-func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt) (fs.InodeEmbedder, error) {
+func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, upds uprocclnt.UprocSrv) (fs.InodeEmbedder, error) {
 	var st syscall.Stat_t
 	err := syscall.Stat(chunksrv.BINPROC, &st)
 	if err != nil {
 		return nil, err
 	}
 	root := &binFsRoot{
-		bincache: newBinCache(kernelId, sc, updc),
+		bincache: newBinCache(kernelId, sc, updc, upds),
 	}
 	return root.newNode(nil, "", 0), nil
 }
 
+func mountBinFs(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, upds uprocclnt.UprocSrv) (*fuse.Server, error) {
+	loopbackRoot, err := newBinRoot(kernelId, sc, updc, upds)
+	if err != nil {
+		return nil, err
+	}
+	sec := time.Second
+	opts := &fs.Options{
+		AttrTimeout:  &sec,
+		EntryTimeout: &sec,
+
+		NullPermissions: true, // Leave file permissions on "000" files as-is
+
+		MountOptions: fuse.MountOptions{
+			Debug:  DEBUG,
+			FsName: chunksrv.BINPROC, // First column in "df -T": original dir
+			Name:   "binfs",          // Second column in "df -T" will be shown as "fuse." + Name
+		},
+	}
+	opts.MountOptions.Options = append(opts.MountOptions.Options, "ro")
+
+	server, err := fs.Mount("/mnt/binfs", loopbackRoot, opts)
+	if err != nil {
+		return nil, err
+	}
+	return server, nil
+}
+
+// Start directly
+func StartBinFs(upds uprocclnt.UprocSrv, kernelId, uprocdpid string, sc *sigmaclnt.SigmaClnt, ep *sp.Tendpoint) error {
+	// XXX for now
+	if err := os.MkdirAll(BINFSMNT, 0750); err != nil {
+		return err
+	}
+	pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
+	rc, err := sigmarpcchan.NewSigmaRPCClntEndpoint([]*fslib.FsLib{sc.FsLib}, pn, ep)
+	if err != nil {
+		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
+		return err
+	}
+	updc := uprocclnt.NewUprocdClnt(sp.Tpid(uprocdpid), rc)
+	server, err := mountBinFs(kernelId, sc, updc, upds)
+	server.Wait()
+	return nil
+}
+
+// Start through exec
 func RunBinFS(kernelId, uprocdpid, smnt string) error {
 	pe := proc.GetProcEnv()
 	ep, err := sp.NewEndpointFromBytes([]byte(smnt))
@@ -109,29 +155,7 @@ func RunBinFS(kernelId, uprocdpid, smnt string) error {
 	}
 	updc := uprocclnt.NewUprocdClnt(sp.Tpid(uprocdpid), rc)
 
-	loopbackRoot, err := newBinRoot(kernelId, sc, updc)
-	if err != nil {
-		return err
-	}
-	sec := time.Second
-	opts := &fs.Options{
-		AttrTimeout:  &sec,
-		EntryTimeout: &sec,
-
-		NullPermissions: true, // Leave file permissions on "000" files as-is
-
-		MountOptions: fuse.MountOptions{
-			Debug:  DEBUG,
-			FsName: chunksrv.BINPROC, // First column in "df -T": original dir
-			Name:   "binfs",          // Second column in "df -T" will be shown as "fuse." + Name
-		},
-	}
-	opts.MountOptions.Options = append(opts.MountOptions.Options, "ro")
-
-	server, err := fs.Mount("/mnt/binfs", loopbackRoot, opts)
-	if err != nil {
-		return err
-	}
+	server, err := mountBinFs(kernelId, sc, updc, nil)
 
 	// Tell ExecBinSrv we are running
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {

@@ -38,7 +38,7 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 		cid:     sp.TclntId(rand.Uint64()),
 	}
 	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, fidc.GetNetProxyClnt())
-	db.DPrintf(db.TEST, "New cid %v\n", pathc.cid)
+	db.DPrintf(db.TEST, "New cid %v %v\n", pathc.cid, pe.GetRealm())
 	return pathc
 }
 

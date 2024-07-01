@@ -2,7 +2,6 @@ package sessclnt
 
 import (
 	"sync"
-	"time"
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
@@ -55,13 +54,10 @@ func (sc *Mgr) allocSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	s := time.Now()
 	sess, err := newSessClnt(sc.pe, sc.npc, ep)
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.WALK_LAT, "allocSession ep %v lat %v\n", ep, time.Since(s))
-	db.DPrintf(db.SPAWN_LAT, "allocSession ep %v lat %v\n", ep, time.Since(s))
 	sc.sessions[key] = sess
 	return sess, nil
 }

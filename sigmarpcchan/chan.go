@@ -3,7 +3,9 @@ package sigmarpcchan
 import (
 	"path/filepath"
 	"sync/atomic"
+	"time"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
@@ -20,6 +22,9 @@ type SigmaRPCCh struct {
 }
 
 func NewSigmaRPCClnt(fsls []*fslib.FsLib, pn string) (*rpcclnt.RPCClnt, error) {
+	s := time.Now()
+	defer func() { db.DPrintf(db.ATTACH_LAT, "NewSigmaRPCClnt %q lat %v", pn, time.Since(s)) }()
+
 	ch, err := NewSigmaRPCCh(fsls, pn)
 	if err != nil {
 		return nil, err

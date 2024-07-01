@@ -216,7 +216,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 
 func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 	s := time.Now()
-	defer db.DPrintf(db.SPAWN_LAT, "[%v] E2E WaitStart %v", pid, time.Since(s))
+	defer func() { db.DPrintf(db.SPAWN_LAT, "[%v] E2E WaitStart %v", pid, time.Since(s)) }()
 
 	pseqno, err := clnt.cs.GetProcSeqno(pid)
 	if err != nil {

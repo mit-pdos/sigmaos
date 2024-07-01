@@ -61,6 +61,7 @@ func (sc *Mgr) allocSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 		return nil, err
 	}
 	db.DPrintf(db.WALK_LAT, "allocSession ep %v lat %v\n", ep, time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "allocSession ep %v lat %v\n", ep, time.Since(s))
 	sc.sessions[key] = sess
 	return sess, nil
 }

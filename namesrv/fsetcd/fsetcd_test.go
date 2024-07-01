@@ -31,12 +31,12 @@ func TestDump(t *testing.T) {
 	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(test.EtcdIP))
 	pe := proc.NewTestProcEnv(sp.Trealm(realm), nil, etcdMnt, lip, lip, "", false, false, false)
 	npc := netproxyclnt.NewNetProxyClnt(pe)
-	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
+	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm(), nil)
 	assert.Nil(t, err)
-	nd, err := fs.ReadDir(fsetcd.NewDirEntInfoDir(fsetcd.ROOT))
+	nd, _, err := fs.ReadDir(fsetcd.NewDirEntInfoDir(fsetcd.ROOT))
 	assert.Nil(t, err)
 	err = fs.Dump(0, nd, path.Tpathname{}, fsetcd.ROOT)
-	eks, err := fs.LeasedPaths(sp.Trealm(realm))
+	eks, _, err := fs.LeasedPaths(sp.Trealm(realm))
 	assert.Nil(t, err)
 	fmt.Printf("Leased keys: %v\n", eks)
 }
@@ -46,7 +46,7 @@ func TestLease(t *testing.T) {
 	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(test.EtcdIP))
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, etcdMnt, lip, lip, "", false, false, false)
 	npc := netproxyclnt.NewNetProxyClnt(pe)
-	ec, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
+	ec, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm(), nil)
 	assert.Nil(t, err, "Err %v", err)
 
 	l := clientv3.NewLease(ec.Client)
@@ -87,7 +87,7 @@ func TestEvents(t *testing.T) {
 	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(test.EtcdIP))
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, etcdMnt, lip, lip, "", false, false, false)
 	npc := netproxyclnt.NewNetProxyClnt(pe)
-	ec, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
+	ec, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm(), nil)
 	assert.Nil(t, err, "Err %v", err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

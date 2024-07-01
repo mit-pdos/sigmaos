@@ -159,7 +159,7 @@ echo "========== Done building kernel bins =========="
 echo "========== Building user bins =========="
 docker exec -it $buildercid \
   /usr/bin/time -f "Build time: %e sec" \
-  ./make.sh $BUILD_ARGS --userbin $USERBIN user \
+  ./make.sh $BUILD_ARGS --userbin $USERBIN user --version $VERSION \
   2>&1 | tee $BUILD_LOG/make-user.out
 echo "========== Done building user bins =========="
 
@@ -169,7 +169,7 @@ RS_BUILD_ARGS="--rustpath \$HOME/.cargo/bin/cargo \
 echo "========== Building Rust bins =========="
 docker exec -it $rsbuildercid \
   /usr/bin/time -f "Build time: %e sec" \
-  ./make-rs.sh $RS_BUILD_ARGS \
+  ./make-rs.sh $RS_BUILD_ARGS --version $VERSION \
   2>&1 | tee $BUILD_LOG/make-user.out
 echo "========== Done building Rust bins =========="
 

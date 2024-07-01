@@ -64,14 +64,14 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *Sche
 			// When a new procq client is created, advance the epoch for the
 			// corresponding procq
 			pqsess, _ := sd.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
-				return NewProcqSession(sd.kernelID, pqID)
+				return NewProcqSession(pqID, sd.kernelID)
 			})
 			pqsess.AdvanceEpoch()
 		},
 		func(pqID string) *proc.ProcSeqno {
 			// Get the next proc seqno for a given procq
 			pqsess, _ := sd.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
-				return NewProcqSession(sd.kernelID, pqID)
+				return NewProcqSession(pqID, sd.kernelID)
 			})
 			return pqsess.NextSeqno()
 		},
@@ -115,7 +115,7 @@ func (sd *Schedd) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitR
 	db.DPrintf(db.SCHEDD, "WaitStart %v seqno %v", req.PidStr, req.GetProcSeqno())
 	// Wait until this schedd has heard about the proc, and has created the state
 	// for it.
-	if err := sd.WaitUntilGotProc(req.GetProcSeqno()); err != nil {
+	if err := sd.waitUntilGotProc(req.GetProcSeqno()); err != nil {
 		// XXX return in res?
 		return err
 	}
@@ -210,19 +210,19 @@ func (sd *Schedd) GetScheddStats(ctx fs.CtxI, req proto.GetScheddStatsRequest, r
 
 // Note that a proc has been received and its corresponding state has been
 // created, so the sequence number can be incremented
-func (sd *Schedd) GotProc(procSeqno *proc.ProcSeqno) {
+func (sd *Schedd) gotProc(procSeqno *proc.ProcSeqno) {
 	// schedd has successfully received a proc from procq pqID. Any clients which
 	// want to wait on that proc can now expect the state for that proc to exist
 	// at schedd. Set the seqno (which should be monotonically increasing) to
 	// release the clients, and allow schedd to handle the wait.
 	pqsess, _ := sd.pqsess.AllocNew(procSeqno.GetProcqID(), func(pqID string) *ProcqSession {
-		return NewProcqSession(sd.kernelID, pqID)
+		return NewProcqSession(pqID, sd.kernelID)
 	})
 	pqsess.Got(procSeqno)
 }
 
 // Wait to hear about a proc from procq pqID.
-func (sd *Schedd) WaitUntilGotProc(pseqno *proc.ProcSeqno) error {
+func (sd *Schedd) waitUntilGotProc(pseqno *proc.ProcSeqno) error {
 	// Kernel procs, spawned directly to schedd, will have an epoch of 0. Pass
 	// them through (since the proc is guaranteed to have been pushed to schedd
 	// by the kernel srv before calling WaitStart)
@@ -230,7 +230,7 @@ func (sd *Schedd) WaitUntilGotProc(pseqno *proc.ProcSeqno) error {
 		return nil
 	}
 	pqsess, _ := sd.pqsess.AllocNew(pseqno.GetProcqID(), func(pqID string) *ProcqSession {
-		return NewProcqSession(sd.kernelID, pqID)
+		return NewProcqSession(pqID, sd.kernelID)
 	})
 	return pqsess.WaitUntilGot(pseqno)
 }
@@ -322,7 +322,7 @@ func (sd *Schedd) spawnAndRunProc(p *proc.Proc, pseqno *proc.ProcSeqno) {
 	if pseqno != nil {
 		// Proc state now exists. Mark it as such to release any clients which may
 		// be waiting in WaitStart for schedd to receive this proc
-		sd.GotProc(pseqno)
+		sd.gotProc(pseqno)
 	}
 	// Run the proc
 	go sd.runProc(p)

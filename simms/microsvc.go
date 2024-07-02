@@ -30,6 +30,10 @@ func NewMicroservice(t *uint64, msp *Params) *Microservice {
 	return m
 }
 
+func (m *Microservice) NReplicas() int {
+	return m.addedReplicas - m.removedReplicas
+}
+
 func (m *Microservice) AddReplica() {
 	m.replicas = append(m.replicas, NewMicroserviceInstance(m.t, m.msp, m.addedReplicas, nil, nil))
 	m.addedReplicas++

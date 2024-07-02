@@ -33,6 +33,7 @@ type ServiceInstance struct {
 	processing      []*Request            // Slice of requests currently being processed
 	processingSince []uint64              // Slice of start times at which requests began to be processed
 	stateful        bool                  // Indicates whether or not the service is stateful
+	init            bool                  // Indicates whether or not the service has already initialized
 	ready           bool                  // Indicates whether or not the service is ready to accept requests
 	srvStats        *ServiceInstanceStats // Stats of the current service instance
 }
@@ -49,6 +50,7 @@ func NewServiceInstance(t *uint64, p *Params, replicaID int) *ServiceInstance {
 		processing:      []*Request{},
 		processingSince: []uint64{},
 		stateful:        p.Stateful,
+		init:            p.InitTime == 0,
 		ready:           p.InitTime == 0,
 		srvStats:        NewServiceInstanceStats(t),
 	}
@@ -71,8 +73,10 @@ func (s *ServiceInstance) GetStats() *ServiceInstanceStats {
 }
 
 func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
-	// If initialization time has passed, mark service ready
-	if s.startTime+s.initTime >= *s.t {
+	// If service had not initialized yet, and sufficient initialization time has
+	// passed, mark service ready
+	if !s.init && s.startTime+s.initTime >= *s.t {
+		s.init = true
 		s.MarkReady()
 	}
 	// Enqueue new requests
@@ -108,6 +112,6 @@ func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
 		s.processing = append(s.processing, req)
 		s.processingSince = append(s.processingSince, *s.t)
 	}
-	s.srvStats.Tick(s.processing, s.nslots, reps)
+	s.srvStats.Tick(s.IsReady(), s.processing, s.nslots, reps)
 	return reps
 }

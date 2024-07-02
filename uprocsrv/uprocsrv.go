@@ -22,6 +22,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
+	"sigmaos/linuxsched"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -72,21 +73,21 @@ func (pe *procEntry) procWait() {
 
 // Uprocsrv holds the state for serving procs.
 type UprocSrv struct {
-	mu            sync.RWMutex
-	ch            chan struct{}
-	pe            *proc.ProcEnv
-	ssrv          *sigmasrv.SigmaSrv
-	kc            *kernelclnt.KernelClnt
-	sc            *sigmaclnt.SigmaClnt
-	scsc          *sigmaclntsrv.SigmaClntSrvCmd
-	binsrv        *exec.Cmd
-	kernelId      string
-	realm         sp.Trealm
-	netproxy      bool
-	assigned      bool
-	sigmaclntdPID sp.Tpid
-	procs         *syncmap.SyncMap[int, *procEntry]
-	ckclnt        *chunkclnt.ChunkClnt
+	mu             sync.RWMutex
+	ch             chan struct{}
+	pe             *proc.ProcEnv
+	ssrv           *sigmasrv.SigmaSrv
+	kc             *kernelclnt.KernelClnt
+	sc             *sigmaclnt.SigmaClnt
+	scsc           *sigmaclntsrv.SigmaClntSrvCmd
+	binsrv         *exec.Cmd
+	kernelId       string
+	realm          sp.Trealm
+	netproxy       bool
+	sigmaclntdPID  sp.Tpid
+	schedPolicySet bool
+	procs          *syncmap.SyncMap[int, *procEntry]
+	ckclnt         *chunkclnt.ChunkClnt
 }
 
 func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpid) error {
@@ -226,6 +227,55 @@ func shrinkMountTable() error {
 	return nil
 }
 
+func (ups *UprocSrv) setSchedPolicy(upid sp.Tpid, ptype proc.Ttype) error {
+	ups.mu.RLock()
+	defer ups.mu.RUnlock()
+
+	// If already set, bail out
+	if ups.schedPolicySet {
+		return nil
+	}
+
+	// Promote lock
+	ups.mu.RUnlock()
+	ups.mu.Lock()
+
+	// If already set, demote lock & bail out
+	if ups.schedPolicySet {
+		ups.mu.Unlock()
+		ups.mu.RLock()
+		return nil
+	}
+
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.setSchedPolicy: %v", upid, time.Since(start))
+	}(start)
+
+	// Set sched policy to SCHED_IDLE if running BE procs
+	if ptype == proc.T_BE {
+		db.DPrintf(db.UPROCD, "Set SCHED_IDLE to run %v", upid)
+		attr, err := linuxsched.SchedGetAttr(0)
+		if err != nil {
+			db.DFatalf("Error Getattr %v", err)
+			return err
+		}
+		attr.Policy = linuxsched.SCHED_IDLE
+		err = linuxsched.SchedSetAttr(0, attr)
+		if err != nil {
+			db.DFatalf("Error Setattr %v", err)
+			return err
+		}
+	}
+	ups.schedPolicySet = true
+
+	// Demote to reader lock
+	ups.mu.Unlock()
+	ups.mu.RLock()
+
+	return nil
+}
+
 // Set up uprocd for use for a specific realm
 func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, path []string, s3secret *sp.SecretProto, ep *sp.TendpointProto) error {
 	ups.mu.RLock()
@@ -275,12 +325,6 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, p
 	return nil
 }
 
-func (ups *UprocSrv) Assign(ctx fs.CtxI, req proto.AssignRequest, res *proto.AssignResult) error {
-	// no-op
-	res.OK = true
-	return nil
-}
-
 // Run a proc inside of an inner container
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
@@ -289,6 +333,10 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
+	}
+	// Set this uprocsrv's Linux scheduling policy
+	if err := ups.setSchedPolicy(uproc.GetPid(), uproc.GetType()); err != nil {
+		db.DFatalf("Err set sched policy: %v", err)
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 

@@ -160,11 +160,6 @@ func (updm *UprocdMgr) getClntOrStartUprocd(realm sp.Trealm, ptype proc.Ttype) (
 		if ptype == proc.T_BE {
 			updm.beUprocds = append(updm.beUprocds, rpcc)
 		}
-		start = time.Now()
-		if err := updm.kclnt.AssignToRealm(pid, realm, ptype); err != nil {
-			db.DFatalf("Err assign uprocd to realm: %v", err)
-		}
-		db.DPrintf(db.REALM_GROW_LAT, "[%v] AssignToRealm latency: %v", realm, time.Since(start))
 	}
 	return rpcc, nil
 }

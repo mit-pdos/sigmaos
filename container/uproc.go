@@ -10,7 +10,6 @@ import (
 
 	"sigmaos/binsrv"
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -73,21 +72,6 @@ func CleanupUproc(pid sp.Tpid) {
 	if err := os.RemoveAll(jailPath(pid)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
 	}
-}
-
-func setSchedPolicy(pid int, policy linuxsched.SchedPolicy) error {
-	attr, err := linuxsched.SchedGetAttr(pid)
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error Getattr %v: %v", pid, err)
-		return err
-	}
-	attr.Policy = policy
-	err = linuxsched.SchedSetAttr(pid, attr)
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error Setattr %v: %v", pid, err)
-		return err
-	}
-	return nil
 }
 
 func jailPath(pid sp.Tpid) string {

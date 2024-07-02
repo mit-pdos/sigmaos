@@ -54,10 +54,6 @@ func (ks *KernelSrv) SetCPUShares(ctx fs.CtxI, req proto.SetCPUSharesRequest, re
 	return ks.k.SetCPUShares(sp.Tpid(req.PidStr), req.Shares)
 }
 
-func (ks *KernelSrv) AssignUprocdToRealm(ctx fs.CtxI, req proto.AssignUprocdToRealmRequest, rep *proto.AssignUprocdToRealmResponse) error {
-	return ks.k.AssignUprocdToRealm(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), proc.Ttype(req.ProcTypeInt))
-}
-
 func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilRequest, rep *proto.GetKernelSrvCPUUtilResponse) error {
 	util, err := ks.k.GetCPUUtil(sp.Tpid(req.PidStr))
 	if err != nil {

@@ -117,7 +117,6 @@ type Subsystem interface {
 	Kill() error
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
-	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
 	GetPortBinding(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
@@ -169,11 +168,6 @@ func (scsc *SigmaClntSrvCmd) SetCPUShares(shares int64) error {
 func (scsc *SigmaClntSrvCmd) GetCPUUtil() (float64, error) {
 	db.DFatalf("Unimplemented")
 	return 0, nil
-}
-
-func (scsc *SigmaClntSrvCmd) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
-	db.DFatalf("Unimplemented")
-	return nil
 }
 
 func (scsc *SigmaClntSrvCmd) GetPortBinding(p sp.Tport) (*port.PortBinding, error) {

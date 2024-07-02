@@ -43,15 +43,6 @@ func (clnt *UprocdClnt) GetPid() sp.Tpid {
 	return clnt.pid
 }
 
-func (clnt *UprocdClnt) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
-	clnt.ptype = ptype
-	req := &proto.AssignRequest{
-		RealmStr: realm.String(),
-	}
-	res := &proto.AssignResult{}
-	return clnt.RPC("UprocSrv.Assign", req, res)
-}
-
 func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr error) {
 	req := &proto.RunRequest{
 		ProcProto: uproc.GetProto(),
@@ -110,13 +101,4 @@ func (clnt *UprocdClnt) Lookup(pn string, pid uint32) (*sp.Stat, error) {
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] uprocdclnt.Lookup pid %d %v", pn, pid, time.Since(s))
 	return sp.NewStatProto(res.Stat), nil
-}
-
-func (clnt *UprocdClnt) Assign() error {
-	req := &proto.AssignRequest{}
-	res := &proto.FetchResponse{}
-	if err := clnt.RPC("UprocSrv.Assign", req, res); err != nil {
-		return err
-	}
-	return nil
 }

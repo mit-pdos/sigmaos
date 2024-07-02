@@ -308,107 +308,6 @@ func (*SetCPUSharesResponse) Descriptor() ([]byte, []int) {
 	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{5}
 }
 
-type AssignUprocdToRealmRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	PidStr      string `protobuf:"bytes,1,opt,name=pidStr,proto3" json:"pidStr,omitempty"`
-	RealmStr    string `protobuf:"bytes,2,opt,name=realmStr,proto3" json:"realmStr,omitempty"`
-	ProcTypeInt int64  `protobuf:"varint,3,opt,name=procTypeInt,proto3" json:"procTypeInt,omitempty"`
-}
-
-func (x *AssignUprocdToRealmRequest) Reset() {
-	*x = AssignUprocdToRealmRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[6]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *AssignUprocdToRealmRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AssignUprocdToRealmRequest) ProtoMessage() {}
-
-func (x *AssignUprocdToRealmRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[6]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AssignUprocdToRealmRequest.ProtoReflect.Descriptor instead.
-func (*AssignUprocdToRealmRequest) Descriptor() ([]byte, []int) {
-	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *AssignUprocdToRealmRequest) GetPidStr() string {
-	if x != nil {
-		return x.PidStr
-	}
-	return ""
-}
-
-func (x *AssignUprocdToRealmRequest) GetRealmStr() string {
-	if x != nil {
-		return x.RealmStr
-	}
-	return ""
-}
-
-func (x *AssignUprocdToRealmRequest) GetProcTypeInt() int64 {
-	if x != nil {
-		return x.ProcTypeInt
-	}
-	return 0
-}
-
-type AssignUprocdToRealmResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *AssignUprocdToRealmResponse) Reset() {
-	*x = AssignUprocdToRealmResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[7]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *AssignUprocdToRealmResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AssignUprocdToRealmResponse) ProtoMessage() {}
-
-func (x *AssignUprocdToRealmResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[7]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AssignUprocdToRealmResponse.ProtoReflect.Descriptor instead.
-func (*AssignUprocdToRealmResponse) Descriptor() ([]byte, []int) {
-	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{7}
-}
-
 type GetKernelSrvCPUUtilRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -420,7 +319,7 @@ type GetKernelSrvCPUUtilRequest struct {
 func (x *GetKernelSrvCPUUtilRequest) Reset() {
 	*x = GetKernelSrvCPUUtilRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[8]
+		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -433,7 +332,7 @@ func (x *GetKernelSrvCPUUtilRequest) String() string {
 func (*GetKernelSrvCPUUtilRequest) ProtoMessage() {}
 
 func (x *GetKernelSrvCPUUtilRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[8]
+	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -446,7 +345,7 @@ func (x *GetKernelSrvCPUUtilRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetKernelSrvCPUUtilRequest.ProtoReflect.Descriptor instead.
 func (*GetKernelSrvCPUUtilRequest) Descriptor() ([]byte, []int) {
-	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{8}
+	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetKernelSrvCPUUtilRequest) GetPidStr() string {
@@ -467,7 +366,7 @@ type GetKernelSrvCPUUtilResponse struct {
 func (x *GetKernelSrvCPUUtilResponse) Reset() {
 	*x = GetKernelSrvCPUUtilResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[9]
+		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -480,7 +379,7 @@ func (x *GetKernelSrvCPUUtilResponse) String() string {
 func (*GetKernelSrvCPUUtilResponse) ProtoMessage() {}
 
 func (x *GetKernelSrvCPUUtilResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[9]
+	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -493,7 +392,7 @@ func (x *GetKernelSrvCPUUtilResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetKernelSrvCPUUtilResponse.ProtoReflect.Descriptor instead.
 func (*GetKernelSrvCPUUtilResponse) Descriptor() ([]byte, []int) {
-	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{9}
+	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetKernelSrvCPUUtilResponse) GetUtil() float64 {
@@ -512,7 +411,7 @@ type ShutdownRequest struct {
 func (x *ShutdownRequest) Reset() {
 	*x = ShutdownRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[10]
+		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -525,7 +424,7 @@ func (x *ShutdownRequest) String() string {
 func (*ShutdownRequest) ProtoMessage() {}
 
 func (x *ShutdownRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[10]
+	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -538,7 +437,7 @@ func (x *ShutdownRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShutdownRequest.ProtoReflect.Descriptor instead.
 func (*ShutdownRequest) Descriptor() ([]byte, []int) {
-	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{10}
+	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{8}
 }
 
 type ShutdownResult struct {
@@ -550,7 +449,7 @@ type ShutdownResult struct {
 func (x *ShutdownResult) Reset() {
 	*x = ShutdownResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[11]
+		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -563,7 +462,7 @@ func (x *ShutdownResult) String() string {
 func (*ShutdownResult) ProtoMessage() {}
 
 func (x *ShutdownResult) ProtoReflect() protoreflect.Message {
-	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[11]
+	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -576,7 +475,7 @@ func (x *ShutdownResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShutdownResult.ProtoReflect.Descriptor instead.
 func (*ShutdownResult) Descriptor() ([]byte, []int) {
-	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{11}
+	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{9}
 }
 
 type KillRequest struct {
@@ -590,7 +489,7 @@ type KillRequest struct {
 func (x *KillRequest) Reset() {
 	*x = KillRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[12]
+		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -603,7 +502,7 @@ func (x *KillRequest) String() string {
 func (*KillRequest) ProtoMessage() {}
 
 func (x *KillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[12]
+	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -616,7 +515,7 @@ func (x *KillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KillRequest.ProtoReflect.Descriptor instead.
 func (*KillRequest) Descriptor() ([]byte, []int) {
-	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{12}
+	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *KillRequest) GetName() string {
@@ -635,7 +534,7 @@ type KillResult struct {
 func (x *KillResult) Reset() {
 	*x = KillResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[13]
+		mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -648,7 +547,7 @@ func (x *KillResult) String() string {
 func (*KillResult) ProtoMessage() {}
 
 func (x *KillResult) ProtoReflect() protoreflect.Message {
-	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[13]
+	mi := &file_kernelsrv_proto_kernelsrv_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -661,7 +560,7 @@ func (x *KillResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KillResult.ProtoReflect.Descriptor instead.
 func (*KillResult) Descriptor() ([]byte, []int) {
-	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{13}
+	return file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP(), []int{11}
 }
 
 var File_kernelsrv_proto_kernelsrv_proto protoreflect.FileDescriptor
@@ -687,30 +586,21 @@ var file_kernelsrv_proto_kernelsrv_proto_rawDesc = []byte{
 	0x50, 0x69, 0x64, 0x53, 0x74, 0x72, 0x12, 0x16, 0x0a, 0x06, 0x53, 0x68, 0x61, 0x72, 0x65, 0x73,
 	0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x53, 0x68, 0x61, 0x72, 0x65, 0x73, 0x22, 0x16,
 	0x0a, 0x14, 0x53, 0x65, 0x74, 0x43, 0x50, 0x55, 0x53, 0x68, 0x61, 0x72, 0x65, 0x73, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x72, 0x0a, 0x1a, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e,
-	0x55, 0x70, 0x72, 0x6f, 0x63, 0x64, 0x54, 0x6f, 0x52, 0x65, 0x61, 0x6c, 0x6d, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x70, 0x69, 0x64, 0x53, 0x74, 0x72, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x70, 0x69, 0x64, 0x53, 0x74, 0x72, 0x12, 0x1a, 0x0a, 0x08,
-	0x72, 0x65, 0x61, 0x6c, 0x6d, 0x53, 0x74, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08,
-	0x72, 0x65, 0x61, 0x6c, 0x6d, 0x53, 0x74, 0x72, 0x12, 0x20, 0x0a, 0x0b, 0x70, 0x72, 0x6f, 0x63,
-	0x54, 0x79, 0x70, 0x65, 0x49, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0b, 0x70,
-	0x72, 0x6f, 0x63, 0x54, 0x79, 0x70, 0x65, 0x49, 0x6e, 0x74, 0x22, 0x1d, 0x0a, 0x1b, 0x41, 0x73,
-	0x73, 0x69, 0x67, 0x6e, 0x55, 0x70, 0x72, 0x6f, 0x63, 0x64, 0x54, 0x6f, 0x52, 0x65, 0x61, 0x6c,
-	0x6d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x34, 0x0a, 0x1a, 0x47, 0x65, 0x74,
-	0x4b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x53, 0x72, 0x76, 0x43, 0x50, 0x55, 0x55, 0x74, 0x69, 0x6c,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x50, 0x69, 0x64, 0x53, 0x74,
-	0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x50, 0x69, 0x64, 0x53, 0x74, 0x72, 0x22,
-	0x31, 0x0a, 0x1b, 0x47, 0x65, 0x74, 0x4b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x53, 0x72, 0x76, 0x43,
-	0x50, 0x55, 0x55, 0x74, 0x69, 0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12,
-	0x0a, 0x04, 0x75, 0x74, 0x69, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x01, 0x52, 0x04, 0x75, 0x74,
-	0x69, 0x6c, 0x22, 0x11, 0x0a, 0x0f, 0x53, 0x68, 0x75, 0x74, 0x64, 0x6f, 0x77, 0x6e, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x10, 0x0a, 0x0e, 0x53, 0x68, 0x75, 0x74, 0x64, 0x6f, 0x77,
-	0x6e, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x21, 0x0a, 0x0b, 0x4b, 0x69, 0x6c, 0x6c, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x0c, 0x0a, 0x0a, 0x4b, 0x69,
-	0x6c, 0x6c, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x42, 0x19, 0x5a, 0x17, 0x73, 0x69, 0x67, 0x6d,
-	0x61, 0x6f, 0x73, 0x2f, 0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x34, 0x0a, 0x1a, 0x47, 0x65, 0x74, 0x4b, 0x65, 0x72,
+	0x6e, 0x65, 0x6c, 0x53, 0x72, 0x76, 0x43, 0x50, 0x55, 0x55, 0x74, 0x69, 0x6c, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x50, 0x69, 0x64, 0x53, 0x74, 0x72, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x50, 0x69, 0x64, 0x53, 0x74, 0x72, 0x22, 0x31, 0x0a, 0x1b,
+	0x47, 0x65, 0x74, 0x4b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x53, 0x72, 0x76, 0x43, 0x50, 0x55, 0x55,
+	0x74, 0x69, 0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x75,
+	0x74, 0x69, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x01, 0x52, 0x04, 0x75, 0x74, 0x69, 0x6c, 0x22,
+	0x11, 0x0a, 0x0f, 0x53, 0x68, 0x75, 0x74, 0x64, 0x6f, 0x77, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x22, 0x10, 0x0a, 0x0e, 0x53, 0x68, 0x75, 0x74, 0x64, 0x6f, 0x77, 0x6e, 0x52, 0x65,
+	0x73, 0x75, 0x6c, 0x74, 0x22, 0x21, 0x0a, 0x0b, 0x4b, 0x69, 0x6c, 0x6c, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x0c, 0x0a, 0x0a, 0x4b, 0x69, 0x6c, 0x6c, 0x52,
+	0x65, 0x73, 0x75, 0x6c, 0x74, 0x42, 0x19, 0x5a, 0x17, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73,
+	0x2f, 0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x73, 0x72, 0x76, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -725,7 +615,7 @@ func file_kernelsrv_proto_kernelsrv_proto_rawDescGZIP() []byte {
 	return file_kernelsrv_proto_kernelsrv_proto_rawDescData
 }
 
-var file_kernelsrv_proto_kernelsrv_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_kernelsrv_proto_kernelsrv_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_kernelsrv_proto_kernelsrv_proto_goTypes = []interface{}{
 	(*BootRequest)(nil),                 // 0: BootRequest
 	(*BootResult)(nil),                  // 1: BootResult
@@ -733,14 +623,12 @@ var file_kernelsrv_proto_kernelsrv_proto_goTypes = []interface{}{
 	(*EvictKernelProcResponse)(nil),     // 3: EvictKernelProcResponse
 	(*SetCPUSharesRequest)(nil),         // 4: SetCPUSharesRequest
 	(*SetCPUSharesResponse)(nil),        // 5: SetCPUSharesResponse
-	(*AssignUprocdToRealmRequest)(nil),  // 6: AssignUprocdToRealmRequest
-	(*AssignUprocdToRealmResponse)(nil), // 7: AssignUprocdToRealmResponse
-	(*GetKernelSrvCPUUtilRequest)(nil),  // 8: GetKernelSrvCPUUtilRequest
-	(*GetKernelSrvCPUUtilResponse)(nil), // 9: GetKernelSrvCPUUtilResponse
-	(*ShutdownRequest)(nil),             // 10: ShutdownRequest
-	(*ShutdownResult)(nil),              // 11: ShutdownResult
-	(*KillRequest)(nil),                 // 12: KillRequest
-	(*KillResult)(nil),                  // 13: KillResult
+	(*GetKernelSrvCPUUtilRequest)(nil),  // 6: GetKernelSrvCPUUtilRequest
+	(*GetKernelSrvCPUUtilResponse)(nil), // 7: GetKernelSrvCPUUtilResponse
+	(*ShutdownRequest)(nil),             // 8: ShutdownRequest
+	(*ShutdownResult)(nil),              // 9: ShutdownResult
+	(*KillRequest)(nil),                 // 10: KillRequest
+	(*KillResult)(nil),                  // 11: KillResult
 }
 var file_kernelsrv_proto_kernelsrv_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -829,30 +717,6 @@ func file_kernelsrv_proto_kernelsrv_proto_init() {
 			}
 		}
 		file_kernelsrv_proto_kernelsrv_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AssignUprocdToRealmRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_kernelsrv_proto_kernelsrv_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AssignUprocdToRealmResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_kernelsrv_proto_kernelsrv_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetKernelSrvCPUUtilRequest); i {
 			case 0:
 				return &v.state
@@ -864,7 +728,7 @@ func file_kernelsrv_proto_kernelsrv_proto_init() {
 				return nil
 			}
 		}
-		file_kernelsrv_proto_kernelsrv_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+		file_kernelsrv_proto_kernelsrv_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetKernelSrvCPUUtilResponse); i {
 			case 0:
 				return &v.state
@@ -876,7 +740,7 @@ func file_kernelsrv_proto_kernelsrv_proto_init() {
 				return nil
 			}
 		}
-		file_kernelsrv_proto_kernelsrv_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_kernelsrv_proto_kernelsrv_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ShutdownRequest); i {
 			case 0:
 				return &v.state
@@ -888,7 +752,7 @@ func file_kernelsrv_proto_kernelsrv_proto_init() {
 				return nil
 			}
 		}
-		file_kernelsrv_proto_kernelsrv_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+		file_kernelsrv_proto_kernelsrv_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ShutdownResult); i {
 			case 0:
 				return &v.state
@@ -900,7 +764,7 @@ func file_kernelsrv_proto_kernelsrv_proto_init() {
 				return nil
 			}
 		}
-		file_kernelsrv_proto_kernelsrv_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+		file_kernelsrv_proto_kernelsrv_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*KillRequest); i {
 			case 0:
 				return &v.state
@@ -912,7 +776,7 @@ func file_kernelsrv_proto_kernelsrv_proto_init() {
 				return nil
 			}
 		}
-		file_kernelsrv_proto_kernelsrv_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+		file_kernelsrv_proto_kernelsrv_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*KillResult); i {
 			case 0:
 				return &v.state
@@ -931,7 +795,7 @@ func file_kernelsrv_proto_kernelsrv_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_kernelsrv_proto_kernelsrv_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

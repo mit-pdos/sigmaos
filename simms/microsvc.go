@@ -11,6 +11,7 @@ type Microservice struct {
 	addedReplicas   int
 	removedReplicas int
 	lb              LoadBalancer
+	stats           *ServiceStats
 }
 
 func NewMicroservice(t *uint64, msp *Params) *Microservice {
@@ -19,6 +20,7 @@ func NewMicroservice(t *uint64, msp *Params) *Microservice {
 		msp:      msp,
 		replicas: []*MicroserviceInstance{},
 		lb:       NewRoundRobinLB(),
+		stats:    NewServiceStats(),
 	}
 	// Start off with 1 replica
 	m.AddReplica()
@@ -52,10 +54,15 @@ func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	for i, rs := range steeredReqs {
 		replies = append(replies, m.replicas[i].Tick(rs)...)
 	}
+	m.stats.Tick(*m.t, replies)
 	return replies
 }
 
-func (m *Microservice) GetStats() []*ServiceInstanceStats {
+func (m *Microservice) GetServiceStats() *ServiceStats {
+	return m.stats
+}
+
+func (m *Microservice) GetInstanceStats() []*ServiceInstanceStats {
 	stats := make([]*ServiceInstanceStats, 0, len(m.replicas))
 	for _, r := range m.replicas {
 		stats = append(stats, r.GetStats())

@@ -266,7 +266,7 @@ func TestWorkloadNoQueueBuildup(t *testing.T) {
 		// Run the simulation
 		dc.Tick()
 	}
-	stats := dc.Stats()
+	stats := dc.GetStats()
 	assert.Equal(t, int(N_TICKS)-1, stats.TotalRequests(), "Produced wrong number of replies")
 	assert.Equal(t, float64(P_TIME), stats.AvgLatency(), "Produced wrong number of replies")
 	db.DPrintf(db.SIM_TEST, "Sim test done")
@@ -304,7 +304,7 @@ func TestWorkloadClntBurst(t *testing.T) {
 		// Run the simulation
 		dc.Tick()
 	}
-	stats := dc.Stats()
+	stats := dc.GetStats()
 	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
@@ -343,7 +343,7 @@ func TestWorkloadClntBurstAddReplica(t *testing.T) {
 		// Run the simulation
 		dc.Tick()
 	}
-	stats := dc.Stats()
+	stats := dc.GetStats()
 	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
 	assert.Equal(t, float64(1.0), stats.AvgLatency())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
@@ -373,6 +373,7 @@ func TestWorkloadClntBurstRemoveReplica(t *testing.T) {
 	svc := simms.NewMicroservice(&time, p)
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
+	dc.RecordStats(10)
 	for ; time < N_TICKS; time++ {
 		if time == BURST_START {
 			db.DPrintf(db.SIM_TEST, "StartBurst [t=%v]", time)
@@ -391,8 +392,10 @@ func TestWorkloadClntBurstRemoveReplica(t *testing.T) {
 		// Run the simulation
 		dc.Tick()
 	}
-	stats := dc.Stats()
+	stats := dc.GetStats()
+	rstats := stats.GetRecordedStats()
 	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }

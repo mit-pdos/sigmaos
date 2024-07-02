@@ -2,7 +2,6 @@ package rpcdirclnt
 
 import (
 	"path/filepath"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/dircache"
@@ -19,7 +18,6 @@ type RPCDirClnt struct {
 }
 
 func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
-	s := time.Now()
 	pn := filepath.Join(rpcdc.Path, n)
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{rpcdc.FsLib}, pn)
 	if err != nil {
@@ -27,7 +25,6 @@ func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
 		return nil, err
 	}
 	db.DPrintf(rpcdc.LSelector, "newClnt NewSigmaRPCClnt[srvID:%v]: %v", pn, rpcc)
-	db.DPrintf(db.SPAWN_LAT, "newClnt %v lat %v", pn, time.Since(s))
 	if rpcdc.allocFn != nil {
 		rpcdc.allocFn(n)
 	}

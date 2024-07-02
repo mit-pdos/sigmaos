@@ -105,7 +105,6 @@ func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 		return err
 	}
 	db.DPrintf(db.WALK_LAT, "%v: automount pn '%v' Attach lat %v\n", mc.cid, path, time.Since(s))
-	db.DPrintf(db.SPAWN_LAT, "%v: automount pn '%v' Attach lat %v\n", mc.cid, path, time.Since(s))
 	err = mc.mount(fid, path.String())
 	if err != nil {
 		return err
@@ -123,9 +122,7 @@ func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 	if ok {
 		return nil
 	}
-	s := time.Now()
 	if fid, err := mc.fidc.Attach(secrets, mc.cid, ep, "", tree); err == nil {
-		db.DPrintf(db.SPAWN_LAT, "Attach %v lat %v", mntname, time.Since(s))
 		return mc.Mount(fid, mntname)
 	} else {
 		db.DPrintf(db.MOUNT_ERR, "%v: MountTree Attach [%v]/%v err %v", mc.cid, ep, tree, err)

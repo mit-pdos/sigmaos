@@ -12,14 +12,6 @@ message RunRequest {
 message RunResult {
 }
 
-message AssignRequest {
-  string realmStr = 1;
-}
-
-message AssignResult {
-  bool oK = 1;
-}
-
 message WarmBinRequest {
   string realmStr = 1;
   string program = 2;

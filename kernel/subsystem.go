@@ -29,7 +29,6 @@ type Subsystem interface {
 	Kill() error
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
-	AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error
 	GetPortBinding(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
@@ -135,10 +134,6 @@ func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) er
 	}
 	err := s.WaitStartKernelProc(s.p.GetPid(), how)
 	return err
-}
-
-func (ss *KernelSubsystem) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
-	return ss.container.AssignToRealm(realm, ptype)
 }
 
 func (ss *KernelSubsystem) SetCPUShares(shares int64) error {

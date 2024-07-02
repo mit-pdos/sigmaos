@@ -50,18 +50,12 @@ MAIN="${vma[0]}"
 
 SSHVM="${vma[$VM]}"
 
-# Get the pubkey and privkey for the SigmaOS deployment
-MASTER_PUB_KEY="$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN cat /tmp/sigmaos/master-key.pub)"
-MASTER_PRIV_KEY="$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN cat /tmp/sigmaos/master-key.priv)"
-
 echo "Run [$SSHVM]: $COMMAND"
 ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$SSHVM <<ENDSSH
   # Make sure swap is off on the benchmark machines.
   sudo swapoff -a
   cd sigmaos
   source ./env/env.sh
-  echo "$MASTER_PRIV_KEY" > /tmp/sigmaos/master-key.priv 
-  echo "$MASTER_PUB_KEY" > /tmp/sigmaos/master-key.pub
   export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;THUMBNAIL_TPT;"
 #  export SIGMAPERF="KVCLERK_TPT;MRMAPPER_TPT;MRREDUCER_TPT;HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;HOTEL_RESERVE_PPROF_MUTEX;CACHESRV_PPROF_MUTEX;"
   $COMMAND

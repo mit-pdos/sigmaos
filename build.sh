@@ -170,7 +170,7 @@ echo "========== Building Rust bins =========="
 docker exec -it $rsbuildercid \
   /usr/bin/time -f "Build time: %e sec" \
   ./make-rs.sh $RS_BUILD_ARGS --version $VERSION \
-  2>&1 | tee $BUILD_LOG/make-user.out
+  2>&1 | tee $BUILD_LOG/make-user-rs.out
 echo "========== Done building Rust bins =========="
 
 echo "========== Copying kernel bins for uprocd =========="

@@ -54,6 +54,7 @@ func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string, erro
 }
 
 type realm struct {
+	sync.Mutex
 	sc       *sigmaclnt.SigmaClnt
 	s3secret *sp.SecretProto
 	bins     *syncmap.SyncMap[string, *bin]

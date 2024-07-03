@@ -18,6 +18,7 @@ message WarmBinRequest {
   string pidStr = 3;
   repeated string sigmaPath = 4;
   SecretProto s3Secret = 5;
+  TendpointProto NamedEndpointProto = 6;
 }
 
 message WarmBinResult {

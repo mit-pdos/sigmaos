@@ -365,7 +365,7 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	db.DPrintf(db.UPROCD, "WarmProc %v pid %v", req, os.Getpid())
 	pid := sp.Tpid(req.PidStr)
 	r := sp.Trealm(req.RealmStr)
-	if err := ups.assignToRealm(r, pid, req.Program, req.SigmaPath, req.GetS3Secret(), nil); err != nil {
+	if err := ups.assignToRealm(r, pid, req.Program, req.SigmaPath, req.GetS3Secret(), req.GetNamedEndpointProto()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
 	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), req.SigmaPath)

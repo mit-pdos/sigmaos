@@ -190,7 +190,7 @@ func (cksrv *ChunkSrv) Prefetch(ctx fs.CtxI, req proto.PrefetchRequest, res *pro
 			return err
 		}
 	} else {
-		db.DPrintf(db.ERROR, "no valid endpoint %v", ep)
+		db.DPrintf(db.ERROR, "no valid endpoint for realm %v: %v", r, ep)
 	}
 	db.DPrintf(db.SPAWN_LAT, "%v: get SigmaClnt %v %v lat %v", req.Prog, r, ep, time.Since(s))
 	st, _, err := cksrv.lookup(sc, req.Prog, req.SigmaPath)

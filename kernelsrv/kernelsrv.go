@@ -7,7 +7,6 @@ import (
 	"sigmaos/fs"
 	"sigmaos/kernel"
 	"sigmaos/kernelsrv/proto"
-	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

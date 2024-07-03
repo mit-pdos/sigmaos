@@ -141,10 +141,15 @@ func (cksrv *ChunkSrv) getRealmSigmaClnt(r sp.Trealm, s3secret *sp.SecretProto) 
 
 // Get binary info of prog in realm. Creates a SigmaClnt for realm, if unknown realm.
 func (cksrv *ChunkSrv) getBin(realm sp.Trealm, prog string, s3secret *sp.SecretProto) (*bin, error) {
-	r, ok := cksrv.realms.AllocNew(realm, newRealm)
-	if ok {
+	r, _ := cksrv.realms.AllocNew(realm, newRealm)
+
+	r.Lock()
+	defer r.Unlock()
+
+	if r.sc == nil {
 		sc, err := cksrv.getRealmSigmaClnt(realm, s3secret)
 		if err != nil {
+			db.DPrintf(db.ERROR, "Error create SigmaClnt: %v", err)
 			return nil, err
 		}
 		r.sc = sc
@@ -185,7 +190,7 @@ func (cksrv *ChunkSrv) Prefetch(ctx fs.CtxI, req proto.PrefetchRequest, res *pro
 			return err
 		}
 	} else {
-		db.DFatalf(db.ERROR, "no valid endpoint %v", ep)
+		db.DPrintf(db.ERROR, "no valid endpoint %v", ep)
 	}
 	db.DPrintf(db.SPAWN_LAT, "%v: get SigmaClnt %v %v lat %v", req.Prog, r, ep, time.Since(s))
 	st, _, err := cksrv.lookup(sc, req.Prog, req.SigmaPath)

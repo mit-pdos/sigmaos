@@ -196,7 +196,12 @@ func (updm *UprocdMgr) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, path 
 	if err != nil {
 		return err, nil
 	}
-	return rpcc.WarmProc(pid, realm, prog, updm.fsl.ProcEnv().GetSecrets()["s3"], path)
+	ep, err := updm.fsl.GetNamedEndpointRealm(realm)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error get realm named EP in WarmProc: %v", err)
+		return err, nil
+	}
+	return rpcc.WarmProc(pid, realm, prog, updm.fsl.ProcEnv().GetSecrets()["s3"], ep, path)
 }
 
 func (updm *UprocdMgr) String() string {

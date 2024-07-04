@@ -4,17 +4,36 @@ import (
 	db "sigmaos/debug"
 )
 
+type MicroserviceParams struct {
+	ID       string
+	NSlots   int
+	InitTime uint64
+	PTime    uint64
+	Stateful bool
+}
+
+func NewMicroserviceParams(id string, nslots int, ptime uint64, initTime uint64, stateful bool) *MicroserviceParams {
+	return &MicroserviceParams{
+		ID:       id,
+		NSlots:   nslots,
+		InitTime: initTime,
+		PTime:    ptime,
+		Stateful: stateful,
+	}
+}
+
 type Microservice struct {
 	t               *uint64
-	msp             *Params
+	msp             *MicroserviceParams
 	replicas        []*MicroserviceInstance
 	addedReplicas   int
 	removedReplicas int
 	lb              LoadBalancer
 	stats           *ServiceStats
+	autoscaler      Autoscaler
 }
 
-func NewMicroservice(t *uint64, msp *Params) *Microservice {
+func NewMicroservice(t *uint64, msp *MicroserviceParams, newAutoscaler NewAutoscalerFn) *Microservice {
 	m := &Microservice{
 		t:        t,
 		msp:      msp,
@@ -27,6 +46,7 @@ func NewMicroservice(t *uint64, msp *Params) *Microservice {
 	for _, r := range m.replicas {
 		r.MarkReady()
 	}
+	m.autoscaler = newAutoscaler(m)
 	return m
 }
 
@@ -80,7 +100,7 @@ type MicroserviceInstance struct {
 	db       *Microservice
 }
 
-func NewMicroserviceInstance(t *uint64, msp *Params, replicaID int, memcache *Microservice, db *Microservice) *MicroserviceInstance {
+func NewMicroserviceInstance(t *uint64, msp *MicroserviceParams, replicaID int, memcache *Microservice, db *Microservice) *MicroserviceInstance {
 	return &MicroserviceInstance{
 		svc:      NewServiceInstance(t, msp, replicaID),
 		memcache: memcache,

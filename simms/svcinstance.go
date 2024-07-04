@@ -4,24 +4,6 @@ import (
 	"strconv"
 )
 
-type Params struct {
-	ID       string
-	NSlots   int
-	InitTime uint64
-	PTime    uint64
-	Stateful bool
-}
-
-func NewParams(id string, nslots int, ptime uint64, initTime uint64, stateful bool) *Params {
-	return &Params{
-		ID:       id,
-		NSlots:   nslots,
-		InitTime: initTime,
-		PTime:    ptime,
-		Stateful: stateful,
-	}
-}
-
 type ServiceInstance struct {
 	id              string                // ID of this service
 	t               *uint64               // Number of ticks that have passed since the beginning of the simulation
@@ -38,7 +20,7 @@ type ServiceInstance struct {
 	srvStats        *ServiceInstanceStats // Stats of the current service instance
 }
 
-func NewServiceInstance(t *uint64, p *Params, replicaID int) *ServiceInstance {
+func NewServiceInstance(t *uint64, p *MicroserviceParams, replicaID int) *ServiceInstance {
 	return &ServiceInstance{
 		id:              p.ID + "-" + strconv.Itoa(replicaID),
 		t:               t,

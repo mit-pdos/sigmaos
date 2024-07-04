@@ -7,6 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/simms"
+	"sigmaos/simms/autoscaler"
 )
 
 func TestCompile(t *testing.T) {
@@ -39,7 +40,7 @@ func TestServiceInstanceNoQueueBuildup(t *testing.T) {
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	svc := simms.NewServiceInstance(&time, p, 0)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
@@ -74,7 +75,7 @@ func TestServiceInstanceNoQueueBuildup10ReqPerTick(t *testing.T) {
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	svc := simms.NewServiceInstance(&time, p, 0)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
@@ -109,7 +110,7 @@ func TestServiceInstanceQueueBuildup10ReqPerTick(t *testing.T) {
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	svc := simms.NewServiceInstance(&time, p, 0)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
@@ -144,7 +145,7 @@ func TestServiceInstanceNoQueueBuildupPTime2(t *testing.T) {
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	svc := simms.NewServiceInstance(&time, p, 0)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
@@ -179,7 +180,7 @@ func TestServiceInstanceQueueBuildupPTime2(t *testing.T) {
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	svc := simms.NewServiceInstance(&time, p, 0)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
@@ -218,8 +219,8 @@ func TestAppNoQueueBuildup(t *testing.T) {
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewMicroservice(&time, p)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewNoOpAutoscalerFn())
 	app := simms.NewSingleTierApp(svc)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
@@ -258,8 +259,8 @@ func TestWorkloadNoQueueBuildup(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewMicroservice(&time, p)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewNoOpAutoscalerFn())
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	for ; time < N_TICKS; time++ {
@@ -290,8 +291,8 @@ func TestWorkloadClntBurst(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewMicroservice(&time, p)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewNoOpAutoscalerFn())
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	for ; time < N_TICKS; time++ {
@@ -328,8 +329,8 @@ func TestWorkloadClntBurstAddReplica(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewMicroservice(&time, p)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewNoOpAutoscalerFn())
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	for ; time < N_TICKS; time++ {
@@ -369,8 +370,8 @@ func TestWorkloadClntBurstRemoveReplica(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewMicroservice(&time, p)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewNoOpAutoscalerFn())
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	dc.RecordStats(10)

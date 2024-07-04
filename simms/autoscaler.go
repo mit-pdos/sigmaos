@@ -1,6 +1,6 @@
 package simms
 
-type NewAutoscalerFn func(*Microservice) Autoscaler
+type NewAutoscalerFn func(*uint64, *Microservice) Autoscaler
 
 type Autoscaler interface {
 	Tick()

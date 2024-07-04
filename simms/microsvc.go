@@ -46,7 +46,7 @@ func NewMicroservice(t *uint64, msp *MicroserviceParams, newAutoscaler NewAutosc
 	for _, r := range m.replicas {
 		r.MarkReady()
 	}
-	m.autoscaler = newAutoscaler(m)
+	m.autoscaler = newAutoscaler(t, m)
 	return m
 }
 
@@ -79,7 +79,16 @@ func (m *Microservice) Tick(reqs []*Request) []*Reply {
 		replies = append(replies, m.replicas[i].Tick(rs)...)
 	}
 	m.stats.Tick(*m.t, replies)
+	m.autoscaler.Tick()
 	return replies
+}
+
+func (m *Microservice) GetID() string {
+	return m.msp.ID
+}
+
+func (m *Microservice) GetAutoscaler() Autoscaler {
+	return m.autoscaler
 }
 
 func (m *Microservice) GetServiceStats() *ServiceStats {

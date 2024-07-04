@@ -400,3 +400,46 @@ func TestWorkloadClntBurstRemoveReplica(t *testing.T) {
 	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
+
+func TestAvgUtilAutoscaler(t *testing.T) {
+	const (
+		N_TICKS uint64 = 1000
+		// Clnt params
+		CLNT_REQ_MEAN float64 = 1
+		CLNT_REQ_STD  float64 = 0
+		// App params
+		N_SLOTS        int    = 1
+		P_TIME         uint64 = 1
+		SVC_ID         string = "wfe"
+		STATEFUL       bool   = false
+		SIZE_UP_TIME   uint64 = 0
+		SIZE_DOWN_TIME uint64 = 500
+		// Autoscaler params
+		SCALE_FREQ         int     = 10
+		TARGET_UTIL        float64 = 50.0
+		UTIL_WINDOW_SIZE   uint64  = 10
+		AUTOSCALER_LEAD_IN uint64  = 100 // Number of ticks to wait before starting the autoscaler
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
+	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewAvgUtilAutoscalerFn(asp))
+	app := simms.NewSingleTierApp(svc)
+	dc := simms.NewWorkload(&time, app, c)
+	dc.RecordStats(10)
+	for ; time < N_TICKS; time++ {
+		if time == AUTOSCALER_LEAD_IN {
+			svc.GetAutoscaler().Start()
+		}
+		// Run the simulation
+		dc.Tick()
+	}
+	stats := dc.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}

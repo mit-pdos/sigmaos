@@ -285,4 +285,5 @@ const (
 	SIM_LB                  = "SIM_LB"
 	SIM_RAW_LAT             = "SIM_RAW_LAT"
 	SIM_LAT_STATS           = "SIM_LAT_STATS"
+	SIM_AUTOSCALE           = "SIM_AUTOSCALE"
 )

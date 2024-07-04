@@ -1,11 +1,12 @@
 package autoscaler
 
 import (
+	db "sigmaos/debug"
 	"sigmaos/simms"
 )
 
-func GetNewAvgUtilAutoscalerFn(t *uint64, asp *AvgUtilAutoscalerParams) simms.NewAutoscalerFn {
-	return func(svc *simms.Microservice) simms.Autoscaler {
+func GetNewAvgUtilAutoscalerFn(asp *AvgUtilAutoscalerParams) simms.NewAutoscalerFn {
+	return func(t *uint64, svc *simms.Microservice) simms.Autoscaler {
 		return NewAvgUtilAutoscaler(t, asp, svc)
 	}
 }
@@ -14,6 +15,14 @@ type AvgUtilAutoscalerParams struct {
 	ScaleFreq      int
 	TargetUtil     float64
 	UtilWindowSize uint64
+}
+
+func NewAvgUtilAutoscalerParams(scaleFreq int, targetUtil float64, utilWindowSize uint64) *AvgUtilAutoscalerParams {
+	return &AvgUtilAutoscalerParams{
+		ScaleFreq:      scaleFreq,
+		TargetUtil:     targetUtil,
+		UtilWindowSize: utilWindowSize,
+	}
 }
 
 // Autoscaler which tries to maintain selected average utilization level
@@ -51,8 +60,10 @@ func (ua *AvgUtilAutoscaler) Tick() {
 	if *ua.t%uint64(ua.p.ScaleFreq) != 0 {
 		return
 	}
+	db.DPrintf(db.SIM_AUTOSCALE, "[t=%v,svc=%v] Run AvgUtilAutoscaler", *ua.t, ua.svc.GetID())
 	istats := ua.svc.GetInstanceStats()
 	d, n := ua.getScalingDecision(istats)
+	db.DPrintf(db.SIM_AUTOSCALE, "[t=%v,svc=%v] AvgUtilAutoscaler scaling decision (%v, %v)", *ua.t, ua.svc.GetID(), d, n)
 	switch d {
 	case SCALE_UP:
 		for i := 0; i < n; i++ {
@@ -84,10 +95,12 @@ func (ua *AvgUtilAutoscaler) getScalingDecision(istats []*simms.ServiceInstanceS
 
 func (ua *AvgUtilAutoscaler) Start() {
 	ua.run = true
+	db.DPrintf(db.SIM_AUTOSCALE, "[t=%v,svc=%v] Start AvgUtilAutoscaler", *ua.t, ua.svc.GetID())
 }
 
 func (ua *AvgUtilAutoscaler) Stop() {
 	ua.run = false
+	db.DPrintf(db.SIM_AUTOSCALE, "[t=%v,svc=%v] Stop AvgUtilAutoscaler", *ua.t, ua.svc.GetID())
 }
 
 func (ua *AvgUtilAutoscaler) NScaleUpEvents() int {

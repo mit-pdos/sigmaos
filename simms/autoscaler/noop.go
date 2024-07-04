@@ -5,7 +5,7 @@ import (
 )
 
 func GetNewNoOpAutoscalerFn() simms.NewAutoscalerFn {
-	return func(*simms.Microservice) simms.Autoscaler {
+	return func(*uint64, *simms.Microservice) simms.Autoscaler {
 		return &NoOpAutoscaler{}
 	}
 }

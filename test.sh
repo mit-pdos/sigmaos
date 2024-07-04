@@ -99,7 +99,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxy reader writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks example example_echo_server; do
+    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv reader writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks example example_echo_server; do
         go test $VERB sigmaos/$T --run TestCompile
     done
 fi
@@ -152,7 +152,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test npproxy with just named and full kernel
     #
 
-    go test $VERB sigmaos/npproxy -start
+    go test $VERB sigmaos/npproxysrv -start
     cleanup
 
 

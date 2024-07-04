@@ -2,7 +2,7 @@
 // linux command line and by mounting root realm's named at /mnt/9p as
 // an 9P file system (see mount.sh), and translating 9P into sigmaP
 // (and back).
-package npproxy
+package npproxysrv
 
 import (
 	"net"
@@ -12,7 +12,7 @@ import (
 	"sigmaos/demux"
 	"sigmaos/fidclnt"
 	"sigmaos/netproxyclnt"
-	"sigmaos/npproxy/npcodec"
+	"sigmaos/npproxysrv/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"

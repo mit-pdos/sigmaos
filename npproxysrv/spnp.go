@@ -1,4 +1,4 @@
-package npproxy
+package npproxysrv
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	np "sigmaos/ninep"
-	"sigmaos/npproxy/npcodec"
+	"sigmaos/npproxysrv/npcodec"
 	"sigmaos/reader"
 	sp "sigmaos/sigmap"
 )

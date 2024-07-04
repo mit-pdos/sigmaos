@@ -8,7 +8,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/netsrv"
-	"sigmaos/npproxy"
+	"sigmaos/npproxysrv"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -39,7 +39,7 @@ func main() {
 	db.DPrintf(db.NPPROXY, "Proxy env: %v", pe)
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
 	npc := netproxyclnt.NewNetProxyClnt(pe)
-	npd := npproxy.NewNpd(pe, npc, lip)
+	npd := npproxysrv.NewNpd(pe, npc, lip)
 	netsrv.NewNetServerEPType(pe, npc, addr, sp.EXTERNAL_EP, npd)
 	ch := make(chan struct{})
 	<-ch

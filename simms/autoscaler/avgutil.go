@@ -84,6 +84,7 @@ func (ua *AvgUtilAutoscaler) getScalingDecision(istats []*simms.ServiceInstanceS
 	currentNReplicas := len(readyIStats)
 	currentUtil := avgUtil(*ua.t, ua.p.UtilWindowSize, readyIStats)
 	desiredNReplicas := k8sCalcDesiredNReplicas(currentNReplicas, currentUtil, ua.p.TargetUtil, DEFAULT_TOLERANCE)
+	db.DPrintf(db.SIM_AUTOSCALE, "[t=%v,svc=%v] AvgUtilAutoscaler currentUtil:%v targetUtil:%v, currentNReplicas:%v desiredNReplicas:%v", *ua.t, ua.svc.GetID(), currentUtil, ua.p.TargetUtil, currentNReplicas, desiredNReplicas)
 	if desiredNReplicas > currentNReplicas {
 		return SCALE_UP, desiredNReplicas - currentNReplicas
 	}

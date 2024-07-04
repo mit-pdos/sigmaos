@@ -416,7 +416,7 @@ func TestAvgUtilAutoscaler(t *testing.T) {
 		SIZE_DOWN_TIME uint64 = 500
 		// Autoscaler params
 		SCALE_FREQ         int     = 10
-		TARGET_UTIL        float64 = 50.0
+		TARGET_UTIL        float64 = 0.5
 		UTIL_WINDOW_SIZE   uint64  = 10
 		AUTOSCALER_LEAD_IN uint64  = 100 // Number of ticks to wait before starting the autoscaler
 	)
@@ -436,6 +436,8 @@ func TestAvgUtilAutoscaler(t *testing.T) {
 		// Run the simulation
 		dc.Tick()
 	}
+	assert.Equal(t, 2, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
+	assert.Equal(t, 1, svc.GetAutoscaler().NScaleDownEvents(), "Scaled up wrong number of times")
 	stats := dc.GetStats()
 	rstats := stats.GetRecordedStats()
 	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())

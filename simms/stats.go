@@ -154,11 +154,11 @@ type ServiceInstanceStats struct {
 func NewServiceInstanceStats(t *uint64) *ServiceInstanceStats {
 	return &ServiceInstanceStats{
 		t:                t,
-		time:             make([]uint64, *t),
-		Ready:            make([]bool, *t),
-		requestsInFlight: make([]uint64, *t),
-		Util:             make([]float64, *t),
-		latency:          make([][]uint64, *t),
+		time:             make([]uint64, *t+1),
+		Ready:            make([]bool, *t+1),
+		requestsInFlight: make([]uint64, *t+1),
+		Util:             make([]float64, *t+1),
+		latency:          make([][]uint64, *t+1),
 	}
 }
 

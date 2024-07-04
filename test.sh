@@ -8,7 +8,7 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usesigmaclntd] [--nonetproxy] [--reuse-kernel] [--cleanup]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usespproxyd] [--nonetproxy] [--reuse-kernel] [--cleanup]" 
 }
 
 BASIC="--basic"
@@ -16,7 +16,7 @@ FAST=""
 APPS=""
 OVERLAY=""
 GVISOR=""
-SIGMACLNTD=""
+SPPROXYD=""
 NETPROXY=""
 REUSEKERNEL=""
 VERB="-v"
@@ -53,9 +53,9 @@ while [[ "$#" -gt 0 ]]; do
             shift
             GVISOR="--gvisor" 
             ;;
-        --usesigmaclntd)
+        --usespproxyd)
             shift
-            SIGMACLNTD="--usesigmaclntd" 
+            SPPROXYD="--usespproxyd" 
             ;;
         --nonetproxy)
             shift
@@ -99,7 +99,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxy reader writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks example example_echo_server; do
+    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv reader writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks example example_echo_server; do
         go test $VERB sigmaos/$T --run TestCompile
     done
 fi
@@ -127,16 +127,16 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in reader writer stats netproxy fslib electclnt dircache; do
-        go test $VERB -timeout 20m sigmaos/$T -start $SIGMACLNTD $NETPROXY $REUSEKERNEL
+        go test $VERB -timeout 20m sigmaos/$T -start $SPPROXYD $NETPROXY $REUSEKERNEL
         cleanup
     done
 
     # go test $VERB sigmaos/sigmapsrv -start  # no perf
 
     # test memfs
-    go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SIGMACLNTD $NETPROXY $REUSEKERNEL
+    go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SPPROXYD $NETPROXY $REUSEKERNEL
     cleanup
-    go test $VERB sigmaos/memfs -start $SIGMACLNTD $NETPROXY $REUSEKERNEL
+    go test $VERB sigmaos/memfs -start $SPPROXYD $NETPROXY $REUSEKERNEL
     cleanup
 
     #
@@ -144,7 +144,7 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in namesrv semclnt chunksrv procclnt ux bootkernelclnt s3 leaderclnt leadertest kvgrp cachedsvcclnt; do
-        go test $VERB sigmaos/$T -start $GVISOR  $SIGMACLNTD $NETPROXY $REUSEKERNEL
+        go test $VERB sigmaos/$T -start $GVISOR  $SPPROXYD $NETPROXY $REUSEKERNEL
         cleanup
     done
 
@@ -152,7 +152,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test npproxy with just named and full kernel
     #
 
-    go test $VERB sigmaos/npproxy -start
+    go test $VERB sigmaos/npproxysrv -start
     cleanup
 
 
@@ -165,7 +165,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test with realms
     #
 
-    go test $VERB sigmaos/realmclnt -start $GVISOR $SIGMACLNTD $NETPROXY $REUSEKERNEL
+    go test $VERB sigmaos/realmclnt -start $GVISOR $SPPROXYD $NETPROXY $REUSEKERNEL
     cleanup
 fi
 
@@ -175,28 +175,28 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        go test $VERB sigmaos/mr -start $GVISOR $SIGMACLNTD $NETPROXY -run MRJob
+        go test $VERB sigmaos/mr -start $GVISOR $SPPROXYD $NETPROXY -run MRJob
         cleanup
-        go test $VERB sigmaos/imgresizesrv -start $GVISOR $SIGMACLNTD $NETPROXY -run ImgdOne
+        go test $VERB sigmaos/imgresizesrv -start $GVISOR $SPPROXYD $NETPROXY -run ImgdOne
         cleanup
-        go test $VERB sigmaos/kv -start $GVISOR $SIGMACLNTD $NETPROXY -run KVOKN
-        cleanup
-        ./start-db.sh
-        go test $VERB sigmaos/hotel -start $GVISOR $SIGMACLNTD $NETPROXY -run TestBenchDeathStarSingle
+        go test $VERB sigmaos/kv -start $GVISOR $SPPROXYD $NETPROXY -run KVOKN
         cleanup
         ./start-db.sh
-       	go test $VERB sigmaos/socialnetwork -start $GVISOR $SIGMACLNTD $NETPROXY -run TestCompose
+        go test $VERB sigmaos/hotel -start $GVISOR $SPPROXYD $NETPROXY -run TestBenchDeathStarSingle
+        cleanup
+        ./start-db.sh
+       	go test $VERB sigmaos/socialnetwork -start $GVISOR $SPPROXYD $NETPROXY -run TestCompose
         cleanup
     else
         for T in imgresizesrv mr hotel socialnetwork www; do
             ./start-db.sh
-            go test -timeout 20m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD $NETPROXY $REUSEKERNEL
+            go test -timeout 20m $VERB sigmaos/$T -start $GVISOR $SPPROXYD $NETPROXY $REUSEKERNEL
             cleanup
         done
         # On machines with many cores, kv tests may take a long time.
         for T in kv; do
             ./start-db.sh
-            go test -timeout 50m $VERB sigmaos/$T -start $GVISOR $SIGMACLNTD $NETPROXY $REUSEKERNEL
+            go test -timeout 50m $VERB sigmaos/$T -start $GVISOR $SPPROXYD $NETPROXY $REUSEKERNEL
             cleanup
         done
     fi

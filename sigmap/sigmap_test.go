@@ -32,7 +32,7 @@ func TestNamedAddrs(t *testing.T) {
 	log.Printf("s %v -> %v %v\n", s, as[0], as[1])
 }
 
-func TestIsSigmaClntdKernel(t *testing.T) {
-	sckid := sp.SigmaClntdKernel("sigma-1c80")
-	assert.True(t, strings.HasPrefix(sckid, sp.SIGMACLNTDKERNEL))
+func TestIsSPProxydKernel(t *testing.T) {
+	sckid := sp.SPProxydKernel("sigma-1c80")
+	assert.True(t, strings.HasPrefix(sckid, sp.SPPROXYDKERNEL))
 }

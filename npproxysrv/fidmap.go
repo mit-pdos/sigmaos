@@ -1,4 +1,4 @@
-package npproxy
+package npproxysrv
 
 import (
 	db "sigmaos/debug"

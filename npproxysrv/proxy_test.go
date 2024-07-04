@@ -1,4 +1,4 @@
-package npproxy_test
+package npproxysrv_test
 
 import (
 	"os"

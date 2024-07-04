@@ -4,7 +4,7 @@
 // All fid-based operations are inherited from [fidclnt].
 //
 // A typical use case is that each pathclnt has its own fidclnt.
-// [sigmaclntd], however, shares a fidclnt among all its pathclnts,
+// [spproxyd], however, shares a fidclnt among all its pathclnts,
 // allows pathclnts to share a single TCP connection to a server.
 package pathclnt
 

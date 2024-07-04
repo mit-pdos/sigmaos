@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|minnode|named|realm|sigmaclntd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|node|minnode|named|realm|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -37,8 +37,8 @@ while [[ "$#" -gt 1 ]]; do
         "named")
             BOOT="knamed"
             ;;
-        "sigmaclntd")
-            BOOT="sigmaclntd"
+        "spproxyd")
+            BOOT="spproxyd"
             ;;
         "realm")
             BOOT="knamed;procq;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
@@ -111,9 +111,9 @@ fi
 KERNELID=$1
 
 mkdir -p /tmp/sigmaos
-# Perhaps /tmp/sigmaclntd should not always be mounted/should not be mounted by
+# Perhaps /tmp/spproxyd should not always be mounted/should not be mounted by
 # every kernel instance on a machine?
-mkdir -p /tmp/sigmaclntd
+mkdir -p /tmp/spproxyd
 mkdir -p /tmp/sigmaos-bin
 mkdir -p /tmp/sigmaos-bin/$KERNELID
 mkdir -p /tmp/sigmaos-perf
@@ -144,7 +144,7 @@ fi
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
   --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos \
-  --mount type=bind,src=/tmp/sigmaclntd,dst=/tmp/sigmaclntd \
+  --mount type=bind,src=/tmp/spproxyd,dst=/tmp/spproxyd \
   --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data \
   --mount type=bind,src=/tmp/sigmaos-bin/${KERNELID},dst=/home/sigmaos/bin/user/realms \
   --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf \

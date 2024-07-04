@@ -25,14 +25,14 @@ RUN mkdir bin && \
 # ========== local user image ==========
 FROM base AS sigmauser-local
 RUN mkdir jail && \
-    mkdir /tmp/sigmaclntd
+    mkdir /tmp/spproxyd
 
 # ========== remote user image ==========
 FROM sigmauser-local AS sigmauser-remote
 # Copy uprocd, the entrypoint for this container, to the user image.
 COPY bin/kernel/uprocd bin/kernel/
-# Copy sigmaclntd to the user image.
-COPY bin/kernel/sigmaclntd bin/kernel/
+# Copy spproxyd to the user image.
+COPY bin/kernel/spproxyd bin/kernel/
 ## Copy rust trampoline to the user image.
 COPY bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/
 ## Copy binfsd to the user image.

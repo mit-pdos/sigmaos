@@ -134,7 +134,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
 	p.ProcEnvProto.Version = parentPE.Version
 	p.ProcEnvProto.Overlays = parentPE.Overlays
-	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
+	p.ProcEnvProto.UseSPProxy = parentPE.UseSPProxy
 	// Don't override intentionally set net proxy settings
 	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
@@ -227,7 +227,7 @@ func (p *Proc) String() string {
 		"Priv:%t "+
 		"SigmaPath:%v "+
 		"KernelId:%v "+
-		"UseSigmaclntd:%v "+
+		"UseSPProxy:%v "+
 		"UseNetProxy:%v "+
 		"Realm:%v "+
 		"Perf:%v "+
@@ -245,7 +245,7 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.Privileged,
 		p.ProcEnvProto.GetSigmaPath(),
 		p.ProcEnvProto.KernelID,
-		p.ProcEnvProto.UseSigmaclntd,
+		p.ProcEnvProto.UseSPProxy,
 		p.ProcEnvProto.UseNetProxy,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.GetPerf(),

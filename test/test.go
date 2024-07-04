@@ -37,7 +37,7 @@ var tag string
 var EtcdIP string
 var Overlays bool
 var GVisor bool
-var useSigmaclntd bool
+var useSPProxy bool
 var noNetProxy bool
 
 func init() {
@@ -49,7 +49,7 @@ func init() {
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
 	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
 	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
-	flag.BoolVar(&useSigmaclntd, "usesigmaclntd", false, "Use sigmaclntd?")
+	flag.BoolVar(&useSPProxy, "usespproxy", false, "Use spproxy?")
 	flag.BoolVar(&noNetProxy, "nonetproxy", false, "Disable use of proxy for network dialing/listening?")
 }
 
@@ -188,7 +188,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
 	useNetProxy := !noNetProxy
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSigmaclntd, useNetProxy)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSPProxy, useNetProxy)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	var kernelid string
 	var k *bootkernelclnt.Kernel
@@ -202,17 +202,17 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	var scsck *bootkernelclnt.Kernel
 	var sckid string
-	if useSigmaclntd || useNetProxy {
-		db.DPrintf(db.BOOT, "Booting sigmaclntd: usesigmaclntd %v usenetproxy %v", useSigmaclntd, useNetProxy)
-		sckid = sp.SigmaClntdKernel(bootkernelclnt.GenKernelId())
-		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SIGMACLNTDREL, Overlays, GVisor, useNetProxy)
+	if useSPProxy || useNetProxy {
+		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usenetproxy %v", useSPProxy, useNetProxy)
+		sckid = sp.SPProxydKernel(bootkernelclnt.GenKernelId())
+		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, Overlays, GVisor, useNetProxy)
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error start kernel for sigmaclntd")
+			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
 			return nil, err
 		}
 		scsck, err = bootkernelclnt.NewKernelClnt(sckid, sp.Tip(EtcdIP), pe)
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error make kernel clnt for sigmaclntd")
+			db.DPrintf(db.ALWAYS, "Error make kernel clnt for spproxyd")
 			return nil, err
 		}
 	}
@@ -328,7 +328,7 @@ func (ts *Tstate) Shutdown() error {
 		}
 		if ts.scsck != nil {
 			if err := ts.scsck.Shutdown(); err != nil {
-				db.DPrintf(db.ALWAYS, "Shutdown sigmaclntd err %v", err)
+				db.DPrintf(db.ALWAYS, "Shutdown spproxyd err %v", err)
 			}
 			ts.scsck.Close()
 		}

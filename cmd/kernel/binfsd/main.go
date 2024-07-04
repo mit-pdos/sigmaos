@@ -5,8 +5,8 @@ package main
 import (
 	"os"
 
-	"sigmaos/binsrv"
 	db "sigmaos/debug"
+	"sigmaos/uprocsrv/binsrv"
 )
 
 func main() {

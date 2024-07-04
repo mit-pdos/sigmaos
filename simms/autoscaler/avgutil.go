@@ -30,6 +30,7 @@ type AvgUtilAutoscaler struct {
 	t          *uint64
 	svc        *simms.Microservice
 	p          *AvgUtilAutoscalerParams
+	ctx        *Ctx
 	run        bool
 	nScaleUp   int
 	nScaleDown int
@@ -41,6 +42,7 @@ func NewAvgUtilAutoscaler(t *uint64, asp *AvgUtilAutoscalerParams, svc *simms.Mi
 		t:          t,
 		svc:        svc,
 		p:          asp,
+		ctx:        NewCtx(t, svc.GetID()),
 		run:        false,
 		nScaleUp:   0,
 		nScaleDown: 0,
@@ -60,10 +62,10 @@ func (ua *AvgUtilAutoscaler) Tick() {
 	if *ua.t%uint64(ua.p.ScaleFreq) != 0 {
 		return
 	}
-	db.DPrintf(db.SIM_AUTOSCALE, "[t=%v,svc=%v] Run AvgUtilAutoscaler", *ua.t, ua.svc.GetID())
+	db.DPrintf(db.SIM_AUTOSCALE, "%v Run AvgUtilAutoscaler", ua.ctx)
 	istats := ua.svc.GetInstanceStats()
 	d, n := ua.getScalingDecision(istats)
-	db.DPrintf(db.SIM_AUTOSCALE, "[t=%v,svc=%v] AvgUtilAutoscaler scaling decision (%v, %v)", *ua.t, ua.svc.GetID(), d, n)
+	db.DPrintf(db.SIM_AUTOSCALE, "%v AvgUtilAutoscaler scaling decision (%v, %v)", ua.ctx, d, n)
 	switch d {
 	case SCALE_UP:
 		for i := 0; i < n; i++ {
@@ -82,9 +84,9 @@ func (ua *AvgUtilAutoscaler) Tick() {
 func (ua *AvgUtilAutoscaler) getScalingDecision(istats []*simms.ServiceInstanceStats) (scalingDecision, int) {
 	readyIStats := getReadyInstanceStats(*ua.t, istats)
 	currentNReplicas := len(readyIStats)
-	currentUtil := avgUtil(*ua.t, ua.p.UtilWindowSize, readyIStats)
-	desiredNReplicas := k8sCalcDesiredNReplicas(currentNReplicas, currentUtil, ua.p.TargetUtil, DEFAULT_TOLERANCE)
-	db.DPrintf(db.SIM_AUTOSCALE, "[t=%v,svc=%v] AvgUtilAutoscaler currentUtil:%v targetUtil:%v, currentNReplicas:%v desiredNReplicas:%v", *ua.t, ua.svc.GetID(), currentUtil, ua.p.TargetUtil, currentNReplicas, desiredNReplicas)
+	currentUtil := avgUtil(ua.ctx, *ua.t, ua.p.UtilWindowSize, readyIStats)
+	desiredNReplicas := k8sCalcDesiredNReplicas(ua.ctx, currentNReplicas, currentUtil, ua.p.TargetUtil, DEFAULT_TOLERANCE)
+	db.DPrintf(db.SIM_AUTOSCALE, "%v AvgUtilAutoscaler currentUtil:%v targetUtil:%v, currentNReplicas:%v desiredNReplicas:%v", ua.ctx, currentUtil, ua.p.TargetUtil, currentNReplicas, desiredNReplicas)
 	if desiredNReplicas > currentNReplicas {
 		return SCALE_UP, desiredNReplicas - currentNReplicas
 	}
@@ -96,12 +98,12 @@ func (ua *AvgUtilAutoscaler) getScalingDecision(istats []*simms.ServiceInstanceS
 
 func (ua *AvgUtilAutoscaler) Start() {
 	ua.run = true
-	db.DPrintf(db.SIM_AUTOSCALE, "[t=%v,svc=%v] Start AvgUtilAutoscaler", *ua.t, ua.svc.GetID())
+	db.DPrintf(db.SIM_AUTOSCALE, "%v Start AvgUtilAutoscaler", ua.ctx)
 }
 
 func (ua *AvgUtilAutoscaler) Stop() {
 	ua.run = false
-	db.DPrintf(db.SIM_AUTOSCALE, "[t=%v,svc=%v] Stop AvgUtilAutoscaler", *ua.t, ua.svc.GetID())
+	db.DPrintf(db.SIM_AUTOSCALE, "%v Stop AvgUtilAutoscaler", ua.ctx)
 }
 
 func (ua *AvgUtilAutoscaler) NScaleUpEvents() int {

@@ -22,13 +22,18 @@ func avgInstanceUtilInWindow(startT uint64, endT uint64, istat *simms.ServiceIns
 
 // Calculate the average util across a set of ready service instances, for a
 // given window of ticks
-func avgUtil(currentT uint64, windowSize uint64, istats []*simms.ServiceInstanceStats) float64 {
+func avgUtil(ctx *Ctx, currentT uint64, windowSize uint64, istats []*simms.ServiceInstanceStats) float64 {
 	if currentT < windowSize {
 		db.DFatalf("Calculate avg util for window of size > current time: %v > %v", windowSize, currentT)
 	}
-	util := 0.0
+	utils := make([]float64, 0, len(istats))
 	for _, istat := range istats {
-		util += avgInstanceUtilInWindow(currentT-windowSize, currentT, istat)
+		utils = append(utils, avgInstanceUtilInWindow(currentT-windowSize, currentT, istat))
+	}
+	db.DPrintf(db.SIM_AUTOSCALE, "%v Instance avg utils: %v", ctx, utils)
+	util := 0.0
+	for _, u := range utils {
+		util += u
 	}
 	util /= float64(len(istats))
 	return util

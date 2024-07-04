@@ -63,8 +63,7 @@ fn main() {
     let principal_id = env::var("SIGMAPRINCIPAL").unwrap_or("NO_PRINCIPAL_IN_ENV".to_string());
     let principal_id_frame_nbytes = (principal_id.len() + 4) as i32;
     // Connect to the netproxy socket
-    let mut netproxy_conn =
-        UnixStream::connect("/tmp/sigmaclntd/sigmaclntd-netproxy.sock").unwrap();
+    let mut netproxy_conn = UnixStream::connect("/tmp/spproxyd/spproxyd-netproxy.sock").unwrap();
     // Write frame containing principal ID to socket
     netproxy_conn
         .write_all(&i32::to_le_bytes(principal_id_frame_nbytes))

@@ -1,7 +1,7 @@
-// Package sigmaclntsrv is an RPC-based server that proxies the
+// Package spproxysrv is an RPC-based server that proxies the
 // [sigmaos] interface over a pipe; it reads requests on stdin and
 // write responses to stdout.
-package sigmaclntsrv
+package spproxysrv
 
 import (
 	"io"
@@ -20,31 +20,31 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// SigmaClntSrv maintains the state of the sigmaclntsrv. All
+// SPProxySrv maintains the state of the spproxysrv. All
 // SigmaSrvClnt's share one fid table
-type SigmaClntSrv struct {
+type SPProxySrv struct {
 	pe   *proc.ProcEnv
 	nps  *netproxysrv.NetProxySrv
 	fidc *fidclnt.FidClnt
 }
 
-func newSigmaClntSrv() (*SigmaClntSrv, error) {
+func newSPProxySrv() (*SPProxySrv, error) {
 	pe := proc.GetProcEnv()
 	nps, err := netproxysrv.NewNetProxySrv(pe)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewNetProxySrv: %v", err)
 		return nil, err
 	}
-	scs := &SigmaClntSrv{
+	scs := &SPProxySrv{
 		pe:   pe,
 		nps:  nps,
 		fidc: fidclnt.NewFidClnt(pe, netproxyclnt.NewNetProxyClnt(pe)),
 	}
-	db.DPrintf(db.SIGMACLNTSRV, "newSigmaClntSrv ProcEnv:%v", pe)
+	db.DPrintf(db.SPPROXYSRV, "newSPProxySrv ProcEnv:%v", pe)
 	return scs, nil
 }
 
-func (scs *SigmaClntSrv) runServer() error {
+func (scs *SPProxySrv) runServer() error {
 	socket, err := net.Listen("unix", sp.SIGMASOCKET)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (scs *SigmaClntSrv) runServer() error {
 	if err := os.Chmod(sp.SIGMASOCKET, 0777); err != nil {
 		db.DFatalf("Err chmod sigmasocket: %v", err)
 	}
-	db.DPrintf(db.TEST, "runServer: sigmaclntd listening on %v", sp.SIGMASOCKET)
+	db.DPrintf(db.TEST, "runServer: spproxyd listening on %v", sp.SIGMASOCKET)
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
 		return err
 	}
@@ -60,9 +60,9 @@ func (scs *SigmaClntSrv) runServer() error {
 	go func() {
 		buf := make([]byte, 1)
 		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
-			db.DPrintf(db.SIGMACLNTSRV_ERR, "read pipe err %v\n", err)
+			db.DPrintf(db.SPPROXYSRV_ERR, "read pipe err %v\n", err)
 		}
-		db.DPrintf(db.SIGMACLNTSRV, "exiting")
+		db.DPrintf(db.SPPROXYSRV, "exiting")
 		os.Remove(sp.SIGMASOCKET)
 		scs.fidc.Close()
 		scs.nps.Shutdown()
@@ -78,28 +78,28 @@ func (scs *SigmaClntSrv) runServer() error {
 	}
 }
 
-// The sigmaclntd process enter here
-func RunSigmaClntSrv() error {
-	scs, err := newSigmaClntSrv()
+// The spproxyd process enter here
+func RunSPProxySrv() error {
+	scs, err := newSPProxySrv()
 	if err != nil {
-		db.DPrintf(db.SIGMACLNTSRV, "runServer err %v\n", err)
+		db.DPrintf(db.SPPROXYSRV, "runServer err %v\n", err)
 		return err
 	}
 	// Perf monitoring
-	p, err := perf.NewPerf(scs.pe, perf.SIGMACLNTSRV)
+	p, err := perf.NewPerf(scs.pe, perf.SPPROXYSRV)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
 
 	if err := scs.runServer(); err != nil {
-		db.DPrintf(db.SIGMACLNTSRV, "runServer err %v\n", err)
+		db.DPrintf(db.SPPROXYSRV, "runServer err %v\n", err)
 		return err
 	}
 	return nil
 }
 
-type SigmaClntSrvCmd struct {
+type SPProxySrvCmd struct {
 	p      *proc.Proc
 	cmd    *exec.Cmd
 	out    io.WriteCloser
@@ -121,70 +121,70 @@ type Subsystem interface {
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
 
-func (scsc *SigmaClntSrvCmd) GetProc() *proc.Proc {
+func (scsc *SPProxySrvCmd) GetProc() *proc.Proc {
 	return scsc.p
 }
 
-func (scsc *SigmaClntSrvCmd) GetHow() proc.Thow {
+func (scsc *SPProxySrvCmd) GetHow() proc.Thow {
 	return proc.HLINUX
 }
 
-func (scsc *SigmaClntSrvCmd) GetCrashed() bool {
+func (scsc *SPProxySrvCmd) GetCrashed() bool {
 	return false
 }
 
-func (scsc *SigmaClntSrvCmd) GetContainer() *container.Container {
+func (scsc *SPProxySrvCmd) GetContainer() *container.Container {
 	db.DFatalf("No container")
 	return nil
 }
 
-func (scsc *SigmaClntSrvCmd) SetWaited(w bool) {
+func (scsc *SPProxySrvCmd) SetWaited(w bool) {
 	scsc.waited = w
 }
 
-func (scsc *SigmaClntSrvCmd) GetWaited() bool {
+func (scsc *SPProxySrvCmd) GetWaited() bool {
 	return scsc.waited
 }
 
-func (scsc *SigmaClntSrvCmd) Evict() error {
+func (scsc *SPProxySrvCmd) Evict() error {
 	// Do nothing
 	return nil
 }
 
-func (scsc *SigmaClntSrvCmd) Wait() error {
+func (scsc *SPProxySrvCmd) Wait() error {
 	return scsc.Shutdown()
 }
 
-func (scsc *SigmaClntSrvCmd) Kill() error {
+func (scsc *SPProxySrvCmd) Kill() error {
 	db.DFatalf("Unimplemented")
 	return nil
 }
 
-func (scsc *SigmaClntSrvCmd) SetCPUShares(shares int64) error {
+func (scsc *SPProxySrvCmd) SetCPUShares(shares int64) error {
 	db.DFatalf("Unimplemented")
 	return nil
 }
 
-func (scsc *SigmaClntSrvCmd) GetCPUUtil() (float64, error) {
+func (scsc *SPProxySrvCmd) GetCPUUtil() (float64, error) {
 	db.DFatalf("Unimplemented")
 	return 0, nil
 }
 
-func (scsc *SigmaClntSrvCmd) GetPortBinding(p sp.Tport) (*port.PortBinding, error) {
+func (scsc *SPProxySrvCmd) GetPortBinding(p sp.Tport) (*port.PortBinding, error) {
 	db.DFatalf("Unimplemented")
 	return nil, nil
 }
 
-func (scsc *SigmaClntSrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip) error {
+func (scsc *SPProxySrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip) error {
 	db.DFatalf("Unimplemented")
 	return nil
 }
 
-// Start the sigmaclntd process
-func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) (*SigmaClntSrvCmd, error) {
+// Start the spproxyd process
+func ExecSPProxySrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) (*SPProxySrvCmd, error) {
 	p.FinalizeEnv(innerIP, outerIP, uprocdPid)
-	db.DPrintf(db.SIGMACLNTSRV, "ExecSigmaclntsrv: %v", p)
-	cmd := exec.Command("sigmaclntd")
+	db.DPrintf(db.SPPROXYSRV, "ExecSPProxySrv: %v", p)
+	cmd := exec.Command("spproxyd")
 	cmd.Env = p.GetEnv()
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -201,17 +201,17 @@ func ExecSigmaClntSrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp
 	}
 	buf := make([]byte, 1)
 	if _, err := io.ReadFull(stdout, buf); err != nil {
-		db.DPrintf(db.SIGMACLNTSRV, "read pipe err %v\n", err)
+		db.DPrintf(db.SPPROXYSRV, "read pipe err %v\n", err)
 		return nil, err
 	}
-	return &SigmaClntSrvCmd{
+	return &SPProxySrvCmd{
 		p:   p,
 		cmd: cmd,
 		out: stdin,
 	}, nil
 }
 
-func (scsc *SigmaClntSrvCmd) Shutdown() error {
+func (scsc *SPProxySrvCmd) Shutdown() error {
 	if _, err := io.WriteString(scsc.out, "e"); err != nil {
 		return err
 	}

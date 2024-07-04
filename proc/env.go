@@ -73,7 +73,7 @@ func GetLabels(s string) map[string]bool {
 	return m
 }
 
-func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, overlays, useSigmaclntd bool, useNetProxy bool) *ProcEnv {
+func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, overlays, useSPProxy bool, useNetProxy bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
@@ -94,7 +94,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			UprocdPIDStr:        sp.NOT_SET,
 			Privileged:          priv,
 			Overlays:            overlays,
-			UseSigmaclntd:       useSigmaclntd,
+			UseSPProxy:          useSPProxy,
 			UseNetProxy:         useNetProxy,
 			SecretsMap:          nil,
 			SigmaPath:           []string{},
@@ -130,7 +130,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto
 	return pe
 }
 
-func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSigmaclntd bool, useNetProxy bool) *ProcEnv {
+func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSPProxy bool, useNetProxy bool) *ProcEnv {
 	pe := NewProcEnvUnset(true, overlays)
 	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), realm))
 	pe.SetSecrets(secrets)
@@ -143,7 +143,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnt
 	pe.Program = "test"
 	pe.ProcDir = filepath.Join(sp.KPIDS, pe.GetPID().String())
 	pe.HowInt = int32(TEST)
-	pe.UseSigmaclntd = useSigmaclntd
+	pe.UseSPProxy = useSPProxy
 	pe.SetSigmaPath(buildTag)
 	pe.UseNetProxy = useNetProxy
 	return pe
@@ -368,7 +368,7 @@ func (pe *ProcEnv) String() string {
 		"Crash:%v "+
 		"Partition:%v "+
 		"NetFail:%v "+
-		"UseSigmaclntd:%v "+
+		"UseSPProxy:%v "+
 		"UseNetProxy:%v "+
 		"SigmaPath:%v "+
 		"RealmSwitch:%v"+
@@ -394,7 +394,7 @@ func (pe *ProcEnv) String() string {
 		pe.Crash,
 		pe.Partition,
 		pe.NetFail,
-		pe.UseSigmaclntd,
+		pe.UseSPProxy,
 		pe.UseNetProxy,
 		pe.SigmaPath,
 		pe.RealmSwitchStr,

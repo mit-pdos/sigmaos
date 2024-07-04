@@ -36,7 +36,7 @@ message ProcEnvProto {
   string strace = 22;
   TendpointProto scheddEndpointProto = 23;
   TendpointProto namedEndpointProto = 24;
-  bool useSigmaclntd = 25;
+  bool useSPProxy = 25;
   bool useNetProxy = 26;
   map<string, SecretProto> secretsMap = 27;
   repeated string sigmaPath = 28;

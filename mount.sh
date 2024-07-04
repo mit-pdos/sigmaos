@@ -32,7 +32,7 @@ done
 
 if [[ "$BOOT" == "--boot" ]] ; then
     (cd npproxy; ../start-kernel.sh --pull local-build --boot all --usenetproxy sigma-named )
-    (cd npproxy; ../start-kernel.sh --pull local-build --boot sigmaclntd --usenetproxy sigma-scd )
+    (cd npproxy; ../start-kernel.sh --pull local-build --boot spproxyd --usenetproxy sigma-scd )
 fi
 
 ./bin/npproxy/npproxyd $1 &

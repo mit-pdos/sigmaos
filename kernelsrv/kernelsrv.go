@@ -67,12 +67,12 @@ func (ks *KernelSrv) EvictKernelProc(ctx fs.CtxI, req proto.EvictKernelProcReque
 }
 
 func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
-	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown (sigmaclntd %t)", ks.k.Param.KernelID, ks.k.IsPurelySigmaclntdKernel())
-	if ks.k.IsPurelySigmaclntdKernel() {
+	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown (spproxyd %t)", ks.k.Param.KernelID, ks.k.IsPurelySPProxydKernel())
+	if ks.k.IsPurelySPProxydKernel() {
 		// This is the last container to shut down, so no named isn't up anymore.
 		// Normal shutdown would involve ending leases, etc., which takes a long
-		// time. Instead, shortcut this by killing sigmaclntd and just exiting.
-		db.DPrintf(db.KERNEL, "Shutdown sigmaclntd kernelsrv")
+		// time. Instead, shortcut this by killing spproxyd and just exiting.
+		db.DPrintf(db.KERNEL, "Shutdown spproxyd kernelsrv")
 	} else {
 		if err := ks.k.Remove(sp.BOOT + ks.k.Param.KernelID); err != nil {
 			db.DPrintf(db.KERNEL, "%v: kernelsrv shutdown remove err %v", ks.k.Param.KernelID, err)

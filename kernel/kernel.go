@@ -89,9 +89,9 @@ func NewKernel(p *Param, pe *proc.ProcEnv) (*Kernel, error) {
 		}
 		db.DPrintf(db.KERNEL, "NewKernel: switch to named\n")
 	}
-	// Eagerly remove kernel's proc dir if this is just a sigmaclntd kernel
+	// Eagerly remove kernel's proc dir if this is just a spproxyd kernel
 	// since it isn't needed (and otherwise will slow down shutdown)
-	if k.IsPurelySigmaclntdKernel() {
+	if k.IsPurelySPProxydKernel() {
 		if err := k.RmDir(k.ProcEnv().ProcDir); err != nil {
 			db.DPrintf(db.KERNEL, "Failed to clean up sigmaclntkernel procdir %v err %v", k.ProcEnv().ProcDir, err)
 		}
@@ -103,9 +103,9 @@ func (k *Kernel) Ip() sp.Tip {
 	return k.ip
 }
 
-func (k *Kernel) IsPurelySigmaclntdKernel() bool {
-	db.DPrintf(db.KERNEL, "Check is sigmaclntd kernel: %v", k.Param.Services)
-	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.SIGMACLNTDREL
+func (k *Kernel) IsPurelySPProxydKernel() bool {
+	db.DPrintf(db.KERNEL, "Check is spproxyd kernel: %v", k.Param.Services)
+	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.SPPROXYDREL
 }
 
 func (k *Kernel) Shutdown() error {
@@ -190,8 +190,8 @@ func (k *Kernel) shutdown() {
 			db.DPrintf(db.KERNEL, "Evicted %v", pid)
 		}
 	}
-	// A purely sigmaclntd kernel won't have a procdir
-	if !k.IsPurelySigmaclntdKernel() {
+	// A purely spproxyd kernel won't have a procdir
+	if !k.IsPurelySPProxydKernel() {
 		if err := k.RmDir(k.ProcEnv().ProcDir); err != nil {
 			db.DPrintf(db.KERNEL, "Failed to clean up %v err %v", k.ProcEnv().ProcDir, err)
 		}

@@ -27,9 +27,9 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/spproxysrv"
 	"sigmaos/syncmap"
 	"sigmaos/uprocsrv/proto"
 )
@@ -79,27 +79,27 @@ type UprocSrv struct {
 	ssrv           *sigmasrv.SigmaSrv
 	kc             *kernelclnt.KernelClnt
 	sc             *sigmaclnt.SigmaClnt
-	scsc           *sigmaclntsrv.SigmaClntSrvCmd
+	scsc           *spproxysrv.SPProxySrvCmd
 	binsrv         *exec.Cmd
 	kernelId       string
 	realm          sp.Trealm
 	netproxy       bool
-	sigmaclntdPID  sp.Tpid
+	spproxydPID    sp.Tpid
 	schedPolicySet bool
 	procs          *syncmap.SyncMap[int, *procEntry]
 	ckclnt         *chunkclnt.ChunkClnt
 }
 
-func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpid) error {
+func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{
-		kernelId:      kernelId,
-		netproxy:      netproxy,
-		ch:            make(chan struct{}),
-		pe:            pe,
-		sigmaclntdPID: sigmaclntdPID,
-		realm:         sp.NOREALM,
-		procs:         syncmap.NewSyncMap[int, *procEntry](),
+		kernelId:    kernelId,
+		netproxy:    netproxy,
+		ch:          make(chan struct{}),
+		pe:          pe,
+		spproxydPID: spproxydPID,
+		realm:       sp.NOREALM,
+		procs:       syncmap.NewSyncMap[int, *procEntry](),
 	}
 
 	// Set inner container IP as soon as uprocsrv starts up
@@ -174,10 +174,10 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, sigmaclntdPID sp.Tpi
 		return err
 	}
 
-	scdp := proc.NewPrivProcPid(ups.sigmaclntdPID, "sigmaclntd", nil, true)
+	scdp := proc.NewPrivProcPid(ups.spproxydPID, "spproxyd", nil, true)
 	scdp.InheritParentProcEnv(ups.pe)
 	scdp.SetHow(proc.HLINUX)
-	scsc, err := sigmaclntsrv.ExecSigmaClntSrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	scsc, err := spproxysrv.ExecSPProxySrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
 	if err != nil {
 		return err
 	}

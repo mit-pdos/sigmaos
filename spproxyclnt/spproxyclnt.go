@@ -1,7 +1,7 @@
-// Package sigmaclntclnt is an RPC-based client for proxing the
+// Package spproxyclnt is an RPC-based client for proxing the
 // [sigmaos] interface. It sends request to [sigmclntsrv], which has a
 // full sigmaclnt to interact with SigmaOS.
-package sigmaclntclnt
+package spproxyclnt
 
 import (
 	"fmt"
@@ -15,8 +15,8 @@ import (
 	"sigmaos/rpcclnt"
 	"sigmaos/sessp"
 	"sigmaos/sigmaclntcodec"
-	scproto "sigmaos/sigmaclntsrv/proto"
 	sp "sigmaos/sigmap"
+	spproto "sigmaos/spproxysrv/proto"
 )
 
 type SigmaClntClnt struct {
@@ -81,11 +81,11 @@ func (scc *SigmaClntClnt) ReportError(err error) {
 	}()
 }
 
-// Tell sigmaclntd to shut down
+// Tell spproxyd to shut down
 func (scc *SigmaClntClnt) Shutdown() error {
-	req := scproto.SigmaNullRequest{}
-	rep := scproto.SigmaErrReply{}
-	err := scc.rpcErr("SigmaClntSrvAPI.Shutdown", &req, &rep)
+	req := spproto.SigmaNullRequest{}
+	rep := spproto.SigmaErrReply{}
+	err := scc.rpcErr("SPProxySrvAPI.Shutdown", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "Shutdown %v %v %v", req, rep, err)
 	return err
 }

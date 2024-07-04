@@ -177,7 +177,7 @@ echo "========== Copying kernel bins for uprocd =========="
 if [ "${TARGET}" == "local" ]; then
   sudo cp $ROOT/create-net.sh $KERNELBIN/
   cp $KERNELBIN/uprocd $UPROCD_BIN/
-  cp $KERNELBIN/sigmaclntd $UPROCD_BIN/
+  cp $KERNELBIN/spproxyd $UPROCD_BIN/
   cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
   cp $KERNELBIN/binfsd $UPROCD_BIN/
 fi

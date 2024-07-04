@@ -40,10 +40,10 @@ if mount | grep -q 9p; then
 fi
 
 pgrep -x npproxyd > /dev/null && killall -9 npproxyd
-pgrep -x sigmaclntd > /dev/null && killall -9 sigmaclntd
+pgrep -x spproxyd > /dev/null && killall -9 spproxyd
 
-sudo rm -f /tmp/sigmaclntd/sigmaclntd.sock
-sudo rm -f /tmp/sigmaclntd/sigmaclntd-netproxy.sock
+sudo rm -f /tmp/spproxyd/spproxyd.sock
+sudo rm -f /tmp/spproxyd/spproxyd-netproxy.sock
 
 if docker ps -a | grep -qE 'sigma|uprocd|bootkerne'; then
   for container in $(docker ps -a | grep -E 'sigma|uprocd|bootkerne' | cut -d ' ' -f1) ; do

@@ -14,8 +14,8 @@ import (
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/sigmaclntclnt"
 	sos "sigmaos/sigmaos"
+	"sigmaos/spproxyclnt"
 )
 
 func init() {
@@ -47,8 +47,8 @@ type SigmaClntKernel struct {
 func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
 	var s sos.FileAPI
-	if pe.UseSigmaclntd {
-		s, err = sigmaclntclnt.NewSigmaClntClnt(pe, fidc.GetNetProxyClnt())
+	if pe.UseSPProxy {
+		s, err = spproxyclnt.NewSigmaClntClnt(pe, fidc.GetNetProxyClnt())
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
 			return nil, err
@@ -83,7 +83,7 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 	return sc
 }
 
-// Create a SigmaClnt (using sigmaclntd or fdclient), as a proc, without ProcAPI.
+// Create a SigmaClnt (using spproxyclnt or fdclient), as a proc, without ProcAPI.
 func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
 	fidc.NewClnt()
 	fsl, err := newFsLibFidClnt(pe, fidc)

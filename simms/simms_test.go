@@ -446,24 +446,24 @@ func TestAvgUtilAutoscaler(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestAvgUtilAutoscalerOscillation(t *testing.T) {
+func TestAvgUtilAutoscalerPersistentQueueImbalance(t *testing.T) {
 	const (
-		N_TICKS uint64 = 1000
+		N_TICKS uint64 = 5000
 		// Clnt params
-		CLNT_REQ_MEAN float64 = 2
+		CLNT_REQ_MEAN float64 = 45
 		CLNT_REQ_STD  float64 = 0
 		// App params
-		N_SLOTS        int    = 3
+		N_SLOTS        int    = 10
 		P_TIME         uint64 = 2
 		SVC_ID         string = "wfe"
 		STATEFUL       bool   = false
 		SIZE_UP_TIME   uint64 = 0
 		SIZE_DOWN_TIME uint64 = 500
 		// Autoscaler params
-		SCALE_FREQ         int     = 2
-		TARGET_UTIL        float64 = 0.66
+		SCALE_FREQ         int     = 1
+		TARGET_UTIL        float64 = 0.9
 		UTIL_WINDOW_SIZE   uint64  = 1
-		AUTOSCALER_LEAD_IN uint64  = 100 // Number of ticks to wait before starting the autoscaler
+		AUTOSCALER_LEAD_IN uint64  = 10 // Number of ticks to wait before starting the autoscaler
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
@@ -486,7 +486,52 @@ func TestAvgUtilAutoscalerOscillation(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
-	assert.Equal(t, 2, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	assert.Equal(t, 1, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	assert.Equal(t, 9, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
+	assert.Equal(t, 0, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+func TestAvgUtilAutoscalerOscillation(t *testing.T) {
+	const (
+		N_TICKS uint64 = 600
+		// Clnt params
+		CLNT_REQ_MEAN float64 = 45
+		CLNT_REQ_STD  float64 = 0
+		// App params
+		N_SLOTS        int    = 10
+		P_TIME         uint64 = 2
+		SVC_ID         string = "wfe"
+		STATEFUL       bool   = false
+		SIZE_UP_TIME   uint64 = 0
+		SIZE_DOWN_TIME uint64 = 500
+		// Autoscaler params
+		SCALE_FREQ         int     = 1
+		TARGET_UTIL        float64 = 0.5
+		UTIL_WINDOW_SIZE   uint64  = 1
+		AUTOSCALER_LEAD_IN uint64  = 10 // Number of ticks to wait before starting the autoscaler
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
+	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewAvgUtilAutoscalerFn(asp))
+	app := simms.NewSingleTierApp(svc)
+	dc := simms.NewWorkload(&time, app, c)
+	dc.RecordStats(10)
+	for ; time < N_TICKS; time++ {
+		if time == AUTOSCALER_LEAD_IN {
+			svc.GetAutoscaler().Start()
+		}
+		// Run the simulation
+		dc.Tick()
+	}
+	stats := dc.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
+	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
+	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }

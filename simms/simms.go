@@ -14,19 +14,19 @@ func NewWorkload(t *uint64, app *App, clients *Clients) *Workload {
 	}
 }
 
-func (d *Workload) Tick() {
-	reqs := d.clients.Tick(*d.t)
-	d.app.Tick(reqs)
+func (w *Workload) Tick() {
+	reqs := w.clients.Tick(*w.t)
+	w.app.Tick(reqs)
 }
 
-func (d *Workload) GetStats() *ServiceStats {
-	return d.app.GetStats()
+func (w *Workload) GetStats() *ServiceStats {
+	return w.app.GetStats()
 }
 
-func (d *Workload) RecordStats(window int) {
-	d.app.GetStats().RecordStats(window)
+func (w *Workload) RecordStats(window int) {
+	w.app.GetStats().RecordStats(window)
 }
 
-func (d *Workload) StopRecordingStats() {
-	d.app.GetStats().RecordStats(0)
+func (w *Workload) StopRecordingStats() {
+	w.app.GetStats().RecordStats(0)
 }

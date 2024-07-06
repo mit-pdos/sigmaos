@@ -330,7 +330,9 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	defer func() {
 		db.DPrintf(db.SPAWN_LAT, "%v: GetFileStat done: %v lat %v", cksrv.kernelId, req, time.Since(s))
 	}()
-	be, err := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg(), req.GetS3Secret())
+
+	r := sp.Trealm(req.GetRealmStr())
+	be, err := cksrv.getBin(r, req.GetProg(), req.GetS3Secret())
 	if err != nil {
 		return err
 	}
@@ -352,6 +354,14 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 			return err
 		}
 	}
+
+	// Prefetch first chunk
+	go func() {
+		s := time.Now()
+		_, _, err := cksrv.fetchChunk(r, req.GetProg(), sp.Tpid(req.Pid), req.GetS3Secret(), 0, chunk.CHUNKSZ, req.GetSigmaPath())
+		db.DPrintf(db.SPAWN_LAT, "fetchChunk %v err %v lat %v", req.GetProg(), err, time.Since(s))
+	}()
+
 	st, srv, err := cksrv.getFileStat(req)
 	if err != nil {
 		return err

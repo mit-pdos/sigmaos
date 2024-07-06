@@ -155,6 +155,9 @@ func (cksrv *ChunkSrv) getBin(realm sp.Trealm, prog string, s3secret *sp.SecretP
 		r.sc = sc
 	}
 	b, _ := r.bins.AllocNew(prog, newBin)
+	b.Lock()
+	defer b.Unlock()
+	b.sc = r.sc
 	return b, nil
 }
 
@@ -172,8 +175,8 @@ func (cksrv *ChunkSrv) Prefetch(ctx fs.CtxI, req proto.PrefetchRequest, res *pro
 		return err
 	}
 
-	be.mu.Lock()
-	defer be.mu.Unlock()
+	be.Lock()
+	defer be.Unlock()
 
 	if be.st != nil {
 		return nil
@@ -319,20 +322,6 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *prot
 // Handle a GetFileStatRequest
 //
 
-func (cksrv *ChunkSrv) getCache(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) (*sp.Stat, string, bool) {
-	be, err := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg(), req.GetS3Secret())
-	if err != nil {
-		return nil, "", false
-	}
-	be.mu.Lock()
-	defer be.mu.Unlock()
-	if be.st == nil {
-		return nil, "", false
-	}
-	db.DPrintf(db.CHUNKSRV, "%v: getCache: hit %v", cksrv.kernelId, req.GetProg())
-	return be.st, cksrv.path, true
-}
-
 func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3secret *sp.SecretProto) (*sp.Stat, string, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: getOrigin %v %v", cksrv.kernelId, prog, paths)
 	sc, err := cksrv.realms.getSc(r)
@@ -347,7 +336,7 @@ func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3sec
 	return st, path, nil
 }
 
-func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
+func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) (*sp.Tstat, string, error) {
 	r := sp.Trealm(req.GetRealmStr())
 	paths := req.GetSigmaPath()
 	if req.SigmaPath[0] == cksrv.path {
@@ -356,7 +345,7 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 	}
 
 	if len(paths) == 0 {
-		return serr.NewErr(serr.TErrNotfound, req.GetProg())
+		return nil, "", serr.NewErr(serr.TErrNotfound, req.GetProg())
 	}
 
 	ok := false
@@ -366,7 +355,7 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 	for IsChunkSrvPath(paths[0]) {
 		s := filepath.Base(paths[0])
 		srv = paths[0]
-		st, _, err = cksrv.ckclnt.GetFileStat(s, req.Prog, sp.Tpid(req.Pid), r, req.GetS3Secret(), []string{srv})
+		st, _, err = cksrv.ckclnt.GetFileStat(s, req.Prog, sp.Tpid(req.Pid), r, req.GetS3Secret(), []string{srv}, nil)
 		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: chunkd %v st %v err %v", cksrv.kernelId, paths[0], st, err)
 		if err == nil {
 			ok = true
@@ -380,20 +369,11 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetF
 		st, srv, err = cksrv.getOrigin(r, req.GetProg(), paths, req.GetS3Secret())
 		db.DPrintf(db.SPAWN_LAT, "[%v] getFileStat lat %v: origin %v err %v", req.Prog, time.Since(s), paths, err)
 		if err != nil {
-			return err
+			return nil, "", err
 		}
 	}
 	db.DPrintf(db.CHUNKSRV, "%v: getFileStat pid %v st %v", cksrv.kernelId, req.Pid, st)
-	be, err := cksrv.getBin(r, req.GetProg(), req.GetS3Secret())
-	if err != nil {
-		return err
-	}
-	be.mu.Lock()
-	defer be.mu.Unlock()
-	be.st = st
-	res.Stat = be.st.StatProto()
-	res.Path = srv
-	return nil
+	return st, srv, nil
 }
 
 func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
@@ -402,13 +382,37 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	defer func() {
 		db.DPrintf(db.SPAWN_LAT, "%v: GetFileStat done: %v lat %v", cksrv.kernelId, req, time.Since(s))
 	}()
-	st, path, ok := cksrv.getCache(req, res)
+	be, err := cksrv.getBin(sp.Trealm(req.GetRealmStr()), req.GetProg(), req.GetS3Secret())
+	if err != nil {
+		return err
+	}
+
+	st, ok := be.getStat()
 	if ok {
+		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: hit %v", cksrv.kernelId, req.GetProg())
 		res.Stat = st.StatProto()
-		res.Path = path
+		res.Path = cksrv.path
 		return nil
 	}
-	return cksrv.getFileStat(req, res)
+
+	be.Lock()
+	defer be.Unlock()
+
+	ep := sp.NewEndpointFromProto(req.GetNamedEndpointProto())
+	if ep != nil && ep.IsValidEP() {
+		if err := be.sc.MountTree(ep, "", sp.NAMED); err != nil {
+			db.DPrintf(db.CHUNKSRV, "MountTree %v err %v", ep, err)
+			return err
+		}
+	}
+	st, srv, err := cksrv.getFileStat(req, res)
+	if err != nil {
+		return err
+	}
+	be.st = st
+	res.Stat = st.StatProto()
+	res.Path = srv
+	return nil
 }
 
 func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, string, error) {

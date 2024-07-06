@@ -23,6 +23,7 @@ message GetFileStatRequest {
   string pid = 3;
   repeated string sigmaPath = 4;
   SecretProto s3Secret = 5;
+  TendpointProto namedEndpointProto = 6;
 }
 
 message GetFileStatResponse {

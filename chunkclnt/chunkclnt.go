@@ -48,17 +48,18 @@ func (ckclnt *ChunkClnt) Prefetch(srvid, pn string, pid sp.Tpid, realm sp.Trealm
 	return nil
 }
 
-func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, paths []string) (*sp.Stat, string, error) {
+func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, paths []string, ep *sp.TendpointProto) (*sp.Stat, string, error) {
 	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
 	if err != nil {
 		return nil, "", err
 	}
 	req := &proto.GetFileStatRequest{
-		Prog:      pn,
-		RealmStr:  string(realm),
-		Pid:       pid.String(),
-		SigmaPath: paths,
-		S3Secret:  s3secret,
+		Prog:               pn,
+		RealmStr:           string(realm),
+		Pid:                pid.String(),
+		SigmaPath:          paths,
+		S3Secret:           s3secret,
+		NamedEndpointProto: ep,
 	}
 	res := &proto.GetFileStatResponse{}
 	if err := rpcc.RPC("ChunkSrv.GetFileStat", req, res); err != nil {

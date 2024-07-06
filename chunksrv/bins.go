@@ -12,12 +12,13 @@ import (
 )
 
 type bin struct {
-	mu   sync.Mutex
+	sync.Mutex
 	cond *sync.Cond
 	fd   int
 	prog string
 	st   *sp.Stat
 	path string
+	sc   *sigmaclnt.SigmaClnt
 }
 
 func newBin(prog string) *bin {
@@ -27,17 +28,27 @@ func newBin(prog string) *bin {
 	}
 }
 
+func (be *bin) getStat() (*sp.Tstat, bool) {
+	be.Lock()
+	defer be.Unlock()
+	if be.st == nil {
+		return nil, false
+	}
+	return be.st, true
+}
+
 func (be *bin) signal() {
-	be.mu.Lock()
-	defer be.mu.Unlock()
+	be.Lock()
+	defer be.Unlock()
 
 	if be.cond != nil {
 		be.cond.Broadcast()
 	}
 }
+
 func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string, error) {
-	be.mu.Lock()
-	defer be.mu.Unlock()
+	be.Lock()
+	defer be.Unlock()
 
 	if be.fd != -1 {
 		return be.fd, be.path, nil

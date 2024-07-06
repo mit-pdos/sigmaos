@@ -336,7 +336,7 @@ func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3sec
 	return st, path, nil
 }
 
-func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, res *proto.GetFileStatResponse) (*sp.Tstat, string, error) {
+func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest) (*sp.Tstat, string, error) {
 	r := sp.Trealm(req.GetRealmStr())
 	paths := req.GetSigmaPath()
 	if req.SigmaPath[0] == cksrv.path {
@@ -387,16 +387,15 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 		return err
 	}
 
-	st, ok := be.getStat()
-	if ok {
+	be.Lock()
+	defer be.Unlock()
+
+	if be.st != nil {
 		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: hit %v", cksrv.kernelId, req.GetProg())
-		res.Stat = st.StatProto()
+		res.Stat = be.st.StatProto()
 		res.Path = cksrv.path
 		return nil
 	}
-
-	be.Lock()
-	defer be.Unlock()
 
 	ep := sp.NewEndpointFromProto(req.GetNamedEndpointProto())
 	if ep != nil && ep.IsValidEP() {
@@ -405,7 +404,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 			return err
 		}
 	}
-	st, srv, err := cksrv.getFileStat(req, res)
+	st, srv, err := cksrv.getFileStat(req)
 	if err != nil {
 		return err
 	}

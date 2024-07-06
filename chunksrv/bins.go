@@ -28,7 +28,7 @@ func newBin(prog string) *bin {
 	}
 }
 
-func (be *bin) getStat() (*sp.Tstat, bool) {
+func (be *bin) getStat1() (*sp.Tstat, bool) {
 	be.Lock()
 	defer be.Unlock()
 	if be.st == nil {

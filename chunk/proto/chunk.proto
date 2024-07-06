@@ -5,18 +5,6 @@ import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/chunk/proto";
 
-message PrefetchRequest {
-  string prog = 1;
-  string realmStr = 2;
-  string pid = 3;
-  repeated string sigmaPath = 4;
-  SecretProto s3Secret = 5;
-  TendpointProto namedEndpointProto = 6;
-}
-
-message PrefetchResponse {
-}
-
 message GetFileStatRequest {
   string prog = 1;
   string realmStr = 2;

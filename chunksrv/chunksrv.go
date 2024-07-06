@@ -162,51 +162,6 @@ func (cksrv *ChunkSrv) getBin(realm sp.Trealm, prog string, s3secret *sp.SecretP
 }
 
 //
-// Handle Pretch request
-//
-
-func (cksrv *ChunkSrv) Prefetch(ctx fs.CtxI, req proto.PrefetchRequest, res *proto.PrefetchResponse) error {
-	r := sp.Trealm(req.RealmStr)
-	db.DPrintf(db.CHUNKSRV, "%v: Prefetch %v %v %v", cksrv.kernelId, r, req.Prog, req.SigmaPath)
-
-	s := time.Now()
-	be, err := cksrv.getBin(r, req.Prog, req.GetS3Secret())
-	if err != nil {
-		return err
-	}
-
-	be.Lock()
-	defer be.Unlock()
-
-	if be.st != nil {
-		return nil
-	}
-
-	sc, err := cksrv.realms.getSc(r)
-	if err != nil {
-		return err
-	}
-	ep := sp.NewEndpointFromProto(req.GetNamedEndpointProto())
-	if ep.IsValidEP() {
-		if err := sc.MountTree(ep, "", sp.NAMED); err != nil {
-			db.DPrintf(db.CHUNKSRV, "MountTree %v err %v", ep, err)
-			return err
-		}
-	} else {
-		db.DPrintf(db.ERROR, "no valid endpoint for realm %v: %v", r, ep)
-	}
-	db.DPrintf(db.SPAWN_LAT, "%v: get SigmaClnt %v %v lat %v", req.Prog, r, ep, time.Since(s))
-
-	st, _, err := cksrv.lookup(sc, req.Prog, req.SigmaPath)
-	if err != nil {
-		return err
-	}
-
-	be.st = st
-	return nil
-}
-
-//
 // Handle a FetchChunkRequest
 //
 

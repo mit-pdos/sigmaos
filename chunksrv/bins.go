@@ -28,24 +28,6 @@ func newBin(prog string) *bin {
 	}
 }
 
-func (be *bin) getStat1() (*sp.Tstat, bool) {
-	be.Lock()
-	defer be.Unlock()
-	if be.st == nil {
-		return nil, false
-	}
-	return be.st, true
-}
-
-func (be *bin) signal() {
-	be.Lock()
-	defer be.Unlock()
-
-	if be.cond != nil {
-		be.cond.Broadcast()
-	}
-}
-
 func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string, error) {
 	be.Lock()
 	defer be.Unlock()

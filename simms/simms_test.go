@@ -8,7 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/simms"
 	"sigmaos/simms/autoscaler"
-	"sigmaos/simms/lb"
+	"sigmaos/simms/opts"
 )
 
 func TestCompile(t *testing.T) {
@@ -221,7 +221,7 @@ func TestAppNoQueueBuildup(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewNoOpAutoscalerFn(), lb.NewRoundRobinLB)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts)
 	app := simms.NewSingleTierApp(svc)
 	for ; time < N_TICKS; time++ {
 		// Construct requests
@@ -261,7 +261,7 @@ func TestWorkloadNoQueueBuildup(t *testing.T) {
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewNoOpAutoscalerFn(), lb.NewRoundRobinLB)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts)
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	for ; time < N_TICKS; time++ {
@@ -293,7 +293,7 @@ func TestWorkloadClntBurst(t *testing.T) {
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewNoOpAutoscalerFn(), lb.NewRoundRobinLB)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts)
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	for ; time < N_TICKS; time++ {
@@ -331,7 +331,7 @@ func TestWorkloadClntBurstAddReplica(t *testing.T) {
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewNoOpAutoscalerFn(), lb.NewRoundRobinLB)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts)
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	for ; time < N_TICKS; time++ {
@@ -372,7 +372,7 @@ func TestWorkloadClntBurstRemoveReplica(t *testing.T) {
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewNoOpAutoscalerFn(), lb.NewRoundRobinLB)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts)
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	dc.RecordStats(10)
@@ -426,7 +426,7 @@ func TestAvgUtilAutoscaler(t *testing.T) {
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
-	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewAvgUtilAutoscalerFn(asp), lb.NewRoundRobinLB)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp))
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	dc.RecordStats(10)
@@ -471,7 +471,7 @@ func TestAvgUtilAutoscalerPersistentQueueImbalance(t *testing.T) {
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
-	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewAvgUtilAutoscalerFn(asp), lb.NewRoundRobinLB)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp))
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	dc.RecordStats(10)
@@ -516,7 +516,7 @@ func TestAvgUtilAutoscalerOscillation(t *testing.T) {
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
-	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewAvgUtilAutoscalerFn(asp), lb.NewRoundRobinLB)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp))
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	dc.RecordStats(10)
@@ -561,7 +561,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithQlenLB(t *testing.T) {
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
-	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewAvgUtilAutoscalerFn(asp), lb.NewOmniscientQLenLB)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp), opts.WithOmniscientQLenLB())
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	dc.RecordStats(10)

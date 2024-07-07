@@ -5,12 +5,6 @@ import (
 	"sigmaos/simms"
 )
 
-func GetNewAvgUtilAutoscalerFn(asp *AvgUtilAutoscalerParams) simms.NewAutoscalerFn {
-	return func(t *uint64, svc *simms.Microservice) simms.Autoscaler {
-		return NewAvgUtilAutoscaler(t, asp, svc)
-	}
-}
-
 type AvgUtilAutoscalerParams struct {
 	ScaleFreq      int
 	TargetUtil     float64

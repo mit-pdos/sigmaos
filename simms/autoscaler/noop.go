@@ -4,13 +4,11 @@ import (
 	"sigmaos/simms"
 )
 
-func GetNewNoOpAutoscalerFn() simms.NewAutoscalerFn {
-	return func(*uint64, *simms.Microservice) simms.Autoscaler {
-		return &NoOpAutoscaler{}
-	}
+type NoOpAutoscaler struct {
 }
 
-type NoOpAutoscaler struct {
+func NewNoOpAutoscaler(*uint64, *simms.Microservice) simms.Autoscaler {
+	return &NoOpAutoscaler{}
 }
 
 func (noop *NoOpAutoscaler) Tick() {

@@ -33,12 +33,14 @@ type Microservice struct {
 	autoscaler      Autoscaler
 }
 
-func NewMicroservice(t *uint64, msp *MicroserviceParams, newAutoscaler NewAutoscalerFn, newLoadBalancer NewLoadBalancerFn) *Microservice {
+func NewMicroservice(t *uint64, msp *MicroserviceParams, defaultOpts MicroserviceOpts, additionalOpts ...MicroserviceOpt) *Microservice {
+	// Create configuration according to passed-in options
+	opts := NewMicroserviceOpts(defaultOpts, additionalOpts)
 	m := &Microservice{
 		t:        t,
 		msp:      msp,
 		replicas: []*MicroserviceInstance{},
-		lb:       newLoadBalancer(),
+		lb:       opts.NewLoadBalancer(),
 		stats:    NewServiceStats(),
 	}
 	// Start off with 1 replica
@@ -46,7 +48,7 @@ func NewMicroservice(t *uint64, msp *MicroserviceParams, newAutoscaler NewAutosc
 	for _, r := range m.replicas {
 		r.MarkReady()
 	}
-	m.autoscaler = newAutoscaler(t, m)
+	m.autoscaler = opts.NewAutoscaler(t, m)
 	return m
 }
 

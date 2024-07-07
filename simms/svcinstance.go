@@ -54,6 +54,10 @@ func (s *ServiceInstance) GetStats() *ServiceInstanceStats {
 	return s.srvStats
 }
 
+func (s *ServiceInstance) GetQLen() int {
+	return s.q.GetLen()
+}
+
 func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
 	// If service had not initialized yet, and sufficient initialization time has
 	// passed, mark service ready

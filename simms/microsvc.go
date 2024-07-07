@@ -121,6 +121,10 @@ func (m *MicroserviceInstance) GetStats() *ServiceInstanceStats {
 	return m.svc.GetStats()
 }
 
+func (m *MicroserviceInstance) GetQLen() int {
+	return m.svc.GetQLen()
+}
+
 func (m *MicroserviceInstance) IsReady() bool {
 	return m.svc.IsReady()
 }

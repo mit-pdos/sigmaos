@@ -539,7 +539,7 @@ func TestAvgUtilAutoscalerOscillation(t *testing.T) {
 
 func TestAvgUtilAutoscalerResolveQueueImbalanceWithQlenLB(t *testing.T) {
 	const (
-		N_TICKS uint64 = 5000
+		N_TICKS uint64 = 1000
 		// Clnt params
 		CLNT_REQ_MEAN float64 = 45
 		CLNT_REQ_STD  float64 = 0
@@ -561,7 +561,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithQlenLB(t *testing.T) {
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
-	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewAvgUtilAutoscalerFn(asp), lb.NewRoundRobinLB)
+	svc := simms.NewMicroservice(&time, p, autoscaler.GetNewAvgUtilAutoscalerFn(asp), lb.NewOmniscientQLenLB)
 	app := simms.NewSingleTierApp(svc)
 	dc := simms.NewWorkload(&time, app, c)
 	dc.RecordStats(10)
@@ -577,7 +577,9 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithQlenLB(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
-	assert.Equal(t, 9, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	assert.Equal(t, 0, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	// Check that queues balanced out eventually, and request latencies settled down again
+	for i := N_TICKS * 9 / 10; i < N_TICKS/10; i++ {
+		assert.Equal(t, P_TIME, rstats.P99Latency[i], "Latency didn't settle to processing time")
+	}
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }

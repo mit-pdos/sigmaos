@@ -22,3 +22,7 @@ func (q *Queue) Dequeue() (*Request, bool) {
 	req, q.reqs = q.reqs[0], q.reqs[1:]
 	return req, true
 }
+
+func (q *Queue) GetLen() int {
+	return len(q.reqs)
+}

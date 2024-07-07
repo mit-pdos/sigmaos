@@ -1,13 +1,14 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--push TAG] [--target TARGET] [--userbin USERBIN] [--parallel] [--rebuildbuilder]" 1>&2
+  echo "Usage: $0 [--push TAG] [--target TARGET] [--version VERSION] [--userbin USERBIN] [--parallel] [--rebuildbuilder]" 1>&2
 }
 
 PARALLEL=""
 REBUILD_BUILDER="false"
 TAG=""
 TARGET="local"
+VERSION="1.0"
 USERBIN="all"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -27,6 +28,11 @@ while [[ "$#" -gt 0 ]]; do
   --target)
     shift
     TARGET="$1"
+    shift
+    ;;
+  --version)
+    shift
+    VERSION="$1"
     shift
     ;;
   --userbin)
@@ -153,7 +159,7 @@ echo "========== Done building kernel bins =========="
 echo "========== Building user bins =========="
 docker exec -it $buildercid \
   /usr/bin/time -f "Build time: %e sec" \
-  ./make.sh $BUILD_ARGS --userbin $USERBIN user \
+  ./make.sh $BUILD_ARGS --userbin $USERBIN user --version $VERSION \
   2>&1 | tee $BUILD_LOG/make-user.out
 echo "========== Done building user bins =========="
 
@@ -163,15 +169,15 @@ RS_BUILD_ARGS="--rustpath \$HOME/.cargo/bin/cargo \
 echo "========== Building Rust bins =========="
 docker exec -it $rsbuildercid \
   /usr/bin/time -f "Build time: %e sec" \
-  ./make-rs.sh $RS_BUILD_ARGS \
-  2>&1 | tee $BUILD_LOG/make-user.out
+  ./make-rs.sh $RS_BUILD_ARGS --version $VERSION \
+  2>&1 | tee $BUILD_LOG/make-user-rs.out
 echo "========== Done building Rust bins =========="
 
 echo "========== Copying kernel bins for uprocd =========="
 if [ "${TARGET}" == "local" ]; then
   sudo cp $ROOT/create-net.sh $KERNELBIN/
   cp $KERNELBIN/uprocd $UPROCD_BIN/
-  cp $KERNELBIN/sigmaclntd $UPROCD_BIN/
+  cp $KERNELBIN/spproxyd $UPROCD_BIN/
   cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
   cp $KERNELBIN/binfsd $UPROCD_BIN/
 fi
@@ -210,9 +216,9 @@ else
   echo "========== Done pushing user bins to aws =========="
 fi
 
-# Build proxy for host
+# Build npproxy for host
 echo "========== Building proxy =========="
-/usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL proxy 
+/usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL npproxy 
 echo "========== Done building proxy =========="
 
 if ! [ -z "$TAG" ]; then

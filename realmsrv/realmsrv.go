@@ -15,7 +15,9 @@ import (
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/procqclnt"
+	"sigmaos/protsrv"
 	"sigmaos/realmsrv/proto"
+	"sigmaos/rpc"
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
@@ -91,7 +93,13 @@ func RunRealmSrv(netproxy bool) error {
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(sp.REALMD, sc, rs)
+	if false {
+		allowedPaths := []string{sp.REALMSREL, rpc.RPC}
+		ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, protsrv.AttachAllowAllPrincipalsSelectPaths(allowedPaths))
+		_ = ssrv
+		_ = err
+	}
+	ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, protsrv.AttachAllowAllToAll)
 	if err != nil {
 		return err
 	}
@@ -175,16 +183,16 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}
 	r.sc = sc
 	// Make some rootrealm services available in new realm
-	namedEndpoint, err := rm.sc.GetNamedEndpoint()
+	rootNamedEP, err := rm.sc.GetNamedEndpoint()
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", err)
 		return err
 	}
 	// Export some service dirs from root realm to the new realm by
 	// making endpoints for them in this realm.
-	for _, s := range []string{sp.LCSCHEDREL, sp.PROCQREL, sp.SCHEDDREL, sp.DBREL, sp.BOOTREL, sp.MONGOREL} {
+	for s, _ := range sp.RootNamedMountedDirs {
 		pn := filepath.Join(sp.NAMED, s)
-		ep := sp.NewEndpoint(sp.INTERNAL_EP, namedEndpoint.Addrs())
+		ep := sp.NewEndpoint(sp.INTERNAL_EP, rootNamedEP.Addrs())
 		ep.SetTree(s)
 		db.DPrintf(db.REALMD, "Link %v at %s\n", ep, pn)
 		if err := sc.MkEndpointFile(pn, ep); err != nil {
@@ -222,6 +230,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	}()
 	for i := 0; i < 2; i++ {
 		if err := <-errC; err != nil {
+			db.DPrintf(db.ERROR, "Error MakeRealm [%v] when booting subsystems", sp.Trealm(req.Realm))
 			return err
 		}
 	}
@@ -292,22 +301,26 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(r *Realm, realm sp.Trealm, ss s
 		kernels = kernels[:n]
 	}
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems selected kernels: %v", realm, kernels)
-	done := make(chan bool)
+	done := make(chan error)
 	for _, kid := range kernels {
 		go func(kid string) {
 			pid, err := rm.mkc.BootInRealm(kid, realm, ss, nil)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error boot subsystem %v in realm %v on kid %v: %v", ss, realm, kid, err)
+				done <- err
 			} else {
 				r.addSubsystem(kid, pid)
 			}
-			done <- true
+			done <- nil
 		}(kid)
 	}
+	var bootErr error
 	for _ = range kernels {
-		<-done
+		if e := <-done; e != nil {
+			bootErr = e
+		}
 	}
-	return nil
+	return bootErr
 }
 
 func (rm *RealmSrv) realmResourceUsage(running map[sp.Trealm][]*proc.Proc) map[sp.Trealm]proc.Tmem {

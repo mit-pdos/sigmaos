@@ -17,6 +17,12 @@ func NewSyncMap[K comparable, T any]() *SyncMap[K, T] {
 	return &SyncMap[K, T]{tbl: make(map[K]T)}
 }
 
+func (sm *SyncMap[_, _]) Len() int {
+	sm.Lock()
+	defer sm.Unlock()
+	return len(sm.tbl)
+}
+
 func (sm *SyncMap[K, T]) Lookup(k K) (T, bool) {
 	sm.Lock()
 	defer sm.Unlock()
@@ -58,6 +64,15 @@ func (sm *SyncMap[K, T]) Insert(k K, t T) bool {
 	return true
 }
 
+func (sm *SyncMap[K, T]) InsertBlind(k K, t T) bool {
+	sm.Lock()
+	defer sm.Unlock()
+
+	_, ok := sm.tbl[k]
+	sm.tbl[k] = t
+	return ok
+}
+
 func (sm *SyncMap[K, T]) Update(k K, t T) bool {
 	sm.Lock()
 	defer sm.Unlock()
@@ -69,7 +84,7 @@ func (sm *SyncMap[K, T]) Update(k K, t T) bool {
 	return true
 }
 
-func (sm *SyncMap[K, T]) Delete(k K) {
+func (sm *SyncMap[K, _]) Delete(k K) {
 	sm.Lock()
 	defer sm.Unlock()
 

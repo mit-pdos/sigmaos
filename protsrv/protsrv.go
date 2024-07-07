@@ -6,41 +6,45 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/path"
+	"sigmaos/proc"
 	"sigmaos/protsrv/lockmap"
 	"sigmaos/protsrv/namei"
 	"sigmaos/serr"
 	"sigmaos/sessp"
-	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
 )
 
 type GetRootCtxF func(*sp.Tprincipal, map[string]*sp.SecretProto, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI)
+type AttachAuthF func(*sp.Tprincipal, string) error
 
 // Each session has its own protsrv, but they share ProtSrvState
 type ProtSrv struct {
 	*ProtSrvState
-	ssrv       *sesssrv.SessSrv
-	fm         *fidMap
-	p          *sp.Tprincipal
-	sid        sessp.Tsession
-	getRootCtx GetRootCtxF
+	fm          *fidMap
+	p           *sp.Tprincipal
+	srvPE       *proc.ProcEnv
+	sid         sessp.Tsession
+	getRootCtx  GetRootCtxF
+	attachAuthF AttachAuthF
 }
 
-func NewProtSrv(pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF) *ProtSrv {
+func NewProtSrv(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF, aaf AttachAuthF) *ProtSrv {
 	ps := &ProtSrv{
 		ProtSrvState: pss,
 		fm:           newFidMap(),
 		p:            p,
+		srvPE:        srvPE,
 		sid:          sid,
 		getRootCtx:   grf,
+		attachAuthF:  aaf,
 	}
 	db.DPrintf(db.PROTSRV, "NewProtSrv[%v] -> %v", p, ps)
 	return ps
 }
 
-func NewProtServer(pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF) sps.Protsrv {
-	return NewProtSrv(pss, p, sid, grf)
+func NewProtServer(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF, aaf AttachAuthF) sps.Protsrv {
+	return NewProtSrv(srvPE, pss, p, sid, grf, aaf)
 }
 
 func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
@@ -61,11 +65,20 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 }
 
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
-	db.DPrintf(db.PROTSRV, "Attach %v %v %v cid %v sid %v", args.Tfid(), args.Tafid(), args.Secrets, args.TclntId(), ps.sid)
+	s := time.Now()
 	p := path.Split(args.Aname)
 	root, ctx := ps.getRootCtx(ps.p, args.GetSecrets(), args.Aname, ps.sid, args.TclntId())
+	db.DPrintf(db.PROTSRV, "Attach p %v fid %v afid %v aname %v cid %v sid %v secrets %v", ctx.Principal(), args.Tfid(), args.Tafid(), args.Aname, args.TclntId(), ps.sid, args.Secrets)
 	tree := root.(fs.FsObj)
 	qid := ps.newQid(tree.Perm(), tree.Path())
+	// If client and server do not belong to the same realm, check that the
+	// client is authorized to attach
+	if ctx.Principal().GetRealm() != ps.srvPE.GetRealm() {
+		db.DPrintf(db.PROTSRV, "Attach auth check srv %v p %v", ps.srvPE.GetPrincipal(), ctx.Principal())
+		if err := ps.attachAuthF(ctx.Principal(), p.String()); err != nil {
+			return sp.NoClntId, sp.NewRerrorErr(err)
+		}
+	}
 	if args.Aname != "" {
 		dlk := ps.plt.Acquire(ctx, path.Tpathname{}, lockmap.RLOCK)
 		_, lo, lk, rest, err := namei.Walk(ps.plt, ctx, root, dlk, path.Tpathname{}, p, nil, lockmap.RLOCK)
@@ -86,6 +99,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		return sp.NoClntId, sp.NewRerrorSerr(err)
 	}
 	rets.Qid = qid.Proto()
+	db.DPrintf(db.WALK_LAT, "ProtSrv.Attach %v %v\n", args.TclntId(), time.Since(s))
 	return args.TclntId(), nil
 }
 

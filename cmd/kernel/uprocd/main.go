@@ -11,7 +11,7 @@ import (
 
 func main() {
 	if len(os.Args) != 5 {
-		db.DFatalf("Usage: %v kernelId netproxy sigmaclntdPID port\nPassed: %v", os.Args[0], os.Args)
+		db.DFatalf("Usage: %v kernelId netproxy spproxydPID port\nPassed: %v", os.Args[0], os.Args)
 	}
 	netproxy, err := strconv.ParseBool(os.Args[2])
 	if err != nil {

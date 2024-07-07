@@ -94,7 +94,7 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 		},
 	}
 
-	// If developing locally, mount kernel bins (exec-uproc-rs, sigmaclntd, and
+	// If developing locally, mount kernel bins (exec-uproc-rs, spproxyd, and
 	// uprocd) from host, since they are excluded from the container image
 	// during local dev in order to speed up build times.
 	if p.GetBuildTag() == sp.LOCAL_BUILD {

@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	leaseproto "sigmaos/lease/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"

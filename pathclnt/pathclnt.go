@@ -4,7 +4,7 @@
 // All fid-based operations are inherited from [fidclnt].
 //
 // A typical use case is that each pathclnt has its own fidclnt.
-// [sigmaclntd], however, shares a fidclnt among all its pathclnts,
+// [spproxyd], however, shares a fidclnt among all its pathclnts,
 // allows pathclnts to share a single TCP connection to a server.
 package pathclnt
 
@@ -13,8 +13,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
-	"sigmaos/mntclnt"
 	"sigmaos/path"
+	"sigmaos/pathclnt/mntclnt"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
@@ -38,7 +38,7 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 		cid:     sp.TclntId(rand.Uint64()),
 	}
 	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, fidc.GetNetProxyClnt())
-	db.DPrintf(db.TEST, "New cid %v\n", pathc.cid)
+	db.DPrintf(db.TEST, "New cid %v %v\n", pathc.cid, pe.GetRealm())
 	return pathc
 }
 
@@ -316,6 +316,17 @@ func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 		return 0, err
 	}
 	return cnt, nil
+}
+
+// For npproxy
+func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Tpathname, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
+	ch := pathc.FidClnt.Lookup(fid)
+	if ch == nil {
+		return sp.NoFid, serr.NewErr(serr.TErrNotfound, fid)
+	}
+	p := ch.Path().AppendPath(path)
+	db.DPrintf(db.PATHCLNT, "Walk %v (ch %v)", p, ch.Path())
+	return pathc.walk(p, principal, true, nil)
 }
 
 func (pathc *PathClnt) Disconnected() bool {

@@ -131,7 +131,9 @@ func TestCompose(t *testing.T) {
 		sn.Srv{"socialnetwork-url", nil, 1000},
 		sn.Srv{"socialnetwork-text", nil, 1000},
 		sn.Srv{"socialnetwork-compose", nil, 1000}}, NCACHESRV)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}

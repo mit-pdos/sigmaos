@@ -1,40 +1,45 @@
 package sigmap
 
+import (
+	"path/filepath"
+)
+
 // if name ends in "/", it is a directory with mount files for that service
 const (
-	KNAMED        = "knamed"
-	NAME          = "name"
-	NAMED         = NAME + "/"
-	NAMEDREL      = "named"
-	MEMFSREL      = "memfs"
-	MEMFS         = NAMED + MEMFSREL + "/"
-	REALMREL      = "realm"
-	REALM         = NAMED + REALMREL + "/"
-	REALMDREL     = "realmd"
-	REALMD        = NAMED + REALMREL + "/" + REALMDREL
-	REALMSREL     = "realms"
-	REALMS        = REALMD + "/" + REALMSREL
-	BOOTREL       = "boot"
-	BOOT          = NAMED + BOOTREL + "/"
-	UPROCDREL     = "uprocd"
-	S3REL         = "s3"
-	S3            = NAMED + S3REL + "/"
-	UXREL         = "ux"
-	UX            = NAMED + UXREL + "/"
-	CHUNKDREL     = "chunkd"
-	CHUNKD        = NAMED + CHUNKDREL + "/"
-	SCHEDDREL     = "schedd"
-	SCHEDD        = NAMED + SCHEDDREL + "/"
-	LCSCHEDREL    = "lcsched"
-	LCSCHED       = NAMED + LCSCHEDREL + "/"
-	SIGMACLNTDREL = "sigmaclntd"
-	PROCQREL      = "procq"
-	PROCQ         = NAMED + PROCQREL + "/"
-	DBREL         = "db"
-	DB            = NAMED + DBREL + "/"
-	DBD           = DB + "~any/"
-	MONGOREL      = "mongo"
-	MONGO         = NAMED + MONGOREL + "/"
+	KNAMED      = "knamed"
+	NAME        = "name"
+	ROOT        = "root"
+	NAMED       = NAME + "/"
+	NAMEDREL    = "named"
+	MEMFSREL    = "memfs"
+	MEMFS       = NAMED + MEMFSREL + "/"
+	REALMREL    = "realm"
+	REALM       = NAMED + REALMREL + "/"
+	REALMDREL   = "realmd"
+	REALMD      = NAMED + REALMREL + "/" + REALMDREL
+	REALMSREL   = "realms"
+	REALMS      = REALMD + "/" + REALMSREL
+	BOOTREL     = "boot"
+	BOOT        = NAMED + BOOTREL + "/"
+	UPROCDREL   = "uprocd"
+	S3REL       = "s3"
+	S3          = NAMED + S3REL + "/"
+	UXREL       = "ux"
+	UX          = NAMED + UXREL + "/"
+	CHUNKDREL   = "chunkd"
+	CHUNKD      = NAMED + CHUNKDREL + "/"
+	SCHEDDREL   = "schedd"
+	SCHEDD      = NAMED + SCHEDDREL + "/"
+	LCSCHEDREL  = "lcsched"
+	LCSCHED     = NAMED + LCSCHEDREL + "/"
+	SPPROXYDREL = "spproxyd"
+	PROCQREL    = "procq"
+	PROCQ       = NAMED + PROCQREL + "/"
+	DBREL       = "db"
+	DB          = NAMED + DBREL + "/"
+	DBD         = DB + "~any/"
+	MONGOREL    = "mongo"
+	MONGO       = NAMED + MONGOREL + "/"
 
 	IMGREL = "img"
 	IMG    = NAMED + IMGREL + "/"
@@ -68,20 +73,38 @@ const (
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
 	SNAPDEV  = "snapdev"
+
+	// stats exported by named
+	PSTATSD = ".pstatsd"
 )
+
+// Dirs mounted from the root named into tenants' realms
+var RootNamedMountedDirs map[string]bool = map[string]bool{
+	REALMREL:   true,
+	LCSCHEDREL: true,
+	PROCQREL:   true,
+	SCHEDDREL:  true,
+	BOOTREL:    true,
+	DBREL:      true,
+	MONGOREL:   true,
+}
 
 // Linux path
 const (
 	SIGMAHOME             = "/home/sigmaos"
-	SIGMASOCKET           = "/tmp/sigmaclntd/sigmaclntd.sock"
-	SIGMA_NETPROXY_SOCKET = "/tmp/sigmaclntd/sigmaclntd-netproxy.sock"
+	SIGMASOCKET           = "/tmp/spproxyd/spproxyd.sock"
+	SIGMA_NETPROXY_SOCKET = "/tmp/spproxyd/spproxyd-netproxy.sock"
 )
 
-// sigmaclntd kernel
+// spproxyd kernel
 const (
-	SIGMACLNTDKERNEL = "kernel-" + SIGMACLNTDREL + "-"
+	SPPROXYDKERNEL = "kernel-" + SPPROXYDREL + "-"
 )
 
-func SigmaClntdKernel(kid string) string {
-	return SIGMACLNTDKERNEL + kid
+func SPProxydKernel(kid string) string {
+	return SPPROXYDKERNEL + kid
+}
+
+func ProxyPathname(srv, kid string) string {
+	return filepath.Join(srv, kid)
 }

@@ -15,14 +15,14 @@ const (
 
 type Qitem struct {
 	p     *proc.Proc
-	kidch chan string
+	ch    chan *proc.ProcSeqno
 	enqTS time.Time
 }
 
-func newQitem(p *proc.Proc, kidch chan string) *Qitem {
+func newQitem(p *proc.Proc, ch chan *proc.ProcSeqno) *Qitem {
 	return &Qitem{
 		p:     p,
-		kidch: kidch,
+		ch:    ch,
 		enqTS: time.Now(),
 	}
 }
@@ -40,38 +40,38 @@ func newQueue() *Queue {
 	}
 }
 
-func (q *Queue) Enqueue(p *proc.Proc, kidch chan string) {
+func (q *Queue) Enqueue(p *proc.Proc, ch chan *proc.ProcSeqno) {
 	q.Lock()
 	defer q.Unlock()
 
 	q.pmap[p.GetPid()] = p
-	qi := newQitem(p, kidch)
+	qi := newQitem(p, ch)
 	q.procs = append(q.procs, qi)
 }
 
-func isEligible(p *proc.Proc, mem proc.Tmem, kernelID string) bool {
+func isEligible(p *proc.Proc, mem proc.Tmem, scheddID string) bool {
 	if p.GetMem() > mem {
 		return false
 	}
 	if p.HasNoKernelPref() {
 		return true
 	}
-	return p.HasKernelPref(kernelID)
+	return p.HasKernelPref(scheddID)
 }
 
-func (q *Queue) Dequeue(mem proc.Tmem, kernelID string) (*proc.Proc, chan string, time.Time, bool) {
+func (q *Queue) Dequeue(mem proc.Tmem, scheddID string) (*proc.Proc, chan *proc.ProcSeqno, time.Time, bool) {
 	q.Lock()
 	defer q.Unlock()
 
 	for i := 0; i < len(q.procs); i++ {
-		if isEligible(q.procs[i].p, mem, kernelID) {
+		if isEligible(q.procs[i].p, mem, scheddID) {
 			// Save the proc we want to return
 			qi := q.procs[i]
 			// Delete the i-th proc from the queue
 			copy(q.procs[i:], q.procs[i+1:])
 			q.procs = q.procs[:len(q.procs)-1]
 			delete(q.pmap, qi.p.GetPid())
-			return qi.p, qi.kidch, qi.enqTS, true
+			return qi.p, qi.ch, qi.enqTS, true
 		}
 	}
 	return nil, nil, time.UnixMicro(0), false

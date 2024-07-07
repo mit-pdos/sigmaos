@@ -29,7 +29,7 @@ func NewLCSchedClnt(fsl *fslib.FsLib) *LCSchedClnt {
 // Enqueue a proc on the lcsched. Returns the ID of the kernel that is running
 // the proc.
 func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
-	pqID, err := lcs.rpcdc.RoundRobin()
+	pqID, err := lcs.rpcdc.WaitTimedRoundRobin()
 	if err != nil {
 		return NOT_ENQ, err
 	}
@@ -45,13 +45,13 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 	if err := rpcc.RPC("LCSched.Enqueue", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "LCSched.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			db.DPrintf(db.ALWAYS, "Force lookup %v", pqID)
-			lcs.rpcdc.RemoveEntry(pqID)
+			db.DPrintf(db.ALWAYS, "Invalidate entry %v", pqID)
+			lcs.rpcdc.InvalidateEntry(pqID)
 		}
 		return NOT_ENQ, err
 	}
 	db.DPrintf(db.LCSCHEDCLNT, "[%v] Got Proc %v", p.GetRealm(), p)
-	return res.KernelID, nil
+	return res.ScheddID, nil
 }
 
 func (lcs *LCSchedClnt) StopWatching() {

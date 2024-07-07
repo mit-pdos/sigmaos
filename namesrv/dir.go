@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -59,7 +59,8 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	di, err := d.fs.Create(&d.Obj.di, pn, path, nf, f, cid, lid)
+	di, c, err := d.fs.Create(&d.Obj.di, pn, path, nf, f, cid, lid)
+	d.Obj.fs.PstatUpdate(d.Obj.pn, c)
 	if err != nil {
 		db.DPrintf(db.NAMED, "Create %v %q err %v\n", d, name, err)
 		return nil, err
@@ -75,7 +76,8 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.Err) {
-	dir, err := d.fs.ReadDir(&d.Obj.di)
+	dir, c, err := d.fs.ReadDir(&d.Obj.di)
+	d.Obj.fs.PstatUpdate(d.pn, c)
 	if err != nil {
 		return nil, err
 	}
@@ -117,12 +119,16 @@ func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 
 func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.Err {
 	db.DPrintf(db.NAMED, "%v: Remove %v name %v\n", ctx.ClntId(), d, name)
-	return d.fs.Remove(&d.Obj.di, name, f, del)
+	c, err := d.fs.Remove(&d.Obj.di, name, f, del)
+	d.Obj.fs.PstatUpdate(d.pn.Append(name), c)
+	return err
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 	db.DPrintf(db.NAMED, "%v: Rename %v: %v %v\n", ctx.ClntId(), d, from, to)
-	return d.fs.Rename(&d.Obj.di, from, to, d.pn.Append(to), f)
+	c, err := d.fs.Rename(&d.Obj.di, from, to, d.pn.Append(to), f)
+	d.Obj.fs.PstatUpdate(d.pn.Append(to), c)
+	return err
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfence) *serr.Err {
@@ -130,7 +136,9 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfen
 	dt := od.(*Dir)
 	old := d.pn.Append(from)
 	new := dt.pn.Append(to)
-	return d.fs.Renameat(&d.Obj.di, old, &dt.Obj.di, new, f)
+	c, err := d.fs.Renameat(&d.Obj.di, old, &dt.Obj.di, new, f)
+	d.Obj.fs.PstatUpdate(new, c)
+	return err
 }
 
 // ===== The following functions are needed to make an named dir of type fs.Inode
@@ -161,7 +169,8 @@ func (d *Dir) VersionInc() {
 //
 
 func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
-	_, err := fs.ReadRootDir()
+	_, c, err := fs.ReadRootDir()
+	fs.PstatUpdate(path.Tpathname{}, c)
 	if err != nil && err.IsErrNotfound() { // make root dir
 		db.DPrintf(db.NAMED, "fsetcd.ReadDir err %v; make root dir\n", err)
 		if err := fs.NewRootDir(); err != nil {

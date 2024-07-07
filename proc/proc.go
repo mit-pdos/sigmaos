@@ -121,6 +121,10 @@ func (p *Proc) GetSecrets() map[string]*sp.SecretProto {
 	return p.ProcEnvProto.GetSecrets()
 }
 
+func (p *Proc) GetVersion() string {
+	return p.ProcEnvProto.GetVersion()
+}
+
 func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.SetRealm(parentPE.GetRealm())
 	p.ProcEnvProto.ParentDir = filepath.Join(parentPE.ProcDir, CHILDREN, p.GetPid().String())
@@ -128,8 +132,9 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Perf = parentPE.Perf
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
+	p.ProcEnvProto.Version = parentPE.Version
 	p.ProcEnvProto.Overlays = parentPE.Overlays
-	p.ProcEnvProto.UseSigmaclntd = parentPE.UseSigmaclntd
+	p.ProcEnvProto.UseSPProxy = parentPE.UseSPProxy
 	// Don't override intentionally set net proxy settings
 	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
@@ -193,6 +198,9 @@ func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
 	// originally)
 	if newr, ok := p.ProcEnvProto.GetRealmSwitch(); ok {
 		p.SetRealm(newr)
+		// Clear the cached named endpoint, since it corresponds to the named
+		// endpoint for the realm the proc *used* to belong to
+		p.ProcEnvProto.ClearNamedEndpoint()
 	}
 	p.AppendEnv(SIGMACONFIG, NewProcEnvFromProto(p.ProcEnvProto).Marshal())
 	// Marshal the principal ID
@@ -211,14 +219,33 @@ func (p *Proc) IsPrivileged() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Program:%v Pid:%v Tag: %v Priv:%t SigmaPath:%v KernelId:%v UseSigmaclntd:%v UseNetProxy:%v Realm:%v Perf:%v InnerIP:%v OuterIP:%v Args:%v Type:%v Mcpu:%v Mem:%v }",
+	return fmt.Sprintf("&{ "+
+		"Program:%v "+
+		"Version:%v "+
+		"Pid:%v "+
+		"Tag: %v "+
+		"Priv:%t "+
+		"SigmaPath:%v "+
+		"KernelId:%v "+
+		"UseSPProxy:%v "+
+		"UseNetProxy:%v "+
+		"Realm:%v "+
+		"Perf:%v "+
+		"InnerIP:%v "+
+		"OuterIP:%v "+
+		"Args:%v "+
+		"Type:%v "+
+		"Mcpu:%v "+
+		"Mem:%v "+
+		"}",
 		p.ProcEnvProto.Program,
+		p.ProcEnvProto.Version,
 		p.ProcEnvProto.GetPID(),
 		p.ProcEnvProto.GetBuildTag(),
 		p.ProcEnvProto.Privileged,
 		p.ProcEnvProto.GetSigmaPath(),
 		p.ProcEnvProto.KernelID,
-		p.ProcEnvProto.UseSigmaclntd,
+		p.ProcEnvProto.UseSPProxy,
 		p.ProcEnvProto.UseNetProxy,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.GetPerf(),
@@ -259,6 +286,14 @@ func (p *Proc) GetProcEnv() *ProcEnv {
 
 func (p *Proc) GetProgram() string {
 	return p.ProcEnvProto.Program
+}
+
+func (p *Proc) GetVersionedProgram() string {
+	// Kernel procs, including named, are not versioned
+	if p.IsPrivileged() || p.GetProgram() == "named" {
+		return p.GetProgram()
+	}
+	return p.GetProgram() + "-v" + p.GetVersion()
 }
 
 func (p *Proc) GetSigmaPath() []string {
@@ -355,6 +390,10 @@ func (p *Proc) SetScheddEndpoint(ep *sp.Tendpoint) {
 
 func (p *Proc) SetNamedEndpoint(ep *sp.Tendpoint) {
 	p.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
+}
+
+func (p *Proc) GetNamedEndpoint() *sp.TendpointProto {
+	return p.ProcEnvProto.NamedEndpointProto
 }
 
 // Return Env map as a []string

@@ -130,7 +130,11 @@ func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netp
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error dial direct: %v", err)
-		res.Err = sp.NewRerrorErr(err)
+		if sr, ok := serr.IsErr(err); ok {
+			res.Err = sp.NewRerrorSerr(sr)
+		} else {
+			res.Err = sp.NewRerrorErr(err)
+		}
 		return nil
 	} else {
 		res.Err = sp.NewRerror()
@@ -160,7 +164,11 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 	// If Listen was unsuccessful, set the reply error appropriately
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error listen direct: %v", err)
-		res.Err = sp.NewRerrorErr(err)
+		if sr, ok := serr.IsErr(err); ok {
+			res.Err = sp.NewRerrorSerr(sr)
+		} else {
+			res.Err = sp.NewRerrorErr(err)
+		}
 		return nil
 	}
 	ep, err := netproxy.NewEndpoint(sp.TTendpoint(req.EndpointType), nps.innerContainerIP, l)
@@ -174,7 +182,11 @@ func (nps *NetProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *
 	err = nps.lm.Add(lid, l)
 	if err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "Error addListener: %v", err)
-		res.Err = sp.NewRerrorErr(err)
+		if sr, ok := serr.IsErr(err); ok {
+			res.Err = sp.NewRerrorSerr(sr)
+		} else {
+			res.Err = sp.NewRerrorErr(err)
+		}
 		l.Close()
 		return err
 	}
@@ -250,7 +262,11 @@ func (nps *NetProxySrvStubs) InvalidateNamedEndpointCacheEntry(c fs.CtxI, req ne
 	realm := sp.Trealm(req.RealmStr)
 	if err := nps.sc.InvalidateNamedEndpointCacheEntryRealm(realm); err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "InvalidateNamedEndpointCacheEntry [%v] err %v %T", realm, err, err)
-		res.Err = sp.NewRerrorErr(err)
+		if sr, ok := serr.IsErr(err); ok {
+			res.Err = sp.NewRerrorSerr(sr)
+		} else {
+			res.Err = sp.NewRerrorErr(err)
+		}
 	} else {
 		res.Err = sp.NewRerror()
 	}
@@ -266,7 +282,11 @@ func (nps *NetProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpo
 	realm := sp.Trealm(req.RealmStr)
 	if ep, err := nps.sc.GetNamedEndpointRealm(realm); err != nil {
 		db.DPrintf(db.NETPROXYSRV_ERR, "GetNamedEndpointRealm [%v] err %v %T", realm, err, err)
-		res.Err = sp.NewRerrorErr(err)
+		if sr, ok := serr.IsErr(err); ok {
+			res.Err = sp.NewRerrorSerr(sr)
+		} else {
+			res.Err = sp.NewRerrorErr(err)
+		}
 	} else {
 		res.Endpoint = ep.GetProto()
 		res.Err = sp.NewRerror()

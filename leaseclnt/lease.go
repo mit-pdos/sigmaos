@@ -6,7 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	leaseproto "sigmaos/lease/proto"
 	sp "sigmaos/sigmap"
 )

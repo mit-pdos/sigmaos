@@ -3,7 +3,6 @@ package kernelclnt
 import (
 	"sigmaos/fslib"
 	"sigmaos/kernelsrv/proto"
-	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
@@ -34,16 +33,6 @@ func (kc *KernelClnt) SetCPUShares(pid sp.Tpid, shares int64) error {
 	var res proto.SetCPUSharesResponse
 	req := &proto.SetCPUSharesRequest{PidStr: pid.String(), Shares: shares}
 	return kc.rpcc.RPC("KernelSrv.SetCPUShares", req, &res)
-}
-
-func (kc *KernelClnt) AssignToRealm(pid sp.Tpid, realm sp.Trealm, ptype proc.Ttype) error {
-	var res proto.AssignUprocdToRealmResponse
-	req := &proto.AssignUprocdToRealmRequest{
-		PidStr:      pid.String(),
-		RealmStr:    realm.String(),
-		ProcTypeInt: int64(ptype),
-	}
-	return kc.rpcc.RPC("KernelSrv.AssignUprocdToRealm", req, &res)
 }
 
 func (kc *KernelClnt) GetCPUUtil(pid sp.Tpid) (float64, error) {

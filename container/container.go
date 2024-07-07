@@ -17,10 +17,7 @@ import (
 
 	"sigmaos/cgroup"
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
 	"sigmaos/port"
-	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 )
 
 const (
@@ -59,43 +56,6 @@ func (c *Container) SetCPUShares(cpu int64) error {
 	err := c.cmgr.SetCPUShares(c.cgroupPath, cpu)
 	db.DPrintf(db.SPAWN_LAT, "Container.SetCPUShares %v", time.Since(s))
 	return err
-}
-
-func (c *Container) AssignToRealm(realm sp.Trealm, ptype proc.Ttype) error {
-	// If this container will run BE procs, mark it as SCHED_IDLE
-	if ptype == proc.T_BE {
-		pids, err := c.cmgr.GetPIDs(c.cgroupPath)
-		if err != nil {
-			return err
-		}
-		db.DPrintf(db.CONTAINER, "Assign uprocd to realm %v and set SCHED_IDLE: %v pids %v", realm, c.cgroupPath, pids)
-		s := time.Now()
-		for _, pid := range pids {
-			db.DPrintf(db.CONTAINER, "Set %v SCHED_IDLE", pid)
-			if err := setSchedPolicy(pid, linuxsched.SCHED_IDLE); err != nil {
-				db.DPrintf(db.ERROR, "Err setSchedPolicy: %v", err)
-				return err
-			}
-		}
-		db.DPrintf(db.SPAWN_LAT, "Get/Set sched attr %v", time.Since(s))
-	}
-	//	if c.overlays && realm != sp.ROOTREALM {
-	//		s := time.Now()
-	//		netns := "sigmanet-" + realm.String()
-	//		db.DPrintf(db.CONTAINER, "Add container %v to net %v", c.container, netns)
-	//		if err := c.cli.NetworkConnect(c.ctx, netns, c.container, &network.EndpointSettings{}); err != nil {
-	//			db.DFatalf("Error NetworkConnect: %v", err)
-	//		}
-	//		db.DPrintf(db.SPAWN_LAT, "Add to overlay network %v", time.Since(s))
-	//		s = time.Now()
-	//		rootnetns := "sigmanet-testuser"
-	//		db.DPrintf(db.CONTAINER, "Remove container %v from net %v", c.container, netns)
-	//		if err := c.cli.NetworkDisconnect(c.ctx, rootnetns, c.container, true); err != nil {
-	//			db.DFatalf("Error NetworkConnect: %v", err)
-	//		}
-	//		db.DPrintf(db.SPAWN_LAT, "Remove from overlay network %v", time.Since(s))
-	//	}
-	return nil
 }
 
 func (c *Container) String() string {

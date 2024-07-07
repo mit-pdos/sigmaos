@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Start proxy and mount root named at /mnt/9p. Optionally boot a
+# Start npproxy and mount root named at /mnt/9p. Optionally boot a
 # rootrealm named.
 #
 # XXX keep IPaddr for now (maybe useful for overlays?)
@@ -31,11 +31,11 @@ while [ $# -ne 1 ]; do
 done
 
 if [[ "$BOOT" == "--boot" ]] ; then
-    (cd proxy; ../start-kernel.sh --pull local-build --boot all --usenetproxy sigma-named )
-    (cd proxy; ../start-kernel.sh --pull local-build --boot sigmaclntd --usenetproxy sigma-scd )
+    (cd npproxysrv; ../start-kernel.sh --pull local-build --boot all --usenetproxy sigma-named )
+    (cd npproxysrv; ../start-kernel.sh --pull local-build --boot spproxyd --usenetproxy sigma-scd )
 fi
 
-./bin/proxy/proxyd $1 &
+./bin/npproxy/npproxyd $1 &
 
 sleep 1
 

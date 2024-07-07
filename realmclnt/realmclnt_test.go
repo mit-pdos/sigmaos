@@ -457,6 +457,28 @@ func spawnDirreader(r *test.RealmTstate, pn string) *proc.Status {
 func TestKernelIsolationBasic(t *testing.T) {
 	ts := newMultiRealmTstate(t)
 
+	// Get the root named endpoint
+	rootNamedEP, err := ts.rootts.GetNamedEndpoint()
+	assert.Nil(t, err, "Err %v", err)
+	db.DPrintf(db.TEST, "rootNamed EP: %v", rootNamedEP)
+	pn := filepath.Join(sp.NAME, sp.PROCQREL) + "/"
+	db.DPrintf(db.TEST, "Try to get dir %v", pn)
+	// Ensure that tenant realms can perform GetDir on union directories which
+	// live in the root named (and are mounted into the tenant's named)
+	sts, err := ts.ts1.GetDir(pn)
+	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
+	assert.True(t, len(sts) == 1, "Wrong list of schedds: %v", sp.Names(sts))
+	sts1, err := ts.ts1.GetDir(filepath.Join(pn, sts[0].Name) + "/")
+	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
+	assert.True(t, len(sts1) == 3, "Wrong procq contents: %v", sp.Names(sts1))
+	db.DPrintf(db.TEST, "Got contents of %v%v: %v", pn, sts[0].Name, sp.Names(sts1))
+	// Ensure that tenant realms can't access the root named's root directory
+	err = ts.ts1.MountTree(rootNamedEP, "", "name/rootnamed")
+	assert.NotNil(t, err, "Able to mount name/ from root named")
+	// Ensure that tenant realms can't access union dirs which aren't mounted into their realms
+	err = ts.ts1.MountTree(rootNamedEP, "s3", "name/roots3")
+	assert.NotNil(t, err, "Able to mount name/s3 from root named")
+
 	// Get the ID of the kernel clnt
 	kid := ts.rootts.GetKernelClnt(0).KernelId()
 	// Read the kernelsrv endpoint
@@ -466,8 +488,10 @@ func TestKernelIsolationBasic(t *testing.T) {
 
 	// No realm should be able to access kernelsrvs
 	err = ts.ts1.MountTree(ksrvEP, "", "name/kernelsrv")
+	db.DPrintf(db.TEST, "MountTree kernelsrv err %v", err)
 	assert.NotNil(t, err, "Able to mount kernelsrv")
 	err = ts.ts2.MountTree(ksrvEP, "", "name/kernelsrv")
+	db.DPrintf(db.TEST, "MountTree kernelsrv err %v", err)
 	assert.NotNil(t, err, "Able to mount kernelsrv")
 
 	// Read an s3 endpoint from realm 1

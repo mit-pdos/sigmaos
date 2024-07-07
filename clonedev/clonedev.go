@@ -1,3 +1,11 @@
+// Package clonedev allows a server to create a directory with a
+// unique session id as name for a client session when the client
+// opens the server's CLONE file.  The directory contains a CTL device
+// file and the caller may create additional session file (see
+// [sessdevsrv]). When a client opens the CLONE file, the open returns
+// a file descriptor for the CTL file, which the client can read to
+// learn the session id and then open files in the session directory (see
+// [sessdevclnt])
 package clonedev
 
 import (

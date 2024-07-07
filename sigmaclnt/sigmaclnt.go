@@ -14,8 +14,8 @@ import (
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/sigmaclntclnt"
 	sos "sigmaos/sigmaos"
+	"sigmaos/spproxyclnt"
 )
 
 func init() {
@@ -47,8 +47,8 @@ type SigmaClntKernel struct {
 func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
 	var s sos.FileAPI
-	if pe.UseSigmaclntd {
-		s, err = sigmaclntclnt.NewSigmaClntClnt(pe, fidc.GetNetProxyClnt())
+	if pe.UseSPProxy {
+		s, err = spproxyclnt.NewSigmaClntClnt(pe, fidc.GetNetProxyClnt())
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
 			return nil, err
@@ -83,7 +83,7 @@ func NewSigmaClntProcAPI(sck *SigmaClntKernel) *SigmaClnt {
 	return sc
 }
 
-// Create a SigmaClnt (using sigmaclntd or fdclient), as a proc, without ProcAPI.
+// Create a SigmaClnt (using spproxyclnt or fdclient), as a proc, without ProcAPI.
 func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaClnt, error) {
 	fidc.NewClnt()
 	fsl, err := newFsLibFidClnt(pe, fidc)
@@ -114,14 +114,9 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 		return nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Make FsLib: %v", pe.GetPID(), time.Since(start))
-	start = time.Now()
-	papi, err := procclnt.NewProcClnt(sc.FsLib)
-	if err != nil {
-		db.DPrintf(db.ERROR, "NewProcClnt: %v", err)
+	if err := sc.NewProcClnt(); err != nil {
 		return nil, err
 	}
-	sc.ProcAPI = papi
-	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", pe.GetPID(), time.Since(start))
 	return sc, nil
 }
 
@@ -138,6 +133,18 @@ func NewSigmaClntRootInit(pe *proc.ProcEnv) (*SigmaClnt, error) {
 	}
 	sc.ProcAPI = papi
 	return sc, nil
+}
+
+func (sc *SigmaClnt) NewProcClnt() error {
+	start := time.Now()
+	papi, err := procclnt.NewProcClnt(sc.FsLib)
+	if err != nil {
+		db.DPrintf(db.ERROR, "NewProcClnt: %v", err)
+		return err
+	}
+	sc.ProcAPI = papi
+	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", sc.ProcEnv().GetPID(), time.Since(start))
+	return nil
 }
 
 func (sc *SigmaClnt) ClntExit(status *proc.Status) error {

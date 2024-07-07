@@ -1,16 +1,22 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--rustpath RUST] [--parallel]" 1>&2
+  echo "Usage: $0 [--rustpath RUST] [--version VERSION] [--parallel]" 1>&2
 }
 
 CARGO="cargo"
+VERSION="1.0"
 PARALLEL=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --rustpath)
     shift
     CARGO="$1"
+    shift
+    ;;
+  --version)
+    shift
+    VERSION="$1"
     shift
     ;;
   --parallel)
@@ -58,4 +64,4 @@ eval $build
 
 # Copy rust bins
 cp rs/exec-uproc-rs/target/release/exec-uproc-rs bin/kernel
-cp rs/spawn-latency/target/release/spawn-latency bin/user
+cp rs/spawn-latency/target/release/spawn-latency bin/user/spawn-latency-v$VERSION

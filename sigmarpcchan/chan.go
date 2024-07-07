@@ -3,7 +3,9 @@ package sigmarpcchan
 import (
 	"path/filepath"
 	"sync/atomic"
+	"time"
 
+	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/rpc"
 	"sigmaos/rpcclnt"
@@ -20,7 +22,18 @@ type SigmaRPCCh struct {
 }
 
 func NewSigmaRPCClnt(fsls []*fslib.FsLib, pn string) (*rpcclnt.RPCClnt, error) {
+	s := time.Now()
+	defer func() { db.DPrintf(db.ATTACH_LAT, "NewSigmaRPCClnt %q lat %v", pn, time.Since(s)) }()
+
 	ch, err := NewSigmaRPCCh(fsls, pn)
+	if err != nil {
+		return nil, err
+	}
+	return rpcclnt.NewRPCClnt(ch), nil
+}
+
+func NewSigmaRPCClntEndpoint(fsls []*fslib.FsLib, pn string, ep *sp.Tendpoint) (*rpcclnt.RPCClnt, error) {
+	ch, err := NewSigmaRPCChEndpoint(fsls, pn, ep)
 	if err != nil {
 		return nil, err
 	}
@@ -33,10 +46,9 @@ func SigmaRPCChanFactory(fsls []*fslib.FsLib) rpcclnt.NewRPCChFn {
 	}
 }
 
-func NewSigmaRPCChEndpoint(fsls []*fslib.FsLib, pn string, mnt *sp.Tendpoint) (rpcclnt.RPCCh, error) {
+func NewSigmaRPCChEndpoint(fsls []*fslib.FsLib, pn string, ep *sp.Tendpoint) (rpcclnt.RPCCh, error) {
 	for _, fsl := range fsls {
-		err := fsl.MountTree(mnt, rpc.RPC, filepath.Join(pn, rpc.RPC))
-		if err != nil {
+		if err := fsl.MountTree(ep, rpc.RPC, filepath.Join(pn, rpc.RPC)); err != nil {
 			return nil, err
 		}
 	}
@@ -49,7 +61,8 @@ func NewSigmaRPCCh(fsls []*fslib.FsLib, pn string) (rpcclnt.RPCCh, error) {
 		fds:  make([]int, 0, len(fsls)),
 		pn:   pn,
 	}
-	sdc, err := sessdevclnt.NewSessDevClnt(fsls[0], filepath.Join(pn, rpc.RPC))
+	pn0 := filepath.Join(pn, rpc.RPC)
+	sdc, err := sessdevclnt.NewSessDevClnt(fsls[0], pn0)
 	if err != nil {
 		return nil, err
 	}

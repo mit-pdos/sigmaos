@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/leaderetcd"
 )
 
 func (nd *Named) startLeader() error {
-	fs, err := fsetcd.NewFsEtcd(nd.GetNetProxyClnt().Dial, nd.ProcEnv().GetEtcdEndpoints(), nd.realm)
+	nd.pstats = fsetcd.NewPstatsDev()
+	fs, err := fsetcd.NewFsEtcd(nd.GetNetProxyClnt().Dial, nd.ProcEnv().GetEtcdEndpoints(), nd.realm, nd.pstats)
 	if err != nil {
 		return err
 	}

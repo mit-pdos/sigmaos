@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/namesrv"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -28,6 +28,18 @@ func TestBootNamed(t *testing.T) {
 	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
 
 	assert.True(t, sp.Present(sts, namesrv.InitRootDir), "initfs")
+
+	ts.Shutdown()
+}
+
+func TestPstats(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	st, err := ts.ReadPstats()
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "pstats %v\n", st)
 
 	ts.Shutdown()
 }

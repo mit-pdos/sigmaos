@@ -8,8 +8,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/port"
 	"sigmaos/proc"
-	"sigmaos/sigmaclntsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/spproxysrv"
 )
 
 type Services struct {
@@ -45,8 +45,8 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp
 	switch s {
 	case sp.NAMEDREL:
 		ss, err = k.bootNamed()
-	case sp.SIGMACLNTDREL:
-		ss, err = k.bootSigmaclntd()
+	case sp.SPPROXYDREL:
+		ss, err = k.bootSPProxyd()
 	case sp.S3REL:
 		ss, err = k.bootS3d(realm)
 	case sp.CHUNKDREL:
@@ -79,15 +79,6 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp
 
 func (k *Kernel) SetCPUShares(pid sp.Tpid, shares int64) error {
 	return k.svcs.svcMap[pid].SetCPUShares(shares)
-}
-
-func (k *Kernel) AssignUprocdToRealm(pid sp.Tpid, realm sp.Trealm, ptype proc.Ttype) error {
-	err := k.svcs.svcMap[pid].AssignToRealm(realm, ptype)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error assign uprocd to realm: %v", err)
-		return err
-	}
-	return nil
 }
 
 func (k *Kernel) GetCPUUtil(pid sp.Tpid) (float64, error) {
@@ -189,13 +180,13 @@ func (k *Kernel) bootNamed() (Subsystem, error) {
 	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0"}, sp.ROOTREALM, proc.HSCHEDD, 0)
 }
 
-func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
-	pid := sp.GenPid("sigmaclntd")
-	p := proc.NewPrivProcPid(pid, "sigmaclntd", nil, true)
+func (k *Kernel) bootSPProxyd() (Subsystem, error) {
+	pid := sp.GenPid("spproxy")
+	p := proc.NewPrivProcPid(pid, "spproxy", nil, true)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetHow(proc.HLINUX)
 	p.InheritParentProcEnv(k.ProcEnv())
-	return sigmaclntsrv.ExecSigmaClntSrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"))
+	return spproxysrv.ExecSPProxySrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"))
 }
 
 // Start uprocd in a sigmauser container and post the mount for
@@ -204,10 +195,10 @@ func (k *Kernel) bootSigmaclntd() (Subsystem, error) {
 func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 	// Append netproxy bool to args
 	args = append(args, strconv.FormatBool(k.Param.NetProxy))
-	sigmaclntdPID := sp.GenPid("sigmaclntd")
-	sigmaclntdArgs := append([]string{sigmaclntdPID.String()})
+	spproxydPID := sp.GenPid("spproxyd")
+	spproxydArgs := append([]string{spproxydPID.String()})
 	db.DPrintf(db.ALWAYS, "Uprocd args %v", args)
-	s, err := k.bootSubsystem("uprocd", append(args, sigmaclntdArgs...), sp.ROOTREALM, proc.HDOCKER, 0)
+	s, err := k.bootSubsystem("uprocd", append(args, spproxydArgs...), sp.ROOTREALM, proc.HDOCKER, 0)
 	if err != nil {
 		return nil, err
 	}

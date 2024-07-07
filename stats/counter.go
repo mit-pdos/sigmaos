@@ -8,9 +8,21 @@ const STATS = true
 
 type Tcounter = atomic.Int64
 
+func NewCounter(n int64) Tcounter {
+	c := Tcounter{}
+	c.Store(n)
+	return c
+}
+
 func Inc(c *Tcounter, v int64) {
 	if STATS {
 		c.Add(v)
+	}
+}
+
+func Add(c *Tcounter, v Tcounter) {
+	if STATS {
+		c.Add(v.Load())
 	}
 }
 

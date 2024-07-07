@@ -10,6 +10,7 @@ package fidclnt
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/netproxyclnt"
@@ -111,7 +112,7 @@ func (fidc *FidClnt) Qid(fid sp.Tfid) *sp.Tqid {
 }
 
 func (fidc *FidClnt) Qids(fid sp.Tfid) []*sp.Tqid {
-	return fidc.Lookup(fid).qids
+	return fidc.Lookup(fid).Qids()
 }
 
 func (fidc *FidClnt) Path(fid sp.Tfid) path.Tpathname {
@@ -135,6 +136,7 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
 }
 
 func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, ep *sp.Tendpoint, pn, tree string) (sp.Tfid, *serr.Err) {
+	s := time.Now()
 	fid := fidc.allocFid()
 	pc := protclnt.NewProtClnt(ep, fidc.sm)
 	reply, err := pc.Attach(secrets, cid, fid, path.Split(tree))
@@ -144,6 +146,7 @@ func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, 
 		return sp.NoFid, err
 	}
 	fidc.fids.insert(fid, newChannel(pc, path.Split(pn), []*sp.Tqid{sp.NewTqid(reply.Qid)}))
+	db.DPrintf(db.ATTACH_LAT, "%v: attach %v pn %q(%q) lat %v\n", cid, ep, pn, tree, time.Since(s))
 	return fid, nil
 }
 

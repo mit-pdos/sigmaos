@@ -2,7 +2,7 @@ package electclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fsetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/leaderetcd"
 	sp "sigmaos/sigmap"
@@ -23,7 +23,7 @@ type ElectClnt struct {
 
 func NewElectClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*ElectClnt, error) {
 	e := &ElectClnt{FsLib: fsl, pn: pn, perm: perm}
-	fs, err := fsetcd.NewFsEtcd(fsl.GetNetProxyClnt().Dial, fsl.ProcEnv().GetEtcdEndpoints(), fsl.ProcEnv().GetRealm())
+	fs, err := fsetcd.NewFsEtcd(fsl.GetNetProxyClnt().Dial, fsl.ProcEnv().GetEtcdEndpoints(), fsl.ProcEnv().GetRealm(), nil)
 	if err != nil {
 		return nil, err
 	}

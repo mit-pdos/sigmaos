@@ -160,11 +160,6 @@ func (updm *UprocdMgr) getClntOrStartUprocd(realm sp.Trealm, ptype proc.Ttype) (
 		if ptype == proc.T_BE {
 			updm.beUprocds = append(updm.beUprocds, rpcc)
 		}
-		start = time.Now()
-		if err := updm.kclnt.AssignToRealm(pid, realm, ptype); err != nil {
-			db.DFatalf("Err assign uprocd to realm: %v", err)
-		}
-		db.DPrintf(db.REALM_GROW_LAT, "[%v] AssignToRealm latency: %v", realm, time.Since(start))
 	}
 	return rpcc, nil
 }
@@ -185,7 +180,7 @@ func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	if err != nil {
 		return err, nil
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup Uprocd clnt %v", updm.fsl.ProcEnv().GetPID(), time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup Uprocd clnt %v lat %v", updm.fsl.ProcEnv().GetPID(), uproc.GetPid(), time.Since(s))
 	// run and exit do resource accounting and share rebalancing for the
 	// uprocds.
 	s = time.Now()
@@ -201,7 +196,12 @@ func (updm *UprocdMgr) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, path 
 	if err != nil {
 		return err, nil
 	}
-	return rpcc.WarmProc(pid, realm, prog, updm.fsl.ProcEnv().GetSecrets()["s3"], path)
+	ep, err := updm.fsl.GetNamedEndpointRealm(realm)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error get realm named EP in WarmProc: %v", err)
+		return err, nil
+	}
+	return rpcc.WarmProc(pid, realm, prog, updm.fsl.ProcEnv().GetSecrets()["s3"], ep, path)
 }
 
 func (updm *UprocdMgr) String() string {

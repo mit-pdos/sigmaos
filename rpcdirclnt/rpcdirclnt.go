@@ -7,46 +7,48 @@ import (
 	"sigmaos/dircache"
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
-	"sigmaos/serr"
 	"sigmaos/sigmarpcchan"
 )
 
+type AllocFn func(string)
+
 type RPCDirClnt struct {
 	*dircache.DirCache[*rpcclnt.RPCClnt]
+	allocFn AllocFn // Callback to be invoked when a new client is created
 }
 
-func (rpcdc *RPCDirClnt) newEntry(n string) (*rpcclnt.RPCClnt, error) {
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{rpcdc.FsLib}, filepath.Join(rpcdc.Path, n))
+func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
+	pn := filepath.Join(rpcdc.Path, n)
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{rpcdc.FsLib}, pn)
 	if err != nil {
-		db.DPrintf(rpcdc.ESelector, "Error NewSigmaRPCClnt[srvID:%v]: %v", n, err)
+		db.DPrintf(rpcdc.ESelector, "Error NewSigmaRPCClnt[srvID:%v]: %v", pn, err)
 		return nil, err
 	}
-	db.DPrintf(rpcdc.LSelector, "newEntry NewSigmaRPCClnt[srvID:%v]: %v", n, rpcc)
+	db.DPrintf(rpcdc.LSelector, "newClnt NewSigmaRPCClnt[srvID:%v]: %v", pn, rpcc)
+	if rpcdc.allocFn != nil {
+		rpcdc.allocFn(n)
+	}
 	return rpcc, nil
 }
 
-func NewRPCDirClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector) *RPCDirClnt {
-	u := &RPCDirClnt{}
-	u.DirCache = dircache.NewDirCache[*rpcclnt.RPCClnt](fsl, path, u.newEntry, lSelector, eSelector)
+func NewRPCDirClntAllocFn(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, fn AllocFn) *RPCDirClnt {
+	u := &RPCDirClnt{
+		allocFn: fn,
+	}
+	u.DirCache = dircache.NewDirCache[*rpcclnt.RPCClnt](fsl, path, u.newClnt, lSelector, eSelector)
 	return u
+}
+
+func NewRPCDirClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector) *RPCDirClnt {
+	return NewRPCDirClntAllocFn(fsl, path, lSelector, eSelector, nil)
 }
 
 func NewRPCDirClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, filter string) *RPCDirClnt {
 	u := &RPCDirClnt{}
-	u.DirCache = dircache.NewDirCacheFilter[*rpcclnt.RPCClnt](fsl, path, u.newEntry, lSelector, eSelector, filter)
+	u.DirCache = dircache.NewDirCacheFilter[*rpcclnt.RPCClnt](fsl, path, u.newClnt, lSelector, eSelector, filter)
 	return u
 }
 
 func (rpcdc *RPCDirClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
-	e, err := rpcdc.GetEntry(srvID)
-	if err != nil && serr.IsErrorNotfound(err) {
-		// In some cases the caller knows that srvID exists, so force
-		// an entry to be allocated.
-		e1, err := rpcdc.GetEntryAlloc(srvID)
-		if err != nil {
-			return nil, err
-		}
-		return e1, nil
-	}
-	return e, err
+	return rpcdc.GetEntry(srvID)
 }

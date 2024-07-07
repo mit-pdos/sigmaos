@@ -145,22 +145,23 @@ func (si *Stats) Inc(fct sessp.Tfcall, ql int64) {
 	Inc(&si.Qlen, ql)
 }
 
-type StatInfo struct {
+type StatInode struct {
 	fs.Inode
 	mu       sync.Mutex // protects some fields of StatInfo
 	st       *Stats
 	pathCnts bool
 }
 
-func NewStatsDev(parent fs.Dir) *StatInfo {
-	sti := &StatInfo{}
-	sti.Inode = inode.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId, parent)
-	sti.st = NewStats()
-	sti.pathCnts = false
+func NewStatsDev(parent fs.Dir) *StatInode {
+	sti := &StatInode{
+		Inode:    inode.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId, parent),
+		st:       NewStats(),
+		pathCnts: false,
+	}
 	return sti
 }
 
-func (sti *StatInfo) SetLoad(load perf.Tload, cload perf.Tload, u, cu float64) {
+func (sti *StatInode) SetLoad(load perf.Tload, cload perf.Tload, u, cu float64) {
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
 
@@ -170,11 +171,11 @@ func (sti *StatInfo) SetLoad(load perf.Tload, cload perf.Tload, u, cu float64) {
 	sti.st.CustomUtil = cu
 }
 
-func (sti *StatInfo) Stats() *Stats {
+func (sti *StatInode) Stats() *Stats {
 	return sti.st
 }
 
-func (sti *StatInfo) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (sti *StatInode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	st, err := sti.Inode.NewStat()
 	if err != nil {
 		return nil, err
@@ -184,23 +185,24 @@ func (sti *StatInfo) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	return st, nil
 }
 
-func (st *StatInfo) Write(ctx fs.CtxI, off sp.Toffset, data []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
+func (st *StatInode) Write(ctx fs.CtxI, off sp.Toffset, data []byte, f sp.Tfence) (sp.Tsize, *serr.Err) {
 	return 0, nil
 }
 
-func (st *StatInfo) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
-	db.DPrintf(db.TEST, "Read statinfo %v\n", st)
+func (st *StatInode) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
+	b := st.stats()
+	db.DPrintf(db.TEST, "Read statinfo %v off %d %d sz %d", st, off, n, len(b))
 	if st == nil {
 		return nil, nil
 	}
 	if off > 0 {
 		return nil, nil
 	}
-	b := st.stats()
-	return b, nil
+	// return no more data than asked for
+	return b[:n], nil
 }
 
-func (sti *StatInfo) EnablePathCnts() {
+func (sti *StatInode) EnablePathCnts() {
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
 
@@ -208,7 +210,7 @@ func (sti *StatInfo) EnablePathCnts() {
 	sti.st.Paths = make(map[string]int)
 }
 
-func (sti *StatInfo) IncPath(path path.Tpathname) {
+func (sti *StatInode) IncPath(path path.Tpathname) {
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
 
@@ -222,7 +224,7 @@ func (sti *StatInfo) IncPath(path path.Tpathname) {
 	sti.st.Paths[p] += 1
 }
 
-func (sti *StatInfo) IncPathString(p string) {
+func (sti *StatInode) IncPathString(p string) {
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
 
@@ -268,7 +270,7 @@ func (st *Stats) statsSnapshot() *StatsSnapshot {
 	return stro
 }
 
-func (sti *StatInfo) StatsSnapshot() *StatsSnapshot {
+func (sti *StatInode) StatsSnapshot() *StatsSnapshot {
 	stro := sti.st.statsSnapshot()
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
@@ -281,7 +283,7 @@ func (sti *StatInfo) StatsSnapshot() *StatsSnapshot {
 	return stro
 }
 
-func (sti *StatInfo) stats() []byte {
+func (sti *StatInode) stats() []byte {
 	st := sti.StatsSnapshot()
 	db.DPrintf(db.TEST, "stat %v\n", st)
 	data, err := json.Marshal(st)

@@ -16,7 +16,7 @@ type MultiKernelClnt struct {
 func NewMultiKernelClnt(fsl *fslib.FsLib, lsel, esel db.Tselector) *MultiKernelClnt {
 	return &MultiKernelClnt{
 		FsLib: fsl,
-		rpcdc: rpcdirclnt.NewRPCDirClntFilter(fsl, sp.BOOT, lsel, esel, sp.SIGMACLNTDKERNEL),
+		rpcdc: rpcdirclnt.NewRPCDirClntFilter(fsl, sp.BOOT, lsel, esel, sp.SPPROXYDKERNEL),
 	}
 }
 
@@ -37,7 +37,7 @@ func (mkc *MultiKernelClnt) EvictKernelProc(kernelID string, pid sp.Tpid) error 
 }
 
 func (mkc *MultiKernelClnt) GetGeneralKernels() ([]string, error) {
-	return mkc.rpcdc.GetEntries()
+	return mkc.rpcdc.WaitTimedGetEntriesN(1)
 }
 
 func (mkc *MultiKernelClnt) StopWatching() {

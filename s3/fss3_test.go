@@ -233,8 +233,9 @@ func TestTwo(t *testing.T) {
 		return
 	}
 
-	// Make a second one
-	ts.BootFss3d()
+	// Boot a kernel with a second s3 proxy
+	err := ts.BootNode(1)
+	assert.Nil(t, err)
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -252,8 +253,9 @@ func TestUnionSimple(t *testing.T) {
 		return
 	}
 
-	// Make a second one
-	ts.BootFss3d()
+	// Boot a kernel with a second s3 proxy
+	err := ts.BootNode(1)
+	assert.Nil(t, err)
 
 	dirents, err := ts.GetDir(filepath.Join(sp.S3, "~local/9ps3/"))
 	assert.Nil(t, err, "GetDir: %v", err)
@@ -269,8 +271,9 @@ func TestUnionDir(t *testing.T) {
 		return
 	}
 
-	// Make a second one
-	ts.BootFss3d()
+	// Boot a kernel with a second s3 proxy
+	err := ts.BootNode(1)
+	assert.Nil(t, err)
 
 	dirents, err := ts.GetDir(filepath.Join(sp.S3, "~local/9ps3/gutenberg"))
 	assert.Nil(t, err, "GetDir")
@@ -286,8 +289,9 @@ func TestUnionFile(t *testing.T) {
 		return
 	}
 
-	// Make a second one
-	ts.BootFss3d()
+	// Boot a kernel with a second s3 proxy
+	err := ts.BootNode(1)
+	assert.Nil(t, err)
 
 	file, err := os.ReadFile("../input/pg-being_ernest.txt")
 	assert.Nil(t, err, "ReadFile")

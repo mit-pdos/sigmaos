@@ -6,10 +6,10 @@ import (
 
 type MicroserviceParams struct {
 	ID       string
-	NSlots   int
-	InitTime uint64
-	PTime    uint64
-	Stateful bool
+	NSlots   int    // Number of slots for processing requests in parallel
+	InitTime uint64 // Time required to initialize a new instance of the microservice
+	PTime    uint64 // Time required to process each request
+	Stateful bool   // If true, microservice is stateful TODO: unimplemented
 }
 
 func NewMicroserviceParams(id string, nslots int, ptime uint64, initTime uint64, stateful bool) *MicroserviceParams {
@@ -33,12 +33,12 @@ type Microservice struct {
 	autoscaler      Autoscaler
 }
 
-func NewMicroservice(t *uint64, msp *MicroserviceParams, newAutoscaler NewAutoscalerFn) *Microservice {
+func NewMicroservice(t *uint64, msp *MicroserviceParams, newAutoscaler NewAutoscalerFn, newLoadBalancer NewLoadBalancerFn) *Microservice {
 	m := &Microservice{
 		t:        t,
 		msp:      msp,
 		replicas: []*MicroserviceInstance{},
-		lb:       NewRoundRobinLB(),
+		lb:       newLoadBalancer(),
 		stats:    NewServiceStats(),
 	}
 	// Start off with 1 replica

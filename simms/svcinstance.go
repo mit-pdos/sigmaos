@@ -2,6 +2,8 @@ package simms
 
 import (
 	"strconv"
+
+	db "sigmaos/debug"
 )
 
 type ServiceInstance struct {
@@ -61,9 +63,10 @@ func (s *ServiceInstance) GetQLen() int {
 func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
 	// If service had not initialized yet, and sufficient initialization time has
 	// passed, mark service ready
-	if !s.init && s.startTime+s.initTime >= *s.t {
+	if !s.init && s.startTime+s.initTime <= *s.t {
 		s.init = true
 		s.MarkReady()
+		db.DPrintf(db.SIM_SVC, "[t=%v,svc=%v] Ready", *s.t, s.id)
 	}
 	// Enqueue new requests
 	s.q.Enqueue(reqs)

@@ -4,6 +4,7 @@ import (
 	"math/rand"
 
 	"sigmaos/simms"
+	"sigmaos/simms/lb/metrics"
 )
 
 // Load balancer with omniscient view of microservice queue lengths, which
@@ -24,6 +25,7 @@ func (lb *NRandomChoicesQLenLB) SteerRequests(reqs []*simms.Request, instances [
 	for i := range steeredReqs {
 		steeredReqs[i] = []*simms.Request{}
 	}
+	m := metrics.NewQLenMetric(steeredReqs, instances)
 	// Create slice of indices of ready instances
 	instanceIdxs := make([]int, 0, len(instances))
 	for i, r := range instances {
@@ -38,13 +40,10 @@ func (lb *NRandomChoicesQLenLB) SteerRequests(reqs []*simms.Request, instances [
 			instanceIdxs[i], instanceIdxs[j] = instanceIdxs[j], instanceIdxs[i]
 		})
 		smallestIdx := 0
-		smallestQLen := -1
 		// Sample (up to) N random choices
 		for i := 0; i < lb.n && i < len(instanceIdxs); i++ {
 			idx := instanceIdxs[i]
-			instanceQLen := instances[idx].GetQLen() + len(steeredReqs[idx])
-			if smallestQLen == -1 || instanceQLen < smallestQLen {
-				smallestQLen = instanceQLen
+			if m.Less(idx, smallestIdx) {
 				smallestIdx = idx
 			}
 		}

@@ -2,6 +2,7 @@ package lb
 
 import (
 	"sigmaos/simms"
+	"sigmaos/simms/lb/metrics"
 )
 
 // Load balancer with omniscient view of microservice queue lengths, which
@@ -19,17 +20,14 @@ func (lb *OmniscientQLenLB) SteerRequests(reqs []*simms.Request, instances []*si
 	for i := range steeredReqs {
 		steeredReqs[i] = []*simms.Request{}
 	}
+	m := metrics.NewQLenMetric(steeredReqs, instances)
 	// For each request
 	for _, r := range reqs {
 		// Get index of ready instance with smallest queue
 		smallestIdx := 0
-		smallestQLen := -1
 		for idx := range instances {
 			if instances[idx].IsReady() {
-				// Queue length is current tick's queue length, plus number of requests to be steered to this instance in this tick
-				instanceQLen := instances[idx].GetQLen() + len(steeredReqs[idx])
-				if smallestQLen == -1 || instanceQLen < smallestQLen {
-					smallestQLen = instanceQLen
+				if m.Less(idx, smallestIdx) {
 					smallestIdx = idx
 				}
 			}

@@ -369,7 +369,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	go func() {
 		s := time.Now()
 		_, _, err := cksrv.fetchChunk(r, req.GetProg(), sp.Tpid(req.Pid), req.GetS3Secret(), 0, chunk.CHUNKSZ, req.GetSigmaPath())
-		db.DPrintf(db.SPAWN_LAT, "prefetch: fetchChunk %v err %v lat %v", req.GetProg(), err, time.Since(s))
+		db.DPrintf(db.SPAWN_LAT, "GetFileStat: fetchChunk %v err %v lat %v", req.GetProg(), err, time.Since(s))
 	}()
 
 	st, srv, err := cksrv.getFileStat(req)

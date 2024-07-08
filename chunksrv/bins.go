@@ -31,6 +31,7 @@ func newBin(prog string) *bin {
 	return b
 }
 
+// Caller should stat file if getStat() returns nil
 func (be *bin) getStat() *sp.Stat {
 	be.Lock()
 	defer be.Unlock()
@@ -56,6 +57,7 @@ func (be *bin) signalStatWaiters() {
 	be.cond.Broadcast()
 }
 
+// Caller should open file if getFd returns -1
 func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string) {
 	be.Lock()
 	defer be.Unlock()
@@ -65,10 +67,10 @@ func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string) {
 			return be.fd, be.path
 		}
 		if !be.openInProgress {
+			be.openInProgress = true
 			return -1, ""
 		}
 		be.cond.Wait()
-
 	}
 }
 

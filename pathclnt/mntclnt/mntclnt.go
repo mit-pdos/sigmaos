@@ -94,44 +94,24 @@ func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Tpat
 	return mc.LastMount(pn, principal)
 }
 
-func (mc *MntClnt) AutoMount(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, path path.Tpathname) *serr.Err {
-	db.DPrintf(db.MOUNT, "%v: automount %v to %v\n", mc.cid, ep, path)
-	var fid sp.Tfid
-	var err *serr.Err
-	s := time.Now()
-	fid, err = mc.fidc.Attach(secrets, mc.cid, ep, path.String(), ep.Root)
-	if err != nil {
-		db.DPrintf(db.MOUNT_ERR, "Attach error: %v", err)
-		return err
-	}
-	db.DPrintf(db.WALK_LAT, "%v: automount pn '%v' Attach lat %v\n", mc.cid, path, time.Since(s))
-	err = mc.mount(fid, path.String())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname string) error {
 	db.DPrintf(db.MOUNT, "MountTree [%v]:%q mnt %v", ep, tree, mntname)
 	ok, err := mc.isMountedAt(mntname)
-	db.DPrintf(db.MOUNT, "isMounted [%v] %t %v", mntname, ok, err)
+	db.DPrintf(db.MOUNT, "isMounted [%v] fid %v %v", mntname, ok, err)
 	if err != nil {
-		return nil
+		return err
 	}
 	if ok {
 		return nil
 	}
-	if fid, err := mc.fidc.Attach(secrets, mc.cid, ep, "", tree); err == nil {
-		return mc.Mount(fid, mntname)
-	} else {
+	s := time.Now()
+	fid, err := mc.fidc.Attach(secrets, mc.cid, ep, mntname, tree)
+	db.DPrintf(db.WALK_LAT, "%v: MoutTree pn %q err %v Attach lat %v\n", mc.cid, mntname, err, time.Since(s))
+	if err != nil {
 		db.DPrintf(db.MOUNT_ERR, "%v: MountTree Attach [%v]/%v err %v", mc.cid, ep, tree, err)
 		return err
 	}
-}
-
-func (mc *MntClnt) Mount(fid sp.Tfid, path string) error {
-	if err := mc.mount(fid, path); err != nil {
+	if err := mc.mount(fid, mntname); err != nil {
 		return err
 	}
 	return nil
@@ -195,7 +175,7 @@ func (mc *MntClnt) Disconnect(pn string, fids []sp.Tfid) error {
 	return nil
 }
 
-func (mc *MntClnt) isMountedAt(pn string) (bool, error) {
+func (mc *MntClnt) isMountedAt(pn string) (bool, *serr.Err) {
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return false, err

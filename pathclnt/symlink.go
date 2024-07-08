@@ -20,10 +20,11 @@ func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Tpathname) 
 	ep, error := sp.NewEndpointFromBytes(target)
 	if error == nil {
 		db.DPrintf(db.WALK_LAT, "walksymlink1 %v %v %v ep %v lat %v\n", pathc.cid, fid, resolved, ep, time.Since(s))
-		err := pathc.mntclnt.AutoMount(pathc.pe.GetSecrets(), ep, resolved)
-		if err != nil {
-			db.DPrintf(db.WALK, "automount %v %v err %v\n", resolved, ep, err)
-			return left, err
+
+		error := pathc.mntclnt.MountTree(pathc.pe.GetSecrets(), ep, ep.Root, resolved.String())
+		if error != nil {
+			db.DPrintf(db.WALK, "automount %v %v err %v\n", resolved, ep, error)
+			return left, error.(*serr.Err)
 		}
 		p = append(resolved, left...)
 	} else {

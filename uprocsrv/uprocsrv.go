@@ -303,9 +303,11 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, p
 
 	// Prefetch file stats
 	go func() {
+		s := time.Now()
 		if _, _, err := ups.ckclnt.GetFileStat(ups.kernelId, prog, upid, realm, s3secret, path, ep); err != nil {
 			db.DPrintf(db.UPROCD, "GetFileStat %v %v err %v", ups.kernelId, realm, err)
 		}
+		db.DPrintf(db.SPAWN_LAT, "[%v] prefetch %v lat %v", upid, prog, time.Since(s))
 	}()
 	start = time.Now()
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v", realm)

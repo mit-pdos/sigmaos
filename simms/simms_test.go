@@ -566,7 +566,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithOmniscientQLenLB(t *testing.T
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
-	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp), opts.WithOmniscientQLenLB())
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp), opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)
@@ -616,7 +616,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithNRandomQLenLB(t *testing.T) {
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
-	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp), opts.WithNRandomChoicesQLenLB(N_RANDOM_CHOICES))
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp), opts.WithNRandomChoicesLB(N_RANDOM_CHOICES), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)
@@ -661,7 +661,7 @@ func TestImmediateScaleUpWithClientBurstOmniscientQLenLB(t *testing.T) {
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, SVC_INIT_TIME, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientQLenLB())
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)
@@ -708,7 +708,7 @@ func TestImmediateScaleUpWithClientBurstNRandomChoicesQLenLB(t *testing.T) {
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, SVC_INIT_TIME, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithNRandomChoicesQLenLB(N_RANDOM_CHOICES))
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithNRandomChoicesLB(N_RANDOM_CHOICES), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)
@@ -739,7 +739,7 @@ func TestImmediateScaleUpWithClientBurstNRandomChoicesQLenLB(t *testing.T) {
 
 // Test increase in tail latency when scaling up a service, assuming sclaing
 // begins exactly when the request burst begins
-func TestDelayedScaleUpWithClientBurstNRandomChoicesQLenLB(t *testing.T) {
+func TestDelayedScaleUpWithClientBurstNRandomChoicesLB(t *testing.T) {
 	const (
 		N_TICKS uint64 = 250
 		// Clnt params
@@ -764,7 +764,7 @@ func TestDelayedScaleUpWithClientBurstNRandomChoicesQLenLB(t *testing.T) {
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, SVC_INIT_TIME, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithNRandomChoicesQLenLB(N_RANDOM_CHOICES))
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithNRandomChoicesLB(N_RANDOM_CHOICES), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)

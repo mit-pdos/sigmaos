@@ -4,28 +4,29 @@ import (
 	"math/rand"
 
 	"sigmaos/simms"
-	"sigmaos/simms/lb/metrics"
 )
 
 // Load balancer with omniscient view of microservice queue lengths, which
 // distributes requests to microservice instances with the shortes queue
 // lengths
-type NRandomChoicesQLenLB struct {
-	n int
+type NRandomChoicesLB struct {
+	n         int
+	newMetric simms.NewLoadBalancerMetricFn
 }
 
-func NewNRandomChoicesQLenLB(n int) simms.LoadBalancer {
-	return &NRandomChoicesQLenLB{
-		n: n,
+func NewNRandomChoicesLB(m simms.NewLoadBalancerMetricFn, n int) simms.LoadBalancer {
+	return &NRandomChoicesLB{
+		n:         n,
+		newMetric: m,
 	}
 }
 
-func (lb *NRandomChoicesQLenLB) SteerRequests(reqs []*simms.Request, instances []*simms.MicroserviceInstance) [][]*simms.Request {
+func (lb *NRandomChoicesLB) SteerRequests(reqs []*simms.Request, instances []*simms.MicroserviceInstance) [][]*simms.Request {
 	steeredReqs := make([][]*simms.Request, len(instances))
 	for i := range steeredReqs {
 		steeredReqs[i] = []*simms.Request{}
 	}
-	m := metrics.NewQLenMetric(steeredReqs, instances)
+	m := lb.newMetric(steeredReqs, instances)
 	// Create slice of indices of ready instances
 	instanceIdxs := make([]int, 0, len(instances))
 	for i, r := range instances {

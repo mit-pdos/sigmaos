@@ -40,7 +40,7 @@ func NewMicroservice(t *uint64, msp *MicroserviceParams, defaultOpts Microservic
 		t:         t,
 		msp:       msp,
 		instances: []*MicroserviceInstance{},
-		lb:        opts.NewLoadBalancer(),
+		lb:        opts.NewLoadBalancer(opts.NewLoadBalancerMetric),
 		stats:     NewServiceStats(),
 	}
 	// Start off with 1 instance

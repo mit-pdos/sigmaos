@@ -8,7 +8,7 @@ import (
 type RoundRobinLB struct {
 }
 
-func NewRoundRobinLB() simms.LoadBalancer {
+func NewRoundRobinLB(simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
 	return &RoundRobinLB{}
 }
 

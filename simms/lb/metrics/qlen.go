@@ -9,7 +9,7 @@ type QLen struct {
 	instances   []*simms.MicroserviceInstance
 }
 
-func NewQLenMetric(steeredReqs [][]*simms.Request, instances []*simms.MicroserviceInstance) Metric {
+func NewQLenMetric(steeredReqs [][]*simms.Request, instances []*simms.MicroserviceInstance) simms.LoadBalancerMetric {
 	return &QLen{
 		steeredReqs: steeredReqs,
 		instances:   instances,

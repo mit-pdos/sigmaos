@@ -3,6 +3,7 @@ package opts
 import (
 	"sigmaos/simms"
 	"sigmaos/simms/lb"
+	lbmetrics "sigmaos/simms/lb/metrics"
 )
 
 type withRoundRobinLB struct{}
@@ -15,28 +16,38 @@ func WithRoundRobinLB() simms.MicroserviceOpt {
 	return &withRoundRobinLB{}
 }
 
-type withOmniscientQLenLB struct{}
+type withLoadBalancerQLenMetric struct{}
 
-func (withOmniscientQLenLB) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancer = lb.NewOmniscientQLenLB
+func (o withLoadBalancerQLenMetric) Apply(opts *simms.MicroserviceOpts) {
+	opts.NewLoadBalancerMetric = lbmetrics.NewQLenMetric
 }
 
-func WithOmniscientQLenLB() simms.MicroserviceOpt {
-	return &withOmniscientQLenLB{}
+func WithLoadBalancerQLenMetric() simms.MicroserviceOpt {
+	return &withLoadBalancerQLenMetric{}
 }
 
-type withNRandomChoicesQLenLB struct {
+type withOmniscientLB struct{}
+
+func (withOmniscientLB) Apply(opts *simms.MicroserviceOpts) {
+	opts.NewLoadBalancer = lb.NewOmniscientLB
+}
+
+func WithOmniscientLB() simms.MicroserviceOpt {
+	return &withOmniscientLB{}
+}
+
+type withNRandomChoicesLB struct {
 	n int
 }
 
-func (o withNRandomChoicesQLenLB) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancer = func() simms.LoadBalancer {
-		return lb.NewNRandomChoicesQLenLB(o.n)
+func (o withNRandomChoicesLB) Apply(opts *simms.MicroserviceOpts) {
+	opts.NewLoadBalancer = func(newMetric simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
+		return lb.NewNRandomChoicesLB(newMetric, o.n)
 	}
 }
 
-func WithNRandomChoicesQLenLB(n int) simms.MicroserviceOpt {
-	return &withNRandomChoicesQLenLB{
+func WithNRandomChoicesLB(n int) simms.MicroserviceOpt {
+	return &withNRandomChoicesLB{
 		n: n,
 	}
 }

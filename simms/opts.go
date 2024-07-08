@@ -7,8 +7,9 @@ type MicroserviceOpt interface {
 // TODO: should probably separate all different parts of the simulator into
 // their own sub-packages to make things cleaner
 type MicroserviceOpts struct {
-	NewAutoscaler   NewAutoscalerFn
-	NewLoadBalancer NewLoadBalancerFn
+	NewAutoscaler         NewAutoscalerFn
+	NewLoadBalancer       NewLoadBalancerFn
+	NewLoadBalancerMetric NewLoadBalancerMetricFn
 }
 
 func NewMicroserviceOpts(defaultOpts MicroserviceOpts, opts []MicroserviceOpt) *MicroserviceOpts {

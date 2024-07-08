@@ -3,9 +3,8 @@ package chunksrv
 import (
 	"fmt"
 	"sync"
-	"time"
 
-	db "sigmaos/debug"
+	// db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
@@ -13,37 +12,72 @@ import (
 
 type bin struct {
 	sync.Mutex
-	cond *sync.Cond
-	fd   int
-	prog string
-	st   *sp.Stat
-	path string
-	sc   *sigmaclnt.SigmaClnt
+	cond           *sync.Cond
+	fd             int
+	prog           string
+	st             *sp.Stat
+	statInProgress bool
+	openInProgress bool
+	path           string
+	sc             *sigmaclnt.SigmaClnt
 }
 
 func newBin(prog string) *bin {
-	return &bin{
+	b := &bin{
 		prog: prog,
 		fd:   -1,
 	}
+	b.cond = sync.NewCond(&b.Mutex)
+	return b
 }
 
-func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string, error) {
+func (be *bin) getStat() *sp.Stat {
 	be.Lock()
 	defer be.Unlock()
 
-	if be.fd != -1 {
-		return be.fd, be.path, nil
+	for {
+		if be.st != nil {
+			return be.st
+		}
+		if !be.statInProgress {
+			be.statInProgress = true
+			return nil
+		}
+		be.cond.Wait()
 	}
-	s := time.Now()
-	fd, path, err := open(sc, be.prog, paths)
-	if err != nil {
-		return -1, "", err
+	return be.st
+}
+
+func (be *bin) signalStatWaiters() {
+	be.Lock()
+	defer be.Unlock()
+
+	be.statInProgress = false
+	be.cond.Broadcast()
+}
+
+func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string) {
+	be.Lock()
+	defer be.Unlock()
+
+	for {
+		if be.fd != -1 {
+			return be.fd, be.path
+		}
+		if !be.openInProgress {
+			return -1, ""
+		}
+		be.cond.Wait()
+
 	}
-	be.fd = fd
-	be.path = path
-	db.DPrintf(db.SPAWN_LAT, "[%v] getFd %q open lat %v", be.prog, paths, time.Since(s))
-	return be.fd, path, nil
+}
+
+func (be *bin) signalFdWaiters() {
+	be.Lock()
+	defer be.Unlock()
+
+	be.openInProgress = false
+	be.cond.Broadcast()
 }
 
 type realm struct {

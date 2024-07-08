@@ -199,9 +199,19 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, s3secret *sp.Secret
 		return 0, "", err
 	}
 	// paths = replaceLocal(paths, cksrv.kernelId)
-	fd, path, err := be.getFd(sc, paths)
-	if err != nil {
-		return 0, "", err
+	fd, path := be.getFd(sc, paths)
+	if fd == -1 {
+		defer be.signalFdWaiters()
+		s := time.Now()
+		fd0, path0, err := open(sc, be.prog, paths)
+		if err != nil {
+			return 0, "", err
+		}
+		be.fd = fd0
+		be.path = path0
+		fd = fd0
+		path = path0
+		db.DPrintf(db.SPAWN_LAT, "[%v] getFd %q open lat %v", be.prog, paths, time.Since(s))
 	}
 	sz, err := sc.Pread(fd, b, sp.Toffset(Ckoff(ck)))
 	if err != nil {
@@ -326,6 +336,7 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest) (*sp.Tstat, str
 
 func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
 	db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: %v", cksrv.kernelId, req)
+	db.DPrintf(db.SPAWN_LAT, "%v: GetFileStat: %v", cksrv.kernelId, req)
 	s := time.Now()
 	defer func() {
 		db.DPrintf(db.SPAWN_LAT, "%v: GetFileStat done: %v lat %v", cksrv.kernelId, req, time.Since(s))
@@ -337,15 +348,14 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 		return err
 	}
 
-	be.Lock()
-	defer be.Unlock()
-
-	if be.st != nil {
+	if st := be.getStat(); st != nil {
 		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: hit %v", cksrv.kernelId, req.GetProg())
 		res.Stat = be.st.StatProto()
 		res.Path = cksrv.path
 		return nil
 	}
+
+	defer be.signalStatWaiters()
 
 	ep := sp.NewEndpointFromProto(req.GetNamedEndpointProto())
 	if ep != nil && ep.IsValidEP() {
@@ -359,7 +369,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	go func() {
 		s := time.Now()
 		_, _, err := cksrv.fetchChunk(r, req.GetProg(), sp.Tpid(req.Pid), req.GetS3Secret(), 0, chunk.CHUNKSZ, req.GetSigmaPath())
-		db.DPrintf(db.SPAWN_LAT, "fetchChunk %v err %v lat %v", req.GetProg(), err, time.Since(s))
+		db.DPrintf(db.SPAWN_LAT, "prefetch: fetchChunk %v err %v lat %v", req.GetProg(), err, time.Since(s))
 	}()
 
 	st, srv, err := cksrv.getFileStat(req)

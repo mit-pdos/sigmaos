@@ -541,7 +541,7 @@ func TestAvgUtilAutoscalerOscillation(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestAvgUtilAutoscalerResolveQueueImbalanceWithOmniscientQlenLB(t *testing.T) {
+func TestAvgUtilAutoscalerResolveQueueImbalanceWithOmniscientQLenLB(t *testing.T) {
 	const (
 		N_TICKS uint64 = 1000
 		// Clnt params
@@ -567,6 +567,56 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithOmniscientQlenLB(t *testing.T
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
 	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp), opts.WithOmniscientQLenLB())
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	for ; time < N_TICKS; time++ {
+		if time == AUTOSCALER_LEAD_IN {
+			svc.GetAutoscaler().Start()
+		}
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
+	// Check that queues balanced out eventually, and request latencies settled down again
+	for i := N_TICKS * 9 / 10; i < N_TICKS/10; i++ {
+		assert.Equal(t, P_TIME, rstats.P99Latency[i], "Latency didn't settle to processing time")
+	}
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+func TestAvgUtilAutoscalerResolveQueueImbalanceWithNRandomQLenLB(t *testing.T) {
+	const (
+		N_TICKS uint64 = 1000
+		// Clnt params
+		CLNT_REQ_MEAN float64 = 45
+		CLNT_REQ_STD  float64 = 0
+		// App params
+		N_SLOTS             int    = 10
+		P_TIME              uint64 = 2
+		SVC_ID              string = "wfe"
+		STATEFUL            bool   = false
+		SIZE_UP_TIME        uint64 = 0
+		SIZE_DOWN_TIME      uint64 = 500
+		RECORD_STATS_WINDOW int    = 10
+		// Autoscaler params
+		SCALE_FREQ         int     = 1
+		TARGET_UTIL        float64 = 0.9
+		UTIL_WINDOW_SIZE   uint64  = 1
+		AUTOSCALER_LEAD_IN uint64  = 10 // Number of ticks to wait before starting the autoscaler
+		// LB param
+		N_RANDOM_CHOICES int = 2
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp), opts.WithNRandomChoicesQLenLB(N_RANDOM_CHOICES))
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)

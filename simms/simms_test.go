@@ -641,7 +641,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithNRandomQLenLB(t *testing.T) {
 
 // Test increase in tail latency when scaling up a service, assuming sclaing
 // begins exactly when the request burst begins
-func TestScaleUpImmediatelyWithClientBurstOmniscientQLenLB(t *testing.T) {
+func TestImmediateScaleUpWithClientBurstOmniscientQLenLB(t *testing.T) {
 	const (
 		N_TICKS uint64 = 250
 		// Clnt params
@@ -685,7 +685,7 @@ func TestScaleUpImmediatelyWithClientBurstOmniscientQLenLB(t *testing.T) {
 
 // Test increase in tail latency when scaling up a service, assuming sclaing
 // begins exactly when the request burst begins
-func TestScaleUpImmediatelyWithClientBurstNRandomChoicesQLenLB(t *testing.T) {
+func TestImmediateScaleUpWithClientBurstNRandomChoicesQLenLB(t *testing.T) {
 	const (
 		N_TICKS uint64 = 250
 		// Clnt params
@@ -722,6 +722,64 @@ func TestScaleUpImmediatelyWithClientBurstNRandomChoicesQLenLB(t *testing.T) {
 			// Start a burst of client requests
 			c.StartBurst(CLNT_BURST_MULTIPLIER)
 			// With no delay, scaling up the service by 2x
+			for i := 0; i < N_INSTANCES; i++ {
+				svc.AddInstance()
+			}
+		}
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+// Test increase in tail latency when scaling up a service, assuming sclaing
+// begins exactly when the request burst begins
+func TestDelayedScaleUpWithClientBurstNRandomChoicesQLenLB(t *testing.T) {
+	const (
+		N_TICKS uint64 = 250
+		// Clnt params
+		CLNT_REQ_MEAN         float64 = 80
+		CLNT_REQ_STD          float64 = 0
+		CLNT_BURST_START      uint64  = 100
+		CLNT_BURST_MULTIPLIER float64 = 2.0
+		// App params
+		N_SLOTS             int    = 10
+		P_TIME              uint64 = 1
+		SVC_ID              string = "wfe"
+		SVC_INIT_TIME       uint64 = 4
+		STATEFUL            bool   = false
+		RECORD_STATS_WINDOW int    = 10
+		N_INSTANCES         int    = 10
+		// Scale up params
+		SCALE_UP_DELAY uint64 = 20
+		// LB param
+		N_RANDOM_CHOICES int = 3
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, SVC_INIT_TIME, STATEFUL)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithNRandomChoicesQLenLB(N_RANDOM_CHOICES))
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	// Add some initial instances for the load balancer to have more choices
+	for i := 1; i < N_INSTANCES; i++ {
+		svc.AddInstance()
+		svc.MarkInstanceReady(i)
+	}
+	for ; time < N_TICKS; time++ {
+		if time == CLNT_BURST_START {
+			// Start a burst of client requests
+			c.StartBurst(CLNT_BURST_MULTIPLIER)
+		}
+		// Scale up instances after a (configurable) delay after the client burst starts
+		if time == CLNT_BURST_START+SCALE_UP_DELAY {
 			for i := 0; i < N_INSTANCES; i++ {
 				svc.AddInstance()
 			}

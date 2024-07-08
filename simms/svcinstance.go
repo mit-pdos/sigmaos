@@ -22,9 +22,9 @@ type ServiceInstance struct {
 	srvStats        *ServiceInstanceStats // Stats of the current service instance
 }
 
-func NewServiceInstance(t *uint64, p *MicroserviceParams, replicaID int) *ServiceInstance {
+func NewServiceInstance(t *uint64, p *MicroserviceParams, instanceID int) *ServiceInstance {
 	return &ServiceInstance{
-		id:              p.ID + "-" + strconv.Itoa(replicaID),
+		id:              p.ID + "-" + strconv.Itoa(instanceID),
 		t:               t,
 		startTime:       *t,
 		nslots:          p.NSlots,

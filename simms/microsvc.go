@@ -23,62 +23,62 @@ func NewMicroserviceParams(id string, nslots int, ptime uint64, initTime uint64,
 }
 
 type Microservice struct {
-	t               *uint64
-	msp             *MicroserviceParams
-	replicas        []*MicroserviceInstance
-	addedReplicas   int
-	removedReplicas int
-	lb              LoadBalancer
-	stats           *ServiceStats
-	autoscaler      Autoscaler
+	t                *uint64
+	msp              *MicroserviceParams
+	instances        []*MicroserviceInstance
+	addedInstances   int
+	removedInstances int
+	lb               LoadBalancer
+	stats            *ServiceStats
+	autoscaler       Autoscaler
 }
 
 func NewMicroservice(t *uint64, msp *MicroserviceParams, defaultOpts MicroserviceOpts, additionalOpts ...MicroserviceOpt) *Microservice {
 	// Create configuration according to passed-in options
 	opts := NewMicroserviceOpts(defaultOpts, additionalOpts)
 	m := &Microservice{
-		t:        t,
-		msp:      msp,
-		replicas: []*MicroserviceInstance{},
-		lb:       opts.NewLoadBalancer(),
-		stats:    NewServiceStats(),
+		t:         t,
+		msp:       msp,
+		instances: []*MicroserviceInstance{},
+		lb:        opts.NewLoadBalancer(),
+		stats:     NewServiceStats(),
 	}
-	// Start off with 1 replica
-	m.AddReplica()
-	for _, r := range m.replicas {
+	// Start off with 1 instance
+	m.AddInstance()
+	for _, r := range m.instances {
 		r.MarkReady()
 	}
 	m.autoscaler = opts.NewAutoscaler(t, m)
 	return m
 }
 
-func (m *Microservice) NReplicas() int {
-	return m.addedReplicas - m.removedReplicas
+func (m *Microservice) NInstances() int {
+	return m.addedInstances - m.removedInstances
 }
 
-func (m *Microservice) AddReplica() {
-	m.replicas = append(m.replicas, NewMicroserviceInstance(m.t, m.msp, m.addedReplicas, nil, nil))
-	m.addedReplicas++
+func (m *Microservice) AddInstance() {
+	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m.msp, m.addedInstances, nil, nil))
+	m.addedInstances++
 }
 
-func (m *Microservice) RemoveReplica() {
-	// Mark the replica "not ready"
-	m.replicas[m.removedReplicas].MarkNotReady()
-	m.removedReplicas++
+func (m *Microservice) RemoveInstance() {
+	// Mark the instance "not ready"
+	m.instances[m.removedInstances].MarkNotReady()
+	m.removedInstances++
 }
 
 func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	replies := []*Reply{}
-	// Steer requests only to replicas which haven't been removed
-	steeredReqs := m.lb.SteerRequests(reqs, m.replicas)
+	// Steer requests only to instances which haven't been removed
+	steeredReqs := m.lb.SteerRequests(reqs, m.instances)
 	steeredReqsCnt := make([]int, len(steeredReqs))
 	for i, r := range steeredReqs {
 		steeredReqsCnt[i] = len(r)
 	}
 	db.DPrintf(db.SIM_LB, "[t=%v] Steering requests to %v", *m.t, steeredReqsCnt)
-	// Forward requests to replicas to which they have been steered
+	// Forward requests to instances to which they have been steered
 	for i, rs := range steeredReqs {
-		replies = append(replies, m.replicas[i].Tick(rs)...)
+		replies = append(replies, m.instances[i].Tick(rs)...)
 	}
 	m.stats.Tick(*m.t, replies)
 	m.autoscaler.Tick()
@@ -98,8 +98,8 @@ func (m *Microservice) GetServiceStats() *ServiceStats {
 }
 
 func (m *Microservice) GetInstanceStats() []*ServiceInstanceStats {
-	stats := make([]*ServiceInstanceStats, 0, len(m.replicas))
-	for _, r := range m.replicas {
+	stats := make([]*ServiceInstanceStats, 0, len(m.instances))
+	for _, r := range m.instances {
 		stats = append(stats, r.GetStats())
 	}
 	return stats
@@ -111,9 +111,9 @@ type MicroserviceInstance struct {
 	db       *Microservice
 }
 
-func NewMicroserviceInstance(t *uint64, msp *MicroserviceParams, replicaID int, memcache *Microservice, db *Microservice) *MicroserviceInstance {
+func NewMicroserviceInstance(t *uint64, msp *MicroserviceParams, instanceID int, memcache *Microservice, db *Microservice) *MicroserviceInstance {
 	return &MicroserviceInstance{
-		svc:      NewServiceInstance(t, msp, replicaID),
+		svc:      NewServiceInstance(t, msp, instanceID),
 		memcache: memcache,
 		db:       db,
 	}

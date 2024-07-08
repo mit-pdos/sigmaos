@@ -312,7 +312,7 @@ func TestWorkloadClntBurst(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestWorkloadClntBurstAddReplica(t *testing.T) {
+func TestWorkloadClntBurstAddInstance(t *testing.T) {
 	const (
 		N_TICKS uint64 = 1000
 		// Clnt params
@@ -337,7 +337,7 @@ func TestWorkloadClntBurstAddReplica(t *testing.T) {
 	for ; time < N_TICKS; time++ {
 		if time == BURST_START {
 			c.StartBurst(BURST_MULTIPLIER)
-			svc.AddReplica()
+			svc.AddInstance()
 		}
 		if time == BURST_END {
 			c.EndBurst()
@@ -351,7 +351,7 @@ func TestWorkloadClntBurstAddReplica(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestWorkloadClntBurstRemoveReplica(t *testing.T) {
+func TestWorkloadClntBurstRemoveInstance(t *testing.T) {
 	const (
 		N_TICKS uint64 = 1000
 		// Clnt params
@@ -387,10 +387,10 @@ func TestWorkloadClntBurstRemoveReplica(t *testing.T) {
 			c.EndBurst()
 		}
 		if time == SIZE_UP_TIME {
-			svc.AddReplica()
+			svc.AddInstance()
 		}
 		if time == SIZE_DOWN_TIME {
-			svc.RemoveReplica()
+			svc.RemoveInstance()
 		}
 		// Run the simulation
 		w.Tick()
@@ -603,7 +603,7 @@ func TestScaleUpImmediatelyWithClientBurst(t *testing.T) {
 		N_SLOTS             int    = 10
 		P_TIME              uint64 = 1
 		SVC_ID              string = "wfe"
-		SVC_INIT_TIME       uint64 = 10
+		SVC_INIT_TIME       uint64 = 4
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 	)
@@ -620,7 +620,7 @@ func TestScaleUpImmediatelyWithClientBurst(t *testing.T) {
 			// Start a burst of client requests
 			c.StartBurst(CLNT_BURST_MULTIPLIER)
 			// With no delay, start scaling up the service
-			svc.AddReplica()
+			svc.AddInstance()
 		}
 		// Run the simulation
 		w.Tick()

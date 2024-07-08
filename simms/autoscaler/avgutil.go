@@ -63,12 +63,12 @@ func (ua *AvgUtilAutoscaler) Tick() {
 	switch d {
 	case SCALE_UP:
 		for i := 0; i < n; i++ {
-			ua.svc.AddReplica()
+			ua.svc.AddInstance()
 		}
 		ua.nScaleUp++
 	case SCALE_DOWN:
 		for i := 0; i < n; i++ {
-			ua.svc.RemoveReplica()
+			ua.svc.RemoveInstance()
 		}
 		ua.nScaleDown++
 	default:
@@ -77,15 +77,15 @@ func (ua *AvgUtilAutoscaler) Tick() {
 
 func (ua *AvgUtilAutoscaler) getScalingDecision(istats []*simms.ServiceInstanceStats) (scalingDecision, int) {
 	readyIStats := getReadyInstanceStats(*ua.t, istats)
-	currentNReplicas := len(readyIStats)
+	currentNInstances := len(readyIStats)
 	currentUtil := avgUtil(ua.ctx, *ua.t, ua.p.UtilWindowSize, readyIStats)
-	desiredNReplicas := k8sCalcDesiredNReplicas(ua.ctx, currentNReplicas, currentUtil, ua.p.TargetUtil, DEFAULT_TOLERANCE)
-	db.DPrintf(db.SIM_AUTOSCALE, "%v AvgUtilAutoscaler currentUtil:%v targetUtil:%v, currentNReplicas:%v desiredNReplicas:%v", ua.ctx, currentUtil, ua.p.TargetUtil, currentNReplicas, desiredNReplicas)
-	if desiredNReplicas > currentNReplicas {
-		return SCALE_UP, desiredNReplicas - currentNReplicas
+	desiredNInstances := k8sCalcDesiredNInstances(ua.ctx, currentNInstances, currentUtil, ua.p.TargetUtil, DEFAULT_TOLERANCE)
+	db.DPrintf(db.SIM_AUTOSCALE, "%v AvgUtilAutoscaler currentUtil:%v targetUtil:%v, currentNInstances:%v desiredNInstances:%v", ua.ctx, currentUtil, ua.p.TargetUtil, currentNInstances, desiredNInstances)
+	if desiredNInstances > currentNInstances {
+		return SCALE_UP, desiredNInstances - currentNInstances
 	}
-	if desiredNReplicas < currentNReplicas {
-		return SCALE_DOWN, currentNReplicas - desiredNReplicas
+	if desiredNInstances < currentNInstances {
+		return SCALE_DOWN, currentNInstances - desiredNInstances
 	}
 	return SCALE_NONE, 0
 }

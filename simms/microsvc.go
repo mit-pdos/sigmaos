@@ -61,6 +61,10 @@ func (m *Microservice) AddInstance() {
 	m.addedInstances++
 }
 
+func (m *Microservice) MarkInstanceReady(idx int) {
+	m.instances[idx].MarkReady()
+}
+
 func (m *Microservice) RemoveInstance() {
 	// Mark the instance "not ready"
 	m.instances[m.removedInstances].MarkNotReady()
@@ -72,10 +76,12 @@ func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	// Steer requests only to instances which haven't been removed
 	steeredReqs := m.lb.SteerRequests(reqs, m.instances)
 	steeredReqsCnt := make([]int, len(steeredReqs))
+	qlens := make([]int, len(steeredReqs))
 	for i, r := range steeredReqs {
 		steeredReqsCnt[i] = len(r)
+		qlens[i] = m.instances[i].GetQLen()
 	}
-	db.DPrintf(db.SIM_LB, "[t=%v] Steering requests to %v", *m.t, steeredReqsCnt)
+	db.DPrintf(db.SIM_LB, "[t=%v] Steering requests\n\tqlen:%v\n\treqs:%v", *m.t, qlens, steeredReqsCnt)
 	// Forward requests to instances to which they have been steered
 	for i, rs := range steeredReqs {
 		replies = append(replies, m.instances[i].Tick(rs)...)

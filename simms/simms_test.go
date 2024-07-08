@@ -593,7 +593,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithNRandomQLenLB(t *testing.T) {
 	const (
 		N_TICKS uint64 = 1000
 		// Clnt params
-		CLNT_REQ_MEAN float64 = 45
+		CLNT_REQ_MEAN float64 = 135
 		CLNT_REQ_STD  float64 = 0
 		// App params
 		N_SLOTS             int    = 10
@@ -609,7 +609,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithNRandomQLenLB(t *testing.T) {
 		UTIL_WINDOW_SIZE   uint64  = 1
 		AUTOSCALER_LEAD_IN uint64  = 10 // Number of ticks to wait before starting the autoscaler
 		// LB param
-		N_RANDOM_CHOICES int = 2
+		N_RANDOM_CHOICES int = 3 // Going from 2 -> 3 decreases tail latency by ~50%
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0

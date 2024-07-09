@@ -99,7 +99,7 @@ func (mc *MntClnt) resolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	if len(pn) == 0 {
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("empty path '%v' ", pn)), false
 	}
-	_, rest, err := mc.mnt.resolveMnt(pn, true)
+	_, rest, err := mc.ResolveMnt(pn, true)
 	if err != nil && len(rest) >= 1 && mc.rootmt.isRootMount(rest[0]) {
 		sm, err := mc.rootmt.lookup(pn[0])
 		if err != nil {
@@ -151,7 +151,7 @@ func (mc *MntClnt) NewRootMount(principal *sp.Tprincipal, pn, mntname string) er
 
 func (mc *MntClnt) mountRoot(svc, rest path.Tpathname, mntname string) *serr.Err {
 	db.DPrintf(db.MOUNT, "mountRoot: %v %v %v\n", svc, rest, mntname)
-	fid, _, err := mc.mnt.resolveMnt(svc, true)
+	fid, _, err := mc.ResolveMnt(svc, true)
 	if err != nil {
 		db.DPrintf(db.MOUNT, "mountRoot: resolve %v err %v\n", svc, err)
 		return err

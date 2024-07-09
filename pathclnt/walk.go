@@ -68,7 +68,7 @@ func (pathc *PathClnt) walkPath(path path.Tpathname, resolve bool, w Watch) (sp.
 		db.DPrintf(db.WALK, "walkPath: %v resolve %v", path, resolve)
 		fid, left, err := pathc.walkMount(path, resolve)
 		if err != nil {
-			db.DPrintf(db.WALK, "walkPath: %v resolve %v", len(left), resolve)
+			db.DPrintf(db.WALK, "walkPath: left %v resolve %v err %v", left, resolve, err)
 			if len(left) != 0 || resolve {
 				return sp.NoFid, path, left, err
 			}

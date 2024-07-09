@@ -43,22 +43,31 @@ func (mc *MntClnt) String() string {
 	return fmt.Sprintf("{mnt %v ndMntCache %v rootmt %v}", mc.mnt, mc.ndMntCache, mc.rootmt)
 }
 
-func (mc *MntClnt) Mounts() []string {
-	return mc.mnt.mountedPaths()
-}
-
 func (mc *MntClnt) Resolve(p path.Tpathname, principal *sp.Tprincipal, resolve bool) (sp.Tfid, path.Tpathname, *serr.Err) {
-	if err, b := mc.resolveRoot(p); err != nil {
-		db.DPrintf(db.ALWAYS, "%v: resolveRoot %v err %v b %v\n", mc.cid, p, err, b)
+	if err, ok := mc.resolveRoot(p); err != nil {
+		db.DPrintf(db.ALWAYS, "%v: resolveRoot %v err %v b %v\n", mc.cid, p, err, ok)
 	}
-	return mc.mnt.resolveMnt(p, resolve)
+	return mc.ResolveMnt(p, resolve)
 }
 
 func (mc *MntClnt) ResolveMnt(p path.Tpathname, resolve bool) (sp.Tfid, path.Tpathname, *serr.Err) {
-	return mc.mnt.resolveMnt(p, resolve)
+	for {
+		pnt, path, err := mc.mnt.resolveMnt(p, resolve)
+		db.DPrintf(db.MOUNT, "%v: resolveMnt path %v resolve %v mnt %v", mc.cid, path, resolve, pnt)
+		if err != nil {
+			return sp.NoFid, path, err
+		}
+		fid, ok := pnt.getFid()
+		if ok {
+			return fid, path, nil
+		}
+		// MountTree() is trying (or will try) to mount pnt and may
+		// succeed or fail; retry resolveMnt.  The retry won't happen
+		// often since MountTree() will lock pnt while mounting.
+		db.DPrintf(db.TEST, "%v: resolveMnt try again path %v resolve %t", mc.cid, path, resolve)
+	}
 }
 
-// XXX use MountedAt
 func (mc *MntClnt) LastMount(pn string, principal *sp.Tprincipal) (path.Tpathname, path.Tpathname, error) {
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
@@ -95,25 +104,39 @@ func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Tpat
 }
 
 func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname string) error {
-	db.DPrintf(db.MOUNT, "MountTree [%v]:%q mnt %v", ep, tree, mntname)
-	ok, err := mc.isMountedAt(mntname)
-	db.DPrintf(db.MOUNT, "isMounted [%v] fid %v %v", mntname, ok, err)
+	pn, err := serr.PathSplitErr(mntname)
 	if err != nil {
 		return err
 	}
-	if ok {
+	db.DPrintf(db.MOUNT, "%v: MountTree [%v]:%q mnt %v", mc.cid, ep, tree, mntname)
+	pnt, err := mc.mnt.lookupAlloc(pn, sp.NoFid)
+	if err != nil {
+		return err
+	}
+
+	pnt.Lock()
+	defer pnt.Unlock()
+
+	db.DPrintf(db.MOUNT, "%v: isAttached? [%v] %t err %v", mc.cid, ep, pnt.isAttached(), err)
+
+	if pnt.isAttached() {
 		return nil
 	}
+
+	db.DPrintf(db.MOUNT, "MountTree [%v]:%q attach %v", ep, tree, mntname)
+
 	s := time.Now()
-	fid, err := mc.fidc.Attach(secrets, mc.cid, ep, mntname, tree)
-	db.DPrintf(db.WALK_LAT, "%v: MoutTree pn %q err %v Attach lat %v\n", mc.cid, mntname, err, time.Since(s))
+	fid, err := mc.fidc.Attach(secrets, mc.cid, ep, pn, tree)
 	if err != nil {
 		db.DPrintf(db.MOUNT_ERR, "%v: MountTree Attach [%v]/%v err %v", mc.cid, ep, tree, err)
+		mc.mnt.umount(pn, true)
+	}
+	db.DPrintf(db.MOUNT, "%v: MountTree pn %q err %v Attach lat %v\n", mc.cid, mntname, err, time.Since(s))
+
+	if err != nil {
 		return err
 	}
-	if err := mc.mount(fid, mntname); err != nil {
-		return err
-	}
+	pnt.fid = fid
 	return nil
 }
 
@@ -123,23 +146,29 @@ func (mc *MntClnt) Detach(pn string) error {
 	if err != nil {
 		return err
 	}
-	fid, _, err := mc.mnt.umount(p, true)
+	pnt, err := mc.mnt.umount(p, true)
 	if err != nil {
 		db.DPrintf(db.TEST, "%v: Detach %q err %v\n", mc.cid, pn, err)
 		return err
 	}
-	defer mc.fidc.Free(fid)
-	if err := mc.fidc.Detach(fid, mc.cid); err != nil {
-		return err
+	fid, ok := pnt.getFid()
+	if ok {
+		defer mc.fidc.Free(fid)
+		if err := mc.fidc.Detach(fid, mc.cid); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (mc *MntClnt) UmountPrefix(path []string) *serr.Err {
-	if fid, _, err := mc.mnt.umount(path, false); err != nil {
+	if pnt, err := mc.mnt.umount(path, false); err != nil {
 		return err
 	} else {
-		mc.fidc.Free(fid)
+		fid, ok := pnt.getFid()
+		if ok {
+			mc.fidc.Free(fid)
+		}
 		return nil
 	}
 }
@@ -156,51 +185,22 @@ func (mc *MntClnt) Disconnect(pn string, fids []sp.Tfid) error {
 	if err != nil {
 		return err
 	}
-	_, mntp := mc.mnt.isMountedAt(p)
+	pnt, ok := mc.mnt.isMountedAt(p)
 	for _, fid := range fids {
 		ch := mc.fidc.Lookup(fid)
 		if ch != nil {
 			if p.IsParent(ch.Path()) {
-				db.DPrintf(db.CRASH, "fid disconnect fid %v %v %v\n", fid, ch, mntp)
+				db.DPrintf(db.CRASH, "fid disconnect fid %v %v %v\n", fid, ch, pnt)
 				mc.fidc.Disconnect(fid)
 			}
 		}
 	}
-	mc.rootmt.disconnect(mntp.String())
-	fid, err := mc.mnt.disconnect(mntp)
-	if err != nil {
-		return err
-	}
-	mc.fidc.Disconnect(fid)
-	return nil
-}
-
-func (mc *MntClnt) isMountedAt(pn string) (bool, *serr.Err) {
-	p, err := serr.PathSplitErr(pn)
-	if err != nil {
-		return false, err
-	}
-	ok, pn0 := mc.mnt.isMountedAt(p)
-	if ok && pn0 == nil {
-		return true, nil
-	}
-	return false, nil
-}
-
-func (mc *MntClnt) mount(fid sp.Tfid, pn string) *serr.Err {
-	p, err := serr.PathSplitErr(pn)
-	if err != nil {
-		return err
-	}
-	if err := mc.mnt.add(p, fid); err != nil {
-		if err.Code() == serr.TErrExists {
-			// Another thread may already have mounted
-			// path; clunk the fid and don't return an
-			// error.
-			mc.fidc.Clunk(fid)
-			return nil
-		} else {
-			return err
+	mc.rootmt.disconnect(pnt.path.String())
+	if ok {
+		pnt.disconnect()
+		fid, ok := pnt.getFid()
+		if ok {
+			mc.fidc.Disconnect(fid)
 		}
 	}
 	return nil

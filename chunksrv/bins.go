@@ -31,8 +31,15 @@ func newBin(prog string) *bin {
 	return b
 }
 
+func (be *bin) isStatCached() (*sp.Stat, bool) {
+	be.Lock()
+	defer be.Unlock()
+
+	return be.st, be.st != nil
+}
+
 // Caller should stat file if getStat() returns nil
-func (be *bin) getStat() *sp.Stat {
+func (be *bin) waitStat() *sp.Stat {
 	be.Lock()
 	defer be.Unlock()
 

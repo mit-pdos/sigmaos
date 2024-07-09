@@ -198,7 +198,10 @@ func (st *StatInode) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, f sp.Tfence) 
 	if off > 0 {
 		return nil, nil
 	}
-	// return no more data than asked for
+	// return no more data than asked for and that is available
+	if sp.Tsize(len(b)) < n {
+		n = sp.Tsize(len(b))
+	}
 	return b[:n], nil
 }
 

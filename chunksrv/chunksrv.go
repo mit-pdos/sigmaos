@@ -357,16 +357,20 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 
 	defer be.signalStatWaiters()
 
-	ep := sp.NewEndpointFromProto(req.GetNamedEndpointProto())
-	if ep != nil && ep.IsValidEP() {
-		if err := be.sc.MountTree(ep, "", sp.NAMED); err != nil {
-			db.DPrintf(db.CHUNKSRV, "MountTree %v err %v", ep, err)
-			return err
+	epp := req.GetNamedEndpointProto()
+	if epp != nil {
+		ep := sp.NewEndpointFromProto(epp)
+		if ep.IsValidEP() {
+			if err := be.sc.MountTree(ep, "", sp.NAMED); err != nil {
+				db.DPrintf(db.CHUNKSRV, "MountTree %v err %v", ep, err)
+				return err
+			}
 		}
 	}
 
 	// Prefetch first chunk
 	go func() {
+		db.DPrintf(db.SPAWN_LAT, "Prefetch chunk 0 %v", req.GetProg())
 		s := time.Now()
 		_, _, err := cksrv.fetchChunk(r, req.GetProg(), sp.Tpid(req.Pid), req.GetS3Secret(), 0, chunk.CHUNKSZ, req.GetSigmaPath())
 		db.DPrintf(db.SPAWN_LAT, "GetFileStat: fetchChunk %v err %v lat %v", req.GetProg(), err, time.Since(s))

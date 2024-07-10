@@ -388,10 +388,6 @@ func TestMicroScheddSpawn(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-
-	err1 = rootts.BootMinNode(3)
-	assert.Nil(t, err1, "Boot node: %v", err1)
-
 	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -426,8 +422,10 @@ func TestMicroScheddSpawn(t *testing.T) {
 	spawnProcs(ts1, p1s)
 	waitStartProcs(ts1, p1s)
 	waitExitProcs(ts1, p1s)
-	db.DPrintf(db.TEST, "Warm up remainder of the realm for sleeper")
-	warmupRealm(ts1, []string{"sleeper"})
+	if PREWARM_REALM {
+		db.DPrintf(db.TEST, "Warm up remainder of the realm for sleeper")
+		warmupRealm(ts1, []string{"sleeper"})
+	}
 	db.DPrintf(db.TEST, "Warm up %v bin cache on kernel %v", prog, kernels[0])
 	p2 := proc.NewProc(prog, nil)
 	p2.SetKernels([]string{kernels[0]})

@@ -314,4 +314,7 @@ func (dc *DirCache[E]) watchDir() {
 		dc.updateEntriesL(ents)
 		dc.Unlock()
 	}
+	if dc.ch != nil {
+		close(dc.ch)
+	}
 }

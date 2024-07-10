@@ -12,15 +12,31 @@ import (
 
 type ChunkClnt struct {
 	*rpcdirclnt.RPCDirClnt
-	done int32
+	ch chan string
 }
 
-func NewChunkClnt(fsl *fslib.FsLib) *ChunkClnt {
+func NewChunkClnt(fsl *fslib.FsLib, eager bool) *ChunkClnt {
 	db.DPrintf(db.CHUNKCLNT, "NewChunkClnt")
+	var ch chan string
+	if eager {
+		ch = make(chan string)
+	}
 	ckclnt := &ChunkClnt{
-		RPCDirClnt: rpcdirclnt.NewRPCDirClnt(fsl, sp.CHUNKD, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
+		RPCDirClnt: rpcdirclnt.NewRPCDirClntCh(fsl, sp.CHUNKD, ch, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
+		ch:         ch,
+	}
+	if eager {
+		go ckclnt.readCh()
 	}
 	return ckclnt
+}
+
+// Eagerly make chunk clnts
+func (ckclnt *ChunkClnt) readCh() {
+	for n := range ckclnt.ch {
+		_, err := ckclnt.RPCDirClnt.GetClnt(n)
+		db.DPrintf(db.CHUNKCLNT, "new chunksrv: %v err %v\n", n, err)
+	}
 }
 
 func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {

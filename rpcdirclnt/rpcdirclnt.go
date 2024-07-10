@@ -35,7 +35,7 @@ func NewRPCDirClntAllocFn(fsl *fslib.FsLib, path string, lSelector db.Tselector,
 	u := &RPCDirClnt{
 		allocFn: fn,
 	}
-	u.DirCache = dircache.NewDirCache[*rpcclnt.RPCClnt](fsl, path, u.newClnt, lSelector, eSelector)
+	u.DirCache = dircache.NewDirCache[*rpcclnt.RPCClnt](fsl, path, u.newClnt, nil, lSelector, eSelector)
 	return u
 }
 
@@ -43,9 +43,15 @@ func NewRPCDirClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelec
 	return NewRPCDirClntAllocFn(fsl, path, lSelector, eSelector, nil)
 }
 
+func NewRPCDirClntCh(fsl *fslib.FsLib, path string, ch chan string, lSelector db.Tselector, eSelector db.Tselector) *RPCDirClnt {
+	u := &RPCDirClnt{}
+	u.DirCache = dircache.NewDirCache[*rpcclnt.RPCClnt](fsl, path, u.newClnt, ch, lSelector, eSelector)
+	return u
+}
+
 func NewRPCDirClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, filter string) *RPCDirClnt {
 	u := &RPCDirClnt{}
-	u.DirCache = dircache.NewDirCacheFilter[*rpcclnt.RPCClnt](fsl, path, u.newClnt, lSelector, eSelector, filter)
+	u.DirCache = dircache.NewDirCacheFilter[*rpcclnt.RPCClnt](fsl, path, u.newClnt, nil, lSelector, eSelector, filter)
 	return u
 }
 

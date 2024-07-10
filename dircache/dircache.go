@@ -11,8 +11,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sortedmap"
@@ -32,14 +32,15 @@ type DirCache[E any] struct {
 	newVal       NewValF[E]
 	prefixFilter string
 	err          error
+	ch           chan string
 }
 
-func NewDirCache[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], lSelector db.Tselector, ESelector db.Tselector) *DirCache[E] {
-	return NewDirCacheFilter(fsl, path, newVal, lSelector, ESelector, "")
+func NewDirCache[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], ch chan string, lSelector db.Tselector, ESelector db.Tselector) *DirCache[E] {
+	return NewDirCacheFilter(fsl, path, newVal, ch, lSelector, ESelector, "")
 }
 
 // filter entries starting with prefix
-func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], LSelector db.Tselector, ESelector db.Tselector, prefix string) *DirCache[E] {
+func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], ch chan string, LSelector db.Tselector, ESelector db.Tselector, prefix string) *DirCache[E] {
 	dc := &DirCache[E]{
 		FsLib:        fsl,
 		Path:         path,
@@ -48,6 +49,7 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 		ESelector:    ESelector,
 		newVal:       newVal,
 		prefixFilter: prefix,
+		ch:           ch,
 	}
 	dc.hasEntries = sync.NewCond(&dc.Mutex)
 	go dc.watchDir()
@@ -113,13 +115,13 @@ func (dc *DirCache[E]) GetEntry(n string) (E, error) {
 	var err error
 	kok, e, vok := dc.dir.LookupKeyVal(n)
 	if !kok {
-		db.DPrintf(dc.LSelector, "Done GetEntry for %v ok %t", n, kok)
+		db.DPrintf(dc.LSelector, "Done GetEntry for %v kok %v", n, kok)
 		serr.NewErr(serr.TErrNotfound, n)
 	}
 	if !vok {
 		e, err = dc.allocVal(n)
 	}
-	db.DPrintf(dc.LSelector, "Done GetEntry for %v e %v err %t", n, e, err)
+	db.DPrintf(dc.LSelector, "Done GetEntry for %v e %v err %v", n, e, err)
 	return e, err
 }
 
@@ -264,6 +266,11 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 		entsMap[n] = true
 		if _, ok := dc.dir.Lookup(n); !ok {
 			dc.dir.InsertKey(n)
+			if dc.ch != nil {
+				go func(n string) {
+					dc.ch <- n
+				}(n)
+			}
 		}
 	}
 	for _, n := range dc.dir.Keys(0) {
@@ -306,5 +313,8 @@ func (dc *DirCache[E]) watchDir() {
 		dc.Lock()
 		dc.updateEntriesL(ents)
 		dc.Unlock()
+	}
+	if dc.ch != nil {
+		close(dc.ch)
 	}
 }

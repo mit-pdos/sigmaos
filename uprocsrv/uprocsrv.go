@@ -165,7 +165,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 		bind = bd
 	}
 
-	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib)
+	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib, false)
 
 	// Lookup the ckclnt for uprocd's local chunkd now since we will
 	// need it later quickly.

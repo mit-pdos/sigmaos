@@ -15,7 +15,7 @@ type bin struct {
 	cond           *sync.Cond
 	fd             int
 	prog           string
-	st             *sp.Stat
+	st             *sp.Tstat
 	statInProgress bool
 	openInProgress bool
 	path           string
@@ -31,7 +31,7 @@ func newBin(prog string) *bin {
 	return b
 }
 
-func (be *bin) isStatCached() (*sp.Stat, bool) {
+func (be *bin) isStatCached() (*sp.Tstat, bool) {
 	be.Lock()
 	defer be.Unlock()
 
@@ -39,7 +39,7 @@ func (be *bin) isStatCached() (*sp.Stat, bool) {
 }
 
 // Caller should stat file if getStat() returns nil
-func (be *bin) waitStat() *sp.Stat {
+func (be *bin) waitStat() *sp.Tstat {
 	be.Lock()
 	defer be.Unlock()
 

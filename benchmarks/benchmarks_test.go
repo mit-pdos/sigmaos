@@ -388,6 +388,10 @@ func TestMicroScheddSpawn(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+
+	err1 = rootts.BootMinNode(3)
+	assert.Nil(t, err1, "Boot node: %v", err1)
+
 	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

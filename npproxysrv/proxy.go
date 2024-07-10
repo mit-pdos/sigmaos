@@ -111,13 +111,14 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		db.DPrintf(db.ERROR, "Error GetNamedEndpoint: %v", error)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
-	fid, err := npc.fidc.Attach(npc.pe.GetSecrets(), npc.cid, ep, "", "")
-	if err != nil {
-		db.DPrintf(db.NPPROXY, "Attach args %v err %v\n", args, err)
-		return sp.NoClntId, sp.NewRerrorSerr(err)
+	if err := npc.pc.MntClnt().MountTree(npc.pe.GetSecrets(), ep, ep.Root, sp.NAMED); err != nil {
+		db.DPrintf(db.NPPROXY, "MountTree %v err %v\n", ep, err)
+		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(err))
 	}
-	if err := npc.pc.MntClnt().Mount(fid, sp.NAMED); err != nil {
-		db.DPrintf(db.NPPROXY, "Attach args %v mount err %v\n", args, err)
+
+	fid, _, err := npc.pc.MntClnt().ResolveMnt(path.Split(sp.NAMED), true)
+	if err != nil {
+		db.DFatalf("Attach: resolve err %v", err)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(err))
 	}
 	rets.Qid = npc.qm.Insert(path.Tpathname{sp.NAMED}, []*sp.Tqid{npc.fidc.Qid(fid)})[0]

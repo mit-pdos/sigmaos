@@ -15,7 +15,6 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"sigmaos/binsrv"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	"sigmaos/container"
@@ -31,6 +30,7 @@ import (
 	"sigmaos/sigmasrv"
 	"sigmaos/spproxysrv"
 	"sigmaos/syncmap"
+	"sigmaos/uprocsrv/binsrv"
 	"sigmaos/uprocsrv/proto"
 )
 
@@ -301,10 +301,13 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, p
 		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
 	}(start)
 
+	// Prefetch file stats
 	go func() {
-		if err := ups.ckclnt.Prefetch(ups.kernelId, prog, upid, realm, path, s3secret, ep); err != nil {
-			db.DPrintf(db.UPROCD, "Prefetch %v %v err %v", ups.kernelId, realm, err)
+		s := time.Now()
+		if _, _, err := ups.ckclnt.GetFileStat(ups.kernelId, prog, upid, realm, s3secret, path, ep); err != nil {
+			db.DPrintf(db.UPROCD, "GetFileStat %v %v err %v", ups.kernelId, realm, err)
 		}
+		db.DPrintf(db.SPAWN_LAT, "[%v] prefetch %v lat %v", upid, prog, time.Since(s))
 	}()
 	start = time.Now()
 	db.DPrintf(db.UPROCD, "Assign Uprocd to realm %v", realm)
@@ -368,7 +371,7 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	if err := ups.assignToRealm(r, pid, req.Program, req.SigmaPath, req.GetS3Secret(), req.GetNamedEndpointProto()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
-	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), req.SigmaPath)
+	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), req.SigmaPath, nil)
 	if err != nil {
 		return err
 	}
@@ -423,28 +426,31 @@ func (ups *UprocSrv) FetchRPC(ctx fs.CtxI, req proto.FetchRequest, res *proto.Fe
 	return nil
 }
 
+func (ups *UprocSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Stat, error) {
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup start %v paths %v; time since spawn %v", proc.GetPid(), ups.kernelId, proc.GetSigmaPath(), time.Since(proc.GetSpawnTime()))
+
+	paths := proc.GetSigmaPath()
+	s3secret, ok := proc.GetSecrets()["s3"]
+	if !ok {
+		return nil, fmt.Errorf("No s3 secrets in proc")
+	}
+
+	s := time.Now()
+	st, path, err := ups.ckclnt.GetFileStat(ups.kernelId, prog, proc.GetPid(), proc.GetRealm(), s3secret, paths, proc.GetNamedEndpoint())
+	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done %v path %q GetFileStat lat %v; time since spawn %v", proc.GetPid(), ups.kernelId, path, time.Since(s), time.Since(proc.GetSpawnTime()))
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
+}
+
 func (ups *UprocSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
 	pe, alloc := ups.procs.Alloc(pid, newProcEntry(nil))
 	if alloc {
 		db.DPrintf(db.UPROCD, "Lookup wait for pid %v proc %v\n", pid, pe)
 		pe.procWait()
 	}
-
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup start %v paths %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
-
-	paths := pe.proc.GetSigmaPath()
-	s3secret, ok := pe.proc.GetSecrets()["s3"]
-	if !ok {
-		return nil, fmt.Errorf("No s3 secrets in proc")
-	}
-
-	s := time.Now()
-	st, path, err := ups.ckclnt.GetFileStat(ups.kernelId, prog, pe.proc.GetPid(), pe.proc.GetRealm(), s3secret, paths)
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done %v path %q GetFileStat lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, path, time.Since(s), time.Since(pe.proc.GetSpawnTime()))
-	if err != nil {
-		return nil, err
-	}
-	return st, nil
+	return ups.lookupProc(pe.proc, prog)
 }
 
 func (ups *UprocSrv) LookupRPC(ctx fs.CtxI, req proto.LookupRequest, res *proto.LookupResponse) error {

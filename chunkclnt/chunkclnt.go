@@ -27,38 +27,18 @@ func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {
 	ckclnt.RPCDirClnt.InvalidateEntry(srv)
 }
 
-func (ckclnt *ChunkClnt) Prefetch(srvid, pn string, pid sp.Tpid, realm sp.Trealm, paths []string, s3secret *sp.SecretProto, ep *sp.TendpointProto) error {
+func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, paths []string, ep *sp.TendpointProto) (*sp.Stat, string, error) {
 	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
-	req := &proto.PrefetchRequest{
+	req := &proto.GetFileStatRequest{
 		Prog:               pn,
 		RealmStr:           string(realm),
 		Pid:                pid.String(),
 		SigmaPath:          paths,
 		S3Secret:           s3secret,
 		NamedEndpointProto: ep,
-	}
-	res := &proto.PrefetchResponse{}
-	if err := rpcc.RPC("ChunkSrv.Prefetch", req, res); err != nil {
-		db.DPrintf(db.CHUNKCLNT_ERR, "ChunkClnt.InitRealm %v err %v", req, err)
-		return err
-	}
-	return nil
-}
-
-func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, paths []string) (*sp.Stat, string, error) {
-	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
-	if err != nil {
-		return nil, "", err
-	}
-	req := &proto.GetFileStatRequest{
-		Prog:      pn,
-		RealmStr:  string(realm),
-		Pid:       pid.String(),
-		SigmaPath: paths,
-		S3Secret:  s3secret,
 	}
 	res := &proto.GetFileStatResponse{}
 	if err := rpcc.RPC("ChunkSrv.GetFileStat", req, res); err != nil {

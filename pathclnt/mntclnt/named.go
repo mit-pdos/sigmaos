@@ -75,7 +75,7 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 	} else {
 		// Otherwise, walk through the root named to find this named's mount.
 		s := time.Now()
-		if _, rest, err := mc.mnt.resolveMnt(path.Tpathname{sp.ROOT, sp.REALMREL}, true); err != nil && len(rest) >= 1 {
+		if _, rest, err := mc.ResolveMnt(path.Tpathname{sp.ROOT, sp.REALMREL}, true); err != nil && len(rest) >= 1 {
 			// Mount the realm dir from the root named
 			if err := mc.mountNamed(sp.ROOTREALM, filepath.Join(sp.ROOT, sp.REALMREL), sp.REALMREL); err != nil {
 				db.DPrintf(db.MOUNT_ERR, "getNamedEndpointDirect [%v] err mounting root named %v", realm, err)
@@ -127,7 +127,7 @@ func (mc *MntClnt) mountNamed(realm sp.Trealm, mntName, tree string) *serr.Err {
 		}
 		return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v realm failure", realm))
 	}
-	db.DPrintf(db.MOUNT, "mountNamed [%v]: automount ep %v/%v at %v", realm, ep, tree, mntName)
-	db.DPrintf(db.WALK_LAT, "mountNamed [%v]: %v automount ep %v/%v at %v lat %v", mc.cid, realm, ep, tree, mntName, time.Since(s))
+	db.DPrintf(db.MOUNT, "mountNamed [%v]: MountTree ep %v/%v at %v", realm, ep, tree, mntName)
+	db.DPrintf(db.WALK_LAT, "mountNamed [%v]: %v MountTree ep %v/%v at %v lat %v", mc.cid, realm, ep, tree, mntName, time.Since(s))
 	return nil
 }

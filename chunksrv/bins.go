@@ -3,54 +3,90 @@ package chunksrv
 import (
 	"fmt"
 	"sync"
-	"time"
 
-	db "sigmaos/debug"
+	// db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
 )
 
 type bin struct {
-	mu   sync.Mutex
-	cond *sync.Cond
-	fd   int
-	prog string
-	st   *sp.Stat
-	path string
+	sync.Mutex
+	cond           *sync.Cond
+	fd             int
+	prog           string
+	st             *sp.Stat
+	statInProgress bool
+	openInProgress bool
+	path           string
+	sc             *sigmaclnt.SigmaClnt
 }
 
 func newBin(prog string) *bin {
-	return &bin{
+	b := &bin{
 		prog: prog,
 		fd:   -1,
 	}
+	b.cond = sync.NewCond(&b.Mutex)
+	return b
 }
 
-func (be *bin) signal() {
-	be.mu.Lock()
-	defer be.mu.Unlock()
+func (be *bin) isStatCached() (*sp.Stat, bool) {
+	be.Lock()
+	defer be.Unlock()
 
-	if be.cond != nil {
-		be.cond.Broadcast()
+	return be.st, be.st != nil
+}
+
+// Caller should stat file if getStat() returns nil
+func (be *bin) waitStat() *sp.Stat {
+	be.Lock()
+	defer be.Unlock()
+
+	for {
+		if be.st != nil {
+			return be.st
+		}
+		if !be.statInProgress {
+			be.statInProgress = true
+			return nil
+		}
+		be.cond.Wait()
+	}
+	return be.st
+}
+
+func (be *bin) signalStatWaiters() {
+	be.Lock()
+	defer be.Unlock()
+
+	be.statInProgress = false
+	be.cond.Broadcast()
+}
+
+// Caller should open file if getFd returns -1
+func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string) {
+	be.Lock()
+	defer be.Unlock()
+
+	for {
+		if be.fd != -1 {
+			return be.fd, be.path
+		}
+		if !be.openInProgress {
+			be.openInProgress = true
+			return -1, ""
+		}
+		be.cond.Wait()
 	}
 }
-func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string, error) {
-	be.mu.Lock()
-	defer be.mu.Unlock()
 
-	if be.fd != -1 {
-		return be.fd, be.path, nil
-	}
-	s := time.Now()
-	fd, path, err := open(sc, be.prog, paths)
-	if err != nil {
-		return -1, "", err
-	}
-	be.fd = fd
-	be.path = path
-	db.DPrintf(db.SPAWN_LAT, "[%v] getFd %q open lat %v", be.prog, paths, time.Since(s))
-	return be.fd, path, nil
+func (be *bin) signalFdWaiters() {
+	be.Lock()
+	defer be.Unlock()
+
+	be.openInProgress = false
+	be.cond.Broadcast()
 }
 
 type realm struct {

@@ -283,7 +283,7 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *prot
 
 	if st, ok := be.isStatCached(); ok {
 		db.DPrintf(db.CHUNKSRV, "%v: Fetch: hit stat %v %v %d", cksrv.kernelId, req.GetProg(), req.GetPid(), st.Length)
-		if req.Size > st.Length {
+		if uint64(Ckoff(int(req.ChunkId)))+req.Size > st.Length {
 			req.Size = st.Length
 		}
 	}

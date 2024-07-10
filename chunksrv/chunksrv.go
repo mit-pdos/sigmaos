@@ -244,6 +244,7 @@ func (cksrv *ChunkSrv) fetchChunk(r sp.Trealm, prog string, pid sp.Tpid, s3secre
 		srv := filepath.Base(srvpath)
 		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: %v ckid %d %v", cksrv.kernelId, prog, ck, []string{srvpath})
 		sz, _, err = cksrv.ckclnt.FetchChunk(srv, prog, pid, r, s3secret, ck, size, []string{}, b)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: %v ckid %d %v err %v", cksrv.kernelId, prog, ck, []string{srvpath}, err)
 		if err == nil {
 			ok = true
 			break
@@ -274,13 +275,26 @@ func (cksrv *ChunkSrv) fetchChunk(r sp.Trealm, prog string, pid sp.Tpid, s3secre
 func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
 	db.DPrintf(db.CHUNKSRV, "%v: Fetch: %v", cksrv.kernelId, req)
 
+	r := sp.Trealm(req.GetRealm())
+	be, err := cksrv.getBin(r, req.GetProg(), req.GetS3Secret())
+	if err != nil {
+		return err
+	}
+
+	if st, ok := be.isStatCached(); ok {
+		db.DPrintf(db.CHUNKSRV, "%v: Fetch: hit stat %v %v %d", cksrv.kernelId, req.GetProg(), req.GetPid(), st.Length)
+		if req.Size > st.Length {
+			req.Size = st.Length
+		}
+	}
+
 	ok, err := cksrv.fetchCache(req, res)
 	if ok || err != nil {
 		return err
 	}
 
 	if len(req.GetSigmaPath()) == 0 {
-		db.DPrintf(db.CHUNKSRV, "%v: Fetch: %v err %v", cksrv.kernelId, req.Prog, err)
+		db.DPrintf(db.CHUNKSRV, "%v: Fetch: %v ok %t err %v", cksrv.kernelId, req.Prog, ok, err)
 		return serr.NewErr(serr.TErrNotfound, req.Prog)
 	}
 
@@ -400,7 +414,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 
 	// Prefetch first chunk
 	go func() {
-		db.DPrintf(db.SPAWN_LAT, "Prefetch chunk 0 %v %v", req.GetProg(), req.GetPid())
+		db.DPrintf(db.SPAWN_LAT, "Prefetch chunk 0 %v %v %v", req.GetProg(), req.GetPid(), req.GetSigmaPath())
 		s := time.Now()
 		_, _, err := cksrv.fetchChunk(r, req.GetProg(), sp.Tpid(req.Pid), req.GetS3Secret(), 0, chunk.CHUNKSZ, req.GetSigmaPath())
 		db.DPrintf(db.SPAWN_LAT, "GetFileStat: prefetch fetchChunk %v err %v lat %v", req.GetProg(), err, time.Since(s))
@@ -470,6 +484,7 @@ func replaceLocal(paths []string, kernelId string) []string {
 func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 	f, err := os.OpenFile(pn, os.O_RDONLY, 0777)
 	if err != nil {
+		db.DPrintf(db.CHUNKSRV, "IsPresent: open %v err %v", pn, err)
 		return 0, false
 	}
 	defer f.Close()

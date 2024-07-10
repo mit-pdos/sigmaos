@@ -312,6 +312,11 @@ func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3sec
 }
 
 func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest) (*sp.Tstat, string, error) {
+	db.DPrintf(db.CHUNKSRV, "%v: getFileStat pid %v", cksrv.kernelId, req.GetPid())
+	start := time.Now()
+	defer func() {
+		db.DPrintf(db.CHUNKSRV, "%v: getFileStat done lat %v pid %v", cksrv.kernelId, time.Since(start), req.Pid)
+	}()
 	r := sp.Trealm(req.GetRealmStr())
 	paths := req.GetSigmaPath()
 	if req.SigmaPath[0] == cksrv.path {
@@ -345,7 +350,6 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest) (*sp.Tstat, str
 	if err != nil {
 		return nil, "", err
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: getFileStat pid %v st %v", cksrv.kernelId, req.Pid, st)
 	return st, srv, nil
 }
 
@@ -367,6 +371,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: hit %v %v", cksrv.kernelId, req.GetProg(), req.GetPid())
 		res.Stat = st.StatProto()
 		res.Path = cksrv.path
+		return nil
 	}
 
 	if len(req.GetSigmaPath()) == 0 {

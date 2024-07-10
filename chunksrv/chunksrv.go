@@ -293,27 +293,24 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *prot
 
 	// one outstanding fetch per chunk
 	be.waitFetch(ckid)
+	defer be.signalFetchWaiters(ckid)
 
 	ok, err := cksrv.fetchCache(req, res)
 	if ok || err != nil {
-		be.signalFetchWaiters(ckid, TFETCH_NOTCACHED)
 		return err
 	}
 
 	if len(req.GetSigmaPath()) == 0 {
 		db.DPrintf(db.CHUNKSRV, "%v: Fetch: %v ok %t err %v", cksrv.kernelId, req.Prog, ok, err)
-		be.signalFetchWaiters(ckid, TFETCH_NOTCACHED)
 		return serr.NewErr(serr.TErrNotfound, req.Prog)
 	}
 
 	sz, srvpath, err := cksrv.fetchChunk(be, sp.Trealm(req.Realm), sp.Tpid(req.Pid), req.GetS3Secret(), int(req.ChunkId), sp.Tsize(req.Size), req.SigmaPath)
 	if err != nil {
-		be.signalFetchWaiters(ckid, TFETCH_NOTCACHED)
 		return err
 	}
 	res.Size = uint64(sz)
 	res.Path = srvpath
-	be.signalFetchWaiters(ckid, TFETCH_CACHED)
 	return nil
 }
 

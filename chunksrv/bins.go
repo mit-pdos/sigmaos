@@ -4,28 +4,38 @@ import (
 	"fmt"
 	"sync"
 
-	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
 )
 
+type Tfetch int
+
+const (
+	TFETCH_INPROGRESS = iota
+	TFETCH_CACHED
+	TFETCH_NOTCACHED
+)
+
 type bin struct {
 	sync.Mutex
-	cond           *sync.Cond
-	fd             int
-	prog           string
-	st             *sp.Tstat
-	statInProgress bool
-	openInProgress bool
-	path           string
-	sc             *sigmaclnt.SigmaClnt
+	cond            *sync.Cond
+	fd              int
+	prog            string
+	st              *sp.Tstat
+	statInProgress  bool
+	openInProgress  bool
+	fetchInProgress map[int]Tfetch
+	path            string
+	sc              *sigmaclnt.SigmaClnt
 }
 
 func newBin(prog string) *bin {
 	b := &bin{
-		prog: prog,
-		fd:   -1,
+		prog:            prog,
+		fd:              -1,
+		fetchInProgress: make(map[int]Tfetch),
 	}
 	b.cond = sync.NewCond(&b.Mutex)
 	return b
@@ -86,6 +96,33 @@ func (be *bin) signalFdWaiters() {
 	defer be.Unlock()
 
 	be.openInProgress = false
+	be.cond.Broadcast()
+}
+
+func (be *bin) waitFetch(ckid int) {
+	be.Lock()
+	defer be.Unlock()
+
+	for {
+		s, ok := be.fetchInProgress[ckid]
+		if !ok {
+			be.fetchInProgress[ckid] = TFETCH_INPROGRESS
+			return
+		}
+		if s == TFETCH_CACHED || s == TFETCH_NOTCACHED {
+			return
+		}
+		// wait until outstanding fetch returns
+		db.DPrintf(db.TEST, "waitFetch %v %d", be.prog, ckid)
+		be.cond.Wait()
+	}
+}
+
+func (be *bin) signalFetchWaiters(ckid int, s Tfetch) {
+	be.Lock()
+	defer be.Unlock()
+
+	be.fetchInProgress[ckid] = s
 	be.cond.Broadcast()
 }
 

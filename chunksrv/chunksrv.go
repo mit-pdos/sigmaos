@@ -364,7 +364,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	}
 
 	if st, ok := be.isStatCached(); ok {
-		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: hit %v", cksrv.kernelId, req.GetProg())
+		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: hit %v %v", cksrv.kernelId, req.GetProg(), req.GetPid())
 		res.Stat = st.StatProto()
 		res.Path = cksrv.path
 	}
@@ -374,7 +374,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	}
 
 	if st := be.waitStat(); st != nil {
-		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: wait hit %v", cksrv.kernelId, req.GetProg())
+		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: wait hit %v %v", cksrv.kernelId, req.GetProg(), req.GetPid())
 		res.Stat = st.StatProto()
 		res.Path = cksrv.path
 		return nil
@@ -395,7 +395,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 
 	// Prefetch first chunk
 	go func() {
-		db.DPrintf(db.SPAWN_LAT, "Prefetch chunk 0 %v", req.GetProg())
+		db.DPrintf(db.SPAWN_LAT, "Prefetch chunk 0 %v %v", req.GetProg(), req.GetPid())
 		s := time.Now()
 		_, _, err := cksrv.fetchChunk(r, req.GetProg(), sp.Tpid(req.Pid), req.GetS3Secret(), 0, chunk.CHUNKSZ, req.GetSigmaPath())
 		db.DPrintf(db.SPAWN_LAT, "GetFileStat: fetchChunk %v err %v lat %v", req.GetProg(), err, time.Since(s))

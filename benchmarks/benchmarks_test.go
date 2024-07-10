@@ -2,7 +2,7 @@ package benchmarks_test
 
 import (
 	"flag"
-	"fmt"
+	// "fmt"
 	"math/rand"
 	"net/rpc"
 	"os/exec"
@@ -302,7 +302,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 
 	if PREWARM_REALM {
 		db.DPrintf(db.TEST, "prewarm: spawn on %v\n", kernel0)
-		p := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 0), "name/"})
+		p := proc.NewProc("spawn-latency", []string{"1us", OUT_DIR})
 		p.SetKernels([]string{kernel0})
 		err := ts1.Spawn(p)
 		assert.Nil(t, err, "Spawn")

@@ -44,7 +44,7 @@ func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) *CachedSvcClnt {
 		cc:  cacheclnt.NewCacheClnt(fsls, job, cachesrv.NSHARD),
 	}
 	dir := csc.pn + cachedsvc.SRVDIR
-	csc.dd = dircache.NewDirCache[struct{}](fsls[0], dir, csc.newEntry, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
+	csc.dd = dircache.NewDirCache[struct{}](fsls[0], dir, csc.newEntry, nil, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
 	return csc
 }
 

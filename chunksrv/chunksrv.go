@@ -114,7 +114,7 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 		sc:       sc,
 		kernelId: kernelId,
 		path:     chunk.ChunkdPath(kernelId),
-		ckclnt:   chunkclnt.NewChunkClnt(sc.FsLib),
+		ckclnt:   chunkclnt.NewChunkClnt(sc.FsLib, true),
 	}
 	cksrv.realms = newRealms()
 	cksrv.realms.InitRoot(sc)

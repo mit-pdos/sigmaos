@@ -175,17 +175,14 @@ func (updm *UprocdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*UprocdCln
 
 func (updm *UprocdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error) {
 	db.DPrintf(db.UPROCDMGR, "[RunUProc %v] run uproc %v", uproc.GetRealm(), uproc)
-	s := time.Now()
 	rpcc, err := updm.lookupClnt(uproc.GetRealm(), uproc.GetType())
 	if err != nil {
 		return err, nil
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup Uprocd clnt %v lat %v", updm.fsl.ProcEnv().GetPID(), uproc.GetPid(), time.Since(s))
 	// run and exit do resource accounting and share rebalancing for the
 	// uprocds.
-	s = time.Now()
 	updm.startBalanceShares(uproc)
-	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Uprocd shares %v", updm.fsl.ProcEnv().GetPID(), time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Uprocd shares time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	defer updm.exitBalanceShares(uproc)
 	return rpcc.RunProc(uproc)
 }

@@ -65,9 +65,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	// Set the schedd mount for the proc, so it can mount this schedd in one RPC
 	// (without walking down to it).
 	p.SetScheddEndpoint(mgr.mfs.GetSigmaPSrvEndpoint())
-	s := time.Now()
 	mgr.setupProcState(p)
-	db.DPrintf(db.SPAWN_LAT, "[%v] Proc state setup %v", p.GetPid(), time.Since(s))
 	err := mgr.runProc(p)
 	if err != nil {
 		mgr.procCrashed(p, err)

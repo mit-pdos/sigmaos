@@ -10,7 +10,7 @@ import (
 
 func (mgr *ProcMgr) runProc(p *proc.Proc) error {
 	db.DPrintf(db.PROCMGR, "Procd run: %v time since spawn %v", p, time.Since(p.GetSpawnTime()))
-	db.DPrintf(db.SPAWN_LAT, "Procd run: %v time since spawn %v", p, time.Since(p.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "Procd run: %v time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	var err error
 	if p.IsPrivileged() {
 		err = mgr.runPrivilegedProc(p)

@@ -1,7 +1,6 @@
 package chunksrv
 
 import (
-	"fmt"
 	"sync"
 
 	db "sigmaos/debug"
@@ -21,7 +20,6 @@ type bin struct {
 	openInProgress  bool
 	fetchInProgress map[int]bool
 	path            string
-	sc              *sigmaclnt.SigmaClnt
 }
 
 func newBin(prog string) *bin {
@@ -142,14 +140,6 @@ func newRealms() *realms {
 	return &realms{
 		SyncMap: syncmap.NewSyncMap[sp.Trealm, *realm](),
 	}
-}
-
-func (rs *realms) getSc(realm sp.Trealm) (*sigmaclnt.SigmaClnt, error) {
-	r, ok := rs.Lookup(realm)
-	if !ok {
-		return nil, fmt.Errorf("No sc for realm %v", realm)
-	}
-	return r.getSc(), nil
 }
 
 func (rs *realms) InitRoot(sc *sigmaclnt.SigmaClnt) {

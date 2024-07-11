@@ -13,6 +13,7 @@ import (
 type bin struct {
 	sync.Mutex
 	cond            *sync.Cond
+	condFetch       *sync.Cond
 	fd              int
 	prog            string
 	st              *sp.Tstat
@@ -30,6 +31,7 @@ func newBin(prog string) *bin {
 		fetchInProgress: make(map[int]bool),
 	}
 	b.cond = sync.NewCond(&b.Mutex)
+	b.condFetch = sync.NewCond(&b.Mutex)
 	return b
 }
 
@@ -103,7 +105,7 @@ func (be *bin) waitFetch(ckid int) {
 		}
 		// wait until outstanding fetch returns
 		db.DPrintf(db.TEST, "waitFetch %v %d", be.prog, ckid)
-		be.cond.Wait()
+		be.condFetch.Wait()
 	}
 }
 
@@ -112,7 +114,7 @@ func (be *bin) signalFetchWaiters(ckid int) {
 	defer be.Unlock()
 
 	delete(be.fetchInProgress, ckid)
-	be.cond.Broadcast()
+	be.condFetch.Broadcast()
 }
 
 type realm struct {

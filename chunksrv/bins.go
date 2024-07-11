@@ -3,7 +3,7 @@ package chunksrv
 import (
 	"sync"
 
-	db "sigmaos/debug"
+	// db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
@@ -102,7 +102,6 @@ func (be *bin) waitFetch(ckid int) {
 			return
 		}
 		// wait until outstanding fetch returns
-		db.DPrintf(db.TEST, "waitFetch %v %d", be.prog, ckid)
 		be.condFetch.Wait()
 	}
 }

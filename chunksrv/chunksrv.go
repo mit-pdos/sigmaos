@@ -346,28 +346,26 @@ func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3sec
 	return st, path, nil
 }
 
-func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, ep *sp.Tendpoint) (*sp.Tstat, string, error) {
-	db.DPrintf(db.CHUNKSRV, "%v: getFileStat pid %v", cksrv.kernelId, req.GetPid())
+func (cksrv *ChunkSrv) getFileStat(r sp.Trealm, prog string, pid sp.Tpid, paths []string, s3secret *sp.SecretProto, ep *sp.Tendpoint) (*sp.Tstat, string, error) {
+	db.DPrintf(db.CHUNKSRV, "%v: getFileStat pid %v", cksrv.kernelId, pid)
 	start := time.Now()
 	defer func() {
-		db.DPrintf(db.CHUNKSRV, "%v: getFileStat done lat %v pid %v", cksrv.kernelId, time.Since(start), req.Pid)
+		db.DPrintf(db.CHUNKSRV, "%v: getFileStat done lat %v pid %v", cksrv.kernelId, time.Since(start), pid)
 	}()
-	r := sp.Trealm(req.GetRealmStr())
-	paths := req.GetSigmaPath()
-	if req.SigmaPath[0] == cksrv.path {
+	if paths[0] == cksrv.path {
 		// If the first path is me, skip myself, because i don't have the stat
-		paths = req.SigmaPath[1:]
+		paths = paths[1:]
 	}
 
 	if len(paths) == 0 {
-		return nil, "", serr.NewErr(serr.TErrNotfound, req.GetProg())
+		return nil, "", serr.NewErr(serr.TErrNotfound, prog)
 	}
 
 	for IsChunkSrvPath(paths[0]) {
 		s := filepath.Base(paths[0])
 		srv := paths[0]
-		st, _, err := cksrv.ckclnt.GetFileStat(s, req.Prog, sp.Tpid(req.Pid), r, req.GetS3Secret(), []string{}, nil)
-		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: chunkd %v pid %v st %v err %v", cksrv.kernelId, paths[0], req.GetPid(), st, err)
+		st, _, err := cksrv.ckclnt.GetFileStat(s, prog, pid, r, s3secret, []string{}, nil)
+		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: chunkd %v pid %v st %v err %v", cksrv.kernelId, paths[0], pid, st, err)
 		if err == nil {
 			return st, srv, nil
 		}
@@ -375,13 +373,13 @@ func (cksrv *ChunkSrv) getFileStat(req proto.GetFileStatRequest, ep *sp.Tendpoin
 	}
 
 	if len(paths) == 0 {
-		return nil, "", serr.NewErr(serr.TErrNotfound, req.GetProg())
+		return nil, "", serr.NewErr(serr.TErrNotfound, prog)
 	}
 
 	s := time.Now()
 	// paths = replaceLocal(paths, cksrv.kernelId)
-	st, srv, err := cksrv.getOrigin(r, req.GetProg(), paths, req.GetS3Secret(), ep)
-	db.DPrintf(db.SPAWN_LAT, "[%v] getFileStat lat %v: origin %v err %v", req.GetPid(), time.Since(s), paths, err)
+	st, srv, err := cksrv.getOrigin(r, prog, paths, s3secret, ep)
+	db.DPrintf(db.SPAWN_LAT, "[%v] getFileStat lat %v: origin %v err %v", pid, time.Since(s), paths, err)
 	if err != nil {
 		return nil, "", err
 	}
@@ -435,7 +433,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 		cksrv.fetch(r, be.prog, sp.Tpid(req.Pid), req.GetS3Secret(), 0, chunk.CHUNKSZ, req.GetSigmaPath(), true, ep)
 	}()
 
-	st, srv, err := cksrv.getFileStat(req, ep)
+	st, srv, err := cksrv.getFileStat(r, req.GetProg(), sp.Tpid(req.Pid), req.GetSigmaPath(), req.GetS3Secret(), ep)
 	if err != nil {
 		return err
 	}

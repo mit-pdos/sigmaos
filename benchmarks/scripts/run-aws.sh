@@ -1332,7 +1332,7 @@ schedd_scalability_rs_without_kernel_pref() {
     fi
     stop_k8s_cluster $KVPC
     cmd="
-      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;SPAWN_LAT;NET_LAT;REALM_GROW_LAT;SESS_LAT;CACHE_LAT;WALK_LAT;FSETCD_LAT;ATTACH_LAT;CHUNKSRV;CHUNKCLNT;\"; \
+      export SIGMADEBUG=\"TEST;BENCH;LOADGEN;SPAWN_LAT;NET_LAT;REALM_GROW_LAT;CACHE_LAT;WALK_LAT;FSETCD_LAT;ATTACH_LAT;CHUNKSRV;CHUNKCLNT;\"; \
       ./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; \
       go clean -testcache; \
       go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS --run TestMicroScheddSpawn --tag $TAG --schedd_dur $dur --schedd_max_rps $rps --use_rust_proc --etcdIP $LEADER_IP_SIGMA $prewarm --no-shutdown $NETPROXY > /tmp/bench.out 2>&1

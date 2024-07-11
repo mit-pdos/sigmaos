@@ -27,7 +27,6 @@ const (
 	SPAWN_LAT      Tselector = "SPAWN_LAT"
 	NET_LAT        Tselector = "NET_LAT"
 	REALM_GROW_LAT           = "REALM_GROW_LAT"
-	SESS_LAT                 = "SESS_LAT"
 	CACHE_LAT                = "CACHE_LAT"
 	WALK_LAT                 = "WALK_LAT"
 	FSETCD_LAT               = "FSETCD_LAT"

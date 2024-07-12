@@ -2,9 +2,8 @@ package uprocclnt
 
 import (
 	"fmt"
-	"time"
 
-	db "sigmaos/debug"
+	// db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/serr"
@@ -70,36 +69,4 @@ func (clnt *UprocdClnt) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, s3se
 	} else {
 		return nil, err
 	}
-}
-
-func (clnt *UprocdClnt) Fetch(pn string, ck int, sz sp.Tsize, pid uint32) (sp.Tsize, error) {
-	s := time.Now()
-	req := &proto.FetchRequest{
-		Prog:    pn,
-		ChunkId: int32(ck),
-		Size:    uint64(sz),
-		Pid:     pid,
-	}
-	res := &proto.FetchResponse{}
-	if err := clnt.RPC("UprocSrv.FetchRPC", req, res); err != nil {
-		db.DPrintf(db.ERROR, "UprocSrv.Fetch %v err %v", req, err)
-		return 0, err
-	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] uprocdclnt.Fetch ck %d %v", pn, ck, time.Since(s))
-	return sp.Tsize(res.Size), nil
-}
-
-func (clnt *UprocdClnt) Lookup(pn string, pid uint32) (*sp.Stat, error) {
-	s := time.Now()
-	req := &proto.LookupRequest{
-		Prog: pn,
-		Pid:  pid,
-	}
-	res := &proto.LookupResponse{}
-	if err := clnt.RPC("UprocSrv.LookupRPC", req, res); err != nil {
-		db.DPrintf(db.ERROR, "UprocSrv.Lookup %v err %v", req, err)
-		return nil, err
-	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] uprocdclnt.Lookup pid %d %v", pn, pid, time.Since(s))
-	return sp.NewStatProto(res.Stat), nil
 }

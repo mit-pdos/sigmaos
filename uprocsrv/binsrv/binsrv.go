@@ -1,5 +1,5 @@
 // The binsrv package serves sigmaos binaries to the linux kernel.  It
-// fetches the binary using the sigmaos pathname and caches them
+// fetches the binary from [uprocsrv] and [chunksrv], and caches them
 // locally.  This allow support demand paging: the kernel can start
 // running the binary before the complete binary has been downloaded.
 //
@@ -8,10 +8,7 @@ package binsrv
 
 import (
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -19,12 +16,8 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse"
 
 	"sigmaos/chunksrv"
-	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
+	// db "sigmaos/debug"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/uprocclnt"
 )
 
@@ -69,20 +62,20 @@ func (n *binFsNode) String() string {
 	return fmt.Sprintf("{N %q}", n.path())
 }
 
-func newBinRoot(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, upds uprocclnt.UprocSrv) (fs.InodeEmbedder, error) {
+func newBinRoot(upds uprocclnt.UprocSrv) (fs.InodeEmbedder, error) {
 	var st syscall.Stat_t
 	err := syscall.Stat(chunksrv.BINPROC, &st)
 	if err != nil {
 		return nil, err
 	}
 	root := &binFsRoot{
-		bincache: newBinCache(kernelId, sc, updc, upds),
+		bincache: newBinCache(upds),
 	}
 	return root.newNode(nil, "", 0), nil
 }
 
-func mountBinFs(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, upds uprocclnt.UprocSrv) (*fuse.Server, error) {
-	loopbackRoot, err := newBinRoot(kernelId, sc, updc, upds)
+func mountBinFs(upds uprocclnt.UprocSrv) (*fuse.Server, error) {
+	loopbackRoot, err := newBinRoot(upds)
 	if err != nil {
 		return nil, err
 	}
@@ -108,111 +101,14 @@ func mountBinFs(kernelId string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.Uprocd
 	return server, nil
 }
 
-// Start directly
-func StartBinFs(upds uprocclnt.UprocSrv, kernelId, uprocdpid string, sc *sigmaclnt.SigmaClnt, ep *sp.Tendpoint) error {
-	// XXX for now
+func StartBinFs(upds uprocclnt.UprocSrv) error {
 	if err := os.MkdirAll(BINFSMNT, 0750); err != nil {
 		return err
 	}
-	pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
-	rc, err := sigmarpcchan.NewSigmaRPCClntEndpoint([]*fslib.FsLib{sc.FsLib}, pn, ep)
+	server, err := mountBinFs(upds)
 	if err != nil {
-		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
 		return err
 	}
-	updc := uprocclnt.NewUprocdClnt(sp.Tpid(uprocdpid), rc)
-	server, err := mountBinFs(kernelId, sc, updc, upds)
 	server.Wait()
-	return nil
-}
-
-// Start through exec
-func RunBinFS(kernelId, uprocdpid, smnt string) error {
-	pe := proc.GetProcEnv()
-	ep, err := sp.NewEndpointFromBytes([]byte(smnt))
-	if err != nil {
-		return err
-	}
-
-	proc.SetSigmaDebugPid("binfsd-" + uprocdpid)
-
-	if err := os.MkdirAll(BINFSMNT, 0750); err != nil {
-		return err
-	}
-
-	db.DPrintf(db.BINSRV, "%s ep %v", db.LsDir(chunksrv.BINPROC), ep)
-
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
-	if err != nil {
-		return err
-	}
-
-	pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid)
-	rc, err := sigmarpcchan.NewSigmaRPCClntEndpoint([]*fslib.FsLib{sc.FsLib}, pn, ep)
-	if err != nil {
-		db.DPrintf(db.ERROR, "rpcclnt err %v", err)
-		return err
-	}
-	updc := uprocclnt.NewUprocdClnt(sp.Tpid(uprocdpid), rc)
-
-	server, err := mountBinFs(kernelId, sc, updc, nil)
-
-	// Tell ExecBinSrv we are running
-	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
-		return err
-	}
-	go func() {
-		buf := make([]byte, 1)
-		if _, err := io.ReadFull(os.Stdin, buf); err != nil {
-			db.DFatalf("read pipe err %v\n", err)
-		}
-		db.DPrintf(db.BINSRV, "exiting\n")
-		server.Unmount()
-		os.Exit(0)
-	}()
-
-	server.Wait()
-	db.DPrintf(db.ALWAYS, "Wait returned\n")
-	return nil
-}
-
-type BinSrvCmd struct {
-	cmd *exec.Cmd
-	out io.WriteCloser
-}
-
-func ExecBinSrv(kernelId, uprocdpid string, ep *sp.Tendpoint) (*BinSrvCmd, error) {
-	d, err := ep.Marshal()
-	if err != nil {
-		return nil, err
-	}
-	cmd := exec.Command("binfsd", kernelId, uprocdpid, string(d))
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return nil, err
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Start(); err != nil {
-		db.DPrintf(db.BINSRV, "Error start %v %v", cmd, err)
-		return nil, err
-	}
-	buf := make([]byte, 1)
-	if _, err := io.ReadFull(stdout, buf); err != nil {
-		db.DPrintf(db.BINSRV, "read pipe err %v\n", err)
-		return nil, err
-	}
-
-	return &BinSrvCmd{cmd: cmd, out: stdin}, nil
-}
-
-func (bsc *BinSrvCmd) Shutdown() error {
-	if _, err := io.WriteString(bsc.out, "e"); err != nil {
-		return err
-	}
 	return nil
 }

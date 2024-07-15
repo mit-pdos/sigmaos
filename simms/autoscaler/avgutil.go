@@ -5,17 +5,23 @@ import (
 	"sigmaos/simms"
 )
 
+const (
+	UNLIMITED_REPLICAS int = 0
+)
+
 type AvgUtilAutoscalerParams struct {
 	ScaleFreq      int
 	TargetUtil     float64
 	UtilWindowSize uint64
+	maxNReplicas   int
 }
 
-func NewAvgUtilAutoscalerParams(scaleFreq int, targetUtil float64, utilWindowSize uint64) *AvgUtilAutoscalerParams {
+func NewAvgUtilAutoscalerParams(scaleFreq int, targetUtil float64, utilWindowSize uint64, maxNReplicas int) *AvgUtilAutoscalerParams {
 	return &AvgUtilAutoscalerParams{
 		ScaleFreq:      scaleFreq,
 		TargetUtil:     targetUtil,
 		UtilWindowSize: utilWindowSize,
+		maxNReplicas:   maxNReplicas,
 	}
 }
 
@@ -79,7 +85,7 @@ func (ua *AvgUtilAutoscaler) getScalingDecision(istats []*simms.ServiceInstanceS
 	readyIStats := getReadyInstanceStats(*ua.t, istats)
 	currentNInstances := len(readyIStats)
 	currentUtil := avgUtil(ua.ctx, *ua.t, ua.p.UtilWindowSize, readyIStats)
-	desiredNInstances := k8sCalcDesiredNInstances(ua.ctx, currentNInstances, currentUtil, ua.p.TargetUtil, DEFAULT_TOLERANCE)
+	desiredNInstances := k8sCalcDesiredNInstances(ua.ctx, currentNInstances, currentUtil, ua.p.TargetUtil, DEFAULT_TOLERANCE, ua.p.maxNReplicas)
 	db.DPrintf(db.SIM_AUTOSCALE, "%v AvgUtilAutoscaler currentUtil:%v targetUtil:%v, currentNInstances:%v desiredNInstances:%v", ua.ctx, currentUtil, ua.p.TargetUtil, currentNInstances, desiredNInstances)
 	if desiredNInstances > currentNInstances {
 		return SCALE_UP, desiredNInstances - currentNInstances

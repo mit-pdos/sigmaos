@@ -2,6 +2,7 @@ package simms
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/montanaflynn/stats"
 
@@ -194,14 +195,18 @@ func NewRecordedStats(window int) *RecordedStats {
 	}
 }
 
+func roundToHundredth(f float64) float64 {
+	return math.Round(f*100.0) / 100.0
+}
+
 // Optionally record workload stats in a sliding window
 func (rst *RecordedStats) record(t uint64, st *ServiceStats) {
 	if rst.window > 0 {
 		rst.Time = append(rst.Time, t)
-		rst.AvgLatency = append(rst.AvgLatency, st.AvgLatencyLastNTicks(rst.window))
-		rst.P50Latency = append(rst.P50Latency, st.PercentileLatencyLastNTicks(50.0, rst.window))
-		rst.P90Latency = append(rst.P90Latency, st.PercentileLatencyLastNTicks(90.0, rst.window))
-		rst.P99Latency = append(rst.P99Latency, st.PercentileLatencyLastNTicks(99.0, rst.window))
+		rst.AvgLatency = append(rst.AvgLatency, roundToHundredth(st.AvgLatencyLastNTicks(rst.window)))
+		rst.P50Latency = append(rst.P50Latency, roundToHundredth(st.PercentileLatencyLastNTicks(50.0, rst.window)))
+		rst.P90Latency = append(rst.P90Latency, roundToHundredth(st.PercentileLatencyLastNTicks(90.0, rst.window)))
+		rst.P99Latency = append(rst.P99Latency, roundToHundredth(st.PercentileLatencyLastNTicks(99.0, rst.window)))
 	}
 }
 

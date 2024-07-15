@@ -809,11 +809,9 @@ func TestAvgUtilAutoscalerOscillationMatchWithK8s(t *testing.T) {
 		// App params
 		N_SLOTS             int    = 10
 		P_TIME              uint64 = 1
-		INIT_TIME           uint64 = 4
+		INIT_TIME           uint64 = 30
 		SVC_ID              string = "wfe"
 		STATEFUL            bool   = false
-		SIZE_UP_TIME        uint64 = 0
-		SIZE_DOWN_TIME      uint64 = 700
 		RECORD_STATS_WINDOW int    = 10
 		// Autoscaler params
 		MAX_N_REPLICAS     int     = 5

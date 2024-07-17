@@ -79,7 +79,7 @@ func isExpected(path string, expect []string) bool {
 func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 	pid := ts.ProcEnv().GetPID()
 	secrets := ts.ProcEnv().GetSecrets()["s3"]
-	st, path, err := ts.ckclnt.GetFileStat(srv, PROG, pid, sp.ROOTREALM, secrets, paths)
+	st, path, err := ts.ckclnt.GetFileStat(srv, PROG, pid, sp.ROOTREALM, secrets, paths, nil)
 	assert.Nil(ts.T, err)
 	assert.True(ts.T, isExpected(path, expect))
 

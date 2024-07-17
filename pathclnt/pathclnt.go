@@ -70,7 +70,7 @@ func (pathc *PathClnt) MntClnt() *mntclnt.MntClnt {
 // Detach from all servers
 func (pathc *PathClnt) detachAll() error {
 	var err error
-	eps := pathc.mntclnt.Mounts()
+	eps := pathc.mntclnt.MountedPaths()
 	db.DPrintf(db.PATHCLNT, "%v: Fslib.detachAll %v\n", pathc.cid, eps)
 	for _, ep := range eps {
 		if r := pathc.mntclnt.Detach(ep); r != nil {

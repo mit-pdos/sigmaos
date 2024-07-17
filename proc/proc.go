@@ -223,7 +223,7 @@ func (p *Proc) String() string {
 		"Program:%v "+
 		"Version:%v "+
 		"Pid:%v "+
-		"Tag: %v "+
+		"Tag:%v "+
 		"Priv:%t "+
 		"SigmaPath:%v "+
 		"KernelId:%v "+

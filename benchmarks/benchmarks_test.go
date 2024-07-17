@@ -2,7 +2,7 @@ package benchmarks_test
 
 import (
 	"flag"
-	"fmt"
+	// "fmt"
 	"math/rand"
 	"net/rpc"
 	"os/exec"
@@ -302,7 +302,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 
 	if PREWARM_REALM {
 		db.DPrintf(db.TEST, "prewarm: spawn on %v\n", kernel0)
-		p := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 0), "name/"})
+		p := proc.NewProc("spawn-latency", []string{"1us", OUT_DIR})
 		p.SetKernels([]string{kernel0})
 		err := ts1.Spawn(p)
 		assert.Nil(t, err, "Spawn")
@@ -394,7 +394,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 	}
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
-	db.DPrintf(db.BENCH, "rust %v ux %v kpref %v nclnt %v durs %v rps %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS)
+	db.DPrintf(db.BENCH, "rust %v ux %v prewarm %v kpref %v nclnt %v durs %v rps %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS)
 
 	prog := "XXXX"
 	if USE_RUST_PROC {
@@ -422,15 +422,17 @@ func TestMicroScheddSpawn(t *testing.T) {
 	spawnProcs(ts1, p1s)
 	waitStartProcs(ts1, p1s)
 	waitExitProcs(ts1, p1s)
-	db.DPrintf(db.TEST, "Warm up remainder of the realm for sleeper")
-	warmupRealm(ts1, []string{"sleeper"})
+	if PREWARM_REALM {
+		db.DPrintf(db.TEST, "Warm up remainder of the realm for sleeper")
+		warmupRealm(ts1, []string{"sleeper"})
+	}
+	// Cold-start the first target proc to download the bin from S3
 	db.DPrintf(db.TEST, "Warm up %v bin cache on kernel %v", prog, kernels[0])
 	p2 := proc.NewProc(prog, nil)
 	p2.SetKernels([]string{kernels[0]})
 	p2s := []*proc.Proc{p2}
 	spawnProcs(ts1, p2s)
 	waitStartProcs(ts1, p2s)
-
 	if PREWARM_REALM {
 		warmupRealm(ts1, []string{prog})
 	}

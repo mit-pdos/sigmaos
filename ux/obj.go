@@ -33,7 +33,7 @@ func umode2Perm(umode uint16) sp.Tperm {
 	case syscall.S_IFLNK:
 		perm |= sp.DMSYMLINK
 	}
-	db.DPrintf(db.UX, "mode 0%o type 0%o perm %v", umode, umode&syscall.S_IFMT, perm)
+	// db.DPrintf(db.UX, "mode 0%o type 0%o perm %v", umode, umode&syscall.S_IFMT, perm)
 	return perm
 }
 

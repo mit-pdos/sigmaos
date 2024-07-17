@@ -42,7 +42,9 @@ if [ -z "$VPC" ] || [ $# -gt 0 ]; then
 fi
 
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
+vm_ids=`./lsvpc.py $VPC | grep -w VMInstance | grep "ec2-" | cut -d " " -f 2`
 vma=($vms)
+vm_id_a=($vm_ids)
 MAIN="${vma[0]}"
 
 LOG_DIR=/tmp
@@ -59,7 +61,8 @@ for vm in $vms; do
     outfile="/tmp/join.out"
   fi
   # read log files.
-  cmd1="ssh -i key-$VPC.pem ubuntu@$vm \"/bin/bash -c '~/sigmaos/logs.sh --merge'\" > $LOG_DIR/$vm.out 2>&1" 
+  vm_hostname="${vm_id_a[$idx]}"
+  cmd1="ssh -i key-$VPC.pem ubuntu@$vm \"/bin/bash -c '~/sigmaos/logs.sh --merge'\" > $LOG_DIR/$vm_hostname-$vm.out 2>&1" 
   # scp performance files.
   cmd2="scp -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos-perf/* $PERF_DIR"
   # scp the bench.out file.

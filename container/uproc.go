@@ -8,10 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	"sigmaos/binsrv"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/uprocsrv/binsrv"
 )
 
 type uprocCmd struct {

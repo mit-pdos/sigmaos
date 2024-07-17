@@ -263,7 +263,7 @@ func (fdc *FdClient) NewRootMount(pn, epname string) error {
 }
 
 func (fdc *FdClient) Mounts() []string {
-	return fdc.pc.MntClnt().Mounts()
+	return fdc.pc.MntClnt().MountedPaths()
 }
 
 func (fdc *FdClient) ClntId() sp.TclntId {

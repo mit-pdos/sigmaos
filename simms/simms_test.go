@@ -802,20 +802,20 @@ func TestDelayedScaleUpWithClientBurstNRandomChoicesLB(t *testing.T) {
 
 func TestAvgUtilAutoscalerOscillationMatchWithK8s(t *testing.T) {
 	const (
-		N_TICKS uint64 = 300
+		N_TICKS uint64 = 180
 		// Clnt params
 		CLNT_REQ_MEAN float64 = 23
 		CLNT_REQ_STD  float64 = 0
 		// App params
 		N_SLOTS             int    = 10
 		P_TIME              uint64 = 1
-		INIT_TIME           uint64 = 30
+		INIT_TIME           uint64 = 5
 		SVC_ID              string = "wfe"
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		// Autoscaler params
 		MAX_N_REPLICAS     int     = 5
-		SCALE_FREQ         int     = 25
+		SCALE_FREQ         int     = 20
 		TARGET_UTIL        float64 = 0.5
 		UTIL_WINDOW_SIZE   uint64  = 10
 		AUTOSCALER_LEAD_IN uint64  = 10 // Number of ticks to wait before starting the autoscaler

@@ -12,6 +12,7 @@ import (
 type ServiceStats struct {
 	lat    [][]uint64
 	rstats *RecordedStats
+	nreps  uint64
 }
 
 func NewServiceStats() *ServiceStats {
@@ -22,6 +23,7 @@ func NewServiceStats() *ServiceStats {
 }
 
 func (st *ServiceStats) Tick(t uint64, reps []*Reply) {
+	st.nreps += uint64(len(reps))
 	lats := make([]uint64, 0, len(reps))
 	for _, rep := range reps {
 		lats = append(lats, rep.GetLatency())
@@ -134,6 +136,10 @@ func (st *ServiceStats) PercentileLatency(p float64) float64 {
 	return percentileLatency(p, st.lat)
 }
 
+func (st *ServiceStats) GetNReps() uint64 {
+	return st.nreps
+}
+
 func (st *ServiceStats) GetLatencies() [][]uint64 {
 	return st.lat
 }
@@ -208,6 +214,15 @@ func (rst *RecordedStats) record(t uint64, st *ServiceStats) {
 		rst.P90Latency = append(rst.P90Latency, roundToHundredth(st.PercentileLatencyLastNTicks(90.0, rst.window)))
 		rst.P99Latency = append(rst.P99Latency, roundToHundredth(st.PercentileLatencyLastNTicks(99.0, rst.window)))
 	}
+}
+
+func (rst *RecordedStats) VerboseString() string {
+	str := "&{"
+	for i := range rst.AvgLatency {
+		str += fmt.Sprintf("\n\t%d mean:%.2f p50:%.2f p90:%.2f p99:%.2f", i, rst.AvgLatency[i], rst.P50Latency[i], rst.P90Latency[i], rst.P99Latency[i])
+	}
+	str += "}"
+	return str
 }
 
 func (rst *RecordedStats) String() string {

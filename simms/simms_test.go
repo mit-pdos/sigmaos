@@ -802,7 +802,7 @@ func TestDelayedScaleUpWithClientBurstNRandomChoicesLB(t *testing.T) {
 
 func TestAvgUtilAutoscalerOscillationMatchWithK8s(t *testing.T) {
 	const (
-		N_TICKS uint64 = 600
+		N_TICKS uint64 = 300
 		// Clnt params
 		CLNT_REQ_MEAN float64 = 23
 		CLNT_REQ_STD  float64 = 0
@@ -840,8 +840,10 @@ func TestAvgUtilAutoscalerOscillationMatchWithK8s(t *testing.T) {
 	rstats := stats.GetRecordedStats()
 	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
 	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
 	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }

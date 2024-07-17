@@ -850,9 +850,9 @@ func TestAvgUtil50AutoscalerRRLBMatchWithK8s(t *testing.T) {
 
 func TestAvgUtil90AutoscalerRRLBMatchWithK8s(t *testing.T) {
 	const (
-		N_TICKS uint64 = 180
+		N_TICKS uint64 = 600
 		// Clnt params
-		CLNT_REQ_MEAN float64 = 23
+		CLNT_REQ_MEAN float64 = 45
 		CLNT_REQ_STD  float64 = 0
 		// App params
 		N_SLOTS             int    = 10

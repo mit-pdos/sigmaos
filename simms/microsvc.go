@@ -24,6 +24,7 @@ func NewMicroserviceParams(id string, nslots int, ptime uint64, initTime uint64,
 
 type Microservice struct {
 	t                *uint64
+	nreqs            uint64
 	msp              *MicroserviceParams
 	instances        []*MicroserviceInstance
 	addedInstances   int
@@ -72,6 +73,7 @@ func (m *Microservice) RemoveInstance() {
 }
 
 func (m *Microservice) Tick(reqs []*Request) []*Reply {
+	m.nreqs += uint64(len(reqs))
 	replies := []*Reply{}
 	// Steer requests only to instances which haven't been removed
 	steeredReqs := m.lb.SteerRequests(reqs, m.instances)
@@ -89,6 +91,10 @@ func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	m.stats.Tick(*m.t, replies)
 	m.autoscaler.Tick()
 	return replies
+}
+
+func (m *Microservice) GetNReqs() uint64 {
+	return m.nreqs
 }
 
 func (m *Microservice) GetID() string {

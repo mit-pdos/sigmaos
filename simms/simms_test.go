@@ -800,7 +800,7 @@ func TestDelayedScaleUpWithClientBurstNRandomChoicesLB(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestAvgUtilAutoscalerOscillationMatchWithK8s(t *testing.T) {
+func TestAvgUtil50AutoscalerRRLBMatchWithK8s(t *testing.T) {
 	const (
 		N_TICKS uint64 = 180
 		// Clnt params
@@ -817,6 +817,54 @@ func TestAvgUtilAutoscalerOscillationMatchWithK8s(t *testing.T) {
 		MAX_N_REPLICAS     int     = 5
 		SCALE_FREQ         int     = 20
 		TARGET_UTIL        float64 = 0.5
+		UTIL_WINDOW_SIZE   uint64  = 10
+		AUTOSCALER_LEAD_IN uint64  = 10 // Number of ticks to wait before starting the autoscaler
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp))
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	for ; time < N_TICKS; time++ {
+		if time == AUTOSCALER_LEAD_IN {
+			svc.GetAutoscaler().Start()
+		}
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
+	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
+	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
+	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+func TestAvgUtil90AutoscalerRRLBMatchWithK8s(t *testing.T) {
+	const (
+		N_TICKS uint64 = 180
+		// Clnt params
+		CLNT_REQ_MEAN float64 = 23
+		CLNT_REQ_STD  float64 = 0
+		// App params
+		N_SLOTS             int    = 10
+		P_TIME              uint64 = 1
+		INIT_TIME           uint64 = 5
+		SVC_ID              string = "wfe"
+		STATEFUL            bool   = false
+		RECORD_STATS_WINDOW int    = 10
+		// Autoscaler params
+		MAX_N_REPLICAS     int     = 5
+		SCALE_FREQ         int     = 20
+		TARGET_UTIL        float64 = 0.9
 		UTIL_WINDOW_SIZE   uint64  = 10
 		AUTOSCALER_LEAD_IN uint64  = 10 // Number of ticks to wait before starting the autoscaler
 	)

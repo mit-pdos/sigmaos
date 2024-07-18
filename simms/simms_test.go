@@ -895,3 +895,163 @@ func TestAvgUtil90AutoscalerRRLBMatchWithK8s(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
+
+func TestAvgUtil90AutoscalerOmniscientQLenLBMatchWithK8s(t *testing.T) {
+	const (
+		N_TICKS uint64 = 600
+		// Clnt params
+		CLNT_REQ_MEAN float64 = 45
+		CLNT_REQ_STD  float64 = 0
+		// App params
+		N_SLOTS             int    = 10
+		P_TIME              uint64 = 1
+		INIT_TIME           uint64 = 5
+		SVC_ID              string = "wfe"
+		STATEFUL            bool   = false
+		RECORD_STATS_WINDOW int    = 10
+		// Autoscaler params
+		MAX_N_REPLICAS     int     = 5
+		SCALE_FREQ         int     = 20
+		TARGET_UTIL        float64 = 0.9
+		UTIL_WINDOW_SIZE   uint64  = 10
+		AUTOSCALER_LEAD_IN uint64  = 10 // Number of ticks to wait before starting the autoscaler
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp), opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	for ; time < N_TICKS; time++ {
+		if time == AUTOSCALER_LEAD_IN {
+			svc.GetAutoscaler().Start()
+		}
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
+	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
+	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
+	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+// Simulate a 5x load burst, with an avg util autoscaler with target
+// utilization of 50%, an omniscient qlen-based load balancer, and SigmaOS
+// scaling parameters (assuming only cold-starts). 1t = 1ms
+func TestBurst5xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartParams(t *testing.T) {
+	const (
+		N_TICKS uint64 = 20000
+		// Clnt params
+		CLNT_REQ_MEAN    float64 = 9 // 9 requests per ms
+		CLNT_REQ_STD     float64 = 0
+		BURST_MULTIPLIER float64 = 5.0 // Burst to 5x the load
+		BURST_START      uint64  = 100 // Start burst 100 ticks in
+		// App params
+		N_SLOTS             int    = 50 // With 9 requests per millisecond, and 5ms to process each request, a server with 50 processing slots should achieve 90% avg utilization.
+		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
+		INIT_TIME           uint64 = 8  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
+		SVC_ID              string = "wfe"
+		STATEFUL            bool   = false
+		RECORD_STATS_WINDOW int    = 10
+		// Autoscaler params
+		MAX_N_REPLICAS     int     = 5    // At most 5 instances should be needed to handle max load at target utilization
+		SCALE_FREQ         int     = 1000 // Make scaling decisions 1/sec
+		TARGET_UTIL        float64 = 0.9  // Target utilization of 90%
+		UTIL_WINDOW_SIZE   uint64  = 10
+		AUTOSCALER_LEAD_IN uint64  = 10 // Number of ticks to wait before starting the autoscaler
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp), opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	for ; time < N_TICKS; time++ {
+		if time == AUTOSCALER_LEAD_IN {
+			svc.GetAutoscaler().Start()
+		}
+		if time == BURST_START {
+			c.StartBurst(BURST_MULTIPLIER)
+		}
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
+	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
+	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
+	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+// Simulate a 2x load burst, with an avg util autoscaler with target
+// utilization of 50%, an omniscient qlen-based load balancer, and SigmaOS
+// scaling parameters (assuming only cold-starts). 1t = 1ms
+func TestBurst2xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartParams(t *testing.T) {
+	const (
+		N_TICKS uint64 = 10000
+		// Clnt params
+		CLNT_REQ_MEAN    float64 = 9 // 9 requests per ms
+		CLNT_REQ_STD     float64 = 0
+		BURST_MULTIPLIER float64 = 2.0 // Burst to 2x the load
+		BURST_START      uint64  = 100 // Start burst 100 ticks in
+		// App params
+		N_SLOTS             int    = 50 // With 9 requests per millisecond, and 5ms to process each request, a server with 50 processing slots should achieve 90% avg utilization.
+		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
+		INIT_TIME           uint64 = 8  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
+		SVC_ID              string = "wfe"
+		STATEFUL            bool   = false
+		RECORD_STATS_WINDOW int    = 10
+		// Autoscaler params
+		MAX_N_REPLICAS     int     = 2    // At most 2 instances should be needed to handle max load at target utilization
+		SCALE_FREQ         int     = 1000 // Make scaling decisions 1/sec
+		TARGET_UTIL        float64 = 0.9  // Target utilization of 90%
+		UTIL_WINDOW_SIZE   uint64  = 10
+		AUTOSCALER_LEAD_IN uint64  = 10 // Number of ticks to wait before starting the autoscaler
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	asp := autoscaler.NewAvgUtilAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgUtilAutoscaler(asp), opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	for ; time < N_TICKS; time++ {
+		if time == AUTOSCALER_LEAD_IN {
+			svc.GetAutoscaler().Start()
+		}
+		if time == BURST_START {
+			c.StartBurst(BURST_MULTIPLIER)
+		}
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
+	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
+	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
+	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}

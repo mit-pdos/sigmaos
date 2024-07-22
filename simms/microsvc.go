@@ -33,6 +33,7 @@ type Microservice struct {
 	lb               LoadBalancer
 	autoscaler       Autoscaler
 	stats            *ServiceStats
+	toRetry          []*Request
 }
 
 func NewMicroservice(t *uint64, msp *MicroserviceParams, defaultOpts MicroserviceOpts, additionalOpts ...MicroserviceOpt) *Microservice {
@@ -45,6 +46,7 @@ func NewMicroservice(t *uint64, msp *MicroserviceParams, defaultOpts Microservic
 		qmgrFn:    opts.NewQMgr,
 		lb:        opts.NewLoadBalancer(opts.NewLoadBalancerMetric),
 		stats:     NewServiceStats(),
+		toRetry:   []*Request{},
 	}
 	// Start off with 1 instance
 	m.AddInstance()
@@ -60,7 +62,7 @@ func (m *Microservice) NInstances() int {
 }
 
 func (m *Microservice) AddInstance() {
-	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m.msp, m.addedInstances, m.qmgrFn(m.t), nil, nil))
+	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m.msp, m.addedInstances, m.qmgrFn(m.t, m), nil, nil))
 	m.addedInstances++
 }
 
@@ -74,8 +76,17 @@ func (m *Microservice) RemoveInstance() {
 	m.removedInstances++
 }
 
+// Retry reqs on the following tick
+func (m *Microservice) Retry(reqs []*Request) {
+	m.toRetry = append(m.toRetry, reqs...)
+}
+
 func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	m.nreqs += uint64(len(reqs))
+	// Pre-pend requests to retry, and clear slice of requests to retry for next
+	// tick
+	reqs = append(m.toRetry, reqs...)
+	m.toRetry = []*Request{}
 	replies := []*Reply{}
 	// Steer requests only to instances which haven't been removed
 	steeredReqs := m.lb.SteerRequests(reqs, m.instances)

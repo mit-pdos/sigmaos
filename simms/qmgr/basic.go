@@ -9,7 +9,7 @@ type BasicQMgr struct {
 	q *Queue
 }
 
-func NewBasicQMgr(t *uint64) simms.QMgr {
+func NewBasicQMgr(t *uint64, ms *simms.Microservice) simms.QMgr {
 	return &BasicQMgr{
 		t: t,
 		q: NewQueue(t),

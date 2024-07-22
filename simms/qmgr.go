@@ -1,6 +1,6 @@
 package simms
 
-type NewQMgrFn func(t *uint64) QMgr
+type NewQMgrFn func(t *uint64, ms *Microservice) QMgr
 
 type QMgr interface {
 	Tick()

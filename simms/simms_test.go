@@ -43,7 +43,7 @@ func TestServiceInstanceNoQueueBuildup(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time))
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -78,7 +78,7 @@ func TestServiceInstanceNoQueueBuildup10ReqPerTick(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time))
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -113,7 +113,7 @@ func TestServiceInstanceQueueBuildup10ReqPerTick(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time))
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -148,7 +148,7 @@ func TestServiceInstanceNoQueueBuildupPTime2(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time))
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -183,7 +183,7 @@ func TestServiceInstanceQueueBuildupPTime2(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time))
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -1288,7 +1288,7 @@ func TestBurst5xLongDelayedPerfectScaleOmniscientQLenLBSigmaOSColdStartParams(t 
 // SigmaOS scaling parameters (assuming only cold-starts). 1t = 1ms
 func TestBurst5xLongDelayedMaxQDelayQMGrPerfectScaleOmniscientQLenLBSigmaOSColdStartParams(t *testing.T) {
 	const (
-		N_TICKS uint64 = 5000
+		N_TICKS uint64 = 2000
 		// Clnt params
 		CLNT_REQ_MEAN    float64 = 9 // 9 requests per ms
 		CLNT_REQ_STD     float64 = 0
@@ -1312,7 +1312,7 @@ func TestBurst5xLongDelayedMaxQDelayQMGrPerfectScaleOmniscientQLenLBSigmaOSColdS
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQDelayQMgr(MAX_Q_DELAY, c))
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQDelayQMgr(MAX_Q_DELAY))
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)

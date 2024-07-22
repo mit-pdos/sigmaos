@@ -10,7 +10,6 @@ type Clients struct {
 	mean            float64
 	std             float64
 	burstMultiplier float64
-	toRetry         []*Request
 }
 
 func NewClients(mean, std float64) *Clients {
@@ -18,7 +17,6 @@ func NewClients(mean, std float64) *Clients {
 		mean:            mean,
 		std:             std,
 		burstMultiplier: 1.0,
-		toRetry:         []*Request{},
 	}
 }
 
@@ -29,16 +27,7 @@ func (c *Clients) Tick(t uint64) []*Request {
 	for i := range reqs {
 		reqs[i] = NewRequest(t)
 	}
-	// Pre-pend requests to retry, and clear slice of requests to retry for next
-	// tick
-	reqs = append(c.toRetry, reqs...)
-	c.toRetry = []*Request{}
 	return reqs
-}
-
-// Retry reqs on the following tick
-func (c *Clients) Retry(reqs []*Request) {
-	c.toRetry = append(c.toRetry, reqs...)
 }
 
 func (c *Clients) StartBurst(multiplier float64) {

@@ -22,11 +22,10 @@ func (m *MaxQDelayQMgr) Tick() {
 }
 
 func (m *MaxQDelayQMgr) Enqueue(req []*simms.Request) {
-	db.DFatalf("Unimplemented")
+	m.q.Enqueue(req)
 }
 
 func (m *MaxQDelayQMgr) Dequeue() (*simms.Request, bool) {
-	db.DFatalf("Unimplemented")
 	return m.q.Dequeue()
 }
 

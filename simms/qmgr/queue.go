@@ -1,7 +1,6 @@
 package qmgr
 
 import (
-	db "sigmaos/debug"
 	"sigmaos/simms"
 )
 
@@ -38,8 +37,18 @@ func (q *Queue) Dequeue() (*simms.Request, bool) {
 
 // Time out requests which have been queued for longer than timeout
 func (q *Queue) TimeoutReqs(timeout uint64) []*simms.Request {
-	db.DFatalf("Unimplemented")
-	return nil
+	tos := []*simms.Request{}
+	for i := 0; i < len(q.reqs); i++ {
+		// If request timed out, retry it
+		if *q.t-q.qtime[i] > timeout {
+			// Append to slice of timeouts
+			tos = append(tos, q.reqs[i])
+			// Remove from queue
+			q.reqs = append(q.reqs[:i], q.reqs[i+1:]...)
+			q.qtime = append(q.qtime[:i], q.qtime[i+1:]...)
+		}
+	}
+	return tos
 }
 
 func (q *Queue) GetLen() int {

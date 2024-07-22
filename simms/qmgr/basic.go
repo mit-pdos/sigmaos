@@ -5,12 +5,14 @@ import (
 )
 
 type BasicQMgr struct {
+	t *uint64
 	q *Queue
 }
 
-func NewBasicQMgr() simms.QMgr {
+func NewBasicQMgr(t *uint64) simms.QMgr {
 	return &BasicQMgr{
-		q: NewQueue(),
+		t: t,
+		q: NewQueue(t),
 	}
 }
 

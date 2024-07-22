@@ -101,6 +101,7 @@ func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
 		s.processing = append(s.processing, req)
 		s.processingSince = append(s.processingSince, *s.t)
 	}
+	s.qmgr.Tick()
 	s.srvStats.Tick(s.IsReady(), s.processing, s.nslots, reps)
 	return reps
 }

@@ -60,7 +60,7 @@ func (m *Microservice) NInstances() int {
 }
 
 func (m *Microservice) AddInstance() {
-	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m.msp, m.addedInstances, m.qmgrFn(), nil, nil))
+	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m.msp, m.addedInstances, m.qmgrFn(m.t), nil, nil))
 	m.addedInstances++
 }
 

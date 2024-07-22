@@ -6,19 +6,25 @@ import (
 )
 
 type MaxQDelayQMgr struct {
+	t        *uint64
 	q        *Queue
+	clnts    *simms.Clients
 	maxDelay uint64
 }
 
-func NewMaxQDelayQMgr(maxDelay uint64) simms.QMgr {
+func NewMaxQDelayQMgr(t *uint64, maxDelay uint64, clnts *simms.Clients) simms.QMgr {
 	return &MaxQDelayQMgr{
-		q:        NewQueue(),
+		t:        t,
+		q:        NewQueue(t),
+		clnts:    clnts,
 		maxDelay: maxDelay,
 	}
 }
 
 func (m *MaxQDelayQMgr) Tick() {
-	db.DFatalf("Unimplemented")
+	retries := m.q.TimeoutReqs(m.maxDelay)
+	db.DPrintf(db.SIM_QMGR, "Retry timed-out requests %v", retries)
+	m.clnts.Retry(retries)
 }
 
 func (m *MaxQDelayQMgr) Enqueue(req []*simms.Request) {

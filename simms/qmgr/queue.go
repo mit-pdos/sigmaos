@@ -1,24 +1,28 @@
-package simms
+package qmgr
+
+import (
+	"sigmaos/simms"
+)
 
 type Queue struct {
-	reqs []*Request
+	reqs []*simms.Request
 }
 
 func NewQueue() *Queue {
 	return &Queue{
-		reqs: []*Request{},
+		reqs: []*simms.Request{},
 	}
 }
 
-func (q *Queue) Enqueue(reqs []*Request) {
+func (q *Queue) Enqueue(reqs []*simms.Request) {
 	q.reqs = append(q.reqs, reqs...)
 }
 
-func (q *Queue) Dequeue() (*Request, bool) {
+func (q *Queue) Dequeue() (*simms.Request, bool) {
 	if len(q.reqs) == 0 {
 		return nil, false
 	}
-	var req *Request
+	var req *simms.Request
 	req, q.reqs = q.reqs[0], q.reqs[1:]
 	return req, true
 }

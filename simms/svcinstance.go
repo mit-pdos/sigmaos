@@ -13,16 +13,16 @@ type ServiceInstance struct {
 	initTime        uint64                // Time required to initialize this service instance
 	nslots          int                   // Concurrent processing slots
 	pTime           uint64                // Request processing time
-	q               *Queue                // Queue of unfulfilled requests
 	processing      []*Request            // Slice of requests currently being processed
 	processingSince []uint64              // Slice of start times at which requests began to be processed
 	stateful        bool                  // Indicates whether or not the service is stateful
 	init            bool                  // Indicates whether or not the service has already initialized
 	ready           bool                  // Indicates whether or not the service is ready to accept requests
+	qmgr            QMgr                  // Queue manager plugin
 	srvStats        *ServiceInstanceStats // Stats of the current service instance
 }
 
-func NewServiceInstance(t *uint64, p *MicroserviceParams, instanceID int) *ServiceInstance {
+func NewServiceInstance(t *uint64, p *MicroserviceParams, instanceID int, qmgr QMgr) *ServiceInstance {
 	return &ServiceInstance{
 		id:              p.ID + "-" + strconv.Itoa(instanceID),
 		t:               t,
@@ -30,12 +30,12 @@ func NewServiceInstance(t *uint64, p *MicroserviceParams, instanceID int) *Servi
 		nslots:          p.NSlots,
 		pTime:           p.PTime,
 		initTime:        p.InitTime,
-		q:               NewQueue(),
 		processing:      []*Request{},
 		processingSince: []uint64{},
 		stateful:        p.Stateful,
 		init:            p.InitTime == 0,
 		ready:           p.InitTime == 0,
+		qmgr:            qmgr,
 		srvStats:        NewServiceInstanceStats(t),
 	}
 }
@@ -57,7 +57,7 @@ func (s *ServiceInstance) GetStats() *ServiceInstanceStats {
 }
 
 func (s *ServiceInstance) GetQLen() int {
-	return s.q.GetLen()
+	return s.qmgr.GetQLen()
 }
 
 func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
@@ -69,7 +69,7 @@ func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
 		db.DPrintf(db.SIM_SVC, "[t=%v,svc=%v] Ready", *s.t, s.id)
 	}
 	// Enqueue new requests
-	s.q.Enqueue(reqs)
+	s.qmgr.Enqueue(reqs)
 	done := []int{}
 	// Process existing requests
 	for i := range s.processing {
@@ -93,7 +93,7 @@ func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
 	}
 	// Dequeue queued requests
 	for len(s.processing) < s.nslots {
-		req, ok := s.q.Dequeue()
+		req, ok := s.qmgr.Dequeue()
 		if !ok {
 			// Nothing left in the queue
 			break

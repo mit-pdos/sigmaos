@@ -9,6 +9,7 @@ import (
 	"sigmaos/simms"
 	"sigmaos/simms/autoscaler"
 	"sigmaos/simms/opts"
+	"sigmaos/simms/qmgr"
 )
 
 func TestCompile(t *testing.T) {
@@ -42,7 +43,7 @@ func TestServiceInstanceNoQueueBuildup(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0)
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr())
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -77,7 +78,7 @@ func TestServiceInstanceNoQueueBuildup10ReqPerTick(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0)
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr())
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -112,7 +113,7 @@ func TestServiceInstanceQueueBuildup10ReqPerTick(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0)
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr())
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -147,7 +148,7 @@ func TestServiceInstanceNoQueueBuildupPTime2(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0)
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr())
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -182,7 +183,7 @@ func TestServiceInstanceQueueBuildupPTime2(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0)
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr())
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)

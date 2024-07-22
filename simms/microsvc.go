@@ -29,9 +29,10 @@ type Microservice struct {
 	instances        []*MicroserviceInstance
 	addedInstances   int
 	removedInstances int
+	qmgrFn           NewQMgrFn
 	lb               LoadBalancer
-	stats            *ServiceStats
 	autoscaler       Autoscaler
+	stats            *ServiceStats
 }
 
 func NewMicroservice(t *uint64, msp *MicroserviceParams, defaultOpts MicroserviceOpts, additionalOpts ...MicroserviceOpt) *Microservice {
@@ -41,6 +42,7 @@ func NewMicroservice(t *uint64, msp *MicroserviceParams, defaultOpts Microservic
 		t:         t,
 		msp:       msp,
 		instances: []*MicroserviceInstance{},
+		qmgrFn:    opts.NewQMgr,
 		lb:        opts.NewLoadBalancer(opts.NewLoadBalancerMetric),
 		stats:     NewServiceStats(),
 	}
@@ -58,7 +60,7 @@ func (m *Microservice) NInstances() int {
 }
 
 func (m *Microservice) AddInstance() {
-	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m.msp, m.addedInstances, nil, nil))
+	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m.msp, m.addedInstances, m.qmgrFn(), nil, nil))
 	m.addedInstances++
 }
 
@@ -123,9 +125,9 @@ type MicroserviceInstance struct {
 	db       *Microservice
 }
 
-func NewMicroserviceInstance(t *uint64, msp *MicroserviceParams, instanceID int, memcache *Microservice, db *Microservice) *MicroserviceInstance {
+func NewMicroserviceInstance(t *uint64, msp *MicroserviceParams, instanceID int, qmgr QMgr, memcache *Microservice, db *Microservice) *MicroserviceInstance {
 	return &MicroserviceInstance{
-		svc:      NewServiceInstance(t, msp, instanceID),
+		svc:      NewServiceInstance(t, msp, instanceID, qmgr),
 		memcache: memcache,
 		db:       db,
 	}

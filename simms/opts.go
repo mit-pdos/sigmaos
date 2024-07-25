@@ -7,6 +7,7 @@ type MicroserviceOpt interface {
 // TODO: should probably separate all different parts of the simulator into
 // their own sub-packages to make things cleaner
 type MicroserviceOpts struct {
+	NewQMgr               NewQMgrFn
 	NewAutoscaler         NewAutoscalerFn
 	NewLoadBalancer       NewLoadBalancerFn
 	NewLoadBalancerMetric NewLoadBalancerMetricFn

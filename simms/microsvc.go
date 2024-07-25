@@ -24,13 +24,16 @@ func NewMicroserviceParams(id string, nslots int, ptime uint64, initTime uint64,
 
 type Microservice struct {
 	t                *uint64
+	nreqs            uint64
 	msp              *MicroserviceParams
 	instances        []*MicroserviceInstance
 	addedInstances   int
 	removedInstances int
+	qmgrFn           NewQMgrFn
 	lb               LoadBalancer
-	stats            *ServiceStats
 	autoscaler       Autoscaler
+	stats            *ServiceStats
+	toRetry          []*Request
 }
 
 func NewMicroservice(t *uint64, msp *MicroserviceParams, defaultOpts MicroserviceOpts, additionalOpts ...MicroserviceOpt) *Microservice {
@@ -40,8 +43,10 @@ func NewMicroservice(t *uint64, msp *MicroserviceParams, defaultOpts Microservic
 		t:         t,
 		msp:       msp,
 		instances: []*MicroserviceInstance{},
+		qmgrFn:    opts.NewQMgr,
 		lb:        opts.NewLoadBalancer(opts.NewLoadBalancerMetric),
 		stats:     NewServiceStats(),
+		toRetry:   []*Request{},
 	}
 	// Start off with 1 instance
 	m.AddInstance()
@@ -57,7 +62,7 @@ func (m *Microservice) NInstances() int {
 }
 
 func (m *Microservice) AddInstance() {
-	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m.msp, m.addedInstances, nil, nil))
+	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m.msp, m.addedInstances, m.qmgrFn(m.t, m), nil, nil))
 	m.addedInstances++
 }
 
@@ -71,7 +76,17 @@ func (m *Microservice) RemoveInstance() {
 	m.removedInstances++
 }
 
+// Retry reqs on the following tick
+func (m *Microservice) Retry(reqs []*Request) {
+	m.toRetry = append(m.toRetry, reqs...)
+}
+
 func (m *Microservice) Tick(reqs []*Request) []*Reply {
+	m.nreqs += uint64(len(reqs))
+	// Pre-pend requests to retry, and clear slice of requests to retry for next
+	// tick
+	reqs = append(m.toRetry, reqs...)
+	m.toRetry = []*Request{}
 	replies := []*Reply{}
 	// Steer requests only to instances which haven't been removed
 	steeredReqs := m.lb.SteerRequests(reqs, m.instances)
@@ -89,6 +104,10 @@ func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	m.stats.Tick(*m.t, replies)
 	m.autoscaler.Tick()
 	return replies
+}
+
+func (m *Microservice) GetNReqs() uint64 {
+	return m.nreqs
 }
 
 func (m *Microservice) GetID() string {
@@ -117,9 +136,9 @@ type MicroserviceInstance struct {
 	db       *Microservice
 }
 
-func NewMicroserviceInstance(t *uint64, msp *MicroserviceParams, instanceID int, memcache *Microservice, db *Microservice) *MicroserviceInstance {
+func NewMicroserviceInstance(t *uint64, msp *MicroserviceParams, instanceID int, qmgr QMgr, memcache *Microservice, db *Microservice) *MicroserviceInstance {
 	return &MicroserviceInstance{
-		svc:      NewServiceInstance(t, msp, instanceID),
+		svc:      NewServiceInstance(t, msp, instanceID, qmgr),
 		memcache: memcache,
 		db:       db,
 	}

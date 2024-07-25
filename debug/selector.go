@@ -283,6 +283,7 @@ const (
 	SIM_CLNT      Tselector = "SIM_CLNT"
 	SIM_TEST                = "SIM_TEST"
 	SIM_SVC                 = "SIM_SVC"
+	SIM_QMGR                = "SIM_QMGR"
 	SIM_LB                  = "SIM_LB"
 	SIM_RAW_LAT             = "SIM_RAW_LAT"
 	SIM_LAT_STATS           = "SIM_LAT_STATS"

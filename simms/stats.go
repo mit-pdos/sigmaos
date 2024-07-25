@@ -2,6 +2,7 @@ package simms
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/montanaflynn/stats"
 
@@ -11,6 +12,7 @@ import (
 type ServiceStats struct {
 	lat    [][]uint64
 	rstats *RecordedStats
+	nreps  uint64
 }
 
 func NewServiceStats() *ServiceStats {
@@ -21,6 +23,7 @@ func NewServiceStats() *ServiceStats {
 }
 
 func (st *ServiceStats) Tick(t uint64, reps []*Reply) {
+	st.nreps += uint64(len(reps))
 	lats := make([]uint64, 0, len(reps))
 	for _, rep := range reps {
 		lats = append(lats, rep.GetLatency())
@@ -133,6 +136,10 @@ func (st *ServiceStats) PercentileLatency(p float64) float64 {
 	return percentileLatency(p, st.lat)
 }
 
+func (st *ServiceStats) GetNReps() uint64 {
+	return st.nreps
+}
+
 func (st *ServiceStats) GetLatencies() [][]uint64 {
 	return st.lat
 }
@@ -194,15 +201,28 @@ func NewRecordedStats(window int) *RecordedStats {
 	}
 }
 
+func roundToHundredth(f float64) float64 {
+	return math.Round(f*100.0) / 100.0
+}
+
 // Optionally record workload stats in a sliding window
 func (rst *RecordedStats) record(t uint64, st *ServiceStats) {
 	if rst.window > 0 {
 		rst.Time = append(rst.Time, t)
-		rst.AvgLatency = append(rst.AvgLatency, st.AvgLatencyLastNTicks(rst.window))
-		rst.P50Latency = append(rst.P50Latency, st.PercentileLatencyLastNTicks(50.0, rst.window))
-		rst.P90Latency = append(rst.P90Latency, st.PercentileLatencyLastNTicks(90.0, rst.window))
-		rst.P99Latency = append(rst.P99Latency, st.PercentileLatencyLastNTicks(99.0, rst.window))
+		rst.AvgLatency = append(rst.AvgLatency, roundToHundredth(st.AvgLatencyLastNTicks(rst.window)))
+		rst.P50Latency = append(rst.P50Latency, roundToHundredth(st.PercentileLatencyLastNTicks(50.0, rst.window)))
+		rst.P90Latency = append(rst.P90Latency, roundToHundredth(st.PercentileLatencyLastNTicks(90.0, rst.window)))
+		rst.P99Latency = append(rst.P99Latency, roundToHundredth(st.PercentileLatencyLastNTicks(99.0, rst.window)))
 	}
+}
+
+func (rst *RecordedStats) VerboseString() string {
+	str := "&{"
+	for i := range rst.AvgLatency {
+		str += fmt.Sprintf("\n\t%d mean:%.2f p50:%.2f p90:%.2f p99:%.2f", i, rst.AvgLatency[i], rst.P50Latency[i], rst.P90Latency[i], rst.P99Latency[i])
+	}
+	str += "}"
+	return str
 }
 
 func (rst *RecordedStats) String() string {

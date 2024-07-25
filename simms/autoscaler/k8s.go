@@ -11,7 +11,7 @@ import (
 //
 // TODO: Implement K8s' more complex plan for handling missing metrics, and
 // scale-up/scale-down dampening.
-func k8sCalcDesiredNInstances(ctx *Ctx, currentInstances int, currentMetricValue, desiredMetricValue, tolerance float64) int {
+func k8sCalcDesiredNInstances(ctx *Ctx, currentInstances int, currentMetricValue, desiredMetricValue, tolerance float64, maxNReplicas int) int {
 	ratio := currentMetricValue / desiredMetricValue
 	// If ratio between current & desired metric values is within the tolerance,
 	// desired number of instances == current number of instances
@@ -20,5 +20,5 @@ func k8sCalcDesiredNInstances(ctx *Ctx, currentInstances int, currentMetricValue
 		return currentInstances
 	}
 	desiredInstances := math.Ceil(float64(currentInstances) * ratio)
-	return int(desiredInstances)
+	return min(int(desiredInstances), maxNReplicas)
 }

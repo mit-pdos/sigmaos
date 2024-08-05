@@ -7,7 +7,6 @@ import (
 
 	"sigmaos/chunksrv"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
 )
@@ -18,50 +17,36 @@ const (
 )
 
 type downloader struct {
-	mu       sync.Mutex
-	pn       string
-	kernelId string
-	sc       *sigmaclnt.SigmaClnt
-	sz       sp.Tsize
-	pid      uint32
-	updc     *uprocclnt.UprocdClnt
-	upds     uprocclnt.UprocSrv
-	err      error
-	tot      time.Duration
+	mu   sync.Mutex
+	pn   string
+	sz   sp.Tsize
+	pid  uint32
+	upds uprocclnt.UprocSrv
+	err  error
+	tot  time.Duration
 }
 
-func newDownloader(pn string, sc *sigmaclnt.SigmaClnt, updc *uprocclnt.UprocdClnt, upds uprocclnt.UprocSrv, kernelId string, sz sp.Tsize, pid uint32) *downloader {
+func newDownloader(pn string, upds uprocclnt.UprocSrv, sz sp.Tsize, pid uint32) *downloader {
 	dl := &downloader{
-		pn:       pn,
-		sc:       sc,
-		updc:     updc,
-		upds:     upds,
-		sz:       sz,
-		kernelId: kernelId,
-		pid:      pid,
+		pn:   pn,
+		upds: upds,
+		sz:   sz,
+		pid:  pid,
 	}
 	return dl
 }
 
 func (dl *downloader) String() string {
-	return fmt.Sprintf("{pn %q sz %d ckclnt %v}", dl.pn, dl.sz, dl.updc)
+	return fmt.Sprintf("{pn %q sz %d ckclnt %v}", dl.pn, dl.sz)
 }
 
 // Fetch chunk through uprocd, which will fill in the realm and
 // write it a local file, which binsrv can read.
 func (dl *downloader) fetchChunk(ck int) (int64, error) {
 	db.DPrintf(db.BINSRV, "fetchChunk invoke %q ck %d\n", dl.pn, ck)
-	sz := sp.Tsize(0)
-	var err error
-	if dl.upds != nil {
-		db.DPrintf(db.BINSRV, "Fetch direct %q %d\n", dl.pn, ck)
-		sz, err = dl.upds.Fetch(int(dl.pid), ck, dl.pn, dl.sz)
-	} else {
-		sz, err = dl.updc.Fetch(dl.pn, ck, dl.sz, dl.pid)
-		if err != nil {
-			db.DPrintf(db.BINSRV, "fetchChunk %q fetch %d err %v\n", dl.pn, ck, err)
-			return 0, err
-		}
+	sz, err := dl.upds.Fetch(int(dl.pid), ck, dl.pn, dl.sz)
+	if err != nil {
+		return 0, err
 	}
 	db.DPrintf(db.BINSRV, "fetchChunk done %q ck %d sz %d\n", dl.pn, ck, sz)
 	return int64(sz), nil

@@ -273,6 +273,9 @@ func TestMicroSpawnWaitStartRealm(t *testing.T) {
 // run any proc.
 func TestMicroSpawnWaitStartNode(t *testing.T) {
 	const N = 1
+	// const PROG = "sleeper"
+	const PROG = "spawn-latency"
+
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -302,7 +305,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 
 	if PREWARM_REALM {
 		db.DPrintf(db.TEST, "prewarm: spawn on %v\n", kernel0)
-		p := proc.NewProc("spawn-latency", []string{"1us", OUT_DIR})
+		p := proc.NewProc(PROG, []string{"1us", OUT_DIR})
 		p.SetKernels([]string{kernel0})
 		err := ts1.Spawn(p)
 		assert.Nil(t, err, "Spawn")
@@ -314,8 +317,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 
 	db.DPrintf(db.TEST, "cold spawn on %v\n", kernel1)
 	s := time.Now()
-	p := proc.NewProc("spawn-latency", []string{"1us", OUT_DIR})
-	//p := proc.NewProc("matmul", []string{"1000"})
+	p := proc.NewProc(PROG, []string{"1us", OUT_DIR})
 	p.SetKernels([]string{kernel1})
 	err = ts1.Spawn(p)
 	assert.Nil(t, err, "Spawn")

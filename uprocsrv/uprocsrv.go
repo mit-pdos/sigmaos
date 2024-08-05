@@ -34,8 +34,6 @@ import (
 	"sigmaos/uprocsrv/proto"
 )
 
-const DIRECT = true
-
 // Lookup may try to read proc in a proc's procEntry before uprocsrv
 // has set it.  To handle this case, procEntry has a condition
 // varialble on which Lookup sleeps until uprocsrv sets proc.
@@ -116,12 +114,10 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 	ups.sc = sc
-	var ep *sp.Tendpoint
 	var ssrv *sigmasrv.SigmaSrv
 	if up == sp.NO_PORT.String() {
 		pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
 		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
-		ep = ssrv.GetSigmaPSrvEndpoint()
 	} else {
 		var port sp.Tport
 		port, err = sp.ParsePort(up)
@@ -132,7 +128,6 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 
 		// The kernel will advertise the server, so pass "" as pn.
 		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
-		ep = sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
 	}
 	if err != nil {
 		db.DFatalf("Error sigmasrvclnt: %v", err)
@@ -148,22 +143,9 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	}
 	defer p.Done()
 
-	var bind *binsrv.BinSrvCmd
-	if DIRECT {
-		go func() {
-			binsrv.StartBinFs(ups, ups.kernelId, ups.pe.GetPID().String(), ups.sc, ep)
-		}()
-	} else {
-		// Start binfsd now; when uprocds gets assigned to a realm, then
-		// uprocd mounts the realm's bin directory that binfs will serve
-		// from.
-		bd, err := binsrv.ExecBinSrv(ups.kernelId, ups.pe.GetPID().String(), ep)
-		if err != nil {
-			db.DPrintf(db.ERROR, "ExecBinSrv err %v\n", err)
-			return err
-		}
-		bind = bd
-	}
+	go func() {
+		binsrv.StartBinFs(ups)
+	}()
 
 	ups.ckclnt = chunkclnt.NewChunkClnt(ups.sc.FsLib, false)
 
@@ -188,9 +170,6 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 		return err
 	}
 	db.DPrintf(db.UPROCD, "RunServer done\n")
-	if !DIRECT {
-		bind.Shutdown()
-	}
 	return nil
 }
 
@@ -416,16 +395,6 @@ func (ups *UprocSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, er
 	return sz, err
 }
 
-func (ups *UprocSrv) FetchRPC(ctx fs.CtxI, req proto.FetchRequest, res *proto.FetchResponse) error {
-	db.DPrintf(db.UPROCD, "Uprocd %v Fetch %v", ups.kernelId, req)
-	sz, err := ups.Fetch(int(req.Pid), int(req.ChunkId), req.Prog, sp.Tsize(req.Size))
-	if err != nil {
-		return err
-	}
-	res.Size = uint64(sz)
-	return nil
-}
-
 func (ups *UprocSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Stat, error) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup start %v paths %v; time since spawn %v", proc.GetPid(), ups.kernelId, proc.GetSigmaPath(), time.Since(proc.GetSpawnTime()))
 
@@ -451,15 +420,4 @@ func (ups *UprocSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
 		pe.procWait()
 	}
 	return ups.lookupProc(pe.proc, prog)
-}
-
-func (ups *UprocSrv) LookupRPC(ctx fs.CtxI, req proto.LookupRequest, res *proto.LookupResponse) error {
-	db.DPrintf(db.UPROCD, "Uprocd Lookup %v", req)
-
-	st, err := ups.Lookup(int(req.Pid), req.Prog)
-	if err != nil {
-		return err
-	}
-	res.Stat = st.StatProto()
-	return nil
 }

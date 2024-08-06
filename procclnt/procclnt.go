@@ -85,6 +85,10 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	return clnt.spawn("~local", proc.HSCHEDD, p)
 }
 
+func (clnt *ProcClnt) Checkpoint(p *proc.Proc, pn string) (int, error) {
+	return clnt.scheddclnt.Checkpoint("~local", p, pn)
+}
+
 // Spawn a proc on kernelId.
 func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error {
 	// Sanity check.

@@ -54,6 +54,19 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 }
 
+func (clnt *UprocdClnt) CheckpointProc(uproc *proc.Proc, pn string) (chkptLoc string, osPid int, childErr error) {
+	req := &proto.CheckpointPidRequest{
+		PidStr:   uproc.ProcEnvProto.PidStr,
+		PathName: pn,
+	}
+	res := &proto.CheckpointPidResult{}
+	if err := clnt.RPC("UprocSrv.Checkpoint", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+		return "", -1, err
+	} else {
+		return res.CheckpointLocation, int(res.OsPid), nil
+	}
+}
+
 func (clnt *UprocdClnt) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, s3secret *sp.SecretProto, namedEP *sp.Tendpoint, path []string) (uprocErr error, childErr error) {
 	req := &proto.WarmBinRequest{
 		RealmStr:           realm.String(),

@@ -15,6 +15,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	criu "github.com/checkpoint-restore/go-criu/v7"
+
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	"sigmaos/container"
@@ -85,7 +87,9 @@ type UprocSrv struct {
 	spproxydPID    sp.Tpid
 	schedPolicySet bool
 	procs          *syncmap.SyncMap[int, *procEntry]
+	pids           *syncmap.SyncMap[sp.Tpid, int]
 	ckclnt         *chunkclnt.ChunkClnt
+	criuInst       *criu.Criu
 }
 
 func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid) error {
@@ -98,6 +102,8 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 		spproxydPID: spproxydPID,
 		realm:       sp.NOREALM,
 		procs:       syncmap.NewSyncMap[int, *procEntry](),
+		pids:        syncmap.NewSyncMap[sp.Tpid, int](),
+		criuInst:    criu.MakeCriu(),
 	}
 
 	// Set inner container IP as soon as uprocsrv starts up
@@ -334,10 +340,11 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	if !alloc { // it was already inserted
 		pe.insertSignal(uproc)
 	}
-
+	ups.pids.Insert(uproc.GetPid(), pid)
 	err = cmd.Wait()
 	container.CleanupUproc(uproc.GetPid())
 	ups.procs.Delete(pid)
+	ups.pids.Delete(uproc.GetPid())
 	// ups.sc.CloseFd(pe.fd)
 	return err
 }
@@ -420,4 +427,72 @@ func (ups *UprocSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
 		pe.procWait()
 	}
 	return ups.lookupProc(pe.proc, prog)
+}
+
+func (ups *UprocSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string) error {
+	if err := ups.ssrv.MemFs.SigmaClnt().MkDir(chkptSimgaDir, 0777); err != nil {
+		return err
+	}
+
+	db.DPrintf(db.UPROCD, "writeCheckpoint: create dir: %v\n", chkptSimgaDir)
+
+	// loop through files in curr dir, put into files in sigmaOS dir
+	files, err := os.ReadDir(chkptLocalDir)
+	if err != nil {
+		db.DPrintf(db.UPROCD, "writeCheckpoint: reading local dir err %\n", err)
+		return err
+	}
+
+	// TODO make this just use CopyFile?
+	for _, file := range files {
+		db.DPrintf(db.UPROCD, "Trying to copy file %s\n", file.Name())
+		dstFd, err := ups.ssrv.MemFs.SigmaClnt().Create(filepath.Join(chkptSimgaDir, file.Name()), 0777, sp.OWRITE)
+		if err != nil {
+			db.DPrintf(db.UPROCD, "writeCheckpoint: creating file %s err %v\n", file.Name(), err)
+			return err
+		}
+
+		// write content
+		fileContents, err := os.ReadFile(filepath.Join(chkptLocalDir, file.Name()))
+		if err != nil {
+			db.DPrintf(db.UPROCD, "writeCheckpoint: reading file err %v\n", err)
+			return err
+		}
+		_, err = ups.ssrv.MemFs.SigmaClnt().Write(dstFd, fileContents)
+		if err != nil {
+			db.DPrintf(db.UPROCD, "writeCheckpoint: writing err %v\n", err)
+			return err
+		}
+
+		// close
+		err = ups.ssrv.MemFs.SigmaClnt().CloseFd(dstFd)
+		if err != nil {
+			db.DPrintf(db.UPROCD, "writeCheckpoint: close file err %v\n", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointPidRequest, res *proto.CheckpointPidResult) error {
+	db.DPrintf(db.UPROCD, "Checkpointing uproc %v %q", req.PidStr, req.PathName)
+
+	spid := sp.Tpid(req.PidStr)
+	pid, ok := ups.pids.Lookup(spid)
+	if !ok {
+		db.DPrintf(db.UPROCD, "Checkpoint no proc for %v\n", spid)
+		return fmt.Errorf("no proc %v\n", spid)
+	}
+
+	ckptdir, err := container.CheckpointProc(ups.criuInst, pid, spid)
+	if err != nil {
+		return err
+	}
+	res.OsPid = int32(pid)
+	if err = ups.writeCheckpoint(ckptdir, req.PathName); err != nil {
+		// TODO clean up what was written partially?
+		return err
+	}
+	// close chan?
+	return nil
 }

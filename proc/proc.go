@@ -104,6 +104,34 @@ func NewProcFromProto(p *ProcProto) *Proc {
 	return &Proc{p}
 }
 
+func NewRestoreProc(pid sp.Tpid, chkptLoc string, osPid int) *Proc {
+	p := &Proc{}
+	p.ProcProto = &ProcProto{}
+	procDir := sp.NOT_SET
+	p.ProcEnvProto = &ProcEnvProto{
+		PidStr:             string(pid),
+		RealmStr:           string(sp.Trealm(sp.NOT_SET)),
+		ProcDir:            procDir,
+		ParentDir:          sp.NOT_SET,
+		Program:            "",
+		KernelID:           sp.NOT_SET,
+		BuildTag:           sp.NOT_SET,
+		Perf:               os.Getenv(SIGMAPERF),
+		Strace:             os.Getenv(SIGMASTRACE),
+		Debug:              os.Getenv(SIGMADEBUG),
+		UprocdPIDStr:       sp.NOT_SET,
+		Privileged:         false,
+		Overlays:           false,
+		CheckpointLocation: chkptLoc,
+		OsPid:              int32(osPid),
+	}
+	p.TypeInt = uint32(T_BE)
+	p.McpuInt = uint32(0)
+	p.Env = make(map[string]string)
+	p.setBaseEnv()
+	return p
+}
+
 func (p *Proc) GetProto() *ProcProto {
 	return p.ProcProto
 }

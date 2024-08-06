@@ -43,6 +43,8 @@ message ProcEnvProto {
   repeated string kernels = 29;
   string realmSwitchStr = 30;
   string version = 31;
+  string checkpointLocation = 32;
+  int32 osPid = 33;
 }
 
 message ProcProto {

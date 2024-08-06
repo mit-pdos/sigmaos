@@ -163,6 +163,19 @@ func (sd *Schedd) Exited(ctx fs.CtxI, req proto.NotifyRequest, res *proto.Notify
 	return nil
 }
 
+func (sd *Schedd) CheckpointProc(ctx fs.CtxI, req proto.CheckpointProcRequest, res *proto.CheckpointProcResponse) error {
+	p := proc.NewProcFromProto(req.ProcProto)
+	db.DPrintf(db.SCHEDD, "CheckpointProc %v", req.ProcProto.ProcEnvProto.PidStr)
+	chkptLoc, osPid, err := sd.pmgr.CheckpointProc(p, req.PathName)
+	res.CheckpointLocation = chkptLoc
+	res.OsPid = int32(osPid)
+	db.DPrintf(db.SCHEDD, "CheckpointProc done %v", req.ProcProto.ProcEnvProto.PidStr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Get CPU shares assigned to this realm.
 func (sd *Schedd) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesRequest, res *proto.GetCPUSharesResponse) error {
 	sd.mu.Lock()

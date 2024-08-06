@@ -149,6 +149,22 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 	return nil
 }
 
+func (sdc *ScheddClnt) Checkpoint(kernelID string, p *proc.Proc, pn string) (int, error) {
+	rpcc, err := sdc.rpcdc.GetClnt(kernelID)
+	if err != nil {
+		return -1, err
+	}
+	req := &proto.CheckpointProcRequest{
+		ProcProto: p.GetProto(),
+		PathName:  pn,
+	}
+	res := &proto.CheckpointProcResponse{}
+	if err := rpcc.RPC("Schedd.CheckpointProc", req, res); err != nil {
+		return -1, err
+	}
+	return int(res.OsPid), nil
+}
+
 func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, error) {
 	// map of realm -> proc
 	procs := make(map[sp.Trealm][]*proc.Proc, 0)

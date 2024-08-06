@@ -104,6 +104,10 @@ func (mgr *ProcMgr) GetCPUUtil(realm sp.Trealm) float64 {
 	return mgr.updm.GetCPUUtil(realm)
 }
 
+func (mgr *ProcMgr) CheckpointProc(p *proc.Proc, pn string) (string, int, error) {
+	return mgr.updm.CheckpointProc(p, pn)
+}
+
 func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
 	return mgr.pstate.GetProcs()
 }

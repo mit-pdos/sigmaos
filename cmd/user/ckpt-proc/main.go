@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	db "sigmaos/debug"
@@ -45,6 +47,8 @@ func main() {
 		db.DFatalf("Error creating out file in s3 %v\n", err)
 	}
 
+	listOpenfiles()
+
 	for {
 		select {
 		case <-timer.C:
@@ -57,6 +61,26 @@ func main() {
 			fmt.Println("here sleep")
 			sc.Write(fd, []byte("here sleep"))
 			time.Sleep(2 * time.Second)
+		}
+	}
+}
+
+func listOpenfiles() {
+	files, _ := ioutil.ReadDir("/proc")
+	fmt.Println("listOpenfiles:")
+	for _, f := range files {
+		m, _ := filepath.Match("[0-9]*", f.Name())
+		if f.IsDir() && m {
+			fdpath := filepath.Join("/proc", f.Name(), "fd")
+			ffiles, _ := ioutil.ReadDir(fdpath)
+			for _, f := range ffiles {
+				fpath, err := os.Readlink(filepath.Join(fdpath, f.Name()))
+				if err != nil {
+					fmt.Printf("listOpenfiles %v: err %v\n", f.Name(), err)
+					continue
+				}
+				fmt.Printf("%v : %v\n", f, fpath)
+			}
 		}
 	}
 }

@@ -47,7 +47,7 @@ func (fss3 *Fss3) getClient(ctx fs.CtxI) (*s3.Client, *serr.Err) {
 		config.WithCredentialsProvider(
 			auth.NewAWSCredentialsProvider(s3secrets),
 		),
-		config.WithRegion(`us-east-1`),
+		config.WithRegion(s3secrets.Metadata),
 	)
 	if err != nil {
 		db.DFatalf("Failed to load SDK configuration %v", err)

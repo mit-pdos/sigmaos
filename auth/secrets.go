@@ -57,8 +57,9 @@ func GetAWSSecrets(profile string) (*sp.SecretProto, error) {
 		return nil, err
 	}
 	return &sp.SecretProto{
-		ID:  cfg.Credentials.AccessKeyID,
-		Key: cfg.Credentials.SecretAccessKey,
+		ID:       cfg.Credentials.AccessKeyID,
+		Key:      cfg.Credentials.SecretAccessKey,
+		Metadata: cfg.Region,
 	}, nil
 }
 

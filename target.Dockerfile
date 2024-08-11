@@ -13,7 +13,7 @@ FROM alpine AS base
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apk add --no-cache libseccomp gcompat musl-dev strace fuse
+RUN apk add --no-cache libseccomp gcompat musl-dev strace fuse iptables
 RUN apk add criu-dev --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
 
 WORKDIR /home/sigmaos

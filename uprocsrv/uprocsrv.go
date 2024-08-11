@@ -328,25 +328,41 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-	cmd, err := container.StartUProc(uproc, ups.netproxy)
-	if err != nil {
+	restore := uproc.GetProto().ProcEnvProto.CheckpointLocation != ""
+	if restore {
+		db.DPrintf(db.ALWAYS, "restoring proc %v", uproc.ProcEnvProto.PidStr)
+		//err := os.MkdirAll("/home/sigmaos/chkptimg", 0777)
+		//if err != nil {
+		//db.DPrintf(db.ALWAYS, "Error creating local chkpt dir: %s", err)
+		//}
+		//localChkptLoc := "/home/sigmaos/chkptimg/" + uproc.ProcEnvProto.PidStr
+		// ups.readCheckpointFromS3(uproc.ProcEnvProto.CheckpointLocation, localChkptLoc)
+		pid := int(uproc.ProcEnvProto.OsPid)
+		if err := container.RestoreRunProc(ups.criuInst, uproc.ProcEnvProto.PidStr, pid); err != nil {
+			return err
+		}
+		db.DPrintf(db.UPROCD, "Restored pid %d\n", pid)
+		return nil
+	} else {
+		db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+		cmd, err := container.StartUProc(uproc, ups.netproxy)
+		if err != nil {
+			return err
+		}
+		pid := cmd.Pid()
+		db.DPrintf(db.UPROCD, "Pid %d\n", pid)
+		pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
+		if !alloc { // it was already inserted
+			pe.insertSignal(uproc)
+		}
+		ups.pids.Insert(uproc.GetPid(), pid)
+		err = cmd.Wait()
+		container.CleanupUproc(uproc.GetPid())
+		ups.procs.Delete(pid)
+		ups.pids.Delete(uproc.GetPid())
+		// ups.sc.CloseFd(pe.fd)
 		return err
 	}
-
-	pid := cmd.Pid()
-	db.DPrintf(db.UPROCD, "Pid %d\n", pid)
-	pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
-	if !alloc { // it was already inserted
-		pe.insertSignal(uproc)
-	}
-	ups.pids.Insert(uproc.GetPid(), pid)
-	err = cmd.Wait()
-	container.CleanupUproc(uproc.GetPid())
-	ups.procs.Delete(pid)
-	ups.pids.Delete(uproc.GetPid())
-	// ups.sc.CloseFd(pe.fd)
-	return err
 }
 
 // Warm uprocd to run a program for experiments with warm start.

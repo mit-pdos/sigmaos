@@ -19,6 +19,8 @@ import (
 	"sigmaos/uprocsrv/binsrv"
 )
 
+const IMGDIR = "/home/sigmaos/ckptimg/"
+
 type uprocCmd struct {
 	cmd *exec.Cmd
 }
@@ -90,13 +92,11 @@ type NoNotify struct {
 
 func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 
-	imgDir := "/home/sigmaos/chkptimg"
-
 	// defer cleanupJail(pid)
 
 	db.DPrintf(db.ALWAYS, "CheckpointProc %v", pid)
 
-	procImgDir := imgDir + "/" + fmt.Sprint(pid)
+	procImgDir := IMGDIR + fmt.Sprint(pid)
 	err := os.MkdirAll(procImgDir, os.ModePerm)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Checkpointing: error creating img dir %v", err)
@@ -144,4 +144,145 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 	}
 
 	return procImgDir, nil
+}
+
+func restoreMounts(sigmaPid string) error {
+	// create dir for proc to be put in
+	jailPath := "/home/sigmaos/jail/" + sigmaPid + "/"
+	os.Mkdir(jailPath, 0777)
+
+	// redo mounts
+	// Mount /lib
+	dstMount := jailPath + "lib"
+	os.Mkdir(dstMount, 0755)
+	if err := syscall.Mount("/lib", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /lib: %v", err)
+		return err
+	}
+	// Mount /lib64
+	dstMount = jailPath + "lib64"
+	os.Mkdir(dstMount, 0755)
+	if err := syscall.Mount("/lib64", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /lib64: %v", err)
+		return err
+	}
+	// Mount /proc
+	dstMount = jailPath + "proc"
+	os.Mkdir(dstMount, 0755)
+	if err := syscall.Mount(dstMount, dstMount, "proc", 0, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /proc: %v", err)
+		return err
+	}
+	// Mount realm's user bin directory as /bin
+	dstMount = jailPath + "bin"
+	os.Mkdir(dstMount, 0755)
+	if err := syscall.Mount(filepath.Join(sp.SIGMAHOME, "bin/user"), dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount userbin: %v", err)
+		return err
+	}
+	// Mount /usr
+	dstMount = jailPath + "usr"
+	os.Mkdir(dstMount, 0755)
+	if err := syscall.Mount("/usr", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /usr: %v", err)
+		return err
+	}
+	// Mount /dev/urandom
+	dstMount = jailPath + "dev"
+	os.Mkdir(dstMount, 0755)
+	if err := syscall.Mount("/dev", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /dev: %v", err)
+		return err
+	}
+	// Mount /etc
+	dstMount = jailPath + "etc"
+	os.Mkdir(dstMount, 0755)
+	if err := syscall.Mount("/etc", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /etc: %v", err)
+		return err
+	}
+
+	// Mount /tmp
+	dstMount = jailPath + "tmp"
+	os.Mkdir(dstMount, 0755)
+	if err := syscall.Mount("/tmp", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /tmp: %v", err)
+		return err
+	}
+
+	// Mount perf dir (remove starting first slash)
+	dstMount = jailPath + "tmp/sigmaos-perf"
+	os.Mkdir(jailPath+"tmp", 0755)
+	os.Mkdir(dstMount, 0755)
+	if err := syscall.Mount("/tmp/sigmaos-perf", jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount perfoutput: %v", err)
+		return err
+	}
+
+	// Mount /tmp
+	dstMount = jailPath + "mnt"
+	os.Mkdir(dstMount, 0755)
+	if err := syscall.Mount("/mnt", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "failed to mount /mnt: %v", err)
+		return err
+	}
+
+	db.DPrintf(db.ALWAYS, "done making mounts!")
+	return nil
+}
+
+func RestoreRunProc(criuInst *criu.Criu, sigmaPid string, osPid int) error {
+	imgDir := IMGDIR + fmt.Sprint(osPid)
+
+	if err := restoreMounts(sigmaPid); err != nil {
+		return err
+	}
+	jailPath := "/home/sigmaos/jail/" + sigmaPid + "/"
+	return restoreProc(criuInst, imgDir, jailPath)
+
+	// signalling finish is done via sigmaos
+	// TODO potentially need to wait for another checkpoint signal
+}
+
+func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
+	// open img dir
+	img, err := os.Open(localChkptLoc)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "can't open image dir:", err)
+		return err
+	}
+	defer img.Close()
+
+	// TODO how do I make this dependent on whether we're using perf? Will that need to be part of the uproc state? Kinda annoying...
+	opts := &rpc.CriuOpts{
+		ImagesDirFd:    proto.Int32(int32(img.Fd())),
+		LogLevel:       proto.Int32(4),
+		TcpEstablished: proto.Bool(true),
+		Root:           proto.String(jailPath),
+		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[/bin]:binMount", "mnt[devMount]:/dev", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/tmp]:tmpMount", "mnt[ubinMount]:/home/sigmaos/bin/user"},
+		// Unprivileged:   proto.Bool(true),
+		LogFile: proto.String("restore.log"),
+	}
+
+	db.DPrintf(db.ALWAYS, "just before restoring")
+
+	err = criuInst.Restore(opts, nil)
+
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %v %s", err, err.Error())
+		b, err := os.ReadFile(localChkptLoc + "/restore.log")
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
+		}
+		str := string(b)
+		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
+		return err
+	} else {
+		db.DPrintf(db.ALWAYS, "Restoring: Restoring suceeded!")
+	}
+
+	return nil
+
+	// signalling finish is done via sigmaos
+	// TODO potentially need to wait for another checkpoint signal
 }

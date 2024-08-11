@@ -40,7 +40,6 @@ func TestCkptProc(t *testing.T) {
 	err = ts.WaitStart(chkptProc.GetPid())
 	assert.Nil(t, err)
 
-	// let her run for a sec
 	time.Sleep(5 * time.Second)
 
 	// pn := sp.S3 + "~any/fkaashoek/" + chkptProc.GetPid().String() + "/"
@@ -52,16 +51,16 @@ func TestCkptProc(t *testing.T) {
 
 	db.DPrintf(db.TEST, "checkpoint pid: %d", osPid)
 
-	log.Printf("Sleep before restoring... ")
-	time.Sleep(10 * time.Second)
+	time.Sleep(1 * time.Second)
 
-	restProc := proc.NewRestoreProc(chkptProc.GetPid(), pn, osPid)
+	restProc := proc.NewRestoreProc(chkptProc, pn, osPid)
 
 	// spawn and run it
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
 	log.Printf("spawned")
+
 	time.Sleep(10 * time.Second)
 	log.Printf("wait exit")
 	status, err := ts.WaitExit(restProc.GetPid())

@@ -56,6 +56,7 @@ func StartUProc(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
 
 	// Set up new namespaces
 	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid: true,
 		Cloneflags: syscall.CLONE_NEWUTS |
 			syscall.CLONE_NEWIPC |
 			syscall.CLONE_NEWPID |
@@ -119,9 +120,12 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(root),
-		External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/tmp]:tmpMount", "mnt[/home/sigmaos/bin/user]ubinMount", "mnt[/mnt/binfs]binfsMount"},
-		Unprivileged:   proto.Bool(true),
-		LogFile:        proto.String("dump.log"),
+		SkipMnt:        []string{"/mnt/binfs"},
+		External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/tmp]:tmpMount", "mnt[/home/sigmaos/bin/user]ubinMount"},
+		//Unprivileged:   proto.Bool(true),
+		//ShellJob: proto.Bool(true),
+		// ExtUnixSk: proto.Bool(true),   // for datagram sockets but for streaming
+		LogFile: proto.String("dump.log"),
 	}
 
 	db.DPrintf(db.ALWAYS, "starting checkpoint")

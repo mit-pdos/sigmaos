@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"syscall"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -47,6 +48,9 @@ func main() {
 		db.DFatalf("Error creating out file in s3 %v\n", err)
 	}
 
+	os.Stdin.Close()
+	syscall.Close(4) // close spproxyd.sock
+
 	listOpenfiles()
 
 	for {
@@ -59,7 +63,7 @@ func main() {
 			return
 		default:
 			fmt.Println("here sleep")
-			sc.Write(fd, []byte("here sleep"))
+			// sc.Write(fd, []byte("here sleep"))
 			time.Sleep(2 * time.Second)
 		}
 	}
@@ -79,7 +83,7 @@ func listOpenfiles() {
 					fmt.Printf("listOpenfiles %v: err %v\n", f.Name(), err)
 					continue
 				}
-				fmt.Printf("%v : %v\n", f, fpath)
+				fmt.Printf("%v: %v : %v\n", f.Name(), f, fpath)
 			}
 		}
 	}

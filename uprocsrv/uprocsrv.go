@@ -339,6 +339,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		// ups.readCheckpointFromS3(uproc.ProcEnvProto.CheckpointLocation, localChkptLoc)
 		pid := int(uproc.ProcEnvProto.OsPid)
 		if err := container.RestoreRunProc(ups.criuInst, uproc.ProcEnvProto.PidStr, pid); err != nil {
+			db.DPrintf(db.UPROCD, "RestoreRunProc err %v\n", err)
 			return err
 		}
 		db.DPrintf(db.UPROCD, "Restored pid %d\n", pid)

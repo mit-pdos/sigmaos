@@ -121,7 +121,7 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(root),
 		SkipMnt:        []string{"/mnt/binfs"},
-		External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/tmp]:tmpMount", "mnt[/home/sigmaos/bin/user]ubinMount"},
+		External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/tmp]:tmpMount", "mnt[/mnt/binfs]:binfsMount"},
 		//Unprivileged:   proto.Bool(true),
 		//ShellJob: proto.Bool(true),
 		// ExtUnixSk: proto.Bool(true),   // for datagram sockets but for streaming
@@ -194,10 +194,25 @@ func restoreMounts(sigmaPid string) error {
 	if err := mkMount("/mnt", jailPath+"mnt", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
-	if err := mkMount("/mnt/binfs", jailPath+"mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
+
+	db.DPrintf(db.ALWAYS, "mount binfs")
+
+	os.Mkdir("mnt", 0755)
+	os.Mkdir("mnt/binfs", 0755)
+
+	// if err := syscall.Mount("/home/sigmaos/bin/user/", "mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+	if err := syscall.Mount("/mnt/binfs", "mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "Mount binfs err %v", err)
 		return err
 	}
-	db.DPrintf(db.ALWAYS, "done making mounts!")
+
+	db.DPrintf(db.ALWAYS, "stat binfs")
+
+	st := &syscall.Statfs_t{}
+	err := syscall.Statfs("/mnt/binfs", st)
+	db.DPrintf(db.ALWAYS, "binfs %v %v", st, err)
+
+	db.DPrintf(db.ALWAYS, "done making mounts")
 	return nil
 }
 
@@ -229,7 +244,7 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(jailPath),
-		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/bin", "mnt[devMount]:/dev", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[tmpMount]:/tmp", "mnt[ubinMount]:/home/sigmaos/bin/user"},
+		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/bin", "mnt[devMount]:/dev", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[tmpMount]:/tmp", "mnt[binfsMount]:/mnt/binfs"},
 		// Unprivileged:   proto.Bool(true),
 		LogFile: proto.String("restore.log"),
 	}

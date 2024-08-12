@@ -15,20 +15,9 @@ import (
 var _ = (fs.NodeStatfser)((*binFsNode)(nil))
 
 func (n *binFsNode) Statfs(ctx context.Context, out *fuse.StatfsOut) syscall.Errno {
-	c := ctx.(*fuse.Context).Caller
-	s := syscall.Statfs_t{}
-
+	const BLOCKSIZE = 4096
+	s := syscall.Statfs_t{Bsize: BLOCKSIZE, Blocks: 1000}
 	db.DPrintf(db.BINSRV, "Statfs %v\n", n.path())
-
-	sst, err := n.RootData.bincache.lookup(n.path(), c.Pid)
-	if err != nil {
-		return fs.ToErrno(os.ErrNotExist)
-	}
-
-	ust := syscall.Statfs_t{}
-	toUstatfs(sst, &ust)
-	out.FromStatfsT(&ust)
-
 	out.FromStatfsT(&s)
 	return fs.OK
 }

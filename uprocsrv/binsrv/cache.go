@@ -36,13 +36,6 @@ func toUstat(sst *sp.Stat, ust *syscall.Stat_t) {
 	ust.Blksize = BLOCKSIZE
 }
 
-func toUstatfs(sst *sp.Stat, ust *syscall.Statfs_t) {
-	const BLOCKSIZE = 4096
-
-	ust.Bsize = BLOCKSIZE
-	ust.Blocks = uint64(sst.Tlength()/BLOCKSIZE + 1)
-}
-
 type entry struct {
 	mu sync.Mutex
 	st *sp.Stat

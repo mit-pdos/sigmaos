@@ -120,7 +120,7 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(root),
-		# SkipMnt:        []string{"/mnt/binfs"},
+		SkipMnt:        []string{"/mnt/binfs"},
 		External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/tmp]:tmpMount", "mnt[/home/sigmaos/bin/user]ubinMount"},
 		//Unprivileged:   proto.Bool(true),
 		//ShellJob: proto.Bool(true),
@@ -229,7 +229,6 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(jailPath),
-		SkipMnt:        []string{"/mnt/binfs"},
 		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/bin", "mnt[devMount]:/dev", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[tmpMount]:/tmp", "mnt[ubinMount]:/home/sigmaos/bin/user"},
 		// Unprivileged:   proto.Bool(true),
 		LogFile: proto.String("restore.log"),
@@ -241,12 +240,12 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %v %s", err, err.Error())
-		b, err := os.ReadFile(localChkptLoc + "/restore.log")
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err)
+		b, err0 := os.ReadFile(localChkptLoc + "/restore.log")
+		if err0 != nil {
+			db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err0)
+		} else {
+			db.DPrintf(db.ALWAYS, "Restoring: restore.log %s", string(b))
 		}
-		str := string(b)
-		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %s", str)
 		return err
 	} else {
 		db.DPrintf(db.ALWAYS, "Restoring: Restoring suceeded!")

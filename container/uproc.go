@@ -120,7 +120,7 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(root),
-		SkipMnt:        []string{"/mnt/binfs"},
+		# SkipMnt:        []string{"/mnt/binfs"},
 		External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/tmp]:tmpMount", "mnt[/home/sigmaos/bin/user]ubinMount"},
 		//Unprivileged:   proto.Bool(true),
 		//ShellJob: proto.Bool(true),
@@ -229,7 +229,8 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(jailPath),
-		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[/bin]:binMount", "mnt[devMount]:/dev", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/tmp]:tmpMount", "mnt[ubinMount]:/home/sigmaos/bin/user"},
+		SkipMnt:        []string{"/mnt/binfs"},
+		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/bin", "mnt[devMount]:/dev", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[tmpMount]:/tmp", "mnt[ubinMount]:/home/sigmaos/bin/user"},
 		// Unprivileged:   proto.Bool(true),
 		LogFile: proto.String("restore.log"),
 	}

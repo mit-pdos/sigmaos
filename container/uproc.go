@@ -131,19 +131,28 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 	db.DPrintf(db.ALWAYS, "starting checkpoint")
 	err = c.Dump(opts, NoNotify{})
 	db.DPrintf(db.ALWAYS, "finished checkpoint")
+	db.DPrintf(db.ALWAYS, "Checkpointing: Dumping failed %v", err)
+	b, err0 := os.ReadFile(procImgDir + "/dump.log")
+	if err0 != nil {
+		db.DPrintf(db.ALWAYS, "Checkpointing: opening dump.log failed %v", err0)
+	}
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Checkpointing: Dumping failed %v", err)
-		b, err0 := os.ReadFile(procImgDir + "/dump.log")
-		if err0 != nil {
-			db.DPrintf(db.ALWAYS, "Checkpointing: opening dump.log failed %v", err0)
-		}
 		db.DPrintf(db.ALWAYS, "Checkpointing: Dumping failed %s", string(b))
 		return procImgDir, err
 	} else {
-		db.DPrintf(db.ALWAYS, "Checkpointing: Dumping succeeded!")
+		db.DPrintf(db.ALWAYS, "Checkpointing: Dumping succeeded %s", string(b))
 	}
 
 	return procImgDir, nil
+}
+
+func mkMount(mnt, dst, t string, flags uintptr) error {
+	os.Mkdir(dst, 0755)
+	if err := syscall.Mount(mnt, dst, t, flags, ""); err != nil {
+		db.DPrintf(db.ALWAYS, "Mount mnt %s dst %s t %s err %v", mnt, dst, t, err)
+		return err
+	}
+	return nil
 }
 
 func restoreMounts(sigmaPid string) error {
@@ -151,82 +160,43 @@ func restoreMounts(sigmaPid string) error {
 	jailPath := "/home/sigmaos/jail/" + sigmaPid + "/"
 	os.Mkdir(jailPath, 0777)
 
-	// redo mounts
 	// Mount /lib
-	dstMount := jailPath + "lib"
-	os.Mkdir(dstMount, 0755)
-	if err := syscall.Mount("/lib", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /lib: %v", err)
+	if err := mkMount("/lib", jailPath+"/lib", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
-	// Mount /lib64
-	dstMount = jailPath + "lib64"
-	os.Mkdir(dstMount, 0755)
-	if err := syscall.Mount("/lib64", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /lib64: %v", err)
+	if err := mkMount("/lib64", jailPath+"/lib64", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
-	// Mount /proc
-	dstMount = jailPath + "proc"
-	os.Mkdir(dstMount, 0755)
-	if err := syscall.Mount(dstMount, dstMount, "proc", 0, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /proc: %v", err)
+	if err := mkMount(jailPath+"/proc", jailPath+"/proc", "proc", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
-	// Mount realm's user bin directory as /bin
-	dstMount = jailPath + "bin"
-	os.Mkdir(dstMount, 0755)
-	if err := syscall.Mount(filepath.Join(sp.SIGMAHOME, "bin/user"), dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount userbin: %v", err)
+	if err := mkMount(filepath.Join(sp.SIGMAHOME, "bin/user"), jailPath+"/bin", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
-	// Mount /usr
-	dstMount = jailPath + "usr"
-	os.Mkdir(dstMount, 0755)
-	if err := syscall.Mount("/usr", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /usr: %v", err)
+	if err := mkMount("/usr", jailPath+"/usr", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
 	// Mount /dev/urandom
-	dstMount = jailPath + "dev"
-	os.Mkdir(dstMount, 0755)
-	if err := syscall.Mount("/dev", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /dev: %v", err)
+	if err := mkMount("/dev", jailPath+"dev", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
-	// Mount /etc
-	dstMount = jailPath + "etc"
-	os.Mkdir(dstMount, 0755)
-	if err := syscall.Mount("/etc", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /etc: %v", err)
+	if err := mkMount("/etc", jailPath+"etc", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
-
-	// Mount /tmp
-	dstMount = jailPath + "tmp"
-	os.Mkdir(dstMount, 0755)
-	if err := syscall.Mount("/tmp", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /tmp: %v", err)
+	if err := mkMount("/tmp", jailPath+"tmp", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
-
 	// Mount perf dir (remove starting first slash)
-	dstMount = jailPath + "tmp/sigmaos-perf"
 	os.Mkdir(jailPath+"tmp", 0755)
-	os.Mkdir(dstMount, 0755)
-	if err := syscall.Mount("/tmp/sigmaos-perf", jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount perfoutput: %v", err)
+	if err := mkMount("/tmp/sigmaos-perf", jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND); err != nil {
 		return err
 	}
-
-	// Mount /tmp
-	dstMount = jailPath + "mnt"
-	os.Mkdir(dstMount, 0755)
-	if err := syscall.Mount("/mnt", dstMount, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount /mnt: %v", err)
+	if err := mkMount("/mnt", jailPath+"mnt", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
-
+	if err := mkMount("/mnt/binfs", jailPath+"mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
+		return err
+	}
 	db.DPrintf(db.ALWAYS, "done making mounts!")
 	return nil
 }

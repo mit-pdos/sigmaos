@@ -9,9 +9,9 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
-	sp "sigmaos/sigmap"
+	//"sigmaos/proc"
+	//"sigmaos/sigmaclnt"
+	//sp "sigmaos/sigmap"
 
 	"time"
 )
@@ -24,14 +24,15 @@ func main() {
 
 	db.DPrintf(db.ALWAYS, "Set started")
 
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-	if err != nil {
-		db.DFatalf("NewSigmaClnt error %v\n", err)
-	}
-	err = sc.Started()
-	if err != nil {
-		db.DFatalf("Started error %v\n", err)
-	}
+	// sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	// if err != nil {
+	// 	db.DFatalf("NewSigmaClnt error %v\n", err)
+	// }
+	// err = sc.Started()
+	// if err != nil {
+	// 	db.DFatalf("Started error %v\n", err)
+	// }
+
 	n, err := strconv.Atoi(os.Args[1])
 	if err != nil {
 		db.DFatalf("Atoi error %v\n", err)
@@ -41,15 +42,18 @@ func main() {
 	timer := time.NewTicker(time.Duration(n) * time.Second)
 
 	// testDir := sp.S3 + "~any/fkaashoek/"
-	testDir := sp.UX + "~any/"
-	filePath := testDir + "example-out.txt"
-	fd, err := sc.Create(filePath, 0777, sp.OWRITE)
-	if err != nil {
-		db.DFatalf("Error creating out file in s3 %v\n", err)
-	}
+	//testDir := sp.UX + "~any/"
+	//filePath := testDir + "example-out.txt"
+	//fd, err := sc.Create(filePath, 0777, sp.OWRITE)
+	//if err != nil {
+	//db.DFatalf("Error creating out file in s3 %v\n", err)
+	//}
 
 	os.Stdin.Close()
-	syscall.Close(4) // close spproxyd.sock
+	//syscall.Close(4) // close spproxyd.sock
+	syscall.Close(3) // close spproxyd.sock
+	//syscall.Close(3) // close ??
+	//syscall.Close(8) // close ??
 
 	listOpenfiles()
 
@@ -57,9 +61,9 @@ func main() {
 		select {
 		case <-timer.C:
 			fmt.Println("exit")
-			sc.Write(fd, []byte("exiting"))
-			err = sc.CloseFd(fd)
-			sc.ClntExitOK()
+			//sc.Write(fd, []byte("exiting"))
+			//err = sc.CloseFd(fd)
+			//sc.ClntExitOK()
 			return
 		default:
 			fmt.Println("here sleep")

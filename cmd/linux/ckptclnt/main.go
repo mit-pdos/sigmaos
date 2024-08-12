@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+// mkdir /tmp/fuse
+// echo hello > /tmp/x
 // Run ckptsrv first:
 //   sudo ./bin/linux/ckptsrv 100
 // Then ckptclnt:

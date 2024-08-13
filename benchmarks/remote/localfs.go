@@ -49,14 +49,30 @@ func NewLocalFSConfig(platform sp.Tplatform, version string, parallel bool) (*Lo
 		GraphOutputDir: filepath.Join(root, GRAPH_OUTPUT_DIR_REL),
 		Parallel:       parallel,
 	}
-	if err := lcfg.SetupFS(); err != nil {
+	if err := lcfg.setupFS(); err != nil {
 		return nil, err
 	}
 	return lcfg, nil
 }
 
+// Get the path of the output directory for a given benchmark
+func (lcfg *LocalFSConfig) GetOutputDirPath(benchName string) string {
+	return filepath.Join(lcfg.OutputDir, benchName)
+}
+
+// Create an output directory
+func (lcfg *LocalFSConfig) CreateOutputDir(outputDirPath string) error {
+	return os.MkdirAll(outputDirPath, 0777)
+}
+
+// Check if output directory already exists
+func (lcfg *LocalFSConfig) OutputExists(outputDirPath string) bool {
+	_, err := os.Stat(outputDirPath)
+	return err == nil
+}
+
 // Set up the file system for benchmarking
-func (lcfg *LocalFSConfig) SetupFS() error {
+func (lcfg *LocalFSConfig) setupFS() error {
 	// Check that script directories exist
 	if fi, err := os.Stat(lcfg.RootDir); err != nil {
 		return fmt.Errorf("Can't stat RootDir: %v", err)
@@ -109,8 +125,16 @@ func (lcfg *LocalFSConfig) getScriptCmd(scriptName string, wr io.Writer, args ..
 	return cmd
 }
 
+func (lcfg *LocalFSConfig) runScriptRedirectOutput(scriptName string, wr io.Writer, args ...string) error {
+	cmd := lcfg.getScriptCmd(scriptName, wr, args...)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("Err runScriptRedirectOutput %v:\n%v:\n%s", filepath.Join(lcfg.ScriptDir, scriptName), err, err.(*exec.ExitError).Stderr)
+	}
+	return nil
+}
+
 // Run a script synchronously and return its output
-func (lcfg *LocalFSConfig) runScriptGetOutput(scriptName string, args ...string) (string, error) {
+func (lcfg *LocalFSConfig) RunScriptGetOutput(scriptName string, args ...string) (string, error) {
 	cmd := lcfg.getScriptCmd(scriptName, nil, args...)
 	b, err := cmd.Output()
 	out := strings.TrimSpace(string(b))
@@ -120,18 +144,18 @@ func (lcfg *LocalFSConfig) runScriptGetOutput(scriptName string, args ...string)
 	return out, nil
 }
 
+// Run a script synchronously and redirect its output to stdout
+func (lcfg *LocalFSConfig) RunScriptRedirectOutputStdout(scriptName string, args ...string) error {
+	return lcfg.runScriptRedirectOutput(scriptName, os.Stdout, args...)
+}
+
 // Run a script synchronously and redirect its output to a file, in append mode
-func (lcfg *LocalFSConfig) runScriptRedirectOutput(scriptName, outFilePath string, args ...string) error {
+func (lcfg *LocalFSConfig) RunScriptRedirectOutputFile(scriptName, outFilePath string, args ...string) error {
 	// Create the output file, or append to it if it exists already
-	outFile, err := os.OpenFile(outFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	outFile, err := os.OpenFile(outFilePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		fmt.Errorf("Err open outFile [%v]: %v", outFilePath, err)
 	}
 	defer outFile.Close()
-
-	cmd := lcfg.getScriptCmd(scriptName, outFile, args...)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Err runScriptRedirectOutput %v:\n%v:\n%s", filepath.Join(lcfg.ScriptDir, scriptName), err, err.(*exec.ExitError).Stderr)
-	}
-	return nil
+	return lcfg.runScriptRedirectOutput(scriptName, outFile, args...)
 }

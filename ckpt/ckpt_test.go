@@ -34,7 +34,7 @@ func TestCkptProc(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
 
-	chkptProc := proc.NewProc("ckpt-proc", []string{"30"})
+	chkptProc := proc.NewProc("ckpt-proc", []string{"300"})
 	err = ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 	//err = ts.WaitStart(chkptProc.GetPid())
@@ -61,7 +61,8 @@ func TestCkptProc(t *testing.T) {
 
 	log.Printf("spawned %v", err)
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(300 * time.Second)
+
 	log.Printf("wait exit")
 	status, err := ts.WaitExit(restProc.GetPid())
 	assert.Nil(t, err)

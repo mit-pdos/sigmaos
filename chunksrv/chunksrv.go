@@ -42,7 +42,7 @@ const (
 	ROOTBINCACHE = sp.SIGMAHOME + "/bin/user/realms"
 
 	// The kernel's scheduler starts a uprocsrv container per realm
-	// and proc type and mounts "/tmp/sigmaos-bin/<kernelid>" at
+	// and proc type, and mounts "/tmp/sigmaos-bin/<kernelid>" at
 	// ROOTBINCONTAINER for uprocsrv.
 	ROOTBINCONTAINER = sp.SIGMAHOME + "all-realm-bin"
 

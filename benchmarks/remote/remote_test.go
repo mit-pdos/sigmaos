@@ -35,7 +35,7 @@ func init() {
 func TestCompile(t *testing.T) {
 }
 
-func TestInitFs(t *testing.T) {
+func TestInitFS(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM        int    = 0
@@ -72,7 +72,7 @@ func TestInitFs(t *testing.T) {
 		assert.Nil(ts.t, err, "Stop cluster: %v", err)
 	}()
 	// Run the benchmark
-	err = ccfg.RunBenchmark(InitFSCmd, driverVM)
+	err = ccfg.RunBenchmark(GetInitFSCmd(ts.BCfg, ccfg), driverVM)
 	assert.Nil(ts.t, err, "Run benchmark: %v", err)
 	// Collect the benchmark results
 	if err := ccfg.CollectResults("/tmp/test-xxx"); !assert.Nil(ts.t, err, "Stop cluster: %v", err) {

@@ -39,6 +39,13 @@ func main() {
 		return
 	}
 
+	// pn := sp.UX + "~any/" + sc.GetPID().String() + "/"
+	// _, err = sc.CheckpointMe(pn)
+	// if err != nil {
+	// 	db.DFatalf("Atoi error %v\n", err)
+	// 	return
+	// }
+
 	timer := time.NewTicker(time.Duration(n) * time.Second)
 
 	// testDir := sp.S3 + "~any/fkaashoek/"

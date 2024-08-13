@@ -35,10 +35,9 @@ func TestCkptProc(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
 
-	err = os.Remove("/tmp/sigmaos-perf/log.txt")
-	assert.Nil(t, err)
+	os.Remove("/tmp/sigmaos-perf/log.txt")
 
-	chkptProc := proc.NewProc("ckpt-proc", []string{"30"})
+	chkptProc := proc.NewProc("ckpt-proc", []string{"20"})
 	err = ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 	//err = ts.WaitStart(chkptProc.GetPid())
@@ -50,7 +49,7 @@ func TestCkptProc(t *testing.T) {
 	pn := sp.UX + "~any/" + chkptProc.GetPid().String() + "/"
 
 	db.DPrintf(db.TEST, "checkpointing %q", pn)
-	osPid, err := ts.Checkpoint(chkptProc, pn)
+	osPid, err := ts.Checkpoint(chkptProc.GetPid(), pn)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "checkpoint pid: %d", osPid)
@@ -63,7 +62,7 @@ func TestCkptProc(t *testing.T) {
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "sleep for a while")
-	time.Sleep(30 * time.Second)
+	time.Sleep(20 * time.Second)
 
 	//status, err := ts.WaitExit(restProc.GetPid())
 	//assert.Nil(t, err)

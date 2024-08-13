@@ -54,9 +54,9 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 }
 
-func (clnt *UprocdClnt) CheckpointProc(uproc *proc.Proc, pn string) (chkptLoc string, osPid int, childErr error) {
+func (clnt *UprocdClnt) CheckpointProc(pid sp.Tpid, pn string) (chkptLoc string, osPid int, childErr error) {
 	req := &proto.CheckpointPidRequest{
-		PidStr:   uproc.ProcEnvProto.PidStr,
+		PidStr:   pid.String(),
 		PathName: pn,
 	}
 	res := &proto.CheckpointPidResult{}

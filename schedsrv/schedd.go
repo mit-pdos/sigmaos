@@ -164,12 +164,10 @@ func (sd *Schedd) Exited(ctx fs.CtxI, req proto.NotifyRequest, res *proto.Notify
 }
 
 func (sd *Schedd) CheckpointProc(ctx fs.CtxI, req proto.CheckpointProcRequest, res *proto.CheckpointProcResponse) error {
-	p := proc.NewProcFromProto(req.ProcProto)
-	db.DPrintf(db.SCHEDD, "CheckpointProc %v", req.ProcProto.ProcEnvProto.PidStr)
-	chkptLoc, osPid, err := sd.pmgr.CheckpointProc(p, req.PathName)
+	db.DPrintf(db.SCHEDD, "CheckpointProc %v", req)
+	chkptLoc, osPid, err := sd.pmgr.CheckpointProc(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.PathName)
 	res.CheckpointLocation = chkptLoc
 	res.OsPid = int32(osPid)
-	db.DPrintf(db.SCHEDD, "CheckpointProc done %v", req.ProcProto.ProcEnvProto.PidStr)
 	if err != nil {
 		return err
 	}

@@ -15,7 +15,9 @@ type ProcAPI interface {
 	Started() error
 	Exited(status *Status)
 	WaitEvict(pid sp.Tpid) error
+	GetPID() sp.Tpid
 
 	// Checkpoint/restart
-	Checkpoint(p *Proc, pn string) (int, error)
+	Checkpoint(pid sp.Tpid, pn string) (int, error)
+	CheckpointMe(pn string) (int, error)
 }

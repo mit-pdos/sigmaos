@@ -149,14 +149,16 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 	return nil
 }
 
-func (sdc *ScheddClnt) Checkpoint(kernelID string, p *proc.Proc, pn string) (int, error) {
+func (sdc *ScheddClnt) Checkpoint(kernelID string, pid sp.Tpid, r sp.Trealm, pn string) (int, error) {
+	db.DPrintf(db.ALWAYS, "Checkpoint kernelId %v pid %v", kernelID, pid)
 	rpcc, err := sdc.rpcdc.GetClnt(kernelID)
 	if err != nil {
 		return -1, err
 	}
 	req := &proto.CheckpointProcRequest{
-		ProcProto: p.GetProto(),
-		PathName:  pn,
+		PidStr:   pid.String(),
+		RealmStr: r.String(),
+		PathName: pn,
 	}
 	res := &proto.CheckpointProcResponse{}
 	if err := rpcc.RPC("Schedd.CheckpointProc", req, res); err != nil {

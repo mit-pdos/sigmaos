@@ -85,10 +85,6 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	return clnt.spawn("~local", proc.HSCHEDD, p)
 }
 
-func (clnt *ProcClnt) Checkpoint(p *proc.Proc, pn string) (int, error) {
-	return clnt.scheddclnt.Checkpoint("~local", p, pn)
-}
-
 // Spawn a proc on kernelId.
 func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error {
 	// Sanity check.
@@ -408,4 +404,24 @@ func (clnt *ProcClnt) setExited(pid sp.Tpid) sp.Tpid {
 	r := clnt.isExited
 	clnt.isExited = pid
 	return r
+}
+
+// ========== GETPID =======
+
+func (clnt *ProcClnt) GetPID() sp.Tpid {
+	return clnt.ProcEnv().GetPID()
+}
+
+// ========== CHECKPOINT ==========
+
+func (clnt *ProcClnt) Checkpoint(pid sp.Tpid, pn string) (int, error) {
+	ps, err := clnt.cs.GetProcSeqno(pid)
+	if err != nil {
+		return -1, err
+	}
+	return clnt.scheddclnt.Checkpoint(ps.GetScheddID(), pid, clnt.ProcEnv().GetRealm(), pn)
+}
+
+func (clnt *ProcClnt) CheckpointMe(pn string) (int, error) {
+	return clnt.scheddclnt.Checkpoint(clnt.ProcEnv().GetKernelID(), clnt.GetPID(), clnt.ProcEnv().GetRealm(), pn)
 }

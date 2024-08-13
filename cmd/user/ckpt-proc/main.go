@@ -9,9 +9,9 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	//"sigmaos/proc"
-	//"sigmaos/sigmaclnt"
-	//sp "sigmaos/sigmap"
+	// "sigmaos/proc"
+	// "sigmaos/sigmaclnt"
+	// sp "sigmaos/sigmap"
 
 	"time"
 )
@@ -24,6 +24,12 @@ func main() {
 
 	db.DPrintf(db.ALWAYS, "Set started")
 
+	n, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		db.DFatalf("Atoi error %v\n", err)
+		return
+	}
+
 	// sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	// if err != nil {
 	// 	db.DFatalf("NewSigmaClnt error %v\n", err)
@@ -32,12 +38,6 @@ func main() {
 	// if err != nil {
 	// 	db.DFatalf("Started error %v\n", err)
 	// }
-
-	n, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		db.DFatalf("Atoi error %v\n", err)
-		return
-	}
 
 	// pn := sp.UX + "~any/" + sc.GetPID().String() + "/"
 	// _, err = sc.CheckpointMe(pn)

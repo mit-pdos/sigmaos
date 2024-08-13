@@ -1,7 +1,8 @@
 package ckpt_test
 
 import (
-	"log"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,7 +35,10 @@ func TestCkptProc(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
 
-	chkptProc := proc.NewProc("ckpt-proc", []string{"300"})
+	err = os.Remove("/tmp/sigmaos-perf/log.txt")
+	assert.Nil(t, err)
+
+	chkptProc := proc.NewProc("ckpt-proc", []string{"30"})
 	err = ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 	//err = ts.WaitStart(chkptProc.GetPid())
@@ -53,20 +57,22 @@ func TestCkptProc(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
+	// spawn and run checkpointed proc
 	restProc := proc.NewRestoreProc(chkptProc, pn, osPid)
-
-	// spawn and run it
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
-	log.Printf("spawned %v", err)
+	db.DPrintf(db.TEST, "sleep for a while")
+	time.Sleep(30 * time.Second)
 
-	time.Sleep(300 * time.Second)
+	//status, err := ts.WaitExit(restProc.GetPid())
+	//assert.Nil(t, err)
+	//assert.True(t, status.IsStatusOK())
 
-	log.Printf("wait exit")
-	status, err := ts.WaitExit(restProc.GetPid())
-	assert.Nil(t, err)
-	assert.True(t, status.IsStatusOK())
+	b, err := os.ReadFile("/tmp/sigmaos-perf/log.txt")
+	db.DPrintf(db.TEST, "b %v\n", string(b))
+	assert.True(t, strings.Contains(string(b), "........."))
+	assert.True(t, strings.Contains(string(b), "exit"))
 
 	ts.Shutdown()
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 
+	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 )
 
@@ -93,6 +94,15 @@ var _ = (fs.NodeGetattrer)((*binFsNode)(nil))
 func (n *binFsNode) Getattr(ctx context.Context, f fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
 	c := ctx.(*fuse.Context).Caller
 	pn := n.path()
+	if pn == "" {
+		ust := syscall.Stat_t{}
+		if err := syscall.Stat(chunksrv.BINPROC, &ust); err != nil {
+			return fs.ToErrno(err)
+		}
+		db.DPrintf(db.BINSRV, "%v: Getattr %q", n, pn)
+		out.Attr.FromStat(&ust)
+		return fs.OK
+	}
 	sst, err := n.RootData.bincache.lookup(pn, c.Pid)
 	if err != nil {
 		return fs.ToErrno(os.ErrNotExist)

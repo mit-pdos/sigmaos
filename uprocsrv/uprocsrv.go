@@ -330,7 +330,6 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 
 	if uproc.GetProto().ProcEnvProto.CheckpointLocation != "" {
-		db.DPrintf(db.ALWAYS, "Run uproc: restoring proc %v", uproc.ProcEnvProto.PidStr)
 		//err := os.MkdirAll("/home/sigmaos/chkptimg", 0777)
 		//if err != nil {
 		//db.DPrintf(db.ALWAYS, "Error creating local chkpt dir: %s", err)
@@ -338,6 +337,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		//localChkptLoc := "/home/sigmaos/chkptimg/" + uproc.ProcEnvProto.PidStr
 		// ups.readCheckpointFromS3(uproc.ProcEnvProto.CheckpointLocation, localChkptLoc)
 		pid := int(uproc.ProcEnvProto.OsPid)
+		db.DPrintf(db.ALWAYS, "Run uproc: restoring proc %v %d", uproc.ProcEnvProto.PidStr, pid)
 		if err := container.RestoreRunProc(ups.criuInst, uproc.ProcEnvProto.PidStr, pid); err != nil {
 			db.DPrintf(db.UPROCD, "RestoreRunProc err %v\n", err)
 			return err
@@ -483,7 +483,7 @@ func (ups *UprocSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Stat, error) 
 func (ups *UprocSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
 	pe, alloc := ups.procs.Alloc(pid, newProcEntry(nil))
 	if alloc {
-		db.DPrintf(db.UPROCD, "Lookup wait for pid %v proc %v\n", pid, pe)
+		db.DPrintf(db.UPROCD, "Lookup wait for pid %v prog %q proc %v\n", pid, prog, pe)
 		pe.procWait()
 	}
 	return ups.lookupProc(pe.proc, prog)

@@ -41,7 +41,7 @@ func StartUProc(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
 
 	pn := binsrv.BinPath(uproc.GetVersionedProgram())
 	if strings.HasPrefix(uproc.GetProgram(), "ckpt-") {
-		pn = "/bin/" + uproc.GetVersionedProgram()
+		pn = pn // "/bin/" + uproc.GetVersionedProgram()
 	}
 
 	db.DPrintf(db.CONTAINER, "StartUProc %q netproxy %v %v env %v\n", pn, netproxy, uproc, os.Environ())
@@ -119,18 +119,14 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 	opts := &rpc.CriuOpts{}
 	// TODO might need to manually add all of these external mounts to the checkpoint?
 	// TODO or at the least, since the FS is not checkpointed, and /local stuff persisted across sigmaos, keep that?
-	db.DPrintf(db.ALWAYS, "opts do not include perf")
 	opts = &rpc.CriuOpts{
 		Pid:            proto.Int32(int32(pid)),
 		ImagesDirFd:    proto.Int32(int32(img.Fd())),
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(root),
-		SkipMnt:        []string{"/mnt", "/mnt/binfs"},
-
-		External: []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount"},
-
-		// "mnt[/mnt/binfs]:binfsMount",  "mnt[/mnt]:mntMount",
+		// SkipMnt:        []string{"/mnt/binfs"},
+		External: []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/mnt/binfs]:binfsMount"}, //  "mnt[/mnt/binfs]:binfsMount"},
 
 		//Unprivileged:   proto.Bool(true),
 		// ExtUnixSk: proto.Bool(true),   // for datagram sockets but for streaming
@@ -204,24 +200,17 @@ func restoreMounts(sigmaPid string) error {
 	if err := mkMount("/mnt", jailPath+"mnt", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
+	// Mount /mnt/binfs
+	if err := syscall.Mount("/mnt/binfs", jailPath+"mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+		return err
+	}
 
-	// os.Mkdir("mnt", 0755)
-	// os.Mkdir("mnt/binfs", 0755)
+	st := &syscall.Statfs_t{}
+	err := syscall.Statfs(jailPath+"mnt/binfs", st)
+	db.DPrintf(db.ALWAYS, "binfs %v %v", st, err)
 
-	// // if err := syscall.Mount("/home/sigmaos/bin/user/", "mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-	// if err := syscall.Mount("/mnt/binfs", "mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-	// 	db.DPrintf(db.ALWAYS, "Mount binfs err %v", err)
-	// 	return err
-	// }
-
-	// db.DPrintf(db.ALWAYS, "stat binfs")
-
-	// st := &syscall.Statfs_t{}
-	// err := syscall.Statfs("/mnt/binfs", st)
-	// db.DPrintf(db.ALWAYS, "binfs %v %v", st, err)
-
-	st := &syscall.Stat_t{}
-	err := syscall.Stat(jailPath+"/bin/ckpt-proc-v1.0", st)
+	//st := &syscall.Stat_t{}
+	//err := syscall.Stat(jailPath+"/bin/ckpt-proc-v1.0", st)
 
 	db.DPrintf(db.ALWAYS, "done making mounts %v err %v", st, err)
 	return nil
@@ -250,10 +239,7 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(jailPath),
-		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf"},
-
-		// "mnt[binfsMount]:/mnt/binfs", "mnt[mntMount]:/mnt"
-
+		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"}, //"mnt[binfsMount]:/mnt/binfs" },
 		// Unprivileged:   proto.Bool(true),
 		LogFile: proto.String("restore.log"),
 	}

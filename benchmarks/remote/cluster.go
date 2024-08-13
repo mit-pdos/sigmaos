@@ -78,10 +78,11 @@ func (ccfg *ClusterConfig) RunBenchmark(benchCmd string, driverVM int) error {
 	return nil
 }
 
-func (ccfg *ClusterConfig) CollectResults(resultsOutputDir string) error {
+func (ccfg *ClusterConfig) CollectResults(benchName string) error {
+	outDirPath := ccfg.lcfg.GetOutputDirPath(benchName)
 	args := []string{
 		"--vpc", ccfg.bcfg.VPC,
-		"--perfdir", resultsOutputDir,
+		"--perfdir", outDirPath,
 	}
 	err := ccfg.lcfg.RunScriptRedirectOutputFile("./collect-results.sh", CLUSTER_INIT_LOG, args...)
 	if err != nil {

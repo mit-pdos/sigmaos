@@ -50,7 +50,7 @@ func TestInitFS(t *testing.T) {
 		return
 	}
 	// Set up the benchmark, and bail out if the benchmark already ran
-	if alreadyRan, err := ts.PrepareToRunBenchmark("initfs"); !assert.Nil(ts.t, err, "Prepare benchmark: %v", err) {
+	if alreadyRan, err := ts.PrepareToRunBenchmark(benchName); !assert.Nil(ts.t, err, "Prepare benchmark: %v", err) {
 		return
 	} else if alreadyRan {
 		db.DPrintf(db.ALWAYS, "========== Skipping %v (already ran) ==========", benchName)
@@ -75,7 +75,7 @@ func TestInitFS(t *testing.T) {
 	err = ccfg.RunBenchmark(GetInitFSCmd(ts.BCfg, ccfg), driverVM)
 	assert.Nil(ts.t, err, "Run benchmark: %v", err)
 	// Collect the benchmark results
-	if err := ccfg.CollectResults("/tmp/test-xxx"); !assert.Nil(ts.t, err, "Stop cluster: %v", err) {
+	if err := ccfg.CollectResults(benchName); !assert.Nil(ts.t, err, "Stop cluster: %v", err) {
 		return
 	}
 }

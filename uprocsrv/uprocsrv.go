@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -343,30 +342,6 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 			return err
 		}
 		db.DPrintf(db.UPROCD, "Restored pid %d\n", pid)
-		return nil
-	} else if strings.HasPrefix(uproc.GetProgram(), "ckpt-") {
-		db.DPrintf(db.ALWAYS, "Run uproc: checkpointable proc %v", uproc.ProcEnvProto.PidStr)
-		if err := ups.fetchBinary(uproc); err != nil {
-			db.DPrintf(db.UPROCD, "Run uproc: fetchBinary err %v\n", err)
-			return err
-		}
-		// TODO: factor out
-		cmd, err := container.StartUProc(uproc, ups.netproxy)
-		if err != nil {
-			return err
-		}
-		pid := cmd.Pid()
-		db.DPrintf(db.UPROCD, "Pid %d\n", pid)
-		pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
-		if !alloc { // it was already inserted
-			pe.insertSignal(uproc)
-		}
-		ups.pids.Insert(uproc.GetPid(), pid)
-		err = cmd.Wait()
-		container.CleanupUproc(uproc.GetPid())
-		ups.procs.Delete(pid)
-		ups.pids.Delete(uproc.GetPid())
-		// ups.sc.CloseFd(pe.fd)
 		return nil
 	} else {
 		db.DPrintf(db.SPAWN_LAT, "[%v] Run uproc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))

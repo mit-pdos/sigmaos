@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -40,10 +39,6 @@ func StartUProc(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
 
 	pn := binsrv.BinPath(uproc.GetVersionedProgram())
-	if strings.HasPrefix(uproc.GetProgram(), "ckpt-") {
-		pn = pn // "/bin/" + uproc.GetVersionedProgram()
-	}
-
 	db.DPrintf(db.CONTAINER, "StartUProc %q netproxy %v %v env %v\n", pn, netproxy, uproc, os.Environ())
 
 	// Optionally strace the proc
@@ -117,26 +112,19 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 
 	root := "/home/sigmaos/jail/" + spid.String() + "/"
 	opts := &rpc.CriuOpts{}
-	// TODO might need to manually add all of these external mounts to the checkpoint?
-	// TODO or at the least, since the FS is not checkpointed, and /local stuff persisted across sigmaos, keep that?
 	opts = &rpc.CriuOpts{
 		Pid:            proto.Int32(int32(pid)),
 		ImagesDirFd:    proto.Int32(int32(img.Fd())),
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(root),
-		// SkipMnt:        []string{"/mnt/binfs"},
-		External: []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/mnt/binfs]:binfsMount"}, //  "mnt[/mnt/binfs]:binfsMount"},
-
+		External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/mnt/binfs]:binfsMount"}, //  "mnt[/mnt/binfs]:binfsMount"},
 		//Unprivileged:   proto.Bool(true),
 		// ExtUnixSk: proto.Bool(true),   // for datagram sockets but for streaming
 		LogFile: proto.String("dump.log"),
 	}
 
-	db.DPrintf(db.ALWAYS, "starting checkpoint")
 	err = c.Dump(opts, NoNotify{})
-	db.DPrintf(db.ALWAYS, "finished checkpoint")
-	db.DPrintf(db.ALWAYS, "Checkpointing: Dumping failed %v", err)
 	b, err0 := os.ReadFile(procImgDir + "/dump.log")
 	if err0 != nil {
 		db.DPrintf(db.ALWAYS, "Checkpointing: opening dump.log failed %v", err0)
@@ -205,14 +193,6 @@ func restoreMounts(sigmaPid string) error {
 		return err
 	}
 
-	st := &syscall.Statfs_t{}
-	err := syscall.Statfs(jailPath+"mnt/binfs", st)
-	db.DPrintf(db.ALWAYS, "binfs %v %v", st, err)
-
-	//st := &syscall.Stat_t{}
-	//err := syscall.Stat(jailPath+"/bin/ckpt-proc-v1.0", st)
-
-	db.DPrintf(db.ALWAYS, "done making mounts %v err %v", st, err)
 	return nil
 }
 
@@ -226,7 +206,6 @@ func RestoreRunProc(criuInst *criu.Criu, sigmaPid string, osPid int) error {
 }
 
 func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
-	// open img dir
 	img, err := os.Open(localChkptLoc)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "can't open image dir:", err)
@@ -245,7 +224,6 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 	}
 
 	if err = criuInst.Restore(opts, nil); err != nil {
-		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %v %s", err, err.Error())
 		b, err0 := os.ReadFile(localChkptLoc + "/restore.log")
 		if err0 != nil {
 			db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err0)

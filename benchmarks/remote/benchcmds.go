@@ -11,11 +11,11 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		debugSelectors string = "\"BENCH;TEST;\""
 	)
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
-		"go test -v sigmaos/fslib -timeout 0 --no-shutdown --etcdIP %s --tag %s"+
-		"--run InitFs"+
-		" > /tmp/bench.out 2>&1",
+		"go test -v sigmaos/fslib -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+		"--run InitFs "+
+		"> /tmp/bench.out 2>&1",
 		debugSelectors,
-		bcfg.Tag,
 		ccfg.LeaderNodeIP,
+		bcfg.Tag,
 	)
 }

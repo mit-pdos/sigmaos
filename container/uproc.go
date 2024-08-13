@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,11 +36,16 @@ func (upc *uprocCmd) Pid() int {
 
 // Contain user procs using exec-uproc-rs trampoline
 func StartUProc(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
-	db.DPrintf(db.CONTAINER, "RunUProc netproxy %v %v env %v\n", netproxy, uproc, os.Environ())
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
 
 	pn := binsrv.BinPath(uproc.GetVersionedProgram())
+	if strings.HasPrefix(uproc.GetProgram(), "ckpt-") {
+		pn = "/bin/" + uproc.GetVersionedProgram()
+	}
+
+	db.DPrintf(db.CONTAINER, "StartUProc %q netproxy %v %v env %v\n", pn, netproxy, uproc, os.Environ())
+
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
 		cmd = exec.Command("strace", append([]string{"-D", "-f", "exec-uproc-rs", uproc.GetPid().String(), pn, strconv.FormatBool(netproxy)}, uproc.Args...)...)
@@ -120,10 +126,13 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(root),
-		SkipMnt:        []string{"/mnt/binfs"},
-		External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/tmp]:tmpMount", "mnt[/mnt/binfs]:binfsMount"},
+		SkipMnt:        []string{"/mnt", "/mnt/binfs"},
+
+		External: []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount"},
+
+		// "mnt[/mnt/binfs]:binfsMount",  "mnt[/mnt]:mntMount",
+
 		//Unprivileged:   proto.Bool(true),
-		//ShellJob: proto.Bool(true),
 		// ExtUnixSk: proto.Bool(true),   // for datagram sockets but for streaming
 		LogFile: proto.String("dump.log"),
 	}
@@ -170,6 +179,7 @@ func restoreMounts(sigmaPid string) error {
 	if err := mkMount(jailPath+"/proc", jailPath+"/proc", "proc", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
+	// Mount realm's user bin directory as /bin
 	if err := mkMount(filepath.Join(sp.SIGMAHOME, "bin/user"), jailPath+"/bin", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
@@ -186,7 +196,7 @@ func restoreMounts(sigmaPid string) error {
 	if err := mkMount("/tmp", jailPath+"tmp", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
-	// Mount perf dir (remove starting first slash)
+	// Mount perf dir
 	os.Mkdir(jailPath+"tmp", 0755)
 	if err := mkMount("/tmp/sigmaos-perf", jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND); err != nil {
 		return err
@@ -195,38 +205,35 @@ func restoreMounts(sigmaPid string) error {
 		return err
 	}
 
-	db.DPrintf(db.ALWAYS, "mount binfs")
+	// os.Mkdir("mnt", 0755)
+	// os.Mkdir("mnt/binfs", 0755)
 
-	os.Mkdir("mnt", 0755)
-	os.Mkdir("mnt/binfs", 0755)
+	// // if err := syscall.Mount("/home/sigmaos/bin/user/", "mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+	// if err := syscall.Mount("/mnt/binfs", "mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
+	// 	db.DPrintf(db.ALWAYS, "Mount binfs err %v", err)
+	// 	return err
+	// }
 
-	// if err := syscall.Mount("/home/sigmaos/bin/user/", "mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-	if err := syscall.Mount("/mnt/binfs", "mnt/binfs", "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "Mount binfs err %v", err)
-		return err
-	}
+	// db.DPrintf(db.ALWAYS, "stat binfs")
 
-	db.DPrintf(db.ALWAYS, "stat binfs")
+	// st := &syscall.Statfs_t{}
+	// err := syscall.Statfs("/mnt/binfs", st)
+	// db.DPrintf(db.ALWAYS, "binfs %v %v", st, err)
 
-	st := &syscall.Statfs_t{}
-	err := syscall.Statfs("/mnt/binfs", st)
-	db.DPrintf(db.ALWAYS, "binfs %v %v", st, err)
+	st := &syscall.Stat_t{}
+	err := syscall.Stat(jailPath+"/bin/ckpt-proc-v1.0", st)
 
-	db.DPrintf(db.ALWAYS, "done making mounts")
+	db.DPrintf(db.ALWAYS, "done making mounts %v err %v", st, err)
 	return nil
 }
 
 func RestoreRunProc(criuInst *criu.Criu, sigmaPid string, osPid int) error {
 	imgDir := IMGDIR + fmt.Sprint(osPid)
-
 	if err := restoreMounts(sigmaPid); err != nil {
 		return err
 	}
 	jailPath := "/home/sigmaos/jail/" + sigmaPid + "/"
 	return restoreProc(criuInst, imgDir, jailPath)
-
-	// signalling finish is done via sigmaos
-	// TODO potentially need to wait for another checkpoint signal
 }
 
 func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
@@ -238,22 +245,20 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 	}
 	defer img.Close()
 
-	// TODO how do I make this dependent on whether we're using perf? Will that need to be part of the uproc state? Kinda annoying...
 	opts := &rpc.CriuOpts{
 		ImagesDirFd:    proto.Int32(int32(img.Fd())),
 		LogLevel:       proto.Int32(4),
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(jailPath),
-		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/bin", "mnt[devMount]:/dev", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[tmpMount]:/tmp", "mnt[binfsMount]:/mnt/binfs"},
+		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf"},
+
+		// "mnt[binfsMount]:/mnt/binfs", "mnt[mntMount]:/mnt"
+
 		// Unprivileged:   proto.Bool(true),
 		LogFile: proto.String("restore.log"),
 	}
 
-	db.DPrintf(db.ALWAYS, "just before restoring")
-
-	err = criuInst.Restore(opts, nil)
-
-	if err != nil {
+	if err = criuInst.Restore(opts, nil); err != nil {
 		db.DPrintf(db.ALWAYS, "Restoring: Restoring failed %v %s", err, err.Error())
 		b, err0 := os.ReadFile(localChkptLoc + "/restore.log")
 		if err0 != nil {
@@ -267,7 +272,4 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 	}
 
 	return nil
-
-	// signalling finish is done via sigmaos
-	// TODO potentially need to wait for another checkpoint signal
 }

@@ -55,18 +55,23 @@ func main() {
 	//syscall.Close(3) // close ??
 	//syscall.Close(8) // close ??
 
+	f, err := os.Create("/tmp/sigmaos-perf/log.txt")
+	if err != nil {
+		db.DFatalf("Error creating %v\n", err)
+	}
+
 	listOpenfiles()
 
 	for {
 		select {
 		case <-timer.C:
-			fmt.Println("exit")
+			f.Write([]byte("exit"))
 			//sc.Write(fd, []byte("exiting"))
 			//err = sc.CloseFd(fd)
 			//sc.ClntExitOK()
 			return
 		default:
-			fmt.Println("here sleep")
+			f.Write([]byte("."))
 			// sc.Write(fd, []byte("here sleep"))
 			time.Sleep(2 * time.Second)
 		}

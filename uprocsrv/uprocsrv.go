@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -328,9 +329,8 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 
-	restore := uproc.GetProto().ProcEnvProto.CheckpointLocation != ""
-	if restore {
-		db.DPrintf(db.ALWAYS, "restoring proc %v", uproc.ProcEnvProto.PidStr)
+	if uproc.GetProto().ProcEnvProto.CheckpointLocation != "" {
+		db.DPrintf(db.ALWAYS, "Run uproc: restoring proc %v", uproc.ProcEnvProto.PidStr)
 		//err := os.MkdirAll("/home/sigmaos/chkptimg", 0777)
 		//if err != nil {
 		//db.DPrintf(db.ALWAYS, "Error creating local chkpt dir: %s", err)
@@ -344,8 +344,32 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		}
 		db.DPrintf(db.UPROCD, "Restored pid %d\n", pid)
 		return nil
+	} else if strings.HasPrefix(uproc.GetProgram(), "ckpt-") {
+		db.DPrintf(db.ALWAYS, "Run uproc: checkpointable proc %v", uproc.ProcEnvProto.PidStr)
+		if err := ups.fetchBinary(uproc); err != nil {
+			db.DPrintf(db.UPROCD, "Run uproc: fetchBinary err %v\n", err)
+			return err
+		}
+		// TODO: factor out
+		cmd, err := container.StartUProc(uproc, ups.netproxy)
+		if err != nil {
+			return err
+		}
+		pid := cmd.Pid()
+		db.DPrintf(db.UPROCD, "Pid %d\n", pid)
+		pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
+		if !alloc { // it was already inserted
+			pe.insertSignal(uproc)
+		}
+		ups.pids.Insert(uproc.GetPid(), pid)
+		err = cmd.Wait()
+		container.CleanupUproc(uproc.GetPid())
+		ups.procs.Delete(pid)
+		ups.pids.Delete(uproc.GetPid())
+		// ups.sc.CloseFd(pe.fd)
+		return nil
 	} else {
-		db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+		db.DPrintf(db.SPAWN_LAT, "[%v] Run uproc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 		cmd, err := container.StartUProc(uproc, ups.netproxy)
 		if err != nil {
 			return err
@@ -367,6 +391,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 }
 
 // Warm uprocd to run a program for experiments with warm start.
+// TODO: merge with fetchBinary
 func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
 	db.DPrintf(db.UPROCD, "WarmProc %v pid %v", req, os.Getpid())
 	pid := sp.Tpid(req.PidStr)
@@ -394,6 +419,24 @@ func mountRealmBinDir(realm sp.Trealm) error {
 
 	if err := syscall.Mount(dir, mnt, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount realm's bin dir %q to %q err %v", dir, mnt, err)
+		return err
+	}
+	return nil
+}
+
+func (ups *UprocSrv) fetchBinary(uproc *proc.Proc) error {
+	prog := uproc.GetVersionedProgram()
+	s3 := uproc.GetSecrets()["s3"]
+	r := uproc.GetRealm()
+	path := uproc.GetSigmaPath()
+	pid := uproc.GetPid()
+	db.DPrintf(db.UPROCD, "fetchBinary: GetFileStat %v %v", uproc, path)
+	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, prog, pid, r, s3, path, uproc.GetNamedEndpoint())
+	if err != nil {
+		return err
+	}
+	db.DPrintf(db.UPROCD, "fetchBinary: FetchBinary: %v %v", uproc, path)
+	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, prog, pid, r, s3, st.Tsize(), path); err != nil {
 		return err
 	}
 	return nil

@@ -119,7 +119,7 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(root),
 		External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/mnt/binfs]:binfsMount"}, //  "mnt[/mnt/binfs]:binfsMount"},
-		//Unprivileged:   proto.Bool(true),
+		Unprivileged:   proto.Bool(true),
 		// ExtUnixSk: proto.Bool(true),   // for datagram sockets but for streaming
 		LogFile: proto.String("dump.log"),
 	}
@@ -219,8 +219,8 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 		TcpEstablished: proto.Bool(true),
 		Root:           proto.String(jailPath),
 		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"}, //"mnt[binfsMount]:/mnt/binfs" },
-		// Unprivileged:   proto.Bool(true),
-		LogFile: proto.String("restore.log"),
+		Unprivileged:   proto.Bool(true),
+		LogFile:        proto.String("restore.log"),
 	}
 
 	if err = criuInst.Restore(opts, nil); err != nil {

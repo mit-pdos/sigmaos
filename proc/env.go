@@ -177,8 +177,9 @@ func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
 	// Deep copy secrets
 	for k, v := range pe.GetSecrets() {
 		pe2.SecretsMap[k] = &sp.SecretProto{
-			ID:  v.ID,
-			Key: v.Key,
+			ID:       v.ID,
+			Key:      v.Key,
+			Metadata: v.Metadata,
 		}
 	}
 	// Clear the named endpoint, so the new realm doesn't try to access the old

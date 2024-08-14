@@ -58,15 +58,19 @@ func (ts *Tstate) RunStandardBenchmark(benchName string, driverVM int, getBenchC
 	}
 	// Start a SigmaOS cluster
 	ccfg, err := ts.StartSigmaOSCluster(numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
-	db.DPrintf(db.ALWAYS, "Running remote tests:\n%v\nCluster config:\n%v", ts, ccfg)
+	db.DPrintf(db.ALWAYS, "\nCluster config:\n%v", ccfg)
 	if !assert.Nil(ts.t, err, "Start cluster: %v", err) {
 		return
 	}
-	defer func() {
-		// Stop the SigmaOS cluster once the benchmark is over
-		err := ts.StopSigmaOSCluster()
-		assert.Nil(ts.t, err, "Stop cluster: %v", err)
-	}()
+	// Optionally skip shutting down the cluster after the benchmark completes
+	// (useful for debugging)
+	if !ts.BCfg.NoShutdown {
+		defer func() {
+			// Stop the SigmaOS cluster once the benchmark is over
+			err := ts.StopSigmaOSCluster()
+			assert.Nil(ts.t, err, "Stop cluster: %v", err)
+		}()
+	}
 	// Run the benchmark
 	err = ccfg.RunBenchmark(driverVM, getBenchCmd(ts.BCfg, ccfg))
 	assert.Nil(ts.t, err, "Run benchmark: %v", err)

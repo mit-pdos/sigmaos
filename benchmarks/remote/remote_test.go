@@ -19,6 +19,7 @@ var versionArg string
 var noNetproxyArg bool
 var overlaysArg bool
 var parallelArg bool
+var noShutdownArg bool
 
 func init() {
 	flag.StringVar(&platformArg, "platform", sp.NOT_SET, "Platform on which to run. Currently, only [aws|cloudlab] are supported")
@@ -29,12 +30,14 @@ func init() {
 	flag.BoolVar(&noNetproxyArg, "nonetproxy", false, "Disable use of proxy for network dialing/listening.")
 	flag.BoolVar(&overlaysArg, "overlays", false, "Run with Docker swarm overlays enabled.")
 	flag.BoolVar(&parallelArg, "parallelize", false, "Run commands in parallel to speed up, e.g., cluster shutdown.")
+	flag.BoolVar(&noShutdownArg, "no-shutdown", false, "Avoid shutting down the cluster after running a benchmark (useful for debugging).")
 	proc.SetSigmaDebugPid("remote-bench")
 }
 
 func TestCompile(t *testing.T) {
 }
 
+// Dummy test to make sure benchmark infrastructure works.
 func TestInitFS(t *testing.T) {
 	// Cluster configuration parameters
 	const (
@@ -49,6 +52,6 @@ func TestInitFS(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	db.DPrintf(db.ALWAYS, "InitFS")
+	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
 	ts.RunStandardBenchmark(benchName, driverVM, GetInitFSCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }

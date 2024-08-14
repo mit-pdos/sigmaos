@@ -55,3 +55,22 @@ func TestInitFS(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
 	ts.RunStandardBenchmark(benchName, driverVM, GetInitFSCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
+
+// Test SigmaOS cold-start.
+func TestColdStart(t *testing.T) {
+	// Cluster configuration parameters
+	const (
+		benchName       string = "cold_start"
+		driverVM        int    = 7
+		numNodes        int    = 8
+		numCoresPerNode uint   = 16
+		onlyOneFullNode bool   = true
+		turboBoost      bool   = true
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	ts.RunStandardBenchmark(benchName, driverVM, GetColdStartCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+}

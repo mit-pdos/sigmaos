@@ -26,4 +26,6 @@ const (
 // Log files
 const (
 	CLUSTER_INIT_LOG string = "/tmp/init.out"
+	BENCH_NODE_LOGS  string = "sigmaos-node-logs"
+	NODE_LOG_DIR     string = "/tmp/" + BENCH_NODE_LOGS
 )

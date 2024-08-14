@@ -39,14 +39,16 @@ func TestCompile(t *testing.T) {
 
 // Dummy test to make sure benchmark infrastructure works.
 func TestInitFS(t *testing.T) {
+	var (
+		benchName string = "initfs"
+	)
 	// Cluster configuration parameters
 	const (
-		benchName       string = "initfs"
-		driverVM        int    = 0
-		numNodes        int    = 4
-		numCoresPerNode uint   = 4
-		onlyOneFullNode bool   = false
-		turboBoost      bool   = false
+		driverVM        int  = 0
+		numNodes        int  = 4
+		numCoresPerNode uint = 4
+		onlyOneFullNode bool = false
+		turboBoost      bool = false
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -58,14 +60,16 @@ func TestInitFS(t *testing.T) {
 
 // Test SigmaOS cold-start.
 func TestColdStart(t *testing.T) {
+	var (
+		benchName string = "cold_start"
+	)
 	// Cluster configuration parameters
 	const (
-		benchName       string = "cold_start"
-		driverVM        int    = 7
-		numNodes        int    = 8
-		numCoresPerNode uint   = 16
-		onlyOneFullNode bool   = true
-		turboBoost      bool   = true
+		driverVM        int  = 7
+		numNodes        int  = 8
+		numCoresPerNode uint = 16
+		onlyOneFullNode bool = true
+		turboBoost      bool = true
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -73,4 +77,46 @@ func TestColdStart(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
 	ts.RunStandardBenchmark(benchName, driverVM, GetColdStartCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+}
+
+// Run the SigmaOS MapReduce benchmark
+func TestMR(t *testing.T) {
+	var (
+		benchNameBase string = "mr_vs_corral"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM        int  = 0
+		numNodes        int  = 8
+		numCoresPerNode uint = 2
+		onlyOneFullNode bool = false
+		turboBoost      bool = true
+	)
+	// Variable MR benchmark configuration parameters
+	var (
+		mrApps        []string = []string{"mr-wc-wiki2G-bench.yml", "mr-wc-wiki2G-bench-s3.yml"}
+		prewarmRealms []bool   = []bool{false, true}
+	)
+	// Constant MR benchmark configuration parameters
+	const (
+		memReq     proc.Tmem = 7000
+		asyncRW    bool      = true
+		measureTpt bool      = false
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	for _, mrApp := range mrApps {
+		for _, prewarmRealm := range prewarmRealms {
+			benchName := benchNameBase
+			if prewarmRealm {
+				benchName += "-warm"
+			} else {
+				benchName += "-cold"
+			}
+			ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrApp, memReq, asyncRW, prewarmRealm, measureTpt), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+		}
+	}
 }

@@ -45,6 +45,7 @@ func NewTstate(t *testing.T) (*Tstate, error) {
 //
 // If any of the above steps results in an error, bail out early.
 func (ts *Tstate) RunStandardBenchmark(benchName string, driverVM int, getBenchCmd GetBenchCmdFn, numNodes int, numCoresPerNode uint, onlyOneFullNode bool, turboBoost bool) {
+	db.DPrintf(db.ALWAYS, "========== Run benchmark %v ==========", benchName)
 	// Set up the benchmark, and bail out if the benchmark already ran
 	if alreadyRan, err := ts.PrepareToRunBenchmark(benchName); !assert.Nil(ts.t, err, "Prepare benchmark: %v", err) {
 		return

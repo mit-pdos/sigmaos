@@ -2,6 +2,7 @@ package remote
 
 import (
 	"flag"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -110,7 +111,7 @@ func TestMR(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
 	for _, mrApp := range mrApps {
 		for _, prewarmRealm := range prewarmRealms {
-			benchName := benchNameBase
+			benchName := filepath.Join(benchNameBase, mrApp)
 			if prewarmRealm {
 				benchName += "-warm"
 			} else {

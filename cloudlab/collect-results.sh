@@ -46,10 +46,11 @@ vms=`cat servers.txt | cut -d " " -f2`
 vma=($vms)
 MAIN="${vma[0]}"
 
-LOG_DIR=/tmp
+LOG_DIR=/tmp/sigmaos-node-logs
 mkdir -p $PERF_DIR
 # Remove old logs
-rm /tmp/*.out
+rm $LOG_DIR/*.out
+mkdir -p $LOG_DIR
 
 idx=0
 for vm in $vms; do
@@ -79,6 +80,8 @@ for vm in $vms; do
   fi
 done
 wait
+
+cp -r $LOG_DIR $PERF_DIR/
 
 echo -e "\n\n===================="
 echo "Perf results are in $PERF_DIR"

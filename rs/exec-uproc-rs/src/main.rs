@@ -130,7 +130,6 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     let newroot = "/home/sigmaos/jail/";
-    let sigmahome = "/home/sigmaos/";
     let newroot_pn: String = newroot.to_owned() + pid + "/";
 
     // Create directories to use as mount points, as well as the new
@@ -183,19 +182,7 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
     // restricted by apparmor sigmoas-uproc profile.
     Mount::builder().fstype("proc").mount("proc", "proc")?;
 
-    // To download sigmaos user binaries into /home/sigmaos/bin/user
-    let shome: String = sigmahome.to_owned();
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount(shome + "bin/user", "bin")?;
-
-    // XXX
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/tmp/", "tmp")?;
-
+    // the binary passed to exec below has the path /mnt/binfs/<binary>
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
@@ -205,6 +192,12 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/mnt/binfs/", "mnt/binfs")?;
+
+    // For /tmp/sigmaos-perf?
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/tmp/", "tmp")?;
 
     // Only mount /tmp/sigmaos-perf directory if SIGMAPERF is set (meaning we are
     // benchmarking and want to extract the results)

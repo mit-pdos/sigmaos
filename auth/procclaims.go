@@ -22,7 +22,7 @@ type ProcClaims struct {
 func NewProcClaims(pe *proc.ProcEnv) *ProcClaims {
 	secrets := make(map[string]*Secret)
 	for svc, s := range pe.GetSecrets() {
-		secrets[svc] = NewSecret(s.ID, s.Key)
+		secrets[svc] = NewSecret(s.ID, s.Key, s.Metadata)
 	}
 	return &ProcClaims{
 		Secrets: secrets,

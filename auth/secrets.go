@@ -13,21 +13,24 @@ import (
 )
 
 type Secret struct {
-	ID  string `json:"id"`
-	Key string `json:"key"`
+	ID       string `json:"id"`
+	Key      string `json:"key"`
+	Metadata string `json:"metadata"`
 }
 
-func NewSecret(id, key string) *Secret {
+func NewSecret(id, key, metadata string) *Secret {
 	return &Secret{
-		ID:  id,
-		Key: key,
+		ID:       id,
+		Key:      key,
+		Metadata: metadata,
 	}
 }
 
 func NewSecretFromProto(psp *sp.SecretProto) *Secret {
 	return &Secret{
-		ID:  psp.ID,
-		Key: psp.Key,
+		ID:       psp.ID,
+		Key:      psp.Key,
+		Metadata: psp.Metadata,
 	}
 }
 

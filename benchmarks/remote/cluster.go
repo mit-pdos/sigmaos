@@ -66,7 +66,7 @@ func (ccfg *ClusterConfig) StartSigmaOSCluster() error {
 }
 
 // Synchronously run a benchmark, according to benchCmd, on the driverVM
-func (ccfg *ClusterConfig) RunBenchmark(benchCmd string, driverVM int) error {
+func (ccfg *ClusterConfig) RunBenchmark(driverVM int, benchCmd string) error {
 	args := []string{
 		"--vpc", ccfg.bcfg.VPC,
 		"--command", benchCmd,

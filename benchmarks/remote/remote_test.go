@@ -38,44 +38,17 @@ func TestCompile(t *testing.T) {
 func TestInitFS(t *testing.T) {
 	// Cluster configuration parameters
 	const (
+		benchName       string = "initfs"
 		driverVM        int    = 0
 		numNodes        int    = 4
 		numCoresPerNode uint   = 4
 		onlyOneFullNode bool   = false
 		turboBoost      bool   = false
-		benchName       string = "initfs"
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	// Set up the benchmark, and bail out if the benchmark already ran
-	if alreadyRan, err := ts.PrepareToRunBenchmark(benchName); !assert.Nil(ts.t, err, "Prepare benchmark: %v", err) {
-		return
-	} else if alreadyRan {
-		db.DPrintf(db.ALWAYS, "========== Skipping %v (already ran) ==========", benchName)
-		return
-	}
-	// First, stop any previously running cluster
-	if err := ts.StopSigmaOSCluster(); !assert.Nil(ts.t, err, "Stop cluster: %v", err) {
-		return
-	}
-	// Start a SigmaOS cluster with 4 machines, and 4 cores on each machine
-	ccfg, err := ts.StartSigmaOSCluster(4, 4, false, false)
-	db.DPrintf(db.ALWAYS, "Running remote tests:\n%v\nCluster config:\n%v", ts, ccfg)
-	if !assert.Nil(ts.t, err, "Start cluster: %v", err) {
-		return
-	}
-	defer func() {
-		// Stop the SigmaOS cluster once the benchmark is over
-		err := ts.StopSigmaOSCluster()
-		assert.Nil(ts.t, err, "Stop cluster: %v", err)
-	}()
-	// Run the benchmark
-	err = ccfg.RunBenchmark(GetInitFSCmd(ts.BCfg, ccfg), driverVM)
-	assert.Nil(ts.t, err, "Run benchmark: %v", err)
-	// Collect the benchmark results
-	if err := ccfg.CollectResults(benchName); !assert.Nil(ts.t, err, "Stop cluster: %v", err) {
-		return
-	}
+	db.DPrintf(db.ALWAYS, "InitFS")
+	ts.RunStandardBenchmark(benchName, driverVM, GetInitFSCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }

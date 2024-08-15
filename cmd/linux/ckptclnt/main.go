@@ -12,8 +12,10 @@ import (
 	"time"
 )
 
+const SRV = false
+
 // mkdir /tmp/fuse
-// echo hello > /tmp/x
+// echo hello > /tmp/fuse/x
 // Run ckptsrv first:
 //   sudo ./bin/linux/ckptsrv 100
 // Then ckptclnt:
@@ -21,6 +23,12 @@ import (
 // Then in another shell:
 //   sudo criu -vvvv dump --images-dir dump --shell-job --log-file log.txt -t 1473191
 //   sudo criu restore -vvvv --images-dir dump --shell-job --log-file log-restore.txt
+
+// lazy-pages:
+// sudo criu -vvvv dump --images-dir dump --shell-job --log-file log.txt -t 1473191
+// cp -r dump dump1
+// sudo criu lazy-pages -D dump
+// sudo criu restore -D dump --shell-job --lazy-pages
 
 func main() {
 	if len(os.Args) < 2 {
@@ -42,12 +50,13 @@ func main() {
 		db.DFatalf("Error creating %v\n", err)
 	}
 
-	_, err = os.Open("/mnt/binfs/x")
-	//_, err = os.Open("/mnt/binfs")
-	if err != nil {
-		db.DFatalf("open failed err %v\n", err)
+	if SRV {
+		_, err = os.Open("/mnt/binfs/x")
+		//_, err = os.Open("/mnt/binfs")
+		if err != nil {
+			db.DFatalf("open failed err %v\n", err)
+		}
 	}
-
 	// listOpenfiles()
 
 	for {

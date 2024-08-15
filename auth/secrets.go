@@ -59,7 +59,6 @@ func GetAWSSecrets(profile string) (*sp.SecretProto, error) {
 		db.DPrintf(db.ERROR, "Load AWS config: %v", err)
 		return nil, err
 	}
-	db.DPrintf(db.ALWAYS, "Secrets Region: %v", cfg.Region)
 	return &sp.SecretProto{
 		ID:       cfg.Credentials.AccessKeyID,
 		Key:      cfg.Credentials.SecretAccessKey,

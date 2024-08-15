@@ -335,13 +335,10 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		//}
 		//localChkptLoc := "/home/sigmaos/chkptimg/" + uproc.ProcEnvProto.PidStr
 		// ups.readCheckpointFromS3(uproc.ProcEnvProto.CheckpointLocation, localChkptLoc)
-		pid := int(uproc.ProcEnvProto.OsPid)
-		db.DPrintf(db.ALWAYS, "Run uproc: restoring proc %v %d", uproc.ProcEnvProto.PidStr, pid)
-		if err := container.RestoreRunProc(ups.criuInst, uproc.ProcEnvProto.PidStr, pid); err != nil {
-			db.DPrintf(db.UPROCD, "RestoreRunProc err %v\n", err)
+		pid := sp.Tpid(uproc.ProcEnvProto.PidStr)
+		if err := container.RestoreRunProc(ups.criuInst, pid); err != nil {
 			return err
 		}
-		db.DPrintf(db.UPROCD, "Restored pid %d\n", pid)
 		return nil
 	} else {
 		db.DPrintf(db.SPAWN_LAT, "[%v] Run uproc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))

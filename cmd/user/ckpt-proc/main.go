@@ -21,14 +21,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v <sleep_length>\n", os.Args[0])
 		os.Exit(1)
 	}
-
-	db.DPrintf(db.ALWAYS, "Set started")
-
 	n, err := strconv.Atoi(os.Args[1])
 	if err != nil {
 		db.DFatalf("Atoi error %v\n", err)
 		return
 	}
+	db.DPrintf(db.ALWAYS, "Running %d", n)
 
 	// sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	// if err != nil {

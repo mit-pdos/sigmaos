@@ -119,7 +119,7 @@ func (updm *UprocdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 	for _, rpcc := range pdcs {
 		util, err := updm.kclnt.GetCPUUtil(rpcc.pid)
 		if err != nil {
-			db.DFatalf("Error GetCPUUtil: %v", err)
+			db.DPrintf(db.ERROR, "Error GetCPUUtil: %v", err)
 		}
 		total += util
 		db.DPrintf(db.UPROCDMGR, "[%v] CPU util pid:%v util:%v", realm, rpcc.pid, util)

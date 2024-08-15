@@ -52,6 +52,6 @@ for vm in $vms; do
 #  sudo apt install -y apparmor-utils
 #  sudo aa-status
 #ls -lha /tmp/sigmaos-data/wiki-20G
-ls ~/8.jpg
+sed -i "s|region=us-east-1|region = us-east-1|g" ~/.aws/credentials
 ENDSSH
 done

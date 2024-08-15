@@ -52,5 +52,4 @@ message CheckpointPidRequest {
 
 message CheckpointPidResult {
   string checkpointLocation = 1;
-  int32 osPid = 2;
 }

@@ -165,9 +165,8 @@ func (sd *Schedd) Exited(ctx fs.CtxI, req proto.NotifyRequest, res *proto.Notify
 
 func (sd *Schedd) CheckpointProc(ctx fs.CtxI, req proto.CheckpointProcRequest, res *proto.CheckpointProcResponse) error {
 	db.DPrintf(db.SCHEDD, "CheckpointProc %v", req)
-	chkptLoc, osPid, err := sd.pmgr.CheckpointProc(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.PathName)
+	chkptLoc, err := sd.pmgr.CheckpointProc(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.PathName)
 	res.CheckpointLocation = chkptLoc
-	res.OsPid = int32(osPid)
 	if err != nil {
 		return err
 	}

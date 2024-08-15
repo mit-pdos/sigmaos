@@ -18,6 +18,6 @@ type ProcAPI interface {
 	GetPID() sp.Tpid
 
 	// Checkpoint/restart
-	Checkpoint(pid sp.Tpid, pn string) (int, error)
-	CheckpointMe(pn string) (int, error)
+	Checkpoint(pid sp.Tpid, pn string) error
+	CheckpointMe(pn string) error
 }

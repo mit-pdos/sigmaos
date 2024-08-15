@@ -414,14 +414,14 @@ func (clnt *ProcClnt) GetPID() sp.Tpid {
 
 // ========== CHECKPOINT ==========
 
-func (clnt *ProcClnt) Checkpoint(pid sp.Tpid, pn string) (int, error) {
+func (clnt *ProcClnt) Checkpoint(pid sp.Tpid, pn string) error {
 	ps, err := clnt.cs.GetProcSeqno(pid)
 	if err != nil {
-		return -1, err
+		return err
 	}
 	return clnt.scheddclnt.Checkpoint(ps.GetScheddID(), pid, clnt.ProcEnv().GetRealm(), pn)
 }
 
-func (clnt *ProcClnt) CheckpointMe(pn string) (int, error) {
+func (clnt *ProcClnt) CheckpointMe(pn string) error {
 	return clnt.scheddclnt.Checkpoint(clnt.ProcEnv().GetKernelID(), clnt.GetPID(), clnt.ProcEnv().GetRealm(), pn)
 }

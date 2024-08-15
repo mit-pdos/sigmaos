@@ -104,7 +104,7 @@ func NewProcFromProto(p *ProcProto) *Proc {
 	return &Proc{p}
 }
 
-func NewRestoreProc(uproc *Proc, chkptLoc string, osPid int) *Proc {
+func NewRestoreProc(uproc *Proc, chkptLoc string) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
 	p.ProcEnvProto = NewProcEnv(
@@ -125,7 +125,6 @@ func NewRestoreProc(uproc *Proc, chkptLoc string, osPid int) *Proc {
 	p.Args = uproc.ProcProto.Args
 
 	p.ProcEnvProto.CheckpointLocation = chkptLoc
-	p.ProcEnvProto.OsPid = int32(osPid)
 
 	p.TypeInt = uint32(T_BE)
 	p.McpuInt = uint32(0)

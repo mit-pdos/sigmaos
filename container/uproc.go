@@ -21,7 +21,7 @@ import (
 
 const (
 	IMGDIR = "/home/sigmaos/ckptimg/"
-	LAZY   = true
+	LAZY   = false
 )
 
 type uprocCmd struct {

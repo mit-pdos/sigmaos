@@ -149,11 +149,11 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 	return nil
 }
 
-func (sdc *ScheddClnt) Checkpoint(kernelID string, pid sp.Tpid, r sp.Trealm, pn string) (int, error) {
+func (sdc *ScheddClnt) Checkpoint(kernelID string, pid sp.Tpid, r sp.Trealm, pn string) error {
 	db.DPrintf(db.ALWAYS, "Checkpoint kernelId %v pid %v", kernelID, pid)
 	rpcc, err := sdc.rpcdc.GetClnt(kernelID)
 	if err != nil {
-		return -1, err
+		return err
 	}
 	req := &proto.CheckpointProcRequest{
 		PidStr:   pid.String(),
@@ -162,9 +162,9 @@ func (sdc *ScheddClnt) Checkpoint(kernelID string, pid sp.Tpid, r sp.Trealm, pn 
 	}
 	res := &proto.CheckpointProcResponse{}
 	if err := rpcc.RPC("Schedd.CheckpointProc", req, res); err != nil {
-		return -1, err
+		return err
 	}
-	return int(res.OsPid), nil
+	return nil
 }
 
 func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, error) {

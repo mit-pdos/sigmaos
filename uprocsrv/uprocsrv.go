@@ -336,7 +336,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		//localChkptLoc := "/home/sigmaos/chkptimg/" + uproc.ProcEnvProto.PidStr
 		// ups.readCheckpointFromS3(uproc.ProcEnvProto.CheckpointLocation, localChkptLoc)
 		pid := sp.Tpid(uproc.ProcEnvProto.PidStr)
-		if err := container.RestoreRunProc(ups.criuInst, pid); err != nil {
+		if err := container.RestoreProc(ups.criuInst, pid); err != nil {
 			return err
 		}
 		return nil
@@ -520,7 +520,6 @@ func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointPidRequest, res
 	if err != nil {
 		return err
 	}
-	res.OsPid = int32(pid)
 	if err = ups.writeCheckpoint(ckptdir, req.PathName); err != nil {
 		// TODO clean up what was written partially?
 		return err

@@ -1,7 +1,7 @@
 package container
 
 import (
-	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,7 +19,10 @@ import (
 	"sigmaos/uprocsrv/binsrv"
 )
 
-const IMGDIR = "/home/sigmaos/ckptimg/"
+const (
+	IMGDIR = "/home/sigmaos/ckptimg/"
+	LAZY   = true
+)
 
 type uprocCmd struct {
 	cmd *exec.Cmd
@@ -95,24 +98,23 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 
 	// defer cleanupJail(pid)
 
-	db.DPrintf(db.ALWAYS, "CheckpointProc %v", pid)
+	db.DPrintf(db.CKPT, "CheckpointProc %v", pid)
 
-	procImgDir := IMGDIR + fmt.Sprint(pid)
+	procImgDir := IMGDIR + spid.String()
 	err := os.MkdirAll(procImgDir, os.ModePerm)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Checkpointing: error creating img dir %v", err)
+		db.DPrintf(db.CKPT, "Checkpointing: error creating img dir %v", err)
 		return procImgDir, err
 	}
 	img, err := os.Open(procImgDir)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Checkpointing: error opening img dir %v", err)
+		db.DPrintf(db.CKPT, "Checkpointing: error opening img dir %v", err)
 		return procImgDir, err
 	}
 	defer img.Close()
 
 	root := "/home/sigmaos/jail/" + spid.String() + "/"
-	opts := &rpc.CriuOpts{}
-	opts = &rpc.CriuOpts{
+	opts := &rpc.CriuOpts{
 		Pid:            proto.Int32(int32(pid)),
 		ImagesDirFd:    proto.Int32(int32(img.Fd())),
 		LogLevel:       proto.Int32(4),
@@ -123,34 +125,39 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 		// ExtUnixSk: proto.Bool(true),   // for datagram sockets but for streaming
 		LogFile: proto.String("dump.log"),
 	}
-
+	if LAZY {
+		addr := "0.0.0.0"
+		port := int32(1234)
+		ps := &rpc.CriuPageServerInfo{Address: &addr, Port: &port}
+		opts.Ps = ps
+		opts.LazyPages = proto.Bool(true)
+	}
 	err = c.Dump(opts, NoNotify{})
 	b, err0 := os.ReadFile(procImgDir + "/dump.log")
 	if err0 != nil {
-		db.DPrintf(db.ALWAYS, "Checkpointing: opening dump.log failed %v", err0)
+		db.DPrintf(db.CKPT, "Checkpointing: opening dump.log failed %v", err0)
 	}
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Checkpointing: Dumping failed %s", string(b))
+		db.DPrintf(db.CKPT, "Checkpointing: Dumping failed %s", string(b))
 		return procImgDir, err
 	} else {
-		db.DPrintf(db.ALWAYS, "Checkpointing: Dumping succeeded %s", string(b))
+		db.DPrintf(db.CKPT, "Checkpointing: Dumping succeeded %s", string(b))
 	}
-
 	return procImgDir, nil
 }
 
 func mkMount(mnt, dst, t string, flags uintptr) error {
 	os.Mkdir(dst, 0755)
 	if err := syscall.Mount(mnt, dst, t, flags, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "Mount mnt %s dst %s t %s err %v", mnt, dst, t, err)
+		db.DPrintf(db.CKPT, "Mount mnt %s dst %s t %s err %v", mnt, dst, t, err)
 		return err
 	}
 	return nil
 }
 
-func restoreMounts(sigmaPid string) error {
+func restoreMounts(sigmaPid sp.Tpid) error {
 	// create dir for proc to be put in
-	jailPath := "/home/sigmaos/jail/" + sigmaPid + "/"
+	jailPath := "/home/sigmaos/jail/" + sigmaPid.String() + "/"
 	os.Mkdir(jailPath, 0777)
 
 	// Mount /lib
@@ -196,19 +203,99 @@ func restoreMounts(sigmaPid string) error {
 	return nil
 }
 
-func RestoreRunProc(criuInst *criu.Criu, sigmaPid string, osPid int) error {
-	imgDir := IMGDIR + fmt.Sprint(osPid)
+func copyFile(srcFile, dstFile string) error {
+	out, err := os.Create(dstFile)
+	if err != nil {
+		return err
+	}
+
+	defer out.Close()
+
+	in, err := os.Open(srcFile)
+	if err != nil {
+		return err
+	}
+
+	defer in.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func copyDir(src, dst string) error {
+	db.DPrintf(db.CKPT, "Restore copydir %v %v", src, dst)
+	os.Mkdir(dst, 0755)
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		sourcePath := filepath.Join(src, entry.Name())
+		destPath := filepath.Join(dst, entry.Name())
+		if err := copyFile(sourcePath, destPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid) error {
+	imgDir := IMGDIR + sigmaPid.String()
+	if LAZY {
+		dst := imgDir + "-restore"
+		if err := copyDir(imgDir, dst); err != nil {
+			return nil
+		}
+		imgDir = dst
+	}
+	db.DPrintf(db.CKPT, "RestoreProc %v %v", sigmaPid, imgDir)
 	if err := restoreMounts(sigmaPid); err != nil {
 		return err
 	}
-	jailPath := "/home/sigmaos/jail/" + sigmaPid + "/"
+	jailPath := "/home/sigmaos/jail/" + sigmaPid.String() + "/"
+	if LAZY {
+		go func() error {
+			if err := lazyPages(criuInst, imgDir); err != nil {
+				db.DPrintf(db.CKPT, "lazyPages failed err %v", err)
+				return err
+			}
+			return nil
+		}()
+		time.Sleep(1 * time.Second)
+	}
 	return restoreProc(criuInst, imgDir, jailPath)
 }
 
-func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
+func lazyPages(criuInst *criu.Criu, localChkptLoc string) error {
+	db.DPrintf(db.CKPT, "Start LazyPages server %v", localChkptLoc)
 	img, err := os.Open(localChkptLoc)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "can't open image dir:", err)
+		db.DPrintf(db.CKPT, "Open %v err", localChkptLoc, err)
+		return err
+	}
+	//defer img.Close()
+	addr := "127.0.0.1"
+	port := int32(1234)
+	ps := &rpc.CriuPageServerInfo{Address: &addr, Port: &port}
+	opts := &rpc.CriuOpts{
+		ImagesDirFd: proto.Int32(int32(img.Fd())),
+		LogLevel:    proto.Int32(4),
+		LogFile:     proto.String("lazy.log"),
+		Ps:          ps,
+	}
+	err = criuInst.StartPageServer(opts)
+	return err
+}
+
+func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
+	db.DPrintf(db.CKPT, "restoreProc %v", localChkptLoc)
+	img, err := os.Open(localChkptLoc)
+	if err != nil {
+		db.DPrintf(db.CKPT, "Open %v err", localChkptLoc, err)
 		return err
 	}
 	defer img.Close()
@@ -222,17 +309,19 @@ func restoreProc(criuInst *criu.Criu, localChkptLoc, jailPath string) error {
 		Unprivileged:   proto.Bool(true),
 		LogFile:        proto.String("restore.log"),
 	}
-
+	if LAZY {
+		opts.LazyPages = proto.Bool(true)
+	}
 	if err = criuInst.Restore(opts, nil); err != nil {
 		b, err0 := os.ReadFile(localChkptLoc + "/restore.log")
 		if err0 != nil {
-			db.DPrintf(db.ALWAYS, "Restoring: opening restore.log failed %v", err0)
+			db.DPrintf(db.CKPT, "Restoring: opening restore.log failed %v", err0)
 		} else {
-			db.DPrintf(db.ALWAYS, "Restoring: restore.log %s", string(b))
+			db.DPrintf(db.CKPT, "Restoring: restore.log %s", string(b))
 		}
 		return err
 	} else {
-		db.DPrintf(db.ALWAYS, "Restoring: Restoring suceeded!")
+		db.DPrintf(db.CKPT, "Restoring: Restoring suceeded!")
 	}
 
 	return nil

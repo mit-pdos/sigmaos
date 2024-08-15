@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -49,20 +50,28 @@ func TestCkptProc(t *testing.T) {
 	pn := sp.UX + "~any/" + chkptProc.GetPid().String() + "/"
 
 	db.DPrintf(db.TEST, "checkpointing %q", pn)
-	osPid, err := ts.Checkpoint(chkptProc.GetPid(), pn)
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "checkpoint pid: %d", osPid)
-
-	time.Sleep(1 * time.Second)
+	osPid := -1
+	if container.LAZY {
+		go func() {
+			osPid, err := ts.Checkpoint(chkptProc.GetPid(), pn)
+			assert.Nil(t, err)
+			db.DPrintf(db.TEST, "checkpoint pid: %d", osPid)
+		}()
+	} else {
+		osPid, err := ts.Checkpoint(chkptProc.GetPid(), pn)
+		assert.Nil(t, err)
+		db.DPrintf(db.TEST, "checkpoint pid: %d", osPid)
+	}
+	time.Sleep(3 * time.Second)
 
 	// spawn and run checkpointed proc
 	restProc := proc.NewRestoreProc(chkptProc, pn, osPid)
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "sleep for a while")
-	time.Sleep(20 * time.Second)
+	n := time.Duration(300)
+	db.DPrintf(db.TEST, "sleep for a while %ds", n)
+	time.Sleep(n * time.Second)
 
 	//status, err := ts.WaitExit(restProc.GetPid())
 	//assert.Nil(t, err)

@@ -143,6 +143,7 @@ const (
 	CHUNKSRV_ERR              = "CHUNKSRV" + ERR
 	CHUNKCLNT                 = "CHUNKCLNT"
 	CHUNKCLNT_ERR             = "CHUNKCLNT" + ERR
+	CKPT                      = "CKPT"
 )
 
 // Realm

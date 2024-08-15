@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -35,16 +36,18 @@ func NewTstate(t *testing.T) (*Tstate, error) {
 	return ts, nil
 }
 
-// Run a standard benchmark:
+// Run a benchmark with multiple parallel clients:
 // 1. Create dirs to hold benchmark output
 // 2. Stop running SigmaOS clusters
 // 3. Start a SigmaOS cluster
-// 4. Run the benchmark
-// 5. Collect benchmark results
-// 6. Stop the SigmaOS cluster
+// 4. Start benchmark clients, beginning with the leader and subsequently the
+// followers, in parallel with a short delay
+// 5. Wait for all clients to complete
+// 6. Collect benchmark results
+// 7. Stop the SigmaOS cluster
 //
 // If any of the above steps results in an error, bail out early.
-func (ts *Tstate) RunStandardBenchmark(benchName string, driverVM int, getBenchCmd GetBenchCmdFn, numNodes int, numCoresPerNode uint, onlyOneFullNode bool, turboBoost bool) {
+func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, getLeaderClientBenchCmd GetBenchCmdFn, getFollowerClientBenchCmd GetBenchCmdFn, clientDelay time.Duration, numNodes int, numCoresPerNode uint, onlyOneFullNode bool, turboBoost bool) {
 	db.DPrintf(db.ALWAYS, "========== Run benchmark %v ==========", benchName)
 	// Set up the benchmark, and bail out if the benchmark already ran
 	if alreadyRan, err := ts.PrepareToRunBenchmark(benchName); !assert.Nil(ts.t, err, "Prepare benchmark: %v", err) {
@@ -72,13 +75,49 @@ func (ts *Tstate) RunStandardBenchmark(benchName string, driverVM int, getBenchC
 			assert.Nil(ts.t, err, "Stop cluster: %v", err)
 		}()
 	}
-	// Run the benchmark
-	err = ccfg.RunBenchmark(driverVM, getBenchCmd(ts.BCfg, ccfg))
-	assert.Nil(ts.t, err, "Run benchmark: %v", err)
+	done := make(chan error)
+	for i := 0; i < len(driverVMs); i++ {
+		// Select the driver VM on which to run this client
+		driverVM := driverVMs[i]
+		// Select the command string to run the benchmark
+		var cmd string
+		if i == 0 {
+			cmd = getLeaderClientBenchCmd(ts.BCfg, ccfg)
+		} else {
+			cmd = getFollowerClientBenchCmd(ts.BCfg, ccfg)
+			db.DPrintf(db.ALWAYS, "\t----- Starting additional benchmark client %v -----", i)
+		}
+		// Start the benchmark client in a different goroutine
+		go func(i int, driverVM int, cmd string) {
+			err = ccfg.RunBenchmark(driverVM, cmd)
+			assert.Nil(ts.t, err, "Run benchmark client %v: %v", err)
+			// Mark self as done
+			done <- err
+		}(i, driverVM, cmd)
+		// Sleep for a short delay before starting the next client
+		time.Sleep(clientDelay)
+	}
+	// Wait for clients to finish
+	for i := 0; i < len(driverVMs); i++ {
+		<-done
+	}
 	// Collect the benchmark results
 	if err := ccfg.CollectResults(benchName); !assert.Nil(ts.t, err, "Stop cluster: %v", err) {
 		return
 	}
+}
+
+// Run a standard benchmark:
+// 1. Create dirs to hold benchmark output
+// 2. Stop running SigmaOS clusters
+// 3. Start a SigmaOS cluster
+// 4. Run the benchmark
+// 5. Collect benchmark results
+// 6. Stop the SigmaOS cluster
+//
+// If any of the above steps results in an error, bail out early.
+func (ts *Tstate) RunStandardBenchmark(benchName string, driverVM int, getBenchCmd GetBenchCmdFn, numNodes int, numCoresPerNode uint, onlyOneFullNode bool, turboBoost bool) {
+	ts.RunParallelClientBenchmark(benchName, []int{driverVM}, getBenchCmd, nil, 0*time.Second, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
 // Prepare to run a benchmark. If the benchmark has already been run, skip

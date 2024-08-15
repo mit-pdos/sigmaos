@@ -4,6 +4,7 @@ import (
 	"flag"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -80,27 +81,6 @@ func TestColdStart(t *testing.T) {
 	ts.RunStandardBenchmark(benchName, driverVM, GetColdStartCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
-// Test multiplexing Best Effort Imgresize jobs.
-func TestBEImgresizeMultiplexing(t *testing.T) {
-	var (
-		benchName string = "be_imgresize_multiplexing"
-	)
-	// Cluster configuration parameters
-	const (
-		driverVM        int  = 0
-		numNodes        int  = 8 // 24
-		numCoresPerNode uint = 4
-		onlyOneFullNode bool = false
-		turboBoost      bool = false
-	)
-	ts, err := NewTstate(t)
-	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
-		return
-	}
-	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
-	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgresizeMultiplexingCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
-}
-
 // Run the SigmaOS MapReduce benchmark
 func TestMR(t *testing.T) {
 	var (
@@ -141,4 +121,56 @@ func TestMR(t *testing.T) {
 			ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrApp, memReq, asyncRW, prewarmRealm, measureTpt), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 		}
 	}
+}
+
+// Test Hotel application's tail latency.
+func TestHotelTailLatency(t *testing.T) {
+	var (
+		benchName string = "hotel_tail_latency"
+		driverVMs []int  = []int{8, 9}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes        int  = 8
+		numCoresPerNode uint = 4
+		onlyOneFullNode bool = false
+		turboBoost      bool = false
+	)
+	// Hotel benchmark configuration parameters
+	var (
+		rps         []int           = []int{250, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000}
+		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
+		cacheType   string          = "cached"
+		scaleCache  bool            = false
+		clientDelay time.Duration   = 10 * time.Second
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+}
+
+// Test multiplexing Best Effort Imgresize jobs.
+func TestBEImgresizeMultiplexing(t *testing.T) {
+	var (
+		benchName string = "be_imgresize_multiplexing"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM        int  = 0
+		numNodes        int  = 8 // 24
+		numCoresPerNode uint = 4
+		onlyOneFullNode bool = false
+		turboBoost      bool = false
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgresizeMultiplexingCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }

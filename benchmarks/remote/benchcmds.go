@@ -3,6 +3,7 @@ package remote
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"sigmaos/proc"
 )
@@ -115,6 +116,81 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 			asyncrw,
 			strconv.Itoa(int(memReq)),
 			mrApp,
+		)
+	}
+}
+
+// Construct command string to run hotel benchmark's lead client
+//
+// - rps specifies the number of requests-per-second this client should execute
+// in each phase of the benchmark.
+//
+// - dur specifies the duration for which each rps period should last.
+//
+// - cacheType specifies the type of cache service that hotel should use (e.g.,
+// cached vs kvd vs memcached).
+//
+// - If scaleCache is true, the cache autoscales.
+//
+// - clientDelay specifies the delay for which the client should wait before
+// starting to send requests.
+func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, clientDelay time.Duration) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;NETSIGMA_PERF;\""
+			perfSelectors  string = "\"\""
+		)
+		testName := ""
+		if leader {
+			testName = "HotelSigmaosSearch"
+		} else {
+			testName = "HotelSigmaosJustCliSearch"
+		}
+		autoscaleCache := ""
+		if scaleCache {
+			autoscaleCache = "--hotel_cache_autoscale"
+		}
+		// Construct comma-separated string of RPS
+		rpsStr := ""
+		for i, r := range rps {
+			rpsStr += strconv.Itoa(r)
+			if i < len(rps)-1 {
+				rpsStr += ","
+			}
+		}
+		// Construct comma-separated string of durations
+		durStr := ""
+		for i, d := range dur {
+			durStr += d.String()
+			if i < len(dur)-1 {
+				durStr += ","
+			}
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+			"--run %s "+
+			"--nclnt %s "+
+			"--hotel_ncache 3 "+
+			"--hotel_cache_mcpu 200 "+
+			"--cache_type %s "+
+			"%s "+ // scaleCache
+			"--hotel_dur %s "+
+			"--hotel_max_rps %s "+
+			"--sleep %s "+
+			"--prewarm_realm "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			perfSelectors,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			testName,
+			strconv.Itoa(numClients),
+			cacheType,
+			autoscaleCache,
+			durStr,
+			rpsStr,
+			clientDelay.String(),
 		)
 	}
 }

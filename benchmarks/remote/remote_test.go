@@ -80,6 +80,27 @@ func TestColdStart(t *testing.T) {
 	ts.RunStandardBenchmark(benchName, driverVM, GetColdStartCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
+// Test multiplexing Best Effort Imgresize jobs.
+func TestBEImgresizeMultiplexing(t *testing.T) {
+	var (
+		benchName string = "be_imgresize_multiplexing"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM        int  = 0
+		numNodes        int  = 8 // 24
+		numCoresPerNode uint = 4
+		onlyOneFullNode bool = false
+		turboBoost      bool = false
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgresizeMultiplexingCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+}
+
 // Run the SigmaOS MapReduce benchmark
 func TestMR(t *testing.T) {
 	var (

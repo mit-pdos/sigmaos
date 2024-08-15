@@ -40,6 +40,29 @@ func GetColdStartCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	)
 }
 
+// Construct command string to run BE imgresize multiplexing benchmark
+func GetBEImgresizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+	const (
+		debugSelectors string = "\"TEST;BENCH;\""
+	)
+	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+		"--run TestRealmBalanceImgResizeImgResize "+
+		"--sleep 60s "+
+		"--n_imgresize 40 "+
+		"--imgresize_nround 300 "+
+		"--n_imgresize_per 25 "+
+		"--imgresize_path name/ux/~local/8.jpg "+
+		"--imgresize_mcpu 0 "+
+		"--imgresize_mem 1500 "+
+		"--nrealm 4 "+
+		"> /tmp/bench.out 2>&1",
+		debugSelectors,
+		ccfg.LeaderNodeIP,
+		bcfg.Tag,
+	)
+}
+
 // Construct command string to run MR benchmark.
 //
 // - mrApp specifies which MR app to run (WC or Grep), as well as the input,

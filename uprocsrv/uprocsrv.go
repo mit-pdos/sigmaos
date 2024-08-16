@@ -171,6 +171,12 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	}
 	ups.scsc = scsc
 
+	if v, err := ups.criuInst.GetCriuVersion(); err != nil {
+		db.DFatalf("GetCriuVersion err %v\n", err)
+	} else {
+		db.DPrintf(db.UPROCD, "GetCriuVersion %v\n", v)
+	}
+
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.UPROCD_ERR, "RunServer err %v\n", err)
 		return err

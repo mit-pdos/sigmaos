@@ -43,6 +43,7 @@ func TestCkptProc(t *testing.T) {
 	//err = ts.WaitStart(chkptProc.GetPid())
 	//assert.Nil(t, err)
 
+	// let ckpt-proc run for a little while
 	time.Sleep(5 * time.Second)
 
 	// pn := sp.S3 + "~any/fkaashoek/" + chkptProc.GetPid().String() + "/"
@@ -53,14 +54,12 @@ func TestCkptProc(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "checkpoint err %v", err)
 
-	time.Sleep(3 * time.Second)
-
 	// spawn and run checkpointed proc
 	restProc := proc.NewRestoreProc(chkptProc, pn)
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
-	n := time.Duration(20)
+	n := time.Duration(25)
 	db.DPrintf(db.TEST, "sleep for a while %ds", n)
 	time.Sleep(n * time.Second)
 

@@ -235,7 +235,7 @@ func (cksrv *ChunkSrv) fetchChunk(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *s
 	}
 
 	if len(paths) == 0 {
-		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: %v err %v", cksrv.kernelId, be.prog, err)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: r %v p %v err %v", cksrv.kernelId, r, be.prog, err)
 		return 0, "", serr.NewErr(serr.TErrNotfound, be.prog)
 	}
 
@@ -292,6 +292,10 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 		if uint64(sp.Tsize(Ckoff(ckid))+size) > st.Length {
 			size = sp.Tsize(st.Length)
 		}
+	} else {
+		if ep == nil {
+			db.DPrintf(db.ERROR, "Stat not cached in fetch and ep not set realm %v prog %v", realm, prog)
+		}
 	}
 
 	// one outstanding fetch per chunk
@@ -316,7 +320,12 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 }
 
 func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
-	sz, srvpath, blob, err := cksrv.fetch(sp.Trealm(req.Realm), req.Prog, sp.Tpid(req.Pid), req.GetS3Secret(), int(req.ChunkId), sp.Tsize(req.Size), req.SigmaPath, req.Data, nil)
+	var ep *sp.Tendpoint
+	epp := req.GetNamedEndpointProto()
+	if epp != nil {
+		ep = sp.NewEndpointFromProto(epp)
+	}
+	sz, srvpath, blob, err := cksrv.fetch(sp.Trealm(req.Realm), req.Prog, sp.Tpid(req.Pid), req.GetS3Secret(), int(req.ChunkId), sp.Tsize(req.Size), req.SigmaPath, req.Data, ep)
 	if err != nil {
 		return err
 	}

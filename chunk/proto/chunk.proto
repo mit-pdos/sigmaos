@@ -28,6 +28,7 @@ message FetchChunkRequest {
   string pid = 6;
   bool data = 7;
   SecretProto s3Secret = 8;
+  TendpointProto namedEndpointProto = 9;
 }
 
 message FetchChunkResponse {

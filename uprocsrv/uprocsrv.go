@@ -350,11 +350,11 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	if err := ups.assignToRealm(r, pid, req.Program, req.SigmaPath, req.GetS3Secret(), req.GetNamedEndpointProto()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
-	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), req.SigmaPath, nil)
+	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), req.SigmaPath, req.GetNamedEndpointProto())
 	if err != nil {
 		return err
 	}
-	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), st.Tsize(), req.SigmaPath); err != nil {
+	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), st.Tsize(), req.SigmaPath, req.GetNamedEndpointProto()); err != nil {
 		return err
 	}
 	res.OK = true
@@ -389,7 +389,7 @@ func (ups *UprocSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, er
 	}
 
 	start := time.Now()
-	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, prog, pe.proc.GetPid(), ups.realm, s3secret, cid, sz, pe.proc.GetSigmaPath())
+	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, prog, pe.proc.GetPid(), ups.realm, s3secret, cid, sz, pe.proc.GetSigmaPath(), pe.proc.GetNamedEndpoint())
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch done: %q ck %d sz %d path %q fetch lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, cid, sz, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 	return sz, err

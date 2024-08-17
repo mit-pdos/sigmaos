@@ -127,7 +127,7 @@ func TestMR(t *testing.T) {
 func TestHotelTailLatency(t *testing.T) {
 	var (
 		benchName string = "hotel_tail_latency"
-		driverVMs []int  = []int{8, 9}
+		driverVMs []int  = []int{8, 9} // , 10, 11}
 	)
 	// Cluster configuration parameters
 	const (
@@ -173,4 +173,34 @@ func TestBEImgresizeMultiplexing(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
 	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgresizeMultiplexingCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+}
+
+func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
+	var (
+		benchName string = "lc_be_hotel_imgresize_multiplexing"
+		driverVMs []int  = []int{8, 9} //, 10, 11}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes        int  = 8
+		numCoresPerNode uint = 4
+		onlyOneFullNode bool = false
+		turboBoost      bool = false
+	)
+	// Hotel benchmark configuration parameters
+	var (
+		rps         []int           = []int{250, 500, 1000, 1500, 2000, 1000}
+		dur         []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
+		cacheType   string          = "cached"
+		scaleCache  bool            = false
+		clientDelay time.Duration   = 10 * time.Second
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	getLeaderCmd := GetHotelImgresizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }

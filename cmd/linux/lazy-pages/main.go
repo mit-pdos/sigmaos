@@ -16,10 +16,10 @@ import (
 	"github.com/checkpoint-restore/go-criu/v7/crit/cli"
 	"github.com/checkpoint-restore/go-criu/v7/crit/images/mm"
 	"github.com/checkpoint-restore/go-criu/v7/crit/images/pagemap"
-	"github.com/loopholelabs/userfaultfd-go/pkg/constants"
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
+	"sigmaos/userfaultfd"
 )
 
 const SOCKNAME = "lazy-pages.socket"
@@ -280,51 +280,74 @@ func handleReqs(pid, fd int) error {
 		); err != nil {
 			return err
 		}
-		buf := make([]byte, unsafe.Sizeof(constants.UffdMsg{}))
+		buf := make([]byte, unsafe.Sizeof(userfaultfd.UffdMsg{}))
 		if _, err := syscall.Read(fd, buf); err != nil {
 			return err
 		}
-		msg := (*(*constants.UffdMsg)(unsafe.Pointer(&buf[0])))
-		if constants.GetMsgEvent(&msg) != constants.UFFD_EVENT_PAGEFAULT {
-			return fmt.Errorf("Unknown event %v", constants.GetMsgEvent(&msg))
+		msg := (*(*userfaultfd.UffdMsg)(unsafe.Pointer(&buf[0])))
+		if userfaultfd.GetMsgEvent(&msg) != userfaultfd.UFFD_EVENT_PAGEFAULT {
+			return fmt.Errorf("Unknown event %v", userfaultfd.GetMsgEvent(&msg))
 		}
 
-		arg := constants.GetMsgArg(&msg)
-		pagefault := (*(*constants.UffdPagefault)(unsafe.Pointer(&arg[0])))
+		arg := userfaultfd.GetMsgArg(&msg)
+		pagefault := (*(*userfaultfd.UffdPagefault)(unsafe.Pointer(&arg[0])))
 
-		addr := uint64(constants.GetPagefaultAddress(&pagefault))
+		addr := uint64(userfaultfd.GetPagefaultAddress(&pagefault))
 		mask := uint64(^(os.Getpagesize() - 1))
 		db.DPrintf(db.ALWAYS, "page fault %d %x %x", addr, addr, addr&mask)
 		addr = addr & mask
 		iov := iovs.find(addr)
 		if iov == nil {
-			db.DFatalf("no iov for %x", addr)
+			db.DPrintf(db.ALWAYS, "no iov for %x", addr)
+			zeroPage(fd, addr)
+		} else {
+			pi := pmi.find(addr)
+			if pi == -1 {
+				db.DFatalf("no page for %x", addr)
+			}
+			db.DPrintf(db.ALWAYS, "page fault %d -> %d", addr, pi)
+			page, err := pmi.read(pid, pi)
+			if err != nil {
+				db.DFatalf("no page content for %x", addr)
+			}
+			copyPage(fd, addr, page)
 		}
-		pi := pmi.find(addr)
-		if pi == -1 {
-			db.DFatalf("no page for %x", addr)
-		}
-		db.DPrintf(db.ALWAYS, "page fault %d -> %d", addr, pi)
-		page, err := pmi.read(pid, pi)
-		if err != nil {
-			db.DFatalf("no page content for %x", addr)
-		}
-		pagesize := os.Getpagesize()
-		cpy := constants.NewUffdioCopy(
-			page,
-			constants.CULong(addr),
-			constants.CULong(pagesize),
-			0,
-			0,
-		)
-		if _, _, errno := syscall.Syscall(
-			syscall.SYS_IOCTL,
-			uintptr(fd),
-			constants.UFFDIO_COPY,
-			uintptr(unsafe.Pointer(&cpy)),
-		); errno != 0 {
-			db.DFatalf("SYS_IOCL err %v", errno)
-		}
+	}
+}
+
+func zeroPage(fd int, addr uint64) {
+	len := uint64(os.Getpagesize())
+	zero := userfaultfd.NewUffdioZeroPage(
+		userfaultfd.CULong(addr),
+		userfaultfd.CULong(len),
+		0,
+	)
+	if _, _, errno := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		uintptr(fd),
+		userfaultfd.UFFDIO_ZEROPAGE,
+		uintptr(unsafe.Pointer(&zero)),
+	); errno != 0 {
+		db.DFatalf("SYS_IOCTL err %v", errno)
+	}
+}
+
+func copyPage(fd int, addr uint64, page []byte) {
+	pagesize := os.Getpagesize()
+	cpy := userfaultfd.NewUffdioCopy(
+		page,
+		userfaultfd.CULong(addr),
+		userfaultfd.CULong(pagesize),
+		0,
+		0,
+	)
+	if _, _, errno := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		uintptr(fd),
+		userfaultfd.UFFDIO_COPY,
+		uintptr(unsafe.Pointer(&cpy)),
+	); errno != 0 {
+		db.DFatalf("SYS_IOCTL err %v", errno)
 	}
 }
 

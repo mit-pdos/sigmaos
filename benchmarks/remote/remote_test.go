@@ -71,7 +71,7 @@ func TestColdStart(t *testing.T) {
 		driverVM        int  = 7
 		numNodes        int  = 8
 		numCoresPerNode uint = 16
-		onlyOneFullNode bool = false
+		onlyOneFullNode bool = true
 		turboBoost      bool = true
 	)
 	// Cold-start benchmark configuration parameters
@@ -94,10 +94,10 @@ func TestSchedScalability(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 24
+		driverVM        int  = 23
 		numNodes        int  = 23
 		numCoresPerNode uint = 40
-		onlyOneFullNode bool = true
+		onlyOneFullNode bool = false
 		turboBoost      bool = true
 	)
 	ts, err := NewTstate(t)

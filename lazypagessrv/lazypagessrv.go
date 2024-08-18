@@ -62,7 +62,7 @@ func (lps *LazyPagesSrv) Run() error {
 				db.DFatalf("Read pid err %v", err)
 			}
 
-			db.DPrintf(db.ALWAYS, "pid %d\n", pid)
+			db.DPrintf(db.LAZYPAGESSRV, "pid %d\n", pid)
 
 			b := make([]byte, unix.CmsgSpace(4))
 			_, _, _, _, err = unix.Recvmsg(connFd, nil, b, 0)
@@ -79,7 +79,7 @@ func (lps *LazyPagesSrv) Run() error {
 				db.DFatalf("ParseUnixRights err %v", err)
 			}
 			fd := fds[0]
-			db.DPrintf(db.ALWAYS, "Received fd %d\n", fd)
+			db.DPrintf(db.LAZYPAGESSRV, "Received fd %d\n", fd)
 			if err := lps.handleReqs(int(pid), fd); err != nil {
 				db.DFatalf("handle fd %v err %v", fd, err)
 			}
@@ -99,7 +99,7 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 	iovs, npages, maxIovLen := mm.collectIovs(pmi)
 	nfault := 0
 	page := make([]byte, pmi.pagesz) // XXX maxIovLen
-	db.DPrintf(db.ALWAYS, "iovs %d npages %d maxIovLen %d", iovs.len(), npages, maxIovLen)
+	db.DPrintf(db.ALWAYS, "lazypages: pid %d fd %d iovs %d npages %d maxIovLen %d", pid, fd, iovs.len(), npages, maxIovLen)
 	for {
 		if _, err := unix.Poll(
 			[]unix.PollFd{{
@@ -129,7 +129,7 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 		iov := iovs.find(addr)
 		nfault += 1
 		if iov == nil {
-			db.DPrintf(db.ALWAYS, "page fault %d: no iov for %x", nfault, addr)
+			db.DPrintf(db.LAZYPAGESSRV, "page fault %d: no iov for %x", nfault, addr)
 			lps.zeroPage(fd, addr)
 		} else {
 			// XXX read and copy the whole iov instead of one?
@@ -137,7 +137,7 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 			if pi == -1 {
 				db.DFatalf("no page for %x", addr)
 			}
-			db.DPrintf(db.ALWAYS, "page fault %d: %d(%x) -> %v %d", nfault, addr, addr, iov, pi)
+			db.DPrintf(db.LAZYPAGESSRV, "page fault %d: %d(%x) -> %v %d", nfault, addr, addr, iov, pi)
 			if err := pmi.readPage(lps.imgdir, pid, pi, page); err != nil {
 				db.DFatalf("no page content for %x", addr)
 			}

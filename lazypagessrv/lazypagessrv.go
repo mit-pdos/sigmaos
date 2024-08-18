@@ -96,8 +96,10 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 	if err != nil {
 		return err
 	}
-	iovs := mm.collectIovs(pmi)
-	db.DPrintf(db.TEST, "iovs: %v", iovs)
+	iovs, npages, maxIovLen := mm.collectIovs(pmi)
+	nfault := 0
+	page := make([]byte, pmi.pagesz) // XXX maxIovLen
+	db.DPrintf(db.ALWAYS, "iovs %d npages %d maxIovLen %d", iovs.len(), npages, maxIovLen)
 	for {
 		if _, err := unix.Poll(
 			[]unix.PollFd{{
@@ -114,28 +116,29 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 		}
 		msg := (*(*userfaultfd.UffdMsg)(unsafe.Pointer(&buf[0])))
 		if userfaultfd.GetMsgEvent(&msg) != userfaultfd.UFFD_EVENT_PAGEFAULT {
+			db.DPrintf(db.ALWAYS, "Unknown even %v", userfaultfd.GetMsgEvent(&msg))
 			return fmt.Errorf("Unknown event %v", userfaultfd.GetMsgEvent(&msg))
 		}
 
 		arg := userfaultfd.GetMsgArg(&msg)
 		pagefault := (*(*userfaultfd.UffdPagefault)(unsafe.Pointer(&arg[0])))
-
 		addr := uint64(userfaultfd.GetPagefaultAddress(&pagefault))
 		mask := uint64(^(lps.pagesz - 1))
-		db.DPrintf(db.ALWAYS, "page fault %d %x %x", addr, addr, addr&mask)
 		addr = addr & mask
+
 		iov := iovs.find(addr)
+		nfault += 1
 		if iov == nil {
-			db.DPrintf(db.ALWAYS, "no iov for %x", addr)
+			db.DPrintf(db.ALWAYS, "page fault %d: no iov for %x", nfault, addr)
 			lps.zeroPage(fd, addr)
 		} else {
+			// XXX read and copy the whole iov instead of one?
 			pi := pmi.find(addr)
 			if pi == -1 {
 				db.DFatalf("no page for %x", addr)
 			}
-			db.DPrintf(db.ALWAYS, "page fault %d -> %d", addr, pi)
-			page, err := pmi.read(lps.imgdir, pid, pi)
-			if err != nil {
+			db.DPrintf(db.ALWAYS, "page fault %d: %d(%x) -> %v %d", nfault, addr, addr, iov, pi)
+			if err := pmi.readPage(lps.imgdir, pid, pi, page); err != nil {
 				db.DFatalf("no page content for %x", addr)
 			}
 			lps.copyPage(fd, addr, page)

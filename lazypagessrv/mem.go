@@ -1,5 +1,9 @@
 package lazypagessrv
 
+//
+// This file is based on criu/uffd.c
+//
+
 import (
 	"fmt"
 	"os"
@@ -50,6 +54,7 @@ func newTpagemapImg(imgdir string, pid int) (*TpagemapImg, error) {
 		nil
 }
 
+// Find page index for addr
 func (pmi *TpagemapImg) find(addr uint64) int {
 	pi := 0
 	for _, pme := range pmi.PagemapEntries {
@@ -60,20 +65,11 @@ func (pmi *TpagemapImg) find(addr uint64) int {
 		if addr >= start && addr < end {
 			m := (addr - start) / uint64(pmi.pagesz)
 			pi = pi + int(m)
-			db.DPrintf(db.ALWAYS, "m %d pi %d\n", m, pi)
 			return pi
 		}
 		pi += int(n)
 	}
 	return -1
-}
-
-func (pmi *TpagemapImg) read(imgdir string, pid, pi int) ([]byte, error) {
-	page := make([]byte, pmi.pagesz)
-	if err := pmi.readPage(imgdir, pid, pi, page); err != nil {
-		return nil, err
-	}
-	return page, nil
 }
 
 func (pmi *TpagemapImg) readPage(imgdir string, pid, pi int, page []byte) error {
@@ -111,17 +107,28 @@ func newTmm(imgdir string, pid int) (*Tmm, error) {
 }
 
 type Iov struct {
+	pagesz    int
 	start     uint64
 	end       uint64
-	img_start uint64
+	img_start uint64 // XXX handle remaps
+}
+
+func newIov(pagesz int, start, end, img_start uint64) *Iov {
+	return &Iov{pagesz: pagesz, start: start, end: end, img_start: img_start}
+}
+
+func nPages(start, end uint64, pagesz int) int {
+	len := end - start
+	return int((len + uint64(pagesz) - 1) / uint64(pagesz))
 }
 
 func (iov *Iov) String() string {
-	return fmt.Sprintf("{%x %x %x}", iov.start, iov.end, iov.img_start)
+	return fmt.Sprintf("{[%x, %x) %d(%d) %x}", iov.start, iov.end, iov.end-iov.start, nPages(iov.start, iov.end, iov.pagesz), iov.img_start)
 }
 
 type Iovs struct {
-	iovs []*Iov
+	pagesz int
+	iovs   []*Iov
 }
 
 func newIovs() *Iovs {
@@ -130,6 +137,10 @@ func newIovs() *Iovs {
 
 func (iovs *Iovs) append(iov *Iov) {
 	iovs.iovs = append(iovs.iovs, iov)
+}
+
+func (iovs *Iovs) len() int {
+	return len(iovs.iovs)
 }
 
 func (iovs *Iovs) find(addr uint64) *Iov {
@@ -141,14 +152,20 @@ func (iovs *Iovs) find(addr uint64) *Iov {
 	return nil
 }
 
-func (mm *Tmm) collectIovs(pmi *TpagemapImg) *Iovs {
+// From criu/uffd.c: Create a list of IOVs that can be handled using
+// userfaultfd. The IOVs generally correspond to lazy pagemap entries,
+// except the cases when a single pagemap entry covers several
+// VMAs. In those cases IOVs are split at VMA boundaries because
+// UFFDIO_COPY may be done only inside a single VMA.  We assume here
+// that pagemaps and VMAs are sorted.
+func (mm *Tmm) collectIovs(pmi *TpagemapImg) (*Iovs, int, int) {
 	db.DPrintf(db.TEST, "mmInfo %d\n", len(mm.Vmas))
 
 	iovs := newIovs()
 	end := uint64(mm.pagesz)
 	start := uint64(0)
-	nPages := uint32(0)
-	max_iov_len := start
+	npages := uint32(0)
+	maxIovLen := start
 
 	ph := pmi.PageMapHead.Message.(*pagemap.PagemapHead)
 	db.DPrintf(db.TEST, "ph %v", ph)
@@ -156,40 +173,32 @@ func (mm *Tmm) collectIovs(pmi *TpagemapImg) *Iovs {
 	for _, pme := range pmi.PagemapEntries[1:] {
 		pm := pme.Message.(*pagemap.PagemapEntry)
 
-		db.DPrintf(db.TEST, "pm %v", pm)
-
 		start = pm.GetVaddr()
 		end = start + uint64(pm.GetNrPages()*uint32(mm.pagesz))
-		nPages += pm.GetNrPages()
+		npages += pm.GetNrPages()
 
 		for _, vma := range mm.Vmas {
 			if start >= vma.GetStart() {
 				continue
 			}
-			iov := &Iov{}
 			vend := vma.GetEnd()
 			len := end
 			if vend < end {
 				end = vend
 			}
 			len = len - start
-			iov.start = start
-			iov.img_start = start
-			iov.end = iov.start + len
+			iov := newIov(mm.pagesz, start, start+len, start)
 			iovs.append(iov)
 
-			if len > max_iov_len {
-				max_iov_len = len
+			if len > maxIovLen {
+				maxIovLen = len
 			}
 
 			if end < vend {
-				db.DPrintf(db.TEST, "%d vma %v\n", end, vma)
 				break
 			}
 			start = vend
 		}
 	}
-	// XXX do something with max_iov_len
-	db.DPrintf(db.TEST, "max_iov_len %d\n", max_iov_len)
-	return iovs
+	return iovs, int(npages), int(maxIovLen)
 }

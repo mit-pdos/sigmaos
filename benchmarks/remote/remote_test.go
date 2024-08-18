@@ -57,7 +57,7 @@ func TestInitFS(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	ts.RunStandardBenchmark(benchName, driverVM, GetInitFSCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
@@ -83,7 +83,7 @@ func TestColdStart(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
@@ -109,7 +109,7 @@ func TestSchedScalability(t *testing.T) {
 		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400, 50600, 55200}
 		dur time.Duration = 5 * time.Second
 	)
-	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, r := range rps {
 		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
 		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
@@ -144,7 +144,7 @@ func TestMR(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, mrApp := range mrApps {
 		for _, prewarmRealm := range prewarmRealms {
 			benchName := filepath.Join(benchNameBase, mrApp)
@@ -183,7 +183,7 @@ func TestHotelTailLatency(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
 	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
@@ -212,7 +212,7 @@ func TestSocialnetTailLatency(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetSocialnetClientCmdConstructor(true, len(driverVMs), rps, dur)
 	getFollowerCmd := GetSocialnetClientCmdConstructor(false, len(driverVMs), rps, dur)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
@@ -235,7 +235,7 @@ func TestBEImgresizeMultiplexing(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgresizeMultiplexingCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
@@ -263,7 +263,7 @@ func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetHotelImgresizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
 	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)

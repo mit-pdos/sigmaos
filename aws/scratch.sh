@@ -51,7 +51,14 @@ for vm in $vms; do
 #  sudo apt update
 #  sudo apt install -y apparmor-utils
 #  sudo aa-status
-#ls -lha /tmp/sigmaos-data/wiki-20G
-sed -i "s|region=us-east-1|region = us-east-1|g" ~/.aws/credentials
+#  ls -lha /tmp/sigmaos-data/wiki-20G
+#  sed -i "s|region=us-east-1|region = us-east-1|g" ~/.aws/credentials
+
+#  sudo apt remove -y golang golang-go
+#  wget https://go.dev/dl/go1.23.0.linux-amd64.tar.gz
+#  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.23.0.linux-amd64.tar.gz
+#  sed -i.old '1s;^;export PATH=\$PATH:/usr/local/go/bin\n;' ~/.profile
+#  sed -i.old '1s;^;export PATH=\$PATH:/usr/local/go/bin\n;' ~/.bashrc
+  go version
 ENDSSH
 done

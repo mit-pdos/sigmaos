@@ -72,10 +72,10 @@ func (pmi *TpagemapImg) find(addr uint64) int {
 	return -1
 }
 
-func (pmi *TpagemapImg) readPage(imgdir string, pid, pi int, page []byte) error {
+func (pmi *TpagemapImg) readPage(pagesdir string, pid, pi int, page []byte) error {
 	ph := pmi.PageMapHead.Message.(*pagemap.PagemapHead)
 	pageId := int(ph.GetPagesId())
-	pn := filepath.Join(imgdir, "pages-"+strconv.Itoa(pageId)+".img")
+	pn := filepath.Join(pagesdir, "pages-"+strconv.Itoa(pageId)+".img")
 	f, err := os.Open(pn)
 	if err != nil {
 		return err

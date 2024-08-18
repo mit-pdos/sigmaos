@@ -204,31 +204,33 @@ func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid) error {
 	}
 	jailPath := "/home/sigmaos/jail/" + sigmaPid.String() + "/"
 	if LAZY {
-		err := lazyPages(imgDir)
+		// XXX first dir should have all non-lazy pages and holes for lazy pages
+		// XXX second dir should have all non-lazy pages (or all for now)
+		err := runLazypagesd(imgDir, imgDir)
 		db.DPrintf(db.CKPT, "lazyPages err %v", err)
 		if err != nil {
 			return err
 		}
+		// XXX use pipe
 		// give lazy-pages daemon some time to start
 		time.Sleep(1 * time.Second)
 	}
 	return restoreProc(criuInst, imgDir, jailPath)
 }
 
-func lazyPages(imgDir string) error {
-	db.DPrintf(db.CKPT, "Start lazyPages server %v", imgDir)
+func runLazypagesd(imgDir, pagesDir string) error {
+	db.DPrintf(db.CKPT, "Start lazypagesd img %v pages %v", imgDir, pagesDir)
 	//cmd := exec.Command("criu", append([]string{"lazy-pages", "-vvvv", "--log-file", "lazy.log", "-D"}, imgDir)...)
-	cmd := exec.Command("lazypagesd", []string{imgDir}...)
+	cmd := exec.Command("lazypagesd", []string{imgDir, pagesDir}...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 	go func() {
-		db.DPrintf(db.CKPT, "Wait lazyPages%v", imgDir)
+		db.DPrintf(db.CKPT, "Wait lazypagesd %v %v", imgDir, pagesDir)
 		err := cmd.Wait()
-		db.DPrintf(db.CKPT, "Wait lazyPages returns %v", err)
-		dumpLog(imgDir + "/lazy.log")
+		db.DPrintf(db.CKPT, "Wait lazypagesd returns %v", err)
 	}()
 	return nil
 }

@@ -21,12 +21,13 @@ import (
 const SOCKNAME = "lazy-pages.socket"
 
 type LazyPagesSrv struct {
-	imgdir string
-	pagesz int
+	imgdir   string
+	pagesdir string
+	pagesz   int
 }
 
-func NewLazyPageSrv(imgdir string) *LazyPagesSrv {
-	return &LazyPagesSrv{imgdir: imgdir, pagesz: os.Getpagesize()}
+func NewLazyPageSrv(imgdir, pagesdir string) *LazyPagesSrv {
+	return &LazyPagesSrv{imgdir: imgdir, pagesdir: pagesdir, pagesz: os.Getpagesize()}
 }
 
 func (lps *LazyPagesSrv) Run() error {
@@ -138,7 +139,7 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 				db.DFatalf("no page for %x", addr)
 			}
 			db.DPrintf(db.LAZYPAGESSRV, "page fault %d: %d(%x) -> %v %d", nfault, addr, addr, iov, pi)
-			if err := pmi.readPage(lps.imgdir, pid, pi, page); err != nil {
+			if err := pmi.readPage(lps.pagesdir, pid, pi, page); err != nil {
 				db.DFatalf("no page content for %x", addr)
 			}
 			lps.copyPage(fd, addr, page)

@@ -81,7 +81,7 @@ func (lps *LazyPagesSrv) Run() error {
 			fd := fds[0]
 			db.DPrintf(db.ALWAYS, "Received fd %d\n", fd)
 			if err := lps.handleReqs(int(pid), fd); err != nil {
-				db.DPrintf(db.ALWAYS, "handle fd %v err\n", fd, err)
+				db.DFatalf("handle fd %v err %v", fd, err)
 			}
 		}(conn)
 	}

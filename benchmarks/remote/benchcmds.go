@@ -24,21 +24,31 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	)
 }
 
-func GetColdStartCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
-	const (
-		debugSelectors string = "\"TEST;BENCH;LOADGEN;SPAWN_LAT;NET_LAT;REALM_GROW_LAT;CACHE_LAT;WALK_LAT;FSETCD_LAT;ATTACH_LAT;CHUNKSRV;CHUNKCLNT;\""
-	)
-	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
-		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
-		"--run TestMicroScheddSpawn "+
-		"--use_rust_proc "+
-		"--schedd_dur 5s "+
-		"--schedd_max_rps 8 "+
-		"> /tmp/bench.out 2>&1",
-		debugSelectors,
-		ccfg.LeaderNodeIP,
-		bcfg.Tag,
-	)
+func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;LOADGEN;SPAWN_LAT;NETSIGMA_PERF;\""
+		)
+		prewarm := ""
+		if prewarmRealm {
+			prewarm = "--prewarm_realm"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+			"--run TestMicroScheddSpawn "+
+			"--use_rust_proc "+
+			"--schedd_dur %s "+
+			"--schedd_max_rps %s "+
+			"%s "+ // prewarmRealm
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			dur.String(),
+			strconv.Itoa(rps),
+			prewarm,
+		)
+	}
 }
 
 // Construct command string to run BE imgresize multiplexing benchmark
@@ -211,6 +221,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 			"--sn_read_only "+
 			"--sn_dur %s "+
 			"--sn_max_rps %s "+
+			"--mongourl %s "+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
@@ -221,6 +232,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 			strconv.Itoa(numClients),
 			dursToString(dur),
 			rpsToString(rps),
+			ccfg.LeaderNodeIP+":4407",
 		)
 	}
 }

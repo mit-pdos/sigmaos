@@ -2,6 +2,7 @@ package remote
 
 import (
 	"flag"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -69,7 +70,33 @@ func TestColdStart(t *testing.T) {
 	const (
 		driverVM        int  = 7
 		numNodes        int  = 8
-		numCoresPerNode uint = 16
+		numCoresPerNode uint = 40 // 16
+		onlyOneFullNode bool = false
+		turboBoost      bool = true
+	)
+	// Cold-start benchmark configuration parameters
+	var (
+		rps int           = 8
+		dur time.Duration = 5 * time.Second
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+}
+
+// Test SigmaOS scheduling scalability (and warm-start).
+func TestSchedScalability(t *testing.T) {
+	var (
+		benchNameBase string = "sched_scalability"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM        int  = 9  // 24
+		numNodes        int  = 8  // 23
+		numCoresPerNode uint = 16 // 40
 		onlyOneFullNode bool = true
 		turboBoost      bool = true
 	)
@@ -77,8 +104,16 @@ func TestColdStart(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
+	// Cold-start benchmark configuration parameters
+	var (
+		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400, 50600, 55200}
+		dur time.Duration = 5 * time.Second
+	)
 	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
-	ts.RunStandardBenchmark(benchName, driverVM, GetColdStartCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	for _, r := range rps {
+		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
+		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	}
 }
 
 // Run the SigmaOS MapReduce benchmark
@@ -169,7 +204,7 @@ func TestSocialnetTailLatency(t *testing.T) {
 	)
 	// Socialnet benchmark configuration parameters
 	var (
-		rps         []int           = []int{1000, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000}
+		rps         []int           = []int{1000, 2000, 4000, 6000}
 		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
 		clientDelay time.Duration   = 10 * time.Second
 	)

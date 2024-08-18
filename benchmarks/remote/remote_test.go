@@ -70,7 +70,7 @@ func TestColdStart(t *testing.T) {
 	const (
 		driverVM        int  = 7
 		numNodes        int  = 8
-		numCoresPerNode uint = 40 // 16
+		numCoresPerNode uint = 16
 		onlyOneFullNode bool = false
 		turboBoost      bool = true
 	)
@@ -94,8 +94,8 @@ func TestSchedScalability(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 9 // 24
-		numNodes        int  = 8 // 23
+		driverVM        int  = 24
+		numNodes        int  = 23
 		numCoresPerNode uint = 40
 		onlyOneFullNode bool = true
 		turboBoost      bool = true

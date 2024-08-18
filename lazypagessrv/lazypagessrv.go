@@ -100,7 +100,7 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 	iovs, npages, maxIovLen := mm.collectIovs(pmi)
 	nfault := 0
 	page := make([]byte, pmi.pagesz) // XXX maxIovLen
-	db.DPrintf(db.ALWAYS, "lazypages: pid %d fd %d iovs %d npages %d maxIovLen %d", pid, fd, iovs.len(), npages, maxIovLen)
+	db.DPrintf(db.ALWAYS, "lazypages: img %v pages %v pid %d fd %d iovs %d npages %d maxIovLen %d", lps.imgdir, lps.pagesdir, pid, fd, iovs.len(), npages, maxIovLen)
 	for {
 		if _, err := unix.Poll(
 			[]unix.PollFd{{

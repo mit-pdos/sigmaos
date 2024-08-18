@@ -74,7 +74,11 @@ func (cs *ChildState) Started(pid sp.Tpid, seqno *proc.ProcSeqno, err error) {
 	defer cs.Unlock()
 
 	// Record ID of schedd this proc was spawned on
-	cs.ranOn[pid].Complete(seqno, err)
+	if sf, ok := cs.ranOn[pid]; ok {
+		sf.Complete(seqno, err)
+	} else {
+		db.DPrintf(db.ERROR, "Error started unknown proc")
+	}
 }
 
 func (cs *ChildState) Exited(pid sp.Tpid, status *proc.Status) {

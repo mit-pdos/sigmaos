@@ -22,14 +22,6 @@ import (
 //   sudo criu -vvvv dump --images-dir dump --shell-job --log-file log.txt -t 1473191
 //   sudo criu restore -vvvv --images-dir dump --shell-job --log-file log-restore.txt
 
-// lazy-pages:
-// ./bin/linux/ckptsrv 100
-// sudo criu dump -vvvv --images-dir dump --shell-job --log-file log.txt -t $(pgrep ckptclnt)
-// or
-//   ./bin/linux/lazy-pages dump1
-// sudo criu lazy-pages -D dump
-// sudo criu restore -D dump --shell-job --lazy-pages
-
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %v <sleep_length>\n", os.Args[0])

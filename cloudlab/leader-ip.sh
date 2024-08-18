@@ -7,6 +7,9 @@ usage() {
 while [[ $# -gt 1 ]]; do
   key="$1"
   case $key in
+  --parallel)
+    shift
+    ;;
   --vpc)
     shift
     shift

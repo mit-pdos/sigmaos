@@ -72,8 +72,9 @@ func waitStartProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 func waitExitProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	for _, p := range ps {
 		status, err := ts.WaitExit(p.GetPid())
-		assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
-		assert.True(ts.Ts.T, status.IsStatusOK(), "Bad status: %v", status)
+		if assert.Nil(ts.Ts.T, err, "WaitStart: %v", err) {
+			assert.True(ts.Ts.T, status.IsStatusOK(), "Bad status: %v", status)
+		}
 	}
 	db.DPrintf(db.TEST, "%v burst-spawned procs have all started", len(ps))
 }
@@ -93,8 +94,9 @@ func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, pro
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
-	assert.False(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
-	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
+	if assert.Nil(ts.Ts.T, err, "WaitStart: %v", err) {
+		assert.False(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
+	}
 	return 99 * time.Second
 }
 
@@ -104,10 +106,11 @@ func runSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, kernelp
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
-	ok := assert.True(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
-	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
-	if ok {
-		return time.Duration(status.Data().(float64))
+	if assert.Nil(ts.Ts.T, err, "WaitStart: %v", err) {
+		ok := assert.True(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
+		if ok {
+			return time.Duration(status.Data().(float64))
+		}
 	}
 	return 99 * time.Second
 }

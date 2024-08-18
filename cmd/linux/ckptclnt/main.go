@@ -12,8 +12,6 @@ import (
 	"time"
 )
 
-const SRV = false
-
 // mkdir /tmp/fuse
 // echo hello > /tmp/fuse/x
 // Run ckptsrv first:
@@ -52,12 +50,10 @@ func main() {
 		db.DFatalf("Error creating %v\n", err)
 	}
 
-	if SRV {
-		_, err = os.Open("/mnt/binfs/x")
-		//_, err = os.Open("/mnt/binfs")
-		if err != nil {
-			db.DFatalf("open failed err %v\n", err)
-		}
+	_, err = os.Open("/mnt/binfs/x")
+	//_, err = os.Open("/mnt/binfs")
+	if err != nil {
+		db.DFatalf("open failed err %v\n", err)
 	}
 	// listOpenfiles()
 

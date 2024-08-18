@@ -14,11 +14,21 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	const (
 		debugSelectors string = "\"BENCH;TEST;\""
 	)
+	netproxy := ""
+	if bcfg.NoNetproxy {
+		netproxy = "--nonetproxy"
+	}
+	overlays := ""
+	if bcfg.Overlays {
+		overlays = "--overlays"
+	}
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
-		"go test -v sigmaos/fslib -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+		"go test -v sigmaos/fslib -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 		"--run InitFs "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
+		netproxy,
+		overlays,
 		ccfg.LeaderNodeIP,
 		bcfg.Tag,
 	)
@@ -27,14 +37,22 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;BENCH;LOADGEN;SPAWN_LAT;\""
+			debugSelectors string = "\"TEST;BENCH;LOADGEN;\""
 		)
 		prewarm := ""
 		if prewarmRealm {
 			prewarm = "--prewarm_realm"
 		}
+		netproxy := ""
+		if bcfg.NoNetproxy {
+			netproxy = "--nonetproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
-			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestMicroScheddSpawn "+
 			"--use_rust_proc "+
 			"--schedd_dur %s "+
@@ -42,6 +60,8 @@ func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBe
 			"%s "+ // prewarmRealm
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
+			netproxy,
+			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			dur.String(),
@@ -56,8 +76,16 @@ func GetBEImgresizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) strin
 	const (
 		debugSelectors string = "\"TEST;BENCH;\""
 	)
+	netproxy := ""
+	if bcfg.NoNetproxy {
+		netproxy = "--nonetproxy"
+	}
+	overlays := ""
+	if bcfg.Overlays {
+		overlays = "--overlays"
+	}
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
-		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 		"--run TestRealmBalanceImgResizeImgResize "+
 		"--sleep 60s "+
 		"--n_imgresize 40 "+
@@ -69,6 +97,8 @@ func GetBEImgresizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) strin
 		"--nrealm 4 "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
+		netproxy,
+		overlays,
 		ccfg.LeaderNodeIP,
 		bcfg.Tag,
 	)
@@ -110,8 +140,16 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 		if asyncRW {
 			asyncrw = "--mr_asyncrw"
 		}
+		netproxy := ""
+		if bcfg.NoNetproxy {
+			netproxy = "--nonetproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
-			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run AppMR "+
 			"%s "+ // prewarm
 			"%s "+ // asyncrw
@@ -120,6 +158,8 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
+			netproxy,
+			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			prewarm,
@@ -163,10 +203,18 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 		if scaleCache {
 			autoscaleCache = "--hotel_cache_autoscale"
 		}
+		netproxy := ""
+		if bcfg.NoNetproxy {
+			netproxy = "--nonetproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
 			"ulimit -n 100000; "+
-			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run %s "+
 			"--nclnt %s "+
 			"--hotel_ncache 3 "+
@@ -180,6 +228,8 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
+			netproxy,
+			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			testName,
@@ -214,10 +264,18 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 		} else {
 			testName = "SocialNetJustCliSigmaos"
 		}
+		netproxy := ""
+		if bcfg.NoNetproxy {
+			netproxy = "--nonetproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
 			"ulimit -n 100000; "+
-			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run %s "+
 			"--nclnt %s "+
 			"--sn_read_only "+
@@ -228,6 +286,8 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
+			netproxy,
+			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			testName,
@@ -266,9 +326,17 @@ func GetHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, dur 
 		if scaleCache {
 			autoscaleCache = "--hotel_cache_autoscale"
 		}
+		netproxy := ""
+		if bcfg.NoNetproxy {
+			netproxy = "--nonetproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
-			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run RealmBalanceHotelImgResize "+
 			"--nclnt %s "+
 			"--hotel_ncache 3 "+
@@ -288,6 +356,8 @@ func GetHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, dur 
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
+			netproxy,
+			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			strconv.Itoa(numClients),

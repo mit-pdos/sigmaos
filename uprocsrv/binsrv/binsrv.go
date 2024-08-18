@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	// binfsd mounts itself here:
+	// binsrv mounts itself here:
 	BINFSMNT = "/mnt/binfs/"
 
 	DEBUG = false

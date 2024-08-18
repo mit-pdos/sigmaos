@@ -215,28 +215,29 @@ func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid) error {
 	return restoreProc(criuInst, imgDir, jailPath)
 }
 
-func lazyPages(chktPath string) error {
-	db.DPrintf(db.CKPT, "Start lazyPages server %v", chktPath)
-	cmd := exec.Command("criu", append([]string{"lazy-pages", "-vvvv", "--log-file", "lazy.log", "-D"}, chktPath)...)
+func lazyPages(imgDir string) error {
+	db.DPrintf(db.CKPT, "Start lazyPages server %v", imgDir)
+	//cmd := exec.Command("criu", append([]string{"lazy-pages", "-vvvv", "--log-file", "lazy.log", "-D"}, imgDir)...)
+	cmd := exec.Command("lazypagesd", []string{imgDir}...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 	go func() {
-		db.DPrintf(db.CKPT, "Wait lazyPages%v", chktPath)
+		db.DPrintf(db.CKPT, "Wait lazyPages%v", imgDir)
 		err := cmd.Wait()
 		db.DPrintf(db.CKPT, "Wait lazyPages returns %v", err)
-		dumpLog(chktPath + "/lazy.log")
+		dumpLog(imgDir + "/lazy.log")
 	}()
 	return nil
 }
 
-func restoreProc(criuInst *criu.Criu, chktPath, jailPath string) error {
-	db.DPrintf(db.CKPT, "restoreProc %v", chktPath)
-	img, err := os.Open(chktPath)
+func restoreProc(criuInst *criu.Criu, imgDir, jailPath string) error {
+	db.DPrintf(db.CKPT, "restoreProc %v", imgDir)
+	img, err := os.Open(imgDir)
 	if err != nil {
-		db.DPrintf(db.CKPT, "restoreProc: Open %v err", chktPath, err)
+		db.DPrintf(db.CKPT, "restoreProc: Open %v err", imgDir, err)
 		return err
 	}
 	defer img.Close()
@@ -253,7 +254,7 @@ func restoreProc(criuInst *criu.Criu, chktPath, jailPath string) error {
 	}
 	err = criuInst.Restore(opts, nil)
 	db.DPrintf(db.CKPT, "restoreProc: Restore err %v", err)
-	dumpLog(chktPath + "/restore.log")
+	dumpLog(imgDir + "/restore.log")
 	if err != nil {
 		return err
 	}

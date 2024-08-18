@@ -179,7 +179,7 @@ if [ "${TARGET}" == "local" ]; then
   cp $KERNELBIN/uprocd $UPROCD_BIN/
   cp $KERNELBIN/spproxyd $UPROCD_BIN/
   cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
-  cp $KERNELBIN/binfsd $UPROCD_BIN/
+  cp $KERNELBIN/lazypagesd $UPROCD_BIN/
 fi
 echo "========== Done copying kernel bins for uproc =========="
 

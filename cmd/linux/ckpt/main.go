@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"os"
 	"strconv"
 
@@ -21,20 +22,32 @@ import (
 // sudo criu restore -D dump1 --shell-job --lazy-pages --log-file restore.txt
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <sleep_length>\n", os.Args[0])
+	if len(os.Args) < 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %v <seconds> <npages>\n", os.Args[0])
 		os.Exit(1)
 	}
 
 	db.DPrintf(db.ALWAYS, "Pid: %d", os.Getpid())
 
-	n, err := strconv.Atoi(os.Args[1])
+	s, err := strconv.Atoi(os.Args[1])
 	if err != nil {
 		log.Printf("Atoi err %v\n", err)
 		return
 	}
 
-	timer := time.NewTicker(time.Duration(n) * time.Second)
+	n, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		log.Printf("Atoi err %v\n", err)
+		return
+	}
+
+	pagesz := os.Getpagesize()
+	mem := make([]byte, pagesz*n)
+	for i := 0; i < n; i++ {
+		mem[i*pagesz] = byte(i)
+	}
+
+	timer := time.NewTicker(time.Duration(s) * time.Second)
 
 	for {
 		select {
@@ -43,6 +56,8 @@ func main() {
 			return
 		default:
 			log.Print(".")
+			r := rand.IntN(n)
+			mem[r*pagesz] = byte(r)
 			time.Sleep(2 * time.Second)
 		}
 	}

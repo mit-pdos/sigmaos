@@ -94,9 +94,9 @@ func TestSchedScalability(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 9  // 24
-		numNodes        int  = 8  // 23
-		numCoresPerNode uint = 16 // 40
+		driverVM        int  = 9 // 24
+		numNodes        int  = 8 // 23
+		numCoresPerNode uint = 40
 		onlyOneFullNode bool = true
 		turboBoost      bool = true
 	)

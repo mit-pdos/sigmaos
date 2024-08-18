@@ -164,6 +164,7 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			autoscaleCache = "--hotel_cache_autoscale"
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
 			"ulimit -n 100000; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
 			"--run %s "+
@@ -214,6 +215,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 			testName = "SocialNetJustCliSigmaos"
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
 			"ulimit -n 100000; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
 			"--run %s "+

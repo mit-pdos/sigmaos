@@ -54,6 +54,7 @@ func RunMongod(mongodUrl string) error {
 	if err != nil {
 		dbg.DFatalf("Error NewSigmaClnt: %v", err)
 	}
+	sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
 	dbg.DPrintf(dbg.MONGO, "Making mongo proxy server at %v", mongodUrl)
 	s, err := newServer(mongodUrl)
 	if err != nil {

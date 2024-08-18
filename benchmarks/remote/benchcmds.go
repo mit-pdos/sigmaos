@@ -27,7 +27,7 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;BENCH;LOADGEN;SPAWN_LAT;NETSIGMA_PERF;\""
+			debugSelectors string = "\"TEST;BENCH;LOADGEN;SPAWN_LAT;\""
 		)
 		prewarm := ""
 		if prewarmRealm {
@@ -150,7 +150,7 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, clientDelay time.Duration) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;NETSIGMA_PERF;\""
+			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
 			perfSelectors  string = "\"\""
 		)
 		testName := ""

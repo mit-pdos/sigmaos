@@ -25,8 +25,10 @@ const SRV = false
 //   sudo criu restore -vvvv --images-dir dump --shell-job --log-file log-restore.txt
 
 // lazy-pages:
-// sudo criu -vvvv dump --images-dir dump --shell-job --log-file log.txt -t 1473191
-// cp -r dump dump1
+// ./bin/linux/ckptsrv 100
+// sudo criu dump -vvvv --images-dir dump --shell-job --log-file log.txt -t $(pgrep ckptclnt)
+// or
+//   ./bin/linux/lazy-pages dump1
 // sudo criu lazy-pages -D dump
 // sudo criu restore -D dump --shell-job --lazy-pages
 

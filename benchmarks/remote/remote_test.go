@@ -154,6 +154,35 @@ func TestHotelTailLatency(t *testing.T) {
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
+// Test Socialnet application's tail latency.
+func TestSocialnetTailLatency(t *testing.T) {
+	var (
+		benchName string = "socialnet_tail_latency"
+		driverVMs []int  = []int{8}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes        int  = 8
+		numCoresPerNode uint = 4
+		onlyOneFullNode bool = false
+		turboBoost      bool = false
+	)
+	// Socialnet benchmark configuration parameters
+	var (
+		rps         []int           = []int{1000, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000}
+		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
+		clientDelay time.Duration   = 10 * time.Second
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark:\n%v", ts)
+	getLeaderCmd := GetSocialnetClientCmdConstructor(true, len(driverVMs), rps, dur)
+	getFollowerCmd := GetSocialnetClientCmdConstructor(false, len(driverVMs), rps, dur)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+}
+
 // Test multiplexing Best Effort Imgresize jobs.
 func TestBEImgresizeMultiplexing(t *testing.T) {
 	var (
@@ -193,7 +222,7 @@ func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 		dur         []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
 		cacheType   string          = "cached"
 		scaleCache  bool            = false
-		clientDelay time.Duration   = 10 * time.Second
+		clientDelay time.Duration   = 20 * time.Second
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

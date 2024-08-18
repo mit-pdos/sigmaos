@@ -120,7 +120,10 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 	}
 }
 
-// Construct command string to run hotel benchmark's lead client
+// Construct command string to run hotel benchmark's load-generating client
+//
+// - numClients specifies the total number of client machines which will make
+// requests to the hotel application
 //
 // - rps specifies the number of requests-per-second this client should execute
 // in each phase of the benchmark.
@@ -179,6 +182,66 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 	}
 }
 
+// Construct command string to run socialnet benchmark's load-generating client
+//
+// - numClients specifies the total number of client machines which will make
+// requests to the socialnet application
+//
+// - rps specifies the number of requests-per-second this client should execute
+// in each phase of the benchmark.
+//
+// - dur specifies the duration for which each rps period should last.
+func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;LOADGEN;\""
+			perfSelectors  string = "\"\""
+		)
+		testName := ""
+		if leader {
+			testName = "SocialNetSigmaos"
+		} else {
+			testName = "SocialNetJustCliSigmaos"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+			"--run %s "+
+			"--nclnt %s "+
+			"--sn_read_only "+
+			"--sn_dur %s "+
+			"--sn_max_rps %s "+
+			"--prewarm_realm "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			perfSelectors,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			testName,
+			strconv.Itoa(numClients),
+			dursToString(dur),
+			rpsToString(rps),
+		)
+	}
+}
+
+// Construct command string to run hotel benchmark's load-generating client
+//
+// - numClients specifies the total number of client machines which will make
+// requests to the hotel application
+//
+// - rps specifies the number of requests-per-second this client should execute
+// in each phase of the benchmark.
+//
+// - dur specifies the duration for which each rps period should last.
+//
+// - cacheType specifies the type of cache service that hotel should use (e.g.,
+// cached vs kvd vs memcached).
+//
+// - If scaleCache is true, the cache autoscales.
+//
+// - clientDelay specifies the delay for which the client should wait before
+// starting to send requests.
 func GetHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, clientDelay time.Duration) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
@@ -201,15 +264,12 @@ func GetHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, dur 
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
-			"--n_imgresize 600 "+
+			"--n_imgresize 590 "+
 			"--n_imgresize_per 1 "+
 			"--imgresize_path name/ux/~local/8.jpg "+
 			"--imgresize_mcpu 0 "+
 			"--imgresize_mem 1500 "+
 			"--imgresize_nround 500 "+
-			""+
-			""+
-			""+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,

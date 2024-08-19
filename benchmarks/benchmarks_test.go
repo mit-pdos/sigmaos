@@ -706,7 +706,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	db.DPrintf(db.TEST, "Setup phase done.")
 	if N_CLNT > 1 {
 		// Wait for hotel clients to start up on other machines.
-		db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
+		db.DPrintf(db.ALWAYS, "Leader waiting for %v clnts", N_CLNT)
 		waitForClnts(rootts, N_CLNT)
 		db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
 	}

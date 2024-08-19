@@ -21,8 +21,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := lazypagessrv.DumpNonLazyPages(os.Args[1], pid); err != nil {
-		db.DPrintf(db.ALWAYS, "SplitPages err %w", err)
+	if err := lazypagessrv.FilterLazyPages(os.Args[1], pid); err != nil {
+		db.DPrintf(db.ALWAYS, "FilterLazyPages err %w", err)
 		os.Exit(1)
 	}
 }

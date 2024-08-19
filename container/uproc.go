@@ -14,6 +14,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
+	"sigmaos/lazypagessrv"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocsrv/binsrv"
@@ -21,7 +22,7 @@ import (
 
 const (
 	IMGDIR = "/home/sigmaos/ckptimg/"
-	LAZY   = true
+	LAZY   = false
 )
 
 type uprocCmd struct {
@@ -130,6 +131,13 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 	dumpLog(procImgDir + "/dump.log")
 	if err != nil {
 		return procImgDir, err
+	}
+	if LAZY {
+		// XXX pid is from inside container
+		if err := lazypagessrv.FilterLazyPages(procImgDir, 1); err != nil {
+			db.DPrintf(db.CKPT, "CheckpointProc: DumpNonLazyPages err %v", err)
+			return procImgDir, err
+		}
 	}
 	return procImgDir, nil
 }
@@ -297,6 +305,18 @@ func copyDir(src, dst string) error {
 		sourcePath := filepath.Join(src, entry.Name())
 		destPath := filepath.Join(dst, entry.Name())
 		if err := copyFile(sourcePath, destPath); err != nil {
+			return err
+		}
+	}
+	if LAZY {
+		pageId := 1
+		if err := os.Remove(filepath.Join(dst, "pages-"+strconv.Itoa(pageId)+".img")); err != nil {
+			db.DPrintf(db.CKPT, "copyDir: Remove err %v", err)
+			return err
+		}
+		// XXX pid is from inside container
+		if err := lazypagessrv.ExpandLazyPages(dst, 1); err != nil {
+			db.DPrintf(db.CKPT, "copyDir: ExpandLazyPages err %v", err)
 			return err
 		}
 	}

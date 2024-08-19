@@ -203,7 +203,7 @@ func (mm *Tmm) collectIovs(pmi *TpagemapImg) (*Iovs, int, int) {
 	return iovs, int(npages), int(maxIovLen)
 }
 
-func DumpNonLazyPages(imgdir string, pid int) error {
+func FilterLazyPages(imgdir string, pid int) error {
 	const (
 		PE_LAZY uint32 = (1 << 1)
 	)
@@ -231,8 +231,6 @@ func DumpNonLazyPages(imgdir string, pid int) error {
 	defer dst.Close()
 
 	page := make([]byte, pmi.pagesz)
-	zero := make([]byte, pmi.pagesz)
-	pi := uint32(0)
 	for _, pme := range pmi.PagemapEntries {
 		pm := pme.Message.(*pagemap.PagemapEntry)
 		n := pm.GetNrPages()
@@ -241,17 +239,63 @@ func DumpNonLazyPages(imgdir string, pid int) error {
 				return err
 			}
 			if pm.GetFlags()&PE_LAZY == PE_LAZY {
-				db.DPrintf(db.CKPT, "pm %v\n", pm)
-				if _, err := dst.Write(zero); err != nil {
-					return err
-				}
+				// skip
 			} else {
 				if _, err := dst.Write(page); err != nil {
 					return err
 				}
 			}
 		}
-		pi += n
+	}
+	return nil
+}
+
+func ExpandLazyPages(imgdir string, pid int) error {
+	const (
+		PE_LAZY uint32 = (1 << 1)
+	)
+
+	pmi, err := newTpagemapImg(imgdir, pid)
+	if err != nil {
+		return err
+	}
+
+	ph := pmi.PageMapHead.Message.(*pagemap.PagemapHead)
+	pageId := int(ph.GetPagesId())
+
+	pn := filepath.Join(imgdir, "pages-nonlazy-"+strconv.Itoa(pageId)+".img")
+	src, err := os.Open(pn)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	pn = filepath.Join(imgdir, "pages-"+strconv.Itoa(pageId)+".img")
+	dst, err := os.Create(pn)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	page := make([]byte, pmi.pagesz)
+	zero := make([]byte, pmi.pagesz)
+	for _, pme := range pmi.PagemapEntries {
+		pm := pme.Message.(*pagemap.PagemapEntry)
+		n := pm.GetNrPages()
+		for i := uint32(0); i < n; i++ {
+			if pm.GetFlags()&PE_LAZY == PE_LAZY {
+				if _, err := dst.Write(zero); err != nil {
+					return err
+				}
+			} else {
+				if _, err := src.Read(page); err != nil {
+					return err
+				}
+				if _, err := dst.Write(page); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return nil
 }

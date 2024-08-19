@@ -76,7 +76,10 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 		}()
 	}
 	leaderBenchCmd := getLeaderClientBenchCmd(ts.BCfg, ccfg)
-	followerBenchCmd := getFollowerClientBenchCmd(ts.BCfg, ccfg)
+	followerBenchCmd := "no-cmd"
+	if getFollowerClientBenchCmd != nil {
+		getFollowerClientBenchCmd(ts.BCfg, ccfg)
+	}
 	done := make(chan error)
 	for i := 0; i < len(driverVMs); i++ {
 		// Select the driver VM on which to run this client

@@ -71,6 +71,10 @@ func (lcfg *LocalFSConfig) OutputExists(outputDirPath string) bool {
 	return err == nil
 }
 
+func (lcfg *LocalFSConfig) WriteBenchmarkConfig(outputDirPath string, bcfg *BenchConfig, ccfg *ClusterConfig, leaderBenchCmd, followerBenchCmd string) error {
+	return os.WriteFile(filepath.Join(outputDirPath, BENCH_CONFIG_FILE), []byte(fmt.Sprintf("Bench config:\n%v\nCluster config:\n%v\nLeader benchCmd:\n%v\nFollower benchCmd:\n%v", bcfg, ccfg, leaderBenchCmd, followerBenchCmd)), 0644)
+}
+
 // Set up the file system for benchmarking
 func (lcfg *LocalFSConfig) setupFS() error {
 	// Check that script directories exist

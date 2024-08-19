@@ -162,7 +162,7 @@ func TestMR(t *testing.T) {
 func TestHotelTailLatency(t *testing.T) {
 	var (
 		benchName string = "hotel_tail_latency"
-		driverVMs []int  = []int{8, 9} // , 10, 11}
+		driverVMs []int  = []int{8, 9, 10, 11}
 	)
 	// Cluster configuration parameters
 	const (
@@ -173,8 +173,8 @@ func TestHotelTailLatency(t *testing.T) {
 	)
 	// Hotel benchmark configuration parameters
 	var (
-		rps         []int           = []int{250, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000}
-		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
+		rps         []int           = []int{250, 500, 1000, 1500, 2000, 2500}
+		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
 		cacheType   string          = "cached"
 		scaleCache  bool            = false
 		clientDelay time.Duration   = 10 * time.Second
@@ -264,7 +264,7 @@ func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	getLeaderCmd := GetHotelImgresizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
+	getLeaderCmd := GetLCBEHotelImgresizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
 	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }

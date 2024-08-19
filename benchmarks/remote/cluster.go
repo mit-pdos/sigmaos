@@ -78,14 +78,17 @@ func (ccfg *ClusterConfig) RunBenchmark(driverVM int, benchCmd string) error {
 	return nil
 }
 
-func (ccfg *ClusterConfig) CollectResults(benchName string) error {
+func (ccfg *ClusterConfig) CollectResults(benchName string, leaderBenchCmd, followerBenchCmd string) error {
 	outDirPath := ccfg.lcfg.GetOutputDirPath(benchName)
 	args := []string{
 		"--vpc", ccfg.bcfg.VPC,
 		"--perfdir", outDirPath,
 	}
-	err := ccfg.lcfg.RunScriptRedirectOutputFile("./collect-results.sh", CLUSTER_INIT_LOG, args...)
-	if err != nil {
+	// Write the cluster/benchmark config to the output directory
+	if err := ccfg.lcfg.WriteBenchmarkConfig(outDirPath, ccfg.bcfg, ccfg, leaderBenchCmd, followerBenchCmd); err != nil {
+		return fmt.Errorf("Err WriteBenchmarkConfig: %v", err)
+	}
+	if err := ccfg.lcfg.RunScriptRedirectOutputFile("./collect-results.sh", CLUSTER_INIT_LOG, args...); err != nil {
 		return fmt.Errorf("Err CollectResults: %v", err)
 	}
 	return nil

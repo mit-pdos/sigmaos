@@ -75,6 +75,8 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 			assert.Nil(ts.t, err, "Stop cluster: %v", err)
 		}()
 	}
+	leaderBenchCmd := getLeaderClientBenchCmd(ts.BCfg, ccfg)
+	followerBenchCmd := getFollowerClientBenchCmd(ts.BCfg, ccfg)
 	done := make(chan error)
 	for i := 0; i < len(driverVMs); i++ {
 		// Select the driver VM on which to run this client
@@ -82,9 +84,9 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 		// Select the command string to run the benchmark
 		var cmd string
 		if i == 0 {
-			cmd = getLeaderClientBenchCmd(ts.BCfg, ccfg)
+			cmd = leaderBenchCmd
 		} else {
-			cmd = getFollowerClientBenchCmd(ts.BCfg, ccfg)
+			cmd = followerBenchCmd
 			db.DPrintf(db.ALWAYS, "\t----- Starting additional benchmark client %v -----", i)
 		}
 		// Start the benchmark client in a different goroutine
@@ -102,7 +104,7 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 		<-done
 	}
 	// Collect the benchmark results
-	if err := ccfg.CollectResults(benchName); !assert.Nil(ts.t, err, "Stop cluster: %v", err) {
+	if err := ccfg.CollectResults(benchName, leaderBenchCmd, followerBenchCmd); !assert.Nil(ts.t, err, "CollectResults: %v", err) {
 		return
 	}
 }

@@ -205,7 +205,7 @@ func TestSocialnetTailLatency(t *testing.T) {
 	// Socialnet benchmark configuration parameters
 	var (
 		rps         []int           = []int{1000, 2000, 4000, 6000}
-		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
+		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
 		clientDelay time.Duration   = 10 * time.Second
 	)
 	ts, err := NewTstate(t)

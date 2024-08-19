@@ -22,7 +22,7 @@ import (
 
 const (
 	IMGDIR = "/home/sigmaos/ckptimg/"
-	LAZY   = false
+	LAZY   = true
 )
 
 type uprocCmd struct {
@@ -205,6 +205,7 @@ func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid) error {
 	if err := copyDir(imgDir, dst); err != nil {
 		return nil
 	}
+	pagesDir := imgDir
 	imgDir = dst
 	db.DPrintf(db.CKPT, "RestoreProc %v %v", sigmaPid, imgDir)
 	if err := restoreMounts(sigmaPid); err != nil {
@@ -214,7 +215,7 @@ func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid) error {
 	if LAZY {
 		// XXX first dir should have all non-lazy pages and holes for lazy pages
 		// XXX second dir should have all non-lazy pages (or all for now)
-		err := runLazypagesd(imgDir, imgDir)
+		err := runLazypagesd(imgDir, pagesDir)
 		db.DPrintf(db.CKPT, "lazyPages err %v", err)
 		if err != nil {
 			return err

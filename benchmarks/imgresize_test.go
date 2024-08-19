@@ -67,11 +67,14 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 		for _, fn := range fns {
 			ts = append(ts, imgresizesrv.NewTask(fn))
 		}
-		err := ft.SubmitTaskMulti(ts)
+		err := ft.SubmitTaskMulti(i, ts)
 		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
 	}
+	// Sanity check
+	n, err := ft.NTasksTODO()
+	assert.Nil(ji.Ts.T, err, "Error NTasksTODO: %v", err)
+	assert.Equal(ji.Ts.T, n, ji.ntasks, "Num tasks TODO doesn't match ntasks")
 	db.DPrintf(db.ALWAYS, "Done submitting ImgResize tasks")
-
 	return ji
 }
 

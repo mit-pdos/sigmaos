@@ -99,6 +99,7 @@ func (ft *FtTasks) SubmitTaskMulti(is []interface{}) error {
 		bs = append(bs, b...)
 	}
 	t := filepath.Join(ft.todo, rd.String(4))
+	db.DPrintf(db.FTTASKS, "SubmitTaskMulti %v", t)
 	_, err := ft.PutFile(t, 0777, sp.OWRITE, bs)
 	return err
 }

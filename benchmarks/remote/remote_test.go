@@ -242,7 +242,7 @@ func TestBEImgresizeMultiplexing(t *testing.T) {
 func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 	var (
 		benchName string = "lc_be_hotel_imgresize_multiplexing"
-		driverVMs []int  = []int{8, 9} //, 10, 11}
+		driverVMs []int  = []int{8, 9, 10, 11}
 	)
 	// Cluster configuration parameters
 	const (
@@ -257,7 +257,7 @@ func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 		dur         []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
 		cacheType   string          = "cached"
 		scaleCache  bool            = false
-		clientDelay time.Duration   = 20 * time.Second
+		clientDelay time.Duration   = 40 * time.Second
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

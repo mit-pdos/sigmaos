@@ -108,7 +108,6 @@ func (dr *DirReader) WaitNEntries(n int) error {
 		// stop when we have n entries
 		return len(dr.ents) < n
 	})
-	db.DPrintf(db.ALWAYS, "entries: %v", dr.ents)
 	if err != nil {
 		return err
 	}

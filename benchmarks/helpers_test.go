@@ -387,6 +387,9 @@ func waitForClnts(rootts *test.Tstate, n int) {
 	dr := fslib.NewDirReader(rootts.FsLib, clidir)
 	err = dr.WaitNEntries(n) // n - 1 + the semaphore
 	assert.Nil(rootts.T, err, "Err WaitNentries: %v", err)
+	sts, err := rootts.GetDir(clidir)
+	assert.Nil(rootts.T, err, "Err GetDir: %v", err)
+	db.DPrintf(db.TEST, "Got clients: %v", sp.Names(sts))
 	sem := createClntWaitSem(rootts)
 	err = sem.Up()
 	assert.Nil(rootts.T, err, "Err sem.Up: %v", err)

@@ -43,7 +43,9 @@ DIR=$(dirname $0)
 source $DIR/env.sh
 
 vms=`cat servers.txt | cut -d " " -f2` 
+vm_ids=`cat servers.txt | cut -d " " -f1` 
 vma=($vms)
+vm_id_a=($vm_ids)
 MAIN="${vma[0]}"
 
 LOG_DIR=/tmp/sigmaos-node-logs
@@ -61,7 +63,8 @@ for vm in $vms; do
     outfile="/tmp/join.out"
   fi
   # read log files.
-  cmd1="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c '~/sigmaos/logs.sh --merge'\" > $LOG_DIR/$vm.out 2>&1"
+  vm_hostname="${vm_id_a[$idx]}"
+  cmd1="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c '~/sigmaos/logs.sh --merge'\" > $LOG_DIR/$vm_hostname-$vm.out 2>&1"
   # scp performance files.
   cmd2="scp -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:/tmp/sigmaos-perf/* $PERF_DIR"
   # scp the bench.out file.

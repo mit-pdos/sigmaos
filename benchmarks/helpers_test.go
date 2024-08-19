@@ -401,12 +401,13 @@ func clientReady(rootts *test.Tstate) {
 	// Make sure the clients directory has been created.
 	err := rootts.MkDir(clidir, 0777)
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
+	// Create a semaphore, which the leader will signal in order to start the benchmark
+	sem := createClntWaitSem(rootts)
 	// Register the client as ready.
 	cid := "clnt-" + rand.String(4)
 	_, err = rootts.PutFile(filepath.Join(clidir, cid), 0777, sp.OWRITE, nil)
 	assert.Nil(rootts.T, err, "Err PutFile: %v", err)
-	// Create a semaphore and wait for the leader to start the benchmark
-	sem := createClntWaitSem(rootts)
+	// Wait for the leader's signal
 	db.DPrintf(db.TEST, "sem.Down %v", cid)
 	sem.Down()
 	db.DPrintf(db.TEST, "sem.Down done %v", cid)

@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fttasks"
 	"sigmaos/groupmgr"
 	"sigmaos/imgresizesrv"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"

@@ -53,7 +53,8 @@ func (sf *SpawnFuture) Get() (*proc.ProcSeqno, error) {
 func (sf *SpawnFuture) Complete(seqno *proc.ProcSeqno, err error) {
 	// Sanity check that completions only happen once.
 	if sf.done {
-		db.DFatalf("Double-completed spawn future")
+		db.DPrintf(db.ERROR, "Double-completed spawn future %v", seqno)
+		db.DFatalf("Double-completed spawn future %v", seqno)
 	}
 	sf.seqno = seqno
 	sf.err = err

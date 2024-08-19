@@ -88,7 +88,8 @@ func (cs *ChildState) Exited(pid sp.Tpid, status *proc.Status) {
 
 	// Sanity check that threads won't block indefinitely.
 	if !cs.ranOn[pid].done {
-		db.DFatalf("Error exited future not completed")
+		db.DPrintf(db.ERROR, "Error exited future not completed %v status %v", pid, status)
+		db.DFatalf("Error exited future not completed %v status %v", pid, status)
 	}
 	// Clean up child state
 	delete(cs.ranOn, pid)

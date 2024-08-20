@@ -263,7 +263,7 @@ func (pq *ProcQ) tryGetRealmQueueL(realm sp.Trealm) (*Queue, bool) {
 }
 
 func (pq *ProcQ) stats() {
-	if !db.WillBePrinted(db.PROCQ) {
+	if !db.IsLabelSet(db.PROCQ) {
 		return
 	}
 	for {

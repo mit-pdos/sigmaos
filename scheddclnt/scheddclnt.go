@@ -45,7 +45,7 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 		return 0, nil
 	}
 	// Only read the proc directory if absolutely necessary.
-	if db.WillBePrinted(db.SCHEDDCLNT) {
+	if db.IsLabelSet(db.SCHEDDCLNT) {
 		for _, st := range sts {
 			b, err := sdc.GetFile(filepath.Join(procdir, st.Name))
 			if err != nil { // the proc may not exist anymore

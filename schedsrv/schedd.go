@@ -371,7 +371,7 @@ func (sd *Schedd) register() {
 }
 
 func (sd *Schedd) stats() {
-	if !db.WillBePrinted(db.SCHEDD) {
+	if !db.IsLabelSet(db.SCHEDD) {
 		return
 	}
 	for {

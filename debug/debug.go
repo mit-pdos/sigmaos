@@ -34,7 +34,7 @@ func init() {
 // Sometimes, converting pointers to call DPrintf is very expensive (and occurs
 // often, e.g., in the session layer). So, the function below can be called to
 // efficiently check if the DPrintf would succeed.
-func WillBePrinted(label Tselector) bool {
+func IsLabelSet(label Tselector) bool {
 	_, ok := labels[label]
 	return ok || label == ALWAYS
 }

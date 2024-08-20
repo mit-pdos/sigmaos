@@ -145,6 +145,7 @@ const (
 	CHUNKCLNT_ERR             = "CHUNKCLNT" + ERR
 	CKPT                      = "CKPT"
 	LAZYPAGESSRV              = "LAZYPAGESSRV"
+	CRIU                      = "CRIU"
 )
 
 // Realm

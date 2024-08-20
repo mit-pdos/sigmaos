@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	if db.WillBePrinted(db.SPAWN_LAT) {
+	if db.IsLabelSet(db.SPAWN_LAT) {
 		name := proc.GetSigmaDebugPid()
 		// Don't print for test programs, which won't have a debug PID set.
 		if name == "" || strings.Contains(name, "test-") {

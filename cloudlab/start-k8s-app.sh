@@ -9,6 +9,9 @@ N_RUNNING=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
+  --parallel)
+    shift
+    ;;
   --vpc)
     shift
     shift

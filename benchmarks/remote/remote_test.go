@@ -223,7 +223,7 @@ func TestSocialnetTailLatency(t *testing.T) {
 	var (
 		rps         []int           = []int{1000, 2000, 4000, 6000}
 		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
-		clientDelay time.Duration   = 10 * time.Second
+		clientDelay time.Duration   = 40 * time.Second
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

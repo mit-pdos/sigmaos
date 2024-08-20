@@ -23,6 +23,7 @@ var noNetproxyArg bool
 var overlaysArg bool
 var parallelArg bool
 var noShutdownArg bool
+var k8sArg bool
 
 func init() {
 	flag.StringVar(&platformArg, "platform", sp.NOT_SET, "Platform on which to run. Currently, only [aws|cloudlab] are supported")
@@ -34,6 +35,7 @@ func init() {
 	flag.BoolVar(&overlaysArg, "overlays", false, "Run with Docker swarm overlays enabled.")
 	flag.BoolVar(&parallelArg, "parallelize", false, "Run commands in parallel to speed up, e.g., cluster shutdown.")
 	flag.BoolVar(&noShutdownArg, "no-shutdown", false, "Avoid shutting down the cluster after running a benchmark (useful for debugging).")
+	flag.BoolVar(&k8sArg, "k8s", false, "Run the k8s version of the experiment.")
 	proc.SetSigmaDebugPid("remote-bench")
 }
 
@@ -55,6 +57,9 @@ func TestInitFS(t *testing.T) {
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
@@ -83,6 +88,9 @@ func TestColdStart(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
@@ -102,6 +110,9 @@ func TestSchedScalability(t *testing.T) {
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
 		return
 	}
 	// Cold-start benchmark configuration parameters
@@ -142,6 +153,9 @@ func TestMR(t *testing.T) {
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
@@ -235,6 +249,9 @@ func TestBEImgresizeMultiplexing(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgresizeMultiplexingCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
@@ -261,6 +278,9 @@ func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)

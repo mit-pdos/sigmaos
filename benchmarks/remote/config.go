@@ -18,6 +18,7 @@ type BenchConfig struct {
 	Overlays   bool         `json:"overlays"`
 	Parallel   bool         `json:"parallel"`
 	NoShutdown bool         `json:"no_shutdown"`
+	K8s        bool         `json:"k8s"`
 }
 
 // Return a new benchmark config, given the flag arguments used to run the
@@ -33,6 +34,7 @@ func NewBenchConfig() (*BenchConfig, error) {
 		Overlays:   overlaysArg,
 		Parallel:   parallelArg,
 		NoShutdown: noShutdownArg,
+		K8s:        k8sArg,
 	}
 	// Check that required arguments have been set
 	if cfg.Platform == sp.NOT_SET {

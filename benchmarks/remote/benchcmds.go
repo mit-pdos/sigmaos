@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	db "sigmaos/debug"
 	"sigmaos/proc"
 )
 
@@ -193,11 +194,17 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
 			perfSelectors  string = "\"\""
 		)
+		sys := ""
+		if bcfg.K8s {
+			sys = "K8s"
+		} else {
+			sys = "Sigmaos"
+		}
 		testName := ""
 		if leader {
-			testName = "HotelSigmaosSearch"
+			testName = fmt.Sprintf("Hotel%sSearch", sys)
 		} else {
-			testName = "HotelSigmaosJustCliSearch"
+			testName = fmt.Sprintf("Hotel%sJustCliSearch", sys)
 		}
 		autoscaleCache := ""
 		if scaleCache {
@@ -211,6 +218,14 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 		if bcfg.Overlays {
 			overlays = "--overlays"
 		}
+		k8sFrontendAddr := ""
+		if bcfg.K8s {
+			addr, err := getK8sHotelFrontendAddr(bcfg, ccfg.lcfg)
+			if err != nil {
+				db.DFatalf("Get k8s hotel frontend addr:%v", err)
+			}
+			k8sFrontendAddr = fmt.Sprintf("--k8saddr %s", addr)
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
 			"ulimit -n 100000; "+
@@ -221,6 +236,7 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			"--hotel_cache_mcpu 200 "+
 			"--cache_type %s "+
 			"%s "+ // scaleCache
+			"%s "+ // k8sFrontendAddr
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
@@ -236,6 +252,7 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			strconv.Itoa(numClients),
 			cacheType,
 			autoscaleCache,
+			k8sFrontendAddr,
 			dursToString(dur),
 			rpsToString(rps),
 			clientDelay.String(),
@@ -258,11 +275,17 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 			debugSelectors string = "\"TEST;BENCH;LOADGEN;\""
 			perfSelectors  string = "\"\""
 		)
+		sys := ""
+		if bcfg.K8s {
+			sys = "K8s"
+		} else {
+			sys = "Sigmaos"
+		}
 		testName := ""
 		if leader {
-			testName = "SocialNetSigmaos"
+			testName = fmt.Sprintf("SocialNet%s", sys)
 		} else {
-			testName = "SocialNetJustCliSigmaos"
+			testName = fmt.Sprintf("SocialNetJustCli%s", sys)
 		}
 		netproxy := ""
 		if bcfg.NoNetproxy {

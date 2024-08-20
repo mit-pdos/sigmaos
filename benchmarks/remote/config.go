@@ -58,6 +58,9 @@ func NewBenchConfig() (*BenchConfig, error) {
 	if cfg.Version == sp.NOT_SET {
 		return nil, fmt.Errorf("version not set")
 	}
+	if cfg.K8s && cfg.Platform != sp.PLATFORM_CLOUDLAB {
+		return nil, fmt.Errorf("k8s is only supported on cloudlab")
+	}
 	return cfg, nil
 }
 

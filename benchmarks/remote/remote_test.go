@@ -73,7 +73,7 @@ func TestColdStart(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 7
+		driverVM        int  = 0
 		numNodes        int  = 8
 		numCoresPerNode uint = 16
 		onlyOneFullNode bool = true
@@ -197,10 +197,13 @@ func TestHotelTailLatency(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
+	if ts.BCfg.K8s {
+		benchName += "_k8s"
+	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
 	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
-	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
 // Test Socialnet application's tail latency.
@@ -226,10 +229,13 @@ func TestSocialnetTailLatency(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
+	if ts.BCfg.K8s {
+		benchName += "_k8s"
+	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetSocialnetClientCmdConstructor(true, len(driverVMs), rps, dur)
 	getFollowerCmd := GetSocialnetClientCmdConstructor(false, len(driverVMs), rps, dur)
-	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sSocialnetApp, stopK8sSocialnetApp, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
 // Test multiplexing Best Effort Imgresize jobs.
@@ -286,5 +292,5 @@ func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetLCBEHotelImgresizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
 	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
-	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }

@@ -126,7 +126,7 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors        string = "\"TEST;BENCH;MR;\""
-			optionalPerfSelectors string = "\"TEST_TPT;BENCH_TPT;\""
+			optionalPerfSelectors string = "\"TEST_TPT;BENCH_TPT;THUMBNAIL_TPT;\""
 		)
 		// If measuring throughput, set the perf selectors
 		perfSelectors := "\"\""

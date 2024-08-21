@@ -310,7 +310,7 @@ func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 		dur         []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
 		cacheType   string          = "cached"
 		scaleCache  bool            = false
-		clientDelay time.Duration   = 40 * time.Second
+		clientDelay time.Duration   = 60 * time.Second
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

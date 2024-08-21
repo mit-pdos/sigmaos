@@ -178,8 +178,8 @@ func GetCorralCmdConstructor() GetBenchCmdFn {
 			"git checkout play; " +
 			"git pull; " +
 			// Load AWS key, because Corral expects this to be set as the default profile
-			"export AWS_ACCESS_KEY_ID=$(cat ~/.aws/credentials | grep aws_access_key_id | head -n1 | cut -d ' ' -f3) " +
-			"export AWS_SECRET_ACCESS_KEY=$(cat ~/.aws/credentials | grep aws_secret_access_key | head -n1 | cut -d ' ' -f3) " +
+			"export AWS_ACCESS_KEY_ID=$(cat ~/.aws/credentials | grep aws_access_key_id | head -n1 | cut -d ' ' -f3); " +
+			"export AWS_SECRET_ACCESS_KEY=$(cat ~/.aws/credentials | grep aws_secret_access_key | head -n1 | cut -d ' ' -f3); " +
 			"cd examples/word_count; " +
 			"make test_wc_lambda " +
 			"> /tmp/bench.out 2>&1"
@@ -207,7 +207,7 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
-			perfSelectors  string = "\"\""
+			perfSelectors  string = "\"HOTEL_WWW_TPT;\""
 		)
 		sys := ""
 		if bcfg.K8s {

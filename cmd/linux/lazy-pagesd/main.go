@@ -21,7 +21,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v <image-dir> <pages-dir>\n", os.Args[0])
 		os.Exit(1)
 	}
-	lps := lazypagessrv.NewLazyPageSrv(os.Args[1], os.Args[2])
+	lps, err := lazypagessrv.NewLazyPagesSrv(os.Args[1], os.Args[2], "")
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "NewLazyPagesSrv: err %w", err)
+		os.Exit(1)
+	}
 	if err := lps.Run(); err != nil {
 		db.DPrintf(db.ALWAYS, "lazypagessrv: err %w", err)
 		os.Exit(1)

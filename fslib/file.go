@@ -140,7 +140,6 @@ func (fl *FsLib) OpenWaitReader(path string) (*FdReader, error) {
 	}
 	rdr := fl.NewReader(fd, path)
 	return rdr, nil
-
 }
 
 func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {

@@ -540,13 +540,13 @@ func (ups *UprocSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string,
 
 func (ups *UprocSrv) restoreProc(spid sp.Tpid, ckptSigmaDir string) error {
 	dst := RESTOREDIR + spid.String()
-	if err := ups.readCheckpoint(ckptSigmaDir, dst, CKPTFULL); err != nil {
-		return nil
-	}
 	if err := ups.readCheckpoint(ckptSigmaDir, dst, CKPTLAZY); err != nil {
 		return nil
 	}
-	if err := container.RestoreProc(ups.criuInst, spid, filepath.Join(dst, CKPTLAZY), filepath.Join(dst, CKPTFULL)); err != nil {
+	pagesId := 1
+	pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
+	// pages := filepath.Join(dst, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
+	if err := container.RestoreProc(ups.criuInst, spid, filepath.Join(dst, CKPTLAZY), filepath.Join(dst, CKPTFULL), pages); err != nil {
 		return err
 	}
 	return nil

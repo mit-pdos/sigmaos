@@ -15,19 +15,36 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/userfaultfd"
 )
+
+const SIGMAOS = true
 
 const SOCKNAME = "lazy-pages.socket"
 
 type LazyPagesSrv struct {
+	*sigmaclnt.SigmaClnt
 	imgdir   string
 	pagesdir string
+	pages    string
 	pagesz   int
 }
 
-func NewLazyPageSrv(imgdir, pagesdir string) *LazyPagesSrv {
-	return &LazyPagesSrv{imgdir: imgdir, pagesdir: pagesdir, pagesz: os.Getpagesize()}
+func NewLazyPagesSrv(imgdir, pagesdir, pages string) (*LazyPagesSrv, error) {
+	lps := &LazyPagesSrv{
+		imgdir:   imgdir,
+		pagesdir: pagesdir,
+		pages:    pages,
+		pagesz:   os.Getpagesize()}
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	if err != nil {
+		return nil, err
+	}
+	lps.SigmaClnt = sc
+	return lps, nil
 }
 
 func (lps *LazyPagesSrv) Run() error {
@@ -100,7 +117,7 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 	iovs, npages, maxIovLen := mm.collectIovs(pmi)
 	nfault := 0
 	page := make([]byte, pmi.pagesz) // XXX maxIovLen
-	db.DPrintf(db.ALWAYS, "lazypages: img %v pages %v pid %d fd %d iovs %d npages %d maxIovLen %d", lps.imgdir, lps.pagesdir, pid, fd, iovs.len(), npages, maxIovLen)
+	db.DPrintf(db.ALWAYS, "lazypages: img %v pagesdir %v pages %v pid %d fd %d iovs %d npages %d maxIovLen %d", lps.imgdir, lps.pagesdir, lps.pages, pid, fd, iovs.len(), npages, maxIovLen)
 	for {
 		if _, err := unix.Poll(
 			[]unix.PollFd{{
@@ -139,7 +156,8 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 				db.DFatalf("no page for %x", addr)
 			}
 			db.DPrintf(db.LAZYPAGESSRV, "page fault %d: %d(%x) -> %v %d", nfault, addr, addr, iov, pi)
-			if err := pmi.readPage(lps.pagesdir, pid, pi, page); err != nil {
+			off := int64(pi * pmi.pagesz)
+			if err := lps.readPage(lps.pages, off, page); err != nil {
 				db.DFatalf("no page content for %x", addr)
 			}
 			lps.copyPage(fd, addr, page)
@@ -180,6 +198,33 @@ func (lps *LazyPagesSrv) copyPage(fd int, addr uint64, page []byte) {
 	); errno != 0 {
 		db.DFatalf("SYS_IOCTL err %v", errno)
 	}
+}
+
+func (lps *LazyPagesSrv) readPage(pn string, off int64, page []byte) error {
+	if SIGMAOS {
+		fd, err := lps.Open(pn, sp.OREAD)
+		if err != nil {
+			return err
+		}
+		defer lps.CloseFd(fd)
+		if _, err := lps.Pread(fd, page, sp.Toffset(off)); err != nil {
+			return err
+		}
+	} else {
+		f, err := os.Open(pn)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		if _, err := f.Seek(off, 0); err != nil {
+			return err
+		}
+		if _, err := f.Read(page); err != nil {
+			return err
+		}
+	}
+	return nil
+
 }
 
 func getConnFd(conn syscall.Conn) (connFd int, err error) {

@@ -96,14 +96,37 @@ func (lps *LazyPagesSrv) Run() error {
 			}
 			fd := fds[0]
 			db.DPrintf(db.LAZYPAGESSRV, "Received fd %d\n", fd)
-			if err := lps.handleReqs(int(pid), fd); err != nil {
+
+			var rp func(int64, []byte) error
+			if SIGMAOS {
+				fdpages, err := lps.Open(lps.pages, sp.OREAD)
+				if err != nil {
+					db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lps.pages, err)
+					return
+				}
+				defer lps.CloseFd(fd)
+				rp = func(off int64, page []byte) error {
+					return readPageSigma(lps.SigmaClnt, fdpages, off, page)
+				}
+			} else {
+				f, err := os.Open(lps.pages)
+				if err != nil {
+					db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lps.pages, err)
+					return
+				}
+				defer f.Close()
+				rp = func(off int64, page []byte) error {
+					return readPage(f, off, page)
+				}
+			}
+			if err := lps.handleReqs(int(pid), fd, rp); err != nil {
 				db.DFatalf("handle fd %v err %v", fd, err)
 			}
 		}(conn)
 	}
 }
 
-func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
+func (lps *LazyPagesSrv) handleReqs(pid, fd int, readPage func(int64, []byte) error) error {
 	pmi, err := newTpagemapImg(lps.imgdir, pid)
 	if err != nil {
 		return err
@@ -155,7 +178,7 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 			}
 			db.DPrintf(db.LAZYPAGESSRV, "page fault %d: %d(%x) -> %v %d", nfault, addr, addr, iov, pi)
 			off := int64(pi * pmi.pagesz)
-			if err := lps.readPage(lps.pages, off, page); err != nil {
+			if err := readPage(off, page); err != nil {
 				db.DFatalf("no page content for %x", addr)
 			}
 			lps.copyPage(fd, addr, page)
@@ -198,31 +221,21 @@ func (lps *LazyPagesSrv) copyPage(fd int, addr uint64, page []byte) {
 	}
 }
 
-func (lps *LazyPagesSrv) readPage(pn string, off int64, page []byte) error {
-	if SIGMAOS {
-		fd, err := lps.Open(pn, sp.OREAD)
-		if err != nil {
-			return err
-		}
-		defer lps.CloseFd(fd)
-		if _, err := lps.Pread(fd, page, sp.Toffset(off)); err != nil {
-			return err
-		}
-	} else {
-		f, err := os.Open(pn)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		if _, err := f.Seek(off, 0); err != nil {
-			return err
-		}
-		if _, err := f.Read(page); err != nil {
-			return err
-		}
+func readPageSigma(sc *sigmaclnt.SigmaClnt, fd int, off int64, page []byte) error {
+	if _, err := sc.Pread(fd, page, sp.Toffset(off)); err != nil {
+		return err
 	}
 	return nil
+}
 
+func readPage(f *os.File, off int64, page []byte) error {
+	if _, err := f.Seek(off, 0); err != nil {
+		return err
+	}
+	if _, err := f.Read(page); err != nil {
+		return err
+	}
+	return nil
 }
 
 func getConnFd(conn syscall.Conn) (connFd int, err error) {

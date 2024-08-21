@@ -79,8 +79,20 @@ test program. If any of them fail, they can be rerun individually by deleting
 the test's result output directory, and re-invoking the Go test program as
 is done in the experiment runner script.
 
-Once the experiments have run successfully, all of the paper's graphs can be
-generated with:
+The scripts try to cache benchmark results to avoid rerunning them. In order
+to force rerun a benchmark (particularly useful if the benchmark invocation
+failed), remove the cached results. For example for the `start_latency`
+benchmark, this can be done with:
+
+```
+$ rm -rf benchmarks/results/SOSP24AE/start_latency
+```
+
+Re-invoking the benchmark will then cause the results to be generated again,
+from scratch.
+
+Once all experiments have run successfully, the paper's corresponding graphs
+can be generated with:
 
 ```
 $ ./artifact/sosp24/scripts/generate-graphs.sh

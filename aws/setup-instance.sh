@@ -161,6 +161,8 @@ sudo mkdir -p /mnt/9p
 
 if [ -d "DeathStarBench" ] 
 then
+  (cd DeathStarBench; git pull;)
+else
   git clone https://github.com/mit-pdos/DeathStarBench.git
 fi
 
@@ -172,8 +174,7 @@ else
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
   # Load apparmor profile
-  cd sigmaos
-  sudo apparmor_parser -r container/sigmaos-uproc
+  (cd sigmaos; sudo apparmor_parser -r container/sigmaos-uproc)
 fi
 
 if [ -d "corral" ] 

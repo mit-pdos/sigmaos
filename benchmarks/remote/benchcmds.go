@@ -244,6 +244,7 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
 			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run %s "+
 			"--nclnt %s "+
@@ -313,6 +314,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
 			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run %s "+
 			"--nclnt %s "+
@@ -374,6 +376,7 @@ func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, 
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run RealmBalanceHotelImgResize "+
 			"--nclnt %s "+

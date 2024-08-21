@@ -65,64 +65,66 @@ func (lps *LazyPagesSrv) Run() error {
 		if err != nil {
 			db.DFatalf("Accept: err %v", err)
 		}
-		go func(conn net.Conn) {
-			defer conn.Close()
+		go lps.handleConn(conn)
+	}
+}
 
-			connFd, err := getConnFd(conn.(*net.UnixConn))
-			if err != nil {
-				db.DFatalf("getConnFd err %v", err)
-			}
+func (lps *LazyPagesSrv) handleConn(conn net.Conn) {
+	defer conn.Close()
 
-			var pid int32
-			if err := binary.Read(conn, binary.NativeEndian, &pid); err != nil {
-				db.DFatalf("Read pid err %v", err)
-			}
+	connFd, err := getConnFd(conn.(*net.UnixConn))
+	if err != nil {
+		db.DFatalf("getConnFd err %v", err)
+	}
 
-			db.DPrintf(db.LAZYPAGESSRV, "pid %d\n", pid)
+	var pid int32
+	if err := binary.Read(conn, binary.NativeEndian, &pid); err != nil {
+		db.DFatalf("Read pid err %v", err)
+	}
 
-			b := make([]byte, unix.CmsgSpace(4))
-			_, _, _, _, err = unix.Recvmsg(connFd, nil, b, 0)
-			if err != nil {
-				db.DFatalf("Recvmsg err %v", err)
-			}
-			// parse socket control message
-			cmsgs, err := unix.ParseSocketControlMessage(b)
-			if err != nil {
-				db.DFatalf("ParseSocketControlMessage err %v", err)
-			}
-			fds, err := unix.ParseUnixRights(&cmsgs[0])
-			if err != nil {
-				db.DFatalf("ParseUnixRights err %v", err)
-			}
-			fd := fds[0]
-			db.DPrintf(db.LAZYPAGESSRV, "Received fd %d\n", fd)
+	db.DPrintf(db.LAZYPAGESSRV, "pid %d\n", pid)
 
-			var rp func(int64, []byte) error
-			if SIGMAOS {
-				fdpages, err := lps.Open(lps.pages, sp.OREAD)
-				if err != nil {
-					db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lps.pages, err)
-					return
-				}
-				defer lps.CloseFd(fd)
-				rp = func(off int64, page []byte) error {
-					return readPageSigma(lps.SigmaClnt, fdpages, off, page)
-				}
-			} else {
-				f, err := os.Open(lps.pages)
-				if err != nil {
-					db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lps.pages, err)
-					return
-				}
-				defer f.Close()
-				rp = func(off int64, page []byte) error {
-					return readPage(f, off, page)
-				}
-			}
-			if err := lps.handleReqs(int(pid), fd, rp); err != nil {
-				db.DFatalf("handle fd %v err %v", fd, err)
-			}
-		}(conn)
+	b := make([]byte, unix.CmsgSpace(4))
+	_, _, _, _, err = unix.Recvmsg(connFd, nil, b, 0)
+	if err != nil {
+		db.DFatalf("Recvmsg err %v", err)
+	}
+	// parse socket control message
+	cmsgs, err := unix.ParseSocketControlMessage(b)
+	if err != nil {
+		db.DFatalf("ParseSocketControlMessage err %v", err)
+	}
+	fds, err := unix.ParseUnixRights(&cmsgs[0])
+	if err != nil {
+		db.DFatalf("ParseUnixRights err %v", err)
+	}
+	fd := fds[0]
+	db.DPrintf(db.LAZYPAGESSRV, "Received fd %d\n", fd)
+
+	var rp func(int64, []byte) error
+	if SIGMAOS {
+		fdpages, err := lps.Open(lps.pages, sp.OREAD)
+		if err != nil {
+			db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lps.pages, err)
+			return
+		}
+		defer lps.CloseFd(fd)
+		rp = func(off int64, page []byte) error {
+			return readPageSigma(lps.SigmaClnt, fdpages, off, page)
+		}
+	} else {
+		f, err := os.Open(lps.pages)
+		if err != nil {
+			db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lps.pages, err)
+			return
+		}
+		defer f.Close()
+		rp = func(off int64, page []byte) error {
+			return readPage(f, off, page)
+		}
+	}
+	if err := lps.handleReqs(int(pid), fd, rp); err != nil {
+		db.DFatalf("handle fd %v err %v", fd, err)
 	}
 }
 

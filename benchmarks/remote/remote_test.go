@@ -311,6 +311,7 @@ func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 		cacheType   string          = "cached"
 		scaleCache  bool            = false
 		clientDelay time.Duration   = 60 * time.Second
+		sleep       time.Duration   = 10 * time.Second
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -320,7 +321,7 @@ func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	getLeaderCmd := GetLCBEHotelImgresizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
-	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
+	getLeaderCmd := GetLCBEHotelImgresizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }

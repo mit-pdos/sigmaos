@@ -126,7 +126,7 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors        string = "\"TEST;BENCH;MR;\""
-			optionalPerfSelectors string = "\"TEST_TPT;BENCH_TPT;THUMBNAIL_TPT;\""
+			optionalPerfSelectors string = "\"TEST_TPT;BENCH_TPT;\""
 		)
 		// If measuring throughput, set the perf selectors
 		perfSelectors := "\"\""
@@ -168,6 +168,18 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 			strconv.Itoa(int(memReq)),
 			mrApp,
 		)
+	}
+}
+
+// Construct command string to run corral benchmark.
+func GetCorralCmdConstructor() GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		return "cd ../corral; " +
+			"git checkout play; " +
+			"git pull; " +
+			"cd examples/word_count; " +
+			"make test_wc_lambda " +
+			"> /tmp/bench.out 2>&1"
 	}
 }
 
@@ -343,7 +355,7 @@ func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, 
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\""
-			perfSelectors  string = "\"\""
+			perfSelectors  string = "\"THUMBNAIL_TPT;TEST_TPT;BENCH_TPT;\""
 		)
 		autoscaleCache := ""
 		if scaleCache {

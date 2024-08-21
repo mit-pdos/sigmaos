@@ -172,6 +172,36 @@ func TestMR(t *testing.T) {
 	}
 }
 
+func TestCorral(t *testing.T) {
+	var (
+		benchNameBase string = "mr_vs_corral"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM        int  = 0
+		numNodes        int  = 8
+		numCoresPerNode uint = 2
+		onlyOneFullNode bool = false
+		turboBoost      bool = true
+	)
+	// Variable MR benchmark configuration parameters
+	var (
+		corralApps []string = []string{"corral-2G-cold", "corral-2G-warm"}
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	for _, corralApp := range corralApps {
+		benchName := filepath.Join(benchNameBase, corralApp)
+		ts.RunStandardBenchmark(benchName, driverVM, GetCorralCmdConstructor(), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	}
+}
+
 // Test Hotel application's tail latency.
 func TestHotelTailLatency(t *testing.T) {
 	var (

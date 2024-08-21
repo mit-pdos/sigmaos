@@ -45,11 +45,12 @@ message LookupResponse {
   TstatProto stat = 1;
 }
 
-message CheckpointPidRequest {
+message CheckpointProcRequest {
   string pidStr = 1;
-  string pathName = 2;
+  string realmStr = 2;
+  string pathName = 3;
 }
 
-message CheckpointPidResult {
+message CheckpointProcResponse {
   string checkpointLocation = 1;
 }

@@ -1,7 +1,6 @@
 package container
 
 import (
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,8 +20,7 @@ import (
 )
 
 const (
-	IMGDIR = "/home/sigmaos/ckptimg/"
-	LAZY   = true
+	LAZY = true
 )
 
 type uprocCmd struct {
@@ -95,22 +93,12 @@ type NoNotify struct {
 	criu.NoNotify
 }
 
-func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
-
-	// defer cleanupJail(pid)
-
-	db.DPrintf(db.CKPT, "CheckpointProc %v", pid)
-
-	procImgDir := IMGDIR + spid.String()
-	err := os.MkdirAll(procImgDir, os.ModePerm)
-	if err != nil {
-		db.DPrintf(db.CKPT, "CheckpointProc: error creating img dir %v", err)
-		return procImgDir, err
-	}
-	img, err := os.Open(procImgDir)
+func CheckpointProc(c *criu.Criu, pid int, imgDir string, spid sp.Tpid) error {
+	db.DPrintf(db.CKPT, "CheckpointProc %q %v", imgDir, pid)
+	img, err := os.Open(imgDir)
 	if err != nil {
 		db.DPrintf(db.CKPT, "CheckpointProc: error opening img dir %v", err)
-		return procImgDir, err
+		return err
 	}
 	defer img.Close()
 
@@ -132,19 +120,19 @@ func CheckpointProc(c *criu.Criu, pid int, spid sp.Tpid) (string, error) {
 	err = c.Dump(opts, NoNotify{})
 	db.DPrintf(db.CKPT, "CheckpointProc: dump err %v", err)
 	if verbose {
-		dumpLog(procImgDir + "/dump.log")
+		dumpLog(imgDir + "/dump.log")
 	}
 	if err != nil {
-		return procImgDir, err
+		return err
 	}
 	if LAZY {
 		// XXX pid is from inside container
-		if err := lazypagessrv.FilterLazyPages(procImgDir, 1); err != nil {
+		if err := lazypagessrv.FilterLazyPages(imgDir, 1); err != nil {
 			db.DPrintf(db.CKPT, "CheckpointProc: DumpNonLazyPages err %v", err)
-			return procImgDir, err
+			return err
 		}
 	}
-	return procImgDir, nil
+	return nil
 }
 
 func mkMount(mnt, dst, t string, flags uintptr) error {
@@ -204,15 +192,8 @@ func restoreMounts(sigmaPid sp.Tpid) error {
 	return nil
 }
 
-func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid) error {
-	imgDir := IMGDIR + sigmaPid.String()
-	dst := imgDir + "-restore"
-	if err := copyDir(imgDir, dst); err != nil {
-		return nil
-	}
-	pagesDir := imgDir
-	imgDir = dst
-	db.DPrintf(db.CKPT, "RestoreProc %v %v", sigmaPid, imgDir)
+func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pagesDir string) error {
+	db.DPrintf(db.CKPT, "RestoreProc %v %v %v", sigmaPid, imgDir, pagesDir)
 	if err := restoreMounts(sigmaPid); err != nil {
 		return err
 	}
@@ -278,58 +259,6 @@ func restoreProc(criuInst *criu.Criu, imgDir, jailPath string) error {
 	}
 	if err != nil {
 		return err
-	}
-	return nil
-}
-
-func copyFile(srcFile, dstFile string) error {
-	out, err := os.Create(dstFile)
-	if err != nil {
-		return err
-	}
-
-	defer out.Close()
-
-	in, err := os.Open(srcFile)
-	if err != nil {
-		return err
-	}
-
-	defer in.Close()
-
-	_, err = io.Copy(out, in)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func copyDir(src, dst string) error {
-	db.DPrintf(db.CKPT, "Restore copydir %v %v", src, dst)
-	os.Mkdir(dst, 0755)
-	entries, err := os.ReadDir(src)
-	if err != nil {
-		return err
-	}
-	for _, entry := range entries {
-		sourcePath := filepath.Join(src, entry.Name())
-		destPath := filepath.Join(dst, entry.Name())
-		if err := copyFile(sourcePath, destPath); err != nil {
-			return err
-		}
-	}
-	if LAZY {
-		pageId := 1
-		if err := os.Remove(filepath.Join(dst, "pages-"+strconv.Itoa(pageId)+".img")); err != nil {
-			db.DPrintf(db.CKPT, "copyDir: Remove err %v", err)
-			return err
-		}
-		// XXX pid is from inside container
-		if err := lazypagessrv.ExpandLazyPages(dst, 1); err != nil {
-			db.DPrintf(db.CKPT, "copyDir: ExpandLazyPages err %v", err)
-			return err
-		}
 	}
 	return nil
 }

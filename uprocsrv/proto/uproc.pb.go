@@ -461,17 +461,18 @@ func (x *LookupResponse) GetStat() *sigmap.TstatProto {
 	return nil
 }
 
-type CheckpointPidRequest struct {
+type CheckpointProcRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	PidStr   string `protobuf:"bytes,1,opt,name=pidStr,proto3" json:"pidStr,omitempty"`
-	PathName string `protobuf:"bytes,2,opt,name=pathName,proto3" json:"pathName,omitempty"`
+	RealmStr string `protobuf:"bytes,2,opt,name=realmStr,proto3" json:"realmStr,omitempty"`
+	PathName string `protobuf:"bytes,3,opt,name=pathName,proto3" json:"pathName,omitempty"`
 }
 
-func (x *CheckpointPidRequest) Reset() {
-	*x = CheckpointPidRequest{}
+func (x *CheckpointProcRequest) Reset() {
+	*x = CheckpointProcRequest{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_uprocsrv_proto_uproc_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -479,13 +480,13 @@ func (x *CheckpointPidRequest) Reset() {
 	}
 }
 
-func (x *CheckpointPidRequest) String() string {
+func (x *CheckpointProcRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CheckpointPidRequest) ProtoMessage() {}
+func (*CheckpointProcRequest) ProtoMessage() {}
 
-func (x *CheckpointPidRequest) ProtoReflect() protoreflect.Message {
+func (x *CheckpointProcRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_uprocsrv_proto_uproc_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -497,26 +498,33 @@ func (x *CheckpointPidRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CheckpointPidRequest.ProtoReflect.Descriptor instead.
-func (*CheckpointPidRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CheckpointProcRequest.ProtoReflect.Descriptor instead.
+func (*CheckpointProcRequest) Descriptor() ([]byte, []int) {
 	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *CheckpointPidRequest) GetPidStr() string {
+func (x *CheckpointProcRequest) GetPidStr() string {
 	if x != nil {
 		return x.PidStr
 	}
 	return ""
 }
 
-func (x *CheckpointPidRequest) GetPathName() string {
+func (x *CheckpointProcRequest) GetRealmStr() string {
+	if x != nil {
+		return x.RealmStr
+	}
+	return ""
+}
+
+func (x *CheckpointProcRequest) GetPathName() string {
 	if x != nil {
 		return x.PathName
 	}
 	return ""
 }
 
-type CheckpointPidResult struct {
+type CheckpointProcResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -524,8 +532,8 @@ type CheckpointPidResult struct {
 	CheckpointLocation string `protobuf:"bytes,1,opt,name=checkpointLocation,proto3" json:"checkpointLocation,omitempty"`
 }
 
-func (x *CheckpointPidResult) Reset() {
-	*x = CheckpointPidResult{}
+func (x *CheckpointProcResponse) Reset() {
+	*x = CheckpointProcResponse{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_uprocsrv_proto_uproc_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -533,13 +541,13 @@ func (x *CheckpointPidResult) Reset() {
 	}
 }
 
-func (x *CheckpointPidResult) String() string {
+func (x *CheckpointProcResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CheckpointPidResult) ProtoMessage() {}
+func (*CheckpointProcResponse) ProtoMessage() {}
 
-func (x *CheckpointPidResult) ProtoReflect() protoreflect.Message {
+func (x *CheckpointProcResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_uprocsrv_proto_uproc_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -551,12 +559,12 @@ func (x *CheckpointPidResult) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CheckpointPidResult.ProtoReflect.Descriptor instead.
-func (*CheckpointPidResult) Descriptor() ([]byte, []int) {
+// Deprecated: Use CheckpointProcResponse.ProtoReflect.Descriptor instead.
+func (*CheckpointProcResponse) Descriptor() ([]byte, []int) {
 	return file_uprocsrv_proto_uproc_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *CheckpointPidResult) GetCheckpointLocation() string {
+func (x *CheckpointProcResponse) GetCheckpointLocation() string {
 	if x != nil {
 		return x.CheckpointLocation
 	}
@@ -606,13 +614,15 @@ var file_uprocsrv_proto_uproc_proto_rawDesc = []byte{
 	0x69, 0x64, 0x22, 0x31, 0x0a, 0x0e, 0x4c, 0x6f, 0x6f, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x73, 0x70,
 	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1f, 0x0a, 0x04, 0x73, 0x74, 0x61, 0x74, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x54, 0x73, 0x74, 0x61, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52,
-	0x04, 0x73, 0x74, 0x61, 0x74, 0x22, 0x4a, 0x0a, 0x14, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x70, 0x6f,
-	0x69, 0x6e, 0x74, 0x50, 0x69, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a,
-	0x06, 0x70, 0x69, 0x64, 0x53, 0x74, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x70,
-	0x69, 0x64, 0x53, 0x74, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x61, 0x74, 0x68, 0x4e, 0x61, 0x6d,
-	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x70, 0x61, 0x74, 0x68, 0x4e, 0x61, 0x6d,
-	0x65, 0x22, 0x45, 0x0a, 0x13, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50,
-	0x69, 0x64, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x2e, 0x0a, 0x12, 0x63, 0x68, 0x65, 0x63,
+	0x04, 0x73, 0x74, 0x61, 0x74, 0x22, 0x67, 0x0a, 0x15, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x70, 0x6f,
+	0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16,
+	0x0a, 0x06, 0x70, 0x69, 0x64, 0x53, 0x74, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06,
+	0x70, 0x69, 0x64, 0x53, 0x74, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x53,
+	0x74, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x53,
+	0x74, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x61, 0x74, 0x68, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x70, 0x61, 0x74, 0x68, 0x4e, 0x61, 0x6d, 0x65, 0x22, 0x48,
+	0x0a, 0x16, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x63,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2e, 0x0a, 0x12, 0x63, 0x68, 0x65, 0x63,
 	0x6b, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x12, 0x63, 0x68, 0x65, 0x63, 0x6b, 0x70, 0x6f, 0x69, 0x6e, 0x74,
 	0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69, 0x67, 0x6d,
@@ -634,20 +644,20 @@ func file_uprocsrv_proto_uproc_proto_rawDescGZIP() []byte {
 
 var file_uprocsrv_proto_uproc_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_uprocsrv_proto_uproc_proto_goTypes = []interface{}{
-	(*RunRequest)(nil),            // 0: RunRequest
-	(*RunResult)(nil),             // 1: RunResult
-	(*WarmBinRequest)(nil),        // 2: WarmBinRequest
-	(*WarmBinResult)(nil),         // 3: WarmBinResult
-	(*FetchRequest)(nil),          // 4: FetchRequest
-	(*FetchResponse)(nil),         // 5: FetchResponse
-	(*LookupRequest)(nil),         // 6: LookupRequest
-	(*LookupResponse)(nil),        // 7: LookupResponse
-	(*CheckpointPidRequest)(nil),  // 8: CheckpointPidRequest
-	(*CheckpointPidResult)(nil),   // 9: CheckpointPidResult
-	(*proc.ProcProto)(nil),        // 10: ProcProto
-	(*sigmap.SecretProto)(nil),    // 11: SecretProto
-	(*sigmap.TendpointProto)(nil), // 12: TendpointProto
-	(*sigmap.TstatProto)(nil),     // 13: TstatProto
+	(*RunRequest)(nil),             // 0: RunRequest
+	(*RunResult)(nil),              // 1: RunResult
+	(*WarmBinRequest)(nil),         // 2: WarmBinRequest
+	(*WarmBinResult)(nil),          // 3: WarmBinResult
+	(*FetchRequest)(nil),           // 4: FetchRequest
+	(*FetchResponse)(nil),          // 5: FetchResponse
+	(*LookupRequest)(nil),          // 6: LookupRequest
+	(*LookupResponse)(nil),         // 7: LookupResponse
+	(*CheckpointProcRequest)(nil),  // 8: CheckpointProcRequest
+	(*CheckpointProcResponse)(nil), // 9: CheckpointProcResponse
+	(*proc.ProcProto)(nil),         // 10: ProcProto
+	(*sigmap.SecretProto)(nil),     // 11: SecretProto
+	(*sigmap.TendpointProto)(nil),  // 12: TendpointProto
+	(*sigmap.TstatProto)(nil),      // 13: TstatProto
 }
 var file_uprocsrv_proto_uproc_proto_depIdxs = []int32{
 	10, // 0: RunRequest.procProto:type_name -> ProcProto
@@ -764,7 +774,7 @@ func file_uprocsrv_proto_uproc_proto_init() {
 			}
 		}
 		file_uprocsrv_proto_uproc_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CheckpointPidRequest); i {
+			switch v := v.(*CheckpointProcRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -776,7 +786,7 @@ func file_uprocsrv_proto_uproc_proto_init() {
 			}
 		}
 		file_uprocsrv_proto_uproc_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CheckpointPidResult); i {
+			switch v := v.(*CheckpointProcResponse); i {
 			case 0:
 				return &v.state
 			case 1:

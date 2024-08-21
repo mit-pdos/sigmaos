@@ -12,6 +12,7 @@ import (
 	"sigmaos/rpcdirclnt"
 	"sigmaos/schedsrv/proto"
 	sp "sigmaos/sigmap"
+	uproto "sigmaos/uprocsrv/proto"
 )
 
 type ScheddClnt struct {
@@ -155,12 +156,12 @@ func (sdc *ScheddClnt) Checkpoint(kernelID string, pid sp.Tpid, r sp.Trealm, pn 
 	if err != nil {
 		return err
 	}
-	req := &proto.CheckpointProcRequest{
+	req := &uproto.CheckpointProcRequest{
 		PidStr:   pid.String(),
 		RealmStr: r.String(),
 		PathName: pn,
 	}
-	res := &proto.CheckpointProcResponse{}
+	res := &uproto.CheckpointProcResponse{}
 	if err := rpcc.RPC("Schedd.CheckpointProc", req, res); err != nil {
 		return err
 	}

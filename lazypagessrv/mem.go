@@ -223,7 +223,7 @@ func FilterLazyPages(imgdir string, pid int) error {
 	}
 	defer src.Close()
 
-	pn = filepath.Join(imgdir, "pages-nonlazy-"+strconv.Itoa(pageId)+".img")
+	pn = filepath.Join(imgdir, "pagesnonlazy-"+strconv.Itoa(pageId)+".img")
 	dst, err := os.Create(pn)
 	if err != nil {
 		return err
@@ -263,7 +263,7 @@ func ExpandLazyPages(imgdir string, pid int) error {
 	ph := pmi.PageMapHead.Message.(*pagemap.PagemapHead)
 	pageId := int(ph.GetPagesId())
 
-	pn := filepath.Join(imgdir, "pages-nonlazy-"+strconv.Itoa(pageId)+".img")
+	pn := filepath.Join(imgdir, "pagesnonlazy-"+strconv.Itoa(pageId)+".img")
 	src, err := os.Open(pn)
 	if err != nil {
 		return err

@@ -55,11 +55,11 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 }
 
 func (clnt *UprocdClnt) CheckpointProc(pid sp.Tpid, pn string) (chkptLoc string, childErr error) {
-	req := &proto.CheckpointPidRequest{
+	req := &proto.CheckpointProcRequest{
 		PidStr:   pid.String(),
 		PathName: pn,
 	}
-	res := &proto.CheckpointPidResult{}
+	res := &proto.CheckpointProcResponse{}
 	if err := clnt.RPC("UprocSrv.Checkpoint", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
 		return "", err
 	} else {

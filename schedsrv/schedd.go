@@ -24,6 +24,7 @@ import (
 	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sigmaos/syncmap"
+	uproto "sigmaos/uprocsrv/proto"
 )
 
 type Schedd struct {
@@ -163,7 +164,7 @@ func (sd *Schedd) Exited(ctx fs.CtxI, req proto.NotifyRequest, res *proto.Notify
 	return nil
 }
 
-func (sd *Schedd) CheckpointProc(ctx fs.CtxI, req proto.CheckpointProcRequest, res *proto.CheckpointProcResponse) error {
+func (sd *Schedd) CheckpointProc(ctx fs.CtxI, req uproto.CheckpointProcRequest, res *uproto.CheckpointProcResponse) error {
 	db.DPrintf(db.SCHEDD, "CheckpointProc %v", req)
 	chkptLoc, err := sd.pmgr.CheckpointProc(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.PathName)
 	res.CheckpointLocation = chkptLoc

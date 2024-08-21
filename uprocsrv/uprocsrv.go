@@ -4,10 +4,14 @@
 package uprocsrv
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -23,6 +27,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
+	"sigmaos/lazypagessrv"
 	"sigmaos/linuxsched"
 	"sigmaos/netsigma"
 	"sigmaos/perf"
@@ -335,14 +340,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 
 	if uproc.GetProto().ProcEnvProto.CheckpointLocation != "" {
-		//err := os.MkdirAll("/home/sigmaos/chkptimg", 0777)
-		//if err != nil {
-		//db.DPrintf(db.ALWAYS, "Error creating local chkpt dir: %s", err)
-		//}
-		//localChkptLoc := "/home/sigmaos/chkptimg/" + uproc.ProcEnvProto.PidStr
-		// ups.readCheckpointFromS3(uproc.ProcEnvProto.CheckpointLocation, localChkptLoc)
-		pid := sp.Tpid(uproc.ProcEnvProto.PidStr)
-		if err := container.RestoreProc(ups.criuInst, pid); err != nil {
+		if err := ups.restoreProc(sp.Tpid(uproc.ProcEnvProto.PidStr), uproc.GetProto().ProcEnvProto.CheckpointLocation); err != nil {
 			return err
 		}
 		return nil
@@ -467,69 +465,191 @@ func (ups *UprocSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
 	return ups.lookupProc(pe.proc, prog)
 }
 
-func (ups *UprocSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string) error {
-	if err := ups.ssrv.MemFs.SigmaClnt().MkDir(chkptSimgaDir, 0777); err != nil {
-		return err
-	}
+const (
+	DUMPDIR    = "/home/sigmaos/dump"
+	RESTOREDIR = "/home/sigmaos/restore"
 
-	db.DPrintf(db.UPROCD, "writeCheckpoint: create dir: %v\n", chkptSimgaDir)
+	CKPTLAZY = "ckptlazy"
+	CKPTFULL = "ckptfull"
+)
 
-	// loop through files in curr dir, put into files in sigmaOS dir
-	files, err := os.ReadDir(chkptLocalDir)
-	if err != nil {
-		db.DPrintf(db.UPROCD, "writeCheckpoint: reading local dir err %\n", err)
-		return err
-	}
-
-	// TODO make this just use CopyFile?
-	for _, file := range files {
-		db.DPrintf(db.UPROCD, "Trying to copy file %s\n", file.Name())
-		dstFd, err := ups.ssrv.MemFs.SigmaClnt().Create(filepath.Join(chkptSimgaDir, file.Name()), 0777, sp.OWRITE)
-		if err != nil {
-			db.DPrintf(db.UPROCD, "writeCheckpoint: creating file %s err %v\n", file.Name(), err)
-			return err
-		}
-
-		// write content
-		fileContents, err := os.ReadFile(filepath.Join(chkptLocalDir, file.Name()))
-		if err != nil {
-			db.DPrintf(db.UPROCD, "writeCheckpoint: reading file err %v\n", err)
-			return err
-		}
-		_, err = ups.ssrv.MemFs.SigmaClnt().Write(dstFd, fileContents)
-		if err != nil {
-			db.DPrintf(db.UPROCD, "writeCheckpoint: writing err %v\n", err)
-			return err
-		}
-
-		// close
-		err = ups.ssrv.MemFs.SigmaClnt().CloseFd(dstFd)
-		if err != nil {
-			db.DPrintf(db.UPROCD, "writeCheckpoint: close file err %v\n", err)
-			return err
-		}
-	}
-	return nil
-}
-
-func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointPidRequest, res *proto.CheckpointPidResult) error {
+func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointProcRequest, res *proto.CheckpointProcResponse) error {
 	db.DPrintf(db.UPROCD, "Checkpointing uproc %v %q", req.PidStr, req.PathName)
-
 	spid := sp.Tpid(req.PidStr)
 	pid, ok := ups.pids.Lookup(spid)
 	if !ok {
 		db.DPrintf(db.UPROCD, "Checkpoint no proc for %v\n", spid)
 		return fmt.Errorf("no proc %v\n", spid)
 	}
+	imgDir := DUMPDIR + spid.String()
+	err := os.MkdirAll(imgDir, os.ModePerm)
+	if err != nil {
+		db.DPrintf(db.CKPT, "CheckpointProc: error creating %v err %v", imgDir, err)
+		return err
+	}
+	if err := container.CheckpointProc(ups.criuInst, pid, imgDir, spid); err != nil {
+		return err
+	}
+	if err := ups.writeCheckpoint(imgDir, req.PathName, CKPTFULL); err != nil {
+		db.DPrintf(db.UPROCD, "writeCheckpoint full %v\n", spid, err)
+		return err
+	}
+	if err := ups.writeCheckpoint(imgDir, req.PathName, CKPTLAZY); err != nil {
+		db.DPrintf(db.UPROCD, "writeCheckpoint lazy %v err %v\n", spid, err)
+		return err
+	}
+	return nil
+}
 
-	ckptdir, err := container.CheckpointProc(ups.criuInst, pid, spid)
+// Copy the checkpoint img. Depending on <ckpt> name,  copy only "pagesnonlazy-<n>.img"
+func (ups *UprocSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string, ckpt string) error {
+	ups.ssrv.MemFs.SigmaClnt().MkDir(chkptSimgaDir, 0777)
+	pn := filepath.Join(chkptSimgaDir, ckpt)
+	db.DPrintf(db.UPROCD, "writeCheckpoint: create dir: %v\n", pn)
+	if err := ups.ssrv.MemFs.SigmaClnt().MkDir(pn, 0777); err != nil {
+		return err
+	}
+	files, err := os.ReadDir(chkptLocalDir)
+	if err != nil {
+		db.DPrintf(db.UPROCD, "writeCheckpoint: reading local dir err %\n", err)
+		return err
+	}
+
+	for _, file := range files {
+		if ckpt == CKPTLAZY && strings.HasPrefix(file.Name(), "pages-") {
+			continue
+		}
+		db.DPrintf(db.UPROCD, "Trying to copy file %s\n", file.Name())
+		b, err := os.ReadFile(filepath.Join(chkptLocalDir, file.Name()))
+		if err != nil {
+			db.DPrintf(db.UPROCD, "Error reading file: %v\n", err)
+			return err
+		}
+		dstFd, err := ups.ssrv.MemFs.SigmaClnt().Create(filepath.Join(pn, file.Name()), 0777, sp.OWRITE)
+		if err != nil {
+			db.DPrintf(db.UPROCD, "writeCheckpoint: creating file %s err %v\n", file.Name(), err)
+			return err
+		}
+		if _, err := ups.ssrv.MemFs.SigmaClnt().Write(dstFd, b); err != nil {
+			return err
+		}
+		ups.ssrv.MemFs.SigmaClnt().CloseFd(dstFd)
+	}
+	return nil
+}
+
+func (ups *UprocSrv) restoreProc(spid sp.Tpid, ckptSigmaDir string) error {
+	dst := RESTOREDIR + spid.String()
+	if err := ups.readCheckpoint(ckptSigmaDir, dst, CKPTFULL); err != nil {
+		return nil
+	}
+	if err := ups.readCheckpoint(ckptSigmaDir, dst, CKPTLAZY); err != nil {
+		return nil
+	}
+	if err := container.RestoreProc(ups.criuInst, spid, filepath.Join(dst, CKPTLAZY), filepath.Join(dst, CKPTFULL)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ups *UprocSrv) readCheckpoint(ckptSigmaDir, localDir, ckpt string) error {
+	db.DPrintf(db.CKPT, "readCheckpoint %v %v %v", ckptSigmaDir, localDir, ckpt)
+
+	os.Mkdir(localDir, 0755)
+	pn := filepath.Join(localDir, ckpt)
+	if err := os.Mkdir(pn, 0755); err != nil {
+		db.DPrintf("Mkdir %v err %v\n", pn, err)
+		return err
+	}
+
+	sts, err := ups.ssrv.MemFs.SigmaClnt().GetDir(filepath.Join(ckptSigmaDir, ckpt))
+	if err != nil {
+		db.DPrintf("GetDir %v err %v\n", ckptSigmaDir, err)
+		return err
+	}
+	files := sp.Names(sts)
+	for _, entry := range files {
+		fn := filepath.Join(ckptSigmaDir, ckpt, entry)
+		db.DPrintf(db.UPROCD, "Copy file %s\n", fn)
+
+		rdr, err := ups.ssrv.MemFs.SigmaClnt().OpenReader(fn)
+		if err != nil {
+			db.DPrintf("GetFile %v err %v\n", fn, err)
+			return err
+		}
+		dstfn := filepath.Join(pn, entry)
+		file, err := os.OpenFile(dstfn, os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			db.DPrintf(db.MR, "OpenFile %v err %v", dstfn, err)
+			return err
+		}
+		wrt := bufio.NewWriter(file)
+		if _, err := io.Copy(wrt, rdr.Reader); err != nil {
+			db.DPrintf(db.MR, "Error Copy: %v", err)
+			return err
+		}
+		rdr.Close()
+		file.Close()
+
+	}
+	if ckpt == CKPTLAZY {
+		// XXX pid is from inside container
+		db.DPrintf(db.CKPT, "Expand %s\n", pn)
+		if err := lazypagessrv.ExpandLazyPages(pn, 1); err != nil {
+			db.DPrintf(db.CKPT, "ExpandLazyPages %v err %v", pn, err)
+			return err
+		}
+	}
+	return nil
+}
+
+func copyFile(srcFile, dstFile string) error {
+	dst, err := os.Create(dstFile)
 	if err != nil {
 		return err
 	}
-	if err = ups.writeCheckpoint(ckptdir, req.PathName); err != nil {
-		// TODO clean up what was written partially?
+	defer dst.Close()
+
+	src, err := os.Open(srcFile)
+	if err != nil {
 		return err
 	}
-	// close chan?
+	defer src.Close()
+	_, err = io.Copy(dst, src)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeRestore(src, dst, ckpt string) error {
+	db.DPrintf(db.CKPT, "Restore copydir %v %v %v", src, dst, ckpt)
+
+	os.Mkdir(dst, 0755)
+	pn := filepath.Join(dst, ckpt)
+	os.Mkdir(pn, 0755)
+
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		sourcePath := filepath.Join(src, entry.Name())
+		destPath := filepath.Join(pn, entry.Name())
+		if err := copyFile(sourcePath, destPath); err != nil {
+			return err
+		}
+	}
+	if ckpt == "CKPTLAZY" {
+		pageId := 1 // XXX pid is from inside container
+		if err := os.Remove(filepath.Join(pn, "pages-"+strconv.Itoa(pageId)+".img")); err != nil {
+			db.DPrintf(db.CKPT, "copyDir: Remove err %v", err)
+			return err
+		}
+		if err := lazypagessrv.ExpandLazyPages(pn, pageId); err != nil {
+			db.DPrintf(db.CKPT, "copyDir: ExpandLazyPages err %v", err)
+			return err
+		}
+	}
 	return nil
 }

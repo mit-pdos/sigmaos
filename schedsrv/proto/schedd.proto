@@ -89,13 +89,3 @@ message GetScheddStatsRequest {
 message GetScheddStatsResponse {
   map<string, RealmStats> scheddStats = 1;
 }
-
-message CheckpointProcRequest {
-  string pidStr = 1;
-  string realmStr = 2;
-  string pathName = 3;
-}
-
-message CheckpointProcResponse {
-  string checkpointLocation = 1;
-}

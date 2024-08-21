@@ -10,6 +10,18 @@ of AWS machines (and provide setup scripts to set up a
 artifact reviewers). Since multiple reviewers may share the clusters, we ask
 that reviewers coordinate to conduct their reviews at different times.
 
+### Unpackaging the reviewer's artifact package
+
+Please download the `.tar.gz` file, and untar it with:
+
+```
+$ tar -xzf sigmaos-artifact-pkg.tar.gz
+```
+
+This package contains keys which will be necessary to access the AWS clusters
+we set up for the reviewers, as well as AWS credentials. They are useful for
+setting up a CloudLab cluster using our scripts.
+
 ### Accessing provided AWS clusters (for reviewers)
 
 The artifact submission package contains VPC keys required to access both AWS

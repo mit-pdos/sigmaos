@@ -117,7 +117,7 @@ func TestSchedScalability(t *testing.T) {
 	}
 	// Cold-start benchmark configuration parameters
 	var (
-		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400, 50600, 55200}
+		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400}
 		dur time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
@@ -221,7 +221,8 @@ func TestHotelTailLatency(t *testing.T) {
 		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
 		cacheType   string          = "cached"
 		scaleCache  bool            = false
-		clientDelay time.Duration   = 10 * time.Second
+		clientDelay time.Duration   = 30 * time.Second
+		sleep       time.Duration   = 10 * time.Second
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -231,8 +232,8 @@ func TestHotelTailLatency(t *testing.T) {
 		benchName += "_k8s"
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
-	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, clientDelay)
+	getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 

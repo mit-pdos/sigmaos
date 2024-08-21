@@ -53,6 +53,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBe
 			overlays = "--overlays"
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestMicroScheddSpawn "+
 			"--use_rust_proc "+

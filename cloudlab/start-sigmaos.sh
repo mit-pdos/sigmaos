@@ -155,7 +155,9 @@ for vm in $vms; do
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/1.jpg ~/
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/6.jpg ~/
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/7.jpg ~/
-#  aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
+  if ! [ -f ~/8.jpg ]; then
+    aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
+  fi
 
   cd sigmaos
   sudo ./load-apparmor.sh

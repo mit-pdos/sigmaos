@@ -385,11 +385,11 @@ func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, 
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
 			"--n_imgresize 600 "+
-			"--n_imgresize_per 300 "+
+			"--imgresize_nround 500 "+
+			"--n_imgresize_per 1 "+
 			"--imgresize_path name/ux/~local/8.jpg "+
 			"--imgresize_mcpu 0 "+
 			"--imgresize_mem 1500 "+
-			"--imgresize_nround 500 "+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,

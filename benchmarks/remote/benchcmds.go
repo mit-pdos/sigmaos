@@ -384,7 +384,7 @@ func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, 
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
-			"--n_imgresize 600 "+
+			"--n_imgresize 350 "+
 			"--imgresize_nround 500 "+
 			"--n_imgresize_per 1 "+
 			"--imgresize_path name/ux/~local/8.jpg "+

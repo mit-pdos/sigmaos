@@ -35,8 +35,6 @@ COPY bin/kernel/uprocd bin/kernel/
 COPY bin/kernel/spproxyd bin/kernel/
 ## Copy rust trampoline to the user image.
 COPY bin/kernel/exec-uproc-rs /home/sigmaos/bin/kernel/
-## Copy binfsd to the user image.
-COPY bin/kernel/binfsd bin/kernel/
 
 # ========== local kernel image ==========
 FROM base AS sigmaos-local

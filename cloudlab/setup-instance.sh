@@ -25,7 +25,14 @@ ENDSSH
 SECRETS="../aws/.aws/credentials ../aws/.docker/config.json"
 for F in $SECRETS
 do
-  yes | gpg --output $F --decrypt ${F}.gpg || exit 1
+  # If private version already exists, don't re-decrypt (used to make artifact
+  # evaluation setup easier)
+  if [ -f $F.priv ]
+  then
+    cp $F.priv $F
+  else 
+    yes | gpg --output $F --decrypt ${F}.gpg || exit 1
+  fi
 done
 
 # scp the aws and docker secrets to the server and remove them locally.

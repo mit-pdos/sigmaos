@@ -32,7 +32,7 @@ def get_lat(dpath, idx, keyword, ignorelast):
       all_lats = all_lats[:-1]
     parsed_lats = [ str_dur_to_ms(l.split(" ")[-1]) for l in all_lats ]
     lat.append(parsed_lats[idx])
-  return round(np.mean(lat), 3)
+  return round(np.mean(lat), 2)
 
 def get_tpt(dpath):
   bench_out_files = [ f for f in os.listdir(dpath) if "bench.out" in f ]

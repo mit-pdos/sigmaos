@@ -4,8 +4,8 @@ VERSION=SOSP24AE
 
 LOG_DIR=/tmp/sigmaos-experiment-logs
 
-AWS_VPC_SMALL=XXX
-AWS_VPC_LARGE=YYY
+AWS_VPC_SMALL=vpc-0814ec9c0d661bffc
+AWS_VPC_LARGE=vpc-0affa7f07bd923811
 
 # TODO: get VPCs right
 

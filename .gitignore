@@ -14,3 +14,5 @@ benchmarks/results/
 *.pdf
 scratch.sh
 run-until-fail.sh
+# Artifact evaluation credential files
+*.priv

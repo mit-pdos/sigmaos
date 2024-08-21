@@ -93,7 +93,7 @@ sudo mkdir -p /mnt/9p
 
 if [ -d "DeathStarBench" ] 
 then
-  (cd DeathStarBench; git pull;)'
+  (cd DeathStarBench; git pull;)
 else
   git clone https://github.com/mit-pdos/DeathStarBench.git
 fi

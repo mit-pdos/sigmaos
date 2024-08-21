@@ -17,11 +17,6 @@ GRAPH_OUT_DIR=$ROOT_DIR/benchmarks/results/graphs
 #$GRAPH_SCRIPTS_DIR/schedd-scalability-hockey.py --measurement_dir $RES_OUT_DIR/sched_scalability --out $GRAPH_OUT_DIR/sched_scalability.pdf --prefix "23-vm-" --tpt_v_tpt > /dev/null
 #echo "Done generating Figure 8..."
 
-# Figure 9
-echo "Generating Figure 9..."
-echo "FIG 9 TODO"
-echo "Done generating Figure 9..."
-
 # Figure 10
 #echo "Generating Figure 10..."
 #$GRAPH_SCRIPTS_DIR/mr_vs_corral.py --measurement_dir $RES_OUT_DIR/mr_vs_corral/ --out $GRAPH_OUT_DIR/mr_vs_corral.pdf --datasize=2G

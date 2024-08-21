@@ -34,9 +34,21 @@ def get_lat(dpath, idx, keyword, ignorelast):
     lat.append(parsed_lats[idx])
   return round(np.mean(lat), 3)
 
+def get_tpt(dpath):
+  bench_out_files = [ f for f in os.listdir(dpath) if "bench.out" in f ]
+  tpts = []
+  for fname in bench_out_files:
+    with open(os.path.join(dpath, fname)) as f:
+      x = f.read()
+    # Scrape for mean timing information
+    all_tpts = [ float(l.strip().split(" ")[-1]) for l in x.split("\n") if "Avg req/sec server-side:" in l ]
+    tpts.append(all_tpts[-1])
+  return round(np.sum(tpts))
+
 def graph_data(hotel_res_dir, socialnet_res_dir, out):
   fig, ((avg_lat, p99_lat), (p99_lat_peak, peak_tpt)) = plt.subplots(2, 2, figsize=(6.4, 2.4))
 
+  # Scrape data
   hotel_avg_lat = get_lat(hotel_res_dir, 0, "Mean:", False)
   social_avg_lat = get_lat(socialnet_res_dir, 0, "Mean:", True)
 
@@ -46,11 +58,15 @@ def graph_data(hotel_res_dir, socialnet_res_dir, out):
   hotel_p99_lat_peak = get_lat(hotel_res_dir, -1, " 99:", False)
   social_p99_lat_peak = get_lat(socialnet_res_dir, -1, " 99: ", True)
 
+  hotel_peak_tpt = get_tpt(hotel_res_dir)
+  social_peak_tpt = get_tpt(socialnet_res_dir)
+
+  # Graph data
   sys = [ "XOS-hotel", "XOS-hotel-overlay", "k8s-hotel", "XOS-socialnet", "XOS-socialnet-overlay", "k8s-socialnet", ]
   d_avg_lat      = [       hotel_avg_lat,  2.60,  4.83,      social_avg_lat,  2.75,  5.49, ]
   d_p99_lat      = [       hotel_p99_lat,  5.78, 12.76,      social_p99_lat,  6.24,  9.01, ]
   d_p99_lat_peak = [  hotel_p99_lat_peak, 66.34, 45.25, social_p99_lat_peak, 31.13, 12.86, ]
-  d_peak_tpt     = [               11896, 11892,  5877,                3988,  3991,  1993, ]
+  d_peak_tpt     = [      hotel_peak_tpt, 11892,  5877,     social_peak_tpt,  3991,  1993, ]
 
   width = 0.25
   

@@ -248,7 +248,7 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			"--run %s "+
 			"--nclnt %s "+
 			"--hotel_ncache 3 "+
-			"--hotel_cache_mcpu 200 "+
+			"--hotel_cache_mcpu 2000 "+
 			"--cache_type %s "+
 			"%s "+ // scaleCache
 			"%s "+ // k8sFrontendAddr
@@ -352,9 +352,9 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 //
 // - If scaleCache is true, the cache autoscales.
 //
-// - clientDelay specifies the delay for which the client should wait before
-// starting to send requests.
-func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, clientDelay time.Duration) GetBenchCmdFn {
+// - sleep specifies the amount of time the hotel benchmark should sleep before
+// starting to run.
+func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\""
@@ -378,14 +378,14 @@ func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, 
 			"--run RealmBalanceHotelImgResize "+
 			"--nclnt %s "+
 			"--hotel_ncache 3 "+
-			"--hotel_cache_mcpu 200 "+
+			"--hotel_cache_mcpu 2000 "+
 			"--cache_type %s "+
 			"%s "+ // scaleCache
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
-			"--n_imgresize 590 "+
-			"--n_imgresize_per 1 "+
+			"--n_imgresize 600 "+
+			"--n_imgresize_per 300 "+
 			"--imgresize_path name/ux/~local/8.jpg "+
 			"--imgresize_mcpu 0 "+
 			"--imgresize_mem 1500 "+
@@ -403,7 +403,7 @@ func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, 
 			autoscaleCache,
 			dursToString(dur),
 			rpsToString(rps),
-			clientDelay.String(),
+			sleep.String(),
 		)
 	}
 }

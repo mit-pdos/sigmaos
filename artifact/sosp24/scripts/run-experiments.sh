@@ -7,8 +7,6 @@ LOG_DIR=/tmp/sigmaos-experiment-logs
 AWS_VPC_SMALL=vpc-0814ec9c0d661bffc
 AWS_VPC_LARGE=vpc-0affa7f07bd923811
 
-# TODO: get VPCs right
-
 mkdir -p $LOG_DIR
 
 # Figure 6

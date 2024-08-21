@@ -27,18 +27,16 @@ const SOCKNAME = "lazy-pages.socket"
 
 type LazyPagesSrv struct {
 	*sigmaclnt.SigmaClnt
-	imgdir   string
-	pagesdir string
-	pages    string
-	pagesz   int
+	imgdir string
+	pages  string
+	pagesz int
 }
 
-func NewLazyPagesSrv(imgdir, pagesdir, pages string) (*LazyPagesSrv, error) {
+func NewLazyPagesSrv(imgdir, pages string) (*LazyPagesSrv, error) {
 	lps := &LazyPagesSrv{
-		imgdir:   imgdir,
-		pagesdir: pagesdir,
-		pages:    pages,
-		pagesz:   os.Getpagesize()}
+		imgdir: imgdir,
+		pages:  pages,
+		pagesz: os.Getpagesize()}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
@@ -117,7 +115,7 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int) error {
 	iovs, npages, maxIovLen := mm.collectIovs(pmi)
 	nfault := 0
 	page := make([]byte, pmi.pagesz) // XXX maxIovLen
-	db.DPrintf(db.ALWAYS, "lazypages: img %v pagesdir %v pages %v pid %d fd %d iovs %d npages %d maxIovLen %d", lps.imgdir, lps.pagesdir, lps.pages, pid, fd, iovs.len(), npages, maxIovLen)
+	db.DPrintf(db.ALWAYS, "lazypages: img %v pages %v pid %d fd %d iovs %d npages %d maxIovLen %d", lps.imgdir, lps.pages, pid, fd, iovs.len(), npages, maxIovLen)
 	for {
 		if _, err := unix.Poll(
 			[]unix.PollFd{{

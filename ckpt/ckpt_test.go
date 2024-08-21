@@ -59,11 +59,9 @@ func TestCkptProc(t *testing.T) {
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
-	for {
-		n := time.Duration(25)
-		db.DPrintf(db.TEST, "sleep for a while %ds", n)
-		time.Sleep(n * time.Second)
-	}
+	n := time.Duration(25)
+	db.DPrintf(db.TEST, "sleep for a while %ds", n)
+	time.Sleep(n * time.Second)
 
 	//status, err := ts.WaitExit(restProc.GetPid())
 	//assert.Nil(t, err)

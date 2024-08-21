@@ -192,8 +192,8 @@ func restoreMounts(sigmaPid sp.Tpid) error {
 	return nil
 }
 
-func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pagesDir, pages string) error {
-	db.DPrintf(db.CKPT, "RestoreProc %v %v %v %v", sigmaPid, imgDir, pagesDir, pages)
+func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pages string) error {
+	db.DPrintf(db.CKPT, "RestoreProc %v %v %v", sigmaPid, imgDir, pages)
 	if err := restoreMounts(sigmaPid); err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pagesDir, pages 
 	if LAZY {
 		// XXX first dir should have all non-lazy pages and holes for lazy pages
 		// XXX second dir should have all non-lazy pages (or all for now)
-		err := runLazypagesd(imgDir, pagesDir, pages)
+		err := runLazypagesd(imgDir, pages)
 		db.DPrintf(db.CKPT, "lazyPages err %v", err)
 		if err != nil {
 			return err
@@ -213,17 +213,17 @@ func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pagesDir, pages 
 	return restoreProc(criuInst, imgDir, jailPath)
 }
 
-func runLazypagesd(imgDir, pagesDir, pages string) error {
-	db.DPrintf(db.CKPT, "Start lazypagesd img %v pages %v", imgDir, pagesDir)
+func runLazypagesd(imgDir, pages string) error {
+	db.DPrintf(db.CKPT, "Start lazypagesd img %v pages %v", imgDir, pages)
 	//cmd := exec.Command("criu", append([]string{"lazy-pages", "-vvvv", "--log-file", "lazy.log", "-D"}, imgDir)...)
-	cmd := exec.Command("lazypagesd", []string{imgDir, pagesDir, pages}...)
+	cmd := exec.Command("lazypagesd", []string{imgDir, pages}...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 	go func() {
-		db.DPrintf(db.CKPT, "Wait lazypagesd %v %v", imgDir, pagesDir)
+		db.DPrintf(db.CKPT, "Wait lazypagesd %v %v", imgDir, pages)
 		err := cmd.Wait()
 		db.DPrintf(db.CKPT, "Wait lazypagesd returns %v", err)
 	}()

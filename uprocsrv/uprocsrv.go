@@ -546,7 +546,7 @@ func (ups *UprocSrv) restoreProc(spid sp.Tpid, ckptSigmaDir string) error {
 	pagesId := 1
 	pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
 	// pages := filepath.Join(dst, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
-	if err := container.RestoreProc(ups.criuInst, spid, filepath.Join(dst, CKPTLAZY), filepath.Join(dst, CKPTFULL), pages); err != nil {
+	if err := container.RestoreProc(ups.criuInst, spid, filepath.Join(dst, CKPTLAZY), pages); err != nil {
 		return err
 	}
 	return nil

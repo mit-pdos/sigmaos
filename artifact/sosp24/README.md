@@ -2,6 +2,85 @@
 
 This README describes how to reproduce the results in our SOSP24 paper.
 
+## Resources for reviewers
+
+For the purpose of artifact the evaluation, we will provide two small clusters
+of AWS machines (and provide setup scripts to set up a
+[CloudLab](https://www.cloudlab.us/) cluster which can be procured by the
+artifact reviewers). Since multiple reviewers may share the clusters, we ask
+that reviewers coordinate to conduct their reviews at different times.
+
+### Accessing provided AWS clusters (for reviewers)
+
+The artifact submission package contains VPC keys required to access both AWS
+clusters, and the driver machine (which is used to run the experiments and
+produce the graphs, and resides in the first cluster), also has these keys
+available.
+
+The driver machine can be accessed by running the following:
+
+```
+$ cd sigmaos-artifact-pkg
+$ ssh -i key-vpc-0affa7f07bd923811.pem ubuntu@ec2-54-234-242-35.compute-1.amazonaws.com
+```
+
+## Building SigmaOS
+
+To build SigmaOS, run the following from the parent directory of the project
+root directory:
+
+```
+$ cd sigmaos
+$ ./build.sh
+```
+
+The build can be sped up by builiding binaries in parallel. WARNING: this will
+try to consume as much CPU as your computer has, and may cause your machine to
+slow down or OOM (so proceed with caution). Parallel builds can be run with:
+
+```
+$ ./build.sh --parallel
+```
+
+This build is suitable to run SigmaOS locally. In order to run deploy SigmaOS
+on remote clusters (like AWS or CloudLab) and run remote benchmarks, you must
+built with a `tag`. We have set up the `sosp24ae` tag for reviewers to use.
+To build the remote version of SigmaOS, run:
+
+```
+$ ./build.sh --target aws --push sosp24ae
+```
+
+## Running experiments
+
+Once SigmaOS has been built in remote mode, you can run its experiments. For
+convenience, we provide a single script which runs the major experiments from
+the paper. From the root of the `sigmaos` repo, you can run this experiment
+with:
+
+```
+$ ./artifact/sosp24/scripts/run-experiments.sh
+```
+
+Each experiment's data is generated using one (or more) invocations of a Go
+test program. If any of them fail, they can be rerun individually by deleting
+the test's result output directory, and re-invoking the Go test program as
+is done in the experiment runner script.
+
+Once the experiments have run successfully, all of the paper's graphs can be
+generated with:
+
+```
+$ ./artifact/sosp24/scripts/generate-graphs.sh
+```
+
+By default, the resulting graph PDFs will be stored in the following directory,
+relative to the root of the `sigmaos` repo:
+
+```
+$ benchmarks/results/graphs/
+```
+
 ## Required Software/Hardware
 
 Some of the paper experiments are run on AWS, and others are run on CloudLab.
@@ -57,6 +136,8 @@ This section describes the Software and Hardware setup used in each setting.
 #### Summary of required resources
 
 - 24 [c220g5](https://docs.cloudlab.us/hardware.html) nodes
+  - CloudLab profile:
+    [small-lan](https://www.cloudlab.us/p/PortalProfiles/small-lan)
 
 #### Setup for each experiment
 

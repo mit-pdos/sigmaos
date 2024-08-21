@@ -1,6 +1,7 @@
 package container
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -199,16 +200,11 @@ func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pages string) er
 	}
 	jailPath := "/home/sigmaos/jail/" + sigmaPid.String() + "/"
 	if LAZY {
-		// XXX first dir should have all non-lazy pages and holes for lazy pages
-		// XXX second dir should have all non-lazy pages (or all for now)
 		err := runLazypagesd(imgDir, pages)
 		db.DPrintf(db.CKPT, "lazyPages err %v", err)
 		if err != nil {
 			return err
 		}
-		// XXX use pipe
-		// give lazy-pages daemon some time to start
-		time.Sleep(1 * time.Second)
 	}
 	return restoreProc(criuInst, imgDir, jailPath)
 }
@@ -216,12 +212,28 @@ func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pages string) er
 func runLazypagesd(imgDir, pages string) error {
 	db.DPrintf(db.CKPT, "Start lazypagesd img %v pages %v", imgDir, pages)
 	//cmd := exec.Command("criu", append([]string{"lazy-pages", "-vvvv", "--log-file", "lazy.log", "-D"}, imgDir)...)
+
 	cmd := exec.Command("lazypagesd", []string{imgDir, pages}...)
-	cmd.Stdout = os.Stdout
+	//stdin, err := cmd.StdinPipe()
+	//if err != nil {
+	//	return nil, err
+	//}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
 	cmd.Stderr = os.Stderr
+
 	if err := cmd.Start(); err != nil {
 		return err
 	}
+
+	buf := make([]byte, 1)
+	if _, err := io.ReadFull(stdout, buf); err != nil {
+		db.DPrintf(db.CKPT, "read pipe err %v\n", err)
+		return err
+	}
+
 	go func() {
 		db.DPrintf(db.CKPT, "Wait lazypagesd %v %v", imgDir, pages)
 		err := cmd.Wait()

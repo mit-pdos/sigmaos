@@ -15,11 +15,13 @@ import (
 	"sigmaos/test"
 )
 
+const NPAGES = "1000"
+
 func TestRunProc(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
 
-	chkptProc := proc.NewProc("ckpt-proc", []string{"10"})
+	chkptProc := proc.NewProc("ckpt-proc", []string{"10", NPAGES})
 	err = ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 	err = ts.WaitStart(chkptProc.GetPid())
@@ -39,7 +41,7 @@ func TestCkptProc(t *testing.T) {
 	os.Remove("/tmp/sigmaos-perf/log.txt")
 
 	run := 10
-	chkptProc := proc.NewProc("ckpt-proc", []string{strconv.Itoa(run)})
+	chkptProc := proc.NewProc("ckpt-proc", []string{strconv.Itoa(run), NPAGES})
 	err = ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 	//err = ts.WaitStart(chkptProc.GetPid())

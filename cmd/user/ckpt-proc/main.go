@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,16 +18,21 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <sleep_length>\n", os.Args[0])
+	if len(os.Args) < 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %v <sleep_length> <npages>\n", os.Args[0])
 		os.Exit(1)
 	}
-	n, err := strconv.Atoi(os.Args[1])
+	sec, err := strconv.Atoi(os.Args[1])
 	if err != nil {
 		db.DFatalf("Atoi error %v\n", err)
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Running %d", n)
+	npages, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		db.DFatalf("Atoi error %v\n", err)
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Running %d %d", sec, npages)
 
 	// sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	// if err != nil {
@@ -44,7 +50,7 @@ func main() {
 	// 	return
 	// }
 
-	timer := time.NewTicker(time.Duration(n) * time.Second)
+	timer := time.NewTicker(time.Duration(sec) * time.Second)
 
 	// testDir := sp.S3 + "~any/fkaashoek/"
 	//testDir := sp.UX + "~any/"
@@ -65,7 +71,13 @@ func main() {
 		db.DFatalf("Error creating %v\n", err)
 	}
 
-	listOpenfiles()
+	// listOpenfiles()
+
+	pagesz := os.Getpagesize()
+	mem := make([]byte, pagesz*npages)
+	for i := 0; i < npages; i++ {
+		mem[i*pagesz] = byte(i)
+	}
 
 	for {
 		select {
@@ -77,6 +89,8 @@ func main() {
 			return
 		default:
 			f.Write([]byte("."))
+			r := rand.IntN(npages)
+			mem[r*pagesz] = byte(r)
 			// sc.Write(fd, []byte("here sleep"))
 			time.Sleep(1 * time.Second)
 		}

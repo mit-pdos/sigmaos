@@ -102,15 +102,15 @@ By default, the resulting graph PDFs will be stored in the following directory,
 relative to the root of the `sigmaos` repo:
 
 ```
-$ benchmarks/results/graphs/
+benchmarks/results/graphs/
 ```
 
 ## Setting up a CloudLab cluster
 
-The CloudLab cluster specs we used to evaluate SigmaOS can be found below.
-For convenience, we provide some scripts to set up a CloudLab cluster
-on behalf of SigmaOS. Reviewers can run these from the benchmark driver
-machine.
+The CloudLab cluster specs we used to evaluate SigmaOS can be found below.  For
+convenience, we provide some scripts to set up a CloudLab cluster in the way
+the SigmaOS scripts/benchmarks expect. Reviewers can run these from the
+benchmark driver machine.
 
 First, create your CloudLab cluster, and double-check that all machines can
 communicate by running a linktest (we have had issues with this in the past).

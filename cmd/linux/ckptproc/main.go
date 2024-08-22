@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"net"
 	"os"
 	"strconv"
 
 	db "sigmaos/debug"
+	"sigmaos/frame"
 
 	"time"
 )
@@ -23,8 +25,8 @@ import (
 // sudo criu restore -D dump1 --shell-job --lazy-pages --log-file restore.txt
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <seconds> <npages>\n", os.Args[0])
+	if len(os.Args) < 4 {
+		fmt.Fprintf(os.Stderr, "Usage: %v <seconds> <npages> <socket>\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -40,6 +42,18 @@ func main() {
 	if err != nil {
 		log.Printf("Atoi err %v\n", err)
 		return
+	}
+
+	if os.Args[3] != "" {
+		uconn, err := net.Dial("unix", os.Args[3])
+		if err != nil {
+			db.DFatalf("dial %v", err)
+		}
+		conn := uconn.(*net.UnixConn)
+		str := "hello"
+		if err := frame.WriteFrame(conn, []byte(str)); err != nil {
+			db.DFatalf("WriteFrame: %v", err)
+		}
 	}
 
 	pagesz := os.Getpagesize()

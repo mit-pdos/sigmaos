@@ -54,16 +54,16 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	}
 }
 
-func (clnt *UprocdClnt) CheckpointProc(pid sp.Tpid, pn string) (chkptLoc string, childErr error) {
+func (clnt *UprocdClnt) CheckpointProc(pid sp.Tpid, pn string) (uprocErr error, childErr error) {
 	req := &proto.CheckpointProcRequest{
 		PidStr:   pid.String(),
 		PathName: pn,
 	}
 	res := &proto.CheckpointProcResponse{}
 	if err := clnt.RPC("UprocSrv.Checkpoint", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
-		return "", err
+		return err, nil
 	} else {
-		return res.CheckpointLocation, nil
+		return nil, err
 	}
 }
 

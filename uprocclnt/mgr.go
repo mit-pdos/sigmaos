@@ -143,13 +143,14 @@ func (updm *UprocdMgr) startUprocd() (sp.Tpid, *UprocdClnt) {
 	return pid, c
 }
 
-func (updm *UprocdMgr) CheckpointProc(pid sp.Tpid, r sp.Trealm, pn string) (chkptloc string, err error) {
+func (updm *UprocdMgr) CheckpointProc(pid sp.Tpid, r sp.Trealm, pn string) error {
 	db.DPrintf(db.UPROCDMGR, "CheckpointProc %v", pid)
 	rpcc, err := updm.lookupClnt(r, proc.T_BE)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return rpcc.CheckpointProc(pid, pn)
+	_, err = rpcc.CheckpointProc(pid, pn)
+	return err
 }
 
 func (updm *UprocdMgr) getClntOrStartUprocd(realm sp.Trealm, ptype proc.Ttype) (*UprocdClnt, error) {

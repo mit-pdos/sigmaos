@@ -52,5 +52,5 @@ message CheckpointProcRequest {
 }
 
 message CheckpointProcResponse {
-  string checkpointLocation = 1;
+  bool oK = 1;
 }

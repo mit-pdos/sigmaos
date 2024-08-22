@@ -10,68 +10,57 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
-	// "sigmaos/proc"
-	// "sigmaos/sigmaclnt"
-	// sp "sigmaos/sigmap"
+	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 
 	"time"
 )
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <sleep_length> <npages>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %v <no/ext/self> <sleep_length> <npages>\n", os.Args[0])
 		os.Exit(1)
 	}
-	sec, err := strconv.Atoi(os.Args[1])
+	cmd := os.Args[1]
+	sec, err := strconv.Atoi(os.Args[2])
 	if err != nil {
 		db.DFatalf("Atoi error %v\n", err)
 		return
 	}
-	npages, err := strconv.Atoi(os.Args[1])
+	npages, err := strconv.Atoi(os.Args[3])
 	if err != nil {
 		db.DFatalf("Atoi error %v\n", err)
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Running %d %d", sec, npages)
+	db.DPrintf(db.ALWAYS, "Running %v %d %d", cmd, sec, npages)
 
-	// sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-	// if err != nil {
-	// 	db.DFatalf("NewSigmaClnt error %v\n", err)
-	// }
-	// err = sc.Started()
-	// if err != nil {
-	// 	db.DFatalf("Started error %v\n", err)
-	// }
-
-	// pn := sp.UX + "~any/" + sc.GetPID().String() + "/"
-	// _, err = sc.CheckpointMe(pn)
-	// if err != nil {
-	// 	db.DFatalf("Atoi error %v\n", err)
-	// 	return
-	// }
+	var sc *sigmaclnt.SigmaClnt
+	if cmd == "no" || cmd == "self" {
+		sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+		if err != nil {
+			db.DFatalf("NewSigmaClnt error %v\n", err)
+		}
+		err = sc.Started()
+		if err != nil {
+			db.DFatalf("Started error %v\n", err)
+		}
+	}
 
 	timer := time.NewTicker(time.Duration(sec) * time.Second)
 
-	// testDir := sp.S3 + "~any/fkaashoek/"
-	//testDir := sp.UX + "~any/"
-	//filePath := testDir + "example-out.txt"
-	//fd, err := sc.Create(filePath, 0777, sp.OWRITE)
-	//if err != nil {
-	//db.DFatalf("Error creating out file in s3 %v\n", err)
-	//}
+	os.Stdin.Close() // XXX close in StartUproc
 
-	os.Stdin.Close()
-	//syscall.Close(4) // close spproxyd.sock
-	syscall.Close(3) // close spproxyd.sock
-	//syscall.Close(3) // close ??
-	//syscall.Close(8) // close ??
+	if cmd == "ext" {
+		syscall.Close(3) // close spproxyd.sock
+	}
 
 	f, err := os.Create("/tmp/sigmaos-perf/log.txt")
 	if err != nil {
 		db.DFatalf("Error creating %v\n", err)
 	}
 
-	// listOpenfiles()
+	listOpenfiles()
 
 	pagesz := os.Getpagesize()
 	mem := make([]byte, pagesz*npages)
@@ -79,19 +68,26 @@ func main() {
 		mem[i*pagesz] = byte(i)
 	}
 
+	f.Write([]byte("."))
+
+	if cmd == "self" {
+		pn := sp.UX + "~any/" + sc.GetPID().String() + "/"
+		if err := sc.CheckpointMe(pn); err != nil {
+			db.DPrintf(db.ALWAYS, "CheckpointMe err %v\n", err)
+			sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "CheckpointMe failed", err))
+		}
+	}
+
 	for {
 		select {
 		case <-timer.C:
 			f.Write([]byte("exit"))
-			//sc.Write(fd, []byte("exiting"))
-			//err = sc.CloseFd(fd)
-			//sc.ClntExitOK()
+			sc.ClntExitOK()
 			return
 		default:
 			f.Write([]byte("."))
 			r := rand.IntN(npages)
 			mem[r*pagesz] = byte(r)
-			// sc.Write(fd, []byte("here sleep"))
 			time.Sleep(1 * time.Second)
 		}
 	}

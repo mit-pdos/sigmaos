@@ -17,11 +17,11 @@ import (
 
 const NPAGES = "1000"
 
-func TestRunProc(t *testing.T) {
+func TestNoCkpt(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
 
-	chkptProc := proc.NewProc("ckpt-proc", []string{"10", NPAGES})
+	chkptProc := proc.NewProc("ckpt-proc", []string{"no", "10", NPAGES})
 	err = ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 	err = ts.WaitStart(chkptProc.GetPid())
@@ -34,23 +34,20 @@ func TestRunProc(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestCkptProc(t *testing.T) {
+func TestExtCkpt(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
 
 	os.Remove("/tmp/sigmaos-perf/log.txt")
 
 	run := 10
-	chkptProc := proc.NewProc("ckpt-proc", []string{strconv.Itoa(run), NPAGES})
+	chkptProc := proc.NewProc("ckpt-proc", []string{"ext", strconv.Itoa(run), NPAGES})
 	err = ts.Spawn(chkptProc)
 	assert.Nil(t, err)
-	//err = ts.WaitStart(chkptProc.GetPid())
-	//assert.Nil(t, err)
 
 	// let ckpt-proc run for a little while
 	time.Sleep(time.Duration(run/2) * time.Second)
 
-	// pn := sp.S3 + "~any/fkaashoek/" + chkptProc.GetPid().String() + "/"
 	pn := sp.UX + "~any/" + chkptProc.GetPid().String() + "/"
 
 	db.DPrintf(db.TEST, "checkpointing %q", pn)
@@ -67,9 +64,48 @@ func TestCkptProc(t *testing.T) {
 	db.DPrintf(db.TEST, "sleep for a while %v", n)
 	time.Sleep(n)
 
-	//status, err := ts.WaitExit(restProc.GetPid())
-	//assert.Nil(t, err)
-	//assert.True(t, status.IsStatusOK())
+	dots := make([]byte, run)
+	for i := 0; i < run; i++ {
+		dots[i] = '.'
+	}
+	b, err := os.ReadFile("/tmp/sigmaos-perf/log.txt")
+	db.DPrintf(db.TEST, "b %v\n", string(b))
+	assert.True(t, strings.Contains(string(b), string(dots)))
+	assert.True(t, strings.Contains(string(b), "exit"))
+
+	ts.Shutdown()
+}
+
+func TestSelfCkpt(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	assert.Nil(t, err)
+
+	os.Remove("/tmp/sigmaos-perf/log.txt")
+
+	run := 10
+	chkptProc := proc.NewProc("ckpt-proc", []string{"self", strconv.Itoa(run), NPAGES})
+	err = ts.Spawn(chkptProc)
+	assert.Nil(t, err)
+	err = ts.WaitStart(chkptProc.GetPid())
+	assert.Nil(t, err)
+
+	// let ckpt-proc run for a little while to checkpoint itself
+	time.Sleep(time.Duration(run/2) * time.Second)
+
+	pn := sp.UX + "~any/" + chkptProc.GetPid().String() + "/"
+
+	// spawn and run checkpointed proc
+	restProc := proc.NewRestoreProc(chkptProc, pn)
+	err = ts.Spawn(restProc)
+	assert.Nil(t, err)
+
+	n := time.Duration(time.Duration(run/2+1) * time.Second)
+	db.DPrintf(db.TEST, "sleep for a while %v", n)
+	time.Sleep(n)
+
+	status, err := ts.WaitExit(restProc.GetPid())
+	assert.Nil(t, err)
+	assert.True(t, status.IsStatusOK())
 
 	dots := make([]byte, run)
 	for i := 0; i < run; i++ {

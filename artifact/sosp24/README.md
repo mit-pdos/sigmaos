@@ -67,8 +67,10 @@ $ ./build.sh --target aws --push sosp24ae
 
 Once SigmaOS has been built in remote mode, you can run its experiments. For
 convenience, we provide a single script which runs the major experiments from
-the paper. From the root of the `sigmaos` repo, you can run this experiment
-with:
+the paper. Note that this script expects a CloudLab cluster to already be set
+up and running. To set up a CloudLab cluster, see the section that describes
+how to do this below. From the root of the `sigmaos` repo, you can run this
+experiment with:
 
 ```
 $ ./artifact/sosp24/scripts/run-experiments.sh

@@ -2,6 +2,7 @@ package ckpt_test
 
 import (
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -37,14 +38,15 @@ func TestCkptProc(t *testing.T) {
 
 	os.Remove("/tmp/sigmaos-perf/log.txt")
 
-	chkptProc := proc.NewProc("ckpt-proc", []string{"20"})
+	run := 10
+	chkptProc := proc.NewProc("ckpt-proc", []string{strconv.Itoa(run)})
 	err = ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 	//err = ts.WaitStart(chkptProc.GetPid())
 	//assert.Nil(t, err)
 
 	// let ckpt-proc run for a little while
-	time.Sleep(5 * time.Second)
+	time.Sleep(time.Duration(run/2) * time.Second)
 
 	// pn := sp.S3 + "~any/fkaashoek/" + chkptProc.GetPid().String() + "/"
 	pn := sp.UX + "~any/" + chkptProc.GetPid().String() + "/"
@@ -59,17 +61,21 @@ func TestCkptProc(t *testing.T) {
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
-	n := time.Duration(25)
-	db.DPrintf(db.TEST, "sleep for a while %ds", n)
-	time.Sleep(n * time.Second)
+	n := time.Duration(time.Duration(run/2+1) * time.Second)
+	db.DPrintf(db.TEST, "sleep for a while %v", n)
+	time.Sleep(n)
 
 	//status, err := ts.WaitExit(restProc.GetPid())
 	//assert.Nil(t, err)
 	//assert.True(t, status.IsStatusOK())
 
+	dots := make([]byte, run)
+	for i := 0; i < run; i++ {
+		dots[i] = '.'
+	}
 	b, err := os.ReadFile("/tmp/sigmaos-perf/log.txt")
 	db.DPrintf(db.TEST, "b %v\n", string(b))
-	assert.True(t, strings.Contains(string(b), "........."))
+	assert.True(t, strings.Contains(string(b), string(dots)))
 	assert.True(t, strings.Contains(string(b), "exit"))
 
 	ts.Shutdown()

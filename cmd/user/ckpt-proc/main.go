@@ -78,7 +78,7 @@ func main() {
 		default:
 			f.Write([]byte("."))
 			// sc.Write(fd, []byte("here sleep"))
-			time.Sleep(2 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 	}
 }

@@ -105,6 +105,45 @@ relative to the root of the `sigmaos` repo:
 $ benchmarks/results/graphs/
 ```
 
+## Setting up a CloudLab cluster
+
+The CloudLab cluster specs we used to evaluate SigmaOS can be found below.
+For convenience, we provide some scripts to set up a CloudLab cluster
+on behalf of SigmaOS. Reviewers can run these from the benchmark driver
+machine.
+
+First, create your CloudLab cluster, and double-check that all machines can
+communicate by running a linktest (we have had issues with this in the past).
+
+Place a private key to access the cluster in the file
+`sigmaos/cloudlab/cloudlab-sigmaos` (which is where our scripts will look for
+it). Then, copy the AWS and Docker credentials provided in the artifact
+evaluation package like so:
+
+```
+$ cp sigmaos-artifact-pkg/.aws/* sigmaos/aws/.aws
+$ cp sigmaos-artifact-pkg/.docker/* sigmaos/aws/.docker
+```
+
+This should already be done on the benchmark driver machine.
+
+Next, write the CloudLab Manifest description of your cluster to a file (in
+this example, `/tmp/manifest.xml`). Then, run the following to ingest the
+manifest in a format that our scripts expect:
+
+```
+$ cd cloudlab
+$ ./import-server-manifest.sh --manifest /tmp/manifest.xml --username YOUR_CLOUDLAB_USERNAME
+```
+
+Then, change the `LOGIN` field in `cloudlab/env.sh` to your cloudlab username.
+
+You can then set up your cloudlab cluster (and run any benchmarks) by running:
+
+```
+$ ./setup-cluster.sh
+```
+
 ## Required Software/Hardware
 
 Some of the paper experiments are run on AWS, and others are run on CloudLab.

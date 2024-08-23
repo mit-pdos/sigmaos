@@ -106,13 +106,14 @@ func CheckpointProc(c *criu.Criu, pid int, imgDir string, spid sp.Tpid) error {
 	verbose := db.IsLabelSet(db.CRIU)
 	root := "/home/sigmaos/jail/" + spid.String() + "/"
 	opts := &rpc.CriuOpts{
-		Pid:            proto.Int32(int32(pid)),
-		ImagesDirFd:    proto.Int32(int32(img.Fd())),
-		TcpEstablished: proto.Bool(true),
-		Root:           proto.String(root),
-		External:       []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/mnt/binfs]:binfsMount"}, //  "mnt[/mnt/binfs]:binfsMount"},
-		Unprivileged:   proto.Bool(true),
-		// ExtUnixSk: proto.Bool(true),   // for datagram sockets but for streaming
+		Pid:         proto.Int32(int32(pid)),
+		ImagesDirFd: proto.Int32(int32(img.Fd())),
+		Root:        proto.String(root),
+		//TcpEstablished: proto.Bool(true),
+		TcpClose:     proto.Bool(true), // XXX does it matter on dump?
+		External:     []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/mnt/binfs]:binfsMount"},
+		Unprivileged: proto.Bool(true),
+		// ExtUnixSk:    proto.Bool(true),
 	}
 	if verbose {
 		opts.LogLevel = proto.Int32(4)
@@ -252,13 +253,19 @@ func restoreProc(criuInst *criu.Criu, imgDir, jailPath string) error {
 	defer img.Close()
 
 	verbose := db.IsLabelSet(db.CRIU)
+	fd := int32(4)
+	fn := sp.SIGMA_NETPROXY_SOCKET
+	ifd := &rpc.InheritFd{Fd: &fd, Key: &fn}
+	ifds := []*rpc.InheritFd{ifd}
 	opts := &rpc.CriuOpts{
-		ImagesDirFd:    proto.Int32(int32(img.Fd())),
-		TcpEstablished: proto.Bool(true),
-		Root:           proto.String(jailPath),
-		External:       []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"}, //"mnt[binfsMount]:/mnt/binfs" },
-		//Unprivileged:   proto.Bool(true),
+		ImagesDirFd: proto.Int32(int32(img.Fd())),
+		Root:        proto.String(jailPath),
+		// TcpEstablished: proto.Bool(true),
+		TcpClose: proto.Bool(true),
+		External: []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"},
+		// Unprivileged: proto.Bool(true),
 		LazyPages: proto.Bool(LAZY),
+		InheritFd: ifds,
 	}
 	if verbose {
 		opts.LogLevel = proto.Int32(4)

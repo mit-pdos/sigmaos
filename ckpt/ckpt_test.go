@@ -60,7 +60,7 @@ func TestExtCkpt(t *testing.T) {
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
-	n := time.Duration(time.Duration(run/2+2) * time.Second)
+	n := time.Duration(time.Duration(run/2+3) * time.Second)
 	db.DPrintf(db.TEST, "sleep for a while %v", n)
 	time.Sleep(n)
 

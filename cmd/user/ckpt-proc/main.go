@@ -71,10 +71,24 @@ func main() {
 	f.Write([]byte("."))
 
 	if cmd == "self" {
+		_, err := sc.Stat(sp.UX + "~any/")
+		if err != nil {
+			db.DFatalf("Stat err %v\n", err)
+		}
+		syscall.Close(4) // close spproxyd.sock
+		f.Write([]byte("checkpointme...\n"))
 		pn := sp.UX + "~any/" + sc.GetPID().String() + "/"
 		if err := sc.CheckpointMe(pn); err != nil {
 			db.DPrintf(db.ALWAYS, "CheckpointMe err %v\n", err)
+			f.Write([]byte(fmt.Sprintf("CheckpointMe err %v\n", err)))
 			sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "CheckpointMe failed", err))
+			os.Exit(1)
+		}
+		f.Write([]byte("checkpointme done\n"))
+		sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+		f.Write([]byte(fmt.Sprintf("sigmaclnt err %v", err)))
+		if err != nil {
+			db.DFatalf("NewSigmaClnt err %v\n", err)
 		}
 	}
 

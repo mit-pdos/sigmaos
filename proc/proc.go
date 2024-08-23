@@ -425,6 +425,10 @@ func (p *Proc) GetNamedEndpoint() *sp.TendpointProto {
 	return p.ProcEnvProto.NamedEndpointProto
 }
 
+func (p *Proc) GetCheckpointLocation() string {
+	return p.ProcEnvProto.CheckpointLocation
+}
+
 // Return Env map as a []string
 func (p *Proc) GetEnv() []string {
 	env := []string{}

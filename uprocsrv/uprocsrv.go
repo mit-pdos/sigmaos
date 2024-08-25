@@ -107,7 +107,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	}
 	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
 
-	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
+	db.DPrintf(db.UPROCD, "Run kid %v port %v innerIP %s outerIP %s pe %v", kernelId, up, pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -126,6 +126,15 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 		}
 		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port)
 
+		// This should only happen if running with overlays. If running with
+		// overlays, allow all principals to attach (because named will try to
+		// attach to find its port). Shouldn't really matter, because overlays are
+		// only ever in use for benchmarking.
+		if !pe.GetOverlays() {
+			// Sanity check
+			db.DFatalf("Sanity check failed! Uprocsrv got a port when running without overlays!")
+		}
+		sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
 		// The kernel will advertise the server, so pass "" as pn.
 		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
 	}

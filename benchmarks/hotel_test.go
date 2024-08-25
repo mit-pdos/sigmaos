@@ -187,7 +187,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 }
 
 func (ji *HotelJobInstance) printStats() {
-	if ji.sigmaos && !ji.justCli && !ts.ProcEnv().GetOverlays() {
+	if ji.sigmaos && !ji.justCli && !ji.ProcEnv().GetOverlays() {
 		for _, s := range hotel.HOTELSVC {
 			stats, err := ji.ReadStats(s)
 			assert.Nil(ji.Ts.T, err, "error get stats [%v] %v", s, err)

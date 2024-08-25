@@ -114,7 +114,8 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		}
 		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
-		if sigmaos {
+		if sigmaos && false {
+			// Not used anymore
 			ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.SigmaClnt.FsLib}, hotel.HOTELRESERVE)
 			if err != nil {
 				db.DFatalf("Error make reserve pdc: %v", err)

@@ -221,7 +221,7 @@ func TestHotelTailLatency(t *testing.T) {
 		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
 		cacheType   string          = "cached"
 		scaleCache  bool            = false
-		clientDelay time.Duration   = 30 * time.Second
+		clientDelay time.Duration   = 60 * time.Second
 		sleep       time.Duration   = 10 * time.Second
 	)
 	ts, err := NewTstate(t)

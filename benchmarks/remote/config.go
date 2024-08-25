@@ -64,6 +64,9 @@ func NewBenchConfig() (*BenchConfig, error) {
 	if cfg.Overlays && !cfg.NoNetproxy {
 		return nil, fmt.Errorf("Should not run with overlays AND netproxy!")
 	}
+	if !cfg.Overlays && cfg.NoNetproxy {
+		return nil, fmt.Errorf("Should not run without overlays AND without netproxy!")
+	}
 	return cfg, nil
 }
 

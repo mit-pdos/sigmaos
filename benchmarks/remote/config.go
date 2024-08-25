@@ -61,6 +61,9 @@ func NewBenchConfig() (*BenchConfig, error) {
 	if cfg.K8s && cfg.Platform != sp.PLATFORM_CLOUDLAB {
 		return nil, fmt.Errorf("k8s is only supported on cloudlab")
 	}
+	if cfg.Overlays && !cfg.NoNetproxy {
+		return nil, fmt.Errorf("Should not run with overlays AND netproxy!")
+	}
 	return cfg, nil
 }
 

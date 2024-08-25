@@ -228,6 +228,9 @@ func TestHotelTailLatency(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
+	if ts.BCfg.Overlays {
+		benchName += "_overlays"
+	}
 	if ts.BCfg.K8s {
 		benchName += "_k8s"
 	}
@@ -259,6 +262,9 @@ func TestSocialnetTailLatency(t *testing.T) {
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
+	}
+	if ts.BCfg.Overlays {
+		benchName += "_overlays"
 	}
 	if ts.BCfg.K8s {
 		benchName += "_k8s"

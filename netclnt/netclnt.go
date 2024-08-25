@@ -56,20 +56,20 @@ func (nc *NetClnt) Close() error {
 }
 
 func (nc *NetClnt) connect(ep *sp.Tendpoint) *serr.Err {
-	db.DPrintf(db.PORT, "NetClnt connect to any of %v, starting w. %v\n", ep, ep.Addrs()[0])
+	db.DPrintf(db.NETCLNT, "NetClnt connect to any of %v, starting w. %v\n", ep, ep.Addrs()[0])
 	//	for _, addr := range addrs {
 	for i, addr := range ep.Addrs() {
 		if i > 0 {
 			ep.Claims.Addr = append(ep.Claims.Addr[1:], ep.Claims.Addr[0])
 		}
 		c, err := nc.npc.Dial(ep)
-		db.DPrintf(db.PORT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
+		db.DPrintf(db.NETCLNT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
 		if err != nil {
 			continue
 		}
 		nc.conn = c
 		nc.addr = addr
-		db.DPrintf(db.PORT, "NetClnt connected %v -> %v\n", c.LocalAddr(), nc.addr)
+		db.DPrintf(db.NETCLNT, "NetClnt connected %v -> %v\n", c.LocalAddr(), nc.addr)
 		return nil
 	}
 	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", ep)

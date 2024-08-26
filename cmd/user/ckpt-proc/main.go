@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/netproxytrans"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -89,7 +90,6 @@ func main() {
 		//syscall.Close(4) // close rpcclnt w. spproxyd.sock?
 		syscall.Close(5) // close rpcclnt w. spproxyd.sock?
 
-		f.Write([]byte("checkpointme...\n"))
 		pn := sp.UX + "~any/" + sc.GetPID().String() + "/"
 		if err := sc.CheckpointMe(pn); err != nil {
 			db.DPrintf(db.ALWAYS, "CheckpointMe err %v\n", err)
@@ -100,6 +100,8 @@ func main() {
 			//infoFd(4)
 			//infoFd(5)
 
+			sc.Close()
+
 			conn, err := receiveConn(rdr)
 			if err != nil {
 				db.DFatalf("Restore err %v\n", err)
@@ -107,14 +109,18 @@ func main() {
 
 			db.DPrintf(db.ALWAYS, "ReceiveFd %v", conn)
 
-			if err := sc.Restore(conn); err != nil {
-				db.DFatalf("Restore err %v\n", err)
+			sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+			if err != nil {
+				db.DFatalf("NewSigmaClnt error %v\n", err)
 			}
 
-			sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "CheckpointMe failed", err))
+			f.Write([]byte("............exit"))
+
+			db.DPrintf(db.ALWAYS, "ClntExit")
+
+			sc.ClntExitOK()
 			os.Exit(1)
 		}
-		f.Write([]byte("checkpointme done\n"))
 	}
 
 	for {
@@ -212,6 +218,10 @@ func rcvConn(uconn *net.UnixConn) (net.Conn, error) {
 	if len(fds) != 1 {
 		return nil, fmt.Errorf("expect 1 fd, got %#v", fds)
 	}
+	db.DPrintf(db.ALWAYS, "spproxyd fd %d\n", fds[0])
+
+	os.Setenv(netproxytrans.SIGMA_NETPROXY_FD, strconv.Itoa(fds[0]))
+
 	f := os.NewFile(uintptr(fds[0]), "spproxyd")
 	conn, err := net.FileConn(f)
 	if err != nil {

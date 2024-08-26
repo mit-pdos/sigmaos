@@ -112,7 +112,7 @@ func TestSelfCkpt(t *testing.T) {
 		dots[i] = '.'
 	}
 	b, err := os.ReadFile("/tmp/sigmaos-perf/log.txt")
-	db.DPrintf(db.TEST, "b %v\n", string(b))
+	db.DPrintf(db.TEST, "%d b %v\n", run, string(b))
 	assert.True(t, strings.Contains(string(b), string(dots)))
 	assert.True(t, strings.Contains(string(b), "exit"))
 

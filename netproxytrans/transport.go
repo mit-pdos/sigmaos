@@ -2,7 +2,7 @@ package netproxytrans
 
 import (
 	"encoding/json"
-	"fmt"
+	//"fmt"
 	"net"
 	"os"
 	"runtime/debug"
@@ -24,7 +24,7 @@ const (
 	SIGMA_NETPROXY_FD = "SIGMA_NETPROXY_FD"
 )
 
-var hasBeenInit bool
+//var hasBeenInit bool
 
 type NetProxyTrans struct {
 	sync.Mutex
@@ -68,13 +68,14 @@ func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 	} else {
 		// Sanity check that a proc only has one NetProxyClnt, since using the fd
 		// set up by the trampoline consumes it destructively.
-		if hasBeenInit {
-			db.DPrintf(db.ERROR, "Error double-init netproxyclnt")
-			return nil, fmt.Errorf("Error double-init netproxyclnt: %v", string(debug.Stack()))
-		}
-		hasBeenInit = true
+		//if hasBeenInit {
+		// db.DPrintf(db.ERROR, "Error double-init netproxyclnt")
+		// return nil, fmt.Errorf("Error double-init netproxyclnt: %v", string(debug.Stack()))
+		//}
+		//hasBeenInit = true
 		// Connect to the netproxy server using the FD set up by the trampoline
 		// (should be done by user procs)
+		db.DPrintf(db.ALWAYS, "fdstr %v\n", fdstr)
 		fd, err := strconv.Atoi(fdstr)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error get netproxy fd (%v): %v", fdstr, err)

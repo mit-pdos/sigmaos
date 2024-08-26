@@ -283,11 +283,11 @@ func restoreProc(criuInst *criu.Criu, imgDir, jailPath string, principal *sp.Tpr
 	verbose := db.IsLabelSet(db.CRIU)
 
 	// XXX deduplicate with GetNetproxydConn
-	uconn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
+	conn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
 	if err != nil {
 		db.DFatalf("Error connect netproxy srv %v err %v", sp.SIGMA_NETPROXY_SOCKET, err)
 	}
-	conn := uconn.(*net.UnixConn)
+	uconn := conn.(*net.UnixConn)
 	b, err := json.Marshal(principal)
 	if err != nil {
 		db.DFatalf("Error marshal principal: %v", err)
@@ -296,7 +296,7 @@ func restoreProc(criuInst *criu.Criu, imgDir, jailPath string, principal *sp.Tpr
 	// Write the principal ID to the server, so that the server
 	// knows the principal associated with this connection. For non-test
 	// programs, this will be done by the trampoline.
-	if err := frame.WriteFrame(conn, b); err != nil {
+	if err := frame.WriteFrame(uconn, b); err != nil {
 		db.DPrintf(db.ERROR, "Error WriteFrame principal: %v", err)
 		return err
 	}
@@ -398,7 +398,7 @@ func newSocketPair() (*os.File, *os.File, error) {
 	return src, dst, nil
 }
 
-func sendConn(wrt *os.File, conn net.Conn) error {
+func sendConn(wrt *os.File, uconn *net.UnixConn) error {
 	conn, err := net.FileConn(wrt)
 	if err != nil {
 		db.DFatalf("sndConn: FileConn err %v", err)
@@ -407,15 +407,15 @@ func sendConn(wrt *os.File, conn net.Conn) error {
 	if !ok {
 		db.DFatalf("sndConn: unixConn err %v", err)
 	}
-	return sndConn(unixConn, conn)
+	return sndConn(unixConn, uconn)
 }
 
-func sndConn(uconn *net.UnixConn, conn net.Conn) error {
-	file, err := conn.(*net.UnixConn).File()
+func sndConn(wrt *net.UnixConn, uconn *net.UnixConn) error {
+	file, err := uconn.File()
 	if err != nil {
 		return err
 	}
 	oob := syscall.UnixRights(int(file.Fd()))
-	_, _, err = uconn.WriteMsgUnix(nil, oob, nil)
+	_, _, err = wrt.WriteMsgUnix(nil, oob, nil)
 	return err
 }

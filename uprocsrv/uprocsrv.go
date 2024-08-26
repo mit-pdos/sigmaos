@@ -48,10 +48,11 @@ type procEntry struct {
 	mu   sync.Mutex
 	cond *sync.Cond
 	proc *proc.Proc
+	ino  uint64
 }
 
-func newProcEntry(proc *proc.Proc) *procEntry {
-	return &procEntry{proc: proc}
+func newProcEntry(proc *proc.Proc, ino uint64) *procEntry {
+	return &procEntry{proc: proc, ino: ino}
 }
 
 func (pe *procEntry) insertSignal(proc *proc.Proc) {
@@ -327,7 +328,7 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, p
 // Run a proc inside of an inner container
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
-	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
+	db.DPrintf(db.UPROCD, "Run uproc %v princ %v", uproc, uproc.GetPrincipal())
 	db.DPrintf(db.SPAWN_LAT, "[%v] UprocSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {
@@ -340,7 +341,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 
 	if uproc.GetProto().ProcEnvProto.CheckpointLocation != "" {
-		if err := ups.restoreProc(sp.Tpid(uproc.ProcEnvProto.PidStr), uproc.GetProto().ProcEnvProto.CheckpointLocation); err != nil {
+		if err := ups.restoreProc(uproc.GetPid(), uproc.GetCheckpointLocation(), uproc.GetPrincipal()); err != nil {
 			return err
 		}
 		return nil
@@ -352,7 +353,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		}
 		pid := cmd.Pid()
 		db.DPrintf(db.UPROCD, "Pid %d\n", pid)
-		pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
+		pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc, cmd.Ino()))
 		if !alloc { // it was already inserted
 			pe.insertSignal(uproc)
 		}
@@ -457,7 +458,7 @@ func (ups *UprocSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Stat, error) 
 }
 
 func (ups *UprocSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
-	pe, alloc := ups.procs.Alloc(pid, newProcEntry(nil))
+	pe, alloc := ups.procs.Alloc(pid, newProcEntry(nil, 0))
 	if alloc {
 		db.DPrintf(db.UPROCD, "Lookup wait for pid %v prog %q proc %v\n", pid, prog, pe)
 		pe.procWait()
@@ -478,7 +479,12 @@ func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointProcRequest, re
 	spid := sp.Tpid(req.PidStr)
 	pid, ok := ups.pids.Lookup(spid)
 	if !ok {
-		db.DPrintf(db.UPROCD, "Checkpoint no proc for %v\n", spid)
+		db.DPrintf(db.UPROCD, "Checkpoint no pid for %v\n", spid)
+		return fmt.Errorf("no proc %v\n", spid)
+	}
+	pe, ok := ups.procs.Lookup(pid)
+	if !ok {
+		db.DPrintf(db.UPROCD, "Checkpoint no proc for %v\n", pid)
 		return fmt.Errorf("no proc %v\n", spid)
 	}
 	imgDir := DUMPDIR + spid.String()
@@ -487,7 +493,7 @@ func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointProcRequest, re
 		db.DPrintf(db.CKPT, "CheckpointProc: error creating %v err %v", imgDir, err)
 		return err
 	}
-	if err := container.CheckpointProc(ups.criuInst, pid, imgDir, spid); err != nil {
+	if err := container.CheckpointProc(ups.criuInst, pid, imgDir, spid, pe.ino); err != nil {
 		return err
 	}
 	if err := ups.writeCheckpoint(imgDir, req.PathName, CKPTFULL); err != nil {
@@ -538,7 +544,7 @@ func (ups *UprocSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string,
 	return nil
 }
 
-func (ups *UprocSrv) restoreProc(spid sp.Tpid, ckptSigmaDir string) error {
+func (ups *UprocSrv) restoreProc(spid sp.Tpid, ckptSigmaDir string, principal *sp.Tprincipal) error {
 	dst := RESTOREDIR + spid.String()
 	if err := ups.readCheckpoint(ckptSigmaDir, dst, CKPTLAZY); err != nil {
 		return nil
@@ -546,7 +552,7 @@ func (ups *UprocSrv) restoreProc(spid sp.Tpid, ckptSigmaDir string) error {
 	pagesId := 1
 	pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
 	// pages := filepath.Join(dst, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
-	if err := container.RestoreProc(ups.criuInst, spid, filepath.Join(dst, CKPTLAZY), pages); err != nil {
+	if err := container.RestoreProc(ups.criuInst, spid, filepath.Join(dst, CKPTLAZY), pages, principal); err != nil {
 		return err
 	}
 	return nil
@@ -595,7 +601,7 @@ func (ups *UprocSrv) readCheckpoint(ckptSigmaDir, localDir, ckpt string) error {
 	if ckpt == CKPTLAZY {
 		// XXX pid is from inside container
 		db.DPrintf(db.CKPT, "Expand %s\n", pn)
-		if err := lazypagessrv.ExpandLazyPages(pn, 1); err != nil {
+		if err := lazypagessrv.ExpandLazyPages(pn); err != nil {
 			db.DPrintf(db.CKPT, "ExpandLazyPages %v err %v", pn, err)
 			return err
 		}
@@ -641,12 +647,12 @@ func writeRestore(src, dst, ckpt string) error {
 		}
 	}
 	if ckpt == "CKPTLAZY" {
-		pageId := 1 // XXX pid is from inside container
+		pageId := 1 // XXX get it from inventory
 		if err := os.Remove(filepath.Join(pn, "pages-"+strconv.Itoa(pageId)+".img")); err != nil {
 			db.DPrintf(db.CKPT, "copyDir: Remove err %v", err)
 			return err
 		}
-		if err := lazypagessrv.ExpandLazyPages(pn, pageId); err != nil {
+		if err := lazypagessrv.ExpandLazyPages(pn); err != nil {
 			db.DPrintf(db.CKPT, "copyDir: ExpandLazyPages err %v", err)
 			return err
 		}

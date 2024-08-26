@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand/v2"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -35,6 +36,8 @@ func main() {
 	}
 	db.DPrintf(db.ALWAYS, "Running %v %d %d", cmd, sec, npages)
 
+	listOpenfiles()
+
 	var sc *sigmaclnt.SigmaClnt
 	if cmd == "no" || cmd == "self" {
 		sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
@@ -45,6 +48,14 @@ func main() {
 		if err != nil {
 			db.DFatalf("Started error %v\n", err)
 		}
+	}
+
+	var rdr *os.File
+	if cmd == "self" {
+		st := syscall.Stat_t{}
+		rdr = os.NewFile(3, "rdr")
+		syscall.Fstat(3, &st)
+		db.DPrintf(db.ALWAYS, "rdr Ino %v\n", st.Ino)
 	}
 
 	timer := time.NewTicker(time.Duration(sec) * time.Second)
@@ -60,8 +71,6 @@ func main() {
 		db.DFatalf("Error creating %v\n", err)
 	}
 
-	listOpenfiles()
-
 	pagesz := os.Getpagesize()
 	mem := make([]byte, pagesz*npages)
 	for i := 0; i < npages; i++ {
@@ -75,28 +84,46 @@ func main() {
 		if err != nil {
 			db.DFatalf("Stat err %v\n", err)
 		}
-		syscall.Close(4) // close spproxyd.sock
+
+		//syscall.Close(3) // TCP connection
+		//syscall.Close(4) // close rpcclnt w. spproxyd.sock?
+		syscall.Close(5) // close rpcclnt w. spproxyd.sock?
+
 		f.Write([]byte("checkpointme...\n"))
 		pn := sp.UX + "~any/" + sc.GetPID().String() + "/"
 		if err := sc.CheckpointMe(pn); err != nil {
 			db.DPrintf(db.ALWAYS, "CheckpointMe err %v\n", err)
-			f.Write([]byte(fmt.Sprintf("CheckpointMe err %v\n", err)))
+
+			// listDir("/tmp")
+			//listOpenfiles()
+
+			//infoFd(4)
+			//infoFd(5)
+
+			conn, err := receiveConn(rdr)
+			if err != nil {
+				db.DFatalf("Restore err %v\n", err)
+			}
+
+			db.DPrintf(db.ALWAYS, "ReceiveFd %v", conn)
+
+			if err := sc.Restore(conn); err != nil {
+				db.DFatalf("Restore err %v\n", err)
+			}
+
 			sc.ClntExit(proc.NewStatusInfo(proc.StatusErr, "CheckpointMe failed", err))
 			os.Exit(1)
 		}
 		f.Write([]byte("checkpointme done\n"))
-		sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-		f.Write([]byte(fmt.Sprintf("sigmaclnt err %v", err)))
-		if err != nil {
-			db.DFatalf("NewSigmaClnt err %v\n", err)
-		}
 	}
 
 	for {
 		select {
 		case <-timer.C:
 			f.Write([]byte("exit"))
-			sc.ClntExitOK()
+			if cmd == "self" {
+				sc.ClntExitOK()
+			}
 			return
 		default:
 			f.Write([]byte("."))
@@ -105,6 +132,15 @@ func main() {
 			time.Sleep(1 * time.Second)
 		}
 	}
+}
+
+func listDir(dir string) {
+	files, _ := ioutil.ReadDir(dir)
+	fmt.Print("listDir:[")
+	for _, f := range files {
+		fmt.Printf("%v,", f.Name())
+	}
+	fmt.Println("]")
 }
 
 func listOpenfiles() {
@@ -125,4 +161,61 @@ func listOpenfiles() {
 			}
 		}
 	}
+}
+
+func infoFd(fd int) {
+	sotype, err := syscall.GetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_TYPE)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "GetsockoptInt %d %v\n", fd, err)
+	}
+	lsa, err := syscall.Getsockname(fd)
+	db.DPrintf(db.ALWAYS, "sock %v %v %v\n", sotype, lsa, err)
+}
+
+func receiveConn(dst *os.File) (net.Conn, error) {
+	conn, err := net.FileConn(dst)
+	if err != nil {
+		return nil, err
+	}
+	uconn, ok := conn.(*net.UnixConn)
+	if !ok {
+		return nil, fmt.Errorf("not a unix conn")
+	}
+	c, err := rcvConn(uconn)
+	if err != nil {
+		return nil, err
+	}
+	return c, err
+}
+
+func rcvConn(uconn *net.UnixConn) (net.Conn, error) {
+	var (
+		b   [32]byte
+		oob [32]byte
+	)
+	_, oobn, _, _, err := uconn.ReadMsgUnix(b[:], oob[:])
+	if err != nil {
+		return nil, err
+	}
+	messages, err := syscall.ParseSocketControlMessage(oob[:oobn])
+	if err != nil {
+		return nil, err
+	}
+	if len(messages) != 1 {
+		return nil, fmt.Errorf("expect 1 message, got %#v", messages)
+	}
+	message := messages[0]
+	fds, err := syscall.ParseUnixRights(&message)
+	if err != nil {
+		return nil, err
+	}
+	if len(fds) != 1 {
+		return nil, fmt.Errorf("expect 1 fd, got %#v", fds)
+	}
+	f := os.NewFile(uintptr(fds[0]), "spproxyd")
+	conn, err := net.FileConn(f)
+	if err != nil {
+		return nil, fmt.Errorf("FileConn %v err %v", fds[0], err)
+	}
+	return conn, nil
 }

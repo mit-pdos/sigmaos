@@ -1,7 +1,9 @@
 package container
 
 import (
+	"encoding/json"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,16 +11,22 @@ import (
 	"syscall"
 	"time"
 
-	criu "github.com/checkpoint-restore/go-criu/v7"
-	"github.com/checkpoint-restore/go-criu/v7/rpc"
 	"google.golang.org/protobuf/proto"
 
+	criu "github.com/checkpoint-restore/go-criu/v7"
+	"github.com/checkpoint-restore/go-criu/v7/crit/images/fdinfo"
+	sk_unix "github.com/checkpoint-restore/go-criu/v7/crit/images/sk-unix"
+	"github.com/checkpoint-restore/go-criu/v7/rpc"
+
 	db "sigmaos/debug"
+	"sigmaos/frame"
 	"sigmaos/lazypagessrv"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocsrv/binsrv"
 )
+
+// https://gist.github.com/Glonee/bf53651aca070c272dafbdbc403907d9
 
 const (
 	LAZY = true
@@ -26,6 +34,7 @@ const (
 
 type uprocCmd struct {
 	cmd *exec.Cmd
+	ino uint64
 }
 
 func (upc *uprocCmd) Wait() error {
@@ -34,6 +43,10 @@ func (upc *uprocCmd) Wait() error {
 
 func (upc *uprocCmd) Pid() int {
 	return upc.cmd.Process.Pid
+}
+
+func (upc *uprocCmd) Ino() uint64 {
+	return upc.ino
 }
 
 // Contain user procs using exec-uproc-rs trampoline
@@ -57,8 +70,21 @@ func StartUProc(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
 	// uproc.AppendEnv("RUST_BACKTRACE", "1")
 	cmd.Env = uproc.GetEnv()
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	f, err := os.Create("/tmp/sigmaos-perf/log-proc.txt")
+	if err != nil {
+		db.DFatalf("Error creating %v\n", err)
+	}
+
+	rdr, _, err := newSocketPair()
+	if err != nil {
+		db.DFatalf("unixPair %v\n", err)
+	}
+
+	cmd.Stdout = f
+	cmd.Stderr = f
+	cmd.ExtraFiles = []*os.File{rdr}
+
+	ino := ino(rdr)
 
 	// Set up new namespaces
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -77,7 +103,10 @@ func StartUProc(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
 		return nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc cmd.Start %v", uproc.GetPid(), time.Since(s))
-	return &uprocCmd{cmd: cmd}, nil
+
+	rdr.Close()
+
+	return &uprocCmd{cmd: cmd, ino: ino}, nil
 }
 
 func CleanupUproc(pid sp.Tpid) {
@@ -94,8 +123,8 @@ type NoNotify struct {
 	criu.NoNotify
 }
 
-func CheckpointProc(c *criu.Criu, pid int, imgDir string, spid sp.Tpid) error {
-	db.DPrintf(db.CKPT, "CheckpointProc %q %v", imgDir, pid)
+func CheckpointProc(c *criu.Criu, pid int, imgDir string, spid sp.Tpid, ino uint64) error {
+	db.DPrintf(db.CKPT, "CheckpointProc %q %v ino %d", imgDir, pid, ino)
 	img, err := os.Open(imgDir)
 	if err != nil {
 		db.DPrintf(db.CKPT, "CheckpointProc: error opening img dir %v", err)
@@ -103,17 +132,22 @@ func CheckpointProc(c *criu.Criu, pid int, imgDir string, spid sp.Tpid) error {
 	}
 	defer img.Close()
 
+	//fileinfo, _ := os.Stat(sp.SIGMA_NETPROXY_SOCKET)
+	//stat, _ := fileinfo.Sys().(*syscall.Stat_t)
+
 	verbose := db.IsLabelSet(db.CRIU)
 	root := "/home/sigmaos/jail/" + spid.String() + "/"
+	extino := "unix[" + strconv.FormatInt(int64(ino), 10) + "]"
+	db.DPrintf(db.ALWAYS, "stat %v\n", extino)
 	opts := &rpc.CriuOpts{
 		Pid:         proto.Int32(int32(pid)),
 		ImagesDirFd: proto.Int32(int32(img.Fd())),
 		Root:        proto.String(root),
 		//TcpEstablished: proto.Bool(true),
 		TcpClose:     proto.Bool(true), // XXX does it matter on dump?
-		External:     []string{"mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/mnt/binfs]:binfsMount"},
+		External:     []string{extino, "unix[/tmp/spproxyd/spproxyd-netproxy.sock]", "mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/mnt/binfs]:binfsMount"},
 		Unprivileged: proto.Bool(true),
-		// ExtUnixSk:    proto.Bool(true),
+		ExtUnixSk:    proto.Bool(true),
 	}
 	if verbose {
 		opts.LogLevel = proto.Int32(4)
@@ -129,7 +163,7 @@ func CheckpointProc(c *criu.Criu, pid int, imgDir string, spid sp.Tpid) error {
 	}
 	if LAZY {
 		// XXX pid is from inside container
-		if err := lazypagessrv.FilterLazyPages(imgDir, 1); err != nil {
+		if err := lazypagessrv.FilterLazyPages(imgDir); err != nil {
 			db.DPrintf(db.CKPT, "CheckpointProc: DumpNonLazyPages err %v", err)
 			return err
 		}
@@ -194,8 +228,8 @@ func restoreMounts(sigmaPid sp.Tpid) error {
 	return nil
 }
 
-func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pages string) error {
-	db.DPrintf(db.CKPT, "RestoreProc %v %v %v", sigmaPid, imgDir, pages)
+func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pages string, principal *sp.Tprincipal) error {
+	db.DPrintf(db.CKPT, "RestoreProc %v %v %v %v", sigmaPid, imgDir, pages, principal)
 	if err := restoreMounts(sigmaPid); err != nil {
 		return err
 	}
@@ -207,18 +241,12 @@ func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pages string) er
 			return err
 		}
 	}
-	return restoreProc(criuInst, imgDir, jailPath)
+	return restoreProc(criuInst, imgDir, jailPath, principal)
 }
 
 func runLazypagesd(imgDir, pages string) error {
 	db.DPrintf(db.CKPT, "Start lazypagesd img %v pages %v", imgDir, pages)
-	//cmd := exec.Command("criu", append([]string{"lazy-pages", "-vvvv", "--log-file", "lazy.log", "-D"}, imgDir)...)
-
 	cmd := exec.Command("lazypagesd", []string{imgDir, pages}...)
-	//stdin, err := cmd.StdinPipe()
-	//if err != nil {
-	//	return nil, err
-	//}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -243,7 +271,7 @@ func runLazypagesd(imgDir, pages string) error {
 	return nil
 }
 
-func restoreProc(criuInst *criu.Criu, imgDir, jailPath string) error {
+func restoreProc(criuInst *criu.Criu, imgDir, jailPath string, principal *sp.Tprincipal) error {
 	db.DPrintf(db.CKPT, "restoreProc %v", imgDir)
 	img, err := os.Open(imgDir)
 	if err != nil {
@@ -253,16 +281,65 @@ func restoreProc(criuInst *criu.Criu, imgDir, jailPath string) error {
 	defer img.Close()
 
 	verbose := db.IsLabelSet(db.CRIU)
-	fd := int32(4)
-	fn := sp.SIGMA_NETPROXY_SOCKET
-	ifd := &rpc.InheritFd{Fd: &fd, Key: &fn}
+
+	// XXX deduplicate with GetNetproxydConn
+	uconn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
+	if err != nil {
+		db.DFatalf("Error connect netproxy srv %v err %v", sp.SIGMA_NETPROXY_SOCKET, err)
+	}
+	conn := uconn.(*net.UnixConn)
+	b, err := json.Marshal(principal)
+	if err != nil {
+		db.DFatalf("Error marshal principal: %v", err)
+		return err
+	}
+	// Write the principal ID to the server, so that the server
+	// knows the principal associated with this connection. For non-test
+	// programs, this will be done by the trampoline.
+	if err := frame.WriteFrame(conn, b); err != nil {
+		db.DPrintf(db.ERROR, "Error WriteFrame principal: %v", err)
+		return err
+	}
+
+	rdr, wrt, err := newSocketPair()
+	if err != nil {
+		db.DFatalf("unixPair err %v\n", err)
+	}
+
+	// XXX read inventory
+	criuDump, err := lazypagessrv.ReadImg(imgDir, "2", "fdinfo")
+	if err != nil {
+		db.DFatalf("ReadImg fdinfo err %v\n", err)
+	}
+	dstfd := criuDump.Entries[3].Message.(*fdinfo.FdinfoEntry)
+	db.DPrintf(db.ALWAYS, "fd 3 %v\n", dstfd)
+	criuDump, err = lazypagessrv.ReadImg(imgDir, "", "files")
+	if err != nil {
+		db.DFatalf("ReadImg files err %v\n", err)
+	}
+	var usk *sk_unix.UnixSkEntry
+	for _, f := range criuDump.Entries {
+		e := f.Message.(*fdinfo.FileEntry)
+		if e.GetId() == dstfd.GetId() {
+			usk = e.GetUsk()
+		}
+	}
+	if usk == nil {
+		db.DFatalf("ReadImg usk err %v\n", err)
+	}
+	inostr := "socket:[" + strconv.Itoa(int(usk.GetIno())) + "]"
+	fd := int32(rdr.Fd())
+	ifd := &rpc.InheritFd{Fd: &fd, Key: &inostr}
 	ifds := []*rpc.InheritFd{ifd}
+
+	db.DPrintf(db.ALWAYS, "fd %d dstfd %v key %v usk %v\n", fd, dstfd, inostr, usk)
+
 	opts := &rpc.CriuOpts{
 		ImagesDirFd: proto.Int32(int32(img.Fd())),
 		Root:        proto.String(jailPath),
 		// TcpEstablished: proto.Bool(true),
 		TcpClose: proto.Bool(true),
-		External: []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"},
+		External: []string{"unix[/tmp/spproxyd/spproxyd-netproxy.sock]", "mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"},
 		// Unprivileged: proto.Bool(true),
 		LazyPages: proto.Bool(LAZY),
 		InheritFd: ifds,
@@ -271,14 +348,23 @@ func restoreProc(criuInst *criu.Criu, imgDir, jailPath string) error {
 		opts.LogLevel = proto.Int32(4)
 		opts.LogFile = proto.String("restore.log")
 	}
-	err = criuInst.Restore(opts, nil)
-	db.DPrintf(db.CKPT, "restoreProc: Restore err %v", err)
-	if verbose {
-		dumpLog(imgDir + "/restore.log")
+
+	go func() {
+		err = criuInst.Restore(opts, nil)
+		db.DPrintf(db.CKPT, "restoreProc: Restore err %v", err)
+		if verbose {
+			dumpLog(imgDir + "/restore.log")
+		}
+	}()
+
+	time.Sleep(1 * time.Second)
+
+	if err := sendConn(wrt, uconn); err != nil {
+		db.DFatalf("sendConn err %v\n", err)
 	}
-	if err != nil {
-		return err
-	}
+
+	db.DPrintf(db.ALWAYS, "sendConn: sent")
+
 	return nil
 }
 
@@ -290,4 +376,46 @@ func dumpLog(pn string) error {
 	}
 	db.DPrintf(db.CKPT, "dumpLog %q: %s", pn, string(b))
 	return nil
+}
+
+func ino(f *os.File) uint64 {
+	st := syscall.Stat_t{}
+	fd := int(f.Fd())
+	if err := syscall.Fstat(fd, &st); err != nil {
+		db.DFatalf("fstat %v\n", err)
+	}
+	db.DPrintf(db.ALWAYS, "fd %v ino %d\n", fd, st.Ino)
+	return st.Ino
+}
+
+func newSocketPair() (*os.File, *os.File, error) {
+	fd, err := syscall.Socketpair(syscall.AF_UNIX, syscall.SOCK_STREAM, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+	src := os.NewFile(uintptr(fd[0]), "src")
+	dst := os.NewFile(uintptr(fd[1]), "dst")
+	return src, dst, nil
+}
+
+func sendConn(wrt *os.File, conn net.Conn) error {
+	conn, err := net.FileConn(wrt)
+	if err != nil {
+		db.DFatalf("sndConn: FileConn err %v", err)
+	}
+	unixConn, ok := conn.(*net.UnixConn)
+	if !ok {
+		db.DFatalf("sndConn: unixConn err %v", err)
+	}
+	return sndConn(unixConn, conn)
+}
+
+func sndConn(uconn *net.UnixConn, conn net.Conn) error {
+	file, err := conn.(*net.UnixConn).File()
+	if err != nil {
+		return err
+	}
+	oob := syscall.UnixRights(int(file.Fd()))
+	_, _, err = uconn.WriteMsgUnix(nil, oob, nil)
+	return err
 }

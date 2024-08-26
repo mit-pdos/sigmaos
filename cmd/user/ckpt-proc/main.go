@@ -20,8 +20,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <no/ext/self> <sleep_length> <npages>\n", os.Args[0])
+	if len(os.Args) < 5 {
+		fmt.Fprintf(os.Stderr, "Usage: %v <no/ext/self> <sleep_length> <npages> <ckpt-pn>\n", os.Args[0])
 		os.Exit(1)
 	}
 	cmd := os.Args[1]
@@ -35,7 +35,9 @@ func main() {
 		db.DFatalf("Atoi error %v\n", err)
 		return
 	}
-	db.DPrintf(db.ALWAYS, "Running %v %d %d", cmd, sec, npages)
+	ckptpn := os.Args[4]
+
+	db.DPrintf(db.ALWAYS, "Running %v %d %d %v", cmd, sec, npages, ckptpn)
 
 	listOpenfiles()
 
@@ -90,8 +92,7 @@ func main() {
 		//syscall.Close(4) // close rpcclnt w. spproxyd.sock?
 		syscall.Close(5) // close rpcclnt w. spproxyd.sock?
 
-		pn := sp.UX + "~any/" + sc.GetPID().String() + "/"
-		if err := sc.CheckpointMe(pn); err != nil {
+		if err := sc.CheckpointMe(ckptpn); err != nil {
 			db.DPrintf(db.ALWAYS, "CheckpointMe err %v\n", err)
 
 			// listDir("/tmp")
@@ -112,6 +113,13 @@ func main() {
 			sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 			if err != nil {
 				db.DFatalf("NewSigmaClnt error %v\n", err)
+			}
+
+			db.DPrintf(db.ALWAYS, "Mark started")
+
+			err = sc.Started()
+			if err != nil {
+				db.DFatalf("Started error %v\n", err)
 			}
 
 			f.Write([]byte("............exit"))

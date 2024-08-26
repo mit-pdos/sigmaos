@@ -15,13 +15,19 @@ import (
 	"sigmaos/test"
 )
 
-const NPAGES = "1000"
+const (
+	NPAGES  = "1000"
+	PROGRAM = "ckpt-proc"
+)
 
 func TestNoCkpt(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
 
-	chkptProc := proc.NewProc("ckpt-proc", []string{"no", "10", NPAGES})
+	pid := sp.GenPid(PROGRAM)
+	pn := sp.UX + "~any/" + pid.String() + "/"
+
+	chkptProc := proc.NewProcPid(pid, PROGRAM, []string{"no", "10", NPAGES, pn})
 	err = ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 	err = ts.WaitStart(chkptProc.GetPid())
@@ -41,22 +47,22 @@ func TestExtCkpt(t *testing.T) {
 	os.Remove("/tmp/sigmaos-perf/log.txt")
 
 	run := 10
-	chkptProc := proc.NewProc("ckpt-proc", []string{"ext", strconv.Itoa(run), NPAGES})
+	pid := sp.GenPid(PROGRAM)
+	pn := sp.UX + "~any/" + pid.String() + "/"
+
+	chkptProc := proc.NewProcPid(pid, PROGRAM, []string{"ext", strconv.Itoa(run), NPAGES, pn})
 	err = ts.Spawn(chkptProc)
 	assert.Nil(t, err)
 
 	// let ckpt-proc run for a little while
 	time.Sleep(time.Duration(run/2) * time.Second)
 
-	pn := sp.UX + "~any/" + chkptProc.GetPid().String() + "/"
-
 	db.DPrintf(db.TEST, "checkpointing %q", pn)
 	err = ts.Checkpoint(chkptProc.GetPid(), pn)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "checkpoint err %v", err)
 
-	// spawn and run checkpointed proc
-	restProc := proc.NewRestoreProc(chkptProc, pn)
+	restProc := proc.NewProcFromCheckpoint(pid, "ckpt-proc-copy", pn)
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
@@ -83,27 +89,37 @@ func TestSelfCkpt(t *testing.T) {
 	os.Remove("/tmp/sigmaos-perf/log.txt")
 
 	run := 10
-	chkptProc := proc.NewProc("ckpt-proc", []string{"self", strconv.Itoa(run), NPAGES})
-	err = ts.Spawn(chkptProc)
+	pid := sp.GenPid(PROGRAM)
+	pn := sp.UX + "~any/" + pid.String() + "/"
+
+	ckptProc := proc.NewProcPid(pid, PROGRAM, []string{"self", strconv.Itoa(run), NPAGES, pn})
+	err = ts.Spawn(ckptProc)
 	assert.Nil(t, err)
-	err = ts.WaitStart(chkptProc.GetPid())
+	err = ts.WaitStart(ckptProc.GetPid())
 	assert.Nil(t, err)
 
-	// let ckpt-proc run for a little while to checkpoint itself
-	time.Sleep(time.Duration(run/2) * time.Second)
+	db.DPrintf(db.TEST, "Wait until proc has checkpointed itself")
 
-	pn := sp.UX + "~any/" + chkptProc.GetPid().String() + "/"
+	status, err := ts.WaitExit(ckptProc.GetPid())
+	assert.Nil(t, err)
+	assert.True(t, status.IsStatusErr())
 
-	// spawn and run checkpointed proc
-	restProc := proc.NewRestoreProc(chkptProc, pn)
+	db.DPrintf(db.TEST, "Spawn from checkpoint")
+
+	time.Sleep(1 * time.Second)
+
+	restProc := proc.NewProcFromCheckpoint(pid, "ckpt-proc-copy", pn)
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
-	n := time.Duration(time.Duration(run/2+1) * time.Second)
-	db.DPrintf(db.TEST, "sleep for a while %v", n)
-	time.Sleep(n)
+	db.DPrintf(db.TEST, "Wait until start")
 
-	status, err := ts.WaitExit(restProc.GetPid())
+	err = ts.WaitStart(pid)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "Wait until exit")
+
+	status, err = ts.WaitExit(restProc.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusOK())
 

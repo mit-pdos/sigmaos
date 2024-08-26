@@ -104,15 +104,17 @@ func NewProcFromProto(p *ProcProto) *Proc {
 	return &Proc{p}
 }
 
-func NewRestoreProc(uproc *Proc, chkptLoc string) *Proc {
+// XXX delete pid
+func NewProcFromCheckpoint(pid sp.Tpid, program string, chkptLoc string) *Proc {
+	// pid := sp.GenPid(program)
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}
 	p.ProcEnvProto = NewProcEnv(
-		uproc.ProcEnvProto.Program,
-		uproc.GetPid(),
+		program,
+		pid,
 		sp.Trealm(sp.NOT_SET),
 		sp.NewPrincipal(
-			sp.TprincipalID(uproc.GetPid().String()),
+			sp.TprincipalID(pid.String()),
 			sp.Trealm(sp.NOT_SET),
 		),
 		sp.NOT_SET,
@@ -122,7 +124,7 @@ func NewRestoreProc(uproc *Proc, chkptLoc string) *Proc {
 		false,
 		false,
 	).GetProto()
-	p.Args = uproc.ProcProto.Args
+	// p.Args = uproc.ProcProto.Args
 
 	p.ProcEnvProto.CheckpointLocation = chkptLoc
 

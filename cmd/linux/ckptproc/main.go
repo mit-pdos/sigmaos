@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"syscall"
 
 	db "sigmaos/debug"
 	"sigmaos/frame"
@@ -54,6 +55,7 @@ func main() {
 		if err := frame.WriteFrame(conn, []byte(str)); err != nil {
 			db.DFatalf("WriteFrame: %v", err)
 		}
+		syscall.Close(3)
 	}
 
 	pagesz := os.Getpagesize()

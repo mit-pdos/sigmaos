@@ -18,8 +18,13 @@ import (
 	db "sigmaos/debug"
 )
 
-func readImg(imgdir string, pid int, magic string) (*crit.CriuImage, error) {
-	pn := filepath.Join(imgdir, magic+"-"+strconv.Itoa(int(pid))+".img")
+func ReadImg(imgdir, id string, magic string) (*crit.CriuImage, error) {
+	pn := filepath.Join(imgdir, magic)
+	if id == "" {
+		pn = pn + ".img"
+	} else {
+		pn = pn + "-" + id + ".img"
+	}
 	f, err := os.Open(pn)
 	if err != nil {
 		return nil, err
@@ -42,8 +47,8 @@ type TpagemapImg struct {
 	PagemapEntries []*crit.CriuEntry
 }
 
-func newTpagemapImg(imgdir string, pid int) (*TpagemapImg, error) {
-	img, err := readImg(imgdir, pid, "pagemap")
+func newTpagemapImg(imgdir, id string) (*TpagemapImg, error) {
+	img, err := ReadImg(imgdir, id, "pagemap")
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +82,8 @@ type Tmm struct {
 	*mm.MmEntry
 }
 
-func newTmm(imgdir string, pid int) (*Tmm, error) {
-	img, err := readImg(imgdir, pid, "mm")
+func newTmm(imgdir, id string) (*Tmm, error) {
+	img, err := ReadImg(imgdir, id, "mm")
 	if err != nil {
 		return nil, err
 	}
@@ -185,12 +190,12 @@ func (mm *Tmm) collectIovs(pmi *TpagemapImg) (*Iovs, int, int) {
 	return iovs, int(npages), int(maxIovLen)
 }
 
-func FilterLazyPages(imgdir string, pid int) error {
+func FilterLazyPages(imgdir string) error {
 	const (
 		PE_LAZY uint32 = (1 << 1)
 	)
 
-	pmi, err := newTpagemapImg(imgdir, pid)
+	pmi, err := newTpagemapImg(imgdir, "1")
 	if err != nil {
 		return err
 	}
@@ -232,12 +237,12 @@ func FilterLazyPages(imgdir string, pid int) error {
 	return nil
 }
 
-func ExpandLazyPages(imgdir string, pid int) error {
+func ExpandLazyPages(imgdir string) error {
 	const (
 		PE_LAZY uint32 = (1 << 1)
 	)
 
-	pmi, err := newTpagemapImg(imgdir, pid)
+	pmi, err := newTpagemapImg(imgdir, "1")
 	if err != nil {
 		return err
 	}

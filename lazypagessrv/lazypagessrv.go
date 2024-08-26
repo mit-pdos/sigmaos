@@ -129,11 +129,11 @@ func (lps *LazyPagesSrv) handleConn(conn net.Conn) {
 }
 
 func (lps *LazyPagesSrv) handleReqs(pid, fd int, readPage func(int64, []byte) error) error {
-	pmi, err := newTpagemapImg(lps.imgdir, pid)
+	pmi, err := newTpagemapImg(lps.imgdir, "1")
 	if err != nil {
 		return err
 	}
-	mm, err := newTmm(lps.imgdir, pid)
+	mm, err := newTmm(lps.imgdir, "1")
 	if err != nil {
 		return err
 	}

@@ -45,28 +45,36 @@ def get_tpt(dpath):
     tpts.append(all_tpts[-1])
   return round(np.sum(tpts))
 
-def graph_data(hotel_res_dir, socialnet_res_dir, out):
+def graph_data(hotel_res_dir, hotel_overlays_res_dir, socialnet_res_dir, socialnet_overlays_res_dir, out):
   fig, ((avg_lat, p99_lat), (p99_lat_peak, peak_tpt)) = plt.subplots(2, 2, figsize=(6.4, 2.4))
 
   # Scrape data
   hotel_avg_lat = get_lat(hotel_res_dir, 0, "Mean:", False)
+  hotel_overlays_avg_lat = get_lat(hotel_overlays_res_dir, 0, "Mean:", False)
   social_avg_lat = get_lat(socialnet_res_dir, 0, "Mean:", True)
+  social_overlays_avg_lat = get_lat(socialnet_overlays_res_dir, 0, "Mean:", True)
 
   hotel_p99_lat = get_lat(hotel_res_dir, 0, " 99:", False)
+  hotel_overlays_p99_lat = get_lat(hotel_overlays_res_dir, 0, " 99:", False)
   social_p99_lat = get_lat(socialnet_res_dir, 0, " 99: ", True)
+  social_overlays_p99_lat = get_lat(socialnet_overlays_res_dir, 0, " 99: ", True)
 
   hotel_p99_lat_peak = get_lat(hotel_res_dir, -1, " 99:", False)
+  hotel_overlays_p99_lat_peak = get_lat(hotel_overlays_res_dir, -1, " 99:", False)
   social_p99_lat_peak = get_lat(socialnet_res_dir, -1, " 99: ", True)
+  social_overlays_p99_lat_peak = get_lat(socialnet_overlays_res_dir, -1, " 99: ", True)
 
   hotel_peak_tpt = get_tpt(hotel_res_dir)
+  hotel_overlays_peak_tpt = get_tpt(hotel_overlays_res_dir)
   social_peak_tpt = get_tpt(socialnet_res_dir)
+  social_overlays_peak_tpt = get_tpt(socialnet_overlays_res_dir)
 
   # Graph data
-  sys = [ "XOS-hotel", "XOS-hotel-overlay", "k8s-hotel", "XOS-socialnet", "XOS-socialnet-overlay", "k8s-socialnet", ]
-  d_avg_lat      = [       hotel_avg_lat,  2.60,  4.83,      social_avg_lat,  2.75,  5.49, ]
-  d_p99_lat      = [       hotel_p99_lat,  5.78, 12.76,      social_p99_lat,  6.24,  9.01, ]
-  d_p99_lat_peak = [  hotel_p99_lat_peak, 66.34, 45.25, social_p99_lat_peak, 31.13, 12.86, ]
-  d_peak_tpt     = [      hotel_peak_tpt, 11892,  5877,     social_peak_tpt,  3991,  1993, ]
+  sys            = [        "XOS-hotel",         "XOS-hotel-overlay", "k8s-hotel",     "XOS-socialnet",      "XOS-socialnet-overlay", "k8s-socialnet", ]
+  d_avg_lat      = [      hotel_avg_lat,      hotel_overlays_avg_lat,        4.83,      social_avg_lat,      social_overlays_avg_lat,            5.49, ]
+  d_p99_lat      = [      hotel_p99_lat,      hotel_overlays_p99_lat,       12.76,      social_p99_lat,      social_overlays_p99_lat,            9.01, ]
+  d_p99_lat_peak = [ hotel_p99_lat_peak, hotel_overlays_p99_lat_peak,       45.25, social_p99_lat_peak, social_overlays_p99_lat_peak,           12.86, ]
+  d_peak_tpt     = [     hotel_peak_tpt,     hotel_overlays_peak_tpt,        5877,     social_peak_tpt,     social_overlays_peak_tpt,            1993, ]
 
   width = 0.25
   
@@ -112,7 +120,9 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--out", type=str, required=True)
   parser.add_argument("--hotel_res_dir", type=str, required=True)
+  parser.add_argument("--hotel_overlays_res_dir", type=str, required=True)
   parser.add_argument("--socialnet_res_dir", type=str, required=True)
+  parser.add_argument("--socialnet_overlays_res_dir", type=str, required=True)
 
   args = parser.parse_args()
-  graph_data(args.hotel_res_dir, args.socialnet_res_dir, args.out)
+  graph_data(args.hotel_res_dir, args.hotel_overlays_res_dir, args.socialnet_res_dir, args.socialnet_overlays_res_dir, args.out)

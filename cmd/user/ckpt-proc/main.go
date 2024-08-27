@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	"sigmaos/frame"
 	"sigmaos/netproxytrans"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -105,10 +106,16 @@ func main() {
 
 			conn, err := receiveConn(rdr)
 			if err != nil {
-				db.DFatalf("Restore err %v\n", err)
+				db.DFatalf("receiveConn err %v\n", err)
 			}
 
 			db.DPrintf(db.ALWAYS, "ReceiveFd %v", conn)
+
+			if err := receiveProcEnv(rdr); err != nil {
+				db.DFatalf("receiveProcEnv pe %v err %v\n", err)
+			}
+
+			db.DPrintf(db.ALWAYS, "ProcEnv %v", proc.GetProcEnv())
 
 			sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 			if err != nil {
@@ -186,8 +193,8 @@ func infoFd(fd int) {
 	db.DPrintf(db.ALWAYS, "sock %v %v %v\n", sotype, lsa, err)
 }
 
-func receiveConn(dst *os.File) (net.Conn, error) {
-	conn, err := net.FileConn(dst)
+func receiveConn(rdr *os.File) (net.Conn, error) {
+	conn, err := net.FileConn(rdr)
 	if err != nil {
 		return nil, err
 	}
@@ -236,4 +243,21 @@ func rcvConn(uconn *net.UnixConn) (net.Conn, error) {
 		return nil, fmt.Errorf("FileConn %v err %v", fds[0], err)
 	}
 	return conn, nil
+}
+
+func receiveProcEnv(rdr *os.File) error {
+	conn, err := net.FileConn(rdr)
+	if err != nil {
+		return err
+	}
+	uconn, ok := conn.(*net.UnixConn)
+	if !ok {
+		return fmt.Errorf("not a unix conn")
+	}
+	b, sr := frame.ReadFrame(uconn)
+	if sr != nil {
+		return err
+	}
+	proc.SetProcEnv(string(b))
+	return nil
 }

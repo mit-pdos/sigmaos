@@ -38,6 +38,10 @@ func GetProcEnv() *ProcEnv {
 	return Unmarshal(pestr)
 }
 
+func SetProcEnv(pe string) {
+	os.Setenv(SIGMACONFIG, pe)
+}
+
 func SetSigmaDebugPid(pid string) {
 	os.Setenv(SIGMADEBUGPID, pid)
 }

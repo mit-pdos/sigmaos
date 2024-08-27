@@ -124,7 +124,6 @@ func NewProcFromCheckpoint(pid sp.Tpid, program string, chkptLoc string) *Proc {
 		false,
 		false,
 	).GetProto()
-	// p.Args = uproc.ProcProto.Args
 
 	p.ProcEnvProto.CheckpointLocation = chkptLoc
 

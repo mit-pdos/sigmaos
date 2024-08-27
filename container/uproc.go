@@ -228,12 +228,12 @@ func restoreMounts(sigmaPid sp.Tpid) error {
 	return nil
 }
 
-func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pages string, principal *sp.Tprincipal) error {
-	db.DPrintf(db.CKPT, "RestoreProc %v %v %v %v", sigmaPid, imgDir, pages, principal)
-	if err := restoreMounts(sigmaPid); err != nil {
+func RestoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, pages string) error {
+	db.DPrintf(db.CKPT, "RestoreProc %v %v %v", proc, imgDir, pages)
+	if err := restoreMounts(proc.GetPid()); err != nil {
 		return err
 	}
-	jailPath := "/home/sigmaos/jail/" + sigmaPid.String() + "/"
+	jailPath := "/home/sigmaos/jail/" + proc.GetPid().String() + "/"
 	if LAZY {
 		err := runLazypagesd(imgDir, pages)
 		db.DPrintf(db.CKPT, "lazyPages err %v", err)
@@ -241,7 +241,7 @@ func RestoreProc(criuInst *criu.Criu, sigmaPid sp.Tpid, imgDir, pages string, pr
 			return err
 		}
 	}
-	return restoreProc(criuInst, imgDir, jailPath, principal)
+	return restoreProc(criuInst, proc, imgDir, jailPath)
 }
 
 func runLazypagesd(imgDir, pages string) error {
@@ -271,7 +271,7 @@ func runLazypagesd(imgDir, pages string) error {
 	return nil
 }
 
-func restoreProc(criuInst *criu.Criu, imgDir, jailPath string, principal *sp.Tprincipal) error {
+func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, jailPath string) error {
 	db.DPrintf(db.CKPT, "restoreProc %v", imgDir)
 	img, err := os.Open(imgDir)
 	if err != nil {
@@ -288,7 +288,7 @@ func restoreProc(criuInst *criu.Criu, imgDir, jailPath string, principal *sp.Tpr
 		db.DFatalf("Error connect netproxy srv %v err %v", sp.SIGMA_NETPROXY_SOCKET, err)
 	}
 	uconn := conn.(*net.UnixConn)
-	b, err := json.Marshal(principal)
+	b, err := json.Marshal(proc.GetPrincipal())
 	if err != nil {
 		db.DFatalf("Error marshal principal: %v", err)
 		return err
@@ -357,9 +357,14 @@ func restoreProc(criuInst *criu.Criu, imgDir, jailPath string, principal *sp.Tpr
 		}
 	}()
 
+	// XXX wait for restored proc to check in
 	time.Sleep(1 * time.Second)
 
 	if err := sendConn(wrt, uconn); err != nil {
+		db.DFatalf("sendConn err %v\n", err)
+	}
+
+	if err := sendProcEnv(wrt, proc); err != nil {
 		db.DFatalf("sendConn err %v\n", err)
 	}
 
@@ -417,5 +422,25 @@ func sndConn(wrt *net.UnixConn, uconn *net.UnixConn) error {
 	}
 	oob := syscall.UnixRights(int(file.Fd()))
 	_, _, err = wrt.WriteMsgUnix(nil, oob, nil)
+	return err
+}
+
+func sendProcEnv(wrt *os.File, p *proc.Proc) error {
+	conn, err := net.FileConn(wrt)
+	if err != nil {
+		db.DFatalf("sndConn: FileConn err %v", err)
+	}
+	unixConn, ok := conn.(*net.UnixConn)
+	if !ok {
+		db.DFatalf("sndConn: unixConn err %v", err)
+	}
+	b, err := json.Marshal(proc.NewProcEnvFromProto(p.ProcEnvProto))
+	if err != nil {
+		return err
+	}
+	if err := frame.WriteFrame(unixConn, b); err != nil {
+		db.DPrintf(db.ERROR, "sendProc: WriteFrame err%v", err)
+		return err
+	}
 	return err
 }

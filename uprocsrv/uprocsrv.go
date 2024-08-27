@@ -340,8 +340,8 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 
-	if uproc.GetProto().ProcEnvProto.CheckpointLocation != "" {
-		if err := ups.restoreProc(uproc.GetPid(), uproc.GetCheckpointLocation(), uproc.GetPrincipal()); err != nil {
+	if uproc.GetCheckpointLocation() != "" {
+		if err := ups.restoreProc(uproc); err != nil {
 			return err
 		}
 		return nil
@@ -544,15 +544,16 @@ func (ups *UprocSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string,
 	return nil
 }
 
-func (ups *UprocSrv) restoreProc(spid sp.Tpid, ckptSigmaDir string, principal *sp.Tprincipal) error {
-	dst := RESTOREDIR + spid.String()
+func (ups *UprocSrv) restoreProc(proc *proc.Proc) error {
+	dst := RESTOREDIR + proc.GetPid().String()
+	ckptSigmaDir := proc.GetCheckpointLocation()
 	if err := ups.readCheckpoint(ckptSigmaDir, dst, CKPTLAZY); err != nil {
 		return nil
 	}
 	pagesId := 1
 	pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
 	// pages := filepath.Join(dst, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
-	if err := container.RestoreProc(ups.criuInst, spid, filepath.Join(dst, CKPTLAZY), pages, principal); err != nil {
+	if err := container.RestoreProc(ups.criuInst, proc, filepath.Join(dst, CKPTLAZY), pages); err != nil {
 		return err
 	}
 	return nil
@@ -576,14 +577,14 @@ func (ups *UprocSrv) readCheckpoint(ckptSigmaDir, localDir, ckpt string) error {
 	files := sp.Names(sts)
 	for _, entry := range files {
 		fn := filepath.Join(ckptSigmaDir, ckpt, entry)
-		db.DPrintf(db.UPROCD, "Copy file %s\n", fn)
+		dstfn := filepath.Join(pn, entry)
+		db.DPrintf(db.UPROCD, "Copy file %s to %s\n", fn, dstfn)
 
 		rdr, err := ups.ssrv.MemFs.SigmaClnt().OpenReader(fn)
 		if err != nil {
 			db.DPrintf("GetFile %v err %v\n", fn, err)
 			return err
 		}
-		dstfn := filepath.Join(pn, entry)
 		file, err := os.OpenFile(dstfn, os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
 			db.DPrintf(db.MR, "OpenFile %v err %v", dstfn, err)

@@ -525,7 +525,7 @@ func (ups *UprocSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string,
 		if ckpt == CKPTLAZY && strings.HasPrefix(file.Name(), "pages-") {
 			continue
 		}
-		db.DPrintf(db.UPROCD, "Trying to copy file %s\n", file.Name())
+		db.DPrintf(db.UPROCD, "writeCheckpoint: copy file %s\n", file.Name())
 		b, err := os.ReadFile(filepath.Join(chkptLocalDir, file.Name()))
 		if err != nil {
 			db.DPrintf(db.UPROCD, "Error reading file: %v\n", err)
@@ -587,12 +587,12 @@ func (ups *UprocSrv) readCheckpoint(ckptSigmaDir, localDir, ckpt string) error {
 		}
 		file, err := os.OpenFile(dstfn, os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
-			db.DPrintf(db.MR, "OpenFile %v err %v", dstfn, err)
+			db.DPrintf(db.UPROCD, "OpenFile %v err %v", dstfn, err)
 			return err
 		}
 		wrt := bufio.NewWriter(file)
 		if _, err := io.Copy(wrt, rdr.Reader); err != nil {
-			db.DPrintf(db.MR, "Error Copy: %v", err)
+			db.DPrintf(db.UPROCD, "Error Copy: %v", err)
 			return err
 		}
 		rdr.Close()
@@ -600,7 +600,6 @@ func (ups *UprocSrv) readCheckpoint(ckptSigmaDir, localDir, ckpt string) error {
 
 	}
 	if ckpt == CKPTLAZY {
-		// XXX pid is from inside container
 		db.DPrintf(db.CKPT, "Expand %s\n", pn)
 		if err := lazypagessrv.ExpandLazyPages(pn); err != nil {
 			db.DPrintf(db.CKPT, "ExpandLazyPages %v err %v", pn, err)

@@ -44,8 +44,6 @@ func main() {
 
 	timer := time.NewTicker(time.Duration(sec) * time.Second)
 
-	os.Stdin.Close() // XXX close in StartUproc
-
 	pagesz := os.Getpagesize()
 	mem := make([]byte, pagesz*npages)
 	for i := 0; i < npages; i++ {

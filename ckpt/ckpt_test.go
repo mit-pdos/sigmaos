@@ -1,7 +1,6 @@
 package ckpt_test
 
 import (
-	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -9,7 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/hotel"
 	"sigmaos/proc"
+	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -17,14 +18,13 @@ import (
 const (
 	NPAGES  = "1000"
 	PROGRAM = "ckpt-proc"
+	GEO     = "hotel-geod"
 	RUN     = 5
 )
 
-func TestSpawnCkpt(t *testing.T) {
+func TestSpawnCkptProc(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
-
-	os.Remove("/tmp/sigmaos-perf/log.txt")
 
 	pid := sp.GenPid(PROGRAM)
 	pn := sp.UX + "~any/" + pid.String() + "/"
@@ -47,7 +47,7 @@ func TestSpawnCkpt(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
 
-	restProc := proc.NewProcFromCheckpoint(pid, "ckpt-proc-copy", pn)
+	restProc := proc.NewProcFromCheckpoint(pid, GEO+"-copy", pn)
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
@@ -56,11 +56,48 @@ func TestSpawnCkpt(t *testing.T) {
 	err = ts.WaitStart(restProc.GetPid())
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "Wait %v until exit; run for %ds", restProc.GetPid(), RUN)
+	db.DPrintf(db.TEST, "Started %v", restProc.GetPid())
 
-	status, err = ts.WaitExit(restProc.GetPid())
+	ts.Shutdown()
+}
+
+func TestSpawnCkptGeo(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
-	assert.True(t, status.IsStatusOK())
+
+	pid := sp.GenPid(GEO)
+	pn := sp.UX + "~any/" + pid.String() + "/"
+
+	job := rd.String(8)
+	err = hotel.InitHotelFs(ts.FsLib, job)
+	assert.Nil(t, err)
+
+	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn})
+	err = ts.Spawn(ckptProc)
+	assert.Nil(t, err)
+	err = ts.WaitStart(ckptProc.GetPid())
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "Wait until proc %v has checkpointed itself", ckptProc.GetPid())
+
+	status, err := ts.WaitExit(ckptProc.GetPid())
+	assert.Nil(t, err)
+	assert.True(t, status.IsStatusErr())
+
+	time.Sleep(10 * time.Second)
+
+	pid = sp.GenPid(GEO + "-copy")
+
+	db.DPrintf(db.TEST, "Spawn form checkpoint %v", pid)
+
+	restProc := proc.NewProcFromCheckpoint(pid, GEO+"-copy", pn)
+	err = ts.Spawn(restProc)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "Wait until start %v", pid)
+
+	err = ts.WaitStart(restProc.GetPid())
+	assert.Nil(t, err)
 
 	ts.Shutdown()
 }

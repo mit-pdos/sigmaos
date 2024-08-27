@@ -15,6 +15,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/serr"
+	sp "sigmaos/sigmap"
 )
 
 // CheckpointMe makes a checkpoint of the calling proc and terminates
@@ -22,6 +23,8 @@ import (
 // new proc resumes in CheckpointMe and return a new SigmaClnt to the
 // new proc.
 func (sc *SigmaClnt) CheckpointMe(ckptpn string) (*SigmaClnt, error) {
+	os.Stdin.Close() // XXX close in StartUproc?
+
 	listOpenfiles()
 
 	// The reader side of the unnamed socketpair created by
@@ -29,9 +32,15 @@ func (sc *SigmaClnt) CheckpointMe(ckptpn string) (*SigmaClnt, error) {
 	// initial NewSigmaClnt call
 	rdr := os.NewFile(3, "rdr")
 
+	// Set up TCP conn for dump dir
+	if _, err := sc.Stat(sp.UX + "~any/"); err != nil {
+		db.DFatalf("Stat err %v\n", err)
+	}
+
 	// Criu cannot dump named streaming unix sockets, so close the
 	// connection with spproxyd.sock.  XXX pass this fd through
 	// environment.
+	syscall.Close(4)
 	syscall.Close(5)
 
 	if err := sc.ProcAPI.(*procclnt.ProcClnt).CheckpointMe(ckptpn); err != nil && serr.IsErrCode(err, serr.TErrUnreachable) {

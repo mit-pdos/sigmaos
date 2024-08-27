@@ -17,12 +17,13 @@ import (
 	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 )
 
 const (
-	N_INDEX   = 1000
+	N_INDEX   = 10000
 	RAND_SEED = 12345
 )
 
@@ -74,13 +75,39 @@ type Geo struct {
 }
 
 // Run starts the server
-func RunGeoSrv(job string) error {
+func RunGeoSrv(job, ckptpn string) error {
+	db.DPrintf(db.CKPT, "start %v %v\n", job, ckptpn)
 	rand.Seed(RAND_SEED)
 	geo := &Geo{}
 	geo.indexes = make([]*safeIndex, 0, N_INDEX)
 	for i := 0; i < N_INDEX; i++ {
 		geo.indexes = append(geo.indexes, newSafeIndex("data/geo.json"))
 	}
+	db.DPrintf(db.CKPT, "init %v\n", job)
+
+	if ckptpn != "" {
+
+		sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+		if err != nil {
+			db.DFatalf("NewSigmaClnt error %v\n", err)
+		}
+		err = sc.Started()
+		if err != nil {
+			db.DFatalf("Started error %v\n", err)
+		}
+
+		sc, err = sc.CheckpointMe(ckptpn)
+		if err != nil {
+			db.DFatalf("Checkpoint me didn't return error", err)
+		}
+		db.DPrintf(db.ALWAYS, "Mark started")
+		err = sc.Started()
+		if err != nil {
+			db.DFatalf("Started error %v\n", err)
+		}
+		sc.Close()
+	}
+
 	ssrv, err := sigmasrv.NewSigmaSrv(HOTELGEO, geo, proc.GetProcEnv())
 	if err != nil {
 		return err

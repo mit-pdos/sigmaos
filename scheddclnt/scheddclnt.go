@@ -151,7 +151,7 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 }
 
 func (sdc *ScheddClnt) Checkpoint(kernelID string, pid sp.Tpid, r sp.Trealm, pn string) error {
-	db.DPrintf(db.ALWAYS, "Checkpoint kernelId %v pid %v", kernelID, pid)
+	db.DPrintf(db.CKPT, "Checkpoint kernelId %v pid %v", kernelID, pid)
 	rpcc, err := sdc.rpcdc.GetClnt(kernelID)
 	if err != nil {
 		return err

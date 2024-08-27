@@ -21,59 +21,40 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 5 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <no/ext/self> <sleep_length> <npages> <ckpt-pn>\n", os.Args[0])
+	if len(os.Args) < 4 {
+		fmt.Fprintf(os.Stderr, "Usage: %v <sleep_length> <npages> <ckpt-pn>\n", os.Args[0])
 		os.Exit(1)
 	}
-	cmd := os.Args[1]
-	sec, err := strconv.Atoi(os.Args[2])
+	sec, err := strconv.Atoi(os.Args[1])
 	if err != nil {
 		db.DFatalf("Atoi error %v\n", err)
 		return
 	}
-	npages, err := strconv.Atoi(os.Args[3])
+	npages, err := strconv.Atoi(os.Args[2])
 	if err != nil {
 		db.DFatalf("Atoi error %v\n", err)
 		return
 	}
-	ckptpn := os.Args[4]
+	ckptpn := os.Args[3]
 
-	db.DPrintf(db.ALWAYS, "Running %v %d %d %v", cmd, sec, npages, ckptpn)
+	db.DPrintf(db.ALWAYS, "Running %d %d %v", sec, npages, ckptpn)
 
 	listOpenfiles()
 
-	var sc *sigmaclnt.SigmaClnt
-	if cmd == "no" || cmd == "self" {
-		sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-		if err != nil {
-			db.DFatalf("NewSigmaClnt error %v\n", err)
-		}
-		err = sc.Started()
-		if err != nil {
-			db.DFatalf("Started error %v\n", err)
-		}
-	}
+	rdr := os.NewFile(3, "rdr") // XXX reader side of unnamed socketpair
 
-	var rdr *os.File
-	if cmd == "self" {
-		st := syscall.Stat_t{}
-		rdr = os.NewFile(3, "rdr")
-		syscall.Fstat(3, &st)
-		db.DPrintf(db.ALWAYS, "rdr Ino %v\n", st.Ino)
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	if err != nil {
+		db.DFatalf("NewSigmaClnt error %v\n", err)
+	}
+	err = sc.Started()
+	if err != nil {
+		db.DFatalf("Started error %v\n", err)
 	}
 
 	timer := time.NewTicker(time.Duration(sec) * time.Second)
 
 	os.Stdin.Close() // XXX close in StartUproc
-
-	if cmd == "ext" {
-		syscall.Close(3) // close spproxyd.sock
-	}
-
-	f, err := os.Create("/tmp/sigmaos-perf/log.txt")
-	if err != nil {
-		db.DFatalf("Error creating %v\n", err)
-	}
 
 	pagesz := os.Getpagesize()
 	mem := make([]byte, pagesz*npages)
@@ -81,70 +62,63 @@ func main() {
 		mem[i*pagesz] = byte(i)
 	}
 
-	if cmd == "self" {
-		_, err := sc.Stat(sp.UX + "~any/")
+	_, err = sc.Stat(sp.UX + "~any/")
+	if err != nil {
+		db.DFatalf("Stat err %v\n", err)
+	}
+
+	//syscall.Close(3) // TCP connection
+	//syscall.Close(4) // close rpcclnt w. spproxyd.sock?
+	syscall.Close(5) // close rpcclnt w. spproxyd.sock?
+
+	if err := sc.CheckpointMe(ckptpn); err != nil {
+		db.DPrintf(db.ALWAYS, "CheckpointMe err %v\n", err)
+
+		// listDir("/tmp")
+		//listOpenfiles()
+
+		//infoFd(4)
+		//infoFd(5)
+
+		sc.Close()
+
+		conn, err := receiveConn(rdr)
 		if err != nil {
-			db.DFatalf("Stat err %v\n", err)
+			db.DFatalf("receiveConn err %v\n", err)
 		}
 
-		//syscall.Close(3) // TCP connection
-		//syscall.Close(4) // close rpcclnt w. spproxyd.sock?
-		syscall.Close(5) // close rpcclnt w. spproxyd.sock?
+		db.DPrintf(db.ALWAYS, "ReceiveFd %v", conn)
 
-		if err := sc.CheckpointMe(ckptpn); err != nil {
-			db.DPrintf(db.ALWAYS, "CheckpointMe err %v\n", err)
-
-			// listDir("/tmp")
-			//listOpenfiles()
-
-			//infoFd(4)
-			//infoFd(5)
-
-			sc.Close()
-
-			conn, err := receiveConn(rdr)
-			if err != nil {
-				db.DFatalf("receiveConn err %v\n", err)
-			}
-
-			db.DPrintf(db.ALWAYS, "ReceiveFd %v", conn)
-
-			if err := receiveProcEnv(rdr); err != nil {
-				db.DFatalf("receiveProcEnv pe %v err %v\n", err)
-			}
-
-			db.DPrintf(db.ALWAYS, "ProcEnv %v", proc.GetProcEnv())
-
-			sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-			if err != nil {
-				db.DFatalf("NewSigmaClnt error %v\n", err)
-			}
-
-			db.DPrintf(db.ALWAYS, "Mark started")
-
-			err = sc.Started()
-			if err != nil {
-				db.DFatalf("Started error %v\n", err)
-			}
-
-			db.DPrintf(db.ALWAYS, "ClntExit")
-
-			sc.ClntExitOK()
-			os.Exit(1)
+		if err := receiveProcEnv(rdr); err != nil {
+			db.DFatalf("receiveProcEnv pe %v err %v\n", err)
 		}
+
+		db.DPrintf(db.ALWAYS, "ProcEnv %v", proc.GetProcEnv())
+
+		sc, err = sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+		if err != nil {
+			db.DFatalf("NewSigmaClnt error %v\n", err)
+		}
+
+		db.DPrintf(db.ALWAYS, "Mark started")
+
+		err = sc.Started()
+		if err != nil {
+			db.DFatalf("Started error %v\n", err)
+		}
+	} else {
+		db.DFatalf("Checkpoint me didn't return error", err)
 	}
 
 	for {
 		select {
 		case <-timer.C:
-			f.Write([]byte("exit"))
-			if cmd == "self" {
-				sc.ClntExitOK()
-			}
+			db.DPrintf(db.ALWAYS, "ClntExit")
+			sc.ClntExitOK()
 			return
 		default:
-			f.Write([]byte("."))
 			r := rand.IntN(npages)
+			db.DPrintf(db.ALWAYS, "Write page %d", r)
 			mem[r*pagesz] = byte(r)
 			time.Sleep(1 * time.Second)
 		}

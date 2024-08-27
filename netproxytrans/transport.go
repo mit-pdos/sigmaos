@@ -75,7 +75,6 @@ func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 		//hasBeenInit = true
 		// Connect to the netproxy server using the FD set up by the trampoline
 		// (should be done by user procs)
-		db.DPrintf(db.ALWAYS, "fdstr %v\n", fdstr)
 		fd, err := strconv.Atoi(fdstr)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error get netproxy fd (%v): %v", fdstr, err)

@@ -81,8 +81,6 @@ func main() {
 		mem[i*pagesz] = byte(i)
 	}
 
-	f.Write([]byte("."))
-
 	if cmd == "self" {
 		_, err := sc.Stat(sp.UX + "~any/")
 		if err != nil {
@@ -128,8 +126,6 @@ func main() {
 			if err != nil {
 				db.DFatalf("Started error %v\n", err)
 			}
-
-			f.Write([]byte("............exit"))
 
 			db.DPrintf(db.ALWAYS, "ClntExit")
 

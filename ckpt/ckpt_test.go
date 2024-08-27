@@ -105,7 +105,7 @@ func TestSelfCkpt(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusErr())
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 
 	pid = sp.GenPid("ckpt-proc-copy")
 
@@ -125,15 +125,6 @@ func TestSelfCkpt(t *testing.T) {
 	status, err = ts.WaitExit(restProc.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusOK())
-
-	dots := make([]byte, run)
-	for i := 0; i < run; i++ {
-		dots[i] = '.'
-	}
-	b, err := os.ReadFile("/tmp/sigmaos-perf/log.txt")
-	db.DPrintf(db.TEST, "%d b %v\n", run, string(b))
-	assert.True(t, strings.Contains(string(b), string(dots)))
-	assert.True(t, strings.Contains(string(b), "exit"))
 
 	ts.Shutdown()
 }

@@ -17,6 +17,7 @@ import (
 const (
 	NPAGES  = "1000"
 	PROGRAM = "ckpt-proc"
+	RUN     = 5
 )
 
 func TestSpawnCkpt(t *testing.T) {
@@ -25,12 +26,10 @@ func TestSpawnCkpt(t *testing.T) {
 
 	os.Remove("/tmp/sigmaos-perf/log.txt")
 
-	run := 10
-
 	pid := sp.GenPid(PROGRAM)
 	pn := sp.UX + "~any/" + pid.String() + "/"
 
-	ckptProc := proc.NewProcPid(pid, PROGRAM, []string{strconv.Itoa(run), NPAGES, pn})
+	ckptProc := proc.NewProcPid(pid, PROGRAM, []string{strconv.Itoa(RUN), NPAGES, pn})
 	err = ts.Spawn(ckptProc)
 	assert.Nil(t, err)
 	err = ts.WaitStart(ckptProc.GetPid())
@@ -52,12 +51,12 @@ func TestSpawnCkpt(t *testing.T) {
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "Wait until start")
+	db.DPrintf(db.TEST, "Wait until start %v", pid)
 
 	err = ts.WaitStart(restProc.GetPid())
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "Wait %v until exit", restProc.GetPid())
+	db.DPrintf(db.TEST, "Wait %v until exit; run for %ds", restProc.GetPid(), RUN)
 
 	status, err = ts.WaitExit(restProc.GetPid())
 	assert.Nil(t, err)

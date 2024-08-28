@@ -84,7 +84,7 @@ func TestSpawnCkptGeo(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusErr())
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	pid = sp.GenPid(GEO + "-copy")
 

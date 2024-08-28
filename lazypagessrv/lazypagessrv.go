@@ -109,8 +109,8 @@ func (lps *LazyPagesSrv) handleConn(conn net.Conn) {
 			return
 		}
 		defer lps.CloseFd(fd)
-		rp = func(off int64, page []byte) error {
-			return readPageSigma(lps.SigmaClnt, fdpages, off, page)
+		rp = func(off int64, pages []byte) error {
+			return readBytesSigma(lps.SigmaClnt, fdpages, off, pages)
 		}
 	} else {
 		f, err := os.Open(lps.pages)
@@ -119,8 +119,8 @@ func (lps *LazyPagesSrv) handleConn(conn net.Conn) {
 			return
 		}
 		defer f.Close()
-		rp = func(off int64, page []byte) error {
-			return readPage(f, off, page)
+		rp = func(off int64, pages []byte) error {
+			return readBytes(f, off, pages)
 		}
 	}
 	if err := lps.handleReqs(int(pid), fd, rp); err != nil {
@@ -128,7 +128,7 @@ func (lps *LazyPagesSrv) handleConn(conn net.Conn) {
 	}
 }
 
-func (lps *LazyPagesSrv) handleReqs(pid, fd int, readPage func(int64, []byte) error) error {
+func (lps *LazyPagesSrv) handleReqs(pid, fd int, readBytes func(int64, []byte) error) error {
 	pmi, err := newTpagemapImg(lps.imgdir, "1")
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int, readPage func(int64, []byte) er
 	}
 	iovs, npages, maxIovLen := mm.collectIovs(pmi)
 	nfault := 0
-	page := make([]byte, pmi.pagesz) // XXX maxIovLen
+	pages := make([]byte, maxIovLen)
 	db.DPrintf(db.ALWAYS, "lazypages: img %v pages %v pid %d fd %d iovs %d npages %d maxIovLen %d", lps.imgdir, lps.pages, pid, fd, iovs.len(), npages, maxIovLen)
 	for {
 		if _, err := unix.Poll(
@@ -173,17 +173,22 @@ func (lps *LazyPagesSrv) handleReqs(pid, fd int, readPage func(int64, []byte) er
 			db.DPrintf(db.LAZYPAGESSRV, "page fault %d: no iov for %x", nfault, addr)
 			lps.zeroPage(fd, addr)
 		} else {
-			// XXX read and copy the whole iov instead of one?
 			pi := pmi.find(addr)
 			if pi == -1 {
 				db.DFatalf("no page for %x", addr)
 			}
-			db.DPrintf(db.LAZYPAGESSRV, "page fault %d: %d(%x) -> %v %d", nfault, addr, addr, iov, pi)
+			n := iov.markFetchLen(addr)
+			if n == 0 {
+				db.DPrintf(db.LAZYPAGESSRV, "fault page: delivered %d: %d(%x) -> %v pi %d(%d,%d,%d)", nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), pmi.pagesz), len(buf))
+				continue
+			}
+			buf := pages[0:n]
+			db.DPrintf(db.LAZYPAGESSRV, "page fault: copy %d: %d(%x) -> %v pi %d(%d,%d,%d)", nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), pmi.pagesz), len(buf))
 			off := int64(pi * pmi.pagesz)
-			if err := readPage(off, page); err != nil {
+			if err := readBytes(off, buf); err != nil {
 				db.DFatalf("no page content for %x", addr)
 			}
-			lps.copyPage(fd, addr, page)
+			lps.copyPages(fd, addr, buf)
 		}
 	}
 }
@@ -205,11 +210,13 @@ func (lps *LazyPagesSrv) zeroPage(fd int, addr uint64) {
 	}
 }
 
-func (lps *LazyPagesSrv) copyPage(fd int, addr uint64, page []byte) {
+func (lps *LazyPagesSrv) copyPages(fd int, addr uint64, pages []byte) {
+	// len := uint64(lps.pagesz)
+	len := len(pages)
 	cpy := userfaultfd.NewUffdioCopy(
-		page,
+		pages,
 		userfaultfd.CULong(addr),
-		userfaultfd.CULong(lps.pagesz),
+		userfaultfd.CULong(len),
 		0,
 		0,
 	)
@@ -219,18 +226,20 @@ func (lps *LazyPagesSrv) copyPage(fd int, addr uint64, page []byte) {
 		userfaultfd.UFFDIO_COPY,
 		uintptr(unsafe.Pointer(&cpy)),
 	); errno != 0 {
-		db.DFatalf("SYS_IOCTL err %v", errno)
+		db.DFatalf("SYS_IOCTL %d(%x) %d err %v", addr, addr, len, errno)
 	}
 }
 
-func readPageSigma(sc *sigmaclnt.SigmaClnt, fd int, off int64, page []byte) error {
-	if _, err := sc.Pread(fd, page, sp.Toffset(off)); err != nil {
+func readBytesSigma(sc *sigmaclnt.SigmaClnt, fd int, off int64, buf []byte) error {
+	if n, err := sc.Pread(fd, buf, sp.Toffset(off)); err != nil {
 		return err
+	} else if int(n) != len(buf) {
+		db.DPrintf(db.LAZYPAGESSRV, "read %d n = %d", len(buf), n)
 	}
 	return nil
 }
 
-func readPage(f *os.File, off int64, page []byte) error {
+func readBytes(f *os.File, off int64, page []byte) error {
 	if _, err := f.Seek(off, 0); err != nil {
 		return err
 	}

@@ -312,7 +312,6 @@ func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, jailPath string) 
 		db.DFatalf("ReadImg fdinfo err %v\n", err)
 	}
 	dstfd := criuDump.Entries[3].Message.(*fdinfo.FdinfoEntry)
-	db.DPrintf(db.ALWAYS, "fd 3 %v\n", dstfd)
 	criuDump, err = lazypagessrv.ReadImg(imgDir, "", "files")
 	if err != nil {
 		db.DFatalf("ReadImg files err %v\n", err)
@@ -332,7 +331,7 @@ func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, jailPath string) 
 	ifd := &rpc.InheritFd{Fd: &fd, Key: &inostr}
 	ifds := []*rpc.InheritFd{ifd}
 
-	db.DPrintf(db.ALWAYS, "fd %d dstfd %v key %v usk %v\n", fd, dstfd, inostr, usk)
+	db.DPrintf(db.ALWAYS, "Invoke restore with fd %d dstfd %v key %v usk %v\n", fd, dstfd, inostr, usk)
 
 	opts := &rpc.CriuOpts{
 		ImagesDirFd: proto.Int32(int32(img.Fd())),

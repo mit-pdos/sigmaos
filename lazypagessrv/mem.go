@@ -18,6 +18,15 @@ import (
 	db "sigmaos/debug"
 )
 
+const (
+	PREFETCH = 1 // in pages
+)
+
+func nPages(start, end uint64, pagesz int) int {
+	len := end - start
+	return int((len + uint64(pagesz) - 1) / uint64(pagesz))
+}
+
 func ReadImg(imgdir, id string, magic string) (*crit.CriuImage, error) {
 	pn := filepath.Join(imgdir, magic)
 	if id == "" {
@@ -97,20 +106,40 @@ type Iov struct {
 	pagesz    int
 	start     uint64
 	end       uint64
+	copied    []bool
 	img_start uint64 // XXX handle remaps
 }
 
 func newIov(pagesz int, start, end, img_start uint64) *Iov {
-	return &Iov{pagesz: pagesz, start: start, end: end, img_start: img_start}
-}
-
-func nPages(start, end uint64, pagesz int) int {
-	len := end - start
-	return int((len + uint64(pagesz) - 1) / uint64(pagesz))
+	return &Iov{
+		pagesz:    pagesz,
+		start:     start,
+		end:       end,
+		copied:    make([]bool, end-start, end-start), // XXX more compact representation?
+		img_start: img_start,
+	}
 }
 
 func (iov *Iov) String() string {
 	return fmt.Sprintf("{[%x, %x) %d(%d) %x}", iov.start, iov.end, iov.end-iov.start, nPages(iov.start, iov.end, iov.pagesz), iov.img_start)
+}
+
+// Fetch max pages starting at addr0, but fewer if we run into a page
+// that lazypagessrv already fetched.
+func (iov *Iov) markFetchLen(addr0 uint64) int {
+	max := 1 + PREFETCH
+	n := 0
+	addr := addr0
+	for ; n < max && addr < iov.end; addr += uint64(iov.pagesz) {
+		i := int(addr-iov.start) / iov.pagesz
+		if iov.copied[i] {
+			db.DPrintf(db.LAZYPAGESSRV, "Don't prefetch %x", addr)
+			break
+		}
+		iov.copied[i] = true
+		n += 1
+	}
+	return n * iov.pagesz
 }
 
 type Iovs struct {

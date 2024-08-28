@@ -86,7 +86,7 @@ func RunGeoSrv(job, ckptpn string) error {
 	db.DPrintf(db.CKPT, "init %v\n", job)
 
 	if ckptpn != "" {
-
+		// create a sigmaclnt for checkpointing
 		sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 		if err != nil {
 			db.DFatalf("NewSigmaClnt error %v\n", err)
@@ -95,7 +95,6 @@ func RunGeoSrv(job, ckptpn string) error {
 		if err != nil {
 			db.DFatalf("Started error %v\n", err)
 		}
-
 		sc, err = sc.CheckpointMe(ckptpn)
 		if err != nil {
 			db.DFatalf("Checkpoint me didn't return error", err)

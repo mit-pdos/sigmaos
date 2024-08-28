@@ -64,11 +64,11 @@ func NewUffdioRegister(start, length, mode CULong) UffdioRegister {
 	}
 }
 
-func NewUffdioCopy(b []byte, address CULong, pagesize CULong, mode CULong, copy CLong) UffdioCopy {
+func NewUffdioCopy(b []byte, address CULong, len CULong, mode CULong, copy CLong) UffdioCopy {
 	return UffdioCopy{
 		src:  CULong(uintptr(unsafe.Pointer(&b[0]))),
-		dst:  address &^ CULong(pagesize-1),
-		len:  pagesize,
+		dst:  address,
+		len:  len,
 		mode: mode,
 		copy: copy,
 	}

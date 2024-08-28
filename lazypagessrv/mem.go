@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	PREFETCH = 1 // in pages
+	PREFETCH = 1 // number of pages to prefetch
 )
 
 func nPages(start, end uint64, pagesz int) int {

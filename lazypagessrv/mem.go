@@ -294,13 +294,12 @@ func ExpandLazyPages(imgdir string) error {
 	defer dst.Close()
 
 	page := make([]byte, pmi.pagesz)
-	zero := make([]byte, pmi.pagesz)
 	for _, pme := range pmi.PagemapEntries {
 		pm := pme.Message.(*pagemap.PagemapEntry)
 		n := pm.GetNrPages()
 		for i := uint32(0); i < n; i++ {
 			if pm.GetFlags()&PE_LAZY == PE_LAZY {
-				if _, err := dst.Write(zero); err != nil {
+				if _, err := dst.Seek(int64(pmi.pagesz), 1); err != nil {
 					return err
 				}
 			} else {

@@ -72,6 +72,8 @@ func TestSpawnCkptGeo(t *testing.T) {
 	err = hotel.InitHotelFs(ts.FsLib, job)
 	assert.Nil(t, err)
 
+	db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
+
 	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn})
 	err = ts.Spawn(ckptProc)
 	assert.Nil(t, err)
@@ -88,7 +90,7 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	pid = sp.GenPid(GEO + "-copy")
 
-	db.DPrintf(db.TEST, "Spawn form checkpoint %v", pid)
+	db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
 
 	restProc := proc.NewProcFromCheckpoint(pid, GEO+"-copy", pn)
 	err = ts.Spawn(restProc)

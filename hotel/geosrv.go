@@ -83,7 +83,7 @@ func RunGeoSrv(job, ckptpn string) error {
 	for i := 0; i < N_INDEX; i++ {
 		geo.indexes = append(geo.indexes, newSafeIndex("data/geo.json"))
 	}
-	db.DPrintf(db.CKPT, "init %v\n", job)
+	db.DPrintf(db.CKPT, "init done %v\n", job)
 
 	if ckptpn != "" {
 		// create a sigmaclnt for checkpointing

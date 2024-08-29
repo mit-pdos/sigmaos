@@ -51,6 +51,10 @@ func (sc *SigmaClnt) CheckpointMe(ckptpn string) (*SigmaClnt, error) {
 		// Close old sigmaclnt
 		sc.Close()
 
+		if _, err := rdr.Write([]byte("r")); err != nil {
+			db.DFatalf("Write run err %v\n", err)
+		}
+
 		// Receive the spproxyd conn from RestoreProc()
 		conn, err := receiveConn(rdr)
 		if err != nil {

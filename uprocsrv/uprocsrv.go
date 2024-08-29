@@ -467,8 +467,8 @@ func (ups *UprocSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
 }
 
 const (
-	DUMPDIR    = "/home/sigmaos/dump"
-	RESTOREDIR = "/home/sigmaos/restore"
+	DUMPDIR    = "/home/sigmaos/dump-"
+	RESTOREDIR = "/home/sigmaos/restore-"
 
 	CKPTLAZY = "ckptlazy"
 	CKPTFULL = "ckptfull"

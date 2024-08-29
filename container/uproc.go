@@ -26,8 +26,6 @@ import (
 	"sigmaos/uprocsrv/binsrv"
 )
 
-// https://gist.github.com/Glonee/bf53651aca070c272dafbdbc403907d9
-
 const (
 	LAZY = true
 )
@@ -162,7 +160,6 @@ func CheckpointProc(c *criu.Criu, pid int, imgDir string, spid sp.Tpid, ino uint
 		return err
 	}
 	if LAZY {
-		// XXX pid is from inside container
 		if err := lazypagessrv.FilterLazyPages(imgDir); err != nil {
 			db.DPrintf(db.CKPT, "CheckpointProc: DumpNonLazyPages err %v", err)
 			return err
@@ -331,7 +328,7 @@ func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, jailPath string) 
 	ifd := &rpc.InheritFd{Fd: &fd, Key: &inostr}
 	ifds := []*rpc.InheritFd{ifd}
 
-	db.DPrintf(db.ALWAYS, "Invoke restore with fd %d dstfd %v key %v usk %v\n", fd, dstfd, inostr, usk)
+	db.DPrintf(db.ALWAYS, "Invoke restore with fd %d dstfd %v key %v\n", fd, dstfd, inostr)
 
 	opts := &rpc.CriuOpts{
 		ImagesDirFd: proto.Int32(int32(img.Fd())),
@@ -356,8 +353,13 @@ func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, jailPath string) 
 		}
 	}()
 
-	// XXX wait for restored proc to check in
-	time.Sleep(1 * time.Second)
+	// wait for restored proc to check in
+	b = make([]byte, 1)
+	if _, err := wrt.Read(b); err != nil {
+		db.DFatalf("sendConn err %v\n", err)
+	}
+
+	db.DPrintf(db.ALWAYS, "restored proc is running")
 
 	if err := sendConn(wrt, uconn); err != nil {
 		db.DFatalf("sendConn err %v\n", err)

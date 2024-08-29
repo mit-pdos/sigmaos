@@ -200,7 +200,7 @@ func (lpc *LazyPagesConn) handleReqs() error {
 		case userfaultfd.UFFD_EVENT_UNMAP:
 			db.DPrintf(db.ERROR, "Unmap event %v", userfaultfd.GetMsgEvent(&msg))
 		default:
-			return fmt.Errorf("Unknown event %v", userfaultfd.GetMsgEvent(&msg))
+			return fmt.Errorf("Unknown event %x", userfaultfd.GetMsgEvent(&msg))
 		}
 	}
 }
@@ -209,7 +209,7 @@ func (lpc *LazyPagesConn) pageFault(addr uint64) error {
 	iov := lpc.iovs.find(addr)
 	lpc.nfault += 1
 	if iov == nil {
-		db.DPrintf(db.LAZYPAGESSRV, "page fault %d: no iov for %x", lpc.nfault, addr)
+		db.DPrintf(db.LAZYPAGESSRV, "page fault: zero %d: no iov for %x", lpc.nfault, addr)
 		zeroPage(lpc.fd, addr, lpc.lps.pagesz)
 	} else {
 		pi := lpc.pmi.find(addr)

@@ -224,16 +224,16 @@ func restoreMounts(sigmaPid sp.Tpid) error {
 	return nil
 }
 
-func RestoreProc(criuInst *criu.Criu, p *proc.Proc, imgDir, workDir string) error {
+func RestoreProc(criuclnt *criu.Criu, p *proc.Proc, imgDir, workDir string) error {
 	db.DPrintf(db.CKPT, "RestoreProc %v %v %v", imgDir, workDir, p)
 	if err := restoreMounts(p.GetPid()); err != nil {
 		return err
 	}
 	jailPath := "/home/sigmaos/jail/" + p.GetPid().String() + "/"
-	return restoreProc(criuInst, p, imgDir, workDir, jailPath)
+	return restoreProc(criuclnt, p, imgDir, workDir, jailPath)
 }
 
-func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath string) error {
+func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath string) error {
 	img, err := os.Open(imgDir)
 	if err != nil {
 		db.DPrintf(db.CKPT, "restoreProc: Open %v err", imgDir, err)
@@ -318,7 +318,7 @@ func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 	}
 
 	go func() {
-		err = criuInst.Restore(opts, nil)
+		err = criuclnt.Restore(opts, nil)
 		db.DPrintf(db.CKPT, "restoreProc: Restore err %v", err)
 		if verbose {
 			dumpLog(workDir + "/restore.log")

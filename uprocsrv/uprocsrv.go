@@ -97,7 +97,7 @@ type UprocSrv struct {
 	pids           *syncmap.SyncMap[sp.Tpid, int]
 	ckclnt         *chunkclnt.ChunkClnt
 	lpc            *lazypagesclnt.LazyPagesClnt
-	criuInst       *criu.Criu
+	criuclnt       *criu.Criu
 }
 
 func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid) error {
@@ -111,7 +111,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 		realm:       sp.NOREALM,
 		procs:       syncmap.NewSyncMap[int, *procEntry](),
 		pids:        syncmap.NewSyncMap[sp.Tpid, int](),
-		criuInst:    criu.MakeCriu(),
+		criuclnt:    criu.MakeCriu(),
 	}
 
 	// Set inner container IP as soon as uprocsrv starts up
@@ -196,7 +196,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	ups.lpc = lpc
 
 	// XXX move somewhere else?
-	if v, err := ups.criuInst.GetCriuVersion(); err != nil {
+	if v, err := ups.criuclnt.GetCriuVersion(); err != nil {
 		db.DFatalf("GetCriuVersion err %v\n", err)
 	} else {
 		db.DPrintf(db.UPROCD, "GetCriuVersion %v", v)
@@ -417,7 +417,7 @@ func mountRealmBinDir(realm sp.Trealm) error {
 	db.DPrintf(db.UPROCD, "mountRealmBinDir: %q %q\n", dir, mnt)
 
 	if err := syscall.Mount(dir, mnt, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
-		db.DPrintf(db.ALWAYS, "failed to mount realm's bin dir %q to %q err %v", dir, mnt, err)
+		db.DPrintf(db.ERROR, "failed to mount realm's bin dir %q to %q err %v", dir, mnt, err)
 		return err
 	}
 	return nil
@@ -515,7 +515,7 @@ func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointProcRequest, re
 		db.DPrintf(db.CKPT, "CheckpointProc: error creating %v err %v", imgDir, err)
 		return err
 	}
-	if err := container.CheckpointProc(ups.criuInst, pid, imgDir, spid, pe.ino); err != nil {
+	if err := container.CheckpointProc(ups.criuclnt, pid, imgDir, spid, pe.ino); err != nil {
 		return err
 	}
 	if err := ups.writeCheckpoint(imgDir, req.PathName, CKPTFULL); err != nil {
@@ -585,7 +585,8 @@ func (ups *UprocSrv) restoreProc(proc *proc.Proc) error {
 			return
 		}
 	}()
-	if err := container.RestoreProc(ups.criuInst, proc, filepath.Join(dst, CKPTLAZY), ups.lpc.WorkDir()); err != nil {
+	// XXX delete dst dir
+	if err := container.RestoreProc(ups.criuclnt, proc, filepath.Join(dst, CKPTLAZY), ups.lpc.WorkDir()); err != nil {
 		return err
 	}
 	return nil

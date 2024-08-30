@@ -43,7 +43,7 @@ func CheckpointProc(c *criu.Criu, pid int, imgDir string, spid sp.Tpid, ino uint
 		ImagesDirFd:  proto.Int32(int32(img.Fd())),
 		Root:         proto.String(root),
 		TcpClose:     proto.Bool(true), // XXX does it matter on dump?
-		External:     []string{extino, "unix[/tmp/spproxyd/spproxyd-netproxy.sock]", "mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/mnt/binfs]:binfsMount"},
+		External:     []string{extino, "mnt[/lib]:libMount", "mnt[/lib64]:lib64Mount", "mnt[/usr]:usrMount", "mnt[/etc]:etcMount", "mnt[/bin]:binMount", "mnt[/dev]:devMount", "mnt[/tmp]:tmpMount", "mnt[/tmp/sigmaos-perf]:perfMount", "mnt[/mnt]:mntMount", "mnt[/mnt/binfs]:binfsMount"},
 		Unprivileged: proto.Bool(true),
 		ExtUnixSk:    proto.Bool(true),
 	}
@@ -207,7 +207,7 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 		WorkDirFd:   proto.Int32(int32(wd.Fd())),
 		Root:        proto.String(jailPath),
 		TcpClose:    proto.Bool(true),
-		External:    []string{"unix[/tmp/spproxyd/spproxyd-netproxy.sock]", "mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"},
+		External:    []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"},
 		LazyPages:   proto.Bool(LAZY),
 		InheritFd:   ifds,
 	}

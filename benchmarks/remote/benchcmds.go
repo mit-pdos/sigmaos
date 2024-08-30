@@ -74,7 +74,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBe
 }
 
 // Construct command string to run BE imgresize multiplexing benchmark
-func GetBEImgresizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+func GetBEImgResizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	const (
 		debugSelectors string = "\"TEST;BENCH;\""
 	)
@@ -97,6 +97,40 @@ func GetBEImgresizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) strin
 		"--imgresize_mcpu 0 "+
 		"--imgresize_mem 1500 "+
 		"--nrealm 4 "+
+		"> /tmp/bench.out 2>&1",
+		debugSelectors,
+		netproxy,
+		overlays,
+		ccfg.LeaderNodeIP,
+		bcfg.Tag,
+	)
+}
+
+// Construct command string to run BE imgresize multiplexing benchmark
+func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+	const (
+		debugSelectors string = "\"TEST;BENCH;IMGD;\""
+	)
+	netproxy := ""
+	if bcfg.NoNetproxy {
+		netproxy = "--nonetproxy"
+	}
+	overlays := ""
+	if bcfg.Overlays {
+		overlays = "--overlays"
+	}
+	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+		"--run TestRealmBalanceImgResizeRPCImgResizeRPC "+
+		"--sleep 60s "+
+		"--imgresize_tps 1 "+
+		"--imgresize_dur 60s "+
+		"--imgresize_nround 300 "+
+		"--n_imgresize_per 25 "+
+		"--imgresize_path name/ux/~local/8.jpg "+
+		"--imgresize_mcpu 0 "+
+		"--imgresize_mem 1500 "+
+		"--nrealm 1 "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
 		netproxy,
@@ -358,7 +392,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 //
 // - sleep specifies the amount of time the hotel benchmark should sleep before
 // starting to run.
-func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration) GetBenchCmdFn {
+func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\""

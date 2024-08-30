@@ -275,8 +275,8 @@ func TestSocialnetTailLatency(t *testing.T) {
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sSocialnetApp, stopK8sSocialnetApp, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
-// Test multiplexing Best Effort Imgresize jobs.
-func TestBEImgresizeMultiplexing(t *testing.T) {
+// Test multiplexing Best Effort ImgResize jobs.
+func TestBEImgResizeMultiplexing(t *testing.T) {
 	var (
 		benchName string = "be_imgresize_multiplexing"
 	)
@@ -296,10 +296,34 @@ func TestBEImgresizeMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgresizeMultiplexingCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgResizeMultiplexingCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
-func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
+// Test multiplexing Best Effort ImgResize jobs.
+func TestBEImgResizeRPCMultiplexing(t *testing.T) {
+	var (
+		benchName string = "be_imgresize_rpc_multiplexing"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM        int  = 0
+		numNodes        int  = 8 // 24
+		numCoresPerNode uint = 4
+		onlyOneFullNode bool = false
+		turboBoost      bool = false
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgResizeRPCMultiplexingCmd, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+}
+
+func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 	var (
 		benchName string = "lc_be_hotel_imgresize_multiplexing"
 		driverVMs []int  = []int{8, 9, 10, 11}
@@ -328,7 +352,7 @@ func TestLCBEHotelImgresizeMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	getLeaderCmd := GetLCBEHotelImgresizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
+	getLeaderCmd := GetLCBEHotelImgResizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
 	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }

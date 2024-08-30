@@ -216,6 +216,7 @@ func (mm *Tmm) collectIovs(pmi *TpagemapImg) (*Iovs, int, int) {
 	start := uint64(0)
 	npages := uint32(0)
 	maxIovLen := start
+	nvma := 0
 
 	ph := pmi.PageMapHead.Message.(*pagemap.PagemapHead)
 	db.DPrintf(db.TEST, "ph %v", ph)
@@ -227,7 +228,8 @@ func (mm *Tmm) collectIovs(pmi *TpagemapImg) (*Iovs, int, int) {
 		end = start + uint64(pm.GetNrPages()*uint32(mm.pagesz))
 		npages += pm.GetNrPages()
 
-		for _, vma := range mm.Vmas {
+		for ; nvma < len(mm.Vmas); nvma++ {
+			vma := mm.Vmas[nvma]
 			if start >= vma.GetStart() {
 				continue
 			}

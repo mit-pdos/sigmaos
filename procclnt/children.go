@@ -53,7 +53,8 @@ func (sf *SpawnFuture) Get() (*proc.ProcSeqno, error) {
 func (sf *SpawnFuture) Complete(seqno *proc.ProcSeqno, err error) {
 	// Sanity check that completions only happen once.
 	if sf.done {
-		db.DFatalf("Double-completed spawn future")
+		db.DPrintf(db.ERROR, "Double-completed spawn future %v", seqno)
+		db.DFatalf("Double-completed spawn future %v", seqno)
 	}
 	sf.seqno = seqno
 	sf.err = err
@@ -74,7 +75,11 @@ func (cs *ChildState) Started(pid sp.Tpid, seqno *proc.ProcSeqno, err error) {
 	defer cs.Unlock()
 
 	// Record ID of schedd this proc was spawned on
-	cs.ranOn[pid].Complete(seqno, err)
+	if sf, ok := cs.ranOn[pid]; ok {
+		sf.Complete(seqno, err)
+	} else {
+		db.DPrintf(db.ERROR, "Error started unknown proc")
+	}
 }
 
 func (cs *ChildState) Exited(pid sp.Tpid, status *proc.Status) {
@@ -83,7 +88,8 @@ func (cs *ChildState) Exited(pid sp.Tpid, status *proc.Status) {
 
 	// Sanity check that threads won't block indefinitely.
 	if !cs.ranOn[pid].done {
-		db.DFatalf("Error exited future not completed")
+		db.DPrintf(db.ERROR, "Error exited future not completed %v status %v", pid, status)
+		db.DFatalf("Error exited future not completed %v status %v", pid, status)
 	}
 	// Clean up child state
 	delete(cs.ranOn, pid)

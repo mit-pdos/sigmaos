@@ -9,6 +9,9 @@ VM=0
 COMMAND=""
 while [[ $# -gt 0 ]]; do
   case $1 in
+  --parallel)
+    shift
+    ;;
   --vpc)
     shift
     VPC=$1

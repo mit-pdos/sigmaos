@@ -42,7 +42,7 @@ def tpt_stats(dpath):
 def scrape_dir_stats(measurement_dir, file_suffix, rps, regex, pos):
   dpath = os.path.join(measurement_dir, rps[1])
   pat = re.compile(regex)
-  paths = [ os.path.join(dpath, f) for f in os.listdir(dpath) if f.endswith(file_suffix) ]
+  paths = [ os.path.join(dpath, "sigmaos-node-logs", f) for f in os.listdir(os.path.join(dpath, "sigmaos-node-logs")) if f.endswith(file_suffix) ]
   fstats = [ scrape_file_stats(f, pat) for f in paths ]
   # Ignore the first run, which involves booting uprocd.
   fstats = [ fstat[1:] for fstat in fstats if len(fstat) > 0 ]
@@ -139,7 +139,7 @@ if __name__ == "__main__":
   if args.cutoff > 0:
     rpses = [ rps for rps in rpses if rps[0] < args.cutoff ]
 
-  regex = ".*E2e spawn latency until main"
+  regex = ".*E2e spawn time since spawn until main"
   file_suffix = ".out"
   pos=-1
 

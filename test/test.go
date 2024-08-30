@@ -117,6 +117,9 @@ type Tstate struct {
 }
 
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
+	if Overlays && EtcdIP == "127.0.0.1" {
+		return nil, fmt.Errorf("Overlays set, but etcdIP not set")
+	}
 	ts, err := newSysClntPath(t, path)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewTstatePath: %v\n", err)

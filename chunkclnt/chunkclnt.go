@@ -90,20 +90,21 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 }
 
 // For uprocsrv to ask chunksrv to fetch ck, but not return data to uprocsrv
-func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, ck int, sz sp.Tsize, path []string) (sp.Tsize, string, error) {
+func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, ck int, sz sp.Tsize, path []string, ep *sp.TendpointProto) (sp.Tsize, string, error) {
 	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
 	if err != nil {
 		return 0, "", err
 	}
 	req := &proto.FetchChunkRequest{
-		Prog:      prog,
-		ChunkId:   int32(ck),
-		Size:      uint64(sz),
-		Realm:     string(realm),
-		SigmaPath: path,
-		Pid:       pid.String(),
-		Data:      false,
-		S3Secret:  s3secret,
+		Prog:               prog,
+		ChunkId:            int32(ck),
+		Size:               uint64(sz),
+		Realm:              string(realm),
+		SigmaPath:          path,
+		Pid:                pid.String(),
+		Data:               false,
+		S3Secret:           s3secret,
+		NamedEndpointProto: ep,
 	}
 	res := &proto.FetchChunkResponse{}
 	if err := rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
@@ -113,12 +114,12 @@ func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm,
 	return sp.Tsize(res.Size), res.Path, nil
 }
 
-func (ckclnt *ChunkClnt) FetchBinary(srvid, prog string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, reqsz sp.Tsize, path []string) (string, error) {
+func (ckclnt *ChunkClnt) FetchBinary(srvid, prog string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, reqsz sp.Tsize, path []string, ep *sp.TendpointProto) (string, error) {
 	n := (reqsz / chunk.CHUNKSZ) + 1
 	db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %v %d", prog, reqsz, n)
 	last := ""
 	for ck := 0; ck < int(n); ck++ {
-		if sz, path, err := ckclnt.Fetch(srvid, prog, pid, realm, s3secret, ck, reqsz, path); err != nil {
+		if sz, path, err := ckclnt.Fetch(srvid, prog, pid, realm, s3secret, ck, reqsz, path, ep); err != nil {
 			return "", err
 		} else {
 			db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %d %v %q", prog, ck, sz, path)

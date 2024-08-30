@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo]" 1>&2
+  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo] [--nodetype node|minnode]" 1>&2
 }
 
 VPC=""
@@ -10,6 +10,7 @@ NCORES=4
 UPDATE=""
 TAG=""
 OVERLAYS=""
+NODETYPE="node"
 NETPROXY="--usenetproxy"
 TOKEN=""
 TURBO=""
@@ -18,6 +19,9 @@ BRANCH="master"
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
+  --parallel)
+    shift
+    ;;
   --vpc)
     shift
     VPC=$1
@@ -60,6 +64,11 @@ while [[ $# -gt 0 ]]; do
     RMCPU="$1"
   	shift
     ;;
+  --nodetype)
+    shift
+    NODETYPE=$1
+    shift
+    ;;
   -help)
     usage
     exit 0
@@ -79,6 +88,11 @@ fi
 
 if [ $NCORES -ne 16 ] && [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   echo "Bad ncores $NCORES"
+  exit 1
+fi
+
+if [ $NODETYPE != "node" ] && [ $NODETYPE != "minnode" ]; then
+  echo "Bad node type\"$NODETYPE\""
   exit 1
 fi
 
@@ -167,7 +181,7 @@ for vm in $vms; do
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
-    ./start-kernel.sh --boot node --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot $NODETYPE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} ${KERNELID} 2>&1 | tee /tmp/join.out
 #    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
 #    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
 #    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg

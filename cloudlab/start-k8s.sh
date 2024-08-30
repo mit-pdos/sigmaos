@@ -89,7 +89,7 @@ for vm in $vms; do
 
     # Install CNI
     rm /tmp/kube-flannel.yml
-    wget -O /tmp/kube-flannel.yml https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+    wget -O /tmp/kube-flannel.yml https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
     sed -i "s/10.244.0.0/$flannel_cidr/g" /tmp/kube-flannel.yml
     kubectl apply -f /tmp/kube-flannel.yml
     kubectl apply -f ~/sigmaos/benchmarks/k8s/metrics/metrics-server.yaml

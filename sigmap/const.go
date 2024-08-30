@@ -136,6 +136,12 @@ const (
 	EXTERNAL_EP
 )
 
+// Platform consts
+const (
+	PLATFORM_AWS      Tplatform = "aws"
+	PLATFORM_CLOUDLAB Tplatform = "cloudlab"
+)
+
 // Auth consts
 const (
 	NO_PRINCIPAL_ID    TprincipalID = "NO_PRINCIPAL_ID"

@@ -99,12 +99,14 @@ func NewDirReader(fslib *FsLib, pn string) *DirReader {
 
 // Wait until n entries are in the directory
 func (dr *DirReader) WaitNEntries(n int) error {
-	_, err := dr.ProcessDir(dr.pn, func(st *sp.Stat) (bool, error) {
-		if !dr.ents[st.Name] {
-			dr.ents[st.Name] = true
+	_, err := dr.readDirWatch(dr.pn, func(sts []*sp.Stat) bool {
+		for _, st := range sts {
+			if !dr.ents[st.Name] {
+				dr.ents[st.Name] = true
+			}
 		}
 		// stop when we have n entries
-		return len(dr.ents) >= n, nil
+		return len(dr.ents) < n
 	})
 	if err != nil {
 		return err

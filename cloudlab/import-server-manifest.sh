@@ -1,16 +1,22 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --manifest PATH" 1>&2
+  echo "Usage: $0 --manifest PATH --username USERNAME" 1>&2
 }
 
 MANIFEST=""
+USERNAME=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --manifest)
     shift
     MANIFEST=$1
+    shift
+    ;;
+  --username)
+    shift
+    USERNAME=$1
     shift
     ;;
   -help)
@@ -33,7 +39,7 @@ fi
 DIR=$(dirname $0)
 source $DIR/env.sh
 
-servers=$(grep "username=\"arielck" $MANIFEST | cut -d "\"" -f4)
+servers=$(grep "username=\"$USERNAME" $MANIFEST | cut -d "\"" -f4)
 
 rm $DIR/servers.txt
 

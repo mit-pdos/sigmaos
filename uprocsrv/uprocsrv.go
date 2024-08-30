@@ -117,7 +117,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	}
 	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
 
-	db.DPrintf(db.UPROCD, "Run %v %v %s innerIP %s outerIP %s pe %v", kernelId, up, os.Environ(), pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
+	db.DPrintf(db.UPROCD, "Run kid %v port %v innerIP %s outerIP %s pe %v", kernelId, up, pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -136,6 +136,15 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 		}
 		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port)
 
+		// This should only happen if running with overlays. If running with
+		// overlays, allow all principals to attach (because named will try to
+		// attach to find its port). Shouldn't really matter, because overlays are
+		// only ever in use for benchmarking.
+		if !pe.GetOverlays() {
+			// Sanity check
+			db.DFatalf("Sanity check failed! Uprocsrv got a port when running without overlays!")
+		}
+		sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
 		// The kernel will advertise the server, so pass "" as pn.
 		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
 	}
@@ -394,11 +403,11 @@ func (ups *UprocSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.
 	if err := ups.assignToRealm(r, pid, req.Program, req.SigmaPath, req.GetS3Secret(), req.GetNamedEndpointProto()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
-	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), req.SigmaPath, nil)
+	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), req.SigmaPath, req.GetNamedEndpointProto())
 	if err != nil {
 		return err
 	}
-	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), st.Tsize(), req.SigmaPath); err != nil {
+	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, req.Program, pid, r, req.GetS3Secret(), st.Tsize(), req.SigmaPath, req.GetNamedEndpointProto()); err != nil {
 		return err
 	}
 	res.OK = true
@@ -419,24 +428,6 @@ func mountRealmBinDir(realm sp.Trealm) error {
 	return nil
 }
 
-func (ups *UprocSrv) fetchBinary(uproc *proc.Proc) error {
-	prog := uproc.GetVersionedProgram()
-	s3 := uproc.GetSecrets()["s3"]
-	r := uproc.GetRealm()
-	path := uproc.GetSigmaPath()
-	pid := uproc.GetPid()
-	db.DPrintf(db.UPROCD, "fetchBinary: GetFileStat %v %v", uproc, path)
-	st, _, err := ups.ckclnt.GetFileStat(ups.kernelId, prog, pid, r, s3, path, uproc.GetNamedEndpoint())
-	if err != nil {
-		return err
-	}
-	db.DPrintf(db.UPROCD, "fetchBinary: FetchBinary: %v %v", uproc, path)
-	if _, err := ups.ckclnt.FetchBinary(ups.kernelId, prog, pid, r, s3, st.Tsize(), path); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (ups *UprocSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, error) {
 	pe, ok := ups.procs.Lookup(pid)
 	if !ok || pe.proc == nil {
@@ -451,7 +442,7 @@ func (ups *UprocSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, er
 	}
 
 	start := time.Now()
-	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, prog, pe.proc.GetPid(), ups.realm, s3secret, cid, sz, pe.proc.GetSigmaPath())
+	sz, path, err := ups.ckclnt.Fetch(ups.kernelId, prog, pe.proc.GetPid(), ups.realm, s3secret, cid, sz, pe.proc.GetSigmaPath(), pe.proc.GetNamedEndpoint())
 
 	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch done: %q ck %d sz %d path %q fetch lat %v; time since spawn %v", pe.proc.GetPid(), ups.kernelId, cid, sz, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
 	return sz, err

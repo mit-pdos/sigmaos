@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -67,6 +68,14 @@ func (ft *FtTasks) Jobs() ([]*sp.Stat, error) {
 	return ft.GetDir(ft.dir)
 }
 
+func (ft *FtTasks) NTasksTODO() (int, error) {
+	sts, err := ft.GetDir(ft.todo)
+	if err != nil {
+		return -1, err
+	}
+	return len(sts), nil
+}
+
 func (ft *FtTasks) NTaskDone() (int, error) {
 	sts, err := ft.GetDir(ft.done)
 	if err != nil {
@@ -83,13 +92,14 @@ func (ft *FtTasks) SubmitStop() error {
 	return err
 }
 
-func (ft *FtTasks) SubmitTask(i interface{}) error {
-	db.DPrintf(db.FTTASKS, "SubmitTask %v", i)
-	t := filepath.Join(ft.todo, rd.String(4))
+func (ft *FtTasks) SubmitTask(id int, i interface{}) error {
+	db.DPrintf(db.FTTASKS, "SubmitTask id %v t %v", id, i)
+	tid := strconv.Itoa(id) + "-" + rd.String(4)
+	t := filepath.Join(ft.todo, tid)
 	return ft.PutFileJson(t, 0777, i)
 }
 
-func (ft *FtTasks) SubmitTaskMulti(is []interface{}) error {
+func (ft *FtTasks) SubmitTaskMulti(id int, is []interface{}) error {
 	bs := make([]byte, 0)
 	for _, i := range is {
 		b, err := json.Marshal(i)
@@ -98,7 +108,9 @@ func (ft *FtTasks) SubmitTaskMulti(is []interface{}) error {
 		}
 		bs = append(bs, b...)
 	}
-	t := filepath.Join(ft.todo, rd.String(4))
+	tid := strconv.Itoa(id) + "-" + rd.String(4)
+	t := filepath.Join(ft.todo, tid)
+	db.DPrintf(db.FTTASKS, "SubmitTaskMulti id %v tname %v", id, tid)
 	_, err := ft.PutFile(t, 0777, sp.OWRITE, bs)
 	return err
 }

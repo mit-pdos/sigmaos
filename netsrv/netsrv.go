@@ -34,7 +34,7 @@ func NewNetServerEPType(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *
 		newConn: newConn,
 		npc:     npc,
 	}
-	db.DPrintf(db.PORT, "Listen addr %v", addr.IPPort())
+	db.DPrintf(db.NETSRV, "Listen addr %v", addr.IPPort())
 	// Create and start the main server listener
 	ep, l, err := npc.Listen(eptype, addr)
 	if err != nil {
@@ -42,7 +42,7 @@ func NewNetServerEPType(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *
 	}
 	srv.ep = ep
 	srv.l = l
-	db.DPrintf(db.PORT, "listen %v myaddr %v\n", addr, srv.ep)
+	db.DPrintf(db.NETSRV, "listen %v myaddr %v\n", addr, srv.ep)
 	go srv.runsrv(l)
 	return srv
 }

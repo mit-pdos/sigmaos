@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo]" 1>&2
+  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo] [--nodetype node|minnode]" 1>&2
 }
 
 VPC=""
@@ -10,6 +10,7 @@ NCORES=4
 UPDATE=""
 TAG=""
 OVERLAYS=""
+NODETYPE="node"
 NETPROXY="--usenetproxy"
 TOKEN=""
 TURBO=""
@@ -18,6 +19,9 @@ BRANCH="master"
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
+  --parallel)
+    shift
+    ;;
   --vpc)
     shift
     shift
@@ -54,6 +58,11 @@ while [[ $# -gt 0 ]]; do
     shift
     NETPROXY=""
     ;;
+  --nodetype)
+    shift
+    NODETYPE=$1
+    shift
+    ;;
   --reserveMcpu)
     shift
     RMCPU="$1"
@@ -78,6 +87,11 @@ fi
 
 if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ] && [ $NCORES -ne 20 ] && [ $NCORES -ne 40 ]; then
   echo "Bad ncores $NCORES"
+  exit 1
+fi
+
+if [ $NODETYPE != "node" ] && [ $NODETYPE != "minnode" ]; then
+  echo "Bad node type\"$NODETYPE\""
   exit 1
 fi
 
@@ -141,7 +155,9 @@ for vm in $vms; do
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/1.jpg ~/
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/6.jpg ~/
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/7.jpg ~/
-#  aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
+  if ! [ -f ~/8.jpg ]; then
+    aws s3 --profile sigmaos cp s3://9ps3/img-save/8.jpg ~/
+  fi
 
   cd sigmaos
   sudo ./load-apparmor.sh
@@ -162,15 +178,15 @@ for vm in $vms; do
 #    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
 #    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
 #    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
-#    docker cp ~/8.jpg ${KERNELID}:/home/sigmaos/8.jpg
+    docker cp ~/8.jpg ${KERNELID}:/home/sigmaos/8.jpg
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
-    ./start-kernel.sh --boot node --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot $NODETYPE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} ${KERNELID} 2>&1 | tee /tmp/join.out
 #    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
 #    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
 #    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
-#    docker cp ~/8.jpg ${KERNELID}:/home/sigmaos/8.jpg
+    docker cp ~/8.jpg ${KERNELID}:/home/sigmaos/8.jpg
   fi
 ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then

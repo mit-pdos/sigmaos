@@ -114,7 +114,8 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		}
 		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
-		if sigmaos {
+		// Doesn't work with overlays
+		if sigmaos && !ts.ProcEnv().GetOverlays() {
 			ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.SigmaClnt.FsLib}, hotel.HOTELRESERVE)
 			if err != nil {
 				db.DFatalf("Error make reserve pdc: %v", err)
@@ -186,7 +187,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 }
 
 func (ji *HotelJobInstance) printStats() {
-	if ji.sigmaos && !ji.justCli {
+	if ji.sigmaos && !ji.justCli && !ji.ProcEnv().GetOverlays() {
 		for _, s := range hotel.HOTELSVC {
 			stats, err := ji.ReadStats(s)
 			assert.Nil(ji.Ts.T, err, "error get stats [%v] %v", s, err)

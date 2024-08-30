@@ -174,7 +174,7 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, err
 			return nil, err
 		}
 		t := &TreduceTask{rs}
-		if err := rft.SubmitTask(t); err != nil {
+		if err := rft.SubmitTask(0, t); err != nil {
 			db.DPrintf(db.ERROR, "SubmitTask %v err %v\n", t, err)
 			return nil, err
 		}
@@ -233,7 +233,7 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobName string, job *Job) (int, err
 		return len(bins), err
 	}
 	for _, b := range bins {
-		if err := ts.Mft.SubmitTask(b); err != nil {
+		if err := ts.Mft.SubmitTask(0, b); err != nil {
 			return len(bins), err
 		}
 

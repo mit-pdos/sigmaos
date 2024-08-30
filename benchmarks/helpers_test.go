@@ -345,6 +345,20 @@ func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	return ws, is
 }
 
+// ========== ImgResizeRPC Helpers ==========
+func newImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, tasksPerSec int, dur time.Duration, ninputs int, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) ([]*ImgResizeRPCJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*ImgResizeRPCJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := NewImgResizeRPCJob(ts, p, sigmaos, input, tasksPerSec, dur, ninputs, mcpu, mem, nrounds, imgdmcpu)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
 // ========== Social Network Helpers ==========
 
 func newSocialNetworkJobs(

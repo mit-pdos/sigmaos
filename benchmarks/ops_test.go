@@ -266,3 +266,25 @@ func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) 
 	db.DPrintf(db.TEST, "[%v] Done cleaning up imgresize", ts.GetRealm())
 	return t, 1.0
 }
+
+func runImgResizeRPC(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*ImgResizeRPCJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	if ji.sigmaos {
+		rpcc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
+		rpcc.MonitorScheddStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
+		defer rpcc.Done()
+	}
+	//	ji.Cleanup()
+	start := time.Now()
+	ji.StartImgResizeRPCJob()
+	ji.Wait()
+	t := time.Since(start)
+	time.Sleep(2 * time.Second)
+	db.DPrintf(db.TEST, "[%v] Cleaning up imgresize", ts.GetRealm())
+	//	ji.Cleanup()
+	db.DPrintf(db.TEST, "[%v] Done cleaning up imgresize", ts.GetRealm())
+	return t, 1.0
+}

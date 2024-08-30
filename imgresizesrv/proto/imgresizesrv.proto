@@ -10,3 +10,10 @@ message ImgResizeRequest {
 message ImgResizeResult {
   bool oK = 1;
 }
+
+message StatusRequest {
+}
+
+message StatusResult {
+  int64 nDone = 1;
+}

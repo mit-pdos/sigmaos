@@ -41,3 +41,13 @@ func (clnt *ImgResizeRPCClnt) Resize(tname, ipath string) error {
 	}
 	return nil
 }
+
+func (clnt *ImgResizeRPCClnt) Status() (int64, error) {
+	arg := proto.StatusRequest{}
+	res := proto.StatusResult{}
+	err := clnt.rpcc.RPC("ImgSrvRPC.Status", &arg, &res)
+	if err != nil {
+		return 0, err
+	}
+	return res.NDone, nil
+}

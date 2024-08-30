@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
@@ -21,6 +22,7 @@ type ImgSrvRPC struct {
 	workerMcpu proc.Tmcpu
 	workerMem  proc.Tmem
 	ssrv       *sigmasrv.SigmaSrv
+	ndone      atomic.Int64
 	mkProc     fttaskmgr.TmkProc
 	sc         *sigmaclnt.SigmaClnt
 }
@@ -58,6 +60,11 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	return imgd, nil
 }
 
+func (imgd *ImgSrvRPC) Status(ctx fs.CtxI, req proto.StatusRequest, rep *proto.StatusResult) error {
+	rep.NDone = imgd.ndone.Load()
+	return nil
+}
+
 func (imgd *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeRequest, rep *proto.ImgResizeResult) error {
 	db.DPrintf(db.IMGD, "Resize %v", req)
 	defer db.DPrintf(db.IMGD, "Resize %v done", req)
@@ -83,6 +90,7 @@ func (imgd *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeRequest, rep *prot
 		return nil
 	}
 	ms := time.Since(start).Milliseconds()
+	imgd.ndone.Add(1)
 	db.DPrintf(db.IMGD, "task ok [%v:%v] latency %vms", req.TaskName, p.GetPid(), ms)
 	rep.OK = true
 	return nil

@@ -67,6 +67,7 @@ const (
 	FSREADER                          = "FSREADER"
 	SLEEPER_TIMING                    = "SLEEPER_TIMING"
 	IMGD                              = "IMGD"
+	IMGD_ERR                          = "IMGD" + ERR
 	MR                                = "MR"
 	MR_TPT                            = "MR_TPT"
 	KVBAL                             = "KVBAL"

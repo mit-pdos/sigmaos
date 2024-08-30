@@ -2,7 +2,6 @@ package container
 
 import (
 	"encoding/json"
-	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -225,57 +224,29 @@ func restoreMounts(sigmaPid sp.Tpid) error {
 	return nil
 }
 
-func RestoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, pages string) error {
-	db.DPrintf(db.CKPT, "RestoreProc %v %v %v", proc, imgDir, pages)
-	if err := restoreMounts(proc.GetPid()); err != nil {
+func RestoreProc(criuInst *criu.Criu, p *proc.Proc, imgDir, workDir string) error {
+	db.DPrintf(db.CKPT, "RestoreProc %v %v %v", imgDir, workDir, p)
+	if err := restoreMounts(p.GetPid()); err != nil {
 		return err
 	}
-	jailPath := "/home/sigmaos/jail/" + proc.GetPid().String() + "/"
-	if LAZY {
-		err := runLazypagesd(imgDir, pages)
-		db.DPrintf(db.CKPT, "lazyPages err %v", err)
-		if err != nil {
-			return err
-		}
-	}
-	return restoreProc(criuInst, proc, imgDir, jailPath)
+	jailPath := "/home/sigmaos/jail/" + p.GetPid().String() + "/"
+	return restoreProc(criuInst, p, imgDir, workDir, jailPath)
 }
 
-func runLazypagesd(imgDir, pages string) error {
-	db.DPrintf(db.CKPT, "Start lazypagesd img %v pages %v", imgDir, pages)
-	cmd := exec.Command("lazypagesd", []string{imgDir, pages}...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	buf := make([]byte, 1)
-	if _, err := io.ReadFull(stdout, buf); err != nil {
-		db.DPrintf(db.CKPT, "read pipe err %v\n", err)
-		return err
-	}
-
-	go func() {
-		db.DPrintf(db.CKPT, "Wait lazypagesd %v %v", imgDir, pages)
-		err := cmd.Wait()
-		db.DPrintf(db.CKPT, "Wait lazypagesd returns %v", err)
-	}()
-	return nil
-}
-
-func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, jailPath string) error {
-	db.DPrintf(db.CKPT, "restoreProc %v", imgDir)
+func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath string) error {
 	img, err := os.Open(imgDir)
 	if err != nil {
 		db.DPrintf(db.CKPT, "restoreProc: Open %v err", imgDir, err)
 		return err
 	}
 	defer img.Close()
+
+	wd, err := os.Open(workDir)
+	if err != nil {
+		db.DPrintf(db.CKPT, "restoreProc: Open %v err", workDir, err)
+		return err
+	}
+	defer wd.Close()
 
 	verbose := db.IsLabelSet(db.CRIU)
 
@@ -332,6 +303,7 @@ func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, jailPath string) 
 
 	opts := &rpc.CriuOpts{
 		ImagesDirFd: proto.Int32(int32(img.Fd())),
+		WorkDirFd:   proto.Int32(int32(wd.Fd())),
 		Root:        proto.String(jailPath),
 		// TcpEstablished: proto.Bool(true),
 		TcpClose: proto.Bool(true),
@@ -349,7 +321,7 @@ func restoreProc(criuInst *criu.Criu, proc *proc.Proc, imgDir, jailPath string) 
 		err = criuInst.Restore(opts, nil)
 		db.DPrintf(db.CKPT, "restoreProc: Restore err %v", err)
 		if verbose {
-			dumpLog(imgDir + "/restore.log")
+			dumpLog(workDir + "/restore.log")
 		}
 	}()
 

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/lazypagessrv/proto";
+
+message RegisterRequest {
+  string imgDir = 1;
+  string pages = 2;
+}
+
+message RegisterResult {
+}

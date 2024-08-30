@@ -27,6 +27,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
+	"sigmaos/lazypagesclnt"
 	"sigmaos/lazypagessrv"
 	"sigmaos/linuxsched"
 	"sigmaos/netsigma"
@@ -95,6 +96,7 @@ type UprocSrv struct {
 	procs          *syncmap.SyncMap[int, *procEntry]
 	pids           *syncmap.SyncMap[sp.Tpid, int]
 	ckclnt         *chunkclnt.ChunkClnt
+	lpc            *lazypagesclnt.LazyPagesClnt
 	criuInst       *criu.Criu
 }
 
@@ -177,17 +179,37 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	}
 	ups.scsc = scsc
 
+	lsdpid := sp.GenPid("lazypagesd")
+	lsdp := proc.NewPrivProcPid(lsdpid, "lazypagesd", nil, true)
+	lsdp.InheritParentProcEnv(ups.pe)
+	lsdp.SetHow(proc.HLINUX)
+	lpsd, err := lazypagessrv.ExecLazyPagesSrv(lsdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	if err != nil {
+		return nil
+	}
+
+	lpc, err := lazypagesclnt.NewLazyPagesClnt(ups.sc.FsLib, lsdpid)
+	if err != nil {
+		db.DPrintf(db.UPROCD, "NewLazyPagesClnt %v err %v", lsdpid, err)
+		return nil
+	}
+	ups.lpc = lpc
+
+	// XXX move somewhere else?
 	if v, err := ups.criuInst.GetCriuVersion(); err != nil {
 		db.DFatalf("GetCriuVersion err %v\n", err)
 	} else {
-		db.DPrintf(db.UPROCD, "GetCriuVersion %v\n", v)
+		db.DPrintf(db.UPROCD, "GetCriuVersion %v", v)
 	}
+
+	db.DPrintf(db.UPROCD, "RunServer")
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.UPROCD_ERR, "RunServer err %v\n", err)
 		return err
 	}
-	db.DPrintf(db.UPROCD, "RunServer done\n")
+	db.DPrintf(db.UPROCD, "RunServer done")
+	lpsd.Shutdown()
 	return nil
 }
 
@@ -520,15 +542,13 @@ func (ups *UprocSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string,
 		db.DPrintf(db.UPROCD, "writeCheckpoint: reading local dir err %\n", err)
 		return err
 	}
-
 	for _, file := range files {
 		if ckpt == CKPTLAZY && strings.HasPrefix(file.Name(), "pages-") {
 			continue
 		}
-		db.DPrintf(db.UPROCD, "writeCheckpoint: copy file %s\n", file.Name())
 		b, err := os.ReadFile(filepath.Join(chkptLocalDir, file.Name()))
 		if err != nil {
-			db.DPrintf(db.UPROCD, "Error reading file: %v\n", err)
+			db.DPrintf(db.UPROCD, "Error reading file %v err %v\n", file.Name(), err)
 			return err
 		}
 		dstFd, err := ups.ssrv.MemFs.SigmaClnt().Create(filepath.Join(pn, file.Name()), 0777, sp.OWRITE)
@@ -541,6 +561,7 @@ func (ups *UprocSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string,
 		}
 		ups.ssrv.MemFs.SigmaClnt().CloseFd(dstFd)
 	}
+	db.DPrintf(db.UPROCD, "writeCheckpoint: copied %d files", len(files))
 	return nil
 }
 
@@ -552,8 +573,11 @@ func (ups *UprocSrv) restoreProc(proc *proc.Proc) error {
 	}
 	pagesId := 1
 	pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
-	// pages := filepath.Join(dst, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
-	if err := container.RestoreProc(ups.criuInst, proc, filepath.Join(dst, CKPTLAZY), pages); err != nil {
+	db.DPrintf(db.CKPT, "restoreProc: Register %v", pages)
+	if err := ups.lpc.Register(filepath.Join(dst, CKPTLAZY), pages); err != nil {
+		return nil
+	}
+	if err := container.RestoreProc(ups.criuInst, proc, filepath.Join(dst, CKPTLAZY), ups.lpc.WorkDir()); err != nil {
 		return err
 	}
 	return nil
@@ -575,11 +599,10 @@ func (ups *UprocSrv) readCheckpoint(ckptSigmaDir, localDir, ckpt string) error {
 		return err
 	}
 	files := sp.Names(sts)
+	db.DPrintf(db.UPROCD, "Copy file %v to %s\n", files, pn)
 	for _, entry := range files {
 		fn := filepath.Join(ckptSigmaDir, ckpt, entry)
 		dstfn := filepath.Join(pn, entry)
-		db.DPrintf(db.UPROCD, "Copy file %s to %s\n", fn, dstfn)
-
 		rdr, err := ups.ssrv.MemFs.SigmaClnt().OpenReader(fn)
 		if err != nil {
 			db.DPrintf("GetFile %v err %v\n", fn, err)

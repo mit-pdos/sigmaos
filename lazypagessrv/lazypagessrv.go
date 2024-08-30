@@ -4,13 +4,11 @@ package lazypagessrv
 
 import (
 	"encoding/binary"
-	"fmt"
+	"io"
 	"net"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"syscall"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 
@@ -18,48 +16,96 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/userfaultfd"
+	"sigmaos/sigmasrv"
 )
 
-const SIGMAOS = true
-
-const SOCKNAME = "lazy-pages.socket"
+const (
+	DIR      = "lazypagesd"
+	SOCKNAME = "lazy-pages.socket"
+)
 
 // XXX imgdir and pages should per LazyPagesConn
-type LazyPagesSrv struct {
+type lazyPagesSrv struct {
 	*sigmaclnt.SigmaClnt
 	imgdir string
 	pages  string
 	pagesz int
 }
 
-func NewLazyPagesSrv(imgdir, pages string) (*LazyPagesSrv, error) {
-	lps := &LazyPagesSrv{
-		imgdir: imgdir,
-		pages:  pages,
-		pagesz: os.Getpagesize()}
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-	if err != nil {
-		return nil, err
+func newLazyPagesSrv(sc *sigmaclnt.SigmaClnt) (*lazyPagesSrv, error) {
+	lps := &lazyPagesSrv{
+		SigmaClnt: sc,
+		pagesz:    os.Getpagesize(),
 	}
-	lps.SigmaClnt = sc
 	return lps, nil
 }
 
-func (lps *LazyPagesSrv) Run() error {
-	sn := filepath.Join(lps.imgdir, SOCKNAME)
+func WorkDir(pid sp.Tpid) string {
+	return filepath.Join(DIR, pid.String())
+}
+
+func SrvPath(pid sp.Tpid) string {
+	return filepath.Join(sp.LAZYPAGESD, pid.String())
+}
+
+// Called indirectly from ExecLazyPagesSrv
+func Run() error {
+	pe := proc.GetProcEnv()
+	pid := pe.GetPID()
+
+	db.DPrintf(db.ALWAYS, "Run: lazypagessrv %v", SrvPath(pid))
+
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if err != nil {
+		db.DFatalf("Error NewSigmaClnt: %v", err)
+	}
+
+	lps, err := newLazyPagesSrv(sc)
+	if err != nil {
+		db.DFatalf("Error newlazyPagesSrv: %v", err)
+	}
+
+	svc := &LazyPagesSvc{lps}
+	_, err = sigmasrv.NewSigmaSrvClnt(SrvPath(pid), sc, svc)
+	if err != nil {
+		db.DFatalf("Error NewSigmaSrv: %v", err)
+	}
+
+	go func() {
+		if err := lps.servePages(pid); err != nil {
+			db.DPrintf(db.ERROR, "servePages err %v", err)
+		}
+	}()
+
+	// Tell ExecLazyPagesSrv we are running
+	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
+		db.DPrintf(db.ALWAYS, "WriteString: err %w", err)
+		os.Exit(1)
+	}
+
+	lps.waitExit()
+	return nil
+}
+
+func (lps *lazyPagesSrv) waitExit() {
+	buf := make([]byte, 1)
+	if _, err := io.ReadFull(os.Stdin, buf); err != nil {
+		db.DFatalf("read pipe err %v\n", err)
+	}
+	db.DPrintf(db.LAZYPAGESSRV, "exiting\n")
+	os.Exit(0)
+}
+
+func (lps *lazyPagesSrv) servePages(pid sp.Tpid) error {
+	sn := filepath.Join(WorkDir(pid), SOCKNAME)
+	os.Mkdir(DIR, 0755)
+	if err := os.Mkdir(WorkDir(pid), 0755); err != nil {
+		return err
+	}
 	socket, err := net.Listen("unix", sn)
 	if err != nil {
 		db.DFatalf("Listen: err %v", err)
 	}
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		os.Remove(sn)
-		os.Exit(1)
-	}()
 
 	for {
 		conn, err := socket.Accept()
@@ -70,7 +116,7 @@ func (lps *LazyPagesSrv) Run() error {
 	}
 }
 
-func (lps *LazyPagesSrv) handleConn(conn net.Conn) {
+func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 	defer conn.Close()
 
 	connFd, err := getConnFd(conn.(*net.UnixConn))
@@ -102,27 +148,15 @@ func (lps *LazyPagesSrv) handleConn(conn net.Conn) {
 	fd := fds[0]
 	db.DPrintf(db.LAZYPAGESSRV, "Received fd %d\n", fd)
 
-	var rp func(int64, []byte) error
-	if SIGMAOS {
-		fdpages, err := lps.Open(lps.pages, sp.OREAD)
-		if err != nil {
-			db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lps.pages, err)
-			return
-		}
-		defer lps.CloseFd(fd)
-		rp = func(off int64, pages []byte) error {
-			return readBytesSigma(lps.SigmaClnt, fdpages, off, pages)
-		}
-	} else {
-		f, err := os.Open(lps.pages)
-		if err != nil {
-			db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lps.pages, err)
-			return
-		}
-		defer f.Close()
-		rp = func(off int64, pages []byte) error {
-			return readBytes(f, off, pages)
-		}
+	fdpages, err := lps.Open(lps.pages, sp.OREAD)
+	if err != nil {
+		db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lps.pages, err)
+		return
+	}
+
+	defer lps.CloseFd(fd)
+	rp := func(off int64, pages []byte) error {
+		return readBytesSigma(lps.SigmaClnt, fdpages, off, pages)
 	}
 
 	lpc, err := lps.newLazyPagesConn(fd, rp, int(pid))
@@ -132,159 +166,6 @@ func (lps *LazyPagesSrv) handleConn(conn net.Conn) {
 	if err := lpc.handleReqs(); err != nil {
 		db.DFatalf("handle fd %v err %v", fd, err)
 	}
-}
-
-type LazyPagesConn struct {
-	lps       *LazyPagesSrv
-	pid       int
-	fd        int
-	rp        func(int64, []byte) error
-	pmi       *TpagemapImg
-	mm        *Tmm
-	iovs      *Iovs
-	maxIovLen int
-	nfault    int
-	pages     []byte
-}
-
-func (lps *LazyPagesSrv) newLazyPagesConn(fd int, rp func(int64, []byte) error, pid int) (*LazyPagesConn, error) {
-	lpc := &LazyPagesConn{lps: lps, fd: fd, rp: rp, pid: int(pid)}
-	pmi, err := newTpagemapImg(lps.imgdir, "1")
-	if err != nil {
-		return nil, err
-	}
-	lpc.pmi = pmi
-	mm, err := newTmm(lps.imgdir, "1")
-	if err != nil {
-		return nil, err
-	}
-	lpc.mm = mm
-	npages := 0
-	lpc.iovs, npages, lpc.maxIovLen = mm.collectIovs(pmi)
-	lpc.pages = make([]byte, lpc.maxIovLen)
-	db.DPrintf(db.ALWAYS, "lazypages: img %v pages %v pid %d fd %d iovs %d npages %d maxIovLen %d", lps.imgdir, lps.pages, pid, fd, lpc.iovs.len(), npages, lpc.maxIovLen)
-	return lpc, nil
-}
-
-func (lpc *LazyPagesConn) handleReqs() error {
-	for {
-		if _, err := unix.Poll(
-			[]unix.PollFd{{
-				Fd:     int32(lpc.fd),
-				Events: unix.POLLIN,
-			}},
-			-1,
-		); err != nil {
-			return err
-		}
-		buf := make([]byte, unsafe.Sizeof(userfaultfd.UffdMsg{}))
-		if _, err := syscall.Read(lpc.fd, buf); err != nil {
-			return err
-		}
-		msg := (*(*userfaultfd.UffdMsg)(unsafe.Pointer(&buf[0])))
-		switch userfaultfd.GetMsgEvent(&msg) {
-		case userfaultfd.UFFD_EVENT_PAGEFAULT:
-			arg := userfaultfd.GetMsgArg(&msg)
-			pagefault := (*(*userfaultfd.UffdPagefault)(unsafe.Pointer(&arg[0])))
-			addr := uint64(userfaultfd.GetPagefaultAddress(&pagefault))
-			mask := uint64(^(lpc.lps.pagesz - 1))
-			if err := lpc.pageFault(addr & mask); err != nil {
-				return err
-			}
-		case userfaultfd.UFFD_EVENT_FORK:
-			db.DPrintf(db.ERROR, "Fork event %v", userfaultfd.GetMsgEvent(&msg))
-		case userfaultfd.UFFD_EVENT_REMAP:
-			db.DPrintf(db.ERROR, "Remap event %v", userfaultfd.GetMsgEvent(&msg))
-		case userfaultfd.UFFD_EVENT_REMOVE:
-			db.DPrintf(db.ERROR, "Remove event %v", userfaultfd.GetMsgEvent(&msg))
-		case userfaultfd.UFFD_EVENT_UNMAP:
-			db.DPrintf(db.ERROR, "Unmap event %v", userfaultfd.GetMsgEvent(&msg))
-		default:
-			return fmt.Errorf("Unknown event %x", userfaultfd.GetMsgEvent(&msg))
-		}
-	}
-}
-
-func (lpc *LazyPagesConn) pageFault(addr uint64) error {
-	iov := lpc.iovs.find(addr)
-	lpc.nfault += 1
-	if iov == nil {
-		db.DPrintf(db.LAZYPAGESSRV, "page fault: zero %d: no iov for %x", lpc.nfault, addr)
-		zeroPage(lpc.fd, addr, lpc.lps.pagesz)
-	} else {
-		pi := lpc.pmi.find(addr)
-		if pi == -1 {
-			db.DFatalf("no page for %x", addr)
-		}
-		n := iov.markFetchLen(addr)
-		if n == 0 {
-			db.DPrintf(db.LAZYPAGESSRV, "fault page: delivered %d: %d(%x) -> %v pi %d(%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz))
-			return nil
-		}
-		buf := lpc.pages[0:n]
-		db.DPrintf(db.LAZYPAGESSRV, "page fault: copy %d: %d(%x) -> %v pi %d(%d,%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf))
-		off := int64(pi * lpc.pmi.pagesz)
-		if err := lpc.rp(off, buf); err != nil {
-			db.DFatalf("no page content for %x", addr)
-		}
-		copyPages(lpc.fd, addr, buf)
-	}
-	return nil
-}
-
-func zeroPage(fd int, addr uint64, pagesz int) {
-	len := uint64(pagesz)
-	zero := userfaultfd.NewUffdioZeroPage(
-		userfaultfd.CULong(addr),
-		userfaultfd.CULong(len),
-		0,
-	)
-	if _, _, errno := syscall.Syscall(
-		syscall.SYS_IOCTL,
-		uintptr(fd),
-		userfaultfd.UFFDIO_ZEROPAGE,
-		uintptr(unsafe.Pointer(&zero)),
-	); errno != 0 {
-		db.DPrintf(db.ERROR, "SYS_IOCTL err %v", errno)
-	}
-}
-
-func copyPages(fd int, addr uint64, pages []byte) {
-	len := len(pages)
-	cpy := userfaultfd.NewUffdioCopy(
-		pages,
-		userfaultfd.CULong(addr),
-		userfaultfd.CULong(len),
-		0,
-		0,
-	)
-	if _, _, errno := syscall.Syscall(
-		syscall.SYS_IOCTL,
-		uintptr(fd),
-		userfaultfd.UFFDIO_COPY,
-		uintptr(unsafe.Pointer(&cpy)),
-	); errno != 0 {
-		db.DPrintf(db.ERROR, "SYS_IOCTL %d(%x) %d err %v", addr, addr, len, errno)
-	}
-}
-
-func readBytesSigma(sc *sigmaclnt.SigmaClnt, fd int, off int64, buf []byte) error {
-	if n, err := sc.Pread(fd, buf, sp.Toffset(off)); err != nil {
-		return err
-	} else if int(n) != len(buf) {
-		db.DPrintf(db.LAZYPAGESSRV, "read %d n = %d", len(buf), n)
-	}
-	return nil
-}
-
-func readBytes(f *os.File, off int64, page []byte) error {
-	if _, err := f.Seek(off, 0); err != nil {
-		return err
-	}
-	if _, err := f.Read(page); err != nil {
-		return err
-	}
-	return nil
 }
 
 func getConnFd(conn syscall.Conn) (connFd int, err error) {

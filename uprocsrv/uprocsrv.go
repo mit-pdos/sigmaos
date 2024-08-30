@@ -578,10 +578,13 @@ func (ups *UprocSrv) restoreProc(proc *proc.Proc) error {
 	}
 	pid := ps.RootPid()
 	pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pid)+".img")
-	db.DPrintf(db.CKPT, "restoreProc: Register %d %v", pid, pages)
-	if err := ups.lpc.Register(pid, imgdir, pages); err != nil {
-		return nil
-	}
+	go func() {
+		db.DPrintf(db.CKPT, "restoreProc: Register %d %v", pid, pages)
+		if err := ups.lpc.Register(pid, imgdir, pages); err != nil {
+			db.DPrintf(db.CKPT, "restoreProc: Register %d %v err %v", pid, pages, err)
+			return
+		}
+	}()
 	if err := container.RestoreProc(ups.criuInst, proc, filepath.Join(dst, CKPTLAZY), ups.lpc.WorkDir()); err != nil {
 		return err
 	}

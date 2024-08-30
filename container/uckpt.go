@@ -175,11 +175,12 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 		db.DFatalf("unixPair err %v\n", err)
 	}
 
-	// XXX read inventory
+	// XXX where does 2 come from?
 	criuDump, err := lazypagessrv.ReadImg(imgDir, "2", "fdinfo")
 	if err != nil {
 		db.DFatalf("ReadImg fdinfo err %v\n", err)
 	}
+	// XXX 3 is SIGMA_NETPROXY_FD
 	dstfd := criuDump.Entries[3].Message.(*fdinfo.FdinfoEntry)
 	criuDump, err = lazypagessrv.ReadImg(imgDir, "", "files")
 	if err != nil {

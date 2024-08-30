@@ -29,8 +29,9 @@ func (lpc *LazyPagesClnt) WorkDir() string {
 	return lpc.wd
 }
 
-func (lpc *LazyPagesClnt) Register(imgdir string, pages string) error {
+func (lpc *LazyPagesClnt) Register(pid int, imgdir string, pages string) error {
 	req := &proto.RegisterRequest{
+		Pid:    uint32(pid),
 		ImgDir: imgdir,
 		Pages:  pages,
 	}

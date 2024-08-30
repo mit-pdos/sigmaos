@@ -12,8 +12,10 @@ import (
 
 	"github.com/checkpoint-restore/go-criu/v7/crit"
 	"github.com/checkpoint-restore/go-criu/v7/crit/cli"
+	"github.com/checkpoint-restore/go-criu/v7/crit/images/inventory"
 	"github.com/checkpoint-restore/go-criu/v7/crit/images/mm"
 	"github.com/checkpoint-restore/go-criu/v7/crit/images/pagemap"
+	"github.com/checkpoint-restore/go-criu/v7/crit/images/pstree"
 
 	db "sigmaos/debug"
 )
@@ -48,6 +50,39 @@ func ReadImg(imgdir, id string, magic string) (*crit.CriuImage, error) {
 		return nil, err
 	}
 	return img, nil
+}
+
+type Tinventory struct {
+	*inventory.InventoryEntry
+}
+
+func NewTinventory(imgdir string) (*Tinventory, error) {
+	img, err := ReadImg(imgdir, "", "inventory")
+	if err != nil {
+		return nil, err
+	}
+	e := img.Entries[0].Message
+	i := &Tinventory{e.(*inventory.InventoryEntry)}
+	return i, nil
+}
+
+type Tpstree struct {
+	PstreeEntries []*crit.CriuEntry
+}
+
+func NewTpstree(imgdir string) (*Tpstree, error) {
+	img, err := ReadImg(imgdir, "", "pstree")
+	if err != nil {
+		return nil, err
+	}
+	ps := &Tpstree{img.Entries}
+	return ps, nil
+}
+
+func (ps *Tpstree) RootPid() int {
+	e := ps.PstreeEntries[0]
+	p := e.Message.(*pstree.PstreeEntry)
+	return int(p.GetPid())
 }
 
 type TpagemapImg struct {
@@ -133,7 +168,6 @@ func (iov *Iov) markFetchLen(addr0 uint64) int {
 	for ; n < max && addr < iov.end; addr += uint64(iov.pagesz) {
 		i := int(addr-iov.start) / iov.pagesz
 		if iov.copied[i] {
-			db.DPrintf(db.LAZYPAGESSRV, "Don't prefetch %x", addr)
 			break
 		}
 		iov.copied[i] = true

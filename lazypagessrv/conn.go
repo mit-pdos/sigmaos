@@ -2,6 +2,7 @@ package lazypagessrv
 
 import (
 	"fmt"
+	"strconv"
 	"syscall"
 	"unsafe"
 
@@ -16,32 +17,35 @@ import (
 type lazyPagesConn struct {
 	lps       *lazyPagesSrv
 	pid       int
-	fd        int
+	imgdir    string
+	pages     string // sigma path for pages file
+	fd        int    // userfauldfd
 	rp        func(int64, []byte) error
 	pmi       *TpagemapImg
 	mm        *Tmm
 	iovs      *Iovs
 	maxIovLen int
 	nfault    int
-	pages     []byte
+	data      []byte
 }
 
-func (lps *lazyPagesSrv) newLazyPagesConn(fd int, rp func(int64, []byte) error, pid int) (*lazyPagesConn, error) {
-	lpc := &lazyPagesConn{lps: lps, fd: fd, rp: rp, pid: int(pid)}
-	pmi, err := newTpagemapImg(lps.imgdir, "1")
+func (lps *lazyPagesSrv) newLazyPagesConn(pid int, imgdir, pages string) (*lazyPagesConn, error) {
+	lpc := &lazyPagesConn{lps: lps, pid: pid, imgdir: imgdir, pages: pages}
+	pidstr := strconv.Itoa(pid)
+	pmi, err := newTpagemapImg(lpc.imgdir, pidstr)
 	if err != nil {
 		return nil, err
 	}
 	lpc.pmi = pmi
-	mm, err := newTmm(lps.imgdir, "1")
+	mm, err := newTmm(lpc.imgdir, pidstr)
 	if err != nil {
 		return nil, err
 	}
 	lpc.mm = mm
 	npages := 0
 	lpc.iovs, npages, lpc.maxIovLen = mm.collectIovs(pmi)
-	lpc.pages = make([]byte, lpc.maxIovLen)
-	db.DPrintf(db.ALWAYS, "lazypages: img %v pages %v pid %d fd %d iovs %d npages %d maxIovLen %d", lps.imgdir, lps.pages, pid, fd, lpc.iovs.len(), npages, lpc.maxIovLen)
+	lpc.data = make([]byte, lpc.maxIovLen)
+	db.DPrintf(db.ALWAYS, "newLazyPagesConn: img %v pages %v pid %d iovs %d npages %d maxIovLen %d", lpc.imgdir, lpc.pages, pid, lpc.iovs.len(), npages, lpc.maxIovLen)
 	return lpc, nil
 }
 
@@ -88,7 +92,7 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 	iov := lpc.iovs.find(addr)
 	lpc.nfault += 1
 	if iov == nil {
-		db.DPrintf(db.LAZYPAGESSRV, "page fault: zero %d: no iov for %x", lpc.nfault, addr)
+		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: zero %d: no iov for %x", lpc.nfault, addr)
 		zeroPage(lpc.fd, addr, lpc.lps.pagesz)
 	} else {
 		pi := lpc.pmi.find(addr)
@@ -97,11 +101,11 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 		}
 		n := iov.markFetchLen(addr)
 		if n == 0 {
-			db.DPrintf(db.LAZYPAGESSRV, "fault page: delivered %d: %d(%x) -> %v pi %d(%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz))
+			db.DPrintf(db.LAZYPAGESSRV_FAULT, "fault page: delivered %d: %d(%x) -> %v pi %d(%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz))
 			return nil
 		}
-		buf := lpc.pages[0:n]
-		db.DPrintf(db.LAZYPAGESSRV, "page fault: copy %d: %d(%x) -> %v pi %d(%d,%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf))
+		buf := lpc.data[0:n]
+		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: copy %d: %d(%x) -> %v pi %d(%d,%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf))
 		off := int64(pi * lpc.pmi.pagesz)
 		if err := lpc.rp(off, buf); err != nil {
 			db.DFatalf("no page content for %x", addr)

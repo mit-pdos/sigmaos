@@ -571,10 +571,15 @@ func (ups *UprocSrv) restoreProc(proc *proc.Proc) error {
 	if err := ups.readCheckpoint(ckptSigmaDir, dst, CKPTLAZY); err != nil {
 		return nil
 	}
-	pagesId := 1
-	pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pagesId)+".img")
-	db.DPrintf(db.CKPT, "restoreProc: Register %v", pages)
-	if err := ups.lpc.Register(filepath.Join(dst, CKPTLAZY), pages); err != nil {
+	imgdir := filepath.Join(dst, CKPTLAZY)
+	ps, err := lazypagessrv.NewTpstree(imgdir)
+	if err != nil {
+		return nil
+	}
+	pid := ps.RootPid()
+	pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pid)+".img")
+	db.DPrintf(db.CKPT, "restoreProc: Register %d %v", pid, pages)
+	if err := ups.lpc.Register(pid, imgdir, pages); err != nil {
 		return nil
 	}
 	if err := container.RestoreProc(ups.criuInst, proc, filepath.Join(dst, CKPTLAZY), ups.lpc.WorkDir()); err != nil {

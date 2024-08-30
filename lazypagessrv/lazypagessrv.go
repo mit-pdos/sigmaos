@@ -17,6 +17,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/syncmap"
 )
 
 const (
@@ -24,17 +25,16 @@ const (
 	SOCKNAME = "lazy-pages.socket"
 )
 
-// XXX imgdir and pages should per LazyPagesConn
 type lazyPagesSrv struct {
 	*sigmaclnt.SigmaClnt
-	imgdir string
-	pages  string
+	pids   *syncmap.SyncMap[int, *lazyPagesConn]
 	pagesz int
 }
 
 func newLazyPagesSrv(sc *sigmaclnt.SigmaClnt) (*lazyPagesSrv, error) {
 	lps := &lazyPagesSrv{
 		SigmaClnt: sc,
+		pids:      syncmap.NewSyncMap[int, *lazyPagesConn](),
 		pagesz:    os.Getpagesize(),
 	}
 	return lps, nil
@@ -148,24 +148,38 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 	fd := fds[0]
 	db.DPrintf(db.LAZYPAGESSRV, "Received fd %d\n", fd)
 
-	fdpages, err := lps.Open(lps.pages, sp.OREAD)
-	if err != nil {
-		db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lps.pages, err)
-		return
+	lpc, ok := lps.pids.Lookup(int(pid))
+	if !ok {
+		db.DFatalf("newLazyPagesConn pid %v no registration", fd, err)
 	}
 
+	fdpages, err := lps.Open(lpc.pages, sp.OREAD)
+	if err != nil {
+		db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lpc.pages, err)
+		return
+	}
 	defer lps.CloseFd(fd)
 	rp := func(off int64, pages []byte) error {
 		return readBytesSigma(lps.SigmaClnt, fdpages, off, pages)
 	}
-
-	lpc, err := lps.newLazyPagesConn(fd, rp, int(pid))
-	if err != nil {
-		db.DFatalf("newLazyPagesConn fd %v err %v", fd, err)
-	}
+	lpc.fd = fd
+	lpc.rp = rp
 	if err := lpc.handleReqs(); err != nil {
-		db.DFatalf("handle fd %v err %v", fd, err)
+		db.DFatalf("handle pid %v err %v", pid, err)
 	}
+	lps.pids.Delete(int(pid))
+}
+
+func (lps *lazyPagesSrv) register(pid int, imgdir, pages string) error {
+	lpc, err := lps.newLazyPagesConn(pid, imgdir, pages)
+	if err != nil {
+		return err
+	}
+	ok := lps.pids.Insert(pid, lpc)
+	if !ok {
+		db.DFatalf("Insert: exists %d", pid)
+	}
+	return nil
 }
 
 func getConnFd(conn syscall.Conn) (connFd int, err error) {

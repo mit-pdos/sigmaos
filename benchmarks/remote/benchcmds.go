@@ -176,7 +176,8 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 func GetCorralCmdConstructor() GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		return "cd ../corral; " +
-			"git checkout play; " +
+			"git pull; " +
+			"git checkout play-perf-asynch; " +
 			"git pull; " +
 			// Load AWS key, because Corral expects this to be set as the default profile
 			"export AWS_ACCESS_KEY_ID=$(cat ~/.aws/credentials | grep aws_access_key_id | head -n1 | cut -d ' ' -f3); " +

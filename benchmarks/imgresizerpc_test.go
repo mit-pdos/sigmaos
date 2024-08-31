@@ -86,10 +86,10 @@ func (ji *ImgResizeRPCJobInstance) runTasks() {
 
 func (ji *ImgResizeRPCJobInstance) StartImgResizeRPCJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeRPC server input %v tps %v dur %v mcpu %v job %v", ji.input, ji.tasksPerSecond, ji.dur, ji.mcpu, ji.job)
-	p, err := imgresizesrv.StartImgRPCd(ji.Ts.SigmaClnt, ji.job, ji.mcpu, ji.mem, ji.nrounds, ji.imgdmcpu)
+	p, err := imgresizesrv.StartImgRPCd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, ji.nrounds, ji.imgdmcpu)
 	assert.Nil(ji.Ts.T, err, "StartImgRPCd: %v", err)
 	ji.srvProc = p
-	rpcc, err := imgresizesrv.NewImgResizeRPCClnt(ji.Ts.SigmaClnt.FsLib, ji.job)
+	rpcc, err := imgresizesrv.NewImgResizeRPCClnt(ji.SigmaClnt.FsLib, ji.job)
 	assert.Nil(ji.Ts.T, err)
 	ji.rpcc = rpcc
 	go ji.runTasks()
@@ -102,9 +102,9 @@ func (ji *ImgResizeRPCJobInstance) Wait() {
 	ndone, err := ji.rpcc.Status()
 	assert.Nil(ji.Ts.T, err, "Status: %v", err)
 	db.DPrintf(db.TEST, "[%v] Done waiting for ImgResizeRPCJob to finish. Completed %v tasks", ji.GetRealm(), ndone)
-	err = ji.Ts.Evict(ji.srvProc.GetPid())
+	err = ji.Evict(ji.srvProc.GetPid())
 	assert.Nil(ji.Ts.T, err)
-	status, err := ji.Ts.WaitExit(ji.srvProc.GetPid())
+	status, err := ji.WaitExit(ji.srvProc.GetPid())
 	if assert.Nil(ji.Ts.T, err) {
 		assert.True(ji.Ts.T, status.IsStatusEvicted(), "Wrong status: %v", status)
 	}

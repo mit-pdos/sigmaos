@@ -122,8 +122,9 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 		"--run TestRealmBalanceImgResizeRPCImgResizeRPC "+
-		"--sleep 60s "+
-		"--imgresize_tps 1 "+
+		//		"--sleep 60s "+
+		"--sleep 0s "+
+		"--imgresize_tps 64 "+
 		"--imgresize_dur 60s "+
 		"--imgresize_nround 300 "+
 		"--n_imgresize_per 25 "+

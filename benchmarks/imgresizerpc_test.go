@@ -58,7 +58,7 @@ func NewImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input 
 
 	ts.RmDir(imgresizesrv.IMG)
 
-	if err := ji.Ts.MkDir(imgresizesrv.IMG, 0777); err != nil {
+	if err := ji.MkDir(imgresizesrv.IMG, 0777); err != nil {
 		assert.True(ji.Ts.T, serr.IsErrCode(err, serr.TErrExists), "Unexpected err mkdir: %v", err)
 	}
 

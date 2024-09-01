@@ -26,7 +26,6 @@ type ImgResizeRPCJobInstance struct {
 	mem               proc.Tmem
 	tasksPerSecond    int
 	dur               time.Duration
-	ninputs           int
 	nrounds           int
 	input             string
 	runningTasks      chan bool
@@ -38,7 +37,7 @@ type ImgResizeRPCJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, tasksPerSecond int, dur time.Duration, ninputs int, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) *ImgResizeRPCJobInstance {
+func NewImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, tasksPerSecond int, dur time.Duration, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) *ImgResizeRPCJobInstance {
 	ji := &ImgResizeRPCJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = "imgresize-" + ts.GetRealm().String() + "-" + rd.String(4)
@@ -49,7 +48,6 @@ func NewImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input 
 	ji.ready = make(chan bool)
 	ji.RealmTstate = ts
 	ji.p = p
-	ji.ninputs = ninputs
 	ji.mcpu = mcpu
 	ji.imgdmcpu = imgdmcpu
 	ji.mem = mem

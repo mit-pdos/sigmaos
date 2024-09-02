@@ -134,6 +134,34 @@ relative to the root of the `sigmaos` repo:
 benchmarks/results/graphs/
 ```
 
+After running experiments, we ask that reviewers shut down any SigmaOS
+deployments used to run the experiments. SigmaOS generates a lot of logging
+information, and if left running for many hours or days, the logs can fill up a
+machine and cause it to become unresponsive. If this happens, we can manually
+restart the AWS cluster (or the CloudLab cluster's machines can be
+force-rebooted). However, in order to avoid having to do this, we provide one
+script which will shut down all SigmaOS deployments on both AWS and CloudLab
+clusters:
+
+```
+$ ./artifact/sosp24/scripts/stop-sigmaos.sh
+```
+
+We also provide a version of the script which only shuts down the AWS clusters:
+
+```
+$ ./artifact/sosp24/scripts/stop-sigmaos-aws.sh
+```
+
+And a version which only shuts down the CloudLab cluster:
+
+```
+$ ./artifact/sosp24/scripts/stop-sigmaos-cloudlab.sh
+```
+
+We kindly ask that reviewers make sure to run these scripts at the end of any
+data-generating session.
+
 ## Setting up a CloudLab cluster
 
 The CloudLab cluster specs we used to evaluate SigmaOS can be found below.  For

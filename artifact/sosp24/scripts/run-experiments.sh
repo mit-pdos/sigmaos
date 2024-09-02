@@ -1,6 +1,5 @@
 #!/bin/bash
 
-VERSION=SOSP24AE
 ROOT_DIR=$(realpath $(dirname $0)/../../..)
 SCRIPTS_DIR=$ROOT_DIR/artifact/sosp24/scripts
 

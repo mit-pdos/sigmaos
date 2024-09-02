@@ -194,6 +194,8 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				// Decrease aggregate queue length.
 				pq.qlen--
 				db.DPrintf(db.PROCQ, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
+				// Chunksrv relies on there only being one chunk server in the path to
+				// avoid circular waits & deadlocks.
 				if !chunksrv.IsChunkSrvPath(p.GetSigmaPath()[0]) {
 					if kid, ok := pq.realmbins.GetBinKernelID(p.GetRealm(), p.GetProgram()); ok {
 						p.PrependSigmaPath(chunk.ChunkdPath(kid))

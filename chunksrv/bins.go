@@ -3,11 +3,21 @@ package chunksrv
 import (
 	"sync"
 
-	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
 )
+
+type fetchInfo struct {
+	paths []string // Paths to try fetching from
+}
+
+func newFetchInfo(paths []string) *fetchInfo {
+	return &fetchInfo{
+		paths: paths,
+	}
+}
 
 type bin struct {
 	sync.Mutex
@@ -18,7 +28,7 @@ type bin struct {
 	st              *sp.Tstat
 	statInProgress  bool
 	openInProgress  bool
-	fetchInProgress map[int]bool
+	fetchInProgress map[int]*fetchInfo
 	path            string
 }
 
@@ -26,7 +36,7 @@ func newBin(prog string) *bin {
 	b := &bin{
 		prog:            prog,
 		fd:              -1,
-		fetchInProgress: make(map[int]bool),
+		fetchInProgress: make(map[int]*fetchInfo),
 	}
 	b.cond = sync.NewCond(&b.Mutex)
 	b.condFetch = sync.NewCond(&b.Mutex)
@@ -91,19 +101,28 @@ func (be *bin) signalFdWaiters() {
 	be.cond.Broadcast()
 }
 
-func (be *bin) waitFetch(ckid int) {
+// If returns true, fetch should skip straight to origin
+func (be *bin) waitFetch(fetcherPath string, paths []string, ckid int) bool {
 	be.Lock()
 	defer be.Unlock()
 
 	for {
-		_, ok := be.fetchInProgress[ckid]
+		fi, ok := be.fetchInProgress[ckid]
 		if !ok {
-			be.fetchInProgress[ckid] = true
-			return
+			be.fetchInProgress[ckid] = newFetchInfo(paths)
+			return false
+		} else {
+			if len(fi.paths) >= 2 && fi.paths[0] == fetcherPath {
+				db.DPrintf(db.CHUNKSRV, "Fetcher %v circular fetch paths %v", fetcherPath, fi.paths)
+				// Circular fetch. Fetcher is waiting for a fetch, which is in turn
+				// fetching from the fetcher, so, bail out and fetch from origin.
+				return true
+			}
 		}
 		// wait until outstanding fetch returns
 		be.condFetch.Wait()
 	}
+	return false
 }
 
 func (be *bin) signalFetchWaiters(ckid int) {

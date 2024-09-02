@@ -29,6 +29,8 @@ message FetchChunkRequest {
   bool data = 7;
   SecretProto s3Secret = 8;
   TendpointProto namedEndpointProto = 9;
+  string fetcherPath = 10;
+  int32 fetchDepth = 11;
 }
 
 message FetchChunkResponse {

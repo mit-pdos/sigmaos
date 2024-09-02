@@ -65,20 +65,22 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 }
 
 // For chunksrv to fetch chunk from another chunksrv and return data in b
-func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, string, error) {
+func (ckclnt *ChunkClnt) FetchChunk(fetcherPath string, fetchDepth int, srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, string, error) {
 	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
 	if err != nil {
 		return 0, "", err
 	}
 	req := &proto.FetchChunkRequest{
-		Prog:      pn,
-		ChunkId:   int32(ck),
-		Size:      uint64(sz),
-		Realm:     string(realm),
-		SigmaPath: path,
-		Pid:       pid.String(),
-		Data:      true,
-		S3Secret:  s3secret,
+		Prog:        pn,
+		ChunkId:     int32(ck),
+		Size:        uint64(sz),
+		Realm:       string(realm),
+		SigmaPath:   path,
+		Pid:         pid.String(),
+		Data:        true,
+		S3Secret:    s3secret,
+		FetcherPath: fetcherPath,
+		FetchDepth:  int32(fetchDepth),
 	}
 	res := &proto.FetchChunkResponse{}
 	res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}

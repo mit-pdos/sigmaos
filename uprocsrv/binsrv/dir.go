@@ -66,7 +66,7 @@ func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, f
 	c := ctx.(*fuse.Context).Caller
 	db.DPrintf(db.SPAWN_LAT, "[%v] Open pid %d", p, c.Pid)
 
-	db.DPrintf(db.BINSRV, "%v: Open path %q", n, p)
+	db.DPrintf(db.BINSRV, "%v: Open pid %d path %q", n, c.Pid, p)
 
 	dl := n.RootData.bincache.getDownload(p, n.sz, c.Pid)
 	lf := newBinFsFile(p, dl)

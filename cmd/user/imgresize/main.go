@@ -71,6 +71,7 @@ func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
 	t := &Trans{
 		p: p,
 	}
+	db.DPrintf(db.ALWAYS, "E2e spawn time since spawn until main: %v", time.Since(pe.GetSpawnTime()))
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		return nil, err

@@ -244,9 +244,9 @@ func (cksrv *ChunkSrv) fetchChunk(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *s
 	for IsChunkSrvPath(paths[0]) {
 		srvpath = paths[0]
 		srv := filepath.Base(srvpath)
-		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: %v ckid %d %v", cksrv.kernelId, be.prog, ck, []string{srvpath})
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: pid %v prog %v ckid %d %v", cksrv.kernelId, pid, be.prog, ck, []string{srvpath})
 		sz, _, err = cksrv.ckclnt.FetchChunk(srv, be.prog, pid, r, s3secret, ck, size, []string{}, b)
-		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: %v ckid %d %v err %v", cksrv.kernelId, be.prog, ck, []string{srvpath}, err)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk done: pid %v prog %v ckid %d %v err %v", cksrv.kernelId, pid, be.prog, ck, []string{srvpath}, err)
 		if err == nil {
 			ok = true
 			break
@@ -275,7 +275,7 @@ func (cksrv *ChunkSrv) fetchChunk(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *s
 }
 
 func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret *sp.SecretProto, ck int, size sp.Tsize, paths []string, data bool, ep *sp.Tendpoint) (sp.Tsize, string, *rpcproto.Blob, error) {
-	db.DPrintf(db.CHUNKSRV, "%v: Fetch: %v", cksrv.kernelId, prog)
+	db.DPrintf(db.CHUNKSRV, "%v: Fetch: pid %v %v", cksrv.kernelId, pid, prog)
 	s := time.Now()
 	defer func() {
 		db.DPrintf(db.SPAWN_LAT, "%v: Fetch: %v ck %d lat %v", cksrv.kernelId, prog, ck, time.Since(s))
@@ -298,10 +298,6 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 		}
 	}
 
-	// one outstanding fetch per chunk
-	be.waitFetch(ckid)
-	defer be.signalFetchWaiters(ckid)
-
 	ok, sz, srvpath, blob, err := cksrv.fetchCache(be, realm, pid, s3secret, ckid, size, data)
 	if ok || err != nil {
 		return sz, srvpath, blob, err
@@ -311,6 +307,10 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 		db.DPrintf(db.CHUNKSRV, "%v: Fetch: %v ok %t err %v", cksrv.kernelId, prog, ok, err)
 		return 0, "", nil, serr.NewErr(serr.TErrNotfound, prog)
 	}
+
+	// one outstanding fetch per chunk
+	be.waitFetch(ckid)
+	defer be.signalFetchWaiters(ckid)
 
 	sz, srvpath, err = cksrv.fetchChunk(be, realm, pid, s3secret, ckid, size, paths, ep)
 	if err != nil {

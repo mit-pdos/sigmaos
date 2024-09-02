@@ -3,7 +3,6 @@ package chunksrv
 import (
 	"sync"
 
-	// db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"

@@ -309,7 +309,7 @@ func TestBEImgResizeRPCMultiplexing(t *testing.T) {
 		driverVM        int  = 0
 		numNodes        int  = 8 // 24
 		numCoresPerNode uint = 4
-		onlyOneFullNode bool = false
+		onlyOneFullNode bool = true
 		turboBoost      bool = false
 	)
 	ts, err := NewTstate(t)

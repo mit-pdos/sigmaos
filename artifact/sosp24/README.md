@@ -115,6 +115,18 @@ can be generated with:
 $ ./artifact/sosp24/scripts/generate-graphs.sh
 ```
 
+Alternatively, the graphs for only AWS-based experiments can be generated with:
+
+```
+$ ./artifact/sosp24/scripts/generate-aws-graphs.sh
+```
+
+And the graphs for only CloudLab-based experiments can be generated with:
+
+```
+$ ./artifact/sosp24/scripts/generate-cloudlab-graphs.sh
+```
+
 By default, the resulting graph PDFs will be stored in the following directory,
 relative to the root of the `sigmaos` repo:
 

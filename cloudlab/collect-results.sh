@@ -66,9 +66,9 @@ for vm in $vms; do
   vm_hostname="${vm_id_a[$idx]}"
   cmd1="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c '~/sigmaos/logs.sh --merge'\" > $LOG_DIR/$vm_hostname-$vm.out 2>&1"
   # scp performance files.
-  cmd2="scp -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:/tmp/sigmaos-perf/* $PERF_DIR"
+  cmd2="scp -C -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:/tmp/sigmaos-perf/* $PERF_DIR"
   # scp the bench.out file.
-  cmd3="scp -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:/tmp/bench.out $PERF_DIR/bench.out.$idx"
+  cmd3="scp -C -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:/tmp/bench.out $PERF_DIR/bench.out.$idx"
   idx=$((idx+1)) 
   if [ -z "$PARALLEL" ]; then
     eval "$cmd1"

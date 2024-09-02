@@ -76,9 +76,9 @@ def graph_data(cold_res_dir, warm_res_dir, out):
   xos_cold = get_xos_cold(cold_res_dir)
   xos_warm = get_xos_warm(warm_res_dir)
 
-  sys = [     "XOS", "AWS λ", "Docker", "K8s", "Mitosis", "FAASM", "Ray", ]
-  cold = [ xos_cold,  1289.6,   2671.4,  1143,       3.1,     8.8,  25.5, ]
-  warm = [ xos_warm,    45.9,    469.1,   217,       3.1,     0.3,   0.6, ]
+  sys = [     "XOS", "AWS λ", "Docker", "K8s", "Mitosis", "FAASM", ]
+  cold = [ xos_cold,  1289.6,   2671.4,  1143,       3.1,     8.8, ]
+  warm = [ xos_warm,    45.9,    469.1,   217,       3.1,     0.3, ]
 
   assert(len(sys) == len(cold))
   assert(len(sys) == len(warm))

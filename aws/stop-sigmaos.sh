@@ -54,6 +54,7 @@ do
   stop="
       ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
         (cd sigmaos; ./stop-benchmarks.sh; ./stop.sh; ./stop-etcd.sh)
+        sudo killall logs.sh > /dev/null 2>&1
         rm -rf /tmp/sigmaos-perf > /dev/null 2>&1
         rm /tmp/bench.out > /dev/null 2>&1
         rm /tmp/start.out > /dev/null 2>&1

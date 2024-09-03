@@ -29,7 +29,7 @@ echo "Done generating Figure 11..."
 
 # Figure 12
 echo "Generating Figure 12..."
-$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_imgresize_multiplexing --out $GRAPH_OUT_DIR/be_imgresize_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 32 --prefix "imgresize-"
+$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_imgresize_rpc_multiplexing --out $GRAPH_OUT_DIR/be_imgresize_rpc_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 32 --prefix "imgresize-"
 echo "Done generating Figure 12..."
 
 # Figure 13

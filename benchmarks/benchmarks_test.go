@@ -474,9 +474,6 @@ func TestMicroScheddSpawn(t *testing.T) {
 	// Kick off schedd jobs
 	scheddJobs[0].ready <- true
 	<-done
-	if USE_DUMMY_PROC {
-		time.Sleep(30 * time.Second)
-	}
 	db.DPrintf(db.TEST, "Schedd load bench done.")
 
 	printResultSummary(rs)
@@ -733,6 +730,87 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	<-done
 	<-done
 	db.DPrintf(db.TEST, "MR and Hotel done.")
+	printResultSummary(rs1)
+	time.Sleep(20 * time.Second)
+	evictMemBlockers(rootts, blockers)
+	rootts.Shutdown()
+}
+
+// Start a realm with a long-running BE mr job. Then, start a realm with an LC
+// hotel job. In phases, ramp the hotel job's CPU utilization up and down, and
+// watch the realm-level software balance resource requests across realms.
+func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
+	done := make(chan bool)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	blockers := blockMem(rootts, BLOCK_MEM)
+	// Structures for imgresize
+	ts1, err1 := test.NewRealmTstate(rootts, REALM2)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
+	p1 := newRealmPerf(ts1)
+	defer p1.Done()
+	if PREWARM_REALM {
+		warmupRealm(ts1, []string{"imgresize", "imgresized"})
+	}
+	// Structure for hotel
+	ts2, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
+	p2 := newRealmPerf(ts2)
+	defer p2.Done()
+	// Prep ImgResize job
+	imgJobs, imgApps := newImgResizeRPCJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS_PER_SECOND, IMG_RESIZE_DUR, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+	// Prep Hotel job
+	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
+		//		hotel.RunDSB(ts2.T, 1, wc, r)
+		err := hotel.RandSearchReq(wc, r)
+		assert.Nil(t, err, "SearchReq %v", err)
+	})
+	// Monitor cores assigned to ImgResize.
+	monitorCPUUtil(ts1, p1)
+	// Monitor cores assigned to Hotel.
+	monitorCPUUtil(ts2, p2)
+	// Run Hotel job
+	go func() {
+		runOps(ts2, ji, runHotel, rs2)
+		done <- true
+	}()
+	// Wait for hotel jobs to set up.
+	<-hotelJobs[0].ready
+	db.DPrintf(db.TEST, "Hotel setup done.")
+	// Run ImgResize job
+	go func() {
+		runOps(ts1, imgApps, runImgResize, rs1)
+		done <- true
+	}()
+	// Wait for imgResize jobs to set up.
+	<-imgJobs[0].ready
+	db.DPrintf(db.TEST, "Imgresize setup done.")
+	db.DPrintf(db.TEST, "Setup phase done.")
+	if N_CLNT > 1 {
+		// Wait for hotel clients to start up on other machines.
+		db.DPrintf(db.ALWAYS, "Leader waiting for %v clnts", N_CLNT)
+		waitForClnts(rootts, N_CLNT)
+		db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
+	}
+	db.DPrintf(db.TEST, "Done waiting for hotel clnts.")
+	// Kick off ImgResize jobs.
+	imgJobs[0].ready <- true
+	// Sleep for a bit
+	time.Sleep(SLEEP)
+	// Kick off hotel jobs
+	hotelJobs[0].ready <- true
+	// Wait for both jobs to finish.
+	<-done
+	<-done
+	db.DPrintf(db.TEST, "Hotel and ImgResize done.")
 	printResultSummary(rs1)
 	time.Sleep(20 * time.Second)
 	evictMemBlockers(rootts, blockers)

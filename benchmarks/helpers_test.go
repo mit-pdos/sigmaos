@@ -92,6 +92,10 @@ func runDummySpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) ti
 	p := proc.NewProc(sp.DUMMY_PROG, nil)
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "Spawn: %v", err)
+	status, err := sclnt.WaitExit(p.GetPid())
+	if assert.Nil(ts.Ts.T, err, "WaitExit: %v", err) {
+		assert.False(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
+	}
 	return 99 * time.Second
 }
 
@@ -99,9 +103,9 @@ func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, pro
 	p := proc.NewProc(prog, nil)
 	p.SetKernels(kernelpref)
 	err := sclnt.Spawn(p)
-	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
+	assert.Nil(ts.Ts.T, err, "Spawn: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
-	if assert.Nil(ts.Ts.T, err, "WaitStart: %v", err) {
+	if assert.Nil(ts.Ts.T, err, "WaitExit: %v", err) {
 		assert.False(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
 	}
 	return 99 * time.Second

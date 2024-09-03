@@ -88,6 +88,13 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	}
 }
 
+func runDummySpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) time.Duration {
+	p := proc.NewProc(sp.DUMMY_PROG, nil)
+	err := sclnt.Spawn(p)
+	assert.Nil(ts.Ts.T, err, "Spawn: %v", err)
+	return 99 * time.Second
+}
+
 func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, prog string, kernelpref []string) time.Duration {
 	p := proc.NewProc(prog, nil)
 	p.SetKernels(kernelpref)

@@ -321,6 +321,11 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
 	db.DPrintf(db.SPAWN_LAT, "[%v] UprocSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	// Spawn, but don't actually run the dummy proc
+	if uproc.GetProgram() == sp.DUMMY_PROG {
+		db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run dummy proc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+		return nil
+	}
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
@@ -330,20 +335,17 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		db.DFatalf("Err set sched policy: %v", err)
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
-
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	cmd, err := container.StartUProc(uproc, ups.netproxy)
 	if err != nil {
 		return err
 	}
-
 	pid := cmd.Pid()
 	db.DPrintf(db.UPROCD, "Pid %d\n", pid)
 	pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
 	if !alloc { // it was already inserted
 		pe.insertSignal(uproc)
 	}
-
 	err = cmd.Wait()
 	container.CleanupUproc(uproc.GetPid())
 	ups.procs.Delete(pid)

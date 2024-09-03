@@ -52,6 +52,7 @@ var CLERK_MCPU int
 var N_NODE_PER_MACHINE int
 var N_CLNT int
 var USE_RUST_PROC bool
+var USE_DUMMY_PROC bool
 var WITH_KERNEL_PREF bool
 var DOWNLOAD_FROM_UX bool
 var SCHEDD_DURS string
@@ -117,6 +118,7 @@ func init() {
 	flag.IntVar(&N_CLNT, "nclnt", 1, "Number of clients.")
 	flag.IntVar(&N_NODE_PER_MACHINE, "n_node_per_machine", 1, "Number of nodes per machine. Likely should always be 1, unless developing locally.")
 	flag.BoolVar(&USE_RUST_PROC, "use_rust_proc", false, "Use rust spawn bench proc")
+	flag.BoolVar(&USE_DUMMY_PROC, "use_dummy_proc", false, "Use dummy spawn bench proc")
 	flag.BoolVar(&WITH_KERNEL_PREF, "with_kernel_pref", false, "Set proc kernel preferences when spawning (e.g., to force & measure cold start)")
 	flag.BoolVar(&DOWNLOAD_FROM_UX, "download_from_ux", false, "Download the proc from ux, instead of S3. !!! WARNING: this only works for the spawn-latency proc !!!")
 	flag.StringVar(&SCHEDD_DURS, "schedd_dur", "10s", "Schedd benchmark load generation duration (comma-separated for multiple phases).")
@@ -388,7 +390,6 @@ func TestMicroWarmupRealm(t *testing.T) {
 	rootts.Shutdown()
 }
 
-// TODO: update SigmaPath for "spawn-latency-ux"
 func TestMicroScheddSpawn(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -409,7 +410,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 		} else {
 			prog = "spawn-latency"
 		}
-	} else {
+	} else if USE_DUMMY_PROC {
 		assert.False(t, DOWNLOAD_FROM_UX, "Can only download rust proc from ux for now")
 		prog = "spawn-bench"
 	}
@@ -432,15 +433,17 @@ func TestMicroScheddSpawn(t *testing.T) {
 		db.DPrintf(db.TEST, "Warm up remainder of the realm for sleeper")
 		warmupRealm(ts1, []string{"sleeper"})
 	}
-	// Cold-start the first target proc to download the bin from S3
-	db.DPrintf(db.TEST, "Warm up %v bin cache on kernel %v", prog, kernels[0])
-	p2 := proc.NewProc(prog, nil)
-	p2.SetKernels([]string{kernels[0]})
-	p2s := []*proc.Proc{p2}
-	spawnProcs(ts1, p2s)
-	waitStartProcs(ts1, p2s)
-	if PREWARM_REALM {
-		warmupRealm(ts1, []string{prog})
+	if !USE_DUMMY_PROC {
+		// Cold-start the first target proc to download the bin from S3
+		db.DPrintf(db.TEST, "Warm up %v bin cache on kernel %v", prog, kernels[0])
+		p2 := proc.NewProc(prog, nil)
+		p2.SetKernels([]string{kernels[0]})
+		p2s := []*proc.Proc{p2}
+		spawnProcs(ts1, p2s)
+		waitStartProcs(ts1, p2s)
+		if PREWARM_REALM {
+			warmupRealm(ts1, []string{prog})
+		}
 	}
 
 	// Allow the uprocd pool to refill
@@ -451,6 +454,8 @@ func TestMicroScheddSpawn(t *testing.T) {
 	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration {
 		if USE_RUST_PROC {
 			return runRustSpawnBenchProc(ts1, sc, prog, kernelpref)
+		} else if USE_DUMMY_PROC {
+			return runDummySpawnBenchProc(ts1, sc)
 		} else {
 			return runSpawnBenchProc(ts1, sc, kernelpref)
 		}
@@ -469,6 +474,9 @@ func TestMicroScheddSpawn(t *testing.T) {
 	// Kick off schedd jobs
 	scheddJobs[0].ready <- true
 	<-done
+	if USE_DUMMY_PROC {
+		time.Sleep(30 * time.Second)
+	}
 	db.DPrintf(db.TEST, "Schedd load bench done.")
 
 	printResultSummary(rs)

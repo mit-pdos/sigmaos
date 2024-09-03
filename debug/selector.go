@@ -108,6 +108,7 @@ const (
 	FSETCD                    = "FSETCD"
 	PROCMGR                   = "PROCMGR"
 	UPROCDMGR                 = "UPROCDMGR"
+	UPROCDMGR_ERR             = "UPROCDMGR" + ERR
 	UPROCD                    = "UPROCD"
 	UPROCD_ERR                = "UPROCD" + ERR
 	LCSCHEDCLNT               = "LCSCHEDCLNT"

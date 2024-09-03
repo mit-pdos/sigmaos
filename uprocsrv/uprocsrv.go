@@ -325,7 +325,9 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	if uproc.GetProgram() == sp.DUMMY_PROG {
 		db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run dummy proc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 		db.DPrintf(db.ALWAYS, "[%v] Uproc Run dummy proc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-		return nil
+		// Return an error, so that the waitStart/waitExit infrastructure still
+		// works
+		return fmt.Errorf("Dummy")
 	}
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {

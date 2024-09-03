@@ -31,10 +31,11 @@ func (mgr *ProcMgr) runPrivilegedProc(p *proc.Proc) error {
 
 func (mgr *ProcMgr) runUserProc(p *proc.Proc) error {
 	if uprocErr, childErr := mgr.updm.RunUProc(p); childErr != nil {
+		db.DPrintf(db.PROCMGR, "runUserProc child err %v", childErr)
 		return childErr
 	} else if uprocErr != nil {
 		// Unexpected error with uproc server.
-		db.DPrintf(db.PROCMGR, "runUserProc uproc err %v", uprocErr)
+		db.DPrintf(db.PROCMGR, "runUserProc uprocsrv err %v", uprocErr)
 		return uprocErr
 	}
 	return nil

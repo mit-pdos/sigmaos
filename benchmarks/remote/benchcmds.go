@@ -124,8 +124,8 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 		"--run TestRealmBalanceImgResizeRPCImgResizeRPC "+
 		"--sleep 10s "+
 		"--imgresize_tps 256 "+
-		"--imgresize_dur 45s "+
-		"--imgresize_nround 6 "+
+		"--imgresize_dur 30s "+
+		"--imgresize_nround 14 "+
 		"--imgresize_path name/ux/~local/8.jpg "+
 		"--imgresize_mcpu 0 "+
 		"--imgresize_mem 1500 "+

@@ -92,7 +92,39 @@ func TestColdStart(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false, false), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+}
+
+// Test SigmaOS scheduling scalability (and warm-start).
+func TestSchedInfraScalability(t *testing.T) {
+	var (
+		benchNameBase string = "sched_infra_scalability"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM        int  = 23
+		numNodes        int  = 23
+		numCoresPerNode uint = 40
+		onlyOneFullNode bool = false
+		turboBoost      bool = true
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	// Cold-start benchmark configuration parameters
+	var (
+		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400}
+		dur time.Duration = 5 * time.Second
+	)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	for _, r := range rps {
+		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
+		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true, true), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	}
 }
 
 // Test SigmaOS scheduling scalability (and warm-start).
@@ -123,7 +155,7 @@ func TestSchedScalability(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, r := range rps {
 		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
-		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, false, true), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 	}
 }
 

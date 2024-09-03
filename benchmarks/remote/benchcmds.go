@@ -35,11 +35,15 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	)
 }
 
-func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBenchCmdFn {
+func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, prewarmRealm bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;LOADGEN;\""
 		)
+		proc := "--use_rust_proc"
+		if dummyProc {
+			proc = "--use_dummy_proc"
+		}
 		prewarm := ""
 		if prewarmRealm {
 			prewarm = "--prewarm_realm"
@@ -56,7 +60,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBe
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestMicroScheddSpawn "+
-			"--use_rust_proc "+
+			"%s "+ // proc
 			"--schedd_dur %s "+
 			"--schedd_max_rps %s "+
 			"%s "+ // prewarmRealm
@@ -66,6 +70,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBe
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
+			proc,
 			dur.String(),
 			strconv.Itoa(rps),
 			prewarm,

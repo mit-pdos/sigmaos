@@ -33,11 +33,11 @@ def get_cold_start_latencies(per_node_latencies):
     # measured for the 2nd node to run the proc onward (they download the proc
     # from a peer in the cluster, rather than S3). This is a rough heuristic
     # check, but should be OK because we do a sanity check before returning
-    if node_latencies[0] > 100.0:
+    if len(node_latencies) == 0 or node_latencies[0] > 100.0:
       continue
     lat.append(node_latencies[0])
   # Sanity check that we have N - 1 cold-start measurements
-  assert(len(lat) == (len(per_node_latencies) - 1))
+  assert(len(lat) == (len(per_node_latencies) - 1) or len(lat) == len(per_node_latencies) - 2)
   return lat
 
 def get_warm_start_latencies(per_node_latencies):

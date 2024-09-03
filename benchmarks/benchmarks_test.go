@@ -787,7 +787,7 @@ func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 	db.DPrintf(db.TEST, "Hotel setup done.")
 	// Run ImgResize job
 	go func() {
-		runOps(ts1, imgApps, runImgResize, rs1)
+		runOps(ts1, imgApps, runImgResizeRPC, rs1)
 		done <- true
 	}()
 	// Wait for imgResize jobs to set up.

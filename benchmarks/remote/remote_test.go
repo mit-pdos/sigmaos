@@ -148,15 +148,16 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
-		rps           []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800}
+		rpsPerCore    []int         = []int{500, 1000}
 		nCoresPerNode []uint        = []uint{2, 4, 8, 16, 32, 40}
 		dur           time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, nCores := range nCoresPerNode {
-		for _, r := range rps {
-			benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-cores-rps-%v", nCores, r))
-			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true, true), numNodes, nCores, onlyOneFullNode, turboBoost)
+		for _, perCoreRPS := range rpsPerCore {
+			rps := int(nCores) * perCoreRPS
+			benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-cores-rps-%v", nCores, rps))
+			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, true, true), numNodes, nCores, onlyOneFullNode, turboBoost)
 		}
 	}
 }

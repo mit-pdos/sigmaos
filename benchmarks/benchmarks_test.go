@@ -167,6 +167,8 @@ func init() {
 	flag.IntVar(&IMG_RESIZE_MCPU, "imgresize_mcpu", 100, "MCPU for img resize worker.")
 	flag.IntVar(&IMG_RESIZE_MEM_MB, "imgresize_mem", 0, "Mem for img resize worker.")
 	flag.IntVar(&IMG_RESIZE_N_ROUNDS, "imgresize_nround", 1, "Number of rounds of computation for each image")
+
+	db.DPrintf(db.ALWAYS, "ncore: %v", linuxsched.GetNCores())
 }
 
 // ========== Common parameters ==========

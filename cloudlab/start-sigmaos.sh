@@ -115,7 +115,9 @@ if ! [ -z "$TAG" ]; then
   ./update-repo.sh --parallel --branch $BRANCH
 fi
 
-vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
+vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc --all)
+first_core_off=$NCORES
+last_core=$(($vm_ncores - 1))
 
 for vm in $vms; do
   echo "starting SigmaOS on $vm!"
@@ -126,32 +128,13 @@ for vm in $vms; do
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMADEBUG="$SIGMADEBUG"
-  if [ $NCORES -eq 2 ]; then
-    ./sigmaos/set-cores.sh --set 0 --start 2 --end $vm_ncores > /dev/null
-    echo "ncores:"
-    nproc
-  else
-    if [ $NCORES -eq 4 ]; then
-      ./sigmaos/set-cores.sh --set 1 --start 2 --end 3 > /dev/null
-      ./sigmaos/set-cores.sh --set 0 --start 4 --end 39 > /dev/null
-      echo "ncores:"
-      nproc
-    else
-      if [ $NCORES -eq 20 ]; then
-        ./sigmaos/set-cores.sh --set 0 --start 20 --end 39 > /dev/null
-        ./sigmaos/set-cores.sh --set 1 --start 2 --end 19 > /dev/null
-        echo "ncores:"
-        nproc
-      else
-        if [ $NCORES -eq 40 ]; then
-          ./sigmaos/set-cores.sh --set 1 --start 2 --end 39 > /dev/null
-          echo "ncores:"
-          nproc
-        fi
-      fi
-    fi
+  # Turn on all cores
+  ./sigmaos/set-cores.sh --set 1 --start 1 --end $last_core > /dev/null
+  # If not using all cores, switch some of them off
+  if [ $NCORES -ne $vm_ncores ]; then
+    ./sigmaos/set-cores.sh --set 0 --start $first_core_off --end $last_core > /dev/null
   fi
-
+  
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/1.jpg ~/
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/6.jpg ~/
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/7.jpg ~/

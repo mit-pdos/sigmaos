@@ -157,7 +157,7 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 		for _, perCoreRPS := range rpsPerCore {
 			rps := int(nCores) * perCoreRPS
 			benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-cores-rps-%v", nCores, rps))
-			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, true, true), numNodes, nCores, onlyOneFullNode, turboBoost)
+			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false, true), numNodes, nCores, onlyOneFullNode, turboBoost)
 		}
 	}
 }

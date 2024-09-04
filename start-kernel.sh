@@ -202,6 +202,8 @@ while [ ! -f "/tmp/sigmaos/${KERNELID}" ]; do
 done;
 rm -f "/tmp/sigmaos/${KERNELID}"
 
+echo nproc
+
 echo -n $IP
 
 echo " container ${CID:0:10}" dbIP $DBIP  mongoIP $MONGOIP 1>&2

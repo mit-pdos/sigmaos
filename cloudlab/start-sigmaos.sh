@@ -85,7 +85,7 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ] && [ $NCORES -ne 20 ] && [ $NCORES -ne 40 ]; then
+if [ $NCORES -ne 2 ] && [ $NCORES -ne 4 ] && [ $NCORES -ne 8 ] && [ $NCORES -ne 16 ] && [ $NCORES -ne 20 ] && [ $NCORES -ne 32 ] && [ $NCORES -ne 40 ]; then
   echo "Bad ncores $NCORES"
   exit 1
 fi

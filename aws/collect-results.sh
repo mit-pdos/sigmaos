@@ -64,20 +64,28 @@ for vm in $vms; do
   # read log files.
   vm_hostname="${vm_id_a[$idx]}"
   cmd1="ssh -i key-$VPC.pem ubuntu@$vm \"/bin/bash -c '~/sigmaos/logs.sh'\" > $LOG_DIR/$vm_hostname-$vm.out 2>&1" 
+  # zip up performance files.
+  cmd2="ssh -i key-$VPC.pem ubuntu@$vm \"/bin/bash -c 'cd /tmp; tar -czf perf.tar.gz sigmaos-perf'\""
   # scp performance files.
-  cmd2="scp -C -i key-$VPC.pem ubuntu@$vm:/tmp/sigmaos-perf/* $PERF_DIR"
+  cmd3="scp -C -i key-$VPC.pem ubuntu@$vm:/tmp/perf.tar.gz $PERF_DIR/$vm_hostname-perf.tar.gz"
+  # unzip performance files.
+  cmd4="tar -xzf $PERF_DIR/$vm_hostname-perf.tar.gz -C $PERF_DIR; rm $PERF_DIR/$vm_hostname-perf.tar.gz"
   # scp the bench.out file.
-  cmd3="scp -C -i key-$VPC.pem ubuntu@$vm:/tmp/bench.out $PERF_DIR/bench.out.$idx"
+  cmd5="scp -C -i key-$VPC.pem ubuntu@$vm:/tmp/bench.out $PERF_DIR/bench.out.$idx"
   idx=$((idx+1)) 
   if [ -z "$PARALLEL" ]; then
     eval "$cmd1"
     eval "$cmd2"
     eval "$cmd3"
+    eval "$cmd4"
+    eval "$cmd5"
   else
     (
       eval "$cmd1"
       eval "$cmd2"
       eval "$cmd3"
+      eval "$cmd4"
+      eval "$cmd5"
     ) &
   fi
 done

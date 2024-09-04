@@ -149,7 +149,7 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 	// Benchmark configuration parameters
 	var (
 		rpsPerCore    []int         = []int{500, 1000}
-		nCoresPerNode []uint        = []uint{2, 4, 8, 16, 32, 40}
+		nCoresPerNode []uint        = []uint{2, 4, 8, 16} // , 32, 40} // In practice, scaling stops well before we reach 32 cores
 		dur           time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)

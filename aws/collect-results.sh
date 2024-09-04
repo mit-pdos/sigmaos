@@ -69,7 +69,7 @@ for vm in $vms; do
   # scp performance files.
   cmd3="scp -C -i key-$VPC.pem ubuntu@$vm:/tmp/perf.tar.gz $PERF_DIR/$vm_hostname-perf.tar.gz"
   # unzip performance files.
-  cmd4="tar -xzf $PERF_DIR/$vm_hostname-perf.tar.gz -C $PERF_DIR; rm $PERF_DIR/$vm_hostname-perf.tar.gz"
+  cmd4="tar -xzf $PERF_DIR/$vm_hostname-perf.tar.gz -C $PERF_DIR; mv $PERF_DIR/sigmaos-perf/* $PERF_DIR/; rm $PERF_DIR/$vm_hostname-perf.tar.gz"
   # scp the bench.out file.
   cmd5="scp -C -i key-$VPC.pem ubuntu@$vm:/tmp/bench.out $PERF_DIR/bench.out.$idx"
   idx=$((idx+1)) 

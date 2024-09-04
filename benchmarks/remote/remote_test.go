@@ -95,6 +95,38 @@ func TestColdStart(t *testing.T) {
 	ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false, false), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }
 
+// Test the maximum throughput of a single procq.
+func TestProcqScalability(t *testing.T) {
+	var (
+		benchNameBase string = "procq_max_tpt"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM        int  = 23
+		numNodes        int  = 23
+		numCoresPerNode uint = 40
+		onlyOneFullNode bool = true
+		turboBoost      bool = true
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	// Cold-start benchmark configuration parameters
+	var (
+		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800}
+		dur time.Duration = 5 * time.Second
+	)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	for _, r := range rps {
+		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
+		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true, true), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	}
+}
+
 // Test SigmaOS scheduling scalability (and warm-start).
 func TestSchedInfraScalability(t *testing.T) {
 	var (
@@ -385,6 +417,40 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetLCBEHotelImgResizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+}
+
+func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
+	var (
+		benchName string = "lc_be_hotel_imgresize_rpc_multiplexing"
+		driverVMs []int  = []int{8, 9, 10, 11}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes        int  = 8
+		numCoresPerNode uint = 4
+		onlyOneFullNode bool = false
+		turboBoost      bool = false
+	)
+	// Hotel benchmark configuration parameters
+	var (
+		rps         []int           = []int{250, 500, 1000, 1500, 2000, 1000}
+		dur         []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
+		cacheType   string          = "cached"
+		scaleCache  bool            = false
+		clientDelay time.Duration   = 60 * time.Second
+		sleep       time.Duration   = 10 * time.Second
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	getLeaderCmd := GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
 	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
 }

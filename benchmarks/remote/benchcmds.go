@@ -450,3 +450,75 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 		)
 	}
 }
+
+// Construct command string to run hotel benchmark's load-generating client
+//
+// - numClients specifies the total number of client machines which will make
+// requests to the hotel application
+//
+// - rps specifies the number of requests-per-second this client should execute
+// in each phase of the benchmark.
+//
+// - dur specifies the duration for which each rps period should last.
+//
+// - cacheType specifies the type of cache service that hotel should use (e.g.,
+// cached vs kvd vs memcached).
+//
+// - If scaleCache is true, the cache autoscales.
+//
+// - sleep specifies the amount of time the hotel benchmark should sleep before
+// starting to run.
+func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\""
+			perfSelectors  string = "\"THUMBNAIL_TPT;TEST_TPT;BENCH_TPT;HOTEL_WWW_TPT;\""
+		)
+		autoscaleCache := ""
+		if scaleCache {
+			autoscaleCache = "--hotel_cache_autoscale"
+		}
+		netproxy := ""
+		if bcfg.NoNetproxy {
+			netproxy = "--nonetproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run RealmBalanceHotelRPCImgResize "+
+			"--nclnt %s "+
+			"--hotel_ncache 3 "+
+			"--hotel_cache_mcpu 2000 "+
+			"--cache_type %s "+
+			"%s "+ // scaleCache
+			"--hotel_dur %s "+
+			"--hotel_max_rps %s "+
+			"--sleep %s "+
+			"--imgresize_tps 256 "+
+			"--imgresize_dur 50s "+
+			"--imgresize_nround 14 "+
+			"--imgresize_path name/ux/~local/8.jpg "+
+			"--imgresize_mcpu 0 "+
+			"--imgresize_mem 1500 "+
+			"--prewarm_realm "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			perfSelectors,
+			netproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			strconv.Itoa(numClients),
+			cacheType,
+			autoscaleCache,
+			dursToString(dur),
+			rpsToString(rps),
+			sleep.String(),
+		)
+	}
+}

@@ -41,7 +41,7 @@ def tpt_stats(dpath):
   
 def scrape_dir_stats(measurement_dir, file_suffix, rps, regex, pos):
   dpath = os.path.join(measurement_dir, rps[1])
-  pat = re.compile(regex)
+  pat = re.compile(regex) 
   paths = [ os.path.join(dpath, "sigmaos-node-logs", f) for f in os.listdir(os.path.join(dpath, "sigmaos-node-logs")) if f.endswith(file_suffix) ]
   fstats = [ scrape_file_stats(f, pat, regex) for f in paths ]
   # Ignore the first run, which involves booting uprocd.
@@ -143,7 +143,7 @@ if __name__ == "__main__":
   file_suffix = ".out"
   pos=-1
 
-  raw_stats = [ (rps, scrape_dir_stats(measurement_dir=args.measurement_dir, file_suffix=file_suffix, rps=rps, regex=args.regex, pos=pos)) for rps in rpses ]
+  raw_stats = [ (rps, scrape_dir_stats(measurement_dir=args.measurement_dir, file_suffix=file_suffix, rps=rps, regex=args.regex, pos=pos)) for rps in rpses if os.path.isdir(os.path.join(args.measurement_dir, rps[1], "sigmaos-node-logs")) ]
   stats_summary = [ stats_summary(st) for st in raw_stats ]
 
   print_stats_summary(stats_summary)

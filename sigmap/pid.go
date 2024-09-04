@@ -5,7 +5,7 @@ import (
 )
 
 func GenPid(program string) Tpid {
-	return Tpid(program + "-" + rand.String(8))
+	return Tpid(program + "-" + rand.String(16))
 }
 
 func (pid Tpid) String() string {

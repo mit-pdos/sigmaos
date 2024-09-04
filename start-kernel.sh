@@ -202,7 +202,7 @@ while [ ! -f "/tmp/sigmaos/${KERNELID}" ]; do
 done;
 rm -f "/tmp/sigmaos/${KERNELID}"
 
-echo nproc
+echo "nproc: $(nproc)"
 
 echo -n $IP
 

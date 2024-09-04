@@ -117,7 +117,7 @@ func TestProcqScalability(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
-		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800}
+		rps []int         = []int{4600, 9200, 13800, 18400, 23000} //, 27600, 32200, 36800} // In practice scaling stops before 23K RPS
 		dur time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)

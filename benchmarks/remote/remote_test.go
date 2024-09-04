@@ -79,7 +79,7 @@ func TestColdStart(t *testing.T) {
 		onlyOneFullNode bool = true
 		turboBoost      bool = true
 	)
-	// Cold-start benchmark configuration parameters
+	// Benchmark configuration parameters
 	var (
 		rps int           = 8
 		dur time.Duration = 5 * time.Second
@@ -115,7 +115,7 @@ func TestProcqScalability(t *testing.T) {
 	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
 		return
 	}
-	// Cold-start benchmark configuration parameters
+	// Benchmark configuration parameters
 	var (
 		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800}
 		dur time.Duration = 5 * time.Second
@@ -124,6 +124,40 @@ func TestProcqScalability(t *testing.T) {
 	for _, r := range rps {
 		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
 		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true, true), numNodes, numCoresPerNode, onlyOneFullNode, turboBoost)
+	}
+}
+
+// Test the single-node proc start bottleneck.
+func TestSingleMachineMaxTpt(t *testing.T) {
+	var (
+		benchNameBase string = "single_machine_max_tpt"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM        int  = 1
+		numNodes        int  = 1
+		onlyOneFullNode bool = true
+		turboBoost      bool = true
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	// Benchmark configuration parameters
+	var (
+		rps           []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800}
+		nCoresPerNode []uint        = []uint{2, 4, 8, 16, 32, 40}
+		dur           time.Duration = 5 * time.Second
+	)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	for _, nCores := range nCoresPerNode {
+		for _, r := range rps {
+			benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-cores-rps-%v", nCores, r))
+			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true, true), numNodes, nCores, onlyOneFullNode, turboBoost)
+		}
 	}
 }
 
@@ -147,7 +181,7 @@ func TestSchedInfraScalability(t *testing.T) {
 	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
 		return
 	}
-	// Cold-start benchmark configuration parameters
+	// Benchmark configuration parameters
 	var (
 		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400}
 		dur time.Duration = 5 * time.Second
@@ -179,7 +213,7 @@ func TestSchedScalability(t *testing.T) {
 	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
 		return
 	}
-	// Cold-start benchmark configuration parameters
+	// Benchmark configuration parameters
 	var (
 		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400}
 		dur time.Duration = 5 * time.Second

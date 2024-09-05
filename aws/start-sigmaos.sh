@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo] [--nodetype node|minnode]" 1>&2
+  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo] [--numfullnode N]" 1>&2
 }
 
 VPC=""
@@ -10,7 +10,7 @@ NCORES=4
 UPDATE=""
 TAG=""
 OVERLAYS=""
-NODETYPE="node"
+NUM_FULL_NODE="0"
 NETPROXY="--usenetproxy"
 TOKEN=""
 TURBO=""
@@ -64,9 +64,9 @@ while [[ $# -gt 0 ]]; do
     RMCPU="$1"
   	shift
     ;;
-  --nodetype)
+  --numfullnode)
     shift
-    NODETYPE=$1
+    NUM_FULL_NODE=$1
     shift
     ;;
   -help)
@@ -88,11 +88,6 @@ fi
 
 if [ $NCORES -ne 16 ] && [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   echo "Bad ncores $NCORES"
-  exit 1
-fi
-
-if [ $NODETYPE != "node" ] && [ $NODETYPE != "minnode" ]; then
-  echo "Bad node type\"$NODETYPE\""
   exit 1
 fi
 
@@ -118,8 +113,15 @@ if ! [ -z "$TAG" ]; then
 fi
 
 vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
+i=0
 for vm in $vms; do
-  echo "starting SigmaOS on $vm!"
+  i=$(($i+1))
+  if [ $NUM_FULL_NODE -gt 0 ] && [ $i -gt $NUM_FULL_NODE ]; then
+    NODETYPE="minnode"
+  else
+    NODETYPE="node"
+  fi
+  echo "starting SigmaOS on $vm nodetype: $NODETYPE!"
   # No benchmarking setup needed for AWS.
   # Get hostname.
   VM_NAME=$(echo "$vms_full" | grep $vm | cut -d " " -f 2)

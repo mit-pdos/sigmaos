@@ -186,7 +186,7 @@ func TestMapperAlone(t *testing.T) {
 		db.DFatalf("CloseWrt err %v", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "%s: in %s out tot %v %f %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
+	db.DPrintf(db.ALWAYS, "%s: in %s out %s tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 
 	// data := make(map[string]int, 0)
 	// rdr, err := ts.OpenAsyncReader(REDUCEIN, 0)

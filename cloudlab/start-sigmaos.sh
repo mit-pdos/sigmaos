@@ -116,13 +116,13 @@ last_core=$(($vm_ncores - 1))
 
 i=0
 for vm in $vms; do
-  echo "starting SigmaOS on $vm!"
   i=$(($i+1))
-  if [ $i -gt $NUM_FULL_NODE ]; then
+  if [ $NUM_FULL_NODE -gt 0 ] && [ $i -gt $NUM_FULL_NODE ]; then
     NODETYPE="minnode"
   else
     NODETYPE="node"
   fi
+  echo "starting SigmaOS on $vm nodetype: $NODETYPE!"
   $DIR/setup-for-benchmarking.sh $vm $TURBO
   # Get hostname.
   VM_NAME=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm hostname -s)

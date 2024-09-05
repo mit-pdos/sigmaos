@@ -7,14 +7,13 @@ import (
 
 	db "sigmaos/debug"
 	// sp "sigmaos/sigmap"
-	"sigmaos/writer"
 )
 
 type Writer struct {
 	sync.Mutex
 	producer  *sync.Cond
 	consumer  *sync.Cond
-	wrt       *writer.Writer
+	wrt       io.Writer
 	buffs     [][]byte
 	lens      []int
 	fullIdxs  []int
@@ -23,7 +22,7 @@ type Writer struct {
 	err       error
 }
 
-func NewWriterSize(wrt *writer.Writer, nbuf, sz int) *Writer {
+func NewWriterSize(wrt io.Writer, nbuf, sz int) *Writer {
 	w := &Writer{}
 	w.wrt = wrt
 	w.producer = sync.NewCond(&w.Mutex)

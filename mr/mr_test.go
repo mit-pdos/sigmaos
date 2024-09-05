@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/auth"
+	"sigmaos/awriter"
 	db "sigmaos/debug"
 	"sigmaos/mr"
 	"sigmaos/perf"
@@ -95,9 +96,13 @@ func TestWordCount(t *testing.T) {
 	file, err = os.Create(OUT)
 	assert.Nil(t, err)
 	defer file.Close()
+	aw := awriter.NewWriterSize(file, 4, sp.BUFSZ)
+	bw := bufio.NewWriterSize(aw, sp.BUFSZ)
+	defer bw.Flush()
+	defer aw.Close()
 	for k, v := range data {
 		b := fmt.Sprintf("%s\t%d\n", k, v)
-		_, err := file.Write([]byte(b))
+		_, err := bw.Write([]byte(b))
 		assert.Nil(t, err)
 	}
 	p.Done()

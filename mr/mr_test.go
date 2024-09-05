@@ -37,7 +37,7 @@ import (
 const (
 	OUTPUT        = "/tmp/par-mr.out"
 	MALICIOUS_APP = "mr-wc-restricted.yml"
-	LOCALINPUT    = "/home/kaashoek/Downloads/enwiki-1G"
+	LOCALINPUT    = "/tmp/enwiki-2G"
 
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine

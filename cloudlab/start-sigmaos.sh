@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo] [--nodetype node|minnode]" 1>&2
+  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo] [--numfullnode N]" 1>&2
 }
 
 VPC=""
@@ -10,7 +10,7 @@ NCORES=4
 UPDATE=""
 TAG=""
 OVERLAYS=""
-NODETYPE="node"
+NUM_FULL_NODE="0"
 NETPROXY="--usenetproxy"
 TOKEN=""
 TURBO=""
@@ -58,9 +58,9 @@ while [[ $# -gt 0 ]]; do
     shift
     NETPROXY=""
     ;;
-  --nodetype)
+  --numfullnode)
     shift
-    NODETYPE=$1
+    NUM_FULL_NODE=$1
     shift
     ;;
   --reserveMcpu)
@@ -90,11 +90,6 @@ if [ $NCORES -ne 2 ] && [ $NCORES -ne 4 ] && [ $NCORES -ne 8 ] && [ $NCORES -ne 
   exit 1
 fi
 
-if [ $NODETYPE != "node" ] && [ $NODETYPE != "minnode" ]; then
-  echo "Bad node type\"$NODETYPE\""
-  exit 1
-fi
-
 DIR=$(dirname $0)
 source $DIR/env.sh
 
@@ -119,8 +114,15 @@ vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc --all)
 first_core_off=$NCORES
 last_core=$(($vm_ncores - 1))
 
+i=0
 for vm in $vms; do
   echo "starting SigmaOS on $vm!"
+  i=$(($i+1))
+  if [ $i -gt $NUM_FULL_NODE ]; then
+    NODETYPE="minnode"
+  else
+    NODETYPE="node"
+  fi
   $DIR/setup-for-benchmarking.sh $vm $TURBO
   # Get hostname.
   VM_NAME=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm hostname -s)

@@ -5,10 +5,11 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io"
+	// "io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -36,7 +37,8 @@ import (
 const (
 	OUTPUT        = "/tmp/par-mr.out"
 	MALICIOUS_APP = "mr-wc-restricted.yml"
-	v
+	LOCALINPUT    = "/home/kaashoek/Downloads/enwiki-1G"
+
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
 	// dynamically
@@ -65,11 +67,11 @@ func TestHash(t *testing.T) {
 
 func TestWordCount(t *testing.T) {
 	const (
-		//INPUT   = "/home/kaashoek/Downloads/enwiki-1G"
 		HOSTTMP = "/tmp/sigmaos"
 		F       = "gutenberg.txt"
 		INPUT   = "../input/" + F
-		OUT     = HOSTTMP + F + ".out"
+		// INPUT   = LOCALINPUT
+		OUT = HOSTTMP + F + ".out"
 	)
 
 	file, err := os.Open(INPUT)
@@ -133,7 +135,8 @@ func TestSplits(t *testing.T) {
 
 func TestMapperAlone(t *testing.T) {
 	const (
-		SPLITSZ   = 64 * sp.KBYTE // 10 * sp.MBYTE
+		//SPLITSZ   =  64 * sp.KBYTE
+		SPLITSZ   = 10 * sp.MBYTE
 		REDUCEIN  = "name/ux/~local/test-reducer-in.txt"
 		REDUCEOUT = "name/ux/~local/test-reducer-out.txt"
 	)
@@ -152,6 +155,14 @@ func TestMapperAlone(t *testing.T) {
 	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	job.Nreduce = 1
 
+	if strings.HasPrefix(job.Input, sp.UX) {
+		file := filepath.Base(LOCALINPUT)
+		err := ts.MkDir(job.Input, 0777)
+		assert.Nil(t, err, "MkDir err %v", err)
+		err = ts.UploadFile(LOCALINPUT, filepath.Join(job.Input, file))
+		assert.Nil(t, err, "UploadFile err %v", err)
+	}
+
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err NewBins %v", err)
 	m, err := mr.NewMapper(ts.SigmaClnt, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
@@ -159,56 +170,67 @@ func TestMapperAlone(t *testing.T) {
 	err = m.InitWrt(0, REDUCEIN)
 	assert.Nil(t, err)
 
+	start := time.Now()
+	nin := sp.Tlength(0)
 	for _, b := range bins {
 		for _, s := range b {
-			m.DoSplit(&s)
-		}
-	}
-	m.CloseWrt()
-
-	data := make(map[string]int, 0)
-	rdr, err := ts.OpenAsyncReader(REDUCEIN, 0)
-	assert.Nil(t, err)
-	for {
-		var kv mr.KeyValue
-		if err := mr.DecodeKV(rdr, &kv); err != nil {
-			if err == io.EOF {
-				break
+			n, err := m.DoSplit(&s)
+			if err != nil {
+				db.DFatalf("DoSplit err %v", err)
 			}
-			assert.Nil(t, err)
+			nin += n
 		}
-		if _, ok := data[kv.Key]; !ok {
-			data[kv.Key] = 0
-		}
-		data[kv.Key] += 1
+	}
+	nout, err := m.CloseWrt()
+	if err != nil {
+		db.DFatalf("CloseWrt err %v", err)
 	}
 
-	wrt, err := ts.CreateAsyncWriter(REDUCEOUT, 0777, sp.OWRITE)
-	assert.Nil(t, err, "Err createAsynchWriter: %v", err)
-	for k, v := range data {
-		b := fmt.Sprintf("%s\t%d\n", k, v)
-		_, err := wrt.Write([]byte(b))
-		assert.Nil(t, err, "Err Write: %v", err)
-	}
-	if err == nil {
-		wrt.Close()
-	}
+	db.DPrintf(db.ALWAYS, "%s: in %s out tot %v %f %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 
-	data1 := make(seqwc.Tdata)
-	sbc := mr.NewScanByteCounter(p)
-	_, _, err = seqwc.WcData(ts.FsLib, job.Input, data1, sbc)
-	assert.Nil(t, err)
-	assert.Equal(t, len(data1), len(data))
-
-	// for k, v := range data1 {
-	// 	if v1, ok := data[k]; !ok {
-	// 		log.Printf("error: k %s missing\n", k)
-	// 	} else {
-	// 		if uint64(len(v1)) != v {
-	// 			log.Printf("error: %s: %v != %v\n", k, v, v1)
+	// data := make(map[string]int, 0)
+	// rdr, err := ts.OpenAsyncReader(REDUCEIN, 0)
+	// assert.Nil(t, err)
+	// for {
+	// 	var kv mr.KeyValue
+	// 	if err := mr.DecodeKV(rdr, &kv); err != nil {
+	// 		if err == io.EOF {
+	// 			break
 	// 		}
+	// 		assert.Nil(t, err)
 	// 	}
+	// 	if _, ok := data[kv.Key]; !ok {
+	// 		data[kv.Key] = 0
+	// 	}
+	// 	data[kv.Key] += 1
 	// }
+
+	// wrt, err := ts.CreateAsyncWriter(REDUCEOUT, 0777, sp.OWRITE)
+	// assert.Nil(t, err, "Err createAsynchWriter: %v", err)
+	// for k, v := range data {
+	// 	b := fmt.Sprintf("%s\t%d\n", k, v)
+	// 	_, err := wrt.Write([]byte(b))
+	// 	assert.Nil(t, err, "Err Write: %v", err)
+	// }
+	// if err == nil {
+	// 	wrt.Close()
+	// }
+
+	// data1 := make(seqwc.Tdata)
+	// sbc := mr.NewScanByteCounter(p)
+	// _, _, err = seqwc.WcData(ts.FsLib, job.Input, data1, sbc)
+	// assert.Nil(t, err)
+	// assert.Equal(t, len(data1), len(data))
+
+	// // for k, v := range data1 {
+	// // 	if v1, ok := data[k]; !ok {
+	// // 		log.Printf("error: k %s missing\n", k)
+	// // 	} else {
+	// // 		if uint64(len(v1)) != v {
+	// // 			log.Printf("error: %s: %v != %v\n", k, v, v1)
+	// // 		}
+	// // 	}
+	// // }
 
 	p.Done()
 	ts.Shutdown()

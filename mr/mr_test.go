@@ -34,7 +34,7 @@ import (
 const (
 	OUTPUT        = "/tmp/par-mr.out"
 	MALICIOUS_APP = "mr-wc-restricted.yml"
-
+	v
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
 	// dynamically
@@ -61,9 +61,9 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 7, mr.Khash("absently")%8)
 }
 
-func TestNewWordCount(t *testing.T) {
+func TestWordCount(t *testing.T) {
 	const (
-		// INPUT = "/home/kaashoek/Downloads/enwiki-1G"
+		//INPUT   = "/home/kaashoek/Downloads/enwiki-1G"
 		HOSTTMP = "/tmp/sigmaos"
 		F       = "gutenberg.txt"
 		INPUT   = "../input/" + F
@@ -97,6 +97,7 @@ func TestNewWordCount(t *testing.T) {
 		_, err := file.Write([]byte(b))
 		assert.Nil(t, err)
 	}
+	p.Done()
 }
 
 func TestSplits(t *testing.T) {
@@ -122,7 +123,7 @@ func TestSplits(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestMapper(t *testing.T) {
+func TestMapperAlone(t *testing.T) {
 	const (
 		SPLITSZ   = 64 * sp.KBYTE // 10 * sp.MBYTE
 		REDUCEIN  = "name/ux/~local/test-reducer-in.txt"

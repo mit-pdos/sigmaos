@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 
-	"sigmaos/container"
+	"sigmaos/dcontainer"
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/netproxyclnt"
@@ -110,7 +110,7 @@ type Subsystem interface {
 	GetProc() *proc.Proc
 	GetHow() proc.Thow
 	GetCrashed() bool
-	GetContainer() *container.Container
+	GetContainer() *dcontainer.Container
 	SetWaited(bool)
 	GetWaited() bool
 	Wait() error
@@ -133,7 +133,7 @@ func (scsc *SPProxySrvCmd) GetCrashed() bool {
 	return false
 }
 
-func (scsc *SPProxySrvCmd) GetContainer() *container.Container {
+func (scsc *SPProxySrvCmd) GetContainer() *dcontainer.Container {
 	db.DFatalf("No container")
 	return nil
 }

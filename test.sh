@@ -207,7 +207,7 @@ fi
 #
 
 if [[ $CONTAINER == "--container" ]] ; then
-    go test $VERB sigmaos/container -start
+    go test $VERB sigmaos/scontainer -start
 fi
 
 #

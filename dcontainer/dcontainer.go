@@ -1,4 +1,4 @@
-package container
+package dcontainer
 
 import (
 	"context"
@@ -21,8 +21,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Start outer container for uprocd. If r is nil, don't use overlays.
-func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) (*Container, error) {
+// Start a docker container to run [uprocsrv] or [spproxysrv]
+func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) (*Container, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())

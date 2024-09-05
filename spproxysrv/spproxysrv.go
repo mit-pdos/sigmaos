@@ -110,7 +110,7 @@ type Subsystem interface {
 	GetProc() *proc.Proc
 	GetHow() proc.Thow
 	GetCrashed() bool
-	GetContainer() *dcontainer.Container
+	GetContainer() *dcontainer.Dcontainer
 	SetWaited(bool)
 	GetWaited() bool
 	Wait() error
@@ -133,7 +133,7 @@ func (scsc *SPProxySrvCmd) GetCrashed() bool {
 	return false
 }
 
-func (scsc *SPProxySrvCmd) GetContainer() *dcontainer.Container {
+func (scsc *SPProxySrvCmd) GetContainer() *dcontainer.Dcontainer {
 	db.DFatalf("No container")
 	return nil
 }

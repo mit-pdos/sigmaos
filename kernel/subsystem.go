@@ -21,7 +21,7 @@ type Subsystem interface {
 	GetProc() *proc.Proc
 	GetHow() proc.Thow
 	GetCrashed() bool
-	GetContainer() *dcontainer.Container
+	GetContainer() *dcontainer.Dcontainer
 	SetWaited(bool)
 	GetWaited() bool
 	Evict() error
@@ -39,7 +39,7 @@ type KernelSubsystem struct {
 	p         *proc.Proc
 	how       proc.Thow
 	cmd       *exec.Cmd
-	container *dcontainer.Container
+	container *dcontainer.Dcontainer
 	waited    bool
 	crashed   bool
 }
@@ -48,7 +48,7 @@ func (ss *KernelSubsystem) GetProc() *proc.Proc {
 	return ss.p
 }
 
-func (ss *KernelSubsystem) GetContainer() *dcontainer.Container {
+func (ss *KernelSubsystem) GetContainer() *dcontainer.Dcontainer {
 	return ss.container
 }
 

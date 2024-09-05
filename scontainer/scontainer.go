@@ -1,3 +1,5 @@
+// This package provides StartSigmaContainer to run a proc inside a
+// sigma container.
 package scontainer
 
 import (

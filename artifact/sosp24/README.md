@@ -91,6 +91,13 @@ And for CloudLab experiments, run:
 $ ./artifact/sosp24/scripts/run-cloudlab-experiments.sh
 ```
 
+In order to run a specific benchmark, these scripts can be invoked with the
+`--exp fig_num` flag. For example, to only run Figure 13, run:
+
+```
+$ ./artifact/sosp24/scripts/run-cloudlab-experiments.sh --exp fig_13
+```
+
 Each experiment's data is generated using one (or more) invocations of a Go
 test program. If any of them fail, they can be rerun individually by deleting
 the test's result output directory, and re-invoking the Go test program as
@@ -107,6 +114,14 @@ $ rm -rf benchmarks/results/SOSP24AE/start_latency
 
 Re-invoking the benchmark will then cause the results to be generated again,
 from scratch.
+
+The benchmark runner scripts can also be invoked with the `--rerun` flag, which
+will remove cached results for any experiment to be run. For example, in order
+to rerun Figure 13's results, run:
+
+```
+$ ./artifact/sosp24/scripts/run-cloudlab-experiments.sh --exp fig_13 --rerun
+```
 
 Once all experiments have run successfully, the paper's corresponding graphs
 can be generated with:

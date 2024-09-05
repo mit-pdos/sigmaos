@@ -40,7 +40,6 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-
 if [ $EXP != "all" ] && [ $EXP != "fig_6" ] && [ $EXP != "fig_10" ] && [ $EXP != "fig_12" ]; then
   echo "Unkown experiment $EXP"
   usage

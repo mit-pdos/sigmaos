@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/klauspost/readahead"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/auth"
@@ -73,7 +74,9 @@ func TestWordCount(t *testing.T) {
 	file, err := os.Open(INPUT)
 	assert.Nil(t, err)
 	defer file.Close()
-	rdr := bufio.NewReader(file)
+	r := bufio.NewReader(file)
+	rdr, err := readahead.NewReaderSize(r, 4, sp.BUFSZ)
+	assert.Nil(t, err, "Err reader: %v", err)
 	scanner := bufio.NewScanner(rdr)
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))

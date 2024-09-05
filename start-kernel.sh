@@ -203,6 +203,7 @@ done;
 rm -f "/tmp/sigmaos/${KERNELID}"
 
 echo "nproc: $(nproc)"
+echo "booted: $BOOT"
 
 echo -n $IP
 

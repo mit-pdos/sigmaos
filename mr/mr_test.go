@@ -164,14 +164,13 @@ func TestMapperAlone(t *testing.T) {
 
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err NewBins %v", err)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
+	assert.Nil(t, err)
 	m, err := mr.NewMapper(ts.SigmaClnt, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
 	assert.Nil(t, err, "NewMapper %v", err)
 	err = m.InitWrt(0, REDUCEIN)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "Bins: %v", bins)
-
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
-	assert.Nil(t, err)
 
 	start := time.Now()
 	nin := sp.Tlength(0)

@@ -319,7 +319,7 @@ func RunMapper(mapf MapT, args []string) {
 	}
 	start := time.Now()
 	nin, nout, err := m.doMap()
-	db.DPrintf(db.MR_TPT, "%s: in %s out tot %v %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
+	db.DPrintf(db.MR_TPT, "%s: in %s out %v ot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, m.input,
 			Result{true, m.input, nin, nout, time.Since(start).Milliseconds()}))

@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	// "io"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -196,49 +196,36 @@ func TestMapperAlone(t *testing.T) {
 
 	db.DPrintf(db.ALWAYS, "%s: in %s out %s tot %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 
-	// data := make(map[string]int, 0)
-	// rdr, err := ts.OpenAsyncReader(REDUCEIN, 0)
-	// assert.Nil(t, err)
-	// for {
-	// 	var kv mr.KeyValue
-	// 	if err := mr.DecodeKV(rdr, &kv); err != nil {
-	// 		if err == io.EOF {
-	// 			break
-	// 		}
-	// 		assert.Nil(t, err)
-	// 	}
-	// 	if _, ok := data[kv.Key]; !ok {
-	// 		data[kv.Key] = 0
-	// 	}
-	// 	data[kv.Key] += 1
-	// }
+	if app == "mr-wc.yml" {
+		data := make(map[string]int, 0)
+		rdr, err := ts.OpenAsyncReader(REDUCEIN, 0)
+		assert.Nil(t, err)
+		for {
+			var kv mr.KeyValue
+			if err := mr.DecodeKV(rdr, &kv); err != nil {
+				if err == io.EOF {
+					break
+				}
+				assert.Nil(t, err)
+			}
+			if _, ok := data[kv.Key]; !ok {
+				data[kv.Key] = 0
+			}
+			data[kv.Key] += 1
+		}
 
-	// wrt, err := ts.CreateAsyncWriter(REDUCEOUT, 0777, sp.OWRITE)
-	// assert.Nil(t, err, "Err createAsynchWriter: %v", err)
-	// for k, v := range data {
-	// 	b := fmt.Sprintf("%s\t%d\n", k, v)
-	// 	_, err := wrt.Write([]byte(b))
-	// 	assert.Nil(t, err, "Err Write: %v", err)
-	// }
-	// if err == nil {
-	// 	wrt.Close()
-	// }
+		data1 := make(seqwc.Tdata)
+		sbc := mr.NewScanByteCounter(p)
+		_, _, err = seqwc.WcData(ts.FsLib, job.Input, data1, sbc)
+		assert.Nil(t, err)
+		assert.Equal(t, len(data1), len(data))
 
-	// data1 := make(seqwc.Tdata)
-	// sbc := mr.NewScanByteCounter(p)
-	// _, _, err = seqwc.WcData(ts.FsLib, job.Input, data1, sbc)
-	// assert.Nil(t, err)
-	// assert.Equal(t, len(data1), len(data))
-
-	// // for k, v := range data1 {
-	// // 	if v1, ok := data[k]; !ok {
-	// // 		log.Printf("error: k %s missing\n", k)
-	// // 	} else {
-	// // 		if uint64(len(v1)) != v {
-	// // 			log.Printf("error: %s: %v != %v\n", k, v, v1)
-	// // 		}
-	// // 	}
-	// // }
+		for k, v := range data1 {
+			v1, ok := data[k]
+			assert.True(t, ok, "error: k %s missing", k)
+			assert.True(t, uint64(v1) == v, "error: %s: %v != %v", k, v, v1)
+		}
+	}
 
 	p.Done()
 	ts.Shutdown()

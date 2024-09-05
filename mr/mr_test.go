@@ -147,9 +147,6 @@ func TestMapperAlone(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
-	assert.Nil(t, err)
-
 	ts.Remove(REDUCEIN)
 	ts.Remove(REDUCEOUT)
 
@@ -172,6 +169,9 @@ func TestMapperAlone(t *testing.T) {
 	err = m.InitWrt(0, REDUCEIN)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "Bins: %v", bins)
+
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
+	assert.Nil(t, err)
 
 	start := time.Now()
 	nin := sp.Tlength(0)

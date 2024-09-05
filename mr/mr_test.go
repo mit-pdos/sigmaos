@@ -123,7 +123,7 @@ func TestSplits(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestMapper(t *testing.T) {
+func TestMapperAlone(t *testing.T) {
 	const (
 		SPLITSZ   = 64 * sp.KBYTE // 10 * sp.MBYTE
 		REDUCEIN  = "name/ux/~local/test-reducer-in.txt"

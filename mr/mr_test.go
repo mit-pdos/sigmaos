@@ -50,9 +50,11 @@ const (
 
 var app string // yaml app file
 var job *mr.Job
+var timeout time.Duration
 
 func init() {
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
+	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
 }
 
 func TestCompile(t *testing.T) {
@@ -180,6 +182,12 @@ func TestMapperAlone(t *testing.T) {
 				db.DFatalf("DoSplit err %v", err)
 			}
 			nin += n
+			if timeout > 0 && time.Since(start) > timeout {
+				break
+			}
+		}
+		if timeout > 0 && time.Since(start) > timeout {
+			break
 		}
 	}
 	nout, err := m.CloseWrt()

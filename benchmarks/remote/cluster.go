@@ -15,18 +15,18 @@ type ClusterConfig struct {
 	LeaderNodeIP    string `json:"leader_node_ip"`
 	NumNodes        int    `json:"num_nodes"`
 	NumCoresPerNode uint   `json:"num_cores_per_node"`
-	OnlyOneFullNode bool   `json:"only_one_full_node"`
+	NumFullNodes    int    `json:"num_full_nodes"`
 	TurboBoost      bool   `json:"turbo_boost"`
 }
 
-func NewClusterConfig(bcfg *BenchConfig, lcfg *LocalFSConfig, numNodes int, numCoresPerNode uint, onlyOneFullNode, turboBoost bool) (*ClusterConfig, error) {
+func NewClusterConfig(bcfg *BenchConfig, lcfg *LocalFSConfig, numNodes int, numCoresPerNode uint, numFullNodes int, turboBoost bool) (*ClusterConfig, error) {
 	ccfg := &ClusterConfig{
 		bcfg:            bcfg,
 		lcfg:            lcfg,
 		LeaderNodeIP:    sp.NOT_SET,
 		NumNodes:        numNodes,
 		NumCoresPerNode: numCoresPerNode,
-		OnlyOneFullNode: onlyOneFullNode,
+		NumFullNodes:    numFullNodes,
 		TurboBoost:      turboBoost,
 	}
 	slIP, err := ccfg.getLeaderNodeIP()
@@ -55,9 +55,7 @@ func (ccfg *ClusterConfig) StartSigmaOSCluster() error {
 	if ccfg.TurboBoost {
 		args = append(args, "--turbo")
 	}
-	if ccfg.OnlyOneFullNode {
-		args = append(args, "--nodetype", "minnode")
-	}
+	args = append(args, "--numfullnode", strconv.Itoa(ccfg.NumFullNodes))
 	err := ccfg.lcfg.RunScriptRedirectOutputFile("./start-sigmaos.sh", CLUSTER_INIT_LOG, args...)
 	if err != nil {
 		return fmt.Errorf("Err StopSigmaOSCluster: %v", err)

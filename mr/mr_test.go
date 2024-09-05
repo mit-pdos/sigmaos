@@ -169,6 +169,7 @@ func TestMapperAlone(t *testing.T) {
 	assert.Nil(t, err, "NewMapper %v", err)
 	err = m.InitWrt(0, REDUCEIN)
 	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "Bins: %v", bins)
 
 	start := time.Now()
 	nin := sp.Tlength(0)

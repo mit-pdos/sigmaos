@@ -1,6 +1,6 @@
 // The uprocsrv package implements uprocd that starts procs inside an
-// inner container.  Uprocd itself runs in a realm-aganostic outer
-// container; it is started by [container.StartPcontainer].
+// sigma container.  Uprocd itself runs in a realm-aganostic docker
+// container; it is started by [container.StartDockerContainer].
 package uprocsrv
 
 import (
@@ -17,7 +17,6 @@ import (
 
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
@@ -25,6 +24,7 @@ import (
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/scontainer"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -339,7 +339,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-	cmd, err := container.StartUProc(uproc, ups.netproxy)
+	cmd, err := scontainer.StartSigmaContainer(uproc, ups.netproxy)
 	if err != nil {
 		return err
 	}
@@ -350,7 +350,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		pe.insertSignal(uproc)
 	}
 	err = cmd.Wait()
-	container.CleanupUproc(uproc.GetPid())
+	scontainer.CleanupUproc(uproc.GetPid())
 	ups.procs.Delete(pid)
 	// ups.sc.CloseFd(pe.fd)
 	return err

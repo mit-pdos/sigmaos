@@ -171,7 +171,7 @@ func TestMapperAlone(t *testing.T) {
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 	for i := 0; i < nmap; i++ {
-		go func() {
+		go func(i int) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			sc, err := sigmaclnt.NewSigmaClnt(pe)
 			assert.Nil(t, err, "NewSC: %v", err)
@@ -205,15 +205,15 @@ func TestMapperAlone(t *testing.T) {
 
 			db.DPrintf(db.ALWAYS, "%s: in %s out %s tot %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 			done <- true
-		}()
+		}(i)
 	}
 	for i := 0; i < nmap; i++ {
 		<-done
 	}
 
-	if app == "mr-wc.yml" {
+	if app == "mr-wc.yml" && nmap == 1 {
 		data := make(map[string]int, 0)
-		rdr, err := ts.OpenAsyncReader(REDUCEIN, 0)
+		rdr, err := ts.OpenAsyncReader(REDUCEIN+strconv.Itoa(0), 0)
 		assert.Nil(t, err)
 		for {
 			var kv mr.KeyValue

@@ -5,31 +5,16 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/fttaskmgr"
 	"sigmaos/fttasks"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
-
-const (
-	IMG = "name/img"
-)
-
-type Ttask struct {
-	FileName string `json:"File"`
-}
-
-func NewTask(fn string) *Ttask {
-	return &Ttask{fn}
-}
 
 type ImgSrv struct {
 	*sigmaclnt.SigmaClnt
@@ -44,21 +29,6 @@ type ImgSrv struct {
 	stop       int32
 }
 
-// remove old thumbnails
-func Cleanup(fsl *fslib.FsLib, dir string) error {
-	_, err := fsl.ProcessDir(dir, func(st *sp.Stat) (bool, error) {
-		if IsThumbNail(st.Name) {
-			err := fsl.Remove(filepath.Join(dir, st.Name))
-			if err != nil {
-				return true, err
-			}
-			return false, nil
-		}
-		return false, nil
-	})
-	return err
-}
-
 func NewImgSrv(args []string) (*ImgSrv, error) {
 	if len(args) != 5 {
 		return nil, fmt.Errorf("NewImgSrv: wrong number of arguments: %v", args)
@@ -71,7 +41,6 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 	}
 	db.DPrintf(db.IMGD, "Made fslib job %v", imgd.job)
 	imgd.SigmaClnt = sc
-	imgd.job = args[0]
 	crashing, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: error parse crash %v", err)
@@ -116,29 +85,6 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 	return imgd, nil
 }
 
-func ThumbName(fn string) string {
-	ext := filepath.Ext(fn)
-	fn1 := strings.TrimSuffix(fn, ext) + "-" + rd.String(4) + "-thumb" + filepath.Ext(fn)
-	return fn1
-}
-
-func IsThumbNail(fn string) bool {
-	return strings.Contains(fn, "-thumb")
-}
-
-func (imgd *ImgSrv) mkProc(tn string, t interface{}) *proc.Proc {
-	task := *t.(*Ttask)
-	db.DPrintf(db.FTTASKS, "mkProc %s %v", tn, task)
-	fn := task.FileName
-	p := proc.NewProcPid(sp.GenPid(imgd.job), "imgresize", []string{fn, ThumbName(fn), strconv.Itoa(imgd.nrounds)})
-	if imgd.crash > 0 {
-		p.SetCrash(imgd.crash)
-	}
-	p.SetMcpu(imgd.workerMcpu)
-	p.SetMem(imgd.workerMem)
-	return p
-}
-
 func (imgd *ImgSrv) Work() {
 	db.DPrintf(db.IMGD, "Try acquire leadership coord %v job %v", imgd.ProcEnv().GetPID(), imgd.job)
 
@@ -154,7 +100,7 @@ func (imgd *ImgSrv) Work() {
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}
-	status := ftm.ExecuteTasks(func() interface{} { return new(Ttask) }, imgd.mkProc)
+	status := ftm.ExecuteTasks(func() interface{} { return new(Ttask) }, getMkProcFn(imgd.job, imgd.nrounds, imgd.crash, imgd.workerMcpu, imgd.workerMem))
 	db.DPrintf(db.ALWAYS, "imgresized exit")
 	imgd.exited = true
 	if status == nil {

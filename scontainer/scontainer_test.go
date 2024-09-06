@@ -1,4 +1,4 @@
-package container_test
+package scontainer_test
 
 import (
 	"fmt"

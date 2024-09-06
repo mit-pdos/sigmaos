@@ -3,8 +3,10 @@ package remote
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -14,6 +16,7 @@ type BenchConfig struct {
 	Tag        string       `json:"tag"`
 	Branch     string       `json:"branch"`
 	Version    string       `json:"version"`
+	Debug      string       `json:"debug"`
 	NoNetproxy bool         `json:"no_netproxy"`
 	Overlays   bool         `json:"overlays"`
 	Parallel   bool         `json:"parallel"`
@@ -30,6 +33,7 @@ func NewBenchConfig() (*BenchConfig, error) {
 		Tag:        tagArg,
 		Branch:     branchArg,
 		Version:    versionArg,
+		Debug:      os.Getenv(proc.SIGMADEBUG),
 		NoNetproxy: noNetproxyArg,
 		Overlays:   overlaysArg,
 		Parallel:   parallelArg,

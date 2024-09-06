@@ -88,13 +88,24 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	}
 }
 
+func runDummySpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) time.Duration {
+	p := proc.NewProc(sp.DUMMY_PROG, nil)
+	err := sclnt.Spawn(p)
+	assert.Nil(ts.Ts.T, err, "Spawn: %v", err)
+	status, err := sclnt.WaitExit(p.GetPid())
+	if assert.Nil(ts.Ts.T, err, "WaitExit: %v", err) {
+		assert.False(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
+	}
+	return 99 * time.Second
+}
+
 func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, prog string, kernelpref []string) time.Duration {
 	p := proc.NewProc(prog, nil)
 	p.SetKernels(kernelpref)
 	err := sclnt.Spawn(p)
-	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)
+	assert.Nil(ts.Ts.T, err, "Spawn: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
-	if assert.Nil(ts.Ts.T, err, "WaitStart: %v", err) {
+	if assert.Nil(ts.Ts.T, err, "WaitExit: %v", err) {
 		assert.False(ts.Ts.T, status.IsStatusOK(), "Wrong status: %v", status)
 	}
 	return 99 * time.Second
@@ -339,6 +350,20 @@ func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, mcpu, mem, nrounds, imgdmcpu)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
+// ========== ImgResizeRPC Helpers ==========
+func newImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, tasksPerSec int, dur time.Duration, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) ([]*ImgResizeRPCJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*ImgResizeRPCJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := NewImgResizeRPCJob(ts, p, sigmaos, input, tasksPerSec, dur, mcpu, mem, nrounds, imgdmcpu)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

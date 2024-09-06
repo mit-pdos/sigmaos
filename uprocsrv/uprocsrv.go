@@ -1,6 +1,6 @@
 // The uprocsrv package implements uprocd that starts procs inside an
-// inner container.  Uprocd itself runs in a realm-aganostic outer
-// container; it is started by [container.StartPcontainer].
+// sigma container.  Uprocd itself runs in a realm-aganostic docker
+// container; it is started by [container.StartDockerContainer].
 package uprocsrv
 
 import (
@@ -19,7 +19,6 @@ import (
 
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
@@ -29,6 +28,7 @@ import (
 	"sigmaos/netsigma"
 	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/scontainer"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -357,6 +357,14 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.UPROCD, "Run uproc %v princ %v", uproc, uproc.GetPrincipal())
 	db.DPrintf(db.SPAWN_LAT, "[%v] UprocSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	// Spawn, but don't actually run the dummy proc
+	if uproc.GetProgram() == sp.DUMMY_PROG {
+		db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run dummy proc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+		db.DPrintf(db.ALWAYS, "[%v] Uproc Run dummy proc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+		// Return an error, so that the waitStart/waitExit infrastructure still
+		// works
+		return fmt.Errorf("Dummy")
+	}
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ups.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
@@ -366,29 +374,26 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		db.DFatalf("Err set sched policy: %v", err)
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
-
 	if uproc.GetCheckpointLocation() != "" {
 		if err := ups.restoreProc(uproc); err != nil {
 			return err
 		}
 		return nil
 	} else {
-		db.DPrintf(db.SPAWN_LAT, "[%v] Run uproc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-		cmd, err := container.StartUProc(uproc, ups.netproxy)
+		db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+		cmd, err := scontainer.StartSigmaContainer(uproc, ups.netproxy)
 		if err != nil {
 			return err
 		}
 		pid := cmd.Pid()
 		db.DPrintf(db.UPROCD, "Pid %d\n", pid)
-		pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc, cmd.Ino()))
+		pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
 		if !alloc { // it was already inserted
 			pe.insertSignal(uproc)
 		}
-		ups.pids.Insert(uproc.GetPid(), pid)
 		err = cmd.Wait()
-		container.CleanupUproc(uproc.GetPid())
+		scontainer.CleanupUproc(uproc.GetPid())
 		ups.procs.Delete(pid)
-		ups.pids.Delete(uproc.GetPid())
 		// ups.sc.CloseFd(pe.fd)
 		return err
 	}

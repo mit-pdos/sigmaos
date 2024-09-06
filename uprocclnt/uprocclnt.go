@@ -3,7 +3,7 @@ package uprocclnt
 import (
 	"fmt"
 
-	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/serr"
@@ -50,6 +50,7 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 	if err := clnt.RPC("UprocSrv.Run", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
 		return err, nil
 	} else {
+		db.DPrintf(db.UPROCDMGR_ERR, "Err child %v", err)
 		return nil, err
 	}
 }

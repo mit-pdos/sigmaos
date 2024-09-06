@@ -3,7 +3,6 @@ package chunksrv
 import (
 	"sync"
 
-	// db "sigmaos/debug"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
@@ -91,6 +90,7 @@ func (be *bin) signalFdWaiters() {
 	be.cond.Broadcast()
 }
 
+// If returns true, fetch should skip straight to origin
 func (be *bin) waitFetch(ckid int) {
 	be.Lock()
 	defer be.Unlock()

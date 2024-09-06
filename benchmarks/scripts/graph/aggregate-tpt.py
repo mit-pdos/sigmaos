@@ -178,6 +178,19 @@ def finalize_graph(fig, ax, plots, title, out, maxval, legend_on_right):
   fig.align_ylabels(ax)
   fig.savefig(out, bbox_inches="tight")
 
+def truncate_to_min_max(tpts, xmin, xmax):
+  new_tpts = []
+  if xmin > -1 and xmax > -1:
+    for t in tpts:
+      inner = []
+      for ti in t:
+        if ti[0] > xmin and ti[0] < xmax:
+          inner.append((ti[0] - xmin, ti[1]))
+      new_tpts.append(inner)
+  else:
+    new_tpts = tpts
+  return new_tpts
+
 def setup_graph(nplots, units, total_ncore):
   figsize=(6.4, 4.8)
   if nplots == 1:
@@ -243,6 +256,7 @@ def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, tota
   hotel_tpts = fit_times_to_range(hotel_tpts, time_range)
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
   hotel_lats = fit_times_to_range(hotel_lats, time_range)
+  procd_tpts = truncate_to_min_max(procd_tpts, xmin, xmax)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
   hotel_buckets = bucketize(hotel_tpts, time_range, xmin, xmax, step_size=1000)

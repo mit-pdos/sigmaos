@@ -69,11 +69,26 @@ Once SigmaOS has been built in remote mode, you can run its experiments. For
 convenience, we provide a single script which runs the major experiments from
 the paper. Note that this script expects a CloudLab cluster to already be set
 up and running. To set up a CloudLab cluster, see the section that describes
-how to do this below. From the root of the `sigmaos` repo, you can run this
-experiment with:
+how to do this below. From the root of the `sigmaos` repo, you can run the
+experiments with:
 
 ```
 $ ./artifact/sosp24/scripts/run-experiments.sh
+```
+
+We also provide a script which runs only the AWS-based experiments, and another
+which runs only the CloudLab-based experiments, to fascilitate evaluating these
+separately. Neither of these scripts expects that the other's cluster is up and
+running. To run the AWS experiments, run:
+
+```
+$ ./artifact/sosp24/scripts/run-aws-experiments.sh
+```
+
+And for CloudLab experiments, run:
+
+```
+$ ./artifact/sosp24/scripts/run-cloudlab-experiments.sh
 ```
 
 Each experiment's data is generated using one (or more) invocations of a Go
@@ -100,12 +115,52 @@ can be generated with:
 $ ./artifact/sosp24/scripts/generate-graphs.sh
 ```
 
+Alternatively, the graphs for only AWS-based experiments can be generated with:
+
+```
+$ ./artifact/sosp24/scripts/generate-aws-graphs.sh
+```
+
+And the graphs for only CloudLab-based experiments can be generated with:
+
+```
+$ ./artifact/sosp24/scripts/generate-cloudlab-graphs.sh
+```
+
 By default, the resulting graph PDFs will be stored in the following directory,
 relative to the root of the `sigmaos` repo:
 
 ```
 benchmarks/results/graphs/
 ```
+
+After running experiments, we ask that reviewers shut down any SigmaOS
+deployments used to run the experiments. SigmaOS generates a lot of logging
+information, and if left running for many hours or days, the logs can fill up a
+machine and cause it to become unresponsive. If this happens, we can manually
+restart the AWS cluster (or the CloudLab cluster's machines can be
+force-rebooted). However, in order to avoid having to do this, we provide one
+script which will shut down all SigmaOS deployments on both AWS and CloudLab
+clusters:
+
+```
+$ ./artifact/sosp24/scripts/stop-sigmaos.sh
+```
+
+We also provide a version of the script which only shuts down the AWS clusters:
+
+```
+$ ./artifact/sosp24/scripts/stop-sigmaos-aws.sh
+```
+
+And a version which only shuts down the CloudLab cluster:
+
+```
+$ ./artifact/sosp24/scripts/stop-sigmaos-cloudlab.sh
+```
+
+We kindly ask that reviewers make sure to run these scripts at the end of any
+data-generating session.
 
 ## Setting up a CloudLab cluster
 

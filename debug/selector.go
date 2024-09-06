@@ -67,6 +67,7 @@ const (
 	FSREADER                          = "FSREADER"
 	SLEEPER_TIMING                    = "SLEEPER_TIMING"
 	IMGD                              = "IMGD"
+	IMGD_ERR                          = "IMGD" + ERR
 	MR                                = "MR"
 	MR_TPT                            = "MR_TPT"
 	KVBAL                             = "KVBAL"
@@ -107,6 +108,7 @@ const (
 	FSETCD                       = "FSETCD"
 	PROCMGR                      = "PROCMGR"
 	UPROCDMGR                    = "UPROCDMGR"
+	UPROCDMGR_ERR                = "UPROCDMGR" + ERR
 	UPROCD                       = "UPROCD"
 	UPROCD_ERR                   = "UPROCD" + ERR
 	LCSCHEDCLNT                  = "LCSCHEDCLNT"

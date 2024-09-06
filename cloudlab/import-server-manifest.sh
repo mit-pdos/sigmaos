@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "$MANIFEST" ] || [ $# -gt 0 ]; then
+if [ -z "$USERNAME" ] || [ -z "$MANIFEST" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi

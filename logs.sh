@@ -36,3 +36,4 @@ if [[ "$MERGE" == "merge" ]] ; then
   out="$(echo "$out" | sort -k 1)"
 fi
 echo "$out"
+echo "nproc: $(nproc)"

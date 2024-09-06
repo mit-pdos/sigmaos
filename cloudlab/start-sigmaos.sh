@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo] [--nodetype node|minnode]" 1>&2
+  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo] [--numfullnode N]" 1>&2
 }
 
 VPC=""
@@ -10,7 +10,7 @@ NCORES=4
 UPDATE=""
 TAG=""
 OVERLAYS=""
-NODETYPE="node"
+NUM_FULL_NODE="0"
 NETPROXY="--usenetproxy"
 TOKEN=""
 TURBO=""
@@ -58,9 +58,9 @@ while [[ $# -gt 0 ]]; do
     shift
     NETPROXY=""
     ;;
-  --nodetype)
+  --numfullnode)
     shift
-    NODETYPE=$1
+    NUM_FULL_NODE=$1
     shift
     ;;
   --reserveMcpu)
@@ -85,13 +85,8 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-if [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ] && [ $NCORES -ne 20 ] && [ $NCORES -ne 40 ]; then
+if [ $NCORES -ne 2 ] && [ $NCORES -ne 4 ] && [ $NCORES -ne 8 ] && [ $NCORES -ne 16 ] && [ $NCORES -ne 20 ] && [ $NCORES -ne 32 ] && [ $NCORES -ne 40 ]; then
   echo "Bad ncores $NCORES"
-  exit 1
-fi
-
-if [ $NODETYPE != "node" ] && [ $NODETYPE != "minnode" ]; then
-  echo "Bad node type\"$NODETYPE\""
   exit 1
 fi
 
@@ -115,10 +110,19 @@ if ! [ -z "$TAG" ]; then
   ./update-repo.sh --parallel --branch $BRANCH
 fi
 
-vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
+vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc --all)
+first_core_off=$NCORES
+last_core=$(($vm_ncores - 1))
 
+i=0
 for vm in $vms; do
-  echo "starting SigmaOS on $vm!"
+  i=$(($i+1))
+  if [ $NUM_FULL_NODE -gt 0 ] && [ $i -gt $NUM_FULL_NODE ]; then
+    NODETYPE="minnode"
+  else
+    NODETYPE="node"
+  fi
+  echo "starting SigmaOS on $vm nodetype: $NODETYPE!"
   $DIR/setup-for-benchmarking.sh $vm $TURBO
   # Get hostname.
   VM_NAME=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm hostname -s)
@@ -126,32 +130,13 @@ for vm in $vms; do
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMADEBUG="$SIGMADEBUG"
-  if [ $NCORES -eq 2 ]; then
-    ./sigmaos/set-cores.sh --set 0 --start 2 --end $vm_ncores > /dev/null
-    echo "ncores:"
-    nproc
-  else
-    if [ $NCORES -eq 4 ]; then
-      ./sigmaos/set-cores.sh --set 1 --start 2 --end 3 > /dev/null
-      ./sigmaos/set-cores.sh --set 0 --start 4 --end 39 > /dev/null
-      echo "ncores:"
-      nproc
-    else
-      if [ $NCORES -eq 20 ]; then
-        ./sigmaos/set-cores.sh --set 0 --start 20 --end 39 > /dev/null
-        ./sigmaos/set-cores.sh --set 1 --start 2 --end 19 > /dev/null
-        echo "ncores:"
-        nproc
-      else
-        if [ $NCORES -eq 40 ]; then
-          ./sigmaos/set-cores.sh --set 1 --start 2 --end 39 > /dev/null
-          echo "ncores:"
-          nproc
-        fi
-      fi
-    fi
+  # Turn on all cores
+  ./sigmaos/set-cores.sh --set 1 --start 1 --end $last_core > /dev/null
+  # If not using all cores, switch some of them off
+  if [ $NCORES -ne $vm_ncores ]; then
+    ./sigmaos/set-cores.sh --set 0 --start $first_core_off --end $last_core > /dev/null
   fi
-
+  
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/1.jpg ~/
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/6.jpg ~/
 #  aws s3 --profile sigmaos cp s3://9ps3/img-save/7.jpg ~/

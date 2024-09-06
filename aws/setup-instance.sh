@@ -174,7 +174,7 @@ else
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
   # Load apparmor profile
-  (cd sigmaos; sudo apparmor_parser -r container/sigmaos-uproc)
+  (cd sigmaos; sudo apparmor_parser -r scontainer/sigmaos-uproc)
 fi
 
 if [ -d "corral" ] 

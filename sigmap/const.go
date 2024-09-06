@@ -115,6 +115,11 @@ const (
 	NO_PID Tpid = "no-pid"
 )
 
+// Program consts
+const (
+	DUMMY_PROG string = "dummy-prog"
+)
+
 // AWS Profile consts
 const (
 	AWS_PROFILE               = "sigmaos"

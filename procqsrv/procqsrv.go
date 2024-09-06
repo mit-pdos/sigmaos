@@ -16,7 +16,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	proto "sigmaos/procqsrv/proto"
-	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -33,6 +32,7 @@ type ProcQ struct {
 	sc        *sigmaclnt.SigmaClnt
 	qs        map[sp.Trealm]*Queue
 	realms    []sp.Trealm
+	rr        *RealmRR
 	qlen      int // Aggregate queue length, across all queues
 	tot       atomic.Int64
 	realmbins *chunkclnt.RealmBinPaths
@@ -47,6 +47,7 @@ func NewProcQ(sc *sigmaclnt.SigmaClnt) *ProcQ {
 		sc:        sc,
 		qs:        make(map[sp.Trealm]*Queue),
 		realms:    make([]sp.Trealm, 0),
+		rr:        NewRealmRR(),
 		qlen:      0,
 		realmbins: chunkclnt.NewRealmBinPaths(),
 	}
@@ -124,6 +125,8 @@ func (pq *ProcQ) addProc(p *proc.Proc, ch chan *proc.ProcSeqno) {
 	q := pq.getRealmQueue(p.GetRealm())
 	// Enqueue the proc according to its realm.
 	q.Enqueue(p, ch)
+	// Note that the realm's queue is not empty
+	pq.rr.RealmQueueNotEmpty(p.GetRealm())
 	// Broadcast that a new proc may be runnable.
 	pq.cond.Broadcast()
 }
@@ -153,47 +156,32 @@ func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.Get
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
-	// Pick a random realm to start with.
-	rOff := int(rand.Int64(9999))
 	start := time.Now()
 	// Try until we hit the timeout (which we may hit if the request is for too
 	// few resources).
 	for time.Since(start) < GET_PROC_TIMEOUT {
 		pq.mu.Lock()
-		nrealm := len(pq.realms)
-		// Iterate through the realms round-robin, starting with the random index.
-		first := ""
-		// +1 to include the root realm, which isn't part of the realms slice.
-		for i := 0; i < nrealm+1; i++ {
-			var r sp.Trealm
-			// If we tried to schedule every other realm, then try to schedule the
-			// root realm. We do it this way to avoid biasing scheduling in favor of
-			// realms that start up earlier. In normal operation there will be
-			// nothing to spawn for the root realm, and this would mean that a random
-			// choice of index into the pq.realms slice would give the first non-root
-			// realm an extra shot at being scheduled (since we move round-robin
-			// after the random choice).
-			if i == nrealm {
-				// Only try the root realm once we've exhausted all other options.
-				r = sp.ROOTREALM
-			} else {
-				r = pq.realms[(rOff+i)%len(pq.realms)]
-			}
+		// Get the next realm with procs queued, globally round-robin
+		r, keepScanning := pq.rr.GetNextRealm(sp.NO_REALM)
+		firstSeen := r
+		for ; keepScanning; r, keepScanning = pq.rr.GetNextRealm(firstSeen) {
 			q, ok := pq.qs[r]
 			if !ok && r == sp.ROOTREALM {
 				continue
-			}
-			if first == "" {
-				first = r.String()
-				db.DPrintf(db.PROCQ, "First try to dequeue from %v", r)
 			}
 			db.DPrintf(db.PROCQ, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
 			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem), req.KernelID)
 			db.DPrintf(db.PROCQ, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)
 			if ok {
+				if q.Len() == 0 {
+					// Realm's queue is now empty
+					pq.rr.RealmQueueEmpty(r)
+				}
 				// Decrease aggregate queue length.
 				pq.qlen--
 				db.DPrintf(db.PROCQ, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
+				// Chunksrv relies on there only being one chunk server in the path to
+				// avoid circular waits & deadlocks.
 				if !chunksrv.IsChunkSrvPath(p.GetSigmaPath()[0]) {
 					if kid, ok := pq.realmbins.GetBinKernelID(p.GetRealm(), p.GetProgram()); ok {
 						p.PrependSigmaPath(chunk.ChunkdPath(kid))

@@ -35,11 +35,15 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	)
 }
 
-func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBenchCmdFn {
+func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, prewarmRealm bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;LOADGEN;\""
 		)
+		proc := "--use_rust_proc"
+		if dummyProc {
+			proc = "--use_dummy_proc"
+		}
 		prewarm := ""
 		if prewarmRealm {
 			prewarm = "--prewarm_realm"
@@ -56,7 +60,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBe
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestMicroScheddSpawn "+
-			"--use_rust_proc "+
+			"%s "+ // proc
 			"--schedd_dur %s "+
 			"--schedd_max_rps %s "+
 			"%s "+ // prewarmRealm
@@ -66,6 +70,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBe
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
+			proc,
 			dur.String(),
 			strconv.Itoa(rps),
 			prewarm,
@@ -74,7 +79,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, prewarmRealm bool) GetBe
 }
 
 // Construct command string to run BE imgresize multiplexing benchmark
-func GetBEImgresizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+func GetBEImgResizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	const (
 		debugSelectors string = "\"TEST;BENCH;\""
 	)
@@ -93,6 +98,39 @@ func GetBEImgresizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) strin
 		"--n_imgresize 40 "+
 		"--imgresize_nround 300 "+
 		"--n_imgresize_per 25 "+
+		"--imgresize_path name/ux/~local/8.jpg "+
+		"--imgresize_mcpu 0 "+
+		"--imgresize_mem 1500 "+
+		"--nrealm 4 "+
+		"> /tmp/bench.out 2>&1",
+		debugSelectors,
+		netproxy,
+		overlays,
+		ccfg.LeaderNodeIP,
+		bcfg.Tag,
+	)
+}
+
+// Construct command string to run BE imgresize multiplexing benchmark
+func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+	const (
+		debugSelectors string = "\"TEST;BENCH;IMGD;\""
+	)
+	netproxy := ""
+	if bcfg.NoNetproxy {
+		netproxy = "--nonetproxy"
+	}
+	overlays := ""
+	if bcfg.Overlays {
+		overlays = "--overlays"
+	}
+	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+		"--run TestRealmBalanceImgResizeRPCImgResizeRPC "+
+		"--sleep 10s "+
+		"--imgresize_tps 256 "+
+		"--imgresize_dur 30s "+
+		"--imgresize_nround 14 "+
 		"--imgresize_path name/ux/~local/8.jpg "+
 		"--imgresize_mcpu 0 "+
 		"--imgresize_mem 1500 "+
@@ -176,7 +214,8 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 func GetCorralCmdConstructor() GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		return "cd ../corral; " +
-			"git checkout play; " +
+			"git pull; " +
+			"git checkout play-perf-asynch; " +
 			"git pull; " +
 			// Load AWS key, because Corral expects this to be set as the default profile
 			"export AWS_ACCESS_KEY_ID=$(cat ~/.aws/credentials | grep aws_access_key_id | head -n1 | cut -d ' ' -f3); " +
@@ -357,7 +396,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 //
 // - sleep specifies the amount of time the hotel benchmark should sleep before
 // starting to run.
-func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration) GetBenchCmdFn {
+func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\""
@@ -391,6 +430,78 @@ func GetLCBEHotelImgresizeMultiplexingCmdConstructor(numClients int, rps []int, 
 			"--n_imgresize 350 "+
 			"--imgresize_nround 500 "+
 			"--n_imgresize_per 1 "+
+			"--imgresize_path name/ux/~local/8.jpg "+
+			"--imgresize_mcpu 0 "+
+			"--imgresize_mem 1500 "+
+			"--prewarm_realm "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			perfSelectors,
+			netproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			strconv.Itoa(numClients),
+			cacheType,
+			autoscaleCache,
+			dursToString(dur),
+			rpsToString(rps),
+			sleep.String(),
+		)
+	}
+}
+
+// Construct command string to run hotel benchmark's load-generating client
+//
+// - numClients specifies the total number of client machines which will make
+// requests to the hotel application
+//
+// - rps specifies the number of requests-per-second this client should execute
+// in each phase of the benchmark.
+//
+// - dur specifies the duration for which each rps period should last.
+//
+// - cacheType specifies the type of cache service that hotel should use (e.g.,
+// cached vs kvd vs memcached).
+//
+// - If scaleCache is true, the cache autoscales.
+//
+// - sleep specifies the amount of time the hotel benchmark should sleep before
+// starting to run.
+func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\""
+			perfSelectors  string = "\"THUMBNAIL_TPT;TEST_TPT;BENCH_TPT;HOTEL_WWW_TPT;\""
+		)
+		autoscaleCache := ""
+		if scaleCache {
+			autoscaleCache = "--hotel_cache_autoscale"
+		}
+		netproxy := ""
+		if bcfg.NoNetproxy {
+			netproxy = "--nonetproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run RealmBalanceHotelRPCImgResize "+
+			"--nclnt %s "+
+			"--hotel_ncache 3 "+
+			"--hotel_cache_mcpu 2000 "+
+			"--cache_type %s "+
+			"%s "+ // scaleCache
+			"--hotel_dur %s "+
+			"--hotel_max_rps %s "+
+			"--sleep %s "+
+			"--imgresize_tps 256 "+
+			"--imgresize_dur 50s "+
+			"--imgresize_nround 14 "+
 			"--imgresize_path name/ux/~local/8.jpg "+
 			"--imgresize_mcpu 0 "+
 			"--imgresize_mem 1500 "+

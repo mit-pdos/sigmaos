@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"strings"
 
-	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/lazypagessrv"
 	"sigmaos/proc"
+	"sigmaos/scontainer"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocsrv/proto"
 )
@@ -45,7 +45,7 @@ func (ups *UprocSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointProcRequest, re
 		db.DPrintf(db.CKPT, "CheckpointProc: error creating %v err %v", imgDir, err)
 		return err
 	}
-	if err := container.CheckpointProc(ups.criuclnt, pid, imgDir, spid, pe.ino); err != nil {
+	if err := scontainer.CheckpointProc(ups.criuclnt, pid, imgDir, spid, pe.ino); err != nil {
 		return err
 	}
 	if err := ups.writeCheckpoint(imgDir, req.PathName, CKPTFULL); err != nil {
@@ -116,7 +116,7 @@ func (ups *UprocSrv) restoreProc(proc *proc.Proc) error {
 		}
 	}()
 	// XXX delete dst dir when done
-	if err := container.RestoreProc(ups.criuclnt, proc, filepath.Join(dst, CKPTLAZY), ups.lpc.WorkDir()); err != nil {
+	if err := scontainer.RestoreProc(ups.criuclnt, proc, filepath.Join(dst, CKPTLAZY), ups.lpc.WorkDir()); err != nil {
 		return err
 	}
 	return nil

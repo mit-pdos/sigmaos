@@ -1,4 +1,4 @@
-package container
+package scontainer
 
 import (
 	"encoding/json"

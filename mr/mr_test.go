@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -176,7 +177,7 @@ func TestMapperAlone(t *testing.T) {
 			assert.Nil(t, err, "NewSC: %v", err)
 			m, err := mr.NewMapper(sc, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
 			assert.Nil(t, err, "NewMapper %v", err)
-			err = m.InitWrt(0, REDUCEIN)
+			err = m.InitWrt(0, REDUCEIN+strconv.Itoa(i))
 			assert.Nil(t, err)
 			db.DPrintf(db.TEST, "Bins: %v", bins)
 

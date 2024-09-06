@@ -1,14 +1,19 @@
-package container
+// This package provides StartDockerContainer to run [uprocsrv] or
+// [spproxysrv] inside a docker container.
+package dcontainer
 
 import (
 	"context"
+	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
 	"sigmaos/cgroup"
@@ -21,8 +26,29 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// Start outer container for uprocd. If r is nil, don't use overlays.
-func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) (*Container, error) {
+const (
+	CGROUP_PATH_BASE = "/cgroup/system.slice"
+)
+
+type Dcontainer struct {
+	*port.PortMap
+	overlays     bool
+	ctx          context.Context
+	cli          *client.Client
+	container    string
+	cgroupPath   string
+	ip           string
+	cmgr         *cgroup.CgroupMgr
+	prevCPUStats cpustats
+}
+
+type cpustats struct {
+	totalSysUsecs       uint64
+	totalContainerUsecs uint64
+	util                float64
+}
+
+func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) (*Dcontainer, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -150,7 +176,7 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v portmap %v", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks, pm)
 	cgroupPath := filepath.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
-	c := &Container{
+	c := &Dcontainer{
 		overlays:   p.GetProcEnv().GetOverlays(),
 		PortMap:    pm,
 		ctx:        ctx,
@@ -166,4 +192,54 @@ func StartPContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) 
 	}
 
 	return c, nil
+}
+
+func (c *Dcontainer) GetCPUUtil() (float64, error) {
+	st, err := c.cmgr.GetCPUStats(c.cgroupPath)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err get cpu stats: %v", err)
+		return 0.0, err
+	}
+	return st.Util, nil
+}
+
+func (c *Dcontainer) SetCPUShares(cpu int64) error {
+	s := time.Now()
+	err := c.cmgr.SetCPUShares(c.cgroupPath, cpu)
+	db.DPrintf(db.SPAWN_LAT, "Dcontainer.SetCPUShares %v", time.Since(s))
+	return err
+}
+
+func (c *Dcontainer) String() string {
+	return c.container[:10]
+}
+
+func (c *Dcontainer) Ip() string {
+	return c.ip
+}
+
+func (c *Dcontainer) Shutdown() error {
+	db.DPrintf(db.CONTAINER, "containerwait for %v\n", c)
+	statusCh, errCh := c.cli.ContainerWait(c.ctx, c.container, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		db.DPrintf(db.CONTAINER, "ContainerWait err %v\n", err)
+		return err
+	case st := <-statusCh:
+		db.DPrintf(db.CONTAINER, "container %s done status %v\n", c, st)
+	}
+	out, err := c.cli.ContainerLogs(c.ctx, c.container, types.ContainerLogsOptions{ShowStderr: true, ShowStdout: true})
+	if err != nil {
+		panic(err)
+	}
+	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+	removeOptions := types.ContainerRemoveOptions{
+		RemoveVolumes: true,
+		Force:         true,
+	}
+	if err := c.cli.ContainerRemove(c.ctx, c.container, removeOptions); err != nil {
+		db.DPrintf(db.CONTAINER, "ContainerRemove %v err %v\n", c, err)
+		return err
+	}
+	return nil
 }

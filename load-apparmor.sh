@@ -2,5 +2,5 @@
 
 # install sigmaos-uproc apparmor profile
 
-cp container/sigmaos-uproc /etc/apparmor.d/sigmaos-uproc
+cp scontainer/sigmaos-uproc /etc/apparmor.d/sigmaos-uproc
 apparmor_parser -r /etc/apparmor.d/sigmaos-uproc 

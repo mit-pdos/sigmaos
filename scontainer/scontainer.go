@@ -1,4 +1,6 @@
-package container
+// This package provides StartSigmaContainer to run a proc inside a
+// sigma container.
+package scontainer
 
 import (
 	"os"
@@ -27,7 +29,7 @@ func (upc *uprocCmd) Pid() int {
 }
 
 // Contain user procs using exec-uproc-rs trampoline
-func StartUProc(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
+func StartSigmaContainer(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
 	db.DPrintf(db.CONTAINER, "RunUProc netproxy %v %v env %v\n", netproxy, uproc, os.Environ())
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())

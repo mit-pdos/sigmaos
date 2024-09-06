@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"syscall"
 
-	"sigmaos/container"
+	"sigmaos/dcontainer"
 	db "sigmaos/debug"
 	"sigmaos/port"
 	"sigmaos/proc"
@@ -21,7 +21,7 @@ type Subsystem interface {
 	GetProc() *proc.Proc
 	GetHow() proc.Thow
 	GetCrashed() bool
-	GetContainer() *container.Container
+	GetContainer() *dcontainer.Dcontainer
 	SetWaited(bool)
 	GetWaited() bool
 	Evict() error
@@ -39,7 +39,7 @@ type KernelSubsystem struct {
 	p         *proc.Proc
 	how       proc.Thow
 	cmd       *exec.Cmd
-	container *container.Container
+	container *dcontainer.Dcontainer
 	waited    bool
 	crashed   bool
 }
@@ -48,7 +48,7 @@ func (ss *KernelSubsystem) GetProc() *proc.Proc {
 	return ss.p
 }
 
-func (ss *KernelSubsystem) GetContainer() *container.Container {
+func (ss *KernelSubsystem) GetContainer() *dcontainer.Dcontainer {
 	return ss.container
 }
 
@@ -126,7 +126,7 @@ func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) er
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.FinalizeEnv(localIP, localIP, sp.Tpid(sp.NOT_SET))
-		c, err := container.StartPContainer(s.p, kernelId, s.k.Param.Overlays, s.k.Param.GVisor)
+		c, err := dcontainer.StartDockerContainer(s.p, kernelId, s.k.Param.Overlays, s.k.Param.GVisor)
 		if err != nil {
 			return err
 		}

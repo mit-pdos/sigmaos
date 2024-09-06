@@ -27,7 +27,7 @@ for vm in $vms; do
 #    git checkout etcd-sigmasrv-newprocclnt
 #    git pull
 #    sudo apt install -y apparmor-utils
-#    (cd sigmaos; sudo apparmor_parser -r container/sigmaos-uproc )
+#    (cd sigmaos; sudo apparmor_parser -r scontainer/sigmaos-uproc )
 #    (cd sigmaos; ./set-cores.sh --set 0 --start 4 --end 39 )
 #    sudo rm -rf /data/volumes/*
   ls ~

@@ -8,5 +8,5 @@ import (
 )
 
 func main() {
-	mr.RunMapper(grep.Map, os.Args[1:])
+	mr.RunMapper(grep.Map, nil, os.Args[1:])
 }

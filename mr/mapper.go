@@ -29,6 +29,7 @@ import (
 type Mapper struct {
 	*sigmaclnt.SigmaClnt
 	mapf        MapT
+	combinef    ReduceT
 	sbc         *ScanByteCounter
 	job         string
 	nreducetask int
@@ -42,11 +43,14 @@ type Mapper struct {
 	rand        string
 	perf        *perf.Perf
 	asyncrw     bool
+	combine     Tdata
+	combinewc   map[string]int
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
 	m := &Mapper{}
 	m.mapf = mapf
+	m.combinef = combinef
 	m.job = job
 	m.nreducetask = nr
 	m.linesz = lsz
@@ -61,10 +65,12 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, job string, p *perf.Perf, nr,
 	m.perf = p
 	m.sbc = NewScanByteCounter(p)
 	m.asyncrw = asyncrw
+	m.combine = make(Tdata)
+	m.combinewc = make(map[string]int)
 	return m, nil
 }
 
-func newMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
+func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
 	if len(args) != 6 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
@@ -84,7 +90,7 @@ func newMapper(mapf MapT, args []string, p *perf.Perf) (*Mapper, error) {
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper: can't parse asyncrw %v", args[5])
 	}
-	m, err := NewMapper(sc, mapf, args[0], p, nr, lsz, args[2], args[3], asyncrw)
+	m, err := NewMapper(sc, mapf, reducef, args[0], p, nr, lsz, args[2], args[3], asyncrw)
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
@@ -206,7 +212,7 @@ func (m *Mapper) informReducer() error {
 	return nil
 }
 
-func (m *Mapper) emit(kv *KeyValue) error {
+func (m *Mapper) Emit(kv *KeyValue) error {
 	r := Khash(kv.Key) % m.nreducetask
 	var err error
 	if m.asyncrw {
@@ -217,7 +223,35 @@ func (m *Mapper) emit(kv *KeyValue) error {
 	return err
 }
 
-func (m *Mapper) DoSplit(s *Split) (sp.Tlength, error) {
+func (m *Mapper) Buffer(kv *KeyValue) error {
+	if _, ok := m.combine[kv.Key]; !ok {
+		m.combine[kv.Key] = make([]string, 0)
+	}
+	m.combine[kv.Key] = append(m.combine[kv.Key], kv.Value)
+	return nil
+}
+
+// Function for performance debugging
+func (m *Mapper) BufferWc(kv *KeyValue) error {
+	if _, ok := m.combinewc[kv.Key]; !ok {
+		m.combinewc[kv.Key] = 0
+	}
+	m.combinewc[kv.Key] += 1
+	return nil
+}
+
+func (m *Mapper) DoCombine() error {
+	for k, vs := range m.combine {
+		if err := m.combinef(k, vs, m.Emit); err != nil {
+			db.DPrintf(db.ALWAYS, "Err combinef: %v", err)
+			return err
+		}
+	}
+	m.combine = make(Tdata, 0)
+	return nil
+}
+
+func (m *Mapper) DoSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	off := s.Offset
 	if off != 0 {
 		// -1 to pick up last byte from prev split so that if s.Offset
@@ -248,7 +282,7 @@ func (m *Mapper) DoSplit(s *Split) (sp.Tlength, error) {
 		l := scanner.Text()
 		n += len(l) + 1 // 1 for newline
 		if len(l) > 0 {
-			if err := m.mapf(m.input, strings.NewReader(l), m.sbc.ScanWords, m.emit); err != nil {
+			if err := m.mapf(m.input, strings.NewReader(l), m.sbc.ScanWords, emit); err != nil {
 				return 0, err
 			}
 		}
@@ -276,9 +310,13 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 		db.DPrintf(db.MR, "Mapper %s: decode %v err %v\n", m.bin, string(c), err)
 		return 0, 0, err
 	}
+	emit := m.Emit
+	if m.combinef != nil {
+		emit = m.Buffer
+	}
 	for _, s := range bin {
 		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)
-		n, err := m.DoSplit(&s)
+		n, err := m.DoSplit(&s, emit)
 		if err != nil {
 			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)
 			return 0, 0, err
@@ -287,6 +325,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 			db.DFatalf("Split: short split o %d l %d %d\n", s.Offset, s.Length, n)
 		}
 		ni += n
+		m.DoCombine()
 	}
 	nout, err := m.CloseWrt()
 	if err != nil {
@@ -298,7 +337,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 	return ni, nout, nil
 }
 
-func RunMapper(mapf MapT, args []string) {
+func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
 	pe := proc.GetProcEnv()
@@ -308,7 +347,7 @@ func RunMapper(mapf MapT, args []string) {
 	}
 	defer p.Done()
 	db.DPrintf(db.BENCH, "Mapper [%v] time since spawn %v", args[2], time.Since(pe.GetSpawnTime()))
-	m, err := newMapper(mapf, args, p)
+	m, err := newMapper(mapf, combinef, args, p)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}

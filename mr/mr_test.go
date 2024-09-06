@@ -38,7 +38,7 @@ import (
 const (
 	OUTPUT        = "/tmp/par-mr.out"
 	MALICIOUS_APP = "mr-wc-restricted.yml"
-	LOCALINPUT    = "/tmp/enwiki-2G"
+	LOCALINPUT    = "/tmp/enwiki-1G"
 
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
@@ -74,9 +74,9 @@ func TestWordCount(t *testing.T) {
 	const (
 		HOSTTMP = "/tmp/sigmaos"
 		F       = "gutenberg.txt"
-		INPUT   = "../input/" + F
-		// INPUT   = LOCALINPUT
-		OUT = HOSTTMP + F + ".out"
+		// INPUT   = "../input/" + F
+		INPUT = LOCALINPUT
+		OUT   = HOSTTMP + F + ".out"
 	)
 
 	file, err := os.Open(INPUT)
@@ -85,6 +85,7 @@ func TestWordCount(t *testing.T) {
 	r := bufio.NewReader(file)
 	rdr, err := readahead.NewReaderSize(r, 4, sp.BUFSZ)
 	assert.Nil(t, err, "Err reader: %v", err)
+	start := time.Now()
 	scanner := bufio.NewScanner(rdr)
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
@@ -100,6 +101,7 @@ func TestWordCount(t *testing.T) {
 	}
 	err = scanner.Err()
 	assert.Nil(t, err)
+	db.DPrintf(db.ALWAYS, "seqwc %v %v", INPUT, time.Since(start).Milliseconds())
 	file, err = os.Create(OUT)
 	assert.Nil(t, err)
 	defer file.Close()
@@ -175,7 +177,8 @@ func TestMapperAlone(t *testing.T) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			sc, err := sigmaclnt.NewSigmaClnt(pe)
 			assert.Nil(t, err, "NewSC: %v", err)
-			m, err := mr.NewMapper(sc, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
+			m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
+			//m, err := mr.NewMapper(sc, wc.Map, nil, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
 			assert.Nil(t, err, "NewMapper %v", err)
 			err = m.InitWrt(0, REDUCEIN+strconv.Itoa(i))
 			assert.Nil(t, err)
@@ -185,7 +188,9 @@ func TestMapperAlone(t *testing.T) {
 			nin := sp.Tlength(0)
 			for _, b := range bins {
 				for _, s := range b {
-					n, err := m.DoSplit(&s)
+					//n, err := m.DoSplit(&s, m.BufferWc)
+					//n, err := m.DoSplit(&s, m.Emit)
+					n, err := m.DoSplit(&s, m.Buffer)
 					if err != nil {
 						db.DFatalf("DoSplit err %v", err)
 					}
@@ -197,6 +202,7 @@ func TestMapperAlone(t *testing.T) {
 				if timeout > 0 && time.Since(start) > timeout {
 					break
 				}
+				m.DoCombine()
 			}
 			nout, err := m.CloseWrt()
 			if err != nil {

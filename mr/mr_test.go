@@ -171,7 +171,10 @@ func TestMapperAlone(t *testing.T) {
 	assert.Nil(t, err)
 	for i := 0; i < nmap; i++ {
 		go func() {
-			m, err := mr.NewMapper(ts.SigmaClnt, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
+			pe := proc.NewAddedProcEnv(ts.ProcEnv())
+			sc, err := sigmaclnt.NewSigmaClnt(pe)
+			assert.Nil(t, err, "NewSC: %v", err)
+			m, err := mr.NewMapper(sc, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
 			assert.Nil(t, err, "NewMapper %v", err)
 			err = m.InitWrt(0, REDUCEIN)
 			assert.Nil(t, err)

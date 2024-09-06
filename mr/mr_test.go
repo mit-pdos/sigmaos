@@ -232,7 +232,9 @@ func TestMapperAlone(t *testing.T) {
 			if _, ok := data[kv.Key]; !ok {
 				data[kv.Key] = 0
 			}
-			data[kv.Key] += 1
+			m, err := strconv.Atoi(kv.Value)
+			assert.Nil(t, err)
+			data[kv.Key] += m
 		}
 
 		data1 := make(seqwc.Tdata)

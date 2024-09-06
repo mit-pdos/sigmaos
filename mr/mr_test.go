@@ -49,11 +49,13 @@ const (
 )
 
 var app string // yaml app file
+var nmap int
 var job *mr.Job
 var timeout time.Duration
 
 func init() {
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
+	flag.IntVar(&nmap, "nmap", 1, "number of mapper threads")
 	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
 }
 
@@ -164,37 +166,46 @@ func TestMapperAlone(t *testing.T) {
 
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err NewBins %v", err)
+	done := make(chan bool)
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
-	m, err := mr.NewMapper(ts.SigmaClnt, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
-	assert.Nil(t, err, "NewMapper %v", err)
-	err = m.InitWrt(0, REDUCEIN)
-	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "Bins: %v", bins)
+	for i := 0; i < nmap; i++ {
+		go func() {
+			m, err := mr.NewMapper(ts.SigmaClnt, wc.Map, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
+			assert.Nil(t, err, "NewMapper %v", err)
+			err = m.InitWrt(0, REDUCEIN)
+			assert.Nil(t, err)
+			db.DPrintf(db.TEST, "Bins: %v", bins)
 
-	start := time.Now()
-	nin := sp.Tlength(0)
-	for _, b := range bins {
-		for _, s := range b {
-			n, err := m.DoSplit(&s)
+			start := time.Now()
+			nin := sp.Tlength(0)
+			for _, b := range bins {
+				for _, s := range b {
+					n, err := m.DoSplit(&s)
+					if err != nil {
+						db.DFatalf("DoSplit err %v", err)
+					}
+					nin += n
+					if timeout > 0 && time.Since(start) > timeout {
+						break
+					}
+				}
+				if timeout > 0 && time.Since(start) > timeout {
+					break
+				}
+			}
+			nout, err := m.CloseWrt()
 			if err != nil {
-				db.DFatalf("DoSplit err %v", err)
+				db.DFatalf("CloseWrt err %v", err)
 			}
-			nin += n
-			if timeout > 0 && time.Since(start) > timeout {
-				break
-			}
-		}
-		if timeout > 0 && time.Since(start) > timeout {
-			break
-		}
-	}
-	nout, err := m.CloseWrt()
-	if err != nil {
-		db.DFatalf("CloseWrt err %v", err)
-	}
 
-	db.DPrintf(db.ALWAYS, "%s: in %s out %s tot %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
+			db.DPrintf(db.ALWAYS, "%s: in %s out %s tot %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
+			done <- true
+		}()
+	}
+	for i := 0; i < nmap; i++ {
+		<-done
+	}
 
 	// data := make(map[string]int, 0)
 	// rdr, err := ts.OpenAsyncReader(REDUCEIN, 0)

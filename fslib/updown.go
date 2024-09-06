@@ -29,3 +29,25 @@ func (fsl *FsLib) UploadFile(lpn, spn string) error {
 	}
 	return nil
 }
+
+// Download spn into local lpn
+func (fsl *FsLib) DownloadFile(spn, lpn string) error {
+	rdr, err := fsl.OpenReader(spn)
+	if err != nil {
+		db.DPrintf(db.FSLIB, "OpenReader %v err %v\n", spn, err)
+		return err
+	}
+	file, err := os.OpenFile(lpn, os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		db.DPrintf(db.FSLIB, "OpenFile %v err %v", lpn, err)
+		return err
+	}
+	wrt := bufio.NewWriter(file)
+	if _, err := io.Copy(wrt, rdr.Reader); err != nil {
+		db.DPrintf(db.FSLIB, "Copy err %v", err)
+		return err
+	}
+	rdr.Close()
+	file.Close()
+	return nil
+}

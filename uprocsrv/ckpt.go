@@ -1,9 +1,7 @@
 package uprocsrv
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -76,20 +74,10 @@ func (ups *UprocSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string,
 		if ckpt == CKPTLAZY && strings.HasPrefix(file.Name(), "pages-") {
 			continue
 		}
-		b, err := os.ReadFile(filepath.Join(chkptLocalDir, file.Name()))
-		if err != nil {
-			db.DPrintf(db.UPROCD, "Error reading file %v err %v\n", file.Name(), err)
+		if err := ups.ssrv.MemFs.SigmaClnt().UploadFile(filepath.Join(chkptLocalDir, file.Name()), filepath.Join(pn, file.Name())); err != nil {
+			db.DPrintf(db.UPROCD, "UploadFile %v err %v\n", file.Name(), err)
 			return err
 		}
-		dstFd, err := ups.ssrv.MemFs.SigmaClnt().Create(filepath.Join(pn, file.Name()), 0777, sp.OWRITE)
-		if err != nil {
-			db.DPrintf(db.UPROCD, "writeCheckpoint: creating file %s err %v\n", file.Name(), err)
-			return err
-		}
-		if _, err := ups.ssrv.MemFs.SigmaClnt().Write(dstFd, b); err != nil {
-			return err
-		}
-		ups.ssrv.MemFs.SigmaClnt().CloseFd(dstFd)
 	}
 	db.DPrintf(db.UPROCD, "writeCheckpoint: copied %d files", len(files))
 	return nil
@@ -141,49 +129,16 @@ func (ups *UprocSrv) readCheckpoint(ckptSigmaDir, localDir, ckpt string) error {
 	for _, entry := range files {
 		fn := filepath.Join(ckptSigmaDir, ckpt, entry)
 		dstfn := filepath.Join(pn, entry)
-		rdr, err := ups.ssrv.MemFs.SigmaClnt().OpenReader(fn)
-		if err != nil {
-			db.DPrintf("GetFile %v err %v\n", fn, err)
+		if err := ups.ssrv.MemFs.SigmaClnt().DownloadFile(fn, dstfn); err != nil {
+			db.DPrintf("DownloadFile %v err %v\n", fn, err)
 			return err
 		}
-		file, err := os.OpenFile(dstfn, os.O_WRONLY|os.O_CREATE, 0644)
-		if err != nil {
-			db.DPrintf(db.UPROCD, "OpenFile %v err %v", dstfn, err)
-			return err
-		}
-		wrt := bufio.NewWriter(file)
-		if _, err := io.Copy(wrt, rdr.Reader); err != nil {
-			db.DPrintf(db.UPROCD, "Error Copy: %v", err)
-			return err
-		}
-		rdr.Close()
-		file.Close()
-
 	}
 	if ckpt == CKPTLAZY {
 		db.DPrintf(db.CKPT, "Expand %s\n", pn)
 		if err := lazypagessrv.ExpandLazyPages(pn); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-func copyFile(srcFile, dstFile string) error {
-	dst, err := os.Create(dstFile)
-	if err != nil {
-		return err
-	}
-	defer dst.Close()
-
-	src, err := os.Open(srcFile)
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-	_, err = io.Copy(dst, src)
-	if err != nil {
-		return err
 	}
 	return nil
 }

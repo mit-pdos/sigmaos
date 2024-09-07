@@ -27,6 +27,11 @@ import (
 	"sigmaos/writer"
 )
 
+const (
+	MAXCAP = 32
+	MINCAP = 4
+)
+
 type Mapper struct {
 	*sigmaclnt.SigmaClnt
 	mapf        MapT
@@ -232,22 +237,34 @@ func (m *Mapper) Emit(key []byte, value string) error {
 	return err
 }
 
-func (m *Mapper) Combine(key []byte, value string) error {
-	k := unsafeutil.BytesToString(key)
-	if e, ok := m.combined[k]; !ok {
-		m.combined[string(key)] = &values{[]string{value}}
-	} else {
-		e.s = append(e.s, value)
-	}
-	return nil
-}
-
 // Function for performance debugging
 func (m *Mapper) CombineWc(kv *KeyValue) error {
 	if _, ok := m.combinewc[kv.Key]; !ok {
 		m.combinewc[kv.Key] = 0
 	}
 	m.combinewc[kv.Key] += 1
+	return nil
+}
+
+func (m *Mapper) Combine(key []byte, value string) error {
+	k := unsafeutil.BytesToString(key)
+	if e, ok := m.combined[k]; !ok {
+		s := make([]string, 1, MINCAP)
+		s[0] = value
+		m.combined[string(key)] = &values{s: s}
+	} else if len(e.s)+1 >= MAXCAP {
+		e.s = append(e.s, value)
+		if err := m.combinef(k, e.s, func(key []byte, val string) error {
+			e.s = e.s[:1]
+			e.s[0] = val
+			return nil
+		}); err != nil {
+			db.DPrintf(db.ALWAYS, "Err combinef: %v", err)
+			return err
+		}
+	} else {
+		e.s = append(e.s, value)
+	}
 	return nil
 }
 

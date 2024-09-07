@@ -246,8 +246,12 @@ func TestMapperAlone(t *testing.T) {
 
 		for k, v := range data1 {
 			v1, ok := data[k]
-			assert.True(t, ok, "error: k %s missing", k)
-			assert.True(t, uint64(v1) == v, "error: %s: %v != %v", k, v, v1)
+			if !assert.True(t, ok, "error: k %s missing", k) {
+				break
+			}
+			if !assert.True(t, uint64(v1) == v, "error: %s: %v != %v", k, v, v1) {
+				break
+			}
 		}
 	}
 

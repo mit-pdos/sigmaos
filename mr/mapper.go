@@ -223,7 +223,7 @@ func (m *Mapper) Emit(kv *KeyValue) error {
 	return err
 }
 
-func (m *Mapper) Buffer(kv *KeyValue) error {
+func (m *Mapper) Combine(kv *KeyValue) error {
 	if _, ok := m.combine[kv.Key]; !ok {
 		m.combine[kv.Key] = make([]string, 0)
 	}
@@ -232,7 +232,7 @@ func (m *Mapper) Buffer(kv *KeyValue) error {
 }
 
 // Function for performance debugging
-func (m *Mapper) BufferWc(kv *KeyValue) error {
+func (m *Mapper) CombineWc(kv *KeyValue) error {
 	if _, ok := m.combinewc[kv.Key]; !ok {
 		m.combinewc[kv.Key] = 0
 	}
@@ -312,7 +312,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 	}
 	emit := m.Emit
 	if m.combinef != nil {
-		emit = m.Buffer
+		emit = m.Combine
 	}
 	for _, s := range bin {
 		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)

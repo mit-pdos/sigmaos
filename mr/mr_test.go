@@ -178,7 +178,6 @@ func TestMapperAlone(t *testing.T) {
 			sc, err := sigmaclnt.NewSigmaClnt(pe)
 			assert.Nil(t, err, "NewSC: %v", err)
 			m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
-			//m, err := mr.NewMapper(sc, wc.Map, nil, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
 			assert.Nil(t, err, "NewMapper %v", err)
 			err = m.InitWrt(0, REDUCEIN+strconv.Itoa(i))
 			assert.Nil(t, err)
@@ -188,9 +187,11 @@ func TestMapperAlone(t *testing.T) {
 			nin := sp.Tlength(0)
 			for _, b := range bins {
 				for _, s := range b {
-					//n, err := m.DoSplit(&s, m.BufferWc)
-					//n, err := m.DoSplit(&s, m.Emit)
-					n, err := m.DoSplit(&s, m.Buffer)
+					// Run with wc-specialized combiner:
+					// n, err := m.DoSplit(&s, m.CombineWc)
+					// Run without combining:
+					// n, err := m.DoSplit(&s, m.Emit)
+					n, err := m.DoSplit(&s, m.Combine)
 					if err != nil {
 						db.DFatalf("DoSplit err %v", err)
 					}

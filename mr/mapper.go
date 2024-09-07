@@ -216,22 +216,22 @@ func (m *Mapper) informReducer() error {
 	return nil
 }
 
-func (m *Mapper) Emit(kv *KeyValue) error {
-	r := Khash(kv.Key) % m.nreducetask
+func (m *Mapper) Emit(key, value string) error {
+	r := Khash(key) % m.nreducetask
 	var err error
 	if m.asyncrw {
-		_, err = encodeKV(m.asyncwrts[r], kv.Key, kv.Value, r)
+		_, err = encodeKV(m.asyncwrts[r], key, value, r)
 	} else {
-		_, err = encodeKV(m.syncwrts[r], kv.Key, kv.Value, r)
+		_, err = encodeKV(m.syncwrts[r], key, value, r)
 	}
 	return err
 }
 
-func (m *Mapper) Combine(kv *KeyValue) error {
-	if _, ok := m.combine[kv.Key]; !ok {
-		m.combine[kv.Key] = make([]string, 0)
+func (m *Mapper) Combine(key, value string) error {
+	if _, ok := m.combine[key]; !ok {
+		m.combine[key] = make([]string, 0)
 	}
-	m.combine[kv.Key] = append(m.combine[kv.Key], kv.Value)
+	m.combine[key] = append(m.combine[key], value)
 	return nil
 }
 

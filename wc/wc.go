@@ -12,11 +12,8 @@ import (
 )
 
 func Map(filename string, scanner *bufio.Scanner, emit mr.EmitT) error {
-	kv := &mr.KeyValue{}
 	for scanner.Scan() {
-		kv.Key = scanner.Text()
-		kv.Value = "1"
-		if err := emit(kv); err != nil {
+		if err := emit(scanner.Text(), "1"); err != nil {
 			return err
 		}
 	}
@@ -26,8 +23,8 @@ func Map(filename string, scanner *bufio.Scanner, emit mr.EmitT) error {
 	return nil
 }
 
+// Emit the number of occurrences of this word.
 func Reduce(key string, values []string, emit mr.EmitT) error {
-	// return the number of occurrences of this word.
 	n := 0
 	for _, v := range values {
 		m, err := strconv.Atoi(v)
@@ -36,8 +33,7 @@ func Reduce(key string, values []string, emit mr.EmitT) error {
 		}
 		n += m
 	}
-	kv := &mr.KeyValue{key, strconv.Itoa(n)}
-	if err := emit(kv); err != nil {
+	if err := emit(key, strconv.Itoa(n)); err != nil {
 		return err
 	}
 	return nil

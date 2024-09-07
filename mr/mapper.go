@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/fmstephe/unsafeutil"
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
@@ -43,10 +44,14 @@ type Mapper struct {
 	rand        string
 	perf        *perf.Perf
 	asyncrw     bool
-	combine     Tdata
+	combined    map[string]*values
 	combinewc   map[string]int
 	buf         []byte
 	line        []byte
+}
+
+type values struct {
+	s []string
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
@@ -67,7 +72,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 	m.perf = p
 	m.sbc = NewScanByteCounter(p)
 	m.asyncrw = asyncrw
-	m.combine = make(Tdata)
+	m.combined = make(map[string]*values)
 	m.combinewc = make(map[string]int)
 	m.buf = make([]byte, 0, lsz)
 	m.line = make([]byte, 0, lsz)
@@ -228,11 +233,12 @@ func (m *Mapper) Emit(key []byte, value string) error {
 }
 
 func (m *Mapper) Combine(key []byte, value string) error {
-	k := string(key)
-	if _, ok := m.combine[k]; !ok {
-		m.combine[k] = make([]string, 0)
+	k := unsafeutil.BytesToString(key)
+	if e, ok := m.combined[k]; !ok {
+		m.combined[string(key)] = &values{[]string{value}}
+	} else {
+		e.s = append(e.s, value)
 	}
-	m.combine[k] = append(m.combine[k], value)
 	return nil
 }
 
@@ -246,13 +252,13 @@ func (m *Mapper) CombineWc(kv *KeyValue) error {
 }
 
 func (m *Mapper) DoCombine() error {
-	for k, vs := range m.combine {
-		if err := m.combinef(k, vs, m.Emit); err != nil {
+	for k, e := range m.combined {
+		if err := m.combinef(k, e.s, m.Emit); err != nil {
 			db.DPrintf(db.ALWAYS, "Err combinef: %v", err)
 			return err
 		}
 	}
-	m.combine = make(Tdata, 0)
+	m.combined = make(map[string]*values)
 	return nil
 }
 

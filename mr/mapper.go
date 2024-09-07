@@ -45,6 +45,8 @@ type Mapper struct {
 	asyncrw     bool
 	combine     Tdata
 	combinewc   map[string]int
+	buf         []byte
+	line        []byte
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
@@ -67,6 +69,8 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 	m.asyncrw = asyncrw
 	m.combine = make(Tdata)
 	m.combinewc = make(map[string]int)
+	m.buf = make([]byte, 0, lsz)
+	m.line = make([]byte, 0, lsz)
 	return m, nil
 }
 
@@ -268,8 +272,7 @@ func (m *Mapper) DoSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	}
 	defer rdr.Close()
 	scanner := bufio.NewScanner(rdr)
-	buf := make([]byte, 0, m.linesz)
-	scanner.Buffer(buf, cap(buf))
+	scanner.Buffer(m.buf, cap(m.buf))
 
 	// advance scanner to new line after start, if start != 0
 	n := 0
@@ -278,11 +281,16 @@ func (m *Mapper) DoSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		l := scanner.Text()
 		n += len(l) // +1 for newline, but -1 for extra byte we read
 	}
+	lineRdr := strings.NewReader("")
 	for scanner.Scan() {
 		l := scanner.Text()
 		n += len(l) + 1 // 1 for newline
 		if len(l) > 0 {
-			if err := m.mapf(m.input, strings.NewReader(l), m.sbc.ScanWords, emit); err != nil {
+			lineRdr.Reset(l)
+			scan := bufio.NewScanner(lineRdr)
+			scan.Buffer(m.line, cap(m.line))
+			scan.Split(m.sbc.ScanWords)
+			if err := m.mapf(m.input, scan, emit); err != nil {
 				return 0, err
 			}
 		}

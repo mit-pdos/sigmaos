@@ -6,7 +6,6 @@ package grep
 
 import (
 	"bufio"
-	"io"
 	"strconv"
 
 	"sigmaos/mr"
@@ -25,9 +24,7 @@ func init() {
 	}
 }
 
-func Map(filename string, rdr io.Reader, split bufio.SplitFunc, emit mr.EmitT) error {
-	scanner := bufio.NewScanner(rdr)
-	scanner.Split(split)
+func Map(filename string, scanner *bufio.Scanner, emit mr.EmitT) error {
 	for scanner.Scan() {
 		w := scanner.Text()
 		if _, ok := target[w]; ok {

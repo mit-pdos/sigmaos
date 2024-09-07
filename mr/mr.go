@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"hash/fnv"
-	"io"
 	"strings"
 
 	"github.com/dustin/go-humanize"
@@ -31,7 +30,7 @@ type ReduceT func(string, []string, EmitT) error
 // The mr library calls the map function for each line of input, which
 // is passed in as an io.Reader.  The map function outputs its values
 // by calling an emit function and passing it a KeyValue.
-type MapT func(string, io.Reader, bufio.SplitFunc, EmitT) error
+type MapT func(string, *bufio.Scanner, EmitT) error
 
 // for sorting by key.
 type ByKey []*KeyValue

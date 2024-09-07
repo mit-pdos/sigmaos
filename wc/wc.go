@@ -6,15 +6,12 @@ package wc
 
 import (
 	"bufio"
-	"io"
 	"strconv"
 
 	"sigmaos/mr"
 )
 
-func Map(filename string, rdr io.Reader, split bufio.SplitFunc, emit mr.EmitT) error {
-	scanner := bufio.NewScanner(rdr)
-	scanner.Split(split)
+func Map(filename string, scanner *bufio.Scanner, emit mr.EmitT) error {
 	kv := &mr.KeyValue{}
 	for scanner.Scan() {
 		kv.Key = scanner.Text()

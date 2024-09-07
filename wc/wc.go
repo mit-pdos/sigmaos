@@ -13,7 +13,7 @@ import (
 
 func Map(filename string, scanner *bufio.Scanner, emit mr.EmitT) error {
 	for scanner.Scan() {
-		if err := emit(scanner.Text(), "1"); err != nil {
+		if err := emit(scanner.Bytes(), "1"); err != nil {
 			return err
 		}
 	}
@@ -33,7 +33,7 @@ func Reduce(key string, values []string, emit mr.EmitT) error {
 		}
 		n += m
 	}
-	if err := emit(key, strconv.Itoa(n)); err != nil {
+	if err := emit([]byte(key), strconv.Itoa(n)); err != nil {
 		return err
 	}
 	return nil

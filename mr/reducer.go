@@ -192,7 +192,7 @@ func (r *Reducer) readFiles(input string) (sp.Tlength, time.Duration, Tdata, []s
 	return nbytes, duration, data, lostMaps, nil
 }
 
-func (r *Reducer) emit(key, value string) error {
+func (r *Reducer) emit(key []byte, value string) error {
 	b := fmt.Sprintf("%s\t%s\n", key, value)
 	_, err := r.pwrt.Write([]byte(b))
 	if err != nil {

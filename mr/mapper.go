@@ -2,6 +2,7 @@ package mr
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,7 +10,6 @@ import (
 	"path/filepath"
 	// "runtime/debug"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -216,7 +216,7 @@ func (m *Mapper) informReducer() error {
 	return nil
 }
 
-func (m *Mapper) Emit(key, value string) error {
+func (m *Mapper) Emit(key []byte, value string) error {
 	r := Khash(key) % m.nreducetask
 	var err error
 	if m.asyncrw {
@@ -227,11 +227,12 @@ func (m *Mapper) Emit(key, value string) error {
 	return err
 }
 
-func (m *Mapper) Combine(key, value string) error {
-	if _, ok := m.combine[key]; !ok {
-		m.combine[key] = make([]string, 0)
+func (m *Mapper) Combine(key []byte, value string) error {
+	k := string(key)
+	if _, ok := m.combine[k]; !ok {
+		m.combine[k] = make([]string, 0)
 	}
-	m.combine[key] = append(m.combine[key], value)
+	m.combine[k] = append(m.combine[k], value)
 	return nil
 }
 
@@ -278,12 +279,12 @@ func (m *Mapper) DoSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	n := 0
 	if s.Offset != 0 {
 		scanner.Scan()
-		l := scanner.Text()
+		l := scanner.Bytes()
 		n += len(l) // +1 for newline, but -1 for extra byte we read
 	}
-	lineRdr := strings.NewReader("")
+	lineRdr := bytes.NewReader([]byte{})
 	for scanner.Scan() {
-		l := scanner.Text()
+		l := scanner.Bytes()
 		n += len(l) + 1 // 1 for newline
 		if len(l) > 0 {
 			lineRdr.Reset(l)

@@ -26,8 +26,8 @@ func init() {
 
 func Map(filename string, scanner *bufio.Scanner, emit mr.EmitT) error {
 	for scanner.Scan() {
-		w := scanner.Text()
-		if _, ok := target[w]; ok {
+		w := scanner.Bytes()
+		if _, ok := target[string(w)]; ok {
 			if err := emit(w, "1"); err != nil {
 				return err
 			}
@@ -37,7 +37,7 @@ func Map(filename string, scanner *bufio.Scanner, emit mr.EmitT) error {
 }
 
 func Reduce(key string, values []string, emit mr.EmitT) error {
-	if err := emit(key, strconv.Itoa(len(values))); err != nil {
+	if err := emit([]byte(key), strconv.Itoa(len(values))); err != nil {
 		return err
 	}
 	return nil

@@ -64,10 +64,10 @@ func TestCompile(t *testing.T) {
 }
 
 func TestHash(t *testing.T) {
-	assert.Equal(t, 0, mr.Khash("LEAGUE")%8)
-	assert.Equal(t, 0, mr.Khash("Abbots")%8)
-	assert.Equal(t, 0, mr.Khash("yes")%8)
-	assert.Equal(t, 7, mr.Khash("absently")%8)
+	assert.Equal(t, 0, mr.Khash([]byte("LEAGUE"))%8)
+	assert.Equal(t, 0, mr.Khash([]byte("Abbots"))%8)
+	assert.Equal(t, 0, mr.Khash([]byte("yes"))%8)
+	assert.Equal(t, 7, mr.Khash([]byte("absently"))%8)
 }
 
 func TestWordCount(t *testing.T) {

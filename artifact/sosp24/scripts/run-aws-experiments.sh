@@ -88,3 +88,6 @@ if [ $EXP == "all" ] || [ $EXP == "fig_12" ]; then
   go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestBEImgresizeMultiplexing --parallelize --platform aws --vpc $AWS_VPC_LARGE --tag sosp24ae --no-shutdown --version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig12.out
   echo "Done generating Figure 12 data..."
 fi
+
+# Shut down sigmaOS
+./artifact/sosp24/scripts/stop-sigmaos-aws.sh

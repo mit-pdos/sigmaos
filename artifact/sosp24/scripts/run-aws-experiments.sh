@@ -66,6 +66,9 @@ if [ $EXP == "all" ] || [ $EXP == "fig_6" ]; then
   echo "Done generating Figure 6 data..."
 fi
 
+# Shut down sigmaOS
+./artifact/sosp24/scripts/stop-sigmaos-aws.sh
+
 # Figure 10
 if [ $EXP == "all" ] || [ $EXP == "fig_10" ]; then
   if [ $RERUN == "true" ]; then
@@ -77,6 +80,9 @@ if [ $EXP == "all" ] || [ $EXP == "fig_10" ]; then
   go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestCorral --parallelize --platform aws --vpc $AWS_VPC_LARGE --tag sosp24ae --no-shutdown --version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig10-corral.out
   echo "Done generating Figure 10 data..."
 fi
+
+# Shut down sigmaOS
+./artifact/sosp24/scripts/stop-sigmaos-aws.sh
 
 # Figure 12
 if [ $EXP == "all" ] || [ $EXP == "fig_12" ]; then

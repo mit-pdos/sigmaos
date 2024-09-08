@@ -56,7 +56,7 @@ AWS_VPC_LARGE=vpc-0affa7f07bd923811
 mkdir -p $LOG_DIR
 
 # Figure 6
-if [ $EXP == "all" ] || [ $EXP != "fig_6" ]; then
+if [ $EXP == "all" ] || [ $EXP == "fig_6" ]; then
   if [ $RERUN == "true" ]; then
     echo "Clearing any cached Figure 6 data..."
     rm -rf benchmarks/results/$VERSION/cold_start
@@ -67,7 +67,7 @@ if [ $EXP == "all" ] || [ $EXP != "fig_6" ]; then
 fi
 
 # Figure 10
-if [ $EXP == "all" ] || [ $EXP != "fig_10" ]; then
+if [ $EXP == "all" ] || [ $EXP == "fig_10" ]; then
   if [ $RERUN == "true" ]; then
     echo "Clearing any cached Figure 10 data..."
     rm -rf benchmarks/results/$VERSION/mr_vs_corral
@@ -79,7 +79,7 @@ if [ $EXP == "all" ] || [ $EXP != "fig_10" ]; then
 fi
 
 # Figure 12
-if [ $EXP == "all" ] || [ $EXP != "fig_12" ]; then
+if [ $EXP == "all" ] || [ $EXP == "fig_12" ]; then
   if [ $RERUN == "true" ]; then
     echo "Clearing any cached Figure 12 data..."
     rm -rf benchmarks/results/$VERSION/be_imgresize_multiplexing

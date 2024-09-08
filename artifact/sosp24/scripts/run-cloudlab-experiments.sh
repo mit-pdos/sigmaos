@@ -56,7 +56,7 @@ AWS_VPC_LARGE=vpc-0affa7f07bd923811
 mkdir -p $LOG_DIR
 
 # Figure 8
-if [ $EXP == "all" ] || [ $EXP != "fig_8" ]; then
+if [ $EXP == "all" ] || [ $EXP == "fig_8" ]; then
   if [ $RERUN == "true" ]; then
     echo "Clearing any cached Figure 8 data..."
     rm -rf benchmarks/results/$VERSION/sched_scalability
@@ -67,7 +67,7 @@ if [ $EXP == "all" ] || [ $EXP != "fig_8" ]; then
 fi
 
 # Figure 11
-if [ $EXP == "all" ] || [ $EXP != "fig_11" ]; then
+if [ $EXP == "all" ] || [ $EXP == "fig_11" ]; then
   if [ $RERUN == "true" ]; then
     echo "Clearing any cached Figure 11 data..."
     rm -rf benchmarks/results/$VERSION/hotel_tail_latency
@@ -80,7 +80,7 @@ if [ $EXP == "all" ] || [ $EXP != "fig_11" ]; then
 fi
 
 # Figure 13
-if [ $EXP == "all" ] || [ $EXP != "fig_13" ]; then
+if [ $EXP == "all" ] || [ $EXP == "fig_13" ]; then
   if [ $RERUN == "true" ]; then
     echo "Clearing any cached Figure 13 data..."
     rm -rf benchmarks/results/$VERSION/lc_be_hotel_imgresize_multiplexing

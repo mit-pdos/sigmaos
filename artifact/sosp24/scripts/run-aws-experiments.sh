@@ -67,7 +67,9 @@ if [ $EXP == "all" ] || [ $EXP == "fig_6" ]; then
 fi
 
 # Shut down sigmaOS
-./artifact/sosp24/scripts/stop-sigmaos-aws.sh
+echo "Shutting down SigmaOS..."
+./artifact/sosp24/scripts/stop-sigmaos-aws.sh > /dev/null 2>&1
+echo "Done shutting down SigmaOS..."
 
 # Figure 10
 if [ $EXP == "all" ] || [ $EXP == "fig_10" ]; then
@@ -82,7 +84,9 @@ if [ $EXP == "all" ] || [ $EXP == "fig_10" ]; then
 fi
 
 # Shut down sigmaOS
-./artifact/sosp24/scripts/stop-sigmaos-aws.sh
+echo "Shutting down SigmaOS..."
+./artifact/sosp24/scripts/stop-sigmaos-aws.sh > /dev/null 2>&1
+echo "Done shutting down SigmaOS..."
 
 # Figure 12
 if [ $EXP == "all" ] || [ $EXP == "fig_12" ]; then
@@ -96,4 +100,6 @@ if [ $EXP == "all" ] || [ $EXP == "fig_12" ]; then
 fi
 
 # Shut down sigmaOS
-./artifact/sosp24/scripts/stop-sigmaos-aws.sh
+echo "Shutting down SigmaOS..."
+./artifact/sosp24/scripts/stop-sigmaos-aws.sh > /dev/null 2>&1
+echo "Done shutting down SigmaOS..."

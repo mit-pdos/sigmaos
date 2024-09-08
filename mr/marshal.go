@@ -10,7 +10,7 @@ const (
 	jsonPadding = "AAAAA"
 )
 
-func encodeKV(wr io.Writer, key, value string, r int) (int, error) {
+func encodeKV(wr io.Writer, key []byte, value string, r int) (int, error) {
 	// Custom JSON marshalling.
 	l1 := int64(len(key))
 	l2 := int64(len(value))

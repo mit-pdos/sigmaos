@@ -2,6 +2,7 @@ package mr
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,10 +10,10 @@ import (
 	"path/filepath"
 	// "runtime/debug"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/fmstephe/unsafeutil"
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
@@ -24,6 +25,11 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/writer"
+)
+
+const (
+	MAXCAP = 32
+	MINCAP = 4
 )
 
 type Mapper struct {
@@ -43,8 +49,14 @@ type Mapper struct {
 	rand        string
 	perf        *perf.Perf
 	asyncrw     bool
-	combine     Tdata
+	combined    map[string]*values
 	combinewc   map[string]int
+	buf         []byte
+	line        []byte
+}
+
+type values struct {
+	s []string
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
@@ -65,8 +77,10 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 	m.perf = p
 	m.sbc = NewScanByteCounter(p)
 	m.asyncrw = asyncrw
-	m.combine = make(Tdata)
+	m.combined = make(map[string]*values)
 	m.combinewc = make(map[string]int)
+	m.buf = make([]byte, 0, lsz)
+	m.line = make([]byte, 0, lsz)
 	return m, nil
 }
 
@@ -212,27 +226,19 @@ func (m *Mapper) informReducer() error {
 	return nil
 }
 
-func (m *Mapper) Emit(kv *KeyValue) error {
-	r := Khash(kv.Key) % m.nreducetask
+func (m *Mapper) Emit(key []byte, value string) error {
+	r := Khash(key) % m.nreducetask
 	var err error
 	if m.asyncrw {
-		_, err = encodeKV(m.asyncwrts[r], kv.Key, kv.Value, r)
+		_, err = encodeKV(m.asyncwrts[r], key, value, r)
 	} else {
-		_, err = encodeKV(m.syncwrts[r], kv.Key, kv.Value, r)
+		_, err = encodeKV(m.syncwrts[r], key, value, r)
 	}
 	return err
 }
 
-func (m *Mapper) Buffer(kv *KeyValue) error {
-	if _, ok := m.combine[kv.Key]; !ok {
-		m.combine[kv.Key] = make([]string, 0)
-	}
-	m.combine[kv.Key] = append(m.combine[kv.Key], kv.Value)
-	return nil
-}
-
 // Function for performance debugging
-func (m *Mapper) BufferWc(kv *KeyValue) error {
+func (m *Mapper) CombineWc(kv *KeyValue) error {
 	if _, ok := m.combinewc[kv.Key]; !ok {
 		m.combinewc[kv.Key] = 0
 	}
@@ -240,14 +246,36 @@ func (m *Mapper) BufferWc(kv *KeyValue) error {
 	return nil
 }
 
+func (m *Mapper) Combine(key []byte, value string) error {
+	k := unsafeutil.BytesToString(key)
+	if e, ok := m.combined[k]; !ok {
+		s := make([]string, 1, MINCAP)
+		s[0] = value
+		m.combined[string(key)] = &values{s: s}
+	} else if len(e.s)+1 >= MAXCAP {
+		e.s = append(e.s, value)
+		if err := m.combinef(k, e.s, func(key []byte, val string) error {
+			e.s = e.s[:1]
+			e.s[0] = val
+			return nil
+		}); err != nil {
+			db.DPrintf(db.ALWAYS, "Err combinef: %v", err)
+			return err
+		}
+	} else {
+		e.s = append(e.s, value)
+	}
+	return nil
+}
+
 func (m *Mapper) DoCombine() error {
-	for k, vs := range m.combine {
-		if err := m.combinef(k, vs, m.Emit); err != nil {
+	for k, e := range m.combined {
+		if err := m.combinef(k, e.s, m.Emit); err != nil {
 			db.DPrintf(db.ALWAYS, "Err combinef: %v", err)
 			return err
 		}
 	}
-	m.combine = make(Tdata, 0)
+	m.combined = make(map[string]*values)
 	return nil
 }
 
@@ -268,21 +296,25 @@ func (m *Mapper) DoSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	}
 	defer rdr.Close()
 	scanner := bufio.NewScanner(rdr)
-	buf := make([]byte, 0, m.linesz)
-	scanner.Buffer(buf, cap(buf))
+	scanner.Buffer(m.buf, cap(m.buf))
 
 	// advance scanner to new line after start, if start != 0
 	n := 0
 	if s.Offset != 0 {
 		scanner.Scan()
-		l := scanner.Text()
+		l := scanner.Bytes()
 		n += len(l) // +1 for newline, but -1 for extra byte we read
 	}
+	lineRdr := bytes.NewReader([]byte{})
 	for scanner.Scan() {
-		l := scanner.Text()
+		l := scanner.Bytes()
 		n += len(l) + 1 // 1 for newline
 		if len(l) > 0 {
-			if err := m.mapf(m.input, strings.NewReader(l), m.sbc.ScanWords, emit); err != nil {
+			lineRdr.Reset(l)
+			scan := bufio.NewScanner(lineRdr)
+			scan.Buffer(m.line, cap(m.line))
+			scan.Split(m.sbc.ScanWords)
+			if err := m.mapf(m.input, scan, emit); err != nil {
 				return 0, err
 			}
 		}
@@ -312,7 +344,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 	}
 	emit := m.Emit
 	if m.combinef != nil {
-		emit = m.Buffer
+		emit = m.Combine
 	}
 	for _, s := range bin {
 		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)

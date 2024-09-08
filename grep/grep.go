@@ -6,7 +6,6 @@ package grep
 
 import (
 	"bufio"
-	"io"
 	"strconv"
 
 	"sigmaos/mr"
@@ -25,14 +24,11 @@ func init() {
 	}
 }
 
-func Map(filename string, rdr io.Reader, split bufio.SplitFunc, emit mr.EmitT) error {
-	scanner := bufio.NewScanner(rdr)
-	scanner.Split(split)
+func Map(filename string, scanner *bufio.Scanner, emit mr.EmitT) error {
 	for scanner.Scan() {
-		w := scanner.Text()
-		if _, ok := target[w]; ok {
-			kv := &mr.KeyValue{w, "1"}
-			if err := emit(kv); err != nil {
+		w := scanner.Bytes()
+		if _, ok := target[string(w)]; ok {
+			if err := emit(w, "1"); err != nil {
 				return err
 			}
 		}
@@ -41,9 +37,7 @@ func Map(filename string, rdr io.Reader, split bufio.SplitFunc, emit mr.EmitT) e
 }
 
 func Reduce(key string, values []string, emit mr.EmitT) error {
-	// return the number of occurrences of this word.
-	kv := &mr.KeyValue{key, strconv.Itoa(len(values))}
-	if err := emit(kv); err != nil {
+	if err := emit([]byte(key), strconv.Itoa(len(values))); err != nil {
 		return err
 	}
 	return nil

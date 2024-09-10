@@ -34,9 +34,6 @@ while [[ "$#" -gt 1 ]]; do
         "minnode")
             BOOT="schedd;ux;s3;chunkd"
             ;;
-        "procqnode")
-            BOOT="procq"
-            ;;
         "named")
             BOOT="knamed"
             ;;

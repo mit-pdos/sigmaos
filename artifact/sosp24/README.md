@@ -288,7 +288,8 @@ This section describes the Software and Hardware setup used in each setting.
   - OS: Ubuntu Jammy 22.04
 
 - Hotel and Socialnet application performance experiments
-  - Number of nodes: 8
+  - Number of nodes: 12 (8 for running each application, 4 for running HTTP
+    clients)
   - Node configuration:
     - 40 logical cores (8 physical cores enabled)
       - 2 Intel Xeon Silver 4114 10-core CPUs at 2.2GHz
@@ -299,7 +300,8 @@ This section describes the Software and Hardware setup used in each setting.
   - OS: Ubuntu Jammy 22.04
 
 - Hotel and ImgResize multi-realm multiplexing experiment
-  - Number of nodes: 8
+  - Number of nodes: 12 (8 for running each application, 4 for running HTTP
+    clients)
   - Node configuration:
     - 40 logical cores (8 physical cores enabled)
       - 2 Intel Xeon Silver 4114 10-core CPUs at 2.2GHz

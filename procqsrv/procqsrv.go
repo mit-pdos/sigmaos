@@ -195,7 +195,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				res.ProcProto = p.GetProto()
 				res.OK = true
 				res.QLen = uint32(pq.qlen)
-				db.DPrintf(db.TEST, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
+				db.DPrintf(db.PROCQ, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
 				pq.mu.Unlock()
 				return nil
 			}

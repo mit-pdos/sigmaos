@@ -205,7 +205,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
 			return nil, err
 		}
-		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
+		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v nretry %v", p.GetPid(), time.Since(s), i)
 		return pseqno, nil
 	}
 	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", sp.PATHCLNT_MAXRETRY, p)

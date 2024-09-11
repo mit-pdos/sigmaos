@@ -40,7 +40,7 @@ while [[ "$#" -gt 1 ]]; do
         "minnode")
             BOOT="schedd;ux;s3;chunkd"
             ;;
-        "proc_node")
+        "procq_node")
             BOOT="procq"
             ;;
         "named")

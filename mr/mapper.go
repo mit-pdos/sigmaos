@@ -60,27 +60,28 @@ type values struct {
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
-	m := &Mapper{}
-	m.mapf = mapf
-	m.combinef = combinef
-	m.job = job
-	m.nreducetask = nr
-	m.linesz = lsz
-	m.rand = rand.String(16)
-	m.input = input
-	m.intOutput = intOutput
-	m.bin = filepath.Base(m.input)
-	m.asyncwrts = make([]*fslib.Wrt, m.nreducetask)
-	m.syncwrts = make([]*writer.Writer, m.nreducetask)
-	m.pwrts = make([]*perf.PerfWriter, m.nreducetask)
-	m.SigmaClnt = sc
-	m.perf = p
-	m.sbc = NewScanByteCounter(p)
-	m.asyncrw = asyncrw
-	m.combined = make(map[string]*values)
-	m.combinewc = make(map[string]int)
-	m.buf = make([]byte, 0, lsz)
-	m.line = make([]byte, 0, lsz)
+	m := &Mapper{
+		mapf:        mapf,
+		combinef:    combinef,
+		job:         job,
+		nreducetask: nr,
+		linesz:      lsz,
+		rand:        rand.String(16),
+		input:       input,
+		intOutput:   intOutput,
+		bin:         filepath.Base(input),
+		asyncwrts:   make([]*fslib.Wrt, nr),
+		syncwrts:    make([]*writer.Writer, nr),
+		pwrts:       make([]*perf.PerfWriter, nr),
+		SigmaClnt:   sc,
+		perf:        p,
+		sbc:         NewScanByteCounter(p),
+		asyncrw:     asyncrw,
+		combined:    make(map[string]*values),
+		combinewc:   make(map[string]int),
+		buf:         make([]byte, 0, lsz),
+		line:        make([]byte, 0, lsz),
+	}
 	return m, nil
 }
 
@@ -124,6 +125,7 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 }
 
 func (m *Mapper) InitWrt(r int, name string) error {
+	db.DPrintf(db.MR, "InitWrt %v", name)
 	if m.asyncrw {
 		if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
 			return err

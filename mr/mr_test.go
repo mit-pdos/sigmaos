@@ -144,16 +144,18 @@ func TestMapperAlone(t *testing.T) {
 	const (
 		//SPLITSZ   =  64 * sp.KBYTE
 		SPLITSZ   = 10 * sp.MBYTE
-		REDUCEIN  = "name/ux/~local/test-reducer-in.txt"
+		REDUCEIN  = "name/ux/~local/reducer"
 		REDUCEOUT = "name/ux/~local/test-reducer-out.txt"
+		DOREDUCE  = true
 	)
 
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts.Remove(REDUCEIN)
+	ts.RmDir(REDUCEIN)
 	ts.Remove(REDUCEOUT)
+	ts.MkDir(REDUCEIN, 0777)
 
 	job, err1 = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
 	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
@@ -162,9 +164,9 @@ func TestMapperAlone(t *testing.T) {
 	if strings.HasPrefix(job.Input, sp.UX) {
 		file := filepath.Base(LOCALINPUT)
 		err := ts.MkDir(job.Input, 0777)
-		assert.Nil(t, err, "MkDir err %v", err)
+		assert.Nil(t, err, "MkDir %v err %v", job.Input, err)
 		err = ts.UploadFile(LOCALINPUT, filepath.Join(job.Input, file))
-		assert.Nil(t, err, "UploadFile err %v", err)
+		assert.Nil(t, err, "UploadFile %v %v err %v", LOCALINPUT, filepath.Join(job.Input, file), err)
 	}
 
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
@@ -179,13 +181,15 @@ func TestMapperAlone(t *testing.T) {
 			assert.Nil(t, err, "NewSC: %v", err)
 			m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
 			assert.Nil(t, err, "NewMapper %v", err)
-			err = m.InitWrt(0, REDUCEIN+strconv.Itoa(i))
+			err = m.InitWrt(0, filepath.Join(REDUCEIN, strconv.Itoa(i)))
 			assert.Nil(t, err)
 			db.DPrintf(db.TEST, "Bins: %v", bins)
 
 			start := time.Now()
 			nin := sp.Tlength(0)
 			for _, b := range bins {
+				binstart := time.Now()
+				ninbin := sp.Tlength(0)
 				for _, s := range b {
 					// Run with wc-specialized combiner:
 					// n, err := m.DoSplit(&s, m.CombineWc)
@@ -195,6 +199,7 @@ func TestMapperAlone(t *testing.T) {
 					if err != nil {
 						db.DFatalf("DoSplit err %v", err)
 					}
+					ninbin += n
 					nin += n
 					if timeout > 0 && time.Since(start) > timeout {
 						break
@@ -204,12 +209,12 @@ func TestMapperAlone(t *testing.T) {
 					break
 				}
 				m.DoCombine()
+				db.DPrintf(db.ALWAYS, "%s: in %s %vms (%s)\n", "map", humanize.Bytes(uint64(ninbin)), time.Since(start).Milliseconds(), test.TputStr(ninbin, time.Since(binstart).Milliseconds()))
 			}
 			nout, err := m.CloseWrt()
 			if err != nil {
 				db.DFatalf("CloseWrt err %v", err)
 			}
-
 			db.DPrintf(db.ALWAYS, "%s: in %s out %s tot %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 			done <- true
 		}(i)
@@ -218,9 +223,20 @@ func TestMapperAlone(t *testing.T) {
 		<-done
 	}
 
+	if DOREDUCE {
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		sc, err := sigmaclnt.NewSigmaClnt(pe)
+		assert.Nil(t, err)
+		db.DPrintf(db.TEST, "input %v", REDUCEIN)
+		r, err := mr.NewReducer(sc, wc.Reduce, []string{REDUCEIN, REDUCEOUT + strconv.Itoa(0), REDUCEOUT, "1", "true"}, p)
+		assert.Nil(t, err)
+		status := r.DoReduce()
+		db.DPrintf(db.TEST, "status %v", status)
+	}
+
 	if app == "mr-wc.yml" && nmap == 1 {
 		data := make(map[string]int, 0)
-		rdr, err := ts.OpenAsyncReader(REDUCEIN+strconv.Itoa(0), 0)
+		rdr, err := ts.OpenAsyncReader(filepath.Join(REDUCEIN, strconv.Itoa(0)), 0)
 		assert.Nil(t, err)
 		for {
 			var kv mr.KeyValue

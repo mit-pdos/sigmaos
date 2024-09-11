@@ -42,27 +42,20 @@ type Reducer struct {
 	asyncrw      bool
 }
 
-func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
-	if len(args) != 5 {
-		return nil, errors.New("NewReducer: too few arguments")
+func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
+	r := &Reducer{
+		input:        args[0],
+		outlink:      args[1],
+		outputTarget: args[2],
+		reducef:      reducef,
+		SigmaClnt:    sc,
+		perf:         p,
 	}
-	r := &Reducer{}
-	r.input = args[0]
-	r.outlink = args[1]
-	r.outputTarget = args[2]
-	r.reducef = reducef
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-	r.SigmaClnt = sc
-	r.perf = p
 	asyncrw, err := strconv.ParseBool(args[4])
 	if err != nil {
 		return nil, fmt.Errorf("NewReducer: can't parse asyncrw %v", args[3])
 	}
 	r.asyncrw = asyncrw
-	//	pn, err := r.ResolveMounts(r.outputTarget + rand.String(16))
-	//	if err != nil {
-	//		db.DFatalf("%v: ResolveMounts %v err %v", r.ProcEnv().GetPID(), r.tmp, err)
-	//	}
 	r.tmp = r.outputTarget + rand.String(16) //pn
 
 	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
@@ -91,11 +84,24 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 		r.syncwrt = w
 		r.pwrt = perf.NewPerfWriter(r.syncwrt, r.perf)
 	}
+	return r, nil
+}
 
-	if err := r.Started(); err != nil {
-		return nil, fmt.Errorf("NewReducer couldn't start %v", args)
+func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
+	if len(args) != 5 {
+		return nil, errors.New("NewReducer: too few arguments")
 	}
-
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	if err != nil {
+		return nil, fmt.Errorf("NewReducer: can't parse asyncrw %v", args[3])
+	}
+	r, err := NewReducer(sc, reducef, args, p)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.Started(); err != nil {
+		return nil, fmt.Errorf("NewReducer couldn't start %v err %v", args, err)
+	}
 	crash.Crasher(r.FsLib)
 	return r, nil
 }
@@ -159,18 +165,26 @@ func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, 
 
 type Tdata map[string][]string
 
-func (r *Reducer) readFiles(input string) (sp.Tlength, time.Duration, Tdata, []string, error) {
+func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, Tdata, []string, error) {
 	data := make(map[string][]string, 0)
 	lostMaps := []string{}
 	nfile := 0
 	nbytes := sp.Tlength(0)
 	duration := time.Duration(0)
-	dr := fslib.NewDirReader(r.FsLib, input)
+	str, err := r.SprintfDir("name/ux/~local/")
+	if err != nil {
+		db.DPrintf(db.MR, "SprintfDir %v err %v", r.input, err)
+		return 0, 0, nil, nil, err
+	}
+	db.DPrintf(db.MR, "Readfiles %v", str)
+	dr := fslib.NewDirReader(r.FsLib, r.input)
 	for nfile < r.nmaptask {
 		files, err := dr.WatchNewUniqueEntries()
 		if err != nil {
+			db.DPrintf(db.MR, "Watch err %v", err)
 			return 0, 0, nil, nil, err
 		}
+		db.DPrintf(db.MR, "files %v", files)
 		randOffset := int(rand.Uint64())
 		if randOffset < 0 {
 			randOffset *= -1
@@ -201,12 +215,12 @@ func (r *Reducer) emit(key []byte, value string) error {
 	return err
 }
 
-func (r *Reducer) doReduce() *proc.Status {
-	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.outlink, r.nmaptask)
-	nin, duration, data, lostMaps, err := r.readFiles(r.input)
+func (r *Reducer) DoReduce() *proc.Status {
+	db.DPrintf(db.ALWAYS, "DoReduce %v %v %v\n", r.input, r.outlink, r.nmaptask)
+	nin, duration, data, lostMaps, err := r.ReadFiles()
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Err readFiles: %v", err)
-		return proc.NewStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", r.ProcEnv().GetPID(), r.input, err), nil)
+		db.DPrintf(db.ALWAYS, "ReadFiles: err %v", err)
+		return proc.NewStatusErr(fmt.Sprintf("%v: ReadFiles %v err %v\n", r.ProcEnv().GetPID(), r.input, err), nil)
 	}
 	if len(lostMaps) > 0 {
 		return proc.NewStatusErr(RESTART, lostMaps)
@@ -243,10 +257,6 @@ func (r *Reducer) doReduce() *proc.Status {
 	if err := r.PutFileAtomic(r.outlink, 0777|sp.DMSYMLINK, []byte(r.tmp)); err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
 	}
-	//	err = r.Rename(r.tmp, r.output)
-	//	if err != nil {
-	//		return proc.NewStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", r.ProcEnv().GetPID(), r.tmp, r.output, err), nil)
-	//	}
 	return proc.NewStatusInfo(proc.StatusOK, r.input,
 		Result{false, r.input, nin, nbyte, duration.Milliseconds()})
 }
@@ -259,11 +269,15 @@ func RunReducer(reducef ReduceT, args []string) {
 	}
 	defer p.Done()
 	db.DPrintf(db.BENCH, "Reducer time since spawn %v", time.Since(pe.GetSpawnTime()))
-	r, err := newReducer(reducef, args, p)
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	if err != nil {
+		db.DFatalf("NewSigmaClnt err %v\n", err)
+	}
+	r, err := NewReducer(sc, reducef, args, p)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
 
-	status := r.doReduce()
+	status := r.DoReduce()
 	r.ClntExit(status)
 }

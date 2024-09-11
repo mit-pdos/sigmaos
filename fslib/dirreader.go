@@ -142,13 +142,22 @@ func (dr *DirReader) GetUniqueEntriesFilter(prefixFilter string) ([]string, erro
 
 // Watch for a directory change relative to present change and return
 // all (unique) entries.  Both present and sts are sorted.
-func (dr *DirReader) WatchUniqueEntries(present []string, prefixFilter string) ([]string, bool, error) {
+func (dr *DirReader) WatchUniqueEntries(present []string, prefixFilters []string) ([]string, bool, error) {
 	newents := make([]string, 0)
 	ok, err := dr.readDirWatch(dr.pn, func(sts []*sp.Stat) bool {
 		unchanged := true
 		for i, st := range sts {
-			if prefixFilter != "" && strings.HasPrefix(st.Name, prefixFilter) {
-				continue
+			if len(prefixFilters) > 0 {
+				skip := false
+				for _, pf := range prefixFilters {
+					if strings.HasPrefix(st.Name, pf) {
+						skip = true
+						break
+					}
+				}
+				if skip {
+					continue
+				}
 			}
 			if !dr.ents[st.Name] {
 				dr.ents[st.Name] = true

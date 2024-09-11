@@ -99,10 +99,15 @@ const (
 // spproxyd kernel
 const (
 	SPPROXYDKERNEL = "kernel-" + SPPROXYDREL + "-"
+	PROCQKERNEL    = "kernel-" + PROCQREL + "-"
 )
 
 func SPProxydKernel(kid string) string {
 	return SPPROXYDKERNEL + kid
+}
+
+func ProcqKernel(kid string) string {
+	return PROCQKERNEL + kid
 }
 
 func ProxyPathname(srv, kid string) string {

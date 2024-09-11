@@ -23,33 +23,33 @@ type NewValF[E any] func(string) (E, error)
 type DirCache[E any] struct {
 	*fslib.FsLib
 	sync.Mutex
-	hasEntries   *sync.Cond
-	dir          *sortedmap.SortedMap[string, E]
-	done         atomic.Uint64
-	Path         string
-	LSelector    db.Tselector
-	ESelector    db.Tselector
-	newVal       NewValF[E]
-	prefixFilter string
-	err          error
-	ch           chan string
+	hasEntries    *sync.Cond
+	dir           *sortedmap.SortedMap[string, E]
+	done          atomic.Uint64
+	Path          string
+	LSelector     db.Tselector
+	ESelector     db.Tselector
+	newVal        NewValF[E]
+	prefixFilters []string
+	err           error
+	ch            chan string
 }
 
 func NewDirCache[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], ch chan string, lSelector db.Tselector, ESelector db.Tselector) *DirCache[E] {
-	return NewDirCacheFilter(fsl, path, newVal, ch, lSelector, ESelector, "")
+	return NewDirCacheFilter(fsl, path, newVal, ch, lSelector, ESelector, nil)
 }
 
 // filter entries starting with prefix
-func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], ch chan string, LSelector db.Tselector, ESelector db.Tselector, prefix string) *DirCache[E] {
+func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], ch chan string, LSelector db.Tselector, ESelector db.Tselector, prefixes []string) *DirCache[E] {
 	dc := &DirCache[E]{
-		FsLib:        fsl,
-		Path:         path,
-		dir:          sortedmap.NewSortedMap[string, E](),
-		LSelector:    LSelector,
-		ESelector:    ESelector,
-		newVal:       newVal,
-		prefixFilter: prefix,
-		ch:           ch,
+		FsLib:         fsl,
+		Path:          path,
+		dir:           sortedmap.NewSortedMap[string, E](),
+		LSelector:     LSelector,
+		ESelector:     ESelector,
+		newVal:        newVal,
+		prefixFilters: prefixes,
+		ch:            ch,
 	}
 	dc.hasEntries = sync.NewCond(&dc.Mutex)
 	go dc.watchDir()
@@ -290,7 +290,7 @@ func (dc *DirCache[E]) watchDir() {
 	retry := false
 	for dc.done.Load() == 0 {
 		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
-		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilter)
+		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilters)
 		if ok { // reset retry?
 			retry = false
 		}

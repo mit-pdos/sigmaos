@@ -50,31 +50,31 @@ def graph_data(hotel_res_dir, hotel_overlays_res_dir, socialnet_res_dir, socialn
 
   # Scrape data
   hotel_avg_lat = get_lat(hotel_res_dir, 0, "Mean:", False)
-  hotel_overlays_avg_lat = get_lat(hotel_overlays_res_dir, 0, "Mean:", False)
+#  hotel_overlays_avg_lat = get_lat(hotel_overlays_res_dir, 0, "Mean:", False)
   social_avg_lat = get_lat(socialnet_res_dir, 0, "Mean:", True)
-  social_overlays_avg_lat = get_lat(socialnet_overlays_res_dir, 0, "Mean:", True)
+#  social_overlays_avg_lat = get_lat(socialnet_overlays_res_dir, 0, "Mean:", True)
 
   hotel_p99_lat = get_lat(hotel_res_dir, 0, " 99:", False)
-  hotel_overlays_p99_lat = get_lat(hotel_overlays_res_dir, 0, " 99:", False)
+#  hotel_overlays_p99_lat = get_lat(hotel_overlays_res_dir, 0, " 99:", False)
   social_p99_lat = get_lat(socialnet_res_dir, 0, " 99: ", True)
-  social_overlays_p99_lat = get_lat(socialnet_overlays_res_dir, 0, " 99: ", True)
+#  social_overlays_p99_lat = get_lat(socialnet_overlays_res_dir, 0, " 99: ", True)
 
   hotel_p99_lat_peak = get_lat(hotel_res_dir, -1, " 99:", False)
-  hotel_overlays_p99_lat_peak = get_lat(hotel_overlays_res_dir, -1, " 99:", False)
+#  hotel_overlays_p99_lat_peak = get_lat(hotel_overlays_res_dir, -1, " 99:", False)
   social_p99_lat_peak = get_lat(socialnet_res_dir, -1, " 99: ", True)
-  social_overlays_p99_lat_peak = get_lat(socialnet_overlays_res_dir, -1, " 99: ", True)
+#  social_overlays_p99_lat_peak = get_lat(socialnet_overlays_res_dir, -1, " 99: ", True)
 
   hotel_peak_tpt = get_tpt(hotel_res_dir)
-  hotel_overlays_peak_tpt = get_tpt(hotel_overlays_res_dir)
+#  hotel_overlays_peak_tpt = get_tpt(hotel_overlays_res_dir)
   social_peak_tpt = get_tpt(socialnet_res_dir)
-  social_overlays_peak_tpt = get_tpt(socialnet_overlays_res_dir)
+#  social_overlays_peak_tpt = get_tpt(socialnet_overlays_res_dir)
 
   # Graph data
-  sys            = [        "XOS-hotel",         "XOS-hotel-overlay", "k8s-hotel",     "XOS-socialnet",      "XOS-socialnet-overlay", "k8s-socialnet", ]
-  d_avg_lat      = [      hotel_avg_lat,      hotel_overlays_avg_lat,        4.83,      social_avg_lat,      social_overlays_avg_lat,            5.49, ]
-  d_p99_lat      = [      hotel_p99_lat,      hotel_overlays_p99_lat,       12.76,      social_p99_lat,      social_overlays_p99_lat,            9.01, ]
-  d_p99_lat_peak = [ hotel_p99_lat_peak, hotel_overlays_p99_lat_peak,       45.25, social_p99_lat_peak, social_overlays_p99_lat_peak,           12.86, ]
-  d_peak_tpt     = [     hotel_peak_tpt,     hotel_overlays_peak_tpt,        5877,     social_peak_tpt,     social_overlays_peak_tpt,            1993, ]
+  sys            = [        "XOS-hotel", "k8s-hotel",     "XOS-socialnet",  "k8s-socialnet", ]
+  d_avg_lat      = [      hotel_avg_lat,        4.83,      social_avg_lat,  5.49, ]
+  d_p99_lat      = [      hotel_p99_lat,       12.76,      social_p99_lat,  9.01, ]
+  d_p99_lat_peak = [ hotel_p99_lat_peak,       45.25, social_p99_lat_peak, 12.86, ]
+  d_peak_tpt     = [     hotel_peak_tpt,        5877,     social_peak_tpt,  1993, ]
 
   width = 0.25
   

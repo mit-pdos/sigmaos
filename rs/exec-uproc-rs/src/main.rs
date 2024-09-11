@@ -127,6 +127,8 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         "mnt",
         "tmp",
         "tmp/sigmaos-perf",
+        "tmp/python",
+        "tmp/spproxyd",
     ];
 
     let newroot = "/home/sigmaos/jail/";
@@ -198,6 +200,17 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/tmp/", "tmp")?;
+
+    // Python
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/tmp/python", "tmp/python")?;
+
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
+        .mount("/tmp/spproxyd", "tmp/spproxyd")?;
 
     // Only mount /tmp/sigmaos-perf directory if SIGMAPERF is set (meaning we are
     // benchmarking and want to extract the results)

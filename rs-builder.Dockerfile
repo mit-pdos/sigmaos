@@ -10,13 +10,23 @@ RUN apk add --no-cache libseccomp \
   gcc \
   libc-dev \
   parallel \
-  libseccomp-static
+  libseccomp-static \
+  make
 
 RUN echo 'will cite' | parallel --citation || true
 
 WORKDIR /home/sigmaos
 RUN mkdir -p bin/kernel && \
-  mkdir -p bin/user
+  mkdir -p bin/user && \
+  mkdir -p pylib
+
+# Install Python
+RUN wget https://www.python.org/ftp/python/3.11.0/Python-3.11.0.tar.xz && tar -xJf Python-3.11.0.tar.xz
+COPY pyModule.config pyModule.config
+RUN cd Python-3.11.0 && \
+  cat ../pyModule.config >> Modules/Setup && \
+  ./configure --disable-shared && \
+  make -j
 
 # Install rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y

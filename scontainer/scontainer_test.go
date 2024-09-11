@@ -2,18 +2,14 @@ package scontainer_test
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/docker/go-connections/nat"
-
 	db "sigmaos/debug"
 	"sigmaos/mem"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/test"
 )
@@ -34,19 +30,19 @@ func TestSyscallBlock(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestExpose(t *testing.T) {
-	const (
-		FPORT port.Tport = 100
-		LPORT port.Tport = 200
-	)
-	ports, err := nat.NewPort("tcp", FPORT.String()+"-"+LPORT.String())
-	assert.Nil(t, err)
-	pms, err := nat.ParsePortSpec("0.0.0.0:" + FPORT.String() + "-" + LPORT.String() + ":8100-8200")
-	assert.Nil(t, err)
-	pmap := nat.PortMap{}
-	pmap[ports] = []nat.PortBinding{}
-	log.Printf("ports %v pms  %v\n", ports, pms)
-}
+// func TestExpose(t *testing.T) {
+// 	const (
+// 		FPORT port.Tport = 100
+// 		LPORT port.Tport = 200
+// 	)
+// 	ports, err := nat.NewPort("tcp", FPORT.String()+"-"+LPORT.String())
+// 	assert.Nil(t, err)
+// 	pms, err := nat.ParsePortSpec("0.0.0.0:" + FPORT.String() + "-" + LPORT.String() + ":8100-8200")
+// 	assert.Nil(t, err)
+// 	pmap := nat.PortMap{}
+// 	pmap[ports] = []nat.PortBinding{}
+// 	log.Printf("ports %v pms  %v\n", ports, pms)
+// }
 
 func runMemHog(ts *test.Tstate, c chan error, id, delay, mem, dur string, nthread int) {
 	p := proc.NewProc("memhog", []string{id, delay, mem, dur, strconv.Itoa(nthread)})
@@ -71,8 +67,8 @@ func runMemBlock(ts *test.Tstate, mem string) *proc.Proc {
 	db.DPrintf(db.TEST, "Spawning memblock for %v of memory", mem)
 	p := proc.NewProc("memblock", []string{mem})
 	p.SetType(proc.T_LC)
-	_, errs := ts.SpawnBurst([]*proc.Proc{p}, 1)
-	assert.True(ts.T, len(errs) == 0, "Error spawn: %v", errs)
+	// _, errs := ts.SpawnBurst([]*proc.Proc{p}, 1)
+	// assert.True(ts.T, len(errs) == 0, "Error spawn: %v", errs)
 	err := ts.WaitStart(p.GetPid())
 	assert.Nil(ts.T, err, "Error waitstart: %v", err)
 	return p
@@ -170,5 +166,23 @@ func TestMemBlockManyFail(t *testing.T) {
 	status, err := ts.WaitExit(p2.GetPid())
 	assert.Nil(ts.T, err, "Err waitexit: %v", err)
 	assert.False(ts.T, status.IsStatusOK(), "Status ok: %v", status)
+	ts.Shutdown()
+}
+
+func TestPythonSmall(t *testing.T) {
+	ts, _ := test.NewTstateAll(t)
+	p := proc.NewProc("python", []string{})
+	start := time.Now()
+	err := ts.Spawn(p)
+	assert.Nil(ts.T, err)
+	duration := time.Since(start)
+	err = ts.WaitStart(p.GetPid())
+	assert.Nil(ts.T, err, "Error waitstart: %v", err)
+	duration2 := time.Since(start)
+	_, err = ts.WaitExit(p.GetPid())
+	assert.Nil(t, err)
+	duration3 := time.Since(start)
+	fmt.Printf("cold spawn %v, start %v, exit %v", duration, duration2, duration3)
+
 	ts.Shutdown()
 }

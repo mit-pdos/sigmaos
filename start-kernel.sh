@@ -118,6 +118,7 @@ mkdir -p /tmp/sigmaos-bin
 mkdir -p /tmp/sigmaos-bin/$KERNELID
 mkdir -p /tmp/sigmaos-perf
 mkdir -p /tmp/sigmaos-data
+mkdir -p /tmp/python
 chmod a+w /tmp/sigmaos-perf
 
 # Pull latest docker images, if not running a local build.
@@ -147,6 +148,7 @@ MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/tmp/spproxyd,dst=/tmp/spproxyd \
   --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data \
   --mount type=bind,src=/tmp/sigmaos-bin/${KERNELID},dst=/home/sigmaos/bin/user/realms \
+  --mount type=bind,src=/tmp/python,dst=/tmp/python \
   --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf \
   --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws"
 if [ "$TAG" == "local-build" ]; then

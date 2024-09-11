@@ -64,10 +64,12 @@ fi
 TMP=/tmp/sigmaos
 BUILD_LOG=/tmp/sigmaos-build
 UPROCD_BIN=/tmp/sigmaos-uprocd-bin
+PYTHON=/tmp/python
 
 # tests uses hosts /tmp, which mounted in kernel container.
 mkdir -p $TMP
 mkdir -p $BUILD_LOG
+mkdir -p $PYTHON
 
 # Make a dir to hold user proc build output
 ROOT=$(pwd)
@@ -131,7 +133,7 @@ if [ -z "$rsbuildercid" ]; then
   # Start builder
   echo "========== Starting Rust builder container =========="
   docker run --rm -d -it \
-    --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
+    --mount type=bind,src=$ROOT,dst=/home/sigmaos-local/ \
     sig-rs-builder
   rsbuildercid=$(docker ps -a | grep -w "sig-rs-builder" | cut -d " " -f1)
   until [ "`docker inspect -f {{.State.Running}} $rsbuildercid`"=="true" ]; do
@@ -168,8 +170,10 @@ RS_BUILD_ARGS="--rustpath \$HOME/.cargo/bin/cargo \
 
 echo "========== Building Rust bins =========="
 docker exec -it $rsbuildercid \
+  sh -c "ls -al"
+docker exec -it $rsbuildercid \
   /usr/bin/time -f "Build time: %e sec" \
-  ./make-rs.sh $RS_BUILD_ARGS --version $VERSION \
+  ../sigmaos-local/make-rs.sh $RS_BUILD_ARGS --version $VERSION \
   2>&1 | tee $BUILD_LOG/make-user-rs.out
 echo "========== Done building Rust bins =========="
 
@@ -179,6 +183,9 @@ if [ "${TARGET}" == "local" ]; then
   cp $KERNELBIN/uprocd $UPROCD_BIN/
   cp $KERNELBIN/spproxyd $UPROCD_BIN/
   cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
+  cp $KERNELBIN/python $UPROCD_BIN/
+  cp -r $KERNELBIN/pylib $PYTHON/
+  cp -r $KERNELBIN/ld_fstatat.so $PYTHON/
 fi
 echo "========== Done copying kernel bins for uproc =========="
 

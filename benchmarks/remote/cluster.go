@@ -10,24 +10,26 @@ import (
 )
 
 type ClusterConfig struct {
-	bcfg            *BenchConfig
-	lcfg            *LocalFSConfig
-	LeaderNodeIP    string `json:"leader_node_ip"`
-	NumNodes        int    `json:"num_nodes"`
-	NumCoresPerNode uint   `json:"num_cores_per_node"`
-	NumFullNodes    int    `json:"num_full_nodes"`
-	TurboBoost      bool   `json:"turbo_boost"`
+	bcfg              *BenchConfig
+	lcfg              *LocalFSConfig
+	LeaderNodeIP      string `json:"leader_node_ip"`
+	NumNodes          int    `json:"num_nodes"`
+	NumCoresPerNode   uint   `json:"num_cores_per_node"`
+	NumFullNodes      int    `json:"num_full_nodes"`
+	NumProcqOnlyNodes int    `json:"num_procq_only_nodes"`
+	TurboBoost        bool   `json:"turbo_boost"`
 }
 
-func NewClusterConfig(bcfg *BenchConfig, lcfg *LocalFSConfig, numNodes int, numCoresPerNode uint, numFullNodes int, turboBoost bool) (*ClusterConfig, error) {
+func NewClusterConfig(bcfg *BenchConfig, lcfg *LocalFSConfig, numNodes int, numCoresPerNode uint, numFullNodes int, numProcqOnlyNodes int, turboBoost bool) (*ClusterConfig, error) {
 	ccfg := &ClusterConfig{
-		bcfg:            bcfg,
-		lcfg:            lcfg,
-		LeaderNodeIP:    sp.NOT_SET,
-		NumNodes:        numNodes,
-		NumCoresPerNode: numCoresPerNode,
-		NumFullNodes:    numFullNodes,
-		TurboBoost:      turboBoost,
+		bcfg:              bcfg,
+		lcfg:              lcfg,
+		LeaderNodeIP:      sp.NOT_SET,
+		NumNodes:          numNodes,
+		NumCoresPerNode:   numCoresPerNode,
+		NumFullNodes:      numFullNodes,
+		NumProcqOnlyNodes: numProcqOnlyNodes,
+		TurboBoost:        turboBoost,
 	}
 	slIP, err := ccfg.getLeaderNodeIP()
 	if err != nil {
@@ -56,6 +58,7 @@ func (ccfg *ClusterConfig) StartSigmaOSCluster() error {
 		args = append(args, "--turbo")
 	}
 	args = append(args, "--numfullnode", strconv.Itoa(ccfg.NumFullNodes))
+	args = append(args, "--numprocqnode", strconv.Itoa(ccfg.NumProcqOnlyNodes))
 	err := ccfg.lcfg.RunScriptRedirectOutputFile("./start-sigmaos.sh", CLUSTER_INIT_LOG, args...)
 	if err != nil {
 		return fmt.Errorf("Err StopSigmaOSCluster: %v", err)

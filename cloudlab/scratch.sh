@@ -35,6 +35,10 @@ for vm in $vms; do
 #  aa-status | grep sigmaos
 #  docker swarm leave
 #  docker swarm join --token SWMTKN-1-1yub2fsj1bsxn9ikm8xsf4an4fb0sln0881opnoy7ko5muxgz9-1shovmaebf8616ds1mip1rzr1 10.10.1.1:2377
-nproc
+#nproc
+echo "N Procq:"
+ps -fax | grep "bin/kernel/" | grep "/procq" | wc -l
+echo "N schedd:"
+ps -fax | grep "bin/kernel/" | grep "schedd" | wc -l
 ENDSSH
 done

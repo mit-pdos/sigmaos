@@ -108,6 +108,11 @@ func (k *Kernel) IsPurelySPProxydKernel() bool {
 	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.SPPROXYDREL
 }
 
+func (k *Kernel) IsPurelyProcqKernel() bool {
+	db.DPrintf(db.KERNEL, "Check is procq kernel: %v", k.Param.Services)
+	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.PROCQREL
+}
+
 func (k *Kernel) Shutdown() error {
 	k.Lock()
 	defer k.Unlock()

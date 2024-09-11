@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|minnode|named|realm|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_procq|node|node_no_procq|minnode|procq_node|named|realm_no_procq|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -28,11 +28,20 @@ while [[ "$#" -gt 1 ]]; do
         "all")
             BOOT="knamed;procq;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
             ;;
+        "all_no_procq")
+            BOOT="knamed;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
+            ;;
         "node")
             BOOT="procq;schedd;ux;s3;db;chunkd;mongo"
             ;;
+        "node_no_procq")
+            BOOT="schedd;ux;s3;db;chunkd;mongo"
+            ;;
         "minnode")
             BOOT="schedd;ux;s3;chunkd"
+            ;;
+        "proc_node")
+            BOOT="procq"
             ;;
         "named")
             BOOT="knamed"
@@ -42,6 +51,9 @@ while [[ "$#" -gt 1 ]]; do
             ;;
         "realm")
             BOOT="knamed;procq;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
+            ;;
+        "realm_no_procq")
+            BOOT="knamed;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
             ;;
         *)
             echo "unexpected argument $1 to boot"

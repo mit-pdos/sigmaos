@@ -1,0 +1,8 @@
+app: "wc"
+nreduce: 1
+binsz: 262144
+input: "name/ux/~local/gutenberg/"
+intermediate: "name/ux/~local/mr-intermediate"
+output: "name/ux/~local/mr-out/"
+linesz: 65536
+local: "/tmp/gutenberg/"

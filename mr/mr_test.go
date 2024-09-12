@@ -144,7 +144,7 @@ func TestMapperAlone(t *testing.T) {
 	const (
 		//SPLITSZ   =  64 * sp.KBYTE
 		SPLITSZ   = 10 * sp.MBYTE
-		REDUCEIN  = "name/ux/~local/reducer"
+		REDUCEIN  = "name/ux/~local/reducer/"
 		REDUCEOUT = "name/ux/~local/test-reducer-out.txt"
 		DOREDUCE  = true
 	)
@@ -153,8 +153,8 @@ func TestMapperAlone(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts.RmDir(REDUCEIN)
 	ts.Remove(REDUCEOUT)
+	ts.RmDir(REDUCEIN)
 	ts.MkDir(REDUCEIN, 0777)
 
 	job, err1 = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
@@ -169,6 +169,10 @@ func TestMapperAlone(t *testing.T) {
 		assert.Nil(t, err, "UploadFile %v %v err %v", LOCALINPUT, filepath.Join(job.Input, file), err)
 	}
 
+	srv, ok, err := ts.ResolveMount(REDUCEIN)
+	assert.Nil(t, err)
+	assert.True(t, ok)
+
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err NewBins %v", err)
 	done := make(chan bool)
@@ -181,10 +185,8 @@ func TestMapperAlone(t *testing.T) {
 			assert.Nil(t, err, "NewSC: %v", err)
 			m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
 			assert.Nil(t, err, "NewMapper %v", err)
-			err = m.InitWrt(0, filepath.Join(REDUCEIN, strconv.Itoa(i)))
+			err = m.InitWrt(0, filepath.Join(srv, strconv.Itoa(i)))
 			assert.Nil(t, err)
-			db.DPrintf(db.TEST, "Bins: %v", bins)
-
 			start := time.Now()
 			nin := sp.Tlength(0)
 			for _, b := range bins {
@@ -227,16 +229,20 @@ func TestMapperAlone(t *testing.T) {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
 		sc, err := sigmaclnt.NewSigmaClnt(pe)
 		assert.Nil(t, err)
-		db.DPrintf(db.TEST, "input %v", REDUCEIN)
-		r, err := mr.NewReducer(sc, wc.Reduce, []string{REDUCEIN, REDUCEOUT + strconv.Itoa(0), REDUCEOUT, "1", "true"}, p)
+
+		str, err := sc.SprintfDir(srv)
+		assert.Nil(t, err, "SprintfDir failed err %v", err)
+		db.DPrintf(db.TEST, "Reduce input: %v", str)
+
+		r, err := mr.NewReducer(sc, wc.Reduce, []string{srv, REDUCEOUT + strconv.Itoa(0), REDUCEOUT, "1", "true"}, p)
 		assert.Nil(t, err)
 		status := r.DoReduce()
-		db.DPrintf(db.TEST, "status %v", status)
+		assert.True(t, status.IsStatusOK(), "status %v", status)
 	}
 
 	if app == "mr-wc.yml" && nmap == 1 {
 		data := make(map[string]int, 0)
-		rdr, err := ts.OpenAsyncReader(filepath.Join(REDUCEIN, strconv.Itoa(0)), 0)
+		rdr, err := ts.OpenAsyncReader(filepath.Join(srv, strconv.Itoa(0)), 0)
 		assert.Nil(t, err)
 		for {
 			var kv mr.KeyValue

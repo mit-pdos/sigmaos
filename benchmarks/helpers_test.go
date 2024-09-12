@@ -88,8 +88,8 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	}
 }
 
-func runDummySpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) time.Duration {
-	p := proc.NewProc(sp.DUMMY_PROG, nil)
+func runDummySpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, pid sp.Tpid) time.Duration {
+	p := proc.NewProcPid(pid, sp.DUMMY_PROG, nil)
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "Spawn: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())
@@ -99,8 +99,8 @@ func runDummySpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt) ti
 	return 99 * time.Second
 }
 
-func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, prog string, kernelpref []string) time.Duration {
-	p := proc.NewProc(prog, nil)
+func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, prog string, pid sp.Tpid, kernelpref []string) time.Duration {
+	p := proc.NewProcPid(pid, prog, nil)
 	p.SetKernels(kernelpref)
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "Spawn: %v", err)
@@ -111,8 +111,8 @@ func runRustSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, pro
 	return 99 * time.Second
 }
 
-func runSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration {
-	p := proc.NewProc("spawn-bench", nil)
+func runSpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration {
+	p := proc.NewProcPid(pid, "spawn-bench", nil)
 	p.SetKernels(kernelpref)
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "WaitStart: %v", err)

@@ -453,13 +453,13 @@ func TestMicroScheddSpawn(t *testing.T) {
 
 	done := make(chan bool)
 	// Prep Schedd job
-	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration {
+	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration {
 		if USE_RUST_PROC {
-			return runRustSpawnBenchProc(ts1, sc, prog, kernelpref)
+			return runRustSpawnBenchProc(ts1, sc, prog, pid, kernelpref)
 		} else if USE_DUMMY_PROC {
-			return runDummySpawnBenchProc(ts1, sc)
+			return runDummySpawnBenchProc(ts1, sc, pid)
 		} else {
-			return runSpawnBenchProc(ts1, sc, kernelpref)
+			return runSpawnBenchProc(ts1, sc, pid, kernelpref)
 		}
 	}, kernels, WITH_KERNEL_PREF)
 	// Run Schedd job

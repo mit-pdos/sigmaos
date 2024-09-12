@@ -13,10 +13,11 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/loadgen"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
-type scheddFn func(sc *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration
+type scheddFn func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration
 type kernelPrefFn func() []string
 
 type ScheddJobInstance struct {
@@ -29,6 +30,7 @@ type ScheddJobInstance struct {
 	kidx    atomic.Int64
 	clnts   []*sigmaclnt.SigmaClnt
 	lgs     []*loadgen.LoadGenerator
+	procCnt atomic.Int64
 	*test.RealmTstate
 }
 
@@ -71,8 +73,9 @@ func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, 
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
+			pid := sp.Tpid("spawn-latency-" + strconv.Itoa(int(ji.procCnt.Add(1))))
 			// Run a single request.
-			dur := ji.spawnFn(ji.clnts[i], ji.kpfn())
+			dur := ji.spawnFn(ji.clnts[i], pid, ji.kpfn())
 			return dur, true
 		}))
 	}

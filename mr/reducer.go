@@ -171,17 +171,12 @@ func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, Tdata, []string, error
 	nfile := 0
 	nbytes := sp.Tlength(0)
 	duration := time.Duration(0)
-	str, err := r.SprintfDir("name/ux/~local/")
-	if err != nil {
-		db.DPrintf(db.MR, "SprintfDir %v err %v", r.input, err)
-		return 0, 0, nil, nil, err
-	}
-	db.DPrintf(db.MR, "Readfiles %v", str)
+
 	dr := fslib.NewDirReader(r.FsLib, r.input)
 	for nfile < r.nmaptask {
 		files, err := dr.WatchNewUniqueEntries()
 		if err != nil {
-			db.DPrintf(db.MR, "Watch err %v", err)
+			db.DPrintf(db.MR, "Watch %v err %v", files, err)
 			return 0, 0, nil, nil, err
 		}
 		db.DPrintf(db.MR, "files %v", files)

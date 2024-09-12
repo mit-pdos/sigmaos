@@ -145,7 +145,7 @@ func (m *Mapper) InitWrt(r int, name string) error {
 	return nil
 }
 
-func (m *Mapper) initMapper() error {
+func (m *Mapper) InitMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
 	m.MkDir(m.intOutput, 0777)
@@ -190,8 +190,7 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 }
 
 // Inform reducer where to find map output
-func (m *Mapper) informReducer() error {
-	/// XXX	intermediateDir := sp.UX + "/~local/mr-intermediate"
+func (m *Mapper) InformReducer() error {
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
 	pn, err := m.ResolveMounts(outDirPath)
 	if err != nil {
@@ -199,10 +198,6 @@ func (m *Mapper) informReducer() error {
 	}
 	for r := 0; r < m.nreducetask; r++ {
 		fn := mshardfile(pn, r) + m.rand
-		//		err = m.Rename(fn+m.rand, fn)
-		//		if err != nil {
-		//			return fmt.Errorf("%v: rename %v -> %v err %v\n", m.ProcEnv().GetPID(), fn+m.rand, fn, err)
-		//		}
 
 		name := symname(m.job, strconv.Itoa(r), m.bin)
 
@@ -365,7 +360,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	if err := m.informReducer(); err != nil {
+	if err := m.InformReducer(); err != nil {
 		return 0, 0, err
 	}
 	return ni, nout, nil
@@ -386,7 +381,7 @@ func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
 
-	if err = m.initMapper(); err != nil {
+	if err = m.InitMapper(); err != nil {
 		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
 		return
 	}

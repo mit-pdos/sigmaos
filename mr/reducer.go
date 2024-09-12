@@ -56,9 +56,9 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf
 		return nil, fmt.Errorf("NewReducer: can't parse asyncrw %v", args[3])
 	}
 	r.asyncrw = asyncrw
-	r.tmp = r.outputTarget + rand.String(16) //pn
+	r.tmp = r.outputTarget + rand.String(16)
 
-	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
+	db.DPrintf(db.MR, "Reducer outputting to %v %t", r.tmp, r.asyncrw)
 
 	m, err := strconv.Atoi(args[3])
 	if err != nil {
@@ -176,10 +176,8 @@ func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, Tdata, []string, error
 	for nfile < r.nmaptask {
 		files, err := dr.WatchNewUniqueEntries()
 		if err != nil {
-			db.DPrintf(db.MR, "Watch %v err %v", files, err)
 			return 0, 0, nil, nil, err
 		}
-		db.DPrintf(db.MR, "files %v", files)
 		randOffset := int(rand.Uint64())
 		if randOffset < 0 {
 			randOffset *= -1
@@ -191,8 +189,6 @@ func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, Tdata, []string, error
 			if !ok {
 				lostMaps = append(lostMaps, strings.TrimPrefix(f, "m-"))
 			}
-			//				runtime.GC()
-			//				debug.FreeOSMemory()
 			nbytes += m
 			duration += d
 			nfile += 1
@@ -211,7 +207,7 @@ func (r *Reducer) emit(key []byte, value string) error {
 }
 
 func (r *Reducer) DoReduce() *proc.Status {
-	db.DPrintf(db.ALWAYS, "DoReduce %v %v %v\n", r.input, r.outlink, r.nmaptask)
+	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", r.input, r.outlink, r.nmaptask)
 	nin, duration, data, lostMaps, err := r.ReadFiles()
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "ReadFiles: err %v", err)
@@ -222,12 +218,12 @@ func (r *Reducer) DoReduce() *proc.Status {
 	}
 
 	ms := duration.Milliseconds()
-	db.DPrintf(db.ALWAYS, "reduce readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
+	db.DPrintf(db.ALWAYS, "DoReduce: Readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
 
 	start := time.Now()
 	for k, vs := range data {
 		if err := r.reducef(k, vs, r.emit); err != nil {
-			db.DPrintf(db.ALWAYS, "Err reducef: %v", err)
+			db.DPrintf(db.ALWAYS, "DoReuce: reducef: %v err %v", k, err)
 			return proc.NewStatusErr("reducef", err)
 		}
 	}

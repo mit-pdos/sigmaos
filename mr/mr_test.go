@@ -144,27 +144,16 @@ func TestMapperAlone(t *testing.T) {
 	const (
 		//SPLITSZ   =  64 * sp.KBYTE
 		SPLITSZ   = 10 * sp.MBYTE
-		REDUCEIN  = "name/ux/~local/reducer/"
-		REDUCEOUT = "name/ux/~local/test-reducer-out.txt"
+		REDUCEOUT = "name/ux/~local/test/rout"
 		DOREDUCE  = true
 	)
-
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	t1, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
+	ts := newTstate(t1, app) // or --app mr-wc-ux.yml or --app mr-ux-wiki1G.yml
+
 	ts.Remove(REDUCEOUT)
-
-	srv, ok, err := ts.ResolveMount(REDUCEIN)
-	assert.Nil(t, err)
-	assert.True(t, ok)
-
-	ts.RmDir(srv)
-	ts.MkDir(srv, 0777)
-
-	job, err1 = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
-	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
-	job.Nreduce = 1
 
 	if strings.HasPrefix(job.Input, sp.UX) {
 		file := filepath.Base(LOCALINPUT)
@@ -184,10 +173,10 @@ func TestMapperAlone(t *testing.T) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			sc, err := sigmaclnt.NewSigmaClnt(pe)
 			assert.Nil(t, err, "NewSC: %v", err)
-			m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
+			m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, ts.job, p, job.Nreduce, job.Linesz, job.Input, job.Intermediate, true)
 			assert.Nil(t, err, "NewMapper %v", err)
-			err = m.InitWrt(0, filepath.Join(srv, strconv.Itoa(i)))
-			assert.Nil(t, err)
+			err = m.InitMapper()
+			assert.Nil(t, err, "InitMapper %v", err)
 			start := time.Now()
 			nin := sp.Tlength(0)
 			for _, b := range bins {
@@ -213,11 +202,14 @@ func TestMapperAlone(t *testing.T) {
 				}
 				m.DoCombine()
 				db.DPrintf(db.ALWAYS, "%s: in %s %vms (%s)\n", "map", humanize.Bytes(uint64(ninbin)), time.Since(start).Milliseconds(), test.TputStr(ninbin, time.Since(binstart).Milliseconds()))
+				break
 			}
 			nout, err := m.CloseWrt()
 			if err != nil {
 				db.DFatalf("CloseWrt err %v", err)
 			}
+			err = m.InformReducer()
+			assert.Nil(t, err)
 			db.DPrintf(db.ALWAYS, "%s: in %s out %s tot %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 			done <- true
 		}(i)
@@ -226,22 +218,21 @@ func TestMapperAlone(t *testing.T) {
 		<-done
 	}
 
+	srv := "XXX"
 	if DOREDUCE {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
 		sc, err := sigmaclnt.NewSigmaClnt(pe)
 		assert.Nil(t, err)
-
-		str, err := sc.SprintfDir(srv)
-		assert.Nil(t, err, "SprintfDir failed err %v", err)
-		db.DPrintf(db.TEST, "Reduce input: %v", str)
-
-		r, err := mr.NewReducer(sc, wc.Reduce, []string{srv, REDUCEOUT + strconv.Itoa(0), REDUCEOUT, "1", "true"}, p)
+		in := mr.ReduceIn(ts.job) + "/" + strconv.Itoa(0)
+		r, err := mr.NewReducer(sc, wc.Reduce, []string{in, REDUCEOUT + strconv.Itoa(0), REDUCEOUT, "1", "true"}, p)
 		assert.Nil(t, err)
 		status := r.DoReduce()
 		assert.True(t, status.IsStatusOK(), "status %v", status)
 	}
 
 	if app == "mr-wc.yml" && nmap == 1 {
+		// ts.checkJob(app)
+
 		data := make(map[string]int, 0)
 		rdr, err := ts.OpenAsyncReader(filepath.Join(srv, strconv.Itoa(0)), 0)
 		assert.Nil(t, err)

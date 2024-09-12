@@ -82,6 +82,10 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 		buf:         make([]byte, 0, lsz),
 		line:        make([]byte, 0, lsz),
 	}
+	err := m.initMapper()
+	if err != nil {
+		return nil, err
+	}
 	return m, nil
 }
 
@@ -124,7 +128,7 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 	return nout, nil
 }
 
-func (m *Mapper) InitWrt(r int, name string) error {
+func (m *Mapper) initWrt(r int, name string) error {
 	db.DPrintf(db.MR, "InitWrt %v", name)
 	if m.asyncrw {
 		if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
@@ -145,7 +149,7 @@ func (m *Mapper) InitWrt(r int, name string) error {
 	return nil
 }
 
-func (m *Mapper) InitMapper() error {
+func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
 	m.MkDir(m.intOutput, 0777)
@@ -157,7 +161,7 @@ func (m *Mapper) InitMapper() error {
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output shard for reducer r
 		oname := mshardfile(outDirPath, r) + m.rand
-		if err := m.InitWrt(r, oname); err != nil {
+		if err := m.initWrt(r, oname); err != nil {
 			m.closewrts()
 			return err
 		}
@@ -276,7 +280,7 @@ func (m *Mapper) DoCombine() error {
 	return nil
 }
 
-func (m *Mapper) DoSplit(s *Split, emit EmitT) (sp.Tlength, error) {
+func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	off := s.Offset
 	if off != 0 {
 		// -1 to pick up last byte from prev split so that if s.Offset
@@ -325,7 +329,7 @@ func (m *Mapper) DoSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	return sp.Tlength(n), nil
 }
 
-func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
+func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 	db.DPrintf(db.ALWAYS, "doMap %v", m.input)
 	rdr, err := m.OpenReader(m.input)
 	if err != nil {
@@ -345,7 +349,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 	}
 	for _, s := range bin {
 		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)
-		n, err := m.DoSplit(&s, emit)
+		n, err := m.doSplit(&s, emit)
 		if err != nil {
 			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)
 			return 0, 0, err
@@ -380,13 +384,8 @@ func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
-
-	if err = m.InitMapper(); err != nil {
-		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
-		return
-	}
 	start := time.Now()
-	nin, nout, err := m.doMap()
+	nin, nout, err := m.DoMap()
 	db.DPrintf(db.MR_TPT, "%s: in %s out tot %v %f %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, m.input,

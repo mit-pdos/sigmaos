@@ -163,57 +163,39 @@ func TestMapperAlone(t *testing.T) {
 		assert.Nil(t, err, "UploadFile %v %v err %v", LOCALINPUT, filepath.Join(job.Input, file), err)
 	}
 
-	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
-	assert.Nil(t, err, "Err NewBins %v", err)
+	nmap, err := mr.PrepareJob(ts.FsLib, ts.tasks, ts.job, job)
+	assert.Nil(ts.T, err, "PrepareJob err %v: %v", job, err)
+	assert.NotEqual(ts.T, 0, nmap)
+
 	done := make(chan bool)
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
-	for i := 0; i < nmap; i++ {
+
+	tns, err := ts.tasks.Mft.GetTasks()
+	assert.Nil(t, err)
+
+	db.DPrintf(db.ALWAYS, "tasks %v %d", tns, nmap)
+
+	for i, task := range tns {
+		input := ts.tasks.Mft.TaskPathName(task)
 		go func(i int) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			sc, err := sigmaclnt.NewSigmaClnt(pe)
 			assert.Nil(t, err, "NewSC: %v", err)
-			m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, ts.job, p, job.Nreduce, job.Linesz, job.Input, job.Intermediate, true)
+			// Run with wc-specialized combiner:
+			// n, err := m.DoSplit(&s, m.CombineWc)
+			// Run without combining:
+			// n, err := m.DoSplit(&s, m.Emit)
+			m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, ts.job, p, job.Nreduce, job.Linesz, input, job.Intermediate, true)
 			assert.Nil(t, err, "NewMapper %v", err)
-			err = m.InitMapper()
-			assert.Nil(t, err, "InitMapper %v", err)
 			start := time.Now()
-			nin := sp.Tlength(0)
-			for _, b := range bins {
-				binstart := time.Now()
-				ninbin := sp.Tlength(0)
-				for _, s := range b {
-					// Run with wc-specialized combiner:
-					// n, err := m.DoSplit(&s, m.CombineWc)
-					// Run without combining:
-					// n, err := m.DoSplit(&s, m.Emit)
-					n, err := m.DoSplit(&s, m.Combine)
-					if err != nil {
-						db.DFatalf("DoSplit err %v", err)
-					}
-					ninbin += n
-					nin += n
-					if timeout > 0 && time.Since(start) > timeout {
-						break
-					}
-				}
-				if timeout > 0 && time.Since(start) > timeout {
-					break
-				}
-				m.DoCombine()
-				db.DPrintf(db.ALWAYS, "%s: in %s %vms (%s)\n", "map", humanize.Bytes(uint64(ninbin)), time.Since(start).Milliseconds(), test.TputStr(ninbin, time.Since(binstart).Milliseconds()))
-				break
-			}
-			nout, err := m.CloseWrt()
-			if err != nil {
-				db.DFatalf("CloseWrt err %v", err)
-			}
-			err = m.InformReducer()
+			nin, nout, err := m.DoMap()
 			assert.Nil(t, err)
 			db.DPrintf(db.ALWAYS, "%s: in %s out %s tot %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 			done <- true
 		}(i)
 	}
+	nmap = 1
 	for i := 0; i < nmap; i++ {
 		<-done
 	}

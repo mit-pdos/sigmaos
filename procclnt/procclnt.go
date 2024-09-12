@@ -158,6 +158,10 @@ func (clnt *ProcClnt) forceRunViaSchedd(kernelID string, p *proc.Proc) error {
 }
 
 func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, *proc.ProcSeqno, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.SPAWN_LAT, "[%v] time enqueueViaProcQ: %v", p.GetPid(), time.Since(start))
+	}(start)
 	return clnt.procqclnt.Enqueue(p)
 }
 

@@ -448,9 +448,6 @@ func TestMicroScheddSpawn(t *testing.T) {
 		}
 	}
 
-	p := newRealmPerf(ts1)
-	defer p.Done()
-
 	// Allow the uprocd pool to refill
 	time.Sleep(5 * time.Second)
 

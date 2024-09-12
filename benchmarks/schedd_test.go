@@ -93,6 +93,9 @@ func withNoKPFn() kernelPrefFn {
 }
 
 func (ji *ScheddJobInstance) StartScheddJob() {
+	p := newRealmPerf(ji.RealmTstate)
+	defer p.Done()
+
 	db.DPrintf(db.ALWAYS, "StartScheddJob dur %v maxrps %v", ji.dur, ji.maxrps)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {

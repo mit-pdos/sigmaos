@@ -101,6 +101,7 @@ type Job struct {
 	Intermediate string `yalm:"intermediate"`
 	Output       string `yalm:"output"`
 	Linesz       int    `yalm:"linesz"`
+	Local        string `yalm:"input"`
 }
 
 // Wait until the job is done

@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -37,7 +36,6 @@ import (
 const (
 	OUTPUT        = "/tmp/par-mr.out"
 	MALICIOUS_APP = "mr-wc-restricted.yml"
-	LOCALINPUT    = "/tmp/enwiki-1G"
 
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
@@ -69,10 +67,11 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 7, mr.Khash([]byte("absently"))%8)
 }
 
-func TestWordCount(t *testing.T) {
+func TestLocalWc(t *testing.T) {
 	const (
-		HOSTTMP = "/tmp/sigmaos"
-		F       = "gutenberg.txt"
+		LOCALINPUT = "/tmp/enwiki-1G"
+		HOSTTMP    = "/tmp/sigmaos"
+		F          = "gutenberg.txt"
 		// INPUT   = "../input/" + F
 		INPUT = LOCALINPUT
 		OUT   = HOSTTMP + F + ".out"
@@ -151,12 +150,9 @@ func TestMapperReducer(t *testing.T) {
 	}
 	ts := newTstate(t1, app) // or --app mr-wc-ux.yml or --app mr-ux-wiki1G.yml
 
-	if strings.HasPrefix(job.Input, sp.UX) {
-		file := filepath.Base(LOCALINPUT)
-		err := ts.MkDir(job.Input, 0777)
-		assert.Nil(t, err, "MkDir %v err %v", job.Input, err)
-		err = ts.UploadFile(LOCALINPUT, filepath.Join(job.Input, file))
-		assert.Nil(t, err, "UploadFile %v %v err %v", LOCALINPUT, filepath.Join(job.Input, file), err)
+	if job.Local != "" {
+		err := ts.UploadDir(job.Local, job.Input)
+		assert.Nil(t, err, "UploadDir %v %v err %v", job.Local, job.Input, err)
 	}
 
 	nmap, err := mr.PrepareJob(ts.FsLib, ts.tasks, ts.job, job)
@@ -317,7 +313,8 @@ func (ts *Tstate) compare() bool {
 func (ts *Tstate) checkJob(app string) bool {
 	err := mr.MergeReducerOutput(ts.FsLib, ts.job, OUTPUT, ts.nreducetask)
 	assert.Nil(ts.T, err, "Merge output files: %v", err)
-	if app == "mr-wc.yml" || app == MALICIOUS_APP {
+	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" || app == MALICIOUS_APP {
+		db.DPrintf(db.TEST, "checkJob %v", app)
 		return ts.compare()
 	}
 	return true

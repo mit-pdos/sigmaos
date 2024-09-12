@@ -202,14 +202,11 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobName string, job *Job) (int, err
 	if job.Output == "" || job.Intermediate == "" {
 		return 0, fmt.Errorf("Err job output (\"%v\") or intermediate (\"%v\") not supplied", job.Output, job.Intermediate)
 	}
-	// Only make out dir if it lives in s3
-	if strings.Contains(job.Output, "/s3/") {
-		fsl.MkDir(job.Output, 0777)
-		outDir := JobOut(job.Output, jobName)
-		if err := fsl.MkDir(outDir, 0777); err != nil {
-			db.DPrintf(db.ALWAYS, "Error mkdir job dir %v: %v", outDir, err)
-			return 0, err
-		}
+	fsl.MkDir(job.Output, 0777)
+	outDir := JobOut(job.Output, jobName)
+	if err := fsl.MkDir(outDir, 0777); err != nil {
+		db.DPrintf(db.ALWAYS, "Error mkdir job dir %v: %v", outDir, err)
+		return 0, err
 	}
 	if _, err := fsl.PutFile(JobOutLink(jobName), 0777, sp.OWRITE, []byte(job.Output)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobName), err)

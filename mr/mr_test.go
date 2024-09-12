@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -204,13 +205,13 @@ func TestMapperReducer(t *testing.T) {
 		outlink := mr.ReduceOut(ts.job) + rt.Task
 		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Task
 
-		r, err := mr.NewReducer(sc, wc.Reduce, []string{in, outlink, outTarget, "1", "true"}, p)
+		r, err := mr.NewReducer(sc, wc.Reduce, []string{in, outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
 		assert.Nil(t, err)
 		status := r.DoReduce()
 		assert.True(t, status.IsStatusOK(), "status %v", status)
 	}
 
-	if app == "mr-wc.yml" {
+	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" {
 		ts.checkJob(app)
 	}
 

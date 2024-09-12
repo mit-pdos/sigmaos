@@ -154,8 +154,13 @@ func TestMapperAlone(t *testing.T) {
 		return
 	}
 	ts.Remove(REDUCEOUT)
-	ts.RmDir(REDUCEIN)
-	ts.MkDir(REDUCEIN, 0777)
+
+	srv, ok, err := ts.ResolveMount(REDUCEIN)
+	assert.Nil(t, err)
+	assert.True(t, ok)
+
+	ts.RmDir(srv)
+	ts.MkDir(srv, 0777)
 
 	job, err1 = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
 	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
@@ -168,10 +173,6 @@ func TestMapperAlone(t *testing.T) {
 		err = ts.UploadFile(LOCALINPUT, filepath.Join(job.Input, file))
 		assert.Nil(t, err, "UploadFile %v %v err %v", LOCALINPUT, filepath.Join(job.Input, file), err)
 	}
-
-	srv, ok, err := ts.ResolveMount(REDUCEIN)
-	assert.Nil(t, err)
-	assert.True(t, ok)
 
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err, "Err NewBins %v", err)

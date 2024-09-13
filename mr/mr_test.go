@@ -139,11 +139,6 @@ func TestSplits(t *testing.T) {
 }
 
 func TestMapperReducer(t *testing.T) {
-	const (
-		//SPLITSZ   =  64 * sp.KBYTE
-		SPLITSZ  = 10 * sp.MBYTE
-		DOREDUCE = true
-	)
 	t1, err := test.NewTstateAll(t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return

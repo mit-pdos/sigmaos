@@ -50,6 +50,8 @@ def ls_instances(vpc):
     else:
         vms.sort(key=cmp)
         for vm in vms:
+            if "student-dev" in name(vm[3]):
+              continue
             if args['privaddr']:
                 print("VMInstance", name(vm[3]), ":", vm[0], vm[1], vm[2])
             else:

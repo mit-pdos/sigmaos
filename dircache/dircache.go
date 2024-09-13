@@ -201,6 +201,8 @@ func (dc *DirCache[E]) allocVal(n string) (E, error) {
 		if !vok {
 			e1, err := dc.newVal(n)
 			if err != nil {
+				dc.Unlock()
+				dc.RLock()
 				return e1, err
 			}
 			e = e1

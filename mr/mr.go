@@ -85,7 +85,7 @@ type Result struct {
 	Ms   int64      `json:"Ms"`
 }
 
-func newResult(data interface{}) *Result {
+func NewResult(data interface{}) *Result {
 	r := &Result{}
 	mapstructure.Decode(data, r)
 	return r

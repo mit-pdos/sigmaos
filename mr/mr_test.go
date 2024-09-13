@@ -207,6 +207,8 @@ func TestMapperReducer(t *testing.T) {
 		assert.Nil(t, err)
 		status := r.DoReduce()
 		assert.True(t, status.IsStatusOK(), "status %v", status)
+		res := mr.NewResult(status.Data())
+		db.DPrintf(db.ALWAYS, "%s: in %s out tot %v %f %vms (%s)\n", res.Task, humanize.Bytes(uint64(res.In)), humanize.Bytes(uint64(res.Out)), test.Mbyte(res.In+res.Out), res.Ms, test.TputStr(res.In+res.Out, res.Ms))
 	}
 
 	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" {

@@ -218,12 +218,12 @@ func (r *Reducer) DoReduce() *proc.Status {
 	}
 
 	ms := duration.Milliseconds()
-	db.DPrintf(db.ALWAYS, "DoReduce: Readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
+	db.DPrintf(db.MR, "DoReduce: Readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
 
 	start := time.Now()
 	for k, vs := range data {
 		if err := r.reducef(k, vs, r.emit); err != nil {
-			db.DPrintf(db.ALWAYS, "DoReuce: reducef: %v err %v", k, err)
+			db.DPrintf(db.ALWAYS, "DoReduce: reducef: %v err %v", k, err)
 			return proc.NewStatusErr("reducef", err)
 		}
 	}

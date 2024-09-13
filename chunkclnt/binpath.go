@@ -16,17 +16,17 @@ type kernelIDs struct {
 	idSlice []string
 }
 
-func newKernelIDs() *kernelIDs {
+func newKernelIDs(kernelID string) *kernelIDs {
 	return &kernelIDs{
-		idMap:   make(map[string]bool),
-		idSlice: []string{},
+		idMap:   map[string]bool{kernelID: true},
+		idSlice: []string{kernelID},
 	}
 }
 
 // BinPaths keeps track of kernels that have ran a binary, and are
 // likely to have to the binary cached.
 type BinPaths struct {
-	sync.Mutex
+	sync.RWMutex
 	bins map[string]*kernelIDs
 }
 
@@ -37,8 +37,8 @@ func NewBinPaths() *BinPaths {
 }
 
 func (bp *BinPaths) GetBinKernelID(bin string) (string, bool) {
-	bp.Lock()
-	defer bp.Unlock()
+	bp.RLock()
+	defer bp.RUnlock()
 
 	if kids, ok := bp.bins[bin]; ok {
 		i := rand.Int64(int64(len(kids.idSlice)))
@@ -50,14 +50,26 @@ func (bp *BinPaths) GetBinKernelID(bin string) (string, bool) {
 }
 
 func (bp *BinPaths) SetBinKernelID(bin, kernelID string) {
-	bp.Lock()
-	defer bp.Unlock()
+	bp.RLock()
+	defer bp.RUnlock()
 
 	if _, ok := bp.bins[bin]; !ok {
-		bp.bins[bin] = newKernelIDs()
+		bp.RUnlock()
+		bp.Lock()
+		if _, ok := bp.bins[bin]; !ok {
+			bp.bins[bin] = newKernelIDs(kernelID)
+		}
+		bp.Unlock()
+		bp.RLock()
 	}
 	if _, ok := bp.bins[bin].idMap[kernelID]; !ok {
-		bp.bins[bin].idSlice = append(bp.bins[bin].idSlice, kernelID)
+		bp.RUnlock()
+		bp.Lock()
+		if _, ok := bp.bins[bin].idMap[kernelID]; !ok {
+			bp.bins[bin].idSlice = append(bp.bins[bin].idSlice, kernelID)
+		}
+		bp.Unlock()
+		bp.RLock()
 	}
 }
 

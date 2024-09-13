@@ -65,6 +65,10 @@ func MapIntermediateOutDir(job, intOutdir, mapname string) string {
 	return filepath.Join(intOutdir, job, "m-"+mapname)
 }
 
+func MapIntermediateDir(job, intOutdir string) string {
+	return filepath.Join(intOutdir, job)
+}
+
 func ReduceTask(job string) string {
 	return filepath.Join(JobDir(job), "/r")
 }
@@ -191,10 +195,10 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, err
 
 // Clean up all old MR outputs
 func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string) {
-	db.DPrintf(db.MR, "Clean up MR outputs: %v", outputDir)
+	db.DPrintf(db.MR, "Clean up MR outputs: %v %v", outputDir, intOutputDir)
 	fsl.RmDir(outputDir)
 	fsl.RmDir(intOutputDir)
-	db.DPrintf(db.MR, "Clean up MR outputs done: %v", outputDir)
+	db.DPrintf(db.MR, "Clean up MR outputs done")
 }
 
 // Put names of input files in name/mr/m

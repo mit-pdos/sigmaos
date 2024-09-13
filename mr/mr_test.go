@@ -415,10 +415,10 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	err = mr.PrintMRStats(ts.FsLib, ts.job)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
-	db.DPrintf(db.TEST, "Cleanup MR outputs")
+	db.DPrintf(db.TEST, "Cleanup tasks state")
 	ts.tasks.Mft.Cleanup()
 	ts.tasks.Rft.Cleanup()
-	mr.CleanupMROutputs(ts.FsLib, job.Output, job.Intermediate)
+	mr.CleanupMROutputs(ts.FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate))
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
 	ts.Shutdown()
 }

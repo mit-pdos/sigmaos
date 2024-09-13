@@ -41,6 +41,7 @@ const (
 var N_TRIALS int
 var N_THREADS int
 var PREWARM_REALM bool
+var SKIPSTATS bool
 var MR_APP string
 var MR_MEM_REQ int
 var MR_ASYNCRW bool
@@ -109,6 +110,7 @@ func init() {
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
+	flag.BoolVar(&SKIPSTATS, "skipstats", false, "Skip printing stats.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.IntVar(&MR_MEM_REQ, "mr_mem_req", 4000, "Amount of memory (in MB) required for each MR task.")
 	flag.BoolVar(&MR_ASYNCRW, "mr_asyncrw", true, "Mapers and reducers use asynchronous readers/writers.")
@@ -403,7 +405,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 	}
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
-	db.DPrintf(db.BENCH, "rust %v ux %v prewarm %v kpref %v nclnt %v durs %v rps %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS)
+	db.DPrintf(db.BENCH, "rust %v ux %v prewarm %v kpref %v nclnt %v durs %v rps %v skipstats %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, SKIPSTATS)
 
 	prog := "XXXX"
 	if USE_RUST_PROC {
@@ -461,7 +463,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 		} else {
 			return runSpawnBenchProc(ts1, sc, pid, kernelpref)
 		}
-	}, kernels, WITH_KERNEL_PREF)
+	}, kernels, WITH_KERNEL_PREF, SKIPSTATS)
 	// Run Schedd job
 	go func() {
 		runOps(ts1, ji, runSchedd, rs)

@@ -21,23 +21,25 @@ type scheddFn func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) ti
 type kernelPrefFn func() []string
 
 type ScheddJobInstance struct {
-	justCli bool
-	dur     []time.Duration
-	maxrps  []int
-	ready   chan bool
-	spawnFn scheddFn
-	kpfn    kernelPrefFn
-	kidx    atomic.Int64
-	clnts   []*sigmaclnt.SigmaClnt
-	lgs     []*loadgen.LoadGenerator
-	procCnt atomic.Int64
+	justCli   bool
+	skipstats bool
+	dur       []time.Duration
+	maxrps    []int
+	ready     chan bool
+	spawnFn   scheddFn
+	kpfn      kernelPrefFn
+	kidx      atomic.Int64
+	clnts     []*sigmaclnt.SigmaClnt
+	lgs       []*loadgen.LoadGenerator
+	procCnt   atomic.Int64
 	*test.RealmTstate
 }
 
-func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, sfn scheddFn, kernels []string, withKernelPref bool) *ScheddJobInstance {
+func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, sfn scheddFn, kernels []string, withKernelPref bool, skipstats bool) *ScheddJobInstance {
 	ji := &ScheddJobInstance{}
 	ji.ready = make(chan bool)
 	ji.spawnFn = sfn
+	ji.skipstats = skipstats
 	ji.RealmTstate = ts
 	ji.clnts = make([]*sigmaclnt.SigmaClnt, nclnt)
 	if withKernelPref {
@@ -118,7 +120,9 @@ func (ji *ScheddJobInstance) StartScheddJob() {
 }
 
 func (ji *ScheddJobInstance) Wait() {
-	for _, lg := range ji.lgs {
-		lg.Stats()
+	if !ji.skipstats {
+		for _, lg := range ji.lgs {
+			lg.Stats()
+		}
 	}
 }

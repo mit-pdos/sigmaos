@@ -288,13 +288,13 @@ func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr 
 
 // ========== Schedd Helpers ==========
 
-func newScheddJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, sfn scheddFn, kernels []string, withKernelPref bool) ([]*ScheddJobInstance, []interface{}) {
+func newScheddJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, sfn scheddFn, kernels []string, withKernelPref, skipstats bool) ([]*ScheddJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*ScheddJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewScheddJob(ts, nclnt, dur, maxrps, sfn, kernels, withKernelPref)
+		i := NewScheddJob(ts, nclnt, dur, maxrps, sfn, kernels, withKernelPref, skipstats)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

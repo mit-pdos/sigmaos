@@ -165,13 +165,14 @@ func TestMapperReducer(t *testing.T) {
 	tns, err := ts.tasks.Mft.GetTasks()
 	assert.Nil(t, err)
 
-	db.DPrintf(db.ALWAYS, "tasks %v %d", tns, nmap)
-
+	start := time.Now()
+	nin := sp.Tlength(0)
+	nout := sp.Tlength(0)
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	assert.Nil(t, err, "NewSC: %v", err)
 	for _, task := range tns {
 		input := ts.tasks.Mft.TaskPathName(task)
-		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		sc, err := sigmaclnt.NewSigmaClnt(pe)
-		assert.Nil(t, err, "NewSC: %v", err)
 		// Run with wc-specialized combiner:
 		// n, err := m.DoSplit(&s, m.CombineWc)
 		// Run without combining:
@@ -179,15 +180,16 @@ func TestMapperReducer(t *testing.T) {
 		m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, ts.job, p, job.Nreduce, job.Linesz, input, job.Intermediate, true)
 		assert.Nil(t, err, "NewMapper %v", err)
 		start := time.Now()
-		nin, nout, err := m.DoMap()
+		in, out, err := m.DoMap()
 		assert.Nil(t, err)
-		db.DPrintf(db.ALWAYS, "%s: in %s out %s tot %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
+		nin += in
+		nout += out
+		db.DPrintf(db.ALWAYS, "map %s: in %s out %s tot %s %vms (%s)\n", input, humanize.Bytes(uint64(in)), humanize.Bytes(uint64(out)), humanize.Bytes(uint64(in+out)), time.Since(start).Milliseconds(), test.TputStr(in+out, time.Since(start).Milliseconds()))
 	}
+	db.DPrintf(db.ALWAYS, "map %s total: in %s out %s tot %s %vms (%s)\n", job.Input, humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 
 	tns, err = ts.tasks.Rft.GetTasks()
 	assert.Nil(t, err)
-
-	db.DPrintf(db.ALWAYS, "tasks %v", tns)
 
 	for _, task := range tns {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())

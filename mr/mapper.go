@@ -260,7 +260,6 @@ func (m *Mapper) Combine(key []byte, value string) error {
 			e.s[0] = val
 			return nil
 		}); err != nil {
-			db.DPrintf(db.ALWAYS, "Err combinef: %v", err)
 			return err
 		}
 	} else {
@@ -272,7 +271,6 @@ func (m *Mapper) Combine(key []byte, value string) error {
 func (m *Mapper) DoCombine() error {
 	for k, e := range m.combined {
 		if err := m.combinef(k, e.s, m.Emit); err != nil {
-			db.DPrintf(db.ALWAYS, "Err combinef: %v", err)
 			return err
 		}
 	}
@@ -330,7 +328,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 }
 
 func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
-	db.DPrintf(db.ALWAYS, "doMap %v", m.input)
+	db.DPrintf(db.MR, "doMap %v", m.input)
 	rdr, err := m.OpenReader(m.input)
 	if err != nil {
 		return 0, 0, err

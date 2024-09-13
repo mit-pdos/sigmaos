@@ -72,7 +72,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 		perf:        p,
 		sbc:         NewScanByteCounter(p),
 		asyncrw:     asyncrw,
-		combined:    newKvmap(MINCAP),
+		combined:    newKvmap(MINCAP, MAXCAP),
 		combinewc:   make(map[string]int),
 		buf:         make([]byte, 0, lsz),
 		line:        make([]byte, 0, lsz),
@@ -243,29 +243,12 @@ func (m *Mapper) CombineWc(kv *KeyValue) error {
 }
 
 func (m *Mapper) Combine(key []byte, value string) error {
-	e := m.combined.lookup(key)
-	if len(e.vs)+1 >= MAXCAP {
-		e.vs = append(e.vs, value)
-		if err := m.combinef(e.k, e.vs, func(key []byte, val string) error {
-			e.vs = e.vs[:1]
-			e.vs[0] = val
-			return nil
-		}); err != nil {
-			return err
-		}
-	} else {
-		e.vs = append(e.vs, value)
-	}
-	return nil
+	return m.combined.combine(key, value, m.combinef)
 }
 
-func (m *Mapper) DoCombine() error {
-	for k, e := range m.combined.kvs {
-		if err := m.combinef(k, e.vs, m.Emit); err != nil {
-			return err
-		}
-	}
-	m.combined = newKvmap(MINCAP)
+func (m *Mapper) CombineEmit() error {
+	m.combined.emit(m.combinef, m.Emit)
+	m.combined = newKvmap(MINCAP, MAXCAP)
 	return nil
 }
 
@@ -347,7 +330,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 			db.DFatalf("Split: short split o %d l %d %d\n", s.Offset, s.Length, n)
 		}
 		ni += n
-		m.DoCombine()
+		m.CombineEmit()
 	}
 	nout, err := m.CloseWrt()
 	if err != nil {

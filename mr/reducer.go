@@ -113,9 +113,10 @@ type result struct {
 	n    sp.Tlength
 }
 
-func ReadKVs(rdr io.Reader, kvm *kvmap) error {
+func ReadKVs(rdr io.Reader, kvm *kvmap, reducef ReduceT) error {
+	kvd := newKVDecoder(rdr, 1000, 10000)
 	for {
-		if k, v, err := DecodeKV(rdr); err != nil {
+		if k, v, err := kvd.decode(); err != nil {
 			if err == io.EOF {
 				break
 			}
@@ -124,8 +125,9 @@ func ReadKVs(rdr io.Reader, kvm *kvmap) error {
 				break
 			}
 		} else {
-			e := kvm.lookup(k)
-			e.vs = append(e.vs, v)
+			if err := kvm.combine(k, v, reducef); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -152,7 +154,7 @@ func (r *Reducer) readFile(file string, kvm *kvmap) (sp.Tlength, time.Duration, 
 
 	start := time.Now()
 
-	err = ReadKVs(rdr, kvm)
+	err = ReadKVs(rdr, kvm, r.reducef)
 	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
 	if err != nil {
 		db.DPrintf(db.MR, "decodeKV %v err %v\n", sym, err)
@@ -162,7 +164,7 @@ func (r *Reducer) readFile(file string, kvm *kvmap) (sp.Tlength, time.Duration, 
 }
 
 func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, *kvmap, []string, error) {
-	kvm := newKvmap(MINCAP)
+	kvm := newKvmap(MINCAP, MAXCAP)
 	lostMaps := []string{}
 	nfile := 0
 	nbytes := sp.Tlength(0)
@@ -217,11 +219,10 @@ func (r *Reducer) DoReduce() *proc.Status {
 	db.DPrintf(db.MR, "DoReduce: Readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
 
 	start := time.Now()
-	for k, e := range kvm.kvs {
-		if err := r.reducef(k, e.vs, r.emit); err != nil {
-			db.DPrintf(db.ALWAYS, "DoReduce: reducef: %v err %v", k, err)
-			return proc.NewStatusErr("reducef", err)
-		}
+
+	if err := kvm.emit(r.reducef, r.emit); err != nil {
+		db.DPrintf(db.ALWAYS, "DoReduce: emit err %v", err)
+		return proc.NewStatusErr("reducef", err)
 	}
 
 	var nbyte sp.Tlength

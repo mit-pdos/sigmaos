@@ -73,9 +73,10 @@ func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, 
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
-			pid := sp.Tpid("spawn-latency-" + strconv.Itoa(int(ji.procCnt.Add(1))))
+			procCnt := int(ji.procCnt.Add(1))
+			pid := sp.Tpid("spawn-latency-" + strconv.Itoa(procCnt))
 			// Run a single request.
-			dur := ji.spawnFn(ji.clnts[i], pid, ji.kpfn())
+			dur := ji.spawnFn(ji.clnts[procCnt%len(ji.clnts)], pid, ji.kpfn())
 			return dur, true
 		}))
 	}

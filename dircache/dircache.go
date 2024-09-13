@@ -22,7 +22,7 @@ type NewValF[E any] func(string) (E, error)
 
 type DirCache[E any] struct {
 	*fslib.FsLib
-	sync.Mutex
+	sync.RWMutex
 	hasEntries    *sync.Cond
 	dir           *sortedmap.SortedMap[string, E]
 	done          atomic.Uint64
@@ -51,7 +51,7 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 		prefixFilters: prefixes,
 		ch:            ch,
 	}
-	dc.hasEntries = sync.NewCond(&dc.Mutex)
+	dc.hasEntries = sync.NewCond(&dc.RWMutex)
 	go dc.watchDir()
 	go dc.watchdog()
 	return dc
@@ -186,20 +186,29 @@ func (dc *DirCache[E]) InvalidateEntry(name string) bool {
 }
 
 func (dc *DirCache[E]) allocVal(n string) (E, error) {
-	dc.Lock()
-	defer dc.Unlock()
+	dc.RLock()
+	defer dc.RUnlock()
 
 	db.DPrintf(dc.LSelector, "GetEntryAlloc for %v", n)
 	defer db.DPrintf(dc.LSelector, "Done GetEntryAlloc for %v", n)
 
 	_, e, vok := dc.dir.LookupKeyVal(n)
 	if !vok {
-		e1, err := dc.newVal(n)
-		if err != nil {
-			return e1, err
+		dc.RUnlock()
+		dc.Lock()
+
+		_, e, vok = dc.dir.LookupKeyVal(n)
+		if !vok {
+			e1, err := dc.newVal(n)
+			if err != nil {
+				return e1, err
+			}
+			e = e1
+			dc.dir.Insert(n, e)
 		}
-		e = e1
-		dc.dir.Insert(n, e)
+
+		dc.Unlock()
+		dc.RLock()
 	}
 	return e, nil
 }

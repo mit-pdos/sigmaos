@@ -114,8 +114,9 @@ type result struct {
 }
 
 func ReadKVs(rdr io.Reader, kvm *kvmap, reducef ReduceT) error {
+	kvd := newKVDecoder(rdr, 1000, 10000)
 	for {
-		if k, v, err := DecodeKV(rdr); err != nil {
+		if k, v, err := kvd.decode(); err != nil {
 			if err == io.EOF {
 				break
 			}

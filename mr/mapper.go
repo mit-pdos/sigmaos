@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/fmstephe/unsafeutil"
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
@@ -49,14 +48,10 @@ type Mapper struct {
 	rand        string
 	perf        *perf.Perf
 	asyncrw     bool
-	combined    map[string]*values
+	combined    *kvmap
 	combinewc   map[string]int
 	buf         []byte
 	line        []byte
-}
-
-type values struct {
-	s []string
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
@@ -77,7 +72,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 		perf:        p,
 		sbc:         NewScanByteCounter(p),
 		asyncrw:     asyncrw,
-		combined:    make(map[string]*values),
+		combined:    newKvmap(MINCAP),
 		combinewc:   make(map[string]int),
 		buf:         make([]byte, 0, lsz),
 		line:        make([]byte, 0, lsz),
@@ -248,33 +243,29 @@ func (m *Mapper) CombineWc(kv *KeyValue) error {
 }
 
 func (m *Mapper) Combine(key []byte, value string) error {
-	k := unsafeutil.BytesToString(key)
-	if e, ok := m.combined[k]; !ok {
-		s := make([]string, 1, MINCAP)
-		s[0] = value
-		m.combined[string(key)] = &values{s: s}
-	} else if len(e.s)+1 >= MAXCAP {
-		e.s = append(e.s, value)
-		if err := m.combinef(k, e.s, func(key []byte, val string) error {
-			e.s = e.s[:1]
-			e.s[0] = val
+	e := m.combined.lookup(key)
+	if len(e.vs)+1 >= MAXCAP {
+		e.vs = append(e.vs, value)
+		if err := m.combinef(e.k, e.vs, func(key []byte, val string) error {
+			e.vs = e.vs[:1]
+			e.vs[0] = val
 			return nil
 		}); err != nil {
 			return err
 		}
 	} else {
-		e.s = append(e.s, value)
+		e.vs = append(e.vs, value)
 	}
 	return nil
 }
 
 func (m *Mapper) DoCombine() error {
-	for k, e := range m.combined {
-		if err := m.combinef(k, e.s, m.Emit); err != nil {
+	for k, e := range m.combined.kvs {
+		if err := m.combinef(k, e.vs, m.Emit); err != nil {
 			return err
 		}
 	}
-	m.combined = make(map[string]*values)
+	m.combined = newKvmap(MINCAP)
 	return nil
 }
 

@@ -113,10 +113,9 @@ type result struct {
 	n    sp.Tlength
 }
 
-func ReadKVs(rdr io.Reader, data Tdata) error {
+func ReadKVs(rdr io.Reader, kvm *kvmap) error {
 	for {
-		var kv KeyValue
-		if err := DecodeKV(rdr, &kv); err != nil {
+		if k, v, err := DecodeKV(rdr); err != nil {
 			if err == io.EOF {
 				break
 			}
@@ -124,16 +123,15 @@ func ReadKVs(rdr io.Reader, data Tdata) error {
 				return err
 				break
 			}
+		} else {
+			e := kvm.lookup(k)
+			e.vs = append(e.vs, v)
 		}
-		if _, ok := data[kv.Key]; !ok {
-			data[kv.Key] = make([]string, 0)
-		}
-		data[kv.Key] = append(data[kv.Key], kv.Value)
 	}
 	return nil
 }
 
-func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, bool) {
+func (r *Reducer) readFile(file string, kvm *kvmap) (sp.Tlength, time.Duration, bool) {
 	// Make new fslib to parallelize request to a single fsux
 	pe := proc.NewAddedProcEnv(r.ProcEnv())
 	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, r.GetNetProxyClnt())
@@ -154,7 +152,7 @@ func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, 
 
 	start := time.Now()
 
-	err = ReadKVs(rdr, data)
+	err = ReadKVs(rdr, kvm)
 	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
 	if err != nil {
 		db.DPrintf(db.MR, "decodeKV %v err %v\n", sym, err)
@@ -163,10 +161,8 @@ func (r *Reducer) readFile(file string, data Tdata) (sp.Tlength, time.Duration, 
 	return rdr.Nbytes(), time.Since(start), true
 }
 
-type Tdata map[string][]string
-
-func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, Tdata, []string, error) {
-	data := make(map[string][]string, 0)
+func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, *kvmap, []string, error) {
+	kvm := newKvmap(MINCAP)
 	lostMaps := []string{}
 	nfile := 0
 	nbytes := sp.Tlength(0)
@@ -185,7 +181,7 @@ func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, Tdata, []string, error
 		for i, _ := range files {
 			// Random offset to stop reducers from all banging on the same ux.
 			f := files[(i+randOffset)%len(files)]
-			m, d, ok := r.readFile(f, data)
+			m, d, ok := r.readFile(f, kvm)
 			if !ok {
 				lostMaps = append(lostMaps, strings.TrimPrefix(f, "m-"))
 			}
@@ -194,7 +190,7 @@ func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, Tdata, []string, error
 			nfile += 1
 		}
 	}
-	return nbytes, duration, data, lostMaps, nil
+	return nbytes, duration, kvm, lostMaps, nil
 }
 
 func (r *Reducer) emit(key []byte, value string) error {
@@ -208,7 +204,7 @@ func (r *Reducer) emit(key []byte, value string) error {
 
 func (r *Reducer) DoReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", r.input, r.outlink, r.nmaptask)
-	nin, duration, data, lostMaps, err := r.ReadFiles()
+	nin, duration, kvm, lostMaps, err := r.ReadFiles()
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "ReadFiles: err %v", err)
 		return proc.NewStatusErr(fmt.Sprintf("%v: ReadFiles %v err %v\n", r.ProcEnv().GetPID(), r.input, err), nil)
@@ -221,8 +217,8 @@ func (r *Reducer) DoReduce() *proc.Status {
 	db.DPrintf(db.MR, "DoReduce: Readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
 
 	start := time.Now()
-	for k, vs := range data {
-		if err := r.reducef(k, vs, r.emit); err != nil {
+	for k, e := range kvm.kvs {
+		if err := r.reducef(k, e.vs, r.emit); err != nil {
 			db.DPrintf(db.ALWAYS, "DoReduce: reducef: %v err %v", k, err)
 			return proc.NewStatusErr("reducef", err)
 		}

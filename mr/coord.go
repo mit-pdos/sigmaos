@@ -217,7 +217,7 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 		if err := ft.MarkDone(t); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
-		r := newResult(status.Data())
+		r := NewResult(status.Data())
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
 		if status != nil && status.Msg() == RESTART {

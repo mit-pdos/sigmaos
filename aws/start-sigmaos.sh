@@ -140,6 +140,10 @@ vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
 i=0
 for vm in $vms; do
   i=$(($i+1))
+  FOLLOWER_NODE="$FULL_NODE"
+  if [ $NUM_FULL_NODE -gt 0 ] && [ $i -gt $NUM_FULL_NODE ]; then
+    FOLLOWER_NODE="node_no_procq"
+  fi
   KERNELID_PREFIX=""
   # If running with procq-only nodes, then node 0 is the leader node, the
   # following NUM_PROCQ_NODE nodes are the procq-only nodes, and the remainder

@@ -72,7 +72,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 		perf:        p,
 		sbc:         NewScanByteCounter(p),
 		asyncrw:     asyncrw,
-		combined:    newKvmap(MINCAP),
+		combined:    newKvmap(MINCAP, MAXCAP),
 		combinewc:   make(map[string]int),
 		buf:         make([]byte, 0, lsz),
 		line:        make([]byte, 0, lsz),
@@ -243,20 +243,7 @@ func (m *Mapper) CombineWc(kv *KeyValue) error {
 }
 
 func (m *Mapper) Combine(key []byte, value string) error {
-	e := m.combined.lookup(key)
-	if len(e.vs)+1 >= MAXCAP {
-		e.vs = append(e.vs, value)
-		if err := m.combinef(e.k, e.vs, func(key []byte, val string) error {
-			e.vs = e.vs[:1]
-			e.vs[0] = val
-			return nil
-		}); err != nil {
-			return err
-		}
-	} else {
-		e.vs = append(e.vs, value)
-	}
-	return nil
+	return m.combined.combine(key, value, m.combinef)
 }
 
 func (m *Mapper) DoCombine() error {
@@ -265,7 +252,7 @@ func (m *Mapper) DoCombine() error {
 			return err
 		}
 	}
-	m.combined = newKvmap(MINCAP)
+	m.combined = newKvmap(MINCAP, MAXCAP)
 	return nil
 }
 

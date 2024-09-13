@@ -113,7 +113,7 @@ type result struct {
 	n    sp.Tlength
 }
 
-func ReadKVs(rdr io.Reader, kvm *kvmap) error {
+func ReadKVs(rdr io.Reader, kvm *kvmap, reducef ReduceT) error {
 	for {
 		if k, v, err := DecodeKV(rdr); err != nil {
 			if err == io.EOF {
@@ -124,8 +124,9 @@ func ReadKVs(rdr io.Reader, kvm *kvmap) error {
 				break
 			}
 		} else {
-			e := kvm.lookup(k)
-			e.vs = append(e.vs, v)
+			if err := kvm.combine(k, v, reducef); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -152,7 +153,7 @@ func (r *Reducer) readFile(file string, kvm *kvmap) (sp.Tlength, time.Duration, 
 
 	start := time.Now()
 
-	err = ReadKVs(rdr, kvm)
+	err = ReadKVs(rdr, kvm, r.reducef)
 	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
 	if err != nil {
 		db.DPrintf(db.MR, "decodeKV %v err %v\n", sym, err)
@@ -162,7 +163,7 @@ func (r *Reducer) readFile(file string, kvm *kvmap) (sp.Tlength, time.Duration, 
 }
 
 func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, *kvmap, []string, error) {
-	kvm := newKvmap(MINCAP)
+	kvm := newKvmap(MINCAP, MAXCAP)
 	lostMaps := []string{}
 	nfile := 0
 	nbytes := sp.Tlength(0)

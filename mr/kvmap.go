@@ -45,6 +45,15 @@ func (kvm *kvmap) combine(key []byte, value string, combinef ReduceT) error {
 	return nil
 }
 
+func (kvm *kvmap) emit(combinef ReduceT, emit EmitT) error {
+	for k, e := range kvm.kvs {
+		if err := combinef(k, e.vs, emit); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (e *values) combine(value string, combinef ReduceT, maxcap int) error {
 	if len(e.vs)+1 >= maxcap {
 		e.vs = append(e.vs, value)

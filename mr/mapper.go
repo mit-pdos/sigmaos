@@ -246,12 +246,8 @@ func (m *Mapper) Combine(key []byte, value string) error {
 	return m.combined.combine(key, value, m.combinef)
 }
 
-func (m *Mapper) DoCombine() error {
-	for k, e := range m.combined.kvs {
-		if err := m.combinef(k, e.vs, m.Emit); err != nil {
-			return err
-		}
-	}
+func (m *Mapper) CombineEmit() error {
+	m.combined.emit(m.combinef, m.Emit)
 	m.combined = newKvmap(MINCAP, MAXCAP)
 	return nil
 }
@@ -334,7 +330,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 			db.DFatalf("Split: short split o %d l %d %d\n", s.Offset, s.Length, n)
 		}
 		ni += n
-		m.DoCombine()
+		m.CombineEmit()
 	}
 	nout, err := m.CloseWrt()
 	if err != nil {

@@ -218,11 +218,10 @@ func (r *Reducer) DoReduce() *proc.Status {
 	db.DPrintf(db.MR, "DoReduce: Readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
 
 	start := time.Now()
-	for k, e := range kvm.kvs {
-		if err := r.reducef(k, e.vs, r.emit); err != nil {
-			db.DPrintf(db.ALWAYS, "DoReduce: reducef: %v err %v", k, err)
-			return proc.NewStatusErr("reducef", err)
-		}
+
+	if err := kvm.emit(r.reducef, r.emit); err != nil {
+		db.DPrintf(db.ALWAYS, "DoReduce: emit err %v", err)
+		return proc.NewStatusErr("reducef", err)
 	}
 
 	var nbyte sp.Tlength

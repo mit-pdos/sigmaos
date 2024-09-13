@@ -8,10 +8,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
-
-	//	"runtime"
-	//	"runtime/debug"
 
 	"github.com/dustin/go-humanize"
 
@@ -133,66 +131,117 @@ func ReadKVs(rdr io.Reader, kvm *kvmap, reducef ReduceT) error {
 	return nil
 }
 
-func (r *Reducer) readFile(file string, kvm *kvmap) (sp.Tlength, time.Duration, bool) {
-	// Make new fslib to parallelize request to a single fsux
-	pe := proc.NewAddedProcEnv(r.ProcEnv())
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, r.GetNetProxyClnt())
-	if err != nil {
-		db.DPrintf(db.MR, "NewSigmaClntFsLib err %v", err)
-		return 0, 0, false
-	}
-	defer sc.Close()
+type readResult struct {
+	f          string
+	ok         bool
+	n          sp.Tlength
+	d          time.Duration
+	kvm        *kvmap
+	mapsFailed []string
+}
 
-	sym := r.input + "/" + file + "/"
+func (rtot *readResult) sum(r *readResult) {
+	db.DPrintf(db.MR, "sum %q %t %v %v", r.f, r.ok, r.n, r.d)
+	if !r.ok {
+		rtot.mapsFailed = append(rtot.mapsFailed, strings.TrimPrefix(r.f, "m-"))
+	} else {
+		rtot.n += r.n
+		rtot.d += r.d
+	}
+}
+
+func (r *Reducer) readFile(rr *readResult) {
+	sym := r.input + "/" + rr.f + "/"
 	db.DPrintf(db.MR, "readFile %v\n", sym)
-	rdr, err := sc.OpenAsyncReader(sym, 0)
+	rdr, err := r.OpenAsyncReader(sym, 0)
 	if err != nil {
 		db.DPrintf(db.MR, "NewReader %v err %v", sym, err)
-		return 0, 0, false
+		rr.ok = false
+		return
 	}
 	defer rdr.Close()
 
 	start := time.Now()
-
-	err = ReadKVs(rdr, kvm, r.reducef)
+	err = ReadKVs(rdr, rr.kvm, r.reducef)
 	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
 	if err != nil {
 		db.DPrintf(db.MR, "decodeKV %v err %v\n", sym, err)
-		return 0, 0, false
+		rr.ok = false
+		return
 	}
-	return rdr.Nbytes(), time.Since(start), true
+	rr.n = rdr.Nbytes()
+	rr.d = time.Since(start)
+	rr.ok = true
 }
 
-func (r *Reducer) ReadFiles() (sp.Tlength, time.Duration, *kvmap, []string, error) {
-	kvm := newKvmap(MINCAP, MAXCAP)
-	lostMaps := []string{}
-	nfile := 0
-	nbytes := sp.Tlength(0)
-	duration := time.Duration(0)
+func (r *Reducer) readerMgr(req chan string, rep chan readResult, max int) {
+	mu := &sync.Mutex{}
+	producer := sync.NewCond(mu)
+	n := 0
+
+	for f := range req {
+		mu.Lock()
+		n += 1
+		for n > max {
+			producer.Wait()
+		}
+		mu.Unlock()
+		db.DPrintf(db.MR, "readerMgr: start %q", f)
+		go func(f string) {
+			kvm := newKvmap(MINCAP, MAXCAP)
+			rr := readResult{f: f, kvm: kvm}
+			r.readFile(&rr)
+			rep <- rr
+			mu.Lock()
+			n--
+			producer.Signal()
+			mu.Unlock()
+		}(f)
+	}
+}
+
+func (r *Reducer) ReadFiles(rtot *readResult) error {
+	const MAXCONCURRENCY = 1
+
+	req := make(chan string, r.nmaptask)
+	rep := make(chan readResult)
+
+	if MAXCONCURRENCY > 1 {
+		go r.readerMgr(req, rep, MAXCONCURRENCY)
+	}
 
 	dr := fslib.NewDirReader(r.FsLib, r.input)
-	for nfile < r.nmaptask {
+	for nfile := 0; nfile < r.nmaptask; {
 		files, err := dr.WatchNewUniqueEntries()
 		if err != nil {
-			return 0, 0, nil, nil, err
+			return err
 		}
 		randOffset := int(rand.Uint64())
 		if randOffset < 0 {
 			randOffset *= -1
 		}
 		for i, _ := range files {
-			// Random offset to stop reducers from all banging on the same ux.
-			f := files[(i+randOffset)%len(files)]
-			m, d, ok := r.readFile(f, kvm)
-			if !ok {
-				lostMaps = append(lostMaps, strings.TrimPrefix(f, "m-"))
-			}
-			nbytes += m
-			duration += d
 			nfile += 1
+			// Random offset to stop reducer procs from all banging on the same ux.
+			f := files[(i+randOffset)%len(files)]
+			if MAXCONCURRENCY > 1 {
+				req <- f
+			} else {
+				rr := &readResult{f: f, kvm: rtot.kvm}
+				r.readFile(rr)
+				rtot.sum(rr)
+			}
 		}
 	}
-	return nbytes, duration, kvm, lostMaps, nil
+	if MAXCONCURRENCY > 1 {
+		close(req)
+		for i := 0; i < r.nmaptask; i++ {
+			rr := <-rep
+			rtot.sum(&rr)
+			rtot.kvm.merge(rr.kvm, r.reducef)
+		}
+	}
+	return nil
 }
 
 func (r *Reducer) emit(key []byte, value string) error {
@@ -206,21 +255,24 @@ func (r *Reducer) emit(key []byte, value string) error {
 
 func (r *Reducer) DoReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", r.input, r.outlink, r.nmaptask)
-	nin, duration, kvm, lostMaps, err := r.ReadFiles()
-	if err != nil {
+	rtot := readResult{
+		kvm:        newKvmap(MINCAP, MAXCAP),
+		mapsFailed: []string{},
+	}
+	if err := r.ReadFiles(&rtot); err != nil {
 		db.DPrintf(db.ALWAYS, "ReadFiles: err %v", err)
 		return proc.NewStatusErr(fmt.Sprintf("%v: ReadFiles %v err %v\n", r.ProcEnv().GetPID(), r.input, err), nil)
 	}
-	if len(lostMaps) > 0 {
-		return proc.NewStatusErr(RESTART, lostMaps)
+	if len(rtot.mapsFailed) > 0 {
+		return proc.NewStatusErr(RESTART, rtot.mapsFailed)
 	}
 
-	ms := duration.Milliseconds()
-	db.DPrintf(db.MR, "DoReduce: Readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(nin)), ms, test.TputStr(nin, ms))
+	ms := rtot.d.Milliseconds()
+	db.DPrintf(db.MR, "DoReduce: Readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(rtot.n)), ms, test.TputStr(rtot.n, ms))
 
 	start := time.Now()
 
-	if err := kvm.emit(r.reducef, r.emit); err != nil {
+	if err := rtot.kvm.emit(r.reducef, r.emit); err != nil {
 		db.DPrintf(db.ALWAYS, "DoReduce: emit err %v", err)
 		return proc.NewStatusErr("reducef", err)
 	}
@@ -239,14 +291,14 @@ func (r *Reducer) DoReduce() *proc.Status {
 	}
 
 	// Include time spent writing output.
-	duration += time.Since(start)
+	rtot.d += time.Since(start)
 
 	// Create symlink atomically.
 	if err := r.PutFileAtomic(r.outlink, 0777|sp.DMSYMLINK, []byte(r.tmp)); err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
 	}
 	return proc.NewStatusInfo(proc.StatusOK, r.input,
-		Result{false, r.input, nin, nbyte, duration.Milliseconds()})
+		Result{false, r.input, rtot.n, nbyte, rtot.d.Milliseconds()})
 }
 
 func RunReducer(reducef ReduceT, args []string) {

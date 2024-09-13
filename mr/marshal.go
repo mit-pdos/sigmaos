@@ -32,16 +32,16 @@ func encodeKV(wr io.Writer, key []byte, value string, r int) (int, error) {
 	return 16 + int(l1) + int(l2) + len(jsonPadding), nil
 }
 
-func DecodeKV(rd io.Reader, kv *KeyValue) error {
+func DecodeKV(rd io.Reader) ([]byte, string, error) {
 	var l1 int64
 	var l2 int64
 
 	if err := binary.Read(rd, binary.LittleEndian, &l1); err != nil {
-		return err
+		return nil, "", err
 	}
 
 	if err := binary.Read(rd, binary.LittleEndian, &l2); err != nil {
-		return err
+		return nil, "", err
 	}
 
 	b1 := make([]byte, l1)
@@ -50,27 +50,25 @@ func DecodeKV(rd io.Reader, kv *KeyValue) error {
 
 	n, err := io.ReadFull(rd, b1)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	if n != int(l1) {
-		return fmt.Errorf("bad string")
+		return nil, "", fmt.Errorf("bad string")
 	}
 
 	n, err = io.ReadFull(rd, b2)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	if n != int(l2) {
-		return fmt.Errorf("bad string")
+		return nil, "", fmt.Errorf("bad string")
 	}
 	n, err = io.ReadFull(rd, b3)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	if n != len(jsonPadding) {
-		return fmt.Errorf("bad string")
+		return nil, "", fmt.Errorf("bad string")
 	}
-	kv.Key = string(b1)
-	kv.Value = string(b2)
-	return nil
+	return b1, string(b2), nil
 }

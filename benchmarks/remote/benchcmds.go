@@ -61,6 +61,8 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, prewarmRealm 
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestMicroScheddSpawn "+
 			"%s "+ // proc
+			"--nclnt 25 "+
+			//			"--skipstats "+
 			"--schedd_dur %s "+
 			"--schedd_max_rps %s "+
 			"%s "+ // prewarmRealm

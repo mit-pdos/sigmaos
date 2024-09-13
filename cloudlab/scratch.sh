@@ -22,7 +22,7 @@ vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc)
 
 for vm in $vms; do
   echo $vm
-  ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
+  ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<'ENDSSH'
 #    sudo apt install -y cpufrequtils
 #    git checkout etcd-sigmasrv-newprocclnt
 #    git pull
@@ -35,10 +35,11 @@ for vm in $vms; do
 #  aa-status | grep sigmaos
 #  docker swarm leave
 #  docker swarm join --token SWMTKN-1-1yub2fsj1bsxn9ikm8xsf4an4fb0sln0881opnoy7ko5muxgz9-1shovmaebf8616ds1mip1rzr1 10.10.1.1:2377
-#nproc
-echo "N Procq:"
-ps -fax | grep "bin/kernel/" | grep "/procq" | wc -l
-echo "N schedd:"
-ps -fax | grep "bin/kernel/" | grep "schedd" | wc -l
+#  nproc
+#  echo "N Procq:"
+#  ps -fax | grep "bin/kernel/" | grep "/procq" | wc -l
+#  echo "N schedd:"
+#  ps -fax | grep "bin/kernel/" | grep "schedd" | wc -l
+  sudo kill -SIGTERM $(ps -fax | grep "argv0 procq" | cut -d " " -f1 | tail -n1)
 ENDSSH
 done

@@ -54,6 +54,16 @@ func (kvm *kvmap) emit(combinef ReduceT, emit EmitT) error {
 	return nil
 }
 
+func (dst *kvmap) merge(src *kvmap, combinef ReduceT) {
+	for k, e := range src.kvs {
+		k0 := unsafeutil.StringToBytes(k)
+		d := dst.lookup(k0)
+		for _, v := range e.vs {
+			d.combine(v, combinef, dst.maxcap)
+		}
+	}
+}
+
 func (e *values) combine(value string, combinef ReduceT, maxcap int) error {
 	if len(e.vs)+1 >= maxcap {
 		e.vs = append(e.vs, value)

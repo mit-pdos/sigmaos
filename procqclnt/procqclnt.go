@@ -168,6 +168,7 @@ func (pqc *ProcQClnt) StopWatching() {
 	pqc.rpcdc.StopWatching()
 }
 
+// XXX
 //func (pqc *ProcQClnt) GetRPCStats() (map[string]*rpc.RPCStatsSnapshot, error) {
 //	snaps := make(map[string]*rpc.RPCStatsSnapshot)
 //	srvs, err := pqc.rpcdc.GetEntries()

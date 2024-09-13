@@ -83,9 +83,13 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	if nc == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, c.mnt)
 	}
-	db.DPrintf(db.SESSCLNT, "sess %v RPC req %v", c.sid, fc)
+	if db.WillBePrinted(db.SESSCLNT) {
+		db.DPrintf(db.SESSCLNT, "sess %v RPC req %v", c.sid, fc)
+	}
 	rep, err := c.dmx.SendReceive(pmfc, outiov)
-	db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
+	if db.WillBePrinted(db.SESSCLNT) {
+		db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
+	}
 
 	if err != nil {
 		return nil, err

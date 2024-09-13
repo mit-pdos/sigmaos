@@ -157,7 +157,7 @@ for vm in $vms; do
       FOLLOWER_NODE="procq_node"
     fi
   fi
-  if [ $i == 1 ]; then
+  if [ $i -eq 1 ]; then
     echo "starting SigmaOS on $vm nodetype leader $LEADER_NODE"
   else
     echo "starting SigmaOS on $vm nodetype follower $FOLLOWER_NODE"

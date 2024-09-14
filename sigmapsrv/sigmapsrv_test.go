@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -474,6 +474,39 @@ func TestDirCreatePerf(t *testing.T) {
 	dir := filepath.Join(pathname, "d")
 	measuredir("create dir", 1, dir, func() int {
 		n := newDir(t, ts.FsLib, dir, N)
+		return n
+	})
+	err := ts.RmDir(dir)
+	assert.Nil(t, err)
+	ts.Shutdown()
+}
+
+func fileRename(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
+	newDir(t, fsl, dir, 100)
+	b := []byte("hello")
+	_, err := fsl.PutFile(filepath.Join(dir, "f"), 0777, sp.OWRITE, b)
+	assert.Nil(t, err)
+	for i := 0; i < n; i++ {
+		if i%2 == 0 {
+			err := fsl.Rename(filepath.Join(dir, "f"), filepath.Join(dir, "g"))
+			assert.Nil(t, err)
+		} else {
+			err := fsl.Rename(filepath.Join(dir, "g"), filepath.Join(dir, "f"))
+			assert.Nil(t, err)
+		}
+	}
+	return n
+}
+
+func TestFileRenamePerf(t *testing.T) {
+	const N = 1000
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	dir := filepath.Join(pathname, "d")
+	measuredir("rename", 1, dir, func() int {
+		n := fileRename(t, ts.FsLib, dir, N)
 		return n
 	})
 	err := ts.RmDir(dir)

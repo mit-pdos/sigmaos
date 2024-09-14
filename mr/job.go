@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	MR          = "/mr/"
-	MRDIRTOP    = "name/" + MR
+	MR       = "/mr/"
+	MRDIRTOP = "name/" + MR
+	//MRDIRTOP    = "name/ux/~local/" + MR
 	MRDIRELECT  = "name/mr-elect"
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"

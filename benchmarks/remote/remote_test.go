@@ -222,7 +222,6 @@ func TestSchedScalability(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
-		//		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400, 46000, 50600, 55200}
 		rps []int         = []int{27600, 32200, 36800, 41400, 46000, 50600, 55200}
 		dur time.Duration = 5 * time.Second
 	)

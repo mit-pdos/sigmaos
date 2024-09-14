@@ -10,6 +10,7 @@ package pathclnt
 
 import (
 	"fmt"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
@@ -83,6 +84,9 @@ func (pathc *PathClnt) detachAll() error {
 
 func (pathc *PathClnt) Create(p string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Create %v perm %v lid %v\n", pathc.cid, p, perm, lid)
+	if filepath.Base(p) == "~local" || filepath.Base(p) == "~any" {
+		return sp.NoFid, fmt.Errorf("Can't create ~local or ~any: %v", p)
+	}
 	path, err := serr.PathSplitErr(p)
 	if err != nil {
 		return sp.NoFid, err
@@ -284,6 +288,9 @@ func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 // Create or open file and write it
 func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId, f *sp.Tfence) (sp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "%v: PutFile %v %v %v\n", pathc.cid, pn, mode, lid)
+	if filepath.Base(pn) == "~local" || filepath.Base(pn) == "~any" {
+		return 0, fmt.Errorf("Can't create ~local or ~any: %v", pn)
+	}
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return 0, err

@@ -94,7 +94,7 @@ func (ft *FtTasks) SubmitStop() error {
 
 func (ft *FtTasks) SubmitTask(id int, i interface{}) error {
 	db.DPrintf(db.FTTASKS, "SubmitTask id %v t %v", id, i)
-	tid := strconv.Itoa(id) + "-" + rd.String(4)
+	tid := strconv.Itoa(id) + "-" + rd.String(16)
 	t := filepath.Join(ft.todo, tid)
 	return ft.PutFileJson(t, 0777, i)
 }

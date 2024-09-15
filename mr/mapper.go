@@ -161,10 +161,18 @@ func (m *Mapper) initMapper() error {
 
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
+	mdStart := time.Now()
+	db.DPrintf(db.MR, "start mkdir intOutput: %v", m.intOutput)
 	m.MkDir(m.intOutput, 0777)
+	db.DPrintf(db.MR, "done mkdir intOutput: %v", m.intOutput)
+	db.DPrintf(db.MR, "initMapper mkdir initOutput time: %v", time.Since(mdStart))
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
+	mdStart = time.Now()
 	m.MkDir(filepath.Dir(outDirPath), 0777) // job dir
-	m.MkDir(outDirPath, 0777)               // mapper dir
+	db.DPrintf(db.MR, "initMapper mkdir jobdir time: %v", time.Since(mdStart))
+	mdStart = time.Now()
+	m.MkDir(outDirPath, 0777) // mapper dir
+	db.DPrintf(db.MR, "initMapper mkdir outDirPath time: %v", time.Since(mdStart))
 	db.DPrintf(db.MR, "initMapper mkdirs time: %v", time.Since(start))
 
 	// Create the output files

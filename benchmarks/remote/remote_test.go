@@ -174,10 +174,10 @@ func TestSchedInfraScalability(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 23
-		numNodes          int  = 23
+		numNodes          int  = 24
 		numCoresPerNode   uint = 40
-		numFullNodes      int  = numNodes
-		numProcqOnlyNodes int  = 0
+		numProcqOnlyNodes int  = 1
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
 		turboBoost        bool = true
 	)
 	ts, err := NewTstate(t)
@@ -253,9 +253,10 @@ func TestMR(t *testing.T) {
 	)
 	// Constant MR benchmark configuration parameters
 	const (
-		memReq     proc.Tmem = 7000
-		asyncRW    bool      = true
-		measureTpt bool      = false
+		memReq proc.Tmem = 1700
+		//		memReq     proc.Tmem = 7000
+		asyncRW    bool = true
+		measureTpt bool = false
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

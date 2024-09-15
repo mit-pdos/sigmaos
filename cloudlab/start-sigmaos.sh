@@ -173,6 +173,7 @@ for vm in $vms; do
   KERNELID="${KERNELID_PREFIX}sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
   mkdir -p /tmp/sigmaos
+  export SIGMAPERF="$SIGMAPERF"
   export SIGMADEBUG="$SIGMADEBUG"
   # Turn on all cores
   ./sigmaos/set-cores.sh --set 1 --start 1 --end $last_core > /dev/null

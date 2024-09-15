@@ -345,6 +345,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
+	init := time.Now()
 	pe := proc.GetProcEnv()
 	p, err := perf.NewPerf(pe, perf.MRMAPPER)
 	if err != nil {
@@ -356,6 +357,7 @@ func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
+	db.DPrintf(db.MR, "Mapper [%v] init time: %v", args[2], time.Since(init))
 	start := time.Now()
 	nin, nout, err := m.DoMap()
 	db.DPrintf(db.MR_TPT, "%s: in %s out tot %v %f %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))

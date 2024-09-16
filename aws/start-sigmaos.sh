@@ -169,7 +169,7 @@ for vm in $vms; do
   # No additional benchmarking setup needed for AWS.
   # Get hostname.
   VM_NAME=$(echo "$vms_full" | grep $vm | cut -d " " -f 2)
-  KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
+  KERNELID="${KERNELID_PREFIX}sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMAPERF="$SIGMAPERF"

@@ -395,8 +395,8 @@ func TestBEImgResizeMultiplexing(t *testing.T) {
 		driverVM          int  = 0
 		numNodes          int  = 8 // 24
 		numCoresPerNode   uint = 4
-		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
 		turboBoost        bool = false
 	)
 	ts, err := NewTstate(t)
@@ -418,10 +418,10 @@ func TestBEImgResizeRPCMultiplexing(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numNodes          int  = 8 // 24
+		numNodes          int  = 26
 		numCoresPerNode   uint = 4
-		numFullNodes      int  = numNodes
-		numProcqOnlyNodes int  = 0
+		numProcqOnlyNodes int  = 2
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
 		turboBoost        bool = false
 	)
 	ts, err := NewTstate(t)

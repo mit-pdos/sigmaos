@@ -39,12 +39,9 @@ MAIN="${vma[0]}"
 MAIN_PRIVADDR="${vma_privaddr[0]}"
 
 for vm in $vms; do
-  if [ $vm == $MAIN ]; then
-    continue
-  fi
   echo "VM: $vm"
   # No additional benchmarking setup needed for AWS.
-  ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<'ENDSSH'
+  ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
 #    cd sigmaos
 #    git fetch --all
 #    git checkout osdi23-submit
@@ -63,19 +60,19 @@ for vm in $vms; do
 #  sed -i.old '1s;^;export PATH=\$PATH:/usr/local/go/bin\n;' ~/.profile
 #  sed -i.old '1s;^;export PATH=\$PATH:/usr/local/go/bin\n;' ~/.bashrc
 #  go version
-#echo "N Procq:"
-#ps -fax | grep "bin/kernel/" | grep "/procq" | wc -l
-#echo "N schedd:"
-#ps -fax | grep "bin/kernel/" | grep "schedd" | wc -l
-sudo kill -SIGTERM $(ps -fax | grep "argv0 /mnt/binfs/named" | cut -d " " -f3 | tail -n1)
-sudo kill -SIGTERM $(ps -fax | grep "argv0 named" | cut -d " " -f3 | tail -n1)
-ls -lha /tmp/sigmaos-perf
+echo "N Procq:"
+ps -fax | grep "bin/kernel/" | grep "/procq" | wc -l
+echo "N schedd:"
+ps -fax | grep "bin/kernel/" | grep "schedd" | wc -l
 ENDSSH
 done
 
+#sudo kill -SIGTERM $(ps -fax | grep "argv0 /mnt/binfs/named" | cut -d " " -f3 | tail -n1)
+#sudo kill -SIGTERM $(ps -fax | grep "argv0 named" | cut -d " " -f3 | tail -n1)
 
-ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<'ENDSSH'
-sudo kill -SIGTERM $(ps -fax | grep "argv0 /mnt/binfs/named" | cut -d " " -f3 | tail -n1)
-sudo kill -SIGTERM $(ps -fax | grep "argv0 named" | cut -d " " -f3 | tail -n1)
-ls -lha /tmp/sigmaos-perf
-ENDSSH
+
+#ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<'ENDSSH'
+#sudo kill -SIGTERM $(ps -fax | grep "argv0 /mnt/binfs/named" | cut -d " " -f3 | tail -n1)
+#sudo kill -SIGTERM $(ps -fax | grep "argv0 named" | cut -d " " -f3 | tail -n1)
+#ls -lha /tmp/sigmaos-perf
+#ENDSSH

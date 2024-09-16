@@ -130,12 +130,12 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 		"--run TestRealmBalanceImgResizeRPCImgResizeRPC "+
 		"--sleep 10s "+
-		"--imgresize_tps 256 "+
-		"--imgresize_dur 30s "+
-		"--imgresize_nround 14 "+
+		"--imgresize_tps 500 "+
+		"--imgresize_dur 20s "+
+		"--imgresize_nround 43 "+
 		"--imgresize_path name/ux/~local/8.jpg "+
 		"--imgresize_mcpu 0 "+
-		"--imgresize_mem 1500 "+
+		"--imgresize_mem 2500 "+
 		"--nrealm 4 "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
@@ -166,6 +166,7 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, measureTpt bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
+			//			debugSelectors string = "\"TEST;BENCH;MR;WALK_LAT;ATTACH_LAT;MOUNT;\"" // XXX REMOVE
 			debugSelectors        string = "\"TEST;BENCH;MR;\""
 			optionalPerfSelectors string = "\"TEST_TPT;BENCH_TPT;\""
 		)

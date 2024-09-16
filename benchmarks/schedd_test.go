@@ -26,6 +26,7 @@ type ScheddJobInstance struct {
 	dur       []time.Duration
 	maxrps    []int
 	ready     chan bool
+	progname  string
 	spawnFn   scheddFn
 	kpfn      kernelPrefFn
 	kidx      atomic.Int64
@@ -35,9 +36,10 @@ type ScheddJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, sfn scheddFn, kernels []string, withKernelPref bool, skipstats bool) *ScheddJobInstance {
+func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, progname string, sfn scheddFn, kernels []string, withKernelPref bool, skipstats bool) *ScheddJobInstance {
 	ji := &ScheddJobInstance{}
 	ji.ready = make(chan bool)
+	ji.progname = progname
 	ji.spawnFn = sfn
 	ji.skipstats = skipstats
 	ji.RealmTstate = ts
@@ -76,7 +78,7 @@ func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, 
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
 			procCnt := int(ji.procCnt.Add(1))
-			pid := sp.Tpid("spawn-latency-" + strconv.Itoa(procCnt))
+			pid := sp.Tpid(ji.progname + "-" + strconv.Itoa(procCnt))
 			// Run a single request.
 			dur := ji.spawnFn(ji.clnts[procCnt%len(ji.clnts)], pid, ji.kpfn())
 			return dur, true

@@ -89,3 +89,39 @@ func TestSrvDialNetProxyExternal(t *testing.T) {
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	srvDialNetProxy(t, addr, sp.EXTERNAL_EP)
 }
+
+func TestClntThroughputNetProxy(t *testing.T) {
+	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
+	assert.Nil(t, err, "Err parse addr: %v", err)
+	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	npc := ts.GetNetProxyClnt()
+	db.DPrintf(db.TEST, "Client start")
+	conn, err := npc.Dial(ep)
+	assert.Nil(ts.T, err, "Err Dial: %v", err)
+	clntThroughput(t, conn)
+}
+
+func TestSrvThroughputNetProxy(t *testing.T) {
+	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
+	assert.Nil(t, err, "Err parse addr: %v", err)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	npc := ts.GetNetProxyClnt()
+	_, l, err := npc.Listen(sp.INTERNAL_EP, addr)
+	assert.Nil(ts.T, err, "Err Listen: %v", err)
+	db.DPrintf(db.TEST, "Ready to accept connections")
+	conn, err := l.Accept()
+	assert.Nil(ts.T, err, "Err Accept: %v", err)
+	srvThroughput(t, conn)
+}

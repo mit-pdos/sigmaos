@@ -2,6 +2,7 @@ package netperf_test
 
 import (
 	"flag"
+	"io"
 	"log"
 	"net"
 	"testing"
@@ -11,12 +12,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	MB = 1 << 20
+)
+
 var srvaddr string
 var ntrial int
+var bufsz int
 
 func init() {
 	flag.StringVar(&srvaddr, "srvaddr", ":8080", "Address of server.")
 	flag.IntVar(&ntrial, "ntrial", 50, "Number of trials.")
+	flag.IntVar(&bufsz, "bufsz", 1*MB, "Size of buffer in bytes.")
 }
 
 func clntDialTCP(t *testing.T, addr string) {
@@ -60,4 +67,57 @@ func TestClntDialTCP(t *testing.T) {
 
 func TestSrvDialTCP(t *testing.T) {
 	srvDialTCP(t, srvaddr)
+}
+
+func clntThroughput(t *testing.T, conn net.Conn) {
+	start := time.Now()
+	b := make([]byte, bufsz)
+	for i := 0; i < ntrial; i++ {
+		n, err := conn.Write(b)
+		assert.Nil(t, err, "Err Write: %v", err)
+		assert.Equal(t, n, len(b), "Err short write: %v", n)
+	}
+	err := conn.Close()
+	assert.Nil(t, err, "Err Close: %v", err)
+	dur := time.Since(start)
+	totBytes := int64(bufsz) * int64(ntrial)
+	log.Printf("Total bytes: %v", totBytes)
+	log.Printf("Elapsed time: %v", dur)
+	log.Printf("Throughput: %vMB/s", float64(totBytes/MB)/dur.Seconds())
+}
+
+func srvThroughput(t *testing.T, conn net.Conn) {
+	start := time.Now()
+	b := make([]byte, bufsz)
+	for i := 0; i < ntrial; i++ {
+		n, err := io.ReadFull(conn, b)
+		assert.Nil(t, err, "Err Read: %v", err)
+		assert.Equal(t, n, len(b), "Err short read: %v", n)
+	}
+	err := conn.Close()
+	assert.Nil(t, err, "Err Close: %v", err)
+	dur := time.Since(start)
+	totBytes := int64(bufsz) * int64(ntrial)
+	log.Printf("Total bytes: %v", totBytes)
+	log.Printf("Elapsed time: %v", dur)
+	log.Printf("Throughput: %vMB/s", float64(totBytes/MB)/dur.Seconds())
+}
+
+func TestClntThroughputTCP(t *testing.T) {
+	conn, err := net.Dial("tcp", srvaddr)
+	if !assert.Nil(t, err, "Err Dial: %v", err) {
+		return
+	}
+	clntThroughput(t, conn)
+}
+
+func TestSrvThroughputTCP(t *testing.T) {
+	l, err := net.Listen("tcp", srvaddr)
+	if !assert.Nil(t, err, "Err Listen: %v", err) {
+		return
+	}
+	log.Printf("Ready to accept connections")
+	conn, err := l.Accept()
+	assert.Nil(t, err, "Err Accept: %v", err)
+	srvThroughput(t, conn)
 }

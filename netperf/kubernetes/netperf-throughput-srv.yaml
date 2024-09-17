@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: netperf-srv
+spec:
+  type: NodePort
+  ports:
+    - name: "8080"
+      port: 8080
+      targetPort: 8080
+  selector:
+    service: netperf-srv
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    service: netperf-srv
+  name: netperf-srv
+spec:
+  containers:
+    - name: netperf-srv
+      image: arielszekely/sigmaos-netperf:latest
+      command: ["go"]
+      args: ["test", "-v", "netperf", "--run", "TestSrvThroughputTCP", "--srvaddr", ":8080", "--ntrial", "500"]
+      ports:
+        - containerPort: 8080
+  restartPolicy: OnFailure
+status: {}

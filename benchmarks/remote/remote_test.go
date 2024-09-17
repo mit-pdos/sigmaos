@@ -83,8 +83,11 @@ func TestColdStart(t *testing.T) {
 	)
 	// Benchmark configuration parameters
 	var (
-		rps int           = 8
-		dur time.Duration = 5 * time.Second
+		dummyProc    bool          = false
+		lcProc       bool          = false
+		prewarmRealm bool          = false
+		rps          int           = 8
+		dur          time.Duration = 5 * time.Second
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -94,7 +97,7 @@ func TestColdStart(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false, false), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+	ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, dummyProc, lcProc, prewarmRealm), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
 // Test the single-node proc start bottleneck.
@@ -119,6 +122,9 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
+		dummyProc     bool          = false
+		lcProc        bool          = false
+		prewarmRealm  bool          = true
 		rpsPerCore    []int         = []int{100, 250}
 		nCoresPerNode []uint        = []uint{2, 4, 8, 16, 32, 40} // In practice, scaling stops well before we reach 32 cores
 		dur           time.Duration = 5 * time.Second
@@ -128,7 +134,7 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 		for _, perCoreRPS := range rpsPerCore {
 			rps := int(nCores) * perCoreRPS
 			benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-cores-rps-%v", nCores, rps))
-			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false, true), numNodes, nCores, numFullNodes, numProcqOnlyNodes, turboBoost)
+			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, dummyProc, lcProc, prewarmRealm), numNodes, nCores, numFullNodes, numProcqOnlyNodes, turboBoost)
 		}
 	}
 }
@@ -156,13 +162,17 @@ func TestSchedLCSchedMaxTpt(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
-		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400, 46000}
+		dummyProc    bool = true
+		lcProc       bool = true
+		prewarmRealm bool = true
+		//		rps          []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400, 46000}
+		rps []int         = []int{4600, 9200, 13800, 27600, 32200, 36800, 41400, 46000}
 		dur time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, r := range rps {
 		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
-		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true, true), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, dummyProc, lcProc, prewarmRealm), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 	}
 }
 
@@ -189,13 +199,16 @@ func TestSchedProcqMaxTpt(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
-		rps []int         = []int{18400, 23000, 27600, 32200, 36800, 41400, 46000}
-		dur time.Duration = 5 * time.Second
+		dummyProc    bool          = true
+		lcProc       bool          = false
+		prewarmRealm bool          = true
+		rps          []int         = []int{32200, 36800, 41400, 46000}
+		dur          time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, r := range rps {
 		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
-		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true, true), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, dummyProc, lcProc, prewarmRealm), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 	}
 }
 
@@ -222,13 +235,16 @@ func TestSchedProcStartMaxTpt(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
-		rps []int         = []int{27600, 32200, 36800, 41400, 46000}
-		dur time.Duration = 5 * time.Second
+		dummyProc    bool          = false
+		lcProc       bool          = false
+		prewarmRealm bool          = true
+		rps          []int         = []int{27600, 32200, 36800, 41400, 46000}
+		dur          time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, r := range rps {
 		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
-		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, false, true), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, dummyProc, lcProc, prewarmRealm), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 	}
 }
 

@@ -88,8 +88,12 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 	}
 }
 
-func runDummySpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, pid sp.Tpid) time.Duration {
+func runDummySpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, pid sp.Tpid, isLC bool) time.Duration {
 	p := proc.NewProcPid(pid, sp.DUMMY_PROG, nil)
+	if isLC {
+		// Set a minimal amount of MCPU if spawning an LC proc
+		p.SetMcpu(1)
+	}
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "Spawn: %v", err)
 	status, err := sclnt.WaitExit(p.GetPid())

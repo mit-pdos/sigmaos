@@ -54,6 +54,7 @@ var N_NODE_PER_MACHINE int
 var N_CLNT int
 var USE_RUST_PROC bool
 var USE_DUMMY_PROC bool
+var SPAWN_BENCH_LC_PROC bool
 var WITH_KERNEL_PREF bool
 var DOWNLOAD_FROM_UX bool
 var SCHEDD_DURS string
@@ -121,6 +122,7 @@ func init() {
 	flag.IntVar(&N_NODE_PER_MACHINE, "n_node_per_machine", 1, "Number of nodes per machine. Likely should always be 1, unless developing locally.")
 	flag.BoolVar(&USE_RUST_PROC, "use_rust_proc", false, "Use rust spawn bench proc")
 	flag.BoolVar(&USE_DUMMY_PROC, "use_dummy_proc", false, "Use dummy spawn bench proc")
+	flag.BoolVar(&SPAWN_BENCH_LC_PROC, "spawn_bench_lc_proc", false, "Use an LC proc for spawn bench")
 	flag.BoolVar(&WITH_KERNEL_PREF, "with_kernel_pref", false, "Set proc kernel preferences when spawning (e.g., to force & measure cold start)")
 	flag.BoolVar(&DOWNLOAD_FROM_UX, "download_from_ux", false, "Download the proc from ux, instead of S3. !!! WARNING: this only works for the spawn-latency proc !!!")
 	flag.StringVar(&SCHEDD_DURS, "schedd_dur", "10s", "Schedd benchmark load generation duration (comma-separated for multiple phases).")
@@ -405,7 +407,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 	}
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
-	db.DPrintf(db.BENCH, "rust %v ux %v prewarm %v kpref %v nclnt %v durs %v rps %v skipstats %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, SKIPSTATS)
+	db.DPrintf(db.BENCH, "rust %v ux %v dummy %v lc %v prewarm %v kpref %v nclnt %v durs %v rps %v skipstats %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, USE_DUMMY_PROC, SPAWN_BENCH_LC_PROC, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, SKIPSTATS)
 
 	prog := "XXXX"
 	if USE_RUST_PROC {
@@ -459,7 +461,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 		if USE_RUST_PROC {
 			return runRustSpawnBenchProc(ts1, sc, prog, pid, kernelpref)
 		} else if USE_DUMMY_PROC {
-			return runDummySpawnBenchProc(ts1, sc, pid)
+			return runDummySpawnBenchProc(ts1, sc, pid, SPAWN_BENCH_LC_PROC)
 		} else {
 			return runSpawnBenchProc(ts1, sc, pid, kernelpref)
 		}

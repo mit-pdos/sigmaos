@@ -166,6 +166,7 @@ func (ts *Tstate) StartSigmaOSCluster(numNodes int, numCoresPerNode uint, numFul
 // Stop any running SigmaOS cluster
 func (ts *Tstate) StopSigmaOSCluster() error {
 	args := []string{
+		"--parallel",
 		"--vpc", ts.BCfg.VPC,
 	}
 	err := ts.LCfg.RunScriptRedirectOutputFile("./stop-sigmaos.sh", CLUSTER_INIT_LOG, args...)

@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 type Tshare int64
@@ -35,7 +36,12 @@ func (updm *UprocdMgr) startBalanceShares(p *proc.Proc) {
 		if rpcc.share == MIN_SHARE {
 			rpcc.share = 0
 		}
-		updm.setShare(rpcc, rpcc.share+mcpuToShare(p.GetMcpu()))
+		if p.GetProgram() == sp.DUMMY_PROG {
+			// Do setShares, but don't actually change them for dummy prog
+			updm.setShare(rpcc, rpcc.share)
+		} else {
+			updm.setShare(rpcc, rpcc.share+mcpuToShare(p.GetMcpu()))
+		}
 	case proc.T_BE:
 		updm.balanceBEShares()
 	default:
@@ -51,7 +57,12 @@ func (updm *UprocdMgr) exitBalanceShares(p *proc.Proc) {
 	switch p.GetType() {
 	case proc.T_LC:
 		rpcc := updm.upcs[p.GetRealm()][p.GetType()]
-		updm.setShare(rpcc, rpcc.share-mcpuToShare(p.GetMcpu()))
+		if p.GetProgram() == sp.DUMMY_PROG {
+			// Do setShares, but don't actually change them for dummy prog
+			updm.setShare(rpcc, rpcc.share)
+		} else {
+			updm.setShare(rpcc, rpcc.share-mcpuToShare(p.GetMcpu()))
+		}
 	case proc.T_BE:
 		// No need to readjust share.
 	default:

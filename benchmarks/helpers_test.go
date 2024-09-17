@@ -92,7 +92,7 @@ func runDummySpawnBenchProc(ts *test.RealmTstate, sclnt *sigmaclnt.SigmaClnt, pi
 	p := proc.NewProcPid(pid, sp.DUMMY_PROG, nil)
 	if isLC {
 		// Set a minimal amount of MCPU if spawning an LC proc
-		p.SetMcpu(1)
+		p.SetMcpu(10)
 	}
 	err := sclnt.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "Spawn: %v", err)

@@ -108,10 +108,10 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM          int  = 1
-		numNodes          int  = 1
-		numFullNodes      int  = 1
-		numProcqOnlyNodes int  = 0
+		driverVM          int  = 3
+		numNodes          int  = 2
+		numProcqOnlyNodes int  = 1
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
 		turboBoost        bool = true
 	)
 	ts, err := NewTstate(t)
@@ -164,13 +164,12 @@ func TestSchedLCSchedMaxTpt(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
-		dummyProc    bool = true
-		lcProc       bool = true
-		prewarmRealm bool = true
-		skipStats    bool = true
-		//		rps          []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400, 46000}
-		rps []int         = []int{4600, 9200, 13800, 32200, 36800, 41400, 46000}
-		dur time.Duration = 5 * time.Second
+		dummyProc    bool          = true
+		lcProc       bool          = true
+		prewarmRealm bool          = true
+		skipStats    bool          = true
+		rps          []int         = []int{36800, 41400, 46000, 51500, 59100}
+		dur          time.Duration = 20 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, r := range rps {
@@ -180,7 +179,7 @@ func TestSchedLCSchedMaxTpt(t *testing.T) {
 }
 
 // Test the maximum throughput of a single procq.
-func TestSchedProcqMaxTpt(t *testing.T) {
+func TestProcqSchedMaxTpt(t *testing.T) {
 	var (
 		benchNameBase string = "procq_max_tpt"
 	)
@@ -206,7 +205,7 @@ func TestSchedProcqMaxTpt(t *testing.T) {
 		lcProc       bool          = false
 		prewarmRealm bool          = true
 		skipStats    bool          = true
-		rps          []int         = []int{32200, 36800, 41400, 46000}
+		rps          []int         = []int{46000, 51500}
 		dur          time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
@@ -224,7 +223,7 @@ func TestSchedProcStartMaxTpt(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 25
-		numNodes          int  = 24
+		numNodes          int  = 25
 		numCoresPerNode   uint = 40
 		numProcqOnlyNodes int  = 1
 		numFullNodes      int  = numNodes - numProcqOnlyNodes
@@ -243,7 +242,7 @@ func TestSchedProcStartMaxTpt(t *testing.T) {
 		lcProc       bool          = false
 		prewarmRealm bool          = true
 		skipStats    bool          = true
-		rps          []int         = []int{27600, 32200, 36800, 41400, 46000}
+		rps          []int         = []int{32200, 36800, 41400}
 		dur          time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)

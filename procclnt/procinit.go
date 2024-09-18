@@ -30,8 +30,19 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
 			return nil, err
 		}
+		db.DPrintf(db.TEST, "Mount schedd [%v] %v as %v time %v", ep, rpc.RPC, pn, time.Since(start))
 		db.DPrintf(db.SPAWN_LAT, "[%v] MountTree latency: %v", fsl.ProcEnv().GetPID(), time.Since(start))
 	}
+	if ep, ok := fsl.ProcEnv().GetNamedEndpoint(); ok {
+		start := time.Now()
+		err := fsl.MountTree(ep, "", sp.NAMED)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
+			return nil, err
+		}
+		db.DPrintf(db.TEST, "Mount named [%v] time %v", ep, time.Since(start))
+	}
+
 	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged()), nil
 }
 

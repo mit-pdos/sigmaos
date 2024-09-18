@@ -127,16 +127,15 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 		lcProc        bool          = false
 		prewarmRealm  bool          = true
 		skipStats     bool          = true
-		rpsPerCore    []int         = []int{100, 250}
-		nCoresPerNode []uint        = []uint{2, 4, 8, 16, 32, 40} // In practice, scaling stops well before we reach 32 cores
+		rps           []int         = []int{1600, 1200, 800, 400}
+		nCoresPerNode []uint        = []uint{40, 32, 16, 8, 4, 2}
 		dur           time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, nCores := range nCoresPerNode {
-		for _, perCoreRPS := range rpsPerCore {
-			rps := int(nCores) * perCoreRPS
-			benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-cores-rps-%v", nCores, rps))
-			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, dummyProc, lcProc, prewarmRealm, skipStats), numNodes, nCores, numFullNodes, numProcqOnlyNodes, turboBoost)
+		for _, r := range rps {
+			benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-cores-rps-%v", nCores, r))
+			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, dummyProc, lcProc, prewarmRealm, skipStats), numNodes, nCores, numFullNodes, numProcqOnlyNodes, turboBoost)
 		}
 	}
 }
@@ -148,7 +147,7 @@ func TestSchedLCSchedMaxTpt(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM          int  = 24
+		driverVM          int  = 25
 		numNodes          int  = 24
 		numCoresPerNode   uint = 40
 		numProcqOnlyNodes int  = 0
@@ -168,7 +167,7 @@ func TestSchedLCSchedMaxTpt(t *testing.T) {
 		lcProc       bool          = true
 		prewarmRealm bool          = true
 		skipStats    bool          = true
-		rps          []int         = []int{36800, 41400, 46000, 51500, 59100}
+		rps          []int         = []int{41400, 46000, 51500, 59100}
 		dur          time.Duration = 20 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
@@ -185,8 +184,8 @@ func TestProcqSchedMaxTpt(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM          int  = 24
-		numNodes          int  = 24
+		driverVM          int  = 25
+		numNodes          int  = 25
 		numCoresPerNode   uint = 40
 		numProcqOnlyNodes int  = 1
 		numFullNodes      int  = numNodes - numProcqOnlyNodes
@@ -205,8 +204,8 @@ func TestProcqSchedMaxTpt(t *testing.T) {
 		lcProc       bool          = false
 		prewarmRealm bool          = true
 		skipStats    bool          = true
-		rps          []int         = []int{46000, 51500}
-		dur          time.Duration = 5 * time.Second
+		rps          []int         = []int{46000, 51500, 59100}
+		dur          time.Duration = 20 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, r := range rps {
@@ -242,7 +241,7 @@ func TestSchedProcStartMaxTpt(t *testing.T) {
 		lcProc       bool          = false
 		prewarmRealm bool          = true
 		skipStats    bool          = true
-		rps          []int         = []int{32200, 36800, 41400}
+		rps          []int         = []int{32200, 36800, 38000, 40000, 41400}
 		dur          time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)

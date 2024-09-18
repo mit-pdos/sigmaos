@@ -418,7 +418,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 		}
 	} else if USE_DUMMY_PROC {
 		assert.False(t, DOWNLOAD_FROM_UX, "Can only download rust proc from ux for now")
-		prog = "spawn-bench"
+		prog = sp.DUMMY_PROG
 	}
 
 	sts, err := rootts.GetDir(sp.SCHEDD)

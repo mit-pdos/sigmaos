@@ -40,6 +40,6 @@ for vm in $vms; do
 #  ps -fax | grep "bin/kernel/" | grep "/procq" | wc -l
 #  echo "N schedd:"
 #  ps -fax | grep "bin/kernel/" | grep "schedd" | wc -l
-  sudo kill -SIGTERM $(ps -fax | grep "argv0 procq" | cut -d " " -f1 | tail -n1)
+  sudo kill -SIGTERM $(ps -fax | grep "argv0 procq" | cut -d " " -f2 | tail -n1)
 ENDSSH
 done

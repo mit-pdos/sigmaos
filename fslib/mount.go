@@ -1,6 +1,8 @@
 package fslib
 
 import (
+	"path/filepath"
+
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -97,24 +99,33 @@ func (fsl *FsLib) CopyEndpoint(pn string) (*sp.Tendpoint, string, error) {
 	return nil, "", serr.NewErr(serr.TErrInval, pn)
 }
 
-func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error) {
+func (fsl *FsLib) isLocal(pn string) (bool, *sp.Tendpoint, error) {
+	b, err := fsl.GetFile(pn)
+	if err != nil {
+		return false, nil, err
+	}
+	ep, error := sp.NewEndpointFromBytes(b)
+	if error != nil {
+		return false, nil, err
+	}
+	ok, err := fsl.FileAPI.IsLocalMount(ep)
+	if err != nil {
+		return false, nil, err
+	}
+	return ok, ep, nil
+}
+
+func (fsl *FsLib) resolveMount0(d string, q string) (string, *sp.Tendpoint, error) {
 	var rep *sp.Tendpoint
 	rname := ""
 	// Make sure to resolve d in case it is a symlink or endpoint point.
 	_, err := fsl.ProcessDir(d+"/", func(st *sp.Stat) (bool, error) {
-		b, err := fsl.GetFile(d + "/" + st.Name)
-		if err != nil {
-			return false, nil
-		}
-		ep, error := sp.NewEndpointFromBytes(b)
-		if error != nil {
-			return false, nil
-		}
-		ok, err := fsl.FileAPI.IsLocalMount(ep)
+		ok, ep, err := fsl.isLocal(filepath.Join(d, st.Name))
 		if err != nil {
 			return false, err
 		}
 		if q == "~any" || ok {
+			db.DPrintf(db.TEST, "resolveMount %v %v %v", d, st.Name, fsl.pe.GetKernelID())
 			rname = st.Name
 			rep = ep
 			return true, nil
@@ -125,6 +136,26 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error
 		return rname, rep, nil
 	}
 	return rname, rep, serr.NewErr(serr.TErrNotfound, d)
+}
+
+func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error) {
+	rname := ""
+
+	if fsl.pe.GetKernelID() != sp.NOT_SET {
+		rname = fsl.pe.GetKernelID()
+		ok, ep, err := fsl.isLocal(filepath.Join(d, rname))
+		if err != nil {
+			return "", nil, err
+		}
+		if !ok {
+			db.DFatalf("resolveMount %v isn't local %v", rname, ep)
+		}
+		if q == "~any" || ok {
+			db.DPrintf(db.TEST, "resolveMount %v %v %v", d, rname, fsl.pe.GetKernelID())
+			return rname, ep, nil
+		}
+	}
+	return fsl.resolveMount0(d, q)
 }
 
 // For code running using /mnt/9p, which doesn't support PutFile.

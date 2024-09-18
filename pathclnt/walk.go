@@ -181,6 +181,15 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w Watch) (sp.Tf
 // and return fid for result.
 func (pathc *PathClnt) walkUnion(fid sp.Tfid, p path.Tpathname) (sp.Tfid, path.Tpathname, *serr.Err) {
 	if len(p) > 0 && path.IsUnionElem(p[0]) {
+		if true && p[0] == "~local" && pathc.pe.GetKernelID() != sp.NOT_SET {
+			db.DPrintf(db.TEST, "Local KernelId %v path %v", p, pathc.pe.GetKernelID())
+			fid1, err := pathc.unionScan(fid, pathc.pe.GetKernelID(), "~local")
+			if err != nil {
+				db.DPrintf(db.TEST, "Local unionScan fid %v err %v", fid, err)
+				return fid, p, err
+			}
+			return fid1, p[1:], nil
+		}
 		s := time.Now()
 		db.DPrintf(db.WALK, "walkUnion %v path %v", fid, p)
 		fid1, err := pathc.unionLookup(fid, p[0])

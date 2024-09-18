@@ -784,11 +784,16 @@ func TestStatUx(t *testing.T) {
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	assert.Nil(t, err)
+
+	sts, err := ts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+	pe.KernelID = sts[0].Name
+
 	s := time.Now()
-	pn := filepath.Join(sp.UX, "sigma-named", "bin/user/common/spawn-latency")
-	//pn := filepath.Join(sp.UX, "~local", "bin/user/common/spawn-latency")
+	pn := filepath.Join(sp.UX, "~local", "bin/user/common/spawn-latency")
 	db.DPrintf(db.TEST, "Stat %v start %v\n", fsl.ClntId(), pn)
 	_, err = fsl.Stat(pn)
-	db.DPrintf(db.TEST, "Stat %v done %v took %v\n", fsl.ClntId(), pn, time.Since(s))
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "Stat %v done %v took %vn", fsl.ClntId(), pn, time.Since(s))
 	ts.Shutdown()
 }

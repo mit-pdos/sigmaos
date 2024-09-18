@@ -3,6 +3,7 @@ package lcschedsrv
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -15,12 +16,14 @@ const (
 type Qitem struct {
 	p     *proc.Proc
 	kidch chan string
+	enqTS time.Time
 }
 
 func newQitem(p *proc.Proc, kidch chan string) *Qitem {
 	return &Qitem{
 		p:     p,
 		kidch: kidch,
+		enqTS: time.Now(),
 	}
 }
 
@@ -54,7 +57,10 @@ func (q *Queue) Dequeue(mcpu proc.Tmcpu, mem proc.Tmem) (*proc.Proc, chan string
 	for i := range q.procs {
 		qi := q.procs[i]
 		if qi.p.GetMem() <= mem && qi.p.GetMcpu() <= mcpu {
-			q.procs = append(q.procs[:i], q.procs[i+1:]...)
+			//			q.procs = append(q.procs[:i], q.procs[i+1:]...)
+			// Delete the i-th proc from the queue
+			copy(q.procs[i:], q.procs[i+1:])
+			q.procs = q.procs[:len(q.procs)-1]
 			delete(q.pmap, qi.p.GetPid())
 			return qi.p, qi.kidch, true
 		}

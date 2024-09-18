@@ -166,6 +166,10 @@ func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, *proc.ProcSeqno, er
 }
 
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.SPAWN_LAT, "[%v] time enqueueViaLCSched: %v", p.GetPid(), time.Since(start))
+	}(start)
 	return clnt.lcschedclnt.Enqueue(p)
 }
 

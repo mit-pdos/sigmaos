@@ -25,7 +25,8 @@ type DirCache[E any] struct {
 	sync.RWMutex
 	hasEntries    *sync.Cond
 	dir           *sortedmap.SortedMap[string, E]
-	done          atomic.Uint64
+	isDone        atomic.Uint64
+	isInit        atomic.Uint64
 	Path          string
 	LSelector     db.Tselector
 	ESelector     db.Tselector
@@ -52,14 +53,23 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 		ch:            ch,
 	}
 	dc.hasEntries = sync.NewCond(&dc.RWMutex)
-	go dc.watchDir()
-	go dc.watchdog()
 	return dc
+}
+
+func (dc *DirCache[E]) init() {
+	ch := make(chan struct{})
+	if dc.isInit.Swap(1) == 0 && dc.isDone.Load() == 0 {
+		db.DPrintf(db.TEST, "DirCache.init %v", dc.Path)
+		go dc.watchDir(ch)
+		go dc.watchdog()
+		<-ch
+		db.DPrintf(db.TEST, "DirCache.init %v done", dc.Path)
+	}
 }
 
 // watchdog thread that wakes up waiters periodically
 func (dc *DirCache[E]) watchdog() {
-	for dc.done.Load() == 0 {
+	for dc.isDone.Load() == 0 {
 		time.Sleep(fsetcd.LeaseTTL * time.Second)
 		db.DPrintf(dc.LSelector, "watchdog: broadcast")
 		dc.hasEntries.Broadcast()
@@ -67,10 +77,11 @@ func (dc *DirCache[E]) watchdog() {
 }
 
 func (dc *DirCache[E]) StopWatching() {
-	dc.done.Add(1)
+	dc.isDone.Add(1)
 }
 
 func (dc *DirCache[E]) Nentry() (int, error) {
+	dc.init()
 	if err := dc.checkErr(); err != nil {
 		return 0, err
 	}
@@ -78,6 +89,7 @@ func (dc *DirCache[E]) Nentry() (int, error) {
 }
 
 func (dc *DirCache[E]) GetEntries() ([]string, error) {
+	dc.init()
 	if err := dc.checkErr(); err != nil {
 		return nil, err
 	}
@@ -85,6 +97,7 @@ func (dc *DirCache[E]) GetEntries() ([]string, error) {
 }
 
 func (dc *DirCache[E]) WaitTimedEntriesN(n int) (int, error) {
+	dc.init()
 	if err := dc.checkErr(); err != nil {
 		return 0, err
 	}
@@ -106,6 +119,7 @@ func (dc *DirCache[E]) WaitTimedGetEntriesN(n int) ([]string, error) {
 
 func (dc *DirCache[E]) GetEntry(n string) (E, error) {
 	db.DPrintf(dc.LSelector, "GetEntry for %v", n)
+	dc.init()
 
 	if err := dc.checkErr(); err != nil {
 		var e E
@@ -135,6 +149,7 @@ func (dc *DirCache[E]) RandomEntry() (string, error) {
 	var ok bool
 
 	db.DPrintf(dc.LSelector, "Random")
+	dc.init()
 
 	if err := dc.checkErr(); err != nil {
 		return "", err
@@ -150,6 +165,7 @@ func (dc *DirCache[E]) RandomEntry() (string, error) {
 }
 
 func (dc *DirCache[E]) WaitTimedRandomEntry() (string, error) {
+	dc.init()
 	return dc.waitEntry(dc.RandomEntry)
 }
 
@@ -158,6 +174,7 @@ func (dc *DirCache[E]) RoundRobin() (string, error) {
 	var ok bool
 
 	db.DPrintf(dc.LSelector, "RoundRobin")
+	dc.init()
 
 	if err := dc.checkErr(); err != nil {
 		return "", err
@@ -175,10 +192,12 @@ func (dc *DirCache[E]) RoundRobin() (string, error) {
 }
 
 func (dc *DirCache[E]) WaitTimedRoundRobin() (string, error) {
+	dc.init()
 	return dc.waitEntry(dc.RoundRobin)
 }
 
 func (dc *DirCache[E]) InvalidateEntry(name string) bool {
+	dc.init()
 	db.DPrintf(dc.LSelector, "InvalidateEntry %v", name)
 	ok := dc.dir.Delete(name)
 	db.DPrintf(dc.LSelector, "Done invalidate entry %v %v", ok, dc.dir)
@@ -297,9 +316,10 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 }
 
 // Monitor for changes to the directory and update the cached one
-func (dc *DirCache[E]) watchDir() {
+func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 	retry := false
-	for dc.done.Load() == 0 {
+	first := true
+	for dc.isDone.Load() == 0 {
 		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
 		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilters)
 		if ok { // reset retry?
@@ -324,6 +344,9 @@ func (dc *DirCache[E]) watchDir() {
 		dc.Lock()
 		dc.updateEntriesL(ents)
 		dc.Unlock()
+		if first {
+			ch <- struct{}{}
+		}
 	}
 	if dc.ch != nil {
 		close(dc.ch)

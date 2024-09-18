@@ -38,7 +38,7 @@ func TestDirCache(t *testing.T) {
 	_, err = ts.PutFile(filepath.Join(dn, fn), 0777, sp.OWRITE, nil)
 	assert.Nil(t, err)
 
-	dc := dircache.NewDirCache[struct{}](ts.FsLib, dn, newEntry, db.FSLIB, db.FSLIB)
+	dc := dircache.NewDirCache[struct{}](ts.FsLib, dn, newEntry, nil, db.TEST, db.TEST)
 
 	ns, err := dc.GetEntries()
 

@@ -9,8 +9,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/leaderetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/path"
 	"sigmaos/perf"
@@ -197,6 +197,12 @@ func Run(args []string) error {
 	}
 
 	db.DPrintf(db.NAMED, "Created Leader file %v ", nd.elect.Key())
+
+	if sts, err := nd.GetDir(sp.UX); err != nil {
+		db.DFatalf("ReadDir %v", err)
+	} else {
+		db.DPrintf(db.TEST, "Warm cache %v", sp.Names(sts))
+	}
 
 	if nd.crash > 0 {
 		crash.Crasher(nd.SigmaClnt.FsLib)

@@ -82,6 +82,7 @@ func (ccfg *ClusterConfig) RunBenchmark(driverVM int, benchCmd string) error {
 func (ccfg *ClusterConfig) CollectResults(benchName string, leaderBenchCmd, followerBenchCmd string) error {
 	outDirPath := ccfg.lcfg.GetOutputDirPath(benchName)
 	args := []string{
+		"--parallel",
 		"--vpc", ccfg.bcfg.VPC,
 		"--perfdir", outDirPath,
 	}

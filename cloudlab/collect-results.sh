@@ -64,7 +64,7 @@ for vm in $vms; do
   fi
   # read log files.
   vm_hostname="${vm_id_a[$idx]}"
-  cmd1="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c '~/sigmaos/logs.sh --merge'\" > $LOG_DIR/$vm_hostname-$vm.out 2>&1"
+  cmd1="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c '~/sigmaos/logs.sh'\" > $LOG_DIR/$vm_hostname-$vm.out 2>&1"
   # zip up performance files.
   cmd2="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c 'cd /tmp/sigmaos-perf; tar -czf ../perf.tar.gz .'\""
   # scp performance files.

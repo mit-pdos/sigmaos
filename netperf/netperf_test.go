@@ -39,7 +39,10 @@ func clntDialNetProxy(t *testing.T, ep *sp.Tendpoint) {
 	assert.Nil(ts.T, err, "Err Mean: %v", err)
 	stdLat, err := stats.StandardDeviation(lat)
 	assert.Nil(ts.T, err, "Err Std: %v", err)
+	maxLat, err := stats.Max(lat)
+	assert.Nil(ts.T, err, "Err Max: %v", err)
 	db.DPrintf(db.BENCH, "Raw latency: %vus", lat)
+	db.DPrintf(db.BENCH, "Max latency: %vus", maxLat)
 	db.DPrintf(db.BENCH, "Mean latency: %vus", avgLat)
 	db.DPrintf(db.BENCH, "Std latency: %vus", stdLat)
 }

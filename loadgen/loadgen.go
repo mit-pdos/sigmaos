@@ -50,7 +50,7 @@ func (lg *LoadGenerator) setupInitThreads() {
 	lg.rpss = make([]int64, 0)
 	lg.sleepdurs = make([]time.Duration, 0)
 	// Rate at which a single initiator thread can kick off asynch requests.
-	N := int64(1000)
+	N := int64(500)
 	rps := lg.maxrps
 	for rps > 0 {
 		// Number of reqests to be fired off by this initiator thread, each second.

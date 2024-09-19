@@ -13,6 +13,7 @@ import (
 	"sigmaos/procfs"
 	pqproto "sigmaos/procqsrv/proto"
 	"sigmaos/scheddclnt"
+	"sigmaos/schedqueue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -23,7 +24,7 @@ type LCSched struct {
 	cond       *sync.Cond
 	sc         *sigmaclnt.SigmaClnt
 	scheddclnt *scheddclnt.ScheddClnt
-	qs         map[sp.Trealm]*Queue
+	qs         map[sp.Trealm]*schedqueue.Queue[string, chan string]
 	schedds    map[string]*Resources
 }
 
@@ -35,7 +36,7 @@ func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	lcs := &LCSched{
 		sc:         sc,
 		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib),
-		qs:         make(map[sp.Trealm]*Queue),
+		qs:         make(map[sp.Trealm]*schedqueue.Queue[string, chan string]),
 		schedds:    make(map[string]*Resources),
 	}
 	lcs.cond = sync.NewCond(&lcs.mu)
@@ -48,7 +49,8 @@ func (qd *QDir) GetProcs() []*proc.Proc {
 
 	procs := make([]*proc.Proc, 0, qd.lcs.lenL())
 	for _, q := range qd.lcs.qs {
-		for _, p := range q.pmap {
+		pmap := q.GetPMapL()
+		for _, p := range pmap {
 			procs = append(procs, p)
 		}
 	}
@@ -60,7 +62,8 @@ func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
 	defer qd.lcs.mu.Unlock()
 
 	for _, q := range qd.lcs.qs {
-		if p, ok := q.pmap[sp.Tpid(pid)]; ok {
+		pmap := q.GetPMapL()
+		if p, ok := pmap[sp.Tpid(pid)]; ok {
 			return p, ok
 		}
 	}
@@ -70,7 +73,7 @@ func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
 func (lcs *LCSched) lenL() int {
 	l := 0
 	for _, q := range lcs.qs {
-		l += len(q.pmap)
+		l += q.Len()
 	}
 	return l
 }
@@ -119,7 +122,9 @@ func (lcs *LCSched) schedule() {
 		for realm, q := range lcs.qs {
 			db.DPrintf(db.LCSCHED, "Try to schedule realm %v", realm)
 			for kid, r := range lcs.schedds {
-				p, ch, ok := q.Dequeue(r.mcpu, r.mem)
+				p, ch, _, ok := q.Dequeue(func(p *proc.Proc) bool {
+					return isEligible(p, r.mcpu, r.mem)
+				})
 				if ok {
 					db.DPrintf(db.LCSCHED, "Successfully schedule realm %v", realm)
 					// Alloc resources for the proc
@@ -186,9 +191,16 @@ func (lcs *LCSched) addProc(p *proc.Proc, ch chan string) {
 	lcs.cond.Signal()
 }
 
+func isEligible(p *proc.Proc, mcpu proc.Tmcpu, mem proc.Tmem) bool {
+	if p.GetMem() <= mem && p.GetMcpu() <= mcpu {
+		return true
+	}
+	return false
+}
+
 // Caller must hold lock.
-func (lcs *LCSched) addRealmQueueL(realm sp.Trealm) *Queue {
-	q := newQueue()
+func (lcs *LCSched) addRealmQueueL(realm sp.Trealm) *schedqueue.Queue[string, chan string] {
+	q := schedqueue.NewQueue[string, chan string]()
 	lcs.qs[realm] = q
 	return q
 }

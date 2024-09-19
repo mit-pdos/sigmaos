@@ -64,7 +64,7 @@ func (npc *NetProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
 		db.DPrintf(db.NETPROXYCLNT, "[%v] directDial %v done ok:%v", npc.pe.GetPrincipal(), ep, err == nil)
 	}
 	if err == nil {
-		db.DPrintf(db.NETPROXY_PERF, "Dial latency: %v", time.Since(start))
+		db.DPrintf(db.NETPROXY_LAT, "Dial latency: %v", time.Since(start))
 	}
 	return c, err
 }
@@ -172,10 +172,12 @@ func (npc *NetProxyClnt) init() error {
 
 func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 	// Ensure that the connection to the netproxy server has been initialized
+	start := time.Now()
 	if err := npc.init(); err != nil {
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return nil, err
 	}
+	db.DPrintf(db.NETPROXY_LAT, "Dial netproxy conn init: %v", time.Since(start))
 	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request ep %v", npc.trans.Conn(), ep)
 	req := &proto.DialRequest{
 		Endpoint: ep.GetProto(),
@@ -190,16 +192,22 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
 		},
 	}
+	start = time.Now()
 	if err := npc.rpcc.RPC("NetProxySrvStubs.Dial", req, res); err != nil {
 		return nil, err
 	}
 	db.DPrintf(db.NETPROXYCLNT, "proxyDial response %v", res)
+	db.DPrintf(db.NETPROXY_LAT, "Dial netproxy RPC: %v", time.Since(start))
 	// If an error occurred during dialing, bail out
 	if res.Err.ErrCode != 0 {
 		err := sp.NewErr(res.Err)
 		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Dial: %v", err)
 		return nil, err
 	}
+	start = time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.NETPROXY_LAT, "Dial parseReturnedConn: %v", time.Since(start))
+	}(start)
 	return netproxytrans.ParseReturnedConn(res.Blob.Iov[0])
 }
 

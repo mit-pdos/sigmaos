@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 type Tshare int64
@@ -28,6 +29,11 @@ func (updm *UprocdMgr) startBalanceShares(p *proc.Proc) {
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
 
+	// Bail out early if dummy prog
+	if p.GetProgram() == sp.DUMMY_PROG {
+		return
+	}
+
 	switch p.GetType() {
 	case proc.T_LC:
 		rpcc := updm.upcs[p.GetRealm()][p.GetType()]
@@ -47,6 +53,11 @@ func (updm *UprocdMgr) startBalanceShares(p *proc.Proc) {
 func (updm *UprocdMgr) exitBalanceShares(p *proc.Proc) {
 	updm.mu.Lock()
 	defer updm.mu.Unlock()
+
+	// Bail out early if dummy prog
+	if p.GetProgram() == sp.DUMMY_PROG {
+		return
+	}
 
 	switch p.GetType() {
 	case proc.T_LC:

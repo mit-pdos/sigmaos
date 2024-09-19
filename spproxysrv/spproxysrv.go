@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"syscall"
 
 	"sigmaos/dcontainer"
 	db "sigmaos/debug"
@@ -18,6 +19,10 @@ import (
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+)
+
+const (
+	GROW_FD = 10000
 )
 
 // SPProxySrv maintains the state of the spproxysrv. All
@@ -55,6 +60,9 @@ func (scs *SPProxySrv) runServer() error {
 	db.DPrintf(db.TEST, "runServer: spproxyd listening on %v", sp.SIGMASOCKET)
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
 		return err
+	}
+	if err := syscall.Dup2(1, GROW_FD); err != nil {
+		db.DFatalf("Error dup2: %v", err)
 	}
 
 	go func() {

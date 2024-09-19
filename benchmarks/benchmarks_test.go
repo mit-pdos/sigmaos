@@ -1466,7 +1466,7 @@ func TestK8sMRMulti(t *testing.T) {
 	err := ts[0].MkDir(sp.K8S_SCRAPER, 0777)
 	assert.Nil(rootts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
-	sdc := scheddclnt.NewScheddClnt(ts[0].SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(ts[0].SigmaClnt.FsLib, sp.NOT_SET)
 	nSchedd, err := sdc.Nschedd()
 	ps2, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	spawnBurstProcs(ts[0], ps2)
@@ -1589,7 +1589,7 @@ func TestK8sImgResize(t *testing.T) {
 	if PREWARM_REALM {
 		warmupRealm(ts1, nil)
 	}
-	sdc := scheddclnt.NewScheddClnt(ts1.FsLib)
+	sdc := scheddclnt.NewScheddClnt(ts1.FsLib, sp.NOT_SET)
 	nSchedd, err := sdc.Nschedd()
 	assert.Nil(ts1.Ts.T, err, "Error nschedd %v", err)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
@@ -1764,7 +1764,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	if PREWARM_REALM {
 		warmupRealm(ts0, nil)
 	}
-	sdc := scheddclnt.NewScheddClnt(ts0.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(ts0.SigmaClnt.FsLib, sp.NOT_SET)
 	nSchedd, err := sdc.Nschedd()
 	assert.Nil(ts0.Ts.T, err, "Error nschedd %v", err)
 	rs0 := benchmarks.NewResults(1, benchmarks.E2E)

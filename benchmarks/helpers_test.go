@@ -149,7 +149,7 @@ func blockMem(rootts *test.Tstate, mem string) []*proc.Proc {
 		db.DPrintf(db.TEST, "No mem blocking")
 		return nil
 	}
-	sdc := scheddclnt.NewScheddClnt(rootts.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(rootts.SigmaClnt.FsLib, sp.NOT_SET)
 	// Get the number of schedds.
 	n, err := sdc.Nschedd()
 	if err != nil {
@@ -190,7 +190,7 @@ func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
 
 // Warm up a realm, by starting uprocds for it on all machines in the cluster.
 func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
-	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
 	// Get the list of schedds.
 	sds, err := sdc.GetSchedds()
 	assert.Nil(ts.Ts.T, err, "Get Schedds: %v", err)

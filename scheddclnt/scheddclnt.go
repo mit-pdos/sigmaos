@@ -274,7 +274,7 @@ func (sdc *ScheddClnt) StopWatching() {
 	sdc.rpcdc.StopWatching()
 }
 
-// Get the RPC client for the local schedd
+// Get the RPC client for my kernel's schedd
 func (sdc *ScheddClnt) getRPCClntMySchedd() (*rpcclnt.RPCClnt, error) {
 	if sdc.rpcc == nil {
 		start := time.Now()
@@ -289,7 +289,6 @@ func (sdc *ScheddClnt) getRPCClntMySchedd() (*rpcclnt.RPCClnt, error) {
 	return sdc.rpcc, nil
 }
 
-// Get the RPC client for the local schedd
 func (sdc *ScheddClnt) getRPCClnt(kernelID string) (*rpcclnt.RPCClnt, error) {
 	if kernelID == sdc.kernelID {
 		return sdc.getRPCClntMySchedd()

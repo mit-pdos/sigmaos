@@ -35,7 +35,7 @@ type QDir struct {
 func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	lcs := &LCSched{
 		sc:         sc,
-		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib),
+		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib, sp.NOT_SET),
 		qs:         make(map[sp.Trealm]*schedqueue.Queue[string, chan string]),
 		schedds:    make(map[string]*Resources),
 	}

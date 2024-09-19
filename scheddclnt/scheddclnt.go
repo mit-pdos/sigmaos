@@ -9,21 +9,28 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/rpcclnt"
 	"sigmaos/rpcdirclnt"
 	"sigmaos/schedsrv/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmarpcchan"
 )
 
 type ScheddClnt struct {
 	*fslib.FsLib
 	rpcdc *rpcdirclnt.RPCDirClnt
 	done  int32
+
+	// rpcclnt for my schedd
+	kernelID string
+	rpcc     *rpcclnt.RPCClnt
 }
 
-func NewScheddClnt(fsl *fslib.FsLib) *ScheddClnt {
+func NewScheddClnt(fsl *fslib.FsLib, kernelID string) *ScheddClnt {
 	return &ScheddClnt{
-		FsLib: fsl,
-		rpcdc: rpcdirclnt.NewRPCDirClnt(fsl, sp.SCHEDD, db.SCHEDDCLNT, db.SCHEDDCLNT_ERR),
+		FsLib:    fsl,
+		kernelID: kernelID,
+		rpcdc:    rpcdirclnt.NewRPCDirClnt(fsl, sp.SCHEDD, db.SCHEDDCLNT, db.SCHEDDCLNT_ERR),
 	}
 }
 
@@ -60,7 +67,7 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 }
 
 func (sdc *ScheddClnt) WarmUprocd(kernelID string, pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
-	rpcc, err := sdc.rpcdc.GetClnt(kernelID)
+	rpcc, err := sdc.getRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -87,7 +94,7 @@ func (sdc *ScheddClnt) WarmUprocd(kernelID string, pid sp.Tpid, realm sp.Trealm,
 // memory).
 func (sdc *ScheddClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Proc) error {
 	start := time.Now()
-	rpcc, err := sdc.rpcdc.GetClnt(kernelID)
+	rpcc, err := sdc.getRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -105,7 +112,7 @@ func (sdc *ScheddClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.P
 
 func (sdc *ScheddClnt) Wait(method Tmethod, scheddID string, seqno *proc.ProcSeqno, pid sp.Tpid) (*proc.Status, error) {
 	// RPC a schedd to wait.
-	rpcc, err := sdc.rpcdc.GetClnt(scheddID)
+	rpcc, err := sdc.getRPCClnt(scheddID)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +130,7 @@ func (sdc *ScheddClnt) Wait(method Tmethod, scheddID string, seqno *proc.ProcSeq
 func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, status *proc.Status) error {
 	start := time.Now()
 	// Get the RPC client for the local schedd
-	rpcc, err := sdc.rpcdc.GetClnt(kernelID)
+	rpcc, err := sdc.getRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -166,7 +173,7 @@ func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc,
 		sampled[kernelID] = true
 		req := &proto.GetRunningProcsRequest{}
 		res := &proto.GetRunningProcsResponse{}
-		rpcc, err := sdc.rpcdc.GetClnt(kernelID)
+		rpcc, err := sdc.getRPCClnt(kernelID)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Can't get clnt: %v", err)
 			return nil, err
@@ -197,7 +204,7 @@ func (sdc *ScheddClnt) ScheddStats() (int, []map[string]*proto.RealmStats, error
 	for _, sd := range sds {
 		req := &proto.GetScheddStatsRequest{}
 		res := &proto.GetScheddStatsResponse{}
-		rpcc, err := sdc.rpcdc.GetClnt(sd)
+		rpcc, err := sdc.getRPCClnt(sd)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -247,7 +254,7 @@ func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 		// Get the CPU shares on this schedd.
 		req := &proto.GetCPUUtilRequest{RealmStr: realm.String()}
 		res := &proto.GetCPUUtilResponse{}
-		sclnt, err := sdc.rpcdc.GetClnt(sd)
+		sclnt, err := sdc.getRPCClnt(sd)
 		if err != nil {
 			db.DPrintf(db.SCHEDDCLNT_ERR, "Error GetCPUUtil GetScheddClnt: %v", err)
 			return 0, err
@@ -265,4 +272,31 @@ func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 
 func (sdc *ScheddClnt) StopWatching() {
 	sdc.rpcdc.StopWatching()
+}
+
+// Get the RPC client for the local schedd
+func (sdc *ScheddClnt) getRPCClntMySchedd() (*rpcclnt.RPCClnt, error) {
+	if sdc.rpcc == nil {
+		start := time.Now()
+		pn := filepath.Join(sp.SCHEDD, sdc.kernelID)
+		rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{sdc.FsLib}, pn)
+		if err != nil {
+			return nil, err
+		}
+		db.DPrintf(db.TEST, "getRPCClntMySchedd %v time %v", sdc.kernelID, time.Since(start))
+		sdc.rpcc = rpcc
+	}
+	return sdc.rpcc, nil
+}
+
+// Get the RPC client for the local schedd
+func (sdc *ScheddClnt) getRPCClnt(kernelID string) (*rpcclnt.RPCClnt, error) {
+	if kernelID == sdc.kernelID {
+		return sdc.getRPCClntMySchedd()
+	}
+	rpcc, err := sdc.rpcdc.GetClnt(kernelID)
+	if err != nil {
+		return nil, err
+	}
+	return rpcc, nil
 }

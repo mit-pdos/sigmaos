@@ -59,11 +59,12 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 func (dc *DirCache[E]) init() {
 	ch := make(chan struct{})
 	if dc.isInit.Swap(1) == 0 && dc.isDone.Load() == 0 {
+		start := time.Now()
 		db.DPrintf(db.TEST, "DirCache.init %v", dc.Path)
 		go dc.watchDir(ch)
 		go dc.watchdog()
 		<-ch
-		db.DPrintf(db.TEST, "DirCache.init %v done", dc.Path)
+		db.DPrintf(db.TEST, "DirCache.init %v time %v", dc.Path, time.Since(start))
 	}
 }
 

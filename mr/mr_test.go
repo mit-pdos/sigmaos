@@ -366,7 +366,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
-	sdc := scheddclnt.NewScheddClnt(sc.FsLib)
+	sdc := scheddclnt.NewScheddClnt(sc.FsLib, sp.NOT_SET)
 	if monitor {
 		sdc.MonitorScheddStats(ts.ProcEnv().GetRealm(), time.Second)
 		defer sdc.Done()

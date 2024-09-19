@@ -111,7 +111,7 @@ func RunRealmSrv(netproxy bool) error {
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
 	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib, db.REALMD, db.REALMD_ERR)
 	rs.pq = procqclnt.NewProcQClnt(rs.sc.FsLib)
-	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib)
+	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib, pe.GetKernelID())
 	go rs.enforceResourcePolicy()
 	err = ssrv.RunServer()
 	rs.mkc.StopWatching()

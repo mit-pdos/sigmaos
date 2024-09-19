@@ -64,7 +64,8 @@ func (kvd *kvdecoder) decode() ([]byte, string, error) {
 
 	// Resize read buffer if necessary
 	if int(l1) > kvd.keylen {
-		kvd.keylen *= 2
+		for ; int(l1) > kvd.keylen; kvd.keylen *= 2 {
+		}
 		kvd.key = make([]byte, 0, kvd.keylen)
 	}
 

@@ -25,6 +25,11 @@ import (
 	"sigmaos/writer"
 )
 
+const (
+	DEFAULT_KEY_BUF_SZ = 1000
+	DEFAULT_VAL_BUF_SZ = 10000
+)
+
 type Reducer struct {
 	*sigmaclnt.SigmaClnt
 	reducef      ReduceT
@@ -112,7 +117,7 @@ type result struct {
 }
 
 func ReadKVs(rdr io.Reader, kvm *kvmap, reducef ReduceT) error {
-	kvd := newKVDecoder(rdr, 4000, 10000)
+	kvd := newKVDecoder(rdr, DEFAULT_KEY_BUF_SZ, DEFAULT_VAL_BUF_SZ)
 	for {
 		if k, v, err := kvd.decode(); err != nil {
 			if err == io.EOF {

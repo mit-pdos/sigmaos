@@ -60,6 +60,12 @@ func (kvd *kvdecoder) decode() ([]byte, string, error) {
 		return nil, "", err
 	}
 
+	// Resize read buffer
+	if int(l1) > len(kvd.key) {
+		n := 1000 * (1 + (int(l1) / 1000)) // Round up to nearest thousand
+		kvd.key = make([]byte, 0, n)
+	}
+
 	kvd.key = kvd.key[:l1]
 	kvd.value = kvd.value[:l2]
 	kvd.padding = kvd.padding[:len(jsonPadding)]

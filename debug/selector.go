@@ -25,7 +25,8 @@ const (
 // Latency break-down.
 const (
 	SPAWN_LAT      Tselector = "SPAWN_LAT"
-	NET_LAT        Tselector = "NET_LAT"
+	NET_LAT                  = "NET_LAT"
+	NETPROXY_LAT             = "NETPROXY_LAT"
 	REALM_GROW_LAT           = "REALM_GROW_LAT"
 	CACHE_LAT                = "CACHE_LAT"
 	WALK_LAT                 = "WALK_LAT"
@@ -205,7 +206,6 @@ const (
 	SIGMASRV                  = "SIGMASRV"
 	NETPROXY                  = "NETPROXY"
 	NETPROXY_ERR              = "NETPROXY_ERR"
-	NETPROXY_PERF             = "NETPROXY_PERF"
 	NETPROXYSRV               = "NETPROXYSRV"
 	NETPROXYSRV_ERR           = "NETPROXYSRV" + ERR
 )

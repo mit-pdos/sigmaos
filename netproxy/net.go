@@ -3,6 +3,7 @@ package netproxy
 import (
 	"net"
 	"sync/atomic"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/netsigma"
@@ -16,6 +17,10 @@ type DialFn func(ep *sp.Tendpoint) (net.Conn, error)
 type ListenFn func(addr *sp.Taddr) (net.Listener, error)
 
 func DialDirect(p *sp.Tprincipal, ep *sp.Tendpoint) (net.Conn, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.NETPROXY_LAT, "[%v] Dial DialDirect latency: %v", ep, time.Since(start))
+	}(start)
 	c, err := net.DialTimeout("tcp", ep.Addrs()[0].IPPort(), sp.Conf.Session.TIMEOUT/10)
 	if err != nil {
 		db.DPrintf(db.NETPROXY_ERR, "[%v] Dial direct addr err %v: err %v", p, ep.Addrs()[0], err)

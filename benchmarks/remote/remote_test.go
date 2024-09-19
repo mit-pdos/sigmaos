@@ -498,8 +498,8 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 	const (
 		numNodes          int  = 8
 		numCoresPerNode   uint = 4
-		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
 		turboBoost        bool = false
 	)
 	// Hotel benchmark configuration parameters

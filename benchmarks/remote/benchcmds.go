@@ -69,7 +69,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, lcProc, prewa
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestMicroScheddSpawn "+
 			"%s "+ // proc
-			"--nclnt 25 "+
+			"--nclnt 50 "+
 			"%s "+ // skipStats
 			"--schedd_dur %s "+
 			"--schedd_max_rps %s "+

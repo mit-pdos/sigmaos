@@ -776,24 +776,37 @@ func TestLookupMultiMount(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestStatUx(t *testing.T) {
+func TestColdPathMicro(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
-	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
-	assert.Nil(t, err)
-
 	sts, err := ts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
+
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	pe.KernelID = sts[0].Name
 
-	s := time.Now()
-	pn := filepath.Join(sp.UX, "~local", "bin/user/common/spawn-latency")
-	db.DPrintf(db.TEST, "Stat %v start %v\n", fsl.ClntId(), pn)
-	_, err = fsl.Stat(pn)
-	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "Stat %v done %v took %vn", fsl.ClntId(), pn, time.Since(s))
+	pn := filepath.Join(sp.UX, "~local", "mr-intermediate")
+
+	var max time.Duration
+	var tot time.Duration
+	const N = 1
+	for i := 0; i < N; i++ {
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		assert.Nil(t, err)
+		db.DPrintf(db.TEST, "MkDir %v start %v", fsl.ClntId(), pn)
+		s := time.Now()
+		err = fsl.MkDir(pn, 0777)
+		assert.Nil(t, err)
+		d := time.Since(s)
+		if d > max {
+			max = d
+		}
+		tot += d
+		fsl.RmDir(pn)
+		fsl.Close()
+	}
+	db.DPrintf(db.TEST, "MkDir done %v took avg %v max %v", pn, tot/N, max)
 	ts.Shutdown()
 }

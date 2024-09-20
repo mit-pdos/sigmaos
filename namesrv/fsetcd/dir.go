@@ -3,6 +3,7 @@ package fsetcd
 import (
 	"fmt"
 	"log"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -94,6 +95,7 @@ func (fse *FsEtcd) ReadRootDir() (*DirInfo, stats.Tcounter, *serr.Err) {
 
 func (fse *FsEtcd) Lookup(dei *DirEntInfo, pn path.Tpathname) (*DirEntInfo, *serr.Err) {
 	name := pn.Base()
+	start := time.Now()
 	dir, _, nops, err := fse.readDir(dei, TSTAT_NONE)
 	if err != nil {
 		fse.PstatUpdate(pn, nops)
@@ -104,6 +106,7 @@ func (fse *FsEtcd) Lookup(dei *DirEntInfo, pn path.Tpathname) (*DirEntInfo, *ser
 	if ok {
 		return e, nil
 	}
+	db.DPrintf(db.FSETCD_LAT, "Lookup %v %v lat %v", name, dei.Path, time.Since(start))
 	return nil, serr.NewErr(serr.TErrNotfound, name)
 }
 

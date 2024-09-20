@@ -27,9 +27,12 @@ func newDir(o *Obj) *Dir {
 func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	s := time.Now()
 	if db.WillBePrinted(db.NAMED) {
-		db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx.ClntId(), pn, d)
+		db.DPrintf(db.NAMED, "%v: Dir.Lookup %v o %v\n", ctx.ClntId(), pn, d)
 	}
 	name := pn[0]
+	if path.IsUnionElem(pn[0]) {
+		return nil, nil, pn, serr.NewErr(serr.TErrNotfound, name)
+	}
 	pn1 := d.pn.Copy().Append(name)
 	di, err := d.fs.Lookup(&d.Obj.di, pn1)
 	if err == nil {

@@ -145,10 +145,10 @@ func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, 
 	}
 	s := time.Now()
 	dir, v, stat, nops, err := fs.readDirEtcd(dei, stat)
-	db.DPrintf(db.FSETCD_LAT, "readDirEtcd %v %v lat %v", dei.Path, stat, time.Since(s))
 	if err != nil {
 		return nil, v, nops, err
 	}
+	db.DPrintf(db.FSETCD_LAT, "readDirEtcd %v lat %v", dei.Path, time.Since(s))
 	fs.dc.insert(dei.Path, &dcEntry{dir, v, stat})
 	return dir, v, nops, nil
 }

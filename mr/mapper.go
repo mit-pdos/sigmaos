@@ -220,7 +220,7 @@ func (m *Mapper) InformReducer() error {
 
 		target := fn + "/"
 
-		db.DPrintf(db.TEST, "name %s target %s\n", name, target)
+		db.DPrintf(db.MR, "name %s target %s\n", name, target)
 
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {

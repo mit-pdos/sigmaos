@@ -151,7 +151,6 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error
 			db.DFatalf("resolveMount %v isn't local %v", rname, ep)
 		}
 		if q == "~any" || ok {
-			db.DPrintf(db.TEST, "resolveMount %v %v %v", d, rname, fsl.pe.GetKernelID())
 			return rname, ep, nil
 		}
 	}

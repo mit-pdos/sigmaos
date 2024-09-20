@@ -101,7 +101,7 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.MR, "NewSigmaClnt time: %v", time.Since(start))
+	db.DPrintf(db.TEST, "NewSigmaClnt time: %v", time.Since(start))
 	asyncrw, err := strconv.ParseBool(args[5])
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper: can't parse asyncrw %v", args[5])
@@ -110,11 +110,9 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
-	start = time.Now()
 	if err := m.Started(); err != nil {
 		return nil, fmt.Errorf("NewMapper couldn't start %v", args)
 	}
-	db.DPrintf(db.MR, "Started time: %v", time.Since(start))
 	crash.Crasher(m.FsLib)
 	return m, nil
 }
@@ -128,11 +126,6 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 }
 
 func (m *Mapper) initWrt(r int, name string) error {
-	start := time.Now()
-	defer func(start time.Time) {
-		db.DPrintf(db.MR, "initWrt time: %v", time.Since(start))
-	}(start)
-
 	db.DPrintf(db.MR, "InitWrt %v", name)
 	if m.asyncrw {
 		if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
@@ -156,21 +149,15 @@ func (m *Mapper) initWrt(r int, name string) error {
 func (m *Mapper) initMapper() error {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.MR, "initMapper time: %v", time.Since(start))
+		db.DPrintf(db.TEST, "initMapper time: %v", time.Since(start))
 	}(start)
 
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
-	mdStart := time.Now()
 	m.MkDir(m.intOutput, 0777)
-	db.DPrintf(db.MR, "initMapper mkdir initOutput %v time: %v", m.intOutput, time.Since(mdStart))
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
-	mdStart = time.Now()
 	m.MkDir(filepath.Dir(outDirPath), 0777) // job dir
-	db.DPrintf(db.MR, "initMapper mkdir jobdir %v time: %v", filepath.Dir(outDirPath), time.Since(mdStart))
-	mdStart = time.Now()
-	m.MkDir(outDirPath, 0777) // mapper dir
-	db.DPrintf(db.MR, "initMapper mkdir outDirPath %v time: %v", outDirPath, time.Since(mdStart))
+	m.MkDir(outDirPath, 0777)               // mapper dir
 	db.DPrintf(db.MR, "initMapper mkdirs time: %v", time.Since(start))
 
 	// Create the output files

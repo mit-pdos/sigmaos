@@ -81,7 +81,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 		ch:          make(chan error),
 	}
 	go func() {
-		m.ch <- m.initMapper()
+		m.ch <- m.initOutput()
 	}()
 	return m, nil
 }
@@ -150,10 +150,10 @@ func (m *Mapper) initWrt(r int, name string) error {
 	return nil
 }
 
-func (m *Mapper) initMapper() error {
+func (m *Mapper) initOutput() error {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.TEST, "initMapper time: %v", time.Since(start))
+		db.DPrintf(db.TEST, "initOutput time: %v", time.Since(start))
 	}(start)
 
 	// Make a directory for holding the output files of a map task.  Ignore
@@ -162,7 +162,7 @@ func (m *Mapper) initMapper() error {
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
 	m.MkDir(filepath.Dir(outDirPath), 0777) // job dir
 	m.MkDir(outDirPath, 0777)               // mapper dir
-	db.DPrintf(db.MR, "initMapper mkdirs time: %v", time.Since(start))
+	db.DPrintf(db.MR, "initOutput mkdirs time: %v", time.Since(start))
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {

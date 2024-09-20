@@ -52,6 +52,8 @@ type Mapper struct {
 	combinewc   map[string]int
 	buf         []byte
 	line        []byte
+	init        bool
+	ch          chan error
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
@@ -76,11 +78,11 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 		combinewc:   make(map[string]int),
 		buf:         make([]byte, 0, lsz),
 		line:        make([]byte, 0, lsz),
+		ch:          make(chan error),
 	}
-	err := m.initMapper()
-	if err != nil {
-		return nil, err
-	}
+	go func() {
+		m.ch <- m.initMapper()
+	}()
 	return m, nil
 }
 
@@ -101,7 +103,7 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.TEST, "NewSigmaClnt time: %v", time.Since(start))
+	db.DPrintf(db.TEST, "NewSigmaClnt done at time: %v", time.Since(start))
 	asyncrw, err := strconv.ParseBool(args[5])
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper: can't parse asyncrw %v", args[5])
@@ -110,9 +112,11 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
+	db.DPrintf(db.TEST, "NewMapper done at time: %v", time.Since(start))
 	if err := m.Started(); err != nil {
 		return nil, fmt.Errorf("NewMapper couldn't start %v", args)
 	}
+	db.DPrintf(db.TEST, "Started at time: %v", time.Since(start))
 	crash.Crasher(m.FsLib)
 	return m, nil
 }
@@ -231,6 +235,14 @@ func (m *Mapper) InformReducer() error {
 }
 
 func (m *Mapper) Emit(key []byte, value string) error {
+	if !m.init {
+		m.init = true
+		// Block if output hasn't been created yet
+		if err := <-m.ch; err != nil {
+			return err
+		}
+	}
+
 	r := Khash(key) % m.nreducetask
 	var err error
 	if m.asyncrw {

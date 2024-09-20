@@ -3,6 +3,7 @@ package sessclnt
 import (
 	"sync"
 	//	"github.com/sasha-s/go-deadlock"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/netproxyclnt"
@@ -70,13 +71,20 @@ func (sc *Mgr) LookupSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 }
 
 func (sc *Mgr) RPC(ep *sp.Tendpoint, req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	s := time.Now()
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(ep)
 	if err != nil {
 		db.DPrintf(db.SESSCLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, ep)
 		return nil, err
 	}
+	start := time.Now()
 	rep, err := sess.RPC(req, iniov, outiov)
+
+	if db.WillBePrinted(db.RPC_LAT) {
+		db.DPrintf(db.RPC_LAT, "RPC time %v [%v] alloc %v tot %v\n", req.Type(), req, time.Since(start), time.Since(s))
+	}
+
 	return rep, err
 }
 

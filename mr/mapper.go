@@ -283,12 +283,13 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		// as part of the previous split.
 		off--
 	}
-	rdr, err := m.OpenAsyncReader(s.File, off)
+	rdr, err := m.OpenS3Reader(s.File)
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}
 	defer rdr.Close()
-	scanner := bufio.NewScanner(rdr)
+	rdr.Lseek(s.Offset)
+	scanner := bufio.NewScanner(rdr.GetReader())
 	scanner.Buffer(m.buf, cap(m.buf))
 
 	// advance scanner to new line after start, if start != 0
@@ -327,7 +328,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	dec := json.NewDecoder(rdr.Reader)
+	dec := json.NewDecoder(rdr.GetReader())
 	ni := sp.Tlength(0)
 	var bin Bin
 	if err := dec.Decode(&bin); err != nil && err != io.EOF {

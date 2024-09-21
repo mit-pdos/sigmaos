@@ -13,6 +13,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -106,7 +107,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	}()
 
 	ds := time.Now()
-	img, err := jpeg.Decode(rdr.Reader)
+	img, err := jpeg.Decode(rdr.(*fslib.FdReader).Reader)
 	if err != nil {
 		return proc.NewStatusErr("Decode", err)
 	}

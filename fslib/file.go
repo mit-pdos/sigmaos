@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	// "strings"
 
 	//	"time"
 
@@ -45,10 +46,20 @@ func (fl *FsLib) PutLeasedFile(fname string, perm sp.Tperm, mode sp.Tmode, lid s
 // Open readers
 //
 
+type ReaderSeekerI interface {
+	reader.ReaderI
+	Lseek(off sp.Toffset) error
+	GetReader() io.Reader
+}
+
 type FdReader struct {
 	*reader.Reader
 	sof sos.FileAPI
 	fd  int
+}
+
+func (rd *FdReader) GetReader() io.Reader {
+	return rd.Reader
 }
 
 func (rd *FdReader) Close() error {
@@ -82,7 +93,10 @@ func (fl *FsLib) NewWriter(fd int) *writer.Writer {
 	return writer.NewWriter(fl.FileAPI, fd)
 }
 
-func (fl *FsLib) OpenReader(path string) (*FdReader, error) {
+func (fl *FsLib) OpenReader(path string) (ReaderSeekerI, error) {
+	//if strings.Contains(path, sp.S3) {
+	//return fl.OpenS3Reader(path)
+	//}
 	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
@@ -120,11 +134,28 @@ func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
 		return nil, err
 	}
 	r := &Rdr{}
-	r.fdrdr = rdr
+	r.fdrdr = rdr.(*FdReader)
 	if err := rdr.Lseek(offset); err != nil {
 		return nil, err
 	}
-	r.brdr = bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
+	r.brdr = bufio.NewReaderSize(rdr.(*FdReader).Reader, sp.BUFSZ)
+	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, sp.BUFSZ)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func (fl *FsLib) OpenS3AsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
+	rdr, err := fl.OpenS3Reader(path)
+	if err != nil {
+		return nil, err
+	}
+	r := &Rdr{}
+	if err := rdr.Lseek(offset); err != nil {
+		return nil, err
+	}
+	r.brdr = bufio.NewReaderSize(rdr.GetReader(), sp.BUFSZ)
 	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err

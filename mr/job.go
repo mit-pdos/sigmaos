@@ -266,7 +266,7 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobName, out string, nreduce int) erro
 			db.DPrintf(db.MR, "Error OpenReader [%v]: %v", ReduceOut(jobName)+r+"/", err)
 			return err
 		}
-		if _, err := io.Copy(wrt, rdr.Reader); err != nil {
+		if _, err := io.Copy(wrt, rdr.(*fslib.FdReader).Reader); err != nil {
 			db.DPrintf(db.MR, "Error Copy: %v", err)
 			return err
 		}

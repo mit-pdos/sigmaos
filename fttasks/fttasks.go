@@ -143,7 +143,11 @@ func (ft *FtTasks) ReadTask(name string, i interface{}) error {
 
 // Read tasks using a reader
 func (ft *FtTasks) TaskReader(name string) (*fslib.FdReader, error) {
-	return ft.OpenReader(filepath.Join(ft.wip, name))
+	rdr, err := ft.OpenReader(filepath.Join(ft.wip, name))
+	if err != nil {
+		return nil, err
+	}
+	return rdr.(*fslib.FdReader), nil
 }
 
 func (ft *FtTasks) TaskPathName(name string) string {

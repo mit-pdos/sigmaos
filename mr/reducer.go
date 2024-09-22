@@ -39,7 +39,7 @@ type Reducer struct {
 	nmaptask     int
 	tmp          string
 	pwrt         *perf.PerfWriter
-	asyncwrt     *fslib.Wrt
+	asyncwrt     fslib.WriterI
 	syncwrt      *writer.Writer
 	perf         *perf.Perf
 	asyncrw      bool

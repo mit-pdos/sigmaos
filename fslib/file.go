@@ -195,6 +195,11 @@ func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
 // Writers
 //
 
+type WriterI interface {
+	io.WriteCloser
+	Nbytes() sp.Tlength
+}
+
 func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*writer.Writer, error) {
 	fd, err := fl.Create(fname, perm, mode)
 	if err != nil {
@@ -214,12 +219,12 @@ func (fl *FsLib) OpenWriter(fname string, mode sp.Tmode) (*writer.Writer, error)
 }
 
 type Wrt struct {
-	wrt  *writer.Writer
+	wrt  WriterI
 	awrt *awriter.Writer
 	bwrt *bufio.Writer
 }
 
-func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*Wrt, error) {
+func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (WriterI, error) {
 	w, err := fl.CreateWriter(fname, perm, mode)
 	if err != nil {
 		return nil, err
@@ -229,12 +234,24 @@ func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (
 	return &Wrt{w, aw, bw}, nil
 }
 
+func (fl *FsLib) CreateS3AsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (WriterI, error) {
+	w, err := fl.OpenS3Writer(fname)
+	if err != nil {
+		return nil, err
+	}
+	// aw := awriter.NewWriterSize(w, 4, sp.BUFSZ)
+	bw := bufio.NewWriterSize(w, sp.BUFSZ)
+	return &Wrt{w, nil, bw}, nil
+}
+
 func (wrt *Wrt) Close() error {
 	if err := wrt.bwrt.Flush(); err != nil {
 		return err
 	}
-	if err := wrt.awrt.Close(); err != nil {
-		return err
+	if wrt.awrt != nil {
+		if err := wrt.awrt.Close(); err != nil {
+			return err
+		}
 	}
 	if err := wrt.wrt.Close(); err != nil {
 		return err

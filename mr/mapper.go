@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	// "runtime/debug"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -42,7 +43,7 @@ type Mapper struct {
 	input       string
 	intOutput   string
 	bin         string
-	asyncwrts   []*fslib.Wrt
+	asyncwrts   []fslib.WriterI
 	syncwrts    []*writer.Writer
 	pwrts       []*perf.PerfWriter
 	rand        string
@@ -67,7 +68,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 		input:       input,
 		intOutput:   intOutput,
 		bin:         filepath.Base(input),
-		asyncwrts:   make([]*fslib.Wrt, nr),
+		asyncwrts:   make([]fslib.WriterI, nr),
 		syncwrts:    make([]*writer.Writer, nr),
 		pwrts:       make([]*perf.PerfWriter, nr),
 		SigmaClnt:   sc,
@@ -132,11 +133,20 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 func (m *Mapper) initWrt(r int, name string) error {
 	db.DPrintf(db.MR, "InitWrt %v", name)
 	if m.asyncrw {
-		if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
-			return err
+		if strings.Contains(name, sp.S3) {
+			if wrt, err := m.CreateS3AsyncWriter(name, 0777, sp.OWRITE); err != nil {
+				return err
+			} else {
+				m.asyncwrts[r] = wrt
+				m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
+			}
 		} else {
-			m.asyncwrts[r] = wrt
-			m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
+			if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
+				return err
+			} else {
+				m.asyncwrts[r] = wrt
+				m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
+			}
 		}
 	} else {
 		if wrt, err := m.CreateWriter(name, 0777, sp.OWRITE); err != nil {

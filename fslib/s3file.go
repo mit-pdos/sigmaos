@@ -102,7 +102,7 @@ func (rdr *rdr) readChunk() error {
 }
 
 func (rdr *rdr) Read(b []byte) (int, error) {
-	db.DPrintf(db.TEST, "s3.Read off %v sz %v len %d", rdr.s3rdr.offset, rdr.s3rdr.sz, len(b))
+	db.DPrintf(db.S3, "s3.Read off %v sz %v len %d", rdr.s3rdr.offset, rdr.s3rdr.sz, len(b))
 	if rdr.chunk == nil {
 		if err := rdr.readChunk(); err != nil {
 			db.DPrintf(db.S3, "readChunk err %v", err)
@@ -114,10 +114,11 @@ func (rdr *rdr) Read(b []byte) (int, error) {
 		rdr.chunk.Close()
 		if err := rdr.readChunk(); err != nil {
 			db.DPrintf(db.S3, "readChunk err %v", err)
-			return 0, err
+			return n, err
 		}
+		return n, nil
 	}
-	db.DPrintf(db.TEST, "s3.Read results %d", len(b))
+	db.DPrintf(db.S3, "s3.Read results %d", len(b))
 	return n, err
 }
 
@@ -145,7 +146,6 @@ func (fl *FsLib) getS3Client() *serr.Err {
 	clnt := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		hclnt := awshttp.NewBuildableClient().WithTransportOptions(func(t *http.Transport) {
 			t.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-				db.DPrintf(db.TEST, "func %v", addr)
 				a, err := sp.NewTaddrFromString(addr, sp.OUTER_CONTAINER_IP)
 				if err != nil {
 					return nil, err

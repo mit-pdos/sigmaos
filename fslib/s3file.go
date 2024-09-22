@@ -162,6 +162,27 @@ func (fl *FsLib) getS3Client() *serr.Err {
 	return nil
 }
 
+func (fl *FsLib) S3Stat(bucket, key string) (sp.Tlength, error) {
+	if fl.s3clnt == nil {
+		if err := fl.getS3Client(); err != nil {
+			return 0, err
+		}
+	}
+
+	input := &s3.HeadObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	}
+
+	result, err := fl.s3clnt.HeadObject(context.TODO(), input)
+	if err != nil {
+		db.DPrintf(db.S3, "readHead: %v err %v\n", key, err)
+		return 0, serr.NewErrError(err)
+	}
+	db.DPrintf(db.S3, "readHead: %v %v %v\n", key, result.ContentLength, err)
+	return sp.Tlength(*result.ContentLength), nil
+}
+
 func (fl *FsLib) OpenS3Reader(pn string) (ReaderSeekerI, error) {
 	pn0, _ := strings.CutPrefix(pn, sp.S3+"~local/")
 	p := path.Split(pn0)
@@ -177,20 +198,20 @@ func (fl *FsLib) OpenS3Reader(pn string) (ReaderSeekerI, error) {
 		}
 	}
 
-	st, err := fl.Stat(pn)
+	sz, err := fl.S3Stat(bucket, key)
 	if err != nil {
 		return nil, err
 	}
 
-	db.DPrintf(db.S3, "OpenS3Reader: Stat %v", st)
+	db.DPrintf(db.S3, "OpenS3Reader: S3Stat %v", sz)
 
 	reader := &s3Reader{
 		clnt:      fl.s3clnt,
 		bucket:    bucket,
 		key:       key,
 		offset:    0,
-		chunkSize: 8 * 1024 * 1024, // 8 Mb chunk size
-		sz:        st.Tlength(),
+		chunkSize: 6 * MB,
+		sz:        sz,
 	}
 	rdr := &rdr{s3rdr: reader}
 	reader.rdr = rdr

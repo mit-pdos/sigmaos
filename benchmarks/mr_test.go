@@ -44,7 +44,7 @@ func (ji *MRJobInstance) PrepareMRJob() {
 	assert.Nil(ji.Ts.T, err, "Error ReadJobConfig: %v", err)
 	ji.job = jobf
 	db.DPrintf(db.TEST, "MR job description: %v", ji.job)
-	db.DPrintf(db.TEST, "MR job memreq %v asyncrw %v", memreq, asyncrw)
+	db.DPrintf(db.TEST, "MR job memreq %v asyncrw %v", ji.memreq, ji.asyncrw)
 	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)
 	tasks, err := mr.InitCoordFS(ji.FsLib, ji.jobname, ji.job.Nreduce)
 	assert.Nil(ji.Ts.T, err, "Error InitCoordFS: %v", err)

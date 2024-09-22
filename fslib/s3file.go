@@ -37,13 +37,16 @@ type s3Reader struct {
 	n         sp.Tlength
 }
 
-func (s3rdr *s3Reader) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, error) {
+func (s3rdr *s3Reader) s3Read(off, cnt uint64) (io.ReadCloser, sp.Tlength, error) {
 	db.DPrintf(db.S3, "s3Read %d %d", off, cnt)
 	key := s3rdr.key
 	region := ""
 	if off != 0 || sp.Tlength(cnt) < s3rdr.sz {
 		n := off + cnt
-		region = "bytes=" + strconv.Itoa(int(off)) + "-" + strconv.Itoa(n-1)
+		if sp.Tlength(n) > s3rdr.sz {
+			n = uint64(s3rdr.sz)
+		}
+		region = "bytes=" + strconv.FormatUint(off, 10) + "-" + strconv.FormatUint(n-1, 10)
 	}
 	input := &s3.GetObjectInput{
 		Bucket: &s3rdr.bucket,
@@ -91,7 +94,7 @@ type rdr struct {
 }
 
 func (rdr *rdr) readChunk() error {
-	r, n, err := rdr.s3rdr.s3Read(int(rdr.s3rdr.offset), CHUNKSZ)
+	r, n, err := rdr.s3rdr.s3Read(uint64(rdr.s3rdr.offset), CHUNKSZ)
 	if err != nil {
 		return err
 	}
@@ -123,8 +126,7 @@ func (rdr *rdr) Read(b []byte) (int, error) {
 }
 
 func (rdr *rdr) Close() error {
-	rdr.chunk.Close()
-	return nil
+	return rdr.chunk.Close()
 }
 
 func (fl *FsLib) getS3Client() *serr.Err {

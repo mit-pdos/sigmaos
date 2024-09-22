@@ -8,6 +8,8 @@ import (
 	"bufio"
 	"strconv"
 
+	"github.com/fmstephe/unsafeutil"
+
 	"sigmaos/mr"
 )
 
@@ -27,7 +29,8 @@ func init() {
 func Map(filename string, scanner *bufio.Scanner, emit mr.EmitT) error {
 	for scanner.Scan() {
 		w := scanner.Bytes()
-		if _, ok := target[string(w)]; ok {
+		word := unsafeutil.BytesToString(w)
+		if _, ok := target[word]; ok {
 			if err := emit(w, "1"); err != nil {
 				return err
 			}

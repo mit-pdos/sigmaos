@@ -303,7 +303,7 @@ func (r *Reducer) DoReduce() *proc.Status {
 		return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
 	}
 	return proc.NewStatusInfo(proc.StatusOK, r.input,
-		Result{false, r.input, rtot.n, nbyte, rtot.d.Milliseconds(), 0})
+		Result{false, r.input, rtot.n, nbyte, rtot.d.Milliseconds(), 0, r.ProcEnv().GetKernelID()})
 }
 
 func RunReducer(reducef ReduceT, args []string) {

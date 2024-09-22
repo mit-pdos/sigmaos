@@ -403,7 +403,7 @@ func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	db.DPrintf(db.MR_TPT, "%s: in %s out %v tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, m.input,
-			Result{true, m.input, nin, nout, time.Since(start).Milliseconds(), 0}))
+			Result{true, m.input, nin, nout, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))
 	} else {
 		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}

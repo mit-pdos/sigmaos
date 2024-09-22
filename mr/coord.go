@@ -218,8 +218,9 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 		if err := ft.MarkDone(t); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
-		db.DPrintf(db.MR, "MarkDone task latency: %v", time.Since(start))
+		db.DPrintf(db.MR, "MarkDone task latency: %v", start)
 		r := NewResult(status.Data())
+		r.MsOuter = ms
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
 		if status != nil && status.Msg() == RESTART {
@@ -332,7 +333,7 @@ func (c *Coord) Round(ttype string) {
 			break
 		}
 		res := <-ch
-		db.DPrintf(db.MR, "Round: task done %v ok %v ms %d msg %v res %v\n", res.t, res.ok, res.ms, res.msg, res.res)
+		db.DPrintf(db.MR, "Round: task done %v ok %v msInner %d msOuter %d msg %v res %v\n", res.t, res.ok, res.res.MsInner, res.res.MsOuter, res.msg, res.res)
 		if res.ok {
 			if err := c.AppendFileJson(MRstats(c.job), res.res); err != nil {
 				db.DFatalf("Appendfile %v err %v\n", MRstats(c.job), err)
@@ -368,6 +369,7 @@ func (c *Coord) Work() {
 	start = time.Now()
 	c.doRestart()
 	db.DPrintf(db.MR, "doRestart took %v", time.Since(start))
+	jobStart := time.Now()
 
 	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)
@@ -405,6 +407,7 @@ func (c *Coord) Work() {
 
 	atomic.StoreInt32(&c.done, 1)
 
+	db.DPrintf(db.ALWAYS, "E2e bench took %v", time.Since(jobStart))
 	JobDone(c.FsLib, c.job)
 
 	c.ClntExitOK()

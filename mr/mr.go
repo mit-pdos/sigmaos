@@ -78,12 +78,13 @@ func (b Bin) String() string {
 
 // Result of mapper or reducer
 type Result struct {
-	IsM     bool       `json:"IsM"`
-	Task    string     `json:"Task"`
-	In      sp.Tlength `json:"In"`
-	Out     sp.Tlength `json:"Out"`
-	MsInner int64      `json:"MsInner"`
-	MsOuter int64      `json:"MsOuter"`
+	IsM      bool       `json:"IsM"`
+	Task     string     `json:"Task"`
+	In       sp.Tlength `json:"In"`
+	Out      sp.Tlength `json:"Out"`
+	MsInner  int64      `json:"MsInner"`
+	MsOuter  int64      `json:"MsOuter"`
+	KernelID string     `json:"KernelID"`
 }
 
 func NewResult(data interface{}) *Result {

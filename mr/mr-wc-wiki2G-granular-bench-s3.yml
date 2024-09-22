@@ -1,6 +1,6 @@
 app: "wc"
 nreduce: 15
-binsz: 1363148 # 136314880 # 134217728
+binsz: 13631488
 input: "name/s3/~local/9ps3/wiki-2G/"
 intermediate: "name/s3/~local/9ps3/mr-intermediate"
 output: "name/s3/~local/9ps3/mr-out"

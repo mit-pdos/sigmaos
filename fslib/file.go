@@ -110,8 +110,8 @@ func (fl *FsLib) OpenReader(path string) (ReaderSeekerI, error) {
 }
 
 type Rdr struct {
-	rdr  ReaderSeekerI
-	brdr *bufio.Reader
+	rdr ReaderSeekerI
+	//brdr *bufio.Reader
 	ardr io.ReadCloser
 }
 
@@ -142,8 +142,8 @@ func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
 	if err := rdr.Lseek(offset); err != nil {
 		return nil, err
 	}
-	r.brdr = bufio.NewReaderSize(rdr.GetReader(), sp.BUFSZ)
-	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, sp.BUFSZ)
+	// r.brdr = bufio.NewReaderSize(rdr.GetReader(), sp.BUFSZ)
+	r.ardr, err = readahead.NewReaderSize(rdr.GetReader(), 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +159,8 @@ func (fl *FsLib) OpenS3AsyncReader(path string, offset sp.Toffset) (*Rdr, error)
 	if err := rdr.Lseek(offset); err != nil {
 		return nil, err
 	}
-	r.brdr = bufio.NewReaderSize(rdr.GetReader(), sp.BUFSZ)
-	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, sp.BUFSZ)
+	// r.brdr = bufio.NewReaderSize(rdr.GetReader(), sp.BUFSZ)
+	r.ardr, err = readahead.NewReaderSize(rdr.GetReader(), 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err
 	}

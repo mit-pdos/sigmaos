@@ -5,7 +5,7 @@ const (
 	KBYTE           = 1 << 10
 	MBYTE           = 1 << 20
 	GBYTE           = 1 << 30
-	BUFSZ           = 4 * MBYTE
+	BUFSZ           = 5 * MBYTE
 	MAXGETSET Tsize = 1_000_000 // If need more than MaxGetSet, use Open/Read/Close interface
 )
 

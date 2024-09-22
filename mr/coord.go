@@ -380,7 +380,7 @@ func (c *Coord) Work() {
 		}
 		if n == c.nmaptask {
 			ms := time.Since(start).Milliseconds()
-			db.DPrintf(db.ALWAYS, "map phase took %v ms\n", ms)
+			db.DPrintf(db.ALWAYS, "map phase took %vms\n", ms)
 			c.Round("reduce")
 		}
 		if !c.doRestart() {

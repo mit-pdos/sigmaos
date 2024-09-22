@@ -40,10 +40,10 @@ func PrintMRStats(fsl *fslib.FsLib, job string) error {
 		}
 	}
 	sort.Slice(results, func(i, j int) bool {
-		return test.Tput(results[i].In+results[i].Out, results[i].Ms) > test.Tput(results[j].In+results[j].Out, results[j].Ms)
+		return test.Tput(results[i].In+results[i].Out, results[i].MsInner) > test.Tput(results[j].In+results[j].Out, results[j].MsInner)
 	})
 	for _, r := range results {
-		fmt.Printf("%s: in %v out %v tot %v %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), test.Mbyte(r.In+r.Out), r.Ms, test.TputStr(r.In+r.Out, r.Ms))
+		fmt.Printf("%s: in %v out %v tot %v inner %vms outer %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), test.Mbyte(r.In+r.Out), r.MsInner, r.MsOuter, test.TputStr(r.In+r.Out, r.MsInner))
 	}
 	fmt.Printf("=== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
 		humanize.Bytes(uint64(totIn)), totIn,

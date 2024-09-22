@@ -375,6 +375,16 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
+	execTimeStr := os.Getenv("SIGMA_EXEC_TIME")
+	execTimeMicro, err := strconv.ParseInt(execTimeStr, 10, 64)
+	if err != nil {
+		db.DFatalf("Error parsing exec time 2: %v", err)
+	}
+	execTime := time.UnixMicro(execTimeMicro)
+	execLat := time.Since(execTime)
+	db.DPrintf(db.SPAWN_LAT, "[%v] Proc exec latency: %v", proc.GetSigmaDebugPid(), execLat)
+	db.DPrintf(db.ALWAYS, "[%v] Proc exec latency: %v", proc.GetSigmaDebugPid(), execLat)
+
 	init := time.Now()
 	pe := proc.GetProcEnv()
 	p, err := perf.NewPerf(pe, perf.MRMAPPER)
@@ -393,7 +403,7 @@ func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	db.DPrintf(db.MR_TPT, "%s: in %s out %v tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, m.input,
-			Result{true, m.input, nin, nout, time.Since(start).Milliseconds()}))
+			Result{true, m.input, nin, nout, time.Since(start).Milliseconds(), 0}))
 	} else {
 		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}

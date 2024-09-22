@@ -283,13 +283,12 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		// as part of the previous split.
 		off--
 	}
-	rdr, err := m.OpenS3Reader(s.File)
+	rdr, err := m.OpenS3AsyncReader(s.File, s.Offset)
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}
 	defer rdr.Close()
-	rdr.Lseek(s.Offset)
-	scanner := bufio.NewScanner(rdr.GetReader())
+	scanner := bufio.NewScanner(rdr)
 	scanner.Buffer(m.buf, cap(m.buf))
 
 	// advance scanner to new line after start, if start != 0

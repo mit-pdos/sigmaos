@@ -34,6 +34,7 @@ type s3Reader struct {
 	offset    sp.Toffset
 	chunkSize int64
 	sz        sp.Tlength
+	n         sp.Tlength
 }
 
 func (s3rdr *s3Reader) s3Read(off, cnt int) (io.ReadCloser, sp.Tlength, error) {
@@ -80,6 +81,10 @@ func (s3rdr *s3Reader) GetReader() io.Reader {
 	return s3rdr.rdr
 }
 
+func (s3rdr *s3Reader) Nbytes() sp.Tlength {
+	return s3rdr.n
+}
+
 type rdr struct {
 	s3rdr *s3Reader
 	chunk io.ReadCloser
@@ -91,11 +96,13 @@ func (rdr *rdr) readChunk() error {
 		return err
 	}
 	rdr.chunk = r
+	rdr.s3rdr.n += sp.Tlength(n)
 	rdr.s3rdr.offset += sp.Toffset(n)
 	return nil
 }
 
 func (rdr *rdr) Read(b []byte) (int, error) {
+	db.DPrintf(db.TEST, "s3.Read off %v sz %v len %d", rdr.s3rdr.offset, rdr.s3rdr.sz, len(b))
 	if rdr.chunk == nil {
 		if err := rdr.readChunk(); err != nil {
 			db.DPrintf(db.S3, "readChunk err %v", err)
@@ -110,10 +117,12 @@ func (rdr *rdr) Read(b []byte) (int, error) {
 			return 0, err
 		}
 	}
-	return n, nil
+	db.DPrintf(db.TEST, "s3.Read results %d", len(b))
+	return n, err
 }
 
 func (rdr *rdr) Close() error {
+	rdr.chunk.Close()
 	return nil
 }
 

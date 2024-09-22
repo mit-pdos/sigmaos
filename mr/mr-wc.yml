@@ -1,7 +1,7 @@
 app: "wc"
 nreduce: 2
-binsz: 262144
-# binsz: 136314880
+# binsz: 262144
+binsz: 136314880
 input: "name/s3/~local/9ps3/gutenberg/"
 intermediate: "name/ux/~local/mr-intermediate"
 output: "name/s3/~local/9ps3/mr-out/"

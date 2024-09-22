@@ -50,6 +50,7 @@ type ReaderSeekerI interface {
 	reader.ReaderI
 	Lseek(off sp.Toffset) error
 	GetReader() io.Reader
+	Nbytes() sp.Tlength
 }
 
 type FdReader struct {
@@ -73,6 +74,10 @@ func (rd *FdReader) Read(o sp.Toffset, b []byte) (int, error) {
 
 func (rd *FdReader) Fd() int {
 	return rd.fd
+}
+
+func (rd *FdReader) Nbytes() sp.Tlength {
+	return rd.Reader.Nbytes()
 }
 
 func (rd *FdReader) Lseek(off sp.Toffset) error {
@@ -105,16 +110,16 @@ func (fl *FsLib) OpenReader(path string) (ReaderSeekerI, error) {
 }
 
 type Rdr struct {
-	fdrdr *FdReader
-	brdr  *bufio.Reader
-	ardr  io.ReadCloser
+	rdr  ReaderSeekerI
+	brdr *bufio.Reader
+	ardr io.ReadCloser
 }
 
 func (rdr *Rdr) Close() error {
 	if err := rdr.ardr.Close(); err != nil {
 		return err
 	}
-	if err := rdr.fdrdr.Close(); err != nil {
+	if err := rdr.rdr.Close(); err != nil {
 		return err
 	}
 	return nil
@@ -125,7 +130,7 @@ func (rdr *Rdr) Read(p []byte) (n int, err error) {
 }
 
 func (rdr *Rdr) Nbytes() sp.Tlength {
-	return rdr.fdrdr.Nbytes()
+	return rdr.rdr.Nbytes()
 }
 
 func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
@@ -133,12 +138,11 @@ func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &Rdr{}
-	r.fdrdr = rdr.(*FdReader)
+	r := &Rdr{rdr: rdr}
 	if err := rdr.Lseek(offset); err != nil {
 		return nil, err
 	}
-	r.brdr = bufio.NewReaderSize(rdr.(*FdReader).Reader, sp.BUFSZ)
+	r.brdr = bufio.NewReaderSize(rdr.GetReader(), sp.BUFSZ)
 	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err
@@ -151,7 +155,7 @@ func (fl *FsLib) OpenS3AsyncReader(path string, offset sp.Toffset) (*Rdr, error)
 	if err != nil {
 		return nil, err
 	}
-	r := &Rdr{}
+	r := &Rdr{rdr: rdr}
 	if err := rdr.Lseek(offset); err != nil {
 		return nil, err
 	}

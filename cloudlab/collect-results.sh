@@ -66,7 +66,7 @@ for vm in $vms; do
   vm_hostname="${vm_id_a[$idx]}"
   cmd1="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c '~/sigmaos/logs.sh'\" > $LOG_DIR/$vm_hostname-$vm.out 2>&1"
   # zip up performance files.
-  cmd2="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c 'cd /tmp/sigmaos-perf; tar -czf ../perf.tar.gz .'\""
+  cmd2="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c 'rm -f /tmp/perf.tar.gz; cd /tmp/sigmaos-perf; tar -czf ../perf.tar.gz .'\""
   # scp performance files.
   cmd3="scp -C -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:/tmp/perf.tar.gz $PERF_DIR/$vm_hostname-perf.tar.gz"
   # unzip performance files.

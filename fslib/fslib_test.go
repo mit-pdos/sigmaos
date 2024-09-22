@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/namesrv"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -336,7 +336,7 @@ func TestReadOff(t *testing.T) {
 
 	rdr.Lseek(3)
 	b := make([]byte, 10)
-	n, err := rdr.Reader.Read(b)
+	n, err := rdr.GetReader().Read(b)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, n)
 	assert.Equal(t, "lo", string(b[:2]))
@@ -1384,7 +1384,7 @@ func TestOpenRemoveRead(t *testing.T) {
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
 
-	b, err := rdr.GetData()
+	b, err := rdr.(*fslib.FdReader).GetData()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, d, b, "data")
 

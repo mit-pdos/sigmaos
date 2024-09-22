@@ -133,7 +133,7 @@ func (fl *FsLib) getS3Client() *serr.Err {
 	var ok bool
 	s3secrets, ok := fl.pe.GetSecrets()["s3"]
 	if !ok {
-		return serr.NewErr(serr.TErrPerm, fmt.Errorf("Principal %v has no S3 secrets"))
+		return serr.NewErr(serr.TErrPerm, fmt.Errorf("Principal has no S3 secrets"))
 	}
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),

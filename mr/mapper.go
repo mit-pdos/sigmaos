@@ -167,8 +167,7 @@ func (m *Mapper) initOutput() error {
 	}(start)
 
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
-	m.MkDir(filepath.Dir(outDirPath), 0777) // job dir
-	m.MkDir(outDirPath, 0777)               // mapper dir
+	m.MkDir(outDirPath, 0777) // mapper dir
 	db.DPrintf(db.MR, "initOutput mkdirs time: %v", time.Since(start))
 
 	// Create the output files

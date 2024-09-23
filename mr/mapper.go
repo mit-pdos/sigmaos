@@ -301,12 +301,27 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		// as part of the previous split.
 		off--
 	}
+	start := time.Now()
 	rdr, err := m.OpenS3AsyncReader(s.File, s.Offset)
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}
+	db.DPrintf(db.MR, "Mapper openAsyncReader time: %v", time.Since(start))
 	defer rdr.Close()
-	scanner := bufio.NewScanner(rdr)
+
+	var scanner *bufio.Scanner
+	if false {
+		scanner = bufio.NewScanner(rdr)
+	} else {
+		start = time.Now()
+		b := make([]byte, s.Length+1)
+		n, err := io.ReadFull(rdr, b)
+		if err != nil && err != io.ErrUnexpectedEOF {
+			db.DPrintf(db.ALWAYS, "Err ReadFull: n %v err %v", n, err)
+		}
+		db.DPrintf(db.MR, "Mapper readAll time %vB tpt %v: %v", n, test.TputStr(sp.Tlength(n), time.Since(start).Milliseconds()), time.Since(start))
+		scanner = bufio.NewScanner(bytes.NewReader(b))
+	}
 	scanner.Buffer(m.buf, cap(m.buf))
 
 	// advance scanner to new line after start, if start != 0
@@ -417,7 +432,7 @@ func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	db.DPrintf(db.MR_TPT, "%s: in %s out %v tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, m.input,
-			Result{true, m.input, nin, nout, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))
+			Result{true, m.ProcEnv().GetPID().String(), nin, nout, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))
 	} else {
 		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}

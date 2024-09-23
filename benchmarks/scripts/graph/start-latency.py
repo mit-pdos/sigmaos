@@ -75,6 +75,7 @@ def graph_data(cold_res_dir, warm_res_dir, out):
 
   xos_cold = get_xos_cold(cold_res_dir)
   xos_warm = get_xos_warm(warm_res_dir)
+  print("cold: {} warm: {}".format(xos_cold, xos_warm))
 
   sys = [     "XOS", "AWS λ", "Docker", "K8s", "Mitosis", "FAASM", ]
   cold = [ xos_cold,  1289.6,   2671.4,  1143,       3.1,     8.8, ]

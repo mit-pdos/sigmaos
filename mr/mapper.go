@@ -37,6 +37,7 @@ type Mapper struct {
 	mapf        MapT
 	combinef    ReduceT
 	sbc         *ScanByteCounter
+	jobRoot     string
 	job         string
 	nreducetask int
 	linesz      int
@@ -57,10 +58,11 @@ type Mapper struct {
 	ch          chan error
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
 	m := &Mapper{
 		mapf:        mapf,
 		combinef:    combinef,
+		jobRoot:     jobRoot,
 		job:         job,
 		nreducetask: nr,
 		linesz:      lsz,
@@ -88,16 +90,16 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string,
 }
 
 func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
-	if len(args) != 6 {
+	if len(args) != 7 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
-	nr, err := strconv.Atoi(args[1])
+	nr, err := strconv.Atoi(args[2])
 	if err != nil {
-		return nil, fmt.Errorf("NewMapper: nreducetask %v isn't int", args[1])
+		return nil, fmt.Errorf("NewMapper: nreducetask %v isn't int", args[2])
 	}
-	lsz, err := strconv.Atoi(args[4])
+	lsz, err := strconv.Atoi(args[5])
 	if err != nil {
-		return nil, fmt.Errorf("NewMapper: linesz %v isn't int", args[1])
+		return nil, fmt.Errorf("NewMapper: linesz %v isn't int", args[2])
 	}
 	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
@@ -105,11 +107,11 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 		return nil, err
 	}
 	db.DPrintf(db.TEST, "NewSigmaClnt done at time: %v", time.Since(start))
-	asyncrw, err := strconv.ParseBool(args[5])
+	asyncrw, err := strconv.ParseBool(args[6])
 	if err != nil {
-		return nil, fmt.Errorf("NewMapper: can't parse asyncrw %v", args[5])
+		return nil, fmt.Errorf("NewMapper: can't parse asyncrw %v", args[6])
 	}
-	m, err := NewMapper(sc, mapf, reducef, args[0], p, nr, lsz, args[2], args[3], asyncrw)
+	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, args[3], args[4], asyncrw)
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
@@ -222,7 +224,7 @@ func (m *Mapper) InformReducer() error {
 	for r := 0; r < m.nreducetask; r++ {
 		fn := mshardfile(pn, r) + m.rand
 
-		name := symname(m.job, strconv.Itoa(r), m.bin)
+		name := symname(m.jobRoot, m.job, strconv.Itoa(r), m.bin)
 
 		// Remove name in case an earlier mapper created the
 		// symlink.  A reducer may have opened and is reading

@@ -13,8 +13,8 @@ import (
 	"sigmaos/test"
 )
 
-func PrintMRStats(fsl *fslib.FsLib, job string) error {
-	rdr, err := fsl.OpenReader(MRstats(job))
+func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
+	rdr, err := fsl.OpenReader(MRstats(jobRoot, job))
 	if err != nil {
 		return err
 	}
@@ -54,6 +54,6 @@ func PrintMRStats(fsl *fslib.FsLib, job string) error {
 	return nil
 }
 
-func RemoveJob(fsl *fslib.FsLib, job string) error {
-	return fsl.RmDir(JobDir(job))
+func RemoveJob(fsl *fslib.FsLib, jobRoot, job string) error {
+	return fsl.RmDir(JobDir(jobRoot, job))
 }

@@ -45,6 +45,7 @@ type Coord struct {
 	*sigmaclnt.SigmaClnt
 	mft             *fttasks.FtTasks
 	rft             *fttasks.FtTasks
+	jobRoot         string
 	job             string
 	nmaptask        int
 	nreducetask     int
@@ -62,10 +63,11 @@ type Coord struct {
 }
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 10 {
+	if len(args) != 11 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
+	c.jobRoot = args[1]
 	c.job = args[0]
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
@@ -73,61 +75,61 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	db.DPrintf(db.MR, "Made fslib job %v", c.job)
 	c.SigmaClnt = sc
-	m, err := strconv.Atoi(args[1])
+	m, err := strconv.Atoi(args[2])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: nmaptask %v isn't int", args[1])
+		return nil, fmt.Errorf("NewCoord: nmaptask %v isn't int", args[2])
 	}
-	n, err := strconv.Atoi(args[2])
+	n, err := strconv.Atoi(args[3])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[2])
+		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[3])
 	}
 	c.nmaptask = m
 	c.nreducetask = n
-	c.mapperbin = args[3]
-	c.reducerbin = args[4]
+	c.mapperbin = args[4]
+	c.reducerbin = args[5]
 
-	ctime, err := strconv.Atoi(args[5])
+	ctime, err := strconv.Atoi(args[6])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: crash %v isn't int", args[5])
+		return nil, fmt.Errorf("NewCoord: crash %v isn't int", args[6])
 	}
 	c.crash = int64(ctime)
 
-	malmap, err := strconv.Atoi(args[9])
+	malmap, err := strconv.Atoi(args[10])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[9])
+		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[10])
 	}
 	c.maliciousMapper = uint64(malmap)
 
-	c.linesz = args[6]
+	c.linesz = args[7]
 
-	mem, err := strconv.Atoi(args[7])
+	mem, err := strconv.Atoi(args[8])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[2])
+		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[3])
 	}
 	c.memPerTask = proc.Tmem(mem)
-	asyncrw, err := strconv.ParseBool(args[8])
+	asyncrw, err := strconv.ParseBool(args[9])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: can't parse asyncrw %v", args[8])
+		return nil, fmt.Errorf("NewCoord: can't parse asyncrw %v", args[9])
 	}
 	c.asyncrw = asyncrw
 
-	b, err := c.GetFile(JobOutLink(c.job))
+	b, err := c.GetFile(JobOutLink(c.jobRoot, c.job))
 	if err != nil {
-		db.DFatalf("Error GetFile JobOutLink [%v]: %v", JobOutLink(c.job), err)
+		db.DFatalf("Error GetFile JobOutLink [%v]: %v", JobOutLink(c.jobRoot, c.job), err)
 	}
 	c.outdir = string(b)
 
-	b, err = c.GetFile(JobIntOutLink(c.job))
+	b, err = c.GetFile(JobIntOutLink(c.jobRoot, c.job))
 	if err != nil {
 		db.DFatalf("Error GetFile JobIntOutLink: %v", err)
 	}
 	c.intOutdir = string(b)
 
-	c.mft, err = fttasks.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.job)), filepath.Join(c.job, "/mtasks"))
+	c.mft, err = fttasks.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/mtasks"))
 	if err != nil {
 		db.DFatalf("NewFtTasks mtasks %v", err)
 	}
-	c.rft, err = fttasks.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.job)), filepath.Join(c.job, "/rtasks"))
+	c.rft, err = fttasks.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/rtasks"))
 	if err != nil {
 		db.DFatalf("NewFtTasks rtasks %v", err)
 	}
@@ -170,7 +172,7 @@ func (c *Coord) mapperProc(task string) *proc.Proc {
 			mapperbin = MALICIOUS_MAPPER_BIN
 		}
 	}
-	return c.newTask(mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
+	return c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
 }
 
 type TreduceTask struct {
@@ -182,8 +184,8 @@ func (c *Coord) reducerProc(tn string) *proc.Proc {
 	if err := c.rft.ReadTask(tn, t); err != nil {
 		db.DFatalf("ReadTask %v err %v", tn, err)
 	}
-	in := ReduceIn(c.job) + "/" + t.Task
-	outlink := ReduceOut(c.job) + t.Task
+	in := ReduceIn(c.jobRoot, c.job) + "/" + t.Task
+	outlink := ReduceOut(c.jobRoot, c.job) + t.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
 	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
 	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
@@ -280,7 +282,7 @@ func (c *Coord) restart(files []string, task string) {
 		// Remove symfile so that when coordinator restarts
 		// reducers, they wait for the mappers to make new
 		// symfiles.
-		sym := symname(c.job, task, f)
+		sym := symname(c.jobRoot, c.job, task, f)
 		if err := c.Remove(sym); err != nil {
 			db.DPrintf(db.ALWAYS, "remove %v err %v\n", sym, err)
 		}
@@ -335,8 +337,8 @@ func (c *Coord) Round(ttype string) {
 		res := <-ch
 		db.DPrintf(db.MR, "Round: task done %v ok %v msInner %d msOuter %d msg %v res %v\n", res.t, res.ok, res.res.MsInner, res.res.MsOuter, res.msg, res.res)
 		if res.ok {
-			if err := c.AppendFileJson(MRstats(c.job), res.res); err != nil {
-				db.DFatalf("Appendfile %v err %v\n", MRstats(c.job), err)
+			if err := c.AppendFileJson(MRstats(c.jobRoot, c.job), res.res); err != nil {
+				db.DFatalf("Appendfile %v err %v\n", MRstats(c.jobRoot, c.job), err)
 			}
 			db.DPrintf(db.ALWAYS, "tasks left %d/%d\n", m-1, c.nmaptask+c.nreducetask)
 			if !mapsDone && m < c.nmaptask {
@@ -351,7 +353,7 @@ func (c *Coord) Work() {
 	db.DPrintf(db.MR, "Try acquire leadership coord %v job %v", c.ProcEnv().GetPID(), c.job)
 
 	// Try to become the leading coordinator.
-	if err := c.leaderclnt.LeadAndFence(nil, []string{JobDir(c.job)}); err != nil {
+	if err := c.leaderclnt.LeadAndFence(nil, []string{JobDir(c.jobRoot, c.job)}); err != nil {
 		db.DFatalf("LeadAndFence err %v", err)
 	}
 
@@ -408,7 +410,7 @@ func (c *Coord) Work() {
 	atomic.StoreInt32(&c.done, 1)
 
 	db.DPrintf(db.ALWAYS, "E2e bench took %v", time.Since(jobStart))
-	JobDone(c.FsLib, c.job)
+	JobDone(c.FsLib, c.jobRoot, c.job)
 
 	c.ClntExitOK()
 }

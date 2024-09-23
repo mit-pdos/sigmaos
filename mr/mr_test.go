@@ -150,7 +150,7 @@ func TestMapperReducer(t *testing.T) {
 		assert.Nil(t, err, "UploadDir %v %v err %v", job.Local, job.Input, err)
 	}
 
-	nmap, err := mr.PrepareJob(ts.FsLib, ts.tasks, ts.job, job)
+	nmap, err := mr.PrepareJob(ts.FsLib, ts.tasks, mr.MR_JOB_ROOT, ts.job, job)
 	assert.Nil(ts.T, err, "PrepareJob err %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
@@ -172,7 +172,7 @@ func TestMapperReducer(t *testing.T) {
 		// n, err := m.DoSplit(&s, m.CombineWc)
 		// Run without combining:
 		// n, err := m.DoSplit(&s, m.Emit)
-		m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, ts.job, p, job.Nreduce, job.Linesz, input, job.Intermediate, true)
+		m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, mr.MR_JOB_ROOT, ts.job, p, job.Nreduce, job.Linesz, input, job.Intermediate, true)
 		assert.Nil(t, err, "NewMapper %v", err)
 		start := time.Now()
 		in, out, err := m.DoMap()
@@ -194,8 +194,8 @@ func TestMapperReducer(t *testing.T) {
 		err = ts.tasks.Rft.ReadTask(task, rt)
 		assert.Nil(t, err)
 
-		in := mr.ReduceIn(ts.job) + "/" + rt.Task
-		outlink := mr.ReduceOut(ts.job) + rt.Task
+		in := mr.ReduceIn(mr.MR_JOB_ROOT, ts.job) + "/" + rt.Task
+		outlink := mr.ReduceOut(mr.MR_JOB_ROOT, ts.job) + rt.Task
 		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Task
 
 		r, err := mr.NewReducer(sc, wc.Reduce, []string{in, outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
@@ -310,7 +310,7 @@ func (ts *Tstate) compare() bool {
 }
 
 func (ts *Tstate) checkJob(app string) bool {
-	err := mr.MergeReducerOutput(ts.FsLib, ts.job, OUTPUT, ts.nreducetask)
+	err := mr.MergeReducerOutput(ts.FsLib, mr.MR_JOB_ROOT, ts.job, OUTPUT, ts.nreducetask)
 	assert.Nil(ts.T, err, "Merge output files: %v", err)
 	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" || app == MALICIOUS_APP {
 		db.DPrintf(db.TEST, "checkJob %v", app)
@@ -372,11 +372,11 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 		defer sdc.Done()
 	}
 
-	nmap, err := mr.PrepareJob(sc.FsLib, ts.tasks, ts.job, job)
+	nmap, err := mr.PrepareJob(sc.FsLib, ts.tasks, mr.MR_JOB_ROOT, ts.job, job)
 	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	cm := mr.StartMRJob(sc, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, true, maliciousMapper)
+	cm := mr.StartMRJob(sc, mr.MR_JOB_ROOT, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, true, maliciousMapper)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}
@@ -412,7 +412,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	}
 	db.DPrintf(db.TEST, "Done check Job")
 
-	err = mr.PrintMRStats(ts.FsLib, ts.job)
+	err = mr.PrintMRStats(ts.FsLib, mr.MR_JOB_ROOT, ts.job)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
 	db.DPrintf(db.TEST, "Cleanup tasks state")

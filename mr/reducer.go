@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -69,7 +68,6 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf
 	}
 	r.nmaptask = m
 
-	sc.MkDir(filepath.Dir(r.tmp), 0777)
 	if r.asyncrw {
 		w, err := r.CreateAsyncWriter(r.tmp, 0777, sp.OWRITE)
 		if err != nil {

@@ -156,8 +156,14 @@ func (rtot *readResult) sum(r *readResult) {
 }
 
 func (r *Reducer) readFile(rr *readResult) {
-	sym := r.input + "/" + rr.f + "/"
-	db.DPrintf(db.MR, "readFile %v\n", sym)
+	fn := r.input + "/" + rr.f
+	sym := fn + "/"
+	//	db.DPrintf(db.MR, "readFile %v\n", sym)
+	//b, err := r.GetFile(fn)
+	//if err != nil {
+	//	return
+	//}
+	//db.DPrintf(db.TEST, "readFile %q", string(b))
 	rdr, err := r.OpenAsyncReader(sym, 0)
 	if err != nil {
 		db.DPrintf(db.MR, "NewReader %v err %v", sym, err)

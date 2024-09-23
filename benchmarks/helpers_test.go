@@ -194,7 +194,7 @@ func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
 	// Get the list of schedds.
 	sds, err := sdc.GetSchedds()
 	assert.Nil(ts.Ts.T, err, "Get Schedds: %v", err)
-	db.DPrintf(db.TEST, "Warm up realm %v for progs %v schedds %v", ts.GetRealm(), progs, sds)
+	db.DPrintf(db.TEST, "Warm up realm %v for progs %v schedds %d %v", ts.GetRealm(), progs, len(sds), sds)
 	start := time.Now()
 	nDL := 0
 	for _, kid := range sds {

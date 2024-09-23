@@ -123,11 +123,11 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.intOutdir = string(b)
 
-	c.mft, err = fttasks.NewFtTasks(c.FsLib, MRDIRTOP, filepath.Join(c.job, "/mtasks"))
+	c.mft, err = fttasks.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.job)), filepath.Join(c.job, "/mtasks"))
 	if err != nil {
 		db.DFatalf("NewFtTasks mtasks %v", err)
 	}
-	c.rft, err = fttasks.NewFtTasks(c.FsLib, MRDIRTOP, filepath.Join(c.job, "/rtasks"))
+	c.rft, err = fttasks.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.job)), filepath.Join(c.job, "/rtasks"))
 	if err != nil {
 		db.DFatalf("NewFtTasks rtasks %v", err)
 	}

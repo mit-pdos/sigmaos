@@ -51,7 +51,7 @@ func JobDir(job string) string {
 }
 
 func JobSem(job string) string {
-	return filepath.Join(MRDIRTOP, job, JOBSEM)
+	return filepath.Join(JobDir(job), JOBSEM)
 }
 
 func MRstats(job string) string {

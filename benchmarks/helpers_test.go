@@ -204,12 +204,12 @@ func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
 		for _, ptype := range []proc.Ttype{proc.T_LC, proc.T_BE} {
 			for _, prog := range progs {
 				wg.Add(1)
-				go func(ptype proc.Ttype, prog string) {
+				go func(kid string, ptype proc.Ttype, prog string) {
 					defer wg.Done()
 					err := sdc.WarmUprocd(kid, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), prog+"-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
 					nDL++
 					assert.Nil(ts.Ts.T, err, "WarmUprocd: %v", err)
-				}(ptype, prog)
+				}(kid, ptype, prog)
 			}
 		}
 	}

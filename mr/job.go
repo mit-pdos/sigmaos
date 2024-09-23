@@ -218,10 +218,23 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobName string, job *Job) (int, err
 		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobName), err)
 		return 0, err
 	}
-	// Only make intermediate out dir if it lives in s3 (otherwise, it will be
-	// made by the mappers on their local machines).
+	// If intermediate output directory lives in S3, make it only once.
+	// Otherwise, make it on every node
 	if strings.Contains(job.Intermediate, "/s3/") {
 		fsl.MkDir(job.Intermediate, 0777)
+	} else if strings.Contains(job.Intermediate, "/ux/") {
+		uxSts, err := fsl.GetDir(sp.UX)
+		if err != nil {
+			return 0, err
+		}
+		for _, ux := range sp.Names(uxSts) {
+			intResolved := strings.ReplaceAll(job.Intermediate, "~local", ux)
+			if err := fsl.MkDir(intResolved, 0777); err != nil {
+				return 0, err
+			}
+		}
+	} else {
+		return 0, fmt.Errorf("Unknown intermediate job location")
 	}
 	if _, err := fsl.PutFile(JobIntOutLink(jobName), 0777, sp.OWRITE, []byte(job.Intermediate)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error link intermediate dir [%v] [%v]: %v", job.Output, JobOutLink(jobName), err)

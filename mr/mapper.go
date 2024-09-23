@@ -166,9 +166,6 @@ func (m *Mapper) initOutput() error {
 		db.DPrintf(db.TEST, "initOutput time: %v", time.Since(start))
 	}(start)
 
-	// Make a directory for holding the output files of a map task.  Ignore
-	// error in case it already exits.  XXX who cleans up?
-	m.MkDir(m.intOutput, 0777)
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
 	m.MkDir(filepath.Dir(outDirPath), 0777) // job dir
 	m.MkDir(outDirPath, 0777)               // mapper dir
@@ -213,7 +210,9 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 // Inform reducer where to find map output
 func (m *Mapper) InformReducer() error {
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
+	start := time.Now()
 	pn, err := m.ResolveMounts(outDirPath)
+	db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
 	if err != nil {
 		return fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
 	}
@@ -230,13 +229,17 @@ func (m *Mapper) InformReducer() error {
 		// will start a new reducer once this map completes.
 		// We could use rename to atomically remove and create
 		// the symlink if we want to avoid the failing case.
+		start = time.Now()
 		m.Remove(name)
+		db.DPrintf(db.MR, "Mapper informReducer Remove time: %v", time.Since(start))
 
 		target := fn + "/"
 
 		db.DPrintf(db.MR, "name %s target %s\n", name, target)
 
+		start = time.Now()
 		err = m.Symlink([]byte(target), name, 0777)
+		db.DPrintf(db.MR, "Mapper informReducer Symlink time: %v", time.Since(start))
 		if err != nil {
 			db.DFatalf("FATAL symlink %v err %v\n", name, err)
 		}
@@ -369,7 +372,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	db.DPrintf(db.MR, "Mapper closeWrtStart time: %v", time.Since(closeWrtStart))
+	db.DPrintf(db.MR, "Mapper closeWrt time: %v", time.Since(closeWrtStart))
 	informReducerStart := time.Now()
 	if err := m.InformReducer(); err != nil {
 		return 0, 0, err
@@ -398,7 +401,7 @@ func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
-	db.DPrintf(db.BENCH, "Mapper [%v] time since spawn %v", args[2], time.Since(pe.GetSpawnTime()))
+	db.DPrintf(db.BENCH, "Mapper [%v] time since spawn: %v", args[2], time.Since(pe.GetSpawnTime()))
 	m, err := newMapper(mapf, combinef, args, p)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)

@@ -218,7 +218,7 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 		if err := ft.MarkDone(t); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
-		db.DPrintf(db.MR, "MarkDone task latency: %v", start)
+		db.DPrintf(db.MR, "MarkDone task latency: %v", time.Since(start))
 		r := NewResult(status.Data())
 		r.MsOuter = ms
 		ch <- Tresult{t, true, ms, status.Msg(), r}

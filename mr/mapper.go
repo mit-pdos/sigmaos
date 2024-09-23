@@ -333,6 +333,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 
 func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 	db.DPrintf(db.MR, "doMap %v", m.input)
+	getInputStart := time.Now()
 	rdr, err := m.OpenReader(m.input)
 	if err != nil {
 		return 0, 0, err
@@ -349,6 +350,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 	if m.combinef != nil {
 		emit = m.Combine
 	}
+	db.DPrintf(db.MR, "Mapper getInput time: %v", time.Since(getInputStart))
 	for _, s := range bin {
 		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)
 		n, err := m.doSplit(&s, emit)
@@ -362,13 +364,17 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 		ni += n
 		m.CombineEmit()
 	}
+	closeWrtStart := time.Now()
 	nout, err := m.CloseWrt()
 	if err != nil {
 		return 0, 0, err
 	}
+	db.DPrintf(db.MR, "Mapper closeWrtStart time: %v", time.Since(closeWrtStart))
+	informReducerStart := time.Now()
 	if err := m.InformReducer(); err != nil {
 		return 0, 0, err
 	}
+	db.DPrintf(db.MR, "Mapper informReducer time: %v", time.Since(informReducerStart))
 	return ni, nout, nil
 }
 

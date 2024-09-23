@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -197,16 +198,22 @@ func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
 	db.DPrintf(db.TEST, "Warm up realm %v for progs %v schedds %d %v", ts.GetRealm(), progs, len(sds), sds)
 	start := time.Now()
 	nDL := 0
+	var wg sync.WaitGroup
 	for _, kid := range sds {
 		// Warm the cache for a binary
 		for _, ptype := range []proc.Ttype{proc.T_LC, proc.T_BE} {
 			for _, prog := range progs {
-				err := sdc.WarmUprocd(kid, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), prog+"-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
-				nDL++
-				assert.Nil(ts.Ts.T, err, "WarmUprocd: %v", err)
+				wg.Add(1)
+				go func(ptype proc.Ttype, prog string) {
+					defer wg.Done()
+					err := sdc.WarmUprocd(kid, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), prog+"-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
+					nDL++
+					assert.Nil(ts.Ts.T, err, "WarmUprocd: %v", err)
+				}(ptype, prog)
 			}
 		}
 	}
+	wg.Wait()
 	db.DPrintf(db.TEST, "Warmed up realm %v", ts.GetRealm())
 	return start, nDL
 }

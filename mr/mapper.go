@@ -167,8 +167,6 @@ func (m *Mapper) initOutput() error {
 	}(start)
 
 	outDirPath := MapIntermediateDir(m.job, m.intOutput)
-	m.MkDir(outDirPath, 0777) // mapper dir
-	db.DPrintf(db.MR, "initOutput mkdirs time: %v", time.Since(start))
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {

@@ -139,12 +139,12 @@ func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*T
 	fsl.MkDir(MRDIRTOP, 0777)
 	fsl.MkDir(MRDIRELECT, 0777)
 
-	mft, err := fttasks.MkFtTasks(fsl, MRDIRTOP, filepath.Join(jobname, "/mtasks"))
+	mft, err := fttasks.MkFtTasks(fsl, jobRoot, filepath.Join(jobname, "/mtasks"))
 	if err != nil {
 		db.DPrintf(db.ERROR, "MkFtTasks %v err %v\n", jobname, err)
 		return nil, err
 	}
-	rft, err := fttasks.MkFtTasks(fsl, MRDIRTOP, filepath.Join(jobname, "/rtasks"))
+	rft, err := fttasks.MkFtTasks(fsl, jobRoot, filepath.Join(jobname, "/rtasks"))
 	if err != nil {
 		db.DPrintf(db.ERROR, "MkFtTasks %v err %v\n", jobname, err)
 		return nil, err

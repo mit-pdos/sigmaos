@@ -135,9 +135,7 @@ type Tasks struct {
 	Rft *fttasks.FtTasks
 }
 
-const MR_JOB_ROOT = MRDIRTOP
-
-func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, error) {
+func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*Tasks, error) {
 	fsl.MkDir(MRDIRTOP, 0777)
 	fsl.MkDir(MRDIRELECT, 0777)
 
@@ -154,9 +152,9 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, err
 
 	dirs := []string{
 		LeaderElectDir(jobname),
-		MapTask(MR_JOB_ROOT, jobname),
-		ReduceTask(MR_JOB_ROOT, jobname),
-		ReduceIn(MR_JOB_ROOT, jobname),
+		MapTask(jobRoot, jobname),
+		ReduceTask(jobRoot, jobname),
+		ReduceIn(jobRoot, jobname),
 	}
 	for _, n := range dirs {
 		if err := fsl.MkDir(n, 0777); err != nil {
@@ -164,7 +162,7 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, err
 			return nil, err
 		}
 	}
-	if err := InitJobSem(fsl, MR_JOB_ROOT, jobname); err != nil {
+	if err := InitJobSem(fsl, jobRoot, jobname); err != nil {
 		db.DPrintf(db.ERROR, "Err init job sem")
 		return nil, err
 	}
@@ -172,7 +170,7 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, err
 	// Make input directories for reduce tasks and submit task
 	for r := 0; r < nreducetask; r++ {
 		rs := strconv.Itoa(r)
-		n := ReduceIn(MR_JOB_ROOT, jobname) + "/" + rs
+		n := ReduceIn(jobRoot, jobname) + "/" + rs
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
 			return nil, err
@@ -185,8 +183,8 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, err
 	}
 
 	// Create empty stats file
-	if _, err := fsl.PutFile(MRstats(MR_JOB_ROOT, jobname), 0777, sp.OWRITE, []byte{}); err != nil {
-		db.DPrintf(db.ERROR, "Putfile %v err %v\n", MRstats(MR_JOB_ROOT, jobname), err)
+	if _, err := fsl.PutFile(MRstats(jobRoot, jobname), 0777, sp.OWRITE, []byte{}); err != nil {
+		db.DPrintf(db.ERROR, "Putfile %v err %v\n", MRstats(jobRoot, jobname), err)
 		return nil, err
 	}
 	return &Tasks{mft, rft}, nil
@@ -212,8 +210,8 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 		db.DPrintf(db.ALWAYS, "Error mkdir job dir %v: %v", outDir, err)
 		return 0, err
 	}
-	if _, err := fsl.PutFile(JobOutLink(MR_JOB_ROOT, jobName), 0777, sp.OWRITE, []byte(job.Output)); err != nil {
-		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(MR_JOB_ROOT, jobName), err)
+	if _, err := fsl.PutFile(JobOutLink(jobRoot, jobName), 0777, sp.OWRITE, []byte(job.Output)); err != nil {
+		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobRoot, jobName), err)
 		return 0, err
 	}
 	redOutDir := ReduceOutTarget(job.Output, jobName)

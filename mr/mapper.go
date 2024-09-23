@@ -166,7 +166,7 @@ func (m *Mapper) initOutput() error {
 		db.DPrintf(db.TEST, "initOutput time: %v", time.Since(start))
 	}(start)
 
-	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
+	outDirPath := MapIntermediateDir(m.job, m.intOutput)
 	m.MkDir(outDirPath, 0777) // mapper dir
 	db.DPrintf(db.MR, "initOutput mkdirs time: %v", time.Since(start))
 
@@ -208,7 +208,7 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 
 // Inform reducer where to find map output
 func (m *Mapper) InformReducer() error {
-	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
+	outDirPath := MapIntermediateDir(m.job, m.intOutput)
 	start := time.Now()
 	pn, err := m.ResolveMounts(outDirPath)
 	db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))

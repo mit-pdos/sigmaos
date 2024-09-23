@@ -62,10 +62,6 @@ func MapTask(job string) string {
 	return filepath.Join(JobDir(job), "/m")
 }
 
-func MapIntermediateOutDir(job, intOutdir, mapname string) string {
-	return filepath.Join(intOutdir, job)
-}
-
 func MapIntermediateDir(job, intOutdir string) string {
 	return filepath.Join(intOutdir, job)
 }

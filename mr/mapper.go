@@ -208,10 +208,16 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 func (m *Mapper) InformReducer() error {
 	outDirPath := MapIntermediateDir(m.job, m.intOutput)
 	start := time.Now()
-	pn, err := m.ResolveMounts(outDirPath)
-	db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
-	if err != nil {
-		return fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
+	var pn string
+	var err error
+	if strings.Contains(outDirPath, "/s3/") {
+		pn = outDirPath
+	} else {
+		pn, err = m.ResolveMounts(outDirPath)
+		db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
+		if err != nil {
+			return fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
+		}
 	}
 	for r := 0; r < m.nreducetask; r++ {
 		fn := mshardfile(pn, r) + m.rand

@@ -61,6 +61,7 @@ def graph_data(input_dir, datasize, out):
   for i, v in enumerate(corral_times):
     plt.text(corralx[i], v + .25, str(round(v, 2)), ha="center")
   plots = [sigmaplot, corralplot]
+  ax.set_ylim(bottom=0, top=max(sigma_times + sigmas3_times + corral_times)*1.2)
   plt.tick_params(
     axis='x',          # changes apply to the x-axis
     which='both',      # both major and minor ticks are affected

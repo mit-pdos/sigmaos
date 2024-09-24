@@ -93,17 +93,17 @@ def graph_data(hotel_res_dir, hotel_overlays_res_dir, socialnet_res_dir, socialn
     peak_tpt.text(i * off, d_peak_tpt[i] + .25, str(d_peak_tpt[i]), ha="center")
 
   avg_lat.title.set_text("Avg latency (ms), low load")
-  p99_lat.title.set_text("p99 latency (ms), low load")
-  p99_lat_peak.title.set_text("p99 latency (ms) at peak throughput")
+  p99_lat.title.set_text("99% latency (ms), low load")
+  p99_lat_peak.title.set_text("99% latency (ms) at peak throughput")
   peak_tpt.title.set_text("Peak throughput (req/s)")
 #  avg_lat.set_ylabel("Avg lat @ low load (ms)")
 #  p99_lat.set_ylabel("99% lat @ low load (ms)")
 #  p99_lat_peak.set_ylabel("99% Lat @ peak tpt (ms)")
 #  peak_tpt.set_ylabel("Peak tpt (req/s)")
 
-  for ax in [ avg_lat, p99_lat, p99_lat_peak, peak_tpt, ]:
+  for (ax, data) in [ (avg_lat, d_avg_lat), (p99_lat, d_p99_lat), (p99_lat_peak, d_p99_lat_peak), (peak_tpt, d_peak_tpt), ]:
     ax.locator_params(axis='y', nbins=4)
-    ax.set_ylim(bottom=0)
+    ax.set_ylim(bottom=0, top=max(data)*1.3)
     ax.tick_params(
       axis='x',          # changes apply to the x-axis
       which='both',      # both major and minor ticks are affected

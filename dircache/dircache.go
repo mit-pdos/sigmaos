@@ -22,36 +22,36 @@ type NewValF[E any] func(string) (E, error)
 
 type DirCache[E any] struct {
 	*fslib.FsLib
-	sync.Mutex
-	hasEntries   *sync.Cond
-	dir          *sortedmap.SortedMap[string, E]
-	done         atomic.Uint64
-	Path         string
-	LSelector    db.Tselector
-	ESelector    db.Tselector
-	newVal       NewValF[E]
-	prefixFilter string
-	err          error
-	ch           chan string
+	sync.RWMutex
+	hasEntries    *sync.Cond
+	dir           *sortedmap.SortedMap[string, E]
+	done          atomic.Uint64
+	Path          string
+	LSelector     db.Tselector
+	ESelector     db.Tselector
+	newVal        NewValF[E]
+	prefixFilters []string
+	err           error
+	ch            chan string
 }
 
 func NewDirCache[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], ch chan string, lSelector db.Tselector, ESelector db.Tselector) *DirCache[E] {
-	return NewDirCacheFilter(fsl, path, newVal, ch, lSelector, ESelector, "")
+	return NewDirCacheFilter(fsl, path, newVal, ch, lSelector, ESelector, nil)
 }
 
 // filter entries starting with prefix
-func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], ch chan string, LSelector db.Tselector, ESelector db.Tselector, prefix string) *DirCache[E] {
+func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], ch chan string, LSelector db.Tselector, ESelector db.Tselector, prefixes []string) *DirCache[E] {
 	dc := &DirCache[E]{
-		FsLib:        fsl,
-		Path:         path,
-		dir:          sortedmap.NewSortedMap[string, E](),
-		LSelector:    LSelector,
-		ESelector:    ESelector,
-		newVal:       newVal,
-		prefixFilter: prefix,
-		ch:           ch,
+		FsLib:         fsl,
+		Path:          path,
+		dir:           sortedmap.NewSortedMap[string, E](),
+		LSelector:     LSelector,
+		ESelector:     ESelector,
+		newVal:        newVal,
+		prefixFilters: prefixes,
+		ch:            ch,
 	}
-	dc.hasEntries = sync.NewCond(&dc.Mutex)
+	dc.hasEntries = sync.NewCond(&dc.RWMutex)
 	go dc.watchDir()
 	go dc.watchdog()
 	return dc
@@ -186,20 +186,31 @@ func (dc *DirCache[E]) InvalidateEntry(name string) bool {
 }
 
 func (dc *DirCache[E]) allocVal(n string) (E, error) {
-	dc.Lock()
-	defer dc.Unlock()
+	dc.RLock()
+	defer dc.RUnlock()
 
 	db.DPrintf(dc.LSelector, "GetEntryAlloc for %v", n)
 	defer db.DPrintf(dc.LSelector, "Done GetEntryAlloc for %v", n)
 
 	_, e, vok := dc.dir.LookupKeyVal(n)
 	if !vok {
-		e1, err := dc.newVal(n)
-		if err != nil {
-			return e1, err
+		dc.RUnlock()
+		dc.Lock()
+
+		_, e, vok = dc.dir.LookupKeyVal(n)
+		if !vok {
+			e1, err := dc.newVal(n)
+			if err != nil {
+				dc.Unlock()
+				dc.RLock()
+				return e1, err
+			}
+			e = e1
+			dc.dir.Insert(n, e)
 		}
-		e = e1
-		dc.dir.Insert(n, e)
+
+		dc.Unlock()
+		dc.RLock()
 	}
 	return e, nil
 }
@@ -290,7 +301,7 @@ func (dc *DirCache[E]) watchDir() {
 	retry := false
 	for dc.done.Load() == 0 {
 		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
-		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilter)
+		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilters)
 		if ok { // reset retry?
 			retry = false
 		}

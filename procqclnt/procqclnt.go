@@ -8,6 +8,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/procqsrv/proto"
+	//	"sigmaos/rpc"
 	"sigmaos/rpcdirclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -47,6 +48,10 @@ func (pqc *ProcQClnt) chooseProcQ(pid sp.Tpid) (string, error) {
 // Enqueue a proc on the procq. Returns the ID of the kernel that is running
 // the proc.
 func (pqc *ProcQClnt) Enqueue(p *proc.Proc) (string, *proc.ProcSeqno, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.SPAWN_LAT, "[%v] procqclnt.Enqueue: %v", p.GetPid(), time.Since(start))
+	}(start)
 	pqID, err := pqc.chooseProcQ(p.GetPid())
 	if err != nil {
 		return NOT_ENQ, nil, err
@@ -162,3 +167,20 @@ func (pqc *ProcQClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 func (pqc *ProcQClnt) StopWatching() {
 	pqc.rpcdc.StopWatching()
 }
+
+// XXX
+//func (pqc *ProcQClnt) GetRPCStats() (map[string]*rpc.RPCStatsSnapshot, error) {
+//	snaps := make(map[string]*rpc.RPCStatsSnapshot)
+//	srvs, err := pqc.rpcdc.GetEntries()
+//	if err != nil {
+//		db.DPrintf(db.ERROR, "Err GetEntries: %v", err)
+//		return nil, err
+//	}
+//	for _, srv := range srvs {
+//		clnt, err := pqc.rpcdc.GetClnt(srvID)
+//		if err != nil {
+//			db.DPrintf(db.ERROR, "Err GetClnt[%v]: %v", srvID, err)
+//			return nil, err
+//		}
+//	}
+//}

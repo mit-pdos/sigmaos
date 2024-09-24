@@ -5,12 +5,10 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -38,7 +36,6 @@ import (
 const (
 	OUTPUT        = "/tmp/par-mr.out"
 	MALICIOUS_APP = "mr-wc-restricted.yml"
-	LOCALINPUT    = "/tmp/enwiki-1G"
 
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
@@ -70,10 +67,11 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 7, mr.Khash([]byte("absently"))%8)
 }
 
-func TestWordCount(t *testing.T) {
+func TestLocalWc(t *testing.T) {
 	const (
-		HOSTTMP = "/tmp/sigmaos"
-		F       = "gutenberg.txt"
+		LOCALINPUT = "/tmp/enwiki-1G"
+		HOSTTMP    = "/tmp/sigmaos"
+		F          = "gutenberg.txt"
 		// INPUT   = "../input/" + F
 		INPUT = LOCALINPUT
 		OUT   = HOSTTMP + F + ".out"
@@ -140,119 +138,76 @@ func TestSplits(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestMapperAlone(t *testing.T) {
-	const (
-		//SPLITSZ   =  64 * sp.KBYTE
-		SPLITSZ   = 10 * sp.MBYTE
-		REDUCEIN  = "name/ux/~local/test-reducer-in.txt"
-		REDUCEOUT = "name/ux/~local/test-reducer-out.txt"
-	)
-
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+func TestMapperReducer(t *testing.T) {
+	t1, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
-	ts.Remove(REDUCEIN)
-	ts.Remove(REDUCEOUT)
+	ts := newTstate(t1, app) // or --app mr-wc-ux.yml or --app mr-ux-wiki1G.yml
 
-	job, err1 = mr.ReadJobConfig(app) // or --app mr-ux-wiki1G.yml
-	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
-	job.Nreduce = 1
-
-	if strings.HasPrefix(job.Input, sp.UX) {
-		file := filepath.Base(LOCALINPUT)
-		err := ts.MkDir(job.Input, 0777)
-		assert.Nil(t, err, "MkDir err %v", err)
-		err = ts.UploadFile(LOCALINPUT, filepath.Join(job.Input, file))
-		assert.Nil(t, err, "UploadFile err %v", err)
+	if job.Local != "" {
+		err := ts.UploadDir(job.Local, job.Input)
+		assert.Nil(t, err, "UploadDir %v %v err %v", job.Local, job.Input, err)
 	}
 
-	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
-	assert.Nil(t, err, "Err NewBins %v", err)
-	done := make(chan bool)
+	nmap, err := mr.PrepareJob(ts.FsLib, ts.tasks, ts.job, job)
+	assert.Nil(ts.T, err, "PrepareJob err %v: %v", job, err)
+	assert.NotEqual(ts.T, 0, nmap)
+
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
-	for i := 0; i < nmap; i++ {
-		go func(i int) {
-			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			sc, err := sigmaclnt.NewSigmaClnt(pe)
-			assert.Nil(t, err, "NewSC: %v", err)
-			m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, "test", p, job.Nreduce, job.Linesz, "nobin", "nointout", true)
-			assert.Nil(t, err, "NewMapper %v", err)
-			err = m.InitWrt(0, REDUCEIN+strconv.Itoa(i))
-			assert.Nil(t, err)
-			db.DPrintf(db.TEST, "Bins: %v", bins)
 
-			start := time.Now()
-			nin := sp.Tlength(0)
-			for _, b := range bins {
-				for _, s := range b {
-					// Run with wc-specialized combiner:
-					// n, err := m.DoSplit(&s, m.CombineWc)
-					// Run without combining:
-					// n, err := m.DoSplit(&s, m.Emit)
-					n, err := m.DoSplit(&s, m.Combine)
-					if err != nil {
-						db.DFatalf("DoSplit err %v", err)
-					}
-					nin += n
-					if timeout > 0 && time.Since(start) > timeout {
-						break
-					}
-				}
-				if timeout > 0 && time.Since(start) > timeout {
-					break
-				}
-				m.DoCombine()
-			}
-			nout, err := m.CloseWrt()
-			if err != nil {
-				db.DFatalf("CloseWrt err %v", err)
-			}
+	tns, err := ts.tasks.Mft.GetTasks()
+	assert.Nil(t, err)
 
-			db.DPrintf(db.ALWAYS, "%s: in %s out %s tot %s %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
-			done <- true
-		}(i)
-	}
-	for i := 0; i < nmap; i++ {
-		<-done
-	}
-
-	if app == "mr-wc.yml" && nmap == 1 {
-		data := make(map[string]int, 0)
-		rdr, err := ts.OpenAsyncReader(REDUCEIN+strconv.Itoa(0), 0)
+	start := time.Now()
+	nin := sp.Tlength(0)
+	nout := sp.Tlength(0)
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	assert.Nil(t, err, "NewSC: %v", err)
+	for _, task := range tns {
+		input := ts.tasks.Mft.TaskPathName(task)
+		// Run with wc-specialized combiner:
+		// n, err := m.DoSplit(&s, m.CombineWc)
+		// Run without combining:
+		// n, err := m.DoSplit(&s, m.Emit)
+		m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, ts.job, p, job.Nreduce, job.Linesz, input, job.Intermediate, true)
+		assert.Nil(t, err, "NewMapper %v", err)
+		start := time.Now()
+		in, out, err := m.DoMap()
 		assert.Nil(t, err)
-		for {
-			var kv mr.KeyValue
-			if err := mr.DecodeKV(rdr, &kv); err != nil {
-				if err == io.EOF {
-					break
-				}
-				assert.Nil(t, err)
-			}
-			if _, ok := data[kv.Key]; !ok {
-				data[kv.Key] = 0
-			}
-			m, err := strconv.Atoi(kv.Value)
-			assert.Nil(t, err)
-			data[kv.Key] += m
-		}
+		nin += in
+		nout += out
+		db.DPrintf(db.ALWAYS, "map %s: in %s out %s tot %s %vms (%s)\n", input, humanize.Bytes(uint64(in)), humanize.Bytes(uint64(out)), humanize.Bytes(uint64(in+out)), time.Since(start).Milliseconds(), test.TputStr(in+out, time.Since(start).Milliseconds()))
+	}
+	db.DPrintf(db.ALWAYS, "map %s total: in %s out %s tot %s %vms (%s)\n", job.Input, humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 
-		data1 := make(seqwc.Tdata)
-		sbc := mr.NewScanByteCounter(p)
-		_, _, err = seqwc.WcData(ts.FsLib, job.Input, data1, sbc)
+	tns, err = ts.tasks.Rft.GetTasks()
+	assert.Nil(t, err)
+
+	for _, task := range tns {
+		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		sc, err := sigmaclnt.NewSigmaClnt(pe)
 		assert.Nil(t, err)
-		assert.Equal(t, len(data1), len(data))
+		rt := &mr.TreduceTask{}
+		err = ts.tasks.Rft.ReadTask(task, rt)
+		assert.Nil(t, err)
 
-		for k, v := range data1 {
-			v1, ok := data[k]
-			if !assert.True(t, ok, "error: k %s missing", k) {
-				break
-			}
-			if !assert.True(t, uint64(v1) == v, "error: %s: %v != %v", k, v, v1) {
-				break
-			}
-		}
+		in := mr.ReduceIn(ts.job) + "/" + rt.Task
+		outlink := mr.ReduceOut(ts.job) + rt.Task
+		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Task
+
+		r, err := mr.NewReducer(sc, wc.Reduce, []string{in, outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
+		assert.Nil(t, err)
+		status := r.DoReduce()
+		assert.True(t, status.IsStatusOK(), "status %v", status)
+		res := mr.NewResult(status.Data())
+		db.DPrintf(db.ALWAYS, "%s: in %s out tot %v %f %vms (%s)\n", res.Task, humanize.Bytes(uint64(res.In)), humanize.Bytes(uint64(res.Out)), test.Mbyte(res.In+res.Out), res.Ms, test.TputStr(res.In+res.Out, res.Ms))
+	}
+
+	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" {
+		ts.checkJob(app)
 	}
 
 	p.Done()
@@ -357,7 +312,8 @@ func (ts *Tstate) compare() bool {
 func (ts *Tstate) checkJob(app string) bool {
 	err := mr.MergeReducerOutput(ts.FsLib, ts.job, OUTPUT, ts.nreducetask)
 	assert.Nil(ts.T, err, "Merge output files: %v", err)
-	if app == "mr-wc.yml" || app == MALICIOUS_APP {
+	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" || app == MALICIOUS_APP {
+		db.DPrintf(db.TEST, "checkJob %v", app)
 		return ts.compare()
 	}
 	return true
@@ -459,10 +415,10 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	err = mr.PrintMRStats(ts.FsLib, ts.job)
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
-	db.DPrintf(db.TEST, "Cleanup MR outputs")
+	db.DPrintf(db.TEST, "Cleanup tasks state")
 	ts.tasks.Mft.Cleanup()
 	ts.tasks.Rft.Cleanup()
-	mr.CleanupMROutputs(ts.FsLib, job.Output, job.Intermediate)
+	mr.CleanupMROutputs(ts.FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate))
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
 	ts.Shutdown()
 }

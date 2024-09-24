@@ -41,6 +41,7 @@ const (
 var N_TRIALS int
 var N_THREADS int
 var PREWARM_REALM bool
+var SKIPSTATS bool
 var MR_APP string
 var MR_MEM_REQ int
 var MR_ASYNCRW bool
@@ -53,6 +54,7 @@ var N_NODE_PER_MACHINE int
 var N_CLNT int
 var USE_RUST_PROC bool
 var USE_DUMMY_PROC bool
+var SPAWN_BENCH_LC_PROC bool
 var WITH_KERNEL_PREF bool
 var DOWNLOAD_FROM_UX bool
 var SCHEDD_DURS string
@@ -109,6 +111,7 @@ func init() {
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
+	flag.BoolVar(&SKIPSTATS, "skipstats", false, "Skip printing stats.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.IntVar(&MR_MEM_REQ, "mr_mem_req", 4000, "Amount of memory (in MB) required for each MR task.")
 	flag.BoolVar(&MR_ASYNCRW, "mr_asyncrw", true, "Mapers and reducers use asynchronous readers/writers.")
@@ -119,6 +122,7 @@ func init() {
 	flag.IntVar(&N_NODE_PER_MACHINE, "n_node_per_machine", 1, "Number of nodes per machine. Likely should always be 1, unless developing locally.")
 	flag.BoolVar(&USE_RUST_PROC, "use_rust_proc", false, "Use rust spawn bench proc")
 	flag.BoolVar(&USE_DUMMY_PROC, "use_dummy_proc", false, "Use dummy spawn bench proc")
+	flag.BoolVar(&SPAWN_BENCH_LC_PROC, "spawn_bench_lc_proc", false, "Use an LC proc for spawn bench")
 	flag.BoolVar(&WITH_KERNEL_PREF, "with_kernel_pref", false, "Set proc kernel preferences when spawning (e.g., to force & measure cold start)")
 	flag.BoolVar(&DOWNLOAD_FROM_UX, "download_from_ux", false, "Download the proc from ux, instead of S3. !!! WARNING: this only works for the spawn-latency proc !!!")
 	flag.StringVar(&SCHEDD_DURS, "schedd_dur", "10s", "Schedd benchmark load generation duration (comma-separated for multiple phases).")
@@ -403,7 +407,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 	}
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
-	db.DPrintf(db.BENCH, "rust %v ux %v prewarm %v kpref %v nclnt %v durs %v rps %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS)
+	db.DPrintf(db.BENCH, "rust %v ux %v dummy %v lc %v prewarm %v kpref %v nclnt %v durs %v rps %v skipstats %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, USE_DUMMY_PROC, SPAWN_BENCH_LC_PROC, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, SKIPSTATS)
 
 	prog := "XXXX"
 	if USE_RUST_PROC {
@@ -414,7 +418,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 		}
 	} else if USE_DUMMY_PROC {
 		assert.False(t, DOWNLOAD_FROM_UX, "Can only download rust proc from ux for now")
-		prog = "spawn-bench"
+		prog = sp.DUMMY_PROG
 	}
 
 	sts, err := rootts.GetDir(sp.SCHEDD)
@@ -453,15 +457,15 @@ func TestMicroScheddSpawn(t *testing.T) {
 
 	done := make(chan bool)
 	// Prep Schedd job
-	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration {
+	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, prog, func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration {
 		if USE_RUST_PROC {
-			return runRustSpawnBenchProc(ts1, sc, prog, kernelpref)
+			return runRustSpawnBenchProc(ts1, sc, prog, pid, kernelpref)
 		} else if USE_DUMMY_PROC {
-			return runDummySpawnBenchProc(ts1, sc)
+			return runDummySpawnBenchProc(ts1, sc, pid, SPAWN_BENCH_LC_PROC)
 		} else {
-			return runSpawnBenchProc(ts1, sc, kernelpref)
+			return runSpawnBenchProc(ts1, sc, pid, kernelpref)
 		}
-	}, kernels, WITH_KERNEL_PREF)
+	}, kernels, WITH_KERNEL_PREF, SKIPSTATS)
 	// Run Schedd job
 	go func() {
 		runOps(ts1, ji, runSchedd, rs)

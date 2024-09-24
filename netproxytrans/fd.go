@@ -3,6 +3,7 @@ package netproxytrans
 import (
 	"net"
 	"os"
+	"time"
 
 	"golang.org/x/sys/unix"
 
@@ -20,7 +21,13 @@ func ListenerToFile(proxyListener net.Listener) (*os.File, error) {
 }
 
 func ConnToFile(proxyConn net.Conn) (*os.File, error) {
-	f, err := proxyConn.(*net.TCPConn).File()
+	start := time.Now()
+	c := proxyConn.(*net.TCPConn)
+	db.DPrintf(db.NETPROXY_LAT, "Dial ConnToFile typecast latency: %v", time.Since(start))
+	start = time.Now()
+	f, err := c.File()
+	dur := time.Since(start)
+	db.DPrintf(db.NETPROXY_LAT, "Dial ConnToFile File[%v] latency: %v", f.Fd(), dur)
 	if err != nil {
 		db.DFatalf("Error get TCP conn fd: %v", err)
 		return nil, err

@@ -159,14 +159,19 @@ func (fsl *FsLib) RmDirEntries(dir string) error {
 }
 
 func (fsl *FsLib) SprintfDir(d string) (string, error) {
-	return fsl.sprintfDirIndent(d, "")
+	s := fmt.Sprintf("dir %v:\n", d)
+	s1, err := fsl.sprintfDirIndent(d, "")
+	if err != nil {
+		return "", err
+	}
+	return s + s1, nil
 }
 
 func (fsl *FsLib) sprintfDirIndent(d string, indent string) (string, error) {
-	s := fmt.Sprintf("%v dir %v\n", indent, d)
+	s := ""
 	sts, err := fsl.GetDir(d)
 	if err != nil {
-		return "", err
+		return s, err
 	}
 	for _, st := range sts {
 		s += fmt.Sprintf("%v %v %v\n", indent, st.Name, st.Tqid())

@@ -9,14 +9,17 @@ import os
 import sys
 import durationpy
 
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 def graph_data(out):
   fig, (dial_lat, packet_lat, tpt) = plt.subplots(1, 3, figsize=(6.4, 2.4))
   # Set up lat graph
 
-  isol = [ "XOS", "none", "Docker overlay", "K8s overlay", ]
-  d_packet_lat = [ 51, 51, 97, 189 ]
-  d_dial_lat = [ 304, 229, 335, 438 ]
-  d_tpt = [ 9.4, 9.4, 8.58, 6.84 ]
+  isol = [ "σOS", "none", "Docker overlay", "K8s overlay", ]
+  d_packet_lat = [   53,   53,   85,    60 ]
+  d_dial_lat =   [  413,  131,  195,   659 ]
+  d_tpt =        [ 8.96, 8.96,  7.84, 5.12 ]
 
   width = 0.15
   
@@ -36,12 +39,13 @@ def graph_data(out):
 
 #  packet_lat.set_ylim(bottom=0)
   #packet_lat.set_yscale("log")
-  packet_lat.set_ylim(bottom=0)
+  packet_lat.set_ylim(bottom=0, top=max(d_packet_lat)*1.1)
   packet_lat.set_ylabel("Per-packet Latency (us)")
   #dial_lat.set_yscale("log")
+  dial_lat.set_ylim(bottom=0, top=max(d_dial_lat)*1.1)
   dial_lat.set_ylabel("Dial Latency (us)")
  # Set up tpt graph
-#  tpt.set_ylim(bottom=0)
+  tpt.set_ylim(bottom=0, top=max(d_tpt)*1.1)
   tpt.set_ylabel("Throughput (Gb/s)")
 
   for ax in [ packet_lat, dial_lat, tpt ]:

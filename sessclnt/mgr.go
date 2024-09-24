@@ -14,6 +14,7 @@ import (
 
 type Mgr struct {
 	mu       sync.Mutex
+	sessKeys map[*sp.Tendpoint]string
 	sessions map[string]*SessClnt
 	pe       *proc.ProcEnv
 	npc      *netproxyclnt.NetProxyClnt
@@ -22,6 +23,7 @@ type Mgr struct {
 func NewMgr(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) *Mgr {
 	sc := &Mgr{
 		sessions: make(map[string]*SessClnt),
+		sessKeys: make(map[*sp.Tendpoint]string),
 		pe:       pe,
 		npc:      npc,
 	}
@@ -45,12 +47,7 @@ func (sc *Mgr) SessClnts() []*SessClnt {
 func (sc *Mgr) allocSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	// TODO XXX: kill?
-	// Store as concatenation of addresses
-	//	if len(addrs) == 0 {
-	//		return nil, serr.NewErr(serr.TErrInval, ep)
-	//	}
-	key := sessKey(ep)
+	key := sc.getSessKeyL(ep)
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
@@ -65,7 +62,7 @@ func (sc *Mgr) allocSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 func (sc *Mgr) LookupSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	key := sessKey(ep)
+	key := sc.getSessKeyL(ep)
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
@@ -83,6 +80,15 @@ func (sc *Mgr) RPC(ep *sp.Tendpoint, req sessp.Tmsg, iniov sessp.IoVec, outiov s
 	return rep, err
 }
 
-func sessKey(ep *sp.Tendpoint) string {
+func (sc *Mgr) getSessKeyL(ep *sp.Tendpoint) string {
+	if s, ok := sc.sessKeys[ep]; ok {
+		return s
+	}
+	s := epToSessKey(ep)
+	sc.sessKeys[ep] = s
+	return s
+}
+
+func epToSessKey(ep *sp.Tendpoint) string {
 	return ep.Addrs().String()
 }

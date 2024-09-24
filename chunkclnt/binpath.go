@@ -11,52 +11,77 @@ import (
 	"sigmaos/syncmap"
 )
 
+type kernelIDs struct {
+	idMap   map[string]bool
+	idSlice []string
+}
+
+func newKernelIDs(kernelID string) *kernelIDs {
+	return &kernelIDs{
+		idMap:   map[string]bool{kernelID: true},
+		idSlice: []string{kernelID},
+	}
+}
+
 // BinPaths keeps track of kernels that have ran a binary, and are
 // likely to have to the binary cached.
 type BinPaths struct {
-	sync.Mutex
-	bins map[string][]string // map from bin name to kernelId
+	sync.RWMutex
+	bins map[string]*kernelIDs
 }
 
 func NewBinPaths() *BinPaths {
-	return &BinPaths{bins: make(map[string][]string)}
+	return &BinPaths{
+		bins: make(map[string]*kernelIDs),
+	}
 }
 
 func (bp *BinPaths) GetBinKernelID(bin string) (string, bool) {
-	bp.Lock()
-	defer bp.Unlock()
+	bp.RLock()
+	defer bp.RUnlock()
 
 	if kids, ok := bp.bins[bin]; ok {
-		i := rand.Int64(int64(len(kids)))
-		k := kids[int(i)]
+		i := rand.Int64(int64(len(kids.idSlice)))
+		k := kids.idSlice[int(i)]
 		db.DPrintf(db.CHUNKCLNT, "GetBinKernelID %v %v\n", bin, k)
 		return k, true
 	}
 	return "", false
 }
 
-func (bp *BinPaths) SetBinKernelID(bin, kernelId string) {
-	bp.Lock()
-	defer bp.Unlock()
+func (bp *BinPaths) SetBinKernelID(bin, kernelID string) {
+	bp.RLock()
+	defer bp.RUnlock()
 
-	if _, ok := bp.bins[bin]; ok {
-		i := slices.IndexFunc(bp.bins[bin], func(s string) bool { return s == kernelId })
-		if i == -1 {
-			bp.bins[bin] = append(bp.bins[bin], kernelId)
+	if _, ok := bp.bins[bin]; !ok {
+		bp.RUnlock()
+		bp.Lock()
+		if _, ok := bp.bins[bin]; !ok {
+			bp.bins[bin] = newKernelIDs(kernelID)
 		}
-	} else {
-		bp.bins[bin] = []string{kernelId}
+		bp.Unlock()
+		bp.RLock()
+	}
+	if _, ok := bp.bins[bin].idMap[kernelID]; !ok {
+		bp.RUnlock()
+		bp.Lock()
+		if _, ok := bp.bins[bin].idMap[kernelID]; !ok {
+			bp.bins[bin].idSlice = append(bp.bins[bin].idSlice, kernelID)
+		}
+		bp.Unlock()
+		bp.RLock()
 	}
 }
 
-func (bp *BinPaths) DelBinKernelID(bin, kernelId string) {
+func (bp *BinPaths) DelBinKernelID(bin, kernelID string) {
 	bp.Lock()
 	defer bp.Unlock()
 
 	if _, ok := bp.bins[bin]; ok {
-		i := slices.IndexFunc(bp.bins[bin], func(s string) bool { return s == kernelId })
-		if i != -1 {
-			bp.bins[bin] = append(bp.bins[bin][:i], bp.bins[bin][i+1:]...)
+		if _, ok := bp.bins[bin].idMap[kernelID]; ok {
+			i := slices.IndexFunc(bp.bins[bin].idSlice, func(s string) bool { return s == kernelID })
+			copy(bp.bins[bin].idSlice[:i], bp.bins[bin].idSlice[i+1:])
+			bp.bins[bin].idSlice = bp.bins[bin].idSlice[:len(bp.bins[bin].idSlice)-1]
 		}
 	}
 }

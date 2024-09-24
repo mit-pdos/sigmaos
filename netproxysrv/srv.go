@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -118,6 +119,12 @@ func (npsc *NetProxySrvConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err
 }
 
 func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netproto.DialResponse) error {
+	start := time.Now()
+	defer func(start time.Time) {
+		dur := time.Since(start)
+		ep := sp.NewEndpointFromProto(req.GetEndpoint())
+		db.DPrintf(db.NETPROXY_LAT, "[%v] Dial e2e latency: %v", ep, dur)
+	}(start)
 	// Set socket control message in output blob. Do this immediately to make
 	// sure it is set, even if we return early
 	res.Blob = &rpcproto.Blob{
@@ -139,15 +146,19 @@ func (nps *NetProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netp
 	} else {
 		res.Err = sp.NewRerror()
 	}
+	start = time.Now()
 	file, err := netproxytrans.ConnToFile(proxyConn)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
+	db.DPrintf(db.NETPROXY_LAT, "[%v] Dial ConnToFile latency: %v", ep, time.Since(start))
 	// Link conn FD to context so that it stays in scope and doesn't get GC-ed
 	// before it can be sent back to the client
 	ctx.SetConn(file)
+	start = time.Now()
 	// Set socket control message in output blob
 	res.Blob.Iov[0] = netproxytrans.ConstructSocketControlMsg(file)
+	db.DPrintf(db.NETPROXY_LAT, "[%v] Dial ConstructSocketControlMsg latency: %v", ep, time.Since(start))
 	return nil
 }
 

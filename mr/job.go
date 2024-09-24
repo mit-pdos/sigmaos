@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	MR          = "/mr/"
-	MRDIRTOP    = "name/" + MR
+	MR       = "/mr/"
+	MRDIRTOP = "name/" + MR
+	//MRDIRTOP    = "name/ux/~local/" + MR
 	MRDIRELECT  = "name/mr-elect"
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"
@@ -65,6 +66,10 @@ func MapIntermediateOutDir(job, intOutdir, mapname string) string {
 	return filepath.Join(intOutdir, job, "m-"+mapname)
 }
 
+func MapIntermediateDir(job, intOutdir string) string {
+	return filepath.Join(intOutdir, job)
+}
+
 func ReduceTask(job string) string {
 	return filepath.Join(JobDir(job), "/r")
 }
@@ -101,6 +106,7 @@ type Job struct {
 	Intermediate string `yalm:"intermediate"`
 	Output       string `yalm:"output"`
 	Linesz       int    `yalm:"linesz"`
+	Local        string `yalm:"input"`
 }
 
 // Wait until the job is done
@@ -190,10 +196,10 @@ func InitCoordFS(fsl *fslib.FsLib, jobname string, nreducetask int) (*Tasks, err
 
 // Clean up all old MR outputs
 func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string) {
-	db.DPrintf(db.MR, "Clean up MR outputs: %v", outputDir)
+	db.DPrintf(db.MR, "Clean up MR outputs: %v %v", outputDir, intOutputDir)
 	fsl.RmDir(outputDir)
 	fsl.RmDir(intOutputDir)
-	db.DPrintf(db.MR, "Clean up MR outputs done: %v", outputDir)
+	db.DPrintf(db.MR, "Clean up MR outputs done")
 }
 
 // Put names of input files in name/mr/m
@@ -202,14 +208,11 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobName string, job *Job) (int, err
 	if job.Output == "" || job.Intermediate == "" {
 		return 0, fmt.Errorf("Err job output (\"%v\") or intermediate (\"%v\") not supplied", job.Output, job.Intermediate)
 	}
-	// Only make out dir if it lives in s3
-	if strings.Contains(job.Output, "/s3/") {
-		fsl.MkDir(job.Output, 0777)
-		outDir := JobOut(job.Output, jobName)
-		if err := fsl.MkDir(outDir, 0777); err != nil {
-			db.DPrintf(db.ALWAYS, "Error mkdir job dir %v: %v", outDir, err)
-			return 0, err
-		}
+	fsl.MkDir(job.Output, 0777)
+	outDir := JobOut(job.Output, jobName)
+	if err := fsl.MkDir(outDir, 0777); err != nil {
+		db.DPrintf(db.ALWAYS, "Error mkdir job dir %v: %v", outDir, err)
+		return 0, err
 	}
 	if _, err := fsl.PutFile(JobOutLink(jobName), 0777, sp.OWRITE, []byte(job.Output)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobName), err)

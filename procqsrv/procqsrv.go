@@ -16,6 +16,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	proto "sigmaos/procqsrv/proto"
+	"sigmaos/schedqueue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -26,16 +27,17 @@ const (
 )
 
 type ProcQ struct {
-	mu        sync.Mutex
-	realmMu   sync.RWMutex
-	cond      *sync.Cond
-	sc        *sigmaclnt.SigmaClnt
-	qs        map[sp.Trealm]*Queue
-	realms    []sp.Trealm
-	rr        *RealmRR
-	qlen      int // Aggregate queue length, across all queues
-	tot       atomic.Int64
-	realmbins *chunkclnt.RealmBinPaths
+	mu          sync.Mutex
+	realmMu     sync.RWMutex
+	cond        *sync.Cond
+	sc          *sigmaclnt.SigmaClnt
+	qs          map[sp.Trealm]*schedqueue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno]
+	realms      []sp.Trealm
+	rr          *RealmRR
+	qlen        int // Aggregate queue length, across all queues
+	tot         atomic.Int64
+	ngetprocReq atomic.Int64
+	realmbins   *chunkclnt.RealmBinPaths
 }
 
 type QDir struct {
@@ -45,7 +47,7 @@ type QDir struct {
 func NewProcQ(sc *sigmaclnt.SigmaClnt) *ProcQ {
 	pq := &ProcQ{
 		sc:        sc,
-		qs:        make(map[sp.Trealm]*Queue),
+		qs:        make(map[sp.Trealm]*schedqueue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno]),
 		realms:    make([]sp.Trealm, 0),
 		rr:        NewRealmRR(),
 		qlen:      0,
@@ -62,7 +64,8 @@ func (qd *QDir) GetProcs() []*proc.Proc {
 
 	procs := make([]*proc.Proc, 0, qd.pq.lenL())
 	for _, q := range qd.pq.qs {
-		for _, p := range q.pmap {
+		pmap := q.GetPMapL()
+		for _, p := range pmap {
 			procs = append(procs, p)
 		}
 	}
@@ -75,7 +78,8 @@ func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
 	defer qd.pq.mu.Unlock()
 
 	for _, q := range qd.pq.qs {
-		if p, ok := q.pmap[sp.Tpid(pid)]; ok {
+		pmap := q.GetPMapL()
+		if p, ok := pmap[sp.Tpid(pid)]; ok {
 			return p, ok
 		}
 	}
@@ -86,7 +90,7 @@ func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
 func (pq *ProcQ) lenL() int {
 	l := 0
 	for _, q := range pq.qs {
-		l += len(q.pmap)
+		l += q.Len()
 	}
 	return l
 }
@@ -114,8 +118,12 @@ func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.Enque
 }
 
 func (pq *ProcQ) addProc(p *proc.Proc, ch chan *proc.ProcSeqno) {
+	lockStart := time.Now()
+
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
+
+	db.DPrintf(db.SPAWN_LAT, "Time to acquire lock in addProc: %v", time.Since(lockStart))
 
 	// Increase aggregate queue length.
 	pq.qlen++
@@ -156,11 +164,17 @@ func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.Get
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
 	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
+	pq.ngetprocReq.Add(1)
+
 	start := time.Now()
 	// Try until we hit the timeout (which we may hit if the request is for too
 	// few resources).
 	for time.Since(start) < GET_PROC_TIMEOUT {
+		lockStart := time.Now()
 		pq.mu.Lock()
+		lockDur := time.Since(lockStart)
+		db.DPrintf(db.SPAWN_LAT, "Time to acquire lock in GetProc: %v", lockDur)
+		scanStart := time.Now()
 		// Get the next realm with procs queued, globally round-robin
 		r, keepScanning := pq.rr.GetNextRealm(sp.NO_REALM)
 		firstSeen := r
@@ -170,9 +184,16 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				continue
 			}
 			db.DPrintf(db.PROCQ, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
-			p, ch, ts, ok := q.Dequeue(proc.Tmem(req.Mem), req.KernelID)
+			dequeueStart := time.Now()
+			p, ch, ts, ok := q.Dequeue(func(p *proc.Proc) bool {
+				return isEligible(p, proc.Tmem(req.Mem), req.KernelID)
+			})
+			dequeueDur := time.Since(dequeueStart)
 			db.DPrintf(db.PROCQ, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)
 			if ok {
+				scanDur := time.Since(scanStart)
+				db.DPrintf(db.SPAWN_LAT, "[%v] Queue scan time: %v dequeue time %v lock time %v", p.GetPid(), scanDur, dequeueDur, lockDur)
+				postDequeueStart := time.Now()
 				if q.Len() == 0 {
 					// Realm's queue is now empty
 					pq.rr.RealmQueueEmpty(r)
@@ -195,7 +216,8 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				res.ProcProto = p.GetProto()
 				res.OK = true
 				res.QLen = uint32(pq.qlen)
-				db.DPrintf(db.TEST, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
+				db.DPrintf(db.SPAWN_LAT, "[%v] Post-dequeue time: %v Queue scan time %v dequeue time %v lock time %v", p.GetPid(), time.Since(postDequeueStart), scanDur, dequeueDur, lockDur)
+				db.DPrintf(db.PROCQ, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
 				pq.mu.Unlock()
 				return nil
 			}
@@ -217,7 +239,17 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 	return nil
 }
 
-func (pq *ProcQ) getRealmQueue(realm sp.Trealm) *Queue {
+func isEligible(p *proc.Proc, mem proc.Tmem, scheddID string) bool {
+	if p.GetMem() > mem {
+		return false
+	}
+	if p.HasNoKernelPref() {
+		return true
+	}
+	return p.HasKernelPref(scheddID)
+}
+
+func (pq *ProcQ) getRealmQueue(realm sp.Trealm) *schedqueue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno] {
 	pq.realmMu.RLock()
 	defer pq.realmMu.RUnlock()
 
@@ -230,7 +262,7 @@ func (pq *ProcQ) getRealmQueue(realm sp.Trealm) *Queue {
 		q, ok = pq.tryGetRealmQueueL(realm)
 		if !ok {
 			// If the queue has still not been created, create it.
-			q = newQueue()
+			q = schedqueue.NewQueue[*proc.ProcSeqno, chan *proc.ProcSeqno]()
 			pq.qs[realm] = q
 			// Don't add the root realm as a realm to choose to schedule from.
 			if realm != sp.ROOTREALM {
@@ -245,7 +277,7 @@ func (pq *ProcQ) getRealmQueue(realm sp.Trealm) *Queue {
 }
 
 // Caller must hold lock.
-func (pq *ProcQ) tryGetRealmQueueL(realm sp.Trealm) (*Queue, bool) {
+func (pq *ProcQ) tryGetRealmQueueL(realm sp.Trealm) (*schedqueue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno], bool) {
 	q, ok := pq.qs[realm]
 	return q, ok
 }
@@ -258,6 +290,18 @@ func (pq *ProcQ) stats() {
 		time.Sleep(time.Second)
 		// Increase the total number of procs spawned
 		db.DPrintf(db.PROCQ, "Procq total size %v", pq.tot.Load())
+	}
+}
+
+func (pq *ProcQ) getprocStats() {
+	if !db.WillBePrinted(db.SPAWN_LAT) {
+		return
+	}
+	for {
+		ngp1 := pq.ngetprocReq.Load()
+		time.Sleep(5 * time.Second)
+		ngp2 := pq.ngetprocReq.Load()
+		db.DPrintf(db.SPAWN_LAT, "Stats ngetproc: %v/s", (ngp2-ngp1)/5)
 	}
 }
 
@@ -286,5 +330,6 @@ func Run() {
 	}
 	defer p.Done()
 	go pq.stats()
+	go pq.getprocStats()
 	ssrv.RunServer()
 }

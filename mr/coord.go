@@ -214,10 +214,12 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 			db.DPrintf(db.ERROR, "!!! WARNING: MALICIOUS MAPPER SUCCEEDED !!!")
 		}
 		// mark task as done
+		start := time.Now()
 		if err := ft.MarkDone(t); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
-		r := newResult(status.Data())
+		db.DPrintf(db.MR, "MarkDone task latency: %v", time.Since(start))
+		r := NewResult(status.Data())
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
 		if status != nil && status.Msg() == RESTART {
@@ -396,7 +398,7 @@ func (c *Coord) Work() {
 		db.DFatalf("NtaskDone reducers err %v\n", err)
 	}
 	if n+m < c.nmaptask+c.nreducetask {
-		db.DFatalf("job isn't done %v", n)
+		db.DFatalf("job isn't done %v+%v != %v+%v", n, m, c.nmaptask, c.nreducetask)
 	}
 
 	db.DPrintf(db.ALWAYS, "job done\n")

@@ -49,11 +49,12 @@ func TestInitFS(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 0
-		numNodes        int  = 4
-		numCoresPerNode uint = 4
-		numFullNodes    int  = numNodes
-		turboBoost      bool = false
+		driverVM          int  = 0
+		numNodes          int  = 4
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -63,7 +64,7 @@ func TestInitFS(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	ts.RunStandardBenchmark(benchName, driverVM, GetInitFSCmd, numNodes, numCoresPerNode, numFullNodes, turboBoost)
+	ts.RunStandardBenchmark(benchName, driverVM, GetInitFSCmd, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
 // Test SigmaOS cold-start.
@@ -73,16 +74,21 @@ func TestColdStart(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 0
-		numNodes        int  = 8
-		numCoresPerNode uint = 16
-		numFullNodes    int  = 1
-		turboBoost      bool = true
+		driverVM          int  = 0
+		numNodes          int  = 8
+		numCoresPerNode   uint = 16
+		numFullNodes      int  = 1
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = true
 	)
 	// Benchmark configuration parameters
 	var (
-		rps int           = 8
-		dur time.Duration = 5 * time.Second
+		dummyProc    bool          = false
+		lcProc       bool          = false
+		prewarmRealm bool          = false
+		skipStats    bool          = true
+		rps          int           = 8
+		dur          time.Duration = 5 * time.Second
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -92,52 +98,21 @@ func TestColdStart(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false, false), numNodes, numCoresPerNode, numFullNodes, turboBoost)
-}
-
-// Test the maximum throughput of a single procq.
-func TestProcqScalability(t *testing.T) {
-	var (
-		benchNameBase string = "procq_max_tpt"
-	)
-	// Cluster configuration parameters
-	const (
-		driverVM        int  = 23
-		numNodes        int  = 23
-		numCoresPerNode uint = 40
-		numFullNodes    int  = 1
-		turboBoost      bool = true
-	)
-	ts, err := NewTstate(t)
-	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
-		return
-	}
-	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
-		return
-	}
-	// Benchmark configuration parameters
-	var (
-		rps []int         = []int{4600, 9200, 13800, 18400, 23000} //, 27600, 32200, 36800} // In practice scaling stops before 23K RPS
-		dur time.Duration = 5 * time.Second
-	)
-	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	for _, r := range rps {
-		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
-		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true, true), numNodes, numCoresPerNode, numFullNodes, turboBoost)
-	}
+	ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, dummyProc, lcProc, prewarmRealm, skipStats), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
 // Test the single-node proc start bottleneck.
 func TestSingleMachineMaxTpt(t *testing.T) {
 	var (
-		benchNameBase string = "single_machine_max_tpt"
+		benchNameBase string = "single_machine_max_start_tpt"
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM     int  = 1
-		numNodes     int  = 1
-		numFullNodes int  = 1
-		turboBoost   bool = true
+		driverVM          int  = 3
+		numNodes          int  = 2
+		numProcqOnlyNodes int  = 1
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
+		turboBoost        bool = true
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -148,32 +123,36 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
-		rpsPerCore    []int         = []int{100, 250}
-		nCoresPerNode []uint        = []uint{2, 4, 8, 16} // , 32, 40} // In practice, scaling stops well before we reach 32 cores
+		dummyProc     bool          = false
+		lcProc        bool          = false
+		prewarmRealm  bool          = true
+		skipStats     bool          = true
+		rps           []int         = []int{1600, 1200, 800, 400}
+		nCoresPerNode []uint        = []uint{40, 32, 16, 8, 4, 2}
 		dur           time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, nCores := range nCoresPerNode {
-		for _, perCoreRPS := range rpsPerCore {
-			rps := int(nCores) * perCoreRPS
-			benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-cores-rps-%v", nCores, rps))
-			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(rps, dur, false, true), numNodes, nCores, numFullNodes, turboBoost)
+		for _, r := range rps {
+			benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-cores-rps-%v", nCores, r))
+			ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, dummyProc, lcProc, prewarmRealm, skipStats), numNodes, nCores, numFullNodes, numProcqOnlyNodes, turboBoost)
 		}
 	}
 }
 
-// Test SigmaOS scheduling scalability (and warm-start).
-func TestSchedInfraScalability(t *testing.T) {
+// Test the maximum throughput of a single lcsched.
+func TestSchedLCSchedMaxTpt(t *testing.T) {
 	var (
-		benchNameBase string = "sched_infra_scalability"
+		benchNameBase string = "lcsched_max_tpt"
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 23
-		numNodes        int  = 23
-		numCoresPerNode uint = 40
-		numFullNodes    int  = numNodes
-		turboBoost      bool = true
+		driverVM          int  = 25
+		numNodes          int  = 24
+		numCoresPerNode   uint = 40
+		numProcqOnlyNodes int  = 0
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
+		turboBoost        bool = true
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -184,28 +163,70 @@ func TestSchedInfraScalability(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
-		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400}
-		dur time.Duration = 5 * time.Second
+		dummyProc    bool          = true
+		lcProc       bool          = true
+		prewarmRealm bool          = true
+		skipStats    bool          = true
+		rps          []int         = []int{41400, 46000, 51500, 59100}
+		dur          time.Duration = 20 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, r := range rps {
 		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
-		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, true, true), numNodes, numCoresPerNode, numFullNodes, turboBoost)
+		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, dummyProc, lcProc, prewarmRealm, skipStats), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+	}
+}
+
+// Test the maximum throughput of a single procq.
+func TestProcqSchedMaxTpt(t *testing.T) {
+	var (
+		benchNameBase string = "procq_max_tpt"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM          int  = 25
+		numNodes          int  = 25
+		numCoresPerNode   uint = 40
+		numProcqOnlyNodes int  = 1
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
+		turboBoost        bool = true
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	// Benchmark configuration parameters
+	var (
+		dummyProc    bool          = true
+		lcProc       bool          = false
+		prewarmRealm bool          = true
+		skipStats    bool          = true
+		rps          []int         = []int{46000, 51500, 59100}
+		dur          time.Duration = 20 * time.Second
+	)
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	for _, r := range rps {
+		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
+		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, dummyProc, lcProc, prewarmRealm, skipStats), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 	}
 }
 
 // Test SigmaOS scheduling scalability (and warm-start).
-func TestSchedScalability(t *testing.T) {
+func TestSchedProcStartMaxTpt(t *testing.T) {
 	var (
-		benchNameBase string = "sched_scalability"
+		benchNameBase string = "proc_start_max_tpt"
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 23
-		numNodes        int  = 23
-		numCoresPerNode uint = 40
-		numFullNodes    int  = numNodes
-		turboBoost      bool = true
+		driverVM          int  = 25
+		numNodes          int  = 25
+		numCoresPerNode   uint = 40
+		numProcqOnlyNodes int  = 1
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
+		turboBoost        bool = true
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -216,13 +237,17 @@ func TestSchedScalability(t *testing.T) {
 	}
 	// Benchmark configuration parameters
 	var (
-		rps []int         = []int{4600, 9200, 13800, 18400, 23000, 27600, 32200, 36800, 41400, 46000, 50600, 55200}
-		dur time.Duration = 5 * time.Second
+		dummyProc    bool          = false
+		lcProc       bool          = false
+		prewarmRealm bool          = true
+		skipStats    bool          = true
+		rps          []int         = []int{32200, 36800, 38000, 40000, 41400}
+		dur          time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, r := range rps {
 		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%v-vm-rps-%v", numNodes, r))
-		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, false, true), numNodes, numCoresPerNode, numFullNodes, turboBoost)
+		ts.RunStandardBenchmark(benchName, driverVM, GetStartCmdConstructor(r, dur, dummyProc, lcProc, prewarmRealm, skipStats), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 	}
 }
 
@@ -233,22 +258,24 @@ func TestMR(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 0
-		numNodes        int  = 8
-		numCoresPerNode uint = 2
-		numFullNodes    int  = numNodes
-		turboBoost      bool = true
+		driverVM          int  = 0
+		numNodes          int  = 8
+		numCoresPerNode   uint = 2
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = true
 	)
 	// Variable MR benchmark configuration parameters
 	var (
-		mrApps        []string = []string{"mr-wc-wiki2G-bench.yml", "mr-wc-wiki2G-bench-s3.yml"}
+		mrApps        []string = []string{"mr-wc-wiki2G-granular-bench.yml", "mr-wc-wiki2G-granular-bench-s3.yml", "mr-wc-wiki2G-bench.yml", "mr-wc-wiki2G-bench-s3.yml"}
 		prewarmRealms []bool   = []bool{false, true}
 	)
 	// Constant MR benchmark configuration parameters
 	const (
-		memReq     proc.Tmem = 7000
-		asyncRW    bool      = true
-		measureTpt bool      = false
+		memReq proc.Tmem = 1700
+		//		memReq     proc.Tmem = 7000
+		asyncRW    bool = true
+		measureTpt bool = false
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -266,7 +293,7 @@ func TestMR(t *testing.T) {
 			} else {
 				benchName += "-cold"
 			}
-			ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrApp, memReq, asyncRW, prewarmRealm, measureTpt), numNodes, numCoresPerNode, numFullNodes, turboBoost)
+			ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrApp, memReq, asyncRW, prewarmRealm, measureTpt), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 		}
 	}
 }
@@ -277,11 +304,12 @@ func TestCorral(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 0
-		numNodes        int  = 8
-		numCoresPerNode uint = 2
-		numFullNodes    int  = numNodes
-		turboBoost      bool = true
+		driverVM          int  = 0
+		numNodes          int  = 8
+		numCoresPerNode   uint = 2
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = true
 	)
 	// Variable MR benchmark configuration parameters
 	var (
@@ -297,7 +325,7 @@ func TestCorral(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	for _, corralApp := range corralApps {
 		benchName := filepath.Join(benchNameBase, corralApp)
-		ts.RunStandardBenchmark(benchName, driverVM, GetCorralCmdConstructor(), numNodes, numCoresPerNode, numFullNodes, turboBoost)
+		ts.RunStandardBenchmark(benchName, driverVM, GetCorralCmdConstructor(), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 	}
 }
 
@@ -309,10 +337,11 @@ func TestHotelTailLatency(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		numNodes        int  = 8
-		numCoresPerNode uint = 4
-		numFullNodes    int  = numNodes
-		turboBoost      bool = false
+		numNodes          int  = 8
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
 	)
 	// Hotel benchmark configuration parameters
 	var (
@@ -336,7 +365,7 @@ func TestHotelTailLatency(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
 	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
-	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, turboBoost)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
 // Test Socialnet application's tail latency.
@@ -347,10 +376,11 @@ func TestSocialnetTailLatency(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		numNodes        int  = 8
-		numCoresPerNode uint = 4
-		numFullNodes    int  = numNodes
-		turboBoost      bool = false
+		numNodes          int  = 8
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
 	)
 	// Socialnet benchmark configuration parameters
 	var (
@@ -371,7 +401,7 @@ func TestSocialnetTailLatency(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetSocialnetClientCmdConstructor(true, len(driverVMs), rps, dur)
 	getFollowerCmd := GetSocialnetClientCmdConstructor(false, len(driverVMs), rps, dur)
-	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sSocialnetApp, stopK8sSocialnetApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, turboBoost)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sSocialnetApp, stopK8sSocialnetApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
 // Test multiplexing Best Effort ImgResize jobs.
@@ -381,11 +411,12 @@ func TestBEImgResizeMultiplexing(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 0
-		numNodes        int  = 8 // 24
-		numCoresPerNode uint = 4
-		numFullNodes    int  = numNodes
-		turboBoost      bool = false
+		driverVM          int  = 0
+		numNodes          int  = 8 // 24
+		numCoresPerNode   uint = 4
+		numProcqOnlyNodes int  = 0
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
+		turboBoost        bool = false
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -395,7 +426,7 @@ func TestBEImgResizeMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgResizeMultiplexingCmd, numNodes, numCoresPerNode, numFullNodes, turboBoost)
+	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgResizeMultiplexingCmd, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
 // Test multiplexing Best Effort ImgResize jobs.
@@ -405,11 +436,12 @@ func TestBEImgResizeRPCMultiplexing(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM        int  = 0
-		numNodes        int  = 8 // 24
-		numCoresPerNode uint = 4
-		numFullNodes    int  = numNodes
-		turboBoost      bool = false
+		driverVM          int  = 0
+		numNodes          int  = 26
+		numCoresPerNode   uint = 4
+		numProcqOnlyNodes int  = 2
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
+		turboBoost        bool = false
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -419,7 +451,7 @@ func TestBEImgResizeRPCMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgResizeRPCMultiplexingCmd, numNodes, numCoresPerNode, numFullNodes, turboBoost)
+	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgResizeRPCMultiplexingCmd, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
 func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
@@ -429,10 +461,11 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		numNodes        int  = 8
-		numCoresPerNode uint = 4
-		numFullNodes    int  = numNodes
-		turboBoost      bool = false
+		numNodes          int  = 8
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
 	)
 	// Hotel benchmark configuration parameters
 	var (
@@ -453,7 +486,7 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetLCBEHotelImgResizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
 	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
-	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, turboBoost)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
 func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
@@ -463,10 +496,11 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		numNodes        int  = 8
-		numCoresPerNode uint = 4
-		numFullNodes    int  = numNodes
-		turboBoost      bool = false
+		numNodes          int  = 8
+		numCoresPerNode   uint = 4
+		numProcqOnlyNodes int  = 0
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
+		turboBoost        bool = false
 	)
 	// Hotel benchmark configuration parameters
 	var (
@@ -487,5 +521,5 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
 	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
-	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, turboBoost)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }

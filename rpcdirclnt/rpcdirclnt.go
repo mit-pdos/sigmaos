@@ -49,9 +49,9 @@ func NewRPCDirClntCh(fsl *fslib.FsLib, path string, ch chan string, lSelector db
 	return u
 }
 
-func NewRPCDirClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, filter string) *RPCDirClnt {
+func NewRPCDirClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, filters []string) *RPCDirClnt {
 	u := &RPCDirClnt{}
-	u.DirCache = dircache.NewDirCacheFilter[*rpcclnt.RPCClnt](fsl, path, u.newClnt, nil, lSelector, eSelector, filter)
+	u.DirCache = dircache.NewDirCacheFilter[*rpcclnt.RPCClnt](fsl, path, u.newClnt, nil, lSelector, eSelector, filters)
 	return u
 }
 

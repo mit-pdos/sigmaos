@@ -294,7 +294,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 		}
 	} else {
 		if ep == nil {
-			db.DPrintf(db.ERROR, "Stat not cached in fetch and ep not set realm %v prog %v", realm, prog)
+			db.DPrintf(db.CHUNKSRV, "Stat not cached in fetch and ep not set realm %v prog %v", realm, prog)
 		}
 	}
 

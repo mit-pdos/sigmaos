@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/fmstephe/unsafeutil"
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
@@ -49,38 +48,39 @@ type Mapper struct {
 	rand        string
 	perf        *perf.Perf
 	asyncrw     bool
-	combined    map[string]*values
+	combined    *kvmap
 	combinewc   map[string]int
 	buf         []byte
 	line        []byte
 }
 
-type values struct {
-	s []string
-}
-
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
-	m := &Mapper{}
-	m.mapf = mapf
-	m.combinef = combinef
-	m.job = job
-	m.nreducetask = nr
-	m.linesz = lsz
-	m.rand = rand.String(16)
-	m.input = input
-	m.intOutput = intOutput
-	m.bin = filepath.Base(m.input)
-	m.asyncwrts = make([]*fslib.Wrt, m.nreducetask)
-	m.syncwrts = make([]*writer.Writer, m.nreducetask)
-	m.pwrts = make([]*perf.PerfWriter, m.nreducetask)
-	m.SigmaClnt = sc
-	m.perf = p
-	m.sbc = NewScanByteCounter(p)
-	m.asyncrw = asyncrw
-	m.combined = make(map[string]*values)
-	m.combinewc = make(map[string]int)
-	m.buf = make([]byte, 0, lsz)
-	m.line = make([]byte, 0, lsz)
+	m := &Mapper{
+		mapf:        mapf,
+		combinef:    combinef,
+		job:         job,
+		nreducetask: nr,
+		linesz:      lsz,
+		rand:        rand.String(16),
+		input:       input,
+		intOutput:   intOutput,
+		bin:         filepath.Base(input),
+		asyncwrts:   make([]*fslib.Wrt, nr),
+		syncwrts:    make([]*writer.Writer, nr),
+		pwrts:       make([]*perf.PerfWriter, nr),
+		SigmaClnt:   sc,
+		perf:        p,
+		sbc:         NewScanByteCounter(p),
+		asyncrw:     asyncrw,
+		combined:    newKvmap(MINCAP, MAXCAP),
+		combinewc:   make(map[string]int),
+		buf:         make([]byte, 0, lsz),
+		line:        make([]byte, 0, lsz),
+	}
+	err := m.initMapper()
+	if err != nil {
+		return nil, err
+	}
 	return m, nil
 }
 
@@ -96,10 +96,12 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper: linesz %v isn't int", args[1])
 	}
+	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.MR, "NewSigmaClnt time: %v", time.Since(start))
 	asyncrw, err := strconv.ParseBool(args[5])
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper: can't parse asyncrw %v", args[5])
@@ -108,9 +110,11 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
+	start = time.Now()
 	if err := m.Started(); err != nil {
 		return nil, fmt.Errorf("NewMapper couldn't start %v", args)
 	}
+	db.DPrintf(db.MR, "Started time: %v", time.Since(start))
 	crash.Crasher(m.FsLib)
 	return m, nil
 }
@@ -123,7 +127,13 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 	return nout, nil
 }
 
-func (m *Mapper) InitWrt(r int, name string) error {
+func (m *Mapper) initWrt(r int, name string) error {
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.MR, "initWrt time: %v", time.Since(start))
+	}(start)
+
+	db.DPrintf(db.MR, "InitWrt %v", name)
 	if m.asyncrw {
 		if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
 			return err
@@ -144,18 +154,32 @@ func (m *Mapper) InitWrt(r int, name string) error {
 }
 
 func (m *Mapper) initMapper() error {
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.MR, "initMapper time: %v", time.Since(start))
+	}(start)
+
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
+	mdStart := time.Now()
+	db.DPrintf(db.MR, "start mkdir intOutput: %v", m.intOutput)
 	m.MkDir(m.intOutput, 0777)
+	db.DPrintf(db.MR, "done mkdir intOutput: %v", m.intOutput)
+	db.DPrintf(db.MR, "initMapper mkdir initOutput time: %v", time.Since(mdStart))
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
+	mdStart = time.Now()
 	m.MkDir(filepath.Dir(outDirPath), 0777) // job dir
-	m.MkDir(outDirPath, 0777)               // mapper dir
+	db.DPrintf(db.MR, "initMapper mkdir jobdir time: %v", time.Since(mdStart))
+	mdStart = time.Now()
+	m.MkDir(outDirPath, 0777) // mapper dir
+	db.DPrintf(db.MR, "initMapper mkdir outDirPath time: %v", time.Since(mdStart))
+	db.DPrintf(db.MR, "initMapper mkdirs time: %v", time.Since(start))
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output shard for reducer r
 		oname := mshardfile(outDirPath, r) + m.rand
-		if err := m.InitWrt(r, oname); err != nil {
+		if err := m.initWrt(r, oname); err != nil {
 			m.closewrts()
 			return err
 		}
@@ -188,8 +212,7 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 }
 
 // Inform reducer where to find map output
-func (m *Mapper) informReducer() error {
-	/// XXX	intermediateDir := sp.UX + "/~local/mr-intermediate"
+func (m *Mapper) InformReducer() error {
 	outDirPath := MapIntermediateOutDir(m.job, m.intOutput, m.bin)
 	pn, err := m.ResolveMounts(outDirPath)
 	if err != nil {
@@ -197,10 +220,6 @@ func (m *Mapper) informReducer() error {
 	}
 	for r := 0; r < m.nreducetask; r++ {
 		fn := mshardfile(pn, r) + m.rand
-		//		err = m.Rename(fn+m.rand, fn)
-		//		if err != nil {
-		//			return fmt.Errorf("%v: rename %v -> %v err %v\n", m.ProcEnv().GetPID(), fn+m.rand, fn, err)
-		//		}
 
 		name := symname(m.job, strconv.Itoa(r), m.bin)
 
@@ -247,39 +266,16 @@ func (m *Mapper) CombineWc(kv *KeyValue) error {
 }
 
 func (m *Mapper) Combine(key []byte, value string) error {
-	k := unsafeutil.BytesToString(key)
-	if e, ok := m.combined[k]; !ok {
-		s := make([]string, 1, MINCAP)
-		s[0] = value
-		m.combined[string(key)] = &values{s: s}
-	} else if len(e.s)+1 >= MAXCAP {
-		e.s = append(e.s, value)
-		if err := m.combinef(k, e.s, func(key []byte, val string) error {
-			e.s = e.s[:1]
-			e.s[0] = val
-			return nil
-		}); err != nil {
-			db.DPrintf(db.ALWAYS, "Err combinef: %v", err)
-			return err
-		}
-	} else {
-		e.s = append(e.s, value)
-	}
+	return m.combined.combine(key, value, m.combinef)
+}
+
+func (m *Mapper) CombineEmit() error {
+	m.combined.emit(m.combinef, m.Emit)
+	m.combined = newKvmap(MINCAP, MAXCAP)
 	return nil
 }
 
-func (m *Mapper) DoCombine() error {
-	for k, e := range m.combined {
-		if err := m.combinef(k, e.s, m.Emit); err != nil {
-			db.DPrintf(db.ALWAYS, "Err combinef: %v", err)
-			return err
-		}
-	}
-	m.combined = make(map[string]*values)
-	return nil
-}
-
-func (m *Mapper) DoSplit(s *Split, emit EmitT) (sp.Tlength, error) {
+func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	off := s.Offset
 	if off != 0 {
 		// -1 to pick up last byte from prev split so that if s.Offset
@@ -328,8 +324,8 @@ func (m *Mapper) DoSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	return sp.Tlength(n), nil
 }
 
-func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
-	db.DPrintf(db.ALWAYS, "doMap %v", m.input)
+func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
+	db.DPrintf(db.MR, "doMap %v", m.input)
 	rdr, err := m.OpenReader(m.input)
 	if err != nil {
 		return 0, 0, err
@@ -348,7 +344,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 	}
 	for _, s := range bin {
 		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)
-		n, err := m.DoSplit(&s, emit)
+		n, err := m.doSplit(&s, emit)
 		if err != nil {
 			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)
 			return 0, 0, err
@@ -357,13 +353,13 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 			db.DFatalf("Split: short split o %d l %d %d\n", s.Offset, s.Length, n)
 		}
 		ni += n
-		m.DoCombine()
+		m.CombineEmit()
 	}
 	nout, err := m.CloseWrt()
 	if err != nil {
 		return 0, 0, err
 	}
-	if err := m.informReducer(); err != nil {
+	if err := m.InformReducer(); err != nil {
 		return 0, 0, err
 	}
 	return ni, nout, nil
@@ -372,6 +368,7 @@ func (m *Mapper) doMap() (sp.Tlength, sp.Tlength, error) {
 func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
+	init := time.Now()
 	pe := proc.GetProcEnv()
 	p, err := perf.NewPerf(pe, perf.MRMAPPER)
 	if err != nil {
@@ -383,13 +380,9 @@ func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
-
-	if err = m.initMapper(); err != nil {
-		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
-		return
-	}
+	db.DPrintf(db.MR, "Mapper [%v] init time: %v", args[2], time.Since(init))
 	start := time.Now()
-	nin, nout, err := m.doMap()
+	nin, nout, err := m.DoMap()
 	db.DPrintf(db.MR_TPT, "%s: in %s out tot %v %f %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, m.input,

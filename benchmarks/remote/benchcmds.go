@@ -35,7 +35,7 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	)
 }
 
-func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, prewarmRealm bool) GetBenchCmdFn {
+func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, lcProc, prewarmRealm, skipStats bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;LOADGEN;\""
@@ -43,6 +43,10 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, prewarmRealm 
 		proc := "--use_rust_proc"
 		if dummyProc {
 			proc = "--use_dummy_proc"
+		}
+		lc := ""
+		if lcProc {
+			lc = "--spawn_bench_lc_proc"
 		}
 		prewarm := ""
 		if prewarmRealm {
@@ -56,14 +60,21 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, prewarmRealm 
 		if bcfg.Overlays {
 			overlays = "--overlays"
 		}
+		skipStatsPrint := ""
+		if skipStats {
+			skipStatsPrint = "--skipstats"
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestMicroScheddSpawn "+
 			"%s "+ // proc
+			"--nclnt 50 "+
+			"%s "+ // skipStats
 			"--schedd_dur %s "+
 			"--schedd_max_rps %s "+
 			"%s "+ // prewarmRealm
+			"%s "+ // lcProc
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			netproxy,
@@ -71,9 +82,11 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, prewarmRealm 
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			proc,
+			skipStatsPrint,
 			dur.String(),
 			strconv.Itoa(rps),
 			prewarm,
+			lc,
 		)
 	}
 }
@@ -94,8 +107,8 @@ func GetBEImgResizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) strin
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 		"--run TestRealmBalanceImgResizeImgResize "+
-		"--sleep 60s "+
-		"--n_imgresize 40 "+
+		"--sleep 15s "+
+		"--n_imgresize 10 "+
 		"--imgresize_nround 300 "+
 		"--n_imgresize_per 25 "+
 		"--imgresize_path name/ux/~local/8.jpg "+
@@ -128,12 +141,12 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 		"--run TestRealmBalanceImgResizeRPCImgResizeRPC "+
 		"--sleep 10s "+
-		"--imgresize_tps 256 "+
-		"--imgresize_dur 30s "+
-		"--imgresize_nround 14 "+
+		"--imgresize_tps 500 "+
+		"--imgresize_dur 20s "+
+		"--imgresize_nround 43 "+
 		"--imgresize_path name/ux/~local/8.jpg "+
 		"--imgresize_mcpu 0 "+
-		"--imgresize_mem 1500 "+
+		"--imgresize_mem 2500 "+
 		"--nrealm 4 "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
@@ -164,7 +177,8 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, measureTpt bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors        string = "\"TEST;BENCH;MR;\""
+			debugSelectors string = "\"TEST;BENCH;MR;WALK_LAT;ATTACH_LAT;MOUNT;\"" // XXX REMOVE
+			//			debugSelectors        string = "\"TEST;BENCH;MR;\""
 			optionalPerfSelectors string = "\"TEST_TPT;BENCH_TPT;\""
 		)
 		// If measuring throughput, set the perf selectors
@@ -499,12 +513,12 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
-			"--imgresize_tps 256 "+
+			"--imgresize_tps 150 "+
 			"--imgresize_dur 50s "+
-			"--imgresize_nround 14 "+
+			"--imgresize_nround 43 "+
 			"--imgresize_path name/ux/~local/8.jpg "+
 			"--imgresize_mcpu 0 "+
-			"--imgresize_mem 1500 "+
+			"--imgresize_mem 2500 "+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,

@@ -17,6 +17,7 @@ type BenchConfig struct {
 	Branch     string       `json:"branch"`
 	Version    string       `json:"version"`
 	Debug      string       `json:"debug"`
+	Perf       string       `json:"perf"`
 	NoNetproxy bool         `json:"no_netproxy"`
 	Overlays   bool         `json:"overlays"`
 	Parallel   bool         `json:"parallel"`
@@ -34,6 +35,7 @@ func NewBenchConfig() (*BenchConfig, error) {
 		Branch:     branchArg,
 		Version:    versionArg,
 		Debug:      os.Getenv(proc.SIGMADEBUG),
+		Perf:       os.Getenv(proc.SIGMAPERF),
 		NoNetproxy: noNetproxyArg,
 		Overlays:   overlaysArg,
 		Parallel:   parallelArg,

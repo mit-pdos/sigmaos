@@ -10,6 +10,9 @@ import os
 import sys
 import durationpy
 
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 def read_tpt(fpath):
   with open(fpath, "r") as f:
     x = f.read()
@@ -274,7 +277,7 @@ def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, tota
   hotel_avg_lat_buckets = buckets_to_avg(hotel_lat_buckets)
   if len(hotel_lats) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "Hotel (LC) " + str(percentile) + "% lat", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "Hotel (LC) " + str(int(percentile)) + "% lat", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)
     p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "Hotel (LC) avg lat", "purple", "-", "")
@@ -290,7 +293,7 @@ def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, tota
   if prefix == "mr-":
     tmod = "MR"
   elif prefix == "imgresize-":
-    tmod = "ImgResize"
+    tmod = "ImgProcess"
   else:
     assert(False)
   if len(be_tpts) > 0:

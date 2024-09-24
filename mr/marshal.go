@@ -32,45 +32,59 @@ func encodeKV(wr io.Writer, key []byte, value string, r int) (int, error) {
 	return 16 + int(l1) + int(l2) + len(jsonPadding), nil
 }
 
-func DecodeKV(rd io.Reader, kv *KeyValue) error {
+type kvdecoder struct {
+	rd      io.Reader
+	key     []byte
+	value   []byte
+	padding []byte
+}
+
+func newKVDecoder(rd io.Reader, maxkey, maxvalue int) *kvdecoder {
+	return &kvdecoder{
+		rd:      rd,
+		key:     make([]byte, 0, maxkey),
+		value:   make([]byte, 0, maxvalue),
+		padding: make([]byte, 0, len(jsonPadding)),
+	}
+}
+
+func (kvd *kvdecoder) decode() ([]byte, string, error) {
 	var l1 int64
 	var l2 int64
 
-	if err := binary.Read(rd, binary.LittleEndian, &l1); err != nil {
-		return err
+	if err := binary.Read(kvd.rd, binary.LittleEndian, &l1); err != nil {
+		return nil, "", err
 	}
 
-	if err := binary.Read(rd, binary.LittleEndian, &l2); err != nil {
-		return err
+	if err := binary.Read(kvd.rd, binary.LittleEndian, &l2); err != nil {
+		return nil, "", err
 	}
 
-	b1 := make([]byte, l1)
-	b2 := make([]byte, l2)
-	b3 := make([]byte, len(jsonPadding))
+	kvd.key = kvd.key[:l1]
+	kvd.value = kvd.value[:l2]
+	kvd.padding = kvd.padding[:len(jsonPadding)]
 
-	n, err := io.ReadFull(rd, b1)
+	n, err := io.ReadFull(kvd.rd, kvd.key)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	if n != int(l1) {
-		return fmt.Errorf("bad string")
+		return nil, "", fmt.Errorf("bad string")
 	}
 
-	n, err = io.ReadFull(rd, b2)
+	n, err = io.ReadFull(kvd.rd, kvd.value)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	if n != int(l2) {
-		return fmt.Errorf("bad string")
+		return nil, "", fmt.Errorf("bad string")
 	}
-	n, err = io.ReadFull(rd, b3)
+	n, err = io.ReadFull(kvd.rd, kvd.padding)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	if n != len(jsonPadding) {
-		return fmt.Errorf("bad string")
+		return nil, "", fmt.Errorf("bad string")
 	}
-	kv.Key = string(b1)
-	kv.Value = string(b2)
-	return nil
+	return kvd.key, string(kvd.value), nil
 }

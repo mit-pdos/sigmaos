@@ -16,7 +16,7 @@ type MultiKernelClnt struct {
 func NewMultiKernelClnt(fsl *fslib.FsLib, lsel, esel db.Tselector) *MultiKernelClnt {
 	return &MultiKernelClnt{
 		FsLib: fsl,
-		rpcdc: rpcdirclnt.NewRPCDirClntFilter(fsl, sp.BOOT, lsel, esel, sp.SPPROXYDKERNEL),
+		rpcdc: rpcdirclnt.NewRPCDirClntFilter(fsl, sp.BOOT, lsel, esel, []string{sp.SPPROXYDKERNEL, sp.PROCQKERNEL}),
 	}
 }
 

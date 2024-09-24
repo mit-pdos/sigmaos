@@ -13,29 +13,35 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/loadgen"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
-type scheddFn func(sc *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration
+type scheddFn func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration
 type kernelPrefFn func() []string
 
 type ScheddJobInstance struct {
-	justCli bool
-	dur     []time.Duration
-	maxrps  []int
-	ready   chan bool
-	spawnFn scheddFn
-	kpfn    kernelPrefFn
-	kidx    atomic.Int64
-	clnts   []*sigmaclnt.SigmaClnt
-	lgs     []*loadgen.LoadGenerator
+	justCli   bool
+	skipstats bool
+	dur       []time.Duration
+	maxrps    []int
+	ready     chan bool
+	progname  string
+	spawnFn   scheddFn
+	kpfn      kernelPrefFn
+	kidx      atomic.Int64
+	clnts     []*sigmaclnt.SigmaClnt
+	lgs       []*loadgen.LoadGenerator
+	procCnt   atomic.Int64
 	*test.RealmTstate
 }
 
-func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, sfn scheddFn, kernels []string, withKernelPref bool) *ScheddJobInstance {
+func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, progname string, sfn scheddFn, kernels []string, withKernelPref bool, skipstats bool) *ScheddJobInstance {
 	ji := &ScheddJobInstance{}
 	ji.ready = make(chan bool)
+	ji.progname = progname
 	ji.spawnFn = sfn
+	ji.skipstats = skipstats
 	ji.RealmTstate = ts
 	ji.clnts = make([]*sigmaclnt.SigmaClnt, nclnt)
 	if withKernelPref {
@@ -71,8 +77,10 @@ func NewScheddJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, 
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
+			procCnt := int(ji.procCnt.Add(1))
+			pid := sp.Tpid(ji.progname + "-" + strconv.Itoa(procCnt))
 			// Run a single request.
-			dur := ji.spawnFn(ji.clnts[i], ji.kpfn())
+			dur := ji.spawnFn(ji.clnts[procCnt%len(ji.clnts)], pid, ji.kpfn())
 			return dur, true
 		}))
 	}
@@ -93,6 +101,9 @@ func withNoKPFn() kernelPrefFn {
 }
 
 func (ji *ScheddJobInstance) StartScheddJob() {
+	p := newRealmPerf(ji.RealmTstate)
+	defer p.Done()
+
 	db.DPrintf(db.ALWAYS, "StartScheddJob dur %v maxrps %v", ji.dur, ji.maxrps)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
@@ -111,7 +122,9 @@ func (ji *ScheddJobInstance) StartScheddJob() {
 }
 
 func (ji *ScheddJobInstance) Wait() {
-	for _, lg := range ji.lgs {
-		lg.Stats()
+	if !ji.skipstats {
+		for _, lg := range ji.lgs {
+			lg.Stats()
+		}
 	}
 }

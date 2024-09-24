@@ -158,10 +158,18 @@ func (clnt *ProcClnt) forceRunViaSchedd(kernelID string, p *proc.Proc) error {
 }
 
 func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, *proc.ProcSeqno, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.SPAWN_LAT, "[%v] time enqueueViaProcQ: %v", p.GetPid(), time.Since(start))
+	}(start)
 	return clnt.procqclnt.Enqueue(p)
 }
 
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.SPAWN_LAT, "[%v] time enqueueViaLCSched: %v", p.GetPid(), time.Since(start))
+	}(start)
 	return clnt.lcschedclnt.Enqueue(p)
 }
 
@@ -182,7 +190,9 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 				scheddID, pseqno, err = clnt.enqueueViaProcQ(p)
 				if err == nil {
 					db.DPrintf(db.PROCCLNT, "spawn: SetBinKernelId proc %v seqno %v", p.GetProgram(), pseqno)
+					start := time.Now()
 					clnt.bins.SetBinKernelID(p.GetProgram(), pseqno.GetScheddID())
+					db.DPrintf(db.SPAWN_LAT, "[%v] time SetBinKernelID: %v", p.GetPid(), time.Since(start))
 					p.SetKernelID(pseqno.GetScheddID(), false)
 				} else if serr.IsErrorUnavailable(err) {
 					clnt.bins.DelBinKernelID(p.GetProgram(), scheddID)
@@ -205,7 +215,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
 			return nil, err
 		}
-		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v", p.GetPid(), time.Since(s))
+		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v nretry %v", p.GetPid(), time.Since(s), i)
 		return pseqno, nil
 	}
 	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", sp.PATHCLNT_MAXRETRY, p)

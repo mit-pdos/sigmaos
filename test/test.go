@@ -39,6 +39,7 @@ var Overlays bool
 var GVisor bool
 var useSPProxy bool
 var noNetProxy bool
+var noBootNetProxy bool
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
@@ -51,6 +52,7 @@ func init() {
 	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
 	flag.BoolVar(&useSPProxy, "usespproxy", false, "Use spproxy?")
 	flag.BoolVar(&noNetProxy, "nonetproxy", false, "Disable use of proxy for network dialing/listening?")
+	flag.BoolVar(&noBootNetProxy, "no-boot-netproxy", false, "Boot spproxy?")
 }
 
 var savedTstate *Tstate
@@ -212,7 +214,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	fmt.Printf("newSysClnt: booted up kernel client\n")
 	var scsck *bootkernelclnt.Kernel
 	var sckid string
-	if useSPProxy || useNetProxy {
+	if !noBootNetProxy && (useSPProxy || useNetProxy) {
 		fmt.Printf("newSysClnt: trying to boot spproxyd\n")
 		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usenetproxy %v", useSPProxy, useNetProxy)
 		sckid = sp.SPProxydKernel(bootkernelclnt.GenKernelId())

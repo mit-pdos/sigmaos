@@ -70,7 +70,7 @@ def graph_data(hotel_res_dir, hotel_overlays_res_dir, socialnet_res_dir, socialn
 #  social_overlays_peak_tpt = get_tpt(socialnet_overlays_res_dir)
 
   # Graph data
-  sys            = [        "XOS-hotel", "k8s-hotel",     "XOS-socialnet",  "k8s-socialnet", ]
+  sys            = [        "σOS-hotel", "k8s-hotel",     "σOS-socialnet",  "k8s-socialnet", ]
   d_avg_lat      = [      hotel_avg_lat,        4.83,      social_avg_lat,  5.49, ]
   d_p99_lat      = [      hotel_p99_lat,       12.76,      social_p99_lat,  9.01, ]
   d_p99_lat_peak = [ hotel_p99_lat_peak,       45.25, social_p99_lat_peak, 12.86, ]

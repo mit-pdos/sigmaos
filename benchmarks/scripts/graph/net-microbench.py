@@ -13,10 +13,10 @@ def graph_data(out):
   fig, (dial_lat, packet_lat, tpt) = plt.subplots(1, 3, figsize=(6.4, 2.4))
   # Set up lat graph
 
-  isol = [ "XOS", "none", "Docker overlay", "K8s overlay", ]
-  d_packet_lat = [ 51, 51, 97, 189 ]
-  d_dial_lat = [ 304, 229, 335, 438 ]
-  d_tpt = [ 9.4, 9.4, 8.58, 6.84 ]
+  isol = [ "σOS", "none", "Docker overlay", "K8s overlay", ]
+  d_packet_lat = [   53,   53,   85,   60 ]
+  d_dial_lat =   [  413,  131,  195,  659 ]
+  d_tpt =        [ 11.2, 11.2,  9.8,  6.4 ]
 
   width = 0.15
   

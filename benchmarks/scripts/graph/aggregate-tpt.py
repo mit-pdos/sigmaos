@@ -290,7 +290,7 @@ def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, tota
   if prefix == "mr-":
     tmod = "MR"
   elif prefix == "imgresize-":
-    tmod = "ImgResize"
+    tmod = "ImgProcess"
   else:
     assert(False)
   if len(be_tpts) > 0:

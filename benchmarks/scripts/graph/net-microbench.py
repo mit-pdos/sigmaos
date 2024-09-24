@@ -36,12 +36,13 @@ def graph_data(out):
 
 #  packet_lat.set_ylim(bottom=0)
   #packet_lat.set_yscale("log")
-  packet_lat.set_ylim(bottom=0)
+  packet_lat.set_ylim(bottom=0, top=max(d_packet_lat)*1.1)
   packet_lat.set_ylabel("Per-packet Latency (us)")
   #dial_lat.set_yscale("log")
+  dial_lat.set_ylim(bottom=0, top=max(d_dial_lat)*1.1)
   dial_lat.set_ylabel("Dial Latency (us)")
  # Set up tpt graph
-#  tpt.set_ylim(bottom=0)
+  tpt.set_ylim(bottom=0, top=max(d_tpt)*1.1)
   tpt.set_ylabel("Throughput (Gb/s)")
 
   for ax in [ packet_lat, dial_lat, tpt ]:

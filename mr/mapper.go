@@ -302,15 +302,17 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		off--
 	}
 	start := time.Now()
-	rdr, err := m.OpenS3AsyncReader(s.File, s.Offset)
+	rdr, err := m.OpenS3Reader(s.File)
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}
-	db.DPrintf(db.MR, "Mapper openAsyncReader time: %v", time.Since(start))
+	db.DPrintf(db.MR, "Mapper openS3Reader time: %v", time.Since(start))
 	defer rdr.Close()
 
+	rdr.Lseek(s.Offset)
+
 	var scanner *bufio.Scanner
-	if false {
+	if true {
 		scanner = bufio.NewScanner(rdr)
 	} else {
 		start = time.Now()

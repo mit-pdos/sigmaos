@@ -28,10 +28,10 @@ const (
 
 type s3Reader struct {
 	clnt      *s3.Client
-	rdr       io.ReadCloser
 	bucket    string
 	key       string
 	offset    sp.Toffset
+	chunk     io.ReadCloser
 	chunkSize int64
 	sz        sp.Tlength
 	n         sp.Tlength
@@ -66,56 +66,38 @@ func (s3r *s3Reader) s3Read(off, cnt uint64) (io.ReadCloser, sp.Tlength, error) 
 	return result.Body, sp.Tlength(*result.ContentLength), nil
 }
 
-func (s3r *s3Reader) Read(off sp.Toffset, b []byte) (int, error) {
-	db.DFatalf("Read: not implemented")
-	return 0, nil
-}
-
 func (s3r *s3Reader) Lseek(off sp.Toffset) error {
 	s3r.offset = off
 	return nil
-}
-
-func (s3r *s3Reader) Close() error {
-	return nil
-}
-
-func (s3r *s3Reader) GetReader() io.Reader {
-	return s3r.rdr
 }
 
 func (s3r *s3Reader) Nbytes() sp.Tlength {
 	return s3r.n
 }
 
-type rdr struct {
-	s3r   *s3Reader
-	chunk io.ReadCloser
-}
-
-func (rdr *rdr) readChunk() error {
-	r, n, err := rdr.s3r.s3Read(uint64(rdr.s3r.offset), CHUNKSZ)
+func (s3r *s3Reader) readChunk() error {
+	r, n, err := s3r.s3Read(uint64(s3r.offset), CHUNKSZ)
 	if err != nil {
 		return err
 	}
-	rdr.chunk = r
-	rdr.s3r.n += sp.Tlength(n)
-	rdr.s3r.offset += sp.Toffset(n)
+	s3r.chunk = r
+	s3r.n += sp.Tlength(n)
+	s3r.offset += sp.Toffset(n)
 	return nil
 }
 
-func (rdr *rdr) Read(b []byte) (int, error) {
-	db.DPrintf(db.S3, "s3.Read off %v sz %v len %d", rdr.s3r.offset, rdr.s3r.sz, len(b))
-	if rdr.chunk == nil {
-		if err := rdr.readChunk(); err != nil {
+func (s3r *s3Reader) Read(b []byte) (int, error) {
+	db.DPrintf(db.S3, "s3.Read off %v sz %v len %d", s3r.offset, s3r.sz, len(b))
+	if s3r.chunk == nil {
+		if err := s3r.readChunk(); err != nil {
 			db.DPrintf(db.S3, "readChunk err %v", err)
 			return 0, err
 		}
 	}
-	n, err := rdr.chunk.Read(b)
-	if err == io.EOF && rdr.s3r.offset != sp.Toffset(rdr.s3r.sz) {
-		rdr.chunk.Close()
-		if err := rdr.readChunk(); err != nil {
+	n, err := s3r.chunk.Read(b)
+	if err == io.EOF && s3r.offset != sp.Toffset(s3r.sz) {
+		s3r.chunk.Close()
+		if err := s3r.readChunk(); err != nil {
 			db.DPrintf(db.S3, "readChunk err %v", err)
 			return n, err
 		}
@@ -125,8 +107,8 @@ func (rdr *rdr) Read(b []byte) (int, error) {
 	return n, err
 }
 
-func (rdr *rdr) Close() error {
-	return rdr.chunk.Close()
+func (s3r *s3Reader) Close() error {
+	return s3r.chunk.Close()
 }
 
 func (fl *FsLib) getS3Client() *serr.Err {
@@ -183,7 +165,7 @@ func (fl *FsLib) S3Stat(bucket, key string) (sp.Tlength, error) {
 	return sp.Tlength(*result.ContentLength), nil
 }
 
-func (fl *FsLib) OpenS3Reader(pn string) (ReaderSeekerI, error) {
+func (fl *FsLib) OpenS3Reader(pn string) (*s3Reader, error) {
 	pn0, _ := strings.CutPrefix(pn, sp.S3+"~local/")
 	p := path.Split(pn0)
 
@@ -213,8 +195,6 @@ func (fl *FsLib) OpenS3Reader(pn string) (ReaderSeekerI, error) {
 		chunkSize: 6 * MB,
 		sz:        sz,
 	}
-	rdr := &rdr{s3r: reader}
-	reader.rdr = rdr
 	return reader, err
 }
 

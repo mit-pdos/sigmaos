@@ -23,6 +23,9 @@ spec:
   containers:
     - name: netperf-srv
       image: arielszekely/sigmaos-netperf:latest
+      resources:
+        requests:
+          cpu: 2500m
       command: ["go"]
       args: ["test", "-v", "netperf", "--run", "TestSrvDialTCP", "--srvaddr", ":8080", "--ntrial", "50"]
       ports:

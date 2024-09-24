@@ -10,6 +10,9 @@ import os
 import sys
 import durationpy
 
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 def read_tpt(fpath):
   with open(fpath, "r") as f:
     x = f.read()

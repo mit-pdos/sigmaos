@@ -9,14 +9,17 @@ import os
 import sys
 import durationpy
 
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 def graph_data(out):
   fig, (dial_lat, packet_lat, tpt) = plt.subplots(1, 3, figsize=(6.4, 2.4))
   # Set up lat graph
 
   isol = [ "σOS", "none", "Docker overlay", "K8s overlay", ]
-  d_packet_lat = [   53,   53,   85,   60 ]
-  d_dial_lat =   [  413,  131,  195,  659 ]
-  d_tpt =        [ 11.2, 11.2,  9.8,  6.4 ]
+  d_packet_lat = [   53,   53,   85,    60 ]
+  d_dial_lat =   [  413,  131,  195,   659 ]
+  d_tpt =        [ 8.96, 8.96,  7.84, 5.12 ]
 
   width = 0.15
   

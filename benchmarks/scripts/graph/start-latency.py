@@ -9,6 +9,9 @@ import os
 import sys
 import durationpy
 
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 def str_dur_to_ms(dstr):
   suffixes = [ "ms", "us", "µs", "ns", "s"  ]
   mults = [ 1.0, .001, .001, .000001, 1000.0 ]

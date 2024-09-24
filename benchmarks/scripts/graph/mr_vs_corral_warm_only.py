@@ -9,6 +9,9 @@ import os
 import sys
 import durationpy
 
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 def scrape_times(dname, sigma):
   with open(os.path.join(dname, "bench.out.0"), "r") as f:
     b = f.read()

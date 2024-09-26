@@ -46,7 +46,6 @@ func min64(a, b uint64) uint64 {
 }
 
 func (s3r *s3Reader) s3Read(off, cnt uint64) (io.ReadCloser, sp.Tlength, error) {
-	db.DPrintf(db.S3, "s3Read %d %d", off, cnt)
 	key := s3r.key
 	n := min64(cnt, uint64(s3r.end)-uint64(s3r.offset))
 	region := "bytes=" + strconv.FormatUint(off, 10) + "-" + strconv.FormatUint(uint64(s3r.offset)+n-1, 10)
@@ -60,11 +59,7 @@ func (s3r *s3Reader) s3Read(off, cnt uint64) (io.ReadCloser, sp.Tlength, error) 
 	if err != nil {
 		return nil, 0, serr.NewErrError(err)
 	}
-	region1 := ""
-	if result.ContentRange != nil {
-		region1 = *result.ContentRange
-	}
-	db.DPrintf(db.S3, "s3Read: %v region %v res %v %v\n", s3r.key, region, region1, result.ContentLength)
+	db.DPrintf(db.S3, "s3Read: %v %d %d res %v %v\n", s3r.key, off, cnt, region, result.ContentLength)
 	return result.Body, sp.Tlength(*result.ContentLength), nil
 }
 
@@ -92,7 +87,6 @@ func (s3r *s3Reader) readChunk() error {
 }
 
 func (s3r *s3Reader) Read(b []byte) (int, error) {
-	db.DPrintf(db.S3, "s3.Read off %d end %d sz %v len %d", s3r.offset, s3r.end, s3r.sz, len(b))
 	if s3r.chunk == nil {
 		if err := s3r.readChunk(); err != nil {
 			db.DPrintf(db.S3, "readChunk err %v", err)
@@ -108,10 +102,7 @@ func (s3r *s3Reader) Read(b []byte) (int, error) {
 		}
 		return n, nil
 	}
-	db.DPrintf(db.S3, "s3.Read results %d err %v", n, err)
-	//if n > 0 {
-	//	return n, nil
-	//}
+	// db.DPrintf(db.S3, "s3.Read off %d end %d len %d results %d err %v", s3r.offset, s3r.end, len(b), n, err)
 	return n, err
 }
 

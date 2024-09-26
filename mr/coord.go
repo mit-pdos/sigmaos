@@ -62,6 +62,8 @@ type Coord struct {
 	asyncrw         bool
 }
 
+type NewProc func(string) (*proc.Proc, error)
+
 func NewCoord(args []string) (*Coord, error) {
 	if len(args) != 11 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
@@ -159,7 +161,7 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem, allowedPaths []
 	return p
 }
 
-func (c *Coord) mapperProc(task string) *proc.Proc {
+func (c *Coord) mapperProc(task string) (*proc.Proc, error) {
 	input := c.mft.TaskPathName(task)
 	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
 	mapperbin := c.mapperbin
@@ -172,14 +174,20 @@ func (c *Coord) mapperProc(task string) *proc.Proc {
 			mapperbin = MALICIOUS_MAPPER_BIN
 		}
 	}
-	return c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), input, c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
+	bin, err := c.GetFile(input)
+	if err != nil {
+		return nil, err
+	}
+	db.DPrintf(db.ALWAYS, "bin %v", string(bin))
+	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
+	return proc, nil
 }
 
 type TreduceTask struct {
 	Task string `json:"Task"`
 }
 
-func (c *Coord) reducerProc(tn string) *proc.Proc {
+func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	t := &TreduceTask{}
 	if err := c.rft.ReadTask(tn, t); err != nil {
 		db.DFatalf("ReadTask %v err %v", tn, err)
@@ -188,7 +196,7 @@ func (c *Coord) reducerProc(tn string) *proc.Proc {
 	outlink := ReduceOut(c.jobRoot, c.job) + t.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
 	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
-	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
+	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths), nil
 }
 
 type Tresult struct {
@@ -215,13 +223,16 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 			// should cause the test to fail.
 			db.DPrintf(db.ERROR, "!!! WARNING: MALICIOUS MAPPER SUCCEEDED !!!")
 		}
+		r, err := NewResult(status.Data())
+		if err != nil {
+			db.DFatalf("NewResult %v err %v", status.Data(), err)
+		}
 		// mark task as done
 		start := time.Now()
 		if err := ft.MarkDone(t); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
-		db.DPrintf(db.MR, "MarkDone latency: %v", time.Since(start))
-		r := NewResult(status.Data())
+		db.DPrintf(db.MR, "MarkDone latency: %v %v", time.Since(start), r)
 		r.MsOuter = ms
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
@@ -238,17 +249,20 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 	}
 }
 
-func (c *Coord) runTasks(ft *fttasks.FtTasks, ch chan Tresult, taskNames []string, f func(string) *proc.Proc) {
+func (c *Coord) runTasks(ft *fttasks.FtTasks, ch chan Tresult, taskNames []string, f NewProc) {
 	db.DPrintf(db.MR, "runTasks %v", taskNames)
 	for _, tn := range taskNames {
-		t := f(tn)
-		db.DPrintf(db.MR, "prep to spawn task %v %v", t.GetPid(), t.Args)
-		start := time.Now()
-		err := c.Spawn(t)
+		proc, err := f(tn)
 		if err != nil {
 			db.DFatalf("Err spawn task: %v", err)
 		}
-		go c.waitForTask(ft, start, ch, t, tn)
+		db.DPrintf(db.MR, "prep to spawn proc %v %v", proc.GetPid(), proc.Args)
+		start := time.Now()
+		err = c.Spawn(proc)
+		if err != nil {
+			db.DFatalf("Err spawn task: %v", err)
+		}
+		go c.waitForTask(ft, start, ch, proc, tn)
 	}
 }
 
@@ -260,7 +274,7 @@ func newStringSlice(data []interface{}) []string {
 	return s
 }
 
-func (c *Coord) startTasks(ft *fttasks.FtTasks, ch chan Tresult, f func(string) *proc.Proc) int {
+func (c *Coord) startTasks(ft *fttasks.FtTasks, ch chan Tresult, f NewProc) int {
 	start := time.Now()
 	tns, err := ft.GetTasks()
 	if err != nil {

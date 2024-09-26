@@ -206,8 +206,8 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 	return n, nil
 }
 
-// Inform reducer where to find map output
-func (m *Mapper) InformReducer() error {
+func (m *Mapper) outputNames() ([]string, error) {
+	outputs := make([]string, m.nreducetask)
 	outDirPath := MapIntermediateDir(m.job, m.intOutput)
 	start := time.Now()
 	var pn string
@@ -218,12 +218,22 @@ func (m *Mapper) InformReducer() error {
 		pn, err = m.ResolveMounts(outDirPath)
 		db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
 		if err != nil {
-			return fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
+			return nil, fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
 		}
 	}
 	for r := 0; r < m.nreducetask; r++ {
-		fn := mshardfile(pn, r) + m.rand
+		outputs[r] = mshardfile(pn, r) + m.rand
+	}
+	return outputs, nil
+}
 
+// Inform reducer where to find map output
+func (m *Mapper) InformReducer() error {
+	outputs, err := m.outputNames()
+	if err != nil {
+		return err
+	}
+	for r, fn := range outputs {
 		name := symname(m.jobRoot, m.job, strconv.Itoa(r), m.bin)
 
 		// Remove name in case an earlier mapper created the
@@ -234,7 +244,7 @@ func (m *Mapper) InformReducer() error {
 		// will start a new reducer once this map completes.
 		// We could use rename to atomically remove and create
 		// the symlink if we want to avoid the failing case.
-		start = time.Now()
+		start := time.Now()
 		m.Remove(name)
 		db.DPrintf(db.MR, "Mapper informReducer Remove time: %v", time.Since(start))
 
@@ -313,7 +323,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	if true {
 		scanner = bufio.NewScanner(rdr)
 	} else {
-	        // no computing; to measure read tput
+		// no computing; to measure read tput
 		start = time.Now()
 		m.buf = m.buf[0:m.linesz]
 		n, err := io.ReadFull(rdr, m.buf)
@@ -321,7 +331,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 			db.DPrintf(db.ALWAYS, "Err ReadFull: n %v err %v", n, err)
 		}
 		db.DPrintf(db.TEST, "Mapper ReadFull time %vB tpt %v: %v", n, test.TputStr(sp.Tlength(n), time.Since(start).Milliseconds()), time.Since(start))
-		return s.Length+1, nil
+		return s.Length + 1, nil
 	}
 	scanner.Buffer(m.buf, cap(m.buf))
 
@@ -341,7 +351,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 			scan := bufio.NewScanner(lineRdr)
 			scan.Buffer(m.line, cap(m.line))
 			scan.Split(m.sbc.ScanWords)
-			if err := m.mapf(m.input, scan, emit); err != nil {
+			if err := m.mapf(s.File, scan, emit); err != nil {
 				return 0, err
 			}
 		}
@@ -355,33 +365,27 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	return sp.Tlength(n), nil
 }
 
-func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
+func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, []string, error) {
 	db.DPrintf(db.MR, "doMap %v", m.input)
 	getInputStart := time.Now()
-	rdr, err := m.OpenReader(m.input)
-	if err != nil {
-		return 0, 0, err
-	}
-	dec := json.NewDecoder(rdr.GetReader())
-	ni := sp.Tlength(0)
 	var bin Bin
-	if err := dec.Decode(&bin); err != nil && err != io.EOF {
-		c, _ := m.GetFile(m.input)
-		db.DPrintf(db.MR, "Mapper %s: decode %v err %v\n", m.bin, string(c), err)
-		return 0, 0, err
+	if err := json.Unmarshal([]byte(m.input), &bin); err != nil {
+		db.DPrintf(db.MR, "Mapper %s: unmarshal err %v\n", m.bin, err)
+		return 0, 0, nil, err
 	}
 	emit := m.Emit
 	if m.combinef != nil {
 		emit = m.Combine
 	}
 	db.DPrintf(db.TEST, "Mapper getInput time: %v", time.Since(getInputStart))
+	ni := sp.Tlength(0)
 	getSplitStart := time.Now()
 	for _, s := range bin {
-		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)
+		db.DPrintf(db.MR, "Mapper process split %v\n", s)
 		n, err := m.doSplit(&s, emit)
 		if err != nil {
 			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)
-			return 0, 0, err
+			return 0, 0, nil, err
 		}
 		if n < s.Length-1 {
 			db.DFatalf("Split: short split o %d l %d %d\n", s.Offset, s.Length, n)
@@ -393,15 +397,20 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 	closeWrtStart := time.Now()
 	nout, err := m.CloseWrt()
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
 	db.DPrintf(db.TEST, "Mapper closeWrt time: %v", time.Since(closeWrtStart))
-	informReducerStart := time.Now()
-	if err := m.InformReducer(); err != nil {
-		return 0, 0, err
+	//informReducerStart := time.Now()
+	//if err := m.InformReducer(); err != nil {
+	//	return 0, 0, err
+	//}
+	//db.DPrintf(db.MR, "Mapper informReducer time: %v", time.Since(informReducerStart))
+	outpns, err := m.outputNames()
+	if err != nil {
+		return 0, 0, nil, err
 	}
-	db.DPrintf(db.MR, "Mapper informReducer time: %v", time.Since(informReducerStart))
-	return ni, nout, nil
+	db.DPrintf(db.TEST, "Mapper outpns %v", outpns)
+	return ni, nout, outpns, nil
 }
 
 func RunMapper(mapf MapT, combinef ReduceT, args []string) {
@@ -431,11 +440,11 @@ func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	}
 	db.DPrintf(db.MR, "Mapper [%v] init time: %v", args[2], time.Since(init))
 	start := time.Now()
-	nin, nout, err := m.DoMap()
+	nin, nout, outfns, err := m.DoMap()
 	db.DPrintf(db.MR_TPT, "%s: in %s out %v tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
-		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, m.input,
-			Result{true, m.ProcEnv().GetPID().String(), nin, nout, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))
+		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK",
+			Result{true, m.ProcEnv().GetPID().String(), nin, nout, outfns, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))
 	} else {
 		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}

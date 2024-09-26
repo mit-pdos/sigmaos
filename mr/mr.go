@@ -82,15 +82,16 @@ type Result struct {
 	Task     string     `json:"Task"`
 	In       sp.Tlength `json:"In"`
 	Out      sp.Tlength `json:"Out"`
+	Outpns   []string   `json:"Outpns"`
 	MsInner  int64      `json:"MsInner"`
 	MsOuter  int64      `json:"MsOuter"`
 	KernelID string     `json:"KernelID"`
 }
 
-func NewResult(data interface{}) *Result {
+func NewResult(data interface{}) (*Result, error) {
 	r := &Result{}
-	mapstructure.Decode(data, r)
-	return r
+	err := mapstructure.Decode(data, r)
+	return r, err
 }
 
 // Each bin has a slice of splits.  Assign splits of files to a bin

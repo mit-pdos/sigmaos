@@ -173,11 +173,14 @@ func TestMapperReducer(t *testing.T) {
 		// n, err := m.DoSplit(&s, m.CombineWc)
 		// Run without combining:
 		// n, err := m.DoSplit(&s, m.Emit)
-		m, err := mr.NewMapper(sc, grep.Map, grep.Reduce, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, input, job.Intermediate, true)
+		bin, err := ts.GetFile(input)
+		assert.Nil(t, err)
+		m, err := mr.NewMapper(sc, grep.Map, grep.Reduce, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, string(bin), job.Intermediate, true)
 		assert.Nil(t, err, "NewMapper %v", err)
 		start := time.Now()
-		in, out, err := m.DoMap()
+		in, out, outpns, err := m.DoMap()
 		assert.Nil(t, err)
+		db.DPrintf(db.ALWAYS, "outpns %v", outpns)
 		nin += in
 		nout += out
 		db.DPrintf(db.ALWAYS, "map %s: in %s out %s tot %s %vms (%s)\n", input, humanize.Bytes(uint64(in)), humanize.Bytes(uint64(out)), humanize.Bytes(uint64(in+out)), time.Since(start).Milliseconds(), test.TputStr(in+out, time.Since(start).Milliseconds()))
@@ -203,7 +206,8 @@ func TestMapperReducer(t *testing.T) {
 		assert.Nil(t, err)
 		status := r.DoReduce()
 		assert.True(t, status.IsStatusOK(), "status %v", status)
-		res := mr.NewResult(status.Data())
+		res, err := mr.NewResult(status.Data())
+		assert.Nil(t, err)
 		db.DPrintf(db.ALWAYS, "%s: in %v out %v tot %v %vms (%s)\n", res.Task, humanize.Bytes(uint64(res.In)), humanize.Bytes(uint64(res.Out)), test.Mbyte(res.In+res.Out), res.MsInner, test.TputStr(res.In+res.Out, res.MsInner))
 	}
 

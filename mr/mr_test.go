@@ -30,7 +30,7 @@ import (
 	sp "sigmaos/sigmap"
 	// "sigmaos/stats"
 	"sigmaos/test"
-	"sigmaos/wc"
+	//"sigmaos/wc"
 	"sigmaos/grep"
 )
 
@@ -173,7 +173,7 @@ func TestMapperReducer(t *testing.T) {
 		// n, err := m.DoSplit(&s, m.CombineWc)
 		// Run without combining:
 		// n, err := m.DoSplit(&s, m.Emit)
-		m, err := mr.NewMapper(sc, grep.Map, grep.Reduce, ts.job, p, job.Nreduce, job.Linesz, input, job.Intermediate, true)
+		m, err := mr.NewMapper(sc, grep.Map, grep.Reduce, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, input, job.Intermediate, true)
 		assert.Nil(t, err, "NewMapper %v", err)
 		start := time.Now()
 		in, out, err := m.DoMap()
@@ -199,7 +199,7 @@ func TestMapperReducer(t *testing.T) {
 		outlink := mr.ReduceOut(ts.jobRoot, ts.job) + rt.Task
 		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Task
 
-		r, err := mr.NewReducer(sc, wc.Reduce, []string{in, outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
+		r, err := mr.NewReducer(sc, grep.Reduce, []string{in, outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
 		assert.Nil(t, err)
 		status := r.DoReduce()
 		assert.True(t, status.IsStatusOK(), "status %v", status)

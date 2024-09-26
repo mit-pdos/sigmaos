@@ -374,7 +374,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 	if m.combinef != nil {
 		emit = m.Combine
 	}
-	db.DPrintf(db.MR, "Mapper getInput time: %v", time.Since(getInputStart))
+	db.DPrintf(db.TEST, "Mapper getInput time: %v", time.Since(getInputStart))
 	getSplitStart := time.Now()
 	for _, s := range bin {
 		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)

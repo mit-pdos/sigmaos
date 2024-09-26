@@ -31,6 +31,7 @@ import (
 	// "sigmaos/stats"
 	"sigmaos/test"
 	"sigmaos/wc"
+	"sigmaos/grep"
 )
 
 const (
@@ -172,7 +173,7 @@ func TestMapperReducer(t *testing.T) {
 		// n, err := m.DoSplit(&s, m.CombineWc)
 		// Run without combining:
 		// n, err := m.DoSplit(&s, m.Emit)
-		m, err := mr.NewMapper(sc, wc.Map, wc.Reduce, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, input, job.Intermediate, true)
+		m, err := mr.NewMapper(sc, grep.Map, grep.Reduce, ts.job, p, job.Nreduce, job.Linesz, input, job.Intermediate, true)
 		assert.Nil(t, err, "NewMapper %v", err)
 		start := time.Now()
 		in, out, err := m.DoMap()

@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	MB      = 1 << 20
-	CHUNKSZ = 4 * MB
+      MB = (1 << 20)
+      CHUNKSZ = 4 * MB
 )
 
 type s3Reader struct {
@@ -33,7 +33,6 @@ type s3Reader struct {
 	offset    sp.Toffset
 	end       sp.Tlength
 	chunk     io.ReadCloser
-	chunkSize int64
 	sz        sp.Tlength
 	n         sp.Tlength
 }
@@ -199,7 +198,6 @@ func (fl *FsLib) OpenS3Reader(pn string, off sp.Toffset, len sp.Tlength) (*s3Rea
 		key:       key,
 		offset:    off,
 		end:       end,
-		chunkSize: 6 * MB,
 		sz:        sz,
 	}
 	return reader, err
@@ -211,7 +209,6 @@ type s3Writer struct {
 	bucket    string
 	key       string
 	offset    sp.Toffset
-	chunkSize int64
 	sz        sp.Tlength
 	n         sp.Tlength
 	r         *io.PipeReader
@@ -278,7 +275,6 @@ func (fl *FsLib) OpenS3Writer(pn string) (WriterI, error) {
 		clnt:      fl.s3clnt,
 		bucket:    bucket,
 		key:       key,
-		chunkSize: 5 * MB,
 		ch:        make(chan error),
 	}
 	go writer.writer()

@@ -136,7 +136,7 @@ func (m *Mapper) initWrt(r int, name string) error {
 	db.DPrintf(db.MR, "InitWrt %v", name)
 	if m.asyncrw {
 		if strings.Contains(name, sp.S3) {
-			if wrt, err := m.CreateS3AsyncWriter(name, 0777, sp.OWRITE); err != nil {
+			if wrt, err := m.OpenS3Writer(name); err != nil {
 				return err
 			} else {
 				m.asyncwrts[r] = wrt
@@ -313,14 +313,15 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	if true {
 		scanner = bufio.NewScanner(rdr)
 	} else {
+	        // no computing; to measure read tput
 		start = time.Now()
-		b := make([]byte, s.Length+1)
-		n, err := io.ReadFull(rdr, b)
+		m.buf = m.buf[0:m.linesz]
+		n, err := io.ReadFull(rdr, m.buf)
 		if err != nil && err != io.ErrUnexpectedEOF {
 			db.DPrintf(db.ALWAYS, "Err ReadFull: n %v err %v", n, err)
 		}
-		db.DPrintf(db.MR, "Mapper readAll time %vB tpt %v: %v", n, test.TputStr(sp.Tlength(n), time.Since(start).Milliseconds()), time.Since(start))
-		scanner = bufio.NewScanner(bytes.NewReader(b))
+		db.DPrintf(db.TEST, "Mapper ReadFull time %vB tpt %v: %v", n, test.TputStr(sp.Tlength(n), time.Since(start).Milliseconds()), time.Since(start))
+		return s.Length+1, nil
 	}
 	scanner.Buffer(m.buf, cap(m.buf))
 
@@ -344,7 +345,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 				return 0, err
 			}
 		}
-		if sp.Tlength(n) >= s.Length {
+		if sp.Tlength(n) >= s.Length-1 {
 			break
 		}
 	}
@@ -374,6 +375,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 		emit = m.Combine
 	}
 	db.DPrintf(db.MR, "Mapper getInput time: %v", time.Since(getInputStart))
+	getSplitStart := time.Now()
 	for _, s := range bin {
 		db.DPrintf(db.MR, "Mapper %s: process split %v\n", m.bin, s)
 		n, err := m.doSplit(&s, emit)
@@ -381,18 +383,19 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, error) {
 			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)
 			return 0, 0, err
 		}
-		if n < s.Length {
+		if n < s.Length-1 {
 			db.DFatalf("Split: short split o %d l %d %d\n", s.Offset, s.Length, n)
 		}
 		ni += n
 		m.CombineEmit()
 	}
+	db.DPrintf(db.TEST, "split time: %v", time.Since(getSplitStart))
 	closeWrtStart := time.Now()
 	nout, err := m.CloseWrt()
 	if err != nil {
 		return 0, 0, err
 	}
-	db.DPrintf(db.MR, "Mapper closeWrt time: %v", time.Since(closeWrtStart))
+	db.DPrintf(db.TEST, "Mapper closeWrt time: %v", time.Since(closeWrtStart))
 	informReducerStart := time.Now()
 	if err := m.InformReducer(); err != nil {
 		return 0, 0, err

@@ -206,8 +206,8 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 	return n, nil
 }
 
-func (m *Mapper) outputNames() ([]string, error) {
-	outputs := make([]string, m.nreducetask)
+func (m *Mapper) outputNames() (Bin, error) {
+	bin := make(Bin, m.nreducetask)
 	outDirPath := MapIntermediateDir(m.job, m.intOutput)
 	start := time.Now()
 	var pn string
@@ -222,44 +222,9 @@ func (m *Mapper) outputNames() ([]string, error) {
 		}
 	}
 	for r := 0; r < m.nreducetask; r++ {
-		outputs[r] = mshardfile(pn, r) + m.rand
+		bin[r].File = mshardfile(pn, r) + m.rand
 	}
-	return outputs, nil
-}
-
-// Inform reducer where to find map output
-func (m *Mapper) InformReducer() error {
-	outputs, err := m.outputNames()
-	if err != nil {
-		return err
-	}
-	for r, fn := range outputs {
-		name := symname(m.jobRoot, m.job, strconv.Itoa(r), m.bin)
-
-		// Remove name in case an earlier mapper created the
-		// symlink.  A reducer may have opened and is reading
-		// the old target, open the new input file and read
-		// the new target, or fail because there is no
-		// symlink. Failing is fine because the coodinator
-		// will start a new reducer once this map completes.
-		// We could use rename to atomically remove and create
-		// the symlink if we want to avoid the failing case.
-		start := time.Now()
-		m.Remove(name)
-		db.DPrintf(db.MR, "Mapper informReducer Remove time: %v", time.Since(start))
-
-		target := fn + "/"
-
-		db.DPrintf(db.MR, "name %s target %s\n", name, target)
-
-		start = time.Now()
-		err = m.Symlink([]byte(target), name, 0777)
-		db.DPrintf(db.MR, "Mapper informReducer Symlink time: %v", time.Since(start))
-		if err != nil {
-			db.DFatalf("FATAL symlink %v err %v\n", name, err)
-		}
-	}
-	return nil
+	return bin, nil
 }
 
 func (m *Mapper) Emit(key []byte, value string) error {
@@ -365,7 +330,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	return sp.Tlength(n), nil
 }
 
-func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, []string, error) {
+func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 	db.DPrintf(db.MR, "doMap %v", m.input)
 	getInputStart := time.Now()
 	var bin Bin
@@ -400,17 +365,12 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, []string, error) {
 		return 0, 0, nil, err
 	}
 	db.DPrintf(db.TEST, "Mapper closeWrt time: %v", time.Since(closeWrtStart))
-	//informReducerStart := time.Now()
-	//if err := m.InformReducer(); err != nil {
-	//	return 0, 0, err
-	//}
-	//db.DPrintf(db.MR, "Mapper informReducer time: %v", time.Since(informReducerStart))
-	outpns, err := m.outputNames()
+	obin, err := m.outputNames()
 	if err != nil {
 		return 0, 0, nil, err
 	}
-	db.DPrintf(db.TEST, "Mapper outpns %v", outpns)
-	return ni, nout, outpns, nil
+	db.DPrintf(db.TEST, "Mapper outpns %v", bin)
+	return ni, nout, obin, nil
 }
 
 func RunMapper(mapf MapT, combinef ReduceT, args []string) {

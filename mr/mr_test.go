@@ -169,7 +169,7 @@ func TestMapperReducer(t *testing.T) {
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "NewSC: %v", err)
 	nmapper := len(tns)
-	moutputs := make([][]string, nmapper)
+	outBins := make([]mr.Bin, nmapper)
 	for i, task := range tns {
 		input := ts.tasks.Mft.TaskPathName(task)
 		// Run with wc-specialized combiner:
@@ -181,10 +181,10 @@ func TestMapperReducer(t *testing.T) {
 		m, err := mr.NewMapper(sc, grep.Map, grep.Reduce, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, string(bin), job.Intermediate, true)
 		assert.Nil(t, err, "NewMapper %v", err)
 		start := time.Now()
-		in, out, outpns, err := m.DoMap()
+		in, out, obin, err := m.DoMap()
 		assert.Nil(t, err)
-		db.DPrintf(db.ALWAYS, "outpns %v", outpns)
-		moutputs[i] = outpns
+		db.DPrintf(db.ALWAYS, "obin %v", obin)
+		outBins[i] = obin
 		nin += in
 		nout += out
 		db.DPrintf(db.ALWAYS, "map %s: in %s out %s tot %s %vms (%s)\n", input, humanize.Bytes(uint64(in)), humanize.Bytes(uint64(out)), humanize.Bytes(uint64(in+out)), time.Since(start).Milliseconds(), test.TputStr(in+out, time.Since(start).Milliseconds()))
@@ -204,7 +204,7 @@ func TestMapperReducer(t *testing.T) {
 
 		b := make(mr.Bin, nmapper)
 		for j := 0; j < len(b); j++ {
-			b[j] = mr.Split{File: moutputs[j][i]}
+			b[j] = outBins[j][i]
 		}
 		db.DPrintf(db.TEST, "reducer %d: %v", i, b)
 		d, err := json.Marshal(b)

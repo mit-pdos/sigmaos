@@ -3,6 +3,7 @@ package mr_test
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -29,9 +30,9 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	// "sigmaos/stats"
-	"sigmaos/test"
-	//"sigmaos/wc"
 	"sigmaos/grep"
+	"sigmaos/test"
+	// "sigmaos/wc"
 )
 
 const (
@@ -167,7 +168,9 @@ func TestMapperReducer(t *testing.T) {
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "NewSC: %v", err)
-	for _, task := range tns {
+	nmapper := len(tns)
+	moutputs := make([][]string, nmapper)
+	for i, task := range tns {
 		input := ts.tasks.Mft.TaskPathName(task)
 		// Run with wc-specialized combiner:
 		// n, err := m.DoSplit(&s, m.CombineWc)
@@ -181,6 +184,7 @@ func TestMapperReducer(t *testing.T) {
 		in, out, outpns, err := m.DoMap()
 		assert.Nil(t, err)
 		db.DPrintf(db.ALWAYS, "outpns %v", outpns)
+		moutputs[i] = outpns
 		nin += in
 		nout += out
 		db.DPrintf(db.ALWAYS, "map %s: in %s out %s tot %s %vms (%s)\n", input, humanize.Bytes(uint64(in)), humanize.Bytes(uint64(out)), humanize.Bytes(uint64(in+out)), time.Since(start).Milliseconds(), test.TputStr(in+out, time.Since(start).Milliseconds()))
@@ -190,7 +194,7 @@ func TestMapperReducer(t *testing.T) {
 	tns, err = ts.tasks.Rft.GetTasks()
 	assert.Nil(t, err)
 
-	for _, task := range tns {
+	for i, task := range tns {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
 		sc, err := sigmaclnt.NewSigmaClnt(pe)
 		assert.Nil(t, err)
@@ -198,11 +202,18 @@ func TestMapperReducer(t *testing.T) {
 		err = ts.tasks.Rft.ReadTask(task, rt)
 		assert.Nil(t, err)
 
-		in := mr.ReduceIn(ts.jobRoot, ts.job) + "/" + rt.Task
+		b := make(mr.Bin, nmapper)
+		for j := 0; j < len(b); j++ {
+			b[j] = mr.Split{File: moutputs[j][i]}
+		}
+		db.DPrintf(db.TEST, "reducer %d: %v", i, b)
+		d, err := json.Marshal(b)
+		assert.Nil(t, err)
+
 		outlink := mr.ReduceOut(ts.jobRoot, ts.job) + rt.Task
 		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Task
 
-		r, err := mr.NewReducer(sc, grep.Reduce, []string{in, outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
+		r, err := mr.NewReducer(sc, grep.Reduce, []string{string(d), outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
 		assert.Nil(t, err)
 		status := r.DoReduce()
 		assert.True(t, status.IsStatusOK(), "status %v", status)

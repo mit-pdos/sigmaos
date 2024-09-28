@@ -115,7 +115,7 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 	return err
 }
 
-func (fl *FsLib) MoveFiles(src, dst string) (int, error) {
+func (fl *FsLib) MoveDirEntries(src, dst string) (int, error) {
 	sts, err := fl.GetDir(src) // XXX handle one entry at the time?
 	if err != nil {
 		return 0, err

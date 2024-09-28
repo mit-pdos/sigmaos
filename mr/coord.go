@@ -2,6 +2,7 @@
 package mr
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -49,6 +50,7 @@ type Coord struct {
 	job             string
 	nmaptask        int
 	nreducetask     int
+	reduceBinIn     map[string]Bin
 	crash           int64
 	maliciousMapper uint64
 	linesz          string
@@ -87,6 +89,8 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.nmaptask = m
 	c.nreducetask = n
+	c.reduceBinIn = make(map[string]Bin, c.nreducetask)
+
 	c.mapperbin = args[4]
 	c.reducerbin = args[5]
 
@@ -192,11 +196,19 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	if err := c.rft.ReadTask(tn, t); err != nil {
 		db.DFatalf("ReadTask %v err %v", tn, err)
 	}
-	in := ReduceIn(c.jobRoot, c.job) + "/" + t.Task
+
+	bin, ok := c.reduceBinIn[tn]
+	if !ok {
+		db.DFatalf("reducerProc: no input for %v", tn)
+	}
+	b, err := json.Marshal(bin)
+	if err != nil {
+		db.DFatalf("reducerProc: %v err %v", tn, err)
+	}
 	outlink := ReduceOut(c.jobRoot, c.job) + t.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
 	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
-	return c.newTask(c.reducerbin, []string{in, outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths), nil
+	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths), nil
 }
 
 type Tresult struct {
@@ -229,7 +241,7 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 		}
 		// mark task as done
 		start := time.Now()
-		if err := ft.MarkDone(t); err != nil {
+		if err := ft.MarkDoneOutput(t, r.OutBin); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
 		db.DPrintf(db.MR, "MarkDone latency: %v %v", time.Since(start), r)
@@ -276,7 +288,7 @@ func newStringSlice(data []interface{}) []string {
 
 func (c *Coord) startTasks(ft *fttasks.FtTasks, ch chan Tresult, f NewProc) int {
 	start := time.Now()
-	tns, err := ft.GetTasks()
+	tns, err := ft.AcquireTasks()
 	if err != nil {
 		db.DFatalf("startTasks err %v\n", err)
 	}
@@ -325,6 +337,45 @@ func (c *Coord) doRestart() bool {
 		db.DPrintf(db.ALWAYS, "restarted %d tasks\n", n+m)
 	}
 	return n+m > 0
+}
+
+func (c *Coord) makeReduceBins() error {
+	mns, err := c.mft.GetDoneTasks()
+	if err != nil {
+		return err
+	}
+	rns, err := c.rft.GetTodoTasks()
+	if err != nil {
+		return err
+	}
+	s, err := c.rft.JobState()
+	if err != nil {
+		return err
+	}
+
+	db.DPrintf(db.MR, "Reducer job state %v", s)
+
+	if len(rns) < c.nreducetask {
+		return nil
+	}
+
+	for _, n := range rns {
+		c.reduceBinIn[n] = make(Bin, c.nmaptask)
+	}
+
+	db.DPrintf(db.MR, "Tasks done %v todo %v %v", mns, rns, c.reduceBinIn)
+
+	for j, m := range mns {
+		var obin Bin
+		if err := c.mft.ReadTaskOutput(m, &obin); err != nil {
+			return err
+		}
+		for i, s := range obin {
+			c.reduceBinIn[rns[i]][j] = s
+		}
+	}
+	db.DPrintf(db.MR, "bins %v", c.reduceBinIn)
+	return nil
 }
 
 // XXX do something for stragglers?
@@ -399,6 +450,10 @@ func (c *Coord) Work() {
 		if n == c.nmaptask {
 			ms := time.Since(start).Milliseconds()
 			db.DPrintf(db.ALWAYS, "map phase took %vms\n", ms)
+			err := c.makeReduceBins()
+			if err != nil {
+				db.DFatalf("ReduceBins err %v", err)
+			}
 			c.Round("reduce")
 		}
 		if !c.doRestart() {

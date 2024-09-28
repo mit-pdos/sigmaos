@@ -139,6 +139,8 @@ func (m *Mapper) initWrt(r int, name string) error {
 			if wrt, err := m.OpenS3Writer(name); err != nil {
 				return err
 			} else {
+				//bwrt := bufio.NewWriterSize(wrt, sp.BUFSZ)
+				//m.syncwrts[r] = wrt
 				m.asyncwrts[r] = wrt
 				m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
 			}
@@ -206,15 +208,15 @@ func (m *Mapper) closewrts() (sp.Tlength, error) {
 	return n, nil
 }
 
-func (m *Mapper) outputNames() (Bin, error) {
+func (m *Mapper) outputBin() (Bin, error) {
 	bin := make(Bin, m.nreducetask)
 	outDirPath := MapIntermediateDir(m.job, m.intOutput)
 	start := time.Now()
 	var pn string
-	var err error
 	if strings.Contains(outDirPath, "/s3/") {
 		pn = outDirPath
 	} else {
+		var err error
 		pn, err = m.ResolveMounts(outDirPath)
 		db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
 		if err != nil {
@@ -320,7 +322,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 				return 0, err
 			}
 		}
-		if sp.Tlength(n) >= s.Length-1 {
+		if sp.Tlength(n) >= s.Length=1 {
 			break
 		}
 	}
@@ -365,11 +367,10 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 		return 0, 0, nil, err
 	}
 	db.DPrintf(db.TEST, "Mapper closeWrt time: %v", time.Since(closeWrtStart))
-	obin, err := m.outputNames()
+	obin, err := m.outputBin()
 	if err != nil {
 		return 0, 0, nil, err
 	}
-	db.DPrintf(db.TEST, "Mapper outpns %v", bin)
 	return ni, nout, obin, nil
 }
 
@@ -400,11 +401,11 @@ func RunMapper(mapf MapT, combinef ReduceT, args []string) {
 	}
 	db.DPrintf(db.MR, "Mapper [%v] init time: %v", args[2], time.Since(init))
 	start := time.Now()
-	nin, nout, outfns, err := m.DoMap()
+	nin, nout, outbin, err := m.DoMap()
 	db.DPrintf(db.MR_TPT, "%s: in %s out %v tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK",
-			Result{true, m.ProcEnv().GetPID().String(), nin, nout, outfns, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))
+			Result{true, m.ProcEnv().GetPID().String(), nin, nout, outbin, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))
 	} else {
 		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}

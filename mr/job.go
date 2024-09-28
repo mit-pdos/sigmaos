@@ -28,6 +28,8 @@ const (
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"
 	JOBSEM      = "jobsem"
+	//SPLITSZ     = 10 * sp.MBYTE
+	SPLITSZ = 200 * sp.KBYTE
 )
 
 func JobOut(outDir, job string) string {
@@ -176,7 +178,7 @@ func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*T
 			return nil, err
 		}
 		t := &TreduceTask{rs}
-		if err := rft.SubmitTask(0, t); err != nil {
+		if err := rft.SubmitTask(r, t); err != nil {
 			db.DPrintf(db.ERROR, "SubmitTask %v err %v\n", t, err)
 			return nil, err
 		}
@@ -255,14 +257,14 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 		return 0, err
 	}
 
-	splitsz := sp.Tlength(10 * sp.MBYTE)
+	splitsz := sp.Tlength(SPLITSZ)
 
 	bins, err := NewBins(fsl, job.Input, sp.Tlength(job.Binsz), splitsz)
 	if err != nil || len(bins) == 0 {
 		return len(bins), err
 	}
-	for _, b := range bins {
-		if err := ts.Mft.SubmitTask(0, b); err != nil {
+	for i, b := range bins {
+		if err := ts.Mft.SubmitTask(i, b); err != nil {
 			return len(bins), err
 		}
 

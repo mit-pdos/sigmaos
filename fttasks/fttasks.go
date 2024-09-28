@@ -68,6 +68,10 @@ func (ft *FtTasks) Jobs() ([]*sp.Stat, error) {
 	return ft.GetDir(ft.dir)
 }
 
+func (ft *FtTasks) JobState() (string, error) {
+	return ft.SprintfDir(filepath.Join(ft.dir, ft.job))
+}
+
 func (ft *FtTasks) NTasksTODO() (int, error) {
 	sts, err := ft.GetDir(ft.todo)
 	if err != nil {
@@ -84,6 +88,22 @@ func (ft *FtTasks) NTaskDone() (int, error) {
 	return len(sts), nil
 }
 
+func (ft *FtTasks) getTasks(dir string) ([]string, error) {
+	sts, err := ft.GetDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	return sp.Names(sts), nil
+}
+
+func (ft *FtTasks) GetDoneTasks() ([]string, error) {
+	return ft.getTasks(ft.done)
+}
+
+func (ft *FtTasks) GetTodoTasks() ([]string, error) {
+	return ft.getTasks(ft.todo)
+}
+
 // Causes the server to stop after processing remaining tasks
 func (ft *FtTasks) SubmitStop() error {
 	db.DPrintf(db.FTTASKS, "SubmitStop")
@@ -92,14 +112,25 @@ func (ft *FtTasks) SubmitStop() error {
 	return err
 }
 
-func (ft *FtTasks) SubmitTask(id int, i interface{}) error {
+func (ft *FtTasks) mkTask(tid string) error {
+	t := filepath.Join(ft.todo, tid)
+	if err := ft.MkDir(t, 0777); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ft *FtTasks) SubmitTask(id int, i any) error {
 	db.DPrintf(db.FTTASKS, "SubmitTask id %v t %v", id, i)
 	tid := strconv.Itoa(id) + "-" + rd.String(16)
-	t := filepath.Join(ft.todo, tid)
+	if err := ft.mkTask(tid); err != nil {
+		return err
+	}
+	t := filepath.Join(ft.todo, tid, "task")
 	return ft.PutFileJson(t, 0777, i)
 }
 
-func (ft *FtTasks) SubmitTaskMulti(id int, is []interface{}) error {
+func (ft *FtTasks) SubmitTaskMulti(id int, is []any) error {
 	bs := make([]byte, 0)
 	for _, i := range is {
 		b, err := json.Marshal(i)
@@ -109,7 +140,10 @@ func (ft *FtTasks) SubmitTaskMulti(id int, is []interface{}) error {
 		bs = append(bs, b...)
 	}
 	tid := strconv.Itoa(id) + "-" + rd.String(4)
-	t := filepath.Join(ft.todo, tid)
+	if err := ft.mkTask(tid); err != nil {
+		return err
+	}
+	t := filepath.Join(ft.todo, tid, "task")
 	db.DPrintf(db.FTTASKS, "SubmitTaskMulti id %v tname %v", id, tid)
 	_, err := ft.PutFile(t, 0777, sp.OWRITE, bs)
 	return err
@@ -118,7 +152,7 @@ func (ft *FtTasks) SubmitTaskMulti(id int, is []interface{}) error {
 // Consider all tasks in progress as failed (too aggressive, but
 // correct), and make them runnable.
 func (ft *FtTasks) RecoverTasks() error {
-	_, err := ft.MoveFiles(ft.wip, ft.todo)
+	_, err := ft.MoveDirEntries(ft.wip, ft.todo)
 	return err
 }
 
@@ -131,19 +165,24 @@ func (ft *FtTasks) WaitForTasks() ([]string, error) {
 	return fns, nil
 }
 
-func (ft *FtTasks) GetTasks() ([]string, error) {
+func (ft *FtTasks) AcquireTasks() ([]string, error) {
 	dr := fslib.NewDirReader(ft.FsLib, ft.todo)
 	return dr.GetEntriesRename(ft.wip)
 }
 
 // Read tasks by reading file in one shot
-func (ft *FtTasks) ReadTask(name string, i interface{}) error {
-	return ft.GetFileJson(ft.wip+"/"+name, i)
+func (ft *FtTasks) ReadTask(name string, i any) error {
+	return ft.GetFileJson(filepath.Join(ft.wip, name, "task"), i)
+}
+
+// Read tasks's output
+func (ft *FtTasks) ReadTaskOutput(name string, i any) error {
+	return ft.GetFileJson(filepath.Join(ft.done, name, "output"), i)
 }
 
 // Read tasks using a reader
 func (ft *FtTasks) TaskReader(name string) (*fslib.FdReader, error) {
-	rdr, err := ft.OpenReader(filepath.Join(ft.wip, name))
+	rdr, err := ft.OpenReader(filepath.Join(ft.wip, name, "task"))
 	if err != nil {
 		return nil, err
 	}
@@ -151,11 +190,19 @@ func (ft *FtTasks) TaskReader(name string) (*fslib.FdReader, error) {
 }
 
 func (ft *FtTasks) TaskPathName(name string) string {
-	return ft.wip + "/" + name
+	return filepath.Join(ft.wip, name, "task")
 }
 
 func (ft *FtTasks) MarkDone(name string) error {
 	return ft.Rename(ft.wip+"/"+name, ft.done+"/"+name)
+}
+
+func (ft *FtTasks) MarkDoneOutput(name string, i any) error {
+	t := filepath.Join(ft.wip, name, "output")
+	if err := ft.PutFileJson(t, 0777, i); err != nil {
+		return err
+	}
+	return ft.MarkDone(name)
 }
 
 func (ft *FtTasks) MarkRunnable(name string) error {
@@ -172,5 +219,5 @@ func (ft *FtTasks) MarkError(name string) error {
 
 // Mark all error-ed tasks as runnable
 func (ft *FtTasks) Restart() (int, error) {
-	return ft.MoveFiles(ft.error, ft.todo)
+	return ft.MoveDirEntries(ft.error, ft.todo)
 }

@@ -295,7 +295,7 @@ func (r *Reducer) DoReduce() *proc.Status {
 		return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
 	}
 	return proc.NewStatusInfo(proc.StatusOK, "OK",
-		Result{false, r.ProcEnv().GetPID().String(), rtot.n, nbyte, nil, rtot.d.Milliseconds(), 0, r.ProcEnv().GetKernelID()})
+		Result{false, r.ProcEnv().GetPID().String(), rtot.n, nbyte, Bin{}, rtot.d.Milliseconds(), 0, r.ProcEnv().GetKernelID()})
 }
 
 func RunReducer(reducef ReduceT, args []string) {

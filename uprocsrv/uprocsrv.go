@@ -88,6 +88,10 @@ type UprocSrv struct {
 	ckclnt         *chunkclnt.ChunkClnt
 }
 
+type UprocRPCSrv struct {
+	ups *UprocSrv
+}
+
 func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{
@@ -117,7 +121,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	var ssrv *sigmasrv.SigmaSrv
 	if up == sp.NO_PORT.String() {
 		pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
-		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, ups)
+		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, &UprocRPCSrv{ups})
 	} else {
 		var port sp.Tport
 		port, err = sp.ParsePort(up)
@@ -136,7 +140,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 		}
 		sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
 		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, ups)
+		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, &UprocRPCSrv{ups})
 	}
 	if err != nil {
 		db.DFatalf("Error sigmasrvclnt: %v", err)
@@ -316,6 +320,10 @@ func (ups *UprocSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, p
 	return nil
 }
 
+func (ups *UprocRPCSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
+	return ups.ups.Run(ctx, req, res)
+}
+
 // Run a proc inside of an inner container
 func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
@@ -356,6 +364,10 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	ups.procs.Delete(pid)
 	// ups.sc.CloseFd(pe.fd)
 	return err
+}
+
+func (ups *UprocRPCSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
+	return ups.ups.WarmProc(ctx, req, res)
 }
 
 // Warm uprocd to run a program for experiments with warm start.

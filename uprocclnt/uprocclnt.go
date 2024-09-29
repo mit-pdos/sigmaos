@@ -47,7 +47,7 @@ func (clnt *UprocdClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr erro
 		ProcProto: uproc.GetProto(),
 	}
 	res := &proto.RunResult{}
-	if err := clnt.RPC("UprocSrv.Run", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+	if err := clnt.RPC("UprocRPCSrv.Run", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
 		return err, nil
 	} else {
 		db.DPrintf(db.UPROCDMGR_ERR, "Err child %v", err)
@@ -65,7 +65,7 @@ func (clnt *UprocdClnt) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, s3se
 		NamedEndpointProto: namedEP.GetProto(),
 	}
 	res := &proto.RunResult{}
-	if err := clnt.RPC("UprocSrv.WarmProc", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+	if err := clnt.RPC("UprocRPCSrv.WarmProc", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
 		return err, nil
 	} else {
 		return nil, err

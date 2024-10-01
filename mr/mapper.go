@@ -279,7 +279,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		off--
 	}
 	start := time.Now()
-	rdr, err := m.OpenS3Reader(s.File, s.Offset, s.Length)
+	rdr, err := m.OpenS3Reader(s.File, s.Offset, s.Length+sp.Tlength(m.linesz))
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}
@@ -290,7 +290,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	if true {
 		scanner = bufio.NewScanner(rdr)
 	} else {
-		// no computing; to measure read tput
+		// To measure read tput; no computing
 		start = time.Now()
 		m.buf = m.buf[0:m.linesz]
 		n, err := io.ReadFull(rdr, m.buf)
@@ -302,17 +302,17 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	}
 	scanner.Buffer(m.buf, cap(m.buf))
 
-	// advance scanner to new line after start, if start != 0
+	// advance scanner to new line after start, if off != 0
 	n := 0
 	if s.Offset != 0 {
 		scanner.Scan()
 		l := scanner.Bytes()
-		n += len(l) // +1 for newline, but -1 for extra byte we read
+		n += len(l) // +1 for newline, but -1 for the extra byte we read (off-- above)
 	}
 	lineRdr := bytes.NewReader([]byte{})
 	for scanner.Scan() {
 		l := scanner.Bytes()
-		n += len(l) + 1 // 1 for newline
+		n += len(l) + 1 // 1 for newline  XXX or 2 if \r\n
 		if len(l) > 0 {
 			lineRdr.Reset(l)
 			scan := bufio.NewScanner(lineRdr)
@@ -322,7 +322,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 				return 0, err
 			}
 		}
-		if sp.Tlength(n) >= s.Length=1 {
+		if sp.Tlength(n) >= s.Length {
 			break
 		}
 	}

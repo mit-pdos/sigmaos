@@ -54,13 +54,13 @@ def graph_data(input_dir, datasize, out):
   sigmax = np.arange(1) * 1.5
   sigmas3x = [ x + width for x in sigmax ]
   corralx = [ x + 2 * width for x in sigmax ]
-  sigmaplot = plt.bar(sigmax, sigma_times, width=width, label="σOS (UX)")
+  sigmaplot = plt.bar(sigmax, sigma_times, width=width, label="σOS-mr (UX)")
   for i, v in enumerate(sigma_times):
     plt.text(sigmax[i], v + .25, str(round(v, 2)), ha="center")
-  sigmas3plot = plt.bar(sigmas3x, sigmas3_times, width=width, label="σOS (S3)")
+  sigmas3plot = plt.bar(sigmas3x, sigmas3_times, width=width, label="σOS-mr (S3)")
   for i, v in enumerate(sigmas3_times):
     plt.text(sigmas3x[i], v + .25, str(round(v, 2)), ha="center")
-  corralplot = plt.bar(corralx, corral_times, width=width, label="Lambda")
+  corralplot = plt.bar(corralx, corral_times, width=width, label="λ-mr")
   for i, v in enumerate(corral_times):
     plt.text(corralx[i], v + .25, str(round(v, 2)), ha="center")
   plots = [sigmaplot, corralplot]

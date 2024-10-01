@@ -215,12 +215,12 @@ func (r *Reducer) ReadFiles(rtot *readResult) error {
 		go r.readerMgr(req, rep, MAXCONCURRENCY)
 	}
 
+	// Random offset to stop reducer procs from all banging on the same ux.
+	randOffset := int(rand.Uint64())
+	if randOffset < 0 {
+		randOffset *= -1
+	}
 	for i := 0; i < r.nmaptask; i++ {
-		// Random offset to stop reducer procs from all banging on the same ux.
-		randOffset := int(rand.Uint64())
-		if randOffset < 0 {
-			randOffset *= -1
-		}
 		f := (i + randOffset) % r.nmaptask
 		if MAXCONCURRENCY > 1 {
 			req <- r.input[f].File

@@ -32,7 +32,7 @@ import (
 	// "sigmaos/stats"
 	"sigmaos/grep"
 	"sigmaos/test"
-	// "sigmaos/wc"
+	"sigmaos/wc"
 )
 
 const (
@@ -156,10 +156,17 @@ func TestMapperReducer(t *testing.T) {
 	assert.Nil(ts.T, err, "PrepareJob err %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
+	mapper := wc.Map
+	reducer := wc.Reduce
+	if job.App == "grep" {
+		mapper = grep.Map
+		reducer = grep.Reduce
+	}
+
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
-	tns, err := ts.tasks.Mft.GetTasks()
+	tns, err := ts.tasks.Mft.AcquireTasks()
 	assert.Nil(t, err)
 
 	start := time.Now()
@@ -170,6 +177,7 @@ func TestMapperReducer(t *testing.T) {
 	assert.Nil(t, err, "NewSC: %v", err)
 	nmapper := len(tns)
 	outBins := make([]mr.Bin, nmapper)
+	db.DPrintf(db.TEST, "nmapper: %d %d", nmapper, job.Binsz)
 	for i, task := range tns {
 		input := ts.tasks.Mft.TaskPathName(task)
 		// Run with wc-specialized combiner:
@@ -178,12 +186,11 @@ func TestMapperReducer(t *testing.T) {
 		// n, err := m.DoSplit(&s, m.Emit)
 		bin, err := ts.GetFile(input)
 		assert.Nil(t, err)
-		m, err := mr.NewMapper(sc, grep.Map, grep.Reduce, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, string(bin), job.Intermediate, true)
+		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, string(bin), job.Intermediate, true)
 		assert.Nil(t, err, "NewMapper %v", err)
 		start := time.Now()
 		in, out, obin, err := m.DoMap()
 		assert.Nil(t, err)
-		db.DPrintf(db.ALWAYS, "obin %v", obin)
 		outBins[i] = obin
 		nin += in
 		nout += out
@@ -191,7 +198,7 @@ func TestMapperReducer(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "map %s total: in %s out %s tot %s %vms (%s)\n", job.Input, humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 
-	tns, err = ts.tasks.Rft.GetTasks()
+	tns, err = ts.tasks.Rft.AcquireTasks()
 	assert.Nil(t, err)
 
 	for i, task := range tns {
@@ -213,7 +220,7 @@ func TestMapperReducer(t *testing.T) {
 		outlink := mr.ReduceOut(ts.jobRoot, ts.job) + rt.Task
 		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Task
 
-		r, err := mr.NewReducer(sc, grep.Reduce, []string{string(d), outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
+		r, err := mr.NewReducer(sc, reducer, []string{string(d), outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
 		assert.Nil(t, err)
 		status := r.DoReduce()
 		assert.True(t, status.IsStatusOK(), "status %v", status)

@@ -22,19 +22,19 @@ import (
 )
 
 const (
-      MB = (1 << 20)
-      CHUNKSZ = 4 * MB
+	MB      = (1 << 20)
+	CHUNKSZ = 4 * MB
 )
 
 type s3Reader struct {
-	clnt      *s3.Client
-	bucket    string
-	key       string
-	offset    sp.Toffset
-	end       sp.Tlength
-	chunk     io.ReadCloser
-	sz        sp.Tlength
-	n         sp.Tlength
+	clnt   *s3.Client
+	bucket string
+	key    string
+	offset sp.Toffset
+	end    sp.Tlength
+	chunk  io.ReadCloser
+	sz     sp.Tlength
+	n      sp.Tlength
 }
 
 func min64(a, b uint64) uint64 {
@@ -46,8 +46,8 @@ func min64(a, b uint64) uint64 {
 
 func (s3r *s3Reader) s3Read(off, cnt uint64) (io.ReadCloser, sp.Tlength, error) {
 	key := s3r.key
-	n := min64(cnt, uint64(s3r.end)-uint64(s3r.offset))
-	region := "bytes=" + strconv.FormatUint(off, 10) + "-" + strconv.FormatUint(uint64(s3r.offset)+n-1, 10)
+	n := min64(cnt, uint64(s3r.end)-off)
+	region := "bytes=" + strconv.FormatUint(off, 10) + "-" + strconv.FormatUint(off+n-1, 10)
 	input := &s3.GetObjectInput{
 		Bucket: &s3r.bucket,
 		Key:    &key,
@@ -193,27 +193,27 @@ func (fl *FsLib) OpenS3Reader(pn string, off sp.Toffset, len sp.Tlength) (*s3Rea
 	db.DPrintf(db.S3, "OpenS3Reader: S3Stat %v", sz)
 
 	reader := &s3Reader{
-		clnt:      fl.s3clnt,
-		bucket:    bucket,
-		key:       key,
-		offset:    off,
-		end:       end,
-		sz:        sz,
+		clnt:   fl.s3clnt,
+		bucket: bucket,
+		key:    key,
+		offset: off,
+		end:    end,
+		sz:     sz,
 	}
 	return reader, err
 }
 
 type s3Writer struct {
-	clnt      *s3.Client
-	rdr       io.WriteCloser
-	bucket    string
-	key       string
-	offset    sp.Toffset
-	sz        sp.Tlength
-	n         sp.Tlength
-	r         *io.PipeReader
-	w         *io.PipeWriter
-	ch        chan error
+	clnt   *s3.Client
+	rdr    io.WriteCloser
+	bucket string
+	key    string
+	offset sp.Toffset
+	sz     sp.Tlength
+	n      sp.Tlength
+	r      *io.PipeReader
+	w      *io.PipeWriter
+	ch     chan error
 }
 
 func (s3w *s3Writer) writer() {
@@ -272,10 +272,10 @@ func (fl *FsLib) OpenS3Writer(pn string) (WriterI, error) {
 	}
 
 	writer := &s3Writer{
-		clnt:      fl.s3clnt,
-		bucket:    bucket,
-		key:       key,
-		ch:        make(chan error),
+		clnt:   fl.s3clnt,
+		bucket: bucket,
+		key:    key,
+		ch:     make(chan error),
 	}
 	go writer.writer()
 	return writer, nil

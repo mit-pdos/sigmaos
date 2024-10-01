@@ -237,7 +237,6 @@ func (m *Mapper) Emit(key []byte, value string) error {
 			return err
 		}
 	}
-
 	r := Khash(key) % m.nreducetask
 	var err error
 	if m.asyncrw {
@@ -303,16 +302,18 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	scanner.Buffer(m.buf, cap(m.buf))
 
 	// advance scanner to new line after start, if off != 0
-	n := 0
+	n := sp.Tlength(0)
 	if s.Offset != 0 {
 		scanner.Scan()
 		l := scanner.Bytes()
-		n += len(l) // +1 for newline, but -1 for the extra byte we read (off-- above)
+		// +1 for newline, but -1 for the extra byte we read (off-- above)
+		n += sp.Tlength(len(l))
+		db.DPrintf(db.MR, "%v off %v skip %d\n", s.File, s.Offset, n)
 	}
 	lineRdr := bytes.NewReader([]byte{})
 	for scanner.Scan() {
 		l := scanner.Bytes()
-		n += len(l) + 1 // 1 for newline  XXX or 2 if \r\n
+		n += sp.Tlength(len(l)) + 1 // 1 for newline  XXX or 2 if \r\n
 		if len(l) > 0 {
 			lineRdr.Reset(l)
 			scan := bufio.NewScanner(lineRdr)
@@ -322,7 +323,8 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 				return 0, err
 			}
 		}
-		if sp.Tlength(n) >= s.Length {
+		if n >= s.Length {
+			db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
 			break
 		}
 	}

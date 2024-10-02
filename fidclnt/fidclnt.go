@@ -123,7 +123,7 @@ func (fidc *FidClnt) Insert(fid sp.Tfid, path *Channel) {
 	fidc.fids.insert(fid, path)
 }
 
-func (fidc *FidClnt) Clunk(fid sp.Tfid) *serr.Err {
+func (fidc *FidClnt) Clunk(fid sp.Tfid) error {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
 		return serr.NewErr(serr.TErrUnreachable, "Clunk")
@@ -287,7 +287,7 @@ func (fidc *FidClnt) Stat(fid sp.Tfid) (*sp.Stat, *serr.Err) {
 	return sp.NewStatProto(reply.Stat), nil
 }
 
-func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
+func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, error) {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
 		return 0, serr.NewErr(serr.TErrUnreachable, "ReadF")
@@ -299,7 +299,7 @@ func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) 
 	return cnt, nil
 }
 
-func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
+func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error) {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
 		return 0, serr.NewErr(serr.TErrUnreachable, "WriteF")

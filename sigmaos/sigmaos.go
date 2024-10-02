@@ -14,9 +14,14 @@ const (
 	O_WAIT Twait = true
 )
 
+type Watch func(error)
+
 type PathClntAPI interface {
-	GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
-	Stat(name string, principal *sp.Tprincipal) (*sp.Stat, error)
+	// Stat(pn string, principal *sp.Tprincipal) (*sp.Stat, error)
+	Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, w Watch) (sp.Tfid, error)
+	ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, error)
+	WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error)
+	Clunk(fid sp.Tfid) error
 }
 
 type FileAPI interface {

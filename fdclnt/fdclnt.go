@@ -14,6 +14,7 @@ import (
 	"sigmaos/sessp"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
+	"sigmaos/syncmap"
 )
 
 type FdClient struct {
@@ -21,16 +22,19 @@ type FdClient struct {
 	pc           *pathclnt.PathClnt
 	fds          *FdTable
 	ft           *FenceTable
+	mnts         *syncmap.SyncMap[string, sos.PathClntAPI]
 	disconnected bool
 }
 
 func NewFdClient(pe *proc.ProcEnv, fsc *fidclnt.FidClnt) sos.FileAPI {
 	fdc := &FdClient{
-		pe:  pe,
-		pc:  pathclnt.NewPathClnt(pe, fsc),
-		fds: newFdTable(),
-		ft:  newFenceTable(),
+		pe:   pe,
+		pc:   pathclnt.NewPathClnt(pe, fsc),
+		fds:  newFdTable(),
+		ft:   newFenceTable(),
+		mnts: syncmap.NewSyncMap[string, sos.PathClntAPI](),
 	}
+	fdc.mnts.Insert("name", fdc.pc)
 	return fdc
 }
 
@@ -58,7 +62,7 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 	if err != nil {
 		return -1, err
 	}
-	fd := fdc.fds.allocFd(fid, mode)
+	fd := fdc.fds.allocFd(fid, mode, fdc.pc)
 	return fd, nil
 }
 
@@ -67,7 +71,7 @@ func (fdc *FdClient) CreateLeased(path string, perm sp.Tperm, mode sp.Tmode, lid
 	if err != nil {
 		return -1, err
 	}
-	fd := fdc.fds.allocFd(fid, mode)
+	fd := fdc.fds.allocFd(fid, mode, fdc.pc)
 	return fd, nil
 }
 
@@ -88,22 +92,30 @@ func (fdc *FdClient) openWait(path string, mode sp.Tmode) (int, error) {
 			db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", path, err)
 			return -1, err
 		} else { // success; file is opened
-			fd = fdc.fds.allocFd(fid, mode)
+			fd = fdc.fds.allocFd(fid, mode, fdc.pc)
 			break
 		}
 	}
 	return fd, nil
 }
 
-func (fdc *FdClient) Open(path string, mode sp.Tmode, w sos.Twait) (int, error) {
+func (fdc *FdClient) Open(pn string, mode sp.Tmode, w sos.Twait) (int, error) {
 	if w {
-		return fdc.openWait(path, mode)
+		return fdc.openWait(pn, mode)
 	} else {
-		fid, err := fdc.pc.Open(path, fdc.pe.GetPrincipal(), mode, nil)
+		p := path.Split(pn)
+		if len(p) == 0 {
+			return -1, serr.NewErr(serr.TErrInval, pn[0])
+		}
+		pc, ok := fdc.mnts.Lookup(p[0])
+		if !ok {
+			return -1, serr.NewErr(serr.TErrNotfound, p[0])
+		}
+		fid, err := pc.Open(pn, fdc.pe.GetPrincipal(), mode, nil)
 		if err != nil {
 			return -1, err
 		}
-		fd := fdc.fds.allocFd(fid, mode)
+		fd := fdc.fds.allocFd(fid, mode, pc)
 		return fd, nil
 	}
 }

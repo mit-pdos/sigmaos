@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"sigmaos/serr"
+	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
 
@@ -15,6 +16,7 @@ type FdState struct {
 	offset sp.Toffset
 	fid    sp.Tfid
 	mode   sp.Tmode
+	pc     sos.PathClntAPI
 }
 
 type FdTable struct {
@@ -30,7 +32,7 @@ func newFdTable() *FdTable {
 	return fdt
 }
 
-func (fdt *FdTable) allocFd(nfid sp.Tfid, m sp.Tmode) int {
+func (fdt *FdTable) allocFd(nfid sp.Tfid, m sp.Tmode, pc sos.PathClntAPI) int {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -40,12 +42,13 @@ func (fdt *FdTable) allocFd(nfid sp.Tfid, m sp.Tmode) int {
 			fdt.fds[i].offset = 0
 			fdt.fds[i].fid = nfid
 			fdt.fds[i].mode = m
+			fdt.fds[i].pc = pc
 			return i
 		}
 	}
 
 	// no free one
-	fdt.fds = append(fdt.fds, FdState{0, nfid, m})
+	fdt.fds = append(fdt.fds, FdState{0, nfid, m, pc})
 	return len(fdt.fds) - 1
 }
 

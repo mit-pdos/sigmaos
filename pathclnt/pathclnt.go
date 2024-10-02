@@ -19,10 +19,9 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/serr"
+	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
-
-type Watch func(error)
 
 type PathClnt struct {
 	*fidclnt.FidClnt
@@ -226,7 +225,7 @@ func (pathc *PathClnt) Stat(name string, principal *sp.Tprincipal) (*sp.Stat, er
 	}
 }
 
-func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, w Watch) (sp.Tfid, error) {
+func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Open %v %v %v\n", pathc.cid, pn, mode, w)
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
@@ -244,7 +243,7 @@ func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, 
 	return fid, nil
 }
 
-func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w Watch) error {
+func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w sos.Watch) error {
 	db.DPrintf(db.PATHCLNT, "%v: SetDirWatch %v\n", pathc.cid, fid)
 	go func() {
 		err := pathc.FidClnt.Watch(fid)

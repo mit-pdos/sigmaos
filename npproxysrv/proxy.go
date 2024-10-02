@@ -5,6 +5,7 @@
 package npproxysrv
 
 import (
+	"errors"
 	"net"
 	"sync"
 
@@ -203,7 +204,11 @@ func (npc *NpSess) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	err := npc.fidc.Clunk(fid)
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Clunk: args %v err %v\n", args, err)
-		return sp.NewRerrorSerr(err)
+		var sr *serr.Err
+		if errors.As(err, &sr) {
+			return sp.NewRerrorSerr(sr)
+		}
+		return sp.NewRerrorErr(err)
 	}
 	npc.fm.delete(args.Tfid())
 	db.DPrintf(db.NPPROXY, "Clunk: args %v rets %v\n", args, rets)
@@ -271,7 +276,11 @@ func (npc *NpSess) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	cnt, err := npc.fidc.ReadF(fid, args.Toffset(), b, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Read: args %v err %v\n", args, err)
-		return nil, sp.NewRerrorSerr(err)
+		var sr *serr.Err
+		if errors.As(err, &sr) {
+			return nil, sp.NewRerrorSerr(sr)
+		}
+		return nil, sp.NewRerrorErr(err)
 	}
 	b = b[:cnt]
 	db.DPrintf(db.NPPROXY, "ReadUV: args %v rets %v %d", args, rets, cnt)
@@ -297,7 +306,11 @@ func (npc *NpSess) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 	n, err := npc.fidc.WriteF(fid, args.Toffset(), data, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Write: args %v err %v\n", args, err)
-		return sp.NewRerrorSerr(err)
+		var sr *serr.Err
+		if errors.As(err, &sr) {
+			return sp.NewRerrorSerr(sr)
+		}
+		return sp.NewRerrorErr(err)
 	}
 	rets.Count = uint32(n)
 	db.DPrintf(db.NPPROXY, "Write: args %v rets %v\n", args, rets)

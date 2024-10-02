@@ -1384,7 +1384,7 @@ func TestOpenRemoveRead(t *testing.T) {
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
 
-	b, err := rdr.(*fslib.FdReader).GetData()
+	b, err := rdr.GetData()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, d, b, "data")
 

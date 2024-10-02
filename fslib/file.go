@@ -46,17 +46,11 @@ func (fl *FsLib) PutLeasedFile(fname string, perm sp.Tperm, mode sp.Tmode, lid s
 // Open readers
 //
 
-type ReaderSeekerI interface {
-	reader.ReaderI
-	Lseek(off sp.Toffset) error
-	GetReader() io.Reader
-	Nbytes() sp.Tlength
-}
-
 type FdReader struct {
 	*reader.Reader
 	sof sos.FileAPI
 	fd  int
+	len sp.Tlength
 }
 
 func (rd *FdReader) GetReader() io.Reader {
@@ -80,28 +74,30 @@ func (rd *FdReader) Nbytes() sp.Tlength {
 	return rd.Reader.Nbytes()
 }
 
+// XXX axe
 func (rd *FdReader) Lseek(off sp.Toffset) error {
 	return rd.sof.Seek(rd.fd, off)
 }
 
-func newFdReader(sos sos.FileAPI, fd int) *FdReader {
-	return &FdReader{nil, sos, fd}
+func newFdReader(sos sos.FileAPI, fd int, len sp.Tlength) *FdReader {
+	return &FdReader{nil, sos, fd, len}
+}
+
+func (fl *FsLib) NewReaderRegion(fd int, path string, len sp.Tlength) *FdReader {
+	fdrdr := newFdReader(fl.FileAPI, fd, len)
+	fdrdr.Reader = reader.NewReader(fdrdr, path)
+	return fdrdr
 }
 
 func (fl *FsLib) NewReader(fd int, path string) *FdReader {
-	fdrdr := newFdReader(fl.FileAPI, fd)
-	fdrdr.Reader = reader.NewReader(fdrdr, path)
-	return fdrdr
+	return fl.NewReaderRegion(fd, path, 0)
 }
 
 func (fl *FsLib) NewWriter(fd int) *writer.Writer {
 	return writer.NewWriter(fl.FileAPI, fd)
 }
 
-func (fl *FsLib) OpenReader(path string) (ReaderSeekerI, error) {
-	//if strings.Contains(path, sp.S3) {
-	//return fl.OpenS3Reader(path)
-	//}
+func (fl *FsLib) OpenReader(path string) (*FdReader, error) {
 	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
@@ -109,8 +105,17 @@ func (fl *FsLib) OpenReader(path string) (ReaderSeekerI, error) {
 	return fl.NewReader(fd, path), nil
 }
 
+func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength) (*FdReader, error) {
+	fd, err := fl.Open(path, sp.OREAD)
+	if err != nil {
+		return nil, err
+	}
+	fl.Seek(fd, offset)
+	return fl.NewReaderRegion(fd, path, len), nil
+}
+
 type Rdr struct {
-	rdr ReaderSeekerI
+	rdr *FdReader
 	//brdr *bufio.Reader
 	ardr io.ReadCloser
 }
@@ -125,6 +130,7 @@ func (rdr *Rdr) Close() error {
 	return nil
 }
 
+// XXX read no more than length
 func (rdr *Rdr) Read(p []byte) (n int, err error) {
 	return rdr.ardr.Read(p)
 }
@@ -234,15 +240,15 @@ func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (
 	return &Wrt{w, aw, bw}, nil
 }
 
-func (fl *FsLib) CreateS3AsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (WriterI, error) {
-	w, err := fl.OpenS3Writer(fname)
-	if err != nil {
-		return nil, err
-	}
-	// aw := awriter.NewWriterSize(w, 4, sp.BUFSZ)
-	bw := bufio.NewWriterSize(w, sp.BUFSZ)
-	return &Wrt{w, nil, bw}, nil
-}
+// func (fl *FsLib) CreateS3AsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (WriterI, error) {
+// 	w, err := fl.OpenS3Writer(fname)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	// aw := awriter.NewWriterSize(w, 4, sp.BUFSZ)
+// 	bw := bufio.NewWriterSize(w, sp.BUFSZ)
+// 	return &Wrt{w, nil, bw}, nil
+// }
 
 func (wrt *Wrt) Close() error {
 	if err := wrt.bwrt.Flush(); err != nil {

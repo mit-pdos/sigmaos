@@ -186,7 +186,7 @@ func (ft *FtTasks) TaskReader(name string) (*fslib.FdReader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return rdr.(*fslib.FdReader), nil
+	return rdr, nil
 }
 
 func (ft *FtTasks) TaskPathName(name string) string {

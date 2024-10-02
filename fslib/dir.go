@@ -67,7 +67,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*sp.Stat) (bool, error)) (bool, e
 		return false, err
 	}
 	defer rdr.Close()
-	return reader.ReadDirEnts(reader.MkDirEntsReader(rdr.(*FdReader).Reader), f)
+	return reader.ReadDirEnts(reader.MkDirEntsReader(rdr.Reader), f)
 }
 
 func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
@@ -86,14 +86,14 @@ func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
 		return nil, nil, err
 	}
 	dirents := []*sp.Stat{}
-	_, error := reader.ReadDirEnts(reader.MkDirEntsReader(rdr.(*FdReader).Reader), func(st *sp.Stat) (bool, error) {
+	_, error := reader.ReadDirEnts(reader.MkDirEntsReader(rdr.Reader), func(st *sp.Stat) (bool, error) {
 		dirents = append(dirents, st)
 		return false, nil
 	})
 	if error != nil {
 		db.DPrintf(db.FSLIB_ERR, "Err reader.ReadDir: %v", error)
 	}
-	return dirents, rdr.(*FdReader), error
+	return dirents, rdr, error
 }
 
 // XXX should use Reader

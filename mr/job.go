@@ -28,8 +28,8 @@ const (
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"
 	JOBSEM      = "jobsem"
-	//SPLITSZ     = 10 * sp.MBYTE
-	SPLITSZ = 200 * sp.KBYTE
+	SPLITSZ     = 10 * sp.MBYTE
+	// SPLITSZ = 200 * sp.KBYTE
 )
 
 func JobOut(outDir, job string) string {

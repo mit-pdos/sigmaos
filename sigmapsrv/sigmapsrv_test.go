@@ -810,3 +810,43 @@ func TestColdPathMicro(t *testing.T) {
 	db.DPrintf(db.TEST, "MkDir done %v took avg %v max %v", pn, tot/N, max)
 	ts.Shutdown()
 }
+
+func TestColdAttach(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	sts, err := ts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	pe.KernelID = sts[0].Name
+
+	pn := filepath.Join(sp.SCHEDD, pe.KernelID)
+	ep, err := ts.ReadEndpoint(pn)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "endpoint %v", ep)
+
+	var max time.Duration
+	var tot time.Duration
+	const N = 1
+	for i := 0; i < N; i++ {
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		assert.Nil(t, err)
+		pn = filepath.Join(pn, rpc.RPC)
+		start := time.Now()
+		err = fsl.MountTree(ep, rpc.RPC, pn)
+		assert.Nil(t, err)
+		d := time.Since(start)
+		db.DPrintf(db.TEST, "Mount schedd [%v] %v as %v time %v", ep, rpc.RPC, pn, d)
+		if d > max {
+			max = d
+		}
+		tot += d
+		fsl.Close()
+	}
+	db.DPrintf(db.TEST, "MountTree avg %v max %v", tot/N, max)
+	ts.Shutdown()
+}

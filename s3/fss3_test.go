@@ -53,7 +53,7 @@ func TestReadOff(t *testing.T) {
 		return
 	}
 
-	rdr, err := ts.OpenS3Reader(filepath.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt"))
+	rdr, err := ts.OpenReader(filepath.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt"))
 	assert.Nil(t, err, "Error ReadOff %v", err)
 	rdr.Lseek(1 << 10)
 	brdr := bufio.NewReaderSize(rdr.GetReader(), 1<<16)
@@ -126,7 +126,7 @@ func TestReadSplit(t *testing.T) {
 		return
 	}
 
-	rdr, err := ts.OpenS3Reader(filepath.Join(sp.S3, "~local/9ps3/wiki/enwiki-latest-pages-articles-multistream.xml"))
+	rdr, err := ts.OpenReader(filepath.Join(sp.S3, "~local/9ps3/wiki/enwiki-latest-pages-articles-multistream.xml"))
 	assert.Nil(t, err)
 	err = rdr.Lseek(SPLITSZ)
 	assert.Nil(t, err)

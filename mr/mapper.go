@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	// "runtime/debug"
 	"strconv"
-	"strings"
+	// "strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -21,6 +21,8 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
+	//"sigmaos/s3/s3pathclnt"
+	// "sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -56,10 +58,12 @@ type Mapper struct {
 	line        []byte
 	init        bool
 	ch          chan error
+	s3c         *s3fileclnt.S3FileClnt // move to s3fileclnt?
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
 	m := &Mapper{
+		SigmaClnt:   sc,
 		mapf:        mapf,
 		combinef:    combinef,
 		jobRoot:     jobRoot,
@@ -73,7 +77,6 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		asyncwrts:   make([]fslib.WriterI, nr),
 		syncwrts:    make([]*writer.Writer, nr),
 		pwrts:       make([]*perf.PerfWriter, nr),
-		SigmaClnt:   sc,
 		perf:        p,
 		sbc:         NewScanByteCounter(p),
 		asyncrw:     asyncrw,
@@ -83,6 +86,20 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		line:        make([]byte, 0, lsz),
 		ch:          make(chan error),
 	}
+
+	// if strings.Contains(input, sp.S3) { // XXX or output
+	// 	var ok bool
+	// 	s3secrets, ok := proc.GetProcEnv().GetSecrets()["s3"]
+	// 	if !ok {
+	// 		return nil, serr.NewErr(serr.TErrPerm, fmt.Errorf("Principal has no S3 secrets"))
+	// 	}
+	// 	s3c, err := s3fileclnt.NewS3FileClnt(sc.FsLib, "s3clnt", s3secrets, m.GetNetProxyClnt())
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	m.s3c = s3c
+	// }
+
 	go func() {
 		m.ch <- m.initOutput()
 	}()
@@ -106,6 +123,7 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	if err != nil {
 		return nil, err
 	}
+
 	db.DPrintf(db.TEST, "NewSigmaClnt done at time: %v", time.Since(start))
 	asyncrw, err := strconv.ParseBool(args[6])
 	if err != nil {
@@ -115,6 +133,7 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
+
 	db.DPrintf(db.TEST, "NewMapper done at time: %v", time.Since(start))
 	if err := m.Started(); err != nil {
 		return nil, fmt.Errorf("NewMapper couldn't start %v", args)
@@ -135,22 +154,11 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 func (m *Mapper) initWrt(r int, name string) error {
 	db.DPrintf(db.MR, "InitWrt %v", name)
 	if m.asyncrw {
-		if strings.Contains(name, sp.S3) {
-			if wrt, err := m.OpenS3Writer(name); err != nil {
-				return err
-			} else {
-				//bwrt := bufio.NewWriterSize(wrt, sp.BUFSZ)
-				//m.syncwrts[r] = wrt
-				m.asyncwrts[r] = wrt
-				m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
-			}
+		if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
+			return err
 		} else {
-			if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
-				return err
-			} else {
-				m.asyncwrts[r] = wrt
-				m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
-			}
+			m.asyncwrts[r] = wrt
+			m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
 		}
 	} else {
 		if wrt, err := m.CreateWriter(name, 0777, sp.OWRITE); err != nil {
@@ -212,16 +220,10 @@ func (m *Mapper) outputBin() (Bin, error) {
 	bin := make(Bin, m.nreducetask)
 	outDirPath := MapIntermediateDir(m.job, m.intOutput)
 	start := time.Now()
-	var pn string
-	if strings.Contains(outDirPath, "/s3/") {
-		pn = outDirPath
-	} else {
-		var err error
-		pn, err = m.ResolveMounts(outDirPath)
-		db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
-		if err != nil {
-			return nil, fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
-		}
+	pn, err := m.ResolveMounts(outDirPath)
+	db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
+	if err != nil {
+		return nil, fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
 		bin[r].File = mshardfile(pn, r) + m.rand
@@ -278,21 +280,22 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		off--
 	}
 	start := time.Now()
-	rdr, err := m.OpenS3Reader(s.File, s.Offset, s.Length+sp.Tlength(m.linesz))
+	rdr, err := m.OpenReaderRegion(s.File, s.Offset, s.Length+sp.Tlength(m.linesz))
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}
+
 	db.DPrintf(db.MR, "Mapper openS3Reader time: %v", time.Since(start))
 	defer rdr.Close()
 
 	var scanner *bufio.Scanner
 	if true {
-		scanner = bufio.NewScanner(rdr)
+		scanner = bufio.NewScanner(rdr.Reader)
 	} else {
 		// To measure read tput; no computing
 		start = time.Now()
 		m.buf = m.buf[0:m.linesz]
-		n, err := io.ReadFull(rdr, m.buf)
+		n, err := io.ReadFull(rdr.Reader, m.buf)
 		if err != nil && err != io.ErrUnexpectedEOF {
 			db.DPrintf(db.ALWAYS, "Err ReadFull: n %v err %v", n, err)
 		}

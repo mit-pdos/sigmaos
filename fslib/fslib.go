@@ -3,8 +3,6 @@ package fslib
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-
 	db "sigmaos/debug"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
@@ -16,7 +14,6 @@ type FsLib struct {
 	pe  *proc.ProcEnv
 	npc *netproxyclnt.NetProxyClnt
 	sos.FileAPI
-	s3clnt *s3.Client
 }
 
 func NewFsLibAPI(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, sos sos.FileAPI) (*FsLib, error) {

@@ -76,6 +76,9 @@ const (
 
 	// stats exported by named
 	PSTATSD = ".pstatsd"
+
+	// names for directly-mounted services
+	S3CLNT = "s3clnt"
 )
 
 // Dirs mounted from the root named into tenants' realms

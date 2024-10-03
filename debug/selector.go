@@ -196,6 +196,7 @@ const (
 	SESSDEVCLNT             = "SESSDEVCLNT"
 	K8S_UTIL                = "K8S_UTIL"
 	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
+	S3CLNT                  = "S3CLNT"
 )
 
 // Server Libraries

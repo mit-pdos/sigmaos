@@ -65,6 +65,7 @@ type FileAPI interface {
 	GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error)
 	InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error
 	NewRootMount(path string, epname string) error
+	MountPathClnt(mnt string, pc PathClntAPI) error
 
 	// Done using SigmaOS, which detaches from any mounted servers and
 	// may close the session with those servers.

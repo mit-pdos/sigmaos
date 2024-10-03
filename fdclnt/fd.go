@@ -82,26 +82,26 @@ func (fdt *FdTable) lookupL(fd int) (*FdState, *serr.Err) {
 	return &fdt.fds[fd], nil
 }
 
-func (fdt *FdTable) lookup(fd int) (sp.Tfid, *serr.Err) {
+func (fdt *FdTable) lookup(fd int) (sp.Tfid, sos.PathClntAPI, *serr.Err) {
 	fdt.Lock()
 	defer fdt.Unlock()
 
 	st, err := fdt.lookupL(fd)
 	if err != nil {
-		return sp.NoFid, err
+		return sp.NoFid, nil, err
 	}
-	return st.fid, nil
+	return st.fid, st.pc, nil
 }
 
-func (fdt *FdTable) lookupOff(fd int) (sp.Tfid, sp.Toffset, *serr.Err) {
+func (fdt *FdTable) lookupOff(fd int) (sp.Tfid, sp.Toffset, sos.PathClntAPI, *serr.Err) {
 	fdt.Lock()
 	defer fdt.Unlock()
 
 	st, err := fdt.lookupL(fd)
 	if err != nil {
-		return sp.NoFid, 0, err
+		return sp.NoFid, 0, nil, err
 	}
-	return st.fid, st.offset, nil
+	return st.fid, st.offset, st.pc, nil
 }
 
 func (fdt *FdTable) setOffset(fd int, off sp.Toffset) *serr.Err {

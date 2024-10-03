@@ -43,11 +43,11 @@ func (fdc *FdClient) String() string {
 }
 
 func (fdc *FdClient) CloseFd(fd int) error {
-	fid, error := fdc.fds.lookup(fd)
-	if error != nil {
-		return error
+	fid, pc, err := fdc.fds.lookup(fd)
+	if err != nil {
+		return err
 	}
-	if err := fdc.pc.Clunk(fid); err != nil {
+	if err := pc.Clunk(fid); err != nil {
 		return err
 	}
 	return nil
@@ -75,11 +75,11 @@ func (fdc *FdClient) CreateLeased(path string, perm sp.Tperm, mode sp.Tmode, lid
 	return fd, nil
 }
 
-func (fdc *FdClient) openWait(path string, mode sp.Tmode) (int, error) {
+func (fdc *FdClient) openWait(pc sos.PathClntAPI, path string, mode sp.Tmode) (int, error) {
 	ch := make(chan error)
 	fd := -1
 	for {
-		fid, err := fdc.pc.Open(path, fdc.pe.GetPrincipal(), mode, func(err error) {
+		fid, err := pc.Open(path, fdc.pe.GetPrincipal(), mode, func(err error) {
 			ch <- err
 		})
 		if serr.IsErrCode(err, serr.TErrNotfound) {
@@ -92,7 +92,7 @@ func (fdc *FdClient) openWait(path string, mode sp.Tmode) (int, error) {
 			db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", path, err)
 			return -1, err
 		} else { // success; file is opened
-			fd = fdc.fds.allocFd(fid, mode, fdc.pc)
+			fd = fdc.fds.allocFd(fid, mode, pc)
 			break
 		}
 	}
@@ -100,17 +100,17 @@ func (fdc *FdClient) openWait(path string, mode sp.Tmode) (int, error) {
 }
 
 func (fdc *FdClient) Open(pn string, mode sp.Tmode, w sos.Twait) (int, error) {
+	p := path.Split(pn)
+	if len(p) == 0 {
+		return -1, serr.NewErr(serr.TErrInval, pn[0])
+	}
+	pc, ok := fdc.mnts.Lookup(p[0])
+	if !ok {
+		return -1, serr.NewErr(serr.TErrNotfound, p[0])
+	}
 	if w {
-		return fdc.openWait(pn, mode)
+		return fdc.openWait(pc, pn, mode)
 	} else {
-		p := path.Split(pn)
-		if len(p) == 0 {
-			return -1, serr.NewErr(serr.TErrInval, pn[0])
-		}
-		pc, ok := fdc.mnts.Lookup(p[0])
-		if !ok {
-			return -1, serr.NewErr(serr.TErrNotfound, p[0])
-		}
 		fid, err := pc.Open(pn, fdc.pe.GetPrincipal(), mode, nil)
 		if err != nil {
 			return -1, err
@@ -140,8 +140,8 @@ func (fdc *FdClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []
 	return fdc.pc.PutFile(fname, fdc.pe.GetPrincipal(), mode|sp.OWRITE, perm, data, off, lid, f)
 }
 
-func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, b []byte) (sp.Tsize, error) {
-	cnt, err := fdc.pc.ReadF(fid, off, b, sp.NullFence())
+func (fdc *FdClient) readFid(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.Toffset, b []byte) (sp.Tsize, error) {
+	cnt, err := pc.ReadF(fid, off, b, sp.NullFence())
 	if err != nil {
 		return 0, err
 	}
@@ -149,11 +149,11 @@ func (fdc *FdClient) readFid(fd int, fid sp.Tfid, off sp.Toffset, b []byte) (sp.
 }
 
 func (fdc *FdClient) Read(fd int, b []byte) (sp.Tsize, error) {
-	fid, off, sr := fdc.fds.lookupOff(fd)
+	fid, off, pc, sr := fdc.fds.lookupOff(fd)
 	if sr != nil {
 		return 0, sr
 	}
-	cnt, err := fdc.readFid(fd, fid, off, b)
+	cnt, err := fdc.readFid(fd, pc, fid, off, b)
 	if err != nil {
 		return 0, err
 	}
@@ -162,14 +162,14 @@ func (fdc *FdClient) Read(fd int, b []byte) (sp.Tsize, error) {
 }
 
 func (fdc *FdClient) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
-	fid, _, sr := fdc.fds.lookupOff(fd)
+	fid, _, pc, sr := fdc.fds.lookupOff(fd)
 	if sr != nil {
 		return 0, sr
 	}
-	return fdc.readFid(fd, fid, o, b)
+	return fdc.readFid(fd, pc, fid, o, b)
 }
 
-func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, error) {
+func (fdc *FdClient) writeFid(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, error) {
 	f := &f0
 	if !f0.HasFence() {
 		ch := fdc.pc.FidClnt.Lookup(fid)
@@ -178,7 +178,7 @@ func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, 
 		}
 		f = fdc.ft.lookupPath(ch.Path())
 	}
-	sz, err := fdc.pc.WriteF(fid, off, data, f)
+	sz, err := pc.WriteF(fid, off, data, f)
 	if err != nil {
 		return 0, err
 	}
@@ -187,28 +187,27 @@ func (fdc *FdClient) writeFid(fd int, fid sp.Tfid, off sp.Toffset, data []byte, 
 }
 
 func (fdc *FdClient) Write(fd int, data []byte) (sp.Tsize, error) {
-	fid, off, error := fdc.fds.lookupOff(fd)
-	if error != nil {
-		return 0, error
+	fid, off, pc, err := fdc.fds.lookupOff(fd)
+	if err != nil {
+		return 0, err
 	}
-	return fdc.writeFid(fd, fid, off, data, sp.NoFence())
+	return fdc.writeFid(fd, pc, fid, off, data, sp.NoFence())
 }
 
 func (fdc *FdClient) WriteFence(fd int, data []byte, f sp.Tfence) (sp.Tsize, error) {
-	fid, off, error := fdc.fds.lookupOff(fd)
-	if error != nil {
-		return 0, error
+	fid, off, _, err := fdc.fds.lookupOff(fd)
+	if err != nil {
+		return 0, err
 	}
-	return fdc.writeFid(fd, fid, off, data, f)
+	return fdc.writeFid(fd, fdc.pc, fid, off, data, f)
 }
 
 func (fdc *FdClient) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error {
-	fid, _, error := fdc.fds.lookupOff(fd)
-	if error != nil {
-		return error
-	}
-	err := fdc.pc.WriteRead(fid, iniov, outiov)
+	fid, _, _, err := fdc.fds.lookupOff(fd)
 	if err != nil {
+		return err
+	}
+	if err := fdc.pc.WriteRead(fid, iniov, outiov); err != nil {
 		return err
 	}
 	return nil
@@ -223,7 +222,7 @@ func (fdc *FdClient) Seek(fd int, off sp.Toffset) error {
 }
 
 func (fdc *FdClient) DirWatch(fd int) error {
-	fid, err := fdc.fds.lookup(fd)
+	fid, _, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return err
 	}
@@ -272,6 +271,11 @@ func (fdc *FdClient) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, erro
 
 func (fdc *FdClient) NewRootMount(pn, epname string) error {
 	return fdc.pc.MntClnt().NewRootMount(fdc.pe.GetPrincipal(), pn, epname)
+}
+
+func (fdc *FdClient) MountPathClnt(mnt string, clnt sos.PathClntAPI) error {
+	fdc.mnts.Insert(mnt, clnt)
+	return nil
 }
 
 func (fdc *FdClient) Mounts() []string {

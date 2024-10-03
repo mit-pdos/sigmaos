@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	// "runtime/debug"
 	"strconv"
-	// "strings"
+	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -21,8 +21,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
-	//"sigmaos/s3/s3pathclnt"
-	// "sigmaos/serr"
+	"sigmaos/s3/s3pathclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -58,7 +57,7 @@ type Mapper struct {
 	line        []byte
 	init        bool
 	ch          chan error
-	s3c         *s3fileclnt.S3FileClnt // move to s3fileclnt?
+	s3c         *s3pathclnt.S3PathClnt
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
@@ -86,19 +85,6 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		line:        make([]byte, 0, lsz),
 		ch:          make(chan error),
 	}
-
-	// if strings.Contains(input, sp.S3) { // XXX or output
-	// 	var ok bool
-	// 	s3secrets, ok := proc.GetProcEnv().GetSecrets()["s3"]
-	// 	if !ok {
-	// 		return nil, serr.NewErr(serr.TErrPerm, fmt.Errorf("Principal has no S3 secrets"))
-	// 	}
-	// 	s3c, err := s3fileclnt.NewS3FileClnt(sc.FsLib, "s3clnt", s3secrets, m.GetNetProxyClnt())
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	m.s3c = s3c
-	// }
 
 	go func() {
 		m.ch <- m.initOutput()
@@ -269,6 +255,13 @@ func (m *Mapper) CombineEmit() error {
 }
 
 func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
+	if strings.Contains(s.File, sp.S3) {
+		m.MountS3PathClnt()
+		pn, _ := strings.CutPrefix(s.File, filepath.Join(sp.S3, "~local"))
+		s.File = filepath.Join(sp.S3CLNT, pn)
+		db.DPrintf(db.TEST, "input %v", s.File)
+	}
+	db.DPrintf(db.MR, "Mapper doSplit %v\n", s)
 	off := s.Offset
 	if off != 0 {
 		// -1 to pick up last byte from prev split so that if s.Offset
@@ -353,7 +346,6 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 	ni := sp.Tlength(0)
 	getSplitStart := time.Now()
 	for _, s := range bin {
-		db.DPrintf(db.MR, "Mapper process split %v\n", s)
 		n, err := m.doSplit(&s, emit)
 		if err != nil {
 			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)

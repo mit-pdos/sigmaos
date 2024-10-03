@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"hash/fnv"
-	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
@@ -101,8 +100,7 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 	binsz := uint64(0)
 	bin := Bin{}
 
-	anydir := strings.ReplaceAll(dir, "~local", "~any")
-	sts, err := fsl.GetDir(anydir)
+	sts, err := fsl.GetDir(dir)
 	if err != nil {
 		return nil, err
 	}

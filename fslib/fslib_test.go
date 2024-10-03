@@ -331,10 +331,8 @@ func TestReadOff(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	rdr, err := ts.OpenReader(fn)
+	rdr, err := ts.OpenReaderRegion(fn, 3, 20)
 	assert.Equal(t, nil, err)
-
-	rdr.Lseek(3)
 	b := make([]byte, 10)
 	n, err := rdr.Reader.Read(b)
 	assert.Nil(t, err)

@@ -67,7 +67,6 @@ func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, err
 		return -1, err
 	}
 	fd := fdc.fds.allocFd(fid, mode, pc)
-	db.DPrintf(db.TEST, "create -> %d %v", fd, fid)
 	return fd, nil
 }
 
@@ -179,12 +178,10 @@ func (fdc *FdClient) writeFid(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.To
 		}
 		f = fdc.ft.lookupPath(pn)
 	}
-	db.DPrintf(db.TEST, "writef %v %d %d", fid, off, len(data))
 	sz, err := pc.WriteF(fid, off, data, f)
 	if err != nil {
 		return 0, err
 	}
-	db.DPrintf(db.TEST, "writef %v %d %d %d", fid, off, len(data), sz)
 	fdc.fds.incOff(fd, sp.Toffset(sz))
 	return sz, nil
 }
@@ -194,7 +191,6 @@ func (fdc *FdClient) Write(fd int, data []byte) (sp.Tsize, error) {
 	if err != nil {
 		return 0, err
 	}
-	db.DPrintf(db.TEST, "Write fd %d fid %v off %d", fd, fid, off)
 	return fdc.writeFid(fd, pc, fid, off, data, sp.NoFence())
 }
 

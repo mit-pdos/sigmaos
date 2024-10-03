@@ -53,15 +53,15 @@ type FdReader struct {
 	len sp.Tlength
 }
 
-func (rd *FdReader) GetReader() io.Reader {
-	return rd.Reader
-}
-
 func (rd *FdReader) Close() error {
 	return rd.sof.CloseFd(rd.fd)
 }
 
+// Read no more than len bytes, if len is set
 func (rd *FdReader) Read(o sp.Toffset, b []byte) (int, error) {
+	if rd.len != 0 && rd.Nbytes() >= rd.len {
+		return 0, io.EOF
+	}
 	sz, err := rd.sof.Read(rd.fd, b)
 	return int(sz), err
 }
@@ -72,11 +72,6 @@ func (rd *FdReader) Fd() int {
 
 func (rd *FdReader) Nbytes() sp.Tlength {
 	return rd.Reader.Nbytes()
-}
-
-// XXX axe
-func (rd *FdReader) Lseek(off sp.Toffset) error {
-	return rd.sof.Seek(rd.fd, off)
 }
 
 func newFdReader(sos sos.FileAPI, fd int, len sp.Tlength) *FdReader {
@@ -115,7 +110,7 @@ func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength
 }
 
 type Rdr struct {
-	rdr *FdReader
+	*FdReader
 	//brdr *bufio.Reader
 	ardr io.ReadCloser
 }
@@ -124,54 +119,29 @@ func (rdr *Rdr) Close() error {
 	if err := rdr.ardr.Close(); err != nil {
 		return err
 	}
-	if err := rdr.rdr.Close(); err != nil {
+	if err := rdr.FdReader.Close(); err != nil {
 		return err
 	}
 	return nil
 }
 
-// XXX read no more than length
 func (rdr *Rdr) Read(p []byte) (n int, err error) {
 	return rdr.ardr.Read(p)
 }
 
-func (rdr *Rdr) Nbytes() sp.Tlength {
-	return rdr.rdr.Nbytes()
-}
-
 func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
-	rdr, err := fl.OpenReader(path)
+	rdr, err := fl.OpenReaderRegion(path, offset, 0)
 	if err != nil {
 		return nil, err
 	}
-	r := &Rdr{rdr: rdr}
-	if err := rdr.Lseek(offset); err != nil {
-		return nil, err
-	}
+	r := &Rdr{FdReader: rdr}
 	// r.brdr = bufio.NewReaderSize(rdr.GetReader(), sp.BUFSZ)
-	r.ardr, err = readahead.NewReaderSize(rdr.GetReader(), 4, sp.BUFSZ)
+	r.ardr, err = readahead.NewReaderSize(rdr.Reader, 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err
 	}
 	return r, nil
 }
-
-// func (fl *FsLib) OpenS3AsyncReader(path string, offset sp.Toffset) (io.ReadCloser, error) {
-// 	rdr, err := fl.OpenS3Reader(path)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	r := &Rdr{rdr: rdr}
-// 	if err := rdr.Lseek(offset); err != nil {
-// 		return nil, err
-// 	}
-// 	// r.brdr = bufio.NewReaderSize(rdr.GetReader(), sp.BUFSZ)
-// 	r.ardr, err = readahead.NewReaderSize(rdr.GetReader(), 4, sp.BUFSZ)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return r, nil
-// }
 
 func (fl *FsLib) OpenWaitReader(path string) (*FdReader, error) {
 	fd, err := fl.FileAPI.Open(path, sp.OREAD, sos.O_WAIT)

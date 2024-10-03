@@ -210,16 +210,6 @@ func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (
 	return &Wrt{w, aw, bw}, nil
 }
 
-// func (fl *FsLib) CreateS3AsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (WriterI, error) {
-// 	w, err := fl.OpenS3Writer(fname)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	// aw := awriter.NewWriterSize(w, 4, sp.BUFSZ)
-// 	bw := bufio.NewWriterSize(w, sp.BUFSZ)
-// 	return &Wrt{w, nil, bw}, nil
-// }
-
 func (wrt *Wrt) Close() error {
 	if err := wrt.bwrt.Flush(); err != nil {
 		return err
@@ -247,7 +237,6 @@ func (wrt *Wrt) Nbytes() sp.Tlength {
 // Util
 //
 
-// XXX use reader/writer interfaces
 func (fl *FsLib) CopyFile(src, dst string) error {
 	//	start := time.Now()
 	//	defer func(t *time.Time) {

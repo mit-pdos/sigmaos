@@ -63,7 +63,7 @@ func (s3r *s3Reader) readChunk(off sp.Toffset) error {
 }
 
 func (s3r *s3Reader) read(off sp.Toffset, b []byte) (int, error) {
-	db.DPrintf(db.S3CLNT, "s3.Read off %d len %d", off, len(b))
+	// db.DPrintf(db.S3CLNT, "s3.Read off %d len %d", off, len(b))
 	if off >= sp.Toffset(s3r.sz) {
 		return 0, io.EOF
 	}
@@ -80,7 +80,7 @@ func (s3r *s3Reader) read(off sp.Toffset, b []byte) (int, error) {
 		s3r.chunk.Close()
 		s3r.chunk = nil
 	}
-	db.DPrintf(db.S3CLNT, "s3.Read off %d end %d buflen %d n %d err %v", off, s3r.sz, len(b), n, err)
+	// db.DPrintf(db.S3CLNT, "s3.Read off %d end %d buflen %d n %d err %v", off, s3r.sz, len(b), n, err)
 	return n, nil
 }
 

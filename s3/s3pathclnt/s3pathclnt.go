@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -17,6 +18,7 @@ import (
 	"sigmaos/serr"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
+	"sigmaos/syncmap"
 )
 
 const (
@@ -26,12 +28,18 @@ const (
 
 type S3PathClnt struct {
 	s3clnt *s3.Client
-	s3r    *s3Reader
-	s3w    *s3Writer
+	rfids  *syncmap.SyncMap[sp.Tfid, *s3Reader]
+	wfids  *syncmap.SyncMap[sp.Tfid, *s3Writer]
+
+	sync.Mutex
+	next sp.Tfid
 }
 
 func NewS3PathClnt(s3secrets *sp.SecretProto, npc *netproxyclnt.NetProxyClnt) (*S3PathClnt, error) {
-	s3c := &S3PathClnt{}
+	s3c := &S3PathClnt{
+		rfids: syncmap.NewSyncMap[sp.Tfid, *s3Reader](),
+		wfids: syncmap.NewSyncMap[sp.Tfid, *s3Writer](),
+	}
 	if s3clnt, err := getS3Client(s3secrets, npc); err != nil {
 		return nil, err
 	} else {
@@ -40,8 +48,15 @@ func NewS3PathClnt(s3secrets *sp.SecretProto, npc *netproxyclnt.NetProxyClnt) (*
 	return s3c, nil
 }
 
+func (s3c *S3PathClnt) allocFid() sp.Tfid {
+	s3c.Lock()
+	defer s3c.Unlock()
+	fid := s3c.next
+	s3c.next += 1
+	return fid
+}
+
 func (s3c *S3PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {
-	db.DPrintf(db.S3CLNT, "Open %v %v", pn, mode)
 	if w != nil {
 		return sp.NoFid, serr.NewErr(serr.TErrNotSupported, "Twait")
 	}
@@ -50,23 +65,61 @@ func (s3c *S3PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, 
 		if err != nil {
 			return sp.NoFid, err
 		}
-		s3c.s3r = s3r
+		fid := s3c.allocFid()
+		s3c.rfids.Insert(fid, s3r)
+		db.DPrintf(db.S3CLNT, "Open %v %v %v", pn, mode, fid)
+		return fid, nil
 	}
-	return 0, nil
+	return sp.NoFid, serr.NewErr(serr.TErrInval, mode)
+}
+
+func (s3c *S3PathClnt) Create(pn string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
+	s3w, err := s3c.openS3Writer(pn)
+	if err != nil {
+		return sp.NoFid, err
+	}
+	fid := s3c.allocFid()
+	s3c.wfids.Insert(fid, s3w)
+	db.DPrintf(db.S3CLNT, "Create %v %v", pn, fid)
+	return fid, nil
 }
 
 func (s3c *S3PathClnt) ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, error) {
-	n, err := s3c.s3r.read(off, b)
+	s3r, ok := s3c.rfids.Lookup(fid)
+	if !ok {
+		return 0, serr.NewErr(serr.TErrNotfound, fid)
+	}
+	n, err := s3r.read(off, b)
 	return sp.Tsize(n), err
 }
 
 func (s3c *S3PathClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error) {
-	return 0, nil
+	s3w, ok := s3c.wfids.Lookup(fid)
+	if !ok {
+		return 0, serr.NewErr(serr.TErrNotfound, fid)
+	}
+	n, err := s3w.write(off, data)
+	return sp.Tsize(n), err
 }
 
 func (s3c *S3PathClnt) Clunk(fid sp.Tfid) error {
-	// XXX in case of write wait
-	return nil
+	db.DPrintf(db.S3CLNT, "Clunk %v", fid)
+	s3r, ok := s3c.rfids.Lookup(fid)
+	if ok {
+		s3r.close()
+		return nil
+	}
+	s3w, ok := s3c.wfids.Lookup(fid)
+	if ok {
+		s3w.close()
+		return nil
+	}
+	return serr.NewErr(serr.TErrNotfound, fid)
+}
+
+// To implement PathClntAPI...
+func (s3c *S3PathClnt) LookupPath(fid sp.Tfid) (path.Tpathname, error) {
+	return nil, nil
 }
 
 // XXX deduplicate with s3
@@ -137,7 +190,7 @@ func (s3c *S3PathClnt) openS3Reader(pn string) (*s3Reader, error) {
 	return reader, err
 }
 
-func (s3c *S3PathClnt) openS3Writer(pn string) (int, error) {
+func (s3c *S3PathClnt) openS3Writer(pn string) (*s3Writer, error) {
 	pn0, _ := strings.CutPrefix(pn, sp.S3CLNT+"/")
 	p := path.Split(pn0)
 
@@ -153,6 +206,5 @@ func (s3c *S3PathClnt) openS3Writer(pn string) (int, error) {
 		ch:     make(chan error),
 	}
 	go writer.writer()
-	s3c.s3w = writer
-	return 0, nil
+	return writer, nil
 }

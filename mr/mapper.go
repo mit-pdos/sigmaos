@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	// "runtime/debug"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -85,7 +84,9 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		line:        make([]byte, 0, lsz),
 		ch:          make(chan error),
 	}
-
+	if sp.IsS3Path(intOutput) {
+		m.MountS3PathClnt()
+	}
 	go func() {
 		m.ch <- m.initOutput()
 	}()
@@ -138,6 +139,10 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 }
 
 func (m *Mapper) initWrt(r int, name string) error {
+	pn, ok := sp.ClientPath(name)
+	if ok {
+		name = pn
+	}
 	db.DPrintf(db.MR, "InitWrt %v", name)
 	if m.asyncrw {
 		if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
@@ -255,11 +260,9 @@ func (m *Mapper) CombineEmit() error {
 }
 
 func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
-	if strings.Contains(s.File, sp.S3) {
-		m.MountS3PathClnt()
-		pn, _ := strings.CutPrefix(s.File, filepath.Join(sp.S3, "~local"))
-		s.File = filepath.Join(sp.S3CLNT, pn)
-		db.DPrintf(db.TEST, "input %v", s.File)
+	pn, ok := sp.ClientPath(s.File)
+	if ok {
+		s.File = pn
 	}
 	db.DPrintf(db.MR, "Mapper doSplit %v\n", s)
 	off := s.Offset

@@ -58,11 +58,16 @@ func (fdc *FdClient) Stat(name string) (*sp.Stat, error) {
 }
 
 func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
-	fid, err := fdc.pc.Create(path, fdc.pe.GetPrincipal(), perm, mode, sp.NoLeaseId, sp.NoFence())
+	pc, err := fdc.mntLookup(path)
 	if err != nil {
 		return -1, err
 	}
-	fd := fdc.fds.allocFd(fid, mode, fdc.pc)
+	fid, err := pc.Create(path, fdc.pe.GetPrincipal(), perm, mode, sp.NoLeaseId, sp.NoFence())
+	if err != nil {
+		return -1, err
+	}
+	fd := fdc.fds.allocFd(fid, mode, pc)
+	db.DPrintf(db.TEST, "create -> %d %v", fd, fid)
 	return fd, nil
 }
 
@@ -100,13 +105,9 @@ func (fdc *FdClient) openWait(pc sos.PathClntAPI, path string, mode sp.Tmode) (i
 }
 
 func (fdc *FdClient) Open(pn string, mode sp.Tmode, w sos.Twait) (int, error) {
-	p := path.Split(pn)
-	if len(p) == 0 {
-		return -1, serr.NewErr(serr.TErrInval, pn[0])
-	}
-	pc, ok := fdc.mnts.Lookup(p[0])
-	if !ok {
-		return -1, serr.NewErr(serr.TErrNotfound, p[0])
+	pc, err := fdc.mntLookup(pn)
+	if err != nil {
+		return -1, err
 	}
 	if w {
 		return fdc.openWait(pc, pn, mode)
@@ -172,16 +173,18 @@ func (fdc *FdClient) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
 func (fdc *FdClient) writeFid(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, error) {
 	f := &f0
 	if !f0.HasFence() {
-		ch := fdc.pc.FidClnt.Lookup(fid)
-		if ch == nil {
-			return 0, serr.NewErr(serr.TErrUnreachable, "writeFid")
+		pn, err := pc.LookupPath(fid)
+		if err != nil {
+			return 0, err
 		}
-		f = fdc.ft.lookupPath(ch.Path())
+		f = fdc.ft.lookupPath(pn)
 	}
+	db.DPrintf(db.TEST, "writef %v %d %d", fid, off, len(data))
 	sz, err := pc.WriteF(fid, off, data, f)
 	if err != nil {
 		return 0, err
 	}
+	db.DPrintf(db.TEST, "writef %v %d %d %d", fid, off, len(data), sz)
 	fdc.fds.incOff(fd, sp.Toffset(sz))
 	return sz, nil
 }
@@ -191,6 +194,7 @@ func (fdc *FdClient) Write(fd int, data []byte) (sp.Tsize, error) {
 	if err != nil {
 		return 0, err
 	}
+	db.DPrintf(db.TEST, "Write fd %d fid %v off %d", fd, fid, off)
 	return fdc.writeFid(fd, pc, fid, off, data, sp.NoFence())
 }
 
@@ -306,4 +310,16 @@ func (fdc *FdClient) Detach(pn string) error {
 
 func (fdc *FdClient) Close() error {
 	return fdc.pc.Close()
+}
+
+func (fdc *FdClient) mntLookup(pn string) (sos.PathClntAPI, error) {
+	p := path.Split(pn)
+	if len(p) == 0 {
+		return nil, serr.NewErr(serr.TErrInval, pn[0])
+	}
+	pc, ok := fdc.mnts.Lookup(p[0])
+	if !ok {
+		return nil, serr.NewErr(serr.TErrNotfound, p[0])
+	}
+	return pc, nil
 }

@@ -18,7 +18,6 @@ type s3Writer struct {
 	bucket string
 	key    string
 	offset sp.Toffset
-	sz     sp.Tlength
 	n      sp.Tlength
 	r      *io.PipeReader
 	w      *io.PipeWriter
@@ -39,19 +38,23 @@ func (s3w *s3Writer) writer() {
 	s3w.ch <- err
 }
 
-func (s3w *s3Writer) Write(b []byte) (int, error) {
-	db.DPrintf(db.S3CLNT, "Write %v off %v f %v\n", len(b), s3w.offset, s3w.key)
+func (s3w *s3Writer) write(off sp.Toffset, b []byte) (int, error) {
+	db.DPrintf(db.S3CLNT, "write %v off %v f %v\n", len(b), s3w.offset, s3w.key)
+	if off != s3w.offset {
+		db.DPrintf(db.S3CLNT, "write err s3w.off %v off %d\n", s3w.offset, off)
+		return 0, serr.NewErr(serr.TErrInval, off)
+	}
 	if n, err := s3w.w.Write(b); err != nil {
-		db.DPrintf(db.S3CLNT, "Write %v %v err %v\n", s3w.offset, len(b), err)
+		db.DPrintf(db.S3CLNT, "write %v %v err %v\n", s3w.offset, len(b), err)
 		return 0, serr.NewErrError(err)
 	} else {
 		s3w.offset += sp.Toffset(n)
-		s3w.sz = sp.Tlength(s3w.offset)
 		return n, nil
 	}
 }
 
-func (s3w *s3Writer) Close() error {
+func (s3w *s3Writer) close() error {
+	db.DPrintf(db.S3CLNT, "close writer")
 	s3w.w.Close()
 	// wait for uploader to finish
 	err := <-s3w.ch
@@ -59,8 +62,4 @@ func (s3w *s3Writer) Close() error {
 		return serr.NewErrError(err)
 	}
 	return nil
-}
-
-func (s3w *s3Writer) Nbytes() sp.Tlength {
-	return s3w.sz
 }

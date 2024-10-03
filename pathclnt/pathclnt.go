@@ -324,6 +324,15 @@ func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 	return cnt, nil
 }
 
+// XXX move paths out of fid
+func (pathc *PathClnt) LookupPath(fid sp.Tfid) (path.Tpathname, error) {
+	ch := pathc.FidClnt.Lookup(fid)
+	if ch == nil {
+		return nil, serr.NewErr(serr.TErrUnreachable, "writeFid")
+	}
+	return ch.Path(), nil
+}
+
 // For npproxy
 func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Tpathname, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
 	ch := pathc.FidClnt.Lookup(fid)

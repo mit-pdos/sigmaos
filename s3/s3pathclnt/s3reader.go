@@ -84,7 +84,7 @@ func (s3r *s3Reader) read(off sp.Toffset, b []byte) (int, error) {
 	return n, nil
 }
 
-func (s3r *s3Reader) Close() error {
+func (s3r *s3Reader) close() error {
 	if s3r.chunk != nil {
 		return s3r.chunk.Close()
 	}

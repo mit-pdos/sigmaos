@@ -336,7 +336,7 @@ func TestReadOff(t *testing.T) {
 
 	rdr.Lseek(3)
 	b := make([]byte, 10)
-	n, err := rdr.GetReader().Read(b)
+	n, err := rdr.Reader.Read(b)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, n)
 	assert.Equal(t, "lo", string(b[:2]))

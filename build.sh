@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--push TAG] [--target TARGET] [--version VERSION] [--userbin USERBIN] [--parallel] [--rebuildbuilder]" 1>&2
+  echo "Usage: $0 [--push TAG] [--target TARGET] [--version VERSION] [--userbin USERBIN] [--parallel] [--rebuildbuilder] [--nocache]" 1>&2
 }
 
 PARALLEL=""
 REBUILD_BUILDER="false"
+NO_CACHE=""
 TAG=""
 TARGET="local"
 VERSION="1.0"
@@ -19,6 +20,10 @@ while [[ "$#" -gt 0 ]]; do
   --rebuildbuilder)
     shift
     REBUILD_BUILDER="true"
+    ;;
+  --nocache)
+    shift
+    NO_CACHE="--no-cache"
     ;;
   --push)
     shift
@@ -128,7 +133,7 @@ fi
 if [ -z "$rsbuildercid" ]; then
   # Build builder
   echo "========== Build Rust builder image =========="
-  DOCKER_BUILDKIT=1 docker build --progress=plain -f rs-builder.Dockerfile -t sig-rs-builder . 2>&1 | tee $BUILD_LOG/sig-rs-builder.out
+  DOCKER_BUILDKIT=1 docker build $NO_CACHE --progress=plain -f rs-builder.Dockerfile -t sig-rs-builder . 2>&1 | tee $BUILD_LOG/sig-rs-builder.out
   echo "========== Done building Rust builder =========="
   # Start builder
   echo "========== Starting Rust builder container =========="
@@ -169,8 +174,6 @@ RS_BUILD_ARGS="--rustpath \$HOME/.cargo/bin/cargo \
   $PARALLEL"
 
 echo "========== Building Rust bins =========="
-docker exec -it $rsbuildercid \
-  sh -c "ls -al"
 docker exec -it $rsbuildercid \
   /usr/bin/time -f "Build time: %e sec" \
   ../sigmaos-local/make-rs.sh $RS_BUILD_ARGS --version $VERSION \

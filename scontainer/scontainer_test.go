@@ -182,7 +182,7 @@ func TestPythonSmall(t *testing.T) {
 	_, err = ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
 	duration3 := time.Since(start)
-	fmt.Printf("cold spawn %v, start %v, exit %v", duration, duration2, duration3)
+	fmt.Printf("cold spawn %v, start %v, exit %v\n", duration, duration2, duration3)
 
 	ts.Shutdown()
 }

@@ -62,6 +62,7 @@ eval $build
 
 # Copy Python executable
 cp Python-3.11.0/python $OUTPATH/kernel
+cp Python-3.11.0/python $OUTPATH/user
 
 # Copy and inject Python libs
 cp ../sigmaos-local/pylib/splib.py Python-3.11.0/Lib

@@ -118,12 +118,6 @@ func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor b
 			Target:   path.Join("/tmp/python"),
 			ReadOnly: true,
 		},
-		mount.Mount{
-			Type:     mount.TypeBind,
-			Source:   path.Join("/tmp/spproxyd"),
-			Target:   path.Join("/tmp/spproxyd"),
-			ReadOnly: true,
-		},
 		// perf output dir
 		mount.Mount{
 			Type:     mount.TypeBind,

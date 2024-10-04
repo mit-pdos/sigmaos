@@ -34,7 +34,11 @@ func StartSigmaContainer(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
 
-	pn := binsrv.BinPath(uproc.GetVersionedProgram())
+	stringProg := uproc.GetVersionedProgram()
+	if uproc.GetProgram() == "python" {
+		stringProg = "python"
+	}
+	pn := binsrv.BinPath(stringProg)
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
 		cmd = exec.Command("strace", append([]string{"-D", "-f", "exec-uproc-rs", uproc.GetPid().String(), pn, strconv.FormatBool(netproxy)}, uproc.Args...)...)

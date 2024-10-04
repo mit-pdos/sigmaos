@@ -38,7 +38,7 @@ func newTstate(t *testing.T, n int) *Tstate {
 	err = s.BootNode(n)
 	assert.Nil(t, err, "Boot node: %v", err)
 
-	ckclnt := chunkclnt.NewChunkClnt(ts.FsLib)
+	ckclnt := chunkclnt.NewChunkClnt(ts.FsLib, true)
 	srvs, err := ckclnt.WaitTimedGetEntriesN(n + 1)
 	assert.Nil(t, err)
 
@@ -95,7 +95,7 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 			ck = h
 			h--
 		}
-		sz, path, err := ts.ckclnt.Fetch(srv, PROG, pid, sp.ROOTREALM, secrets, ck, st.Tsize(), paths)
+		sz, path, err := ts.ckclnt.Fetch(srv, PROG, pid, sp.ROOTREALM, secrets, ck, st.Tsize(), paths, ts.ProcEnv().GetNamedEndpointProto())
 		db.DPrintf(db.TEST, "path %v", path)
 		assert.Nil(ts.T, err, "err %v", err)
 		assert.True(ts.T, sz > 0 && sz <= chunk.CHUNKSZ)

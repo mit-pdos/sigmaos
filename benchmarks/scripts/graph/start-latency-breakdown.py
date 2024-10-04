@@ -14,7 +14,7 @@ def graph_data(out):
 #  ax.set_ylim(bottom=0)
   ax.set_ylabel("Latency (ms)")
 
-  config   = [ "XOS" ]# "σOS-gvisor" ]
+  config   = [ "σOS" ]# "σOS-gvisor" ]
   sched    = np.array([        0.395, ])#       0.395 ])
   ns_exec  = np.array([        0.269, ])#       1.727 ])
   fs_jail  = np.array([        0.402, ])#       1.735 ])
@@ -26,7 +26,7 @@ def graph_data(out):
   width = 0.5
 
 #  bin_dl_plt   = plt.bar(x,    bin_dl, label="binfs paging (cold-start)")
-  sched_plt    = plt.bar(x,    sched, width=width, label="XOS scheduling")
+  sched_plt    = plt.bar(x,    sched, width=width, label="σOS scheduling")
   ns_exec_plt  = plt.bar(x,  ns_exec, width=width, bottom=sched, label="Linux NS + exec")
   fs_jail_plt  = plt.bar(x,  fs_jail, width=width, bottom=sched+ns_exec, label="FS jail")
   seccomp_plt  = plt.bar(x,  seccomp, width=width, bottom=sched+ns_exec+fs_jail, label="Seccomp")

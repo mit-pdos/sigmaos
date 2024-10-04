@@ -8,6 +8,9 @@ spec:
   containers:
     - name: netperf-clnt
       image: arielszekely/sigmaos-netperf:latest
+      resources:
+        requests:
+          cpu: 2500m
       command: ["go"]
       args: ["test", "-v", "netperf", "--run", "TestClntRTTTCP", "--srvaddr", "netperf-srv:8080", "--ntrial", "500"]
       ports:

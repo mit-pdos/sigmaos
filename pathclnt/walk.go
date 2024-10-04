@@ -182,7 +182,7 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w sos.Watch) (s
 // and return fid for result.
 func (pathc *PathClnt) walkUnion(fid sp.Tfid, p path.Tpathname) (sp.Tfid, path.Tpathname, *serr.Err) {
 	if len(p) > 0 && path.IsUnionElem(p[0]) {
-		if true && p[0] == "~local" && pathc.pe.GetKernelID() != sp.NOT_SET {
+		if p[0] == "~local" && pathc.pe.GetKernelID() != sp.NOT_SET {
 			start := time.Now()
 			fid1, err := pathc.unionScan(fid, pathc.pe.GetKernelID(), "~local")
 			if err != nil {

@@ -455,7 +455,7 @@ func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Tr
 		rdr, err := ts.OpenReader(filepath.Join(src, st.Name))
 		defer rdr.Close()
 		assert.Nil(ts.T, err, "Error open reader %v", err)
-		b, err := io.ReadAll(rdr.GetReader())
+		b, err := io.ReadAll(rdr.Reader)
 		assert.Nil(ts.T, err, "Error read all %v", err)
 		name := st.Name
 		if realm.String() != "" {

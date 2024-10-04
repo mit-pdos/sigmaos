@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	// "runtime/debug"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -211,10 +212,16 @@ func (m *Mapper) outputBin() (Bin, error) {
 	bin := make(Bin, m.nreducetask)
 	outDirPath := MapIntermediateDir(m.job, m.intOutput)
 	start := time.Now()
-	pn, err := m.ResolveMounts(outDirPath)
-	db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
-	if err != nil {
-		return nil, fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
+	var pn string
+	if strings.Contains(outDirPath, "/s3/") {
+		pn = outDirPath
+	} else {
+		var err error
+		pn, err = m.ResolveMounts(outDirPath)
+		db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
+		if err != nil {
+			return nil, fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
+		}
 	}
 	for r := 0; r < m.nreducetask; r++ {
 		bin[r].File = mshardfile(pn, r) + m.rand

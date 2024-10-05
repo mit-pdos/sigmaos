@@ -385,12 +385,6 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	}
 
 	jobRoot := mr.MRDIRTOP
-	if crashux == 0 {
-		// Choose a UX to host the job dir
-		uxSts, err := t1.GetDir(sp.UX)
-		assert.Nil(t, err, "GetDir: %v", err)
-		jobRoot = filepath.Join(sp.UX, sp.Names(uxSts)[0]) + mr.MR
-	}
 
 	ts := newTstate(t1, jobRoot, runApp)
 

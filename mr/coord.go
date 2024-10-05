@@ -74,7 +74,7 @@ type stat struct {
 	nRecoverReduce int
 }
 
-func (s stat) String() string {
+func (s *stat) String() string {
 	return fmt.Sprintf("{nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.nMap, s.nReduce, s.nFail, s.nRestart, s.nRecoverMap, s.nRecoverReduce)
 }
 
@@ -451,7 +451,7 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
-	crash.Crasher(c.FsLib)
+	crash.CrasherMsg(c.FsLib, c.stat.String)
 
 	start := time.Now()
 	if n, err := c.mft.RecoverTasks(); err != nil {

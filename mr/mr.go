@@ -61,6 +61,9 @@ func (s Split) String() string {
 type Bin []Split
 
 func (b Bin) String() string {
+	if len(b) == 0 {
+		return fmt.Sprintf("bins (0): []")
+	}
 	r := fmt.Sprintf("bins (%d): [ %v, ", len(b), b[0])
 	sum := sp.Tlength(b[0].Length)
 	for i, s := range b[1:] {
@@ -71,7 +74,7 @@ func (b Bin) String() string {
 		}
 		sum += s.Length
 	}
-	r += fmt.Sprintf("] (sum %v)\n", humanize.Bytes(uint64(sum)))
+	r += fmt.Sprintf("] (sum %v)", humanize.Bytes(uint64(sum)))
 	return r
 }
 

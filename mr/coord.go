@@ -353,14 +353,14 @@ func (c *Coord) makeReduceBins() error {
 		return err
 	}
 
-	db.DPrintf(db.MR, "Reducer job state %v", ms)
+	db.DPrintf(db.MR, "Mappers job state %v", ms)
 
 	rs, err := c.rft.JobState()
 	if err != nil {
 		return err
 	}
 
-	db.DPrintf(db.MR, "Reducer job state %v", rs)
+	db.DPrintf(db.MR, "Reducers job state %v", rs)
 
 	if len(rns) < c.nreducetask {
 		return nil
@@ -407,7 +407,10 @@ func (c *Coord) Round(ttype string) {
 			break
 		}
 		res := <-ch
-		db.DPrintf(db.MR, "Round: task done %v ok %v msInner %d msOuter %d msg %v res %v\n", res.t, res.ok, res.res.MsInner, res.res.MsOuter, res.msg, res.res)
+		db.DPrintf(db.MR, "Round: task done %v ok %v msg %v", res.t, res.ok, res.msg)
+		if res.res != nil {
+			db.DPrintf(db.MR, "Round: task %v res: msInner %d msOuter %d res %v\n", res.t, res.res.MsInner, res.res.MsOuter, res.res)
+		}
 		if res.ok {
 			if err := c.AppendFileJson(MRstats(c.jobRoot, c.job), res.res); err != nil {
 				db.DFatalf("Appendfile %v err %v\n", MRstats(c.jobRoot, c.job), err)

@@ -62,6 +62,20 @@ type Coord struct {
 	done            int32
 	memPerTask      proc.Tmem
 	asyncrw         bool
+	stat            stat
+}
+
+type stat struct {
+	nMap           int
+	nReduce        int
+	nFail          int
+	nRestart       int
+	nRecoverMap    int
+	nRecoverReduce int
+}
+
+func (s stat) String() string {
+	return fmt.Sprintf("{nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.nMap, s.nReduce, s.nFail, s.nRestart, s.nRecoverMap, s.nRecoverReduce)
 }
 
 type NewProc func(string) (*proc.Proc, error)
@@ -181,6 +195,7 @@ func (c *Coord) mapperProc(task string) (*proc.Proc, error) {
 		return nil, err
 	}
 	db.DPrintf(db.ALWAYS, "bin %v", string(bin))
+	c.stat.nMap += 1
 	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
 	return proc, nil
 }
@@ -205,6 +220,7 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	outlink := ReduceOut(c.jobRoot, c.job) + t.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
 	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
+	c.stat.nReduce += 1
 	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths), nil
 }
 
@@ -245,6 +261,7 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 		r.MsOuter = ms
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
+		c.stat.nFail += 1
 		db.DPrintf(db.MR, "Task failed %v status %v", t, status)
 		if status != nil && status.Msg() == RESTART {
 			// reducer indicates to run some mappers again
@@ -334,6 +351,7 @@ func (c *Coord) doRestart() bool {
 	if n+m > 0 {
 		db.DPrintf(db.ALWAYS, "do.Restart(): restarted %d tasks\n", n+m)
 	}
+	c.stat.nRestart += n + m
 	return n+m > 0
 }
 
@@ -435,21 +453,19 @@ func (c *Coord) Work() {
 
 	crash.Crasher(c.FsLib)
 
-	nMap := c.nmaptask
 	start := time.Now()
 	if n, err := c.mft.RecoverTasks(); err != nil {
 		db.DFatalf("RecoverTasks mapper err %v", err)
 	} else {
-		nMap = 0
+		c.stat.nRecoverMap = n
 		db.DPrintf(db.MR, "Recover %d map tasks took %v", n, time.Since(start))
 	}
 
-	nReduce := c.nreducetask
 	start = time.Now()
 	if n, err := c.rft.RecoverTasks(); err != nil {
 		db.DFatalf("RecoverTasks reducer err %v", err)
 	} else {
-		nReduce = n
+		c.stat.nRecoverReduce = n
 		db.DPrintf(db.MR, "Recover %d reduce tasks took %v", n, time.Since(start))
 	}
 	start = time.Now()
@@ -493,12 +509,12 @@ func (c *Coord) Work() {
 		db.DFatalf("job isn't done %v+%v != %v+%v", n, m, c.nmaptask, c.nreducetask)
 	}
 
-	db.DPrintf(db.ALWAYS, "job done nmap %d nreduce %d", nMap, nReduce)
+	db.DPrintf(db.ALWAYS, "job done stat %v", c.stat)
 
 	atomic.StoreInt32(&c.done, 1)
 
 	db.DPrintf(db.ALWAYS, "E2e bench took %v", time.Since(jobStart))
 	JobDone(c.FsLib, c.jobRoot, c.job)
 
-	c.ClntExitOK()
+	c.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", c.stat))
 }

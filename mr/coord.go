@@ -32,12 +32,12 @@ const (
 //
 // The coordinator claims tasks and start procs for them, which
 // process the claimed task.  Mapper i creates <r> output shards, one
-// for each reducer.  Once the mapper completes an output shard, it
-// creates a symlink in dir <job>/<r>/, which contains the pathname
-// for the mapper's output shard for reducer <r>.
+// for each reducer and returns a bin of pathnames for the shards to
+// the coordinator.
 //
 // If a mapper or reducer proc successfully exits, the coordinator
-// marks the task as done.  If it fails, the coordinator will make the
+// marks the task as done and stores the pathnames returned by the
+// mapper with the task.  If it fails, the coordinator will make the
 // task runnable again and start new mapper/reducer procs to process
 // the task.  If the coordinator fails, another coordinator will take
 // over and claim tasks.
@@ -196,7 +196,6 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	if err := c.rft.ReadTask(tn, t); err != nil {
 		db.DFatalf("ReadTask %v err %v", tn, err)
 	}
-
 	bin, ok := c.reduceBinIn[tn]
 	if !ok {
 		db.DFatalf("reducerProc: no input for %v", tn)
@@ -348,12 +347,20 @@ func (c *Coord) makeReduceBins() error {
 	if err != nil {
 		return err
 	}
-	s, err := c.rft.JobState()
+
+	ms, err := c.mft.JobState()
 	if err != nil {
 		return err
 	}
 
-	db.DPrintf(db.MR, "Reducer job state %v", s)
+	db.DPrintf(db.MR, "Reducer job state %v", ms)
+
+	rs, err := c.rft.JobState()
+	if err != nil {
+		return err
+	}
+
+	db.DPrintf(db.MR, "Reducer job state %v", rs)
 
 	if len(rns) < c.nreducetask {
 		return nil
@@ -363,7 +370,7 @@ func (c *Coord) makeReduceBins() error {
 		c.reduceBinIn[n] = make(Bin, c.nmaptask)
 	}
 
-	db.DPrintf(db.MR, "Tasks done %v todo %v %v", mns, rns, c.reduceBinIn)
+	db.DPrintf(db.MR, "makeReduceBins: tasks done %v todo %v %v", mns, rns, c.reduceBinIn)
 
 	for j, m := range mns {
 		var obin Bin
@@ -374,7 +381,7 @@ func (c *Coord) makeReduceBins() error {
 			c.reduceBinIn[rns[i]][j] = s
 		}
 	}
-	db.DPrintf(db.MR, "bins %v", c.reduceBinIn)
+	db.DPrintf(db.MR, "makeReduceBins: reduceBinIn %v", c.reduceBinIn)
 	return nil
 }
 

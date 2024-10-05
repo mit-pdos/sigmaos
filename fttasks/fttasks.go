@@ -151,9 +151,9 @@ func (ft *FtTasks) SubmitTaskMulti(id int, is []any) error {
 
 // Consider all tasks in progress as failed (too aggressive, but
 // correct), and make them runnable.
-func (ft *FtTasks) RecoverTasks() error {
-	_, err := ft.MoveDirEntries(ft.wip, ft.todo)
-	return err
+func (ft *FtTasks) RecoverTasks() (int, error) {
+	n, err := ft.MoveDirEntries(ft.wip, ft.todo)
+	return n, err
 }
 
 func (ft *FtTasks) WaitForTasks() ([]string, error) {

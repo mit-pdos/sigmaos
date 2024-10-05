@@ -147,8 +147,6 @@ func NewCoord(args []string) (*Coord, error) {
 		return nil, fmt.Errorf("NewCoord: NewLeaderclnt err %v", err)
 	}
 
-	crash.Crasher(c.FsLib)
-
 	return c, nil
 }
 
@@ -247,6 +245,7 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 		r.MsOuter = ms
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
+		db.DPrintf(db.MR, "Task failed %v status %v", t, status)
 		if status != nil && status.Msg() == RESTART {
 			// reducer indicates to run some mappers again
 			s := newStringSlice(status.Data().([]interface{}))
@@ -333,7 +332,7 @@ func (c *Coord) doRestart() bool {
 		db.DFatalf("Restart reducers err %v\n", err)
 	}
 	if n+m > 0 {
-		db.DPrintf(db.ALWAYS, "restarted %d tasks\n", n+m)
+		db.DPrintf(db.ALWAYS, "do.Restart(): restarted %d tasks\n", n+m)
 	}
 	return n+m > 0
 }
@@ -433,16 +432,26 @@ func (c *Coord) Work() {
 	}
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
+
+	crash.Crasher(c.FsLib)
+
+	nMap := c.nmaptask
 	start := time.Now()
-	if err := c.mft.RecoverTasks(); err != nil {
+	if n, err := c.mft.RecoverTasks(); err != nil {
 		db.DFatalf("RecoverTasks mapper err %v", err)
+	} else {
+		nMap = 0
+		db.DPrintf(db.MR, "Recover %d map tasks took %v", n, time.Since(start))
 	}
+
+	nReduce := c.nreducetask
 	start = time.Now()
-	db.DPrintf(db.MR, "Recover map tasks took %v", time.Since(start))
-	if err := c.rft.RecoverTasks(); err != nil {
+	if n, err := c.rft.RecoverTasks(); err != nil {
 		db.DFatalf("RecoverTasks reducer err %v", err)
+	} else {
+		nReduce = n
+		db.DPrintf(db.MR, "Recover %d reduce tasks took %v", n, time.Since(start))
 	}
-	db.DPrintf(db.MR, "Recover reduce tasks took %v", time.Since(start))
 	start = time.Now()
 	c.doRestart()
 	db.DPrintf(db.MR, "doRestart took %v", time.Since(start))
@@ -484,7 +493,7 @@ func (c *Coord) Work() {
 		db.DFatalf("job isn't done %v+%v != %v+%v", n, m, c.nmaptask, c.nreducetask)
 	}
 
-	db.DPrintf(db.ALWAYS, "job done\n")
+	db.DPrintf(db.ALWAYS, "job done nmap %d nreduce %d", nMap, nReduce)
 
 	atomic.StoreInt32(&c.done, 1)
 

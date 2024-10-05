@@ -33,7 +33,7 @@ type Tnew func() interface{}
 type TmkProc func(n string, i interface{}) *proc.Proc
 
 func NewTaskMgr(pclnt proc.ProcAPI, ft *fttasks.FtTasks) (*FtTaskMgr, error) {
-	if err := ft.RecoverTasks(); err != nil {
+	if _, err := ft.RecoverTasks(); err != nil {
 		return nil, err
 	}
 	return &FtTaskMgr{ProcAPI: pclnt, FtTasks: ft}, nil

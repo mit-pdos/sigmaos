@@ -269,7 +269,13 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p1, r := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
 	assert.Nil(t, r)
 	measure(p1, "reader", func() sp.Tlength {
-		r, err := ts.OpenReader(fn)
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenReader(pn)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, r.Reader, buf, sz)
 		assert.Nil(t, err)
@@ -285,7 +291,13 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
 	assert.Nil(t, err)
 	measure(p2, "bufreader", func() sp.Tlength {
-		r, err := ts.OpenReader(fn)
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenReader(pn)
 		br := bufio.NewReaderSize(r.Reader, sp.BUFSZ)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)
@@ -301,7 +313,13 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
 	measure(p3, "readahead", func() sp.Tlength {
-		r, err := ts.OpenAsyncReader(fn, 0)
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenAsyncReader(pn, 0)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)

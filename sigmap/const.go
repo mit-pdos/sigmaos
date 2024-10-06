@@ -6,7 +6,7 @@ const (
 	MBYTE           = 1 << 20
 	GBYTE           = 1 << 30
 	BUFSZ           = 5 * MBYTE
-	MAXGETSET Tsize = 1_000_000 // If need more than MaxGetSet, use Open/Read/Close interface
+	MAXGETSET Tsize = MBYTE // If need more than MaxGetSet, use Open/Read/Close interface
 )
 
 // Build constants

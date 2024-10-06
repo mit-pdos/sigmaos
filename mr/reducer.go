@@ -72,6 +72,10 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf
 	}
 	r.nmaptask = m
 
+	if sp.IsS3Path(r.input[0].File) {
+		r.MountS3PathClnt()
+	}
+
 	if r.asyncrw {
 		w, err := r.CreateAsyncWriter(r.tmp, 0777, sp.OWRITE)
 		if err != nil {
@@ -158,6 +162,10 @@ func (rtot *readResult) sum(r *readResult) {
 }
 
 func (r *Reducer) readFile(rr *readResult) {
+	pn, ok := sp.S3ClientPath(rr.f)
+	if ok {
+		rr.f = pn
+	}
 	rdr, err := r.OpenAsyncReader(rr.f, 0)
 	if err != nil {
 		db.DPrintf(db.MR, "NewReader %v err %v", rr.f, err)

@@ -138,7 +138,7 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 }
 
 func (m *Mapper) initWrt(r int, name string) error {
-	pn, ok := sp.ClientPath(name)
+	pn, ok := sp.S3ClientPath(name)
 	if ok {
 		name = pn
 	}
@@ -265,7 +265,7 @@ func (m *Mapper) CombineEmit() error {
 }
 
 func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
-	pn, ok := sp.ClientPath(s.File)
+	pn, ok := sp.S3ClientPath(s.File)
 	if ok {
 		s.File = pn
 	}

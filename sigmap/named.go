@@ -86,7 +86,7 @@ func IsS3Path(pn string) bool {
 	return strings.HasPrefix(pn, S3)
 }
 
-func ClientPath(pn string) (string, bool) {
+func S3ClientPath(pn string) (string, bool) {
 	pn0, ok := strings.CutPrefix(pn, filepath.Join(S3, "~local"))
 	if ok {
 		return filepath.Join(S3CLNT, pn0), true

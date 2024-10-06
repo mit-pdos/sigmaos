@@ -162,7 +162,7 @@ func (rtot *readResult) sum(r *readResult) {
 }
 
 func (r *Reducer) readFile(rr *readResult) {
-	pn, ok := sp.ClientPath(rr.f)
+	pn, ok := sp.S3ClientPath(rr.f)
 	if ok {
 		rr.f = pn
 	}

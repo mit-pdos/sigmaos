@@ -19,7 +19,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
-	"sigmaos/s3/s3pathclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -44,7 +43,6 @@ type Reducer struct {
 	syncwrt      *writer.Writer
 	perf         *perf.Perf
 	asyncrw      bool
-	s3c          *s3pathclnt.S3PathClnt
 }
 
 func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {

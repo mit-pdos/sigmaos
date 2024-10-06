@@ -21,7 +21,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
-	"sigmaos/s3/s3pathclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -57,7 +56,6 @@ type Mapper struct {
 	line        []byte
 	init        bool
 	ch          chan error
-	s3c         *s3pathclnt.S3PathClnt
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {

@@ -87,7 +87,7 @@ func TestColdStart(t *testing.T) {
 		lcProc       bool          = false
 		prewarmRealm bool          = false
 		skipStats    bool          = true
-		rps          int           = 8
+		rps          int           = 7
 		dur          time.Duration = 5 * time.Second
 	)
 	ts, err := NewTstate(t)
@@ -259,21 +259,37 @@ func TestMR(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numNodes          int  = 8
-		numCoresPerNode   uint = 2
-		numFullNodes      int  = numNodes
-		numProcqOnlyNodes int  = 0
+		numProcqOnlyNodes int  = 2
 		turboBoost        bool = true
 	)
+	type MRExperimentConfig struct {
+		benchName       string
+		numNodes        int
+		numCoresPerNode uint
+		memReq          proc.Tmem
+	}
 	// Variable MR benchmark configuration parameters
 	var (
-		mrApps        []string = []string{"mr-wc-wiki2G-granular-bench.yml", "mr-wc-wiki2G-granular-bench-s3.yml", "mr-wc-wiki2G-bench.yml", "mr-wc-wiki2G-bench-s3.yml"}
-		prewarmRealms []bool   = []bool{false, true}
+		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
+			&MRExperimentConfig{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
+			&MRExperimentConfig{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
+			//			"mr-grep-wiki2G-granular-bench.yml",
+			//			"mr-grep-wiki10G-granular-bench.yml",
+			//			"mr-grep-wiki10G-granular-bench-s3.yml",
+			//			"mr-wc-wiki2G-bench-s3.yml",
+			//			"mr-wc-wiki2G-bench.yml",
+			//			"mr-wc-wiki10G-bench-s3.yml",
+			//			"mr-wc-wiki10G-bench.yml",
+			//			"mr-wc-wiki10G-granular-bench-s3.yml",
+			//			"mr-wc-wiki10G-granular-m-granular-r-bench-s3.yml",
+			//			"mr-wc-wiki20G-bench-s3.yml",
+			//			"mr-wc-wiki20G-bench.yml",
+		}
+		prewarmRealms []bool = []bool{true}
+		//		prewarmRealms []bool   = []bool{true, false}
 	)
 	// Constant MR benchmark configuration parameters
 	const (
-		memReq proc.Tmem = 1700
-		//		memReq     proc.Tmem = 7000
 		asyncRW    bool = true
 		measureTpt bool = false
 	)
@@ -285,15 +301,16 @@ func TestMR(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	for _, mrApp := range mrApps {
+	for _, mrEP := range mrApps {
 		for _, prewarmRealm := range prewarmRealms {
-			benchName := filepath.Join(benchNameBase, mrApp)
+			benchName := filepath.Join(benchNameBase, mrEP.benchName)
 			if prewarmRealm {
 				benchName += "-warm"
 			} else {
 				benchName += "-cold"
 			}
-			ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrApp, memReq, asyncRW, prewarmRealm, measureTpt), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+			numFullNodes := mrEP.numNodes - numProcqOnlyNodes
+			ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, asyncRW, prewarmRealm, measureTpt), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 		}
 	}
 }

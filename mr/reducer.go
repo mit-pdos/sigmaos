@@ -19,6 +19,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
+	"sigmaos/s3/s3pathclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -43,6 +44,7 @@ type Reducer struct {
 	syncwrt      *writer.Writer
 	perf         *perf.Perf
 	asyncrw      bool
+	s3c          *s3pathclnt.S3PathClnt
 }
 
 func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
@@ -71,6 +73,10 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf
 		return nil, fmt.Errorf("Reducer: nmaptask %v isn't int", args[2])
 	}
 	r.nmaptask = m
+
+	if sp.IsS3Path(r.input[0].File) {
+		r.MountS3PathClnt()
+	}
 
 	if r.asyncrw {
 		w, err := r.CreateAsyncWriter(r.tmp, 0777, sp.OWRITE)
@@ -158,6 +164,10 @@ func (rtot *readResult) sum(r *readResult) {
 }
 
 func (r *Reducer) readFile(rr *readResult) {
+	pn, ok := sp.ClientPath(rr.f)
+	if ok {
+		rr.f = pn
+	}
 	rdr, err := r.OpenAsyncReader(rr.f, 0)
 	if err != nil {
 		db.DPrintf(db.MR, "NewReader %v err %v", rr.f, err)

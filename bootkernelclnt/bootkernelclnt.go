@@ -2,7 +2,6 @@
 package bootkernelclnt
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -56,16 +55,13 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 	}
 	defer efile.Close()
 	// Create the command struct and set stdout/stderr
-	fmt.Printf("bootkernelclnt.Start: starting to exec start-kernel.sh\n")
 	cmd := exec.Command(START, args...)
 	cmd.Stdout = ofile
 	cmd.Stderr = efile
 	if err := cmd.Run(); err != nil {
 		db.DPrintf(db.BOOT, "Boot: run err %v", err)
-		fmt.Printf("bootkernelclnt.Start: error running start-kernel.sh - %v\n", err)
 		return "", err
 	}
-	fmt.Printf("bootkernelclnt.Start: start-kernel.sh finished running\n")
 	if err := ofile.Sync(); err != nil {
 		db.DPrintf(db.ERROR, "Sync out file %v: %v", ofilePath, err)
 		return "", err
@@ -76,7 +72,6 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 		return "", err
 	}
 	ip := string(out)
-	fmt.Printf("bootkernelclnt.Start: finished exec start-kernel.sh\n")
 	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v netproxy %v", kernelId, srvs, ip, overlays, gvisor, netproxy)
 	return ip, nil
 }

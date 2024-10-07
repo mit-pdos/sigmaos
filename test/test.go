@@ -171,7 +171,6 @@ func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	// If the tests are invoked trying to reuse booted systems, and the same
 	// servers are meant to be booted, skip the boot.
-	fmt.Printf("newSysClnt: reached newSysClnt\n")
 	if reuseKernel && savedTstate != nil && savedTstate.srvs == srvs {
 		// Reset the Tstate's *testing.T
 		savedTstate.T = t
@@ -194,28 +193,21 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
 	useNetProxy := !noNetProxy
-	fmt.Printf("newSysClnt: started creating NewTestProcEnv\n")
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSPProxy, useNetProxy)
-	fmt.Printf("newSysClnt: started setting debug PID\n")
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	fmt.Printf("newSysClnt: finished setting debug PID\n")
 	var kernelid string
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		fmt.Printf("newSysClnt: kernel ID - %v\n", kernelid)
 		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, srvs, Overlays, GVisor, useNetProxy)
-		fmt.Printf("newSysClnt: finished starting up kernel\n")
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
 		}
 	}
-	fmt.Printf("newSysClnt: booted up kernel client\n")
 	var scsck *bootkernelclnt.Kernel
 	var sckid string
 	if !noBootNetProxy && (useSPProxy || useNetProxy) {
-		fmt.Printf("newSysClnt: trying to boot spproxyd\n")
 		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usenetproxy %v", useSPProxy, useNetProxy)
 		sckid = sp.SPProxydKernel(bootkernelclnt.GenKernelId())
 		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, Overlays, GVisor, useNetProxy)
@@ -229,7 +221,6 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 			return nil, err
 		}
 	}
-	fmt.Printf("newSysClnt: started creating NewKernelClnt\n")
 	k, err = bootkernelclnt.NewKernelClnt(kernelid, sp.Tip(EtcdIP), pe)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error make kernel clnt")

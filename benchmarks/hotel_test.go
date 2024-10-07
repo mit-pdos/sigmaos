@@ -171,7 +171,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	if err != nil {
 		db.DFatalf("Can't start recording: %v", err)
 	}
-	if ji.manuallyScaleCaches {
+	if !ji.justCli && ji.manuallyScaleCaches {
 		go func() {
 			time.Sleep(ji.scaleCacheDelay)
 			ji.hj.CacheAutoscaler.AddServers(ji.nCachesToAdd)

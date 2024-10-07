@@ -202,7 +202,7 @@ func (ji *HotelJobInstance) printStats() {
 
 func (ji *HotelJobInstance) Wait() {
 	db.DPrintf(db.TEST, "extra sleep")
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	if ji.p != nil {
 		ji.p.Done()
 	}

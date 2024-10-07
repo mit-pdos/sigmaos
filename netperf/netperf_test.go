@@ -1,13 +1,14 @@
 package netperf_test
 
 import (
+	"strconv"
 	"testing"
-	"time"
 
-	"github.com/montanaflynn/stats"
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/netperf"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -23,28 +24,8 @@ func clntDialNetProxy(t *testing.T, ep *sp.Tendpoint) {
 	defer ts.Shutdown()
 
 	npc := ts.GetNetProxyClnt()
-	db.DPrintf(db.TEST, "Client start dialing")
-	lat := make([]float64, 0, ntrial)
-	for i := 0; i < ntrial; i++ {
-		start := time.Now()
-		// Dial the listener
-		conn, err := npc.Dial(ep)
-		assert.Nil(ts.T, err, "Err Dial: %v", err)
-		lat = append(lat, float64(time.Since(start).Microseconds()))
-		err = conn.Close()
-		assert.Nil(ts.T, err, "Err Close: %v", err)
-		time.Sleep(50 * time.Millisecond)
-	}
-	avgLat, err := stats.Mean(lat)
-	assert.Nil(ts.T, err, "Err Mean: %v", err)
-	stdLat, err := stats.StandardDeviation(lat)
-	assert.Nil(ts.T, err, "Err Std: %v", err)
-	maxLat, err := stats.Max(lat)
-	assert.Nil(ts.T, err, "Err Max: %v", err)
-	db.DPrintf(db.BENCH, "Raw latency: %vus", lat)
-	db.DPrintf(db.BENCH, "Max latency: %vus", maxLat)
-	db.DPrintf(db.BENCH, "Mean latency: %vus", avgLat)
-	db.DPrintf(db.BENCH, "Std latency: %vus", stdLat)
+	_, err := netperf.ClntDialNetProxy(ntrial, npc, ep)
+	assert.Nil(ts.T, err, "Err clnt: %v", err)
 }
 
 func srvDialNetProxy(t *testing.T, addr *sp.Taddr, epType sp.TTendpoint) {
@@ -55,16 +36,40 @@ func srvDialNetProxy(t *testing.T, addr *sp.Taddr, epType sp.TTendpoint) {
 	defer ts.Shutdown()
 
 	npc := ts.GetNetProxyClnt()
-	_, l, err := npc.Listen(epType, addr)
-	assert.Nil(ts.T, err, "Err Listen: %v", err)
-	db.DPrintf(db.TEST, "Ready to accept connections")
-	for i := 0; i < ntrial; i++ {
-		conn, err := l.Accept()
-		assert.Nil(ts.T, err, "Err Accept: %v", err)
-		err = conn.Close()
-		assert.Nil(ts.T, err, "Err Close: %v", err)
+	started := make(chan bool, 2)
+	err := netperf.SrvDialNetProxy(started, ntrial, npc, addr, epType)
+	assert.Nil(ts.T, err, "Err srv: %v", err)
+}
+
+func TestProcDialNetProxy(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
 	}
-	db.DPrintf(db.TEST, "Done accepting connections")
+	defer ts.Shutdown()
+
+	// Start srv proc
+	srvProc := proc.NewProc("netperf-srv", []string{"dial", srvaddr, strconv.Itoa(ntrial)})
+	err := ts.Spawn(srvProc)
+	assert.Nil(ts.T, err, "Spawn srv proc: %v", err)
+	err = ts.WaitStart(srvProc.GetPid())
+	assert.Nil(ts.T, err, "WaitStart srv proc: %v", err)
+
+	// Start clnt proc
+	clntProc := proc.NewProc("netperf-clnt", []string{"dial", srvaddr, strconv.Itoa(ntrial)})
+	err = ts.Spawn(clntProc)
+	assert.Nil(ts.T, err, "Spawn clnt proc: %v", err)
+
+	// Wait for both to exit
+	clntStatus, err := ts.WaitExit(clntProc.GetPid())
+	if assert.Nil(ts.T, err, "WaitExit clnt proc: %v", err) {
+		assert.True(ts.T, clntStatus.IsStatusOK(), "Err clnt status: %v", clntStatus)
+	}
+	srvStatus, err := ts.WaitExit(srvProc.GetPid())
+	if assert.Nil(ts.T, err, "WaitExit srv proc: %v", err) {
+		assert.True(ts.T, srvStatus.IsStatusOK(), "Err srv status: %v", srvStatus)
+	}
+	db.DPrintf(db.BENCH, "Clnt latency: %s", clntStatus.Msg())
 }
 
 func TestClntDialNetProxyInternal(t *testing.T) {

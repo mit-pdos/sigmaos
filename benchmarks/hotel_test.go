@@ -11,17 +11,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/rpcclnt"
-
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
 )
 
@@ -32,24 +28,27 @@ const (
 type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 
 type HotelJobInstance struct {
-	sigmaos    bool
-	justCli    bool
-	k8ssrvaddr string
-	job        string
-	dur        []time.Duration
-	maxrps     []int
-	ncache     int
-	cachetype  string
-	ready      chan bool
-	fn         hotelFn
-	hj         *hotel.HotelJob
-	lgs        []*loadgen.LoadGenerator
-	p          *perf.Perf
-	wc         *hotel.WebClnt
+	sigmaos             bool
+	justCli             bool
+	k8ssrvaddr          string
+	job                 string
+	dur                 []time.Duration
+	maxrps              []int
+	ncache              int
+	cachetype           string
+	scaleCacheDelay     time.Duration
+	manuallyScaleCaches bool
+	nCachesToAdd        int
+	ready               chan bool
+	fn                  hotelFn
+	hj                  *hotel.HotelJob
+	lgs                 []*loadgen.LoadGenerator
+	p                   *perf.Perf
+	wc                  *hotel.WebClnt
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
@@ -60,6 +59,9 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	ji.justCli = justCli
 	ji.ncache = ncache
 	ji.cachetype = cachetype
+	ji.manuallyScaleCaches = manuallyScaleCaches
+	ji.scaleCacheDelay = scaleCacheDelay
+	ji.nCachesToAdd = nCachesToAdd
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -114,15 +116,6 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		}
 		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
-		// Doesn't work with overlays
-		if sigmaos && !ts.ProcEnv().GetOverlays() {
-			ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.SigmaClnt.FsLib}, hotel.HOTELRESERVE)
-			if err != nil {
-				db.DFatalf("Error make reserve pdc: %v", err)
-			}
-			rpcc := rpcclnt.NewRPCClnt(ch)
-			reservec = rpcc
-		}
 	}
 
 	if !sigmaos {
@@ -164,7 +157,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
-	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v)", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr)
+	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v) manuallyScaleCaches %v scaleCacheDelay %v nCachesToAdd %v", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr, ji.manuallyScaleCaches, ji.scaleCacheDelay, ji.nCachesToAdd)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)
@@ -177,6 +170,12 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	_, err := ji.wc.StartRecording()
 	if err != nil {
 		db.DFatalf("Can't start recording: %v", err)
+	}
+	if !ji.justCli && ji.manuallyScaleCaches {
+		go func() {
+			time.Sleep(ji.scaleCacheDelay)
+			ji.hj.CacheAutoscaler.AddServers(ji.nCachesToAdd)
+		}()
 	}
 	for i, lg := range ji.lgs {
 		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
@@ -203,7 +202,7 @@ func (ji *HotelJobInstance) printStats() {
 
 func (ji *HotelJobInstance) Wait() {
 	db.DPrintf(db.TEST, "extra sleep")
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	if ji.p != nil {
 		ji.p.Done()
 	}

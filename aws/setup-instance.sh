@@ -159,6 +159,16 @@ EOF
 
 sudo mkdir -p /mnt/9p
 
+# Install the latest version of golang
+if ! [ -d "go1.22.2.linux-amd64.tar.gz" ]; then
+    wget https://go.dev/dl/go1.22.2.linux-amd64.tar.gz
+    sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz
+    echo "export PATH=\$PATH:/usr/local/go/bin" | cat - .bashrc > .bashrc.tmp && mv .bashrc.tmp .bashrc
+    echo "export PATH=\$PATH:/usr/local/go/bin" | cat - .profile > .profile.tmp && mv .profile.tmp .profile
+    sudo apt remove -y golang-go golang
+    go version
+fi
+
 if [ -d "DeathStarBench" ] 
 then
   (cd DeathStarBench; git pull;)
@@ -184,16 +194,6 @@ else
   ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; git clone git@g.csail.mit.edu:corral; (cd corral; git checkout k8s; git pull; go mod download;)'
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
-fi
-
-# Install the latest version of golang
-if ! [ -d "go1.22.2.linux-amd64.tar.gz" ] then
-    wget https://go.dev/dl/go1.22.2.linux-amd64.tar.gz
-    sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz
-    echo "export PATH=\$PATH:/usr/local/go/bin" | cat - .bashrc > .bashrc.tmp && mv .bashrc.tmp .bashrc
-    echo "export PATH=\$PATH:/usr/local/go/bin" | cat - .profile > .profile.tmp && mv .profile.tmp .profile
-    sudo apt remove -y golang-go golang
-    go version
 fi
 
 # Add to docker group

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,9 +10,6 @@ import argparse
 import os
 import sys
 import durationpy
-
-matplotlib.rcParams['pdf.fonttype'] = 42
-matplotlib.rcParams['ps.fonttype'] = 42
 
 def str_dur_to_ms(dstr):
   suffixes = [ "ms", "us", "µs", "ns", "s"  ]

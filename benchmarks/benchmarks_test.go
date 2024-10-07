@@ -1270,24 +1270,6 @@ func TestSocialNetK8s(t *testing.T) {
 	testSocialNet(rootts, ts1, p1, false)
 }
 
-// XXX Messy, get rid of this.
-var reservec *rpcclnt.RPCClnt
-
-func TestHotelSigmaosReserve(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
-		err := hotel.RandCheckAvailabilityReq(reservec, r)
-		assert.Nil(t, err, "Error reserve req: %v", err)
-	})
-}
-
 func TestHotelSigmaosSearch(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

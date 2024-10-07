@@ -16,7 +16,6 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
 	"sigmaos/scheddclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

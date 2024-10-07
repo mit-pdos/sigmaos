@@ -37,6 +37,12 @@ func (a *Autoscaler) Stop() {
 	a.done = true
 }
 
+func (a *Autoscaler) AddServers(n int) {
+	for i := 0; i < n; i++ {
+		a.cm.AddServer()
+	}
+}
+
 func (a *Autoscaler) run(freq time.Duration, max int) {
 	for !a.isDone() {
 		sts, err := a.csc.StatsSrvs()
@@ -47,7 +53,7 @@ func (a *Autoscaler) run(freq time.Duration, max int) {
 		db.DPrintf(db.ALWAYS, "Global avg cache Qlen: %v", qlen)
 		if qlen > QLEN_SCALE_THRESHOLD && len(sts) < max {
 			db.DPrintf(db.ALWAYS, "Scale caches up")
-			a.cm.AddServer()
+			a.AddServers(1)
 		}
 		time.Sleep(freq)
 	}

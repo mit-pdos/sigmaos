@@ -118,8 +118,6 @@ type Srv struct {
 	Mcpu proc.Tmcpu
 }
 
-//	,[]string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.DB, "*")}
-
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func NewHotelSvc(public bool) []Srv {
 	return []Srv{

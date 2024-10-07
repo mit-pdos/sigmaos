@@ -28,24 +28,27 @@ const (
 type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 
 type HotelJobInstance struct {
-	sigmaos    bool
-	justCli    bool
-	k8ssrvaddr string
-	job        string
-	dur        []time.Duration
-	maxrps     []int
-	ncache     int
-	cachetype  string
-	ready      chan bool
-	fn         hotelFn
-	hj         *hotel.HotelJob
-	lgs        []*loadgen.LoadGenerator
-	p          *perf.Perf
-	wc         *hotel.WebClnt
+	sigmaos             bool
+	justCli             bool
+	k8ssrvaddr          string
+	job                 string
+	dur                 []time.Duration
+	maxrps              []int
+	ncache              int
+	cachetype           string
+	scaleCacheDelay     time.Duration
+	manuallyScaleCaches bool
+	nCachesToAdd        int
+	ready               chan bool
+	fn                  hotelFn
+	hj                  *hotel.HotelJob
+	lgs                 []*loadgen.LoadGenerator
+	p                   *perf.Perf
+	wc                  *hotel.WebClnt
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
@@ -56,6 +59,9 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	ji.justCli = justCli
 	ji.ncache = ncache
 	ji.cachetype = cachetype
+	ji.manuallyScaleCaches = manuallyScaleCaches
+	ji.scaleCacheDelay = scaleCacheDelay
+	ji.nCachesToAdd = nCachesToAdd
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -164,6 +170,12 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	_, err := ji.wc.StartRecording()
 	if err != nil {
 		db.DFatalf("Can't start recording: %v", err)
+	}
+	if ji.manuallyScaleCaches {
+		go func() {
+			time.Sleep(ji.scaleCacheDelay)
+			ji.hj.CacheAutoscaler.AddServers(ji.nCachesToAdd)
+		}()
 	}
 	for i, lg := range ji.lgs {
 		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])

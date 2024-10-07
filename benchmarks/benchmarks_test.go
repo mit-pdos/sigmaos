@@ -1289,7 +1289,7 @@ func TestHotelSigmaosSearch(t *testing.T) {
 	})
 }
 
-func TestHotelSigmaosSearchScaleCache(t *testing.T) {
+func TestHotelSigmaosSearchScaleCacheDev(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

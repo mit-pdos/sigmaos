@@ -11,17 +11,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/rpcclnt"
-
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
 )
 
@@ -114,15 +110,6 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		}
 		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB)
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
-		// Doesn't work with overlays
-		if sigmaos && !ts.ProcEnv().GetOverlays() {
-			ch, err := sigmarpcchan.NewSigmaRPCCh([]*fslib.FsLib{ts.SigmaClnt.FsLib}, hotel.HOTELRESERVE)
-			if err != nil {
-				db.DFatalf("Error make reserve pdc: %v", err)
-			}
-			rpcc := rpcclnt.NewRPCClnt(ch)
-			reservec = rpcc
-		}
 	}
 
 	if !sigmaos {

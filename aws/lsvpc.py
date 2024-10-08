@@ -6,6 +6,7 @@ import boto3
 parser=argparse.ArgumentParser(description='ls vpc on AWS.')
 parser.add_argument('vpc-id', help='VPC')
 parser.add_argument('--privaddr', dest='privaddr', action='store_true', help='Private IP Address')
+parser.add_argument('--all', action='store_true', default=False)
 args = vars(parser.parse_args())
 
 def ls_nets(vpc):
@@ -50,7 +51,7 @@ def ls_instances(vpc):
     else:
         vms.sort(key=cmp)
         for vm in vms:
-            if "student-dev" in name(vm[3]):
+            if "student-dev" in name(vm[3]) and not args['all']:
               continue
             if args['privaddr']:
                 print("VMInstance", name(vm[3]), ":", vm[0], vm[1], vm[2])

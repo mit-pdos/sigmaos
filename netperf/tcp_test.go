@@ -10,11 +10,8 @@ import (
 
 	"github.com/montanaflynn/stats"
 	"github.com/stretchr/testify/assert"
-)
 
-const (
-	MB = 1 << 20
-	KB = 1 << 10
+	sp "sigmaos/sigmap"
 )
 
 var srvaddr string
@@ -25,8 +22,8 @@ var rttbufsz int
 func init() {
 	flag.StringVar(&srvaddr, "srvaddr", ":8080", "Address of server.")
 	flag.IntVar(&ntrial, "ntrial", 50, "Number of trials.")
-	flag.IntVar(&bufsz, "bufsz", 1*MB, "Size of buffer for throughput experiments in bytes.")
-	flag.IntVar(&rttbufsz, "rttbufsz", 4*KB, "Size of buffer for RTT experiments in bytes.")
+	flag.IntVar(&bufsz, "bufsz", 1*sp.MBYTE, "Size of buffer for throughput experiments in bytes.")
+	flag.IntVar(&rttbufsz, "rttbufsz", 4*sp.KBYTE, "Size of buffer for RTT experiments in bytes.")
 }
 
 func clntDialTCP(t *testing.T, addr string) {
@@ -86,7 +83,7 @@ func clntThroughput(t *testing.T, conn net.Conn) {
 	totBytes := int64(bufsz) * int64(ntrial)
 	log.Printf("Total bytes: %v", totBytes)
 	log.Printf("Elapsed time: %v", dur)
-	log.Printf("Throughput: %vMB/s", float64(totBytes/MB)/dur.Seconds())
+	log.Printf("Throughput: %vMB/s", float64(totBytes/sp.MBYTE)/dur.Seconds())
 }
 
 func srvThroughput(t *testing.T, conn net.Conn) {

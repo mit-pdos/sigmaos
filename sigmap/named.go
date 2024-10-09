@@ -2,6 +2,7 @@ package sigmap
 
 import (
 	"path/filepath"
+	"strings"
 )
 
 // if name ends in "/", it is a directory with mount files for that service
@@ -76,7 +77,22 @@ const (
 
 	// stats exported by named
 	PSTATSD = ".pstatsd"
+
+	// names for directly-mounted services
+	S3CLNT = "s3clnt"
 )
+
+func IsS3Path(pn string) bool {
+	return strings.HasPrefix(pn, S3)
+}
+
+func S3ClientPath(pn string) (string, bool) {
+	pn0, ok := strings.CutPrefix(pn, filepath.Join(S3, "~local"))
+	if ok {
+		return filepath.Join(S3CLNT, pn0), true
+	}
+	return pn, false
+}
 
 // Dirs mounted from the root named into tenants' realms
 var RootNamedMountedDirs map[string]bool = map[string]bool{

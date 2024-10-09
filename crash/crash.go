@@ -32,9 +32,26 @@ func Crasher(fsl *fslib.FsLib) {
 		for true {
 			r := randSleep(crash)
 			if r < 330 {
-				Crash(crash)
+				fail(crash, nil)
 			} else if r < 660 {
-				PartitionNamed(fsl)
+				partitionNamed(fsl)
+			}
+		}
+	}()
+}
+
+func CrasherMsg(fsl *fslib.FsLib, f func() string) {
+	crash := fsl.ProcEnv().GetCrash()
+	if crash == 0 {
+		return
+	}
+	go func() {
+		for true {
+			r := randSleep(crash)
+			if r < 330 {
+				fail(crash, f)
+			} else if r < 660 {
+				partitionNamed(fsl)
 			}
 		}
 	}()
@@ -86,12 +103,20 @@ func PartitionParentProb(sc *sigmaclnt.SigmaClnt, prob uint64) bool {
 	return false
 }
 
-func Crash(crash int64) {
-	db.DPrintf(db.CRASH, "crash.Crash %v\n", crash)
+func fail(crash int64, f func() string) {
+	msg := ""
+	if f != nil {
+		msg = f()
+	}
+	db.DPrintf(db.CRASH, "crash.fail %v %v\n", crash, msg)
 	os.Exit(1)
 }
 
-func PartitionNamed(fsl *fslib.FsLib) {
+func Fail(crash int64) {
+	fail(crash, nil)
+}
+
+func partitionNamed(fsl *fslib.FsLib) {
 	db.DPrintf(db.CRASH, "crash.Partition from %v\n", sp.NAMED)
 	if error := fsl.Disconnect(sp.NAMED); error != nil {
 		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v\n", os.Args, error)

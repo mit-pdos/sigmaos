@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	// "strings"
 
 	//	"time"
 
@@ -49,13 +50,18 @@ type FdReader struct {
 	*reader.Reader
 	sof sos.FileAPI
 	fd  int
+	len sp.Tlength
 }
 
 func (rd *FdReader) Close() error {
 	return rd.sof.CloseFd(rd.fd)
 }
 
+// Read no more than len bytes, if len is set
 func (rd *FdReader) Read(o sp.Toffset, b []byte) (int, error) {
+	if rd.len != 0 && rd.Nbytes() >= rd.len {
+		return 0, io.EOF
+	}
 	sz, err := rd.sof.Read(rd.fd, b)
 	return int(sz), err
 }
@@ -64,18 +70,22 @@ func (rd *FdReader) Fd() int {
 	return rd.fd
 }
 
-func (rd *FdReader) Lseek(off sp.Toffset) error {
-	return rd.sof.Seek(rd.fd, off)
+func (rd *FdReader) Nbytes() sp.Tlength {
+	return rd.Reader.Nbytes()
 }
 
-func newFdReader(sos sos.FileAPI, fd int) *FdReader {
-	return &FdReader{nil, sos, fd}
+func newFdReader(sos sos.FileAPI, fd int, len sp.Tlength) *FdReader {
+	return &FdReader{nil, sos, fd, len}
+}
+
+func (fl *FsLib) NewReaderRegion(fd int, path string, len sp.Tlength) *FdReader {
+	fdrdr := newFdReader(fl.FileAPI, fd, len)
+	fdrdr.Reader = reader.NewReader(fdrdr, path)
+	return fdrdr
 }
 
 func (fl *FsLib) NewReader(fd int, path string) *FdReader {
-	fdrdr := newFdReader(fl.FileAPI, fd)
-	fdrdr.Reader = reader.NewReader(fdrdr, path)
-	return fdrdr
+	return fl.NewReaderRegion(fd, path, 0)
 }
 
 func (fl *FsLib) NewWriter(fd int) *writer.Writer {
@@ -90,17 +100,26 @@ func (fl *FsLib) OpenReader(path string) (*FdReader, error) {
 	return fl.NewReader(fd, path), nil
 }
 
+func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength) (*FdReader, error) {
+	fd, err := fl.Open(path, sp.OREAD)
+	if err != nil {
+		return nil, err
+	}
+	fl.Seek(fd, offset)
+	return fl.NewReaderRegion(fd, path, len), nil
+}
+
 type Rdr struct {
-	fdrdr *FdReader
-	brdr  *bufio.Reader
-	ardr  io.ReadCloser
+	*FdReader
+	//brdr *bufio.Reader
+	ardr io.ReadCloser
 }
 
 func (rdr *Rdr) Close() error {
 	if err := rdr.ardr.Close(); err != nil {
 		return err
 	}
-	if err := rdr.fdrdr.Close(); err != nil {
+	if err := rdr.FdReader.Close(); err != nil {
 		return err
 	}
 	return nil
@@ -110,22 +129,14 @@ func (rdr *Rdr) Read(p []byte) (n int, err error) {
 	return rdr.ardr.Read(p)
 }
 
-func (rdr *Rdr) Nbytes() sp.Tlength {
-	return rdr.fdrdr.Nbytes()
-}
-
 func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
-	rdr, err := fl.OpenReader(path)
+	rdr, err := fl.OpenReaderRegion(path, offset, 0)
 	if err != nil {
 		return nil, err
 	}
-	r := &Rdr{}
-	r.fdrdr = rdr
-	if err := rdr.Lseek(offset); err != nil {
-		return nil, err
-	}
-	r.brdr = bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
-	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, sp.BUFSZ)
+	r := &Rdr{FdReader: rdr}
+	// r.brdr = bufio.NewReaderSize(rdr.GetReader(), sp.BUFSZ)
+	r.ardr, err = readahead.NewReaderSize(rdr.Reader, 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err
 	}
@@ -160,6 +171,11 @@ func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
 // Writers
 //
 
+type WriterI interface {
+	io.WriteCloser
+	Nbytes() sp.Tlength
+}
+
 func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*writer.Writer, error) {
 	fd, err := fl.Create(fname, perm, mode)
 	if err != nil {
@@ -179,12 +195,12 @@ func (fl *FsLib) OpenWriter(fname string, mode sp.Tmode) (*writer.Writer, error)
 }
 
 type Wrt struct {
-	wrt  *writer.Writer
+	wrt  WriterI
 	awrt *awriter.Writer
 	bwrt *bufio.Writer
 }
 
-func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*Wrt, error) {
+func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (WriterI, error) {
 	w, err := fl.CreateWriter(fname, perm, mode)
 	if err != nil {
 		return nil, err
@@ -198,8 +214,10 @@ func (wrt *Wrt) Close() error {
 	if err := wrt.bwrt.Flush(); err != nil {
 		return err
 	}
-	if err := wrt.awrt.Close(); err != nil {
-		return err
+	if wrt.awrt != nil {
+		if err := wrt.awrt.Close(); err != nil {
+			return err
+		}
 	}
 	if err := wrt.wrt.Close(); err != nil {
 		return err
@@ -219,7 +237,6 @@ func (wrt *Wrt) Nbytes() sp.Tlength {
 // Util
 //
 
-// XXX use reader/writer interfaces
 func (fl *FsLib) CopyFile(src, dst string) error {
 	//	start := time.Now()
 	//	defer func(t *time.Time) {

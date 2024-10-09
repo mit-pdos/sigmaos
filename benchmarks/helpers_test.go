@@ -149,7 +149,7 @@ func blockMem(rootts *test.Tstate, mem string) []*proc.Proc {
 		db.DPrintf(db.TEST, "No mem blocking")
 		return nil
 	}
-	sdc := scheddclnt.NewScheddClnt(rootts.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(rootts.SigmaClnt.FsLib, sp.NOT_SET)
 	// Get the number of schedds.
 	n, err := sdc.Nschedd()
 	if err != nil {
@@ -190,11 +190,11 @@ func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
 
 // Warm up a realm, by starting uprocds for it on all machines in the cluster.
 func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
-	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
 	// Get the list of schedds.
 	sds, err := sdc.GetSchedds()
 	assert.Nil(ts.Ts.T, err, "Get Schedds: %v", err)
-	db.DPrintf(db.TEST, "Warm up realm %v for progs %v schedds %v", ts.GetRealm(), progs, sds)
+	db.DPrintf(db.TEST, "Warm up realm %v for progs %v schedds %d %v", ts.GetRealm(), progs, len(sds), sds)
 	start := time.Now()
 	nDL := 0
 	for _, kid := range sds {
@@ -239,11 +239,11 @@ func newNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interfac
 
 // ========== MR Helpers ========
 
-func newNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string, memreq proc.Tmem, asyncrw bool) ([]*MRJobInstance, []interface{}) {
+func newNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string, jobRoot string, memreq proc.Tmem, asyncrw bool) ([]*MRJobInstance, []interface{}) {
 	ms := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewMRJobInstance(ts, p, app, app+"-mr-"+rand.String(16)+"-"+ts.GetRealm().String(), memreq, asyncrw)
+		i := NewMRJobInstance(ts, p, app, jobRoot, app+"-mr-"+rand.String(3)+"-"+ts.GetRealm().String(), memreq, asyncrw)
 		ms = append(ms, i)
 		is = append(is, i)
 	}

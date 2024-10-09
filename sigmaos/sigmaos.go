@@ -14,9 +14,17 @@ const (
 	O_WAIT Twait = true
 )
 
+type Watch func(error)
+
 type PathClntAPI interface {
-	GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
-	Stat(name string, principal *sp.Tprincipal) (*sp.Stat, error)
+	// Stat(pn string, principal *sp.Tprincipal) (*sp.Stat, error)
+	Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, w Watch) (sp.Tfid, error)
+	Create(p string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error)
+	ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, error)
+	WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error)
+	Clunk(fid sp.Tfid) error
+	// XXX delete
+	LookupPath(fid sp.Tfid) (path.Tpathname, error)
 }
 
 type FileAPI interface {
@@ -60,6 +68,7 @@ type FileAPI interface {
 	GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error)
 	InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error
 	NewRootMount(path string, epname string) error
+	MountPathClnt(mnt string, pc PathClntAPI) error
 
 	// Done using SigmaOS, which detaches from any mounted servers and
 	// may close the session with those servers.

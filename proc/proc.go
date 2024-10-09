@@ -112,6 +112,10 @@ func (p *Proc) AppendEnv(name, val string) {
 	p.Env[name] = val
 }
 
+func (p *Proc) SetEnv(name, val string) {
+	p.Env[name] = val
+}
+
 func (p *Proc) LookupEnv(name string) (string, bool) {
 	s, ok := p.Env[name]
 	return s, ok

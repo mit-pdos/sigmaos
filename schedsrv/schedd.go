@@ -58,7 +58,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *Sche
 		cpuStats:    &cpuStats{},
 	}
 	sd.cond = sync.NewCond(&sd.mu)
-	sd.scheddclnt = scheddclnt.NewScheddClnt(sc.FsLib)
+	sd.scheddclnt = scheddclnt.NewScheddClnt(sc.FsLib, sp.NOT_SET)
 	sd.procqclnt = procqclnt.NewProcQClntSchedd(sc.FsLib,
 		func(pqID string) {
 			// When a new procq client is created, advance the epoch for the

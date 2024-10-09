@@ -340,6 +340,10 @@ func (scc *SigmaClntClnt) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
 	db.DFatalf("SetLocalMount %v", ep)
 }
 
+func (scc *SigmaClntClnt) MountPathClnt(path string, clnt sos.PathClntAPI) error {
+	return serr.NewErr(serr.TErrNotSupported, "MountPathClnt")
+}
+
 func (scc *SigmaClntClnt) Detach(path string) error {
 	req := spproto.SigmaPathRequest{Path: path}
 	rep := spproto.SigmaErrReply{}

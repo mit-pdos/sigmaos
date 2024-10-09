@@ -36,12 +36,12 @@ type ProcClnt struct {
 	bins           *chunkclnt.BinPaths
 }
 
-func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool) *ProcClnt {
+func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool, kernelID string) *ProcClnt {
 	clnt := &ProcClnt{
 		FsLib:          fsl,
 		pid:            pid,
 		procDirCreated: procDirCreated,
-		scheddclnt:     scheddclnt.NewScheddClnt(fsl),
+		scheddclnt:     scheddclnt.NewScheddClnt(fsl, kernelID),
 		procqclnt:      procqclnt.NewProcQClnt(fsl),
 		lcschedclnt:    lcschedclnt.NewLCSchedClnt(fsl),
 		cs:             newChildState(),

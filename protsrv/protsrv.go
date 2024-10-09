@@ -151,7 +151,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 
 	s := time.Now()
 	os, lo, lk, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames, lockmap.RLOCK)
-	db.DPrintf(db.WALK_LAT, "Walk %q %v lat %v\n", f.Pobj().Ctx().ClntId(), args.Wnames, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "ProtSrv.Walk %v %v lat %v\n", f.Pobj().Ctx().ClntId(), args.Wnames, time.Since(s))
 	defer ps.plt.Release(f.Pobj().Ctx(), lk, lockmap.RLOCK)
 
 	if lk != nil {

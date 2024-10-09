@@ -9,8 +9,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/leaderetcd"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/path"
 	"sigmaos/perf"
@@ -198,6 +198,10 @@ func Run(args []string) error {
 
 	db.DPrintf(db.NAMED, "Created Leader file %v ", nd.elect.Key())
 
+	if err := nd.warmCache(); err != nil {
+		db.DFatalf("warmCache err %v", err)
+	}
+
 	if nd.crash > 0 {
 		crash.Crasher(nd.SigmaClnt.FsLib)
 	}
@@ -309,4 +313,16 @@ func (nd *Named) watchLeased() {
 	for pn := range nd.ephch {
 		nd.SigmaSrv.Notify(pn)
 	}
+}
+
+// XXX same as initRootDir?
+var warmRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.PROCQ, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
+
+func (nd *Named) warmCache() error {
+	for _, n := range warmRootDir {
+		if sts, err := nd.GetDir(n); err == nil {
+			db.DPrintf(db.TEST, "Warm cache %v: %v", n, sp.Names(sts))
+		}
+	}
+	return nil
 }

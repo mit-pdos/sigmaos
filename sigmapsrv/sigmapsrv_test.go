@@ -269,7 +269,13 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p1, r := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
 	assert.Nil(t, r)
 	measure(p1, "reader", func() sp.Tlength {
-		r, err := ts.OpenReader(fn)
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenReader(pn)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, r.Reader, buf, sz)
 		assert.Nil(t, err)
@@ -285,7 +291,13 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
 	assert.Nil(t, err)
 	measure(p2, "bufreader", func() sp.Tlength {
-		r, err := ts.OpenReader(fn)
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenReader(pn)
 		br := bufio.NewReaderSize(r.Reader, sp.BUFSZ)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)
@@ -301,7 +313,13 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
 	measure(p3, "readahead", func() sp.Tlength {
-		r, err := ts.OpenAsyncReader(fn, 0)
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenAsyncReader(pn, 0)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
@@ -776,19 +794,77 @@ func TestLookupMultiMount(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestStatUx(t *testing.T) {
+func TestColdPathMicro(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
-	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	sts, err := ts.GetDir(sp.SCHEDD)
 	assert.Nil(t, err)
-	s := time.Now()
-	pn := filepath.Join(sp.UX, "sigma-named", "bin/user/common/spawn-latency")
-	//pn := filepath.Join(sp.UX, "~local", "bin/user/common/spawn-latency")
-	db.DPrintf(db.TEST, "Stat %v start %v\n", fsl.ClntId(), pn)
-	_, err = fsl.Stat(pn)
-	db.DPrintf(db.TEST, "Stat %v done %v took %v\n", fsl.ClntId(), pn, time.Since(s))
+
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	pe.KernelID = sts[0].Name
+
+	pn := filepath.Join(sp.UX, "~local", "mr-intermediate")
+
+	var max time.Duration
+	var tot time.Duration
+	const N = 1
+	for i := 0; i < N; i++ {
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		assert.Nil(t, err)
+		db.DPrintf(db.TEST, "MkDir %v start %v", fsl.ClntId(), pn)
+		s := time.Now()
+		err = fsl.MkDir(pn, 0777)
+		assert.Nil(t, err)
+		d := time.Since(s)
+		if d > max {
+			max = d
+		}
+		tot += d
+		fsl.RmDir(pn)
+		fsl.Close()
+	}
+	db.DPrintf(db.TEST, "MkDir done %v took avg %v max %v", pn, tot/N, max)
+	ts.Shutdown()
+}
+
+func TestColdAttach(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	sts, err := ts.GetDir(sp.SCHEDD)
+	assert.Nil(t, err)
+
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	pe.KernelID = sts[0].Name
+
+	pn := filepath.Join(sp.SCHEDD, pe.KernelID)
+	ep, err := ts.ReadEndpoint(pn)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "endpoint %v", ep)
+
+	var max time.Duration
+	var tot time.Duration
+	const N = 1
+	for i := 0; i < N; i++ {
+		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		assert.Nil(t, err)
+		pn = filepath.Join(pn, rpc.RPC)
+		start := time.Now()
+		err = fsl.MountTree(ep, rpc.RPC, pn)
+		assert.Nil(t, err)
+		d := time.Since(start)
+		db.DPrintf(db.TEST, "Mount schedd [%v] %v as %v time %v", ep, rpc.RPC, pn, d)
+		if d > max {
+			max = d
+		}
+		tot += d
+		fsl.Close()
+	}
+	db.DPrintf(db.TEST, "MountTree avg %v max %v", tot/N, max)
 	ts.Shutdown()
 }

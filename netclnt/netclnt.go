@@ -5,8 +5,6 @@ import (
 	"net"
 	"sync"
 
-	// "time"
-
 	db "sigmaos/debug"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
@@ -57,7 +55,6 @@ func (nc *NetClnt) Close() error {
 
 func (nc *NetClnt) connect(ep *sp.Tendpoint) *serr.Err {
 	db.DPrintf(db.NETCLNT, "NetClnt connect to any of %v, starting w. %v\n", ep, ep.Addrs()[0])
-	//	for _, addr := range addrs {
 	for i, addr := range ep.Addrs() {
 		if i > 0 {
 			ep.Claims.Addr = append(ep.Claims.Addr[1:], ep.Claims.Addr[0])

@@ -1,11 +1,11 @@
 package mr
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,16 +25,21 @@ import (
 	"sigmaos/writer"
 )
 
+const (
+	DEFAULT_KEY_BUF_SZ = 1000
+	DEFAULT_VAL_BUF_SZ = 10000
+)
+
 type Reducer struct {
 	*sigmaclnt.SigmaClnt
 	reducef      ReduceT
-	input        string
+	input        Bin
 	outputTarget string
 	outlink      string
 	nmaptask     int
 	tmp          string
 	pwrt         *perf.PerfWriter
-	asyncwrt     *fslib.Wrt
+	asyncwrt     fslib.WriterI
 	syncwrt      *writer.Writer
 	perf         *perf.Perf
 	asyncrw      bool
@@ -42,12 +47,15 @@ type Reducer struct {
 
 func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
 	r := &Reducer{
-		input:        args[0],
 		outlink:      args[1],
 		outputTarget: args[2],
 		reducef:      reducef,
 		SigmaClnt:    sc,
 		perf:         p,
+	}
+	if err := json.Unmarshal([]byte(args[0]), &r.input); err != nil {
+		db.DPrintf(db.MR, "NewReducer %s: unmarshal err %v\n", args[0], err)
+		return nil, err
 	}
 	asyncrw, err := strconv.ParseBool(args[4])
 	if err != nil {
@@ -64,7 +72,10 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf
 	}
 	r.nmaptask = m
 
-	sc.MkDir(filepath.Dir(r.tmp), 0777)
+	if sp.IsS3Path(r.input[0].File) {
+		r.MountS3PathClnt()
+	}
+
 	if r.asyncrw {
 		w, err := r.CreateAsyncWriter(r.tmp, 0777, sp.OWRITE)
 		if err != nil {
@@ -112,7 +123,7 @@ type result struct {
 }
 
 func ReadKVs(rdr io.Reader, kvm *kvmap, reducef ReduceT) error {
-	kvd := newKVDecoder(rdr, 1000, 10000)
+	kvd := newKVDecoder(rdr, DEFAULT_KEY_BUF_SZ, DEFAULT_VAL_BUF_SZ)
 	for {
 		if k, v, err := kvd.decode(); err != nil {
 			if err == io.EOF {
@@ -151,11 +162,13 @@ func (rtot *readResult) sum(r *readResult) {
 }
 
 func (r *Reducer) readFile(rr *readResult) {
-	sym := r.input + "/" + rr.f + "/"
-	db.DPrintf(db.MR, "readFile %v\n", sym)
-	rdr, err := r.OpenAsyncReader(sym, 0)
+	pn, ok := sp.S3ClientPath(rr.f)
+	if ok {
+		rr.f = pn
+	}
+	rdr, err := r.OpenAsyncReader(rr.f, 0)
 	if err != nil {
-		db.DPrintf(db.MR, "NewReader %v err %v", sym, err)
+		db.DPrintf(db.MR, "NewReader %v err %v", rr.f, err)
 		rr.ok = false
 		return
 	}
@@ -163,9 +176,9 @@ func (r *Reducer) readFile(rr *readResult) {
 
 	start := time.Now()
 	err = ReadKVs(rdr, rr.kvm, r.reducef)
-	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", sym, time.Since(start).Milliseconds(), err)
+	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", rr.f, time.Since(start).Milliseconds(), err)
 	if err != nil {
-		db.DPrintf(db.MR, "decodeKV %v err %v\n", sym, err)
+		db.DPrintf(db.MR, "decodeKV %v err %v\n", rr.f, err)
 		rr.ok = false
 		return
 	}
@@ -210,27 +223,19 @@ func (r *Reducer) ReadFiles(rtot *readResult) error {
 		go r.readerMgr(req, rep, MAXCONCURRENCY)
 	}
 
-	dr := fslib.NewDirReader(r.FsLib, r.input)
-	for nfile := 0; nfile < r.nmaptask; {
-		files, err := dr.WatchNewUniqueEntries()
-		if err != nil {
-			return err
-		}
-		randOffset := int(rand.Uint64())
-		if randOffset < 0 {
-			randOffset *= -1
-		}
-		for i, _ := range files {
-			nfile += 1
-			// Random offset to stop reducer procs from all banging on the same ux.
-			f := files[(i+randOffset)%len(files)]
-			if MAXCONCURRENCY > 1 {
-				req <- f
-			} else {
-				rr := &readResult{f: f, kvm: rtot.kvm}
-				r.readFile(rr)
-				rtot.sum(rr)
-			}
+	// Random offset to stop reducer procs from all banging on the same ux.
+	randOffset := int(rand.Uint64())
+	if randOffset < 0 {
+		randOffset *= -1
+	}
+	for i := 0; i < r.nmaptask; i++ {
+		f := (i + randOffset) % r.nmaptask
+		if MAXCONCURRENCY > 1 {
+			req <- r.input[f].File
+		} else {
+			rr := &readResult{f: r.input[f].File, kvm: rtot.kvm}
+			r.readFile(rr)
+			rtot.sum(rr)
 		}
 	}
 	if MAXCONCURRENCY > 1 {
@@ -297,8 +302,8 @@ func (r *Reducer) DoReduce() *proc.Status {
 	if err := r.PutFileAtomic(r.outlink, 0777|sp.DMSYMLINK, []byte(r.tmp)); err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
 	}
-	return proc.NewStatusInfo(proc.StatusOK, r.input,
-		Result{false, r.input, rtot.n, nbyte, rtot.d.Milliseconds()})
+	return proc.NewStatusInfo(proc.StatusOK, "OK",
+		Result{false, r.ProcEnv().GetPID().String(), rtot.n, nbyte, Bin{}, rtot.d.Milliseconds(), 0, r.ProcEnv().GetKernelID()})
 }
 
 func RunReducer(reducef ReduceT, args []string) {

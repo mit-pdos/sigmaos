@@ -32,15 +32,17 @@ const (
 	WALK_LAT                 = "WALK_LAT"
 	FSETCD_LAT               = "FSETCD_LAT"
 	ATTACH_LAT               = "ATTACH_LAT"
+	RPC_LAT                  = "RPC_LAT"
 )
 
 // Tests
 const (
-	TEST  Tselector = "TEST"
-	TEST1           = "TEST1"
-	DELAY           = "DELAY"
-	CRASH           = "CRASH"
-	PERF            = "PERF"
+	TEST     Tselector = "TEST"
+	TEST1              = "TEST1"
+	TEST_LAT           = "TEST_LAT"
+	DELAY              = "DELAY"
+	CRASH              = "CRASH"
+	PERF               = "PERF"
 )
 
 // Apps
@@ -194,6 +196,7 @@ const (
 	SESSDEVCLNT             = "SESSDEVCLNT"
 	K8S_UTIL                = "K8S_UTIL"
 	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
+	S3CLNT                  = "S3CLNT"
 )
 
 // Server Libraries

@@ -34,6 +34,7 @@ func encodeKV(wr io.Writer, key []byte, value string, r int) (int, error) {
 
 type kvdecoder struct {
 	rd      io.Reader
+	keylen  int
 	key     []byte
 	value   []byte
 	padding []byte
@@ -42,6 +43,7 @@ type kvdecoder struct {
 func newKVDecoder(rd io.Reader, maxkey, maxvalue int) *kvdecoder {
 	return &kvdecoder{
 		rd:      rd,
+		keylen:  maxkey,
 		key:     make([]byte, 0, maxkey),
 		value:   make([]byte, 0, maxvalue),
 		padding: make([]byte, 0, len(jsonPadding)),
@@ -58,6 +60,13 @@ func (kvd *kvdecoder) decode() ([]byte, string, error) {
 
 	if err := binary.Read(kvd.rd, binary.LittleEndian, &l2); err != nil {
 		return nil, "", err
+	}
+
+	// Resize read buffer if necessary
+	if int(l1) > kvd.keylen {
+		for ; int(l1) > kvd.keylen; kvd.keylen *= 2 {
+		}
+		kvd.key = make([]byte, 0, kvd.keylen)
 	}
 
 	kvd.key = kvd.key[:l1]

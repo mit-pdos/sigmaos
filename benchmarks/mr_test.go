@@ -26,10 +26,9 @@ type MRJobInstance struct {
 	done    int32
 	job     *mr.Job
 	cm      *groupmgr.GroupMgr
-	asyncrw bool
 }
 
-func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname string, memreq proc.Tmem, asyncrw bool) *MRJobInstance {
+func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname string, memreq proc.Tmem) *MRJobInstance {
 	ji := &MRJobInstance{}
 	ji.RealmTstate = ts
 	ji.p = p
@@ -38,7 +37,6 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname 
 	ji.jobRoot = jobRoot
 	ji.jobname = jobname
 	ji.memreq = memreq
-	ji.asyncrw = asyncrw
 	return ji
 }
 
@@ -47,7 +45,6 @@ func (ji *MRJobInstance) PrepareMRJob() {
 	assert.Nil(ji.Ts.T, err, "Error ReadJobConfig: %v", err)
 	ji.job = jobf
 	db.DPrintf(db.TEST, "MR job description: %v", ji.job)
-	db.DPrintf(db.TEST, "MR job memreq %v asyncrw %v", ji.memreq, ji.asyncrw)
 	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)
 	tasks, err := mr.InitCoordFS(ji.FsLib, ji.jobRoot, ji.jobname, ji.job.Nreduce)
 	assert.Nil(ji.Ts.T, err, "Error InitCoordFS: %v", err)
@@ -61,7 +58,7 @@ func (ji *MRJobInstance) PrepareMRJob() {
 }
 
 func (ji *MRJobInstance) StartMRJob() {
-	db.DPrintf(db.TEST, "Start MR job %v %v %v", ji.jobname, ji.job, ji.asyncrw)
+	db.DPrintf(db.TEST, "Start MR job %v %v", ji.jobname, ji.job)
 	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, mr.NCOORD, ji.nmap, 0, 0, ji.memreq, 0)
 }
 

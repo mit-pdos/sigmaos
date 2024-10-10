@@ -44,7 +44,6 @@ var PREWARM_REALM bool
 var SKIPSTATS bool
 var MR_APP string
 var MR_MEM_REQ int
-var MR_ASYNCRW bool
 var KV_AUTO string
 var N_KVD int
 var N_CLERK int
@@ -114,7 +113,6 @@ func init() {
 	flag.BoolVar(&SKIPSTATS, "skipstats", false, "Skip printing stats.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.IntVar(&MR_MEM_REQ, "mr_mem_req", 4000, "Amount of memory (in MB) required for each MR task.")
-	flag.BoolVar(&MR_ASYNCRW, "mr_asyncrw", true, "Mapers and reducers use asynchronous readers/writers.")
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
@@ -506,7 +504,7 @@ func TestAppMR(t *testing.T) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := newNMRJobs(ts1, p, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
+	jobs, apps := newNMRJobs(ts1, p, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -691,7 +689,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
+	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
 	// Prep Hotel job
 	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
@@ -928,7 +926,7 @@ func TestRealmBalanceMRMR(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(tses[i])
 		defer ps[i].Done()
-		mrjob, mrapp := newNMRJobs(tses[i], ps[i], 1, MR_APP, chooseMRJobRoot(tses[i]), proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
+		mrjob, mrapp := newNMRJobs(tses[i], ps[i], 1, MR_APP, chooseMRJobRoot(tses[i]), proc.Tmem(MR_MEM_REQ))
 		mrjobs[i] = mrjob
 		mrapps[i] = mrapp
 	}
@@ -1108,7 +1106,7 @@ func TestKVMRRRB(t *testing.T) {
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
+	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
 	// Prep KV job
 	nclerks := []int{N_CLERK}
 	kvjobs, ji := newNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)

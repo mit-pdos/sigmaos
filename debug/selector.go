@@ -67,6 +67,8 @@ const (
 	HOTEL_WWW_STATS                   = "HOTEL_WWW_STATS"
 	SLEEPER                           = "SLEEPER"
 	SPINNER                           = "SPINNER"
+	WATCH_TEST                        = "WATCH_TEST" 
+	WATCH_PERF                        = "WATCH_PERF"
 	FSREADER                          = "FSREADER"
 	SLEEPER_TIMING                    = "SLEEPER_TIMING"
 	IMGD                              = "IMGD"

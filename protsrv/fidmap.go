@@ -44,7 +44,7 @@ func (fm *fidMap) Insert(fid sp.Tfid, f *Fid) *serr.Err {
 
 func (fm *fidMap) Update(fid sp.Tfid, f *Fid) *serr.Err {
 	if ok := fm.fids.Update(fid, f); !ok {
-		db.DPrintf(db.ERROR, "Update err %v %v %v\n", fid, f)
+		db.DPrintf(db.ERROR, "Update err %v %v\n", fid, f)
 		return serr.NewErr(serr.TErrUnknownfid, fid)
 	}
 	return nil

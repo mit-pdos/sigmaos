@@ -72,6 +72,7 @@ var CACHE_TYPE string
 var CACHE_GC bool
 var BLOCK_MEM string
 var N_REALM int
+var ASYNCRW
 
 // XXX Remove
 var MEMCACHED_ADDRS string
@@ -106,6 +107,7 @@ var S3_RES_DIR string
 
 // Read & set the proc version.
 func init() {
+	flag.BoolVar(&ASYNCRW, "mr_asyncrw", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
 	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")

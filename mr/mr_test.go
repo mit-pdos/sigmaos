@@ -185,7 +185,7 @@ func TestMapperReducer(t *testing.T) {
 		assert.Nil(t, err, "NewSC: %v", err)
 		db.DPrintf(db.TEST, "NewSigmaClnt %v", time.Since(start))
 		start = time.Now()
-		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, string(bin), job.Intermediate, true)
+		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, string(bin), job.Intermediate)
 		assert.Nil(t, err, "NewMapper %v", err)
 		db.DPrintf(db.TEST, "Newmapper %v", time.Since(start))
 		start = time.Now()
@@ -404,7 +404,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, true, maliciousMapper)
+	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, maliciousMapper)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

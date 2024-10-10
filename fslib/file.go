@@ -46,6 +46,11 @@ func (fl *FsLib) PutLeasedFile(fname string, perm sp.Tperm, mode sp.Tmode, lid s
 // Open readers
 //
 
+type ReaderI interface {
+	io.ReadCloser
+	Nbytes() sp.Tlength
+}
+
 type FdReader struct {
 	*reader.Reader
 	sof sos.FileAPI
@@ -111,13 +116,15 @@ func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength
 
 type Rdr struct {
 	*FdReader
-	//brdr *bufio.Reader
+	brdr *bufio.Reader
 	ardr io.ReadCloser
 }
 
 func (rdr *Rdr) Close() error {
-	if err := rdr.ardr.Close(); err != nil {
-		return err
+	if rdr.ardr != nil {
+		if err := rdr.ardr.Close(); err != nil {
+			return err
+		}
 	}
 	if err := rdr.FdReader.Close(); err != nil {
 		return err
@@ -126,16 +133,29 @@ func (rdr *Rdr) Close() error {
 }
 
 func (rdr *Rdr) Read(p []byte) (n int, err error) {
-	return rdr.ardr.Read(p)
+	if rdr.ardr != nil {
+		return rdr.ardr.Read(p)
+	}
+	return rdr.brdr.Read(p)
 }
 
-func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
+func (fl *FsLib) OpenBufReader(path string, offset sp.Toffset) (ReaderI, error) {
 	rdr, err := fl.OpenReaderRegion(path, offset, 0)
 	if err != nil {
 		return nil, err
 	}
 	r := &Rdr{FdReader: rdr}
-	// r.brdr = bufio.NewReaderSize(rdr.GetReader(), sp.BUFSZ)
+	r.brdr = bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
+	return r, nil
+}
+
+func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (ReaderI, error) {
+	rdr, err := fl.OpenReaderRegion(path, offset, 0)
+	if err != nil {
+		return nil, err
+	}
+	r := &Rdr{FdReader: rdr}
+	//r.brdr = bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
 	r.ardr, err = readahead.NewReaderSize(rdr.Reader, 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err
@@ -176,28 +196,53 @@ type WriterI interface {
 	Nbytes() sp.Tlength
 }
 
-func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*writer.Writer, error) {
-	fd, err := fl.Create(fname, perm, mode)
-	if err != nil {
-		return nil, err
-	}
-	wrt := fl.NewWriter(fd)
-	return wrt, nil
-}
-
-func (fl *FsLib) OpenWriter(fname string, mode sp.Tmode) (*writer.Writer, error) {
-	fd, err := fl.Open(fname, mode)
-	if err != nil {
-		return nil, err
-	}
-	wrt := fl.NewWriter(fd)
-	return wrt, nil
-}
-
 type Wrt struct {
 	wrt  WriterI
 	awrt *awriter.Writer
 	bwrt *bufio.Writer
+}
+
+func (fl *FsLib) newWrt(fd int) *Wrt {
+	w := fl.NewWriter(fd)
+	return &Wrt{w, nil, nil}
+}
+
+func (fl *FsLib) newBufWrt(fd int) *Wrt {
+	w := fl.NewWriter(fd)
+	bw := bufio.NewWriterSize(w, sp.BUFSZ)
+	return &Wrt{w, nil, bw}
+}
+
+func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (WriterI, error) {
+	fd, err := fl.Create(fname, perm, mode)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newWrt(fd), nil
+}
+
+func (fl *FsLib) OpenWriter(fname string) (WriterI, error) {
+	fd, err := fl.Open(fname, sp.OWRITE)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newWrt(fd), nil
+}
+
+func (fl *FsLib) CreateBufWriter(fname string, perm sp.Tperm) (WriterI, error) {
+	fd, err := fl.Create(fname, perm, sp.OWRITE)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newBufWrt(fd), nil
+}
+
+func (fl *FsLib) OpenBufWriter(fname string, mode sp.Tmode) (WriterI, error) {
+	fd, err := fl.Open(fname, mode)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newBufWrt(fd), nil
 }
 
 func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (WriterI, error) {
@@ -211,8 +256,10 @@ func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (
 }
 
 func (wrt *Wrt) Close() error {
-	if err := wrt.bwrt.Flush(); err != nil {
-		return err
+	if wrt.bwrt != nil {
+		if err := wrt.bwrt.Flush(); err != nil {
+			return err
+		}
 	}
 	if wrt.awrt != nil {
 		if err := wrt.awrt.Close(); err != nil {
@@ -226,7 +273,10 @@ func (wrt *Wrt) Close() error {
 }
 
 func (wrt *Wrt) Write(b []byte) (int, error) {
-	return wrt.bwrt.Write(b)
+	if wrt.bwrt != nil {
+		return wrt.bwrt.Write(b)
+	}
+	return wrt.wrt.Write(b)
 }
 
 func (wrt *Wrt) Nbytes() sp.Tlength {

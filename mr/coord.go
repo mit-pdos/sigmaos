@@ -61,7 +61,6 @@ type Coord struct {
 	intOutdir       string
 	done            int32
 	memPerTask      proc.Tmem
-	asyncrw         bool
 	stat            stat
 }
 
@@ -81,7 +80,7 @@ func (s *stat) String() string {
 type NewProc func(string) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 11 {
+	if len(args) != 10 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
@@ -114,9 +113,9 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.crash = int64(ctime)
 
-	malmap, err := strconv.Atoi(args[10])
+	malmap, err := strconv.Atoi(args[9])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[10])
+		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[9])
 	}
 	c.maliciousMapper = uint64(malmap)
 
@@ -127,11 +126,6 @@ func NewCoord(args []string) (*Coord, error) {
 		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[3])
 	}
 	c.memPerTask = proc.Tmem(mem)
-	asyncrw, err := strconv.ParseBool(args[9])
-	if err != nil {
-		return nil, fmt.Errorf("NewCoord: can't parse asyncrw %v", args[9])
-	}
-	c.asyncrw = asyncrw
 
 	b, err := c.GetFile(JobOutLink(c.jobRoot, c.job))
 	if err != nil {
@@ -196,7 +190,7 @@ func (c *Coord) mapperProc(task string) (*proc.Proc, error) {
 	}
 	db.DPrintf(db.ALWAYS, "bin %v", string(bin))
 	c.stat.nMap += 1
-	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz, strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths)
+	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz}, c.memPerTask, allowedPaths)
 	return proc, nil
 }
 
@@ -221,7 +215,7 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
 	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
 	c.stat.nReduce += 1
-	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.asyncrw)}, c.memPerTask, allowedPaths), nil
+	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask, allowedPaths), nil
 }
 
 type Tresult struct {

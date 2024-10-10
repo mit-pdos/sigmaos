@@ -79,9 +79,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		line:        make([]byte, 0, lsz),
 		ch:          make(chan error),
 	}
-	if sp.IsS3Path(intOutput) {
-		m.MountS3PathClnt()
-	}
+	m.MountS3PathClnt()
 	go func() {
 		m.ch <- m.initOutput()
 	}()

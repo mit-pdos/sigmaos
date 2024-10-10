@@ -101,7 +101,7 @@ func writer(t *testing.T, ch chan error, pe *proc.ProcEnv, idx int) {
 			if err := fsl.Remove(fn); serr.IsErrCode(err, serr.TErrUnreachable) {
 				break
 			}
-			w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
+			w, err := fsl.CreateBufWriter(fn, 0777)
 			if err != nil {
 				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err code %v", err)
 				break

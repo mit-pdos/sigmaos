@@ -82,11 +82,13 @@ func RunCoord(args []string) {
 		}(ix)
 	}
 
-	dirWatcher, err := fslib.NewDirWatcher(sc.FsLib, readyDir)
+	// dirWatcher, err := fslib.NewDirWatcher(sc.FsLib, readyDir)
+	dirReader := fslib.NewDirReader(sc.FsLib, readyDir)
 	if err != nil {
 		db.DFatalf("RunCoord: failed to create dir watcher for ready dir %v", err)
 	}
-	err = dirWatcher.WaitNEntries(nWorkers)
+	// err = dirWatcher.WaitNEntries(nWorkers)
+	err = dirReader.WaitNEntries(nWorkers)
 	if err != nil {
 		db.DFatalf("RunCoord: failed to wait for all procs to be ready %v", err)
 	}
@@ -125,19 +127,16 @@ func RunCoord(args []string) {
 		}
 	}
 
-	if sc.Remove(watchDir) != nil {
+	if err := sc.Remove(watchDir); err != nil {
 		db.DFatalf("RunCoord: failed to remove watchdir %v", err)
 	}
-	if sc.Remove(tempDir) != nil {
+	if err := sc.Remove(tempDir); err != nil {
 		db.DFatalf("RunCoord: failed to remove tempdir %v", err)
 	}
-	if sc.Remove(readyDir) != nil {
+	if err := sc.Remove(readyDir); err != nil {
 		db.DFatalf("RunCoord: failed to remove readydir %v", err)
 	}
-	if sc.Remove(tempDir) != nil {
-		db.DFatalf("RunCoord: failed to remove tempdir %v", err)
-	}
-	if sc.Remove(baseDir) != nil {
+	if err := sc.Remove(baseDir); err != nil {
 		db.DFatalf("RunCoord: failed to remove basedir %v", err)
 	}
 

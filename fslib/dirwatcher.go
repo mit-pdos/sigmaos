@@ -10,7 +10,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
-	"sigmaos/sigmap"
 	sp "sigmaos/sigmap"
 )
 
@@ -32,7 +31,7 @@ func (fsl *FsLib) read_(fd int, bytes []byte) (sp.Tsize, error) {
 	if ok && len(toSendForFd) > 0 {
 		toSend[fd] = toSendForFd[min(bufLen, len(toSendForFd)):]
 		numCopied := copy(bytes, toSendForFd)
-		return sigmap.Tsize(numCopied), nil
+		return sp.Tsize(numCopied), nil
 	}
 
 	for {
@@ -105,7 +104,7 @@ func (fsl *FsLib) read_(fd int, bytes []byte) (sp.Tsize, error) {
 		numCopied := copy(bytes, sendBytes)
 
 		db.DPrintf(db.WATCH, "read_: wrote %s to buffer, %s is stored to send later", string(bytes), string(toSend[fd]))
-		return sigmap.Tsize(numCopied), nil
+		return sp.Tsize(numCopied), nil
 	}
 }
 

@@ -10,23 +10,21 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/klauspost/readahead"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/auth"
-	"sigmaos/awriter"
 	db "sigmaos/debug"
 	"sigmaos/mr"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/scheddclnt"
-	"sigmaos/seqwc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	// "sigmaos/stats"
@@ -69,49 +67,66 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 7, mr.Khash([]byte("absently"))%8)
 }
 
-func TestLocalWc(t *testing.T) {
+type Tdata map[string]uint64
+
+func wcline(n int, line string, data Tdata, sbc *mr.ScanByteCounter) (int, error) {
+	scanner := bufio.NewScanner(strings.NewReader(line))
+	scanner.Split(sbc.ScanWords)
+	cnt := 0
+	for scanner.Scan() {
+		w := scanner.Text()
+		if _, ok := data[w]; !ok {
+			data[w] = uint64(0)
+		}
+		data[w] += 1
+		cnt++
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
+	return cnt, nil
+}
+
+func TestSeqWc(t *testing.T) {
 	const (
 		LOCALINPUT = "/tmp/enwiki-1G"
 		HOSTTMP    = "/tmp/sigmaos"
 		F          = "gutenberg.txt"
-		// INPUT   = "../input/" + F
-		INPUT = LOCALINPUT
-		OUT   = HOSTTMP + F + ".out"
+		INPUT      = "../input/" + F
+		// INPUT = LOCALINPUT
+		OUT = HOSTTMP + F + ".out"
 	)
 
 	file, err := os.Open(INPUT)
 	assert.Nil(t, err)
 	defer file.Close()
 	r := bufio.NewReader(file)
-	rdr, err := readahead.NewReaderSize(r, 4, sp.BUFSZ)
-	assert.Nil(t, err, "Err reader: %v", err)
 	start := time.Now()
-	scanner := bufio.NewScanner(rdr)
+	scanner := bufio.NewScanner(r)
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
-	data := make(seqwc.Tdata, 0)
+	data := make(Tdata, 0)
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.SEQWC)
 	assert.Nil(t, err)
 	sbc := mr.NewScanByteCounter(p)
 	for scanner.Scan() {
 		l := scanner.Text()
 		if len(l) > 0 {
-			seqwc.Wcline(0, l, data, sbc)
+			_, err := wcline(0, l, data, sbc)
+			assert.Nil(t, err)
 		}
 	}
 	err = scanner.Err()
 	assert.Nil(t, err)
-	db.DPrintf(db.ALWAYS, "seqwc %v %v", INPUT, time.Since(start).Milliseconds())
+	db.DPrintf(db.ALWAYS, "seqwc %v %v", INPUT, time.Since(start))
 	file, err = os.Create(OUT)
 	assert.Nil(t, err)
 	defer file.Close()
-	aw := awriter.NewWriterSize(file, 4, sp.BUFSZ)
-	bw := bufio.NewWriterSize(aw, sp.BUFSZ)
-	defer bw.Flush()
-	defer aw.Close()
+	w := bufio.NewWriter(file)
+	defer w.Flush()
 	for k, v := range data {
 		b := fmt.Sprintf("%s\t%d\n", k, v)
-		_, err := bw.Write([]byte(b))
+		_, err := w.Write([]byte(b))
 		assert.Nil(t, err)
 	}
 	p.Done()
@@ -234,45 +249,6 @@ func TestMapperReducer(t *testing.T) {
 	}
 
 	p.Done()
-	ts.Shutdown()
-}
-
-func TestSeqGrep(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	job, err1 = mr.ReadJobConfig(app)
-	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
-
-	p := proc.NewProc("seqgrep", []string{job.Input})
-	err := ts.Spawn(p)
-	assert.Nil(t, err)
-	status, err := ts.WaitExit(p.GetPid())
-	assert.Nil(t, err)
-	assert.True(t, status.IsStatusOK())
-	// assert.Equal(t, 795, n)
-	ts.Shutdown()
-}
-
-func TestSeqWc(t *testing.T) {
-	const OUT = "name/ux/~local/seqout.txt"
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	job, err1 = mr.ReadJobConfig(app)
-	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
-
-	ts.Remove(OUT)
-
-	p := proc.NewProc("seqwc", []string{job.Input, OUT})
-	err := ts.Spawn(p)
-	assert.Nil(t, err)
-	status, err := ts.WaitExit(p.GetPid())
-	assert.Nil(t, err)
-	assert.True(t, status.IsStatusOK())
-	// assert.Equal(t, 795, n)
 	ts.Shutdown()
 }
 

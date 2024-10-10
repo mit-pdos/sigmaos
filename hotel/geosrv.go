@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strconv"
 	"sync"
+	"time"
 
 	//	"go.opentelemetry.io/otel/trace"
 
@@ -77,10 +78,12 @@ type Geo struct {
 func RunGeoSrv(job string) error {
 	rand.Seed(RAND_SEED)
 	geo := &Geo{}
+	start := time.Now()
 	geo.indexes = make([]*safeIndex, 0, N_INDEX)
 	for i := 0; i < N_INDEX; i++ {
 		geo.indexes = append(geo.indexes, newSafeIndex("data/geo.json"))
 	}
+	db.DPrintf(db.ALWAYS, "Geo srv done building indexes after: %v", time.Since(start))
 	ssrv, err := sigmasrv.NewSigmaSrv(HOTELGEO, geo, proc.GetProcEnv())
 	if err != nil {
 		return err
@@ -93,6 +96,8 @@ func RunGeoSrv(job string) error {
 	defer p.Done()
 	//	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
 	//	defer geo.tracer.Flush()
+
+	db.DPrintf(db.ALWAYS, "Geo srv ready to serve time since spawn: %v", time.Since(ssrv.ProcEnv().GetSpawnTime()))
 
 	return ssrv.RunServer()
 }

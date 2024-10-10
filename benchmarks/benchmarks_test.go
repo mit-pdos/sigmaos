@@ -72,7 +72,7 @@ var CACHE_TYPE string
 var CACHE_GC bool
 var BLOCK_MEM string
 var N_REALM int
-var ASYNCRW
+var ASYNCRW bool
 
 // XXX Remove
 var MEMCACHED_ADDRS string

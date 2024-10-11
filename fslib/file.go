@@ -46,11 +46,6 @@ func (fl *FsLib) PutLeasedFile(fname string, perm sp.Tperm, mode sp.Tmode, lid s
 // Open readers
 //
 
-type ReaderI interface {
-	io.ReadCloser
-	Nbytes() sp.Tlength
-}
-
 // For clients of fslib that want an io.Reader interface for a file with
 // a few extra features (e.g., reading no more than len bytes, if len > 0).
 type FileReader struct {
@@ -118,13 +113,12 @@ func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength
 	return fl.NewReaderRegion(fd, path, len), nil
 }
 
-type Rdr struct {
+type AsyncFileReader struct {
 	*FileReader
-	brdr *bufio.Reader
 	ardr io.ReadCloser
 }
 
-func (rdr *Rdr) Close() error {
+func (rdr *AsyncFileReader) Close() error {
 	if rdr.ardr != nil {
 		if err := rdr.ardr.Close(); err != nil {
 			return err
@@ -136,20 +130,19 @@ func (rdr *Rdr) Close() error {
 	return nil
 }
 
-func (rdr *Rdr) Read(p []byte) (n int, err error) {
+func (rdr *AsyncFileReader) Read(p []byte) (n int, err error) {
 	if rdr.ardr != nil {
 		return rdr.ardr.Read(p)
 	}
-	return rdr.brdr.Read(p)
+	return rdr.FileReader.Read(p)
 }
 
-func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (ReaderI, error) {
+func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*AsyncFileReader, error) {
 	rdr, err := fl.OpenReaderRegion(path, offset, 0)
 	if err != nil {
 		return nil, err
 	}
-	r := &Rdr{FileReader: rdr}
-	//r.brdr = bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
+	r := &AsyncFileReader{FileReader: rdr}
 	r.ardr, err = readahead.NewReaderSize(rdr, 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err

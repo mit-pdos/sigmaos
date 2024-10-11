@@ -1,7 +1,6 @@
 package sigmapsrv_test
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"path/filepath"
@@ -294,9 +293,8 @@ func TestReadFilePerfSingle(t *testing.T) {
 			assert.True(t, ok)
 			pn = pn0
 		}
-		r, err := ts.OpenReader(pn)
-		br := bufio.NewReaderSize(r, sp.BUFSZ)
-		n, err := test.Reader(t, br, buf, sz)
+		r, err := ts.OpenBufReader(pn)
+		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
 		return n

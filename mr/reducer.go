@@ -39,7 +39,7 @@ type Reducer struct {
 	nmaptask     int
 	tmp          string
 	pwrt         *perf.PerfWriter
-	wrt          fslib.WriterI
+	wrt          *fslib.FileWriter
 	perf         *perf.Perf
 }
 

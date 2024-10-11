@@ -503,7 +503,7 @@ func (c *Coord) Work() {
 		db.DFatalf("job isn't done %v+%v != %v+%v", n, m, c.nmaptask, c.nreducetask)
 	}
 
-	db.DPrintf(db.ALWAYS, "job done stat %v", c.stat)
+	db.DPrintf(db.ALWAYS, "job done stat %v", &c.stat)
 
 	atomic.StoreInt32(&c.done, 1)
 

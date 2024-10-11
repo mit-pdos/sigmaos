@@ -43,7 +43,7 @@ type Mapper struct {
 	input       string
 	intOutput   string
 	bin         string
-	wrts        []fslib.WriterI
+	wrts        []*fslib.FileWriter
 	pwrts       []*perf.PerfWriter
 	rand        string
 	perf        *perf.Perf
@@ -69,7 +69,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		input:       input,
 		intOutput:   intOutput,
 		bin:         filepath.Base(input),
-		wrts:        make([]fslib.WriterI, nr),
+		wrts:        make([]*fslib.FileWriter, nr),
 		pwrts:       make([]*perf.PerfWriter, nr),
 		perf:        p,
 		sbc:         NewScanByteCounter(p),

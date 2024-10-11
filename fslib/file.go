@@ -12,10 +12,10 @@ import (
 
 	"sigmaos/awriter"
 	db "sigmaos/debug"
+	"sigmaos/fslib/writer"
 	"sigmaos/reader"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
-	"sigmaos/writer"
 )
 
 //
@@ -90,10 +90,6 @@ func (fl *FsLib) NewReaderRegion(fd int, path string, len sp.Tlength) *FileReade
 
 func (fl *FsLib) NewReader(fd int, path string) *FileReader {
 	return fl.NewReaderRegion(fd, path, 0)
-}
-
-func (fl *FsLib) NewWriter(fd int) *writer.Writer {
-	return writer.NewWriter(fl.FileAPI, fd)
 }
 
 func (fl *FsLib) OpenReader(path string) (*FileReader, error) {
@@ -197,71 +193,31 @@ func (rd *fdReader) Read(off sp.Toffset, b []byte) (int, error) {
 // Writers
 //
 
-type WriterI interface {
-	io.WriteCloser
-	Nbytes() sp.Tlength
-}
-
-type Wrt struct {
-	wrt  WriterI
+type FileWriter struct {
+	wrt  *writer.Writer
 	awrt *awriter.Writer
 	bwrt *bufio.Writer
 }
 
-func (fl *FsLib) newWrt(fd int) *Wrt {
-	w := fl.NewWriter(fd)
-	return &Wrt{w, nil, nil}
+func (fl *FsLib) newFileWriter(fd int) *FileWriter {
+	w := writer.NewWriter(fl.FileAPI, fd)
+	return &FileWriter{w, nil, nil}
 }
 
-func (fl *FsLib) newBufWrt(fd int) *Wrt {
-	w := fl.NewWriter(fd)
+func (fl *FsLib) newBufFileWriter(fd int) *FileWriter {
+	w := writer.NewWriter(fl.FileAPI, fd)
 	bw := bufio.NewWriterSize(w, sp.BUFSZ)
-	return &Wrt{w, nil, bw}
+	return &FileWriter{w, nil, bw}
 }
 
-func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (WriterI, error) {
-	fd, err := fl.Create(fname, perm, mode)
-	if err != nil {
-		return nil, err
-	}
-	return fl.newWrt(fd), nil
-}
-
-func (fl *FsLib) OpenWriter(fname string) (WriterI, error) {
-	fd, err := fl.Open(fname, sp.OWRITE)
-	if err != nil {
-		return nil, err
-	}
-	return fl.newWrt(fd), nil
-}
-
-func (fl *FsLib) CreateBufWriter(fname string, perm sp.Tperm) (WriterI, error) {
-	fd, err := fl.Create(fname, perm, sp.OWRITE)
-	if err != nil {
-		return nil, err
-	}
-	return fl.newBufWrt(fd), nil
-}
-
-func (fl *FsLib) OpenBufWriter(fname string, mode sp.Tmode) (WriterI, error) {
-	fd, err := fl.Open(fname, mode)
-	if err != nil {
-		return nil, err
-	}
-	return fl.newBufWrt(fd), nil
-}
-
-func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (WriterI, error) {
-	w, err := fl.CreateWriter(fname, perm, mode)
-	if err != nil {
-		return nil, err
-	}
+func (fl *FsLib) newBufAsyncFileWriter(fd int) *FileWriter {
+	w := writer.NewWriter(fl.FileAPI, fd)
 	aw := awriter.NewWriterSize(w, 4, sp.BUFSZ)
 	bw := bufio.NewWriterSize(aw, sp.BUFSZ)
-	return &Wrt{w, aw, bw}, nil
+	return &FileWriter{w, aw, bw}
 }
 
-func (wrt *Wrt) Close() error {
+func (wrt *FileWriter) Close() error {
 	if wrt.bwrt != nil {
 		if err := wrt.bwrt.Flush(); err != nil {
 			return err
@@ -278,15 +234,55 @@ func (wrt *Wrt) Close() error {
 	return nil
 }
 
-func (wrt *Wrt) Write(b []byte) (int, error) {
+func (wrt *FileWriter) Write(b []byte) (int, error) {
 	if wrt.bwrt != nil {
 		return wrt.bwrt.Write(b)
 	}
 	return wrt.wrt.Write(b)
 }
 
-func (wrt *Wrt) Nbytes() sp.Tlength {
+func (wrt *FileWriter) Nbytes() sp.Tlength {
 	return wrt.wrt.Nbytes()
+}
+
+func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*FileWriter, error) {
+	fd, err := fl.Create(fname, perm, mode)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newFileWriter(fd), nil
+}
+
+func (fl *FsLib) OpenWriter(fname string) (*FileWriter, error) {
+	fd, err := fl.Open(fname, sp.OWRITE)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newFileWriter(fd), nil
+}
+
+func (fl *FsLib) CreateBufWriter(fname string, perm sp.Tperm) (*FileWriter, error) {
+	fd, err := fl.Create(fname, perm, sp.OWRITE)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newBufFileWriter(fd), nil
+}
+
+func (fl *FsLib) OpenBufWriter(fname string, mode sp.Tmode) (*FileWriter, error) {
+	fd, err := fl.Open(fname, mode)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newBufFileWriter(fd), nil
+}
+
+func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*FileWriter, error) {
+	fd, err := fl.Create(fname, perm, mode)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newBufAsyncFileWriter(fd), nil
 }
 
 //
@@ -298,14 +294,14 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	//	defer func(t *time.Time) {
 	//		db.DPrintf(db.ALWAYS, "Time reading + writing in copyFile: %v", time.Since(*t))
 	//	}(&start)
-	rdr, err := fl.OpenAsyncReader(src, 0)
+	rdr, err := fl.OpenReader(src)
 	if err != nil {
 		return err
 	}
 	//	db.DPrintf(db.ALWAYS, "Time openReader: %v", time.Since(start))
 	//	start = time.Now()
 	defer rdr.Close()
-	wrt, err := fl.CreateAsyncWriter(dst, 0777, sp.OWRITE)
+	wrt, err := fl.CreateWriter(dst, 0777, sp.OWRITE)
 	if err != nil {
 		return err
 	}

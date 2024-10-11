@@ -12,8 +12,8 @@ import (
 
 	"sigmaos/awriter"
 	db "sigmaos/debug"
+	"sigmaos/fslib/reader"
 	"sigmaos/fslib/writer"
-	"sigmaos/reader"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )

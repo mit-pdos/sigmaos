@@ -82,15 +82,17 @@ func RunCoord(args []string) {
 		}(ix)
 	}
 
-	// dirWatcher, err := fslib.NewDirWatcher(sc.FsLib, readyDir)
-	dirReader := fslib.NewDirReader(sc.FsLib, readyDir)
+	dirWatcher, _, err := fslib.NewDirWatcher(sc.FsLib, readyDir)
 	if err != nil {
 		db.DFatalf("RunCoord: failed to create dir watcher for ready dir %v", err)
 	}
-	// err = dirWatcher.WaitNEntries(nWorkers)
-	err = dirReader.WaitNEntries(nWorkers)
+	err = dirWatcher.WaitNEntries(nWorkers)
 	if err != nil {
 		db.DFatalf("RunCoord: failed to wait for all procs to be ready %v", err)
+	}
+	err = dirWatcher.Close()
+	if err != nil {
+		db.DFatalf("RunCoord: failed to close watcher %v", err)
 	}
 
 	sum := uint64(0)
@@ -143,6 +145,7 @@ func RunCoord(args []string) {
 	failed := make([]int, 0, nWorkers)
 	for ix := 0; ix < nWorkers; ix++ {
 		if sums[ix] != sum {
+			db.DPrintf(db.WATCH_TEST, "RunCoord: proc %d did not match %d != %d", ix, sums[ix], sum)
 			failed = append(failed, ix)
 		}
 	}

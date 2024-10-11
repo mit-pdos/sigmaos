@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmap"
@@ -52,58 +52,49 @@ func RunWorker(args []string) {
 
 	workDirFd, err := sc.Open(workDir, 0777)
 	if err != nil {
-		db.DFatalf("RunWorker %s: failed to open workDir %s", id, workDir)
+		db.DFatalf("RunWorker %s: failed to open workDir %s: %v", id, workDir, err)
 	}
 
 	sum := uint64(0)
-	nfilesSeen := 0
+	seen := make(map[string]bool)
+	dirWatcher, initFiles, err := fslib.NewDirWatcher(sc.FsLib, workDir)
+	if err != nil {
+		db.DFatalf("RunWorker %s: failed to create dir watcher for %s: %v", id, workDir, err)
+	}
+
+	for _, file := range initFiles {
+		if !seen[file] {
+			sum += readFile(sc, id, filepath.Join(workDir, file))
+			seen[file] = true
+		} else {
+			db.DPrintf(db.WATCH_TEST, "RunWorker %s: found duplicate %s", id, file)
+		}
+	}
 	for {
+		changed, err := dirWatcher.WatchEntriesChanged()
 		if err != nil {
-			db.DFatalf("RunWorker %s: failed to wait for %s", id, workDir)
+			db.DFatalf("RunWorker %s: failed to watch for entries changed %v", id, err)
 		}
-
-		stats, err := sc.GetDir(workDir)
-		if err != nil {
-			db.DFatalf("RunWorker %s: failed to get dir: err %v", id, err)
+		addedFiles := make([]string, 0)
+		for file, created := range changed {
+			if created {
+				addedFiles = append(addedFiles, file)
+			}
 		}
+		db.DPrintf(db.WATCH_TEST, "RunWorker %s: added files: %v", id, addedFiles)
 
-		sum = 0
-		nfilesSeen = 0
-		for _, stat := range stats {
-			if strings.Contains(stat.Name, "input_") {
-				file := filepath.Join(workDir, stat.Name)
-				reader, err := sc.OpenReader(file)
-				if err != nil {
-					db.DFatalf("RunWorker %s: failed to open file: err %v", id, err)
-				}
-				scanner := bufio.NewScanner(reader.Reader)
-				exists := scanner.Scan()
-				if !exists {
-					db.DFatalf("RunWorker %s: file %s does not contain line", id, file)
-				}
-
-				line := scanner.Text()
-				num, err := strconv.ParseUint(line, 10, 64)
-				if err != nil {
-					db.DFatalf("RunWorker %s: failed to parse %v as u64: err %v", id, line, err)
-				}
-
-				if err = reader.Close(); err != nil {
-					db.DFatalf("RunWorker %s: failed to close reader for %s: err %v", id, file, err)
-				}
-
-				sum += num
-				nfilesSeen++
+		for _, file := range addedFiles {
+			if !seen[file] {
+				sum += readFile(sc, id, filepath.Join(workDir, file))
+				seen[file] = true
+			} else {
+				db.DPrintf(db.WATCH_TEST, "RunWorker %s: found duplicate %s", id, file)
 			}
 		}
 
-		db.DPrintf(db.WATCH_TEST, "RunWorker %s: found %d files", id, nfilesSeen)
-
-		if nfilesSeen >= nfiles {
-			break;
+		if len(seen) >= nfiles {
+			break
 		}
-		db.DPrintf(db.WATCH_TEST, "RunWorker %s: watching %s", id, workDir)
-		sc.DirWatch(workDirFd)
 	}
 
 	err = sc.CloseFd(workDirFd)
@@ -123,5 +114,29 @@ func RunWorker(args []string) {
 	
 	status := proc.NewStatusInfo(proc.StatusOK, "", sum)
 	sc.ClntExit(status)
+}
+
+func readFile(sc *sigmaclnt.SigmaClnt, id string, file string) uint64 {
+	reader, err := sc.OpenReader(file)
+	if err != nil {
+		db.DFatalf("readFile id %s: failed to open file: err %v", id, err)
+	}
+	scanner := bufio.NewScanner(reader.Reader)
+	exists := scanner.Scan()
+	if !exists {
+		db.DFatalf("readFile id %s: file %s does not contain line", id, file)
+	}
+
+	line := scanner.Text()
+	num, err := strconv.ParseUint(line, 10, 64)
+	if err != nil {
+		db.DFatalf("readFile id %s: failed to parse %v as u64: err %v", id, line, err)
+	}
+
+	if err = reader.Close(); err != nil {
+		db.DFatalf("readFile id %s: failed to close reader for %s: err %v", id, file, err)
+	}
+
+	return num
 }
 

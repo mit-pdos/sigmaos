@@ -255,6 +255,7 @@ const (
 	INTERVALS               = "INTERVALS"
 	SESSSRV                 = "SESSSRV"
 	WATCH                   = "WATCH"
+	WATCH_NEW               = "WATCH_NEW"
 	WATCH_ERR               = WATCH + ERR
 	LOCKMAP                 = "LOCKMAP"
 	SNAP                    = "SNAP"

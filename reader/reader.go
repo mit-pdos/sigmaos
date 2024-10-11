@@ -1,3 +1,5 @@
+// Package reader wraps callers that have ReadOffsetI and returns an
+// io.Reader interface
 package reader
 
 import (
@@ -7,25 +9,15 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type ReaderI interface {
+type ReadOffsetI interface {
 	Read(sp.Toffset, []byte) (int, error)
 	Close() error
 }
 
 type Reader struct {
-	rdr    ReaderI
-	path   string
-	off    sp.Toffset
-	eof    bool
-	fenced bool
-}
-
-func (rdr *Reader) Path() string {
-	return rdr.path
-}
-
-func (rdr *Reader) Nbytes() sp.Tlength {
-	return sp.Tlength(rdr.off)
+	rdr ReadOffsetI
+	off sp.Toffset
+	eof bool
 }
 
 func (rdr *Reader) Read(p []byte) (int, error) {
@@ -37,7 +29,7 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 	}
 	n, err := rdr.rdr.Read(rdr.off, p)
 	if err != nil {
-		db.DPrintf(db.READER_ERR, "Read %v err %v\n", rdr.path, err)
+		db.DPrintf(db.READER_ERR, "Read err %v\n", err)
 		return 0, err
 	}
 	if n == 0 {
@@ -45,17 +37,10 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 	if int(n) < len(p) {
-		db.DPrintf(db.READER_ERR, "Read short %v %v %v\n", rdr.path, len(p), n)
+		db.DPrintf(db.READER_ERR, "Read short %v %v\n", len(p), n)
 	}
 	rdr.off += sp.Toffset(n)
 	return int(n), nil
-}
-
-func (rdr *Reader) GetData() ([]byte, error) {
-	// XXX too big?
-	b := make([]byte, sp.MAXGETSET)
-	sz, err := rdr.rdr.Read(0, b)
-	return b[:sz], err
 }
 
 func (rdr *Reader) Close() error {
@@ -66,14 +51,6 @@ func (rdr *Reader) Close() error {
 	return nil
 }
 
-func (rdr *Reader) Unfence() {
-	rdr.fenced = false
-}
-
-func (rdr *Reader) Reader() ReaderI {
-	return rdr.rdr
-}
-
-func NewReader(rdr ReaderI, path string) *Reader {
-	return &Reader{rdr, path, 0, false, true}
+func NewReader(rdr ReadOffsetI, path string) *Reader {
+	return &Reader{rdr, 0, false}
 }

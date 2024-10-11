@@ -55,7 +55,7 @@ func TestReadOff(t *testing.T) {
 
 	rdr, err := ts.OpenReaderRegion(filepath.Join(sp.S3, "~local/9ps3/gutenberg/pg-being_ernest.txt"), 1<<10, 0)
 	assert.Nil(t, err, "Error OpenReaderRegion %v", err)
-	brdr := bufio.NewReaderSize(rdr.Reader, 1<<16)
+	brdr := bufio.NewReaderSize(rdr, 1<<16)
 	scanner := bufio.NewScanner(brdr)
 	l := sp.Tlength(1 << 10)
 	n := 0
@@ -127,7 +127,7 @@ func TestReadSplit(t *testing.T) {
 
 	rdr, err := ts.OpenReaderRegion(filepath.Join(sp.S3, "~local/9ps3/wiki/enwiki-latest-pages-articles-multistream.xml"), SPLITSZ, 0)
 	assert.Nil(t, err)
-	brdr := bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
+	brdr := bufio.NewReaderSize(rdr, sp.BUFSZ)
 	b := make([]byte, SPLITSZ)
 	n, err := brdr.Read(b)
 	assert.Nil(t, err)

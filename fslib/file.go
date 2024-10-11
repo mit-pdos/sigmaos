@@ -51,45 +51,49 @@ type ReaderI interface {
 	Nbytes() sp.Tlength
 }
 
-type FdReader struct {
-	*reader.Reader
-	sof sos.FileAPI
+// For clients of fslib that want an io.Reader interface for a file with
+// a few extra features (e.g., reading no more than len bytes, if len > 0).
+type FileReader struct {
+	rdr *reader.Reader
 	fd  int
 	len sp.Tlength
+	n   sp.Tlength
+	pn  string
 }
 
-func (rd *FdReader) Close() error {
-	return rd.sof.CloseFd(rd.fd)
+func newFileReader(rdr *reader.Reader, fd int, len sp.Tlength, pn string) *FileReader {
+	return &FileReader{rdr, fd, len, 0, pn}
 }
 
-// Read no more than len bytes, if len is set
-func (rd *FdReader) Read(o sp.Toffset, b []byte) (int, error) {
-	if rd.len != 0 && rd.Nbytes() >= rd.len {
-		return 0, io.EOF
-	}
-	sz, err := rd.sof.Read(rd.fd, b)
-	return int(sz), err
+func (rd *FileReader) Close() error {
+	return rd.rdr.Close()
 }
 
-func (rd *FdReader) Fd() int {
+func (rd *FileReader) Fd() int {
 	return rd.fd
 }
 
-func (rd *FdReader) Nbytes() sp.Tlength {
-	return rd.Reader.Nbytes()
+// Read no more than len bytes, if len is set
+func (rd *FileReader) Read(b []byte) (int, error) {
+	if rd.len != 0 && rd.n >= rd.len {
+		return 0, io.EOF
+	}
+	sz, err := rd.rdr.Read(b)
+	rd.n += sp.Tlength(sz)
+	return sz, err
 }
 
-func newFdReader(sos sos.FileAPI, fd int, len sp.Tlength) *FdReader {
-	return &FdReader{nil, sos, fd, len}
+func (rd *FileReader) Nbytes() sp.Tlength {
+	return rd.n
 }
 
-func (fl *FsLib) NewReaderRegion(fd int, path string, len sp.Tlength) *FdReader {
-	fdrdr := newFdReader(fl.FileAPI, fd, len)
-	fdrdr.Reader = reader.NewReader(fdrdr, path)
-	return fdrdr
+func (fl *FsLib) NewReaderRegion(fd int, path string, len sp.Tlength) *FileReader {
+	fdrdr := newFdReader(fl.FileAPI, fd)
+	rdr := reader.NewReader(fdrdr, path)
+	return newFileReader(rdr, fd, len, path)
 }
 
-func (fl *FsLib) NewReader(fd int, path string) *FdReader {
+func (fl *FsLib) NewReader(fd int, path string) *FileReader {
 	return fl.NewReaderRegion(fd, path, 0)
 }
 
@@ -97,7 +101,7 @@ func (fl *FsLib) NewWriter(fd int) *writer.Writer {
 	return writer.NewWriter(fl.FileAPI, fd)
 }
 
-func (fl *FsLib) OpenReader(path string) (*FdReader, error) {
+func (fl *FsLib) OpenReader(path string) (*FileReader, error) {
 	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
@@ -105,7 +109,7 @@ func (fl *FsLib) OpenReader(path string) (*FdReader, error) {
 	return fl.NewReader(fd, path), nil
 }
 
-func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength) (*FdReader, error) {
+func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength) (*FileReader, error) {
 	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
@@ -115,7 +119,7 @@ func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength
 }
 
 type Rdr struct {
-	*FdReader
+	*FileReader
 	brdr *bufio.Reader
 	ardr io.ReadCloser
 }
@@ -126,7 +130,7 @@ func (rdr *Rdr) Close() error {
 			return err
 		}
 	}
-	if err := rdr.FdReader.Close(); err != nil {
+	if err := rdr.rdr.Close(); err != nil {
 		return err
 	}
 	return nil
@@ -139,52 +143,61 @@ func (rdr *Rdr) Read(p []byte) (n int, err error) {
 	return rdr.brdr.Read(p)
 }
 
-func (fl *FsLib) OpenBufReader(path string, offset sp.Toffset) (ReaderI, error) {
-	rdr, err := fl.OpenReaderRegion(path, offset, 0)
-	if err != nil {
-		return nil, err
-	}
-	r := &Rdr{FdReader: rdr}
-	r.brdr = bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
-	return r, nil
-}
-
 func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (ReaderI, error) {
 	rdr, err := fl.OpenReaderRegion(path, offset, 0)
 	if err != nil {
 		return nil, err
 	}
-	r := &Rdr{FdReader: rdr}
+	r := &Rdr{FileReader: rdr}
 	//r.brdr = bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
-	r.ardr, err = readahead.NewReaderSize(rdr.Reader, 4, sp.BUFSZ)
+	r.ardr, err = readahead.NewReaderSize(rdr, 4, sp.BUFSZ)
 	if err != nil {
 		return nil, err
 	}
 	return r, nil
 }
 
-func (fl *FsLib) OpenWaitReader(path string) (*FdReader, error) {
+func (fl *FsLib) OpenWaitReader(path string) (int, error) {
 	fd, err := fl.FileAPI.Open(path, sp.OREAD, sos.O_WAIT)
 	db.DPrintf(db.FSLIB, "OpenWaitReader %v err %v\n", path, err)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	rdr := fl.NewReader(fd, path)
-	return rdr, nil
-
+	return fd, nil
 }
 
 func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
-	rdr, err := fl.OpenWaitReader(path)
+	fd, err := fl.OpenWaitReader(path)
 	if err != nil {
 		return nil, err
 	}
-	defer rdr.Close()
-	b, error := rdr.GetData()
+	defer fl.FileAPI.CloseFd(fd)
+	b := make([]byte, sp.MAXGETSET)
+	sz, error := fl.FileAPI.Read(fd, b)
 	if error != nil {
 		return nil, error
 	}
-	return b, nil
+	return b[:sz], nil
+}
+
+// File readers pass fdReader to reader to provide an io.Reader
+// interface
+type fdReader struct {
+	sof sos.FileAPI
+	fd  int
+}
+
+func newFdReader(sos sos.FileAPI, fd int) *fdReader {
+	return &fdReader{sos, fd}
+}
+
+func (rd *fdReader) Close() error {
+	return rd.sof.CloseFd(rd.fd)
+}
+
+func (rd *fdReader) Read(off sp.Toffset, b []byte) (int, error) {
+	sz, err := rd.sof.Read(rd.fd, b)
+	return int(sz), err
 }
 
 //

@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -148,16 +149,16 @@ func (r *Reducer) readFile(rr *readResult) {
 	if ok {
 		rr.f = pn
 	}
-	rdr, err := r.OpenBufReader(rr.f, 0)
+	rdr, err := r.OpenReader(rr.f)
 	if err != nil {
 		db.DPrintf(db.MR, "NewReader %v err %v", rr.f, err)
 		rr.ok = false
 		return
 	}
 	defer rdr.Close()
-
+	brdr := bufio.NewReaderSize(rdr, sp.BUFSZ)
 	start := time.Now()
-	err = ReadKVs(rdr, rr.kvm, r.reducef)
+	err = ReadKVs(brdr, rr.kvm, r.reducef)
 	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", rr.f, time.Since(start).Milliseconds(), err)
 	if err != nil {
 		db.DPrintf(db.MR, "decodeKV %v err %v\n", rr.f, err)

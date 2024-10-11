@@ -277,7 +277,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 		}
 		r, err := ts.OpenReader(pn)
 		assert.Nil(t, err)
-		n, err := test.Reader(t, r.Reader, buf, sz)
+		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
 		return n
@@ -298,7 +298,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 			pn = pn0
 		}
 		r, err := ts.OpenReader(pn)
-		br := bufio.NewReaderSize(r.Reader, sp.BUFSZ)
+		br := bufio.NewReaderSize(r, sp.BUFSZ)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
@@ -374,7 +374,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 				for j := 0; j < NTRIAL; j++ {
 					r, err := fsls[i].OpenReader(fns[i])
 					assert.Nil(t, err)
-					n2, err := test.Reader(t, r.Reader, buf, SYNCFILESZ)
+					n2, err := test.Reader(t, r, buf, SYNCFILESZ)
 					assert.Nil(t, err)
 					n += n2
 					r.Close()
@@ -408,7 +408,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 				for j := 0; j < NTRIAL; j++ {
 					r, err := fsls[i].OpenReader(fns[i])
 					assert.Nil(t, err)
-					br := bufio.NewReaderSize(r.Reader, sp.BUFSZ)
+					br := bufio.NewReaderSize(r, sp.BUFSZ)
 					n2, err := test.Reader(t, br, buf, FILESZ)
 					assert.Nil(t, err)
 					n += n2

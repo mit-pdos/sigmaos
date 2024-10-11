@@ -257,12 +257,12 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 
 	var scanner *bufio.Scanner
 	if true {
-		scanner = bufio.NewScanner(rdr.Reader)
+		scanner = bufio.NewScanner(rdr)
 	} else {
 		// To measure read tput; no computing
 		start = time.Now()
 		m.buf = m.buf[0:m.linesz]
-		n, err := io.ReadFull(rdr.Reader, m.buf)
+		n, err := io.ReadFull(rdr, m.buf)
 		if err != nil && err != io.ErrUnexpectedEOF {
 			db.DPrintf(db.ALWAYS, "Err ReadFull: n %v err %v", n, err)
 		}

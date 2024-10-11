@@ -109,6 +109,32 @@ func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength
 	return fl.NewReaderRegion(fd, path, len), nil
 }
 
+type BufFileReader struct {
+	*FileReader
+	brdr *bufio.Reader
+}
+
+func (rdr *BufFileReader) Close() error {
+	if err := rdr.FileReader.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (rdr *BufFileReader) Read(p []byte) (n int, err error) {
+	return rdr.brdr.Read(p)
+}
+
+func (fl *FsLib) OpenBufReader(path string) (*BufFileReader, error) {
+	fd, err := fl.Open(path, sp.OREAD)
+	if err != nil {
+		return nil, err
+	}
+	rdr := fl.NewReader(fd, path)
+	brdr := bufio.NewReaderSize(rdr, sp.BUFSZ)
+	return &BufFileReader{rdr, brdr}, nil
+}
+
 type AsyncFileReader struct {
 	*FileReader
 	ardr io.ReadCloser

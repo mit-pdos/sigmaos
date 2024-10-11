@@ -89,13 +89,10 @@ func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz
 		err = w.Close()
 		assert.Nil(t, err)
 	case HBUF:
-		w, err := fsl.CreateWriter(fn, 0777, sp.OWRITE)
+		w, err := fsl.CreateBufWriter(fn, 0777)
 		assert.Nil(t, err, "Error Create writer: %v", err)
-		bw := bufio.NewWriterSize(w, sp.BUFSZ)
-		err = test.Writer(t, bw, buf, sz)
+		err = test.Writer(t, w, buf, sz)
 		assert.Nil(t, err, "Err writer %v", err)
-		err = bw.Flush()
-		assert.Nil(t, err, "Err: %v", err)
 		err = w.Close()
 		assert.Nil(t, err)
 	case HASYNC:
@@ -406,10 +403,9 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 			n := measure(p2, "bufreader", func() sp.Tlength {
 				n := sp.Tlength(0)
 				for j := 0; j < NTRIAL; j++ {
-					r, err := fsls[i].OpenReader(fns[i])
+					r, err := fsls[i].OpenBufReader(fns[i])
 					assert.Nil(t, err)
-					br := bufio.NewReaderSize(r, sp.BUFSZ)
-					n2, err := test.Reader(t, br, buf, FILESZ)
+					n2, err := test.Reader(t, r, buf, FILESZ)
 					assert.Nil(t, err)
 					n += n2
 					r.Close()

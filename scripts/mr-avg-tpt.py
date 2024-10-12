@@ -19,20 +19,25 @@ def get_tpt(s, inner, is_corral):
     tpt = s[1:len(s)-5]
   return float(tpt)
 
-def scrape_stats(path, inner, is_corral):
+def scrape_stats(path, inner, is_corral, mapper):
   with open(path, "r") as f:
     x = f.read()
   expected_line_contents = "MB/s"
   if is_corral:
     expected_line_contents = "ninvoc"
-  lines = [ l.strip() for l in x.split("\n") if expected_line_contents in l and "mr-r-" not in l ]
+  if mapper:
+    exclude = "mr-m-"
+  else:
+    exclude = "mr-r-"
+  lines = x.split("\n")
+  lines = [ lines[idx].strip() for idx in range(len(lines)) if expected_line_contents in lines[idx] and exclude not in lines[idx-1] ]
   if len(lines) == 0:
     print("No matches for contents [{}] in file {}".format(expected_line_contents, path))
     return []
   tpt = [ get_tpt(l, inner, is_corral) for l in lines ]
   return tpt
 
-def print_stats(path, tpt, verbose):
+def print_stats(path, tpt, verbose, mapper):
   if verbose:
     for l in tpt:
       print("{:.3f}MB/s".format(l))
@@ -41,7 +46,12 @@ def print_stats(path, tpt, verbose):
   if len(tpt) == 0:
     print("!!! NO DATA !!!")
     return
-  print("Stats for path[{}]:\n\tdata points: {}\n\tsum: {:.2f}MB/s\n\tmin: {:.3f}MB/s\n\tmax: {:.3f}MB/s\n\tmean: {:.3f}MB/s\n\tstd: {:.3f}MB/s\n\tp50: {:.3f}MB/s\n\tp90: {:.3f}MB/s\n\tp99: {:.3f}MB/s".format(
+  if mapper:
+    pfx = "Mapper"
+  else:
+    pfx = "Reducer"
+  print("{} stats for path[{}]:\n\tdata points: {}\n\tsum: {:.2f}MB/s\n\tmin: {:.3f}MB/s\n\tmax: {:.3f}MB/s\n\tmean: {:.3f}MB/s\n\tstd: {:.3f}MB/s\n\tp50: {:.3f}MB/s\n\tp90: {:.3f}MB/s\n\tp99: {:.3f}MB/s".format(
+    pfx,
     path,
     len(tpt),
     sum(tpt),
@@ -64,8 +74,14 @@ if __name__ == "__main__":
 
   paths = [ os.path.join(args.path, fn) for fn in os.listdir(args.path) if "bench.out" in fn ]
 
-  mapper_tpts = [ scrape_stats(path=pn, inner=args.inner, is_corral=args.is_corral) for pn in paths ]
+  mapper_tpts = [ scrape_stats(path=pn, inner=args.inner, is_corral=args.is_corral, mapper=True) for pn in paths ]
   tpt = []
   for t in mapper_tpts:
     tpt = tpt + t
-  print_stats(path=args.path, tpt=tpt, verbose=args.v)
+  print_stats(path=args.path, tpt=tpt, verbose=args.v, mapper=True)
+
+  reducer_tpts = [ scrape_stats(path=pn, inner=args.inner, is_corral=args.is_corral, mapper=False) for pn in paths ]
+  tpt = []
+  for t in reducer_tpts:
+    tpt = tpt + t
+  print_stats(path=args.path, tpt=tpt, verbose=args.v, mapper=False)

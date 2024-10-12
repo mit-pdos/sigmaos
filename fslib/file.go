@@ -4,11 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	// "strings"
-
+	"sync"
 	//	"time"
-
-	"github.com/klauspost/readahead"
 
 	"sigmaos/awriter"
 	db "sigmaos/debug"
@@ -136,38 +133,141 @@ func (fl *FsLib) OpenBufReader(path string) (*BufFileReader, error) {
 }
 
 type AsyncFileReader struct {
-	*FileReader
-	ardr io.ReadCloser
+	fd   int
+	sof  sos.FileAPI
+	end  sp.Toffset
+	wg   sync.WaitGroup
+	buf  []byte
+	n    int
+	done []bool
+
+	mu   sync.Mutex
+	cond *sync.Cond
+	err  error
+	coff sp.Toffset // next offset to consume
+	poff sp.Toffset // next offset to be produced
+	noff sp.Toffset // next offset to start reading
 }
 
 func (rdr *AsyncFileReader) Close() error {
-	if rdr.ardr != nil {
-		if err := rdr.ardr.Close(); err != nil {
-			return err
+	return rdr.sof.CloseFd(rdr.fd)
+}
+
+func (rdr *AsyncFileReader) Read(p []byte) (int, error) {
+	rdr.mu.Lock()
+	defer rdr.mu.Unlock()
+
+	if rdr.err != nil {
+		return 0, rdr.err
+	}
+	if rdr.coff >= rdr.end {
+		rdr.err = io.EOF
+		return 0, io.EOF
+	}
+	for rdr.coff == rdr.poff {
+		// db.DPrintf(db.TEST, "Read: wait for p %d c %d", chunkId(rdr.poff), chunkId(rdr.poff))
+		rdr.cond.Wait()
+	}
+	i := chunkId(rdr.coff)
+	i0 := int(i) % rdr.n
+	n := copy(p, rdr.buf[i0*sp.BUFSZ:(i0+1)*sp.BUFSZ])
+	rdr.coff += sp.Toffset(n)
+
+	if rdr.coff >= rdr.poff {
+		rdr.cond.Broadcast()
+	}
+	return n, nil
+}
+
+func (rdr *AsyncFileReader) setErr(err error) {
+	rdr.mu.Lock()
+	defer rdr.mu.Unlock()
+	rdr.err = err
+}
+
+func (rdr *AsyncFileReader) getChunk() (sp.Toffset, bool) {
+	rdr.mu.Lock()
+	defer rdr.mu.Unlock()
+
+	off := rdr.noff
+	rdr.noff += sp.BUFSZ
+	if off >= rdr.end {
+		return 0, false
+	}
+	return off, true
+}
+
+func chunkId(off sp.Toffset) int {
+	return int(off / sp.BUFSZ)
+}
+
+func (rdr *AsyncFileReader) getBuf(off sp.Toffset) int {
+	rdr.mu.Lock()
+	defer rdr.mu.Unlock()
+
+	for chunkId(off-rdr.coff) >= rdr.n {
+		//db.DPrintf(db.TEST, "chunkReader: wait for c %d p %d", chunkId(rdr.coff), chunkId(off))
+		rdr.cond.Wait()
+	}
+	return chunkId(off)
+}
+
+func (rdr *AsyncFileReader) chunkReader() {
+	defer rdr.wg.Done()
+
+	for {
+		off, ok := rdr.getChunk()
+		if !ok {
+			break
+		}
+		//db.DPrintf(db.TEST, "chunkReader: getChunk %d", chunkId(off))
+		i := rdr.getBuf(off)
+		sz := int(0)
+		for sz < sp.BUFSZ {
+			j := i % rdr.n
+			n, err := rdr.sof.Pread(rdr.fd, rdr.buf[j*sp.BUFSZ:(j+1)*sp.BUFSZ], off)
+			if err != nil {
+				rdr.setErr(err)
+				break
+			}
+			// db.DPrintf(db.TEST, "chunkReader: ck %d(%d) read %d", i, off, sz)
+			sz += int(n)
+		}
+		//db.DPrintf(db.TEST, "chunkReader: getChunk %d done", i)
+		rdr.done[i%rdr.n] = true
+		eq := rdr.poff == rdr.coff
+		for j := i; rdr.done[j%rdr.n]; j++ {
+			if rdr.poff == sp.Toffset(j*sp.BUFSZ) {
+				rdr.poff += sp.BUFSZ
+				rdr.done[j%rdr.n] = false
+			}
+		}
+
+		if eq && rdr.poff > rdr.coff {
+			// db.DPrintf(db.TEST, "chunkReader: wakeup c %d (p %d)", chunkId(rdr.coff), chunkId(rdr.poff))
+			rdr.cond.Signal()
 		}
 	}
-	if err := rdr.rdr.Close(); err != nil {
-		return err
-	}
-	return nil
 }
 
-func (rdr *AsyncFileReader) Read(p []byte) (n int, err error) {
-	if rdr.ardr != nil {
-		return rdr.ardr.Read(p)
-	}
-	return rdr.FileReader.Read(p)
-}
-
-func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*AsyncFileReader, error) {
-	rdr, err := fl.OpenReaderRegion(path, offset, 0)
+func (fl *FsLib) OpenAsyncReaderRegion(path string, offset sp.Toffset, buf []byte, end sp.Toffset) (*AsyncFileReader, error) {
+	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
-	r := &AsyncFileReader{FileReader: rdr}
-	r.ardr, err = readahead.NewReaderSize(rdr, 4, sp.BUFSZ)
-	if err != nil {
-		return nil, err
+	n := len(buf) / sp.BUFSZ
+	r := &AsyncFileReader{
+		fd:   fd,
+		sof:  fl.FileAPI,
+		end:  end,
+		buf:  buf,
+		n:    n,
+		done: make([]bool, n),
+	}
+	r.cond = sync.NewCond(&r.mu)
+	for i := 0; i < r.n; i++ {
+		r.wg.Add(1)
+		go r.chunkReader()
 	}
 	return r, nil
 }

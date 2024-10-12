@@ -21,10 +21,6 @@ import (
 	"sigmaos/syncmap"
 )
 
-const (
-	CHUNKSZ = 4 * sp.MBYTE
-)
-
 type S3PathClnt struct {
 	s3clnt *s3.Client
 	rfids  *syncmap.SyncMap[sp.Tfid, *s3Reader]

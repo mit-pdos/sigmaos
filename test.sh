@@ -8,7 +8,7 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usespproxyd] [--nonetproxy] [--reuse-kernel] [--cleanup]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usespproxyd] [--nonetproxy] [--reuse-kernel] [--cleanup] [--skipto PKG]" 
 }
 
 BASIC="--basic"
@@ -21,6 +21,7 @@ NETPROXY=""
 REUSEKERNEL=""
 VERB="-v"
 CONTAINER=""
+SKIPTO=""
 CLEANUP=""
 COMPILE=""
 HOST_IP="IP_NOT_SET"
@@ -47,6 +48,11 @@ while [[ "$#" -gt 0 ]]; do
             BASIC="" 
             OVERLAY="--overlay"
             HOST_IP="$1"
+            shift
+            ;;
+        --skipto)
+            shift
+            SKIPTO="$1" 
             shift
             ;;
         --gvisor)
@@ -100,6 +106,15 @@ if [[ $COMPILE == "--compile" ]]; then
     #
 
     for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv reader writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
+        if ! [ -z "$SKIPTO" ]; then
+          if [[ "$SKIPTO" == "$T" ]]; then
+            # Stop skipping
+            SKIPTO=""
+          else
+            # Skip
+            continue
+          fi
+        fi
         go test $VERB sigmaos/$T --run TestCompile
     done
 fi
@@ -111,6 +126,15 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in path intervals serr linuxsched perf sigmap sortedmap; do
+        if ! [ -z "$SKIPTO" ]; then
+          if [[ "$SKIPTO" == "$T" ]]; then
+            # Stop skipping
+            SKIPTO=""
+          else
+            # Skip
+            continue
+          fi
+        fi
         go test $VERB sigmaos/$T
         cleanup
     done
@@ -119,14 +143,34 @@ if [[ $BASIC == "--basic" ]]; then
     # test sessions
     #
     
-    go test $VERB sigmaos/sessclnt
-    cleanup
+    for T in sessclnt; do
+        if ! [ -z "$SKIPTO" ]; then
+          if [[ "$SKIPTO" == "$T" ]]; then
+            # Stop skipping
+            SKIPTO=""
+          else
+            # Skip
+            continue
+          fi
+        fi
+        go test $VERB sigmaos/$T
+        cleanup
+    done
 
     #
     # test with a kernel with just named
     #
 
     for T in reader writer stats netproxy fslib electclnt dircache; do
+        if ! [ -z "$SKIPTO" ]; then
+          if [[ "$SKIPTO" == "$T" ]]; then
+            # Stop skipping
+            SKIPTO=""
+          else
+            # Skip
+            continue
+          fi
+        fi
         go test $VERB -timeout 20m sigmaos/$T -start $SPPROXYD $NETPROXY $REUSEKERNEL
         cleanup
     done
@@ -144,6 +188,15 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in namesrv semclnt chunksrv procclnt ux bootkernelclnt s3 leaderclnt leadertest kvgrp cachedsvcclnt; do
+        if ! [ -z "$SKIPTO" ]; then
+          if [[ "$SKIPTO" == "$T" ]]; then
+            # Stop skipping
+            SKIPTO=""
+          else
+            # Skip
+            continue
+          fi
+        fi
         go test $VERB sigmaos/$T -start $GVISOR  $SPPROXYD $NETPROXY $REUSEKERNEL
         cleanup
     done
@@ -152,8 +205,19 @@ if [[ $BASIC == "--basic" ]]; then
     # test npproxy with just named and full kernel
     #
 
-    go test $VERB sigmaos/npproxysrv -start
-    cleanup
+    for T in npproxysrv; do
+        if ! [ -z "$SKIPTO" ]; then
+          if [[ "$SKIPTO" == "$T" ]]; then
+            # Stop skipping
+            SKIPTO=""
+          else
+            # Skip
+            continue
+          fi
+        fi
+        go test $VERB sigmaos/$T -start
+        cleanup
+    done
 
 
     go test $VERB sigmaos/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf
@@ -168,8 +232,19 @@ if [[ $BASIC == "--basic" ]]; then
     # test with realms
     #
 
-    go test $VERB sigmaos/realmclnt -start $GVISOR $SPPROXYD $NETPROXY $REUSEKERNEL
-    cleanup
+    for T in realmclnt; do
+        if ! [ -z "$SKIPTO" ]; then
+          if [[ "$SKIPTO" == "$T" ]]; then
+            # Stop skipping
+            SKIPTO=""
+          else
+            # Skip
+            continue
+          fi
+        fi
+      go test $VERB sigmaos/$T -start $GVISOR $SPPROXYD $NETPROXY $REUSEKERNEL
+      cleanup
+  done
 fi
 
 #
@@ -192,12 +267,30 @@ if [[ $APPS == "--apps" ]]; then
         cleanup
     else
         for T in imgresizesrv mr hotel socialnetwork www; do
+            if ! [ -z "$SKIPTO" ]; then
+              if [[ "$SKIPTO" == "$T" ]]; then
+                # Stop skipping
+                SKIPTO=""
+              else
+                # Skip
+                continue
+              fi
+            fi
             ./start-db.sh
             go test -timeout 20m $VERB sigmaos/$T -start $GVISOR $SPPROXYD $NETPROXY $REUSEKERNEL
             cleanup
         done
         # On machines with many cores, kv tests may take a long time.
         for T in kv; do
+            if ! [ -z "$SKIPTO" ]; then
+              if [[ "$SKIPTO" == "$T" ]]; then
+                # Stop skipping
+                SKIPTO=""
+              else
+                # Skip
+                continue
+              fi
+            fi
             ./start-db.sh
             go test -timeout 50m $VERB sigmaos/$T -start $GVISOR $SPPROXYD $NETPROXY $REUSEKERNEL
             cleanup

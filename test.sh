@@ -253,18 +253,39 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        go test $VERB sigmaos/mr -start $GVISOR $SPPROXYD $NETPROXY -run MRJob
-        cleanup
-        go test $VERB sigmaos/imgresizesrv -start $GVISOR $SPPROXYD $NETPROXY -run ImgdOne
-        cleanup
-        go test $VERB sigmaos/kv -start $GVISOR $SPPROXYD $NETPROXY -run KVOKN
-        cleanup
-        ./start-db.sh
-        go test $VERB sigmaos/hotel -start $GVISOR $SPPROXYD $NETPROXY -run TestBenchDeathStarSingle
-        cleanup
-        ./start-db.sh
-       	go test $VERB sigmaos/socialnetwork -start $GVISOR $SPPROXYD $NETPROXY -run TestCompose
-        cleanup
+        PKGS="mr imgresizesrv kv hotel socialnetwork"
+        TNAMES=("MRJob" "ImgdOne" "KVOKN" "TestBenchDeathStarSingle" "TestCompose")
+        NEED_DB=("false" "false" "false" "true" "true")
+        i=0
+        for T in $PKGS; do
+          if ! [ -z "$SKIPTO" ]; then
+            if [[ "$SKIPTO" == "$T" ]]; then
+              # Stop skipping
+              SKIPTO=""
+            else
+              # Skip
+              continue
+            fi
+          fi
+          if [[ "${NEED_DB[$i]}" == "true" ]]; then
+            ./start-db.sh
+          fi
+          go test $VERB sigmaos/$T -start $GVISOR $SPPROXYD $NETPROXY -run "${TNAMES[$i]}"
+          cleanup
+          i=$(($i+1))
+        done
+#        go test $VERB sigmaos/mr -start $GVISOR $SPPROXYD $NETPROXY -run MRJob
+#        cleanup
+#        go test $VERB sigmaos/imgresizesrv -start $GVISOR $SPPROXYD $NETPROXY -run ImgdOne
+#        cleanup
+#        go test $VERB sigmaos/kv -start $GVISOR $SPPROXYD $NETPROXY -run KVOKN
+#        cleanup
+#        ./start-db.sh
+#        go test $VERB sigmaos/hotel -start $GVISOR $SPPROXYD $NETPROXY -run TestBenchDeathStarSingle
+#        cleanup
+#        ./start-db.sh
+#       	go test $VERB sigmaos/socialnetwork -start $GVISOR $SPPROXYD $NETPROXY -run TestCompose
+#        cleanup
     else
         for T in imgresizesrv mr hotel socialnetwork www; do
             if ! [ -z "$SKIPTO" ]; then

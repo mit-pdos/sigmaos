@@ -22,8 +22,7 @@ import (
 )
 
 const (
-	MB      = (1 << 20)
-	CHUNKSZ = 4 * MB
+	CHUNKSZ = 4 * sp.MBYTE
 )
 
 type S3PathClnt struct {

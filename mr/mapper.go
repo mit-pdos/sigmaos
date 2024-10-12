@@ -24,7 +24,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
-	"sigmaos/writer"
 )
 
 const (
@@ -44,8 +43,7 @@ type Mapper struct {
 	input       string
 	intOutput   string
 	bin         string
-	asyncwrts   []fslib.WriterI
-	syncwrts    []*writer.Writer
+	wrts        []*fslib.FileWriter
 	pwrts       []*perf.PerfWriter
 	rand        string
 	perf        *perf.Perf
@@ -58,7 +56,7 @@ type Mapper struct {
 	ch          chan error
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string, asyncrw bool) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string) (*Mapper, error) {
 	m := &Mapper{
 		SigmaClnt:   sc,
 		mapf:        mapf,
@@ -71,12 +69,10 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		input:       input,
 		intOutput:   intOutput,
 		bin:         filepath.Base(input),
-		asyncwrts:   make([]fslib.WriterI, nr),
-		syncwrts:    make([]*writer.Writer, nr),
+		wrts:        make([]*fslib.FileWriter, nr),
 		pwrts:       make([]*perf.PerfWriter, nr),
 		perf:        p,
 		sbc:         NewScanByteCounter(p),
-		asyncrw:     asyncrw,
 		combined:    newKvmap(MINCAP, MAXCAP),
 		combinewc:   make(map[string]int),
 		buf:         make([]byte, 0, lsz),
@@ -91,7 +87,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 }
 
 func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
-	if len(args) != 7 {
+	if len(args) != 6 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
 	nr, err := strconv.Atoi(args[2])
@@ -109,11 +105,7 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	}
 
 	db.DPrintf(db.TEST, "NewSigmaClnt done at time: %v", time.Since(start))
-	asyncrw, err := strconv.ParseBool(args[6])
-	if err != nil {
-		return nil, fmt.Errorf("NewMapper: can't parse asyncrw %v", args[6])
-	}
-	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, args[3], args[4], asyncrw)
+	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, args[3], args[4])
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
@@ -141,22 +133,12 @@ func (m *Mapper) initWrt(r int, name string) error {
 		name = pn
 	}
 	db.DPrintf(db.MR, "InitWrt %v", name)
-	if m.asyncrw {
-		if wrt, err := m.CreateAsyncWriter(name, 0777, sp.OWRITE); err != nil {
-			return err
-		} else {
-			m.asyncwrts[r] = wrt
-			m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
-		}
+	if wrt, err := m.CreateBufWriter(name, 0777); err != nil {
+		return err
 	} else {
-		if wrt, err := m.CreateWriter(name, 0777, sp.OWRITE); err != nil {
-			return err
-		} else {
-			m.syncwrts[r] = wrt
-			m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
-		}
+		m.wrts[r] = wrt
+		m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
 	}
-
 	return nil
 }
 
@@ -183,21 +165,11 @@ func (m *Mapper) initOutput() error {
 func (m *Mapper) closewrts() (sp.Tlength, error) {
 	n := sp.Tlength(0)
 	for r := 0; r < m.nreducetask; r++ {
-		if m.asyncrw {
-			if m.asyncwrts[r] != nil {
-				if err := m.asyncwrts[r].Close(); err != nil {
-					return 0, err
-				} else {
-					n += m.asyncwrts[r].Nbytes()
-				}
-			}
-		} else {
-			if m.syncwrts[r] != nil {
-				if err := m.syncwrts[r].Close(); err != nil {
-					return 0, err
-				} else {
-					n += m.syncwrts[r].Nbytes()
-				}
+		if m.wrts[r] != nil {
+			if err := m.wrts[r].Close(); err != nil {
+				return 0, err
+			} else {
+				n += m.wrts[r].Nbytes()
 			}
 		}
 	}
@@ -235,11 +207,7 @@ func (m *Mapper) Emit(key []byte, value string) error {
 	}
 	r := Khash(key) % m.nreducetask
 	var err error
-	if m.asyncrw {
-		_, err = encodeKV(m.asyncwrts[r], key, value, r)
-	} else {
-		_, err = encodeKV(m.syncwrts[r], key, value, r)
-	}
+	_, err = encodeKV(m.wrts[r], key, value, r)
 	return err
 }
 
@@ -289,12 +257,12 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 
 	var scanner *bufio.Scanner
 	if true {
-		scanner = bufio.NewScanner(rdr.Reader)
+		scanner = bufio.NewScanner(rdr)
 	} else {
 		// To measure read tput; no computing
 		start = time.Now()
 		m.buf = m.buf[0:m.linesz]
-		n, err := io.ReadFull(rdr.Reader, m.buf)
+		n, err := io.ReadFull(rdr, m.buf)
 		if err != nil && err != io.ErrUnexpectedEOF {
 			db.DPrintf(db.ALWAYS, "Err ReadFull: n %v err %v", n, err)
 		}

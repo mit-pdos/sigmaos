@@ -87,7 +87,15 @@ func IsS3Path(pn string) bool {
 }
 
 func S3ClientPath(pn string) (string, bool) {
-	pn0, ok := strings.CutPrefix(pn, filepath.Join(S3, "~local"))
+	pn0, ok := strings.CutPrefix(pn, S3)
+	if !ok {
+		return pn, false
+	}
+	pn0, ok = strings.CutPrefix(pn0, "~local")
+	if ok {
+		return filepath.Join(S3CLNT, pn0), true
+	}
+	pn0, ok = strings.CutPrefix(pn0, "~any")
 	if ok {
 		return filepath.Join(S3CLNT, pn0), true
 	}

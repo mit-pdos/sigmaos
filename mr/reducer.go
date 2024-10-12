@@ -22,7 +22,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
-	"sigmaos/writer"
 )
 
 const (
@@ -39,10 +38,8 @@ type Reducer struct {
 	nmaptask     int
 	tmp          string
 	pwrt         *perf.PerfWriter
-	asyncwrt     fslib.WriterI
-	syncwrt      *writer.Writer
+	wrt          *fslib.FileWriter
 	perf         *perf.Perf
-	asyncrw      bool
 }
 
 func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
@@ -57,14 +54,9 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf
 		db.DPrintf(db.MR, "NewReducer %s: unmarshal err %v\n", args[0], err)
 		return nil, err
 	}
-	asyncrw, err := strconv.ParseBool(args[4])
-	if err != nil {
-		return nil, fmt.Errorf("NewReducer: can't parse asyncrw %v", args[3])
-	}
-	r.asyncrw = asyncrw
 	r.tmp = r.outputTarget + rand.String(16)
 
-	db.DPrintf(db.MR, "Reducer outputting to %v %t", r.tmp, r.asyncrw)
+	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 
 	m, err := strconv.Atoi(args[3])
 	if err != nil {
@@ -76,33 +68,23 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf
 		r.MountS3PathClnt()
 	}
 
-	if r.asyncrw {
-		w, err := r.CreateAsyncWriter(r.tmp, 0777, sp.OWRITE)
-		if err != nil {
-			db.DFatalf("Error CreateWriter [%v] %v", r.tmp, err)
-			return nil, err
-		}
-		r.asyncwrt = w
-		r.pwrt = perf.NewPerfWriter(r.asyncwrt, r.perf)
-	} else {
-		w, err := r.CreateWriter(r.tmp, 0777, sp.OWRITE)
-		if err != nil {
-			db.DFatalf("Error CreateWriter [%v] %v", r.tmp, err)
-			return nil, err
-		}
-		r.syncwrt = w
-		r.pwrt = perf.NewPerfWriter(r.syncwrt, r.perf)
+	w, err := r.CreateBufWriter(r.tmp, 0777)
+	if err != nil {
+		db.DFatalf("Error CreateBufWriter [%v] %v", r.tmp, err)
+		return nil, err
 	}
+	r.wrt = w
+	r.pwrt = perf.NewPerfWriter(r.wrt, r.perf)
 	return r, nil
 }
 
 func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
-	if len(args) != 5 {
+	if len(args) != 4 {
 		return nil, errors.New("NewReducer: too few arguments")
 	}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		return nil, fmt.Errorf("NewReducer: can't parse asyncrw %v", args[3])
+		return nil, fmt.Errorf("NewReducer: can't create sc err %v", err)
 	}
 	r, err := NewReducer(sc, reducef, args, p)
 	if err != nil {
@@ -166,14 +148,13 @@ func (r *Reducer) readFile(rr *readResult) {
 	if ok {
 		rr.f = pn
 	}
-	rdr, err := r.OpenAsyncReader(rr.f, 0)
+	rdr, err := r.OpenBufReader(rr.f)
 	if err != nil {
 		db.DPrintf(db.MR, "NewReader %v err %v", rr.f, err)
 		rr.ok = false
 		return
 	}
 	defer rdr.Close()
-
 	start := time.Now()
 	err = ReadKVs(rdr, rr.kvm, r.reducef)
 	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", rr.f, time.Since(start).Milliseconds(), err)
@@ -282,18 +263,10 @@ func (r *Reducer) DoReduce() *proc.Status {
 		return proc.NewStatusErr("reducef", err)
 	}
 
-	var nbyte sp.Tlength
-	if r.asyncrw {
-		if err := r.asyncwrt.Close(); err != nil {
-			return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
-		}
-		nbyte = r.asyncwrt.Nbytes()
-	} else {
-		if err := r.syncwrt.Close(); err != nil {
-			return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
-		}
-		nbyte = r.syncwrt.Nbytes()
+	if err := r.wrt.Close(); err != nil {
+		return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
 	}
+	nbyte := r.wrt.Nbytes()
 
 	// Include time spent writing output.
 	rtot.d += time.Since(start)

@@ -1,7 +1,6 @@
 package sigmapsrv_test
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"path/filepath"
@@ -89,13 +88,10 @@ func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz
 		err = w.Close()
 		assert.Nil(t, err)
 	case HBUF:
-		w, err := fsl.CreateWriter(fn, 0777, sp.OWRITE)
+		w, err := fsl.CreateBufWriter(fn, 0777)
 		assert.Nil(t, err, "Error Create writer: %v", err)
-		bw := bufio.NewWriterSize(w, sp.BUFSZ)
-		err = test.Writer(t, bw, buf, sz)
+		err = test.Writer(t, w, buf, sz)
 		assert.Nil(t, err, "Err writer %v", err)
-		err = bw.Flush()
-		assert.Nil(t, err, "Err: %v", err)
 		err = w.Close()
 		assert.Nil(t, err)
 	case HASYNC:
@@ -277,7 +273,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 		}
 		r, err := ts.OpenReader(pn)
 		assert.Nil(t, err)
-		n, err := test.Reader(t, r.Reader, buf, sz)
+		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
 		return n
@@ -297,9 +293,8 @@ func TestReadFilePerfSingle(t *testing.T) {
 			assert.True(t, ok)
 			pn = pn0
 		}
-		r, err := ts.OpenReader(pn)
-		br := bufio.NewReaderSize(r.Reader, sp.BUFSZ)
-		n, err := test.Reader(t, br, buf, sz)
+		r, err := ts.OpenBufReader(pn)
+		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
 		return n
@@ -374,7 +369,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 				for j := 0; j < NTRIAL; j++ {
 					r, err := fsls[i].OpenReader(fns[i])
 					assert.Nil(t, err)
-					n2, err := test.Reader(t, r.Reader, buf, SYNCFILESZ)
+					n2, err := test.Reader(t, r, buf, SYNCFILESZ)
 					assert.Nil(t, err)
 					n += n2
 					r.Close()
@@ -406,10 +401,9 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 			n := measure(p2, "bufreader", func() sp.Tlength {
 				n := sp.Tlength(0)
 				for j := 0; j < NTRIAL; j++ {
-					r, err := fsls[i].OpenReader(fns[i])
+					r, err := fsls[i].OpenBufReader(fns[i])
 					assert.Nil(t, err)
-					br := bufio.NewReaderSize(r.Reader, sp.BUFSZ)
-					n2, err := test.Reader(t, br, buf, FILESZ)
+					n2, err := test.Reader(t, r, buf, FILESZ)
 					assert.Nil(t, err)
 					n += n2
 					r.Close()

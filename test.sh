@@ -160,6 +160,9 @@ if [[ $BASIC == "--basic" ]]; then
     cleanup
     go test $VERB sigmaos/sigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
     cleanup
+    go test $VERB sigmaos/sigmapsrv --withs3pathclnt -start -path "name/s3/~local/9ps3/" -run ReadFilePerfSingle
+    cleanup
+    
 
     #
     # test with realms

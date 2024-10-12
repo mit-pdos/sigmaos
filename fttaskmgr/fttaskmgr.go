@@ -85,7 +85,7 @@ func (ftm *FtTaskMgr) StartTasks(ts []string, ch chan Tresult, new Tnew, mkProc 
 			continue
 		}
 		defer rdr.Close()
-		err = fslib.JsonReader(rdr.Reader, new, func(i interface{}) error {
+		err = fslib.JsonReader(rdr, new, func(i interface{}) error {
 			ftm.ntask.Add(1)
 			ntask += 1
 			p := mkProc(t, i)

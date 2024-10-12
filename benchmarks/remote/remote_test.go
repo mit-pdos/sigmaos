@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -273,11 +274,12 @@ func TestMR(t *testing.T) {
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
 			&MRExperimentConfig{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
 			&MRExperimentConfig{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
+			&MRExperimentConfig{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
+			&MRExperimentConfig{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
+
 			//			"mr-grep-wiki2G-granular-bench.yml",
 			//			"mr-grep-wiki10G-granular-bench.yml",
 			//			"mr-grep-wiki10G-granular-bench-s3.yml",
-			//			"mr-wc-wiki2G-bench-s3.yml",
-			//			"mr-wc-wiki2G-bench.yml",
 			//			"mr-wc-wiki10G-bench-s3.yml",
 			//			"mr-wc-wiki10G-bench.yml",
 			//			"mr-wc-wiki10G-granular-bench-s3.yml",
@@ -290,7 +292,6 @@ func TestMR(t *testing.T) {
 	)
 	// Constant MR benchmark configuration parameters
 	const (
-		asyncRW    bool = true
 		measureTpt bool = false
 	)
 	ts, err := NewTstate(t)
@@ -310,7 +311,7 @@ func TestMR(t *testing.T) {
 				benchName += "-cold"
 			}
 			numFullNodes := mrEP.numNodes - numProcqOnlyNodes
-			ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, asyncRW, prewarmRealm, measureTpt), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+			ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, prewarmRealm, measureTpt), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 		}
 	}
 }
@@ -362,12 +363,16 @@ func TestHotelTailLatency(t *testing.T) {
 	)
 	// Hotel benchmark configuration parameters
 	var (
-		rps         []int           = []int{250, 500, 1000, 1500, 2000, 2500}
-		dur         []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
-		cacheType   string          = "cached"
-		scaleCache  bool            = false
-		clientDelay time.Duration   = 60 * time.Second
-		sleep       time.Duration   = 10 * time.Second
+		rps                 []int           = []int{250, 500, 1000, 1500, 2000, 2500}
+		dur                 []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
+		numCaches           int             = 3
+		cacheType           string          = "cached"
+		scaleCache          bool            = false
+		clientDelay         time.Duration   = 60 * time.Second
+		sleep               time.Duration   = 10 * time.Second
+		manuallyScaleCaches bool            = false
+		scaleCacheDelay     time.Duration   = 0 * time.Second
+		numCachesToAdd      int             = 0
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -380,9 +385,72 @@ func TestHotelTailLatency(t *testing.T) {
 		benchName += "_k8s"
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
-	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
+	getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+}
+
+// Test Hotel application's tail latency.
+func TestHotelScaleCache(t *testing.T) {
+	var (
+		benchNameBase string = "hotel_tail_latency"
+		driverVMs     []int  = []int{8, 9, 10, 11}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes          int  = 8
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	// Hotel benchmark configuration parameters
+	var (
+		rps                  []int           = []int{250, 1500, 2500}
+		dur                  []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second}
+		numCachesBase        int             = 1
+		cacheType            string          = "cached"
+		scaleCache           bool            = false
+		clientDelay          time.Duration   = 60 * time.Second
+		sleep                time.Duration   = 10 * time.Second
+		manuallyScaleCaches  []bool          = []bool{true, false}
+		scaleCacheDelayBase  time.Duration   = 20 * time.Second
+		scaleCacheExtraDelay []time.Duration = []time.Duration{0, 200 * time.Millisecond, 500 * time.Millisecond, 1 * time.Second, 2 * time.Second}
+		nAdditionalCaches    []int           = []int{0, 2}
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if ts.BCfg.Overlays {
+		benchNameBase += "_overlays"
+	}
+	if ts.BCfg.K8s {
+		benchNameBase += "_k8s"
+	}
+	for _, scale := range manuallyScaleCaches {
+		for _, numCachesToAdd := range nAdditionalCaches {
+			for _, extraDelay := range scaleCacheExtraDelay {
+				db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+				benchName := benchNameBase
+				numCaches := numCachesBase
+				scaleCacheDelay := scaleCacheDelayBase
+				if scale {
+					benchName += "_scale_cache_add_" + strconv.Itoa(numCachesToAdd)
+					if extraDelay > 0 && numCachesToAdd > 0 {
+						scaleCacheDelay += extraDelay
+						benchName += "_extra_scaling_delay_" + extraDelay.String()
+					}
+				} else {
+					numCaches += numCachesToAdd
+					benchName += "_no_scale_cache_ncache_" + strconv.Itoa(numCaches)
+				}
+				getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, scale, scaleCacheDelay, numCachesToAdd)
+				getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, scale, scaleCacheDelay, numCachesToAdd)
+				ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+			}
+		}
+	}
 }
 
 // Test Socialnet application's tail latency.
@@ -486,12 +554,16 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 	)
 	// Hotel benchmark configuration parameters
 	var (
-		rps         []int           = []int{250, 500, 1000, 1500, 2000, 1000}
-		dur         []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
-		cacheType   string          = "cached"
-		scaleCache  bool            = false
-		clientDelay time.Duration   = 60 * time.Second
-		sleep       time.Duration   = 10 * time.Second
+		rps                 []int           = []int{250, 500, 1000, 1500, 2000, 1000}
+		dur                 []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
+		numCaches           int             = 3
+		cacheType           string          = "cached"
+		scaleCache          bool            = false
+		clientDelay         time.Duration   = 60 * time.Second
+		sleep               time.Duration   = 10 * time.Second
+		manuallyScaleCaches bool            = false
+		scaleCacheDelay     time.Duration   = 0 * time.Second
+		numCachesToAdd      int             = 0
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -502,7 +574,7 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetLCBEHotelImgResizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
-	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
@@ -521,12 +593,16 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 	)
 	// Hotel benchmark configuration parameters
 	var (
-		rps         []int           = []int{250, 500, 1000, 1500, 2000, 1000}
-		dur         []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
-		cacheType   string          = "cached"
-		scaleCache  bool            = false
-		clientDelay time.Duration   = 60 * time.Second
-		sleep       time.Duration   = 10 * time.Second
+		rps                 []int           = []int{250, 500, 1000, 1500, 2000, 1000}
+		dur                 []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
+		numCaches           int             = 3
+		cacheType           string          = "cached"
+		scaleCache          bool            = false
+		clientDelay         time.Duration   = 60 * time.Second
+		sleep               time.Duration   = 10 * time.Second
+		manuallyScaleCaches bool            = false
+		scaleCacheDelay     time.Duration   = 0 * time.Second
+		numCachesToAdd      int             = 0
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -537,6 +613,6 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
-	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }

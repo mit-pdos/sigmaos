@@ -27,8 +27,9 @@ import (
 )
 
 const (
-	MAXCAP = 32
-	MINCAP = 4
+	MAXCAP         = 32
+	MINCAP         = 4
+	MAXCONCURRENCY = 5
 )
 
 type Mapper struct {
@@ -52,6 +53,7 @@ type Mapper struct {
 	combinewc   map[string]int
 	buf         []byte
 	line        []byte
+	pbuf        []byte
 	init        bool
 	ch          chan error
 }
@@ -77,6 +79,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		combinewc:   make(map[string]int),
 		buf:         make([]byte, 0, lsz),
 		line:        make([]byte, 0, lsz),
+		pbuf:        make([]byte, MAXCONCURRENCY*sp.MBYTE),
 		ch:          make(chan error),
 	}
 	m.MountS3PathClnt()
@@ -247,7 +250,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		off--
 	}
 	start := time.Now()
-	rdr, err := m.OpenReaderRegion(s.File, s.Offset, s.Length+sp.Tlength(m.linesz))
+	rdr, err := m.OpenAsyncReaderRegion(s.File, s.Offset, s.Length+sp.Tlength(m.linesz), m.pbuf)
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}

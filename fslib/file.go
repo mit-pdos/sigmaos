@@ -141,15 +141,22 @@ type AsyncFileReader struct {
 	n    int
 	done []bool
 
-	mu   sync.Mutex
-	cond *sync.Cond
-	err  error
-	coff sp.Toffset // next offset to consume
-	poff sp.Toffset // next offset to be produced
-	noff sp.Toffset // next offset to start reading
+	mu       sync.Mutex
+	pcond    *sync.Cond
+	ccond    *sync.Cond
+	err      error
+	coff     sp.Toffset // next offset to consume
+	poff     sp.Toffset // next offset to be produced
+	noff     sp.Toffset // next offset to start reading
+	isClosed bool
 }
 
+// Close() maybe called before the caller has read the complete
+// region.
 func (rdr *AsyncFileReader) Close() error {
+	db.DPrintf(db.PREADER, "Close coff %d poff %d end %d", rdr.coff, rdr.poff, rdr.end)
+	rdr.close()
+	rdr.wg.Wait()
 	return rdr.sof.CloseFd(rdr.fd)
 }
 
@@ -165,18 +172,31 @@ func (rdr *AsyncFileReader) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 	for rdr.coff == rdr.poff {
-		// db.DPrintf(db.TEST, "Read: wait for p %d c %d", chunkId(rdr.poff), chunkId(rdr.poff))
-		rdr.cond.Wait()
+		db.DPrintf(db.PREADER, "Read: wait for chunk p %d c %d", chunkId(rdr.poff), chunkId(rdr.coff))
+		rdr.ccond.Wait()
+	}
+
+	if rdr.coff > rdr.poff {
+		db.DFatalf("Read: c %d(%d) p %d(%d)", chunkId(rdr.coff), rdr.coff, chunkId(rdr.poff), rdr.poff)
 	}
 	i := chunkId(rdr.coff)
-	i0 := int(i) % rdr.n
-	n := copy(p, rdr.buf[i0*sp.BUFSZ:(i0+1)*sp.BUFSZ])
+	i0 := chunk2Buf(i, rdr.n)
+	o := chunkOff(rdr.coff)
+	n := copy(p, rdr.buf[chunk2Offset(i0)+o:chunk2Offset(i0+1)])
 	rdr.coff += sp.Toffset(n)
 
+	db.DPrintf(db.PREADER, "Read n %d ck %d off %d(%d) end %d", n, chunkId(rdr.coff), rdr.coff, chunkOff(rdr.coff), rdr.end)
 	if rdr.coff >= rdr.poff {
-		rdr.cond.Broadcast()
+		rdr.pcond.Broadcast()
 	}
 	return n, nil
+}
+
+func (rdr *AsyncFileReader) close() {
+	rdr.mu.Lock()
+	defer rdr.mu.Unlock()
+	rdr.isClosed = true
+	rdr.pcond.Broadcast()
 }
 
 func (rdr *AsyncFileReader) setErr(err error) {
@@ -189,9 +209,10 @@ func (rdr *AsyncFileReader) getChunk() (sp.Toffset, bool) {
 	rdr.mu.Lock()
 	defer rdr.mu.Unlock()
 
+	db.DPrintf(db.PREADER, "getChunk: off %d end %d", rdr.noff, rdr.end)
 	off := rdr.noff
 	rdr.noff += sp.BUFSZ
-	if off >= rdr.end {
+	if off >= rdr.end || rdr.err != nil {
 		return 0, false
 	}
 	return off, true
@@ -201,15 +222,55 @@ func chunkId(off sp.Toffset) int {
 	return int(off / sp.BUFSZ)
 }
 
-func (rdr *AsyncFileReader) getBuf(off sp.Toffset) int {
+func chunkOff(off sp.Toffset) int {
+	return int(off % sp.BUFSZ)
+}
+
+func chunk2Offset(ck int) int {
+	return ck * sp.BUFSZ
+}
+
+func chunk2Buf(i, n int) int {
+	return i % n
+}
+
+func (rdr *AsyncFileReader) getBuf(off sp.Toffset) (int, bool) {
 	rdr.mu.Lock()
 	defer rdr.mu.Unlock()
 
-	for chunkId(off-rdr.coff) >= rdr.n {
-		//db.DPrintf(db.TEST, "chunkReader: wait for c %d p %d", chunkId(rdr.coff), chunkId(off))
-		rdr.cond.Wait()
+	for chunkId(off-rdr.coff) >= rdr.n && !rdr.isClosed {
+		db.DPrintf(db.PREADER, "chunkReader: wait for read c %d p %d", chunkId(rdr.coff), chunkId(off))
+		rdr.pcond.Wait()
 	}
-	return chunkId(off)
+	if rdr.isClosed {
+		return 0, false
+	}
+	return chunkId(off), true
+}
+
+func (rdr *AsyncFileReader) doneChunk(i, sz int) {
+	rdr.mu.Lock()
+	defer rdr.mu.Unlock()
+
+	db.DPrintf(db.PREADER, "chunkReader: getChunk %d sz %d err %v", i, sz, rdr.err)
+
+	if sz != sp.BUFSZ { // eof?
+		rdr.end = sp.Toffset(chunk2Offset(i) + sz)
+	}
+
+	rdr.done[i%rdr.n] = true
+	eq := rdr.poff == rdr.coff
+	for j := i; rdr.done[chunk2Buf(j, rdr.n)]; j++ {
+		if rdr.poff == sp.Toffset(chunk2Offset(j)) {
+			rdr.poff += sp.BUFSZ
+			rdr.done[chunk2Buf(j, rdr.n)] = false
+		}
+	}
+
+	if eq && rdr.poff > rdr.coff {
+		db.DPrintf(db.PREADER, "chunkReader: wakeup reader c %d (p %d)", chunkId(rdr.coff), chunkId(rdr.poff))
+		rdr.ccond.Signal()
+	}
 }
 
 func (rdr *AsyncFileReader) chunkReader() {
@@ -220,37 +281,38 @@ func (rdr *AsyncFileReader) chunkReader() {
 		if !ok {
 			break
 		}
-		//db.DPrintf(db.TEST, "chunkReader: getChunk %d", chunkId(off))
-		i := rdr.getBuf(off)
+		db.DPrintf(db.PREADER, "chunkReader: getChunk %d(%d)", chunkId(off), off)
+		i, ok := rdr.getBuf(off)
+		if !ok {
+			break
+		}
 		sz := int(0)
-		for sz < sp.BUFSZ {
-			j := i % rdr.n
-			n, err := rdr.sof.Pread(rdr.fd, rdr.buf[j*sp.BUFSZ:(j+1)*sp.BUFSZ], off)
+		l := sp.BUFSZ
+		if int(rdr.end-off) < sp.BUFSZ {
+			l = int(rdr.end - off)
+		}
+		for sz < l {
+			j := chunk2Buf(i, rdr.n)
+			n, err := rdr.sof.Pread(rdr.fd, rdr.buf[chunk2Offset(j):chunk2Offset(j+1)], off)
 			if err != nil {
-				rdr.setErr(err)
+				if err != io.EOF {
+					db.DPrintf(db.PREADER, "chunkReader: Pread n %d sz %d err %v", n, sz, err)
+					rdr.setErr(err)
+				} else {
+					db.DPrintf(db.PREADER, "chunkReader: Eof n %d sz %d", n, sz)
+					sz += int(n)
+				}
 				break
 			}
-			// db.DPrintf(db.TEST, "chunkReader: ck %d(%d) read %d", i, off, sz)
 			sz += int(n)
+			db.DPrintf(db.PREADER, "chunkReader: ck %d(%d) read %d", i, off, n)
 		}
-		//db.DPrintf(db.TEST, "chunkReader: getChunk %d done", i)
-		rdr.done[i%rdr.n] = true
-		eq := rdr.poff == rdr.coff
-		for j := i; rdr.done[j%rdr.n]; j++ {
-			if rdr.poff == sp.Toffset(j*sp.BUFSZ) {
-				rdr.poff += sp.BUFSZ
-				rdr.done[j%rdr.n] = false
-			}
-		}
-
-		if eq && rdr.poff > rdr.coff {
-			// db.DPrintf(db.TEST, "chunkReader: wakeup c %d (p %d)", chunkId(rdr.coff), chunkId(rdr.poff))
-			rdr.cond.Signal()
-		}
+		rdr.doneChunk(i, sz)
 	}
+	db.DPrintf(db.PREADER, "chunkReader: done %d", rdr.end)
 }
 
-func (fl *FsLib) OpenAsyncReaderRegion(path string, offset sp.Toffset, buf []byte, end sp.Toffset) (*AsyncFileReader, error) {
+func (fl *FsLib) OpenAsyncReaderRegion(path string, offset sp.Toffset, l sp.Tlength, buf []byte) (*AsyncFileReader, error) {
 	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
@@ -259,12 +321,16 @@ func (fl *FsLib) OpenAsyncReaderRegion(path string, offset sp.Toffset, buf []byt
 	r := &AsyncFileReader{
 		fd:   fd,
 		sof:  fl.FileAPI,
-		end:  end,
+		end:  offset + sp.Toffset(l),
 		buf:  buf,
 		n:    n,
+		coff: offset,
+		poff: offset,
+		noff: offset,
 		done: make([]bool, n),
 	}
-	r.cond = sync.NewCond(&r.mu)
+	r.pcond = sync.NewCond(&r.mu)
+	r.ccond = sync.NewCond(&r.mu)
 	for i := 0; i < r.n; i++ {
 		r.wg.Add(1)
 		go r.chunkReader()

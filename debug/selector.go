@@ -173,6 +173,7 @@ const (
 	WRITER_ERR    Tselector = "WRITER" + ERR
 	READER_ERR              = "READER" + ERR
 	AWRITER                 = "AWRITER"
+	PREADER                 = "PREADER"
 	FSLIB                   = "FSLIB"
 	FSLIB_ERR               = "FSLIB" + ERR
 	SEMCLNT                 = "SEMCLNT"

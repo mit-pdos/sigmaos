@@ -395,6 +395,11 @@ func newSocialNetworkJobs(
 
 var clidir string = filepath.Join("name/", "clnts")
 
+// Wait for a realm to be created
+func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
+	return rootts.WaitCreate(filepath.Join(sp.REALMS, realm.String()))
+}
+
 func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
 	sem := semclnt.NewSemClnt(rootts.FsLib, filepath.Join(clidir, "clisem"))
 	err := sem.Init(0)

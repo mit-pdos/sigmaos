@@ -400,7 +400,7 @@ func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
 	if err := rootts.WaitCreate(filepath.Join(sp.REALMS, realm.String())); err != nil {
 		return err
 	}
-	if err := rootts.WaitCreate(filepath.Join(sp.REALMS, realm.String()), sp.KPIDSREL); err != nil {
+	if err := rootts.WaitCreate(filepath.Join(sp.REALMS, realm.String(), sp.KPIDSREL)); err != nil {
 		return err
 	}
 }

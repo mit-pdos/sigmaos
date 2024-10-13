@@ -397,12 +397,18 @@ var clidir string = filepath.Join("name/", "clnts")
 
 // Wait for a realm to be created
 func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
-	if err := rootts.WaitCreate(filepath.Join(sp.REALMS, realm.String())); err != nil {
-		return err
+	dirs := []string{
+		"",
+		sp.KPIDSREL,
+		sp.S3REL,
+		sp.UXREL,
 	}
-	if err := rootts.WaitCreate(filepath.Join(sp.REALMS, realm.String(), sp.KPIDSREL)); err != nil {
-		return err
+	for _, d := range dirs {
+		if err := rootts.WaitCreate(filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {

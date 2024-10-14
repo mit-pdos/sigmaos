@@ -20,7 +20,7 @@ import (
 const (
 	HOTEL        = "hotel/"
 	HOTELDIR     = "name/" + HOTEL
-	HOTELGEO     = HOTELDIR + "geo"
+	HOTELGEODIR  = HOTELDIR + "geo/"
 	HOTELRATE    = HOTELDIR + "rate"
 	HOTELSEARCH  = HOTELDIR + "search"
 	HOTELREC     = HOTELDIR + "rec"
@@ -34,8 +34,16 @@ const (
 	N_RPC_SESSIONS = 10
 )
 
-var HOTELSVC = []string{HOTELGEO, HOTELRATE, HOTELSEARCH, HOTELREC, HOTELRESERVE,
-	HOTELUSER, HOTELPROF, sp.DB + "~any/"}
+var HOTELSVC = []string{
+	HOTELGEODIR + "~any/",
+	HOTELRATE,
+	HOTELSEARCH,
+	HOTELREC,
+	HOTELRESERVE,
+	HOTELUSER,
+	HOTELPROF,
+	sp.DB + "~any/",
+}
 
 var (
 	nhotel    int
@@ -105,6 +113,7 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 
 func InitHotelFs(fsl *fslib.FsLib, jobname string) error {
 	fsl.MkDir(HOTELDIR, 0777)
+	fsl.MkDir(HOTELGEODIR, 0777)
 	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
 		db.DPrintf(db.ERROR, "Mkdir %v err %v\n", JobDir(jobname), err)
 		return err

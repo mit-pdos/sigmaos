@@ -21,6 +21,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
+	"sigmaos/rpcdirclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
@@ -109,8 +110,14 @@ func TestGeoSingle(t *testing.T) {
 	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod"}}, 0)
 	defer ts.Shutdown()
 	defer ts.stop()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
-	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+
+	rpcdc := rpcdirclnt.NewRPCDirClnt(ts.FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
+	geoID, err := rpcdc.WaitTimedRandomEntry()
+	if !assert.Nil(t, err, "Err get geo server ID: %v", err) {
+		return
+	}
+	rpcc, err := rpcdc.GetClnt(geoID)
+	if !assert.Nil(t, err, "Err get geo clnt: %v", err) {
 		return
 	}
 	arg := proto.GeoRequest{

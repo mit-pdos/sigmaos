@@ -59,11 +59,13 @@ const (
 	RPC_BENCH_CLNT                    = "RPC_BENCH_CLNT"
 	HOTEL_CLNT                        = "HOTEL_CLNT"
 	HOTEL_GEO                         = "HOTEL_GEO"
+	HOTEL_GEO_ERR                     = "HOTEL_GEO" + ERR
 	HOTEL_PROF                        = "HOTEL_PROF"
 	HOTEL_RATE                        = "HOTEL_RATE"
 	HOTEL_RESERVE                     = "HOTEL_RESERVE"
 	HOTEL_SEARCH                      = "HOTEL_SEARCH"
 	HOTEL_WWW                         = "HOTEL_WWW"
+	HOTEL_WWW_ERR                     = "HOTEL_WWW" + ERR
 	HOTEL_WWW_STATS                   = "HOTEL_WWW_STATS"
 	SLEEPER                           = "SLEEPER"
 	SPINNER                           = "SPINNER"

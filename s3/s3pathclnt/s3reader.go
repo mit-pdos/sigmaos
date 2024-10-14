@@ -75,6 +75,7 @@ func (s3r *s3Reader) read(off sp.Toffset, b []byte) (int, error) {
 			i += n
 		}
 		db.DPrintf(db.S3CLNT, "s3.Read off %d end %d buflen %d n %d err %v", off, s3r.sz, len(b), i, err)
+		chunk.Close()
 		return i, nil
 	}
 }

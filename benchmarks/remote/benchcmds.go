@@ -251,7 +251,7 @@ func GetCorralCmdConstructor() GetBenchCmdFn {
 //
 // - clientDelay specifies the delay for which the client should wait before
 // starting to send requests.
-func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, cacheType string, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, numGeoToAdd int) GetBenchCmdFn {
+func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, cacheType string, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numGeo int, geoNIdx int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, numGeoToAdd int) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
@@ -317,6 +317,8 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			"%s "+ // manually_scale_caches
 			"--scale_cache_delay %s "+
 			"--n_caches_to_add %s "+
+			"--hotel_ngeo %s "+
+			"--hotel_ngeo_idx %s "+
 			"%s "+ // manually_scale_geo
 			"--scale_geo_delay %s "+
 			"--n_geo_to_add %s "+
@@ -340,6 +342,8 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			scalecache,
 			scaleCacheDelay.String(),
 			strconv.Itoa(numCachesToAdd),
+			strconv.Itoa(numGeo),
+			strconv.Itoa(geoNIdx),
 			scalegeo,
 			scaleGeoDelay.String(),
 			strconv.Itoa(numGeoToAdd),

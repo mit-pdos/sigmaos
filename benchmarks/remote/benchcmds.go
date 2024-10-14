@@ -251,7 +251,7 @@ func GetCorralCmdConstructor() GetBenchCmdFn {
 //
 // - clientDelay specifies the delay for which the client should wait before
 // starting to send requests.
-func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, cacheType string, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int) GetBenchCmdFn {
+func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, cacheType string, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, numGeoToAdd int) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
@@ -309,6 +309,9 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			"--manually_scale_caches %s "+
 			"--scale_cache_delay %s "+
 			"--n_caches_to_add %s "+
+			"--manually_scale_geo %s "+
+			"--scale_geo_delay %s "+
+			"--n_geo_to_add %s "+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
@@ -329,6 +332,9 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			strconv.FormatBool(manuallyScaleCaches),
 			scaleCacheDelay.String(),
 			strconv.Itoa(numCachesToAdd),
+			strconv.FormatBool(manuallyScaleGeo),
+			scaleGeoDelay.String(),
+			strconv.Itoa(numGeoToAdd),
 		)
 	}
 }

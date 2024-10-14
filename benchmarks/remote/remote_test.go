@@ -373,6 +373,9 @@ func TestHotelTailLatency(t *testing.T) {
 		manuallyScaleCaches bool            = false
 		scaleCacheDelay     time.Duration   = 0 * time.Second
 		numCachesToAdd      int             = 0
+		manuallyScaleGeo    bool            = false
+		scaleGeoDelay       time.Duration   = 0 * time.Second
+		numGeoToAdd         int             = 0
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -385,9 +388,73 @@ func TestHotelTailLatency(t *testing.T) {
 		benchName += "_k8s"
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd)
-	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd)
+	getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+}
+
+// Test Hotel application's tail latency.
+func TestHotelScaleGeo(t *testing.T) {
+	var (
+		benchNameBase string = "hotel_tail_latency"
+		driverVMs     []int  = []int{8, 9, 10, 11}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes          int  = 8
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	// Hotel benchmark configuration parameters
+	var (
+		rps                []int           = []int{250, 1500, 2500}
+		dur                []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second}
+		numGeoBase         int             = 1
+		numCaches          int             = 3
+		cacheType          string          = "cached"
+		scaleCache         bool            = false
+		clientDelay        time.Duration   = 0 * time.Second
+		sleep              time.Duration   = 0 * time.Second
+		manuallyScaleGeo   []bool          = []bool{true, false}
+		scaleGeoDelayBase  time.Duration   = 20 * time.Second
+		scaleGeoExtraDelay []time.Duration = []time.Duration{0, 200 * time.Millisecond, 500 * time.Millisecond, 1 * time.Second, 2 * time.Second}
+		nAdditionalGeo     []int           = []int{0, 2}
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if ts.BCfg.Overlays {
+		benchNameBase += "_overlays"
+	}
+	if ts.BCfg.K8s {
+		benchNameBase += "_k8s"
+	}
+	for _, scale := range manuallyScaleGeo {
+		for _, numGeoToAdd := range nAdditionalGeo {
+			for _, extraDelay := range scaleGeoExtraDelay {
+				db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+				benchName := benchNameBase
+				numGeo := numGeoBase
+				scaleGeoDelay := scaleGeoDelayBase
+				if scale {
+					benchName += "_scale_geo_add_" + strconv.Itoa(numGeoToAdd)
+					if extraDelay > 0 && numGeoToAdd > 0 {
+						scaleGeoDelay += extraDelay
+						benchName += "_extra_scaling_delay_" + extraDelay.String()
+					}
+				} else {
+					numGeo += numGeoToAdd
+					benchName += "_no_scale_geo_ngeo_" + strconv.Itoa(numGeo)
+				}
+				getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, false, 0, 0, scale, scaleGeoDelay, numGeoToAdd)
+				getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, false, 0, 0, scale, scaleGeoDelay, numGeoToAdd)
+				ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+			}
+		}
+	}
 }
 
 // Test Hotel application's tail latency.
@@ -411,12 +478,15 @@ func TestHotelScaleCache(t *testing.T) {
 		numCachesBase        int             = 1
 		cacheType            string          = "cached"
 		scaleCache           bool            = false
-		clientDelay          time.Duration   = 60 * time.Second
-		sleep                time.Duration   = 10 * time.Second
+		clientDelay          time.Duration   = 0 * time.Second
+		sleep                time.Duration   = 0 * time.Second
 		manuallyScaleCaches  []bool          = []bool{true, false}
 		scaleCacheDelayBase  time.Duration   = 20 * time.Second
 		scaleCacheExtraDelay []time.Duration = []time.Duration{0, 200 * time.Millisecond, 500 * time.Millisecond, 1 * time.Second, 2 * time.Second}
 		nAdditionalCaches    []int           = []int{0, 2}
+		manuallyScaleGeo     bool            = false
+		scaleGeoDelay        time.Duration   = 0 * time.Second
+		numGeoToAdd          int             = 0
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -445,8 +515,8 @@ func TestHotelScaleCache(t *testing.T) {
 					numCaches += numCachesToAdd
 					benchName += "_no_scale_cache_ncache_" + strconv.Itoa(numCaches)
 				}
-				getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, scale, scaleCacheDelay, numCachesToAdd)
-				getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, scale, scaleCacheDelay, numCachesToAdd)
+				getLeaderCmd := GetHotelClientCmdConstructor(true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, scale, scaleCacheDelay, numCachesToAdd, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
+				getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, scale, scaleCacheDelay, numCachesToAdd, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
 				ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 			}
 		}
@@ -564,6 +634,9 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 		manuallyScaleCaches bool            = false
 		scaleCacheDelay     time.Duration   = 0 * time.Second
 		numCachesToAdd      int             = 0
+		manuallyScaleGeo    bool            = false
+		scaleGeoDelay       time.Duration   = 0 * time.Second
+		numGeoToAdd         int             = 0
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -574,7 +647,7 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetLCBEHotelImgResizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
-	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
@@ -603,6 +676,9 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 		manuallyScaleCaches bool            = false
 		scaleCacheDelay     time.Duration   = 0 * time.Second
 		numCachesToAdd      int             = 0
+		manuallyScaleGeo    bool            = false
+		scaleGeoDelay       time.Duration   = 0 * time.Second
+		numGeoToAdd         int             = 0
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -613,6 +689,6 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	getLeaderCmd := GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
-	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd)
+	getFollowerCmd := GetHotelClientCmdConstructor(false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }

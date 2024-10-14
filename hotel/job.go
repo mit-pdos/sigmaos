@@ -143,14 +143,6 @@ func NewHotelSvc(public bool) []*Srv {
 	}
 }
 
-//var ncores = []int{0, 1,
-//	1, 1, 3,
-//	3, 0, 2}
-
-//var ncores = []int{0, 2,
-//	2, 2, 3,
-//	3, 0, 2}
-
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
 	cacheClnt       *cachedsvcclnt.CachedSvcClnt

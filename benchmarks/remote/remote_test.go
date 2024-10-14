@@ -397,11 +397,11 @@ func TestHotelTailLatency(t *testing.T) {
 func TestHotelScaleGeo(t *testing.T) {
 	var (
 		benchNameBase string = "hotel_tail_latency"
-		driverVMs     []int  = []int{8, 9, 10, 11}
+		driverVMs     []int  = []int{9, 10, 11, 12}
 	)
 	// Cluster configuration parameters
 	const (
-		numNodes          int  = 8
+		numNodes          int  = 9
 		numCoresPerNode   uint = 4
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
@@ -409,18 +409,20 @@ func TestHotelScaleGeo(t *testing.T) {
 	)
 	// Hotel benchmark configuration parameters
 	var (
-		rps                []int           = []int{250, 1500, 2500}
-		dur                []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second}
-		numGeoBase         int             = 1
-		numCaches          int             = 3
-		cacheType          string          = "cached"
-		scaleCache         bool            = false
-		clientDelay        time.Duration   = 0 * time.Second
-		sleep              time.Duration   = 0 * time.Second
-		manuallyScaleGeo   []bool          = []bool{true, false}
-		scaleGeoDelayBase  time.Duration   = 20 * time.Second
-		scaleGeoExtraDelay []time.Duration = []time.Duration{0, 200 * time.Millisecond, 500 * time.Millisecond, 1 * time.Second, 2 * time.Second}
-		nAdditionalGeo     []int           = []int{0, 2}
+		rps               []int           = []int{250, 1500, 2500}
+		dur               []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second}
+		numGeoBase        int             = 1
+		numCaches         int             = 3
+		cacheType         string          = "cached"
+		scaleCache        bool            = false
+		clientDelay       time.Duration   = 0 * time.Second
+		sleep             time.Duration   = 0 * time.Second
+		manuallyScaleGeo  []bool          = []bool{true, false}
+		scaleGeoDelayBase time.Duration   = 20 * time.Second
+		//		scaleGeoExtraDelay []time.Duration = []time.Duration{0, 200 * time.Millisecond, 500 * time.Millisecond, 1 * time.Second, 2 * time.Second}
+		scaleGeoExtraDelay []time.Duration = []time.Duration{0, 1 * time.Second}
+		//		nAdditionalGeo     []int           = []int{0, 2}
+		nAdditionalGeo []int = []int{2}
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

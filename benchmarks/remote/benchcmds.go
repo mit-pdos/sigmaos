@@ -291,6 +291,14 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			}
 			k8sFrontendAddr = fmt.Sprintf("--k8saddr %s", addr)
 		}
+		scalecache := ""
+		if manuallyScaleCaches {
+			scalecache = "--manually_scale_caches"
+		}
+		scalegeo := ""
+		if manuallyScaleGeo {
+			scalegeo = "--manually_scale_geo"
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
 			"ulimit -n 100000; "+
@@ -306,10 +314,10 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
-			"--manually_scale_caches %s "+
+			"%s "+ // manually_scale_caches
 			"--scale_cache_delay %s "+
 			"--n_caches_to_add %s "+
-			"--manually_scale_geo %s "+
+			"%s "+ // manually_scale_geo
 			"--scale_geo_delay %s "+
 			"--n_geo_to_add %s "+
 			"--prewarm_realm "+
@@ -329,10 +337,10 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			dursToString(dur),
 			rpsToString(rps),
 			clientDelay.String(),
-			strconv.FormatBool(manuallyScaleCaches),
+			scalecache,
 			scaleCacheDelay.String(),
 			strconv.Itoa(numCachesToAdd),
-			strconv.FormatBool(manuallyScaleGeo),
+			scalegeo,
 			scaleGeoDelay.String(),
 			strconv.Itoa(numGeoToAdd),
 		)

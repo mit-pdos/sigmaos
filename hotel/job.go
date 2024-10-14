@@ -127,19 +127,19 @@ type Srv struct {
 	Mcpu proc.Tmcpu
 }
 
-var geo Srv = Srv{"hotel-geod", nil, 2000}
+var geo *Srv = &Srv{"hotel-geod", nil, 2000}
 
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
-func NewHotelSvc(public bool) []Srv {
-	return []Srv{
-		Srv{"hotel-userd", nil, 0},
-		Srv{"hotel-rated", nil, 2000},
+func NewHotelSvc(public bool) []*Srv {
+	return []*Srv{
+		&Srv{"hotel-userd", nil, 0},
+		&Srv{"hotel-rated", nil, 2000},
 		geo,
-		Srv{"hotel-profd", nil, 2000},
-		Srv{"hotel-searchd", nil, 3000},
-		Srv{"hotel-reserved", nil, 3000},
-		Srv{"hotel-recd", nil, 0},
-		Srv{"hotel-wwwd", []string{strconv.FormatBool(public)}, 3000},
+		&Srv{"hotel-profd", nil, 2000},
+		&Srv{"hotel-searchd", nil, 3000},
+		&Srv{"hotel-reserved", nil, 3000},
+		&Srv{"hotel-recd", nil, 0},
+		&Srv{"hotel-wwwd", []string{strconv.FormatBool(public)}, 3000},
 	}
 }
 
@@ -162,9 +162,11 @@ type HotelJob struct {
 	job             string
 }
 
-func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int) (*HotelJob, error) {
+func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int, ngeoidx int) (*HotelJob, error) {
 	// Set number of hotels before doing anything.
 	setNHotel(nhotel)
+	// Set the number of indexes to be used in each geo server
+	geo.Args = []string{strconv.Itoa(ngeoidx)}
 
 	var cc *cachedsvcclnt.CachedSvcClnt
 	var cm *cachedsvc.CacheMgr

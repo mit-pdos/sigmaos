@@ -5,6 +5,9 @@ import (
 	"path/filepath"
 	"sync"
 
+	"sigmaos/chunk"
+	"sigmaos/chunkclnt"
+	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	proto "sigmaos/lcschedsrv/proto"
@@ -26,6 +29,7 @@ type LCSched struct {
 	scheddclnt *scheddclnt.ScheddClnt
 	qs         map[sp.Trealm]*schedqueue.Queue[string, chan string]
 	schedds    map[string]*Resources
+	realmbins  *chunkclnt.RealmBinPaths
 }
 
 type QDir struct {
@@ -38,6 +42,7 @@ func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib, sp.NOT_SET),
 		qs:         make(map[sp.Trealm]*schedqueue.Queue[string, chan string]),
 		schedds:    make(map[string]*Resources),
+		realmbins:  chunkclnt.NewRealmBinPaths(),
 	}
 	lcs.cond = sync.NewCond(&lcs.mu)
 	return lcs
@@ -147,6 +152,14 @@ func (lcs *LCSched) schedule() {
 }
 
 func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Resources) {
+	// Chunksrv relies on there only being one chunk server in the path to
+	// avoid circular waits & deadlocks.
+	if !chunksrv.IsChunkSrvPath(p.GetSigmaPath()[0]) {
+		if kid, ok := lcs.realmbins.GetBinKernelID(p.GetRealm(), p.GetProgram()); ok {
+			p.PrependSigmaPath(chunk.ChunkdPath(kid))
+		}
+	}
+	lcs.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), kernelID)
 	db.DPrintf(db.LCSCHED, "runProc kernelID %v p %v", kernelID, p)
 	if err := lcs.scheddclnt.ForceRun(kernelID, false, p); err != nil {
 		db.DPrintf(db.ALWAYS, "Schedd.Run %v err %v", kernelID, err)

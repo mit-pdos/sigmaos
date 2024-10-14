@@ -254,7 +254,7 @@ func (rdr *AsyncFileReader) doneChunk(i, sz int) {
 
 	db.DPrintf(db.PREADER, "chunkReader: getChunk %d sz %d err %v", i, sz, rdr.err)
 
-	if sz != sp.BUFSZ { // eof?
+	if sz < sp.BUFSZ { // eof?
 		rdr.end = sp.Toffset(chunk2Offset(i) + sz)
 	}
 
@@ -286,28 +286,19 @@ func (rdr *AsyncFileReader) chunkReader() {
 		if !ok {
 			break
 		}
-		sz := int(0)
 		l := sp.BUFSZ
 		if int(rdr.end-off) < sp.BUFSZ {
 			l = int(rdr.end - off)
 		}
-		for sz < l {
-			j := chunk2Buf(i, rdr.n)
-			n, err := rdr.sof.Pread(rdr.fd, rdr.buf[chunk2Offset(j):chunk2Offset(j+1)], off)
-			if err != nil {
-				if err != io.EOF {
-					db.DPrintf(db.PREADER, "chunkReader: Pread n %d sz %d err %v", n, sz, err)
-					rdr.setErr(err)
-				} else {
-					db.DPrintf(db.PREADER, "chunkReader: Eof n %d sz %d", n, sz)
-					sz += int(n)
-				}
-				break
-			}
-			sz += int(n)
-			db.DPrintf(db.PREADER, "chunkReader: ck %d(%d) read %d", i, off, n)
+		j := chunk2Buf(i, rdr.n)
+		n, err := rdr.sof.Pread(rdr.fd, rdr.buf[chunk2Offset(j):chunk2Offset(j+1)], off)
+		if err != nil && err != io.EOF {
+			db.DPrintf(db.PREADER, "chunkReader: Pread n %d l %d err %v", n, l, err)
+			rdr.setErr(err)
+			break
 		}
-		rdr.doneChunk(i, sz)
+		db.DPrintf(db.PREADER, "chunkReader: ck %d(%d) read %d err %v", i, off, n, err)
+		rdr.doneChunk(i, int(n))
 	}
 	db.DPrintf(db.PREADER, "chunkReader: done %d", rdr.end)
 }

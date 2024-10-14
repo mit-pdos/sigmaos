@@ -74,7 +74,11 @@ type Geo struct {
 }
 
 // Run starts the server
-func RunGeoSrv(job string, nidx int) error {
+func RunGeoSrv(job string, nidxStr string) error {
+	nidx, err := strconv.Atoi(nidxStr)
+	if err != nil {
+		db.DFatalf("Invalid nidx: %v", err)
+	}
 	geo := &Geo{}
 	start := time.Now()
 	geo.idxs = newGeoIndexes(nidx, "data/geo.json")

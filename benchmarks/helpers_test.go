@@ -320,26 +320,26 @@ func newWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwmcpu proc.Tmcpu, r
 
 // ========== Hotel Helpers ==========
 
-func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nGeo int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewHotelJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cachetype, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd, manuallyScaleGeo, scaleGeoDelay, nGeoToAdd)
+		i := NewHotelJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cachetype, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd, nGeo, manuallyScaleGeo, scaleGeoDelay, nGeoToAdd)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
 	return ws, is
 }
 
-func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nGeo int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache, cachetype, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd, manuallyScaleGeo, scaleGeoDelay, nGeoToAdd)
+		i := NewHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache, cachetype, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd, nGeo, manuallyScaleGeo, scaleGeoDelay, nGeoToAdd)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

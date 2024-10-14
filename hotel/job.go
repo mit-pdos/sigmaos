@@ -162,7 +162,7 @@ type HotelJob struct {
 	job             string
 }
 
-func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, nsrv int, gc bool, imgSizeMB int) (*HotelJob, error) {
+func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int) (*HotelJob, error) {
 	// Set number of hotels before doing anything.
 	setNHotel(nhotel)
 
@@ -178,11 +178,11 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 	}
 
 	// Create a cache clnt.
-	if nsrv > 0 {
+	if ncache > 0 {
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cachedsvc.NewCacheMgr(sc, job, nsrv, cacheMcpu, gc)
+			cm, err = cachedsvc.NewCacheMgr(sc, job, ncache, cacheMcpu, gc)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err
@@ -191,7 +191,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 			ca = cachedsvcclnt.NewAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
-			kvf, err = kv.NewKvdFleet(sc, job, 0, nsrv, 0, 0, cacheMcpu, "0", "manual")
+			kvf, err = kv.NewKvdFleet(sc, job, 0, ncache, 0, 0, cacheMcpu, "0", "manual")
 			if err != nil {
 				return nil, err
 			}
@@ -227,7 +227,17 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 		db.DPrintf(db.TEST, "Hotel started %v", srv.Name)
 	}
 
-	return &HotelJob{sc, cc, cm, ca, pids, cache, kvf, job}, nil
+	hj := &HotelJob{sc, cc, cm, ca, pids, cache, kvf, job}
+
+	if ngeo > 1 {
+		for i := 0; i < ngeo-1; i++ {
+			if err := hj.AddGeoSrv(); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return hj, nil
 }
 
 func (hj *HotelJob) AddGeoSrv() error {

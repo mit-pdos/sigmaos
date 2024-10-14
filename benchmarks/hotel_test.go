@@ -39,6 +39,9 @@ type HotelJobInstance struct {
 	scaleCacheDelay     time.Duration
 	manuallyScaleCaches bool
 	nCachesToAdd        int
+	scaleGeoDelay       time.Duration
+	manuallyScaleGeo    bool
+	nGeoToAdd           int
 	ready               chan bool
 	fn                  hotelFn
 	hj                  *hotel.HotelJob
@@ -48,7 +51,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
@@ -62,6 +65,9 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	ji.manuallyScaleCaches = manuallyScaleCaches
 	ji.scaleCacheDelay = scaleCacheDelay
 	ji.nCachesToAdd = nCachesToAdd
+	ji.manuallyScaleGeo = manuallyScaleGeo
+	ji.scaleGeoDelay = scaleGeoDelay
+	ji.nGeoToAdd = nGeoToAdd
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -157,7 +163,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
-	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v) manuallyScaleCaches %v scaleCacheDelay %v nCachesToAdd %v", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr, ji.manuallyScaleCaches, ji.scaleCacheDelay, ji.nCachesToAdd)
+	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v) manuallyScaleCaches %v scaleCacheDelay %v nCachesToAdd %v manuallyScaleGeo %v scaleGeoDelay %v nGeoToAdd %v", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr, ji.manuallyScaleCaches, ji.scaleCacheDelay, ji.nCachesToAdd, ji.manuallyScaleGeo, ji.scaleGeoDelay, ji.nGeoToAdd)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)
@@ -170,6 +176,15 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	_, err := ji.wc.StartRecording()
 	if err != nil {
 		db.DFatalf("Can't start recording: %v", err)
+	}
+	if !ji.justCli && ji.manuallyScaleGeo {
+		go func() {
+			time.Sleep(ji.scaleGeoDelay)
+			for i := 0; i < ji.nGeoToAdd; i++ {
+				err := ji.hj.AddGeoSrv()
+				assert.Nil(ji.Ts.T, err, "Add Geo srv: %v", err)
+			}
+		}()
 	}
 	if !ji.justCli && ji.manuallyScaleCaches {
 		go func() {

@@ -127,12 +127,14 @@ type Srv struct {
 	Mcpu proc.Tmcpu
 }
 
+var geo Srv = Srv{"hotel-geod", nil, 2000}
+
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func NewHotelSvc(public bool) []Srv {
 	return []Srv{
 		Srv{"hotel-userd", nil, 0},
 		Srv{"hotel-rated", nil, 2000},
-		Srv{"hotel-geod", nil, 2000},
+		geo,
 		Srv{"hotel-profd", nil, 2000},
 		Srv{"hotel-searchd", nil, 3000},
 		Srv{"hotel-reserved", nil, 3000},
@@ -157,6 +159,7 @@ type HotelJob struct {
 	pids            []sp.Tpid
 	cache           string
 	kvf             *kv.KVFleet
+	job             string
 }
 
 func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, nsrv int, gc bool, imgSizeMB int) (*HotelJob, error) {
@@ -213,18 +216,36 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)
 		if err := sc.Spawn(p); err != nil {
-			db.DPrintf(db.ERROR, "Error burst-spawnn proc %v: %v", p, err)
+			db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
 			return nil, err
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {
-			db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
+			db.DPrintf(db.ERROR, "Error start proc %v: %v", p, err)
 			return nil, err
 		}
 		pids = append(pids, p.GetPid())
 		db.DPrintf(db.TEST, "Hotel started %v", srv.Name)
 	}
 
-	return &HotelJob{sc, cc, cm, ca, pids, cache, kvf}, nil
+	return &HotelJob{sc, cc, cm, ca, pids, cache, kvf, job}, nil
+}
+
+func (hj *HotelJob) AddGeoSrv() error {
+	p := proc.NewProc(geo.Name, append([]string{hj.job, hj.cache}, geo.Args...))
+	p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
+	p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
+	p.SetMcpu(geo.Mcpu)
+	if err := hj.Spawn(p); err != nil {
+		db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
+		return err
+	}
+	if err := hj.WaitStart(p.GetPid()); err != nil {
+		db.DPrintf(db.ERROR, "Error start proc %v: %v", p, err)
+		return err
+	}
+	hj.pids = append(hj.pids, p.GetPid())
+	db.DPrintf(db.TEST, "Hotel started %v", geo.Name)
+	return nil
 }
 
 func (hj *HotelJob) Stop() error {

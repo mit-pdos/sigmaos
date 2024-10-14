@@ -23,10 +23,6 @@ import (
 )
 
 const (
-	N_INDEX = 2
-)
-
-const (
 	maxSearchRadius  = 10
 	maxSearchResults = 5
 )
@@ -78,11 +74,11 @@ type Geo struct {
 }
 
 // Run starts the server
-func RunGeoSrv(job string) error {
+func RunGeoSrv(job string, nidx int) error {
 	geo := &Geo{}
 	start := time.Now()
-	geo.idxs = newGeoIndexes(N_INDEX, "data/geo.json")
-	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes after: %v", N_INDEX, time.Since(start))
+	geo.idxs = newGeoIndexes(nidx, "data/geo.json")
+	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes after: %v", nidx, time.Since(start))
 	pe := proc.GetProcEnv()
 	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
 	if err != nil {

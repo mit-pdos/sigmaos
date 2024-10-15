@@ -4,6 +4,7 @@ package fdclnt
 
 import (
 	"fmt"
+	"io"
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
@@ -148,6 +149,14 @@ func (fdc *FdClient) readFid(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.Tof
 	return cnt, nil
 }
 
+func (fdc *FdClient) readFidRdr(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+	rdr, err := pc.PreadRdr(fid, off, sz)
+	if err != nil {
+		return nil, err
+	}
+	return rdr, nil
+}
+
 func (fdc *FdClient) Read(fd int, b []byte) (sp.Tsize, error) {
 	fid, off, pc, sr := fdc.fds.lookupOff(fd)
 	if sr != nil {
@@ -167,6 +176,14 @@ func (fdc *FdClient) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
 		return 0, sr
 	}
 	return fdc.readFid(fd, pc, fid, o, b)
+}
+
+func (fdc *FdClient) PreadRdr(fd int, o sp.Toffset, l sp.Tsize) (io.ReadCloser, error) {
+	fid, _, pc, sr := fdc.fds.lookupOff(fd)
+	if sr != nil {
+		return nil, sr
+	}
+	return fdc.readFidRdr(fd, pc, fid, o, l)
 }
 
 func (fdc *FdClient) writeFid(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, error) {

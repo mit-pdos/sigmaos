@@ -8,7 +8,9 @@
 package fidclnt
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -297,6 +299,19 @@ func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) 
 		return 0, err
 	}
 	return cnt, nil
+}
+
+func (fidc *FidClnt) PreadRdr(fid sp.Tfid, off sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+	b := make([]byte, sz)
+	ch := fidc.Lookup(fid)
+	if ch == nil {
+		return nil, serr.NewErr(serr.TErrUnreachable, "ReadF")
+	}
+	cnt, err := ch.pc.ReadF(fid, off, b, sp.NullFence())
+	if err != nil {
+		return nil, err
+	}
+	return io.NopCloser(bytes.NewReader(b[0:cnt])), nil
 }
 
 func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error) {

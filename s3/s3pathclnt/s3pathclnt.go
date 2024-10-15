@@ -2,6 +2,7 @@ package s3pathclnt
 
 import (
 	"context"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -86,6 +87,14 @@ func (s3c *S3PathClnt) ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence
 	}
 	n, err := s3r.read(off, b)
 	return sp.Tsize(n), err
+}
+
+func (s3c *S3PathClnt) PreadRdr(fid sp.Tfid, off sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+	s3r, ok := s3c.rfids.Lookup(fid)
+	if !ok {
+		return nil, serr.NewErr(serr.TErrNotfound, fid)
+	}
+	return s3r.readRdr(off, sz)
 }
 
 func (s3c *S3PathClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error) {

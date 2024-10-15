@@ -2,6 +2,7 @@ package spproxyclnt
 
 import (
 	"fmt"
+	"io"
 
 	"google.golang.org/protobuf/proto"
 
@@ -165,6 +166,11 @@ func (scc *SigmaClntClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error
 		return 0, err
 	}
 	return sp.Tsize(len(d[0])), nil
+}
+
+func (scc *SigmaClntClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+	db.DFatalf("PreadRdr")
+	return nil, nil
 }
 
 func (scc *SigmaClntClnt) Write(fd int, data []byte) (sp.Tsize, error) {

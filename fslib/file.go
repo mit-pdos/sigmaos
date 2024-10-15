@@ -133,13 +133,14 @@ func (fl *FsLib) OpenBufReader(path string) (*BufFileReader, error) {
 }
 
 type AsyncFileReader struct {
-	fd   int
-	sof  sos.FileAPI
-	end  sp.Toffset
-	wg   sync.WaitGroup
-	buf  []byte
-	n    int
-	done []bool
+	fd      int
+	sof     sos.FileAPI
+	end     sp.Toffset
+	wg      sync.WaitGroup
+	rdrs    []io.ReadCloser
+	buf     []byte
+	nreader int
+	done    []bool
 
 	mu       sync.Mutex
 	pcond    *sync.Cond
@@ -180,12 +181,10 @@ func (rdr *AsyncFileReader) Read(p []byte) (int, error) {
 		db.DFatalf("Read: c %d(%d) p %d(%d)", chunkId(rdr.coff), rdr.coff, chunkId(rdr.poff), rdr.poff)
 	}
 	i := chunkId(rdr.coff)
-	i0 := chunk2Buf(i, rdr.n)
-	o := chunkOff(rdr.coff)
-	n := copy(p, rdr.buf[chunk2Offset(i0)+o:chunk2Offset(i0+1)])
+	n, err := rdr.rdrs[chunk2Buf(i, rdr.nreader)].Read(p)
 	rdr.coff += sp.Toffset(n)
 
-	db.DPrintf(db.PREADER, "Read n %d ck %d off %d(%d) end %d", n, chunkId(rdr.coff), rdr.coff, chunkOff(rdr.coff), rdr.end)
+	db.DPrintf(db.PREADER, "Read n %d ck %d off %d(%d) end %d err %v", n, chunkId(rdr.coff), rdr.coff, chunkOff(rdr.coff), rdr.end, err)
 	if rdr.coff >= rdr.poff {
 		rdr.pcond.Broadcast()
 	}
@@ -238,7 +237,7 @@ func (rdr *AsyncFileReader) getBuf(off sp.Toffset) (int, bool) {
 	rdr.mu.Lock()
 	defer rdr.mu.Unlock()
 
-	for chunkId(off-rdr.coff) >= rdr.n && !rdr.isClosed {
+	for chunkId(off-rdr.coff) >= rdr.nreader && !rdr.isClosed {
 		db.DPrintf(db.PREADER, "chunkReader: wait for read c %d p %d", chunkId(rdr.coff), chunkId(off))
 		rdr.pcond.Wait()
 	}
@@ -248,7 +247,7 @@ func (rdr *AsyncFileReader) getBuf(off sp.Toffset) (int, bool) {
 	return chunkId(off), true
 }
 
-func (rdr *AsyncFileReader) doneChunk(i, sz int) {
+func (rdr *AsyncFileReader) doneChunk(i int, sz int, r io.ReadCloser) {
 	rdr.mu.Lock()
 	defer rdr.mu.Unlock()
 
@@ -258,12 +257,13 @@ func (rdr *AsyncFileReader) doneChunk(i, sz int) {
 		rdr.end = sp.Toffset(chunk2Offset(i) + sz)
 	}
 
-	rdr.done[i%rdr.n] = true
+	rdr.done[chunk2Buf(i, rdr.nreader)] = true
+	rdr.rdrs[chunk2Buf(i, rdr.nreader)] = r
 	eq := rdr.poff == rdr.coff
-	for j := i; rdr.done[chunk2Buf(j, rdr.n)]; j++ {
+	for j := i; rdr.done[chunk2Buf(j, rdr.nreader)]; j++ {
 		if rdr.poff == sp.Toffset(chunk2Offset(j)) {
 			rdr.poff += sp.BUFSZ
-			rdr.done[chunk2Buf(j, rdr.n)] = false
+			rdr.done[chunk2Buf(j, rdr.nreader)] = false
 		}
 	}
 
@@ -290,39 +290,42 @@ func (rdr *AsyncFileReader) chunkReader() {
 		if int(rdr.end-off) < sp.BUFSZ {
 			l = int(rdr.end - off)
 		}
-		j := chunk2Buf(i, rdr.n)
-		n, err := rdr.sof.Pread(rdr.fd, rdr.buf[chunk2Offset(j):chunk2Offset(j+1)], off)
+		r, err := rdr.sof.PreadRdr(rdr.fd, off, sp.Tsize(l))
 		if err != nil && err != io.EOF {
-			db.DPrintf(db.PREADER, "chunkReader: Pread n %d l %d err %v", n, l, err)
+			db.DPrintf(db.PREADER, "chunkReader: Pread n %d l %d err %v", l, err)
 			rdr.setErr(err)
 			break
 		}
-		db.DPrintf(db.PREADER, "chunkReader: ck %d(%d) read %d err %v", i, off, n, err)
-		rdr.doneChunk(i, int(n))
+		db.DPrintf(db.PREADER, "chunkReader: ck %d(%d) read %d err %v", i, off, l, err)
+		rdr.doneChunk(i, l, r)
 	}
 	db.DPrintf(db.PREADER, "chunkReader: done %d", rdr.end)
 }
 
-func (fl *FsLib) OpenAsyncReaderRegion(path string, offset sp.Toffset, l sp.Tlength, buf []byte) (*AsyncFileReader, error) {
+func (fl *FsLib) OpenAsyncReaderRegion(path string, offset sp.Toffset, l sp.Tlength, buf []byte, concurrency int) (*AsyncFileReader, error) {
 	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
 	n := len(buf) / sp.BUFSZ
+	if n > 0 && n != concurrency {
+		db.DFatalf("OpenAsyncReaderRegion: wrong concurrency")
+	}
 	r := &AsyncFileReader{
-		fd:   fd,
-		sof:  fl.FileAPI,
-		end:  offset + sp.Toffset(l),
-		buf:  buf,
-		n:    n,
-		coff: offset,
-		poff: offset,
-		noff: offset,
-		done: make([]bool, n),
+		fd:      fd,
+		sof:     fl.FileAPI,
+		end:     offset + sp.Toffset(l),
+		buf:     buf,
+		rdrs:    make([]io.ReadCloser, concurrency),
+		nreader: concurrency,
+		coff:    offset,
+		poff:    offset,
+		noff:    offset,
+		done:    make([]bool, concurrency),
 	}
 	r.pcond = sync.NewCond(&r.mu)
 	r.ccond = sync.NewCond(&r.mu)
-	for i := 0; i < r.n; i++ {
+	for i := 0; i < concurrency; i++ {
 		r.wg.Add(1)
 		go r.chunkReader()
 	}

@@ -307,7 +307,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 
 	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
-	buf0 := make([]byte, 5*sp.BUFSZ)
+	// buf0 := make([]byte, 5*sp.BUFSZ)
 	measure(p3, "readahead", func() sp.Tlength {
 		pn := fn
 		if test.Withs3pathclnt {
@@ -315,7 +315,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 			assert.True(t, ok)
 			pn = pn0
 		}
-		r, err := ts.OpenAsyncReaderRegion(pn, 0, FILESZ, buf0)
+		r, err := ts.OpenAsyncReaderRegion(pn, 0, FILESZ, nil, 5)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
@@ -432,7 +432,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 				n := sp.Tlength(0)
 				for j := 0; j < NTRIAL; j++ {
 					// XXX Fix
-					r, err := fsls[i].OpenAsyncReaderRegion(fns[i], 0, 0, nil)
+					r, err := fsls[i].OpenAsyncReaderRegion(fns[i], 0, 0, nil, 5)
 					assert.Nil(t, err)
 					n2, err := test.Reader(t, r, buf, FILESZ)
 					assert.Nil(t, err)

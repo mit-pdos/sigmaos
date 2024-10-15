@@ -250,7 +250,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		off--
 	}
 	start := time.Now()
-	rdr, err := m.OpenAsyncReaderRegion(s.File, s.Offset, s.Length+sp.Tlength(m.linesz), m.pbuf)
+	rdr, err := m.OpenAsyncReaderRegion(s.File, s.Offset, s.Length+sp.Tlength(m.linesz), nil, MAXCONCURRENCY)
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}

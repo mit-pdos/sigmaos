@@ -110,10 +110,13 @@ func (c *Coord) Run() {
 	}
 
 	db.DPrintf(db.WATCH_PERF, "Run: Waiting for workers to signal they're ready")
-	dirReader := fslib.NewDirReader(c.FsLib, c.responseDir)
-	err := dirReader.WaitNEntries(c.nWorkers)
+	responseWatcher, _, err := fslib.NewDirWatcher(c.FsLib, c.responseDir)
 	if err != nil {
-		db.DFatalf("Run: failed to wait for all procs to be ready %v", err)
+		db.DFatalf("Run: failed to create dir watcher for response dir %v", err)
+	}
+	err = responseWatcher.WaitNEntries(c.nWorkers)
+	if err != nil {
+		db.DFatalf("RunCoord: failed to wait for all procs to be ready %v", err)
 	}
 	c.clearResponseDir()
 
@@ -131,10 +134,8 @@ func (c *Coord) Run() {
 			db.DFatalf("Run: failed to create trial file %d, %v", trial, err)
 		}
 		// wait for all children to recognize the creation
-		// create a new dirReader because WaitNEntries caches responses and still has the old one as available
 		db.DPrintf(db.WATCH_PERF, "Run: Waiting for workers to see creation for trial %d", trial)
-		dirReader = fslib.NewDirReader(c.FsLib, c.responseDir)
-		err = dirReader.WaitNEntries(c.nWorkers)
+		err = responseWatcher.WaitNEntries(c.nWorkers)
 		if err != nil {
 			db.DFatalf("Run: failed to wait for all procs to respond to creation during trial %d, %v", trial, err)
 		}
@@ -142,6 +143,7 @@ func (c *Coord) Run() {
 		creationDelays[trial] = c.getWorkerDelays(creationTime)
 		db.DPrintf(db.WATCH_PERF, "Run: Creation delays for trial %d: %v", trial, creationDelays[trial])
 		c.clearResponseDir()
+		responseWatcher.WaitEmpty()
 
 		db.DPrintf(db.WATCH_PERF, "Run: Removing file for trial %d", trial)
 		deletionTime := time.Now()
@@ -151,14 +153,14 @@ func (c *Coord) Run() {
 		}
 		// wait for all children to recognize the deletion
 		db.DPrintf(db.WATCH_PERF, "Run: Waiting for workers to see deletion for trial %d", trial)
-		dirReader = fslib.NewDirReader(c.FsLib, c.responseDir)
-		err = dirReader.WaitNEntries(c.nWorkers)
+		err = responseWatcher.WaitNEntries(c.nWorkers)
 		if err != nil {
 			db.DFatalf("Run: failed to wait for all procs to respond to deletion during trial %d, %v", trial, err)
 		}
 		deletionDelays[trial] = c.getWorkerDelays(deletionTime)
 		db.DPrintf(db.WATCH_PERF, "Run: Deletion delays for trial %d: %v", trial, deletionDelays[trial])
 		c.clearResponseDir()
+		responseWatcher.WaitEmpty()
 
 		err = c.CloseFd(fd)
 		if err != nil {
@@ -174,16 +176,20 @@ func (c *Coord) Run() {
 		}
 	}
 
-	if c.Remove(c.watchDir) != nil {
+	if err := responseWatcher.Close(); err != nil {
+		db.DFatalf("RunCoord: failed to close watcher %v", err)
+	}
+
+	if err := c.Remove(c.watchDir); err != nil {
 		db.DFatalf("Run: failed to remove watchdir %v", err)
 	}
-	if c.Remove(c.responseDir) != nil {
+	if err := c.Remove(c.responseDir); err != nil {
 		db.DFatalf("Run: failed to remove responsedir %v", err)
 	}
-	if c.Remove(c.tempDir) != nil {
+	if err := c.Remove(c.tempDir); err != nil {
 		db.DFatalf("Run: failed to remove tempdir %v", err)
 	}
-	if c.Remove(c.baseDir) != nil {
+	if err := c.Remove(c.baseDir); err != nil {
 		db.DFatalf("Run: failed to remove basedir %v", err)
 	}
 

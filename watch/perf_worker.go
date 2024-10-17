@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmap"
@@ -16,6 +17,7 @@ type Worker struct {
 	id string;
 	nTrials int;
 	watchDir string;
+	watchDirWatcher *fslib.DirWatcher;
 	responseDir string;
 	tempDir string;
 }
@@ -42,11 +44,17 @@ func NewWorker(args []string) (*Worker, error) {
 	responseDir := args[3]
 	tempDir := args[4]
 
+	watchDirWatcher, _, err := fslib.NewDirWatcher(sc.FsLib, watchDir)
+	if err != nil {
+		return &Worker{}, fmt.Errorf("NewWorker %s: failed to construct watcher for %s, %v", id, watchDir, err)
+	}
+
 	return &Worker {
 		sc,
 		id,
 		nTrials,
 		watchDir,
+		watchDirWatcher,
 		responseDir,
 		tempDir,
 	}, nil
@@ -66,12 +74,12 @@ func (w *Worker) Run() {
 	for trial := 0; trial < w.nTrials; trial++ {
 		filename := fmt.Sprintf("trial_%d", trial)
 		db.DPrintf(db.WATCH_PERF, "Run %s: Trial %d: waiting for file creation", w.id, trial)
-		w.waitForFile(watchDirFd, w.watchDir, filename, false)
+		w.waitForFile(w.watchDir, filename, false)
 		createdFileTime := time.Now()
 		w.respondWithTime(createdFileTime)
 
 		db.DPrintf(db.WATCH_PERF, "Run %s: Trial %d: waiting for file deletion", w.id, trial)
-		w.waitForFile(watchDirFd, w.watchDir, filename, true)
+		w.waitForFile(w.watchDir, filename, true)
 		deletedFileTime := time.Now()
 		w.respondWithTime(deletedFileTime)
 	}
@@ -90,21 +98,18 @@ func (w *Worker) Run() {
 	w.ClntExit(status)
 }
 
-func (w *Worker) waitForFile(watchFd int, watchDir string, filename string, deleted bool) {
-	found := false
-	for !found {
-		found = deleted
-		w.DirWatch(watchFd)
-		stats, err := w.GetDir(watchDir)
-		if err != nil {
-			db.DFatalf("waitForFile %s: failed to get dir: err %v", w.id, err)
-		}
+func (w *Worker) waitForFile(watchDir string, filename string, deleted bool) {
+	db.DPrintf(db.WATCH_PERF, "waitForFile: waiting for %s/%s (deleted = %t)", watchDir, filename, deleted)
 
-		for _, stat := range stats {
-			if stat.Name == filename {
-				found = !deleted
-			}
-		}
+	var err error
+	if deleted {
+		err = w.watchDirWatcher.WaitRemove(filename)
+	} else {
+		err = w.watchDirWatcher.WaitCreate(filename)
+	}
+
+	if err != nil {
+		db.DFatalf("waitForFile: failed to wait for %s/%s: err %v", watchDir, filename, err)
 	}
 }
 

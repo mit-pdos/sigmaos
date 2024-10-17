@@ -172,6 +172,7 @@ type DirWatcher struct {
 	watchFd int
 	ents map[string]bool
 	changes map[string]bool
+	closed bool
 }
 
 type watchReader struct {
@@ -213,6 +214,7 @@ func NewDirWatcher(fslib *FsLib, pn string) (*DirWatcher, []string, error) {
 		watchFd: watchFd,
 		ents:   make(map[string]bool),
 		changes: make(map[string]bool),
+		closed: false,
 	}
 
 	sts, _, err := fslib.ReadDir(pn)
@@ -229,12 +231,21 @@ func NewDirWatcher(fslib *FsLib, pn string) (*DirWatcher, []string, error) {
 	go func() {
 		for {
 			event, err := bufferedReader.ReadString('\n')
-			// remove the newline
-			event = event[:len(event) - 1]
-			if err != nil {
-				db.DPrintf(db.WATCH_NEW, "DirWatcher: Reading watch stream produced err: %v", err)
+			if dw.closed {
+				return
 			}
 
+			// remove the newline
+			if err != nil {
+				if serr.IsErrCode(err, serr.TErrClosed) {
+					db.DPrintf(db.WATCH_NEW, "DirWatcher: Watch stream for %s closed", pn)
+					return
+				} else {
+					db.DFatalf("DirWatcher: Watch stream produced err %v", err)
+				}
+			}
+
+			event = event[:len(event) - 1]
 			var name string
 			var created bool
 
@@ -249,6 +260,10 @@ func NewDirWatcher(fslib *FsLib, pn string) (*DirWatcher, []string, error) {
 			}
 
 			dw.Lock()
+			if dw.closed {
+				dw.Unlock()
+				return
+			}
 
 			db.DPrintf(db.WATCH_NEW, "DirWatcher: Broadcasting event %s %t", name, created)
 
@@ -283,6 +298,7 @@ func (dw *DirWatcher) GetDir() []string {
 }
 
 func (dw *DirWatcher) Close() error {
+	dw.closed = true
 	return dw.close_(dw.watchFd)
 }
 

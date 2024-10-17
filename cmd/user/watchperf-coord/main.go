@@ -12,7 +12,7 @@ func main() {
 		db.DFatalf("Usage: %v nworkers nstartfiles ntrials basedir\n", os.Args[0])
 	}
 
-	c, err := watch.NewCoord(os.Args[1:])
+	c, err := watch.NewPerfCoord(os.Args[1:])
 	if err != nil {
 		db.DFatalf("%v: err %v", os.Args[0], err)
 	}

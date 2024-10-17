@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-type Worker struct {
+type PerfWorker struct {
 	*sigmaclnt.SigmaClnt
 	id string;
 	nTrials int;
@@ -22,22 +22,22 @@ type Worker struct {
 	tempDir string;
 }
 
-func NewWorker(args []string) (*Worker, error) {
+func NewPerfWorker(args []string) (*PerfWorker, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		return &Worker{}, fmt.Errorf("NewWorker: error %v", err)
+		return &PerfWorker{}, fmt.Errorf("NewPerfWorker: error %v", err)
 	}
 
 	err = sc.Started()
 	if err != nil {
-		return &Worker{}, fmt.Errorf("NewWorker: error %v", err)
+		return &PerfWorker{}, fmt.Errorf("NewPerfWorker: error %v", err)
 	}
 
 	id := args[0]
 
 	nTrials, err := strconv.Atoi(args[1])
 	if err != nil {
-		return &Worker{}, fmt.Errorf("NewWorker %s: ntrials %s is not an integer", id, args[1])
+		return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: ntrials %s is not an integer", id, args[1])
 	}
 
 	watchDir := args[2]
@@ -46,10 +46,10 @@ func NewWorker(args []string) (*Worker, error) {
 
 	watchDirWatcher, _, err := fslib.NewDirWatcher(sc.FsLib, watchDir)
 	if err != nil {
-		return &Worker{}, fmt.Errorf("NewWorker %s: failed to construct watcher for %s, %v", id, watchDir, err)
+		return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: failed to construct watcher for %s, %v", id, watchDir, err)
 	}
 
-	return &Worker {
+	return &PerfWorker {
 		sc,
 		id,
 		nTrials,
@@ -60,7 +60,7 @@ func NewWorker(args []string) (*Worker, error) {
 	}, nil
 }
 
-func (w *Worker) Run() {
+func (w *PerfWorker) Run() {
 	idFilePath := filepath.Join(w.responseDir, w.id)
 	idFileFd, err := w.Create(idFilePath, 0777, sigmap.OAPPEND)
 	if err != nil {
@@ -98,7 +98,7 @@ func (w *Worker) Run() {
 	w.ClntExit(status)
 }
 
-func (w *Worker) waitForFile(watchDir string, filename string, deleted bool) {
+func (w *PerfWorker) waitForFile(watchDir string, filename string, deleted bool) {
 	db.DPrintf(db.WATCH_PERF, "waitForFile: waiting for %s/%s (deleted = %t)", watchDir, filename, deleted)
 
 	var err error
@@ -113,7 +113,7 @@ func (w *Worker) waitForFile(watchDir string, filename string, deleted bool) {
 	}
 }
 
-func (w *Worker) respondWithTime(responseTime time.Time) {
+func (w *PerfWorker) respondWithTime(responseTime time.Time) {
 	db.DPrintf(db.WATCH_PERF, "respondWithTime: id %s with time %v", w.id, responseTime)
 	tempPath := filepath.Join(w.tempDir, w.id)
 	realPath := filepath.Join(w.responseDir, w.id)

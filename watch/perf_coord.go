@@ -19,7 +19,7 @@ type Result struct {
 	DeletionTimeNs [][]time.Duration
 }
 
-type Coord struct {
+type PerfCoord struct {
 	*sigmaclnt.SigmaClnt
   nWorkers int
 	nStartFiles int
@@ -30,30 +30,30 @@ type Coord struct {
 	tempDir string
 }
 
-func NewCoord(args []string) (*Coord, error) {
+func NewPerfCoord(args []string) (*PerfCoord, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		return &Coord{}, fmt.Errorf("NewCoord: error %v", err)
+		return &PerfCoord{}, fmt.Errorf("NewPerfCoord: error %v", err)
 	}
 
 	err = sc.Started()
 	if err != nil {
-		return &Coord{}, fmt.Errorf("NewCoord: error %v", err)
+		return &PerfCoord{}, fmt.Errorf("NewPerfCoord: error %v", err)
 	}
 
 	nWorkers, err := strconv.Atoi(args[0])
 	if err != nil {
-		return &Coord{}, fmt.Errorf("NewCoord: nworkers %s is not an integer", args[0])
+		return &PerfCoord{}, fmt.Errorf("NewPerfCoord: nworkers %s is not an integer", args[0])
 	}
 
 	nStartFiles, err := strconv.Atoi(args[1])
 	if err != nil {
-		return &Coord{}, fmt.Errorf("NewCoord: nstartfiles %s is not an integer", args[1])
+		return &PerfCoord{}, fmt.Errorf("NewPerfCoord: nstartfiles %s is not an integer", args[1])
 	}
 
 	nTrials, err := strconv.Atoi(args[2])
 	if err != nil {
-		return &Coord{}, fmt.Errorf("NewCoord: nTrials %s is not an integer", args[1])
+		return &PerfCoord{}, fmt.Errorf("NewPerfCoord: nTrials %s is not an integer", args[1])
 	}
 
 	baseDir := args[3]
@@ -61,7 +61,7 @@ func NewCoord(args []string) (*Coord, error) {
 	responseDir := filepath.Join(baseDir, "response")
 	tempDir := filepath.Join(baseDir, "temp")
 
-	return &Coord{
+	return &PerfCoord{
 		sc,
 		nWorkers,
 		nStartFiles,
@@ -73,7 +73,7 @@ func NewCoord(args []string) (*Coord, error) {
 	}, nil
 }
 
-func (c *Coord) Run() {
+func (c *PerfCoord) Run() {
 	c.MkDir(c.baseDir, 0777)
 	c.MkDir(c.watchDir, 0777)
 	c.MkDir(c.responseDir, 0777)
@@ -204,7 +204,7 @@ func (c *Coord) Run() {
 	}
 }
 
-func (c *Coord) clearResponseDir() {
+func (c *PerfCoord) clearResponseDir() {
 	db.DPrintf(db.WATCH_PERF, "clearResponseDir: Clearing response dir")
 	err := c.RmDirEntries(c.responseDir)
 	if err != nil {
@@ -212,7 +212,7 @@ func (c *Coord) clearResponseDir() {
 	}
 }
 
-func (c *Coord) getWorkerDelays(startTime time.Time) []time.Duration {
+func (c *PerfCoord) getWorkerDelays(startTime time.Time) []time.Duration {
 	db.DPrintf(db.WATCH_PERF, "getWorkerDelays: Getting proc times")
 	times := c.getWorkerTimes()
 	db.DPrintf(db.WATCH_PERF, "worker times: %v", times)
@@ -224,7 +224,7 @@ func (c *Coord) getWorkerDelays(startTime time.Time) []time.Duration {
 	return deltas
 }
 
-func (c *Coord) getWorkerTimes() []time.Time {
+func (c *PerfCoord) getWorkerTimes() []time.Time {
 	times := make([]time.Time, c.nWorkers)
 	stats, _, err := c.ReadDir(c.responseDir)
 	if err != nil {

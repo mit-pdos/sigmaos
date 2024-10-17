@@ -11,6 +11,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmap"
+	"sigmaos/watch"
 )
 
 func main() {
@@ -18,7 +19,12 @@ func main() {
 		db.DFatalf("Usage: %v id nfiles workdir readydir\n", os.Args[0])
 	}
 
-	RunWorker(os.Args[1:])
+	w, err := watch.NewTestWorker(os.Args[1:])
+	if err != nil {
+		db.DFatalf("%v: err %v", os.Args[0], err)
+	}
+
+	w.Run()
 }
 
 func RunWorker(args []string) {

@@ -7,9 +7,9 @@
 package proc
 
 import (
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sigmap "sigmaos/sigmap"
 	sync "sync"
@@ -118,7 +118,7 @@ type ProcEnvProto struct {
 	Crash               int64                             `protobuf:"varint,18,opt,name=crash,proto3" json:"crash,omitempty"`
 	Partition           int64                             `protobuf:"varint,19,opt,name=partition,proto3" json:"partition,omitempty"`
 	HowInt              int32                             `protobuf:"varint,20,opt,name=howInt,proto3" json:"howInt,omitempty"`
-	SpawnTimePB         *timestamppb.Timestamp            `protobuf:"bytes,21,opt,name=spawnTimePB,proto3" json:"spawnTimePB,omitempty"`
+	SpawnTimePB         *timestamp.Timestamp              `protobuf:"bytes,21,opt,name=spawnTimePB,proto3" json:"spawnTimePB,omitempty"`
 	Strace              string                            `protobuf:"bytes,22,opt,name=strace,proto3" json:"strace,omitempty"`
 	ScheddEndpointProto *sigmap.TendpointProto            `protobuf:"bytes,23,opt,name=scheddEndpointProto,proto3" json:"scheddEndpointProto,omitempty"`
 	NamedEndpointProto  *sigmap.TendpointProto            `protobuf:"bytes,24,opt,name=namedEndpointProto,proto3" json:"namedEndpointProto,omitempty"`
@@ -303,7 +303,7 @@ func (x *ProcEnvProto) GetHowInt() int32 {
 	return 0
 }
 
-func (x *ProcEnvProto) GetSpawnTimePB() *timestamppb.Timestamp {
+func (x *ProcEnvProto) GetSpawnTimePB() *timestamp.Timestamp {
 	if x != nil {
 		return x.SpawnTimePB
 	}
@@ -613,7 +613,7 @@ var file_proc_proc_proto_goTypes = []interface{}{
 	nil,                           // 4: ProcEnvProto.SecretsMapEntry
 	nil,                           // 5: ProcProto.EnvEntry
 	(*sigmap.Tprincipal)(nil),     // 6: Tprincipal
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(*timestamp.Timestamp)(nil),   // 7: google.protobuf.Timestamp
 	(*sigmap.TendpointProto)(nil), // 8: TendpointProto
 	(*sigmap.SecretProto)(nil),    // 9: SecretProto
 }

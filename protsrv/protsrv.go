@@ -22,6 +22,7 @@ type AttachAuthF func(*sp.Tprincipal, string) error
 type ProtSrv struct {
 	*ProtSrvState
 	fm          *fidMap
+	fwm         *fidWatchMap
 	p           *sp.Tprincipal
 	srvPE       *proc.ProcEnv
 	sid         sessp.Tsession
@@ -33,6 +34,7 @@ func NewProtSrv(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid se
 	ps := &ProtSrv{
 		ProtSrvState: pss,
 		fm:           newFidMap(),
+		fwm:          newFidWatchMap(),
 		p:            p,
 		srvPE:        srvPE,
 		sid:          sid,
@@ -105,7 +107,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 
 // Close open files from this client and delete this client
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
-	fids := ps.fm.ClientFids(args.TclntId())
+	fids := append(ps.fm.ClientFids(args.TclntId()), ps.fwm.ClientFids(args.TclntId())...)
 	db.DPrintf(db.PROTSRV, "Detach clnt %v fes %v\n", args.TclntId(), fids)
 	for _, fid := range fids {
 		ps.clunk(fid)
@@ -177,9 +179,24 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	return nil
 }
 
+func (ps *ProtSrv) clunkWatch(fid sp.Tfid) *sp.Rerror {
+	f, err := ps.fwm.LookupDel(fid)
+	if err != nil {
+		return sp.NewRerrorSerr(err)
+	}
+	db.DPrintf(db.PROTSRV, "%v: Clunk watch %v f %v path %q", f.Pobj().Ctx().ClntId(), fid, f, f.Pobj().Pathname())
+	if _, err := ps.vt.Delete(f.Pobj().Obj().Path()); err != nil {
+		db.DFatalf("%v: clunk watch %v vt del failed %v err %v\n", f.Pobj().Ctx().ClntId(), fid, f.Pobj(), err)
+	}
+	return nil
+}
+
 func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 	f, err := ps.fm.LookupDel(fid)
 	if err != nil {
+		if serr.IsErrCode(err, serr.TErrUnknownfid) {
+			return ps.clunkWatch(fid)
+		}
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %q", f.Pobj().Ctx().ClntId(), fid, f, f.Pobj().Pathname())
@@ -194,7 +211,7 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 }
 
 func (ps *ProtSrv) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
-	return ps.clunk(args.Tfid())
+  return ps.clunk(args.Tfid())
 }
 
 func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
@@ -247,6 +264,41 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
+func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
+	dirf, err := ps.fm.Lookup(args.Tdirfid())
+	if err != nil {
+		return sp.NewRerrorSerr(err)
+	}
+	pn := dirf.Pobj().Pathname()
+	// p := dirf.Pobj().Obj().Path()
+
+	db.DPrintf(db.PROTSRV, "%v: Watch %v v %v %v", dirf.Pobj().Ctx().ClntId(), dirf.Pobj().Pathname(), dirf.Qid(), args)
+
+	if !dirf.Pobj().Obj().Perm().IsDir() {
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, dirf.Pobj().Pathname().String()))
+	}
+
+	// Acquire path lock on the directory pn, so that no request can
+	// change the directory while setting a watch on it.  to the
+	// directory
+	pl := ps.plt.Acquire(dirf.Pobj().Ctx(), pn, lockmap.WLOCK)
+	defer ps.plt.Release(dirf.Pobj().Ctx(), pl, lockmap.WLOCK)
+
+	err = ps.fwm.Insert(args.Twatchfid(), newFidWatch(dirf.Pobj(), dirf.qid))
+	if err != nil {
+		return sp.NewRerrorSerr(err)
+	}
+
+	ps.vt.Insert(dirf.qid.Tpath())
+
+	// TODO: do we need this?
+	// v := ps.vt.GetVersion(p)
+	// if !sp.VEq(dirf.Qid().Tversion(), v) {
+	// 	return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
+	// }
+	return nil
+}
+
 func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
@@ -265,9 +317,25 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	return nil
 }
 
+func (ps *ProtSrv) ReadFWatch(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
+	_, err := ps.fwm.Lookup(args.Tfid())
+	if err != nil {
+		return nil, sp.NewRerrorSerr(err)
+	}
+	rets.Count = 100
+	buf := make([]byte, 100)
+	buf[0] = 'a'
+	buf[1] = 'b'
+	buf[2] = 'c'
+	return buf, nil
+}
+
 func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
+		if serr.IsErrCode(err, serr.TErrUnknownfid) {
+			return ps.ReadFWatch(args, rets)
+		}
 		return nil, sp.NewRerrorSerr(err)
 	}
 

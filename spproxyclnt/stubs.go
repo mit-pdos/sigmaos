@@ -246,6 +246,14 @@ func (scc *SigmaClntClnt) DirWatch(fd int) error {
 	return err
 }
 
+func (scc *SigmaClntClnt) DirWatchV2(fd int) (int, error) {
+	req := spproto.SigmaReadRequest{Fd: uint32(fd)}
+	rep := spproto.SigmaFdReply{}
+	fd, err := scc.rpcFd("SPProxySrvAPI.DirWatchV2", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "DirWatchV2 %v %v %v", req, rep, err)
+	return fd, err
+}
+
 func (scc *SigmaClntClnt) MountTree(ep *sp.Tendpoint, tree, mount string) error {
 	req := spproto.SigmaMountTreeRequest{Endpoint: ep.GetProto(), Tree: tree, MountName: mount}
 	rep := spproto.SigmaErrReply{}

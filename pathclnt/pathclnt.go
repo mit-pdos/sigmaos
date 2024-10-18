@@ -257,6 +257,16 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w sos.Watch) error {
 	return nil
 }
 
+func (pathc *PathClnt) SetDirWatchV2(fid sp.Tfid) (sp.Tfid, error) {
+	db.DPrintf(db.PATHCLNT, "%v: SetDirWatchV2 %v\n", pathc.cid, fid)
+	watchfid, err := pathc.FidClnt.WatchV2(fid)
+	if err != nil {
+		db.DPrintf(db.PATHCLNT_ERR, "%v: SetDirWatchV2: setting watch failed %v err %v\n", pathc.cid, fid, err)
+		return sp.NoFid, nil
+	}
+	return watchfid, nil
+}
+
 func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v\n", pathc.cid, pn, mode)
 	p, err := serr.PathSplitErr(pn)

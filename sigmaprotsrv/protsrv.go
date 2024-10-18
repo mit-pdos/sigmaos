@@ -15,6 +15,7 @@ type Protsrv interface {
 	Create(*sp.Tcreate, *sp.Rcreate) *sp.Rerror
 	Open(*sp.Topen, *sp.Ropen) *sp.Rerror
 	Watch(*sp.Twatch, *sp.Ropen) *sp.Rerror
+	WatchV2(*sp.Twatchv2, *sp.Rwatchv2) *sp.Rerror
 	Clunk(*sp.Tclunk, *sp.Rclunk) *sp.Rerror
 	ReadF(*sp.TreadF, *sp.Rread) ([]byte, *sp.Rerror)
 	WriteF(*sp.TwriteF, []byte, *sp.Rwrite) *sp.Rerror
@@ -50,6 +51,7 @@ func Dispatch(protsrv Protsrv, msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, ses
 		err := protsrv.Auth(req, reply)
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Tattach:
+		db.DPrintf(db.PROTSRV, "Attach %v", req)
 		reply := &sp.Rattach{}
 		cid, err := protsrv.Attach(req, reply)
 		if cid != sp.NoClntId {
@@ -68,6 +70,10 @@ func Dispatch(protsrv Protsrv, msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, ses
 	case *sp.Twatch:
 		reply := &sp.Ropen{}
 		err := protsrv.Watch(req, reply)
+		return reply, nil, err, TSESS_NONE, sp.NoClntId
+	case *sp.Twatchv2:
+		reply := &sp.Rwatchv2{}
+		err := protsrv.WatchV2(req, reply)
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Tcreate:
 		reply := &sp.Rcreate{}

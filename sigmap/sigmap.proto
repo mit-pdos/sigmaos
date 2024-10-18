@@ -193,6 +193,15 @@ message Twatch {
         uint32 fid = 1;
 }
 
+message Twatchv2 {
+        uint32 dirfid = 1;
+        uint32 watchfid = 2;
+}
+
+message Rwatchv2 {
+        
+}
+
 message Trenameat {
         uint32 oldFid = 1;
         string oldName = 2;

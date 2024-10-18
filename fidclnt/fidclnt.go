@@ -234,6 +234,24 @@ func (fidc *FidClnt) Watch(fid sp.Tfid) *serr.Err {
 	return ch.pc.Watch(fid)
 }
 
+func (fidc *FidClnt) WatchV2(fid sp.Tfid) (sp.Tfid, *serr.Err) {
+	ch := fidc.Lookup(fid)
+	if ch == nil {
+		return 0, serr.NewErr(serr.TErrUnreachable, "WatchV2")
+	}
+	watchfid := fidc.allocFid()
+	db.DPrintf(db.FIDCLNT, "WatchV2 %v %v\n", fid, watchfid)
+	_, err := ch.pc.WatchV2(fid, watchfid)
+	if err != nil {
+		// TODO: should we keep this if it does nothing?
+		fidc.freeFid(watchfid)
+		return 0, err
+	}
+	ch = ch.Copy()
+	fidc.Insert(watchfid, ch)
+	return watchfid, err
+}
+
 func (fidc *FidClnt) Wstat(fid sp.Tfid, st *sp.Stat, f *sp.Tfence) *serr.Err {
 	ch := fidc.Lookup(fid)
 	if ch == nil {

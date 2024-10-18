@@ -59,6 +59,7 @@ type FileAPI interface {
 
 	// Watch for directory changes
 	DirWatch(fd int) error
+	DirWatchV2(fd int) (int, error)
 
 	// Mounting
 	MountTree(ep *sp.Tendpoint, tree, mount string) error

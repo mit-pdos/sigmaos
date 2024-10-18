@@ -108,7 +108,6 @@ func (fsl *FsLib) read_(fd int, bytes []byte) (sp.Tsize, error) {
 		// if no changes, wait for changes and try again
 		if len(addedFiles) + len(deletedFiles) == 0 {
 			if err := fsl.DirWatch(rdr.fd); err != nil {
-				// TODO what does this mean?
 				if serr.IsErrCode(err, serr.TErrVersion) {
 					db.DPrintf(db.WATCH_NEW, "read_: Version mismatch %v", dir)
 					continue

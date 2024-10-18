@@ -276,6 +276,14 @@ func (scs *SPProxySrvAPI) DirWatch(ctx fs.CtxI, req scproto.SigmaReadRequest, re
 	return nil
 }
 
+func (scs *SPProxySrvAPI) DirWatchV2(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaFdReply) error {
+	fd, err := scs.sc.DirWatchV2(int(req.Fd))
+	rep.Fd = uint32(fd)
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SPPROXYSRV, "%v: DirWatchV2 %v %v", scs.sc.ClntId(), req, rep)
+	return nil
+}
+
 func (scs *SPProxySrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountRequest, rep *scproto.SigmaMountReply) error {
 	ok, err := scs.sc.IsLocalMount(sp.NewEndpointFromProto(req.Endpoint))
 	rep.Local = ok

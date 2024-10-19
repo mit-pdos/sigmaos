@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	MAXCAP         = 32
-	MINCAP         = 4
-	MAXCONCURRENCY = 5
+	MAXCAP      = 32
+	MINCAP      = 4
+	CONCURRENCY = 5
 )
 
 type Mapper struct {
@@ -51,9 +51,8 @@ type Mapper struct {
 	asyncrw     bool
 	combined    *kvmap
 	combinewc   map[string]int
-	buf         []byte
-	line        []byte
-	pbuf        []byte
+	bufs        [][]byte
+	lines       [][]byte
 	init        bool
 	ch          chan error
 }
@@ -77,10 +76,13 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		sbc:         NewScanByteCounter(p),
 		combined:    newKvmap(MINCAP, MAXCAP),
 		combinewc:   make(map[string]int),
-		buf:         make([]byte, 0, lsz),
-		line:        make([]byte, 0, lsz),
-		pbuf:        make([]byte, MAXCONCURRENCY*sp.MBYTE),
+		bufs:        make([][]byte, CONCURRENCY),
+		lines:       make([][]byte, CONCURRENCY),
 		ch:          make(chan error),
+	}
+	for i := 0; i < CONCURRENCY; i++ {
+		m.bufs[i] = make([]byte, 0, lsz)
+		m.lines[i] = make([]byte, 0, lsz)
 	}
 	m.MountS3PathClnt()
 	go func() {
@@ -90,6 +92,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 }
 
 func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
+
 	if len(args) != 6 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
@@ -233,6 +236,52 @@ func (m *Mapper) CombineEmit() error {
 	return nil
 }
 
+// Read chunks from the split in parallel
+func (m *Mapper) doChunks(i int, pfr *fslib.ParallelFileReader, s *Split, emit EmitT) (sp.Tlength, error) {
+	t := sp.Tlength(0)
+	for {
+		rdr, err := pfr.GetChunkReader(cap(m.bufs[i]))
+		if err != nil && err == io.EOF {
+			break
+		}
+		scanner := bufio.NewScanner(rdr)
+		scanner.Buffer(m.bufs[i], cap(m.bufs[i]))
+
+		// advance scanner to new line after start, if off != 0
+		n := sp.Tlength(0)
+		if s.Offset != 0 {
+			scanner.Scan()
+			l := scanner.Bytes()
+			// +1 for newline, but -1 for the extra byte we read (off-- above)
+			n += sp.Tlength(len(l))
+			db.DPrintf(db.MR, "%v off %v skip %d\n", s.File, s.Offset, n)
+		}
+		lineRdr := bytes.NewReader([]byte{})
+		for scanner.Scan() {
+			l := scanner.Bytes()
+			n += sp.Tlength(len(l)) + 1 // 1 for newline  XXX or 2 if \r\n
+			if len(l) > 0 {
+				lineRdr.Reset(l)
+				scan := bufio.NewScanner(lineRdr)
+				scan.Buffer(m.lines[i], cap(m.lines[i]))
+				scan.Split(m.sbc.ScanWords)
+				if err := m.mapf(s.File, scan, emit); err != nil {
+					return 0, err
+				}
+			}
+			if n >= s.Length {
+				db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
+				break
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			return sp.Tlength(n), err
+		}
+		t += n
+	}
+	return t, nil
+}
+
 func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	pn, ok := sp.S3ClientPath(s.File)
 	if ok {
@@ -250,61 +299,35 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		off--
 	}
 	start := time.Now()
-	rdr, err := m.OpenAsyncReaderRegion(s.File, s.Offset, s.Length+sp.Tlength(m.linesz), nil, MAXCONCURRENCY)
+	pfr, err := m.OpenParallelFileReader(s.File, s.Offset, s.Length+sp.Tlength(m.linesz))
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}
 
 	db.DPrintf(db.MR, "Mapper openS3Reader time: %v", time.Since(start))
-	defer rdr.Close()
+	defer pfr.Close()
 
-	var scanner *bufio.Scanner
-	if true {
-		scanner = bufio.NewScanner(rdr)
-	} else {
-		// To measure read tput; no computing
-		start = time.Now()
-		m.buf = m.buf[0:m.linesz]
-		n, err := io.ReadFull(rdr, m.buf)
-		if err != nil && err != io.ErrUnexpectedEOF {
-			db.DPrintf(db.ALWAYS, "Err ReadFull: n %v err %v", n, err)
-		}
-		db.DPrintf(db.TEST, "Mapper ReadFull time %vB tpt %v: %v", n, test.TputStr(sp.Tlength(n), time.Since(start).Milliseconds()), time.Since(start))
-		return s.Length + 1, nil
+	type result struct {
+		n   sp.Tlength
+		err error
 	}
-	scanner.Buffer(m.buf, cap(m.buf))
 
-	// advance scanner to new line after start, if off != 0
+	ch := make(chan result)
+	for i := 0; i < CONCURRENCY; i++ {
+		go func(i int) {
+			n, err := m.doChunks(i, pfr, s, emit)
+			ch <- result{n, err}
+		}(i)
+	}
 	n := sp.Tlength(0)
-	if s.Offset != 0 {
-		scanner.Scan()
-		l := scanner.Bytes()
-		// +1 for newline, but -1 for the extra byte we read (off-- above)
-		n += sp.Tlength(len(l))
-		db.DPrintf(db.MR, "%v off %v skip %d\n", s.File, s.Offset, n)
-	}
-	lineRdr := bytes.NewReader([]byte{})
-	for scanner.Scan() {
-		l := scanner.Bytes()
-		n += sp.Tlength(len(l)) + 1 // 1 for newline  XXX or 2 if \r\n
-		if len(l) > 0 {
-			lineRdr.Reset(l)
-			scan := bufio.NewScanner(lineRdr)
-			scan.Buffer(m.line, cap(m.line))
-			scan.Split(m.sbc.ScanWords)
-			if err := m.mapf(s.File, scan, emit); err != nil {
-				return 0, err
-			}
-		}
-		if n >= s.Length {
-			db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
-			break
+	for i := 0; i < CONCURRENCY; i++ {
+		r := <-ch
+		n += r.n
+		if r.err != nil {
+			return n, err
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return sp.Tlength(n), err
-	}
-	return sp.Tlength(n), nil
+	return n, nil
 }
 
 func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {

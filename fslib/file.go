@@ -132,6 +132,61 @@ func (fl *FsLib) OpenBufReader(path string) (*BufFileReader, error) {
 	return &BufFileReader{rdr, brdr}, nil
 }
 
+type ParallelFileReader struct {
+	fd  int
+	sof sos.FileAPI
+	end sp.Toffset
+
+	mu  sync.Mutex
+	err error
+	off sp.Toffset // next offset to consume
+}
+
+func (fl *FsLib) OpenParallelFileReader(path string, offset sp.Toffset, l sp.Tlength) (*ParallelFileReader, error) {
+	fd, err := fl.Open(path, sp.OREAD)
+	if err != nil {
+		return nil, err
+	}
+	r := &ParallelFileReader{
+		fd:  fd,
+		sof: fl.FileAPI,
+		end: offset + sp.Toffset(l),
+		off: offset,
+	}
+	return r, nil
+}
+
+func (pfr *ParallelFileReader) getChunk(sz int) (sp.Toffset, sp.Toffset, error) {
+	pfr.mu.Lock()
+	defer pfr.mu.Unlock()
+
+	if pfr.off >= pfr.end {
+		return pfr.end, pfr.end, io.EOF
+	}
+
+	off := pfr.off
+	e := off + sp.Toffset(sz)
+	if pfr.end < e {
+		e = pfr.end
+	}
+	pfr.off += sp.Toffset(sz)
+	return off, e, nil
+}
+
+func (pfr *ParallelFileReader) GetChunkReader(sz int) (io.ReadCloser, error) {
+	o, e, err := pfr.getChunk(sz)
+	if err != nil {
+		return nil, err
+	}
+	db.DPrintf(db.PREADER, "GetChunkReader: %v %v", o, e)
+	r, err := pfr.sof.PreadRdr(pfr.fd, o, sp.Tsize(e-o))
+	return r, err
+}
+
+func (pfr *ParallelFileReader) Close() error {
+	return pfr.sof.CloseFd(pfr.fd)
+}
+
 type AsyncFileReader struct {
 	fd      int
 	sof     sos.FileAPI

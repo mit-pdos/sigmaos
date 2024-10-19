@@ -3,6 +3,7 @@ package sigmapsrv_test
 import (
 	"flag"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -37,7 +38,8 @@ const (
 	SYNCFILESZ = 100 * KBYTE
 	//	SYNCFILESZ = 250 * KBYTE
 	// SYNCFILESZ = WRITESZ
-	FILESZ  = 100 * sp.MBYTE
+	// FILESZ  = 100 * sp.MBYTE
+	FILESZ  = 10 * sp.MBYTE
 	WRITESZ = 4096
 )
 
@@ -258,71 +260,115 @@ func TestReadFilePerfSingle(t *testing.T) {
 	fn := filepath.Join(pathname, "f")
 	buf := test.NewBuf(WRITESZ)
 
-	// // Remove just in case it was left over from a previous run.
-	// ts.Remove(fn)
-	// sz = newFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
+	// Remove just in case it was left over from a previous run.
+	ts.Remove(fn)
+	newFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
 
-	// p1, r := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
-	// assert.Nil(t, r)
-	// measure(p1, "reader", func() sp.Tlength {
-	// 	pn := fn
-	// 	if test.Withs3pathclnt {
-	// 		pn0, ok := sp.S3ClientPath(fn)
-	// 		assert.True(t, ok)
-	// 		pn = pn0
-	// 	}
-	// 	r, err := ts.OpenReader(pn)
-	// 	assert.Nil(t, err)
-	// 	n, err := test.Reader(t, r, buf, sz)
-	// 	assert.Nil(t, err)
-	// 	r.Close()
-	// 	return n
-	// })
-	// p1.Done()
-
-	// err = ts.Remove(fn)
-	// assert.Nil(t, err)
-	// sz = newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
-
-	// p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
-	// assert.Nil(t, err)
-	// measure(p2, "bufreader", func() sp.Tlength {
-	// 	pn := fn
-	// 	if test.Withs3pathclnt {
-	// 		pn0, ok := sp.S3ClientPath(fn)
-	// 		assert.True(t, ok)
-	// 		pn = pn0
-	// 	}
-	// 	r, err := ts.OpenBufReader(pn)
-	// 	n, err := test.Reader(t, r, buf, sz)
-	// 	assert.Nil(t, err)
-	// 	r.Close()
-	// 	return n
-	// })
-	// p2.Done()
-
-	err = ts.Remove(fn)
-	assert.Nil(t, err)
-	sz = newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
-
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
-	assert.Nil(t, err)
-	// buf0 := make([]byte, 5*sp.BUFSZ)
-	measure(p3, "readahead", func() sp.Tlength {
+	p1, r := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
+	assert.Nil(t, r)
+	measure(p1, "reader", func() sp.Tlength {
 		pn := fn
 		if test.Withs3pathclnt {
 			pn0, ok := sp.S3ClientPath(fn)
 			assert.True(t, ok)
 			pn = pn0
 		}
-		r, err := ts.OpenAsyncReaderRegion(pn, 0, FILESZ, nil, 5)
+		r, err := ts.OpenReader(pn)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
 		return n
 	})
-	p3.Done()
+	p1.Done()
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err)
+	sz = newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+
+	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
+	assert.Nil(t, err)
+	measure(p2, "bufreader", func() sp.Tlength {
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenBufReader(pn)
+		n, err := test.Reader(t, r, buf, sz)
+		assert.Nil(t, err)
+		r.Close()
+		return n
+	})
+	p2.Done()
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err)
+
+	ts.Shutdown()
+}
+
+func TestParallelReadFile(t *testing.T) {
+	const (
+		CONCURRENCY = 5
+		CHUNKSZ     = 1 * sp.MBYTE
+	)
+
+	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {
+		return
+	}
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	fn := filepath.Join(pathname, "f")
+	buf := test.NewBuf(WRITESZ)
+
+	ts.Remove(fn)
+
+	newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+	// assert.Equal(t, FILESZ, sz)
+
+	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
+	assert.Nil(t, err)
+	measure(p1, "pread", func() sp.Tlength {
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenParallelFileReader(pn, 0, FILESZ)
+		assert.Nil(t, err)
+		ch := make(chan sp.Tlength)
+		for i := 0; i < CONCURRENCY; i++ {
+			go func(i int) {
+				m := sp.Tlength(0)
+				for {
+					rdr, err := r.GetChunkReader(CHUNKSZ)
+					if err != nil && err == io.EOF {
+						db.DPrintf(db.TEST, "eof %d", i)
+						break
+					}
+					assert.Nil(t, err)
+					n, err := test.Reader(t, rdr, buf, CHUNKSZ)
+					assert.Nil(t, err)
+					m += n
+				}
+				ch <- m
+			}(i)
+		}
+		sz := sp.Tlength(0)
+		for i := 0; i < CONCURRENCY; i++ {
+			n := <-ch
+			sz += n
+		}
+		r.Close()
+		return sz
+	})
+	p1.Done()
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err)

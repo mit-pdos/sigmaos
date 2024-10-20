@@ -34,7 +34,7 @@ func init() {
 
 const (
 	KBYTE      = 1 << 10
-	NRUNS      = 1 // 3
+	NRUNS      = 3
 	SYNCFILESZ = 100 * KBYTE
 	//	SYNCFILESZ = 250 * KBYTE
 	// SYNCFILESZ = WRITESZ
@@ -329,7 +329,6 @@ func TestParallelReadFile(t *testing.T) {
 	ts.Remove(fn)
 
 	newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
-	// assert.Equal(t, FILESZ, sz)
 
 	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
@@ -349,7 +348,6 @@ func TestParallelReadFile(t *testing.T) {
 				for {
 					rdr, err := r.GetChunkReader(CHUNKSZ)
 					if err != nil && err == io.EOF {
-						db.DPrintf(db.TEST, "eof %d", i)
 						break
 					}
 					assert.Nil(t, err)

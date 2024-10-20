@@ -262,7 +262,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 
 	// Remove just in case it was left over from a previous run.
 	ts.Remove(fn)
-	newFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
+	sz = newFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
 
 	p1, r := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
 	assert.Nil(t, r)

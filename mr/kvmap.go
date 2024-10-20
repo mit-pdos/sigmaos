@@ -27,7 +27,7 @@ func newKvmap(mincap, maxcap int) *kvmap {
 	}
 }
 
-func (kvm kvmap) lookup(key []byte) *values {
+func (kvm *kvmap) lookup(key []byte) *values {
 	kvm.mu.Lock()
 	defer kvm.mu.Unlock()
 

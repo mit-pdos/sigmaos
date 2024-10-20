@@ -1,16 +1,20 @@
 package mr
 
 import (
+	"sync"
+
 	"github.com/fmstephe/unsafeutil"
 )
 
 type kvmap struct {
+	mu     sync.Mutex
 	mincap int
 	maxcap int
 	kvs    map[string]*values
 }
 
 type values struct {
+	mu sync.Mutex
 	k  string
 	vs []string
 }
@@ -24,6 +28,9 @@ func newKvmap(mincap, maxcap int) *kvmap {
 }
 
 func (kvm kvmap) lookup(key []byte) *values {
+	kvm.mu.Lock()
+	defer kvm.mu.Unlock()
+
 	k := unsafeutil.BytesToString(key)
 	if e, ok := kvm.kvs[k]; ok {
 		return e
@@ -46,6 +53,9 @@ func (kvm *kvmap) combine(key []byte, value string, combinef ReduceT) error {
 }
 
 func (kvm *kvmap) emit(combinef ReduceT, emit EmitT) error {
+	kvm.mu.Lock()
+	defer kvm.mu.Unlock()
+
 	for k, e := range kvm.kvs {
 		if err := combinef(k, e.vs, emit); err != nil {
 			return err
@@ -55,6 +65,11 @@ func (kvm *kvmap) emit(combinef ReduceT, emit EmitT) error {
 }
 
 func (dst *kvmap) merge(src *kvmap, combinef ReduceT) {
+	dst.mu.Lock()
+	defer dst.mu.Unlock()
+	src.mu.Lock()
+	defer src.mu.Unlock()
+
 	for k, e := range src.kvs {
 		k0 := unsafeutil.StringToBytes(k)
 		d := dst.lookup(k0)
@@ -65,6 +80,9 @@ func (dst *kvmap) merge(src *kvmap, combinef ReduceT) {
 }
 
 func (e *values) combine(value string, combinef ReduceT, maxcap int) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	if len(e.vs)+1 >= maxcap {
 		e.vs = append(e.vs, value)
 		if err := combinef(e.k, e.vs, func(key []byte, val string) error {

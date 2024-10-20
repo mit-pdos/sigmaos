@@ -347,7 +347,7 @@ func (rdr *AsyncFileReader) chunkReader() {
 		}
 		r, err := rdr.sof.PreadRdr(rdr.fd, off, sp.Tsize(l))
 		if err != nil && err != io.EOF {
-			db.DPrintf(db.PREADER, "chunkReader: Pread n %d l %d err %v", l, err)
+			db.DPrintf(db.PREADER, "chunkReader: Pread l %d err %v", l, err)
 			rdr.setErr(err)
 			break
 		}

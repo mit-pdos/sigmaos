@@ -140,7 +140,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 			addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
 			mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
 			if err = ts.MkEndpointFile(p, mnt); err != nil {
-				db.DFatalf("MkEndpointFile %v", err)
+				db.DFatalf("MkEndpointFile mnt %v err %v", mnt, err)
 			}
 		}
 	}
@@ -183,10 +183,15 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	}
 	if !ji.justCli && ji.manuallyScaleGeo {
 		go func() {
-			time.Sleep(ji.scaleGeoDelay)
-			for i := 0; i < ji.nGeoToAdd; i++ {
-				err := ji.hj.AddGeoSrv()
-				assert.Nil(ji.Ts.T, err, "Add Geo srv: %v", err)
+			if ji.sigmaos {
+				time.Sleep(ji.scaleGeoDelay)
+				for i := 0; i < ji.nGeoToAdd; i++ {
+					err := ji.hj.AddGeoSrv()
+					assert.Nil(ji.Ts.T, err, "Add Geo srv: %v", err)
+				}
+			} else {
+				err := k8sScaleUpGeo()
+				assert.Nil(ji.Ts.T, err, "K8s scale up Geo srv: %v", err)
 			}
 		}()
 	}

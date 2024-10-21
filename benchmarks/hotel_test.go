@@ -186,8 +186,8 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	}
 	if !ji.justCli && ji.manuallyScaleGeo {
 		go func() {
+			time.Sleep(ji.scaleGeoDelay)
 			if ji.sigmaos {
-				time.Sleep(ji.scaleGeoDelay)
 				for i := 0; i < ji.nGeoToAdd; i++ {
 					err := ji.hj.AddGeoSrv()
 					assert.Nil(ji.Ts.T, err, "Add Geo srv: %v", err)

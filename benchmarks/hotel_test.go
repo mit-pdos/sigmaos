@@ -132,14 +132,14 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		ji.k8ssrvaddr = K8S_ADDR
 		// Write a file for clients to discover the server's address.
 		if !ji.justCli {
-			p := hotel.JobHTTPAddrsPath(ji.job)
+			pn := hotel.JobHTTPAddrsPath(ji.job)
 			h, p, err := net.SplitHostPort(K8S_ADDR)
 			assert.Nil(ts.Ts.T, err, "Err split host port %v: %v", ji.k8ssrvaddr, err)
 			port, err := strconv.Atoi(p)
 			assert.Nil(ts.Ts.T, err, "Err parse port %v: %v", p, err)
 			addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
 			mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
-			if err = ts.MkEndpointFile(p, mnt); err != nil {
+			if err = ts.MkEndpointFile(pn, mnt); err != nil {
 				db.DFatalf("MkEndpointFile mnt %v err %v", mnt, err)
 			}
 		}

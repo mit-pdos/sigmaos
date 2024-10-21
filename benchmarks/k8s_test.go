@@ -79,3 +79,12 @@ func k8sJobHasCompleted(jobname string) bool {
 	jstate := strings.Split(jstatestr, "/")
 	return jstate[0] == jstate[1]
 }
+
+func k8sScaleUpGeo() error {
+	b, err := exec.Command("kubectl", "apply", "-Rf", "~/DeathStarBench/hotelReservation/kubernetes-geo-scale-large").Output()
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error exec manual scale-up: %v\n%v", err, string(b))
+		return err
+	}
+	return nil
+}

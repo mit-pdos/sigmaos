@@ -81,7 +81,7 @@ func k8sJobHasCompleted(jobname string) bool {
 }
 
 func k8sScaleUpGeo() error {
-	b, err := exec.Command("kubectl", "apply", "-Rf", "~/DeathStarBench/hotelReservation/kubernetes-geo-scale-large").CombinedOutput()
+	b, err := exec.Command("kubectl", "apply", "-Rf", "/users/arielck/DeathStarBench/hotelReservation/kubernetes-geo-scale-large").CombinedOutput()
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error exec manual scale-up: %v\n%v", err, string(b))
 		return err

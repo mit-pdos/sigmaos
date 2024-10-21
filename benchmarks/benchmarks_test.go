@@ -1358,6 +1358,9 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+		return
+	}
 	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

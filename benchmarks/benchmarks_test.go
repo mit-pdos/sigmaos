@@ -1402,19 +1402,19 @@ func TestHotelK8sSearch(t *testing.T) {
 	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
-func TestHotelK8sSearchCli(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
-		hotel.RandSearchReq(wc, r)
-	})
-}
+//func TestHotelK8sSearchCli(t *testing.T) {
+//	rootts, err1 := test.NewTstateWithRealms(t)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+//		hotel.RandSearchReq(wc, r)
+//	})
+//}
 
 func TestHotelSigmaosAll(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)

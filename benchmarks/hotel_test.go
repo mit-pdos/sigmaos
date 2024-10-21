@@ -193,8 +193,12 @@ func (ji *HotelJobInstance) StartHotelJob() {
 					assert.Nil(ji.Ts.T, err, "Add Geo srv: %v", err)
 				}
 			} else {
-				err := k8sScaleUpGeo()
-				assert.Nil(ji.Ts.T, err, "K8s scale up Geo srv: %v", err)
+				if ji.nGeoToAdd > 0 {
+					err := k8sScaleUpGeo()
+					assert.Nil(ji.Ts.T, err, "K8s scale up Geo srv: %v", err)
+				} else {
+					db.DPrintf(db.ALWAYS, "No geos meant to be added. Skip scaling up")
+				}
 			}
 		}()
 	}

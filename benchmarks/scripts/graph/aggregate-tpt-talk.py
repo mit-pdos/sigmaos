@@ -174,7 +174,7 @@ def finalize_graph(fig, ax, plots, title, out, maxval, ymax, legend_on_right):
     ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 3))
   for idx in range(len(ax)):
     ax[idx].set_xlim(left=0)
-    if idx < len(ax) - 1:
+    if idx != 0:
       ax[idx].set_ylim(bottom=0, top=ymax)
     else:
       ax[idx].set_ylim(bottom=0)
@@ -288,10 +288,10 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   if len(hotel_lats) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
     ymax = max(ymax, max(y1))
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "σOS-hotel " + str(int(percentile)) + "% lat", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, "σOS-hotel " + str(int(percentile)) + "% lat", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)
-    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "σOS-hotel avg lat", "purple", "-", "")
+    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "σOS-hotel avg lat", "purple", "-", "")
     plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   hotel_lat_k8s_buckets = bucketize_latency(hotel_lats_k8s, time_range, xmin, xmax, step_size=50)
@@ -300,15 +300,15 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   if len(hotel_lats_k8s) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_k8s_buckets)
     ymax = max(ymax, max(y1))
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "k8s-hotel " + str(int(percentile)) + "% lat", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, "k8s-hotel " + str(int(percentile)) + "% lat", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_k8s_buckets)
-    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "k8s-hotel avg lat", "purple", "-", "")
+    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "k8s-hotel avg lat", "purple", "-", "")
     plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Client request rate", "blue", "-", "")
+    p = add_data_to_graph(tptax[0], x, y, "Client request rate", "blue", "-", "")
     plots.append(p)
     tptax_idx = tptax_idx + 1
   be_buckets = bucketize(be_tpts, time_range, xmin, xmax, step_size=1000)
@@ -346,6 +346,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
       ta = [ ax for ax in tptax ]
 #      ta.append(coresax[0])
       tptax = ta
+  ymax = int(ymax * 1.1)
   finalize_graph(fig, tptax, plots, title, out, (xmax - xmin) / 1000.0, ymax, legend_on_right)
 
 if __name__ == "__main__":

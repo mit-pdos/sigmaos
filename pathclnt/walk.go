@@ -6,6 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
+	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
 
@@ -18,7 +19,7 @@ const (
 // unreachable, it umounts the path it walked to, and starts over
 // again, perhaps switching to another replica.  (Note:
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
-func (pathc *PathClnt) walk(path path.Tpathname, principal *sp.Tprincipal, resolve bool, w Watch) (sp.Tfid, *serr.Err) {
+func (pathc *PathClnt) walk(path path.Tpathname, principal *sp.Tprincipal, resolve bool, w sos.Watch) (sp.Tfid, *serr.Err) {
 	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
 		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
 			if cont && err.IsErrUnreachable() {
@@ -63,7 +64,7 @@ func (pathc *PathClnt) walk(path path.Tpathname, principal *sp.Tprincipal, resol
 // mount table.  Each of the walk*() returns an fid, which on error is
 // the same as the argument; and the caller is responsible for
 // clunking it.
-func (pathc *PathClnt) walkPath(path path.Tpathname, resolve bool, w Watch) (sp.Tfid, path.Tpathname, path.Tpathname, *serr.Err) {
+func (pathc *PathClnt) walkPath(path path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, path.Tpathname, *serr.Err) {
 	for i := 0; i < MAXSYMLINK; i++ {
 		db.DPrintf(db.WALK, "walkPath: %v resolve %v", path, resolve)
 		fid, left, err := pathc.walkMount(path, resolve)
@@ -142,7 +143,7 @@ func (pathc *PathClnt) walkMount(path path.Tpathname, resolve bool) (sp.Tfid, pa
 // union element, or an error. walkOne returns the fid walked too.  If
 // file is not found, set watch on the directory, waiting until the
 // file is created.
-func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w Watch) (sp.Tfid, path.Tpathname, *serr.Err) {
+func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w sos.Watch) (sp.Tfid, path.Tpathname, *serr.Err) {
 	db.DPrintf(db.WALK, "walkOne %v left %v", fid, path)
 	s := time.Now()
 	fid1, left, err := pathc.FidClnt.Walk(fid, path)
@@ -172,7 +173,7 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w Watch) (sp.Tf
 	}
 	db.DPrintf(db.WALK, "walkOne -> %v %v", fid1, left)
 	s1 := time.Now()
-	err = pathc.FidClnt.Clunk(fid)
+	pathc.FidClnt.Clunk(fid)
 	db.DPrintf(db.WALK_LAT, "walkOne cid %v fid %v path %v -> fid1 %v left %v lat %v (clunk lat %v)", pathc.cid, fid, path, fid1, left, time.Since(s), time.Since(s1))
 	return fid1, left, nil
 }
@@ -181,6 +182,16 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w Watch) (sp.Tf
 // and return fid for result.
 func (pathc *PathClnt) walkUnion(fid sp.Tfid, p path.Tpathname) (sp.Tfid, path.Tpathname, *serr.Err) {
 	if len(p) > 0 && path.IsUnionElem(p[0]) {
+		if p[0] == "~local" && pathc.pe.GetKernelID() != sp.NOT_SET {
+			start := time.Now()
+			fid1, err := pathc.unionScan(fid, pathc.pe.GetKernelID(), "~local")
+			if err != nil {
+				db.DPrintf(db.TEST, "Local unionScan fid %v err %v", fid, err)
+				return fid, p, err
+			}
+			db.DPrintf(db.WALK_LAT, "walkUnion/unionScan: KernelId %v path %v time %v", pathc.pe.GetKernelID(), p, time.Since(start))
+			return fid1, p[1:], nil
+		}
 		s := time.Now()
 		db.DPrintf(db.WALK, "walkUnion %v path %v", fid, p)
 		fid1, err := pathc.unionLookup(fid, p[0])
@@ -221,7 +232,7 @@ func (pathc *PathClnt) walkSymlink(fid sp.Tfid, path, left path.Tpathname, resol
 // return entry.  Otherwise, set watch based on directory's version
 // number. If the directory is modified between Walk and Watch(), the
 // versions numbers won't match and Watch will return an error.
-func (pathc *PathClnt) setWatch(fid sp.Tfid, p path.Tpathname, r path.Tpathname, w Watch) (sp.Tfid, *serr.Err) {
+func (pathc *PathClnt) setWatch(fid sp.Tfid, p path.Tpathname, r path.Tpathname, w sos.Watch) (sp.Tfid, *serr.Err) {
 	fid1, _, err := pathc.FidClnt.Walk(fid, r.Dir())
 	if err != nil {
 		return sp.NoFid, err

@@ -10,9 +10,13 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
+
+type MntClntAPI interface {
+	GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
+	Stat(pn string, principal *sp.Tprincipal) (*sp.Stat, error)
+}
 
 type MntClnt struct {
 	ndMntCache *NamedEndpointCache
@@ -22,10 +26,10 @@ type MntClnt struct {
 	npc        *netproxyclnt.NetProxyClnt
 	cid        sp.TclntId
 	fidc       *fidclnt.FidClnt
-	pathc      sigmaos.PathClntAPI
+	pathc      MntClntAPI
 }
 
-func NewMntClnt(pathc sigmaos.PathClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) *MntClnt {
+func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) *MntClnt {
 	mc := &MntClnt{
 		cid:        cid,
 		mnt:        newMntTable(),

@@ -33,7 +33,7 @@ type Tnew func() interface{}
 type TmkProc func(n string, i interface{}) *proc.Proc
 
 func NewTaskMgr(pclnt proc.ProcAPI, ft *fttasks.FtTasks) (*FtTaskMgr, error) {
-	if err := ft.RecoverTasks(); err != nil {
+	if _, err := ft.RecoverTasks(); err != nil {
 		return nil, err
 	}
 	return &FtTaskMgr{ProcAPI: pclnt, FtTasks: ft}, nil
@@ -85,7 +85,7 @@ func (ftm *FtTaskMgr) StartTasks(ts []string, ch chan Tresult, new Tnew, mkProc 
 			continue
 		}
 		defer rdr.Close()
-		err = fslib.JsonReader(rdr.Reader, new, func(i interface{}) error {
+		err = fslib.JsonReader(rdr, new, func(i interface{}) error {
 			ftm.ntask.Add(1)
 			ntask += 1
 			p := mkProc(t, i)

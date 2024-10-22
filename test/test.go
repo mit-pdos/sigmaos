@@ -40,6 +40,7 @@ var GVisor bool
 var useSPProxy bool
 var noNetProxy bool
 var noBootNetProxy bool
+var Withs3pathclnt bool
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
@@ -53,6 +54,7 @@ func init() {
 	flag.BoolVar(&useSPProxy, "usespproxy", false, "Use spproxy?")
 	flag.BoolVar(&noNetProxy, "nonetproxy", false, "Disable use of proxy for network dialing/listening?")
 	flag.BoolVar(&noBootNetProxy, "no-boot-netproxy", false, "Boot spproxy?")
+	flag.BoolVar(&Withs3pathclnt, "withs3pathclnt", false, "With s3clntpath?")
 }
 
 var savedTstate *Tstate
@@ -126,6 +128,10 @@ func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewTstatePath: %v\n", err)
 		return nil, err
+	}
+	if Withs3pathclnt {
+		err := ts.MountS3PathClnt()
+		assert.Nil(t, err, "MountS3PathClnt")
 	}
 	if path == filepath.Join(sp.MEMFS, "~local/")+"/" {
 		ts.memfs = proc.NewProc("memfsd", []string{})

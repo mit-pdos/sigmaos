@@ -32,15 +32,17 @@ const (
 	WALK_LAT                 = "WALK_LAT"
 	FSETCD_LAT               = "FSETCD_LAT"
 	ATTACH_LAT               = "ATTACH_LAT"
+	RPC_LAT                  = "RPC_LAT"
 )
 
 // Tests
 const (
-	TEST  Tselector = "TEST"
-	TEST1           = "TEST1"
-	DELAY           = "DELAY"
-	CRASH           = "CRASH"
-	PERF            = "PERF"
+	TEST     Tselector = "TEST"
+	TEST1              = "TEST1"
+	TEST_LAT           = "TEST_LAT"
+	DELAY              = "DELAY"
+	CRASH              = "CRASH"
+	PERF               = "PERF"
 )
 
 // Apps
@@ -57,11 +59,13 @@ const (
 	RPC_BENCH_CLNT                    = "RPC_BENCH_CLNT"
 	HOTEL_CLNT                        = "HOTEL_CLNT"
 	HOTEL_GEO                         = "HOTEL_GEO"
+	HOTEL_GEO_ERR                     = "HOTEL_GEO" + ERR
 	HOTEL_PROF                        = "HOTEL_PROF"
 	HOTEL_RATE                        = "HOTEL_RATE"
 	HOTEL_RESERVE                     = "HOTEL_RESERVE"
 	HOTEL_SEARCH                      = "HOTEL_SEARCH"
 	HOTEL_WWW                         = "HOTEL_WWW"
+	HOTEL_WWW_ERR                     = "HOTEL_WWW" + ERR
 	HOTEL_WWW_STATS                   = "HOTEL_WWW_STATS"
 	SLEEPER                           = "SLEEPER"
 	SPINNER                           = "SPINNER"
@@ -194,6 +198,7 @@ const (
 	SESSDEVCLNT             = "SESSDEVCLNT"
 	K8S_UTIL                = "K8S_UTIL"
 	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
+	S3CLNT                  = "S3CLNT"
 )
 
 // Server Libraries

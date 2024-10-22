@@ -149,7 +149,7 @@ func blockMem(rootts *test.Tstate, mem string) []*proc.Proc {
 		db.DPrintf(db.TEST, "No mem blocking")
 		return nil
 	}
-	sdc := scheddclnt.NewScheddClnt(rootts.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(rootts.SigmaClnt.FsLib, sp.NOT_SET)
 	// Get the number of schedds.
 	n, err := sdc.Nschedd()
 	if err != nil {
@@ -190,11 +190,11 @@ func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
 
 // Warm up a realm, by starting uprocds for it on all machines in the cluster.
 func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
-	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib)
+	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
 	// Get the list of schedds.
 	sds, err := sdc.GetSchedds()
 	assert.Nil(ts.Ts.T, err, "Get Schedds: %v", err)
-	db.DPrintf(db.TEST, "Warm up realm %v for progs %v schedds %v", ts.GetRealm(), progs, sds)
+	db.DPrintf(db.TEST, "Warm up realm %v for progs %v schedds %d %v", ts.GetRealm(), progs, len(sds), sds)
 	start := time.Now()
 	nDL := 0
 	for _, kid := range sds {
@@ -239,11 +239,11 @@ func newNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interfac
 
 // ========== MR Helpers ========
 
-func newNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string, memreq proc.Tmem, asyncrw bool) ([]*MRJobInstance, []interface{}) {
+func newNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string, jobRoot string, memreq proc.Tmem) ([]*MRJobInstance, []interface{}) {
 	ms := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewMRJobInstance(ts, p, app, app+"-mr-"+rand.String(16)+"-"+ts.GetRealm().String(), memreq, asyncrw)
+		i := NewMRJobInstance(ts, p, app, jobRoot, app+"-mr-"+rand.String(3)+"-"+ts.GetRealm().String(), memreq)
 		ms = append(ms, i)
 		is = append(is, i)
 	}
@@ -320,26 +320,26 @@ func newWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwmcpu proc.Tmcpu, r
 
 // ========== Hotel Helpers ==========
 
-func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nGeo int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int, geoNIndex int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewHotelJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cachetype, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd)
+		i := NewHotelJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cachetype, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd, nGeo, geoNIndex, manuallyScaleGeo, scaleGeoDelay, nGeoToAdd)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
 	return ws, is
 }
 
-func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nGeo int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int, geoNIndex int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache, cachetype, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd)
+		i := NewHotelJob(ts, nil, sigmaos, dur, maxrps, fn, true, ncache, cachetype, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd, nGeo, geoNIndex, manuallyScaleGeo, scaleGeoDelay, nGeoToAdd)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -394,6 +394,22 @@ func newSocialNetworkJobs(
 // ========== Client Helpers ==========
 
 var clidir string = filepath.Join("name/", "clnts")
+
+// Wait for a realm to be created
+func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
+	dirs := []string{
+		"",
+		sp.KPIDSREL,
+		sp.S3REL,
+		sp.UXREL,
+	}
+	for _, d := range dirs {
+		if err := rootts.WaitCreate(filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
 	sem := semclnt.NewSemClnt(rootts.FsLib, filepath.Join(clidir, "clisem"))
@@ -455,7 +471,7 @@ func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Tr
 		rdr, err := ts.OpenReader(filepath.Join(src, st.Name))
 		defer rdr.Close()
 		assert.Nil(ts.T, err, "Error open reader %v", err)
-		b, err := io.ReadAll(rdr.Reader)
+		b, err := io.ReadAll(rdr)
 		assert.Nil(ts.T, err, "Error read all %v", err)
 		name := st.Name
 		if realm.String() != "" {

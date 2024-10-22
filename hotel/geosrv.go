@@ -3,9 +3,10 @@ package hotel
 import (
 	"encoding/json"
 	"log"
-	"math/rand"
+	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 
 	//	"go.opentelemetry.io/otel/trace"
 
@@ -22,37 +23,36 @@ import (
 )
 
 const (
-	N_INDEX   = 1000
-	RAND_SEED = 12345
-)
-
-const (
 	maxSearchRadius  = 10
 	maxSearchResults = 5
 )
 
-type safeIndex struct {
-	mu     sync.Mutex
-	geoidx *geoindex.ClusteringIndex
+type GeoIndexes struct {
+	mu      sync.Mutex
+	indexes chan *geoindex.ClusteringIndex
 }
 
-func newSafeIndex(path string) *safeIndex {
-	return &safeIndex{
-		geoidx: newGeoIndex(path),
+func newGeoIndexes(n int, path string) *GeoIndexes {
+	idxs := &GeoIndexes{
+		indexes: make(chan *geoindex.ClusteringIndex, n),
 	}
+	for i := 0; i < n; i++ {
+		idxs.indexes <- newGeoIndex(path)
+	}
+	return idxs
 }
 
-func (si *safeIndex) KNN(center *geoindex.GeoPoint) []geoindex.Point {
-	si.mu.Lock()
-	defer si.mu.Unlock()
-
-	return si.geoidx.KNearest(
+func (gi GeoIndexes) KNN(center *geoindex.GeoPoint) []geoindex.Point {
+	idx := <-gi.indexes
+	points := idx.KNearest(
 		center,
 		maxSearchResults,
 		geoindex.Km(maxSearchRadius), func(p geoindex.Point) bool {
 			return true
 		},
 	)
+	gi.indexes <- idx
+	return points
 }
 
 // Point represents a hotels's geo location on map
@@ -69,19 +69,22 @@ func (p *point) Id() string   { return p.Pid }
 
 // Server implements the geo service
 type Geo struct {
-	tracer  *tracing.Tracer
-	indexes []*safeIndex
+	tracer *tracing.Tracer
+	idxs   *GeoIndexes
 }
 
 // Run starts the server
-func RunGeoSrv(job string) error {
-	rand.Seed(RAND_SEED)
-	geo := &Geo{}
-	geo.indexes = make([]*safeIndex, 0, N_INDEX)
-	for i := 0; i < N_INDEX; i++ {
-		geo.indexes = append(geo.indexes, newSafeIndex("data/geo.json"))
+func RunGeoSrv(job string, nidxStr string) error {
+	nidx, err := strconv.Atoi(nidxStr)
+	if err != nil {
+		db.DFatalf("Invalid nidx: %v", err)
 	}
-	ssrv, err := sigmasrv.NewSigmaSrv(HOTELGEO, geo, proc.GetProcEnv())
+	geo := &Geo{}
+	start := time.Now()
+	geo.idxs = newGeoIndexes(nidx, "data/geo.json")
+	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes after: %v", nidx, time.Since(start))
+	pe := proc.GetProcEnv()
+	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
 	if err != nil {
 		return err
 	}
@@ -93,6 +96,8 @@ func RunGeoSrv(job string) error {
 	defer p.Done()
 	//	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
 	//	defer geo.tracer.Flush()
+
+	db.DPrintf(db.ALWAYS, "Geo srv ready to serve time since spawn: %v", time.Since(ssrv.ProcEnv().GetSpawnTime()))
 
 	return ssrv.RunServer()
 }
@@ -120,11 +125,7 @@ func (s *Geo) getNearbyPoints(lat, lon float64) []geoindex.Point {
 		Plon: lon,
 	}
 
-	r := rand.Int63() % N_INDEX
-
-	si := s.indexes[r]
-
-	return si.KNN(center)
+	return s.idxs.KNN(center)
 }
 
 // newGeoIndex returns a geo index with points loaded

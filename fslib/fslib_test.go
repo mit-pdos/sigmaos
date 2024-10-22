@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
 	"sigmaos/namesrv"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -331,12 +331,10 @@ func TestReadOff(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	rdr, err := ts.OpenReader(fn)
+	rdr, err := ts.OpenReaderRegion(fn, 3, 20)
 	assert.Equal(t, nil, err)
-
-	rdr.Lseek(3)
 	b := make([]byte, 10)
-	n, err := rdr.Reader.Read(b)
+	n, err := rdr.Read(b)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, n)
 	assert.Equal(t, "lo", string(b[:2]))
@@ -1378,17 +1376,18 @@ func TestOpenRemoveRead(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	rdr, err := ts.OpenReader(fn)
+	fd, err := ts.Open(fn, sp.OREAD)
 	assert.Equal(t, nil, err)
 
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
 
-	b, err := rdr.GetData()
+	b := make([]byte, len(d))
+	_, err = ts.Read(fd, b)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, d, b, "data")
 
-	rdr.Close()
+	ts.CloseFd(fd)
 
 	_, err = ts.Stat(fn)
 	assert.NotNil(t, err, "stat")

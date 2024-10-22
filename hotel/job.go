@@ -20,7 +20,7 @@ import (
 const (
 	HOTEL        = "hotel/"
 	HOTELDIR     = "name/" + HOTEL
-	HOTELGEO     = HOTELDIR + "geo"
+	HOTELGEODIR  = HOTELDIR + "geo/"
 	HOTELRATE    = HOTELDIR + "rate"
 	HOTELSEARCH  = HOTELDIR + "search"
 	HOTELREC     = HOTELDIR + "rec"
@@ -34,8 +34,16 @@ const (
 	N_RPC_SESSIONS = 10
 )
 
-var HOTELSVC = []string{HOTELGEO, HOTELRATE, HOTELSEARCH, HOTELREC, HOTELRESERVE,
-	HOTELUSER, HOTELPROF, sp.DB + "~any/"}
+var HOTELSVC = []string{
+	HOTELGEODIR + "~any/",
+	HOTELRATE,
+	HOTELSEARCH,
+	HOTELREC,
+	HOTELRESERVE,
+	HOTELUSER,
+	HOTELPROF,
+	sp.DB + "~any/",
+}
 
 var (
 	nhotel    int
@@ -105,6 +113,7 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 
 func InitHotelFs(fsl *fslib.FsLib, jobname string) error {
 	fsl.MkDir(HOTELDIR, 0777)
+	fsl.MkDir(HOTELGEODIR, 0777)
 	if err := fsl.MkDir(JobDir(jobname), 0777); err != nil {
 		db.DPrintf(db.ERROR, "Mkdir %v err %v\n", JobDir(jobname), err)
 		return err
@@ -118,27 +127,21 @@ type Srv struct {
 	Mcpu proc.Tmcpu
 }
 
+var geo *Srv = &Srv{"hotel-geod", nil, 2000}
+
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
-func NewHotelSvc(public bool) []Srv {
-	return []Srv{
-		Srv{"hotel-userd", nil, 0},
-		Srv{"hotel-rated", nil, 2000},
-		Srv{"hotel-geod", nil, 2000},
-		Srv{"hotel-profd", nil, 2000},
-		Srv{"hotel-searchd", nil, 3000},
-		Srv{"hotel-reserved", nil, 3000},
-		Srv{"hotel-recd", nil, 0},
-		Srv{"hotel-wwwd", []string{strconv.FormatBool(public)}, 3000},
+func NewHotelSvc(public bool) []*Srv {
+	return []*Srv{
+		&Srv{"hotel-userd", nil, 0},
+		&Srv{"hotel-rated", nil, 2000},
+		geo,
+		&Srv{"hotel-profd", nil, 2000},
+		&Srv{"hotel-searchd", nil, 3000},
+		&Srv{"hotel-reserved", nil, 3000},
+		&Srv{"hotel-recd", nil, 0},
+		&Srv{"hotel-wwwd", []string{strconv.FormatBool(public)}, 3000},
 	}
 }
-
-//var ncores = []int{0, 1,
-//	1, 1, 3,
-//	3, 0, 2}
-
-//var ncores = []int{0, 2,
-//	2, 2, 3,
-//	3, 0, 2}
 
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
@@ -148,11 +151,14 @@ type HotelJob struct {
 	pids            []sp.Tpid
 	cache           string
 	kvf             *kv.KVFleet
+	job             string
 }
 
-func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, nsrv int, gc bool, imgSizeMB int) (*HotelJob, error) {
+func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int, ngeoidx int) (*HotelJob, error) {
 	// Set number of hotels before doing anything.
 	setNHotel(nhotel)
+	// Set the number of indexes to be used in each geo server
+	geo.Args = []string{strconv.Itoa(ngeoidx)}
 
 	var cc *cachedsvcclnt.CachedSvcClnt
 	var cm *cachedsvc.CacheMgr
@@ -166,11 +172,11 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 	}
 
 	// Create a cache clnt.
-	if nsrv > 0 {
+	if ncache > 0 {
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cachedsvc.NewCacheMgr(sc, job, nsrv, cacheMcpu, gc)
+			cm, err = cachedsvc.NewCacheMgr(sc, job, ncache, cacheMcpu, gc)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err
@@ -179,7 +185,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 			ca = cachedsvcclnt.NewAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
-			kvf, err = kv.NewKvdFleet(sc, job, 0, nsrv, 0, 0, cacheMcpu, "0", "manual")
+			kvf, err = kv.NewKvdFleet(sc, job, 0, ncache, 0, 0, cacheMcpu, "0", "manual")
 			if err != nil {
 				return nil, err
 			}
@@ -204,18 +210,47 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []Srv, nhotel int, ca
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)
 		if err := sc.Spawn(p); err != nil {
-			db.DPrintf(db.ERROR, "Error burst-spawnn proc %v: %v", p, err)
+			db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
 			return nil, err
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {
-			db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
+			db.DPrintf(db.ERROR, "Error start proc %v: %v", p, err)
 			return nil, err
 		}
 		pids = append(pids, p.GetPid())
 		db.DPrintf(db.TEST, "Hotel started %v", srv.Name)
 	}
 
-	return &HotelJob{sc, cc, cm, ca, pids, cache, kvf}, nil
+	hj := &HotelJob{sc, cc, cm, ca, pids, cache, kvf, job}
+
+	if ngeo > 1 {
+		for i := 0; i < ngeo-1; i++ {
+			if err := hj.AddGeoSrv(); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return hj, nil
+}
+
+func (hj *HotelJob) AddGeoSrv() error {
+	p := proc.NewProc(geo.Name, append([]string{hj.job, hj.cache}, geo.Args...))
+	p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
+	p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
+	p.SetMcpu(geo.Mcpu)
+	db.DPrintf(db.TEST, "Hotel spawn additional %v", geo.Name)
+	if err := hj.Spawn(p); err != nil {
+		db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
+		return err
+	}
+	if err := hj.WaitStart(p.GetPid()); err != nil {
+		db.DPrintf(db.ERROR, "Error start proc %v: %v", p, err)
+		return err
+	}
+	hj.pids = append(hj.pids, p.GetPid())
+	db.DPrintf(db.TEST, "Hotel started %v", geo.Name)
+	return nil
 }
 
 func (hj *HotelJob) Stop() error {

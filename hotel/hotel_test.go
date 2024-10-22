@@ -21,6 +21,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
+	"sigmaos/rpcdirclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
@@ -50,7 +51,7 @@ type Tstate struct {
 	hotel *hotel.HotelJob
 }
 
-func newTstate(t1 *test.Tstate, srvs []hotel.Srv, nserver int) *Tstate {
+func newTstate(t1 *test.Tstate, srvs []*hotel.Srv, nserver int) *Tstate {
 	var err error
 	ts := &Tstate{}
 	ts.job = rd.String(8)
@@ -61,7 +62,7 @@ func newTstate(t1 *test.Tstate, srvs []hotel.Srv, nserver int) *Tstate {
 	}
 	err = ts.BootNode(n)
 	assert.Nil(ts.T, err)
-	ts.hotel, err = hotel.NewHotelJob(ts.SigmaClnt, ts.job, srvs, 80, cache, proc.Tmcpu(2000), nserver, true, 0)
+	ts.hotel, err = hotel.NewHotelJob(ts.SigmaClnt, ts.job, srvs, 80, cache, proc.Tmcpu(2000), nserver, true, 0, 1, 10)
 	assert.Nil(ts.T, err)
 	return ts
 }
@@ -106,11 +107,17 @@ func TestGeoSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod"}}, 0)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1000"}}}, 0)
 	defer ts.Shutdown()
 	defer ts.stop()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELGEO)
-	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+
+	rpcdc := rpcdirclnt.NewRPCDirClnt(ts.FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
+	geoID, err := rpcdc.WaitTimedRandomEntry()
+	if !assert.Nil(t, err, "Err get geo server ID: %v", err) {
+		return
+	}
+	rpcc, err := rpcdc.GetClnt(geoID)
+	if !assert.Nil(t, err, "Err get geo clnt: %v", err) {
 		return
 	}
 	arg := proto.GeoRequest{
@@ -133,7 +140,7 @@ func TestRateSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-rated"}}, NCACHESRV)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-rated"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
@@ -163,7 +170,7 @@ func TestRecSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-recd"}}, 0)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-recd"}}, 0)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
@@ -191,7 +198,7 @@ func TestUserSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-userd"}}, 0)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-userd"}}, 0)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
@@ -217,7 +224,7 @@ func TestProfile(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-profd"}}, NCACHESRV)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-profd"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
@@ -248,7 +255,7 @@ func TestCheck(t *testing.T) {
 		return
 	}
 
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
@@ -281,7 +288,7 @@ func TestReserve(t *testing.T) {
 		return
 	}
 
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
@@ -337,7 +344,7 @@ func TestSingleSearch(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []hotel.Srv{hotel.Srv{Name: "hotel-geod"}, hotel.Srv{Name: "hotel-rated"}, hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1000"}}, &hotel.Srv{Name: "hotel-rated"}, &hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)

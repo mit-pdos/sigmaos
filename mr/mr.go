@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"hash/fnv"
-	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
@@ -62,33 +61,39 @@ func (s Split) String() string {
 type Bin []Split
 
 func (b Bin) String() string {
+	if len(b) == 0 {
+		return fmt.Sprintf("bins (0): []")
+	}
 	r := fmt.Sprintf("bins (%d): [ %v, ", len(b), b[0])
 	sum := sp.Tlength(b[0].Length)
 	for i, s := range b[1:] {
 		if s.File == b[i].File {
-			r += fmt.Sprintf("_ o %v l %v,", humanize.Bytes(uint64(s.Offset)), humanize.Bytes(uint64(s.Length)))
+			r += fmt.Sprintf("{_ o %v l %v},", humanize.Bytes(uint64(s.Offset)), humanize.Bytes(uint64(s.Length)))
 		} else {
-			r += fmt.Sprintf("[ %v, ", s)
+			r += fmt.Sprintf("%v, ", s)
 		}
 		sum += s.Length
 	}
-	r += fmt.Sprintf("] (sum %v)\n", humanize.Bytes(uint64(sum)))
+	r += fmt.Sprintf("] (sum %v)", humanize.Bytes(uint64(sum)))
 	return r
 }
 
 // Result of mapper or reducer
 type Result struct {
-	IsM  bool       `json:"IsM"`
-	Task string     `json:"Task"`
-	In   sp.Tlength `json:"In"`
-	Out  sp.Tlength `json:"Out"`
-	Ms   int64      `json:"Ms"`
+	IsM      bool       `json:"IsM"`
+	Task     string     `json:"Task"`
+	In       sp.Tlength `json:"In"`
+	Out      sp.Tlength `json:"Out"`
+	OutBin   Bin        `json:"OutBin"`
+	MsInner  int64      `json:"MsInner"`
+	MsOuter  int64      `json:"MsOuter"`
+	KernelID string     `json:"KernelID"`
 }
 
-func NewResult(data interface{}) *Result {
+func NewResult(data interface{}) (*Result, error) {
 	r := &Result{}
-	mapstructure.Decode(data, r)
-	return r
+	err := mapstructure.Decode(data, r)
+	return r, err
 }
 
 // Each bin has a slice of splits.  Assign splits of files to a bin
@@ -98,8 +103,7 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 	binsz := uint64(0)
 	bin := Bin{}
 
-	anydir := strings.ReplaceAll(dir, "~local", "~any")
-	sts, err := fsl.GetDir(anydir)
+	sts, err := fsl.GetDir(dir)
 	if err != nil {
 		return nil, err
 	}

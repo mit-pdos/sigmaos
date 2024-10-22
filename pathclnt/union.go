@@ -3,8 +3,8 @@ package pathclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/fslib/reader"
 	"sigmaos/path"
-	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

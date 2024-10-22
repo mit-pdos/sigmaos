@@ -36,12 +36,12 @@ func TestReader1(t *testing.T) {
 	assert.Equal(t, nil, err)
 	v := make([]byte, 1)
 	for _, b := range d {
-		n, err := rdr.Reader.Read(v)
+		n, err := rdr.Read(v)
 		assert.Equal(ts.T, nil, err)
 		assert.Equal(ts.T, 1, n)
 		assert.Equal(ts.T, b, v[0])
 	}
-	n, err := rdr.Reader.Read(v)
+	n, err := rdr.Read(v)
 	assert.Equal(ts.T, io.EOF, err)
 	assert.Equal(ts.T, 0, n)
 	rdr.Close()
@@ -66,11 +66,11 @@ func TestReader2(t *testing.T) {
 	rdr, err := ts.OpenReader(fn)
 	assert.Equal(t, nil, err)
 	v := make([]byte, 2)
-	n, err := rdr.Reader.Read(v)
+	n, err := rdr.Read(v)
 	assert.Equal(ts.T, nil, err)
 	assert.Equal(ts.T, 1, n)
 	assert.Equal(ts.T, d[0], v[0])
-	n, err = rdr.Reader.Read(v)
+	n, err = rdr.Read(v)
 	assert.Equal(ts.T, io.EOF, err)
 	assert.Equal(ts.T, 0, n)
 	rdr.Close()
@@ -102,7 +102,7 @@ func TestReaderLarge(t *testing.T) {
 	n := 0
 	for {
 		v := make([]byte, 9)
-		m, err := rdr.Reader.Read(v)
+		m, err := rdr.Read(v)
 		if err != nil {
 			assert.Equal(ts.T, io.EOF, err)
 			break

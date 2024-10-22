@@ -26,14 +26,20 @@ def scrape_times(dname, sigma):
   return t.total_seconds()
 
 
-def get_e2e_times(input_dir, datasize):
-  sfnbase = os.path.join(input_dir, "mr-wc-wiki" + datasize + "-bench.yml")
-  sfns3base = os.path.join(input_dir, "mr-wc-wiki" + datasize + "-bench-s3.yml")
-  cfnbase = os.path.join(input_dir, "corral-wc-wiki" + datasize)
-  sigma = [ scrape_times(sfnbase + "-warm", True) ]
+def get_e2e_times(input_dir, app, datasize, granular, noux):
+  gr = ""
+  if granular:
+    gr = "-granular"
+  sfns3base = os.path.join(input_dir, "mr-" + app + "-wiki" + datasize + gr + "-bench-s3.yml")
+  cfnbase = os.path.join(input_dir, "corral-" + app + "-wiki" + datasize + gr)
   sigmas3 = [ scrape_times(sfns3base + "-warm", True) ]
   corral = [ scrape_times(cfnbase + "-warm", False) ]
-  return (sigma, sigmas3, corral)
+  if not noux:
+    sfnbase = os.path.join(input_dir, "mr-" + app + "-wiki" + datasize + gr + "-bench.yml")
+    sigmaux = [ scrape_times(sfnbase + "-warm", True) ]
+  else:
+    sigmaux = sigmas3
+  return (sigmaux, sigmas3, corral)
 
 def finalize_graph(fig, ax, plots, title, out):
   plt.title(title)
@@ -45,8 +51,8 @@ def setup_graph():
   ax.set_ylabel("Execution Time (seconds)")
   return fig, ax
 
-def graph_data(input_dir, datasize, out):
-  sigma_times, sigmas3_times, corral_times = get_e2e_times(input_dir, datasize)
+def graph_data(input_dir, app, datasize, granular, noux, out):
+  sigma_times, sigmas3_times, corral_times = get_e2e_times(input_dir, app, datasize, granular, noux)
 
   fig, ax = setup_graph()
 
@@ -54,16 +60,20 @@ def graph_data(input_dir, datasize, out):
   sigmax = np.arange(1) * 1.5
   sigmas3x = [ x + width for x in sigmax ]
   corralx = [ x + 2 * width for x in sigmax ]
-  sigmaplot = plt.bar(sigmax, sigma_times, width=width, label="σOS-mr (UX)")
-  for i, v in enumerate(sigma_times):
-    plt.text(sigmax[i], v + .25, str(round(v, 2)), ha="center")
+  if not noux:
+    sigmaplot = plt.bar(sigmax, sigma_times, width=width, label="σOS-mr (UX)")
+    for i, v in enumerate(sigma_times):
+      plt.text(sigmax[i], v + .25, str(round(v, 2)), ha="center")
   sigmas3plot = plt.bar(sigmas3x, sigmas3_times, width=width, label="σOS-mr (S3)")
   for i, v in enumerate(sigmas3_times):
     plt.text(sigmas3x[i], v + .25, str(round(v, 2)), ha="center")
   corralplot = plt.bar(corralx, corral_times, width=width, label="λ-mr")
   for i, v in enumerate(corral_times):
     plt.text(corralx[i], v + .25, str(round(v, 2)), ha="center")
-  plots = [sigmaplot, corralplot]
+  if noux:
+    plots = [sigmas3plot, corralplot]
+  else:
+    plots = [sigmaplot, corralplot]
   ax.set_ylim(bottom=0, top=max(sigma_times + sigmas3_times + corral_times)*1.2)
   plt.tick_params(
     axis='x',          # changes apply to the x-axis
@@ -73,13 +83,23 @@ def graph_data(input_dir, datasize, out):
     labelbottom=False) # labels along the bottom edge are off
   #plt.xticks(sigmax + width, ("Cold-start", "Warm-start"))
 
-  finalize_graph(fig, ax, plots, "MapReduce WordCount Execution Time", out)
+  if app == "grep":
+    title = "MapReduce Grep Execution Time"
+  elif app == "wc":
+    title = "MapReduce WordCount Execution Time"
+  else:
+    assert(False)
+
+  finalize_graph(fig, ax, plots, title, out)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--measurement_dir", type=str, required=True)
   parser.add_argument("--datasize", type=str, required=True)
+  parser.add_argument("--granular", action="store_true", default=False)
+  parser.add_argument("--noux", action="store_true", default=False)
+  parser.add_argument("--app", type=str, required=True)
   parser.add_argument("--out", type=str, required=True)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir, args.datasize, args.out)
+  graph_data(args.measurement_dir, args.app, args.datasize, args.granular, args.noux, args.out)

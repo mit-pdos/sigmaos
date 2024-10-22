@@ -7,7 +7,7 @@ import (
 )
 
 type kvmap struct {
-	mu     sync.Mutex
+	sync.RWMutex
 	mincap int
 	maxcap int
 	kvs    map[string]*values
@@ -28,10 +28,16 @@ func newKvmap(mincap, maxcap int) *kvmap {
 }
 
 func (kvm *kvmap) lookup(key []byte) *values {
-	kvm.mu.Lock()
-	defer kvm.mu.Unlock()
+	kvm.RLock()
+	defer kvm.RUnlock()
 
 	k := unsafeutil.BytesToString(key)
+	if e, ok := kvm.kvs[k]; ok {
+		return e
+	}
+
+	kvm.RUnlock()
+	kvm.Lock()
 	if e, ok := kvm.kvs[k]; ok {
 		return e
 	}
@@ -41,6 +47,9 @@ func (kvm *kvmap) lookup(key []byte) *values {
 		vs: make([]string, 0, kvm.mincap),
 	}
 	kvm.kvs[k] = v
+	kvm.Unlock()
+	kvm.RLock()
+
 	return v
 }
 
@@ -53,8 +62,8 @@ func (kvm *kvmap) combine(key []byte, value string, combinef ReduceT) error {
 }
 
 func (kvm *kvmap) emit(combinef ReduceT, emit EmitT) error {
-	kvm.mu.Lock()
-	defer kvm.mu.Unlock()
+	kvm.Lock()
+	defer kvm.Unlock()
 
 	for k, e := range kvm.kvs {
 		if err := combinef(k, e.vs, emit); err != nil {
@@ -65,10 +74,10 @@ func (kvm *kvmap) emit(combinef ReduceT, emit EmitT) error {
 }
 
 func (dst *kvmap) merge(src *kvmap, combinef ReduceT) {
-	dst.mu.Lock()
-	defer dst.mu.Unlock()
-	src.mu.Lock()
-	defer src.mu.Unlock()
+	dst.Lock()
+	defer dst.Unlock()
+	src.Lock()
+	defer src.Unlock()
 
 	for k, e := range src.kvs {
 		k0 := unsafeutil.StringToBytes(k)

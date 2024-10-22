@@ -1,4 +1,4 @@
-app: "wc"
+app: "grep"
 nreduce: 1
 binsz: 134217728
 input: "name/ux/~local/wiki-1G/"

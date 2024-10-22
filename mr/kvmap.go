@@ -27,34 +27,39 @@ func newKvmap(mincap, maxcap int) *kvmap {
 	}
 }
 
-func (kvm *kvmap) lookup(key []byte) *values {
+func (kvm *kvmap) lookUp(key []byte) (*values, bool) {
 	kvm.RLock()
 	defer kvm.RUnlock()
 
 	k := unsafeutil.BytesToString(key)
 	if e, ok := kvm.kvs[k]; ok {
+		return e, true
+	}
+	return nil, false
+}
+
+func (kvm *kvmap) lookupInsert(key []byte) *values {
+	if e, ok := kvm.lookUp(key); ok {
 		return e
 	}
 
-	kvm.RUnlock()
 	kvm.Lock()
+	defer kvm.Unlock()
+
+	k := string(key)
 	if e, ok := kvm.kvs[k]; ok {
 		return e
 	}
-	k = string(key)
 	v := &values{
 		k:  k,
 		vs: make([]string, 0, kvm.mincap),
 	}
 	kvm.kvs[k] = v
-	kvm.Unlock()
-	kvm.RLock()
-
 	return v
 }
 
 func (kvm *kvmap) combine(key []byte, value string, combinef ReduceT) error {
-	e := kvm.lookup(key)
+	e := kvm.lookupInsert(key)
 	if err := e.combine(value, combinef, kvm.maxcap); err != nil {
 		return err
 	}
@@ -81,7 +86,7 @@ func (dst *kvmap) merge(src *kvmap, combinef ReduceT) {
 
 	for k, e := range src.kvs {
 		k0 := unsafeutil.StringToBytes(k)
-		d := dst.lookup(k0)
+		d := dst.lookupInsert(k0)
 		for _, v := range e.vs {
 			d.combine(v, combinef, dst.maxcap)
 		}

@@ -13,13 +13,28 @@
 
 const char* socketPath = "/tmp/spproxyd/spproxyd.sock";
 int sfd = 0;
-int res = 0;
+int init_done = 0;
 
 const char* get_path(const char *filename)
 {
-    // funct();
-    static int (*open_func)(const char*, int, mode_t) = NULL;
-    open_func = (int(*)(const char*, int, mode_t)) dlsym(RTLD_NEXT, "open");
+    char x2[3];
+
+//     if(!init_done) {
+//         printf("IVY: get_path: trying to write to socket\n");
+//         struct sockaddr_un addr;
+//         memset(&addr, 0, sizeof(struct sockaddr_un));
+//         addr.sun_family = AF_UNIX;
+//         strncpy(addr.sun_path, socketPath, sizeof(addr.sun_path) - 1);
+//         if (connect(sfd, (struct sockaddr *) &addr,
+//                 sizeof(struct sockaddr_un)) == -1) {
+//             printf("IVY: get_path: failed to connect\n");
+//             exit(-1);
+//         }
+//         write(sfd, "pb", 2);
+//         write(sfd, "\n", 1);
+//         read(sfd, x2, 2);
+//         init_done = 1;
+//     }
 
     const char* prefix = "/~~";
     int i = 0;
@@ -34,24 +49,8 @@ const char* get_path(const char *filename)
 
     fflush(stdout);
     char* x = malloc(512 * sizeof(char));
-    char x2[3];
     sprintf(x, "%s%s", "/bin", &(filename[3]));
 
-    if(!res) {
-        struct sockaddr_un addr;
-        memset(&addr, 0, sizeof(struct sockaddr_un));
-        addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, socketPath, sizeof(addr.sun_path) - 1);
-        if (connect(sfd, (struct sockaddr *) &addr,
-                sizeof(struct sockaddr_un)) == -1) {
-            exit(-1);
-        }
-        write(sfd, "pb", 2);
-        write(sfd, "\n", 1);
-        read(sfd, x2, 2);
-        res = 1;
-        return x;
-    }
     write(sfd, "pf", 2);
     write(sfd, &(filename[3]), strlen(filename) - 3);
     write(sfd, "\n", 1);

@@ -94,6 +94,7 @@ const (
 	SIGMAHOME             = "/home/sigmaos"
 	SIGMASOCKET           = "/tmp/spproxyd/spproxyd.sock"
 	SIGMA_NETPROXY_SOCKET = "/tmp/spproxyd/spproxyd-netproxy.sock"
+	SIGMA_PYPROXY_SOCKET  = "/tmp/spproxyd/spproxyd-pyproxy.sock" 
 )
 
 // spproxyd kernel

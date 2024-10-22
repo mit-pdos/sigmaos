@@ -208,6 +208,8 @@ const (
 	NETPROXY_ERR              = "NETPROXY_ERR"
 	NETPROXYSRV               = "NETPROXYSRV"
 	NETPROXYSRV_ERR           = "NETPROXYSRV" + ERR
+	PYPROXYSRV 				  = "PYPROXYSRV"
+	PYPROXYSRV_ERR			  = "PYPROXYSRV" + ERR
 )
 
 // Client-side Infrastructure

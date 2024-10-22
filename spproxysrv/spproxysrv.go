@@ -18,6 +18,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
+	"sigmaos/pyproxysrv"
 	sp "sigmaos/sigmap"
 )
 
@@ -30,6 +31,7 @@ const (
 type SPProxySrv struct {
 	pe   *proc.ProcEnv
 	nps  *netproxysrv.NetProxySrv
+	pps  *pyproxysrv.PyProxySrv
 	fidc *fidclnt.FidClnt
 }
 
@@ -40,9 +42,15 @@ func newSPProxySrv() (*SPProxySrv, error) {
 		db.DPrintf(db.ERROR, "Error NewNetProxySrv: %v", err)
 		return nil, err
 	}
+	pps, err := pyproxysrv.NewPyProxySrv(pe)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewPyProxySrv: %v", err)
+		return nil, err
+	}
 	scs := &SPProxySrv{
 		pe:   pe,
 		nps:  nps,
+		pps:  pps,
 		fidc: fidclnt.NewFidClnt(pe, netproxyclnt.NewNetProxyClnt(pe)),
 	}
 	db.DPrintf(db.SPPROXYSRV, "newSPProxySrv ProcEnv:%v", pe)
@@ -74,6 +82,7 @@ func (scs *SPProxySrv) runServer() error {
 		os.Remove(sp.SIGMASOCKET)
 		scs.fidc.Close()
 		scs.nps.Shutdown()
+		// scs.pps.Shutdown()
 		os.Exit(0)
 	}()
 

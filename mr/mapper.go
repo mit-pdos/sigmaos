@@ -36,7 +36,6 @@ type Mapper struct {
 	*sigmaclnt.SigmaClnt
 	mapf        MapT
 	combinef    ReduceT
-	sbc         *ScanByteCounter
 	jobRoot     string
 	job         string
 	nreducetask int
@@ -49,12 +48,28 @@ type Mapper struct {
 	rand        string
 	perf        *perf.Perf
 	asyncrw     bool
-	combined    *kvmap
-	combinewc   map[string]int
-	bufs        [][]byte
-	lines       [][]byte
 	init        bool
+	ckrs        []*chunkReader
 	ch          chan error
+}
+
+type chunkReader struct {
+	sbc      *ScanByteCounter
+	buf      []byte
+	line     []byte
+	combinef ReduceT
+	combined *kvmap
+}
+
+func newChunkReader(lsz int, combinef ReduceT, p *perf.Perf) *chunkReader {
+	ckr := &chunkReader{
+		sbc:      NewScanByteCounter(p),
+		buf:      make([]byte, lsz),
+		line:     make([]byte, lsz),
+		combinef: combinef,
+		combined: newKvmap(MINCAP, MAXCAP),
+	}
+	return ckr
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string) (*Mapper, error) {
@@ -73,16 +88,11 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		wrts:        make([]*fslib.FileWriter, nr),
 		pwrts:       make([]*perf.PerfWriter, nr),
 		perf:        p,
-		sbc:         NewScanByteCounter(p),
-		combined:    newKvmap(MINCAP, MAXCAP),
-		combinewc:   make(map[string]int),
-		bufs:        make([][]byte, CONCURRENCY),
-		lines:       make([][]byte, CONCURRENCY),
 		ch:          make(chan error),
+		ckrs:        make([]*chunkReader, CONCURRENCY),
 	}
 	for i := 0; i < CONCURRENCY; i++ {
-		m.bufs[i] = make([]byte, 0, lsz)
-		m.lines[i] = make([]byte, 0, lsz)
+		m.ckrs[i] = newChunkReader(lsz, combinef, p)
 	}
 	m.MountS3PathClnt()
 	go func() {
@@ -203,6 +213,7 @@ func (m *Mapper) outputBin() (Bin, error) {
 	return bin, nil
 }
 
+// Emit cannot be called in parallel
 func (m *Mapper) Emit(key []byte, value string) error {
 	if !m.init {
 		m.init = true
@@ -217,35 +228,32 @@ func (m *Mapper) Emit(key []byte, value string) error {
 	return err
 }
 
-// Function for performance debugging
-func (m *Mapper) CombineWc(kv *KeyValue) error {
-	if _, ok := m.combinewc[kv.Key]; !ok {
-		m.combinewc[kv.Key] = 0
+func (m *Mapper) combineEmit() {
+	for _, ckr := range m.ckrs {
+		ckr.combineEmit(m.Emit)
 	}
-	m.combinewc[kv.Key] += 1
+}
+
+func (ckr *chunkReader) combineEmit(emit EmitT) error {
+	ckr.combined.emit(ckr.combinef, emit)
+	ckr.combined = newKvmap(MINCAP, MAXCAP)
 	return nil
 }
 
-func (m *Mapper) Combine(key []byte, value string) error {
-	return m.combined.combine(key, value, m.combinef)
+func (ckr *chunkReader) combine(key []byte, value string) error {
+	return ckr.combined.combine(key, value, ckr.combinef)
 }
 
-func (m *Mapper) CombineEmit() error {
-	m.combined.emit(m.combinef, m.Emit)
-	m.combined = newKvmap(MINCAP, MAXCAP)
-	return nil
-}
-
-// Read chunks from the split in parallel
-func (m *Mapper) doChunks(i int, pfr *fslib.ParallelFileReader, s *Split, emit EmitT) (sp.Tlength, error) {
+// Process a chunk from the split in parallel
+func (ckr *chunkReader) doChunks(pfr *fslib.ParallelFileReader, s *Split, mapf MapT) (sp.Tlength, error) {
 	t := sp.Tlength(0)
 	for {
-		rdr, err := pfr.GetChunkReader(cap(m.bufs[i]))
+		rdr, err := pfr.GetChunkReader(cap(ckr.buf))
 		if err != nil && err == io.EOF {
 			break
 		}
 		scanner := bufio.NewScanner(rdr)
-		scanner.Buffer(m.bufs[i], cap(m.bufs[i]))
+		scanner.Buffer(ckr.buf, cap(ckr.buf))
 
 		// advance scanner to new line after start, if off != 0
 		n := sp.Tlength(0)
@@ -263,9 +271,9 @@ func (m *Mapper) doChunks(i int, pfr *fslib.ParallelFileReader, s *Split, emit E
 			if len(l) > 0 {
 				lineRdr.Reset(l)
 				scan := bufio.NewScanner(lineRdr)
-				scan.Buffer(m.lines[i], cap(m.lines[i]))
-				scan.Split(m.sbc.ScanWords)
-				if err := m.mapf(s.File, scan, emit); err != nil {
+				scan.Buffer(ckr.line, cap(ckr.line))
+				scan.Split(ckr.sbc.ScanWords)
+				if err := mapf(s.File, scan, ckr.combine); err != nil {
 					return 0, err
 				}
 			}
@@ -282,7 +290,7 @@ func (m *Mapper) doChunks(i int, pfr *fslib.ParallelFileReader, s *Split, emit E
 	return t, nil
 }
 
-func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
+func (m *Mapper) doSplit(s *Split) (sp.Tlength, error) {
 	pn, ok := sp.S3ClientPath(s.File)
 	if ok {
 		s.File = pn
@@ -313,20 +321,21 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	}
 
 	ch := make(chan result)
-	for i := 0; i < CONCURRENCY; i++ {
-		go func(i int) {
-			n, err := m.doChunks(i, pfr, s, emit)
+	for _, ckr := range m.ckrs {
+		go func(ckr *chunkReader) {
+			n, err := ckr.doChunks(pfr, s, m.mapf)
 			ch <- result{n, err}
-		}(i)
+		}(ckr)
 	}
 	n := sp.Tlength(0)
-	for i := 0; i < CONCURRENCY; i++ {
+	for range m.ckrs {
 		r := <-ch
 		n += r.n
 		if r.err != nil {
 			return n, err
 		}
 	}
+	m.combineEmit()
 	return n, nil
 }
 
@@ -338,15 +347,11 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 		db.DPrintf(db.MR, "Mapper %s: unmarshal err %v\n", m.bin, err)
 		return 0, 0, nil, err
 	}
-	emit := m.Emit
-	if m.combinef != nil {
-		emit = m.Combine
-	}
 	db.DPrintf(db.TEST, "Mapper getInput time: %v", time.Since(getInputStart))
 	ni := sp.Tlength(0)
 	getSplitStart := time.Now()
 	for _, s := range bin {
-		n, err := m.doSplit(&s, emit)
+		n, err := m.doSplit(&s)
 		if err != nil {
 			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)
 			return 0, 0, nil, err
@@ -355,7 +360,6 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 			db.DFatalf("Split: short split o %d l %d %d\n", s.Offset, s.Length, n)
 		}
 		ni += n
-		m.CombineEmit()
 	}
 	db.DPrintf(db.TEST, "split time: %v", time.Since(getSplitStart))
 	closeWrtStart := time.Now()

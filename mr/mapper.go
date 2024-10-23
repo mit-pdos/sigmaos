@@ -229,9 +229,11 @@ func (m *Mapper) Emit(key []byte, value string) error {
 }
 
 func (m *Mapper) combineEmit() {
-	for _, ckr := range m.ckrs {
-		ckr.combineEmit(m.Emit)
+	d := m.ckrs[0]
+	for _, ckr := range m.ckrs[1:] {
+		d.combined.merge(ckr.combined, m.combinef)
 	}
+	d.combineEmit(m.Emit)
 }
 
 func (ckr *chunkReader) combineEmit(emit EmitT) error {

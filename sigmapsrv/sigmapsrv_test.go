@@ -312,7 +312,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 func TestParallelReadFile(t *testing.T) {
 	const (
 		CONCURRENCY = 5
-		CHUNKSZ     = 1 * sp.MBYTE
+		CHUNKSZ     = 2 * sp.MBYTE
 	)
 
 	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {

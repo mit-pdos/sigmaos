@@ -6,3 +6,4 @@ intermediate: "name/ux/~local/mr-intermediate"
 output: "name/ux/~local/mr-out/"
 linesz: 65536
 local: "/tmp/gutenberg/"
+wordsz: 25

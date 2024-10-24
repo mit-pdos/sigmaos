@@ -255,7 +255,7 @@ func TestMapperReducer(t *testing.T) {
 		assert.Nil(t, err, "NewSC: %v", err)
 		db.DPrintf(db.TEST, "NewSigmaClnt %v", time.Since(start))
 		start = time.Now()
-		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, string(bin), job.Intermediate)
+		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, job.Wordsz, string(bin), job.Intermediate)
 		assert.Nil(t, err, "NewMapper %v", err)
 		db.DPrintf(db.TEST, "Newmapper %v", time.Since(start))
 		start = time.Now()

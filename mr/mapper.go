@@ -51,7 +51,7 @@ type Mapper struct {
 	ch          chan error
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input, intOutput string) (*Mapper, error) {
 	m := &Mapper{
 		SigmaClnt:   sc,
 		mapf:        mapf,
@@ -71,7 +71,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		ckrs:        make([]*chunkreader.ChunkReader, CONCURRENCY),
 	}
 	for i := 0; i < CONCURRENCY; i++ {
-		m.ckrs[i] = chunkreader.NewChunkReader(lsz, 20, combinef, p)
+		m.ckrs[i] = chunkreader.NewChunkReader(lsz, wsz, combinef, p)
 	}
 	m.MountS3PathClnt()
 	go func() {
@@ -82,7 +82,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 
 func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
 
-	if len(args) != 6 {
+	if len(args) != 7 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
 	nr, err := strconv.Atoi(args[2])
@@ -91,7 +91,11 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*
 	}
 	lsz, err := strconv.Atoi(args[5])
 	if err != nil {
-		return nil, fmt.Errorf("NewMapper: linesz %v isn't int", args[2])
+		return nil, fmt.Errorf("NewMapper: linesz %v isn't int", args[5])
+	}
+	wsz, err := strconv.Atoi(args[6])
+	if err != nil {
+		return nil, fmt.Errorf("NewMapper: wordsz %v isn't int", args[6])
 	}
 	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
@@ -100,7 +104,7 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*
 	}
 
 	db.DPrintf(db.TEST, "NewSigmaClnt done at time: %v", time.Since(start))
-	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, args[3], args[4])
+	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4])
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}

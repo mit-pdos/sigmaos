@@ -5,3 +5,4 @@ input: "name/s3/~local/9ps3/gutenberg/"
 intermediate: "name/s3/~local/9ps3/mr-intermediate"
 output: "name/s3/~local/9ps3/mr-out/"
 linesz: 65536
+wordsz: 25

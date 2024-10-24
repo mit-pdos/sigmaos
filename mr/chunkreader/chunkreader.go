@@ -9,7 +9,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/mr/kvmap"
 	"sigmaos/mr/mr"
-	"sigmaos/mr/scanner"
+	mrscanner "sigmaos/mr/scanner"
 	"sigmaos/perf"
 	sp "sigmaos/sigmap"
 )
@@ -20,18 +20,21 @@ const (
 )
 
 type ChunkReader struct {
-	sbc      *scanner.ScanByteCounter
+	sbc      *mrscanner.ScanByteCounter
 	buf      []byte
 	line     []byte
+	wsz      int
 	combinef mr.ReduceT
 	combined *kvmap.KVMap
 }
 
-func NewChunkReader(lsz int, combinef mr.ReduceT, p *perf.Perf) *ChunkReader {
+func NewChunkReader(lsz, wsz int, combinef mr.ReduceT, p *perf.Perf) *ChunkReader {
+	sz := lsz + wsz
 	ckr := &ChunkReader{
-		sbc:      scanner.NewScanByteCounter(p),
-		buf:      make([]byte, lsz),
-		line:     make([]byte, lsz),
+		sbc:      mrscanner.NewScanByteCounter(p),
+		buf:      make([]byte, sz),
+		line:     make([]byte, sz),
+		wsz:      wsz,
 		combinef: combinef,
 		combined: kvmap.NewKVMap(MINCAP, MAXCAP),
 	}
@@ -65,6 +68,7 @@ func (ckr *ChunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *mr.Split, mapf m
 	scanner := bufio.NewScanner(rdr)
 	scanner.Buffer(ckr.buf, cap(ckr.buf))
 
+	db.DPrintf(db.MR, "DoChunk off %d %v", o, s)
 	// If this is first chunk from a split with an offset, advance
 	// scanner to new line after start
 	n := sp.Tlength(0)
@@ -76,10 +80,29 @@ func (ckr *ChunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *mr.Split, mapf m
 		db.DPrintf(db.MR, "%v off %v skip %d\n", s.File, s.Offset, n)
 	}
 	lineRdr := bytes.NewReader([]byte{})
+	skip := o > s.Offset
+	e := sp.Tlength(cap(ckr.line) - ckr.wsz)
 	for scanner.Scan() {
 		l := scanner.Bytes()
-		n += sp.Tlength(len(l)) + 1 // 1 for newline  XXX or 2 if \r\n
-		if len(l) > 0 {
+		l0 := sp.Tlength(len(l) + 1) // 1 for newline  XXX or 2 if \r\n
+
+		// if this isn't the first chunk and this line is the first
+		// one of chunk, skip to separator
+		if skip {
+			skip = false
+			start, err := mrscanner.ScanSeperator(l)
+			db.DPrintf(db.MR, "skip: %d err %v l: %v", start, err, string(l[0:start]))
+			l = l[start:]
+		}
+		if l0 > 1 {
+			if n+l0 >= e {
+				start := int(e - n)
+				// go back to linesz in l; scan forward to seperator
+				end, err := mrscanner.ScanSeperator(l[start:])
+				db.DPrintf(db.MR, "eol: extra %d (start %d) err %v l: %v", end, start, err, string(l[start:start+end]))
+				l = l[0 : start+end]
+
+			}
 			lineRdr.Reset(l)
 			scan := bufio.NewScanner(lineRdr)
 			scan.Buffer(ckr.line, cap(ckr.line))
@@ -88,9 +111,9 @@ func (ckr *ChunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *mr.Split, mapf m
 				return 0, err
 			}
 		}
-		if n >= s.Length {
-			db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
-			break
+		n += l0
+		if n-1 >= sp.Tlength(e) {
+			return n, nil
 		}
 	}
 
@@ -100,10 +123,10 @@ func (ckr *ChunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *mr.Split, mapf m
 	return n, nil
 }
 
-func (ckr *ChunkReader) ChunkReader(pfr *fslib.ParallelFileReader, s *mr.Split, mapf mr.MapT) (sp.Tlength, error) {
+func (ckr *ChunkReader) ReadChunks(pfr *fslib.ParallelFileReader, s *mr.Split, mapf mr.MapT) (sp.Tlength, error) {
 	t := sp.Tlength(0)
 	for {
-		rdr, o, err := pfr.GetChunkReader(cap(ckr.buf))
+		rdr, o, err := pfr.GetChunkReader(cap(ckr.buf), cap(ckr.buf)-ckr.wsz)
 		if err != nil && err == io.EOF {
 			break
 		}

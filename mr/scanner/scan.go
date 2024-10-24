@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"io"
 	"unicode"
 	"unicode/utf8"
 
@@ -25,6 +26,18 @@ func (sbc *ScanByteCounter) ScanWords(data []byte, atEOF bool) (advance int, tok
 
 func (sbc *ScanByteCounter) BytesRead() int {
 	return sbc.bytesRead
+}
+
+func ScanSeperator(data []byte) (int, error) {
+	start := 0
+	for width := 0; start < len(data); start += width {
+		var r rune
+		r, width = utf8.DecodeRune(data[start:])
+		if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '_' {
+			return start + width, nil // index of first char after separator
+		}
+	}
+	return 0, io.EOF
 }
 
 // Scan for words for mappers. Implement grep's definition of a word

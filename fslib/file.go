@@ -156,7 +156,8 @@ func (fl *FsLib) OpenParallelFileReader(path string, offset sp.Toffset, l sp.Tle
 	return r, nil
 }
 
-func (pfr *ParallelFileReader) getChunk(sz int) (sp.Toffset, sp.Toffset, error) {
+// caller can use offinc to arrange for some overlap between two chunks
+func (pfr *ParallelFileReader) getChunk(sz, offinc int) (sp.Toffset, sp.Toffset, error) {
 	pfr.mu.Lock()
 	defer pfr.mu.Unlock()
 
@@ -169,18 +170,18 @@ func (pfr *ParallelFileReader) getChunk(sz int) (sp.Toffset, sp.Toffset, error) 
 	if pfr.end < e {
 		e = pfr.end
 	}
-	pfr.off += sp.Toffset(sz)
+	pfr.off += sp.Toffset(offinc)
 	return off, e, nil
 }
 
-func (pfr *ParallelFileReader) GetChunkReader(sz int) (io.ReadCloser, sp.Toffset, error) {
-	o, e, err := pfr.getChunk(sz)
+func (pfr *ParallelFileReader) GetChunkReader(sz, offinc int) (io.ReadCloser, sp.Toffset, error) {
+	o, e, err := pfr.getChunk(sz, offinc)
 	if err != nil {
 		return nil, 0, err
 	}
 	db.DPrintf(db.PREADER, "GetChunkReader: %v %v", o, e)
 	r, err := pfr.sof.PreadRdr(pfr.fd, o, sp.Tsize(e-o))
-	return r, 0, err
+	return r, o, err
 }
 
 func (pfr *ParallelFileReader) Close() error {

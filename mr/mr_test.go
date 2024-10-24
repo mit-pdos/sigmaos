@@ -71,28 +71,53 @@ func TestHash(t *testing.T) {
 }
 
 func TestWordSpanningChunk(t *testing.T) {
-	const CKSZ = 8
+	const (
+		CKSZ    = 8
+		SPLITSZ = sp.MBYTE
+		LINESZ  = 65536
+		WORDSZ  = 20
+		NWORD   = 7777 // According to TestSeqWc
+		WC      = "/tmp/sigmaos/pg-dorian_gray.txt.wc"
+	)
 
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	str := "01234 56789 01234"
-	rdr0 := strings.NewReader(str[0:CKSZ])
-	rdr1 := strings.NewReader(str[CKSZ:])
+
+	fn := filepath.Join("name/s3/~local/9ps3/gutenberg/pg-dorian_gray.txt")
+	fn, ok := sp.S3ClientPath(fn)
+	assert.True(t, ok)
+	s := &api.Split{fn, 0, SPLITSZ}
+	ts.MountS3PathClnt()
+
+	pfr, err := ts.OpenParallelFileReader(s.File, s.Offset, s.Length)
+	assert.Nil(t, err)
+
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.MRMAPPER)
 	assert.Nil(t, err)
-	s := &api.Split{"x", 0, 10}
-	ckr := chunkreader.NewChunkReader(200, wc.Reduce, p)
 
-	ckr.DoChunk(rdr0, 0, s, wc.Map)
-	ckr.DoChunk(rdr1, 0, s, wc.Map)
+	ckr := chunkreader.NewChunkReader(LINESZ, WORDSZ, wc.Reduce, p)
+	n, err := ckr.ReadChunks(pfr, s, wc.Map)
+	assert.Nil(t, err)
 
 	kvmap := ckr.KVMap()
 
-	db.DPrintf(db.TEST, "kvmmap: %v", kvmap)
+	db.DPrintf(db.TEST, "bytes %d words %d", n, kvmap.Len())
 
-	assert.Equal(t, 2, kvmap.Len())
+	assert.Equal(t, NWORD, kvmap.Len())
+
+	file, err := os.Create(WC)
+	assert.Nil(t, err)
+	defer file.Close()
+	w := bufio.NewWriter(file)
+	defer w.Flush()
+	kvmap.Emit(wc.Reduce, func(k []byte, v string) error {
+		b := fmt.Sprintf("%s\t%v\n", string(k), v)
+		_, err := w.Write([]byte(b))
+		return err
+	})
+	p.Done()
 
 	ts.Shutdown()
 }
@@ -120,8 +145,8 @@ func wcline(n int, line string, data Tdata, sbc *mrscanner.ScanByteCounter) (int
 func TestSeqWc(t *testing.T) {
 	const (
 		LOCALINPUT = "/tmp/enwiki-1G"
-		HOSTTMP    = "/tmp/sigmaos"
-		F          = "gutenberg.txt"
+		HOSTTMP    = "/tmp/sigmaos/"
+		F          = "pg-dorian_gray.txt"
 		INPUT      = "../input/" + F
 		// INPUT = LOCALINPUT
 		OUT = HOSTTMP + F + ".out"
@@ -148,7 +173,7 @@ func TestSeqWc(t *testing.T) {
 	}
 	err = scanner.Err()
 	assert.Nil(t, err)
-	db.DPrintf(db.ALWAYS, "seqwc %v %v", INPUT, time.Since(start))
+	db.DPrintf(db.ALWAYS, "seqwc %v %v %v", INPUT, time.Since(start), OUT)
 	file, err = os.Create(OUT)
 	assert.Nil(t, err)
 	defer file.Close()

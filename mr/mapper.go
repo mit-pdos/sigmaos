@@ -71,7 +71,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		ckrs:        make([]*chunkreader.ChunkReader, CONCURRENCY),
 	}
 	for i := 0; i < CONCURRENCY; i++ {
-		m.ckrs[i] = chunkreader.NewChunkReader(lsz, combinef, p)
+		m.ckrs[i] = chunkreader.NewChunkReader(lsz, 20, combinef, p)
 	}
 	m.MountS3PathClnt()
 	go func() {
@@ -251,7 +251,7 @@ func (m *Mapper) doSplit(s *mr.Split) (sp.Tlength, error) {
 	ch := make(chan result)
 	for _, ckr := range m.ckrs {
 		go func(ckr *chunkreader.ChunkReader) {
-			n, err := ckr.ChunkReader(pfr, s, m.mapf)
+			n, err := ckr.ReadChunks(pfr, s, m.mapf)
 			ch <- result{n, err}
 		}(ckr)
 	}
@@ -262,6 +262,9 @@ func (m *Mapper) doSplit(s *mr.Split) (sp.Tlength, error) {
 		if r.err != nil {
 			return n, err
 		}
+	}
+	if n >= s.Length {
+		db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
 	}
 	m.combineEmit()
 	return n, nil

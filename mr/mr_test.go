@@ -264,7 +264,7 @@ func newTstate(t1 *test.Tstate, jobRoot, app string) *Tstate {
 	ts := &Tstate{}
 	ts.jobRoot = jobRoot
 	ts.Tstate = t1
-	j, err := mr.ReadJobConfig(app)
+	j, err := mr.ReadJobConfig(filepath.Join("job-descriptions", app))
 	assert.Nil(t1.T, err, "Error ReadJobConfig: %v", err)
 	job = j
 	ts.nreducetask = job.Nreduce

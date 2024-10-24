@@ -346,7 +346,7 @@ func TestParallelReadFile(t *testing.T) {
 			go func(i int) {
 				m := sp.Tlength(0)
 				for {
-					rdr, err := r.GetChunkReader(CHUNKSZ)
+					rdr, _, err := r.GetChunkReader(CHUNKSZ)
 					if err != nil && err == io.EOF {
 						break
 					}

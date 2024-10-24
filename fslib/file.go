@@ -173,14 +173,14 @@ func (pfr *ParallelFileReader) getChunk(sz int) (sp.Toffset, sp.Toffset, error) 
 	return off, e, nil
 }
 
-func (pfr *ParallelFileReader) GetChunkReader(sz int) (io.ReadCloser, error) {
+func (pfr *ParallelFileReader) GetChunkReader(sz int) (io.ReadCloser, sp.Toffset, error) {
 	o, e, err := pfr.getChunk(sz)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	db.DPrintf(db.PREADER, "GetChunkReader: %v %v", o, e)
 	r, err := pfr.sof.PreadRdr(pfr.fd, o, sp.Tsize(e-o))
-	return r, err
+	return r, 0, err
 }
 
 func (pfr *ParallelFileReader) Close() error {

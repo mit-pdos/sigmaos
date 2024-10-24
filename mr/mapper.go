@@ -27,9 +27,10 @@ import (
 )
 
 const (
-	MAXCAP      = 32
-	MINCAP      = 4
-	CONCURRENCY = 5
+	MAXCAP = 32
+	MINCAP = 4
+	// CONCURRENCY = 5
+	CONCURRENCY = 1
 )
 
 type Mapper struct {
@@ -61,7 +62,7 @@ type chunkReader struct {
 	combined *kvmap
 }
 
-func newChunkReader(lsz int, combinef ReduceT, p *perf.Perf) *chunkReader {
+func NewChunkReader(lsz int, combinef ReduceT, p *perf.Perf) *chunkReader {
 	ckr := &chunkReader{
 		sbc:      NewScanByteCounter(p),
 		buf:      make([]byte, lsz),
@@ -92,7 +93,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		ckrs:        make([]*chunkReader, CONCURRENCY),
 	}
 	for i := 0; i < CONCURRENCY; i++ {
-		m.ckrs[i] = newChunkReader(lsz, combinef, p)
+		m.ckrs[i] = NewChunkReader(lsz, combinef, p)
 	}
 	m.MountS3PathClnt()
 	go func() {
@@ -234,6 +235,7 @@ func (m *Mapper) combineEmit() {
 		d.combined.merge(ckr.combined, m.combinef)
 	}
 	d.combineEmit(m.Emit)
+	d.combined = newKvmap(MINCAP, MAXCAP)
 }
 
 func (ckr *chunkReader) combineEmit(emit EmitT) error {
@@ -247,47 +249,59 @@ func (ckr *chunkReader) combine(key []byte, value string) error {
 }
 
 // Process a chunk from the split in parallel
-func (ckr *chunkReader) doChunks(pfr *fslib.ParallelFileReader, s *Split, mapf MapT) (sp.Tlength, error) {
+func (ckr *chunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *Split, mapf MapT) (sp.Tlength, error) {
+	scanner := bufio.NewScanner(rdr)
+	scanner.Buffer(ckr.buf, cap(ckr.buf))
+
+	// If this is first chunk from a split with an offset, advance
+	// scanner to new line after start
+	n := sp.Tlength(0)
+	if s.Offset != 0 && o == s.Offset {
+		scanner.Scan()
+		l := scanner.Bytes()
+		// +1 for newline, but -1 for the extra byte we read (off-- above)
+		n += sp.Tlength(len(l))
+		db.DPrintf(db.MR, "%v off %v skip %d\n", s.File, s.Offset, n)
+	}
+	lineRdr := bytes.NewReader([]byte{})
+	for scanner.Scan() {
+		l := scanner.Bytes()
+		n += sp.Tlength(len(l)) + 1 // 1 for newline  XXX or 2 if \r\n
+		if len(l) > 0 {
+			lineRdr.Reset(l)
+			scan := bufio.NewScanner(lineRdr)
+			scan.Buffer(ckr.line, cap(ckr.line))
+			scan.Split(ckr.sbc.ScanWords)
+			if err := mapf(s.File, scan, ckr.combine); err != nil {
+				return 0, err
+			}
+		}
+		if n >= s.Length {
+			db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
+			break
+		}
+	}
+
+	db.DPrintf(db.TEST, "kvmmap: %v", ckr.combined)
+
+	if err := scanner.Err(); err != nil {
+		return sp.Tlength(n), err
+	}
+	return n, nil
+}
+
+func (ckr *chunkReader) chunkReader(pfr *fslib.ParallelFileReader, s *Split, mapf MapT) (sp.Tlength, error) {
 	t := sp.Tlength(0)
 	for {
-		rdr, err := pfr.GetChunkReader(cap(ckr.buf))
+		rdr, o, err := pfr.GetChunkReader(cap(ckr.buf))
 		if err != nil && err == io.EOF {
 			break
 		}
-		scanner := bufio.NewScanner(rdr)
-		scanner.Buffer(ckr.buf, cap(ckr.buf))
-
-		// advance scanner to new line after start, if off != 0
-		n := sp.Tlength(0)
-		if s.Offset != 0 {
-			scanner.Scan()
-			l := scanner.Bytes()
-			// +1 for newline, but -1 for the extra byte we read (off-- above)
-			n += sp.Tlength(len(l))
-			db.DPrintf(db.MR, "%v off %v skip %d\n", s.File, s.Offset, n)
-		}
-		lineRdr := bytes.NewReader([]byte{})
-		for scanner.Scan() {
-			l := scanner.Bytes()
-			n += sp.Tlength(len(l)) + 1 // 1 for newline  XXX or 2 if \r\n
-			if len(l) > 0 {
-				lineRdr.Reset(l)
-				scan := bufio.NewScanner(lineRdr)
-				scan.Buffer(ckr.line, cap(ckr.line))
-				scan.Split(ckr.sbc.ScanWords)
-				if err := mapf(s.File, scan, ckr.combine); err != nil {
-					return 0, err
-				}
-			}
-			if n >= s.Length {
-				db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
-				break
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			return sp.Tlength(n), err
-		}
+		n, err := ckr.DoChunk(rdr, o, s, mapf)
 		t += n
+		if err != nil {
+			return t, err
+		}
 	}
 	return t, nil
 }
@@ -301,7 +315,7 @@ func (m *Mapper) doSplit(s *Split) (sp.Tlength, error) {
 	off := s.Offset
 	if off != 0 {
 		// -1 to pick up last byte from prev split so that if s.Offset
-		// != 0 below works out correctly. if the last byte of
+		// != 0 in doChunk works out correctly. if the last byte of
 		// previous split is a newline, this mapper should process the
 		// first line of the split.  if not, this mapper should ignore
 		// the first line of the split because it has been processed
@@ -309,7 +323,7 @@ func (m *Mapper) doSplit(s *Split) (sp.Tlength, error) {
 		off--
 	}
 	start := time.Now()
-	pfr, err := m.OpenParallelFileReader(s.File, s.Offset, s.Length+sp.Tlength(m.linesz))
+	pfr, err := m.OpenParallelFileReader(s.File, off, s.Length+sp.Tlength(m.linesz))
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}
@@ -325,7 +339,7 @@ func (m *Mapper) doSplit(s *Split) (sp.Tlength, error) {
 	ch := make(chan result)
 	for _, ckr := range m.ckrs {
 		go func(ckr *chunkReader) {
-			n, err := ckr.doChunks(pfr, s, m.mapf)
+			n, err := ckr.chunkReader(pfr, s, m.mapf)
 			ch <- result{n, err}
 		}(ckr)
 	}

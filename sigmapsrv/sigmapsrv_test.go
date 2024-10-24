@@ -77,7 +77,6 @@ type Thow uint8
 const (
 	HSYNC Thow = iota + 1
 	HBUF
-	HASYNC
 )
 
 func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz sp.Tlength) sp.Tlength {
@@ -94,13 +93,6 @@ func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz
 		assert.Nil(t, err, "Error Create writer: %v", err)
 		err = test.Writer(t, w, buf, sz)
 		assert.Nil(t, err, "Err writer %v", err)
-		err = w.Close()
-		assert.Nil(t, err)
-	case HASYNC:
-		w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
-		assert.Nil(t, err, "Error Create writer: %v", err)
-		err = test.Writer(t, w, buf, sz)
-		assert.Nil(t, err)
 		err = w.Close()
 		assert.Nil(t, err)
 	}
@@ -139,15 +131,6 @@ func TestWriteFilePerfSingle(t *testing.T) {
 	defer p2.Done()
 	measure(p2, "bufwriter", func() sp.Tlength {
 		sz := newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
-		err := ts.Remove(fn)
-		assert.Nil(t, err)
-		return sz
-	})
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFWRITER)
-	assert.Nil(t, err)
-	defer p3.Done()
-	measure(p3, "abufwriter", func() sp.Tlength {
-		sz := newFile(t, ts.FsLib, fn, HASYNC, buf, FILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
@@ -221,27 +204,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	}
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFWRITER)
-	assert.Nil(t, err)
-	defer p3.Done()
-	start = time.Now()
-	for i := range fns {
-		go func(i int) {
-			n := measure(p3, "abufwriter", func() sp.Tlength {
-				sz := newFile(t, fsls[i], fns[i], HASYNC, buf, FILESZ)
-				err := ts.Remove(fns[i])
-				assert.Nil(t, err, "Remove err %v", err)
-				return sz
-			})
-			done <- n
-		}(i)
-	}
-	n = 0
-	for _ = range fns {
-		n += <-done
-	}
-	ms = time.Since(start).Milliseconds()
-	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+
 	ts.Shutdown()
 }
 

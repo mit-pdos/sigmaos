@@ -7,7 +7,6 @@ import (
 	"sync"
 	//	"time"
 
-	"sigmaos/awriter"
 	db "sigmaos/debug"
 	"sigmaos/fslib/reader"
 	"sigmaos/fslib/writer"
@@ -237,36 +236,23 @@ func (rd *fdReader) Read(off sp.Toffset, b []byte) (int, error) {
 
 type FileWriter struct {
 	wrt  *writer.Writer
-	awrt *awriter.Writer
 	bwrt *bufio.Writer
 }
 
 func (fl *FsLib) newFileWriter(fd int) *FileWriter {
 	w := writer.NewWriter(fl.FileAPI, fd)
-	return &FileWriter{w, nil, nil}
+	return &FileWriter{w, nil}
 }
 
 func (fl *FsLib) newBufFileWriter(fd int) *FileWriter {
 	w := writer.NewWriter(fl.FileAPI, fd)
 	bw := bufio.NewWriterSize(w, sp.BUFSZ)
-	return &FileWriter{w, nil, bw}
-}
-
-func (fl *FsLib) newBufAsyncFileWriter(fd int) *FileWriter {
-	w := writer.NewWriter(fl.FileAPI, fd)
-	aw := awriter.NewWriterSize(w, 4, sp.BUFSZ)
-	bw := bufio.NewWriterSize(aw, sp.BUFSZ)
-	return &FileWriter{w, aw, bw}
+	return &FileWriter{w, bw}
 }
 
 func (wrt *FileWriter) Close() error {
 	if wrt.bwrt != nil {
 		if err := wrt.bwrt.Flush(); err != nil {
-			return err
-		}
-	}
-	if wrt.awrt != nil {
-		if err := wrt.awrt.Close(); err != nil {
 			return err
 		}
 	}
@@ -317,14 +303,6 @@ func (fl *FsLib) OpenBufWriter(fname string, mode sp.Tmode) (*FileWriter, error)
 		return nil, err
 	}
 	return fl.newBufFileWriter(fd), nil
-}
-
-func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*FileWriter, error) {
-	fd, err := fl.Create(fname, perm, mode)
-	if err != nil {
-		return nil, err
-	}
-	return fl.newBufAsyncFileWriter(fd), nil
 }
 
 //

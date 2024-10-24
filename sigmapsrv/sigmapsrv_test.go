@@ -346,7 +346,7 @@ func TestParallelReadFile(t *testing.T) {
 			go func(i int) {
 				m := sp.Tlength(0)
 				for {
-					rdr, _, err := r.GetChunkReader(CHUNKSZ)
+					rdr, _, err := r.GetChunkReader(CHUNKSZ, CHUNKSZ)
 					if err != nil && err == io.EOF {
 						break
 					}
@@ -466,34 +466,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
-	assert.Nil(t, err)
-	defer p3.Done()
-	start = time.Now()
-	for i := range fns {
-		go func(i int) {
-			n := measure(p3, "readabuf", func() sp.Tlength {
-				n := sp.Tlength(0)
-				for j := 0; j < NTRIAL; j++ {
-					// XXX Fix
-					r, err := fsls[i].OpenAsyncReaderRegion(fns[i], 0, 0, nil, 5)
-					assert.Nil(t, err)
-					n2, err := test.Reader(t, r, buf, FILESZ)
-					assert.Nil(t, err)
-					n += n2
-					r.Close()
-				}
-				return n
-			})
-			done <- n
-		}(i)
-	}
-	n = 0
-	for _ = range fns {
-		n += <-done
-	}
-	ms = time.Since(start).Milliseconds()
-	db.DPrintf(db.ALWAYS, "Total tpt abufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+
 	ts.Shutdown()
 }
 

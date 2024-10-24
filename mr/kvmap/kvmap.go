@@ -25,6 +25,10 @@ func NewKVMap(mincap, maxcap int) *KVMap {
 	}
 }
 
+func (kvm *KVMap) Len() int {
+	return len(kvm.kvs)
+}
+
 func (kvm *KVMap) lookup(key []byte) *values {
 	k := unsafeutil.BytesToString(key)
 	if e, ok := kvm.kvs[k]; ok {

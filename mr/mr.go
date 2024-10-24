@@ -9,6 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/mr/mr"
 	sp "sigmaos/sigmap"
 )
 
@@ -20,18 +21,7 @@ func Khash(key []byte) int {
 	return int(h.Sum32() & 0x7fffffff)
 }
 
-// An input split
-type Split struct {
-	File   string     `json:"File"`
-	Offset sp.Toffset `json:"Offset"`
-	Length sp.Tlength `json:"Length"`
-}
-
-func (s Split) String() string {
-	return fmt.Sprintf("{f %s o %v l %v}", s.File, humanize.Bytes(uint64(s.Offset)), humanize.Bytes(uint64(s.Length)))
-}
-
-type Bin []Split
+type Bin []mr.Split
 
 func (b Bin) String() string {
 	if len(b) == 0 {
@@ -86,7 +76,7 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 			if i+n > st.LengthUint64() {
 				n = st.LengthUint64() - i
 			}
-			split := Split{dir + "/" + st.Name, sp.Toffset(i), sp.Tlength(n)}
+			split := mr.Split{dir + "/" + st.Name, sp.Toffset(i), sp.Tlength(n)}
 			bin = append(bin, split)
 			binsz += n
 			if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?

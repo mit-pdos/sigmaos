@@ -21,6 +21,9 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/mr"
+	"sigmaos/mr/chunkreader"
+	api "sigmaos/mr/mr"
+	mrscanner "sigmaos/mr/scanner"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
@@ -79,20 +82,24 @@ func TestWordSpanningChunk(t *testing.T) {
 	rdr1 := strings.NewReader(str[CKSZ:])
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.MRMAPPER)
 	assert.Nil(t, err)
-	s := &mr.Split{"x", 0, 10}
-	ckr := mr.NewChunkReader(200, wc.Reduce, p)
+	s := &api.Split{"x", 0, 10}
+	ckr := chunkreader.NewChunkReader(200, wc.Reduce, p)
 
 	ckr.DoChunk(rdr0, 0, s, wc.Map)
 	ckr.DoChunk(rdr1, 0, s, wc.Map)
 
-	// db.DPrintf(db.TEST, "kvmmap: %v", ckr.combined)
+	kvmap := ckr.KVMap()
+
+	db.DPrintf(db.TEST, "kvmmap: %v", kvmap)
+
+	assert.Equal(t, 2, kvmap.Len())
 
 	ts.Shutdown()
 }
 
 type Tdata map[string]uint64
 
-func wcline(n int, line string, data Tdata, sbc *mr.ScanByteCounter) (int, error) {
+func wcline(n int, line string, data Tdata, sbc *mrscanner.ScanByteCounter) (int, error) {
 	scanner := bufio.NewScanner(strings.NewReader(line))
 	scanner.Split(sbc.ScanWords)
 	cnt := 0
@@ -131,7 +138,7 @@ func TestSeqWc(t *testing.T) {
 	data := make(Tdata, 0)
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.SEQWC)
 	assert.Nil(t, err)
-	sbc := mr.NewScanByteCounter(p)
+	sbc := mrscanner.NewScanByteCounter(p)
 	for scanner.Scan() {
 		l := scanner.Text()
 		if len(l) > 0 {

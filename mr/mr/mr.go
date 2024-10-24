@@ -2,6 +2,11 @@ package mr
 
 import (
 	"bufio"
+	"fmt"
+
+	"github.com/dustin/go-humanize"
+
+	sp "sigmaos/sigmap"
 )
 
 // Map and reduce functions produce and consume KeyValue pairs
@@ -21,3 +26,14 @@ type ReduceT func(string, []string, EmitT) error
 // is passed in as an io.Reader.  The map function outputs its values
 // by calling an emit function and passing it a KeyValue.
 type MapT func(string, *bufio.Scanner, EmitT) error
+
+// An input split
+type Split struct {
+	File   string     `json:"File"`
+	Offset sp.Toffset `json:"Offset"`
+	Length sp.Tlength `json:"Length"`
+}
+
+func (s Split) String() string {
+	return fmt.Sprintf("{f %s o %v l %v}", s.File, humanize.Bytes(uint64(s.Offset)), humanize.Bytes(uint64(s.Length)))
+}

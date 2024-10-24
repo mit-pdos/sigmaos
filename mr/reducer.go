@@ -16,6 +16,7 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/mr/chunkreader"
 	"sigmaos/mr/kvmap"
 	"sigmaos/mr/mr"
 	"sigmaos/perf"
@@ -184,7 +185,7 @@ func (r *Reducer) readerMgr(req chan string, rep chan readResult, max int) {
 		mu.Unlock()
 		db.DPrintf(db.MR, "readerMgr: start %q", f)
 		go func(f string) {
-			kvm := kvmap.NewKVMap(MINCAP, MAXCAP)
+			kvm := kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP)
 			rr := readResult{f: f, kvm: kvm}
 			r.readFile(&rr)
 			rep <- rr
@@ -244,7 +245,7 @@ func (r *Reducer) emit(key []byte, value string) error {
 func (r *Reducer) DoReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", r.input, r.outlink, r.nmaptask)
 	rtot := readResult{
-		kvm:        kvmap.NewKVMap(MINCAP, MAXCAP),
+		kvm:        kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP),
 		mapsFailed: []string{},
 	}
 	if err := r.ReadFiles(&rtot); err != nil {

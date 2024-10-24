@@ -1,11 +1,8 @@
 package mr
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	// "runtime/debug"
@@ -18,7 +15,7 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/mr/kvmap"
+	"sigmaos/mr/chunkreader"
 	"sigmaos/mr/mr"
 	"sigmaos/perf"
 	"sigmaos/proc"
@@ -29,8 +26,6 @@ import (
 )
 
 const (
-	MAXCAP = 32
-	MINCAP = 4
 	// CONCURRENCY = 5
 	CONCURRENCY = 1
 )
@@ -52,27 +47,8 @@ type Mapper struct {
 	perf        *perf.Perf
 	asyncrw     bool
 	init        bool
-	ckrs        []*chunkReader
+	ckrs        []*chunkreader.ChunkReader
 	ch          chan error
-}
-
-type chunkReader struct {
-	sbc      *ScanByteCounter
-	buf      []byte
-	line     []byte
-	combinef mr.ReduceT
-	combined *kvmap.KVMap
-}
-
-func NewChunkReader(lsz int, combinef mr.ReduceT, p *perf.Perf) *chunkReader {
-	ckr := &chunkReader{
-		sbc:      NewScanByteCounter(p),
-		buf:      make([]byte, lsz),
-		line:     make([]byte, lsz),
-		combinef: combinef,
-		combined: kvmap.NewKVMap(MINCAP, MAXCAP),
-	}
-	return ckr
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string) (*Mapper, error) {
@@ -92,10 +68,10 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		pwrts:       make([]*perf.PerfWriter, nr),
 		perf:        p,
 		ch:          make(chan error),
-		ckrs:        make([]*chunkReader, CONCURRENCY),
+		ckrs:        make([]*chunkreader.ChunkReader, CONCURRENCY),
 	}
 	for i := 0; i < CONCURRENCY; i++ {
-		m.ckrs[i] = NewChunkReader(lsz, combinef, p)
+		m.ckrs[i] = chunkreader.NewChunkReader(lsz, combinef, p)
 	}
 	m.MountS3PathClnt()
 	go func() {
@@ -234,79 +210,15 @@ func (m *Mapper) Emit(key []byte, value string) error {
 func (m *Mapper) combineEmit() {
 	d := m.ckrs[0]
 	for _, ckr := range m.ckrs[1:] {
-		d.combined.Merge(ckr.combined, m.combinef)
+		d.MergeKVMap(ckr)
 	}
-	d.combineEmit(m.Emit)
-	d.combined = kvmap.NewKVMap(MINCAP, MAXCAP)
+	d.CombineEmit(m.Emit)
+	for _, ckr := range m.ckrs {
+		ckr.Reset()
+	}
 }
 
-func (ckr *chunkReader) combineEmit(emit mr.EmitT) error {
-	ckr.combined.Emit(ckr.combinef, emit)
-	ckr.combined = kvmap.NewKVMap(MINCAP, MAXCAP)
-	return nil
-}
-
-func (ckr *chunkReader) combine(key []byte, value string) error {
-	return ckr.combined.Combine(key, value, ckr.combinef)
-}
-
-// Process a chunk from the split in parallel
-func (ckr *chunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *Split, mapf mr.MapT) (sp.Tlength, error) {
-	scanner := bufio.NewScanner(rdr)
-	scanner.Buffer(ckr.buf, cap(ckr.buf))
-
-	// If this is first chunk from a split with an offset, advance
-	// scanner to new line after start
-	n := sp.Tlength(0)
-	if s.Offset != 0 && o == s.Offset {
-		scanner.Scan()
-		l := scanner.Bytes()
-		// +1 for newline, but -1 for the extra byte we read (off-- above)
-		n += sp.Tlength(len(l))
-		db.DPrintf(db.MR, "%v off %v skip %d\n", s.File, s.Offset, n)
-	}
-	lineRdr := bytes.NewReader([]byte{})
-	for scanner.Scan() {
-		l := scanner.Bytes()
-		n += sp.Tlength(len(l)) + 1 // 1 for newline  XXX or 2 if \r\n
-		if len(l) > 0 {
-			lineRdr.Reset(l)
-			scan := bufio.NewScanner(lineRdr)
-			scan.Buffer(ckr.line, cap(ckr.line))
-			scan.Split(ckr.sbc.ScanWords)
-			if err := mapf(s.File, scan, ckr.combine); err != nil {
-				return 0, err
-			}
-		}
-		if n >= s.Length {
-			db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
-			break
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return sp.Tlength(n), err
-	}
-	return n, nil
-}
-
-func (ckr *chunkReader) chunkReader(pfr *fslib.ParallelFileReader, s *Split, mapf mr.MapT) (sp.Tlength, error) {
-	t := sp.Tlength(0)
-	for {
-		rdr, o, err := pfr.GetChunkReader(cap(ckr.buf))
-		if err != nil && err == io.EOF {
-			break
-		}
-		n, err := ckr.DoChunk(rdr, o, s, mapf)
-		t += n
-		if err != nil {
-			return t, err
-		}
-	}
-	return t, nil
-}
-
-func (m *Mapper) doSplit(s *Split) (sp.Tlength, error) {
+func (m *Mapper) doSplit(s *mr.Split) (sp.Tlength, error) {
 	pn, ok := sp.S3ClientPath(s.File)
 	if ok {
 		s.File = pn
@@ -338,8 +250,8 @@ func (m *Mapper) doSplit(s *Split) (sp.Tlength, error) {
 
 	ch := make(chan result)
 	for _, ckr := range m.ckrs {
-		go func(ckr *chunkReader) {
-			n, err := ckr.chunkReader(pfr, s, m.mapf)
+		go func(ckr *chunkreader.ChunkReader) {
+			n, err := ckr.ChunkReader(pfr, s, m.mapf)
 			ch <- result{n, err}
 		}(ckr)
 	}

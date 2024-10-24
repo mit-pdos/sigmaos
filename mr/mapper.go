@@ -212,10 +212,12 @@ func (m *Mapper) Emit(key []byte, value string) error {
 }
 
 func (m *Mapper) combineEmit() {
+	s := time.Now()
 	d := m.ckrs[0]
 	for _, ckr := range m.ckrs[1:] {
 		d.MergeKVMap(ckr)
 	}
+	db.DPrintf(db.TEST, "combineEmit: %v", time.Since(s))
 	d.CombineEmit(m.Emit)
 	for _, ckr := range m.ckrs {
 		ckr.Reset()

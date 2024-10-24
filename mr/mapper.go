@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	// CONCURRENCY = 5
-	CONCURRENCY = 1
+	CONCURRENCY = 5
+	// CONCURRENCY = 1
 )
 
 type Mapper struct {

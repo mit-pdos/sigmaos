@@ -95,7 +95,7 @@ func (ckr *ChunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *mr.Split, mapf m
 			l = l[start:]
 		}
 		if l0 > 1 {
-			if n+l0 >= e {
+			if n+l0 > e {
 				start := int(e - n)
 				// go back to linesz in l; scan forward to seperator
 				end, err := mrscanner.ScanSeperator(l[start:])

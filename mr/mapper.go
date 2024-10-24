@@ -18,6 +18,8 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/mr/kvmap"
+	"sigmaos/mr/mr"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -35,8 +37,8 @@ const (
 
 type Mapper struct {
 	*sigmaclnt.SigmaClnt
-	mapf        MapT
-	combinef    ReduceT
+	mapf        mr.MapT
+	combinef    mr.ReduceT
 	jobRoot     string
 	job         string
 	nreducetask int
@@ -58,22 +60,22 @@ type chunkReader struct {
 	sbc      *ScanByteCounter
 	buf      []byte
 	line     []byte
-	combinef ReduceT
-	combined *kvmap
+	combinef mr.ReduceT
+	combined *kvmap.KVMap
 }
 
-func NewChunkReader(lsz int, combinef ReduceT, p *perf.Perf) *chunkReader {
+func NewChunkReader(lsz int, combinef mr.ReduceT, p *perf.Perf) *chunkReader {
 	ckr := &chunkReader{
 		sbc:      NewScanByteCounter(p),
 		buf:      make([]byte, lsz),
 		line:     make([]byte, lsz),
 		combinef: combinef,
-		combined: newKvmap(MINCAP, MAXCAP),
+		combined: kvmap.NewKVMap(MINCAP, MAXCAP),
 	}
 	return ckr
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string) (*Mapper, error) {
 	m := &Mapper{
 		SigmaClnt:   sc,
 		mapf:        mapf,
@@ -102,7 +104,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 	return m, nil
 }
 
-func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
+func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
 
 	if len(args) != 6 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
@@ -232,24 +234,24 @@ func (m *Mapper) Emit(key []byte, value string) error {
 func (m *Mapper) combineEmit() {
 	d := m.ckrs[0]
 	for _, ckr := range m.ckrs[1:] {
-		d.combined.merge(ckr.combined, m.combinef)
+		d.combined.Merge(ckr.combined, m.combinef)
 	}
 	d.combineEmit(m.Emit)
-	d.combined = newKvmap(MINCAP, MAXCAP)
+	d.combined = kvmap.NewKVMap(MINCAP, MAXCAP)
 }
 
-func (ckr *chunkReader) combineEmit(emit EmitT) error {
-	ckr.combined.emit(ckr.combinef, emit)
-	ckr.combined = newKvmap(MINCAP, MAXCAP)
+func (ckr *chunkReader) combineEmit(emit mr.EmitT) error {
+	ckr.combined.Emit(ckr.combinef, emit)
+	ckr.combined = kvmap.NewKVMap(MINCAP, MAXCAP)
 	return nil
 }
 
 func (ckr *chunkReader) combine(key []byte, value string) error {
-	return ckr.combined.combine(key, value, ckr.combinef)
+	return ckr.combined.Combine(key, value, ckr.combinef)
 }
 
 // Process a chunk from the split in parallel
-func (ckr *chunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *Split, mapf MapT) (sp.Tlength, error) {
+func (ckr *chunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *Split, mapf mr.MapT) (sp.Tlength, error) {
 	scanner := bufio.NewScanner(rdr)
 	scanner.Buffer(ckr.buf, cap(ckr.buf))
 
@@ -282,15 +284,13 @@ func (ckr *chunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *Split, mapf MapT
 		}
 	}
 
-	db.DPrintf(db.TEST, "kvmmap: %v", ckr.combined)
-
 	if err := scanner.Err(); err != nil {
 		return sp.Tlength(n), err
 	}
 	return n, nil
 }
 
-func (ckr *chunkReader) chunkReader(pfr *fslib.ParallelFileReader, s *Split, mapf MapT) (sp.Tlength, error) {
+func (ckr *chunkReader) chunkReader(pfr *fslib.ParallelFileReader, s *Split, mapf mr.MapT) (sp.Tlength, error) {
 	t := sp.Tlength(0)
 	for {
 		rdr, o, err := pfr.GetChunkReader(cap(ckr.buf))
@@ -391,7 +391,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 	return ni, nout, obin, nil
 }
 
-func RunMapper(mapf MapT, combinef ReduceT, args []string) {
+func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
 	execTimeStr := os.Getenv("SIGMA_EXEC_TIME")

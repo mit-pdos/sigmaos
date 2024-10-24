@@ -1,10 +1,12 @@
-package mr
+package kvmap
 
 import (
 	"github.com/fmstephe/unsafeutil"
+
+	"sigmaos/mr/mr"
 )
 
-type kvmap struct {
+type KVMap struct {
 	mincap int
 	maxcap int
 	kvs    map[string]*values
@@ -15,15 +17,15 @@ type values struct {
 	vs []string
 }
 
-func newKvmap(mincap, maxcap int) *kvmap {
-	return &kvmap{
+func NewKVMap(mincap, maxcap int) *KVMap {
+	return &KVMap{
 		mincap: mincap,
 		maxcap: maxcap,
 		kvs:    make(map[string]*values),
 	}
 }
 
-func (kvm kvmap) lookup(key []byte) *values {
+func (kvm *KVMap) lookup(key []byte) *values {
 	k := unsafeutil.BytesToString(key)
 	if e, ok := kvm.kvs[k]; ok {
 		return e
@@ -37,7 +39,7 @@ func (kvm kvmap) lookup(key []byte) *values {
 	return v
 }
 
-func (kvm *kvmap) combine(key []byte, value string, combinef ReduceT) error {
+func (kvm *KVMap) Combine(key []byte, value string, combinef mr.ReduceT) error {
 	e := kvm.lookup(key)
 	if err := e.combine(value, combinef, kvm.maxcap); err != nil {
 		return err
@@ -45,7 +47,7 @@ func (kvm *kvmap) combine(key []byte, value string, combinef ReduceT) error {
 	return nil
 }
 
-func (kvm *kvmap) emit(combinef ReduceT, emit EmitT) error {
+func (kvm *KVMap) Emit(combinef mr.ReduceT, emit mr.EmitT) error {
 	for k, e := range kvm.kvs {
 		if err := combinef(k, e.vs, emit); err != nil {
 			return err
@@ -54,7 +56,7 @@ func (kvm *kvmap) emit(combinef ReduceT, emit EmitT) error {
 	return nil
 }
 
-func (dst *kvmap) merge(src *kvmap, combinef ReduceT) {
+func (dst *KVMap) Merge(src *KVMap, combinef mr.ReduceT) {
 	for k, e := range src.kvs {
 		k0 := unsafeutil.StringToBytes(k)
 		d := dst.lookup(k0)
@@ -64,7 +66,7 @@ func (dst *kvmap) merge(src *kvmap, combinef ReduceT) {
 	}
 }
 
-func (e *values) combine(value string, combinef ReduceT, maxcap int) error {
+func (e *values) combine(value string, combinef mr.ReduceT, maxcap int) error {
 	if len(e.vs)+1 >= maxcap {
 		e.vs = append(e.vs, value)
 		if err := combinef(e.k, e.vs, func(key []byte, val string) error {

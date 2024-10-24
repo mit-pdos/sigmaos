@@ -67,6 +67,29 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 7, mr.Khash([]byte("absently"))%8)
 }
 
+func TestWordSpanningChunk(t *testing.T) {
+	const CKSZ = 8
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	str := "01234 56789 01234"
+	rdr0 := strings.NewReader(str[0:CKSZ])
+	rdr1 := strings.NewReader(str[CKSZ:])
+	p, err := perf.NewPerf(ts.ProcEnv(), perf.MRMAPPER)
+	assert.Nil(t, err)
+	s := &mr.Split{"x", 0, 10}
+	ckr := mr.NewChunkReader(200, wc.Reduce, p)
+
+	ckr.DoChunk(rdr0, 0, s, wc.Map)
+	ckr.DoChunk(rdr1, 0, s, wc.Map)
+
+	// db.DPrintf(db.TEST, "kvmmap: %v", ckr.combined)
+
+	ts.Shutdown()
+}
+
 type Tdata map[string]uint64
 
 func wcline(n int, line string, data Tdata, sbc *mr.ScanByteCounter) (int, error) {

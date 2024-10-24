@@ -90,16 +90,14 @@ func (ckr *ChunkReader) DoChunk(rdr io.Reader, o sp.Toffset, s *mr.Split, mapf m
 		// one of chunk, skip to separator
 		if skip {
 			skip = false
-			start, err := mrscanner.ScanSeperator(l)
-			db.DPrintf(db.MR, "skip: %d err %v l: %v", start, err, string(l[0:start]))
+			start, _ := mrscanner.ScanSeperator(l)
 			l = l[start:]
 		}
 		if l0 > 1 {
 			if n+l0 > e {
+				// scan to first separator beyond linesz
 				start := int(e - n)
-				// go back to linesz in l; scan forward to seperator
-				end, err := mrscanner.ScanSeperator(l[start:])
-				db.DPrintf(db.MR, "eol: extra %d (start %d) err %v l: %v", end, start, err, string(l[start:start+end]))
+				end, _ := mrscanner.ScanSeperator(l[start:])
 				l = l[0 : start+end]
 
 			}

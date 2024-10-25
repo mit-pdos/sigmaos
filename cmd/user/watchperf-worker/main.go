@@ -12,7 +12,7 @@ func main() {
 		db.DFatalf("Usage: %v id ntrials watchdir responsedir tempdir\n", os.Args[0])
 	}
 
-	w, err := watch.NewPerfWorker(os.Args[1:])
+	w, err := watch.NewWorker(os.Args[1:])
 	if err != nil {
 		db.DFatalf("%v: err %v", os.Args[0], err)
 	}

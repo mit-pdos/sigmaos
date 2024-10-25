@@ -51,6 +51,7 @@ func NewTestWorker(args []string) (*TestWorker, error) {
 
 func (w *TestWorker) Run() {
 	idFilePath := filepath.Join(w.readyDir, w.id)
+	db.DPrintf(db.WATCH_TEST, "RunWorker %s: creating id file path %s", w.id, idFilePath)
 	idFileFd, err := w.Create(idFilePath, 0777, sigmap.OAPPEND)
 	if err != nil {
 		db.DFatalf("RunWorker %s: failed to create id file %v", w.id, err)
@@ -68,6 +69,7 @@ func (w *TestWorker) Run() {
 		db.DFatalf("RunWorker %s: failed to create dir watcher for %s: %v", w.id, w.workDir, err)
 	}
 
+	db.DPrintf(db.WATCH_TEST, "RunWorker %s: summing initial files %v", w.id, initFiles)
 	for _, file := range initFiles {
 		if !seen[file] {
 			sum += w.readFile(filepath.Join(w.workDir, file))
@@ -77,6 +79,7 @@ func (w *TestWorker) Run() {
 		}
 	}
 	for {
+		db.DPrintf(db.WATCH_TEST, "RunWorker %s: waiting for files", w.id)
 		changed, err := dirWatcher.WatchEntriesChanged()
 		if err != nil {
 			db.DFatalf("RunWorker %s: failed to watch for entries changed %v", w.id, err)

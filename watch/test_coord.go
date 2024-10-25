@@ -88,6 +88,7 @@ func (c *TestCoord) Run() {
 				db.DFatalf("Run: running %d failed %v", ix, err)
 			}
 
+			db.DPrintf(db.WATCH_TEST, "Run: got sum for worker %d", ix)
 			sums[ix] = uint64(status.Data().(float64))
 		}(ix)
 	}
@@ -96,15 +97,18 @@ func (c *TestCoord) Run() {
 	if err != nil {
 		db.DFatalf("Run: failed to create dir watcher for ready dir %v", err)
 	}
+	db.DPrintf(db.WATCH_TEST, "Run: waiting for %d workers", c.nWorkers)
 	err = dirWatcher.WaitNEntries(c.nWorkers)
 	if err != nil {
 		db.DFatalf("Run: failed to wait for all procs to be ready %v", err)
 	}
 	err = dirWatcher.Close()
+	db.DPrintf(db.WATCH_TEST, "Run: all workers ready")
 	if err != nil {
 		db.DFatalf("Run: failed to close watcher %v", err)
 	}
 
+	db.DPrintf(db.WATCH_TEST, "Run: creating %d files", c.nFiles)
 	sum := uint64(0)
 	for ix := 0; ix < c.nFiles; ix++ {
 		randInt := rand.Int64(1000000)

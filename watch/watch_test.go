@@ -2,6 +2,7 @@ package watch_test
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"sigmaos/proc"
 	"sigmaos/test"
@@ -91,8 +92,27 @@ func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, 
 	}
 	averageDeletionDelay /= float64(nTrials * nWorkers)
 
-	fmt.Printf("Creation Delays:\n  Avg: %f us\n  Max: %f us\n  Min: %f us\n", averageCreationDelay / 1000.0, float64(maxCreationDelay) / 1000.0, float64(minCreationDelay) / 1000.0)
-	fmt.Printf("Deletion Delays:\n  Avg: %f us\n  Max: %f us\n  Min: %f us\n", averageDeletionDelay / 1000.0, float64(maxDeletionDelay) / 1000.0, float64(minDeletionDelay) / 1000.0)
+	// calculate stddev
+	creationStddev := float64(0)
+	for trial := 0; trial < nTrials; trial++ {
+		for worker := 0; worker < nWorkers; worker++ {
+			creationStddev += math.Pow(float64(creationDelays[trial][worker].Nanoseconds()) - averageCreationDelay, 2)
+		}
+	}
+	creationStddev /= float64(nTrials * nWorkers)
+	creationStddev = math.Sqrt(creationStddev)
+
+	deletionStddev := float64(0)
+	for trial := 0; trial < nTrials; trial++ {
+		for worker := 0; worker < nWorkers; worker++ {
+			deletionStddev += math.Pow(float64(deletionDelays[trial][worker].Nanoseconds()) - averageDeletionDelay, 2)
+		}
+	}
+	deletionStddev /= float64(nTrials * nWorkers)
+	deletionStddev = math.Sqrt(deletionStddev)
+
+	fmt.Printf("Creation Delays:\n  Avg: %f us\n  Max: %f us\n  Min: %f us\n  Stddev: %f us\n", averageCreationDelay / 1000.0, float64(maxCreationDelay) / 1000.0, float64(minCreationDelay) / 1000.0, creationStddev / 1000.0)
+	fmt.Printf("Deletion Delays:\n  Avg: %f us\n  Max: %f us\n  Min: %f us\n  Stddev: %f us\n", averageDeletionDelay / 1000.0, float64(maxDeletionDelay) / 1000.0, float64(minDeletionDelay) / 1000.0, deletionStddev / 1000.0)
 
 	s3Filepath := filepath.Join("name/s3/~any/sigmaos-bucket-ryan/", fmt.Sprintf("watchperf_%s_%s.txt", prefix, time.Now().String()))
 	fd, err := ts.Create(s3Filepath, 0777, sp.OWRITE)

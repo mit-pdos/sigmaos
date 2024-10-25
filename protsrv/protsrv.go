@@ -185,6 +185,14 @@ func (ps *ProtSrv) clunkWatch(fid sp.Tfid) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Clunk watch %v f %v path %q", f.Pobj().Ctx().ClntId(), fid, f, f.Pobj().Pathname())
+	if f.watch != nil {
+		f.watch.pl.Lock()
+		ps.wtv2.FreeWatch(f.watch, f)
+		f.watch.pl.Unlock()
+	} else {
+		db.DFatalf("%v: clunk watch %v f %v watch nil\n", f.Pobj().Ctx().ClntId(), fid, f)
+	}
+
 	if _, err := ps.vt.Delete(f.Pobj().Obj().Path()); err != nil {
 		db.DFatalf("%v: clunk watch %v vt del failed %v err %v\n", f.Pobj().Ctx().ClntId(), fid, f.Pobj(), err)
 	}
@@ -284,11 +292,14 @@ func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
 	pl := ps.plt.Acquire(dirf.Pobj().Ctx(), pn, lockmap.WLOCK)
 	defer ps.plt.Release(dirf.Pobj().Ctx(), pl, lockmap.WLOCK)
 
-	err = ps.fwm.Insert(args.Twatchfid(), newFidWatch(dirf.Pobj(), dirf.qid))
+	fidWatch := newFidWatch(dirf.Pobj(), dirf.qid)
+
+	err = ps.fwm.Insert(args.Twatchfid(), fidWatch)
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
 
+	ps.wtv2.AllocWatch(pl, fidWatch)
 	ps.vt.Insert(dirf.qid.Tpath())
 
 	// TODO: do we need this?
@@ -318,15 +329,35 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 }
 
 func (ps *ProtSrv) ReadFWatch(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
-	_, err := ps.fwm.Lookup(args.Tfid())
+	fidWatch, err := ps.fwm.Lookup(args.Tfid())
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
-	rets.Count = 100
-	buf := make([]byte, 100)
-	buf[0] = 'a'
-	buf[1] = 'b'
-	buf[2] = 'c'
+	events := fidWatch.GetEvents()
+	maxCount := args.Count
+	buf := make([]byte, 0)
+
+	maxIxReached := -1
+	offset := uint32(0)
+	for ix, event := range events {
+		db.DPrintf(db.WATCH_NEW, "ReadFWatch event %v\n", event)
+		str := []byte(event + "\n")
+		if offset + uint32(len(str)) > maxCount {
+			break
+		}
+
+		maxIxReached = ix
+		buf = append(buf, str...)
+		offset += uint32(len(str))
+	}
+
+	if maxIxReached >= 0 {
+		fidWatch.events = events[maxIxReached+1:]
+	}
+
+	// TODO handle edge case where buffer isn't large enough to hold a single event
+
+	rets.Count = uint32(len(buf))
 	return buf, nil
 }
 

@@ -2,7 +2,6 @@ package fslib
 
 import (
 	"bufio"
-	"fmt"
 	"maps"
 	"path/filepath"
 	"slices"
@@ -13,153 +12,6 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
-
-var mutex sync.Mutex
-var watchLookup map[int]string = make(map[int]string)
-var maxId int
-
-var prevFiles map[int][]string = make(map[int][]string)
-var toSend map[int][]byte = make(map[int][]byte)
-
-func (fsl *FsLib) read_(fd int, bytes []byte) (sp.Tsize, error) {
-	mutex.Lock()
-	dir, ok := watchLookup[fd]
-	if !ok {
-		defer mutex.Unlock()
-		return 0, fmt.Errorf("fd %d not found %v", fd, watchLookup)
-	}
-	mutex.Unlock()
-
-	bufLen := len(bytes)
-
-	mutex.Lock()
-	toSendForFd, ok := toSend[fd]
-	if ok && len(toSendForFd) > 0 {
-		toSend[fd] = toSendForFd[min(bufLen, len(toSendForFd)):]
-		numCopied := copy(bytes, toSendForFd)
-		mutex.Unlock()
-		return sp.Tsize(numCopied), nil
-	}
-	mutex.Unlock()
-
-	for {
-		sts, rdr, err := fsl.ReadDir(dir)
-		for _, st := range sts {
-			if strings.HasPrefix(st.Name, "trial") {
-				db.DPrintf("read_: st: %v", st.Name)
-			}
-		}
-		if err != nil {
-			return 0, err
-		}
-		currFilesSet := make(map[string]bool)
-		for _, st := range sts {
-			currFilesSet[st.Name] = true
-		}
-		currFiles := make([]string, 0)
-		for file := range currFilesSet {
-			currFiles = append(currFiles, file)
-		}
-
-		prevFilesForFd, ok := prevFiles[fd]
-		if !ok {
-			db.DPrintf(db.WATCH_NEW, "read_: No prev view of directory found, no changes computed")
-			prevFiles[fd] = currFiles
-			continue
-		}
-
-		addedFiles := make([]string, 0)
-		deletedFiles := make([]string, 0)
-
-		for _, prevFile := range prevFilesForFd {
-			found := false
-			for _, currFile := range currFiles {
-				if prevFile == currFile {
-					found = true
-				}
-			}
-
-			if strings.HasPrefix(prevFile, "trial") {
-				db.DPrintf(db.WATCH_NEW, "read_: found in prev %v", prevFile)
-			}
-
-			if !found {
-				deletedFiles = append(deletedFiles, prevFile)
-			}
-		}
-
-		for _, currFile := range currFiles {
-			found := false
-			for _, prevFile := range prevFilesForFd {
-				if prevFile == currFile {
-					found = true
-				}
-			}
-
-			if strings.HasPrefix(currFile, "trial") {
-				db.DPrintf(db.WATCH_NEW, "read_: found in curr %v", currFile)
-			}
-
-			if !found {
-				addedFiles = append(addedFiles, currFile)
-			}
-		}
-
-		// if no changes, wait for changes and try again
-		if len(addedFiles) + len(deletedFiles) == 0 {
-			if err := fsl.DirWatch(rdr.fd); err != nil {
-				if serr.IsErrCode(err, serr.TErrVersion) {
-					db.DPrintf(db.WATCH_NEW, "read_: Version mismatch %v", dir)
-					continue
-				}
-				return 0, err
-			}
-			continue
-		}
-
-		sendString := ""
-		for _, addedFile := range addedFiles {
-			sendString += CREATE_PREFIX + addedFile + "\n"
-		}
-		for _, deletedFiles := range deletedFiles {
-			sendString += REMOVE_PREFIX + deletedFiles + "\n"
-		}
-
-		db.DPrintf(db.WATCH_NEW, "read_: computed changes %s", sendString)
-
-		prevFiles[fd] = make([]string, len(currFiles))
-		copy(prevFiles[fd], currFiles)
-		sendBytes := []byte(sendString)
-
-		// limited by size of buffer
-		numCopied := copy(bytes, sendBytes)
-
-		// store everything else to be sent upon the next read
-		toSend[fd] = append(toSendForFd, sendBytes[min(bufLen, len(sendBytes)):]...)
-
-		db.DPrintf(db.WATCH_NEW, "read_: wrote %s to buffer (%d bytes), %s is stored to send later", string(bytes[:numCopied]), numCopied, string(toSend[fd]))
-		return sp.Tsize(numCopied), nil
-	}
-}
-
-func (fsl *FsLib) close_(fd int) error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	delete(watchLookup, fd)
-	return nil
-}
-
-func (fsl *FsLib) dirWatch_(dir string) (int, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	id := maxId
-	watchLookup[id] = dir
-	prevFiles[id] = make([]string, 0)
-	maxId += 1
-	return id, nil
-}
 
 type Fwatch_ func(ents map[string] bool, changes map[string] bool) bool
 
@@ -180,7 +32,7 @@ type watchReader struct {
 }
 
 func (wr watchReader) Read(p []byte) (int, error) {
-	size, err := wr.read_(wr.watchFd, p)
+	size, err := wr.FsLib.Read(wr.watchFd, p)
 	return int(size), err
 }
 
@@ -190,7 +42,11 @@ var REMOVE_PREFIX = "REMOVE "
 func NewDirWatcher(fslib *FsLib, pn string) (*DirWatcher, []string, error) {
 	db.DPrintf(db.WATCH_NEW, "Creating new watch on %s", pn)
 
-	watchFd, err := fslib.dirWatch_(pn)
+	fd, err := fslib.Open(pn, sp.OREAD)
+	if err != nil {
+		return nil, nil, err
+	}
+	watchFd, err := fslib.DirWatchV2(fd)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -298,12 +154,12 @@ func (dw *DirWatcher) GetDir() []string {
 
 func (dw *DirWatcher) Close() error {
 	dw.closed = true
-	return dw.close_(dw.watchFd)
+	return dw.CloseFd(dw.watchFd)
 }
 
 // Keep reading dir until wait returns false (e.g., a new file has
 // been created in dir).
-func (dw *DirWatcher) readDirWatch_(watch Fwatch_) error {
+func (dw *DirWatcher) readDirWatch(watch Fwatch_) error {
 	dw.Lock()
 	for watch(dw.ents, dw.changes) {
 		clear(dw.changes)
@@ -317,7 +173,7 @@ func (dw *DirWatcher) readDirWatch_(watch Fwatch_) error {
 
 // Wait until pn isn't present
 func (dw *DirWatcher) WaitRemove(file string) error {
-	err := dw.readDirWatch_(func(ents map[string] bool, changes map[string]bool) bool {
+	err := dw.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
 		db.DPrintf(db.WATCH_NEW, "WaitRemove %v %v\n", ents, file)
 		return ents[file]
 	})
@@ -326,7 +182,7 @@ func (dw *DirWatcher) WaitRemove(file string) error {
 
 // Wait until pn exists
 func (dw *DirWatcher) WaitCreate(file string) error {
-	err := dw.readDirWatch_(func(ents map[string] bool, changes map[string]bool) bool {
+	err := dw.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
 		db.DPrintf(db.WATCH_NEW, "WaitCreate %v %v %t\n", ents, file, ents[file])
 		return !ents[file]
 	})
@@ -335,7 +191,7 @@ func (dw *DirWatcher) WaitCreate(file string) error {
 
 // Wait until n entries are in the directory
 func (dw *DirWatcher) WaitNEntries(n int) error {
-	err := dw.readDirWatch_(func(ents map[string]bool, changes map[string]bool) bool {
+	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		db.DPrintf(db.WATCH_NEW, "WaitNEntries: %v %v", ents, changes)
 		return len(filterMap(ents)) < n
 	})
@@ -347,7 +203,7 @@ func (dw *DirWatcher) WaitNEntries(n int) error {
 
 // Wait until direcotry is empty
 func (dw *DirWatcher) WaitEmpty() error {
-	err := dw.readDirWatch_(func(ents map[string]bool, changes map[string]bool) bool {
+	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		db.DPrintf(db.WATCH_NEW, "WaitEmpty: %v %v", ents, changes)
 		return len(filterMap(ents)) > 0
 	})
@@ -363,7 +219,7 @@ func (dw *DirWatcher) WaitEmpty() error {
 func (dw *DirWatcher) WatchEntriesChangedRelativeFiltered(present []string, excludedPrefixes []string) ([]string, error) {
 	var files = make([]string, 0)
 	ix := 0
-	err := dw.readDirWatch_(func(ents map[string]bool, changes map[string]bool) bool {
+	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		unchanged := true
 		filesPresent := filterMap(ents)
 		slices.Sort(filesPresent)
@@ -403,7 +259,7 @@ func (dw *DirWatcher) WatchEntriesChangedRelative(present []string) ([]string, e
 // Watch for a directory change and then only return new changes since the last call to a Watch
 func (dw *DirWatcher) WatchEntriesChanged() (map[string]bool, error) {
 	var ret map[string]bool
-	err := dw.readDirWatch_(func(ents map[string]bool, changes map[string]bool) bool {
+	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		if len(changes) > 0 {
 			ret = maps.Clone(changes)
 			return false
@@ -429,7 +285,7 @@ func (dw *DirWatcher) WatchEntriesAndRename(dst string) ([]string, error) {
 	}
 
 	var movedEnts []string
-	err := dw.readDirWatch_(func(ents map[string]bool, changes map[string]bool) bool {
+	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		movedEnts, r = dw.rename(filterMap(changes), dst)
 		if r != nil || len(movedEnts) > 0 {
 			return false

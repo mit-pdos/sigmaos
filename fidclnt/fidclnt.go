@@ -243,7 +243,6 @@ func (fidc *FidClnt) WatchV2(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	db.DPrintf(db.FIDCLNT, "WatchV2 %v %v\n", fid, watchfid)
 	_, err := ch.pc.WatchV2(fid, watchfid)
 	if err != nil {
-		// TODO: should we keep this if it does nothing?
 		fidc.freeFid(watchfid)
 		return 0, err
 	}

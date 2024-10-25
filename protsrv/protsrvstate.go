@@ -17,6 +17,7 @@ import (
 type ProtSrvState struct {
 	plt   *lockmap.PathLockTable
 	wt    *watch.WatchTable
+	wtv2  *WatchTableV2
 	vt    *version.VersionTable
 	stats *stats.StatInode
 	lm    *leasedmap.LeasedMap
@@ -31,6 +32,7 @@ func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 		plt:   lockmap.NewPathLockTable(),
 		cct:   cct,
 		wt:    watch.NewWatchTable(cct),
+		wtv2:  NewWatchTableV2(),
 		vt:    version.NewVersionTable(),
 	}
 	return pss
@@ -82,6 +84,7 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	if err == nil {
 		pss.vt.IncVersion(d.Path())
 		pss.wt.WakeupWatch(dlk)
+		pss.wtv2.AddCreateEvent(dlk, name)
 		return o1, flk, nil
 	} else {
 		pss.plt.Release(ctx, flk, lockmap.WLOCK)
@@ -157,6 +160,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 	pss.vt.IncVersion(o.Parent().Path())
 
 	pss.wt.WakeupWatch(dlk)
+	pss.wtv2.AddRemoveEvent(dlk, name)
 
 	if leased && pss.lm != nil {
 		if ok := pss.lm.Delete(path.String()); !ok {
@@ -169,6 +173,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 }
 
 func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err {
+	oldname := po.Pathname().Base()
 	dst := po.Pathname().Dir().Copy().AppendPath(path.Split(name))
 	dlk, slk := pss.plt.AcquireLocks(po.Ctx(), po.Pathname().Dir(), po.Pathname().Base(), lockmap.WLOCK)
 	defer pss.plt.ReleaseLocks(po.Ctx(), dlk, slk, lockmap.WLOCK)
@@ -181,7 +186,11 @@ func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err
 	}
 	pss.vt.IncVersion(po.Obj().Path())
 	pss.vt.IncVersion(po.Obj().Parent().Path())
+
 	pss.wt.WakeupWatch(dlk)
+	pss.wtv2.AddRemoveEvent(dlk, oldname)
+	pss.wtv2.AddCreateEvent(dlk, name)
+
 	if po.Obj().IsLeased() && pss.lm != nil {
 		pss.lm.Rename(po.Pathname().String(), dst.String())
 	}
@@ -229,5 +238,9 @@ func (pss *ProtSrvState) RenameAtObj(old, new *Pobj, dold, dnew fs.Dir, oldname,
 
 	pss.wt.WakeupWatch(d1lk) // trigger one dir watch
 	pss.wt.WakeupWatch(d2lk) // trigger the other dir watch
+
+	pss.wtv2.AddRemoveEvent(d1lk, oldname)
+	pss.wtv2.AddCreateEvent(d2lk, newname)
+
 	return nil
 }

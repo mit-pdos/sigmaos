@@ -5,6 +5,7 @@ import (
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,10 +28,20 @@ func TestSend(t *testing.T) {
 	watchfd, err := ts.DirWatchV2(fd)
 	assert.Nil(t, err)
 
+	go func() {
+		_, err := ts.Create(filepath.Join(testdir, "testfile" + strconv.Itoa(0)), 0777, sp.OWRITE)
+		assert.Nil(t, err)
+	}()
+
 	b := make([]byte, 1000)
+	db.DPrintf(db.WATCH_NEW, "Reading watchfd %v", watchfd)
 	sz, err := ts.Read(watchfd, b)
 	assert.Nil(t, err)
-	db.DPrintf(db.WATCH, "Read %v bytes: %s", sz, b[:sz])
+	db.DPrintf(db.WATCH_NEW, "Read %v bytes: %s", sz, b[:sz])
+	db.DPrintf(db.WATCH_NEW, "%v", b)
+
+	ts.RmDirEntries(testdir)
+	assert.Nil(t, err)
 
 	err = ts.RmDir(testdir)
 	assert.Nil(t, err)

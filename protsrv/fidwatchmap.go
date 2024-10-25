@@ -34,6 +34,7 @@ func (fm *fidWatchMap) LookupDel(fid sp.Tfid) (*FidWatch, *serr.Err) {
 }
 
 func (fm *fidWatchMap) Insert(fid sp.Tfid, f *FidWatch) *serr.Err {
+	db.DPrintf(db.WATCH_NEW, "Insert fid %v f %v\n", fid, f)
 	if ok := fm.fidWatches.Insert(fid, f); !ok {
 		f1, _ := fm.fidWatches.Lookup(fid)
 		db.DPrintf(db.ERROR, "Insert err %v %v %v\n", fid, f, f1)

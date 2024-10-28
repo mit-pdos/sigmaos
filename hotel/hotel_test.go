@@ -34,7 +34,10 @@ var cache string
 var TEST_AUTH bool
 
 const (
-	NCACHESRV = 6
+	NCACHESRV             = 6
+	DEF_GEO_N_IDX         = 1000
+	DEF_GEO_SEARCH_RADIUS = 10
+	DEF_GEO_N_RESULTS     = 5
 )
 
 func init() {
@@ -51,7 +54,7 @@ type Tstate struct {
 	hotel *hotel.HotelJob
 }
 
-func newTstate(t1 *test.Tstate, srvs []*hotel.Srv, nserver int) *Tstate {
+func newTstate(t1 *test.Tstate, srvs []*hotel.Srv, nserver int, geoNIndex, geoSearchRadius, geoNResults int) *Tstate {
 	var err error
 	ts := &Tstate{}
 	ts.job = rd.String(8)
@@ -62,7 +65,7 @@ func newTstate(t1 *test.Tstate, srvs []*hotel.Srv, nserver int) *Tstate {
 	}
 	err = ts.BootNode(n)
 	assert.Nil(ts.T, err)
-	ts.hotel, err = hotel.NewHotelJob(ts.SigmaClnt, ts.job, srvs, 80, cache, proc.Tmcpu(2000), nserver, true, 0, 1, 10)
+	ts.hotel, err = hotel.NewHotelJob(ts.SigmaClnt, ts.job, srvs, 80, cache, proc.Tmcpu(2000), nserver, true, 0, 1, geoNIndex, geoSearchRadius, geoNResults)
 	assert.Nil(ts.T, err)
 	return ts
 }
@@ -107,7 +110,7 @@ func TestGeoSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1000"}}}, 0)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1000", "10", "20"}}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
 
@@ -140,7 +143,7 @@ func TestRateSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-rated"}}, NCACHESRV)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-rated"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
@@ -170,7 +173,7 @@ func TestRecSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-recd"}}, 0)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-recd"}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
@@ -198,7 +201,7 @@ func TestUserSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-userd"}}, 0)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-userd"}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
@@ -224,7 +227,7 @@ func TestProfile(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-profd"}}, NCACHESRV)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-profd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
@@ -255,7 +258,7 @@ func TestCheck(t *testing.T) {
 		return
 	}
 
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
@@ -288,7 +291,7 @@ func TestReserve(t *testing.T) {
 		return
 	}
 
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
@@ -344,7 +347,7 @@ func TestSingleSearch(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1000"}}, &hotel.Srv{Name: "hotel-rated"}, &hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1000"}}, &hotel.Srv{Name: "hotel-rated"}, &hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
@@ -375,7 +378,7 @@ func TestWww(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
+	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
@@ -439,7 +442,7 @@ func TestBenchDeathStarSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
+	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -463,7 +466,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, 0)
+	ts := newTstate(t1, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 
 	err1 = setupK8sState(ts)
 	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
@@ -484,7 +487,7 @@ func TestBenchSearchSigma(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
+	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
@@ -532,7 +535,7 @@ func TestBenchSearchK8s(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, 0)
+	ts := newTstate(t1, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	err1 = setupK8sState(ts)
 	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
@@ -558,7 +561,7 @@ func TestBenchGeoSigma(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
+	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV, 1, 20, 500)
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
@@ -589,7 +592,7 @@ func TestBenchGeoK8s(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, 0)
+	ts := newTstate(t1, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	err1 = setupK8sState(ts)
 	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
@@ -614,7 +617,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV)
+	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	ch := make(chan bool)
@@ -661,7 +664,7 @@ func TestAuthK8s(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, 0)
+	ts := newTstate(t1, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	err1 = setupK8sState(ts)
 	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))

@@ -106,6 +106,10 @@ func RandCheckAvailabilityReq(rpcc *rpcclnt.RPCClnt, r *rand.Rand) error {
 	return rpcc.RPC("Reserve.CheckAvailability", arg, &res)
 }
 
+func SpecificGeoReq(wc *WebClnt, lat float64, lon float64) (string, error) {
+	return wc.Geo(lat, lon)
+}
+
 func GeoReq(wc *WebClnt) (string, error) {
 	// Same coordinates to make sure performance is very consistent.
 	lat := 37.7749

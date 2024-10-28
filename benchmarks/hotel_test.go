@@ -44,6 +44,8 @@ type HotelJobInstance struct {
 	nGeoToAdd           int
 	nGeo                int
 	geoNIdx             int
+	geoSearchRadius     int
+	geoNResults         int
 	ready               chan bool
 	fn                  hotelFn
 	hj                  *hotel.HotelJob
@@ -53,7 +55,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nGeo int, geoNIndex int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nGeo int, geoNIndex int, geoSearchRadius int, geoNResults int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = rd.String(8)
@@ -72,6 +74,8 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	ji.nGeoToAdd = nGeoToAdd
 	ji.nGeo = nGeo
 	ji.geoNIdx = geoNIndex
+	ji.geoSearchRadius = geoSearchRadius
+	ji.geoNResults = geoNResults
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -127,7 +131,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		if !sigmaos {
 			nc = 0
 		}
-		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB, nGeo, geoNIndex)
+		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB, nGeo, geoNIndex, geoSearchRadius, geoNResults)
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
 	}
 
@@ -170,7 +174,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
-	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v) manuallyScaleCaches %v scaleCacheDelay %v nCachesToAdd %v manuallyScaleGeo %v scaleGeoDelay %v nGeoToAdd %v nGeoInit %v geoNIndex %v", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr, ji.manuallyScaleCaches, ji.scaleCacheDelay, ji.nCachesToAdd, ji.manuallyScaleGeo, ji.scaleGeoDelay, ji.nGeoToAdd, ji.nGeo, ji.geoNIdx)
+	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v) manuallyScaleCaches %v scaleCacheDelay %v nCachesToAdd %v manuallyScaleGeo %v scaleGeoDelay %v nGeoToAdd %v nGeoInit %v geoNIndex %v geoSearchRadius: %v geoNResults: %v", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr, ji.manuallyScaleCaches, ji.scaleCacheDelay, ji.nCachesToAdd, ji.manuallyScaleGeo, ji.scaleGeoDelay, ji.nGeoToAdd, ji.nGeo, ji.geoNIdx, ji.geoSearchRadius, ji.geoNResults)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)

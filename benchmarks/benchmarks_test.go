@@ -1284,6 +1284,22 @@ func TestSocialNetK8s(t *testing.T) {
 	testSocialNet(rootts, ts1, p1, false)
 }
 
+func TestHotelSigmaosGeo(t *testing.T) {
+	db.DPrintf(db.ALWAYS, "scaleGeo %v delay %v n2a %v", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+		_, err := hotel.GeoReq(wc)
+		assert.Nil(t, err, "Error search req: %v", err)
+	})
+}
+
 func TestHotelSigmaosSearch(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "scaleGeo %v delay %v n2a %v", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	rootts, err1 := test.NewTstateWithRealms(t)
@@ -1320,6 +1336,39 @@ func TestHotelDevSigmaosSearchScaleCache(t *testing.T) {
 	})
 }
 
+func TestHotelSigmaosJustCliGeo(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+		return
+	}
+	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	clientReady(rootts)
+	// Sleep for a bit
+	time.Sleep(SLEEP)
+	jobs, ji := newHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, func(wc *hotel.WebClnt, r *rand.Rand) {
+		_, err := hotel.GeoReq(wc)
+		assert.Nil(t, err, "Error geo req: %v", err)
+	})
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts1, ji, runHotel, rs)
+	//	printResultSummary(rs)
+	//	jobs[0].requestK8sStats()
+}
+
 func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -1339,6 +1388,39 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	jobs, ji := newHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
+	})
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts1, ji, runHotel, rs)
+	//	printResultSummary(rs)
+	//	jobs[0].requestK8sStats()
+}
+
+func TestHotelK8sJustCliGeo(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+		return
+	}
+	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	db.DPrintf(db.ALWAYS, "Clnt ready")
+	clientReady(rootts)
+	db.DPrintf(db.ALWAYS, "Clnt done waiting")
+	jobs, ji := newHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, func(wc *hotel.WebClnt, r *rand.Rand) {
+		_, err := hotel.GeoReq(wc)
+		assert.Nil(t, err, "Error geo req: %v", err)
 	})
 	go func() {
 		for _, j := range jobs {
@@ -1384,6 +1466,22 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	runOps(ts1, ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()
+}
+
+func TestHotelK8sGeo(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		_, err := hotel.GeoReq(wc)
+		assert.Nil(t, err, "Error geo req: %v", err)
+	})
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
 func TestHotelK8sSearch(t *testing.T) {

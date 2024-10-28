@@ -99,7 +99,7 @@ def graph_data(hotel_res_dir, hotel_overlays_res_dir, socialnet_res_dir, socialn
 #  avg_lat.title.set_text("Avg latency (ms), low load")
   p99_lat.title.set_text("99% latency at moderate load")
 #  p99_lat_peak.title.set_text("99% latency (ms) at peak throughput")
-  peak_tpt.title.set_text("Peak throughput")
+  peak_tpt.title.set_text("Max sustained throughput")
 #  avg_lat.set_ylabel("Avg lat @ low load (ms)")
 #  p99_lat.set_ylabel("99% lat @ low load (ms)")
 #  p99_lat_peak.set_ylabel("99% Lat @ peak tpt (ms)")

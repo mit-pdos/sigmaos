@@ -133,7 +133,10 @@ def bucketize_latency(tpts, time_range, xmin, xmax, step_size=1000):
       if xmin != -1 and xmax != -1:
         if t[0] < xmin or t[0] > xmax:
           continue
-      buckets[find_bucket(t[0] - sub, step_size)].append(t[1])
+      b = find_bucket(t[0] - sub, step_size)
+      if b not in buckets.keys():
+        buckets[b] = []
+      buckets[b].append(t[1])
   return buckets
 
 def buckets_to_percentile(buckets, percentile):
@@ -261,6 +264,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   hotel_tpts_k8s = read_tpts(input_dir_k8s, "hotel")
   hotel_range_k8s = get_time_range(hotel_tpts_k8s)
   time_range_k8s = get_overall_time_range([hotel_range_k8s, hotel_lat_k8s_range])
+#  time_range_k8s = (time_range_k8s[0] + 350000, time_range_k8s[1] + 350000)
   extend_tpts_to_range(procd_tpts, time_range)
   procd_tpts = truncate_tpts_to_range(procd_tpts, time_range)
   be_tpts = fit_times_to_range(be_tpts, time_range)
@@ -268,6 +272,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
   hotel_lats = fit_times_to_range(hotel_lats, time_range)
   hotel_lats_k8s = fit_times_to_range(hotel_lats_k8s, time_range_k8s)
+#XXX  hotel_lats_k8s = truncate_to_min_max(hotel_lats_k8s, 348000, 390000)
   procd_tpts = truncate_to_min_max(procd_tpts, xmin, xmax)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)

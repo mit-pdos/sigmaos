@@ -17,6 +17,7 @@ type FdState struct {
 	fid    sp.Tfid
 	mode   sp.Tmode
 	pc     sos.PathClntAPI
+	pn     string
 }
 
 type FdTable struct {
@@ -32,7 +33,7 @@ func newFdTable() *FdTable {
 	return fdt
 }
 
-func (fdt *FdTable) allocFd(nfid sp.Tfid, m sp.Tmode, pc sos.PathClntAPI) int {
+func (fdt *FdTable) allocFd(nfid sp.Tfid, m sp.Tmode, pc sos.PathClntAPI, pn string) int {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -43,12 +44,13 @@ func (fdt *FdTable) allocFd(nfid sp.Tfid, m sp.Tmode, pc sos.PathClntAPI) int {
 			fdt.fds[i].fid = nfid
 			fdt.fds[i].mode = m
 			fdt.fds[i].pc = pc
+			fdt.fds[i].pn = pn
 			return i
 		}
 	}
 
 	// no free one
-	fdt.fds = append(fdt.fds, FdState{0, nfid, m, pc})
+	fdt.fds = append(fdt.fds, FdState{0, nfid, m, pc, pn})
 	return len(fdt.fds) - 1
 }
 
@@ -91,6 +93,17 @@ func (fdt *FdTable) lookup(fd int) (sp.Tfid, sos.PathClntAPI, *serr.Err) {
 		return sp.NoFid, nil, err
 	}
 	return st.fid, st.pc, nil
+}
+
+func (fdt *FdTable) lookupPn(fd int) (string, *serr.Err) {
+	fdt.Lock()
+	defer fdt.Unlock()
+
+	st, err := fdt.lookupL(fd)
+	if err != nil {
+		return "", err
+	}
+	return st.pn, nil
 }
 
 func (fdt *FdTable) lookupOff(fd int) (sp.Tfid, sp.Toffset, sos.PathClntAPI, *serr.Err) {

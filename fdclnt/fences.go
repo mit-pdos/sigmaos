@@ -1,6 +1,8 @@
 package fdclnt
 
 import (
+	"path/filepath"
+	"strings"
 	"sync"
 
 	db "sigmaos/debug"
@@ -37,20 +39,16 @@ func (ft *FenceTable) insert(pn string, f sp.Tfence) error {
 }
 
 func (ft *FenceTable) lookup(pn string) *sp.Tfence {
-	p := path.Split(pn) // cleans up pn
-	return ft.lookupPath(p)
-}
-
-func (ft *FenceTable) lookupPath(p path.Tpathname) *sp.Tfence {
 	ft.Lock()
 	defer ft.Unlock()
 
-	for pn, f := range ft.fencedDirs {
-		db.DPrintf(db.FDCLNT, "Lookup fence %v %v\n", p, f)
-		if p.IsParent(path.Split(pn)) {
+	for pni, f := range ft.fencedDirs {
+		filepath.Join()
+		db.DPrintf(db.FDCLNT, "Lookup fence %v %v\n", pn, f)
+		if strings.HasPrefix(pn, pni) {
 			return &f
 		}
 	}
-	db.DPrintf(db.FDCLNT, "Lookup fence %v: no fence\n", p)
+	db.DPrintf(db.FDCLNT, "Lookup fence %v: no fence\n", pn)
 	return sp.NullFence()
 }

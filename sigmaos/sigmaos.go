@@ -26,8 +26,6 @@ type PathClntAPI interface {
 	PreadRdr(fid sp.Tfid, off sp.Toffset, len sp.Tsize) (io.ReadCloser, error)
 	WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error)
 	Clunk(fid sp.Tfid) error
-	// XXX delete
-	LookupPath(fid sp.Tfid) (path.Tpathname, error)
 }
 
 type FileAPI interface {

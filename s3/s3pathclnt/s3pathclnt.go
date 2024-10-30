@@ -121,11 +121,6 @@ func (s3c *S3PathClnt) Clunk(fid sp.Tfid) error {
 	return serr.NewErr(serr.TErrNotfound, fid)
 }
 
-// To implement PathClntAPI...
-func (s3c *S3PathClnt) LookupPath(fid sp.Tfid) (path.Tpathname, error) {
-	return nil, nil
-}
-
 // XXX deduplicate with s3
 func getS3Client(s3secrets *sp.SecretProto, npc *netproxyclnt.NetProxyClnt) (*s3.Client, error) {
 	cfg, err := config.LoadDefaultConfig(

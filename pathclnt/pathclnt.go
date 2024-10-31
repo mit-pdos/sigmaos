@@ -330,9 +330,13 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Tpathname, principal *sp.Tpri
 	if ch == nil {
 		return sp.NoFid, serr.NewErr(serr.TErrNotfound, fid)
 	}
-	p := ch.Path().AppendPath(path)
-	db.DPrintf(db.PATHCLNT, "Walk %v (ch %v)", p, ch.Path())
-	return pathc.walk(p, principal, true, nil)
+
+	// XXX fix
+	// p := ch.Path().AppendPath(path)
+	// return pathc.walk(p, principal, true, nil)
+
+	db.DPrintf(db.PATHCLNT, "Walk %v %v (ch %v)", fid, path, ch)
+	return pathc.walk(path, principal, true, nil)
 }
 
 func (pathc *PathClnt) Disconnected() bool {

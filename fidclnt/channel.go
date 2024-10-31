@@ -6,35 +6,24 @@ package fidclnt
 import (
 	"fmt"
 
-	"sigmaos/path"
 	"sigmaos/protclnt"
 	sp "sigmaos/sigmap"
 )
 
 type Channel struct {
 	pc   *protclnt.ProtClnt
-	pn   path.Tpathname
 	qids []*sp.Tqid
 }
 
-func newChannel(pc *protclnt.ProtClnt, pn path.Tpathname, qs []*sp.Tqid) *Channel {
+func newChannel(pc *protclnt.ProtClnt, qs []*sp.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
-	c.pn = pn
 	c.qids = qs
 	return c
 }
 
 func (c *Channel) String() string {
-	return fmt.Sprintf("{ep %v pn %v Qids %v}", c.Endpoint(), c.pn, c.qids)
-}
-
-func (c *Channel) Path() path.Tpathname {
-	return c.pn
-}
-
-func (c *Channel) SetPath(p path.Tpathname) {
-	c.pn = p
+	return fmt.Sprintf("{ep %v Qids %v}", c.Endpoint(), c.qids)
 }
 
 func (c *Channel) Version() sp.TQversion {
@@ -44,21 +33,17 @@ func (c *Channel) Version() sp.TQversion {
 func (c *Channel) Copy() *Channel {
 	qids := make([]*sp.Tqid, len(c.qids))
 	copy(qids, c.qids)
-	return newChannel(c.pc, c.pn.Copy(), qids)
+	return newChannel(c.pc, qids)
 }
 
-func (c *Channel) add(name string, q *sp.TqidProto) {
-	c.pn = append(c.pn, name)
+func (c *Channel) addQid(q *sp.TqidProto) {
 	c.qids = append(c.qids, sp.NewTqid(q))
 }
 
 // empty path = ""
-func (c *Channel) AddN(qs []*sp.TqidProto, path path.Tpathname) {
-	if len(path) == 0 {
-		path = append(path, "")
-	}
-	for i, q := range qs {
-		c.add(path[i], q)
+func (c *Channel) AddQids(qs []*sp.TqidProto) {
+	for _, q := range qs {
+		c.addQid(q)
 	}
 }
 

@@ -1,4 +1,4 @@
-package protsrv
+package pobj
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ type Pobj struct {
 	ctx      fs.CtxI
 }
 
-func newPobj(pn path.Tpathname, o fs.FsObj, ctx fs.CtxI) *Pobj {
+func NewPobj(pn path.Tpathname, o fs.FsObj, ctx fs.CtxI) *Pobj {
 	return &Pobj{pn, o, ctx}
 }
 

@@ -6,6 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
+	"sigmaos/protsrv/pobj"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -14,13 +15,13 @@ import (
 type Fid struct {
 	mu     sync.Mutex
 	isOpen bool
-	po     *Pobj
+	po     *pobj.Pobj
 	m      sp.Tmode
 	qid    *sp.Tqid // the qid of obj at the time of invoking NewFidPath
 	cursor int      // for directories
 }
 
-func newFidPath(pobj *Pobj, m sp.Tmode, qid *sp.Tqid) *Fid {
+func newFidPath(pobj *pobj.Pobj, m sp.Tmode, qid *sp.Tqid) *Fid {
 	return &Fid{sync.Mutex{}, false, pobj, m, qid, 0}
 }
 
@@ -37,7 +38,7 @@ func (f *Fid) SetMode(m sp.Tmode) {
 	f.m = m
 }
 
-func (f *Fid) Pobj() *Pobj {
+func (f *Fid) Pobj() *pobj.Pobj {
 	return f.po
 }
 

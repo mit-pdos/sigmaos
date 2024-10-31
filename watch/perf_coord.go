@@ -141,7 +141,7 @@ func (c *PerfCoord) Run() {
 	}
 
 	db.DPrintf(db.WATCH_PERF, "Run: Waiting for workers to signal they're ready")
-	var responseWatcher *fslib.DirWatcher
+	var responseWatcher *fslib.DirReaderV2
 
 	if c.useOldWatch {
 		dirReader := fslib.NewDirReader(c.FsLib, c.responseDir)
@@ -151,7 +151,7 @@ func (c *PerfCoord) Run() {
 		}
 	} else {
 		var err error
-		responseWatcher, _, err = fslib.NewDirWatcher(c.FsLib, c.responseDir)
+		responseWatcher, _, err = fslib.NewDirReaderV2(c.FsLib, c.responseDir)
 		if err != nil {
 			db.DFatalf("Run: failed to create dir watcher for response dir %v", err)
 		}
@@ -366,7 +366,7 @@ func (c *PerfCoord) getWorkerTimes() []time.Time {
 	return times
 }
 
-func (c *PerfCoord) waitResponses(responseWatcher *fslib.DirWatcher) {
+func (c *PerfCoord) waitResponses(responseWatcher *fslib.DirReaderV2) {
 	if c.useOldWatch {
 		dirReader := fslib.NewDirReader(c.FsLib, c.responseDir)
 		err := dirReader.WaitNEntries(c.nWorkers)
@@ -381,7 +381,7 @@ func (c *PerfCoord) waitResponses(responseWatcher *fslib.DirWatcher) {
 	}
 }
 
-func (c *PerfCoord) waitResponseEmpty(responseDirFd int, responseWatcher *fslib.DirWatcher) {
+func (c *PerfCoord) waitResponseEmpty(responseDirFd int, responseWatcher *fslib.DirReaderV2) {
 	if c.useOldWatch {
 		for {
 			stats, _, err := c.ReadDir(c.responseDir)

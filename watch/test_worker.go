@@ -64,7 +64,7 @@ func (w *TestWorker) Run() {
 
 	sum := uint64(0)
 	seen := make(map[string]bool)
-	dirWatcher, initFiles, err := fslib.NewDirWatcher(w.FsLib, w.workDir)
+	dirWatcher, initFiles, err := fslib.NewDirReaderV2(w.FsLib, w.workDir)
 	if err != nil {
 		db.DFatalf("RunWorker %s: failed to create dir watcher for %s: %v", w.id, w.workDir, err)
 	}

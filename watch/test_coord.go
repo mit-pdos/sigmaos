@@ -93,7 +93,7 @@ func (c *TestCoord) Run() {
 		}(ix)
 	}
 
-	dirWatcher, _, err := fslib.NewDirWatcher(c.FsLib, c.readyDir)
+	dirWatcher, _, err := fslib.NewDirReaderV2(c.FsLib, c.readyDir)
 	if err != nil {
 		db.DFatalf("Run: failed to create dir watcher for ready dir %v", err)
 	}

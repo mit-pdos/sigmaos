@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from columnar import columnar
 
-# TODO: if have time, make this connect directly to s3
 def read_data(file_path):
     with open(file_path, 'r') as file:
         data = file.readlines()

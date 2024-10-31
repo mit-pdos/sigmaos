@@ -1,4 +1,4 @@
-package protsrv
+package watch
 
 import (
 	db "sigmaos/debug"
@@ -15,6 +15,14 @@ func newWatchV2(pl *lockmap.PathLock) *WatchV2 {
 	w := &WatchV2{}
 	w.pl = pl
 	return w
+}
+
+func (w *WatchV2) LockPl() {
+	w.pl.Lock()
+}
+
+func (w *WatchV2) UnlockPl() {
+	w.pl.Unlock()
 }
 
 type WatchTableV2 struct {
@@ -35,7 +43,7 @@ func (wt *WatchTableV2) AllocWatch(pl *lockmap.PathLock, fid *FidWatch) *WatchV2
 
 	p := pl.Path()
 
-	db.DPrintf(db.WATCH_NEW, "AllocWatch '%s'\n", p)
+	db.DPrintf(db.WATCH_V2, "AllocWatch '%s'\n", p)
 
 	ws, ok := wt.watches[p]
 	if !ok {
@@ -51,7 +59,7 @@ func (wt *WatchTableV2) AllocWatch(pl *lockmap.PathLock, fid *FidWatch) *WatchV2
 
 // Free watch for path. Caller should have pl locked
 func (wt *WatchTableV2) FreeWatch(ws *WatchV2, fid *FidWatch) bool {
-	db.DPrintf(db.WATCH_NEW, "FreeWatch '%s'\n", ws.pl.Path())
+	db.DPrintf(db.WATCH_V2, "FreeWatch '%s'\n", ws.pl.Path())
 	wt.Lock()
 	defer wt.Unlock()
 
@@ -108,7 +116,7 @@ func (wt *WatchTableV2) addWatchEvent(pl *lockmap.PathLock, event string) {
 		return
 	}
 
-	db.DPrintf(db.WATCH_NEW, "AddWatchEvent '%s' '%s' %v\n", p, event, ws.fids)
+	db.DPrintf(db.WATCH_V2, "AddWatchEvent '%s' '%s' %v\n", p, event, ws.fids)
 	
 	for _, fid := range ws.fids {
 		fid.mu.Lock()

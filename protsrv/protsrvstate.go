@@ -7,6 +7,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/protsrv/leasedmap"
 	"sigmaos/protsrv/lockmap"
+	"sigmaos/protsrv/pobj"
 	"sigmaos/protsrv/version"
 	"sigmaos/protsrv/watch"
 	"sigmaos/serr"
@@ -17,7 +18,7 @@ import (
 type ProtSrvState struct {
 	plt   *lockmap.PathLockTable
 	wt    *watch.WatchTable
-	wtv2  *WatchTableV2
+	wtv2  *watch.WatchTableV2
 	vt    *version.VersionTable
 	stats *stats.StatInode
 	lm    *leasedmap.LeasedMap
@@ -32,7 +33,7 @@ func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 		plt:   lockmap.NewPathLockTable(),
 		cct:   cct,
 		wt:    watch.NewWatchTable(cct),
-		wtv2:  NewWatchTableV2(),
+		wtv2:  watch.NewWatchTableV2(),
 		vt:    version.NewVersionTable(),
 	}
 	return pss
@@ -64,7 +65,7 @@ func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
 
 func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Tpathname, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *Fid {
 	pn := dir.Copy().Append(name)
-	po := newPobj(pn, o, ctx)
+	po := pobj.NewPobj(pn, o, ctx)
 	nf := newFidPath(po, 0, qid)
 	if o.IsLeased() && pss.lm != nil {
 		pss.lm.Insert(pn.String(), lid)
@@ -172,7 +173,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 	return nil
 }
 
-func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err {
+func (pss *ProtSrvState) RenameObj(po *pobj.Pobj, name string, f sp.Tfence) *serr.Err {
 	oldname := po.Pathname().Base()
 	dst := po.Pathname().Dir().Copy().AppendPath(path.Split(name))
 	dlk, slk := pss.plt.AcquireLocks(po.Ctx(), po.Pathname().Dir(), po.Pathname().Base(), lockmap.WLOCK)
@@ -210,7 +211,7 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 	}
 }
 
-func (pss *ProtSrvState) RenameAtObj(old, new *Pobj, dold, dnew fs.Dir, oldname, newname string, f sp.Tfence) *serr.Err {
+func (pss *ProtSrvState) RenameAtObj(old, new *pobj.Pobj, dold, dnew fs.Dir, oldname, newname string, f sp.Tfence) *serr.Err {
 	var d1lk, d2lk, srclk, dstlk *lockmap.PathLock
 	if srcfirst := lockOrder(dold, dnew); srcfirst {
 		d1lk, srclk = pss.plt.AcquireLocks(old.Ctx(), old.Pathname(), oldname, lockmap.WLOCK)

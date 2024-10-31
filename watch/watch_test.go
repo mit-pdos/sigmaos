@@ -162,6 +162,7 @@ func TestWatchStress(t *testing.T) {
 	testWatch(t, 10, 1000)
 }
 
+// Use USE_OLD_WATCH and WATCHPERF_MEASURE_MODE to configure perf data
 func TestWatchPerfSingleWorkerNoFiles(t *testing.T) {
 	testWatchPerf(t, 1, 0, 250, "single_no_files")
 }

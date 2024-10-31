@@ -13,9 +13,9 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Fwatch_ func(ents map[string] bool, changes map[string] bool) bool
+type FwatchV2 func(ents map[string] bool, changes map[string] bool) bool
 
-type DirWatcher struct {
+type DirReaderV2 struct {
 	*FsLib
 	*sync.Mutex
 	cond *sync.Cond
@@ -39,8 +39,8 @@ func (wr watchReader) Read(p []byte) (int, error) {
 var CREATE_PREFIX = "CREATE "
 var REMOVE_PREFIX = "REMOVE "
 
-func NewDirWatcher(fslib *FsLib, pn string) (*DirWatcher, []string, error) {
-	db.DPrintf(db.WATCH_NEW, "Creating new watch on %s", pn)
+func NewDirReaderV2(fslib *FsLib, pn string) (*DirReaderV2, []string, error) {
+	db.DPrintf(db.WATCH_V2, "Creating new watch on %s", pn)
 
 	fd, err := fslib.Open(pn, sp.OREAD)
 	if err != nil {
@@ -51,7 +51,7 @@ func NewDirWatcher(fslib *FsLib, pn string) (*DirWatcher, []string, error) {
 		return nil, nil, err
 	}
 
-	db.DPrintf(db.WATCH_NEW, "Created watch on %s with fd=%d", pn, watchFd)
+	db.DPrintf(db.WATCH_V2, "Created watch on %s with fd=%d", pn, watchFd)
 
 	reader := watchReader {
 		fslib,
@@ -61,7 +61,7 @@ func NewDirWatcher(fslib *FsLib, pn string) (*DirWatcher, []string, error) {
 
 	var mu sync.Mutex
 
-	dw := &DirWatcher{
+	dw := &DirReaderV2{
 		FsLib: fslib,
 		Mutex: &mu,
 		cond:  sync.NewCond(&mu),
@@ -90,16 +90,16 @@ func NewDirWatcher(fslib *FsLib, pn string) (*DirWatcher, []string, error) {
 				return
 			}
 
-			// remove the newline
 			if err != nil {
 				if serr.IsErrCode(err, serr.TErrClosed) {
-					db.DPrintf(db.WATCH_NEW, "DirWatcher: Watch stream for %s closed", pn)
+					db.DPrintf(db.WATCH_V2, "DirWatcher: Watch stream for %s closed", pn)
 					return
 				} else {
 					db.DFatalf("DirWatcher: Watch stream produced err %v", err)
 				}
 			}
 
+			// remove the newline
 			event = event[:len(event) - 1]
 			var name string
 			var created bool
@@ -120,7 +120,7 @@ func NewDirWatcher(fslib *FsLib, pn string) (*DirWatcher, []string, error) {
 				return
 			}
 
-			db.DPrintf(db.WATCH_NEW, "DirWatcher: Broadcasting event %s %t", name, created)
+			db.DPrintf(db.WATCH_V2, "DirWatcher: Broadcasting event %s %t", name, created)
 
 			dw.ents[name] = created
 			dw.changes[name] = created
@@ -145,21 +145,21 @@ func filterMap(ents map[string] bool) []string {
 	return result
 }
 
-func (dw *DirWatcher) GetDir() []string {
+func (dw *DirReaderV2) GetDir() []string {
 	dw.Lock()
 	defer dw.Unlock()
 
 	return filterMap(dw.ents)
 }
 
-func (dw *DirWatcher) Close() error {
+func (dw *DirReaderV2) Close() error {
 	dw.closed = true
 	return dw.CloseFd(dw.watchFd)
 }
 
 // Keep reading dir until wait returns false (e.g., a new file has
 // been created in dir).
-func (dw *DirWatcher) readDirWatch(watch Fwatch_) error {
+func (dw *DirReaderV2) readDirWatch(watch FwatchV2) error {
 	dw.Lock()
 	for watch(dw.ents, dw.changes) {
 		clear(dw.changes)
@@ -172,27 +172,27 @@ func (dw *DirWatcher) readDirWatch(watch Fwatch_) error {
 }
 
 // Wait until pn isn't present
-func (dw *DirWatcher) WaitRemove(file string) error {
+func (dw *DirReaderV2) WaitRemove(file string) error {
 	err := dw.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
-		db.DPrintf(db.WATCH_NEW, "WaitRemove %v %v\n", ents, file)
+		db.DPrintf(db.WATCH_V2, "WaitRemove %v %v\n", ents, file)
 		return ents[file]
 	})
 	return err
 }
 
 // Wait until pn exists
-func (dw *DirWatcher) WaitCreate(file string) error {
+func (dw *DirReaderV2) WaitCreate(file string) error {
 	err := dw.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
-		db.DPrintf(db.WATCH_NEW, "WaitCreate %v %v %t\n", ents, file, ents[file])
+		db.DPrintf(db.WATCH_V2, "WaitCreate %v %v %t\n", ents, file, ents[file])
 		return !ents[file]
 	})
 	return err
 }
 
 // Wait until n entries are in the directory
-func (dw *DirWatcher) WaitNEntries(n int) error {
+func (dw *DirReaderV2) WaitNEntries(n int) error {
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
-		db.DPrintf(db.WATCH_NEW, "WaitNEntries: %v %v", ents, changes)
+		db.DPrintf(db.WATCH_V2, "WaitNEntries: %v %v", ents, changes)
 		return len(filterMap(ents)) < n
 	})
 	if err != nil {
@@ -202,9 +202,9 @@ func (dw *DirWatcher) WaitNEntries(n int) error {
 }
 
 // Wait until direcotry is empty
-func (dw *DirWatcher) WaitEmpty() error {
+func (dw *DirReaderV2) WaitEmpty() error {
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
-		db.DPrintf(db.WATCH_NEW, "WaitEmpty: %v %v", ents, changes)
+		db.DPrintf(db.WATCH_V2, "WaitEmpty: %v %v", ents, changes)
 		return len(filterMap(ents)) > 0
 	})
 	if err != nil {
@@ -216,7 +216,7 @@ func (dw *DirWatcher) WaitEmpty() error {
 // Watch for a directory change relative to present view and then return
 // all directory entries. If provided, any file beginning with an
 // excluded prefix is ignored. present should be sorted.
-func (dw *DirWatcher) WatchEntriesChangedRelativeFiltered(present []string, excludedPrefixes []string) ([]string, error) {
+func (dw *DirReaderV2) WatchEntriesChangedRelativeFiltered(present []string, excludedPrefixes []string) ([]string, error) {
 	var files = make([]string, 0)
 	ix := 0
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
@@ -252,12 +252,12 @@ func (dw *DirWatcher) WatchEntriesChangedRelativeFiltered(present []string, excl
 
 // Watch for a directory change relative to present view and then return 
 // all directory entries. present should be sorted
-func (dw *DirWatcher) WatchEntriesChangedRelative(present []string) ([]string, error) {
+func (dw *DirReaderV2) WatchEntriesChangedRelative(present []string) ([]string, error) {
 	return dw.WatchEntriesChangedRelativeFiltered(present, nil)
 }
 
 // Watch for a directory change and then only return new changes since the last call to a Watch
-func (dw *DirWatcher) WatchEntriesChanged() (map[string]bool, error) {
+func (dw *DirReaderV2) WatchEntriesChanged() (map[string]bool, error) {
 	var ret map[string]bool
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		if len(changes) > 0 {
@@ -277,7 +277,7 @@ func (dw *DirWatcher) WatchEntriesChanged() (map[string]bool, error) {
 
 // Uses rename to move all entries in the directory to dst. If there are no further entries to be renamed,
 // waits for a new entry and moves it.
-func (dw *DirWatcher) WatchEntriesAndRename(dst string) ([]string, error) {
+func (dw *DirReaderV2) WatchEntriesAndRename(dst string) ([]string, error) {
 	var r error
 	presentFiles := filterMap(dw.ents)
 	if len(presentFiles) > 0 {
@@ -303,7 +303,7 @@ func (dw *DirWatcher) WatchEntriesAndRename(dst string) ([]string, error) {
 
 // Takes each file and moves them to the dst directory. Returns a list of all
 // files successfully moved
-func (dw *DirWatcher) rename(files []string, dst string) ([]string, error) {
+func (dw *DirReaderV2) rename(files []string, dst string) ([]string, error) {
 	var r error
 	newents := make([]string, 0)
 	for _, file := range files {

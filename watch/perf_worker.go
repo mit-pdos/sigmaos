@@ -17,7 +17,7 @@ type PerfWorker struct {
 	id string;
 	nTrials int;
 	watchDir string;
-	watchDirWatcher *fslib.DirWatcher;
+	watchDirWatcher *fslib.DirReaderV2;
 	responseDir string;
 	tempDir string;
 	useOldWatch bool;
@@ -48,13 +48,13 @@ func NewPerfWorker(args []string) (*PerfWorker, error) {
 	oldOrNew := args[5]
 
 	var useOldWatch bool
-	var watchDirWatcher *fslib.DirWatcher
+	var watchDirWatcher *fslib.DirReaderV2
 
 	if oldOrNew == "old" {
 		useOldWatch = true
 	} else if oldOrNew == "new" {
 		useOldWatch = false
-		watchDirWatcher, _, err = fslib.NewDirWatcher(sc.FsLib, watchDir)
+		watchDirWatcher, _, err = fslib.NewDirReaderV2(sc.FsLib, watchDir)
 		if err != nil {
 			return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: failed to construct watcher for %s, %v", id, watchDir, err)
 		}

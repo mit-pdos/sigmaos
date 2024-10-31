@@ -9,6 +9,8 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protsrv/lockmap"
 	"sigmaos/protsrv/namei"
+	"sigmaos/protsrv/pobj"
+	"sigmaos/protsrv/watch"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -22,7 +24,7 @@ type AttachAuthF func(*sp.Tprincipal, string) error
 type ProtSrv struct {
 	*ProtSrvState
 	fm          *fidMap
-	fwm         *fidWatchMap
+	fwm         *watch.FidWatchMap
 	p           *sp.Tprincipal
 	srvPE       *proc.ProcEnv
 	sid         sessp.Tsession
@@ -34,7 +36,7 @@ func NewProtSrv(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid se
 	ps := &ProtSrv{
 		ProtSrvState: pss,
 		fm:           newFidMap(),
-		fwm:          newFidWatchMap(),
+		fwm:          watch.NewFidWatchMap(),
 		p:            p,
 		srvPE:        srvPE,
 		sid:          sid,
@@ -57,7 +59,7 @@ func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 
 func (ps *ProtSrv) NewRootFid(id sp.Tfid, ctx fs.CtxI, root fs.FsObj, pn path.Tpathname) {
 	qid := ps.newQid(root.Perm(), root.Path())
-	if err := ps.fm.Insert(id, newFidPath(newPobj(pn, root, ctx), 0, qid)); err != nil {
+	if err := ps.fm.Insert(id, newFidPath(pobj.NewPobj(pn, root, ctx), 0, qid)); err != nil {
 		db.DFatalf("NewRootFid err %v\n", err)
 	}
 }
@@ -97,7 +99,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		// just the refcnt.
 		ps.vt.Insert(root.Path())
 	}
-	if err := ps.fm.Insert(args.Tfid(), newFidPath(newPobj(p, tree, ctx), 0, qid)); err != nil {
+	if err := ps.fm.Insert(args.Tfid(), newFidPath(pobj.NewPobj(p, tree, ctx), 0, qid)); err != nil {
 		return sp.NoClntId, sp.NewRerrorSerr(err)
 	}
 	rets.Qid = qid.Proto()
@@ -170,7 +172,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	rets.Qids = ps.newQidProtos(os)
 	qid := ps.newQid(lo.Perm(), lo.Path())
 	db.DPrintf(db.PROTSRV, "%v: Walk NewFidPath fid %v p %v lo %v qid %v os %v", f.Pobj().Ctx().ClntId(), args.NewFid, p, lo, qid, os)
-	if err := ps.fm.Insert(args.Tnewfid(), newFidPath(newPobj(p, lo, f.Pobj().Ctx()), 0, qid)); err != nil {
+	if err := ps.fm.Insert(args.Tnewfid(), newFidPath(pobj.NewPobj(p, lo, f.Pobj().Ctx()), 0, qid)); err != nil {
 		return sp.NewRerrorSerr(err)
 	}
 
@@ -185,10 +187,10 @@ func (ps *ProtSrv) clunkWatch(fid sp.Tfid) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Clunk watch %v f %v path %q", f.Pobj().Ctx().ClntId(), fid, f, f.Pobj().Pathname())
-	if f.watch != nil {
-		f.watch.pl.Lock()
-		ps.wtv2.FreeWatch(f.watch, f)
-		f.watch.pl.Unlock()
+	if f.Watch() != nil {
+		f.Watch().LockPl()
+		ps.wtv2.FreeWatch(f.Watch(), f)
+		f.Watch().UnlockPl()
 	} else {
 		db.DFatalf("%v: clunk watch %v f %v watch nil\n", f.Pobj().Ctx().ClntId(), fid, f)
 	}
@@ -278,7 +280,6 @@ func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 	pn := dirf.Pobj().Pathname()
-	// p := dirf.Pobj().Obj().Path()
 
 	db.DPrintf(db.PROTSRV, "%v: Watch %v v %v %v", dirf.Pobj().Ctx().ClntId(), dirf.Pobj().Pathname(), dirf.Qid(), args)
 
@@ -292,7 +293,7 @@ func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
 	pl := ps.plt.Acquire(dirf.Pobj().Ctx(), pn, lockmap.WLOCK)
 	defer ps.plt.Release(dirf.Pobj().Ctx(), pl, lockmap.WLOCK)
 
-	fidWatch := newFidWatch(dirf.Pobj(), dirf.qid)
+	fidWatch := watch.NewFidWatch(dirf.Pobj())
 
 	err = ps.fwm.Insert(args.Twatchfid(), fidWatch)
 	if err != nil {
@@ -302,11 +303,6 @@ func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
 	ps.wtv2.AllocWatch(pl, fidWatch)
 	ps.vt.Insert(dirf.qid.Tpath())
 
-	// TODO: do we need this?
-	// v := ps.vt.GetVersion(p)
-	// if !sp.VEq(dirf.Qid().Tversion(), v) {
-	// 	return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
-	// }
 	return nil
 }
 
@@ -321,7 +317,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	if ps.fm.Update(args.Tfid(), nf); err != nil {
+	if err := ps.fm.Update(args.Tfid(), nf); err != nil {
 		return sp.NewRerrorSerr(err)
 	}
 	rets.Qid = qid.Proto()
@@ -333,30 +329,7 @@ func (ps *ProtSrv) ReadFWatch(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerr
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
-	events := fidWatch.GetEvents()
-	maxCount := args.Count
-	buf := make([]byte, 0)
-
-	maxIxReached := -1
-	offset := uint32(0)
-	for ix, event := range events {
-		db.DPrintf(db.WATCH_NEW, "ReadFWatch event %v\n", event)
-		str := []byte(event + "\n")
-		if offset + uint32(len(str)) > maxCount {
-			break
-		}
-
-		maxIxReached = ix
-		buf = append(buf, str...)
-		offset += uint32(len(str))
-	}
-
-	if maxIxReached >= 0 {
-		fidWatch.events = events[maxIxReached+1:]
-	}
-
-	// TODO handle edge case where buffer isn't large enough to hold a single event
-
+	buf := fidWatch.GetEventBuffer(int(args.Count))
 	rets.Count = uint32(len(buf))
 	return buf, nil
 }

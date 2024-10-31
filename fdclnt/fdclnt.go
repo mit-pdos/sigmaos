@@ -313,8 +313,7 @@ func (fdc *FdClient) Disconnected() bool {
 
 func (fdc *FdClient) Disconnect(pn string) error {
 	fdc.disconnected = true
-	fids := fdc.fds.openfids()
-	return fdc.pc.Disconnect(pn, fids)
+	return fdc.pc.Disconnect(pn)
 }
 
 func (fdc *FdClient) Detach(pn string) error {

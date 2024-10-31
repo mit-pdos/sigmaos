@@ -71,5 +71,5 @@ func (c *Channel) Qids() []*sp.Tqid {
 }
 
 func (c *Channel) Endpoint() *sp.Tendpoint {
-	return c.pc.Endpoints()
+	return c.pc.Endpoint()
 }

@@ -62,17 +62,6 @@ func (fdt *FdTable) closefd(fd int) {
 	fdt.freefds[fd] = true
 }
 
-func (fdt *FdTable) openfids() []sp.Tfid {
-	fdt.Lock()
-	defer fdt.Unlock()
-
-	fids := make([]sp.Tfid, 0)
-	for _, fdst := range fdt.fds {
-		fids = append(fids, fdst.fid)
-	}
-	return fids
-}
-
 // Caller must have locked fdt
 func (fdt *FdTable) lookupL(fd int) (*FdState, *serr.Err) {
 	if fd < 0 || fd >= len(fdt.fds) {

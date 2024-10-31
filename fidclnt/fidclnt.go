@@ -101,7 +101,7 @@ func (fidc *FidClnt) Free(fid sp.Tfid) {
 	fidc.fids.free(fid)
 }
 
-func (fidc *FidClnt) Disconnect(fid sp.Tfid) {
+func (fidc *FidClnt) DisconnectAll(fid sp.Tfid) {
 	fidc.fids.disconnect(fid)
 }
 

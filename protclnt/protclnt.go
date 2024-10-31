@@ -26,7 +26,7 @@ func NewProtClnt(ep *sp.Tendpoint, sm *sessclnt.Mgr) *ProtClnt {
 	}
 }
 
-func (pclnt *ProtClnt) Endpoints() *sp.Tendpoint {
+func (pclnt *ProtClnt) Endpoint() *sp.Tendpoint {
 	return pclnt.ep
 }
 

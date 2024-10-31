@@ -341,8 +341,8 @@ func (pathc *PathClnt) Disconnected() bool {
 
 // Disconnect client from server permanently to simulate network
 // partition to server that exports pn
-func (pathc *PathClnt) Disconnect(pn string, fids []sp.Tfid) error {
-	db.DPrintf(db.CRASH, "Disconnect %v mnts %v\n", pn, pathc.mntclnt.MountedPaths())
+func (pathc *PathClnt) Disconnect(pn string) error {
+	db.DPrintf(db.CRASH, "Disconnect %v\n", pn)
 	pathc.disconnected = true
-	return pathc.mntclnt.Disconnect(pn, fids)
+	return pathc.mntclnt.Disconnect(pn)
 }

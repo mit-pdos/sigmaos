@@ -15,9 +15,16 @@ import (
 )
 
 type Result struct {
-	CreationTimeNs [][]time.Duration
-	DeletionTimeNs [][]time.Duration
+	CreationWatchTimeNs [][]time.Duration
+	DeletionWatchTimeNs [][]time.Duration
 }
+
+type MeasureMode int
+
+const (
+	IncludeFileOp MeasureMode = iota
+	JustWatch                 = iota
+)
 
 type PerfCoord struct {
 	*sigmaclnt.SigmaClnt
@@ -28,6 +35,8 @@ type PerfCoord struct {
 	watchDir string
 	responseDir string
 	tempDir string
+	useOldWatch bool
+	measureMode MeasureMode
 }
 
 func NewPerfCoord(args []string) (*PerfCoord, error) {
@@ -53,13 +62,28 @@ func NewPerfCoord(args []string) (*PerfCoord, error) {
 
 	nTrials, err := strconv.Atoi(args[2])
 	if err != nil {
-		return &PerfCoord{}, fmt.Errorf("NewPerfCoord: nTrials %s is not an integer", args[1])
+		return &PerfCoord{}, fmt.Errorf("NewPerfCoord: nTrials %s is not an integer", args[2])
 	}
 
 	baseDir := args[3]
 	watchDir := filepath.Join(baseDir, "watch")
 	responseDir := filepath.Join(baseDir, "response")
 	tempDir := filepath.Join(baseDir, "temp")
+
+	var useOldWatch bool
+	oldOrNew := args[4]
+	if oldOrNew == "old" {
+		useOldWatch = true
+	} else if (oldOrNew == "new") {
+		useOldWatch = false
+	} else {
+		return &PerfCoord{}, fmt.Errorf("NewPerfCoord: oldornew %s is not either 'old' or 'new'", args[4])
+	}
+
+	measureMode, err := strconv.Atoi(args[5])
+	if err != nil || measureMode < 0 || measureMode > 1 {
+		return &PerfCoord{}, fmt.Errorf("NewPerfCoord: measure mode %s is invalid", args[5])
+	}
 
 	return &PerfCoord{
 		sc,
@@ -70,6 +94,8 @@ func NewPerfCoord(args []string) (*PerfCoord, error) {
 		watchDir,
 		responseDir,
 		tempDir,
+		useOldWatch,
+		MeasureMode(measureMode),
 	}, nil
 }
 
@@ -92,8 +118,13 @@ func (c *PerfCoord) Run() {
 	}
 
 	for ix := 0; ix < c.nWorkers; ix++ {
+		oldOrNew := "new"
+		if c.useOldWatch {
+			oldOrNew = "old"
+		}
+
 		go func (ix int) {
-			p := proc.NewProc("watchperf-worker", []string{strconv.Itoa(ix), strconv.Itoa(c.nTrials), c.watchDir, c.responseDir, c.tempDir})
+			p := proc.NewProc("watchperf-worker", []string{strconv.Itoa(ix), strconv.Itoa(c.nTrials), c.watchDir, c.responseDir, c.tempDir, oldOrNew, strconv.Itoa(int(c.measureMode))})
 			err := c.Spawn(p)
 			if err != nil {
 				db.DFatalf("Run: spawning %d failed %v", ix, err)
@@ -110,74 +141,128 @@ func (c *PerfCoord) Run() {
 	}
 
 	db.DPrintf(db.WATCH_PERF, "Run: Waiting for workers to signal they're ready")
-	responseWatcher, _, err := fslib.NewDirWatcher(c.FsLib, c.responseDir)
-	if err != nil {
-		db.DFatalf("Run: failed to create dir watcher for response dir %v", err)
-	}
-	err = responseWatcher.WaitNEntries(c.nWorkers)
-	if err != nil {
-		db.DFatalf("RunCoord: failed to wait for all procs to be ready %v", err)
+	var responseWatcher *fslib.DirWatcher
+
+	if c.useOldWatch {
+		dirReader := fslib.NewDirReader(c.FsLib, c.responseDir)
+		err := dirReader.WaitNEntries(c.nWorkers)
+		if err != nil {
+			db.DFatalf("Run: failed to wait for all procs to be ready %v", err)
+		}
+	} else {
+		var err error
+		responseWatcher, _, err = fslib.NewDirWatcher(c.FsLib, c.responseDir)
+		if err != nil {
+			db.DFatalf("Run: failed to create dir watcher for response dir %v", err)
+		}
+		err = responseWatcher.WaitNEntries(c.nWorkers)
+		if err != nil {
+			db.DFatalf("RunCoord: failed to wait for all procs to be ready %v", err)
+		}
 	}
 	c.clearResponseDir()
 
-	creationDelays := make([][]time.Duration, c.nTrials)
-	deletionDelays := make([][]time.Duration, c.nTrials)
+	responseDirFd, err := c.Open(c.responseDir, sigmap.OREAD)
+	if err != nil {
+		db.DFatalf("Run: failed to open response dir %v", err)
+	}
+
+	creationWatchDelays := make([][]time.Duration, c.nTrials)
+	deletionWatchDelays := make([][]time.Duration, c.nTrials)
 
 	for trial := 0; trial < c.nTrials; trial++ {
 		db.DPrintf(db.WATCH_PERF, "Run: Running trial %d", trial)
 		path := filepath.Join(c.watchDir, fmt.Sprintf("trial_%d", trial))
+		signal_path_create := filepath.Join(c.watchDir, coordSignalName(trial, false))
+		signal_path_delete := filepath.Join(c.watchDir, coordSignalName(trial, true))
 
 		db.DPrintf(db.WATCH_PERF, "Run: Creating file for trial %d", trial)
-		creationTime := time.Now()
-		fd, err := c.Create(path, 0777, sigmap.OAPPEND)
-		if err != nil {
-			db.DFatalf("Run: failed to create trial file %d, %v", trial, err)
+
+		var creationStart time.Time
+		var deletionStart time.Time
+
+		if c.measureMode == JustWatch {
+			creationStart = time.Now()
+			_, err = c.Create(path, 0777, sigmap.OAPPEND)
+			if err != nil {
+				db.DFatalf("Run: failed to create trial file %d, %v", trial, err)
+			}
+			_, err = c.Create(signal_path_create, 0777, sigmap.OAPPEND)
+			if err != nil {
+				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
+			}
+		} else {
+			_, err = c.Create(signal_path_create, 0777, sigmap.OAPPEND)
+			if err != nil {
+				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
+			}
+			creationStart = time.Now()
+			_, err = c.Create(path, 0777, sigmap.OAPPEND)
+			if err != nil {
+				db.DFatalf("Run: failed to create trial file %d, %v", trial, err)
+			}
 		}
+
 		// wait for all children to recognize the creation
 		db.DPrintf(db.WATCH_PERF, "Run: Waiting for workers to see creation for trial %d", trial)
-		err = responseWatcher.WaitNEntries(c.nWorkers)
-		if err != nil {
-			db.DFatalf("Run: failed to wait for all procs to respond to creation during trial %d, %v", trial, err)
-		}
+		c.waitResponses(responseWatcher)
 
-		creationDelays[trial] = c.getWorkerDelays(creationTime)
-		db.DPrintf(db.WATCH_PERF, "Run: Creation delays for trial %d: %v", trial, creationDelays[trial])
+		creationWatchDelays[trial] = c.getWorkerDelays(creationStart)
 		c.clearResponseDir()
-		responseWatcher.WaitEmpty()
+		c.waitResponseEmpty(responseDirFd, responseWatcher)
 
 		db.DPrintf(db.WATCH_PERF, "Run: Removing file for trial %d", trial)
-		deletionTime := time.Now()
-		err = c.Remove(path)
+		if c.measureMode == JustWatch {
+			deletionStart = time.Now()
+			err = c.Remove(path)
+			if err != nil {
+				db.DFatalf("Run: failed to delete trial file %d, %v", trial, err)
+			}
+			_, err = c.Create(signal_path_delete, 0777, sigmap.OAPPEND)
+			if err != nil {
+				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
+			}
+		} else {
+			_, err = c.Create(signal_path_delete, 0777, sigmap.OAPPEND)
+			if err != nil {
+				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
+			}
+			deletionStart = time.Now()
+			err = c.Remove(path)
+			if err != nil {
+				db.DFatalf("Run: failed to delete trial file %d, %v", trial, err)
+			}
+		}
 		if err != nil {
 			db.DFatalf("Run: failed to remove trial file %d, %v", trial, err)
 		}
+
 		// wait for all children to recognize the deletion
 		db.DPrintf(db.WATCH_PERF, "Run: Waiting for workers to see deletion for trial %d", trial)
-		err = responseWatcher.WaitNEntries(c.nWorkers)
-		if err != nil {
-			db.DFatalf("Run: failed to wait for all procs to respond to deletion during trial %d, %v", trial, err)
-		}
-		deletionDelays[trial] = c.getWorkerDelays(deletionTime)
-		db.DPrintf(db.WATCH_PERF, "Run: Deletion delays for trial %d: %v", trial, deletionDelays[trial])
+		c.waitResponses(responseWatcher)
+
+		deletionWatchDelays[trial] = c.getWorkerDelays(deletionStart)
 		c.clearResponseDir()
-		responseWatcher.WaitEmpty()
+		c.waitResponseEmpty(responseDirFd, responseWatcher)
 
-		err = c.CloseFd(fd)
+		err = c.RmDirEntries(c.watchDir)
 		if err != nil {
-			db.DFatalf("Run: failed to close trial file %d, %v", trial, err)
+			db.DFatalf("Run: failed to clear watchdir entries %v", err)
 		}
 	}
 
-	for ix := 0; ix < c.nStartFiles; ix++ {
-		path := filepath.Join(c.watchDir, strconv.Itoa(ix))
-		err = c.Remove(path)
-		if err != nil {
-			db.DFatalf("Run: failed to remove %s, %v", path, err)
+	 if !c.useOldWatch {
+		if err := responseWatcher.Close(); err != nil {
+			db.DFatalf("RunCoord: failed to close watcher %v", err)
 		}
 	}
 
-	if err := responseWatcher.Close(); err != nil {
-		db.DFatalf("RunCoord: failed to close watcher %v", err)
+	if err := c.CloseFd(responseDirFd); err != nil {
+		db.DFatalf("Run: failed to close response dir fd %v", err)
+	}
+
+	if err := c.RmDirEntries(c.watchDir); err != nil {
+		db.DFatalf("Run: failed to clear watchdir entries %v", err)
 	}
 
 	if err := c.Remove(c.watchDir); err != nil {
@@ -194,8 +279,8 @@ func (c *PerfCoord) Run() {
 	}
 
 	result := Result{
-		CreationTimeNs: creationDelays,
-		DeletionTimeNs: deletionDelays,
+		CreationWatchTimeNs: creationWatchDelays,
+		DeletionWatchTimeNs: deletionWatchDelays,
 	}
 	status := proc.NewStatusInfo(proc.StatusOK, "", result)
 	err = c.ClntExit(status)
@@ -218,7 +303,13 @@ func (c *PerfCoord) getWorkerDelays(startTime time.Time) []time.Duration {
 	db.DPrintf(db.WATCH_PERF, "worker times: %v", times)
 	deltas := make([]time.Duration, c.nWorkers)
 	for ix := 0; ix < c.nWorkers; ix++ {
-		deltas[ix] = times[ix].Sub(startTime)
+		if c.measureMode == JustWatch {
+			deltas[ix] = time.Duration(times[ix].Nanosecond())
+		} else if c.measureMode == IncludeFileOp {
+			deltas[ix] = times[ix].Sub(startTime)
+		} else {
+			db.DFatalf("getWorkerDelays: invalid measure mode %d", c.measureMode)
+		}
 	}
 
 	return deltas
@@ -256,12 +347,60 @@ func (c *PerfCoord) getWorkerTimes() []time.Time {
 
 		text := scanner.Text()
 		db.DPrintf(db.WATCH_PERF, "getWorkerTimes: File %s has contents %s", stat.Name, text)
-		time, err := time.Parse(time.RFC3339Nano, text)
-		if err != nil {
-			db.DFatalf("getWorkerTimes: failed to parse time %s, %v", text, err)
+
+		if c.measureMode == JustWatch {
+			duration, err := strconv.Atoi(text)
+			if err != nil {
+				db.DFatalf("getWorkerTimes: failed to parse duration %s, %v", text, err)
+			}
+			times[id] = time.Unix(0, int64(duration))
+		} else {
+			time, err := time.Parse(time.RFC3339Nano, text)
+			if err != nil {
+				db.DFatalf("getWorkerTimes: failed to parse time %s, %v", text, err)
+			}
+			times[id] = time
 		}
-		times[id] = time
 	}
 
 	return times
+}
+
+func (c *PerfCoord) waitResponses(responseWatcher *fslib.DirWatcher) {
+	if c.useOldWatch {
+		dirReader := fslib.NewDirReader(c.FsLib, c.responseDir)
+		err := dirReader.WaitNEntries(c.nWorkers)
+		if err != nil {
+			db.DFatalf("Run: failed to wait for all procs to respond %v", err)
+		}
+	} else {
+		err := responseWatcher.WaitNEntries(c.nWorkers)
+		if err != nil {
+			db.DFatalf("Run: failed to wait for all procs to respond %v", err)
+		}
+	}
+}
+
+func (c *PerfCoord) waitResponseEmpty(responseDirFd int, responseWatcher *fslib.DirWatcher) {
+	if c.useOldWatch {
+		for {
+			stats, _, err := c.ReadDir(c.responseDir)
+			if err != nil {
+				db.DFatalf("Run: failed to read response dir %v", err)
+			}
+			if len(stats) == 0 {
+				break
+			}
+			c.DirWatch(responseDirFd)
+		}
+	} else {
+		responseWatcher.WaitEmpty()
+	}
+}
+
+func coordSignalName(trial int, delete bool) string {
+	if delete {
+		return fmt.Sprintf("coord_signal_delete_%d", trial)
+	}
+	return fmt.Sprintf("coord_signal_create_%d", trial)
 }

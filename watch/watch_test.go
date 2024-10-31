@@ -3,10 +3,12 @@ package watch_test
 import (
 	"fmt"
 	"math"
+	"os"
 	"path/filepath"
 	"sigmaos/proc"
 	"sigmaos/test"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,7 +42,65 @@ func testWatch(t *testing.T, nworkers int, nfiles int) {
 	ts.Shutdown()
 }
 
+type Stats struct {
+	Average float64
+	Max int64
+	Min int64
+	Stddev float64
+}
+
+func flatten(data [][]time.Duration) []time.Duration {
+	flat := make([]time.Duration, 0)
+	for _, d := range data {
+		flat = append(flat, d...)
+	}
+	return flat
+}
+
+func computeStats(data []time.Duration) Stats {
+	average := float64(0)
+	minT := data[0].Nanoseconds()
+	maxT := data[0].Nanoseconds()
+	for _, d := range data {
+		average += float64(d.Nanoseconds())
+		minT = min(minT, d.Nanoseconds())
+		maxT = max(maxT, d.Nanoseconds())
+	}
+	average /= float64(len(data))
+
+	stddev := float64(0)
+	for _, d := range data {
+		stddev += math.Pow(float64(d.Nanoseconds()) - average, 2)
+	}
+	stddev /= float64(len(data))
+	stddev = math.Sqrt(stddev)
+
+	return Stats{average, maxT, minT, stddev}
+}
+
+func (s Stats) String() string {
+	return fmt.Sprintf("Avg: %f us\nMax: %f us\nMin: %f us\nStddev: %f us", s.Average / 1000.0, float64(s.Max) / 1000.0, float64(s.Min) / 1000.0, s.Stddev / 1000.0)
+}
+
+func dataString(data []time.Duration) string {
+	str := ""
+	for _, d := range data {
+		str += fmt.Sprintf("%d,", d.Nanoseconds())
+	}
+	return str
+}
+
 func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefix string) {
+	var oldornew string
+	useOldWatch := os.Getenv("USE_OLD_WATCH")
+	if useOldWatch != "" {
+		oldornew = "old"
+		fmt.Println("Using old watch")
+	} else {
+		oldornew = "new"
+		fmt.Println("Using new watch")
+	}
+
 	ts, err := test.NewTstateAll(t)
 
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -49,7 +109,14 @@ func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, 
 
 	basedir := filepath.Join(sp.NAMED, "watchperf")
 
-	p := proc.NewProc("watchperf-coord", []string{strconv.Itoa(nWorkers), strconv.Itoa(nStartingFiles), strconv.Itoa(nTrials), basedir})
+	measureMode := os.Getenv("WATCHPERF_MEASURE_MODE")
+	if measureMode == "" {
+		measureMode = strconv.Itoa(int(watch.JustWatch))
+	}
+
+	fmt.Printf("Using measure mode %s\n", measureMode)
+
+	p := proc.NewProc("watchperf-coord", []string{strconv.Itoa(nWorkers), strconv.Itoa(nStartingFiles), strconv.Itoa(nTrials), basedir, oldornew, measureMode})
 	err = ts.Spawn(p)
 	assert.Nil(t, err)
 	err = ts.WaitStart(p.GetPid())
@@ -64,69 +131,18 @@ func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, 
 	result := watch.Result{}
 	mapstructure.Decode(data, &result)
 
-	creationDelays := result.CreationTimeNs
-	deletionDelays := result.DeletionTimeNs
-
-	// TODO make this code nicer by wrapping into a function and also calculate things like stddev
-	averageCreationDelay := float64(0)
-	minCreationDelay := creationDelays[0][0].Nanoseconds()
-	maxCreationDelay := creationDelays[0][0].Nanoseconds()
-	for trial := 0; trial < nTrials; trial++ {
-		for worker := 0; worker < nWorkers; worker++ {
-			averageCreationDelay += float64(creationDelays[trial][worker].Nanoseconds())
-			minCreationDelay = min(minCreationDelay, creationDelays[trial][worker].Nanoseconds())
-			maxCreationDelay = max(maxCreationDelay, creationDelays[trial][worker].Nanoseconds())
-		}
-	}
-	averageCreationDelay /= float64(nTrials * nWorkers)
-
-	averageDeletionDelay := float64(0)
-	minDeletionDelay := deletionDelays[0][0].Nanoseconds()
-	maxDeletionDelay := deletionDelays[0][0].Nanoseconds()
-	for trial := 0; trial < nTrials; trial++ {
-		for worker := 0; worker < nWorkers; worker++ {
-			averageDeletionDelay += float64(deletionDelays[trial][worker].Nanoseconds())
-			minDeletionDelay = min(minDeletionDelay, deletionDelays[trial][worker].Nanoseconds())
-			maxDeletionDelay = max(maxDeletionDelay, deletionDelays[trial][worker].Nanoseconds())
-		}
-	}
-	averageDeletionDelay /= float64(nTrials * nWorkers)
-
-	// calculate stddev
-	creationStddev := float64(0)
-	for trial := 0; trial < nTrials; trial++ {
-		for worker := 0; worker < nWorkers; worker++ {
-			creationStddev += math.Pow(float64(creationDelays[trial][worker].Nanoseconds()) - averageCreationDelay, 2)
-		}
-	}
-	creationStddev /= float64(nTrials * nWorkers)
-	creationStddev = math.Sqrt(creationStddev)
-
-	deletionStddev := float64(0)
-	for trial := 0; trial < nTrials; trial++ {
-		for worker := 0; worker < nWorkers; worker++ {
-			deletionStddev += math.Pow(float64(deletionDelays[trial][worker].Nanoseconds()) - averageDeletionDelay, 2)
-		}
-	}
-	deletionStddev /= float64(nTrials * nWorkers)
-	deletionStddev = math.Sqrt(deletionStddev)
-
-	fmt.Printf("Creation Delays:\n  Avg: %f us\n  Max: %f us\n  Min: %f us\n  Stddev: %f us\n", averageCreationDelay / 1000.0, float64(maxCreationDelay) / 1000.0, float64(minCreationDelay) / 1000.0, creationStddev / 1000.0)
-	fmt.Printf("Deletion Delays:\n  Avg: %f us\n  Max: %f us\n  Min: %f us\n  Stddev: %f us\n", averageDeletionDelay / 1000.0, float64(maxDeletionDelay) / 1000.0, float64(minDeletionDelay) / 1000.0, deletionStddev / 1000.0)
+	fmt.Printf("Creation Watch Delays:\n%s\n", computeStats(flatten(result.CreationWatchTimeNs)))
+	fmt.Printf("Deletion Watch Delays:\n%s\n", computeStats(flatten(result.DeletionWatchTimeNs)))
 
 	s3Filepath := filepath.Join("name/s3/~any/sigmaos-bucket-ryan/", fmt.Sprintf("watchperf_%s_%s.txt", prefix, time.Now().String()))
 	fd, err := ts.Create(s3Filepath, 0777, sp.OWRITE)
 	assert.Nil(t, err)
 
-	creationDelaysString := ""
-	deletionDelaysString := ""
-	for trial := 0; trial < nTrials; trial++ {
-		for worker := 0; worker < nWorkers; worker++ {
-			creationDelaysString += strconv.FormatInt(creationDelays[trial][worker].Nanoseconds(), 10) + ","
-			deletionDelaysString += strconv.FormatInt(deletionDelays[trial][worker].Nanoseconds(), 10) + ","
-		}
-	}
-	writeString := creationDelaysString + "\n" + deletionDelaysString + "\n"
+	creationWatchDelaysString := dataString(flatten(result.CreationWatchTimeNs))
+	deletionWatchDelaysString := dataString(flatten(result.DeletionWatchTimeNs))
+	writeString := strings.Join([]string{
+		creationWatchDelaysString,
+		deletionWatchDelaysString}, "\n")
 	_, err = ts.Write(fd, []byte(writeString))
 	assert.Nil(t, err)
 	ts.CloseFd(fd)

@@ -2,6 +2,7 @@ package fslib_test
 
 import (
 	"flag"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -723,6 +724,7 @@ func TestWaitRemoveOne(t *testing.T) {
 }
 
 func TestDirWatch(t *testing.T) {
+	useOldWatch := os.Getenv("USE_OLD_WATCH") != ""
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -735,7 +737,12 @@ func TestDirWatch(t *testing.T) {
 	pn1 := filepath.Join(pn, f)
 	ch := make(chan bool)
 	go func() {
-		err := ts.WaitCreate(pn1)
+		var err error
+		if useOldWatch {
+			err = ts.WaitCreate(pn1)
+		} else {
+			err = ts.WaitCreateV2(pn1)
+		}
 		assert.Nil(t, err)
 		ch <- true
 	}()
@@ -752,7 +759,7 @@ func TestDirWatch(t *testing.T) {
 
 	<-ch
 
-	db.DPrintf(db.TEST, "ReadDirWatch returned")
+	db.DPrintf(db.TEST, "WaitCreate returned")
 
 	err = ts.RmDir(pn)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -762,6 +769,7 @@ func TestDirWatch(t *testing.T) {
 
 // Concurrently remove & wait
 func TestWaitRemoveWaitConcur(t *testing.T) {
+	useOldWatch := os.Getenv("USE_OLD_WATCH") != ""
 	const N = 100 // 10_000
 
 	ts, err1 := test.NewTstatePath(t, pathname)
@@ -784,7 +792,11 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 	for i := 0; i < N; i++ {
 		fn := filepath.Join(dn, strconv.Itoa(i))
 		go func(fn string) {
-			err := ts.WaitRemove(fn)
+			if useOldWatch {
+				err = ts.WaitRemove(fn)
+			} else {
+				err = ts.WaitRemoveV2(fn)
+			}
 			assert.True(ts.T, err == nil, "Unexpected WaitRemove error: %v", err)
 			done <- true
 		}(fn)
@@ -806,6 +818,7 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 
 // Concurrently wait, create and remove in dir
 func TestWaitCreateRemoveConcur(t *testing.T) {
+	useOldWatch := os.Getenv("USE_OLD_WATCH") != ""
 	const N = 500 // 5_000
 	const MS = 2
 
@@ -829,7 +842,12 @@ func TestWaitCreateRemoveConcur(t *testing.T) {
 		assert.Nil(t, err)
 
 		go func() {
-			err = fsl.WaitRemove(fn)
+			var err error
+			if useOldWatch {
+				err = fsl.WaitRemove(fn)
+			} else {
+				err = fsl.WaitRemoveV2(fn)
+			}
 			if err == nil {
 				// db.DPrintf(db.TEST, "wait for rm %v\n", i)
 			} else {

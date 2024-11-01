@@ -91,7 +91,7 @@ func NewDirReaderV2(fslib *FsLib, pn string) (*DirReaderV2, []string, error) {
 			}
 
 			if err != nil {
-				if serr.IsErrCode(err, serr.TErrClosed) {
+				if serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrUnknownfid) {
 					db.DPrintf(db.WATCH_V2, "DirWatcher: Watch stream for %s closed", pn)
 					return
 				} else {
@@ -153,6 +153,7 @@ func (dw *DirReaderV2) GetDir() []string {
 }
 
 func (dw *DirReaderV2) Close() error {
+	db.DPrintf(db.WATCH_V2, "Closing watch on %s", dw.pn)
 	dw.closed = true
 	return dw.CloseFd(dw.watchFd)
 }
@@ -320,4 +321,32 @@ func (dw *DirReaderV2) rename(files []string, dst string) ([]string, error) {
 		}
 	}
 	return newents, r
+}
+
+// Wait until pn isn't present
+func (fsl *FsLib) WaitRemoveV2(pn string) error {
+	dir := filepath.Dir(pn) + "/"
+	f := filepath.Base(pn)
+	db.DPrintf(db.WATCH_V2, "WaitRemoveV2: dir %v\n", dir)
+	dirreader, _, err := NewDirReaderV2(fsl, dir)
+	if err == nil {
+		return err
+	}
+	dirreader.WaitRemove(f)
+	dirreader.Close()
+	return err
+}
+
+// Wait until pn exists
+func (fsl *FsLib) WaitCreateV2(pn string) error {
+	dir := filepath.Dir(pn) + "/"
+	f := filepath.Base(pn)
+	db.DPrintf(db.WATCH_V2, "WaitCreateV2: dir %v\n", dir)
+	dirreader, _, err := NewDirReaderV2(fsl, dir)
+	if err == nil {
+		return err
+	}
+	dirreader.WaitCreate(f)
+	dirreader.Close()
+	return err
 }

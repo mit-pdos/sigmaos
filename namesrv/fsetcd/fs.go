@@ -102,24 +102,24 @@ func (fs *FsEtcd) GetFile(dei *DirEntInfo) (*EtcdFile, sp.TQversion, stats.Tcoun
 func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) (stats.Tcounter, *serr.Err) {
 	c := stats.NewCounter(1)
 	opts := dei.LeaseOpts()
+	fenced := f.PathName != ""
 	if b, err := proto.Marshal(nf.EtcdFileProto); err != nil {
 		return c, serr.NewErrError(err)
 	} else {
-		var cmp []clientv3.Cmp
-		if f.PathName == "" {
-			cmp = []clientv3.Cmp{
-				clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
-			}
-		} else {
-			cmp = []clientv3.Cmp{
-				clientv3.Compare(clientv3.CreateRevision(f.PathName), "=", int64(f.Epoch)),
-			}
+		cmp := []clientv3.Cmp{
+			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
+		}
+		if fenced {
+			cmp = append(cmp, clientv3.Compare(clientv3.CreateRevision(f.PathName), "=", int64(f.Epoch)))
 		}
 		opst := []clientv3.Op{
-			clientv3.OpPut(fs.path2key(fs.realm, dei), string(b)),
+			clientv3.OpPut(fs.path2key(fs.realm, dei), string(b), opts...),
 		}
 		opsf := []clientv3.Op{
-			clientv3.OpGet(f.Prefix(), opts...),
+			clientv3.OpGet(fs.fencekey),
+		}
+		if fenced {
+			opsf = append(opsf, clientv3.OpGet(f.PathName))
 		}
 		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
 		db.DPrintf(db.FSETCD, "PutFile dei %v f %v resp %v err %v\n", dei, f, resp, err)
@@ -129,11 +129,14 @@ func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) (stats.Tco
 		if !resp.Succeeded {
 			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
 				db.DPrintf(db.FENCEFS, "PutFile dei %v f %v resp %v stale\n", dei, f, resp)
+				return c, serr.NewErr(serr.TErrStale, fs.fencekey)
+			}
+			if fenced && len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
+				db.DPrintf(db.FENCEFS, "PutFile dei %v f %v resp %v stale\n", dei, f, resp)
 				return c, serr.NewErr(serr.TErrStale, f)
 			}
 			db.DPrintf(db.ERROR, "PutFile failed dei %v %v\n", dei, resp.Responses[0])
 		}
-
 		return c, nil
 	}
 }

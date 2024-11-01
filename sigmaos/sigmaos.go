@@ -48,7 +48,7 @@ type FileAPI interface {
 	PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error)
 	Seek(fd int, o sp.Toffset) error
 
-	// Leased
+	// Leases
 	CreateLeased(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error)
 	ClntId() sp.TclntId
 

@@ -86,7 +86,7 @@ func (fidc *FidClnt) Close() error {
 }
 
 func (fidc *FidClnt) Len() int {
-	return len(fidc.fids.fids)
+	return fidc.fids.len()
 }
 
 func (fidc *FidClnt) allocFid() sp.Tfid {

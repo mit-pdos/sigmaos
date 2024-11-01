@@ -73,6 +73,14 @@ func (sm *SyncMap[K, T]) InsertBlind(k K, t T) bool {
 	return ok
 }
 
+func (sm *SyncMap[K, T]) UpdateL(k K, t T) bool {
+	if _, ok := sm.tbl[k]; !ok {
+		return false
+	}
+	sm.tbl[k] = t
+	return true
+}
+
 func (sm *SyncMap[K, T]) Update(k K, t T) bool {
 	sm.Lock()
 	defer sm.Unlock()

@@ -258,7 +258,7 @@ func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) (stat
 	return c, nil
 }
 
-func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *DirEntInfo, npn path.Tpathname) (stats.Tcounter, *serr.Err) {
+func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *DirEntInfo, npn path.Tpathname, f sp.Tfence) (stats.Tcounter, *serr.Err) {
 	c := stats.NewCounter(0)
 	opts := new.LeaseOpts()
 	b, err := proto.Marshal(new.Nf.EtcdFileProto)
@@ -269,6 +269,7 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 	if r != nil {
 		return c, r
 	}
+	fenced := f.PathName != ""
 	// Update directory if new file/dir doesn't exist and directory
 	// hasn't changed.
 	cmp := []clientv3.Cmp{
@@ -282,6 +283,11 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 		clientv3.OpGet(fs.fencekey),
 		clientv3.OpGet(fs.path2key(fs.realm, new)),
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
+
+	if fenced {
+		cmp = append(cmp, clientv3.Compare(clientv3.CreateRevision(f.PathName), "=", int64(f.Epoch)))
+		ops1 = append(ops1, clientv3.OpGet(f.PathName))
+	}
 
 	if new.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(new), npn.String(), opts...))
@@ -299,6 +305,10 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 			db.DPrintf(db.FSETCD, "create %v stale\n", fs.fencekey)
 			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
 		}
+		if fenced && len(resp.Responses[3].GetResponseRange().Kvs) != 1 {
+			db.DPrintf(db.FENCEFS, "rename %v f stale", f)
+			return c, serr.NewErr(serr.TErrStale, f.PathName)
+		}
 		if len(resp.Responses[1].GetResponseRange().Kvs) == 1 {
 			db.DPrintf(db.FSETCD, "create %v exists %v\n", dir, new)
 			return c, serr.NewErr(serr.TErrExists, fmt.Sprintf("path exists %v", fs.path2key(fs.realm, new)))
@@ -309,12 +319,13 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 	return c, nil
 }
 
-func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *DirEntInfo) (stats.Tcounter, *serr.Err) {
+func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *DirEntInfo, f sp.Tfence) (stats.Tcounter, *serr.Err) {
 	c := stats.NewCounter(0)
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return c, r
 	}
+	fenced := f.PathName != ""
 	cmp := []clientv3.Cmp{
 		clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 		clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, del)), ">", 0),
@@ -326,7 +337,10 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 		clientv3.OpGet(fs.fencekey),
 		clientv3.OpGet(fs.path2key(fs.realm, del)),
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
-
+	if fenced {
+		cmp = append(cmp, clientv3.Compare(clientv3.CreateRevision(f.PathName), "=", int64(f.Epoch)))
+		ops1 = append(ops1, clientv3.OpGet(f.PathName))
+	}
 	if del.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpDelete(fs.leasedkey(del)))
 	}
@@ -342,6 +356,10 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
 			db.DPrintf(db.FSETCD, "remove %v stale\n", fs.fencekey)
 			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
+		}
+		if fenced && len(resp.Responses[3].GetResponseRange().Kvs) != 1 {
+			db.DPrintf(db.FSETCD, "remove %v stale\n", f)
+			return c, serr.NewErr(serr.TErrStale, f.PathName)
 		}
 		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "remove from %v doesn't exist\n", del)

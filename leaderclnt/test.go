@@ -23,10 +23,11 @@ const (
 
 func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	ts.MkDir(pn, 0777)
-	ts.Remove(pn + "/f")
-	ts.Remove(pn + "/g")
-	ts.Remove(pn + "/s")
-	ts.Remove(pn + "/t")
+	ts.Remove(pn + "/fff")
+	ts.Remove(pn + "/ggg")
+	ts.Remove(pn + "/sss")
+	ts.Remove(pn + "/ttt")
+	ts.Remove(pn + "/uuu")
 
 	ch := make(chan bool)
 	go func() {
@@ -41,15 +42,17 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		err = l.LeadAndFence(nil, []string{pn})
 		assert.Nil(ts.T, err, "BecomeLeaderEpoch")
 
-		_, err = fsl2.PutFile(pn+"/s", 0777, sp.OWRITE, nil)
+		_, err = fsl2.PutFile(pn+"/sss", 0777, sp.OWRITE, nil)
 		assert.Nil(ts.T, err, "PutFile")
 
-		fd, err := fsl2.Create(pn+"/f", 0777, sp.OWRITE)
+		fd, err := fsl2.Create(pn+"/fff", 0777, sp.OWRITE)
 		assert.Nil(ts.T, err, "Create")
+
+		fence := l.Fence()
 
 		ch <- true
 
-		db.DPrintf(db.TEST, "sign off as leader...")
+		db.DPrintf(db.TEST, "sign off as leader %v...", fence)
 
 		l.ReleaseLeadership()
 
@@ -62,13 +65,32 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		// now so this write to pn should fail, because it is fenced
 		// with the fsl's fence, which is the old leader's one.
 
-		_, err = fsl2.PutFile(pn+"/f", 0777, sp.OWRITE, []byte("should fail"))
+		_, err = fsl2.PutFile(pn+"/fff", 0777, sp.OWRITE, []byte("should fail"))
 		assert.NotNil(ts.T, err, "Put")
 		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale), "Err code: %v", err)
 		fsl2.CloseFd(fd)
 
-		err = fsl2.Rename(pn+"/s", pn+"/t")
+		fd, err = fsl2.Create(pn+"/uuu", 0777, sp.OWRITE)
+		assert.NotNil(ts.T, err, "Create")
+		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale), "Err code: %v", err)
+		fsl2.CloseFd(fd)
+
+		fd, err = fsl2.CreateLeased(pn+"/uuu", 0777, sp.OWRITE, sp.NoLeaseId, fence)
+		assert.NotNil(ts.T, err, "CreateLeased")
+		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale), "Err code: %v", err)
+		fsl2.CloseFd(fd)
+
+		_, err = fsl2.PutFile(pn+"/uuu", 0777, sp.OWRITE, nil)
+		assert.NotNil(ts.T, err, "PutFile")
+		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale), "Err code: %v", err)
+
+		err = fsl2.Rename(pn+"/sss", pn+"/ttt")
 		assert.NotNil(ts.T, err, "Rename")
+		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale), "Err code: %v", err)
+		fsl2.CloseFd(fd)
+
+		err = fsl2.Remove(pn + "/sss")
+		assert.NotNil(ts.T, err, "Remove")
 		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale), "Err code: %v", err)
 		fsl2.CloseFd(fd)
 
@@ -88,8 +110,10 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	err = l.LeadAndFence(nil, []string{pn})
 	assert.Nil(ts.T, err, "BecomeLeaderEpoch")
 
+	db.DPrintf(db.TEST, "fence new leader %v", l.Fence())
+
 	// Do some op so that server becomes aware of new epoch
-	_, err = ts.PutFile(pn+"/g", 0777, sp.OWRITE, []byte(strconv.Itoa(0)))
+	_, err = ts.PutFile(pn+"/ggg", 0777, sp.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(ts.T, err, "PutFile")
 
 	if crash {
@@ -105,13 +129,13 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 
 	<-ch
 
-	fd, err := ts.Open(pn+"/f", sp.OREAD)
+	fd, err := ts.Open(pn+"/fff", sp.OREAD)
 	assert.Nil(ts.T, err, "Open err %v", err)
 	b := make([]byte, 100)
 	cnt, err := ts.Read(fd, b)
 	assert.Equal(ts.T, sp.Tsize(0), cnt, "buf %v", string(b))
 
-	_, err = ts.Stat(pn + "/s")
+	_, err = ts.Stat(pn + "/sss")
 	assert.Nil(ts.T, err, "Stat err %v", err)
 
 	return l

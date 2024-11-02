@@ -6,6 +6,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/memfs"
 	"sigmaos/memfs/dir"
+	"sigmaos/memfs/fenceddir"
 	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/sigmaclnt"
@@ -41,7 +42,7 @@ func NewMemFsPortClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, aaf pr
 
 func NewMemFsPortClntFenceAuth(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf protsrv.AttachAuthF) (*MemFs, error) {
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, fencefs)
-	root := dir.NewRootDir(ctx, memfs.NewInode, nil)
+	root := fenceddir.NewFencedRoot(dir.NewRootDir(ctx, memfs.NewInode, nil))
 	return NewMemFsRootPortClntFenceAuth(root, pn, addr, sc, fencefs, aaf)
 }
 

@@ -25,6 +25,8 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	ts.MkDir(pn, 0777)
 	ts.Remove(pn + "/f")
 	ts.Remove(pn + "/g")
+	ts.Remove(pn + "/s")
+	ts.Remove(pn + "/t")
 
 	ch := make(chan bool)
 	go func() {
@@ -38,6 +40,9 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		assert.Nil(ts.T, err)
 		err = l.LeadAndFence(nil, []string{pn})
 		assert.Nil(ts.T, err, "BecomeLeaderEpoch")
+
+		_, err = fsl2.PutFile(pn+"/s", 0777, sp.OWRITE, nil)
+		assert.Nil(ts.T, err, "PutFile")
 
 		fd, err := fsl2.Create(pn+"/f", 0777, sp.OWRITE)
 		assert.Nil(ts.T, err, "Create")
@@ -59,6 +64,11 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 
 		_, err = fsl2.PutFile(pn+"/f", 0777, sp.OWRITE, []byte("should fail"))
 		assert.NotNil(ts.T, err, "Put")
+		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale), "Err code: %v", err)
+		fsl2.CloseFd(fd)
+
+		err = fsl2.Rename(pn+"/s", pn+"/t")
+		assert.NotNil(ts.T, err, "Rename")
 		assert.True(ts.T, serr.IsErrCode(err, serr.TErrStale), "Err code: %v", err)
 		fsl2.CloseFd(fd)
 
@@ -100,6 +110,9 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	b := make([]byte, 100)
 	cnt, err := ts.Read(fd, b)
 	assert.Equal(ts.T, sp.Tsize(0), cnt, "buf %v", string(b))
+
+	_, err = ts.Stat(pn + "/s")
+	assert.Nil(ts.T, err, "Stat err %v", err)
 
 	return l
 }

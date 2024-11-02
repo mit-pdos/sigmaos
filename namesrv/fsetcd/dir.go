@@ -234,7 +234,7 @@ func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, new path.Tpathname, 
 
 	dir.Ents.Delete(from)
 	dir.Ents.Insert(to, difrom)
-	if nops1, err := fse.rename(dei, dir, v, dito, difrom, new); err == nil {
+	if nops1, err := fse.rename(dei, dir, v, dito, difrom, new, f); err == nil {
 		stats.Add(&nops, nops1)
 		fse.dc.update(dei.Path, dir)
 		return nops, nil

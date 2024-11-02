@@ -109,9 +109,6 @@ func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) (stats.Tco
 		cmp := []clientv3.Cmp{
 			clientv3.Compare(clientv3.CreateRevision(fs.fencekey), "=", fs.fencerev),
 		}
-		if fenced {
-			cmp = append(cmp, clientv3.Compare(clientv3.CreateRevision(f.PathName), "=", int64(f.Epoch)))
-		}
 		opst := []clientv3.Op{
 			clientv3.OpPut(fs.path2key(fs.realm, dei), string(b), opts...),
 		}
@@ -119,6 +116,7 @@ func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) (stats.Tco
 			clientv3.OpGet(fs.fencekey),
 		}
 		if fenced {
+			cmp = append(cmp, clientv3.Compare(clientv3.CreateRevision(f.PathName), "=", int64(f.Epoch)))
 			opsf = append(opsf, clientv3.OpGet(f.PathName))
 		}
 		resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(opst...).Else(opsf...).Commit()
@@ -356,13 +354,14 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 }
 
 // XXX retry
-func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) (stats.Tcounter, *serr.Err) {
+func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, from *DirEntInfo, npn path.Tpathname, f sp.Tfence) (stats.Tcounter, *serr.Err) {
 	c := stats.NewCounter(0)
 	opts := from.LeaseOpts()
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return c, r
 	}
+	fenced := f.PathName != ""
 	var cmp []clientv3.Cmp
 	var ops []clientv3.Op
 	ops1 := []clientv3.Op{
@@ -375,6 +374,7 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, from)), ">", 0),
 			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, del)), ">", 0),
 			clientv3.Compare(clientv3.Version(fs.path2key(fs.realm, dei)), "=", int64(v))}
+
 		ops = []clientv3.Op{
 			clientv3.OpDelete(fs.path2key(fs.realm, del)),
 			clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
@@ -385,7 +385,10 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 		ops = []clientv3.Op{
 			clientv3.OpPut(fs.path2key(fs.realm, dei), string(d1))}
 	}
-
+	if fenced {
+		cmp = append(cmp, clientv3.Compare(clientv3.CreateRevision(f.PathName), "=", int64(f.Epoch)))
+		ops1 = append(ops1, clientv3.OpGet(f.PathName))
+	}
 	if from.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
 	}
@@ -398,8 +401,12 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 	if !resp.Succeeded {
 		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
 			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
-			db.DPrintf(db.FSETCD, "rename %v stale\n", fs.fencekey)
+			db.DPrintf(db.FSETCD, "rename %v stale", fs.fencekey)
 			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
+		}
+		if fenced && len(resp.Responses[3].GetResponseRange().Kvs) != 1 {
+			db.DPrintf(db.FENCEFS, "rename %v f stale", f)
+			return c, serr.NewErr(serr.TErrStale, f.PathName)
 		}
 		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "rename from %v doesn't exist\n", from)

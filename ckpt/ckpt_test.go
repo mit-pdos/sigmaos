@@ -41,7 +41,7 @@ func TestSpawnCkptProc(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusErr())
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	pid = sp.GenPid("ckpt-proc-copy")
 

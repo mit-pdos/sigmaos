@@ -69,7 +69,7 @@ func (s3c *S3PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, 
 	return sp.NoFid, serr.NewErr(serr.TErrInval, mode)
 }
 
-func (s3c *S3PathClnt) Create(pn string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
+func (s3c *S3PathClnt) Create(pn string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (sp.Tfid, error) {
 	s3w, err := s3c.openS3Writer(pn)
 	if err != nil {
 		return sp.NoFid, err

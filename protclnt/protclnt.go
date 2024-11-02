@@ -77,7 +77,7 @@ func (pclnt *ProtClnt) Walk(fid sp.Tfid, nfid sp.Tfid, path path.Tpathname) (*sp
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (*sp.Rcreate, *serr.Err) {
+func (pclnt *ProtClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (*sp.Rcreate, *serr.Err) {
 	args := sp.NewTcreate(fid, name, perm, mode, lid, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {

@@ -63,7 +63,8 @@ func (fdc *FdClient) Create(pn string, perm sp.Tperm, mode sp.Tmode) (int, error
 	if err != nil {
 		return -1, err
 	}
-	fid, err := pc.Create(pn, fdc.pe.GetPrincipal(), perm, mode, sp.NoLeaseId, sp.NoFence())
+	f := fdc.ft.lookup(pn)
+	fid, err := pc.Create(pn, fdc.pe.GetPrincipal(), perm, mode, sp.NoLeaseId, f)
 	if err != nil {
 		return -1, err
 	}
@@ -72,7 +73,7 @@ func (fdc *FdClient) Create(pn string, perm sp.Tperm, mode sp.Tmode) (int, error
 }
 
 func (fdc *FdClient) CreateLeased(pn string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
-	fid, err := fdc.pc.Create(pn, fdc.pe.GetPrincipal(), perm, mode, lid, f)
+	fid, err := fdc.pc.Create(pn, fdc.pe.GetPrincipal(), perm, mode, lid, &f)
 	if err != nil {
 		return -1, err
 	}

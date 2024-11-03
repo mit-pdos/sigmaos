@@ -2,7 +2,7 @@
 // file is created or removed, or a directory changes; see Watch()
 // [protsrv].
 //
-// Servers also use them to locks a pathname before
+// Servers also use them to lock a pathname before
 // manipulating/creating a file or directory.  When a server starts an
 // operation it calls WatchLookupL, which allocates an watch in the
 // table and locks the watch. Then, it does it work, and releases the

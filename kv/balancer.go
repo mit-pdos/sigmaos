@@ -31,6 +31,7 @@ import (
 	"sigmaos/kvgrp"
 	"sigmaos/leaderclnt"
 	"sigmaos/memfs/dir"
+	"sigmaos/memfs/fenceddir"
 	"sigmaos/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -108,7 +109,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 	}
 	ctx := ctx.NewCtx(sp.NewPrincipal(sp.TprincipalID(KVBALANCER), bl.SigmaClnt.ProcEnv().GetRealm()), nil, 0, sp.NoClntId, nil, nil)
 	root, _, _ := ssrv.Root(path.Tpathname{})
-	err1 := dir.MkNod(ctx, root, "ctl", newCtl(ctx, root, bl))
+	err1 := dir.MkNod(ctx, fenceddir.GetDir(root), "ctl", newCtl(ctx, root, bl))
 	if err1 != nil {
 		db.DFatalf("MkNod clone failed %v\n", err1)
 	}

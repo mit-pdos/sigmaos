@@ -47,25 +47,30 @@ def remove_outliers(data):
     
     return [x for x in data if lower_bound <= x <= upper_bound]
 
-def plot_histogram(data, bins=10, title="Histogram", xlabel="Value", ylabel="Frequency", save=True):
-    plt.hist(data, bins=bins, edgecolor='black', alpha=0.4)
+def plot_histogram(data, bins=10, title="Histogram", xlabel="Value", ylabel="Frequency", save=None, label=None):
+    plt.hist(data, bins=bins, edgecolor='black', alpha=0.4, label=label)
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.grid(True)
+    plt.legend()
     if save:
-        plt.savefig(f"{title}.png")
+        plt.savefig(save)
 
-if __name__ == "__main__":
-    create_watch_times,delete_watch_times = read_data(
-        "watchperf_multiple_no_files_2024-10-31 07_38_06.427872582 +0000 UTC m=+73.577331401.txt"
-    )
+def process_file(file, save=None, label_suffix=""):
+    create_watch_times, delete_watch_times = read_data(file)
+    if save == "":
+        save = file.replace(".txt", ".png")
 
     create_watch_times = remove_outliers(create_watch_times)
     delete_watch_times = remove_outliers(delete_watch_times)
 
     print_stats(create_watch_times, delete_watch_times)
     
-    plot_histogram(create_watch_times, bins=30, title="", xlabel="Delay (us)", ylabel="Frequency", save=False)
-    plot_histogram(delete_watch_times, bins=30, title="Watch Times", xlabel="Delay (us)", ylabel="Frequency")
+    # plot_histogram(create_watch_times, bins=30, title="", xlabel="Delay (us)", ylabel="Frequency", label=("Create" + label_suffix))
+    plot_histogram(delete_watch_times, bins=30, title="Watch Times", xlabel="Delay (us)", ylabel="Frequency", save=save, label=("Delete" + label_suffix))
+
+if __name__ == "__main__":
+    process_file("watchperf_single_no_new.txt", label_suffix=" (No Files in Directory)")
+    process_file("watchperf_single_many_new.txt", save="watchperf_single_no_vs_many_new.png", label_suffix=" (1000 Files in Directory)")
     plt.clf()

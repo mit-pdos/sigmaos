@@ -36,6 +36,13 @@ func (wr watchReader) Read(p []byte) (int, error) {
 	return int(size), err
 }
 
+// TODO: change this paradigm to more accurately reflect the old one
+// by only reading when the user asks for it, then we can accurately measure the perf
+
+// TODO: update it so that this and the oriignal dirreader have a unified interface and then swap between them with a flag
+
+// change the fidwatch to just be a normal fid with a diff fsobj
+
 var CREATE_PREFIX = "CREATE "
 var REMOVE_PREFIX = "REMOVE "
 

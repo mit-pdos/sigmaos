@@ -40,6 +40,7 @@ type PerfCoord struct {
 	watchDir string
 	responseDir string
 	tempDir string
+	signalDir string
 	useOldWatch bool
 	measureMode MeasureMode
 }
@@ -74,6 +75,7 @@ func NewPerfCoord(args []string) (*PerfCoord, error) {
 	watchDir := filepath.Join(baseDir, "watch")
 	responseDir := filepath.Join(baseDir, "response")
 	tempDir := filepath.Join(baseDir, "temp")
+	signalDir := filepath.Join(baseDir, "signal")
 
 	var useOldWatch bool
 	oldOrNew := args[4]
@@ -99,6 +101,7 @@ func NewPerfCoord(args []string) (*PerfCoord, error) {
 		watchDir,
 		responseDir,
 		tempDir,
+		signalDir,
 		useOldWatch,
 		MeasureMode(measureMode),
 	}, nil
@@ -109,6 +112,7 @@ func (c *PerfCoord) Run() {
 	c.MkDir(c.watchDir, 0777)
 	c.MkDir(c.responseDir, 0777)
 	c.MkDir(c.tempDir, 0777)
+	c.MkDir(c.signalDir, 0777)
 
 	for ix := 0; ix < c.nStartFiles; ix++ {
 		path := filepath.Join(c.watchDir, strconv.Itoa(ix))
@@ -129,7 +133,7 @@ func (c *PerfCoord) Run() {
 		}
 
 		go func (ix int) {
-			p := proc.NewProc("watchperf-worker", []string{strconv.Itoa(ix), strconv.Itoa(c.nTrials), c.watchDir, c.responseDir, c.tempDir, oldOrNew, strconv.Itoa(int(c.measureMode))})
+			p := proc.NewProc("watchperf-worker", []string{strconv.Itoa(ix), strconv.Itoa(c.nTrials), c.watchDir, c.responseDir, c.tempDir, c.signalDir, oldOrNew, strconv.Itoa(int(c.measureMode))})
 			err := c.Spawn(p)
 			if err != nil {
 				db.DFatalf("Run: spawning %d failed %v", ix, err)
@@ -165,12 +169,14 @@ func (c *PerfCoord) Run() {
 			db.DFatalf("RunCoord: failed to wait for all procs to be ready %v", err)
 		}
 	}
-	c.clearResponseDir()
 
 	responseDirFd, err := c.Open(c.responseDir, sigmap.OREAD)
 	if err != nil {
 		db.DFatalf("Run: failed to open response dir %v", err)
 	}
+
+	c.clearResponseDir()
+	c.waitResponseEmpty(responseDirFd, responseWatcher)
 
 	creationWatchDelays := make([][]time.Duration, c.nTrials)
 	deletionWatchDelays := make([][]time.Duration, c.nTrials)
@@ -178,8 +184,8 @@ func (c *PerfCoord) Run() {
 	for trial := 0; trial < c.nTrials; trial++ {
 		db.DPrintf(db.WATCH_PERF, "Run: Running trial %d", trial)
 		path := filepath.Join(c.watchDir, fmt.Sprintf("trial_%d", trial))
-		signal_path_create := filepath.Join(c.watchDir, coordSignalName(trial, false))
-		signal_path_delete := filepath.Join(c.watchDir, coordSignalName(trial, true))
+		signal_path_create := filepath.Join(c.signalDir, coordSignalName(trial, false))
+		signal_path_delete := filepath.Join(c.signalDir, coordSignalName(trial, true))
 
 		db.DPrintf(db.WATCH_PERF, "Run: Creating file for trial %d", trial)
 
@@ -249,6 +255,10 @@ func (c *PerfCoord) Run() {
 		deletionWatchDelays[trial] = c.getWorkerDelays(deletionStart)
 		c.clearResponseDir()
 		c.waitResponseEmpty(responseDirFd, responseWatcher)
+		err := c.RmDirEntries(c.signalDir)
+		if err != nil {
+			db.DFatalf("Run: failed to clear signaldir entries %v", err)
+		}
 
 		err = c.RmDirEntries(c.watchDir)
 		if err != nil {
@@ -278,6 +288,13 @@ func (c *PerfCoord) Run() {
 	}
 	if err := c.Remove(c.tempDir); err != nil {
 		db.DFatalf("Run: failed to remove tempdir %v", err)
+	}
+	if err := c.RmDirEntries(c.signalDir); err != nil {
+		db.DFatalf("Run: failed to clear signaldir entries %v", err)
+	}
+
+	if err := c.Remove(c.signalDir); err != nil {
+		db.DFatalf("Run: failed to remove signaldir %v", err)
 	}
 	if err := c.Remove(c.baseDir); err != nil {
 		db.DFatalf("Run: failed to remove basedir %v", err)

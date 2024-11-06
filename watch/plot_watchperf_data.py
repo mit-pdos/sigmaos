@@ -62,15 +62,15 @@ def process_file(file, save=None, label_suffix=""):
     if save == "":
         save = file.replace(".txt", ".png")
 
-    create_watch_times = remove_outliers(create_watch_times)
-    delete_watch_times = remove_outliers(delete_watch_times)
+    create_watch_times =(create_watch_times)
+    delete_watch_times =(delete_watch_times)
 
     print_stats(create_watch_times, delete_watch_times)
     
-    # plot_histogram(create_watch_times, bins=30, title="", xlabel="Delay (us)", ylabel="Frequency", label=("Create" + label_suffix))
+    plot_histogram(create_watch_times, bins=30, title="", xlabel="Delay (us)", ylabel="Frequency", label=("Create" + label_suffix))
     plot_histogram(delete_watch_times, bins=30, title="Watch Times", xlabel="Delay (us)", ylabel="Frequency", save=save, label=("Delete" + label_suffix))
 
 if __name__ == "__main__":
-    process_file("watchperf_single_no_new.txt", label_suffix=" (No Files in Directory)")
-    process_file("watchperf_single_many_new.txt", save="watchperf_single_no_vs_many_new.png", label_suffix=" (1000 Files in Directory)")
+    process_file("watchperf_single_many_new.txt", label_suffix=" (No Files in Directory)", save="graph.png")
+    # process_file("watchperf_single_many_new.txt", save="watchperf_single_no_vs_many_new.png", label_suffix=" (1000 Files in Directory)")
     plt.clf()

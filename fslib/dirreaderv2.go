@@ -24,6 +24,7 @@ type DirReaderV2 struct {
 	ents map[string]bool
 	changes map[string]bool
 	closed bool
+	reader *bufio.Reader
 }
 
 type watchReader struct {
@@ -35,9 +36,6 @@ func (wr watchReader) Read(p []byte) (int, error) {
 	size, err := wr.FsLib.Read(wr.watchFd, p)
 	return int(size), err
 }
-
-// TODO: change this paradigm to more accurately reflect the old one
-// by only reading when the user asks for it, then we can accurately measure the perf
 
 // TODO: update it so that this and the oriignal dirreader have a unified interface and then swap between them with a flag
 
@@ -71,12 +69,12 @@ func NewDirReaderV2(fslib *FsLib, pn string) (*DirReaderV2, []string, error) {
 	dw := &DirReaderV2{
 		FsLib: fslib,
 		Mutex: &mu,
-		cond:  sync.NewCond(&mu),
 		pn:    pn,
 		watchFd: watchFd,
 		ents:   make(map[string]bool),
 		changes: make(map[string]bool),
 		closed: false,
+		reader: bufferedReader,
 	}
 
 	sts, _, err := fslib.ReadDir(pn)
@@ -90,55 +88,90 @@ func NewDirReaderV2(fslib *FsLib, pn string) (*DirReaderV2, []string, error) {
 
 	files := filterMap(dw.ents)
 
-	go func() {
-		for {
-			event, err := bufferedReader.ReadString('\n')
-			if dw.closed {
-				return
-			}
-
-			if err != nil {
-				if serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrUnknownfid) {
-					db.DPrintf(db.WATCH_V2, "DirWatcher: Watch stream for %s closed", pn)
-					return
-				} else {
-					db.DFatalf("DirWatcher: Watch stream produced err %v", err)
-				}
-			}
-
-			// remove the newline
-			event = event[:len(event) - 1]
-			var name string
-			var created bool
-
-			if strings.HasPrefix(event, CREATE_PREFIX) {
-				name = event[len(CREATE_PREFIX):]
-				created = true
-			} else if strings.HasPrefix(event, REMOVE_PREFIX) {
-				name = event[len(REMOVE_PREFIX):]
-				created = false
-			} else {
-				db.DFatalf("Received malformed watch event: %s", event)
-			}
-
-			dw.Lock()
-			if dw.closed {
-				dw.Unlock()
-				return
-			}
-
-			db.DPrintf(db.WATCH_V2, "DirWatcher: Broadcasting event %s %t", name, created)
-
-			dw.ents[name] = created
-			dw.changes[name] = created
-
-			dw.cond.Broadcast()
-
-			dw.Unlock()
-		}
-	}()
-
 	return dw, files, nil
+}
+
+// should hold lock for dw
+func (dw *DirReaderV2) ReadUpdates() error {
+	err := dw.ReadNextUpdate()
+	if err != nil {
+		return err
+	}
+
+	// read extra events as long as they do not cause is to incur an additional RPC read()
+	hasUpdates, err := dw.HasUpdateAvailableInBuffer()
+	for hasUpdates && err == nil {
+		err = dw.ReadNextUpdate()
+		if err != nil {
+			return err
+		}
+
+		hasUpdates, err = dw.HasUpdateAvailableInBuffer()
+	}
+
+	return err
+}
+
+// should hold lock for dw
+func (dw *DirReaderV2)  ReadNextUpdate() error {
+	event, err := dw.reader.ReadString('\n')
+
+	if dw.closed {
+		return serr.NewErr(serr.TErrClosed, "")
+	}
+
+	if err != nil {
+		if serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrUnknownfid) {
+			db.DPrintf(db.WATCH_V2, "DirWatcher: Watch stream for %s closed", dw.pn)
+			return serr.NewErr(serr.TErrClosed, "")
+		} else {
+			db.DFatalf("DirWatcher: Watch stream produced err %v", err)
+		}
+	}
+
+	// remove the newline
+	event = event[:len(event) - 1]
+	var name string
+	var created bool
+
+	if strings.HasPrefix(event, CREATE_PREFIX) {
+		name = event[len(CREATE_PREFIX):]
+		created = true
+	} else if strings.HasPrefix(event, REMOVE_PREFIX) {
+		name = event[len(REMOVE_PREFIX):]
+		created = false
+	} else {
+		db.DFatalf("Received malformed watch event: %s", event)
+	}
+
+	if dw.closed {
+		return serr.NewErr(serr.TErrClosed, "")
+	}
+
+	db.DPrintf(db.WATCH_V2, "DirWatcher: Read event %s %t", name, created)
+
+	dw.ents[name] = created
+	dw.changes[name] = created
+
+	return nil
+}
+
+
+// should hold lock for dw
+func (dw *DirReaderV2) HasUpdateAvailableInBuffer() (bool, error) {
+	buffer, err := dw.reader.Peek(dw.reader.Buffered())
+	if err != nil {
+		db.DPrintf(db.WATCH_V2, "DirWatcher: failed to peek at buffer for %s", dw.pn)
+		return false, err
+	}
+
+	for _, b := range buffer {
+		if b == '\n' {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func filterMap(ents map[string] bool) []string {
@@ -169,12 +202,17 @@ func (dw *DirReaderV2) Close() error {
 // been created in dir).
 func (dw *DirReaderV2) readDirWatch(watch FwatchV2) error {
 	dw.Lock()
+	defer dw.Unlock()
+
 	for watch(dw.ents, dw.changes) {
 		clear(dw.changes)
-		dw.cond.Wait()
+		err := dw.ReadUpdates()
+		if err != nil {
+			db.DPrintf(db.WATCH_V2, "readDirWatch: ReadUpdates failed %v", err)
+			return err
+		}
 	}
 	clear(dw.changes)
-	dw.Unlock()
 
 	return nil
 }
@@ -209,7 +247,7 @@ func (dw *DirReaderV2) WaitNEntries(n int) error {
 	return nil
 }
 
-// Wait until direcotry is empty
+// Wait until directory is empty
 func (dw *DirReaderV2) WaitEmpty() error {
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		db.DPrintf(db.WATCH_V2, "WaitEmpty: %v %v", ents, changes)

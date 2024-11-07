@@ -141,7 +141,7 @@ func (sd *Schedd) WaitEvict(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitR
 	return nil
 }
 
-// Wait for a proc to mark itself as exited.
+// Evict a proc
 func (sd *Schedd) Evict(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
 	db.DPrintf(db.SCHEDD, "Evict %v", req.PidStr)
 	sd.pmgr.Evict(sp.Tpid(req.PidStr))

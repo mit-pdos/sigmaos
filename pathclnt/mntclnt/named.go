@@ -33,7 +33,6 @@ func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.
 	}
 	var ep *sp.Tendpoint
 	if mc.pe.UseNetProxy {
-		// If this mount was passed via the proc env, return it immediately.
 		ep0, err := mc.npc.GetNamedEndpoint(realm)
 		if err != nil {
 			if sr, ok := serr.IsErr(err); ok {
@@ -51,7 +50,7 @@ func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.
 	}
 	// Cache the newly resolved mount
 	mc.ndMntCache.Put(realm, ep)
-	db.DPrintf(db.MOUNT, "getNamedEndpointRealm [%v] %v", realm, ep)
+	db.DPrintf(db.MOUNT, "getNamedEndpointRealm %v [%v] %v", mc.cid, realm, ep)
 	db.DPrintf(db.WALK_LAT, "getNamedEndpointRealm %v %v %v", mc.cid, ep, time.Since(s))
 	return ep, nil
 

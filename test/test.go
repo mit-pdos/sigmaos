@@ -277,6 +277,13 @@ func (ts *Tstate) Boot(s string) error {
 	return ts.kclnts[0].Boot(s)
 }
 
+func (ts *Tstate) BootEnv(s string, env []string) error {
+	// Clear the saved kernel, since the next test may not need an additional
+	// node
+	savedTstate = nil
+	return ts.kclnts[0].BootEnv(s, env)
+}
+
 func (ts *Tstate) BootFss3d() error {
 	// Clear the saved kernel, since the next test may not need an additional
 	// node

@@ -146,7 +146,12 @@ func (k *Kernel) Shutdown() error {
 }
 
 func (k *Kernel) Boot(s string) error {
-	_, err := k.kclnt.Boot(s, []string{})
+	_, err := k.kclnt.Boot(s, []string{}, []string{})
+	return err
+}
+
+func (k *Kernel) BootEnv(s string, env []string) error {
+	_, err := k.kclnt.Boot(s, []string{}, env)
 	return err
 }
 

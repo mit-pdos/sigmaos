@@ -129,7 +129,7 @@ func (updm *UprocdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 
 func (updm *UprocdMgr) startUprocd() (sp.Tpid, *UprocdClnt) {
 	s := time.Now()
-	pid, err := updm.kclnt.Boot("uprocd", []string{updm.kernelId})
+	pid, err := updm.kclnt.Boot("uprocd", []string{updm.kernelId}, []string{})
 	db.DPrintf(db.SPAWN_LAT, "Boot uprocd latency: %v", time.Since(s))
 	if err != nil {
 		db.DFatalf("Error Boot Uprocd: %v", err)

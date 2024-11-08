@@ -21,6 +21,7 @@ const (
 	SIGMADEBUGPID  = "SIGMADEBUGPID"
 	SIGMAPERF      = "SIGMAPERF"
 	SIGMADEBUG     = "SIGMADEBUG"
+	SIGMAFAIL      = "SIGMAFAIL"
 	SIGMACONFIG    = "SIGMACONFIG"
 	SIGMAPRINCIPAL = "SIGMAPRINCIPAL"
 )
@@ -54,6 +55,14 @@ func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
 }
 
+func GetSigmaFail() string {
+	return os.Getenv(SIGMAFAIL)
+}
+
+func SetSigmaFail(s string) {
+	os.Setenv(SIGMAFAIL, s)
+}
+
 func GetLabelsEnv(envvar string) map[string]bool {
 	s := os.Getenv(envvar)
 	return GetLabels(s)
@@ -74,7 +83,7 @@ func GetLabels(s string) map[string]bool {
 }
 
 func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, overlays, useSPProxy bool, useNetProxy bool) *ProcEnv {
-	// Load Perf & Debug from the environment for convenience.
+	// Load Debug, Perf, and Fail from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
 			PidStr:              string(pid),
@@ -91,6 +100,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Perf:                os.Getenv(SIGMAPERF),
 			Strace:              os.Getenv(SIGMASTRACE),
 			Debug:               os.Getenv(SIGMADEBUG),
+			Fail:                os.Getenv(SIGMAFAIL),
 			UprocdPIDStr:        sp.NOT_SET,
 			Privileged:          priv,
 			Overlays:            overlays,
@@ -364,6 +374,7 @@ func (pe *ProcEnv) String() string {
 		"EtcdMnt:%v "+
 		"InnerIP:%v "+
 		"OuterIP:%v "+
+		"Named:%v "+
 		"BuildTag:%v "+
 		"Privileged:%v "+
 		"Overlays:%v "+
@@ -373,7 +384,8 @@ func (pe *ProcEnv) String() string {
 		"UseSPProxy:%v "+
 		"UseNetProxy:%v "+
 		"SigmaPath:%v "+
-		"RealmSwitch:%v"+
+		"RealmSwitch:%v "+
+		"Fail:%v"+
 		"}",
 		pe.Program,
 		pe.Version,
@@ -390,6 +402,7 @@ func (pe *ProcEnv) String() string {
 		pe.GetEtcdEndpoints(),
 		pe.InnerContainerIPStr,
 		pe.OuterContainerIPStr,
+		pe.NamedEndpointProto,
 		pe.BuildTag,
 		pe.Privileged,
 		pe.Overlays,
@@ -400,5 +413,6 @@ func (pe *ProcEnv) String() string {
 		pe.UseNetProxy,
 		pe.SigmaPath,
 		pe.RealmSwitchStr,
+		pe.Fail,
 	)
 }

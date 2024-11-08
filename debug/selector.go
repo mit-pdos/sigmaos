@@ -108,6 +108,7 @@ const (
 	BOOT                      = "BOOT"
 	CONTAINER                 = "CONTAINER"
 	NAMED                     = "NAMED"
+	NAMED0                    = "NAMED0"
 	FSETCD                    = "FSETCD"
 	PROCMGR                   = "PROCMGR"
 	UPROCDMGR                 = "UPROCDMGR"
@@ -257,6 +258,7 @@ const (
 	WATCH_ERR               = WATCH + ERR
 	LOCKMAP                 = "LOCKMAP"
 	SNAP                    = "SNAP"
+	STAT                    = "STAT"
 	NAMEI                   = "NAMEI"
 	FENCEFS                 = "FENCEFS"
 	FENCEFS_ERR             = FENCEFS + ERR

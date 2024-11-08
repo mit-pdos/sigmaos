@@ -187,6 +187,7 @@ CID=$(docker run -dit \
              -e gvisor=${GVISOR} \
              -e netproxy=${NETPROXY} \
              -e SIGMAPERF=${SIGMAPERF} \
+             -e SIGMAFAIL=${SIGMAFAIL} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \
              sigmaos)

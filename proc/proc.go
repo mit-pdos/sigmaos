@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -238,6 +239,7 @@ func (p *Proc) String() string {
 		"InnerIP:%v "+
 		"OuterIP:%v "+
 		"Args:%v "+
+		"Env:%v "+
 		"Type:%v "+
 		"Mcpu:%v "+
 		"Mem:%v "+
@@ -256,6 +258,7 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.GetInnerContainerIP(),
 		p.ProcEnvProto.GetOuterContainerIP(),
 		p.Args,
+		p.Env,
 		p.GetType(),
 		p.GetMcpu(),
 		p.GetMem(),
@@ -276,6 +279,7 @@ func (p *Proc) setBaseEnv() {
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
+	p.AppendEnv(SIGMAFAIL, GetSigmaFail())
 	p.AppendEnv(SIGMADEBUGPID, p.GetPid().String())
 	if p.IsPrivileged() {
 		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot
@@ -407,6 +411,15 @@ func (p *Proc) GetEnv() []string {
 		env = append(env, key+"="+envvar)
 	}
 	return env
+}
+
+func (p *Proc) UpdateEnv(env []string) {
+	for _, e := range env {
+		kv := strings.Split(e, "=")
+		if len(kv) == 2 {
+			p.Env[kv[0]] = kv[1]
+		}
+	}
 }
 
 // Set the number of cores on this proc. If > 0, then this proc is LC. For now,

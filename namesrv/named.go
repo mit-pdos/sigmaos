@@ -64,7 +64,7 @@ func Run(args []string) error {
 	//	}()
 
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pe)
+	db.DPrintf(db.NAMED0, "named start: %v cfg: %v", args, pe)
 	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
@@ -147,13 +147,18 @@ func Run(args []string) error {
 	ch := make(chan struct{})
 	go nd.waitExit(ch)
 
-	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
+	db.DPrintf(db.NAMED0, "started %v %v", pe.GetPID(), nd.realm)
 
 	if err := nd.startLeader(); err != nil {
-		db.DPrintf(db.NAMED, "%v: startLeader %v err %v", pe.GetPID(), nd.realm, err)
+		db.DPrintf(db.NAMED0, "%v: startLeader %v err %v", pe.GetPID(), nd.realm, err)
 		return err
 	}
 	defer nd.fs.Close()
+
+	go func() {
+		<-nd.sess.Done()
+		db.DPrintf(db.NAMED0, "%v sess done", nd.realm)
+	}()
 
 	ep, err := nd.newSrv()
 	if err != nil {
@@ -162,7 +167,7 @@ func Run(args []string) error {
 
 	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
-	db.DPrintf(db.NAMED, "newSrv %v ep %v", nd.realm, ep)
+	db.DPrintf(db.NAMED0, "newSrv %v ep %v", nd.realm, ep)
 
 	pn = sp.NAMED
 	if nd.realm == sp.ROOTREALM {
@@ -195,22 +200,25 @@ func Run(args []string) error {
 		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v", nd.elect.Key(), err)
 	}
 
-	db.DPrintf(db.NAMED, "Created Leader file %v ", nd.elect.Key())
+	db.DPrintf(db.NAMED0, "Created Leader file %v ", nd.elect.Key())
 
 	if err := nd.warmCache(); err != nil {
 		db.DFatalf("warmCache err %v", err)
 	}
 
-	if nd.crash > 0 {
-		crash.Crasher(nd.SigmaClnt.FsLib)
-	}
+	crash.Partition(crash.NAMED_PARTITION, func() {
+		db.DPrintf(db.CRASH, "Partition named: resign")
+		if err := nd.elect.Resign(); err != nil {
+			db.DPrintf(db.NAMED, "Partition %v err %v", pe.GetPID(), err)
+		}
+	})
 
 	<-ch
 
 	db.DPrintf(db.ALWAYS, "named done %v %v", nd.realm, ep)
 
 	if err := nd.resign(); err != nil {
-		db.DPrintf(db.NAMED, "resign %v err %v", pe.GetPID(), err)
+		db.DPrintf(db.NAMED0, "resign %v err %v", pe.GetPID(), err)
 	}
 
 	nd.SigmaSrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
@@ -260,7 +268,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		ep.Addrs()[0].IPStr = nd.ProcEnv().GetOuterContainerIP().String()
 		ep.Addrs()[0].PortInt = uint32(pm.HostPort)
 	}
-	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
+	db.DPrintf(db.NAMED0, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }
 
@@ -320,7 +328,9 @@ var warmRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.PROCQ, sp
 func (nd *Named) warmCache() error {
 	for _, n := range warmRootDir {
 		if sts, err := nd.GetDir(n); err == nil {
-			db.DPrintf(db.TEST, "Warm cache %v: %v", n, sp.Names(sts))
+			db.DPrintf(db.NAMED, "Warm cache %v: %v", n, sp.Names(sts))
+		} else {
+			db.DPrintf(db.NAMED, "Warm cache %v err %v", n, err)
 		}
 	}
 	return nil

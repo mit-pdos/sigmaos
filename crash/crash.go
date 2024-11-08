@@ -3,6 +3,7 @@
 package crash
 
 import (
+	"encoding/json"
 	"os"
 	"time"
 
@@ -15,9 +16,48 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type Event struct {
+	Label   string  `json:"label"`
+	Start   int64   `json:"start"`
+	MaxWait int64   `json:"maxwait"`
+	Prob    float64 `json:"prob:`
+}
+
+var labels map[Tselector]Event
+
+const ONE = 1000
+
+func MakeEvents(es []Event) ([]byte, error) {
+	return json.Marshal(es)
+}
+
+func parseEvents(s string, labels map[Tselector]Event) error {
+	var evs []Event
+	if s == "" {
+		return nil
+	}
+	if err := json.Unmarshal([]byte(s), &evs); err != nil {
+		return err
+	}
+	for _, e := range evs {
+		labels[Tselector(e.Label)] = e
+	}
+	return nil
+}
+
+func init() {
+	s := time.Now()
+	labelstr := proc.GetSigmaFail()
+	labels = make(map[Tselector]Event, len(labelstr))
+	if err := parseEvents(labelstr, labels); err != nil {
+		db.DFatalf("parseLabels %v err %v", labelstr, err)
+	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] crash init pkg: %v", proc.GetSigmaDebugPid(), time.Since(s))
+}
+
 func randSleep(c int64) uint64 {
 	ms := rand.Int64(c)
-	r := rand.Int64(1000)
+	r := rand.Int64(ONE)
 	db.DPrintf(db.CRASH, "randSleep %dms r %d\n", ms, r)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 	return r
@@ -120,5 +160,21 @@ func partitionNamed(fsl *fslib.FsLib) {
 	db.DPrintf(db.CRASH, "crash.Partition from %v\n", sp.NAMED)
 	if error := fsl.Disconnect(sp.NAMED); error != nil {
 		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v\n", os.Args, error)
+	}
+}
+
+func Partition(label Tselector, f func()) {
+	if e, ok := labels[label]; ok {
+		go func() {
+			time.Sleep(time.Duration(e.Start) * time.Millisecond)
+			for true {
+				r := randSleep(e.MaxWait)
+				if r < uint64(e.Prob*ONE) {
+					f()
+				}
+			}
+		}()
+	} else {
+		db.DPrintf(db.TEST, "Unknown label %v", label)
 	}
 }

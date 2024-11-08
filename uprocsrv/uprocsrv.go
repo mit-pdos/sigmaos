@@ -77,7 +77,7 @@ type UprocSrv struct {
 	ssrv           *sigmasrv.SigmaSrv
 	kc             *kernelclnt.KernelClnt
 	sc             *sigmaclnt.SigmaClnt
-	scsc           *spproxysrv.SPProxySrvCmd
+	spc            *spproxysrv.SPProxySrvCmd
 	binsrv         *exec.Cmd
 	kernelId       string
 	realm          sp.Trealm
@@ -172,11 +172,11 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	scdp := proc.NewPrivProcPid(ups.spproxydPID, "spproxyd", nil, true)
 	scdp.InheritParentProcEnv(ups.pe)
 	scdp.SetHow(proc.HLINUX)
-	scsc, err := spproxysrv.ExecSPProxySrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
+	spc, err := spproxysrv.ExecSPProxySrv(scdp, ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
 	if err != nil {
 		return err
 	}
-	ups.scsc = scsc
+	ups.spc = spc
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.UPROCD_ERR, "RunServer err %v\n", err)

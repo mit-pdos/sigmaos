@@ -7,9 +7,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/namesrv"
+	"sigmaos/namesrv/fsetcd"
+	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -127,7 +130,8 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, string), d time.Durati
 	ts.Shutdown()
 }
 
-// In these tests named will receive notification from etcd
+// In these tests named will receive notification from etcd that
+// leased file has expired.
 func TestLeaseQuickReboot(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, sp.NAMED)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -183,14 +187,15 @@ func TestLeaseQuickReboot(t *testing.T) {
 	}, delay, true)
 }
 
-// In these tests named will not receive notification from etcd, but
-// discover when reading from etcd and call updateDir.
+// In these tests named will not receive notification from etcd when
+// leased file expires, but discover when reading from etcd and call
+// updateDir.
 func TestLeaseDelayReboot(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, sp.NAMED)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	dn := filepath.Join(sp.NAMED, "dir")
+	dn := filepath.Join(sp.NAMED, "ddd")
 	ts.RmDir(dn)
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
@@ -231,4 +236,63 @@ func TestLeaseDelayReboot(t *testing.T) {
 		db.DPrintf(db.TEST, "Open after expire err %v\n", err)
 		ts.Remove(fn)
 	}, delay, false)
+}
+
+func TestPartitionNamed(t *testing.T) {
+	es := make([]crash.Event, 0)
+	es = append(es, crash.Event{crash.NAMED_PARTITION, 2000, 1000, 1.0})
+	s, err := crash.MakeEvents(es)
+	assert.Nil(t, err)
+	proc.SetSigmaFail(string(s))
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	dn := filepath.Join(sp.NAMED, "ddd")
+	ts.RmDir(dn)
+	err = ts.MkDir(dn, 0777)
+	assert.Nil(ts.T, err, "dir")
+
+	sts, err := ts.GetDir(dn)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "sts named0 %v", sp.Names(sts))
+
+	// start second named but without SIGMAFAIL
+	err = ts.BootEnv(sp.NAMEDREL, []string{"SIGMAFAIL="})
+	assert.Nil(t, err)
+
+	// given first named change to fail
+	time.Sleep(5 * time.Second)
+
+	fn := filepath.Join(dn, "f")
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	pe.ClearNamedEndpoint()
+
+	ts.BootNode()
+
+	db.DPrintf(db.TEST, "pe %v", pe)
+
+	fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetNetProxyClnt())
+
+	sts, err = fsl2.GetDir(dn)
+	assert.Nil(t, err)
+
+	_, err = fsl2.PutFile(fn, 0777, sp.OWRITE, nil)
+	assert.Nil(t, err, "Err PutFile: %v", err)
+
+	sts, err = fsl2.GetDir(dn)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "sts named1 %v\n", sp.Names(sts))
+
+	// read dn through first named
+	sts, err = ts.GetDir(dn)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "sts named0 %v\n", sp.Names(sts))
+
+	ts.Shutdown()
 }

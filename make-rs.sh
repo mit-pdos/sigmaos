@@ -63,6 +63,7 @@ eval $build
 # Copy Python executable
 cp Python-3.11.0/python $OUTPATH/kernel
 cp Python-3.11.0/python $OUTPATH/user
+echo "/tmp/python/lib" > $OUTPATH/user/python.pth
 
 # Copy pybuilddir.txt
 cp Python-3.11.0/pybuilddir.txt $OUTPATH/kernel
@@ -71,6 +72,8 @@ cp Python-3.11.0/pybuilddir.txt $OUTPATH/user
 # Copy and inject Python libs
 cp ../sigmaos-local/pylib/splib.py Python-3.11.0/Lib
 cp Python-3.11.0/Lib $OUTPATH/kernel/pylib -r
+cp Python-3.11.0/Lib $OUTPATH/user -r
+cp Python-3.11.0/Lib $OUTPATH/user/pylib -r
 
 # Copy and inject Python shim
 gcc -Wall -fPIC -shared -o ld_fstatat.so ../sigmaos-local/ld_preload/ld_fstatat.c 

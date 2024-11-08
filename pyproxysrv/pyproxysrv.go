@@ -17,7 +17,7 @@ type PyProxySrv struct {
 }
 
 func NewPyProxySrv(pe *proc.ProcEnv) (*PyProxySrv, error) {
-	// Create the net proxy socket
+	// Create the proxy socket
 	socket, err := net.Listen("unix", sp.SIGMA_PYPROXY_SOCKET)
 	if err != nil {
 		return nil, err
@@ -56,11 +56,19 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 		}
 
 		data := buf[0:bytesRead]
-		db.DPrintf(db.PYPROXYSRV, "reader: received %v\n", data)
+		db.DPrintf(db.PYPROXYSRV, "reader: received %v\n", string(data))
+
+		response := []byte("d\n")
+		_, err = conn.Write(response)
+		if err != nil {
+			db.DPrintf(db.PYPROXYSRV_ERR, "reader: wf err %v\n", err)
+			return
+		}
 	}
 }
 
 func (pps *PyProxySrv) runServer(l net.Listener) {
+	db.DPrintf(db.PYPROXYSRV, "pyproxysrv running")
 	for {
 		conn, err := l.Accept()
 		if err != nil {

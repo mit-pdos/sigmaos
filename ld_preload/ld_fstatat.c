@@ -9,9 +9,9 @@
 #include <dirent.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 
-
-const char* socketPath = "/tmp/spproxyd/spproxyd.sock";
+const char* socketEnvVar = "SIGMA_PYPROXY_FD";
 int sfd = 0;
 int init_done = 0;
 
@@ -19,22 +19,22 @@ const char* get_path(const char *filename)
 {
     char x2[3];
 
-//     if(!init_done) {
-//         printf("IVY: get_path: trying to write to socket\n");
-//         struct sockaddr_un addr;
-//         memset(&addr, 0, sizeof(struct sockaddr_un));
-//         addr.sun_family = AF_UNIX;
-//         strncpy(addr.sun_path, socketPath, sizeof(addr.sun_path) - 1);
-//         if (connect(sfd, (struct sockaddr *) &addr,
-//                 sizeof(struct sockaddr_un)) == -1) {
-//             printf("IVY: get_path: failed to connect\n");
-//             exit(-1);
-//         }
-//         write(sfd, "pb", 2);
-//         write(sfd, "\n", 1);
-//         read(sfd, x2, 2);
-//         init_done = 1;
-//     }
+    if(!init_done) {
+        const char* sfd_str = getenv(socketEnvVar);
+        if (sfd_str == NULL) {
+          exit(-1);
+        }
+        sfd = atoi(sfd_str);
+
+        write(sfd, "pb", 2);
+        write(sfd, "\n", 1);
+        read(sfd, x2, 2);
+        init_done = 1;
+    }
+    
+    // Try setting PWD in init_done/exec_uproc_rs
+    // Try catching python._pth (suffix based)
+    // Fork cpython and try to change things there
 
     const char* prefix = "/~~";
     int i = 0;

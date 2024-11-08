@@ -77,9 +77,18 @@ fn main() {
     env::set_var("SIGMA_NETPROXY_FD", netproxy_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_netproxy", now, false);
     now = SystemTime::now();
+    // Connect to the pyproxy socket
+    let pyproxy_conn = UnixStream::connect("/tmp/spproxyd/spproxyd-pyproxy.sock").unwrap();
+    let pyproxy_conn_fd = pyproxy_conn.into_raw_fd();
+    fcntl::fcntl(pyproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
+    env::set_var("SIGMA_PYPROXY_FD", pyproxy_conn_fd.to_string());
+    env::set_var("PWD", "/tmp/python/pylib/Lib");
+    print_elapsed_time("trampoline.connect_pyproxy", now, false);
+    now = SystemTime::now();
     seccomp_proc(netproxy).expect("seccomp failed");
     print_elapsed_time("trampoline.seccomp_proc", now, false);
     now = SystemTime::now();
+
 
     if aa {
         apply_apparmor("sigmaos-uproc").expect("apparmor failed");
@@ -206,6 +215,11 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/tmp/python", "tmp/python")?;
+
+    // Mount::builder()
+    //     .fstype("none")
+    //     .flags(MountFlags::BIND | MountFlags::RDONLY)
+    //     .mount("/tmp/python/pylib/Lib", "mnt/binfs/python3.11/Lib")?;
 
     Mount::builder()
         .fstype("none")

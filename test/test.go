@@ -115,7 +115,7 @@ type Tstate struct {
 	killidx       int
 	T             *testing.T
 	proc          *proc.Proc
-	scsck         *bootkernelclnt.Kernel
+	spkc          *bootkernelclnt.Kernel // for spproxy kernel
 	masterPubKey  auth.PublicKey
 	masterPrivKey auth.PrivateKey
 }
@@ -211,17 +211,19 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 			return nil, err
 		}
 	}
-	var scsck *bootkernelclnt.Kernel
-	var sckid string
+	var spkc *bootkernelclnt.Kernel
 	if !noBootNetProxy && (useSPProxy || useNetProxy) {
 		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usenetproxy %v", useSPProxy, useNetProxy)
-		sckid = sp.SPProxydKernel(bootkernelclnt.GenKernelId())
+		sckid := sp.SPProxydKernel(bootkernelclnt.GenKernelId())
+		if kernelid != "" {
+			sckid = sp.SPProxydKernel(kernelid)
+		}
 		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, Overlays, GVisor, useNetProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
 			return nil, err
 		}
-		scsck, err = bootkernelclnt.NewKernelClnt(sckid, sp.Tip(EtcdIP), pe)
+		spkc, err = bootkernelclnt.NewKernelClnt(sckid, sp.Tip(EtcdIP), pe)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error make kernel clnt for spproxyd")
 			return nil, err
@@ -238,7 +240,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		kclnts:    []*bootkernelclnt.Kernel{k},
 		killidx:   0,
 		T:         t,
-		scsck:     scsck,
+		spkc:      spkc,
 	}
 	return savedTstate, nil
 }
@@ -344,11 +346,11 @@ func (ts *Tstate) Shutdown() error {
 			}
 			ts.kclnts[i].Close()
 		}
-		if ts.scsck != nil {
-			if err := ts.scsck.Shutdown(); err != nil {
+		if ts.spkc != nil {
+			if err := ts.spkc.Shutdown(); err != nil {
 				db.DPrintf(db.ALWAYS, "Shutdown spproxyd err %v", err)
 			}
-			ts.scsck.Close()
+			ts.spkc.Close()
 		}
 	}
 	return nil

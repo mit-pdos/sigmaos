@@ -108,7 +108,7 @@ const (
 	BOOT                      = "BOOT"
 	CONTAINER                 = "CONTAINER"
 	NAMED                     = "NAMED"
-	NAMED0                    = "NAMED0"
+	NAMED_LDR                 = "NAMED_LDR"
 	FSETCD                    = "FSETCD"
 	PROCMGR                   = "PROCMGR"
 	UPROCDMGR                 = "UPROCDMGR"

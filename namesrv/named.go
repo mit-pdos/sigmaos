@@ -64,7 +64,7 @@ func Run(args []string) error {
 	//	}()
 
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.NAMED0, "named start: %v cfg: %v", args, pe)
+	db.DPrintf(db.NAMED_LDR, "named start: %v cfg: %v", args, pe)
 	if len(args) != 3 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
@@ -147,17 +147,16 @@ func Run(args []string) error {
 	ch := make(chan struct{})
 	go nd.waitExit(ch)
 
-	db.DPrintf(db.NAMED0, "started %v %v", pe.GetPID(), nd.realm)
+	db.DPrintf(db.NAMED_LDR, "started %v %v", pe.GetPID(), nd.realm)
 
 	if err := nd.startLeader(); err != nil {
-		db.DPrintf(db.NAMED0, "%v: startLeader %v err %v", pe.GetPID(), nd.realm, err)
+		db.DPrintf(db.NAMED_LDR, "%v: startLeader %v err %v", pe.GetPID(), nd.realm, err)
 		return err
 	}
 	defer nd.fs.Close()
 
 	go func() {
 		<-nd.sess.Done()
-		db.DPrintf(db.NAMED0, "%v sess done", nd.realm)
 		nd.resign()
 	}()
 
@@ -168,7 +167,7 @@ func Run(args []string) error {
 
 	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
-	db.DPrintf(db.NAMED0, "newSrv %v ep %v", nd.realm, ep)
+	db.DPrintf(db.NAMED_LDR, "newSrv %v ep %v", nd.realm, ep)
 
 	pn = sp.NAMED
 	if nd.realm == sp.ROOTREALM {
@@ -201,17 +200,15 @@ func Run(args []string) error {
 		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v", nd.elect.Key(), err)
 	}
 
-	db.DPrintf(db.NAMED0, "Created Leader file %v ", nd.elect.Key())
+	db.DPrintf(db.NAMED_LDR, "Created Leader file %v ", nd.elect.Key())
 
 	if err := nd.warmCache(); err != nil {
 		db.DFatalf("warmCache err %v", err)
 	}
 
 	crash.Partition(crash.NAMED_PARTITION, func() {
-		db.DPrintf(db.CRASH, "Partition named: resign")
-		if err := nd.resign(); err != nil {
-			db.DPrintf(db.NAMED, "Partition %v resign err %v", pe.GetPID(), err)
-		}
+		db.DPrintf(db.CRASH, "Partition named: orphan")
+		nd.sess.Orphan()
 	})
 
 	<-ch
@@ -219,7 +216,7 @@ func Run(args []string) error {
 	db.DPrintf(db.ALWAYS, "named done %v %v", nd.realm, ep)
 
 	if err := nd.resign(); err != nil {
-		db.DPrintf(db.NAMED0, "resign %v err %v", pe.GetPID(), err)
+		db.DPrintf(db.NAMED_LDR, "resign %v err %v", pe.GetPID(), err)
 	}
 
 	nd.SigmaSrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
@@ -269,7 +266,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		ep.Addrs()[0].IPStr = nd.ProcEnv().GetOuterContainerIP().String()
 		ep.Addrs()[0].PortInt = uint32(pm.HostPort)
 	}
-	db.DPrintf(db.NAMED0, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
+	db.DPrintf(db.NAMED_LDR, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }
 
@@ -284,6 +281,7 @@ func (nd *Named) detach(cid sp.TclntId) {
 }
 
 func (nd *Named) resign() error {
+	db.DPrintf(db.NAMED_LDR, "%v resign", nd.realm)
 	if err := nd.fs.StopWatch(); err != nil {
 		return err
 	}

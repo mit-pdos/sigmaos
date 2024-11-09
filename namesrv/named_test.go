@@ -12,7 +12,6 @@ import (
 	"sigmaos/namesrv"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -238,6 +237,7 @@ func TestLeaseDelayReboot(t *testing.T) {
 	}, delay, false)
 }
 
+// Test if read fails after a named lost leadership
 func TestPartitionNamed(t *testing.T) {
 	es := make([]crash.Event, 0)
 	es = append(es, crash.Event{crash.NAMED_PARTITION, 2000, 1000, 1.0})
@@ -255,44 +255,24 @@ func TestPartitionNamed(t *testing.T) {
 	err = ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
 
-	sts, err := ts.GetDir(dn)
+	// load dn into the server's cache
+	_, err = ts.GetDir(dn)
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "sts named0 %v", sp.Names(sts))
+	rdr, err := ts.OpenReader(dn)
+	assert.Nil(t, err)
 
 	// start second named but without SIGMAFAIL
 	err = ts.BootEnv(sp.NAMEDREL, []string{"SIGMAFAIL="})
 	assert.Nil(t, err)
 
-	// given first named change to fail
-	time.Sleep(5 * time.Second)
+	// give the first named chance to fail
+	time.Sleep(3 * time.Second)
 
-	fn := filepath.Join(dn, "f")
-	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	pe.ClearNamedEndpoint()
-
-	ts.BootNode()
-
-	db.DPrintf(db.TEST, "pe %v", pe)
-
-	fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetNetProxyClnt())
-
-	sts, err = fsl2.GetDir(dn)
-	assert.Nil(t, err)
-
-	_, err = fsl2.PutFile(fn, 0777, sp.OWRITE, nil)
-	assert.Nil(t, err, "Err PutFile: %v", err)
-
-	sts, err = fsl2.GetDir(dn)
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "sts named1 %v\n", sp.Names(sts))
-
-	// read dn through first named
-	sts, err = ts.GetDir(dn)
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "sts named0 %v\n", sp.Names(sts))
+	// read from old server
+	b := make([]byte, sp.BUFSZ)
+	_, err = rdr.Read(b)
+	assert.NotNil(t, err)
 
 	ts.Shutdown()
 }

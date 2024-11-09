@@ -164,6 +164,7 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 			db.DPrintf(db.FSETCD, "SetNamed txn %v err %v\n", nf, err)
 			return serr.NewErrError(err)
 		}
+		// XXX return failure if fence check fails
 		db.DPrintf(db.FSETCD, "SetNamed txn %v %v\n", nf, resp)
 		return nil
 	}

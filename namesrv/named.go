@@ -158,6 +158,7 @@ func Run(args []string) error {
 	go func() {
 		<-nd.sess.Done()
 		db.DPrintf(db.NAMED0, "%v sess done", nd.realm)
+		nd.resign()
 	}()
 
 	ep, err := nd.newSrv()
@@ -208,8 +209,8 @@ func Run(args []string) error {
 
 	crash.Partition(crash.NAMED_PARTITION, func() {
 		db.DPrintf(db.CRASH, "Partition named: resign")
-		if err := nd.elect.Resign(); err != nil {
-			db.DPrintf(db.NAMED, "Partition %v err %v", pe.GetPID(), err)
+		if err := nd.resign(); err != nil {
+			db.DPrintf(db.NAMED, "Partition %v resign err %v", pe.GetPID(), err)
 		}
 	})
 

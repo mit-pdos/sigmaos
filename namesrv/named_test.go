@@ -11,7 +11,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/namesrv"
 	"sigmaos/namesrv/fsetcd"
+	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -239,7 +241,7 @@ func TestLeaseDelayReboot(t *testing.T) {
 
 // Test if read fails after a named lost leadership
 func TestPartitionNamed(t *testing.T) {
-	e := crash.Event{crash.NAMED_PARTITION, 1000, 1000, 1.0, 2000}
+	e := crash.Event{crash.NAMED_PARTITION, 2000, 1000, 1.0, 7000}
 	// e := crash.Event{crash.NAMED_PARTITION, 1000, 1000, 1.0, 0}
 	es := []crash.Event{e}
 	s, err := crash.MakeEvents(es)
@@ -250,6 +252,12 @@ func TestPartitionNamed(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+
+	pe := ts.ProcEnv()
+	npc := netproxyclnt.NewNetProxyClnt(pe)
+	ep, err := fsetcd.GetRootNamed(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "ep named1 %v", ep)
 
 	dn := filepath.Join(sp.NAMED, "ddd")
 	ts.RmDir(dn)
@@ -274,20 +282,41 @@ func TestPartitionNamed(t *testing.T) {
 	// give the first named chance to fail
 	time.Sleep(time.Duration(e.Start+e.MaxInterval) * time.Millisecond)
 
-	// read from second named (doesn't work because netproxy caches named ep)
-	//pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	//pe.ClearNamedEndpoint()
-	//fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetNetProxyClnt())
-	//sts, err := fsl2.GetDir(dn)
-	//assert.Nil(t, err)
-	//assert.Equal(t, 1, len(sts))
+	// wait until session times out
+	time.Sleep(sp.EtcdSessionTTL * time.Second)
+
+	pe.ClearNamedEndpoint()
+	npc = netproxyclnt.NewNetProxyClnt(pe)
+	ep, err = fsetcd.GetRootNamed(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "ep named2 %v", ep)
+
+	// read from second named
+	pe = proc.NewAddedProcEnv(ts.ProcEnv())
+	pe.SetNamedEndpoint(ep)
+	fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetNetProxyClnt())
+
+	_, err = fsl2.PutFile(filepath.Join(dn, "ggg"), 0777, sp.OWRITE, []byte("bye"))
+	assert.Nil(t, err, "Err PutFile: %v", err)
+
+	sts, err := fsl2.GetDir(dn)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(sts))
+
+	// read from old server
+	sts, err = ts.GetDir(dn)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(sts))
 
 	// read from old server
 	b = make([]byte, 1)
 	n, err := rdr.Read(b)
 	assert.NotNil(t, err)
 	assert.NotEqual(t, 1, n)
-
 	db.DPrintf(db.TEST, "read err %v", err)
+
+	// wait until first named has exited
+	time.Sleep(time.Duration(e.Delay) * time.Millisecond)
+
 	ts.Shutdown()
 }

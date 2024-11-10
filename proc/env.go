@@ -339,6 +339,10 @@ func (pe *ProcEnv) GetNamedEndpoint() (*sp.Tendpoint, bool) {
 	return sp.NewEndpointFromProto(mp), true
 }
 
+func (pe *ProcEnv) SetNamedEndpoint(ep *sp.Tendpoint) {
+	pe.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
+}
+
 func (pe *ProcEnv) Marshal() string {
 	b, err := json.Marshal(pe)
 	if err != nil {

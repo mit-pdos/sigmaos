@@ -177,7 +177,7 @@ func (k *Kernel) bootSchedd() (Subsystem, error) {
 }
 
 func (k *Kernel) bootNamed(env []string) (Subsystem, error) {
-	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0"}, env, sp.ROOTREALM, proc.HSCHEDD, 0)
+	return k.bootSubsystem("named", []string{sp.ROOTREALM.String()}, env, sp.ROOTREALM, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootSPProxyd() (Subsystem, error) {

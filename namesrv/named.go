@@ -64,7 +64,7 @@ func Run(args []string) error {
 
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.NAMED_LDR, "named start: %v cfg: %v", args, pe)
-	if len(args) != 3 {
+	if len(args) != 2 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 

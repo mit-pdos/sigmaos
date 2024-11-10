@@ -148,7 +148,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		return err
 	}
 	r := newRealm()
-	p := proc.NewProc("named", []string{req.Realm, "0"})
+	p := proc.NewProc("named", []string{req.Realm})
 	// Set up a realm switch: when named runs, it should start as a member of the
 	// new realm.
 	p.SetRealmSwitch(rid)

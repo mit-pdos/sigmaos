@@ -4,6 +4,7 @@ package crash
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
@@ -16,16 +17,21 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Event struct {
-	Label   string  `json:"label"`
-	Start   int64   `json:"start"`
-	MaxWait int64   `json:"maxwait"`
-	Prob    float64 `json:"prob:`
-}
+const ONE = 1000
 
 var labels map[Tselector]Event
 
-const ONE = 1000
+type Event struct {
+	Label       string  `json:"label"`       // see selector.go
+	Start       int64   `json:"start"`       // wait for start ms to start generating events
+	MaxInterval int64   `json:"maxinterval"` // max length of event interval in ms
+	Prob        float64 `json:"prob:`        // probability of generating event in this interval
+	Delay       int64   `json:"delay"`       // delay in ms (interpretable by event creator)
+}
+
+func (e *Event) String() string {
+	return fmt.Sprintf("{l %v s %v mi %v p %v d %v}", e.Label, e.Start, e.MaxInterval, e.Prob, e.Delay)
+}
 
 func MakeEvents(es []Event) ([]byte, error) {
 	return json.Marshal(es)
@@ -163,14 +169,14 @@ func partitionNamed(fsl *fslib.FsLib) {
 	}
 }
 
-func Partition(label Tselector, f func()) {
+func Partition(label Tselector, f func(e Event)) {
 	if e, ok := labels[label]; ok {
 		go func() {
 			time.Sleep(time.Duration(e.Start) * time.Millisecond)
 			for true {
-				r := randSleep(e.MaxWait)
+				r := randSleep(e.MaxInterval)
 				if r < uint64(e.Prob*ONE) {
-					f()
+					f(e)
 				}
 			}
 		}()

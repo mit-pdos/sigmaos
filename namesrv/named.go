@@ -5,7 +5,6 @@ package namesrv
 import (
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 
@@ -34,7 +33,7 @@ type Named struct {
 	elect  *leaderetcd.Election
 	job    string
 	realm  sp.Trealm
-	crash  int
+	delay  int64
 	sess   *fsetcd.Session
 	signer sp.Tsigner
 	pstats *fsetcd.PstatInode
@@ -71,11 +70,6 @@ func Run(args []string) error {
 
 	nd := newNamed(sp.Trealm(args[1]))
 	nd.signer = sp.Tsigner(pe.GetPID())
-	crashing, err := strconv.Atoi(args[2])
-	if err != nil {
-		return fmt.Errorf("%v: crash %v isn't int", args[0], args[1])
-	}
-	nd.crash = crashing
 
 	p, err := perf.NewPerf(pe, perf.NAMED)
 	if err != nil {
@@ -157,6 +151,8 @@ func Run(args []string) error {
 
 	go func() {
 		<-nd.sess.Done()
+		db.DPrintf(db.NAMED_LDR, "session expired delay %v", nd.delay)
+		time.Sleep(time.Duration(nd.delay) * time.Millisecond)
 		nd.resign()
 	}()
 
@@ -206,9 +202,12 @@ func Run(args []string) error {
 		db.DFatalf("warmCache err %v", err)
 	}
 
-	crash.Partition(crash.NAMED_PARTITION, func() {
-		db.DPrintf(db.CRASH, "Partition named: orphan")
-		nd.sess.Orphan()
+	crash.Partition(crash.NAMED_PARTITION, func(e crash.Event) {
+		db.DPrintf(db.CRASH, "Partition named: %v", e)
+		if nd.delay == 0 {
+			nd.delay = e.Delay
+			nd.sess.Orphan()
+		}
 	})
 
 	<-ch

@@ -239,8 +239,9 @@ func TestLeaseDelayReboot(t *testing.T) {
 
 // Test if read fails after a named lost leadership
 func TestPartitionNamed(t *testing.T) {
-	es := make([]crash.Event, 0)
-	es = append(es, crash.Event{crash.NAMED_PARTITION, 2000, 1000, 1.0})
+	e := crash.Event{crash.NAMED_PARTITION, 1000, 1000, 1.0, 2000}
+	// e := crash.Event{crash.NAMED_PARTITION, 1000, 1000, 1.0, 0}
+	es := []crash.Event{e}
 	s, err := crash.MakeEvents(es)
 	assert.Nil(t, err)
 	proc.SetSigmaFail(string(s))
@@ -254,12 +255,16 @@ func TestPartitionNamed(t *testing.T) {
 	ts.RmDir(dn)
 	err = ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
+	fn := filepath.Join(dn, "fff")
 
-	// load dn into the server's cache
-	_, err = ts.GetDir(dn)
+	_, err = ts.PutFile(fn, 0777, sp.OWRITE, []byte("hello"))
+	assert.Nil(t, err, "Err PutFile: %v", err)
+
+	b, err := ts.GetFile(fn)
 	assert.Nil(t, err)
+	assert.Equal(t, len(b), 5)
 
-	rdr, err := ts.OpenReader(dn)
+	rdr, err := ts.OpenReader(fn)
 	assert.Nil(t, err)
 
 	// start second named but without SIGMAFAIL
@@ -267,12 +272,22 @@ func TestPartitionNamed(t *testing.T) {
 	assert.Nil(t, err)
 
 	// give the first named chance to fail
-	time.Sleep(3 * time.Second)
+	time.Sleep(time.Duration(e.Start+e.MaxInterval) * time.Millisecond)
+
+	// read from second named (doesn't work because netproxy caches named ep)
+	//pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	//pe.ClearNamedEndpoint()
+	//fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetNetProxyClnt())
+	//sts, err := fsl2.GetDir(dn)
+	//assert.Nil(t, err)
+	//assert.Equal(t, 1, len(sts))
 
 	// read from old server
-	b := make([]byte, sp.BUFSZ)
-	_, err = rdr.Read(b)
+	b = make([]byte, 1)
+	n, err := rdr.Read(b)
 	assert.NotNil(t, err)
+	assert.NotEqual(t, 1, n)
 
+	db.DPrintf(db.TEST, "read err %v", err)
 	ts.Shutdown()
 }

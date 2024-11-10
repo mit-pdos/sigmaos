@@ -26,6 +26,9 @@ func init() {
 	flag.StringVar(&realm, "realm", string(sp.ROOTREALM), "realm")
 }
 
+func TestCompile(t *testing.T) {
+}
+
 func TestDump(t *testing.T) {
 	lip := sp.Tip("127.0.0.1")
 	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(test.EtcdIP))

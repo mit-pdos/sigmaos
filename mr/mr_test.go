@@ -396,7 +396,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	l3 := &sync.Mutex{}
 	for i := 0; i < crashprocq; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.CrashServer(sp.PROCQREL, (i+1)*CRASHSRV, l3, crashchan)
+		go ts.CrashServer(sp.BESCHEDREL, (i+1)*CRASHSRV, l3, crashchan)
 	}
 
 	db.DPrintf(db.TEST, "WaitGroup")

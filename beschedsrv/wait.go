@@ -1,4 +1,4 @@
-package procqsrv
+package beschedsrv
 
 import (
 	"time"

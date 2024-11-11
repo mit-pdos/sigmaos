@@ -59,7 +59,7 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp
 		ss, err = k.bootMongod(p.Mongoip)
 	case sp.LCSCHEDREL:
 		ss, err = k.bootLCSched()
-	case sp.PROCQREL:
+	case sp.BESCHEDREL:
 		ss, err = k.bootProcq()
 	case sp.SCHEDDREL:
 		ss, err = k.bootSchedd()

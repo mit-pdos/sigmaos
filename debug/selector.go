@@ -120,10 +120,10 @@ const (
 	LCSCHEDCLNT_ERR           = "LCSCHEDCLNT" + ERR
 	LCSCHED                   = "LCSCHED"
 	LCSCHED_ERR               = "LCSCHED" + ERR
-	PROCQ                     = "PROCQ"
-	PROCQ_ERR                 = "PROCQ" + ERR
-	PROCQCLNT                 = "PROCQCLNT"
-	PROCQCLNT_ERR             = "PROCQCLNT" + ERR
+	BESCHED                   = "BESCHED"
+	BESCHED_ERR               = "BESCHED" + ERR
+	BESCHEDCLNT               = "BESCHEDCLNT"
+	BESCHEDCLNT_ERR           = "BESCHEDCLNT" + ERR
 	KEYCLNT                   = "KEYCLNT"
 	KEYCLNT_ERR               = "KEYCLNT" + ERR
 	KEYD                      = "KEYD"

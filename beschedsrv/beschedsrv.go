@@ -1,4 +1,4 @@
-package procqsrv
+package beschedsrv
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	proto "sigmaos/beschedsrv/proto"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
@@ -15,7 +16,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
-	proto "sigmaos/procqsrv/proto"
 	"sigmaos/schedqueue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -107,11 +107,11 @@ func (pq *ProcQ) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.Enque
 	if p.GetRealm() != ctx.Principal().GetRealm() {
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
 	}
-	db.DPrintf(db.PROCQ, "[%v] Enqueue %v", p.GetRealm(), p)
-	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to procqsrv; time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	db.DPrintf(db.BESCHED, "[%v] Enqueue %v", p.GetRealm(), p)
+	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to beschedsrv; time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	ch := make(chan *proc.ProcSeqno)
 	pq.addProc(p, ch)
-	db.DPrintf(db.PROCQ, "[%v] Enqueued %v", p.GetRealm(), p)
+	db.DPrintf(db.BESCHED, "[%v] Enqueued %v", p.GetRealm(), p)
 	seqno := <-ch
 	res.ProcSeqno = seqno
 	return nil
@@ -140,8 +140,8 @@ func (pq *ProcQ) addProc(p *proc.Proc, ch chan *proc.ProcSeqno) {
 }
 
 func (pq *ProcQ) replyToParent(pseqno *proc.ProcSeqno, p *proc.Proc, ch chan *proc.ProcSeqno, enqTS time.Time) {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Internal procqsrv Proc queueing time %v", p.GetPid(), time.Since(enqTS))
-	db.DPrintf(db.PROCQ, "replyToParent child is on kid %v", pseqno.GetScheddID())
+	db.DPrintf(db.SPAWN_LAT, "[%v] Internal beschedsrv Proc queueing time %v", p.GetPid(), time.Since(enqTS))
+	db.DPrintf(db.BESCHED, "replyToParent child is on kid %v", pseqno.GetScheddID())
 	ch <- pseqno
 }
 
@@ -162,7 +162,7 @@ func (pq *ProcQ) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.Get
 }
 
 func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
-	db.DPrintf(db.PROCQ, "GetProc request by %v mem %v", req.KernelID, req.Mem)
+	db.DPrintf(db.BESCHED, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
 	pq.ngetprocReq.Add(1)
 
@@ -183,13 +183,13 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 			if !ok && r == sp.ROOTREALM {
 				continue
 			}
-			db.DPrintf(db.PROCQ, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
+			db.DPrintf(db.BESCHED, "[%v] GetProc Try to dequeue %v", r, req.KernelID)
 			dequeueStart := time.Now()
 			p, ch, ts, ok := q.Dequeue(func(p *proc.Proc) bool {
 				return isEligible(p, proc.Tmem(req.Mem), req.KernelID)
 			})
 			dequeueDur := time.Since(dequeueStart)
-			db.DPrintf(db.PROCQ, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)
+			db.DPrintf(db.BESCHED, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)
 			if ok {
 				scanDur := time.Since(scanStart)
 				db.DPrintf(db.SPAWN_LAT, "[%v] Queue scan time: %v dequeue time %v lock time %v", p.GetPid(), scanDur, dequeueDur, lockDur)
@@ -200,7 +200,7 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				}
 				// Decrease aggregate queue length.
 				pq.qlen--
-				db.DPrintf(db.PROCQ, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
+				db.DPrintf(db.BESCHED, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
 				// Chunksrv relies on there only being one chunk server in the path to
 				// avoid circular waits & deadlocks.
 				if !chunksrv.IsChunkSrvPath(p.GetSigmaPath()[0]) {
@@ -217,23 +217,23 @@ func (pq *ProcQ) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetPr
 				res.OK = true
 				res.QLen = uint32(pq.qlen)
 				db.DPrintf(db.SPAWN_LAT, "[%v] Post-dequeue time: %v Queue scan time %v dequeue time %v lock time %v", p.GetPid(), time.Since(postDequeueStart), scanDur, dequeueDur, lockDur)
-				db.DPrintf(db.PROCQ, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
+				db.DPrintf(db.BESCHED, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
 				pq.mu.Unlock()
 				return nil
 			}
 		}
 		res.QLen = uint32(pq.qlen)
 		// If unable to schedule a proc from any realm, wait.
-		db.DPrintf(db.PROCQ, "GetProc No procs schedulable qs:%v", pq.qs)
+		db.DPrintf(db.BESCHED, "GetProc No procs schedulable qs:%v", pq.qs)
 		// Releases the lock, so we must re-acquire on the next loop iteration.
 		ok := pq.waitOrTimeoutAndUnlock()
-		// If timed out, respond to schedd to have it try another procq.
+		// If timed out, respond to schedd to have it try another besched.
 		if !ok {
-			db.DPrintf(db.PROCQ, "Timed out GetProc request from: %v", req.KernelID)
+			db.DPrintf(db.BESCHED, "Timed out GetProc request from: %v", req.KernelID)
 			res.OK = false
 			return nil
 		}
-		db.DPrintf(db.PROCQ, "Woke up GetProc request from: %v", req.KernelID)
+		db.DPrintf(db.BESCHED, "Woke up GetProc request from: %v", req.KernelID)
 	}
 	res.OK = false
 	return nil
@@ -283,13 +283,13 @@ func (pq *ProcQ) tryGetRealmQueueL(realm sp.Trealm) (*schedqueue.Queue[*proc.Pro
 }
 
 func (pq *ProcQ) stats() {
-	if !db.WillBePrinted(db.PROCQ) {
+	if !db.WillBePrinted(db.BESCHED) {
 		return
 	}
 	for {
 		time.Sleep(time.Second)
 		// Increase the total number of procs spawned
-		db.DPrintf(db.PROCQ, "Procq total size %v", pq.tot.Load())
+		db.DPrintf(db.BESCHED, "Procq total size %v", pq.tot.Load())
 	}
 }
 
@@ -314,7 +314,7 @@ func Run() {
 	}
 	sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
 	pq := NewProcQ(sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.PROCQ, sc.ProcEnv().GetKernelID()), sc, pq)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.BESCHED, sc.ProcEnv().GetKernelID()), sc, pq)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
@@ -324,7 +324,7 @@ func Run() {
 		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}
 	// Perf monitoring
-	p, err := perf.NewPerf(sc.ProcEnv(), perf.PROCQ)
+	p, err := perf.NewPerf(sc.ProcEnv(), perf.BESCHED)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}

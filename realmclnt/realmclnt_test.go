@@ -461,7 +461,7 @@ func TestKernelIsolationBasic(t *testing.T) {
 	rootNamedEP, err := ts.rootts.GetNamedEndpoint()
 	assert.Nil(t, err, "Err %v", err)
 	db.DPrintf(db.TEST, "rootNamed EP: %v", rootNamedEP)
-	pn := filepath.Join(sp.NAME, sp.PROCQREL) + "/"
+	pn := filepath.Join(sp.NAME, sp.BESCHEDREL) + "/"
 	db.DPrintf(db.TEST, "Try to get dir %v", pn)
 	// Ensure that tenant realms can perform GetDir on union directories which
 	// live in the root named (and are mounted into the tenant's named)

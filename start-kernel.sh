@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|all_no_procq|node|node_no_procq|minnode|procq_node|named|realm_no_procq|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -26,22 +26,22 @@ while [[ "$#" -gt 1 ]]; do
     shift
     case "$1" in
         "all")
-            BOOT="knamed;procq;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
             ;;
-        "all_no_procq")
+        "all_no_besched")
             BOOT="knamed;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
             ;;
         "node")
-            BOOT="procq;schedd;ux;s3;db;chunkd;mongo"
+            BOOT="besched;schedd;ux;s3;db;chunkd;mongo"
             ;;
-        "node_no_procq")
+        "node_no_besched")
             BOOT="schedd;ux;s3;db;chunkd;mongo"
             ;;
         "minnode")
             BOOT="schedd;ux;s3;chunkd"
             ;;
-        "procq_node")
-            BOOT="procq"
+        "besched_node")
+            BOOT="besched"
             ;;
         "named")
             BOOT="knamed"
@@ -50,9 +50,9 @@ while [[ "$#" -gt 1 ]]; do
             BOOT="spproxyd"
             ;;
         "realm")
-            BOOT="knamed;procq;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
             ;;
-        "realm_no_procq")
+        "realm_no_besched")
             BOOT="knamed;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
             ;;
         *)

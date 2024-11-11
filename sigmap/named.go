@@ -34,8 +34,8 @@ const (
 	LCSCHEDREL  = "lcsched"
 	LCSCHED     = NAMED + LCSCHEDREL + "/"
 	SPPROXYDREL = "spproxyd"
-	PROCQREL    = "procq"
-	PROCQ       = NAMED + PROCQREL + "/"
+	BESCHEDREL  = "besched"
+	BESCHED     = NAMED + BESCHEDREL + "/"
 	DBREL       = "db"
 	DB          = NAMED + DBREL + "/"
 	DBD         = DB + "~any/"
@@ -106,7 +106,7 @@ func S3ClientPath(pn string) (string, bool) {
 var RootNamedMountedDirs map[string]bool = map[string]bool{
 	REALMREL:   true,
 	LCSCHEDREL: true,
-	PROCQREL:   true,
+	BESCHEDREL: true,
 	SCHEDDREL:  true,
 	BOOTREL:    true,
 	DBREL:      true,
@@ -123,7 +123,7 @@ const (
 // spproxyd kernel
 const (
 	SPPROXYDKERNEL = "kernel-" + SPPROXYDREL + "-"
-	PROCQKERNEL    = "kernel-" + PROCQREL + "-"
+	BESCHEDKERNEL  = "kernel-" + BESCHEDREL + "-"
 )
 
 func SPProxydKernel(kid string) string {
@@ -131,7 +131,7 @@ func SPProxydKernel(kid string) string {
 }
 
 func ProcqKernel(kid string) string {
-	return PROCQKERNEL + kid
+	return BESCHEDKERNEL + kid
 }
 
 func ProxyPathname(srv, kid string) string {

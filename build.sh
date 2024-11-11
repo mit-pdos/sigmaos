@@ -148,29 +148,56 @@ BUILD_ARGS="--norace \
   $PARALLEL"
 
 echo "========== Building kernel bins =========="
+BUILD_OUT_FILE=$BUILD_LOG/make-kernel.out
 docker exec -it $buildercid \
   /usr/bin/time -f "Build time: %e sec" \
   ./make.sh $BUILD_ARGS kernel \
-  2>&1 | tee $BUILD_LOG/make-kernel.out
+  2>&1 | tee $BUILD_OUT_FILE && \
+  if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
+      | tee -a $BUILD_OUT_FILE;
+  fi;
+  if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
+    echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
+    exit 1
+  fi
   # Copy named, which is also a user bin
   cp $KERNELBIN/named $USRBIN/named
 echo "========== Done building kernel bins =========="
 
 echo "========== Building user bins =========="
+BUILD_OUT_FILE=$BUILD_LOG/make-user.out
 docker exec -it $buildercid \
   /usr/bin/time -f "Build time: %e sec" \
   ./make.sh $BUILD_ARGS --userbin $USERBIN user --version $VERSION \
-  2>&1 | tee $BUILD_LOG/make-user.out
+  2>&1 | tee $BUILD_OUT_FILE && \
+  if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
+      | tee -a $BUILD_OUT_FILE;
+  fi;
+  if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
+    echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
+    exit 1
+  fi
 echo "========== Done building user bins =========="
 
 RS_BUILD_ARGS="--rustpath \$HOME/.cargo/bin/cargo \
   $PARALLEL"
 
 echo "========== Building Rust bins =========="
+BUILD_OUT_FILE=$BUILD_LOG/make-user-rs.out
 docker exec -it $rsbuildercid \
   /usr/bin/time -f "Build time: %e sec" \
   ./make-rs.sh $RS_BUILD_ARGS --version $VERSION \
-  2>&1 | tee $BUILD_LOG/make-user-rs.out
+  2>&1 | tee $BUILD_OUT_FILE && \
+  if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
+      | tee -a $BUILD_OUT_FILE;
+  fi;
+  if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
+    echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
+    exit 1
+  fi
 echo "========== Done building Rust bins =========="
 
 echo "========== Copying kernel bins for uprocd =========="

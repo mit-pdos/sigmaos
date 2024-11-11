@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] [--version VERSION] [--userbin USERBIN] kernel|user|npproxy" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target local|remote] [--version VERSION] [--userbin USERBIN] kernel|user|npproxy" 1>&2
 }
 
 RACE="-race"
@@ -71,6 +71,12 @@ if [ $# -gt 0 ]; then
     usage
     exit 1
 fi
+
+if [[ "$TARGET" != "local" ]] && [[ "$TARGET" != "remote" ]]; then
+  echo "Error! Build target must be either \"local\" or \"remote\""
+  exit 1
+fi
+
 echo $WHAT
 
 OUTPATH=bin

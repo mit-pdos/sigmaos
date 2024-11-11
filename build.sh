@@ -57,7 +57,7 @@ if [ $# -gt 0 ]; then
 fi
 
 if [[ "$TAG" != "" && "$TARGET" == "local" ]] || [[ "$TAG" == "" && "$TARGET" != "local" ]] ; then
-  echo "Must run with either --push set and --target=aws, or --target=local and without --push"
+  echo "Must run with either --push set and --target=remote, or --target=local and without --push"
   exit 1
 fi
 
@@ -80,7 +80,7 @@ rm -rf $UPROCD_BIN
 mkdir -p $UPROCD_BIN
 
 # build and start db container
-if [ "${TARGET}" != "aws" ]; then
+if [ "${TARGET}" != "remote" ]; then
     ./start-network.sh
 fi
 
@@ -237,9 +237,9 @@ else
   docker tag sigmaos-remote sigmaos
   docker tag sigmauser-remote sigmauser
   # Upload the user bins to S3
-  echo "========== Pushing user bins to aws =========="
+  echo "========== Pushing user bins to S3 =========="
   ./upload.sh --tag $TAG --profile sigmaos
-  echo "========== Done pushing user bins to aws =========="
+  echo "========== Done pushing user bins to S3 =========="
 fi
 
 # Build npproxy for host

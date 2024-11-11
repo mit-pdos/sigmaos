@@ -8,7 +8,7 @@ import (
 // succesful, or false if timed out. This function releases the lock.
 //
 // Caller holds lock.
-func (pq *ProcQ) waitOrTimeoutAndUnlock() bool {
+func (be *BESched) waitOrTimeoutAndUnlock() bool {
 	ch := make(chan bool, 2)
 	go func(ch chan bool) {
 		time.Sleep(GET_PROC_TIMEOUT)
@@ -16,8 +16,8 @@ func (pq *ProcQ) waitOrTimeoutAndUnlock() bool {
 	}(ch)
 	go func(ch chan bool) {
 		// Make sure to unlock, in the event that the waiting thread timed out.
-		defer pq.mu.Unlock()
-		pq.cond.Wait()
+		defer be.mu.Unlock()
+		be.cond.Wait()
 		ch <- true
 	}(ch)
 	return <-ch

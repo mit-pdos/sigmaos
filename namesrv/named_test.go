@@ -246,7 +246,7 @@ func TestPartitionNamed(t *testing.T) {
 	es := []crash.Event{e}
 	s, err := crash.MakeEvents(es)
 	assert.Nil(t, err)
-	proc.SetSigmaFail(string(s))
+	proc.SetSigmaFail(s)
 
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

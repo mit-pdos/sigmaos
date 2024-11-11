@@ -202,7 +202,7 @@ func Run(args []string) error {
 		db.DFatalf("warmCache err %v", err)
 	}
 
-	crash.Partition(crash.NAMED_PARTITION, func(e crash.Event) {
+	crash.Failer(crash.NAMED_PARTITION, func(e crash.Event) {
 		db.DPrintf(db.CRASH, "Partition named: %v", e)
 		if nd.delay == 0 {
 			nd.delay = e.Delay

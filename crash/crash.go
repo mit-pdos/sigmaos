@@ -33,8 +33,12 @@ func (e *Event) String() string {
 	return fmt.Sprintf("{l %v s %v mi %v p %v d %v}", e.Label, e.Start, e.MaxInterval, e.Prob, e.Delay)
 }
 
-func MakeEvents(es []Event) ([]byte, error) {
-	return json.Marshal(es)
+func MakeEvents(es []Event) (string, error) {
+	b, err := json.Marshal(es)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func parseEvents(s string, labels map[Tselector]Event) error {
@@ -80,7 +84,7 @@ func Crasher(fsl *fslib.FsLib) {
 			if r < 330 {
 				fail(crash, nil)
 			} else if r < 660 {
-				partitionNamed(fsl)
+				PartitionNamed(fsl)
 			}
 		}
 	}()
@@ -97,7 +101,7 @@ func CrasherMsg(fsl *fslib.FsLib, f func() string) {
 			if r < 330 {
 				fail(crash, f)
 			} else if r < 660 {
-				partitionNamed(fsl)
+				PartitionNamed(fsl)
 			}
 		}
 	}()
@@ -162,14 +166,19 @@ func Fail(crash int64) {
 	fail(crash, nil)
 }
 
-func partitionNamed(fsl *fslib.FsLib) {
-	db.DPrintf(db.CRASH, "crash.Partition from %v\n", sp.NAMED)
+func Crash() {
+	db.DPrintf(db.CRASH, "Crash")
+	os.Exit(1)
+}
+
+func PartitionNamed(fsl *fslib.FsLib) {
+	db.DPrintf(db.CRASH, "PartitionNamed from %v\n", sp.NAMED)
 	if error := fsl.Disconnect(sp.NAMED); error != nil {
 		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v\n", os.Args, error)
 	}
 }
 
-func Partition(label Tselector, f func(e Event)) {
+func Failer(label Tselector, f func(e Event)) {
 	if e, ok := labels[label]; ok {
 		go func() {
 			time.Sleep(time.Duration(e.Start) * time.Millisecond)

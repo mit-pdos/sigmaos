@@ -130,7 +130,7 @@ func SPProxydKernel(kid string) string {
 	return SPPROXYDKERNEL + kid
 }
 
-func ProcqKernel(kid string) string {
+func BESchedKernel(kid string) string {
 	return BESCHEDKERNEL + kid
 }
 

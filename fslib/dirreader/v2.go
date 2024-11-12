@@ -1,4 +1,4 @@
-package fslib
+package dirreader
 
 import (
 	"bufio"
@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -16,7 +17,7 @@ import (
 type FwatchV2 func(ents map[string] bool, changes map[string] bool) bool
 
 type DirReaderV2 struct {
-	*FsLib
+	*fslib.FsLib
 	*sync.Mutex
 	cond *sync.Cond
 	pn string
@@ -28,7 +29,7 @@ type DirReaderV2 struct {
 }
 
 type watchReader struct {
-	*FsLib
+	*fslib.FsLib
 	watchFd int
 }
 
@@ -37,23 +38,22 @@ func (wr watchReader) Read(p []byte) (int, error) {
 	return int(size), err
 }
 
-// TODO: update it so that this and the oriignal dirreader have a unified interface and then swap between them with a flag
+// TODO: update it so that this and the original dirreader have a unified interface and then swap between them with a flag
 
-// change the fidwatch to just be a normal fid with a diff fsobj
 
 var CREATE_PREFIX = "CREATE "
 var REMOVE_PREFIX = "REMOVE "
 
-func NewDirReaderV2(fslib *FsLib, pn string) (*DirReaderV2, []string, error) {
+func NewDirReaderV2(fslib *fslib.FsLib, pn string) (*DirReaderV2, error) {
 	db.DPrintf(db.WATCH_V2, "Creating new watch on %s", pn)
 
 	fd, err := fslib.Open(pn, sp.OREAD)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	watchFd, err := fslib.DirWatchV2(fd)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	db.DPrintf(db.WATCH_V2, "Created watch on %s with fd=%d", pn, watchFd)
@@ -79,16 +79,16 @@ func NewDirReaderV2(fslib *FsLib, pn string) (*DirReaderV2, []string, error) {
 
 	sts, _, err := fslib.ReadDir(pn)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	for _, st := range sts {
 		dw.ents[st.Name] = true
 		dw.changes[st.Name] = true
 	}
 
-	files := filterMap(dw.ents)
+	db.DPrintf(db.WATCH_V2, "NewDirReaderV2: Initial dir contents %v", dw.ents)
 
-	return dw, files, nil
+	return dw, nil
 }
 
 // should hold lock for dw
@@ -185,11 +185,15 @@ func filterMap(ents map[string] bool) []string {
 	return result
 }
 
-func (dw *DirReaderV2) GetDir() []string {
+func (dw *DirReaderV2) GetPath() string {
+	return dw.pn
+}
+
+func (dw *DirReaderV2) GetDir() ([]string, error) {
 	dw.Lock()
 	defer dw.Unlock()
 
-	return filterMap(dw.ents)
+	return filterMap(dw.ents), nil
 }
 
 func (dw *DirReaderV2) Close() error {
@@ -203,6 +207,8 @@ func (dw *DirReaderV2) Close() error {
 func (dw *DirReaderV2) readDirWatch(watch FwatchV2) error {
 	dw.Lock()
 	defer dw.Unlock()
+
+	db.DPrintf(db.WATCH_V2, "readDirWatch: initial dir contents %v", dw.ents)
 
 	for watch(dw.ents, dw.changes) {
 		clear(dw.changes)
@@ -262,13 +268,15 @@ func (dw *DirReaderV2) WaitEmpty() error {
 // Watch for a directory change relative to present view and then return
 // all directory entries. If provided, any file beginning with an
 // excluded prefix is ignored. present should be sorted.
-func (dw *DirReaderV2) WatchEntriesChangedRelativeFiltered(present []string, excludedPrefixes []string) ([]string, error) {
+func (dw *DirReaderV2) WatchEntriesChangedRelative(present []string, excludedPrefixes []string) ([]string, bool, error) {
 	var files = make([]string, 0)
 	ix := 0
+
+	db.DPrintf(db.WATCH, "WatchUniqueEntries: dir %v, present: %v, excludedPrefixes %v\n", dw.pn, present, excludedPrefixes)
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		unchanged := true
-		filesPresent := filterMap(ents)
-		slices.Sort(filesPresent)
+		files = filterMap(ents)
+		slices.Sort(files)
 		for _, file := range files {
 			skip := false
 			for _, pf := range excludedPrefixes {
@@ -288,18 +296,13 @@ func (dw *DirReaderV2) WatchEntriesChangedRelativeFiltered(present []string, exc
 				unchanged = false
 			}
 		}
+		db.DPrintf(db.WATCH, "WatchUniqueEntries: ents: %v, present: %v, files: %v, unchanged: %v\n", ents, present, files, unchanged)
 		return unchanged
 	})
 	if err != nil {
-		return nil, err
+		return nil, true, err
 	}
-	return files, nil
-}
-
-// Watch for a directory change relative to present view and then return 
-// all directory entries. present should be sorted
-func (dw *DirReaderV2) WatchEntriesChangedRelative(present []string) ([]string, error) {
-	return dw.WatchEntriesChangedRelativeFiltered(present, nil)
+	return files, true, nil
 }
 
 // Watch for a directory change and then only return new changes since the last call to a Watch
@@ -323,7 +326,7 @@ func (dw *DirReaderV2) WatchEntriesChanged() (map[string]bool, error) {
 
 // Uses rename to move all entries in the directory to dst. If there are no further entries to be renamed,
 // waits for a new entry and moves it.
-func (dw *DirReaderV2) WatchEntriesAndRename(dst string) ([]string, error) {
+func (dw *DirReaderV2) WatchNewEntriesAndRename(dst string) ([]string, error) {
 	var r error
 	presentFiles := filterMap(dw.ents)
 	if len(presentFiles) > 0 {
@@ -347,6 +350,13 @@ func (dw *DirReaderV2) WatchEntriesAndRename(dst string) ([]string, error) {
 	return movedEnts, nil
 }
 
+
+// Uses rename to move all entries in the directory to dst. Does not block if there are no entries to rename
+func (dw *DirReaderV2) GetEntriesAndRename(dst string) ([]string, error) {
+	presentFiles := filterMap(dw.ents)
+	return dw.rename(presentFiles, dst)
+}
+
 // Takes each file and moves them to the dst directory. Returns a list of all
 // files successfully moved
 func (dw *DirReaderV2) rename(files []string, dst string) ([]string, error) {
@@ -366,32 +376,4 @@ func (dw *DirReaderV2) rename(files []string, dst string) ([]string, error) {
 		}
 	}
 	return newents, r
-}
-
-// Wait until pn isn't present
-func (fsl *FsLib) WaitRemoveV2(pn string) error {
-	dir := filepath.Dir(pn) + "/"
-	f := filepath.Base(pn)
-	db.DPrintf(db.WATCH_V2, "WaitRemoveV2: dir %v\n", dir)
-	dirreader, _, err := NewDirReaderV2(fsl, dir)
-	if err == nil {
-		return err
-	}
-	dirreader.WaitRemove(f)
-	dirreader.Close()
-	return err
-}
-
-// Wait until pn exists
-func (fsl *FsLib) WaitCreateV2(pn string) error {
-	dir := filepath.Dir(pn) + "/"
-	f := filepath.Base(pn)
-	db.DPrintf(db.WATCH_V2, "WaitCreateV2: dir %v\n", dir)
-	dirreader, _, err := NewDirReaderV2(fsl, dir)
-	if err == nil {
-		return err
-	}
-	dirreader.WaitCreate(f)
-	dirreader.Close()
-	return err
 }

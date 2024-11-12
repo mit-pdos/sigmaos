@@ -8,6 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/fslib/dirreader"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -45,9 +46,9 @@ func NewUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 		// wait for the kernel to start up and advertise itself in a separate
 		// goroutine, and then fill the uprocd pool
 		for {
-			err := updm.fsl.WaitCreate(filepath.Join(sp.BOOT, updm.kernelId))
+			err := dirreader.WaitCreate(updm.fsl, filepath.Join(sp.BOOT, updm.kernelId))
 			// Retry if unreachable
-			if serr.IsErrCode(err, serr.TErrUnreachable) {
+			if serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrClosed) {
 				db.DPrintf(db.UPROCDMGR, "Boot dir unreachable")
 				continue
 			}

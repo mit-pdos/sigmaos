@@ -91,16 +91,6 @@ func dataString(data []time.Duration) string {
 }
 
 func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefix string) {
-	var oldornew string
-	useOldWatch := os.Getenv("USE_OLD_WATCH")
-	if useOldWatch != "" {
-		oldornew = "old"
-		fmt.Println("Using old watch")
-	} else {
-		oldornew = "new"
-		fmt.Println("Using new watch")
-	}
-
 	ts, err := test.NewTstateAll(t)
 
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -116,7 +106,7 @@ func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, 
 
 	fmt.Printf("Using measure mode %s\n", measureMode)
 
-	p := proc.NewProc("watchperf-coord", []string{strconv.Itoa(nWorkers), strconv.Itoa(nStartingFiles), strconv.Itoa(nTrials), basedir, oldornew, measureMode})
+	p := proc.NewProc("watchperf-coord", []string{strconv.Itoa(nWorkers), strconv.Itoa(nStartingFiles), strconv.Itoa(nTrials), basedir, measureMode})
 	err = ts.Spawn(p)
 	assert.Nil(t, err)
 	err = ts.WaitStart(p.GetPid())

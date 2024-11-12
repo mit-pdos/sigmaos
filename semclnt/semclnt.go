@@ -6,6 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/fslib/dirreader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -44,14 +45,14 @@ func (c *SemClnt) InitLease(perm sp.Tperm, lid sp.TleaseId) error {
 func (c *SemClnt) Down() error {
 	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
 		db.DPrintf(db.SEMCLNT, "Down %d %v\n", i, c.path)
-		err := c.WaitRemove(c.path)
+		err := dirreader.WaitRemove(c.FsLib, c.path)
 		// If err is because file has been removed, then no error: the
 		// semaphore has been "upped".
 		if serr.IsErrCode(err, serr.TErrNotfound) {
 			db.DPrintf(db.SEMCLNT_ERR, "down notfound %v ok err %v\n", c.path, err)
 			return nil
 		}
-		if serr.IsErrCode(err, serr.TErrUnreachable) {
+		if serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrClosed) {
 			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", c.path, err)
 			time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 			continue

@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 7 {
-		db.DFatalf("Usage: %v nworkers nstartfiles ntrials basedir oldornew measuremode\n", os.Args[0])
+	if len(os.Args) < 6 {
+		db.DFatalf("Usage: %v nworkers nstartfiles ntrials basedir measuremode\n", os.Args[0])
 	}
 
 	p, err := perf.NewPerf(proc.GetProcEnv(), "WATCH_PERF_COORD")

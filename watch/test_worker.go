@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"path/filepath"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/fslib/dirreader"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmap"
@@ -64,9 +64,13 @@ func (w *TestWorker) Run() {
 
 	sum := uint64(0)
 	seen := make(map[string]bool)
-	dirWatcher, initFiles, err := fslib.NewDirReaderV2(w.FsLib, w.workDir)
+	dr, err := dirreader.NewDirReader(w.FsLib, w.workDir)
 	if err != nil {
 		db.DFatalf("RunWorker %s: failed to create dir watcher for %s: %v", w.id, w.workDir, err)
+	}
+	initFiles, err := dr.GetDir()
+	if err != nil {
+		db.DFatalf("RunWorker %s: failed to get initial files for %s: %v", w.id, w.workDir, err)
 	}
 
 	db.DPrintf(db.WATCH_TEST, "RunWorker %s: summing initial files %v", w.id, initFiles)
@@ -80,7 +84,7 @@ func (w *TestWorker) Run() {
 	}
 	for {
 		db.DPrintf(db.WATCH_TEST, "RunWorker %s: waiting for files", w.id)
-		changed, err := dirWatcher.WatchEntriesChanged()
+		changed, err := dr.WatchEntriesChanged()
 		if err != nil {
 			db.DFatalf("RunWorker %s: failed to watch for entries changed %v", w.id, err)
 		}
@@ -106,7 +110,7 @@ func (w *TestWorker) Run() {
 		}
 	}
 
-	err = dirWatcher.Close()
+	err = dr.Close()
 	if err != nil {
 		db.DFatalf("RunWorker %s: failed to close dir watcher", err)
 	}

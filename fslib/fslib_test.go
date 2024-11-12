@@ -2,7 +2,6 @@ package fslib_test
 
 import (
 	"flag"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/fslib/dirreader"
 	"sigmaos/namesrv"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
@@ -701,7 +701,7 @@ func TestWaitRemoveOne(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		err := ts.WaitRemove(fn)
+		err := dirreader.WaitRemove(ts.FsLib, fn)
 		assert.Nil(t, err)
 		ch <- true
 	}()
@@ -724,7 +724,6 @@ func TestWaitRemoveOne(t *testing.T) {
 }
 
 func TestDirWatch(t *testing.T) {
-	useOldWatch := os.Getenv("USE_OLD_WATCH") != ""
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -738,11 +737,7 @@ func TestDirWatch(t *testing.T) {
 	ch := make(chan bool)
 	go func() {
 		var err error
-		if useOldWatch {
-			err = ts.WaitCreate(pn1)
-		} else {
-			err = ts.WaitCreateV2(pn1)
-		}
+		dirreader.WaitCreate(ts.FsLib, pn1)
 		assert.Nil(t, err)
 		ch <- true
 	}()
@@ -769,7 +764,6 @@ func TestDirWatch(t *testing.T) {
 
 // Concurrently remove & wait
 func TestWaitRemoveWaitConcur(t *testing.T) {
-	useOldWatch := os.Getenv("USE_OLD_WATCH") != ""
 	const N = 100 // 10_000
 
 	ts, err1 := test.NewTstatePath(t, pathname)
@@ -792,11 +786,7 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 	for i := 0; i < N; i++ {
 		fn := filepath.Join(dn, strconv.Itoa(i))
 		go func(fn string) {
-			if useOldWatch {
-				err = ts.WaitRemove(fn)
-			} else {
-				err = ts.WaitRemoveV2(fn)
-			}
+			err = dirreader.WaitRemove(ts.FsLib, fn)
 			assert.True(ts.T, err == nil, "Unexpected WaitRemove error: %v", err)
 			done <- true
 		}(fn)
@@ -818,7 +808,6 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 
 // Concurrently wait, create and remove in dir
 func TestWaitCreateRemoveConcur(t *testing.T) {
-	useOldWatch := os.Getenv("USE_OLD_WATCH") != ""
 	const N = 500 // 5_000
 	const MS = 2
 
@@ -843,11 +832,7 @@ func TestWaitCreateRemoveConcur(t *testing.T) {
 
 		go func() {
 			var err error
-			if useOldWatch {
-				err = fsl.WaitRemove(fn)
-			} else {
-				err = fsl.WaitRemoveV2(fn)
-			}
+			dirreader.WaitRemove(fsl, fn)
 			if err == nil {
 				// db.DPrintf(db.TEST, "wait for rm %v\n", i)
 			} else {

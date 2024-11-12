@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/fslib/dirreader"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmap"
@@ -17,12 +17,11 @@ type PerfWorker struct {
 	id string;
 	nTrials int;
 	watchDir string;
-	watchDirWatcher *fslib.DirReaderV2;
+	watchDirReader dirreader.DirReader;
 	responseDir string;
 	tempDir string;
 	signalDir string;
-	signalDirWatcher *fslib.DirReaderV2;
-	useOldWatch bool;
+	signalDirReader dirreader.DirReader;
 	measureMode MeasureMode
 }
 
@@ -48,29 +47,17 @@ func NewPerfWorker(args []string) (*PerfWorker, error) {
 	responseDir := args[3]
 	tempDir := args[4]
 	signalDir := args[5]
-	oldOrNew := args[6]
 
-	var useOldWatch bool
-	var watchDirWatcher *fslib.DirReaderV2
-	var signalDirWatcher *fslib.DirReaderV2
-
-	if oldOrNew == "old" {
-		useOldWatch = true
-	} else if oldOrNew == "new" {
-		useOldWatch = false
-		watchDirWatcher, _, err = fslib.NewDirReaderV2(sc.FsLib, watchDir)
-		if err != nil {
-			return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: failed to construct watcher for %s, %v", id, watchDir, err)
-		}
-		signalDirWatcher, _, err = fslib.NewDirReaderV2(sc.FsLib, signalDir)
-		if err != nil {
-			return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: failed to construct watcher for %s, %v", id, signalDir, err)
-		}
-	} else {
-		return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: oldornew %s is not either 'old' or 'new'", id, oldOrNew)
+	watchDirReader, err := dirreader.NewDirReader(sc.FsLib, watchDir)
+	if err != nil {
+		return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: failed to construct watcher for %s, %v", id, watchDir, err)
+	}
+	signalDirReader, err := dirreader.NewDirReader(sc.FsLib, signalDir)
+	if err != nil {
+		return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: failed to construct watcher for %s, %v", id, signalDir, err)
 	}
 
-	measureMode, err := strconv.Atoi(args[7])
+	measureMode, err := strconv.Atoi(args[6])
 	if err != nil || measureMode < 0 || measureMode > 1 {
 		return &PerfWorker{}, fmt.Errorf("NewPerfWorker: measure mode %s is invalid", args[6])
 	}
@@ -80,12 +67,11 @@ func NewPerfWorker(args []string) (*PerfWorker, error) {
 		id,
 		nTrials,
 		watchDir,
-		watchDirWatcher,
+		watchDirReader,
 		responseDir,
 		tempDir,
 		signalDir,
-		signalDirWatcher,
-		useOldWatch,
+		signalDirReader,
 		MeasureMode(measureMode),
 	}, nil
 }
@@ -101,7 +87,6 @@ func (w *PerfWorker) Run() {
 	if err != nil {
 		db.DFatalf("Run %s: failed to open watchdir %s", w.id, w.watchDir)
 	}
-	signalDirFd, err := w.Open(w.signalDir, 0777)
 	if err != nil {
 		db.DFatalf("Run %s: failed to open signaldir %s", w.id, w.signalDir)
 	}
@@ -109,27 +94,27 @@ func (w *PerfWorker) Run() {
 		filename := fmt.Sprintf("trial_%d", trial)
 
 		db.DPrintf(db.WATCH_PERF, "Run %s: Trial %d: waiting for file creation", w.id, trial)
-		w.waitForCoordSignal(signalDirFd, trial, false)
+		w.waitForCoordSignal(trial, false)
 		preWatchTime := time.Now()
-		w.waitForWatchFile(watchDirFd, filename, false)
+		w.waitForWatchFile(filename, false)
 		createdFileTime := time.Now()
 
 		if w.measureMode == JustWatch {
-			w.respondWith(formatDuration(createdFileTime.Sub(preWatchTime)))
+			w.respondWith(formatDuration(createdFileTime.Sub(preWatchTime)), trial, false)
 		} else if w.measureMode == IncludeFileOp {
-			w.respondWith(formatTime(createdFileTime))
+			w.respondWith(formatTime(createdFileTime), trial, false)
 		}
 
 		db.DPrintf(db.WATCH_PERF, "Run %s: Trial %d: waiting for file deletion", w.id, trial)
-		w.waitForCoordSignal(signalDirFd, trial, true)
+		w.waitForCoordSignal(trial, true)
 		preWatchTime = time.Now()
-		w.waitForWatchFile(watchDirFd, filename, true)
+		w.waitForWatchFile(filename, true)
 		deletedFileTime := time.Now()
 
 		if w.measureMode == JustWatch {
-			w.respondWith(formatDuration(deletedFileTime.Sub(preWatchTime)))
+			w.respondWith(formatDuration(deletedFileTime.Sub(preWatchTime)), trial, true)
 		} else if w.measureMode == IncludeFileOp {
-			w.respondWith(formatTime(deletedFileTime))
+			w.respondWith(formatTime(deletedFileTime), trial, true)
 		}
 	}
 
@@ -148,51 +133,34 @@ func (w *PerfWorker) Run() {
 }
 
 // wait for a signal from the coord that we should now start watching for the next file
-func (w *PerfWorker) waitForCoordSignal(signalDirFd int, trial int, deleted bool) {
-	w.waitForFile(signalDirFd, w.signalDir, w.signalDirWatcher, coordSignalName(trial, deleted), false)
+func (w *PerfWorker) waitForCoordSignal(trial int, deleted bool) {
+	w.waitForFile( w.signalDirReader, coordSignalName(trial, deleted), false)
 }
 
-func (w *PerfWorker) waitForWatchFile(watchDirFd int, filename string, deleted bool) {
-	w.waitForFile(watchDirFd, w.watchDir, w.watchDirWatcher, filename, deleted)
+func (w *PerfWorker) waitForWatchFile(filename string, deleted bool) {
+	w.waitForFile( w.watchDirReader, filename, deleted)
 }
 
-func (w *PerfWorker) waitForFile(watchFd int, watchDir string, watcher *fslib.DirReaderV2, filename string, deleted bool) {
+func (w *PerfWorker) waitForFile(watcher dirreader.DirReader, filename string, deleted bool) {
 	db.DPrintf(db.WATCH_PERF, "waitForFile: waiting for %s/%s (deleted = %t)", w.watchDir, filename, deleted)
 
-	if w.useOldWatch {
-		found := false
-		for !found {
-			found = deleted
-			w.DirWatch(watchFd)
-			stats, err := w.GetDir(watchDir)
-			if err != nil {
-				db.DFatalf("waitForFile %s: failed to get dir: err %v", w.id, err)
-			}
-
-			for _, stat := range stats {
-				if stat.Name == filename {
-					found = !deleted
-				}
-			}
-		}
+	var err error
+	if deleted {
+		err = watcher.WaitRemove(filename)
 	} else {
-		var err error
-		if deleted {
-			err = watcher.WaitRemove(filename)
-		} else {
-			err = watcher.WaitCreate(filename)
-		}
+		err = watcher.WaitCreate(filename)
+	}
 
-		if err != nil {
-			db.DFatalf("waitForFile: failed to wait for %s/%s: err %v", watchDir, filename, err)
-		}
+	if err != nil {
+		db.DFatalf("waitForFile: failed to wait for %s/%s: err %v", watcher.GetPath(), filename, err)
 	}
 }
 
-func (w *PerfWorker) respondWith(resp string) {
+func (w *PerfWorker) respondWith(resp string, trialNum int, deleted bool) {
 	db.DPrintf(db.WATCH_PERF, "respondWithTime: id %s with resp %s", w.id, resp)
-	tempPath := filepath.Join(w.tempDir, w.id)
-	realPath := filepath.Join(w.responseDir, w.id)
+	fileName := responseName(trialNum, w.id, deleted)
+	tempPath := filepath.Join(w.tempDir, fileName)
+	realPath := filepath.Join(w.responseDir, fileName)
 	fd, err := w.Create(tempPath, 0777, sigmap.OAPPEND)
 	if err != nil {
 		db.DFatalf("respondWithTime: failed to create file %s, %v", tempPath, err)
@@ -206,6 +174,8 @@ func (w *PerfWorker) respondWith(resp string) {
 	if err != nil {
 		db.DFatalf("respondWithTime: failed to rename %s to %s, %v", tempPath, realPath, err)
 	}
+
+	db.DPrintf(db.WATCH_PERF, "respondWithTime: id %s with resp %s to file %s", w.id, resp, realPath)
 }
 
 func formatTime(t time.Time) string {

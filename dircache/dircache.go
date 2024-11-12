@@ -12,6 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/fslib/dirreader"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -318,13 +319,18 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 	retry := false
 	first := true
 	for dc.isDone.Load() == 0 {
-		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
-		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilters)
+		dr, err := dirreader.NewDirReader(dc.FsLib, dc.Path)
+		if err != nil {
+			dc.err = err
+			return
+		}
+		ents, ok, err := dr.WatchEntriesChangedRelative(dc.dir.Keys(0), dc.prefixFilters)
+		dr.Close()
 		if ok { // reset retry?
 			retry = false
 		}
 		if err != nil {
-			if serr.IsErrorUnreachable(err) && !retry {
+			if (serr.IsErrorUnreachable(err) || serr.IsErrCode(err, serr.TErrClosed)) && !retry {
 				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
 				// try again but remember we are already tried reading ReadDir
 				if !ok {

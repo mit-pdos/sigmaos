@@ -35,14 +35,14 @@ const (
 )
 
 var HOTELSVC = []string{
-	HOTELGEODIR + "~any/",
+	HOTELGEODIR + sp.ANY + "/",
 	HOTELRATE,
 	HOTELSEARCH,
 	HOTELREC,
 	HOTELRESERVE,
 	HOTELUSER,
 	HOTELPROF,
-	sp.DB + "~any/",
+	sp.DB + sp.ANY + "/",
 }
 
 var (

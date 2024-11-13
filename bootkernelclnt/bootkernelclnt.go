@@ -107,10 +107,10 @@ func NewKernelClnt(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv) (*Kernel, e
 		var pn1 string
 		var err error
 		if etcdIP != pe.GetOuterContainerIP() {
-			// If running in a distributed setting, bootkernel clnt can be ~any
-			pn1, _, err = sc.ResolveMount(sp.BOOT + "~any")
+			// If running in a distributed setting, bootkernel clnt can be ANY
+			pn1, _, err = sc.ResolveMount(sp.BOOT + sp.ANY)
 		} else {
-			pn1, _, err = sc.ResolveMount(sp.BOOT + "~local")
+			pn1, _, err = sc.ResolveMount(sp.BOOT + sp.LOCAL)
 		}
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error resolve local")

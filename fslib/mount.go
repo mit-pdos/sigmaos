@@ -33,7 +33,7 @@ func (fsl *FsLib) MkEndpointFile(pn string, ep *sp.Tendpoint) error {
 	return nil
 }
 
-// Return pn, replacing first ~local/~any with a endpoint point for a specific
+// Return pn, replacing first LOCAL/ANY with a endpoint point for a specific
 // server.
 func (fsl *FsLib) ResolveMount(pn string) (string, bool, error) {
 	p := path.Split(pn)
@@ -49,7 +49,7 @@ func (fsl *FsLib) ResolveMount(pn string) (string, bool, error) {
 	return "", ok, nil
 }
 
-// Return pn but with all ~local and ~any's replaced with endpoint points for a
+// Return pn but with all LOCAL and ANY's replaced with endpoint points for a
 // specific server.
 func (fsl *FsLib) ResolveMounts(pn string) (string, error) {
 	for {
@@ -124,7 +124,7 @@ func (fsl *FsLib) resolveMount0(d string, q string) (string, *sp.Tendpoint, erro
 		if err != nil {
 			return false, err
 		}
-		if q == "~any" || ok {
+		if q == sp.ANY || ok {
 			db.DPrintf(db.TEST, "resolveMount %v %v %v", d, st.Name, fsl.pe.GetKernelID())
 			rname = st.Name
 			rep = ep
@@ -150,7 +150,7 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error
 		if !ok {
 			db.DFatalf("resolveMount %v isn't local %v", rname, ep)
 		}
-		if q == "~any" || ok {
+		if q == sp.ANY || ok {
 			return rname, ep, nil
 		}
 	}

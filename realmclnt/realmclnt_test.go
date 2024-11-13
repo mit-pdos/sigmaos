@@ -495,7 +495,7 @@ func TestKernelIsolationBasic(t *testing.T) {
 	assert.NotNil(t, err, "Able to mount kernelsrv")
 
 	// Read an s3 endpoint from realm 1
-	s3r1EP, err := ts.ts1.ReadEndpoint(filepath.Join(sp.S3, "~any"))
+	s3r1EP, err := ts.ts1.ReadEndpoint(filepath.Join(sp.S3, sp.ANY))
 	assert.Nil(t, err, "Err %v", err)
 	db.DPrintf(db.TEST, "S3 Realm1 EP: %v", s3r1EP)
 	// Make sure ts1 can mount its realm's S3 server
@@ -506,7 +506,7 @@ func TestKernelIsolationBasic(t *testing.T) {
 	assert.NotNil(t, err, "Able to mount s3r1")
 
 	// Read a ux endpoint from realm 2
-	uxr2EP, err := ts.ts2.ReadEndpoint(filepath.Join(sp.UX, "~any"))
+	uxr2EP, err := ts.ts2.ReadEndpoint(filepath.Join(sp.UX, sp.ANY))
 	assert.Nil(t, err, "Err %v", err)
 	db.DPrintf(db.TEST, "UX Realm2 EP: %v", uxr2EP)
 	// Make sure ts2 can mount its realm's UX server

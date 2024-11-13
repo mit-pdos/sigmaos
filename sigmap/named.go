@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+const (
+	ANY   = "~any"
+	LOCAL = "~local"
+)
+
 // if name ends in "/", it is a directory with mount files for that service
 const (
 	KNAMED      = "knamed"
@@ -38,7 +43,7 @@ const (
 	BESCHED     = NAMED + BESCHEDREL + "/"
 	DBREL       = "db"
 	DB          = NAMED + DBREL + "/"
-	DBD         = DB + "~any/"
+	DBD         = DB + ANY + "/"
 	MONGOREL    = "mongo"
 	MONGO       = NAMED + MONGOREL + "/"
 
@@ -91,11 +96,11 @@ func S3ClientPath(pn string) (string, bool) {
 	if !ok {
 		return pn, false
 	}
-	pn0, ok = strings.CutPrefix(pn0, "~local")
+	pn0, ok = strings.CutPrefix(pn0, LOCAL)
 	if ok {
 		return filepath.Join(S3CLNT, pn0), true
 	}
-	pn0, ok = strings.CutPrefix(pn0, "~any")
+	pn0, ok = strings.CutPrefix(pn0, ANY)
 	if ok {
 		return filepath.Join(S3CLNT, pn0), true
 	}

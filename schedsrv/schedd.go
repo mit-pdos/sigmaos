@@ -345,7 +345,7 @@ func (sd *Schedd) shouldGetBEProc() (proc.Tmem, bool) {
 }
 
 func (sd *Schedd) register() {
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{sd.sc.FsLib}, filepath.Join(sp.LCSCHED, "~any"))
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{sd.sc.FsLib}, filepath.Join(sp.LCSCHED, sp.ANY))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}

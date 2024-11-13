@@ -170,7 +170,7 @@ func TestLeased(t *testing.T) {
 		return
 	}
 
-	name := filepath.Join(sp.SCHEDD, "~any")
+	name := filepath.Join(sp.SCHEDD, sp.ANY)
 
 	var err error
 

@@ -49,7 +49,8 @@ def get_tpt(dpath):
   return round(np.sum(tpts))
 
 def graph_data(hotel_res_dir, hotel_overlays_res_dir, socialnet_res_dir, socialnet_overlays_res_dir, out):
-  fig, (p99_lat, peak_tpt) = plt.subplots(1, 2, figsize=(6.4, 2.4))
+  fig, (peak_tpt) = plt.subplots(1, 1, figsize=(6.4, 2.4))
+#  fig, (p99_lat, peak_tpt) = plt.subplots(1, 2, figsize=(6.4, 2.4))
 #  fig, ((avg_lat, p99_lat), (p99_lat_peak, peak_tpt)) = plt.subplots(2, 2, figsize=(6.4, 2.4))
 
   # Scrape data
@@ -89,15 +90,15 @@ def graph_data(hotel_res_dir, hotel_overlays_res_dir, socialnet_res_dir, socialn
     label = sys[i]
 #    avg_lat.bar([i * off], [d_avg_lat[i]], width=width, label=label)
 #    avg_lat.text(i * off, d_avg_lat[i] + .25, str(d_avg_lat[i]), ha="center")
-    p99_lat.bar([i * off], [d_p99_lat[i]], width=width, label=label)
-    p99_lat.text(i * off, d_p99_lat[i] + .25, str(d_p99_lat[i]), ha="center")
+#    p99_lat.bar([i * off], [d_p99_lat[i]], width=width, label=label)
+#    p99_lat.text(i * off, d_p99_lat[i] + .25, str(d_p99_lat[i]), ha="center")
 #    p99_lat_peak.bar([i * off], [d_p99_lat_peak[i]], width=width, label=label)
 #    p99_lat_peak.text(i * off, d_p99_lat_peak[i] + .25, str(d_p99_lat_peak[i]), ha="center")
     peak_tpt.bar([i * off], [d_peak_tpt[i]], width=width, label=label)
     peak_tpt.text(i * off, d_peak_tpt[i] + .25, str(d_peak_tpt[i]), ha="center")
 
 #  avg_lat.title.set_text("Avg latency (ms), low load")
-  p99_lat.title.set_text("99% latency at moderate load")
+#  p99_lat.title.set_text("99% latency at moderate load")
 #  p99_lat_peak.title.set_text("99% latency (ms) at peak throughput")
   peak_tpt.title.set_text("Max sustained throughput")
 #  avg_lat.set_ylabel("Avg lat @ low load (ms)")
@@ -106,7 +107,8 @@ def graph_data(hotel_res_dir, hotel_overlays_res_dir, socialnet_res_dir, socialn
 #  peak_tpt.set_ylabel("Peak tpt (req/s)")
 
 #  for (ax, data) in [ (avg_lat, d_avg_lat), (p99_lat, d_p99_lat), (p99_lat_peak, d_p99_lat_peak), (peak_tpt, d_peak_tpt), ]:
-  for (ax, data, ylabel) in [ (p99_lat, d_p99_lat, "Milliseconds"), (peak_tpt, d_peak_tpt, "Requests per second"), ]:
+#  for (ax, data, ylabel) in [ (p99_lat, d_p99_lat, "Milliseconds"), (peak_tpt, d_peak_tpt, "Requests per second"), ]:
+  for (ax, data, ylabel) in [ (peak_tpt, d_peak_tpt, "Requests per second"), ]:
     ax.set_ylabel(ylabel)
     ax.locator_params(axis='y', nbins=4)
     ax.set_ylim(bottom=0, top=max(data)*1.3)

@@ -264,7 +264,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   hotel_tpts_k8s = read_tpts(input_dir_k8s, "hotel")
   hotel_range_k8s = get_time_range(hotel_tpts_k8s)
   time_range_k8s = get_overall_time_range([hotel_range_k8s, hotel_lat_k8s_range])
-#  time_range_k8s = (time_range_k8s[0] + 350000, time_range_k8s[1] + 350000)
+  time_range_k8s = (time_range_k8s[0] + 370000, time_range_k8s[1] + 370000)
   extend_tpts_to_range(procd_tpts, time_range)
   procd_tpts = truncate_tpts_to_range(procd_tpts, time_range)
   be_tpts = fit_times_to_range(be_tpts, time_range)
@@ -272,7 +272,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
   hotel_lats = fit_times_to_range(hotel_lats, time_range)
   hotel_lats_k8s = fit_times_to_range(hotel_lats_k8s, time_range_k8s)
-#XXX  hotel_lats_k8s = truncate_to_min_max(hotel_lats_k8s, 348000, 390000)
+  hotel_lats_k8s = truncate_to_min_max(hotel_lats_k8s, 354500, 390000)
   procd_tpts = truncate_to_min_max(procd_tpts, xmin, xmax)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
@@ -293,11 +293,11 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   if len(hotel_lats) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
     ymax = max(ymax, max(y1))
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, "σOS-hotel " + str(int(percentile)) + "% lat", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, str(int(percentile)) + "% tail latency", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)
-    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "σOS-hotel avg lat", "purple", "-", "")
-    plots.append(p_avg_lat)
+#    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "σOS-hotel avg lat", "purple", "-", "")
+#    plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   hotel_lat_k8s_buckets = bucketize_latency(hotel_lats_k8s, time_range, xmin, xmax, step_size=50)
   hotel_tail_lat_k8s_buckets = buckets_to_percentile(hotel_lat_k8s_buckets, percentile)
@@ -305,11 +305,11 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   if len(hotel_lats_k8s) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_k8s_buckets)
     ymax = max(ymax, max(y1))
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, "k8s-hotel " + str(int(percentile)) + "% lat", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, None, "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_k8s_buckets)
-    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "k8s-hotel avg lat", "purple", "-", "")
-    plots.append(p_avg_lat)
+#    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "k8s-hotel avg lat", "purple", "-", "")
+#    plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)

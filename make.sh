@@ -120,6 +120,11 @@ for k in $WHAT; do
         build="$GO build -ldflags=\"$LDF\" $RACE -o $OUTPATH/$k/$f$VERSION cmd/$k/$f/main.go"
         echo $build
         eval "$build"
+        # Bail out early on build error
+        export EXIT_STATUS=$?
+        if [ $EXIT_STATUS  -ne 0 ]; then
+          exit $EXIT_STATUS
+        fi
       fi
     done
   else
@@ -129,5 +134,10 @@ for k in $WHAT; do
     build="parallel -j$njobs $GO \"build -ldflags='$LDF' $RACE -o $OUTPATH/$k/{}$VERSION cmd/$k/{}/main.go\" ::: $FILES"
     echo $build
     eval $build
+    # Bail out early on build error
+    export EXIT_STATUS=$?
+    if [ $EXIT_STATUS  -ne 0 ]; then
+      exit $EXIT_STATUS
+    fi
   fi
 done

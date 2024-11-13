@@ -23,8 +23,9 @@ func newFidMap() *FidMap {
 
 func (fm *FidMap) String() string {
 	str := "["
-	fm.fids.Iter(func(k sp.Tfid, v *Channel) {
+	fm.fids.Iter(func(k sp.Tfid, v *Channel) bool {
 		str += fmt.Sprintf("{%v chan %v},", k, v)
+		return true
 	})
 	return str + "]"
 }
@@ -61,11 +62,12 @@ func (fm *FidMap) disconnect(fid0 sp.Tfid) {
 		db.DFatalf("disconnect: fid %v unknown\n", fid0)
 	}
 	db.DPrintf(db.CRASH, "fid disconnect fid %v ch0 %v\n", fid0, ch0)
-	fm.fids.Iter(func(fid sp.Tfid, ch *Channel) {
+	fm.fids.Iter(func(fid sp.Tfid, ch *Channel) bool {
 		if fid != fid0 && ch.pc == ch0.pc {
 			db.DPrintf(db.CRASH, "fid disconnect fid %v ch %v\n", fid, ch)
 			fm.fids.UpdateL(fid, nil)
 		}
+		return true
 	})
 	fm.fids.Update(fid0, nil)
 }

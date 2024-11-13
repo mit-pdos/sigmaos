@@ -2,7 +2,7 @@
 // file is created or removed, or a directory changes; see Watch()
 // [protsrv].
 //
-// Servers also use them to locks a pathname before
+// Servers also use them to lock a pathname before
 // manipulating/creating a file or directory.  When a server starts an
 // operation it calls WatchLookupL, which allocates an watch in the
 // table and locks the watch. Then, it does it work, and releases the
@@ -120,8 +120,8 @@ func (wt *WatchTable) free(ws *Watch) bool {
 // Free watch for path. Caller should hold path lock. If no thread is
 // using the watch anymore, free the sess cond associated with the
 // watch.
-func (wt *WatchTable) FreeWatch(ws *Watch) {
-	db.DPrintf(db.WATCH, "FreeWatch '%s'\n", ws.pl.Path())
+func (wt *WatchTable) freeWatch(ws *Watch) {
+	db.DPrintf(db.WATCH, "freeWatch '%s'\n", ws.pl.Path())
 	del := wt.free(ws)
 	if del {
 		wt.sct.FreeClntCond(ws.sc)
@@ -132,7 +132,7 @@ func (wt *WatchTable) FreeWatch(ws *Watch) {
 func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, cid sp.TclntId) *serr.Err {
 	ws := wt.allocWatch(pl)
 	err := ws.Watch(cid)
-	wt.FreeWatch(ws)
+	wt.freeWatch(ws)
 	return err
 }
 

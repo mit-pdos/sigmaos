@@ -60,10 +60,11 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 
 		db.DPrintf(db.TEST, "Old leader try to write...")
 
-		// A thread shouldn't write after resigning, but this thread
-		// lost leader status, and the other thread should have it by
-		// now so this write to pn should fail, because it is fenced
-		// with the fsl's fence, which is the old leader's one.
+		// A leader shouldn't write after resigning, but this is for
+		// testing that operations of an old leader fails.  This
+		// thread lost leader status, and the other thread should have
+		// it by now so this write to pn should fail, because it is
+		// fenced with the fsl's fence, which is the old leader's one.
 
 		_, err = fsl2.PutFile(pn+"/fff", 0777, sp.OWRITE, []byte("should fail"))
 		assert.NotNil(ts.T, err, "Put")

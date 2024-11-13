@@ -136,11 +136,13 @@ func (sm *SyncMap[K, T]) Values() []T {
 	return vals
 }
 
-func (sm *SyncMap[K, V]) Iter(f func(key K, val V)) {
+func (sm *SyncMap[K, V]) Iter(f func(key K, val V) bool) {
 	sm.Lock()
 	defer sm.Unlock()
 
 	for k, v := range sm.tbl {
-		f(k, v)
+		if !f(k, v) {
+			break
+		}
 	}
 }

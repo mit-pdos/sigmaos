@@ -24,6 +24,15 @@ func NewFencedRoot(root fs.Dir) fs.Dir {
 	return &FencedDir{root}
 }
 
+func GetDir(dir fs.Dir) fs.Dir {
+	switch d := dir.(type) {
+	case *FencedDir:
+		return d.Dir
+	default:
+		return d
+	}
+}
+
 func (fdir *FencedDir) LookupPath(ctx fs.CtxI, path path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	os, lo, p, err := fdir.Dir.LookupPath(ctx, path)
 	for i, o := range os {

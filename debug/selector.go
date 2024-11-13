@@ -39,6 +39,7 @@ const (
 const (
 	TEST     Tselector = "TEST"
 	TEST1              = "TEST1"
+	STAT               = "STAT"
 	TEST_LAT           = "TEST_LAT"
 	DELAY              = "DELAY"
 	CRASH              = "CRASH"

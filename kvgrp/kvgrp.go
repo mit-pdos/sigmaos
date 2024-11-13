@@ -1,11 +1,8 @@
+// The kvgrp package starts a group of servers. If nrepl > 0, then the
+// servers form a Raft group.  If nrepl == 0, then group is either a
+// single server with possibly some backup servers. Clients can wait
+// until the group has configured using WaitStarted().
 package kvgrp
-
-//
-// Starts a group of servers. If nrepl > 0, then the servers form a
-// raft group.  If nrepl == 0, then group is either a single
-// server. or Clients can wait until the group has configured using
-// WaitStarted().
-//
 
 import (
 	"path/filepath"

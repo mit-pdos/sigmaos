@@ -1,7 +1,0 @@
-app: "wc"
-nreduce: 1
-binsz: 268435456
-input: "name/s3/~local/9ps3/wiki-128M/"
-intermediate: "name/ux/~local/mr-intermediate"
-output: "name/s3/~local/9ps3/mr-out"
-linesz: 2097152  # the longest line in wiki is just shorter than 2MB

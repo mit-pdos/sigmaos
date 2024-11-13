@@ -125,8 +125,8 @@ func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf 
 	// directory to etcd, but undo the Insert if create fails.
 	di := NewDirEntInfoNf(nf, path, nf.Tperm(), cid, lid)
 	dir.Ents.Insert(name, di)
-	db.DPrintf(db.FSETCD, "Create %q(%v) di %v\n", name, pn, di)
-	if nops1, err := fse.create(dei, dir, v, di, pn); err == nil {
+	db.DPrintf(db.FSETCD, "Create %q(%v) di %v f %v\n", name, pn, di, f)
+	if nops1, err := fse.create(dei, dir, v, di, pn, f); err == nil {
 		stats.Add(&nops, nops1)
 		fse.dc.update(dei.Path, dir)
 		return di, nops, nil
@@ -183,7 +183,7 @@ func (fse *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del fs.Tdel
 	}
 
 	dir.Ents.Delete(name)
-	nops1, err = fse.remove(dei, dir, v, di)
+	nops1, err = fse.remove(dei, dir, v, di, f)
 	stats.Add(&nops, nops1)
 	if err != nil {
 		db.DPrintf(db.FSETCD, "Remove entry %v %v err %v\n", name, di, err)
@@ -234,7 +234,7 @@ func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, new path.Tpathname, 
 
 	dir.Ents.Delete(from)
 	dir.Ents.Insert(to, difrom)
-	if nops1, err := fse.rename(dei, dir, v, dito, difrom, new); err == nil {
+	if nops1, err := fse.rename(dei, dir, v, dito, difrom, new, f); err == nil {
 		stats.Add(&nops, nops1)
 		fse.dc.update(dei.Path, dir)
 		return nops, nil

@@ -4,6 +4,7 @@ package fdclnt
 
 import (
 	"fmt"
+	"io"
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
@@ -57,46 +58,47 @@ func (fdc *FdClient) Stat(name string) (*sp.Stat, error) {
 	return fdc.pc.Stat(name, fdc.pe.GetPrincipal())
 }
 
-func (fdc *FdClient) Create(path string, perm sp.Tperm, mode sp.Tmode) (int, error) {
-	pc, err := fdc.mntLookup(path)
+func (fdc *FdClient) Create(pn string, perm sp.Tperm, mode sp.Tmode) (int, error) {
+	pc, err := fdc.mntLookup(pn)
 	if err != nil {
 		return -1, err
 	}
-	fid, err := pc.Create(path, fdc.pe.GetPrincipal(), perm, mode, sp.NoLeaseId, sp.NoFence())
+	f := fdc.ft.lookup(pn)
+	fid, err := pc.Create(pn, fdc.pe.GetPrincipal(), perm, mode, sp.NoLeaseId, f)
 	if err != nil {
 		return -1, err
 	}
-	fd := fdc.fds.allocFd(fid, mode, pc)
+	fd := fdc.fds.allocFd(fid, mode, pc, pn)
 	return fd, nil
 }
 
-func (fdc *FdClient) CreateLeased(path string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
-	fid, err := fdc.pc.Create(path, fdc.pe.GetPrincipal(), perm, mode, lid, f)
+func (fdc *FdClient) CreateLeased(pn string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
+	fid, err := fdc.pc.Create(pn, fdc.pe.GetPrincipal(), perm, mode, lid, &f)
 	if err != nil {
 		return -1, err
 	}
-	fd := fdc.fds.allocFd(fid, mode, fdc.pc)
+	fd := fdc.fds.allocFd(fid, mode, fdc.pc, pn)
 	return fd, nil
 }
 
-func (fdc *FdClient) openWait(pc sos.PathClntAPI, path string, mode sp.Tmode) (int, error) {
+func (fdc *FdClient) openWait(pc sos.PathClntAPI, pn string, mode sp.Tmode) (int, error) {
 	ch := make(chan error)
 	fd := -1
 	for {
-		fid, err := pc.Open(path, fdc.pe.GetPrincipal(), mode, func(err error) {
+		fid, err := pc.Open(pn, fdc.pe.GetPrincipal(), mode, func(err error) {
 			ch <- err
 		})
 		if serr.IsErrCode(err, serr.TErrNotfound) {
-			db.DPrintf(db.FDCLNT, "openWatch wait %v\n", path)
+			db.DPrintf(db.FDCLNT, "openWatch wait %v\n", pn)
 			r := <-ch
 			if r != nil {
-				db.DPrintf(db.FDCLNT, "Open watch wait %v err %v\n", path, err)
+				db.DPrintf(db.FDCLNT, "Open watch wait %v err %v\n", pn, err)
 			}
 		} else if err != nil {
-			db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", path, err)
+			db.DPrintf(db.FDCLNT, "openWatch %v err %v\n", pn, err)
 			return -1, err
 		} else { // success; file is opened
-			fd = fdc.fds.allocFd(fid, mode, pc)
+			fd = fdc.fds.allocFd(fid, mode, pc, pn)
 			break
 		}
 	}
@@ -115,7 +117,7 @@ func (fdc *FdClient) Open(pn string, mode sp.Tmode, w sos.Twait) (int, error) {
 		if err != nil {
 			return -1, err
 		}
-		fd := fdc.fds.allocFd(fid, mode, pc)
+		fd := fdc.fds.allocFd(fid, mode, pc, pn)
 		return fd, nil
 	}
 }
@@ -148,6 +150,14 @@ func (fdc *FdClient) readFid(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.Tof
 	return cnt, nil
 }
 
+func (fdc *FdClient) readFidRdr(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+	rdr, err := pc.PreadRdr(fid, off, sz)
+	if err != nil {
+		return nil, err
+	}
+	return rdr, nil
+}
+
 func (fdc *FdClient) Read(fd int, b []byte) (sp.Tsize, error) {
 	fid, off, pc, sr := fdc.fds.lookupOff(fd)
 	if sr != nil {
@@ -169,14 +179,22 @@ func (fdc *FdClient) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
 	return fdc.readFid(fd, pc, fid, o, b)
 }
 
+func (fdc *FdClient) PreadRdr(fd int, o sp.Toffset, l sp.Tsize) (io.ReadCloser, error) {
+	fid, _, pc, sr := fdc.fds.lookupOff(fd)
+	if sr != nil {
+		return nil, sr
+	}
+	return fdc.readFidRdr(fd, pc, fid, o, l)
+}
+
 func (fdc *FdClient) writeFid(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.Toffset, data []byte, f0 sp.Tfence) (sp.Tsize, error) {
 	f := &f0
 	if !f0.HasFence() {
-		pn, err := pc.LookupPath(fid)
+		pn, err := fdc.fds.lookupPn(fd)
 		if err != nil {
 			return 0, err
 		}
-		f = fdc.ft.lookupPath(pn)
+		f = fdc.ft.lookup(pn)
 	}
 	sz, err := pc.WriteF(fid, off, data, f)
 	if err != nil {
@@ -296,8 +314,7 @@ func (fdc *FdClient) Disconnected() bool {
 
 func (fdc *FdClient) Disconnect(pn string) error {
 	fdc.disconnected = true
-	fids := fdc.fds.openfids()
-	return fdc.pc.Disconnect(pn, fids)
+	return fdc.pc.Disconnect(pn)
 }
 
 func (fdc *FdClient) Detach(pn string) error {

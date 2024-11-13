@@ -8,7 +8,9 @@
 package fidclnt
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -84,7 +86,7 @@ func (fidc *FidClnt) Close() error {
 }
 
 func (fidc *FidClnt) Len() int {
-	return len(fidc.fids.fids)
+	return fidc.fids.len()
 }
 
 func (fidc *FidClnt) allocFid() sp.Tfid {
@@ -99,7 +101,7 @@ func (fidc *FidClnt) Free(fid sp.Tfid) {
 	fidc.fids.free(fid)
 }
 
-func (fidc *FidClnt) Disconnect(fid sp.Tfid) {
+func (fidc *FidClnt) DisconnectAll(fid sp.Tfid) {
 	fidc.fids.disconnect(fid)
 }
 
@@ -113,10 +115,6 @@ func (fidc *FidClnt) Qid(fid sp.Tfid) *sp.Tqid {
 
 func (fidc *FidClnt) Qids(fid sp.Tfid) []*sp.Tqid {
 	return fidc.Lookup(fid).Qids()
-}
-
-func (fidc *FidClnt) Path(fid sp.Tfid) path.Tpathname {
-	return fidc.Lookup(fid).Path()
 }
 
 func (fidc *FidClnt) Insert(fid sp.Tfid, path *Channel) {
@@ -145,7 +143,7 @@ func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, 
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}
-	fidc.fids.insert(fid, newChannel(pc, pn, []*sp.Tqid{sp.NewTqid(reply.Qid)}))
+	fidc.fids.insert(fid, newChannel(pc, []*sp.Tqid{sp.NewTqid(reply.Qid)}))
 	db.DPrintf(db.ATTACH_LAT, "%v: attach %v pn %q tree %q lat %v\n", cid, ep, pn, tree, time.Since(s))
 	return fid, nil
 }
@@ -175,7 +173,7 @@ func (fidc *FidClnt) Walk(fid sp.Tfid, path []string) (sp.Tfid, []string, *serr.
 		return fid, path, err
 	}
 	channel := ch.Copy()
-	channel.AddN(reply.Qids, path)
+	channel.AddQids(reply.Qids)
 	fidc.Insert(nfid, channel)
 	return nfid, path[len(reply.Qids):], nil
 }
@@ -199,7 +197,7 @@ func (fidc *FidClnt) Clone(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	return nfid, err
 }
 
-func (fidc *FidClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, *serr.Err) {
+func (fidc *FidClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (sp.Tfid, *serr.Err) {
 	db.DPrintf(db.FIDCLNT, "Create %v name %v", fid, name)
 	ch := fidc.Lookup(fid)
 	if ch == nil {
@@ -210,7 +208,7 @@ func (fidc *FidClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmo
 	if err != nil {
 		return sp.NoFid, err
 	}
-	ch.add(name, reply.Qid)
+	ch.addQid(reply.Qid)
 	return fid, nil
 }
 
@@ -297,6 +295,19 @@ func (fidc *FidClnt) ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) 
 		return 0, err
 	}
 	return cnt, nil
+}
+
+func (fidc *FidClnt) PreadRdr(fid sp.Tfid, off sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+	b := make([]byte, sz)
+	ch := fidc.Lookup(fid)
+	if ch == nil {
+		return nil, serr.NewErr(serr.TErrUnreachable, "ReadF")
+	}
+	cnt, err := ch.pc.ReadF(fid, off, b, sp.NullFence())
+	if err != nil {
+		return nil, err
+	}
+	return io.NopCloser(bytes.NewReader(b[0:cnt])), nil
 }
 
 func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error) {

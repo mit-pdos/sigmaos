@@ -382,10 +382,9 @@ func (npc *NetProxyClnt) GetNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
 	if !npc.useProxy() {
 		db.DFatalf("GetNamedEndpoint: internal %v\n", npc)
 	}
-	db.DPrintf(db.NETPROXYCLNT, "GetNamedEndpoint %v", r)
 	ep, err := npc.getNamedEndpoint(r)
+	db.DPrintf(db.NETPROXYCLNT, "GetNamedEndpoint %v ep %v err %v", r, ep, err)
 	if err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "GetNamedEndpoint %v err %v", r, err)
 		return nil, err
 	}
 	return ep, nil

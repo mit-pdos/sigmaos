@@ -21,6 +21,9 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/mr"
+	"sigmaos/mr/chunkreader"
+	api "sigmaos/mr/mr"
+	mrscanner "sigmaos/mr/scanner"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
@@ -67,9 +70,61 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 7, mr.Khash([]byte("absently"))%8)
 }
 
+func TestWordSpanningChunk(t *testing.T) {
+	const (
+		CKSZ    = 8
+		SPLITSZ = sp.MBYTE
+		LINESZ  = 65536
+		WORDSZ  = 20
+		NWORD   = 7777 // According to TestSeqWc
+		WC      = "/tmp/sigmaos/pg-dorian_gray.txt.wc"
+	)
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	fn := filepath.Join("name/s3/~local/9ps3/gutenberg/pg-dorian_gray.txt")
+	fn, ok := sp.S3ClientPath(fn)
+	assert.True(t, ok)
+	s := &api.Split{fn, 0, SPLITSZ}
+	ts.MountS3PathClnt()
+
+	pfr, err := ts.OpenParallelFileReader(s.File, s.Offset, s.Length)
+	assert.Nil(t, err)
+
+	p, err := perf.NewPerf(ts.ProcEnv(), perf.MRMAPPER)
+	assert.Nil(t, err)
+
+	ckr := chunkreader.NewChunkReader(LINESZ, WORDSZ, wc.Reduce, p)
+	n, err := ckr.ReadChunks(pfr, s, wc.Map)
+	assert.Nil(t, err)
+
+	kvmap := ckr.KVMap()
+
+	db.DPrintf(db.TEST, "bytes %d words %d", n, kvmap.Len())
+
+	assert.Equal(t, NWORD, kvmap.Len())
+
+	file, err := os.Create(WC)
+	assert.Nil(t, err)
+	defer file.Close()
+	w := bufio.NewWriter(file)
+	defer w.Flush()
+	kvmap.Emit(wc.Reduce, func(k []byte, v string) error {
+		b := fmt.Sprintf("%s\t%v\n", string(k), v)
+		_, err := w.Write([]byte(b))
+		return err
+	})
+	p.Done()
+
+	ts.Shutdown()
+}
+
 type Tdata map[string]uint64
 
-func wcline(n int, line string, data Tdata, sbc *mr.ScanByteCounter) (int, error) {
+func wcline(n int, line string, data Tdata, sbc *mrscanner.ScanByteCounter) (int, error) {
 	scanner := bufio.NewScanner(strings.NewReader(line))
 	scanner.Split(sbc.ScanWords)
 	cnt := 0
@@ -90,8 +145,8 @@ func wcline(n int, line string, data Tdata, sbc *mr.ScanByteCounter) (int, error
 func TestSeqWc(t *testing.T) {
 	const (
 		LOCALINPUT = "/tmp/enwiki-1G"
-		HOSTTMP    = "/tmp/sigmaos"
-		F          = "gutenberg.txt"
+		HOSTTMP    = "/tmp/sigmaos/"
+		F          = "pg-dorian_gray.txt"
 		INPUT      = "../input/" + F
 		// INPUT = LOCALINPUT
 		OUT = HOSTTMP + F + ".out"
@@ -108,7 +163,7 @@ func TestSeqWc(t *testing.T) {
 	data := make(Tdata, 0)
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.SEQWC)
 	assert.Nil(t, err)
-	sbc := mr.NewScanByteCounter(p)
+	sbc := mrscanner.NewScanByteCounter(p)
 	for scanner.Scan() {
 		l := scanner.Text()
 		if len(l) > 0 {
@@ -118,7 +173,7 @@ func TestSeqWc(t *testing.T) {
 	}
 	err = scanner.Err()
 	assert.Nil(t, err)
-	db.DPrintf(db.ALWAYS, "seqwc %v %v", INPUT, time.Since(start))
+	db.DPrintf(db.ALWAYS, "seqwc %v %v %v", INPUT, time.Since(start), OUT)
 	file, err = os.Create(OUT)
 	assert.Nil(t, err)
 	defer file.Close()
@@ -138,7 +193,7 @@ func TestSplits(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	job, err1 = mr.ReadJobConfig(app)
+	job, err1 = mr.ReadJobConfig(filepath.Join("job-descriptions", app))
 	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
@@ -200,7 +255,7 @@ func TestMapperReducer(t *testing.T) {
 		assert.Nil(t, err, "NewSC: %v", err)
 		db.DPrintf(db.TEST, "NewSigmaClnt %v", time.Since(start))
 		start = time.Now()
-		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, string(bin), job.Intermediate)
+		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, job.Wordsz, string(bin), job.Intermediate)
 		assert.Nil(t, err, "NewMapper %v", err)
 		db.DPrintf(db.TEST, "Newmapper %v", time.Since(start))
 		start = time.Now()
@@ -241,7 +296,7 @@ func TestMapperReducer(t *testing.T) {
 		assert.True(t, status.IsStatusOK(), "status %v", status)
 		res, err := mr.NewResult(status.Data())
 		assert.Nil(t, err)
-		db.DPrintf(db.ALWAYS, "%s: in %v out %v tot %v %vms (%s)\n", res.Task, humanize.Bytes(uint64(res.In)), humanize.Bytes(uint64(res.Out)), test.Mbyte(res.In+res.Out), res.MsInner, test.TputStr(res.In+res.Out, res.MsInner))
+		db.DPrintf(db.ALWAYS, "%s: reduce in %v out %v tot %v %vms (%s)\n", res.Task, humanize.Bytes(uint64(res.In)), humanize.Bytes(uint64(res.Out)), test.Mbyte(res.In+res.Out), res.MsInner, test.TputStr(res.In+res.Out, res.MsInner))
 	}
 
 	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" {
@@ -264,7 +319,7 @@ func newTstate(t1 *test.Tstate, jobRoot, app string) *Tstate {
 	ts := &Tstate{}
 	ts.jobRoot = jobRoot
 	ts.Tstate = t1
-	j, err := mr.ReadJobConfig(app)
+	j, err := mr.ReadJobConfig(filepath.Join("job-descriptions", app))
 	assert.Nil(t1.T, err, "Error ReadJobConfig: %v", err)
 	job = j
 	ts.nreducetask = job.Nreduce

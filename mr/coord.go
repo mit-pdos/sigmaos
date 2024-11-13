@@ -54,6 +54,7 @@ type Coord struct {
 	crash           int64
 	maliciousMapper uint64
 	linesz          string
+	wordsz          string
 	mapperbin       string
 	reducerbin      string
 	leaderclnt      *leaderclnt.LeaderClnt
@@ -80,7 +81,7 @@ func (s *stat) String() string {
 type NewProc func(string) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 10 {
+	if len(args) != 11 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
@@ -113,15 +114,16 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.crash = int64(ctime)
 
-	malmap, err := strconv.Atoi(args[9])
+	malmap, err := strconv.Atoi(args[10])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[9])
+		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[10])
 	}
 	c.maliciousMapper = uint64(malmap)
 
 	c.linesz = args[7]
+	c.wordsz = args[8]
 
-	mem, err := strconv.Atoi(args[8])
+	mem, err := strconv.Atoi(args[9])
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[3])
 	}
@@ -190,7 +192,7 @@ func (c *Coord) mapperProc(task string) (*proc.Proc, error) {
 	}
 	db.DPrintf(db.ALWAYS, "bin %v", string(bin))
 	c.stat.nMap += 1
-	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz}, c.memPerTask, allowedPaths)
+	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz, c.wordsz}, c.memPerTask, allowedPaths)
 	return proc, nil
 }
 

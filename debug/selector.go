@@ -39,6 +39,7 @@ const (
 const (
 	TEST     Tselector = "TEST"
 	TEST1              = "TEST1"
+	STAT               = "STAT"
 	TEST_LAT           = "TEST_LAT"
 	DELAY              = "DELAY"
 	CRASH              = "CRASH"
@@ -175,6 +176,7 @@ const (
 	WRITER_ERR    Tselector = "WRITER" + ERR
 	READER_ERR              = "READER" + ERR
 	AWRITER                 = "AWRITER"
+	PREADER                 = "PREADER"
 	FSLIB                   = "FSLIB"
 	FSLIB_ERR               = "FSLIB" + ERR
 	SEMCLNT                 = "SEMCLNT"

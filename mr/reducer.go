@@ -16,6 +16,9 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/mr/chunkreader"
+	"sigmaos/mr/kvmap"
+	"sigmaos/mr/mr"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -31,7 +34,7 @@ const (
 
 type Reducer struct {
 	*sigmaclnt.SigmaClnt
-	reducef      ReduceT
+	reducef      mr.ReduceT
 	input        Bin
 	outputTarget string
 	outlink      string
@@ -42,7 +45,7 @@ type Reducer struct {
 	perf         *perf.Perf
 }
 
-func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
+func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
 	r := &Reducer{
 		outlink:      args[1],
 		outputTarget: args[2],
@@ -78,7 +81,7 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf
 	return r, nil
 }
 
-func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
+func newReducer(reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
 	if len(args) != 4 {
 		return nil, errors.New("NewReducer: too few arguments")
 	}
@@ -98,13 +101,13 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 }
 
 type result struct {
-	kvs  []*KeyValue
+	kvs  []*mr.KeyValue
 	name string
 	ok   bool
 	n    sp.Tlength
 }
 
-func ReadKVs(rdr io.Reader, kvm *kvmap, reducef ReduceT) error {
+func ReadKVs(rdr io.Reader, kvm *kvmap.KVMap, reducef mr.ReduceT) error {
 	kvd := newKVDecoder(rdr, DEFAULT_KEY_BUF_SZ, DEFAULT_VAL_BUF_SZ)
 	for {
 		if k, v, err := kvd.decode(); err != nil {
@@ -116,7 +119,7 @@ func ReadKVs(rdr io.Reader, kvm *kvmap, reducef ReduceT) error {
 				break
 			}
 		} else {
-			if err := kvm.combine(k, v, reducef); err != nil {
+			if err := kvm.Combine(k, v, reducef); err != nil {
 				return err
 			}
 		}
@@ -129,7 +132,7 @@ type readResult struct {
 	ok         bool
 	n          sp.Tlength
 	d          time.Duration
-	kvm        *kvmap
+	kvm        *kvmap.KVMap
 	mapsFailed []string
 }
 
@@ -182,7 +185,7 @@ func (r *Reducer) readerMgr(req chan string, rep chan readResult, max int) {
 		mu.Unlock()
 		db.DPrintf(db.MR, "readerMgr: start %q", f)
 		go func(f string) {
-			kvm := newKvmap(MINCAP, MAXCAP)
+			kvm := kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP)
 			rr := readResult{f: f, kvm: kvm}
 			r.readFile(&rr)
 			rep <- rr
@@ -224,7 +227,7 @@ func (r *Reducer) ReadFiles(rtot *readResult) error {
 		for i := 0; i < r.nmaptask; i++ {
 			rr := <-rep
 			rtot.sum(&rr)
-			rtot.kvm.merge(rr.kvm, r.reducef)
+			rtot.kvm.Merge(rr.kvm, r.reducef)
 		}
 	}
 	return nil
@@ -242,7 +245,7 @@ func (r *Reducer) emit(key []byte, value string) error {
 func (r *Reducer) DoReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", r.input, r.outlink, r.nmaptask)
 	rtot := readResult{
-		kvm:        newKvmap(MINCAP, MAXCAP),
+		kvm:        kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP),
 		mapsFailed: []string{},
 	}
 	if err := r.ReadFiles(&rtot); err != nil {
@@ -258,7 +261,7 @@ func (r *Reducer) DoReduce() *proc.Status {
 
 	start := time.Now()
 
-	if err := rtot.kvm.emit(r.reducef, r.emit); err != nil {
+	if err := rtot.kvm.Emit(r.reducef, r.emit); err != nil {
 		db.DPrintf(db.ALWAYS, "DoReduce: emit err %v", err)
 		return proc.NewStatusErr("reducef", err)
 	}
@@ -279,7 +282,7 @@ func (r *Reducer) DoReduce() *proc.Status {
 		Result{false, r.ProcEnv().GetPID().String(), rtot.n, nbyte, Bin{}, rtot.d.Milliseconds(), 0, r.ProcEnv().GetKernelID()})
 }
 
-func RunReducer(reducef ReduceT, args []string) {
+func RunReducer(reducef mr.ReduceT, args []string) {
 	pe := proc.GetProcEnv()
 	p, err := perf.NewPerf(pe, perf.MRREDUCER)
 	if err != nil {

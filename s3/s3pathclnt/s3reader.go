@@ -13,14 +13,11 @@ import (
 )
 
 type s3Reader struct {
-	clnt    *s3.Client
-	bucket  string
-	key     string
-	offset  sp.Toffset
-	chunk   io.ReadCloser
-	chunksz sp.Tlength
-	sz      sp.Tlength
-	n       sp.Tlength
+	clnt   *s3.Client
+	bucket string
+	key    string
+	sz     sp.Tlength
+	n      sp.Tlength
 }
 
 func min64(a, b uint64) uint64 {
@@ -44,22 +41,19 @@ func (s3r *s3Reader) s3Read(off, cnt uint64) (io.ReadCloser, sp.Tlength, *serr.E
 	if err != nil {
 		return nil, 0, serr.NewErrError(err)
 	}
-	db.DPrintf(db.S3CLNT, "s3Read: %v %d %d res %v %v\n", s3r.key, off, cnt, region, result.ContentLength)
+	// db.DPrintf(db.S3CLNT, "s3Read: %v %d %d res %v %v\n", s3r.key, off, cnt, region, result.ContentLength)
 	return result.Body, sp.Tlength(*result.ContentLength), nil
 }
 
-func (s3r *s3Reader) readChunk(off sp.Toffset) error {
+func (s3r *s3Reader) readChunk(off sp.Toffset, len int) (io.ReadCloser, error) {
 	if sp.Tlength(off) >= s3r.sz {
-		return io.EOF
+		return nil, io.EOF
 	}
-	r, n, err := s3r.s3Read(uint64(off), CHUNKSZ)
+	r, _, err := s3r.s3Read(uint64(off), uint64(len))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	s3r.chunk = r
-	s3r.offset = off
-	s3r.chunksz = n
-	return nil
+	return r, nil
 }
 
 func (s3r *s3Reader) read(off sp.Toffset, b []byte) (int, error) {
@@ -67,26 +61,38 @@ func (s3r *s3Reader) read(off sp.Toffset, b []byte) (int, error) {
 	if off >= sp.Toffset(s3r.sz) {
 		return 0, io.EOF
 	}
-	if s3r.chunk == nil {
-		if err := s3r.readChunk(off); err != nil {
-			db.DPrintf(db.S3CLNT, "readChunk err %v", err)
-			return 0, err
+	if chunk, err := s3r.readChunk(off, len(b)); err != nil {
+		db.DPrintf(db.S3CLNT, "readChunk err %v", err)
+		return 0, err
+	} else {
+		i := 0
+		l := len(b)
+		for i < l {
+			n, err := chunk.Read(b[i:l])
+			if err != nil && err != io.EOF {
+				return 0, err
+			}
+			i += n
 		}
+		db.DPrintf(db.S3CLNT, "s3.Read off %d end %d buflen %d n %d err %v", off, s3r.sz, len(b), i, err)
+		chunk.Close()
+		return i, nil
 	}
-	n, err := s3r.chunk.Read(b)
-	s3r.offset += sp.Toffset(n)
-	s3r.n += sp.Tlength(n)
-	if err == io.EOF {
-		s3r.chunk.Close()
-		s3r.chunk = nil
+}
+
+func (s3r *s3Reader) readRdr(off sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+	db.DPrintf(db.S3CLNT, "s3.ReadRdr off %d len %d", off, sz)
+	if off >= sp.Toffset(s3r.sz) {
+		return nil, io.EOF
 	}
-	// db.DPrintf(db.S3CLNT, "s3.Read off %d end %d buflen %d n %d err %v", off, s3r.sz, len(b), n, err)
-	return n, nil
+	if chunk, err := s3r.readChunk(off, int(sz)); err != nil {
+		db.DPrintf(db.S3CLNT, "readChunk err %v", err)
+		return nil, err
+	} else {
+		return chunk, nil
+	}
 }
 
 func (s3r *s3Reader) close() error {
-	if s3r.chunk != nil {
-		return s3r.chunk.Close()
-	}
 	return nil
 }

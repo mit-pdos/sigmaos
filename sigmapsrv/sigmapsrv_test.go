@@ -3,6 +3,7 @@ package sigmapsrv_test
 import (
 	"flag"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -37,7 +38,8 @@ const (
 	SYNCFILESZ = 100 * KBYTE
 	//	SYNCFILESZ = 250 * KBYTE
 	// SYNCFILESZ = WRITESZ
-	FILESZ  = 100 * sp.MBYTE
+	FILESZ = 100 * sp.MBYTE
+	//FILESZ  = 10 * sp.MBYTE
 	WRITESZ = 4096
 )
 
@@ -75,7 +77,6 @@ type Thow uint8
 const (
 	HSYNC Thow = iota + 1
 	HBUF
-	HASYNC
 )
 
 func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz sp.Tlength) sp.Tlength {
@@ -92,13 +93,6 @@ func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz
 		assert.Nil(t, err, "Error Create writer: %v", err)
 		err = test.Writer(t, w, buf, sz)
 		assert.Nil(t, err, "Err writer %v", err)
-		err = w.Close()
-		assert.Nil(t, err)
-	case HASYNC:
-		w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
-		assert.Nil(t, err, "Error Create writer: %v", err)
-		err = test.Writer(t, w, buf, sz)
-		assert.Nil(t, err)
 		err = w.Close()
 		assert.Nil(t, err)
 	}
@@ -137,15 +131,6 @@ func TestWriteFilePerfSingle(t *testing.T) {
 	defer p2.Done()
 	measure(p2, "bufwriter", func() sp.Tlength {
 		sz := newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
-		err := ts.Remove(fn)
-		assert.Nil(t, err)
-		return sz
-	})
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFWRITER)
-	assert.Nil(t, err)
-	defer p3.Done()
-	measure(p3, "abufwriter", func() sp.Tlength {
-		sz := newFile(t, ts.FsLib, fn, HASYNC, buf, FILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
@@ -219,27 +204,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	}
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFWRITER)
-	assert.Nil(t, err)
-	defer p3.Done()
-	start = time.Now()
-	for i := range fns {
-		go func(i int) {
-			n := measure(p3, "abufwriter", func() sp.Tlength {
-				sz := newFile(t, fsls[i], fns[i], HASYNC, buf, FILESZ)
-				err := ts.Remove(fns[i])
-				assert.Nil(t, err, "Remove err %v", err)
-				return sz
-			})
-			done <- n
-		}(i)
-	}
-	n = 0
-	for _ = range fns {
-		n += <-done
-	}
-	ms = time.Since(start).Milliseconds()
-	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+
 	ts.Shutdown()
 }
 
@@ -303,25 +268,68 @@ func TestReadFilePerfSingle(t *testing.T) {
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err)
-	sz = newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
+	ts.Shutdown()
+}
+
+func TestParallelReadFile(t *testing.T) {
+	const (
+		CONCURRENCY = 5
+		CHUNKSZ     = 2 * sp.MBYTE
+	)
+
+	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {
+		return
+	}
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	fn := filepath.Join(pathname, "f")
+	buf := test.NewBuf(WRITESZ)
+
+	ts.Remove(fn)
+
+	newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+
+	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
-	measure(p3, "readahead", func() sp.Tlength {
+	measure(p1, "pread", func() sp.Tlength {
 		pn := fn
 		if test.Withs3pathclnt {
 			pn0, ok := sp.S3ClientPath(fn)
 			assert.True(t, ok)
 			pn = pn0
 		}
-		r, err := ts.OpenAsyncReader(pn, 0)
+		r, err := ts.OpenParallelFileReader(pn, 0, FILESZ)
 		assert.Nil(t, err)
-		n, err := test.Reader(t, r, buf, sz)
-		assert.Nil(t, err)
+		ch := make(chan sp.Tlength)
+		for i := 0; i < CONCURRENCY; i++ {
+			go func(i int) {
+				m := sp.Tlength(0)
+				for {
+					rdr, _, err := r.GetChunkReader(CHUNKSZ, CHUNKSZ)
+					if err != nil && err == io.EOF {
+						break
+					}
+					assert.Nil(t, err)
+					n, err := test.Reader(t, rdr, buf, CHUNKSZ)
+					assert.Nil(t, err)
+					m += n
+				}
+				ch <- m
+			}(i)
+		}
+		sz := sp.Tlength(0)
+		for i := 0; i < CONCURRENCY; i++ {
+			n := <-ch
+			sz += n
+		}
 		r.Close()
-		return n
+		return sz
 	})
-	p3.Done()
+	p1.Done()
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err)
@@ -421,33 +429,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
-	assert.Nil(t, err)
-	defer p3.Done()
-	start = time.Now()
-	for i := range fns {
-		go func(i int) {
-			n := measure(p3, "readabuf", func() sp.Tlength {
-				n := sp.Tlength(0)
-				for j := 0; j < NTRIAL; j++ {
-					r, err := fsls[i].OpenAsyncReader(fns[i], 0)
-					assert.Nil(t, err)
-					n2, err := test.Reader(t, r, buf, FILESZ)
-					assert.Nil(t, err)
-					n += n2
-					r.Close()
-				}
-				return n
-			})
-			done <- n
-		}(i)
-	}
-	n = 0
-	for _ = range fns {
-		n += <-done
-	}
-	ms = time.Since(start).Milliseconds()
-	db.DPrintf(db.ALWAYS, "Total tpt abufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+
 	ts.Shutdown()
 }
 

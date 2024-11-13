@@ -1,11 +1,8 @@
 package mr
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	// "runtime/debug"
@@ -18,6 +15,8 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/mr/chunkreader"
+	"sigmaos/mr/mr"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -27,15 +26,14 @@ import (
 )
 
 const (
-	MAXCAP = 32
-	MINCAP = 4
+	CONCURRENCY = 5
+	// CONCURRENCY = 1
 )
 
 type Mapper struct {
 	*sigmaclnt.SigmaClnt
-	mapf        MapT
-	combinef    ReduceT
-	sbc         *ScanByteCounter
+	mapf        mr.MapT
+	combinef    mr.ReduceT
 	jobRoot     string
 	job         string
 	nreducetask int
@@ -48,15 +46,12 @@ type Mapper struct {
 	rand        string
 	perf        *perf.Perf
 	asyncrw     bool
-	combined    *kvmap
-	combinewc   map[string]int
-	buf         []byte
-	line        []byte
 	init        bool
+	ckrs        []*chunkreader.ChunkReader
 	ch          chan error
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz int, input, intOutput string) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input, intOutput string) (*Mapper, error) {
 	m := &Mapper{
 		SigmaClnt:   sc,
 		mapf:        mapf,
@@ -72,12 +67,11 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 		wrts:        make([]*fslib.FileWriter, nr),
 		pwrts:       make([]*perf.PerfWriter, nr),
 		perf:        p,
-		sbc:         NewScanByteCounter(p),
-		combined:    newKvmap(MINCAP, MAXCAP),
-		combinewc:   make(map[string]int),
-		buf:         make([]byte, 0, lsz),
-		line:        make([]byte, 0, lsz),
 		ch:          make(chan error),
+		ckrs:        make([]*chunkreader.ChunkReader, CONCURRENCY),
+	}
+	for i := 0; i < CONCURRENCY; i++ {
+		m.ckrs[i] = chunkreader.NewChunkReader(lsz, wsz, combinef, p)
 	}
 	m.MountS3PathClnt()
 	go func() {
@@ -86,8 +80,9 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf MapT, combinef ReduceT, jobRoot, jo
 	return m, nil
 }
 
-func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
-	if len(args) != 6 {
+func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
+
+	if len(args) != 7 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
 	nr, err := strconv.Atoi(args[2])
@@ -96,7 +91,11 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	}
 	lsz, err := strconv.Atoi(args[5])
 	if err != nil {
-		return nil, fmt.Errorf("NewMapper: linesz %v isn't int", args[2])
+		return nil, fmt.Errorf("NewMapper: linesz %v isn't int", args[5])
+	}
+	wsz, err := strconv.Atoi(args[6])
+	if err != nil {
+		return nil, fmt.Errorf("NewMapper: wordsz %v isn't int", args[6])
 	}
 	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
@@ -105,7 +104,7 @@ func newMapper(mapf MapT, reducef ReduceT, args []string, p *perf.Perf) (*Mapper
 	}
 
 	db.DPrintf(db.TEST, "NewSigmaClnt done at time: %v", time.Since(start))
-	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, args[3], args[4])
+	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4])
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
@@ -197,6 +196,7 @@ func (m *Mapper) outputBin() (Bin, error) {
 	return bin, nil
 }
 
+// Emit cannot be called in parallel
 func (m *Mapper) Emit(key []byte, value string) error {
 	if !m.init {
 		m.init = true
@@ -211,26 +211,20 @@ func (m *Mapper) Emit(key []byte, value string) error {
 	return err
 }
 
-// Function for performance debugging
-func (m *Mapper) CombineWc(kv *KeyValue) error {
-	if _, ok := m.combinewc[kv.Key]; !ok {
-		m.combinewc[kv.Key] = 0
+func (m *Mapper) combineEmit() {
+	s := time.Now()
+	d := m.ckrs[0]
+	for _, ckr := range m.ckrs[1:] {
+		d.MergeKVMap(ckr)
 	}
-	m.combinewc[kv.Key] += 1
-	return nil
+	db.DPrintf(db.TEST, "combineEmit: %v", time.Since(s))
+	d.CombineEmit(m.Emit)
+	for _, ckr := range m.ckrs {
+		ckr.Reset()
+	}
 }
 
-func (m *Mapper) Combine(key []byte, value string) error {
-	return m.combined.combine(key, value, m.combinef)
-}
-
-func (m *Mapper) CombineEmit() error {
-	m.combined.emit(m.combinef, m.Emit)
-	m.combined = newKvmap(MINCAP, MAXCAP)
-	return nil
-}
-
-func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
+func (m *Mapper) doSplit(s *mr.Split) (sp.Tlength, error) {
 	pn, ok := sp.S3ClientPath(s.File)
 	if ok {
 		s.File = pn
@@ -239,7 +233,7 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 	off := s.Offset
 	if off != 0 {
 		// -1 to pick up last byte from prev split so that if s.Offset
-		// != 0 below works out correctly. if the last byte of
+		// != 0 in doChunk works out correctly. if the last byte of
 		// previous split is a newline, this mapper should process the
 		// first line of the split.  if not, this mapper should ignore
 		// the first line of the split because it has been processed
@@ -247,61 +241,39 @@ func (m *Mapper) doSplit(s *Split, emit EmitT) (sp.Tlength, error) {
 		off--
 	}
 	start := time.Now()
-	rdr, err := m.OpenReaderRegion(s.File, s.Offset, s.Length+sp.Tlength(m.linesz))
+	pfr, err := m.OpenParallelFileReader(s.File, off, s.Length+sp.Tlength(m.linesz))
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}
 
 	db.DPrintf(db.MR, "Mapper openS3Reader time: %v", time.Since(start))
-	defer rdr.Close()
+	defer pfr.Close()
 
-	var scanner *bufio.Scanner
-	if true {
-		scanner = bufio.NewScanner(rdr)
-	} else {
-		// To measure read tput; no computing
-		start = time.Now()
-		m.buf = m.buf[0:m.linesz]
-		n, err := io.ReadFull(rdr, m.buf)
-		if err != nil && err != io.ErrUnexpectedEOF {
-			db.DPrintf(db.ALWAYS, "Err ReadFull: n %v err %v", n, err)
-		}
-		db.DPrintf(db.TEST, "Mapper ReadFull time %vB tpt %v: %v", n, test.TputStr(sp.Tlength(n), time.Since(start).Milliseconds()), time.Since(start))
-		return s.Length + 1, nil
+	type result struct {
+		n   sp.Tlength
+		err error
 	}
-	scanner.Buffer(m.buf, cap(m.buf))
 
-	// advance scanner to new line after start, if off != 0
+	ch := make(chan result)
+	for _, ckr := range m.ckrs {
+		go func(ckr *chunkreader.ChunkReader) {
+			n, err := ckr.ReadChunks(pfr, s, m.mapf)
+			ch <- result{n, err}
+		}(ckr)
+	}
 	n := sp.Tlength(0)
-	if s.Offset != 0 {
-		scanner.Scan()
-		l := scanner.Bytes()
-		// +1 for newline, but -1 for the extra byte we read (off-- above)
-		n += sp.Tlength(len(l))
-		db.DPrintf(db.MR, "%v off %v skip %d\n", s.File, s.Offset, n)
-	}
-	lineRdr := bytes.NewReader([]byte{})
-	for scanner.Scan() {
-		l := scanner.Bytes()
-		n += sp.Tlength(len(l)) + 1 // 1 for newline  XXX or 2 if \r\n
-		if len(l) > 0 {
-			lineRdr.Reset(l)
-			scan := bufio.NewScanner(lineRdr)
-			scan.Buffer(m.line, cap(m.line))
-			scan.Split(m.sbc.ScanWords)
-			if err := m.mapf(s.File, scan, emit); err != nil {
-				return 0, err
-			}
-		}
-		if n >= s.Length {
-			db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
-			break
+	for range m.ckrs {
+		r := <-ch
+		n += r.n
+		if r.err != nil {
+			return n, err
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return sp.Tlength(n), err
+	if n >= s.Length {
+		db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
 	}
-	return sp.Tlength(n), nil
+	m.combineEmit()
+	return n, nil
 }
 
 func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
@@ -312,15 +284,11 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 		db.DPrintf(db.MR, "Mapper %s: unmarshal err %v\n", m.bin, err)
 		return 0, 0, nil, err
 	}
-	emit := m.Emit
-	if m.combinef != nil {
-		emit = m.Combine
-	}
 	db.DPrintf(db.TEST, "Mapper getInput time: %v", time.Since(getInputStart))
 	ni := sp.Tlength(0)
 	getSplitStart := time.Now()
 	for _, s := range bin {
-		n, err := m.doSplit(&s, emit)
+		n, err := m.doSplit(&s)
 		if err != nil {
 			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)
 			return 0, 0, nil, err
@@ -329,7 +297,6 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 			db.DFatalf("Split: short split o %d l %d %d\n", s.Offset, s.Length, n)
 		}
 		ni += n
-		m.CombineEmit()
 	}
 	db.DPrintf(db.TEST, "split time: %v", time.Since(getSplitStart))
 	closeWrtStart := time.Now()
@@ -345,7 +312,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 	return ni, nout, obin, nil
 }
 
-func RunMapper(mapf MapT, combinef ReduceT, args []string) {
+func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	// debug.SetMemoryLimit(1769 * 1024 * 1024)
 
 	execTimeStr := os.Getenv("SIGMA_EXEC_TIME")

@@ -81,7 +81,7 @@ func (pathc *PathClnt) detachAll() error {
 	return err
 }
 
-func (pathc *PathClnt) Create(p string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
+func (pathc *PathClnt) Create(p string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Create %v perm %v lid %v\n", pathc.cid, p, perm, lid)
 	if filepath.Base(p) == "~local" || filepath.Base(p) == "~any" {
 		return sp.NoFid, fmt.Errorf("Can't create ~local or ~any: %v", p)
@@ -324,24 +324,19 @@ func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 	return cnt, nil
 }
 
-// XXX move paths out of fid
-func (pathc *PathClnt) LookupPath(fid sp.Tfid) (path.Tpathname, error) {
-	ch := pathc.FidClnt.Lookup(fid)
-	if ch == nil {
-		return nil, serr.NewErr(serr.TErrUnreachable, "writeFid")
-	}
-	return ch.Path(), nil
-}
-
 // For npproxy
 func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Tpathname, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
 	ch := pathc.FidClnt.Lookup(fid)
 	if ch == nil {
 		return sp.NoFid, serr.NewErr(serr.TErrNotfound, fid)
 	}
-	p := ch.Path().AppendPath(path)
-	db.DPrintf(db.PATHCLNT, "Walk %v (ch %v)", p, ch.Path())
-	return pathc.walk(p, principal, true, nil)
+
+	// XXX fix
+	// p := ch.Path().AppendPath(path)
+	// return pathc.walk(p, principal, true, nil)
+
+	db.DPrintf(db.PATHCLNT, "Walk %v %v (ch %v)", fid, path, ch)
+	return pathc.walk(path, principal, true, nil)
 }
 
 func (pathc *PathClnt) Disconnected() bool {
@@ -350,8 +345,8 @@ func (pathc *PathClnt) Disconnected() bool {
 
 // Disconnect client from server permanently to simulate network
 // partition to server that exports pn
-func (pathc *PathClnt) Disconnect(pn string, fids []sp.Tfid) error {
-	db.DPrintf(db.CRASH, "Disconnect %v mnts %v\n", pn, pathc.mntclnt.MountedPaths())
+func (pathc *PathClnt) Disconnect(pn string) error {
+	db.DPrintf(db.CRASH, "Disconnect %v\n", pn)
 	pathc.disconnected = true
-	return pathc.mntclnt.Disconnect(pn, fids)
+	return pathc.mntclnt.Disconnect(pn)
 }

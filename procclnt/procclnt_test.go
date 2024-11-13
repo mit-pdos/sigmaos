@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

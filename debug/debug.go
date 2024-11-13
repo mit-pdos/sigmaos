@@ -1,3 +1,6 @@
+// The debug package allow callers to control debug output through the
+// SIGMADEBUG environment variable, which can be a list of labels
+// (e.g., "RPC;PATHCLNT").
 package debug
 
 import (
@@ -11,11 +14,6 @@ import (
 
 	"sigmaos/proc"
 )
-
-//
-// Debug output is controled by SIGMADEBUG environment variable, which
-// can be a list of labels (e.g., "RPC;PATHCLNT").
-//
 
 var labels map[Tselector]bool
 
